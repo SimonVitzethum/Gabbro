@@ -199,19 +199,21 @@ impl<'a> Sicht<'a> {
 /// `messung/DOMAENENSTELLUNGEN.md` verified each of the 53 corpus quantifier sites OUTSIDE
 /// `ensures` one by one: the base name of the place replaced by `zzznix`, the base load of
 /// the same file subtracted. **51 stayed silent and 2 answered with `D012`** -- the premise
-/// rule at a call of a generated operation, which says nothing about the name. *Zero of 53
+/// rule at a call of a generated operation, which lives in `opsruf.rs` and says nothing
+/// about the name. *Zero of 53
 /// got a refusal about the name.* And 38 TYPE falsifications across all five positions
 /// (`slots of` over a record, `queue` over a table, `elems of` over a scalar field, …) got
 /// zero.
 ///
-/// * **`D017`** -- the base name of the place resolves. Same question as `M109`, in the
-///   positions `M109` does not read.
+/// * **`D017`** -- the base name of the place resolves. The same question `M109` asks in
+///   `m1.rs`, in the positions `M109` does not read.
 /// * **`D018`** -- the place is of the kind the DOMAIN needs: a table for `slots of`, a
 ///   record for `queue`, an array field for `elems of`, a `walk` for `mappings of`, a slot
 ///   for the three that walk the tree.
 ///
-/// ### Why `D017` is its own code and not a wider `M109`
+/// ### Why `D017` is its own code and not a wider `M109` (`m1.rs`)
 ///
+/// All three rules named below live in `m1.rs`, in one loop over `f.ensures`.
 /// **26 of the 53 places are `Self`**, 22 at a `table` and 4 at a `walk`. `M109` shares its
 /// loop with `M120` -- *"`Self` in `ensures` names no carrier"* -- and in a `table`
 /// invariant `Self` is EXACTLY the carrier. The same loop laid over the invariants would
@@ -243,7 +245,7 @@ pub fn domaenen(baum: &Programm, u: &Umgebung, absagen: &mut Absagen) {
 }
 
 /// In which clause does the domain stand? **The refusal names it**, and one of the five is
-/// skipped by `D017` because `M109` already reads it.
+/// skipped by `D017` because `M109` in `m1.rs` already reads it.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Stellung {
     Nachbedingung,
@@ -327,17 +329,15 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
         // no tables at all -- fell at `D017` over `Endpunkte`, a name its own first line
         // introduces. *A refusal that the documentation of the language triggers is a
         // refusal about the pass, not about the program.* Whether the carrier EXISTS is a
-        // different question and `D010` asks it.
+        // different question, and `D010` in `kbedingung.rs` asks it.
         ItemArt::Gruppe(g) => {
             let mut lokal: HashMap<String, Typ> = HashMap::new();
             for tr in &g.traeger {
-                let q = qualifiziert(modul, &tr.text);
-                let art = if u.tabellen.contains_key(&q) {
-                    Typ::Tabelle(q)
-                } else {
-                    // Known by NAME and of unknown kind -- `D018` then stays silent, which
-                    // is what it does everywhere it does not know.
-                    Typ::Unbekannt
+                // Known by NAME even when the carrier is of unknown kind -- `D018` then
+                // stays silent, which is what it does everywhere it does not know.
+                let art = match u.nennt_tabelle(modul, &tr.text) {
+                    Some(q) => Typ::Tabelle(q),
+                    None => Typ::Unbekannt,
                 };
                 lokal.insert(tr.text.clone(), art);
             }
@@ -453,8 +453,9 @@ fn ort_der_domaene(d: &Domaene) -> Option<&Ort> {
 
 /// **`D017` -- the base name of the place resolves.**
 ///
-/// The resolution is `M109`'s, word for word (parameter, global, a resolvable type or
-/// constant), widened by the three declaration maps a place may name directly: a `table`,
+/// The resolution is the one `M109` performs in `m1.rs`, word for word (parameter, global,
+/// a resolvable type or constant), widened by the three declaration maps a place may name
+/// directly: a `table`,
 /// a `walk`, a `format`. *A wider resolution can only make this rule quieter, and quiet is
 /// the safe direction for a refusal.*
 fn grundname_pruefen(
@@ -465,23 +466,23 @@ fn grundname_pruefen(
     absagen: &mut Absagen,
 ) {
     // **`ensures` has a reader, and a second one would be a second refusal for one fault.**
-    // `M109` resolves EVERY name of a postcondition, not just the place of a domain.
+    // `M109` in `m1.rs` resolves EVERY name of a postcondition, not just the domain's place.
     if st == Stellung::Nachbedingung {
         return;
     }
     // **A `traverse` is not checked here, and the reason is scope and not reach.** A domain
     // in a body may run over a `let` binding, and this pass carries no block scope -- it
     // would refuse the name the line above introduced. At a `traverse` with a `costs` line
-    // `K003` speaks instead: about the missing BOUND, not about the name. *That is the `W16`
+    // `K003` from `kosten.rs` speaks instead: about the missing BOUND, not the name. *`W16`
     // shape and it is named in `messung/DOMAENENSTELLUNGEN.md`, not closed here.*
     if st == Stellung::Durchlauf {
         return;
     }
     let Some(o) = ort_der_domaene(d) else { return };
     let n = &o.basis;
-    // **`Self` is the CARRIER question, and `M120` owns it.** Saying "is not declared here"
-    // about `Self` sends the reader off to declare a word the language does not let him
-    // declare -- the exact refusal `M120` was built to replace.
+    // **`Self` is the CARRIER question, and `M120` in `m1.rs` owns it.** Saying "is not
+    // declared here" about `Self` sends the reader off to declare a word the language does
+    // not let him declare -- the exact refusal `M120` was built to replace.
     if n.text == "Self" {
         return;
     }
@@ -491,13 +492,11 @@ fn grundname_pruefen(
     if s.u.suche_global(s.modul, &n.text).is_some() {
         return;
     }
-    if s.u.kandidaten_aufloesbar(s.modul, &n.text).iter().any(|k| {
-        s.u.typen.contains_key(k)
-            || s.u.konstanten.contains_key(k)
-            || s.u.tabellen.contains_key(k)
-            || s.u.walknamen.contains(k)
-            || s.u.formate.contains_key(k)
-    }) {
+    if s.u.nennt_typ_oder_konstante(s.modul, &n.text)
+        || s.u.nennt_tabelle(s.modul, &n.text).is_some()
+        || s.u.nennt_walk(s.modul, &n.text)
+        || s.u.nennt_kopf(s.modul, &n.text)
+    {
         return;
     }
     absagen.schiebe(
@@ -832,17 +831,13 @@ impl<'a> Sicht<'a> {
     }
 
     fn benannte_deklaration(&self, name: &str) -> Option<Ortsart> {
-        let kand = self.u.kandidaten_aufloesbar(self.modul, name);
-        if kand.iter().any(|k| self.u.tabellen.contains_key(k)) {
+        if self.u.nennt_tabelle(self.modul, name).is_some() {
             return Some(Ortsart::Tabelle);
         }
-        if kand.iter().any(|k| self.u.walknamen.contains(k)) {
+        if self.u.nennt_walk(self.modul, name) {
             return Some(Ortsart::Walk);
         }
-        if kand
-            .iter()
-            .any(|k| self.u.formate.contains_key(k) || self.u.geraete.contains_key(k))
-        {
+        if self.u.nennt_kopf(self.modul, name) {
             return Some(Ortsart::Kopf);
         }
         None

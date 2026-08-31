@@ -312,6 +312,46 @@ impl Umgebung {
         self.kandidaten(von, pfad)
     }
 
+    /// **Does this bare name stand for a `table`**, resolved from the using module? The
+    /// qualified name, or `None`.
+    ///
+    /// A declaration name is no value, so it is not in `globale` and `typ_von_ort` answers
+    /// `Unbekannt` for it -- and `forall s in slots of Kappenraum` names the table itself.
+    /// **Seventeen of the 53 corpus quantifier places are of that shape**
+    /// (`messung/DOMAENENSTELLUNGEN.md`).
+    ///
+    /// *It resolves through `kandidaten` and not through a direct lookup on a qualified
+    /// key*: that is the shape of the `M103` hole in `m1.rs` of 2026-08-17, and
+    /// `zaehle-karten.py` counts exactly this move.
+    pub fn nennt_tabelle(&self, von: &str, name: &str) -> Option<String> {
+        self.kandidaten(von, name)
+            .into_iter()
+            .find(|k| self.tabellen.contains_key(k))
+    }
+
+    /// Does this bare name stand for a `walk`? -- `walknamen`, not `walkschranken`: whether
+    /// the declaration EXISTS is a different question from how large its leaf set is.
+    pub fn nennt_walk(&self, von: &str, name: &str) -> bool {
+        self.kandidaten(von, name)
+            .iter()
+            .any(|k| self.walknamen.contains(k))
+    }
+
+    /// Does this bare name stand for a `format` or a `device` head?
+    pub fn nennt_kopf(&self, von: &str, name: &str) -> bool {
+        let kand = self.kandidaten(von, name);
+        kand.iter().any(|k| self.formate.contains_key(k))
+            || kand.iter().any(|k| self.geraete.contains_key(k))
+    }
+
+    /// Does this bare name stand for a declared type or a constant? -- **the question
+    /// `M109` asks in `m1.rs`**, lifted out of it so a second reader asks it the same way.
+    pub fn nennt_typ_oder_konstante(&self, von: &str, name: &str) -> bool {
+        let kand = self.kandidaten(von, name);
+        kand.iter().any(|k| self.typen.contains_key(k))
+            || kand.iter().any(|k| self.konstanten.contains_key(k))
+    }
+
     /// **Der `reason` dieses Namens, voll qualifiziert** (Stufe 7) -- oder `None`.
     pub fn grund(&self, von: &str, name: &str) -> Option<(String, &Vec<String>)> {
         self.kandidaten(von, name)

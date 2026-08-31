@@ -127,9 +127,10 @@ pub fn fremdverengungen(baum: &Programm) -> Vec<Stelle> {
 
 fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
     let umgebung = Umgebung::sammle(baum);
-    // **The PLACE of a quantifier domain** -- its name (`D017`), its type (`D018`) and the
-    // two edges of a chain (`D014`-`D016`). It hangs here because the environment already
-    // stands here -- a second `Umgebung::sammle` would be a second reader of one thing.
+    // **The PLACE of a quantifier domain**, and all five rules live in `domaene.rs`: its
+    // name (`D017`), its type (`D018`) and the two edges of a chain (`D014`-`D016`). The
+    // call hangs here because the environment already stands here -- a second
+    // `Umgebung::sammle` would be a second reader of one thing.
     //
     // *And it walks EVERY position, not just `ensures`*: `messung/DOMAENENSTELLUNGEN.md`
     // falsified each of the 53 corpus sites outside `ensures` one by one and got 51 silent
