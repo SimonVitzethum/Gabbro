@@ -320,3 +320,136 @@ diesen Zustand — der Mutationslauf, den der Absatz beschuldigt, hebt ihn wiede
 **Beide Übertragungen haben getragen:** `pruefe-beweise.sh` grün in 23,2 s über alle 15
 Theorien, kein `OHNE NACHWEIS`.
 
+---
+
+## 7 — Der GEGENSTAND der übrigen 44
+
+`pruefe-waechter.py:GEGENSTAND` deckt heute **fünf** Wächter — die vier `SCHWER`en und
+`zaehle-b3.py`. Für die anderen 44 gibt es keine gezählte Gesamtmenge, und die Schlusszeile
+nennt deshalb nur die Wächter, die etwas mitgenommen haben, das jemand beziffert hat.
+
+Hier sind die 44, **statisch erhoben** — Konstanten per `ast.parse`, Globs im Baum
+nachgezählt, **nichts gefahren und nichts gebaut**. Die Zahlen tragen ihren Nenner in der
+Spalte daneben (`W25`). Stichprobenweise selbst nachgerechnet und übereinstimmend:
+`beispiele/gift/*.gab` = 337, `beispiele/*.gab` = 57, `messung/*/*.gab` = 83, `crates/*/src/*.rs` = 47,
+`beweise/*.thy` = 15, offene Punkte in `TODO.md` = 267.
+
+| Wächter | Gegenstand | Nenner |
+|---|---|---|
+| `pruefe-abstieg.py` | 15 Pässe × 9 blocktragende Anweisungsarten = 135 Zellen | Konstante `PAESSE`, `unterbloecke` aus `lib.rs` |
+| `pruefe-aufloesung.py` | 38 Passdateien, 8 qualifizierte Karten | Glob `crates/gabbro-check/src/*.rs` |
+| `pruefe-englisch.py` | 47 Quell- + 44 Instrument- + 10 Testdateien | drei Globs |
+| `pruefe-grammatiktafel.py` | 219 EBNF-Terminale gegen 482 `.gab` | `SYNTAX.md`; Korpuslauf |
+| `pruefe-gruende.py` | 204 Absagen aus 37 Dateien | Glob ohne `saetze.rs` |
+| `pruefe-kennungen.py` | 252 Kennungen aus 48 Dateien | `crates/**/*.rs` ohne `tests/`, ohne `saetze.rs` |
+| `pruefe-klauseln.py` | 153 Feldnamen aus `ast.rs` gegen 40 Leserdateien | `felder()` |
+| `pruefe-konstrukte.py` | 23 Item-Arten × 38 Passdateien | `pub enum ItemArt` |
+| `pruefe-lean-beweis.sh` | 140 Übersetzungseinheiten → 140 Lean-Module | `beispiele/*.gab` + `messung/*/*.gab` |
+| `pruefe-lean-programm.sh` | **2** handgeschriebene `.gab`, 1 Export, 5+5 Sätze | Konstante `B="$MODEL/beispiel"` |
+| `pruefe-notation.py` | 8 Notationslücken + 6 Gegenproben = 14 Schnipsel | Konstanten `LUECKEN`, `ABSAGEN` |
+| `pruefe-p6-beweis.sh` | 140 Übersetzungseinheiten → 140 Isabelle-Theorien | zwei Globs |
+| `pruefe-reichweite.py` | 12 Rumpfarten × 12 Pässe = 144 Tafelzellen | Konstanten `RUEMPFE`, `PAESSE` |
+| `pruefe-saetze.py` | 252 Kennungen (48 Dateien) gegen die Sätze aus `gabbro paesse` | Glob + ein Werkzeuglauf |
+| `pruefe-schablonen.py` | 21 Schablonen / 31 Voraussetzungen (14 `Bewiesen`) | `schablonen.rs` — **nicht gedruckt**, s. u. |
+| `pruefe-sonden.sh` | **2** Sonden | Glob `sonden/sonde_*.c` |
+| `pruefe-syntax.sh` | 9 Dokumente + 1 `cargo build --tests` + 4 Giftschnipsel | Konstante `DOKUMENTE` |
+| `pruefe-todo.py` | 267 offene Punkte, dazu `README.md` und 8 Planetiketten | `^- \[ \]` in `TODO.md` |
+| `pruefe-uebersetzerfamilie.py` | 482 `.gab`, je mit `gcc` **und** `clang` | `rglob("*.gab")` ohne `target`/`.claude`/`.lake`/`arbeitsprotokoll` |
+| `pruefe-vergabe.py` | 287 Vergabestellen auf 244 Kennungen (46 Dateien) + 334 Giftproben | Regex `VERGABE`; `gift/*.gab` mit `-- erwartet:` |
+| `pruefe-waechter.py` | 50 Wächter, 53 Werkzeuge für die `git`-Prüfung | sechs Globs über `instrumente/` |
+| `pruefe-widerruf.py` | 12 Widerrufe gegen 150 Dateien | Konstante `WIDERRUFE` + Globsumme |
+| `pruefe-wortschatz.py` | 219 EBNF-Terminale in 154 Regeln | ` ```ebnf `-Blöcke von `SYNTAX.md` |
+| `pruefe-zahlen.py` | 78 bewachte Kennzahlen (+40 als unbewachbar gebucht, 5 Dateien) | Konstanten `EINTRAEGE`, `UNBEWACHBAR` |
+| `pruefe-zitate.py` | 47 Dateien / 287 Vergabestellen | Glob `crates/*/src/*.rs` |
+| `zaehle-absagen.py` | 136 `weigere(`-Stellen in `emit.rs`; mit `--korpus` dazu 482 `.gab` | Regex `\bweigere\s*\(` |
+| `zaehle-bereichspflichten.py` | 10 Fragmentblöcke / „791 Zeilen" | Konstante `KORPUS` — **791 ist ein Literal**, s. u. |
+| `zaehle-bloecke.py` | 267 offene Punkte in 7 Blöcken | Konstante `BLOECKE` |
+| `zaehle-empfindlichkeit.py` | 219 Terminale, gedeckt über einen Korpuslauf von 482 `.gab` | `SYNTAX.md` + Korpuslauf |
+| `zaehle-fallen.sh` | 100 Einträge | `fallen-klassifikation.tsv`, hart geprüft |
+| `zaehle-formate.py` | 479 Korpusdateien + `FRAGMENTE.md` | drei `**`-Globs |
+| `zaehle-fragmente.py` | 10 Fragmentdateien | `messung/fragmente/F*.gab`, hart geprüft (`!= 10 → ABBRUCH`) |
+| `zaehle-fremdpflichten.py` | 140 Dateien mit Zeugnis-Lauf | Konstante `MUSTER` |
+| `zaehle-fremdverengung.py` | 140 Dateien (337 Giftdateien ausdrücklich NICHT angesehen) | `MUSTER`, `GIFT` |
+| `zaehle-gifttreffer.py` | 337 Giftproben, je ein Prüferlauf | Glob `beispiele/gift/*.gab` |
+| `zaehle-karten.py` | 38 Passdateien, 8 Karten in `umgebung.rs` | Glob + Regex |
+| `zaehle-lean.py` | 140 Übersetzungseinheiten | zwei Globs |
+| `zaehle-narrow.py` | **FREMDER BAUM** — `~/Dokumente/SEL4Lake/SEL4Lake` | steht schon in `FREMDER_KORPUS` |
+| `zaehle-netz.py` | 243 Zeilen Gabbro in **1** Datei, 3 Vektoren, 1 Probe | Konstante `QUELLE` |
+| `zaehle-p6.py` | 140 Übersetzungseinheiten | zwei Globs |
+| `zaehle-pflichten.py` | 10 ` ```gabbro `-Blöcke × 9 Ereignisspalten | `FRAGMENTE.md`, hart geprüft |
+| `zaehle-theorien.py` | 15 Theorien, 3512 Zeilen, 101 Sätze | Glob `beweise/*.thy` |
+| `zaehle-traversierungen.py` | 71 Korpusdateien (67 Lehr- + 4 Echtkorpus); mit `--gift` dazu 337 | Konstanten `LEHRKORPUS`, `ECHTKORPUS` |
+| `zaehle-zeremonie.py` | 70 Korpusdateien (67 Lehr- + 3 Echtkorpus) | dieselben Konstanten |
+
+### Wo der Nenner FEHLT oder wackelt — sechs Befunde, kein Makel
+
+*Ein fehlender Nenner ist ein Befund.* Diese sechs sind das eigentliche Ergebnis der
+Zählung:
+
+1. **`pruefe-schablonen.py` druckt keinen Nenner, sondern nur Befunde.** Die gedruckte Zahl
+   (`len(luft)`, Marke 6) ist die Menge der *Funde*, nicht der angesehenen Fläche. Die
+   Gesamtmenge steht in keiner Ausgabezeile; sie entsteht erst im Bericht von
+   `gabbro schablonen`, also aus einem Bau. Statisch ist sie trotzdem ablesbar —
+   `schablonen.rs` führt 21 Schablonen mit 31 Voraussetzungen (14 `Bewiesen`).
+   **Ein W17-Befund: die Arbeitsmenge steht nicht neben dem Urteil.**
+2. **`zaehle-bereichspflichten.py`: die „791 Zeilen" sind eine BEHAUPTUNG.** Sie stehen als
+   Literal im `print`-String, nicht aus einer Messung. Die einzige gemessene Grundgesamtheit
+   (`ganz`) kommt aus `gabbro fragmente` — also erst aus einem `cargo run`. **Falle 80 in
+   Reinform: eine Zahl neben einem Korpus, die niemand über den Korpus erhoben hat.**
+3. **`pruefe-reichweite.py` und `pruefe-abstieg.py`** drucken nur Befunde
+   (`{ungelesen} ungelesen`, `{len(neu)} NEUE Paesse`). Ihr Gegenstand ist hart bezifferbar —
+   144 bzw. 135 Zellen aus je zwei Konstanten —, er steht nur nicht neben dem Urteil.
+   Wieder W17, und diesmal ist der Nenner sogar trivial.
+4. **`pruefe-syntax.sh`** nennt als einzige Zahl die 4 gefangenen Gifte seiner Sprechprobe.
+   Sein eigentlicher Gegenstand (9 Dokumente + ein `cargo build --tests`) wird nicht gezählt
+   gedruckt. Nenner vorhanden (`DOKUMENTE`), Zahl fehlt in der Ausgabe.
+5. **`pruefe-lean-programm.sh` hat den kleinsten Gegenstand von allen: 2.** Zwei
+   handgeschriebene `.gab` und ein Export. Das ist keine Lücke, sondern die ehrliche Größe —
+   aber es ist eine **2 und keine 140**, und der Unterschied gehört ins Register, damit
+   niemand ihn neben `pruefe-lean-beweis.sh` (140) für dasselbe hält.
+6. **`zaehle-narrow.py`** hat aus diesem Verzeichnis heraus keinen Nenner und kann keinen
+   haben — sein Baum liegt außerhalb. Er steht bereits in `FREMDER_KORPUS` und gehört, wie
+   `zaehle-b3.py`, aus jedem Bruch heraus.
+
+### Und ein siebter, der die Schlusszeile selbst betrifft
+
+`92 gefährliche Stellen` ist der einzige Nenner, der über *alle* Wächter geht — aber er geht
+nicht über alle. Nachgerechnet mit `teilmessungen()` über die Besetzung:
+
+| | |
+|---|---|
+| Besetzung | 49 |
+| gefährliche Stellen gesamt | 92 |
+| Wächter **mit** mindestens einer Stelle | **25** |
+| Wächter **ohne** eine einzige Stelle | **24** |
+| davon in `pruefe-emission.sh` allein | **45** (49 %) |
+
+**Die Hälfte der Besetzung trägt nichts zu diesem Nenner bei.** `91 von 92 Stellen` sagt
+damit nichts über 24 Wächter aus — und `45 von 92` sitzen in einem einzigen. Die Zahl ist
+richtig und ihr Nenner ist schmaler, als die Beschriftung nahelegt. *Genau die Sorte Satz,
+gegen die `W25` steht, diesmal in dem Satz, der `W25` zitiert.*
+
+---
+
+## 8 — Was ausdrücklich UNGEMESSEN bleibt
+
+* **`pruefe-luecken.py` hat nichts angesehen.** 15 Verdrehungen, 13 davon mit eigenem Bau,
+  dazu der Nullauf — **null davon gefahren.** Was er gefunden hätte, weiß niemand; die zwei
+  Befunde daneben sind eine **untere Schranke**, kein Stand.
+* **`zaehle-b3.py`:** 105 Dateien / 2536 Rümpfe der Caprock-Messbasis. Nicht angesehen, weil
+  der Baum auf `fisch` nicht liegt.
+* **`zaehle-narrow.py`:** der zweite Korpus, SEL4Lake. Dasselbe, und dazu **die eine der 92
+  Stellen**, die diesem Lauf zu `92 von 92` fehlte.
+* **Der Zweig der Schlusszeile ohne Lücke** ist weiterhin nur durch die Sprechprobe belegt.
+  Auf `ki-pc-fisch-101` ist er nicht erreichbar, solange zwei fremde Korpora im Register
+  stehen.
+* **Die Zahlen in Abschnitt 7 sind STATISCH erhoben**, nicht aus einem Lauf gelesen. Wo ein
+  Wächter seine Menge erst aus einem Bau bekommt (`pruefe-schablonen.py`,
+  `zaehle-bereichspflichten.py`), ist die Zahl aus der Quelle abgelesen und **nicht
+  gemessen** — sie ist als solche markiert.
+* **Ob dieselben 49 Wächter LOKAL grün sind, ist nicht gemessen.** Dieser Lauf fand auf
+  `fisch` statt; `pruefe-luecken.py` und `zaehle-b3.py` würden lokal aus einem
+  Nicht-Arbeitsbaum heraus andere Urteile liefern.
+* **Grün heißt nicht frei.** Was kein Wächter ansieht, fällt auch hier nicht auf — die
+  Abnahme verpflichtet, sie spricht nicht frei (W10).
+
