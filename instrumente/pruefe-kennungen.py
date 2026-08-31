@@ -52,17 +52,17 @@ def befunde(karte):
 
 
 def sprechprobe():
-    """**In beide Richtungen -- und die zweite nimmt ihren Massstab NICHT vom Gegenstand.**
+    """**Both directions -- and the second one does NOT take its yardstick from the subject.**
 
-    Der Waechter muss eine kuenstliche Doppelbelegung SEHEN und dieselbe Kennung ohne das
-    Gift DURCHLASSEN.
+    The guardian has to SEE an artificial double issue and to LET THROUGH the same
+    identifier once the poison is gone.
 
-    Bis zum 2026-08-31 lautete die Gegenrichtung *„die echte Lage meldet nichts"*, und das
-    ist genau die Falle, die `pruefe-todo.py` schon einmal bezahlt hat: eine WIRKLICHE
-    Doppelbelegung haette die Probe fallen lassen, der Waechter haette mit `2` abgebrochen
-    -- **und den Befund dabei verschluckt.** *Eine Probe, die ihren Massstab aus ihrem
-    Gegenstand nimmt, misst den Gegenstand nicht.* Gefragt wird darum nur nach `K001`: mit
-    Gift eine Doppelbelegung, ohne Gift keine -- unabhaengig davon, was sonst im Baum steht.
+    Until 2026-08-31 the counter-direction read *"the real state reports nothing"*, and that
+    is exactly the trap `pruefe-todo.py` has already paid for once: a REAL double issue would
+    have made the probe fall, the guardian would have aborted with `2` -- **and swallowed the
+    finding while doing so.** *A probe that takes its yardstick from its subject does not
+    measure the subject.* So the question is only about `K001`: a double issue with the
+    poison, none without it -- whatever else stands in the tree.
     """
     gift = befunde(erhebe(("namen.rs", '\nlet _ = "K001";\n')))
     sauber = befunde(erhebe())
@@ -75,15 +75,14 @@ def sprechprobe():
 
 
 def main():
-    # **DIE SPRECHPROBE FAEHRT IMMER** (2026-08-31). Bis heute stand sie hinter
-    # `--sprechprobe`, und `abnahme.py` ruft dieses Werkzeug ohne Argumente -- **der
-    # Regellauf hat also nie geprueft, ob dieser Waechter ueberhaupt rot werden kann.**
-    # Von allen 28 Waechtern war er der einzige mit einer Probe auf Bestellung; der Rest
-    # faehrt sie im Regellauf. *Eine Sprechprobe, die man anfordern muss, ist von keiner
-    # nicht zu unterscheiden* (R14).
+    # **THE SPEECH TEST RUNS EVERY TIME** (2026-08-31). Until today it sat behind a flag,
+    # and `abnahme.py` calls this tool with no arguments at all -- **so the regular run
+    # never once checked whether this guardian can go red.** Of all 28 guardians it was the
+    # only one whose probe had to be ordered; every other runs it unasked. *A speech test
+    # you have to request is indistinguishable from none* (R14).
     if not sprechprobe():
-        # 2, nicht 1: ein Waechter, der seine eigene Probe nicht besteht, hat NICHTS
-        # gemessen -- was er danach ueber die Kennungen sagt, ist keine Aussage ueber sie.
+        # 2, not 1: a guardian that fails its own probe has measured NOTHING -- what it
+        # says about the identifiers afterwards is not a statement about them.
         print("\n! Der Waechter misst nicht, was er behauptet. ABBRUCH.")
         return 2
     if "--sprechprobe" in sys.argv:

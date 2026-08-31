@@ -265,12 +265,14 @@ darunter.
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
       **`pruefe-zahlen.py` führt heute 76 Kennzahlen mit Befehl** und zählt daneben
-      **145 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
+      **180 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
-      **Und der Schritt von ~~146~~ auf 145 am 2026-08-31 ist KEINE Verbesserung, sondern eine
-      Kollision** — der Befund darunter nennt sie beim Namen. *Eine Marke, die aus dem falschen
-      Grund fällt, ist schlimmer als eine, die steht.*
+      **Die Zahl ist von ~~145~~ auf 180 GESTIEGEN, und das ist die Korrektur einer
+      Kollision und kein Rückschritt** *(2026-08-31)*: der Schlüssel zählte je WERT statt je ZELLE, und 35
+      Zellen galten als bewacht, weil irgendeine andere Zelle derselben Datei zufällig dieselbe
+      Ziffer trug. *Eine Marke, die aus dem falschen Grund fällt, ist schlimmer als eine, die
+      steht* — von 76 Registereinträgen zeigen **9** wirklich auf eine solche Zelle.
 
 - [ ] **`F05`s letzte Absage ist EINE Ergänzung weit von zu — und die Ergänzung steht
       trotzdem nicht da, weil `exit` ein Name ist, den C vergeben hat** *(ausgemessen
@@ -334,38 +336,6 @@ darunter.
       wirken statt absolut, damit „unter mir" und „neben mir" unterscheidbar bleiben.
       *Dieselbe Klasse wie `W16`, und diesmal hat die Heilung eines W16-Befunds den nächsten
       erzeugt.*
-
-- [ ] **Die Reichweite von `pruefe-zahlen.py` zählt je WERT und nicht je ZELLE — und darum
-      ist sie heute aus dem falschen Grund gefallen** *(gefunden 2026-08-31 beim Buchen von
-      `H = 4`)*. Die Prüfung steht in `instrumente/pruefe-zahlen.py`:1084:
-
-      ```python
-      if z not in bewacht.get(datei, set()):
-      ```
-
-      `bewacht` ist eine Menge von ZAHLEN je Datei. Eine fettgedruckte Tabellenzelle gilt
-      damit als bewacht, sobald **irgendeine andere** Zelle derselben Datei denselben Wert
-      trägt und einen Befehl hat. Gemessen: `H` fiel heute von 5 auf 4, zwei
-      `PLAN.md`-Registerzellen wurden dadurch zur fettgedruckten Vier — und die Zeile, deren
-      erste Zelle eine fettgedruckte Vier ist und deren zweite `Genericity` heißt
-      (*„without it every table needs its own traverse"*), fiel aus der Liste, **ohne dass sie
-      einen Befehl bekommen hätte.** Die Marke sank von 146 auf 145.
-
-      > *Und dieser Posten hat es beim Schreiben gleich noch einmal vorgeführt:* die erste
-      > Fassung zitierte jene Zeile WÖRTLICH, mit ihren Strichen — und der Zähler las das
-      > Zitat als eigene Tabellenzelle und meldete wieder 146. **Ein Register, das seine
-      > eigene Arbeitsliste mitzählt.**
-
-      *Dieselbe Klasse wie `W16`: ein Werkzeug, das eine Kollision für eine Messung hält.*
-      Die Gegenrichtung ist genauso wahr und schlimmer — eine Zelle, die einen Befehl
-      BEKOMMT, senkt die Zahl nicht, wenn ihr Wert in derselben Datei noch einmal vorkommt.
-
-      Der Schlüssel müsste die ZELLE sein (Datei, Zeile, Fundstelle), und dazu müsste jeder
-      Registereintrag seinen Ort nennen statt nur sein Muster — **das ist ein Umbau des
-      Registers und keine Zeile**, darum steht er hier und nicht im Diff. Bis dahin ist
-      `145` eine untere Schranke: der ungeschminkte Bestand sind **189** fettgedruckte
-      Zahlen in Tabellenzellen über den fünf bewachten Dateien, gegen 76 Kennzahlen mit
-      Befehl.
 
 - [ ] **Zwei Blicke auf dieselbe Karte gingen auseinander, und nur einer hatte einen Test**
       *(gefunden 2026-08-17 beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die

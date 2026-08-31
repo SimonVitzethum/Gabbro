@@ -941,6 +941,51 @@ def lauf(befehl):
 ZWISCHEN = {}
 
 
+def ort_von(text, pos):
+    """`(line, column)` of a match -- **the PLACE, not the VALUE.**
+
+    Until 2026-08-31 `bewacht` was a set of NUMBERS per file, so a bold table cell counted
+    as guarded the moment ANY other cell of the same file happened to carry the same value
+    and have a command. Measured that day: `H` fell from 5 to 4, two register cells in
+    `PLAN.md` became a bold four -- and a completely unrelated row dropped out of the
+    unguarded list, **without ever having been given a command.** The mark sank from 146 to
+    145. *A mark that falls through a collision does not measure what it says* -- and the
+    other direction is worse: a cell that DOES get a command fails to lower the count if its
+    value appears once more in the same file.
+    """
+    return text.count("\n", 0, pos), pos - (text.rfind("\n", 0, pos) + 1)
+
+
+def zellen(text):
+    """Every bold table cell as `(place, value, line)` -- **block quotes excluded.**
+
+    Two things stand here, and both were measured on 2026-08-31:
+
+    * The key is the PLACE (`ort_von`), not the value. Otherwise a cell counts as guarded
+      the moment any other cell of the same file happens to carry the same digit -- and the
+      mark falls through a collision instead of through work.
+    * **A QUOTATION of a table row is not a table cell.** The entry that wrote the collision
+      down repeated it while writing: its first draft quoted the colliding row verbatim,
+      pipes and all, and the counter read the quotation as a cell of its own. *A register
+      that counts its own work list.* The numbers inside a block quote belong to whoever is
+      being quoted.
+    """
+    aus = []
+    for nr, zeile in enumerate(text.splitlines()):
+        if zeile.lstrip().startswith(">"):
+            continue
+        for m in KENNZAHL.finditer(zeile):
+            aus.append(((nr, m.start(1)), m.group(1).replace(" ", "").replace("\u00a0", ""),
+                        zeile))
+    return aus
+
+
+def zitierte_zellen(text):
+    """How many bold cells stand inside block quotes -- the number is PRINTED."""
+    return sum(len(KENNZAHL.findall(z)) for z in text.splitlines()
+               if z.lstrip().startswith(">"))
+
+
 def pruefe_eintraege(verstellen=None):
     """Alle Eintraege gegen ihren Befehl.
 
@@ -983,7 +1028,9 @@ def pruefe_eintraege(verstellen=None):
         geprueft += 1
         im_text = treffer.group(1).replace(" ", "").replace(" ", "")
         aus_lauf = m2.group(1)
-        bewacht.setdefault(datei, set()).add(im_text)
+        # **The key carries the PLACE** (see `ort_von`). The value alone let a
+        # foreign cell with the same digit pass as guarded.
+        bewacht.setdefault(datei, set()).add(ort_von(text, treffer.start(1)))
         if im_text != aus_lauf:
             befunde.append(f"{datei}: „{was}\" steht als {im_text}, der Lauf sagt {aus_lauf}")
     return befunde, geprueft, bewacht, ausgesetzt
@@ -1050,6 +1097,33 @@ def main():
                                    else "es steht ein toter Grund im Register -- siehe unten"))
     if not tot_biss:
         return 1
+    # **And the key has to carry the PLACE, not the VALUE** (2026-08-31). Two cells with
+    # the same digit at two places are TWO cells, and a guarded one must not cover the
+    # other. Until today it did: `H` fell from 5 to 4, two register cells in `PLAN.md`
+    # became a bold four, and a completely unrelated row dropped out of the unguarded list
+    # -- **without ever having been given a command.**
+    #
+    # Three directions over invented text, and the second is the one that counts: the OLD
+    # key has to be blind at the very same spot. Otherwise this probe measures nothing.
+    probe_text = ("| **4** | Genericity |\n"
+                  "| **4** | eine ganz andere Zeile |\n"
+                  "> | **4** | zitiert, also fremd |\n")
+    p_zellen = zellen(probe_text)
+    bewacht_probe = {p_zellen[0][0]} if p_zellen else set()
+    rest = [c for c in p_zellen if c[0] not in bewacht_probe]
+    ort_ok = len(p_zellen) == 2 and len(rest) == 1 and rest[0][1] == "4"
+    alt_blind = not [c for c in p_zellen if c[1] not in {p_zellen[0][1]}] if p_zellen else False
+    zitat_ok = zitierte_zellen(probe_text) == 1 and len(p_zellen) == 2
+    print("  Ortsschluessel: " + ("ok (zwei Vieren an zwei Stellen sind ZWEI Zellen)"
+                                  if ort_ok else "GESCHEITERT -- eine Kollision deckt zu"))
+    print("  Gegenprobe:     " + ("ok (der alte Schluessel WAERE an derselben Stelle blind)"
+                                  if alt_blind else "GESCHEITERT -- die Probe misst nichts"))
+    print("  Blockzitat:     " + ("ok (eine zitierte Zeile ist keine Tabellenzelle)"
+                                  if zitat_ok else "GESCHEITERT -- das Zitat zaehlt mit"))
+    if not (ort_ok and alt_blind and zitat_ok):
+        # 2, not 1: a fallen speech test has measured NOTHING.
+        print("\n! Der Waechter misst nicht, was er behauptet. ABBRUCH.")
+        return 2
     stumm = []
     for nr in range(len(EINTRAEGE)):
         b, _, _, _ = pruefe_eintraege(verstellen=nr)
@@ -1077,17 +1151,18 @@ def main():
 
     # Die zweite Haelfte: wie weit reicht dieses Register?
     offen = []
+    zitiert = 0
     for datei in BEWACHTE_DATEIEN:
         p = W / datei
         if not p.is_file():
             continue
-        for zeile in p.read_text(encoding="utf-8").splitlines():
-            for m in KENNZAHL.finditer(zeile):
-                z = m.group(1).replace(" ", "").replace(" ", "")
-                if z not in bewacht.get(datei, set()):
-                    g = unbewachbar_grund(datei, zeile)
-                    offen.append((datei, z, zeile.strip()[:70],
-                                  bool(TRAEGT.search(zeile)), g))
+        roh = p.read_text(encoding="utf-8")
+        zitiert += zitierte_zellen(roh)
+        for ort, z, zeile in zellen(roh):
+            if ort not in bewacht.get(datei, set()):
+                g = unbewachbar_grund(datei, zeile)
+                offen.append((datei, z, zeile.strip()[:70],
+                              bool(TRAEGT.search(zeile)), g))
     print()
     print("== Reichweite: was dieses Register NICHT bewacht ==")
     traegt = [o for o in offen if o[3]]
@@ -1097,6 +1172,9 @@ def main():
           f"Tabellenzellen ohne einen")
     print(f"  davon TRAGEND (Zusage oder Vergleich): {len(traegt)}   "
           f"Zwischenstand: {len(offen) - len(traegt)}")
+    print(f"  {zitiert} weitere stehen in BLOCKZITATEN und zaehlen nicht mit -- die Zahlen")
+    print("  eines Zitats gehoeren dem Zitierten. *Ein Register, das seine eigene")
+    print("  Arbeitsliste mitzaehlt, misst sich selbst.*")
     # **The load-bearing bucket, split once more** (2026-08-30). A load-bearing figure without
     # a command is not debt by that fact alone: most of them are a dated record that must not
     # get one. *What remains is the work list, and it is a great deal shorter.*

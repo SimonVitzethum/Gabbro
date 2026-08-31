@@ -270,7 +270,7 @@ def main():
                + f" unter {QUELLE.relative_to(WURZEL)}")
     arten, zeilen, neu, gebucht, veraltet, doppelte_gesamt = messe()
     # **And an empty population is a refusal too** (W17): every readable pass appends at
-    # least one line, so zero lines means no pass was read at all -- `keine neue Luecke`
+    # least one line, so zero lines means no pass was read at all, and a clean verdict
     # over nothing is a positive verdict about nothing.
     if not arten or not zeilen:
         absage(f"{len(arten)} blocktragende Arten, {len(zeilen)} gemessene Paesse -- "
