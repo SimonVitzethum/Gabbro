@@ -10,9 +10,9 @@
 -- M1 wurde damals nachgezogen, die sechs anderen Pässe nicht.*
 module gift::boese {
 
-static mut G : u32 = 0;
+pub static mut G : u32 = 0;
 
-impl fn hilf(x : u32) -> u32
+pub impl fn hilf(x : u32) -> u32
     effects { writes G, masks IRQ }
     costs   <= 900 ops
 { G = x; return 0; }
@@ -29,7 +29,7 @@ impl fn hilf(x : u32) -> u32
 -- Der QUALIFIZIERTE Ruf trifft den fremden Nachbarn -- und der maskiert und schreibt.
 impl fn ruft(x : u32) -> u32
     effects { pure }
-    costs   <= 8 ops
+    costs   <= 1000 ops
 { return gift::boese::hilf(x); }
 
 }

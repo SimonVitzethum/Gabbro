@@ -21,7 +21,7 @@ impl fn raeume(t : ptr<normal, r> T, s : index into T)
     effects { reads t.slots }
     costs   <= 64 ops
 {
-    traverse v over descendants of t.slots[s] by consuming touches reads t.slots { }
+    traverse v over descendants of t.slots[s] by consuming touches consumes t.slots, reads t.slots { }
 }
 
 }

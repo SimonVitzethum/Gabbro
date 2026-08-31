@@ -24,6 +24,12 @@ extern fn mmu_an(p : Phase) -> Phase
     advances roh -> mmu
     effects  { consumes p, writes mmu_an_zahl } costs <= 4096 ops;
 
+assume irgendwas
+    "Irgendetwas ausserhalb dieser Einheit bewegt sich bei jedem Durchlauf."
+    falsifier sonde_irgendwas;
+
+extern fn aufgeben() -> never effects { diverges };
+
 impl fn hochlauf(p : Phase)
     advances roh -> mmu
     effects { consumes p, writes mmu_an_zahl, locks L }

@@ -38,7 +38,11 @@ lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
 
 group Zustellung over { Endpunkte, Faeden };
 
-extern fn pruefe_platz(e : index into Endpunkte) -> u32
+reason PlatzFehler {
+    Leer = 1 "die Quelle hat nichts geliefert"
+    exhaustive
+}
+extern fn pruefe_platz(e : index into Endpunkte) -> u32 or PlatzFehler
     effects { reads Endpunkte.slots } costs <= 8 ops;
 -- **Der Sonst-Zweig enthaelt KEIN `return`** -- sonst faengt die `return`-Regel den Fall und
 -- die Probe prueft die falsche Haelfte. Er divergiert, und auch das ist ein Weg hinaus:
