@@ -135,12 +135,21 @@ cargo test                     # alle Sammlungen gruen
 ./instrumente/abnahme.py       # ALLE Waechter, je Waechter ein Urteil
 ```
 
-`abnahme.py` liest das **Verzeichnis** (`instrumente/pruefe-*`, `mutiere-*`) und fährt jeden
-Wächter. Je Wächter steht da: **grün · ROT · NICHT FAHRBAR · ausgelassen**. Daneben steht die
-**Arbeitsmenge** — wie viele gefahren wurden —, und *ein Lauf, der null fährt, ist rot* (W17).
+`abnahme.py` liest das **Verzeichnis** (`instrumente/pruefe-*`, `mutiere-*`, `zaehle-*`) und
+fährt jeden Wächter. Je Wächter steht da: **grün · ROT · TEILMESSUNG · ABBRUCH · NICHT
+FAHRBAR · ausgelassen**. Daneben steht die **Arbeitsmenge** — wie viele gefahren wurden —,
+und *ein Lauf, der null fährt, ist rot* (W17).
 `--voll` nimmt die vier teuren dazu (`mutiere-pruefer.py`, `pruefe-beweise.sh`,
 `pruefe-emission.sh`, `pruefe-luecken.py`); der Schnellauf **nennt sie, statt sie
 wegzulassen**, und fährt von `mutiere-pruefer.py` die kostenlose Hälfte `--anker` mit.
+
+> **Und seit dem 2026-08-31 steht die Arbeitsmenge nicht mehr allein da.** Sie zählt
+> Wächter, und der Baum ist nicht in Wächtern gemessen: der Schnelllauf fuhr *45 von 49
+> Wächtern* und sah dabei **höchstens 45 der 92 gefährlichen Stellen** — 45 davon liegen in
+> `pruefe-emission.sh` allein. Die zweite Zeile nennt jetzt beides, und jeder ausgelassene
+> Wächter steht mit seinem Gegenstand daneben (101 Übersetzungseinheiten, 372 Mutationen,
+> 15 Verdrehungen, 15 Theorien). *Grün mit benannter Lücke bleibt grün — es sagt nur, wie
+> viel dieses Grün abdeckt.* Ausgeschrieben in `messung/RUECKLAUFWERTE.md`.
 
 > **Bis zum 2026-08-30 stand hier eine Liste mit elf Namen, und es gab 26 Wächter.** Sieben
 > standen in KEINER Liste und in keinem Sammellauf — `pruefe-abstieg.py`,

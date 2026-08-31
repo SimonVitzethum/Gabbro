@@ -244,7 +244,10 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
 * **Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**, und er
   steht mit Grund da: `zaehle-b3.py` (`NICHT FAHRBAR` — die Caprock-Messbasis fehlt im
   Arbeitsbaum). **48 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
-  schlichte Abnahme auslässt, sind einzeln nachgefahren.
+  schlichte Abnahme auslässt, sind einzeln nachgefahren. *Nachgemessen am selben Abend:
+  die 48 gelten nur im ARBEITSBAUM* — `/home/simon/Dokumente/caprock-messbasis` existiert,
+  und gegen diesen Pfad läuft `zaehle-b3.py` grün (105 Dateien, 2536 Rümpfe, 0 Abbrüche).
+  Der relative Pfad zeigt aus einem `git worktree` heraus daneben. Siehe unten.
 * **Die Schalenregel ist großzügig, und das ist geprüft und nicht gehofft**: ein `exit` in
   einem Funktionsrumpf gilt als gedeckt, weil der Rumpf aus dem Hauptlauf gerufen wird.
   Nachgesehen wurde, ob eine solche Funktion **vor** der Falle gerufen wird — in keinem der
@@ -509,11 +512,12 @@ Bauart, gegen die dieser Abschnitt steht — also ist sie hier nicht stehen gebl
 | `pruefe-emission.sh` | einzeln gefahren, `rc=0`, kein `ABGESCHNITTEN` in 282 Zeilen | **nein** |
 | `pruefe-beweise.sh` | einzeln nachgefahren | **nein** |
 | `pruefe-luecken.py` | einzeln nachgefahren: `ALL PASS`, *alle Quellen byteidentisch zurück* | **nein** |
-| `zaehle-b3.py` | `NICHT FAHRBAR` — die Caprock-Messbasis fehlt im Arbeitsbaum | *offen* |
+| `zaehle-b3.py` | `NICHT FAHRBAR` im Arbeitsbaum; gegen `/home/simon/Dokumente/caprock-messbasis` **gefahren, `rc=0`** | **nein** |
 
-**Also: 48 von 49 gemessen, null davon abgeschnitten.** Der eine Rest hat gar nichts
-gemessen und steht mit Grund da. Das ist keine Zusage für morgen — es ist der Stand von
-heute abend.
+**Also: 49 von 49 gemessen, null davon abgeschnitten** — ~~48 von 49~~, denn der eine
+Rest ist am selben Abend gegen den Pfad nachgefahren worden, an dem seine Messbasis
+wirklich liegt. Im Arbeitsbaum bleibt er `NICHT FAHRBAR`, und das ist eine Aussage über
+den Arbeitsbaum. Das ist keine Zusage für morgen — es ist der Stand von heute abend.
 
 **Die Zahl steht in der Kopfzeile, auch wenn sie null ist.** Das ist kein Schmuck: eine
 gedruckte Null sagt, dass gemessen wurde; eine fehlende Zahl sagt gar nichts (W17). Ist sie
@@ -643,6 +647,105 @@ grün** — genau einmal gefahren (17:34), und da endete er in einer Teilmessung
 > *Die Auslassung ist also keine Abkürzung eines Laufs, den man sonst hätte:* der volle Lauf
 > über die heutige Besetzung existiert als **ein** Datenpunkt. Was der Schnelllauf nicht
 > sieht, sieht heute niemand — und die Kopfzeile sagte es nicht.
+
+
+### Die Heilung: die Schlusszeile nennt jetzt ihren Gegenstand
+
+*2026-08-31 abends. `pruefe-waechter.py:GEGENSTAND` (neu) und `abnahme.py:gegenstand()`.*
+
+Die Kopfzeile hat eine zweite bekommen, und die zweite hat den anderen Nenner:
+
+```
+== Arbeitsmenge: 45 von 49 Waechtern haben GEMESSEN -- 44 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 1 nicht fahrbar, 3 ausgelassen
+== Und ihr GEGENSTAND: hoechstens 45 von 92 gefaehrlichen Stellen besucht -- 49 % ==
+   47 davon stehen in Waechtern, die dieser Lauf nicht gefahren hat -- und was
+   mit ihnen ungemessen bleibt:
+     pruefe-emission.sh    45 Stellen   101 von 101 Uebersetzungseinheiten in Stufe 9, …
+     pruefe-beweise.sh      2 Stellen   15 Isabelle-Theorien (`beweise/ROOT`)
+     pruefe-luecken.py      0 Stellen   15 Verdrehungen, 13 davon mit eigenem Bau
+     zaehle-b3.py           0 Stellen   105 Dateien / 2536 Ruempfe der Caprock-Messbasis
+```
+
+**Drei Entscheidungen darin, und jede hat einen Grund:**
+
+1. **Die Einheit ist die, die dieser Ordner ohnehin führt.** `gegenstand()` ruft
+   `pruefe-waechter.teilmessungen()` — dieselbe Funktion, derselbe Code, nur je Wächter
+   statt aufsummiert. *Kein zweites Register über derselben Sache* (W7): ein Wächter, der
+   eine gefährliche Stelle dazubekommt, bekommt sie in beiden Zahlen zugleich.
+2. **`höchstens`, und das Wort steht in der Zeile.** Ein halb gefahrener Wächter
+   (`mutiere-pruefer.py --anker`) und eine `TEILMESSUNG` zählen hier als *gesehen*, obwohl
+   beide nur einen Teil ihrer Stellen erreicht haben. Die Schranke irrt damit **nach oben** —
+   die Richtung, in der eine Schranke irren darf.
+3. **Was keine Stellen trägt, wird trotzdem genannt.** `zaehle-b3.py` hat **null**
+   gefährliche Stellen und 105 fremde Dateien als Gegenstand: in der Einheit, in der der
+   Bruch gerechnet wird, kostet sein Fehlen *nichts*. Er stünde nirgends. Also läuft neben
+   dem Bruch eine zweite Liste — jeder nicht gemessene Wächter mit einem Eintrag in
+   `GEGENSTAND` wird gedruckt, mit `0 Stellen` und seinem Gegenstand daneben. *Wer nur den
+   Bruch druckt, verliert genau den Wächter, dessen Ausfall im Bruch keinen Ort hat.*
+
+**Und die Gegenrichtung, weil ein Schnelllauf, der nie mehr grün aussieht, keine Hilfe ist:**
+das Wort bleibt `GRUEN` und der Rücklaufwert bleibt `0`. Was sich ändert, ist die Zeile:
+
+```
+  ABNAHME GRUEN MIT BENANNTER LUECKE: 45 von 49 Waechtern,
+  und hoechstens 45 von 92 gefaehrlichen Stellen -- 49 %. **Gruen heisst hier:
+  was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist.
+```
+
+Ein voller Lauf ohne Lücke bekommt die andere Hälfte: *„und 92 von 92 gefährlichen Stellen.
+**Kein Wort davon ist ausgelassen.**"* — **Grün mit benannter Lücke und Grün sind zwei
+Sätze, und man sieht ihnen den Unterschied an.**
+
+#### Die Sprechprobe dazu — drei Richtungen, und auf ihrem EIGENEN Träger
+
+`abnahme.py:sprechprobe()` legt für den Gegenstandszähler ein **eigenes** Wegwerfverzeichnis
+an, nicht das der anderen zwölf Proben. Der Grund ist der Fund vom selben Abend: die
+bestehenden Proben behaupten `len(erg) == 5`, und ein sechster erfundener Wächter hätte sie
+umgeworfen. *Eine Probe, die den Lauf verändert, in dem sie steckt, misst diesen Lauf und
+nicht ihren Gegenstand.*
+
+| Richtung | erfundener Fall | verlangt |
+|---|---|---|
+| gezählt wird der Gegenstand | `pruefe-tief.sh` (2 gefährliche Stellen), `pruefe-flach.sh` (0), beide gefahren | `2 von 2`, keine Lücke |
+| eine Auslassung nimmt ihren Gegenstand MIT | `pruefe-tief.sh` ausgelassen | `0 von 2`, und er wird benannt |
+| eine Auslassung OHNE Gegenstand öffnet KEINE | `pruefe-flach.sh` ausgelassen | `2 von 2`, keine Lücke |
+
+Die dritte ist die, die die Zahl ehrlich hält: *eine Lückenmeldung, die bei jeder Auslassung
+anschlägt, misst die Auslassung und nicht den Gegenstand* — und dann liest sich jeder
+Schnelllauf als blind, was so falsch ist wie die alte Null. **Sechzehn Proben laufen jetzt
+vor jeder Abnahme, dreizehn alte und drei neue.**
+
+### `zaehle-b3.py`: richtig eingeordnet — und „48 von 49" gilt nur im ARBEITSBAUM
+
+*Gemessen 2026-08-31 abends.* Drei Fragen, drei Antworten:
+
+* **Steht er sauber in `FREMDER_KORPUS`?** Ja. Der Eintrag nennt Pfad und Gegenstand, sein
+  Kommentar nennt sogar den Sonderfall: *„`../caprock-messbasis` ist zusätzlich relativ: in
+  einem `git worktree` zeigt der Pfad neben den Arbeitsbaum statt neben die
+  Hauptauscheckung."* Er wird **nicht grün gebucht**, sondern als nicht gemessen gezählt.
+* **Erscheint seine Zahl in der Schlusszeile?** Jetzt ja — vorher nur als `1 nicht fahrbar`,
+  ohne dass irgendwo stand, was damit ungemessen bleibt. Er ist der Grund für die zweite
+  Liste oben.
+* **Und stimmt der Grund?** *Nur zur Hälfte.* Die Messbasis liegt da:
+  `/home/simon/Dokumente/caprock-messbasis` **existiert**. Gefahren gegen genau diesen Pfad,
+  aus diesem Arbeitsbaum heraus:
+
+```
+  ./instrumente/zaehle-b3.py /home/simon/Dokumente/caprock-messbasis   ->  rc=0
+  Dateien 105 | Ruempfe 2536 | mit Schleife 462 | Abbrueche 0
+  BUCHSTABE (Na+Nb1) 12 Ruempfe · BERICHTET (+Nb2) 26 Ruempfe · 0,953 %
+```
+
+> **`48 von 49` ist damit eine Aussage über den ARBEITSBAUM, nicht über den Baum.** Auf der
+> Hauptauscheckung löst `../caprock-messbasis` richtig auf, und die Abnahme fährt **49 von
+> 49**. Ein Wächter, dessen Urteil davon abhängt, aus welcher Auscheckung er läuft, ist
+> dieselbe Klasse wie einer, dessen Urteil am Rechner hängt — nur eine Ebene kleiner.
+
+**Gebucht, nicht geheilt**, und mit dem Grund: die Heilung heißt, den Pfad gegen die
+*Hauptauscheckung* aufzulösen (`git rev-parse --git-common-dir`), und damit läse `korpus_fehlt`
+`git` — was den Riegel aus derselben Datei verlangt (*„wer `git` liest, liest den
+Rücklaufwert"*). Das ist ein eigener Posten und keine Nebenbei-Zeile.
 
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister
