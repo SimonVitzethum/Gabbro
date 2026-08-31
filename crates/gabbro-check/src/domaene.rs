@@ -437,7 +437,8 @@ fn domaene_pruefen(
 /// **`D019` -- the FIELD names in the suffix of the place resolve.**
 ///
 /// `messung/DOMAENENSTELLUNGEN.md` §7 carried the cell as unchecked, and the reason it gave
-/// was read off the source: *"`M109` descends only into `[index]` suffixes, not into
+/// was read off the source -- `M109` lives in `m1.rs`: *"`M109` descends only into
+/// `[index]` suffixes, not into
 /// `.field`; `D017` reads the BASE name. `D018` catches the case by half: if the field name
 /// does not resolve, the type of the whole place is `Unbekannt`, and then it stays silent
 /// too."*
@@ -449,7 +450,8 @@ fn domaene_pruefen(
 /// …: 8 items, 0 errors, 0 hints
 /// ```
 ///
-/// **Not one of them**, and `ensures` among them -- so `M109` does not read it either, and
+/// **Not one of them**, and `ensures` among them -- so `M109` in `m1.rs` does not read it
+/// either, and
 /// the §7 cell was too kind to the checker. The control in the same run: falsifying the
 /// BASE name (`elems of zzznix.plaetze`) does fall, at `M109`. *The base is read and the
 /// field is not.*
