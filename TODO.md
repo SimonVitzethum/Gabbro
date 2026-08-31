@@ -272,6 +272,46 @@ darunter.
       Kollision** — der Befund darunter nennt sie beim Namen. *Eine Marke, die aus dem falschen
       Grund fällt, ist schlimmer als eine, die steht.*
 
+- [ ] **`F05`s letzte Absage ist EINE Ergänzung weit von zu — und die Ergänzung steht
+      trotzdem nicht da, weil `exit` ein Name ist, den C vergeben hat** *(ausgemessen
+      2026-08-31)*. Fünf `extern fn`-Zeilen (`decode_op`, `request_flush`, `serve_rw`,
+      `serve_scan`, `bump_served`) sind die ganze fehlende Ergänzung: Namen, die der
+      eingefrorene Dienstrumpf ruft und nicht nennt. Danach **31 Items, 0 Fehler, 0 Hinweise,
+      199 Zeilen C** — der `C001` bei `match decode_op(m.op)` ist weg, und sein Satz hatte
+      recht: *„A call whose return type IS a `tagged type` lowers."*
+
+      **`cc -std=c11 -O0 -Wall -Wextra -Werror` nimmt das C nicht an, und die drei Gründe
+      sind Befunde und keine Nacharbeit:**
+
+      1. `_Noreturn void exit(void);` — *conflicting types for built-in function `exit`;
+         expected `void(int)`*. **Gabbro kennt die reservierten Namen von C nicht.** Ein
+         Nutzer, der seine Funktion `exit`, `abort`, `free` oder `read` nennt, erfährt es vom
+         fremden Übersetzer. Für `F05` ist es eine Wand: `exit()` steht im EINGEFRORENEN
+         Ausschnitt, und umbenennen wäre ein Umschreiben. *Die Heilung ist eine neue
+         Prüferabsage — „dieser Name ist in C vergeben" —, und die kostet eine Kennung, zwei
+         Giftproben und eine Mutation.*
+      2. `Op _m2 = decode_op(m->op);` — *invalid type argument of `->` (have `uint64_t`)*.
+         Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und **kein Pass sagt
+         etwas**: `M1` führt `m.op` unter den 20 % ohne Typ. *Wörtlich dieselbe Klasse wie
+         `F06`s `elems of` — der fremde Übersetzer sagt, was der Prüfer wusste und nicht
+         aussprach.* Ein Feldzugriff auf einen Skalar gehört in `M1` oder in den Namenspass.
+         (Korpusseitig heilbar: ein ergänzter Träger `type Nachricht = { op : u64, }` wie
+         `IrqMarke` in `F06`.)
+      3. `unused variable 'r2'` — `let r2 = request_flush(transport, pool);` steht so im
+         EINGEFRORENEN Ausschnitt und wird nie gelesen. Der Erzeuger schreibt für einen
+         ungenutzten Parameter schon `(void)art;`; für eine ungenutzte `let`-Bindung nicht.
+         **Eine Zeile im Erzeuger.**
+
+      > **Warum die fünf Zeilen nicht im Baum stehen.** `pruefe-emission.sh` Stufe 9 verlangt
+      > *„jede Datei, die emittiert, muss auch übersetzen"*, und ihre Ausnahmeliste ist seit
+      > dem 2026-08-20 LEER — der Ertrag jenes Tages, und der Wächter meldet abgelaufene
+      > Einträge selbst. **Die Ergänzung hätte diese Marke von 0 auf 1 gehoben.** *Eine Zelle
+      > zu schließen, indem man die erste benannte Ausnahme seit elf Tagen einträgt, ist kein
+      > Tausch, den eine Bahn allein macht.* Gemessen ist er, benannt ist er; entschieden
+      > nicht.
+
+      `H` bleibt darum bei 4.
+
 - [ ] **`zaehle-absagen.py` schließt im Arbeitsbaum eines AGENTEN den ganzen Korpus aus — und
       `pruefe-grammatiktafel.py` bricht dann ab, statt zu messen** *(gemessen 2026-08-31)*.
       Der Filter in `instrumente/zaehle-absagen.py`:379–381 überspringt jeden Pfad, der
