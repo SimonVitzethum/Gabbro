@@ -349,12 +349,68 @@ gebaut ist.* Drei Änderungen je Wächter, keine davon je Stufenrumpf: die Quell
 `EXIT`-Falle auf `abschnitt_ende`; ein bloßes `import abschnitt` oder `. abschnitt.sh` zählt
 nicht. *Eine Regel, die die Einfuhr zählt, zählt die Absicht.*
 
-> **Und was die Deckungszahl NICHT sagt: sie ist je DATEI gemessen, nicht je Stelle.** Eine
-> Falle, die auf halber Höhe der Datei scharf wird, deckt die Ausgänge darüber nicht — und
-> das Sieb sieht es nicht. Nachgesehen wurde deshalb von Hand: `pruefe-syntax.sh` und
+> ~~**Und was die Deckungszahl NICHT sagt: sie ist je DATEI gemessen, nicht je Stelle.**~~
+> Eine Falle, die auf halber Höhe der Datei scharf wird, deckt die Ausgänge darüber nicht —
+> und das Sieb sah es nicht. Nachgesehen wurde deshalb von Hand: `pruefe-syntax.sh` und
 > `pruefe-sonden.sh` hatten je einen Ausgang **über** ihrer Falle, und beide sind
-> nachgezogen (die Falle steht jetzt unmittelbar hinter der Quelle). *Das ist eine gefundene
-> Stelle und keine gemessene Menge — die Klasse bleibt offen.*
+> nachgezogen (die Falle steht jetzt unmittelbar hinter der Quelle). ~~*Das ist eine
+> gefundene Stelle und keine gemessene Menge — die Klasse bleibt offen.*~~
+> **GEMESSEN am 2026-08-31 — siehe den nächsten Abschnitt. Es ist ein Nullbefund, und der
+> Suchweg steht daneben.**
+
+#### Die Klasse, gemessen statt gesucht — je STELLE, nicht je Datei
+
+*Gemessen 2026-08-31 über `f08e5ad`, lokal (`free -g`: 31 GB gesamt, 13 GB verfügbar,
+20 Kerne). **Kein Bau** — es wird Quelltext gelesen, sonst nichts.*
+
+Die Vorgängerbahn hat zwei Fälle **von Hand** gefunden und ihren eigenen Schlusssatz offen
+gelassen. Die Frage dahinter ist schärfer als die zwei Fälle: *wie viele Dateien gelten
+heute als gedeckt, obwohl nur EINE ihrer Stellen es ist?* Eine Datei, die als gedeckt gilt,
+weil irgendwo in ihr das richtige Wort steht, ist genau die Bauart, gegen die dieser
+Abschnitt gebaut wurde — nur eine Ebene höher.
+
+**Was „je Stelle" heißt, und es ist nicht dasselbe in beiden Sprachen:**
+
+| | wann eine Stelle gedeckt ist | warum |
+|---|---|---|
+| **Schale** | ihre Zeile steht **hinter** der `EXIT`-Falle — oder sie steht in einem Funktionsrumpf | eine Falle wird an ihrer Zeile scharf. Ein `exit` darüber läuft an ihr vorbei. |
+| **Python** | sie liegt **lexikalisch in einem `def`** | `fahre()` umschließt den Aufruf von `main`. Was auf Modulebene ausgeführt wird, läuft **vor** `fahre` — der Gegenstandsriegel etwa. |
+
+```
+92  gefaehrliche Stellen, in 25 Dateien
+92  gedeckt je DATEI    (der Zaehler von gestern abend)
+92  gedeckt je STELLE   (die Messung von heute)
+ 0  Differenz -- und 0 Dateien mit Scheindeckung
+```
+
+**Der Nullbefund ist belegt und nicht behauptet** (W25): die Verdrahtungszeile und die
+kleinste Ausgangsstelle stehen je Datei nebeneinander, und in **keiner** liegt ein Ausgang
+über seiner Falle. Die engsten Abstände sind `pruefe-beweise.sh` (Falle Zeile 21, erster
+Ausgang 72) und `pruefe-syntax.sh` (11 / 70) — beide erst am Vorabend nachgezogen, und
+genau darum liegt hier eine Null und keine Zwei. *Die Klasse ist nicht leer gewesen; sie ist
+geleert worden.*
+
+**Und die schärfere Nachfrage in derselben Messung**: erreicht ein Python-Wächter eine
+gefährliche Stelle **außerhalb** von `fahre` — durch einen Aufruf auf Modulebene? Gesucht
+wurde über alle Wächter, deren gefährliche Stellen und deren Modulebene vor der
+Verdrahtungszeile. **Kein einziger Treffer.**
+
+##### Der Fund, den die Nullzahl nicht zeigt: zwei Dateien sind aus Versehen gedeckt
+
+`SAGT_WO` liest den Dateitext. Zwei Wächter tragen das Wort `ABGESCHNITTEN` in ihrer
+**eigenen Beschreibung** und gelten damit als gedeckt, **ohne dass eine Zeile verdrahtet
+ist**:
+
+| Datei | warum sie trifft | gefährliche Stellen heute |
+|---|---|---|
+| `pruefe-waechter.py` | `SAGT_WO` selbst steht in ihr, dazu die Kommentare darüber | **0** |
+| `abnahme.py` | druckt die Marke `TEILMESSUNG` und den Text dazu | **0** |
+
+Beide haben heute **keine** gefährliche Stelle, also kostet es heute nichts. *Es ist eine
+gelegte Falle und kein Schaden* — und sie liegt ausgerechnet unter den zwei Werkzeugen, die
+diese Zahl drucken. **Ein Maßstab, der sich selbst freispricht, tut es lautlos**, und er tut
+es an dem Tag, an dem jemand dem einen eine `1` mitten im Lauf hinzufügt. Der Zähler je
+Stelle nimmt ihnen die Ausnahme, weil er nach der VERDRAHTUNG fragt und nicht nach dem Wort.
 
 **`fertig()` ist die einzige Zeile, die Urteilskraft braucht**, und sie ist unentbehrlich:
 ein Wächter, der an seinem LETZTEN Ausgang mit `1` endet, hat alles gemessen; einer, der am
