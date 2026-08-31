@@ -1345,6 +1345,11 @@ pub fn emittiere_mit(
         }
     }
 
+    // **Which names does this unit DEFINE itself, and what does the definition lower to?**
+    // Read before the emitting pass, because a Gabbro file's order is free -- see the
+    // refusal in `funktion`.
+    let eigene = eigene_ruempfe(baum, &namen);
+
     // **Welche Namen haben im Erzeugnis einen Prototyp?** Genau die Funktionen, die keine
     // `spec fn` sind -- `funktion` schreibt fuer die anderen nichts. *Ohne diese Liste waere
     // eine gepruefte Bezugnahme auf eine Spezifikationsfunktion ein Uebersetzungsfehler im
@@ -1848,7 +1853,7 @@ pub fn emittiere_mit(
                 ));
             }
         }
-        ItemArt::Funktion(f) => funktion(f, &mut aus, &mut rumpf, &namen, absagen),
+        ItemArt::Funktion(f) => funktion(f, &mut aus, &mut rumpf, &namen, &eigene, absagen),
         // **`assume` und `axiom` erzeugen keinen Code -- aber sie erzeugen die ZUSAGE.**
         //
         // `SYNTAX.md` §12: *„Die Annahmenmenge wird ins Erzeugnis emittiert (‚bewiesen unter
@@ -4375,16 +4380,20 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
     }
 }
 
-fn funktion(
+/// **The lowered CORE of a prototype: the return type and the parameter list.**
+///
+/// Split out on 2026-08-31 so that the same declaration is lowered by the same code twice --
+/// once where it is written into the output, and once to answer the question *"does this
+/// unit already declare that name, and does it declare the SAME thing?"* (see `funktion`).
+/// *Two spellings of one lowering would be the second register W7 warns about; here the
+/// second reader would silently disagree with the first at exactly the corner cases.*
+///
+/// `Err` carries the span and the word for the refusal instead of raising it: the pre-pass
+/// asks the question without speaking, and only the emitting call reports.
+fn prototyp_kern(
     f: &FnDecl,
-    aus: &mut String,
-    rumpf_aus: &mut String,
     u: &Namen,
-    absagen: &mut Absagen,
-) {
-    if matches!(f.klasse, Some(FnKlasse::Spec)) {
-        return;
-    }
+) -> Result<(String, String), (gabbro_syntax::span::Span, &'static str)> {
     let eigen = eigene_sicht(f, u);
     let u = &eigen;
     // **The ghost return becomes `void` — not a lowering but an ERASURE.** `mmu_an` hands the
@@ -4397,10 +4406,7 @@ fn funktion(
         Some(TypExpr::Never(_)) => "_Noreturn void".into(),
         Some(t) => match ctyp(t, u) {
             Some(c) => c,
-            None => {
-                weigere(absagen, f.name.span, "return type");
-                return;
-            }
+            None => return Err((f.name.span, "return type")),
         },
         None => "void".into(),
     };
@@ -4417,10 +4423,7 @@ fn funktion(
                 let r = if darf_restrict(f, p, u) { "restrict " } else { "" };
                 params.push(format!("{c}{luecke}{r}{}", p.name.text))
             }
-            None => {
-                weigere(absagen, p.name.span, "parameter type");
-                return;
-            }
+            None => return Err((p.name.span, "parameter type")),
         }
     }
     // **`-> T or R` -- der Fehlerkanal, und er aendert die C-Signatur** (2026-08-20).
@@ -4448,10 +4451,7 @@ fn funktion(
         if let Some(t) = &f.ergebnis {
             match ctyp(t, u) {
                 Some(c) => params.push(format!("{c} *_wert")),
-                None => {
-                    weigere(absagen, f.name.span, "return type");
-                    return;
-                }
+                None => return Err((f.name.span, "return type")),
             }
         }
         params.push(format!("{} *_grund", r.text));
@@ -4461,6 +4461,59 @@ fn funktion(
     } else {
         params.join(", ")
     };
+    Ok((rueck, liste))
+}
+
+/// **One name, one prototype** (2026-08-31) -- the names this unit DEFINES itself, each with
+/// the core its definition lowers to.
+///
+/// See the refusal in `funktion`: a bodiless declaration of a name this unit defines is not
+/// a foreign body, and its prototype is a second declaration of the same C function. Where
+/// the two lowerings agree the second one is dropped; where they disagree the emitter
+/// refuses. **The map is built BEFORE the emitting pass** because a Gabbro file's order is
+/// free -- the `extern fn` may stand before the definition, and it does in
+/// `beispiele/29-undurchsichtig.gab` the other way round.
+fn eigene_ruempfe(
+    baum: &Programm,
+    u: &Namen,
+) -> std::collections::BTreeMap<String, (String, String)> {
+    let mut m = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            if !matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_)) {
+                return;
+            }
+            if let Ok(k) = prototyp_kern(f, u) {
+                m.insert(f.name.text.clone(), k);
+            }
+        }
+    });
+    m
+}
+
+fn funktion(
+    f: &FnDecl,
+    aus: &mut String,
+    rumpf_aus: &mut String,
+    u: &Namen,
+    eigene: &std::collections::BTreeMap<String, (String, String)>,
+    absagen: &mut Absagen,
+) {
+    if matches!(f.klasse, Some(FnKlasse::Spec)) {
+        return;
+    }
+    let (rueck, liste) = match prototyp_kern(f, u) {
+        Ok(k) => k,
+        Err((span, was)) => {
+            weigere(absagen, span, was);
+            return;
+        }
+    };
+    let eigen = eigene_sicht(f, u);
+    let u = &eigen;
     // **Without `pub` the binding is INTERNAL -- since 2026-08-25** (the ABI work).
     //
     // Until then this file knew the word `pub` nowhere: **zero occurrences in 6 976 lines.**
@@ -4478,6 +4531,51 @@ fn funktion(
     // definition that is not here -- `cc` says *"used but never defined"* to that, and it
     // would be right.
     let definiert = matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_));
+    // **ONE name, ONE prototype -- and the one that stands is the DEFINITION's** (2026-08-31).
+    //
+    // `beispiele/29-undurchsichtig.gab` names `pa_aus_zahl` twice: as `pub impl fn … effects
+    // { pure }` in the declaring module and as `extern fn … effects { pure }` in the using
+    // one. **The doubling comes from the PROGRAM** -- that is the whole point of the file, a
+    // module boundary drawn inside one unit. **The diverging attributes came from HERE:**
+    //
+    // ```c
+    // uint64_t pa_aus_zahl(uint64_t z) __attribute__((const));   /* from the `impl fn`   */
+    // uint64_t pa_aus_zahl(uint64_t z);                          /* from the `extern fn` */
+    // ```
+    //
+    // *Two declarations of one C function carrying different promises to the compiler are a
+    // statement that contradicts itself.* `-Wredundant-decls` names it; `-Wall -Wextra` does
+    // not. The second one is dropped: the first already declares the name, with the type it
+    // has and with the attribute the body earned.
+    //
+    // **And the attribute is NOT given to the `extern` half instead**, which would be the
+    // other way to make the two agree. `wirkungsattribut` gives its reason two hundred lines
+    // up: at an `extern fn` the effects clause is an ASSUMPTION about foreign code, and an
+    // attribute is an INSTRUCTION to the compiler. Turning the one into the other is the
+    // move the certificate stands against. *Here the body is not foreign at all -- it stands
+    // in the same unit -- so the assumption has nothing left to say.*
+    //
+    // > **Where the two lowerings DISAGREE, nothing is dropped and the emitter refuses.**
+    //   Measured on 2026-08-31: `impl fn f(z : u64) -> u64` beside `extern fn f(z : u32) ->
+    //   u32` passes `gabbro pruefe` with **0 errors**, and the C is rejected by `cc`
+    //   (*"conflicting types for 'f'"*). Silently dropping the second declaration would take
+    //   that error away and leave a call lowered against the wrong width -- *the refusal is
+    //   what makes the dropping safe, and it is not a separate feature.*
+    if !definiert {
+        if let Some(kern) = eigene.get(&f.name.text) {
+            if *kern == (rueck.clone(), liste.clone()) {
+                return;
+            }
+            weigere(
+                absagen,
+                f.name.span,
+                "a bodiless declaration of a name this unit DEFINES, and the two disagree -- \
+                 one C function cannot have two prototypes with different types. The body is \
+                 not foreign: it stands in this same unit",
+            );
+            return;
+        }
+    }
     let intern = if !f.oeffentlich && definiert { "static " } else { "" };
     // **`unused` -- the same treatment as at the `static` of a world state and at the
     // `(void)k;` of an unread parameter, and for the same reason.**

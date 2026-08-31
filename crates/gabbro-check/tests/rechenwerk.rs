@@ -6214,3 +6214,99 @@ impl fn breit(y : Weit) -> Weit effects { pure } costs <= 4 ops
         "an `f64` computes in `double`, and the literal carries NO `f`:\n{c}"
     );
 }
+
+/// **One name, one prototype -- and the one that stands is the DEFINITION's** (2026-08-31).
+///
+/// `beispiele/29-undurchsichtig.gab` names `pa_aus_zahl` twice, as `pub impl fn … effects
+/// { pure }` and as `extern fn … effects { pure }` in the module that uses it. The output
+/// carried both prototypes, and only the first one the `__attribute__((const))`:
+///
+/// ```c
+/// uint64_t pa_aus_zahl(uint64_t z) __attribute__((const));
+/// uint64_t pa_aus_zahl(uint64_t z);
+/// ```
+///
+/// *The doubling comes from the PROGRAM -- that is the point of the file. The diverging
+/// promises came from the producer.* `-Wredundant-decls` names it, `-Wall -Wextra` does not.
+#[test]
+fn ein_name_ein_prototyp() {
+    fn emittiere(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    // **1. The measured case, cut down from `beispiele/29`**: a `pub` body in one module, an
+    //    `extern fn` naming it in another. Counted per BLOCK -- exactly ONE declaration line
+    //    for the name, and it is the one that carries the attribute.
+    let (c, f) = emittiere(
+        "module a {
+pub impl fn pa_aus_zahl(z : u64) -> u64 effects { pure } costs <= 2 ops { return z; }
+}
+module b {
+extern fn pa_aus_zahl(z : u64) -> u64 effects { pure } costs <= 2 ops;
+pub impl fn erste() -> u64 effects { pure } costs <= 4 ops { return pa_aus_zahl(4096); }
+}",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let deklarationen: Vec<&str> = c
+        .lines()
+        .filter(|z| z.starts_with("uint64_t pa_aus_zahl(uint64_t z)") && z.ends_with(';'))
+        .collect();
+    assert_eq!(
+        deklarationen.len(),
+        1,
+        "one C function, one prototype -- and not two with different promises:\n{c}"
+    );
+    assert!(
+        deklarationen[0].contains("__attribute__((const))"),
+        "the one that stands is the DEFINITION's, with the attribute its body earned:\n{c}"
+    );
+
+    // **2. A body that is NOT `pub` keeps its `static`, and the second declaration goes.**
+    //    Both stood before, and the pair is undefined behaviour C11 6.2.2p7 -- a file scope
+    //    declaration without a storage class has EXTERNAL linkage, after a `static` one.
+    //    *`gcc -Wall -Wextra -Werror` accepts it silently, which is the whole reason this
+    //    half needs a probe of its own.*
+    let (c, f) = emittiere(
+        "module a {
+impl fn f(z : u64) -> u64 effects { pure } costs <= 2 ops { return z; }
+}
+module b {
+extern fn f(z : u64) -> u64 effects { pure } costs <= 2 ops;
+pub impl fn g() -> u64 effects { pure } costs <= 4 ops { return f(7); }
+}",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert_eq!(
+        c.lines().filter(|z| z.trim_start().starts_with("static uint64_t f(uint64_t z)")
+            && z.ends_with(';')).count(),
+        1,
+        "the `static` prototype stands:\n{c}"
+    );
+    assert!(
+        !c.contains("\nuint64_t f(uint64_t z);"),
+        "and the second, externally linked declaration of the same name does not:\n{c}"
+    );
+
+    // **3. Where the two DISAGREE, nothing is dropped and the emitter refuses.**
+    //
+    // `gabbro pruefe` says 0 errors over this program and `cc` rejects its C
+    // (*"conflicting types for 'f'"*). Silently dropping the second declaration would take
+    // that error away and leave the call lowered against the wrong width -- *the refusal is
+    // what makes the dropping safe, and not a feature beside it.*
+    let (_, f) = emittiere(
+        "module a {
+pub impl fn f(z : u64) -> u64 effects { pure } costs <= 2 ops { return z; }
+}
+module b {
+extern fn f(z : u32) -> u32 effects { pure } costs <= 2 ops;
+pub impl fn g() -> u32 effects { pure } costs <= 4 ops { return f(7); }
+}",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("a bodiless declaration of a name this unit DEFINES")),
+        "the contradiction is refused BY NAME, not handed to `cc`: {f:?}"
+    );
+}

@@ -3662,6 +3662,18 @@ MUTATIONEN = [
         "`-Wdouble-promotion` oder `-Wfloat-conversion`, und keiner von beiden steht im Tor",
         "code",
     ),
+    Mutation(
+        "zweiter-prototyp-kommt-zurueck",
+        "gabbro-check/src/emit.rs",
+        "    if !definiert {\n        if let Some(kern) = eigene.get(&f.name.text) {",
+        "    if false {\n        if let Some(kern) = eigene.get(&f.name.text) {",
+        "Ein Name bekommt wieder ZWEI Prototypen: der aus der Definition traegt "
+        "`__attribute__((const))`, der aus dem `extern fn` nicht -- zwei Deklarationen "
+        "derselben C-Funktion mit verschiedenen Zusagen an den Uebersetzer. "
+        "`-Wredundant-decls` nennt es, `-Wall -Wextra` nicht. Und die widersprechende Form "
+        "(`u64` gegen `u32`) wird wieder emittiert statt abgesagt -- genau EINE Probe faellt",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
