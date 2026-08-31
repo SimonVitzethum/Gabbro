@@ -180,7 +180,15 @@ CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
 # *What stays open is written out there in §5c and is not talked away:* the three hang on one
 # file each, and a second carrier would have to be a second SUBJECT -- not a second program
 # written against a list (trap 80). **Named, not healed.**
-MARKE_ALLEIN = 3
+#
+# **3 -> 0 on 2026-08-31, and NOT by writing three programs against the list.**
+# `messung/proben/probe-neun-domaenen.gab` is the carrier of the falsification series in
+# `messung/DOMAENENNAMEN.md`: all nine quantifier domains in one unit, so that each of the 32
+# falsifications changes exactly one thing and the control is the same file. It happens to be
+# the SECOND file for `chain`, `queue` and `threads` -- *a by-product of a measurement with
+# its own subject, which is exactly the shape §5c asks for and not the one it warns against.*
+# The ratchet falls; it is not loosened.
+MARKE_ALLEIN = 0
 # **IT IS PRINTED, NOT RATCHETED, AND THAT IS A DECISION WITH A REASON.**
 #
 # A mark set on the run that first measured it is a conjecture: this number moved 25 -> 0 in

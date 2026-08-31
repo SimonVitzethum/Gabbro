@@ -132,7 +132,15 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # population correction to be had here, and the mark is NOT re-booked. What went in instead is
 # the rule itself plus `ankerprobe`, which prints the zero on every run: the disjointness is
 # now CHECKED rather than assumed, and it will speak up on the day it stops holding.
-MARKE = 274
+# **274 -> 281 on 2026-08-31, and the subject grew by a whole rule family.** `D014`-`D016`
+# (`domaene.rs`, the chain edge) are built as `D006`-`D008` word for word, and seven of the
+# new comment lines say so by NAMING the model: `D006` at the missing field, `D007` at the
+# missing end, `D008` at the foreign table, `M109` at the position finding, `M120` at the
+# `Self` binding, `K003` at the silent carrier. *Every one of those is a cross-reference and
+# not a claim that this file issues the code* -- which is exactly the judgement this tool
+# says it leaves to the reader. **The debt is carried, not discharged:** the target stays
+# 207, and these seven are in it.
+MARKE = 281
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

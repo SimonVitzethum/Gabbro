@@ -385,8 +385,8 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **41 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **37 davon unqualifiziert**.
+      **40 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
+      Kandidatenschleife und **36 davon unqualifiziert**.
       *Die alte Zählung sagte 13 — sie kannte `.contains_key(` nicht, und das ist derselbe
       Blick.* **Ein Werkzeug, das eine der beiden Formen nicht liest, misst seine eigene
       Leseweite** (W16).

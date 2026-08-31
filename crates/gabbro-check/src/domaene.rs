@@ -300,8 +300,20 @@ fn aus_pred(p: &Pred, s: &Sicht, absagen: &mut Absagen) {
 fn kette_pruefen(d: &Domaene, s: &Sicht, absagen: &mut Absagen) {
     let Domaene::KetteIn { a, b, ort } = d else { return };
     let Some(tabelle) = s.kettentabelle(ort) else { return };
-    let Some(felder) = s.u.tabellen.get(&tabelle) else { return };
+    // **Module-aware, and not a direct `.get(` on a qualified map.** `tabellenname` returns
+    // the QUALIFIED name for a `Typ::Tabelle` and the bare one for an `index into T` (it
+    // reads it out of the type name) -- a straight lookup would silently miss the second
+    // kind, and a silent miss here reads as "this chain is fine". *That is the shape of the
+    // `M103` hole of 2026-08-17, and `zaehle-karten.py` counts exactly this move.*
     let kurz = kurzname(&tabelle);
+    let Some((_, felder)) = s
+        .u
+        .tabellen
+        .iter()
+        .find(|(k, _)| *k == &tabelle || kurzname(k) == kurz)
+    else {
+        return;
+    };
     // **The position stands in the message.** `chain(a, b)` has TWO edges, and a refusal
     // about "the edge" sends the reader to the wrong one half the time.
     kante_pruefen(a, true, kurz, felder, absagen);
