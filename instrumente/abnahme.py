@@ -331,6 +331,31 @@ def gegenstand(wurzel, ergebnisse):
     return gesamt - sum(ungesehen.values()), gesamt, ungesehen
 
 
+def schlusssatz(gemessen, gruen, wieviele, gesehen, g_gesamt, luecke):
+    """The closing sentence, as a list of lines -- **two sentences, not one with a suffix.**
+
+    **Green with a named gap is not the same as green, and it is not red either**
+    (2026-08-31). A quick run that can never look green again is no help: nobody drives it,
+    and then the four expensive guardians are the only measurement there is -- which is
+    exactly the road by which they stopped being driven at all. So the word stays `GRUEN` and
+    the return code stays `0`. What changes is that the sentence now says HOW MUCH OF THE
+    OBJECT this green covers, and that the two cases are visibly different sentences.
+
+    *It is a function and not four `print` calls inside `main` so that the speech test can
+    read both directions* -- the number underneath was already provable, the SENTENCE was not.
+    """
+    anteil = f" -- {round(100 * gesehen / g_gesamt)} %" if g_gesamt else ""
+    if luecke:
+        return [f"  ABNAHME GRUEN MIT BENANNTER LUECKE: {gemessen} von {wieviele} Waechtern,",
+                f"  und hoechstens {gesehen} von {g_gesamt} gefaehrlichen Stellen{anteil}."
+                "  **Gruen heisst hier:",
+                "  was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist. Der",
+                "  Rest steht oben mit Namen und Zahl, und `--voll` faehrt ihn."]
+    return [f"  ABNAHME GRUEN: {gruen} von {gruen} messenden Waechtern -- und",
+            f"  {gesehen} von {g_gesamt} gefaehrlichen Stellen. **Kein Wort davon ist",
+            "  ausgelassen, und keiner ist ungesehen geblieben.**"]
+
+
 def sprechprobe():
     """**In alle Richtungen, auf ERFUNDENEN Waechtern.**
 
@@ -434,6 +459,21 @@ def sprechprobe():
         g3, ges3, off3 = gegenstand(gp, leer_erg)
         proben.append(("und eine Auslassung OHNE Gegenstand oeffnet keine Luecke: 2 von 2",
                        ges3 == 2 and g3 == 2 and not off3))
+    # **AND THE SENTENCE ITSELF, in both directions.** The number above was provable, the
+    # closing line was not -- and the closing line is what a reader actually reads. Two
+    # requirements, and the second is the one that is easy to lose: a gap must be visible,
+    # AND a run without a gap must not carry the gap wording. *A sentence that always warns
+    # says nothing; one that never warns says less.*
+    mit = "\n".join(schlusssatz(45, 44, 49, 45, 92, luecke=True))
+    ohne = "\n".join(schlusssatz(49, 49, 49, 92, 92, luecke=False))
+    proben.append(("die Luecke steht IM Satz, mit beiden Zahlen",
+                   "MIT BENANNTER LUECKE" in mit and "45 von 49" in mit
+                   and "45 von 92" in mit and "49 %" in mit))
+    proben.append(("und ohne Luecke traegt der Satz KEINE -- 92 von 92",
+                   "LUECKE" not in ohne and "92 von 92" in ohne))
+    proben.append(("beide bleiben GRUEN -- die Luecke ist kein Befund",
+                   mit.lstrip().startswith("ABNAHME GRUEN")
+                   and ohne.lstrip().startswith("ABNAHME GRUEN") and mit != ohne))
     return proben
 
 
@@ -579,23 +619,12 @@ def main():
             if marke == "ROT":
                 print(f"   {name:<26} [{rc}]  {bem}")
     if not ab and not rot and not teil:
-        # **GREEN WITH A NAMED GAP IS NOT THE SAME AS GREEN, and it is not the same as RED
-        # either** (2026-08-31). A quick run that can never look green again is no help --
-        # nobody would run it, and then the four expensive ones are the only measurement
-        # there is, which is how they stopped being run at all. So the word stays `GRUEN`
-        # and the return code stays `0`; what changes is that the line now says HOW MUCH OF
-        # THE OBJECT that green covers. *Both halves have to stay readable in one line.*
-        if benannt or nf:
-            print(f"\n  ABNAHME GRUEN MIT BENANNTER LUECKE: {gemessen} von {len(alle)} "
-                  f"Waechtern,")
-            print(f"  und hoechstens {gesehen} von {g_gesamt} gefaehrlichen Stellen"
-                  f"{anteil}. **Gruen heisst hier:")
-            print("  was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist. Der")
-            print("  Rest steht oben mit Namen und Zahl, und `--voll` faehrt ihn.")
-        else:
-            print(f"\n  ABNAHME GRUEN: {gruen} von {gruen} messenden Waechtern -- und")
-            print(f"  {gesehen} von {g_gesamt} gefaehrlichen Stellen. **Kein Wort davon ist")
-            print("  ausgelassen.**")
+        # The sentence lives in `schlusssatz()`, where the speech test can read BOTH of its
+        # directions -- see there for why green with a named gap stays green.
+        print()
+        for zeile in schlusssatz(gemessen, gruen, len(alle), gesehen, g_gesamt,
+                                 bool(benannt or nf)):
+            print(zeile)
     return code
 
 

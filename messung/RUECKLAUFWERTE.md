@@ -713,8 +713,20 @@ nicht ihren Gegenstand.*
 
 Die dritte ist die, die die Zahl ehrlich hält: *eine Lückenmeldung, die bei jeder Auslassung
 anschlägt, misst die Auslassung und nicht den Gegenstand* — und dann liest sich jeder
-Schnelllauf als blind, was so falsch ist wie die alte Null. **Sechzehn Proben laufen jetzt
-vor jeder Abnahme, dreizehn alte und drei neue.**
+Schnelllauf als blind, was so falsch ist wie die alte Null.
+
+**Und drei weitere über den SATZ, nicht über die Zahl.** Die Zahl war beweisbar, die
+Schlusszeile nicht — und die Schlusszeile ist das, was jemand liest. Also steht sie in
+`schlusssatz()` und gibt Zeilen zurück, statt vier `print` in `main` zu sein:
+
+| Richtung | verlangt |
+|---|---|
+| mit Lücke | `MIT BENANNTER LUECKE` im Satz, **und beide Zahlen darin** (`45 von 49`, `45 von 92`, `49 %`) |
+| ohne Lücke | das Wort `LUECKE` kommt **nicht vor**, und es steht `92 von 92` da |
+| beide | beide fangen mit `ABNAHME GRUEN` an, **und sie sind nicht derselbe Satz** |
+
+*Ein Satz, der immer warnt, sagt nichts; einer, der nie warnt, sagt weniger.* **Neunzehn
+Proben laufen jetzt vor jeder Abnahme, dreizehn alte und sechs neue.**
 
 ### `zaehle-b3.py`: richtig eingeordnet — und „48 von 49" gilt nur im ARBEITSBAUM
 
