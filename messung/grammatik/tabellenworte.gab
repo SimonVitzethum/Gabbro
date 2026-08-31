@@ -1,0 +1,93 @@
+-- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- das zweite Buendel.
+--
+-- Diese Datei traegt vier Woerter, die bis heute an je einer Datei hingen:
+--
+--     insert remove relabel     SYNTAX.md:1104, `opname` -- die GESCHLOSSENE Wortmenge
+--     exists                    SYNTAX.md:682, der seltenere Zwilling von `forall`
+--
+-- Die drei `opname` sind ein Buendel wie `walkdecl`: keines ist ohne eine `table` mit
+-- `count`, `slot` und `occupied` schreibbar, `relabel` zusaetzlich nicht ohne eine
+-- `tree`-Kante. Bis heute standen alle drei allein in `beispiele/47-ops-wortmenge.gab`.
+-- Faellt jene Datei aus der Uebersetzung, fallen drei Zellen auf einmal
+-- (`messung/EINSAME-WOERTER.md` §2).
+--
+-- **Und `exists` steht hier statt anderswo, weil es hier etwas SAGT.** Ein Baum ohne Wurzel
+-- ist kein Baum; das ist genau eine Existenzaussage und mit `forall` nicht formulierbar.
+-- *Ein Wort, das nur hingeschrieben wird, damit ein Zaehler steigt, ist Falle 80 im Kleinen* --
+-- die Invariante unten ist die, die diese Struktur ohnehin braucht.
+--
+-- Der Gegenstand ist ein GERAETEBAUM und keine zweite Verzeichnistabelle: jedes Geraet haengt
+-- an einem Bus, und der Bus haengt an einem Bus, bis zur Wurzelbruecke. Dieselbe Kante wie in
+-- `beispiele/47`, ein anderer Gegenstand -- eine Abschrift waere kein zweiter Beleg.
+
+module grammatik::tabellenworte {
+
+const NGERAETE : u32 = 32;
+
+table Geraetebaum count NGERAETE {
+
+    -- Die Wurzelbruecke. Welcher Platz sie ist, sagt die Deklaration nicht -- das steht in
+    -- der Erreichbarkeitsinvariante und nicht in der `tree`-Zeile (`beispiele/47`).
+    const BRUECKE : u32 = 0;
+
+    tree { parent bus }
+
+    slot {
+        benutzt : bool,
+        bus     : option index into Geraetebaum,
+        klasse  : u32,
+    }
+
+    -- **Die drei Woerter der geschlossenen Menge.** `relabel` braucht die `tree`-Kante oben;
+    -- ohne sie waere `umhaengen_erhaelt` gegenstandslos.
+    ops insert, remove, relabel;
+
+    -- `D011`: eine `table` mit `ops` sagt, WELCHES Feld die Belegung traegt.
+    occupied benutzt;
+
+    -- **`exists`, und es ist die Aussage, die diese Struktur braucht.** Ein Baum, in dem
+    -- jeder Platz einen Bus nennt, hat keinen Anfang -- er ist ein Zyklus oder leer.
+    invariant eine_wurzel_gibt_es cost O(n) runs offline :
+        exists s in slots of Self : Self.slots[s].bus == None;
+
+    invariant jedes_geraet_erreicht_die_bruecke cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s] reaches BRUECKE via bus;
+}
+
+-- Die drei Rufformen. Die Voraussetzungen sind woertlich die des Beweises und werden von
+-- `D012` an der Rufstelle gehalten -- was hier steht, steht nicht zur Zierde.
+
+impl fn anstecken(g : ptr<normal, rw> Geraetebaum,
+                  n : index into Geraetebaum,
+                  b : index into Geraetebaum)
+    requires !g.slots[n].benutzt, g.slots[b] reaches BRUECKE via bus
+    effects  { writes g.slots }
+    costs    <= 6 ops
+{
+    Geraetebaum::insert(g, n, b);
+}
+
+-- `blatt sigma s`: niemand nennt `s` als Bus. Nicht „`s` hat kein Kindfeld" -- das waere
+-- schwaecher als der Satz, und schwaecher genau dort, wo der Satz der ganze Ertrag ist.
+impl fn abziehen(g : ptr<normal, rw> Geraetebaum, s : index into Geraetebaum)
+    requires forall x in slots of g : g.slots[x].bus != Some(s)
+    effects  { writes g.slots }
+    costs    <= 6 ops
+{
+    Geraetebaum::remove(g, s);
+}
+
+-- `relabel`: der neue Bus erreicht die Bruecke, UND `s` liegt nicht auf dessen Buskette --
+-- `b` selbst eingeschlossen. Ohne das Zweite entsteht die Schlinge `relabel(g, s, s)`.
+impl fn umstecken(g : ptr<normal, rw> Geraetebaum,
+                  s : index into Geraetebaum,
+                  b : index into Geraetebaum)
+    requires g.slots[b] reaches BRUECKE via bus,
+             !(g.slots[b] reaches g.slots[s] via bus)
+    effects  { writes g.slots }
+    costs    <= 6 ops
+{
+    Geraetebaum::relabel(g, s, b);
+}
+
+}
