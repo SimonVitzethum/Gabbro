@@ -1008,7 +1008,7 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
             // a function and the `let`s of its body.
             //
             // It is not a tidiness rule, and it is exactly the `N042` shape: **`gabbro
-            // pruefe` said 0 errors, `gabbro emit` wrote the unit without a `C001`, and `cc`
+            // pruefe` said 0 errors, `gabbro emit` wrote the unit without a refusal, and `cc`
             // refused it.** Measured on 2026-08-31 against the unchanged checker
             // (`messung/proben/probe-domaenenschatten.gab`):
             //
@@ -1097,7 +1097,7 @@ fn auswahl(item: &Item) -> Auswahl {
 /// **The cut at the block boundary is the whole rule, and it is not a style choice.**
 /// `beispiele/gift/19-let-verdeckt.gab` has held the covering form as a legal program since
 /// 2026-08-14 -- `let x : u8 = 0;` inside an `if`, covering the parameter `x`, expected to
-/// fall at `M102` because the narrowing fact belongs to the covered binding. *The language
+/// fall over the division because the narrowing fact belongs to the covered binding. *The language
 /// permits covering, and `m1.rs` carries the block scope that makes it mean something.*
 /// A rule refusing it at any depth would refuse that probe over the wrong thing.
 ///
@@ -1105,26 +1105,29 @@ fn auswahl(item: &Item) -> Auswahl {
 /// scope, which the emitter writes out unchanged and `cc` then rejects.
 fn rumpf_geltung(b: &Block, scope: &mut HashMap<String, Span>, absagen: &mut Absagen) {
     for st in &b.anweisungen {
-        // A sub-block opens a scope of its own, so it starts from an empty map -- and it is
-        // walked BEFORE the name is added, because a binding is visible to what follows it
-        // and not to its own right-hand side.
+        // **One descent, and only one.** A sub-block opens a scope of its own, so it starts
+        // from an empty map -- seeded only where the construct declares a name FOR that
+        // block. A second explicit descent next to this loop would walk `let … else`'s
+        // `else` twice, and `pruefe-abstieg.py` calls that what it is: 2^depth.
+        let mut innen = HashMap::new();
+        if let StmtArt::LetSonst(l) = &st.art {
+            // The failure name lives in the `else` block alone -- `unterbloecke` hands us
+            // exactly that block, and the unpacked name is not visible inside it.
+            innen.insert(l.fehlername.text.clone(), l.fehlername.span);
+        }
+        for k in crate::unterbloecke(st) {
+            rumpf_geltung(k, &mut innen.clone(), absagen);
+        }
+        // The binding is added AFTER the sub-blocks, because it is visible to what follows
+        // the statement and not to its own right-hand side.
         match &st.art {
-            // `let … else` binds the unpacked name in THIS scope, and the failure name in
-            // the `else` block alone -- so that block does not start empty.
+            StmtArt::Let(l) => {
+                doppelt(scope, &l.name.text, l.name.span, "local binding", absagen)
+            }
             StmtArt::LetSonst(l) => {
-                let mut innen = HashMap::new();
-                innen.insert(l.fehlername.text.clone(), l.fehlername.span);
-                rumpf_geltung(&l.sonst, &mut innen, absagen);
-                doppelt(scope, &l.name.text, l.name.span, "local binding", absagen);
+                doppelt(scope, &l.name.text, l.name.span, "local binding", absagen)
             }
-            _ => {
-                for k in crate::unterbloecke(st) {
-                    rumpf_geltung(k, &mut HashMap::new(), absagen);
-                }
-                if let StmtArt::Let(l) = &st.art {
-                    doppelt(scope, &l.name.text, l.name.span, "local binding", absagen);
-                }
-            }
+            _ => {}
         }
     }
 }
