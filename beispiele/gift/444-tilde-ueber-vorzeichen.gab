@@ -1,0 +1,25 @@
+-- erwartet: M137
+-- **Gift 444 -- `~` ueber einer vorzeichenbehafteten Zahl.**
+--
+-- In C ist `~x` auf einem `int32_t` wohldefiniert und heisst `-x-1`. Das ist eine
+-- Rechnung, und es ist **nicht** die, fuer die dieser Operator gebaut wurde: *„invertiere
+-- die Bits eines Wortes"* setzt voraus, dass alle Bits Wert tragen, und beim Zweierkomplement
+-- traegt das oberste das Vorzeichen.
+--
+-- > Ein Operator, der auf `u32` eine Maske invertiert und auf `i32` eine Zahl negiert und
+-- > vermindert, ist zwei Operatoren unter einem Zeichen.
+--
+-- Kein Korpusprogramm fragt danach (Regel A), und deshalb wird nicht entschieden, sondern
+-- abgesagt. *Faellt der Bedarf an, ist die Absage die Stelle, an der die Entscheidung
+-- getroffen wird -- und sie steht dann als Satz da und nicht als Nebenwirkung.*
+
+module gift444 {
+
+impl fn negativ(w : i32) -> i32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return ~w;
+}
+
+}

@@ -1454,6 +1454,12 @@ impl<'a> Parser<'a> {
         let op = match t.art {
             Art::Zeichen(Z::Bang) => Some(UnOp::Nicht),
             Art::Zeichen(Z::Minus) => Some(UnOp::Negativ),
+            // **`~` stands beside `!` and `-`, at `unary` and not at `bitexpr`.** It takes a
+            // `primary`, exactly like the other two: `~a & b` is `(~a) & b`, and that is C's
+            // grouping as well -- unary above every binary level. *The one flat bit level
+            // (`M136`) is a statement about the BINARY operators; a prefix operator does not
+            // enter it.*
+            Art::Zeichen(Z::Tilde) => Some(UnOp::BitNicht),
             _ => None,
         };
         if let Some(op) = op {

@@ -1,0 +1,151 @@
+-- 61 -- **`~`, und die ganze Frage ist die BREITE.**
+--
+-- Bis zum 2026-09-01 gab es in Gabbro keinen Weg, im Rumpf eine Maske zu invertieren.
+-- Gemessen, woertlich, am unveraenderten Pruefer:
+--
+--     `~w`               error: [L006] character `~` belongs to no form of the language
+--     `w ^ u32::max`     0 errors  ->  emittiert `w ^ u32->max`  ->  cc: »u32« nicht deklariert
+--
+-- Der Ausweg war die ausbuchstabierte Form, und der Korpus hat sie geschrieben --
+-- `messung/netz/udp-echo.gab:111`, `return (b & 65535) ^ 65535;`, RFC 1071.
+--
+-- **Warum dafuer ein Zeichen in den Wortschatz kommt** (`OA1`, begruendungspflichtig):
+--
+-- Die `^`-Form wird NICHT abgeloest. Ein Xor gegen eine Maske, die nicht Allesbits ist, ist
+-- eine andere Rechnung, und der Korpus schreibt sie. Abgeloest wird genau die Redewendung
+-- *„xor gegen das Allesbits-Literal meiner eigenen Breite"* -- und der Grund ist, dass diese
+-- Redewendung die Breite **als Dezimalzahl neben den Typ** schreibt. Der Typ sagt sie schon.
+--
+-- > **Gemessen 2026-09-01, und das ist der Beleg und keine Meinung:** derselbe Rumpf mit
+-- > `c : u32` statt `c : u16` -- `return c ^ 65535;` -- gibt **0 Fehler, 0 Hinweise**. Aus
+-- > der Invertierung ist ein Loeschen der unteren sechzehn Bit geworden, und kein Pass sagt
+-- > etwas. *Zwei Register ueber derselben Tatsache, und nur eines wird gepflegt* (W7).
+--
+-- Mit `~c` folgt die Rechnung dem Typ, und die Breite steht genau einmal da.
+--
+-- **Und die Absenkung ist der eigentliche Posten.** Ein nacktes `~x` in C ist kein
+-- Komplement der Breite, die im Gabbro steht: die ganzzahlige Aufwertung hebt alles unter
+-- `int` auf `int`. `~(uint16_t)240` ist dort `0xFFFFFF0F` statt `0xFF0F`, und `-Wall
+-- -Wextra` sagt dazu nichts -- der Wert ist wohldefiniert, er ist bloss ein anderer als der
+-- geprueste. Der Erzeuger schreibt darum `({c})~({c})(x)`, dieselbe Form, die `mirrors` und
+-- der Bitfeldsetzer seit jeher schreiben.
+--
+-- **Gelaufen, 2026-09-01, `cc -std=c11 -Wall -Wextra -Werror` bei `-O0` und `-O2`:**
+--
+--     u8   15          u16  65532       u16b 0        u32  4294967055
+--     and  61440       cmp  1           wide 3855
+--
+-- **Und die Gegenprobe, mit `sed` aus demselben Erzeugnis** -- die Casts an `verbreitert`
+-- gestrichen, alles andere byteidentisch:
+--
+--     wide 4294905615      und `cc` uebersetzt es OHNE eine einzige Warnung.
+--
+-- *Das ist der Beleg fuer die zwei Casts.* An der Vergleichsstelle (`cmp`) warnt gcc von
+-- selbst (`-Wsign-compare`, „Vergleich von befoerdertem bitweisem Komplement"); an der
+-- Verbreiterung **schweigt es**, und das Programm rechnet `4294905615`, wo M1 `u16 in 0 ..
+-- 65535` sagt. Ein Waechter, der nur den einen Fall faengt, deckt die Haelfte.
+
+module beispiel61 {
+
+-- **Der `u8`-Fall.** Ohne den aeusseren Cast waere das erzeugte `~` ein `int`-Komplement,
+-- und `~(uint8_t)240` gaebe `0xFFFFFF0F` statt `0x0F`.
+impl fn maske8(m : u8) -> u8
+    effects { pure }
+    costs   <= 4 ops
+{
+    return ~m;
+}
+
+-- **Der `u16`-Fall -- und er ist die Zeile aus RFC 1071.** `summe_1071` faltet zweimal und
+-- komplementiert am Ende; `udp-echo.gab` schreibt das Komplement als `^ 65535` aus.
+impl fn falte(s : u32) -> u16
+    effects { pure }
+    costs   <= 24 ops
+{
+    let a : u32 = (s & 65535) + (s >> 16);
+    let b : u32 = (a & 65535) + (a >> 16);
+    let c : u16 = b & 65535;
+    return ~c;
+}
+
+-- **Der `u32`-Fall**, an dem der Cast NICHT sichtbar waere -- er steht hier, damit die
+-- Probe nicht nur die Breiten misst, an denen der Fehler auffaellt.
+impl fn maske32(m : u32) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return ~m;
+}
+
+-- **Und die Invertierung im Verbund mit einer Und-Verknuepfung** -- `a & ~b` ist die
+-- Loeschung von Bits, die haeufigste Gestalt der Sache ueberhaupt. `~` bindet als
+-- Praefixoperator fester als jedes binaere Zeichen, hier wie in C.
+impl fn loesche(a : u16, b : u16) -> u16
+    effects { pure }
+    costs   <= 8 ops
+{
+    return a & ~b;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- **Die zwei Stellen, an denen der fehlende Cast SICHTBAR wird -- und der Rest des Beispiels
+-- misst ihn nicht.**
+--
+-- *Gemessen 2026-09-01, und es ist eine Korrektur an der eigenen Probe:* die vier Ruempfe
+-- oben geben ihr Ergebnis durch einen `uint8_t`/`uint16_t`-Rueckgabetyp zurueck, und der
+-- schneidet die Aufwertung wieder ab. Mit den Casts und ohne sie kommen **dieselben fuenf
+-- Zahlen** heraus. **Eine Probe, die in beide Richtungen dasselbe misst, misst nichts.**
+--
+-- Sichtbar wird die Aufwertung genau dort, wo der Wert des Komplements gebraucht wird, ohne
+-- vorher auf seine Breite zurueckgeschnitten zu werden:
+--
+--   * im VERGLEICH -- `~b == 3855` ist mit Aufwertung `0xFFFF0F0F == 0x0F0F`, also falsch,
+--   * in der VERBREITERUNG -- `let w : u32 = ~b;` traegt mit Aufwertung die oberen sechzehn
+--     Bit mit.
+--
+-- Beide sagt M1 als `u16 in 0 .. 65535` an; das erzeugte C ohne Cast rechnet etwas anderes.
+-- *Das ist die Klasse, gegen die dieser ganze Ordner steht* -- und sie steht hier als
+-- laufende Zeile und nicht als Satz.
+-- ---------------------------------------------------------------------------------------
+
+impl fn ist_gleich(b : u16) -> bool
+    effects { pure }
+    costs   <= 8 ops
+{
+    return ~b == 3855;
+}
+
+impl fn verbreitert(b : u16) -> u32
+    effects { pure }
+    costs   <= 8 ops
+{
+    let w : u32 = ~b;
+    return w;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- **Und der BEREICH, den M1 dem Komplement gibt -- er ist exakt und nicht die volle Breite.**
+--
+-- Das Komplement ueber `n` Bit ist `MAX - x`: streng monoton fallend und bijektiv. Der
+-- Bereich von `~x` ist also **genau** `MAX - x.max .. MAX - x.min` und nichts Groeberes.
+--
+-- *Gemessen 2026-09-01, als Mutation:* wird die Zeile in `m1.rs` durch `IntBereich::voll`
+-- ersetzt -- die volle Breite, also die konservative Richtung --, faellt **keine einzige
+-- Probe** des ganzen Baums. Die Zeile darunter ist die Antwort darauf: sie verlangt
+-- `240 .. 255` und faellt mit `M101`, sobald der Bereich vergroebert wird.
+--
+-- > Eine sichere Vergroeberung ist kein Fehler und trotzdem ein Verlust: sie lehnt
+-- > Programme ab, die die Sprache traegt. **Eine Regel ohne Probe ist eine Vermutung mit
+-- > Rueckenwind.**
+-- ---------------------------------------------------------------------------------------
+
+type Nibble = u8 in 0 .. 15;
+
+impl fn hohes_nibble(x : Nibble) -> u8 in 240 .. 255
+    effects { pure }
+    costs   <= 4 ops
+{
+    return ~x;
+}
+
+}

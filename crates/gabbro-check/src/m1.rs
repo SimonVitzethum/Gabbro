@@ -1664,6 +1664,64 @@ impl<'a> Pruefer<'a> {
                     None => Typ::Unbekannt,
                 }
             }
+            // **`~x` -- and the operand's WIDTH is the whole rule.**
+            //
+            // The complement over `n` bits is `MAX - x`, and it is order-reversing and
+            // bijective: the range of `~x` is exactly `MAX - x.max .. MAX - x.min`. *No
+            // widening, no approximation* -- unlike `+` or `*`, the complement can never
+            // leave the width it is taken in, so `M104` has nothing to say about this node
+            // and everything to say about the one above it.
+            //
+            // **Two operands are refused by name rather than guessed at:**
+            //
+            // * A LITERAL has no width (`IntBereich::konstante` gives it the smallest one it
+            //   fits into, marked `literal`). `~5` would then be `250` over `u8` and
+            //   `4294967290` over `u32`, and nothing in the source says which. *C answers
+            //   this question with the integer promotion, and that answer is the trap this
+            //   whole construct stands against.* The named limit is the form for the
+            //   all-ones constant: `u32::max`.
+            // * A SIGNED operand. `~x` on `i32` is `-x-1` in C -- a perfectly defined
+            //   operation and a different one from "invert the bits of a word". Zero corpus
+            //   sites ask for it, and Rule A says a construct without a measured need does
+            //   not get built.
+            ExprArt::Unaer(UnOp::BitNicht, i) => {
+                let t = self.ausdruck(i, lage);
+                let Some(b) = t.bereich() else { return Typ::Unbekannt };
+                if b.literal {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M137",
+                            e.span,
+                            format!(
+                                "`~` over a literal -- `{}` carries no width, and the \
+                                 complement is a different number in every one",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "the all-ones constant of a width has its own form: `u32::max`",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                if b.vorzeichen {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M137",
+                            e.span,
+                            format!("`~` over the signed `{}`", b.text()),
+                        )
+                        .mit_notiz(
+                            "`~` inverts the bits of an unsigned word; on a signed one C \
+                             computes `-x-1`, and that is a different operation with no \
+                             corpus site asking for it",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                let (_, hi) = typen::grenzen(b.breite, false);
+                Typ::Ganzzahl(IntBereich::genau(b.breite, false, hi - b.max, hi - b.min))
+            }
             ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage),
         }
     }

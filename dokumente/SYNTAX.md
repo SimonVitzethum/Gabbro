@@ -541,7 +541,17 @@ cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
 bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
-unary      = [ "!" | "-" ] primary | fnvalue ;
+unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
+             (* **`~`, 2026-09-01 -- das Bitkomplement, und seine ganze Frage ist die
+                BREITE.** Es steht bei `unary`, nimmt also ein `primary`: `~a & b` ist
+                `(~a) & b`, hier wie in C. Der Operand ist VORZEICHENLOS und traegt eine
+                erklaerte Breite; ein Literal und ein `i32` werden mit `M137` abgesagt.
+                **Die ausbuchstabierte Form `x ^ <Allesbits>` bleibt** -- ein Xor gegen
+                eine andere Maske ist eine andere Rechnung. Abgeloest wird nur die
+                Redewendung, die die Breite als Dezimalzahl neben den Typ schreibt:
+                gemessen gibt `c : u32` mit `c ^ 65535` null Fehler und null Hinweise,
+                und aus der Invertierung ist lautlos etwas anderes geworden.
+                Der Bedarfsbeleg ist `messung/netz/udp-echo.gab`:111 (RFC 1071). *)
 fnvalue    = "&" path ;
              (* **«B8», 2026-08-21: der ERZEUGER eines Funktionszeigers.** `fnptr` stand seit
                 jeher in der Grammatik und hatte **null Korpusstellen** -- weil es keinen

@@ -638,6 +638,13 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         ExprArt::Ort(o) => place_term(o, c),
         ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("(.un .not {})", expr_term(x, c)?)),
         ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(.un .neg {})", expr_term(x, c)?)),
+        // **`~` has no term here, and the reason is the model and not the operator.**
+        //
+        // `Gabbro.Body` carries `.un .not` and `.un .neg`, both of which are width-free over
+        // `Int`. A complement is NOT: `~x` is `2^n - 1 - x`, and the `n` is nowhere in this
+        // channel -- an expression carries no declared type into `expr_term`. *A term that
+        // picked a width would prove a theorem about a program the checker never checked.*
+        ExprArt::Unaer(UnOp::BitNicht, _) => Err(LeanReason::Expression),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
                 BinOp::Plus => "add",

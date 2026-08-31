@@ -1460,6 +1460,23 @@ pub fn emittiere_mit(
             } else if let Some(w) = namen.konstwert.get(&k.name.text).copied() {
                 let suffix = if w < 0 { "" } else { "u" };
                 aus.push_str(&format!("\n#define {} {w}{suffix}\n", k.name.text));
+            // **`~` inside a `const` gets its OWN refusal, because the one beside it would
+            // be false.** `const H : u32 = ~G;` IS a constant expression -- it is merely not
+            // one `umgebung.rs` can fold: that folder computes in `i128`, and the complement
+            // is `2^n - 1 - x` with an `n` it does not have. *A refusal that says
+            // "non-constant" sends the reader the wrong way* -- looking for a variable and
+            // finding a missing folder.
+            //
+            // The folding is not built (Rule A: zero corpus sites); the form for the
+            // all-ones constant stands beside it and is called `u32::max`.
+            } else if enthaelt_bitnicht(&k.wert) {
+                weigere(
+                    absagen,
+                    k.name.span,
+                    "`~` inside a `const` -- the value IS constant, and the folder in \
+                     `umgebung.rs` computes in `i128` without a width. The all-ones constant \
+                     of a width has its own form: `u32::max`",
+                );
             } else {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
@@ -2349,6 +2366,29 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// **One reader is one place to fix that**, and four are four places to forget it.
 fn traegertyp<'a>(name: &str, u: &'a Namen) -> Option<&'a TypExpr> {
     u.typen.get(name)
+}
+
+/// **Does a `~` stand anywhere inside this expression?** -- the one question the `const`
+/// refusal above needs, and it is asked over the whole tree rather than at the top node:
+/// `const H : u32 = (~G) & 255;` is unfoldable for the same reason as `~G` itself, and a
+/// look at the root alone would have sent it to the wrong sentence.
+fn enthaelt_bitnicht(e: &Expr) -> bool {
+    match &e.art {
+        ExprArt::Unaer(UnOp::BitNicht, _) => true,
+        ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => enthaelt_bitnicht(x),
+        ExprArt::Binaer(_, a, b) => enthaelt_bitnicht(a) || enthaelt_bitnicht(b),
+        ExprArt::Ruf(r) => r.argumente.iter().any(enthaelt_bitnicht),
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::Ort(_)
+        | ExprArt::FnWert(_)
+        | ExprArt::Eingebaut(_)
+        | ExprArt::Alt(_)
+        | ExprArt::Ergebnis
+        | ExprArt::Grund { .. } => false,
+    }
 }
 
 /// A range BOUND as a number -- like `konst_zahl`, but the minus sign counts.
@@ -3863,6 +3903,20 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         // Datei nirgends erklaert.** *Der Fehler faellt bei `cc`; entschieden gehoert er
         // hier.*
         ExprArt::Unaer(UnOp::Nicht, x) => format!("!({})", ausdruck_format(x, fmt, u, absagen)),
+        // **`~` in a `where` clause is refused by name, and the reason is the width.** A
+        // field reader is called `Elf_gueltig(v)` here; which C width it returns stands in
+        // the `format` declaration and not in this reader. *Without the width the emitted
+        // `~` would be an `int` complement* -- exactly the defect this operator is built
+        // against. Zero corpus sites ask for it (Rule A).
+        ExprArt::Unaer(UnOp::BitNicht, _) => {
+            weigere(
+                absagen,
+                e.span,
+                "`~` inside a `where` clause of a `format` -- the complement needs the WIDTH \
+                 of its operand, and a field reader's width is not readable at this point",
+            );
+            String::new()
+        }
         // **Ein Ort MIT Suffix hat in einer `where`-Klausel keinen Gegenstand.** In der
         // erzeugten Pruefkoerperfunktion steht genau ein Objekt: `v`, der Puffer. `a.b` oder
         // `a[i]` nennt etwas, das dort nicht existiert -- und `ausdruck` haette daraus
@@ -8340,6 +8394,36 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         // geschrieben, und ein `!` ist kein Konstrukt -- es ist das, was man beim Schreiben
         // eines Programms tut.*
         ExprArt::Unaer(UnOp::Nicht, x) => format!("!({})", ausdruck(x, u, absagen)),
+        // **`~x` lowers to `({c})~({c})(x)`, and the TWO casts are the whole item.**
+        //
+        // A bare `~x` in C is not a complement of the width the Gabbro states: the integer
+        // promotion lifts every operand narrower than `int` up to `int`, and `~(uint16_t)240`
+        // is `0xFFFFFF0F` there and not `0xFF0F`. **`-Wall -Wextra` mostly says nothing about
+        // it** -- the value is well defined, it is merely a different one from the checked
+        // one.
+        //
+        // > The inner cast binds the operand to its width, the outer one cuts the promoted
+        // > result back. *Only the outer one is the effective one*; the inner stands beside
+        // > it because `mirrors` and the bit-field setter have written exactly this form
+        // > since day one (`emit.rs::3062`, `::3514`), and **two spellings for one thing
+        // > would be the second register** (W7).
+        //
+        // The width comes from `wert_ctyp`, that is, from the declaration. Where it is not
+        // readable the emitter refuses instead of guessing -- a `uint64_t` default here
+        // would be precisely `breite_von`'s `_ => 8`, one level down.
+        ExprArt::Unaer(UnOp::BitNicht, x) => {
+            let Some(c) = wert_ctyp(x, u) else {
+                weigere(
+                    absagen,
+                    e.span,
+                    "`~` over an operand whose WIDTH the emitter cannot read off a \
+                     declaration -- the complement is a different number in every width, and \
+                     a default width here would be a guess",
+                );
+                return String::new();
+            };
+            format!("({c})~({c})({})", ausdruck(x, u, absagen))
+        }
         // **Und das unaere Minus wird NICHT mitgebaut, obwohl es danebensteht** -- Regel A:
         // kein Konstrukt ohne ein Programm, das es gebraucht hat. Es hat einen zweiten
         // Grund, und der ist schaerfer:

@@ -1,0 +1,25 @@
+-- erwartet: M137
+-- **Gift 443 -- `~` ueber einem Literal, und das Literal hat keine Breite.**
+--
+-- `~5` ist in C `-6`, in einem `uint8_t`-Zusammenhang `250` und in einem `uint32_t`-en
+-- `4294967290`. **Drei Zahlen, eine Schreibweise** -- und was davon gemeint ist, entscheidet
+-- in C die ganzzahlige Aufwertung samt dem, was danebensteht.
+--
+-- Gabbro entscheidet es gar nicht: `IntBereich::konstante` gibt einem Literal die kleinste
+-- Breite, in die es passt, und markiert es als `literal`. *Diese Breite ist eine Folge der
+-- Ziffern und keine Aussage des Programms* -- ein Komplement darueber waere eine Zahl, die
+-- sich aendert, wenn man `5` durch `300` ersetzt.
+--
+-- **Die Form fuer die Allesbits-Konstante steht daneben und heisst `u32::max`** -- dort
+-- nennt das Programm die Breite, statt sie aus einer Ziffernfolge zu erben.
+
+module gift443 {
+
+impl fn was_denn(w : u32) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return w & ~5;
+}
+
+}
