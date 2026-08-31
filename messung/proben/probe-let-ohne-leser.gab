@@ -1,0 +1,37 @@
+-- **Die `let`-Bindung, die niemand zurueckliest -- und warum sie ABSENKT statt zu fallen.**
+--
+-- `F05`s eingefrorener Ausschnitt schreibt `let r2 = request_flush(transport, pool);` und
+-- liest `r2` nie. Der Erzeuger schrieb dafuer `uint64_t r2 = …;`, und
+-- `cc -Wall -Werror` antwortete *unused variable 'r2'*.
+--
+-- > **Der W24-Vorlauf, 2026-08-31:** `0 errors, 0 hints`, 21 Zeilen C, und das dritte
+-- > Werkzeug faellt. Dieselbe Lage wie bei `exit` und bei `m.op` -- nur ist die Antwort hier
+-- > eine ANDERE, und sie ist gemessen und nicht gewaehlt.
+--
+-- **Eine Absage waere falsch gewesen.** Sie wurde gebaut, ueber die 418 Dateien gemessen und
+-- wieder zurueckgenommen: sie fiel in **17** von ihnen -- dreizehn Giftproben, vier
+-- `fnptr`-Proben, eine Messdatei -- *und keine davon war ein Mangel.* **Eine Bindung nicht
+-- zurueckzulesen ist etwas, das dieser Korpus schreibt.** Die ganze Abwaegung steht in
+-- `messung/ZWEI-BLINDSTELLEN.md` §3.
+--
+-- Gebaut wurde stattdessen die Absenkung: **`(void)r2;`**, genau die Zeile, die der Erzeuger
+-- fuer einen ungelesenen PARAMETER seit jeher schreibt, aus demselben Laeufer.
+--
+-- Diese Datei ist eine MESSUNG: sie muss 0 Fehler geben, emittieren UND uebersetzen. Stufe 9
+-- von `pruefe-emission.sh` liest `messung/*/*.gab` -- damit haelt der Fall sich selbst.
+
+module probe::let_ohne_leser {
+
+extern fn spuelen(a : u64) -> u64 effects { writes a } costs <= 4 ops;
+
+pub fn dienst(a : u64) -> u64
+    effects { writes a }
+    costs <= 16 ops
+{
+    -- Der Ruf ist, worauf es ankommt; der Wert ist es nicht. Ein nackter Ruf taete es auch
+    -- (`spuelen(a);`), und genau darum ist die Bindung kein Mangel, sondern eine Wahl.
+    let r2 = spuelen(a);
+    return 0;
+}
+
+}

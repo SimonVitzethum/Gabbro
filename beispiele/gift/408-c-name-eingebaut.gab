@@ -1,0 +1,25 @@
+-- erwartet: N041
+-- **Klasse `Eingebaut`: ein Name, den `cc` OHNE JEDEN `#include` kennt.**
+--
+-- Das ist die Klasse, die `F05` getroffen hat, und die unheimlichste der drei: `exit` steht
+-- in keinem der vier Header, die der Erzeuger schreibt, und `cc` weist die Deklaration
+-- trotzdem zurueck -- *conflicting types for built-in function `exit`; expected `void(int)`*.
+--
+-- > **Der `W24`-Vorlauf ist der Grund, dass diese Datei nicht rot geraten ist:** vor der
+-- > Regel sagte der Pruefer zu genau diesem Text `3 items, 0 errors, 0 hints`, der Erzeuger
+-- > schrieb 20 Zeilen C, und erst das dritte Werkzeug fiel. `messung/C-NAMEN.md` §1.
+--
+-- Gegenprobe: `messung/proben/probe-c-namen-frei.gab` -- `read` und `write` sind POSIX und
+-- KEINE eingebauten Funktionen; dieselbe Form geht dort mit 0 Fehlern durch.
+
+module gift {
+
+extern fn exit() -> never effects { diverges };
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

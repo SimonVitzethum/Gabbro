@@ -1,0 +1,24 @@
+-- erwartet: N041
+-- **Klasse `Wort`: ein Schluesselwort von C11 §6.4.1.**
+--
+-- `switch` ist in Gabbro ein gewoehnlicher Bezeichner -- der Wortschatz ist eine
+-- GESCHLOSSENE Tafel (221 Woerter), und `switch` steht nicht darin. In C ist es ein
+-- Schluesselwort, und `uint64_t switch(uint64_t)` ist kein Deklarator, sondern ein
+-- Syntaxfehler.
+--
+-- > **Sieben der 44 C11-Schluesselwoerter sind gar nicht erreichbar** -- `const`, `else`,
+-- > `extern`, `if`, `return`, `sizeof` und `static` stehen in Gabbros eigenem Wortschatz und
+-- > fallen schon an `P002`, *„is a word of the vocabulary, not an identifier"*. **Gemessen,
+-- > nicht angenommen:** `const bool : u64 = 3;` faellt heute an `P002`. Die Tafel traegt
+-- > darum 37 und nicht 44 -- *was eine andere Regel schon abweist, gehoert nicht doppelt
+-- > gebucht.*
+
+module gift {
+
+pub fn switch(a : u64) -> u64
+    effects { pure }
+{
+    return a;
+}
+
+}

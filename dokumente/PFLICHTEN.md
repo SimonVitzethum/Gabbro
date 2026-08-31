@@ -399,6 +399,16 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 
 **+10 obligations, 10 K, ~~6~~ 5 hanging** *(re-measured **2026-08-30** with `./instrumente/zaehle-fragmente.py`: ~~6~~ **7** of the ten check clean, ~~**4 lower and run**~~ **6 lower and 5 run** — F02, F04, F07, F08, F10)*. **Alle drei Zahlen dieses Klammersatzes waren falsch, und alle drei in dieselbe Richtung: zu pessimistisch.** *Eine Buchführung, die nur in eine Richtung altert, ist nicht vorsichtig — sie ist ungemessen.*
 
+> **Und am 2026-08-31 ist die erste dieser Zahlen GEFALLEN, von ~~7~~ auf 6 — mit Grund an der
+> Marke.** `N041` weist einen Namen ab, den C schon vergeben hat, und `messung/fragmente/F05.gab`
+> trägt einen: `extern fn exit()`. **Die 7 war ein falsches Grün** — die Datei prüfte sauber,
+> emittierte 199 Zeilen C und wurde vom fremden Übersetzer zurückgewiesen. *Eine Marke, die fällt,
+> weil eine Blindstelle einen Namen bekommen hat, ist keine Verschlechterung; sie ist die erste
+> ehrliche Ablesung.* Gemessen in `messung/C-NAMEN.md`, entschieden in `messung/F05-UNERREICHBAR.md`.
+> **Die Absenkungsspalte bewegt sich davon NICHT:** `F05` war nie unter denen, die absenken —
+> `C001` stand davor. Sie steht heute bei *6 lower and 6 run*, und der Zuwachs kommt von `F06`,
+> das am 2026-08-31 durchgestochen wurde.
+
 > **And the column is no longer kept by hand.** `instrumente/zaehle-pflichten.py` used to carry
 > `ABSENKUNG_OFFEN = ["F1", "F2", …]` in its source; it now reads the `lauf "fragmentN"` lines out of
 > `pruefe-emission.sh`. **Whoever builds a differential test lowers `H`; whoever removes one raises it**, and

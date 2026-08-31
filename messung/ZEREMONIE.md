@@ -5,12 +5,21 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-61 Dateien gemessen, 3 abgelehnt
+60 Dateien gemessen, 4 abgelehnt
   ableitbar       60        A1  4 · A4 56
   redundant        0
-  tragend        975
-60 von 1035 Stellen dürfen sinken
+  tragend        948
+60 von 1008 Stellen dürfen sinken
 ```
+
+> **~~1035~~ 1008 seit dem 2026-08-31, und der Nenner ist gefallen, nicht der Zähler.**
+> `messung/fragmente/F05.gab` ist die vierte abgelehnte Datei: `N041` weist `extern fn exit()`
+> ab, ein Name, den C schon vergeben hat, und **eine Datei mit Fehlern zählt hier nicht mit**
+> (*„has errors -- no count"*). Ihre 27 Stellen sind aus der Grundgesamtheit heraus.
+>
+> *Eine Quote, deren Nenner sich bewegt, ist zweimal zu lesen* — die 60 ableitbaren stehen
+> unverändert, die Prozentzahl steigt trotzdem. **Nichts ist nutzbarer geworden;** eine Datei
+> hat die Messung verlassen. `messung/C-NAMEN.md`, `messung/F05-UNERREICHBAR.md`
 
 ## Die zwei Achsen, und warum sie getrennt bleiben
 

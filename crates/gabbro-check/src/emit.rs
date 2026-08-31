@@ -80,6 +80,22 @@ struct Namen {
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
+    /// **The `let` bindings this body never reads back** (2026-08-31).
+    ///
+    /// The emitter already writes `(void)k;` for an unread PARAMETER, and the comment at
+    /// that site gives the reason: *`cc -Wextra` finds it, no pass of this compiler does,
+    /// and the user did not write the generated line.* **A `let` is the same C problem and
+    /// the same answer** -- `uint64_t r2 = spuelen(a);` with no reader is
+    /// `-Werror=unused-variable`, and `messung/fragmente/F05.gab`:184 writes exactly that,
+    /// in a FROZEN line.
+    ///
+    /// > **And it is deliberately not a refusal.** Measured 2026-08-31 over the 418 files:
+    /// > a rule that refused an unread binding fell in **17** of them -- thirteen poison
+    /// > probes, four `fnptr` probes and one measurement file -- *and not one was a defect.*
+    /// > **Binding a value and not reading it back is a thing this corpus writes.** Rule A
+    /// > cuts the other way here, and the whole weighing stands in
+    /// > `messung/ZWEI-BLINDSTELLEN.md` §3.
+    ungelesene_lets: BTreeSet<String>,
     typen: HashMap<String, TypExpr>,
     /// **Die Verbundtypen: Name -> Felderliste in Deklarationsreihenfolge** («B7»).
     /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
@@ -4107,6 +4123,23 @@ fn zeigerziel(t: &TypExpr) -> Option<String> {
 /// ihm laengst tut.
 fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
     let mut lokal = u.clone();
+    // **Which of this body's `let`s nobody reads back** -- the same walker the
+    // `(void)k;` of an unread parameter uses, so the two answers cannot drift.
+    lokal.ungelesene_lets.clear();
+    if let FnRumpf::Block(b) = &f.rumpf {
+        let mut gelesen = BTreeSet::new();
+        benutzte_namen(b, &mut gelesen);
+        let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
+        sammle_lets(b, &mut lets, &mut wieoft);
+        for l in lets {
+            // A name bound TWICE is not decided here -- the same rule the ghost
+            // fixpoint above follows, and for the same reason: two bindings under
+            // one name are two questions, and this map answers one.
+            if wieoft.get(&l.name.text) == Some(&1) && !gelesen.contains(&l.name.text) {
+                lokal.ungelesene_lets.insert(l.name.text.clone());
+            }
+        }
+    }
     for p in &f.parameter {
         let name = &p.name.text;
         // **Erst loeschen, dann eintragen.** Was diese Funktion selbst bindet, kommt aus
@@ -4244,20 +4277,24 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
 /// claim a type for a name the product never spells. **Its NAME still goes on record**, into
 /// `geistlokal` -- the skip loses the type, and the question `geist_wert` asks later survives
 /// it (2026-08-30).
-fn lokale_lets(b: &Block, lokal: &mut Namen) {
-    fn sammle<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>, wieoft: &mut HashMap<String, u32>) {
-        for s in &b.anweisungen {
-            if let StmtArt::Let(l) = &s.art {
-                *wieoft.entry(l.name.text.clone()).or_insert(0) += 1;
-                aus.push(l);
-            }
-            for k in crate::unterbloecke(s) {
-                sammle(k, aus, wieoft);
-            }
+/// Every `let` of a body and how often each NAME is bound. **Pulled out of `lokale_lets`
+/// on 2026-08-31** so `eigene_sicht` can ask the same question -- a second copy of it would
+/// be the drift this file already records once.
+fn sammle_lets<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>, wieoft: &mut HashMap<String, u32>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Let(l) = &s.art {
+            *wieoft.entry(l.name.text.clone()).or_insert(0) += 1;
+            aus.push(l);
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_lets(k, aus, wieoft);
         }
     }
+}
+
+fn lokale_lets(b: &Block, lokal: &mut Namen) {
     let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
-    sammle(b, &mut lets, &mut wieoft);
+    sammle_lets(b, &mut lets, &mut wieoft);
     loop {
         let mut neu: Vec<(String, String)> = Vec::new();
         let mut neu_tx: Vec<(String, TypExpr)> = Vec::new();
@@ -4646,7 +4683,16 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
 
 /// Welche Namen liest dieser Rumpf? Nur die Formen, die der Erzeuger ueberhaupt absenkt --
 /// jede andere wird ohnehin abgelehnt.
-fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
+/// **The one walker that answers *which names does this body mention*.**
+///
+/// `pub(crate)` since 2026-08-31, because `namen.rs::let_ohne_leser` needs the same
+/// answer and a second implementation of it would drift -- *the comment three lines
+/// down already records that happening once inside this file.*
+///
+/// It is the load-bearing walker of the `(void)k;` decision, so it is measured in both
+/// directions by the emission suite: too few names and a live parameter is silenced,
+/// too many and a dead one keeps a warning `cc -Wextra -Werror` turns into an error.
+pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
     // **Die zwei privaten Helfer `e` und `o_` sind weg** -- see `sammle_expr_namen` and
     // `ort_namen`. They were a second implementation of the same question and had already
     // drifted from the first.
@@ -5189,11 +5235,19 @@ fn anweisung(
                 None => None,
             };
             match typ {
-                Some(c) => aus.push_str(&format!(
-                    "{e}{c} {} = {};\n",
-                    l.name.text,
-                    ausdruck(&l.wert, u, absagen)
-                )),
+                Some(c) => {
+                    aus.push_str(&format!(
+                        "{e}{c} {} = {};\n",
+                        l.name.text,
+                        ausdruck(&l.wert, u, absagen)
+                    ));
+                    // **`(void)r2;` for a binding this body never reads back** -- the same
+                    // answer the unread parameter gets, from the same walker. See
+                    // `Namen::ungelesene_lets` for why it is a lowering and not a refusal.
+                    if u.ungelesene_lets.contains(&l.name.text) {
+                        aus.push_str(&format!("{e}(void){};\n", l.name.text));
+                    }
+                }
                 None => weigere(absagen, s.span, "`let` without a resolvable type"),
             }
         }
