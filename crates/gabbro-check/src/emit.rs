@@ -6361,6 +6361,53 @@ fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
 ///
 /// *Die dritte ist die, an der es sich entscheidet:* ein blanker `index into T` nennt seine
 /// Tabelle nur im TYP, und ohne den Parametertyp waere der Erzeuger hier blind.
+/// **The view INSIDE a traversal -- and without it the emitter walked the wrong table.**
+///
+/// Measured 2026-08-31. A loop variable may carry the name of a parameter; the language
+/// allows it and `gabbro pruefe` says `0 errors` about it. `baumsicht` above answers from
+/// `parametertyp`, a map from NAME to declared type that knows nothing about scope -- so
+/// `descendants of v` inside `traverse v of g over ancestors of g` resolved against the
+/// PARAMETER `v` and lowered to a walk over the parameter's table:
+///
+/// ```text
+/// gabbro pruefe   ->  6 items, 0 errors, 0 hints
+/// cc              ->  clean
+/// ./a.out         ->  0        (the right answer is 3)
+/// ```
+///
+/// **The control in the same run is what makes it a finding**: rename the parameter, take
+/// the shadow away, and the emitter REFUSES -- `C001: descendants of over a place that
+/// names no table`. *The shadow was the only thing standing between a refusal and wrong
+/// code.*
+///
+/// So the loop variable shadows here the way a parameter shadows in `eigene_sicht`: **the
+/// emitter only catches up with the binding rule every pass in front of it already
+/// follows.** What it does NOT do is guess a type -- the name leaves `parametertyp` instead
+/// of entering it with something invented, and then `baumsicht` says `None` and the refusal
+/// above speaks.
+///
+/// ## ONE map, and the other six are named instead of cleared -- Regel A
+///
+/// `eigene_sicht` clears seven maps for a parameter (`werte`, `markenwerte`,
+/// `tabellenzeiger`, `geraetezeiger`, `geraetewerte`, `formatwerte`, `parametertyp`), and
+/// the first version here mirrored all seven. **Six of them were then deleted one at a time
+/// and rebuilt, and not one probe went red** -- so they were cut.
+///
+/// It is not a coverage gap, it is the shape of the thing: **`parametertyp` is the only one
+/// of the seven that answers about a BARE name.** The other six decide `.` against `->`, a
+/// register access, a tagged value -- every one of them a name with a SUFFIX. A loop
+/// variable is an index word and carries no fields, so `v.feld` under any of them is C that
+/// does not compile, with or without this line. *A shadow over a question nobody can ask is
+/// not a rule, it is a line.*
+///
+/// The day a loop variable can hold a record, this is where the other six go back in --
+/// with the program that measures them beside it.
+fn laufsicht(u: &Namen, name: &str) -> Namen {
+    let mut innen = u.clone();
+    innen.parametertyp.remove(name);
+    innen
+}
+
 fn baumsicht(o: &Ort, u: &Namen, absagen: &mut Absagen) -> Option<(String, String, String)> {
     // `<zeiger>.slots[i]` oder `<Tabelle>.slots[i]`
     if o.suffixe.len() == 2 {
@@ -6454,8 +6501,10 @@ fn vorfahren(
          {e} * well-foundedness, which is a HYPOTHESIS of the table, not a run-time check. */\n\
          {e}for (uint32_t {v} = {basis}[{wurzel}].{elter}; {v} != {n}u; {v} = {basis}[{v}].{elter}) {{\n"
     ));
+    // The domain above was read in the OUTER scope; the BODY is not.
+    let innen = laufsicht(u, v);
     for k in &x.rumpf.anweisungen {
-        anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+        anweisung(k, aus, &innen, absagen, tiefe + 1, austritt);
     }
     aus.push_str(&format!("{e}}}\n"));
 }
@@ -6574,11 +6623,13 @@ fn nachfahren(
     // **Die Vorordnung besucht auf dem WEG hinunter, die Nachordnung auf dem Weg zurueck.**
     // Beide Male steht der Nachfolger schon fest -- der Unterschied ist allein, wo der Rumpf
     // sitzt, und genau das ist die ganze Aussage von `by consuming`.
+    // The domain above was read in the OUTER scope; the BODY is not.
+    let innen = laufsicht(u, v);
     let rumpf_hin = |aus: &mut String, absagen: &mut Absagen| {
         aus.push_str(&format!("{e}        {{\n{e}            const uint32_t {v} = {k};\n"));
         aus.push_str(&format!("{e}            (void){v};\n"));
         for kk in &x.rumpf.anweisungen {
-            anweisung(kk, aus, u, absagen, tiefe + 3, austritt);
+            anweisung(kk, aus, &innen, absagen, tiefe + 3, austritt);
         }
         aus.push_str(&format!("{e}        }}\n"));
     };
@@ -6653,8 +6704,10 @@ fn traverse(
             aus.push_str(&format!(
                 "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
             ));
+            // The domain above was read in the OUTER scope; the BODY is not.
+            let innen = laufsicht(u, v);
             for k in &x.rumpf.anweisungen {
-                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                anweisung(k, aus, &innen, absagen, tiefe + 1, austritt);
             }
             aus.push_str(&format!("{e}}}\n"));
             return;
@@ -6720,8 +6773,10 @@ fn traverse(
             aus.push_str(&format!(
                 "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
             ));
+            // The domain above was read in the OUTER scope; the BODY is not.
+            let innen = laufsicht(u, v);
             for k in &x.rumpf.anweisungen {
-                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                anweisung(k, aus, &innen, absagen, tiefe + 1, austritt);
             }
             aus.push_str(&format!("{e}}}\n"));
             return;

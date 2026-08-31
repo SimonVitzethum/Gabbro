@@ -6942,6 +6942,241 @@ impl fn f(t : ptr<normal, r> T) -> u32
     );
 }
 
+/// **The emitter walked the wrong table -- silently, it compiled, and with 0 errors.**
+///
+/// `emit.rs::baumsicht` asks `parametertyp`: a map NAME -> declared type that knows nothing
+/// about scope. A loop variable may carry the name of a parameter -- the language allows it
+/// and every pass says `0 errors` -- and then `descendants of v` inside `traverse v of g
+/// over ancestors of g` resolved against the PARAMETER and lowered a tree walk over the
+/// parameter's table.
+///
+/// Measured 2026-08-31, with a `main` beside the emitted C (`Topologie` a chain 0 -> 1 -> 2,
+/// `Riesen` empty, `f(2, 0)`):
+///
+/// ```text
+/// gabbro pruefe   ->  6 items, 0 errors, 0 hints
+/// cc              ->  clean
+/// ./a.out         ->  0        (the right answer is 3)
+/// ```
+///
+/// The 3 was measured too, in the same C with `Riesen_speicher` replaced by
+/// `Topologie_speicher` and the sentinel `512u` by `8u`. *A number against a number.*
+///
+/// ## The control is what makes it a finding
+///
+/// Rename the parameter, take the shadow away and change nothing else -- and the emitter
+/// REFUSES: `C001: descendants of over a place that names no table`. **The shadow was the
+/// only thing standing between a refusal and wrong code.**
+///
+/// ## And the half that kills the too-wide version
+///
+/// A `laufsicht` that simply emptied every map would pass the two halves above and quietly
+/// break every ordinary loop. So the third part emits a corpus-shaped nested traversal --
+/// two loops over the same pointer, the body writing through it -- and holds the C.
+#[test]
+fn die_laufvariable_verdeckt_die_tabelle_im_erzeugnis() {
+    fn erzeuge(quelle: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.code.to_string()).collect())
+    }
+    fn pruefercodes(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen
+            .iter()
+            .filter(|x| x.stufe == gabbro_syntax::diag::Stufe::Fehler)
+            .map(|x| x.code.to_string())
+            .collect()
+    }
+    fn welt(param: &str) -> String {
+        format!(
+            "module t {{
+const NKLEIN : u32 = 8;
+const NGROSS : u32 = 512;
+table Topologie count NKLEIN {{
+    tree {{ parent elter, child erstes_kind, sibling naechstes }}
+    slot {{ elter : option index into Topologie,
+            erstes_kind : option index into Topologie,
+            naechstes : option index into Topologie,
+            wert : u32, }} }}
+table Riesen count NGROSS {{
+    tree {{ parent elter, child erstes_kind, sibling naechstes }}
+    slot {{ elter : option index into Riesen,
+            erstes_kind : option index into Riesen,
+            naechstes : option index into Riesen,
+            wert : u32, }} }}
+impl fn f(g : index into Topologie, {param} : index into Riesen) -> u32
+    effects {{ reads Topologie.slots, reads Riesen.slots }}
+{{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    traverse v of g over ancestors of g by decreasing v
+        touches reads Topologie.slots
+    {{
+        traverse d of v over descendants of v by unvisited
+            touches reads Topologie.slots
+        {{ if summe < 60000 {{ summe += 1; }} }}
+    }}
+    return summe;
+}} }}"
+        )
+    }
+
+    // 1 -- the checker says NOTHING about this program, and it is right to: the shadowing
+    // is allowed. Whatever falls here has to be said by the emitter.
+    assert!(
+        pruefercodes(&welt("v")).is_empty(),
+        "die Verdeckung ist erlaubt -- der Pruefer darf nichts sagen: {:?}",
+        pruefercodes(&welt("v"))
+    );
+
+    // 2 -- the shadow changes nothing about the LOWERING any more: shadowed and unshadowed
+    // fall with the same refusal, and NO C is written.
+    for (was, param) in [("verdeckt", "v"), ("Kontrolle, unverdeckt", "q")] {
+        let (c, codes) = erzeuge(&welt(param));
+        assert!(
+            codes.iter().any(|x| x == "C001"),
+            "{was}: die Baumkante nennt keine Tabelle -- `C001` muss fallen: {codes:?}"
+        );
+        assert!(
+            !c.contains("Riesen_speicher.slots[_"),
+            "{was}: der Abstieg darf NICHT ueber `Riesen` laufen -- das war der stille Bruch"
+        );
+    }
+
+    // 3 -- **and the ordinary loop stays what it was.** Without this part `laufsicht` could
+    // empty every map and the two halves above would still be green.
+    let (c, codes) = erzeuge(
+        "module t { const N : u32 = 8;
+table T count N { slot { wert : u32, } }
+impl fn f(c : ptr<normal, rw> T) effects { reads c.slots, writes c.slots }
+{ traverse i over slots of c by unvisited touches reads c.slots, writes c.slots
+    { traverse j over slots of c by unvisited touches reads c.slots, writes c.slots
+        { c->slots[i].wert = c->slots[j].wert; } } } }",
+    );
+    assert!(codes.is_empty(), "die gewoehnliche Traversierung senkt ab: {codes:?}");
+    assert!(
+        c.contains("c->slots[i].wert = c->slots[j].wert;"),
+        "der Rumpf schreibt weiter durch den Zeiger:\n{c}"
+    );
+    assert!(
+        c.matches("sizeof(c->slots)").count() == 2,
+        "beide Schleifen laufen weiter ueber `c->slots`:\n{c}"
+    );
+
+    // 4 -- **the SECOND way into `baumsicht`, and without it the too-wide version lives.**
+    // `descendants of c.slots[i]` reads the table from `tabellenzeiger`, not from
+    // `parametertyp`. A `laufsicht` that emptied that map instead of removing ONE name
+    // passed parts 1 to 3 unchanged and broke this shape -- measured, 0 probes red.
+    // `beispiele/01` writes exactly this.
+    let (c, codes) = erzeuge(
+        "module t { const N : u32 = 8;
+table T count N {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot { elter : option index into T,
+           erstes_kind : option index into T,
+           naechstes : option index into T,
+           wert : u32, } }
+impl fn f(c : ptr<normal, rw> T) -> u32
+    effects { reads c.slots, writes c.slots }
+{ let mut summe : u32 in 0 .. 65535 = 0;
+  traverse i over slots of c by unvisited touches reads c.slots, writes c.slots
+    { traverse d of c over descendants of c.slots[i] by unvisited
+          touches reads c.slots, writes c.slots
+        { if summe < 60000 { summe += 1; } } }
+  return summe; } }",
+    );
+    assert!(codes.is_empty(), "`descendants of c.slots[i]` senkt ab: {codes:?}");
+    assert!(
+        c.contains("c->slots[_k2].erstes_kind"),
+        "der Abstieg laeuft weiter ueber den Zeiger `c`:\n{c}"
+    );
+
+    // 5 -- **the counting loop has the same body and needed the same scope.**
+    // `traverse v over slots of w` binds `v` too, and a `descendants of v` under it walked
+    // the parameter's table just as the tree loop did. Without this part the scope could be
+    // dropped from the `slots of` arm and nothing would go red -- measured.
+    let (c, codes) = erzeuge(
+        "module t { const NKLEIN : u32 = 8; const NGROSS : u32 = 512;
+table Winzig count NKLEIN { slot { wert : u32, } }
+table Riesen count NGROSS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot { elter : option index into Riesen,
+           erstes_kind : option index into Riesen,
+           naechstes : option index into Riesen,
+           wert : u32, } }
+impl fn f(w : ptr<normal, r> Winzig, v : index into Riesen) -> u32
+    effects { reads w.slots, reads Riesen.slots }
+{ let mut summe : u32 in 0 .. 65535 = 0;
+  traverse v over slots of w by unvisited touches reads w.slots
+    { traverse d of v over descendants of v by unvisited touches reads Riesen.slots
+        { if summe < 60000 { summe += 1; } } }
+  return summe; } }",
+    );
+    assert!(
+        codes.iter().any(|x| x == "C001"),
+        "auch unter `slots of` nennt die Baumkante keine Tabelle: {codes:?}"
+    );
+    assert!(
+        !c.contains("Riesen_speicher.slots[_"),
+        "der Abstieg darf nicht ueber `Riesen` laufen -- der unveraenderte Erzeuger tat es"
+    );
+
+    // 6 -- **all four lowered loops bind, and each one had to be measured separately.**
+    // Dropping the scope from the `descendants` body or from `elems of` killed no probe at
+    // all until these two stood here -- the shadow in parts 1 to 5 always sat under an
+    // `ancestors of` or a `slots of` loop. *A binder that is never entered is not covered
+    // by a probe about its neighbour.* The unchanged emitter wrote four `Riesen_speicher`
+    // references for each of these two.
+    const BAEUME: &str = "const NKLEIN : u32 = 8; const NGROSS : u32 = 512;
+const NPLAETZE : u64 = 4;
+type Ring = { plaetze : [u32; NPLAETZE], };
+table Topologie count NKLEIN {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot { elter : option index into Topologie,
+           erstes_kind : option index into Topologie,
+           naechstes : option index into Topologie,
+           wert : u32, } }
+table Riesen count NGROSS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot { elter : option index into Riesen,
+           erstes_kind : option index into Riesen,
+           naechstes : option index into Riesen,
+           wert : u32, } }";
+    for (was, kopf, aussen) in [
+        (
+            "descendants unter descendants",
+            "g : index into Topologie, v : index into Riesen",
+            "traverse v of g over descendants of g by unvisited
+                 touches reads Topologie.slots",
+        ),
+        (
+            "descendants unter elems of",
+            "r : ptr<normal, r> Ring, v : index into Riesen",
+            "traverse v over elems of r.plaetze by unvisited touches reads r",
+        ),
+    ] {
+        let (c, codes) = erzeuge(&format!(
+            "module t {{ {BAEUME}
+impl fn f({kopf}) -> u32
+    effects {{ reads Topologie.slots, reads Riesen.slots, reads r }}
+{{ let mut summe : u32 in 0 .. 65535 = 0;
+   {aussen}
+   {{ traverse d of v over descendants of v by unvisited touches reads Riesen.slots
+        {{ if summe < 60000 {{ summe += 1; }} }} }}
+   return summe; }} }}"
+        ));
+        assert!(
+            codes.iter().any(|x| x == "C001"),
+            "{was}: die innere Baumkante nennt keine Tabelle: {codes:?}"
+        );
+        assert!(
+            !c.contains("Riesen_speicher.slots[_"),
+            "{was}: der Abstieg darf nicht ueber `Riesen` laufen"
+        );
+    }
+}
+
 /// **`D019`: the FIELD names in the suffix of a domain's place.**
 ///
 /// The third question at the same place -- `D017` reads its base name, `D018` its kind,

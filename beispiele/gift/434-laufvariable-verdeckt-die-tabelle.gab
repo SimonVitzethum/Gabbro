@@ -1,0 +1,85 @@
+-- erwartet: C001
+-- **Die Laufvariable verdeckt einen Parameter -- und der Erzeuger lief ueber die falsche
+-- Tabelle. Still, uebersetzbar, mit 0 Prueferfehlern.**
+--
+-- `baumsicht` in `emit.rs` fragt `parametertyp`: eine Karte NAME -> erklaerter Typ, die von
+-- Geltungsbereichen nichts weiss. `traverse v of g over ancestors of g` bindet `v` als Slot
+-- von `Topologie` -- aber im Rumpf schlug `descendants of v` weiter den PARAMETER `v :
+-- index into Riesen` nach und senkte einen Baumlauf ueber `Riesen` ab.
+--
+-- Gemessen am 2026-08-31 gegen den unveraenderten Erzeuger, mit einem Hauptprogramm daneben
+-- (`Topologie` eine Kette 0 -> 1 -> 2, `Riesen` leer, Aufruf `f(2, 0)`):
+--
+--     gabbro pruefe   ->  6 items, 0 errors, 0 hints
+--     gabbro emit     ->  for (uint32_t v = Topologie_speicher.slots[g].elter; ...)
+--                           { ... Riesen_speicher.slots[_k2].erstes_kind ... }
+--     cc              ->  sauber, keine Warnung
+--     ./a.out         ->  0
+--
+-- **Richtig sind 3** (`descendants of 1` = {2}, `descendants of 0` = {1,2}) -- nachgerechnet
+-- mit demselben C, in dem von Hand `Riesen_speicher` auf `Topologie_speicher` und der
+-- Sonderwert `512u` auf `8u` gesetzt wurde. *Eine Zahl gegen eine Zahl, kein Argument.*
+--
+-- ## Die Kontrolle ist es, die daraus einen Befund macht
+--
+-- Dieselbe Datei mit dem Parameter `v` in `q` umbenannt -- die Verdeckung weg, sonst nichts
+-- --, und der Erzeuger SAGT AB:
+--
+--     error: [C001] ... `descendants of` over a place that names no table
+--
+-- **Die Verdeckung war das Einzige, was zwischen einer Absage und falschem Code stand.**
+-- Dieselbe Klasse wie `9f88c2e` (`typ_von_ort` schlug die Parameter vor den Globalen nach),
+-- nur einen Leser weiter: nicht der Kostenpass, sondern der Erzeuger.
+--
+-- Geheilt mit `emit.rs::laufsicht` -- die Laufvariable verdeckt im RUMPF genau die Karten,
+-- die `eigene_sicht` fuer einen Parameter loescht. Danach faellt diese Datei mit derselben
+-- Absage wie ihre Kontrolle, und das ist der Punkt: **der Schatten aendert nichts mehr.**
+
+module gift {
+
+const NKLEIN : u32 = 8;
+const NGROSS : u32 = 512;
+
+table Topologie count NKLEIN {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        elter       : option index into Topologie,
+        erstes_kind : option index into Topologie,
+        naechstes   : option index into Topologie,
+        wert        : u32,
+    }
+}
+
+table Riesen count NGROSS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        elter       : option index into Riesen,
+        erstes_kind : option index into Riesen,
+        naechstes   : option index into Riesen,
+        wert        : u32,
+    }
+}
+
+-- MUSS am Erzeuger fallen (C001): `v` ist im Rumpf die Laufvariable und kein `index into
+-- Riesen` mehr. Der Pruefer sagt hier NICHTS, und das ist richtig -- die Verdeckung ist
+-- erlaubt (`beispiele/gift/19-let-verdeckt.gab` seit dem 2026-08-14). Was faellt, ist die
+-- ABSENKUNG: eine Baumkante, die keine Tabelle nennt.
+impl fn f(g : index into Topologie, v : index into Riesen) -> u32
+    effects { reads Topologie.slots, reads Riesen.slots }
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    traverse v of g over ancestors of g by decreasing v
+        touches reads Topologie.slots
+    {
+        traverse d of v over descendants of v by unvisited
+            touches reads Topologie.slots
+        {
+            if summe < 60000 {
+                summe += 1;
+            }
+        }
+    }
+    return summe;
+}
+
+}
