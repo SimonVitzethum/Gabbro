@@ -65,6 +65,23 @@ PFLICHTEN_SUMME = (
 # Je Eintrag: (Datei, Muster mit EINER Gruppe = die Zahl im Text, Befehl, Auszug mit EINER
 # Gruppe = die Zahl aus dem Lauf, was die Zahl bedeutet)
 EINTRAEGE = [
+    # **The cut in the middle of the run** (2026-08-31). The two figures out of
+    # `messung/RUECKLAUFWERTE.md`, its own section on the cut -- the item the empty tree
+    # leaves open, and that a case with a date closed on that day.
+    (
+        "messung/RUECKLAUFWERTE.md",
+        r"\*\*(\d+) von 49\*\* Wächtern können mitten im Lauf",
+        ["./instrumente/pruefe-waechter.py"],
+        r"^== Ein Abbruch MITTEN im Lauf: (\d+) von \d+ koennen",
+        "Waechter, die mitten im Lauf abbrechen koennen",
+    ),
+    (
+        "messung/RUECKLAUFWERTE.md",
+        r"\*\*(\d+) Ausgangsstellen\*\* liegen hinter dem jeweils ersten",
+        ["./instrumente/pruefe-waechter.py"],
+        r"^   (\d+) Ausgangsstellen liegen hinter dem jeweils ersten",
+        "Ausgangsstellen hinter dem jeweils ersten -- die Schnittflaeche",
+    ),
     (
         "messung/fragmente/README.md",
         r"(\d+) von 10 prüfen sauber",

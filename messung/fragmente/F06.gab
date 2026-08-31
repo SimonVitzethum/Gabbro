@@ -6,7 +6,9 @@
 --
 -- **ERGAENZT, und nichts sonst:** `MUSTER` und `EICH_TIEFE_WORTE` (zwei Konstanten) ·
 -- `type IrqMarke` + `static irq` (der Ausschnitt MISST `irq.tiefe_max` und `irq.n`, ohne den
--- Traeger zu nennen) · `reason NichtGemessen` und zwei `extern fn … or NichtGemessen`
+-- Traeger zu nennen) · `type EichMarke` + `static eich` (2026-08-31, DERSELBE Satz: der
+-- Ausschnitt misst `eich.leer`, `eich.voll`, `eich.tiefe`, `eich.gelaufen`) ·
+-- `reason NichtGemessen` und zwei `extern fn … or NichtGemessen`
 -- (`groesse_gemessen`, `frei_min_gemessen` werden mit `else` gerufen, brauchen also einen
 -- Fehlerkanal) · `extern fn eichung_lief` als Tor fuer `gates all_done`.
 --
@@ -64,6 +66,26 @@ const EICH_TIEFE_WORTE : u64 = 64;                     -- wie tief die Eichung s
 -- misst sie, ohne den Traeger zu nennen.
 type IrqMarke = { tiefe_max : u64, n : u32, };
 static mut irq : IrqMarke = IrqMarke(tiefe_max: 0, n: 1);
+
+-- **ERGAENZT 2026-08-31, und zwar nach demselben Satz wie `irq` sechs Zeilen darueber:**
+-- der Ausschnitt MISST `eich.leer`, `eich.voll`, `eich.tiefe` und `eich.gelaufen` und nennt
+-- den Traeger nirgends. `check kstack_eichung` unten schreibt die vier Namen in seine
+-- Berichtszeile, und `eich` gibt es in `dokumente/FRAGMENTE.md` an keiner Stelle.
+--
+-- **Die vier Feldnamen sind nicht erfunden, sie stehen im Ausschnitt.** Erfunden sind der
+-- Typname, die Breiten und die Anfangswerte -- und die liest niemand: kein Pass, und auch
+-- der Differenztest nicht (seine achtzehn Zahlen ruehren `eich` nicht an). *Das ist eine
+-- ERGAENZUNG und keine Entscheidung: sie macht den Ausschnitt zu einem Programm, sie sagt
+-- nichts darueber, was er bedeutet.*
+--
+-- > **Und dahinter steht ein Befund, den `N043` NICHT faengt:** der `can_fail`-Rumpf
+-- > unten schreibt `eich` an keiner Stelle. Er meldet vier Groessen und setzt keine davon.
+-- > `N021` sieht den umgekehrten Fall (der gemessene Pfad veraendert seine eigene Messung),
+-- > `N022` eine einseitige Schwelle ohne `floor` -- **eine Berichtszeile ohne einen
+-- > einzigen Schreiber sieht keine Regel.** Dieselbe Richtung wie `N043`: eine falsche
+-- > BESTAETIGUNG, keine falsche Absage. Der Befund gehoert dem Ausschnitt, nicht Gabbro.
+type EichMarke = { leer : u64, voll : u64, tiefe : u64, gelaufen : u32, };
+static mut eich : EichMarke = EichMarke(leer: 0, voll: 0, tiefe: 0, gelaufen: 1);
 
 -- `groesse_gemessen`/`frei_min_gemessen` werden mit `else` gerufen, also brauchen sie einen
 -- Fehlerkanal (`N028`) -- sonst koennte der Zweig nie genommen werden.
@@ -134,7 +156,17 @@ atomic tiefster     : u32 publishes nothing relaxed;
 -- >
 -- > `lauf "fragment6"` in `pruefe-emission.sh` erzeugt, uebersetzt (`-O0`, `-O2`, UBSan),
 -- > FUEHRT AUS und vergleicht achtzehn Zahlen gegen eine Handschrift, die aus dem Ausschnitt
--- > ABGELEITET und COMMITTET wurde, bevor sie gemessen war. **`H` faellt von 5 auf 4.**
+-- > ABGELEITET und COMMITTET wurde, bevor sie gemessen war. ~~**`H` faellt von 5 auf 4.**~~
+--
+-- > **AM SELBEN TAG GEFALLEN UND AM SELBEN TAG GEHEILT.** `N043` las die Berichtszeile von
+-- > `check kstack_eichung` unten -- `measures eich.leer, eich.voll, eich.tiefe,
+-- > eich.gelaufen` -- und fand keinen Traeger `eich`. Damit pruefte diese Datei nicht mehr
+-- > sauber, `gabbro emit` schrieb kein C, und der Durchstich war WEG: **`H` stand wieder
+-- > bei 5.** *Die `lauf`-Zeile stand unveraendert da* -- und bis zum 2026-08-31 hat
+-- > `zaehle-pflichten.py` genau sie gelesen und nicht den Lauf, also sagte `H` weiter 4.
+-- > **Der Zaehler liest seit heute den Lauf** (`pruefe-emission.sh --absenkung`), und damit
+-- > ist die Reihenfolge belegt: erst stieg `H` auf 5, dann senkte die Ergaenzung von
+-- > `EichMarke`/`eich` es wieder auf 4. **Beide Male ist es eine Messung und keine Buchung.**
 -- >
 -- > Und die INDEXLESART steht in diesen achtzehn Zahlen drin, nicht daneben: `unberuehrt`
 -- > liefert 0, auch an einem Feld, das voll mit `MUSTER` beschrieben ist -- und damit schlaegt
