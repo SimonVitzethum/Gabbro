@@ -1,0 +1,131 @@
+-- Die NEUN Quantorendomaenen in EINER Einheit -- und zwar in `ensures`.
+--
+-- **Der Zweck ist die Messung und nicht das Programm.** Die Tafel in
+-- `messung/DOMAENENNAMEN.md` fragt je Domaene: welche Namen nennt sie, und faellt eine
+-- erfundene Angabe? Diese Datei ist der Traeger, an dem die Verfaelschungen gesetzt werden.
+--
+-- Warum `ensures` und nicht `invariant`: **`M109` liest heute NUR `ensures`** (`m1.rs`:3100,
+-- `for p in &f.ensures`). Steht eine Domaene in einem `requires` oder einer `invariant`,
+-- ist selbst ihr GRUNDNAME ungeprueft -- das ist an dieser Datei nachgemessen. Wer die
+-- Namensprobe in der schaerfsten Stellung fahren will, faehrt sie hier.
+--
+-- Alle neun stehen unter einem Dach, damit eine Verfaelschung an genau EINER Domaene und
+-- sonst nichts geaendert wird -- und die Kontrolle daneben dieselbe Datei ist.
+
+module messung::neun_domaenen {
+
+const NKNOTEN : u32 = 64;
+const NRING   : u64 = 32;
+const LEER    : u32 = 64;
+
+type RingNr = u32 in 0 ..< 32;
+
+-- 1/3/4/2 -- eine Tabelle mit allen drei Baumkanten traegt `slots of`, `descendants of`,
+-- `ancestors of` und `chain(a, b) in`.
+table Knoten count NKNOTEN {
+    tree { parent elter, child erstes_kind, sibling naechstes_geschwister }
+
+    slot {
+        belegt                : bool,
+        marke                 : u32,
+        elter                 : option index into Knoten,
+        erstes_kind           : option index into Knoten,
+        naechstes_geschwister : option index into Knoten,
+    }
+}
+
+-- 5/7 -- ein Verbund mit genau EINEM Feldarray traegt `queue` und `elems of`.
+type Ring = {
+    plaetze : [RingNr; NRING],
+    kopf    : u32,
+    zahl    : u32,
+};
+
+-- 6 -- ein `format` ist die Feldliste, ueber die `fields of` laufen soll.
+format Wort endian little {
+    gueltigkeit : bool @0,
+    schreibbar  : bool @1,
+    rest        : u64 @[63:2] reserved,
+}
+
+-- 9 -- ein `walk` erklaert `mappings of`.
+walk Baum levels 2 {
+    node : [Wort; 512],
+    down : rest when it.gueltigkeit && !it.schreibbar,
+    leaf : it.gueltigkeit && it.schreibbar,
+}
+
+-- 1 -- `slots of <ort>`
+impl fn d1_slots(k : ptr<normal, rw> Knoten)
+    ensures forall s in slots of k : k.slots[s].marke == 0
+    effects { reads k.slots, writes k.slots }
+    costs   <= 4 ops
+{
+}
+
+-- 2 -- `chain(a, b) in <ort>`
+impl fn d2_chain(k : ptr<normal, rw> Knoten, p : index into Knoten)
+    ensures forall x in chain(erstes_kind, naechstes_geschwister) in k.slots[p] :
+                k.slots[x].elter == Some(p)
+    effects { reads k.slots, writes k.slots }
+    costs   <= 4 ops
+{
+}
+
+-- 3 -- `descendants of <ort>`
+impl fn d3_descendants(k : ptr<normal, rw> Knoten, s : index into Knoten)
+    ensures !exists x in descendants of k.slots[s] : k.slots[x].belegt
+    effects { reads k.slots, writes k.slots }
+    costs   <= 4 ops
+{
+}
+
+-- 4 -- `ancestors of <ort>`
+impl fn d4_ancestors(k : ptr<normal, rw> Knoten, s : index into Knoten)
+    ensures forall x in ancestors of k.slots[s] : k.slots[x].belegt
+    effects { reads k.slots, writes k.slots }
+    costs   <= 4 ops
+{
+}
+
+-- 5 -- `queue <ort>`
+impl fn d5_queue(r : ptr<normal, rw> Ring)
+    ensures forall j in queue r : r.plaetze[j] != LEER
+    effects { reads r, writes r }
+    costs   <= 4 ops
+{
+}
+
+-- 7 -- `elems of <ort>`
+impl fn d7_elems(r : ptr<normal, rw> Ring)
+    ensures forall j in elems of r.plaetze : r.plaetze[j] != LEER
+    effects { reads r, writes r }
+    costs   <= 4 ops
+{
+}
+
+-- 6 -- `fields of <pfad>`
+impl fn d6_fields(k : ptr<normal, rw> Knoten)
+    ensures forall f in fields of Wort : k.slots[0].marke == 0
+    effects { reads k.slots, writes k.slots }
+    costs   <= 4 ops
+{
+}
+
+-- 9 -- `mappings of <ort>`
+impl fn d9_mappings(w : ptr<normal, rw> Baum)
+    ensures !exists m in mappings of w : m.schreibbar && !m.gueltigkeit
+    effects { writes w }
+    costs   <= 4 ops
+{
+}
+
+-- 8 -- `threads`
+impl fn d8_threads(k : ptr<normal, rw> Knoten)
+    ensures forall t in threads : k.slots[t].belegt
+    effects { reads k.slots, writes k.slots }
+    costs   <= 4 ops
+{
+}
+
+}
