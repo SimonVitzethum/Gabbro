@@ -9,7 +9,7 @@ check c {
     claim    "Die Messung veraendert, was sie misst -- aber im TOR."
     measures k
     gates    tor
-    can_fail { if k >= 3 { return; } }
+    can_fail { if k >= 3 { return false; } return true; }
     floor    k >= 1
 }
 

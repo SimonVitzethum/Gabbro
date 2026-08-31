@@ -516,6 +516,32 @@ pub const D1D2: &[Satz] = &[
                      SYNTAX.md:1060",
     },
     Satz {
+        name: "n.probenurteil",
+        kennungen: &["N044", "N045"],
+        aussage: "A `can_fail` block yields a VERDICT, and on every path: every `return` in \
+                  it carries a value (`N044`), and no path reaches its closing brace \
+                  (`N045`). A probe FALLS or it HOLDS -- `return false` and `return true` \
+                  are the two things it can say.",
+        vorbehalt: "**It says nothing about the TYPE of the value returned**, only that \
+                    there is one on every path: `return 3` in a `can_fail` block is not \
+                    refused here. And `N045` reads `crate::endet_immer`, which treats a \
+                    loop as falling through -- a probe whose only exit is inside a `forever` \
+                    would be refused, and the corpus carries no such shape to measure it on.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker: six of the twelve \
+                      files in messung/tor-proben/ emit C that `cc` refuses -- `bool \
+                      pruefe_c(void) { if (k >= 3) { return; } }`. `gabbro pruefe` said 0 \
+                      errors and `gabbro emit` no `C001`; three stages passed it and the \
+                      fourth is not part of the language. Eighteen corpus files carried the \
+                      shape and every one of them was a defect; they are repaired, and the \
+                      poison is beispiele/gift/428 (`N044`) and 429 (`N045`). \
+                      **beispiele/06-annahmen.gab has carried the finding as a COMMENT \
+                      since 2026-08-20 with no rule behind it** -- and six files walked \
+                      back into it. messung/TORREICHWEITE.md.",
+        fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/SYNTAX.md §13; \
+                     beispiele/06-annahmen.gab",
+    },
+    Satz {
         name: "d.domaenenort",
         kennungen: &["D017", "D018"],
         aussage: "The PLACE a quantifier domain runs over is held twice: its base name \

@@ -18,7 +18,7 @@ check c1 {
     claim    "Dieselbe Sonde noch einmal."
     measures k
     gates    tor
-    can_fail { if k >= 2 { return; } }
+    can_fail { if k >= 2 { return false; } return true; }
     floor    k >= 1
     counterprobe "Und sie soll beide tragen." expects sonde_x
 }

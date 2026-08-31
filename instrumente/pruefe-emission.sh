@@ -2025,7 +2025,13 @@ MARKE_EMIT=57
 # beide Male mit 31 -- der Merge hat sie doppelt gelegt, und die zweite ueberschrieb die
 # erste mit demselben Wert. *Ein Doppeleintrag, der nicht auffaellt, weil beide Zweige
 # dasselbe massen, ist der Vorbote eines, bei dem sie es nicht tun.*
-MARKE_EMIT_M=38
+#
+# **38 -> 39 on 2026-08-31**, and the subject grew by one file:
+# `messung/proben/probe-stellungen.gab` -- the nine quantifier domains in `requires`, in an
+# `invariant` and in the body of a `spec fn`, the carrier of the position measurement in
+# `messung/DOMAENENSTELLUNGEN.md`. It is annotations only, so it lowers to C and compiles.
+# *A floor that lags behind the corpus is slack, not safety.*
+MARKE_EMIT_M=39
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

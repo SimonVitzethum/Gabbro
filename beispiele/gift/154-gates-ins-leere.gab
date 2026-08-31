@@ -15,7 +15,7 @@ check c {
     claim    "Eine Pflicht, die niemand verbrauchen kann."
     measures k
     gates    gibt_es_nicht
-    can_fail { if k >= 2 { return; } }
+    can_fail { if k >= 2 { return false; } return true; }
     floor    k >= 1
 }
 

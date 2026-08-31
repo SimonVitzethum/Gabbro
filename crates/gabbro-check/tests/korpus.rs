@@ -91,6 +91,11 @@ const BENANNT: &[&str] = &[
     // 2026-08-31: the same three questions at the CHAIN edge, which `chain(a, b) in`
     // names at the walk instead of at the declaration. `messung/DOMAENENNAMEN.md`.
     "D014", "D015", "D016",
+    // **2026-08-31: a probe yields a VERDICT, and on every path.** `N044` a `return` with
+    // no value in a `can_fail` block, `N045` a path that reaches the closing brace. Six of
+    // the twelve files in `messung/tor-proben/` emitted C that `cc` refused, and no stage
+    // before `cc` said a word. `messung/TORREICHWEITE.md`.
+    "N044", "N045",
     // 2026-08-31, one measurement later: the PLACE of a quantifier domain. `D017` its base
     // name -- `messung/DOMAENENSTELLUNGEN.md` falsified each of the 53 corpus sites outside
     // `ensures` one by one and 51 stayed silent -- and `D018` its KIND: `slots of` needs a

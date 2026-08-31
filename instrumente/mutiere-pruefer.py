@@ -810,6 +810,27 @@ MUTATIONEN = [
         "D016 -- a chain edge may point into a FOREIGN table, so the walk leaves its own "
         "table at the first step",
     ),
+    # -- namen.rs: the VERDICT of a probe (2026-08-31) -----------------------------------
+    #
+    # Six of the twelve files in `messung/tor-proben/` emitted C that `cc` refused, and
+    # three static stages passed it. **Each of these two mutations is the state the checker
+    # was in that morning.** `messung/TORREICHWEITE.md`.
+    Mutation(
+        "probenurteil-return-darf-leer-sein",
+        "namen.rs",
+        "                    if matches!(&s.art, StmtArt::Return(None)) {",
+        "                    if false && matches!(&s.art, StmtArt::Return(None)) {",
+        "N044 -- a `return` in a `can_fail` block may carry no value again, so the emitter "
+        "writes `return;` into a `bool` function and only `cc` says so",
+    ),
+    Mutation(
+        "probenurteil-darf-durchfallen",
+        "namen.rs",
+        "            if !crate::endet_immer(&c.can_fail, &divergent) {",
+        "            if false && !crate::endet_immer(&c.can_fail, &divergent) {",
+        "N045 -- a probe may run off the end of its block again, so the generated `bool` "
+        "function returns an indeterminate value",
+    ),
     # -- domaene.rs: the PLACE of a domain (2026-08-31) ----------------------------------
     #
     # `M109` reads `f.ensures` and nothing else. Each of the 53 corpus quantifier sites

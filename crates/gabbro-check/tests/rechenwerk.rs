@@ -6766,3 +6766,102 @@ impl fn f(t : ptr<normal, rw> T, x : fnptr())
         "ueber einem Ort, dessen Typ nicht aufloest, schweigt `D018`: {u:?}"
     );
 }
+
+/// **`N044`/`N045`: a probe yields a VERDICT, and on every path.**
+///
+/// `can_fail` is a probe -- it falls or it holds (`SYNTAX.md` §13). Measured 2026-08-31
+/// against the unchanged checker: **six of the twelve files in `messung/tor-proben/` emit C
+/// that `cc` refuses.**
+///
+/// ```c
+/// bool pruefe_c(void) { if (k >= 3) { return; } }
+/// ```
+///
+/// `gabbro pruefe` reported 0 errors, `gabbro emit` no `C001`; only `cc` said *"return with
+/// no value in function returning non-void"*. **Three stages passed it, and the fourth is
+/// not part of the language.**
+///
+/// > And `beispiele/06-annahmen.gab` has carried the finding as a COMMENT since 2026-08-20
+/// > -- it says in so many words that the body returned no value -- with no rule behind it.
+/// > Six files walked back into it. *A comment that names a defect is read as evidence.*
+///
+/// Three halves, as everywhere here: a probe per class, the counter-direction, and the
+/// division of labour between the two codes.
+#[test]
+fn eine_probe_gibt_ein_urteil_zurueck() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(rumpf: &str) -> String {
+        format!(
+            "module t {{
+static mut k : u32 = 0;
+impl fn tor() effects {{ reads k }} costs <= 1 ops {{ return; }}
+check c {{
+    claim    \"unter drei\"
+    measures k
+    gates    tor
+    can_fail {{ {rumpf} }}
+    floor    k >= 1
+}} }}"
+        )
+    }
+
+    // 1 -- one probe per class, and each falls ALONE: the two faults are separable.
+    let a = absagen(&mit("if k >= 3 { return; } return true;"));
+    assert!(
+        a.iter().any(|c| c == "N044") && !a.iter().any(|c| c == "N045"),
+        "ein wertloses `return` faellt an N044, und der Block endet trotzdem: {a:?}"
+    );
+    let b = absagen(&mit("if k >= 3 { return false; }"));
+    assert!(
+        b.iter().any(|c| c == "N045") && !b.iter().any(|c| c == "N044"),
+        "ein Weg ohne `return` faellt an N045, und die `return`s sind in Ordnung: {b:?}"
+    );
+
+    // 2 -- the counter-direction. **The corpus shape of `beispiele/06-annahmen.gab`**, and
+    // the three ways a block can end on every path.
+    for rumpf in [
+        "if k >= 3 { return false; } return true;",
+        "return true;",
+        "if k >= 3 { return false; } else { return true; }",
+    ] {
+        let g = absagen(&mit(rumpf));
+        assert!(
+            !g.iter().any(|c| c == "N044" || c == "N045"),
+            "`{rumpf}` gibt auf jedem Weg ein Urteil und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- a value-less `return` is refused WHEREVER it stands, not only at the top level:
+    // the emitted C does not care how deeply the statement is nested.
+    let tief = absagen(&mit(
+        "if k >= 3 { if k >= 9 { return; } return false; } return true;",
+    ));
+    assert!(
+        tief.iter().any(|c| c == "N044"),
+        "auch zwei Ebenen tief faellt das wertlose `return`: {tief:?}"
+    );
+
+    // 4 -- **a divergent call ends the block.** Without the `divergent` list `endet_immer`
+    // would call this path open and refuse a probe for a way that does not exist.
+    let nie = absagen(
+        "module t {
+static mut k : u32 = 0;
+divergent fn halt() -> never effects { diverges } costs <= 0 ops { halt(); }
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+check c {
+    claim    \"unter drei\"
+    measures k
+    gates    tor
+    can_fail { if k >= 3 { return false; } halt(); }
+    floor    k >= 1
+} }",
+    );
+    assert!(
+        !nie.iter().any(|c| c == "N045"),
+        "ein Ruf, der nicht zurueckkehrt, beendet den Block: {nie:?}"
+    );
+}

@@ -74,11 +74,12 @@ check stapel_wasserstand {
     measures     tiefe_max, tiefe_lebend, kerne_gemessen
     gates        abnahme, freigabe
     can_fail {
-        let g = groesse_gemessen() else (e1) { return; }
+        let g = groesse_gemessen() else (e1) { return false; }
         tiefe_max = 1;
         if tiefe_max * 4 >= g * 3 {
-            return;
+            return false;
         }
+        return true;
     }
     floor        kerne_gemessen >= 2, tiefe_max >= 1
     counterprobe "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen."
