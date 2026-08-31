@@ -77,11 +77,12 @@ EINTRAEGE = [
     (
         "messung/RUECKLAUFWERTE.md",
         # **The denominator stays PINNED and gets carried along by hand** (49 -> 50 on
-        # 2026-08-31, when `pruefe-uebersetzerfamilie.py` joined). A `\d+` there would let
-        # *"44 of 12"* pass -- the reference set is half of the claim, and a figure vouches
-        # for its denominator, not for its caption (W25). The self-check above turns a
-        # forgotten carry into a fallen speech test rather than a silent entry.
-        r"\*\*(\d+) von 50\*\* Wächtern können mitten im Lauf",
+        # 2026-08-31, when `pruefe-uebersetzerfamilie.py` joined; 50 -> 51 the same day,
+        # when `zaehle-c-formen.py` did). A `\d+` there would let *"44 of 12"* pass -- the
+        # reference set is half of the claim, and a figure vouches for its denominator, not
+        # for its caption (W25). The self-check above turns a forgotten carry into a fallen
+        # speech test rather than a silent entry.
+        r"\*\*(\d+) von 51\*\* Wächtern können mitten im Lauf",
         ["./instrumente/pruefe-waechter.py"],
         r"^== Ein Abbruch MITTEN im Lauf: (\d+) von \d+ koennen",
         "Waechter, die mitten im Lauf abbrechen koennen",

@@ -228,8 +228,8 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
 * ~~**Der leere Baum ist die billigste Absage, nicht die einzige.** Ein Wächter, dessen
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
-  *Der Schnitt mitten im Lauf* darunter: **44 von 50** Wächtern können mitten im Lauf
-  abbrechen, **251 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  *Der Schnitt mitten im Lauf* darunter: **45 von 51** Wächtern können mitten im Lauf
+  abbrechen, **253 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   **Und am selben Abend GEHEILT**, soweit eine Form das kann: 92 gefährliche Stellen, alle
   gedeckt, `MARKE_TEILMESSUNG = 0`, und die Abnahme trennt eine `TEILMESSUNG` vom Befund.
@@ -261,8 +261,8 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
 im Lauf"), Sprechprobe in beide Richtungen im selben Lauf.*
 
 ```
-44 von 50 Wächtern können mitten im Lauf abbrechen
-251 Ausgangsstellen liegen hinter dem jeweils ersten
+45 von 51 Wächtern können mitten im Lauf abbrechen
+253 Ausgangsstellen liegen hinter dem jeweils ersten
   pruefe-emission.sh   62 Ausgänge, 156 Druckstellen dahinter
   mutiere-pruefer.py   12 Ausgänge,  50
   pruefe-syntax.sh     11 Ausgänge,  14
