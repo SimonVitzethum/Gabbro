@@ -15,7 +15,8 @@ der ganze Ordner gebaut ist.*
 **Die Regel, mechanisch:** eine Kennung darf in beliebig vielen ZEILEN stehen (dieselbe Regel
 an mehreren Stellen ist normal), aber nur in **einer Datei**. Die Datei ist die Regel.
 
-Sprechprobe in beide Richtungen (`--sprechprobe`).
+Sprechprobe in beide Richtungen, und sie faehrt in JEDEM Lauf. `--sprechprobe`
+faehrt nur sie und sonst nichts.
 """
 import collections
 import pathlib
@@ -50,16 +51,43 @@ def befunde(karte):
     return sorted((k, sorted(v)) for k, v in karte.items() if len(v) > 1)
 
 
+def sprechprobe():
+    """**In beide Richtungen -- und die zweite nimmt ihren Massstab NICHT vom Gegenstand.**
+
+    Der Waechter muss eine kuenstliche Doppelbelegung SEHEN und dieselbe Kennung ohne das
+    Gift DURCHLASSEN.
+
+    Bis zum 2026-08-31 lautete die Gegenrichtung *„die echte Lage meldet nichts"*, und das
+    ist genau die Falle, die `pruefe-todo.py` schon einmal bezahlt hat: eine WIRKLICHE
+    Doppelbelegung haette die Probe fallen lassen, der Waechter haette mit `2` abgebrochen
+    -- **und den Befund dabei verschluckt.** *Eine Probe, die ihren Massstab aus ihrem
+    Gegenstand nimmt, misst den Gegenstand nicht.* Gefragt wird darum nur nach `K001`: mit
+    Gift eine Doppelbelegung, ohne Gift keine -- unabhaengig davon, was sonst im Baum steht.
+    """
+    gift = befunde(erhebe(("namen.rs", '\nlet _ = "K001";\n')))
+    sauber = befunde(erhebe())
+    gesehen = any(k == "K001" for k, _ in gift)
+    frei = not any(k == "K001" for k, _ in sauber)
+    print("== Sprechprobe ==")
+    print(f"  kuenstliche Doppelbelegung K001: {'gesehen' if gesehen else 'UEBERSEHEN'}")
+    print(f"  ohne das Gift ist K001 frei:     {'ja' if frei else 'FALSCHER ALARM'}")
+    return gesehen and frei
+
+
 def main():
+    # **DIE SPRECHPROBE FAEHRT IMMER** (2026-08-31). Bis heute stand sie hinter
+    # `--sprechprobe`, und `abnahme.py` ruft dieses Werkzeug ohne Argumente -- **der
+    # Regellauf hat also nie geprueft, ob dieser Waechter ueberhaupt rot werden kann.**
+    # Von allen 28 Waechtern war er der einzige mit einer Probe auf Bestellung; der Rest
+    # faehrt sie im Regellauf. *Eine Sprechprobe, die man anfordern muss, ist von keiner
+    # nicht zu unterscheiden* (R14).
+    if not sprechprobe():
+        # 2, nicht 1: ein Waechter, der seine eigene Probe nicht besteht, hat NICHTS
+        # gemessen -- was er danach ueber die Kennungen sagt, ist keine Aussage ueber sie.
+        print("\n! Der Waechter misst nicht, was er behauptet. ABBRUCH.")
+        return 2
     if "--sprechprobe" in sys.argv:
-        # Der Waechter muss eine kuenstliche Doppelbelegung SEHEN und eine saubere Lage
-        # DURCHLASSEN. Ohne beide Richtungen misst er nichts.
-        gift = befunde(erhebe(("namen.rs", '\nlet _ = "K001";\n')))
-        sauber = befunde(erhebe())
-        print("== Sprechprobe ==")
-        print(f"  kuenstliche Doppelbelegung K001: {'gesehen' if any(k=='K001' for k,_ in gift) else 'UEBERSEHEN'}")
-        print(f"  saubere Lage:                    {'durchgelassen' if not sauber else 'FALSCHER ALARM'}")
-        return 0 if (any(k == "K001" for k, _ in gift) and not sauber) else 2
+        return 0
 
     karte = erhebe()
     # **`0 issued ... ALL PASS` was a GREEN run until 2026-08-31** (measured over an empty
