@@ -202,9 +202,93 @@ Deklaration, und zwar so, dass die historisch falsche Lesart auffällt: bei `l =
 sagt `e × l` die Schranke `6` und `l^e` die Schranke `8` — gedruckt `12` gegen die gemessenen
 `16`. Bei `l = 512, e = 4` trennen dieselben zwei Lesarten `4096` von `137 438 953 472`.
 
-**Der Stand bleibt `VERMUTET`, und das ist kein Versehen.** Der Satz spricht über *alle*
-Domänen — `count` einer Tabelle, das einzige Feldarray eines `queue`-Verbunds, `elems of`,
-`index into T`. Gemessen ist ab heute **eine** davon. *Der Vorbehalt im Satz sagt das selbst:
+**Der Stand blieb an dieser Stelle `VERMUTET`, und das war kein Versehen.** Der Satz
+spricht über *alle* Domänen — `count` einer Tabelle, das einzige Feldarray eines
+`queue`-Verbunds, `elems of`, `index into T`. Gemessen war nach §1–§7 **eine** davon.
+*Die anderen vier stehen in §8, und erst damit fällt der Stand.* *Der Vorbehalt im Satz sagt das selbst:
 „Every other domain bound in this pass has exactly the same shape and exactly as little
 checking."* Er wird um den Satz ergänzt, welche Domäne jetzt Proben hat — **eine Marke, die
 fällt, nicht eine, die steigt.**
+
+---
+
+## 8. Die anderen vier — gemessen am 2026-08-31, Bahn K
+
+> **Das Ergebnis zuerst.** Alle fünf Domänen tragen jetzt Probe und Mutation, und der Stand
+> steigt von `VERMUTET` auf `measured` — *nicht, weil jemand es entscheidet, sondern weil die
+> Grundgesamtheit voll ist.* **Und die Messung hat den Satz vorher KORRIGIERT:** er sagte
+> „die Schranke IST die Mächtigkeit", und für zwei der fünf ist sie es nicht.
+
+### 8.1 Die fünf Domänen einzeln — Mächtigkeit, Herkunft, und ob sie abgeleitet ist
+
+| Domäne | Schranke, die der Pass nimmt | woher sie kommt | angenommen / abgeleitet |
+|---|---|---|---|
+| `mappings of w` | `Knotenlänge ^ Ebenen` | `walk W levels E { node : [T; L], … }` → `umgebung.rs::walkschranken`, `checked_pow` | **abgeleitet und SCHARF** — §3: jede Ebene multipliziert mit `L`, eine Großseite (`PS == 1`) ersetzt einen Unterbaum durch *ein* Blatt und senkt die Zahl; belegt man die tiefste Ebene ganz mit `PS == 1`, sind es genau `L^E`. Gegenprobe: `512⁴ = 2³⁶` 4-KiB-Seiten = `2⁴⁸` Bytes = 256 TiB |
+| `slots of p` | `count N` der Tabelle | `table T count N` → `umgebung.rs::kapazitaeten` → `domaene.rs` über `Typ::Tabelle` | **abgeleitet und SCHARF** — die Tabelle IST ihre `N` Slots, und `by unvisited` besucht jeden genau einmal. Definitorisch |
+| `descendants of x`, `ancestors of x` | dieselbe `count N` | derselbe Weg | **abgeleitet, aber nur OBERE Schranke** — die Nachfahren eines Knotens sind höchstens `N−1`, nie `N`. Die Schranke folgt nicht aus der Baumform, sondern aus `by unvisited`: kein Slot zweimal. *Grob nach oben, und die Kostenzusage hält trotzdem* |
+| `queue p` | Länge des **einzigen** Feldarrays des Verbunds | `type Q = { buf : [u32; n], … }` → `domaene.rs::arraylaenge_im_verbund` | **abgeleitet als OBERE Schranke, mit einer ANGENOMMENEN Zuordnung** — dass das einzige Array der Puffer der Warteschlange *ist*, prüft nichts. Es ist eine Regel: bei zwei Arrays liefert die Funktion `None`, und der Pass sagt `K003` statt zu raten. Die Warteschlange hält zur Laufzeit höchstens `n`, nicht notwendig `n` |
+| `elems of a` | Länge im FELDTYP | `Typ::Feld { laenge: Some(n) }` — der Tabellenzweig wird nie erreicht | **abgeleitet und SCHARF** — genau `n` Elemente |
+| `index into T` | `count` der Tabelle, die der TYPNAME nennt | `domaene.rs::tabellenname`, Präfix `"index into "` | **abgeleitet, gleiche Schärfe wie der Weg, an dem sie hängt** (`slots of` scharf, `descendants of` obere Schranke). *Der Weg selbst war bis zum 2026-08-17 tot: kein Beispiel hatte die Stelle je ausgelöst, weil der Korpus `descendants of` nur in PRÄDIKATEN führt, wo kein Kostenpass läuft* |
+
+**Es sind fünf Schrankenquellen und neun `Domaene`-Varianten.** `KetteIn`, `FelderVon` und
+`Threads` liefern gar keine Schranke — sie fallen in `_ => return None` und damit auf `K003`.
+*Das ist keine Lücke, sondern die vierte Antwort: der Pass rät nicht.*
+
+### 8.2 Die Probe — ein Regler je Domäne, gelesen wird der `K001`-TEXT
+
+`crates/gabbro-check/tests/rechenwerk.rs`,
+`die_vier_uebrigen_domaenenschranken_kommen_aus_ihrer_deklaration`:
+
+| Domäne | Regler | gedruckt | Rumpf |
+|---|---|---|---|
+| `slots of` | `count` = 3, 7, 13 | 3, 7, 13 | 1 op |
+| `elems of` | `[u32; n]`, n = 2, 9, 31 | 2, 9, 31 | 1 op |
+| `queue` | `[u32; n]`, n = 3, 5, 16 | 6, 10, 32 | 2 ops |
+| `index into T` | `count` = 4, 6, 11 | 4, 6, 11 | 1 op |
+
+**Die vier sind vier LESEWEGE und nicht einer**, und deshalb bekommt jeder seinen eigenen
+Regler: `slots of` löst über `Typ::Tabelle` auf, `index into T` über das Namenspräfix in
+`tabellenname`, `queue` über `arraylaenge_im_verbund`, und `elems of` kehrt zurück, bevor der
+Tabellenzweig überhaupt erreicht wird. *Eine Probe über einen davon sagt nichts über die
+anderen drei — genau der Zustand, den das hier ersetzt.*
+
+### 8.3 Die Mutationen — OFF-BY-ONE, und das ist der ganze Punkt
+
+| Mutation | Anker in `domaene.rs` | gefangen von |
+|---|---|---|
+| `count-schranke-um-eins-daneben` | `.map(\|n\| n as i128)` → `- 1` | **1** Probe |
+| `elems-schranke-um-eins-daneben` | `return Some(*n as i128);` → `- 1` | **1** Probe |
+| `queue-schranke-um-eins-daneben` | `gefunden = laenge.map(…)` → `- 1` | **1** Probe |
+| `index-into-tabelle-verloren` | `if name.starts_with("index into ")` → `if false && …` | **2** Proben |
+
+**Warum off-by-one und nicht Entfernung:** eine Schranke, die GANZ FEHLT, sagt `K003` und ist
+seit langem von zwei Giftproben gedeckt (`36-kosten-ueber-unbekanntem.gab`,
+`69-vorfahren-ohne-schranke.gab`). Die Lücke war eine Schranke, die DA IST und falsch ist —
+und genau das waren die 2 048 gegen `512⁴`. *Eine Mutation, die entfernt, misst die schon
+gemessene Hälfte.*
+
+**Die vierte ist die Ausnahme und wird zweimal gefangen** — von dieser Probe und vom
+Korpuslauf, weil `beispiele/39-auftragsdienst.gab` die Stelle trägt. Der Leseweg `index into`
+lässt sich nur durch Entfernen beschädigen; seine Falsch-Zahl-Hälfte deckt
+`count-schranke-um-eins-daneben` ab, mit dem er sich das letzte `.map` teilt. *Das ist keine
+schwache Mutation, sondern eine Aussage über den Korpus: die Stelle ist tragend geworden,
+seit sie 2026-08-17 gefunden wurde.*
+
+### 8.4 Was daraus für das Satzregister folgt — der Satz wurde korrigiert, dann gehoben
+
+`saetze.rs::kosten.domaenenschranke` sagte:
+
+> *„…and that bound is the **cardinality** of the domain as it follows from the declaration"*
+
+**Für zwei der fünf ist das falsch, und das ist der eigentliche Fund dieser Messung.**
+`descendants of x` besucht höchstens `count`−1 Slots; eine `queue` hält höchstens ihr Array.
+Die Zeile heißt seit heute **`an UPPER bound on the cardinality`**. *Nach oben grob hält eine
+Kostenzusage; die 2 048 waren nach UNTEN grob, und das ist die Richtung, die lügt.*
+
+Erst danach steigt `Satzstand::Vermutet` auf `Satzstand::Gemessen`. Die Bilanz von
+`gabbro paesse` geht damit von `63 measured, 2 ARGUED, 6 CONJECTURED` auf
+**`64 measured, 2 ARGUED, 5 CONJECTURED`**.
+
+> **Und was `measured` NICHT heißt.** Es misst die UMSETZUNG an geprüften Fällen, nicht die
+> Regel und nicht alle Fälle — das steht in `Satzstand::Gemessen` selbst. Die drei
+> Domänensätze aus §6 fehlen weiter; `PROVED` bleibt bei 0 von 71.

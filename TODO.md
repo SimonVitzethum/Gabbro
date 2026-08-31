@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 71 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-30 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 71 over 12 passes -- 63 measured, 2 ARGUED, 6 CONJECTURED, 0 proved`; die Zahl steht seit heute im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 71 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-30 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 71 over 12 passes -- 64 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, nachgemessen 2026-08-31; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -546,10 +546,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2101 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
-      *Am 2026-08-31 fiel die Zahl von 2102 auf 2101* — eine übersetzte Parsermeldung
-      kam mit einer Fortsetzung weniger aus. **Eine fallende Fläche ist kein Fund;
-      dass der Wächter sie bemerkt hat, ist einer.**
+      Heute **2120 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
+      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
+      Domänenproben fortgesetzte Quelltexte tragen. **Eine Fläche, die sich bewegt, ist
+      kein Fund; dass der Wächter beide Richtungen bemerkt hat, ist einer.**
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -799,7 +800,8 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **348 von 348 Ankern** greifen (`--anker`, 2026-08-31).
+      fällt. Mutationskatalog: **352 von 352 Ankern** greifen (`--anker`, 2026-08-31 —
+      vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8).
       ~~345 von 345~~ nachgezogen am 2026-08-30: die 346. trennt die zwei Fälle von `result`
       (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Die
       acht des Rumpfkanals kamen am 28. abends dazu, und am 30. fünf weitere aus drei Ketten:
@@ -3644,20 +3646,39 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 71 S�
 
 - [ ] **PL.2 — die drei Sätze BEWEISEN.** Aufgeschrieben sind sie seit dem 2026-08-21, **keine
       Zeile Isabelle.** `K001` ist dabei **geteilt** in `kosten.summation` (*gemessen*) und
-      `kosten.domaenenschranke` (**VERMUTET**) — damit der gemessene Fehler (2 048 gegen
+      `kosten.domaenenschranke` (seit 2026-08-31 **gemessen**) — damit der gemessene Fehler (2 048 gegen
       512⁴, **sieben Größenordnungen, drei Tage getragen**) im Satz *sichtbar* bleibt, statt
       von einer glatten Formulierung überschrieben zu werden.
 
-      > **Nachgezogen am 2026-08-31 (Bahn P, P-a), und der Stand bleibt `VERMUTET`.**
+      > **Nachgezogen am 2026-08-31 (Bahn P, P-a), und der Stand blieb `VERMUTET`.**
       > Was fiel, ist der Satz *„keine Probe und keine Mutation misst die Schranke gegen die
-      > Domäne"*: für **`mappings of`** messen ihn seit heute zwei Proben in `rechenwerk.rs`
+      > Domäne"*: für **`mappings of`** messen ihn zwei Proben in `rechenwerk.rs`
       > (`e` von 1 bis 4 über `l ∈ {2, 8, 512}`, gelesen wird der **`K001`-Text** je Stelle;
       > die zwei Lesarten trennen sich schon bei `e = 3, l = 2` — 16 gegen 12) und die
       > Mutation `walkschranke-wieder-ein-pfad`, die das historische `e × l` zurücksetzt und
-      > gefangen wird.
+      > gefangen wird. **Für `count`, `queue`, `elems of` und `index into T` war der Satz
+      > damals so ungeprüft wie vorher** — eine von fünf, und deshalb stieg der Stand nicht.
       >
-      > **Für `count`, `queue`, `elems of` und `index into T` ist der Satz so ungeprüft wie
-      > vorher** — eine von fünf Domänen ist gemessen, und deshalb steigt der Stand nicht.
+      > **Am selben Tag nachgemessen, und jetzt fällt er: `VERMUTET` → `measured`.**
+      > Die vier übrigen Domänen haben seit heute je eine Probe
+      > (`die_vier_uebrigen_domaenenschranken_kommen_aus_ihrer_deklaration`: `count` an
+      > 3/7/13, `elems of` an 2/9/31, `queue` an 3/5/16, `index into T` an 4/6/11 — gelesen
+      > wird jedesmal der `K001`-**Text**) und je eine Mutation. **Die Mutationen sind
+      > OFF-BY-ONE und keine Entfernungen:** eine FEHLENDE Schranke sagte `K003` und hatte
+      > zwei Giftproben; die Lücke war eine ANWESENDE und falsche, und genau das waren die
+      > 2 048. *Der Stand steigt nicht, weil jemand ihn entscheidet, sondern weil die
+      > Grundgesamtheit voll ist.*
+      >
+      > **Und die Messung hat den Satz KORRIGIERT, bevor sie ihn heben durfte.** Er sagte
+      > *„die Schranke IST die Mächtigkeit der Domäne"*; für zwei der fünf ist sie es nicht.
+      > `descendants of x` besucht höchstens `count`−1 Slots, nie `count`; eine `queue` hält
+      > höchstens ihr Array, nicht notwendig ganz. Der Satz sagt seit heute **OBERE
+      > Schranke**. *Nach oben grob hält eine Kostenzusage; die 2 048 waren nach UNTEN grob,
+      > und das ist die Richtung, die lügt.*
+      >
+      > **Was ungeprüft bleibt und benannt ist:** für `queue` nimmt der Pass das EINZIGE
+      > Feldarray des Verbunds als Puffer. Diese Zuordnung prüft nichts — sie ist eine
+      > Regel, kein Beweis, und bei zwei Arrays sagt der Pass `K003` statt zu raten.
       > *Die Rechnung Faktor für Faktor steht in [`messung/K001-DOMAENENSCHRANKE.md`](messung/K001-DOMAENENSCHRANKE.md).*
       **V2 ist der teuerste, und der Grund ist ein Befund über das Geschirr:** die Regel hat
       **keine eigene Kennung** — sie erweitert, was durchgeht. Eine Giftprobe müsste ein

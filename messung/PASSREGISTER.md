@@ -86,7 +86,7 @@ scheitern. **Fünf Kennungen sind Hinweise: `E003`, `E009`, `V003`, `S007`, `N02
 | | Stand | |
 |---|---|---|
 | `kosten.summation` | **measured** | Anweisungen addieren; Zweig = Maximum; was hinter einem immer verlassenden `if` steht, zählt einmal; verglichen wird bei der **kleinsten Belegung** |
-| `kosten.domaenenschranke` | **CONJECTURED** | `traverse` kostet Rumpf × Schranke — *und nichts prüft, dass die gelesene Zahl die Mächtigkeit der Domäne IST* |
+| `kosten.domaenenschranke` | **measured** | `traverse` kostet Rumpf × Schranke, und die Schranke ist eine **OBERE** Schranke aus der Deklaration — seit 2026-08-31 hat **jede der fünf Domänen** eine Probe und eine Mutation |
 
 > **Der Fehler, sichtbar gemacht statt überschrieben:** für `mappings of` las der Pass
 > `Ebenen × Knotenlänge` = **2 048**, wo die Domäne die **Blattmenge** ist,

@@ -229,7 +229,7 @@ seiner Bedingung.
   V1  die 22 C001-Stellen aufschluesseln          Messung, billig, sofort
   V2  FORM x POSITION aus der GRAMMATIK           Bau, ein Instrument
   P2  der Funktionszeigervertrag (N035)           Stufe 7, unabhaengig
-  P3  die Kostendomaenenschranke (K001)           gebucht als VERMUTET
+  P3  die Kostendomaenenschranke (K001)           gemessen 2026-08-31, alle fuenf
   V3  je UNGEDECKT-Zelle eine Entscheidung        haengt an V2
   V4  der Waechter                                haengt an V3
   ---------------------------------------------------------------

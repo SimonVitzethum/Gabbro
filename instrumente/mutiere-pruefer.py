@@ -728,6 +728,56 @@ MUTATIONEN = [
         "W16 -- the existence of a `walk` TYPE is decided by the cost map again, so a "
         "declaration whose leaf count is 0 or past `u128` is reported as an unknown name",
     ),
+    # **THE OTHER FOUR DOMAIN BOUNDS, one mutation each** (2026-08-31).
+    #
+    # `walkschranke-wieder-ein-pfad` above puts back the historic error of ONE domain. The
+    # sentence `kosten.domaenenschranke` speaks about five, and its own reservation says so:
+    # *"Every other domain bound in this pass has exactly the same shape and exactly as
+    # little checking."* These four close that sentence.
+    #
+    # **Each one is an OFF-BY-ONE and not a removal, and that is the whole point.** A bound
+    # that is GONE is already refused by `K003` and caught by two poison probes since long
+    # ago. A bound that is WRONG is what the 2 048 against 512^4 was -- present, plausible,
+    # and seven orders of magnitude short. *The probe reads the number out of the `K001`
+    # text, so one off is enough to part the readings.*
+    Mutation(
+        "count-schranke-um-eins-daneben",
+        "domaene.rs",
+        "            .map(|n| n as i128)",
+        "            .map(|n| n as i128 - 1)",
+        "K001 -- the bound of `slots of` and of `index into T` is the table's `count` minus "
+        "one, so the last slot costs nothing",
+    ),
+    Mutation(
+        "elems-schranke-um-eins-daneben",
+        "domaene.rs",
+        "                return Some(*n as i128);",
+        "                return Some(*n as i128 - 1);",
+        "K001 -- the bound of `elems of` is the array length minus one; same class as "
+        "`elems-laesst-den-letzten-aus` in the emitter, one layer up",
+    ),
+    Mutation(
+        "queue-schranke-um-eins-daneben",
+        "domaene.rs",
+        "                gefunden = laenge.map(|n| n as i128);",
+        "                gefunden = laenge.map(|n| n as i128 - 1);",
+        "K001 -- the bound of `queue` is the single field array minus one, so a full queue "
+        "costs less than it runs",
+    ),
+    # **This one is NOT an off-by-one, because the read path itself is what is unmeasured.**
+    # `index into T` names its table in the TYPE, and until 2026-08-17 nobody read it -- no
+    # example had ever triggered the site, since the corpus carries `descendants of` only
+    # inside predicates, where no cost pass runs. *A bound never triggered is not covered,
+    # it is unbreakable.* With the guard gone the bound is missing, and `K003` takes over --
+    # which is exactly what it looked like before the site was found.
+    Mutation(
+        "index-into-tabelle-verloren",
+        "domaene.rs",
+        '            crate::typen::Typ::Benannt { ref name, .. } if name.starts_with("index into ") => {',
+        '            crate::typen::Typ::Benannt { ref name, .. } if false && name.starts_with("index into ") => {',
+        "K001 -- an `index into T` no longer names its table, so a `traverse` over it has "
+        "no bound and falls back to `K003`",
+    ),
     Mutation(
         "index-erbt-nicht",
         "umgebung.rs",

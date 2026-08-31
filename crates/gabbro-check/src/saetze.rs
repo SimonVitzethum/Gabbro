@@ -1228,36 +1228,55 @@ pub const KOSTEN: &[Satz] = &[
     Satz {
         name: "kosten.domaenenschranke",
         kennungen: &["K003"],
-        aussage: "A `traverse` over a domain costs body x DOMAIN BOUND, and that bound is the \
-                  cardinality of the domain as it follows from the declaration -- a table's \
-                  `count`, the single field array of a record for `queue`, `node length ^ \
-                  levels` for `mappings of`. Where no bound follows from a declaration the \
-                  pass refuses (`K003`) instead of guessing.",
+        aussage: "A `traverse` over a domain costs body x DOMAIN BOUND, and that bound is an \
+                  UPPER bound on the cardinality of the domain, read from the declaration -- \
+                  a table's `count`, the single field array of a record for `queue`, the \
+                  array length in the field type for `elems of`, the `count` of the table \
+                  named by an `index into T`, and `node length ^ levels` for `mappings of`. \
+                  Where no bound follows from a declaration the pass refuses (`K003`) \
+                  instead of guessing.",
         vorbehalt: "**This is the sentence with a MEASURED error in its history, and it is \
-                    written so the error stays visible.** The bound is READ from a \
-                    declaration; nothing checks that the number read is the cardinality of \
-                    the domain it names. For `mappings of` the pass read `levels x node \
-                    length` = 2 048 where the domain is the LEAF SET, `node length ^ levels` \
-                    = 512^4 = 68 719 476 736 -- **seven orders of magnitude, carried for \
-                    three days**, and it was found because the EMITTER walked into it, not \
-                    because a test fell. It is corrected, and the correction bought a \
-                    consequence rather than defining it away: a run-time traversal over \
-                    `mappings of` can hold no cost promise at all. **Every other domain bound \
-                    in this pass has exactly the same shape and exactly as little checking.**",
-        stand: Satzstand::Vermutet,
-        gemessen_an: "**ONE of the domains is measured since 2026-08-31, the rest is not.** \
-                      For `mappings of`, the probe named after it in `rechenwerk.rs` walks \
-                      levels 1..4 across node lengths 2, 8 and \
-                      512 and reads the number out of the `K001` TEXT per site: the two \
-                      readings part at `e = 3, l = 2` (16 against 12), and the mutation \
+                    written so the error stays visible.** For `mappings of` the pass read \
+                    `levels x node length` = 2 048 where the domain is the LEAF SET, `node \
+                    length ^ levels` = 512^4 = 68 719 476 736 -- **seven orders of \
+                    magnitude, carried for three days**, and it was found because the \
+                    EMITTER walked into it, not because a test fell. It is corrected, and \
+                    the correction bought a consequence rather than defining it away: a \
+                    run-time traversal over `mappings of` can hold no cost promise at all. \
+                    **And the word is UPPER bound, not cardinality, since 2026-08-31** -- \
+                    measuring the four remaining domains is what showed that two of them \
+                    were never the cardinality: `descendants of x` visits at most `count`-1 \
+                    slots, never `count`, and a `queue` holds at most its array, never \
+                    necessarily all of it. *Coarse upwards keeps a cost promise; the 2 048 \
+                    was coarse DOWNWARDS, and that is the direction that lies.* What still \
+                    stands unchecked: for `queue` the pass takes the record's ONLY field \
+                    array to be the queue buffer. Nothing verifies that identification -- it \
+                    is a rule, not a proof, and with two arrays the pass refuses instead.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "**All five domain bounds carry a probe and a mutation since \
+                      2026-08-31, and that is why the state moved -- not a decision, a full \
+                      population.** For `mappings of`: the probe named after it in \
+                      `rechenwerk.rs` walks levels 1..4 across node lengths 2, 8 and 512 and \
+                      reads the number out of the `K001` TEXT per site; the two readings \
+                      part at `e = 3, l = 2` (16 against 12), and \
                       `walkschranke-wieder-ein-pfad` puts the historic `e * l` back and is \
-                      caught. A second probe pins the overflow edge -- `512^14` fits, \
-                      `2 x 512^14` does not, and the pass says `K003` instead of wrapping. \
-                      **For `count`, `queue`, `elems of` and `index into T` the statement \
-                      is still untested in exactly the way it was:** `K003` has 2 probes, \
-                      and they measure that a MISSING bound is refused -- not that a \
-                      PRESENT one is right. That is the difference the 2 048/512^4 error \
-                      lived in. See `messung/K001-DOMAENENSCHRANKE.md`.",
+                      caught. A second probe pins the overflow edge -- `512^14` fits, `2 x \
+                      512^14` does not, and the pass says `K003` instead of wrapping. For \
+                      the other four: \
+                      `die_vier_uebrigen_domaenenschranken_kommen_aus_ihrer_deklaration` \
+                      turns the declared number itself -- `count` at 3/7/13, `elems of` at \
+                      2/9/31, `queue` at 3/5/16, `index into T` at 4/6/11 -- and reads the \
+                      `K001` text each time. Their mutations are OFF-BY-ONE and not \
+                      removals (`count-schranke-um-eins-daneben`, \
+                      `elems-schranke-um-eins-daneben`, `queue-schranke-um-eins-daneben`), \
+                      because a bound that is GONE was already refused by `K003` and its 2 \
+                      poison probes: **the gap was a bound that is present and wrong**, \
+                      which is what the 2 048 was. `index-into-tabelle-verloren` is \
+                      the exception and is caught TWICE -- by this probe and by the corpus \
+                      run, since `beispiele/39` carries the site; the wrong-number half of \
+                      that path is covered by `count-schranke-um-eins-daneben`, which it \
+                      shares. What is measured is the IMPLEMENTATION against tested cases, \
+                      not the rule. See `messung/K001-DOMAENENSCHRANKE.md`.",
         fundstelle: "crates/gabbro-check/src/domaene.rs (line 82), umgebung.rs \
                      (`walkschranken`); MESSUNGEN.md:6307; SPRACHE.md:906",
     },
