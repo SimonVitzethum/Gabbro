@@ -160,8 +160,15 @@ einer druckenden Zeile braucht — und eine gefallene Sprechprobe druckt nichts:
 `$name-probe` und `abi-proben/` in `pruefe-emission.sh` — vier Stufenbefunde, die RICHTIG
 eine `1` sind. *Eine Regel mit Fehlalarmen wird ignoriert, und dann schützt sie nichts.*
 
-Sie gilt seit dem 2026-08-31 für **alle 47**: die `zaehle-*` sind in die Abnahme
+Sie gilt seit dem 2026-08-31 für **alle ~~47~~ 50**: die `zaehle-*` sind in die Abnahme
 aufgenommen, und `ABBRUCH_GEBUCHT` steht leer.
+
+**Und am selben Abend hat ihre Wortliste eine Lücke gezeigt**, gefunden nicht von ihr,
+sondern vom Sieb darunter: sie führte `SPRECHPROBE GESCHEITERT` beim Namen und sah eine
+**RÜCKWÄRTSPROBE**, die fällt, nicht — zwei Stellen in `zaehle-pflichten.py`, beide mit `1`.
+Das Muster heißt jetzt `PROBE\b[^\n]*(GESCHEITERT|UNTAUGLICH)` und trifft im ganzen Ordner
+genau diese zwei; beide sind auf `2` geheilt. *Eine Regel, die die Wörter aufzählt, die sie
+schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
 
 ## Gebucht statt geheilt — mit Grund
 
@@ -195,6 +202,15 @@ aufgenommen, und `ABBRUCH_GEBUCHT` steht leer.
   Sammellauf gelesen.
 * **`pruefe-grammatiktafel.py` bleibt rot**, an seinen vier `UNGEDECKT`-Zellen. Eine
   Sprachentscheidung des Ordners, kein Werkzeugfehler.
+* **`pruefe-emission.sh` ist seit dem 2026-08-31 abends eine `TEILMESSUNG`, keine `ROT`.**
+  Er stirbt in **Stufe 9 von 10** an den sechs `messung/tor-proben/`, deren erzeugtes C
+  nicht übersetzt — **Stufe 10 (die Bibliothekskette) läuft nicht.** Vorher stand er als
+  Befund da, in derselben Zeile und derselben Farbe wie ein Wächter, der zu Ende gemessen
+  hat. *Die Zahl der Befunde daneben ist eine untere Schranke*, und der Rest gehört dem,
+  der `crates/` führt.
+* **18 von 99 emittierenden Dateien fallen bei `clang`, nicht bei `gcc`** — alle an
+  `-Wunused-function` über emittierten `static inline`-Zugriffen. `MARKE_FAMILIENUNTERSCHIED`
+  steht auf 18, gezogen und nicht geheilt; die Heilung gehört `emit.rs`.
 * **Die 180 unbewachten Zellen sind jetzt ehrlich gezählt und damit größer geworden.** 41
   davon tragend, 37 mit geschriebenem Grund, **4 offen** — das ist die Arbeitsliste.
 * ~~**Der leere Baum ist die billigste Absage, nicht die einzige.** Ein Wächter, dessen
@@ -203,6 +219,9 @@ aufgenommen, und `ABBRUCH_GEBUCHT` steht leer.
   *Der Schnitt mitten im Lauf* darunter: **44 von 50** Wächtern können mitten im Lauf
   abbrechen, **251 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
+  **Und am selben Abend GEHEILT**, soweit eine Form das kann: 92 gefährliche Stellen, alle
+  gedeckt, `MARKE_TEILMESSUNG = 0`, und die Abnahme trennt eine `TEILMESSUNG` vom Befund.
+  *Was bleibt, ist die Ansage — nicht das Ausbleiben des Schnitts.*
 * **`OHNE_URTEIL` steht leer, und das ist eine Zusage an die Zukunft, keine Messung über
   sie.** Wer einen Zähler wieder herausnimmt, schreibt den Grund dazu — die Zahl der
   Ausgenommenen druckt die Abnahme.
