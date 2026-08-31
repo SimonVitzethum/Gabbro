@@ -1659,26 +1659,98 @@ ausnahme_grund() {
 #
 # `messung/*/*.gab` kommt dazu: Fragmente, ABI-Proben, Treiber, Netz, Grenze, Caprock. Was
 # `C001` sagt, faellt wie zuvor aus dem Nenner -- eine Weigerung ist eine ehrliche Antwort.
-n_emit=0; n_ok=0; n_aus=0; schlecht=0
-n_emit_b=0; n_emit_m=0
-for q in "$W"/beispiele/*.gab "$W"/messung/*/*.gab; do
+#
+# =======================================================================================
+# **Und am Abend desselben Tages endet sie an gar keinem Verzeichnis mehr** (2026-08-31).
+#
+# `pruefe-grammatiktafel.py` stellt seit heute dieselbe Frage -- und sah **88** Dateien, wo
+# diese Stufe **83** sah. *Zwei Register ueber derselben Sache sind `W7`*, und hier sagte das
+# eine `83 von 83`, waehrend das andere eine Datei kannte, die es nicht sah. Nachgemessen ueber
+# alle 431 `.gab` des Baumes (`messung/REICHWEITE-DER-REGEL.md`):
+#
+#     R9  `beispiele/*.gab` + `messung/*/*.gab`      109 Dateien     83 davon emittieren
+#     RT  der ganze Baum, ohne target/.claude/.lake  431 Dateien     88 davon emittieren
+#     RT \ R9  322          R9 \ RT  0
+#
+# Die letzte Null ist die tragende: **diese Stufe sah keine Datei, die die Tafel nicht auch
+# sah** -- eine echte Teilmenge. Die fuenf fehlenden emittierenden waren `gift/286`,
+# `gift/413`, `messungen/narrow`, `messungen/tabelle`, `programmlogik/beispiel/lager`, und
+# **`gift/413` uebersetzt nicht.** *Eine Regel, die ueber einer Teilmenge haelt, haelt ueber
+# der Teilmenge.*
+#
+# ## Warum die Grenze nicht am Verzeichnis `gift/` bleibt
+#
+# Das Argument dafuer laege nahe: *Giftproben emittieren mit Absicht kaputtes C.* Gemessen ist
+# es falsch, und nicht knapp -- **2 von 317 Giftproben emittieren ueberhaupt**, die anderen 315
+# weist der Pruefer oder `C001` ab und sie kommen am C-Tor nie an. Der Filter *„emittiert
+# vollstaendig"* schliesst sie laengst aus, und aus dem richtigen Grund. Eine Verzeichnisregel
+# schloesse zusaetzlich `gift/286` aus, **das gruen uebersetzt**, und `gift/413`, **das die
+# einzige Fundstelle dieser Regel im ganzen Baum ist.**
+#
+# ## Die Grenze steht jetzt an dem, was die DATEI ueber sich selbst sagt
+#
+# `gift/413` traegt `-- erwartet: cc` in der ersten Zeile: der Pruefer muss schweigen **und**
+# `cc` muss ablehnen (`crates/gabbro-check/tests/beispiele.rs`). Fuer so eine Datei ist die
+# Regel dieser Stufe **umgekehrt**, und darum steht sie nicht in `ausnahme_grund()`:
+#
+#     -- erwartet: cc      das C MUSS fallen.  Faellt es nicht, beisst die Probe nicht mehr.
+#     alles andere         das C MUSS stehen.
+#
+# **Die Ausnahmeliste bleibt damit leer, und das ist kein Kunstgriff.** Ein Eintrag dort waere
+# ein *Befund mit Adresse*, der einmal ablaeuft; `-- erwartet: cc` ist keiner -- es ist die
+# Zusage der Datei, dass ihr C fallen soll. Eine Liste haette ausserdem einen Eintrag je
+# `-- erwartet: cc`-Probe gebraucht, **also ein zweites Register des Giftkorpus** -- genau das
+# `W7`, gegen das diese Ausdehnung gebaut ist. *Dieselbe Bewegung wie am 2026-08-20: die REGEL,
+# nicht die Liste.*
+#
+# Und die Umkehrung misst in beide Richtungen: **eine `-- erwartet: cc`-Probe, deren C
+# ploetzlich uebersetzt, ist ein Rot** -- entweder ist der Erzeugerfehler geheilt (dann gehoert
+# die Probe fort) oder sie trifft nicht mehr. *Eine Probe, die nicht mehr beissen kann, liest
+# sich wie eine, die es nie konnte.*
+n_emit=0; n_ok=0; n_aus=0; n_umg=0; schlecht=0
+n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_x=0; rest_x=""
+# **Der `find` bildet die Reichweite der Tafel NACH, und zwar ueber Namen statt ueber Pfade.**
+# `-name` sieht nur den letzten Bestandteil; ein Muster auf den ganzen Pfad haette denselben
+# Fehler gemacht wie der erste Auszaehler der Tafel, deren Wurzel selbst
+# `…/.claude/worktrees/agent-X` heisst -- *dort passte der absolute Pfad auf jede Datei, und
+# der Korpus ging auf null.*
+while IFS= read -r q; do
     d="${q#"$W"/}"
     if ! cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$q" \
             > "$ARB/regel.c" 2>/dev/null || [ ! -s "$ARB/regel.c" ]; then
         continue          # `C001` weigert sich -- eine Weigerung ist eine ehrliche Antwort.
     fi
     n_emit=$((n_emit + 1))
+    # `beispiele/gift/*` steht VOR `beispiele/*`: in einem `case`-Muster ueberspringt `*`
+    # sehr wohl einen `/`, anders als im Glob der Shell.
     case "$d" in
-    beispiele/*) n_emit_b=$((n_emit_b + 1)) ;;
-    messung/*)   n_emit_m=$((n_emit_m + 1)) ;;
+    beispiele/gift/*) n_emit_g=$((n_emit_g + 1)) ;;
+    beispiele/*)      n_emit_b=$((n_emit_b + 1)) ;;
+    messung/*)        n_emit_m=$((n_emit_m + 1)) ;;
+    messungen/*)      n_emit_n=$((n_emit_n + 1)) ;;
+    programmlogik/*)  n_emit_p=$((n_emit_p + 1)) ;;
+    *)                n_emit_x=$((n_emit_x + 1)); rest_x="$rest_x $d" ;;
     esac
+    umgekehrt=0
+    [ "$(head -1 "$q")" = "-- erwartet: cc" ] && umgekehrt=1
     if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
-        n_ok=$((n_ok + 1))
-        if grund="$(ausnahme_grund "$d")"; then
-            echo "  ABGELAUFENE AUSNAHME: $d uebersetzt jetzt -- der Eintrag gehoert geloescht"
-            echo "                        (stand da als: $grund)"
+        if [ "$umgekehrt" = "1" ]; then
+            echo "  PROBE BEISST NICHT MEHR: $d sagt \`-- erwartet: cc\`, und cc nimmt das C an."
+            echo "        Entweder ist der Erzeugerfehler geheilt -- dann gehoert die Probe fort --"
+            echo "        oder sie trifft nicht mehr. Beides ist ein Befund, keines ein gruener Lauf."
             schlecht=1
+        else
+            n_ok=$((n_ok + 1))
+            if grund="$(ausnahme_grund "$d")"; then
+                echo "  ABGELAUFENE AUSNAHME: $d uebersetzt jetzt -- der Eintrag gehoert geloescht"
+                echo "                        (stand da als: $grund)"
+                schlecht=1
+            fi
         fi
+    elif [ "$umgekehrt" = "1" ]; then
+        n_umg=$((n_umg + 1))
+        echo "  umgekehrte Probe  $d -- \`-- erwartet: cc\`, und cc lehnt ab. Sie beisst:"
+        head -1 "$ARB/regelerr" | sed 's/^/      /'
     elif grund="$(ausnahme_grund "$d")"; then
         n_aus=$((n_aus + 1))
         echo "  ausgenommen  $d -- $grund"
@@ -1687,9 +1759,13 @@ for q in "$W"/beispiele/*.gab "$W"/messung/*/*.gab; do
         head -3 "$ARB/regelerr" | sed 's/^/      /'
         schlecht=1
     fi
-done
-echo "  $n_ok von $n_emit emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen"
-echo "  ($n_emit_b aus beispiele/, $n_emit_m aus messung/ -- ZWEI Ratschen, nicht eine)"
+done < <(find "$W" \( -name target -o -name .claude -o -name .lake \) -prune \
+              -o -name '*.gab' -print | sort)
+n_nenner=$((n_emit - n_umg))
+echo "  $n_ok von $n_nenner emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen,"
+echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die emittieren"
+echo "  ($n_emit_b beispiele/, $n_emit_g beispiele/gift/, $n_emit_m messung/*/,"
+echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECHS Marken)"
 
 # **Die Zahl `n_emit` ist SELBSTGEWAEHLT, und das ist eine Luecke gewesen** (2026-08-28).
 #
@@ -1747,6 +1823,30 @@ MARKE_EMIT=54
 # steigt, weil mehr uebersetzt, ist keine gelockerte Ratsche. *Der Grund steht hier, damit
 # die naechste Sitzung nicht eine Lockerung liest.*
 MARKE_EMIT_M=29
+# **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
+# Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
+MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
+MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt ab
+MARKE_EMIT_X=0      # alles uebrige, `halde.gab` eingeschlossen: heute emittiert davon keines
+#
+# **`beispiele/gift/` bekommt eine DECKE und keine Ratsche, und die Richtung ist der Ertrag.**
+# In `beispiele/` heisst eine Datei weniger: der Erzeuger hat eine Form verloren -- schlecht.
+# In `gift/` heisst eine Datei weniger: **der Pruefer faengt jetzt eine Probe mehr, bevor sie
+# ueberhaupt emittiert** -- gut, und genau das Ziel des Korpus. Am selben Tag ist es passiert:
+# `gift/45-pub-wo-es-nicht-steht.gab` fiel durch den neuen Pass `P041` aus der Emission.
+#
+# *Eine Ratsche misst nicht eine Zahl, sondern eine Richtung* -- und die Richtung haengt daran,
+# wofuer die Population da ist. Wer hier dieselbe Ratsche wie nebenan haengt, meldet die gute
+# Arbeit als Bruch. Beide Seiten sind trotzdem ein Befund: ein Anstieg heisst, dass eine Probe
+# durchrutscht, ein Abstieg, dass die Marke nachzuziehen ist.
+MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/413` (`-- erwartet: cc`)
+#
+# **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
+# Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
+# mehr -- und ein Zweig, den nichts betritt, ist gruen, ohne etwas zu sagen. *Genau der Fall,
+# an dem die Sprechprobe der Grammatiktafel am 2026-08-31 gestorben ist: die Arbeit, die den
+# Baum verbessert, hat den Waechter abgeschaltet.* Hier faellt es auf.
+MARKE_UMGEKEHRT=1
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then
@@ -1761,15 +1861,63 @@ ratsche() {
         schlecht=1
     fi
 }
+decke() {
+    local ist="$1" marke="$2" wo="$3"
+    if [ "$ist" -gt "$marke" ]; then
+        echo "  DECKE DURCHBROCHEN: $ist emittierende Giftproben in $wo, gebucht sind $marke."
+        echo "                      Eine Probe RUTSCHT DURCH: sie sollte am Pruefer fallen und"
+        echo "                      kommt bis zum Erzeuger. Das ist kein gruener Lauf."
+        echo "                      Nachsehen mit: head -1 auf die neue Datei -- steht dort"
+        echo "                      \`-- erwartet: cc\`, gehoert die Marke mit Grund nachgezogen."
+        schlecht=1
+    elif [ "$ist" -lt "$marke" ]; then
+        echo "  FUND: $ist statt $marke emittierende Giftproben in $wo -- der Pruefer faengt"
+        echo "        jetzt eine mehr, bevor sie emittiert. Die Marke gehoert nachgezogen"
+        echo "        (der gute Fall, und trotzdem ein Befund)."
+        schlecht=1
+    fi
+}
 ratsche "$n_emit_b" "$MARKE_EMIT"   "beispiele/"
 ratsche "$n_emit_m" "$MARKE_EMIT_M" "messung/*/"
+ratsche "$n_emit_n" "$MARKE_EMIT_N" "messungen/"
+ratsche "$n_emit_p" "$MARKE_EMIT_P" "programmlogik/"
+decke   "$n_emit_g" "$MARKE_EMIT_G" "beispiele/gift/"
+if [ "$n_emit_x" -ne "$MARKE_EMIT_X" ]; then
+    echo "  NEUE WURZEL EMITTIERT: $n_emit_x Dateien ausserhalb der fuenf gebuchten Wurzeln"
+    echo "                         emittieren, gebucht sind $MARKE_EMIT_X. Das ist die Stelle,"
+    echo "                         an der die Reichweite frueher lautlos zurueckblieb:$rest_x"
+    schlecht=1
+fi
+if [ "$n_umg" -ne "$MARKE_UMGEKEHRT" ]; then
+    echo "  UMGEKEHRTE PROBEN: $n_umg statt $MARKE_UMGEKEHRT."
+    if [ "$n_umg" -lt "$MARKE_UMGEKEHRT" ]; then
+        echo "                     Faellt sie auf 0, misst der \`-- erwartet: cc\`-Zweig NICHTS"
+        echo "                     mehr -- er ist dann gruen, ohne etwas gesagt zu haben."
+    fi
+    echo "                     Die Marke gehoert mit Grund nachgezogen (MARKE_UMGEKEHRT)."
+    schlecht=1
+fi
 if [ "$schlecht" != "0" ]; then
     echo "== EMISSION: die REGEL haelt nicht -- eine neue Form ist am C-Uebersetzer vorbei =="
     exit 1
 fi
 
 # **Die Sprechprobe der Regel.** Ein Waechter, der nur gruen kann, misst nichts: hier faellt
-# absichtlich erzeugtes C durch, damit „$n_ok von $n_emit" eine Aussage ist und kein Ritual.
+# absichtlich erzeugtes C durch, damit „$n_ok von $n_nenner" eine Aussage ist und kein Ritual.
+#
+# **Und die UMKEHRUNG braucht keine eigene Sprechprobe, sondern zwei Marken -- gepruefte
+# Ueberlegung, kein Weglassen** (2026-08-31). Zwei Wege koennte der `-- erwartet: cc`-Zweig
+# falsch gehen, und beide sind schon zugehalten:
+#
+#   * **Die Marke trifft nie** (ein Leerzeichen zu viel, ein CRLF): dann faellt `gift/413` in
+#     den gewoehnlichen Zweig und wird als `UEBERSETZT NICHT` gemeldet -- laut und rot.
+#   * **Die Marke trifft zu viel**: dann steigt `n_umg` ueber `MARKE_UMGEKEHRT` und der Lauf
+#     sagt es. Faellt sie auf 0, sagt er auch das -- *ein Zweig, den nichts betritt, ist
+#     gruen, ohne etwas gesagt zu haben.*
+#
+# Damit sind BEIDE Zweige jeden Lauf betreten: `n_umg >= 1` erzwingt `MARKE_UMGEKEHRT`,
+# `n_ok >= 1` die vier Ratschen daneben. *Das ist die Aussage, die eine Sprechprobe geben
+# soll -- hier gibt sie der Korpus selbst, und sie kostet keinen zweiten Durchgang.*
 printf 'int fehlt(void) { return nicht_da(); }\n' > "$ARB/sprech9.c"
 if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9.c" 2>/dev/null; then
     echo "== EMISSION: Sprechprobe 9 haelt nicht -- cc -Werror laesst alles durch =="
@@ -1915,7 +2063,7 @@ fi
 grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 2; }
 echo "  8. Sprechprobe B: ok (N039 sagt ab, und der Binder haette es sonst getan)"
 
-echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_emit uebersetzen =="
+echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_nenner uebersetzen, $n_umg umgekehrte Probe(n) =="
 echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"
 echo "  AUSGEFUEHRT und mit einer Handschrift verglichen. Die Regel darueber ist"
 echo "  schwaecher: sie fragt nur, ob der C-Uebersetzer die Ausgabe annimmt. Ein"

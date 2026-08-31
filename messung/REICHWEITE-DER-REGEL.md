@@ -1,15 +1,21 @@
-# Zwei Wächter über einer Regel: **83 gegen 88**, und die Lücke sind fünf Dateien
+# Drei Register über einer Regel: **83 gegen 88**, und die Grenze steht jetzt in der DATEI
 
 *Gemessen am 2026-08-31 auf `ki-pc-fisch-101` (`gabbro-r2`, `gcc 13.3.0`, 16 Kerne), über
 den Stand `893e53a`. Ein Durchgang über **alle** `.gab` des Baumes, ohne eine Zeile am Baum
 zu ändern.*
 
-Die Regel steht an zwei Orten und lautet an beiden gleich:
+Die Regel stand an zwei Orten und lautete an beiden gleich:
 
 > **Jede Datei, die emittiert, muss auch übersetzen.**
 
 `pruefe-emission.sh` Stufe 9 sagt `83 von 83`. `pruefe-grammatiktafel.py` sagt `87 von 88`.
 **Beide Zahlen sind richtig** — und der Unterschied ist keine Rundung, sondern ein Glob.
+
+> **Der Ausgang in einer Zeile:** die Reichweite ist ausgedehnt (109 → 431 Dateien, 83 → 88
+> emittierende), **die Ausnahmeliste ist leer geblieben**, und die Grenze steht nicht mehr an
+> einem Verzeichnis, sondern an der Zeile `-- erwartet: cc`, mit der eine Datei selbst sagt,
+> dass ihr C fallen soll. Der dritte Halter, der diese Zeile schon las, stand die ganze Zeit
+> in `crates/gabbro-check/tests/beispiele.rs` — **§6.**
 
 ---
 
@@ -122,15 +128,116 @@ N041      greift nicht -- er haelt die Namen, die C vergeben hat, nicht die eige
 cc        error: redefinition of 'Eintrag_gueltig'
 ```
 
-**Das C-Tor ist die einzige Stelle im Baum, die etwas dazu sagt** — und heute nur das der
-Grammatiktafel, deren Lauf aus einem *anderen* Grund rot ist (die vier `UNGEDECKT`-Zellen,
-§4). *Ein Befund, der in einem Rot mit anderer Ursache steht, ist ein Befund, den niemand
-liest.*
+### Und es sind DREI Register, nicht zwei
 
-## 7. Was diese Messung NICHT sagt
+Die Suche nach dem zweiten Halter hat einen dritten gefunden, und er ist der interessanteste:
+
+| | Ort | Reichweite | was er verlangt |
+|---|---|---|---|
+| 1 | `pruefe-emission.sh` Stufe 9 | 109 Dateien → heute der ganze Baum | emittiert ⇒ `cc` nimmt an |
+| 2 | `pruefe-grammatiktafel.py` | ganzer Baum | emittiert ⇒ `cc` nimmt an *(Tor zu `gesenkt`)* |
+| 3 | `crates/…/tests/beispiele.rs` | `beispiele/gift/` | `-- erwartet: cc` ⇒ Prüfer schweigt **und** `cc` lehnt ab |
+
+**Der dritte verlangt für `gift/413` das GEGENTEIL des ersten.** Genau eine Datei trägt heute
+`-- erwartet: cc` — die Zeile ist in derselben Nacht entstanden, mit der Probe. Damit ist die
+Frage nach der Ausdehnung keine Reichweitenfrage mehr, sondern eine nach dem **Vorzeichen**.
+
+## 7. Der gewählte Ausgang: die Reichweite ist der ganze Baum, und die Grenze steht in der DATEI
+
+Nicht Verzeichnis gegen Verzeichnis, sondern die Erklärung, die die Datei über sich selbst
+abgibt:
+
+```
+-- erwartet: cc      das C MUSS fallen.  Faellt es nicht, beisst die Probe nicht mehr.
+alles andere         das C MUSS stehen.
+```
+
+**Die Ausnahmeliste bleibt leer — und das ist kein Kunstgriff, sondern die Folge.** Ein
+Eintrag in `ausnahme_grund()` ist ein *Befund mit Adresse*, der einmal abläuft;
+`-- erwartet: cc` ist keiner — es ist die **Zusage der Datei**, dass ihr C fallen soll. Eine
+Liste hätte außerdem **einen Eintrag je `-- erwartet: cc`-Probe** gebraucht, also ein zweites
+Register des Giftkorpus — *genau das `W7`, gegen das diese Ausdehnung gebaut ist.* Dieselbe
+Bewegung wie am 2026-08-20: **die REGEL, nicht die Liste.**
+
+### Was daran neu MISST, und nicht nur dieselbe Zahl breiter macht
+
+Die Umkehrung hat eine zweite Richtung, die es vorher nirgends gab: **eine `-- erwartet: cc`-Probe,
+deren C plötzlich übersetzt, ist rot.** Entweder ist der Erzeugerfehler geheilt — dann gehört
+die Probe fort — oder sie trifft nicht mehr. *Eine Probe, die nicht mehr beißen kann, liest
+sich wie eine, die es nie konnte.*
+
+### Die Marken: sechs statt zwei, und eine davon zeigt nach unten
+
+| Wurzel | Marke | Richtung | warum |
+|---|---:|---|---|
+| `beispiele/` | 54 | Ratsche (Boden) | eine Datei weniger = der Erzeuger hat eine Form verloren |
+| `messung/*/` | 29 | Ratsche | dito |
+| `messungen/` | 2 | Ratsche | neu |
+| `programmlogik/` | 1 | Ratsche | neu |
+| **`beispiele/gift/`** | **2** | **DECKE** | eine Datei weniger = **der Prüfer fängt eine mehr, bevor sie emittiert** |
+| sonst | 0 | exakt | eine neue Wurzel, die emittiert, meldet sich selbst |
+| `-- erwartet: cc` | 1 | exakt | fällt sie auf 0, misst der umgekehrte Zweig **nichts** |
+
+> **Die Richtung ist der Ertrag, nicht die Zahl.** In `beispiele/` ist eine verlorene Datei ein
+> Schaden, in `gift/` ein Gewinn — am 2026-08-31 ist genau das passiert:
+> `gift/45-pub-wo-es-nicht-steht.gab` fiel durch den neuen Pass `P041` aus der Emission. *Wer
+> dort dieselbe Ratsche hängt wie nebenan, meldet die gute Arbeit als Bruch.*
+
+### Und die letzte Marke ist die Lehre aus §9.4 der Grammatiktafel
+
+`MARKE_UMGEKEHRT = 1` zählt die lebenden umgekehrten Proben. Fällt sie auf 0, läuft der
+`-- erwartet: cc`-Zweig über keine einzige Datei mehr und ist grün, ohne etwas gesagt zu
+haben. *Das ist der Fall, an dem die Sprechprobe der Grammatiktafel am selben Tag gestorben
+ist: die Arbeit, die den Baum verbessert, hat den Wächter abgeschaltet.* **Hier fällt es auf.**
+
+## 8. Gemessen, nicht behauptet: die drei neuen Zweige gehen ROT
+
+*Alle drei auf `ki-pc-fisch-101` gefahren, jeweils am unveränderten Wächter, Rücklaufwert `1`.*
+
+| Sprechprobe | Eingriff | was der Wächter sagt |
+|---|---|---|
+| neue Wurzel | `probe-neue-wurzel/x.gab` angelegt (Kopie von `03-format`) | `NEUE WURZEL EMITTIERT: 1 … gebucht sind 0` |
+| Probe beißt nicht | `-- erwartet: cc` vor `messungen/narrow.gab` gesetzt | `PROBE BEISST NICHT MEHR: … cc nimmt das C an` |
+| Probe verschwindet | `gift/413` weggenommen | `FUND: 1 statt 2 …` **und** `UMGEKEHRTE PROBEN: 0 statt 1` |
+
+Und der Preis in Zeit: **16,6 s → 21,1 s** (`ki-pc-fisch-101`, ganzer `pruefe-emission.sh`)
+für 322 Dateien mehr Reichweite. `FRIST_VOLL` ist 1800 s.
+
+Der grüne Lauf liest sich jetzt so:
+
+```
+umgekehrte Probe  beispiele/gift/413-format-feld-heisst-gueltig.gab -- `-- erwartet: cc`, und cc lehnt ab. Sie beisst:
+    regel.c:23:20: error: redefinition of 'Eintrag_gueltig'
+87 von 87 emittierenden Dateien uebersetzen; 0 benannte Ausnahmen,
+1 umgekehrte Proben (`-- erwartet: cc`) -- zusammen 88, die emittieren
+(54 beispiele/, 2 beispiele/gift/, 29 messung/*/, 2 messungen/, 1 programmlogik/, 0 sonst)
+```
+
+## 9. Welcher ist der Gegenstand und welcher die Gegenprobe?
+
+Die Frage ist jetzt beantwortbar, weil die Reichweiten gleich sind:
+
+* **`pruefe-emission.sh` Stufe 9 ist der GEGENSTAND.** Er trägt die Regel, er kennt beide
+  Vorzeichen, und er hat die Marken. Er ist grün oder rot **wegen dieser Regel**.
+* **`pruefe-grammatiktafel.py` ist die GEGENPROBE.** Dort ist das C-Tor kein Selbstzweck,
+  sondern die Vorbedingung für `gesenkt`: eine Zelle gilt erst als abgesenkt, wenn das C steht.
+  Es misst dieselbe Sache mit **anderer Apparatur** — Python statt Shell, `-O0` **und** `-O2`
+  statt `-O0`, Rohr statt Datei — und beantwortet damit eine andere Frage.
+* **`tests/beispiele.rs` ist die Gegenprobe des Vorzeichens.** Er verlangt für `-- erwartet: cc`
+  beide Hälften, und er läuft in `cargo test` statt im Schnelllauf.
+
+*Zwei Register über derselben Sache sind nur dann keins, wenn eines das andere prüft.* Hier
+sind es drei, mit drei verschiedenen Apparaturen, und die Reichweite ist bei zweien
+buchstäblich dieselbe Menge — **das ist der Zustand, in dem eine Abweichung ein Befund ist und
+kein Reichweitenunterschied.**
+
+## 10. Was diese Messung NICHT sagt
 
 * **Nichts über den Erzeugerfehler selbst.** `emit.rs:3369` bildet den Namen; die Heilung
-  gehört zu `crates/` und nicht hierher.
+  gehört zu `crates/` und nicht hierher. **Wird er geheilt, geht Stufe 9 rot** — mit
+  `PROBE BEISST NICHT MEHR`, und das ist die richtige Farbe: die Probe gehört dann fort.
+* **Nichts darüber, ob die 315 aus dem richtigen Grund abgewiesen werden.** Diese Messung
+  fragt nur, ob sie emittieren.
 * **Nichts über `cc` als Maßstab.** Gemessen mit `gcc 13.3.0`. `GRAMMATIKTAFEL.md` §7 hat
   dieselbe Menge an zwei Übersetzern gemessen; diese Messung hat das nicht wiederholt.
 * **Nichts über die 315.** Dass sie nicht emittieren, heißt, dass der Prüfer sie abweist —
