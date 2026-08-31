@@ -1,0 +1,39 @@
+-- erwartet: C001
+-- **`ops remove` setzt eine nicht-optionale Kante auf `0` -- und das ist der erste Slot.**
+--
+-- `nachbar : index into Verz` hat kein `None`. Der Typ sagt: **jeder** Wert von ihm benennt
+-- einen Slot. Es gibt darin also keinen Wert fuer *„kein Nachbar"*, und `0` ist nicht
+-- neutral, sondern Platz null.
+--
+-- Bis zum 2026-08-31 schrieb der Erzeuger `t->slots[s].nachbar = 0;`, und der geraeumte Slot
+-- **behauptete danach eine Kante**. Der Unterschied zur Schwesterprobe 441 ist der Grund,
+-- nicht der Mechanismus: dort verlaesst ein Wert seinen Bereich, hier ist der Wert im Bereich
+-- und trotzdem eine Luege.
+--
+-- > Wer eine Kante braucht, die fehlen darf, schreibt `option index into Verz` -- dann traegt
+-- > sie `Verz_NONE`, und `beweise/Option_Sonderwert.thy` sagt, warum `count` der Sonderwert
+-- > ist. **Die Sprache hat die Form; sie war nur nicht verlangt.**
+
+module gift {
+
+const N : u32 = 8;
+
+table Verz count N {
+    slot {
+        benutzt : bool,
+        nachbar : index into Verz,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+}
+
+impl fn ist_belegt(v : ptr<normal, r> Verz, i : index into Verz) -> bool
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].benutzt;
+}
+
+}

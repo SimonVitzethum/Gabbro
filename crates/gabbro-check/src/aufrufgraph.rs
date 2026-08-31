@@ -820,14 +820,21 @@ pub fn held_aus_pred(p: &Pred, aus: &mut Vec<(String, bool)>) {
 fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
     match &e.art {
         ExprArt::Ruf(r) if r.heisst("Held") => {
-            let name = match r.argumente.first().map(|a| &a.art) {
-                Some(ExprArt::Ort(o)) => o.text(),
-                _ => "…".to_string(),
-            };
-            // Ein zweites Argument `shared` macht die Forderung geteilt.
-            let geteilt = r.argumente.len() > 1
-                && matches!(&r.argumente[1].art, ExprArt::Ort(o) if o.text() == "shared");
-            aus.push((name, geteilt));
+            // **`Held(<anything that is not a place>)` names NO lock** -- and until
+            // 2026-08-31 it named `…`. Measured over 499 corpus files the arm never fired,
+            // and in both readers (`geteilt.rs`) such a name is inert because it equals no
+            // declared lock. *But inert is not absent:* it put an entry into the held set
+            // that no declaration carries, and the next reader to compare by COUNT rather
+            // than by name would have read it.
+            //
+            // Dropping it is the conservative direction in both places: fewer locks held
+            // means more refusals, never fewer.
+            if let Some(ExprArt::Ort(o)) = r.argumente.first().map(|a| &a.art) {
+                // Ein zweites Argument `shared` macht die Forderung geteilt.
+                let geteilt = r.argumente.len() > 1
+                    && matches!(&r.argumente[1].art, ExprArt::Ort(o) if o.text() == "shared");
+                aus.push((o.text(), geteilt));
+            }
         }
         ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => held_aus_expr(x, aus),
         ExprArt::Binaer(_, a, b) => {

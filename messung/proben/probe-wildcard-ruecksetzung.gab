@@ -85,11 +85,23 @@
 -- **Latent, nicht tot:** es braucht ein Feld mit Bereich oder eine nicht-optionale Kante,
 -- und die Sprache erlaubt beides ohne ein Wort dazu.
 --
--- Der strukturelle Weg ist der, den `emit.rs` sonst ueberall geht: **den Wildcard streichen
--- und den Ruecksetzwert ableiten** -- `T_NONE` fuer die optionale Kante, `0` fuer `bool` und
--- fuer einen Bereich, der die Null enthaelt, und sonst eine Absage bei Namen. *Nicht in
--- diesem Lauf gebaut* -- eine Aenderung am Erzeuger gehoert mit ihrer eigenen Gift- und
--- Gegenprobe gefahren, und die Messung steht auch ohne sie.
+-- **GEBAUT am 2026-08-31**, und zwar genau so: Wildcard gestrichen, Ruecksetzwert
+-- ABGELEITET -- `T_NONE` fuer die optionale Kante, `0` fuer `bool`, fuer einen Bereich, der
+-- die Null enthaelt, und fuer `wrapping`; ein Neutyp folgt seinem Traegertyp; alles andere
+-- ist eine Absage bei Namen.
+--
+-- **Diese Datei emittiert seither nicht mehr.** Sie ist der Reproduzent, und sie tut jetzt,
+-- was ein Reproduzent tun soll: `gabbro emit` sagt `C001` an `stufe`, und kein C entsteht.
+-- *Sie war die EINZIGE der 499 Korpusdateien, deren Erzeugnis sich geaendert hat.*
+--
+-- Gift- und Gegenprobe stehen daneben, wie es die Regel verlangt:
+--
+--     beispiele/gift/441-ruecksetzung-verlaesst-den-bereich.gab   `u32 in 1 .. 9`
+--     beispiele/gift/442-ruecksetzung-erfindet-eine-kante.gab     `index into Verz`
+--     messung/proben/probe-ruecksetzung-abgeleitet.gab            sieben Feldarten, die WEITER absenken
+--
+-- Der Unterschied zwischen Gift und Gegenprobe ist EIN Zeichen: `in 0 .. 9` statt `in 1 .. 9`,
+-- `option index into` statt `index into`. **Damit misst das Paar die Regel und nicht die Datei.**
 
 module mass::wildcard_ruecksetzung {
 

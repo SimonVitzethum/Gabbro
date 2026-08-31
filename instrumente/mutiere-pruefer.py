@@ -805,8 +805,8 @@ MUTATIONEN = [
     Mutation(
         "kettenkante-braucht-kein-ende",
         "domaene.rs",
-        '    let Some(ziel) = name.strip_prefix("option index into ") else {',
-        '    let Some(ziel) = name.strip_prefix("option index into ").or(Some(kurz)) else {',
+        '        Typ::Benannt { name, .. } => name.strip_prefix("option index into "),',
+        '        Typ::Benannt { name, .. } => name.strip_prefix("option index into ").or(Some(kurz)),',
         "D015 -- a chain edge no longer has to be `option index into`, so a `bool` is an "
         "edge again and a chain has no end",
     ),
@@ -1822,8 +1822,8 @@ MUTATIONEN = [
     Mutation(
         "acht-byte-leser-ohne-seinen-vier-byte-leser",
         "emit.rs",
-        "                    if b == 8 {\n                        leser.insert(lesewort(4, gross));",
-        "                    if false {\n                        leser.insert(lesewort(4, gross));",
+        "                    if b == 8 {\n                        leser.extend(lesewort(4, gross));",
+        "                    if false {\n                        leser.extend(lesewort(4, gross));",
         "C-Absenkung -- `gabbro_le64` ruft `gabbro_le32`, und der Sammler zaehlt wieder nur die GENANNTEN Leser statt der gebrauchten",
         "code",
     ),
@@ -2224,8 +2224,8 @@ MUTATIONEN = [
     Mutation(
         "registerversatz-egal",
         "emit.rs",
-        "                        reg.insert(r.name.text.clone(), (v, intty(&r.typ)));",
-        "                        reg.insert(r.name.text.clone(), (0 * v, intty(&r.typ)));",
+        "                        reg.insert(r.name.text.clone(), (v, c));",
+        "                        reg.insert(r.name.text.clone(), (0 * v, c));",
         "C-Absenkung -- jedes Register liegt an Versatz 0; alle treffen dasselbe Wort",
         "code",
     ),

@@ -670,9 +670,9 @@ fn anweisung(
                     let erklaert = u.typ_von_ausdruck_decl(modul, t);
                     let text = format!("let {} : {}", l.name.text, schnitt(quelle, t.span()));
                     match rechts {
-                        Some((r, woher)) if r == erklaert && !r.ist_unbekannt() => {
+                        Some((r, woher, regel)) if r == erklaert && !r.ist_unbekannt() => {
                             aus.push(Stelle {
-                                regel: regel_fuer_herkunft(&l.wert),
+                                regel,
                                 ort: ort.to_string(),
                                 was: text,
                                 nachweis: Some(woher),
@@ -688,7 +688,7 @@ fn anweisung(
                     lokal.insert(l.name.text.clone(), erklaert);
                 }
                 None => {
-                    if let Some((r, _)) = rechts {
+                    if let Some((r, _, _)) = rechts {
                         lokal.insert(l.name.text.clone(), r);
                     }
                 }
@@ -817,40 +817,44 @@ fn schleife(
     }
 }
 
-/// Welche der drei Ableitbarkeitsregeln griff -- **die Herkunft ist der Nachweis.**
-fn regel_fuer_herkunft(e: &Expr) -> &'static str {
-    match &e.art {
-        ExprArt::Ruf(_) => "A1",
-        ExprArt::Ort(o) if o.suffixe.is_empty() => "A3",
-        ExprArt::Ort(_) => "A2",
-        _ => "A3",
-    }
-}
-
-/// **Der Typ der rechten Seite -- nachgeschlagen, nicht geraten.**
+/// **Der Typ der rechten Seite -- nachgeschlagen, nicht geraten. Und mit ihm die REGEL.**
 ///
 /// Genau drei Formen, und jede hat eine Deklaration, auf die der Nachweis zeigt. Alles andere
 /// gibt `None`, und die Annotation faellt dann nach `T8`: *was der Uebersetzer nicht ablesen
 /// kann, sagt etwas, das er nicht weiss.*
+///
+/// **Until 2026-08-31 the rule stood in a SECOND function** (`regel_fuer_herkunft`) that made
+/// the same case distinction over again and ended in `_ => "A3"`. Two registers over one
+/// thing is `W7`, and these two had already drifted apart: for `let x : T = (f());`
+/// `typ_der_rechten` unwrapped the parenthesis and found `A1`, while the rule function saw
+/// the parenthesis and reported **`A3`** -- *evidence pointing at a declaration it never
+/// read.* Measured over 499 corpus files the arm never fired; the parenthesised form is
+/// writable today all the same.
+///
+/// Now **one** place decides both, and a parenthesis inherits the rule of its content.
 fn typ_der_rechten(
     e: &Expr,
     modul: &str,
     u: &Umgebung,
     lokal: &HashMap<String, Typ>,
-) -> Option<(Typ, String)> {
+) -> Option<(Typ, String, &'static str)> {
     match &e.art {
         ExprArt::Klammer(x) => typ_der_rechten(x, modul, u, lokal),
         ExprArt::Ruf(r) => {
             let s = u.funktion(modul, r.path()?)?;
             let t = s.ergebnis.clone()?;
-            Some((t, format!("declared result of `{}`", r.target_text())))
+            Some((t, format!("declared result of `{}`", r.target_text()), "A1"))
         }
         ExprArt::Ort(o) => {
             let t = u.typ_von_ort(modul, o, lokal);
             if t.ist_unbekannt() {
                 return None;
             }
-            Some((t, format!("declared type of `{}`", o.text())))
+            // `A3` is a bare name in scope, `A2` a place that reaches through a declaration
+            // (`t->slots[i].f`) -- the suffixes are the difference, and the rule table says
+            // so in both entries.
+            let regel = if o.suffixe.is_empty() { "A3" } else { "A2" };
+            Some((t, format!("declared type of `{}`", o.text()), regel))
         }
         _ => None,
     }

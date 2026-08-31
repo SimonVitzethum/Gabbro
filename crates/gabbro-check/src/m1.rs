@@ -4178,7 +4178,12 @@ fn op_zeichen(op: BinOp) -> &'static str {
         BinOp::KleinerGleich => "<=",
         BinOp::Groesser => ">",
         BinOp::GroesserGleich => ">=",
-        _ => "?",
+        // **And the last two came out of the `_` on the same day.** `||` and `&&` were the
+        // only ones left in it; the arm answered `?` for them and for nothing else, so it
+        // was `M136` waiting for a caller. *A branch that is silent over 499 files is not a
+        // branch that is right.*
+        BinOp::Oder => "||",
+        BinOp::Und => "&&",
     }
 }
 
@@ -4422,5 +4427,40 @@ fn grundname_von(e: &Expr, lage: &Lage) -> Option<String> {
             _ => None,
         },
         _ => None,
+    }
+}
+
+/// **The third operator table against the second** -- see `opsruf::operatortafeln` for why
+/// there are three and what the `_ => "?"` in this one did.
+#[cfg(test)]
+mod operatortafel {
+    use super::*;
+
+    #[test]
+    fn op_zeichen_sagt_dasselbe_wie_fremdverengung() {
+        let alle = [
+            BinOp::Oder,
+            BinOp::Und,
+            BinOp::Gleich,
+            BinOp::Ungleich,
+            BinOp::Kleiner,
+            BinOp::KleinerGleich,
+            BinOp::Groesser,
+            BinOp::GroesserGleich,
+            BinOp::BitUnd,
+            BinOp::BitOder,
+            BinOp::BitXor,
+            BinOp::SchiebLinks,
+            BinOp::SchiebRechts,
+            BinOp::Plus,
+            BinOp::Minus,
+            BinOp::Mal,
+            BinOp::Geteilt,
+            BinOp::Rest,
+        ];
+        for op in alle {
+            assert_eq!(op_zeichen(op), crate::fremdverengung::zeichen(op), "{op:?}");
+            assert_ne!(op_zeichen(op), "?", "{op:?}");
+        }
     }
 }

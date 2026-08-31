@@ -963,13 +963,21 @@ pub fn emittiere_mit(
                 let mut umlaeufer = HashMap::new();
                 let mut klassen = HashMap::new();
                 for r in &d.register {
+                    // **A register word this emitter cannot lower is not collected**, and
+                    // `geraet` refuses it by name a few hundred lines further down. Skipping
+                    // here records NOTHING -- it does not put a plausible width into the map,
+                    // which is the whole difference to the `_ => 8` that stood in
+                    // `breite_von`.
+                    let (Some(c), Some(breite)) = (intty(&r.typ), breite_von(&r.typ)) else {
+                        continue;
+                    };
                     if let Some(v) = umg.konst_wert(modul, &r.versatz) {
-                        reg.insert(r.name.text.clone(), (v, intty(&r.typ)));
+                        reg.insert(r.name.text.clone(), (v, c));
                     }
                     if r.umlaufend {
                         umlaeufer.insert(r.name.text.clone(), r.typ.clone());
                     }
-                    let breite = breite_von(&r.typ) * 8;
+                    let breite = breite * 8;
                     let mut f = HashMap::new();
                     for (name, lage, _) in &r.felder {
                         let (hi, lo) = match lage {
@@ -1268,8 +1276,14 @@ pub fn emittiere_mit(
             let gross = matches!(f.endian, Some(Endian::Gross));
             for feld in &f.felder {
                 if let TypExpr::Int(i) = &feld.typ.typ {
-                    let b = breite_von(i);
-                    leser.insert(lesewort(b, gross));
+                    // A word without a width collects no reader here -- `format_`
+                    // refuses it by name a moment later. *Collecting nothing is not the
+                    // same as collecting the next best thing.*
+                    let Some(b) = breite_von(i) else { continue };
+                    let (Some(l), Some(s)) = (lesewort(b, gross), schreibwort(b, gross)) else {
+                        continue;
+                    };
+                    leser.insert(l);
                     // **Ein Achtbyteleser ist aus ZWEI Vierbytelesern gebaut**, und der
                     // Sammler kannte nur den, den ein Feld nennt. Ein `format`, dessen
                     // einziges Ganzzahlfeld `u64` ist, definiert `gabbro_le64` und ruft darin
@@ -1277,11 +1291,11 @@ pub fn emittiere_mit(
                     // ERZEUGTEN Ruempfen -- der Sammler zaehlte die genannten, nicht die
                     // gebrauchten.*
                     if b == 8 {
-                        leser.insert(lesewort(4, gross));
+                        leser.extend(lesewort(4, gross));
                     }
-                    schreiber.insert(schreibwort(b, gross));
+                    schreiber.insert(s);
                     if b == 8 {
-                        schreiber.insert(schreibwort(4, gross));
+                        schreiber.extend(schreibwort(4, gross));
                     }
                 }
             }
@@ -1804,13 +1818,21 @@ pub fn emittiere_mit(
                             Ordnung::Seq => ("memory_order_seq_cst", "total order"),
                             Ordnung::Relaxed => ("memory_order_relaxed", "no payload"),
                         };
-                        let last = match &a.obermenge {
+                        // **Three cases, and two of them say the same word for different
+                        // reasons** (the `_` here was struck 2026-08-31; measured 21 hits,
+                        // every one of them `None`). `publishes nothing` is the source
+                        // SAYING there is no payload; no clause at all is the source saying
+                        // nothing. The C comment reads the same either way -- what changes
+                        // is that a third `Nutzlast` is now a translation error instead of
+                        // the word `nothing`.
+                        let last: String = match &a.obermenge {
                             Some(Nutzlast::Orte(l)) => l
                                 .iter()
                                 .map(|x| x.text())
                                 .collect::<Vec<_>>()
                                 .join(", "),
-                            _ => "nothing".into(),
+                            Some(Nutzlast::Nichts(_)) => "nothing".into(),
+                            None => "nothing".into(),
                         };
                         aus.push_str(&format!(
                             "\n/* {} under A10 (release_stellt_sichtbarkeit_her, UNFALSIFIABLE):\n\
@@ -2062,9 +2084,13 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 
 /// Ein Typausdruck als Text -- **nur zum VERGLEICHEN zweier Deklarationen**, nicht zum
 /// Absenken. `TypExpr` traegt Spannen und ist darum nicht vergleichbar.
+///
+/// **A word with no C name gets its OWN SOURCE TEXT as the key here**, never another word's.
+/// That is not a lowering, it is a comparison key: two different unknown words have to stay
+/// different, or this comparison would hold two unequal declarations to be equal.
 fn typtext(t: &TypExpr) -> String {
     match t {
-        TypExpr::Int(i) => intty(i),
+        TypExpr::Int(i) => intty(i).unwrap_or_else(|| i.wort.to_string()),
         TypExpr::Bool(_) => "bool".into(),
         TypExpr::Pfad(p) => p.teile.iter().map(|i| i.text.clone()).collect::<Vec<_>>().join("::"),
         TypExpr::Index { tabelle, optional, .. } => {
@@ -2227,7 +2253,7 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 SlotTyp::Typ(t) => ctyp(t, u),
                 // `intty wrapping` -- the wraparound is DECLARED («B32»), so the C type is
                 // the plain unsigned word whose wrap C already defines.
-                SlotTyp::Wrapping(i) => Some(intty(i)),
+                SlotTyp::Wrapping(i) => intty(i),
             };
             match c {
                 Some(c) => aus.push_str(&format!("    {c} {};\n", f.name.text)),
@@ -2312,6 +2338,104 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// that carries no value any more -- `beispiele/47` shows why that is not zeal: its invariant
 /// `marke_null_wenn_frei` breaks if `marke` survives the removal. *That is the item a hand
 /// mutation forgets and a generator cannot forget.*
+/// **The carrier of a named type -- ONE reader for all three callers.**
+///
+/// `vorzeichen`, `ctyp` and `ruecksetzwert` each need the same thing: `type Zaehler = u32 in
+/// 0 .. 65535` behind the name `Zaehler`. Until 2026-08-31 all three looked into the map
+/// themselves, which is four direct looks at one card (`zaehle-karten.py` counts them, and
+/// its reason is `M103` in `m1.rs`: a look that only hits a fully qualified name goes silent
+/// inside a `module` block).
+///
+/// **One reader is one place to fix that**, and four are four places to forget it.
+fn traegertyp<'a>(name: &str, u: &'a Namen) -> Option<&'a TypExpr> {
+    u.typen.get(name)
+}
+
+/// A range BOUND as a number -- like `konst_zahl`, but the minus sign counts.
+///
+/// **`konst_zahl` deliberately does not read one**: its other callers are a table length and
+/// a register offset, and a negative one of those is nonsense. `i32 in -4 .. 4` is not, and
+/// reading its lower bound as "unreadable" would refuse a field whose reset value is plainly
+/// derivable.
+fn grenzzahl(e: &Expr) -> Option<i128> {
+    match &e.art {
+        ExprArt::Unaer(UnOp::Negativ, i) => Some(-konst_zahl(i)?),
+        _ => konst_zahl(e),
+    }
+}
+
+/// **The reset value of ONE slot field -- derived, and `None` where it cannot be.**
+///
+/// `T_remove` clears a slot: the theorem it carries (`beweise/Table_Ops_Erhaltung.thy`,
+/// `blatt_loeschen_erhaelt`) says the slot carries NO value any more, so EVERY field is
+/// reset. Until 2026-08-31 that read *`T_NONE` for an optional index, `0` for everything
+/// else*, and the `0` was a `_` arm. Measured over 499 corpus files: 29 hits.
+///
+/// **`messung/proben/probe-wildcard-ruecksetzung.gab` is what the `_` cost.** It checks with
+/// `0 errors` and the emitter wrote two wrong values into one function:
+///
+/// ```text
+/// t->slots[s].stufe   = 0;   `u32 in 1 .. 9`   -- OUTSIDE the field's own range
+/// t->slots[s].nachbar = 0;   `index into Verz` -- a VALID index, i.e. a claimed edge
+/// ```
+///
+/// Two different defects out of one line. The first has the emitter break the type the
+/// checker had just enforced -- *a generator that violates the pass in front of it undoes
+/// it.* The second writes a lie: a non-optional index has no `None`, and `0` is not neutral,
+/// it is the first slot.
+///
+/// So the value is DERIVED now: `T_NONE` for the optional edge, `0` for a truth value and
+/// for a range that contains the zero, and otherwise nothing -- the caller refuses by name.
+///
+/// `tiefe` bounds the walk through named types; a cyclic `type` declaration must not turn a
+/// refusal into a stack overflow.
+fn ruecksetzwert(t: &SlotTyp, tn: &str, u: &Namen, tiefe: u32) -> Option<String> {
+    if tiefe > 16 {
+        return None;
+    }
+    let x = match t {
+        // `u32 wrapping`: the wraparound is DECLARED («B32»), the range is the whole word,
+        // and the zero lies in it.
+        SlotTyp::Wrapping(_) => return Some("0".to_string()),
+        SlotTyp::Typ(x) => x,
+    };
+    match x {
+        // The sentinel is `count` itself -- `beweise/Option_Sonderwert.thy`.
+        TypExpr::Index { optional: true, .. } => Some(format!("{tn}_NONE")),
+        // And the non-optional one has no sentinel at all. **That is the refusal**, not an
+        // oversight: the type says every value of it names a slot.
+        TypExpr::Index { optional: false, .. } => None,
+        TypExpr::Bool(_) => Some("0".to_string()),
+        TypExpr::Int(i) => match &i.bereich {
+            None => Some("0".to_string()),
+            Some(b) => {
+                let (Some(von), Some(bis)) = (grenzzahl(&b.von), grenzzahl(&b.bis)) else {
+                    // A bound this emitter cannot read is not a bound it may ignore.
+                    return None;
+                };
+                let bis = if b.exklusiv { bis - 1 } else { bis };
+                (von <= 0 && 0 <= bis).then(|| "0".to_string())
+            }
+        },
+        // A named type is its underlying one -- read off, not guessed.
+        TypExpr::Pfad(p) => {
+            let n = &p.teile.last()?.text;
+            ruecksetzwert(&SlotTyp::Typ(traegertyp(n, u)?.clone()), tn, u, tiefe + 1)
+        }
+        // Pointer, float, array, record, function pointer, `never`, a tagged type: **no
+        // reset value is derived here.** Each of them would need its own statement about
+        // what "empty" means, and this emitter refuses by name rather than writing a
+        // plausible zero.
+        TypExpr::Zeiger(_)
+        | TypExpr::Float(_)
+        | TypExpr::Feld(_)
+        | TypExpr::Verbund(..)
+        | TypExpr::FnZeiger(_)
+        | TypExpr::Never(_)
+        | TypExpr::Varianten(..) => None,
+    }
+}
+
 fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     if t.ops.is_empty() {
         return;
@@ -2402,14 +2526,37 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                     pflicht("remove"),
                     leise("remove")
                 ));
+                // **Every field is asked, and the refusal does not stop at the first.** A
+                // table with two underivable fields would otherwise be reported as having
+                // one, and the second would surface only after the first was fixed --
+                // *a measurement that stops at the first hit answers a different question.*
+                let mut fehlt = false;
                 for f in t.slot.iter().flat_map(|sd| sd.felder.iter()) {
-                    let wert = match &f.typ {
-                        SlotTyp::Typ(TypExpr::Index { optional: true, .. }) => {
-                            format!("{tn}_NONE")
+                    match ruecksetzwert(&f.typ, tn, u, 0) {
+                        Some(wert) => {
+                            aus.push_str(&format!("    t->slots[s].{} = {wert};\n", f.name.text))
                         }
-                        _ => "0".to_string(),
-                    };
-                    aus.push_str(&format!("    t->slots[s].{} = {wert};\n", f.name.text));
+                        None => {
+                            fehlt = true;
+                            weigere(
+                                absagen,
+                                f.name.span,
+                                &format!(
+                                    "`ops remove` on `{}`: this emitter has no reset value \
+                                     for that field type. A cleared slot carries NO value \
+                                     any more, so every field is reset -- and `0` is a value \
+                                     like any other: outside a declared range it breaks the \
+                                     type the checker just enforced, and in a non-optional \
+                                     `index into T` it is the FIRST slot, not the absence \
+                                     of one",
+                                    f.name.text
+                                ),
+                            );
+                        }
+                    }
+                }
+                if fehlt {
+                    return;
                 }
                 aus.push_str("}\n");
             }
@@ -2569,7 +2716,7 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     // einem `format`; hier ist die Breite erklaert, also ist die Frage entscheidbar -- und
     // eine Lage, die herausragt, ist ein Fehler, kein offener Punkt.
     for r in &d.register {
-        let breite = breite_von(&r.typ) * 8;
+        let breite = breite_oder_absage(&r.typ, absagen) * 8;
         for (name, lage, _) in &r.felder {
             let hi = match lage {
                 BitPos::Bit(b) => *b as u32,
@@ -2643,7 +2790,10 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
             weigere(absagen, r.name.span, "`bank` register at a non-constant offset");
             return;
         };
-        let breite = intty(&r.typ);
+        let Some(breite) = intty(&r.typ) else {
+            weigere(absagen, r.name.span, "`bank` register word -- no such integer word");
+            return;
+        };
         aus.push_str(&format!(
             "\nstatic inline __attribute__((unused)) {breite} {}_{}_{}(const {} *d, uint32_t i) {{\n\
              \x20   /* count {anzahl}: the index bound falls out of the declaration */\n\
@@ -3107,9 +3257,9 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 weigere(absagen, feld.span, "`format` field type");
                 return;
             };
-            let breite = breite_von(i);
-            let c = intty(i);
-            let leser = lesewort(breite, gross);
+            let breite = breite_oder_absage(i, absagen);
+            let c = intty_oder_absage(i, absagen);
+            let (leser, sw) = wortpaar_oder_absage(breite, gross, feld.span, absagen);
             if !feld.reserviert {
                 aus.push_str(&format!(
                     "static inline __attribute__((unused)) {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
@@ -3121,8 +3271,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 // Funktionsaufruf.
                 aus.push_str(&format!(
                     "static inline __attribute__((unused)) void {n}_setz_{f2}({n} *v, {c} x) {{ {sw}(v->bytes + {versatz}, x); }}\n",
-                    f2 = feld.name.text,
-                    sw = schreibwort(breite, gross)
+                    f2 = feld.name.text
                 ));
             }
             // **The pinning of a byte-wise field.** *A `reserved` one has no reader, so
@@ -3193,11 +3342,24 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                     match &ctyp_wort {
                         // Ein anderes Ganzzahlwort faengt ein neues Wort an -- dieselbe
                         // Regel wie bisher, nur ohne die `bool` mitzuzaehlen.
-                        Some(vorher) if *vorher != intty(gi) => break,
+                        Some(vorher) if Some(vorher.as_str()) != intty(gi).as_deref() => break,
                         Some(_) => {}
                         None => {
-                            breite = Some(breite_von(gi));
-                            ctyp_wort = Some(intty(gi));
+                            // **A word without a width opens no group, it refuses.**
+                            // Until 2026-08-31 a `breite_von` stood here that made every
+                            // unknown word eight bytes wide -- and a bit group over the
+                            // wrong word width is exactly the error «B24» prevents from
+                            // the other side.
+                            let (Some(b), Some(c)) = (breite_von(gi), intty(gi)) else {
+                                weigere(
+                                    absagen,
+                                    g.span,
+                                    "integer width -- no such word in the width table",
+                                );
+                                return;
+                            };
+                            breite = Some(b);
+                            ctyp_wort = Some(c);
                         }
                     }
                 }
@@ -3213,7 +3375,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             );
             return;
         };
-        let leser = lesewort(breite, gross);
+        let (leser, sw) = wortpaar_oder_absage(breite, gross, feld.span, absagen);
         let bits = breite * 8;
         let mut belegt: u64 = 0;
         let mut gruppe = Vec::new();
@@ -3238,7 +3400,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                         return;
                     }
                 }
-                TypExpr::Int(gi) if intty(gi) == c => {}
+                TypExpr::Int(gi) if intty(gi).as_deref() == Some(c.as_str()) => {}
                 TypExpr::Int(_) => break,
                 _ => {
                     weigere(absagen, g.span, "`format` bit field type");
@@ -3351,8 +3513,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                      {c} w = ({c}){leser}(v->bytes + {versatz}); \
                      w = ({c})((w & ({c})~(({c}){maske}u << {lo})) | ((({c})x & {maske}u) << {lo})); \
                      {sw}(v->bytes + {versatz}, w); }}\n",
-                    f2 = g.name.text,
-                    sw = schreibwort(breite, gross)
+                    f2 = g.name.text
                 ));
             }
             // **The pinning of a BIT field, and its width is the group's, not the carrier's.**
@@ -3437,19 +3598,57 @@ fn vorzeichen(t: &TypExpr, u: &Namen) -> Option<bool> {
             match n.as_str() {
                 "u8" | "u16" | "u32" | "u64" => Some(true),
                 "i8" | "i16" | "i32" | "i64" => Some(false),
-                _ => vorzeichen(u.typen.get(n)?, u),
+                _ => vorzeichen(traegertyp(n, u)?, u),
             }
         }
         _ => None,
     }
 }
 
-fn breite_von(i: &IntTy) -> u32 {
-    match i.wort {
-        gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8 => 1,
-        gabbro_syntax::kw::Kw::U16 | gabbro_syntax::kw::Kw::I16 => 2,
-        gabbro_syntax::kw::Kw::U32 | gabbro_syntax::kw::Kw::I32 => 4,
-        _ => 8,
+/// **The eight integer words, their C name and their width in bytes -- and NOTHING else.**
+///
+/// This one table is what all four hardware points stand on. It used to be two matches with
+/// a `_` arm each: `intty` named seven words and let the eighth fall into `int64_t`,
+/// `breite_von` named six and let the rest fall into `8`. *A new integer word would have
+/// been lowered as a signed eight-byte one by both, silently* -- `gabbro pruefe` clean,
+/// `cc -Werror` clean, and a device register accessed at the wrong width.
+///
+/// **A word that is not in this table has no width here, and the emitter says so.** The
+/// callers turn the `None` into `C001` by name; none of them substitutes a plausible value.
+/// The refusal is unreachable today and the test below says why: every word `ist_intty`
+/// admits stands in this table, and the table admits no other. *The point is not that it
+/// fires -- the point is that adding a ninth word is a translation error instead of a silent
+/// byte.*
+fn ganzzahlwort(k: gabbro_syntax::kw::Kw) -> Option<(&'static str, u32)> {
+    use gabbro_syntax::kw::Kw;
+    Some(match k {
+        Kw::U8 => ("uint8_t", 1),
+        Kw::U16 => ("uint16_t", 2),
+        Kw::U32 => ("uint32_t", 4),
+        Kw::U64 => ("uint64_t", 8),
+        Kw::I8 => ("int8_t", 1),
+        Kw::I16 => ("int16_t", 2),
+        Kw::I32 => ("int32_t", 4),
+        Kw::I64 => ("int64_t", 8),
+        _ => return None,
+    })
+}
+
+/// The width in BYTES of an integer type, or `None` for a word this emitter cannot lower.
+fn breite_von(i: &IntTy) -> Option<u32> {
+    ganzzahlwort(i.wort).map(|(_, b)| b)
+}
+
+/// The width, or a `C001` at the type's own span. **Zero comes back with the refusal**, and
+/// that is safe because an emission with an error writes no C at all (`command_emit`); it is
+/// the same shape `zahltext` uses for a table length it cannot read.
+fn breite_oder_absage(i: &IntTy, absagen: &mut Absagen) -> u32 {
+    match breite_von(i) {
+        Some(b) => b,
+        None => {
+            weigere(absagen, i.span, "integer width -- no such word in the width table");
+            0
+        }
     }
 }
 
@@ -3477,16 +3676,22 @@ const SCHREIBER_C: &[(&str, &str)] = &[
 ];
 
 /// Das Schreibwort zu einer Breite und Byteordnung -- Spiegel von `lesewort`.
-fn schreibwort(breite: u32, gross: bool) -> &'static str {
-    match (breite, gross) {
+///
+/// **The four widths stand one by one, and none falls into a fifth.** Until 2026-08-31
+/// `_ => "gabbro_setz_le64"` caught everything that was not `(8, true)`: measured 148 hits,
+/// every one of them `(8, false)` -- answered correctly, but a width of 16 would have got
+/// the same answer. *The arm was load-bearing and written as `_` instead of named.*
+fn schreibwort(breite: u32, gross: bool) -> Option<&'static str> {
+    Some(match (breite, gross) {
         (1, _) => "gabbro_setz_u8",
         (2, true) => "gabbro_setz_be16",
         (2, false) => "gabbro_setz_le16",
         (4, true) => "gabbro_setz_be32",
         (4, false) => "gabbro_setz_le32",
         (8, true) => "gabbro_setz_be64",
-        _ => "gabbro_setz_le64",
-    }
+        (8, false) => "gabbro_setz_le64",
+        _ => return None,
+    })
 }
 
 const LESER_C: &[(&str, &str)] = &[
@@ -3499,15 +3704,35 @@ const LESER_C: &[(&str, &str)] = &[
     ("gabbro_le64", "static inline uint64_t gabbro_le64(const uint8_t *p) { return (uint64_t)gabbro_le32(p + 4) << 32 | gabbro_le32(p); }\n"),
 ];
 
-fn lesewort(breite: u32, gross: bool) -> &'static str {
-    match (breite, gross) {
+/// The reader word -- the same enumeration as `schreibwort`; the struck `_` was measured at
+/// 107 hits, all of them `(8, false)`.
+fn lesewort(breite: u32, gross: bool) -> Option<&'static str> {
+    Some(match (breite, gross) {
         (1, _) => "gabbro_u8",
         (2, true) => "gabbro_be16",
         (2, false) => "gabbro_le16",
         (4, true) => "gabbro_be32",
         (4, false) => "gabbro_le32",
         (8, true) => "gabbro_be64",
-        _ => "gabbro_le64",
+        (8, false) => "gabbro_le64",
+        _ => return None,
+    })
+}
+
+/// Reader and writer word for a width, or a refusal by name. **A word this emitter does not
+/// have is not replaced by the next best one.**
+fn wortpaar_oder_absage(
+    breite: u32,
+    gross: bool,
+    span: gabbro_syntax::span::Span,
+    absagen: &mut Absagen,
+) -> (&'static str, &'static str) {
+    match (lesewort(breite, gross), schreibwort(breite, gross)) {
+        (Some(l), Some(s)) => (l, s),
+        _ => {
+            weigere(absagen, span, &format!("a {breite}-byte word -- no reader/writer for it"));
+            ("", "")
+        }
     }
 }
 
@@ -3676,20 +3901,22 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
     }
 }
 
-fn intty(i: &IntTy) -> String {
-    // The word IS the width -- `u32 wrapping` lowers to `uint32_t`, whose wraparound C
-    // defines. «B32»: the wraparound is spoken at the declaration, not tolerated.
-    match i.wort {
-        gabbro_syntax::kw::Kw::U8 => "uint8_t",
-        gabbro_syntax::kw::Kw::U16 => "uint16_t",
-        gabbro_syntax::kw::Kw::U32 => "uint32_t",
-        gabbro_syntax::kw::Kw::U64 => "uint64_t",
-        gabbro_syntax::kw::Kw::I8 => "int8_t",
-        gabbro_syntax::kw::Kw::I16 => "int16_t",
-        gabbro_syntax::kw::Kw::I32 => "int32_t",
-        _ => "int64_t",
+/// The C word of an integer type. **`None` for a word the table does not carry** -- the word
+/// IS the width («B32»: `u32 wrapping` lowers to `uint32_t`, whose wraparound C defines, and
+/// the wraparound is spoken at the declaration, not tolerated).
+fn intty(i: &IntTy) -> Option<String> {
+    ganzzahlwort(i.wort).map(|(c, _)| c.to_string())
+}
+
+/// The C word, or a `C001` at the type's own span -- the mirror of `breite_oder_absage`.
+fn intty_oder_absage(i: &IntTy, absagen: &mut Absagen) -> String {
+    match intty(i) {
+        Some(c) => c,
+        None => {
+            weigere(absagen, i.span, "integer type -- no such word in the width table");
+            String::new()
+        }
     }
-    .to_string()
 }
 
 /// The array length of a `table`. **A length this emitter cannot read is refused** — the same
@@ -3742,17 +3969,21 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
         // The abstract declarator -- a function pointer in a position that has no name of
         // its own (a parameter, a result). See `fnzeiger_deklarator`.
         TypExpr::FnZeiger(z) => fnzeiger_deklarator(z, "", u),
-        TypExpr::Int(i) => Some(intty(i)),
+        TypExpr::Int(i) => intty(i),
         // **«F»: `f32`/`f64` senken zu `float`/`double` ab -- und mehr sagt der Erzeuger
         // nicht.** Der Bereich ist ein M1-Faktum und lebt im Pruefer, genau wie beim
         // Ganzzahlbereich; die zwei Bits ebenso.
-        TypExpr::Float(f) => Some(
-            if f.wort == gabbro_syntax::kw::Kw::F32 {
-                "float".into()
-            } else {
-                "double".into()
-            },
-        ),
+        //
+        // **And both words stand one by one.** Until 2026-08-31 an
+        // `if f32 { float } else { double }` stood here -- the same disease as
+        // `_ => "int64_t"`, only written as an `else`: a third floating point word would
+        // silently have become a `double`. *Now there is `None`, and `ctyp`'s callers
+        // refuse by name.*
+        TypExpr::Float(f) => match f.wort {
+            gabbro_syntax::kw::Kw::F32 => Some("float".into()),
+            gabbro_syntax::kw::Kw::F64 => Some("double".into()),
+            _ => None,
+        },
         TypExpr::Bool(_) => Some("bool".into()),
         TypExpr::Pfad(p) => {
             let n = p.teile.last()?.text.clone();
@@ -3806,8 +4037,8 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
                 // it, and for nothing else.
-                _ if u.typen.contains_key(&n) => {
-                    return ctyp(u.typen.get(&n)?, u);
+                _ if traegertyp(&n, u).is_some() => {
+                    return ctyp(traegertyp(&n, u)?, u);
                 }
                 // A named type whose carrier is not resolved here. Refused rather than
                 // guessed -- see the head of this file.
@@ -8059,7 +8290,13 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             // passt in `int`, und die Aufwertung ist dann harmlos. *Die Absenkung braucht den
             // Cast genau dort, wo die Sprache den Ueberlauf zulaesst.*
             if let (true, Some(i)) = (rechnet(op), umlaeufer_typ(a, u).or(umlaeufer_typ(b, u))) {
-                let (breite, vz) = crate::umgebung::breite_von(i.wort);
+                // Which width the modulo arithmetic runs in is not a question with a
+                // default: a word without a width gets no `uint64_t` here, it gets a
+                // refusal by name.
+                let Some((breite, vz)) = crate::umgebung::breite_von(i.wort) else {
+                    weigere(absagen, i.span, "the width of a `wrapping` computation");
+                    return String::new();
+                };
                 let rechenwort = if breite <= 32 { "uint32_t" } else { "uint64_t" };
                 let zurueck = format!("{}int{}_t", if vz { "" } else { "u" }, breite);
                 return format!(
@@ -8475,11 +8712,25 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             Laeuft::Online => "online",
             Laeuft::Offline => "offline",
         };
+        // **The comment said `COMPILE TIME (W6)`, and no pass decided it** (2026-08-31).
+        //
+        // W6 divides labour: what a pass settled, the machine does not check a second time.
+        // *That sentence needs a pass.* Measured on this line: an unsatisfiable walk
+        // invariant passes with `0 errors, 0 hints`, produces no template in the
+        // certificate, and -- until the same day -- no obligation either.
+        //
+        // A refusal was weighed and dropped: `runs online` at a `table … ops` IS carried
+        // (`table.ops.erhaltung`, machine-checked), and at a `table` without `ops` it becomes
+        // an `E` per `maintains`. **A rule over the word `online` would hit two registers
+        // that work in order to reach the one that does not.** So the gap is booked instead:
+        // `gabbro pflichten` counts it as `W`, and the comment says where it stands rather
+        // than claiming it is settled.
         aus.push_str(&format!(
-            " * invariant {} runs {laeuft} -- COMPILE TIME (W6), not re-checked here{}\n",
+            " * invariant {} runs {laeuft} -- NOT checked here and by no pass either;\n\
+             \x20*   it stands as a `W` obligation in `gabbro pflichten`{}\n",
             kommentartext(&i.name.text),
             if nennt_abbildungen(&i.pred) {
-                ";\n *   it quantifies over `mappings of`, whose bound is an open finding\n\
+                ".\n *   It quantifies over `mappings of`, whose bound is an open finding\n\
                  \x20*   about the COST PASS (see `traverse`). This descent walks ONE path\n\
                  \x20*   and claims nothing about the domain"
             } else {
@@ -8897,4 +9148,90 @@ fn fehlbare_lesung(
     }
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
     true
+}
+
+/// **The width table against the word list -- the check that makes the refusals above dead.**
+///
+/// `ganzzahlwort` refuses a word it does not carry, and `intty`/`breite_von` hand that
+/// refusal on as `C001`. That is the right answer for a word the emitter cannot lower, but
+/// it is an answer nobody wants to see: it would mean the language grew an integer word and
+/// the emitter did not. **This test says so at build time instead.**
+///
+/// It reads the SAME list the lexer reads (`kw::ALLE`) and the SAME predicate the passes read
+/// (`ist_intty`). A ninth integer word is then a red test, not a silent eight-byte access on
+/// a device register -- which is precisely what `_ => 8` used to be.
+#[cfg(test)]
+mod breitentafel {
+    use super::*;
+
+    #[test]
+    fn jedes_ganzzahlwort_hat_eine_breite() {
+        let mut fehlend = Vec::new();
+        let mut ueberzaehlig = Vec::new();
+        for k in gabbro_syntax::kw::ALLE {
+            match (k.ist_intty(), ganzzahlwort(*k)) {
+                (true, None) => fehlend.push(k.text()),
+                (false, Some(_)) => ueberzaehlig.push(k.text()),
+                _ => {}
+            }
+        }
+        assert!(
+            fehlend.is_empty(),
+            "`ist_intty` admits {fehlend:?}, and the emitter has no width for them -- \
+             every use lowers to `C001` instead of C"
+        );
+        assert!(
+            ueberzaehlig.is_empty(),
+            "the width table carries {ueberzaehlig:?}, which `ist_intty` does not admit"
+        );
+    }
+
+    /// The other direction of the same table: **the eight words, their C name and their
+    /// width, written out once more.** A test that only compared against a predicate would
+    /// accept a `u16` mapped to `uint64_t` -- the predicate says nothing about widths.
+    #[test]
+    fn die_acht_worte_stehen_einzeln() {
+        use gabbro_syntax::kw::Kw;
+        let erwartet: &[(Kw, &str, u32)] = &[
+            (Kw::U8, "uint8_t", 1),
+            (Kw::U16, "uint16_t", 2),
+            (Kw::U32, "uint32_t", 4),
+            (Kw::U64, "uint64_t", 8),
+            (Kw::I8, "int8_t", 1),
+            (Kw::I16, "int16_t", 2),
+            (Kw::I32, "int32_t", 4),
+            (Kw::I64, "int64_t", 8),
+        ];
+        for (k, c, b) in erwartet {
+            assert_eq!(ganzzahlwort(*k), Some((*c, *b)), "{}", k.text());
+        }
+        assert_eq!(
+            erwartet.len(),
+            gabbro_syntax::kw::ALLE.iter().filter(|k| k.ist_intty()).count()
+        );
+    }
+
+    /// **`umgebung::breite_von` is the same table in bits, and it must not drift.** Two
+    /// registers over one thing is `W7`; this test is what keeps them one.
+    #[test]
+    fn erzeuger_und_pruefer_sagen_dieselbe_breite() {
+        for k in gabbro_syntax::kw::ALLE {
+            let hier = ganzzahlwort(*k).map(|(_, b)| b * 8);
+            let dort = crate::umgebung::breite_von(*k).map(|(b, _)| b as u32);
+            assert_eq!(hier, dort, "{}", k.text());
+        }
+    }
+
+    /// Every width the table hands out has a reader and a writer. **Without this the `C001`
+    /// in `wortpaar_oder_absage` would be reachable from a legal program.**
+    #[test]
+    fn jede_breite_hat_ein_lese_und_ein_schreibwort() {
+        for k in gabbro_syntax::kw::ALLE {
+            let Some((_, b)) = ganzzahlwort(*k) else { continue };
+            for gross in [true, false] {
+                assert!(lesewort(b, gross).is_some(), "{} {gross}", k.text());
+                assert!(schreibwort(b, gross).is_some(), "{} {gross}", k.text());
+            }
+        }
+    }
 }

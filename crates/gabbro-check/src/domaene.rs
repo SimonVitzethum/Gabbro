@@ -105,7 +105,20 @@ impl<'a> Sicht<'a> {
                     .find(|(k, _)| *k == &name || k.rsplit("::").next() == Some(kurz.as_str()))
                     .map(|(_, n)| *n as i128);
             }
-            _ => return None,
+            // **The three domains that carry NO bound out of the declaration, spelled out**
+            // *(2026-08-31)*. They stood on a `_ => return None` -- the honest answer, but
+            // an invisible one: nothing in this file said which domains it was about, and
+            // the certificate covered all five non-tree forms with one word. Naming them
+            // makes the gap countable, and it makes a TENTH domain a translation error here
+            // instead of a silent `K003` -- that refusal lives in `kosten.rs`, which asks
+            // this function and passes the silence on.
+            //
+            //   `chain(a, b) in`  the chain ends because its edge is `option index into T`
+            //                     -- an END is not a LENGTH
+            //   `fields of`       finitely many and statically known, but no length is
+            //                     written down
+            //   `threads`         how many there are is a statement about the MACHINE
+            Domaene::KetteIn { .. } | Domaene::FelderVon(_) | Domaene::Threads => return None,
         };
         // **Der Name kann unqualifiziert sein** -- `index into Topologie` nennt die Tabelle
         // ohne Modulpfad, waehrend `kapazitaeten` qualifiziert schluesselt. Ohne diesen
@@ -893,11 +906,38 @@ fn kante_pruefen(
     };
     // `option index into T` stands as the NAME in the type (`umgebung.rs`) -- and that it
     // is a DIFFERENT type from `index into T` is the finding of «C1».
-    let name = match typ {
-        Typ::Benannt { name, .. } => name.as_str(),
-        _ => "",
+    //
+    // **The `_ => ""` that stood here was a sentinel, not an answer** (struck 2026-08-31).
+    // It made "this is a truth value" and "this is a name that does not start with `option
+    // index into`" into ONE case by way of an empty string -- and an empty string is a name
+    // like any other. Every non-`Benannt` type simply IS not an `option index into T`, so
+    // the two `let … else` say that directly and the refusal below is reached once, from
+    // both.
+    //
+    // **And the sixteen other types are written out.** They all answer the same thing,
+    // namely that they are not an `option index into T` -- but they answer it because they
+    // are LISTED, not because a `_` swept them up. A seventeenth type (and «C1» wants one:
+    // an `option index into T` that is a type instead of a name) is a translation error
+    // here instead of a silent `D015`.
+    let ziel = match typ {
+        Typ::Benannt { name, .. } => name.strip_prefix("option index into "),
+        Typ::Ganzzahl(_)
+        | Typ::Gleitkomma(_)
+        | Typ::Umlaufend(_)
+        | Typ::Wahrheit
+        | Typ::Nie
+        | Typ::Zeiger(_)
+        | Typ::Summe { .. }
+        | Typ::Verbund(_)
+        | Typ::Feld { .. }
+        | Typ::Tabelle(_)
+        | Typ::Register { .. }
+        | Typ::Verbundname(_)
+        | Typ::Grund(_)
+        | Typ::FnPtr(_)
+        | Typ::Unbekannt => None,
     };
-    let Some(ziel) = name.strip_prefix("option index into ") else {
+    let Some(ziel) = ziel else {
         absagen.schiebe(
             Absage::fehler(
                 "D015",

@@ -57,14 +57,36 @@ pub fn gespiegelt(op: BinOp) -> BinOp {
     }
 }
 
+/// The sign of an operator, the way the source wrote it.
+///
+/// **Until 2026-08-31 a `_ => "?"` caught thirteen of the eighteen operators.** Measured over
+/// 499 corpus files: **0 hits** -- the callers hand over comparisons only. *But an arm that is
+/// silent today prints a question mark tomorrow into a clause whose job is to quote what the
+/// source said.* `M136` was exactly that case in `m1.rs`, with the same five comparisons and
+/// the same `?`.
+///
+/// The eighteen now stand one by one, and `opsruf::zeichen` says the same thing word for
+/// word -- the test `zwei_operatortafeln_stimmen_ueberein` is what holds the tables together.
 pub fn zeichen(op: BinOp) -> &'static str {
     match op {
+        BinOp::Oder => "||",
+        BinOp::Und => "&&",
+        BinOp::Gleich => "==",
+        BinOp::Ungleich => "!=",
         BinOp::Kleiner => "<",
         BinOp::KleinerGleich => "<=",
         BinOp::Groesser => ">",
         BinOp::GroesserGleich => ">=",
-        BinOp::Gleich => "==",
-        _ => "?",
+        BinOp::BitUnd => "&",
+        BinOp::BitOder => "|",
+        BinOp::BitXor => "^",
+        BinOp::SchiebLinks => "<<",
+        BinOp::SchiebRechts => ">>",
+        BinOp::Plus => "+",
+        BinOp::Minus => "-",
+        BinOp::Mal => "*",
+        BinOp::Geteilt => "/",
+        BinOp::Rest => "%",
     }
 }
 

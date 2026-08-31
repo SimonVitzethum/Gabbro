@@ -1465,3 +1465,66 @@ and that is a small, named measurement, not a reservation.*
 
 > **Why the second number is needed at all, in one sentence:** *otherwise the folder optimises for
 > the denominator that shines instead of the one that costs.*
+
+---
+
+# The trust base is the EMITTER, and the certificate is the only thing that does not depend on it
+
+*2026-08-31, drawn from the wildcard sweep (`messung/WILDCARD-ZWEIGE.md`).*
+
+Everything above measures what a **person** still owes. It says nothing about the party that
+writes the C, and that party is a few thousand lines of Rust without a proof:
+
+> **Gabbro's trust base is not the `assume` list. It is the emitter.** Closing points 1 to 4
+> in the type system changes nothing as long as the lowering is allowed to guess.
+
+## What a guess looks like, measured
+
+`emit.rs::breite_von` used to be four lines:
+
+```rust
+U8|I8 => 1,  U16|I16 => 2,  U32|I32 => 4,
+_ => 8,
+```
+
+Under all four hardware points lies this one arm. A ninth integer word, and the emitter
+silently writes `volatile uint64_t *` onto a device register: checker `0 errors`,
+`cc -Werror` clean, and the device gets an access of the wrong width. **No Gabbro program can
+defend itself against that** — the defect sits below every pass, in the translation.
+
+It fired **146 times** over 499 corpus files, and the previous count had booked it as
+*silent*. It is now a table with eight entries, a `C001` for anything else, and four tests
+that hold the table against `kw::ALLE` and `ist_intty`.
+
+## Why the CERTIFICATE is the structurally different answer
+
+Every other safeguard in this folder is a pass, and a pass is code by the same author as the
+emitter. The translation certificate is not:
+
+> **A certificate that vouches for two different programs vouches for neither** — and that
+> property can be checked without believing the emitter.
+
+Until 2026-08-31 it did not hold. Two programs differing in one line
+(`messung/proben/probe-zeugnis-injektiv-{a,b}.gab`, `threads` against `queue r`) had
+**byte-identical** certificates apart from the file name in the header: five of the nine
+traversal domains ran together on one word.
+
+The cure was not nine labels but **nine reasons** — each domain rests on a different bound,
+and three rest on none at all (`chain(…) in`, `fields of`, `threads`). *The single mark hid
+exactly the places where termination does not follow from the declaration.*
+
+`crates/gabbro-check/tests/zeugnis_injektiv.rs` measures both directions: the pair must
+differ, two equal programs must agree, all nine domains must be pairwise distinct — and every
+comparison renders under the **same** file name, so the header cannot do the work.
+
+## What this does NOT claim
+
+* **An injective certificate is not a proof.** It cannot become false while the program
+  changes, which is a different and weaker property than being right.
+* **It is injective in the traversal domains, not in general.** Nothing here says that no two
+  other programs share a certificate; the measurement covers the case that was found and the
+  thirty-five neighbouring pairs.
+* **The emitter still has arms that answer `None`** rather than a value — those hand the
+  decision to a caller that refuses. The sweep struck the arms that answered with a
+  *plausible value*; the honest-unknown ones stay, and the reasoning stands in
+  `messung/WILDCARD-ZWEIGE.md`.

@@ -278,10 +278,84 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Direkt,
         grund: "the one place where a range check REMAINS in the C — and there it stands",
     },
+    // **The nine traversal domains, one entry each** *(2026-08-31)*.
+    //
+    // Until that day there were two: `traverse` and `traverse (Baum)`, and the first swept up
+    // five domains. `messung/proben/probe-zeugnis-injektiv-{a,b}.gab` are two programs that
+    // differ in ONE line (`threads` against `queue r`) and whose certificates were identical
+    // apart from the file name in the header. *A certificate that vouches for two different
+    // programs vouches for neither.*
+    //
+    // The reasons below are not nine spellings of one sentence. **Each domain rests on a
+    // different bound, and three of them rest on none** -- that is the finding the single
+    // entry hid.
     Posten {
-        konstrukt: "traverse",
+        konstrukt: "traverse (slots of)",
         traegt: Traegt::Schablone("table.induktion"),
-        grund: "a bounded `for` loop; the bound comes out of `count N`",
+        grund: "a bounded `for` loop; the bound is `count N` of the table, read out of the \
+                declaration (`domaene.rs::domaenenschranke`)",
+    },
+    Posten {
+        konstrukt: "traverse (elems of)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "the bound is the LENGTH IN THE TYPE (`[u32; 8]`), not a table capacity -- and \
+                where the place is an index into a table instead, it falls back on that \
+                table's `count N`",
+    },
+    Posten {
+        konstrukt: "traverse (queue)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "a queue is an ordinary record with EXACTLY ONE field array, and the bound is \
+                that array's length. Two arrays and there is no bound: `K003` then demands a \
+                declaration instead of picking one",
+    },
+    Posten {
+        konstrukt: "traverse (mappings of)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "the bound stands in the `walk` declaration and is `node length ^ levels` -- \
+                the domain is the LEAF set, which is what makes W^X sayable over the whole \
+                table",
+    },
+    Posten {
+        konstrukt: "traverse (descendants of)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "runs WITHOUT a stack along the table's `tree { child, sibling, parent }`, in \
+                post-order. That it TERMINATES rests on well-foundedness -- a HYPOTHESIS of \
+                the table, not a run-time check, and that is why it stands here",
+    },
+    Posten {
+        konstrukt: "traverse (ancestors of)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "the chain along `parent` -- the same edge as `descendants of`, the other \
+                direction, and an ascending chain cannot be longer than the table has slots \
+                without a cycle. The absence of that cycle is the table's hypothesis",
+    },
+    // **And these three carry NO bound out of the declaration.** `domaenenschranke` answers
+    // `None` for all three, and `K003` -- issued in `kosten.rs` -- then asks for one. They
+    // are separate entries because
+    // that is a different statement from the six above -- and it was invisible while one
+    // word covered five domains.
+    Posten {
+        konstrukt: "traverse (chain … in)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "the chain has an END only because its edge is `option index into T` -- the \
+                sentinel is `count` itself (beweise/Option_Sonderwert.thy, `D015`). The \
+                declaration hands out NO length: `domaenenschranke` is silent here and \
+                `K003` asks for the bound",
+    },
+    Posten {
+        konstrukt: "traverse (fields of)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "the fields of a record are finitely many and statically known, but no length \
+                stands in the declaration -- `domaenenschranke` is silent and `K003` asks \
+                for the bound",
+    },
+    Posten {
+        konstrukt: "traverse (threads)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "how many threads there are is a statement about the MACHINE, not about this \
+                unit -- `domaenenschranke` is silent, and a `costs` clause over it needs the \
+                bound written down (`K003`, and `NCORES` is the name it usually gets)",
     },
     // **`breaking` lowers since 2026-08-31, so it stands here** -- until that day the
     // certificate booked it as `UNZUGEORDNET`, and rightly: the emitter refused it.
@@ -374,14 +448,6 @@ pub const EINORDNUNG: &[Posten] = &[
                 through an exit of its own, because `reason` values are handed out by people \
                 and no word is free for „no error\"",
     },
-    Posten {
-        konstrukt: "traverse (Baum)",
-        traegt: Traegt::Schablone("table.induktion"),
-        grund: "`descendants of` runs WITHOUT a stack along the table's \
-                `tree { child, sibling, parent }`, in post-order; `ancestors of` is the chain \
-                along `parent`. That both TERMINATE rests on well-foundedness -- a HYPOTHESIS \
-                of the table, not a run-time check, and that is why it stands here",
-    },
 ];
 
 /// Alles, was in dieser Datei vorkommt, mit Fundstellenzahl.
@@ -427,6 +493,37 @@ pub struct Erhebung {
     ///
     /// *Der Leser des Zeugnisses muss es sehen, ohne den Quelltext zu lesen.*
     pub gleitkomma: bool,
+}
+
+/// **The mark of ONE traversal form -- and the certificate's injectivity hangs on it.**
+///
+/// Until 2026-08-31 a `_ => "traverse"` stood here that pulled five of the nine domains onto
+/// one word. Measured: 20 hits, `slots of` 12, `elems of` 3, `threads` 2, `queue` 2,
+/// `chain(…) in` 1.
+///
+/// The price stood in `messung/proben/probe-zeugnis-injektiv-{a,b}.gab`: **two programs
+/// differing in exactly one line** (`threads` against `queue r`), both `0 errors` -- and
+/// their certificates were **byte-identical** apart from the header carrying the file name.
+///
+/// > **A certificate that vouches for two different programs vouches for neither.**
+///
+/// And this is more than a label: the nine forms rest on **different** bounds, and three of
+/// them rest on none at all (`domaene.rs::domaenenschranke` answers `None` for
+/// `chain(…) in`, `fields of` and `threads`, and `K003` then demands a declaration). *A mark
+/// that pulls those together hides exactly the place where termination does NOT follow from
+/// the declaration.* The reasons stand per form in `EINORDNUNG`.
+fn traversenausweis(d: &Domaene) -> &'static str {
+    match d {
+        Domaene::SlotsVon(_) => "traverse (slots of)",
+        Domaene::KetteIn { .. } => "traverse (chain … in)",
+        Domaene::NachfahrenVon(_) => "traverse (descendants of)",
+        Domaene::VorfahrenVon(_) => "traverse (ancestors of)",
+        Domaene::Schlange(_) => "traverse (queue)",
+        Domaene::FelderVon(_) => "traverse (fields of)",
+        Domaene::ElementeVon(_) => "traverse (elems of)",
+        Domaene::Threads => "traverse (threads)",
+        Domaene::AbbildungenVon(_) => "traverse (mappings of)",
+    }
 }
 
 fn zaehle(e: &mut Erhebung, was: &'static str) {
@@ -747,17 +844,7 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             }
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 Schleife::Traverse(t) => {
-                    // **Ein Baumdurchlauf traegt anderes als ein Feldlauf** («B41b»): dort
-                    // steht die Schranke im Typ, hier ruht sie auf einer Invariante.
-                    zaehle(
-                        e,
-                        match &t.domaene {
-                            Domaene::NachfahrenVon(_) | Domaene::VorfahrenVon(_) => {
-                                "traverse (Baum)"
-                            }
-                            _ => "traverse",
-                        },
-                    );
+                    zaehle(e, traversenausweis(&t.domaene));
                     block(&t.rumpf, e, geister);
                 }
                 Schleife::Retry(r) => {

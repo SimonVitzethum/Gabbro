@@ -410,8 +410,12 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **40 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **36 davon unqualifiziert**.
+      **38 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
+      Kandidatenschleife und **34 davon unqualifiziert**.
+      *40 → 38 am 2026-08-31: `emit.rs` las dieselbe Karte an vier Stellen selbst
+      (`vorzeichen`, `ctyp` zweimal, die neue Rücksetzableitung); jetzt liest sie
+      `traegertyp` einmal. **Ein Leser ist eine Stelle, die man heilen kann; vier sind vier,
+      die man vergisst.***
       *Die alte Zählung sagte 13 — sie kannte `.contains_key(` nicht, und das ist derselbe
       Blick.* **Ein Werkzeug, das eine der beiden Formen nicht liest, misst seine eigene
       Leseweite** (W16).
@@ -513,7 +517,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 160 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 161 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *157 → 160 am 2026-09-01, aus ZWEI Bahnen: `dokumente/PLAN-HARDWARE.md` von hier,
       `messung/ANNAHMEKONJUNKTIONEN.md` und `instrumente/zaehle-verdrahtung.py` von dort.
       **Jede Bahn schrieb eine andere Zahl, und beide hatten recht über ihrem Baum** — die
@@ -702,7 +706,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2547 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2572 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -3607,7 +3611,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7887 von 17687 Kommentarzeilen** im Pruefer sind deutsch
+**7884 von 17687 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```

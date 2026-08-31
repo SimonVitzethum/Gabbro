@@ -1,0 +1,53 @@
+-- **Die Gegenprobe zu `beispiele/gift/441` und `/442`: was der Erzeuger WEITER absenkt.**
+--
+-- Eine Absage ohne Gegenprobe misst nicht, ob sie zu weit greift. Diese Datei traegt in
+-- EINER Tabelle jede Feldart, fuer die der Ruecksetzwert **ableitbar** ist -- und sie muss
+-- mit `0 errors` durchgehen und C erzeugen:
+--
+--     benutzt : bool                        -> 0     (falsch ist der leere Wert)
+--     zaehler : u32                         -> 0     (voller Wortbereich, die Null liegt drin)
+--     stufe   : u32 in 0 .. 9               -> 0     (Bereich MIT der Null)
+--     spanne  : i32 in -4 .. 4              -> 0     (auch mit Vorzeichen)
+--     takte   : u32 wrapping                -> 0     («B32»: der Umlauf ist erklaert)
+--     kappe   : Kappe                       -> 0     (ein Neutyp -- der Traeger entscheidet)
+--     nachbar : option index into Verz      -> Verz_NONE
+--
+-- **Der Unterschied zu 441/442 ist ein einziges Zeichen.** `stufe : u32 in 0 .. 9` senkt ab,
+-- `u32 in 1 .. 9` sagt ab; `option index into Verz` senkt ab, `index into Verz` sagt ab.
+-- *Damit misst das Paar die Regel und nicht die Datei.*
+--
+-- Die Ableitung liest die Deklaration und nichts sonst: fuer einen Bereich prueft sie, ob
+-- die Null darin liegt, und fuer einen Neutyp folgt sie dem Namen auf seinen Traegertyp.
+-- **Was sie nicht ableiten kann, sagt sie ab** -- Zeiger, Gleitkomma, Feld, Verbund,
+-- Funktionszeiger und die nicht-optionale Kante.
+
+module mass::ruecksetzung {
+
+const N : u32 = 8;
+
+type Kappe = u32 in 0 .. 3;
+
+table Verz count N {
+    slot {
+        benutzt : bool,
+        zaehler : u32,
+        stufe   : u32 in 0 .. 9,
+        spanne  : i32 in -4 .. 4,
+        takte   : u32 wrapping,
+        kappe   : Kappe,
+        nachbar : option index into Verz,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+}
+
+impl fn ist_belegt(v : ptr<normal, r> Verz, i : index into Verz) -> bool
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].benutzt;
+}
+
+}

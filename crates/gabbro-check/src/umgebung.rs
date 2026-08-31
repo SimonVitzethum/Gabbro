@@ -938,7 +938,12 @@ impl Umgebung {
                         (Kw::suche(&o.basis.text), &o.suffixe[0])
                     {
                         if kw.ist_intty() {
-                            let (breite, vz) = breite_von(kw);
+                            // A word without a width has no `max` and no `min` -- the
+                            // constant then does not stand, and that is the honest answer.
+                            // (`ist_intty` and the table cover each other today; should
+                            // they drift apart, a constant drops out here instead of a
+                            // wrong one coming into being.)
+                            let Some((breite, vz)) = breite_von(kw) else { return None };
                             let (lo, hi) = grenzen(breite, vz);
                             return match f.text.as_str() {
                                 "max" => Some(hi),
@@ -1271,7 +1276,12 @@ impl Umgebung {
     }
 
     fn intbereich(&self, von: &str, i: &IntTy, unterwegs: &mut HashSet<String>) -> IntBereich {
-        let (breite, vz) = breite_von(i.wort);
+        // **A word without a width gets the WIDEST range, not the unsigned one.** Wider
+        // means conservative here: M1 proves less over a bigger range, so in doubt a refusal
+        // falls and not a silent promise.
+        let Some((breite, vz)) = breite_von(i.wort) else {
+            return IntBereich::genau(64, true, i64::MIN as i128, u64::MAX as i128);
+        };
         let Some(b) = &i.bereich else {
             return IntBereich::voll(breite, vz);
         };
@@ -1578,8 +1588,17 @@ pub enum Feldurteil {
     Unklar,
 }
 
-pub fn breite_von(k: Kw) -> (u8, bool) {
-    match k {
+/// Width in BITS and signedness of an integer word -- **or `None`.**
+///
+/// The twin of `emit::ganzzahlwort`, and until 2026-08-31 it had the same defect:
+/// `_ => (64, false)` made every unknown word **unsigned and sixty-four bits wide**. That is
+/// the sharpest of the wrong answers -- a signed word would get a range that does not contain
+/// its negative half, and M1 would compute over values it never takes.
+///
+/// *This function lives in the CHECKER, not in the emitter; it cannot say `C001`.* Both of
+/// its callers answer the `None` themselves, and both in the conservative direction.
+pub fn breite_von(k: Kw) -> Option<(u8, bool)> {
+    Some(match k {
         Kw::U8 => (8, false),
         Kw::U16 => (16, false),
         Kw::U32 => (32, false),
@@ -1588,8 +1607,8 @@ pub fn breite_von(k: Kw) -> (u8, bool) {
         Kw::I16 => (16, true),
         Kw::I32 => (32, true),
         Kw::I64 => (64, true),
-        _ => (64, false),
-    }
+        _ => return None,
+    })
 }
 
 /// **Wertetabellen fuer die Konstantenauswertung — der zweite Fundort des Generatorlaufs.**
