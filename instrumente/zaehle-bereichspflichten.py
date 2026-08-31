@@ -74,6 +74,14 @@ def messe(quelle):
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # its subject this tool died of a `FileNotFoundError`: return code **1**, a
+    # traceback, and in a chain that reads like a finding. *A crash is not a refusal
+    # -- a NAMED refusal is*, and a missing subject says the SETUP has to change.
+    if not KORPUS.is_file():
+        print(f"ABBRUCH: {KORPUS.relative_to(WURZEL)} fehlt -- es wird NICHT null gezaehlt.",
+              file=sys.stderr)
+        return 2
     urtext = KORPUS.read_text()
     gestrichen, entfernt = ohne_narrow(urtext)
 

@@ -158,7 +158,11 @@ def main() -> int:
         return 2
     if not GABBRO.exists():
         print(f"ABORT: {GABBRO} is missing -- it is built on ki-pc-fisch-101 (CLAUDE.md).")
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     dateien = sorted(glob.glob(str(W / "beispiele" / "*.gab"))) + sorted(
         glob.glob(str(W / "messung" / "*" / "*.gab"))
     )
@@ -179,7 +183,7 @@ def main() -> int:
             )
         except subprocess.TimeoutExpired:
             print(f"ABORT: {rel} -- deadline {FRIST} s exceeded. A hang is not a finding.")
-            return 1
+            return 2
         # **A unit with errors carries no register**, and that is the same rule
         # `gabbro pflichten` follows -- not a skipped file but one without an answer yet.
         if lauf.returncode != 0:
@@ -188,11 +192,11 @@ def main() -> int:
         kopf = lies_kopf(lauf.stdout)
         if kopf is None:
             print(f"ABORT: {rel} -- no `@duty` header. The emitter is silent about itself.")
-            return 1
+            return 2
         g, z, a = kopf
         if z + a != g:
             print(f"ABORT: {rel} -- {z} + {a} != {g}. The balance of the emitter does not add up.")
-            return 1
+            return 2
         gesamt += g
         ziele += z
         abgesagt += a
@@ -204,7 +208,7 @@ def main() -> int:
         summe = sum(hier.values())
         if summe != a:
             print(f"ABORT: {rel} -- the reasons count {summe}, refused are {a}.")
-            return 1
+            return 2
         je_grund.update(hier)
         for zeile in lauf.stdout.splitlines():
             d = DETAIL.match(zeile)
@@ -217,7 +221,7 @@ def main() -> int:
     for t in je_grund:
         if t not in bekannt:
             print(f"ABORT: UNKNOWN refusal reason `{t}` -- this tool is out of date.")
-            return 1
+            return 2
 
     if je_datei:
         print()
@@ -236,7 +240,7 @@ def main() -> int:
     # is short by three looks exactly like a channel that refuses three fewer.
     if sum(je_art.values()) != abgesagt:
         print(f"ABORT: the kinds count {sum(je_art.values())}, refused are {abgesagt}.")
-        return 1
+        return 2
 
     print()
     print("-- Refused BY KIND, before an expression is looked at --")

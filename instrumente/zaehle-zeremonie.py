@@ -131,7 +131,11 @@ def main():
     regeln = tafel()
     if not regeln:
         print("ABBRUCH: die Kalibriertafel ist leer.", file=sys.stderr)
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
 
     # **Jede Regel braucht einen Grund.** Ein Nein ohne Satz waere ein Machtwort, und ein Ja
     # ohne Satz waere eine Einladung.
@@ -145,7 +149,7 @@ def main():
     if gemessen == 0:
         print("ABBRUCH: keine einzige Datei gemessen -- das ist KEINE Zeremonie von null.",
               file=sys.stderr)
-        return 1
+        return 2
 
     # ---- Sprechprobe: was der Korpus nicht ausloest, muss die Probe ausloesen -------------
     probe = W / "beispiele" / "_zeremonieprobe.gab"
@@ -157,7 +161,7 @@ def main():
     if p_gemessen != 1:
         print("SPRECHPROBE GESCHEITERT: die Probe lief nicht durch -- ohne sie ist "
               "„0 redundant“ ununterscheidbar von einem blinden Werkzeug.", file=sys.stderr)
-        return 1
+        return 2
 
     stumm = sorted(k for k in regeln if k not in treffer and k not in p_treffer)
     print("== Sprechprobe ==")

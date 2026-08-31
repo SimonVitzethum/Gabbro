@@ -121,17 +121,21 @@ def main():
     if rfc1071(bytes.fromhex(KOPF_OHNE)) != 0xB861:
         print("SPRECHPROBE GESCHEITERT: die zweite Implementierung trifft den "
               "veroeffentlichten Vektor nicht.", file=sys.stderr)
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     if rfc1071(bytes.fromhex(KOPF_OHNE[:-2] + "00")) == 0xB861:
         print("SPRECHPROBE GESCHEITERT: ein VERAENDERTER Kopf ergibt dieselbe Summe -- "
               "dieser Pruefstand unterscheidet nichts.", file=sys.stderr)
-        return 1
+        return 2
     print("== Sprechprobe: ok (der veroeffentlichte Vektor trifft, ein veraenderter nicht) ==\n")
 
     r = lauf([str(BIN), "emit", str(QUELLE)])
     if r.returncode != 0 or "kopfsumme" not in r.stdout:
         print("ABBRUCH: `gabbro emit` lief nicht durch:\n" + r.stderr[:800], file=sys.stderr)
-        return 1
+        return 2
     c = r.stdout + (PRUEFSTAND
                     .replace("%OHNE%", bytes_c(KOPF_OHNE))
                     .replace("%MIT%", bytes_c(KOPF_MIT))
@@ -146,11 +150,11 @@ def main():
               "-o", str(binaer), str(quelle)])
     if u.returncode != 0:
         print("ABBRUCH: `cc` lehnte das erzeugte C ab:\n" + u.stderr[:1200], file=sys.stderr)
-        return 1
+        return 2
     e = lauf([str(binaer)])
     if e.returncode != 0:
         print(f"ABBRUCH: der Pruefstand endete mit {e.returncode}.", file=sys.stderr)
-        return 1
+        return 2
     ist = dict(re.findall(r"(\w+)=([0-9a-f]+)", e.stdout))
 
     soll = {

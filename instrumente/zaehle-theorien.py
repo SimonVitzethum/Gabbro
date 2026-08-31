@@ -194,12 +194,16 @@ def main():
     print("  eine Theorie ohne Register faellt: %s" % ("ja" if r_ok else "NEIN"))
     if not (g_ok and s_ok and k_ok and r_ok):
         print("== THEORIEN: der Zaehler misst nicht ==")
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
 
     dateien = sorted(BEWEISE.glob("*.thy"))
     if not dateien:
         print("== THEORIEN: 0 Theorien gefunden -- es wurde NICHTS gemessen ==")
-        return 1
+        return 2
     S = [0] * 6
     v_alle, f_alle = {w: 0 for w in VERBOTEN}, {w: 0 for w in EINGEFROREN}
     je = []

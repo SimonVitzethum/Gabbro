@@ -128,9 +128,20 @@ def sprechprobe():
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # its subject this tool died of a `FileNotFoundError`: return code **1**, a
+    # traceback, and in a chain that reads like a finding. *A crash is not a refusal
+    # -- a NAMED refusal is*, and a missing subject says the SETUP has to change.
+    if not (W / "TODO.md").is_file():
+        print("ABBRUCH: TODO.md fehlt -- es wird NICHT null gezaehlt.", file=sys.stderr)
+        return 2
     if not sprechprobe():
         print("\n== BLOECKE: die Sprechprobe faellt -- die Zahlen darunter sind wertlos ==")
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     text = (W / "TODO.md").read_text(encoding="utf-8")
     verteilung, ohne_marke, unbekannt, gesamt = lies(text)
     t_befunde = tabelle(text)

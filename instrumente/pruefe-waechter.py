@@ -267,11 +267,27 @@ def stumme_probe_mit_eins(text):
 
 
 # **Who carries this requirement: whoever's return code is read as a VERDICT.**
-# `abnahme.py` drives `pruefe-*` and `mutiere-*` and reads their return code; the `zaehle-*`
-# stand beside it on purpose -- *they measure, they do not guard, and no return code of
-# theirs carries a verdict*. A requirement on a number nobody reads is a requirement on
-# nothing. **The boundary is PRINTED below with its count**, so somebody can move it.
-TRAEGT_URTEIL = ("pruefe-", "mutiere-", "abnahme.py")
+#
+# **The boundary MOVED on 2026-08-31, and it moved because it was printed.** Until that day
+# it ran `pruefe-*` and `mutiere-*` only; the 18 `zaehle-*` stood outside with the sentence
+# *"they measure, they do not guard"* -- and with their count beside it, so that somebody
+# could move it. Somebody did, and the measurement decided it:
+#
+# * Over an EMPTY tree not one of the 18 returned a green verdict. Six died of a
+#   `FileNotFoundError` with return code 1; nine printed a refusal and returned 1. **They all
+#   carry a verdict -- none of them had been GIVEN one.**
+# * `zaehle-karten.py` had been arriving at `master` RED, over a broken ratchet (36/32
+#   measured 40/36), and no collective run read it.
+#
+# What is left outside stands in `OHNE_URTEIL` below, by name and with its reason.
+TRAEGT_URTEIL = ("pruefe-", "mutiere-", "zaehle-", "abnahme.py")
+
+# **Counters deliberately left OUT of `abnahme.py`, each with its reason.**
+# It stands empty today, and that is a measurement: every one of the 18 ends with 0, 1 or 2,
+# and every one of them says something by it. *An empty exclusion is the only honest starting
+# state -- what goes in has to be argued for.* `abnahme.py` reads this register and PRINTS
+# its count, so the boundary stays visible the way the old one was.
+OHNE_URTEIL = {}
 
 # **Booked instead of healed** -- with the reason beside it, as everywhere in this workshop.
 # **It stands EMPTY since 2026-08-31, and that is a measurement and not an oversight.**
@@ -506,10 +522,10 @@ def main():
     print("   und nicht im Quelltext. Sie wird in `--lauf` gemessen, sonst gar nicht.")
 
     # **The boundary of the sixth requirement, printed with its count instead of kept quiet.**
-    # It holds for those whose return code `abnahme.py` reads as a VERDICT. Over the
-    # `zaehle-*` it would fire in as many places as printed below -- and **that is a measured
-    # number, not a claim**, so somebody CAN move the boundary. A tool nobody names is a tool
-    # nobody moves.
+    # It holds for those whose return code `abnahme.py` reads as a VERDICT -- and since
+    # 2026-08-31 that is everyone but the named exceptions. The number below is what is STILL
+    # outside; on 2026-08-30 it was 18 tools and 46 places. *A tool nobody names is a tool
+    # nobody moves*, and this one moved because it was named.
     ausserhalb = [(p.name, absage_mit_eins(p.read_text(encoding="utf-8", errors="replace")),
                    stumme_probe_mit_eins(p.read_text(encoding="utf-8", errors="replace")))
                   for p in alle if not p.name.startswith(TRAEGT_URTEIL)]
@@ -519,12 +535,17 @@ def main():
     print()
     print(f"== Die sechste Forderung gilt fuer {sum(1 for p in alle if p.name.startswith(TRAEGT_URTEIL))} "
           f"von {len(alle)}: die mit einem gelesenen URTEIL ==")
-    print(f"   Ueber den {len(ausserhalb)} `zaehle-*` liefe sie an {n_stellen} Stellen an "
-          f"({n_gedruckt} gedruckt, {n_stumm} stumm). Sie stehen")
-    print("   ausserhalb, weil `abnahme.py` ihren Ruecklaufwert nicht liest -- *sie messen,")
-    print("   sie bewachen nicht.* Eine Forderung an eine Zahl, die niemand liest, ist eine")
-    print("   Forderung an nichts. **Die Zahl steht hier, damit jemand die Grenze")
-    print("   verschieben kann.**")
+    print(f"   Ausserhalb stehen {len(ausserhalb)} Werkzeuge mit {n_stellen} Stellen "
+          f"({n_gedruckt} gedruckt, {n_stumm} stumm).")
+    print("   **Am 2026-08-30 waren es 18 Werkzeuge und 46 Stellen** -- die 18 `zaehle-*`,")
+    print("   mit dem Satz *sie messen, sie bewachen nicht*. Die Grenze stand mit ihrer Zahl")
+    print("   da, damit jemand sie verschieben KANN; am 2026-08-31 hat es jemand getan.")
+    if OHNE_URTEIL:
+        print(f"   Und {len(OHNE_URTEIL)} AUSGENOMMEN, mit Grund:")
+        for name, grund in sorted(OHNE_URTEIL.items()):
+            print(f"     {name}: {grund}")
+    else:
+        print("   `OHNE_URTEIL` steht LEER: keiner der 18 blieb mit Grund draussen.")
     if ABBRUCH_GEBUCHT:
         print(f"   Und {len(ABBRUCH_GEBUCHT)} GEBUCHT, mit Grund:")
         for name, grund in sorted(ABBRUCH_GEBUCHT.items()):
