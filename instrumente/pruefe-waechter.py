@@ -161,14 +161,14 @@ FUEHRT_AUS = re.compile(r"subprocess\.|os\.system|check_output|\bcargo\b|\bcc\b|
 HAT_FRIST = re.compile(r"timeout=|\btimeout\b|TimeoutExpired|\bFRIST\b|\bZEIT\b")
 HAT_PROBE = re.compile(r"[Ss]prechprobe|speech test|Gegenprobe|[Ss]elbsttest")
 
-# **DIE SECHSTE FORDERUNG: EINE ABSAGE ENDET MIT 2, NICHT MIT 1** (2026-08-31)
-# ---------------------------------------------------------------------------
+# **THE SIXTH REQUIREMENT: A REFUSAL ENDS WITH 2, NOT WITH 1** (2026-08-31)
+# ------------------------------------------------------------------------
 # Requirement three says *"an abort leaves with a return code other than zero"*, and that is
 # not enough: `1` is other than zero, and `1` is also what a FINDING looks like. On the night
-# of 2026-08-31 twelve guardians printed the word `ABBRUCH` and returned `1`, among them
-# `pruefe-grammatiktafel.py` with *"KEIN LAUF -- es wurde NICHTS gemessen"* -- indis-
-# tinguishable in the collective run from its four `UNGEDECKT` cells. **Twice that cost an
-# hour.**
+# of 2026-08-31 twelve guardians printed the abort word and returned `1`, among them
+# `pruefe-grammatiktafel.py`, whose refusal states that no run happened at all -- and in the
+# collective run that was indistinguishable from the four uncovered cells it reports on a
+# good day. **Twice that cost an hour.**
 #
 # > **A tool that measured nothing must not look like one that found something.**
 #
@@ -187,11 +187,11 @@ ABSAGEWORT = re.compile(
     r"NOTHING measured|nothing measured|measures nothing|misst NICHTS|misst nicht\b|"
     r"SPRECHPROBE GESCHEITERT|[Ss]prechprobe.*GESCHEITERT|OHNE NACHWEIS|"
     r"KEIN CC|KEIN GABBRO|NO GABBRO|NO LEAN|KEIN ISABELLE|Zaehlung misst|UEBERSEHEN")
-# **Die AUFRUFSTELLE, nicht das Wort** -- `print(` muss die Anweisung BEGINNEN. Beim ersten
-# Lauf stand hier `\bprint\(`, und der Waechter meldete sich selbst: in der Erklaerung
-# darunter steht der Satz *„darin steht woertlich `print("ABBRUCH: …")` gefolgt von
-# `sys.exit(1)`"*, und das reichte. **Prosa ueber eine Absage ist keine Absage** -- dieselbe
-# Lehre, die die fuenfte Forderung an `cc` schon gezogen hat.
+# **The CALL SITE, not the word** -- `print(` has to BEGIN the statement. The first version
+# searched for it anywhere in the line, and this guardian promptly reported itself: the
+# explanation further down quotes a printed refusal inside a sentence, and that was enough.
+# **Prose about a refusal is not a refusal** -- the very lesson requirement five had to learn
+# about `cc`.
 DRUCKT = re.compile(r"^\s*print\(|^\s*echo\b|;\s*echo\b|\{\s*echo\b")
 AUSGANG = re.compile(r"sys\.exit\(\s*(\d+)\s*\)|SystemExit\(\s*(\d+)\s*\)|"
                      r"^\s*return\s+(\d+)\b|(?:^|;|\|\||\{)\s*exit\s+(\d+)\b")
@@ -228,15 +228,14 @@ def absage_mit_eins(text):
     return aus
 
 
-# **Wer diese Forderung traegt: wessen Ruecklaufwert als URTEIL gelesen wird.**
-# `abnahme.py` faehrt `pruefe-*` und `mutiere-*` und liest ihren Ruecklaufwert; die
-# `zaehle-*` stehen ausdruecklich daneben -- *„sie messen, sie bewachen nicht -- kein
-# Ruecklaufwert, der ein Urteil traegt"*. Eine Forderung an eine Zahl, die niemand liest,
-# waere eine Forderung an nichts. **Die Grenze wird unten mit ihrer Zahl GEDRUCKT**, damit
-# sie jemand verschieben kann.
+# **Who carries this requirement: whoever's return code is read as a VERDICT.**
+# `abnahme.py` drives `pruefe-*` and `mutiere-*` and reads their return code; the `zaehle-*`
+# stand beside it on purpose -- *they measure, they do not guard, and no return code of
+# theirs carries a verdict*. A requirement on a number nobody reads is a requirement on
+# nothing. **The boundary is PRINTED below with its count**, so somebody can move it.
 TRAEGT_URTEIL = ("pruefe-", "mutiere-", "abnahme.py")
 
-# **Gebucht statt geheilt** -- je Eintrag der Grund, wie ueberall in diesem Ordner.
+# **Booked instead of healed** -- with the reason beside it, as everywhere in this workshop.
 ABBRUCH_GEBUCHT = {
     "pruefe-zahlen.py":
         "eine zweite Bahn uebersetzt diese Datei in derselben Nacht; zwei Laeufe auf einer "
@@ -348,8 +347,8 @@ def sprechprobe():
                      'subprocess.run(["cargo", "test"], timeout=5)\n'
                      'print("== 3 von 3 Stellen ==")\n'
                      'sys.exit(2)\n', encoding="utf-8")
-        # **Die sechste Forderung, in BEIDE Richtungen** -- und die zweite ist die
-        # wichtigere: ohne sie waere die Regel ein Verbot des Wortes `ABBRUCH`.
+        # **The sixth requirement, in BOTH directions** -- and the second one matters more:
+        # without it the rule would be a ban on the abort word rather than a rule.
         h = pathlib.Path(d) / "pruefe-absage-eins.py"
         h.write_text('import subprocess, sys\n'
                      '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
@@ -421,15 +420,24 @@ def main():
             befunde.append((p.name, fehlt))
 
     print()
-    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die STATISCHEN ==")
+    # **The wording of this line is an INTERFACE PROMISE, not prose.**
+    # `pruefe-zahlen.py` recomputes two figures in README and TODO against exactly this
+    # pattern. The first draft of the sixth requirement dropped one word from it, and both
+    # entries went SILENT -- not wrong, unrecomputable, which is worse. *A tool whose output
+    # somebody reads has an interface, whether or not anyone calls it one.*
+    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die vier STATISCHEN ==")
+    print("   Es sind seit dem 2026-08-31 FUENF: die sechste Forderung (eine Absage endet")
+    print("   mit 2) steht in derselben Zahl. **Der Wortlaut `vier` bleibt, weil")
+    print("   `pruefe-zahlen.py` diese Zeile woertlich nachrechnet** -- wer ihn aendert,")
+    print("   macht zwei Kennzahlen stumm, statt sie falsch zu machen.")
     print("   Die ARBEITSMENGE neben dem Urteil (W17) -- steht in der Ausgabe")
     print("   und nicht im Quelltext. Sie wird in `--lauf` gemessen, sonst gar nicht.")
 
-    # **Die Grenze der sechsten Forderung, mit ihrer Zahl statt als Schweigen.**
-    # Sie gilt fuer die, deren Ruecklaufwert `abnahme.py` als URTEIL liest. Ueber den
-    # `zaehle-*` liefe sie an so vielen Stellen an -- und **das ist eine gemessene Zahl und
-    # keine Behauptung**, damit jemand die Grenze verschieben KANN. Ein Werkzeug, das
-    # niemand nennt, verschiebt niemand.
+    # **The boundary of the sixth requirement, printed with its count instead of kept quiet.**
+    # It holds for those whose return code `abnahme.py` reads as a VERDICT. Over the
+    # `zaehle-*` it would fire in as many places as printed below -- and **that is a measured
+    # number, not a claim**, so somebody CAN move the boundary. A tool nobody names is a tool
+    # nobody moves.
     ausserhalb = [(p.name, absage_mit_eins(p.read_text(encoding="utf-8", errors="replace")))
                   for p in alle if not p.name.startswith(TRAEGT_URTEIL)]
     n_stellen = sum(len(s) for _, s in ausserhalb)
