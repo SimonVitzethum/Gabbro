@@ -495,7 +495,27 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 #
 # > *A file name is not a translation problem, it is a rename* -- and a renamed probe file
 # > takes its corpus site, its anchor and every citation of it along.
-MARKE_ZUBRINGER = 39      # 173 -> 98 -> 40 -> 39 on 2026-08-31; three registers read whole
+# **AND THE REST, THE SAME DAY: 39 -> 23. There is no fourth register.**
+# The remaining thirteen files held 16 pieces between them, and none of them was a table:
+#
+#     manifest.rs   5   the two floating-point assumptions, the lock-footprint assumption
+#                       and the decommission assumption. `gabbro annahmen` prints all four,
+#                       and they are the sentences the artefact carries in its own head.
+#     lib.rs        3   `quelle:` of a pass -- CITATIONS whose targets are English today
+#                       (`SYNTAX.md`:459, `SPRACHE.md`:747, `MESSUNGEN.md`:3507). The
+#                       German text pointed nowhere -- the same case as the citation
+#                       `schablonen.rs` had carried, and it travelled for the same reason.
+#     typen.rs      3   assertion texts in `mod tests`
+#     umgebung.rs   3   assertion texts in `mod tests`
+#     zeremonie.rs  2   two `.expect` texts -- a panic message is prose with a reader
+#
+# **WHAT IS LEFT IS 23, AND EVERY ONE OF THEM IS A NAME OR A CITATION:** 18 in `saetze.rs`,
+# 4 in `schablonen.rs`, 1 in `lib.rs`. Probe files, mutation anchors, sentence keys, and
+# three citations of `MESSUNGEN.md`:4100 -- a heading that really is German.
+#
+# > **The mark can fall further only by renaming things, and a rename is not a
+# > translation.** That is where this ratchet stops being about language.
+MARKE_ZUBRINGER = 23      # 173 -> 23 on 2026-08-31; what is left are names, not prose
 MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
 
 

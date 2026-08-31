@@ -644,13 +644,16 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2136 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2134 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
       das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
-      Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen.* **Eine Fläche, die sich bewegt, ist
+      Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
+      2134, als `manifest.rs` mit zwei Fortsetzungen weniger auskam.* **Die Zahl bewegt sich
+      an einem Tag dreimal, und zweimal davon nach oben** — sie misst eine Fläche, keine
+      Schuld; die Zahl daneben (`0 kleben`) ist die Zusage. **Eine Fläche, die sich bewegt, ist
       kein Fund; dass der Wächter beide Richtungen bemerkt hat, ist einer.**
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
@@ -3509,7 +3512,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7891 von 16456 Kommentarzeilen** im Pruefer sind deutsch
+**7892 von 16462 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```

@@ -72,9 +72,9 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
         klasse: Klasse::Falsifizierbar {
             sonde: "sonde_mxcsr_rne".into(),
         },
-        aussage: "Der Rundungsmodus ist round-to-nearest-even. Er ist GLOBALER Zustand \
-                  (MXCSR/FPCR) und damit ein impliziter Eingang jeder Operation -- die Sonde \
-                  liest ihn und faellt, wenn er ein anderer ist."
+        aussage: "The rounding mode is round-to-nearest-even. It is GLOBAL state \
+                  (MXCSR/FPCR) and therefore an implicit input of every operation -- the \
+                  probe reads it and falls if it is a different one."
             .into(),
     });
     out.push(Eintrag {
@@ -83,10 +83,10 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
         klasse: Klasse::Falsifizierbar {
             sonde: "sonde_keine_ueberbreite".into(),
         },
-        aussage: "Auf x86 rechnet der erzeugte Code mit SSE2 und nicht auf dem x87-Stapel. \
-                  Der x87 rechnet mit 80 Bit und RUNDET DOPPELT; jede Schranke, die der \
-                  Pruefer gerechnet hat, gilt dann nicht. Die Sonde rechnet einen Ausdruck, \
-                  dessen Ergebnis sich zwischen 64 und 80 Bit unterscheidet."
+        aussage: "On x86 the generated code computes with SSE2 and not on the x87 stack. \
+                  The x87 computes with 80 bits and ROUNDS TWICE; every bound the checker \
+                  computed then fails to hold. The probe evaluates an expression whose \
+                  result differs between 64 and 80 bits."
             .into(),
     });
 }
@@ -124,16 +124,15 @@ fn sperrabdruckannahme(baum: &Programm, out: &mut Vec<Eintrag>) {
         name: "sperrabdruck_haelt_fremde_kerne_fern".into(),
         art: "assume",
         klasse: Klasse::NichtFalsifizierbar {
-            grund: "das Speichermodell ist nicht durch Ausfuehrung widerlegbar -- eine Sonde, \
-                    die den Abdruck haelt und nachsieht, zeigt nur, dass diesmal niemand \
-                    hingesehen hat"
+            grund: "a memory model cannot be refuted by execution -- a probe that holds the \
+                    footprint and looks shows only that this time nobody looked"
                 .into(),
         },
-        aussage: "Solange der Zieher den GANZEN Sperrabdruck einer Gruppe haelt, kann kein \
-                  fremder Kern die Traeger zusammen ansehen. `Gruppe_Erhaltung.thy` nimmt \
-                  genau das im Locale `zug` als `abdruck_innen` an und beweist darauf, dass \
-                  der Zwischenzustand folgenlos ist -- die Annahme selbst faellt nicht in \
-                  den Satz, sondern hierher."
+        aussage: "As long as the mover holds the WHOLE lock footprint of a group, no \
+                  foreign core can look at the carriers together. `Gruppe_Erhaltung.thy` \
+                  assumes exactly that in the locale `zug` as `abdruck_innen` and proves on \
+                  top of it that the intermediate state has no consequence -- the assumption \
+                  itself does not fall into the theorem but here."
             .into(),
     });
 }
@@ -175,12 +174,11 @@ fn stilllegungsannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
             art: "assume",
             klasse: klasse(&st.klasse),
             aussage: format!(
-                "Nach `{}` ist keine Adresse des Raumes `{raum}` mehr erreichbar. Dass die \
-                 ABBILDUNG verschwindet, ist die Nachbedingung ueber `mappings of` und wird \
-                 verlangt (`O012`); dass eine Adresse ohne Abbildung nicht mehr erreichbar \
-                 ist, ist eine Aussage ueber MMU und TLB und faellt unter keinen Pass. Die \
-                 Sonde greift nach dem Ereignis auf eine Adresse des Raumes zu und muss \
-                 faulten.",
+                "After `{}` no address of the space `{raum}` is reachable any more. That \
+                 the MAPPING disappears is the postcondition over `mappings of` and is \
+                 demanded (`O012`); that an address without a mapping is no longer reachable \
+                 is a statement about MMU and TLB and falls under no pass. After the event \
+                 the probe accesses an address of the space and must fault.",
                 f.name.text
             ),
         });
