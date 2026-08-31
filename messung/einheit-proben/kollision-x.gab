@@ -1,0 +1,11 @@
+-- Zwei Module, die denselben Namen fuehren -- Datei 1 von 3.
+--
+-- `links::Wert` ist ein u32 in 0..10. `rechts::Wert` (Datei 2) ist ein u32 in 0..1000.
+-- Ein Nutzer, der `use links::Wert;` schreibt, muss den ENGEN bekommen. Verdeckt das
+-- eine das andere, ist die Aufloesung zu weit -- und eine zu weite Aufloesung macht aus
+-- einer richtigen Absage Schweigen.
+module links {
+
+pub type Wert = u32 in 0 .. 10;
+
+}

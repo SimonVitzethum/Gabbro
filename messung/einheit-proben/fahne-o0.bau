@@ -1,0 +1,15 @@
+-- Zwei Manifeste, die sich NUR in der Uebersetzerfahne unterscheiden -- Fassung 1 (`-O0`).
+--
+-- Sie zeigen auf DASSELBE Ausgabeverzeichnis. Ein Bau, der von der einen auf die andere
+-- wechselt und „aktuell" meldet, haette ein Erzeugnis unter einer Fahne, die niemand mehr
+-- genannt hat. **Eine andere Fahne ist ein anderes Erzeugnis**, also gehoert die ganze
+-- Uebersetzerzeile in den Abdruck -- und nicht nur der Quellinhalt.
+--
+-- Diese Probe steht hier, weil eine Mutation von Hand OHNE sie ueberlebt hat (`453`).
+
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-fahne
+
+unit fahne object
+    programmlogik/beispiel/lager.gab
+    programmlogik/beispiel/betrieb.gab

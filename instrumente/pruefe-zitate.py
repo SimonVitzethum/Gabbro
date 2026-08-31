@@ -154,7 +154,12 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # of a rule it does not issue. **The target stays 207.** A mark that rises because the
 # corpus grew is a different movement from one that rises because a debt was let go -- the
 # file names stand here so the difference stays countable.
-MARKE = 280
+#
+# **280 -> 281 on 2026-08-31, and the mark RISES with its reason.** The module/build lane
+# added `crates/gabbro-cli/src/bau.rs`, three probe files and two measurement documents; one
+# of them cites a rule it does not issue. **The target stays 207** -- the object grew, the
+# debt did not.
+MARKE = 281
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

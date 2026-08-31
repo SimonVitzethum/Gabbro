@@ -7,6 +7,7 @@
 use gabbro_check::{manifest, passliste, pruefe, Zustand};
 use gabbro_syntax::diag::Stufe;
 
+mod bau;
 mod fragmente;
 
 /// **A reader that stops reading must not look like a crash.**
@@ -106,13 +107,17 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
-        "pruefe" => befehl_pruefe(rest),
+        "check" | "pruefe" => befehl_pruefe(befehl, rest),
+        // **`gabbro build` -- the build out of a manifest** (German second name `bau`). The
+        // reckoning that decided its shape stands in `dokumente/BAUSYSTEM.md`, and it was
+        // written before the first line of `bau.rs`.
+        "build" | "bau" => bau::befehl(rest),
         // The emitter, since 2026-08-17 -- what it covers and what it refuses stands at
         // `command_emit` below, where the code is.
-        "emit" => command_emit(rest),
-        "fragmente" => fragmente::befehl(rest),
-        "annahmen" => befehl_annahmen(rest),
-        "k-bedingung" => {
+        "emit" => command_emit(befehl, rest),
+        "fragments" | "fragmente" => fragmente::befehl(rest),
+        "assumptions" | "annahmen" => befehl_annahmen(rest),
+        "k-condition" | "k-bedingung" => {
             if rest.is_empty() {
                 eprintln!("gabbro k-bedingung: no file named");
                 return std::process::ExitCode::from(2);
@@ -131,7 +136,7 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
-        "kosten" => {
+        "costs" | "kosten" => {
             if rest.is_empty() {
                 eprintln!("gabbro kosten: no file named");
                 return std::process::ExitCode::from(2);
@@ -198,7 +203,7 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
-        "kontexte" => {
+        "contexts" | "kontexte" => {
             if rest.is_empty() {
                 eprintln!("gabbro kontexte: no file named");
                 return std::process::ExitCode::from(2);
@@ -229,7 +234,7 @@ fn main() -> std::process::ExitCode {
         // prints the SAME register as an Isabelle theory. *Not a second subcommand, because
         // it is not a second register* -- `refinement::verdicts` walks exactly the list
         // `pflichten::sammle` counts, and the theory header carries the sum.
-        "pflichten" => {
+        "obligations" | "pflichten" => {
             let isabelle = rest.iter().any(|a| a == "--isabelle");
             // **`--lean` is the SAME register again, through the body channel.** Not a
             // second subcommand and not a second register: `lean::verdicts` walks exactly
@@ -334,7 +339,7 @@ fn main() -> std::process::ExitCode {
         // **Blindstellen: eine Form, die der Korpus nicht ausloest.** Siehe
         // `gabbro_check::blindstellen` -- die Bauart von `mutiere-pruefer.py`, eine Ebene
         // hoeher. *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.*
-        "blindstellen" => {
+        "blindspots" | "blindstellen" => {
             if rest.is_empty() {
                 eprintln!("gabbro blindstellen: no file named");
                 return std::process::ExitCode::from(2);
@@ -377,7 +382,7 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
-        "zeugnis" => {
+        "certificate" | "zeugnis" => {
             if rest.is_empty() {
                 eprintln!("gabbro zeugnis: no file named");
                 return std::process::ExitCode::from(2);
@@ -411,7 +416,7 @@ fn main() -> std::process::ExitCode {
         // gemessen (steht die Tatsache ein zweites Mal da?), Achse 2 ist erklaert (darf die
         // Zahl sinken?). *Ohne die zweite misst „Nutzbarkeit" die Menge aller Klauseln und
         // draengt gegen die Zusage der Sprache.*
-        "zeremonie" => {
+        "ceremony" | "zeremonie" => {
             if rest.iter().any(|x| x == "--tafel") {
                 print!("{}", gabbro_check::zeremonie::tafel());
                 return std::process::ExitCode::SUCCESS;
@@ -461,7 +466,7 @@ fn main() -> std::process::ExitCode {
         // `--tor` faellt, solange eine haengt. Es ist ausdruecklich KEIN Vorgabeverhalten:
         // ein Werkzeug, das jeden Tag rot ist, wird nicht gelesen -- die tägliche Wache ist
         // die Ratsche in `pruefe-schablonen.py`, und **dieses Tor ist das ZIEL.**
-        "schablonen" => {
+        "templates" | "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             if rest.iter().any(|x| x == "--tor") {
                 let luft = gabbro_check::schablonen::in_der_luft();
@@ -479,7 +484,7 @@ fn main() -> std::process::ExitCode {
         }
         // **Das PASSREGISTER haengt hier dran, nicht an einem eigenen Befehl** (PL.1): der
         // Satz gehoert zum Pass, und zwei Befehle fuer eine Liste waeren zwei Wahrheiten.
-        "paesse" => {
+        "passes" | "paesse" => {
             befehl_paesse();
             print!(
                 "{}",
@@ -487,12 +492,12 @@ fn main() -> std::process::ExitCode {
             );
             std::process::ExitCode::SUCCESS
         }
-        "--hilfe" | "-h" | "hilfe" => {
+        "--help" | "help" | "--hilfe" | "-h" | "hilfe" => {
             hilfe();
             std::process::ExitCode::SUCCESS
         }
         anderes => {
-            eprintln!("gabbro: unbekannter Befehl `{anderes}`");
+            eprintln!("gabbro: unknown command `{anderes}`");
             hilfe();
             std::process::ExitCode::from(2)
         }
@@ -503,7 +508,7 @@ fn hilfe() {
     eprintln!(
         "gabbro -- compiler and checker for Gabbro (stage P2 + three passes)
 
-  gabbro pruefe [--with L.gabi]… [--paesse] <file.gab>…
+  gabbro check|pruefe [--with L.gabi]… [--unit] [--paesse] <file.gab>…
                                     read, parse and run the built passes. The \"not checked
                                     in this run\" register is SUMMARISED (count per state and
                                     a fingerprint); `--paesse` prints it in full. *It is a
@@ -512,22 +517,34 @@ fn hilfe() {
                                     run, is a disclosure nobody reads
   gabbro abi        <file.gab>…     write the library interface: `pub` declarations,
                                     no bodies -- valid Gabbro, no second format
-  gabbro fragmente  <file.md>…      every ```gabbro block of a markdown file, one by one
-  gabbro annahmen   <file.gab>…     the assumption manifest: proved under A1…An
-  gabbro paesse [--je-satz]         the pass list -- built AND open -- and THE PASS
+  gabbro fragments|fragmente <file.md>…
+                                    every ```gabbro block of a markdown file, one by one
+  gabbro assumptions|annahmen <file.gab>…
+                                    the assumption manifest: proved under A1…An
+  gabbro passes|paesse [--je-satz]  the pass list -- built AND open -- and THE PASS
                                     REGISTER: the sentence each pass owes, with its
                                     state. `--je-satz` prints each sentence in full
-  gabbro schablonen [--tor]         the generator templates: the third counting column.
+  gabbro templates|schablonen [--tor]
+                                    the generator templates: the third counting column.
                                     `--tor` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
-  gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
-  gabbro pflichten [--isabelle | --lean] <file.gab>…
+  gabbro k-condition|k-bedingung <file.gab>…
+                                    per carrier: are ALL write sites generated? (measurement 2)
+  gabbro costs|kosten <file.gab>…   the cost report per routine
+  gabbro build|bau [--testbuild] [--dry-run] [<manifest>]
+                                    the build out of a manifest: it computes the unit graph
+                                    from `module` and `use` -- never from a manifest line --
+                                    and is incremental by CONTENT, not by timestamp. It
+                                    prints what it built AND what it did not look at.
+                                    The reckoning: `dokumente/BAUSYSTEM.md`
+  gabbro obligations|pflichten [--isabelle | --lean] <file.gab>…
                                     what a HUMAN still owes -- counted, not discharged.
                                     `--isabelle` writes the SAME register as an Isabelle
                                     theory: every obligation appears, as a goal or as a
                                     NAMED refusal, and the header carries `goals + refused
                                     = total`
-  gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
+  gabbro contexts|kontexte <file.gab>…
+                                    execution contexts per place -- and the COUNT beside it
   gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus
                                     a missing alias analysis could be about. Two upper
                                     bounds and two lower ones, printed together; no refusal
@@ -541,16 +558,21 @@ fn hilfe() {
                                     precondition, and the shape of every declared place --
                                     and NO specification. What is to hold is said in Lean,
                                     by a person. Several files become ONE program
-  gabbro blindstellen <clean>… [-- <poison>…]
+  gabbro blindspots|blindstellen <clean>… [-- <poison>…]
                                     FORM x POSITION over a corpus -- and the EMPTY cells.
                                     What has 0 sites is not checked but UNREACHABLE
-  gabbro zeugnis    <file.gab>…     what the translation RESTS ON: assumptions, templates
+  gabbro certificate|zeugnis <file.gab>…
+                                    what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines
-  gabbro zeremonie  [--je-stelle | --tafel] <file.gab>…
+  gabbro ceremony|zeremonie [--je-stelle | --tafel] <file.gab>…
                                     every clause and annotation, in three columns --
                                     derivable / redundant / load-bearing. The CALIBRATION
                                     travels with the tool: `--tafel` prints, per rule,
                                     whether its number may fall AND why
+
+Every subcommand has an ENGLISH first name; the German second name keeps working and is
+printed after the `|`. A refusal names the spelling that was TYPED, not the first name --
+otherwise a run under the second name would report a command nobody called (W16).
 
 Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
     );
@@ -660,7 +682,7 @@ fn read_preamble(befehl: &str, mit: &[String]) -> Result<String, std::process::E
 /// *Measured: a `.gabi` through the generator is exactly a C HEADER* -- `typedef`, `#define`
 /// and prototypes, **not a single object**. So the preamble in the output is what it would be
 /// in C anyway, and two units link without a duplicate symbol.
-fn command_emit(argumente: &[String]) -> std::process::ExitCode {
+fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     // **`--testbuild` opens the build gate, and its ABSENCE is the shipping build.**
     //
     // *The default is the closed gate on purpose.* Whoever forgets the flag loses check code
@@ -669,7 +691,7 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
     let pruefbau = argumente.iter().any(|a| a == "--testbuild");
     let argumente: Vec<String> =
         argumente.iter().filter(|a| a.as_str() != "--testbuild").cloned().collect();
-    let (dateien, mit) = match split_with("emit", &argumente) {
+    let (dateien, mit) = match split_with(getippt, &argumente) {
         Ok(x) => x,
         Err(c) => return c,
     };
@@ -678,7 +700,7 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
     } else {
         gabbro_check::gatter::Bau::Auslieferung
     };
-    let vorspann = match read_preamble("emit", &mit) {
+    let vorspann = match read_preamble(getippt, &mit) {
         Ok(v) => v,
         Err(c) => return c,
     };
@@ -711,7 +733,7 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
         let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);
         if absagen.fehler_zahl() > 0 {
             eprint!("{}", absagen.zeige(&ganz));
-            eprintln!("gabbro emit: {datei} has errors -- no C written");
+            eprintln!("gabbro {getippt}: {datei} has errors -- no C written");
             schlecht = true;
             continue;
         }
@@ -724,13 +746,222 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
     }
 }
 
-fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
+/// One file of a joined unit, and where its text sits in the joined source.
+///
+/// **The byte range is the whole point.** Without it a refusal that comes out of the joined
+/// parse carries a line number from the CONCATENATION -- which is a line number in no file
+/// at all. `gabbro lean` names that price in its own comment and pays it; this map is the
+/// thing it says is not built.
+pub(crate) struct Stueck {
+    pub datei: String,
+    pub quelle: String,
+    pub von: usize,
+    pub bis: usize,
+}
+
+/// **The refusals of a joined parse, rendered into the files they came from.**
+///
+/// One bucket per piece, every refusal shifted back by that piece's start offset and rendered
+/// against that piece's OWN source -- so the site is the site in the file, not in the
+/// concatenation. Returns the refusals that fitted into no piece; **they are handed back
+/// rather than dropped**, because a partition that swallows what it cannot place looks
+/// exactly like a clean run.
+///
+/// `gabbro build` renders the same way, out of the same function -- two renderings of one
+/// joined parse would be a second register over the same thing.
+pub(crate) fn zeige_je_stueck(
+    absagen: &gabbro_syntax::Absagen,
+    stuecke: &[Stueck],
+    je_datei: &mut dyn FnMut(&str, &gabbro_syntax::Absagen),
+) -> Vec<gabbro_syntax::diag::Absage> {
+    let mut gezeigt = vec![false; absagen.absagen.len()];
+    for s in stuecke {
+        let mut eigene = gabbro_syntax::Absagen::neu(&s.datei);
+        for (i, a) in absagen.absagen.iter().enumerate() {
+            let v = a.span.von as usize;
+            if v < s.von || v >= s.bis {
+                continue;
+            }
+            gezeigt[i] = true;
+            let mut a = a.clone();
+            a.span.von -= s.von as u32;
+            a.span.bis = a.span.bis.saturating_sub(s.von as u32);
+            eigene.schiebe(a);
+        }
+        if !eigene.leer() {
+            print!("{}", eigene.zeige(&s.quelle));
+        }
+        je_datei(&s.datei, &eigene);
+    }
+    (0..absagen.absagen.len())
+        .filter(|i| !gezeigt[*i])
+        .map(|i| absagen.absagen[i].clone())
+        .collect()
+}
+
+/// **`gabbro pruefe --unit a.gab b.gab` -- the named files as ONE translation unit.**
+///
+/// Why this is a flag and not the default: *a unit is a compilation unit*, and the file list
+/// on a command line is not by itself a statement that these files belong together. The
+/// tooling in `instrumente/` runs ONE PROCESS PER FILE on purpose
+/// (`zaehle-gifttreffer.py`:146), and joining the whole corpus would make every module name
+/// that appears twice in two unrelated files an `N039`. **What files form a unit is a
+/// manifest line, not a shell glob.**
+///
+/// What it buys is measured in `messung/EINHEITENSICHT.md`: over five units of the corpus
+/// eleven refusals fall away *because the names resolve*, and two appear that no per-file run
+/// can see -- a lock ring across library boundaries (`H012`). *Silence is not the only thing
+/// joining buys; it also buys a finding.*
+///
+/// The resolver needed no change. `umgebung.rs::kandidaten` walks the module chain outward
+/// and follows the `use` lines; it was module-aware and `use`-aware all along. **What it never
+/// got was the other file.**
+fn pruefe_als_einheit(
+    getippt: &str,
+    dateien: &[String],
+    vorspann: &str,
+    voll: bool,
+) -> std::process::ExitCode {
+    let mut ganz = String::new();
+    if !vorspann.is_empty() {
+        ganz.push_str(vorspann);
+        ganz.push('\n');
+    }
+    // Everything before this offset belongs to the interfaces, not to the unit.
+    let vorspann_ende = ganz.len();
+    let mut stuecke: Vec<Stueck> = Vec::new();
+    for datei in dateien {
+        let quelle = match std::fs::read_to_string(datei) {
+            Ok(q) => q,
+            Err(e) => {
+                eprintln!("gabbro: {datei}: {e}");
+                return std::process::ExitCode::from(2);
+            }
+        };
+        let von = ganz.len();
+        ganz.push_str(&quelle);
+        // **Always a newline, never a conditional one.** A file that ends without one would
+        // otherwise glue its last token to the next file's first, and the joined parse would
+        // read a construct that stands in no source.
+        ganz.push('\n');
+        let bis = ganz.len();
+        stuecke.push(Stueck { datei: datei.clone(), quelle, von, bis });
+    }
+
+    let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
+    let bericht = pruefe(&baum, &mut absagen);
+    // **One unit, one name in the register.** Passing each file separately here would report
+    // the unit's own second carrier of a name as a cross-unit collision -- which is what
+    // `bindung::nimm_auf` already guards against for the same file named twice.
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    register.nimm_auf("<unit>", &baum, vorspann_ende, &mut absagen);
+
+    // A FEHLER inside the preamble means the interface itself does not hold. Same rule as in
+    // the per-file path, and for the same reason: swallowing it sells a broken library as
+    // clean.
+    if vorspann_ende > 0 {
+        let kaputt = absagen.absagen.iter().any(|a| {
+            (a.span.von as usize) < vorspann_ende && a.stufe == gabbro_syntax::Stufe::Fehler
+        });
+        if kaputt {
+            print!("{}", absagen.zeige(&ganz));
+            eprintln!("gabbro {getippt}: the interface itself does not hold -- nothing checked");
+            return std::process::ExitCode::from(1);
+        }
+    }
+
+    // **Every refusal goes into exactly one bucket, and what fits nowhere is PRINTED.**
+    // A partition that drops what it cannot place looks exactly like a clean run.
+    let mut fehler = 0usize;
+    let mut hinweise = 0usize;
+    let mut items_gesamt = 0usize;
+    let bereiche: Vec<(usize, usize)> = stuecke.iter().map(|s| (s.von, s.bis)).collect();
+    let mut i_stueck = 0usize;
+    let rest = zeige_je_stueck(&absagen, &stuecke, &mut |datei, eigene| {
+        let f = eigene.fehler_zahl();
+        let h = eigene.absagen.len() - f;
+        fehler += f;
+        hinweise += h;
+        let (von, bis) = bereiche[i_stueck];
+        i_stueck += 1;
+        let items = items_im_bereich(&baum, von, bis);
+        items_gesamt += items;
+        println!("{datei}: {items} items, {f} errors, {h} hints");
+    });
+    // Refusals that landed in the preamble (hints only -- the errors aborted above) or
+    // carry a span outside every piece. **They are named, not dropped.**
+    if !rest.is_empty() {
+        let mut fremd = gabbro_syntax::Absagen::neu("<interface>");
+        for a in &rest {
+            fremd.schiebe(a.clone());
+        }
+        let f = fremd.fehler_zahl();
+        println!(
+            "  {} refusal(s) fell outside every file of the unit ({f} of them errors) -- \
+             they belong to the `--with` preamble, and their line numbers are the \
+             PREAMBLE's, not any file's",
+            rest.len()
+        );
+        fehler += f;
+    }
+    println!(
+        "unit of {} file(s): {items_gesamt} items, {fehler} errors, {hinweise} hints",
+        stuecke.len()
+    );
+    if bericht.m1.gesamt() == 0 {
+        println!("  M1 saw no expression -- this unit has no function body");
+    } else {
+        println!(
+            "  M1 saw {} expressions, {} of them without a type ({:.0} % coverage)",
+            bericht.m1.gesamt(),
+            bericht.m1.unbekannt,
+            bericht.m1.deckung()
+        );
+    }
+    println!();
+    if voll {
+        print!("{}", register_voll());
+    } else {
+        print!("{}", register_kurz());
+    }
+    if fehler == 0 {
+        std::process::ExitCode::SUCCESS
+    } else {
+        std::process::ExitCode::from(1)
+    }
+}
+
+/// Items whose site lies inside the half-open byte range of the joined source, nested ones
+/// counted the way `zaehle_items` counts them.
+fn items_im_bereich(baum: &gabbro_syntax::ast::Programm, von: usize, bis: usize) -> usize {
+    fn geh(items: &[gabbro_syntax::ast::Item], von: usize, bis: usize) -> usize {
+        items
+            .iter()
+            .map(|i| {
+                let drin = (i.span.von as usize) >= von && (i.span.von as usize) < bis;
+                usize::from(drin)
+                    + match &i.art {
+                        gabbro_syntax::ast::ItemArt::Modul(m) => geh(&m.items, von, bis),
+                        _ => 0,
+                    }
+            })
+            .sum()
+    }
+    geh(&baum.items, von, bis)
+}
+
+fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     // **`--paesse` prints the FULL register, and since 2026-08-25 it no longer prints
     // itself.** See `register_kurz` for the measurement and the reason.
     let voll = argumente.iter().any(|a| a == "--paesse");
+    // **`--unit` checks the named files as ONE translation unit** (German second name
+    // `--einheit`; NOT called an alias here -- `gabbro alias` is a subcommand about POINTER
+    // aliasing, and one word for two things is how a register starts to drift). Without it every file is its own unit -- see the loop below, and see
+    // `pruefe_als_einheit` for what changes and what the flag costs.
+    let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
     let argumente: Vec<String> = argumente
         .iter()
-        .filter(|a| a.as_str() != "--paesse")
+        .filter(|a| !matches!(a.as_str(), "--paesse" | "--unit" | "--einheit"))
         .cloned()
         .collect();
     // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
@@ -738,14 +969,17 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
     // Die Datei ist Gabbro-Quelltext; sie wird vor die zu pruefende Einheit gestellt, und
     // damit loesen die Namen auf. *`E009` und `K003` verschwinden dann, WEIL geprueft wird
     // -- nicht, weil geschwiegen wird.*
-    let (dateien, mit) = match split_with("pruefe", &argumente) {
+    let (dateien, mit) = match split_with(getippt, &argumente) {
         Ok(x) => x,
         Err(c) => return c,
     };
-    let vorspann = match read_preamble("pruefe", &mit) {
+    let vorspann = match read_preamble(getippt, &mit) {
         Ok(v) => v,
         Err(c) => return c,
     };
+    if einheit {
+        return pruefe_als_einheit(getippt, &dateien, &vorspann, voll);
+    }
     let mut fehler = 0usize;
     // See `command_emit`: the build spans the file list, not one file.
     let mut register = gabbro_check::bindung::Bindungsregister::neu();
@@ -782,7 +1016,7 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
                 .any(|a| (a.span.von as usize) < versatz && a.stufe == gabbro_syntax::Stufe::Fehler);
             if kaputt {
                 print!("{}", absagen.zeige(&ganz));
-                eprintln!("gabbro pruefe: the interface itself does not hold -- nothing checked");
+                eprintln!("gabbro {getippt}: the interface itself does not hold -- nothing checked");
                 return std::process::ExitCode::from(1);
             }
             absagen.absagen.retain(|a| a.span.von as usize >= versatz);

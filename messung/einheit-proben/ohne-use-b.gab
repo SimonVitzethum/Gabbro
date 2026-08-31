@@ -1,0 +1,14 @@
+-- Die zweite Gegenrichtung: ein Name, den KEIN `use` nennt, muss fallen -- auch wenn die
+-- Datei danebenliegt und im selben Lauf uebergeben wird.
+--
+-- `pub-a.gab` fuehrt `Offen`. Dieses Modul nennt es und schreibt KEIN `use`.
+module ohne_use {
+
+pub impl fn nimmt_offen(x : Offen) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return true;
+}
+
+}

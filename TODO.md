@@ -513,7 +513,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 152 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 155 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *149 → 151 am 2026-08-31, aus ZWEI Bahnen gleichzeitig: `messung/proben/PLAN-ENGLISCH.md`
       und `messung/ABNAHME-VOLL.md` kamen dazu. **Jede Bahn schrieb 150, und beide hatten
       recht — über ihrem eigenen Baum.** Beim Zusammenführen ist die Summe keine der beiden
@@ -698,7 +698,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2485 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2493 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -977,7 +977,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **372 von 372 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **377 von 377 Ankern** greifen (`--anker`, 2026-08-31 —
       **362 → 363** durch `measures-darf-nennen-was-es-will` zu `N043`; der ganze Lauf
       fängt 362 von 363, und die eine Überlebende ist die alte
       (`ungelesene-bindung-bekommt-kein-void`) —
@@ -3603,7 +3603,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7890 von 17687 Kommentarzeilen** im Pruefer sind deutsch
+**7892 von 17687 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```

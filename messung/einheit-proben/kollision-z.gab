@@ -1,0 +1,17 @@
+-- Zwei Module, die denselben Namen fuehren -- Datei 3 von 3, der Nutzer.
+--
+-- `use links::Wert;` holt den ENGEN Typ (0..10). Der Rueckgabebereich ist als 0..10
+-- deklariert. Loest der Name auf `rechts::Wert` (0..1000) auf, muesste die Verengung
+-- melden -- und wenn nichts gemeldet wird, hat `rechts` das `links` verdeckt.
+module nutzer {
+
+use links::Wert;
+
+pub impl fn eng(x : Wert) -> u32 in 0 .. 10
+    effects { pure }
+    costs   <= 4 ops
+{
+    return x;
+}
+
+}

@@ -3853,6 +3853,90 @@ MUTATIONEN = [
         "faellt",
         "code",
     ),
+    # -- gabbro-cli/src/main.rs: the unit view (2026-08-31) -------------------------------
+    #
+    # `pruefe --unit` joins the sources and parses ONCE. Every refusal therefore carries a
+    # site in the CONCATENATION, and the offset map computes it back into its own file.
+    # `gabbro lean` names exactly this map as the thing it does not build.
+    Mutation(
+        "einheitsversatz-wird-nicht-abgezogen",
+        "gabbro-cli/src/main.rs",
+        "            let mut a = a.clone();\n"
+        "            a.span.von -= s.von as u32;",
+        "            let mut a = a.clone();\n"
+        "            a.span.von -= 0;",
+        "Die Versatzkarte von `pruefe --unit` rechnet nicht mehr zurueck: jede Absage traegt "
+        "die Zeile der KONKATENATION statt der ihrer eigenen Datei -- eine Zeilennummer, die "
+        "in keiner Quelle steht. **Zwei Proben fallen** (`einheit.rs`)",
+    ),
+    # **This mutation SURVIVED on 2026-08-31** and forced the test that now catches it
+    # (`ein_hinweis_wird_gedruckt_und_gezaehlt`). The six probes before it all looked at
+    # errors, and a swallowed hint looks like a clean run -- exactly the class this whole
+    # flag is under suspicion of.
+    Mutation(
+        "einheit-verschluckt-hinweise",
+        "gabbro-cli/src/main.rs",
+        "            gezeigt[i] = true;\n"
+        "            let mut a = a.clone();",
+        "            gezeigt[i] = true;\n"
+        "            if a.stufe == gabbro_syntax::Stufe::Hinweis {\n"
+        "                continue;\n"
+        "            }\n"
+        "            let mut a = a.clone();",
+        "`pruefe --unit` druckt keine Hinweise mehr, zaehlt sie aber weiter -- Schweigen, "
+        "das wie ein sauberer Lauf aussieht, und eine Zusammenfassung, die dem widerspricht. "
+        "**EINE Probe faellt** (`einheit.rs`)",
+    ),
+    # -- gabbro-cli/src/bau.rs: the build (2026-08-31) ------------------------------------
+    #
+    # Incremental by CONTENT. Both mutations below attack the INPUT of the fingerprint, which
+    # is where a build of this kind goes wrong quietly: it does not build something false, it
+    # builds NOTHING and calls that current.
+    Mutation(
+        "bau-glaubt-das-erzeugnis",
+        "gabbro-cli/src/bau.rs",
+        'if alt.trim() == format!("{abdruck:016x}") && erzeugnis.exists() {',
+        'if alt.trim() == format!("{abdruck:016x}") {',
+        "`gabbro build` glaubt seiner eigenen Aufzeichnung, statt das Erzeugnis anzusehen -- "
+        "ein geloeschtes Erzeugnis mit gueltigem Abdruck heisst dann `aktuell`, und der Bau "
+        "meldet Erfolg ueber etwas, das nicht da ist. **EINE Probe faellt** (`bausystem.rs`)",
+    ),
+    # **This mutation SURVIVED on 2026-08-31** and forced `eine_andere_uebersetzerfahne_baut_neu`.
+    # The eight probes before it all moved SOURCE bytes -- and content alone is not the whole
+    # input to a build.
+    Mutation(
+        "bau-vergisst-die-uebersetzerzeile",
+        "gabbro-cli/src/bau.rs",
+        '    let compilerzeile = manifest.compiler.join(" ");\n'
+        "    teile.push(compilerzeile.as_bytes());",
+        '    let compilerzeile = manifest.compiler.join(" ");\n'
+        "    let _ = &compilerzeile;",
+        "Die Uebersetzerzeile faellt aus dem Abdruck: ein Wechsel von `-O0` auf `-O2` meldet "
+        "`aktuell`, und das Erzeugnis steht unter einer Fahne, die niemand mehr genannt hat. "
+        "**EINE Probe faellt** (`bausystem.rs`)",
+    ),
+    # -- gabbro-cli/src/main.rs: the English first names (2026-08-31) ---------------------
+    #
+    # W16 in the command line itself: `split_with` used to carry a LITERAL `"pruefe"` into its
+    # own refusal. Under the second spelling the message named a command nobody had typed --
+    # a measuring device reporting its own name instead of the subject's.
+    Mutation(
+        "absage-nennt-wieder-den-erstnamen",
+        "gabbro-cli/src/main.rs",
+        "    let vorspann = match read_preamble(getippt, &mit) {\n"
+        "        Ok(v) => v,\n"
+        "        Err(c) => return c,\n"
+        "    };\n"
+        "    if einheit {",
+        '    let vorspann = match read_preamble("pruefe", &mit) {\n'
+        "        Ok(v) => v,\n"
+        "        Err(c) => return c,\n"
+        "    };\n"
+        "    if einheit {",
+        "Die Absage von `gabbro check --with` nennt wieder den festen Namen `pruefe` statt "
+        "des getippten -- ein Lauf unter dem einen Namen meldet den anderen. **EINE Probe "
+        "faellt** (`erstnamen.rs`)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

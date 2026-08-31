@@ -1,0 +1,12 @@
+-- Modul A. `Offen` ist `pub`, `Geheim` ist es NICHT.
+--
+-- Die Frage, die diese Probe stellt: entscheidet `pub` heute, was ein `use` aus einem
+-- anderen Modul erreichen darf? Wenn nein, ist die Einheitensicht eine Aufweichung und
+-- keine Aufloesung -- sie macht dann aus einer richtigen Absage Schweigen.
+module a {
+
+pub type Offen = u32 in 0 .. 100;
+
+type Geheim = u32 in 0 .. 100;
+
+}
