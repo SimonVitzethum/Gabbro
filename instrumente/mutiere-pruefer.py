@@ -810,6 +810,47 @@ MUTATIONEN = [
         "D016 -- a chain edge may point into a FOREIGN table, so the walk leaves its own "
         "table at the first step",
     ),
+    # -- domaene.rs: the PLACE of a domain (2026-08-31) ----------------------------------
+    #
+    # `M109` reads `f.ensures` and nothing else. Each of the 53 corpus quantifier sites
+    # OUTSIDE `ensures` was falsified one by one against the unchanged checker, and 51
+    # stayed silent (`messung/DOMAENENSTELLUNGEN.md`). **Each of these three mutations is
+    # the state the checker was in the day before**, so a survivor says the rule went back.
+    Mutation(
+        "domaenenort-nur-in-nachbedingungen",
+        "domaene.rs",
+        "    if st == Stellung::Nachbedingung {",
+        "    if st != Stellung::Nachbedingung {",
+        "D017 -- the place of a domain is resolved only in `ensures` again, where `M109` "
+        "already resolves it, so all 53 sites outside it fall silent",
+    ),
+    Mutation(
+        "domaenenort-jeder-name-geht",
+        "domaene.rs",
+        "    if geb.contains(&n.text) || s.lokal.contains_key(&n.text) {",
+        "    if true || geb.contains(&n.text) || s.lokal.contains_key(&n.text) {",
+        "D017 -- every name counts as bound, so a quantifier over a name that stands "
+        "nowhere stands again",
+    ),
+    Mutation(
+        "domaenenort-jeder-typ-geht",
+        "domaene.rs",
+        "    if erlaubt.contains(&art) {",
+        "    if true || erlaubt.contains(&art) {",
+        "D018 -- the domain no longer decides what its place must be: `slots of` over a "
+        "record and `queue` over a table pass again",
+    ),
+    # **The counter-direction as a mutation**, and it is the one that would break the
+    # corpus: a slot is written `<x>.slots[i]` and its TYPE is a plain record, so without
+    # the shape question `descendants of c.slots[s]` would be refused in every clean file.
+    Mutation(
+        "domaenenort-slot-ist-kein-slot",
+        "domaene.rs",
+        "    if laeuft_im_baum && s.ist_slotform(o) {",
+        "    if false && laeuft_im_baum && s.ist_slotform(o) {",
+        "D018 -- a slot no longer counts as a place for `descendants of`/`ancestors of`/"
+        "`chain in`, so the rule fires on the clean corpus instead of on the fault",
+    ),
     Mutation(
         "index-erbt-nicht",
         "umgebung.rs",

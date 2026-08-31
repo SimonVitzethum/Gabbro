@@ -91,6 +91,11 @@ const BENANNT: &[&str] = &[
     // 2026-08-31: the same three questions at the CHAIN edge, which `chain(a, b) in`
     // names at the walk instead of at the declaration. `messung/DOMAENENNAMEN.md`.
     "D014", "D015", "D016",
+    // 2026-08-31, one measurement later: the PLACE of a quantifier domain. `D017` its base
+    // name -- `messung/DOMAENENSTELLUNGEN.md` falsified each of the 53 corpus sites outside
+    // `ensures` one by one and 51 stayed silent -- and `D018` its KIND: `slots of` needs a
+    // table, `queue` a record, `elems of` an array field, `mappings of` a `walk`.
+    "D017", "D018",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.

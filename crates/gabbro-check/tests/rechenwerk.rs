@@ -6421,6 +6421,10 @@ impl fn setze(k : ptr<normal, rw> Klein, i : index into Ring)
 ///    statement about what was meant,
 /// 3. **all four positions** -- `ensures`, `requires`, `invariant`, `traverse`. The rule does
 ///    not hang on the one clause that `M109` reads.
+///
+/// The tail of the test held the S2 gap open -- *what happens when the place is no table at
+/// all* -- and since `D018` (2026-08-31) it holds the DIVISION instead: the place rule
+/// speaks, the three edge rules stay silent.
 #[test]
 fn die_kettenkante_wird_gegen_ihre_tabelle_gehalten() {
     const TABELLE: &str = "table N count 4 { slot { w : u32, } }
@@ -6531,9 +6535,11 @@ impl fn f(t : ptr<normal, rw> T, p : index into T)
         );
     }
 
-    // And the carrier that is NOT a table: the rule stays silent instead of guessing. That
-    // is the S2 gap of `messung/DOMAENENNAMEN.md`, held here so that a later extension
-    // closes it with its eyes open.
+    // And the carrier that is NOT a table. **Until 2026-08-31 this was held here as an open
+    // gap -- the S2 cell of `messung/DOMAENENNAMEN.md` -- and `D018` closed it the same
+    // day.** The division of labour is the point of the assertion: the three CHAIN rules
+    // stay silent, because without a table there is no slot to hold the two field names
+    // against; the refusal comes from the rule about the PLACE, and it names the place.
     let g = absagen(
         "module t { type R = { a : [u32; 4], k : u32, };
 impl fn f(r : ptr<normal, rw> R)
@@ -6541,7 +6547,222 @@ impl fn f(r : ptr<normal, rw> R)
     effects { reads r, writes r } costs <= 4 ops { } }",
     );
     assert!(
-        !g.iter().any(|c| c.starts_with("D01")),
-        "ueber einem Verbund schweigt die Regel: {g:?}"
+        g.iter().any(|c| c == "D018"),
+        "ueber einem Verbund faellt die Regel ueber den ORT: {g:?}"
+    );
+    assert!(
+        !g.iter().any(|c| c == "D014" || c == "D015" || c == "D016"),
+        "und die drei Kantenregeln schweigen, denn es gibt keinen Slot: {g:?}"
+    );
+}
+
+/// **`D017`/`D018`: the PLACE of a quantifier domain -- its name and its kind.**
+///
+/// `messung/DOMAENENSTELLUNGEN.md`, 2026-08-31. The corpus carries 72 quantifier sites;
+/// **19 stand in an `ensures` and 53 do not.** Each of the 53 was falsified ONE BY ONE
+/// against the unchanged checker -- the base name replaced by `zzznix`, the file's own base
+/// load subtracted -- and **51 stayed silent**; the two that spoke said `D012`, about a
+/// premise at a call and not about the name. Thirty-eight TYPE falsifications across five
+/// positions got zero.
+///
+/// The test has the same three halves as the chain-edge test above, and the third is again
+/// the one that makes the rule honest:
+///
+/// 1. one probe per class, in every position the rule claims,
+/// 2. **the counter-direction** -- each domain over the carrier it actually wants, and the
+///    two positions where `D017` deliberately says nothing (`ensures`, where `M109` reads
+///    every name of the clause, and a `traverse`, where a `let` binding would be refused by
+///    a pass that carries no block scope),
+/// 3. **what resolves must not fall** -- a parameter, a bare table name, `Self` at a table
+///    and at a `walk`, and a variable an enclosing quantifier just bound.
+#[test]
+fn der_ort_einer_domaene_wird_gehalten() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    // A table, a record, an array field, a `format` and a `walk` -- one of each, so that
+    // every domain has both a right carrier and a wrong one in the same unit.
+    const WELT: &str = "const N : u32 = 8;
+table T count N {
+    tree { parent elter, child kind, sibling gesch }
+    slot { belegt : bool,
+           elter : option index into T,
+           kind  : option index into T,
+           gesch : option index into T, } }
+type R = { plaetze : [u32; 8], kopf : u32, };
+format Wort endian little {
+    gueltig : bool @0,
+    schreib : bool @1,
+    frei    : u64 @[11:2] reserved,
+    rahmen  : u64 embeds [51:12] scale 4096,
+    hoch    : u64 @[63:52] reserved, }
+walk Baum levels 2 {
+    node : [Wort; 512],
+    down : rahmen when it.gueltig && !it.schreib,
+    leaf : it.gueltig && it.schreib, }";
+
+    fn mit(klausel: &str) -> String {
+        format!(
+            "module t {{ {WELT}
+impl fn f(t : ptr<normal, rw> T, r : ptr<normal, rw> R, w : ptr<normal, rw> Baum,
+          p : index into T, z : u32)
+    {klausel}
+    effects {{ reads t.slots, writes t.slots }}
+    costs   <= 4 ops {{ }} }}"
+        )
+    }
+
+    // 1a -- `D017`, in every position the rule claims. 41 of the 53 corpus sites are a
+    // `table` invariant, 7 a `requires`, 5 the body of a `spec fn`, 4 a `walk` invariant.
+    let stellungen = [
+        (
+            "requires",
+            mit("requires forall s in slots of zzznix : t.slots[p].belegt"),
+        ),
+        (
+            "table invariant",
+            format!(
+                "module t {{ table T count 8 {{ slot {{ belegt : bool, }}
+    invariant i cost O(n) runs offline :
+        forall s in slots of zzznix : Self.slots[0].belegt; }} }}"
+            ),
+        ),
+        (
+            "walk invariant",
+            format!(
+                "module t {{ {WELT}
+walk Zweiter levels 1 {{
+    node : [Wort; 512],
+    down : rahmen when it.gueltig,
+    leaf : it.schreib,
+    invariant i cost O(n) runs offline :
+        forall m in mappings of zzznix : m.gueltig; }} }}"
+            ),
+        ),
+        (
+            "spec fn",
+            format!(
+                "module t {{ {WELT}
+spec fn g(t : ptr<normal, r> T) -> bool
+    effects {{ pure }}
+    = forall s in slots of zzznix : t.slots[s].belegt; }}"
+            ),
+        ),
+    ];
+    for (stellung, quelle) in &stellungen {
+        let g = absagen(quelle);
+        assert!(
+            g.iter().any(|c| c == "D017"),
+            "in `{stellung}` muss D017 fallen, gefallen ist: {g:?}"
+        );
+    }
+
+    // 1b -- `D018`, one falsification per domain. The name resolves every time; only the
+    // KIND is wrong, and until 2026-08-31 not one of these fell.
+    for (was, klausel) in [
+        ("slots of ueber einem Verbund", "requires forall s in slots of r : r.kopf == 0"),
+        ("slots of ueber einem Skalar", "requires forall s in slots of z : z == 0"),
+        ("queue ueber einer Tabelle", "requires forall i in queue t : t.slots[p].belegt"),
+        ("queue ueber einem Skalar", "requires forall i in queue z : z == 0"),
+        ("elems of ueber einer Tabelle", "requires forall i in elems of t : t.slots[p].belegt"),
+        ("elems of ueber einem Skalarfeld", "requires forall i in elems of r.kopf : r.kopf == 0"),
+        ("mappings of ueber einer Tabelle", "requires !exists m in mappings of t : m.gueltig"),
+        ("descendants of ueber einem Verbund", "requires !exists x in descendants of r : r.kopf == 0"),
+        ("ancestors of ueber einem Verbund", "requires forall x in ancestors of r : r.kopf == 0"),
+        ("chain in ueber einem Verbund", "requires forall x in chain(kind, gesch) in r : r.kopf == 0"),
+    ] {
+        let g = absagen(&mit(klausel));
+        assert!(
+            g.iter().any(|c| c == "D018"),
+            "{was} muss an D018 fallen, gefallen ist: {g:?}"
+        );
+    }
+
+    // 2 -- the counter-direction. **A refusal without a clean control is half a measurement.**
+    // Each domain over the carrier it actually wants, plus the two shapes the corpus writes
+    // that no type alone can settle: a BARE declaration name and `<x>.slots[i]`.
+    for klausel in [
+        "requires forall s in slots of t : t.slots[s].belegt",
+        "requires forall s in slots of T : t.slots[p].belegt",
+        "requires forall j in queue r : r.plaetze[j] == 0",
+        "requires forall j in elems of r.plaetze : r.plaetze[j] == 0",
+        "requires !exists m in mappings of w : m.gueltig",
+        "requires !exists x in descendants of t.slots[p] : t.slots[x].belegt",
+        "requires forall x in ancestors of t.slots[p] : t.slots[x].belegt",
+        "requires forall x in chain(kind, gesch) in t.slots[p] : t.slots[x].belegt",
+        "requires forall x in ancestors of p : t.slots[x].belegt",
+        "requires forall f in fields of Wort : t.slots[p].belegt",
+        "requires forall th in threads : t.slots[p].belegt",
+    ] {
+        let g = absagen(&mit(klausel));
+        assert!(
+            !g.iter().any(|c| c == "D017" || c == "D018"),
+            "`{klausel}` ist wohlgeformt und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- `Self` is the CARRIER question and belongs to `M120`; a bound variable is
+    // declared by the quantifier above it. **26 of the 53 corpus places are `Self`** --
+    // without these two lines the rule would have refused them all.
+    for quelle in [
+        format!(
+            "module t {{ table T count 8 {{ slot {{ belegt : bool, }}
+    invariant i cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].belegt; }} }}"
+        ),
+        format!(
+            "module t {{ {WELT}
+walk Zweiter levels 1 {{
+    node : [Wort; 512],
+    down : rahmen when it.gueltig,
+    leaf : it.schreib,
+    invariant i cost O(n) runs offline :
+        forall m in mappings of Self : m.gueltig; }} }}"
+        ),
+    ] {
+        let g = absagen(&quelle);
+        assert!(
+            !g.iter().any(|c| c == "D017" || c == "D018"),
+            "`Self` ist der Traeger und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 4 -- the two positions `D017` deliberately leaves alone, and both are measured.
+    //
+    // In an `ensures` `M109` resolves EVERY name of the clause, so a second refusal would
+    // be a second refusal for one fault; at a `traverse` a domain may run over a `let`
+    // binding, and this pass carries no block scope.
+    let e = absagen(&mit("ensures forall s in slots of zzznix : t.slots[p].belegt"));
+    assert!(
+        e.iter().any(|c| c == "M109") && !e.iter().any(|c| c == "D017"),
+        "in `ensures` spricht `M109` und `D017` schweigt: {e:?}"
+    );
+    let d = absagen(
+        "module t { table T count 8 { slot { belegt : bool, } }
+impl fn f(t : ptr<normal, rw> T)
+    effects { reads t.slots, writes t.slots } costs <= 64 ops
+{ let q = t; traverse i over slots of q by unvisited
+      touches reads t.slots, writes t.slots { t.slots[i].belegt = true; } } }",
+    );
+    assert!(
+        !d.iter().any(|c| c == "D017"),
+        "an einem `traverse` darf eine lokale Bindung nicht als unbekannt gelten: {d:?}"
+    );
+
+    // 5 -- **`None` means stay silent.** A place whose type the checker cannot resolve is
+    // not a place of the wrong kind, and a refusal about the checker's own ignorance is the
+    // false alarm this bench spent a whole build undoing.
+    let u = absagen(
+        "module t { extern fn fremd() -> u32 effects { pure } costs <= 1 ops;
+table T count 8 { slot { belegt : bool, } }
+impl fn f(t : ptr<normal, rw> T, x : fnptr())
+    requires forall s in slots of x : t.slots[0].belegt
+    effects { reads t.slots, writes t.slots } costs <= 4 ops { } }",
+    );
+    assert!(
+        !u.iter().any(|c| c == "D018"),
+        "ueber einem Ort, dessen Typ nicht aufloest, schweigt `D018`: {u:?}"
     );
 }

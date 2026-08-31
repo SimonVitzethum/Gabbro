@@ -506,14 +506,49 @@ pub const D1D2: &[Satz] = &[
                     of a domain's place is checked by nobody, for all nine domains, and that \
                     gap is named and measured in messung/DOMAENENNAMEN.md, not closed here.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 417 (`D014`, the field does not exist), 418 (`D015`, a \
-                      `bool` -- no edge, no end), 419 (`D016`, an edge into another table). \
+        gemessen_an: "beispiele/gift: 422 (`D014`, the field does not exist), 423 (`D015`, a \
+                      `bool` -- no edge, no end), 424 (`D016`, an edge into another table). \
                       The clean side is beispiele/55-kindkette.gab and \
                       messung/proben/probe-neun-domaenen.gab; the counter-direction (the \
                       reversed pair, `chain(parent, parent)`, `chain(child, child)`) is \
                       measured green at each of them.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; messung/DOMAENENNAMEN.md; \
                      SYNTAX.md:1060",
+    },
+    Satz {
+        name: "d.domaenenort",
+        kennungen: &["D017", "D018"],
+        aussage: "The PLACE a quantifier domain runs over is held twice: its base name \
+                  resolves (`D017`), and it is of the kind the domain needs (`D018`) -- a \
+                  table for `slots of`, a record for `queue`, an array field for `elems \
+                  of`, a `walk` for `mappings of`, and a slot for the three that walk the \
+                  tree. **`D017` is `M109`'s question in the four positions `M109` does not \
+                  read**: `requires`, an `invariant` of a `table`, of a `walk` or of a \
+                  `group`, and the body of a `spec fn`.",
+        vorbehalt: "**`D017` is silent in `ensures` and at a `traverse`, and both are \
+                    measured decisions.** `M109` reads every name of a postcondition, so a \
+                    second refusal there would be a second refusal for one fault; a domain \
+                    in a BODY may run over a `let` binding, and this pass carries no block \
+                    scope -- at a `traverse` with a `costs` line `K003` speaks instead, \
+                    about the missing bound rather than about the name. It is also silent \
+                    on `Self`, which is the carrier question and belongs to `M120`, and on \
+                    `fields of` (a path, not a place, and zero corpus sites -- Regel A) and \
+                    `threads` (names nothing, `Q3`). **`D018` stays silent whenever the \
+                    type of the place does not resolve**: a place the checker cannot type \
+                    is not a place of the wrong kind.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Every one of the 53 corpus quantifier sites outside `ensures` was \
+                      falsified one by one against the UNCHANGED checker -- the base name \
+                      replaced by `zzznix`, the file's own base load subtracted: **51 \
+                      silent, 2 answering with `D012`** (a premise at a call, not the \
+                      name). After the build all 53 fall with `D017`. Poison: \
+                      beispiele/gift/425 (`D017` in an `invariant`), 426 (`D018`, `slots \
+                      of` over a record), 427 (`D018`, `queue` over a table -- the shape \
+                      the corpus itself carried). The counter-direction is the whole \
+                      corpus: 462 files, and the only place either code falls is the one \
+                      the measurement found. messung/DOMAENENSTELLUNGEN.md.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; messung/DOMAENENSTELLUNGEN.md; \
+                     messung/DOMAENENNAMEN.md",
     },
     Satz {
         name: "d.undurchsichtig",

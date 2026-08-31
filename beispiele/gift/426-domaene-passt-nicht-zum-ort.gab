@@ -1,0 +1,39 @@
+-- erwartet: D018
+-- **Die Domaene entscheidet, was ihr Ort sein muss -- und niemand hat je gefragt.**
+--
+-- `slots of` laeuft ueber eine `table`. Hier steht ein VERBUND darunter: `r` hat keine
+-- Slots, es hat Felder. Der Name loest auf (`r` ist ein Parameter), also schweigt `D017`;
+-- die Frage ist der TYP, und die stellt `D018`.
+--
+-- **Achtunddreissig Typverfaelschungen, null Absagen** -- gemessen am 2026-08-31 in fuenf
+-- Stellungen (`messung/DOMAENENNAMEN.md` §2b: zehn in `ensures`;
+-- `messung/DOMAENENSTELLUNGEN.md` §2a: elf in `requires`, elf in einer `spec fn`, drei an
+-- einer `table`-`invariant`, drei an einer `walk`-`invariant`). Die Kontrolle daneben:
+-- verschwindet der Parametertyp ganz, faellt `N040` -- **der Typ wird also aufgeloest, nur
+-- fragte niemand, ob die Domaene zu ihm passt.**
+--
+-- Die Gegenprobe steht in derselben Datei: `elems of r.plaetze` ueber demselben Verbund
+-- ist gruen, denn `elems of` will genau ein Feldarray.
+
+module gift {
+
+const N : u32 = 8;
+
+type Ring = {
+    plaetze : [u32; 8],
+    kopf    : u32,
+};
+
+table Kappraum count N {
+    slot { belegt : bool, }
+}
+
+impl fn ueber_dem_verbund(r : ptr<normal, rw> Ring)
+    requires forall s in slots of r : r.kopf == 0,
+             forall j in elems of r.plaetze : r.plaetze[j] == 0
+    effects  { reads r, writes r }
+    costs    <= 4 ops
+{
+}
+
+}

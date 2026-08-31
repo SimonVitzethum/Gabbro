@@ -35,11 +35,22 @@ state Stufe {
     transition an { s : 0 -> 1 }
 }
 
-divergent fn schlange_leeren(q : ptr<normal, rw> Warteschlange) -> never
-    effects { writes q.slots, diverges }
+-- **Der Traeger einer `queue` ist ein VERBUND mit genau EINEM Feldarray, keine `table`** --
+-- und bis zum 2026-08-31 stand hier `queue q` ueber einem Tabellenzeiger. Der Pruefer
+-- schwieg dazu (`D018` gab es nicht), und mit einer Kostenzusage sagte `K003` „die Domaene
+-- hat keine Schranke aus der Deklaration" -- **eine Aussage ueber die Deklaration, wo die
+-- Wahrheit war, dass dieser Ort keine Warteschlange ist.** Dieselbe W16-Gestalt wie an
+-- `walkschranken`: ein Messgeraet, das etwas anderes misst als seinen Gegenstand.
+--
+-- *Die Zelle, um die es dieser Datei geht, bleibt dieselbe:* der Erzeuger sagt die
+-- Traversierungsdomaene `queue` weiter namentlich mit `C001` ab.
+type Ring = { plaetze : [u32; 8], kopf : u32, };
+
+divergent fn schlange_leeren(r : ptr<normal, rw> Ring) -> never
+    effects { writes r, diverges }
 {
-    traverse i over queue q by unvisited touches writes q.slots {
-        q.slots[i].a = 0;
+    traverse i over queue r by unvisited touches writes r {
+        r.plaetze[i] = 0;
     }
     nie();
 }
