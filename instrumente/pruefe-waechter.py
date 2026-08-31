@@ -72,6 +72,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -107,6 +108,44 @@ SCHWER = {
     "pruefe-luecken.py":
         "baut dreizehnmal neu -- gehoert auf den Server; 10,7 s / 27,8 s CPU dort (2026-08-20)",
 }
+# **WHAT AN OMITTED GUARDIAN TAKES WITH IT -- in its OWN unit** (2026-08-31).
+#
+# `SCHWER` above says why a guardian is expensive. It does not say what stays UNMEASURED when
+# the quick run leaves it out, and for two weeks the collective run's closing line therefore
+# reported 45 guardians out of 49 over a tree of which it had seen less than half. *A count of
+# guardians is not a count of the object* -- `pruefe-emission.sh` is one line in that
+# denominator and 101 translation units behind it.
+#
+# > **W25: a number vouches for its DENOMINATOR, not for its label.** Here the denominator was
+# > the wrong one, and it read like a verdict on the tree.
+#
+# Measured 2026-08-31 from the guardians' own sources and their last logged full run, with no
+# build: `beweise/ROOT` (15 theories), `mutiere-pruefer.MUTATIONEN` (372), `pruefe-luecken
+# .LUECKEN` (15 twists, 13 of them with a build of their own), and stage 9 of the last green
+# `pruefe-emission.sh` run (101 out of 101, behind ten stages and 25 through-cuts).
+#
+# **The sum of these is NOT printed as a fraction.** 101 units, 372 mutations, 15 twists and
+# 15 theories add up to 503 items only if one ignores that they are four different things,
+# and there is no counted total for the other 45 guardians to divide it by. The number that
+# HAS a denominator is the other one -- the dangerous places, counted by `teilmessungen()`
+# over every guardian alike. This register exists to be NAMED beside it, never summed into it.
+GEGENSTAND = {
+    "mutiere-pruefer.py":
+        "372 Mutationen, je ein `cargo build` und ein `cargo test`",
+    "pruefe-beweise.sh":
+        "15 Isabelle-Theorien (`beweise/ROOT`)",
+    "pruefe-emission.sh":
+        "101 von 101 Uebersetzungseinheiten in Stufe 9, hinter zehn Stufen und 25 Durchstichen",
+    "pruefe-luecken.py":
+        "15 Verdrehungen, 13 davon mit eigenem Bau, dazu der Nullauf",
+    # **Not expensive -- ABSENT, and it belongs here for exactly that reason.** Its object is
+    # the Caprock measuring base, and it carries ZERO dangerous places: in the unit the
+    # fraction is counted in, losing it costs nothing, and it would drop out of the report
+    # without a word. *A guardian whose object is a foreign tree is the case where the two
+    # units come apart* -- so it is named here and stays out of the fraction.
+    "zaehle-b3.py":
+        "105 Dateien / 2536 Ruempfe der Caprock-Messbasis -- ein FREMDER Baum",
+}
 # **Waechter, deren Gegenstand ein FREMDER BAUM ist** -- einer, der nicht in diesem
 # Verzeichnis liegt und den `git` nicht mitbringt. Je Eintrag: der Pfad und was dort steht.
 #
@@ -116,9 +155,9 @@ SCHWER = {
 # Caprock-Messbasis noch SEL4Lake. *Ein Waechter, dessen Urteil davon abhaengt, auf welchem
 # Rechner er laeuft, ohne es zu sagen, misst den Rechner.*
 #
-# **Und `../caprock-messbasis` ist zusaetzlich relativ**: in einem `git worktree` zeigt der
-# Pfad neben den Arbeitsbaum statt neben die Hauptauscheckung. Auch dort fehlt er also --
-# lautlos, bis dieser Eintrag es sagt.
+# **Und `../caprock-messbasis` ist zusaetzlich relativ**: bis zum 2026-08-31 zeigte der Pfad
+# aus einem `git worktree` heraus neben den Arbeitsbaum statt neben die Hauptauscheckung --
+# geheilt durch `korpus_ort()` unten, das ihn und sein ARGUMENT an EINER Stelle aufloest.
 #
 # *Das ist kein Freibrief.* Was hier steht, wird NICHT gruen gebucht, sondern als **nicht
 # gemessen** gezaehlt und in der Schlusszeile mit seiner Zahl genannt (W17).
@@ -138,6 +177,55 @@ ARGUMENTE = {
 }
 
 
+def hauptauscheckung(w=None):
+    """The main checkout `w` belongs to -- `w` itself when it is not a worktree.
+
+    **A guardian that is `NICHT FAHRBAR` here and runnable three directories up measures the
+    checkout, not the tree** (2026-08-31). `../caprock-messbasis` sits beside the main
+    checkout; from inside `.claude/worktrees/<name>/` the same two dots point somewhere else
+    entirely, and `zaehle-b3.py` was booked as *"the measuring base is missing"* while it lay
+    there and ran green against it (`rc=0`, 105 files, 2536 bodies). The acceptance said
+    `48 von 49` and meant *48 of 49 in this worktree*.
+
+    > *Same class as the guardian whose verdict hung on the MACHINE -- one level smaller.*
+
+    **Read from the `.git` marker, not from `git`.** A worktree's `.git` is a FILE holding
+    `gitdir: <main>/.git/worktrees/<name>`; a plain checkout has a DIRECTORY there. So this
+    needs no subprocess, no return code and no `git` on the PATH -- and it cannot fall foul
+    of the bolt three requirements below (*whoever reads `git` reads the return code*), which
+    is the reason the healing waited a day. Anything unexpected returns `w`: the old
+    behaviour, which errs towards `NICHT FAHRBAR` and never towards a false green.
+    """
+    w = W if w is None else w
+    marke = w / ".git"
+    try:
+        if not marke.is_file():
+            return w
+        text = marke.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return w
+    if not text.startswith("gitdir:"):
+        return w
+    ort = pathlib.Path(text.split(":", 1)[1].strip())
+    if not ort.is_absolute():
+        ort = (w / ort).resolve()
+    if ort.parent.name == "worktrees" and ort.parent.parent.name == ".git":
+        return ort.parent.parent.parent
+    return w
+
+
+def korpus_ort(pfad, w=None):
+    """One declared corpus path: `~` expanded, relative resolved against the MAIN checkout.
+
+    **The one place where such a path is turned into a location** (W7). It is read from two
+    sides -- `korpus_fehlt()` below asks whether the corpus is there, and `abnahme.py` hands
+    the very same path to the guardian as its argument. *Two resolutions of one path is how a
+    run reports a corpus as present and then measures a different directory.*
+    """
+    ort = pathlib.Path(pfad).expanduser()
+    return ort if ort.is_absolute() else (hauptauscheckung(w) / pfad).resolve()
+
+
 def korpus_fehlt(name):
     """Der fremde Baum dieses Waechters -- oder `None`, wenn er keinen braucht/hat.
 
@@ -147,9 +235,7 @@ def korpus_fehlt(name):
     if not eintrag:
         return None
     pfad, was = eintrag
-    ort = pathlib.Path(pfad).expanduser()
-    if not ort.is_absolute():
-        ort = (W / pfad).resolve()
+    ort = korpus_ort(pfad)
     return None if ort.is_dir() else (str(ort), was)
 
 
@@ -846,6 +932,43 @@ GIT_PROSA = "\n".join([
 ])
 
 
+def sprechprobe_auscheckung():
+    """`[(what, ok)]` -- **four directions, on invented checkouts, never on the real one.**
+
+    A probe that reads the tree it runs in passes or fails by where somebody put the
+    repository -- the very fault this function exists against. So all four cases are built in
+    a throwaway directory: a plain checkout, a worktree, a `.git` file with nonsense in it,
+    and no `.git` at all. **The last two must fall back to the directory itself**, because
+    the wrong answer there is a corpus reported present at a place nobody measured.
+    """
+    with tempfile.TemporaryDirectory() as d:
+        dp = pathlib.Path(d).resolve()
+        haupt = dp / "haupt"
+        (haupt / ".git" / "worktrees" / "zweig").mkdir(parents=True)
+        baum = dp / "haupt" / ".claude" / "worktrees" / "zweig"
+        baum.mkdir(parents=True)
+        (baum / ".git").write_text(f"gitdir: {haupt}/.git/worktrees/zweig\n")
+        wirr = dp / "wirr"
+        wirr.mkdir()
+        (wirr / ".git").write_text("nicht der Rede wert\n")
+        nackt = dp / "nackt"
+        nackt.mkdir()
+        return [
+            ("eine gewoehnliche Auscheckung ist ihre eigene Hauptauscheckung",
+             hauptauscheckung(haupt) == haupt),
+            ("ein `git worktree` findet die Hauptauscheckung darueber",
+             hauptauscheckung(baum) == haupt),
+            ("eine `.git`-Datei ohne `gitdir:` faellt auf den Baum selbst zurueck",
+             hauptauscheckung(wirr) == wirr),
+            ("und ohne `.git` ebenso -- nie auf einen erratenen Ort",
+             hauptauscheckung(nackt) == nackt),
+            ("und ein ABSOLUTER Korpuspfad bleibt, wie er ist",
+             korpus_ort("/nirgends/korpus", baum) == pathlib.Path("/nirgends/korpus")),
+            ("ein relativer wird gegen die HAUPTauscheckung aufgeloest, nicht gegen den Baum",
+             korpus_ort("../korpus", baum) == (dp / "korpus")),
+        ]
+
+
 def sprechprobe_git():
     """`[(what, ok)]` -- the bolt has to be able to fall, and must not fall everywhere."""
     return [
@@ -1026,6 +1149,9 @@ def main():
     for was, git_ok in sprechprobe_git():
         print(f"  git-Riegel:     {'ok' if git_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and git_ok
+    for was, au_ok in sprechprobe_auscheckung():
+        print(f"  Auscheckung:    {'ok' if au_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and au_ok
     # **`abschnitt.py` is not a guardian, so no collective run reaches it** -- and a tool
     # nobody drives is indistinguishable from one that does not exist. It is driven here,
     # because the honesty of every guarded cut rests on it.

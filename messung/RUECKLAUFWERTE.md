@@ -241,9 +241,11 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   `pruefe-waechter.py` und `abnahme.py`. Beide haben heute null gefährliche Stellen, also
   kostet es nichts; der Zähler je Stelle nimmt ihnen die Ausnahme, weil er nach der
   VERDRAHTUNG fragt. *Es war eine gelegte Falle und kein Schaden.*
-* **Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**, und er
-  steht mit Grund da: `zaehle-b3.py` (`NICHT FAHRBAR` — die Caprock-Messbasis fehlt im
-  Arbeitsbaum). **48 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
+* ~~**Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**~~ —
+  `zaehle-b3.py` stand als `NICHT FAHRBAR` da, **und das war eine Aussage über den
+  Arbeitsbaum**: `/home/simon/Dokumente/caprock-messbasis` liegt da, nur zeigte der relative
+  Pfad aus einem `git worktree` heraus daneben. Geheilt am selben Abend (`korpus_ort()`,
+  siehe unten). **49 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
   schlichte Abnahme auslässt, sind einzeln nachgefahren.
 * **Die Schalenregel ist großzügig, und das ist geprüft und nicht gehofft**: ein `exit` in
   einem Funktionsrumpf gilt als gedeckt, weil der Rumpf aus dem Hauptlauf gerufen wird.
@@ -509,11 +511,11 @@ Bauart, gegen die dieser Abschnitt steht — also ist sie hier nicht stehen gebl
 | `pruefe-emission.sh` | einzeln gefahren, `rc=0`, kein `ABGESCHNITTEN` in 282 Zeilen | **nein** |
 | `pruefe-beweise.sh` | einzeln nachgefahren | **nein** |
 | `pruefe-luecken.py` | einzeln nachgefahren: `ALL PASS`, *alle Quellen byteidentisch zurück* | **nein** |
-| `zaehle-b3.py` | `NICHT FAHRBAR` — die Caprock-Messbasis fehlt im Arbeitsbaum | *offen* |
+| `zaehle-b3.py` | ~~`NICHT FAHRBAR`~~ — der Pfad ist geheilt, er läuft in der Abnahme mit (3,3 s, `rc=0`) | **nein** |
 
-**Also: 48 von 49 gemessen, null davon abgeschnitten.** Der eine Rest hat gar nichts
-gemessen und steht mit Grund da. Das ist keine Zusage für morgen — es ist der Stand von
-heute abend.
+**Also: 49 von 49 gemessen, null davon abgeschnitten** — ~~48 von 49~~, denn der eine Rest
+war nie abwesend, sondern falsch adressiert. Das ist keine Zusage für morgen — es ist der
+Stand von heute abend.
 
 **Die Zahl steht in der Kopfzeile, auch wenn sie null ist.** Das ist kein Schmuck: eine
 gedruckte Null sagt, dass gemessen wurde; eine fehlende Zahl sagt gar nichts (W17). Ist sie
@@ -561,6 +563,242 @@ ihren Gegenstand* — dieselbe Klasse wie das `pgrep -f`, das sich selbst findet
 indem `sprechprobe()` die drei Modulgrößen sichert, `_AN` zurücksetzt und alles hinterher
 zurücklegt. **Und sie ist nicht durch Nachdenken gefunden worden, sondern dadurch, dass
 jemand die Form auf ihren eigenen Träger angewandt hat.**
+
+
+## Was die Auslassung KOSTET — der Schnelllauf sieht 45 von 92, nicht 45 von 49
+
+*Gemessen 2026-08-31 abends, lokal (`free -g`: 31 GB gesamt, 13 GB verfügbar, 20 Kerne).
+Kein Bau: die vier teuren wurden **nicht** gefahren, ihr Gegenstand ist aus ihrem eigenen
+Quelltext und aus dem letzten protokollierten Auslauf gezählt.*
+
+Die Kopfzeile des Schnelllaufs sagt heute:
+
+```
+== Arbeitsmenge: 45 von 49 Waechtern haben GEMESSEN -- 44 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 1 nicht fahrbar, 3 ausgelassen
+```
+
+**45 von 49 ist eine richtige Zahl über dem falschen Gegenstand.** Sie zählt Wächter. Wer sie
+liest, liest ein Urteil über den Baum — und der Baum ist nicht in Wächtern gemessen, sondern
+in dem, was sie ansehen. Also ist das nachgezählt worden, in zwei Einheiten.
+
+### Erstens: in der Einheit, die dieser Ordner ohnehin führt — die gefährlichen Stellen
+
+`pruefe-waechter.py:teilmessungen()` zählt sie schon, je Datei: **92 Stellen, an denen ein
+Lauf mit `1` aussteigt und dahinter noch Ausgabe stünde.** Dieselbe Zahl, dieselbe Messung,
+nur je Wächter aufgeteilt statt aufsummiert:
+
+| | gefährliche Stellen | im Schnelllauf besucht? |
+|---|---:|---|
+| `pruefe-emission.sh` | **45** | nein — ausgelassen |
+| `mutiere-pruefer.py` | 5 | nur die `--anker`-Hälfte |
+| `pruefe-beweise.sh` | 2 | nein — ausgelassen |
+| `pruefe-luecken.py` | 0 | nein — ausgelassen |
+| die übrigen 45 Wächter | 40 | ja |
+| **zusammen** | **92** | |
+
+**47 der 92 stehen in Wächtern, die der Schnelllauf gar nicht erst startet** — mehr als die
+Hälfte, und 45 davon in einem einzigen. Großzügig gerechnet (die fünf Stellen des
+Ankerlaufs mitgezählt, obwohl der Mutationslauf selbst nicht läuft) sieht der Schnelllauf
+**45 von 92**.
+
+> *Zwei Zahlen, beide 45, und sie messen Verschiedenes:* **45 von 49 Wächtern — 49 %** *von
+> 92 gefährlichen Stellen. Die erste steht in der Kopfzeile, die zweite stand nirgends* (W25:
+> eine Zahl belegt ihren Nenner, nicht ihre Beschriftung).
+
+### Zweitens: in der Einheit jedes einzelnen Wächters
+
+| ausgelassen | sein Gegenstand | der Schnelllauf sieht davon |
+|---|---|---|
+| `pruefe-emission.sh` | zehn Stufen, 25 Durchstiche, **101 von 101** Übersetzungseinheiten in Stufe 9, dazu Stufe 10 (Bibliothekskette) | **nichts** |
+| `mutiere-pruefer.py` | **372** Mutationen, je ein `cargo build` und ein `cargo test` | **372 Anker textlich**, null Mutationen gefahren |
+| `pruefe-luecken.py` | **15** Verdrehungen (13 mit eigenem Bau, 2 bewiesene Nullmutationen) und ein Nullauf | **nichts** |
+| `pruefe-beweise.sh` | **15** Isabelle-Theorien (`beweise/ROOT`) | **nichts** |
+
+**503 Messposten stehen hinter der Auslassung** — 101 Übersetzungseinheiten, 372 Mutationen,
+15 Verdrehungen, 15 Theorien. *Die Summe hat keinen eigenen Nenner:* es gibt keine gezählte
+Gesamtmenge, gegen die sich „503" als Anteil lesen ließe, und darum steht sie hier mit ihren
+vier Summanden daneben und nie allein. Die Zahl mit einem Nenner ist die andere: **45 von
+92.**
+
+### Und die Gegenprobe: wie oft war der VOLLE Lauf heute überhaupt grün?
+
+Nicht geschätzt, sondern in `git log` gesucht (2026-08-31, 00:00 bis 18:51; einige Belege
+können denselben Lauf meinen):
+
+| Zeit | Besetzung | Ergebnis |
+|---|---:|---|
+| 01:10 (`bc3812d`) | 27 | **grün** (auf `fisch`) |
+| 01:33 (`23bee0e`) | 27 | rot — `pruefe-beweise.sh [1]` |
+| 01:55 (`e33eedd`) | 28 | rot — 27 grün, 1 ROT |
+| 02:03 (`2755721`) | 27 | Fund über die **Messapparatur**, nicht über den Baum |
+| 02:20 (`531b2e6`) | 27 | **grün** (`EXIT=0`) |
+| 02:52 (`cd2c8db`) | 27 | **grün** — mit allen vier teuren |
+| 06:11 (`22d56a1`) | 28 | rot — 25 gemessen, 24 grün, 1 ROT |
+| 07:14 (`0ae9bea`) | 46 | **ungefahren** — der Mutationslauf hätte kollidiert |
+| 17:34 (`1264dad`) | 49 | rot — `TEILMESSUNG pruefe-emission.sh`, Stufe 9 |
+
+**Der letzte grüne volle Lauf war um 02:52 und ging über 27 Wächter.** Seither ist die
+Besetzung auf 49 gewachsen, und **über der heutigen Besetzung war der volle Lauf noch nie
+grün** — genau einmal gefahren (17:34), und da endete er in einer Teilmessung.
+
+> *Die Auslassung ist also keine Abkürzung eines Laufs, den man sonst hätte:* der volle Lauf
+> über die heutige Besetzung existiert als **ein** Datenpunkt. Was der Schnelllauf nicht
+> sieht, sieht heute niemand — und die Kopfzeile sagte es nicht.
+
+
+### Die Heilung: die Schlusszeile nennt jetzt ihren Gegenstand
+
+*2026-08-31 abends. `pruefe-waechter.py:GEGENSTAND` (neu) und `abnahme.py:gegenstand()`.*
+
+Die Kopfzeile hat eine zweite bekommen, und die zweite hat den anderen Nenner:
+
+```
+== Arbeitsmenge: 46 von 49 Waechtern haben GEMESSEN -- 45 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 0 nicht fahrbar, 3 ausgelassen
+== Und ihr GEGENSTAND: hoechstens 45 von 92 gefaehrlichen Stellen besucht -- 49 % ==
+   47 davon stehen in Waechtern, die dieser Lauf nicht gefahren hat -- und was
+   mit ihnen ungemessen bleibt:
+     pruefe-emission.sh    45 Stellen   101 von 101 Uebersetzungseinheiten in Stufe 9, …
+     pruefe-beweise.sh      2 Stellen   15 Isabelle-Theorien (`beweise/ROOT`)
+     pruefe-luecken.py      0 Stellen   15 Verdrehungen, 13 davon mit eigenem Bau
+```
+
+*Die `46` und die `0 nicht fahrbar` sind eine Stunde jünger als der Rest dieses
+Abschnitts:* `zaehle-b3.py` läuft seit der Pfadheilung weiter unten mit. Solange er als
+`NICHT FAHRBAR` dastand, erschien er hier als vierte Zeile mit `0 Stellen` und **105
+Dateien / 2536 Rümpfe der Caprock-Messbasis** daneben — und genau dafür gibt es diese
+zweite Liste.
+
+**Drei Entscheidungen darin, und jede hat einen Grund:**
+
+1. **Die Einheit ist die, die dieser Ordner ohnehin führt.** `gegenstand()` ruft
+   `pruefe-waechter.teilmessungen()` — dieselbe Funktion, derselbe Code, nur je Wächter
+   statt aufsummiert. *Kein zweites Register über derselben Sache* (W7): ein Wächter, der
+   eine gefährliche Stelle dazubekommt, bekommt sie in beiden Zahlen zugleich.
+2. **`höchstens`, und das Wort steht in der Zeile.** Ein halb gefahrener Wächter
+   (`mutiere-pruefer.py --anker`) und eine `TEILMESSUNG` zählen hier als *gesehen*, obwohl
+   beide nur einen Teil ihrer Stellen erreicht haben. Die Schranke irrt damit **nach oben** —
+   die Richtung, in der eine Schranke irren darf.
+3. **Was keine Stellen trägt, wird trotzdem genannt.** `zaehle-b3.py` hat **null**
+   gefährliche Stellen und 105 fremde Dateien als Gegenstand: in der Einheit, in der der
+   Bruch gerechnet wird, kostet sein Fehlen *nichts*. Er stünde nirgends. Also läuft neben
+   dem Bruch eine zweite Liste — jeder nicht gemessene Wächter mit einem Eintrag in
+   `GEGENSTAND` wird gedruckt, mit `0 Stellen` und seinem Gegenstand daneben. *Wer nur den
+   Bruch druckt, verliert genau den Wächter, dessen Ausfall im Bruch keinen Ort hat.*
+
+**Und die Gegenrichtung, weil ein Schnelllauf, der nie mehr grün aussieht, keine Hilfe ist:**
+das Wort bleibt `GRUEN` und der Rücklaufwert bleibt `0`. Was sich ändert, ist die Zeile:
+
+```
+  ABNAHME GRUEN MIT BENANNTER LUECKE: 46 von 49 Waechtern,
+  und hoechstens 45 von 92 gefaehrlichen Stellen -- 49 %. **Gruen heisst hier:
+  was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist.
+```
+
+Ein voller Lauf ohne Lücke bekommt die andere Hälfte: *„und 92 von 92 gefährlichen Stellen.
+**Kein Wort davon ist ausgelassen.**"* — **Grün mit benannter Lücke und Grün sind zwei
+Sätze, und man sieht ihnen den Unterschied an.**
+
+#### Die Sprechprobe dazu — drei Richtungen, und auf ihrem EIGENEN Träger
+
+`abnahme.py:sprechprobe()` legt für den Gegenstandszähler ein **eigenes** Wegwerfverzeichnis
+an, nicht das der anderen zwölf Proben. Der Grund ist der Fund vom selben Abend: die
+bestehenden Proben behaupten `len(erg) == 5`, und ein sechster erfundener Wächter hätte sie
+umgeworfen. *Eine Probe, die den Lauf verändert, in dem sie steckt, misst diesen Lauf und
+nicht ihren Gegenstand.*
+
+| Richtung | erfundener Fall | verlangt |
+|---|---|---|
+| gezählt wird der Gegenstand | `pruefe-tief.sh` (2 gefährliche Stellen), `pruefe-flach.sh` (0), beide gefahren | `2 von 2`, keine Lücke |
+| eine Auslassung nimmt ihren Gegenstand MIT | `pruefe-tief.sh` ausgelassen | `0 von 2`, und er wird benannt |
+| eine Auslassung OHNE Gegenstand öffnet KEINE | `pruefe-flach.sh` ausgelassen | `2 von 2`, keine Lücke |
+
+Die dritte ist die, die die Zahl ehrlich hält: *eine Lückenmeldung, die bei jeder Auslassung
+anschlägt, misst die Auslassung und nicht den Gegenstand* — und dann liest sich jeder
+Schnelllauf als blind, was so falsch ist wie die alte Null.
+
+**Und drei weitere über den SATZ, nicht über die Zahl.** Die Zahl war beweisbar, die
+Schlusszeile nicht — und die Schlusszeile ist das, was jemand liest. Also steht sie in
+`schlusssatz()` und gibt Zeilen zurück, statt vier `print` in `main` zu sein:
+
+| Richtung | verlangt |
+|---|---|
+| mit Lücke | `MIT BENANNTER LUECKE` im Satz, **und beide Zahlen darin** (Wächterzahl, Stellenzahl, Anteil) |
+| ohne Lücke | das Wort `LUECKE` kommt **nicht vor**, und es steht `92 von 92` da |
+| beide | beide fangen mit `ABNAHME GRUEN` an, **und sie sind nicht derselbe Satz** |
+
+*Ein Satz, der immer warnt, sagt nichts; einer, der nie warnt, sagt weniger.* **Neunzehn
+Proben laufen jetzt vor jeder Abnahme, dreizehn alte und sechs neue.**
+
+### `zaehle-b3.py`: richtig eingeordnet — und „48 von 49" galt nur im ARBEITSBAUM
+
+*Gemessen 2026-08-31 abends.* Drei Fragen, drei Antworten:
+
+* **Steht er sauber in `FREMDER_KORPUS`?** Ja. Der Eintrag nennt Pfad und Gegenstand, sein
+  Kommentar nannte sogar den Sonderfall: *„`../caprock-messbasis` ist zusätzlich relativ: in
+  einem `git worktree` zeigt der Pfad neben den Arbeitsbaum statt neben die
+  Hauptauscheckung."* Er wird **nicht grün gebucht**, sondern als nicht gemessen gezählt.
+  *Der Satz stand da — und niemand hatte gefragt, ob der Pfad dann NEBEN der
+  Hauptauscheckung liegt.* **Eine benannte Lücke ist keine gemessene.**
+* **Erscheint seine Zahl in der Schlusszeile?** Jetzt ja — vorher nur als `1 nicht fahrbar`,
+  ohne dass irgendwo stand, was damit ungemessen bleibt. Er ist der Grund für die zweite
+  Liste oben.
+* **Und stimmt der Grund?** *Nur zur Hälfte.* Die Messbasis liegt da:
+  `/home/simon/Dokumente/caprock-messbasis` **existiert**. Gefahren gegen genau diesen Pfad,
+  aus diesem Arbeitsbaum heraus:
+
+```
+  ./instrumente/zaehle-b3.py /home/simon/Dokumente/caprock-messbasis   ->  rc=0
+  Dateien 105 | Ruempfe 2536 | mit Schleife 462 | Abbrueche 0
+  BUCHSTABE (Na+Nb1) 12 Ruempfe · BERICHTET (+Nb2) 26 Ruempfe · 0,953 %
+```
+
+> **`48 von 49` ist damit eine Aussage über den ARBEITSBAUM, nicht über den Baum.** Auf der
+> Hauptauscheckung löst `../caprock-messbasis` richtig auf, und die Abnahme fährt **49 von
+> 49**. Ein Wächter, dessen Urteil davon abhängt, aus welcher Auscheckung er läuft, ist
+> dieselbe Klasse wie einer, dessen Urteil am Rechner hängt — nur eine Ebene kleiner.
+
+#### Und dann doch geheilt — ohne `git`, an EINER Stelle
+
+Der Grund, es zu buchen, war der Riegel aus derselben Datei: *wer `git` liest, liest den
+Rücklaufwert.* **Der Riegel ist gar nicht nötig.** Ein `git worktree` trägt seine Herkunft im
+Dateisystem: `.git` ist dort eine **Datei** mit `gitdir: <hauptauscheckung>/.git/worktrees/<name>`,
+in einer gewöhnlichen Auscheckung ein **Verzeichnis**. Kein Unterprozess, kein Rücklaufwert,
+kein `git` im `PATH`.
+
+`pruefe-waechter.hauptauscheckung()` liest genau das, und `korpus_ort()` löst damit **jeden
+deklarierten Korpuspfad an einer Stelle auf** — gelesen von `korpus_fehlt()` *und* von
+`abnahme.py`, das denselben Pfad als **Argument** an den Wächter gibt. *Zwei Auflösungen eines
+Pfades sind der Weg, auf dem ein Lauf einen Korpus als vorhanden meldet und dann ein anderes
+Verzeichnis misst* (W7).
+
+**Alles Unerwartete fällt auf den Baum selbst zurück** — die alte Antwort, die in Richtung
+`NICHT FAHRBAR` irrt und nie in Richtung falsches Grün. Sechs Sprechproben, auf **erfundenen**
+Auscheckungen in einer Wegwerf-Ablage, denn eine Probe, die den Baum liest, in dem sie läuft,
+besteht oder fällt danach, wo jemand das Repository hingelegt hat:
+
+| Fall | verlangt |
+|---|---|
+| gewöhnliche Auscheckung | ist ihre eigene Hauptauscheckung |
+| `git worktree` | findet die Hauptauscheckung darüber |
+| `.git`-Datei ohne `gitdir:` | fällt auf den Baum selbst zurück |
+| gar kein `.git` | ebenso — **nie auf einen erratenen Ort** |
+| absoluter Korpuspfad | bleibt, wie er ist |
+| relativer Korpuspfad | gegen die HAUPTauscheckung, nicht gegen den Arbeitsbaum |
+
+**Gemessen danach, im selben Arbeitsbaum:**
+
+```
+  gruen   zaehle-b3.py   3,3 s [0]   bekommt `/home/simon/Dokumente/caprock-messbasis`
+== Arbeitsmenge: 46 von 49 Waechtern haben GEMESSEN -- 45 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 0 nicht fahrbar, 3 ausgelassen
+```
+
+**`1 nicht fahrbar` ist auf `0` gefallen, und die Arbeitsmenge von 45 auf 46** — ohne dass
+irgendetwas am Baum anders geworden wäre. *Die Zahl hatte die ganze Zeit den Arbeitsbaum
+gemessen.* Auf `ki-pc-fisch-101` bleibt der Eintrag richtig: dort liegt die Messbasis nicht,
+und `zaehle-b3.py` steht dort weiter als benannte Lücke.
 
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister

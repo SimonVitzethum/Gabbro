@@ -113,10 +113,13 @@ _spec.loader.exec_module(_pw)
 _abschnitt = _pw._abschnitt          # the shared cut notice, through the one register (W7)
 
 SCHWER = _pw.SCHWER
+GEGENSTAND = _pw.GEGENSTAND
+teilmessungen = _pw.teilmessungen      # the dangerous places, counted the ONE way (W7)
 ARGUMENTE = _pw.ARGUMENTE
 FRIST = _pw.FRIST
 OHNE_URTEIL = _pw.OHNE_URTEIL
 korpus_fehlt = _pw.korpus_fehlt
+korpus_ort = _pw.korpus_ort            # one resolution of one corpus path (W7)
 
 # **The heavy ones get their own deadline, and it is not a comfort setting.**
 # `mutiere-pruefer.py` WRITES INTO SOURCES and puts them back byte for byte afterwards. Killed
@@ -201,7 +204,12 @@ def fahre_einen(p, voll, arbeitsverzeichnis):
     `marke` is one of `gruen` · `ROT` · `ABBRUCH` · `NICHT FAHRBAR` · `ausgelassen`.
     """
     teuer = p.name in SCHWER
-    args = [str(pathlib.Path(a).expanduser()) if a.startswith("~") else a
+    # **The corpus path is resolved in ONE place, and both readers use it** (W7). Until
+    # 2026-08-31 this line expanded `~` and left `../caprock-messbasis` alone -- so from a
+    # worktree the guardian was asked about a directory two levels away from the one
+    # `korpus_fehlt()` had just looked for. *Two resolutions of one path is how a run reports
+    # a corpus as present and then measures a different directory.*
+    args = [str(korpus_ort(a)) if (a.startswith("~") or a.startswith("..")) else a
             for a in ARGUMENTE.get(p.name, [])]
     angemeldet = p.name in ARGUMENTE
     nachsatz = ""
@@ -299,6 +307,61 @@ def urteil(ergebnisse):
     return code, gemessen, gruen, rot, ab, nf, aus, teil
 
 
+def gegenstand(wurzel, ergebnisse):
+    """`(gesehen, gesamt, ungesehen_je_waechter)` -- the OBJECT, not the cast.
+
+    **The closing line counted guardians, and a tree is not measured in guardians.** On
+    2026-08-31 the quick run reported `45 von 49 Waechtern haben GEMESSEN` while the three it
+    had left out carried 47 of the 92 dangerous places between them -- 45 in
+    `pruefe-emission.sh` alone. *The number was right and its denominator was the wrong
+    thing* (W25), and whoever read it read a verdict on the tree.
+
+    **The unit is the one this workshop already counts.** `pruefe-waechter.teilmessungen()`
+    walks every guardian for the places where a run leaves with `1` and output would still
+    follow -- the same sieve, the same code, merely split per guardian instead of summed. So
+    this is not a second register over the same thing (W7): it is the same register read a
+    second way, and a guardian that gains a place gains it in both numbers at once.
+
+    **`gesehen` is an UPPER bound, and it says so where it is printed.** A guardian run with
+    only half its arguments (`SCHNELL_TEIL`) counts as seen because it started; the places
+    behind the half that did not run were not visited. A `TEILMESSUNG` counts as seen for the
+    same reason and for the same lie -- it stopped somewhere in the middle. *Both push the
+    number up, never down, which is the direction a bound may err in.*
+    """
+    je = {p.name: teilmessungen([p])[3] for p in besetzung(wurzel)}
+    gesamt = sum(je.values())
+    # **Whoever did not MEASURE did not visit his places either.** The three marks are the
+    # same three that fall out of the work quantity in `urteil()` -- one boundary, drawn once.
+    ungesehen = {n: je.get(n, 0) for n, m, *_ in ergebnisse
+                 if m in ("ausgelassen", "NICHT FAHRBAR", "ABBRUCH") and je.get(n, 0)}
+    return gesamt - sum(ungesehen.values()), gesamt, ungesehen
+
+
+def schlusssatz(gemessen, gruen, wieviele, gesehen, g_gesamt, luecke):
+    """The closing sentence, as a list of lines -- **two sentences, not one with a suffix.**
+
+    **Green with a named gap is not the same as green, and it is not red either**
+    (2026-08-31). A quick run that can never look green again is no help: nobody drives it,
+    and then the four expensive guardians are the only measurement there is -- which is
+    exactly the road by which they stopped being driven at all. So the word stays `GRUEN` and
+    the return code stays `0`. What changes is that the sentence now says HOW MUCH OF THE
+    OBJECT this green covers, and that the two cases are visibly different sentences.
+
+    *It is a function and not four `print` calls inside `main` so that the speech test can
+    read both directions* -- the number underneath was already provable, the SENTENCE was not.
+    """
+    anteil = f" -- {round(100 * gesehen / g_gesamt)} %" if g_gesamt else ""
+    if luecke:
+        return [f"  ABNAHME GRUEN MIT BENANNTER LUECKE: {gemessen} von {wieviele} Waechtern,",
+                f"  und hoechstens {gesehen} von {g_gesamt} gefaehrlichen Stellen{anteil}."
+                "  **Gruen heisst hier:",
+                "  was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist. Der",
+                "  Rest steht oben mit Namen und Zahl, und `--voll` faehrt ihn."]
+    return [f"  ABNAHME GRUEN: {gruen} von {gruen} messenden Waechtern -- und",
+            f"  {gesehen} von {g_gesamt} gefaehrlichen Stellen. **Kein Wort davon ist",
+            "  ausgelassen, und keiner ist ungesehen geblieben.**"]
+
+
 def sprechprobe():
     """**In alle Richtungen, auf ERFUNDENEN Waechtern.**
 
@@ -368,6 +431,55 @@ def sprechprobe():
         leer.mkdir()
         rc0, gemessen0, *_ = urteil(fahre(leer, voll=True, arbeitsverzeichnis=leer))
         proben.append(("null gemessen ist ABBRUCH, nicht gruen", rc0 == 2 and gemessen0 == 0))
+    # **AND THE OBJECT COUNT ON ITS OWN CARRIER -- three directions** (2026-08-31).
+    #
+    # Its own directory, because the probes above assert `len(erg) == 5` and a sixth invented
+    # guardian would break them. *A probe that changes the run it sits in measures that run
+    # and not its subject* -- the reentrancy fault this file paid for the same evening.
+    #
+    # `pruefe-tief.sh` carries two dangerous places (three `exit 1` with output on both
+    # sides, the first one not counted); `pruefe-flach.sh` carries none. **The third
+    # direction is the one that keeps the number honest:** leaving out a guardian with an
+    # EMPTY object must not open a gap, or the line measures the omission instead of the
+    # object -- and then every quick run reads as blind, which is no help either.
+    with tempfile.TemporaryDirectory() as d:
+        gp = pathlib.Path(d)
+        (gp / "pruefe-tief.sh").write_text(
+            "#!/bin/sh\necho 'Stufe 1'\nexit 1\necho 'Stufe 2'\nexit 1\n"
+            "echo 'Stufe 3'\nexit 1\necho 'Stufe 4'\n")
+        (gp / "pruefe-flach.sh").write_text("#!/bin/sh\necho 'alles gesehen'\nexit 0\n")
+        for f in gp.iterdir():
+            f.chmod(0o755)
+        voll_erg = [("pruefe-tief.sh", "ROT", 1, 0.0, ""),
+                    ("pruefe-flach.sh", "gruen", 0, 0.0, "")]
+        g1, ges1, off1 = gegenstand(gp, voll_erg)
+        proben.append(("der GEGENSTAND wird gezaehlt, nicht die Besetzung: 2 Stellen",
+                       ges1 == 2 and g1 == 2 and not off1))
+        aus_erg = [("pruefe-tief.sh", "ausgelassen", None, 0.0, ""),
+                   ("pruefe-flach.sh", "gruen", 0, 0.0, "")]
+        g2, ges2, off2 = gegenstand(gp, aus_erg)
+        proben.append(("ein ausgelassener Waechter NIMMT SEINEN GEGENSTAND MIT: 0 von 2",
+                       ges2 == 2 and g2 == 0 and off2 == {"pruefe-tief.sh": 2}))
+        leer_erg = [("pruefe-tief.sh", "gruen", 0, 0.0, ""),
+                    ("pruefe-flach.sh", "ausgelassen", None, 0.0, "")]
+        g3, ges3, off3 = gegenstand(gp, leer_erg)
+        proben.append(("und eine Auslassung OHNE Gegenstand oeffnet keine Luecke: 2 von 2",
+                       ges3 == 2 and g3 == 2 and not off3))
+    # **AND THE SENTENCE ITSELF, in both directions.** The number above was provable, the
+    # closing line was not -- and the closing line is what a reader actually reads. Two
+    # requirements, and the second is the one that is easy to lose: a gap must be visible,
+    # AND a run without a gap must not carry the gap wording. *A sentence that always warns
+    # says nothing; one that never warns says less.*
+    mit = "\n".join(schlusssatz(45, 44, 49, 45, 92, luecke=True))
+    ohne = "\n".join(schlusssatz(49, 49, 49, 92, 92, luecke=False))
+    proben.append(("die Luecke steht IM Satz, mit beiden Zahlen",
+                   "MIT BENANNTER LUECKE" in mit and "45 von 49" in mit
+                   and "45 von 92" in mit and "49 %" in mit))
+    proben.append(("und ohne Luecke traegt der Satz KEINE -- 92 von 92",
+                   "LUECKE" not in ohne and "92 von 92" in ohne))
+    proben.append(("beide bleiben GRUEN -- die Luecke ist kein Befund",
+                   mit.lstrip().startswith("ABNAHME GRUEN")
+                   and ohne.lstrip().startswith("ABNAHME GRUEN") and mit != ohne))
     return proben
 
 
@@ -403,6 +515,36 @@ def main():
           f"{gruen} gruen, {rot} ROT, {teil} TEILMESSUNG ==")
     print(f"   {ab} ABBRUCH, {nf} nicht fahrbar, {aus} ausgelassen -- **die drei haben")
     print("   NICHTS gemessen und stehen darum nicht in der Zahl davor.**")
+
+    # **AND THE SECOND NUMBER, over the OBJECT** (2026-08-31). The line above counts
+    # guardians; a tree is not measured in guardians. See `gegenstand()` for why the unit is
+    # the dangerous places and why the count is an upper bound.
+    gesehen, g_gesamt, ungesehen = gegenstand(inst, erg)
+    anteil = f" -- {round(100 * gesehen / g_gesamt)} %" if g_gesamt else ""
+    print(f"== Und ihr GEGENSTAND: hoechstens {gesehen} von {g_gesamt} gefaehrlichen "
+          f"Stellen besucht{anteil} ==")
+    # **And the ones whose object is NOT in this unit get named anyway.** `zaehle-b3.py`
+    # carries zero dangerous places and 105 files of a foreign tree: it costs nothing in the
+    # fraction and everything in the thing measured. *Whoever prints only the fraction loses
+    # exactly the guardian whose absence has no place to show up in.*
+    benannt = {n: (ungesehen.get(n, 0), GEGENSTAND[n]) for n, m, *_ in erg
+               if m in ("ausgelassen", "NICHT FAHRBAR", "ABBRUCH") and n in GEGENSTAND}
+    for n, k in ungesehen.items():
+        benannt.setdefault(n, (k, ""))
+    if benannt:
+        print(f"   {sum(ungesehen.values())} davon stehen in Waechtern, die dieser Lauf "
+              f"nicht gefahren hat -- und was mit ihnen ungemessen bleibt:")
+        for name, (n, was) in sorted(benannt.items(), key=lambda r: (-r[1][0], r[0])):
+            print(f"     {name:<26} {n:>3} Stellen   {was}")
+    else:
+        print("   Kein ungefahrener Waechter traegt eine -- der Lauf hat den ganzen")
+        print("   gezaehlten Gegenstand angesehen.")
+    print(f"   **`{gemessen} von {len(alle)} Waechtern` und `{gesehen} von {g_gesamt} "
+          f"Stellen` sind ZWEI Zahlen.**")
+    print("   Die erste stand hier seit jeher, die zweite nicht -- und die zweite ist die")
+    print("   ueber den GEGENSTAND (W25: eine Zahl belegt ihren Nenner, nicht ihre")
+    print("   Beschriftung). *Hoechstens*, weil ein halb gefahrener Waechter und eine")
+    print("   TEILMESSUNG hier als gesehen zaehlen -- die Schranke irrt nach OBEN.")
 
     teilweise = [n for n, m, _, _, b in erg if n in SCHNELL_TEIL and "--voll" in b]
     if aus or teilweise:
@@ -483,10 +625,12 @@ def main():
             if marke == "ROT":
                 print(f"   {name:<26} [{rc}]  {bem}")
     if not ab and not rot and not teil:
-        if nf:
-            print(f"\n  ABNAHME GRUEN MIT LUECKE: {nf} Waechter sind nicht gefahren.")
-        else:
-            print(f"\n  ABNAHME GRUEN: {gruen} von {gruen} messenden Waechtern.")
+        # The sentence lives in `schlusssatz()`, where the speech test can read BOTH of its
+        # directions -- see there for why green with a named gap stays green.
+        print()
+        for zeile in schlusssatz(gemessen, gruen, len(alle), gesehen, g_gesamt,
+                                 bool(benannt or nf)):
+            print(zeile)
     return code
 
 
