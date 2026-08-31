@@ -6404,3 +6404,144 @@ impl fn setze(k : ptr<normal, rw> Klein, i : index into Ring)
         a.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
     );
 }
+
+/// **`D014`-`D016`: the chain names its edge AT THE WALK, and nobody read it.**
+///
+/// `messung/DOMAENENNAMEN.md`, 2026-08-31: five falsifications of the edge in
+/// `beispiele/55-kindkette.gab`, in `ensures`, in an `invariant` and in the body of a `spec
+/// fn` -- **0 errors and 0 `C001` every time**, while `tree { child gibtsnicht }` at the very
+/// same table falls at `D006`.
+///
+/// The test has **three halves**, and the third is the one that makes a rule honest:
+///
+/// 1. one poison probe per class,
+/// 2. **the counter-direction** -- what was green stays green, and that expressly includes
+///    the two falsifications this rule does NOT catch (the exchanged pair and
+///    `chain(parent, parent)`): both are well-formed chains, and refusing them would need a
+///    statement about what was meant,
+/// 3. **all four positions** -- `ensures`, `requires`, `invariant`, `traverse`. The rule does
+///    not hang on the one clause that `M109` reads.
+#[test]
+fn die_kettenkante_wird_gegen_ihre_tabelle_gehalten() {
+    const TABELLE: &str = "table N count 4 { slot { w : u32, } }
+table T count 8 {
+    tree { parent elter, child kind, sibling gesch }
+    slot {
+        belegt  : bool,
+        elter   : option index into T,
+        kind    : option index into T,
+        gesch   : option index into T,
+        fremd   : option index into N,
+        blank   : index into T,
+    } }";
+
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit_ensures(kette: &str) -> String {
+        format!(
+            "module t {{ {TABELLE}
+impl fn f(t : ptr<normal, rw> T, p : index into T)
+    ensures forall x in {kette} in t.slots[p] : t.slots[x].belegt
+    effects {{ reads t.slots, writes t.slots }} costs <= 4 ops {{ }} }}"
+        )
+    }
+
+    // 1 -- one probe per class.
+    for (kette, code) in [
+        ("chain(gibtsnicht, auchnicht)", "D014"),
+        ("chain(belegt, belegt)", "D015"),
+        ("chain(blank, blank)", "D015"),
+        ("chain(fremd, fremd)", "D016"),
+    ] {
+        let g = absagen(&mit_ensures(kette));
+        assert!(
+            g.iter().any(|c| c == code),
+            "{kette} muss an {code} fallen, gefallen ist: {g:?}"
+        );
+    }
+
+    // 2 -- the counter-direction. **A refusal without a clean control is half a measurement.**
+    for kette in [
+        "chain(kind, gesch)",  // the declared chain
+        "chain(gesch, kind)",  // exchanged -- structurally still a chain
+        "chain(elter, elter)", // the ancestor chain
+        "chain(kind, kind)",   // the leftmost spine of the tree
+    ] {
+        let g = absagen(&mit_ensures(kette));
+        assert!(
+            !g.iter().any(|c| c.starts_with("D01")),
+            "{kette} ist wohlgeformt und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- all four positions. `M109` reads only `ensures`; this rule reads all of them.
+    let stellungen = [
+        (
+            "requires",
+            format!(
+                "module t {{ {TABELLE}
+impl fn f(t : ptr<normal, rw> T, p : index into T)
+    requires forall x in chain(gibtsnicht, auchnicht) in t.slots[p] : t.slots[x].belegt
+    effects {{ reads t.slots }} costs <= 4 ops {{ }} }}"
+            ),
+        ),
+        (
+            "invariant",
+            format!(
+                "module t {{ table N count 4 {{ slot {{ w : u32, }} }}
+table T count 8 {{
+    tree {{ parent elter, child kind, sibling gesch }}
+    slot {{ belegt : bool, elter : option index into T,
+            kind : option index into T, gesch : option index into T, }}
+    invariant i cost O(n) runs offline :
+        forall s in slots of Self :
+            forall x in chain(gibtsnicht, auchnicht) in Self.slots[s] :
+                Self.slots[x].belegt;
+}} }}"
+            ),
+        ),
+        (
+            "spec fn",
+            format!(
+                "module t {{ {TABELLE}
+spec fn f(t : ptr<normal, r> T, p : index into T) -> bool
+    effects {{ pure }}
+    = forall x in chain(gibtsnicht, auchnicht) in t.slots[p] : t.slots[x].belegt; }}"
+            ),
+        ),
+        (
+            "traverse",
+            format!(
+                "module t {{ {TABELLE}
+impl fn f(t : ptr<normal, rw> T, p : index into T)
+    effects {{ reads t.slots, writes t.slots }} costs <= 64 ops
+{{ traverse x over chain(gibtsnicht, auchnicht) in t.slots[p] by unvisited
+       touches reads t.slots, writes t.slots {{ t.slots[x].belegt = true; }} }} }}"
+            ),
+        ),
+    ];
+    for (stellung, quelle) in stellungen {
+        let g = absagen(&quelle);
+        assert!(
+            g.iter().any(|c| c == "D014"),
+            "in `{stellung}` muss D014 fallen, gefallen ist: {g:?}"
+        );
+    }
+
+    // And the carrier that is NOT a table: the rule stays silent instead of guessing. That
+    // is the S2 gap of `messung/DOMAENENNAMEN.md`, held here so that a later extension
+    // closes it with its eyes open.
+    let g = absagen(
+        "module t { type R = { a : [u32; 4], k : u32, };
+impl fn f(r : ptr<normal, rw> R)
+    ensures forall x in chain(gibtsnicht, auchnicht) in r : r.k == 0
+    effects { reads r, writes r } costs <= 4 ops { } }",
+    );
+    assert!(
+        !g.iter().any(|c| c.starts_with("D01")),
+        "ueber einem Verbund schweigt die Regel: {g:?}"
+    );
+}

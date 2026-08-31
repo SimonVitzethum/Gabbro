@@ -1,0 +1,38 @@
+-- erwartet: D015
+-- **Eine Kette muss ENDEN koennen, und ein `bool` kann es nicht.**
+--
+-- `chain(belegt, belegt)` benennt ein Feld, das es gibt -- also faellt `D014` hier nicht.
+-- Es ist nur keine Kante: ein `bool` zeigt nirgendwohin. Dieselbe Datei mit `elter` statt
+-- `belegt` ist gruen, und das ist die Gegenprobe.
+--
+-- **`D015` ist `D007` Wort fuer Wort**, und der Sonderwert dahinter ist derselbe: `count`
+-- selbst (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). Damit faellt hier auch
+-- ein `index into Kappraum` OHNE `option` -- es hat kein Ende, und eine Kette ohne Ende
+-- laeuft, solange die Tabelle Plaetze hat.
+--
+-- Gemessen in `messung/DOMAENENNAMEN.md`.
+
+module gift {
+
+const N : u32 = 32;
+
+table Kappraum count N {
+    tree { parent elter, child erstes_kind, sibling naechstes_geschwister }
+
+    slot {
+        belegt                : bool,
+        elter                 : option index into Kappraum,
+        erstes_kind           : option index into Kappraum,
+        naechstes_geschwister : option index into Kappraum,
+    }
+}
+
+impl fn kette(c : ptr<normal, rw> Kappraum, p : index into Kappraum)
+    ensures forall x in chain(belegt, belegt) in c.slots[p] :
+                c.slots[x].elter == Some(p)
+    effects { reads c.slots, writes c.slots }
+    costs   <= 4 ops
+{
+}
+
+}

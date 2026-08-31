@@ -1846,6 +1846,23 @@ MARKE_EMIT=57
 # is one the checker let through, so stage 9 holds both halves of the narrowing at once.
 # *Its six brothers in that directory do NOT emit, because `N042` refuses them -- which is
 # what they are there to show.*
+#
+# **30 -> 31 on 2026-08-31, and it is a GROWING SUBJECT again.**
+# `messung/proben/probe-neun-domaenen.gab` carries all NINE quantifier domains in one unit,
+# each in an `ensures` -- the carrier on which `messung/DOMAENENNAMEN.md` sets its 32
+# falsifications, and the one place where `fields of` stands in a program at all (it had
+# ZERO sites in the whole corpus). It emits and compiles.
+#
+# > *And it did not, in its first cut.* The `walk` descended through a `reserved` field, and
+# > the generator emitted a call to an accessor it does not generate -- `implicit declaration
+# > of function 'Wort_rest'`. **Stage 9 caught it, and no other stage would have**: `gabbro
+# > pruefe` said 0 errors and `gabbro emit` said 0 `C001` over exactly that text. A
+# > measurement carrier that does not compile measures the checker and nothing else.
+# **UNGEPRUEFT ueber der VEREINIGUNG, 2026-08-31.** Beide Bahnen massen 30 -> 31, jede fuer
+# eine ANDERE Datei; die Vereinigung ist damit hoeher, und Stufe 9 bricht vorher an `F06`
+# ab (`N043`). *Eine Marke, die niemand gemessen hat, waere schlimmer als eine, die faellt* --
+# also steht hier die belegte Zahl, und der naechste volle Lauf nennt die richtige als FUND.
+MARKE_EMIT_M=31
 MARKE_EMIT_M=31
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.

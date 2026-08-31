@@ -487,6 +487,35 @@ pub const D1D2: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; SPRACHE.md §10",
     },
     Satz {
+        name: "d.kettenkante",
+        kennungen: &["D014", "D015", "D016"],
+        aussage: "The two field names of `chain(a, b) in <place>` are held against the table \
+                  the chain walks: each names a real slot field (`D014`), each is an `option \
+                  index into` that table (`D015`), and neither points into a foreign one \
+                  (`D016`). **The same three questions as `d.baumkante`, and deliberately \
+                  the same wording** -- `chain` is the one domain that names its edge AT THE \
+                  WALK instead of at the declaration, and until 2026-08-31 that was the one \
+                  edge nobody read.",
+        vorbehalt: "**Two of the five measured falsifications still pass, and under Regel A \
+                    they must.** `chain(sibling, child)` -- the declared pair with the roles \
+                    exchanged -- and `chain(parent, parent)` are structurally well-formed \
+                    chains: `chain(x, x)` walks a spine and stands in the corpus \
+                    (messung/proben/probe-vier-zellen.gab, `chain(naechst, naechst)`). \
+                    Refusing them needs a statement about what the author MEANT. **And when \
+                    the place does not resolve to a table the pass is SILENT** -- the type \
+                    of a domain's place is checked by nobody, for all nine domains, and that \
+                    gap is named and measured in messung/DOMAENENNAMEN.md, not closed here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: 417 (`D014`, the field does not exist), 418 (`D015`, a \
+                      `bool` -- no edge, no end), 419 (`D016`, an edge into another table). \
+                      The clean side is beispiele/55-kindkette.gab and \
+                      messung/proben/probe-neun-domaenen.gab; the counter-direction (the \
+                      reversed pair, `chain(parent, parent)`, `chain(child, child)`) is \
+                      measured green at each of them.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; messung/DOMAENENNAMEN.md; \
+                     SYNTAX.md:1060",
+    },
+    Satz {
         name: "d.undurchsichtig",
         kennungen: &["D003", "D004"],
         aussage: "Outside the declaring module an `opaque type` has neither the arithmetic \

@@ -779,6 +779,37 @@ MUTATIONEN = [
         "K001 -- an `index into T` no longer names its table, so a `traverse` over it has "
         "no bound and falls back to `K003`",
     ),
+    # -- domaene.rs: die KETTENkante (2026-08-31) ----------------------------------------
+    #
+    # `chain(a, b) in` is the one domain that names its edge AT THE WALK, and until this day
+    # nobody read the two names. **Three rules, three mutations** -- and each of them is the
+    # state the checker was in yesterday, so a survivor here would say the rule went back to
+    # where it came from. `messung/DOMAENENNAMEN.md`.
+    Mutation(
+        "kettenkante-nimmt-irgendein-feld",
+        "domaene.rs",
+        "    let Some((_, typ)) = felder.iter().find(|(n, _)| *n == kante.text) else {",
+        "    let Some((_, typ)) = felder.iter().find(|(n, _)| *n == kante.text)"
+        ".or(felder.first()) else {",
+        "D014 -- a chain edge that names no field silently takes the FIRST slot field "
+        "instead, so `chain(gibtsnicht, auchnicht)` stands again",
+    ),
+    Mutation(
+        "kettenkante-braucht-kein-ende",
+        "domaene.rs",
+        '    let Some(ziel) = name.strip_prefix("option index into ") else {',
+        '    let Some(ziel) = name.strip_prefix("option index into ").or(Some(kurz)) else {',
+        "D015 -- a chain edge no longer has to be `option index into`, so a `bool` is an "
+        "edge again and a chain has no end",
+    ),
+    Mutation(
+        "kettenkante-darf-hinaus",
+        "domaene.rs",
+        "    if kurzname(ziel) != kurz {",
+        "    if false && kurzname(ziel) != kurz {",
+        "D016 -- a chain edge may point into a FOREIGN table, so the walk leaves its own "
+        "table at the first step",
+    ),
     Mutation(
         "index-erbt-nicht",
         "umgebung.rs",

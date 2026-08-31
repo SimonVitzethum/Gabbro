@@ -1,0 +1,41 @@
+-- erwartet: D016
+-- **Eine Kette bleibt in der Tabelle, in der sie gelaufen wird.**
+--
+-- `nachbar : option index into Nachbarraum` ist ein tadelloses Feld und ein tadelloser
+-- Optionsindex -- also faellt weder `D014` noch `D015`. Es zeigt nur HINAUS: `chain(nachbar,
+-- nachbar) in c.slots[p]` laeuft in `Kappraum` und tritt beim ersten Schritt heraus.
+--
+-- **`D016` ist `D008` Wort fuer Wort:** eine Kante in eine fremde Tabelle ist ein
+-- Fremdschluessel, und `chain(a, b) in` sagt darueber nichts. *Der Index waere dort sogar
+-- typkorrekt -- er zaehlt Plaetze, nur die der falschen Tabelle.*
+--
+-- Gemessen in `messung/DOMAENENNAMEN.md`.
+
+module gift {
+
+const N : u32 = 32;
+
+table Nachbarraum count N {
+    slot { wert : u32, }
+}
+
+table Kappraum count N {
+    tree { parent elter, child erstes_kind, sibling naechstes_geschwister }
+
+    slot {
+        elter                 : option index into Kappraum,
+        erstes_kind           : option index into Kappraum,
+        naechstes_geschwister : option index into Kappraum,
+        nachbar               : option index into Nachbarraum,
+    }
+}
+
+impl fn kette(c : ptr<normal, rw> Kappraum, p : index into Kappraum)
+    ensures forall x in chain(nachbar, nachbar) in c.slots[p] :
+                c.slots[x].elter == Some(p)
+    effects { reads c.slots, writes c.slots }
+    costs   <= 4 ops
+{
+}
+
+}
