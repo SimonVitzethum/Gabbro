@@ -195,11 +195,57 @@ aufgenommen, und `ABBRUCH_GEBUCHT` steht leer.
   Sprachentscheidung des Ordners, kein Werkzeugfehler.
 * **Die 180 unbewachten Zellen sind jetzt ehrlich gezählt und damit größer geworden.** 41
   davon tragend, 37 mit geschriebenem Grund, **4 offen** — das ist die Arbeitsliste.
-* **Der leere Baum ist die billigste Absage, nicht die einzige.** Ein Wächter, dessen
-  Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.
+* ~~**Der leere Baum ist die billigste Absage, nicht die einzige.** Ein Wächter, dessen
+  Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
+  **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
+  *Der Schnitt mitten im Lauf* darunter: **43 von 49** Wächtern können mitten im Lauf
+  abbrechen, **249 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
 * **`OHNE_URTEIL` steht leer, und das ist eine Zusage an die Zukunft, keine Messung über
   sie.** Wer einen Zähler wieder herausnimmt, schreibt den Grund dazu — die Zahl der
   Ausgenommenen druckt die Abnahme.
+
+## Der Schnitt mitten im Lauf — der Posten, den der leere Baum offen lässt
+
+*Gemessen 2026-08-31 mit `./instrumente/pruefe-waechter.py` (Abschnitt „Ein Abbruch MITTEN
+im Lauf"), Sprechprobe in beide Richtungen im selben Lauf.*
+
+```
+43 von 49 Wächtern können mitten im Lauf abbrechen
+249 Ausgangsstellen liegen hinter dem jeweils ersten
+  pruefe-emission.sh   62 Ausgänge, 156 Druckstellen dahinter
+  mutiere-pruefer.py   12 Ausgänge,  50
+  pruefe-syntax.sh     11 Ausgänge,  14
+  zaehle-pflichten.py  10 Ausgänge,  67
+  pruefe-lean-beweis.sh 8 Ausgänge,  32
+```
+
+**Der Fall, an dem die Klasse ihren Namen bekommen hat.** `pruefe-emission.sh` starb am
+2026-08-31 an `F06`s `N043` in der vierten von zehn Stufen, mit `exit 1`. **Die Stufen 9 und
+10 liefen nie, und keine Zeile sagte das.** Hinter dem Schnitt standen zwei Befunde, die
+zwei Wochen niemand gesehen hat:
+
+* sechs Dateien in `messung/tor-proben/`, deren erzeugtes C nicht übersetzt
+  (`'return' with no value, in function returning non-void` — ein leeres `return` in einem
+  `can_fail`-Block, den kein Pass liest);
+* `MARKE_EMIT_M` stand auf 31, gemessen waren 38 — und `CLAUDE.md` führte den Posten
+  ausdrücklich als *„der nächste volle Lauf nennt die richtige als FUND"*.
+
+> *Eine leere Grundgesamtheit ist ein grünes Urteil über nichts (W17). Eine ABGESCHNITTENE
+> ist schlimmer: sie sieht aus wie ein Urteil über alles.* Und der Rücklaufwert half nicht —
+> `1` las sich als Stufenbefund und war zugleich ein Abbruch für alles dahinter. **Die dritte
+> Klasse der Tafel oben kennt „nichts gemessen"; sie kennt „die Hälfte gemessen" nicht.**
+
+**Was die Zahl misst, und was nicht.** Gezählt wird die FLÄCHE: alles hinter dem ersten
+Ausgang mit einem Rücklaufwert ungleich null, sofern dahinter noch mindestens einmal
+gedruckt wird. Sie sagt **nicht**, dass einer dieser Ausgänge falsch ist — eine Sprechprobe
+am Dateianfang SOLL alles dahinter beenden, und das ist ihr Zweck. Sie sagt, wo man
+nachsehen muss, und sie ist eine OBERE Schranke. *Sie verpflichtet, sie spricht nicht frei*
+(W10).
+
+**Und was daraus folgt, steht als Form und nicht als Zahl da:** wer mitten im Lauf abbricht,
+schreibt dazu, was er nicht mehr gemessen hat. `pruefe-emission.sh` hat es an diesem Tag
+nicht getan, und der Preis waren zwei Wochen.
 
 ## Was diese Tafel NICHT sagt
 
