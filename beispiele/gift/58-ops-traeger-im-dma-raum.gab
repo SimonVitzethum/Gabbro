@@ -7,6 +7,7 @@ table Ring count 8 {
     slot { belegt : bool, }
     -- Nachgezogen 2026-08-20: die Wortmenge von `ops` ist geschlossen («NL.1»).
     ops insert, remove;
+    occupied belegt;
 }
 impl fn anfassen(r : ptr<dma, rw> Ring)
     effects { reads r.slots }

@@ -30,6 +30,7 @@ table Objekte count NOBJEKTE {
     -- hielt sie bis heute nicht. *Dass ausgerechnet die Giftprobe erfundene Woerter trug,
     -- ist der Grund, aus dem die Luecke nicht auffiel.*
     ops insert, remove;
+    occupied benutzt;
 }
 
 impl fn von_hand_senken(o : ptr<normal, rw> Objekte, i : index into Objekte)

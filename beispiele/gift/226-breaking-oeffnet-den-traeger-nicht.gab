@@ -39,6 +39,7 @@ table Objekte count N {
     -- -- derselbe Grund, aus dem die Luecke so lange nicht auffiel: die Giftproben trugen
     -- sie alle.
     ops insert, remove;
+    occupied benutzt;
 }
 
 impl fn von_hand(o : ptr<normal, rw> Objekte, i : index into Objekte)
