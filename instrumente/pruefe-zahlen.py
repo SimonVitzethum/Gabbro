@@ -780,6 +780,23 @@ UNBEWACHBAR = [
     ("dokumente/MESSUNGEN.md", r"\| \*\*caught\*\* \| \*\*7\*\* \|", "PROTOKOLL",
      "ein Generatorlauf an seinem Tag; der heutige Stand ist `mutiere-pruefer.py`"),
 
+    # ---- MESSUNGEN.md: the three that were left OPEN until 2026-08-31 --------------------
+    #
+    # All three are dated records, and each has a LIVING counterpart that is measured
+    # elsewhere -- which is the whole reason they must not get a command of their own: two
+    # registers over one subject is W7, and a record that is given a command stops being a
+    # record.
+    ("dokumente/MESSUNGEN.md", r"\| \*\*generator templates\*\* \| \*\*0\*\*", "PROTOKOLL",
+     "die Flaechentafel vom Tag, an dem `32 of 32` berichtigt wurde; die LEBENDE Zahl "
+     "druckt `mutiere-pruefer.py` unter `Mutationen je Emissionsflaeche`"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*lines with zero mutations\*\* \| \*\*1 310\*\*",
+     "PROTOKOLL",
+     "eine Vorher/Nachher-Zeile, also ein Ereignis und kein Stand -- dieselbe Tafel fuehrt "
+     "`mutations 67 -> 87`, und die ist aus demselben Grund gebucht"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*ZUSAGE ohne Leser\*\* \| 13 \| \*\*0\*\*", "PROTOKOLL",
+     "die Berichtigungstafel `stand | ist`; die LEBENDE Null steht in `PLAN.md`:3402 MIT "
+     "`pruefe-klauseln.py` daneben und ist dort bewacht"),
+
     # ---- TODO.md: ordinals, not metrics -------------------------------------------------
     ("TODO.md", r"\| \*\*\d+\*\* \| keine Klempnerei beim Endnutzer", "KEINE KENNZAHL",
      "Ziel Nummer vier aus der Zieltafel"),
@@ -800,6 +817,11 @@ UNBEWACHBAR = [
      "Caprock-Zeilen, gemessen 2026-08-13 im fremden Baum"),
     ("dokumente/PLAN.md", r"\| \*\*\d+\*\* \| \*\*The preservation\*\* of the group invariant",
      "KEINE KENNZAHL", "Posten Nummer drei einer nummerierten Aufzaehlung"),
+    # **Its neighbour in the very same table, and it stood open for a day longer.** Rows 3,
+    # 4 and 5 of that list were booked and row 2 was not -- *a register that catches four of
+    # five rows of one table has found the class and missed a line.*
+    ("dokumente/PLAN.md", r"\| \*\*\d+\*\* \| \*\*The emission\*\* — C and annotation",
+     "KEINE KENNZAHL", "Posten Nummer zwei derselben nummerierten Aufzaehlung"),
     ("dokumente/PLAN.md", r"117 ms \| 117 ms \|", "KEIN INSTRUMENT",
      "Laufzeitverhaeltnis aus einem Messlauf, den dieser Ordner nicht wiederholt"),
     ("dokumente/PLAN.md", r"156 ms \| 210 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),

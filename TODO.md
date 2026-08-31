@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 74 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 74 over 12 passes -- 67 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 75 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -583,10 +583,13 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 104 sind tragend, 3 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 105 sind tragend, 3 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *86 → 87 am 2026-08-31: `N042` kam dazu und steht wie sein Nachbar `N041` in der
       unklaren Spalte — der Gegenstand ist um einen Code gewachsen, nicht die Unklarheit.*
+      *104 → 105 tragende am selben Tag: `N043` nennt die Absenkungseigenschaft in seinem
+      eigenen Text (`the report line`), also wächst die TRAGENDE Spalte und nicht die
+      unklare.*
       **Die Zahl sprang am 2026-08-30 von 57 auf 85, und der Sprung ist kein Rückschritt am
       Prüfer — er ist eine Reparatur am WÄCHTER.** Sein Lesefenster war 4000 Zeichen lang
       und endete an keiner Regelgrenze; wo zwei Absagen näher beieinander standen, las die
@@ -940,7 +943,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **362 von 362 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **363 von 363 Ankern** greifen (`--anker`, 2026-08-31 —
+      **362 → 363** durch `measures-darf-nennen-was-es-will` zu `N043`; der ganze Lauf
+      fängt 362 von 363, und die eine Überlebende ist die alte
+      (`ungelesene-bindung-bekommt-kein-void`) —
       **360 → 362** durch zwei EINZELNE Arme der `N042`-Aufzählung: der bloße Name einer
       `boot`-Strecke und der `pruefe_{c}` eines `check`. *Die zwei davor warfen fünf Proben
       zugleich um* — nachgemessen am selben Tag, und ihre „genau EINE"-Sätze standen daneben
@@ -3770,7 +3776,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 74 Sätze über 242 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 75 Sätze über 243 Codes, 45 Codes noch ohne).
 **Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*

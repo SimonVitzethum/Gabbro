@@ -16,14 +16,14 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **74** | `gabbro paesse` |
-| davon `measured` | **67** | ein Giftprobenfall oder eine gefangene Mutation |
+| Sätze im Register | **75** | `gabbro paesse` |
+| davon `measured` | **68** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon **`ARGUED`** | **2** | ein Korrektheitsargument ist aufgeschrieben — [`K001`](K001.md), [`H006`](H006.md). *Das erste fand eine Unterzählung um Faktor 3; der dritte Versuch ([`V2`](V2.md)) fand statt einer Messung den [Nichtdeterminismus](DETERMINISMUS.md) und blieb `CONJECTURED`* |
 | davon `CONJECTURED` | **6** | nichts misst sie |
 | davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
 | Pässe mit mindestens einem Satz | **12 von 12** | `gabbro paesse` |
-| Kennungen im Prüfer | **242** | `./pruefe-kennungen.py` |
-| davon von einem Satz beansprucht | **197** | `./instrumente/pruefe-saetze.py` |
+| Kennungen im Prüfer | **243** | `./pruefe-kennungen.py` |
+| davon von einem Satz beansprucht | **198** | `./instrumente/pruefe-saetze.py` |
 
 > **Die fünf Zahlen oben sind am 2026-08-31 nachgezogen, und die Ratsche STEIGT — mit Grund.**
 > Der Gegenstand ist gewachsen: `N042` kam dazu (`namen.erzeugter_name_zweimal`,
@@ -31,6 +31,11 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 > Zahlen daneben standen noch älter da — `davon measured` auf 48 statt 67, `Kennungen` auf 191
 > statt 242. *Eine Zahl, die zu tief steht, sieht aus wie eine gehaltene Ratsche und ist eine
 > vergessene.*
+>
+> **Und am selben Tag noch einmal um eins, aus demselben Grund:** `N043`
+> (`namen.berichtszeile`) — ein `measures`-Name ohne Träger, `messung/TORREICHWEITE.md`.
+> 74 → 75 Sätze, 242 → 243 Kennungen, 197 → 198 beansprucht, 67 → 68 `measured`; die 45
+> ohne Satz bleiben stehen. *Der zweite Zahn, zum zweiten Mal an einem Tag.*
 | **Kennungen ohne Satz — die Ratsche** | **45** | `./instrumente/pruefe-saetze.py` |
 
 **Die Schätzung im Plan war ~22 Sätze; es sind 43 geworden.** Der Grund ist kein
