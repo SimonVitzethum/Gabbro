@@ -202,12 +202,24 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Sammellauf gelesen.
 * **`pruefe-grammatiktafel.py` bleibt rot**, an seinen vier `UNGEDECKT`-Zellen. Eine
   Sprachentscheidung des Ordners, kein Werkzeugfehler.
-* **`pruefe-emission.sh` ist seit dem 2026-08-31 abends eine `TEILMESSUNG`, keine `ROT`.**
-  Er stirbt in **Stufe 9 von 10** an den sechs `messung/tor-proben/`, deren erzeugtes C
-  nicht übersetzt — **Stufe 10 (die Bibliothekskette) läuft nicht.** Vorher stand er als
-  Befund da, in derselben Zeile und derselben Farbe wie ein Wächter, der zu Ende gemessen
-  hat. *Die Zahl der Befunde daneben ist eine untere Schranke*, und der Rest gehört dem,
-  der `crates/` führt.
+* ~~**`pruefe-emission.sh` ist seit dem 2026-08-31 abends eine `TEILMESSUNG`, keine
+  `ROT`.**~~ Er starb in **Stufe 9 von 10** an den sechs `messung/tor-proben/`, deren
+  erzeugtes C nicht übersetzte — **Stufe 10 (die Bibliothekskette) lief nicht.**
+  **NACHGESEHEN am 2026-08-31 über `f08e5ad`, lokal, `rc=0`: Stufe 10 läuft, und sie ist
+  nicht nur angetreten.** Alle acht ihrer Teilproben stehen mit Text da — zwei `.gabi` je
+  mit Marke, die Ausfuhr ohne die beiden privaten Helfer, `pruefe` mit 0 errors über die
+  Grenze, drei getrennt übersetzte Einheiten unter `-Werror`, drei `pub`-Namen außen, ein
+  Programm aus drei Objekten unter `-O0` **und** `-O2`, das Ergebnis `2007 65535` (der
+  private Helfer hat gedeckelt) und **zwei Sprechproben, die beide beißen**: ein
+  verfälschter privater Helfer ändert das Ergebnis, und `N039` sagt ab, wo sonst der Binder
+  es getan hätte. Stufe 9 meldet **101 von 101** und eine umgekehrte Probe. *Der Posten ist
+  eingelöst, und er war eine Aussage über den `crates/`-Baum, nicht über den Wächter.*
+
+  > **Das ist der Beleg dafür, wozu die Marke da ist**, und er ist an einem Tag entstanden.
+  > Zwei Wochen lang sah derselbe Wächter aus wie einer, der zu Ende gemessen hat; seit
+  > gestern abend sagte er, wo er aufhörte; heute hört er nicht mehr dort auf. **Die Marke
+  > hat den Befund nicht geheilt — sie hat ihn SICHTBAR gemacht**, und geheilt hat ihn, wer
+  > `crates/` führt.
 * **18 von 99 emittierenden Dateien fallen bei `clang`, nicht bei `gcc`** — alle an
   `-Wunused-function` über emittierten `static inline`-Zugriffen. `MARKE_FAMILIENUNTERSCHIED`
   steht auf 18, gezogen und nicht geheilt; die Heilung gehört `emit.rs`.
@@ -456,6 +468,54 @@ Schirm steht und dahinter das, was nie lief.
 Und die Deckung ist keine Heilung: eine gedeckte Stelle bricht genauso mitten im Lauf ab —
 sie **sagt es nur**. `MARKE_TEILMESSUNG` in `pruefe-waechter.py` steht auf 0 und darf nur
 fallen.
+
+### Die Gegenzahl: wie oft wird heute WIRKLICH abgeschnitten?
+
+*Gemessen 2026-08-31 mit `./instrumente/abnahme.py`, lokal (`free -g`: 31 GB gesamt, 13 GB
+verfügbar, 20 Kerne).*
+
+`MARKE_TEILMESSUNG = 0` zählt **Stellen, die es nicht ansagen würden**. Sie sagt nichts
+darüber, wie oft ein Lauf tatsächlich mitten drin endet — das ist die andere Zahl, und die
+Abnahme trägt sie in ihrer Kopfzeile:
+
+```
+== Arbeitsmenge: 45 von 49 Waechtern haben GEMESSEN -- 44 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 1 nicht fahrbar, 3 ausgelassen
+```
+
+**Null — und der Nenner ist 45 und nicht 49** (W25). Der schlichte Lauf lässt drei teure aus,
+und **darunter ist ausgerechnet `pruefe-emission.sh`, der allein 45 der 92 gefährlichen
+Stellen trägt.** Eine Null, die den halben Gegenstand nicht angesehen hat, ist genau die
+Bauart, gegen die dieser Abschnitt steht — also ist sie hier nicht stehen geblieben:
+
+| Wächter | wie gemessen | abgeschnitten? |
+|---|---|---|
+| 45 aus der Abnahme | `abnahme.py`, ein Lauf | **0** |
+| `pruefe-emission.sh` | einzeln gefahren, `rc=0`, kein `ABGESCHNITTEN` in 282 Zeilen | **nein** |
+| `pruefe-beweise.sh` | einzeln nachgefahren | **nein** |
+| `pruefe-luecken.py` | **nicht gefahren** — baut dreizehnmal neu und schreibt in Quellen | *offen* |
+| `zaehle-b3.py` | `NICHT FAHRBAR` — der fremde Korpus fehlt | *offen* |
+
+**Also: 47 von 49 gemessen, null davon abgeschnitten; zwei stehen offen und stehen mit
+Grund da.** Das ist keine Zusage für morgen — es ist der Stand von heute abend.
+
+**Die Zahl steht in der Kopfzeile, auch wenn sie null ist.** Das ist kein Schmuck: eine
+gedruckte Null sagt, dass gemessen wurde; eine fehlende Zahl sagt gar nichts (W17). Ist sie
+nicht null, kommt ein eigener Block dazu, der jeden abgeschnittenen Wächter mit seinem
+Rücklaufwert und seiner STELLE nennt.
+
+**Und dass sie erscheint, ist selbst unter einer Sprechprobe**, die bei jeder Abnahme
+mitläuft: `abnahme.py:sprechprobe()` legt fünf erfundene Wächter an, darunter `pruefe-halb.sh`
+(zwei Zeilen Ausgabe, dann `ABGESCHNITTEN in: Stufe 4`, dann `exit 1`) und `pruefe-rot.sh`
+(ein voller Befund). Geprüft wird in **beide** Richtungen: der abgeschnittene **muss**
+`TEILMESSUNG` heißen und seine STELLE nennen, der volle Befund **muss** `ROT` bleiben — und
+die Arbeitsmenge muss `3` sein, was die Teilmessung mitzählt. *Eine Marke, die jedes Rot
+einfärbt, bestünde die erste Richtung und fiele an der zweiten.*
+
+> **Die zwei Zahlen messen Verschiedenes, und beide werden gebraucht.** Die Ratsche zählt
+> Stellen, die schweigen *würden*; die Kopfzeile zählt Läufe, die heute schweigen *müssten*
+> und es nicht tun. *Die erste darf nur fallen. Die zweite darf steigen* — sie ist eine
+> Aussage über den BAUM und keine über die Messapparatur.
 
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister
