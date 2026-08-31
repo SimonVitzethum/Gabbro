@@ -73,3 +73,67 @@ Siehe oben: vier Befehle, ein Pass. Kein Befund, ein Messgerätefehler.
   zweite Frage und hier nicht gestellt.
 * **Sie misst das Feuern, nicht die Richtigkeit.** `schreibwort (8,false)` feuert 148× und ist
   jedes Mal richtig. Die Gefahr steht nicht im Treffer, sondern im **nächsten** Konstruktor.
+
+---
+
+# Was gestrichen wurde
+
+## Die Wurzel: eine Tafel statt zweier Verteiler
+
+`intty` und `breite_von` waren **zwei Aufzählungen über demselben Enum mit verschiedener
+Länge** — sieben Worte gegen sechs, und beide mit einem `_`, der den Rest verschluckte.
+Jetzt lesen beide **eine** Tafel:
+
+```rust
+fn ganzzahlwort(k: Kw) -> Option<(&'static str, u32)>   // Name in C, Breite in Byte
+```
+
+`intty` und `breite_von` geben `Option`; `breite_oder_absage`/`intty_oder_absage` machen
+daraus **`C001` an der Spanne des Typs**. Kein Rufer setzt einen Vorgabewert ein.
+
+**Warum die Null hinter der Absage ungefährlich ist:** `command_emit` schreibt **kein C**,
+wenn nach der Emission ein Fehler steht. Dieselbe Form benutzt `zahltext` seit jeher für eine
+Tabellenlänge, die es nicht lesen kann.
+
+## `lesewort` / `schreibwort`: die vierte Breite steht jetzt da
+
+`(8, false)` war der `_`-Zweig; beide zählen ihn jetzt auf und geben `Option`.
+`wortpaar_oder_absage` sagt bei Namen ab statt das nächstbeste Wort zu nehmen.
+
+## Zwei Stellen derselben Klasse, die in der Liste der zwölf FEHLTEN
+
+| Stelle | was sie tat | jetzt |
+|---|---|---|
+| `umgebung.rs::breite_von` `_ => (64, false)` | jedes unbekannte Wort **vorzeichenlos, 64 Bit** | `Option`; `max`/`min` fällt aus, `intbereich` nimmt den **weitesten** Bereich |
+| `emit.rs::ctyp` `if f32 { float } else { double }` | ein drittes Gleitkommawort still `double` | beide Worte einzeln, sonst `None` → Absage des Rufers |
+
+Die erste ist die **schärfere** der beiden Fehlantworten: ein vorzeichenbehaftetes Wort
+bekäme einen Bereich ohne seine negative Hälfte, und M1 rechnete über Werten, die es nie
+annimmt. *Ein `else` ist derselbe Wildcard mit anderer Schreibweise.*
+
+## Die Absage ist heute unerreichbar, und eine Probe sagt warum
+
+`emit.rs::breitentafel` — vier Proben, alle über `kw::ALLE` und `ist_intty`, also über
+**denselben** Listen, die Lexer und Pässe lesen:
+
+| Probe | Aussage |
+|---|---|
+| `jedes_ganzzahlwort_hat_eine_breite` | `ist_intty` und die Tafel decken einander **in beide Richtungen** |
+| `die_acht_worte_stehen_einzeln` | Name **und** Breite je Wort — ein Prädikat sagt nichts über Breiten |
+| `erzeuger_und_pruefer_sagen_dieselbe_breite` | `emit`-Tafel gegen `umgebung`-Tafel (`W7`: zwei Register über einer Sache) |
+| `jede_breite_hat_ein_lese_und_ein_schreibwort` | die `C001` in `wortpaar_oder_absage` ist aus keinem legalen Programm erreichbar |
+
+> **Das ist der eigentliche Ertrag.** Ein neunter Ganzzahltyp ist ab jetzt eine **rote Probe**
+> und kein stilles `volatile uint64_t *` auf einem Geräteregister.
+
+## Die Gegenrichtung, byteweise
+
+499 Korpusdateien × drei Befehle, `md5` über den ganzen Mitschnitt:
+
+| | vorher | nachher |
+|---|---|---|
+| `pruefe` | `fbc70c78b2b8cdbb6b816f259a027d5d` | **gleich** |
+| `emit` | `34eb26ede4aa86fdc80ca0ceb195f92b` | **gleich** |
+| `zeugnis` | `686a1ef576ec08a79642e0fe35fbc493` | **gleich** |
+
+*Kippt eine Datei, war die Zuordnung geraten.* Keine kippte.
