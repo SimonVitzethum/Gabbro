@@ -284,12 +284,24 @@ darunter.
       sind Befunde und keine Nacharbeit:**
 
       1. `_Noreturn void exit(void);` — *conflicting types for built-in function `exit`;
-         expected `void(int)`*. **Gabbro kennt die reservierten Namen von C nicht.** Ein
-         Nutzer, der seine Funktion `exit`, `abort`, `free` oder `read` nennt, erfährt es vom
-         fremden Übersetzer. Für `F05` ist es eine Wand: `exit()` steht im EINGEFRORENEN
-         Ausschnitt, und umbenennen wäre ein Umschreiben. *Die Heilung ist eine neue
-         Prüferabsage — „dieser Name ist in C vergeben" —, und die kostet eine Kennung, zwei
-         Giftproben und eine Mutation.*
+         expected `void(int)`*. ~~**Gabbro kennt die reservierten Namen von C nicht.**~~
+         **GEBAUT am 2026-08-31 als `N041`** (`crates/gabbro-check/src/cnamen.rs`,
+         `messung/C-NAMEN.md`): 558 Namen in drei gemessenen Klassen, drei Giftproben — eine
+         je Klasse —, eine Gegenprobe, eine Mutation. Über 418 Dateien trifft die Regel
+         **genau eine** Zeile, und es ist diese.
+
+         > **Und der Satz daneben war zu einem Viertel falsch.** Er lautete: *„Ein Nutzer, der
+         > seine Funktion `exit`, `abort`, `free` oder **`read`** nennt, erfährt es vom fremden
+         > Übersetzer."* **`read` erfährt nichts** — POSIX, keine eingebaute Funktion von GCC,
+         > in keinem der vier Header des Erzeugers; `uint64_t read(uint64_t);` übersetzt
+         > tadellos (gemessen, `messung/proben/probe-c-namen-frei.gab`). *Drei von vier
+         > Beispielen trugen, und darum hat das vierte niemand nachgerechnet.*
+
+         Für `F05` bleibt es eine Wand, und die Regel macht sie SICHTBAR statt sie
+         wegzunehmen: `exit()` steht im EINGEFRORENEN Ausschnitt (`FRAGMENTE.md`:1028 die
+         Deklaration, acht Rufstellen im Rumpf), umbenennen wäre ein Umschreiben, und der
+         `verlorene_zeilen`-Riegel in `pruefe-emission.sh` hält genau das auf. **`F05` fällt
+         jetzt am PRÜFER statt am fremden Übersetzer** — siehe `messung/F05-UNERREICHBAR.md`.
       2. `Op _m2 = decode_op(m->op);` — *invalid type argument of `->` (have `uint64_t`)*.
          Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und **kein Pass sagt
          etwas**: `M1` führt `m.op` unter den 20 % ohne Typ. *Wörtlich dieselbe Klasse wie

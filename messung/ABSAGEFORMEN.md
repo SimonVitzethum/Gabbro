@@ -170,6 +170,23 @@ Richtung** (sie meldete zu viel), und die Messung hat das Urteil bestätigt: in 
 > 2026-08-20 LEER. *Eine Zelle zu schließen, indem man die erste Ausnahme seit elf Tagen
 > einträgt, ist kein Tausch, den eine Bahn allein macht.* Die Zeilen sind gemessen, der Preis
 > ist benannt, und beides steht hier statt im Diff.
+>
+> ### NACHGETRAGEN am 2026-08-31: der Preis ist weg, und die Zelle bleibt trotzdem offen
+>
+> **`N041` ist gebaut** (`messung/C-NAMEN.md`): der PRÜFER weist jetzt einen Namen ab, den C
+> schon vergeben hat — 558 Namen in drei gemessenen Klassen, drei Giftproben, eine
+> Gegenprobe, eine Mutation. **Damit emittiert `F05` gar nicht mehr**, und Stufe 9 hat nichts
+> zu beanstanden: die leere Ausnahmeliste bleibt leer. *Der Preis, der die vorige Bahn
+> umkehren ließ, existiert nicht mehr.*
+>
+> **Nur senkt `F05` damit auch nicht ab, und diesmal ist die Wand vermessen statt geschätzt**
+> (`messung/F05-UNERREICHBAR.md`): `exit` steht **neunmal** im eingefrorenen Block —
+> die Deklaration bei `FRAGMENTE.md`:1028 und acht Rufstellen —, der
+> `verlorene_zeilen`-Riegel macht jede Umbenennung zu neun Weglassungen, und **die Stelligkeit
+> stimmt ohnehin nicht**: C führt `void exit(int)`, der Ausschnitt ruft `exit()`.
+>
+> *Die Zelle `U10` ist damit nicht mehr `UNGEDECKT` an einer `match`-Form — sie ist `vom
+> Pruefer`, an einem Namen.* Und `H` bleibt bei 4, mit einer Kennung statt einer Vermutung.
 
 **U10 und U11 haben eine gemeinsame Wurzel, und sie ist gemessen** (`messung/proben/`):
 
