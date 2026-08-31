@@ -356,3 +356,96 @@ Die Ableitung muss einen Neutyp auf seinen Träger auflösen — derselbe Blick,
 da, und `zaehle-karten.py` fällt von **40 auf 38** (unqualifiziert 36 → 34).
 
 > *Ein Leser ist eine Stelle, die man heilen kann; vier sind vier, die man vergisst.*
+
+---
+
+# `runs online`: die vorgeschlagene Regel ist von der Messung WIDERLEGT
+
+Der Auftrag schlug vor: *„`runs online` ohne erzeugte Prüfung ist `C001`."* **Erst messen.**
+
+## Elf Fundstellen, und sie zerfallen in DREI Klassen
+
+| Träger | Fundstellen | erzeugte Prüfung | wer die Zusage trägt |
+|---|---|---|---|
+| `table … ops` | 3 (`beispiele/47`, `gift/249`, `gift/333`) | keine | **`table.ops.erhaltung`**, maschinengeprüft |
+| `table` ohne `ops` | 5 (`beispiele/53`, `gift/351`, `F03`, `netz/udp-echo`, `probe-stellungen`) | keine | **eine `E`-Pflicht je `maintains`-Funktion** |
+| **`walk`** | **3** (`beispiele/07`, `gift/130`, `grammatik/blocklauf`) | **keine** | **niemand** |
+
+*Gemessen mit `gabbro pflichten` je Datei, nicht gelesen:* `beispiele/53` bucht
+`treffen_oeffnen :: antwortpflicht_paarig` und `treffen_schliessen :: antwortpflicht_paarig`
+als **E**; `beispiele/47` bucht **null** Pflichten, weil die Schablone sie trägt;
+`beispiele/07` buchte **null** — und hatte keine Schablone.
+
+> **Eine Regel über dem Wort `online` hätte zwei Register getroffen, die funktionieren, um an
+> das eine zu kommen, das nicht funktioniert.** Sie ist nicht gebaut worden.
+
+## Die Falsifikation, die die Stelle festnagelt
+
+`messung/grammatik/blocklauf.gab`, eine Zeile geändert:
+
+```gabbro
+invariant geteilt_bleibt_lesbar cost O(n) runs online :
+    forall m in mappings of Inodebaum : m.block == 1 && m.block == 2;
+```
+
+```
+6 items, 0 errors, 0 hints
+```
+
+**Eine unerfüllbare Invariante geht durch.** Kein Pass entscheidet sie, keine Pflicht zählt
+sie, und das Zeugnis führt `walk` unter *direkter* Absenkung — nicht unter einer Schablone.
+Im C stand:
+
+```c
+ * invariant geteilt_bleibt_lesbar runs online -- COMPILE TIME (W6), not re-checked here
+```
+
+*`W6` sagt: was der Pass entschieden hat, prüft die Maschine nicht ein zweites Mal.* **Kein
+Pass hatte es entschieden.** Und dasselbe gilt für `runs offline` — das Wort war nie der
+Unterschied.
+
+## Gebaut wurde die Heilung, die `D` schon bekommen hat
+
+`reg … requires` stand bis zum 2026-08-24 in genau derselben Lage: *„eine Klausel, die parst
+und fallengelassen wird"*. Die Antwort damals war **nicht** eine Absage:
+
+> *do not refuse it, do not pretend to check it — **COUNT it**.*
+
+Also:
+
+* **`Art::Walkinvariante` (`W`)** in `pflichten.rs` — eine Pflicht je `walk`-Invariante.
+* **`LeanReason::WalkInvariant`** — im Lean-Kanal abgelehnt wie die Tabelleninvariante, mit
+  eigenem Grund, weil die beiden von **verschiedenen** Dingen geschuldet werden.
+* **Der C-Kommentar sagt jetzt die Wahrheit:** *„NOT checked here and by no pass either; it
+  stands as a `W` obligation in `gabbro pflichten`"*.
+
+`beispiele/07` bucht damit `0` → **`2` Pflichten**, und die Lücke steht in einem Register
+statt in einem Kommentar.
+
+## Und die Bilanzzeile hat es zum DRITTEN Mal gefangen
+
+`pflichten.rs` trägt ein `debug_assert_eq!(r + e + n + f + v + dz + si == p.len())`. Sie fiel
+beim ersten Lauf, **bevor ein Bericht gelesen war** — genau wie 2026-08-24 (`R`) und
+2026-08-28 (`S`).
+
+> *Drei von drei: jede Pflichtart, die nach dieser Zeile dazukam, ist an ihr aufgelaufen.*
+
+## Die Gegenrichtung
+
+| | vorher | nachher |
+|---|---|---|
+| `pruefe` | `fbc70c78b2b8cdbb6b816f259a027d5d` | **gleich** |
+| `zeugnis` | `c051feaebb8c6d6677decf12452228ce` | **gleich** |
+| `emit` | | drei Dateien, **nur Kommentarzeilen** |
+
+Je Datei nachgerechnet: `beispiele/07`, `messung/grammatik/blocklauf.gab` und
+`messung/proben/probe-stellungen.gab` — genau die drei mit einem `walk`, und in jeder nur der
+Kommentar. *Keine erzeugte Funktion, kein `#define`, keine Absage hat sich bewegt.*
+
+## Was ungemessen bleibt
+
+* **Ob eine `walk`-Invariante überhaupt prüfbar wäre**, ist hier nicht gefragt worden. Sie
+  quantifiziert über `mappings of`, dessen Schranke `Knotenlänge ^ levels` ist — bei
+  `beispiele/07` sind das `512^4`. Eine Laufzeitprüfung darüber ist keine.
+* **Die `E`-Pflichten der `table`-Fälle sind gezählt, nicht eingelöst.** Dass sie in einem
+  Register stehen, sagt nichts darüber, ob jemand sie erfüllt hat.

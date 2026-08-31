@@ -164,6 +164,32 @@ pub enum Art {
     /// quantified over its passes. Both need the meaning of a body -- they are not the same
     /// duty, and a register that merged them could not separate the two prices.
     Schleifeninvariante,
+    /// **`W` -- the invariant of a `walk`, and until today it was a C COMMENT** (2026-08-31).
+    ///
+    /// `walk Seitentabelle levels 4 { … invariant wx_getrennt cost O(n) runs online : … }`
+    /// parses, and the emitter writes it into the artefact as
+    /// *"COMPILE TIME (W6), not re-checked here"*. **Measured: nothing decides it.** An
+    /// unsatisfiable one --
+    ///
+    /// ```text
+    /// invariant geteilt_bleibt_lesbar cost O(n) runs online :
+    ///     forall m in mappings of Inodebaum : m.block == 1 && m.block == 2;
+    /// ```
+    ///
+    /// -- passes with `0 errors, 0 hints`, produces no obligation, and appears in the
+    /// certificate under DIRECT lowering, not under a template. *W6 says the pass decided it;
+    /// no pass did.*
+    ///
+    /// **The cure is the one `D` got** (`messung/PFLICHTEN.md`, the register clause): do not
+    /// refuse it, do not pretend to check it -- COUNT it. A refusal was weighed and dropped:
+    /// `runs online` at a `table … ops` IS carried (by `table.ops.erhaltung`), and at a
+    /// `table` without `ops` it becomes an `E` per `maintains` -- *a rule over the word
+    /// `online` would hit two registers that work in order to reach the one that does not.*
+    ///
+    /// *It stands beside `E` and not inside it:* an `E` is owed by a FUNCTION that names the
+    /// invariant in `maintains`. A walk invariant is owed by no function at all -- it is a
+    /// statement about the whole mapping domain, and there is no `maintains` for it.
+    Walkinvariante,
 }
 
 impl Art {
@@ -176,6 +202,7 @@ impl Art {
             Art::Verfeinerung => "R",
             Art::Geraetezusage => "D",
             Art::Schleifeninvariante => "S",
+            Art::Walkinvariante => "W",
         }
     }
     pub fn name(self) -> &'static str {
@@ -187,6 +214,7 @@ impl Art {
             Art::Verfeinerung => "Refinement of a specification",
             Art::Geraetezusage => "Device promise at a register",
             Art::Schleifeninvariante => "Invariant across the passes of a loop",
+            Art::Walkinvariante => "Invariant of a `walk` -- carried by no pass and no template",
         }
     }
 }
@@ -570,6 +598,31 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                     }
                 }
             }
+            // **`walk … invariant` -- and until 2026-08-31 it stood in a C COMMENT.**
+            //
+            // The emitter writes *"COMPILE TIME (W6), not re-checked here"* into the
+            // artefact. Measured that day: an unsatisfiable walk invariant passes with
+            // `0 errors, 0 hints` -- no pass decides it, no template carries it, and the
+            // certificate lists `walk` under DIRECT lowering. **W6 says the pass decided it;
+            // no pass did.**
+            //
+            // The same shape as `reg … requires` before 2026-08-24, and the same cure: do
+            // not refuse it, do not pretend to check it -- COUNT it. *A price that stands
+            // nowhere looks like zero.*
+            //
+            // `rumpf_da: false` because there is no body at all: the statement is about the
+            // mapping domain of the structure, not about what some function leaves behind.
+            ItemArt::Walk(w) => {
+                for i in &w.invarianten {
+                    aus.push(Pflicht {
+                        art: Art::Walkinvariante,
+                        funktion: w.name.text.clone(),
+                        gegenstand: format!("invariant {}", i.name.text),
+                        rumpf_da: false,
+                        material: Material::Foreign,
+                    });
+                }
+            }
             _ => {}
         }
     }
@@ -584,7 +637,8 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         s.push_str("   no generated proof obligation in this unit\n\n");
     }
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
-               Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante] {
+               Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante,
+               Art::Walkinvariante] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
         if eigene.is_empty() {
             continue;
@@ -602,6 +656,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     let r = p.iter().filter(|x| x.art == Art::Verfeinerung).count();
     let dz = p.iter().filter(|x| x.art == Art::Geraetezusage).count();
     let si = p.iter().filter(|x| x.art == Art::Schleifeninvariante).count();
+    let wi = p.iter().filter(|x| x.art == Art::Walkinvariante).count();
     // **The header line MUST add up** -- `r + e + n + f + v == p.len()`. The first version of
     // this line did not carry the refinement and reported `1 obligations: 0, 0, 0, 0`.
     // *A balance that does not add up is the class `zaehle-p6.py` is built against* -- and it
@@ -610,10 +665,18 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     // **And it arose a SECOND time, on 2026-08-28, when `S` came.** The same assertion caught
     // it before any report was read. *That is what a balance is for: a new kind does not get
     // to be quietly uncounted, and the check does not depend on anyone noticing.*
-    debug_assert_eq!(r + e + n + f + v + dz + si, p.len(), "the obligation balance does not add up");
+    //
+    // **A THIRD time on 2026-08-31, when `W` came** -- and again before the first report was
+    // read. *Three for three: the line has now caught every kind that was added after it.*
+    debug_assert_eq!(
+        r + e + n + f + v + dz + si + wi,
+        p.len(),
+        "the obligation balance does not add up"
+    );
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
-         {f} foreign, {v} precondition, {dz} device, {si} loop invariant ==\n",
+         {f} foreign, {v} precondition, {dz} device, {si} loop invariant, \
+         {wi} walk invariant ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");

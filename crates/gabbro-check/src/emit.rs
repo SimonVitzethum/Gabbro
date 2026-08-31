@@ -8712,11 +8712,25 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             Laeuft::Online => "online",
             Laeuft::Offline => "offline",
         };
+        // **The comment said `COMPILE TIME (W6)`, and no pass decided it** (2026-08-31).
+        //
+        // W6 divides labour: what a pass settled, the machine does not check a second time.
+        // *That sentence needs a pass.* Measured on this line: an unsatisfiable walk
+        // invariant passes with `0 errors, 0 hints`, produces no template in the
+        // certificate, and -- until the same day -- no obligation either.
+        //
+        // A refusal was weighed and dropped: `runs online` at a `table … ops` IS carried
+        // (`table.ops.erhaltung`, machine-checked), and at a `table` without `ops` it becomes
+        // an `E` per `maintains`. **A rule over the word `online` would hit two registers
+        // that work in order to reach the one that does not.** So the gap is booked instead:
+        // `gabbro pflichten` counts it as `W`, and the comment says where it stands rather
+        // than claiming it is settled.
         aus.push_str(&format!(
-            " * invariant {} runs {laeuft} -- COMPILE TIME (W6), not re-checked here{}\n",
+            " * invariant {} runs {laeuft} -- NOT checked here and by no pass either;\n\
+             \x20*   it stands as a `W` obligation in `gabbro pflichten`{}\n",
             kommentartext(&i.name.text),
             if nennt_abbildungen(&i.pred) {
-                ";\n *   it quantifies over `mappings of`, whose bound is an open finding\n\
+                ".\n *   It quantifies over `mappings of`, whose bound is an open finding\n\
                  \x20*   about the COST PASS (see `traverse`). This descent walks ONE path\n\
                  \x20*   and claims nothing about the domain"
             } else {

@@ -47,6 +47,12 @@ pub enum LeanReason {
     CallSite,
     /// A promise at a device register -- hardware Gabbro does not see.
     DevicePromise,
+    /// An invariant of a `walk`. **Quantified over `mappings of`, whose bound is `node
+    /// length ^ levels`** -- a set this channel has no quantifier for, exactly as with a
+    /// table invariant. *It is refused here for the same reason and booked separately,
+    /// because the two are owed by different things:* a table invariant by a function that
+    /// names it in `maintains`, a walk invariant by nobody at all.
+    WalkInvariant,
     /// A CALL. **The biggest single item of the register, and it is not an oversight**: a
     /// call is to be taken compositionally over the callee's CONTRACT, never over its body.
     /// Inlining the body would make the goal a statement about a program nobody wrote.
@@ -182,6 +188,7 @@ impl LeanReason {
             LeanReason::Invariant => "table-invariant",
             LeanReason::CallSite => "call-site",
             LeanReason::DevicePromise => "device-promise",
+            LeanReason::WalkInvariant => "walk-invariant",
             LeanReason::CallStatement => "call-not-compositional",
             LeanReason::Loop => "loop",
             LeanReason::Concurrent => "concurrent-statement",
@@ -224,6 +231,10 @@ impl LeanReason {
                 "a precondition at a call site -- the Isabelle channel carries these"
             }
             LeanReason::DevicePromise => "a promise at hardware Gabbro does not see",
+            LeanReason::WalkInvariant => {
+                "an invariant of a `walk`, quantified over `mappings of` -- and no pass \
+                 decides it either"
+            }
             LeanReason::CallStatement => {
                 "a call -- compositional over the CONTRACT, and that gate is not built"
             }
@@ -1516,6 +1527,13 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 // the datum a person needs to state it.
                 crate::pflichten::Art::Schleifeninvariante => {
                     LeanVerdict::Refused(LeanReason::Loop)
+                }
+                // **The `walk` invariant, and it is refused for the SAME reason as the
+                // table one** -- a quantifier over a domain this channel cannot express.
+                // What is new is that it now HAS a number; until 2026-08-31 it stood in a
+                // C comment and in no register.
+                crate::pflichten::Art::Walkinvariante => {
+                    LeanVerdict::Refused(LeanReason::WalkInvariant)
                 }
                 crate::pflichten::Art::Nachbedingung => match fns.get(&p.funktion) {
                     Some((module, f)) => {
