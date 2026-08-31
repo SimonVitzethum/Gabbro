@@ -16,7 +16,7 @@ geschrieben und nicht ausgeführt.*
 | | |
 |---|---|
 | **V** — Vollständigkeit | **Kennt der Erzeuger jedes Programm, das der Prüfer annimmt?** Eine Aussage über zwei Mengen, und beide sind endlich beschreibbar |
-| **K** — Klempnerei | **Bleibt nach der Absenkung eine Pflicht am Menschen, die nicht seine eigene Logik ist?** Heute `H = 5` |
+| **K** — Klempnerei | **Bleibt nach der Absenkung eine Pflicht am Menschen, die nicht seine eigene Logik ist?** Heute ~~`H = 5`~~ **`H = 4`** *(F6 durchgestochen 2026-08-31)* |
 
 **Sie hängen zusammen, aber nicht so, wie es aussieht.** `V` kann vollständig sein, während `K`
 offen ist: ein Erzeuger, der jede Form kennt und für keine bewiesen hat, dass sie stimmt, hat
@@ -163,9 +163,16 @@ machen, und eine künstlich erfundene Form auch.
 
 # 4. Die Schritte für **K** (`H = 0`)
 
-`H = 5`, und alle fünf sind **dieselbe** Pflicht: *das erzeugte C rechnet, was das Fragment
-sagt* — offen für F1, F3, F5, F6, F9. Für F2, F4, F7, F8, F10 ist sie **durch Ausführung**
-eingelöst: erzeugt, übersetzt, ausgeführt, gegen eine Handschrift verglichen.
+~~`H = 5`~~ **`H = 4`**, und alle vier sind **dieselbe** Pflicht: *das erzeugte C rechnet, was
+das Fragment sagt* — offen für F1, F3, F5, F9. Für F2, F4, **F6**, F7, F8, F10 ist sie **durch
+Ausführung** eingelöst: erzeugt, übersetzt, ausgeführt, gegen eine Handschrift verglichen.
+
+> **F6 ist am 2026-08-31 dazugekommen, und es ist das erste der fünf, das den Weg gehen
+> konnte.** Was es gekostet hat, war kein Bau am Fragment, sondern eine Zeile im Erzeuger: der
+> Feldindex von `elems of` senkte als `uint32_t` ab — eine Kopie aus `slots of` —, und
+> `w != MUSTER` mit `MUSTER = 0xdead_beef_dead_beef` fiel damit an
+> `-Wextra`s *comparison is always true due to limited range*. **Mit `uint64_t` übersetzt
+> dasselbe C.**
 
 ### K1 — Die fünf offenen auf denselben Weg bringen
 

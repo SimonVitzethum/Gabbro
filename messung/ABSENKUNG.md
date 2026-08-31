@@ -20,6 +20,12 @@
 
 ### 1.1 `H = 5` ist seit heute **vollständig** die Absenkung
 
+> **Fortgeschrieben 2026-08-31: `H = 4`.** Die Momentaufnahme darunter bleibt stehen, weil sie
+> datiert ist und der Satz, um dessentwillen sie hier steht, unberührt gilt: *was noch offen
+> ist, ist ausschließlich die Absenkung.* **F6 ist seit dem 2026-08-31 durchgestochen**
+> (`lauf "fragment6"` in `pruefe-emission.sh`, achtzehn Zahlen, `-O0`/`-O2`/UBSan), und
+> `GEMESSEN` sind damit F2, F4, **F6**, F7, F8, F10.
+
 ```bash
 ./instrumente/zaehle-pflichten.py --haengend
 ```
