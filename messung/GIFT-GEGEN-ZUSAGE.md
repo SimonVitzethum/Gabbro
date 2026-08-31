@@ -34,6 +34,11 @@ misst die Anwesenheit einer Regel, nicht ihre Zuständigkeit.*
 
 ## 2. Das Maß
 
+**Das Werkzeug dazu steht seit dem 2026-08-31 im Baum:** `./instrumente/zaehle-gifttreffer.py`
+(`--lang` druckt jede nicht-saubere Probe einzeln, `--json` die ganze Tafel). Es trägt die
+drei Marken aus §9 als Ratsche — *ohne sie wäre alles hier eine Momentaufnahme, und genau
+diese Drift ist zweimal unbemerkt passiert.*
+
 Je Probe ein eigener Prozess, damit sich die Dateien nicht über das Bindungsregister
 beeinflussen (`gabbro pruefe` teilt es über eine Dateiliste hinweg):
 
@@ -347,3 +352,16 @@ emittierende. **Jede geheilte Probe trägt ihren Fehler weiter und kommt am C-To
 gemessene Größe, sagt **kein einziger Pass etwas** — die Datei geht mit null Absagen durch.
 *Ob das eine Lücke ist oder die richtige Grenze, ist eine Frage an `SYNTAX.md` §13 und
 nicht an diese Tafel;* hier steht nur, dass es gemessen wurde und dass keine Probe es hält.
+
+## 11. Was dieser Eingriff NICHT gezeigt hat
+
+* **Nichts darüber, ob die 255 sauberen aus dem richtigen Grund fallen.** §8 gilt weiter, nur
+  über eine größere Menge. Dass ein Code allein fällt, macht ihn nicht zuständig.
+* **Nichts über die Proben, die nie geschrieben wurden.** Vier Vorläufer waren Regeln, die
+  nach ihrer Probe kamen; **wie viele Regeln gar keine Probe haben**, misst
+  `zaehle-absagen.py` und nicht diese Tafel.
+* **Nichts darüber, ob die Reparaturen die Proben SCHÄRFER gemacht haben.** Sie haben ihnen
+  einen zweiten Gegenstand genommen — dass die verbleibende Zeile scharf ist, hat der
+  Mutationslauf zu sagen, nicht dieser Eingriff.
+* **Und der `-- erwartet: cc`-Zweig ist unberührt.** `413` hat nie einen Vorläufer gehabt: der
+  Prüfer schweigt dort mit Absicht, und das ist die halbe Zusage der Probe.
