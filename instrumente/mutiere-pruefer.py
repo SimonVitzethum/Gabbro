@@ -3853,6 +3853,40 @@ MUTATIONEN = [
         "faellt",
         "code",
     ),
+    # -- gabbro-cli/src/main.rs: the unit view (2026-08-31) -------------------------------
+    #
+    # `pruefe --unit` joins the sources and parses ONCE. Every refusal therefore carries a
+    # site in the CONCATENATION, and the offset map computes it back into its own file.
+    # `gabbro lean` names exactly this map as the thing it does not build.
+    Mutation(
+        "einheitsversatz-wird-nicht-abgezogen",
+        "gabbro-cli/src/main.rs",
+        "            let mut a = a.clone();\n"
+        "            a.span.von -= s.von as u32;",
+        "            let mut a = a.clone();\n"
+        "            a.span.von -= 0;",
+        "Die Versatzkarte von `pruefe --unit` rechnet nicht mehr zurueck: jede Absage traegt "
+        "die Zeile der KONKATENATION statt der ihrer eigenen Datei -- eine Zeilennummer, die "
+        "in keiner Quelle steht. **Zwei Proben fallen** (`einheit.rs`)",
+    ),
+    # **This mutation SURVIVED on 2026-08-31** and forced the test that now catches it
+    # (`ein_hinweis_wird_gedruckt_und_gezaehlt`). The six probes before it all looked at
+    # errors, and a swallowed hint looks like a clean run -- exactly the class this whole
+    # flag is under suspicion of.
+    Mutation(
+        "einheit-verschluckt-hinweise",
+        "gabbro-cli/src/main.rs",
+        "            gezeigt[i] = true;\n"
+        "            let mut a = a.clone();",
+        "            gezeigt[i] = true;\n"
+        "            if a.stufe == gabbro_syntax::Stufe::Hinweis {\n"
+        "                continue;\n"
+        "            }\n"
+        "            let mut a = a.clone();",
+        "`pruefe --unit` druckt keine Hinweise mehr, zaehlt sie aber weiter -- Schweigen, "
+        "das wie ein sauberer Lauf aussieht, und eine Zusammenfassung, die dem widerspricht. "
+        "**EINE Probe faellt** (`einheit.rs`)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

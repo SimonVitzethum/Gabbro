@@ -1,0 +1,21 @@
+-- Modul B nennt BEIDE Namen aus A. `Geheim` ist dort nicht `pub` -- das muss fallen.
+module b {
+
+use a::Offen;
+use a::Geheim;
+
+pub impl fn nimmt_offen(x : Offen) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return true;
+}
+
+pub impl fn nimmt_geheim(x : Geheim) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return true;
+}
+
+}

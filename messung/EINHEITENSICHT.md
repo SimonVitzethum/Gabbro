@@ -171,3 +171,113 @@ error: [H012] <program>:86:9: this call takes `SPEICHER` (rank 0) while `GERAET`
   Text sind ungemessen.
 * **Die Zahl 11 gilt für 12 Dateien**, nicht für 485. Über die anderen 473 ist bisher nichts
   gemessen — genau das ist die Gegenrichtung, und sie steht noch aus.
+
+---
+
+# Der Bau: `gabbro pruefe --unit`
+
+*Gebaut am 2026-08-31, nach der Messung oben und nicht davor.*
+
+## 6. Was gebaut wurde — und was NICHT
+
+**Am Resolver wurde nichts geändert.** Kein `use`-Pass, keine neue Sichtbarkeitsregel, keine
+Zeile in `umgebung.rs`. Der ganze Bau steht in `crates/gabbro-cli/src/main.rs` und besteht aus
+zwei Stücken:
+
+1. **Die Fahne `--unit`** (deutscher Zweitname `--einheit`) an `gabbro pruefe`.
+2. **Die Versatzkarte** — `struct Stueck { datei, quelle, von, bis }` — die jede Absage aus dem
+   geklebten Text in *ihre eigene Datei und ihre eigene Zeile* zurückrechnet.
+
+Die Versatzkarte ist genau das, was der Kommentar an `gabbro lean` als **nicht gebaut**
+benennt: *„A per-file offset map would fix that and is not built."* Sie ist jetzt gebaut, und
+sie ist der Unterschied zwischen `<program>:22:29` und `ohne-use-b.gab:7:29`.
+
+### Warum eine Fahne und kein Vorgabewert
+
+**Weil eine Dateiliste auf einer Kommandozeile keine Aussage darüber ist, dass diese Dateien
+zusammengehören.** Drei Gründe, alle gemessen:
+
+* Der Werkzeugkasten fährt **einen Prozess je Datei**, ausdrücklich und mit Begründung
+  (`zaehle-gifttreffer.py`:146: *„Ein eigener Prozess, weil `gabbro pruefe` sein
+  Bindungsregister über eine Dateiliste hinweg teilt"*).
+* Den ganzen Korpus zu kleben hieße, jeden Modulnamen, der in zwei unverwandten Dateien
+  vorkommt, zu einem `N039` zu machen. `module speicher` steht zweimal, `module geraet`
+  zweimal.
+* **Und die Frage „welche Dateien bilden eine Einheit" ist eine Manifestzeile**, kein
+  Shell-Glob. Das ist derselbe Satz, mit dem Punkt 2 des Auftrags beginnt.
+
+## 7. Die Gegenprobe: was fallen muss, fällt
+
+Alle fünf durch `gabbro pruefe --unit`, alle mit der Stelle in *ihrer eigenen Datei*:
+
+| Was | Ergebnis | Stelle |
+|---|---|---|
+| `betrieb.gab` **ohne** `lager.gab` übergeben | `N040`×2, `M109`, `M119`, `H016` — **fällt** | `betrieb.gab:36:56` u. a. |
+| Name ohne `use`, Datei liegt daneben | `N040` — **fällt** | `ohne-use-b.gab:7:29` |
+| `use` auf einen Namen, der nicht `pub` ist | `N025` **und** `N038` — **fällt zweifach** | `pub-b.gab:5:5`, `:14:30` |
+| Zwei Module, derselbe Name, **beide Reihenfolgen** | `N039` — **fällt**, reihenfolgeunabhängig | `kollision-y.gab:4:10` |
+| Die Einheit, die auflösen soll | **0 Fehler, 0 Hinweise** | — |
+
+> **`pub` entscheidet heute schon, und zwar an zwei Stellen.** Das war die Frage des Auftrags
+> („miss, ob es das heute tut"), und die Antwort ist ja: `N025` an der `use`-Zeile und `N038`
+> an der Signatur, die den Namen exportieren würde.
+
+**Zwei Module mit demselben Namen verdecken einander nicht — die Antwort ist gröber als
+„der nähere gewinnt":** `N039` sagt den ganzen Bau ab, weil beide denselben C-Namen trügen.
+*Verdeckung ist damit nicht entschieden, sondern verboten* — und das ist eine ehrlichere
+Antwort als eine Rangfolge, die niemand aufgeschrieben hat.
+
+## 8. Die Gegenrichtung über 491 Dateien, mit zwei Binärprogrammen
+
+`instrumente/vergleiche-binaerprogramme.py` fährt **zwei** `gabbro`-Programme (`09d6c4f` und
+der neue Stand) über jede `.gab`-Datei des Baums, mit `pruefe` **und** `emit`, und vergleicht
+**stdout, stderr und Rücklaufwert byteweise**:
+
+```
+Korpus: 491 `.gab`-Dateien, je zwei Unterbefehle, 1964 Prozesse.
+  pruefe: 0 Datei(en) bewegt
+  emit: 0 Datei(en) bewegt
+== NICHTS BEWEGT ==
+```
+
+**491 und nicht 485**, weil diese Arbeit sechs Proben hinzugefügt hat
+(`messung/einheit-proben/`). *Der Nenner ist gewachsen, und das gehört neben die Zahl.*
+
+Verglichen werden **Bytes und nicht Kennungen.** Eine Absage, deren Code gleich blieb und
+deren Zeilennummer wanderte, ist eine veränderte Absage — ein Vergleich über Codes hätte das
+grün genannt. **Dieselbe Klasse wie `W16`.**
+
+## 9. Die Mutationen — und eine davon hat überlebt
+
+Zwei Mutationen von Hand, **gebaut**, mit `cargo test --no-fail-fast` gezählt:
+
+| Nr. | Was beschädigt wird | gefangen von |
+|---|---|---|
+| **450** `einheitsversatz-wird-nicht-abgezogen` | die Versatzkarte rechnet nicht zurück — jede Absage trägt die Zeile der Konkatenation | **2 Proben** |
+| **451** `einheit-verschluckt-hinweise` | Hinweise werden nicht gedruckt, aber weiter gezählt | **anfangs 0 — ÜBERLEBT** |
+
+> **Mutation 451 hat überlebt, und das ist der Befund an dieser Stelle.** Die sechs Proben,
+> die ich zuerst geschrieben hatte, sahen **alle auf Fehler**. Ein verschluckter Hinweis sieht
+> aus wie ein sauberer Lauf — *genau die Klasse, gegen die diese ganze Fahne unter Verdacht
+> steht*, und meine eigene Probe war blind dafür.
+>
+> Der Test `ein_hinweis_wird_gedruckt_und_gezaehlt` ist daraufhin geschrieben worden, nicht
+> vorher. Danach fällt `451` mit **einer** Probe. *Eine Mutation, die überlebt, ist die
+> billigste Art zu erfahren, dass die Probe die falsche Hälfte ansieht.*
+
+Beide stehen jetzt im Katalog (`mutiere-pruefer.py`); `--anker` meldet **374 von 374**.
+
+## 10. Was am Bau ungemessen bleibt
+
+* **`emit --unit` gibt es nicht.** Der Erzeuger prüft weiter je Datei; `gabbro emit a.gab
+  b.gab` klebt die *C-Ausgabe*, nicht die Prüfung. Damit gilt der ganze Befund oben für
+  `pruefe` und **nicht** für `emit` — eine Einheit, die als Einheit prüft, wird heute nicht
+  als Einheit übersetzt.
+* **Der `--with`-Vorspann und `--unit` zusammen** sind nur im Code behandelt (die Absagen, die
+  in keine Datei fallen, werden benannt statt verschluckt) und **nicht durch eine Probe
+  belegt**.
+* **Die Reihenfolge der Dateien** ist nur an der Namenskollision gemessen, nicht an der
+  Auflösung selbst.
+* **Nichts davon sagt, dass die Einheitensicht die RICHTIGE Einheit ist.** Welche Dateien
+  zusammengehören, entscheidet heute die Kommandozeile — und das ist die offene Frage, die
+  Punkt 2 des Auftrags stellt.

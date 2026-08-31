@@ -724,13 +724,193 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
     }
 }
 
+/// One file of a joined unit, and where its text sits in the joined source.
+///
+/// **The byte range is the whole point.** Without it a refusal that comes out of the joined
+/// parse carries a line number from the CONCATENATION -- which is a line number in no file
+/// at all. `gabbro lean` names that price in its own comment and pays it; this map is the
+/// thing it says is not built.
+struct Stueck {
+    datei: String,
+    quelle: String,
+    von: usize,
+    bis: usize,
+}
+
+/// **`gabbro pruefe --unit a.gab b.gab` -- the named files as ONE translation unit.**
+///
+/// Why this is a flag and not the default: *a unit is a compilation unit*, and the file list
+/// on a command line is not by itself a statement that these files belong together. The
+/// tooling in `instrumente/` runs ONE PROCESS PER FILE on purpose
+/// (`zaehle-gifttreffer.py`:146), and joining the whole corpus would make every module name
+/// that appears twice in two unrelated files an `N039`. **What files form a unit is a
+/// manifest line, not a shell glob.**
+///
+/// What it buys is measured in `messung/EINHEITENSICHT.md`: over five units of the corpus
+/// eleven refusals fall away *because the names resolve*, and two appear that no per-file run
+/// can see -- a lock ring across library boundaries (`H012`). *Silence is not the only thing
+/// joining buys; it also buys a finding.*
+///
+/// The resolver needed no change. `umgebung.rs::kandidaten` walks the module chain outward
+/// and follows the `use` lines; it was module-aware and `use`-aware all along. **What it never
+/// got was the other file.**
+fn pruefe_als_einheit(
+    dateien: &[String],
+    vorspann: &str,
+    voll: bool,
+) -> std::process::ExitCode {
+    let mut ganz = String::new();
+    if !vorspann.is_empty() {
+        ganz.push_str(vorspann);
+        ganz.push('\n');
+    }
+    // Everything before this offset belongs to the interfaces, not to the unit.
+    let vorspann_ende = ganz.len();
+    let mut stuecke: Vec<Stueck> = Vec::new();
+    for datei in dateien {
+        let quelle = match std::fs::read_to_string(datei) {
+            Ok(q) => q,
+            Err(e) => {
+                eprintln!("gabbro: {datei}: {e}");
+                return std::process::ExitCode::from(2);
+            }
+        };
+        let von = ganz.len();
+        ganz.push_str(&quelle);
+        // **Always a newline, never a conditional one.** A file that ends without one would
+        // otherwise glue its last token to the next file's first, and the joined parse would
+        // read a construct that stands in no source.
+        ganz.push('\n');
+        let bis = ganz.len();
+        stuecke.push(Stueck { datei: datei.clone(), quelle, von, bis });
+    }
+
+    let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
+    let bericht = pruefe(&baum, &mut absagen);
+    // **One unit, one name in the register.** Passing each file separately here would report
+    // the unit's own second carrier of a name as a cross-unit collision -- which is what
+    // `bindung::nimm_auf` already guards against for the same file named twice.
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    register.nimm_auf("<unit>", &baum, vorspann_ende, &mut absagen);
+
+    // A FEHLER inside the preamble means the interface itself does not hold. Same rule as in
+    // the per-file path, and for the same reason: swallowing it sells a broken library as
+    // clean.
+    if vorspann_ende > 0 {
+        let kaputt = absagen.absagen.iter().any(|a| {
+            (a.span.von as usize) < vorspann_ende && a.stufe == gabbro_syntax::Stufe::Fehler
+        });
+        if kaputt {
+            print!("{}", absagen.zeige(&ganz));
+            eprintln!("gabbro pruefe: the interface itself does not hold -- nothing checked");
+            return std::process::ExitCode::from(1);
+        }
+    }
+
+    // **Every refusal goes into exactly one bucket, and what fits nowhere is PRINTED.**
+    // A partition that drops what it cannot place looks exactly like a clean run.
+    let mut gezeigt = vec![false; absagen.absagen.len()];
+    let mut fehler = 0usize;
+    let mut hinweise = 0usize;
+    let mut items_gesamt = 0usize;
+    for s in &stuecke {
+        let mut eigene = gabbro_syntax::Absagen::neu(&s.datei);
+        for (i, a) in absagen.absagen.iter().enumerate() {
+            let v = a.span.von as usize;
+            if v < s.von || v >= s.bis {
+                continue;
+            }
+            gezeigt[i] = true;
+            let mut a = a.clone();
+            a.span.von -= s.von as u32;
+            a.span.bis = a.span.bis.saturating_sub(s.von as u32);
+            eigene.schiebe(a);
+        }
+        if !eigene.leer() {
+            print!("{}", eigene.zeige(&s.quelle));
+        }
+        let f = eigene.fehler_zahl();
+        let h = eigene.absagen.len() - f;
+        fehler += f;
+        hinweise += h;
+        let items = items_im_bereich(&baum, s.von, s.bis);
+        items_gesamt += items;
+        println!("{}: {items} items, {f} errors, {h} hints", s.datei);
+    }
+    // Refusals that landed in the preamble (hints only -- the errors aborted above) or
+    // carry a span outside every piece. **They are named, not dropped.**
+    let rest: Vec<usize> = (0..absagen.absagen.len()).filter(|i| !gezeigt[*i]).collect();
+    if !rest.is_empty() {
+        let mut fremd = gabbro_syntax::Absagen::neu("<interface>");
+        for i in &rest {
+            fremd.schiebe(absagen.absagen[*i].clone());
+        }
+        let f = fremd.fehler_zahl();
+        println!(
+            "  {} refusal(s) fell outside every file of the unit ({f} of them errors) -- \
+             they belong to the `--with` preamble, and their line numbers are the \
+             PREAMBLE's, not any file's",
+            rest.len()
+        );
+        fehler += f;
+    }
+    println!(
+        "unit of {} file(s): {items_gesamt} items, {fehler} errors, {hinweise} hints",
+        stuecke.len()
+    );
+    if bericht.m1.gesamt() == 0 {
+        println!("  M1 saw no expression -- this unit has no function body");
+    } else {
+        println!(
+            "  M1 saw {} expressions, {} of them without a type ({:.0} % coverage)",
+            bericht.m1.gesamt(),
+            bericht.m1.unbekannt,
+            bericht.m1.deckung()
+        );
+    }
+    println!();
+    if voll {
+        print!("{}", register_voll());
+    } else {
+        print!("{}", register_kurz());
+    }
+    if fehler == 0 {
+        std::process::ExitCode::SUCCESS
+    } else {
+        std::process::ExitCode::from(1)
+    }
+}
+
+/// Items whose site lies inside the half-open byte range of the joined source, nested ones
+/// counted the way `zaehle_items` counts them.
+fn items_im_bereich(baum: &gabbro_syntax::ast::Programm, von: usize, bis: usize) -> usize {
+    fn geh(items: &[gabbro_syntax::ast::Item], von: usize, bis: usize) -> usize {
+        items
+            .iter()
+            .map(|i| {
+                let drin = (i.span.von as usize) >= von && (i.span.von as usize) < bis;
+                usize::from(drin)
+                    + match &i.art {
+                        gabbro_syntax::ast::ItemArt::Modul(m) => geh(&m.items, von, bis),
+                        _ => 0,
+                    }
+            })
+            .sum()
+    }
+    geh(&baum.items, von, bis)
+}
+
 fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
     // **`--paesse` prints the FULL register, and since 2026-08-25 it no longer prints
     // itself.** See `register_kurz` for the measurement and the reason.
     let voll = argumente.iter().any(|a| a == "--paesse");
+    // **`--unit` checks the named files as ONE translation unit** (German alias
+    // `--einheit`). Without it every file is its own unit -- see the loop below, and see
+    // `pruefe_als_einheit` for what changes and what the flag costs.
+    let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
     let argumente: Vec<String> = argumente
         .iter()
-        .filter(|a| a.as_str() != "--paesse")
+        .filter(|a| !matches!(a.as_str(), "--paesse" | "--unit" | "--einheit"))
         .cloned()
         .collect();
     // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
@@ -746,6 +926,9 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
         Ok(v) => v,
         Err(c) => return c,
     };
+    if einheit {
+        return pruefe_als_einheit(&dateien, &vorspann, voll);
+    }
     let mut fehler = 0usize;
     // See `command_emit`: the build spans the file list, not one file.
     let mut register = gabbro_check::bindung::Bindungsregister::neu();

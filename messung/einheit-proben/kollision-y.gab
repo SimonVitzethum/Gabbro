@@ -1,0 +1,6 @@
+-- Zwei Module, die denselben Namen fuehren -- Datei 2 von 3.
+module rechts {
+
+pub type Wert = u32 in 0 .. 1000;
+
+}
