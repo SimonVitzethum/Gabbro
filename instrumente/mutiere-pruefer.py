@@ -2497,8 +2497,12 @@ MUTATIONEN = [
     Mutation(
         "veroeffentlichung-nimmt-die-vorgabeordnung",
         "emit.rs",
-        "atomic_store_explicit(&{ziel}, {}, {ordnung});",
-        "{ziel} = {}; /* {ordnung} */",
+        # **The anchor was pulled along on 2026-08-31, not the rule**: since `verenge` the
+        # value stands as `{w}` in that line and no longer as `{}`. An anchor that does not
+        # follow a rebuild falls under `ungueltig`, and the quota keeps reading as if it
+        # covered it.
+        "atomic_store_explicit(&{ziel}, {w}, {ordnung});",
+        "{ziel} = {w}; /* {ordnung} */",
         "K11.2.3 -- die Veroeffentlichung wird ein `=`, also seq_cst statt der deklarierten "
         "Ordnung; das erzeugte Programm sagt etwas anderes als die Quelle",
     ),
@@ -3648,6 +3652,43 @@ MUTATIONEN = [
         "ohne Typ. Derselbe Rumpf ueber einem RUF sagt `u32 + u8` ab, ueber einem Register "
         "geht er durch: die Quelle des `let` entscheidet, ob der Ueberlauf auffaellt, "
         "«B14b» band den Platz und niemand band seinen Typ",
+    ),
+    # -- emit.rs: the WIDTH of a floating point computation (2026-08-31) -----------------
+    Mutation(
+        "f32-literal-verliert-sein-f",
+        "gabbro-check/src/emit.rs",
+        '    if schmal { format!("{t}f") } else { t }',
+        "    let _ = schmal;\n    t",
+        "«F» -- ein Gleitkommaliteral neben einem `f32` faellt wieder auf `double` zurueck, "
+        "und C hebt die ganze Rechnung mit. Gemessen ueber 200 000 Werten: das Erzeugnis "
+        "rechnet dann in 39 990 Faellen etwas anderes als `v * 0.1f`, also etwas anderes als "
+        "der Pruefer ueber `f32` gesagt hat. `-Wall -Wextra` sieht es NICHT -- es braucht "
+        "`-Wdouble-promotion` oder `-Wfloat-conversion`, und keiner von beiden steht im Tor",
+        "code",
+    ),
+    Mutation(
+        "zweiter-prototyp-kommt-zurueck",
+        "gabbro-check/src/emit.rs",
+        "    if !definiert {\n        if let Some(kern) = eigene.get(&f.name.text) {",
+        "    if false {\n        if let Some(kern) = eigene.get(&f.name.text) {",
+        "Ein Name bekommt wieder ZWEI Prototypen: der aus der Definition traegt "
+        "`__attribute__((const))`, der aus dem `extern fn` nicht -- zwei Deklarationen "
+        "derselben C-Funktion mit verschiedenen Zusagen an den Uebersetzer. "
+        "`-Wredundant-decls` nennt es, `-Wall -Wextra` nicht. Und die widersprechende Form "
+        "(`u64` gegen `u32`) wird wieder emittiert statt abgesagt -- genau EINE Probe faellt",
+        "code",
+    ),
+    Mutation(
+        "index-verengt-sich-wieder-stillschweigend",
+        "gabbro-check/src/emit.rs",
+        '        Some(h) if h <= zmax => format!("({ziel})({text})"),',
+        '        Some(h) if h <= zmax && false => format!("({ziel})({text})"),',
+        "Ein `index into T` (`uint32_t`) wird wieder ohne Umwandlung in ein `u16`-Feld und "
+        "in ein `u16`-Atomar geschrieben -- dieselbe Familie wie `F06`: der Pruefer kennt "
+        "die Schranke (`count 8`, drei Bit reichen), der Erzeuger senkt 32 ab. "
+        "`cc -Wconversion` nennt es zweimal, `-Wall -Wextra` nicht, und genau EINE Probe "
+        "faellt",
+        "code",
     ),
 ]
 

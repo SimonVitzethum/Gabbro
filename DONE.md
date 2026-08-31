@@ -365,6 +365,50 @@ key has to be blind at the very same spot, or the probe measures nothing.
 
 ---
 
+## Moved out of TODO.md on 2026-08-31 — three producer faults `-Wextra` does not see
+
+> **The W24 prelude asked for the SHAPE, and the shape is the finding.** Over all 83 emitting
+> files of eight roots — not the two of stage 9 — `cc -Wconversion` names **4 sites in 3
+> files**, and each hangs on exactly ONE construct. *A refusal that fell eighty times would be
+> a statement about the language; these are statements about three lines in `emit.rs`.*
+
+| | what it was | who says it now |
+|---|---|---|
+| **A** index narrowing | `a.slots[i].kopf = i;` writes a `uint32_t` index into a `u16` field and into a `u16` atomic, silently. `index into T` lowers to `uint32_t`, `count QGROESSE = 8` needs three bits | the **producer** writes `(uint16_t)(i)`. `M101` already refuses the case that does NOT fit — measured with `count 100000` into a `u16` field — so the cast is the checker's sentence, carried into C |
+| **B** two prototypes | `beispiele/29-undurchsichtig.gab` declares `pa_aus_zahl` as `pub impl fn` and as `extern fn` in a second module, one prototype with `__attribute__((const))` and one without | the **producer** drops the second declaration. Giving the `extern` half the attribute was the other way and `wirkungsattribut` had already refused it: at an `extern fn` the effects clause is an ASSUMPTION, an attribute an INSTRUCTION |
+| **C** float width | in `messung/proben/probe-f32-literal.gab` a literal without `f` beside an `f32` lifts the whole computation to `double`; `39 990` of 200 000 values differ from `v * 0.1f` | the **producer** appends the `f`, inherited through parentheses and binary nodes |
+
+**Three times the same outcome, and that is not chance:** all three are places where the
+checker HAS a fact and C cannot see it. *A refusal would have been wrong in all three — the
+programs are correct.* What was missing was the translation of the fact into the language the
+C compiler reads.
+
+**The one refusal that did come with it** hangs on B: where the two declarations of one name
+lower DIFFERENTLY, nothing is dropped and `C001` speaks. `impl fn f(z : u64)` beside
+`extern fn f(z : u32)` passes `gabbro pruefe` with **0 errors** and `cc` rejects the C —
+*silently dropping the second declaration would take that error away*, so the refusal is what
+makes the dropping safe.
+
+**Evidence:** `messung/DREI-ERZEUGERFEHLER.md` · `crates/gabbro-check/src/emit.rs`
+(`gleitkommatext`/`ausdruck_breit`, `prototyp_kern`/`eigene_ruempfe`, `verenge`) · probes
+`f32_literal_traegt_seinen_suffix`, `ein_name_ein_prototyp`,
+`index_in_ein_schmaleres_feld_wird_umgewandelt` · mutations `f32-literal-verliert-sein-f`,
+`zweiter-prototyp-kommt-zurueck`, `index-verengt-sich-wieder-stillschweigend` — each set by
+hand, built, and measured to kill exactly one probe of 123; anchor count 355 → 358, with
+`veroeffentlichung-nimmt-die-vorgabeordnung` re-anchored.
+
+**The counter after the work: 0 of 83** under `-Wconversion -Wdouble-promotion
+-Wredundant-decls -Wsign-conversion` and ten further sharper switches. No file left the
+emission — 83 emit before and after, `pruefe-emission.sh` unchanged at `79 von 79`, ratchets
+54 / 25.
+
+**`-Wconversion` was NOT put into the gate.** It costs nothing today, and that is a
+measurement and not a decision; `TODO.md` carries it, along with the representation question
+(should `index into T` lower to the narrowest width its `count` needs?) and the checker rule
+against the contradictory pair.
+
+---
+
 ## Moved out of TODO.md on 2026-08-30 — `result-in-ensures` carried two cases, and named a third
 
 > **The W24 prelude turned the entry around.** It stood as *"`LeanReason::Result` carries two

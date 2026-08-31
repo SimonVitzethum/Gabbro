@@ -1345,6 +1345,11 @@ pub fn emittiere_mit(
         }
     }
 
+    // **Which names does this unit DEFINE itself, and what does the definition lower to?**
+    // Read before the emitting pass, because a Gabbro file's order is free -- see the
+    // refusal in `funktion`.
+    let eigene = eigene_ruempfe(baum, &namen);
+
     // **Welche Namen haben im Erzeugnis einen Prototyp?** Genau die Funktionen, die keine
     // `spec fn` sind -- `funktion` schreibt fuer die anderen nichts. *Ohne diese Liste waere
     // eine gepruefte Bezugnahme auf eine Spezifikationsfunktion ein Uebersetzungsfehler im
@@ -1421,7 +1426,7 @@ pub fn emittiere_mit(
                 aus.push_str(&format!(
                     "\n#define {} {}\n",
                     k.name.text,
-                    gleitkommatext(*bits)
+                    gleitkommatext(*bits, false)
                 ));
             // **«G5»: `u64::max` IST eine Konstante -- sie steht nur nicht als Ziffernfolge
             // da.** Die Grenzen einer Breite sind Wortschatzwoerter, und sie hier abzulehnen
@@ -1848,7 +1853,7 @@ pub fn emittiere_mit(
                 ));
             }
         }
-        ItemArt::Funktion(f) => funktion(f, &mut aus, &mut rumpf, &namen, absagen),
+        ItemArt::Funktion(f) => funktion(f, &mut aus, &mut rumpf, &namen, &eigene, absagen),
         // **`assume` und `axiom` erzeugen keinen Code -- aber sie erzeugen die ZUSAGE.**
         //
         // `SYNTAX.md` §12: *„Die Annahmenmenge wird ins Erzeugnis emittiert (‚bewiesen unter
@@ -4375,16 +4380,20 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
     }
 }
 
-fn funktion(
+/// **The lowered CORE of a prototype: the return type and the parameter list.**
+///
+/// Split out on 2026-08-31 so that the same declaration is lowered by the same code twice --
+/// once where it is written into the output, and once to answer the question *"does this
+/// unit already declare that name, and does it declare the SAME thing?"* (see `funktion`).
+/// *Two spellings of one lowering would be the second register W7 warns about; here the
+/// second reader would silently disagree with the first at exactly the corner cases.*
+///
+/// `Err` carries the span and the word for the refusal instead of raising it: the pre-pass
+/// asks the question without speaking, and only the emitting call reports.
+fn prototyp_kern(
     f: &FnDecl,
-    aus: &mut String,
-    rumpf_aus: &mut String,
     u: &Namen,
-    absagen: &mut Absagen,
-) {
-    if matches!(f.klasse, Some(FnKlasse::Spec)) {
-        return;
-    }
+) -> Result<(String, String), (gabbro_syntax::span::Span, &'static str)> {
     let eigen = eigene_sicht(f, u);
     let u = &eigen;
     // **The ghost return becomes `void` — not a lowering but an ERASURE.** `mmu_an` hands the
@@ -4397,10 +4406,7 @@ fn funktion(
         Some(TypExpr::Never(_)) => "_Noreturn void".into(),
         Some(t) => match ctyp(t, u) {
             Some(c) => c,
-            None => {
-                weigere(absagen, f.name.span, "return type");
-                return;
-            }
+            None => return Err((f.name.span, "return type")),
         },
         None => "void".into(),
     };
@@ -4417,10 +4423,7 @@ fn funktion(
                 let r = if darf_restrict(f, p, u) { "restrict " } else { "" };
                 params.push(format!("{c}{luecke}{r}{}", p.name.text))
             }
-            None => {
-                weigere(absagen, p.name.span, "parameter type");
-                return;
-            }
+            None => return Err((p.name.span, "parameter type")),
         }
     }
     // **`-> T or R` -- der Fehlerkanal, und er aendert die C-Signatur** (2026-08-20).
@@ -4448,10 +4451,7 @@ fn funktion(
         if let Some(t) = &f.ergebnis {
             match ctyp(t, u) {
                 Some(c) => params.push(format!("{c} *_wert")),
-                None => {
-                    weigere(absagen, f.name.span, "return type");
-                    return;
-                }
+                None => return Err((f.name.span, "return type")),
             }
         }
         params.push(format!("{} *_grund", r.text));
@@ -4461,6 +4461,59 @@ fn funktion(
     } else {
         params.join(", ")
     };
+    Ok((rueck, liste))
+}
+
+/// **One name, one prototype** (2026-08-31) -- the names this unit DEFINES itself, each with
+/// the core its definition lowers to.
+///
+/// See the refusal in `funktion`: a bodiless declaration of a name this unit defines is not
+/// a foreign body, and its prototype is a second declaration of the same C function. Where
+/// the two lowerings agree the second one is dropped; where they disagree the emitter
+/// refuses. **The map is built BEFORE the emitting pass** because a Gabbro file's order is
+/// free -- the `extern fn` may stand before the definition, and it does in
+/// `beispiele/29-undurchsichtig.gab` the other way round.
+fn eigene_ruempfe(
+    baum: &Programm,
+    u: &Namen,
+) -> std::collections::BTreeMap<String, (String, String)> {
+    let mut m = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            if !matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_)) {
+                return;
+            }
+            if let Ok(k) = prototyp_kern(f, u) {
+                m.insert(f.name.text.clone(), k);
+            }
+        }
+    });
+    m
+}
+
+fn funktion(
+    f: &FnDecl,
+    aus: &mut String,
+    rumpf_aus: &mut String,
+    u: &Namen,
+    eigene: &std::collections::BTreeMap<String, (String, String)>,
+    absagen: &mut Absagen,
+) {
+    if matches!(f.klasse, Some(FnKlasse::Spec)) {
+        return;
+    }
+    let (rueck, liste) = match prototyp_kern(f, u) {
+        Ok(k) => k,
+        Err((span, was)) => {
+            weigere(absagen, span, was);
+            return;
+        }
+    };
+    let eigen = eigene_sicht(f, u);
+    let u = &eigen;
     // **Without `pub` the binding is INTERNAL -- since 2026-08-25** (the ABI work).
     //
     // Until then this file knew the word `pub` nowhere: **zero occurrences in 6 976 lines.**
@@ -4478,6 +4531,51 @@ fn funktion(
     // definition that is not here -- `cc` says *"used but never defined"* to that, and it
     // would be right.
     let definiert = matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_));
+    // **ONE name, ONE prototype -- and the one that stands is the DEFINITION's** (2026-08-31).
+    //
+    // `beispiele/29-undurchsichtig.gab` names `pa_aus_zahl` twice: as `pub impl fn … effects
+    // { pure }` in the declaring module and as `extern fn … effects { pure }` in the using
+    // one. **The doubling comes from the PROGRAM** -- that is the whole point of the file, a
+    // module boundary drawn inside one unit. **The diverging attributes came from HERE:**
+    //
+    // ```c
+    // uint64_t pa_aus_zahl(uint64_t z) __attribute__((const));   /* from the `impl fn`   */
+    // uint64_t pa_aus_zahl(uint64_t z);                          /* from the `extern fn` */
+    // ```
+    //
+    // *Two declarations of one C function carrying different promises to the compiler are a
+    // statement that contradicts itself.* `-Wredundant-decls` names it; `-Wall -Wextra` does
+    // not. The second one is dropped: the first already declares the name, with the type it
+    // has and with the attribute the body earned.
+    //
+    // **And the attribute is NOT given to the `extern` half instead**, which would be the
+    // other way to make the two agree. `wirkungsattribut` gives its reason two hundred lines
+    // up: at an `extern fn` the effects clause is an ASSUMPTION about foreign code, and an
+    // attribute is an INSTRUCTION to the compiler. Turning the one into the other is the
+    // move the certificate stands against. *Here the body is not foreign at all -- it stands
+    // in the same unit -- so the assumption has nothing left to say.*
+    //
+    // > **Where the two lowerings DISAGREE, nothing is dropped and the emitter refuses.**
+    //   Measured on 2026-08-31: `impl fn f(z : u64) -> u64` beside `extern fn f(z : u32) ->
+    //   u32` passes `gabbro pruefe` with **0 errors**, and the C is rejected by `cc`
+    //   (*"conflicting types for 'f'"*). Silently dropping the second declaration would take
+    //   that error away and leave a call lowered against the wrong width -- *the refusal is
+    //   what makes the dropping safe, and it is not a separate feature.*
+    if !definiert {
+        if let Some(kern) = eigene.get(&f.name.text) {
+            if *kern == (rueck.clone(), liste.clone()) {
+                return;
+            }
+            weigere(
+                absagen,
+                f.name.span,
+                "a bodiless declaration of a name this unit DEFINES, and the two disagree -- \
+                 one C function cannot have two prototypes with different types. The body is \
+                 not foreign: it stands in this same unit",
+            );
+            return;
+        }
+    }
     let intern = if !f.oeffentlich && definiert { "static " } else { "" };
     // **`unused` -- the same treatment as at the `static` of a world state and at the
     // `(void)k;` of an unread parameter, and for the same reason.**
@@ -5005,7 +5103,13 @@ fn anweisung(
                 // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
                 Some(tab) => option_wert(&z.wert, &tab, u, absagen)
                     .unwrap_or_else(|| ausdruck(&z.wert, u, absagen)),
-                None => ausdruck(&z.wert, u, absagen),
+                // **The declared width of the PLACE decides whether a conversion is
+                // written** -- see `verenge`. `a.slots[i].kopf = i;` with an index into a
+                // `count 8` table and a `u16` field narrowed silently until 2026-08-31.
+                None => {
+                    let ziel = ort_typ(&z.ziel, u).and_then(|t| ctyp(&t, u));
+                    verenge(ausdruck(&z.wert, u, absagen), &z.wert, ziel.as_deref(), u)
+                }
             };
             // **Ein `format`-Feld wird ein SETZER, kein Zuweisungsziel** (2026-08-20).
             //
@@ -5270,7 +5374,7 @@ fn anweisung(
         // die Maschine nicht noch einmal pruefen.
         StmtArt::Publish(pb) => {
             let ziel = pb.ziel.text();
-            let Some((_, ordnung, _)) = u.atomics.get(&ziel) else {
+            let Some((atyp, ordnung, _)) = u.atomics.get(&ziel) else {
                 weigere(absagen, s.span, "`publishes` on something that is not an atomic");
                 return;
             };
@@ -5278,10 +5382,18 @@ fn anweisung(
                 Nutzlast::Orte(l) => l.iter().map(|x| x.text()).collect::<Vec<_>>().join(", "),
                 Nutzlast::Nichts(_) => "nothing".into(),
             };
+            // **The atomic carries its width in its own declaration** (`atomic AVAIL_IDX :
+            // u16`), and it is the same silent narrowing as at a slot field -- `-Wconversion`
+            // named `atomic_store_explicit(&AVAIL_IDX, i, …)` as the second of the two sites.
+            let w = verenge(
+                ausdruck(&pb.wert, u, absagen),
+                &pb.wert,
+                Some(atyp.as_str()),
+                u,
+            );
             aus.push_str(&format!(
                 "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n\
-                 {e}atomic_store_explicit(&{ziel}, {}, {ordnung});\n",
-                ausdruck(&pb.wert, u, absagen)
+                 {e}atomic_store_explicit(&{ziel}, {w}, {ordnung});\n"
             ));
         }
         StmtArt::AwaitLoad(al) => {
@@ -7016,6 +7128,82 @@ fn umlaeufer_typ(e: &Expr, u: &Namen) -> Option<IntTy> {
     }
 }
 
+/// The largest value an unsigned C integer type can hold. `None` for everything else --
+/// a signed type, a pointer, a struct: none of them is a narrowing this function may judge.
+fn c_obergrenze(t: &str) -> Option<i128> {
+    Some(match t {
+        "uint8_t" => 255,
+        "uint16_t" => 65535,
+        "uint32_t" => 4294967295,
+        "uint64_t" => i128::from(u64::MAX),
+        _ => return None,
+    })
+}
+
+/// **The bound the CHECKER carries for a bare `index into T`: `count N` minus one.**
+///
+/// `option index into T` is deliberately excluded -- its widest value is the SENTINEL `N`,
+/// not `N - 1`, and an option has no business in an integer field in the first place.
+fn indexschranke(e: &Expr, u: &Namen) -> Option<i128> {
+    let ExprArt::Ort(o) = &e.art else { return None };
+    match ort_typ(o, u) {
+        Some(TypExpr::Index { tabelle, optional: false, .. }) => {
+            u.kapazitaet.get(&tabelle.text).copied().map(|n| n - 1)
+        }
+        _ => None,
+    }
+}
+
+/// **The width the checker knows, WRITTEN DOWN where C cannot see it** (2026-08-31).
+///
+/// `messung/treiber/virtio-net.gab`:236 writes `a.slots[i].kopf = i;` with
+/// `i : index into Deskring`, `count QGROESSE = 8`, into a `u16` field. `index into T` lowers
+/// to `uint32_t` (the representation the `option` sentinel hangs on), so the C reads
+/// `a->slots[i].kopf = i;` -- **a silent narrowing.** `cc -Wconversion` names it twice,
+/// `-Wall -Wextra` names neither. *The same family as `F06`, one file on: the checker knows
+/// the bound -- three bits are enough -- and the producer lowered 32.*
+///
+/// **The cast is not a promise this function invents.** `M101` in the checker (`m1.rs`)
+/// refuses the program when the value does NOT fit: measured on 2026-08-31, `k.slots[i].kopf = i` with `count 100000`
+/// into a `u16` field gives
+///
+/// ```text
+/// error: [M101] die Zuweisung requires `u16`, the value has `u32 in 0 .. 99999`
+/// ```
+///
+/// -- so no program that reaches this emitter carries a narrowing that loses a value. *The
+/// checker already SAYS it; it says it in Gabbro, to a Gabbro reader. What was missing is
+/// the sentence in C.* The bound is nevertheless read again here rather than trusted: an
+/// emitter that writes a cast on another pass's word writes a promise it cannot see.
+///
+/// **And the other way out was NOT taken.** `index into T` could lower to the narrowest
+/// width its `count` needs -- `uint8_t` for `count 8` -- and then the assignment would be a
+/// WIDENING and silent by itself. That changes the representation of every index in every
+/// signature, and the `option` sentinel premise (`N` must fit the index word,
+/// `beweise/Option_Sonderwert.thy`) with it. *A decision about the ABI is not a side effect
+/// of a warning*; `messung/GRAMMATIKTAFEL.md` §8 left it open and it stays open.
+fn verenge(text: String, e: &Expr, ziel: Option<&str>, u: &Namen) -> String {
+    let Some(ziel) = ziel else { return text };
+    let (Some(zmax), Some(qmax)) = (
+        c_obergrenze(ziel),
+        wert_ctyp(e, u).as_deref().and_then(c_obergrenze),
+    ) else {
+        return text;
+    };
+    // Widening or equal: C converts without losing anything, and says nothing about it.
+    if qmax <= zmax {
+        return text;
+    }
+    match indexschranke(e, u) {
+        // It fits, and the declaration says so. Write it down.
+        Some(h) if h <= zmax => format!("({ziel})({text})"),
+        // It does NOT fit, or nothing here bounds it. **Then nothing is written** -- a cast
+        // would be a claim, and `M101` in the checker is the pass that makes claims about
+        // ranges.
+        _ => text,
+    }
+}
+
 fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
         // **The signature first, the body second** (2026-08-25). A name a declaration knows is
@@ -7581,21 +7769,52 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
 /// zurueckliest. *Eine gekuerzte Form waere ein zweites Runden -- und zwar eines, von dem im
 /// Quelltext nichts steht.*
 ///
-/// Ohne Suffix, also ein `double`-Literal. Trifft es auf ein `float`, wandelt C um.
-fn gleitkommatext(bits: u64) -> String {
+/// **And `schmal` appends an `f` where the computation is an `f32` computation** (2026-08-31).
+///
+/// Without a suffix a C literal is a `double`. Standing next to a `float`, C lifts the
+/// `float` up to it -- **the whole computation changes width** and only falls back at the
+/// end. Measured over 200 000 values of the emitted unit: the old output differed from
+/// `v * 0.1f` in **39 990** cases (the plain-C run of `messung/GRAMMATIKTAFEL.md` §8 said
+/// 39 974 over its own sampling). *The program says `f32`, the output computed `f64` --
+/// exactly the class the `wrapping` cast one level up stands against.*
+///
+/// **The `f` does not change the VALUE of the literal.** `{:?}` yields the shortest decimal
+/// that reads back to the same `f64`; `float` has a 24 bit significand and `double` 53, so
+/// `53 >= 2*24 + 2` -- under that condition double rounding is provably innocuous
+/// (Figueroa 1995), and `0.1f` is bit-identical to `(float)0.1`. *The suffix picks the
+/// computation width, not a different value.*
+fn gleitkommatext(bits: u64, schmal: bool) -> String {
     let w = f64::from_bits(bits);
     let t = format!("{w:?}");
-    if t.contains('.') || t.contains('e') || t.contains("inf") || t.contains("NaN") {
+    let t = if t.contains('.') || t.contains('e') || t.contains("inf") || t.contains("NaN") {
         t
     } else {
         format!("{t}.0")
-    }
+    };
+    if schmal { format!("{t}f") } else { t }
+}
+
+/// **Does this expression compute in `float`?** -- the question the suffix hangs on.
+///
+/// It is answered at the LEAVES and not at the node: a literal has no type to read off, so
+/// the neighbour carries it. `wert_ctyp` reads it out of the declaration -- a parameter, a
+/// field, the return of a call.
+fn ist_float(e: &Expr, u: &Namen) -> bool {
+    wert_ctyp(e, u).as_deref() == Some("float")
 }
 
 fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
+    ausdruck_breit(e, u, absagen, false)
+}
+
+/// `schmal` means: this expression stands inside an `f32` computation, and a literal in it
+/// gets its `f`. **Only three forms pass it on** -- the parenthesis, the binary node and the
+/// literal itself. Everything else starts at `false`: a call, a place, an index carry their
+/// own type, and a literal inside one has a different neighbour.
+fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> String {
     match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
-        ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits),
+        ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits, schmal),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
         ExprArt::Ort(o) => ort(o, u, absagen),
@@ -7617,7 +7836,7 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
         // muessen dieselbe Regel benutzen, sonst erzeugt der Uebersetzer einen Namen, den
         // er selbst nicht deklariert hat* -- `cc` faengt das, aber erst am Ende.
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
-        ExprArt::Klammer(x) => format!("({})", ausdruck(x, u, absagen)),
+        ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
             // **Ein `wrapping`-Slot rechnet UNSIGNED -- sonst sagt das C etwas anderes als
             // das Gepruefte** (Rezension 2026-08-20).
@@ -7659,7 +7878,28 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
                     ausdruck(b, u, absagen)
                 );
             }
-            format!("{} {} {}", ausdruck(a, u, absagen), op_text(op), ausdruck(b, u, absagen))
+            // **And here the WIDTH of a floating point computation is decided** (2026-08-31).
+            //
+            // If one side is a `float`, the whole node computes in `float` -- and a literal
+            // in it gets its `f`. Without that C lifted the `float` to `double`, computed
+            // there and rounded back at the end: **two roundings instead of one**, and in
+            // 39 990 of 200 000 measured cases a different result from what the checker said
+            // about `f32`.
+            //
+            // *The same shape as the `wrapping` cast above:* where C changes the width by
+            // itself, the producer writes it down. The only difference is where the width
+            // stands -- there in the slot declaration, here in the neighbouring operand.
+            //
+            // **The context is INHERITED (`schmal ||`), not asked afresh.** In
+            // `x * (0.5 + 0.25)` the inner node knows no `float` neighbour; without passing
+            // it down the parenthesis would stay a `double` and take the expression with it.
+            let schmal = schmal || ist_float(a, u) || ist_float(b, u);
+            format!(
+                "{} {} {}",
+                ausdruck_breit(a, u, absagen, schmal),
+                op_text(op),
+                ausdruck_breit(b, u, absagen, schmal)
+            )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
         // **Die logische Verneinung -- gebaut, WEIL ein Programm sie gebraucht hat**

@@ -488,7 +488,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 134 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 135 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -654,7 +654,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2186 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2188 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -914,8 +914,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **355 von 355 Ankern** greifen (`--anker`, 2026-08-31 —
-      vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8).
+      fällt. Mutationskatalog: **358 von 358 Ankern** greifen (`--anker`, 2026-08-31 —
+      vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8;
+      **355 → 358** durch die drei Erzeugerfehler desselben Tages, und einer der alten
+      musste dabei nachgezogen werden, siehe `messung/DREI-ERZEUGERFEHLER.md`).
       ~~345 von 345~~ nachgezogen am 2026-08-30: die 346. trennt die zwei Fälle von `result`
       (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Die
       acht des Rumpfkanals kamen am 28. abends dazu, und am 30. fünf weitere aus drei Ketten:
@@ -3522,7 +3524,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7892 von 16467 Kommentarzeilen** im Pruefer sind deutsch
+**7891 von 16857 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -4749,18 +4751,6 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       nicht deklariert (`messung/ABSAGEFORMEN.md` U10/U11). *Zwei `UNGEDECKT`-Zellen mit
       einer Wurzel* — `messung/fragmente/F05.gab` ist die Fundstelle.
 
-- [ ] **Ein Gleitkommaliteral in einem `f32`-Ausdruck wird ein `double`, und das C rechnet
-      etwas anderes als das Programm.** `gleitkommatext` (`emit.rs`) schreibt
-      `f64::from_bits(bits)` ohne Suffix; in C ist ein Literal ohne `f` ein `double`, also
-      wird `x * 0.1` bei `x : f32` in doppelter Breite gerechnet und erst bei der Rückgabe
-      gerundet. **Gemessen 2026-08-31 in reinem C über 200 000 Werten:
-      `(float)(v * 0.1) != v * 0.1f` in 39 974 Fällen.** Der Prüfer nimmt das Programm mit
-      100 % Typdeckung an (`messung/proben/probe-f32-literal.gab`). *Welche Breite ein
-      Literal in einem `f32`-Ausdruck hat, ist eine Aussage über das Zahlmodell und keine
-      über den Erzeuger* — `dokumente/MEMO-GLEITKOMMA.md` führt die Doppelrundung schon als
-      Landmine. Gefunden von `pruefe-grammatiktafel.py`: `f32` stand in der Grammatik und in
-      keinem Programm.
-
 - [ ] **Der Adressraum eines Zeigers verschwindet in der Absenkung.** `ctyp` liest
       `TypExpr::Zeiger(z).raum` überhaupt nicht: `ptr<port, r> T` und `ptr<normal, r> T`
       werden beide `const T *`. Bei `mmio` fängt das der Geräteweg auf (`volatile` an
@@ -4793,28 +4783,32 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       aber er sieht keine andere Quelländerung. **Ein Prüfsummenabgleich gegen den Stand vor
       dem Lauf wäre die vollständige Antwort und ist nicht gebaut.**
 
-- [ ] **Ein Feldindex senkt als `uint32_t` ab und wird stillschweigend in ein `u16`-Feld
-      geschrieben — dieselbe Familie wie `F06`, eine Datei weiter.**
-      `messung/treiber/virtio-net.gab`:236 schreibt `a.slots[i].kopf = i;` mit
-      `i : index into Deskring` und `count QGROESSE = 8`; `AvailRing.slot.kopf` ist ein
-      `u16`, `AVAIL_IDX` auch. Im Erzeugnis steht `uint32_t i` und `d->slots[i].kopf = i`
-      ohne Umwandlung — `cc -Wconversion` nennt es zweimal (*„conversion from `uint32_t` to
-      `uint16_t` may change value"*), `-Wall -Wextra` **nicht**. Gemessen am 2026-08-31 von
-      `pruefe-grammatiktafel.py`, das seit diesem Tag jedes Erzeugnis übersetzt.
-      **Der Prüfer kennt die Schranke** (drei Bit reichen), der Erzeuger senkt trotzdem
-      32 Bit ab. *Ob ein Indextyp auf die kleinste Breite absenken soll, die sein `count`
-      trägt, oder ob der Erzeuger eine Umwandlung hinschreibt, ist eine Aussage über die
-      Absenkung und wird hier nicht nebenbei entschieden.* `F06` war genau diese Kopie aus
-      `slots of`, nur mit `-Wtype-limits` statt `-Wconversion`.
+- [ ] **Zwei widersprechende Deklarationen desselben Namens gehen durch `gabbro pruefe`.**
+      `impl fn f(z : u64) -> u64` in einem Modul und `extern fn f(z : u32) -> u32` in einem
+      zweiten derselben Datei: **0 errors, 100 % Typdeckung** — und `cc` weist das Erzeugnis
+      zurück (*„conflicting types for `f`"*). Gemessen am 2026-08-31. **Der Erzeuger sagt es
+      seit diesem Tag beim Namen ab** (`C001`, `emit.rs`, Probe `ein_name_ein_prototyp`) —
+      aber *er sagt es, nachdem der Prüfer schon 0 Fehler gemeldet hat*, und ein Widerspruch
+      zwischen zwei Deklarationen ist eine Aussage über NAMEN und nicht über die Absenkung.
+      Die Regel gehört zu `namen.rs`, neben `N025`. *Dieselbe Bauart wie `F06`: der einzige,
+      der es bis heute merkte, war der C-Übersetzer.*
 
-- [ ] **Zwei Deklarationen einer Funktion in einer Übersetzungseinheit, und sie versprechen
-      Verschiedenes.** `beispiele/29-undurchsichtig.gab` nennt `pa_aus_zahl` zweimal: als
-      `pub impl fn … effects { pure }` (Zeile 23) und als `extern fn … effects { pure }`
-      (Zeile 46, anderes Modul). Das Erzeugnis trägt beide Prototypen — den ersten **mit**
-      `__attribute__((const))`, den zweiten **ohne**. `cc -Wredundant-decls` nennt es;
-      `-Wall -Wextra` nicht. **`effects { pure }` senkt an einem `extern fn` anders ab als
-      an einem `impl fn`** (gegengeprüft an `beispiele/40-werte-und-griffe.gab`:96, wo
-      `extern fn halde() effects { pure }` zu `void halde(void);` wird). Gemessen am
-      2026-08-31. *Ob der Erzeuger den zweiten Prototyp unterdrücken soll — er weiß, dass die
-      Definition in derselben Einheit steht — oder ihm das Attribut mitgeben, ist eine
-      Entscheidung über die Absenkung und steht hier ohne Antwort.*
+- [ ] **Soll `index into T` auf die schmalste Breite absenken, die sein `count` trägt?**
+      Heute wird jeder Index ein `uint32_t`, und ein `count 8` braucht drei Bit. Seit dem
+      2026-08-31 schreibt der Erzeuger die Verengung hin, wo ein Index in ein schmaleres Feld
+      geht (`(uint16_t)(i)`, `messung/DREI-ERZEUGERFEHLER.md` Fund A) — **die Darstellung
+      selbst steht unverändert.** Der andere Ausgang wäre `uint8_t` für `count 8`, und dann
+      wäre die Zuweisung eine Verbreiterung und von sich aus still. *Er ändert die
+      Darstellung jedes Index in jeder Signatur und die Prämisse des `option`-Sonderwerts
+      (`beweise/Option_Sonderwert.thy`) mit* — eine Entscheidung über die ABI, und sie gehört
+      dem Ordner.
+
+- [ ] **`-Wconversion` im Übersetzungstor — es kostet heute NICHTS, und das ist keine
+      Entscheidung.** Nach den drei Heilungen des 2026-08-31 fallen **0 von 83** emittierenden
+      Dateien unter `-Wall -Wextra -Wconversion -Wdouble-promotion -Wredundant-decls
+      -Wsign-conversion` und unter zehn weiteren schärferen Schaltern
+      (`messung/DREI-ERZEUGERFEHLER.md` §4). `CC_SCHALTER` und Stufe 9 stehen weiter bei
+      `-std=c11 -Wall -Wextra -Werror`. **Zwei Wächter mit verschiedenen Schaltern über
+      demselben Erzeugnis geben zwei Antworten auf eine Frage** — wer den Schalter setzt,
+      setzt ihn an BEIDEN Stellen oder gar nicht. *Die Messung sagt nur, dass der Weg frei
+      ist; ihn zu gehen ist eine Wahl.*

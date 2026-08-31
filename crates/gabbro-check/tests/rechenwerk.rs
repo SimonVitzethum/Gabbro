@@ -6140,3 +6140,267 @@ impl fn f(w : ptr<normal, rw> T, g : index into T)
     // chain visits at most every slot once. *Coarse upwards is a cost promise that holds;
     // the 2 048 was coarse DOWNWARDS, and that is the direction that lies.*
 }
+
+/// **«F»: a floating point literal inside an `f32` computation carries its `f`** (2026-08-31).
+///
+/// Without the suffix a C literal is a `double`, and C lifts the neighbouring `float` up to
+/// it: **the whole computation changes width** and only falls back at the return.
+/// `-Wdouble-promotion` names the way up, `-Wfloat-conversion` the way back -- *the same
+/// defect seen from both sides* -- and `-Wall -Wextra` names neither.
+///
+/// Measured in plain C over 200 000 values from the range of `Bruch`:
+///
+/// ```text
+///   BEFORE != v*0.1f : 39990        AFTER != v*0.1f : 0
+/// ```
+///
+/// **The producer therefore wrote a different number than the checker said about `f32` in
+/// one case out of five.** Same shape as the `wrapping` cast: where C changes the width by
+/// itself, the producer writes the width down.
+#[test]
+fn f32_literal_traegt_seinen_suffix() {
+    fn c_ohne_absage(q: &str) -> String {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+        c
+    }
+    // **Read per BLOCK, not over the whole output.** Three bodies stand in the same file and
+    // one of them MUST carry `0.1` without a suffix -- a claim about the whole text would
+    // already be satisfied by the wrong body.
+    fn rumpf<'a>(c: &'a str, kopf: &str) -> &'a str {
+        let von = c
+            .rfind(kopf)
+            .unwrap_or_else(|| panic!("no body `{kopf}`:\n{c}"));
+        let rest = &c[von..];
+        &rest[..rest.find('}').unwrap_or(rest.len())]
+    }
+
+    let c = c_ohne_absage(
+        "module t {
+type Bruch = f32 in 0.0 .. 10.0;
+type Weit  = f64 in 0.0 .. 10.0;
+impl fn schmal(x : Bruch) -> Bruch effects { pure } costs <= 4 ops
+{ return x * 0.1 rounded; }
+impl fn geschachtelt(x : Bruch) -> Bruch effects { pure } costs <= 4 ops
+{ return x * (0.5 rounded + 0.25 rounded); }
+impl fn breit(y : Weit) -> Weit effects { pure } costs <= 4 ops
+{ return y * 0.1 rounded; }
+}",
+    );
+
+    // 1. The measured case: `x : f32`, a literal beside it.
+    assert!(
+        rumpf(&c, "static float schmal(float x) {").contains("x * 0.1f"),
+        "the literal computes in `float`, not in `double`:\n{c}"
+    );
+
+    // 2. **The context is INHERITED.** In `x * (0.5 + 0.25)` the inner node sees no `float`
+    //    neighbour; without passing it down the parenthesis would stay a `double` and drag
+    //    the whole expression with it. *That is the part a look at the one measured line
+    //    would not have built.*
+    assert!(
+        rumpf(&c, "static float geschachtelt(float x) {").contains("(0.5f + 0.25f)"),
+        "under a parenthesis too the computation stays narrow:\n{c}"
+    );
+
+    // 3. **The silent direction, and it is no bonus.** An `f` on an `f64` literal would be
+    //    the same defect with the sign reversed -- it would NARROW the computation, and
+    //    `0.1f` is not `0.1`.
+    let breit = rumpf(&c, "static double breit(double y) {");
+    assert!(
+        breit.contains("y * 0.1") && !breit.contains("0.1f"),
+        "an `f64` computes in `double`, and the literal carries NO `f`:\n{c}"
+    );
+}
+
+/// **One name, one prototype -- and the one that stands is the DEFINITION's** (2026-08-31).
+///
+/// `beispiele/29-undurchsichtig.gab` names `pa_aus_zahl` twice, as `pub impl fn … effects
+/// { pure }` and as `extern fn … effects { pure }` in the module that uses it. The output
+/// carried both prototypes, and only the first one the `__attribute__((const))`:
+///
+/// ```c
+/// uint64_t pa_aus_zahl(uint64_t z) __attribute__((const));
+/// uint64_t pa_aus_zahl(uint64_t z);
+/// ```
+///
+/// *The doubling comes from the PROGRAM -- that is the point of the file. The diverging
+/// promises came from the producer.* `-Wredundant-decls` names it, `-Wall -Wextra` does not.
+#[test]
+fn ein_name_ein_prototyp() {
+    fn emittiere(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    // **1. The measured case, cut down from `beispiele/29`**: a `pub` body in one module, an
+    //    `extern fn` naming it in another. Counted per BLOCK -- exactly ONE declaration line
+    //    for the name, and it is the one that carries the attribute.
+    let (c, f) = emittiere(
+        "module a {
+pub impl fn pa_aus_zahl(z : u64) -> u64 effects { pure } costs <= 2 ops { return z; }
+}
+module b {
+extern fn pa_aus_zahl(z : u64) -> u64 effects { pure } costs <= 2 ops;
+pub impl fn erste() -> u64 effects { pure } costs <= 4 ops { return pa_aus_zahl(4096); }
+}",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let deklarationen: Vec<&str> = c
+        .lines()
+        .filter(|z| z.starts_with("uint64_t pa_aus_zahl(uint64_t z)") && z.ends_with(';'))
+        .collect();
+    assert_eq!(
+        deklarationen.len(),
+        1,
+        "one C function, one prototype -- and not two with different promises:\n{c}"
+    );
+    assert!(
+        deklarationen[0].contains("__attribute__((const))"),
+        "the one that stands is the DEFINITION's, with the attribute its body earned:\n{c}"
+    );
+
+    // **2. A body that is NOT `pub` keeps its `static`, and the second declaration goes.**
+    //    Both stood before, and the pair is undefined behaviour C11 6.2.2p7 -- a file scope
+    //    declaration without a storage class has EXTERNAL linkage, after a `static` one.
+    //    *`gcc -Wall -Wextra -Werror` accepts it silently, which is the whole reason this
+    //    half needs a probe of its own.*
+    let (c, f) = emittiere(
+        "module a {
+impl fn f(z : u64) -> u64 effects { pure } costs <= 2 ops { return z; }
+}
+module b {
+extern fn f(z : u64) -> u64 effects { pure } costs <= 2 ops;
+pub impl fn g() -> u64 effects { pure } costs <= 4 ops { return f(7); }
+}",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert_eq!(
+        c.lines().filter(|z| z.trim_start().starts_with("static uint64_t f(uint64_t z)")
+            && z.ends_with(';')).count(),
+        1,
+        "the `static` prototype stands:\n{c}"
+    );
+    assert!(
+        !c.contains("\nuint64_t f(uint64_t z);"),
+        "and the second, externally linked declaration of the same name does not:\n{c}"
+    );
+
+    // **3. Where the two DISAGREE, nothing is dropped and the emitter refuses.**
+    //
+    // `gabbro pruefe` says 0 errors over this program and `cc` rejects its C
+    // (*"conflicting types for 'f'"*). Silently dropping the second declaration would take
+    // that error away and leave the call lowered against the wrong width -- *the refusal is
+    // what makes the dropping safe, and not a feature beside it.*
+    let (_, f) = emittiere(
+        "module a {
+pub impl fn f(z : u64) -> u64 effects { pure } costs <= 2 ops { return z; }
+}
+module b {
+extern fn f(z : u32) -> u32 effects { pure } costs <= 2 ops;
+pub impl fn g() -> u32 effects { pure } costs <= 4 ops { return f(7); }
+}",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("a bodiless declaration of a name this unit DEFINES")),
+        "the contradiction is refused BY NAME, not handed to `cc`: {f:?}"
+    );
+}
+
+/// **An index written into a narrower field carries its conversion** (2026-08-31).
+///
+/// `index into T` lowers to `uint32_t`; `messung/treiber/virtio-net.gab`:236 writes such a
+/// value into a `u16` slot field and into a `u16` atomic. Both narrowed silently:
+/// `cc -Wconversion` named them, `-Wall -Wextra` named neither. *The same family as `F06`,
+/// one file on -- the checker knows the bound (`count 8`, three bits) and the producer
+/// lowered 32.*
+///
+/// The cast is not invented here: `M101` refuses the program when the value does NOT fit,
+/// and part 3 below measures that. What the producer adds is the sentence in C.
+#[test]
+fn index_in_ein_schmaleres_feld_wird_umgewandelt() {
+    fn emittiere(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+    // Read per BODY: three assignments stand in the one function below, and two of them must
+    // stay bare. An assertion over the whole output would be satisfied by the wrong one.
+    fn rumpf<'a>(c: &'a str, kopf: &str) -> &'a str {
+        let von = c.rfind(kopf).unwrap_or_else(|| panic!("no body `{kopf}`:\n{c}"));
+        let rest = &c[von..];
+        &rest[..rest.find("\n}").unwrap_or(rest.len())]
+    }
+
+    let (c, f) = emittiere(
+        "module t {
+table Ring count 8 { slot { breit : u32, } }
+table Schmal count 8 { slot { kopf : u16, } }
+atomic IDX : u16 release observed by karte_liest;
+assume karte_liest \"Die Karte liest den Eintrag erst nach dem Index.\" falsifier sonde_x;
+impl fn armiere(s : ptr<normal, rw> Schmal, r : ptr<normal, rw> Ring, i : index into Ring)
+    effects { writes s.slots, writes r.slots, publishes IDX }
+    costs   <= 8 ops
+{
+    s.slots[i].kopf = i;
+    r.slots[i].breit = i;
+    IDX = i publishes nothing;
+}
+}",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let b = rumpf(&c, "static void armiere(");
+
+    // 1. Into a NARROWER field: the conversion stands.
+    assert!(
+        b.contains("s->slots[i].kopf = (uint16_t)(i);"),
+        "the narrowing to `u16` is written down:\n{b}"
+    );
+    // 2. Into a field of the SAME width: nothing is written. *A cast where C converts
+    //    nothing is noise, and noise in generated code reads like a reason.*
+    assert!(
+        b.contains("r->slots[i].breit = i;"),
+        "same width, no cast:\n{b}"
+    );
+    // 3. The atomic store is the SECOND site, and it has its own lowering path -- healing
+    //    the slot field alone would leave `-Wconversion` standing at one of the two.
+    //
+    //    **Read at the line that writes `IDX`, not at the whole store call.** The ordering
+    //    in that call is what `veroeffentlichung-nimmt-die-vorgabeordnung` damages, and it
+    //    already has a probe; an assertion over the full text here would make one mutation
+    //    fell two probes and say nothing new. *This probe's subject is the width.*
+    let idx = b
+        .lines()
+        .find(|z| z.contains("IDX"))
+        .unwrap_or_else(|| panic!("no line writing `IDX`:\n{b}"));
+    assert!(
+        idx.contains("(uint16_t)(i)"),
+        "and the atomic carries its width from its own declaration:\n{idx}"
+    );
+
+    // 4. **Where it does NOT fit, `M101` refuses before the emitter is asked.** That is what
+    //    makes the cast above a statement and not a claim: a `count 100000` index into a
+    //    `u16` field never reaches the lowering.
+    let (baum, mut a) = gabbro_syntax::lies(
+        "p.gab",
+        "module t {
+const GROSS : u32 = 100000;
+table Ring count GROSS { slot { a : u64, } }
+table Klein count GROSS { slot { kopf : u16, } }
+impl fn setze(k : ptr<normal, rw> Klein, i : index into Ring)
+    effects { writes k.slots } costs <= 4 ops
+{ k.slots[i].kopf = i; }
+}",
+    );
+    gabbro_check::pruefe(&baum, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "M101"),
+        "`M101` carries the range, and it refuses the narrowing that loses a value: {:?}",
+        a.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+}
