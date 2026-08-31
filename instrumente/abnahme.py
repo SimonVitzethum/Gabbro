@@ -110,6 +110,8 @@ _spec = importlib.util.spec_from_file_location("pw", W / "instrumente" / "pruefe
 _pw = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_pw)
 
+_abschnitt = _pw._abschnitt          # the shared cut notice, through the one register (W7)
+
 SCHWER = _pw.SCHWER
 ARGUMENTE = _pw.ARGUMENTE
 FRIST = _pw.FRIST
@@ -441,6 +443,10 @@ def main():
     print("   ansieht, faellt auch hier nicht auf -- die Abnahme verpflichtet, sie")
     print("   spricht nicht frei (W10). Und `nicht fahrbar` ist eine LUECKE mit einem")
     print("   Namen, kein gruener Haken.")
+    # **From here on nothing more is measured** -- what follows is the verdict chain, and
+    # every one of its ends is a complete one. It sits BEFORE that chain and not before the
+    # last `return`: a red acceptance that has seen everything is not a truncated run.
+    _abschnitt.fertig()
     if gemessen == 0:
         print("\n! NULL Waechter haben gemessen. Ein positives Urteil ueber nichts ist "
               "keines (W17).")
@@ -484,5 +490,11 @@ def main():
     return code
 
 
+# **AND THE COLLECTIVE RUN ANNOUNCES ITS OWN CUT** -- since 2026-08-31.
+# It prints the `TEILMESSUNG` count for all 49 and was not itself under the form. A crash
+# after twenty guards would have left twenty rows on screen and no line saying that
+# twenty-nine were never asked -- *a half acceptance that reads like a whole one*, which is
+# the exact shape this mark exists for. **The tool that names a class does not get to stand
+# outside it.**
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_abschnitt.fahre(main))

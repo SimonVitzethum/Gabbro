@@ -1260,8 +1260,17 @@ def main():
     print("  Ruecklaufwert 124 traf. **Die Frist war da, die Forderung nicht erfuellt.**")
     print(f"  {len(SCHWER)} Waechter sind zu schwer fuer den Lauf hier und stehen mit Grund")
     print("  daneben; ihre Frist ist damit nur statisch geprueft.")
+    # **From here on nothing more is measured** -- everything above has run, and both the
+    # green end and the red one are complete.
+    _abschnitt.fertig()
     return 1 if befunde else 0
 
 
+# **AND THE GUARD OVER THE GUARDS ANNOUNCES ITS OWN CUT** -- since 2026-08-31.
+# It counted 92 covered places and was not among them, because its own dangerous set is
+# empty today. *That is a reason to be exempt from the FINDING, never from the FORM* -- a
+# crash halfway through this file would have cut every measurement below it and said
+# nothing, and the reader would have had the sections above and no hint that the rest was
+# missing. Same class, applied to the tool that names the class.
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_abschnitt.fahre(main))

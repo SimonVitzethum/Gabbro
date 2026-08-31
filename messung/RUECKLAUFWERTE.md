@@ -533,6 +533,35 @@ einfärbt, bestünde die erste Richtung und fiele an der zweiten.*
 > und es nicht tun. *Die erste darf nur fallen. Die zweite darf steigen* — sie ist eine
 > Aussage über den BAUM und keine über die Messapparatur.
 
+#### Und die zwei, die die Zahl drucken, standen selbst außerhalb der Form
+
+`pruefe-waechter.py` und `abnahme.py` liefen bis zum 2026-08-31 abends mit
+`sys.exit(main())`. Beide haben null gefährliche Stellen, also fielen sie aus der Ratsche
+heraus — *und das ist ein Grund, vom BEFUND ausgenommen zu sein, nie von der FORM.* Ein
+Absturz auf halber Höhe hätte bei `abnahme.py` zwanzig Zeilen auf dem Schirm gelassen und
+keine Zeile darüber, dass neunundzwanzig Wächter nie gefragt wurden: **eine halbe Abnahme,
+die wie eine ganze aussieht** — genau die Gestalt, für die die Marke da ist. Beide sind
+jetzt verdrahtet, mit `fertig()` vor der Urteilskette; die rote Abnahme von heute bleibt ein
+Befund und wird **nicht** als abgeschnitten gemeldet.
+
+##### Der Fund dabei: die Sprechprobe war nicht wiedereintrittsfest
+
+Kaum war `pruefe-waechter.py` verdrahtet, **fiel `abschnitt.py`s erste Richtung** — die,
+die es überhaupt gibt. Nicht weil die Meldung kaputt war: `pruefe-waechter.py` fährt
+`abschnitt.sprechprobe()` mit, und die läuft nun *innerhalb* eines `fahre()`. Damit stand
+`_AN` schon auf `True`, das geschachtelte `fahre` legte sich nicht um seinen Puffer, und
+`_MARKE` wurde nie gelernt. Der Lauf endete mit `2` und dieser Zeile:
+
+```
+== ABGESCHNITTEN in: ABGESCHNITTEN in: Stufe 2: der Kopf -- Ruecklaufwert 1 -- Ruecklaufwert 2 ==
+```
+
+*Eine Probe, die von dem Lauf zerstört wird, in dem sie steckt, misst diesen Lauf und nicht
+ihren Gegenstand* — dieselbe Klasse wie das `pgrep -f`, das sich selbst findet. Geheilt,
+indem `sprechprobe()` die drei Modulgrößen sichert, `_AN` zurücksetzt und alles hinterher
+zurücklegt. **Und sie ist nicht durch Nachdenken gefunden worden, sondern dadurch, dass
+jemand die Form auf ihren eigenen Träger angewandt hat.**
+
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister
 

@@ -149,7 +149,29 @@ def fahre(hauptteil, *args, **kw):
 # ornament* (R11). This module is not a guardian, but it is the thing every guardian's
 # honesty about its own cut now rests on. `pruefe-waechter.py` drives it.
 def sprechprobe():
-    """`[(what, ok)]` -- a cut must be announced, a complete run must not be."""
+    """`[(what, ok)]` -- a cut must be announced, a complete run must not be.
+
+    **It runs INSIDE a `fahre()` of its own driver, and until 2026-08-31 that broke it.**
+    `pruefe-waechter.py` drives this test; the day that guard wired its own run through
+    `fahre`, the test started failing its FIRST direction -- not because the notice broke,
+    but because `_AN` was already `True`, so the nested `fahre` never wrapped its buffer and
+    `_MARKE` was never learned. *A probe that is destroyed by the run it sits in measures
+    that run, not its subject* -- the same class as `pgrep -f` finding itself.
+
+    The three module globals are therefore saved and put back. `_AN` is cleared first, so
+    the nested runs wrap their own buffers; and the caller's own state survives untouched.
+    """
+    global _MARKE, _FERTIG, _AN
+    import io
+    _gesichert = (_MARKE, _FERTIG, _AN)
+    _AN = False
+    try:
+        return _sprechprobe()
+    finally:
+        _MARKE, _FERTIG, _AN = _gesichert
+
+
+def _sprechprobe():
     global _MARKE, _FERTIG
     import io
 
