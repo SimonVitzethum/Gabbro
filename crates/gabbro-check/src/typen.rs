@@ -542,9 +542,9 @@ impl Typ {
             Typ::Ganzzahl(b) => b.text(),
             Typ::Gleitkomma(f) => {
                 let art = if f.kann_nan {
-                    " (kann NaN)"
+                    " (may be NaN)"
                 } else if f.kann_unendlich {
-                    " (kann unendlich)"
+                    " (may be infinite)"
                 } else {
                     ""
                 };

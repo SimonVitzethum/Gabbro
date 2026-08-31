@@ -943,7 +943,7 @@ impl<'a> Pruefer<'a> {
                         &ergebnis_typ,
                         &ziel,
                         z.wert.span,
-                        "die Zuweisung",
+                        "the assignment",
                     );
                 }
                 self.schreiben_toetet_fakten(&z.ziel, lage);
@@ -1359,7 +1359,7 @@ impl<'a> Pruefer<'a> {
                 }
                 if let Some(z) = ergebnis {
                     let z = z.clone();
-                    self.passt_wert(e, &t, &z, e.span, "die Rueckgabe");
+                    self.passt_wert(e, &t, &z, e.span, "the return value");
                 }
             }
             StmtArt::Ruf(r) => {
@@ -2829,7 +2829,7 @@ impl<'a> Pruefer<'a> {
             Absage::fehler(
                 "D004",
                 span,
-                format!("{was} wandelt `{name}` stillschweigend um"),
+                format!("{was} silently converts `{name}`"),
             )
             .mit_notiz(
                 "D1: an opaque newtype has NO implicit conversion to its carrier",
@@ -3032,7 +3032,7 @@ impl<'a> Pruefer<'a> {
                 fehlt.push("NaN");
             }
             if q.kann_unendlich && !z.kann_unendlich {
-                fehlt.push("unendlich");
+                fehlt.push("infinity");
             }
             // **`F002` an der VERSCHMAELERUNG.** Ein Literal, das in `f64` exakt liegt,
             // muss es in `f32` nicht -- und `FBereich::mantisse()` stand dafuer da und wurde
@@ -3084,7 +3084,7 @@ impl<'a> Pruefer<'a> {
                         span,
                         format!(
                             "{was} admits no {}, and the value may be one",
-                            fehlt.join(" und kein ")
+                            fehlt.join(" and no ")
                         ),
                     )
                     .mit_notiz(
