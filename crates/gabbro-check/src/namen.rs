@@ -50,7 +50,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 /// collision only because the emitter writes `Eintrag_gueltig` for the field reader **and**
 /// `Eintrag_gueltig` for the validity predicate. *Measured against the unchanged checker*
 /// (`messung/ERZEUGERNAMEN.md` §2): `gabbro pruefe` said `3 items, 0 errors, 0 hints`,
-/// `gabbro emit` wrote the unit **without** a `C001`, and `cc` answered *redefinition of
+/// `gabbro emit` wrote the unit **without** a `C001` -- that refusal lives in the generator,
+/// `emit.rs`, and it had nothing to say here -- and `cc` answered *redefinition of
 /// `Eintrag_gueltig`*.
 ///
 /// **Nine forms are measured, not one** -- inside a carrier (a field `gueltig`; a field

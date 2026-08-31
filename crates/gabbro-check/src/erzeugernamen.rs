@@ -12,7 +12,8 @@
 //! `gueltig` is no C name and no duplicate. It becomes one only because the emitter writes
 //! `Eintrag_gueltig` for the field AND `Eintrag_gueltig` for the validity predicate.
 //! **`gabbro pruefe` said `0 errors, 0 hints`, `gabbro emit` wrote the unit without a `C001`,
-//! and `cc` answered *redefinition of `Eintrag_gueltig`*.**
+//! and `cc` answered *redefinition of `Eintrag_gueltig`*.** (`C001` is the generator's own
+//! refusal and lives in `emit.rs`; it stayed silent here, which is the point.)
 //!
 //! **Nine such forms are measured, not two** (`messung/ERZEUGERNAMEN.md` §2), and they fall
 //! into two sorts that are one sentence:
@@ -46,7 +47,8 @@ pub struct Gebildet {
     /// letter for letter -- a `fn`, a `const`, the struct of a `format`. `true` means a
     /// suffix or a prefix the writer never wrote.
     ///
-    /// **This is the cut that keeps `N042` off two things that are not its business**, and
+    /// **This is the cut that keeps `N042` off two things that are not its business** --
+    /// the rule itself is issued next door in `namen.rs`, this field only feeds it -- and
     /// both were measured over the corpus before the rule was narrowed:
     ///
     /// * `beispiele/29-undurchsichtig.gab` -- `pub impl fn pa_aus_zahl` in one module and
