@@ -1089,7 +1089,7 @@ fn auswahl(item: &Item) -> Auswahl {
 
 /// **One block of a function body -- and only the names that share ITS scope.**
 ///
-/// `hier` starts empty for every block, and for the outermost one it starts with the
+/// The scope map starts empty for every block; for the outermost one it starts with the
 /// parameters: **C puts a function's parameters in the scope of its body block**, which is
 /// why `cc` refuses a top-level `let` that repeats a parameter name and accepts a nested one.
 /// Sibling arms of an `if` never see each other, and a nested block may cover an outer name.
@@ -1103,7 +1103,7 @@ fn auswahl(item: &Item) -> Auswahl {
 ///
 /// What is left is the form that has no reading at all: two declarations of one name in one
 /// scope, which the emitter writes out unchanged and `cc` then rejects.
-fn rumpf_geltung(b: &Block, hier: &mut HashMap<String, Span>, absagen: &mut Absagen) {
+fn rumpf_geltung(b: &Block, scope: &mut HashMap<String, Span>, absagen: &mut Absagen) {
     for st in &b.anweisungen {
         // A sub-block opens a scope of its own, so it starts from an empty map -- and it is
         // walked BEFORE the name is added, because a binding is visible to what follows it
@@ -1115,14 +1115,14 @@ fn rumpf_geltung(b: &Block, hier: &mut HashMap<String, Span>, absagen: &mut Absa
                 let mut innen = HashMap::new();
                 innen.insert(l.fehlername.text.clone(), l.fehlername.span);
                 rumpf_geltung(&l.sonst, &mut innen, absagen);
-                doppelt(hier, &l.name.text, l.name.span, "local binding", absagen);
+                doppelt(scope, &l.name.text, l.name.span, "local binding", absagen);
             }
             _ => {
                 for k in crate::unterbloecke(st) {
                     rumpf_geltung(k, &mut HashMap::new(), absagen);
                 }
                 if let StmtArt::Let(l) = &st.art {
-                    doppelt(hier, &l.name.text, l.name.span, "local binding", absagen);
+                    doppelt(scope, &l.name.text, l.name.span, "local binding", absagen);
                 }
             }
         }
