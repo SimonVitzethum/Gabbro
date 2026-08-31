@@ -159,7 +159,11 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # added `crates/gabbro-cli/src/bau.rs`, three probe files and two measurement documents; one
 # of them cites a rule it does not issue. **The target stays 207** -- the object grew, the
 # debt did not.
-MARKE = 281
+#
+# **281 -> 282 on 2026-09-01, and the mark RISES with its reason.** The seam lane added
+# `beispiele/58`, three poison probes and three measurement probes; one cites a rule it does
+# not issue. **The target stays 207** -- the object grew, the debt did not.
+MARKE = 282
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

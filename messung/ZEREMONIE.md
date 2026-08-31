@@ -5,11 +5,11 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-63 Dateien gemessen, 4 abgelehnt
-  ableitbar       64        A1  4 · A4 60
+64 Dateien gemessen, 4 abgelehnt
+  ableitbar       68        A1  4 · A4 64
   redundant        0
-  tragend        986
-64 von 1050 Stellen dürfen sinken
+  tragend       1011
+68 von 1079 Stellen dürfen sinken
 ```
 
 > **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**
@@ -164,3 +164,9 @@ ungemessenes Schweigen wie eine Null aus (W11).
 
 *Und die Doktrinzeile, wie bei den drei anderen Zählern:* **was 0 Befunde hat, ist nicht
 nutzbar, sondern ungemessen.**
+
+> **1050 → 1079 am 2026-09-01, und wieder ist es der NENNER.** `beispiele/58` und drei
+> Giftproben kamen mit dem Blockgeltungsbereich dazu; `ableitbar` steigt von 64 auf 68,
+> `tragend` von 986 auf 1011. *Die Quote bewegt sich nicht, weil jemand nachlässiger
+> geworden wäre, sondern weil der Korpus gewachsen ist* — und genau darum steht der Nenner
+> hier und nicht nur der Zähler (W11).

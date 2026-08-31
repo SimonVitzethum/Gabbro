@@ -1,4 +1,15 @@
--- Eine Halde mit Deckel: 30 GiB Adressraum, hinterlegt wird, was da ist.
+-- Eine Halde mit Deckel: 30 GiB ADRESSRAUM, hinterlegt wird, was da ist.
+--
+-- **Und `30 GiB` ist die Einheit der Seiten, nicht die des Objekts** (gemessen 2026-08-31).
+-- `DECKE` zaehlt Seiten a 4 KiB; der erzeugte C-Typ misst `sizeof(Arena)` = 125829120 Byte
+-- = 120 MiB. Ein Koerper entsteht hier ohnehin nicht: `Arena` laeuft als `ptr<…> Arena`
+-- durch die Parameter, und wer die Tabelle beim NAMEN nennt, bekommt erst `static Arena
+-- Arena_speicher;` (`emit.rs`). *Der 2-GiB-Uebergang liegt woanders und ist in
+-- `messung/proben/probe-zwei-gibibyte.gab` gemessen.*
+--
+-- Bis zum 2026-08-31 war dies die einzige Datei im Baum, die nie emittiert wurde: sie fiel
+-- an einem `L104`, das ein Fehlalarm war -- `narrow … else` lief in M2 als geradliniger
+-- Rumpf statt als Zweig.
 module app::halde {
 
 const DECKE : u32 = 7864320;          -- 30 GiB / 4 KiB

@@ -1,0 +1,68 @@
+-- **Der 2-GiB-Uebergang unter x86-64 -- gemessen am 2026-08-31, vorher nie erreicht.**
+--
+-- Eine Tabelle wird nur dann zu Speicher im erzeugten C, wenn die Quelle sie beim NAMEN
+-- nennt (`emit.rs`: `static T T_speicher;`). Wo sie als `ptr<…> T` durch die Parameter
+-- laeuft, entsteht nur ein Typ -- und dann sieht `cc` nie ein Objekt, sondern nur eine
+-- Groesse. **`halde.gab` ist der zweite Fall**, und die 30 GiB stehen dort in der Einheit
+-- der SEITEN und nicht in der des Objekts: `sizeof(Arena)` ist gemessen **125829120 Byte
+-- = 120 MiB**, nicht 30 GiB. *Ein Zielmassstab in der falschen Einheit sieht aus wie ein
+-- erreichter.*
+--
+-- ## Was gemessen wurde
+--
+-- Diese Probe nennt die Tabelle beim Namen. `sizeof(Gross)` = **3200000000 Byte = 2,98
+-- GiB**, und damit liegt sie ueber der 2-GiB-Grenze des kleinen Codemodells.
+--
+--     cc -std=c11 -Wall -Wextra -Werror -c    sauber
+--     cc -std=c11 -O0  (PIE, kleines Modell)  bindet, laeuft, `.bss` = 3200000032
+--     cc -std=c11 -O2                         bindet -- aber `.bss` = 8:
+--                                             gcc hat das Objekt WEGOPTIMIERT
+--
+-- **Ein Objekt ueber 2 GiB allein reicht also nicht.** Das kleine Modell adressiert
+-- RIP-relativ, und gebraucht wird nur die BASIS des Symbols; wie weit das Feld darueber
+-- hinaus reicht, ist eine Rechnung zur Laufzeit und keine Verschiebung im Objekt.
+--
+-- ## Wo die Grenze wirklich liegt
+--
+-- Sie faellt, sobald eine BASIS jenseits von 2 GiB liegt -- zwei Tabellen zu je 2,23 GiB,
+-- die zweite 2400000000 Byte hinter der ersten:
+--
+--     /tmp/…o: In Funktion »lesen_b«:
+--     zwei.c:(.text+0x34): relocation truncated to fit: R_X86_64_PC32 against `.bss'
+--     collect2: error: ld gab 1 als Ende-Status zurueck
+--
+--     mit -mcmodel=medium   bindet, `-Werror` sauber, laeuft, `.bss` = 4800000008
+--     mit -mcmodel=large    ebenso
+--
+-- **`-mcmodel` kommt im ganzen Baum null mal vor**, und der Erzeuger gibt keine Zeile
+-- darueber aus. Das ist kein Fehler im C -- es ist eine Uebersetzungsoption, die der
+-- Anwender kennen muss und die heute nirgends steht. *Ein Erzeugnis, das nur unter einer
+-- ungenannten Option bindet, verschiebt seinen Fehler an den fremden Uebersetzer.*
+--
+-- Was hier NICHT gemessen ist (W10): ob die Schranke auch OHNE PIE dort liegt, was ein
+-- Binder ausser `ld` sagt, und ob das mittlere Modell auf dem Zielsystem des Ordners
+-- ueberhaupt zulaessig ist. Ein Kern laeuft nicht als PIE.
+
+module mass::zwei_gibibyte {
+
+const N : u32 = 400000000;
+
+table Gross count 400000000 {
+    slot { wert : u64, }
+}
+
+impl fn lesen(i : index into Gross) -> u64
+    effects { reads Gross.slots }
+    costs   <= 3 ops
+{
+    return Gross.slots[i].wert;
+}
+
+impl fn schreiben(i : index into Gross, w : u64)
+    effects { writes Gross.slots }
+    costs   <= 3 ops
+{
+    Gross.slots[i].wert = w;
+}
+
+}
