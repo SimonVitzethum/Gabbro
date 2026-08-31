@@ -64,11 +64,17 @@ ZUSAGE = "-- erwartet: "
 
 # **THE MARKS, measured 2026-08-31 after the repair** (`messung/GIFT-GEGEN-ZUSAGE.md` §9).
 # 255 clean, 54 accompanied, 7 covered, 1 `-- erwartet: cc`.
-MARKE_SAUBER = 258
+#
+# **258 -> 262 and 320 -> 324 on 2026-08-31**, and it is a growing SUBJECT and not a raised
+# bar: four probes came in for the silent `N042` collisions (`417`-`420`,
+# `messung/STILLE-KOLLISIONEN.md`), and each of the four falls with its code and nothing
+# else. *A floor that lags behind the corpus is slack, not safety* -- it would take four
+# probes losing their subject without a word.
+MARKE_SAUBER = 262
 MARKE_VERDECKT = 7
 # The population is a floor of its own: a corpus that SHRINKS says the checker lost a probe,
 # and neither of the two marks above would notice.
-MARKE_PROBEN = 320
+MARKE_PROBEN = 324
 
 
 def binaer():
@@ -93,6 +99,13 @@ def zusage(quelle):
         return ("cc", "cc")
     if e.startswith("Hinweis "):
         return ("hint", e[len("Hinweis "):].strip())
+    # **`CODE allein` is a normal error contract with a SECOND half** (2026-08-31). The
+    # second half -- `cc` must ACCEPT the emitted unit -- lives in `tests/beispiele.rs`,
+    # because it needs a `cc` run and this counter never starts one. Here the suffix is
+    # simply not part of the code. *Until today it was, and four probes counted as `FEHLT`
+    # while every one of them was falling exactly as written.*
+    if e.endswith(" allein"):
+        return ("error", e[: -len(" allein")].strip())
     return ("error", e)
 
 
@@ -164,6 +177,10 @@ def sprechprobe():
         ("was gar nicht faellt, FEHLT",
          einordnen("error", "M104", [t("error", "M101")]) == "FEHLT"),
         ("eine Zusage wird gelesen", zusage("-- erwartet: Hinweis S007\n") == ("hint", "S007")),
+        # **The `allein` half belongs to `tests/beispiele.rs`, and this line says so.** A
+        # counter that read the suffix as part of the code called four falling probes `FEHLT`.
+        ("`allein` ist ein Fehlercode wie jeder andere",
+         zusage("-- erwartet: N042 allein\n") == ("error", "N042")),
         ("und eine Zeile ohne Zusage ergibt nichts", zusage("module gift {\n") is None),
     ]
 

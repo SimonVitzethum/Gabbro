@@ -488,7 +488,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 144 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 146 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *135 → 140 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
       `messung/proben/probe-erzeugernamen-frei.gab` kamen dazu. Die Ratsche steigt am
       Gegenstand, und die drei Namen stehen hier, damit man das nachzählen kann.*
@@ -661,7 +661,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2239 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2281 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -940,7 +940,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **360 von 360 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **362 von 362 Ankern** greifen (`--anker`, 2026-08-31 —
+      **360 → 362** durch zwei EINZELNE Arme der `N042`-Aufzählung: der bloße Name einer
+      `boot`-Strecke und der `pruefe_{c}` eines `check`. *Die zwei davor warfen fünf Proben
+      zugleich um* — nachgemessen am selben Tag, und ihre „genau EINE"-Sätze standen daneben
+      und waren falsch (`messung/STILLE-KOLLISIONEN.md`);
       **358 → 360** durch `N042`: die Doppelung erst ab drei melden, und kein gebildeter
       Name gilt mehr als gebildet (`messung/ERZEUGERNAMEN.md`);
       vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8;
@@ -4829,6 +4833,21 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       ersten Datei des Baumes mit einem `port`-Zeiger. **Entweder senkt der Raum ab, oder er
       wird benannt abgesagt** — was nicht geht, ist ein Wort der Grammatik, das im Erzeugnis
       spurlos verschwindet.
+
+- [ ] **Darf ein Wort im TYP stehen, dessen ganze Wirkung eine Prüferpartition ist?**
+      Die Rechnung dazu steht in [`messung/RAUM-IM-TYP.md`](messung/RAUM-IM-TYP.md), die
+      Entscheidung nicht — sie ist ein Urteil über die Sprache. **Gemessen am 2026-08-31:**
+      fünf Räume am Zeiger erzeugen byteidentisches C (*ein* `md5` über fünf Dateien), das
+      **Recht** im selben Typ senkt dagegen ab (`const T *` gegen `T *`). Was der Raum
+      stattdessen tut, ist ebenfalls gemessen: `R008` partitioniert die sechs **vollständig**
+      (30 von 30 gemischten Paaren fallen, 6 von 6 gleichen gehen durch), `R001` hebt `dma`
+      zusätzlich heraus, und das Wort reist in der `.gabi` über die Bibliotheksgrenze, wo
+      `R008` es hält. *Die Voraussetzung der Frage — „ein Raum, der nichts tut" — ist damit
+      falsch;* er tut nur nichts im Erzeugnis, und in C gibt es nichts, wohin er absenken
+      könnte: der Raum ist eine Aussage über die **Herkunft** einer Adresse, `volatile` eine
+      über die **Zugriffsform**. **Was die Wegnahme kostete:** drei Giftproben verlören ihren
+      Eingang (`259`, `58`, `415`), über dem sauberen Korpus null. Mit hängt daran, ob `code`
+      und `boot` bleiben — zusammen **drei** Zeigerstellen, null `device`-Stellen.
 
 - [ ] **Vier Terminale sind `UNGEDECKT`: `chain`, `queue`, `state`, `threads`.**
       `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. **Nachgemessen am 2026-08-31**

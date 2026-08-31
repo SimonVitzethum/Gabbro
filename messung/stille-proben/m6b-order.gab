@@ -1,0 +1,15 @@
+module probe::m6 {
+
+-- `relaxed` ohne Nutzlast: der Erzeuger schreibt KEIN `#define ZAEHLER_ORDER`.
+atomic ZAEHLER : u32 release;
+
+const ZAEHLER_ORDER : u32 = 3;
+
+pub impl fn lies() -> u32
+    effects { pure }
+    costs   <= 2 ops
+{
+    return ZAEHLER_ORDER;
+}
+
+}

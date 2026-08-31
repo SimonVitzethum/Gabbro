@@ -1,0 +1,65 @@
+-- erwartet: N042 allein
+-- 417 -- **die Kollision, bei der die GANZE Kette schweigt.**
+--
+-- > **`-- erwartet: N042 allein` ist ein neuer Vertrag, und er ist der SCHAERFERE.**
+-- > `-- erwartet: cc` (`414`) sagt: der Pruefer schweigt, `cc` weist ab. Hier sagt die erste
+-- > Zeile das Gegenteil in beiden Haelften: **der Pruefer weist ab, und `cc` NIMMT AN.**
+-- > *Ohne `N042` faellt an dieser Datei nichts -- nicht im Pruefer, nicht im Erzeuger, nicht
+-- > im Uebersetzer, nicht im Binder.* Genau das ist die Behauptung, und eine einseitige
+-- > Probe koennte sie nicht tragen: eine Regel mit Rueckhalt und eine ohne sehen von einer
+-- > Seite gleich aus.
+--
+-- Eine Sperre senkt zu zwei Prototypen ab, die der Erzeuger NIE definiert (`emit.rs`:1846):
+--
+--     void TOR_nimm(void);
+--     void TOR_gib(void);
+--
+-- Sie sind Vertrauensbasis -- das Primitiv steht in der Axiomschicht, wie `write_cr3`. Ein
+-- `extern fn TOR_nimm()` daneben senkt zu **derselben Zeile** ab, und zwei gleiche
+-- Prototypen sind in C eine zulaessige Wiederholung. **Ein Symbol, zwei Absichten.**
+--
+-- Gemessen und AUSGEFUEHRT am 2026-08-31 (`messung/STILLE-KOLLISIONEN.md` §4):
+--
+--   * mit `pub impl fn TOR_nimm()` daneben faehrt die Nahme der Sperre den Rumpf des
+--     Nutzers: `spur` geht von 0 auf 7, `nutz` wird geschrieben, **und keine Sperre ist
+--     genommen worden.** Der ganze `protects`, der `rank`, die Haltezeitrechnung stehen
+--     ueber einem Aufruf, der woandershin geht.
+--   * mit `extern fn` daneben, wie hier, zaehlt der fremde Rumpf **zwei** Aufrufer, wo sein
+--     Schreiber einen geschrieben hat.
+--
+-- **Und ein Wort entscheidet, ob `cc` etwas sagt.** Ohne `pub` schreibt der Erzeuger
+-- `static void TOR_nimm(void)`, und eine statische Deklaration NACH einer nicht-statischen
+-- ist ein Fehler (C11 6.2.2p4). Andersherum -- und das ist die Reihenfolge, die hier steht --
+-- erbt die zweite die interne Bindung, und `cc` schweigt. *Ein Werkzeug, dessen Antwort an
+-- der Zeilennummer haengt, ist kein Orakel fuer diese Frage.*
+--
+-- Dieselbe Klasse tragen `{Lock}_gib`, `{Lock}_nimm_geteilt`, `{Lock}_gib_geteilt`,
+-- `{Rcu}_lese_start`, `{Rcu}_lese_ende`, `gabbro_eintritt_{e}`, `gabbro_gast_{t}`,
+-- `gabbro_kern` -- und `gabbro_boot_{b}`, siehe `420`.
+
+module gift::sperrprimitiv {
+
+pub static mut nutz : u32 = 0;
+
+pub lock TOR protects { nutz } rank 0 held <= 8 ops;
+
+-- **Hier.** Der Schreiber meint eine eigene fremde Funktion; er bekommt das Sperrprimitiv.
+extern fn TOR_nimm() effects { pure } costs <= 1 ops;
+
+pub impl fn arbeite()
+    effects { writes nutz, locks TOR }
+    costs   <= 8 ops
+{
+    locks TOR {
+        nutz = 1;
+    }
+}
+
+pub impl fn ruft_selbst()
+    effects { pure }
+    costs   <= 4 ops
+{
+    TOR_nimm();
+}
+
+}

@@ -1,0 +1,54 @@
+-- erwartet: N042 allein
+-- 418 -- **der Pruefkoerper eines `check`, und der Binder holt das Archivglied nie.**
+--
+-- Ein `check c` senkt zu einem Prototyp UND einem Rumpf ab (`emit.rs`:2775, :2793):
+--
+--     bool pruefe_c(void);
+--     bool pruefe_c(void) { … }
+--
+-- Beide mit AEUSSERER Bindung -- das ist der einzige erzeugte Name dieser Form. Daneben
+-- `extern fn pruefe_c() -> bool`: der Schreiber sagt *„den Rumpf liefere ich",* und der
+-- Erzeuger hat ihn schon geliefert. **Prototyp plus Definition ist in C voellig normal**, es
+-- faellt also nichts.
+--
+-- Gemessen und AUSGEFUEHRT am 2026-08-31 (`messung/STILLE-KOLLISIONEN.md` §4c): der eigene
+-- Rumpf des Schreibers lag in `libmein.a`, sein Aufruf gab **`true`** zurueck -- die Antwort
+-- des Pruefkoerpers -- wo seine Bibliothek `false` sagt. *Der Binder findet das Symbol
+-- schon definiert und holt das Archivglied gar nicht erst.* Pruefer still, `cc -Werror`
+-- still, Binder still.
+--
+-- **Und die Stille haengt daran, WIE gebunden wird, was keine Eigenschaft des Programms
+-- ist.** Wird die fremde Datei direkt statt aus einem Archiv gebunden, sagt `ld`
+-- *„Mehrfachdefinition von »pruefe_kontostand«"*. Eine Regel, die erst beim Binden greift
+-- und auch dann nur manchmal, ist keine.
+--
+-- Diese Datei traegt `-- erwartet: N042 allein`: der Pruefer muss abweisen, **und `cc` muss
+-- das Erzeugnis annehmen.** Faellt die zweite Haelfte, hat diese Form einen zweiten
+-- Waechter bekommen und die Datei gehoert auf `-- erwartet: cc` nachgezogen.
+
+module gift::pruefkoerper {
+
+pub static mut stand : u32 = 0;
+
+check kontostand {
+    claim        "Der Stand ist niemals sieben."
+    measures     stand
+    gates        frage
+
+    can_fail {
+        return stand != 7;
+    }
+    counterprobe "setze stand auf 7" expects sonde_stand_sieben
+}
+
+-- **Hier.** Der Schreiber meint seinen eigenen fremden Pruefkoerper.
+extern fn pruefe_kontostand() -> bool effects { pure } costs <= 1 ops;
+
+pub impl fn frage() -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return pruefe_kontostand();
+}
+
+}

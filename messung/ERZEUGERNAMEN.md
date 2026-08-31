@@ -8,6 +8,28 @@ hat die Familie ausgemessen: es sind **neun**, und eine zehnte fällt ausdrückl
 
 *Eine Absage, die nur `gueltig` kennt, verschiebt den Fehler auf das nächste Wort.*
 
+> **BERICHTIGT AM 2026-08-31 — `messung/STILLE-KOLLISIONEN.md` hat die Familie nachgezählt,
+> und die Einteilung dieses Dokuments stimmt nicht.**
+>
+> * **Die zehnte ist nicht die einzige stille.** Ob `cc` spricht, hängt an drei Dingen, und
+>   keines davon ist die Kollision: verträgliche Typen, höchstens eine Definition — und die
+>   **Reihenfolge**. C11 6.2.2p4: eine nicht-statische Deklaration *nach* einer statischen
+>   erbt die interne Bindung, andersherum ist es ein Fehler. *Dieselben zwei
+>   Gabbro-Deklarationen, zwischen zwei Zeilen getauscht, geben `cc` exit 0 und exit 1.*
+> * **§2 Fall 9 ist nur zufällig laut.** `format Eintrag { a … }` neben `extern fn
+>   Eintrag_a` mit **passender** Signatur übersetzt sauber, und der erzeugte Leser
+>   beantwortet den Ruf des Schreibers (gemessen: 42 statt der 999 aus seiner Bibliothek).
+>   Die anderen acht sind *strukturell* laut.
+> * **§7 letzter Punkt stimmt** — `N042` fängt die zehnte Form —, aber **die Aufzählung war
+>   an sechs Stellen unvollständig und an drei zu weit**; beides ist am 2026-08-31 geheilt
+>   und dort gemessen. `{Atomic}_ORDER`, `gabbro_eintritt_{e}_VEKTOR` und
+>   `gabbro_boot_{b}_s{i}` stehen jetzt unter ihrer Bedingung.
+> * **§6 nennt 426 Dateien.** Der Baum hält heute 446, und die Regel hat elf Treffer:
+>   `gift/413`, die vier neuen Proben `417`–`420` und sechs Messdateien.
+>
+> *Die Tafel in §1 und die neun Formen in §2 bleiben, wie sie dastehen — sie sind gemessen.
+> Was sich geändert hat, ist ihre Einteilung.*
+
 ---
 
 ## §1 Die Namensmuster, aus `emit.rs` gelesen

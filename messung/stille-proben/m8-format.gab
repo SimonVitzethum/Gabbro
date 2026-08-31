@@ -1,0 +1,19 @@
+module probe::m8 {
+
+pub format Eintrag endian little {
+    a    : u32 @[15:0],
+    rest : u32 @[31:16] reserved,
+}
+
+-- Der Nutzer meint eine EIGENE fremde Funktion, und diesmal passt die Signatur
+-- auf das Byte: `static inline uint32_t Eintrag_a(const Eintrag *v)`.
+extern fn Eintrag_a(v : ptr<normal, r> Eintrag) -> u32 effects { pure } costs <= 1 ops;
+
+pub impl fn frag(v : ptr<normal, r> Eintrag) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return Eintrag_a(v);
+}
+
+}

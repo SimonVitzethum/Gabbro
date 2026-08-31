@@ -64,6 +64,11 @@ pub struct Gebildet {
     pub angehaengt: bool,
 }
 
+/// The last segment of a path -- the C name a `dispatch` or a `step` binds to.
+fn letztes(p: &Pfad) -> String {
+    p.teile.last().map(|i| i.text.clone()).unwrap_or_default()
+}
+
 fn schiebe(v: &mut Vec<Gebildet>, name: String, span: Span, muster: &'static str, was: String) {
     v.push(Gebildet { name, span, muster, was, angehaengt: true });
 }
@@ -87,6 +92,40 @@ fn eigen(v: &mut Vec<Gebildet>, name: String, span: Span, muster: &'static str, 
 ///   the same boundary `N041` draws, and for the same measured reason.
 pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
     let mut v = Vec::new();
+    // **The emitter's own `ruempfe` set, rebuilt here** (`emit.rs`:1357). A `boot` step and an
+    // `entry`'s `dispatch` get a checked reference ONLY where the target is a declared
+    // non-`spec` function of this unit; where it is an `axiom`, the emitter writes a comment
+    // and no name. *Listing a name the emitter never writes is a refusal without a defect* --
+    // measured, see `{Boot}_s{i}` below.
+    let mut ruempfe: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if !matches!(f.klasse, Some(FnKlasse::Spec)) {
+                ruempfe.insert(f.name.text.clone());
+            }
+        }
+    });
+    // **`gabbro_kern` is the one name that has no carrier** (`emit.rs`:1374). It is written
+    // once per UNIT, and only where an `accumulates` stands: `{n}_melde` calls it, and
+    // without the prototype C11 made an implicit declaration out of that. The writer never
+    // spelled a letter of it, so `angehaengt` is true and the whole name is the suffix.
+    // The span is the FIRST `accumulates` -- the declaration that made the prototype
+    // necessary, and the only place a reader can see why the name exists at all.
+    let mut erstes_acc: Option<Span> = None;
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Accumulates(a) = &item.art {
+            erstes_acc.get_or_insert(a.name.span);
+        }
+    });
+    if let Some(ort) = erstes_acc {
+        schiebe(
+            &mut v,
+            "gabbro_kern".into(),
+            ort,
+            "gabbro_kern",
+            "the foreign core number every `accumulates` needs".into(),
+        );
+    }
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         // A struct, a reader and a writer per field, and ONE validity predicate over all
         // `where` clauses (`emit.rs`:3064, :3109, :3117, :3406).
@@ -248,25 +287,84 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
         ItemArt::Atomic(a) => {
             let n = &a.name.text;
             eigen(&mut v, n.clone(), a.name.span, "{Atomic}", "the atomic object".into());
-            schiebe(&mut v, format!("{n}_ORDER"), a.name.span, "{Atomic}_ORDER", "the declared ordering".into());
+            // **`{A}_ORDER` is CONDITIONAL, and the condition was measured as a false
+            // positive before it was written here** (2026-08-31,
+            // `messung/STILLE-KOLLISIONEN.md` §5). The emitter writes the `#define` only
+            // where the ordering is not `relaxed`-without-payload (`emit.rs`,
+            // `ItemArt::Atomic`, the `Some(o)` arm); for `atomic Z : u32 relaxed` it writes
+            // nothing at all. Listed unconditionally, this rule refused
+            // `const Z_ORDER` next to such an atomic while the emitted unit held exactly
+            // ONE `Z_ORDER` -- the writer's -- and `cc -Werror` was happy.
+            //
+            // *Same class as the `{T}_speicher` exclusion below, with one difference that
+            // decides it: this condition stands IN THE TREE and can be answered here.*
+            let schreibt_ordnung = !matches!(
+                (a.ordnung, &a.obermenge),
+                (Some(Ordnung::Relaxed) | None, None | Some(Nutzlast::Nichts(_)))
+            );
+            if schreibt_ordnung {
+                schiebe(&mut v, format!("{n}_ORDER"), a.name.span, "{Atomic}_ORDER", "the declared ordering".into());
+            }
         }
         ItemArt::Entry(e) => {
             let n = &e.name.text;
             schiebe(&mut v, format!("gabbro_eintritt_{n}"), e.name.span, "gabbro_eintritt_{Entry}", "the stub prototype".into());
-            schiebe(&mut v, format!("gabbro_eintritt_{n}_VEKTOR"), e.name.span, "gabbro_eintritt_{Entry}_VEKTOR", "the vector number".into());
-            schiebe(&mut v, format!("gabbro_eintritt_{n}_verteiler"), e.name.span, "gabbro_eintritt_{Entry}_verteiler", "the dispatch reference".into());
+            // **The vector `#define` needs a LITERAL** (`emit.rs`:8465, `konst_zahl`), and
+            // `vector NR` with a named constant is not one. Measured 2026-08-31: with
+            // `vector NR`, `const gabbro_eintritt_x_VEKTOR` fell at this rule while the
+            // emitted unit held one such name, the writer's, and `cc` was happy.
+            if e.vektor.as_ref().is_some_and(|x| matches!(x.art, ExprArt::Zahl(_))) {
+                schiebe(&mut v, format!("gabbro_eintritt_{n}_VEKTOR"), e.name.span, "gabbro_eintritt_{Entry}_VEKTOR", "the vector number".into());
+            }
+            // The dispatch reference exists only where the target is a declared function.
+            // **A program in which it is missing is already refused** -- by `N018`, which
+            // lives in `namen.rs::dispatch_loest_auf`, measured 2026-08-31 -- so this gate
+            // buys nothing today. It stands because the emitter's condition is one lookup and
+            // two conditions that must agree should not be written down differently.
+            if ruempfe.contains(&letztes(&e.dispatch)) {
+                schiebe(&mut v, format!("gabbro_eintritt_{n}_verteiler"), e.name.span, "gabbro_eintritt_{Entry}_verteiler", "the dispatch reference".into());
+            }
         }
+        // **A `boot` forms FOUR shapes, and the bare name was missing until 2026-08-31.**
+        //
+        // `void gabbro_boot_{n}(void);` (`emit.rs`:8611) is an external prototype the emitter
+        // never defines -- the same class as `{L}_nimm`, and the sharpest member of it: that
+        // symbol is the address the machine jumps to. Measured
+        // (`messung/STILLE-KOLLISIONEN.md` §3, `m4-boot`): `boot multiboot1` next to
+        // `extern fn gabbro_boot_multiboot1()` passed with `0 errors, 0 hints` and `cc
+        // -Werror` compiled the unit. **The whole chain was silent.**
         ItemArt::Boot(b) => {
             let n = &b.name.text;
+            schiebe(
+                &mut v,
+                format!("gabbro_boot_{n}"),
+                b.name.span,
+                "gabbro_boot_{Boot}",
+                "the boot entry prototype".into(),
+            );
             for (i, s) in b.schritte.iter().enumerate() {
                 match s {
-                    BootSchritt::Ruf(_) => schiebe(
-                        &mut v,
-                        format!("gabbro_boot_{n}_s{}", i + 1),
-                        b.name.span,
-                        "gabbro_boot_{Boot}_s{i}",
-                        format!("the reference of step {}", i + 1),
-                    ),
+                    // **Only where the step calls a declared function.** A step may name an
+                    // `axiom` -- `beispiele/07` does it four times (`write_cr3`, `write_cr4`,
+                    // `wrmsr_efer`, `write_cr0`) -- and then the emitter writes no reference
+                    // at all. Measured 2026-08-31: `const gabbro_boot_multiboot1_s4` beside
+                    // that very file fell at this rule while the emitted unit held ONE such
+                    // name, the writer's `#define`, and `cc -Werror` was happy.
+                    BootSchritt::Ruf(r) => {
+                        let ziel = r
+                            .path()
+                            .map(letztes)
+                            .unwrap_or_default();
+                        if ruempfe.contains(&ziel) {
+                            schiebe(
+                                &mut v,
+                                format!("gabbro_boot_{n}_s{}", i + 1),
+                                b.name.span,
+                                "gabbro_boot_{Boot}_s{i}",
+                                format!("the reference of step {}", i + 1),
+                            );
+                        }
+                    }
                     BootSchritt::Setzt { name, .. } => schiebe(
                         &mut v,
                         format!("gabbro_boot_{n}_{}", name.text),
@@ -275,6 +373,67 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
                         format!("the constant `{}`", name.text),
                     ),
                 }
+            }
+            if ruempfe.contains(&letztes(&b.dispatch)) {
+                schiebe(
+                    &mut v,
+                    format!("gabbro_boot_{n}_dispatch"),
+                    b.name.span,
+                    "gabbro_boot_{Boot}_dispatch",
+                    "the dispatch reference".into(),
+                );
+            }
+        }
+        // **`check c` -- `bool pruefe_{c}(void);` AND its body** (`emit.rs`:2775, :2793).
+        //
+        // The only generated name of that shape: external linkage AND defined here. Measured
+        // and RUN (`messung/STILLE-KOLLISIONEN.md` §4c): `check kontostand` next to
+        // `extern fn pruefe_kontostand() -> bool`, the writer's own body shipped in an
+        // archive -- the linker never pulls the member, and the writer's call is answered by
+        // the probe. Checker silent, `cc -Werror` silent, linker silent.
+        ItemArt::Check(c) => {
+            schiebe(
+                &mut v,
+                format!("pruefe_{}", c.name.text),
+                c.name.span,
+                "pruefe_{Check}",
+                "the probe function".into(),
+            );
+        }
+        // **`entrust t` -- `void gabbro_gast_{t}(void);`** (`emit.rs`:8546). An external
+        // prototype the emitter never defines, exactly like `{L}_nimm`. Measured: `0 errors,
+        // 0 hints` and `cc -Werror` exit 0 (`m4-gast`).
+        ItemArt::Entrust(t) => {
+            schiebe(
+                &mut v,
+                format!("gabbro_gast_{}", t.name.text),
+                t.name.span,
+                "gabbro_gast_{Entrust}",
+                "the guest entry prototype".into(),
+            );
+        }
+        // **`accumulates n` -- three internal names** (`emit.rs`, `ItemArt::Accumulates`).
+        //
+        // All three are `static`, and a `static` declaration BEFORE the writer's external one
+        // is silent in C (C11 6.2.2p4) -- the reverse order is the error. Measured both ways
+        // on one file (`m7-akk` against `m7b-akk`): with `extern fn hoechststand_lies()`
+        // behind the `accumulates`, `cc` says nothing; in front of it, `cc` refuses.
+        // **Byte-identical declarations, different lines, different answer** -- which is why
+        // this belongs here and not to `cc`.
+        ItemArt::Accumulates(a) => {
+            let n = &a.name.text;
+            for (anhang, was) in [
+                ("zellen", "the per-core cell array"),
+                ("lies", "the fold over all cells"),
+                ("melde", "the per-core report"),
+            ] {
+                schiebe(
+                    &mut v,
+                    format!("{n}_{anhang}"),
+                    a.name.span,
+                    "{Accumulates}_…",
+                    was.into(),
+                );
             }
         }
         // A function, a constant and a `static` form nothing from their name -- but the name

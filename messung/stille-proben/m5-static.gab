@@ -1,0 +1,24 @@
+module probe::hijack {
+
+static mut spur : u32 = 0;
+pub static mut nutz : u32 = 0;
+
+pub lock TOR protects { nutz } rank 0 held <= 8 ops;
+
+impl fn TOR_nimm()
+    effects { writes spur }
+    costs   <= 4 ops
+{
+    spur = 7;
+}
+
+pub impl fn arbeite()
+    effects { writes nutz, locks TOR }
+    costs   <= 8 ops
+{
+    locks TOR {
+        nutz = 1;
+    }
+}
+
+}

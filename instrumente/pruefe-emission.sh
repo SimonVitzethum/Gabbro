@@ -1837,7 +1837,16 @@ MARKE_EMIT=57
 # `tagged type`. *A word list would have refused all six*, and that is exactly why `N042`
 # enumerates the names the generator forms instead of forbidding words. The probe emits and
 # compiles -- the same good case as above.
-MARKE_EMIT_M=30
+# **30 -> 31 on 2026-08-31, and the file that came in is a COUNTER-PROBE to a narrowing.**
+# `messung/stille-proben/m6-order.gab` writes `atomic ZAEHLER : u32 relaxed` next to
+# `const ZAEHLER_ORDER`. Until that day `N042` refused it, and the refusal had no defect
+# under it: the emitter writes `#define {A}_ORDER` only where the ordering is not
+# `relaxed`-without-payload, so the unit held exactly ONE `ZAEHLER_ORDER` -- the writer's --
+# and `cc -Werror` took it. **That this file EMITS is now the measurement**: an emitted unit
+# is one the checker let through, so stage 9 holds both halves of the narrowing at once.
+# *Its six brothers in that directory do NOT emit, because `N042` refuses them -- which is
+# what they are there to show.*
+MARKE_EMIT_M=31
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

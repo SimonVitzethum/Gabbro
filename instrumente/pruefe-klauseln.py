@@ -145,7 +145,15 @@ ERWARTET = {
     # sieben Konstrukte ohne Giftprobe, und die Felder fielen als Nebenwirkung.*
     "by":           ("TOT", "Der Induktionshinweis. Nichts liest ihn -- und `Table_Induktion.thy` fuehrt genau ihn als Praemisse OHNE Erzeuger (`je Verkettungsfeld eine Kantenpraemisse`). Die beiden gehoeren zusammen."),
     "stack":        ("TOT", "siehe `regs_in` -- `EntryDecl`."),
-    "vektor":       ("TOT", "siehe `regs_in` -- `EntryDecl`."),
+    # **`vektor` ROSE on 2026-08-31, and this guard said so before anyone thought of it** --
+    # the same day, the same reader and the same reason as `scale` below. `erzeugernamen.rs`
+    # reads it because the emitter writes `#define gabbro_eintritt_{e}_VEKTOR` only where the
+    # vector is a LITERAL (`emit.rs`:8465, `konst_zahl`): `vector NR` with a named constant
+    # writes no such line. **`N042` has to know it**, or it counts a name the generator never
+    # writes -- measured that very day as a refusal without a defect.
+    #
+    # *The entry falls here with nothing in its place; the change that lifted it is in
+    # `crates/`.*
     "ist":          ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "ab":           ("TOT", "`walk` ist gelesen und sonst nichts: kein Pass, kein Erzeuger kennt `WalkDecl`."),
     "ab_wenn":      ("TOT", "siehe `ab` -- `WalkDecl`."),
