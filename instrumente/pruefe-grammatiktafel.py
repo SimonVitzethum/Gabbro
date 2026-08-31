@@ -25,8 +25,9 @@ Textabgleich, sondern ein Lauf.*
 
 **Und es ist tragfaehig, weil der Wortschatz GESCHLOSSEN ist.** `kw.rs` fuehrt 213 der 222
 Woerter als `res` -- reserviert, nirgends ein Bezeichner. Ein Vorkommen IST damit ein
-Schluesselwort. Die neun `ctx`-Woerter koennen ein Bezeichner sein; sie stehen in
-`KONTEXTUELL` und werden neben dem Urteil GENANNT, statt still mitzulaufen.
+Schluesselwort. Die neun `ctx`-Woerter koennen ein Bezeichner sein; **sechs von ihnen stehen
+in dieser Tafel** (`r`, `w`, `x` sind einbuchstabig und fallen schon aus der Terminalmenge),
+und der Lauf NENNT sie neben dem Urteil, statt sie still mitlaufen zu lassen.
 
 DREI REGISTER, GELESEN STATT KOPIERT (W7)
 -------------------------------------------
