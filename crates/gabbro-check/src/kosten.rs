@@ -69,10 +69,10 @@ use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 use std::collections::HashMap;
 
-/// **Die Namen, die an EINER Stelle im Rumpf sichtbar sind** -- Parameter plus jedes `let`
-/// der umschliessenden Bloecke. Bis zum 2026-08-31 gab es nur die Parameter, und ein `let`
-/// in einem inneren Block war fuer diesen Pass unsichtbar. *Dasselbe, was `m1.rs::Lage`
-/// traegt, unter demselben Vorbild.*
+/// **The names visible at ONE point of a body** -- the parameters plus every `let` of the
+/// enclosing blocks. Until 2026-08-31 there were only the parameters, and a `let` in an
+/// inner block was invisible to this pass. *The same thing `m1.rs::Lage` carries, after the
+/// same model.*
 type Bindungen = HashMap<String, Typ>;
 
 /// **Eine Zusage als SUMME: eine Konstante plus Vielfache nichtnegativer Groessen.**
@@ -472,11 +472,10 @@ impl<'a> Rechner<'a> {
     /// Ohne diese Regel zahlt jeder fruehe Rueckstieg zweimal, und die Zahl misst einen
     /// Weg, den kein Durchlauf nimmt.
     fn block(&self, b: &Block, aussen: &Bindungen) -> Kosten {
-        // **Der Blockgeltungsbereich -- er ERBT und gibt nichts zurueck**, genau wie
-        // `m1.rs::Lage`. Ohne ihn schlaegt `typ_von_ort` den Parameter nach, den ein `let`
-        // eine Zeile darueber verdeckt hat, und die Domaenenschranke gehoert zur falschen
-        // Tabelle. *Gemessen 2026-08-31: 17 zugesagte ops ueber einem C-Programm, das 64
-        // Durchgaenge laeuft.*
+        // **The block scope -- it INHERITS and gives nothing back**, exactly like
+        // `m1.rs::Lage`. Without it `typ_von_ort` looks up the parameter that a `let` one
+        // line above has shadowed, and the domain bound belongs to the wrong table.
+        // *Measured 2026-08-31: 17 promised ops over a C program that runs 64 passes.*
         let mut lokal = aussen.clone();
         let mut summe = Kosten::Zahl(0);
         for (i, s) in b.anweisungen.iter().enumerate() {
@@ -517,15 +516,14 @@ impl<'a> Rechner<'a> {
         summe
     }
 
-    /// **Was eine Anweisung an NAMEN hinterlaesst** -- der eine Schritt, den dieser Pass bis
-    /// zum 2026-08-31 nicht tat.
+    /// **What a statement leaves behind in NAMES** -- the one step this pass did not take
+    /// until 2026-08-31.
     ///
-    /// Der Wert steht im ALTEN Geltungsbereich (`let t = t;` liest das aeussere `t`), also
-    /// wird erst gerechnet und dann gebunden. **Und ein Name, dessen Typ hier nicht
-    /// abzulesen ist, wird `Unbekannt` und nicht durchgereicht:** `typ_von_ort` faellt sonst
-    /// auf den GLOBALEN Namen zurueck, und das waere dieselbe Verwechslung eine Ebene
-    /// hoeher. *Unbekannt faellt laut -- `K003` sagt „keine Schranke", statt eine falsche
-    /// zu nennen.*
+    /// The value stands in the OLD scope (`let t = t;` reads the outer `t`), so the cost is
+    /// computed first and the name bound after. **And a name whose type cannot be read here
+    /// becomes `Unbekannt` rather than being passed over:** otherwise `typ_von_ort` falls
+    /// back to the GLOBAL name, which is the same confusion one level up. *Unknown falls
+    /// loud -- `K003` says "no bound" instead of naming a wrong one.*
     fn binde(&self, s: &Stmt, lokal: &mut Bindungen) {
         match &s.art {
             StmtArt::Let(l) => {
@@ -557,10 +555,10 @@ impl<'a> Rechner<'a> {
         }
     }
 
-    /// Der Typ eines `let`-Wertes, soweit dieser Pass ihn ablesen kann. **Er braucht nur
-    /// die Traeger von Domaenen** -- Tabellen, Verbunde, `walk`-Koepfe, Feldarrays -- und
-    /// die stehen alle an einem ORT. Alles andere ist `Unbekannt`, und das ist die ehrliche
-    /// Antwort: eine Zahl waere hier geraten.
+    /// The type of a `let` value, as far as this pass can read it. **It only needs the
+    /// CARRIERS of domains** -- tables, records, `walk` heads, field arrays -- and every one
+    /// of those stands at a place. Everything else is `Unbekannt`, and that is the honest
+    /// answer: a number here would be a guess.
     fn typ_des_wertes(&self, e: &Expr, lokal: &Bindungen) -> crate::typen::Typ {
         match &e.art {
             ExprArt::Ort(o) => self.u.typ_von_ort(self.modul, o, lokal),
@@ -655,10 +653,9 @@ impl<'a> Rechner<'a> {
         match sch {
             // Rumpfkosten x Domaenenschranke. Steht die Schranke nicht fest, steht auch
             // die Kostenzusage nicht fest -- und dann sagt der Pass das.
-            // **Die Laufvariable ist im Rumpf GEBUNDEN**, und sie ist keine Tabelle -- sie
-            // ist ein Platzindex. Verdeckt sie einen Parameter, darf `slots of i` nicht die
-            // Schranke des Parameters bekommen. *`m1.rs` bindet sie an derselben Stelle
-            // ebenso auf `Unbekannt` (Zeile 1288).*
+            // **The loop variable is BOUND in the body**, and it is no table -- it is a
+            // place index. Where it shadows a parameter, `slots of i` must not inherit that
+            // parameter's bound. *`m1.rs` binds it to `Unbekannt` at the same spot.*
             Schleife::Traverse(t) => match (
                 self.block(&t.rumpf, &{
                     let mut innen = lokal.clone();

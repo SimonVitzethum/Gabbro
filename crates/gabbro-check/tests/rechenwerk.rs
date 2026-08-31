@@ -7251,3 +7251,149 @@ impl fn f(x : u8) -> u8 effects { pure } costs <= 8 ops {
          Deklaration ab, also weist der Pruefer sie ab: {selber:?}"
     );
 }
+
+// ==========================================================================================
+// **The block scope of the cost pass** (2026-08-31). Until this day `kosten.rs` knew the
+// PARAMETERS of a function and nothing else -- a `let` in an inner block was invisible to
+// it, and `typ_von_ort` therefore answered with the parameter a `let` had shadowed one line
+// above. The bound then belonged to the wrong table, in both directions.
+// ==========================================================================================
+
+/// **A shadowing `let` decides the bound, and the number says which binding was read.**
+///
+/// The measurement that forced this: the same body, once over the shadowing name and once
+/// over the real one, and the promise `costs <= 17 ops` went through with **0 errors** --
+/// while the emitted C ran 64 passes (`sizeof(t->slots)` reads the INNER `t`; compiled and
+/// run, it printed `64`). *A cost promise the delivered program violates, and no pass said
+/// a word.*
+///
+/// **The exact number is the point, and it is what kills a too-wide fix.** A version that
+/// binds every `let` to `Unbekannt` also stops printing 17 -- it prints `OFFEN` and refuses
+/// at `K003`, which looks like a repair and is a second defect. Only the honest reading of
+/// the shadowing binding lands on 197.
+#[test]
+fn ein_let_im_inneren_block_verdeckt_den_parameter_und_die_schranke_folgt_ihm() {
+    let q = "module p {
+const KLEIN : u32 = 4;
+const GROSS : u32 = 64;
+table Winzig count KLEIN { slot { wert : u32, } }
+table Riesig count GROSS { slot { wert : u32, } }
+impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig, f : bool) -> u32
+    effects { reads t.slots, reads g.slots }
+    costs   <= 17 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    if f {
+        let t = g;
+        traverse i over slots of t by unvisited
+            touches reads t.slots
+        {
+            if summe < 60000 {
+                summe += 1;
+            }
+        }
+    }
+    return summe;
+}
+}
+";
+    // 197 = the bound of `Riesig` (64), not the 17 of `Winzig` (4).
+    assert_eq!(
+        gerechnet(q, "schatten"),
+        197,
+        "the traversal runs over the INNER `t`, which is `g` -- 64 slots, not 4"
+    );
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+    assert!(
+        codes.contains(&"K001"),
+        "a promise of 17 over a body of 197 must fall, fallen: {codes:?}"
+    );
+    // **And the refusal has to be `K001`, not `K003`.** A pass that answers *"no bound"*
+    // here has thrown away a bound that stands in the declaration -- the very defect this
+    // scope was built against, only in the other direction.
+    assert!(
+        !codes.contains(&"K003"),
+        "the bound STANDS -- `Riesig count 64`; `K003` here would be a second defect: {codes:?}"
+    );
+}
+
+/// **The other direction: a `let` that shadows NOTHING must still carry its bound.**
+///
+/// `let tafel = w; traverse i over slots of tafel` was a `K003` until today -- a correct
+/// program refused over a bound that stands in the declaration
+/// (`messung/proben/probe-traverse-grundname.gab`, case (a)). *This is the test that kills
+/// the cheap fix:* binding every `let` to `Unbekannt` closes the shadowing hole and reopens
+/// this one, and a poison sample asking only whether the expected code is AMONG the fallen
+/// would not notice.
+#[test]
+fn ein_let_ohne_verdeckung_erbt_den_typ_seines_wertes() {
+    let q = "module p {
+const NSLOTS : u32 = 8;
+table Werte count NSLOTS { slot { wert : u32, } }
+impl fn ueber_ein_let(w : ptr<normal, r> Werte) -> u32
+    effects { reads w.slots }
+    costs   <= 64 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    let tafel = w;
+    traverse i over slots of tafel by unvisited
+        touches reads tafel.slots
+    {
+        if summe < 60000 {
+            summe += 1;
+        }
+    }
+    return summe;
+}
+}
+";
+    assert_eq!(
+        gerechnet(q, "ueber_ein_let"),
+        28,
+        "`tafel` IS `w` -- 8 slots, and the number stands in the declaration"
+    );
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+    assert!(
+        codes.is_empty(),
+        "a correct program, and it was refused until 2026-08-31: {codes:?}"
+    );
+}
+
+/// **The traversal variable is a place index, not a table** -- and it is bound in the body.
+///
+/// Without this line a `traverse t over …` inside a function with a parameter `t` would
+/// hand the parameter's bound to `slots of t` in the body. The honest answer is *no bound*,
+/// and `K003` says so instead of naming a number that belongs to another table.
+#[test]
+fn die_laufvariable_verdeckt_den_parameter_und_traegt_keine_schranke() {
+    let q = "module p {
+const NSLOTS : u32 = 8;
+table Werte count NSLOTS { slot { wert : u32, } }
+impl fn f(t : ptr<normal, r> Werte) -> u32
+    effects { reads t.slots }
+    costs   <= 999 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    traverse t over slots of t by unvisited
+        touches reads t.slots
+    {
+        traverse j over slots of t by unvisited {
+            summe += 1;
+        }
+    }
+    return summe;
+}
+}
+";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+    assert!(
+        codes.contains(&"K003"),
+        "`slots of t` over the LOOP variable has no bound -- it is an index: {codes:?}"
+    );
+}

@@ -1,0 +1,59 @@
+-- erwartet: K001
+--
+-- **Die Verdeckung im VERSCHACHTELTEN Block -- erlaubt, uebersetzbar, und bis zum
+-- 2026-08-31 eine Kostenzusage, die das ausgelieferte Programm verletzt.**
+--
+-- `432-let-verdeckt-parameter.gab` fuehrt die Verdeckung im OBERSTEN Block; die faellt an
+-- `N001`, weil C dort keine Lesart hat. **Diese hier faellt nicht an der Verdeckung** --
+-- `19-let-verdeckt.gab` fuehrt sie seit dem 2026-08-14 als gueltiges Programm, und C
+-- schreibt sie ohne Murren hin. Sie faellt an der ZAHL.
+--
+-- Gemessen gegen `a713863^` (den unveraenderten Pruefer):
+--
+--     gabbro pruefe   ->  6 items, 0 errors, 0 hints
+--     gabbro emit     ->  const Riesig * t = g;
+--                         for (i = 0; i < sizeof(t->slots)/sizeof(t->slots[0]); i++)
+--     cc && ./a.out   ->  64
+--
+-- **Der Pruefer rechnete 17, das Programm laeuft 197.** `kosten.rs` kannte nur die
+-- PARAMETER, also schlug `typ_von_ort` den Parameter `t : ptr Winzig` nach -- die kleine
+-- Tabelle -- waehrend die Schleife ueber `g : ptr Riesig` laeuft. *Keine Falschabsage,
+-- sondern eine Falschannahme: die Richtung, die weh tut.*
+--
+-- Geheilt mit dem Blockgeltungsbereich in `kosten.rs` und `domaene.rs`, nach dem Vorbild
+-- von `m1.rs::Lage`. Diese Datei steht hier, damit er nicht wieder verschwindet.
+
+module gift {
+
+const KLEIN : u32 = 4;
+const GROSS : u32 = 64;
+
+table Winzig count KLEIN {
+    slot { wert : u32, }
+}
+
+table Riesig count GROSS {
+    slot { wert : u32, }
+}
+
+-- MUSS fallen (K001): der Rumpf kostet 197, die Zeile sagt 17 zu. Das `let` im `if`-Rumpf
+-- ist ERLAUBT -- was faellt, ist die Zahl darueber.
+impl fn verdeckte_schranke(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig, f : bool) -> u32
+    effects { reads t.slots, reads g.slots }
+    costs   <= 17 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    if f {
+        let t = g;
+        traverse i over slots of t by unvisited
+            touches reads t.slots
+        {
+            if summe < 60000 {
+                summe += 1;
+            }
+        }
+    }
+    return summe;
+}
+
+}

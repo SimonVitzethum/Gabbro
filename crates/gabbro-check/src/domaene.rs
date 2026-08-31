@@ -359,15 +359,15 @@ fn qualifiziert(modul: &str, name: &str) -> String {
     }
 }
 
-/// **Der Blockgeltungsbereich -- die zweite Haelfte des Fundes vom 2026-08-31.**
+/// **The block scope -- the second half of the 2026-08-31 finding.**
 ///
-/// Bis dahin trug dieser Lauf NUR die Parameter, und ein `let` in einem inneren Block war
-/// unsichtbar. Verdeckt es einen Parameter, fragt `ortsart` den Typ des PARAMETERS -- und
-/// `D018` sagt dann *„`slots of t` needs a table, and `t` is a scalar"* ueber ein Programm,
-/// in dem `t` an dieser Stelle eine Tabelle IST. **Eine Falschabsage aus derselben Wurzel
-/// wie die falsche Kostenzahl in `kosten.rs`.**
+/// Until then this walk carried ONLY the parameters, and a `let` in an inner block was
+/// invisible. Where it shadows a parameter, `ortsart` asks the type of the PARAMETER -- and
+/// `D018` then says *"`slots of t` needs a table, and `t` is a scalar"* about a program in
+/// which `t` IS a table at that point. **A false refusal from the same root as the wrong
+/// cost number in `kosten.rs`.**
 ///
-/// Der Wert steht im ALTEN Geltungsbereich, also wird erst geprueft und dann gebunden.
+/// The value stands in the OLD scope, so the check runs first and the name is bound after.
 fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Absagen) {
     let mut karte = aussen.lokal.clone();
     for st in &b.anweisungen {
@@ -408,10 +408,10 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
     }
 }
 
-/// Was eine Anweisung an NAMEN hinterlaesst -- dieselbe Frage, die `kosten.rs::binde`
-/// stellt, und dieselbe Antwort: was hier nicht abzulesen ist, wird `Unbekannt` und nicht
-/// durchgereicht. **`ortsart` schweigt ueber `Unbekannt`**, und Schweigen ist die Antwort,
-/// die `D018` an jeder Stelle gibt, an der es nichts weiss.
+/// What a statement leaves behind in NAMES -- the same question `kosten.rs::binde` asks,
+/// and the same answer: what cannot be read here becomes `Unbekannt` rather than being
+/// passed over. **`ortsart` stays silent about `Unbekannt`**, and silence is the answer
+/// `D018` gives everywhere it knows nothing.
 fn binde(st: &gabbro_syntax::ast::Stmt, karte: &mut HashMap<String, Typ>, u: &Umgebung, modul: &str) {
     match &st.art {
         StmtArt::Let(l) => {
