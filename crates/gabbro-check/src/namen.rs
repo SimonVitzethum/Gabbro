@@ -21,6 +21,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     formatklauseln(baum, absagen);
     bootschritte(baum, absagen);
     asm_versiegelt(baum, absagen);
+    annahme_arch(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
     verweigerte_zahltypen(baum, absagen);
@@ -2330,6 +2331,90 @@ fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
 ///
 /// **`clobbers memory` ist die Vorgabe und keine Ausnahme** (`N026` als Hinweis): wer sie
 /// weglässt, spart eine Zeile und verliert eine Zusage.
+/// **`A005` -- an assumption for a machine this unit does not run on** («B40», 2026-08-31).
+///
+/// `assume … arch A` says the assumption holds exactly on `A`. If no declaration of this unit
+/// names `A`, it can **never be in force here** -- and it still stands in the certificate
+/// under *"proved under A1…An"*. **A reader of the artefact takes a reach out of that which
+/// does not exist.**
+///
+/// ## Why `arch` belongs at an `assume` in the first place
+///
+/// Measured 2026-08-31: `assume` was the only item carrying a statement about the MACHINE
+/// that could not name the machine. `entry`, `entrust`, `boot` and an `asm` body all could.
+/// The expensive case is `dma_kohaerent` -- it carried **two** claims under one name and one
+/// falsifier:
+///
+/// | | |
+/// |---|---|
+/// | coherence | device and kernel see the same cells without cache maintenance |
+/// | order | two volatile accesses become visible to the device in program order |
+///
+/// *The second does not follow from the first.* On AArch64 the ordering statement holds for
+/// Device-nGnRnE, but C11 `volatile` emits no barrier against normal memory there: a
+/// descriptor write into coherent RAM and a following doorbell write into the device can
+/// become visible out of order without a `DSB`. **And its falsifier runs on x86 and passes**
+/// -- a green probe for an assumption that is false on the other half of the estate.
+///
+/// ## And what this rule does NOT do
+///
+/// It does not read the TEXT. Whether an assumption carries two claims is decided by a human;
+/// the checker only sees whether the named machine occurs here. *A guard against conjunctions
+/// in prose would be a text guard, not a pass.* The count stands in
+/// `messung/ANNAHMEKONJUNKTIONEN.md`.
+///
+/// **Without a single `arch` declaration nothing is refused** (R16): a unit without `entry`,
+/// `boot`, `entrust` and without `asm` does not say which machine it runs on, and a refusal
+/// would then be a guess.
+fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
+    let mut bekannt: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Entry(e) => bekannt.push(e.arch.text.clone()),
+        ItemArt::Entrust(e) => bekannt.push(e.arch.text.clone()),
+        ItemArt::Boot(b) => bekannt.push(b.arch.text.clone()),
+        ItemArt::Funktion(f) => {
+            if let Some(a) = &f.arch {
+                bekannt.push(a.text.clone());
+            }
+        }
+        _ => {}
+    });
+    if bekannt.is_empty() {
+        return;
+    }
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Assume(a) = &item.art else { return };
+        let Some(arch) = &a.arch else { return };
+        if bekannt.contains(&arch.text) {
+            return;
+        }
+        let mut genannt: Vec<&str> = bekannt.iter().map(|s| s.as_str()).collect();
+        genannt.sort_unstable();
+        genannt.dedup();
+        absagen.schiebe(
+            Absage::fehler(
+                "A005",
+                arch.span,
+                format!(
+                    "`{}` is assumed for `{}`, and this unit declares only `{}`",
+                    a.name.text,
+                    arch.text,
+                    genannt.join("`, `")
+                ),
+            )
+            .mit_notiz(
+                "an assumption that can never be in force here still travels in the \
+                 artefact under `proved under A1…An` -- and a reader takes a reach out of \
+                 it that does not exist",
+            )
+            .mit_notiz(
+                "leave `arch` off if the assumption holds on every machine this unit \
+                 targets -- that is the honest default, not a gap",
+            ),
+        );
+    });
+}
+
 fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else {

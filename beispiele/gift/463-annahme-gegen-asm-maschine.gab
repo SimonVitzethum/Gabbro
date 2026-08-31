@@ -1,0 +1,36 @@
+-- erwartet: A005
+-- **Die Maschine steht NUR am Assemblerblock -- und `A005` muss sie trotzdem finden.**
+--
+-- Diese Einheit hat keinen `entry`, kein `boot`, kein `entrust`. Das einzige Wort, das
+-- sagt, auf welchem Prozessor sie laeuft, ist das `arch x86_64` am `asm`-Rumpf -- und `A001`
+-- macht es dort zur Pflicht. Die Annahme daneben ist fuer `aarch64` gestellt und kann hier
+-- also nie in Kraft sein.
+--
+-- **Warum diese Datei existiert:** die Handmutation, die den `ItemArt::Funktion`-Zweig aus
+-- der Sammelstelle von `A005` nahm, ging am 2026-08-31 durch alle Proben. `beispiele/60`
+-- fing sie NICHT -- dort steht ein `entry` in derselben Datei, und der lieferte die Maschine
+-- ohnehin. *Ein Zeuge, der neben einer zweiten Quelle derselben Auskunft steht, bezeugt
+-- nichts.* Ohne den Zweig ist `bekannt` hier leer, `A005` schweigt nach R16, und die Datei
+-- geht durch.
+--
+-- > Dieselbe Klasse wie der Fund, aus dem `A005` hervorging: zwei Auskuenfte ueber dieselbe
+-- > Sache, und die Probe traf die falsche.
+
+module gift {
+
+assume speichermodell_ordnet_geraeteschreiben arch aarch64
+    "Zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
+    falsifier sonde_dma_reihenfolge;
+
+static mut ZELLE : u32 = 0;
+
+impl fn barriere()
+    effects { writes ZELLE }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "mfence"
+        clobbers { memory }
+    };
+
+}

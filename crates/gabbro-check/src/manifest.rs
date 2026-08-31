@@ -22,6 +22,17 @@ pub struct Eintrag {
     pub name: String,
     /// `assume` oder `axiom`.
     pub art: &'static str,
+    /// **«B40»: the machine, and it is part of the IDENTITY** (2026-08-31).
+    ///
+    /// `assume c11_release_acquire arch x86_64` and `… arch aarch64` are two assumptions,
+    /// not one declared twice -- they say different things about different machines, and an
+    /// estate with both architectures needs both lines. **Before this field [`vereinige`]
+    /// called them a contradiction**, and the pattern `SPRACHE.md` §6 writes out would have
+    /// been unwritable the day `arch` became sayable.
+    ///
+    /// *The same name with the same `arch` and different content stays a contradiction* --
+    /// that is the case the function was built for, and it is untouched.
+    pub arch: Option<String>,
     pub klasse: Klasse,
     /// Bei `assume` der erklaerende Satz, bei `axiom` die Wirkungen.
     pub aussage: String,
@@ -69,6 +80,7 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
     out.push(Eintrag {
         name: "gleitkomma_rundungsmodus_ist_rne".into(),
         art: "assume",
+        arch: None,
         klasse: Klasse::Falsifizierbar {
             sonde: "sonde_mxcsr_rne".into(),
         },
@@ -80,6 +92,7 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
     out.push(Eintrag {
         name: "gleitkomma_x86_rechnet_mit_sse2".into(),
         art: "assume",
+        arch: None,
         klasse: Klasse::Falsifizierbar {
             sonde: "sonde_keine_ueberbreite".into(),
         },
@@ -123,6 +136,7 @@ fn sperrabdruckannahme(baum: &Programm, out: &mut Vec<Eintrag>) {
     out.push(Eintrag {
         name: "sperrabdruck_haelt_fremde_kerne_fern".into(),
         art: "assume",
+        arch: None,
         klasse: Klasse::NichtFalsifizierbar {
             grund: "a memory model cannot be refuted by execution -- a probe that holds the \
                     footprint and looks shows only that this time nobody looked"
@@ -172,6 +186,7 @@ fn stilllegungsannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
         out.push(Eintrag {
             name: format!("stilllegung_{}_ist_unerreichbar", f.name.text),
             art: "assume",
+            arch: None,
             klasse: klasse(&st.klasse),
             aussage: format!(
                 "After `{}` no address of the space `{raum}` is reachable any more. That \
@@ -192,7 +207,7 @@ pub fn sammle(baum: &Programm) -> Vec<Eintrag> {
     sperrabdruckannahme(baum, &mut out);
     stilllegungsannahmen(baum, &mut out);
     sammle_items(&baum.items, &mut out);
-    out.sort_by(|a, b| a.name.cmp(&b.name));
+    out.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     out
 }
 
@@ -203,12 +218,14 @@ fn sammle_items(items: &[Item], out: &mut Vec<Eintrag>) {
             ItemArt::Assume(a) => out.push(Eintrag {
                 name: a.name.text.clone(),
                 art: "assume",
+                arch: a.arch.as_ref().map(|x| x.text.clone()),
                 klasse: klasse(&a.klasse),
                 aussage: a.text.text.clone(),
             }),
             ItemArt::Axiom(a) => out.push(Eintrag {
                 name: a.name.text.clone(),
                 art: "axiom",
+                arch: None,
                 klasse: klasse(&a.klasse),
                 aussage: a
                     .effects
@@ -243,7 +260,8 @@ pub fn vereinige(alle: Vec<Eintrag>) -> (Vec<Eintrag>, Vec<String>) {
     let mut aus: Vec<Eintrag> = Vec::new();
     let mut streit = Vec::new();
     for e in alle {
-        match aus.iter().find(|a| a.name == e.name) {
+        // **The key is NAME AND MACHINE** -- see [`Eintrag::arch`].
+        match aus.iter().find(|a| a.name == e.name && a.arch == e.arch) {
             None => aus.push(e),
             Some(vorher) => {
                 if vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage {
@@ -256,7 +274,7 @@ pub fn vereinige(alle: Vec<Eintrag>) -> (Vec<Eintrag>, Vec<String>) {
             }
         }
     }
-    aus.sort_by(|a, b| a.name.cmp(&b.name));
+    aus.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     (aus, streit)
 }
 
@@ -307,7 +325,7 @@ pub fn zeige(eintraege: &[Eintrag]) -> String {
     let mut out = String::new();
     let mut gestrichen = 0usize;
     out.push_str("-- The assumption set. The promise reads: proved under A1…An.\n");
-    out.push_str("-- Nr\tName\tArt\tKlasse\tSonde/Grund\tAussage\n");
+    out.push_str("-- Nr\tName\tArt\tMaschine\tKlasse\tSonde/Grund\tAussage\n");
     for (n, e) in eintraege.iter().enumerate() {
         let (kl, wie) = match &e.klasse {
             // **The name stands only where the probe stands as a program** -- see [`gedeckt`].
@@ -322,10 +340,13 @@ pub fn zeige(eintraege: &[Eintrag]) -> String {
             Klasse::NichtFalsifizierbar { grund } => ("nicht-falsifizierbar", grund.as_str()),
         };
         out.push_str(&format!(
-            "A{}\t{}\t{}\t{}\t{}\t{}\n",
+            "A{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             n + 1,
             e.name,
             e.art,
+            // **`--` and not an empty cell.** An assumption without `arch` claims EVERY
+            // machine this unit targets; a blank column would read as "unknown".
+            e.arch.as_deref().unwrap_or("--"),
             kl,
             wie,
             e.aussage

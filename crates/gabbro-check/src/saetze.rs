@@ -268,6 +268,44 @@ pub const NAMEN: &[Satz] = &[
                       by a line nothing measures.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12",
     },
+    // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
+    //
+    // **What bought the clause was a CONJUNCTION, not a missing keyword.** `dma_kohaerent`
+    // carried two independent claims under one name and one falsifier, and the second is
+    // false on AArch64 -- while that falsifier runs on x86 and passes.
+    Satz {
+        name: "namen.annahmemaschine",
+        kennungen: &["A005"],
+        aussage: "An `assume … arch A` names a machine this unit declares somewhere -- \
+                  at an `entry`, an `entrust`, a `boot` or an `asm` body. An assumption \
+                  that can never be in force here does not travel in the artefact's \
+                  assumption set as though it could.",
+        vorbehalt: "**The rule reads the `arch`, never the TEXT.** Whether an assumption \
+                    carries two claims under one name is a human judgement; a guard \
+                    against conjunctions in prose would be a text guard, not a pass. And \
+                    a unit that declares NO `arch` anywhere is not refused (R16) -- it \
+                    does not say which machine it runs on, so a refusal would be a \
+                    guess. *That silence covers `beispiele/02` itself, the file the rule \
+                    came from.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured before the build: `arch` existed at `entry`, `entrust`, \
+                      `boot` and `asm` (27 `x86_64`, 2 `aarch64` in the corpus) and at \
+                      NO `assume`. Of 34 distinct assumption texts **17 are mechanically \
+                      flagged** (a semicolon or a German conjunction) and **8 judged to \
+                      carry two claims that can fail independently** -- one name, one \
+                      falsifier, \
+                      two obligations; it was 9 before `dma_kohaerent` was split. *The \
+                      mechanical half over-counts by more than a factor of two and is \
+                      printed anyway* -- the judgement stands per entry in \
+                      `messung/ANNAHMEKONJUNKTIONEN.md`. `beispiele/gift/462` and `/463`; \
+                      `beispiele/60` is the counterprobe. **3 hand mutations, all BUILT, \
+                      all caught -- but the first witness was worthless**: dropping the \
+                      `fn … arch` branch went through `beispiele/60`, because an `entry` \
+                      in the same file supplied the machine anyway. *A witness standing \
+                      next to a second source of the same answer witnesses nothing.* \
+                      `/463` is the one that has no second source.",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12; «B40»",
+    },
     Satz {
         name: "namen.bootkette",
         kennungen: &["O007"],
@@ -1897,6 +1935,44 @@ pub const SPERREN: &[Satz] = &[
         gemessen_an: "beispiele/gift/231; 2 mutations, both caught. Hand probe: the same \
                       file with and without `masks IRQ` gave 0 errors against `[H013]`.",
         fundstelle: "crates/gabbro-check/src/kontexte.rs; «B38»",
+    },
+    // --- «B39», 2026-08-31: the wiring between the rank pass and the entry ---------------
+    //
+    // **Born out of a COUNT, not out of a find.** `zaehle-verdrahtung.py` listed
+    // `Entry / Lock` as one of 32 construct pairs that stand together in the corpus and that
+    // no single pass function reads together. *Both halves had stood for months; what was
+    // missing was the line that hangs them on each other.*
+    Satz {
+        name: "kontexte.handlersperre",
+        kennungen: &["H102"],
+        aussage: "An entry that hardware THROWS (`via idt`) takes no lock that fails to \
+                  declare `masks irqs`: the path it interrupted may be holding that lock, \
+                  and the handler would wait for a holder that only resumes once the \
+                  handler returns.",
+        vorbehalt: "**The trigger is `via idt`, and that leaves a gap this rule does not \
+                    close.** `beispiele/57`'s `halt_ipi vector 0xF0` is thrown too, but it \
+                    writes no `via`, so `Kontext::unterbricht` is false and `H102` stays \
+                    silent over it. *That is a gap in the LANGUAGE -- `via` is the only \
+                    place Gabbro says the difference -- and it is named here rather than \
+                    papered over with a second answer to `what is an interrupt context` \
+                    (a fourth register over the same set is W7).* And the remedy this rule \
+                    demands is a PROMISE, not a lowering: the emitter writes no `cli`/`sti` \
+                    out of `masks irqs`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured before the build: 39 lock declarations in the clean corpus, \
+                      7 of them `masks irqs`; exactly ONE corpus file carries an `entry` \
+                      AND a lock (`beispiele/57`), and that lock masks. **The clean corpus \
+                      therefore has zero sites -- the evidence is poison** (Falle 80). \
+                      `beispiele/gift/460` gave 0 errors before the rule and `[H102]` \
+                      after; `beispiele/59` differs by ONE word and stays clean. **3 hand \
+                      mutations, all BUILT: 1 caught at once, 2 went through all 283 \
+                      probes** -- the `via idt` gate and the `locks shared ` prefix had no \
+                      witness at all. Both now have one (`beispiele/59` module `ruf`, \
+                      `beispiele/gift/461`), and the second is the sharper: without the \
+                      prefix `locks shared TAKT` resolves to no lock and the rule falls \
+                      silent through the SAME `continue` that lets an unknown lock pass. \
+                      *A branch that stays quiet for two reasons and means only one.*",
+        fundstelle: "crates/gabbro-check/src/kontexte.rs; «B39»",
     },
     Satz {
         name: "geteilt.gnadenfrist",

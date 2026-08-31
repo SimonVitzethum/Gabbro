@@ -4054,11 +4054,22 @@ impl<'a> Parser<'a> {
     fn assume(&mut self) -> Erg<Assume> {
         let anfang = self.erwarte_kw(Kw::Assume)?;
         let name = self.erwarte_ident()?;
+        // **«B40»: `arch` BEFORE the text, the same place `entry` and `boot` write it.**
+        //
+        // It is optional, and that is the whole design: an assumption about a timer holds on
+        // every machine, one about visibility order does not. *A compulsory `arch` would
+        // force 39 corpus entries to answer a question they do not have.*
+        let arch = if self.friss_kw(Kw::Arch) {
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
         let text = self.erwarte_text()?;
         let klasse = self.annahmeklasse()?;
         self.erwarte_z(Z::Semi)?;
         Ok(Assume {
             name,
+            arch,
             text,
             klasse,
             span: anfang.bis_zu(self.vorheriger_span()),

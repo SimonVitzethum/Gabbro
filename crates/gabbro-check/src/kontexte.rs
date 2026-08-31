@@ -156,6 +156,15 @@ pub struct Traegerlage {
     /// davon: von keinem sichtbaren Kontext erreicht. **Diese sind nicht freigesprochen,
     /// sondern ungesehen** — in einer Uebersetzungseinheit ohne `entry` fragt niemand.
     pub traeger_unerreicht: usize,
+    /// **«B39» -- the numbers next to `H102`.** Locks declared in this unit.
+    pub sperren: usize,
+    /// of those: they carry `masks irqs`, so taking them masks interrupts.
+    pub sperren_maskiert: usize,
+    /// Contexts that a piece of hardware THROWS -- `via idt`. Only these can arrive
+    /// between two instructions of a path that is holding a lock.
+    pub irq_kontexte: usize,
+    /// of those: they reach a `locks L` whose `L` masks nothing -- here `H102` falls.
+    pub irq_nimmt_unmaskiert: usize,
 }
 
 /// **Welche Knoten erreicht dieser Kontext?** Eine eigene kleine Wanderung, weil der Graph
@@ -208,6 +217,26 @@ fn erhebe_lage(baum: &Programm) -> (Traegerlage, Vec<Absage>) {
     // Welche erklaerten Traeger erreicht ueberhaupt ein Kontext? Der Schluessel ist der
     // QUALIFIZIERTE Name -- zwei gleichnamige Funktionen in zwei Modulen sind zwei Knoten
     // (derselbe Fehler, den `140-gleicher-name-fremdes-modul.gab` festhaelt).
+    // **«B39» -- the lock table, and it is the half `kontexte.rs` never had.**
+    //
+    // `LockDecl::maskiert` is filled by the reader and, until 2026-08-31, read by nobody:
+    // `pruefe-klauseln.py` carried `maskiert / LockDecl` under **UNGELESEN** -- *"the reader
+    // fills it, nobody looks"*. The other half stood right here: `EntryDecl::dispatch` has
+    // been the root of this file since «K5.3».
+    //
+    // > *Both parts existed and were correct; what was missing was the line that brings
+    // > them together.* Exactly the class `zaehle-verdrahtung.py` counts -- and `Entry/Lock`
+    // > was one of its 32 open pairs on the day this was written.
+    let mut sperren: Vec<(String, bool)> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Lock(l) = &item.art {
+            sperren.push((l.name.text.clone(), l.maskiert.is_some()));
+        }
+    });
+    lage.sperren = sperren.len();
+    lage.sperren_maskiert = sperren.iter().filter(|(_, m)| *m).count();
+    lage.irq_kontexte = kontexte.iter().filter(|k| k.unterbricht).count();
+
     let mut erklaert: Vec<String> = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
@@ -233,6 +262,83 @@ fn erhebe_lage(baum: &Programm) -> (Traegerlage, Vec<Absage>) {
             }
         }
         let h = g.huelle(&voll);
+
+        // **`H102` -- a handler takes no lock that leaves interrupts unmasked.**
+        //
+        // `nested never` says this vector does not re-enter ITSELF. It says nothing about a
+        // path that was INTERRUPTED while holding a lock. If the handler then takes that
+        // same lock, it waits for a holder who only resumes once the handler returns --
+        // **on one core that is the standstill, and no loop is spinning in it.**
+        //
+        // Linux writes `spin_lock_irqsave` for this, and `lock … masks irqs` IS that word.
+        // Measured before the build (`beispiele/gift/460`): **0 errors.**
+        //
+        // ## Why the trigger is `via idt` and not `vector`
+        //
+        // `Kontext::unterbricht` is the tree's OWN answer to "what makes an entry an
+        // interrupt context", and it has a reason written next to it: a syscall carries a
+        // vector too, but it is CALLED, not thrown. Asking the question a second time here,
+        // with a second answer, would be a fourth register over the same set (W7) -- the
+        // very form this rule was built out of. *So it reuses the answer instead.*
+        //
+        // **And that leaves a gap this rule does not close, named rather than hidden:**
+        // `beispiele/57`'s `halt_ipi vector 0xF0` is an IPI and therefore thrown, but it
+        // writes no `via idt` -- so `unterbricht` is false and `H102` stays silent over it.
+        // *That is a gap in the LANGUAGE (`via` is the only place it says the difference),
+        // not a gap in this rule.*
+        //
+        // ## It fires on PRESENCE, so an incomplete hull is no excuse
+        //
+        // The same argument `H101` carries one screen up: the effect set only GROWS, so a
+        // `locks L` in a lower bound stands in the full hull too (R16 forbids refusing on
+        // ABSENCE, and this is not one). *The reverse -- a lock hidden behind a cut edge --
+        // is possible, and that is why `unentscheidbar` keeps being counted.*
+        if k.unterbricht {
+            for w in &h.wirkungen {
+                let Some(ort) = w
+                    .strip_prefix("locks shared ")
+                    .or_else(|| w.strip_prefix("locks "))
+                else {
+                    continue;
+                };
+                // The last segment: `locks a::b::L` and `lock L` are the same lock.
+                let kurz = ort.rsplit("::").next().unwrap_or(ort);
+                // **A lock this unit does not declare is not refused.** We would be
+                // guessing at its `masks` clause, and a guess in the refusing direction is
+                // exactly what R16 forbids.
+                let Some((_, maskiert)) = sperren.iter().find(|(n, _)| n == kurz) else {
+                    continue;
+                };
+                if *maskiert {
+                    continue;
+                }
+                lage.irq_nimmt_unmaskiert += 1;
+                absagen.push(
+                    Absage::fehler(
+                        "H102",
+                        k.span,
+                        format!(
+                            "`{}` is thrown by hardware and takes `{kurz}`, which does not \
+                             declare `masks irqs`",
+                            k.name
+                        ),
+                    )
+                    .mit_notiz(&format!(
+                        "an interrupted path may be holding `{kurz}` -- the handler then \
+                         waits for a holder that only resumes once the handler returns"
+                    ))
+                    .mit_notiz(
+                        "the remedy is one word at the DECLARATION: `lock … masks irqs`, \
+                         the same statement `spin_lock_irqsave` makes",
+                    )
+                    .mit_notiz(
+                        "`nested never` is not this promise -- it says the vector does not \
+                         re-enter itself, and says nothing about the path it interrupted",
+                    ),
+                );
+            }
+        }
+
         let traeger: Vec<&String> = h
             .wirkungen
             .iter()

@@ -1730,6 +1730,25 @@ pub enum MergeOp {
 #[derive(Debug, Clone)]
 pub struct Assume {
     pub name: Ident,
+    /// **`arch` at an assumption -- «B40», 2026-08-31.**
+    ///
+    /// Until this date only `entry`, `boot`, `device`, `entrust` and an `asm` body could say
+    /// which machine they mean; an `assume` could not. **And a hardware assumption is the
+    /// one item where that hurts most**, because a statement about caches, barriers or
+    /// register semantics is a statement about ONE architecture and travels with the
+    /// artefact as if it held everywhere.
+    ///
+    /// The measured case is `dma_kohaerent`: *"device and kernel see the same cells without
+    /// cache maintenance, AND two volatile accesses become visible to the device in program
+    /// order."* The second half holds on x86 and is **false on AArch64 in the most common
+    /// DMA configuration** -- a descriptor write to coherent RAM and a following doorbell
+    /// write to Device-nGnRnE memory can become visible out of order without a `DSB`, and
+    /// C11 `volatile` emits no barrier there. *Its falsifier runs on x86 and passes.*
+    ///
+    /// `None` means the assumption is claimed for every machine this unit targets. **That is
+    /// the honest default and not a gap** -- `zeitgeber_tickt` is about a timer, not about a
+    /// memory model.
+    pub arch: Option<Ident>,
     pub text: Textliteral,
     pub klasse: AnnahmeKlasse,
     pub span: Span,

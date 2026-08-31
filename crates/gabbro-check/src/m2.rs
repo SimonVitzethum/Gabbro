@@ -360,14 +360,18 @@ fn gehe(
                     let mut z = vorher.clone();
                     ausdruck(bed, s.span, v, &mut z, absagen);
                     gehe(r, linear, v, &mut z, absagen);
-                    zweig_geborene(&vorher, &z, endet(r, v), absagen);
-                    ergebnisse.push((z, endet(r, v)));
+                    // **One descent, not two.** `endet` walks the block itself; asking it
+                    // twice per branch makes the pass 2^depth over nested `if`s.
+                    let endet_hier = endet(r, v);
+                    zweig_geborene(&vorher, &z, endet_hier, absagen);
+                    ergebnisse.push((z, endet_hier));
                 }
                 if let Some(r) = &w.sonst {
                     let mut z = vorher.clone();
                     gehe(r, linear, v, &mut z, absagen);
-                    zweig_geborene(&vorher, &z, endet(r, v), absagen);
-                    ergebnisse.push((z, endet(r, v)));
+                    let endet_hier = endet(r, v);
+                    zweig_geborene(&vorher, &z, endet_hier, absagen);
+                    ergebnisse.push((z, endet_hier));
                 } else {
                     ergebnisse.push((vorher.clone(), false));
                 }
@@ -379,8 +383,9 @@ fn gehe(
                 for zw in &m.zweige {
                     let mut z = vorher.clone();
                     gehe(&zw.rumpf, linear, v, &mut z, absagen);
-                    zweig_geborene(&vorher, &z, endet(&zw.rumpf, v), absagen);
-                    ergebnisse.push((z, endet(&zw.rumpf, v)));
+                    let endet_hier = endet(&zw.rumpf, v);
+                    zweig_geborene(&vorher, &z, endet_hier, absagen);
+                    ergebnisse.push((z, endet_hier));
                 }
                 abgleich(&ergebnisse, s.span, zust, absagen);
             }

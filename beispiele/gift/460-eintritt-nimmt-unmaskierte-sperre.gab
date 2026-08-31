@@ -1,0 +1,57 @@
+-- erwartet: H102
+-- **Der Verklemmungspfad, den `nested never` NICHT abdeckt.**
+--
+-- `nested never` sagt, dass dieser Vektor sich nicht selbst wieder betritt. Es sagt nichts
+-- darueber, ob der Handler eine Sperre nimmt, die ein UNTERBROCHENER Weg schon haelt.
+--
+-- Genau das steht hier. `TAKT` maskiert die Interrupts nicht. Ein Faden nimmt `TAKT`, der
+-- Zeitgeber kommt zwischen zwei Anweisungen an, `takt_verteiler` nimmt `TAKT` -- und wartet
+-- auf einen Halter, der erst weiterlaeuft, wenn der Handler zurueckkehrt. **Auf einem Kern
+-- ist das der Stillstand, und keine Schleife dreht sich dabei.**
+--
+-- Der Linux-Kern schreibt dafuer `spin_lock_irqsave`, und `lock … masks irqs` IST dieses
+-- Wort. Es stand in der Grammatik, seit es `lock` gibt -- und bis zum 2026-08-31 hat es
+-- kein Pass gelesen (`pruefe-klauseln.py`: `maskiert / LockDecl` unter **UNGELESEN**).
+--
+-- Gemessen vor dem Bau: **0 Fehler.** Die Abhilfe steht in der Datei daneben
+-- (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`): `masks irqs` an die Deklaration.
+
+module gift {
+
+table Takte count 64 {
+    slot { stand : u64, }
+}
+
+-- **Die Sperre ohne `masks irqs`** -- und das ist der ganze Unterschied zur Gegenprobe.
+lock TAKT protects { Takte } rank 0 held <= 40 ops;
+
+impl fn zaehle(i : index into Takte)
+    requires Held(TAKT)
+    effects  { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs    <= 8 ops
+{
+    Takte.slots[i].stand = 1;
+}
+
+impl fn takt_verteiler()
+    effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs   <= 40 ops
+{
+    locks TAKT {
+        zaehle(0);
+    }
+}
+
+-- **`via idt` macht daraus einen Interruptkontext** -- der Weg, den die Hardware zwischen
+-- zwei Anweisungen wirft. `nested never` deckt ihn nicht: es spricht ueber den Vektor,
+-- nicht ueber den Halter, der gerade unterbrochen wurde.
+entry zeitgeber vector 32 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack takt_stapel per cpu nested never
+    dispatch gift::takt_verteiler;
+}
+
+}
