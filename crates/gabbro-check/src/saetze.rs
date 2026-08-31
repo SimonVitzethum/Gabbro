@@ -516,6 +516,41 @@ pub const D1D2: &[Satz] = &[
                      SYNTAX.md:1060",
     },
     Satz {
+        name: "m.wahrheit_ist_keine_zahl",
+        kennungen: &["M135"],
+        aussage: "A value does not cross between `bool` and a number. `m1.rs::passt` ends \
+                  in a comparison of RANGES, and `Typ::Wahrheit` has none -- so the whole \
+                  boundary fell through a silent `else`, at every `return`, every \
+                  assignment and every argument. **This is the other half of `N044`'s \
+                  sentence**: `N044` sees THAT a verdict is missing, `M135` sees whether \
+                  the one that is there is a verdict at all.",
+        vorbehalt: "**A range of exactly `0 .. 1` is not a crossing** -- a one-bit device \
+                    field admits both truth values and nothing else, and \
+                    beispiele/gift/416 reads one into a `bool`. The line is the RANGE and \
+                    not the width: `return 1` has `u8 in 1 .. 1` and falls. And it holds \
+                    ONLY this boundary: a float against an integer crosses the same silent \
+                    `else` and is named in messung/proben/probe-rueckgabetyp.gab, not \
+                    refused -- the measurement decides the reach of the rule, not the \
+                    symmetry of the code.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker: \
+                      messung/proben/probe-rueckgabetyp.gab falsifies four returns in one \
+                      file and exactly ONE falls (`-> u8 { return 300; }` at `M101`) -- the \
+                      one where both sides carry a range. **And no stage after this one \
+                      says a word either**: `emit` writes `return 7;` into a `bool` \
+                      function and `cc -O0 -Wall -Wextra -Werror` accepts it, because C \
+                      converts. A probe returning `7` HOLDS on that path, always. Poison is \
+                      beispiele/gift/430. **Its first two finds were in this checker**: a \
+                      compare-exchange bound to the atomic's type instead of to `bool` \
+                      (`beispiele/35-tausch.gab`, where the emitter had written `bool \
+                      genommen` all along), and an `exchange update` body read against the \
+                      enclosing function's result instead of the place's type \
+                      (beispiele/gift/209). Over all 475 corpus files the rule falls in ZERO \
+                      after both repairs.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; messung/proben/probe-rueckgabetyp.gab; \
+                     messung/proben/probe-probenurteil-typ.gab",
+    },
+    Satz {
         name: "n.probenurteil",
         kennungen: &["N044", "N045"],
         aussage: "A `can_fail` block yields a VERDICT, and on every path: every `return` in \
@@ -527,10 +562,10 @@ pub const D1D2: &[Satz] = &[
                     refused here -- MEASURED 2026-08-31, and all four stages pass it (`cc` \
                     converts `7` to `true`, so there is no fourth stage that refuses). The \
                     gap is not the `check`'s: `m1.rs::passt` compares RANGES, and \
-                    `Typ::Wahrheit` has none, so the `bool`/number boundary is unheld at \
-                    every `return`, assignment and argument. \
-                    messung/proben/probe-rueckgabetyp.gab falsifies four returns and one \
-                    falls. **The loop caveat is gone**: `crate::endet_immer` treated every \
+                    `Typ::Wahrheit` had none, so the `bool`/number boundary was unheld \
+                    at every `return`, assignment and argument. **Both caveats are gone**: \
+                    `M135` holds the boundary since the same day (satz \
+                    m.wahrheit_ist_keine_zahl): `crate::endet_immer` treated every \
                     loop as falling through and refused a probe whose only exits stand \
                     inside a `forever`; that was a FALSE refusal (`cc -Werror` accepts the \
                     `for (;;)` it emits), and it is repaired.",

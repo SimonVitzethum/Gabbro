@@ -101,6 +101,13 @@ const BENANNT: &[&str] = &[
     // `ensures` one by one and 51 stayed silent -- and `D018` its KIND: `slots of` needs a
     // table, `queue` a record, `elems of` an array field, `mappings of` a `walk`.
     "D017", "D018",
+    // 2026-08-31, the other half of the `N044` sentence: `N044` sees THAT a verdict is
+    // missing, `M135` sees whether the one that is there is a verdict at all. `passt` ends
+    // in a comparison of RANGES and `bool` has none, so the whole boundary fell through a
+    // silent `else` -- at every `return`, assignment and argument. Its first two finds were
+    // in this checker: a compare-exchange bound to the atomic's type instead of to `bool`,
+    // and an `exchange update` body read against the enclosing function's result.
+    "M135",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.

@@ -1,0 +1,62 @@
+-- erwartet: M135
+-- **Eine Probe, die eine ZAHL zurueckgibt, sagt weder „gefallen" noch „gehalten".**
+--
+-- Die andere Haelfte des Satzes, den `N044` zur einen Haelfte haelt: `N044` sieht, DASS ein
+-- Urteil fehlt, `M135` sieht, ob das vorhandene ueberhaupt eines ist.
+--
+-- Gemessen am 2026-08-31 gegen den unveraenderten Pruefer
+-- (`messung/proben/probe-probenurteil-typ.gab`): diese Datei prueft mit **0 Fehlern**, der
+-- Erzeuger schreibt
+--
+--     bool pruefe_c(void) {
+--         if (k >= 3) { return 7; }
+--         return true;
+--     }
+--
+-- und `cc -O0 -Wall -Wextra -Werror -c` **nimmt es an** (exit=0). C wandelt `7` nach
+-- `true`. *Alle vier Stufen laufen durch -- anders als bei `N044`, wo `cc` die vierte war,
+-- die absagte. Hier gibt es keine vierte.*
+--
+-- WARUM DAS SCHLIMMER IST UND NICHT HARMLOSER
+-- --------------------------------------------
+-- `7` ist nicht null, also HAELT die Probe auf diesem Weg -- immer. **Eine Gegenprobe, die
+-- nicht fallen kann, ist ein Messgeraet, das gruen klemmt**, und jede Stufe dieses Ordners
+-- meldet sie als in Ordnung. Die `W16`-Gestalt, im Werkzeug, das die Pflichten haelt.
+--
+-- WO DIE LUECKE SASS
+-- ------------------
+-- Nicht im `check`. `m1.rs::passt` endet mit
+--
+--     let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else { return; };
+--
+-- und `Typ::Wahrheit` hat keinen Bereich -- also schwieg der Vergleich, sobald `bool` auf
+-- einer der beiden Seiten stand. An JEDER Rueckgabe, jeder Zuweisung, jedem Argument.
+-- `messung/proben/probe-rueckgabetyp.gab` verfaelscht vier Rueckgaben, und genau eine fiel:
+-- die, an der beide Seiten einen Bereich hatten.
+--
+-- DIE GEGENPROBE STEHT IN DERSELBEN DATEI
+-- ----------------------------------------
+-- `return true` am Ende ist der zweite Ausgang desselben Blocks und faellt nicht. Und die
+-- Ein-Bit-Ausnahme steht daneben: `beispiele/gift/416` liest ein Geraetefeld `u8 in 0 .. 1`
+-- in ein `bool`, und **das ist kein Uebergang** -- ein Typ, der beide Wahrheitswerte
+-- zulaesst und sonst nichts, traegt dieselbe Frage wie `bool`. Die Grenze ist der BEREICH
+-- und nicht die Breite: `return 1;` hat `u8 in 1 .. 1`, laesst einen Wert zu, und faellt.
+
+module gift {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Zaehler bleibt unter drei."
+    measures k
+    gates    tor
+    can_fail {
+        if k >= 3 { return 7; }
+        return true;
+    }
+    floor    k >= 1
+}
+
+}

@@ -6913,3 +6913,136 @@ assume tickt \"der Zeitgeber unterbricht\" falsifier sonde_tickt; }}"
          wieder da: {mit_ausgang:?}"
     );
 }
+
+/// **`M135`: `bool` is not a number** -- and the other half of `N044`'s sentence.
+///
+/// `N044` sees THAT a verdict is missing; nobody saw whether the one that is there is a
+/// verdict at all. Measured 2026-08-31 (`messung/proben/probe-rueckgabetyp.gab`): four
+/// falsified returns in one file and exactly ONE falls -- the one where both sides carry a
+/// range. `m1.rs::passt` ends in a comparison of ranges and `Typ::Wahrheit` has none, so
+/// the whole boundary fell through a silent `else`.
+///
+/// **And no stage after it says a word either**: the emitter writes `return 7;` into a
+/// `bool` function and `cc -O0 -Wall -Wextra -Werror` accepts it, because C converts. *A
+/// probe that returns `7` HOLDS on that path, always -- a counterprobe that cannot fall.*
+#[test]
+fn wahrheit_ist_keine_zahl() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(kopf: &str, rumpf: &str) -> String {
+        format!(
+            "module t {{
+static mut k : u32 = 0;
+static mut w : bool = false;
+impl fn f() -> {kopf} effects {{ reads k, reads w }} costs <= 1 ops {{ {rumpf} }} }}"
+        )
+    }
+
+    // 1 -- both directions across the boundary.
+    for (kopf, rumpf) in [("bool", "return 7;"), ("u32", "return w;"), ("bool", "return k;")] {
+        let a = absagen(&mit(kopf, rumpf));
+        assert!(
+            a.iter().any(|c| c == "M135"),
+            "`-> {kopf} {{ {rumpf} }}` kreuzt die Grenze und muss fallen: {a:?}"
+        );
+    }
+
+    // 2 -- the counter-direction. **A range still belongs to `M101`** -- one rule per
+    // question, and widening this one would take a refusal away from the other.
+    let bereich = absagen(&mit("u8", "return 300;"));
+    assert!(
+        bereich.iter().any(|c| c == "M101") && !bereich.iter().any(|c| c == "M135"),
+        "ein Bereichsfehler bleibt `M101`s Sache: {bereich:?}"
+    );
+    for (kopf, rumpf) in [("bool", "return true;"), ("u32", "return k;"), ("bool", "return w;")] {
+        let g = absagen(&mit(kopf, rumpf));
+        assert!(
+            !g.iter().any(|c| c == "M135"),
+            "`-> {kopf} {{ {rumpf} }}` kreuzt nichts und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- **the one-bit exception, and `beispiele/gift/416` wrote it.** A device field of
+    // one bit has type `u8 in 0 .. 1`: it admits both truth values and nothing else, so it
+    // carries the same question as `bool`. *The line is the RANGE and not the width* -- a
+    // literal `1` has `u8 in 1 .. 1`, admits one value, and falls.
+    let bit = absagen(
+        "module t {
+device Uart at mmio {
+    reg LSR : u8 @0x3FD class r fields { THRE @5, }
+}
+impl fn lies(d : ptr<mmio, r> Uart) -> bool effects { reads d.LSR } costs <= 2 ops
+{ return d.LSR.THRE; } }",
+    );
+    assert!(
+        !bit.iter().any(|c| c == "M135"),
+        "ein Ein-Bit-Feld in ein `bool` ist kein Uebergang: {bit:?}"
+    );
+    let eins = absagen(&mit("bool", "return 1;"));
+    assert!(
+        eins.iter().any(|c| c == "M135"),
+        "`return 1` laesst genau einen Wert zu und ist kein Wahrheitswert: {eins:?}"
+    );
+
+    // 4 -- **the two defects `M135` found in this checker on its first corpus run**, and
+    // they are the reason it is worth its own rule. Both bound a name to the wrong type,
+    // and both had been silent because nothing ever compared the two sides.
+    //
+    // (a) `when … returns e` hands back WHETHER the swap happened -- the emitter writes
+    // `bool genommen; genommen = atomic_compare_exchange_strong_explicit(…)`
+    // (`beispiele/35-tausch.gab`), and this pass called it `u32`.
+    let cas = absagen(
+        "module t {
+const NIEMAND : u32 = 0;
+atomic BESITZER : u32 release;
+impl fn nimm(f : u32) -> bool
+    requires f > 0
+    effects { writes BESITZER, publishes BESITZER }
+    costs   <= 16 ops
+{
+    let genommen = BESITZER exchange f when old(BESITZER) == NIEMAND returns erfolg
+        publishes nothing;
+    return genommen;
+} }",
+    );
+    assert!(
+        !cas.iter().any(|c| c == "M135" || c == "M101"),
+        "ein compare-exchange liefert ein `bool`, kein `u32`: {cas:?}"
+    );
+
+    // (b) a `return` in an `update` body yields the NEW value of the PLACE, not the
+    // enclosing function's result. In the corpus the two coincided by accident
+    // (`beispiele/05-nebenlaeufigkeit.gab`); inside a `check` they do not.
+    let update = absagen(
+        "module t {
+const GRENZE : u32 = 65535;
+const NKERNE : u32 = 4;
+atomic ZAEHLER : u32 relaxed;
+extern fn streit() -> never effects { diverges } costs <= 1 ops;
+impl fn tor() effects { reads ZAEHLER } costs <= 1 ops { return; }
+check c {
+    claim    \"der Zaehler bleibt unter seiner Grenze\"
+    measures ZAEHLER
+    gates    tor
+    can_fail {
+        let alt = ZAEHLER exchange update(v)
+            bounded NKERNE * 4 ops
+            on_exceeded streit
+        {
+            if v < GRENZE { return v + 1; }
+            return v;
+        } publishes nothing;
+        return alt < GRENZE;
+    }
+    floor    ZAEHLER >= 0
+} }",
+    );
+    assert!(
+        !update.iter().any(|c| c == "M135"),
+        "der Rumpf eines `update` liefert den neuen Wert des ORTS, nicht das Ergebnis der \
+         umgebenden Funktion: {update:?}"
+    );
+}
