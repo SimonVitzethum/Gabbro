@@ -1,0 +1,74 @@
+-- **Der Feldname im Suffix von `elems of` -- liest ihn jemand?**
+--
+-- `messung/DOMAENENSTELLUNGEN.md` §7 fuehrt die Zelle als ungeprueft:
+--
+-- > *„`M109` steigt nur in `[index]`-Suffixe ab, nicht in `.feld`; `D017` liest den
+-- > GRUNDnamen. `D018` faengt den Fall halb: loest der Feldname nicht auf, ist der Typ des
+-- > ganzen Orts `Unbekannt`, und dann schweigt auch er."*
+--
+-- **Aus dem Quelltext gelesen.** Dieselbe Bauart wie `chain`s Kante, die am 2026-08-31
+-- `D014`--`D016` bekam. Hier steht die Messung -- der Feldname `plaetze` durch
+-- `gibtsnichtfeld` ersetzt, in JEDER Stellung, gegen den unveraenderten Pruefer.
+--
+-- GEMESSEN am 2026-08-31
+-- ----------------------
+--
+--     $ gabbro pruefe messung/proben/probe-elems-feldname.gab
+--     error: [M109] …:52:31: `gibtsnichtfeld` is not declared here
+--     error: [M103] …:52:56: the index `j` has no bound
+--     …: 6 items, 2 errors, 0 hints
+--
+-- **Eine von vier Stellungen faellt, und die Absage kommt aus der Nachbarschaft.** `M109`
+-- liest JEDEN Namen einer Nachbedingung -- also auch den Feldnamen, aber nur dort. In
+-- `requires`, in einem `invariant` und im Rumpf einer `spec fn` sagt niemand etwas:
+--
+-- | Stellung | Urteil |
+-- |---|---|
+-- | `ensures`  | `M109` (und `M103` hinterher, weil der Index seine Schranke verliert) |
+-- | `requires` | **schweigt** |
+-- | `invariant` eines `walk`/einer `table` | **schweigt** |
+-- | Rumpf einer `spec fn` | **schweigt** |
+--
+-- WARUM `D018` DEN FALL NICHT FAENGT, und der Quelltext sagt es genau
+-- -------------------------------------------------------------------
+-- `ortsart` ruft `typ_von_ort` auf dem GANZEN Ort auf. Loest `r.gibtsnichtfeld` nicht auf,
+-- ist der Typ `Unbekannt`, und `Unbekannt` heisst bei `D018` **schweigen** -- das ist seine
+-- Disziplin und kein Versehen: *ein Ort, den der Pruefer nicht typisieren kann, ist kein
+-- Ort der falschen Art.* Die zweite Haelfte, `if !o.suffixe.is_empty() { return None; }`,
+-- schliesst den Ort mit Suffix ohnehin von der Deklarationsrueckfrage aus.
+--
+-- **Der Feldname eines Suffixes ist ein Name im TYP -- eine andere Frage als die des
+-- Orts**, und genau deshalb faellt er zwischen `D017` (Grundname) und `D018` (Art des
+-- Orts) hindurch.
+
+module probe::elemsfeldname {
+
+const NRING : u32 = 32;
+type RingNr = u32 in 0 ..< 32;
+const LEER : RingNr = 0;
+
+type Ring = {
+    plaetze : [RingNr; NRING],
+};
+
+-- (a) `ensures`
+impl fn in_ensures(r : ptr<normal, rw> Ring)
+    ensures forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER
+    effects { reads r, writes r }
+    costs   <= 4 ops
+{
+}
+
+-- (b) `requires`
+impl fn in_requires(r : ptr<normal, rw> Ring)
+    requires forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER
+    effects { reads r, writes r }
+    costs   <= 4 ops
+{
+}
+
+-- (c) der Rumpf einer `spec fn`
+spec fn ring_voll(r : ptr<normal, r> Ring) -> bool
+    = forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER;
+
+}

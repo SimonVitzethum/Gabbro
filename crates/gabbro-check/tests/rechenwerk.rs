@@ -6767,6 +6767,104 @@ impl fn f(t : ptr<normal, rw> T, x : fnptr())
     );
 }
 
+/// **`D019`: the FIELD names in the suffix of a domain's place.**
+///
+/// The third question at the same place -- `D017` reads its base name, `D018` its kind,
+/// `D019` the field names of its suffix. `messung/DOMAENENSTELLUNGEN.md` §7 carried the
+/// cell as unchecked with a reason read off the source; the measurement of 2026-08-31
+/// (`messung/proben/probe-elems-feldname.gab`) found it too kind to the checker:
+///
+/// ```text
+/// …: 8 items, 0 errors, 0 hints
+/// ```
+///
+/// `elems of r.gibtsnichtfeld` in `ensures`, in `requires` and in the body of a `spec fn`
+/// -- **not one of them**, and `ensures` among them, so `M109` did not read it either. The
+/// control in the same run: the same place with a falsified BASE name does fall, at
+/// `M109`. *The base is read and the field is not.*
+#[test]
+fn der_feldname_am_ort_einer_domaene() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(klausel: &str) -> String {
+        format!(
+            "module t {{
+const NRING : u32 = 32;
+type RingNr = u32 in 0 ..< 32;
+const LEER : RingNr = 0;
+type Ring = {{ plaetze : [RingNr; NRING], }};
+impl fn f(r : ptr<normal, rw> Ring)
+    {klausel}
+    effects {{ reads r, writes r }}
+    costs   <= 4 ops
+{{ }} }}"
+        )
+    }
+
+    // 1 -- every position, and `ensures` among them: the rule speaks where `M109` does
+    // not, and `M109` does not read a field name anywhere.
+    for klausel in [
+        "ensures forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER",
+        "requires forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER",
+    ] {
+        let a = absagen(&mit(klausel));
+        assert!(
+            a.iter().any(|c| c == "D019"),
+            "`{klausel}` quantifiziert ueber ein Feld, das nirgends steht: {a:?}"
+        );
+    }
+
+    // 2 -- the counter-direction: the same place with the field it actually has.
+    for klausel in [
+        "ensures forall j in elems of r.plaetze : r.plaetze[j] != LEER",
+        "requires forall j in elems of r.plaetze : r.plaetze[j] != LEER",
+    ] {
+        let g = absagen(&mit(klausel));
+        assert!(
+            !g.iter().any(|c| c == "D019"),
+            "`{klausel}` nennt ein Feld, das es gibt, und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- **silence where the prefix is not known, and that is the whole discipline.** At
+    // a `traverse` over a `let` binding the base does not resolve in this pass, so nothing
+    // is claimed about the field either. *The missing block scope -- the reason `D017` has
+    // to skip a `traverse` at all -- cannot produce a false refusal here.*
+    let ueber_ein_let = absagen(
+        "module t {
+const NRING : u32 = 32;
+type RingNr = u32 in 0 ..< 32;
+type Ring = { plaetze : [RingNr; NRING], };
+impl fn f(r : ptr<normal, rw> Ring)
+    effects { reads r } costs <= 64 ops
+{ let q = r; traverse j over elems of q.plaetze by unvisited
+      touches reads r { } } }",
+    );
+    assert!(
+        !ueber_ein_let.iter().any(|c| c == "D019"),
+        "ueber einem Traeger, den dieser Pass nicht aufloest, wird nichts behauptet: \
+         {ueber_ein_let:?}"
+    );
+
+    // 4 -- and the OTHER answer `Feldurteil` carries: a carrier that has no fields at all.
+    // A number is not a record with the wrong names -- the refusal has to say which.
+    let ohne_felder = absagen(
+        "module t {
+static mut k : u32 = 0;
+impl fn f() -> bool
+    requires forall j in elems of k.plaetze : j != 0
+    effects { reads k } costs <= 4 ops { return true; } }",
+    );
+    assert!(
+        ohne_felder.iter().any(|c| c == "D019"),
+        "ein Feldzugriff auf eine Zahl faellt ebenfalls, mit dem anderen Satz: \
+         {ohne_felder:?}"
+    );
+}
+
 /// **`N044`/`N045`: a probe yields a VERDICT, and on every path.**
 ///
 /// `can_fail` is a probe -- it falls or it holds (`SYNTAX.md` §13). Measured 2026-08-31

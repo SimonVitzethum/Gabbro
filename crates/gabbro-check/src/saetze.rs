@@ -588,6 +588,35 @@ pub const D1D2: &[Satz] = &[
                      beispiele/06-annahmen.gab",
     },
     Satz {
+        name: "d.domaenenfeld",
+        kennungen: &["D019"],
+        aussage: "The FIELD names in the suffix of a domain's place resolve. The third \
+                  question at the same place: `D017` reads its base name, `D018` its kind, \
+                  `D019` the field names of its suffix. A quantifier over a field that \
+                  stands nowhere ranges over nothing -- **the same sentence `D017` says \
+                  about the base name, and `M134` about a field access in a body.**",
+        vorbehalt: "**It is silent wherever the PREFIX did not resolve**, and that is the \
+                    whole discipline: the walk stops at the first suffix whose carrier is \
+                    unknown. That makes the rule safe at a `traverse` over a `let` binding \
+                    -- the position `D017` has to skip for want of a block scope cannot \
+                    produce a false refusal here, because a rule that says nothing about an \
+                    unknown carrier says nothing at all.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker, \
+                      messung/proben/probe-elems-feldname.gab: `elems of r.plaetze` \
+                      falsified to `elems of r.gibtsnichtfeld` in `ensures`, in `requires` \
+                      and in the body of a `spec fn` gave `8 items, 0 errors, 0 hints` -- \
+                      **not one of them**, and `ensures` among them, so `M109` does not read \
+                      a field name either and the DOMAENENSTELLUNGEN.md §7 cell was too kind \
+                      to the checker. The control in the same run: the same place with a \
+                      falsified BASE name (`elems of zzznix.plaetze`) does fall, at `M109` \
+                      -- *the base is read and the field is not.* Poison is \
+                      beispiele/gift/431. Over all 478 corpus files the rule falls in ZERO.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; \
+                     messung/proben/probe-elems-feldname.gab; \
+                     messung/DOMAENENSTELLUNGEN.md §7",
+    },
+    Satz {
         name: "d.domaenenort",
         kennungen: &["D017", "D018"],
         aussage: "The PLACE a quantifier domain runs over is held twice: its base name \
