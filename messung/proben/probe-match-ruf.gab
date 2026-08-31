@@ -1,0 +1,30 @@
+-- W24-Vorlauf: **`match` ueber einem RUF, der einen `tagged type` liefert.**
+--
+-- `messung/fragmente/F05.gab` schreibt `match decode_op(m.op) { Info => … }` und faellt bei
+-- `C001 match over something other than an option index into T`. Der Text nennt das Falsche:
+-- der Gegenstand ist keine Option, sondern ein `tagged type` -- nur eben hinter einem Ruf,
+-- und `marken_quelle` las bis zum 2026-08-31 nur ORTE.
+--
+-- Diese Datei ist die Messung dazu: derselbe Bau, aber der Gerufene ist DEKLARIERT.
+-- (In `F05` ist er es nicht -- dort bleibt eine Absage, und sie hat seit heute ihren
+-- eigenen Satz.)
+
+module probe::matchruf {
+
+tagged type Op = { Info, Read, Stop };
+
+extern fn entschluessle(w : u64) -> Op effects { pure } costs <= 4 ops;
+extern fn melde(w : u64) effects { pure } costs <= 2 ops;
+
+impl fn bediene(w : u64)
+    effects { pure }
+    costs   <= 16 ops
+{
+    match entschluessle(w) {
+        Info => { melde(1); }
+        Read => { melde(2); }
+        Stop => { melde(3); }
+    }
+}
+
+}

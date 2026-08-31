@@ -4,7 +4,16 @@
 -- nicht Numerik. Was er traegt, ist die Ganzzahltatsache plus ZWEI BITS -- ein Intervall
 -- ueber den reellen Zahlen, dazu `kann_nan` und `kann_unendlich`.
 --
--- **Und der Erzeuger weigert sich benannt** (`C001`): erklaert und geprueft, nicht abgesenkt.
+-- ~~**Und der Erzeuger weigert sich benannt** (`C001`): erklaert und geprueft, nicht
+-- abgesenkt.~~ **WIDERLEGT am 2026-08-31, von der Datei selbst.** Sie emittiert mit NULL
+-- Absagen, und ihr C uebersetzt unter `cc -Werror` bei `-O0` und `-O2` (Stufe 9 von
+-- `pruefe-emission.sh`; sie steht in dessen Nenner). *Ein Satz ueber den Erzeuger, den
+-- der Erzeuger widerlegt, ist die teuerste Sorte Kommentar -- er liest sich wie eine
+-- gebuchte Grenze.* Gefunden beim Bau der Grammatiktafel, weil `f64` als `gesenkt`
+-- gemessen wurde und der Kopf das Gegenteil behauptete.
+--
+-- **Was WEITER gilt**: `f32` stand bis zu diesem Tag in keinem Programm des Baumes, und
+-- ein Gleitkommaliteral wird im C ein `double` -- siehe `messung/GRAMMATIKTAFEL.md` §3.
 
 module beispiel::gleitkomma {
 

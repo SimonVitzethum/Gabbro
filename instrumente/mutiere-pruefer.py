@@ -30,6 +30,7 @@ import hashlib
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
@@ -1817,14 +1818,18 @@ MUTATIONEN = [
         # `let _ = 0;` an und war damit ein No-op -- sie ueberlebte den Lauf und las sich wie
         # eine unbewachte Regel. *Eine Mutation, die nichts aendert, ist die Umkehrung von
         # W17: Misserfolg ohne Arbeit, und sie beschuldigt eine Regel, die in Ordnung ist.*
+        # **`uint32_t` -> `uint64_t` on 2026-08-31**: the index of an ARRAY is not the index
+        # word of a TABLE, and the narrowing made `F06` fall at `cc -Werror=type-limits`.
+        # *The anchor became unambiguous on the way -- `slots of` keeps `uint32_t`, so the
+        # two domains no longer read alike.*
         "elems-laesst-den-letzten-aus",
         "emit.rs",
         "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
         "            aus.push_str(&format!(\n"
-        "                \"{e}for (uint32_t {v} = 0; {v} < (uint32_t)",
+        "                \"{e}for (uint64_t {v} = 0; {v} < (uint64_t)",
         "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
         "            aus.push_str(&format!(\n"
-        "                \"{e}for (uint32_t {v} = 0; {v} + 1 < (uint32_t)",
+        "                \"{e}for (uint64_t {v} = 0; {v} + 1 < (uint64_t)",
         "C-Absenkung -- die `elems of`-Schleife laesst den letzten Eintrag aus",
         "code",
     ),
@@ -2500,10 +2505,14 @@ MUTATIONEN = [
         "die Vertrauensflaeche ist dann groesser als gebucht",
     ),
     Mutation(
+        # **Anchor moved on 2026-08-31, and the damage is the same one.** `breaking` lowers
+        # since that day, so the arm books it with `zaehle` instead of pushing it onto
+        # `unzugeordnet`. Dropping the `zaehle` call is the identical failure: a statement
+        # falls SILENTLY out of the certificate -- neither counted nor reported as unknown.
         "zeugnis-schluckt-unbekannte-anweisungen",
         "zeugnis.rs",
-        '            StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),',
-        "            StmtArt::Bricht(_) => {}",
+        '                zaehle(e, "breaking");\n                block(&b.rumpf, e, geister);',
+        "                block(&b.rumpf, e, geister);",
         "K100.4 -- dasselbe eine Ebene tiefer: eine Anweisung faellt still aus der Buchung",
     ),
     Mutation(
@@ -2840,12 +2849,22 @@ MUTATIONEN = [
         flaeche="code",
     ),
     Mutation(
-        "breaking-heisst-wieder-anweisungsart",
+        # **Turned around on 2026-08-31, when the refusal fell.** It used to check that the
+        # ONE unlowered statement kind was named -- `breaking` lowers now, so there is no
+        # such refusal to blunt. **The damage the mutation stands for survives the change
+        # and is worse than it was**: the region is lowered SILENTLY. What comes out is an
+        # ordinary C block, and nobody reading it can see which invariant was suspended or
+        # where the restoration is counted. *A dropped proof region looks exactly like a
+        # program that never had one* -- which was the whole ground of the old refusal.
+        "breaking-senkt-die-region-still-ab",
         "emit.rs",
-        '            "`breaking I { … }` -- the block is a PROOF region: inside it the invariant is \\',
-        '            "statement kind -- the block is a PROOF region: inside it the invariant is \\',
-        "C001 -- die eine Anweisungsart ohne Absenkung wird wieder nicht beim Namen genannt; "
-        "ein Leser des Zeugnisses kann nicht ablesen, WAS fehlt",
+        '                "{e}/* breaking {} -- PROOF region: inside it the invariant is not a\\n\\\n'
+        '                 {e} * premise. At run time this is its statements and nothing else; the\\n\\\n'
+        '                 {e} * restoration is booked as a preservation obligation (`gabbro pflichten`).\\n\\\n'
+        '                 {e} */\\n",',
+        '                "{e}/* {} */\\n",',
+        "C001 -- die Beweisregion verschwindet aus dem Erzeugnis; das C sieht aus wie ein "
+        "gewoehnlicher Block, und die ausgesetzte Invariante steht nirgends",
         flaeche="code",
     ),
     # **Berichtigung 2026-08-28 -- it said THREE forms, and there are two.** The anchor read
@@ -3698,13 +3717,34 @@ def anker_sprechprobe():
 
 
 
-def sauberer_baum():
+def baumstand(wurzel=None):
+    """`sauber` · `schmutzig` · `unbekannt` -- **und die dritte ist nicht die erste.**
+
+    Measured on `ki-pc-fisch-101`, 2026-08-31: a server working copy arrives by `rsync`,
+    so its `.git` file points at a worktree directory that does not exist there. `git
+    status --porcelain crates/` then exits **128 with an EMPTY stdout** -- and the old
+    version of this function read that as *"clean"*.
+
+    > **The check that protects this run against measuring a mixture was vacuous on the
+    > very machine the heavy runs belong on.** `abnahme.py --voll` calls it there. A
+    > mutation run killed halfway leaves a mutated tree behind, and the next run then
+    > measures a mixture -- `W16`, word for word, and the guard against it said `ok`.
+
+    *An empty output from a command that FAILED is not an answer.* The three states are
+    kept apart so that the caller cannot collapse them by accident.
+    """
     r = subprocess.run(
         ["git", "status", "--porcelain", "crates/"],
-        cwd=WURZEL,
+        cwd=wurzel or WURZEL,
         capture_output=True,
         text=True, timeout=FRIST)
-    return r.stdout.strip() == ""
+    if r.returncode != 0:
+        return "unbekannt"
+    return "sauber" if r.stdout.strip() == "" else "schmutzig"
+
+
+def sauberer_baum():
+    return baumstand() == "sauber"
 
 
 def main():
@@ -3731,6 +3771,19 @@ def main():
             print("  SPRECHPROBE GESCHEITERT: `keine-flaeche` steht in FLAECHEN")
             return 1
         print("  erfundene Flaeche faellt:  ok")
+        # **R14 for the tree check, and it took a server run to notice it was missing.**
+        # A directory that is no git repository must come back as `unbekannt`, never as
+        # `sauber` -- that difference is the whole protection against measuring a mixture.
+        with tempfile.TemporaryDirectory() as d:
+            fremd = baumstand(d)
+        eigen = baumstand()
+        if fremd != "unbekannt":
+            print(f"  SPRECHPROBE GESCHEITERT: ein Nicht-Repository meldet `{fremd}`")
+            return 1
+        if eigen not in ("sauber", "schmutzig"):
+            print(f"  SPRECHPROBE GESCHEITERT: der eigene Baum meldet `{eigen}`")
+            return 1
+        print(f"  Baumstand unterscheidet:   ok (fremd `unbekannt`, eigen `{eigen}`)")
         # **R14 for the area row that READS its number** (2026-08-30). It replaces a number
         # that had stood wrong since 2026-08-17 -- and without this probe it would only be
         # another place where the same thing can happen.
@@ -3749,10 +3802,11 @@ def main():
         print("  ALL PASS")
         return 0
 
-    if not sauberer_baum():
-        print("crates/ ist nicht sauber -- erst committen. Diese Probe schreibt in Quellen.")
-        return 2
-
+    # **The ANCHOR check runs first, and since 2026-08-31 that order carries an argument.**
+    # It is the DIRECT measurement of the hazard the tree check is here for: a mutation still
+    # applied has lost its `alt` text, so it shows up below as a dead anchor and stops the
+    # run. The git view sees one thing more -- UNCOMMITTED work somebody could lose -- and
+    # that is the half which does not exist on a copy.
     tot = anker_stand()
     if tot:
         print(f"== {len(tot)} von {len(MUTATIONEN)} Ankern greifen ins Leere ==")
@@ -3762,6 +3816,28 @@ def main():
         print("  aus der Quote heraus -- sie wuerde ueber einer schrumpfenden Bezugsgroesse")
         print("  gerechnet und laese sich wie Deckung. `--anker` sagt dasselbe ohne Bau.")
         return 1
+
+    stand = baumstand()
+    if stand == "schmutzig":
+        print("crates/ ist nicht sauber -- erst committen. Diese Probe schreibt in Quellen.")
+        return 2
+    # **And "git could not look" is a state of its own since 2026-08-31.** On a server copy
+    # that arrived by `rsync`, `git status` fails with 128 and an EMPTY stdout -- which read
+    # as "clean" until today, so the protection against measuring a mixture was inert on
+    # exactly the machine the heavy runs belong on (`abnahme.py --voll` calls it there).
+    #
+    # **The run continues, and the reason stands here rather than in nobody's head:** the
+    # anchor check above is the direct measurement of the hazard, and it passed. What the git
+    # view sees ON TOP of that is uncommitted work somebody could lose -- and a transferred
+    # copy has none. *A gap with a name is not a green tick, and not a red one either.*
+    if stand == "unbekannt":
+        print("== LUECKE MIT NAMEN: git konnte `crates/` nicht ansehen ==")
+        print("   Der Baum ist WEDER sauber noch schmutzig, sondern ungemessen -- so faellt")
+        print("   `git status` auf einer per `rsync` uebertragenen Kopie (128, leere Ausgabe).")
+        print("   Der Lauf geht weiter, weil der ANKERSTAND oben dieselbe Gefahr direkt misst:")
+        print("   eine noch angewandte Mutation hat ihren `alt`-Text verloren und faellt dort.")
+        print("   Was der git-Blick zusaetzlich sieht, ist NICHT COMMITTETE Arbeit.")
+        print()
 
     print("== Sprechprobe des Geruests ==")
     zustand, _ = fahre(NULLMUTATION)

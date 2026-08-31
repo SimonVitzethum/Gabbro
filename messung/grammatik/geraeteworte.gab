@@ -1,0 +1,62 @@
+-- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- zweiter Teil.
+--
+-- Drei Woerter, die `SYNTAX.md` fuehrt und die kein Programm des Baumes je geschrieben hat:
+--
+--     port   ein Adressraum (`ptr < space , rights >`, SYNTAX.md:463)
+--     rc     eine Registerklasse -- read to clear (SYNTAX.md:1288)
+--     seq    eine Speicherordnung an einem `atomic` (SYNTAX.md:1375)
+--
+-- *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.* Die drei standen in der
+-- Grammatik, im Wortschatz und in keinem Programm -- also hat auch nie jemand gesehen, was
+-- der Erzeuger aus ihnen macht.
+
+module grammatik::geraeteworte {
+
+opaque type Pa = u64;
+
+type Stand = { bereit : bool, };
+
+static mut lage : Stand = Stand(bereit: false);
+
+atomic SCHRANKE : bool publishes { lage } seq;
+
+device Uart(basis : Pa) at mmio {
+    -- `class rc`: das Lesen LOESCHT. Ein zweites Lesen gibt etwas anderes -- genau die
+    -- Klasse, wegen der «B33» ueberhaupt eine Regel ist.
+    reg IIR  : u32 @0x08 class rc fields { GRUND @[3:0], }
+    reg DATA : u32 @0x00 class rw
+}
+
+impl fn freigeben()
+    effects { writes lage, publishes SCHRANKE }
+    costs   <= 4 ops
+{
+    lage.bereit = true;
+    SCHRANKE = true publishes { lage };
+}
+
+impl fn warten() -> bool
+    effects { reads SCHRANKE, reads lage }
+    costs   <= 4 ops
+{
+    let fertig = SCHRANKE awaits { lage };
+    return fertig;
+}
+
+-- Ein Lesen an `class rc`: es LOESCHT. Was der Erzeuger daraus macht, hat vor dieser
+-- Datei niemand gesehen.
+impl fn grund_lesen(g : ptr<mmio, r> Uart) -> u32
+    effects { reads g.IIR }
+    costs   <= 2 ops
+{
+    return g.IIR.GRUND;
+}
+
+impl fn tor_lesen(p : ptr<port, r> Stand) -> bool
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p.bereit;
+}
+
+}

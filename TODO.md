@@ -277,8 +277,8 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **38 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **34 davon unqualifiziert**.
+      **40 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
+      Kandidatenschleife und **36 davon unqualifiziert**.
       *Die alte Zählung sagte 13 — sie kannte `.contains_key(` nicht, und das ist derselbe
       Blick.* **Ein Werkzeug, das eine der beiden Formen nicht liest, misst seine eigene
       Leseweite** (W16).
@@ -380,7 +380,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 124 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 129 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -3403,7 +3403,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7910 von 12954 Kommentarzeilen** im Pruefer sind deutsch
+**7906 von 12954 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -4562,3 +4562,88 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       `S5` und ist `S6`, `table.absenkung` als `S15` und ist `S16`, `consuming.ordnung` als `S1`
       und ist `S3`. **Kein einziger Kopf trifft die heutige Position, und kein Wächter prüft es.**
       Der Name ist stabil, die Nummer ist es nicht — *wer nach S-Nummern quer liest, liest falsch.*
+
+---
+
+## Aus Bahn V des Vollständigkeitsdurchlaufs, 2026-08-31 (`dokumente/PLAN-VOLLSTAENDIGKEIT.md` §7)
+
+- [ ] **Acht `UNGEDECKT`-Zellen gehören dem PRÜFER, und alle acht sind Giftproben, die
+      `C001` erwarten.** `messung/ABSAGEFORMEN.md` §2.1: `retry` ohne `until` ·
+      `exchange update` ohne `bounded … ops` · ein Bitwort ohne Ganzzahlfeld · ein Bitfeld an
+      einem Register ohne `class rw` · `old(place)` außerhalb eines Vergleichstauschs ·
+      `in a .. b` an einem `reserved`-Feld · `in a .. b` mit `scale` · ein `transition`-Ziel
+      ohne Feldnamen · `ops relabel` ohne `parent`-Kante. **Der Prüfer nimmt jede dieser
+      Formen an** — gemessen, null Fehler —, und erst der Erzeuger sagt ab. *Eine benannte
+      Absage ist ein Ergebnis; sie ist nur nicht das Ergebnis „Prüfer nimmt an ⇒ es gibt C".*
+      Je Form: die Regel in einen Prüferpass, die Probe erwartet dessen Kennung statt `C001`.
+
+- [ ] **Sechzehn Formen sind weder gedeckt noch ungedeckt, sondern UNGEMESSEN.**
+      `messung/ABSAGEFORMEN.md` §2.2: sie wurden nur neben einem *fremden* Prüferfehler
+      gesehen, und dass in derselben Datei etwas anderes fällt, sagt nichts über sie. Jede
+      braucht das kleinste Programm, das nur sie enthält, durch den unveränderten Prüfer.
+
+- [ ] **92 der 130 Absageformen erreicht kein Programm des Korpus.** Das ist die Zahl, die
+      Falle 80 misst: *ungemessen ist nicht gedeckt*. Die Tafel aus der GRAMMATIK
+      (`gabbro blindstellen --grammatik`) ist die Antwort darauf und steht; was sie je Zelle
+      an Urteil braucht, steht in `messung/GRAMMATIKTAFEL.md`.
+
+- [ ] **Der Prüfer sagt nichts zu einem Vergleich, den sein eigener Bereich konstant macht.**
+      Gemessen am 2026-08-31 (`messung/UEBERSETZUNGSREICHWEITE.md` §2, Messung A):
+      `let a : u64 in 0 .. 10 = 5; if a != 0xdead_beef_dead_beef { … }` gibt **0 Fehler bei
+      100 % Typdeckung**. M1 trägt die Bereiche und spricht es nicht aus; `cc -Werror` hat es
+      gesagt, und nur dort, wo der Erzeuger vorher verengt hatte. *Der fremde Übersetzer sagte,
+      was der Prüfer wusste.*
+
+- [ ] **Ein Ruf auf einen Namen, den niemand deklariert, kommt durch den Prüfer — wenn die
+      rufende Funktion keine Kostenzusage trägt.** Gemessen am 2026-08-31
+      (`messung/proben/probe-unbekannter-ruf.gab`): mit `costs <= n ops` fällt `K003`
+      (*„`f` promises costs, but X is not declared here"*); in einem `divergent fn` gibt es
+      keine Kostenzusage, an der die Regel hängen könnte, und übrig bleibt `E009` — ein
+      HINWEIS. **Der Prüfer nimmt an, der Erzeuger sagt ab**, und zwar an zwei Stellen
+      gleichzeitig: `let` ohne auflösbaren Typ und `match` über einen Ruf, den diese Einheit
+      nicht deklariert (`messung/ABSAGEFORMEN.md` U10/U11). *Zwei `UNGEDECKT`-Zellen mit
+      einer Wurzel* — `messung/fragmente/F05.gab` ist die Fundstelle.
+
+- [ ] **Ein Gleitkommaliteral in einem `f32`-Ausdruck wird ein `double`, und das C rechnet
+      etwas anderes als das Programm.** `gleitkommatext` (`emit.rs`) schreibt
+      `f64::from_bits(bits)` ohne Suffix; in C ist ein Literal ohne `f` ein `double`, also
+      wird `x * 0.1` bei `x : f32` in doppelter Breite gerechnet und erst bei der Rückgabe
+      gerundet. **Gemessen 2026-08-31 in reinem C über 200 000 Werten:
+      `(float)(v * 0.1) != v * 0.1f` in 39 974 Fällen.** Der Prüfer nimmt das Programm mit
+      100 % Typdeckung an (`messung/proben/probe-f32-literal.gab`). *Welche Breite ein
+      Literal in einem `f32`-Ausdruck hat, ist eine Aussage über das Zahlmodell und keine
+      über den Erzeuger* — `dokumente/MEMO-GLEITKOMMA.md` führt die Doppelrundung schon als
+      Landmine. Gefunden von `pruefe-grammatiktafel.py`: `f32` stand in der Grammatik und in
+      keinem Programm.
+
+- [ ] **Der Adressraum eines Zeigers verschwindet in der Absenkung.** `ctyp` liest
+      `TypExpr::Zeiger(z).raum` überhaupt nicht: `ptr<port, r> T` und `ptr<normal, r> T`
+      werden beide `const T *`. Bei `mmio` fängt das der Geräteweg auf (`volatile` an
+      `basis + Versatz`); bei `port` fängt es nichts auf, und auf x86_64 ist Portraum kein
+      Speicher, sondern `in`/`out`. Gemessen an `messung/grammatik/geraeteworte.gab`, der
+      ersten Datei des Baumes mit einem `port`-Zeiger. **Entweder senkt der Raum ab, oder er
+      wird benannt abgesagt** — was nicht geht, ist ein Wort der Grammatik, das im Erzeugnis
+      spurlos verschwindet.
+
+- [ ] **Vier Terminale sind `UNGEDECKT`: `chain`, `queue`, `state`, `threads`.**
+      `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. **Nachgemessen am 2026-08-31**
+      (`messung/proben/probe-vier-zellen.gab`, nicht aus dem Schweigen der Texte
+      geschlossen): in einem `divergent fn` prüfen alle vier mit **0 Fehlern** und fallen an
+      vier `C001`. Mit einer Kostenzusage fängt `K003` zwei davon — und genau daran hängt
+      alles: **`K003` ist die einzige Regel zwischen den Absagen des Erzeugers und dem
+      Prüfer, und sie hängt an einer Zusage, die ein `divergent fn` nicht macht.**
+      Der Ausgang steht im Plan: *im PRÜFER absagen, dann wandert die Zelle nach
+      `vom Pruefer`.* **Das ist eine Entscheidung über die SPRACHE** (vier Formen fallen aus
+      Gabbro heraus) und gehört der Bahn, die am Prüfer arbeitet.
+
+- [ ] **Der Sauberkeitsschutz des Mutationslaufs war auf dem SERVER wirkungslos, und die
+      Ursache ist eine leere Ausgabe.** Auf einer per `rsync` übertragenen Kopie zeigt
+      `.git` auf ein Arbeitsbaumverzeichnis, das dort nicht existiert; `git status
+      --porcelain crates/` endet mit **128 und leerem stdout**, und `sauberer_baum()` las
+      genau das als „sauber". Gemessen am 2026-08-31 auf `ki-pc-fisch-101` — und
+      `abnahme.py --voll` ruft den Lauf dort. **Behoben:** drei Zustände statt zwei
+      (`sauber` · `schmutzig` · `unbekannt`), mit Sprechprobe. *Was offen bleibt:* auf einer
+      Kopie gibt es keinen git-Blick, also trägt dort allein der ANKERSTAND die Kontrolle —
+      er misst die Gefahr direkt (eine angewandte Mutation hat ihren `alt`-Text verloren),
+      aber er sieht keine andere Quelländerung. **Ein Prüfsummenabgleich gegen den Stand vor
+      dem Lauf wäre die vollständige Antwort und ist nicht gebaut.**

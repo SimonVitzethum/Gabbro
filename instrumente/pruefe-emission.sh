@@ -1470,14 +1470,32 @@ ausnahme_grund() {
     esac
 }
 
+# **Die REICHWEITE der Regel endete bis zum 2026-08-31 an `beispiele/`** -- und darin lag
+# genau die Luecke, gegen die die Regel gebaut ist, eine Ebene hoeher.
+#
+# `messung/fragmente/F06.gab` emittierte 161 Zeilen und fiel bei `cc -Werror=type-limits`:
+# *"comparison is always true due to limited range"*. **Die Datei liegt seit dem 2026-08-14
+# im Baum, und keine Stufe hat gefragt** -- weil sie unter `messung/` liegt und nicht unter
+# `beispiele/`.
+#
+# > *Eine Regel, deren Gegenstand die Sprache ist und deren Reichweite ein Verzeichnis, misst
+# > das Verzeichnis.* Dieselbe Bauart wie die Liste, die diese Regel abgeloest hat.
+#
+# `messung/*/*.gab` kommt dazu: Fragmente, ABI-Proben, Treiber, Netz, Grenze, Caprock. Was
+# `C001` sagt, faellt wie zuvor aus dem Nenner -- eine Weigerung ist eine ehrliche Antwort.
 n_emit=0; n_ok=0; n_aus=0; schlecht=0
-for q in "$W"/beispiele/*.gab; do
-    d="$(basename "$q")"
+n_emit_b=0; n_emit_m=0
+for q in "$W"/beispiele/*.gab "$W"/messung/*/*.gab; do
+    d="${q#"$W"/}"
     if ! cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$q" \
             > "$ARB/regel.c" 2>/dev/null || [ ! -s "$ARB/regel.c" ]; then
         continue          # `C001` weigert sich -- eine Weigerung ist eine ehrliche Antwort.
     fi
     n_emit=$((n_emit + 1))
+    case "$d" in
+    beispiele/*) n_emit_b=$((n_emit_b + 1)) ;;
+    messung/*)   n_emit_m=$((n_emit_m + 1)) ;;
+    esac
     if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
         n_ok=$((n_ok + 1))
         if grund="$(ausnahme_grund "$d")"; then
@@ -1495,6 +1513,7 @@ for q in "$W"/beispiele/*.gab; do
     fi
 done
 echo "  $n_ok von $n_emit emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen"
+echo "  ($n_emit_b aus beispiele/, $n_emit_m aus messung/ -- ZWEI Ratschen, nicht eine)"
 
 # **Die Zahl `n_emit` ist SELBSTGEWAEHLT, und das ist eine Luecke gewesen** (2026-08-28).
 #
@@ -1513,18 +1532,44 @@ echo "  $n_ok von $n_emit emittierenden Dateien uebersetzen; $n_aus benannte Aus
 # **52 -> 53 am 2026-08-30**: `beispiele/54-divergenz-leckt-nicht.gab` kam dazu -- die
 # Datei, an der `m2::endet` einen divergierenden Zweig nicht mehr als Leck ablehnt
 # (`messung/ABSTIEG.md`). Sie emittiert und uebersetzt, also gehoert sie in den NENNER.
-MARKE_EMIT=53
-if [ "$n_emit" -lt "$MARKE_EMIT" ]; then
-    echo "  RATSCHE GEBROCHEN: $n_emit emittierende Dateien, gebucht sind $MARKE_EMIT."
-    echo "                     Eine Datei hat die Emission VERLASSEN -- das ist kein gruener"
-    echo "                     Lauf, sondern ein kleinerer Nenner. Nachsehen mit:"
-    echo "                     for f in beispiele/*.gab; do ./target/debug/gabbro emit \$f >/dev/null || echo \$f; done"
-    schlecht=1
-elif [ "$n_emit" -gt "$MARKE_EMIT" ]; then
-    echo "  FUND: $n_emit statt $MARKE_EMIT emittierende Dateien -- die Marke gehoert"
-    echo "        nachgezogen (der gute Fall, und trotzdem ein Befund)."
-    schlecht=1
-fi
+#
+# **ZWEI Marken seit dem 2026-08-31, und nicht eine Summe.** Eine Summe ueber zwei
+# Verzeichnissen laesst sich ausgleichen: eine Datei verlaesst `beispiele/`, eine kommt in
+# `messung/` dazu, und die Zahl steht still. *Genau die Bewegung, gegen die diese Ratsche
+# gebaut ist* -- also steht sie je Wurzel da.
+#
+# **53 -> 54 am 2026-08-31**: `beispiele/53-zwei-orte.gab` kam dazu. `breaking I { … }`
+# senkt seit diesem Tag ab -- die Weigerung stand auf *„emitting it would drop the region"*,
+# und `gabbro pflichten` bucht die Erhaltungspflicht laengst (`messung/ZWEI-ABSAGEN.md`).
+MARKE_EMIT=54
+# **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
+# F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
+# Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
+# `F06` ist die Datei, die die Ausdehnung ueberhaupt ausgeloest hat: sie emittierte und
+# uebersetzte NICHT, und keine Stufe hat sie je angesehen.
+#
+# **19 -> 22 am selben Tag, und der Zuwachs ist der Ertrag von `pruefe-grammatiktafel.py`:**
+# die zwei `messung/grammatik/`-Dateien schliessen NEUN Terminale, die die Grammatik erlaubt
+# und die kein Programm des Baumes je geschrieben hatte -- `i8`, `i16`, `i32`, `i64`, `f32`,
+# `and`, `port`, `rc`, `seq`. *Was 0 Fundstellen hat, ist nicht geprueft, sondern
+# unerreichbar* -- und keine dieser neun Absenkungen war je gelaufen.
+MARKE_EMIT_M=22
+ratsche() {
+    local ist="$1" marke="$2" wo="$3"
+    if [ "$ist" -lt "$marke" ]; then
+        echo "  RATSCHE GEBROCHEN: $ist emittierende Dateien in $wo, gebucht sind $marke."
+        echo "                     Eine Datei hat die Emission VERLASSEN -- das ist kein gruener"
+        echo "                     Lauf, sondern ein kleinerer Nenner. Nachsehen mit:"
+        echo "                     for f in $wo*.gab; do ./target/debug/gabbro emit \$f >/dev/null || echo \$f; done"
+        schlecht=1
+    elif [ "$ist" -gt "$marke" ]; then
+        echo "  FUND: $ist statt $marke emittierende Dateien in $wo -- die Marke gehoert"
+        echo "        nachgezogen (der gute Fall, und trotzdem ein Befund)."
+        schlecht=1
+    fi
+}
+ratsche "$n_emit_b" "$MARKE_EMIT"   "beispiele/"
+ratsche "$n_emit_m" "$MARKE_EMIT_M" "messung/*/"
 if [ "$schlecht" != "0" ]; then
     echo "== EMISSION: die REGEL haelt nicht -- eine neue Form ist am C-Uebersetzer vorbei =="
     exit 1
