@@ -35,7 +35,39 @@ export LC_ALL=C
 
 W="$(cd "$(dirname "$0")/.." && pwd)"
 ARB="$(mktemp -d)"
-trap 'rm -rf "$ARB"' EXIT
+
+# **WER MITTEN IM LAUF ABBRICHT, SCHREIBT DAZU, WAS ER NICHT MEHR GEMESSEN HAT**
+# ----------------------------------------------------------------------------
+# (2026-08-31, und der Anlass ist dieser Waechter selbst.)
+#
+# Am 2026-08-31 starb er an `F06`s `N043` in der VIERTEN von zehn Stufen, mit `exit 1`.
+# **Die Stufen 9 und 10 liefen nie, und keine Zeile sagte das.** Dahinter standen zwei
+# Befunde, die zwei Wochen niemand gesehen hat: sechs Dateien, deren erzeugtes C nicht
+# uebersetzt, und eine Marke, die sieben zu niedrig stand.
+#
+# > *Eine leere Grundgesamtheit ist ein gruenes Urteil ueber nichts (W17). Eine
+# > ABGESCHNITTENE sieht aus wie ein Urteil ueber alles.*
+#
+# Der Ruecklaufwert allein kann es nicht sagen: `1` heisst „Befund", und ein Befund in
+# Stufe 4 ist zugleich ein Abbruch fuer die Stufen 5 bis 10. **Also sagt es die Ausgabe.**
+# `messung/RUECKLAUFWERTE.md` fuehrt die Klasse und ihre Zahl (43 von 49 Waechtern koennen
+# so abbrechen); dies hier ist die Form, die sie beantwortet.
+LETZTE_STUFE="Kopf (vor der ersten Stufe)"
+GANZ_DURCH=0
+aufraeumen() {
+    local rc=$?
+    if [ "$rc" != 0 ] && [ "$GANZ_DURCH" = 0 ]; then
+        echo
+        echo "== ABGESCHNITTEN in: $LETZTE_STUFE -- Ruecklaufwert $rc =="
+        echo "   Was DAHINTER steht, wurde NICHT gemessen -- weder ja noch nein. Die volle"
+        echo "   Kette ist: Sprechprobe des Kopfes, die Differenztests, Baugatter, Stufe 9"
+        echo "   (uebersetzt jede emittierende Datei?), Stufe 10 (die Bibliothekskette)."
+        echo "   Ein Ruecklaufwert, der wie ein Befund aussieht, ist hier zugleich ein"
+        echo "   Abbruch fuer den Rest -- messung/RUECKLAUFWERTE.md, Abschnitt zum Schnitt."
+    fi
+    rm -rf "$ARB"
+}
+trap aufraeumen EXIT
 
 # **W1: eine uebersprungene Probe senkt die Zahl, sie laesst sie nicht unberuehrt.**
 # Kein `cc` heisst NICHT „bestanden, uebersprungen" -- es heisst, dass dieser Waechter
@@ -99,6 +131,7 @@ PROBE_B
     rm -rf "$d"
     return $ok
 }
+LETZTE_STUFE="der Sprechprobe des Kopfes"
 echo "== Sprechprobe: koennen die neuen Stufen ueberhaupt fallen? =="
 if ! sprechprobe_ub; then
     echo "== EMISSION: die Sprechprobe haelt nicht -- ein Haken ohne Messung ist schlimmer als keiner =="
@@ -152,6 +185,7 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # eine Regel wurde, nur eine Ebene hoeher. *Eine Kennzahl, die jemand nachtragen muss,
     # ist irgendwann falsch.*
     N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
+    LETZTE_STUFE="Differenztest $name"
     lauf_kern "$@"
 }
 
@@ -1658,6 +1692,7 @@ if [ -n "$NUR_ABSENKUNG" ]; then
            -e 's/^ *\(bekommen:.*\)$/        \1/p' "$ARB/sprechprobe7.protokoll"
     echo
     echo "== ABSENKUNG: gemessen -- nur die Fragment-Durchstiche, Stufe 9 und 10 nicht =="
+    GANZ_DURCH=1
     exit 0
 fi
 
@@ -1666,6 +1701,7 @@ fi
 # *Ein Gatter, das im C landet, ist kein Gatter* -- ein `#if` haette den ganzen Block
 # mitgeliefert und nur den Praeprozessor darueber entscheiden lassen. Hier wird der Baum vor
 # dem Erzeuger gefiltert (`gatter::ohne_gatter`), und was das heisst, wird hier gezaehlt.
+LETZTE_STUFE="Baugatter"
 echo '== Baugatter: `when TESTBUILD` erzeugt im Auslieferungsbau nichts =='
 cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit \
     "$W/beispiele/52-baugatter.gab" > "$ARB/g52-aus.c"
@@ -1739,6 +1775,7 @@ echo "  Pruefbau cc:   ok (-Werror, und die Probe pruefe_puffer_haelt steht dari
 # noetig ist, faellt ebenfalls auf.** Sonst waechst hier eine zweite Liste nach.
 
 echo
+LETZTE_STUFE="Stufe 9 (jede emittierende Datei uebersetzt)"
 echo "== Stufe 9: jede Datei, die emittiert, muss auch uebersetzen =="
 
 # Datei -> Grund. Eine Ausnahme ist ein BEFUND mit Adresse, kein Freibrief.
@@ -2123,6 +2160,7 @@ echo "  Sprechprobe:  ok (ein fehlender Prototyp faellt an cc -Werror)"
 # > das Wort `pub` an keiner Stelle: ein privater Rechenhelfer erschien im C als Symbol mit
 # > aeusserer Bindung, und der ganze Innenraum einer Bibliothek lag auf dem Tisch des Binders.
 echo
+LETZTE_STUFE="Stufe 10 (die Bibliothekskette)"
 echo "== Stufe 10: die Bibliothekskette, mit Binder =="
 N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
 BIB="$ARB/bib"; mkdir -p "$BIB"
@@ -2236,6 +2274,7 @@ fi
 grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 2; }
 echo "  8. Sprechprobe B: ok (N039 sagt ab, und der Binder haette es sonst getan)"
 
+GANZ_DURCH=1
 echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_nenner uebersetzen, $n_umg umgekehrte Probe(n) =="
 echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"
 echo "  AUSGEFUEHRT und mit einer Handschrift verglichen. Die Regel darueber ist"
