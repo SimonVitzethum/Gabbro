@@ -1,0 +1,49 @@
+-- erwartet: C001
+-- 416 -- **`device … at port`, und die PORTNUMMER kam als Speicherversatz heraus.**
+--
+-- Die zweite Haelfte des Befunds von `415`, und die schaerfere. Am Zeiger schwieg der
+-- Erzeuger; hier ANTWORTETE er, und die Antwort war falsch. Gemessen am 2026-08-31
+-- (`messung/ADRESSRAEUME.md` §4): diese Datei prueft mit **0 Fehlern, 0 Hinweisen** und der
+-- unveraenderte Erzeuger schrieb daraus
+--
+--     typedef struct { volatile uint8_t *basis; } SerialCom1;
+--     static bool lies_lsr(const SerialCom1 *restrict d) {
+--         return (((*(volatile uint8_t *)(d->basis + 1021)) >> 5) & 1u);
+--     }
+--
+-- `1021` ist `0x3FD` -- die **Portnummer** des Leitungsstatusregisters, ausgegeben als
+-- Versatz auf einen Speicherzeiger. Das erzeugte C liest RAM an `basis + 0x3FD`. *Nicht ein
+-- fehlender Befehl: ein anderer Befehl auf eine andere Sache.*
+--
+-- `SPRACHE.md` sagt es woertlich und seit langem:
+--
+--     `at port` lowers accesses to `in`/`out` instead of to volatile loads/stores
+--
+-- Und die zweite Haelfte derselben Zusage stand auch nicht: `SPRACHE.md` verlangt
+-- `arch x86_64` an einem `port`-Geraet, weil es Architekturen ohne Portraum gibt. Diese
+-- Datei traegt keines und wurde angenommen.
+--
+-- WAS ES KOSTET: NICHTS
+-- ---------------------
+-- **Null `device … at port` in 426 Dateien** -- 34 `at mmio`, 5 `at dma`, und `at normal`
+-- wird seit langem abgewiesen (`emit.rs`:2507). *Regel A: kein Konstrukt ohne gemessenen
+-- Bedarf* -- `in`/`out` zu bauen waere eines. Die Absage ist die dritte an dieser Stelle und
+-- die dritte aus einem eigenen Grund: `at normal` fragt, ob es ueberhaupt ein Geraetezugriff
+-- ist; `at dma` fragt nach der Barriere; **diese fragt nichts -- sie nimmt eine falsche
+-- Antwort zurueck.**
+
+module gift::geraetportraum {
+
+device SerialCom1 at port {
+    reg DATA : u8 @0x3F8 class rw
+    reg LSR  : u8 @0x3FD class r fields { THRE @5, }
+}
+
+impl fn lies_lsr(d : ptr<mmio, r> SerialCom1) -> bool
+    effects { reads d.LSR }
+    costs   <= 2 ops
+{
+    return d.LSR.THRE;
+}
+
+}

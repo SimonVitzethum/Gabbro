@@ -161,3 +161,43 @@ Typ, `extern fn`), bei `boot` ist der gewöhnliche Ladebefehl die richtige Absen
 ist ein Linkerabschnitt und kein anderer Befehlssatz (`SYNTAX.md`:1607). **Eine Absage über
 diesen beiden wäre eine ohne Mangel**, und in dieser Nacht wurde schon eine solche
 zurückgenommen.
+
+## §8 Gebaut: zwei Absagen, und die zweite kostet null
+
+**Beide sind `C001` und beide stehen im ERZEUGER**, nicht im Prüfer — anders als bei `N042`
+nebenan, und der Unterschied hat einen Grund: `N042` redet über einen **Namen**, den der
+Schreiber ändern kann, ohne sein Programm zu ändern. Hier redet die Absage über eine
+**Absenkung, die es nicht gibt**, und das ist genau die Frage, für die `C001` da ist.
+
+| | wo | was es kostet |
+|---|---|---|
+| ein Rumpf, der einen `ptr<port, …>` trägt | `emit.rs::funktion` | **zwei Stellen in 426 Dateien**, und beide waren der Mangel |
+| `device … at port` | `emit.rs::geraet` | **null Stellen** |
+
+Die zwei Zeigerstellen sind geheilt statt weggeworfen: `messung/grammatik/geraeteworte.gab`
+und `messung/grammatik/raumworte.gab` tragen ihren `port`-Rumpf jetzt als **fremden**
+(`extern fn`). Das Wort `port` bleibt gedeckt — es steht am *Typ*, und der Typ steht dort —,
+und die Absenkung, die es nicht gibt, steht nicht mehr da. **Die Ratsche
+`MARKE_EMIT_M` bleibt bei 30**; keine Datei hat die Emission verlassen.
+
+Proben: `beispiele/gift/415-portzeiger-im-eigenen-rumpf.gab` und
+`beispiele/gift/416-geraet-am-portraum.gab`, beide mit `-- erwartet: C001`.
+
+**Die Zeigerregel hält an der SIGNATUR und nicht am Zugriff** (W10). Ein Rumpf, der einen
+Portzeiger nimmt und nie anfasst, fällt auch — gröber als der Mangel und gröber in die
+sichere Richtung. Eine Regel am Zugriff bräuchte den Raum des Zeigers an jeder Zugriffsstelle,
+und die Ausdrucksabsenkung trägt ihn nicht.
+
+## §9 Was ausdrücklich NICHT gebaut wurde
+
+* **`in`/`out`.** Null `device … at port` im Korpus. Regel A sagt: kein Konstrukt ohne
+  gemessenen Bedarf. *Wer es baut, baut es gegen kein Programm.*
+* **Eine Absage über `boot`, `code`, `dma` oder `mmio` am Zeiger.** §3 rechnet jede der vier
+  einzeln nach, und keine ist ein Mangel.
+* **Die `arch x86_64`-Pflicht am `port`-Gerät** (`SPRACHE.md`:2189). Sie wäre eine zweite
+  Regel über einem Konstrukt, das jetzt ganz abgewiesen wird — W7. *Sie gehört an den Tag, an
+  dem `at port` eine Absenkung bekommt, und steht bis dahin hier.*
+* **Ein `volatile` am `ptr<mmio, …>`.** Im sauberen Korpus zeigt jeder auf einen
+  `device`-Typ, und dort trägt es die Geräteabsenkung. Die drei Gegenbeispiele liegen in
+  `gift/` und fallen aus anderen Gründen. *Ein `mmio`-Zeiger auf einen gewöhnlichen Verbund
+  ist heute keine gemessene Form* — er steht als Posten im `TODO.md` und nicht als Absage.

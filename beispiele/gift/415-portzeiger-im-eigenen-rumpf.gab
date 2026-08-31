@@ -1,0 +1,50 @@
+-- erwartet: C001
+-- 415 -- **ein `ptr<port, …>` im eigenen Rumpf, und was daraus wurde, war ein Ladebefehl.**
+--
+-- `SPRACHE.md` sagt zum sechsten Adressraum woertlich:
+--
+--     `at port` lowers accesses to `in`/`out` instead of to volatile loads/stores
+--
+-- Der Erzeuger tat es nicht. **Gemessen am 2026-08-31** (`messung/ADRESSRAEUME.md`): sechs
+-- Funktionen, die sich in NICHTS unterscheiden als im Raumwort -- `normal mmio dma code boot
+-- port` --, pruefen mit 0 Fehlern und emittieren **sechsmal denselben Text**:
+--
+--     static uint32_t r_port(const Zelle *restrict p) { return p->wert; }
+--
+-- und alle sechs mit `__attribute__((pure))`. Bei `port` ist das nicht ein fehlendes
+-- `volatile`, sondern die gegenteilige Zusage: der Uebersetzer darf den zweiten Ruf
+-- streichen. `ctyp` liest `z.raum` fuer KEINEN Raum (`emit.rs`:3801) -- fuer fuenf der sechs
+-- ist das richtig, und `messung/ADRESSRAEUME.md` §3 rechnet jeden einzeln nach.
+--
+-- WARUM DIE ABSAGE UND NICHT DIE ABSENKUNG
+-- ----------------------------------------
+-- **`in`/`out` nehmen eine PORTNUMMER.** Ein Feld eines Verbunds an einem Versatz hinter
+-- einem Zeiger ist keine. Es gibt hier keine Absenkung, die der Erzeuger verschweigt -- es
+-- gibt keine.
+--
+-- Und die Form, die eine Portnummer HAETTE -- `device … at port` --, steht im ganzen Korpus
+-- **null Mal** (34 `at mmio`, 5 `at dma`). *Regel A: kein Konstrukt ohne gemessenen Bedarf.*
+-- Was gebaut wird, ist darum die benannte Absage und nicht `in`/`out`.
+--
+-- **Der Preis, gemessen vor dem Bau: zwei Stellen in 426 Dateien**
+-- (`messung/grammatik/geraeteworte.gab`, `messung/grammatik/raumworte.gab`), und beide waren
+-- der Mangel selbst -- beide dereferenzierten ein gewoehnliches Verbundfeld ueber einem
+-- Portzeiger. Beide tragen den Rumpf jetzt als FREMDEN; das Wort `port` bleibt gedeckt, weil
+-- es am Typ steht, und die Absenkung, die es nicht gibt, steht nicht mehr da.
+--
+-- **Die Regel haelt an der SIGNATUR und nicht am Zugriff** (W10). Ein Rumpf, der einen
+-- Portzeiger nimmt und nie anfasst, faellt auch -- gröber als der Mangel, und in die sichere
+-- Richtung. Ueber dem Korpus dereferenzieren beide Stellen.
+
+module gift::portzeiger {
+
+type Torstand = { bereit : bool, };
+
+impl fn tor_bereit(p : ptr<port, r> Torstand) -> bool
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p.bereit;
+}
+
+}

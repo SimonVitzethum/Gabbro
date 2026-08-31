@@ -659,7 +659,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2229 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2239 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -919,7 +919,9 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **358 von 358 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **360 von 360 Ankern** greifen (`--anker`, 2026-08-31 —
+      **358 → 360** durch `N042`: die Doppelung erst ab drei melden, und kein gebildeter
+      Name gilt mehr als gebildet (`messung/ERZEUGERNAMEN.md`);
       vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8;
       **355 → 358** durch die drei Erzeugerfehler desselben Tages, und einer der alten
       musste dabei nachgezogen werden, siehe `messung/DREI-ERZEUGERFEHLER.md`).
