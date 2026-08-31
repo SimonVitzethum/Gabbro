@@ -1148,3 +1148,133 @@ existieren schon als Messung:**
 *Alle Zahlen 2026-09-01 über die 159 Dateien ohne `gift/`. Der Nenner ist genannt, weil er
 das Ergebnis entscheidet (W25) — über den ganzen Korpus mit Giftproben sähen sie anders und
 schlechter aus, und das wäre keine Messung, sondern eine Verwechslung.*
+
+---
+
+## §36 — Die Annahmen, vorab vermessen: zwei Ebenen, nicht eine
+
+*Gemessen 2026-09-01 über die 159 Dateien ohne `gift/`, alles vor der ersten Zeile Bahn.*
+
+### Wiederverwendung
+
+```
+  40 `assume`-Stellen, 31 verschiedene TEXTE
+     1x vorkommend   26 Texte    26 Stellen
+     2x vorkommend    4 Texte     8 Stellen
+     6x vorkommend    1 Text      6 Stellen
+                                 --------
+     Kopien: 14 von 40 Stellen  (35 %)
+```
+
+**Und die Kopien sind genau die allgemeinen:**
+
+```
+6x  „Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund"
+        04-schleifen · 39-auftragsdienst · 41-handschlag · 42-zaehlwerk · …
+2x  „Ein Traeger im dma-Raum ist kohaerent: …"                02-geraet · F04
+2x  „Nach SRTP=1 steht RTPS=1, bevor TE gesetzt werden darf."  02-geraet · 09-ohne-zeiger
+```
+
+> **„Der Zeitgeber unterbricht" ist keine Aussage über `04-schleifen` oder `41-handschlag`
+> — sie ist eine Aussage über die PLATTFORM. Sie steht sechsmal, weil es keinen Ort gibt,
+> an dem eine Plattformaussage einmal stehen kann.**
+
+### Damit sind es ZWEI Ebenen, und §32 nannte nur eine
+
+| Ebene | Beispiel | müsste stehen |
+|---|---|---|
+| **Gerät** | `SRTP=1 → RTPS=1`, `dma_kohaerent`, `GCMD`-Schreibvorgang | **einmal pro Gerät** |
+| **Maschine** | Zeitgeber, `CR3` verwirft, Release-Speichern, IPI-Zustellung | **einmal, Punkt** |
+
+> **Die zweite Ebene gibt bei Programm n+1 den Ausschlag.** Ein neues Programm auf derselben
+> Maschine darf **gar keine** neue Plattformannahme erzeugen — **und heute erzeugt es sechs
+> von sechs.**
+
+### Die Marke, geschärft
+
+Statt *„Annahmen pro Programm konstant"*:
+
+> **Plattformannahmen pro Programm NULL. Geräteannahmen pro Gerät EINMAL.**
+
+**Beide sind fallierbar, und die erste ist heute schon widerlegt.**
+
+### Die Vorabprobe für die 26 Einzeltexte
+
+*Ohne Programm n+1 auszukommen: **nennt der Text einen Namen aus seiner eigenen Datei?***
+Eine Annahme, die eine bestimmte Tabelle oder Funktion nennt, sagt etwas über die Welt in
+den Begriffen eines Programms — **und ist vermutlich zu eng formuliert.**
+
+```
+  EINZELTEXTE  26:   7 nennen einen Namen aus der eigenen Datei  (27 %)
+  KOPIERTE      5:   1 nennt einen                               (20 %)
+```
+
+**Neunzehn von sechsundzwanzig sind echte Weltaussagen**, und neun davon stehen in
+`06-annahmen.gab`:
+
+```
+  Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege.
+  Ein gesendetes IPI erreicht den Zielkern in endlicher Zeit.
+  Ein Release-Speichern macht jede vorher geschriebene Nutzlast sichtbar.
+  Die MMU setzt in einem Seitentabelleneintrag ausschliesslich …
+```
+
+> **§35 ist damit entspannter als befürchtet:** die Einzeltexte sind überwiegend echte
+> Einzelfälle, nicht verkappte Programmaussagen.
+
+**Und die sieben Treffer sind zum Teil ein Fehler meines Maßes**, nicht der Texte:
+`USED_IDX`, `GCMD`, `FSTS` sind **Registernamen aus dem Handbuch**, die zufällig auch in der
+Datei deklariert stehen. *Das Maß fängt den Namen, nicht seine Herkunft* — dieselbe Gestalt
+wie überall. Genuin programmförmig sehen **zwei** aus (`Manifest`, `Statusregister`+`fertig`).
+
+---
+
+## §37 — Überdeklaration: still, unauffällig, und sie macht den Prüfer STRENGER
+
+```gabbro
+impl fn zuviel(t : ptr<normal,rw> T, u : ptr<normal,rw> U, i : index into T) -> u32
+    effects { reads t.slots, writes t.slots, reads u.slots, writes u.slots }
+{ return t.slots[i].a; }              ->   5 items, 0 errors, 0 hints
+```
+
+**Zwei Tabellen deklariert, eine angefasst, kein Wort.** Das ist `costs <= 100000` auf der
+Effektseite — **aber schärfer:**
+
+> Bei `costs <= 100000` steht die Zahl da; ein Leser sieht sie und kann stutzen. Bei
+> `reads u.slots` auf eine nie berührte Tabelle sieht der Leser **eine Klausel, die aussieht
+> wie jede andere.** Die Überdeklaration ist nicht nur ungemessen — **sie ist unauffällig.**
+
+### Und sie hat eine Folgewirkung, die die Kostenseite nicht hat
+
+`effects` speist **den Sperrrangpass, `touches`, die Nebenläufigkeitsargumente.**
+
+> Eine zu weite Effektmenge macht den Prüfer nicht falsch, aber **strenger als nötig** — sie
+> kann eine korrekte Sperrreihenfolge ablehnen, **weil eine nie berührte Tabelle im Rahmen
+> steht.** Ein Fehlalarm derselben Klasse wie `L104`, eine Ebene höher — **und niemand würde
+> ihn als solchen erkennen, weil die Klausel ja dasteht.**
+
+- [ ] **Nebenmessung nach der Ableitung:** geht eine der heute abgesagten Rangprüfungen unter
+      der engeren Menge durch? *Das wäre der Beleg, dass Überdeklaration nicht Zeremonie ist,
+      sondern Reibung.*
+
+### Ein zurückgezogenes Maß, und der Rest, der bleibt
+
+Ein textueller Versuch — *Basisname kommt im Rumpf nicht vor* — gab `103 von 527 (20 %)`,
+davon `53` ohne Ruf im Rumpf. **Die 53 sind falsch und zurückgezogen:**
+
+```gabbro
+impl fn liegt_unter(…) effects { reads Topologie.slots, locks TOPO }
+{ traverse v of g over ancestors of g { … } }
+```
+
+Der Rumpf fasst `Topologie.slots` **durch die Domäne** an, ohne den Namen zu schreiben.
+Ebenso `PLANER` über `requires Held(PLANER)`.
+
+**Aber der Befund darunter bleibt, und er ist die Struktur hinter der toten Zahl:**
+
+> **Es gibt ZWEI Wege, auf denen ein Ort ohne seinen Namen in den Rumpf kommt — die Domäne
+> und der Gerufene.** Die 53 sind der erste Weg, die 50 mit Ruf der zweite. *Und nur den
+> zweiten rechnet eine Ableitung über den Aufrufgraphen von selbst.*
+
+**Damit ist die Frage, ob die 462 Abschriften stimmen, bis zur Ableitung unbeantwortbar** —
+und das ist selbst das Argument für den Zwischenschritt aus §28.
