@@ -1693,6 +1693,32 @@ if ! cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/g52-pruef.c" 2> "$A
 fi
 echo "  Pruefbau cc:   ok (-Werror, und die Probe pruefe_puffer_haelt steht darin)"
 
+# **OFFENER BEFUND, aufgedeckt am 2026-08-31 und NICHT gebucht** -- `messung/tor-proben/`.
+# ---------------------------------------------------------------------------------------
+# Sechs der zwoelf Torproben emittieren C, das nicht uebersetzt:
+#
+#     bool pruefe_c(void) { ... return; ... }
+#     error: 'return' with no value, in function returning non-void [-Werror=return-type]
+#
+# Alle zwoelf schreiben `can_fail { if k >= 3 { return; } }`. **Ein `can_fail`-Block ist eine
+# PROBE und liefert ein `bool`; ein leeres `return` darin hat keinen Wert** -- und kein Pass
+# sagt es. `gabbro pruefe` meldet `0 errors, 0 hints`, der Erzeuger schreibt die Zeile
+# unveraendert ins C, und `cc -Werror=return-type` ist der einzige Leser. *Dieselbe Familie
+# wie `N040`, `N041` und `N043`: eine falsche BESTAETIGUNG, und das dritte Werkzeug findet
+# sie.* Die anderen sechs verdecken es -- sie werden schon aus einem anderen Grund abgelehnt.
+#
+# **Und warum es zwei Wochen niemand gesehen hat, ist der zweite Befund:** Stufe 9 wurde
+# nicht erreicht. `pruefe-emission.sh` starb an `F06`s `N043` in Zeile 901 mit `exit 1`, und
+# die Stufen 9 und 10 liefen nie -- *ohne dass eine Zeile sagte, was nicht gemessen wurde.*
+# Der Ruecklaufwert `1` sah aus wie ein Stufenbefund und war zugleich ein Abbruch fuer alles
+# dahinter. **Genau die Klasse, die `messung/RUECKLAUFWERTE.md` unter „Was offen bleibt"
+# fuehrt: ein Waechter, dessen Vorbedingung MITTEN im Lauf wegbricht.**
+#
+# *Nicht als Ausnahme gebucht.* Die Liste unten ist leer und soll es bleiben; sechs Dateien
+# hineinzuschreiben machte aus einer Erzeugerluecke eine gruene Zeile. Der Waechter bleibt
+# rot, bis die Regel steht oder die Proben `return false;` schreiben -- beides gehoert dem,
+# der `messung/tor-proben/` und die `check`-Regeln fuehrt.
+#
 # =======================================================================================
 # **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).
 #
@@ -1955,8 +1981,14 @@ MARKE_EMIT=57
 # eine ANDERE Datei; die Vereinigung ist damit hoeher, und Stufe 9 bricht vorher an `F06`
 # ab (`N043`). *Eine Marke, die niemand gemessen hat, waere schlimmer als eine, die faellt* --
 # also steht hier die belegte Zahl, und der naechste volle Lauf nennt die richtige als FUND.
-MARKE_EMIT_M=31
-MARKE_EMIT_M=31
+#
+# **31 -> 38, und der naechste volle Lauf war der vom 2026-08-31 nach `F06`s Heilung.** Der
+# Waechter hat die Zahl selbst als FUND genannt (*"38 statt 31 emittierende Dateien in
+# `messung/*/` -- die Marke gehoert nachgezogen"*). Die Zeile stand ZWEIMAL untereinander da,
+# beide Male mit 31 -- der Merge hat sie doppelt gelegt, und die zweite ueberschrieb die
+# erste mit demselben Wert. *Ein Doppeleintrag, der nicht auffaellt, weil beide Zweige
+# dasselbe massen, ist der Vorbote eines, bei dem sie es nicht tun.*
+MARKE_EMIT_M=38
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
