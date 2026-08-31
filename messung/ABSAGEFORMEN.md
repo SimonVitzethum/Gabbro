@@ -118,6 +118,12 @@ Richtung** (sie meldete zu viel), und die Messung hat das Urteil bestätigt: in 
 > **Damit haben U10 bis U15 dieselbe Wurzel wie U11.** `K003` ist die einzige Regel, die
 > zwischen den Absagen des Erzeugers und dem Prüfer steht — *und sie hängt an einer
 > Kostenzusage, die ein `divergent fn` nicht trägt.*
+>
+> **Die Wurzel ist am 2026-08-31 ausgerechnet: [`messung/K003-TOR.md`](K003-TOR.md).** Das Tor
+> ist EINE Zeile (`kosten.rs`:296), `K003` greift bei einem `divergent fn` MIT Zusage tadellos
+> (gemessen, in beide Richtungen), und drei Formen einer torlosen Regel kosten über die 418
+> Dateien **9 · 4 · 2** Programme, die heute durchgehen. *Keine einzelne schließt alle sechs;
+> `state` erreicht gar keine.*
 
 > **Neun der ersten elf sind Giftproben, die `C001` ERWARTEN** — der Ordner hat für sie schon
 > entschieden, dass der Erzeuger der Absager ist. **Das macht sie nicht zu gedeckten Zellen.**

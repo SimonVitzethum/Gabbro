@@ -272,6 +272,29 @@ darunter.
       Kollision** — der Befund darunter nennt sie beim Namen. *Eine Marke, die aus dem falschen
       Grund fällt, ist schlimmer als eine, die steht.*
 
+- [ ] **`zaehle-absagen.py` schließt im Arbeitsbaum eines AGENTEN den ganzen Korpus aus — und
+      `pruefe-grammatiktafel.py` bricht dann ab, statt zu messen** *(gemessen 2026-08-31)*.
+      Der Filter in `instrumente/zaehle-absagen.py`:379–381 überspringt jeden Pfad, der
+      `/.claude/` enthält, und der Kommentar darüber begründet ihn richtig: ein `rglob` von
+      der Wurzel läuft sonst in jeden fremden Arbeitsbaum. **Nur ist die Wurzel eines Agenten
+      selbst `…/.claude/worktrees/agent-…`** — der Filter trifft dann nicht die fremden Bäume,
+      sondern den eigenen:
+
+      ```
+      gefunden: 418   nach Filter: 0
+      ```
+
+      `korpus` ist leer, die erste Sprechprobe fällt (*„kein Wort ist NUR durch Absenkung
+      gedeckt — die Probe misst nichts"*), und der Wächter bricht mit Rücklaufwert 2 ab. **Er
+      verhält sich richtig** — er meldet nicht grün, sondern *nichts gemessen* —, aber die
+      Tafelzahlen sind aus einem Agentenbaum heraus nicht zu holen, und in einer Abnahme sieht
+      der Abbruch aus wie die vier `UNGEDECKT`-Zellen, die dort erwartet werden.
+
+      Die Heilung ist ein Satz und keine Zeile: der Filter müsste **relativ zur Wurzel**
+      wirken statt absolut, damit „unter mir" und „neben mir" unterscheidbar bleiben.
+      *Dieselbe Klasse wie `W16`, und diesmal hat die Heilung eines W16-Befunds den nächsten
+      erzeugt.*
+
 - [ ] **Die Reichweite von `pruefe-zahlen.py` zählt je WERT und nicht je ZELLE — und darum
       ist sie heute aus dem falschen Grund gefallen** *(gefunden 2026-08-31 beim Buchen von
       `H = 4`)*. Die Prüfung steht in `instrumente/pruefe-zahlen.py`:1084:
@@ -415,7 +438,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 129 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 130 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
