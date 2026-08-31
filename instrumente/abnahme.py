@@ -34,21 +34,42 @@ einer, der ein Argument braucht, faellt BENANNT auf.
 Die `zaehle-*` sind NICHT in der Abnahme -- sie messen, sie bewachen nicht. *Diese Grenze
 wird gedruckt und nicht verschwiegen*, mit ihrer Zahl; wer sie verschieben will, sieht sie.
 
-VIER URTEILE, UND DAS DRITTE IST DER GRUND FUER DIESE DATEI
-------------------------------------------------------------
-    gruen             Ruecklaufwert 0
-    ROT               Ruecklaufwert != 0 -- ein Befund
-    NICHT FAHRBAR     das Werkzeug ist gar nicht gelaufen (Absturz, Frist, fehlender Korpus)
+FUENF URTEILE, UND DAS DRITTE IST DER GRUND FUER DIESE DATEI
+--------------------------------------------------------------
+    gruen             Ruecklaufwert 0 -- gemessen, kein Befund
+    ROT               Ruecklaufwert 1 -- gemessen, und es steht etwas offen
+    ABBRUCH           er hat es versucht und konnte nicht: Ruecklaufwert 2, eine
+                      ueberschrittene Frist, ein Absturz. **Es wurde NICHTS gemessen.**
+    NICHT FAHRBAR     sein GEGENSTAND ist nicht hier (fremder Korpus) oder er laesst sich
+                      gar nicht erst starten
     ausgelassen       teuer, und der Schnellauf SAGT es
+
+**`ABBRUCH` kam am 2026-08-31 dazu, und er hat zweimal eine Stunde gekostet, bevor es ihn
+gab.** `pruefe-grammatiktafel.py` brach ab (*„es wurde NICHTS gemessen"*) -- dieselbe Marke,
+dieselbe Farbe und dieselbe letzte Zeile wie die vier `UNGEDECKT`-Zellen, die er sonst
+meldet. `pruefe-luecken.py` verweigerte bei unsauberem `crates/`, und auch das war in der
+Sammelabnahme von einem Rueckstand nicht zu unterscheiden.
+
+> **Ein Werkzeug, das nichts gemessen hat, darf nicht so aussehen wie eines, das etwas
+> gefunden hat.** *Null Dateien ist eine Absage, kein Ergebnis* (W1, W17).
+
+`ABBRUCH` ist NICHT dasselbe wie `NICHT FAHRBAR`: „nicht fahrbar" heisst, dass der
+Gegenstand fehlt -- ein Loch mit einem Namen, und der Lauf bleibt gruen. „Abbruch" heisst,
+dass der Waechter angetreten ist und kein Urteil geliefert hat. **Das macht die Abnahme rot,
+mit eigenem Wort und eigenem Ruecklaufwert.**
+
+**Und der Abbruch ueberstimmt den Befund.** Wer einen Waechter verloren hat, weiss nicht, was
+der gefunden haette -- die Zahl der Befunde daneben ist dann eine untere Schranke und kein
+Stand. Erst die Messapparatur, dann der Baum (`CLAUDE.md`: *ein Abbruch aus Speichermangel
+ist kein Befund*).
 
 **Ein Absturz ist keine Absage.** `pruefe-wortschatz.py` stirbt ohne Dateiargument mit
 `IndexError` -- Ruecklaufwert 1, und es sieht aus wie ein Befund. Es ist keiner: das Werkzeug
-hat nichts angesehen. Wer den Unterschied nicht druckt, bucht eine Luecke als Fund.
-
-**Und eine unangemeldete Luecke ist ROT.** Ein Waechter, dessen Argument in `ARGUMENTE`
-steht, wird mit dem Argument gefahren. Steht es dort NICHT und er stuerzt ab, ist er nicht
-bloss ausgewiesen, sondern rot -- genau der Zustand, gegen den dieser Lauf gebaut ist. *Ein
-angemeldetes Loch ist ein Loch mit einem Namen; ein unangemeldetes ist eine Behauptung.*
+hat nichts angesehen. Wer den Unterschied nicht druckt, bucht eine Luecke als Fund. Seit dem
+2026-08-31 faellt ein Absturz als `ABBRUCH` -- **rot wie vorher, aber benannt**. Ob sein
+Argument in `ARGUMENTE` steht, aendert die Farbe nicht mehr; es steht als Grund daneben. *Ein
+angemeldetes Argument ist eine Erklaerung, kein Freibrief:* wer es bekommt und trotzdem
+stuerzt, hat nichts gemessen.
 
     ./instrumente/abnahme.py            der Schnellauf -- teure ausgelassen und GENANNT
     ./instrumente/abnahme.py --voll     alle, auch die teuren
@@ -118,7 +139,7 @@ def besetzung(wurzel):
 def fahre_einen(p, voll, arbeitsverzeichnis):
     """One guardian. Returns `(marke, ruecklauf, dauer, bemerkung)`.
 
-    `marke` is one of `gruen` · `ROT` · `NICHT FAHRBAR` · `ausgelassen`.
+    `marke` is one of `gruen` · `ROT` · `ABBRUCH` · `NICHT FAHRBAR` · `ausgelassen`.
     """
     teuer = p.name in SCHWER
     args = [str(pathlib.Path(a).expanduser()) if a.startswith("~") else a
@@ -140,7 +161,10 @@ def fahre_einen(p, voll, arbeitsverzeichnis):
         r = subprocess.run([str(p)] + args, cwd=arbeitsverzeichnis, capture_output=True,
                            text=True, timeout=frist)
     except subprocess.TimeoutExpired:
-        return "NICHT FAHRBAR", None, time.monotonic() - t0, f"HAENGT -- Frist {frist} s"
+        # **A hang is an ABORT, not a named hole.** It looks like "still running", and the
+        # tree it was asked about got no verdict at all -- requirement (1) of
+        # `pruefe-waechter.py`, one level up.
+        return "ABBRUCH", None, time.monotonic() - t0, f"HAENGT -- Frist {frist} s"
     except (PermissionError, OSError) as e:
         return "NICHT FAHRBAR", None, time.monotonic() - t0, f"nicht startbar: {e}"
     dauer = time.monotonic() - t0
@@ -149,14 +173,23 @@ def fahre_einen(p, voll, arbeitsverzeichnis):
     if ABSTURZ in (r.stderr or ""):
         zeilen = [z for z in r.stderr.strip().splitlines() if z.strip()]
         grund = zeilen[-1] if zeilen else "Absturz"
-        # An unannounced crash is RED: the guardian measured nothing and nobody declared it.
-        marke = "NICHT FAHRBAR" if angemeldet else "ROT"
-        return marke, r.returncode, dauer, f"ABGESTUERZT, kein Urteil -- {grund}"
+        return "ABBRUCH", r.returncode, dauer, "; ".join(
+            x for x in (f"ABGESTUERZT, kein Urteil -- {grund}", nachsatz) if x)
     if r.returncode == 0:
         return "gruen", 0, dauer, nachsatz
-    kopf = [z for z in (r.stdout or "").splitlines() if z.strip()]
+    # **An abort names its reason on STDERR** -- that is where every `ABBRUCH:` line in this
+    # directory is printed. Reading stdout only would show the last row of the table instead
+    # of the refusal, and that is word for word the confusion this mark exists against.
+    marke = "ROT" if r.returncode == 1 else "ABBRUCH"
+    roh = r.stdout or ""
+    if marke == "ABBRUCH" and (r.stderr or "").strip():
+        roh = r.stderr
+    kopf = [z for z in roh.splitlines() if z.strip()]
     schluss = kopf[-1].strip()[:80] if kopf else ""
-    return "ROT", r.returncode, dauer, "; ".join(x for x in (schluss, nachsatz) if x)
+    if marke == "ABBRUCH" and r.returncode != 2:
+        nachsatz = "; ".join(x for x in (f"beendet mit {r.returncode} -- kein Urteil",
+                                         nachsatz) if x)
+    return marke, r.returncode, dauer, "; ".join(x for x in (schluss, nachsatz) if x)
 
 
 def fahre(wurzel, voll, arbeitsverzeichnis):
@@ -166,17 +199,30 @@ def fahre(wurzel, voll, arbeitsverzeichnis):
 
 
 def urteil(ergebnisse):
-    """`(ruecklaufwert, gefahren, gruen, rot, nicht_fahrbar, ausgelassen)`.
+    """`(ruecklaufwert, gemessen, gruen, rot, abbruch, nicht_fahrbar, ausgelassen)`.
 
-    **Null gefahrene Waechter sind ROT.** Ein positives Urteil ueber nichts sieht aus wie ein
-    Ergebnis und ist keines (W17).
+    Drei Ruecklaufwerte, dieselben drei, die jeder einzelne Waechter fuehren soll:
+
+        0   gemessen, kein Befund
+        1   gemessen, und mindestens einer meldet etwas
+        2   ABBRUCH -- ein Waechter hat kein Urteil geliefert, oder es wurde gar nichts
+            gemessen
+
+    **Die gezaehlte Arbeitsmenge ist `gemessen`, nicht `gestartet`.** Ein Abbruch faellt aus
+    ihr heraus, denn er hat nichts angesehen; bis zum 2026-08-31 zaehlte er mit und hob damit
+    genau die Zahl, die gegen das leere Urteil steht.
+
+    **Null gemessene Waechter sind ein ABBRUCH.** Ein positives Urteil ueber nichts sieht aus
+    wie ein Ergebnis und ist keines (W17).
     """
     gruen = sum(1 for e in ergebnisse if e[1] == "gruen")
     rot = sum(1 for e in ergebnisse if e[1] == "ROT")
+    ab = sum(1 for e in ergebnisse if e[1] == "ABBRUCH")
     nf = sum(1 for e in ergebnisse if e[1] == "NICHT FAHRBAR")
     aus = sum(1 for e in ergebnisse if e[1] == "ausgelassen")
-    gefahren = gruen + rot + nf
-    return (1 if (rot or gefahren == 0) else 0), gefahren, gruen, rot, nf, aus
+    gemessen = gruen + rot
+    code = 2 if (ab or gemessen == 0) else (1 if rot else 0)
+    return code, gemessen, gruen, rot, ab, nf, aus
 
 
 def sprechprobe():
@@ -186,29 +232,54 @@ def sprechprobe():
     Gepruefte Behauptung: ein kuenstlich rot gemachter Waechter macht den Sammellauf rot,
     ein gruener nicht, ein abstuerzender faellt als eigener Fall auf -- und **ein leeres
     Verzeichnis ist rot, nicht gruen**.
+
+    **Und seit dem 2026-08-31 in der Richtung, die der Grund fuer diese Datei ist:** ein
+    kuenstlich ABBRECHENDER Waechter muss als `ABBRUCH` erscheinen und NICHT als Befund, ein
+    kuenstlich roter weiter als Befund. *Zwei Proben, denn eine allein liesse sich mit einer
+    Marke bestehen, die alles rot nennt.*
     """
     proben = []
     with tempfile.TemporaryDirectory() as d:
         dp = pathlib.Path(d)
         (dp / "pruefe-gruen.sh").write_text("#!/bin/sh\necho '== 3 von 3 =='\nexit 0\n")
         (dp / "pruefe-rot.sh").write_text("#!/bin/sh\necho '! RATSCHE: 28, erlaubt 27'\nexit 1\n")
+        # The abort prints its reason on stderr, exactly as the real ones do -- so this probe
+        # also measures that the reason is READ from there and not from the last table row.
+        (dp / "pruefe-halt.sh").write_text(
+            "#!/bin/sh\necho '== 0 von 0 Zellen =='\n"
+            "echo 'ABBRUCH: der Korpus ist leer -- es wurde NICHTS gemessen.' >&2\nexit 2\n")
         (dp / "pruefe-sturz.py").write_text(
             "#!/usr/bin/env python3\nimport sys\nsys.argv[1]\n")
         for f in dp.iterdir():
             f.chmod(0o755)
         erg = fahre(dp, voll=True, arbeitsverzeichnis=dp)
-        rc, gefahren, gruen, rot, nf, _ = urteil(erg)
+        rc, gemessen, gruen, rot, ab, nf, _ = urteil(erg)
         marken = {n: m for n, m, *_ in erg}
-        proben.append(("drei Waechter gefunden und gefahren", gefahren == 3 and len(erg) == 3))
+        bem = {n: b for n, _, _, _, b in erg}
+        proben.append(("vier Waechter gefunden und gefahren", len(erg) == 4))
         proben.append(("der gruene ist gruen", marken.get("pruefe-gruen.sh") == "gruen"))
         proben.append(("der rote ist ROT", marken.get("pruefe-rot.sh") == "ROT"))
-        # It is not in `ARGUMENTE`, so an unannounced crash must be RED, not a soft gap.
-        proben.append(("der abstuerzende faellt auf", marken.get("pruefe-sturz.py") == "ROT"))
-        proben.append(("ein roter macht den Lauf rot", rc == 1 and rot == 2 and gruen == 1))
+        # **The direction this whole mark exists for.** An abort must not be booked as a
+        # finding -- and the printed reason must be the REFUSAL, not the last row above it.
+        proben.append(("der abbrechende ist ABBRUCH und kein Befund",
+                       marken.get("pruefe-halt.sh") == "ABBRUCH" and rot == 1))
+        proben.append(("und er nennt seine Absage, nicht die letzte Tabellenzeile",
+                       "es wurde NICHTS gemessen" in bem.get("pruefe-halt.sh", "")))
+        proben.append(("der abstuerzende faellt als ABBRUCH auf",
+                       marken.get("pruefe-sturz.py") == "ABBRUCH"))
+        proben.append(("nur zwei von vier haben ueberhaupt GEMESSEN",
+                       gemessen == 2 and gruen == 1 and ab == 2 and nf == 0))
+        # **Both directions of the return code**, because one alone passes with a mark that
+        # calls everything red: an abort ends with 2, a mere finding with 1.
+        proben.append(("ein Abbruch macht den Lauf rot -- mit 2, nicht mit 1", rc == 2))
+        nur_rot = [e for e in erg if e[0] in ("pruefe-gruen.sh", "pruefe-rot.sh")]
+        rc1, _, _, rot1, ab1, *_ = urteil(nur_rot)
+        proben.append(("ein roter ALLEIN macht 1 -- er wird nicht zum Abbruch",
+                       rc1 == 1 and rot1 == 1 and ab1 == 0))
         leer = dp / "leer"
         leer.mkdir()
-        rc0, gefahren0, *_ = urteil(fahre(leer, voll=True, arbeitsverzeichnis=leer))
-        proben.append(("null gefahren ist ROT, nicht gruen", rc0 == 1 and gefahren0 == 0))
+        rc0, gemessen0, *_ = urteil(fahre(leer, voll=True, arbeitsverzeichnis=leer))
+        proben.append(("null gemessen ist ABBRUCH, nicht gruen", rc0 == 2 and gemessen0 == 0))
     return proben
 
 
@@ -237,11 +308,13 @@ def main():
         rcs = "" if rc is None else f"[{rc}]"
         print(f"  {marke:<14} {name:<26} {dauer:6.1f} s {rcs:<4} {bem}")
 
-    code, gefahren, gruen, rot, nf, aus = urteil(erg)
+    code, gemessen, gruen, rot, ab, nf, aus = urteil(erg)
 
     print()
-    print(f"== Arbeitsmenge: {gefahren} von {len(alle)} Waechtern GEFAHREN -- "
-          f"{gruen} gruen, {rot} ROT, {nf} nicht fahrbar ==")
+    print(f"== Arbeitsmenge: {gemessen} von {len(alle)} Waechtern haben GEMESSEN -- "
+          f"{gruen} gruen, {rot} ROT ==")
+    print(f"   {ab} ABBRUCH, {nf} nicht fahrbar, {aus} ausgelassen -- **die drei haben")
+    print("   NICHTS gemessen und stehen darum nicht in der Zahl davor.**")
 
     teilweise = [n for n, m, _, _, b in erg if n in SCHNELL_TEIL and "--voll" in b]
     if aus or teilweise:
@@ -275,17 +348,31 @@ def main():
     print("   ansieht, faellt auch hier nicht auf -- die Abnahme verpflichtet, sie")
     print("   spricht nicht frei (W10). Und `nicht fahrbar` ist eine LUECKE mit einem")
     print("   Namen, kein gruener Haken.")
-    if gefahren == 0:
-        print("\n! NULL Waechter gefahren. Ein positives Urteil ueber nichts ist keines (W17).")
+    if gemessen == 0:
+        print("\n! NULL Waechter haben gemessen. Ein positives Urteil ueber nichts ist "
+              "keines (W17).")
+    # **The abort comes FIRST and it has its own word.** An acceptance in which an abort
+    # passes as a finding has lost a guardian without saying so.
+    if ab:
+        print(f"\n! ABNAHME ABGEBROCHEN: {ab} Waechter haben KEIN Urteil geliefert.")
+        for name, marke, rc, _, bem in erg:
+            if marke == "ABBRUCH":
+                print(f"   {name:<26} [{rc if rc is not None else '-'}]  {bem}")
+        print("   **Das ist kein Befund.** Diese Waechter haben nichts angesehen -- was sie")
+        print("   gefunden haetten, weiss niemand, und die Zahl der Befunde daneben ist")
+        print("   damit eine untere Schranke und kein Stand. *Erst die Messapparatur, dann")
+        print("   der Baum.*")
     if rot:
-        print(f"\n! ABNAHME ROT: {rot} von {gefahren} gefahrenen Waechtern melden einen Befund.")
+        wort = "und ausserdem" if ab else "! ABNAHME ROT:"
+        print(f"\n{wort} {rot} von {gemessen} messenden Waechtern melden einen Befund.")
         for name, marke, rc, _, bem in erg:
             if marke == "ROT":
                 print(f"   {name:<26} [{rc}]  {bem}")
-    elif nf:
-        print(f"\n  ABNAHME GRUEN MIT LUECKE: {nf} Waechter sind nicht gefahren.")
-    else:
-        print(f"\n  ABNAHME GRUEN: {gruen} von {gruen} gefahrenen Waechtern.")
+    if not ab and not rot:
+        if nf:
+            print(f"\n  ABNAHME GRUEN MIT LUECKE: {nf} Waechter sind nicht gefahren.")
+        else:
+            print(f"\n  ABNAHME GRUEN: {gruen} von {gruen} messenden Waechtern.")
     return code
 
 
