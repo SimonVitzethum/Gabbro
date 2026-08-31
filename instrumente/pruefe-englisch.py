@@ -478,7 +478,24 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 # one number, three lines apart.* Two tests in `tests/beispiele.rs` read those labels and were
 # carried along -- and the newer form has to separate the label from the summary, which says
 # the same words with a comma after them.
-MARKE_ZUBRINGER = 40      # 173 -> 98 -> 40 on 2026-08-31; two registers taken whole
+# **THE THIRD REGISTER IS ALREADY ENGLISH, AND THAT IS THE FINDING: `saetze.rs`, 19 -> 18.**
+# The note above guessed `mostly German FILE NAMES`, and reading all nineteen turned the
+# guess into a count. **Eighteen are proper names and not one is prose:**
+#
+#     kind                              example shape                            how many
+#     ---------------------------------------------------------------------------------
+#     probe files under `beispiele/gift`  a numbered `.gab` file, German name           8
+#     mutation anchors                    a literal source key of `mutiere-pruefer.py`  6
+#     the `name:` of a sentence           the lookup key of the sentence itself         3
+#     one citation                        `MESSUNGEN.md`:4100, German heading           1
+#
+# **The one real piece of prose in the register was a MOTTO**, quoted from the German working
+# documents inside an English sentence -- the name of the stage that `namen.kanal_ohne_einloeser`
+# belongs to. It is a sentence, so it travelled; the eighteen are names, so they stay.
+#
+# > *A file name is not a translation problem, it is a rename* -- and a renamed probe file
+# > takes its corpus site, its anchor and every citation of it along.
+MARKE_ZUBRINGER = 39      # 173 -> 98 -> 40 -> 39 on 2026-08-31; three registers read whole
 MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
 
 
