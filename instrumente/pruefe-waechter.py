@@ -528,6 +528,155 @@ def sprechprobe_schnitt():
     return (not (a_heil and d_heil), bool(a_kap and d_kap))
 
 
+# **THE DANGEROUS SUBSET OF THE SURFACE -- and it is the SMALL one, not the big one**
+# ------------------------------------------------------------------------------------
+# `schnitt()` above counts the SURFACE: 249 exit sites behind a first one. That figure is an
+# upper bound and says so. **This is the sieve underneath it**, and it exists because a
+# surface nobody can shrink stops being read.
+#
+# Three cuts, each of which removes places that are NOT the hazard:
+#
+# 1. **Does it end the run at all?** A `return 1` inside a helper function is a VALUE, not an
+#    exit -- the caller reads it and carries on. Only `sys.exit(...)`, a `return` out of
+#    `main()`, and every `exit` in a shell script actually end the run.
+# 2. **Which return code?** `2` means ABORT: the guard says *nothing measured*, and
+#    `abnahme.py` prints it as `ABBRUCH` with its own word and its own colour. Reaching it
+#    takes a BROKEN precondition -- a missing tool, a fallen speech test, an empty
+#    population. `1` means FINDING, and a finding is reachable **with everything intact**:
+#    the tree merely has a flaw. *That is the half that needs nothing to be broken.*
+# 3. **Is there output on BOTH sides?** Output before the exit means a partial measurement
+#    exists on screen; output behind it means something was skipped. Only both together make
+#    the shape this class is named for: **a half-run that reads like a whole one.**
+#
+# What survives all three is the working list. And what takes a place OFF it is the form
+# `pruefe-emission.sh` grew on 2026-08-31: a run that stops early **says where it stopped**.
+# A file that carries that announcement is counted as covered -- its truncated runs are
+# still truncated, but they no longer look complete.
+#
+# > *An abort names its reason (that is the third class of the table). A cut has to name its
+# > PLACE -- the reason is already printed, and it is a finding.*
+SAGT_WO = re.compile(r"ABGESCHNITTEN")
+_DEF = re.compile(r"^(\s*)def\s+(\w+)")
+_WERT = re.compile(r"sys\.exit\(\s*([12])\s*\)|return\s+([12])\b|exit\s+([12])\b")
+
+
+def _beendet_den_lauf(zeilen, nr, s, ist_shell):
+    """Does the exit on line `nr` end the RUN -- or merely a function?"""
+    if ist_shell:
+        return True
+    if not re.match(r"^\s*return\b", s):
+        return True          # `sys.exit(...)` -- always.
+    tiefe = len(s) - len(s.lstrip())
+    for j in range(nr - 2, -1, -1):
+        m = _DEF.match(zeilen[j])
+        if m and len(m.group(1)) < tiefe:
+            return m.group(2) == "main"
+    return False
+
+
+def schnitt_stellen(text, ist_shell):
+    """Per exit behind the first: `(line, code, ends_the_run, partial_measurement)`."""
+    zeilen = text.splitlines()
+    aus, druck = [], []
+    for nr, z in enumerate(zeilen, 1):
+        s = z.rstrip()
+        if _fixtur(s) or s.lstrip().startswith("#"):
+            continue
+        if AUSGANG_STELLE.search(s):
+            m = _WERT.search(s)
+            wert = next((g for g in m.groups() if g), "?") if m else "?"
+            aus.append((nr, wert, s))
+        if DRUCK_STELLE.search(s):
+            druck.append(nr)
+    if not aus or not druck:
+        return []
+    erster = aus[0][0]
+    if not any(d > erster for d in druck):
+        return []
+    stellen = []
+    for nr, wert, s in aus:
+        if nr <= erster:
+            continue
+        stellen.append((nr, wert, _beendet_den_lauf(zeilen, nr, s, ist_shell),
+                        any(d < nr for d in druck) and any(d > nr for d in druck)))
+    return stellen
+
+
+def teilmessungen(pfade):
+    """`(total, ending, finding, partial, covered, open_per_file)` over all guardians."""
+    gesamt = beendend = befund = teil = gedeckt = 0
+    offen = {}
+    for p in pfade:
+        t = p.read_text(encoding="utf-8", errors="replace")
+        sagt = bool(SAGT_WO.search(t))
+        n_offen = 0
+        for _, wert, beendet, ist_teil in schnitt_stellen(t, p.suffix == ".sh"):
+            gesamt += 1
+            if not beendet:
+                continue
+            beendend += 1
+            if wert != "1":
+                continue
+            befund += 1
+            if not ist_teil:
+                continue
+            teil += 1
+            if sagt:
+                gedeckt += 1
+            else:
+                n_offen += 1
+        if n_offen:
+            offen[p.name] = n_offen
+    return gesamt, beendend, befund, teil, gedeckt, offen
+
+
+# **The ratchet over the working list -- it may only FALL.**
+# Measured 2026-08-31 over `283cb26`: 249 sites, of which 246 end the run, 106 leave with
+# code 1 (reachable with nothing broken), 94 carry output on both sides -- and 45 of those
+# sit in `pruefe-emission.sh`, which prints `ABGESCHNITTEN in:` since that same day.
+# **49 stayed open, in 25 files.**
+MARKE_TEILMESSUNG = 49
+
+
+# **The speech test of the sieve, in FOUR directions.** Three cuts, and each has to bite on
+# its own -- otherwise the sieve measures a habit instead of a rule.
+SIEB_HELFER = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')",
+    "def hilf():", "    return 1", "print('c')",
+])
+SIEB_ZWEI = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')", "sys.exit(2)", "print('c')",
+])
+SIEB_RAND = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')", "sys.exit(1)",
+])
+SIEB_ECHT = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')", "sys.exit(1)", "print('c')",
+])
+
+
+def sprechprobe_sieb():
+    """`[(what, ok)]` -- four directions, and only the last one gets through the sieve."""
+    def zaehle(text):
+        return [(w, b, t) for _, w, b, t in schnitt_stellen(text, False)]
+    helfer = zaehle(SIEB_HELFER)
+    zwei = zaehle(SIEB_ZWEI)
+    rand = zaehle(SIEB_RAND)
+    echt = zaehle(SIEB_ECHT)
+    return [
+        # It sits in the middle of the output and would therefore read as a partial
+        # measurement -- the FIRST cut removes it, and only that one. Hence the `True`.
+        ("ein `return 1` im HELFER beendet den Lauf nicht",
+         helfer == [("1", False, True)]),
+        ("ein Ausgang mit 2 ist ein ABBRUCH, kein halbes Urteil",
+         zwei == [("2", True, True)]),
+        ("ein Befund OHNE Ausgabe dahinter ist keine Teilmessung",
+         rand == [("1", True, False)]),
+        ("ein Befund mit Ausgabe auf BEIDEN Seiten ist eine",
+         echt == [("1", True, True)]),
+    ]
+
+
 def main():
     (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
      s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt) = sprechprobe()
@@ -565,6 +714,9 @@ def main():
                                   "Ausgabe dahinter schon)"
                                   if schnitt_heil and schnitt_kaputt else "GESCHEITERT"))
     ok = ok and schnitt_heil and schnitt_kaputt
+    for was, sieb_ok in sprechprobe_sieb():
+        print(f"  Sieb:           {'ok' if sieb_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and sieb_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own
@@ -650,6 +802,36 @@ def main():
     print("   Und was diese Zahl NICHT sagt: dass einer dieser Ausgaenge falsch ist. Eine")
     print("   Sprechprobe am Dateianfang SOLL alles dahinter beenden. Sie ist die FLAECHE,")
     print("   keine Mangelliste -- sie verpflichtet, sie spricht nicht frei (W10).")
+
+    # **And underneath it the sieve: the surface turns into a working list.**
+    ges, beendend, befund, teil, gedeckt, offen = teilmessungen(alle)
+    n_offen = sum(offen.values())
+    print()
+    print(f"== Davon eine TEILMESSUNG, die wie eine ganze aussieht: {teil} von {ges} ==")
+    print(f"   {ges - beendend} beenden den Lauf gar nicht erst -- ein `return 1` im Helfer")
+    print("   ist ein WERT, den der Aufrufer liest, und kein Ausgang.")
+    print(f"   {beendend - befund} der uebrigen enden mit 2. Das ist ein ABBRUCH: der Waechter")
+    print("   sagt *nichts gemessen*, und die Abnahme druckt ihn mit eigenem Wort. Dorthin")
+    print("   kommt nur, wer etwas KAPUTT hat -- ein fehlendes Werkzeug, eine gefallene")
+    print("   Probe, eine leere Grundgesamtheit.")
+    print(f"   **{befund} enden mit 1, und die sind erreichbar, ohne dass etwas kaputt ist**:")
+    print("   ein Befund ist eine Aussage ueber den BAUM, und der Baum darf einen Fehler")
+    print(f"   haben. Von ihnen tragen {teil} Ausgabe auf BEIDEN Seiten -- davor eine halbe")
+    print("   Messung, dahinter das, was nie lief. *Das ist die gefaehrliche Menge, und sie")
+    print("   ist die kleine.*")
+    print(f"   {gedeckt} davon stehen in Dateien, die `ABGESCHNITTEN in:` drucken -- gedeckt.")
+    print(f"   **{n_offen} bleiben offen, in {len(offen)} Dateien** (Ratsche "
+          f"{MARKE_TEILMESSUNG}):")
+    for name, n in sorted(offen.items(), key=lambda r: (-r[1], r[0]))[:8]:
+        print(f"     {name:<28} {n:>3}")
+    if len(offen) > 8:
+        print(f"     ... und {len(offen) - 8} weitere mit je einer")
+    if n_offen > MARKE_TEILMESSUNG:
+        print(f"   !! RATSCHE: {n_offen} offene Teilmessungen, erlaubt {MARKE_TEILMESSUNG}.")
+        befunde.append(("TEILMESSUNG", [f"{n_offen} > {MARKE_TEILMESSUNG}"]))
+    elif n_offen < MARKE_TEILMESSUNG:
+        print(f"   Die Ratsche steht auf {MARKE_TEILMESSUNG} und ist auf {n_offen} gefallen"
+              " -- nachziehen.")
 
     if "--lauf" in sys.argv:
         print()

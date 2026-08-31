@@ -247,6 +247,48 @@ nachsehen muss, und sie ist eine OBERE Schranke. *Sie verpflichtet, sie spricht 
 schreibt dazu, was er nicht mehr gemessen hat. `pruefe-emission.sh` hat es an diesem Tag
 nicht getan, und der Preis waren zwei Wochen.
 
+### Das Sieb unter der Fläche — 249 sind die Fläche, **94** sind die Gefahr
+
+*Gemessen 2026-08-31 über `283cb26`, abgelesen mit `./instrumente/pruefe-waechter.py`
+(Abschnitt „Davon eine TEILMESSUNG"), Sprechprobe in vier Richtungen im selben Lauf.*
+
+Die 249 sind eine **obere Schranke** und sagen das auch. Eine Fläche, die niemand
+verkleinern kann, hört auf, gelesen zu werden — also steht darunter ein Sieb mit drei
+Schnitten, und jeder nimmt Stellen heraus, die **nicht** die Gefahr sind:
+
+| Schnitt | wie viele fallen | warum sie nicht die Gefahr sind |
+|---|---:|---|
+| **beendet den Lauf gar nicht** | 3 | ein `return 1` in einem HELFER ist ein *Wert*, den der Aufrufer liest. Kein Ausgang. |
+| **endet mit `2`** | 140 | das ist ein ABBRUCH. Der Wächter sagt „nichts gemessen", die Abnahme druckt ihn mit eigenem Wort und eigener Farbe. **Dorthin kommt nur, wer etwas kaputt hat.** |
+| **keine Ausgabe auf beiden Seiten** | 12 | ohne Ausgabe davor gibt es keine halbe Messung zu verwechseln; ohne Ausgabe dahinter wurde nichts übersprungen. |
+
+Was übrigbleibt:
+
+```
+249  Ausgangsstellen hinter dem jeweils ersten          (die FLAECHE)
+246  beenden den Lauf wirklich
+106  enden mit 1 -- ERREICHBAR, OHNE DASS ETWAS KAPUTT IST
+ 94  tragen Ausgabe auf BEIDEN Seiten                   (die GEFAHR)
+ 45  davon in `pruefe-emission.sh`, das seit heute `ABGESCHNITTEN in:` druckt
+ 49  bleiben offen, in 25 Dateien                       (die ARBEITSLISTE)
+```
+
+**Die beiden Zahlen beantworten zwei verschiedene Fragen, und die zweite ist die, die zählt.**
+*Erreichbar, ohne dass etwas kaputt ist* sind **106** — ein Befund ist eine Aussage über den
+BAUM, und der Baum darf einen Fehler haben; es braucht kein fehlendes Werkzeug und keine
+gefallene Probe, um dort hinzukommen. *Eine Teilmessung, die wie eine ganze aussieht*, sind
+**94** — und das ist die gefährliche Menge, weil vor der Stelle eine halbe Messung auf dem
+Schirm steht und dahinter das, was nie lief.
+
+> **Der Rücklaufwert kann es nicht sagen, und das ist der ganze Punkt.** `2` heißt „nichts
+> gemessen" und wird gedruckt. `1` heißt „gemessen, es steht etwas offen" — und ein `1`
+> mitten im Lauf heißt beides zugleich: *ein Befund hier, ein Abbruch für alles dahinter.*
+> **Die drei Klassen der Tafel oben kennen „die Hälfte gemessen" nicht.**
+
+Und die Deckung ist keine Heilung: eine gedeckte Stelle bricht genauso mitten im Lauf ab —
+sie **sagt es nur**. `MARKE_TEILMESSUNG` in `pruefe-waechter.py` steht auf 49 und darf nur
+fallen.
+
 ## Was diese Tafel NICHT sagt
 
 Sie liest den **Quelltext** und einen Lauf über einem leeren Baum. Ein Wächter, dessen
