@@ -1,0 +1,17 @@
+-- W24-Vorlauf: der `can_fail`-Block nennt eine Groesse, die es nicht gibt.
+-- *Die Gegenprobe zu t5/t7: liest ueberhaupt jemand Namen in diesem Konstrukt?*
+module w24::t8 {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Rumpf nennt einen Namen, der nirgends steht."
+    measures k
+    gates    tor
+    can_fail { if gibt_es_nicht >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

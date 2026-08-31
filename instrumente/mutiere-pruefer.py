@@ -1881,6 +1881,18 @@ MUTATIONEN = [
         "                if true || felder.contains(n.as_str())",
         "N032 -- die `where`-Klausel eines `format` darf wieder einen Namen nennen, den es nicht gibt; PFLICHTEN.md F10 baut auf ihr auf",
     ),
+    # **The report line of a `check`** (2026-08-31). If this one survives, `measures` may
+    # name into the void again -- and with it `N021` and `N022` go silent, because both find
+    # their quantity by matching a name against this list. *The damage is not the missing
+    # `N043`; it is the two refusals that stop falling without saying so.*
+    Mutation(
+        "measures-darf-nennen-was-es-will",
+        "namen.rs",
+        "                if sichtbar.contains(&m.basis.text) {",
+        "                if true || sichtbar.contains(&m.basis.text) {",
+        "N043 -- `measures` darf wieder einen Namen nennen, den es nicht gibt; damit "
+        "schweigen `N021` und `N022` ueber diese Groesse mit",
+    ),
     Mutation(
         "bootschritt-darf-nennen-was-er-will",
         "namen.rs",

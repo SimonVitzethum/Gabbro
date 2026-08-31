@@ -1614,6 +1614,27 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
 ///   *Der gemessene Pfad verändert seine eigene Messung.*
 /// * **`N022`** — eine Grösse, gegen die der Block **einseitig** vergleicht, ohne dass
 ///   `floor` sie nennt. Dann hat sie nach unten keinen Bereich, und die Schwelle sagt nichts.
+///
+/// ## `N043` -- and it stands here because it is what makes the two above BITE
+///
+/// **`N021` and `N022` find their quantity by matching a NAME against `measures`.** Put a
+/// name there that exists nowhere and the match matches nothing, so **both rules fall
+/// silent** -- and the file looks no different from one that had nothing to report.
+///
+/// *Measured 2026-08-31, `messung/TORREICHWEITE.md`:* `messung/tor-proben/t11` is
+/// `beispiele/gift/155-messung-schreibt-sich-selbst.gab` byte for byte with `measures kk`
+/// instead of `measures k`. The original reports `N027` **and `N021`**, the copy only
+/// `N027`. *One letter, and the rule is gone.* `measures` is „the report line" by
+/// `SYNTAX.md` §13 -- a name with nothing behind it describes a state that does not exist.
+///
+/// Same class as `N020` (`gates` without a gate function), `N040` (a type name without a
+/// type) and `S007` (`on_exceeded` without a name). **And the same direction as `N040`: a
+/// false CONFIRMATION, not a false refusal.**
+///
+/// What this rule does NOT touch, and why: the names inside `floor`. A predicate carries
+/// binders (`forall i in …`) and built-in forms (`lenof`, `old`), and resolving names
+/// without them would be a false refusal. *The defect at `floor` reads the same and is not
+/// measurable with the tool at this spot.*
 fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
     // **Ein `gates`-Name ist eine Funktion ODER ein anderer `check`** -- und das hat der
     // Korpus berichtigt, nicht ich. Der erste Anlauf verlangte eine Funktion und meldete
@@ -1626,8 +1647,63 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
         ItemArt::Check(c) => traeger.push(c.name.text.clone()),
         _ => {}
     });
+    // **Every declared name of the unit, for `N043`** -- and it is deliberately EVERY one,
+    // not just the places. A `measures` base that names a function or a `table` is a
+    // different mistake than one that names nothing at all, and only the second is measured
+    // here (W10: this refuses, it does not absolve).
+    let mut erklaert: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let Some(n) = i.art.name() {
+            erklaert.push(n.text.clone());
+        }
+    });
     crate::fuer_jedes_item(baum, &mut |i| {
         let ItemArt::Check(c) = &i.art else { return };
+
+        // -- N043: nennt `measures` ueberhaupt etwas?
+        //
+        // **A `let` of the probe body counts too**, so that the rule cannot fall over a
+        // shape the corpus does not have yet: the base is resolved against the unit's
+        // declarations AND against everything the `can_fail` block binds.
+        {
+            let mut sichtbar = erklaert.clone();
+            fn lets(b: &Block, aus: &mut Vec<String>) {
+                for s in &b.anweisungen {
+                    match &s.art {
+                        StmtArt::Let(l) => aus.push(l.name.text.clone()),
+                        StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+                        StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
+                        StmtArt::Exchange(e) => aus.push(e.name.text.clone()),
+                        _ => {}
+                    }
+                    for k in crate::unterbloecke(s) {
+                        lets(k, aus);
+                    }
+                }
+            }
+            lets(&c.can_fail, &mut sichtbar);
+            for m in &c.measures {
+                if sichtbar.contains(&m.basis.text) {
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N043",
+                        m.basis.span,
+                        format!("`measures {}` names nothing declared", m.basis.text),
+                    )
+                    .mit_notiz(
+                        "the `measures` list IS the report line -- a name with nothing \
+                         behind it describes a state that does not exist",
+                    )
+                    .mit_notiz(
+                        "and it switches off two rules without saying so: `N021` and `N022` \
+                         find their quantity by matching a name against this list, so a \
+                         misspelt one makes both silent",
+                    ),
+                );
+            }
+        }
 
         // **`N027` — ein `can_fail`-Block ist eine PROBE, kein Programm** (Rezension
         // 2026-08-20).

@@ -1,0 +1,16 @@
+-- W24-Vorlauf: `measures` VERSCHRIEBEN -- und damit schaltet die Datei `N021` ab.
+-- *Byteweise `beispiele/gift/155-messung-schreibt-sich-selbst.gab`, ein Buchstabe anders.*
+module w24::t11 {
+
+static mut k : u32 = 0;
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Die Messung veraendert, was sie misst."
+    measures kk
+    gates    tor
+    can_fail { k = 1; if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

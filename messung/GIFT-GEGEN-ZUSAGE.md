@@ -361,6 +361,28 @@ gemessene Größe, sagt **kein einziger Pass etwas** — die Datei geht mit null
 *Ob das eine Lücke ist oder die richtige Grenze, ist eine Frage an `SYNTAX.md` §13 und
 nicht an diese Tafel;* hier steht nur, dass es gemessen wurde und dass keine Probe es hält.
 
+> **BEANTWORTET am 2026-08-31, mit einem Lauf statt einer Ansicht:
+> `messung/TORREICHWEITE.md`.** Zwölf kleinste Programme gegen den unveränderten Prüfer.
+> Die Antwort ist **die richtige Grenze**: `gates` nennt, WER die `Duty` verbraucht,
+> Verbrauch kommt nach Erzeugung, also liegt eine Schreibstelle im Tor **flussabwärts** von
+> der Messung. Der Erzeuger schreibt `gates` als Kommentarzeile und sonst nirgendwohin
+> (`emit.rs`:2781); der Rumpf von `pruefe_c()` **ist** `can_fail` (`emit.rs`:2807). *Eine
+> Absage über schreibende Tore wäre eine ohne gemessenen Mangel — sie wurde nicht gebaut.*
+>
+> **Und derselbe Vorlauf hat gefunden, wonach niemand gesucht hatte:** `N021` und `N022`
+> finden ihre Größe über einen **Namensvergleich gegen `measures`**, und `measures` löste
+> niemand auf. `messung/tor-proben/t11` ist byteweise `155-messung-schreibt-sich-selbst.gab`
+> mit `measures kk` — und `N021` ist weg. **Ein Buchstabe schaltete zwei Regeln ab.**
+> Dagegen steht seit heute `N043` (`beispiele/gift/421-measures-ins-leere.gab`), und es fand
+> bei seinem ersten Lauf zwei Fälle im eigenen Korpus: `187-can-fail-schreibt.gab` (zwei
+> Träger beim Kürzen aus `beispiele/06` verloren, `measures` und `floor` nannten sie weiter
+> — **`N022` schwieg dort über `floor kerne_gemessen >= 2`**) und `messung/fragmente/F06.gab`
+> (`measures eich.leer, …` an einem Träger `eich`, den die Datei nicht hat).
+>
+> *Die Zeile von `187` in der Tafel oben ist damit `N027`@78 · `N021`@78 —* die zwei
+> nachgetragenen Träger haben sie um sechs Zeilen verschoben. **Das Paar bleibt unverändert
+> untrennbar;** `N043` macht nur die eine Umgehung unmöglich, mit der es jemand versucht hat.
+
 ## 11. Was dieser Eingriff NICHT gezeigt hat
 
 * **Nichts darüber, ob die 255 sauberen aus dem richtigen Grund fallen.** §8 gilt weiter, nur

@@ -1,0 +1,14 @@
+-- W24-Vorlauf: das Tor ist der `check` SELBST.
+module w24::t9 {
+
+static mut k : u32 = 0;
+
+check c {
+    claim    "Die Pflicht wird von dem verbraucht, der sie erzeugt."
+    measures k
+    gates    c
+    can_fail { if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

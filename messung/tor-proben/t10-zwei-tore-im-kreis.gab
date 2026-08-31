@@ -1,0 +1,22 @@
+-- W24-Vorlauf: zwei `check` gattern einander.
+module w24::t10 {
+
+static mut k : u32 = 0;
+
+check a {
+    claim    "a verlangt b."
+    measures k
+    gates    b
+    can_fail { if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+check b {
+    claim    "b verlangt a."
+    measures k
+    gates    a
+    can_fail { if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

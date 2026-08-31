@@ -9,10 +9,10 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       64        A1  4 · A4 60
   redundant        0
   tragend        986
-64 von 1050 Stellen dürfen sinken
+63 von 1028 Stellen dürfen sinken
 ```
 
-> **~~1008~~ 1050 am Abend des 2026-08-31, und diesmal ist der ZÄHLER mitgestiegen.**
+> **~~1008~~ ~~1050~~ 1028 am Abend des 2026-08-31, und diesmal ist der ZÄHLER mitgestiegen.**
 > `beispiele/55`–`57` sind drei neue Dateien (die Quantorendomänen `chain`, `queue`,
 > `threads`, `QUANTORENDOMAENEN.md`): +42 Stellen, davon +4 ableitbar. *Die Quote bleibt
 > damit fast stehen, und das ist die ehrliche Auskunft — drei annotationsschwere Programme

@@ -1,0 +1,14 @@
+-- W24-Vorlauf: das Tor gibt es nicht.
+module w24::t2 {
+
+static mut k : u32 = 0;
+
+check c {
+    claim    "Eine Pflicht, die niemand verbrauchen kann."
+    measures k
+    gates    gibt_es_nicht
+    can_fail { if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

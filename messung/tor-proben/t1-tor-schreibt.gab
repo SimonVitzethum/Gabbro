@@ -1,0 +1,16 @@
+-- W24-Vorlauf: das Tor SCHREIBT die gemessene Groesse.
+module w24::t1 {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { writes k } costs <= 1 ops { k = 1; return; }
+
+check c {
+    claim    "Die Messung veraendert, was sie misst -- aber im TOR."
+    measures k
+    gates    tor
+    can_fail { if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}
