@@ -98,6 +98,14 @@ Theorien. **Am 2026-08-31 hat das eine volle Abnahme rot gemeldet, mit `[1]` und
 Befund darin.** Der Wächter nennt die Ursache und die Heilung in seiner eigenen Absage — *aber
 er nennt sie erst, nachdem der Lauf zwölf Minuten gebraucht hat.*
 
+**Und wer auf so einen Lauf wartet, wartet nicht mit `pgrep -f`.** Der ganze Aufruf steht in
+der Kommandozeile der wartenden Shell, also **findet das Muster sich selbst** — die Schleife
+meldet für immer „läuft noch", und auf dem Server bleibt ein Prozess stehen, der nie endet.
+*Am 2026-08-31 hat das einen fertigen, grünen Lauf als laufend gemeldet und einen Waisen
+hinterlassen.* Wer den Zustand wissen will, fragt `ps -C python3` oder legt die Ausgabe in eine
+Datei und liest deren letzte Zeile. **Dieselbe Klasse wie `W16`, diesmal im Wartewerkzeug: ein
+Messgerät, das seinen eigenen Namen mitzählt.**
+
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).
