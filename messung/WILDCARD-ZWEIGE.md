@@ -205,3 +205,86 @@ die Richtung des Fehlers:**
 Über `ExprArt` (30+ Varianten) erschöpfend aufzuzählen, was ohnehin `None` heißt, kostet
 Zeilen und kauft nichts — **die Absicherung ist dort der Rufer, nicht die Aufzählung.**
 *Das ist ein Urteil und keine Messung, und es steht deshalb als Urteil da.*
+
+---
+
+# Die Ausnahme: `zeugnis.rs`, und die Antwort folgte aus der Messung
+
+Die zwölf sind gestrichen. Elf davon änderten **nichts** am Korpus — dieser eine sollte etwas
+ändern, und das ist der Punkt.
+
+## Der Befund, reproduziert
+
+`messung/proben/probe-zeugnis-injektiv-{a,b}.gab`, Unterschied **eine Zeile**
+(`threads` gegen `queue r`), beide `0 errors, 0 hints`. Die Zeugnisse:
+
+```
+--- a          == Translation certificate: …-a.gab ==
++++ b          == Translation certificate: …-b.gab ==
+```
+
+**Der Dateiname war der einzige Unterschied.** Ohne die Kopfzeile: md5 beider Rümpfe
+`d0ff59cac7aa208dae5c964754339cfa`.
+
+> Ein Etikett ist kein Beleg. *Ein Zeugnis, das zwei verschiedene Programme belegt, belegt
+> keines von beiden* — und diese Eigenschaft hängt **nicht** daran, ob der Erzeuger richtig
+> arbeitet. Genau darum wäre sie die Absicherung gegen Erzeugerfehler.
+
+## Und die Antwort war nicht „neun Etiketten"
+
+Aus der Messung folgte mehr als die Aufzählung: **die neun Domänen ruhen auf verschiedenen
+Schranken, und drei ruhen auf gar keiner.**
+
+| Domäne | worauf die Schranke ruht |
+|---|---|
+| `slots of` | `count N` der Tabelle |
+| `elems of` | die **Länge im Typ** (`[u32; 8]`) — sonst die Tabellenkapazität |
+| `queue` | die Länge des **einzigen** Feldarrays; zwei Arrays → keine Schranke, `K003` |
+| `mappings of` | `Knotenlänge ^ levels` aus der `walk`-Deklaration |
+| `descendants of` | die Baumkanten, Postordnung — Terminierung ist eine **Hypothese** der Tabelle |
+| `ancestors of` | die `parent`-Kette; kein Zyklus, und das ist dieselbe Hypothese |
+| **`chain(…) in`** | **keine** — die Kette hat ein ENDE (`option index into T`), das ist keine LÄNGE |
+| **`fields of`** | **keine** — endlich viele, aber keine Zahl in der Deklaration |
+| **`threads`** | **keine** — wie viele es gibt, ist eine Aussage über die MASCHINE |
+
+Die letzten drei standen in `domaene.rs::domaenenschranke` auf einem `_ => return None`.
+Ehrlich, aber **unsichtbar**: nichts in der Datei sagte, um welche Domänen es geht, und das
+Zeugnis deckte alle fünf Nichtbaumformen mit einem Wort. Beide sind jetzt aufgezählt.
+
+## Die Probe MISST, sie behauptet nicht
+
+`crates/gabbro-check/tests/zeugnis_injektiv.rs`, vier Proben:
+
+| Probe | was sie misst |
+|---|---|
+| `das_gemessene_paar_hat_verschiedene_zeugnisse` | das Paar oben, **unter demselben Dateinamen gerendert** |
+| `zwei_gleiche_programme_geben_gleiche_zeugnisse` | die Gegenrichtung — sonst wäre ein Zeitstempel „injektiv" |
+| `alle_neun_domaenen_geben_verschiedene_zeugnisse` | die übrigen **fünfunddreißig** Paare |
+| `jeder_domaenenausweis_steht_in_der_einordnung` | kein Ausweis fällt auf `UNZUGEORDNET` |
+
+**Der Dateiname wird weggenommen.** Zwei Zeugnisse, die sich nur im Kopf unterscheiden, sind
+nicht verschieden — sie tragen verschiedene Etiketten an derselben Aussage.
+
+*Und die Probe wurde falsifiziert, bevor sie gebucht wurde* (R11): `KetteIn` versuchsweise
+auf `traverse (slots of)` gezogen → `alle_neun_domaenen_geben_verschiedene_zeugnisse`
+**FAILED**, die übrigen drei grün. Danach zurückgestellt und wieder grün.
+
+## Die Gegenrichtung
+
+| | vorher | nachher |
+|---|---|---|
+| `pruefe` | `fbc70c78b2b8cdbb6b816f259a027d5d` | **gleich** |
+| `emit` | `062702775e2a6942c93927895224881e` | **gleich** |
+| `zeugnis` | `686a1ef576ec08a79642e0fe35fbc493` | **`c051feaebb8c6d6677decf12452228ce` — geändert, und das ist der Zweck** |
+
+> **Der `emit`-Wert oben ist nicht der aus Schritt 2** (`34eb26e…`). Grund: die zwei
+> Probendateien haben einen längeren Kommentarkopf bekommen, und `emit` druckt Zeilennummern.
+> *Nachgemessen statt behauptet:* der Baum von `59a8028` mit den NEUEN Probendateien liefert
+> `062702775e…` — dieselbe Zahl. Der Unterschied ist der Kopf, nicht der Prüfer.
+
+Der `zeugnis`-Unterschied ist **ausschließlich** in den Traversierungszeilen und den daraus
+folgenden Schablonenzahlen: 9 × `traverse` und 8 × `traverse (Baum)` werden zu
+`slots of` 6, `descendants of` 6, `ancestors of` 4, `elems of` 3, `threads` 2, `queue` 2,
+`chain … in` 1 (plus die Mehrfachzählungen). *Wo eine Datei zwei verschiedene Domänen
+durchläuft, zählt das Zeugnis jetzt zwei Schablonen statt einer — genau der Fall, den der
+eine Ausweis verschwieg.*

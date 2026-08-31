@@ -105,7 +105,20 @@ impl<'a> Sicht<'a> {
                     .find(|(k, _)| *k == &name || k.rsplit("::").next() == Some(kurz.as_str()))
                     .map(|(_, n)| *n as i128);
             }
-            _ => return None,
+            // **The three domains that carry NO bound out of the declaration, spelled out**
+            // *(2026-08-31)*. They stood on a `_ => return None` -- the honest answer, but
+            // an invisible one: nothing in this file said which domains it was about, and
+            // the certificate covered all five non-tree forms with one word. Naming them
+            // makes the gap countable, and it makes a TENTH domain a translation error here
+            // instead of a silent `K003` -- that refusal lives in `kosten.rs`, which asks
+            // this function and passes the silence on.
+            //
+            //   `chain(a, b) in`  the chain ends because its edge is `option index into T`
+            //                     -- an END is not a LENGTH
+            //   `fields of`       finitely many and statically known, but no length is
+            //                     written down
+            //   `threads`         how many there are is a statement about the MACHINE
+            Domaene::KetteIn { .. } | Domaene::FelderVon(_) | Domaene::Threads => return None,
         };
         // **Der Name kann unqualifiziert sein** -- `index into Topologie` nennt die Tabelle
         // ohne Modulpfad, waehrend `kapazitaeten` qualifiziert schluesselt. Ohne diesen

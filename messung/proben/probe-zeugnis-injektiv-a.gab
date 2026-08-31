@@ -6,15 +6,26 @@
 --
 --      table.induktion          proved     1x  traverse
 --
--- `zeugnis.rs:758` fuehrt `ElementeVon`, `KetteIn`, `Schlange`, `SlotsVon` und `Threads`
--- auf einem `_ => "traverse"` zusammen -- fuenf Domaenenformen, ein Ausweis.
+-- `zeugnis.rs` fuehrte `ElementeVon`, `KetteIn`, `Schlange`, `SlotsVon` und `Threads` auf
+-- einem `_ => "traverse"` zusammen -- fuenf Domaenenformen, ein Ausweis.
 --
 -- **Ein Zeugnis, das zwei verschiedene Programme belegt, belegt keines von beiden.** Das
 -- ist die eine Eigenschaft, die ein Uebersetzungsbeleg nicht haben darf, und sie haengt
 -- nicht daran, ob der Erzeuger richtig arbeitet.
 --
--- Die Heilung ist die erschoepfende Aufzaehlung in `zeugnis.rs`. Sie ist NICHT gebaut --
--- welchen Ausweis jede der fuenf Formen bekommen soll, folgt erst aus dieser Messung.
+-- **GEHEILT am 2026-08-31**, und die Antwort folgte aus der Messung: `traversenausweis`
+-- zaehlt alle NEUN Domaenen einzeln auf, und `EINORDNUNG` traegt je Form den Grund, auf dem
+-- ihre Schranke ruht -- neun verschiedene Gruende, und **drei Formen ruhen auf gar keiner**
+-- (`chain(…) in`, `fields of`, `threads`; `domaenenschranke` schweigt, `K003` verlangt eine
+-- Deklaration). *Genau das verschwieg der eine Ausweis.*
+--
+-- Dieses Paar wird seither GEMESSEN und nicht behauptet:
+-- `crates/gabbro-check/tests/zeugnis_injektiv.rs` rendert beide unter DEMSELBEN Dateinamen
+-- -- der Kopf darf den Unterschied nicht machen -- und verlangt
+--
+--      das gemessene Paar          verschieden
+--      zwei gleiche Programme      gleich          (sonst waere ein Zeitstempel „injektiv")
+--      alle neun Domaenen          paarweise verschieden
 
 module probe::inj {
 const N : u32 = 8;
