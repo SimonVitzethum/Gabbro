@@ -340,7 +340,7 @@ Adresse, an der die Messung dünn ist.*
 |---|---|---|
 | `ki-pc-fisch-101` | 0,85 s | **2,7 s** (2,73 · 2,66 · 2,72) |
 | lokal (20 Kerne) | 1,0 s | **5,9 s** (5,87 · 5,83) |
-| davon der Übersetzerdurchgang | — | 1,8 s / 4,0 s (160 `cc`-Aufrufe) |
+| davon der Übersetzerdurchgang | — | 1,8 s / 4,0 s (166 `cc`-Aufrufe über 83 Erzeugnisse) |
 
 `abnahme.py` gibt jedem leichten Wächter **600 s** (`FRIST_ABNAHME`) — das sind knapp ein
 Prozent. **Die erste Fassung brauchte 9,8 s**, weil die Sprechprobe den ganzen Durchgang ein
