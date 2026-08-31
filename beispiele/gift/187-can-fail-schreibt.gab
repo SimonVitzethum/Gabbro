@@ -51,6 +51,8 @@ axiom wbinvd()          effects { writes cache }
 -- die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
 -- Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
 -- heute, hat ihn im eigenen Beispiel gefunden.
+static mut tiefe_max : u64 in 0 .. 1000 = 0;
+
 impl fn abnahme()
     effects { reads kerne_gemessen }
     costs   <= 4 ops
@@ -83,7 +85,11 @@ check stapel_wasserstand {
 --
 -- *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
 -- `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
-extern fn groesse_gemessen() -> u64
+reason MessFehler {
+    KeinKern = 1 "kein Kern hat gemeldet"
+    exhaustive
+}
+extern fn groesse_gemessen() -> u64 in 1 .. 1000000 or MessFehler
     ensures result >= 1
     effects { reads stapel };
 

@@ -21,9 +21,9 @@
 
 module gift251 {
 
-const N : u32 = 8;
+pub const N : u32 = 8;
 
-table T count N {
+pub table T count N {
     slot { a : u32, }
 }
 

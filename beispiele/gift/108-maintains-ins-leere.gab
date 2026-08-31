@@ -14,7 +14,7 @@ table W count 8 {
         forall s in slots of W : W.slots[s].a <= 10;
 }
 
-impl fn nullen() -> unit
+impl fn nullen()
     maintains gross
     effects { reads W, writes W }
     costs <= 64 ops

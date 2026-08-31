@@ -2,7 +2,13 @@
 -- Die andere Richtung: eine Barriere ohne Gegenstueck. Teuer und irrefuehrend --
 -- `publishes nothing` sagt ausdruecklich, dass es keine gibt.
 module gift {
-atomic FERTIG : bool publishes { bericht } release;
+type Bericht = { daten : u32, };
+-- **`publishes { bericht }` stand hier und nannte einen Namen, den diese Datei nicht
+-- kennt** -- `V008` fiel VOR `V001` und verdeckte den Gegenstand. Dieselbe Berichtigung
+-- wie in `beispiele/14-paarung-ueber-zwischenfunktion.gab`: eine Obermenge ueber eine
+-- parameterrelative Nutzlast ist nicht schreibbar, und weil sie freiwillig ist, steht
+-- hier keine.
+atomic FERTIG : bool release;
 impl fn melden(b : ptr<normal, rw> Bericht)
     effects { writes b, writes FERTIG } costs <= 4 ops
 {

@@ -17,20 +17,26 @@ static mut mmu_an_zahl : u32 = 0;
 
 table Puffer count 4 { slot { a : u32, } }
 
-lock L protects { Puffer } rank 1 held <= 40 ops;
+lock L protects { Puffer } rank 1 held <= 8192 ops;
 
 extern fn mmu_an(p : Phase) -> Phase
     ensures  mmu_an_zahl == 1
     advances roh -> mmu
     effects  { consumes p, writes mmu_an_zahl } costs <= 4096 ops;
 
+assume irgendwas
+    "Irgendetwas ausserhalb dieser Einheit bewegt sich bei jedem Durchlauf."
+    falsifier sonde_irgendwas;
+
+extern fn aufgeben() -> never effects { diverges };
+
 impl fn hochlauf(p : Phase)
     advances roh -> mmu
     effects { consumes p, writes mmu_an_zahl, locks L }
-    costs   <= 32768 ops
+    costs   <= 65536 ops
 {
     retry warten until false
-        bounded 4096 ops
+        bounded 8192 ops
         progress irgendwas
         on_exceeded aufgeben
         effects { consumes p, writes mmu_an_zahl, locks L }

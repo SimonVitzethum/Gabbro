@@ -7,6 +7,7 @@ module gift {
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 
+table T count 8 { slot { x : u32 in 0 .. 10, } }
 impl fn schleifen(z : ptr<normal, rw> Zelle, c : ptr<normal, rw> T)
     effects { writes z, writes c }
 {

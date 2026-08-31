@@ -1,6 +1,7 @@
 -- erwartet: V004
 -- `relaxed` ordnet nichts. Eine Nutzlast daran ist eine Zusage, die die Ordnung nicht haelt.
 module gift {
+type Bericht = { daten : u32, };
 atomic ZAEHLER : u32 publishes nothing relaxed;
 impl fn zaehlen(b : ptr<normal, rw> Bericht)
     effects { writes b, writes ZAEHLER } costs <= 4 ops

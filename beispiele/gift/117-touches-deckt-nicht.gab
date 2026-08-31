@@ -13,7 +13,7 @@ const N : u32 = 8;
 table W count N { slot { a : u32 in 0 .. 10, } }
 static mut fremd : u32 = 0;
 
-impl fn f(w : ptr<normal, rw> W) -> unit
+impl fn f(w : ptr<normal, rw> W)
     effects { reads w.slots, writes w.slots, writes fremd } costs <= 200 ops
 {
     traverse i over slots of w by unvisited

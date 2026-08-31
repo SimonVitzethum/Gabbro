@@ -3,6 +3,7 @@
 -- Pflicht -- eine Traversierung ohne Mass ist keine.
 module gift {
 
+table T count 8 { slot { x : u32 in 0 .. 10, } }
 impl fn gehen(c : ptr<normal, rw> T) effects { writes c } {
     traverse s over slots of c {
         c.slots[s].x = 0;

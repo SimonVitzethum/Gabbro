@@ -3,6 +3,7 @@
 -- -- die Auslassung war zugleich die staerkste Zusage und die kuerzeste Spezifikation.
 module gift {
 
+type T = { x : u32 in 0 .. 10, };
 impl fn schweigt(c : ptr<normal, rw> T) {
     c.x = 1;
 }

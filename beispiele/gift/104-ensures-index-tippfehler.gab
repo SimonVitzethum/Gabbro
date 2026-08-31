@@ -10,7 +10,7 @@ module gift::ensures_index {
 
 table Werke count 8 { slot { a : u32 in 0 .. 10, } }
 
-impl fn nullen() -> unit
+impl fn nullen()
     ensures  forall s in slots of Werke : Werke.slots[tippfehler].a == 0
     effects  { reads Werke, writes Werke }
     costs <= 64 ops

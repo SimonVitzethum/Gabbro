@@ -19,6 +19,7 @@ table Kappenraum count 8 {
     }
 
     ops insert, remove;
+    occupied belegt;
 
     invariant belegt_zaehlt cost O(1) runs online :
         forall s in slots of Self : Self.slots[s].belegt || !Self.slots[s].belegt;

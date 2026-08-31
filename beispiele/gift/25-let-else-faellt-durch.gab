@@ -8,7 +8,11 @@
 
 module gift {
 
-impl fn quelle() -> u32 effects { pure } { return 1; }
+reason QuellFehler {
+    Leer = 1 "die Quelle hat nichts geliefert"
+    exhaustive
+}
+extern fn quelle() -> u32 or QuellFehler effects { pure } costs <= 1 ops;
 impl fn j1() -> u32 effects { pure } {
     let v = quelle() else (e) { }
     return v;

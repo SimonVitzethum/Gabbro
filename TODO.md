@@ -488,8 +488,8 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 138 Dateien, und keiner davon ist eine Teilmengenbeziehung.
-      *135 → 138 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
+      heute **12 Widerrufe** über 140 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *135 → 140 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
       `messung/proben/probe-erzeugernamen-frei.gab` kamen dazu. Die Ratsche steigt am
       Gegenstand, und die drei Namen stehen hier, damit man das nachzählen kann.*
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und

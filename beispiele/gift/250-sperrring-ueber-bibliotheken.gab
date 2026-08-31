@@ -29,22 +29,22 @@
 -- der Normalfall -- **absolute Zahlen komponieren nicht** (siehe «ABI2» in `TODO.md`).
 
 module speicher {
-const NEINTRAEGE : u32 = 64;
-table Eintraege count NEINTRAEGE {
+pub const NEINTRAEGE : u32 = 64;
+pub table Eintraege count NEINTRAEGE {
     slot { marke : u32, gueltig : bool, }
 }
-lock SPEICHER protects { Eintraege } rank 0 held <= 40 ops;
+pub lock SPEICHER protects { Eintraege } rank 0 held <= 40 ops;
 pub extern fn speicher_setze(i : index into Eintraege, m : u32) -> bool
     effects { writes Eintraege.slots, locks SPEICHER }
     costs   <= 30 ops;
 }
 
 module geraet {
-const NREGISTER : u32 = 16;
-table Register count NREGISTER {
+pub const NREGISTER : u32 = 16;
+pub table Register count NREGISTER {
     slot { wert : u32, bereit : bool, }
 }
-lock GERAET protects { Register } rank 0 held <= 40 ops;
+pub lock GERAET protects { Register } rank 0 held <= 40 ops;
 pub extern fn geraet_setze(i : index into Register, w : u32) -> bool
     effects { writes Register.slots, locks GERAET }
     costs   <= 30 ops;

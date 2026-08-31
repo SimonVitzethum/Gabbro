@@ -11,8 +11,8 @@
 
 -- Zwei Module, beide mit `fn eng`. Der Aufruf uebergibt 200 an das ENGE (0..10).
 module eins {
-    type Eng = u32 in 0 .. 10;
-    impl fn eng(x : Eng) -> u32 effects { pure } { return x; }
+    pub type Eng = u32 in 0 .. 10;
+    pub impl fn eng(x : Eng) -> u32 effects { pure } { return x; }
 }
 
 module zwei {

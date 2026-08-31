@@ -7,7 +7,7 @@
 module gift::wand {
 
 module heim {
-    opaque type Pa = u64;
+    pub opaque type Pa = u64;
 }
 
 module fremd {

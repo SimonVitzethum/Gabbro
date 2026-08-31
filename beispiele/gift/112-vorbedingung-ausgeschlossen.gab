@@ -9,10 +9,10 @@
 -- braucht eine Entscheidungsprozedur, die M1 nicht hat.
 module gift::vorbedingung {
 
-extern fn nimm(x : u32) -> unit
+extern fn nimm(x : u32)
     requires x >= 1
     effects { pure } costs <= 8 ops;
 
-impl fn ruf() -> unit effects { pure } costs <= 16 ops { nimm(0); return; }
+impl fn ruf() effects { pure } costs <= 16 ops { nimm(0); return; }
 
 }

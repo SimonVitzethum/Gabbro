@@ -17,6 +17,12 @@ extern fn wecken(p : Parked)
     effects { consumes p }
     costs   <= 2 ops;
 
+assume irgendwas
+    "Irgendetwas ausserhalb dieser Einheit bewegt sich bei jedem Durchlauf."
+    falsifier sonde_irgendwas;
+
+extern fn aufgeben() -> never effects { diverges };
+
 impl fn schleife(p : Parked)
     effects { consumes p }
     costs   <= 64 ops
