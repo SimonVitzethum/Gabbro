@@ -4635,3 +4635,15 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       Der Ausgang steht im Plan: *im PRÜFER absagen, dann wandert die Zelle nach
       `vom Pruefer`.* **Das ist eine Entscheidung über die SPRACHE** (vier Formen fallen aus
       Gabbro heraus) und gehört der Bahn, die am Prüfer arbeitet.
+
+- [ ] **Der Sauberkeitsschutz des Mutationslaufs war auf dem SERVER wirkungslos, und die
+      Ursache ist eine leere Ausgabe.** Auf einer per `rsync` übertragenen Kopie zeigt
+      `.git` auf ein Arbeitsbaumverzeichnis, das dort nicht existiert; `git status
+      --porcelain crates/` endet mit **128 und leerem stdout**, und `sauberer_baum()` las
+      genau das als „sauber". Gemessen am 2026-08-31 auf `ki-pc-fisch-101` — und
+      `abnahme.py --voll` ruft den Lauf dort. **Behoben:** drei Zustände statt zwei
+      (`sauber` · `schmutzig` · `unbekannt`), mit Sprechprobe. *Was offen bleibt:* auf einer
+      Kopie gibt es keinen git-Blick, also trägt dort allein der ANKERSTAND die Kontrolle —
+      er misst die Gefahr direkt (eine angewandte Mutation hat ihren `alt`-Text verloren),
+      aber er sieht keine andere Quelländerung. **Ein Prüfsummenabgleich gegen den Stand vor
+      dem Lauf wäre die vollständige Antwort und ist nicht gebaut.**
