@@ -9,8 +9,22 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       64        A1  4 · A4 60
   redundant        0
   tragend        986
-63 von 1028 Stellen dürfen sinken
+64 von 1050 Stellen dürfen sinken
 ```
+
+> **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**
+> `messung/fragmente/F06.gab` war die fünfte abgelehnte Datei: `N043` wies
+> `measures eich.leer, …` ab, einen Träger, den der eingefrorene Ausschnitt nennt und
+> nirgends deklariert — **und eine Datei mit Fehlern zählt hier nicht mit.** Mit
+> `type EichMarke` + `static eich` prüft sie wieder sauber, und ihre **22 Stellen (1
+> ableitbar, 21 tragend)** sind zurück in der Grundgesamtheit.
+>
+> *Dieselbe Bewegung wie bei `F05` weiter unten, nur andersherum* — dort verließ eine Datei
+> die Messung, hier kommt eine zurück. **Nichts ist nutzbarer geworden und nichts weniger;
+> die Grundgesamtheit hat sich bewegt.** Und die Zeilen `ableitbar 64 / tragend 986` im
+> Block darüber standen schon vorher so da: sie summierten sich zu 1050, während die
+> Schlusszeile 1028 sagte. *Ein Block, dessen Spalten nicht auf seine Summe gehen, ist
+> sechzehn Tage lang nicht nachgerechnet worden* (W10) — er geht seit heute wieder auf.
 
 > **~~1008~~ ~~1050~~ 1028 am Abend des 2026-08-31, und diesmal ist der ZÄHLER mitgestiegen.**
 > `beispiele/55`–`57` sind drei neue Dateien (die Quantorendomänen `chain`, `queue`,
