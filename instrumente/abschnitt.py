@@ -3,9 +3,9 @@
 
 `messung/RUECKLAUFWERTE.md` hat den leeren Baum ueber jeden Waechter gefahren und die
 Klasse gefunden, die er NICHT erreicht: eine Vorbedingung, die erst **mitten im Lauf**
-wegbricht. Gemessen wurden 249 Ausgangsstellen hinter dem jeweils ersten; das Sieb darunter
-(`pruefe-waechter.py`) laesst **94** uebrig, die eine Teilmessung hinterlassen, die wie eine
-ganze aussieht -- und **106**, die erreichbar sind, ohne dass irgendetwas kaputt ist.
+wegbricht. Gemessen wurden 251 Ausgangsstellen hinter dem jeweils ersten; das Sieb darunter
+(`pruefe-waechter.py`) laesst **92** uebrig, die eine Teilmessung hinterlassen, die wie eine
+ganze aussieht -- und **104**, die erreichbar sind, ohne dass irgendetwas kaputt ist.
 
 **Der Fall mit Datum.** `pruefe-emission.sh` starb am 2026-08-31 an `F06`s `N043` in der
 vierten von zehn Stufen, mit `exit 1`. Die Stufen 9 und 10 liefen nie, und keine Zeile sagte
@@ -39,9 +39,17 @@ war.
 
 **`fertig()` ist die einzige Zeile, die Urteilskraft braucht**, und sie ist notwendig: ein
 Waechter, der an seinem LETZTEN Ausgang mit `1` endet, hat alles gemessen, und ein Waechter,
-der am vorletzten mit `1` endet, nicht. Von aussen sieht beides gleich aus. *Wer sie
-vergisst, bekommt eine Warnung zu viel -- wer sie zu frueh setzt, eine zu wenig;* darum steht
-sie unmittelbar vor der Rueckgabe und nirgends sonst.
+der am vorletzten mit `1` endet, nicht. Von aussen sieht beides gleich aus.
+
+**Sie gehoert vor die URTEILSKETTE, nicht vor die letzte Rueckgabe** -- vor den letzten
+zusammenhaengenden Block aus `if …: … return`. Der erste Anlauf setzte sie vor die letzte
+Rueckgabe, und `pruefe-grammatiktafel.py` meldete daraufhin seinen VOLLSTAENDIGEN Befund als
+abgeschnitten: sein rotes Ende und sein gruenes sind zwei verschiedene Rueckgaben, und beide
+sind ganz. *Wer sie zu spaet setzt, bekommt eine Warnung zu viel -- wer sie zu frueh setzt,
+eine zu wenig.*
+
+Ein Waechter mit BETRIEBSARTEN traegt sie mehrfach: `mutiere-pruefer.py` dreimal, denn
+`--anker`, `--schnell` und der volle Lauf sind jeder fuer sich ein ganzer Lauf.
 
 **Und was diese Form NICHT tut** (W10): sie verhindert keinen Schnitt. Ein gedeckter Lauf
 bricht genauso mitten im Lauf ab -- **er sagt es nur.** Das ist der ganze Unterschied, und

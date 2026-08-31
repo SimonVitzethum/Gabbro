@@ -34,6 +34,12 @@ import subprocess
 import sys
 import tempfile
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
@@ -4127,11 +4133,17 @@ def main():
         print(f"\n== {len(MUTATIONEN) - len(tot)} von {len(MUTATIONEN)} Ankern greifen ==")
         for m, warum in tot:
             print(f"  !! {warum:<16} {m.name:<44} {m.pfad.name}")
+        # **`--anker` is a COMPLETE run of its own** -- not a cut. Both of its ends are the
+        # end of everything this mode set out to measure, so both declare it. *This is the
+        # one line `abschnitt.py` cannot derive: from outside, a mode's last exit and a
+        # truncated run's exit look exactly alike.*
         if tot:
             print(f"\n  {len(tot)} Mutationen messen NICHTS. Die Quote laeuft sonst ueber")
             print("  einer schrumpfenden Bezugsgroesse und liest sich wie Deckung.")
+            abschnitt.fertig()
             return 1
         print("  ALL PASS")
+        abschnitt.fertig()
         return 0
 
     # **The ANCHOR check runs first, and since 2026-08-31 that order carries an argument.**
@@ -4190,6 +4202,7 @@ def main():
         print("  GESCHEITERT: das Geruest faengt nicht einmal eine tote Bereichspruefung.")
         return 1
     if "--schnell" in sys.argv:
+        abschnitt.fertig()   # `--schnell` measures the scaffold, and it measured it.
         return 0
 
     print(f"\n== {len(MUTATIONEN)} Mutationen ==\n")
@@ -4238,8 +4251,9 @@ def main():
         print("\n  Eine ueberlebende Mutation heisst: die Regel koennte ausfallen, ohne dass")
         print("  eine einzige Probe faellt. Das ist genau die Richtung, in der am 2026-08-14")
         print("  zwoelf Loecher offenstanden.")
+    abschnitt.fertig()
     return 1 if ueberlebt else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

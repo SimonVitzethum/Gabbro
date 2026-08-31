@@ -3,6 +3,13 @@
 # ein Pruefer, der nicht fehlschlagen kann, ist kein Pruefer.
 set -uo pipefail
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.sh`.
+# **Armed HERE and not at the first `mktemp`**: two stage exits stand above that line, and a
+# notice that starts halfway down the file measures the second half. The later `trap`s
+# replace this one and call `abschnitt_ende` themselves.
+. "$(dirname "$0")/abschnitt.sh"
+trap abschnitt_ende EXIT
+
 # **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
 # Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
 # statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
@@ -55,7 +62,7 @@ if [ -n "$FEHLEND" ]; then
   exit 2
 fi
 
-echo "== Beispiele gegen dokumente/SYNTAX.md =="
+stufe "Beispiele gegen dokumente/SYNTAX.md"
 if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md && \
    pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md; then
   echo "  keine verbotene Form in Beispielen, keine zweite Schluesselwortsprache in Prosa"
@@ -83,7 +90,7 @@ if ! ebnf_geschlossen dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Grammat
 if ! ./instrumente/pruefe-wortschatz.py dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Wortschatz deckt die EBNF nicht) =="; exit 1; fi
 
 # --- Sprechprobe: der Pruefer MUSS bei jeder Verletzung fallen ---
-tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+tmp=$(mktemp -d); trap 'abschnitt_ende; rm -rf "$tmp"' EXIT
 n=0
 for gift in 'while (x) { }' 'let a = wirkung;' 'goto ende;' 'traverse t over s by decrement { }'; do
   printf '```gabbro\n%s\n```\n' "$gift" > "$tmp/g.md"
@@ -106,13 +113,13 @@ ebnf_geschlossen "$tmp/e.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: EBNF
 printf '```ebnf\na = "x" ;\n```\n' > "$tmp/eok.md"
 ebnf_geschlossen "$tmp/eok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: geschlossene EBNF fiel durch"; exit 2; }
 echo "Sprechprobe: $n Gifte in Beispielen gefangen, Prosa-Zweig spricht, Sauberes durchgelassen."
-echo "== SYNTAX: ALL PASS =="
+stufe "SYNTAX: ALL PASS"
 
 # **Null Warnungen, und zwar geprueft statt erinnert.** Dreimal in drei Laeufen habe ich
 # GROSSSCHREIBUNG in einen Testnamen geschrieben und die Warnung hinterher weggeraeumt --
 # beim dritten Mal war sie schon gepusht. Eine Warnung, die bei jedem Bau mitlaeuft, tarnt
 # die naechste echte; ein Fehler, den man dreimal macht, gehoert in die Waechterkette.
-echo "== Warnungen =="
+stufe "Warnungen"
 # **Mit Frist**, seit dem 2026-08-20: ein `cargo build`, der nicht endet, sieht in einer
 # Waechterkette aus wie einer, der noch baut. Am selben Tag standen deswegen einundzwanzig
 # `pruefe-emission.sh` nebeneinander. *Eine ueberschrittene Frist ist ein BEFUND, kein Warten.*
@@ -123,7 +130,7 @@ FRIST=${FRIST:-900}
 # **"keine"** und endet gruen. *Erfolg ohne Arbeit, dieselbe Klasse wie `isabelle build -D .`
 # ueber einer leeren Auswahl.* Also wird der Ruecklaufwert des Baus gelesen, nicht nur seine
 # Ausgabe -- und ein Bau, der nicht endete, ist ein ABBRUCH und kein sauberer Bau.
-BAULOG="$(mktemp)"; trap 'rm -rf "$tmp" "$BAULOG"' EXIT
+BAULOG="$(mktemp)"; trap 'abschnitt_ende; rm -rf "$tmp" "$BAULOG"' EXIT
 timeout "$FRIST" cargo build --tests > "$BAULOG" 2>&1
 BAURC=$?
 if [ "$BAURC" -ne 0 ]; then
@@ -134,13 +141,16 @@ if [ "$BAURC" -ne 0 ]; then
   echo "  hier bis heute aus wie ein sauberer Endzustand."
   exit 2
 fi
+# **From here on nothing more is measured** -- what follows is the verdict over what the
+# run above measured. Its non-zero exits are complete findings, not cuts.
+abschnitt_fertig
 W=$(grep -cE "^warning: " "$BAULOG" || true)
 if [ "$W" != "0" ]; then
   echo "  $W WARNUNG(EN) -- der Endzustand verlangt null:"
   # Aus dem Protokoll des EINEN Baus -- ein zweiter Lauf zeigte, was `cargo` beim
   # zweiten Mal noch sagt, und das ist nach einem gecachten Bau schlicht nichts.
   grep -E "^warning: " "$BAULOG" | head -5
-  echo "== SYNTAX: FEHLER (Warnungen im Bau) =="
+  stufe "SYNTAX: FEHLER (Warnungen im Bau)"
   exit 1
 fi
 echo "  keine"

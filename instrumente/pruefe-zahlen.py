@@ -46,6 +46,12 @@ import re
 import subprocess
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger als „laeuft".
 
@@ -1265,8 +1271,9 @@ def main():
     print("  Der README steht nicht in diesem Register, sondern in `pruefe-todo.py`.")
     print("  Zwei Register ueber derselben Sache sind W7.")
 
+    abschnitt.fertig()
     return 1 if befunde else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

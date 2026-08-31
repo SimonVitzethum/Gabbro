@@ -19,6 +19,12 @@ import re
 import subprocess
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
@@ -729,8 +735,9 @@ def main():
     for b in befunde:
         print(f"  {b}")
     print(f"== TODO: {len(befunde) + len(r_befunde)} BEFUNDE ==")
+    abschnitt.fertig()
     return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

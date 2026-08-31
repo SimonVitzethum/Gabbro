@@ -57,6 +57,12 @@ import pathlib
 import re
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 
 # **The file list was EIGHT files short, and the parser was among them** (2026-08-31).
@@ -683,8 +689,9 @@ def main():
     print("   Die Sprachflaeche von Gabbro ist englisch (SYNTAX.md, 2026-08-19).")
     print("   Quellkommentare und die Arbeitsdokumente sind es NICHT -- die Linie laeuft")
     print("   zwischen dem, was Gabbro sagt, und dem, was der Ordner ueber Gabbro sagt.")
+    abschnitt.fertig()
     return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

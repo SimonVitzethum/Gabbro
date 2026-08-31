@@ -29,6 +29,9 @@
 # 2026-08-20, where the deadline was there and the requirement was not met.
 set -euo pipefail
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.sh`.
+. "$(dirname "$0")/abschnitt.sh"
+
 # **`LC_ALL=C`, and it is not a nicety.** Foreign tools report in the user's locale, and a
 # `grep` written against the English wording then matches nothing. Same class as `W16`: a tool
 # that measures its own locale and looks plausible doing it.
@@ -36,7 +39,7 @@ export LC_ALL=C
 
 W="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'abschnitt_ende; rm -rf "$TMP"' EXIT
 
 GABBRO="$W/target/debug/gabbro"
 LEANBIN="${LEANBIN:-$HOME/.elan/bin/lean}"
@@ -45,20 +48,20 @@ MODEL="${MODEL:-$W/programmlogik}"
 DEADLINE=120
 
 if [ ! -x "$GABBRO" ]; then
-    echo "== LEAN PROOF: NO GABBRO -- it is built on ki-pc-fisch-101 (CLAUDE.md) =="
+    stufe "LEAN PROOF: NO GABBRO -- it is built on ki-pc-fisch-101 (CLAUDE.md)"
     exit 2
 fi
 if [ ! -x "$LEANBIN" ] || [ ! -x "$LAKE" ]; then
-    echo "== LEAN PROOF: NO LEAN at $LEANBIN -- NOTHING measured =="
+    stufe "LEAN PROOF: NO LEAN at $LEANBIN -- NOTHING measured"
     echo "  A missing tool is not a passed test (W1)."
     exit 2
 fi
 
 # **The meaning of a body must be built before any goal can cite it.**
-echo "== Building the meaning of a body =="
+stufe "Building the meaning of a body"
 if ! (cd "$MODEL" && timeout "$DEADLINE" "$LAKE" build Gabbro.Body > "$TMP/lake.log" 2>&1); then
     cat "$TMP/lake.log"
-    echo "== LEAN PROOF: Gabbro.Body does not build -- the MODEL is red, not the product =="
+    stufe "LEAN PROOF: Gabbro.Body does not build -- the MODEL is red, not the product"
     # The sentence says it: the model, not the product. NOTHING was measured about Gabbro.
     exit 2
 fi
@@ -123,7 +126,7 @@ LEAN
                 [ "$case_" = poison ] && poison=1
             fi
         done
-        echo "== Speech test -- $shape =="
+        stufe "Speech test -- $shape"
         echo "  a true theorem goes through: $([ $good   -eq 1 ] && echo yes || echo NO)"
         echo "  a false theorem falls:       $([ $poison -eq 1 ] && echo yes || echo NO)"
         { [ $good -eq 1 ] && [ $poison -eq 1 ]; } || ok=0
@@ -132,7 +135,7 @@ LEAN
 }
 
 if ! speech_test; then
-    echo "== LEAN PROOF: this guardian measures nothing -- Lean does not answer as expected =="
+    stufe "LEAN PROOF: this guardian measures nothing -- Lean does not answer as expected"
     exit 2
 fi
 
@@ -148,13 +151,13 @@ for e in "$W"/beispiele/*.gab "$W"/messung/*/*.gab; do
     fi
     name="$(printf '%s' "$out" | sed -n 's/^namespace GabbroDuty\.\(.*\)$/\1/p')"
     if [ -z "$name" ]; then
-        echo "== LEAN PROOF: ${e#"$W"/} yields no module =="
+        stufe "LEAN PROOF: ${e#"$W"/} yields no module"
         exit 1
     fi
     # **Two units with the same stem overwrote each other silently**, and the second count
     # would then be one nobody built. Same trap as in the Isabelle guardian.
     if [ -e "$TMP/$name.lean" ]; then
-        echo "== LEAN PROOF: two units are both called $name =="
+        stufe "LEAN PROOF: two units are both called $name"
         exit 1
     fi
     printf '%s\n' "$out" > "$TMP/$name.lean"
@@ -167,7 +170,7 @@ done
 # without a single theorem builds green and measures nothing -- exactly the class W1 stands
 # against: empty and passed look the same.
 if [ "$GOALS" -eq 0 ]; then
-    echo "== LEAN PROOF: $UNITS modules, NOT ONE theorem -- nothing measured =="
+    stufe "LEAN PROOF: $UNITS modules, NOT ONE theorem -- nothing measured"
     echo "  Rule A demands that at least one GENERATED obligation really goes through."
     exit 2
 fi
@@ -192,23 +195,26 @@ for name in "${NAMES[@]}"; do
     fi
 done
 
+# **From here on nothing more is measured** -- every module has been asked. What follows is
+# the verdict, and its non-zero exits are complete answers rather than cuts.
+abschnitt_fertig
 if [ "$FRISTFAELLE" -ne 0 ]; then
     echo
-    echo "== LEAN PROOF: ABBRUCH -- $FRISTFAELLE module(s) hit the $DEADLINE s deadline =="
+    stufe "LEAN PROOF: ABBRUCH -- $FRISTFAELLE module(s) hit the $DEADLINE s deadline"
     echo "  For those, NOTHING was measured. A hang looks like \"still running\", not like a"
     echo "  finding -- and a module nobody asked is not a module that answered no."
     exit 2
 fi
 if [ "$RED" -ne 0 ]; then
     echo
-    echo "== LEAN PROOF: RED -- $RED module(s) do not go through =="
+    stufe "LEAN PROOF: RED -- $RED module(s) do not go through"
     echo "  And that is the right colour: the emitter refuses no obligation it cannot prove"
     echo "  -- it states it. A goal that falls is a finding, not a fault of this guardian."
     exit 1
 fi
 
 echo
-echo "== LEAN PROOF: $GOALS generated obligation(s) in $UNITS modules, LEAN GREEN =="
+stufe "LEAN PROOF: $GOALS generated obligation(s) in $UNITS modules, LEAN GREEN"
 echo "   And what that does NOT mean: that the register is covered. It means two things --"
 echo "   that every generated module IS valid Lean, including the one that consists purely"
 echo "   of named refusals, and that the obligations standing CLOSED hold. How many those"

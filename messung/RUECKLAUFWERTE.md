@@ -1,13 +1,15 @@
-# Die Rücklaufwerte der ~~28~~ **46** Wächter — was jeder Wert BEDEUTET
+# Die Rücklaufwerte der ~~28~~ ~~46~~ **50** Wächter — was jeder Wert BEDEUTET
 
 *Gemessen 2026-08-31. Grundlage: der Quelltext jedes Wächters und ein Lauf jedes Wächters
 über einem **leeren Baum** (`instrumente/` kopiert, sonst nichts) — die Messung, die
 „leere Grundgesamtheit" von „nichts gefunden" trennt.*
 
-> **Die Tafel unten führt 28, die Abnahme fährt 46** *(2026-08-31)*. An diesem Tag sind die
-> 18 `zaehle-*` dazugekommen; ihre eigene Tafel steht unter *Die achtzehn Zähler*. Die
-> Nummerierung der großen Tafel bleibt bei 28, weil sie den Stand beschreibt, an dem diese
-> Messung angefangen hat.
+> **Die Tafel unten führt 28, die Abnahme fährt ~~46~~ 50** *(2026-08-31)*. An diesem Tag
+> sind die 18 `zaehle-*` dazugekommen; ihre eigene Tafel steht unter *Die achtzehn Zähler*.
+> Am Abend kamen `pruefe-grammatiktafel.py`, `zaehle-absagen.py`, `zaehle-gifttreffer.py` und
+> `pruefe-uebersetzerfamilie.py` hinzu — **die Zahl steigt, weil der GEGENSTAND wächst**, und
+> das ist die eine erlaubte Richtung für eine Ratsche. Die Nummerierung der großen Tafel
+> bleibt bei 28, weil sie den Stand beschreibt, an dem diese Messung angefangen hat.
 
 > **Ein Werkzeug, das nichts gemessen hat, darf nicht so aussehen wie eines, das etwas
 > gefunden hat.** In der Nacht auf den 2026-08-31 hat dieser Unterschied zweimal eine Stunde
@@ -247,7 +249,7 @@ nachsehen muss, und sie ist eine OBERE Schranke. *Sie verpflichtet, sie spricht 
 schreibt dazu, was er nicht mehr gemessen hat. `pruefe-emission.sh` hat es an diesem Tag
 nicht getan, und der Preis waren zwei Wochen.
 
-### Das Sieb unter der Fläche — 251 sind die Fläche, **94** sind die Gefahr
+### Das Sieb unter der Fläche — 251 sind die Fläche, **92** sind die Gefahr
 
 *Gemessen 2026-08-31 über `283cb26`, abgelesen mit `./instrumente/pruefe-waechter.py`
 (Abschnitt „Davon eine TEILMESSUNG"), Sprechprobe in vier Richtungen im selben Lauf.*
@@ -259,7 +261,7 @@ Schnitten, und jeder nimmt Stellen heraus, die **nicht** die Gefahr sind:
 | Schnitt | wie viele fallen | warum sie nicht die Gefahr sind |
 |---|---:|---|
 | **beendet den Lauf gar nicht** | 3 | ein `return 1` in einem HELFER ist ein *Wert*, den der Aufrufer liest. Kein Ausgang. |
-| **endet mit `2`** | 142 | das ist ein ABBRUCH. Der Wächter sagt „nichts gemessen", die Abnahme druckt ihn mit eigenem Wort und eigener Farbe. **Dorthin kommt nur, wer etwas kaputt hat.** |
+| **endet mit `2`** | 144 | das ist ein ABBRUCH. Der Wächter sagt „nichts gemessen", die Abnahme druckt ihn mit eigenem Wort und eigener Farbe. **Dorthin kommt nur, wer etwas kaputt hat.** |
 | **keine Ausgabe auf beiden Seiten** | 12 | ohne Ausgabe davor gibt es keine halbe Messung zu verwechseln; ohne Ausgabe dahinter wurde nichts übersprungen. |
 
 Was übrigbleibt:
@@ -267,17 +269,108 @@ Was übrigbleibt:
 ```
 251  Ausgangsstellen hinter dem jeweils ersten          (die FLAECHE)
 248  beenden den Lauf wirklich
-106  enden mit 1 -- ERREICHBAR, OHNE DASS ETWAS KAPUTT IST
- 94  tragen Ausgabe auf BEIDEN Seiten                   (die GEFAHR)
- 45  davon in `pruefe-emission.sh`, das seit heute `ABGESCHNITTEN in:` druckt
- 49  bleiben offen, in 25 Dateien                       (die ARBEITSLISTE)
+104  enden mit 1 -- ERREICHBAR, OHNE DASS ETWAS KAPUTT IST
+ 92  tragen Ausgabe auf BEIDEN Seiten                   (die GEFAHR)
 ```
 
+Beim ersten Ablesen waren es **106** und **94**; zwei Stellen sind seither von „Befund" auf
+„Abbruch" gewandert (siehe unten), und das ist die richtige Richtung. Gedeckt waren damals
+**45** — alle in `pruefe-emission.sh` —, **49 standen offen, in 25 Dateien.**
+
+**Und am Abend desselben Tages: 49 → 19 → 0.**
+
+| Schritt | offen | wodurch |
+|---|---:|---|
+| gemessen | 49 | — |
+| `instrumente/abschnitt.py` | 19 | 19 Python-Wächter, 30 Stellen |
+| `instrumente/abschnitt.sh` | 2 | 5 Shell-Wächter, 17 Stellen |
+| `zaehle-pflichten.py` **geheilt** | **0** | die zwei brauchten die Form gar nicht |
+
+Die letzten zwei sind der interessante Fall: **zwei gefallene RÜCKWÄRTSPROBEN, die mit `1`
+endeten.** Eine gefallene Probe hat *nichts* gemessen — ihr Ausgang ist ein `2`, und dann
+fällt sie aus der gefährlichen Menge heraus, ohne dass sie irgendetwas ansagen müsste. Die
+sechste Forderung hatte die Vorwärtsrichtung **beim Namen** in ihrer Wortliste
+(`SPRECHPROBE GESCHEITERT`) und die Rückwärtsrichtung nie gesehen. *Eine Regel, die die
+Wörter aufzählt, die sie schon gesehen hat, misst die Wörter, die sie schon gesehen hat* —
+gefunden hat es dieses Sieb, nicht jenes Muster.
+
+Damit stehen **104** erreichbare Ausgänge und **92** gefährliche (zwei sind von „Befund" auf
+„Abbruch" gewandert, und das ist die richtige Richtung). `MARKE_TEILMESSUNG` steht auf **0**.
+
+> **Und 0 ist keine Ziellinie.** Eine gedeckte Stelle schneidet den Lauf genauso — *sie sagt
+> es nur*, und die Abnahme druckt sie als `TEILMESSUNG` statt als Befund. Gemessen ist, ob
+> der Schnitt ANGESAGT wird, nie, ob er richtig ist (W10).
+
+### Die Form: das WO kommt aus der eigenen Ausgabe
+
+    import abschnitt
+
+    def main():
+        ...
+        abschnitt.fertig()             # ab hier wird nichts mehr gemessen
+        return 1 if befunde else 0
+
+    if __name__ == "__main__":
+        sys.exit(abschnitt.fahre(main))
+
+`fahre()` legt sich um `sys.stdout` und merkt sich die letzte `== … ==`-Zeile. **Eine Marke
+je Stufe wäre ein zweites Register über derselben Sache** (W7) — und sie veraltet lautlos,
+genau wie die Liste, die Stufe 9 einmal war. *Jeder Wächter dieses Ordners druckt seine
+Abschnitte ohnehin.*
+
+**Die Schale kann das nicht, und darum sagt sie es ausdrücklich.** `abschnitt.sh` bietet
+`stufe "…"` statt `echo "== … =="`: eine Schale kann ihre eigene Ausgabe nicht durch ein
+`tee` schicken und dabei sicher sein, dass es geleert ist, wenn die `EXIT`-Falle läuft. *Ein
+Mechanismus, der manchmal die falsche Stufe meldet, wäre dieselbe Klasse wie das, wogegen er
+gebaut ist.* Drei Änderungen je Wächter, keine davon je Stufenrumpf: die Quelle, die Falle
+(`trap 'abschnitt_ende; …' EXIT` — und `abschnitt_ende` **zuerst**, weil es `$?` liest), und
+`abschnitt_fertig` vor dem letzten, vollständigen Ausgang.
+
+**Gedeckt heißt VERDRAHTET, nicht geladen.** `SAGT_WO` verlangt `abschnitt.fahre(` oder eine
+`EXIT`-Falle auf `abschnitt_ende`; ein bloßes `import abschnitt` oder `. abschnitt.sh` zählt
+nicht. *Eine Regel, die die Einfuhr zählt, zählt die Absicht.*
+
+> **Und was die Deckungszahl NICHT sagt: sie ist je DATEI gemessen, nicht je Stelle.** Eine
+> Falle, die auf halber Höhe der Datei scharf wird, deckt die Ausgänge darüber nicht — und
+> das Sieb sieht es nicht. Nachgesehen wurde deshalb von Hand: `pruefe-syntax.sh` und
+> `pruefe-sonden.sh` hatten je einen Ausgang **über** ihrer Falle, und beide sind
+> nachgezogen (die Falle steht jetzt unmittelbar hinter der Quelle). *Das ist eine gefundene
+> Stelle und keine gemessene Menge — die Klasse bleibt offen.*
+
+**`fertig()` ist die einzige Zeile, die Urteilskraft braucht**, und sie ist unentbehrlich:
+ein Wächter, der an seinem LETZTEN Ausgang mit `1` endet, hat alles gemessen; einer, der am
+vorletzten mit `1` endet, nicht. **Von außen sieht beides gleich aus.** `mutiere-pruefer.py`
+trägt sie deshalb dreimal — einmal je Betriebsart (`--anker`, `--schnell`, der volle Lauf),
+weil jede für sich ein ganzer Lauf ist.
+
+Sprechprobe in fünf Richtungen (`python3 instrumente/abschnitt.py`, und `pruefe-waechter.py`
+fährt sie mit, weil kein Sammellauf ein Modul ohne `pruefe-`-Namen erreicht): ein Ausstieg
+vor dem Ende **wird** angesagt, ein vollständiger Lauf mit `1` **nicht**, ein grüner ohne
+`fertig()` auch nicht, ein Absturz **doch** — und die eigene Ausgabe geht unverändert durch.
+Die Schale bekommt zwei eigene Richtungen im selben Lauf, an einem erfundenen Skript.
+
+### Und die Abnahme trennt es vom Befund — die vierte Marke
+
+`abnahme.py` kannte `gruen · ROT · ABBRUCH · NICHT FAHRBAR · ausgelassen`. Am 2026-08-31 kam
+**`TEILMESSUNG`** dazu, und sie ist eine eigene MARKE, keine eigene Farbe:
+
+| | |
+|---|---|
+| `ABBRUCH` | er hat **nichts** gemessen. Er zählt nicht zur Arbeitsmenge. |
+| **`TEILMESSUNG`** | er hat **etwas** gemessen, aber nicht alles. Er zählt zur Arbeitsmenge und macht den Lauf rot — **und die Zahl der Befunde daneben ist eine untere Schranke.** |
+| `ROT` | er hat **alles** gemessen und etwas gefunden. |
+
+Ohne sie hätte die Abnahme `pruefe-emission.sh`s Tod in Stufe 4 als `ROT` mit der
+Zusammenfassung der vierten Stufe gezeigt — *dieselbe Zeile, dieselbe Farbe und dieselbe
+Form wie ein Wächter, der zu Ende gemessen hat.* Die Sprechprobe fährt beide Richtungen: ein
+abgeschnittener Lauf **muss** als `TEILMESSUNG` erscheinen, **und ein voller Befund muss ein
+Befund bleiben** — sonst wäre die Marke eine, die jedes Rot einfärbt.
+
 **Die beiden Zahlen beantworten zwei verschiedene Fragen, und die zweite ist die, die zählt.**
-*Erreichbar, ohne dass etwas kaputt ist* sind **106** — ein Befund ist eine Aussage über den
+*Erreichbar, ohne dass etwas kaputt ist* sind **104** — ein Befund ist eine Aussage über den
 BAUM, und der Baum darf einen Fehler haben; es braucht kein fehlendes Werkzeug und keine
 gefallene Probe, um dort hinzukommen. *Eine Teilmessung, die wie eine ganze aussieht*, sind
-**94** — und das ist die gefährliche Menge, weil vor der Stelle eine halbe Messung auf dem
+**92** — und das ist die gefährliche Menge, weil vor der Stelle eine halbe Messung auf dem
 Schirm steht und dahinter das, was nie lief.
 
 > **Der Rücklaufwert kann es nicht sagen, und das ist der ganze Punkt.** `2` heißt „nichts
@@ -286,8 +379,9 @@ Schirm steht und dahinter das, was nie lief.
 > **Die drei Klassen der Tafel oben kennen „die Hälfte gemessen" nicht.**
 
 Und die Deckung ist keine Heilung: eine gedeckte Stelle bricht genauso mitten im Lauf ab —
-sie **sagt es nur**. `MARKE_TEILMESSUNG` in `pruefe-waechter.py` steht auf 49 und darf nur
+sie **sagt es nur**. `MARKE_TEILMESSUNG` in `pruefe-waechter.py` steht auf 0 und darf nur
 fallen.
+
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister
 
@@ -322,7 +416,7 @@ Angabe daneben.
 |---|---|---|
 | echtes Repository | ok | ok |
 | `rsync`-Kopie ohne `.git` | **SPRECHPROBE GESCHEITERT**, `2` | ok; `Baum HIER: unbekannt` als Angabe |
-| gar kein `git` | Traceback aus `FileNotFoundError`, `1` | `ABBRUCH: der Baumstand ist NICHT GEMESSEN`, `2` |
+| gar kein `git` | Traceback aus `FileNotFoundError`, `1` *(am Quelltext abgelesen, nicht gefahren)* | `ABBRUCH: der Baumstand ist NICHT GEMESSEN`, `2` *(gefahren mit leerem `PATH`)* |
 
 Die dritte Zeile ist die, auf die es ankommt: **ohne `git` fallen alle drei Zustände auf
 `unbekannt` zusammen**, und eine Probe mit einem einzigen erreichbaren Ausgang misst nichts.

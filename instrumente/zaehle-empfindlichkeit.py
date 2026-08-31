@@ -54,6 +54,12 @@ import pathlib
 import shutil
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 # **Fifth requirement: the LOCALE.** The compiler gate below reports through `cc`, and under
 # `de_DE.UTF-8` it says `Neudefinition` where this run expects `redefinition` -- a tool that
 # measures its own locale looks plausible while doing it (W16).
@@ -114,6 +120,7 @@ def main():
     print(f"   {len(uebersetzt)} Dateien tragen die Karte; {len(faellt_durch)} emittieren und")
     print("   fallen am Uebersetzer -- deren Woerter zaehlen hier NICHT als gedeckt.")
 
+    abschnitt.fertig()
     if n1 > _gt.MARKE_ALLEIN:
         print()
         print(f"! EMPFINDLICHKEIT GESTIEGEN: {n1} statt {_gt.MARKE_ALLEIN}. Jedes dieser")
@@ -142,4 +149,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

@@ -46,10 +46,13 @@ kann. Der Satz war eine Behauptung, und sie wurde gemessen:
 Was draussen bleibt, steht in `pruefe-waechter.py:OHNE_URTEIL`, mit Namen und Grund, und
 wird hier mit seiner Zahl GEDRUCKT.
 
-FUENF URTEILE, UND DAS DRITTE IST DER GRUND FUER DIESE DATEI
+SECHS URTEILE, UND ZWEI DAVON SIND DER GRUND FUER DIESE DATEI
 --------------------------------------------------------------
     gruen             Ruecklaufwert 0 -- gemessen, kein Befund
-    ROT               Ruecklaufwert 1 -- gemessen, und es steht etwas offen
+    ROT               Ruecklaufwert 1 -- ALLES gemessen, und es steht etwas offen
+    TEILMESSUNG       er ist VOR seiner letzten Messung ausgestiegen und sagt, WO.
+                      **Etwas gemessen, aber nicht alles** -- die Zahl der Befunde
+                      daneben ist damit eine UNTERE Schranke. (2026-08-31, W26)
     ABBRUCH           er hat es versucht und konnte nicht: Ruecklaufwert 2, eine
                       ueberschrittene Frist, ein Absturz. **Es wurde NICHTS gemessen.**
     NICHT FAHRBAR     sein GEGENSTAND ist nicht hier (fremder Korpus) oder er laesst sich
@@ -140,6 +143,29 @@ SCHNELL_TEIL = {"mutiere-pruefer.py": ["--anker"]}
 # ONE signal that separates "did not run" from "found something".
 ABSTURZ = "Traceback (most recent call last)"
 
+# **THE HALF-MEASUREMENT -- the fourth mark, and it took two weeks to earn its name.**
+#
+# `pruefe-emission.sh` died on 2026-08-31 at `F06`'s `N043` in the fourth of ten stages with
+# `exit 1`. Stages 9 and 10 never ran; two findings sat behind the cut unseen for two weeks.
+# **This run would have shown it as `ROT` with the fourth stage's summary beside it** -- the
+# same line, the same colour and the same shape as a guard that had measured everything and
+# found something.
+#
+# > *An empty population is a green judgement over nothing (W17). A TRUNCATED one looks like
+# > a judgement over everything.* The three marks knew "nothing measured"; they did not know
+# > "half measured".
+#
+# The return code cannot say it: `1` means *finding*, and a finding in stage 4 is at the same
+# time an abort for stages 5 to 10. **So the guard says it in its output**, and this run
+# reads it -- `pruefe-emission.sh` through its own `trap`, every Python guard through
+# `instrumente/abschnitt.py`.
+#
+# **It is a separate MARK, not a separate colour.** A truncated run has measured something,
+# so it is not an `ABBRUCH`; and it has not measured everything, so its finding count is a
+# lower bound. `messung/RUECKLAUFWERTE.md` counts the surface (251 exit sites behind a first
+# one) and the danger underneath it (94 that leave a partial measurement looking whole).
+SCHNITT = "ABGESCHNITTEN in:"
+
 
 def besetzung(wurzel):
     """Every guardian in `wurzel` -- from the DIRECTORY, never from a list in here.
@@ -217,6 +243,17 @@ def fahre_einen(p, voll, arbeitsverzeichnis):
         roh = r.stderr
     kopf = [z for z in roh.splitlines() if z.strip()]
     schluss = kopf[-1].strip()[:80] if kopf else ""
+    # **The cut is read from the OUTPUT, and it overrides the last line as the remark.**
+    # Without this the announcement's closing line would replace the finding's summary --
+    # the guard would have said where it stopped and this run would have printed a pointer
+    # to a document instead.
+    #
+    # **And only over a FINDING.** An abort's own refusal is the stronger statement -- it
+    # says nothing was measured at all, and the cut notice must not push it out of the line.
+    schnitt = next((z.strip() for z in reversed(roh.splitlines()) if SCHNITT in z), None)
+    if schnitt and marke == "ROT":
+        marke = "TEILMESSUNG"
+        schluss = schnitt.strip("= ").strip()[:80]
     if marke == "ABBRUCH" and r.returncode != 2:
         nachsatz = "; ".join(x for x in (f"beendet mit {r.returncode} -- kein Urteil",
                                          nachsatz) if x)
@@ -248,12 +285,16 @@ def urteil(ergebnisse):
     """
     gruen = sum(1 for e in ergebnisse if e[1] == "gruen")
     rot = sum(1 for e in ergebnisse if e[1] == "ROT")
+    # **A truncated run counts among those that MEASURED, and among the red ones.** It saw
+    # something and it found something -- it merely did not see everything, and that is why
+    # it gets its own line and its own count instead of its own colour.
+    teil = sum(1 for e in ergebnisse if e[1] == "TEILMESSUNG")
     ab = sum(1 for e in ergebnisse if e[1] == "ABBRUCH")
     nf = sum(1 for e in ergebnisse if e[1] == "NICHT FAHRBAR")
     aus = sum(1 for e in ergebnisse if e[1] == "ausgelassen")
-    gemessen = gruen + rot
-    code = 2 if (ab or gemessen == 0) else (1 if rot else 0)
-    return code, gemessen, gruen, rot, ab, nf, aus
+    gemessen = gruen + rot + teil
+    code = 2 if (ab or gemessen == 0) else (1 if (rot or teil) else 0)
+    return code, gemessen, gruen, rot, ab, nf, aus, teil
 
 
 def sprechprobe():
@@ -281,13 +322,21 @@ def sprechprobe():
             "echo 'ABBRUCH: der Korpus ist leer -- es wurde NICHTS gemessen.' >&2\nexit 2\n")
         (dp / "pruefe-sturz.py").write_text(
             "#!/usr/bin/env python3\nimport sys\nsys.argv[1]\n")
+        # **The fourth mark, and BOTH directions.** A guard that stops before its last
+        # measurement and says so must not read like one that measured everything; and a
+        # guard that measured everything and found something must stay a plain finding.
+        # *One direction alone passes with a mark that calls every red a half-measurement.*
+        (dp / "pruefe-halb.sh").write_text(
+            "#!/bin/sh\necho '== Stufe 4: der Differenztest =='\n"
+            "echo '  F06 faellt an N043'\n"
+            "echo '== ABGESCHNITTEN in: Stufe 4 -- Ruecklaufwert 1 =='\nexit 1\n")
         for f in dp.iterdir():
             f.chmod(0o755)
         erg = fahre(dp, voll=True, arbeitsverzeichnis=dp)
-        rc, gemessen, gruen, rot, ab, nf, _ = urteil(erg)
+        rc, gemessen, gruen, rot, ab, nf, _, teil = urteil(erg)
         marken = {n: m for n, m, *_ in erg}
         bem = {n: b for n, _, _, _, b in erg}
-        proben.append(("vier Waechter gefunden und gefahren", len(erg) == 4))
+        proben.append(("fuenf Waechter gefunden und gefahren", len(erg) == 5))
         proben.append(("der gruene ist gruen", marken.get("pruefe-gruen.sh") == "gruen"))
         proben.append(("der rote ist ROT", marken.get("pruefe-rot.sh") == "ROT"))
         # **The direction this whole mark exists for.** An abort must not be booked as a
@@ -298,8 +347,14 @@ def sprechprobe():
                        "es wurde NICHTS gemessen" in bem.get("pruefe-halt.sh", "")))
         proben.append(("der abstuerzende faellt als ABBRUCH auf",
                        marken.get("pruefe-sturz.py") == "ABBRUCH"))
-        proben.append(("nur zwei von vier haben ueberhaupt GEMESSEN",
-                       gemessen == 2 and gruen == 1 and ab == 2 and nf == 0))
+        proben.append(("der abgeschnittene ist TEILMESSUNG und kein blosser Befund",
+                       marken.get("pruefe-halb.sh") == "TEILMESSUNG" and rot == 1))
+        proben.append(("und er nennt die STELLE, nicht die letzte Zeile davor",
+                       "Stufe 4" in bem.get("pruefe-halb.sh", "")))
+        proben.append(("der VOLLE Befund bleibt ein Befund -- die Marke faellt nicht ueberall",
+                       marken.get("pruefe-rot.sh") == "ROT"))
+        proben.append(("drei von fuenf haben ueberhaupt GEMESSEN",
+                       gemessen == 3 and gruen == 1 and ab == 2 and nf == 0))
         # **Both directions of the return code**, because one alone passes with a mark that
         # calls everything red: an abort ends with 2, a mere finding with 1.
         proben.append(("ein Abbruch macht den Lauf rot -- mit 2, nicht mit 1", rc == 2))
@@ -339,11 +394,11 @@ def main():
         rcs = "" if rc is None else f"[{rc}]"
         print(f"  {marke:<14} {name:<26} {dauer:6.1f} s {rcs:<4} {bem}")
 
-    code, gemessen, gruen, rot, ab, nf, aus = urteil(erg)
+    code, gemessen, gruen, rot, ab, nf, aus, teil = urteil(erg)
 
     print()
     print(f"== Arbeitsmenge: {gemessen} von {len(alle)} Waechtern haben GEMESSEN -- "
-          f"{gruen} gruen, {rot} ROT ==")
+          f"{gruen} gruen, {rot} ROT, {teil} TEILMESSUNG ==")
     print(f"   {ab} ABBRUCH, {nf} nicht fahrbar, {aus} ausgelassen -- **die drei haben")
     print("   NICHTS gemessen und stehen darum nicht in der Zahl davor.**")
 
@@ -400,13 +455,28 @@ def main():
         print("   gefunden haetten, weiss niemand, und die Zahl der Befunde daneben ist")
         print("   damit eine untere Schranke und kein Stand. *Erst die Messapparatur, dann")
         print("   der Baum.*")
+    # **The half-measurement gets its own block, between the abort and the finding.**
+    # It measured something, so it is not an abort; it did not measure everything, so the
+    # findings beside it are a LOWER BOUND. *A run that measured half must not look like one
+    # that measured all of it.*
+    if teil:
+        print(f"\n! {teil} Waechter haben nur die HAELFTE gemessen -- sie sind VOR ihrer")
+        print("  letzten Messung ausgestiegen und sagen, WO:")
+        for name, marke, rc, _, bem in erg:
+            if marke == "TEILMESSUNG":
+                print(f"   {name:<26} [{rc}]  {bem}")
+        print("   **Ihr Ruecklaufwert sagt `Befund`, und er ist zugleich ein Abbruch fuer")
+        print("   alles dahinter.** Was hinter dem Schnitt stand, wurde weder bejaht noch")
+        print("   verneint -- die Zahl der Befunde ist damit eine untere Schranke. Am")
+        print("   2026-08-31 waren es zwei Befunde und zwei Wochen (`pruefe-emission.sh`,")
+        print("   Stufe 4 von 10). *Erst zu Ende messen, dann den Baum lesen.*")
     if rot:
-        wort = "und ausserdem" if ab else "! ABNAHME ROT:"
+        wort = "und ausserdem" if (ab or teil) else "! ABNAHME ROT:"
         print(f"\n{wort} {rot} von {gemessen} messenden Waechtern melden einen Befund.")
         for name, marke, rc, _, bem in erg:
             if marke == "ROT":
                 print(f"   {name:<26} [{rc}]  {bem}")
-    if not ab and not rot:
+    if not ab and not rot and not teil:
         if nf:
             print(f"\n  ABNAHME GRUEN MIT LUECKE: {nf} Waechter sind nicht gefahren.")
         else:

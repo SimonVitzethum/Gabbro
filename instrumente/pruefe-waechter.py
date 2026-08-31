@@ -189,6 +189,13 @@ ABSAGEWORT = re.compile(
     r"ABBRUCH|ABORT:|KEIN LAUF|NICHTS gemessen|NICHTS geprueft|NICHTS an ihnen|"
     r"NOTHING measured|nothing measured|measures nothing|misst NICHTS|misst nicht\b|"
     r"SPRECHPROBE GESCHEITERT|[Ss]prechprobe.*GESCHEITERT|OHNE NACHWEIS|"
+    # **Any PROBE that falls, not just the one spelled `SPRECHPROBE`** (2026-08-31).
+    # The list named the forward direction by name, and `zaehle-pflichten.py` prints
+    # `RUECKWAERTSPROBE UNTAUGLICH` and `RUECKWAERTSPROBE GESCHEITERT` and ends both with
+    # `1`. **Two fallen probes reading as findings, inside the very requirement built
+    # against that** -- found by the cut sieve, not by this pattern. *A rule that lists the
+    # words it has already seen measures the words it has already seen.*
+    r"PROBE\b[^\n]*\b(?:GESCHEITERT|UNTAUGLICH)\b|"
     r"KEIN CC|KEIN GABBRO|NO GABBRO|NO LEAN|KEIN ISABELLE|Zaehlung misst|UEBERSEHEN")
 # **The CALL SITE, not the word** -- `print(` has to BEGIN the statement. The first version
 # searched for it anywhere in the line, and this guardian promptly reported itself: the
@@ -558,7 +565,13 @@ def sprechprobe_schnitt():
 #
 # > *An abort names its reason (that is the third class of the table). A cut has to name its
 # > PLACE -- the reason is already printed, and it is a finding.*
-SAGT_WO = re.compile(r"ABGESCHNITTEN")
+# Three shapes count as covered, and each one is the WIRING, never the mere presence of the
+# helper: the word itself (a guard carrying its own `trap`, as `pruefe-emission.sh` does),
+# `abschnitt.fahre(` (Python, the wrapper around `main`), or an `EXIT` trap that calls
+# `abschnitt_ende` (shell). **`import abschnitt` or `. abschnitt.sh` alone is NOT enough** --
+# a tool that loads the helper and never hands its run to it announces nothing, and would
+# otherwise read as covered. *A rule that counts the import counts the intention.*
+SAGT_WO = re.compile(r"ABGESCHNITTEN|abschnitt\.fahre\(|trap [^\n]*abschnitt_ende")
 
 # **WHO READS `git` -- AND WHAT DOES HE DO WITHOUT A REPOSITORY?**
 # ------------------------------------------------------------------
@@ -677,9 +690,19 @@ def teilmessungen(pfade):
 # **The ratchet over the working list -- it may only FALL.**
 # Measured 2026-08-31 over `283cb26`: 249 sites, of which 246 end the run, 106 leave with
 # code 1 (reachable with nothing broken), 94 carry output on both sides -- and 45 of those
-# sit in `pruefe-emission.sh`, which prints `ABGESCHNITTEN in:` since that same day.
+# sat in `pruefe-emission.sh`, which prints `ABGESCHNITTEN in:` since that same day.
 # **49 stayed open, in 25 files.**
-MARKE_TEILMESSUNG = 49
+#
+# **Same evening: 49 -> 19 -> 0.** `abschnitt.py` gave the 19 Python guards the same form,
+# `abschnitt.sh` gave it to the five shell guards, and the last two places -- two fallen
+# BACKWARD probes in `zaehle-pflichten.py` that ended with `1` -- turned out not to need the
+# form at all: *a fallen probe measured nothing, and its exit is a `2`.* Requirement six had
+# listed the forward direction by name and never saw them; this sieve did.
+#
+# **The ratchet stands at 0, and that is not a finish line.** A covered site still cuts the
+# run -- it merely SAYS so, and `abnahme.py` prints it as `TEILMESSUNG` instead of as a
+# finding. What is measured here is whether the cut is announced, never whether it is right.
+MARKE_TEILMESSUNG = 0
 
 
 # **The speech test of the sieve, in FOUR directions.** Three cuts, and each has to bite on
@@ -730,6 +753,49 @@ def sprechprobe_git():
          git_ohne_riegel(GIT_ZU) == []),
         ("`git status` in einem ABSAGETEXT ist keine Aufrufstelle",
          git_ohne_riegel(GIT_PROSA) == []),
+    ]
+
+
+# **And the SHELL half gets driven too** -- `abschnitt.sh` is sourced by five guardians and
+# reached by no collective run of its own. *A tool nobody drives is indistinguishable from
+# one that does not exist*, and here it would be worse than absent: a silent `abschnitt_ende`
+# would let five guardians read as covered while announcing nothing.
+#
+# **Built line by line, every line BEGINNING with a quote** -- and that is not style. A
+# fixture written as a block string puts a bare `exit 1` at the start of a line, and the cut
+# measurement above then counts this guardian's own probe text as a real exit site. It did:
+# the surface read 253 instead of 251 the moment these two were added. *A guardian that
+# counts its own fixture measures itself* -- exactly what `_fixtur` is for.
+SCHALE_AB = "\n".join([
+    '. "%s/abschnitt.sh"',
+    "trap 'abschnitt_ende' EXIT",
+    'stufe "Stufe 4: der Differenztest"',
+    "exit 1",
+])
+SCHALE_GANZ = "\n".join([
+    '. "%s/abschnitt.sh"',
+    "trap 'abschnitt_ende' EXIT",
+    'stufe "Stufe 9: jede Datei uebersetzt"',
+    "abschnitt_fertig",
+    "exit 1",
+])
+
+
+def sprechprobe_schale():
+    """`[(what, ok)]` -- the shell notice must fire on a cut and stay quiet on a full run."""
+    ort = str(W / "instrumente")
+
+    def lauf(vorlage):
+        r = subprocess.run(["bash", "-c", vorlage % ort], capture_output=True, text=True,
+                           timeout=FRIST, cwd=W)
+        return r.returncode, r.stdout
+    rc_ab, aus_ab = lauf(SCHALE_AB)
+    rc_ganz, aus_ganz = lauf(SCHALE_GANZ)
+    return [
+        ("die Schale sagt einen Schnitt an und behaelt den Ruecklaufwert",
+         rc_ab == 1 and "ABGESCHNITTEN in: Stufe 4: der Differenztest" in aus_ab),
+        ("nach `abschnitt_fertig` schweigt sie -- auch bei 1",
+         rc_ganz == 1 and "ABGESCHNITTEN" not in aus_ganz),
     ]
 
 
@@ -804,6 +870,9 @@ def main():
     for was, ab_ok in _abschnitt.sprechprobe():
         print(f"  Abschnitt:      {'ok' if ab_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and ab_ok
+    for was, sch_ok in sprechprobe_schale():
+        print(f"  Abschnitt (sh): {'ok' if sch_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and sch_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own

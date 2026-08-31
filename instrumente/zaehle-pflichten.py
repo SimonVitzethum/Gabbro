@@ -583,13 +583,18 @@ if __name__ == "__main__":
                       f"den Zaehler gar nicht -- schon die WEITE Regel sieht sie nicht "
                       f"({weit_vorher} -> {weit}). **Dann belegt ein Gleichstand unter der "
                       f"engen Regel nichts.**", file=sys.stderr)
-                sys.exit(1)
+                # **2, not 1** (2026-08-31). A fallen probe says *this tool does not
+                # measure what it claims* -- nothing was measured, and what it prints
+                # afterwards is not a statement about the tree. The two places here read as
+                # FINDINGS until today; the sixth requirement listed the forward direction
+                # by name (`SPRECHPROBE GESCHEITERT`) and never saw the backward one.
+                sys.exit(2)
             if eng != vorher:
                 print(f"RUECKWAERTSPROBE GESCHEITERT ({was}): eine blosse ERWAEHNUNG von "
                       f"`gap:` verstellt H ({vorher} -> {eng}). **Eine Zahl, die sich durch "
                       f"ihr eigenes Schluesselwort heben laesst, ist kein Mass.**",
                       file=sys.stderr)
-                sys.exit(1)
+                sys.exit(2)
             print(f"== Rueckwaertsprobe: ok ({was}: weit {weit_vorher} -> {weit}, "
                   f"eng {vorher} -> {eng}) ==")
         # **The same probe for the SECOND half of `H`, and since 2026-08-31 it is a RUN.**

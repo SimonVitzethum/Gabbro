@@ -50,6 +50,12 @@ import re
 import subprocess
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 GIFT = W / "beispiele" / "gift"
 
@@ -275,6 +281,7 @@ def main():
         befunde.append(f"DECKE verdeckt: {z['verdeckt']} statt {MARKE_VERDECKT} "
                        "-- eine neue Regel faellt vor einer alten Probe")
 
+    abschnitt.fertig()
     if befunde:
         print("\n== BEFUND ==")
         for b in befunde:
@@ -292,4 +299,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

@@ -23,7 +23,6 @@ der Meldung, damit der Leser das selbst entscheidet -- die Zahl verpflichtet, si
 nicht frei.
 """
 import pathlib
-import re
 import subprocess
 import sys
 import tempfile
@@ -215,6 +214,12 @@ def main():
         rot = 1
     if len(beide_rot) > MARKE_BEIDE_ROT:
         print(f"   DECKE DURCHBROCHEN: {len(beide_rot)} > {MARKE_BEIDE_ROT} lehnen beide ab.")
+        rot = 1
+    elif len(beide_rot) < MARKE_BEIDE_ROT:
+        # **A mark below its subject measures nothing** -- and it is the GOOD case that
+        # breaks it: somebody healed a file and the mark stayed. It is still a finding.
+        print(f"   FUND: nur noch {len(beide_rot)} statt {MARKE_BEIDE_ROT} lehnen beide ab"
+              " -- die Marke gehoert nachgezogen.")
         rot = 1
     return rot
 
