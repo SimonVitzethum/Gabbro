@@ -1,0 +1,94 @@
+-- **Der Geltungsbereich am `traverse` -- und was er NEBEN der Falschabsage kostet.**
+--
+-- `messung/proben/probe-traverse-grundname.gab` hat die eine Haelfte gemessen: `kosten.rs`
+-- traegt keinen Blockgeltungsbereich, und darum faellt `traverse i over slots of tafel`
+-- mit `let tafel = w;` heute an `K003` -- ein richtiges Programm, abgewiesen ueber eine
+-- SCHRANKE, die dasteht. *Diese Datei misst die andere Haelfte, und sie ist die
+-- schaerfere.*
+--
+-- **Ein Pass ohne Geltungsbereich sagt nicht nur zu oft ab -- er kann die FALSCHE Bindung
+-- finden.** `umgebung.rs::typ_von_ort` schlaegt in dieser Reihenfolge nach:
+--
+--     lokal  (in `kosten.rs`: NUR die Parameter)  ->  globale  ->  Unbekannt
+--
+-- Verdeckt ein `let` einen Parameter, gewinnt der PARAMETER -- und der Kostenpass rechnet
+-- die Schranke der Tabelle aus, ueber die die Schleife GAR NICHT laeuft.
+--
+-- 1. GEGEN DEN UNVERAENDERTEN PRUEFER, 2026-08-31 (`f08e5ad`)
+-- -----------------------------------------------------------
+-- Derselbe Rumpf, einmal ueber den verdeckten Namen und einmal ueber den echten:
+--
+--     let t = g;  traverse i over slots of t     ->  K001: the body costs   16
+--                 traverse i over slots of g     ->  K001: the body costs  196
+--
+-- **Dieselbe Schleife, zwei Zahlen.** `t` ist zur Laufzeit `g`; die 16 kommt aus
+-- `Winzig count 4`, die 196 aus `Riesig count 64`. Der Pass hat den Parameter gelesen und
+-- die Bindung uebersehen, die eine Zeile darueber steht.
+--
+-- **Und die 16 wird ANGENOMMEN:**
+--
+--     costs <= 16 ops   ->  …: 6 items, 0 errors, 0 hints
+--
+-- *Eine Kostenzusage, die um den Faktor 12 zu klein ist, geht als eingeloest durch.* Das
+-- ist keine Falschabsage mehr, sondern eine Falschannahme -- die Richtung, die weh tut.
+--
+-- 2. UND DER ERZEUGER BAUT DARAUS KEIN C
+-- ---------------------------------------
+--     static uint32_t schatten(const Winzig *restrict t, const Riesig *restrict g) {
+--         uint32_t summe = 0;
+--         const Riesig * t = g;          -- <<< derselbe Block wie der Parameter
+--
+--     $ cc -c c.c
+--     error: »t« als andere Symbolart redeklariert
+--
+-- **Zwei Paesse irren ueber dieselbe Form**, und der zweite faellt hart: C erlaubt die
+-- Verdeckung eines Parameters im Rumpfblock nicht, `emit.rs` schreibt sie trotzdem hin.
+-- *Ein Programm, das der Pruefer annimmt und der Uebersetzer nicht baut.*
+--
+-- 3. DER KORPUS
+-- --------------
+-- **479 `.gab`-Dateien, 0 Verdeckungen** -- weder `let` ueber Parameter noch `let` ueber
+-- `let`. Die Form kommt im Korpus nicht vor; sie ist deshalb nicht harmlos, sondern
+-- ungemessen gewesen.
+--
+-- WAS DARAUS FOLGT
+-- -----------------
+-- Der Mangel ist gemessen und doppelt (Regel A), der Preis ist null. Gebaut wird die
+-- kleinere Form: **die Verdeckung wird abgesagt**, nicht ein Blockgeltungsbereich in
+-- `kosten.rs` nachgeruestet. Solange keine Verdeckung mehr moeglich ist, ist die Frage
+-- „welche Bindung?" eindeutig -- und erst dann waere ein Geltungsbereich ein Zuwachs
+-- statt einer zweiten Fehlerquelle.
+
+module probe::domaenenschatten {
+
+const KLEIN : u32 = 4;
+const GROSS : u32 = 64;
+
+table Winzig count KLEIN {
+    slot { wert : u32, }
+}
+
+table Riesig count GROSS {
+    slot { wert : u32, }
+}
+
+-- **Der Parameter `t` zeigt auf die kleine Tabelle, das `let` auf die grosse.**
+-- Vor dem Bau: `K001 … the body costs 16` -- die Schranke der KLEINEN. Nach dem Bau
+-- faellt die Zeile `let t = g;` selbst.
+impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig) -> u32
+    effects { reads t.slots, reads g.slots }
+    costs   <= 8 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    let t = g;
+    traverse i over slots of t by unvisited
+        touches reads t.slots
+    {
+        if summe < 60000 {
+            summe += 1;
+        }
+    }
+    return summe;
+}
+
+}
