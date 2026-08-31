@@ -1729,7 +1729,18 @@ MARKE_EMIT=54
 # und die kein Programm des Baumes je geschrieben hatte -- `i8`, `i16`, `i32`, `i64`, `f32`,
 # `and`, `port`, `rc`, `seq`. *Was 0 Fundstellen hat, ist nicht geprueft, sondern
 # unerreichbar* -- und keine dieser neun Absenkungen war je gelaufen.
-MARKE_EMIT_M=22
+#
+# **22 -> 25 am 2026-08-31, Bahn F5.** Drei Gegenproben aus `messung/proben/`, und jede ist
+# die freundliche Seite einer neuen Absage -- *eine Regel, die 558 Namen oder jeden
+# Feldzugriff abweist, ist nur dann eine Regel und keine Wand, wenn die Nachbarn durchgehen:*
+#
+#   `probe-c-namen-frei.gab`       `read` `write` `open` `close` `signal` -- POSIX, nicht C,
+#                                  und damit KEINE Namen, die `N041` vergeben nennt
+#   `probe-feldzugriffe-frei.gab`  Verbundfeld, Registerfeld und GERAETEPARAMETER -- die
+#                                  dritte Lage hat `M134` im ersten Bau widerlegt
+#   `probe-let-ohne-leser.gab`     die ungelesene `let`-Bindung, die jetzt `(void)r2;`
+#                                  absenkt statt abgewiesen zu werden
+MARKE_EMIT_M=25
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

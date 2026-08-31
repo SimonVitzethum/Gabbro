@@ -1392,6 +1392,37 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; messung/SCHLEIFENINVARIANTE.md §4",
     },
     Satz {
+        name: "m1.feld_traegt_der_traeger",
+        kennungen: &["M134"],
+        aussage: "A `.field` access is refused where the carrier's type is KNOWN and cannot \
+                  carry it -- either the carrier is a record without that field, or it has no \
+                  fields at all.",
+        vorbehalt: "**It answers three situations that used to be one.** \
+                    `umgebung.rs::feld_von` returned `Typ::Unbekannt` for *the carrier lacks \
+                    this field*, *the carrier has no fields* and *the carrier's type never \
+                    resolved* alike; two of those are defects and the third is honest \
+                    ignorance. `Feldurteil` separates them, and where the type did not \
+                    resolve the rule says NOTHING (W10) -- refusing there would hit exactly \
+                    the programs M1 already reports as uncovered.\n\
+                    **What it therefore does not reach:** a field access whose carrier is a \
+                    `tagged type`, an array, a function pointer or `never`. Those return \
+                    `Unklar` and are unmeasured, not cleared.\n\
+                    **And the first build was WRONG, measured within the minute.** It did not \
+                    know that the parameter list of a `device` is readable -- \
+                    `messung/fragmente/F04.gab`:146 writes `q.AVAIL_IDX % q.n`, and F04 is \
+                    DURCHGESTOCHEN: it emits, compiles under `-Werror` and runs. *A refusal \
+                    there could only be the rule's own mistake.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes 411 and 412 on `M134` -- a `u64` carrier, and \
+                      a declared record asked for a name it does not have. Counter-probe in \
+                      messung/proben: record field, register field and DEVICE PARAMETER, 0 \
+                      errors. Over the 418 `.gab` files it falls in ONE, \
+                      `messung/fragmente/F05.gab`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; \
+                     crates/gabbro-check/src/umgebung.rs::feldurteil; \
+                     messung/ZWEI-BLINDSTELLEN.md",
+    },
+    Satz {
         name: "parser.occupied-einmal",
         kennungen: &["P040"],
         aussage: "A `table` carries at most one `occupied` clause -- the same shape `P022` \

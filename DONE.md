@@ -780,7 +780,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**54 clean examples, 314 poison probes, 233 tests · 53 translation units** —
+**54 clean examples, 316 poison probes, 233 tests · 53 translation units** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`
 
 > **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean
@@ -790,7 +790,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 > | | booked | measured | by what |
 > |---|---:|---:|---|
 > | clean examples | 25 | **54** | `ls beispiele/*.gab` |
-> | poison probes | 78 | **314** | `ls beispiele/gift/*.gab` |
+> | poison probes | 78 | **316** | `ls beispiele/gift/*.gab` |
 > | tests | 123 | **233** | `cargo test` — 15 suites, 0 red |
 > | translation units | 11 | **53** | `./instrumente/pruefe-emission.sh`, of which **24 run and compare** |
 >

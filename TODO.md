@@ -303,16 +303,41 @@ darunter.
          `verlorene_zeilen`-Riegel in `pruefe-emission.sh` hält genau das auf. **`F05` fällt
          jetzt am PRÜFER statt am fremden Übersetzer** — siehe `messung/F05-UNERREICHBAR.md`.
       2. `Op _m2 = decode_op(m->op);` — *invalid type argument of `->` (have `uint64_t`)*.
-         Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und **kein Pass sagt
-         etwas**: `M1` führt `m.op` unter den 20 % ohne Typ. *Wörtlich dieselbe Klasse wie
-         `F06`s `elems of` — der fremde Übersetzer sagt, was der Prüfer wusste und nicht
-         aussprach.* Ein Feldzugriff auf einen Skalar gehört in `M1` oder in den Namenspass.
-         (Korpusseitig heilbar: ein ergänzter Träger `type Nachricht = { op : u64, }` wie
-         `IrqMarke` in `F06`.)
+         Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und ~~**kein Pass sagt
+         etwas**~~ — **GEBAUT am 2026-08-31 als `M134`** in `M1`, genau wo dieser Punkt es
+         verlangt hat. Zwei Giftproben, eine Gegenprobe, eine Mutation; über 418 Dateien
+         fällt es in **einer**, und das ist `F05`.
+
+         > **Und der Nachbarfall war schlimmer als der gemeldete:** auch `m.gibt_es_nicht`
+         > auf einem DEKLARIERTEN Verbund ging mit `0 errors, 0 hints` durch.
+         > `umgebung.rs::feld_von` gab `Typ::Unbekannt` für drei verschiedene Lagen zurück —
+         > zwei Mängel und ein ehrliches Nichtwissen —, und solange eine Funktion sie
+         > zusammenwirft, kann kein Pass die zwei benennen, ohne die dritte falsch
+         > abzuweisen. `Feldurteil` trennt sie. *`M1` sagte im selben Atemzug
+         > `1 of them without a type` und `0 errors`: **es hat die Lücke gezählt und nicht
+         > benannt.*** `messung/ZWEI-BLINDSTELLEN.md`
       3. `unused variable 'r2'` — `let r2 = request_flush(transport, pool);` steht so im
          EINGEFRORENEN Ausschnitt und wird nie gelesen. Der Erzeuger schreibt für einen
          ungenutzten Parameter schon `(void)art;`; für eine ungenutzte `let`-Bindung nicht.
-         **Eine Zeile im Erzeuger.**
+         ~~**Eine Zeile im Erzeuger.**~~ **GEBAUT am 2026-08-31, und es ist wirklich eine
+         Zeile — aber erst, nachdem die naheliegende Antwort gemessen und WIDERLEGT war.**
+
+         > Die naheliegende Antwort war eine Absage, und sie hatte ein gutes Argument: bei
+         > einem Parameter hat der Anwender die erzeugte Zeile nicht geschrieben, bei einem
+         > `let` schon — und ein nackter Ruf täte es auch. **Gebaut, über die 418 Dateien
+         > gemessen, zurückgenommen: sie fiel in 17 von ihnen, und keine davon war ein
+         > Mangel.** Dreizehn Giftproben, vier `fnptr`-Proben, eine Messdatei. *Eine Bindung
+         > nicht zurückzulesen ist etwas, das dieser Korpus schreibt.*
+         >
+         > **Regel A schneidet hier andersherum:** kein Konstrukt ohne gemessenen Bedarf —
+         > und keine ABSAGE ohne gemessenen Mangel. Der Mangel hat null Instanzen, die
+         > überhaupt emittieren; die Absage hätte 17 gekostet.
+
+         Gebaut ist die Absenkung: `(void)r2;`, aus **demselben Läufer** wie beim Parameter
+         (`emit::benutzte_namen`, seit heute `pub(crate)`). Gegenprobe
+         `messung/proben/probe-let-ohne-leser.gab`, bewacht von Stufe 9; die Mutation, die
+         die Zeile wegnimmt, lässt genau diese Datei an `cc` fallen.
+         `messung/ZWEI-BLINDSTELLEN.md` §3
 
       > **Warum die fünf Zeilen nicht im Baum stehen.** `pruefe-emission.sh` Stufe 9 verlangt
       > *„jede Datei, die emittiert, muss auch übersetzen"*, und ihre Ausnahmeliste ist seit
