@@ -464,6 +464,28 @@ assume vtd_te_wirkt
 The pattern comes from Caprock: **a guardian checks the EXISTENCE of a reason, never its TRUTH** —
 which is why the identity reasons there carry a falsifier.
 
+**And since «B40» an assumption can name its machine:** `assume <name> arch x86_64 "…"`. The
+clause is optional — a timer ticks everywhere — but a statement about caches, barriers or
+register semantics is a statement about **one** architecture, and until 2026-08-31 `assume`
+was the only item carrying such statements that could not say so. *`entry`, `entrust`, `boot`
+and an `asm` body all could.*
+
+> **What bought the clause was a conjunction, not a gap.** `dma_kohaerent` said two things
+> under one name and one falsifier: cells are coherent **and** two volatile accesses become
+> visible to the device in program order. The second does not follow from the first, and on
+> AArch64 it is false in the commonest DMA configuration — `volatile` in C11 emits no barrier
+> against normal memory there, so a descriptor write and a following doorbell write can be
+> seen out of order without a `DSB`. **Its one falsifier runs on x86 and passes.**
+>
+> *One green probe discharged two obligations, and nobody ever checked the second.* That is
+> the same reasoning `N024` makes for `counterprobe`, one layer up.
+
+`A005` holds the clause against the unit: an `arch` no declaration here names is an assumption
+that can never be in force, and it would still stand in the artefact under *proved under
+A1…An*. The count of the remaining conjunctions — **17 of 34 texts mechanically flagged,
+8 judged real** — stands in `messung/ANNAHMEKONJUNKTIONEN.md`, together with the seven that
+are **not** split and why that is a debt and not a decision.
+
 **Three classes, not two** — the third must never look like the first:
 
 | Class | means |
@@ -2005,13 +2027,18 @@ check harness), so that the boot theorem has no silent edge.
 carries on the target architecture. That stood nowhere. Now:
 
 ```gabbro
-assume c11_release_acquire_x86
+assume c11_release_acquire arch x86_64
     "release-Store / acquire-Load auf x86-64 (TSO): Absenkung auf mov genuegt"
     falsifier probe_mp_x86;          -- Message-Passing-Litmus, im Pruefgeruest gefahren
-assume c11_release_acquire_aarch64
+assume c11_release_acquire arch aarch64
     "stlr/ldar tragen release/acquire auf aarch64"
     falsifier probe_mp_aarch64;
 ```
+
+**The machine used to live in the NAME** — `_x86`, `_aarch64` — and a name is not a clause:
+nothing held it against the unit, and nothing kept a third architecture from writing a fourth
+suffix. Since «B40» it stands in `arch`, where `A005` reads it. *Two spellings for one thing,
+and only one of them had a reader — the same shape as `masks irqs` at a lock.*
 
 The litmus probes (MP, SB, LB — the classic three) run in the check harness as `check` with
 `counterprobe`. With that the memory model is **countably** part of the axiom layer instead of

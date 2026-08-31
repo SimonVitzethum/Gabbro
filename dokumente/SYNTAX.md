@@ -1496,7 +1496,7 @@ in the rule*, and inventing a second answer here would be a fourth register over
 ## 12. Hardware assumptions and axioms — **load-bearing, not trimming**
 
 ```ebnf
-assume = "assume" ident string
+assume = "assume" ident [ "arch" ident ] string
          ( "falsifier" ident | "unfalsifiable" string ) ";" ;
 axiom  = "axiom" ident "(" [ params ] ")" [ "->" typeexpr ]
          [ "requires" pred ]                                    (* G2 *)
@@ -1509,12 +1509,42 @@ assume vtd_te_effective
     "GCMD.TE schaltet die Uebersetzung scharf; DMA ohne Kontexteintrag faultet."
     falsifier probe_vtd_te;
 
+assume dma_visibility_in_order arch x86_64
+    "Zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
+    falsifier probe_dma_order;
+
 assume x2apic_two_step
     "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
     unfalsifiable "qemu64 hat kein x2APIC";
 
 axiom write_cr3(p: Pa) effects { writes tlb, writes active_table } falsifier probe_cr3;
 ```
+
+**`arch` at an assumption is OPTIONAL, and the option is the design** («B40», 2026-08-31).
+An assumption about a timer holds on every machine this unit targets and writes none; one
+about caches, barriers or register semantics is a statement about **one** architecture and
+says so. *A compulsory `arch` would force 39 corpus entries to answer a question they do not
+have.*
+
+> **The case that bought the clause: `dma_kohaerent` carried TWO claims under one name and
+> one falsifier** — coherence (*device and kernel see the same cells without cache
+> maintenance*) and order (*two volatile accesses become visible to the device in program
+> order*). **The second does not follow from the first**, and on AArch64 it is false in the
+> commonest DMA configuration: a descriptor write to coherent RAM and a following doorbell
+> write to Device-nGnRnE memory can become visible out of order without a `DSB`, and C11
+> `volatile` emits no barrier there. *Its single falsifier runs on x86 and passes.*
+>
+> It is two assumptions since 2026-08-31, each with its own probe and its own `arch`. The
+> count of the rest stands in `messung/ANNAHMEKONJUNKTIONEN.md`: **17 of 34 texts are
+> mechanically flagged, 8 judged to carry two independently falsifiable claims** — and the
+> seven that are not split stand there as a named debt, not as done.
+
+**`A005` reads the clause**, and reads only it: an `assume … arch A` names a machine this
+unit declares somewhere — at an `entry`, an `entrust`, a `boot` or an `asm` body. *Otherwise
+the assumption can never be in force here and still travels in the artefact under „proved
+under A1…An", where a reader takes a reach out of it that does not exist.* A unit that
+declares no `arch` at all is not refused (R16): it does not say which machine it runs on, so
+a refusal would be a guess.
 
 **Three classes, and the third does not exist syntactically:** *falsified* (probe ran and held),
 *not falsifiable* (**with a reason as a string**), *not run* — that is the

@@ -263,7 +263,7 @@ fn erhebe_lage(baum: &Programm) -> (Traegerlage, Vec<Absage>) {
         }
         let h = g.huelle(&voll);
 
-        // **`H102` -- ein Handler darf keine Sperre nehmen, die IRQs nicht maskiert.**
+        // **`H102` -- a handler takes no lock that leaves interrupts unmasked.**
         //
         // `nested never` says this vector does not re-enter ITSELF. It says nothing about a
         // path that was INTERRUPTED while holding a lock. If the handler then takes that

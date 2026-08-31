@@ -9,7 +9,7 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       68        A1  4 · A4 64
   redundant        0
   tragend       1011
-68 von 1079 Stellen dürfen sinken
+76 von 1110 Stellen dürfen sinken
 ```
 
 > **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**

@@ -95,8 +95,21 @@ extern fn geraet_haengt() -> never effects { diverges };
 -- ein DMA-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und der Erzeuger baut
 -- sie nicht -- er traegt sie unter ihrem Namen (`C001`). *Die Sonde ist auf einem nicht
 -- kohaerenten Traeger der Befund und nicht die Ausrede.*
-assume dma_kohaerent
-    "Ein Traeger im dma-Raum ist kohaerent: Geraet und Kern sehen dieselben Zellen ohne Cache-Pflege, und zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
+-- **Bis zum 2026-08-31 stand hier EINE Annahme mit ZWEI Behauptungen und EINEM Falsifikator.**
+-- Die Ordnung folgt nicht aus der Kohaerenz, und beide sind architekturabhaengig: auf AArch64
+-- gilt die Ordnungsaussage fuer Device-nGnRnE, aber C11-`volatile` erzeugt dort keine Barriere
+-- gegenueber normalem Speicher -- ein Deskriptorschreiben in kohaerentem RAM und ein
+-- anschliessendes Doorbell-Schreiben ins Geraet koennen ohne `DSB` in falscher Reihenfolge
+-- sichtbar werden. *Und der eine Falsifikator lief auf x86 und ging durch.*
+assume dma_kohaerent arch x86_64
+    "Ein Traeger im dma-Raum ist kohaerent: Geraet und Kern sehen dieselben Zellen ohne Cache-Pflege."
+    falsifier sonde_dma_kohaerenz;
+
+-- Die ZWEITE Haelfte, mit eigenem Namen und eigener Sonde. `N024` haelt einen Falsifikator
+-- an genau einer Pflicht: *zwei Pflichten auf einer Sonde heisst, ein gruener Lauf entlastet
+-- beide, und eine davon hat nie jemand geprueft.*
+assume dma_sichtbarkeit_in_reihenfolge arch x86_64
+    "Zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
     falsifier sonde_dma_reihenfolge;
 
 linear ghost type QueuePhase order { setup, live };

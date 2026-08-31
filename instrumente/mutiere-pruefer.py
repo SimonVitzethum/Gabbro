@@ -1470,7 +1470,7 @@ MUTATIONEN = [
     Mutation(
         "menge-ist-wieder-liste",
         "manifest.rs",
-        "        match aus.iter().find(|a| a.name == e.name) {\n            None => aus.push(e),",
+        "        match aus.iter().find(|a| a.name == e.name && a.arch == e.arch) {\n            None => aus.push(e),",
         "        match None::<&Eintrag> {\n            None => aus.push(e),",
         "SYNTAX.md §12 -- die Annahmenmenge zaehlt Duplikate wieder mit (15 statt 14)",
     ),

@@ -1,0 +1,63 @@
+-- **`assume … arch` -- die Gegenprobe zu `beispiele/gift/462`, und sie haelt `A005` schmal.**
+--
+-- Drei Faelle stehen hier nebeneinander, und alle drei muessen SCHWEIGEN:
+--
+--   1. `arch x86_64` an einer Annahme, und der Eintritt nennt dieselbe Maschine
+--   2. gar kein `arch` -- die Annahme gilt ueberall, wo diese Einheit laeuft
+--   3. dieselbe Maschine, aber ueber eine `asm`-Funktion statt ueber den Eintritt erklaert
+--
+-- **Der dritte ist der, der ohne Probe still verschwindet.** `A005` sammelt die erklaerten
+-- Maschinen aus `entry`, `entrust`, `boot` UND `fn … arch`; nimmt man den letzten Zweig
+-- heraus, faellt die Regel in einer Einheit, die ihre Maschine nur am Assemblerblock nennt.
+-- *Eine Sammelstelle ohne Zeugen ist eine Behauptung.*
+--
+-- > Und was hier NICHT steht: dass `arch` an einer Annahme abgesenkt wird. Es wird nichts
+-- > abgesenkt. Die Maschine reist im Annahmensatz mit, den `manifest::sammle` in den
+-- > C-Kopf schreibt -- *damit der Leser des Artefakts die Reichweite sieht und nicht raet.*
+
+module beispiel {
+module maschine {
+
+-- 1 -- die Maschine passt zum Eintritt.
+assume cr3_leert_den_tlb arch x86_64
+    "Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege."
+    falsifier sonde_cr3_leert_den_tlb;
+
+-- 2 -- kein `arch`: ein Zeitgeber tickt auf jeder Maschine, und die Annahme sagt das.
+assume zeitgeber_meldet_sich
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_meldet_sich;
+
+extern fn verteiler() effects { writes phys } costs <= 8 ops;
+
+entry systemruf vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack kernstapel per cpu nested never
+    dispatch beispiel::maschine::verteiler;
+}
+
+}
+
+-- 3 -- eine Einheit, deren Maschine NUR am `asm`-Rumpf steht.
+module nuranasm {
+
+assume x2apic_braucht_zwei_schritte arch x86_64
+    "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
+    falsifier sonde_x2apic_braucht_zwei_schritte;
+
+static mut ZELLE : u32 = 0;
+
+impl fn barriere()
+    effects { writes ZELLE }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "mfence"
+        clobbers { memory }
+    };
+}
+
+}

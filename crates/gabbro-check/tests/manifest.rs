@@ -57,6 +57,7 @@ fn e(name: &str, art: &'static str, sonde: &str, aussage: &str) -> Eintrag {
     Eintrag {
         name: name.into(),
         art,
+        arch: None,
         klasse: Klasse::Falsifizierbar { sonde: sonde.into() },
         aussage: aussage.into(),
     }
@@ -98,6 +99,7 @@ fn derselbe_name_mit_anderem_inhalt_ist_ein_widerspruch() {
     let mit_grund = Eintrag {
         name: "write_cr3".into(),
         art: "axiom",
+        arch: None,
         klasse: Klasse::NichtFalsifizierbar { grund: "keine Sonde".into() },
         aussage: "writes tlb".into(),
     };
@@ -107,6 +109,41 @@ fn derselbe_name_mit_anderem_inhalt_ist_ein_widerspruch() {
         1,
         "eine Annahme, die einmal falsifizierbar heisst und einmal nicht, ist ein Streit"
     );
+}
+
+/// **«B40»: the same name for two machines is NO contradiction** (2026-08-31).
+///
+/// `assume c11_release_acquire arch x86_64` and `… arch aarch64` say different things about
+/// different processors, and an estate carrying both architectures needs both lines.
+/// **Before `Eintrag::arch`, `vereinige` called that a contradiction** -- and the pattern
+/// `SPRACHE.md` §6 writes out would have become unwritable the day `arch` became sayable.
+///
+/// *The other direction stands and is checked here too:* the same name with the SAME machine
+/// and different content is still a dispute.
+#[test]
+fn zwei_maschinen_sind_zwei_annahmen() {
+    let x86 = Eintrag {
+        name: "c11_release_acquire".into(),
+        art: "assume",
+        arch: Some("x86_64".into()),
+        klasse: Klasse::Falsifizierbar { sonde: "probe_mp_x86".into() },
+        aussage: "TSO: mov genuegt".into(),
+    };
+    let arm = Eintrag {
+        name: "c11_release_acquire".into(),
+        art: "assume",
+        arch: Some("aarch64".into()),
+        klasse: Klasse::Falsifizierbar { sonde: "probe_mp_aarch64".into() },
+        aussage: "stlr/ldar tragen release/acquire".into(),
+    };
+    let (menge, streit) = vereinige(vec![x86.clone(), arm]);
+    assert!(streit.is_empty(), "zwei Maschinen sind kein Widerspruch: {streit:?}");
+    assert_eq!(menge.len(), 2, "und beide gehoeren in die Annahmenmenge");
+
+    // Same machine, different content -- the case the function was built against.
+    let x86_anders = Eintrag { aussage: "etwas anderes".into(), ..x86.clone() };
+    let (_, streit) = vereinige(vec![x86, x86_anders]);
+    assert_eq!(streit.len(), 1, "gleiche Maschine, anderer Inhalt: weiterhin ein Streit");
 }
 
 #[test]
