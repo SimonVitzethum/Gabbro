@@ -1,0 +1,131 @@
+-- **B -- der lineare Zeuge als Aliasgarantie, und was er heute kostet.**
+--
+-- Der Ausgangsbefund: `Griff` ist ein ZAEHLER, keine Bindung an einen Platz.
+--
+--     let g = vergeben(a, 3);
+--     freigeben(a, 7, g);        ->  9 items, 0 errors, 0 hints
+--
+-- Der Zeuge zaehlt Vergaben gegen Freigaben und sagt nichts darueber, WELCHEN Platz er
+-- bezeugt. Die Selbstschlinge entsteht erneut.
+--
+-- ## Das Argument, das den Bau traegt
+--
+-- *„Kein Index kommt zweimal in der Kette vor" ist keine lokale Eigenschaft. Sie ist eine
+-- Erreichbarkeitsaussage ueber die verlinkte Struktur, und ein `ops`-Block, der pro
+-- Operation prueft, kann sie nicht sehen.* Der lineare Token ist damit nicht eine
+-- Alternative zur Invariante, sondern ihre einzige lokal pruefbare Kodierung.
+--
+-- Und die billigere Fassung streicht das INDEXARGUMENT, statt Gleichheit zu pruefen: mit
+-- dem Index IM TYP ist `freigeben(a, 7, g)` fuer ein `g`, das den Platz 3 bezeugt, nicht
+-- falsch -- es ist **unaussprechbar**.
+--
+-- ## Was gemessen wurde (2026-08-31)
+--
+-- **Im Pruefer geht das heute.** Diese Datei: `8 items, 0 errors, 0 hints`. Der
+-- parametrische Zeuge parst und typt, und `match g { Griff(i) => … }` LIEST ihn, ohne ihn
+-- zu verbrauchen -- das `griff_weg(g)` dahinter ist noetig und wird angenommen. Teilbarkeit
+-- braucht es also nicht.
+--
+-- **Im Erzeuger nicht:**
+--
+--     gabbro emit  ->  [C001] no lowering: `match` over something other than an
+--                      `option index into T`
+--
+-- ## Und die Absenkung ist NICHT billig -- das ist die Korrektur
+--
+-- Der naheliegende Gedanke lautet: *im C steht der Index ohnehin, er kaeme nur aus dem
+-- Griff statt daneben.* **Gemessen stimmt das nicht.** `Griff` ist `ghost` und wird vor der
+-- Codeerzeugung geloescht -- sein Nutzdatenwert mit ihm. Im erzeugten C von `halde.gab`
+-- steht bereits
+--
+--     void griff_weg(void);
+--     static void freigeben(Arena *restrict a, uint32_t i) { … }
+--
+-- Der Zeuge ist weg; der Index ueberlebt **nur, weil er als eigenes Argument danebensteht.**
+-- Nimmt man das Argument fort, hat das C nichts mehr, womit es den Platz benennt. Der
+-- Nutzdatenwert eines geloeschten Wertes ist geloescht.
+--
+-- Die Fassung ohne `ghost` traegt ihn -- und hat gar keine Absenkung:
+--
+--     linear type Griff(index into Arena);
+--     [C001] no lowering: return type       (`-> Griff`)
+--     [C001] no lowering: parameter type    (`g : Griff`)
+--
+-- **Drei fehlende Absenkungen, nicht eine**, und die tragfaehige kostet ein Maschinenwort
+-- je Zeuge. Der dritte Weg -- ein Erzeuger, der den Index an jeder Rufstelle aus der
+-- Herkunft des Zeugen zurueckrechnet -- ist keine Absenkung mehr, sondern eine
+-- Spezialisierung ueber das ganze Programm. *Billig ist keiner der drei.*
+--
+-- ## Die Zahl fuer „Angebot wird Pflicht" (Regel A: kein Bau ohne sie)
+--
+-- Korpus: `beispiele/*.gab` (58) + `messung/fragmente/*.gab` (10) + `halde.gab`.
+-- **45 Tabellen.** Zwei Praedikate:
+--
+--     ENG   Tabelle deklariert `ops` mit insert UND remove          2
+--     weit A  Selbstverweis im Slot (`index into <sie selbst>`)    15
+--     weit B  ein Index ueberquert eine Funktionsgrenze            31
+--     WEIT  (A oder B)                                             35
+--     DIFFERENZ weit - eng                                         33
+--
+--     davon ENG  ohne linearen Typ im Modul -- fielen heute          2
+--     davon WEIT ohne linearen Typ im Modul -- fielen heute         30
+--
+-- **Die enge Regel trifft die Datei nicht, die den Bau ausloest.** `27-freiliste.gab` hat
+-- keinen `ops`-Block, keine Invariante, und `freigeben(h,7)` zweimal ergibt eine
+-- Selbstschlinge bei `0 errors, 0 hints`. Die `ops`-Wortmenge ist geschlossen
+-- (`insert|remove|relabel`), und im ganzen Baum deklarieren sie **zwei** Tabellen, beide in
+-- `beispiele/47-ops-wortmenge.gab`.
+--
+-- **Die Differenz 33 ist die eigentliche Messung:** dreiunddreissig Tabellen betreiben
+-- verlinkte Struktur oder reichen Indizes ueber Funktionsgrenzen, ohne das zu deklarieren.
+-- Derselbe Befund wie zweimal vorher -- der Mechanismus existiert, die Dateien benutzen ihn
+-- nicht --, diesmal als Zahl.
+--
+-- **Kein Bau daraus.** Eine Pflicht ueber die weite Fassung faellte 30 von 45 Tabellen und
+-- verlangte fuer jede einen Zeugen, dessen Erzeugnis es dreimal nicht gibt. Die Reihenfolge
+-- ist damit umgekehrt zur naheliegenden: **erst die Absenkung, dann die Pflicht.**
+--
+-- Textuell gemessen (Regexe ueber die Quellen), nicht ueber den Parser; die Zeilen der
+-- Tafel sind von Hand nachgeschlagen. W10: eine Tabelle ohne linearen Typ IM MODUL kann
+-- ihren Zeugen aus einem anderen Modul beziehen -- gezaehlt ist die Deklaration, nicht die
+-- Erreichbarkeit.
+
+module mass::zeugenpflicht {
+
+static mut hinterlegt : u32 in 4 .. 16 = 4;
+
+table Arena count 16 backed hinterlegt {
+    slot { belegt : bool, }
+}
+
+-- **Der Zeuge traegt den Index IM TYP.**
+linear ghost type Griff(index into Arena);
+
+extern fn griff_fuer(i : index into Arena) -> Griff effects { pure }       costs <= 0 ops;
+extern fn griff_weg(g : Griff)                      effects { consumes g } costs <= 0 ops;
+
+impl fn vergeben(a : ptr<normal, rw> Arena, i : index into Arena) -> Griff
+    effects { reads hinterlegt, writes a.slots }
+    costs   <= 8 ops
+{
+    narrow i to 0 ..< hinterlegt else { return griff_fuer(i); }
+    a.slots[i].belegt = true;
+    return griff_fuer(i);
+}
+
+-- **Ohne Indexargument.** Der Index kommt aus dem Zeugen und nicht daneben -- damit ist
+-- `vergeben(3)` / `freigeben(7)` nicht falsch, sondern nicht hinschreibbar.
+impl fn freigeben(a : ptr<normal, rw> Arena, g : Griff)
+    effects { reads hinterlegt, writes a.slots, consumes g }
+    costs   <= 12 ops
+{
+    match g {
+        Griff(i) => {
+            narrow i to 0 ..< hinterlegt else { griff_weg(g); return; }
+            a.slots[i].belegt = false;
+            griff_weg(g);
+        }
+    }
+}
+
+}
