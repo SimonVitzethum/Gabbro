@@ -241,13 +241,12 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   `pruefe-waechter.py` und `abnahme.py`. Beide haben heute null gefährliche Stellen, also
   kostet es nichts; der Zähler je Stelle nimmt ihnen die Ausnahme, weil er nach der
   VERDRAHTUNG fragt. *Es war eine gelegte Falle und kein Schaden.*
-* **Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**, und er
-  steht mit Grund da: `zaehle-b3.py` (`NICHT FAHRBAR` — die Caprock-Messbasis fehlt im
-  Arbeitsbaum). **48 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
-  schlichte Abnahme auslässt, sind einzeln nachgefahren. *Nachgemessen am selben Abend:
-  die 48 gelten nur im ARBEITSBAUM* — `/home/simon/Dokumente/caprock-messbasis` existiert,
-  und gegen diesen Pfad läuft `zaehle-b3.py` grün (105 Dateien, 2536 Rümpfe, 0 Abbrüche).
-  Der relative Pfad zeigt aus einem `git worktree` heraus daneben. Siehe unten.
+* ~~**Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**~~ —
+  `zaehle-b3.py` stand als `NICHT FAHRBAR` da, **und das war eine Aussage über den
+  Arbeitsbaum**: `/home/simon/Dokumente/caprock-messbasis` liegt da, nur zeigte der relative
+  Pfad aus einem `git worktree` heraus daneben. Geheilt am selben Abend (`korpus_ort()`,
+  siehe unten). **49 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
+  schlichte Abnahme auslässt, sind einzeln nachgefahren.
 * **Die Schalenregel ist großzügig, und das ist geprüft und nicht gehofft**: ein `exit` in
   einem Funktionsrumpf gilt als gedeckt, weil der Rumpf aus dem Hauptlauf gerufen wird.
   Nachgesehen wurde, ob eine solche Funktion **vor** der Falle gerufen wird — in keinem der
@@ -512,12 +511,11 @@ Bauart, gegen die dieser Abschnitt steht — also ist sie hier nicht stehen gebl
 | `pruefe-emission.sh` | einzeln gefahren, `rc=0`, kein `ABGESCHNITTEN` in 282 Zeilen | **nein** |
 | `pruefe-beweise.sh` | einzeln nachgefahren | **nein** |
 | `pruefe-luecken.py` | einzeln nachgefahren: `ALL PASS`, *alle Quellen byteidentisch zurück* | **nein** |
-| `zaehle-b3.py` | `NICHT FAHRBAR` im Arbeitsbaum; gegen `/home/simon/Dokumente/caprock-messbasis` **gefahren, `rc=0`** | **nein** |
+| `zaehle-b3.py` | ~~`NICHT FAHRBAR`~~ — der Pfad ist geheilt, er läuft in der Abnahme mit (3,3 s, `rc=0`) | **nein** |
 
-**Also: 49 von 49 gemessen, null davon abgeschnitten** — ~~48 von 49~~, denn der eine
-Rest ist am selben Abend gegen den Pfad nachgefahren worden, an dem seine Messbasis
-wirklich liegt. Im Arbeitsbaum bleibt er `NICHT FAHRBAR`, und das ist eine Aussage über
-den Arbeitsbaum. Das ist keine Zusage für morgen — es ist der Stand von heute abend.
+**Also: 49 von 49 gemessen, null davon abgeschnitten** — ~~48 von 49~~, denn der eine Rest
+war nie abwesend, sondern falsch adressiert. Das ist keine Zusage für morgen — es ist der
+Stand von heute abend.
 
 **Die Zahl steht in der Kopfzeile, auch wenn sie null ist.** Das ist kein Schmuck: eine
 gedruckte Null sagt, dass gemessen wurde; eine fehlende Zahl sagt gar nichts (W17). Ist sie
@@ -656,16 +654,21 @@ grün** — genau einmal gefahren (17:34), und da endete er in einer Teilmessung
 Die Kopfzeile hat eine zweite bekommen, und die zweite hat den anderen Nenner:
 
 ```
-== Arbeitsmenge: 45 von 49 Waechtern haben GEMESSEN -- 44 gruen, 1 ROT, 0 TEILMESSUNG ==
-   0 ABBRUCH, 1 nicht fahrbar, 3 ausgelassen
+== Arbeitsmenge: 46 von 49 Waechtern haben GEMESSEN -- 45 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 0 nicht fahrbar, 3 ausgelassen
 == Und ihr GEGENSTAND: hoechstens 45 von 92 gefaehrlichen Stellen besucht -- 49 % ==
    47 davon stehen in Waechtern, die dieser Lauf nicht gefahren hat -- und was
    mit ihnen ungemessen bleibt:
      pruefe-emission.sh    45 Stellen   101 von 101 Uebersetzungseinheiten in Stufe 9, …
      pruefe-beweise.sh      2 Stellen   15 Isabelle-Theorien (`beweise/ROOT`)
      pruefe-luecken.py      0 Stellen   15 Verdrehungen, 13 davon mit eigenem Bau
-     zaehle-b3.py           0 Stellen   105 Dateien / 2536 Ruempfe der Caprock-Messbasis
 ```
+
+*Die `46` und die `0 nicht fahrbar` sind eine Stunde jünger als der Rest dieses
+Abschnitts:* `zaehle-b3.py` läuft seit der Pfadheilung weiter unten mit. Solange er als
+`NICHT FAHRBAR` dastand, erschien er hier als vierte Zeile mit `0 Stellen` und **105
+Dateien / 2536 Rümpfe der Caprock-Messbasis** daneben — und genau dafür gibt es diese
+zweite Liste.
 
 **Drei Entscheidungen darin, und jede hat einen Grund:**
 
@@ -688,7 +691,7 @@ Die Kopfzeile hat eine zweite bekommen, und die zweite hat den anderen Nenner:
 das Wort bleibt `GRUEN` und der Rücklaufwert bleibt `0`. Was sich ändert, ist die Zeile:
 
 ```
-  ABNAHME GRUEN MIT BENANNTER LUECKE: 45 von 49 Waechtern,
+  ABNAHME GRUEN MIT BENANNTER LUECKE: 46 von 49 Waechtern,
   und hoechstens 45 von 92 gefaehrlichen Stellen -- 49 %. **Gruen heisst hier:
   was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist.
 ```
@@ -721,14 +724,14 @@ Schlusszeile nicht — und die Schlusszeile ist das, was jemand liest. Also steh
 
 | Richtung | verlangt |
 |---|---|
-| mit Lücke | `MIT BENANNTER LUECKE` im Satz, **und beide Zahlen darin** (`45 von 49`, `45 von 92`, `49 %`) |
+| mit Lücke | `MIT BENANNTER LUECKE` im Satz, **und beide Zahlen darin** (Wächterzahl, Stellenzahl, Anteil) |
 | ohne Lücke | das Wort `LUECKE` kommt **nicht vor**, und es steht `92 von 92` da |
 | beide | beide fangen mit `ABNAHME GRUEN` an, **und sie sind nicht derselbe Satz** |
 
 *Ein Satz, der immer warnt, sagt nichts; einer, der nie warnt, sagt weniger.* **Neunzehn
 Proben laufen jetzt vor jeder Abnahme, dreizehn alte und sechs neue.**
 
-### `zaehle-b3.py`: richtig eingeordnet — und „48 von 49" gilt nur im ARBEITSBAUM
+### `zaehle-b3.py`: richtig eingeordnet — und „48 von 49" galt nur im ARBEITSBAUM
 
 *Gemessen 2026-08-31 abends.* Drei Fragen, drei Antworten:
 
@@ -754,10 +757,46 @@ Proben laufen jetzt vor jeder Abnahme, dreizehn alte und sechs neue.**
 > 49**. Ein Wächter, dessen Urteil davon abhängt, aus welcher Auscheckung er läuft, ist
 > dieselbe Klasse wie einer, dessen Urteil am Rechner hängt — nur eine Ebene kleiner.
 
-**Gebucht, nicht geheilt**, und mit dem Grund: die Heilung heißt, den Pfad gegen die
-*Hauptauscheckung* aufzulösen (`git rev-parse --git-common-dir`), und damit läse `korpus_fehlt`
-`git` — was den Riegel aus derselben Datei verlangt (*„wer `git` liest, liest den
-Rücklaufwert"*). Das ist ein eigener Posten und keine Nebenbei-Zeile.
+#### Und dann doch geheilt — ohne `git`, an EINER Stelle
+
+Der Grund, es zu buchen, war der Riegel aus derselben Datei: *wer `git` liest, liest den
+Rücklaufwert.* **Der Riegel ist gar nicht nötig.** Ein `git worktree` trägt seine Herkunft im
+Dateisystem: `.git` ist dort eine **Datei** mit `gitdir: <hauptauscheckung>/.git/worktrees/<name>`,
+in einer gewöhnlichen Auscheckung ein **Verzeichnis**. Kein Unterprozess, kein Rücklaufwert,
+kein `git` im `PATH`.
+
+`pruefe-waechter.hauptauscheckung()` liest genau das, und `korpus_ort()` löst damit **jeden
+deklarierten Korpuspfad an einer Stelle auf** — gelesen von `korpus_fehlt()` *und* von
+`abnahme.py`, das denselben Pfad als **Argument** an den Wächter gibt. *Zwei Auflösungen eines
+Pfades sind der Weg, auf dem ein Lauf einen Korpus als vorhanden meldet und dann ein anderes
+Verzeichnis misst* (W7).
+
+**Alles Unerwartete fällt auf den Baum selbst zurück** — die alte Antwort, die in Richtung
+`NICHT FAHRBAR` irrt und nie in Richtung falsches Grün. Sechs Sprechproben, auf **erfundenen**
+Auscheckungen in einer Wegwerf-Ablage, denn eine Probe, die den Baum liest, in dem sie läuft,
+besteht oder fällt danach, wo jemand das Repository hingelegt hat:
+
+| Fall | verlangt |
+|---|---|
+| gewöhnliche Auscheckung | ist ihre eigene Hauptauscheckung |
+| `git worktree` | findet die Hauptauscheckung darüber |
+| `.git`-Datei ohne `gitdir:` | fällt auf den Baum selbst zurück |
+| gar kein `.git` | ebenso — **nie auf einen erratenen Ort** |
+| absoluter Korpuspfad | bleibt, wie er ist |
+| relativer Korpuspfad | gegen die HAUPTauscheckung, nicht gegen den Arbeitsbaum |
+
+**Gemessen danach, im selben Arbeitsbaum:**
+
+```
+  gruen   zaehle-b3.py   3,3 s [0]   bekommt `/home/simon/Dokumente/caprock-messbasis`
+== Arbeitsmenge: 46 von 49 Waechtern haben GEMESSEN -- 45 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 0 nicht fahrbar, 3 ausgelassen
+```
+
+**`1 nicht fahrbar` ist auf `0` gefallen, und die Arbeitsmenge von 45 auf 46** — ohne dass
+irgendetwas am Baum anders geworden wäre. *Die Zahl hatte die ganze Zeit den Arbeitsbaum
+gemessen.* Auf `ki-pc-fisch-101` bleibt der Eintrag richtig: dort liegt die Messbasis nicht,
+und `zaehle-b3.py` steht dort weiter als benannte Lücke.
 
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister

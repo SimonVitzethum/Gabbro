@@ -144,7 +144,7 @@ und *ein Lauf, der null fährt, ist rot* (W17).
 wegzulassen**, und fährt von `mutiere-pruefer.py` die kostenlose Hälfte `--anker` mit.
 
 > **Und seit dem 2026-08-31 steht die Arbeitsmenge nicht mehr allein da.** Sie zählt
-> Wächter, und der Baum ist nicht in Wächtern gemessen: der Schnelllauf fuhr *45 von 49
+> Wächter, und der Baum ist nicht in Wächtern gemessen: der Schnelllauf fuhr *46 von 49
 > Wächtern* und sah dabei **höchstens 45 der 92 gefährlichen Stellen** — 45 davon liegen in
 > `pruefe-emission.sh` allein. Die zweite Zeile nennt jetzt beides, und jeder ausgelassene
 > Wächter steht mit seinem Gegenstand daneben (101 Übersetzungseinheiten, 372 Mutationen,

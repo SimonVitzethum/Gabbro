@@ -119,6 +119,7 @@ ARGUMENTE = _pw.ARGUMENTE
 FRIST = _pw.FRIST
 OHNE_URTEIL = _pw.OHNE_URTEIL
 korpus_fehlt = _pw.korpus_fehlt
+korpus_ort = _pw.korpus_ort            # one resolution of one corpus path (W7)
 
 # **The heavy ones get their own deadline, and it is not a comfort setting.**
 # `mutiere-pruefer.py` WRITES INTO SOURCES and puts them back byte for byte afterwards. Killed
@@ -203,7 +204,12 @@ def fahre_einen(p, voll, arbeitsverzeichnis):
     `marke` is one of `gruen` · `ROT` · `ABBRUCH` · `NICHT FAHRBAR` · `ausgelassen`.
     """
     teuer = p.name in SCHWER
-    args = [str(pathlib.Path(a).expanduser()) if a.startswith("~") else a
+    # **The corpus path is resolved in ONE place, and both readers use it** (W7). Until
+    # 2026-08-31 this line expanded `~` and left `../caprock-messbasis` alone -- so from a
+    # worktree the guardian was asked about a directory two levels away from the one
+    # `korpus_fehlt()` had just looked for. *Two resolutions of one path is how a run reports
+    # a corpus as present and then measures a different directory.*
+    args = [str(korpus_ort(a)) if (a.startswith("~") or a.startswith("..")) else a
             for a in ARGUMENTE.get(p.name, [])]
     angemeldet = p.name in ARGUMENTE
     nachsatz = ""
