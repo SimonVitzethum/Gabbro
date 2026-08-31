@@ -412,18 +412,18 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 #     sites at a sink                   1103       1209   + `Kosten::Unbekannt`, + parser
 #     prose BESIDE the sinks               0        931   the fourth half
 #     German messages at a sink            0          0   27 found, 27 translated
-#     German prose beside them             -        177   this mark
+#     German prose beside them             -        173   this mark
 #
 # **A ratchet that rises because its subject grows is not a broken ratchet -- and one where
 # that is not written down beside it is indistinguishable from a broken one.** So it stands
 # here, with the number and the date.
 #
-# The 177 are NOT an even fog. Two registers carry 136 of them:
+# The 173 are NOT an even fog. Two registers carry 136 of them:
 #
 #     schablonen.rs   79   `gabbro schablonen` -- premise/obligation/construct per template
 #     zeugnis.rs      57   `gabbro zeugnis`    -- `grund:` per carrier kind
 #     saetze.rs       19   `gabbro paesse`     -- `gemessen_an`, mostly German FILE NAMES
-#     the rest        22   spread over thirteen files
+#     the rest        18   spread over thirteen files
 #
 # **They are printed reports and therefore language surface** -- the frame is already
 # English (`A THE ASSUMPTIONS`, `B THE TEMPLATES`), the table contents are not. *Exactly
@@ -434,7 +434,13 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 # precisely the state this guardian calls the worst of all -- *"a half-translated source is
 # worse than either of the two pure forms"*. **The mark falls when somebody takes one
 # register whole.**
-MARKE_ZUBRINGER = 177     # measured 2026-08-31; population is new, see the note above
+#
+# *It already fell once on the day it was set, from 177 to 173:* rewriting the sentence
+# `kosten.domaenenschranke` for the domain measurement put four pieces of its prose into
+# English on the way past. **That is the direction a ratchet is for** -- nobody translated a
+# register, the number simply cannot go back up without somebody writing German into a
+# report.
+MARKE_ZUBRINGER = 173     # 177 measured, then 173 -- see the last paragraph of the note
 MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
 
 
