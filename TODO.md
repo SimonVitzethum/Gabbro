@@ -488,7 +488,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 141 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 142 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *135 → 140 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
       `messung/proben/probe-erzeugernamen-frei.gab` kamen dazu. Die Ratsche steigt am
       Gegenstand, und die drei Namen stehen hier, damit man das nachzählen kann.*
@@ -4824,6 +4824,21 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       ersten Datei des Baumes mit einem `port`-Zeiger. **Entweder senkt der Raum ab, oder er
       wird benannt abgesagt** — was nicht geht, ist ein Wort der Grammatik, das im Erzeugnis
       spurlos verschwindet.
+
+- [ ] **Darf ein Wort im TYP stehen, dessen ganze Wirkung eine Prüferpartition ist?**
+      Die Rechnung dazu steht in [`messung/RAUM-IM-TYP.md`](messung/RAUM-IM-TYP.md), die
+      Entscheidung nicht — sie ist ein Urteil über die Sprache. **Gemessen am 2026-08-31:**
+      fünf Räume am Zeiger erzeugen byteidentisches C (*ein* `md5` über fünf Dateien), das
+      **Recht** im selben Typ senkt dagegen ab (`const T *` gegen `T *`). Was der Raum
+      stattdessen tut, ist ebenfalls gemessen: `R008` partitioniert die sechs **vollständig**
+      (30 von 30 gemischten Paaren fallen, 6 von 6 gleichen gehen durch), `R001` hebt `dma`
+      zusätzlich heraus, und das Wort reist in der `.gabi` über die Bibliotheksgrenze, wo
+      `R008` es hält. *Die Voraussetzung der Frage — „ein Raum, der nichts tut" — ist damit
+      falsch;* er tut nur nichts im Erzeugnis, und in C gibt es nichts, wohin er absenken
+      könnte: der Raum ist eine Aussage über die **Herkunft** einer Adresse, `volatile` eine
+      über die **Zugriffsform**. **Was die Wegnahme kostete:** drei Giftproben verlören ihren
+      Eingang (`259`, `58`, `415`), über dem sauberen Korpus null. Mit hängt daran, ob `code`
+      und `boot` bleiben — zusammen **drei** Zeigerstellen, null `device`-Stellen.
 
 - [ ] **Vier Terminale sind `UNGEDECKT`: `chain`, `queue`, `state`, `threads`.**
       `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. **Nachgemessen am 2026-08-31**
