@@ -74,6 +74,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt as _abschnitt   # noqa: E402  -- the shared cut notice
+
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 300
 
@@ -795,6 +798,12 @@ def main():
     for was, git_ok in sprechprobe_git():
         print(f"  git-Riegel:     {'ok' if git_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and git_ok
+    # **`abschnitt.py` is not a guardian, so no collective run reaches it** -- and a tool
+    # nobody drives is indistinguishable from one that does not exist. It is driven here,
+    # because the honesty of every guarded cut rests on it.
+    for was, ab_ok in _abschnitt.sprechprobe():
+        print(f"  Abschnitt:      {'ok' if ab_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and ab_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own

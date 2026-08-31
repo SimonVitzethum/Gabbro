@@ -70,7 +70,12 @@ EINTRAEGE = [
     # leaves open, and that a case with a date closed on that day.
     (
         "messung/RUECKLAUFWERTE.md",
-        r"\*\*(\d+) von 49\*\* Wächtern können mitten im Lauf",
+        # **The denominator stays PINNED and gets carried along by hand** (49 -> 50 on
+        # 2026-08-31, when `pruefe-uebersetzerfamilie.py` joined). A `\d+` there would let
+        # *"44 of 12"* pass -- the reference set is half of the claim, and a figure vouches
+        # for its denominator, not for its caption (W25). The self-check above turns a
+        # forgotten carry into a fallen speech test rather than a silent entry.
+        r"\*\*(\d+) von 50\*\* Wächtern können mitten im Lauf",
         ["./instrumente/pruefe-waechter.py"],
         r"^== Ein Abbruch MITTEN im Lauf: (\d+) von \d+ koennen",
         "Waechter, die mitten im Lauf abbrechen koennen",

@@ -198,8 +198,8 @@ aufgenommen, und `ABBRUCH_GEBUCHT` steht leer.
 * ~~**Der leere Baum ist die billigste Absage, nicht die einzige.** Ein Wächter, dessen
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
-  *Der Schnitt mitten im Lauf* darunter: **43 von 49** Wächtern können mitten im Lauf
-  abbrechen, **249 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  *Der Schnitt mitten im Lauf* darunter: **44 von 50** Wächtern können mitten im Lauf
+  abbrechen, **251 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
 * **`OHNE_URTEIL` steht leer, und das ist eine Zusage an die Zukunft, keine Messung über
   sie.** Wer einen Zähler wieder herausnimmt, schreibt den Grund dazu — die Zahl der
@@ -211,8 +211,8 @@ aufgenommen, und `ABBRUCH_GEBUCHT` steht leer.
 im Lauf"), Sprechprobe in beide Richtungen im selben Lauf.*
 
 ```
-43 von 49 Wächtern können mitten im Lauf abbrechen
-249 Ausgangsstellen liegen hinter dem jeweils ersten
+44 von 50 Wächtern können mitten im Lauf abbrechen
+251 Ausgangsstellen liegen hinter dem jeweils ersten
   pruefe-emission.sh   62 Ausgänge, 156 Druckstellen dahinter
   mutiere-pruefer.py   12 Ausgänge,  50
   pruefe-syntax.sh     11 Ausgänge,  14
@@ -247,26 +247,26 @@ nachsehen muss, und sie ist eine OBERE Schranke. *Sie verpflichtet, sie spricht 
 schreibt dazu, was er nicht mehr gemessen hat. `pruefe-emission.sh` hat es an diesem Tag
 nicht getan, und der Preis waren zwei Wochen.
 
-### Das Sieb unter der Fläche — 249 sind die Fläche, **94** sind die Gefahr
+### Das Sieb unter der Fläche — 251 sind die Fläche, **94** sind die Gefahr
 
 *Gemessen 2026-08-31 über `283cb26`, abgelesen mit `./instrumente/pruefe-waechter.py`
 (Abschnitt „Davon eine TEILMESSUNG"), Sprechprobe in vier Richtungen im selben Lauf.*
 
-Die 249 sind eine **obere Schranke** und sagen das auch. Eine Fläche, die niemand
+Die 251 sind eine **obere Schranke** und sagen das auch. Eine Fläche, die niemand
 verkleinern kann, hört auf, gelesen zu werden — also steht darunter ein Sieb mit drei
 Schnitten, und jeder nimmt Stellen heraus, die **nicht** die Gefahr sind:
 
 | Schnitt | wie viele fallen | warum sie nicht die Gefahr sind |
 |---|---:|---|
 | **beendet den Lauf gar nicht** | 3 | ein `return 1` in einem HELFER ist ein *Wert*, den der Aufrufer liest. Kein Ausgang. |
-| **endet mit `2`** | 140 | das ist ein ABBRUCH. Der Wächter sagt „nichts gemessen", die Abnahme druckt ihn mit eigenem Wort und eigener Farbe. **Dorthin kommt nur, wer etwas kaputt hat.** |
+| **endet mit `2`** | 142 | das ist ein ABBRUCH. Der Wächter sagt „nichts gemessen", die Abnahme druckt ihn mit eigenem Wort und eigener Farbe. **Dorthin kommt nur, wer etwas kaputt hat.** |
 | **keine Ausgabe auf beiden Seiten** | 12 | ohne Ausgabe davor gibt es keine halbe Messung zu verwechseln; ohne Ausgabe dahinter wurde nichts übersprungen. |
 
 Was übrigbleibt:
 
 ```
-249  Ausgangsstellen hinter dem jeweils ersten          (die FLAECHE)
-246  beenden den Lauf wirklich
+251  Ausgangsstellen hinter dem jeweils ersten          (die FLAECHE)
+248  beenden den Lauf wirklich
 106  enden mit 1 -- ERREICHBAR, OHNE DASS ETWAS KAPUTT IST
  94  tragen Ausgabe auf BEIDEN Seiten                   (die GEFAHR)
  45  davon in `pruefe-emission.sh`, das seit heute `ABGESCHNITTEN in:` druckt
