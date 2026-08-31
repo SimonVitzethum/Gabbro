@@ -736,9 +736,11 @@ Proben laufen jetzt vor jeder Abnahme, dreizehn alte und sechs neue.**
 *Gemessen 2026-08-31 abends.* Drei Fragen, drei Antworten:
 
 * **Steht er sauber in `FREMDER_KORPUS`?** Ja. Der Eintrag nennt Pfad und Gegenstand, sein
-  Kommentar nennt sogar den Sonderfall: *„`../caprock-messbasis` ist zusätzlich relativ: in
+  Kommentar nannte sogar den Sonderfall: *„`../caprock-messbasis` ist zusätzlich relativ: in
   einem `git worktree` zeigt der Pfad neben den Arbeitsbaum statt neben die
   Hauptauscheckung."* Er wird **nicht grün gebucht**, sondern als nicht gemessen gezählt.
+  *Der Satz stand da — und niemand hatte gefragt, ob der Pfad dann NEBEN der
+  Hauptauscheckung liegt.* **Eine benannte Lücke ist keine gemessene.**
 * **Erscheint seine Zahl in der Schlusszeile?** Jetzt ja — vorher nur als `1 nicht fahrbar`,
   ohne dass irgendwo stand, was damit ungemessen bleibt. Er ist der Grund für die zweite
   Liste oben.
