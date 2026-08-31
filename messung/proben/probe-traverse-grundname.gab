@@ -60,11 +60,19 @@
 -- `probe-vier-zellen.gab`. Die Aenderung wurde zurueckgenommen; was bleibt, ist diese Datei
 -- und die Zahl.
 --
--- **WAS OFFEN BLEIBT, und es ist der schaerfere Teil:** die `K003`-Absage an (a). Sie steht
--- im UNVERAENDERTEN Pruefer, sie trifft ein richtiges Programm, und sie hat dieselbe
--- Ursache -- kein Blockgeltungsbereich. Null Korpusstellen tragen die Form, also bleibt
--- auch sie **benannt und nicht gebaut**; aber sie ist gemessen und nicht gelesen, und das
--- ist der Unterschied zu vorher.
+-- **NACHGETRAGEN 2026-08-31, `a713863`: die `K003`-Absage an (a) IST WEG.** Der
+-- Blockgeltungsbereich in `kosten.rs` und `domaene.rs` hat sie geschlossen -- (a) rechnet
+-- jetzt `28` gegen die zugesagten `64` und faellt nicht mehr. Nachgemessen mit
+-- `gabbro kosten` ueber alle 481 Korpusdateien, zwei Binaerprogramme:
+--
+--     ueber_ein_let   OFFEN  ->  28        (die Falschabsage)
+--     3570 Berichtszeilen, vier geaenderte Stellen, alle drei die erwarteten
+--
+-- **Die zweite Absage bleibt und soll bleiben:** (b) nennt `zzznix`, und dazu gibt es
+-- keine Deklaration. *Der Geltungsbereich heilt die Verwechslung, nicht die Unkenntnis.*
+--
+-- Die schaerfere Haelfte desselben Mangels -- eine Kostenzusage, die das ausgelieferte
+-- Programm verletzt -- steht in `messung/proben/probe-domaenenschatten.gab`.
 
 module probe::traversegrundname {
 
