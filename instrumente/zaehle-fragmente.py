@@ -50,11 +50,11 @@ def gabbro(*args):
 
 def messe(p):
     r = gabbro("pruefe", str(p))
-    if "Items," not in r.stdout:
+    if "items," not in r.stdout:
         print(f"ABBRUCH: `gabbro pruefe {p.name}` lief nicht -- das ist KEINE Zaehlung von null.",
               file=sys.stderr)
         sys.exit(2)
-    m = re.search(r"(\d+) Fehler", r.stdout)
+    m = re.search(r"(\d+) errors", r.stdout)
     fehler = int(m.group(1)) if m else -1
     e = gabbro("emit", str(p))
     senkt = e.returncode == 0

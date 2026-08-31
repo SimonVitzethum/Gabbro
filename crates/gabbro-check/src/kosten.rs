@@ -1018,10 +1018,10 @@ pub fn bericht(baum: &Programm) -> String {
     });
 
     let mut out = String::from(
-        "-- Was der Rumpf KOSTET, neben dem, was die Zeile ZUSAGT. Wer eine Zusage\n\
-         -- schreibt, schreibt ab, was hier steht -- eine `costs`-Zeile ist eine Messung,\n\
-         -- keine Schaetzung.\n\
-         -- Stelle\tgerechnet\tzugesagt\tLuft\n",
+        "-- What the body COSTS, beside what the line PROMISES. Whoever writes a\n\
+         -- promise copies down what stands here -- a `costs` line is a measurement,\n\
+         -- not an estimate.\n\
+         -- site\tcomputed\tpromised\tslack\n",
     );
     let (mut mit, mut ohne) = (0usize, 0usize);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {

@@ -58,9 +58,22 @@ import re
 import sys
 
 W = pathlib.Path(__file__).resolve().parent.parent
-QUELLEN = sorted((W / "crates" / "gabbro-check" / "src").glob("*.rs")) + [
-    W / "crates" / "gabbro-cli" / "src" / "main.rs",
-]
+
+# **The file list was EIGHT files short, and the parser was among them** (2026-08-31).
+#
+# Until today this said `gabbro-check/src/*.rs` + `gabbro-cli/src/main.rs` -- 37 of 45
+# sources. Never read: `crates/gabbro-syntax/src/*.rs` (seven files) and
+# `crates/gabbro-cli/src/fragmente.rs`. **Those eight held 27 German messages AT A SINK**,
+# and the guardian printed `ALL PASS` beside them.
+#
+# > *The parser is the FIRST thing a user of Gabbro reads.* A typo in a `.gab` file never
+# > reaches `gabbro-check`; it ends in `parse.rs`. The surface the guardian did not look at
+# > was the one visited first.
+#
+# **So the list is no longer a list but a pattern.** A new crate under `crates/` is in on
+# the day it is created -- the same reason `abnahme.py` reads its cast from the directory
+# instead of an enumeration that goes stale without a sound.
+QUELLEN = sorted(W.glob("crates/*/src/*.rs"))
 
 # **Geschlossene Liste deutscher FUNKTIONSWOERTER.** Keine Fachwoerter -- `Bereich`, `Schranke`
 # und `Traeger` koennten Bezeichner eines Nutzers sein und stehen darum nicht drin.
@@ -88,11 +101,21 @@ WORT = re.compile(r"[A-Za-zÄÖÜäöüß_]+")
 # eine halbe Regel* -- der Satz stand im TODO, bevor er hier eingeloest wurde.
 STELLEN = re.compile(
     r"(?:"
-    r"Absage::(?:fehler|hinweis)\([^,]+,[^,]+,\s*(?:format!\()?"   # die Meldung
+    # **`[^,]+` for the `Span` was too narrow, and it cost four messages** (2026-08-31).
+    # `Absage::fehler("L001", Span::neu(…, …), "…")` carries a comma INSIDE
+    # its second argument, so the expression did not match. The code string anchors it now:
+    # between the code and the message stands an expression with NO quote in it, so `[^"]*`
+    # suffices. *Narrower is impossible, wider would be guessing.*
+    r'Absage::(?:fehler|hinweis)\(\s*"[A-Z][A-Za-z0-9_]*",[^"]*'   # die Meldung
     r"|\.mit_notiz\(\s*(?:format!\()?"                            # ihre Notiz
     r"|push_str\(&?(?:format!\()?"                                 # die Berichte
     r"|(?:e?println!)\(\s*"                                        # die CLI
     r"|Zustand::(?:Teilgebaut|Offen)\(\s*"                         # die Passliste
+    # **`Kosten::Unbekannt` -- a sink nobody recognised as one** (2026-08-31).
+    # The payload of the variant is printed twice in `kosten.rs`: as `{grund}` inside the
+    # `K003` text, and as the column `-- {warum}` in the report of `gabbro kosten`. *The
+    # text reached the user without ever being counted.*
+    r"|Kosten::Unbekannt\(\s*(?:format!\()?"
     r")"
     r'\s*"((?:[^"\\]|\\.)*)"',
     re.S,
@@ -110,6 +133,129 @@ def deutsch(text):
     """Die deutschen Funktionswoerter in diesem Text -- Platzhalter zaehlen nicht."""
     zusammen = PLATZHALTER.sub(" ", text.replace("\\\n", " "))
     return sorted({w.lower() for w in WORT.findall(zusammen) if w.lower() in DEUTSCH})
+
+
+# **THE FOURTH HALF: THE FEEDERS -- and the reason it exists is the reason it is not a list.**
+#
+# Measured 2026-08-31: the guardian saw **931 of 1870** prose strings in the sources, so
+# half. The other half reached the user all the same, along paths no expression above names.
+# Seven were found, and the tally is the point:
+#
+#     path                                          example                          texts
+#     ------------------------------------------------------------------------------------
+#     payload of a variant                          `Kosten::Unbekannt(grund, _)`        8
+#     parameter of a helper                         `m1::passt(.., was)`                 6
+#     return value of a helper                      `namen::grund(n)` -> `mit_notiz`     2
+#     conditional expression at a sink              `.mit_notiz(if .. {..} else {..})`   2
+#     literal inside an INNER `format!` / closure    `einigen`s `zeig` closure            2
+#     head of a report through `String::from`       `kosten.rs::zeige`                   1
+#     static register table printed by a            `schablonen.rs`, `zeugnis.rs`,
+#     subcommand                                    `saetze.rs`, `manifest.rs`         173
+#
+# **A reach widened once around a known case is too small again at the next unknown one.**
+# The eighth path is not in that table because I do not know it -- and that is exactly why
+# this half counts not the paths but the REST: every prose literal of the sources that
+# stands at NO sink.
+#
+# > The two halves are a PARTITION. Together they are every prose literal of every source.
+# > *A new path can therefore no longer slip past the reach; it can only raise the residue,
+# > and the residue is a ratchet.*
+#
+# What this half does NOT say: that every feeder reaches a user. The C templates in
+# `emit.rs` are no sentence to a reader. *The coarsening runs, as everywhere here, in the
+# safe direction -- it obliges, it does not acquit (W10).*
+
+
+def literale(t):
+    """Jedes Zeichenkettenliteral AUSSERHALB von Kommentaren, als `(anfang, inhalt)`.
+
+    **Ein `re.findall` auf `"…"` reicht dafuer nicht**, und das ist gemessen: der erste
+    Anlauf zaehlte 2126 Literale statt 1870 und legte Treffer quer ueber den Quelltext, weil
+    ein `//`-Kommentar mit einem Anfuehrungszeichen die Paarung verschiebt. *Ein Werkzeug,
+    das eine Mischung misst, sieht plausibel aus* -- W16, hier im eigenen Haus.
+
+    Erkannt werden Zeilen- und Blockkommentare, Zeichenliterale (`'a'` gegen die Lebensdauer
+    `'a`), Rohketten (`r"…"`, `r#"…"#`) und Byteketten (`b"…"`).
+    """
+    i, n, aus = 0, len(t), []
+    while i < n:
+        c = t[i]
+        if c == "/" and t.startswith("//", i):
+            j = t.find("\n", i)
+            i = n if j < 0 else j + 1
+            continue
+        if c == "/" and t.startswith("/*", i):
+            tiefe, i = 1, i + 2
+            while i < n and tiefe:
+                if t.startswith("/*", i):
+                    tiefe, i = tiefe + 1, i + 2
+                elif t.startswith("*/", i):
+                    tiefe, i = tiefe - 1, i + 2
+                else:
+                    i += 1
+            continue
+        if c == "'":
+            m = re.match(r"'(?:\\.|[^\\'])'", t[i:])
+            i += m.end() if m else 1
+            continue
+        if c == "r" and t[i + 1 : i + 2] in ("#", '"'):
+            m = re.match(r'r(#*)"', t[i:])
+            if m:
+                zaun = '"' + m.group(1)
+                a = i + m.end()
+                j = t.find(zaun, a)
+                if j < 0:
+                    break
+                aus.append((a, t[a:j]))
+                i = j + len(zaun)
+                continue
+        if c == "b" and t[i + 1 : i + 2] == '"':
+            i, c = i + 1, '"'
+        if c == '"':
+            a = j = i + 1
+            while j < n:
+                if t[j] == "\\":
+                    j += 2
+                    continue
+                if t[j] == '"':
+                    break
+                j += 1
+            aus.append((a, t[a:j]))
+            i = j + 1
+            continue
+        i += 1
+    return aus
+
+
+def ist_prosa(s):
+    """Drei Woerter oder mehr, Platzhalter abgezogen -- ein Satz an einen Leser.
+
+    Die Grenze ist grob und steht hier als Zahl, damit sie jemand verschieben kann. Unter
+    drei Woertern liegen `"index into "`, `"slots of"`, Formatstuecke und C-Bruchstuecke;
+    darueber liegt, was jemand gelesen haben will.
+    """
+    k = PLATZHALTER.sub(" ", s.replace("\\\n", " "))
+    return len(re.findall(r"[A-Za-zÄÖÜäöüß]{2,}", k)) >= 3
+
+
+def zubringer(quellen):
+    """Prosa-Literale, die an KEINEM Sink stehen -- die andere Haelfte der Partition.
+
+    Gibt `(gesamt, deutsche, je_datei)`. **Die Arbeitsmenge steht neben dem Urteil** (W17).
+    """
+    gesamt, deutsche, je_datei = 0, [], {}
+    for f in quellen:
+        t = f.read_text(encoding="utf-8", errors="replace")
+        sinken = {m.start(1) for m in STELLEN.finditer(t)}
+        for a, s in literale(t):
+            if a in sinken or not ist_prosa(s):
+                continue
+            gesamt += 1
+            if deutsch(s):
+                zeile = t[:a].count("\n") + 1
+                deutsche.append((f.name, zeile, deutsch(s), s[:58]))
+                je_datei[f.name] = je_datei.get(f.name, 0) + 1
+    return gesamt, deutsche, je_datei
 
 
 def messe(quellen):
@@ -186,6 +332,45 @@ def sprechprobe():
     return bool(gift) and not sauber
 
 
+def flaechenprobe():
+    """R14 fuer die dritte und vierte Haelfte, in BEIDE Richtungen -- an ERFUNDENEN Quellen.
+
+    **Der neue Weg wird mit einem Konstruktor geprueft, den es nicht gibt** (`Kosten::Wolke`).
+    Das ist Absicht: haette die Reichweite ihn kennen muessen, waere sie wieder eine
+    Aufzaehlung von Wegen. *Ein deutsches Wort auf einem Weg, den niemand genannt hat, muss
+    rot machen -- sonst ist die Partition nur behauptet.*
+
+    Gibt fuenf Wahrheitswerte: Sink rot/frei, Zubringer rot/frei -- und einen fuenften, der
+    misst, dass ein deutscher Satz IM KOMMENTAR keine Meldung ist (der Lexer trennt sie).
+    """
+    import tempfile
+
+    def schreibe(ort, name, text):
+        f = pathlib.Path(ort) / name
+        f.write_text(text, encoding="utf-8")
+        return f
+
+    with tempfile.TemporaryDirectory() as ort:
+        sg = schreibe(ort, "sg.rs", 'fn f() { Kosten::Unbekannt("die Zahl steht nicht fest"); }\n')
+        ss = schreibe(ort, "ss.rs", 'fn f() { Kosten::Unbekannt("the number is not fixed"); }\n')
+        zg = schreibe(ort, "zg.rs", 'fn f() { Kosten::Wolke("die Zahl steht nicht fest"); }\n')
+        zs = schreibe(ort, "zs.rs", 'fn f() { Kosten::Wolke("the number is not fixed"); }\n')
+        ko = schreibe(ort, "ko.rs", '// hier steht ein deutscher Satz mit "einer langen Kette"\n')
+        _, sink_gift = messe([sg])
+        _, sink_frei = messe([ss])
+        _, zub_gift, _ = zubringer([zg])
+        _, zub_frei, _ = zubringer([zs])
+        _, ko_zub, _ = zubringer([ko])
+        _, ko_sink = messe([ko])
+    return (
+        len(sink_gift) == 1,
+        not sink_frei,
+        len(zub_gift) == 1,
+        not zub_frei,
+        not ko_zub and not ko_sink,
+    )
+
+
 # **The ratchet of the translation.** It stands at the state measured on 2026-08-21, not at
 # a wished-for number -- a mark below the current state is indistinguishable from a guardian
 # that is simply red.
@@ -213,6 +398,45 @@ def sprechprobe():
 MARKE_KOMMENTARE = 7910   # 7730 earned + 180 booked as debt (2026-08-21)
 MARKE_PY = 1072           # 1043 earned + 29 booked as debt (2026-08-21)
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
+
+# **THE FEEDER MARK -- IT CAME INTO BEING TODAY AND SO RISES FROM NOTHING TO 179.**
+#
+# **That is not a backlog that grew, but a population that did not exist before.** Until
+# 2026-08-31 this guardian measured 1103 sites at five named sinks and reported `ALL PASS`.
+# What was measured on that day is how large its surface REALLY is: 2140 prose strings in
+# 45 sources. **It saw half.**
+#
+#     what                            before      after   where the difference comes from
+#     ---------------------------------------------------------------------------------
+#     sources in view                     37         45   `gabbro-syntax`, `fragmente.rs`
+#     sites at a sink                   1103       1209   + `Kosten::Unbekannt`, + parser
+#     prose BESIDE the sinks               0        931   the fourth half
+#     German messages at a sink            0          0   27 found, 27 translated
+#     German prose beside them             -        177   this mark
+#
+# **A ratchet that rises because its subject grows is not a broken ratchet -- and one where
+# that is not written down beside it is indistinguishable from a broken one.** So it stands
+# here, with the number and the date.
+#
+# The 177 are NOT an even fog. Two registers carry 136 of them:
+#
+#     schablonen.rs   79   `gabbro schablonen` -- premise/obligation/construct per template
+#     zeugnis.rs      57   `gabbro zeugnis`    -- `grund:` per carrier kind
+#     saetze.rs       19   `gabbro paesse`     -- `gemessen_an`, mostly German FILE NAMES
+#     the rest        22   spread over thirteen files
+#
+# **They are printed reports and therefore language surface** -- the frame is already
+# English (`A THE ASSUMPTIONS`, `B THE TEMPLATES`), the table contents are not. *Exactly
+# the mixture this guardian was built against* (`M101`, 2026-08-19).
+#
+# **Not translated, and named as such:** two registers with 136 pieces of prose are a
+# session of their own, not a side branch. A translation that stops halfway leaves behind
+# precisely the state this guardian calls the worst of all -- *"a half-translated source is
+# worse than either of the two pure forms"*. **The mark falls when somebody takes one
+# register whole.**
+MARKE_ZUBRINGER = 177     # measured 2026-08-31; population is new, see the note above
+MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
+
 
 # **Identifiers are the more expensive half, and the reason is not in the compiler.** A
 # rename is mechanical, but `mutiere-pruefer.py` carries 264 anchors that are LITERAL source
@@ -278,7 +502,17 @@ def main():
     if not (gift_faellt and sauber_frei):
         print("== LESBARKEIT: der Waechter misst nicht ==")
         return 2
+    sf, sr, zf, zr, kk = flaechenprobe()
+    print("  deutsch am neuen Sink faellt:   %s" % ("ja" if sf else "NEIN"))
+    print("  englisch am neuen Sink frei:    %s" % ("ja" if sr else "NEIN"))
+    print("  deutsch auf UNGENANNTEM Weg:    %s" % ("faellt" if zf else "NEIN"))
+    print("  englisch auf demselben Weg:     %s" % ("frei" if zr else "NEIN"))
+    print("  deutscher KOMMENTAR zaehlt nicht als Meldung: %s" % ("ja" if kk else "NEIN"))
+    if not (sf and sr and zf and zr and kk):
+        print("== FLAECHE: der Waechter misst nicht ==")
+        return 2
     gesamt, gefunden = messe(QUELLEN)
+    zub_gesamt, zub_deutsch, zub_datei = zubringer(QUELLEN)
     naht_gesamt, klebt = naehte(LESBAR_QUELLEN)
     print("\n== Lesbarkeit: %d Zeilenfortsetzungen in %d Quellen ==" % (naht_gesamt, len(LESBAR_QUELLEN)))
     for datei, zeile, vor, nach in klebt:
@@ -287,7 +521,17 @@ def main():
     print("   Und was das NICHT heisst: gemessen wird die NAHT, nicht der Satz. Eine Meldung,")
     print("   die aus zwei Zeichenketten zusammengesetzt wird, geht hier nicht durch die")
     print("   Fortsetzung -- der Waechter verpflichtet, er spricht nicht frei (W10).")
-    print("\n== Sprachflaeche: %d Meldungstexte in %d Dateien ==" % (gesamt, len(QUELLEN)))
+    print("\n== Sprachflaeche: %d Meldungstexte an einem Sink, in %d Dateien ==" % (gesamt, len(QUELLEN)))
+    print("== Zubringer: %d Prosastuecke NEBEN den Sinken, %d davon deutsch ==" % (zub_gesamt, len(zub_deutsch)))
+    print("   Die zwei Zahlen sind eine PARTITION: zusammen sind sie jedes Prosa-Literal")
+    print("   jeder Quelle. Ein Weg, den niemand genannt hat, kann darum nicht an der")
+    print("   Reichweite vorbei -- er hebt die zweite Zahl, und die ist eine Ratsche.")
+    if zub_datei:
+        schwer = sorted(zub_datei.items(), key=lambda x: -x[1])[:6]
+        print("   Die schwersten: " + ", ".join("%s %d" % (a, b) for a, b in schwer))
+    print("   Und was das NICHT heisst: nicht jeder Zubringer kommt beim Nutzer an. Die")
+    print("   C-Vorlagen in `emit.rs` sind kein Satz an einen Leser -- die Vergroeberung")
+    print("   geht in die sichere Richtung, sie verpflichtet und spricht nicht frei (W10).")
 
     rs_n, rs_d, je_datei, py_n, py_d, namen, dt_namen = quellsprache()
     print("\n== Quellsprache: %d von %d Kommentarzeilen im Pruefer sind deutsch ==" % (rs_d, rs_n))
@@ -317,6 +561,17 @@ def main():
     if py_d > MARKE_PY:
         print("\n  RATSCHE GEBROCHEN: %d in den Instrumenten, gebucht sind %d."
               % (py_d, MARKE_PY))
+        ratsche = 1
+    if len(zub_deutsch) > MARKE_ZUBRINGER:
+        print("\n  RATSCHE GEBROCHEN: %d deutsche Zubringer, gebucht sind %d."
+              % (len(zub_deutsch), MARKE_ZUBRINGER))
+        print("   Ein NEUER Weg, auf dem Text in eine Meldung gelangt, sieht genau so aus.")
+        for datei, zeile, woerter, text in zub_deutsch[-8:]:
+            print("     %s:%d  [%s]  %s" % (datei, zeile, ", ".join(woerter[:3]), text))
+        ratsche = 1
+    if len(gefunden) > MARKE_MELDUNGEN:
+        print("\n  RATSCHE GEBROCHEN: %d deutsche Meldungen an einem Sink, gebucht sind %d."
+              % (len(gefunden), MARKE_MELDUNGEN))
         ratsche = 1
     if ratsche:
         return 1

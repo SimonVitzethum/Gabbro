@@ -1589,8 +1589,8 @@ if ! G pruefe --with "$BIB/fach.gabi" --with "$BIB/mischen.gabi" \
         "$W/messung/abi-proben/nutzt-beide.gab" > "$BIB/pruef" 2>&1; then
     echo "  2. pruefe:     GESCHEITERT"; head -20 "$BIB/pruef"; exit 1
 fi
-grep -q ', 0 Fehler, 0 Hinweise' "$BIB/pruef" || { echo "  2. pruefe: nicht sauber"; head -20 "$BIB/pruef"; exit 1; }
-echo "  2. pruefe:     ok (0 Fehler, 0 Hinweise ueber die Grenze)"
+grep -q ', 0 errors, 0 hints' "$BIB/pruef" || { echo "  2. pruefe: nicht sauber"; head -20 "$BIB/pruef"; exit 1; }
+echo "  2. pruefe:     ok (0 errors, 0 hints ueber die Grenze)"
 
 G emit "$W/messung/abi-proben/bib-fach.gab"    > "$BIB/fach.c"    || exit 1
 G emit "$W/messung/abi-proben/bib-mischen.gab" > "$BIB/mischen.c" || exit 1

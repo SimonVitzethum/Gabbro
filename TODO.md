@@ -546,7 +546,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2102 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2101 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      *Am 2026-08-31 fiel die Zahl von 2102 auf 2101* — eine übersetzte Parsermeldung
+      kam mit einer Fortsetzung weniger aus. **Eine fallende Fläche ist kein Fund;
+      dass der Wächter sie bemerkt hat, ist einer.**
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote

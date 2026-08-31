@@ -184,7 +184,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P001",
                 t.span,
-                format!("`{}` erwartet, {} gefunden", z.text(), gefunden),
+                format!("`{}` expected, {} found", z.text(), gefunden),
             ));
             Err(Abbruch)
         }
@@ -199,7 +199,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P001",
                 t.span,
-                format!("`{}` erwartet, {} gefunden", k.text(), gefunden),
+                format!("`{}` expected, {} found", k.text(), gefunden),
             ));
             Err(Abbruch)
         }
@@ -212,10 +212,10 @@ impl<'a> Parser<'a> {
             self.absage(
                 Absage::fehler("P034", t.span, "`_` on its own is not an identifier")
                     .mit_notiz(
-                        "es gibt keinen Auffangzweig (`match` ist erschoepfend) und keinen \
-                         Platzhalterbinder -- eine neue Variante soll die Uebersetzung brechen",
+                        "there is no catch-all arm (`match` is exhaustive) and no \
+                         wildcard binder -- a new variant is meant to break the build",
                     )
-                    .mit_notiz("Namen wie `_start` bleiben erlaubt"),
+                    .mit_notiz("names like `_start` stay allowed"),
             );
             return Err(Abbruch);
         }
@@ -242,8 +242,8 @@ impl<'a> Parser<'a> {
                     format!("`{}` is a word of the vocabulary, not an identifier", k),
                 )
                 .mit_notiz(
-                    "SYNTAX.md: der Wortschatz ist eine geschlossene Tabelle -- \
-                     alles andere ist ein Bezeichner",
+                    "SYNTAX.md: the vocabulary is a closed table -- \
+                     everything else is an identifier",
                 );
                 // **M-woerter:** the decision was "rename rather than soften". So the burden
                 // does not land on the writer, the compiler names the replacement.
@@ -258,7 +258,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P003",
                     t.span,
-                    format!("Bezeichner erwartet, {gefunden} gefunden"),
+                    format!("identifier expected, {gefunden} found"),
                 ));
                 Err(Abbruch)
             }
@@ -289,7 +289,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P003",
                     t.span,
-                    format!("Feldname erwartet, {gefunden} gefunden"),
+                    format!("field name expected, {gefunden} found"),
                 ));
                 Err(Abbruch)
             }
@@ -306,7 +306,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P004",
                 t.span,
-                format!("Zahl erwartet, {gefunden} gefunden"),
+                format!("number expected, {gefunden} found"),
             ));
             Err(Abbruch)
         }
@@ -350,7 +350,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P005",
                 t.span,
-                "Zeichenkette erwartet".to_string(),
+                "string expected".to_string(),
             ));
             Err(Abbruch)
         }
@@ -375,7 +375,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P005",
                 t.span,
-                format!("Zeichenkette erwartet, {gefunden} gefunden"),
+                format!("string expected, {gefunden} found"),
             ));
             Err(Abbruch)
         }
@@ -515,9 +515,9 @@ impl<'a> Parser<'a> {
                     ),
                 )
                 .mit_notiz(
-                    "`[ \"pub\" ]` steht an elf Item-Arten: module use const static type \
-                     fn atomic table device format lock -- der Parser nahm es ueberall an \
-                     und warf es weg",
+                    "`[ \"pub\" ]` stands at eleven item kinds: module use const static \
+                     type fn atomic table device format lock -- the parser accepted it \
+                     everywhere and threw it away",
                 ),
             );
         }
@@ -564,8 +564,8 @@ impl<'a> Parser<'a> {
                         format!("no item starts here: {gefunden}"),
                     )
                     .mit_notiz(
-                        "`item` kennt: module use type const static fn format table reason \
-                         state device assume axiom check atomic lock accumulates walk entry boot",
+                        "`item` knows: module use type const static fn format table reason \
+                     state device assume axiom check atomic lock accumulates walk entry boot",
                     ),
                 );
                 return Err(Abbruch);
@@ -822,7 +822,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P007",
                     t.span,
-                    format!("Typ erwartet, {gefunden} gefunden"),
+                    format!("type expected, {gefunden} found"),
                 ));
                 Err(Abbruch)
             }
@@ -836,7 +836,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P008",
                 t.span,
-                format!("Ganzzahltyp erwartet, {gefunden} gefunden"),
+                format!("integer type expected, {gefunden} found"),
             ));
             return Err(Abbruch);
         };
@@ -844,7 +844,7 @@ impl<'a> Parser<'a> {
             self.absage(Absage::fehler(
                 "P008",
                 t.span,
-                format!("Ganzzahltyp erwartet, `{wort}` gefunden"),
+                format!("integer type expected, `{wort}` found"),
             ));
             return Err(Abbruch);
         }
@@ -911,9 +911,9 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P009",
                         t.span,
-                        format!("Adressraum erwartet, {gefunden} gefunden"),
+                        format!("address space expected, {gefunden} found"),
                     )
-                    .mit_notiz("`normal` `mmio` `dma` `code` `boot` `port` oder ein Name"),
+                    .mit_notiz("`normal` `mmio` `dma` `code` `boot` `port` or a name"),
                 );
                 return Err(Abbruch);
             }
@@ -952,7 +952,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P010",
                         t.span,
-                        format!("Zugriffsrecht erwartet, {gefunden} gefunden"),
+                        format!("access right expected, {gefunden} found"),
                     )
                     .mit_notiz("`r` `w` `rw` `x` `own[@marke]`"),
                 );
@@ -1043,13 +1043,13 @@ impl<'a> Parser<'a> {
             self.absage(
                 Absage::fehler("P035", sp, "`{ }` is neither a record nor a sum type")
                     .mit_notiz(
-                        "der leere Klammerpaar-Fall ergab bisher stillschweigend einen LEEREN \
-                         SUMMENTYP -- einen Typ ohne Wert, ueber den ein `match` erschoepfend \
-                         ist, indem er nichts tut",
+                        "the empty parenthesis case silently yielded an EMPTY SUM TYPE \
+                         until now -- a type with no value, over which a `match` is \
+                         exhaustive by doing nothing",
                     )
                     .mit_notiz(
-                        "E3: nichts ist implizit -- auch keine Wahl zwischen zwei Bedeutungen, \
-                         die niemand hingeschrieben hat",
+                        "E3: nothing is implicit -- not even a choice between two meanings \
+                         that nobody wrote down",
                     ),
             );
             return Err(Abbruch);
@@ -1722,7 +1722,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P011",
                     t.span,
-                    format!("Ausdruck erwartet, {gefunden} gefunden"),
+                    format!("expression expected, {gefunden} found"),
                 ));
                 Err(Abbruch)
             }
@@ -1787,13 +1787,12 @@ impl<'a> Parser<'a> {
                         Absage::fehler(
                             "P036",
                             wert.span,
-                            "in einer Argumentliste sind entweder ALLE Argumente markiert \
-                             oder keines",
+                            "in an argument list either ALL arguments are labelled \
+                             or none is",
                         )
                         .mit_notiz(
-                            "`P(a: 1, b: 2)` stellt einen Verbund her, `f(1, 2)` ruft eine \
-                             Funktion -- eine halb markierte Liste ist weder das eine noch \
-                             das andere",
+                            "`P(a: 1, b: 2)` builds a record, `f(1, 2)` calls a function \
+                             -- a half-labelled list is neither the one nor the other",
                         ),
                     );
                     return Err(Abbruch);
@@ -1840,16 +1839,16 @@ impl<'a> Parser<'a> {
             Absage::fehler(
                 "P037",
                 nach.bis_zu(self.span()),
-                "Gabbro hat kein geschweiftes Verbundliteral",
+                "Gabbro has no braced record literal",
             )
-            .mit_notiz("statt `P { a: 1, b: 2 }` schreibt man `P(a: 1, b: 2)`")
+            .mit_notiz("instead of `P { a: 1, b: 2 }` one writes `P(a: 1, b: 2)`")
             .mit_notiz(
-                "die Felderliste einer Deklaration IST ihr Konstruktor -- genau wie die \
-                 Parameterliste eines `device` (`Vtd(basis)`)",
+                "the field list of a declaration IS its constructor -- exactly like \
+                 the parameter list of a `device` (`Vtd(basis)`)",
             )
             .mit_notiz(
-                "SYNTAX.md, \u{201e}Was es absichtlich nicht gibt\u{201c}: ein `{` nach einem \
-                 Ausdruck gehoert in Gabbro immer einem Block",
+                "SYNTAX.md, \u{201e}What deliberately does not exist\u{201c}: in Gabbro a \
+                 `{` after an expression always belongs to a block",
             ),
         );
     }
@@ -2106,7 +2105,7 @@ impl<'a> Parser<'a> {
         self.absage(Absage::fehler(
             "P012",
             t.span,
-            format!("Praedikat erwartet, {gefunden} gefunden"),
+            format!("predicate expected, {gefunden} found"),
         ));
         Err(Abbruch)
     }
@@ -2195,15 +2194,15 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P013",
                         t.span,
-                        format!("Quantorendomaene erwartet, {gefunden} gefunden"),
+                        format!("quantifier domain expected, {gefunden} found"),
                     )
                     .mit_notiz(
-                        "acht Domaenen, geschlossen: slots of · chain(a,b) in · descendants of \
+                        "nine domains, closed: slots of · chain(a,b) in · descendants of \
                          · queue · fields of · elems of · threads · mappings of · ancestors of",
                     )
                     .mit_notiz(
-                        "es gibt keine benutzerdefinierte Domaene -- was hier herausfaellt, \
-                         ist NICHT formulierbar (SYNTAX.md §5)",
+                        "there is no user-defined domain -- what falls out here is NOT \
+                         expressible (SYNTAX.md §5)",
                     ),
                 );
                 Err(Abbruch)
@@ -2471,7 +2470,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P014",
                         t.span,
-                        format!("Wirkung erwartet, {gefunden} gefunden"),
+                        format!("effect expected, {gefunden} found"),
                     )
                     .mit_notiz(
                         "reads writes locks masks allocs consumes publishes diverges pure",
@@ -2569,9 +2568,9 @@ impl<'a> Parser<'a> {
             self.absage(
                 Absage::fehler("P033", anfang, "a semicolon on its own is not a statement")
                     .mit_notiz(
-                        "die Formen mit Block -- `if`, `match`, `traverse`, `retry`, \
+                        "the forms with a block -- `if`, `match`, `traverse`, `retry`, \
                          `forever`, `breaking`, `narrow … else`, `locks`, `let … else` -- \
-                         tragen KEIN abschliessendes Semikolon",
+                         carry NO trailing semicolon",
                     ),
             );
             return Err(Abbruch);
@@ -2582,9 +2581,9 @@ impl<'a> Parser<'a> {
             let wort = self.blick().text(self.quelle);
             if let Some(grund) = abgeschaffte_form(wort) {
                 self.absage(
-                    Absage::fehler("P035", anfang, format!("`{wort}` gibt es in Gabbro nicht"))
+                    Absage::fehler("P035", anfang, format!("`{wort}` does not exist in Gabbro"))
                         .mit_notiz(grund)
-                        .mit_notiz("SYNTAX.md, „Was es absichtlich nicht gibt\u{201c}"),
+                        .mit_notiz("SYNTAX.md, \u{201e}What deliberately does not exist\u{201c}"),
                 );
                 return Err(Abbruch);
             }
@@ -2874,7 +2873,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P017",
                         t.span,
-                        format!("Zuweisung oder Aufruf erwartet, {gefunden} gefunden"),
+                        format!("assignment or call expected, {gefunden} found"),
                     )
                     .mit_notiz("E2: an assignment is not an expression"),
                 );
@@ -3003,7 +3002,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P019",
                         t.span,
-                        format!("Abstiegsmass erwartet, {gefunden} gefunden"),
+                        format!("descent measure expected, {gefunden} found"),
                     )
                     .mit_notiz("`by unvisited` · `by consuming` · `by decreasing expr`"),
                 );
@@ -3174,7 +3173,7 @@ impl<'a> Parser<'a> {
                         self.absage(Absage::fehler(
                             "P020",
                             s.span,
-                            "`table` kennt genau ein `slot`-Wort",
+                            "`table` knows exactly one `slot` word",
                         ));
                         return Err(Abbruch);
                     }
@@ -3189,7 +3188,7 @@ impl<'a> Parser<'a> {
                         self.absage(Absage::fehler(
                             "P022",
                             t.span,
-                            "`table` kennt genau ein `tree`-Wort",
+                            "`table` knows exactly one `tree` word",
                         ));
                         return Err(Abbruch);
                     }
@@ -3228,7 +3227,7 @@ impl<'a> Parser<'a> {
                         self.absage(Absage::fehler(
                             "P040",
                             anfang.bis_zu(ende),
-                            "`table` kennt genau ein `occupied`-Wort",
+                            "`table` knows exactly one `occupied` word",
                         ));
                         return Err(Abbruch);
                     }
@@ -3241,7 +3240,7 @@ impl<'a> Parser<'a> {
                         Absage::fehler(
                             "P021",
                             t.span,
-                            format!("im `table`-Rumpf erwartet: const, slot, invariant, ops, tree, occupied -- {gefunden} gefunden"),
+                            format!("in a `table` body expected: const, slot, invariant, ops, tree, occupied -- {gefunden} found"),
                         ),
                     );
                     return Err(Abbruch);
@@ -3287,7 +3286,7 @@ impl<'a> Parser<'a> {
                     self.absage(Absage::fehler(
                         "P023",
                         t.span,
-                        format!("im `tree`-Rumpf erwartet: parent, child, sibling -- {gefunden} gefunden"),
+                        format!("in a `tree` body expected: parent, child, sibling -- {gefunden} found"),
                     ));
                     return Err(Abbruch);
                 }
@@ -3300,7 +3299,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P024",
                     feld.span,
-                    "diese Kante steht in `tree` zweimal",
+                    "this edge appears twice in `tree`",
                 ));
                 return Err(Abbruch);
             }
@@ -3397,7 +3396,7 @@ impl<'a> Parser<'a> {
                 Absage::fehler(
                     "P022",
                     t.span,
-                    format!("Kostenangabe faengt mit `O` an, `{}` gefunden", name.text),
+                    format!("a cost bound starts with `O`, `{}` found", name.text),
                 )
                 .mit_notiz("`costexpr = \"O\" \"(\" expr \")\"`"),
             );
@@ -3467,7 +3466,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P024",
                     at.bis_zu(wort.span),
-                    format!("`@version` erwartet, `@{}` gefunden", wort.text),
+                    format!("`@version` expected, `@{}` found", wort.text),
                 ));
                 return Err(Abbruch);
             }
@@ -3605,8 +3604,8 @@ impl<'a> Parser<'a> {
                         "P026",
                         t.span,
                         format!(
-                            "im `device`-Rumpf erwartet: mirrors, reg, bank, transition -- \
-                             {gefunden} gefunden"
+                            "in a `device` body expected: mirrors, reg, bank, transition -- \
+                     {gefunden} found"
                         ),
                     ));
                     return Err(Abbruch);
@@ -3642,7 +3641,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P027",
                         t.span,
-                        format!("Registerklasse erwartet, {gefunden} gefunden"),
+                        format!("register class expected, {gefunden} found"),
                     )
                     .mit_notiz("`r` `w` `rw` `w1c` `rc`"),
                 );
@@ -3999,7 +3998,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P028",
                         t.span,
-                        format!("Merge-Operation erwartet, {gefunden} gefunden"),
+                        format!("merge operation expected, {gefunden} found"),
                     )
                     .mit_notiz("the set is closed: max min add or and"),
                 );
@@ -4040,12 +4039,12 @@ impl<'a> Parser<'a> {
                 Absage::fehler(
                     "P029",
                     t.span,
-                    format!("`falsifier` oder `unfalsifiable` erwartet, {gefunden} gefunden"),
+                    format!("`falsifier` or `unfalsifiable` expected, {gefunden} found"),
                 )
                 .mit_notiz(
-                    "die dritte Klasse -- *nicht gefahren* -- ist die Abwesenheit beider \
-                     Angaben und ein Uebersetzungsfehler: eine nicht gefahrene Annahme darf \
-                     nie wie eine falsifizierte aussehen",
+                    "the third class -- *not run* -- is the absence of both entries and a \
+                     compile error: an assumption that was never run must never look \
+                     like a falsified one",
                 ),
             );
             Err(Abbruch)
@@ -4240,7 +4239,7 @@ impl<'a> Parser<'a> {
                     self.absage(Absage::fehler(
                         "P030",
                         t.span,
-                        format!("`never`, `masked` oder `bounded` erwartet, {gefunden} gefunden"),
+                        format!("`never`, `masked` or `bounded` expected, {gefunden} found"),
                     ));
                     return Err(Abbruch);
                 }
@@ -4331,16 +4330,16 @@ impl<'a> Parser<'a> {
 fn abgeschaffte_form(wort: &str) -> Option<&'static str> {
     match wort {
         "while" | "for" | "do" | "loop" => Some(
-            "es gibt drei Schleifenformen und nur diese: `traverse … over … by …`, \
+            "there are three loop forms and only these: `traverse … over … by …`, \
              `retry … bounded … ops on_exceeded …`, `forever per_pass bounded … ops`",
         ),
-        "break" => Some("die geordnete Abschaltung heisst `leave <marke>;`"),
-        "continue" => Some("der naechste Durchgang heisst `next <marke>;`"),
+        "break" => Some("the orderly shutdown is called `leave <mark>;`"),
+        "continue" => Some("the next pass is called `next <mark>;`"),
         "goto" => Some("there is no jump -- control flow lives in the form"),
         "switch" => Some("`match` is exhaustive and has no catch-all branch"),
         "unsafe" => Some(
-            "unsichere Fenster gibt es nicht; was die Maschine anfasst, steht in `axiom`, \
-             `raw fn` oder `prim fn` -- benannt und gezaehlt",
+            "there are no unsafe windows; what touches the machine stands in `axiom`, \
+             `raw fn` or `prim fn` -- named and counted",
         ),
         _ => None,
     }

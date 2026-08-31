@@ -610,7 +610,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     // **And it arose a SECOND time, on 2026-08-28, when `S` came.** The same assertion caught
     // it before any report was read. *That is what a balance is for: a new kind does not get
     // to be quietly uncounted, and the check does not depend on anyone noticing.*
-    debug_assert_eq!(r + e + n + f + v + dz + si, p.len(), "Pflichtenbilanz geht nicht auf");
+    debug_assert_eq!(r + e + n + f + v + dz + si, p.len(), "the obligation balance does not add up");
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
          {f} foreign, {v} precondition, {dz} device, {si} loop invariant ==\n",

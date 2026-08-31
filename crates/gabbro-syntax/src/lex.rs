@@ -141,13 +141,13 @@ impl Token {
     /// How the token is named in a refusal.
     pub fn benennung(&self, quelle: &str) -> String {
         match self.art {
-            Art::Ident => format!("Bezeichner `{}`", self.text(quelle)),
+            Art::Ident => format!("identifier `{}`", self.text(quelle)),
             Art::Wort(k) => format!("`{}`", k.text()),
-            Art::Zahl(_) => format!("Zahl `{}`", self.text(quelle)),
-            Art::Gleitkomma(..) => format!("Gleitkommazahl `{}`", self.text(quelle)),
-            Art::Text => "Zeichenkette".to_string(),
+            Art::Zahl(_) => format!("number `{}`", self.text(quelle)),
+            Art::Gleitkomma(..) => format!("floating point number `{}`", self.text(quelle)),
+            Art::Text => "string".to_string(),
             Art::Zeichen(z) => format!("`{}`", z.text()),
-            Art::Ende => "Dateiende".to_string(),
+            Art::Ende => "end of file".to_string(),
         }
     }
 }
@@ -220,11 +220,11 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                     Absage::fehler(
                         "L001",
                         Span::neu(von as u32, i as u32),
-                        "Zeichenkette ohne schliessendes Anfuehrungszeichen",
+                        "string literal with no closing quote",
                     )
                     .mit_notiz(
-                        "`char = jedes Zeichen ausser quote und newline` -- eine Zeichenkette \
-                         endet auf ihrer Zeile",
+                        "`char = any character except quote and newline` -- a string \
+                         literal ends on its own line",
                     ),
                 );
             }
@@ -249,7 +249,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                     Absage::fehler(
                         "L004",
                         Span::neu(von as u32, von as u32 + 2),
-                        "Grossbuchstabe im Zahlenpraefix",
+                        "capital letter in the number prefix",
                     )
                     .mit_notiz("the lexer knows `0x` and `0b`, not `0X`/`0B`"),
                 );
@@ -394,7 +394,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                         ),
                     )
                     .mit_notiz(
-                        "Zahlen enden vor dem naechsten Buchstaben; ein Suffix gibt es nicht",
+                        "numbers end before the next letter; there is no suffix",
                     ),
                 );
                 i = ende;
