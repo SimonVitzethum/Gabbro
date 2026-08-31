@@ -727,6 +727,168 @@ lauf "fragment4" "$W/messung/fragmente/F04.gab" "$TREIBER4" \
      's/% q->n/% 1/g' \
      "2 assumptions (0 of them NOT FALSIFIABLE, 2 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 4d. Das Fragment F6: die Stack-Wasserstandsmarke, und sie MISST DEN INDEX ------------
+#
+# **Die erste der fuenf offenen Absenkungspflichten (`H`), die den Ausfuehrungsweg gehen
+# kann.** Bis zum 2026-08-30 ging sie nicht: der Erzeuger senkte den Feldindex von
+# `elems of` als `uint32_t` ab -- eine Kopie aus `slots of` --, und `w != MUSTER` mit
+# `MUSTER = 0xdead_beef_dead_beef` war damit *comparison is always true due to limited
+# range*. `-Wextra -Werror` nahm es nicht an. **Mit `uint64_t` uebersetzt dasselbe C.**
+#
+# ERWARTUNG, ABGELEITET AUS DEM AUSSCHNITT -- HINGESCHRIEBEN, BEVOR SIE GEMESSEN WURDE
+# ------------------------------------------------------------------------------------
+# *Sonst misst dieser Lauf den Erzeuger gegen sich selbst.* Die Ableitung ruht auf genau
+# einer Sprachentscheidung: **`elems of` bindet einen INDEX** (`SYNTAX.md`:635, «B12»,
+# entschieden 2026-08-20). Also laeuft `w` ueber 0, 1, …, 8191, und `MUSTER` ist
+# 16045690984833335023. Schon der erste Durchgang nimmt den `return`:
+#
+#     unberuehrt(s)           == 0            fuer JEDES s -- der Rumpf liest `s` nie
+#     messen_benutzt(s, art)  == s.len - 0    == s.len
+#     pruefe_all_done()       == true         (`can_fail { return true; }`)
+#
+# Daraus faellt die Eichung des Ausschnitts, und zwar an ZWEI verschiedenen Stellen, je
+# nachdem was `eichfeld()` liefert:
+#
+#     f.len == 0      1. `unberuehrt(f) != 0`             -> 0 != 0, weiter
+#                     2. `muster_schreiben(f)`            -> gerufen  (1)
+#                     3. `unberuehrt(f) != f.len`         -> 0 != 0, weiter
+#                     4. `beruehre(f, 64)`                -> gerufen  (1)
+#                     5. `unberuehrt(f) != (8192-64)*8`   -> 0 != 65024  -> FALSE
+#
+#     f.len != 0      1. weiter · 2. gerufen (1) · 3. `0 != 4096` -> FALSE
+#                     `beruehre` wird NICHT mehr gerufen (0)
+#
+# > **Und das ist der eigentliche Befund dieses Durchstichs, nicht sein Nebenprodukt.**
+# > Der Ausschnitt vom 2026-08-14 wurde mit der ELEMENTlesart geschrieben; Gabbro hat sich
+# > 2026-08-20 fuer den INDEX entschieden. **Die Eichung, die der Ausschnitt selbst
+# > mitbringt, um sein Messgeraet zu pruefen, schlaegt an** -- an genau dem Unterschied.
+# > *Ein Fragment, das seine eigene Falschheit meldet, ist der beste Fall, den es hier gibt:
+# > das erzeugte C rechnet, was das Fragment SAGT, und was es sagt, ist nicht, was sein
+# > Schreiber meinte.* Der Durchstich misst das erste und nennt das zweite.
+#
+# Die Stuempfe sind darum EHRLICH: `muster_schreiben` schreibt das Muster wirklich in alle
+# 8192 Worte, `beruehre` macht die obersten `tiefe` Worte schmutzig. **Ein Stumpf, der
+# nichts schreibt, koennte die Indexlesart von der Elementlesart nicht unterscheiden** --
+# unter der Elementlesart lieferte Schritt 2 dann 8192*8 und Schritt 4 genau 65024.
+#
+# `check kstack` haengt an keiner der beiden Lesarten; er wird ueber die Stuempfe belegt:
+#
+#     g fehlt                                  -> false   (`let … else`)
+#     f fehlt                                  -> false
+#     g=65536 f=4096                           -> false   (4096 < 65536/8)
+#     g=65536 f=8192  irq.tiefe_max=0          -> true    (0 + 8192 <= 8192)
+#     g=65536 f=8192  irq.tiefe_max=1          -> false   (8193 <= 8192)
+#     g=65536 f=16384 irq.tiefe_max=8192       -> true    (16384 <= 16384)
+#     g=65536 f=16384 irq.tiefe_max=8193       -> false   (16385 <= 16384)
+schneide "$W/dokumente/FRAGMENTE.md" "module kernel::kstackmark" > "$ARB/f6.gab"
+if ! grep -q "traverse w of s over elems of s.worte" "$ARB/f6.gab"; then
+    echo "== EMISSION: F6 NICHT GESCHNITTEN -- der Waechter misst seine eigene Ablage =="
+    exit 1
+fi
+if [ -n "$(verlorene_zeilen "$ARB/f6.gab" "$W/messung/fragmente/F06.gab")" ]; then
+    echo "== EMISSION: F06.gab hat eine Zeile des eingefrorenen Ausschnitts VERLOREN =="
+    verlorene_zeilen "$ARB/f6.gab" "$W/messung/fragmente/F06.gab" | head -10
+    exit 1
+fi
+grep -v "atomic tiefster" "$W/messung/fragmente/F06.gab" > "$ARB/f6-kurz.gab"
+if [ -z "$(verlorene_zeilen "$ARB/f6.gab" "$ARB/f6-kurz.gab")" ]; then
+    echo "== EMISSION: Sprechprobe F6 haelt nicht -- eine entfernte Ausschnittzeile faellt"
+    echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
+    exit 1
+fi
+echo "  (F6: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
+echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
+TREIBER6='#include <stdio.h>
+#include "@ERZEUGT@"
+
+/* Die sechs fremden Rumpfe. Der Ausschnitt RUFT sie und deklariert sie nicht; F06.gab
+ * traegt die `extern fn`-Zeilen nach, die Koerper schuldet der Rufer -- hier also dieser
+ * Treiber. */
+static Stack f6_feld;
+static unsigned f6_muster_rufe;
+static unsigned f6_beruehre_rufe;
+static uint64_t f6_g_wert;
+static uint64_t f6_f_wert;
+static bool f6_g_ok;
+static bool f6_f_ok;
+
+Stack * eichfeld(void) { return &f6_feld; }
+
+void muster_schreiben(Stack *s) {
+    f6_muster_rufe++;
+    for (uint64_t k = 0; k < STACK_WORTE; k++) { s->worte[k] = MUSTER; }
+}
+
+/* Der Stack waechst nach unten: „Tiefe" sind die HOECHSTEN Indizes. Unter der
+ * Elementlesart lieferte `unberuehrt` danach genau (8192 - tiefe) * 8 -- die Zahl, die der
+ * Ausschnitt in Schritt 4 seiner Eichung erwartet. */
+void beruehre(Stack *s, uint64_t tiefe) {
+    f6_beruehre_rufe++;
+    for (uint64_t k = 0; k < tiefe && k < STACK_WORTE; k++) { s->worte[STACK_WORTE - 1 - k] = 0; }
+}
+
+bool eichung_lief(void) { return true; }
+
+bool groesse_gemessen(uint64_t *wert, NichtGemessen *grund) {
+    if (!f6_g_ok) { *grund = NichtGemessen_Fehlt; return false; }
+    *wert = f6_g_wert;
+    return true;
+}
+
+bool frei_min_gemessen(uint64_t *wert, NichtGemessen *grund) {
+    if (!f6_f_ok) { *grund = NichtGemessen_Fehlt; return false; }
+    *wert = f6_f_wert;
+    return true;
+}
+
+static int kstack_mit(uint64_t g, bool g_ok, uint64_t f, bool f_ok, uint64_t im) {
+    f6_g_wert = g; f6_g_ok = g_ok; f6_f_wert = f; f6_f_ok = f_ok; irq.tiefe_max = im;
+    return pruefe_kstack() ? 1 : 0;
+}
+
+int main(void) {
+    /* A -- `unberuehrt` an einem FRISCHEN und an einem voll mit MUSTER beschriebenen Feld.
+     *      Zweimal 0: der Vergleich trifft den Index, nicht das Wort. */
+    printf("%llu ", (unsigned long long)unberuehrt(&f6_feld));
+    muster_schreiben(&f6_feld);
+    printf("%llu ", (unsigned long long)unberuehrt(&f6_feld));
+
+    /* B -- `messen_benutzt` == s.len - unberuehrt(s) == s.len */
+    f6_feld.len = 4096;
+    printf("%llu ", (unsigned long long)messen_benutzt(&f6_feld, Stackart_El0));
+    printf("%llu ", (unsigned long long)messen_benutzt(&f6_feld, Stackart_Kern));
+
+    /* C -- das Tor `all_done` */
+    printf("%d ", pruefe_all_done() ? 1 : 0);
+
+    /* D -- die Eichung des Ausschnitts, zweimal, und die Rufzaehler sagen WO sie faellt */
+    f6_feld.len = 0; f6_muster_rufe = 0; f6_beruehre_rufe = 0;
+    printf("%d ", pruefe_kstack_eichung() ? 1 : 0);
+    printf("%u %u ", f6_muster_rufe, f6_beruehre_rufe);
+    f6_feld.len = 4096; f6_muster_rufe = 0; f6_beruehre_rufe = 0;
+    printf("%d ", pruefe_kstack_eichung() ? 1 : 0);
+    printf("%u %u ", f6_muster_rufe, f6_beruehre_rufe);
+
+    /* E -- `check kstack`, sieben Belegungen: beide Fehlerkanaele, die Schranke und die
+     *      Grenze in beide Richtungen */
+    printf("%d ", kstack_mit(0, false, 0, false, 0));
+    printf("%d ", kstack_mit(65536, true, 0, false, 0));
+    printf("%d ", kstack_mit(65536, true, 4096, true, 0));
+    printf("%d ", kstack_mit(65536, true, 8192, true, 0));
+    printf("%d ", kstack_mit(65536, true, 8192, true, 1));
+    printf("%d ", kstack_mit(65536, true, 16384, true, 8192));
+    printf("%d\n", kstack_mit(65536, true, 16384, true, 8193));
+    return 0;
+}
+'
+# **Das Gift loescht den Ruf von `muster_schreiben` aus der Eichung** -- dieselbe Klasse wie
+# bei F7: eine Anweisung faellt weg, das C uebersetzt, und die Eichung schlaegt weiter an.
+# *Nur die Rufzaehler sehen es* -- und genau darum stehen sie in der Erwartung.
+lauf "fragment6" "$W/messung/fragmente/F06.gab" "$TREIBER6" \
+     "0 0 4096 4096 1 0 1 1 0 1 0 0 0 0 1 0 1 0" \
+     's/    muster_schreiben(f);/    \/* geloescht *\//' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 13 direct forms, 6 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
 # **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**
