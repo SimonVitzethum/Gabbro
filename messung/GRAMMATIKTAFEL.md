@@ -642,6 +642,27 @@ fünf neuen Dateien und der zweite vergiftete Träger.
   abweist, ist eine Entscheidung über die Absenkung.
 * **Nichts über die Reichweite von Stufe 9.** Sie sieht `beispiele/gift/` nicht, und die
   Giftprobe liegt genau dort. Das gehört `pruefe-emission.sh`.
+
+### 9.10 Die eine Zahl, die diese Bahn SCHULDET
+
+`pruefe-emission.sh` zählt je Wurzel, wie viele Dateien emittieren, und hält es gegen zwei
+Marken. **Vier neue `messung/grammatik/`-Dateien heben die zweite:**
+
+```
+MARKE_EMIT_M   25  ->  29     die vier Programme aus 9.2
+MARKE_EMIT     54  ->  55     NICHT von dieser Bahn -- schon vor ihr so
+```
+
+Die Ratsche nennt den Fall selbst *„der gute Fall, und trotzdem ein Befund"* und verlangt,
+dass die Marke nachgezogen wird. **Diese Bahn zieht sie nicht** — an `pruefe-emission.sh`
+arbeitet in derselben Nacht eine andere, und eine Ratschenzeile, die zwei Bahnen gleichzeitig
+anfassen, ist ein Merge-Konflikt an genau der Stelle, an der eine Zahl stimmen muss. *Die
+Zahl steht hier, damit sie beim Zusammenführen nicht gesucht werden muss.*
+
+Nachgerechnet mit demselben Nenner, den Stufe 9 benutzt (Dateien, die **emittieren**, nicht
+die, die übersetzen); die 29 sind 6 Fragmente, 7 Proben, **6 aus der Grammatik**, 5 ABI, 2
+Caprock, Grenze, Netz, Treiber. Der Lauf steht ohnehin unter `--voll` und war in der
+Schnellabnahme dieses Abends ausgelassen.
 * **Nichts darüber, ob die Absenkungen RICHTIG sind.** Zwei Träger statt einem machen die
   Messung unempfindlich, nicht die Sprache richtig. `ptr<port, r>` senkt in `raumworte.gab`
   genauso zu einem gewöhnlichen Ladebefehl ab wie in `geraeteworte.gab` — §3 Befund 2, ein

@@ -184,6 +184,38 @@ wächst, braucht ihren Grund an der Marke* (§ Ratschen, `dokumente/`).
 
 ---
 
+## 5b. Und so ist es ausgegangen — **25 → 0**, am selben Abend
+
+Vier Programme aus der Grammatik, jedes mit einem Gegenstand statt einer Liste. Jedes prüft
+mit **0 Fehlern, 0 Hinweisen, 0 `C001`** und übersetzt unter `cc -std=c11 -Wall -Wextra
+-Werror` bei `-O0` und `-O2`:
+
+| Datei | verteilt | Gegenstand |
+|---|---|---|
+| `messung/grammatik/blocklauf.gab` | `walk` `levels` `node` `down` `leaf` `mappings` | der Indirektionsbaum eines Inodes |
+| `messung/grammatik/tabellenworte.gab` | `insert` `remove` `relabel` `exists` | ein Gerätebaum: Gerät am Bus am Bus |
+| `messung/grammatik/messreihe.gab` | `i8` `i16` `i32` `i64` `and` `min` `finite` `sizeof` | eine Messreihe |
+| `messung/grammatik/raumworte.gab` | `port` `rc` `seq` `boot` `prim` `allocs` `use` | ein Zeitgeber am Altlastenbus |
+
+```
+vorher   25 an je EINER Datei · 15 an zwei · Median 4
+nachher   0 an je EINER Datei · 38 an zwei · Median 4
+```
+
+**`gesenkt` bleibt bei 214, `UNGEDECKT` bei 4.** Die Programme decken nichts Neues ab; sie
+machen die vorhandene Deckung unempfindlich. *Dass es sich in keiner Deckungszahl zeigt, ist
+der Punkt.*
+
+Was dabei herausgefallen ist, steht in `messung/GRAMMATIKTAFEL.md` §9: ein Formatfeld namens
+`gueltig` kollidiert mit der erzeugten Prüfkörperfunktion (`beispiele/gift/413`), und die
+Sprechprobe des Wächters selbst hing daran, dass ein Wort einsam ist — sie brach ab, sobald
+keines mehr einsam war.
+
+**Und §4 steht unverändert:** `bootdecl` bleibt allein in `beispiele/07`. Benannt, nicht
+geheilt.
+
+---
+
 ## 6. Was dieses Dokument NICHT sagt
 
 1. **Nichts darüber, ob die Absenkung richtig ist.** Ein Wort an fünf Dateien kann fünfmal
