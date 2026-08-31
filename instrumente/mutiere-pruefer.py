@@ -1790,6 +1790,25 @@ MUTATIONEN = [
         "Giftprobe faellt (408).",
     ),
     Mutation(
+        "zwei-erzeugernamen-duerfen-gleich-sein",
+        "namen.rs",
+        "        if gruppe.len() < 2 {",
+        "        if gruppe.len() < 3 {",
+        "N042 -- die Doppelung wird erst ab DREI gleichen Namen gemeldet, also nie: der "
+        "Erzeuger schreibt `Eintrag_gueltig` zweimal, der Pruefer schweigt, und `cc` sagt "
+        "*Redefinition*. Der Rest des Passes bleibt wach -- genau EINE Giftprobe faellt (413).",
+    ),
+    Mutation(
+        "der-anhang-des-erzeugers-zaehlt-nicht-mehr",
+        "erzeugernamen.rs",
+        "    v.push(Gebildet { name, span, muster, was, angehaengt: true });",
+        "    v.push(Gebildet { name, span, muster, was, angehaengt: false });",
+        "N042 -- kein gebildeter Name gilt mehr als gebildet, also greift der Schnitt "
+        "`mindestens eine Seite ist ein Anhang` nie: die ganze Regel schweigt, waehrend "
+        "`geltungsbereich` und `N041` daneben unversehrt bleiben. Genau EINE Giftprobe "
+        "faellt (413).",
+    ),
+    Mutation(
         "baumkante-braucht-ihr-feld-nicht",
         "kbedingung.rs",
         "            let Some(typ) = felder.get(k.text.as_str()) else {",

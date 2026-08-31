@@ -35,6 +35,11 @@ pub mod gatter;
 // `N041`. It sits next to `gatter` for the same reason: both answer a question about a NAME
 // before any pass asks what the thing behind it does.
 pub mod cnamen;
+// **The names the GENERATOR forms.** The other half of the same question, and a table for the
+// same reason: `namen.rs` reads it and issues `N042`. `cnamen` holds what C took, this holds
+// what Gabbro itself builds out of a user name -- and neither is a duplicate at the Gabbro
+// level, which is why `geltungsbereich` sees none of them.
+pub mod erzeugernamen;
 // Die Domaenenschranke -- kosten.rs und m1.rs lesen dieselbe.
 pub mod domaene;
 pub mod m2;

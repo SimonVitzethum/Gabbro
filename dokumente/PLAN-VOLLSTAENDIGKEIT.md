@@ -212,7 +212,18 @@ gegangen.**
 >
 > *Der eigene Satz dieses Abschnitts — „eine Absenkungspflicht an einem Programm, das nicht
 > übersetzt, ist keine offene Pflicht, sondern eine falsch gebuchte" — trifft damit nicht zwei
-> der vier, sondern alle.* **Die Umbuchung ist EINE Entscheidung über alle vier und gehört dem
+> der vier, sondern alle.*
+>
+> **Und die Bewegung ging am selben Tag noch zweimal in dieselbe Richtung** — beide Male von
+> `cc` zum Prüfer bzw. vom stillen C zur benannten Absage:
+>
+> | | vorher | seit dem 2026-08-31 |
+> |---|---|---|
+> | ein `format`-Feld, das `gueltig` heisst | Prüfer 0 Fehler, `emit` ohne `C001`, `cc` sagt *Redefinition* | **`N042`** — und es sind NEUN Kollisionsformen, nicht zwei ([`../messung/ERZEUGERNAMEN.md`](../messung/ERZEUGERNAMEN.md)) |
+> | `device … at port` | Prüfer 0 Fehler, `emit` schreibt die PORTNUMMER als Speicherversatz, `cc` nimmt an | **`C001`** — die Absage statt einer Absenkung, die es nicht gibt ([`../messung/ADRESSRAEUME.md`](../messung/ADRESSRAEUME.md)) |
+>
+> Die zweite ist der schärfere Fall: dort war das C nicht *abwesend*, sondern **falsch**, und
+> kein Werkzeug der Kette hat es gemeldet. **Die Umbuchung ist EINE Entscheidung über alle vier und gehört dem
 > Ordner;** eine Bahn, die `F5` allein umbucht, senkt `H` um eins und lässt drei gleichgelagerte
 > Zeilen stehen. *Das ist Umtopfen.*
 

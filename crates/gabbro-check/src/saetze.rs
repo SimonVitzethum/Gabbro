@@ -1839,6 +1839,54 @@ pub const SPERREN: &[Satz] = &[
                      crates/gabbro-check/src/cnamen.rs; messung/C-NAMEN.md",
     },
     Satz {
+        name: "namen.erzeugter_name_zweimal",
+        kennungen: &["N042"],
+        aussage: "Two Gabbro declarations that get the SAME C name are refused at the second \
+                  one. The generator forms C names out of a user name plus a fixed suffix \
+                  (`{Format}_gueltig`, `{Tabelle}_NONE`, `{Walk}_knoten`, …) and writes the \
+                  user name unchanged -- so a collision can arise between two names the \
+                  generator built itself, neither of which is a C name and neither of which \
+                  is a duplicate in Gabbro.",
+        vorbehalt: "**The family is measured and it is NINE forms, not the one that found \
+                    it** (`messung/ERZEUGERNAMEN.md` §2). Inside one carrier: a field named \
+                    `gueltig`, a field `setz_a` next to a field `a`, a variant named `marke`, \
+                    a bank register `setz_LO` next to `LO`. Across two: `table Kappe` next to \
+                    `const Kappe_NONE`, `walk Baum` next to `type Baum_knoten`, `reason \
+                    Fehler { Leer … }` next to `const Fehler_Leer`, `format Eintrag { a … }` \
+                    next to `extern fn Eintrag_a`. All nine check with 0 errors, emit without \
+                    a `C001`, and are refused by `cc`.\n\
+                    **And a TENTH that `cc` does not catch** -- `lock TOR` next to `extern fn \
+                    TOR_nimm()`. `void TOR_nimm(void);` twice with the same type is a legal \
+                    repetition in C, so the two declarations quietly become ONE symbol and \
+                    the acquire call lands in the foreign function at link time. *That is why \
+                    this rule cannot be left to `cc`.*\n\
+                    **What it deliberately does NOT enumerate** (W10): `{T}_speicher`, \
+                    because the generator writes it only where the source addresses the table \
+                    BY NAME and that set lives in the generator's `Namen`, not in the tree -- \
+                    a listed name the generator never writes would be a refusal without a \
+                    defect. The price is measured and stands as a probe of its own \
+                    (`beispiele/gift/414`, contract `-- erwartet: cc`). Also left out: block \
+                    labels (`{marke}_wachhund`) and everything inside a body, where a local \
+                    shadowing a file-scope name is legal C.\n\
+                    **And it fires only where at least one side carries a GENERATOR-BUILT \
+                    name.** Two equal plain declared names are a Gabbro duplicate and belong \
+                    to `geltungsbereich` -- W7, one register per thing. That cut was measured, \
+                    not guessed: without it the rule spoke a second time over five duplicate \
+                    poison samples, and twice where there was no defect at all -- \
+                    `beispiele/29-undurchsichtig.gab` (a prototype naming its definition in \
+                    another module) and `messung/fragmente/F05.gab` (two `prim fn invoke` \
+                    separated by `arch`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/413 (both forms: a `format` field spelled like the \
+                      validity predicate, and one spelled like another field's writer; the \
+                      contract moved from `-- erwartet: cc` to `-- erwartet: N042`); \
+                      counter-probe messung/proben/probe-erzeugernamen-frei.gab -- six words that LOOK like \
+                      generator suffixes and are none, 0 errors and `cc` accepts. Over the 426 \
+                      `.gab` files the rule has exactly ONE hit, and it is 413.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::erzeugter_name_zweimal; \
+                     crates/gabbro-check/src/erzeugernamen.rs; messung/ERZEUGERNAMEN.md",
+    },
+    Satz {
         name: "namen.kanal_ohne_einloeser",
         kennungen: &["N034"],
         aussage: "A function that declares `or R` has a body that can actually produce a \

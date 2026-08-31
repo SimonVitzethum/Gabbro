@@ -16,14 +16,21 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **73** | `gabbro paesse` |
-| davon `measured` | **48** | ein Giftprobenfall oder eine gefangene Mutation |
+| Sätze im Register | **74** | `gabbro paesse` |
+| davon `measured` | **67** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon **`ARGUED`** | **2** | ein Korrektheitsargument ist aufgeschrieben — [`K001`](K001.md), [`H006`](H006.md). *Das erste fand eine Unterzählung um Faktor 3; der dritte Versuch ([`V2`](V2.md)) fand statt einer Messung den [Nichtdeterminismus](DETERMINISMUS.md) und blieb `CONJECTURED`* |
 | davon `CONJECTURED` | **6** | nichts misst sie |
 | davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
 | Pässe mit mindestens einem Satz | **12 von 12** | `gabbro paesse` |
-| Kennungen im Prüfer | **191** | `./pruefe-kennungen.py` |
-| davon von einem Satz beansprucht | **156** | `./instrumente/pruefe-saetze.py` |
+| Kennungen im Prüfer | **242** | `./pruefe-kennungen.py` |
+| davon von einem Satz beansprucht | **197** | `./instrumente/pruefe-saetze.py` |
+
+> **Die fünf Zahlen oben sind am 2026-08-31 nachgezogen, und die Ratsche STEIGT — mit Grund.**
+> Der Gegenstand ist gewachsen: `N042` kam dazu (`namen.erzeugter_name_zweimal`,
+> `messung/ERZEUGERNAMEN.md`), und `pruefe-zahlen.py` hatte 73 gegen 74 gemeldet. Die vier
+> Zahlen daneben standen noch älter da — `davon measured` auf 48 statt 67, `Kennungen` auf 191
+> statt 242. *Eine Zahl, die zu tief steht, sieht aus wie eine gehaltene Ratsche und ist eine
+> vergessene.*
 | **Kennungen ohne Satz — die Ratsche** | **45** | `./instrumente/pruefe-saetze.py` |
 
 **Die Schätzung im Plan war ~22 Sätze; es sind 43 geworden.** Der Grund ist kein

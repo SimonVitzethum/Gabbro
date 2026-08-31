@@ -2513,6 +2513,38 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         );
         return;
     }
+    // **`at port` is refused, and it is the THIRD refusal here for a third reason**
+    // (2026-08-31, `messung/ADRESSRAEUME.md` §4).
+    //
+    // `at normal` above asks whether it is a device access at all. `at dma` below asks which
+    // barrier. This one asks nothing: **the lowering that stood here was wrong, and under a
+    // written promise.** `SPRACHE.md` § *the sixth address space*: *"`at port` lowers
+    // accesses to `in`/`out` instead of to volatile loads/stores"*. Measured, `device
+    // SerialCom1 at port { reg LSR : u8 @0x3FD … }` checked with 0 errors and emitted
+    //
+    //     (((*(volatile uint8_t *)(d->basis + 1021)) >> 5) & 1u)
+    //
+    // -- `1021` is `0x3FD`, the PORT NUMBER, handed out as an offset onto a memory pointer.
+    // The generated C reads RAM. *Not a missing instruction: a different instruction on a
+    // different thing.*
+    //
+    // **And the second half of the same promise did not stand either:** `SPRACHE.md` requires
+    // `arch x86_64` at a `port` device, and the probe carried none and was accepted.
+    //
+    // **What it costs: nothing.** Zero `device … at port` in 426 files (34 `mmio`, 5 `dma`).
+    // Building `in`/`out` instead would be a construct without a measured need -- Rule A --
+    // and the refusal is what keeps the promise until such a device is written.
+    if matches!(d.raum, Raum::Port) {
+        weigere(
+            absagen,
+            d.span,
+            "`device … at port` -- the port space is reached by `in`/`out`, and this \
+             generator writes a volatile load at `basis + offset`, i.e. the PORT NUMBER as a \
+             memory offset. SPRACHE.md promises `in`/`out` here; until a program asks for one \
+             the promise is kept by refusing, not by a load that looks like an access",
+        );
+        return;
+    }
     if matches!(d.raum, Raum::Dma) && !u.annahmen.contains(ANNAHME_DMA) {
         weigere(
             absagen,
@@ -4504,6 +4536,58 @@ fn funktion(
 ) {
     if matches!(f.klasse, Some(FnKlasse::Spec)) {
         return;
+    }
+    // **`ptr<port, …>` in a body: refused, because there is no lowering and there cannot be
+    // one** (2026-08-31, `messung/ADRESSRAEUME.md`).
+    //
+    // `ctyp` reads `z.raum` for NO space -- measured: six functions differing in nothing but
+    // the space word emit six byte-identical lines. For five of the six that is right:
+    // `normal` is ordinary memory, `boot` is ordinary memory in a link-time section
+    // (`SYNTAX.md`:1607), `code` is never dereferenced (an incomplete type behind an
+    // `extern fn`), and `mmio`/`dma` are carried by the CHECKER (`R001`, `R008`, and the W9
+    // clause in `m3.rs`:22).
+    //
+    // **`port` is the sixth, and it is wrong under a written promise.** `SPRACHE.md`:2188:
+    // *"`at port` lowers accesses to `in`/`out` instead of to volatile loads/stores"*. What
+    // the generator writes is a load. On x86_64 the port space is reached by `in`/`out` and
+    // by nothing else, so the emitted access reads a different thing at a different address.
+    //
+    // **And the missing lowering is not missing work -- there is nothing to write.** `in` and
+    // `out` take a PORT NUMBER; a field of a struct at an offset behind a pointer is not one.
+    // *Building `in`/`out` for a `device … at port` would be a construct without a measured
+    // need: the corpus holds zero `at port` devices* (34 `mmio`, 5 `dma`, and `at normal` is
+    // already refused above). Rule A says no; the honest outcome is the named refusal.
+    //
+    // **What it costs, measured before it was built:** two sites in 426 files
+    // (`messung/grammatik/geraeteworte.gab`, `messung/grammatik/raumworte.gab`), both of them
+    // dereferencing a plain struct field through a port pointer -- *both the defect itself.*
+    // Their repair is one word: the body moves to a foreign one, and the promise `port` makes
+    // stays where it can be kept.
+    //
+    // **It holds at the SIGNATURE, not at the access** (W10). A body that takes a port
+    // pointer and never touches it is refused too. That is coarser than the defect and it is
+    // coarse in the safe direction; over the corpus the two sites both dereference, and a
+    // rule that walked the body would need the pointer's space at every access site, which
+    // the expression lowering does not carry.
+    if matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_)) {
+        for p in &f.parameter {
+            if let TypExpr::Zeiger(z) = &p.typ {
+                if z.raum == Raum::Port {
+                    weigere(
+                        absagen,
+                        p.name.span,
+                        "a body that carries a `ptr<port, …>` -- the port space is reached by \
+                         `in`/`out` and not by a load, and this generator writes a load. \
+                         There is no lowering to write either: `in`/`out` take a PORT NUMBER, \
+                         and a struct field at an offset behind a pointer is not one. \
+                         SPRACHE.md promises `in`/`out` here (§ *the sixth address space*); \
+                         until a `device … at port` exists to lower, the promise is kept by \
+                         refusing and not by a load that looks like one",
+                    );
+                    return;
+                }
+            }
+        }
     }
     let (rueck, liste) = match prototyp_kern(f, u) {
         Ok(k) => k,
