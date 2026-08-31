@@ -1398,7 +1398,10 @@ impl Umgebung {
         }
     }
 
-    /// **Why a field access needs a verdict and not just a type** (`M134`, 2026-08-31).
+    /// **Why a field access needs a verdict and not just a type** (2026-08-31).
+    ///
+    /// The refusal itself is `M134`, and it lives in `m1.rs`; what stands here is the
+    /// question it asks.
     ///
     /// [`Self::feld_von`] answers `Typ::Unbekannt` for three different situations, and one of
     /// them is a defect:
@@ -1453,8 +1456,9 @@ impl Umgebung {
                     .map(|s| s.parameter.iter().map(|(p, _)| p.clone()).collect())
                     .unwrap_or_default();
                 match self.formate.get(n).or_else(|| self.geraete.get(n)) {
-                    // A name that resolves to NOTHING is not this rule's business -- `N040`
-                    // holds the undeclared type, and saying it twice would double-book it.
+                    // A name that resolves to NOTHING is not this rule's business -- see
+                    // `N040` in `namen.rs`, which holds the undeclared type; saying it
+                    // twice would double-book it.
                     None => Feldurteil::Unklar,
                     Some(felder)
                         if felder.iter().any(|(f, _)| f == name)

@@ -10,7 +10,7 @@
 //!
 //! | class | count | how it was measured |
 //! |---|---:|---|
-//! | `Klasse::Wort` -- a C11 keyword | 37 | C11 §6.4.1, minus the 7 that Gabbro's own vocabulary already refuses at `P002` |
+//! | `Klasse::Wort` -- a C11 keyword | 37 | C11 §6.4.1, minus the 7 that Gabbro's own vocabulary already refuses -- see `P002`, issued in `parse.rs` |
 //! | `Klasse::Header` -- provided by one of the four headers every generated unit includes | 366 | `cc -dM -E`, `cc -aux-info` and a `typedef` scan over `<stdint.h> <stdbool.h> <stdatomic.h> <math.h>` |
 //! | `Klasse::Eingebaut` -- a built-in function of the C implementation | 155 | one file per candidate, WITHOUT any `#include`, refused with *built-in function* |
 //!
@@ -79,7 +79,7 @@ pub fn umfang() -> (usize, usize, usize) {
 }
 
 /// C11 §6.4.1, minus `const else extern if return sizeof static` -- those are words of
-/// Gabbro's own vocabulary and never reach a name (`P002`).
+/// Gabbro's own vocabulary and never reach a name -- see `P002`, which lives in `parse.rs`.
 static C11_WORT: [&str; 37] = [
     "_Alignas", "_Alignof", "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary",
     "_Noreturn", "_Static_assert", "_Thread_local", "auto", "break", "case", "char",
