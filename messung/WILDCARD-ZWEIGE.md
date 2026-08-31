@@ -288,3 +288,71 @@ folgenden Schablonenzahlen: 9 × `traverse` und 8 × `traverse (Baum)` werden zu
 `chain … in` 1 (plus die Mehrfachzählungen). *Wo eine Datei zwei verschiedene Domänen
 durchläuft, zählt das Zeugnis jetzt zwei Schablonen statt einer — genau der Fall, den der
 eine Ausweis verschwieg.*
+
+---
+
+# Der zweite echte Befund: `T_remove` setzt jetzt ab, statt zu raten
+
+Der `_ => "0"` in `emit.rs` fing **29** Feldarten. Der Preis stand seit `e8a6752` als
+Reproduzent im Baum und wurde in jenem Lauf ausdrücklich **nicht** geheilt.
+
+## Was `0` in einem geräumten Slot anrichtet
+
+```c
+static void Verz_remove(Verz *t, uint32_t s) {
+    t->slots[s].benutzt = 0;
+    t->slots[s].stufe   = 0;   /* `u32 in 1 .. 9`   -- AUSSERHALB des eigenen Bereichs */
+    t->slots[s].nachbar = 0;   /* `index into Verz` -- ein GÜLTIGER Index              */
+}
+```
+
+Zwei verschiedene Fehler aus einer Zeile — und der zweite ist der unangenehmere: `0` liegt
+**im** Typ und ist trotzdem falsch. Ein nicht-optionaler Index hat kein `None`; der geräumte
+Slot behauptet danach eine Kante.
+
+## Abgeleitet statt geraten
+
+| Feldart | Rücksetzwert |
+|---|---|
+| `option index into T` | `T_NONE` (`beweise/Option_Sonderwert.thy`) |
+| `bool` | `0` |
+| Ganzzahl ohne Bereich, `wrapping` | `0` |
+| Ganzzahl mit Bereich, der die Null enthält | `0` |
+| Ganzzahl mit Bereich **ohne** die Null | **`C001`** |
+| `index into T` (nicht optional) | **`C001`** |
+| Neutyp | folgt dem Trägertyp, höchstens 16 Ebenen |
+| Zeiger, Gleitkomma, Feld, Verbund, Fn-Zeiger, `never`, tagged | **`C001`** |
+
+**Und die Absage bricht nicht beim ersten Feld ab.** Eine Tabelle mit zwei nicht ableitbaren
+Feldern meldet zwei — *sonst hätte sie dieselbe Krankheit wie die Messung von heute früh.*
+
+## Drei Proben, und der Unterschied ist EIN Zeichen
+
+| Datei | was sie hält |
+|---|---|
+| `beispiele/gift/441-ruecksetzung-verlaesst-den-bereich.gab` | `u32 in 1 .. 9` → `C001` |
+| `beispiele/gift/442-ruecksetzung-erfindet-eine-kante.gab` | `index into Verz` → `C001` |
+| `messung/proben/probe-ruecksetzung-abgeleitet.gab` | sieben Feldarten, die **weiter** absenken |
+
+Die Gegenprobe schreibt `u32 in 0 .. 9` statt `1 .. 9` und `option index into Verz` statt
+`index into Verz`. *Damit misst das Paar die Regel und nicht die Datei.*
+
+## Die Gegenrichtung: GENAU EINE Datei kippt
+
+| | vorher | nachher |
+|---|---|---|
+| `pruefe` | `fbc70c78b2b8cdbb6b816f259a027d5d` | **gleich** |
+| `emit` | `062702775e2a6942c93927895224881e` | `1173ca54fd41a407dbd7126ee799453e` |
+| `zeugnis` | `c051feaebb8c6d6677decf12452228ce` | **gleich** |
+
+*Je Datei nachgerechnet* (nicht nur die Summe): **von 499 Korpusdateien ändert sich genau
+eine** — `messung/proben/probe-wildcard-ruecksetzung.gab`, der Reproduzent. Sie schrieb C
+mit zwei falschen Werten und sagt jetzt `C001`.
+
+## Und ein Nebenertrag: vier Blicke auf eine Karte wurden einer
+
+Die Ableitung muss einen Neutyp auf seinen Träger auflösen — derselbe Blick, den
+`vorzeichen` und `ctyp` schon zweimal taten. Statt eines vierten steht jetzt **`traegertyp`**
+da, und `zaehle-karten.py` fällt von **40 auf 38** (unqualifiziert 36 → 34).
+
+> *Ein Leser ist eine Stelle, die man heilen kann; vier sind vier, die man vergisst.*

@@ -2338,6 +2338,104 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// that carries no value any more -- `beispiele/47` shows why that is not zeal: its invariant
 /// `marke_null_wenn_frei` breaks if `marke` survives the removal. *That is the item a hand
 /// mutation forgets and a generator cannot forget.*
+/// **The carrier of a named type -- ONE reader for all three callers.**
+///
+/// `vorzeichen`, `ctyp` and `ruecksetzwert` each need the same thing: `type Zaehler = u32 in
+/// 0 .. 65535` behind the name `Zaehler`. Until 2026-08-31 all three looked into the map
+/// themselves, which is four direct looks at one card (`zaehle-karten.py` counts them, and
+/// its reason is `M103` in `m1.rs`: a look that only hits a fully qualified name goes silent
+/// inside a `module` block).
+///
+/// **One reader is one place to fix that**, and four are four places to forget it.
+fn traegertyp<'a>(name: &str, u: &'a Namen) -> Option<&'a TypExpr> {
+    u.typen.get(name)
+}
+
+/// A range BOUND as a number -- like `konst_zahl`, but the minus sign counts.
+///
+/// **`konst_zahl` deliberately does not read one**: its other callers are a table length and
+/// a register offset, and a negative one of those is nonsense. `i32 in -4 .. 4` is not, and
+/// reading its lower bound as "unreadable" would refuse a field whose reset value is plainly
+/// derivable.
+fn grenzzahl(e: &Expr) -> Option<i128> {
+    match &e.art {
+        ExprArt::Unaer(UnOp::Negativ, i) => Some(-konst_zahl(i)?),
+        _ => konst_zahl(e),
+    }
+}
+
+/// **The reset value of ONE slot field -- derived, and `None` where it cannot be.**
+///
+/// `T_remove` clears a slot: the theorem it carries (`beweise/Table_Ops_Erhaltung.thy`,
+/// `blatt_loeschen_erhaelt`) says the slot carries NO value any more, so EVERY field is
+/// reset. Until 2026-08-31 that read *`T_NONE` for an optional index, `0` for everything
+/// else*, and the `0` was a `_` arm. Measured over 499 corpus files: 29 hits.
+///
+/// **`messung/proben/probe-wildcard-ruecksetzung.gab` is what the `_` cost.** It checks with
+/// `0 errors` and the emitter wrote two wrong values into one function:
+///
+/// ```text
+/// t->slots[s].stufe   = 0;   `u32 in 1 .. 9`   -- OUTSIDE the field's own range
+/// t->slots[s].nachbar = 0;   `index into Verz` -- a VALID index, i.e. a claimed edge
+/// ```
+///
+/// Two different defects out of one line. The first has the emitter break the type the
+/// checker had just enforced -- *a generator that violates the pass in front of it undoes
+/// it.* The second writes a lie: a non-optional index has no `None`, and `0` is not neutral,
+/// it is the first slot.
+///
+/// So the value is DERIVED now: `T_NONE` for the optional edge, `0` for a truth value and
+/// for a range that contains the zero, and otherwise nothing -- the caller refuses by name.
+///
+/// `tiefe` bounds the walk through named types; a cyclic `type` declaration must not turn a
+/// refusal into a stack overflow.
+fn ruecksetzwert(t: &SlotTyp, tn: &str, u: &Namen, tiefe: u32) -> Option<String> {
+    if tiefe > 16 {
+        return None;
+    }
+    let x = match t {
+        // `u32 wrapping`: the wraparound is DECLARED («B32»), the range is the whole word,
+        // and the zero lies in it.
+        SlotTyp::Wrapping(_) => return Some("0".to_string()),
+        SlotTyp::Typ(x) => x,
+    };
+    match x {
+        // The sentinel is `count` itself -- `beweise/Option_Sonderwert.thy`.
+        TypExpr::Index { optional: true, .. } => Some(format!("{tn}_NONE")),
+        // And the non-optional one has no sentinel at all. **That is the refusal**, not an
+        // oversight: the type says every value of it names a slot.
+        TypExpr::Index { optional: false, .. } => None,
+        TypExpr::Bool(_) => Some("0".to_string()),
+        TypExpr::Int(i) => match &i.bereich {
+            None => Some("0".to_string()),
+            Some(b) => {
+                let (Some(von), Some(bis)) = (grenzzahl(&b.von), grenzzahl(&b.bis)) else {
+                    // A bound this emitter cannot read is not a bound it may ignore.
+                    return None;
+                };
+                let bis = if b.exklusiv { bis - 1 } else { bis };
+                (von <= 0 && 0 <= bis).then(|| "0".to_string())
+            }
+        },
+        // A named type is its underlying one -- read off, not guessed.
+        TypExpr::Pfad(p) => {
+            let n = &p.teile.last()?.text;
+            ruecksetzwert(&SlotTyp::Typ(traegertyp(n, u)?.clone()), tn, u, tiefe + 1)
+        }
+        // Pointer, float, array, record, function pointer, `never`, a tagged type: **no
+        // reset value is derived here.** Each of them would need its own statement about
+        // what "empty" means, and this emitter refuses by name rather than writing a
+        // plausible zero.
+        TypExpr::Zeiger(_)
+        | TypExpr::Float(_)
+        | TypExpr::Feld(_)
+        | TypExpr::Verbund(..)
+        | TypExpr::FnZeiger(_)
+        | TypExpr::Never(_)
+        | TypExpr::Varianten(..) => None,
+    }
+}
+
 fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     if t.ops.is_empty() {
         return;
@@ -2428,14 +2526,37 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                     pflicht("remove"),
                     leise("remove")
                 ));
+                // **Every field is asked, and the refusal does not stop at the first.** A
+                // table with two underivable fields would otherwise be reported as having
+                // one, and the second would surface only after the first was fixed --
+                // *a measurement that stops at the first hit answers a different question.*
+                let mut fehlt = false;
                 for f in t.slot.iter().flat_map(|sd| sd.felder.iter()) {
-                    let wert = match &f.typ {
-                        SlotTyp::Typ(TypExpr::Index { optional: true, .. }) => {
-                            format!("{tn}_NONE")
+                    match ruecksetzwert(&f.typ, tn, u, 0) {
+                        Some(wert) => {
+                            aus.push_str(&format!("    t->slots[s].{} = {wert};\n", f.name.text))
                         }
-                        _ => "0".to_string(),
-                    };
-                    aus.push_str(&format!("    t->slots[s].{} = {wert};\n", f.name.text));
+                        None => {
+                            fehlt = true;
+                            weigere(
+                                absagen,
+                                f.name.span,
+                                &format!(
+                                    "`ops remove` on `{}`: this emitter has no reset value \
+                                     for that field type. A cleared slot carries NO value \
+                                     any more, so every field is reset -- and `0` is a value \
+                                     like any other: outside a declared range it breaks the \
+                                     type the checker just enforced, and in a non-optional \
+                                     `index into T` it is the FIRST slot, not the absence \
+                                     of one",
+                                    f.name.text
+                                ),
+                            );
+                        }
+                    }
+                }
+                if fehlt {
+                    return;
                 }
                 aus.push_str("}\n");
             }
@@ -3477,7 +3598,7 @@ fn vorzeichen(t: &TypExpr, u: &Namen) -> Option<bool> {
             match n.as_str() {
                 "u8" | "u16" | "u32" | "u64" => Some(true),
                 "i8" | "i16" | "i32" | "i64" => Some(false),
-                _ => vorzeichen(u.typen.get(n)?, u),
+                _ => vorzeichen(traegertyp(n, u)?, u),
             }
         }
         _ => None,
@@ -3916,8 +4037,8 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
                 // it, and for nothing else.
-                _ if u.typen.contains_key(&n) => {
-                    return ctyp(u.typen.get(&n)?, u);
+                _ if traegertyp(&n, u).is_some() => {
+                    return ctyp(traegertyp(&n, u)?, u);
                 }
                 // A named type whose carrier is not resolved here. Refused rather than
                 // guessed -- see the head of this file.

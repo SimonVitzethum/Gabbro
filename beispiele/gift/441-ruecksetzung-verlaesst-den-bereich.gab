@@ -1,0 +1,38 @@
+-- erwartet: C001
+-- **`ops remove` setzt ein Feld auf einen Wert, den sein Typ ausschliesst.**
+--
+-- `stufe : u32 in 1 .. 9` hat die Null nicht in seinem Bereich. Bis zum 2026-08-31 schrieb
+-- der Erzeuger trotzdem `t->slots[s].stufe = 0;` -- ein `_ => "0"` in `emit.rs`, das jedes
+-- Feld ausser der optionalen Kante fing. `gabbro pruefe` sagte `0 errors`, `cc -Werror`
+-- schwieg, und **der Erzeuger verletzte den Typ, den der Pruefer gerade durchgesetzt hatte.**
+--
+-- *Ein Erzeuger, der die Zusage des Passes vor ihm bricht, hebt den Pass auf.* Jede
+-- Verengungsregel ueber `stufe` rechnet danach mit einem Wert, den niemand geschrieben hat.
+--
+-- Die Heilung ist keine andere Zahl, sondern eine Absage bei Namen: **welcher Wert ein
+-- geraeumter Slot in einem Feld mit Bereich traegt, sagt die Deklaration nicht** -- und der
+-- Erzeuger raet ihn nicht.
+
+module gift {
+
+const N : u32 = 8;
+
+table Verz count N {
+    slot {
+        benutzt : bool,
+        stufe   : u32 in 1 .. 9,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+}
+
+impl fn ist_belegt(v : ptr<normal, r> Verz, i : index into Verz) -> bool
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].benutzt;
+}
+
+}
