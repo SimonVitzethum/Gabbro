@@ -469,7 +469,16 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 #
 # *And it cost this note a rewrite:* the first draft quoted all four keys, whereupon
 # `MARKE_PY` broke by five. **The guardian measured its own commentary and was right to.**
-MARKE_ZUBRINGER = 98      # 173 -> 98 on 2026-08-31; `schablonen.rs` 79 -> 4
+#
+# **THE SECOND REGISTER, THE SAME DAY: `zeugnis.rs`, 58 -> 0.** `gabbro zeugnis` prints
+# `EINORDNUNG` -- one reason per construct for where it stands -- plus the foreign-body
+# contracts and the assumption lines. Nothing German is left there, and the two labels of the
+# `A` lines travelled along with it: they now read `UNCOVERED` and `NOT FALSIFIABLE`, which is
+# what the summary line three rows beneath them had been saying all along. *Two languages over
+# one number, three lines apart.* Two tests in `tests/beispiele.rs` read those labels and were
+# carried along -- and the newer form has to separate the label from the summary, which says
+# the same words with a comma after them.
+MARKE_ZUBRINGER = 40      # 173 -> 98 -> 40 on 2026-08-31; two registers taken whole
 MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
 
 

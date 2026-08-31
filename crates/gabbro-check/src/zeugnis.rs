@@ -99,205 +99,205 @@ pub const EINORDNUNG: &[Posten] = &[
     Posten {
         konstrukt: "const",
         traegt: Traegt::Direkt,
-        grund: "`#define N u` — ein konstanter Wert, kein erzeugter Code",
+        grund: "`#define N u` — a constant value, no generated code",
     },
     Posten {
         konstrukt: "type (Bereich)",
         traegt: Traegt::Direkt,
-        grund: "senkt zu seinem Traeger ab; die Schranke bleibt M1-Faktum (W6)",
+        grund: "lowers to its carrier; the bound stays an M1 fact (W6)",
     },
     Posten {
         konstrukt: "type (Verbund)",
         traegt: Traegt::Schablone("verbund.konstruktor"),
-        grund: "`typedef struct` plus `(P){ .a = … }` — der Konstruktor ist ERZEUGT («B7»)",
+        grund: "`typedef struct` plus `(P){ .a = … }` — the constructor is GENERATED («B7»)",
     },
     Posten {
         konstrukt: "type (tagged)",
         traegt: Traegt::Direkt,
-        grund: "`struct { marke; union { … } }`, und die Marke ist ein `enum` — damit wird \
-                `-Wswitch` ein ZWEITER Leser von `D005`. Dass die `union` das Typrecht nicht \
-                verletzt, haelt derselbe Pass: gelesen wird nur, was die Marke nennt",
+        grund: "`struct { tag; union { … } }`, and the tag is an `enum` — which makes \
+                `-Wswitch` a SECOND reader of `D005`. That the `union` does not violate the \
+                type discipline is held by the same pass: only what the tag names is read",
     },
     Posten {
         konstrukt: "type (ghost)",
         traegt: Traegt::Geloescht,
-        grund: "ein `linear ghost type` existiert zur Laufzeit nicht -- die Loeschung wirkt \
-                an Signatur, Rufstelle und Bindung",
+        grund: "a `linear ghost type` does not exist at run time -- the erasure takes effect \
+                at the signature, the call site and the binding",
     },
     Posten {
         konstrukt: "table",
         traegt: Traegt::Schablone("table.absenkung"),
-        grund: "Slotverbund plus festes Feld; `count N` ist der Grund, dass es fest ist",
+        grund: "slot struct plus a fixed array; `count N` is the reason it is fixed",
     },
     Posten {
         konstrukt: "format",
         traegt: Traegt::Schablone("format.roundtrip"),
-        grund: "KEIN C-Verbund, sondern Byteleser — ein Format ist eine Zusage ueber BYTES",
+        grund: "NOT a C struct but byte readers — a format is a promise about BYTES",
     },
     Posten {
         konstrukt: "device",
         traegt: Traegt::Schablone("device.konstruktor"),
-        grund: "Griff auf `basis`; jeder Registerzugriff wird ein `volatile` an `basis + Versatz`",
+        grund: "a handle on `basis`; every register access becomes a `volatile` at `base + offset`",
     },
     Posten {
         konstrukt: "device (mirrors)",
         traegt: Traegt::Schablone("device.konstruktor"),
-        grund: "Falle 4: `write(GCMD, (read(GSTS) & ~geaendert) | neu)` — eine Zeile je Geraet",
+        grund: "trap 4: `write(GCMD, (read(GSTS) & ~changed) | new)` — one line per device",
     },
     Posten {
         konstrukt: "lock",
         traegt: Traegt::Fremd,
-        grund: "vier Prototypen (`_nimm`, `_gib`, `_nimm_geteilt`, `_gib_geteilt`); Rang und \
-                Haltezeit bleiben im Pruefer (W6), der RUMPF kommt von aussen",
+        grund: "four prototypes (`_nimm`, `_gib`, `_nimm_geteilt`, `_gib_geteilt`); rank and \
+                hold time stay in the checker (W6), the BODY comes from outside",
     },
     Posten {
         konstrukt: "static",
         traegt: Traegt::Direkt,
-        grund: "ohne `mut` ein C-`const` -- ein Schreiben darauf ist dort ein Uebersetzungsfehler; \
-                `section` wird ein Attribut, weil Platzierung eine Aussage ist",
+        grund: "without `mut` a C `const` -- a write to it is a compile error there; `section` \
+                becomes an attribute, because placement is a statement",
     },
     Posten {
         konstrukt: "accumulates",
         traegt: Traegt::Schablone("accumulates.monoid"),
-        grund: "eine Zelle je Kern, gefaltet beim Lesen -- kein CAS, keine unbeschraenkte \
-                Schleife. Der aktuelle Kern kommt von aussen (`gabbro_kern`)",
+        grund: "one cell per core, folded on reading -- no CAS, no unbounded loop. The current \
+                core comes from outside (`gabbro_kern`)",
     },
     Posten {
         konstrukt: "atomic",
         traegt: Traegt::Direkt,
-        grund: "`_Atomic`, und die deklarierte Ordnung steht daneben -- unter A10, das die \
-                Sichtbarkeitsaussage traegt und NICHT falsifizierbar ist",
+        grund: "`_Atomic`, and the declared ordering stands beside it -- under A10, which carries \
+                the visibility statement and is NOT falsifiable",
     },
     Posten {
         konstrukt: "publishes",
         traegt: Traegt::Direkt,
-        grund: "`atomic_store_explicit` mit der DEKLARIERTEN Ordnung -- ein `=` waere in C \
-                `seq_cst`, also eine andere und teurere als die, die dasteht",
+        grund: "`atomic_store_explicit` with the DECLARED ordering -- an `=` would be `seq_cst` \
+                in C, so a different and more expensive one than the one written there",
     },
     Posten {
         konstrukt: "awaits",
         traegt: Traegt::Direkt,
-        grund: "`atomic_load_explicit` mit ACQUIRE -- die Deklaration nennt die Speicherseite, \
-                und ein Laden mit `release` gibt es in C11 nicht",
+        grund: "`atomic_load_explicit` with ACQUIRE -- the declaration names the memory side, and \
+                a load with `release` does not exist in C11",
     },
     Posten {
         konstrukt: "fn (impl/raw/prim/extern)",
         traegt: Traegt::Direkt,
-        grund: "Prototyp und Rumpf; `-> never` wird `_Noreturn void`",
+        grund: "prototype and body; `-> never` becomes `_Noreturn void`",
     },
     Posten {
         konstrukt: "fn (spec)",
         traegt: Traegt::Geloescht,
-        grund: "eine Spezifikationsfunktion hat kein C — sie ist Beweisersache",
+        grund: "a specification function has no C — it is the prover's business",
     },
     Posten {
         konstrukt: "reason",
         traegt: Traegt::Direkt,
-        grund: "ein `enum` mit den DEKLARIERTEN Zahlen; der Text wandert als Kommentar mit. \
-                Wie ein Fehler zurueckkommt, steht nirgends -- `let … else` bleibt `C001`",
+        grund: "an `enum` with the DECLARED numbers; the text travels along as a comment. How an \
+                error comes back is written nowhere -- `let … else` stays `C001`",
     },
     Posten {
         konstrukt: "group",
         traegt: Traegt::Geloescht,
-        grund: "eine Gruppe erzeugt NICHTS und darf nichts erzeugen: sie ist die \
-                Verbindungsaussage ueber zwei Traegern, und ihr Sperrabdruck (`U001`-`U006`) \
-                wird zur Uebersetzungszeit nachgerechnet (W6)",
+        grund: "a group generates NOTHING and may generate nothing: it is the connecting \
+                statement over two carriers, and its lock footprint (`U001`-`U006`) is \
+                recomputed at compile time (W6)",
     },
     Posten {
         konstrukt: "assume / axiom",
         traegt: Traegt::Geloescht,
-        grund: "steht als Annahme im Kopf des Erzeugnisses, nicht als Code (SYNTAX.md 12)",
+        grund: "stands as an assumption in the head of the artefact, not as code (SYNTAX.md 12)",
     },
     // -- Anweisungen -------------------------------------------------------------------
     Posten {
         konstrukt: "let",
         traegt: Traegt::Direkt,
-        grund: "eine Bindung; der Typ wird NICHT geraten (`C001`)",
+        grund: "a binding; the type is NOT guessed (`C001`)",
     },
     Posten {
         konstrukt: "assignment",
         traegt: Traegt::Direkt,
-        grund: "`=`, `+=`, `-=`, `&=`, `|=` — je eine C-Form",
+        grund: "`=`, `+=`, `-=`, `&=`, `|=` — one C form each",
     },
     Posten {
         konstrukt: "if",
         traegt: Traegt::Direkt,
-        grund: "eine `else if`-Kette; der Austritt wird durchgereicht",
+        grund: "an `else if` chain; the exit is passed through",
     },
     Posten {
         konstrukt: "return",
         traegt: Traegt::Direkt,
-        grund: "vor jedem `return` werden gehaltene Sperren gegeben",
+        grund: "before every `return` held locks are released",
     },
     Posten {
         konstrukt: "call",
         traegt: Traegt::Direkt,
-        grund: "Geistargumente fallen an der Rufstelle weg",
+        grund: "ghost arguments drop out at the call site",
     },
     Posten {
         konstrukt: "match (option)",
         traegt: Traegt::Schablone("option.sonderwert"),
-        grund: "ein Vergleich gegen den Sonderwert `N`; die Bindung des `Some`-Zweigs ist der Wert",
+        grund: "a comparison against the special value `N`; the `Some` branch binds the value",
     },
     Posten {
         konstrukt: "match (tagged)",
         traegt: Traegt::Direkt,
-        grund: "ein `switch` OHNE `default` — der fehlende Sammelzweig IST die Aussage, und \
-                `-Wswitch` liest `D005` damit ein zweites Mal. Die Nutzlast kommt aus dem \
-                Glied, das die Marke nennt, und nur daraus",
+        grund: "a `switch` WITHOUT `default` — the missing catch-all branch IS the statement, and \
+                `-Wswitch` thereby reads `D005` a second time. The payload comes out of the \
+                member the tag names, and out of that alone",
     },
     Posten {
         konstrukt: "rcu",
         traegt: Traegt::Fremd,
-        grund: "zwei Prototypen (`_lese_start`, `_lese_ende`) und die Gnadenfrist -- der \
-                RUMPF kommt von aussen. Dass nach der Ruecknahme des Zeigers kein Leser mehr \
-                drin ist, ist eine Aussage ueber die UMGEBUNG und steht als `assume` daneben",
+        grund: "two prototypes (`_lese_start`, `_lese_ende`) and the grace period -- the BODY \
+                comes from outside. That no reader is left inside once the pointer has been \
+                withdrawn is a statement about the ENVIRONMENT and stands beside it as an \
+                `assume`",
     },
     Posten {
         konstrukt: "observes",
         traegt: Traegt::Fremd,
-        grund: "Betreten und Verlassen des Lesebereichs, auf JEDEM Pfad -- wie `locks`, nur \
-                ohne Ausschluss. Wo zurueckgegeben werden darf, rechnet `H011`/`H012` zur \
-                Uebersetzungszeit nach (W6)",
+        grund: "entering and leaving the read section, on EVERY path -- like `locks`, only without \
+                exclusion. Where a return is allowed, `H011`/`H012` recomputes at compile \
+                time (W6)",
     },
     Posten {
         konstrukt: "exchange (compare)",
         traegt: Traegt::Direkt,
-        grund: "`atomic_compare_exchange_strong_explicit` mit der DEKLARIERTEN Ordnung -- ein \
-                `=` waere in C `seq_cst`, also eine andere und teurere als die, die dasteht. \
-                Die `update`-Form bleibt `C001`: ihre Schranke braucht `NCORES`",
+        grund: "`atomic_compare_exchange_strong_explicit` with the DECLARED ordering -- an `=` \
+                would be `seq_cst` in C, so a different and more expensive one than the one \
+                written there. The `update` form stays `C001`: its bound needs `NCORES`",
     },
     Posten {
         konstrukt: "locks",
         traegt: Traegt::Schablone("gruppe.sperrabdruck"),
-        grund: "Nehmen und Geben, auf JEDEM Pfad; Rang und Haltezeit bleiben im Pruefer (W6)",
+        grund: "take and release, on EVERY path; rank and hold time stay in the checker (W6)",
     },
     Posten {
         konstrukt: "narrow",
         traegt: Traegt::Direkt,
-        grund: "die eine Stelle, an der eine Bereichspruefung im C BLEIBT — und sie steht da",
+        grund: "the one place where a range check REMAINS in the C — and there it stands",
     },
     Posten {
         konstrukt: "traverse",
         traegt: Traegt::Schablone("table.induktion"),
-        grund: "eine beschraenkte `for`-Schleife; die Schranke kommt aus `count N`",
+        grund: "a bounded `for` loop; the bound comes out of `count N`",
     },
     // **`breaking` lowers since 2026-08-31, so it stands here** -- until that day the
     // certificate booked it as `UNZUGEORDNET`, and rightly: the emitter refused it.
     Posten {
         konstrukt: "breaking",
         traegt: Traegt::Direkt,
-        grund: "ein C-Block, und nichts sonst -- zur Laufzeit IST die Region ihre \
-                Anweisungen. Was erzeugt wird, ist der Kommentar mit den ausgesetzten \
-                Invarianten; die Wiederherstellung steht als Erhaltungspflicht in \
-                `gabbro pflichten` und nicht im C (W6)",
+        grund: "a C block, and nothing else -- at run time the region IS its statements. What is \
+                generated is the comment carrying the suspended invariants; the restoration \
+                stands as a preservation duty in `gabbro pflichten` and not in the C (W6)",
     },
     Posten {
         konstrukt: "entrust",
         traegt: Traegt::Fremd,
-        grund: "der Raum, dessen INHALT Gabbro nicht kennt -- keine Kosten, keine Wirkungen, \
-                keine Terminierung. Was dasteht, ist der Vertrag am EINTRITT und die Annahme, \
-                unter der er gilt",
+        grund: "the space whose CONTENT Gabbro does not know -- no costs, no effects, no \
+                termination. What is written down is the contract at ENTRY and the assumption \
+                under which it holds",
     },
     // -- Die Maschinennaht -------------------------------------------------------------
     //
@@ -309,69 +309,78 @@ pub const EINORDNUNG: &[Posten] = &[
     Posten {
         konstrukt: "entry",
         traegt: Traegt::Fremd,
-        grund: "Prototyp fuer den Stumpf, der Vektor als Zahl und `dispatch` als GEPRUEFTE \
-                Bezugnahme; Registerabdruck, Stapelwechsel und `iretq` schreibt C nicht",
+        grund: "a prototype for the stub, the vector as a number and `dispatch` as a CHECKED \
+                reference; the register footprint, the stack switch and `iretq` C does not \
+                write",
     },
     Posten {
         konstrukt: "boot",
         traegt: Traegt::Fremd,
-        grund: "die Reihenfolge ist ein Tokenfluss und damit Uebersetzungszeit (W6); im C \
-                stehen der Prototyp der Strecke und je eine gepruefte Bezugnahme auf einen \
-                Schritt, der einen Rumpf hat -- die Modeschritte selbst sind `axiom`e",
+        grund: "the order is a token flow and therefore compile time (W6); the C carries the \
+                prototype of the sequence and one checked reference per step that has a body \
+                -- the mode steps themselves are `axiom`s",
     },
     Posten {
         konstrukt: "walk",
         traegt: Traegt::Direkt,
-        grund: "Knotentyp, `down`/`leaf` als Praedikate ueber dem Eintrag und ein Abstieg, \
-                dessen Schrittzahl aus `levels` kommt -- die Invarianten bleiben M1-Faktum (W6)",
+        grund: "node type, `down`/`leaf` as predicates over the entry, and a descent whose step \
+                count comes out of `levels` -- the invariants stay M1 facts (W6)",
     },
     Posten {
         konstrukt: "retry",
         traegt: Traegt::Schablone("table.induktion"),
-        grund: "Budget geteilt durch Kosten je Durchgang — die Zahl steht im C, nicht im Kopf",
+        grund: "budget divided by the cost per pass — the number is in the C, not in the head",
     },
     Posten {
         konstrukt: "forever",
         traegt: Traegt::Direkt,
-        grund: "`for (;;)` — und `per_pass … ops` ist eine Aussage ueber EINEN Durchgang, die                 der Kostenpass zur Uebersetzungszeit haelt (W6). Zur Laufzeit gibt es nichts                 zu zaehlen, also bekommt `on_exceeded` KEINEN Zweig; es bekommt einen                 geprueften Bezug (`static void (*const …)(void) = <Wachhund>`), damit der                 C-Uebersetzer die Klausel ein zweites Mal liest",
+        grund: "`for (;;)` — and `per_pass … ops` is a statement about ONE pass, which the cost \
+                pass holds at compile time (W6). At run time there is nothing to count, so \
+                `on_exceeded` gets NO branch; it gets a checked reference \
+                (`static void (*const …)(void) = <watchdog>`), so that the C compiler reads \
+                the clause a second time",
     },
     Posten {
         konstrukt: "leave / next",
         traegt: Traegt::Direkt,
-        grund: "ein `goto` auf eine benannte Marke und KEIN `break` — die Marke nennt eine                 Schleife, und `break` braeche in C immer die innerste. Die Sperren, die                 INNERHALB der Schleife genommen wurden, werden davor freigegeben",
+        grund: "a `goto` to a named label and NO `break` — the label names a loop, and in C \
+                `break` would always break the innermost one. The locks taken INSIDE the loop \
+                are released before it",
     },
     Posten {
         konstrukt: "check",
         traegt: Traegt::Direkt,
-        grund: "`bool pruefe_<name>(void)` -- der Rumpf ist der GESCHRIEBENE `can_fail`-Block \
-                und keine Schablone; erzeugt wird nur seine Huelle. \
-                `claim`, `gates` und `counterprobe` fahren als Kommentar mit: sie sind die \
-                Erklaerung, die ein Leser des Erzeugnisses sonst nirgends findet. Die \
-                Pflicht selbst (`linear ghost Duty`) ist geloescht -- dass sie verbraucht \
-                wird, hat M2 entschieden",
+        grund: "`bool pruefe_<name>(void)` -- the body is the WRITTEN `can_fail` block and no \
+                template; only its shell is generated. `claim`, `gates` and `counterprobe` \
+                travel along as a comment: they are the explanation a reader of the artefact \
+                finds nowhere else. The duty itself (`linear ghost Duty`) is erased -- that \
+                it is consumed was decided by M2",
     },
     Posten {
         konstrukt: "exchange (update)",
         traegt: Traegt::Schablone("table.induktion"),
-        grund: "«C4b»: eine BESCHRAENKTE CAS-Schleife, und beschraenkt ist der Punkt -- eine \
-                unbeschraenkte ist genau das, was diese Sprache verbietet. `bounded … ops \
-                on_exceeded …` stehen in denselben Woertern wie an einem `retry`, weil es \
-                dieselbe Schleife ist. Der Rumpf rechnet alt -> neu und ist REIN: darum darf \
-                ein verlorener Wettlauf ihn folgenlos wiederholen",
+        grund: "«C4b»: a BOUNDED CAS loop, and bounded is the point -- an unbounded one is \
+                exactly what this language forbids. `bounded … ops on_exceeded …` stand in \
+                the same words as at a `retry`, because it is the same loop. The body \
+                computes old -> new and is PURE: that is why a lost race may repeat it \
+                without consequence",
     },
     Posten {
         konstrukt: "let … else",
         traegt: Traegt::Direkt,
-        grund: "«C3a»: `bool f(T *_wert, R *_grund)`, und der `else`-Zweig haengt an dem \
-                `bool`. Der Erfolg ist der Rueckgabewert und nicht ein Sonderwert im \
-                Ergebnis (das taete `option index into T` schon -- W7), und der GRUND geht \
-                durch einen eigenen Ausgang, weil `reason`-Werte vom Menschen vergeben sind \
-                und kein Wort fuer „kein Fehler\" frei ist",
+        grund: "«C3a»: `bool f(T *_wert, R *_grund)`, and the `else` branch hangs on that \
+                `bool`. Success is the return value and not a special value in the result \
+                (`option index into T` already does that -- W7), and the REASON leaves \
+                through an exit of its own, because `reason` values are handed out by people \
+                and no word is free for „no error\"",
     },
     Posten {
         konstrukt: "traverse (Baum)",
         traegt: Traegt::Schablone("table.induktion"),
-        grund: "`descendants of` laeuft OHNE Stapel an `tree { child, sibling, parent }` der                 Tabelle, in Nachordnung; `ancestors of` ist die Kette an `parent`. Dass                 beide ENDEN, ruht auf der Wohlfundiertheit -- einer HYPOTHESE der Tabelle,                 nicht einer Laufzeitpruefung, und darum steht es hier",
+        grund: "`descendants of` runs WITHOUT a stack along the table's \
+                `tree { child, sibling, parent }`, in post-order; `ancestors of` is the chain \
+                along `parent`. That both TERMINATE rests on well-foundedness -- a HYPOTHESIS \
+                of the table, not a run-time check, and that is why it stands here",
     },
 ];
 
@@ -492,8 +501,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "accumulates");
             e.fremde.push((
                 "gabbro_kern".into(),
-                "liefert die Nummer des laufenden Kerns, kleiner als `per cpu` -- eine \
-                 MASCHINENFRAGE, und darum ein fremder Rumpf statt eines Ausdrucks"
+                "yields the number of the running core, smaller than `per cpu` -- a \
+                 MACHINE QUESTION, and therefore a foreign body instead of an expression"
                     .into(),
             ));
         }
@@ -502,8 +511,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "lock");
             e.fremde.push((
                 format!("{}_nimm / _gib (+ geteilt)", l.name.text),
-                "der Rumpf einer Sperre -- gegenseitiger Ausschluss, Fortschritt, und dass \
-                 `rank` die Ordnung ist, die der Pruefer annimmt"
+                "the body of a lock -- mutual exclusion, progress, and that `rank` is the \
+                 order the checker assumes"
                     .into(),
             ));
         }
@@ -513,9 +522,9 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "rcu");
             e.fremde.push((
                 format!("{}_lese_start / _lese_ende", r.name.text),
-                "der Rumpf eines RCU-Lesebereichs -- und die GNADENFRIST: dass nach der \
-                 Ruecknahme des Zeigers kein Leser mehr drin ist, stellt kein statischer \
-                 Pass her"
+                "the body of an RCU read section -- and the GRACE PERIOD: that no reader \
+                 is left inside once the pointer has been withdrawn is established by no \
+                 static pass"
                     .into(),
             ));
         }
@@ -536,8 +545,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             e.fremde.push((
                 t.name.text.clone(),
                 format!(
-                    "GAST auf `{}`, Stapel `{}`, Register {{ {} }} -- \
-                     Gabbro sagt ueber den Rumpf NICHTS; es gilt `assume {}`",
+                    "GUEST on `{}`, stack `{}`, registers {{ {} }} -- \
+                     Gabbro says NOTHING about the body; `assume {}` holds",
                     t.arch.text, t.stapel.text, regs, t.annahme.text
                 ),
             ));
@@ -559,9 +568,9 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             e.fremde.push((
                 format!("gabbro_eintritt_{}", x.name.text),
                 format!(
-                    "EINTRITTSPFAD auf `{}`, Stapel `{}`, regs in {{ {} }}, regs out {{ {} }} \
-                     -- er haelt den Registerabdruck und kehrt mit `iretq` zurueck; C schreibt \
-                     das nicht. Er verteilt an `{}`",
+                    "ENTRY PATH on `{}`, stack `{}`, regs in {{ {} }}, regs out {{ {} }} \
+                     -- it holds the register footprint and returns with `iretq`; C does not \
+                     write that. It dispatches to `{}`",
                     x.arch.text,
                     x.stack.text,
                     regs(&x.regs_in),
@@ -575,9 +584,9 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             e.fremde.push((
                 format!("gabbro_boot_{}", b.name.text),
                 format!(
-                    "BOOTSTRECKE auf `{}`, {} Schritte, dann `{}` -- sie setzt und liest \
-                     Maschinenregister, und die Modeschritte sind `axiom`e. Die REIHENFOLGE \
-                     haelt der Pruefer (Tokenfluss), nicht dieser Rumpf",
+                    "BOOT SEQUENCE on `{}`, {} steps, then `{}` -- it sets and reads \
+                     machine registers, and the mode steps are `axiom`s. The ORDER is held by \
+                     the checker (token flow), not by this body",
                     b.arch.text,
                     b.schritte.len(),
                     b.dispatch.text()
@@ -654,15 +663,15 @@ fn vertrag(f: &FnDecl) -> String {
                 .collect::<Vec<_>>()
                 .join(", ")
         })
-        .unwrap_or_else(|| "KEINE `effects`-Klausel".into());
+        .unwrap_or_else(|| "NO `effects` clause".into());
     let k = match &f.costs {
-        Some(_) => "mit `costs`",
-        None => "**ohne `costs`** -- jede Huelle darueber ist eine untere Schranke",
+        Some(_) => "with `costs`",
+        None => "**without `costs`** -- every envelope above it is a LOWER bound",
     };
     let pf = if spricht_seine_pflicht_aus(f) {
         format!(", ensures ({})", f.ensures.len() + f.maintains.len())
     } else {
-        " -- OHNE `ensures`: was er HERSTELLEN muss, steht nirgends".into()
+        " -- WITHOUT `ensures`: what it must ESTABLISH is written nowhere".into()
     };
     format!("effects {{ {w} }}, {k}{pf}")
 }
@@ -823,10 +832,10 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
                 format!("Sonde {sonde}")
             }
             crate::manifest::Klasse::Falsifizierbar { .. } => {
-                "UNGEDECKT -- kein Programm zu dieser Sonde".to_string()
+                "UNCOVERED -- no program for this probe".to_string()
             }
             crate::manifest::Klasse::NichtFalsifizierbar { grund } => {
-                format!("NICHT FALSIFIZIERBAR -- {grund}")
+                format!("NOT FALSIFIABLE -- {grund}")
             }
         };
         aus.push_str(&format!("     A{}  {:<24} {}\n", n + 1, a.name, wie));
@@ -1096,9 +1105,9 @@ mod proben {
     #[test]
     fn ein_name_ohne_einordnung_faellt_auf() {
         let mut e = Erhebung::default();
-        zaehle(&mut e, "eine Form, die niemand eingetragen hat");
+        zaehle(&mut e, "a form nobody has entered");
         assert_eq!(e.unzugeordnet.len(), 1, "{:?}", e.unzugeordnet);
-        assert!(e.posten.is_empty(), "sie darf nicht ALS gezaehlt durchgehen");
+        assert!(e.posten.is_empty(), "it must not pass as counted");
     }
 
     /// Jede Schablone, auf die die Einordnung zeigt, muss es geben. *Eine Abhaengigkeit auf
@@ -1109,7 +1118,7 @@ mod proben {
             if let Traegt::Schablone(s) = p.traegt {
                 assert!(
                     crate::schablonen::SCHABLONEN.iter().any(|x| x.name == s),
-                    "`{}` zeigt auf die Schablone `{s}` -- die gibt es nicht",
+                    "`{}` points at the template `{s}` -- there is no such template",
                     p.konstrukt
                 );
             }
