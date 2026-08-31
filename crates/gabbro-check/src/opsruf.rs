@@ -831,3 +831,63 @@ const fn zeichen(op: BinOp) -> &'static str {
         BinOp::Rest => "%",
     }
 }
+
+/// **Three tables over one thing, held together by one test.**
+///
+/// `zeichen` here, `zeichen` in `fremdverengung.rs` and `op_zeichen` in `m1.rs` all turn a
+/// `BinOp` into the sign the source wrote. Until 2026-08-31 only this one was complete: the
+/// other two ended in `_ => "?"` and answered a question mark for thirteen and for two
+/// operators. Measured over 499 corpus files neither arm ever fired -- *and `M136`, which
+/// `m1.rs` issues, had already printed `x | y ? z` for `x | y == z`: a refusal that cannot
+/// quote the line it is about.*
+///
+/// **Three registers over one thing is `W7`.** Merging them is a bigger move than this lane
+/// carries; holding them to the same answer is not, and it is what makes a divergence a red
+/// test instead of a question mark in a message.
+#[cfg(test)]
+mod operatortafeln {
+    use super::*;
+
+    /// Every `BinOp`, written out -- the list a `_` would have hidden.
+    const ALLE: &[BinOp] = &[
+        BinOp::Oder,
+        BinOp::Und,
+        BinOp::Gleich,
+        BinOp::Ungleich,
+        BinOp::Kleiner,
+        BinOp::KleinerGleich,
+        BinOp::Groesser,
+        BinOp::GroesserGleich,
+        BinOp::BitUnd,
+        BinOp::BitOder,
+        BinOp::BitXor,
+        BinOp::SchiebLinks,
+        BinOp::SchiebRechts,
+        BinOp::Plus,
+        BinOp::Minus,
+        BinOp::Mal,
+        BinOp::Geteilt,
+        BinOp::Rest,
+    ];
+
+    #[test]
+    fn zwei_operatortafeln_stimmen_ueberein() {
+        for op in ALLE {
+            assert_eq!(
+                zeichen(*op),
+                crate::fremdverengung::zeichen(*op),
+                "{op:?}"
+            );
+        }
+    }
+
+    /// **And none of them is a question mark.** A table that agrees with a second one on `?`
+    /// would pass the test above and still print nothing about the source.
+    #[test]
+    fn kein_operator_heisst_fragezeichen() {
+        for op in ALLE {
+            assert_ne!(zeichen(*op), "?", "{op:?}");
+            assert_ne!(crate::fremdverengung::zeichen(*op), "?", "{op:?}");
+        }
+    }
+}

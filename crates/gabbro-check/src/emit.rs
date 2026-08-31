@@ -1818,13 +1818,21 @@ pub fn emittiere_mit(
                             Ordnung::Seq => ("memory_order_seq_cst", "total order"),
                             Ordnung::Relaxed => ("memory_order_relaxed", "no payload"),
                         };
-                        let last = match &a.obermenge {
+                        // **Three cases, and two of them say the same word for different
+                        // reasons** (the `_` here was struck 2026-08-31; measured 21 hits,
+                        // every one of them `None`). `publishes nothing` is the source
+                        // SAYING there is no payload; no clause at all is the source saying
+                        // nothing. The C comment reads the same either way -- what changes
+                        // is that a third `Nutzlast` is now a translation error instead of
+                        // the word `nothing`.
+                        let last: String = match &a.obermenge {
                             Some(Nutzlast::Orte(l)) => l
                                 .iter()
                                 .map(|x| x.text())
                                 .collect::<Vec<_>>()
                                 .join(", "),
-                            _ => "nothing".into(),
+                            Some(Nutzlast::Nichts(_)) => "nothing".into(),
+                            None => "nothing".into(),
                         };
                         aus.push_str(&format!(
                             "\n/* {} under A10 (release_stellt_sichtbarkeit_her, UNFALSIFIABLE):\n\

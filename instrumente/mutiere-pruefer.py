@@ -805,8 +805,8 @@ MUTATIONEN = [
     Mutation(
         "kettenkante-braucht-kein-ende",
         "domaene.rs",
-        '    let Some(ziel) = name.strip_prefix("option index into ") else {',
-        '    let Some(ziel) = name.strip_prefix("option index into ").or(Some(kurz)) else {',
+        '        Typ::Benannt { name, .. } => name.strip_prefix("option index into "),',
+        '        Typ::Benannt { name, .. } => name.strip_prefix("option index into ").or(Some(kurz)),',
         "D015 -- a chain edge no longer has to be `option index into`, so a `bool` is an "
         "edge again and a chain has no end",
     ),

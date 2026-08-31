@@ -137,3 +137,71 @@ annimmt. *Ein `else` ist derselbe Wildcard mit anderer Schreibweise.*
 | `zeugnis` | `686a1ef576ec08a79642e0fe35fbc493` | **gleich** |
 
 *Kippt eine Datei, war die Zuordnung geraten.* Keine kippte.
+
+---
+
+# Die übrigen sechs, und zwei Befunde dabei
+
+| Stelle | vorher | jetzt |
+|---|---|---|
+| `emit.rs` Nutzlast | `_ => "nothing"` | `Some(Nichts(_))` und `None` **einzeln** — dasselbe Wort, zwei Gründe |
+| `domaene.rs` Kantentyp | `_ => ""` + `strip_prefix` | die **sechzehn** anderen `Typ`-Varianten aufgezählt |
+| `fremdverengung.rs` `zeichen` | `_ => "?"` (13 von 18) | alle achtzehn |
+| `m1.rs` `op_zeichen` | `_ => "?"` (2 von 18) | alle achtzehn |
+| `aufrufgraph.rs` `Held(…)` | `_ => "…"` als **Sperrname** | kein Name statt eines erfundenen |
+| `zeremonie.rs` `regel_fuer_herkunft` | `_ => "A3"` | Funktion **gestrichen**, die Regel kommt aus `typ_der_rechten` |
+
+## Zwei davon sind mehr als Kosmetik
+
+### `zeremonie.rs` — zwei Register über einer Sache, und sie liefen schon auseinander
+
+`regel_fuer_herkunft` traf **dieselbe Fallunterscheidung ein zweites Mal** wie
+`typ_der_rechten` — und die beiden waren nicht deckungsgleich:
+
+```gabbro
+let x : T = (f());
+```
+
+`typ_der_rechten` löst die Klammer auf und findet die Signatur von `f` → **`A1`**.
+`regel_fuer_herkunft` sieht die Klammer, fällt in `_` → **`A3`**, *„gleich dem deklarierten
+Typ eines Namens im Geltungsbereich"*. **Ein Nachweis, der auf eine Deklaration zeigt, die
+er nicht gelesen hat.**
+
+Der Zweig feuerte über 499 Dateien nie; die Klammerform ist trotzdem heute schreibbar.
+`typ_der_rechten` gibt jetzt `(Typ, Nachweis, Regel)` zurück — **eine** Stelle entscheidet
+beides, und die Klammer erbt die Regel ihres Inhalts. `W7` aufgelöst statt bewacht.
+
+### `aufrufgraph.rs` — ein erfundener Sperrname
+
+`Held(<kein Ort>)` bekam den Namen `…`. In beiden Lesern (`geteilt.rs`) ist so ein Name
+inert, weil er keiner deklarierten Sperre gleicht — **aber inert ist nicht abwesend**: er
+stand im Satz der gehaltenen Sperren, und der nächste Leser, der nach Anzahl statt nach Namen
+vergleicht, hätte ihn mitgelesen. Jetzt entsteht kein Name. *Weniger gehaltene Sperren heißt
+mehr Absagen, nie weniger — die konservative Richtung.*
+
+## Drei Operatortafeln, eine Probe
+
+`opsruf::zeichen` war vollständig, `fremdverengung::zeichen` fing **13 von 18**,
+`m1::op_zeichen` **2 von 18** — beide mit `_ => "?"`. `M136` hatte genau daran schon einmal
+`x | y ? z` für `x | y == z` gedruckt: *eine Absage, die die Zeile nicht zitieren kann, um
+die es geht.*
+
+Alle drei zählen jetzt achtzehn auf, und zwei Proben halten sie zusammen
+(`opsruf::operatortafeln`, `m1::operatortafel`). **Drei Register über einer Sache
+zusammenzulegen ist ein größerer Zug als diese Bahn trägt; sie auf dieselbe Antwort zu
+verpflichten nicht.**
+
+## Was NICHT gestrichen wurde, und warum
+
+`typ_der_rechten` behält `_ => None`, `held_aus_pred` behält `_ => {}`. **Der Unterschied ist
+die Richtung des Fehlers:**
+
+* Ein `_`, der einen **plausiblen Wert** liefert (`8`, `"int64_t"`, `"A3"`, `"…"`), macht aus
+  einem unbekannten Fall einen beantworteten. *Das ist das stille Byte.*
+* Ein `_ => None` liefert **nichts** und schiebt die Entscheidung an den Rufer, der absagt
+  oder nach `T8` fällt. *Das ist der ehrliche Ausgang, den dieser Ordner an vielen Stellen
+  ausdrücklich so schreibt.*
+
+Über `ExprArt` (30+ Varianten) erschöpfend aufzuzählen, was ohnehin `None` heißt, kostet
+Zeilen und kauft nichts — **die Absicherung ist dort der Rufer, nicht die Aufzählung.**
+*Das ist ein Urteil und keine Messung, und es steht deshalb als Urteil da.*
