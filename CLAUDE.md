@@ -70,6 +70,27 @@ zerstören einander.*
 Seit dem 2026-08-19 liegt auch eine **Rust-Kette auf `ki-pc-fisch-101`**
 (`~/.cargo/bin`, rustup, ohne `sudo` installiert — der Rechner hatte vorher kein `cargo`).
 
+**Nach `abnahme.py --voll` ist die naechste `abnahme.py` ROT, und das ist kein Befund.**
+Der Mutationslauf schreibt in jede Pruefer-Quelle und stellt sie byteweise zurueck — *aber
+mit einer neuen `mtime`*. Damit ist jede Quelle juenger als das gebaute Binaerprogramm, und
+`pruefe-saetze.py` bricht mit `ABBRUCH: das Binaerprogramm ist AELTER als N Quelldatei(en)`
+ab. **Der Waechter hat recht** — er kann nicht wissen, dass der Inhalt derselbe ist —, aber
+die Ursache ist die Messapparatur und nicht der Baum.
+
+*Gemessen am 2026-08-31:* ein Lauf rot direkt nach `--voll`, fuenf Laeufe gruen danach, und
+`touch crates/gabbro-check/src/saetze.rs` stellt den roten Zustand auf Knopfdruck her
+(`exit=2`). **Die Heilung ist ein Bau, kein `touch` auf das Binaerprogramm** — den
+Zeitstempel zu faelschen macht genau die Mischung unsichtbar, gegen die der Riegel steht:
+
+```bash
+ssh ki-pc-fisch-101 'cd gabbro-k && export PATH=$HOME/.cargo/bin:$PATH && cargo build'
+rsync -a ki-pc-fisch-101:gabbro-k/target/debug/gabbro target/debug/gabbro
+```
+
+Dieselbe Klasse wie `rsync -a` gegen `cargo`, nur andersherum: dort log der Zeitstempel,
+hier sagt er die Wahrheit ueber etwas, das keine Rolle spielt. *Ein Werkzeug, das die Zeit
+misst statt den Inhalt, irrt in beide Richtungen.*
+
 ## Wenn ein Agent nebenher rechnet
 
 **Jeder Agent bekommt sein EIGENES Serververzeichnis** (`gabbro-a`, `gabbro-b`, …), nie
