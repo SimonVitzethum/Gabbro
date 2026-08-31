@@ -760,8 +760,155 @@ comma operator; assignment inside an expression; `?:`; nested assignment; implic
 variadic functions; `longjmp`; VLA; bitfields (Gabbro does them itself with mask and shift);
 `const` discarding.
 
-- [ ] **The list is to be counted and ratcheted**, like the axiom layer. If it grows in order to
+- [x] **The list is to be counted and ratcheted**, like the axiom layer. If it grows in order to
       solve an emission problem, that is the same movement as a growing axiom layer.
+      **Counted on 2026-08-31 by `instrumente/zaehle-c-formen.py`, ratcheted at 64/30, and
+      driven by `abnahme.py` from the day it was written. The result is below, and it is not
+      the result this section assumed.**
+
+#### 1a. The list, MEASURED — 2026-08-31
+
+**Denominator:** 102 of 482 versioned `.gab` files emit; **8001 lines of C**, of which 1732
+are comment (22 %). Not `grep` but a lexer: line splicing, comment removal, string and
+character literals as one token. *The generated C explains itself in English, and `for`,
+`if`, `while`, `case` are English WORDS too — `grep` finds `for` 73 times, a statement it is
+**49** times.* The counter is TOTAL over the token stream: every keyword and every punctuator
+must map to a catalogue entry, and what does not is printed under `UNBEKANNT`. That is why
+`float`, `&&`, `sizeof`, `while`, `inline` and `__attribute__` were noticed at all — *a
+checklist can only find what somebody already suspected.*
+
+| | | |
+|---|---:|---|
+| **A** erlaubt und benutzt | **34** | the actual table — what needs a C semantics |
+| **B** erlaubt und NIE benutzt | **6** | dead entries; the list can lose them |
+| **C** benutzt und NICHT erlaubt | **30** | the findings |
+| | | **7** on the never list — a CONTRADICTION |
+| | | **19** on neither list, and no generous reading covers them |
+| | | **4** on neither list, but a generous reading does |
+| **Forms in the emitted C** | **64** | = A + C, and this is the ratchet |
+
+**B — the six dead entries, and the first is the important one:** `#if` out of `when` · `#else`
+· `#elif` · `extern` · `_Bool` · unary `-`.
+
+> **This section's own example is dead.** The allow list says *„preprocessor other than `#if`
+> **out of `when`**"*. Of the five `#if` in the entire corpus, **not one** comes out of a
+> `when`; all five are `#if defined(__GNUC__)` around `__builtin_unreachable()`, written by
+> the emitter. *The permitted form is never emitted, and the emitted form was never
+> permitted.* Until the counter split the entry in two it booked the one as the other and
+> looked green (W25).
+
+**C1 — used and on the NEVER list.** Seven, and two of them are large:
+
+| form | sites | note |
+|---|---:|---|
+| **pointer arithmetic** | **491** | `d->basis + 8`, `v->bytes + 4`. `basis` is `volatile uint8_t *`, `bytes` is `uint8_t *` — checked against the declarations. **This contradicts §2 row 2 directly**, which says *„the emission generates **no** pointer arithmetic \| residual risk: none"* |
+| **index on a pointer** | **156** | `p[1]` where `p` is `const uint8_t *p`. `p[i]` **is** `*(p+i)` by C's own definition; the allow list says „index" and does not say whether it means this too |
+| `#include` | 408 | preprocessor other than `#if` |
+| `typedef` | 240 | the list says *„**typedef-free** struct/union definition"* |
+| `#define` | 210 | preprocessor other than `#if` — but *„enum-free constants"* plainly means it |
+| `enum` | 28 | the list says *„**enum-free** constants"* |
+| **`?:`** | **8** | ruled on below |
+
+**C2 — used and on NEITHER list, and no generous reading covers them.** Nineteen: `void` (930,
+the type row does not name it) · `__attribute__` (766) · `inline` (440) · `const` (419) ·
+`*` dereference (141) · `&` address-of (111) · `~` (98) · `break` (51) · `++`/`--` (42) ·
+`sizeof` (27) · `&&`/`||` (23) · `double` (18) · `while` (11) · `__typeof__` (9) · `float` (8) ·
+`__builtin_unreachable` (5) · `#if defined(__GNUC__)` (5) · `continue` (3) · `_Static_assert` (1).
+
+> **Two of these are not omissions but decisions nobody took.** `float`/`double` — the type
+> row knows no floating point at all, and 26 sites of it are emitted. `&&`/`||` — the binary
+> row names `&` and `|`, not `&&` and `||`, and those two are exactly the operators that,
+> like `?:`, evaluate CONDITIONALLY. *Refusing `?:` while emitting `&&` refuses a class at
+> one of its three doors.*
+
+**C3 — used, unnamed, but a generous reading covers them.** Four: `->` (704, „field access") ·
+`bool` (350, `<stdbool.h>` rather than `_Bool`) · `true`/`false` (211) · `+=`/`|=`/`-=` (24,
+„assignment"). *They are listed so that the count of 30 carries its own two readings; under
+the generous one the findings are 26.*
+
+**What the SECOND instrument says, and it is good news:** `cc -std=c11 -Wconversion
+-Wsign-conversion -Wcast-qual -Wvla -Wdouble-promotion -Wfloat-equal` finds **zero** hits over
+the **101** units it compiles. **Implicit conversion, `const` discarding and VLA hold — and
+they hold measured.** Row 7 of §2 below demands of implicit conversion *„none, but to be
+checked mechanically"*; that is the mechanical check. *(The 102nd unit,
+`beispiele/gift/414-tabellenspeicher-heisst-so.gab`, does not compile, and the tool says so
+rather than booking it as zero warnings — W1.)*
+
+**What stays UNMEASURED, by name:** `union` reinterpretation without a tag (a question about
+the Gabbro program, not about its C) · whether every `goto` really is a generated loop exit
+(the count is of `goto`, not of what for) · whether `asm` really sits at exactly one emission
+site *in `emit.rs`* · the comma operator outside a grouping paren. Set B is an UPPER bound: a
+103rd program can revive a dead entry.
+
+#### 1b. Two rulings, each with a calculation
+
+**`?:` — the GENERATOR is wrong. Measured, not preferred.**
+
+All eight sites are one and the same line, `z = (z > v) ? z : v;`, out of one emission site
+(`emit.rs`, `MergeOp::Max`/`Min`). Three forms of the same fold, `cc (GCC) 16.2.1`, x86-64:
+
+| | `?:` | `if/else` naive | `if` tight |
+|---|---:|---:|---:|
+| `-O0` | 34 | 36 | **34** |
+| `-O2` | 11 | 11 | 11 — **byte-identical bar the `.file` line** |
+| `-Os` | 11 | 11 | 11 — **byte-identical bar the `.file` line** |
+
+*`if (v > z) { z = v; }` costs nothing at any level.* And what would `?:` cost on the list? It
+is, besides `&&`/`||`, the only operator that evaluates conditionally — and the only one that
+forms its result type by the **usual arithmetic conversions** over its two arms. Putting it on
+the list drags an implicit-conversion rule into a table that the compiler has just certified
+free of one. **A rule that costs a semantics and buys zero instructions is the wrong side of
+the trade.**
+
+- [ ] `emit.rs` writes `if (v > z) { z = v; }` for `MergeOp::Max`/`Min`. Then C1 loses `?:`
+      and both marks fall by one. *Not done here: `emit.rs` was held by another lane.*
+- [ ] **And it does not close the class.** `&&`/`||` remain, 23 sites, with the same
+      conditional evaluation. Either the binary row admits them by name, or they go the same
+      way. **Deciding `?:` alone would look like a solved class and be one door of three.**
+
+**`__builtin_unreachable` — BOTH: the generator is wrong four times, and the list was wrong
+once.**
+
+Deleting the whole `#if` block and compiling with `cc -std=c11 -Wall -Wextra -Werror`:
+
+| site | `-O0` | `-O2` | |
+|---|---|---|---|
+| `08-bereiche` | ok | ok | **deletable** |
+| `34-markierter-wert` ×3 | ok | ok | **deletable** |
+| `40-werte-und-griffe` | **`-Werror=return-type`** | ok | **load-bearing — and only at `-O0`** |
+
+**And the rule behind it is mechanical: exactly the four deletable sites carry a `return 0;`
+directly after the `#endif`, the load-bearing one does not.** So at four sites two adjacent
+lines contradict each other — `__builtin_unreachable()` says *„being here is undefined"*, the
+`return 0;` under it says *„if we are here, return 0"*. **Only one of the two can be meant**,
+and the first turns the second into dead code the optimiser may remove. *Four sites export a
+Gabbro promise into C's UB rules and get nothing for it.*
+
+- [ ] `emit.rs` emits the block only where no `return` follows — measured: 1 of 5.
+- [x] **The remaining one goes ON the list, and its price is said.** It is not a convenience:
+      at that site the C compiler is TOLD that the fall-through is unreachable, and that rests
+      on `D005` plus the invariant that a tag only ever holds a declared variant. **That is a
+      proof export into C's rules — the same class as row 11 (`restrict`) below**, and it
+      belongs in the UB inventory as such, not in the syntax list alone.
+- [ ] **Its `#if defined(__GNUC__)` is a second deviation at the same construct**, and a
+      sharper one than it looks: under a non-GNU compiler the emitted program is a DIFFERENT
+      program. §3 pins the compiler options into the artefact with a fingerprint; a `#if` on
+      the compiler's IDENTITY belongs in the same place, or the artefact is not one artefact.
+
+#### 1c. What the count decides — and it is not what this section assumed
+
+**The table did not stay small because the list was obeyed; it stayed small because Gabbro is
+small.** 64 forms over 8001 lines is a real result and it does hold the load-bearing sentence:
+this is an enumerable target language, and AutoCorres is not needed for it. **But 30 of the 64
+were never decided**, and two of them — pointer arithmetic at 491 sites, `void` as a type at
+930 — are not oversights at the margin. *A list that 30 forms walk past is not a ratchet, and
+until today nothing counted it.*
+
+- [ ] **The 19 unnamed forms of C2 are to be RULED ON, one by one, the way `?:` was**: onto the
+      list with the price of their semantics, or out of the generator with the price of the
+      change. **Ruling by taste is what produced a list with 30 holes in it.**
+- [ ] **§2 row 2 is to be rewritten.** It says pointer arithmetic has residual risk „none"
+      because the emission generates none. The emission generates 491 sites of it.
 
 ---
 

@@ -103,30 +103,30 @@ import abschnitt  # noqa: E402
 
 W = pathlib.Path(__file__).resolve().parent.parent
 
-# **DIE MARKEN, gemessen 2026-08-31** ueber den Korpus bei `e6a3c63`: 102 emittierende
-# Uebersetzungseinheiten, 8001 Zeilen C. Sie sind die MESSUNG und kein Ziel -- eine Ratsche,
-# die unter ihrem Gegenstand beginnt, ist am Tag ihrer Niederschrift rot und sagt niemandem
-# etwas. Was sie kauft, ist der ZWEITE Tag.
+# **THE MARKS, measured 2026-08-31** over the corpus at `e6a3c63`: 102 emitting translation
+# units, 8001 lines of C. They are the MEASUREMENT and not a target -- a ratchet that starts
+# below its object is red on the day it is written and tells nobody anything. What it buys is
+# the SECOND day.
 #
-# **Beide Marken sind mit `--uebersetzer` genommen**, also mit der vollsten Messung, die
-# dieses Werkzeug kann. Ein Lauf ohne die Schalter misst hoechstens dasselbe und nie mehr;
-# die Marke ist damit in beide Richtungen sicher.
+# **Both marks were taken with `--uebersetzer`**, that is, with the fullest measurement this
+# tool can make. A run without the switches measures at most the same and never more, so the
+# mark is safe in both directions.
 #
-#   64  Formen im Erzeugnis  =  34 erlaubt+benutzt  +  30 benutzt+nicht erlaubt
-#   30  davon nicht erlaubt  =   7 auf der Nie-Liste + 19 ungenannt + 4 weit gedeckt
+#   64  forms in the emitted C  =  34 allowed+used  +  30 used+not allowed
+#   30  of those not allowed    =   7 on the never list + 19 unnamed + 4 generously covered
 #
-# > **`MARKE_UNERLAUBT` ist am 2026-08-31 von 29 auf 30 GESTIEGEN, und hier steht warum.**
-# > Nicht der Erzeuger hat sich bewegt, sondern die MESSUNG ist genauer geworden: `#if` war
-# > eine Zeile im Katalog und ist zwei. Die Erlaubtliste sagt *„preprocessor other than
-# > `#if` OUT OF `when`"* -- erlaubt ist also das `#if`, das aus einer `when`-Klausel des
-# > Gabbro-Programms kommt. Von den fuenf `#if` im ganzen Korpus kommt **keines** daher;
-# > alle fuenf sind `#if defined(__GNUC__)` um `__builtin_unreachable()`.
+# > **`MARKE_UNERLAUBT` ROSE from 29 to 30 on 2026-08-31, and the reason stands here.**
+# > The generator did not move; the MEASUREMENT got sharper. `#if` was one catalogue line and
+# > is two. The allow list says *"preprocessor other than `#if` OUT OF `when`"* -- so what is
+# > allowed is the `#if` that comes out of a `when` clause of the Gabbro program. Of the five
+# > `#if` in the whole corpus **not one** does; all five are `#if defined(__GNUC__)` around
+# > `__builtin_unreachable()`.
 # >
-# > *Der erlaubte Eintrag ist tot (Menge B), und der benutzte steht auf keiner Liste
-# > (Menge C).* Vorher buchte der Zaehler den einen als den anderen und sah gruen aus.
-# > **Ein Anstieg aus einer scharferen Messung ist kein Anstieg des Gegenstands** -- aber er
-# > gehoert genauso begruendet an die Marke, sonst ist die Ratsche ein Ort, an dem Zahlen
-# > stillschweigend groesser werden.
+# > *The permitted entry is dead (set B) and the used one is on neither list (set C).* Until
+# > the split the counter booked the one as the other and looked green.
+# > **A rise out of a sharper measurement is not a rise of the object** -- but it belongs at
+# > the mark with the same reasoning, or the mark becomes a place where numbers grow in
+# > silence.
 MARKE_TABELLE = 64
 MARKE_UNERLAUBT = 30
 
@@ -158,7 +158,7 @@ def _lade(name):
 
 
 # ----------------------------------------------------------------------------------------
-# DER LEXER
+# THE LEXER
 # ----------------------------------------------------------------------------------------
 
 # The C punctuators, longest first -- a shorter one first would cut `<<=` into `<` `<=`.
@@ -295,7 +295,7 @@ def lies_tokens(text):
 
 
 # ----------------------------------------------------------------------------------------
-# DER KATALOG
+# THE CATALOGUE
 # ----------------------------------------------------------------------------------------
 #
 # **Every entry carries WHERE IT COMES FROM, and that is not decoration.** `stand` is `E`
@@ -315,13 +315,13 @@ def lies_tokens(text):
 E, N, U = "E", "N", "U"
 KATALOG = {
     # --- Praeprozessor ---------------------------------------------------------------
-    # **`#if` ist ZWEI Formen, und die Erlaubtliste kennt nur eine.** Sie sagt „preprocessor
-    # other than `#if` OUT OF `when`" -- also ist erlaubt, was aus einer `when`-Klausel des
-    # Gabbro-Programms kommt. Gemessen 2026-08-31: von fuenf `#if` im ganzen Korpus kommt
-    # **keines** aus einem `when`; alle fuenf sind `#if defined(__GNUC__)` um
-    # `__builtin_unreachable()`. *Der erlaubte Eintrag ist tot, und der benutzte steht auf
-    # keiner Liste.* Ohne diese Trennung buchte der Zaehler die eine Form als die andere --
-    # dieselbe Klasse wie W25: eine Zahl belegt ihren Nenner, nicht ihre Beschriftung.
+    # **`#if` is TWO forms and the allow list knows only one.** It says "preprocessor other
+    # than `#if` OUT OF `when`", so what is allowed is what comes out of a `when` clause of
+    # the Gabbro program. Measured 2026-08-31: of five `#if` in the whole corpus **none**
+    # comes out of a `when`; all five are `#if defined(__GNUC__)` around
+    # `__builtin_unreachable()`. *The permitted entry is dead and the used one is on no list.*
+    # Without the split the counter booked the one form as the other -- the same class as
+    # W25: a number vouches for its denominator, not for its label.
     "#if aus `when`": ("Praeprozessor", E, "struk", "preprocessor ... `#if` out of `when`", None),
     "#if auf __GNUC__": ("Praeprozessor", U, "struk",
                          "auf keiner Liste -- die Erlaubtliste kennt NUR `#if` aus `when`", None),
@@ -408,13 +408,13 @@ KATALOG = {
     "&&/||": ("Ausdruck", U, "lex",
               "auf keiner Liste -- die binaere Zeile nennt `&` und `|`, NICHT `&&`/`||`", None),
     "zeigerarithmetik": ("Ausdruck", N, "struk", "NIE: pointer arithmetic", None),
-    # **`p[i]` IST `*(p+i)` -- das ist C's eigene Definition und keine Lesart.** Die
-    # Erlaubtliste nennt „index"; ob sie damit auch die Indizierung eines ZEIGERS meint,
-    # steht dort nicht. Darum eine eigene Zeile, mit beiden Lesarten gedruckt.
+    # **`p[i]` IS `*(p+i)` -- that is C's own definition, not a reading.** The allow list
+    # says "index"; whether it also means indexing a POINTER is not written there. Hence a
+    # line of its own, with both readings printed.
     "index auf zeiger": ("Ausdruck", N, "struk", "NIE: pointer arithmetic (`p[i]` = `*(p+i)`)",
                          "Expressions: index"),
-    # `asm ( "…" : "=r"(x) : "r"(y) )` -- die Operandenlisten der einen `asm`-Stelle. Sie
-    # gehoeren zu `Other: inline assembler`, sind aber ein eigenes Stueck Syntax.
+    # `asm ( "…" : "=r"(x) : "r"(y) )` -- the operand lists of the one `asm` site. They
+    # belong to `Other: inline assembler` but are a piece of syntax in their own right.
     "asm-operanden": ("Sonstiges", E, "struk", "Other: inline assembler (Operandenliste)", None),
     "#?": ("Praeprozessor", U, "lex", "eine Direktive, die der Katalog nicht kennt", None),
     "varargs ...": ("Ausdruck", N, "lex", "NIE: variadic functions", None),
@@ -582,9 +582,9 @@ def zaehle(tokens, typen=None):
                     if x[0] == "ppende":
                         break
                     rumpf.append(x[1])
-                # `__GNUC__`, `__clang__`, `_MSC_VER` -- eine Bedingung ueber den
-                # UEBERSETZER. Die kann aus keinem `when` kommen: Gabbro kennt den
-                # Uebersetzer nicht, der Erzeuger schreibt sie selbst.
+                # `__GNUC__`, `__clang__`, `_MSC_VER` -- a condition about the COMPILER.
+                # It cannot come out of a `when`: Gabbro does not know the compiler, the
+                # generator writes the line itself.
                 zaehl("#if auf __GNUC__" if any(w.startswith("__") or w.endswith("__")
                                                 for w in rumpf) else "#if aus `when`", tok)
             else:
@@ -597,7 +597,7 @@ def zaehle(tokens, typen=None):
             continue
 
         if art == "ppende":
-            # Das Ende einer Direktivenzeile IST ein Satzende -- siehe `lies_tokens`.
+            # The end of a directive line IS a statement end -- see `lies_tokens`.
             vor, satzanfang = None, True
             deklaration = initialisierer = False
             seit_semikolon = []
@@ -663,21 +663,20 @@ def zaehle(tokens, typen=None):
             else:
                 zaehl("index []", tok)
                 if vorher in zeiger:
-                    # `p[i]` auf einem ZEIGER ist nach C's eigener Definition `*(p+i)` --
-                    # Zeigerarithmetik. Getrennt gezaehlt, nie stillschweigend eingerechnet.
+                    # `p[i]` on a POINTER is `*(p+i)` by C's own definition -- pointer
+                    # arithmetic. Counted apart, never folded in silently.
                     zaehl("index auf zeiger", tok)
             stapel.append(("[", "index"))
         elif t == "{":
-            # **Drei Klammernpaare sehen gleich aus und sind es nicht** -- und zwei davon
-            # haben diesen Zaehler beim ersten Lauf 24 „geschachtelte Zuweisungen" finden
-            # lassen, die keine sind:
+            # **Three bracket pairs look alike and are not** -- and two of them made this
+            # counter find 24 "nested assignments" on its first run that are none:
             #
-            #   `enum { A = 0, B = 1 }`   -- Aufzaehlungswerte, keine Zuweisungen
-            #   `(T){ .x = k, .y = n }`   -- ein VERBUNDLITERAL hinter einer Umwandlung
-            #   `if (x) { … }`            -- ein Block, und davor steht auch ein `)`
+            #   `enum { A = 0, B = 1 }`   -- enumerator values, not assignments
+            #   `(T){ .x = k, .y = n }`   -- a COMPOUND LITERAL behind a cast
+            #   `if (x) { … }`            -- a block, and a `)` stands before it too
             #
-            # Die letzten beiden trennt nur die ROLLE der eben geschlossenen Klammer:
-            # `gruppe` war eine Umwandlung, `steuer` war ein `if`.
+            # Only the ROLE of the bracket just closed separates the last two: `gruppe` was a
+            # cast, `steuer` was an `if`.
             if vorher == "=" or (stapel and stapel[-1][1] in ("init", "aufzaehlung")):
                 rolle = "init"
             elif vorher == ")" and letzte_zu == "gruppe":
@@ -726,8 +725,8 @@ def zaehle(tokens, typen=None):
                 zaehl("sprungmarke", tok)
                 satzanfang = True
             else:
-                # `asm ( "…" : "=r"(x) : "r"(y) )` -- die Operandenlisten. Sie stehen in
-                # einer Steuerklammer und sind weder Marke noch Bitfeld noch `?:`.
+                # `asm ( "…" : "=r"(x) : "r"(y) )` -- the operand lists. They sit in a
+                # control bracket and are neither a label nor a bitfield nor a `?:`.
                 zaehl("asm-operanden", tok)
         elif t == ",":
             innen = stapel[-1][1] if stapel else "datei"
@@ -852,7 +851,7 @@ def _casts(tokens, typen=frozenset()):
 
 
 # ----------------------------------------------------------------------------------------
-# DER KORPUS
+# THE CORPUS
 # ----------------------------------------------------------------------------------------
 
 def korpus(wurzel=None, gabbro=None):
@@ -961,8 +960,8 @@ enum ZzF { ZZ_X = 0, ZZ_Y = 2 };
 typedef struct { uint32_t id; } ZzV;
 static ZzV zzv(uint32_t k) { return (ZzV){ .id = k }; }
 '''
-# **Die NEGATIVE Richtung: was NICHT gezaehlt werden darf.** Jede Null hier ist eine Falle,
-# an der ein `grep`-Zaehler stirbt.
+# **The NEGATIVE direction: what must NOT be counted.** Every zero here is a trap a `grep`
+# counter dies on.
 ERWARTET = {"?:": 1, "&&/||": 1, "char": 2, "cast": 1, "verbundzuweisung": 1,
             "inkrement ++/--": 1, "#include": 1, "#define": 1, "sprungmarke": 1, "goto": 1,
             "for": 1, "if": 1, "zeigertyp": 1, "const": 1, "static": 3,
@@ -971,11 +970,11 @@ ERWARTET = {"?:": 1, "&&/||": 1, "char": 2, "cast": 1, "verbundzuweisung": 1,
             "bitfeld": 0, "zeigerarithmetik": 0, "index auf zeiger": 0, "ruf": 0,
             "zuweisung im ausdruck": 0, "geschachtelte zuweisung": 0}
 
-# **Die POSITIVE Richtung, und ohne sie waere das hier eine Zierde** (R11). Ein Zaehler, der
-# nie etwas gefunden hat, ist von einem, der nichts finden KANN, nicht zu unterscheiden --
-# und die interessante Menge dieses Werkzeugs ist genau die der Funde. Also traegt dieser
-# Text **jede Form der Nie-Liste, die lexikalisch oder strukturell entscheidbar ist**, und
-# jede muss auftauchen.
+# **The POSITIVE direction, and without it this would be an ornament** (R11). A counter that
+# has never found anything is indistinguishable from one that CANNOT find anything -- and the
+# interesting set of this tool is precisely the set of findings. So this text carries **every
+# form of the never list that is lexically or structurally decidable**, and every one of them
+# must show up.
 GIFT_POSITIV = r'''
 #ifdef ZZIRGENDWAS
 #endif

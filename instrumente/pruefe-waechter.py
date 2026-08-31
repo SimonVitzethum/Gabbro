@@ -182,10 +182,10 @@ ARGUMENTE = {
     # **`zaehle-narrow.py` nahm bis zum 2026-08-20 den Standardbaum stillschweigend an** und
     # endete mit 2, wo er fehlt. Jetzt steht der Pfad hier, sichtbar neben dem von `b3`.
     "zaehle-narrow.py": ["~/Dokumente/SEL4Lake/SEL4Lake"],
-    # **`--uebersetzer` gehoert in den Sammellauf, weil die Marke damit genommen ist.**
-    # Ohne den Schalter bleiben drei Eintraege der Nie-Liste (implizite Umwandlung,
-    # `const`-Verwurf, VLA) ungemessen -- und ein Waechter, der seine eigene Marke nicht
-    # nachrechnen kann, bewacht die Haelfte. Er kostet 5 s ueber 102 Einheiten.
+    # **`--uebersetzer` belongs in the collective run because the mark was taken with it.**
+    # Without the switch three entries of the never list (implicit conversion, `const`
+    # discarding, VLA) stay unmeasured -- and a guardian that cannot recompute its own mark
+    # guards half of it. It costs 5 s over 102 units.
     "zaehle-c-formen.py": ["--uebersetzer"],
 }
 
