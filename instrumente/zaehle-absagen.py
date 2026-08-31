@@ -327,11 +327,15 @@ def formen(quelle=None):
     return sorted(aus)
 
 
-def korpuslauf(wurzel=None, gabbro=None):
-    """Per `.gab` file: the checker codes and the `C001` texts, apart.
+def binaer(wurzel=None, gabbro=None):
+    """The command that runs `gabbro` -- WITH the staleness latch, in ONE place.
 
-    `gabbro emit` runs `emittiere_mit` even when the checker found errors, so ONE run
-    yields both halves. Zero checker errors beside a `C001` is a measured `UNGEDECKT`.
+    **Split out of `korpuslauf` on 2026-08-31, and the reason is W7.**
+    `pruefe-grammatiktafel.py` now puts the emitted C through `cc -Werror`, so it needs the
+    very same binary a second time. Resolving it there would be a SECOND register over the
+    same thing -- and the second copy is the one that forgets the latch below. *A tool that
+    asks a stale binary measures a tree that no longer exists*, and two tools asking two
+    different binaries measure two trees.
     """
     wurzel = wurzel or W
     befehl = None
@@ -384,6 +388,17 @@ def korpuslauf(wurzel=None, gabbro=None):
     # `zaehle-fragmente.py` carries.
     if befehl is None:
         befehl = ["cargo", "run", "-q", "--bin", "gabbro", "--"]
+    return befehl
+
+
+def korpuslauf(wurzel=None, gabbro=None):
+    """Per `.gab` file: the checker codes and the `C001` texts, apart.
+
+    `gabbro emit` runs `emittiere_mit` even when the checker found errors, so ONE run
+    yields both halves. Zero checker errors beside a `C001` is a measured `UNGEDECKT`.
+    """
+    wurzel = wurzel or W
+    befehl = binaer(wurzel, gabbro)
     aus = {}
     # **`rglob` from the repo root walks into every agent worktree** (2026-08-31). Measured on
     # the day this tool was built: 13 629 of 14 078 `.gab` files in the tree live under

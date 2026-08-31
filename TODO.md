@@ -4792,3 +4792,29 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       er misst die Gefahr direkt (eine angewandte Mutation hat ihren `alt`-Text verloren),
       aber er sieht keine andere Quelländerung. **Ein Prüfsummenabgleich gegen den Stand vor
       dem Lauf wäre die vollständige Antwort und ist nicht gebaut.**
+
+- [ ] **Ein Feldindex senkt als `uint32_t` ab und wird stillschweigend in ein `u16`-Feld
+      geschrieben — dieselbe Familie wie `F06`, eine Datei weiter.**
+      `messung/treiber/virtio-net.gab`:236 schreibt `a.slots[i].kopf = i;` mit
+      `i : index into Deskring` und `count QGROESSE = 8`; `AvailRing.slot.kopf` ist ein
+      `u16`, `AVAIL_IDX` auch. Im Erzeugnis steht `uint32_t i` und `d->slots[i].kopf = i`
+      ohne Umwandlung — `cc -Wconversion` nennt es zweimal (*„conversion from `uint32_t` to
+      `uint16_t` may change value"*), `-Wall -Wextra` **nicht**. Gemessen am 2026-08-31 von
+      `pruefe-grammatiktafel.py`, das seit diesem Tag jedes Erzeugnis übersetzt.
+      **Der Prüfer kennt die Schranke** (drei Bit reichen), der Erzeuger senkt trotzdem
+      32 Bit ab. *Ob ein Indextyp auf die kleinste Breite absenken soll, die sein `count`
+      trägt, oder ob der Erzeuger eine Umwandlung hinschreibt, ist eine Aussage über die
+      Absenkung und wird hier nicht nebenbei entschieden.* `F06` war genau diese Kopie aus
+      `slots of`, nur mit `-Wtype-limits` statt `-Wconversion`.
+
+- [ ] **Zwei Deklarationen einer Funktion in einer Übersetzungseinheit, und sie versprechen
+      Verschiedenes.** `beispiele/29-undurchsichtig.gab` nennt `pa_aus_zahl` zweimal: als
+      `pub impl fn … effects { pure }` (Zeile 23) und als `extern fn … effects { pure }`
+      (Zeile 46, anderes Modul). Das Erzeugnis trägt beide Prototypen — den ersten **mit**
+      `__attribute__((const))`, den zweiten **ohne**. `cc -Wredundant-decls` nennt es;
+      `-Wall -Wextra` nicht. **`effects { pure }` senkt an einem `extern fn` anders ab als
+      an einem `impl fn`** (gegengeprüft an `beispiele/40-werte-und-griffe.gab`:96, wo
+      `extern fn halde() effects { pure }` zu `void halde(void);` wird). Gemessen am
+      2026-08-31. *Ob der Erzeuger den zweiten Prototyp unterdrücken soll — er weiß, dass die
+      Definition in derselben Einheit steht — oder ihm das Attribut mitgeben, ist eine
+      Entscheidung über die Absenkung und steht hier ohne Antwort.*
