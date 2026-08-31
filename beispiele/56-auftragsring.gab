@@ -13,8 +13,9 @@
 -- ----------------------
 -- Sie bindet einen INDEX in den Puffer (`SYNTAX.md`:705), und die Schranke holt sie sich aus
 -- der Deklaration: `domaene.rs` nimmt die Laenge des **einzigen** Feldarrays des Verbunds
--- und weigert sich zu raten, wenn es zwei gibt. Damit steht `traverse … over queue r` unter
--- einer Kostenzusage.
+-- und weigert sich zu raten, wenn es zwei gibt (`K003` statt einer Vermutung). Das ist die
+-- Rechnung des KOSTENPASSES; **absenken** laesst sich ein `traverse … over queue r` heute
+-- ohnehin nicht -- der Erzeuger sagt es namentlich ab («B10»).
 --
 -- UND WAS SIE NICHT TRAEGT -- ZWEI FUNDE, BEIDE GEMESSEN (2026-08-31)
 -- -------------------------------------------------------------------
