@@ -32,6 +32,65 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     check_traegt_seine_pflicht(baum, absagen);
     spiegel_und_sonde(baum, absagen);
     fnptr_traegt_seinen_vertrag(baum, absagen);
+    name_gehoert_schon_c(baum, absagen);
+}
+
+/// **`N041` -- a name C has already taken.**
+///
+/// The generator writes the Gabbro name into C UNCHANGED -- there is no `fn c_name` in
+/// `emit.rs`. So a declaration named `exit` becomes `_Noreturn void exit(void);`, and `cc`
+/// answers *conflicting types for built-in function 'exit'; expected 'void(int)'*. **Measured
+/// against the UNCHANGED checker before this rule existed** (`W24`, `messung/C-NAMEN.md` §1):
+/// `gabbro pruefe` said `3 items, 0 errors, 0 hints`, `gabbro emit` wrote 20 lines of C, and
+/// the third tool refused them. *That is exactly the state `PLAN-VOLLSTAENDIGKEIT.md` §2
+/// forbids -- the checker accepts and there is no C.*
+///
+/// **Why the CHECKER and not the generator.** A generator that quietly renames `exit` to
+/// `gabbro_exit` fixes the compile and moves the explanation into an artefact nobody reads.
+/// The name belongs to the writer, and so does the refusal.
+///
+/// **And the refusal names the finding site.** A user who writes `fn exit()` did nothing
+/// wrong -- they only do not know the lowering goes to C. `Klasse::fundort` says which side
+/// of C owns the name and where it comes from; without that the message moves an explanation
+/// into an error list.
+///
+/// > **What it costs, measured before it was built:** over the 418 `.gab` files and their 743
+/// > distinct top-level item names, the 558-name table has **exactly one** hit -- `exit` in
+/// > `messung/fragmente/F05.gab`, the file this rule was measured on. *A rule that forbids 558
+/// > names and touches one line is not a tightening of the tree; it is an answer to a case
+/// > nobody had written down.*
+///
+/// The rule holds every named item except `module` and `use`: a module declares no C
+/// identifier, and `use` declares no name at all.
+fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if matches!(item.art, ItemArt::Modul(_) | ItemArt::Use(_)) {
+            return;
+        }
+        let Some(name) = item.art.name() else { return };
+        let Some(klasse) = crate::cnamen::vergeben(&name.text) else { return };
+        absagen.schiebe(
+            Absage::fehler(
+                "N041",
+                name.span,
+                format!("`{}` is a name C has already taken", name.text),
+            )
+            .mit_notiz(format!(
+                "the lowering goes to C, and this declaration becomes `{}` in the generated \
+                 unit -- the generator writes the name unchanged",
+                name.text
+            ))
+            .mit_notiz(klasse.fundort(&name.text))
+            .mit_notiz(
+                "measured 2026-08-31 with `cc -std=c11 -O0 -Wall -Wextra -Werror`; \
+                 the table and its command stand in `messung/C-NAMEN.md`",
+            )
+            .mit_notiz(
+                "the name is fine everywhere except at the boundary -- rename the \
+                 declaration, and nothing else has to move",
+            ),
+        );
+    });
 }
 
 /// **The words an effect line may use at a function pointer type -- and why the list is

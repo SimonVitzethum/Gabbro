@@ -219,6 +219,21 @@ const BENANNT: &[&str] = &[
     // > *The number was known and the checker was silent* -- the same shape as a clause that
     // > parses and is dropped. **Now it speaks, and the tally has a reader.**
     "N040",
+    // **`N041` -- and over the frozen excerpt it is the finding, not a side effect.**
+    //
+    // `FRAGMENTE.md`:1028 writes `extern fn exit() -> never effects { diverges };`, and the
+    // body above it calls `exit()` at eight sites. **C owns that name**: the generator writes
+    // `_Noreturn void exit(void);` and `cc` answers *conflicting types for built-in function
+    // 'exit'; expected 'void(int)'*. Measured 2026-08-31, `messung/C-NAMEN.md`.
+    //
+    // > **The line was ADDED to the excerpt on 2026-08-15**, with the note above it saying
+    // > `exit` and `signal` had been called and never declared -- and it thereby became part
+    // > of the frozen text. Since then it has been the one line that keeps `F05` from
+    // > lowering, and nothing said so: the
+    // > checker was silent, the emitter wrote 199 lines of C, and the foreign compiler
+    // > refused them. *A finding that only the third tool can see is not a finding, it is a
+    // > surprise.*
+    "N041",
 ];
 
 #[test]

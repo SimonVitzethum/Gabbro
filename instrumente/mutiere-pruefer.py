@@ -1753,6 +1753,16 @@ MUTATIONEN = [
         "N029 -- ein Ruf auf eine scheiternde Funktion ausserhalb eines `let … else`; der Grund faellt unbemerkt auf den Boden",
     ),
     Mutation(
+        "c-vergibt-den-namen-nicht-mehr",
+        "cnamen.rs",
+        "    if EINGEBAUT.binary_search(&name).is_ok() {",
+        "    if false && EINGEBAUT.binary_search(&name).is_ok() {",
+        "N041 -- die Klasse `Eingebaut` faellt aus: `exit`, `abort`, `malloc` gehen wieder "
+        "durch, der Erzeuger schreibt `_Noreturn void exit(void);`, und `cc` weist die "
+        "Uebersetzungseinheit zurueck. Die beiden anderen Klassen bleiben wach -- genau EINE "
+        "Giftprobe faellt (408).",
+    ),
+    Mutation(
         "baumkante-braucht-ihr-feld-nicht",
         "kbedingung.rs",
         "            let Some(typ) = felder.get(k.text.as_str()) else {",

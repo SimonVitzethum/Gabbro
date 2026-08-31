@@ -1776,6 +1776,38 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/namen.rs::typname_bekannt",
     },
     Satz {
+        name: "namen.c_hat_den_namen",
+        kennungen: &["N041"],
+        aussage: "An item name that C has already taken is refused AT THE DECLARATION. The \
+                  generator writes the Gabbro name into C unchanged, so a name C owns is a \
+                  name no lowering can use -- and the refusal names which side of C owns it.",
+        vorbehalt: "**The population is measured, and it is a measurement of ONE toolchain.** \
+                    558 reachable names in three classes -- 37 C11 keywords (44 minus the \
+                    seven Gabbro's own vocabulary refuses at `P002`), 366 from the four \
+                    headers every generated unit includes, 155 built-in functions of the C \
+                    implementation. The third class was measured file by file WITHOUT any \
+                    `#include`; a different `cc` can know a different set, and then this \
+                    table is a lower bound. *`messung/C-NAMEN.md` carries the command for \
+                    every line of it.*\n\
+                    **What it deliberately does NOT carry** (W10): the reserved prefixes of \
+                    C11 §7.1.3. `__builtin_x`, `_Grosz` and `_klein` are reserved by the \
+                    standard and MEASURED not to break, and the corpus holds zero item names \
+                    with a leading underscore in 743. Rule A: no construct without a measured \
+                    need. Nor does it carry the 883 underscore names the four headers define \
+                    -- those are one libc's spelling, not C's.\n\
+                    **And it does not look inside bodies.** A `let` or a parameter named \
+                    `exit` lowers to a local, and a local shadowing a built-in is measured to \
+                    compile. The rule holds every named item except `module` and `use`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/408-c-name-eingebaut.gab (built-in), 409 (`<math.h>`), \
+                      410 (C11 keyword); counter-probe messung/proben/probe-c-namen-frei.gab \
+                      -- `read` `write` `open` `close` `signal` are POSIX, not C, and pass \
+                      with 0 errors. Over the 418 `.gab` files the table has exactly ONE hit \
+                      outside its own probes: `exit` in `messung/fragmente/F05.gab`.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::name_gehoert_schon_c; \
+                     crates/gabbro-check/src/cnamen.rs; messung/C-NAMEN.md",
+    },
+    Satz {
         name: "namen.kanal_ohne_einloeser",
         kennungen: &["N034"],
         aussage: "A function that declares `or R` has a body that can actually produce a \
