@@ -2497,8 +2497,12 @@ MUTATIONEN = [
     Mutation(
         "veroeffentlichung-nimmt-die-vorgabeordnung",
         "emit.rs",
-        "atomic_store_explicit(&{ziel}, {}, {ordnung});",
-        "{ziel} = {}; /* {ordnung} */",
+        # **The anchor was pulled along on 2026-08-31, not the rule**: since `verenge` the
+        # value stands as `{w}` in that line and no longer as `{}`. An anchor that does not
+        # follow a rebuild falls under `ungueltig`, and the quota keeps reading as if it
+        # covered it.
+        "atomic_store_explicit(&{ziel}, {w}, {ordnung});",
+        "{ziel} = {w}; /* {ordnung} */",
         "K11.2.3 -- die Veroeffentlichung wird ein `=`, also seq_cst statt der deklarierten "
         "Ordnung; das erzeugte Programm sagt etwas anderes als die Quelle",
     ),
@@ -3672,6 +3676,18 @@ MUTATIONEN = [
         "derselben C-Funktion mit verschiedenen Zusagen an den Uebersetzer. "
         "`-Wredundant-decls` nennt es, `-Wall -Wextra` nicht. Und die widersprechende Form "
         "(`u64` gegen `u32`) wird wieder emittiert statt abgesagt -- genau EINE Probe faellt",
+        "code",
+    ),
+    Mutation(
+        "index-verengt-sich-wieder-stillschweigend",
+        "gabbro-check/src/emit.rs",
+        '        Some(h) if h <= zmax => format!("({ziel})({text})"),',
+        '        Some(h) if h <= zmax && false => format!("({ziel})({text})"),',
+        "Ein `index into T` (`uint32_t`) wird wieder ohne Umwandlung in ein `u16`-Feld und "
+        "in ein `u16`-Atomar geschrieben -- dieselbe Familie wie `F06`: der Pruefer kennt "
+        "die Schranke (`count 8`, drei Bit reichen), der Erzeuger senkt 32 ab. "
+        "`cc -Wconversion` nennt es zweimal, `-Wall -Wextra` nicht, und genau EINE Probe "
+        "faellt",
         "code",
     ),
 ]

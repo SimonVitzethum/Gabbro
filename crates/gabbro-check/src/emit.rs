@@ -5103,7 +5103,13 @@ fn anweisung(
                 // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
                 Some(tab) => option_wert(&z.wert, &tab, u, absagen)
                     .unwrap_or_else(|| ausdruck(&z.wert, u, absagen)),
-                None => ausdruck(&z.wert, u, absagen),
+                // **The declared width of the PLACE decides whether a conversion is
+                // written** -- see `verenge`. `a.slots[i].kopf = i;` with an index into a
+                // `count 8` table and a `u16` field narrowed silently until 2026-08-31.
+                None => {
+                    let ziel = ort_typ(&z.ziel, u).and_then(|t| ctyp(&t, u));
+                    verenge(ausdruck(&z.wert, u, absagen), &z.wert, ziel.as_deref(), u)
+                }
             };
             // **Ein `format`-Feld wird ein SETZER, kein Zuweisungsziel** (2026-08-20).
             //
@@ -5368,7 +5374,7 @@ fn anweisung(
         // die Maschine nicht noch einmal pruefen.
         StmtArt::Publish(pb) => {
             let ziel = pb.ziel.text();
-            let Some((_, ordnung, _)) = u.atomics.get(&ziel) else {
+            let Some((atyp, ordnung, _)) = u.atomics.get(&ziel) else {
                 weigere(absagen, s.span, "`publishes` on something that is not an atomic");
                 return;
             };
@@ -5376,10 +5382,18 @@ fn anweisung(
                 Nutzlast::Orte(l) => l.iter().map(|x| x.text()).collect::<Vec<_>>().join(", "),
                 Nutzlast::Nichts(_) => "nothing".into(),
             };
+            // **The atomic carries its width in its own declaration** (`atomic AVAIL_IDX :
+            // u16`), and it is the same silent narrowing as at a slot field -- `-Wconversion`
+            // named `atomic_store_explicit(&AVAIL_IDX, i, …)` as the second of the two sites.
+            let w = verenge(
+                ausdruck(&pb.wert, u, absagen),
+                &pb.wert,
+                Some(atyp.as_str()),
+                u,
+            );
             aus.push_str(&format!(
                 "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n\
-                 {e}atomic_store_explicit(&{ziel}, {}, {ordnung});\n",
-                ausdruck(&pb.wert, u, absagen)
+                 {e}atomic_store_explicit(&{ziel}, {w}, {ordnung});\n"
             ));
         }
         StmtArt::AwaitLoad(al) => {
@@ -7111,6 +7125,82 @@ fn umlaeufer_typ(e: &Expr, u: &Namen) -> Option<IntTy> {
             u.geraete.get(g)?.umlaeufer.get(&f.text).cloned()
         }
         _ => None,
+    }
+}
+
+/// The largest value an unsigned C integer type can hold. `None` for everything else --
+/// a signed type, a pointer, a struct: none of them is a narrowing this function may judge.
+fn c_obergrenze(t: &str) -> Option<i128> {
+    Some(match t {
+        "uint8_t" => 255,
+        "uint16_t" => 65535,
+        "uint32_t" => 4294967295,
+        "uint64_t" => i128::from(u64::MAX),
+        _ => return None,
+    })
+}
+
+/// **The bound the CHECKER carries for a bare `index into T`: `count N` minus one.**
+///
+/// `option index into T` is deliberately excluded -- its widest value is the SENTINEL `N`,
+/// not `N - 1`, and an option has no business in an integer field in the first place.
+fn indexschranke(e: &Expr, u: &Namen) -> Option<i128> {
+    let ExprArt::Ort(o) = &e.art else { return None };
+    match ort_typ(o, u) {
+        Some(TypExpr::Index { tabelle, optional: false, .. }) => {
+            u.kapazitaet.get(&tabelle.text).copied().map(|n| n - 1)
+        }
+        _ => None,
+    }
+}
+
+/// **The width the checker knows, WRITTEN DOWN where C cannot see it** (2026-08-31).
+///
+/// `messung/treiber/virtio-net.gab`:236 writes `a.slots[i].kopf = i;` with
+/// `i : index into Deskring`, `count QGROESSE = 8`, into a `u16` field. `index into T` lowers
+/// to `uint32_t` (the representation the `option` sentinel hangs on), so the C reads
+/// `a->slots[i].kopf = i;` -- **a silent narrowing.** `cc -Wconversion` names it twice,
+/// `-Wall -Wextra` names neither. *The same family as `F06`, one file on: the checker knows
+/// the bound -- three bits are enough -- and the producer lowered 32.*
+///
+/// **The cast is not a promise this function invents.** `M101` in the checker (`m1.rs`)
+/// refuses the program when the value does NOT fit: measured on 2026-08-31, `k.slots[i].kopf = i` with `count 100000`
+/// into a `u16` field gives
+///
+/// ```text
+/// error: [M101] die Zuweisung requires `u16`, the value has `u32 in 0 .. 99999`
+/// ```
+///
+/// -- so no program that reaches this emitter carries a narrowing that loses a value. *The
+/// checker already SAYS it; it says it in Gabbro, to a Gabbro reader. What was missing is
+/// the sentence in C.* The bound is nevertheless read again here rather than trusted: an
+/// emitter that writes a cast on another pass's word writes a promise it cannot see.
+///
+/// **And the other way out was NOT taken.** `index into T` could lower to the narrowest
+/// width its `count` needs -- `uint8_t` for `count 8` -- and then the assignment would be a
+/// WIDENING and silent by itself. That changes the representation of every index in every
+/// signature, and the `option` sentinel premise (`N` must fit the index word,
+/// `beweise/Option_Sonderwert.thy`) with it. *A decision about the ABI is not a side effect
+/// of a warning*; `messung/GRAMMATIKTAFEL.md` §8 left it open and it stays open.
+fn verenge(text: String, e: &Expr, ziel: Option<&str>, u: &Namen) -> String {
+    let Some(ziel) = ziel else { return text };
+    let (Some(zmax), Some(qmax)) = (
+        c_obergrenze(ziel),
+        wert_ctyp(e, u).as_deref().and_then(c_obergrenze),
+    ) else {
+        return text;
+    };
+    // Widening or equal: C converts without losing anything, and says nothing about it.
+    if qmax <= zmax {
+        return text;
+    }
+    match indexschranke(e, u) {
+        // It fits, and the declaration says so. Write it down.
+        Some(h) if h <= zmax => format!("({ziel})({text})"),
+        // It does NOT fit, or nothing here bounds it. **Then nothing is written** -- a cast
+        // would be a claim, and `M101` in the checker is the pass that makes claims about
+        // ranges.
+        _ => text,
     }
 }
 

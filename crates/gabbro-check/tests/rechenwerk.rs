@@ -6310,3 +6310,97 @@ pub impl fn g() -> u32 effects { pure } costs <= 4 ops { return f(7); }
         "the contradiction is refused BY NAME, not handed to `cc`: {f:?}"
     );
 }
+
+/// **An index written into a narrower field carries its conversion** (2026-08-31).
+///
+/// `index into T` lowers to `uint32_t`; `messung/treiber/virtio-net.gab`:236 writes such a
+/// value into a `u16` slot field and into a `u16` atomic. Both narrowed silently:
+/// `cc -Wconversion` named them, `-Wall -Wextra` named neither. *The same family as `F06`,
+/// one file on -- the checker knows the bound (`count 8`, three bits) and the producer
+/// lowered 32.*
+///
+/// The cast is not invented here: `M101` refuses the program when the value does NOT fit,
+/// and part 3 below measures that. What the producer adds is the sentence in C.
+#[test]
+fn index_in_ein_schmaleres_feld_wird_umgewandelt() {
+    fn emittiere(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+    // Read per BODY: three assignments stand in the one function below, and two of them must
+    // stay bare. An assertion over the whole output would be satisfied by the wrong one.
+    fn rumpf<'a>(c: &'a str, kopf: &str) -> &'a str {
+        let von = c.rfind(kopf).unwrap_or_else(|| panic!("no body `{kopf}`:\n{c}"));
+        let rest = &c[von..];
+        &rest[..rest.find("\n}").unwrap_or(rest.len())]
+    }
+
+    let (c, f) = emittiere(
+        "module t {
+table Ring count 8 { slot { breit : u32, } }
+table Schmal count 8 { slot { kopf : u16, } }
+atomic IDX : u16 release observed by karte_liest;
+assume karte_liest \"Die Karte liest den Eintrag erst nach dem Index.\" falsifier sonde_x;
+impl fn armiere(s : ptr<normal, rw> Schmal, r : ptr<normal, rw> Ring, i : index into Ring)
+    effects { writes s.slots, writes r.slots, publishes IDX }
+    costs   <= 8 ops
+{
+    s.slots[i].kopf = i;
+    r.slots[i].breit = i;
+    IDX = i publishes nothing;
+}
+}",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let b = rumpf(&c, "static void armiere(");
+
+    // 1. Into a NARROWER field: the conversion stands.
+    assert!(
+        b.contains("s->slots[i].kopf = (uint16_t)(i);"),
+        "the narrowing to `u16` is written down:\n{b}"
+    );
+    // 2. Into a field of the SAME width: nothing is written. *A cast where C converts
+    //    nothing is noise, and noise in generated code reads like a reason.*
+    assert!(
+        b.contains("r->slots[i].breit = i;"),
+        "same width, no cast:\n{b}"
+    );
+    // 3. The atomic store is the SECOND site, and it has its own lowering path -- healing
+    //    the slot field alone would leave `-Wconversion` standing at one of the two.
+    //
+    //    **Read at the line that writes `IDX`, not at the whole store call.** The ordering
+    //    in that call is what `veroeffentlichung-nimmt-die-vorgabeordnung` damages, and it
+    //    already has a probe; an assertion over the full text here would make one mutation
+    //    fell two probes and say nothing new. *This probe's subject is the width.*
+    let idx = b
+        .lines()
+        .find(|z| z.contains("IDX"))
+        .unwrap_or_else(|| panic!("no line writing `IDX`:\n{b}"));
+    assert!(
+        idx.contains("(uint16_t)(i)"),
+        "and the atomic carries its width from its own declaration:\n{idx}"
+    );
+
+    // 4. **Where it does NOT fit, `M101` refuses before the emitter is asked.** That is what
+    //    makes the cast above a statement and not a claim: a `count 100000` index into a
+    //    `u16` field never reaches the lowering.
+    let (baum, mut a) = gabbro_syntax::lies(
+        "p.gab",
+        "module t {
+const GROSS : u32 = 100000;
+table Ring count GROSS { slot { a : u64, } }
+table Klein count GROSS { slot { kopf : u16, } }
+impl fn setze(k : ptr<normal, rw> Klein, i : index into Ring)
+    effects { writes k.slots } costs <= 4 ops
+{ k.slots[i].kopf = i; }
+}",
+    );
+    gabbro_check::pruefe(&baum, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "M101"),
+        "`M101` carries the range, and it refuses the narrowing that loses a value: {:?}",
+        a.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+}

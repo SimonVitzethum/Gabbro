@@ -109,3 +109,70 @@ derselbe Name als `impl fn` UND `extern fn` in einer Einheit   1 Datei  (29-undu
 erst am 2026-08-31 entstanden* — die eine aus der Grammatik geschrieben, die andere als
 W24-Probe. **Vor diesem Tag hatte der Baum keine einzige `f32`-Rechnung**, und der Fehler war
 trotzdem seit «F» da. *Was 0 Fundstellen hat, ist nicht geprüft, sondern unerreichbar.*
+
+---
+
+## 4. Alle drei geheilt — und der Zähler steht auf **0 von 83**
+
+Gemessen am selben Tag, nach den drei Reparaturen, mit demselben Lauf über dieselben acht
+Wurzeln:
+
+```
+cc -std=c11 -Wall -Wextra -O2                                       0 von 83
+  + -Wconversion -Wdouble-promotion -Wredundant-decls -Wsign-conversion   0 von 83
+  + -Wpedantic -Wshadow -Wcast-qual -Wstrict-prototypes
+    -Wmissing-prototypes -Wswitch-enum -Wfloat-equal -Wundef
+    -Wwrite-strings -Wold-style-definition -Wvla                          0 von 83
+```
+
+**Keine Datei hat die Emission verlassen** — 83 emittieren vor und nach der Arbeit, und
+`pruefe-emission.sh` meldet unverändert `79 von 79` bei den Ratschen 54 / 25.
+
+### Wer es sagt, je Fund — und warum nicht der andere
+
+| | wer sagt es | und warum nicht der andere |
+|---|---|---|
+| **A** Indexverengung | der **Erzeuger** schreibt `(uint16_t)(i)` | Der Prüfer sagt es schon: `M101` weist die Zuweisung ab, wenn der Wert NICHT passt (gemessen an `count 100000` in ein `u16`-Feld). Ihm fehlt nichts — dem *C* fehlt der Satz. |
+| **B** Doppelprototyp | der **Erzeuger** lässt die zweite Deklaration weg | Das Attribut nachzureichen wäre der andere Weg, und `wirkungsattribut` hat ihn schon begründet abgelehnt: an einem `extern fn` ist die Wirkungsklausel eine ANNAHME, ein Attribut eine ANWEISUNG. |
+| **C** Gleitkommabreite | der **Erzeuger** hängt das `f` an | Der Prüfer rechnet in `f32` und hat recht; das Erzeugnis rechnete in `f64`. Es gibt nichts abzulehnen — es gibt eine Breite hinzuschreiben. |
+
+**Dreimal derselbe Ausgang, und das ist kein Zufall:** alle drei Befunde sind Stellen, an
+denen der Prüfer eine Tatsache HAT und das C sie nicht sehen kann. *Eine Absage wäre in
+keinem der drei Fälle richtig gewesen — alle drei Programme sind korrekt.* Was fehlte, war
+die Übersetzung der Tatsache in die Sprache, die der C-Übersetzer liest.
+
+### Die eine Absage, die trotzdem dazukam
+
+Bei **B** hängt an der Heilung eine: wo die beiden Deklarationen desselben Namens
+**verschieden** absenken, wird nichts weggelassen, sondern abgesagt.
+
+```
+impl fn f(z : u64) -> u64   neben   extern fn f(z : u32) -> u32
+gabbro pruefe: 0 errors             cc: `conflicting types for 'f'`
+```
+
+*Wer die zweite Deklaration still streicht, nimmt diesen `cc`-Fehler weg und lässt einen Ruf
+zurück, der gegen die falsche Breite abgesenkt ist.* **Die Absage ist das, was das Streichen
+sicher macht** — kein Merkmal daneben. Sie fällt in **0 von 83** Korpusdateien und in genau
+der einen konstruierten Form, und die ist ein gemessener Mangel.
+
+### Und was NICHT gebaut wurde
+
+* **`-Wconversion` steht NICHT im Übersetzungstor.** `CC_SCHALTER` und Stufe 9 bleiben bei
+  `-std=c11 -Wall -Wextra -Werror`. Der Zähler steht bei 0, also *könnte* jemand es jetzt
+  setzen — aber das ist eine Entscheidung des Ordners und keine Messung. Die Messung sagt
+  nur: es kostet heute nichts.
+* **`index into T` senkt weiter zu `uint32_t` ab.** Die schmalste Breite, die sein `count`
+  trägt, wäre der andere Ausgang aus Fund A — und sie ändert die Darstellung jedes Index in
+  jeder Signatur und die Prämisse des `option`-Sonderwerts
+  (`beweise/Option_Sonderwert.thy`) mit. *Eine Entscheidung über die ABI ist keine
+  Nebenwirkung einer Warnung.*
+* **Keine Prüferregel gegen die widersprechende Doppeldeklaration.** Sie wäre die stärkere
+  Antwort — der Erzeuger sagt erst ab, nachdem `pruefe` 0 Fehler gemeldet hat — und gehört
+  zu `namen.rs`.
+* **Kein `f` an einem Gleitkomma-`#define` und an einem blanken Literal in `return`/`let`.**
+  Beides ist EINE Umwandlung und damit exakt; die Landmine ist die Rechnung, die die Breite
+  wechselt, und die hängt am Binärknoten. Regel A.
+* **Keine Verengung ohne `index into T`.** Ein `u32 in 0 .. 7` in ein `u16`-Feld wäre
+  dasselbe Argument über einen deklarierten Bereich statt über ein `count` — und der Korpus
+  hat keine solche Stelle.
