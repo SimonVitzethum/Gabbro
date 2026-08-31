@@ -104,9 +104,14 @@ Und die Arbeitsmenge daneben:
 **Die Antwort auf die Frage, die nie gestellt worden ist:** *nein, der Baum steht nicht
 grün, wenn alles läuft* — aber knapper als die neun Läufe davor vermuten ließen. **44 von
 46 messenden Wächtern sind grün.** Von den drei, die es nicht sind, ist einer gebucht, einer
-misst die Übertragung statt den Baum, und beim dritten ist der gedruckte Grund vier Wochen
-älter als der Lauf. **Kein einziger `TEILMESSUNG`** — der Zweig, an dem der Lauf um 17:34
-noch hängenblieb, ist durch.
+misst die Übertragung statt den Baum, und beim dritten ist der gedruckte Grund **siebzehn
+Tage älter als der Lauf** — er meldete in Wahrheit `371 von 372 (99 %)` und **einen**
+Überlebenden, der von einem anderen Wächter desselben Laufs gefangen wird. **Kein einziger
+`TEILMESSUNG`** — der Zweig, an dem der Lauf um 17:34 noch hängenblieb, ist durch.
+
+> **Kein einziger der drei ist ein Rückstand am Baum.** Einer ist gebucht, zwei sind
+> Befunde an der Messapparatur. *Der dritte Ausgang war heute wieder der richtige — dreimal
+> von dreien.*
 
 ### Der Zweig ohne Lücke ist weiterhin NICHT durch einen Lauf belegt
 
@@ -228,7 +233,52 @@ Beschriftung** — hier belegt sie nicht einmal ihr Jahr.
 
 Nachgemessen, indem der Mutationslauf einzeln gefahren und seine ganze Ausgabe gelesen wurde:
 
-<!-- UEBERLEBT -->
+```
+== 371 von 372 gueltigen Mutationen gefangen (99 %) ==
+
+== UEBERLEBT -- eine VERMUTUNG, dass diese Regel unbewacht ist ==
+  !! UEBERLEBT  ungelesene-bindung-bekommt-kein-void
+```
+
+**Ein Überlebender. Nicht zwölf.** Die Abnahme druckte eine Zahl aus dem August, während der
+Wächter darüber `99 %` meldete. *Ein Faktor zwölf zwischen dem, was der Lauf fand, und dem,
+was die Zusammenfassung nannte.*
+
+### Und der eine Überlebende ist bewacht — nur nicht vom Orakel
+
+Der Text der Mutation nennt seinen eigenen Bewacher:
+
+> `!! UEBERLEBT  ungelesene-bindung-bekommt-kein-void` — *die `(void)r2;`-Zeile für eine
+> `let`-Bindung ohne Leser fällt weg; das erzeugte C trägt `unused variable` und
+> `cc -Wall -Werror` weist die Einheit zurück.* **`pruefe-emission.sh` Stufe 9 fängt es an
+> `messung/proben/probe-let-ohne-leser.gab`.**
+
+Das Orakel des Mutationslaufs ist `cargo test`. Diese Mutation überlebt `cargo test` und
+**fällt bei `pruefe-emission.sh`** — der in genau demselben Lauf **grün in 21,9 s** durchkam.
+Ein Überlebender ist eine *Vermutung, dass die Regel unbewacht ist* (W13), und diese
+Vermutung ist im selben Lauf widerlegt worden, nur von einem anderen Wächter.
+
+**Ausgang (3), zum dritten Mal und eine Ebene tiefer:** nicht der Baum hat ein Loch, sondern
+das Orakel hat eine Grenze — und die Abnahme, die beide Wächter fährt, ist die einzige
+Stelle, an der das überhaupt sichtbar werden kann. *Genau wofür sie gebaut wurde.*
+
+### Ein Nachtrag, der die Diagnose aus (3a) bestätigt
+
+Die erste Zeile desselben Mutationslaufs lautet:
+
+```
+== LUECKE MIT NAMEN: git konnte `crates/` nicht ansehen ==
+```
+
+**Derselbe Befund, dieselbe Ursache, entgegengesetzte Behandlung.** `mutiere-pruefer.py`
+bucht das kaputte `git` als *Lücke mit einem Namen* und fährt weiter — 372 Mutationen, 523 s.
+`pruefe-luecken.py` bricht daran ab und macht den ganzen Lauf zum `ABBRUCH`. **Beide
+schreiben in Quellen, beide brauchen denselben Nachweis, und sie ziehen entgegengesetzte
+Schlüsse daraus, ihn nicht zu haben.**
+
+Das ist kein Widerspruch, den man wegräumen sollte, ohne ihn entschieden zu haben — aber es
+ist einer, und er entscheidet allein, ob eine Abnahme auf `ki-pc-fisch-101` mit
+Rücklaufwert 2 endet oder nicht.
 
 ---
 

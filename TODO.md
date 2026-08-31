@@ -513,7 +513,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 149 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 150 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *149 → 150 am 2026-08-31: `messung/ABNAHME-VOLL.md` kam dazu — der erste volle
+      Abnahmelauf über 49 Wächter. Die Ratsche steigt, weil der Gegenstand um genau diese
+      eine Datei wächst; nachgerechnet 14 + 57 + 73 + 4 + 3 − 1 = 150.*
       *148 → 149 am 2026-08-31: `messung/DOMAENENSTELLUNGEN.md` kam dazu.*
       *135 → 140 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
       `messung/proben/probe-erzeugernamen-frei.gab` kamen dazu. Die Ratsche steigt am
