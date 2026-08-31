@@ -1,0 +1,11 @@
+-- Zwei Manifeste, die sich NUR in der Uebersetzerfahne unterscheiden -- Fassung 2 (`-O2`).
+--
+-- Der Zwilling von `fahne-o0.bau`: gleicher Einheitenname, gleiche Dateien, gleiches
+-- Ausgabeverzeichnis, EINE andere Fahne. Der Bau muss darauf bauen und nicht „aktuell" sagen.
+
+compiler cc -std=c11 -O2 -Wall -Wextra -Werror
+out      target/bau-fahne
+
+unit fahne object
+    programmlogik/beispiel/lager.gab
+    programmlogik/beispiel/betrieb.gab

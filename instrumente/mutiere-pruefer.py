@@ -3887,6 +3887,34 @@ MUTATIONEN = [
         "das wie ein sauberer Lauf aussieht, und eine Zusammenfassung, die dem widerspricht. "
         "**EINE Probe faellt** (`einheit.rs`)",
     ),
+    # -- gabbro-cli/src/bau.rs: the build (2026-08-31) ------------------------------------
+    #
+    # Incremental by CONTENT. Both mutations below attack the INPUT of the fingerprint, which
+    # is where a build of this kind goes wrong quietly: it does not build something false, it
+    # builds NOTHING and calls that current.
+    Mutation(
+        "bau-glaubt-das-erzeugnis",
+        "gabbro-cli/src/bau.rs",
+        'if alt.trim() == format!("{abdruck:016x}") && erzeugnis.exists() {',
+        'if alt.trim() == format!("{abdruck:016x}") {',
+        "`gabbro build` glaubt seiner eigenen Aufzeichnung, statt das Erzeugnis anzusehen -- "
+        "ein geloeschtes Erzeugnis mit gueltigem Abdruck heisst dann `aktuell`, und der Bau "
+        "meldet Erfolg ueber etwas, das nicht da ist. **EINE Probe faellt** (`bausystem.rs`)",
+    ),
+    # **This mutation SURVIVED on 2026-08-31** and forced `eine_andere_uebersetzerfahne_baut_neu`.
+    # The eight probes before it all moved SOURCE bytes -- and content alone is not the whole
+    # input to a build.
+    Mutation(
+        "bau-vergisst-die-uebersetzerzeile",
+        "gabbro-cli/src/bau.rs",
+        '    let compilerzeile = manifest.compiler.join(" ");\n'
+        "    teile.push(compilerzeile.as_bytes());",
+        '    let compilerzeile = manifest.compiler.join(" ");\n'
+        "    let _ = &compilerzeile;",
+        "Die Uebersetzerzeile faellt aus dem Abdruck: ein Wechsel von `-O0` auf `-O2` meldet "
+        "`aktuell`, und das Erzeugnis steht unter einer Fahne, die niemand mehr genannt hat. "
+        "**EINE Probe faellt** (`bausystem.rs`)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

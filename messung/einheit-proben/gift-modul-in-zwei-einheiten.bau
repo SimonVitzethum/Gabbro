@@ -1,0 +1,16 @@
+-- GIFT: derselbe Modulname in ZWEI Einheiten.
+--
+-- `pub-a.gab` deklariert `module a`. Steht die Datei in zwei Einheiten, gehoert `a` beiden --
+-- und eine `use a::Offen`-Kante haette dann ZWEI Ziele. Der Graph waere geraten.
+--
+-- Das muss abgesagt werden, und zwar BEIM NAMEN. Ueber den ganzen Baum ist ein Modulname
+-- nicht eindeutig (`module gift` gehoert 122 Dateien) -- innerhalb EINES Baus muss er es sein.
+
+compiler cc -std=c11 -Wall -Wextra -Werror
+out      target/bau-gift
+
+unit eins object
+    messung/einheit-proben/pub-a.gab
+
+unit zwei object
+    messung/einheit-proben/pub-a.gab

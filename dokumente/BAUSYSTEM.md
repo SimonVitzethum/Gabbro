@@ -166,3 +166,85 @@ und 489 nicht ansieht, darf nicht wie ein Bau über den Baum aussehen.
   abgesagt wird, steht offen.
 * **Nichts davon sagt, dass die Einheiten dieses Baums richtig geschnitten sind.** Das Manifest
   sagt, was zusammengehört; **ob es zusammengehört, sagt kein Werkzeug.**
+
+---
+
+# Was davon LÄUFT (2026-08-31)
+
+`gabbro build` (deutscher Zweitname `bau`), `crates/gabbro-cli/src/bau.rs`, 9 Proben grün.
+
+## Der Lauf über dem Beispiel
+
+`programmlogik/beispiel/gabbro.bau` — **das Manifest nennt zwei Dateien und keine einzige
+Abhängigkeit.** Die vier `use lager::…`-Zeilen stehen in `betrieb.gab`, und der Bau liest sie
+dort.
+
+```
+$ gabbro build --dry-run programmlogik/beispiel/gabbro.bau
+manifest programmlogik/beispiel/gabbro.bau
+  compiler cc -std=c11 -Wall -Wextra -Werror
+  out      target/bau-beispiel
+  unit lager (2 file(s))
+  0 computed edge(s) between units
+built 0 unit(s), 0 up to date, 0 refused -- 2 file(s) named by this manifest
+NOT looked at: 489 `.gab` file(s) in this tree stand in no unit of this manifest (491 in the tree)
+  the manifest is the reach -- a file no `unit` line names is not a file this build passed
+
+$ gabbro build programmlogik/beispiel/gabbro.bau
+built    lager
+$ gabbro build programmlogik/beispiel/gabbro.bau
+current  lager  -- content unchanged, artefact present
+```
+
+Das erzeugte C ist **eine** Übersetzungseinheit aus zwei Dateien und geht durch
+`cc -std=c11 -Wall -Wextra -Werror`. *Einzeln geprüft fällt `betrieb.gab` mit fünf Absagen.*
+
+## Die vier Eigenschaften, jede mit einer Probe
+
+| Eigenschaft | Probe |
+|---|---|
+| **`touch` baut NICHT neu** — dieselben Bytes, neue `mtime` | `inkrementell_nach_inhalt_und_nicht_nach_zeitstempel` |
+| **ein gelöschtes Erzeugnis baut neu** — das Vorliegen wird geprüft, nicht geglaubt | dieselbe |
+| **eine andere Übersetzerfahne baut neu** — `-O0` → `-O2`, kein Quellbyte bewegt | `eine_andere_uebersetzerfahne_baut_neu` |
+| **der Graph wird gerechnet** — kein `use` im Manifest, und die Kanten stehen trotzdem | `der_graph_wird_gerechnet_und_nicht_gelesen` |
+
+## Drei Giftmanifeste, alle abgesagt
+
+| Probe | Absage | Rückgabe |
+|---|---|---|
+| derselbe Modulname in **zwei** Einheiten | *„module `a` is declared in unit `eins` AND in unit `zwei` — a `use` edge onto it would have two targets"* | 1 |
+| eine Einheit **ohne Datei** | *„unit `leer` names no file — an empty unit builds nothing and says it built"* | 2 |
+| eine Einheit, die **nicht durchgeht** | `REFUSED halb: 7 error(s) -- no C written` | 1 |
+
+**Und die Absagen der dritten nennen `betrieb.gab:36:56`, nicht `<unit>:36:56`** — der Bau
+rendert durch **dieselbe Versatzkarte** wie `pruefe --unit`, aus derselben Funktion
+(`main.rs::zeige_je_stueck`). *Zwei Renderungen desselben geklebten Parses wären ein zweites
+Register über derselben Sache.*
+
+## Zwei Mutationen — und eine hat überlebt
+
+| Nr. | Was beschädigt wird | gefangen von |
+|---|---|---|
+| **452** `bau-glaubt-das-erzeugnis` | das Vorliegen wird geglaubt statt geprüft | **1 Probe** |
+| **453** `bau-vergisst-die-uebersetzerzeile` | die Übersetzerzeile fällt aus dem Abdruck | **anfangs 0 — ÜBERLEBT** |
+
+> **`453` hat überlebt, und der Grund ist derselbe wie bei `451`: meine Proben sahen auf die
+> falsche Hälfte.** Alle acht bewegten **Quellbytes** — und *Inhalt allein ist nicht die ganze
+> Eingabe eines Baus.* Ein Wechsel von `-O0` auf `-O2` hätte „aktuell" gemeldet, und das
+> Erzeugnis stünde unter einer Fahne, die niemand mehr genannt hat.
+>
+> `eine_andere_uebersetzerfahne_baut_neu` ist daraufhin geschrieben worden. **Zum zweiten Mal
+> an diesem Tag hat eine überlebende Mutation eine blinde Probe benannt** — und beide Male war
+> die Blindheit dieselbe: die Probe sah dorthin, wo ich den Fehler erwartet hatte.
+
+## Was NICHT läuft
+
+* **Kein Link zwischen zwei Einheiten.** Der Graph wird gerechnet und topologisch sortiert,
+  und ein Zyklus wird beim Namen abgesagt — **aber es gibt kein Beispiel mit zwei Einheiten**,
+  also ist die Kante **ungemessen**. `0 computed edge(s)` ist eine ehrliche Null und kein
+  Beleg.
+* **`--with` und der Bau kennen einander nicht.** Eine Einheit kann heute keine `.gabi` ziehen.
+* **`unit … program` ist nie gelaufen.** Der Zweig existiert (`cc` ohne `-c`), aber das
+  Beispiel ist ein `object`; ein `program` bräuchte ein `main`.
+* **Parallelität gibt es nicht.** Die Einheiten laufen der Reihe nach.
+* **`--testbuild` geht in den Abdruck, aber keine Probe fährt es.**

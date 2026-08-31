@@ -7,6 +7,7 @@
 use gabbro_check::{manifest, passliste, pruefe, Zustand};
 use gabbro_syntax::diag::Stufe;
 
+mod bau;
 mod fragmente;
 
 /// **A reader that stops reading must not look like a crash.**
@@ -107,6 +108,10 @@ fn main() -> std::process::ExitCode {
             std::process::ExitCode::SUCCESS
         }
         "pruefe" => befehl_pruefe(rest),
+        // **`gabbro build` -- the build out of a manifest** (German alias `bau`). The
+        // reckoning that decided its shape stands in `dokumente/BAUSYSTEM.md`, and it was
+        // written before the first line of `bau.rs`.
+        "build" | "bau" => bau::befehl(rest),
         // The emitter, since 2026-08-17 -- what it covers and what it refuses stands at
         // `command_emit` below, where the code is.
         "emit" => command_emit(rest),
@@ -730,11 +735,51 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
 /// parse carries a line number from the CONCATENATION -- which is a line number in no file
 /// at all. `gabbro lean` names that price in its own comment and pays it; this map is the
 /// thing it says is not built.
-struct Stueck {
-    datei: String,
-    quelle: String,
-    von: usize,
-    bis: usize,
+pub(crate) struct Stueck {
+    pub datei: String,
+    pub quelle: String,
+    pub von: usize,
+    pub bis: usize,
+}
+
+/// **The refusals of a joined parse, rendered into the files they came from.**
+///
+/// One bucket per piece, every refusal shifted back by that piece's start offset and rendered
+/// against that piece's OWN source -- so the site is the site in the file, not in the
+/// concatenation. Returns the refusals that fitted into no piece; **they are handed back
+/// rather than dropped**, because a partition that swallows what it cannot place looks
+/// exactly like a clean run.
+///
+/// `gabbro build` renders the same way, out of the same function -- two renderings of one
+/// joined parse would be a second register over the same thing.
+pub(crate) fn zeige_je_stueck(
+    absagen: &gabbro_syntax::Absagen,
+    stuecke: &[Stueck],
+    je_datei: &mut dyn FnMut(&str, &gabbro_syntax::Absagen),
+) -> Vec<gabbro_syntax::diag::Absage> {
+    let mut gezeigt = vec![false; absagen.absagen.len()];
+    for s in stuecke {
+        let mut eigene = gabbro_syntax::Absagen::neu(&s.datei);
+        for (i, a) in absagen.absagen.iter().enumerate() {
+            let v = a.span.von as usize;
+            if v < s.von || v >= s.bis {
+                continue;
+            }
+            gezeigt[i] = true;
+            let mut a = a.clone();
+            a.span.von -= s.von as u32;
+            a.span.bis = a.span.bis.saturating_sub(s.von as u32);
+            eigene.schiebe(a);
+        }
+        if !eigene.leer() {
+            print!("{}", eigene.zeige(&s.quelle));
+        }
+        je_datei(&s.datei, &eigene);
+    }
+    (0..absagen.absagen.len())
+        .filter(|i| !gezeigt[*i])
+        .map(|i| absagen.absagen[i].clone())
+        .collect()
 }
 
 /// **`gabbro pruefe --unit a.gab b.gab` -- the named files as ONE translation unit.**
@@ -809,41 +854,28 @@ fn pruefe_als_einheit(
 
     // **Every refusal goes into exactly one bucket, and what fits nowhere is PRINTED.**
     // A partition that drops what it cannot place looks exactly like a clean run.
-    let mut gezeigt = vec![false; absagen.absagen.len()];
     let mut fehler = 0usize;
     let mut hinweise = 0usize;
     let mut items_gesamt = 0usize;
-    for s in &stuecke {
-        let mut eigene = gabbro_syntax::Absagen::neu(&s.datei);
-        for (i, a) in absagen.absagen.iter().enumerate() {
-            let v = a.span.von as usize;
-            if v < s.von || v >= s.bis {
-                continue;
-            }
-            gezeigt[i] = true;
-            let mut a = a.clone();
-            a.span.von -= s.von as u32;
-            a.span.bis = a.span.bis.saturating_sub(s.von as u32);
-            eigene.schiebe(a);
-        }
-        if !eigene.leer() {
-            print!("{}", eigene.zeige(&s.quelle));
-        }
+    let bereiche: Vec<(usize, usize)> = stuecke.iter().map(|s| (s.von, s.bis)).collect();
+    let mut i_stueck = 0usize;
+    let rest = zeige_je_stueck(&absagen, &stuecke, &mut |datei, eigene| {
         let f = eigene.fehler_zahl();
         let h = eigene.absagen.len() - f;
         fehler += f;
         hinweise += h;
-        let items = items_im_bereich(&baum, s.von, s.bis);
+        let (von, bis) = bereiche[i_stueck];
+        i_stueck += 1;
+        let items = items_im_bereich(&baum, von, bis);
         items_gesamt += items;
-        println!("{}: {items} items, {f} errors, {h} hints", s.datei);
-    }
+        println!("{datei}: {items} items, {f} errors, {h} hints");
+    });
     // Refusals that landed in the preamble (hints only -- the errors aborted above) or
     // carry a span outside every piece. **They are named, not dropped.**
-    let rest: Vec<usize> = (0..absagen.absagen.len()).filter(|i| !gezeigt[*i]).collect();
     if !rest.is_empty() {
         let mut fremd = gabbro_syntax::Absagen::neu("<interface>");
-        for i in &rest {
-            fremd.schiebe(absagen.absagen[*i].clone());
+        for a in &rest {
+            fremd.schiebe(a.clone());
         }
         let f = fremd.fehler_zahl();
         println!(

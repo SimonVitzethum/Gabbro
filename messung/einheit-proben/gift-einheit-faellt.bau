@@ -1,0 +1,11 @@
+-- GIFT: eine Einheit, deren Dateien nicht durchgehen.
+--
+-- `betrieb.gab` OHNE `lager.gab` -- fuenf Absagen. Der Bau darf daraus kein C schreiben und
+-- kein `cc` rufen: ein Erzeuger, der aus einem abgelehnten Baum uebersetzt, hebt jeden Pass
+-- vor ihm auf.
+
+compiler cc -std=c11 -Wall -Wextra -Werror
+out      target/bau-gift
+
+unit halb object
+    programmlogik/beispiel/betrieb.gab
