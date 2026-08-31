@@ -147,7 +147,14 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # `opsruf.rs`, `D010` in `kbedingung.rs`. Two OLDER lines fell with the same pass. *A whole
 # rule family came in and the debt went DOWN by two* -- the target stays 207, and the mark
 # follows the measurement in the direction a ratchet is allowed to move.
-MARKE = 279
+#
+# **279 -> 280 on 2026-08-31, and the mark RISES with its reason.** The object grew: the
+# block-scope work added `beispiele/gift/434`, `gift/435` and
+# `messung/proben/probe-schleifenzusage-schatten.gab`, and one of those carries a citation
+# of a rule it does not issue. **The target stays 207.** A mark that rises because the
+# corpus grew is a different movement from one that rises because a debt was let go -- the
+# file names stand here so the difference stays countable.
+MARKE = 280
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
