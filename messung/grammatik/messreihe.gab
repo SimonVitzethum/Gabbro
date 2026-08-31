@@ -1,0 +1,98 @@
+-- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- die Zahlworte, zum zweiten Mal.
+--
+-- Diese Datei traegt acht Woerter, die bis heute an je EINER Datei hingen
+-- (`messung/EINSAME-WOERTER.md` §1):
+--
+--     i8 i16 i32 i64   SYNTAX.md:356, `intty`            bisher nur `grammatik/zahlbreiten.gab`
+--     and              SYNTAX.md:283, `accdecl merge`    dito
+--     min              SYNTAX.md:283, `accdecl merge`    bisher nur `beispiele/23`
+--     finite           SYNTAX.md:949, `narrowstmt`       bisher nur `beispiele/26`
+--     sizeof           SYNTAX.md:642, `builtin`          bisher nur `beispiele/03`
+--
+-- **Und sie stehen hier nicht als Liste.** `zahlbreiten.gab` war gegen eine Liste geschrieben
+-- und traegt darum fuenf grammatisch unverwandte Woerter allein -- das ist der Befund ⟨A⟩ aus
+-- `EINSAME-WOERTER.md` §3, und er trifft die Methode und nicht den Korpus. Diese Datei hat
+-- stattdessen einen GEGENSTAND: eine Messreihe, die Abweichungen aufzeichnet.
+--
+-- Abweichungen sind VORZEICHENBEHAFTET -- das ist der Grund, warum `i8` bis `i64` hier
+-- stehen und nicht, weil vier Breiten zu decken waren. Ein Tiefstwert faltet mit `min`, eine
+-- Kalibrierung ueber alle Kerne faltet mit `and`, ein gemessener Gleitkommawert kann NaN
+-- sein und braucht `finite`, und ein Kopf, der aus einem Puffer gelesen wird, braucht seine
+-- Laenge -- `sizeof`.
+
+module grammatik::messreihe {
+
+const NKERNE : u32 = 8;
+
+-- Die vier vorzeichenbehafteten Breiten, jede an der Groesse, die sie traegt.
+type TempAbw    = i8  in -60 .. 60;          -- Grad Celsius gegen den Sollwert
+type DruckAbw   = i16 in -8000 .. 8000;      -- Pascal gegen den Sollwert
+type VersatzAbw = i32 in -1000000 .. 1000000;-- aufsummierter Versatz
+type DriftAbw   = i64 in -1000000000 .. 1000000000; -- Nanosekunden Uhrendrift
+
+-- **`merge min`** -- der Tiefstwert ueber alle Kerne. Sein Neutrales ist das MAXIMUM des
+-- Typs, nicht die Null; `beispiele/23` hat das beim Nachweis der Instanzen abgeworfen.
+accumulates tiefste_temperatur : u32 merge min per cpu NKERNE;
+
+-- **`merge and`** -- die fuenfte Faltung. „Alle Kerne kalibriert" ist eine Konjunktion, und
+-- als `min` geschrieben waere sie eine Zahl, die zufaellig dasselbe tut.
+accumulates alle_kalibriert : u32 merge and per cpu NKERNE;
+
+-- Der Kopf eines Messsatzes. Er wird aus einem Puffer gelesen, und darum braucht die Lesung
+-- eine Laengenzusage -- das ist die Stelle, an der `sizeof` steht.
+format Messkopf endian little {
+    folge   : u64 @[31:0],
+    kerne   : u64 @[39:32],
+    mk_frei : u64 @[63:40] reserved,
+}
+
+impl fn abweichung_summe(a : TempAbw, b : TempAbw) -> DruckAbw
+    effects { pure }
+    costs   <= 4 ops
+{
+    return a + b;
+}
+
+impl fn versatz_weiten(v : VersatzAbw) -> DriftAbw
+    effects { pure }
+    costs   <= 2 ops
+{
+    return v;
+}
+
+impl fn tiefstwert_melden(t : u32)
+    effects { writes tiefste_temperatur }
+    costs   <= 8 ops
+{
+    tiefste_temperatur = t;
+}
+
+impl fn kalibrierung_melden(k : u32)
+    effects { writes alle_kalibriert }
+    costs   <= 8 ops
+{
+    alle_kalibriert = k;
+}
+
+-- **`sizeof`** -- der Puffer muss den Kopf tragen, bevor eine Lesung etwas bedeutet.
+impl fn folge_lesen(puffer : ptr<normal, r> Messkopf) -> u64
+    requires lenof(puffer) >= sizeof(Messkopf)
+    ensures  result == puffer.folge
+    effects  { reads puffer }
+    costs    <= 16 ops
+{
+    return puffer.folge;
+}
+
+-- **`finite`** -- ein gemessener Wert kann NaN sein, und dann liefert die Verneinung eines
+-- Vergleichs nichts: aus `!(x < y)` folgt `x >= y` nicht. Die Verengung stellt die eine
+-- Tatsache her, auf der alles Weitere steht.
+impl fn mittel_bereinigt(x : f64) -> f64
+    effects { pure }
+    costs   <= 3 ops
+{
+    narrow x to finite else { return 0.0; }
+    return x;
+}
+
+}

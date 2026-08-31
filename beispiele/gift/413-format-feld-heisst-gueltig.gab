@@ -1,0 +1,65 @@
+-- erwartet: cc
+-- 413 -- **ein Formatfeld, das `gueltig` heisst, und der Erzeuger schreibt den Namen zweimal.**
+--
+-- `emit.rs`:3369 schreibt zu JEDEM `format` eine Pruefkoerperfunktion:
+--
+--     static inline bool {Format}_gueltig(const {Format} *v) { … }
+--
+-- und zu JEDEM Feld einen Leser nach demselben Muster:
+--
+--     static inline bool {Format}_{feld}(const {Format} *v) { … }
+--
+-- Ein Feld, das `gueltig` heisst, bekommt damit denselben C-Namen wie die
+-- Pruefkoerperfunktion. **`N041` (`cnamen.rs`) faengt das nicht** -- jener Pass haelt die
+-- Namen, die C schon VERGEBEN hat (C11-Wort, Kopfdatei, eingebaut), und `gueltig` ist keiner
+-- davon. Die Kollision entsteht erst im Erzeugnis, zwischen zwei Namen, die der Erzeuger
+-- SELBST bildet. *Ein Namenswaechter, der nur die fremden Namen kennt, misst die fremden.*
+--
+-- **Und es ist eine FAMILIE, keine Einzelstelle.** Drei Namensmuster aus demselben Praefix,
+-- zwei davon kollidierbar mit einem Feldnamen:
+--
+--     {Format}_gueltig        die Pruefkoerperfunktion   <->  ein Feld `gueltig`
+--     {Format}_setz_{feld}    der Schreiber              <->  ein Feld `setz_<feld>`
+--     {Format}_{feld}         der Leser                  --   die Quelle beider Kollisionen
+--
+-- Beide Formen stehen unten. Beide pruefen mit **0 Fehlern und 0 Hinweisen**, beide
+-- emittieren ohne `C001`, und `cc -std=c11 -Wall -Wextra -Werror` sagt
+-- *redefinition of `Eintrag_gueltig`* bzw. *conflicting types for `Eintrag2_setz_a`*.
+--
+-- > **Gefunden am 2026-08-31 beim Schreiben des zweiten `walk`**
+-- > (`messung/grammatik/blocklauf.gab`), an einem Feld, das in seiner Domaene das
+-- > naheliegendste Wort ueberhaupt ist: der Gueltigkeitsbit eines Blockzeigers. Nicht
+-- > gesucht -- **hingeschrieben und hingefallen.**
+--
+-- WARUM DIESE DATEI IN `gift/` LIEGT UND NICHT IN `messung/proben/`
+-- -------------------------------------------------------------------
+-- Sie EMITTIERT, und ihr C uebersetzt nicht. Stufe 9 von `pruefe-emission.sh` faehrt
+-- `beispiele/*.gab` und `messung/*/*.gab`; in `messung/proben/` haette sie einen zweiten
+-- Waechter rot gemacht, an dem in derselben Nacht eine andere Bahn arbeitet.
+--
+-- **Gehalten wird sie trotzdem** -- von `instrumente/pruefe-grammatiktafel.py`, dessen
+-- Uebersetzungstor ueber den GANZEN Korpus laeuft und `beispiele/gift/` einschliesst. Genau
+-- die vier Dateien Reichweitenunterschied, die `messung/GRAMMATIKTAFEL.md` §7 gemessen hat,
+-- fangen hier zum ersten Mal etwas: die Tafel meldet die Datei mit Adresse und Diagnose.
+--
+-- *Dass Stufe 9 sie NICHT sieht, ist der zweite Befund dieser Datei und gehoert der Bahn,
+-- die an `pruefe-emission.sh` arbeitet.* Zwei Wege stehen offen und beide sind Entscheidungen:
+-- die Reichweite auf `beispiele/gift/` ausdehnen, oder einen benannten Eintrag in
+-- `ausnahme_grund()`. **Hier wird keiner davon gegangen.**
+
+module gift::formatgueltig {
+
+-- Form 1 -- gegen die Pruefkoerperfunktion.
+format Eintrag endian little {
+    gueltig : bool @0,
+    rest    : u64  @[63:1] reserved,
+}
+
+-- Form 2 -- gegen den Schreiber. `a` erzeugt `Eintrag2_setz_a`, und das Feld daneben heisst so.
+format Eintrag2 endian little {
+    a      : bool @0,
+    setz_a : bool @1,
+    e2rest : u64  @[63:2] reserved,
+}
+
+}

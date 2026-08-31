@@ -1,0 +1,70 @@
+-- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- und diesmal gegen ein
+-- BUENDEL statt gegen eine Liste.
+--
+-- Diese Datei traegt die sechs Woerter von `walkdecl` und `mappings of`:
+--
+--     walk levels node down leaf        SYNTAX.md:1158-1161, EINE Produktion
+--     mappings                          SYNTAX.md:695, „erzeugt aus einer walk-Deklaration"
+--
+-- `messung/EINSAME-WOERTER.md` §2: keines der fuenf ist ohne die anderen vier schreibbar --
+-- das ist eine Eigenschaft der GRAMMATIK und nicht des Korpus. Die Frage „laesst sich das
+-- Buendel teilen?" hat darum eine Antwort, und sie ist nein. **Die richtige Frage ist, ob es
+-- sich VERDOPPELN laesst** -- und das entscheidet sich daran, ob `walk` etwas anderes
+-- beschreiben kann als eine Seitentabelle.
+--
+-- Bis heute stand `walkdecl` genau einmal im Baum, in `beispiele/07-eintritt-und-boot.gab`,
+-- und dort ueber vier Ebenen x86_64-Seitentabelle. **Hier steht es ueber etwas anderem:** dem
+-- Indirektionsbaum eines Dateisystem-Inodes. Drei Ebenen, 256 Zeiger je Knoten, und die
+-- Abbildung geht von einem DATEIVERSATZ auf einen PLATTENBLOCK -- nicht von einer virtuellen
+-- auf eine physische Adresse.
+--
+-- *Wenn `walk` nur Seitentabellen beschreiben kann, faellt das hier auf.*
+
+module grammatik::blocklauf {
+
+opaque type Blocknr = u64;
+
+-- Der Zeiger eines Indirektionsblocks. Ein Achtbytewort, und die ungenannten Bits stehen als
+-- `reserved` da -- dieselbe Pflicht wie am `Pte` von `beispiele/07`: diese Bits existieren,
+-- und dieses Format liest sie nicht.
+-- **Das erste Feld hiess `gueltig`, und daran ist die Datei zuerst gescheitert.** Der
+-- Erzeuger schreibt je Format eine Pruefkoerperfunktion `{Format}_gueltig`, und ein Feld
+-- desselben Namens bekommt denselben C-Namen: *redefinition*, bei 0 Prueferfehlern und
+-- 0 Hinweisen. Der Befund steht als `beispiele/gift/413-format-feld-heisst-gueltig.gab` im
+-- Baum; hier heisst das Feld `belegt`, damit diese Datei misst, was sie messen soll.
+format Blockzeiger endian little {
+    belegt     : bool @0,
+    blatt      : bool @1,
+    geteilt    : bool @2,
+    bz_frei    : u64  @[11:3]  reserved,
+    block      : u64  embeds [51:12] scale 4096,
+    bz_hoch    : u64  @[62:52] reserved,
+    nurlesen   : bool @63,
+}
+
+-- **Der zweite `walk` des Baumes.** `down` nennt das Feld, an dem abgestiegen wird, `leaf`
+-- die Bedingung, unter der ein Eintrag die Abbildung selbst ist.
+walk Inodebaum levels 3 {
+    node : [Blockzeiger; 256],
+    down : block when it.belegt && !it.blatt,
+    leaf : it.belegt && it.blatt,
+
+    -- Kein Datenblock liegt im Kopf der Platte: der Superblock und die Inodetabelle sind
+    -- keine Nutzdaten, und eine Abbildung dorthin ist eine stille Ueberschreibung.
+    invariant kein_block_im_kopf cost O(n) runs offline :
+        forall m in mappings of Inodebaum : m.block >= DATENANFANG;
+
+    -- Ein geteilter Block ist nur lesbar. Das ist die Copy-on-Write-Pflicht, und sie ist
+    -- ueber der ganzen Abbildung formulierbar -- genau dafuer gibt es `mappings of`.
+    invariant geteilt_bleibt_lesbar cost O(n) runs online :
+        forall m in mappings of Inodebaum : !m.geteilt || m.nurlesen;
+}
+
+const DATENANFANG : u64 = 0x10000;
+
+-- Der Baum selbst ist kein C-Wert: eine Wurzel als Wert zu uebergeben hiesse, sie zu
+-- kopieren. Er steht darum als Zeiger, wie in `beispiele/07`.
+extern fn baum_lesen(w : ptr<normal, r> Inodebaum, versatz : u64) -> Blocknr
+    effects { reads w };
+
+}

@@ -105,6 +105,59 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // Probe -- auch `E009` nicht, obwohl der Unterschied zwischen *„unentscheidbar"*
         // und *„in Ordnung"* genau die Stelle ist, an der der falsche Zyklus ein falsches
         // `pure` durchliess. `-- erwartet: Hinweis S007` verlangt die Stufe mit.
+        // **And a FOURTH state, measured 2026-08-31: a poison whose defect is at `cc`.**
+        //
+        // `413` names a `format` field `gueltig`, and the emitter writes `{Format}_gueltig`
+        // twice -- once for the field reader, once for the well-formedness function. The
+        // checker sees **0 errors**, the emitter refuses **nothing**, and `cc` says
+        // `Redefinition`. *`N041` does not catch it: that pass holds names C has taken,
+        // while these two are both formed by the EMITTER.*
+        //
+        // Until today the poison corpus took it for granted that every poison falls at the
+        // checker. **`-- erwartet: cc` says the opposite in both halves**, and that makes it
+        // a stronger probe than the code form: the checker has to STAY silent, and `cc` has
+        // to refuse. A one-sided version would pass over a checker that started refusing for
+        // some unrelated reason.
+        if erwartet == "cc" {
+            let (codes, bericht, name) = absagen_von(&pfad);
+            let fehler: Vec<&str> = codes
+                .iter()
+                .filter(|(_, s)| *s == Stufe::Fehler)
+                .map(|(c, _)| *c)
+                .collect();
+            assert!(
+                fehler.is_empty(),
+                "{name} traegt `-- erwartet: cc`, also darf der Pruefer NICHTS sagen: \
+                 {fehler:?}\n{bericht}"
+            );
+            // **The other half, and it is the one that carries the claim.** Without it the
+            // probe passes over an emitter that has been repaired -- and a poison that can no
+            // longer bite reads exactly like one that never could.
+            let (baum, mut a2) = gabbro_syntax::lies(&pfad.display().to_string(), &quelle);
+            let c = gabbro_check::emit::emittiere(&baum, &mut a2);
+            let ziel = std::env::temp_dir().join(format!(
+                "gabbro-gift-{}.c",
+                pfad.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(&ziel, &c).expect("das erzeugte C liegt schreibbar");
+            let cc = std::process::Command::new("cc")
+                .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only"])
+                .arg(&ziel)
+                .output();
+            match cc {
+                Ok(r) => assert!(
+                    !r.status.success(),
+                    "{name} traegt `-- erwartet: cc`, also muss `cc` es ABWEISEN -- es hat \
+                     angenommen. Der Erzeugerfehler ist geheilt, und die Probe gehoert \
+                     nachgezogen:\n{}",
+                    ziel.display()
+                ),
+                // **A missing `cc` is a missing measurement, never a green one** (W1).
+                Err(e) => panic!("`cc` laesst sich nicht starten ({e}) -- NICHTS gemessen"),
+            }
+            let _ = std::fs::remove_file(&ziel);
+            continue;
+        }
         let (stufe, erwartet) = match erwartet.strip_prefix("Hinweis ") {
             Some(c) => (Stufe::Hinweis, c.trim().to_string()),
             None => (Stufe::Fehler, erwartet),

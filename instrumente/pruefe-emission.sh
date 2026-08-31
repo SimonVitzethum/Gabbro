@@ -1740,7 +1740,13 @@ MARKE_EMIT=54
 #                                  dritte Lage hat `M134` im ersten Bau widerlegt
 #   `probe-let-ohne-leser.gab`     die ungelesene `let`-Bindung, die jetzt `(void)r2;`
 #                                  absenkt statt abgewiesen zu werden
-MARKE_EMIT_M=25
+# **25 -> 29 am 2026-08-31, und das ist ein Zuwachs des GEGENSTANDS.** Vier aus der
+# Grammatik geschriebene Programme kamen dazu (`messung/grammatik/`), damit kein Wort der
+# EBNF mehr an einer einzigen Datei haengt -- die Einsamkeitszahl fiel von 25 auf 0. Der
+# Waechter nennt es selbst *„der gute Fall, und trotzdem ein Befund"*: eine Marke, die
+# steigt, weil mehr uebersetzt, ist keine gelockerte Ratsche. *Der Grund steht hier, damit
+# die naechste Sitzung nicht eine Lockerung liest.*
+MARKE_EMIT_M=29
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

@@ -334,6 +334,14 @@ sie. Für die ist die Übersetzungsprobe die einzige Gegenprobe, die es gibt. **
 Dateien tragen zusammen acht. *Das ist keine Empfehlung, sie zu vervielfachen — es ist die
 Adresse, an der die Messung dünn ist.*
 
+> ### Und am Abend desselben Tages sind es **null** — §9
+>
+> Die 25 wurden eingeteilt (`messung/EINSAME-WOERTER.md`) und dann verteilt: **fünf Programme
+> aus der Grammatik**, und die Zahl fällt `25 → 0`. Jedes der 125 Wörter steht jetzt in
+> mindestens zwei übersetzenden Dateien. Die Zahl steht seither **im Wächter** und nicht mehr
+> nur in diesem Absatz — mit Marke, mit Adressen und mit einer Sprechprobe, die eine Datei
+> wegnimmt. §9 misst es nach, und es ist dabei etwas herausgefallen.
+
 ### Die Verschärfung steht im SCHNELLLAUF, und die Zahl steht daneben
 
 | | vorher | nachher |
@@ -443,3 +451,221 @@ von `pruefe-emission.sh`.** Zwei Wächter, die dasselbe Erzeugnis mit verschiede
 übersetzen, geben zwei Antworten auf eine Frage; und `-Wconversion` dazuzunehmen würde
 `UNGEDECKT` durch eine **Entscheidung** heben statt durch eine Messung. *Die Verschärfung
 dieser Nacht ist eine Berichtigung; die nächste wäre eine Wahl, und die gehört dem Ordner.*
+
+---
+
+## 9. Die Empfindlichkeit: **25 → 0** — und der Wächter war der erste Befund
+
+*Gemessen am Abend des 2026-08-31, lokal (`free -g`: 31 GB gesamt, 17 GB verfügbar,
+20 Kerne). Fünf Programme, eine Giftprobe, eine vierte Sprechproberichtung.*
+
+§7 nennt die Zahl als Satz: *25 Wörter hängen an je einer Datei.* Ein Satz in einem Dokument
+steigt unbemerkt. Er steht jetzt als **Zahl im Wächter** (`MARKE_ALLEIN`), mit den Adressen
+daneben und mit einer Probe, die ihn misst.
+
+### 9.1 Erst einteilen, dann schreiben
+
+`messung/EINSAME-WOERTER.md` nimmt die 25 einzeln und fragt je Wort: **warum nur diese
+Datei?** Drei Klassen, und die Einteilung ist der Ertrag:
+
+| Klasse | Wörter | Antwort |
+|---|---:|---|
+| **⟨G⟩ Bündel aus der GRAMMATIK** | 9 | `walkdecl` ist EINE Produktion; `opdecl` braucht `table`+`slot`+`occupied` |
+| **⟨A⟩ Bündel aus der AUTORSCHAFT** | 8 | eine Datei gegen eine LISTE geschrieben — grammatisch unverwandt |
+| ⟨Z⟩ Zufall | 8 | gewöhnliche Wörter, einmal geschrieben |
+| ⟨E⟩ eng | 1 (Form) | `bootdecl` — siehe 9.5 |
+
+> **⟨A⟩ ist der Befund über die eigene Methode.** Acht der 25 hingen an
+> `messung/grammatik/zahlbreiten.gab` und `geraeteworte.gab` — den zwei Dateien, die in der
+> Nacht davor gegen genau diese Lücke geschrieben wurden. *Eine Lücke mit EINER Datei zu
+> schließen verschiebt sie.* Darum heißt die Antwort unten nicht „noch eine Datei".
+
+### 9.2 Fünf Programme, jedes mit einem Gegenstand
+
+| Datei | verteilt | Gegenstand |
+|---|---|---|
+| `messung/grammatik/blocklauf.gab` | `walk` `levels` `node` `down` `leaf` `mappings` | der Indirektionsbaum eines Inodes — **keine zweite Seitentabelle** |
+| `messung/grammatik/tabellenworte.gab` | `insert` `remove` `relabel` `exists` | ein Gerätebaum: Gerät am Bus am Bus |
+| `messung/grammatik/messreihe.gab` | `i8` `i16` `i32` `i64` `and` `min` `finite` `sizeof` | eine Messreihe — Abweichungen sind vorzeichenbehaftet |
+| `messung/grammatik/raumworte.gab` | `port` `rc` `seq` `boot` `prim` `allocs` `use` | ein Zeitgeber am Altlastenbus |
+| `beispiele/gift/413-…gueltig.gab` | — | die Giftprobe zu Befund A unten |
+
+**Alle vier Messprogramme: 0 Prüferfehler, 0 Hinweise, 0 `C001`, `cc -Werror` grün bei `-O0`
+und `-O2`.** Der Korpus wächst von 83 auf 88 vollständig emittierende Dateien; 87 übersetzen.
+
+```
+vorher   25 Woerter an je EINER Datei · 15 an zwei · Median 4
+nachher   0 Woerter an je EINER Datei · 38 an zwei · Median 4
+```
+
+`gesenkt` bleibt bei 214, `UNGEDECKT` bei 4. **Kein Wort ist dazugekommen** — die Programme
+decken nichts Neues ab, sie machen die vorhandene Deckung unempfindlich. *Das ist der ganze
+Zweck, und es ist wichtig, dass es sich in keiner Deckungszahl zeigt.*
+
+### 9.3 Befund A — ein Formatfeld, das `gueltig` heißt, und der Erzeuger schreibt den Namen zweimal
+
+Gefunden **beim ersten Lauf von `blocklauf.gab`, ungesucht**: das Gültigkeitsbit eines
+Blockzeigers hieß `gueltig`, das naheliegendste Wort seiner Domäne.
+
+```c
+static inline bool Blockzeiger_gueltig(const Blockzeiger *v)   /* der FELDLESER            */
+static inline bool Blockzeiger_gueltig(const Blockzeiger *v)   /* die Pruefkoerperfunktion */
+```
+
+`cc`: *redefinition*. Der Prüfer: **0 Fehler, 0 Hinweise.** Der Erzeuger: **0 `C001`.**
+
+Und es ist eine **Familie**, keine Einzelstelle — drei Namensmuster aus einem Präfix, zwei
+davon kollidierbar:
+
+```
+{Format}_gueltig       die Pruefkoerperfunktion (emit.rs:3369)  <->  ein Feld `gueltig`
+{Format}_setz_{feld}   der Schreiber                            <->  ein Feld `setz_<feld>`
+{Format}_{feld}        der Leser                                --   die Quelle beider
+```
+
+> **`N041` (`cnamen.rs`) fängt es nicht, und das ist kein Versehen jenes Passes.** Er hält die
+> Namen, die C schon **vergeben** hat — C11-Wort, Kopfdatei, eingebaut; `gueltig` ist keiner
+> davon. Die Kollision entsteht zwischen zwei Namen, die der **Erzeuger selbst** bildet. *Ein
+> Namenswächter, der nur die fremden Namen kennt, misst die fremden.*
+
+Beide Formen stehen als `beispiele/gift/413-format-feld-heisst-gueltig.gab` im Baum. **Sie
+liegt in `gift/` und nicht in `messung/proben/`, weil sie EMITTIERT** — unter
+`messung/proben/` hätte Stufe 9 von `pruefe-emission.sh` rot gemeldet, und daran arbeitet in
+dieser Nacht eine andere Bahn. Gehalten wird sie trotzdem: **vom Übersetzungstor dieser
+Tafel, dessen Reichweite `beispiele/gift/` einschließt.** Genau die vier Dateien
+Reichweitenunterschied aus §7 fangen hier zum ersten Mal etwas. *Dass Stufe 9 sie nicht
+sieht, ist der zweite Befund und gehört der anderen Bahn; die zwei Wege — Reichweite
+ausdehnen oder benannter Eintrag in `ausnahme_grund()` — stehen in der Datei und werden hier
+nicht gegangen.*
+
+### 9.4 Befund B — der WÄCHTER war der Befund, und zwar dieser hier
+
+Richtung (c) der Sprechprobe nahm bis heute **ein Wort, das in genau EINER Datei steht**, und
+prüfte, dass es `UNGEDECKT` wird, wenn deren C vergiftet ist. Sobald die 25 verteilt waren,
+gab es kein solches Wort mehr — und der Wächter meldete
+
+```
+GESCHEITERT  keine Datei traegt ein Wort allein -- die Probe misst nichts
+! Die Tafel misst nicht, was sie behauptet. ABBRUCH.       (Rücklaufwert 2)
+```
+
+**Die Arbeit, die den Baum verbessert, hat den Wächter abgeschaltet.** Nicht der Baum war
+falsch, die Probe war es: *eine Probe, deren Gegenstand „kostet eine gefallene Übersetzung
+eine Zelle?" ist, darf nicht daran hängen, dass der Korpus eine dünne Stelle HAT* — die dünne
+Stelle ist das, woran gearbeitet wird.
+
+Sie nimmt jetzt das Wort mit der **kleinsten Trägermenge** und vergiftet **jeden** Träger. Bei
+einem Träger ist das die Probe von gestern, bei zweien ein `cc`-Lauf mehr, und sie misst auch
+nach der nächsten Runde noch. `verfaelsche` nimmt dafür seit heute eine **Menge** von Dateien
+statt einer.
+
+### 9.5 Was NICHT geheilt wurde: die Form `bootdecl`
+
+`boot` steht an **zwei** Grammatikstellen — `bootdecl` (:245) und `space` (:463).
+`raumworte.gab` schreibt es als Adressraum (`ptr<boot, r>`), und damit ist das **Wort** an
+zwei Dateien gedeckt. **Die Form `bootdecl` bleibt allein in `beispiele/07`, und das ist
+richtig:**
+
+> Ein `bootdecl` ist die Modusleiter EINER Maschine. `write_cr3` · `write_cr4(PAE)` ·
+> `wrmsr_efer(LME)` · `write_cr0(PG)` ist *der* x86_64-Weg in den Langmodus, nicht *ein* Weg.
+> Ein zweites `bootdecl` wäre eine **Abschrift** — Falle 80 im Kleinen, ein Programm nur damit
+> ein Zähler steigt — oder `aarch64`, und das ist versiegelt.
+
+*Die Einsamkeit ist benannt und nicht geheilt.* Und der Satz daneben gehört dazu: **das Wort
+ist an zwei Dateien, die Form an einer.** Wer nur den Zähler nennt, hat den `bootdecl`
+stillschweigend für gedeckt erklärt — §6.2 sagt seit jeher, dass ein Terminal keine Form ist,
+und hier kostet dieser Satz etwas.
+
+### 9.6 Die Zahl im Wächter — gedruckt, **nicht** geratscht
+
+```
+== EMPFINDLICHKEIT: 0 Woerter haengen an je EINER Datei (Marke 0) ==
+   125 der 219 Terminale sind NUR durch Absenkung gedeckt …
+   an je ZWEI Dateien: 38 (Marke 38, ohne Ratsche …)
+```
+
+Steigt sie, druckt der Lauf jedes Wort mit seiner Adresse. **Der Rücklaufwert ändert sich
+nicht**, und der Grund steht an der Marke:
+
+* Eine Marke, die auf dem Lauf gesetzt wird, der sie zum ersten Mal gemessen hat, ist eine
+  **Vermutung** — diese Zahl ist in einer Nacht von 25 auf 0 gesprungen.
+* Sie wächst aus **zwei** Richtungen: ein neues Terminal, das genau ein Programm schreibt,
+  hebt sie, ohne dass etwas schlechter geworden wäre (*Ratschen: Steigen braucht seinen Grund
+  an der Marke*).
+* Und ein Anstieg wäre **unsichtbar** in einem Rot, das eine andere Ursache hat — die vier
+  `UNGEDECKT`-Zellen.
+
+> **Der Vorschlag steht daneben, damit der nächste Lauf ihn nicht erfinden muss:** sobald die
+> vier Zellen entschieden sind und dieser Wächter grün werden kann, soll das Überschreiten von
+> `MARKE_ALLEIN` den Rücklaufwert mitentscheiden. *Eine unsichtbare Ratsche ist schlechter als
+> eine gedruckte Zahl.*
+
+Die zweite Zahl (Wörter an genau **zwei** Dateien, heute 38) trägt **absichtlich keine
+Ratsche**: sie steigt, wenn Wörter aus der Einserspalte herunterwandern — also wenn es besser
+wird. *Eine Ratsche auf einer Zahl, die beim Verbessern wächst, bestraft die Heilung.*
+
+### 9.7 Die Sprechprobe, in beide Richtungen
+
+Die vierte Richtung nimmt eine Datei weg und verlangt, dass die Zahl **steigt** — und dass
+jedes neu einsame Wort in genau dieser Datei stand. *Eine Zahl, die steigt, ist noch kein
+Beleg dafür, dass das Wegnehmen sie hat steigen lassen.*
+
+```
+ok   ohne `beispiele/01-tabelle.gab` steigt die Einsamkeitszahl (0 -> 1)
+ok   und jedes neu einsame Wort stand in der entfernten Datei
+```
+
+Und von Hand, mit einer ganzen Datei aus dem Baum genommen — `raumworte.gab` beiseite:
+
+```
+! EMPFINDLICHKEIT GESTIEGEN: 7 statt 0.
+    allocs  beispiele/09 · boot beispiele/07 · port geraeteworte · prim beispiele/07
+    rc geraeteworte · seq geraeteworte · use beispiele/29
+```
+
+### 9.8 Der Preis
+
+| | vorher (83 Dateien) | jetzt (88 Dateien, 13 Proben) |
+|---|---|---|
+| lokal (20 Kerne) | 5,9 s | **6,2 s** (6,20 · 6,26 · 6,15) |
+
+`abnahme.py` gibt jedem leichten Wächter **600 s**. Die Empfindlichkeitsprobe selbst kostet
+nichts als Text — sie liest die Trägerkarte, die ohnehin gerechnet wird; die 0,3 s sind die
+fünf neuen Dateien und der zweite vergiftete Träger.
+
+### 9.9 Und was hier NICHT entschieden wurde
+
+* **Nichts über die vier Zellen.** `chain`, `queue`, `state`, `threads` stehen unverändert;
+  der Lauf bleibt rot, und das ist das gewollte Rot.
+* **Nichts über den `Format_gueltig`-Zusammenstoß.** Der Befund hat eine Adresse, eine
+  Giftprobe und zwei Formen; ob der Erzeuger die Namen entzerrt oder ein Prüferpass sie
+  abweist, ist eine Entscheidung über die Absenkung.
+* **Nichts über die Reichweite von Stufe 9.** Sie sieht `beispiele/gift/` nicht, und die
+  Giftprobe liegt genau dort. Das gehört `pruefe-emission.sh`.
+
+### 9.10 Die eine Zahl, die diese Bahn SCHULDET
+
+`pruefe-emission.sh` zählt je Wurzel, wie viele Dateien emittieren, und hält es gegen zwei
+Marken. **Vier neue `messung/grammatik/`-Dateien heben die zweite:**
+
+```
+MARKE_EMIT_M   25  ->  29     die vier Programme aus 9.2
+MARKE_EMIT     54  ->  55     NICHT von dieser Bahn -- schon vor ihr so
+```
+
+Die Ratsche nennt den Fall selbst *„der gute Fall, und trotzdem ein Befund"* und verlangt,
+dass die Marke nachgezogen wird. **Diese Bahn zieht sie nicht** — an `pruefe-emission.sh`
+arbeitet in derselben Nacht eine andere, und eine Ratschenzeile, die zwei Bahnen gleichzeitig
+anfassen, ist ein Merge-Konflikt an genau der Stelle, an der eine Zahl stimmen muss. *Die
+Zahl steht hier, damit sie beim Zusammenführen nicht gesucht werden muss.*
+
+Nachgerechnet mit demselben Nenner, den Stufe 9 benutzt (Dateien, die **emittieren**, nicht
+die, die übersetzen); die 29 sind 6 Fragmente, 7 Proben, **6 aus der Grammatik**, 5 ABI, 2
+Caprock, Grenze, Netz, Treiber. Der Lauf steht ohnehin unter `--voll` und war in der
+Schnellabnahme dieses Abends ausgelassen.
+* **Nichts darüber, ob die Absenkungen RICHTIG sind.** Zwei Träger statt einem machen die
+  Messung unempfindlich, nicht die Sprache richtig. `ptr<port, r>` senkt in `raumworte.gab`
+  genauso zu einem gewöhnlichen Ladebefehl ab wie in `geraeteworte.gab` — §3 Befund 2, ein
+  zweites Mal und unabhängig, und `ptr<boot, r>` ebenso: `ctyp` liest `z.raum` für **jeden**
+  Raum außer `mmio` nicht. *Die Adresse dieses Befundes ist breiter, als der Satz von gestern
+  sagte.*
