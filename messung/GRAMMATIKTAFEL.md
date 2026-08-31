@@ -14,16 +14,24 @@ am 2026-08-31. Werkzeug: `./instrumente/pruefe-grammatiktafel.py`.*
 ## 1. Die vier Zustände, und wie jeder gemessen wird
 
 ```
-gesenkt       ein Programm mit diesem Wort emittiert C -- OHNE eine einzige Absage
+gesenkt       ein Programm mit diesem Wort emittiert C, das `cc -Werror` ANNIMMT
 abgesagt      der Erzeuger sagt es benannt ab, und ein PRUEFERFEHLER nennt es auch
 vom Pruefer   nur ein Prueferfehler nennt es; der Erzeuger sieht die Form nie
 UNGEDECKT     keines davon
 ```
 
-**`gesenkt` ist ein LAUF und keine Lesung.** Ein Wort gilt genau dann als abgesenkt, wenn es
-in einer `.gab`-Datei steht, die **vollständig emittiert**: null Prüferfehler *und* null
-`C001`. Dann ist alles, was in dieser Datei steht, durch den Erzeuger gegangen — das Wort
-eingeschlossen.
+**`gesenkt` sind ZWEI LÄUFE und keine Lesung.** Ein Wort gilt genau dann als abgesenkt, wenn
+es in einer `.gab`-Datei steht, die **vollständig emittiert** (null Prüferfehler *und* null
+`C001`) **und deren Erzeugnis `cc -std=c11 -Wall -Wextra -Werror` bei `-O0` und `-O2`
+annimmt**. Dann ist alles, was in dieser Datei steht, durch den Erzeuger gegangen — das Wort
+eingeschlossen — *und was dabei herauskam, ist C.*
+
+> **Die zweite Hälfte kam am 2026-08-31 dazu, und §7 sagt, was sie gekostet hat: nichts.**
+> Bis dahin hieß `gesenkt` nur „die Datei emittiert"; ob das Erzeugnis überhaupt C ist,
+> fragte niemand — §6.1 stand als Selbstauskunft da, und `F06` war der Beleg dafür. **Die
+> `UNGEDECKT`-Marke bleibt bei 4 und steigt nicht**; die Grundgesamtheit ist nicht gewachsen,
+> die Messung ist schärfer geworden. *Eine Marke, die bei einer Verschärfung stehen bleibt,
+> ist eine Aussage über den Baum und nicht über die Ratsche.*
 
 **Und das trägt, weil der Wortschatz geschlossen ist.** `kw.rs` führt 213 der 222 Wörter als
 `res` — reserviert, nirgends ein Bezeichner. *Ein Vorkommen IST damit ein Schlüsselwort.* Die
@@ -188,6 +196,32 @@ ok   erfundene Grammatikregel `zztafelprobe` faellt als UNGEDECKT
 ok   und sie steht nicht schon in der echten Grammatik
 ```
 
+**Seit dem 2026-08-31 sind es DREI Richtungen und elf Proben** — die dritte ist das
+Übersetzungstor, und sie ist die Richtung, an der `F06` siebzehn Tage vorbeilief:
+
+```
+ok   kuenstliches `F06`-C faellt bei `cc -Werror` (beide Stufen)
+ok   und die Meldung nennt den erzwungenen Bereich ('limited range')
+ok   gueltiges C kommt durch -- das Tor sagt nicht zu allem nein
+ok   `beispiele/03-format.gab` mit `F06`-C faellt aus der Deckung
+ok   und aus dem richtigen Grund
+ok   und das allein von ihr getragene `sizeof` faellt als UNGEDECKT
+ok   im sauberen Lauf ist `sizeof` gesenkt
+```
+
+Das Gift ist **genau die Form, an der `F06` hing** — ein `uint8_t`-Index gegen eine Schranke,
+die sein Bereich nicht überschreiten kann, also *„comparison is always true due to limited
+range of data type"* (`-Wtype-limits`, in `-Wextra`). Und es geht **durch dasselbe Tor wie
+der echte Lauf**: `uebersetzende(verfaelsche=(datei, GIFT_C))` schiebt einer echten Datei
+das kaputte C unter, statt zu behaupten, was das Tor getan hätte. *Eine Probe, die das
+Ergebnis setzt statt es zu messen, prüft ihre eigene Annahme.*
+
+Die drei Zeilen davor sind so wichtig wie die drei danach: **ein Tor, das zu allem nein sagt,
+misst auch nichts.** Ein Tippfehler im `cc`-Aufruf hätte 214 Zellen auf einmal rot gemacht,
+und das hätte wie ein Befund ausgesehen. `LC_ALL=C` steht daneben, weil die Probe den
+Meldungstext liest — *ein Wächter, dessen Urteil an der Spracheinstellung hängt, misst die
+Umgebung.*
+
 Die zweite Richtung läuft über eine **Kopie von `SYNTAX.md`** mit einer eingeschobenen Regel
 — also durch dieselbe Extraktion, die auch die echten 219 liefert, und nicht durch eine
 zweite. Die erste unterdrückt die Korpusbelege für ein Wort, das heute allein durch die
@@ -201,10 +235,14 @@ ein Wächter, der nichts gemessen hat, ist kein Befund.
 
 ## 6. Was diese Tafel NICHT sagt
 
-1. **Eine besetzte Zelle heißt, dass es eine Absenkung GIBT — nicht, dass sie richtig ist.**
-   `messung/fragmente/F06.gab` emittierte 161 Zeilen, die `cc -Werror` zurückwies, und diese
-   Tafel hätte sein Wort als `gesenkt` geführt. Die Gegenprobe dafür ist **Stufe 9** von
-   `pruefe-emission.sh`, und sie läuft seit heute auch über `messung/`.
+1. ~~**Eine besetzte Zelle heißt, dass es eine Absenkung GIBT — nicht, dass sie richtig
+   ist.**~~ **Diese Selbstauskunft ist seit dem 2026-08-31 zur Hälfte eingelöst** (§7): eine
+   besetzte Zelle heißt jetzt, dass eine Absenkung LÄUFT *und ihr Erzeugnis C IST*. Was sie
+   weiter nicht heißt: dass es das **richtige** C ist. `cc -Werror` prüft die Sprache, nicht
+   die Bedeutung — *ein `f32`-Ausdruck, der in `double` rechnet, übersetzt tadellos* (§3,
+   Befund 1). Die Gegenprobe über *Dateien* bleibt **Stufe 9** von `pruefe-emission.sh`; die
+   Tafel stellt die Frage seit heute selbst, weil sie über *Wörter* urteilt und ihre
+   Grundgesamtheit vier Dateien größer ist als die von Stufe 9.
 2. **Ein Terminal ist nicht dasselbe wie eine Form.** `SYNTAX.md` führt 154 Regeln; diese
    Tafel steht über den 219 **Wörtern**. Eine Regel, die aus lauter gedeckten Wörtern eine
    ungedeckte Kombination baut, fällt hier nicht auf — *das ist genau die Klasse, für die
@@ -279,3 +317,34 @@ sie. Für die ist die Übersetzungsprobe die einzige Gegenprobe, die es gibt. **
 `beispiele/07` kostet neun Zellen auf einmal**; die zwei aus der Grammatik geschriebenen
 Dateien tragen zusammen acht. *Das ist keine Empfehlung, sie zu vervielfachen — es ist die
 Adresse, an der die Messung dünn ist.*
+
+### Die Verschärfung steht im SCHNELLLAUF, und die Zahl steht daneben
+
+| | vorher | nachher |
+|---|---|---|
+| `ki-pc-fisch-101` | 0,85 s | **5,0 s** |
+| lokal (20 Kerne) | 1,0 s | **5,7 s** |
+| davon der Übersetzerdurchgang | — | 1,8 s / 4,0 s (160 `cc`-Aufrufe) |
+
+`abnahme.py` gibt jedem leichten Wächter **600 s** (`FRIST_ABNAHME`) — das sind knapp ein
+Prozent. **Die erste Fassung brauchte 9,8 s**, weil die Sprechprobe den ganzen Durchgang ein
+zweites Mal fuhr, um EINE vergiftete Datei zu prüfen; sie fährt jetzt nur diese eine
+(`uebersetzende(nur=…)`) und zeigt dieselbe Kette.
+
+> **Und der Grund gegen `--voll` ist nicht nur die Zahl.** `pruefe-waechter.SCHWER` sagt
+> ausdrücklich, dass keiner seiner vier Einträge wegen der **Zeit** dort steht — es ist der
+> *Ort* (Speicher, Rechenlast gehört auf den Server) oder die *Wirkung* (es schreibt in
+> Quellen). `cc -c` auf eine Übersetzungseinheit tut weder das eine noch das andere. *Ein
+> Wächter hinter `--voll`, den der Schnelllauf braucht, ist ein Wächter, den niemand fährt.*
+
+### Und was hier NICHT entschieden wurde
+
+* **Nichts über die Sprache.** Die vier Zellen `chain`, `queue`, `state`, `threads` stehen
+  unverändert; sie sind eine Entscheidung des Ordners (§4) und keine Messfrage.
+* **Nichts über `cc` als Maßstab.** Zwei Übersetzer, drei Hauptversionen Abstand, dieselbe
+  Antwort — aber das ist eine *Messung* und keine Zusage, dass jeder C-Übersetzer dasselbe
+  sagt. Fällt ein dritter anders aus, ist das ein Befund und kein Fehler dieses Wächters.
+* **Nichts über die vier Dateien außerhalb von Stufe 9.** Sie übersetzen; ob Stufe 9 ihre
+  Reichweite auf `messungen/` und `programmlogik/` ausdehnen soll, gehört zu
+  `pruefe-emission.sh` — *und daran arbeitet in dieser Nacht eine andere Bahn.* Die Tafel
+  misst sie ab heute selbst; das ersetzt die Frage nicht, es beantwortet sie nur für Wörter.
