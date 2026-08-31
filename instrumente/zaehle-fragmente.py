@@ -48,6 +48,20 @@ def gabbro(*args):
         sys.exit(2)
 
 
+def pflichtenzaehler():
+    """`zaehle-pflichten.py` als Modul -- **ein Suchweg, nicht zwei Register** (W7)."""
+    import importlib.util
+    ort = W / "instrumente" / "zaehle-pflichten.py"
+    if not ort.is_file():
+        print(f"ABBRUCH: {ort} fehlt -- die Durchstichzahl wurde NICHT gemessen.",
+              file=sys.stderr)
+        sys.exit(2)
+    spec = importlib.util.spec_from_file_location("zaehle_pflichten", ort)
+    modul = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    return modul
+
+
 def messe(p):
     r = gabbro("pruefe", str(p))
     if "items," not in r.stdout:
@@ -114,15 +128,34 @@ def main():
     # what the fragment says"*, **measured by execution**; stopping at `senkt ab` stops one
     # step short of the statement.
     #
-    # It is read where it arises: the `lauf "fragmentN"` lines of `pruefe-emission.sh`. Same
-    # method as `zaehle-pflichten.py --haengend`, for the same reason.
-    waechter = (W / "instrumente" / "pruefe-emission.sh").read_text(encoding="utf-8")
-    gestochen = {f"F{int(m):02d}" for m in re.findall(r'^lauf "fragment(\d+)"', waechter, re.M)}
+    # **And it is read at the RUN, not at the line** (2026-08-31). Until today this stood
+    # here:
+    #
+    #     waechter = (W / "instrumente" / "pruefe-emission.sh").read_text(...)
+    #     gestochen = {... for m in re.findall(r'^lauf "fragment(\d+)"', waechter, re.M)}
+    #
+    # -- the SECOND member of the family that `zaehle-pflichten.py` was caught in on the same
+    # day. Three lines above, this file runs `gabbro pruefe` and `gabbro emit` over every
+    # fragment and counts what comes back; **for the one number that says AUSGEFUEHRT it read
+    # a line of shell.** *A counter that runs for three of its four figures and reads text for
+    # the fourth looks measured all the way through.*
+    #
+    # `zaehle-pflichten.absenkung()` is the one search path now (W7: not a second register),
+    # and it answers out of `pruefe-emission.sh --absenkung` -- 1,7 s, a real run per fragment.
+    zp = pflichtenzaehler()
+    haelt, faellt, _ = zp.absenkung()
+    gestochen = {f"F{int(f[1:]):02d}" for f in haelt}
+    gefallen = {f"F{int(f[1:]):02d}" for f in faellt}
     print(f"  {sauber} von {len(dateien)} pruefen sauber")
     print(f"  {senken} von {len(dateien)} senken ab")
     print(f"  {len(gestochen)} von {len(dateien)} sind DURCHGESTOCHEN -- "
-          f"{', '.join(sorted(gestochen))}")
+          f"{', '.join(sorted(gestochen)) or 'keines'}")
     print("     erzeugt, uebersetzt, AUSGEFUEHRT und gegen eine Handschrift verglichen.")
+    if gefallen:
+        print(f"  {len(gefallen)} traegt einen Differenztest, dessen Lauf FAELLT -- "
+              f"{', '.join(sorted(gefallen))}")
+        print("     **eine gebaute Einloesung, die weggefallen ist** -- ein anderer Zustand")
+        print("     als „nie durchgestochen\", und bis zum 2026-08-31 nicht unterscheidbar.")
     print()
     print("  Vor der Vervollstaendigung (2026-08-20, ueber den Ausschnitten):")
     print("  5 von 10 sauber, 3 von 10 senkten ab -- und JEDES der sieben offenen trug")

@@ -266,6 +266,53 @@ def stumme_probe_mit_eins(text):
     return _mit_eins(text, lambda z: bool(PROBENZWEIG.search(z)))
 
 
+# **THE CUT IN THE MIDDLE OF THE RUN -- the class that the empty tree cannot reach**
+# ---------------------------------------------------------------------------------
+# `messung/RUECKLAUFWERTE.md` measured every guard over an EMPTY tree and closes with the
+# sentence it could not measure: *"a guard whose precondition breaks MID-RUN is not covered
+# here. The empty tree is the cheapest refusal, not the only one."*
+#
+# **On 2026-08-31 that sentence got a specimen with a date.** `pruefe-emission.sh` died at
+# `F06`'s `N043` in its fourth stage with `exit 1`; **stages 9 and 10 never ran**, and not
+# one line said so. The return code `1` read as a stage finding and was at the same time an
+# abort for everything behind it. Two findings sat there unseen for two weeks -- six files
+# whose emitted C does not compile, and a mark that was seven too low.
+#
+# > *An empty population is a green judgement over nothing (W17). A TRUNCATED population is
+# > worse: it looks like a judgement over everything.*
+#
+# What is measured here, and it is a COARSE upper bound: everything after a guard's FIRST
+# non-zero exit is behind a cut. A guard counts as affected when at least one further exit
+# AND at least one printing site lie behind that first one -- **then a run exists that ends
+# before the last measurement.** The per-guard figure is how many printing sites lie behind
+# the first exit: *the output a truncated run can swallow.*
+#
+# **And what this does NOT say** (W10): it does not say that any of those exits is wrong. A
+# speech test at the top of the file SHOULD end everything behind it -- that is the point of
+# a speech test. The number is the SURFACE, not a defect list; it names where to look, and
+# it verpflichtet, it does not absolve.
+AUSGANG_STELLE = re.compile(r"^\s*sys\.exit\(\s*[12]\s*\)|^\s*return\s+[12]\b"
+                            r"|(?:^|;|\|\||&&|\{)\s*exit\s+[12]\b")
+DRUCK_STELLE = re.compile(r"^\s*print\(|^\s*echo\b")
+
+
+def schnitt(text):
+    """`(Ausgaenge hinter dem ersten, Druckstellen hinter dem ersten)` -- Zeilennummern."""
+    aus, druck = [], []
+    for nr, z in enumerate(text.splitlines(), 1):
+        s = z.rstrip()
+        if _fixtur(s) or s.lstrip().startswith("#"):
+            continue
+        if AUSGANG_STELLE.search(s):
+            aus.append(nr)
+        if DRUCK_STELLE.search(s):
+            druck.append(nr)
+    if not aus:
+        return [], []
+    erster = aus[0]
+    return [a for a in aus if a > erster], [d for d in druck if d > erster]
+
+
 # **Who carries this requirement: whoever's return code is read as a VERDICT.**
 #
 # **The boundary MOVED on 2026-08-31, and it moved because it was printed.** Until that day
@@ -456,6 +503,31 @@ def sprechprobe():
             s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt)
 
 
+# **The speech test of the cut, BOTH ways.** A guardian with ONE exit at the very end must
+# not read as cut; one that still prints and still leaves again behind its first exit must.
+# *A measure that answers in one direction only is an ornament* (R14).
+SCHNITT_HEIL = "\n".join([
+    "import sys",
+    "print('a')",
+    "print('b')",
+    "sys.exit(1)",
+])
+SCHNITT_KAPUTT = "\n".join([
+    "import sys",
+    "print('a')",
+    "sys.exit(2)",
+    "print('b')",
+    "sys.exit(1)",
+])
+
+
+def sprechprobe_schnitt():
+    """`(heil_ist_frei, kaputt_faellt)` -- und beide muessen stimmen."""
+    a_heil, d_heil = schnitt(SCHNITT_HEIL)
+    a_kap, d_kap = schnitt(SCHNITT_KAPUTT)
+    return (not (a_heil and d_heil), bool(a_kap and d_kap))
+
+
 def main():
     (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
      s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt) = sprechprobe()
@@ -488,6 +560,11 @@ def main():
              if stumm_ist_stumm else "GESCHEITERT -- die alte Haelfte faengt sie schon"))
     print("  Arbeitsmenge:   " + ("ok (eine Ausgabe ohne Zahl faellt, eine mit Zahl nicht)"
                                   if leer_faellt and voll_faellt else "GESCHEITERT"))
+    schnitt_heil, schnitt_kaputt = sprechprobe_schnitt()
+    print("  Schnitt:        " + ("ok (ein Ausgang am Ende ist kein Schnitt, einer mit "
+                                  "Ausgabe dahinter schon)"
+                                  if schnitt_heil and schnitt_kaputt else "GESCHEITERT"))
+    ok = ok and schnitt_heil and schnitt_kaputt
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own
@@ -550,6 +627,29 @@ def main():
         print(f"   Und {len(ABBRUCH_GEBUCHT)} GEBUCHT, mit Grund:")
         for name, grund in sorted(ABBRUCH_GEBUCHT.items()):
             print(f"     {name}: {grund}")
+
+    # **The cut in the middle of the run -- the item the empty tree leaves open.**
+    geschnitten = []
+    for q in alle:
+        a, d = schnitt(q.read_text(encoding="utf-8", errors="replace"))
+        if a and d:
+            geschnitten.append((q.name, len(a), len(d)))
+    geschnitten.sort(key=lambda r: -r[1])
+    n_aus = sum(a for _, a, _ in geschnitten)
+    print()
+    print(f"== Ein Abbruch MITTEN im Lauf: {len(geschnitten)} von {len(alle)} koennen ihn haben ==")
+    print(f"   {n_aus} Ausgangsstellen liegen hinter dem jeweils ersten -- jede davon ist ein")
+    print("   Lauf, der VOR der letzten Messung endet, mit einem Ruecklaufwert, der wie ein")
+    print("   Befund aussieht. **Der leere Baum misst den ANFANG; das hier misst die Mitte.**")
+    for name, a, d in geschnitten[:5]:
+        print(f"     {name:<28} {a:>3} Ausgaenge, {d:>4} Druckstellen dahinter")
+    print("   *Gemessen am 2026-08-31 an einem Fall mit Datum:* `pruefe-emission.sh` starb an")
+    print("   `F06`s `N043` in der vierten Stufe, die Stufen 9 und 10 liefen nie, und dahinter")
+    print("   standen zwei Befunde, die zwei Wochen niemand sah. **Kein `2`, kein Wort --")
+    print("   ein `1`, das wie ein Stufenbefund aussah.**")
+    print("   Und was diese Zahl NICHT sagt: dass einer dieser Ausgaenge falsch ist. Eine")
+    print("   Sprechprobe am Dateianfang SOLL alles dahinter beenden. Sie ist die FLAECHE,")
+    print("   keine Mangelliste -- sie verpflichtet, sie spricht nicht frei (W10).")
 
     if "--lauf" in sys.argv:
         print()

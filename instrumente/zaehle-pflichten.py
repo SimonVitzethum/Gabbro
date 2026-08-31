@@ -207,27 +207,104 @@ def main():
         print("hier sorgt dafuer, dass er nichts uebersieht.")
 
 
-def abgesenkt(quelle=None):
-    """**Which fragments have MEASURED their lowering obligation -- read out of the guard.**
+# **The lowering column reads the RUN, not the source line** (2026-08-31).
+# ----------------------------------------------------------------------
+# Until today this stood here:
+#
+#     return {f"F{m}" for m in re.findall(r'^lauf "fragment(\d+)"', quelle, re.M)}
+#
+# -- the answer read off `pruefe-emission.sh`'s OWN SOURCE TEXT, at the bare presence of a
+# `lauf` line. **Not at whether the run holds.** On 2026-08-31 `F06` stood at `N043`
+# (`measures eich`, a carrier that is in no excerpt): it no longer checked, no longer
+# emitted, its differential test was gone, the guard was RIGHTLY red -- **and `H` said 4.**
+#
+# > *Same family as `W25`, one step further: there a correct number carried an UNMEASURED
+# > LABEL, here a number carried an UNMEASURED PRECONDITION.* While the line stands, the run
+# > may fall and the number stays.
+#
+# The guard now answers the question itself (`--absenkung`): it runs only the six fragment
+# differential tests, a fallen one is a RESULT and not an abort, and each leaves one verdict
+# line behind -- the two tokens are the regular expressions in `_messe_absenkung` below.
+# Measured 2026-08-31 on `ki-pc-fisch-101`: **1,7 s** -- the `cargo run` calls hit a warm
+# build, and stages 9 and 10 do not run.
+#
+# **And the source line is still read -- as a CROSS-CHECK, not as the answer.** Every
+# `lauf "fragmentN"` in the guard must come back with a verdict; a line without one means
+# the run did not reach it, and then nothing was measured (a `2`, not a number).
+FRIST_ABSENKUNG = 300  # Sekunden. Ein Waechter ohne Frist meldet einen Haenger als „laeuft".
+_ABSENKUNG = None
 
-    The obligation of the ten reads *"the generated C computes what the fragment says"*, and
-    it is discharged by one thing: `pruefe-emission.sh` emits, compiles, **runs** and compares
-    against a handwritten expectation. Whoever does that for a fragment writes a
-    `lauf "fragmentN"` line into the guard.
 
-    Until 2026-08-25 the answer sat beside it as a hand-kept list in this file's own source --
-    `["F1", "F2", ...]`. **That made `H` a number somebody has to update**, and this file says
-    in three other places where that leads: *a metric somebody has to keep is wrong sooner or
-    later.*
+def absenkung(neu_messen=False):
+    """**Der gemessene Absenkungsstand: `(haelt, faellt, ausgabe)`.**
 
-    > Now it is derived: **whoever builds a differential test lowers `H`; whoever removes one
-    > raises it.** An entry without a run is no longer writable.
+    Der Waechter wird EINMAL je Prozess gerufen und die Antwort gemerkt -- `haengend()` fragt
+    sie mehrfach, und zwei Laeufe desselben Waechters ueber demselben Baum sind kein zweites
+    Mass, sondern zweimal dieselbe Wanduhr.
     """
+    global _ABSENKUNG
+    if _ABSENKUNG is None or neu_messen:
+        _ABSENKUNG = _messe_absenkung()
+    return _ABSENKUNG
+
+
+def _absage(*zeilen):
+    for z in zeilen:
+        print(z, file=sys.stderr)
+    # **Every refusal here ends with `2`**: nothing was measured, and then the SETUP has
+    # to change and not the tree.
+    sys.exit(2)
+
+
+def _messe_absenkung():
     import re
-    if quelle is None:
-        quelle = (Path(__file__).resolve().parent.parent
-                  / "instrumente" / "pruefe-emission.sh").read_text(encoding="utf-8")
-    return {f"F{m}" for m in re.findall(r'^lauf "fragment(\d+)"', quelle, re.M)}
+    import subprocess
+    w = Path(__file__).resolve().parent.parent
+    waechter = w / "instrumente" / "pruefe-emission.sh"
+    if not waechter.is_file():
+        _absage(f"ABBRUCH: {waechter} fehlt -- die Absenkung wurde NICHT gemessen.")
+    try:
+        r = subprocess.run([str(waechter), "--absenkung"], cwd=w, capture_output=True,
+                           text=True, timeout=FRIST_ABSENKUNG)
+    except subprocess.TimeoutExpired:
+        _absage(f"ABBRUCH: der Waechter ueberschreitet die Frist ({FRIST_ABSENKUNG} s) -- "
+                f"ein Haenger sieht aus wie „laeuft noch“, nicht wie ein Befund.")
+    except OSError as e:
+        _absage(f"ABBRUCH: der Waechter laesst sich nicht starten ({e}) -- es wurde "
+                f"NICHTS gemessen.")
+    if r.returncode != 0:
+        _absage(f"ABBRUCH: `pruefe-emission.sh --absenkung` endet mit {r.returncode} -- "
+                f"in diesem Modus ist ein GEFALLENER Durchstich ein Ergebnis, also hat der "
+                f"Waechter selbst NICHTS gemessen.",
+                *(r.stdout.splitlines()[-8:] + r.stderr.splitlines()[-8:]))
+    haelt = set(re.findall(r'^DURCHSTICH fragment(\d+) HAELT\b', r.stdout, re.M))
+    faellt = set(re.findall(r'^DURCHSTICH fragment(\d+) FAELLT\b', r.stdout, re.M))
+    # **The speech test lives in the guard and is DEMANDED here.** A counter that takes a
+    # tool's answer without that tool ever having been able to answer wrongly has passed the
+    # assurance on, not checked it (R14).
+    if not re.search(r'^SPRECHPROBE ok\b', r.stdout, re.M):
+        _absage("ABBRUCH: der Waechter belegt seine eigene Falsifizierbarkeit nicht -- "
+                "die Zeile `SPRECHPROBE ok` fehlt. **Dann misst DURCHSTICH ... HAELT nichts.**")
+    # **And the cross-check against the source text, in the direction that is left.** The
+    # source no longer says WHAT is lowered -- but it says how many verdicts have to come
+    # back. A `lauf` line without one means the run never reached it.
+    geschrieben = set(re.findall(r'^lauf "fragment(\d+)"',
+                                 waechter.read_text(encoding="utf-8"), re.M))
+    if geschrieben != haelt | faellt:
+        _absage(f"ABBRUCH: der Waechter traegt {sorted(geschrieben)} als Fragmentlaeufe und "
+                f"urteilt ueber {sorted(haelt | faellt)}. **Eine `lauf`-Zeile ohne Urteil "
+                f"heisst, dass der Lauf nicht bis dorthin gekommen ist** -- es wurde nicht "
+                f"weniger abgesenkt, es wurde weniger GEMESSEN.")
+    if not geschrieben:
+        _absage("ABBRUCH: der Waechter traegt keinen einzigen Fragmentlauf -- eine leere "
+                "Grundgesamtheit ist die billigste Absage, und sie wird hier nicht als "
+                "„nichts offen“ gebucht.")
+    return ({f"F{m}" for m in haelt}, {f"F{m}" for m in faellt}, r.stdout)
+
+
+def abgesenkt():
+    """Die Fragmente, deren Durchstich HAELT -- gemessen, nicht abgelesen."""
+    return absenkung()[0]
 
 
 # **The K/L split, DERIVED instead of carried forward** (2026-08-30).
@@ -404,10 +481,21 @@ def haengend(probe=None, still=False, locker=False):
         if v or a:
             print(f"    {f:<4} {v} + {a} = {v + a}")
     a = len(ABSENKUNG_OFFEN)
-    gemessen = ", ".join(sorted(abgesenkt(), key=lambda x: int(x[1:])))
+    haelt, faellt, _ = absenkung()
+    def _liste(s):
+        return ", ".join(sorted(s, key=lambda x: int(x[1:]))) or "keines"
     print(f"\n  verankert       {n:>3}")
     print(f"  Absenkung       {a:>3}   eine Zeile je Fragment, in `The tenth event`;")
-    print(f"                        GEMESSEN sind {gemessen}")
+    print(f"                        GEMESSEN sind {_liste(haelt)}")
+    # **Two different states, and telling them apart is the whole yield of today.** A
+    # fragment without a differential test is one nobody has worked on; one WITH a
+    # differential test whose run FALLS is a discharge that has FALLEN AWAY. Both raise `H`
+    # by one -- but only the second is a step back, and until 2026-08-31 it did not appear in
+    # this output at all, because the counter read the line and not the run.
+    if faellt:
+        print(f"                        GEBAUT, aber der Durchstich FAELLT: {_liste(faellt)}")
+    ohne_lauf = [f for f in ABSENKUNG_OFFEN if f not in faellt]
+    print(f"                        OHNE Differenztest: {_liste(ohne_lauf)}")
     print(f"  ---------------------")
     print(f"  H               {n + a:>3}")
     print()
@@ -504,20 +592,39 @@ if __name__ == "__main__":
                 sys.exit(1)
             print(f"== Rueckwaertsprobe: ok ({was}: weit {weit_vorher} -> {weit}, "
                   f"eng {vorher} -> {eng}) ==")
-        # **The same probe for the SECOND half of `H`** (2026-08-25). Since the lowering
-        # column is derived from `pruefe-emission.sh`, the number rests on a second guard --
-        # and *a derivation nobody has seen fail is a claim about a script.*
-        gemessen = abgesenkt()
-        quelle = (Path(__file__).resolve().parent.parent
-                  / "instrumente" / "pruefe-emission.sh").read_text(encoding="utf-8")
-        ohne = abgesenkt(quelle.replace('lauf "fragment', 'lauf "GENOMMEN'))
-        if not gemessen or ohne:
-            print(f"SPRECHPROBE GESCHEITERT: die Absenkungsspalte antwortet auf einen "
-                  f"herausgenommenen Differenztest nicht ({sorted(gemessen)} -> "
-                  f"{sorted(ohne)}). **Diese Haelfte von H misst nichts.**", file=sys.stderr)
+        # **The same probe for the SECOND half of `H`, and since 2026-08-31 it is a RUN.**
+        #
+        # Until today the probe here replaced `lauf "fragment` by `lauf "GENOMMEN` **in a
+        # string** and checked that the column then went empty. *That showed the regular
+        # expression works.* It could not show what the number is supposed to say -- that the
+        # differential test HOLDS -- because nothing was ever run.
+        #
+        # > **And that is exactly where it broke.** On 2026-08-31 `F06` stood at `N043`, the
+        # > guard was rightly red, and `H` said 4. The old probe was green throughout: the
+        # > `lauf` line had not moved.
+        #
+        # Now both directions come out of the guard's own run:
+        #
+        #   * FORWARD -- `pruefe-emission.sh --absenkung` runs a POISONED `F07` (two boot
+        #     steps swapped) beside the real ones. It checks, it emits, it compiles without a
+        #     warning, and the EXECUTED run says `124356` instead of `123456`. Falls it not,
+        #     the guard ends with `2` and this counter refuses (`_messe_absenkung`).
+        #   * BACKWARD -- the healthy fragments in the same run report `HAELT` and do NOT
+        #     raise `H`. *A probe that only shows the fall also passes when everything falls.*
+        haelt, faellt, _ausgabe = absenkung()
+        if not haelt and not faellt:
+            print("SPRECHPROBE GESCHEITERT: der Waechter urteilt ueber kein einziges "
+                  "Fragment. **Diese Haelfte von H misst nichts.**", file=sys.stderr)
             sys.exit(2)
-        print(f"== Sprechprobe: ok (ohne die Differenztests faellt die Absenkungsspalte "
-              f"von {len(gemessen)} auf 0 gemessene) ==\n")
+        print(f"== Sprechprobe: ok (der Waechter laesst einen vertauschten Durchstich "
+              f"FALLEN und {len(haelt)} heile HALTEN) ==")
+        if faellt:
+            gefallen = ", ".join(sorted(faellt, key=lambda x: int(x[1:])))
+            print(f"== Gemessen: {gefallen} traegt eine `lauf`-Zeile und der Durchstich "
+                  f"FAELLT -- das hebt H ==\n")
+        else:
+            print("== Gemessen: jede `lauf`-Zeile hat einen HALTENDEN Durchstich unter "
+                  "sich ==\n")
         haengend()
     else:
         main()

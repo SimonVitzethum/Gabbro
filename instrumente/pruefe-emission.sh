@@ -35,7 +35,39 @@ export LC_ALL=C
 
 W="$(cd "$(dirname "$0")/.." && pwd)"
 ARB="$(mktemp -d)"
-trap 'rm -rf "$ARB"' EXIT
+
+# **WER MITTEN IM LAUF ABBRICHT, SCHREIBT DAZU, WAS ER NICHT MEHR GEMESSEN HAT**
+# ----------------------------------------------------------------------------
+# (2026-08-31, und der Anlass ist dieser Waechter selbst.)
+#
+# Am 2026-08-31 starb er an `F06`s `N043` in der VIERTEN von zehn Stufen, mit `exit 1`.
+# **Die Stufen 9 und 10 liefen nie, und keine Zeile sagte das.** Dahinter standen zwei
+# Befunde, die zwei Wochen niemand gesehen hat: sechs Dateien, deren erzeugtes C nicht
+# uebersetzt, und eine Marke, die sieben zu niedrig stand.
+#
+# > *Eine leere Grundgesamtheit ist ein gruenes Urteil ueber nichts (W17). Eine
+# > ABGESCHNITTENE sieht aus wie ein Urteil ueber alles.*
+#
+# Der Ruecklaufwert allein kann es nicht sagen: `1` heisst „Befund", und ein Befund in
+# Stufe 4 ist zugleich ein Abbruch fuer die Stufen 5 bis 10. **Also sagt es die Ausgabe.**
+# `messung/RUECKLAUFWERTE.md` fuehrt die Klasse und ihre Zahl (43 von 49 Waechtern koennen
+# so abbrechen); dies hier ist die Form, die sie beantwortet.
+LETZTE_STUFE="Kopf (vor der ersten Stufe)"
+GANZ_DURCH=0
+aufraeumen() {
+    local rc=$?
+    if [ "$rc" != 0 ] && [ "$GANZ_DURCH" = 0 ]; then
+        echo
+        echo "== ABGESCHNITTEN in: $LETZTE_STUFE -- Ruecklaufwert $rc =="
+        echo "   Was DAHINTER steht, wurde NICHT gemessen -- weder ja noch nein. Die volle"
+        echo "   Kette ist: Sprechprobe des Kopfes, die Differenztests, Baugatter, Stufe 9"
+        echo "   (uebersetzt jede emittierende Datei?), Stufe 10 (die Bibliothekskette)."
+        echo "   Ein Ruecklaufwert, der wie ein Befund aussieht, ist hier zugleich ein"
+        echo "   Abbruch fuer den Rest -- messung/RUECKLAUFWERTE.md, Abschnitt zum Schnitt."
+    fi
+    rm -rf "$ARB"
+}
+trap aufraeumen EXIT
 
 # **W1: eine uebersprungene Probe senkt die Zahl, sie laesst sie nicht unberuehrt.**
 # Kein `cc` heisst NICHT „bestanden, uebersprungen" -- es heisst, dass dieser Waechter
@@ -99,6 +131,7 @@ PROBE_B
     rm -rf "$d"
     return $ok
 }
+LETZTE_STUFE="der Sprechprobe des Kopfes"
 echo "== Sprechprobe: koennen die neuen Stufen ueberhaupt fallen? =="
 if ! sprechprobe_ub; then
     echo "== EMISSION: die Sprechprobe haelt nicht -- ein Haken ohne Messung ist schlimmer als keiner =="
@@ -118,13 +151,63 @@ schneide() {
 
 N_DURCHGESTOCHEN=0
 
+# **`--absenkung`: der Waechter beantwortet die Frage, auf der `H` steht** (2026-08-31).
+# -------------------------------------------------------------------------------------
+# `zaehle-pflichten.py` las die Absenkungsspalte bis heute **am QUELLTEXT dieser Datei** ab:
+# `^lauf "fragment(\d+)"`, an der blossen Anwesenheit der Zeile. **Nicht daran, ob der Lauf
+# haelt.** Am 2026-08-31 stand `F06` an `N043` (`measures eich`, ein Traeger, den es nicht
+# gibt), dieser Waechter war deswegen zu Recht ROT -- und `H` sagte weiter 4.
+#
+# > *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine
+# > ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* Solange
+# > die Zeile steht, kann der Lauf fallen und die Zahl bleibt.
+#
+# In diesem Modus laufen NUR die `fragment*`-Durchstiche, und **ein gefallener ist ein
+# ERGEBNIS und kein Abbruch**: der Zaehler braucht alle sechs Antworten, nicht die erste.
+# Je Fragment steht danach eine Zeile `DURCHSTICH fragmentN HAELT` oder `… FAELLT` da.
+NUR_ABSENKUNG=""
+for _a in "$@"; do
+    case "$_a" in
+        --absenkung) NUR_ABSENKUNG=1 ;;
+        *) echo "unbekanntes Argument: $_a -- es gibt nur --absenkung" >&2; exit 2 ;;
+    esac
+done
+
 lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
-    local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
+    local name="$1"
+    if [ -n "$NUR_ABSENKUNG" ]; then
+        case "$name" in fragment*) ;; *) return 0 ;; esac
+        absenkung_messen "$@"
+        return 0
+    fi
     # **Die Zahl wird GEZAEHLT, nicht gepflegt** (2026-08-20). Sie stand als `17` in der
     # Schlusszeile, waehrend achtzehn Einheiten liefen -- dieselbe Klasse wie die Liste, die
     # eine Regel wurde, nur eine Ebene hoeher. *Eine Kennzahl, die jemand nachtragen muss,
     # ist irgendwann falsch.*
     N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
+    LETZTE_STUFE="Differenztest $name"
+    lauf_kern "$@"
+}
+
+# Ein Durchstich, dessen Fall PROTOKOLLIERT statt abgebrochen wird.
+#
+# **`set -e` muss im Kind ausdruecklich wieder an.** Eine Verbundanweisung links von `||`
+# laeuft mit abgeschaltetem `errexit`, und das gilt bis in die Unterschale hinein -- ohne das
+# `set -e` liefe `lauf_kern` dort mit einer anderen Fehlersemantik als im vollen Lauf.
+# *Ein Messmodus, der anders faellt als der gemessene Lauf, misst den Modus.*
+absenkung_messen() {
+    local name="$1" rc=0
+    ( set -e; lauf_kern "$@" ) > "$ARB/$name.protokoll" 2>&1 || rc=$?
+    if [ "$rc" = 0 ]; then
+        echo "DURCHSTICH $name HAELT"
+    else
+        echo "DURCHSTICH $name FAELLT   (Ruecklauf $rc)"
+        sed 's/^/      /' "$ARB/$name.protokoll"
+    fi
+}
+
+lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
+    local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
     local c="$ARB/$name.c"
     echo "== Differenztest: $name =="
 
@@ -1569,11 +1652,56 @@ lauf "beispiel52" "$W/beispiele/52-baugatter.gab" "$TREIBER52" "42 0" \
      's/p->slots\[i\].fuellstand = v;/(void)v;/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 9 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
+# ---------------------------------------------------------------------------------------
+# *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
+# unter `H`, der Zahl, auf der K100s erstes Tor definiert ist.
+#
+# Das Gift TAUSCHT zwei Bootschritte von `F07`: `ipc_tabellen` und `autoritaet_melden`
+# wechseln die Reihenfolge, die Linearitaet bleibt heil (`p2 -> p3 -> p4`). **Damit prueft
+# das Fragment sauber, es emittiert, es UEBERSETZT ohne eine Warnung -- und erst der
+# AUSGEFUEHRTE Lauf sagt `124356` statt `123456`.** Genau das ist die Aussage, die der
+# Zaehler braucht: nicht dass eine Zeile dasteht, sondern dass das erzeugte C rechnet, was
+# das Fragment sagt.
+#
+# *Ein Gift, das schon beim Pruefen faellt, haette dieselbe Antwort aus einem anderen Grund
+# gegeben -- und dann bliebe unbelegt, dass die Ausfuehrungsstufe ueberhaupt mitzaehlt.*
+if [ -n "$NUR_ABSENKUNG" ]; then
+    echo
+    sed -e 's/^    let p3 = ipc_tabellen(p2);$/    let p3 = autoritaet_melden(p2);/' \
+        -e 's/^    let p4 = autoritaet_melden(p3);$/    let p4 = ipc_tabellen(p3);/' \
+        "$W/messung/fragmente/F07.gab" > "$ARB/f7-vertauscht.gab"
+    if cmp -s "$W/messung/fragmente/F07.gab" "$ARB/f7-vertauscht.gab"; then
+        echo "SPRECHPROBE GESCHEITERT: das Gift veraendert F07 gar nicht -- die Probe hat"
+        echo "  NICHTS gemessen, und ein Gleichstand belegt dann nichts."
+        exit 2
+    fi
+    sp_rc=0
+    ( set -e; lauf_kern "sprechprobe7" "$ARB/f7-vertauscht.gab" "$TREIBER7" "123456" \
+        's/    ipc_tabellen();/    \/* geloescht *\//' \
+        "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 4 direct forms, 7 foreign bodies (0 state their duty), 0 narrowings from foreign contracts" \
+    ) > "$ARB/sprechprobe7.protokoll" 2>&1 || sp_rc=$?
+    if [ "$sp_rc" = 0 ]; then
+        echo "SPRECHPROBE GESCHEITERT: ein Durchstich mit VERTAUSCHTEN Bootschritten HAELT."
+        echo "  Dann sagt die Zeile DURCHSTICH ... HAELT nichts ueber den Lauf aus."
+        exit 2
+    fi
+    echo "SPRECHPROBE ok (der vertauschte Durchstich faellt, Ruecklauf $sp_rc)"
+    sed -n -e 's/^  \(4\. Ergebnis:.*\)$/      \1/p' \
+           -e 's/^ *\(erwartet:.*\)$/        \1/p' \
+           -e 's/^ *\(bekommen:.*\)$/        \1/p' "$ARB/sprechprobe7.protokoll"
+    echo
+    echo "== ABSENKUNG: gemessen -- nur die Fragment-Durchstiche, Stufe 9 und 10 nicht =="
+    GANZ_DURCH=1
+    exit 0
+fi
+
 # **Und die Aussage, auf die es bei einem Gatter ankommt: es steht NICHT im C.**
 #
 # *Ein Gatter, das im C landet, ist kein Gatter* -- ein `#if` haette den ganzen Block
 # mitgeliefert und nur den Praeprozessor darueber entscheiden lassen. Hier wird der Baum vor
 # dem Erzeuger gefiltert (`gatter::ohne_gatter`), und was das heisst, wird hier gezaehlt.
+LETZTE_STUFE="Baugatter"
 echo '== Baugatter: `when TESTBUILD` erzeugt im Auslieferungsbau nichts =='
 cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit \
     "$W/beispiele/52-baugatter.gab" > "$ARB/g52-aus.c"
@@ -1601,6 +1729,32 @@ if ! cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/g52-pruef.c" 2> "$A
 fi
 echo "  Pruefbau cc:   ok (-Werror, und die Probe pruefe_puffer_haelt steht darin)"
 
+# **OFFENER BEFUND, aufgedeckt am 2026-08-31 und NICHT gebucht** -- `messung/tor-proben/`.
+# ---------------------------------------------------------------------------------------
+# Sechs der zwoelf Torproben emittieren C, das nicht uebersetzt:
+#
+#     bool pruefe_c(void) { ... return; ... }
+#     error: 'return' with no value, in function returning non-void [-Werror=return-type]
+#
+# Alle zwoelf schreiben `can_fail { if k >= 3 { return; } }`. **Ein `can_fail`-Block ist eine
+# PROBE und liefert ein `bool`; ein leeres `return` darin hat keinen Wert** -- und kein Pass
+# sagt es. `gabbro pruefe` meldet `0 errors, 0 hints`, der Erzeuger schreibt die Zeile
+# unveraendert ins C, und `cc -Werror=return-type` ist der einzige Leser. *Dieselbe Familie
+# wie `N040`, `N041` und `N043`: eine falsche BESTAETIGUNG, und das dritte Werkzeug findet
+# sie.* Die anderen sechs verdecken es -- sie werden schon aus einem anderen Grund abgelehnt.
+#
+# **Und warum es zwei Wochen niemand gesehen hat, ist der zweite Befund:** Stufe 9 wurde
+# nicht erreicht. `pruefe-emission.sh` starb an `F06`s `N043` in Zeile 901 mit `exit 1`, und
+# die Stufen 9 und 10 liefen nie -- *ohne dass eine Zeile sagte, was nicht gemessen wurde.*
+# Der Ruecklaufwert `1` sah aus wie ein Stufenbefund und war zugleich ein Abbruch fuer alles
+# dahinter. **Genau die Klasse, die `messung/RUECKLAUFWERTE.md` unter „Was offen bleibt"
+# fuehrt: ein Waechter, dessen Vorbedingung MITTEN im Lauf wegbricht.**
+#
+# *Nicht als Ausnahme gebucht.* Die Liste unten ist leer und soll es bleiben; sechs Dateien
+# hineinzuschreiben machte aus einer Erzeugerluecke eine gruene Zeile. Der Waechter bleibt
+# rot, bis die Regel steht oder die Proben `return false;` schreiben -- beides gehoert dem,
+# der `messung/tor-proben/` und die `check`-Regeln fuehrt.
+#
 # =======================================================================================
 # **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).
 #
@@ -1619,7 +1773,9 @@ echo "  Pruefbau cc:   ok (-Werror, und die Probe pruefe_puffer_haelt steht dari
 #
 # Die Ausnahmen stehen einzeln und mit Grund da -- und **eine Ausnahme, die nicht mehr
 # noetig ist, faellt ebenfalls auf.** Sonst waechst hier eine zweite Liste nach.
+
 echo
+LETZTE_STUFE="Stufe 9 (jede emittierende Datei uebersetzt)"
 echo "== Stufe 9: jede Datei, die emittiert, muss auch uebersetzen =="
 
 # Datei -> Grund. Eine Ausnahme ist ein BEFUND mit Adresse, kein Freibrief.
@@ -1862,8 +2018,14 @@ MARKE_EMIT=57
 # eine ANDERE Datei; die Vereinigung ist damit hoeher, und Stufe 9 bricht vorher an `F06`
 # ab (`N043`). *Eine Marke, die niemand gemessen hat, waere schlimmer als eine, die faellt* --
 # also steht hier die belegte Zahl, und der naechste volle Lauf nennt die richtige als FUND.
-MARKE_EMIT_M=31
-MARKE_EMIT_M=31
+#
+# **31 -> 38, und der naechste volle Lauf war der vom 2026-08-31 nach `F06`s Heilung.** Der
+# Waechter hat die Zahl selbst als FUND genannt (*"38 statt 31 emittierende Dateien in
+# `messung/*/` -- die Marke gehoert nachgezogen"*). Die Zeile stand ZWEIMAL untereinander da,
+# beide Male mit 31 -- der Merge hat sie doppelt gelegt, und die zweite ueberschrieb die
+# erste mit demselben Wert. *Ein Doppeleintrag, der nicht auffaellt, weil beide Zweige
+# dasselbe massen, ist der Vorbote eines, bei dem sie es nicht tun.*
+MARKE_EMIT_M=38
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -1998,6 +2160,7 @@ echo "  Sprechprobe:  ok (ein fehlender Prototyp faellt an cc -Werror)"
 # > das Wort `pub` an keiner Stelle: ein privater Rechenhelfer erschien im C als Symbol mit
 # > aeusserer Bindung, und der ganze Innenraum einer Bibliothek lag auf dem Tisch des Binders.
 echo
+LETZTE_STUFE="Stufe 10 (die Bibliothekskette)"
 echo "== Stufe 10: die Bibliothekskette, mit Binder =="
 N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
 BIB="$ARB/bib"; mkdir -p "$BIB"
@@ -2111,6 +2274,7 @@ fi
 grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 2; }
 echo "  8. Sprechprobe B: ok (N039 sagt ab, und der Binder haette es sonst getan)"
 
+GANZ_DURCH=1
 echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_nenner uebersetzen, $n_umg umgekehrte Probe(n) =="
 echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"
 echo "  AUSGEFUEHRT und mit einer Handschrift verglichen. Die Regel darueber ist"
