@@ -183,7 +183,8 @@ def uebersetzt_c(text):
     """Does this C pass `cc -Werror` at BOTH levels? -> `(ok, first message)`.
 
     The C never touches the disk: `-x c -` reads it from the pipe. *A temporary file is a
-    second place where a run can leave something behind*, and this one runs 160 times.
+    second place where a run can leave something behind*, and this one runs twice per
+    emitting file, on every acceptance run.
     """
     for stufe in CC_STUFEN:
         r = subprocess.run(["cc"] + CC_SCHALTER + [stufe, "-x", "c", "-c", "-o", os.devnull, "-"],
