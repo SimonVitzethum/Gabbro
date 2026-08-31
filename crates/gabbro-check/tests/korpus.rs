@@ -234,6 +234,20 @@ const BENANNT: &[&str] = &[
     // > refused them. *A finding that only the third tool can see is not a finding, it is a
     // > surprise.*
     "N041",
+    // **`N043` -- the report line of `check kstack_eichung`, and it names a carrier that is
+    // in no excerpt.**
+    //
+    // `FRAGMENTE.md`:1166 writes `measures eich.leer, eich.voll, eich.tiefe, eich.gelaufen`
+    // and `floor eich.gelaufen == 1`. **There is no `eich` anywhere in the file** -- the
+    // calibration reports four fields of something that was never brought over. Same shape
+    // as `N040` above and found at the same place (`messung/fragmente/F06.gab`), one week
+    // later.
+    //
+    // > **And the second subject weighs more than the first:** `N021` and `N022` find their
+    // > quantity by matching a name against `measures`, so this excerpt's `floor` clause has
+    // > been outside every rule that reads the list. *A quantity nobody declared is also a
+    // > quantity nobody can check* -- and until 2026-08-31 nothing said so.
+    "N043",
 ];
 
 #[test]
