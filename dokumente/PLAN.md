@@ -4423,3 +4423,251 @@ stellen.
 > solches Paar entgegen (`$4 Erwartet`, `$5 Gift-sed`), 24 davon stehen im Baum. *Die dritte
 > Form ist keine neue Maschine, sie ist die Verallgemeinerung einer vorhandenen — von je
 > Übersetzungseinheit auf je Absenkungsbehauptung.*
+
+---
+---
+
+# OFFEN — das vollständige Register, Stand `6633a6d` (2026-09-01, 23:30)
+
+*Angelegt auf Verlangen. **Jede Zahl hier ist gemessen**, und wo eine fehlt, steht das
+dabei. Sortiert nach der Achse, die eine Durchsprache dieses Abends freigelegt hat:*
+
+> **Nicht „fertig gegen unfertig", sondern ENTWORFEN gegen UNGEBAUT. Das Ungebaute ist eine
+> Frage der Zeit. Das Entworfene nicht.**
+
+## O0 — Der Befund, der über allem steht
+
+Drei Zahlen aus verschiedenen Ecken, dieselbe Gestalt:
+
+```
+Abnahme                  45 von 92 gefaehrlichen Stellen besucht     49 %
+pruefe-luecken.py         0 von 15 Verdrehungen je angesehen          0 %
+zaehle-verdrahtung.py     3 von  6 Startkorpusfaellen sichtbar       50 %
+```
+
+> **Die Prüfschicht ist inzwischen die Schicht mit der schlechtesten Abdeckung — und sie ist
+> die, deren Zahlen alle anderen tragen.** *„Alle Wächter rc=0" war korrekt und war zugleich
+> eine Aussage über die Hälfte.*
+
+Keine Kritik am Bau, sondern die vorhersehbare Folge davon, **dass Wächter schneller
+entstehen als ihre Selbstprüfung.** Daraus folgt die Reihenfolge: **die 49 % vor allem
+anderen** — *jede Zahl unten wird durch sie neu bewertet, nach oben oder nach unten.*
+
+---
+
+# TEIL A — ENTWURFSSCHWÄCHEN (keine Baustellen)
+
+## OA1 — Der Wortschatz ist unverwaltet · **das Größte**
+
+```
+234 Woerter (C: 32, Ada: 70)   ·   64 Formen im Erzeugnis   ·   EIN Absenkungssatz
+```
+
+Nicht „noch nicht bewiesen", sondern **eine Wachstumsregel**: Totalität wird mit Vokabular
+bezahlt, jede neue Rekursionsform bekommt ein Konstrukt statt eines Terminierungsarguments.
+
+> **Es gibt keine Regel, die das bremst, und keine Zahl, die es misst** — nicht weil 234 zu
+> viel wären, sondern weil die Zahl steigt und niemand sie führt.
+
+- [ ] Eine Ratsche: *ein neues Wort nennt entweder das Wort, das es ablöst, oder die
+      Messung, warum keine vorhandene Form es trägt.*
+- [ ] `by decreasing e` steht als dritter Laufmodus und ist ein **Beweiszeuge**. *Drei Modi,
+      zwei Läufe.*
+
+## OA2 — Domänen sind geschlossen · **der schärfste Widerspruch zum Ziel**
+
+Siebzehn Wörter, keine benutzerdefinierten.
+
+> **Eine neue Datenstruktur braucht den SPRACHAUTOR.** Für ein Ziel, das *„der Nutzer
+> beweist nur seine eigene Logik"* heißt, ist das der schärfste Widerspruch im Entwurf.
+
+- [ ] Eine Domäne als **deklarierte Erreichbarkeit über einem Tabellenfeld, mit
+      Wohlfundiertheitsnachweis an der Deklaration.** Ein Wort statt siebzehn, ein
+      parametrischer Absenkungssatz statt siebzehn. *Löst zugleich `zeugnis.rs:758` und die
+      `mappings of`-Schranke.*
+
+## OA3 — Der Ausstieg ist binär
+
+Entweder die Sprache trägt es, oder man ist bei `extern`. **Ada hat einen Abstiegspfad** —
+was nicht bewiesen wird, wird geprüft und bleibt sicher.
+
+> **Und `~` zeigt, wie billig das passiert: eine Maskeninvertierung, ein Zeichen in C, und
+> man ist draußen.**
+
+- [ ] Das Prinzip übernehmen, nicht die Laufzeitausnahme: eine Pflicht, die statisch nicht
+      fällt, wird eine **benannte Laufzeitabsage** statt `extern`. *Der Ausstieg bleibt in
+      der Sprache und ist zählbar.*
+
+## OA4 — Verdrahtung fehlt systematisch · **die härteste Kritik**
+
+Achtmal an einem Abend, an unabhängigen Stellen: `Griff/Freiliste` · `boot/backed` ·
+`Prüfer/Erzeuger` · `lean/Resolver` · `walk/Änderung` · `Entry/Lock` · `breite_von/zwei
+Verteiler` · `Isabelle/Lean`.
+
+**197 gezählte Stellen** über fünf Formen mit fünf Nennern — *und die Zahl ist eine untere
+Schranke: von den sechs Startkorpusfällen sieht das Werkzeug drei.*
+
+> **Das ist keine Ansammlung von Fehlern, sondern eine Aussage über den Entwurfsvorgang:
+> Konstrukte entstehen einzeln und richtig, ihre Beschränkung untereinander gehört zu keinem
+> Konstrukt und entsteht deshalb nie.**
+>
+> **Eine Sprache IST im Wesentlichen ihre Kompositionsregeln.**
+
+## OA5 — Keine Parametrizität · **gemessen, und die Frage ist erledigt**
+
+```
+77 echte Programmdateien, table/format mit >=2 Feldern:
+68 Deklarationen, 62 Skelette, davon mehrfach: 5
+```
+
+**Cogents Falle ist nicht zugeschnappt. Monomorphie ist richtig** — bis der Korpus wächst.
+*Die Messung gehört wiederholt, wenn Caprock ganz übersetzt ist.*
+
+## OA6 — Die zentrale Wette ist unentschieden, und der Grund ist `n = 1`
+
+> Der Wortschatz ist die amortisierte Spezifikation. Das geht auf, wenn viele Programme
+> wenige Konstrukte benutzen — und schief, wenn jedes neue Problem ein Wort braucht.
+
+**Sprache und Korpus sind zusammen gewachsen; jede Stelle, an der etwas fehlte, bekam ein
+Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
+
+> **Der erste ungesehene Port entscheidet die Frage** — und bis dahin ist jede Aussage über
+> Gabbros Ertrag eine Selbstauskunft.
+
+- [ ] Ein Programm portieren, das nicht aus diesem Kopf stammt. **Kein Kästchen im Baum,
+      sondern die Bedingung, unter der alle anderen etwas bedeuten.**
+
+---
+
+# TEIL B — UNGEBAUT, mit Namen und Zahl
+
+## OB1 — Die Prüfschicht (`49 %`) · **läuft, hat Vorrang**
+
+- [ ] `pruefe-luecken.py`: **null von fünfzehn Verdrehungen je gefahren.** Der Zweig
+      `92 von 92` ruht auf einer Sprechprobe. *Dieselbe Form wie der maskierende `panic!`.*
+- [ ] Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**
+- [ ] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
+      hat?** Heute unbekannt.
+- [ ] `pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
+      `Wenn`/`Match`-Arme → **2^Tiefe**. *Dritter Befund in `m2` über denselben Gegenstand —
+      die Frage ist nicht die Stelle, sondern ob `m2` einen eigenen Abstiegsbegriff führt.*
+
+## OB2 — Der Erzeuger als Vertrauensbasis · **läuft**
+
+- [ ] `breite_von` mit `_ => 8` — **liegt unter allen vier Hardwarepunkten.** Breite außerhalb
+      der Aufzählung muss `C001` sein, kein Vorgabewert.
+- [ ] Zwölf Wildcards: **1 echter Befund, 6 tragende Standardzweige, 4 Korpuslücken.**
+- [ ] `runs online` senkt ab und schreibt **in einen Kommentar**, dass es das Versprochene
+      nicht tut. `device … at dma` sagt dasselbe Versagen unter Namen ab. → `C001`.
+
+## OB3 — Das Zeugnis · **eigener Riegel, nicht Erzeugerposten**
+
+```
+zwei verschiedene Programme (threads / queue r)  ->  EIN md5: 152d61a6
+```
+
+> **Damit ist das Zeugnis als Beweisträger nicht schwach, sondern unbrauchbar: es belegt
+> eine Äquivalenzklasse, nicht ein Programm.** Jeder Plan, der Translation Validation über
+> das Zeugnis führt — und das ist der billigste Weg zur Verifikation —, steht auf dieser
+> einen Eigenschaft. *Es ist die Frage, ob der Verifikationspfad überhaupt einen Träger hat.*
+
+## OB4 — Bitmanipulation · **ein Posten, nicht drei**
+
+- [ ] `~` existiert nicht (`L006`), **und** `u32::max` im Ausdruck emittiert `u32->max`, das
+      nicht übersetzt. Zusammen: **keine Maskeninvertierung im Rumpf schreibbar** — während
+      der Erzeuger sie für `reg`-RMW selbst baut, korrekt und mit Cast.
+- [ ] `w1c` steht unter *Typen* und gehört zu `class`. **Solange es ein Typ ist, ist ein RMW
+      darauf typkorrekt und falsch** — und der RMW-Erzeuger baut ihn.
+- [ ] RMW auf ein Gerät ist drei Erzeugerschritte, **die Atomarität steht nirgends.**
+
+## OB5 — Der Bau, und `0 computed edge(s)` · **Voraussetzung, nicht Nebensache**
+
+> Der Bau rechnet den Graphen und verbindet nichts. **Solange kein Programm aus zwei
+> Einheiten besteht, ist jede Aussage über Modularität — Effektableitung über den
+> Aufrufgraphen, Annahmen-Import, Profile — an einem Fall gemessen, den es noch nicht gibt.**
+
+- [ ] Die Kante zwischen zwei Einheiten. `emit --unit` gibt es nicht.
+- [ ] Kein `--with` im Bau, `unit … program` nie gelaufen, `--testbuild` ohne Probe.
+
+## OB6 — Die Schreiblast · `705 → 0` bei bleibenden `188`
+
+```
+Buchfuehrung  705 (67 %)      eigene Logik 188 (18 %)      Hardware 93 (9 %)
+87 % der Kostenzusagen gepolstert, 397 davon ueber 50 %
+```
+
+- [ ] **`effects` zuerst** (Quellanalyse, 462 Stellen) — *nicht `costs`, weil eine
+      abgeleitete Kostenzahl jede offene Erzeugerstelle erbt, und zwar unsichtbar.*
+- [ ] Vorher: `costs` **unter einen Wächter** (gemessene Zahl, wie `377/377`), sonst hört die
+      Schranke auf, ein Riegel zu sein.
+- [ ] Der Zwischenzustand: **beide Register vergleichen, bevor die Deklaration fällt.** *`E005`
+      feuert nur bei Widerspruch, nicht bei Auslassung.*
+- [ ] Überdeklaration ist **still** — und sie speist den Sperrrangpass, macht ihn also
+      **strenger als nötig.**
+
+## OB7 — Beta-Fläche
+
+- [ ] Tutorial, `gabbro new`, „meintest du"-Hinweise. **Acht Anläufe für „addiere zwei
+      Zahlen"**, von der Person mit maximalem Vorwissen.
+- [ ] Die Fahnen sind nur teilweise englisch; **kein Wächter erzwingt einen englischen
+      Erstnamen für einen neuen Unterbefehl.**
+- [ ] `at port` ist **abgesagt, nicht gelöst** — x86-I/O findet außerhalb der Sprache statt.
+
+## OB8 — Hardware, die drei Schichten der Seitentabelle
+
+- [ ] **TLB** — kein Konstrukt nennt `invlpg`/`TLBI`/Shootdown. *Billig, real ausnutzbar,
+      kein Beweisanteil.*
+- [ ] **Erhaltung** — die Invariante hängt am Abstieg statt an der Änderung. *Als Induktion
+      geführt braucht sie keine Quantifizierung über die Domäne.*
+- [ ] **Selbstbezug** — ungelöst, auch bei seL4.
+- [ ] `assume … arch` ist gebaut; **sieben der acht Konjunktionen sind nicht geteilt.**
+- [ ] **Plattformannahmen pro Programm NULL** — heute sechs von sechs. Es fehlt eine
+      Importform, die Annahmen mitträgt statt sie zu kopieren.
+
+## OB9 — Zwei Entscheidungen beim Ordner
+
+- [ ] **`H = 4`** — alle vier hängen an Programmen, die Gabbro nicht annimmt, jede Absage
+      nachgemessen. *Sieben von zehn buchen, oder den vier eine eigene Spalte.*
+- [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen.
+
+---
+
+# TEIL C — Was der Plan über sich selbst weiß
+
+## OC1 — Die Rate, gemessen
+
+```
+Fenster                Bahnen   neue Punkte   je Bahn
+08-30 19:48 - 03:00      14        +11         +0,79
+08-31 03:00 - 11:00      13        +12         +0,92
+08-31 11:00 - 17:00       8         +3         +0,38
+08-31 17:00 - 23:29      17         +0          0,00
+
+offene Punkte  241 -> 267 in 27,7 Stunden ueber 52 Bahnen
+```
+
+**Die Liste ist gewachsen, nicht geschrumpft** — bei 0,8 neuen Punkten je Bahn schließt sie
+sich nicht. *Das ist keine Schlamperei, das ist die Bauart: jede Bahn misst etwas, das
+vorher niemand gemessen hat, und findet dort etwas.*
+
+**Aber die Rate fällt.** Bei 0,3 je Bahn und ~20 min je Bahn (zwei parallel):
+
+```
+~30 benannte Bauten  ->  10 h  +  Nachwuchs  ->  rund 14 Stunden
+```
+
+**Belastbar ist nur die untere Schranke: unter 14 Stunden wird es nicht.** Die obere hängt
+an dem, was `OB1` über die Prüfschicht herausfindet — *und die `0,00` der letzten sechs
+Stunden ist verdächtig, weil in dem Fenster mehr Plan geschrieben als gebaut wurde.*
+
+## OC2 — Die Einordnung, gegen die dieser Plan geschrieben ist
+
+Das Feld ist **Cogent, Habit, Austral, ATS, SPARK** — nicht Rust, Go, Carbon.
+
+> **Ausdrucksstärker an der Hardware als alle außer Habit, disziplinierter in der Diagnostik
+> als alle, schwächer bewiesen als Cogent und SPARK, und das einzige mit ernsthafter
+> Messkultur.**
+
+*Die meisten Sprachen dieser Nische sterben, weil niemand misst, was sie kosten. Diese misst
+— und zieht die eigenen Zahlen zurück, wenn sie falsch waren.* **Ob das reicht, hängt daran,
+ob die Messung bald auf etwas trifft, das nicht aus demselben Kopf stammt** (`OA6`).
