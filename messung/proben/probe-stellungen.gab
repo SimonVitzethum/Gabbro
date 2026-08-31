@@ -1,0 +1,194 @@
+-- Die neun Quantorendomaenen in den STELLUNGEN, die `M109` nicht liest.
+--
+-- `messung/proben/probe-neun-domaenen.gab` traegt alle neun in `ensures` -- der einzigen
+-- Stellung, die `M109` liest. **Diese Datei ist ihr Gegenstueck**: dieselben neun Domaenen
+-- in `requires`, in einer `invariant` und im Rumpf einer `spec fn`.
+--
+-- Der Zweck ist die Messung und nicht das Programm. Je Zelle wird der GRUNDNAME des Orts
+-- durch `zzznix` ersetzt und je Zelle der TYP des Orts vertauscht; gemessen wird, was der
+-- Pruefer dazu sagt. Die Tafel steht in `messung/DOMAENENSTELLUNGEN.md`.
+--
+-- **Drei Zellen fehlen, und sie fehlen aus einem Sprachgrund**: `queue`, `elems of` und
+-- `fields of` in einer `table`-`invariant` braeuchten einen Verbund bzw. ein Format, an das
+-- die Tabelle herankommt -- eine `invariant` spricht ueber `Self` und ueber andere
+-- Traeger, nicht ueber Parameter, die es dort nicht gibt. *Die Zelle ist nicht ungemessen,
+-- sondern unformulierbar; sie steht so in der Tafel.*
+
+module messung::stellungen {
+
+const NKNOTEN : u32 = 64;
+const NRING   : u64 = 32;
+const LEER    : u32 = 64;
+
+type RingNr = u32 in 0 ..< 32;
+
+table Knoten count NKNOTEN {
+    tree { parent elter, child erstes_kind, sibling naechstes_geschwister }
+
+    slot {
+        belegt                : bool,
+        marke                 : u32,
+        elter                 : option index into Knoten,
+        erstes_kind           : option index into Knoten,
+        naechstes_geschwister : option index into Knoten,
+    }
+
+    -- 1 -- `slots of` in einer `invariant`
+    invariant s1_slots cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].marke == 0;
+
+    -- 2 -- `chain(a, b) in` in einer `invariant`
+    invariant s2_chain cost O(n) runs offline :
+        forall s in slots of Self :
+            forall x in chain(erstes_kind, naechstes_geschwister) in Self.slots[s] :
+                Self.slots[x].belegt;
+
+    -- 3 -- `descendants of` in einer `invariant`
+    invariant s3_descendants cost O(n) runs offline :
+        forall s in slots of Self :
+            !exists x in descendants of Self.slots[s] : !Self.slots[x].belegt;
+
+    -- 4 -- `ancestors of` in einer `invariant`
+    invariant s4_ancestors cost O(n) runs offline :
+        forall s in slots of Self :
+            forall x in ancestors of Self.slots[s] : Self.slots[x].belegt;
+
+    -- 8 -- `threads` in einer `invariant`
+    invariant s8_threads cost O(n) runs online :
+        forall t in threads : Self.slots[0].belegt;
+}
+
+type Ring = {
+    plaetze : [RingNr; NRING],
+    kopf    : u32,
+    zahl    : u32,
+};
+
+format Wort endian little {
+    gueltigkeit : bool @0,
+    schreibbar  : bool @1,
+    frei        : u64 @[11:2]  reserved,
+    rahmen      : u64 embeds [51:12] scale 4096,
+    hoch        : u64 @[63:52] reserved,
+}
+
+walk Baum levels 2 {
+    node : [Wort; 512],
+    down : rahmen when it.gueltigkeit && !it.schreibbar,
+    leaf : it.gueltigkeit && it.schreibbar,
+
+    -- 9 -- `mappings of` in einer `invariant`
+    invariant s9_mappings cost O(n) runs offline :
+        forall m in mappings of Self : m.gueltigkeit;
+}
+
+-- ============================================================================
+-- Stellung `requires` -- alle neun
+-- ============================================================================
+
+impl fn r1_slots(k : ptr<normal, rw> Knoten)
+    requires forall s in slots of k : k.slots[s].marke == 0
+    effects  { reads k.slots, writes k.slots }
+    costs    <= 4 ops
+{
+}
+
+impl fn r2_chain(k : ptr<normal, rw> Knoten, p : index into Knoten)
+    requires forall x in chain(erstes_kind, naechstes_geschwister) in k.slots[p] :
+                 k.slots[x].belegt
+    effects  { reads k.slots, writes k.slots }
+    costs    <= 4 ops
+{
+}
+
+impl fn r3_descendants(k : ptr<normal, rw> Knoten, s : index into Knoten)
+    requires !exists x in descendants of k.slots[s] : k.slots[x].belegt
+    effects  { reads k.slots, writes k.slots }
+    costs    <= 4 ops
+{
+}
+
+impl fn r4_ancestors(k : ptr<normal, rw> Knoten, s : index into Knoten)
+    requires forall x in ancestors of k.slots[s] : k.slots[x].belegt
+    effects  { reads k.slots, writes k.slots }
+    costs    <= 4 ops
+{
+}
+
+impl fn r5_queue(r : ptr<normal, rw> Ring)
+    requires forall j in queue r : r.plaetze[j] != LEER
+    effects  { reads r, writes r }
+    costs    <= 4 ops
+{
+}
+
+impl fn r6_fields(k : ptr<normal, rw> Knoten)
+    requires forall f in fields of Wort : k.slots[0].marke == 0
+    effects  { reads k.slots, writes k.slots }
+    costs    <= 4 ops
+{
+}
+
+impl fn r7_elems(r : ptr<normal, rw> Ring)
+    requires forall j in elems of r.plaetze : r.plaetze[j] != LEER
+    effects  { reads r, writes r }
+    costs    <= 4 ops
+{
+}
+
+impl fn r8_threads(k : ptr<normal, rw> Knoten)
+    requires forall t in threads : k.slots[0].belegt
+    effects  { reads k.slots, writes k.slots }
+    costs    <= 4 ops
+{
+}
+
+impl fn r9_mappings(w : ptr<normal, rw> Baum)
+    requires !exists m in mappings of w : m.schreibbar && !m.gueltigkeit
+    effects  { writes w }
+    costs    <= 4 ops
+{
+}
+
+-- ============================================================================
+-- Stellung `spec fn =` -- alle neun
+-- ============================================================================
+
+spec fn p1_slots(k : ptr<normal, r> Knoten) -> bool
+    effects { pure }
+    = forall s in slots of k : k.slots[s].marke == 0;
+
+spec fn p2_chain(k : ptr<normal, r> Knoten, p : index into Knoten) -> bool
+    effects { pure }
+    = forall x in chain(erstes_kind, naechstes_geschwister) in k.slots[p] :
+          k.slots[x].belegt;
+
+spec fn p3_descendants(k : ptr<normal, r> Knoten, s : index into Knoten) -> bool
+    effects { pure }
+    = !exists x in descendants of k.slots[s] : k.slots[x].belegt;
+
+spec fn p4_ancestors(k : ptr<normal, r> Knoten, s : index into Knoten) -> bool
+    effects { pure }
+    = forall x in ancestors of k.slots[s] : k.slots[x].belegt;
+
+spec fn p5_queue(r : ptr<normal, r> Ring) -> bool
+    effects { pure }
+    = forall j in queue r : r.plaetze[j] != LEER;
+
+spec fn p6_fields(k : ptr<normal, r> Knoten) -> bool
+    effects { pure }
+    = forall f in fields of Wort : k.slots[0].marke == 0;
+
+spec fn p7_elems(r : ptr<normal, r> Ring) -> bool
+    effects { pure }
+    = forall j in elems of r.plaetze : r.plaetze[j] != LEER;
+
+spec fn p8_threads(k : ptr<normal, r> Knoten) -> bool
+    effects { pure }
+    = forall t in threads : k.slots[0].belegt;
+
+spec fn p9_mappings(w : ptr<normal, r> Baum) -> bool
+    effects { pure }
+    = !exists m in mappings of w : m.schreibbar && !m.gueltigkeit;
+
+}
