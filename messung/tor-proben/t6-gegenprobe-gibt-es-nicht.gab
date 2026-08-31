@@ -1,0 +1,17 @@
+-- W24-Vorlauf: `counterprobe … expects` nennt eine Sonde, die nirgends steht.
+module w24::t6 {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim        "Die Gegenprobe nennt einen Namen."
+    measures     k
+    gates        tor
+    can_fail     { if k >= 3 { return; } }
+    floor        k >= 1
+    counterprobe "so faellt sie" expects gibt_es_nicht
+}
+
+}

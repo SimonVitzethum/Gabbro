@@ -1,0 +1,16 @@
+-- W24-Vorlauf: `floor` nennt eine Groesse, die es nicht gibt.
+module w24::t7 {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Boden nennt einen Namen, der nirgends steht."
+    measures k
+    gates    tor
+    can_fail { if k >= 3 { return; } }
+    floor    gibt_es_nicht >= 1
+}
+
+}
