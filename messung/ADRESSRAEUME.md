@@ -14,9 +14,15 @@ ankommt, weil kein Gegenbeispiel geschrieben wurde, ist keine Zusage.*
 
 ## §1 Die Stelle
 
-`crates/gabbro-check/src/emit.rs`:3702, `fn ctyp`. Der Zweig für `TypExpr::Zeiger(z)` liest
+`crates/gabbro-check/src/emit.rs`, `fn ctyp`. Der Zweig für `TypExpr::Zeiger(z)` liest
 genau zwei Dinge aus `z`: `z.ziel` (für den Zieltyp) und `z.rechte` (für das `const`).
-**`z.raum` steht nicht darin.** Der ganze Zweig steht bei :3801–3823.
+**`z.raum` steht nicht darin.**
+
+> **Die Zeilennummern hier sind die des Standes NACH dem Bau von §8** (`26cd71f`): `fn ctyp`
+> bei :3734, der Zeigerzweig bei :3828–3854, `fn geraet` bei :2487 mit seinen drei Absagen bei
+> :2507 (`at normal`), :2537 (`at port`) und :2548 (`at dma`). *Zur Messzeit standen sie 31
+> Zeilen höher — die Differenz ist die Absage selbst, und sie steht hier, damit niemand die
+> alte Zahl nachschlägt und die neue Regel findet.*
 
 ```rust
 let konst = if z.rechte.iter().any(|r| matches!(r,
@@ -24,9 +30,9 @@ let konst = if z.rechte.iter().any(|r| matches!(r,
 Some(format!("{konst}{ziel} *"))
 ```
 
-`grep -n 'Raum::' crates/gabbro-check/src/emit.rs` liefert **zwei** Treffer, beide in
-`fn geraet` (:2507, :2516) und beide über `device … at <raum>` — **keiner über einen
-Zeigertyp.**
+`grep -n 'Raum::' crates/gabbro-check/src/emit.rs` lieferte zur Messzeit **zwei** Treffer,
+beide in `fn geraet` und beide über `device … at <raum>` — **keiner über einen Zeigertyp.**
+(Seit §8 sind es drei, und der dritte ist die Absage.)
 
 ## §2 Die Gegenprobe: sechs Räume, ein Ziel, ein Rumpf
 

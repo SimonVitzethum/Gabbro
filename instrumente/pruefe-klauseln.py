@@ -168,7 +168,7 @@ ERWARTET = {
     "rueckgabe":    ("TOT", "Der Ergebnistyp eines `axiom` (G2); ungelesen."),
     # **`scale` ROSE on 2026-08-31, and again this guard said so before anyone thought of
     # it.** The reader is `erzeugernamen.rs`: whether the generator forms a writer
-    # `{F}_setz_{f}` for a `format` field hangs on exactly this clause (`emit.rs`:3310 --
+    # `{F}_setz_{f}` for a `format` field hangs on exactly this clause (`emit.rs`:3342 --
     # with `scale K` the way back would be a division, and whether a value divides without a
     # remainder is not said by the declaration). **`N042` has to know it**, or it would count
     # a name the generator never writes -- a refusal without a defect.

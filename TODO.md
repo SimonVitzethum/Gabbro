@@ -4722,6 +4722,38 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
 
 ---
 
+## Aus den zwei Erzeugerfehlern des 2026-08-31 — [`messung/ADRESSRAEUME.md`](messung/ADRESSRAEUME.md), [`messung/ERZEUGERNAMEN.md`](messung/ERZEUGERNAMEN.md)
+
+- [ ] **`at port` hat keine Absenkung, und `in`/`out` zu bauen ist heute nicht gedeckt.**
+      `SPRACHE.md` sagt seit langem *„`at port` lowers accesses to `in`/`out` instead of to
+      volatile loads/stores"*; der Erzeuger schrieb stattdessen `*(volatile uint8_t
+      *)(d->basis + 0x3FD)` — **die Portnummer als Speicherversatz**. Seit heute wird
+      `device … at port` abgewiesen (`C001`, `beispiele/gift/416`), und ein Rumpf mit
+      `ptr<port, …>` ebenso (`beispiele/gift/415`). *Die Absage ist die ehrliche Antwort und
+      nicht die Absenkung:* der Korpus hält **null** `at port`-Geräte, und `in`/`out`
+      brauchen eine Portnummer, die ein Verbundfeld hinter einem Zeiger nicht ist. **Der
+      Auslöser ist ein Programm, kein Termin** — sobald ein `device … at port` geschrieben
+      wird, wird die Absenkung fällig, und mit ihr die `arch x86_64`-Pflicht aus
+      `SPRACHE.md`:2189, die heute ebenfalls nicht gehalten wird.
+
+- [ ] **Ein `ptr<mmio, …>` auf einen gewöhnlichen Verbund senkt zu einem gewöhnlichen
+      Ladebefehl ab.** `ctyp` liest `z.raum` für **keinen** Raum; dass `mmio` trotzdem
+      ankommt, liegt allein daran, dass jeder saubere `ptr<mmio, …>` im Korpus auf einen
+      `device`-Typ zeigt, und das `volatile` aus der *Geräteabsenkung* kommt. **Die drei
+      Gegenbeispiele liegen in `gift/`** und fallen aus anderen Gründen —
+      `messung/ADRESSRAEUME.md` §3/§6. *Kein gemessener Mangel, also heute keine Absage:*
+      der Posten steht hier, damit der erste `ptr<mmio, …>` auf einen Nicht-Geräte-Typ nicht
+      still durchgeht, sondern gegen diese Zeile läuft.
+
+- [ ] **`{T}_speicher` steht nicht in der `N042`-Aufzählung, und der Preis ist eine Probe.**
+      Der Erzeuger schreibt `static {T} {T}_speicher;` nur, wo die Quelle die Tabelle beim
+      NAMEN nennt (`emit.rs`:2244) — jene Menge lebt in den `Namen` des Erzeugers und nicht
+      im Baum. Ein gelisteter Name, den der Erzeuger nie schreibt, wäre eine Absage ohne
+      Mangel, also steht er nicht in der Liste. **Was durchgeht, steht als
+      `beispiele/gift/414` mit dem Vertrag `-- erwartet: cc` da**: Prüfer schweigt, `cc`
+      weist ab. *Zu heilen wäre es, indem der Erzeuger seine `tabellenglobal`-Menge an den
+      Pass reicht — eine Umkehrung der Richtung, in der die beiden heute stehen.*
+
 ## Aus Bahn V des Vollständigkeitsdurchlaufs, 2026-08-31 (`dokumente/PLAN-VOLLSTAENDIGKEIT.md` §7)
 
 - [ ] **Acht `UNGEDECKT`-Zellen gehören dem PRÜFER, und alle acht sind Giftproben, die

@@ -13,7 +13,7 @@
 --
 -- und alle sechs mit `__attribute__((pure))`. Bei `port` ist das nicht ein fehlendes
 -- `volatile`, sondern die gegenteilige Zusage: der Uebersetzer darf den zweiten Ruf
--- streichen. `ctyp` liest `z.raum` fuer KEINEN Raum (`emit.rs`:3801) -- fuer fuenf der sechs
+-- streichen. `ctyp` liest `z.raum` fuer KEINEN Raum (`emit.rs`:3828, der Zeigerzweig) -- fuer fuenf der sechs
 -- ist das richtig, und `messung/ADRESSRAEUME.md` §3 rechnet jeden einzeln nach.
 --
 -- WARUM DIE ABSAGE UND NICHT DIE ABSENKUNG

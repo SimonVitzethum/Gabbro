@@ -18,27 +18,31 @@ hat die Familie ausgemessen: es sind **neun**, und eine zehnte fällt ausdrückl
 
 | Träger | gebildeter C-Name | Stelle |
 |---|---|---|
-| `format F` | `F` (Verbund) | :3032 |
-| `format F`, Feld `f` | `F_f` (Leser) | :3077, :3297 |
-| `format F`, Feld `f` | `F_setz_f` (Schreiber, nur ohne `scale`) | :3085, :3312 |
-| `format F` | `F_gueltig` (Prüfkörper) | :3374 |
+| `format F` | `F` (Verbund) | :3064 |
+| `format F`, Feld `f` | `F_f` (Leser) | :3109, :3329 |
+| `format F`, Feld `f` | `F_setz_f` (Schreiber, nur ohne `scale`) | :3117, :3344 |
+| `format F` | `F_gueltig` (Prüfkörper) | :3406 |
 | `tagged type T`, Variante `v` | `T_v` (Aufzählungswert) | :2185 |
 | `tagged type T` | `T_marke` (Aufzählung), `T` (Verbund) | :2185, :2204 |
 | `table T` | `T_slot`, `T` | :2232, :2236 |
 | `table T` | `T_speicher` (nur wenn beim Namen genannt) | :2244 |
 | `table T` | `T_NONE` (nur wenn `count < 2^32`) | :2263 |
-| `table T`, `ops` | `T_insert`, `T_remove` | :2369, :2395 |
+| `table T`, `ops` | `T_insert`, `T_remove` | :2369, :2394 |
 | `reason R`, Fall `c` | `R_c`, `R` | :1881 |
-| `device D` | `D` (Griff) | :2565 |
-| `device D`, `bank B`, Register `r` | `D_B_r`, `D_B_setz_r` | :2610, :2622 |
-| `device D`, `transition x` | `D_x` | :2862 |
-| `lock L` | `L_nimm`, `L_gib`, (`L_nimm_geteilt`, `L_gib_geteilt`) | :1845, :1851 |
+| `device D` | `D` (Griff) | :2597 |
+| `device D`, `bank B`, Register `r` | `D_B_r`, `D_B_setz_r` | :2642, :2654 |
+| `device D`, `transition x` | `D_x` | :2894 |
+| `lock L` | `L_nimm`, `L_gib`, (`L_nimm_geteilt`, `L_gib_geteilt`) | :1846, :1851 |
 | `rcu N` | `N_lese_start`, `N_lese_ende` | :1932 |
 | `atomic A` | `A`, `A_ORDER` | :1812 |
-| `walk W` | `W_EBENEN`, `W_WEITE`, `W_knoten`, `W_ist_blatt`, `W_steigt_ab`, `W_absteigen` | :8253–:8266 |
-| `entry e` | `gabbro_eintritt_e`, `gabbro_eintritt_e_VEKTOR`, `gabbro_eintritt_e_verteiler` | :8382–:8390 |
-| `boot b`, Schritt `s` | `gabbro_boot_b_s`, `gabbro_boot_b_s{i}` | :8540 |
-| Blockmarke `m` | `m_wachhund` | :6107 |
+| `walk W` | `W_EBENEN`, `W_WEITE`, `W_knoten`, `W_ist_blatt`, `W_steigt_ab`, `W_absteigen` | :8337 ff. |
+| `entry e` | `gabbro_eintritt_e`, `gabbro_eintritt_e_VEKTOR`, `gabbro_eintritt_e_verteiler` | :8466 ff. |
+| `boot b`, Schritt `s` | `gabbro_boot_b_s`, `gabbro_boot_b_s{i}` | :8624 |
+| Blockmarke `m` | `m_wachhund` | :6191 |
+
+> **Die Nummern sind die des Standes `26cd71f`** — nach den zwei Portraum-Absagen, die
+> `emit.rs` um 83 Zeilen verlängert haben. *Eine Zeilennummer ist eine Jahreszahl; der `grep`
+> daneben ist es nicht, und darum steht in jeder Zeile das Muster und nicht nur die Zahl.*
 
 **Es gibt keine Umbenennung dazwischen.** `cnamen.rs` sagt es in seiner ersten Zeile: *„there
 is no `fn c_name` in `emit.rs`"*. Was in Gabbro steht, steht in C — plus einem Anhang.
@@ -104,3 +108,51 @@ Wort erst mit der Tabelle daneben entsteht.
 
 *Der eine Pass misst die fremden Namen, der andere die doppelten. Die gebildeten misst
 keiner.*
+
+## §6 Was die Regel kostet, über den ganzen Korpus (Regel A)
+
+`gabbro pruefe` über alle **426** `.gab`-Dateien, mit dem gebauten `N042`:
+
+```
+---- 426 Dateien, 1 mit N042 ----
+== beispiele/gift/413-format-feld-heisst-gueltig.gab
+error: [N042] …:61:5: `Eintrag2_setz_a` is the C name of two different declarations
+error: [N042] …:54:5: `Eintrag_gueltig` is the C name of two different declarations
+```
+
+**Ein Treffer, und es ist die Probe, für die die Regel geschrieben wurde** — beide Formen,
+beide an der Feldzeile, die sie verursacht.
+
+### Der erste Lauf meldete ACHT, und die anderen sieben haben den Schnitt gezogen
+
+| Datei | was gemeldet wurde | Urteil |
+|---|---|---|
+| `beispiele/29-undurchsichtig.gab` | `pa_aus_zahl` | **kein Mangel** — `pub impl fn` im einen Modul, `extern fn` im nächsten. Zwei Deklarationen, ein C-Symbol, *mit Absicht*: der Erzeuger schreibt den Prototyp genau einmal, und `cc` nimmt an (nachgemessen) |
+| `messung/fragmente/F05.gab` | `invoke` | **kein Mangel** — zweimal `prim fn invoke`, getrennt durch `arch x86_64` / `arch aarch64`. Je Bau wird eine emittiert |
+| `gift/06-doppelt`, `gift/31`, `gift/32`, `gift/140`, `gift/274` | `SEITE`, `eng`, `Eng`, `hilf`, `lesen` | **W7** — zwei *gleiche* Gabbro-Namen, und das sagt `geltungsbereich` schon. Ein zweites Register über einer Sache ist ein zweites Register |
+
+Daraus die Verengung, und sie ist gemessen und nicht geraten: **mindestens eine Seite muss
+ein Name sein, den der Erzeuger gebildet hat** (`Gebildet::angehaengt`). Zwei gleiche
+*erklärte* Namen gehören dem Nachbarpass; wo sie kein Mangel sind, hat diese Regel gar nichts
+zu sagen.
+
+*Ohne diese Zeile hätte `N042` in sieben Fällen gesprochen, in denen entweder nichts kaputt
+war oder ein anderer Pass schon sprach.* **Genau die Sorte Absage, die in dieser Nacht schon
+einmal zurückgenommen werden musste.**
+
+## §7 Was NICHT gebaut wurde, und je ein Grund
+
+* **`{T}_speicher` steht nicht in der Aufzählung.** Der Erzeuger schreibt es nur, wo die
+  Quelle die Tabelle beim NAMEN nennt (`emit.rs`:2244, `u.tabellenglobal`) — jene Menge lebt
+  in den `Namen` des Erzeugers und nicht im Baum. Ein gelisteter Name, den der Erzeuger nie
+  schreibt, wäre eine Absage ohne Mangel. **Der Preis steht als Probe da und nicht in einem
+  Absatz:** `beispiele/gift/414-tabellenspeicher-heisst-so.gab`, Vertrag `-- erwartet: cc`.
+* **Blockmarken (`{marke}_wachhund`).** Eine Marke ist kein Name des Dateibereichs; zwei
+  Funktionen dürfen dieselbe tragen.
+* **Rümpfe.** Ein `let` senkt zu einer lokalen Größe ab, und eine lokale, die einen Namen des
+  Dateibereichs verdeckt, ist zulässiges C — dieselbe Grenze, die `N041` zieht, und aus
+  demselben gemessenen Grund.
+* **Eine Regel gegen die zehnte Form aus §3** wurde nicht *zusätzlich* gebaut — `N042` fängt
+  sie mit. `lock TOR` neben `extern fn TOR_nimm()` ist `{Lock}_nimm` gegen `{fn}`, also eine
+  Seite gebildet, also gemeldet. *Das ist der einzige der zehn Fälle, den `cc` nie gefunden
+  hätte.*

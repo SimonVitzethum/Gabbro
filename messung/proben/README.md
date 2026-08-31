@@ -19,6 +19,7 @@ Ausschnitte** `F01`–`F10`, ein Korpus mit einer eigenen Zählung (`zaehle-frag
 | `probe-unbekannter-ruf.gab` | nimmt der Prüfer einen Ruf an, den niemand deklariert hat? | **ohne Kostenzusage ja** — nur `E009`, ein Hinweis. Mit Kostenzusage fällt `K003`. *Der Befund gehört dem Prüfer* |
 | `probe-f32-literal.gab` | welche Breite hat ein Gleitkommaliteral im erzeugten C? | **`double`** — `x * 0.1` rechnet bei `x : f32` in doppelter Breite. 39 974 von 200 000 Werten weichen ab |
 | `probe-vier-zellen.gab` | nimmt der Prüfer `state`, `queue`, `chain in`, `threads` wirklich an? | **ohne Kostenzusage ja** — 0 Fehler, vier `C001`. Dieselbe Wurzel: `K003` hängt an einer Zusage, die ein `divergent fn` nicht macht |
+| `probe-erzeugernamen-frei.gab` | weist `N042` sechs Wörter ab, die wie ein Anhang des Erzeugers *aussehen*? | **nein** — 0 Fehler, `cc` nimmt an. `fn gueltig`, `const Kappe_speicher`, `type Baum_knoten`, ein Feld `setz_b` ohne ein Feld `b`, ein Feld `marke` in einem `format`, eine Variante `gueltig` in einem `tagged type`. *Eine Wortliste hätte alle sechs abgewiesen* ([`../ERZEUGERNAMEN.md`](../ERZEUGERNAMEN.md)) |
 
 **Was eine Probe nicht ist:** ein Beispiel. `beispiele/` zeigt, was die Sprache kann; eine
 Probe hier zeigt, was sie an einer Stelle TUT — und mehrere davon sind absichtlich Programme,

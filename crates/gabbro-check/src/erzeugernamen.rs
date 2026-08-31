@@ -79,7 +79,7 @@ fn eigen(v: &mut Vec<Gebildet>, name: String, span: Span, muster: &'static str, 
 /// * `{T}_speicher` (`emit.rs`:2244) -- written only where the source addresses the table BY
 ///   NAME. That set lives in the generator's `Namen`, not in the tree; a name listed here
 ///   that the emitter never writes would be a refusal without a defect.
-/// * `{marke}_wachhund` (`emit.rs`:6107) -- a block label. Labels are not top-level names,
+/// * `{marke}_wachhund` (`emit.rs`:6191) -- a block label. Labels are not top-level names,
 ///   two functions may carry the same one, and the emitted marker is per block.
 /// * Bodies. A `let` lowers to a local, and a local shadowing a file-scope name is legal C --
 ///   the same boundary `N041` draws, and for the same measured reason.
@@ -87,7 +87,7 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
     let mut v = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         // A struct, a reader and a writer per field, and ONE validity predicate over all
-        // `where` clauses (`emit.rs`:3032, :3077, :3085, :3374).
+        // `where` clauses (`emit.rs`:3064, :3109, :3117, :3406).
         ItemArt::Format(f) => {
             let n = &f.name.text;
             eigen(&mut v, n.clone(), f.name.span, "{Format}", "the access struct".into());
@@ -154,7 +154,7 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
                 "the slot struct".into(),
             );
             // `{T}_NONE` falls away only above `2^32`, and that case is refused at the
-            // generator (`emit.rs`:2270) -- so here it always stands.
+            // generator (`emit.rs`:2265) -- so here it always stands.
             schiebe(
                 &mut v,
                 format!("{n}_NONE"),
