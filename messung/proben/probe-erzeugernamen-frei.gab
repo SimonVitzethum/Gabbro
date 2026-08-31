@@ -1,0 +1,60 @@
+-- **Die GEGENPROBE zu `N042`, und sie ist die Hälfte, die die Regel klein hält.**
+--
+-- `N042` weist zurück, wo zwei Gabbro-Deklarationen denselben C-Namen bekommen. Hier stehen
+-- genau die Wörter, an denen sie NICHT greifen darf -- jedes davon sieht wie ein Anhang des
+-- Erzeugers aus und ist keiner, weil der Träger daneben fehlt oder ein anderer ist.
+--
+-- Gemessen am 2026-08-31: **0 Fehler, 0 Hinweise**, und `cc -std=c11 -Wall -Wextra -Werror`
+-- nimmt das erzeugte C an.
+--
+-- | Zeile | sieht aus wie | warum es keiner ist |
+-- |---|---|---|
+-- | `fn gueltig()` | `{Format}_gueltig` | kein `format` heisst so, dass der Anhang trifft |
+-- | `const Kappe_speicher` | `{Tabelle}_speicher` | kein `table Kappe` in dieser Einheit |
+-- | `type Baum_knoten` | `{Walk}_knoten` | kein `walk Baum` in dieser Einheit |
+-- | Feld `setz_b` ohne Feld `b` | `{Format}_setz_{feld}` | der Leser `Rahmen_b` gibt es nicht |
+-- | Feld `marke` in einem `format` | `{Tagged}_marke` | ein `format` bildet keine Markenaufzählung |
+-- | Variante `gueltig` | `{Format}_gueltig` | ein `tagged type` bildet keinen Prüfkörper |
+--
+-- *Eine Wortliste hätte jede dieser sechs Zeilen abgewiesen.* Genau deshalb zählt der Pass
+-- die gebildeten Namen auf, statt Wörter zu verbieten.
+
+module probe::erzeugernamenfrei {
+
+-- `gueltig` als eigener Name: es gibt keinen `format`-Prüfkörper, der so heisst.
+impl fn gueltig(x : u32) -> bool
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x > 0;
+}
+
+-- `Kappe_speicher` ohne eine `table Kappe` daneben.
+const Kappe_speicher : u32 = 7;
+
+-- `Baum_knoten` ohne einen `walk Baum` daneben.
+type Baum_knoten = { fuellung : u32, };
+
+-- Ein Feld `setz_b`, und **kein** Feld `b`: der Schreiber des einen trifft den Leser des
+-- anderen nicht, weil es den anderen nicht gibt.
+--
+-- Und ein Feld `marke`: `Rahmen_marke` wäre eine Kollision an einem `tagged type`, nicht an
+-- einem `format` -- ein `format` bildet keine Markenaufzählung.
+format Rahmen endian little {
+    setz_b : bool @0,
+    marke  : bool @1,
+    rest   : u64  @[63:2] reserved,
+}
+
+-- Eine Variante `gueltig`: `Nachricht_gueltig` wäre eine Kollision an einem `format`, nicht
+-- an einem `tagged type` -- ein `tagged type` bildet keinen Prüfkörper.
+tagged type Nachricht = { Leer, gueltig(u32) };
+
+impl fn lies(r : ptr<normal, r> Rahmen) -> bool
+    effects { reads r }
+    costs   <= 4 ops
+{
+    return r.setz_b;
+}
+
+}

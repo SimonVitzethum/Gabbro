@@ -1,0 +1,51 @@
+-- erwartet: cc
+-- 414 -- **die GRENZE von `N042`, und sie ist mit Absicht dort gezogen.**
+--
+-- `N042` (`namen.rs`, `erzeugernamen.rs`) zaehlt die C-Namen auf, die der Erzeuger aus einem
+-- Nutzernamen bildet, und weist zwei gleiche zurueck. **Einen bildet er, den die Aufzaehlung
+-- nicht kennt:**
+--
+--     static {T} {T}_speicher;          -- `emit.rs`:2244
+--
+-- Er steht **nur dann** da, wenn die Quelle die Tabelle bei ihrem NAMEN anspricht --
+-- `u.tabellenglobal` im Erzeuger. Diese Menge lebt in den `Namen` des Erzeugers und nicht im
+-- Baum, und ein Name in der Liste, den der Erzeuger nie schreibt, waere eine Absage ohne
+-- Mangel. *Also steht er nicht in der Liste, und die Auslassung ist im Kopf von
+-- `erzeugernamen.rs` benannt statt verschwiegen.*
+--
+-- **Diese Datei ist der Preis dafuer, und sie steht hier, damit er gemessen dasteht.**
+-- Gemessen am 2026-08-31: `gabbro pruefe` sagt `5 items, 0 errors, 0 hints`, `gabbro emit`
+-- schreibt die Einheit ohne `C001`, und
+-- `cc -std=c11 -Wall -Wextra -Werror` sagt
+--
+--     abweichende Typen fuer »Kappe_speicher«; der bestehende Typ ist »uint32_t«
+--
+-- **Und sie haelt zugleich den `cc`-Zweig von `tests/beispiele.rs` am Leben.** Jener Zweig
+-- kam am 2026-08-31 fuer `413`; seit `N042` faellt `413` am PRUEFER, und der Zweig haette
+-- ohne diese Datei keinen einzigen Fall mehr. *Ein Zweig ohne Fall misst nichts und sieht
+-- aus wie einer, der misst.*
+--
+-- Der Vertrag ist der zweiseitige und darum der scharfe: **der Pruefer muss SCHWEIGEN**
+-- (sonst ist die Grenze verschoben und diese Datei gehoert nachgezogen), **und `cc` muss
+-- ABWEISEN** (sonst ist der Erzeugerfehler geheilt und diese Datei ebenso).
+
+module gift::tabellenspeicher {
+
+const N : u32 = 8;
+
+table Kappe count N {
+    slot { benutzt : bool, }
+}
+
+-- Der Erzeuger schreibt `static Kappe Kappe_speicher;`, weil `Kappe` unten beim Namen
+-- angesprochen wird. Diese Zeile schreibt `static uint32_t Kappe_speicher = 0;`.
+static mut Kappe_speicher : u32 = 0;
+
+impl fn beruehren(s : index into Kappe) -> bool
+    effects { reads Kappe.slots }
+    costs   <= 2 ops
+{
+    return Kappe.slots[s].benutzt;
+}
+
+}

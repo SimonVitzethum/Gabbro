@@ -1746,7 +1746,14 @@ MARKE_EMIT=54
 # Waechter nennt es selbst *„der gute Fall, und trotzdem ein Befund"*: eine Marke, die
 # steigt, weil mehr uebersetzt, ist keine gelockerte Ratsche. *Der Grund steht hier, damit
 # die naechste Sitzung nicht eine Lockerung liest.*
-MARKE_EMIT_M=29
+# **29 -> 30 on 2026-08-31.** A counter-probe to `N042`
+# (`messung/proben/probe-erzeugernamen-frei.gab`): six words that LOOK like a suffix the
+# generator adds and are none -- `fn gueltig`, `const Kappe_speicher`, `type Baum_knoten`, a
+# field `setz_b` without a field `b`, a field `marke` in a `format`, a variant `gueltig` in a
+# `tagged type`. *A word list would have refused all six*, and that is exactly why `N042`
+# enumerates the names the generator forms instead of forbidding words. The probe emits and
+# compiles -- the same good case as above.
+MARKE_EMIT_M=30
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

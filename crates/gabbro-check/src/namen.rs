@@ -33,6 +33,103 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     spiegel_und_sonde(baum, absagen);
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
+    erzeugter_name_zweimal(baum, absagen);
+}
+
+/// **`N042` -- two declarations, one C name, and the generator formed both.**
+///
+/// `N041` next door holds the names **C** has taken. This one holds the names **Gabbro
+/// itself** forms -- and they are a different population, because they do not exist until two
+/// declarations stand next to each other:
+///
+/// ```text
+/// format Eintrag endian little { gueltig : bool @0, rest : u64 @[63:1] reserved }
+/// ```
+///
+/// `gueltig` is no C name, and it duplicates nothing at the Gabbro level. It becomes a
+/// collision only because the emitter writes `Eintrag_gueltig` for the field reader **and**
+/// `Eintrag_gueltig` for the validity predicate. *Measured against the unchanged checker*
+/// (`messung/ERZEUGERNAMEN.md` §2): `gabbro pruefe` said `3 items, 0 errors, 0 hints`,
+/// `gabbro emit` wrote the unit **without** a `C001`, and `cc` answered *redefinition of
+/// `Eintrag_gueltig`*.
+///
+/// **Nine forms are measured, not one** -- inside a carrier (a field `gueltig`; a field
+/// `setz_a` next to a field `a`; a variant `marke`; a bank register `setz_LO` next to `LO`)
+/// and across two (`table Kappe` next to `const Kappe_NONE`; `walk Baum` next to `type
+/// Baum_knoten`; `reason Fehler { Leer … }` next to `const Fehler_Leer`; `format Eintrag { a
+/// … }` next to `extern fn Eintrag_a`). *A refusal that only knows `gueltig` moves the defect
+/// to the next word.*
+///
+/// **And a tenth that `cc` does NOT catch, which is why this rule cannot be left to `cc`.**
+/// `lock TOR` next to `extern fn TOR_nimm()` compiles clean: `void TOR_nimm(void);` twice
+/// with the same type is a legal repetition in C. Two Gabbro declarations become **one
+/// symbol**, the lock's acquire call lands in the foreign function at link time, and nothing
+/// in the chain says a word. *A checker that only re-derives what `cc` finds does not find
+/// it.*
+///
+/// **Why the CHECKER and not the generator** -- the same answer `N041` gives. A generator
+/// that quietly disambiguates moves the explanation into an artefact nobody reads. The name
+/// belongs to the writer, and so does the refusal.
+///
+/// > **What it costs, measured before it was built** (`messung/ERZEUGERNAMEN.md` §6): over
+/// > the whole corpus the enumeration yields the collisions of the probes and **nothing
+/// > else**. A rule whose first run over the clean corpus is silent is not a tightening of
+/// > the tree; it is an answer to a case that had not been written down.
+fn erzeugter_name_zweimal(baum: &Programm, absagen: &mut Absagen) {
+    use std::collections::BTreeMap;
+    let gebildet = crate::erzeugernamen::erzeugte_namen(baum);
+    // **Sorted, and that is not taste.** Two collisions in one unit must come out in the same
+    // order on every run, or the probe that pins the message is pinning a coin toss.
+    let mut nach_namen: BTreeMap<&str, Vec<&crate::erzeugernamen::Gebildet>> = BTreeMap::new();
+    for g in &gebildet {
+        nach_namen.entry(g.name.as_str()).or_default().push(g);
+    }
+    for (name, gruppe) in nach_namen {
+        if gruppe.len() < 2 {
+            continue;
+        }
+        // **At least one side must be a name the GENERATOR built.** Two plain declared names
+        // that are equal are a Gabbro duplicate, and `geltungsbereich` above already says so
+        // -- W7: what one register holds, a second does not hold again. And where they are
+        // NOT a defect (a prototype next to its definition in another module, two `prim fn`
+        // separated by `arch`) this rule has no business at all. *Both were measured over the
+        // corpus before the rule was narrowed* -- see `Gebildet::angehaengt`.
+        if !gruppe.iter().any(|g| g.angehaengt) {
+            continue;
+        }
+        // The refusal sits at the SECOND one: the first is the declaration that was there,
+        // and a message at the first would ask the writer to move the wrong line.
+        let erst = gruppe[0];
+        for g in &gruppe[1..] {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N042",
+                    g.span,
+                    format!("`{name}` is the C name of two different declarations"),
+                )
+                .mit_notiz(format!(
+                    "the generator forms `{name}` here as `{}` -- {}",
+                    g.muster, g.was
+                ))
+                .mit_notiz(format!(
+                    "and it forms the same name as `{}` -- {}",
+                    erst.muster, erst.was
+                ))
+                .mit_notiz(
+                    "the lowering goes to C and there is no renaming in between -- what \
+                     stands in Gabbro stands in C, plus a suffix the generator adds",
+                )
+                .mit_notiz(
+                    "measured 2026-08-31 with `cc -std=c11 -O0 -Wall -Wextra -Werror`; \
+                     the nine forms and their probes stand in `messung/ERZEUGERNAMEN.md`",
+                )
+                .mit_notiz(
+                    "rename one of the two -- the name is fine everywhere except where the \
+                     other declaration stands next to it",
+                ),
+            );
+        }
+    }
 }
 
 /// **`N041` -- a name C has already taken.**

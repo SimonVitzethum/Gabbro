@@ -1,5 +1,14 @@
--- erwartet: cc
+-- erwartet: N042
 -- 413 -- **ein Formatfeld, das `gueltig` heisst, und der Erzeuger schreibt den Namen zweimal.**
+--
+-- > **DER VERTRAG DIESER DATEI HAT SICH GEAENDERT, und das ist der ganze Ertrag.**
+-- > Sie stand bis zum 2026-08-31 auf `-- erwartet: cc`: der Pruefer musste SCHWEIGEN und
+-- > `cc` musste abweisen. **Jetzt sagt es der PRUEFER**, mit `N042`, und zwar an beiden
+-- > Formen unten. Der W24-Vorlauf dazu steht in `messung/ERZEUGERNAMEN.md` -- es sind NEUN
+-- > Kollisionsformen und nicht zwei, und eine zehnte, die `cc` gar nicht findet.
+-- >
+-- > *Die Bahn, an der `beispiele.rs` den `cc`-Zweig fuehrt, verliert damit ihren einzigen
+-- > Fall nicht* -- `414` nimmt ihn auf und pruefe die GRENZE von `N042` statt seiner Mitte.
 --
 -- `emit.rs`:3369 schreibt zu JEDEM `format` eine Pruefkoerperfunktion:
 --
