@@ -7252,7 +7252,7 @@ fn indexschranke(e: &Expr, u: &Namen) -> Option<i128> {
 /// into a `u16` field gives
 ///
 /// ```text
-/// error: [M101] die Zuweisung requires `u16`, the value has `u32 in 0 .. 99999`
+/// error: [M101] the assignment requires `u16`, the value has `u32 in 0 .. 99999`
 /// ```
 ///
 /// -- so no program that reaches this emitter carries a narrowing that loses a value. *The

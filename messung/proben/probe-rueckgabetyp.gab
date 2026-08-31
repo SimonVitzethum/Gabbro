@@ -7,7 +7,7 @@
 -- GEMESSEN am 2026-08-31 gegen den UNVERAENDERTEN Pruefer, alle vier Faelle in EINER Datei:
 --
 --     $ gabbro pruefe messung/proben/probe-rueckgabetyp.gab
---     error: [M101] …:48:63: die Rueckgabe requires `u8`, the value has `u16 in 300 .. 300`
+--     error: [M101] …:48:63: the return value requires `u8`, the value has `u16 in 300 .. 300`
 --        48 | impl fn b() -> u8 … { return 300; }
 --     …: 7 items, 1 errors, 0 hints
 --       M1 saw 6 expressions, 0 of them without a type (100 % coverage)

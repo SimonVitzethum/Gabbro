@@ -83,3 +83,55 @@ fn die_kuerzung_ruehrt_das_ergebnis_nicht_an() {
     assert!(kurz.contains(kopf), "short:\n{kurz}");
     assert!(voll.contains(kopf), "full:\n{voll}");
 }
+
+/// **A reader that stops reading must not look like a crash.**
+///
+/// `gabbro pruefe f.gab | head` ended with **`rc=101` and a panic message** until
+/// 2026-08-31: Rust ignores `SIGPIPE`, so the write into the closed pipe fails with `EPIPE`
+/// and `println!` turns that into a panic. *Measured before the repair: 101 through a pipe,
+/// 0 without one.*
+///
+/// The WHOLE poison corpus is passed on purpose. `gabbro paesse` prints 13 891 bytes and
+/// fits inside a 64 KiB pipe buffer -- the child could finish writing before `head` ever
+/// closes the read end, and the probe would pass without having tested anything. *A probe
+/// whose subject fits in the buffer measures the buffer, not the rule.*
+fn durch_bash(skript: &str) -> (String, String) {
+    let aus = std::process::Command::new("bash")
+        .arg("-c")
+        .arg(skript)
+        .arg("bash")
+        .arg(env!("CARGO_BIN_EXE_gabbro"))
+        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+        .output()
+        .expect("bash runs");
+    (
+        String::from_utf8_lossy(&aus.stdout).trim().to_owned(),
+        String::from_utf8_lossy(&aus.stderr).into_owned(),
+    )
+}
+
+#[test]
+fn geschlossene_pipe_ist_kein_absturz() {
+    let (rc, err) = durch_bash(
+        r#""$1" pruefe beispiele/gift/*.gab | head -1 >/dev/null; echo "${PIPESTATUS[0]}""#,
+    );
+    assert_eq!(rc, "0", "a closed pipe must not end in rc=101\nstderr:\n{err}");
+    assert!(
+        !err.contains("panicked"),
+        "a closed pipe must not print a panic:\n{err}"
+    );
+}
+
+/// **And the repair must not swallow the VERDICT.** A hook that turned every panic into a
+/// quiet 0 would hide exactly what this checker exists to say.
+///
+/// This one pipes into a reader that reads EVERYTHING (`cat > /dev/null`), so no `EPIPE`
+/// ever arises -- *if it ended in `head` as well, `cat` would take the broken pipe and hand
+/// it straight on, and the probe would measure the repair instead of the verdict.*
+#[test]
+fn die_pipe_verschluckt_das_urteil_nicht() {
+    let (rc, err) = durch_bash(
+        r#""$1" pruefe beispiele/gift/104-ensures-index-tippfehler.gab | cat >/dev/null; echo "${PIPESTATUS[0]}""#,
+    );
+    assert_eq!(rc, "1", "a finding stays a finding through a pipe\nstderr:\n{err}");
+}

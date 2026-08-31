@@ -9,7 +9,49 @@ use gabbro_syntax::diag::Stufe;
 
 mod fragmente;
 
+/// **A reader that stops reading must not look like a crash.**
+///
+/// Rust sets `SIGPIPE` to `SIG_IGN` before `main` runs, so a write into a closed pipe does
+/// not end the process -- it fails with `EPIPE`, and `println!` turns that failure into a
+/// panic. `gabbro pruefe f.gab | head` therefore ended with **`rc=101` and a panic message**,
+/// for the most ordinary thing a reader can do to a long output. *Measured 2026-08-31: 101
+/// through a pipe, 0 without one.*
+///
+/// **The usual repair is closed to this workspace twice over.** `signal(SIGPIPE, SIG_DFL)`
+/// needs `unsafe`, and the workspace sets `unsafe_code = "forbid"`; it also needs `libc`, and
+/// the dependency list is empty by policy -- std alone, nothing beside it. So the panic is
+/// answered where it arrives instead of being prevented.
+///
+/// **The marker is std's own literal, not the operating system's message.** `std::io` panics
+/// with `failed printing to stdout: {e}`: the prefix is a constant inside `std`, while the
+/// `{e}` behind it comes from `strerror` and is therefore **locale-dependent**. Matching the
+/// prefix holds under `de_DE.UTF-8`; matching `Broken pipe` would not -- the same class the
+/// locale requirement in `pruefe-waechter.py` was written for, and the same class as the
+/// linker emitting its own diagnostics in German.
+///
+/// > **What this does NOT tell apart:** a full disk reaches this hook by the same path as a
+/// > closed pipe, and also ends quietly with 0. Separating them needs the `io::Error` kind,
+/// > and a panic carries only a formatted string. *The limit is named here rather than
+/// > hidden* (W10).
+fn quiet_on_closed_output() {
+    let vorher = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |lage| {
+        let text = lage
+            .payload()
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| lage.payload().downcast_ref::<&str>().copied())
+            .unwrap_or("");
+        // `stdout` and `stderr` both -- a pager closed early is not a fault of the checker.
+        if text.starts_with("failed printing to std") {
+            std::process::exit(0);
+        }
+        vorher(lage);
+    }));
+}
+
 fn main() -> std::process::ExitCode {
+    quiet_on_closed_output();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
         hilfe();
