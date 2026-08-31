@@ -938,7 +938,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **360 von 360 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **362 von 362 Ankern** greifen (`--anker`, 2026-08-31 —
+      **360 → 362** durch zwei EINZELNE Arme der `N042`-Aufzählung: der bloße Name einer
+      `boot`-Strecke und der `pruefe_{c}` eines `check`. *Die zwei davor warfen fünf Proben
+      zugleich um* — nachgemessen am selben Tag, und ihre „genau EINE"-Sätze standen daneben
+      und waren falsch (`messung/STILLE-KOLLISIONEN.md`);
       **358 → 360** durch `N042`: die Doppelung erst ab drei melden, und kein gebildeter
       Name gilt mehr als gebildet (`messung/ERZEUGERNAMEN.md`);
       vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8;

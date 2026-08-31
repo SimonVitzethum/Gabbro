@@ -1796,7 +1796,12 @@ MUTATIONEN = [
         "        if gruppe.len() < 3 {",
         "N042 -- die Doppelung wird erst ab DREI gleichen Namen gemeldet, also nie: der "
         "Erzeuger schreibt `Eintrag_gueltig` zweimal, der Pruefer schweigt, und `cc` sagt "
-        "*Redefinition*. Der Rest des Passes bleibt wach -- genau EINE Giftprobe faellt (413).",
+        "*Redefinition*. Der Rest des Passes bleibt wach -- ~~genau EINE Giftprobe faellt "
+        "(413)~~ **FUENF fallen (413, 417, 418, 419, 420), nachgemessen 2026-08-31**. Die "
+        "alte Zahl stammt vom Tag, an dem 413 die einzige Probe der Regel war; die vier "
+        "neuen decken die drei STILLEN Sorten ab, bei denen `cc` gar nichts sagt. *Eine "
+        "Mutation, die mehr faellt als ihr Text behauptet, sieht aus wie eine, die weniger "
+        "faellt* -- W25: eine Zahl belegt ihren Nenner, nicht ihre Beschriftung.",
     ),
     Mutation(
         "der-anhang-des-erzeugers-zaehlt-nicht-mehr",
@@ -1805,8 +1810,34 @@ MUTATIONEN = [
         "    v.push(Gebildet { name, span, muster, was, angehaengt: false });",
         "N042 -- kein gebildeter Name gilt mehr als gebildet, also greift der Schnitt "
         "`mindestens eine Seite ist ein Anhang` nie: die ganze Regel schweigt, waehrend "
-        "`geltungsbereich` und `N041` daneben unversehrt bleiben. Genau EINE Giftprobe "
-        "faellt (413).",
+        "`geltungsbereich` und `N041` daneben unversehrt bleiben. ~~Genau EINE Giftprobe "
+        "faellt (413)~~ **FUENF fallen (413, 417, 418, 419, 420), nachgemessen 2026-08-31** "
+        "-- dieselbe Berichtigung wie eine Mutation weiter oben, und aus demselben Grund.",
+    ),
+    # **Two arms of the enumeration on their OWN**, so that not every `N042` mutation knocks
+    # over the same five probes. Both were hand-set on 2026-08-31, BUILT, and measured:
+    # exactly ONE probe stops falling, and it is the one belonging to that arm.
+    Mutation(
+        "die-bootstrecke-bildet-ihren-eintritt-nicht",
+        "erzeugernamen.rs",
+        '                format!("gabbro_boot_{n}"),',
+        '                format!("gabbro_boot__{n}"),',
+        "N042 -- der blosse Name einer `boot`-Strecke faellt aus der Aufzaehlung, und damit "
+        "genau der Name, an dem die MASCHINE anfaengt: `void gabbro_boot_{b}(void);` neben "
+        "`extern fn gabbro_boot_{b}()` wird ein Symbol, und `cc -Werror` uebersetzt es. "
+        "Die Schritte `_s{i}` und `_{setzt}` bleiben wach -- genau EINE Giftprobe faellt "
+        "(420), nachgemessen 2026-08-31.",
+    ),
+    Mutation(
+        "der-pruefkoerper-heisst-nicht-mehr-so",
+        "erzeugernamen.rs",
+        '                format!("pruefe_{}", c.name.text),',
+        '                format!("pruefe__{}", c.name.text),',
+        "N042 -- `check c` bildet `pruefe_{c}` nicht mehr. Es ist der einzige erzeugte Name "
+        "mit AEUSSERER Bindung, den der Erzeuger auch DEFINIERT: daneben ein "
+        "`extern fn pruefe_{c}()`, und der Binder holt das Archivglied des Schreibers nie -- "
+        "sein Aufruf wird vom Pruefkoerper beantwortet. Der Rest der Aufzaehlung bleibt "
+        "wach -- genau EINE Giftprobe faellt (418), nachgemessen 2026-08-31.",
     ),
     Mutation(
         "baumkante-braucht-ihr-feld-nicht",
