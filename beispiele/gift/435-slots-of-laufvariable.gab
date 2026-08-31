@@ -1,0 +1,62 @@
+-- erwartet: C001
+-- **Die zweite Haelfte desselben Schattens -- und diese fand `cc`, kein Pass.**
+--
+-- `434` traegt den Baumlauf: dort schlug `baumsicht` den verdeckten PARAMETER nach und
+-- senkte einen Lauf ueber die falsche Tabelle ab. Hier steht die Zaehlschleife, und sie
+-- geht anders kaputt: der Pfeil kommt nicht aus `parametertyp`, sondern aus
+-- `tabellenglobal`, der Name aus `ort`. **Die Verdeckung allein schliesst das nicht.**
+--
+-- Gemessen am 2026-08-31 gegen den unveraenderten Erzeuger:
+--
+--     gabbro pruefe   ->  6 items, 0 errors, 0 hints
+--     gabbro emit     ->  for (uint32_t t = 0; t < sizeof(w->slots)/sizeof(w->slots[0]); t++)
+--                           for (uint32_t i = 0; i < sizeof(t->slots)/sizeof(t->slots[0]); i++)
+--     cc              ->  error: ungueltiger Typ »uint32_t« fuer »->«
+--
+-- **Zwei Zeilen untereinander, und in der zweiten steht ein Pfeil auf einer Zahl.** Der
+-- Pruefer schwieg, der Erzeuger schwieg, und der Uebersetzer sagte ab -- die `N042`-Gestalt,
+-- genau wie `432`.
+--
+-- Der Erzeuger sagt jetzt selbst ab, und zwar beim NAMEN statt beim Pfeil: eine
+-- Laufvariable ist ein Indexwort, und ein Indexwort nennt keine Tabelle. *Sich auf `cc` zu
+-- verlassen hiesse, die Absage zu delegieren, wo die Antwort hier steht* -- derselbe Satz,
+-- den `emit.rs` ueber die Speicherordnung schon schreibt.
+--
+-- Die Verdeckung SELBST bleibt erlaubt: `19-let-verdeckt.gab` fuehrt sie seit dem
+-- 2026-08-14 als gueltiges Programm, und `a1` daneben (dieselbe Datei ohne die innere
+-- Schleife) uebersetzt tadellos. Was faellt, ist die Domaene ueber der Laufvariablen.
+
+module gift {
+
+const KLEIN : u32 = 2;
+const GROSS : u32 = 64;
+
+table Winzig count KLEIN {
+    slot { wert : u32, }
+}
+
+table Riesig count GROSS {
+    slot { wert : u32, }
+}
+
+-- MUSS am Erzeuger fallen (C001): `t` ist im Rumpf die Laufvariable -- ein `uint32_t` --
+-- und `slots of t` haette daraus `t->slots` gemacht.
+impl fn f(t : ptr<normal, r> Riesig, w : ptr<normal, r> Winzig) -> u32
+    effects { reads t.slots, reads w.slots }
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    traverse t over slots of w by unvisited
+        touches reads w.slots
+    {
+        traverse i over slots of t by unvisited
+            touches reads w.slots
+        {
+            if summe < 60000 {
+                summe += 1;
+            }
+        }
+    }
+    return summe;
+}
+
+}
