@@ -1371,14 +1371,35 @@ impl<'a> Pruefer<'a> {
                 self.buche(&t);
                 lage.lokal.insert(a.name.text.clone(), t);
             }
+            // **An `exchange` binds ONE of two things, and until 2026-08-31 it bound the
+            // first one twice.**
+            //
+            // `update(v) { … }` hands back the OLD value of the place, so the name carries
+            // the place's type. **`when … returns e` hands back whether the swap
+            // HAPPENED** -- the emitter writes `bool genommen; genommen =
+            // atomic_compare_exchange_strong_explicit(…)` (`beispiele/35-tausch.gab`), and
+            // this pass called it `u32`. *Three stages agreed with each other and the
+            // fourth wrote something else* -- found by `M135`, which is the first rule that
+            // ever compared the two sides of this binding.
+            //
+            // And the second half is the RESULT type of the `update` body. A `return` in
+            // there yields the NEW value of the place, not the enclosing function's result
+            // -- passing `ergebnis` down was right in the corpus by accident
+            // (`beispiele/05-nebenlaeufigkeit.gab` counts a `Zaehlerwert` inside a function
+            // returning `Zaehlerwert`) and wrong at `beispiele/gift/209`, where the same
+            // body sits in a `check` and `M135` read its `return v + 1` against `bool`.
             StmtArt::Exchange(e) => {
                 let t = self.u.typ_von_ort(&self.modul, &e.ort, &lage.lokal);
                 self.buche(&t);
-                lage.lokal.insert(e.name.text.clone(), t.clone());
+                let gebunden = match &e.form {
+                    XForm::Vergleich { .. } => Typ::Wahrheit,
+                    XForm::Update { .. } => t.clone(),
+                };
+                lage.lokal.insert(e.name.text.clone(), gebunden);
                 if let XForm::Update { binder, rumpf, .. } = &e.form {
                     let mut innen = lage.clone();
-                    innen.lokal.insert(binder.text.clone(), t);
-                    self.block(rumpf, &mut innen, ergebnis);
+                    innen.lokal.insert(binder.text.clone(), t.clone());
+                    self.block(rumpf, &mut innen, Some(&t));
                 }
                 self.schreiben_toetet_fakten(&e.ort, lage);
             }
@@ -2896,6 +2917,95 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **`M135` -- `bool` is not a number, and the comparison below cannot say so.**
+    ///
+    /// `passt` ends in a comparison of RANGES, and `Typ::Wahrheit` has none
+    /// (`typen::bereich` answers `Some` for `Ganzzahl`, `Umlaufend` and `Register` and
+    /// `None` for the rest). Where one side has no range the comparison returns without a
+    /// word -- so `M101` holds `-> u8 { return 300; }` and says nothing at all about
+    /// `-> bool { return 7; }`.
+    ///
+    /// **Measured 2026-08-31** (`messung/proben/probe-rueckgabetyp.gab`): four falsified
+    /// returns in one file, and exactly one falls -- the one where both sides carry a
+    /// range. The other three cross the `bool`/number boundary and pass.
+    ///
+    /// ## Why this is worth a refusal when `cc` accepts the C
+    ///
+    /// It is not a defect the next stage catches. `emit` writes `return 7;` into a `bool`
+    /// function and `cc -O0 -Wall -Wextra -Werror` takes it: C converts. **That is what
+    /// makes it worse and not better.** The sharpest site is a probe
+    /// (`messung/proben/probe-probenurteil-typ.gab`):
+    ///
+    /// ```gabbro
+    /// can_fail { if k >= 3 { return 7; } return true; }
+    /// ```
+    ///
+    /// `7` is not zero, so the probe HOLDS on that path -- always. *A counterprobe that
+    /// cannot fall is a measuring instrument stuck at green*, and every stage of this
+    /// bench reports it as sound. The `W16` shape, in the tool that holds the duties.
+    ///
+    /// ## The exception, and the corpus wrote it
+    ///
+    /// **A range of exactly `0 .. 1` is not a crossing.** `beispiele/gift/416` reads a
+    /// one-bit device field into a `bool`:
+    ///
+    /// ```gabbro
+    /// reg LSR : u8 @0x3FD class r fields { THRE @5, }
+    /// impl fn lies_lsr(d : ptr<mmio, r> SerialCom1) -> bool { return d.LSR.THRE; }
+    /// ```
+    ///
+    /// `THRE` has type `u8 in 0 .. 1` -- **a type that admits both truth values and
+    /// nothing else carries the same question as `bool`**, and the driver idiom that reads
+    /// a flag bit is not the defect this rule was built on. *The line is the RANGE and not
+    /// the width:* `return 1;` has type `u8 in 1 .. 1`, admits one value, and still falls.
+    ///
+    /// ## What it deliberately does NOT say
+    ///
+    /// **Only the `bool`/number boundary**, because that is the one that was falsified.
+    /// A float against an integer crosses the same silent `else` in `passt` and is named
+    /// in `messung/proben/probe-rueckgabetyp.gab`, not refused here -- *Regel A: the
+    /// measurement decides the reach of the rule, not the symmetry of the code.*
+    fn wahrheit_ist_keine_zahl(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        fn ist_zahl(t: &Typ) -> bool {
+            matches!(
+                t,
+                Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Gleitkomma(_) | Typ::Register { .. }
+            )
+        }
+        /// Admits exactly the two truth values and nothing else.
+        fn ist_bitbreit(t: &Typ) -> bool {
+            t.bereich().is_some_and(|b| b.min == 0 && b.max == 1)
+        }
+        let (q, z) = (quelle.durchgreifen(), ziel.durchgreifen());
+        let (qw, zw) = (matches!(q, Typ::Wahrheit), matches!(z, Typ::Wahrheit));
+        if !((qw && ist_zahl(z)) || (ist_zahl(q) && zw)) {
+            return;
+        }
+        if ist_bitbreit(q) || ist_bitbreit(z) {
+            return;
+        }
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M135",
+                span,
+                format!(
+                    "{was} requires `{}`, the value has `{}`",
+                    ziel.text(),
+                    quelle.text()
+                ),
+            )
+            .mit_notiz(
+                "`bool` is not a number: it says HELD or FALLEN, and a number says how \
+                 many -- the two carry different questions and neither answers the other's",
+            )
+            .mit_notiz(
+                "no stage after this one says it either: the emitter writes the value \
+                 straight into the C, and C converts silently -- `return 7` in a `bool` \
+                 function is `return true` and no warning is printed",
+            ),
+        );
+    }
+
     fn passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
         // **The function pointer comparison runs FIRST and returns** -- the rules below are
         // about ranges and widths, and a function pointer has neither.
@@ -2905,6 +3015,7 @@ impl<'a> Pruefer<'a> {
             return;
         }
         self.undurchsichtigkeit_pruefen(quelle, ziel, span, was);
+        self.wahrheit_ist_keine_zahl(quelle, ziel, span, was);
         // **«F»: die zwei Bits, und sie sind der Abnehmer der Faktenmaschine.**
         //
         // Ohne diese Zeilen waere `Fakt::Endlich` gebaut und von nichts gelesen -- genau die

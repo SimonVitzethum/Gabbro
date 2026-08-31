@@ -449,12 +449,6 @@ fn gehe(
 /// mark is counted here too, and the answer is then "yes, it falls through" -- the old
 /// answer. *A search that errs only towards falling through cannot create a false
 /// acceptance; it can only give up a refinement.*
-fn verlassen(b: &Block, marke: &str) -> bool {
-    b.anweisungen.iter().any(|s| {
-        matches!(&s.art, StmtArt::Leave(id) if id.text == marke)
-            || crate::unterbloecke(s).into_iter().any(|k| verlassen(k, marke))
-    })
-}
 
 /// **Does control leave this block for good?** Not a descent -- one question about ONE
 /// statement, the last one.
@@ -499,7 +493,7 @@ fn endet(b: &Block, v: &Vertraege) -> bool {
             // An unnamed `forever` can be left by nothing: `StmtArt::Leave` always carries a
             // mark, so there is no unlabelled exit to look for.
             Schleife::Forever(f) => match &f.marke {
-                Some(m) => !verlassen(&f.rumpf, &m.text),
+                Some(m) => !crate::verlassen(&f.rumpf, &m.text),
                 None => true,
             },
             Schleife::Traverse(_) | Schleife::Retry(_) => false,

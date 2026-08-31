@@ -2031,7 +2031,12 @@ MARKE_EMIT=57
 # `invariant` and in the body of a `spec fn`, the carrier of the position measurement in
 # `messung/DOMAENENSTELLUNGEN.md`. It is annotations only, so it lowers to C and compiles.
 # *A floor that lags behind the corpus is slack, not safety.*
-MARKE_EMIT_M=39
+#
+# **39 -> 40 on 2026-08-31**, same reason and one file further:
+# `messung/proben/probe-probenurteil-schleife.gab` -- a probe whose only exits stand inside
+# a `forever`, the carrier of the `N045` measurement. It checks green since the false
+# refusal there was repaired, so it lowers to C and compiles.
+MARKE_EMIT_M=40
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

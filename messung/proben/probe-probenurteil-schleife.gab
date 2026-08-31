@@ -1,0 +1,105 @@
+-- **Eine Probe, deren einziger Ausgang in einer SCHLEIFE steht -- greift `N045`, und zu
+-- Recht?**
+--
+-- Der Bericht vom 2026-08-31 nannte die Stelle ausdruecklich ungemessen: *„`N045` reads
+-- `crate::endet_immer`, which treats a loop as falling through -- a probe whose only exit
+-- is inside a `forever` would be refused, and the corpus carries no such shape to measure
+-- it on."* (`saetze.rs`, Satz `n.probenurteil`). **Aus dem Quelltext gelesen.** Hier steht
+-- die Messung.
+--
+-- GEMESSEN am 2026-08-31 gegen den UNVERAENDERTEN Pruefer:
+--
+--     $ gabbro pruefe messung/proben/probe-probenurteil-schleife.gab
+--     error: [N045] …:65:14: the `can_fail` block of `c` can end without a verdict
+--        65 |     can_fail {
+--           |              ^^^^^^^^^^^^^^
+--           = not every path returns -- and the last one that does not is the one the
+--             probe is silent about
+--           = the emitter lowers the block into a `bool` function; a path that reaches its
+--             closing brace returns an indeterminate value, and no stage before `cc` says so
+--     …: 7 items, 1 errors, 0 hints
+--     exit=1
+--
+-- **Er greift. Und er greift NICHT zu Recht.**
+--
+-- DIE GEGENMESSUNG -- weil `emit` nach der Absage nichts schreibt
+-- ---------------------------------------------------------------
+-- `gabbro emit` sagt an derselben Absage ab („has errors -- no C written"), also ist der
+-- Weg zum C ueber dieselbe Schleife in einer gewoehnlichen Funktion gefahren worden
+-- (byteweise derselbe Rumpf, `-> bool` statt `can_fail`). Der Erzeuger schreibt
+--
+--     static bool f(void) {
+--         static void (*const runde_wachhund)(void) __attribute__((unused)) = wachhund;
+--         for (;;) {
+--             if (k >= 3) { return false; }
+--             return true;
+--         }
+--     }
+--
+-- und `cc -O0 -Wall -Wextra -Werror -c` nimmt es an (**exit=0**). Kein `-Wreturn-type`:
+-- **`for (;;)` hat kein Ende, an dem eine Funktion herausfallen koennte.** Die zweite Note
+-- der Absage -- *„a path that reaches its closing brace"* -- beschreibt einen Weg, den es
+-- nicht gibt.
+--
+-- Genau die Richtung, vor der `W10` steht: eine Absage ueber ein Programm, das in Ordnung
+-- ist. `endet_immer` liest `StmtArt::Schleife(_) => false` (`lib.rs`:909) fuer alle drei
+-- Schleifenarten -- und fuer `retry` und `traverse` ist das richtig, denn beide fallen
+-- durch. **Ein `forever` ohne ein `leave` auf seine eigene Marke faellt nicht durch.**
+--
+-- Die Gegenrichtung steht als `beispiele/gift/407` schon im Baum: derselbe `forever` MIT
+-- `leave dienst` faellt sehr wohl durch, und `L103` haengt daran.
+--
+-- REPARIERT am 2026-08-31, und die Reparatur stand schon einen Tag im Baum
+-- -------------------------------------------------------------------------
+-- `m2::endet` hat genau diesen Unterschied am 2026-08-30 gelernt
+-- (`beispiele/54-divergenz-leckt-nicht.gab` gegen `gift/407`), und `crate::endet_immer`
+-- nicht -- **ein Befund, an EINER seiner Stellen berichtigt, liest sich wie ein
+-- berichtigter Befund.** Dieselbe Klasse wie die sechs Torproben, die in die `N044`-Form
+-- zurueckgelaufen sind.
+--
+-- Seither steht die Frage einmal im Baum (`lib.rs::verlassen`), und `endet_immer` liest sie:
+--
+--     Schleife::Forever(f) => match &f.marke {
+--         Some(m) => !verlassen(&f.rumpf, &m.text),
+--         None    => true,
+--     },
+--     Schleife::Traverse(_) | Schleife::Retry(_) => false,
+--
+-- **Die Gegenrichtung, gemessen ueber alle 475 Korpusdateien:** genau EINE aendert sich --
+-- diese. Keine andere Regel ist still geworden, keine hat neu gesprochen.
+--
+--     $ gabbro pruefe messung/proben/probe-probenurteil-schleife.gab
+--     …: 7 items, 0 errors, 0 hints
+
+module probe::probenurteil::schleife {
+
+static mut k : u32 = 0;
+
+extern fn wachhund() -> never effects { diverges };
+extern fn sonde_tickt() -> bool effects { pure } costs <= 1 ops;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Zaehler bleibt unter drei."
+    measures k
+    gates    tor
+    can_fail {
+        forever runde
+            per_pass bounded 4 ops
+            on_exceeded wachhund
+            effects  { reads k }
+            progress tickt
+        {
+            if k >= 3 { return false; }
+            return true;
+        }
+    }
+    floor    k >= 1
+}
+
+assume tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_tickt;
+
+}

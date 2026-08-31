@@ -611,7 +611,39 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
     // fehlte. *Das `const` am Zeiger hatte ohnehin nie etwas gehalten -- es sagte nur, dass
     // `bytes` nicht umgehaengt wird, und `const N *` propagiert in C nicht nach innen.*
     assert!(c.contains("uint8_t *bytes"), "{c}");
-    assert!(c.contains("static inline void Kopf_setz_magie(Kopf *v, uint32_t x)"), "der Schreiber fehlt:\n{c}");
+    assert!(c.contains("static inline __attribute__((unused)) void Kopf_setz_magie(Kopf *v, uint32_t x)"), "der Schreiber fehlt:\n{c}");
+    // **`__attribute__((unused))` and NOT the removal of `static`** (2026-08-31). Until
+    // this day every generated `static inline` accessor carried neither: gcc says nothing
+    // about an unused `static inline` in C, **clang refuses it under `-Werror`**, and 19 of
+    // 99 emitting files fell that way (`instrumente/pruefe-uebersetzerfamilie.py`). *Stage
+    // 9's green never meant „the emitted C compiles" -- it meant „it compiles with gcc".*
+    //
+    // The repair is the emitter's own idiom, standing at every `static` function with a
+    // body since long before. **Taking `static` away would have healed the warning and
+    // bought a symbol with external linkage** -- exactly the family of silent name
+    // collisions `N042` was built against. So the two halves are asserted together, and the
+    // second is the one that would rot quietly:
+    assert!(
+        !c.contains("\ninline ") && !c.contains("\n__attribute__((unused)) inline "),
+        "kein Zugriff verliert sein `static` -- aeussere Bindung waere `N042`s Familie:\n{c}"
+    );
+    for zeile in c
+        .lines()
+        .filter(|z| z.contains("inline") && z.contains("_setz_") && !z.contains("gabbro_setz_"))
+    {
+        assert!(
+            zeile.starts_with("static inline __attribute__((unused)) "),
+            "jeder erzeugte Zugriff traegt beides, `static` und das Attribut: {zeile}"
+        );
+    }
+    // **And the byte helpers deliberately do NOT carry it**, which is the other half of the
+    // same decision: they are emitted ON DEMAND (`Erzeuger::helfer` writes only what this
+    // unit calls), so the attribute would be a false statement about the unit -- the same
+    // reasoning that gives a generated `ops` the attribute only where nothing calls it.
+    assert!(
+        c.contains("static inline void gabbro_setz_be32("),
+        "der Bedarfshelfer bleibt ohne Attribut:\n{c}"
+    );
     assert!(c.contains("gabbro_setz_be32(v->bytes + 0, x)"), "gross geschrieben:\n{c}");
     assert!(!c.contains("uint32_t magie;"), "kein Feld -- ein Zugriff:\n{c}");
     assert!(c.contains("gabbro_be32(v->bytes + 0)"), "Versatz 0, gross gelesen:\n{c}");
@@ -1022,7 +1054,7 @@ fn mirrors_schreibt_die_zustandsbits_mit() {
     // und dort nicht waere die stille Ausnahme.
     assert!(c.contains("a caller obligation, not a generated assertion"), "{c}");
     // Kein `assert(...)` im Rumpf -- der Kommentar oben enthaelt das Wort, der CODE nicht.
-    let rumpf = &c[c.find("static inline void V_setze_rtp").expect("der Uebergang")..];
+    let rumpf = &c[c.find("static inline __attribute__((unused)) void V_setze_rtp").expect("der Uebergang")..];
     assert!(!rumpf.contains("assert("), "keine erzeugte Zusicherung:\n{rumpf}");
 }
 
@@ -3512,7 +3544,7 @@ type Zelle = { bytes : [u8; KAP], }; }",
     nx    : bool @63,
 } }",
     );
-    assert!(c.contains("static inline bool P_da(const P *v)"), "ein `bool` liest sich als bool:\n{c}");
+    assert!(c.contains("static inline __attribute__((unused)) bool P_da(const P *v)"), "ein `bool` liest sich als bool:\n{c}");
     assert!(c.contains("gabbro_le64(v->bytes + 0)"), "acht Byte, nicht eines:\n{c}");
     // **Und der Achtbyteleser bringt seinen Vierbyteleser mit** -- er ist aus ihm gebaut.
     assert!(c.contains("static inline uint32_t gabbro_le32"), "die Abhaengigkeit fehlt:\n{c}");
@@ -6767,6 +6799,104 @@ impl fn f(t : ptr<normal, rw> T, x : fnptr())
     );
 }
 
+/// **`D019`: the FIELD names in the suffix of a domain's place.**
+///
+/// The third question at the same place -- `D017` reads its base name, `D018` its kind,
+/// `D019` the field names of its suffix. `messung/DOMAENENSTELLUNGEN.md` §7 carried the
+/// cell as unchecked with a reason read off the source; the measurement of 2026-08-31
+/// (`messung/proben/probe-elems-feldname.gab`) found it too kind to the checker:
+///
+/// ```text
+/// …: 8 items, 0 errors, 0 hints
+/// ```
+///
+/// `elems of r.gibtsnichtfeld` in `ensures`, in `requires` and in the body of a `spec fn`
+/// -- **not one of them**, and `ensures` among them, so `M109` did not read it either. The
+/// control in the same run: the same place with a falsified BASE name does fall, at
+/// `M109`. *The base is read and the field is not.*
+#[test]
+fn der_feldname_am_ort_einer_domaene() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(klausel: &str) -> String {
+        format!(
+            "module t {{
+const NRING : u32 = 32;
+type RingNr = u32 in 0 ..< 32;
+const LEER : RingNr = 0;
+type Ring = {{ plaetze : [RingNr; NRING], }};
+impl fn f(r : ptr<normal, rw> Ring)
+    {klausel}
+    effects {{ reads r, writes r }}
+    costs   <= 4 ops
+{{ }} }}"
+        )
+    }
+
+    // 1 -- every position, and `ensures` among them: the rule speaks where `M109` does
+    // not, and `M109` does not read a field name anywhere.
+    for klausel in [
+        "ensures forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER",
+        "requires forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER",
+    ] {
+        let a = absagen(&mit(klausel));
+        assert!(
+            a.iter().any(|c| c == "D019"),
+            "`{klausel}` quantifiziert ueber ein Feld, das nirgends steht: {a:?}"
+        );
+    }
+
+    // 2 -- the counter-direction: the same place with the field it actually has.
+    for klausel in [
+        "ensures forall j in elems of r.plaetze : r.plaetze[j] != LEER",
+        "requires forall j in elems of r.plaetze : r.plaetze[j] != LEER",
+    ] {
+        let g = absagen(&mit(klausel));
+        assert!(
+            !g.iter().any(|c| c == "D019"),
+            "`{klausel}` nennt ein Feld, das es gibt, und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- **silence where the prefix is not known, and that is the whole discipline.** At
+    // a `traverse` over a `let` binding the base does not resolve in this pass, so nothing
+    // is claimed about the field either. *The missing block scope -- the reason `D017` has
+    // to skip a `traverse` at all -- cannot produce a false refusal here.*
+    let ueber_ein_let = absagen(
+        "module t {
+const NRING : u32 = 32;
+type RingNr = u32 in 0 ..< 32;
+type Ring = { plaetze : [RingNr; NRING], };
+impl fn f(r : ptr<normal, rw> Ring)
+    effects { reads r } costs <= 64 ops
+{ let q = r; traverse j over elems of q.plaetze by unvisited
+      touches reads r { } } }",
+    );
+    assert!(
+        !ueber_ein_let.iter().any(|c| c == "D019"),
+        "ueber einem Traeger, den dieser Pass nicht aufloest, wird nichts behauptet: \
+         {ueber_ein_let:?}"
+    );
+
+    // 4 -- and the OTHER answer `Feldurteil` carries: a carrier that has no fields at all.
+    // A number is not a record with the wrong names -- the refusal has to say which.
+    let ohne_felder = absagen(
+        "module t {
+static mut k : u32 = 0;
+impl fn f() -> bool
+    requires forall j in elems of k.plaetze : j != 0
+    effects { reads k } costs <= 4 ops { return true; } }",
+    );
+    assert!(
+        ohne_felder.iter().any(|c| c == "D019"),
+        "ein Feldzugriff auf eine Zahl faellt ebenfalls, mit dem anderen Satz: \
+         {ohne_felder:?}"
+    );
+}
+
 /// **`N044`/`N045`: a probe yields a VERDICT, and on every path.**
 ///
 /// `can_fail` is a probe -- it falls or it holds (`SYNTAX.md` §13). Measured 2026-08-31
@@ -6863,5 +6993,186 @@ check c {
     assert!(
         !nie.iter().any(|c| c == "N045"),
         "ein Ruf, der nicht zurueckkehrt, beendet den Block: {nie:?}"
+    );
+
+    // 5 -- **and a `forever` without an exit ends it too** (measured 2026-08-31,
+    // `messung/proben/probe-probenurteil-schleife.gab`). Until that day `N045` refused this
+    // shape: `endet_immer` answered `false` for every loop, `m2::endet` had learned the
+    // difference a day earlier and this copy had not. The emitted C is `for (;;) { … }`,
+    // and `cc -O0 -Wall -Wextra -Werror` accepts it -- *a `for (;;)` has no end for a
+    // function to fall out of, so the "path that reaches its closing brace" is a path that
+    // does not exist.*
+    let schleife = |rumpf: &str| {
+        absagen(&format!(
+            "module t {{
+static mut k : u32 = 0;
+extern fn wachhund() -> never effects {{ diverges }};
+extern fn sonde_tickt() -> bool effects {{ pure }} costs <= 1 ops;
+impl fn tor() effects {{ reads k }} costs <= 1 ops {{ return; }}
+check c {{
+    claim    \"unter drei\"
+    measures k
+    gates    tor
+    can_fail {{
+        forever runde
+            per_pass bounded 4 ops
+            on_exceeded wachhund
+            effects  {{ reads k }}
+            progress tickt
+        {{ {rumpf} }}
+    }}
+    floor    k >= 1
+}}
+assume tickt \"der Zeitgeber unterbricht\" falsifier sonde_tickt; }}"
+        ))
+    };
+    let ohne_ausgang = schleife("if k >= 3 { return false; } return true;");
+    assert!(
+        !ohne_ausgang.iter().any(|c| c == "N045"),
+        "ein `forever` ohne `leave` faellt nicht durch -- `N045` hat dort nichts zu sagen: \
+         {ohne_ausgang:?}"
+    );
+
+    // 6 -- **the counter-direction, and it is what keeps 5 from being a blanket amnesty.**
+    // The same loop WITH a `leave runde` does fall through, and then the closing brace is
+    // reachable again. `beispiele/gift/407` carries the same pair for `L103`.
+    let mit_ausgang = schleife("if k >= 3 { return false; } leave runde;");
+    assert!(
+        mit_ausgang.iter().any(|c| c == "N045"),
+        "mit `leave runde` faellt die Schleife durch, und der Weg an die Klammer ist \
+         wieder da: {mit_ausgang:?}"
+    );
+}
+
+/// **`M135`: `bool` is not a number** -- and the other half of `N044`'s sentence.
+///
+/// `N044` sees THAT a verdict is missing; nobody saw whether the one that is there is a
+/// verdict at all. Measured 2026-08-31 (`messung/proben/probe-rueckgabetyp.gab`): four
+/// falsified returns in one file and exactly ONE falls -- the one where both sides carry a
+/// range. `m1.rs::passt` ends in a comparison of ranges and `Typ::Wahrheit` has none, so
+/// the whole boundary fell through a silent `else`.
+///
+/// **And no stage after it says a word either**: the emitter writes `return 7;` into a
+/// `bool` function and `cc -O0 -Wall -Wextra -Werror` accepts it, because C converts. *A
+/// probe that returns `7` HOLDS on that path, always -- a counterprobe that cannot fall.*
+#[test]
+fn wahrheit_ist_keine_zahl() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(kopf: &str, rumpf: &str) -> String {
+        format!(
+            "module t {{
+static mut k : u32 = 0;
+static mut w : bool = false;
+impl fn f() -> {kopf} effects {{ reads k, reads w }} costs <= 1 ops {{ {rumpf} }} }}"
+        )
+    }
+
+    // 1 -- both directions across the boundary.
+    for (kopf, rumpf) in [("bool", "return 7;"), ("u32", "return w;"), ("bool", "return k;")] {
+        let a = absagen(&mit(kopf, rumpf));
+        assert!(
+            a.iter().any(|c| c == "M135"),
+            "`-> {kopf} {{ {rumpf} }}` kreuzt die Grenze und muss fallen: {a:?}"
+        );
+    }
+
+    // 2 -- the counter-direction. **A range still belongs to `M101`** -- one rule per
+    // question, and widening this one would take a refusal away from the other.
+    let bereich = absagen(&mit("u8", "return 300;"));
+    assert!(
+        bereich.iter().any(|c| c == "M101") && !bereich.iter().any(|c| c == "M135"),
+        "ein Bereichsfehler bleibt `M101`s Sache: {bereich:?}"
+    );
+    for (kopf, rumpf) in [("bool", "return true;"), ("u32", "return k;"), ("bool", "return w;")] {
+        let g = absagen(&mit(kopf, rumpf));
+        assert!(
+            !g.iter().any(|c| c == "M135"),
+            "`-> {kopf} {{ {rumpf} }}` kreuzt nichts und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- **the one-bit exception, and `beispiele/gift/416` wrote it.** A device field of
+    // one bit has type `u8 in 0 .. 1`: it admits both truth values and nothing else, so it
+    // carries the same question as `bool`. *The line is the RANGE and not the width* -- a
+    // literal `1` has `u8 in 1 .. 1`, admits one value, and falls.
+    let bit = absagen(
+        "module t {
+device Uart at mmio {
+    reg LSR : u8 @0x3FD class r fields { THRE @5, }
+}
+impl fn lies(d : ptr<mmio, r> Uart) -> bool effects { reads d.LSR } costs <= 2 ops
+{ return d.LSR.THRE; } }",
+    );
+    assert!(
+        !bit.iter().any(|c| c == "M135"),
+        "ein Ein-Bit-Feld in ein `bool` ist kein Uebergang: {bit:?}"
+    );
+    let eins = absagen(&mit("bool", "return 1;"));
+    assert!(
+        eins.iter().any(|c| c == "M135"),
+        "`return 1` laesst genau einen Wert zu und ist kein Wahrheitswert: {eins:?}"
+    );
+
+    // 4 -- **the two defects `M135` found in this checker on its first corpus run**, and
+    // they are the reason it is worth its own rule. Both bound a name to the wrong type,
+    // and both had been silent because nothing ever compared the two sides.
+    //
+    // (a) `when … returns e` hands back WHETHER the swap happened -- the emitter writes
+    // `bool genommen; genommen = atomic_compare_exchange_strong_explicit(…)`
+    // (`beispiele/35-tausch.gab`), and this pass called it `u32`.
+    let cas = absagen(
+        "module t {
+const NIEMAND : u32 = 0;
+atomic BESITZER : u32 release;
+impl fn nimm(f : u32) -> bool
+    requires f > 0
+    effects { writes BESITZER, publishes BESITZER }
+    costs   <= 16 ops
+{
+    let genommen = BESITZER exchange f when old(BESITZER) == NIEMAND returns erfolg
+        publishes nothing;
+    return genommen;
+} }",
+    );
+    assert!(
+        !cas.iter().any(|c| c == "M135" || c == "M101"),
+        "ein compare-exchange liefert ein `bool`, kein `u32`: {cas:?}"
+    );
+
+    // (b) a `return` in an `update` body yields the NEW value of the PLACE, not the
+    // enclosing function's result. In the corpus the two coincided by accident
+    // (`beispiele/05-nebenlaeufigkeit.gab`); inside a `check` they do not.
+    let update = absagen(
+        "module t {
+const GRENZE : u32 = 65535;
+const NKERNE : u32 = 4;
+atomic ZAEHLER : u32 relaxed;
+extern fn streit() -> never effects { diverges } costs <= 1 ops;
+impl fn tor() effects { reads ZAEHLER } costs <= 1 ops { return; }
+check c {
+    claim    \"der Zaehler bleibt unter seiner Grenze\"
+    measures ZAEHLER
+    gates    tor
+    can_fail {
+        let alt = ZAEHLER exchange update(v)
+            bounded NKERNE * 4 ops
+            on_exceeded streit
+        {
+            if v < GRENZE { return v + 1; }
+            return v;
+        } publishes nothing;
+        return alt < GRENZE;
+    }
+    floor    ZAEHLER >= 0
+} }",
+    );
+    assert!(
+        !update.iter().any(|c| c == "M135"),
+        "der Rumpf eines `update` liefert den neuen Wert des ORTS, nicht das Ergebnis der \
+         umgebenden Funktion: {update:?}"
     );
 }

@@ -1,0 +1,54 @@
+-- erwartet: D019
+-- **Der Feldname im Suffix einer Domaene, den es nicht gibt.**
+--
+-- Dieselbe Bauart wie `chain`s Kante (`D014`--`D016`) und wie der Grundname (`D017`): ein
+-- Name in einer Annotation, den niemand las. `messung/DOMAENENSTELLUNGEN.md` §7 fuehrte die
+-- Zelle als ungeprueft und nannte den Grund aus dem Quelltext -- *„`M109` steigt nur in
+-- `[index]`-Suffixe ab, nicht in `.feld`"*.
+--
+-- GEMESSEN am 2026-08-31 (`messung/proben/probe-elems-feldname.gab`), dieselbe
+-- Verfaelschung in drei Stellungen gegen den unveraenderten Pruefer:
+--
+--     …: 8 items, 0 errors, 0 hints
+--
+-- **Keine einzige** -- und `ensures` war darunter, also las `M109` den Feldnamen auch dort
+-- nicht. *Die Zelle war zu freundlich zum Pruefer.* Die Kontrolle im selben Lauf: derselbe
+-- Ort mit verfaelschtem GRUNDnamen (`elems of zzznix.plaetze`) faellt sehr wohl, an `M109`.
+-- **Der Grundname wird gelesen, der Feldname nicht.**
+--
+-- `forall j in elems of r.gibtsnichtfeld` quantifiziert ueber ein Feld, das nirgends steht
+-- -- der Quantor laeuft ueber nichts, und er steht im Zeugnis und in der Bibliotheks-ABI.
+-- **Genau der Satz, den `D017` ueber den Grundnamen sagt**, und den `M134` ueber einen
+-- Feldzugriff in einem Rumpf sagt. `M134` lebt in `m1.rs` und laeuft ueber AUSDRUECKE; der
+-- Ort einer Domaene ist keiner, und deshalb fiel er hindurch.
+--
+-- DIE GEGENPROBE STEHT IN DERSELBEN DATEI
+-- ----------------------------------------
+-- `elems of r.plaetze` in der zweiten Funktion ist derselbe Verbund, dasselbe Suffix, ein
+-- Feld, das es gibt -- und faellt nicht.
+
+module gift {
+
+const NRING : u32 = 32;
+type RingNr = u32 in 0 ..< 32;
+const LEER : RingNr = 0;
+
+type Ring = {
+    plaetze : [RingNr; NRING],
+};
+
+impl fn ins_leere(r : ptr<normal, rw> Ring)
+    ensures forall j in elems of r.gibtsnichtfeld : r.plaetze[j] != LEER
+    effects { reads r, writes r }
+    costs   <= 4 ops
+{
+}
+
+impl fn richtig(r : ptr<normal, rw> Ring)
+    ensures forall j in elems of r.plaetze : r.plaetze[j] != LEER
+    effects { reads r, writes r }
+    costs   <= 4 ops
+{
+}
+
+}

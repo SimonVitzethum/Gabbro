@@ -20,7 +20,7 @@ use gabbro_syntax::diag::{Absage, Absagen};
 use std::collections::HashMap;
 
 use crate::typen::Typ;
-use crate::umgebung::Umgebung;
+use crate::umgebung::{Feldurteil, Umgebung};
 
 pub struct Sicht<'a> {
     pub u: &'a Umgebung,
@@ -429,8 +429,117 @@ fn domaene_pruefen(
     absagen: &mut Absagen,
 ) {
     grundname_pruefen(d, s, st, geb, absagen);
+    ortsfelder_pruefen(d, s, geb, absagen);
     ortstyp_pruefen(d, s, geb, absagen);
     kette_pruefen(d, s, absagen);
+}
+
+/// **`D019` -- the FIELD names in the suffix of the place resolve.**
+///
+/// `messung/DOMAENENSTELLUNGEN.md` §7 carried the cell as unchecked, and the reason it gave
+/// was read off the source -- `M109` lives in `m1.rs`: *"`M109` descends only into
+/// `[index]` suffixes, not into
+/// `.field`; `D017` reads the BASE name. `D018` catches the case by half: if the field name
+/// does not resolve, the type of the whole place is `Unbekannt`, and then it stays silent
+/// too."*
+///
+/// **Measured 2026-08-31** (`messung/proben/probe-elems-feldname.gab`), `elems of
+/// r.plaetze` falsified to `elems of r.gibtsnichtfeld` in three positions:
+///
+/// ```text
+/// …: 8 items, 0 errors, 0 hints
+/// ```
+///
+/// **Not one of them**, and `ensures` among them -- so `M109` in `m1.rs` does not read it
+/// either, and
+/// the §7 cell was too kind to the checker. The control in the same run: falsifying the
+/// BASE name (`elems of zzznix.plaetze`) does fall, at `M109`. *The base is read and the
+/// field is not.*
+///
+/// A quantifier over a field that stands nowhere ranges over nothing -- **the same sentence
+/// `D017` says about the base name**, and the same one `M134` says about a field access in
+/// a body. `M134` lives in `m1.rs` and walks EXPRESSIONS; the place of a domain is not one,
+/// which is exactly why it slipped through.
+///
+/// ## Silence where the prefix is not known, and it is the whole discipline
+///
+/// The walk stops at the first suffix whose carrier did not resolve. That makes the rule
+/// safe in the two positions `D017` has to skip: at a `traverse` over a `let` binding the
+/// base is `Unbekannt`, so nothing is claimed about the field either -- **the missing block
+/// scope cannot produce a false refusal here**, because a rule that says nothing about an
+/// unknown carrier says nothing at all.
+fn ortsfelder_pruefen(d: &Domaene, s: &Sicht, geb: &[String], absagen: &mut Absagen) {
+    let Some(o) = ort_der_domaene(d) else { return };
+    // A quantifier variable carries no type in this pass -- `mappings of w` binds `m` to a
+    // page-table entry, and `m.feld` must not be guessed at.
+    if geb.contains(&o.basis.text) {
+        return;
+    }
+    let mut traeger = s
+        .lokal
+        .get(&o.basis.text)
+        .cloned()
+        .or_else(|| s.u.suche_global(s.modul, &o.basis.text).cloned())
+        .unwrap_or(Typ::Unbekannt);
+    for suffix in &o.suffixe {
+        if traeger.ist_unbekannt() {
+            return;
+        }
+        match suffix {
+            OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) => {
+                match s.u.feldurteil(&traeger, &f.text) {
+                    Feldurteil::KeinFeld(hat) => {
+                        let mut a = Absage::fehler(
+                            "D019",
+                            f.span,
+                            format!("`{}` is not a field of this carrier", f.text),
+                        )
+                        .mit_notiz(format!(
+                            "the carrier is `{}`, and a quantifier over a field that \
+                             stands nowhere ranges over nothing -- it stands in the \
+                             certificate and in the library ABI and says nothing",
+                            traeger.text()
+                        ));
+                        a = if hat.is_empty() {
+                            a.mit_notiz("it declares no fields at all")
+                        } else {
+                            a.mit_notiz(format!("it has: {}", hat.join(", ")))
+                        };
+                        absagen.schiebe(a);
+                        return;
+                    }
+                    Feldurteil::KeineFelder => {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "D019",
+                                f.span,
+                                format!("`.{}` reads a field on something that has none", f.text),
+                            )
+                            .mit_notiz(format!(
+                                "the carrier is `{}` -- a number, a truth value or a reason \
+                                 carries no fields",
+                                traeger.text()
+                            )),
+                        );
+                        return;
+                    }
+                    // The carrying case walks on; `Unklar` is the honest exit -- what the
+                    // pass cannot type it does not judge.
+                    Feldurteil::Traegt => {}
+                    Feldurteil::Unklar => return,
+                }
+                traeger = s.u.feld_von(s.modul, &traeger, &f.text);
+            }
+            OrtSuffix::Index(_) => {
+                traeger = match traeger.durchgreifen() {
+                    Typ::Feld { element, .. } => (**element).clone(),
+                    // A `table` indexed directly, and everything else this pass cannot
+                    // follow: stop rather than guess.
+                    _ => return,
+                };
+            }
+        }
+    }
 }
 
 /// The place a domain names -- or `None` for the two domains that name no place.

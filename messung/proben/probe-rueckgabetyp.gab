@@ -1,0 +1,56 @@
+-- **Wo sitzt die Luecke des Rueckgabetyps -- im `check` oder in `M1`?**
+--
+-- Die Nachbarprobe (`probe-probenurteil-typ.gab`) misst, dass `return 7` in einem
+-- `can_fail` durch alle vier Stufen laeuft. Diese hier fragt, ob das eine Eigenschaft des
+-- `check` ist -- und die Antwort ist **nein**: es ist `M1`s Gestalt an JEDEM `return`.
+--
+-- GEMESSEN am 2026-08-31 gegen den UNVERAENDERTEN Pruefer, alle vier Faelle in EINER Datei:
+--
+--     $ gabbro pruefe messung/proben/probe-rueckgabetyp.gab
+--     error: [M101] …:48:63: die Rueckgabe requires `u8`, the value has `u16 in 300 .. 300`
+--        48 | impl fn b() -> u8 … { return 300; }
+--     …: 7 items, 1 errors, 0 hints
+--       M1 saw 6 expressions, 0 of them without a type (100 % coverage)
+--
+-- **Eine von vier.** Und die eine ist die, an der beide Seiten einen BEREICH haben:
+--
+-- | Fall | verlangt | geliefert | Urteil |
+-- |---|---|---|---|
+-- | (a) | `bool` | `7` | **schweigt** |
+-- | (b) | `u8`   | `300` | `M101` |
+-- | (c) | `u32`  | `bool` | **schweigt** |
+-- | (d) | `bool` | `u32`-Ort | **schweigt** |
+--
+-- DIE URSACHE, aus dem Quelltext BESTAETIGT und nicht daraus geraten
+-- ------------------------------------------------------------------
+-- `m1.rs::passt` endet mit
+--
+--     let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else { return; };
+--
+-- und `typen.rs::bereich` liefert `Some` nur fuer `Ganzzahl`, `Umlaufend`, `Register` und
+-- das, was ein `Benannt` darauf durchreicht. **`Typ::Wahrheit` hat keinen Bereich**, also
+-- schweigt der Vergleich, sobald `bool` auf einer der beiden Seiten steht.
+--
+-- *Das ist keine Regel, die fehlt -- es ist eine Regel, deren letzte Zeile eine ganze
+-- Typklasse durchfallen laesst.* Und sie schweigt nicht nur an der Rueckgabe: `passt`
+-- laeuft ebenso an der Zuweisung und am Argument (`passt_wert` heisst der Aufrufer, `was`
+-- ist der einzige Unterschied).
+
+module probe::rueckgabetyp {
+
+static mut k : u32 = 0;
+static mut w : bool = false;
+
+-- (a) `bool` verlangt, Zahl geliefert
+impl fn a() -> bool effects { reads k } costs <= 1 ops { return 7; }
+
+-- (b) `u8` verlangt, Zahl ausserhalb des Bereichs geliefert
+impl fn b() -> u8 effects { reads k } costs <= 1 ops { return 300; }
+
+-- (c) `u32` verlangt, `bool` geliefert
+impl fn c() -> u32 effects { reads w } costs <= 1 ops { return w; }
+
+-- (d) `bool` verlangt, `u32`-Ort geliefert
+impl fn d() -> bool effects { reads k } costs <= 1 ops { return k; }
+
+}

@@ -1,0 +1,62 @@
+-- **Sieht jemand den TYP des Wertes, den eine Probe zurueckgibt?**
+--
+-- `N044` sieht, DASS ein Wert fehlt. Der Bericht vom 2026-08-31 nannte die andere Haelfte
+-- ausdruecklich ungemessen: *„It says nothing about the TYPE of the value returned, only
+-- that there is one on every path: `return 3` in a `can_fail` block is not refused here."*
+-- (`saetze.rs`, Satz `n.probenurteil`, `vorbehalt`). **Das war aus dem Quelltext gelesen
+-- und nicht gemessen** -- ein Satz mit einer Zeilennummer.
+--
+-- GEMESSEN am 2026-08-31 gegen den UNVERAENDERTEN Pruefer:
+--
+--     $ gabbro pruefe messung/proben/probe-probenurteil-typ.gab
+--     …: 4 items, 0 errors, 0 hints
+--       M1 saw 9 expressions, 0 of them without a type (100 % coverage)
+--     exit=0
+--
+-- **Und die Stufe dahinter ebenso.** `gabbro emit` senkt die Zeile woertlich ab
+--
+--     bool pruefe_c(void) {
+--         if (k >= 3) {
+--             return 7;
+--         }
+--         return true;
+--     }
+--
+-- und `cc -O0 -Wall -Wextra -Werror -c` nimmt sie an (exit=0): C wandelt `7` nach `true`.
+-- **Alle vier Stufen laufen durch** -- anders als bei `N044`, wo `cc` die vierte war, die
+-- absagte. *Hier gibt es keine vierte.*
+--
+-- WAS DAS HEISST, und es ist schaerfer als „ein Typfehler"
+-- --------------------------------------------------------
+-- Die Probe HAELT auf diesem Weg, immer. Ein `check`, dessen `can_fail` auf einem Zweig
+-- eine Zahl ungleich null zurueckgibt, kann dort nie fallen -- **ein Messgeraet, das gruen
+-- klemmt.** Genau die `W16`-Gestalt, und diesmal im Werkzeug, das die Pflichten haelt.
+--
+-- WO DIE LUECKE WIRKLICH SITZT -- und nicht in `can_fail`
+-- -------------------------------------------------------
+-- Die zweite Messung derselben Stunde (`probe-rueckgabetyp.gab`) zeigt: es ist keine
+-- Luecke des `check`. `m1.rs::passt` vergleicht **Bereiche**, und `Typ::Wahrheit` hat
+-- keinen (`typen.rs::bereich` liefert `None` fuer alles ausser Ganzzahl, Umlaufend,
+-- Register). Wo eine Seite keinen Bereich hat, **schweigt `passt`**. Deshalb faellt
+-- `-> u8 { return 300; }` an `M101` und `-> bool { return 7; }` an nichts.
+--
+-- Der `can_fail`-Block ist nur die Stelle, an der es am meisten kostet.
+
+module probe::probenurteil {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Zaehler bleibt unter drei."
+    measures k
+    gates    tor
+    can_fail {
+        if k >= 3 { return 7; }
+        return true;
+    }
+    floor    k >= 1
+}
+
+}

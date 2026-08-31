@@ -516,6 +516,41 @@ pub const D1D2: &[Satz] = &[
                      SYNTAX.md:1060",
     },
     Satz {
+        name: "m.wahrheit_ist_keine_zahl",
+        kennungen: &["M135"],
+        aussage: "A value does not cross between `bool` and a number. `m1.rs::passt` ends \
+                  in a comparison of RANGES, and `Typ::Wahrheit` has none -- so the whole \
+                  boundary fell through a silent `else`, at every `return`, every \
+                  assignment and every argument. **This is the other half of `N044`'s \
+                  sentence**: `N044` sees THAT a verdict is missing, `M135` sees whether \
+                  the one that is there is a verdict at all.",
+        vorbehalt: "**A range of exactly `0 .. 1` is not a crossing** -- a one-bit device \
+                    field admits both truth values and nothing else, and \
+                    beispiele/gift/416 reads one into a `bool`. The line is the RANGE and \
+                    not the width: `return 1` has `u8 in 1 .. 1` and falls. And it holds \
+                    ONLY this boundary: a float against an integer crosses the same silent \
+                    `else` and is named in messung/proben/probe-rueckgabetyp.gab, not \
+                    refused -- the measurement decides the reach of the rule, not the \
+                    symmetry of the code.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker: \
+                      messung/proben/probe-rueckgabetyp.gab falsifies four returns in one \
+                      file and exactly ONE falls (`-> u8 { return 300; }` at `M101`) -- the \
+                      one where both sides carry a range. **And no stage after this one \
+                      says a word either**: `emit` writes `return 7;` into a `bool` \
+                      function and `cc -O0 -Wall -Wextra -Werror` accepts it, because C \
+                      converts. A probe returning `7` HOLDS on that path, always. Poison is \
+                      beispiele/gift/430. **Its first two finds were in this checker**: a \
+                      compare-exchange bound to the atomic's type instead of to `bool` \
+                      (`beispiele/35-tausch.gab`, where the emitter had written `bool \
+                      genommen` all along), and an `exchange update` body read against the \
+                      enclosing function's result instead of the place's type \
+                      (beispiele/gift/209). Over all 475 corpus files the rule falls in ZERO \
+                      after both repairs.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; messung/proben/probe-rueckgabetyp.gab; \
+                     messung/proben/probe-probenurteil-typ.gab",
+    },
+    Satz {
         name: "n.probenurteil",
         kennungen: &["N044", "N045"],
         aussage: "A `can_fail` block yields a VERDICT, and on every path: every `return` in \
@@ -523,10 +558,17 @@ pub const D1D2: &[Satz] = &[
                   (`N045`). A probe FALLS or it HOLDS -- `return false` and `return true` \
                   are the two things it can say.",
         vorbehalt: "**It says nothing about the TYPE of the value returned**, only that \
-                    there is one on every path: `return 3` in a `can_fail` block is not \
-                    refused here. And `N045` reads `crate::endet_immer`, which treats a \
-                    loop as falling through -- a probe whose only exit is inside a `forever` \
-                    would be refused, and the corpus carries no such shape to measure it on.",
+                    there is one on every path: `return 7` in a `can_fail` block is not \
+                    refused here -- MEASURED 2026-08-31, and all four stages pass it (`cc` \
+                    converts `7` to `true`, so there is no fourth stage that refuses). The \
+                    gap is not the `check`'s: `m1.rs::passt` compares RANGES, and \
+                    `Typ::Wahrheit` had none, so the `bool`/number boundary was unheld \
+                    at every `return`, assignment and argument. **Both caveats are gone**: \
+                    `M135` holds the boundary since the same day (satz \
+                    m.wahrheit_ist_keine_zahl): `crate::endet_immer` treated every \
+                    loop as falling through and refused a probe whose only exits stand \
+                    inside a `forever`; that was a FALSE refusal (`cc -Werror` accepts the \
+                    `for (;;)` it emits), and it is repaired.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker: six of the twelve \
                       files in messung/tor-proben/ emit C that `cc` refuses -- `bool \
@@ -537,9 +579,42 @@ pub const D1D2: &[Satz] = &[
                       poison is beispiele/gift/428 (`N044`) and 429 (`N045`). \
                       **beispiele/06-annahmen.gab has carried the finding as a COMMENT \
                       since 2026-08-20 with no rule behind it** -- and six files walked \
-                      back into it. messung/TORREICHWEITE.md.",
+                      back into it. messung/TORREICHWEITE.md. **The loop half was measured \
+                      2026-08-31** at messung/proben/probe-probenurteil-schleife.gab: \
+                      `N045` fell there and should not have. Over all 475 corpus files the \
+                      repair changes exactly that one file -- no other rule fell silent, \
+                      none newly spoke.",
         fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/SYNTAX.md §13; \
                      beispiele/06-annahmen.gab",
+    },
+    Satz {
+        name: "d.domaenenfeld",
+        kennungen: &["D019"],
+        aussage: "The FIELD names in the suffix of a domain's place resolve. The third \
+                  question at the same place: `D017` reads its base name, `D018` its kind, \
+                  `D019` the field names of its suffix. A quantifier over a field that \
+                  stands nowhere ranges over nothing -- **the same sentence `D017` says \
+                  about the base name, and `M134` about a field access in a body.**",
+        vorbehalt: "**It is silent wherever the PREFIX did not resolve**, and that is the \
+                    whole discipline: the walk stops at the first suffix whose carrier is \
+                    unknown. That makes the rule safe at a `traverse` over a `let` binding \
+                    -- the position `D017` has to skip for want of a block scope cannot \
+                    produce a false refusal here, because a rule that says nothing about an \
+                    unknown carrier says nothing at all.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker, \
+                      messung/proben/probe-elems-feldname.gab: `elems of r.plaetze` \
+                      falsified to `elems of r.gibtsnichtfeld` in `ensures`, in `requires` \
+                      and in the body of a `spec fn` gave `8 items, 0 errors, 0 hints` -- \
+                      **not one of them**, and `ensures` among them, so `M109` does not read \
+                      a field name either and the DOMAENENSTELLUNGEN.md §7 cell was too kind \
+                      to the checker. The control in the same run: the same place with a \
+                      falsified BASE name (`elems of zzznix.plaetze`) does fall, at `M109` \
+                      -- *the base is read and the field is not.* Poison is \
+                      beispiele/gift/431. Over all 478 corpus files the rule falls in ZERO.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; \
+                     messung/proben/probe-elems-feldname.gab; \
+                     messung/DOMAENENSTELLUNGEN.md §7",
     },
     Satz {
         name: "d.domaenenort",

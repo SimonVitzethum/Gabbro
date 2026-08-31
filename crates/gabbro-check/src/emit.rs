@@ -2615,7 +2615,7 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// Abgesenkt als Zugriffsfunktion mit Index, weil die Lage erst zur Laufzeit feststeht:
 ///
 /// ```c
-/// static inline uint64_t Vtd_FRR_FR_LO(const Vtd *d, uint32_t i) {
+/// static inline __attribute__((unused)) uint64_t Vtd_FRR_FR_LO(const Vtd *d, uint32_t i) {
 ///     return *(volatile uint64_t *)(d->basis + <lage> + i * 16 + 0);
 /// }
 /// ```
@@ -2639,7 +2639,7 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
         };
         let breite = intty(&r.typ);
         aus.push_str(&format!(
-            "\nstatic inline {breite} {}_{}_{}(const {} *d, uint32_t i) {{\n\
+            "\nstatic inline __attribute__((unused)) {breite} {}_{}_{}(const {} *d, uint32_t i) {{\n\
              \x20   /* count {anzahl}: the index bound falls out of the declaration */\n\
              \x20   return *(volatile {breite} *)(d->basis + ({lage}) + i * {schritt}u + {off}u);\n}}\n",
             d.name.text, b.name.text, r.name.text, d.name.text
@@ -2651,7 +2651,7 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
         // The class rule stays with the checker (`R002`/`R003`, issued in `m3.rs`), as
         // everywhere: what the pass decided, the machine does not check a second time (W6).
         aus.push_str(&format!(
-            "\nstatic inline void {}_{}_setz_{}({} *d, uint32_t i, {breite} x) {{\n\
+            "\nstatic inline __attribute__((unused)) void {}_{}_setz_{}({} *d, uint32_t i, {breite} x) {{\n\
              \x20   *(volatile {breite} *)(d->basis + ({lage}) + i * {schritt}u + {off}u) = x;\n}}\n",
             d.name.text, b.name.text, r.name.text, d.name.text
         ));
@@ -2891,7 +2891,7 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
         aus.push_str("/* requires: a caller obligation, not a generated assertion */\n");
     }
     aus.push_str(&format!(
-        "static inline void {}_{}({} *d) {{\n",
+        "static inline __attribute__((unused)) void {}_{}({} *d) {{\n",
         d.name.text, x.name.text, d.name.text
     ));
     match &d.mirrors {
@@ -3106,7 +3106,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             let leser = lesewort(breite, gross);
             if !feld.reserviert {
                 aus.push_str(&format!(
-                    "static inline {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
+                    "static inline __attribute__((unused)) {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
                     f2 = feld.name.text
                 ));
                 // **Der SCHREIBER, und er heisst `_setz_`** -- `SPRACHE.md`:355 sagt ihn
@@ -3114,7 +3114,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 // Treiber, der einen Rahmen STELLT, faellt auf eine Zuweisung an einen
                 // Funktionsaufruf.
                 aus.push_str(&format!(
-                    "static inline void {n}_setz_{f2}({n} *v, {c} x) {{ {sw}(v->bytes + {versatz}, x); }}\n",
+                    "static inline __attribute__((unused)) void {n}_setz_{f2}({n} *v, {c} x) {{ {sw}(v->bytes + {versatz}, x); }}\n",
                     f2 = feld.name.text,
                     sw = schreibwort(breite, gross)
                 ));
@@ -3326,7 +3326,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 None => String::new(),
             };
             aus.push_str(&format!(
-                "static inline {ergebnis} {n}_{f2}(const {n} *v) {{ \
+                "static inline __attribute__((unused)) {ergebnis} {n}_{f2}(const {n} *v) {{ \
                  return ({ergebnis})(((({c}){leser}(v->bytes + {versatz}) >> {lo}) & {maske}u){mal}); }}\n",
                 f2 = g.name.text
             ));
@@ -3341,7 +3341,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             // Modul steht.*
             if g.typ.scale.is_none() {
                 aus.push_str(&format!(
-                    "static inline void {n}_setz_{f2}({n} *v, {ergebnis} x) {{ \
+                    "static inline __attribute__((unused)) void {n}_setz_{f2}({n} *v, {ergebnis} x) {{ \
                      {c} w = ({c}){leser}(v->bytes + {versatz}); \
                      w = ({c})((w & ({c})~(({c}){maske}u << {lo})) | ((({c})x & {maske}u) << {lo})); \
                      {sw}(v->bytes + {versatz}, w); }}\n",
@@ -3403,7 +3403,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     // Laengenpruefung braucht** (`PFLICHTEN.md` F10). Sie stehen als EINE Funktion da, damit
     // der Rufer sie einmal stellt statt an jedem Feld.
     aus.push_str(&format!(
-        "static inline bool {n}_gueltig(const {n} *v) {{\n    if (v->len < {versatz}u) return false;\n"
+        "static inline __attribute__((unused)) bool {n}_gueltig(const {n} *v) {{\n    if (v->len < {versatz}u) return false;\n"
     ));
     for p in &pruefungen {
         aus.push_str(&format!("    if (!({p})) return false;\n"));
@@ -8340,14 +8340,14 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         "\ntypedef struct {{ {elem} eintraege[{weite}]; }} {n}_knoten;\n"
     ));
     aus.push_str(&format!(
-        "\nstatic inline bool {n}_ist_blatt(const {elem} *it) {{ return (bool)({blatt}); }}\n"
+        "\nstatic inline __attribute__((unused)) bool {n}_ist_blatt(const {elem} *it) {{ return (bool)({blatt}); }}\n"
     ));
     aus.push_str(&format!(
-        "static inline bool {n}_steigt_ab(const {elem} *it) {{ return (bool)({ab_wenn}); }}\n"
+        "static inline __attribute__((unused)) bool {n}_steigt_ab(const {elem} *it) {{ return (bool)({ab_wenn}); }}\n"
     ));
     // **Der Abstieg. `levels` ist die Schranke, und sie steht als Zahl da.**
     aus.push_str(&format!(
-        "\nstatic inline bool {n}_absteigen(const {n}_knoten *wurzel, const uint32_t *index,\n\
+        "\nstatic inline __attribute__((unused)) bool {n}_absteigen(const {n}_knoten *wurzel, const uint32_t *index,\n\
          \x20       bool (*knoten_zu)(uint64_t, const {n}_knoten **), const {elem} **blatt) {{\n\
          \x20   const {n}_knoten *k = wurzel;\n\
          \x20   for (uint32_t e = 0; e < {n}_EBENEN; e++) {{\n\
