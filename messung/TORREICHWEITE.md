@@ -131,6 +131,24 @@ steht, beschreibt in ihr einen Zustand, den es nicht gibt.
 (Typname ohne Typ) und `S007` (`on_exceeded` ohne Namen): *ein Name, hinter dem nichts
 steht.*
 
+## Die Mutation, von Hand gesetzt und nachgezählt
+
+`measures-darf-nennen-was-es-will` macht `sichtbar.contains(&m.basis.text)` zu
+`true || …`. Gebaut, und über 394 Dateien (`beispiele/`, `beispiele/gift/`,
+`messung/tor-proben/`) je die Zahl der Absagen vorher und nachher gezählt. Der ganze
+Unterschied:
+
+```
+  beispiele/gift/421-measures-ins-leere.gab        1  ->  0
+  messung/tor-proben/t11-measures-verschrieben.gab 2  ->  1
+  messung/tor-proben/t5-measures-gibt-es-nicht.gab 1  ->  0
+```
+
+**Genau EINE Giftprobe fällt** — `421`. Die zwei anderen sind die Messdateien dieses
+Vorlaufs und stehen in keinem Wächterlauf. *Die Zahl steht hier, weil an diesem Tag zwei
+Mutationen „genau EINE" sagten und fünf meinten.* Die Quelle ist danach byteweise
+zurückgestellt (`git status` leer).
+
 ## Was ungeprüft bleibt
 
 * **Die Signatur des Tors** (`t4`). Welche Signatur eine `Duty` verbrauchen **kann**, ist
