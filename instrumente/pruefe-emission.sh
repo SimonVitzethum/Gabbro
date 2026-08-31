@@ -232,10 +232,14 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
             > "$ARB/$name.zeugnis" 2> "$ARB/zfehler"; then
         echo "  7. Zeugnis:    GESCHEITERT"; cat "$ARB/zfehler"; exit 1
     fi
-    if grep -q "UNZUGEORDNET" "$ARB/$name.zeugnis"; then
-        echo "  7. Zeugnis:    UNZUGEORDNET -- der Erzeuger senkt eine Form ab, die keine"
+    # **`UNCLASSIFIED` statt `UNZUGEORDNET` seit dem 2026-08-31** -- dieselbe Bewegung
+    # wie bei `templates` darunter: das Zeugnis ist ein Bericht und englisch, und diese
+    # Zeile liest ihn ab. *Ein Muster, das nach einer Uebersetzung nichts mehr findet,
+    # meldet stumm null.*
+    if grep -q "UNCLASSIFIED" "$ARB/$name.zeugnis"; then
+        echo "  7. Zeugnis:    UNCLASSIFIED -- der Erzeuger senkt eine Form ab, die keine"
         echo "                 Einordnung kennt. Die Vertrauensflaeche ist groesser als gebucht."
-        grep -A3 "UNZUGEORDNET" "$ARB/$name.zeugnis"; exit 1
+        grep -A3 "UNCLASSIFIED" "$ARB/$name.zeugnis"; exit 1
     fi
     # **Die Zahl wird ABGELESEN, nicht nachgezaehlt** (W2). Ein `grep -c` ueber der
     # Schablonenliste zaehlte hier erst die Zeile „keine. Diese Einheit nimmt nichts an" mit --

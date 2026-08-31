@@ -808,7 +808,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
     let e = erhebe(baum);
     let stellen = crate::fremdverengungen(baum);
     let mut aus = String::new();
-    aus.push_str(&format!("== Uebersetzungszeugnis: {datei} ==\n"));
+    aus.push_str(&format!("== Translation certificate: {datei} ==\n"));
     aus.push_str(
         "-- It does NOT prove the translation. It lists what the translation RESTS ON.\n\n",
     );
@@ -995,13 +995,13 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
                 ranges,\n     not error bounds.\n",
         );
     }
-    aus.push_str("\n-- BEFUND\n");
+    aus.push_str("\n-- FINDING\n");
     if !e.unzugeordnet.is_empty() {
         let mut u = e.unzugeordnet.clone();
         u.sort();
         u.dedup();
         aus.push_str(&format!(
-            "     UNZUGEORDNET: {}\n",
+            "     UNCLASSIFIED: {}\n",
             u.join(", ")
         ));
         aus.push_str(

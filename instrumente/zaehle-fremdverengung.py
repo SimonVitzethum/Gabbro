@@ -46,7 +46,7 @@ FRIST = 600
 MUSTER = ["beispiele/*.gab", "messung/*/*.gab"]
 GIFT = "beispiele/gift/*.gab"
 
-KOPF = re.compile(r"^== Uebersetzungszeugnis: (\S+) ==$")
+KOPF = re.compile(r"^== Translation certificate: (\S+) ==$")
 # **Carried over 2026-08-30:** the certificate's finding line took a THIRD currency, `N
 # UNCOVERED` -- an assumption naming a probe that no program redeems. *The old pattern lost
 # its subject that way and reported the search path as gone* -- correctly, and that is what
@@ -88,7 +88,7 @@ def messe(wurzel, pfade):
         text=True, timeout=FRIST)
     # Ruecklaufwert 1 heisst nur: mindestens eine Einheit traegt Fehler. Das ist ueber dem
     # Fragmentkorpus der Normalfall und kein Abbruch.
-    if r.returncode not in (0, 1) or "Uebersetzungszeugnis" not in r.stdout:
+    if r.returncode not in (0, 1) or "Translation certificate" not in r.stdout:
         print("!! ABBRUCH: `gabbro zeugnis` lief nicht -- das ist KEINE Zaehlung von null.")
         print((r.stderr or r.stdout)[-800:])
         sys.exit(2)
