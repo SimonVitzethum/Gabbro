@@ -317,10 +317,10 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
                 schiebe(&mut v, format!("gabbro_eintritt_{n}_VEKTOR"), e.name.span, "gabbro_eintritt_{Entry}_VEKTOR", "the vector number".into());
             }
             // The dispatch reference exists only where the target is a declared function.
-            // **A program in which it is missing is already refused** -- `N018`, measured
-            // 2026-08-31 -- so this gate buys nothing today. It stands because the emitter's
-            // condition is one lookup and two conditions that must agree should not be
-            // written down differently.
+            // **A program in which it is missing is already refused** -- by `N018`, which
+            // lives in `namen.rs::dispatch_loest_auf`, measured 2026-08-31 -- so this gate
+            // buys nothing today. It stands because the emitter's condition is one lookup and
+            // two conditions that must agree should not be written down differently.
             if ruempfe.contains(&letztes(&e.dispatch)) {
                 schiebe(&mut v, format!("gabbro_eintritt_{n}_verteiler"), e.name.span, "gabbro_eintritt_{Entry}_verteiler", "the dispatch reference".into());
             }
