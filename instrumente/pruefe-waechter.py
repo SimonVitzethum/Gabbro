@@ -274,13 +274,14 @@ def stumme_probe_mit_eins(text):
 TRAEGT_URTEIL = ("pruefe-", "mutiere-", "abnahme.py")
 
 # **Booked instead of healed** -- with the reason beside it, as everywhere in this workshop.
-ABBRUCH_GEBUCHT = {
-    "pruefe-zahlen.py":
-        "eine zweite Bahn uebersetzt diese Datei in derselben Nacht; zwei Laeufe auf einer "
-        "Quelle zerstoeren einander (CLAUDE.md). ZWEI Stellen, seit die stumme Haelfte "
-        "misst: Zeile 1001 druckt ihre Absage, Zeile 1037 (`if not tief_ok: return 1`) "
-        "nicht. Beide sind benannt und gehoeren ihr.",
-}
+# **It stands EMPTY since 2026-08-31, and that is a measurement and not an oversight.**
+# Its one entry was `pruefe-zahlen.py`, booked because a second track was translating that
+# file the same night -- two runs on one source destroy each other (`CLAUDE.md`). Both its
+# places are healed now: the printed refusal at the dynamic self-reference guard, and the
+# silent `if not tief_ok: return 1` that only the other half of the sixth requirement can
+# see. *An empty booking is the only honest starting state -- what goes in has to be argued
+# for.*
+ABBRUCH_GEBUCHT = {}
 # **`[1-9]` and not `1` -- and this guardian reported the flaw on itself** (2026-08-31).
 # Requirement three reads *"an abort leaves with a return code other than zero"*, and the
 # pattern recognised exactly one digit of that. The moment three guardians moved their fallen

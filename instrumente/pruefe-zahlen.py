@@ -1046,7 +1046,11 @@ def main():
         print("  gefaehrliche Fall ist nicht der Ruecklauf, sondern der Fixpunkt, der")
         print("  TERMINIERT: die Zahl stimmt dann immer, unabhaengig davon, ob gemessen wurde.")
         print("  0 von 0 Eintraegen nachgerechnet -- es wurde NICHTS gemessen.")
-        return 1
+        # **2, not 1** (2026-08-31). The line above says nothing was measured, and until
+        # today the return code said the opposite. This branch is not a finding about the
+        # tree: the register is intact, the RUN is the child of a register command. *The
+        # setup has to change, not the tree.*
+        return 2
 
     # **Der Riegel gegen den Fixpunkt, vor allem anderen.**
     if schlecht := kein_selbstbezug():
@@ -1071,18 +1075,19 @@ def main():
     print("  Fixpunktriegel: " + ("ok (ein selbstbezueglicher Eintrag faellt)" if biss
                                   else "GESCHEITERT -- er laesst sich selbst durch"))
     if not biss:
-        return 1
+        # 2, not 1: a fallen probe has measured NOTHING.
+        return 2
     # **Und der DYNAMISCHE Riegel muss ebenso beissen koennen.** Ein Riegel, der nie
     # zuschlaegt, ist von einem fehlenden nicht zu unterscheiden -- darum wird er hier an
     # einem echten Kindprozess gemessen und nicht an einem Satz.
     tief = subprocess.run([str(pathlib.Path(__file__).resolve())], cwd=W, text=True,
                           capture_output=True, timeout=FRIST,
                           env=dict(os.environ, **{MARKE: "1"}))
-    tief_ok = tief.returncode == 1 and "SELBSTBEZUG (dynamisch)" in tief.stdout
+    tief_ok = tief.returncode == 2 and "SELBSTBEZUG (dynamisch)" in tief.stdout
     print("  Tiefenriegel:   " + ("ok (ein Lauf aus dem Register heraus faellt, in JEDER Tiefe)"
                                   if tief_ok else "GESCHEITERT -- ein Ring ueber zwei Ecken kaeme durch"))
     if not tief_ok:
-        return 1
+        return 2
     # **And the register of reasons must be able to bite** (2026-08-30). A written reason ages
     # exactly like a written number: the row it explains gets reworded, the reason keeps
     # lowering the count and explains nothing. *That is worse than no reason at all -- it makes
@@ -1096,7 +1101,7 @@ def main():
     print("  Gruende leben:   " + ("ok (jeder gebuchte Grund trifft eine Zeile)" if tot_still
                                    else "es steht ein toter Grund im Register -- siehe unten"))
     if not tot_biss:
-        return 1
+        return 2
     # **And the key has to carry the PLACE, not the VALUE** (2026-08-31). Two cells with
     # the same digit at two places are TWO cells, and a guarded one must not cover the
     # other. Until today it did: `H` fell from 5 to 4, two register cells in `PLAN.md`
@@ -1133,7 +1138,7 @@ def main():
         print(f"  GESCHEITERT -- {len(stumm)} Eintraege bleiben stumm, wenn ihre Zahl verstellt wird:")
         for x in stumm:
             print(f"     {x}")
-        return 1
+        return 2
     print(f"  ok -- alle {len(EINTRAEGE)} Eintraege fallen, wenn ihre Zahl verstellt wird")
     print()
 
