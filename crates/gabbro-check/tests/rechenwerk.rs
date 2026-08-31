@@ -6140,3 +6140,77 @@ impl fn f(w : ptr<normal, rw> T, g : index into T)
     // chain visits at most every slot once. *Coarse upwards is a cost promise that holds;
     // the 2 048 was coarse DOWNWARDS, and that is the direction that lies.*
 }
+
+/// **«F»: a floating point literal inside an `f32` computation carries its `f`** (2026-08-31).
+///
+/// Without the suffix a C literal is a `double`, and C lifts the neighbouring `float` up to
+/// it: **the whole computation changes width** and only falls back at the return.
+/// `-Wdouble-promotion` names the way up, `-Wfloat-conversion` the way back -- *the same
+/// defect seen from both sides* -- and `-Wall -Wextra` names neither.
+///
+/// Measured in plain C over 200 000 values from the range of `Bruch`:
+///
+/// ```text
+///   BEFORE != v*0.1f : 39990        AFTER != v*0.1f : 0
+/// ```
+///
+/// **The producer therefore wrote a different number than the checker said about `f32` in
+/// one case out of five.** Same shape as the `wrapping` cast: where C changes the width by
+/// itself, the producer writes the width down.
+#[test]
+fn f32_literal_traegt_seinen_suffix() {
+    fn c_ohne_absage(q: &str) -> String {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+        c
+    }
+    // **Read per BLOCK, not over the whole output.** Three bodies stand in the same file and
+    // one of them MUST carry `0.1` without a suffix -- a claim about the whole text would
+    // already be satisfied by the wrong body.
+    fn rumpf<'a>(c: &'a str, kopf: &str) -> &'a str {
+        let von = c
+            .rfind(kopf)
+            .unwrap_or_else(|| panic!("no body `{kopf}`:\n{c}"));
+        let rest = &c[von..];
+        &rest[..rest.find('}').unwrap_or(rest.len())]
+    }
+
+    let c = c_ohne_absage(
+        "module t {
+type Bruch = f32 in 0.0 .. 10.0;
+type Weit  = f64 in 0.0 .. 10.0;
+impl fn schmal(x : Bruch) -> Bruch effects { pure } costs <= 4 ops
+{ return x * 0.1 rounded; }
+impl fn geschachtelt(x : Bruch) -> Bruch effects { pure } costs <= 4 ops
+{ return x * (0.5 rounded + 0.25 rounded); }
+impl fn breit(y : Weit) -> Weit effects { pure } costs <= 4 ops
+{ return y * 0.1 rounded; }
+}",
+    );
+
+    // 1. The measured case: `x : f32`, a literal beside it.
+    assert!(
+        rumpf(&c, "static float schmal(float x) {").contains("x * 0.1f"),
+        "the literal computes in `float`, not in `double`:\n{c}"
+    );
+
+    // 2. **The context is INHERITED.** In `x * (0.5 + 0.25)` the inner node sees no `float`
+    //    neighbour; without passing it down the parenthesis would stay a `double` and drag
+    //    the whole expression with it. *That is the part a look at the one measured line
+    //    would not have built.*
+    assert!(
+        rumpf(&c, "static float geschachtelt(float x) {").contains("(0.5f + 0.25f)"),
+        "under a parenthesis too the computation stays narrow:\n{c}"
+    );
+
+    // 3. **The silent direction, and it is no bonus.** An `f` on an `f64` literal would be
+    //    the same defect with the sign reversed -- it would NARROW the computation, and
+    //    `0.1f` is not `0.1`.
+    let breit = rumpf(&c, "static double breit(double y) {");
+    assert!(
+        breit.contains("y * 0.1") && !breit.contains("0.1f"),
+        "an `f64` computes in `double`, and the literal carries NO `f`:\n{c}"
+    );
+}

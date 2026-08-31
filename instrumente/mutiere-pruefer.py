@@ -3649,6 +3649,19 @@ MUTATIONEN = [
         "geht er durch: die Quelle des `let` entscheidet, ob der Ueberlauf auffaellt, "
         "«B14b» band den Platz und niemand band seinen Typ",
     ),
+    # -- emit.rs: the WIDTH of a floating point computation (2026-08-31) -----------------
+    Mutation(
+        "f32-literal-verliert-sein-f",
+        "gabbro-check/src/emit.rs",
+        '    if schmal { format!("{t}f") } else { t }',
+        "    let _ = schmal;\n    t",
+        "«F» -- ein Gleitkommaliteral neben einem `f32` faellt wieder auf `double` zurueck, "
+        "und C hebt die ganze Rechnung mit. Gemessen ueber 200 000 Werten: das Erzeugnis "
+        "rechnet dann in 39 990 Faellen etwas anderes als `v * 0.1f`, also etwas anderes als "
+        "der Pruefer ueber `f32` gesagt hat. `-Wall -Wextra` sieht es NICHT -- es braucht "
+        "`-Wdouble-promotion` oder `-Wfloat-conversion`, und keiner von beiden steht im Tor",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

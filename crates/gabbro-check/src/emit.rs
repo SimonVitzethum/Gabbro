@@ -1421,7 +1421,7 @@ pub fn emittiere_mit(
                 aus.push_str(&format!(
                     "\n#define {} {}\n",
                     k.name.text,
-                    gleitkommatext(*bits)
+                    gleitkommatext(*bits, false)
                 ));
             // **«G5»: `u64::max` IST eine Konstante -- sie steht nur nicht als Ziffernfolge
             // da.** Die Grenzen einer Breite sind Wortschatzwoerter, und sie hier abzulehnen
@@ -7581,21 +7581,52 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
 /// zurueckliest. *Eine gekuerzte Form waere ein zweites Runden -- und zwar eines, von dem im
 /// Quelltext nichts steht.*
 ///
-/// Ohne Suffix, also ein `double`-Literal. Trifft es auf ein `float`, wandelt C um.
-fn gleitkommatext(bits: u64) -> String {
+/// **And `schmal` appends an `f` where the computation is an `f32` computation** (2026-08-31).
+///
+/// Without a suffix a C literal is a `double`. Standing next to a `float`, C lifts the
+/// `float` up to it -- **the whole computation changes width** and only falls back at the
+/// end. Measured over 200 000 values of the emitted unit: the old output differed from
+/// `v * 0.1f` in **39 990** cases (the plain-C run of `messung/GRAMMATIKTAFEL.md` §8 said
+/// 39 974 over its own sampling). *The program says `f32`, the output computed `f64` --
+/// exactly the class the `wrapping` cast one level up stands against.*
+///
+/// **The `f` does not change the VALUE of the literal.** `{:?}` yields the shortest decimal
+/// that reads back to the same `f64`; `float` has a 24 bit significand and `double` 53, so
+/// `53 >= 2*24 + 2` -- under that condition double rounding is provably innocuous
+/// (Figueroa 1995), and `0.1f` is bit-identical to `(float)0.1`. *The suffix picks the
+/// computation width, not a different value.*
+fn gleitkommatext(bits: u64, schmal: bool) -> String {
     let w = f64::from_bits(bits);
     let t = format!("{w:?}");
-    if t.contains('.') || t.contains('e') || t.contains("inf") || t.contains("NaN") {
+    let t = if t.contains('.') || t.contains('e') || t.contains("inf") || t.contains("NaN") {
         t
     } else {
         format!("{t}.0")
-    }
+    };
+    if schmal { format!("{t}f") } else { t }
+}
+
+/// **Does this expression compute in `float`?** -- the question the suffix hangs on.
+///
+/// It is answered at the LEAVES and not at the node: a literal has no type to read off, so
+/// the neighbour carries it. `wert_ctyp` reads it out of the declaration -- a parameter, a
+/// field, the return of a call.
+fn ist_float(e: &Expr, u: &Namen) -> bool {
+    wert_ctyp(e, u).as_deref() == Some("float")
 }
 
 fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
+    ausdruck_breit(e, u, absagen, false)
+}
+
+/// `schmal` means: this expression stands inside an `f32` computation, and a literal in it
+/// gets its `f`. **Only three forms pass it on** -- the parenthesis, the binary node and the
+/// literal itself. Everything else starts at `false`: a call, a place, an index carry their
+/// own type, and a literal inside one has a different neighbour.
+fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> String {
     match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
-        ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits),
+        ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits, schmal),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
         ExprArt::Ort(o) => ort(o, u, absagen),
@@ -7617,7 +7648,7 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
         // muessen dieselbe Regel benutzen, sonst erzeugt der Uebersetzer einen Namen, den
         // er selbst nicht deklariert hat* -- `cc` faengt das, aber erst am Ende.
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
-        ExprArt::Klammer(x) => format!("({})", ausdruck(x, u, absagen)),
+        ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
             // **Ein `wrapping`-Slot rechnet UNSIGNED -- sonst sagt das C etwas anderes als
             // das Gepruefte** (Rezension 2026-08-20).
@@ -7659,7 +7690,28 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
                     ausdruck(b, u, absagen)
                 );
             }
-            format!("{} {} {}", ausdruck(a, u, absagen), op_text(op), ausdruck(b, u, absagen))
+            // **And here the WIDTH of a floating point computation is decided** (2026-08-31).
+            //
+            // If one side is a `float`, the whole node computes in `float` -- and a literal
+            // in it gets its `f`. Without that C lifted the `float` to `double`, computed
+            // there and rounded back at the end: **two roundings instead of one**, and in
+            // 39 990 of 200 000 measured cases a different result from what the checker said
+            // about `f32`.
+            //
+            // *The same shape as the `wrapping` cast above:* where C changes the width by
+            // itself, the producer writes it down. The only difference is where the width
+            // stands -- there in the slot declaration, here in the neighbouring operand.
+            //
+            // **The context is INHERITED (`schmal ||`), not asked afresh.** In
+            // `x * (0.5 + 0.25)` the inner node knows no `float` neighbour; without passing
+            // it down the parenthesis would stay a `double` and take the expression with it.
+            let schmal = schmal || ist_float(a, u) || ist_float(b, u);
+            format!(
+                "{} {} {}",
+                ausdruck_breit(a, u, absagen, schmal),
+                op_text(op),
+                ausdruck_breit(b, u, absagen, schmal)
+            )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
         // **Die logische Verneinung -- gebaut, WEIL ein Programm sie gebraucht hat**
