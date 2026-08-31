@@ -62,24 +62,23 @@ LUECKEN = [
  ("umgebung.rs", "BinOp::Oder => i128::from(x != 0 || y != 0),", "BinOp::Oder => i128::from(x != 0 && y != 0),"),
  ("umgebung.rs", "BinOp::Oder => i128::from(x != 0 || y != 0),", "BinOp::Oder => i128::from(x != 1 || y != 0),"),
  ("umgebung.rs", ".unwrap_or_else(|| IntBereich::voll(32, false));", ".unwrap_or_else(|| IntBereich::voll(33, false));"),
- # **BEIDE Anker in `kosten.rs` standen TOT da, und zwar seit `self.block()` einen
- # `lokal`-Parameter bekam** (nachgemessen 2026-08-31 im ersten Lauf, den es je gab).
- # Der Lauf meldete `-- ANKER WEG` und `== LUECKEN: FEHLER ==` mit Ruecklaufwert 1 --
- # und `11 von 11` darueber. **Zwei der dreizehn echten Verdrehungen hatten schlicht
- # keinen Gegenstand mehr**, und der Nenner sagte es nicht: `11 von 11` ist wahr und
- # zaehlt ueber elf, wo dreizehn stehen sollten (W25).
+ # **BOTH anchors in `kosten.rs` stood DEAD, and had since `self.block()` gained a
+ # `lokal` parameter** (measured 2026-08-31, in the first run this file ever had).
+ # The run said `-- ANKER WEG` and `== LUECKEN: FEHLER ==` with exit 1 -- and printed
+ # `11 of 11` above it. **Two of the thirteen real twists simply had no subject left**,
+ # and the denominator did not say so: `11 of 11` is TRUE and counts over eleven where
+ # thirteen should stand (W25).
  #
- # > *Ein Anker, der ins Leere zeigt, sagt nichts -- und ein Nenner, der sich still an ihn
- # > anpasst, sagt Falsches.*
+ # > *An anchor pointing at nothing says nothing -- and a denominator that quietly adapts
+ # > to it says something false.*
  #
- # **Warum es niemand sah:** diese Datei war bis heute nie gefahren worden. Sie stand in
- # `SCHWER`, der Schnellauf liess sie aus, und `--voll` lief nicht. *Ein Anker verwittert
- # in genau dem Tempo, in dem der Baum sich bewegt, und ein Werkzeug, das nicht faehrt,
- # merkt davon nichts.*
+ # **Why nobody saw it:** this file had never been run. It sits in `SCHWER`, the quick
+ # pass skips it, and `--voll` did not run. *An anchor weathers at exactly the rate the
+ # tree moves, and a tool that does not run notices none of it.*
  ("kosten.rs", "XForm::Update { rumpf, .. } => Kosten::Zahl(1).plus(self.block(rumpf, lokal)),", "XForm::Update { rumpf, .. } => Kosten::Zahl(2).plus(self.block(rumpf, lokal)),"),
  # Der Anker wanderte, als `let … else` eine `place`-Quelle bekam (`als_ruf`): der Ruf
- # steht seitdem in einem `match`, nicht mehr in der Zeile. Nachgezogen 2026-08-19,
- # und am 2026-08-31 ein zweites Mal -- diesmal um den `lokal`-Parameter.
+ # has since stood in a `match`, no longer in the line. Re-pointed 2026-08-19, and a
+ # second time on 2026-08-31 -- that time for the `lokal` parameter.
  ("kosten.rs", "Kosten::Zahl(1).plus(quelle).plus(self.block(&l.sonst, lokal))", "Kosten::Zahl(2).plus(quelle).plus(self.block(&l.sonst, lokal))"),
  ("kbedingung.rs", "let (mut haelt, mut faellt) = (0, 0);", "let (mut haelt, mut faellt) = (1, 0);"),
  ("schablonen.rs", "n + 1,", "n + 2,"),
@@ -163,7 +162,7 @@ def beleg(r, wieviel=20):
 
     Until 2026-08-31 the speech test below ended with one sentence and THREW THE OUTPUT
     AWAY (`capture_output=True`, never printed). On the evening of 2026-08-31 that cost
-    three runs: the probe reported *"der Baum ist schon ohne Verdrehung rot"*, and
+    three runs: the probe said *"the tree is already red without a twist"*, and
     `cargo test --no-fail-fast` was green one minute later on the same tree. Without the
     evidence it was not even possible to say WHICH test had fallen -- the refusal was not
     checkable, and the only way to find out was to run `cargo` again by hand.
@@ -184,14 +183,14 @@ def beleg(r, wieviel=20):
 
 
 print("== Sprechprobe ==")
-# **`--no-fail-fast`, und der Grund steht in `CLAUDE.md`.** Der Nullauf beantwortet nicht
-# „faellt mindestens eine", sondern „steht der Baum gruen" -- und wenn er rot ist, gehoert
-# der GANZE Grund in den Beleg darunter und nicht die erste gefallene Probe. Gruen kostet es
-# nichts: dann laufen ohnehin alle.
+# **`--no-fail-fast`, and the reason stands in `CLAUDE.md`.** The zero run does not answer
+# „does at least one fall", but „is the tree green" -- and when it is red, the WHOLE reason
+# belongs in the evidence below, not the first probe that fell. Green costs nothing: then
+# they all run anyway.
 #
-# *In den dreizehn Verdrehungsläufen weiter unten steht es NICHT, und das ist Absicht:* dort
-# ist die Frage wirklich „faellt mindestens eine", und ein Abbruch beim ersten Treffer ist
-# dort die richtige und die billigere Messung.
+# *The thirteen twist runs below do NOT carry it, and that is deliberate:* there the question
+# really is „does at least one fall", and stopping at the first hit is the right and the
+# cheaper measurement.
 _r = subprocess.run(["cargo", "test", "--quiet", "--no-fail-fast"], cwd=W,
                     capture_output=True, timeout=FRIST)
 if _r.returncode != 0:
@@ -224,13 +223,12 @@ for eintrag in LUECKEN:
     p.write_text(t)
     if r.returncode != 0: zu += 1; print(f"  GEFANGEN     {d}: {alt[:56]}")
     else: offen.append((d,alt)); print(f"  !! ENTKOMMEN {d}: {alt[:56]}")
-# **DER NENNER IST DIE ZAHL DER BENANNTEN VERDREHUNGEN, NICHT DIE DER GEMESSENEN**
-# (2026-08-31, W25). Bis heute stand hier `{zu} von {zu+len(offen)}` -- ein Nenner, der sich
-# still um jeden toten Anker VERKLEINERT. Der erste Lauf, den es je gab, druckte deshalb
-# `11 von 11` ueber dreizehn benannte Verdrehungen, von denen zwei keinen Gegenstand mehr
-# hatten. **Die Zahl war wahr und ihr Nenner der falsche** -- und ein `11 von 11` liest sich
-# wie ein voller Nachweis. Jetzt stehen beide Zahlen da, und die Luecke zwischen ihnen ist
-# genau die Zahl der toten Anker.
+# **THE DENOMINATOR IS THE NUMBER OF NAMED TWISTS, NOT OF MEASURED ONES**
+# (2026-08-31, W25). Until today the line read `<zu> of <zu+offen>` -- a denominator that
+# quietly SHRINKS by every dead anchor. The first run this file ever had therefore printed
+# `11 of 11` over thirteen named twists, two of which had no subject left. **The figure was
+# true and its denominator the wrong one** -- and `11 of 11` reads like a full proof. Both
+# numbers stand there now, and the gap between them is exactly the count of dead anchors.
 _benannt = len(LUECKEN) - len(null)
 print(f"\n== {zu} von {zu+len(offen)} GEMESSENEN Verdrehungen sind ZU -- "
       f"und BENANNT sind {_benannt} ==")

@@ -4557,14 +4557,22 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
 - [ ] `breite_von` mit `_ => 8` — **liegt unter allen vier Hardwarepunkten.** Breite außerhalb
       der Aufzählung muss `C001` sein, kein Vorgabewert.
 - [ ] Zwölf Wildcards: **1 echter Befund, 6 tragende Standardzweige, 4 Korpuslücken.**
-- [ ] `runs online` senkt ab und schreibt **in einen Kommentar**, dass es das Versprochene
-      nicht tut. `device … at dma` sagt dasselbe Versagen unter Namen ab. → `C001`.
+- [x] **`runs online` → `C001`: die Regel ist WIDERLEGT** (`e5e555d`). 11 Fundstellen, drei
+      Klassen — `table … ops` (3) trägt es über eine maschinengeprüfte Schablone, `table`
+      ohne `ops` (5) als `E`-Pflicht, **`walk` (3) durch nichts.** *Eine Regel über dem Wort
+      `online` hätte zwei funktionierende Register getroffen, um an das eine zu kommen, das
+      nicht funktioniert.* Gebaut wurde `Art::Walkinvariante` — **zählen statt absagen.**
 
-## OB3 — Das Zeugnis · **eigener Riegel, nicht Erzeugerposten**
+## OB3 — Das Zeugnis · **ZU seit `e5e555d`**
 
 ```
-zwei verschiedene Programme (threads / queue r)  ->  EIN md5: 152d61a6
+vorher   zwei verschiedene Programme (threads / queue r)  ->  EIN md5: 152d61a6
+jetzt    30a2f4b0…  gegen  8e040dca…
 ```
+
+**Der Verifikationspfad hat damit einen Träger.** *Offen bleibt: injektiv in den
+Traversierungsdomänen, nicht allgemein — 36 Paare gemessen, nicht alle Programme. Und drei
+Domänen ruhen auf gar keiner Schranke (`chain(…) in`, `fields of`, `threads`).*
 
 > **Damit ist das Zeugnis als Beweisträger nicht schwach, sondern unbrauchbar: es belegt
 > eine Äquivalenzklasse, nicht ein Programm.** Jeder Plan, der Translation Validation über

@@ -74,6 +74,32 @@ emit.rs:3447     —                     `_ => 8` — liefert eine ZAHL, vom Str
 still: fremdverengung.rs:67 · aufrufgraph.rs:825 · zeremonie.rs:826 · m1.rs:4181
 ```
 
+> ### BERICHTIGUNG 2026-09-01 — zwei dieser Buchungen waren FALSCH
+>
+> ```
+> breite_von   hier gebucht: SCHWEIGT (0)    nachgemessen: 146 Treffer, nur `U64`
+> domaene.rs   hier gebucht: 8               nachgemessen: 2 je Lauf
+> ```
+>
+> **Ausgerechnet die Stelle, die dieser Abschnitt als Wurzel benennt, stand darin als
+> schweigend.** Und die `8` kam daher, dass **vier Befehle denselben Pass fahren und die
+> Treffer in einen Topf fielen** — *ein Messgerät, das viermal zählt, was einmal geschieht.*
+>
+> Acht feuern, vier schweigen; die Zeile oben sagte sieben. **Zwei weitere Wildcards
+> derselben Klasse fehlten in der Liste ganz:** `umgebung.rs::breite_von` mit
+> `_ => (64, false)` — *machte jedes unbekannte Wort vorzeichenlos, die schärfste
+> Fehlantwort* — und `emit.rs::ctyp` mit `if f32 {} else { double }`, denn **ein `else` ist
+> derselbe Wildcard mit anderer Schreibweise.**
+>
+> **Erledigt seit `e5e555d`:** `intty` und `breite_von` sind **eine Tafel**
+> (`ganzzahlwort`), acht Worte, sonst `C001` an der Spanne. Vier Proben halten sie gegen
+> `kw::ALLE` — *ein neuntes Ganzzahlwort ist jetzt eine rote Probe statt eines stillen
+> `volatile uint64_t *`.*
+>
+> **Nicht gestrichen, und das ist ein Urteil:** `_ => None` bleibt. *Ein `_`, der einen
+> plausiblen WERT liefert, ist das stille Byte; ein `_ => None` liefert nichts und schiebt
+> die Entscheidung an den Rufer.*
+
 **Drei Kategorien, nicht zwei** — und das ist die ehrliche Buchung:
 
 | | |
@@ -372,7 +398,13 @@ Das Paar liegt als `messung/proben/probe-zeugnis-injektiv-{a,b}.gab` im Baum. Di
 ist **nicht gebaut** — welchen Ausweis jede der fünf Formen bekommen soll, folgt erst aus
 dieser Messung.
 
-- [ ] Injektivität bauen, und die Probe so, dass sie es **misst statt behauptet**: das Paar
+- [x] **Injektivität gebaut, `e5e555d`** — das Paar gibt jetzt `30a2f4b0…` gegen
+      `8e040dca…`, und die Antwort folgte aus der Messung: **nicht neun Etiketten, sondern
+      neun GRÜNDE.** Dabei fiel auf, dass **drei Domänen auf gar keiner Schranke ruhen**
+      (`chain(…) in`, `fields of`, `threads`). `tests/zeugnis_injektiv.rs` misst beide
+      Richtungen unter demselben Dateinamen, falsifiziert und zurückgestellt.
+      *Offen bleibt: injektiv in den TRAVERSIERUNGSDOMÄNEN, nicht allgemein — 36 Paare.*
+- [ ] ~~Injektivität bauen, und die Probe so, dass sie es **misst statt behauptet**~~: das Paar
       muss danach verschiedene Zeugnisse haben, und die Gegenrichtung — zwei gleiche
       Programme geben gleiche Zeugnisse — gehört daneben.
 
