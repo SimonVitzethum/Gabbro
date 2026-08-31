@@ -1,0 +1,36 @@
+-- Injektivitaetsprobe fuer `gabbro zeugnis`, Haelfte B -- Domaene `queue r`.
+--
+-- **Diese Datei und ihre Schwester unterscheiden sich in GENAU EINER ZEILE**, der
+-- Traversierungsdomaene. Beide gehen mit `0 errors, 0 hints` durch. Und ihre Zeugnisse
+-- sind BYTEIDENTISCH (md5 `152d61a6`, gemessen 2026-08-31):
+--
+--      table.induktion          proved     1x  traverse
+--
+-- `zeugnis.rs:758` fuehrt `ElementeVon`, `KetteIn`, `Schlange`, `SlotsVon` und `Threads`
+-- auf einem `_ => "traverse"` zusammen -- fuenf Domaenenformen, ein Ausweis.
+--
+-- **Ein Zeugnis, das zwei verschiedene Programme belegt, belegt keines von beiden.** Das
+-- ist die eine Eigenschaft, die ein Uebersetzungsbeleg nicht haben darf, und sie haengt
+-- nicht daran, ob der Erzeuger richtig arbeitet.
+--
+-- Die Heilung ist die erschoepfende Aufzaehlung in `zeugnis.rs`. Sie ist NICHT gebaut --
+-- welchen Ausweis jede der fuenf Formen bekommen soll, folgt erst aus dieser Messung.
+
+module probe::inj {
+const N : u32 = 8;
+extern fn nie() -> never effects { diverges } costs <= 0 ops;
+table Warteschlange count N {
+    slot { a : u32, naechst : option index into Warteschlange, }
+    tree { sibling naechst }
+}
+type Ring = { plaetze : [u32; 8], kopf : u32, };
+
+divergent fn eine(q : ptr<normal, rw> Warteschlange, r : ptr<normal, rw> Ring) -> never
+    effects { writes q.slots, diverges }
+{
+    traverse t over queue r by unvisited touches writes q.slots {
+        q.slots[0].a = 1;
+    }
+    nie();
+}
+}

@@ -127,6 +127,31 @@ hinterlassen.* Wer den Zustand wissen will, fragt `ps -C python3` oder legt die 
 Datei und liest deren letzte Zeile. **Dieselbe Klasse wie `W16`, diesmal im Wartewerkzeug: ein
 Messgerät, das seinen eigenen Namen mitzählt.**
 
+## Eine Messung, die beim ersten Treffer abbricht, misst die falsche Frage
+
+**Sie beantwortet „feuert mindestens eine", nicht „welche feuern"** — und die zweite Frage
+war gestellt.
+
+*Gemessen am 2026-08-31:* elf Wildcard-Zweige im Prüfer wurden durch `panic!` ersetzt und
+der ganze Korpus darüber gefahren. Ergebnis: sechs feuern, fünf schweigen. **Falsch.** Der
+erste Treffer bricht den Prozess ab und verdeckt jeden späteren im selben Lauf — `emit.rs:3488`
+wurde als *schweigend* gemeldet und feuert **148×**. Mit `eprintln!` statt `panic!` neu
+gefahren: **sieben feuern.**
+
+Die Form ist weiter als `cargo test`: sie trifft **`--fail-fast`, `set -e` in Messskripten,
+`panic!`-Instrumentierung und jeden Prüferlauf, der nach dem ersten Fehler aufhört.**
+Wer zählen will, darf nicht abbrechen.
+
+Bekannte Instanzen im Baum:
+
+* `cargo test` **braucht `--no-fail-fast`** — sonst meldet es immer genau eine gefallene Probe.
+* `abnahme.py` bricht bei `ABBRUCH` ab und sagt es in seiner eigenen Schlusszeile:
+  *„Was DAHINTER steht, wurde NICHT gemessen — weder ja noch nein."*
+
+> **Bemerkenswert am Vorfall:** das Messwerkzeug hatte denselben Fehler wie sein Gegenstand.
+> Ein Standardzweig, der still das Falsche tut, und ein Abbruch, der still den Rest verdeckt —
+> *beides Stellen, an denen etwas ohne Meldung verschwindet.*
+
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).
