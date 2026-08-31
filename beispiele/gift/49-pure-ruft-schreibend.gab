@@ -3,6 +3,7 @@
 -- `pure` und ruft etwas, das schreibt -- zwei Ebenen tiefer. Die Rahmenaussage „nur die
 -- eingetragene Logik ist aktiv" war damit eine halbe Aussage.
 module gift {
+table T count 8 { slot { x : u32 in 0 .. 10, } }
 extern fn schreibt(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 1 ops;
 impl fn mitte(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 4 ops { schreibt(p); }
 impl fn zaehlt(p : ptr<normal, rw> T) effects { pure } costs <= 8 ops { mitte(p); }

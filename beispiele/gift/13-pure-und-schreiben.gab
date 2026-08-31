@@ -3,6 +3,7 @@
 -- kein Zusatz.
 module gift {
 
+type T = { x : u32 in 0 .. 10, };
 impl fn beides(c : ptr<normal, rw> T) effects { pure, writes c } {
     c.x = 1;
 }
