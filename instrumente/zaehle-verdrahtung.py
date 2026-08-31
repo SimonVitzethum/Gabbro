@@ -155,6 +155,31 @@ def v1_konstruktpaare(wort, fn_liest, schranke):
     return zusammen, offen, sammler
 
 
+def odermuster(text):
+    """Jedes Oder-Muster mit >= 3 verschiedenen Alternativen, als (Menge, Zeile).
+
+    **Ueber TEXT und nicht ueber eine Datei** -- damit die Sprechprobe unten dieselbe
+    Funktion fahren kann, die der Bericht fuehrt. *Ein Selbsttest gegen einen Nachbau misst
+    den Nachbau* (W7)."""
+    roh = ohne_kommentar(text)
+    aus = []
+    for m in re.finditer(
+        r"((?:\w+::)+\w+(?:\([^()]*\))?\s*\|\s*){2,}(?:\w+::)+\w+(?:\([^()]*\))?",
+        roh,
+    ):
+        alt = frozenset(
+            re.sub(r"\(.*\)", "", a) for a in re.split(r"\s*\|\s*", m.group(0).strip())
+        )
+        if len(alt) >= 3:
+            aus.append((alt, roh[: m.start()].count(chr(10)) + 1))
+    return aus
+
+
+def ohne_stelle(woerter, korpustext):
+    """Welche der Woerter stehen NIRGENDS im Korpustext? Die reine Haelfte von V5."""
+    return [w for w in woerter if not re.search(r"\b%s\b" % re.escape(w), korpustext)]
+
+
 def v2_doppelregister():
     """Dasselbe Oder-Muster (>= 3 Alternativen) an >= 2 Stellen des Baums.
 
@@ -165,17 +190,8 @@ def v2_doppelregister():
     Urteil und steht nicht hier."""
     muster = collections.defaultdict(list)
     for f in sorted(PRUEFER.glob("*.rs")) + sorted(SYNTAX.glob("*.rs")):
-        roh = ohne_kommentar(f.read_text(encoding="utf-8"))
-        for m in re.finditer(
-            r"((?:\w+::)+\w+(?:\([^()]*\))?\s*\|\s*){2,}(?:\w+::)+\w+(?:\([^()]*\))?",
-            roh,
-        ):
-            alt = frozenset(
-                re.sub(r"\(.*\)", "", a) for a in re.split(r"\s*\|\s*", m.group(0).strip())
-            )
-            if len(alt) < 3:
-                continue
-            muster[alt].append(f"{f.name}:{roh[: m.start()].count(chr(10)) + 1}")
+        for alt, zeile in odermuster(f.read_text(encoding="utf-8")):
+            muster[alt].append("%s:%d" % (f.name, zeile))
     return muster, {k: v for k, v in muster.items() if len(v) >= 2}
 
 
@@ -224,9 +240,7 @@ def v5_angebot_ohne_pflicht():
             z for z in p.read_text(encoding="utf-8").splitlines()
             if not z.lstrip().startswith("--")
         ))
-    kt = "\n".join(text)
-    ohne = [w for _, w in woerter if not re.search(r"\b%s\b" % re.escape(w), kt)]
-    return woerter, ohne
+    return woerter, ohne_stelle([w for _, w in woerter], "\n".join(text))
 
 
 # **The calibration.** One line per case of the starting corpus: which form ought to see
@@ -261,6 +275,51 @@ EICHUNG = [
 ]
 
 
+def sprechprobe():
+    """**Misst dieses Werkzeug ueberhaupt?** In beide Richtungen, je Form.
+
+    Ein Zaehler ohne Selbsttest ist eine Zahl ohne Zeugen: eine kaputte Form meldet **0**,
+    und 0 liest sich wie *„nichts offen"*. Jede Zeile hier faehrt die Funktion, die auch der
+    Bericht faehrt -- kein Nachbau, sonst misst die Probe den Nachbau (W7).
+
+    Gibt eine Liste der VERLETZUNGEN; leer heisst bestanden."""
+    schlecht = []
+
+    # V2 -- one pattern at two sites is found, one at a single site is not.
+    zwei = odermuster(
+        "match x { A::Ein(_) | A::Zwei(_) | A::Drei(_) => 1, _ => 0 }\n"
+        "match y { A::Ein(_) | A::Zwei(_) | A::Drei(_) => 2, _ => 0 }\n"
+    )
+    if len({m for m, _ in zwei}) != 1 or len(zwei) != 2:
+        schlecht.append("V2: dasselbe Muster an zwei Stellen wird nicht als EINES gezaehlt")
+    if odermuster("match x { A::Ein(_) | A::Zwei(_) => 1, _ => 0 }\n"):
+        schlecht.append("V2: zwei Alternativen sind kein Register und muessen durchfallen")
+    # **And a COMMENT is no register.** Otherwise every explanation would count.
+    if odermuster("// A::Ein(_) | A::Zwei(_) | A::Drei(_) -- nur erklaert\n"):
+        schlecht.append("V2: ein Muster im Kommentar zaehlt mit")
+
+    # V5 -- a word with no corpus site shows up, one with a site does not.
+    ohne = ohne_stelle(["gibtsnicht", "steht"], "hier steht etwas")
+    if ohne != ["gibtsnicht"]:
+        schlecht.append("V5: %r statt genau dem fehlenden Wort" % ohne)
+    # A PARTIAL word is no site -- `\b` carries the whole statement.
+    if ohne_stelle(["steh"], "hier steht etwas") != ["steh"]:
+        schlecht.append("V5: ein Teilwort gilt faelschlich als Fundstelle")
+
+    # V1 -- the bound excludes collectors, and only those.
+    fn = [("a.rs", "eng", 1, {"Entry", "Lock"}),
+          ("b.rs", "sammler", 2, {"Entry", "Lock", "Boot", "Walk"})]
+    _, offen_eng, weg_eng = v1_konstruktpaare({}, fn, 2)
+    if not any(n == "sammler" for _, n, _, _ in weg_eng):
+        schlecht.append("V1: die Schranke schliesst den Sammler nicht aus")
+    if any(n == "eng" for _, n, _, _ in weg_eng):
+        schlecht.append("V1: die Schranke schliesst eine enge Funktion aus")
+    _, _, weg_weit = v1_konstruktpaare({}, fn, 9)
+    if weg_weit:
+        schlecht.append("V1: eine hohe Schranke schliesst trotzdem aus")
+    return schlecht
+
+
 def main():
     p = argparse.ArgumentParser(add_help=True)
     p.add_argument("--lang", action="store_true", help="jede Fundstelle einzeln")
@@ -268,6 +327,14 @@ def main():
                    help="V1: hoechste Zahl Itemarten, bis zu der eine Funktion als "
                         "verdrahtend gilt (Vorgabe: die Haelfte)")
     a = p.parse_args()
+
+    if schlecht := sprechprobe():
+        print("ABBRUCH: die SPRECHPROBE dieses Werkzeugs faellt -- es misst nicht, was es")
+        print("  behauptet, und jede Zahl darunter waere geraten:", file=sys.stderr)
+        for s in schlecht:
+            print("    " + s, file=sys.stderr)
+        return 2
+    print("== Sprechprobe: ok (jede Form faellt und schweigt am richtigen Gegenstand) ==")
 
     wort = konstrukte()
     schranke = a.schranke if a.schranke is not None else len(wort) // 2
@@ -317,13 +384,14 @@ def main():
 
     getragen, ungelesen, feldnenner = v4_klauseln()
     if getragen is None:
-        print("-- V4  `pruefe-klauseln.py` ANTWORTETE NICHT -- die Zahl fehlt, sie ist nicht 0 --")
-        v4 = None
-    else:
-        v4 = getragen + ungelesen
-        print("-- V4  Klausel ohne Pass, aus `pruefe-klauseln.py`: %d von %d Feldnamen --"
-              % (v4, feldnenner))
-        print("      %d nur getragen (emit/zeugnis), %d ungelesen" % (getragen, ungelesen))
+        print("ABBRUCH: `pruefe-klauseln.py` antwortete nicht -- V4 FEHLT, und eine")
+        print("  fehlende Zahl ist keine Null. Was dahinter steht, waere eine Summe mit")
+        print("  einem leeren Summanden.", file=sys.stderr)
+        return 2
+    v4 = getragen + ungelesen
+    print("-- V4  Klausel ohne Pass, aus `pruefe-klauseln.py`: %d von %d Feldnamen --"
+          % (v4, feldnenner))
+    print("      %d nur getragen (emit/zeugnis), %d ungelesen" % (getragen, ungelesen))
     print()
 
     woerter, ohne = v5_angebot_ohne_pflicht()
@@ -332,11 +400,10 @@ def main():
         print("      %s" % x)
     print()
 
-    summe = len(offen) + len(doppelt) + len(stellen) + (v4 or 0) + len(ohne)
+    summe = len(offen) + len(doppelt) + len(stellen) + v4 + len(ohne)
     print("== VERDRAHTUNGSZAHL: %d ==" % summe)
-    print("   V1 %d + V2 %d + V3 %d + V4 %s + V5 %d." % (
-        len(offen), len(doppelt), len(stellen),
-        v4 if v4 is not None else "?", len(ohne)))
+    print("   V1 %d + V2 %d + V3 %d + V4 %d + V5 %d."
+          % (len(offen), len(doppelt), len(stellen), v4, len(ohne)))
     print("   **Und was diese Summe NICHT ist: eine Anzahl von Fehlern.** Fuenf Formen mit")
     print("   fuenf Nennern addieren sich zu einer Summe von Formen. Die einzige Aussage,")
     print("   die sie traegt: die Klasse ist nicht acht Faelle gross (W25).")
