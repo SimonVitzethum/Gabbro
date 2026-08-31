@@ -3915,6 +3915,28 @@ MUTATIONEN = [
         "`aktuell`, und das Erzeugnis steht unter einer Fahne, die niemand mehr genannt hat. "
         "**EINE Probe faellt** (`bausystem.rs`)",
     ),
+    # -- gabbro-cli/src/main.rs: the English first names (2026-08-31) ---------------------
+    #
+    # W16 in the command line itself: `split_with` used to carry a LITERAL `"pruefe"` into its
+    # own refusal. Under the second spelling the message named a command nobody had typed --
+    # a measuring device reporting its own name instead of the subject's.
+    Mutation(
+        "absage-nennt-wieder-den-erstnamen",
+        "gabbro-cli/src/main.rs",
+        "    let vorspann = match read_preamble(getippt, &mit) {\n"
+        "        Ok(v) => v,\n"
+        "        Err(c) => return c,\n"
+        "    };\n"
+        "    if einheit {",
+        '    let vorspann = match read_preamble("pruefe", &mit) {\n'
+        "        Ok(v) => v,\n"
+        "        Err(c) => return c,\n"
+        "    };\n"
+        "    if einheit {",
+        "Die Absage von `gabbro check --with` nennt wieder den festen Namen `pruefe` statt "
+        "des getippten -- ein Lauf unter dem einen Namen meldet den anderen. **EINE Probe "
+        "faellt** (`erstnamen.rs`)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

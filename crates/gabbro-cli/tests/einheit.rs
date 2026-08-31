@@ -48,7 +48,7 @@ fn zwei_dateien_als_einheit_loesen_auf() {
     );
 }
 
-/// The German alias reaches the same code. *A flag with two spellings that do two things is
+/// The German second name reaches the same code. *A flag with two spellings that do two things is
 /// worse than a flag with one.*
 #[test]
 fn der_deutsche_zweitname_der_fahne_tut_dasselbe() {
