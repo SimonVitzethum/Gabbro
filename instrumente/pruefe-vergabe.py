@@ -273,7 +273,10 @@ def sprechprobe():
 
 def main():
     if not sprechprobe():
-        return 1
+        # **2, not 1.** The reconstruction above IS the measurement of this tool; if it does
+        # not reproduce the real `M120` case, the candidate list below counts nothing.
+        print("\n! Der Waechter misst nicht, was er behauptet. ABBRUCH.")
+        return 2
     stellen = erhebe()
     n_stellen = sum(len(v) for v in stellen.values())
     mehrfach = {k: v for k, v in stellen.items() if len(v) > 1}

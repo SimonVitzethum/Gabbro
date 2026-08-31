@@ -221,7 +221,13 @@ def main():
         print("   Ohne `gabbro emit` ueber dem Korpus gibt es den Zustand `gesenkt` nicht,")
         print("   und ohne ihn ist jede Zelle UNGEDECKT. Das waere kein Befund, sondern")
         print("   ein fehlendes Werkzeug (W1).")
-        return 1
+        # **2, not 1 -- and that single digit cost an hour on 2026-08-31.**
+        # The refusal above says NOTHING was measured, and the return code said the opposite:
+        # `1` is the colour of the four UNGEDECKT cells this tool reports on a good day. In
+        # the collective run the two were indistinguishable, so a lost guardian read as a
+        # known backlog. *A tool that measured nothing must not look like one that found
+        # something.*
+        return 2
     gesenkt, sauber = gesenkte_worte(korpus)
 
     print("== Sprechprobe -- in beide Richtungen ==")

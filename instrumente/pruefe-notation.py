@@ -18,6 +18,7 @@ den Pruefer, ob es durchgeht.
     ./instrumente/pruefe-notation.py
 """
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -89,6 +90,9 @@ ABSAGEN = [
 ]
 
 
+SPRACH = re.compile(r"\b\d+ items, \d+ errors, \d+ hints\b")
+
+
 def lauf(pfad, quelle):
     """Ein Programm durch den Pruefer, mit dem Bauabbruch als ABBRUCH statt als Ergebnis."""
     pfad.write_text(quelle, encoding="utf-8")
@@ -100,7 +104,23 @@ def lauf(pfad, quelle):
     # kaputter Baum jede Luecke als zu -- und der Waechter meldete Erfolg (W1).
     if "error[E" in r.stderr or "could not compile" in r.stderr:
         print("ABBRUCH: der Pruefer baut nicht -- es wurde NICHTS gemessen.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
+    # **And the same trap one step to the side, measured 2026-08-31.** The two strings above
+    # catch a COMPILE error and nothing else. Over a tree without a `Cargo.toml`, `cargo`
+    # says `error: manifest path ... does not exist` -- neither string matches, `r.stdout` is
+    # empty, every gap counts as CLOSED and every refusal as SILENT. *The guardian then
+    # reported findings out of a run that never happened.*
+    #
+    # So the latch does not enumerate failures any more, it demands a POSITIVE sign of life:
+    # `gabbro pruefe` always prints `N items, M errors, K hints`, with errors and without.
+    # **A checker that did not say that sentence did not check.**
+    if not SPRACH.search(r.stdout):
+        print("ABBRUCH: der Pruefer hat nicht geantwortet -- keine Zeile "
+              "`N items, M errors, K hints`.", file=sys.stderr)
+        print("  Es wurde NICHTS gemessen; ohne den Lauf zaehlt jede Luecke als zu.",
+              file=sys.stderr)
+        print((r.stderr or r.stdout or "").strip()[:400], file=sys.stderr)
+        sys.exit(2)
     return [z for z in r.stdout.splitlines() if z.startswith("error")]
 
 

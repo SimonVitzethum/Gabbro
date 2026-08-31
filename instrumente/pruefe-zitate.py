@@ -293,9 +293,12 @@ def main():
     # **Red on abort, not a quiet zero.** If the source tree cannot be read at all, this tool
     # must fall -- a guardian that reports „0 candidates" over an empty set is
     # indistinguishable from one that looked.
+    # **Return code 2, and until 2026-08-31 it was 1.** Three lines further down a failed
+    # speech test already ended with 2 -- the same file said both things about the same
+    # class. *A refusal that ends with 1 is a refusal nobody can tell from a finding.*
     if not list(W.glob("crates/*/src/*.rs")):
         print("ABORT: no checker sources found -- this is NOT a count of zero.")
-        sys.exit(1)
+        sys.exit(2)
     # **Red on a catalogue that cannot be read.** The anchor rule can only exclude what it can
     # see; if it sees nothing, its zero is not a measurement.
     try:
@@ -303,7 +306,7 @@ def main():
     except Exception as e:
         print("ABORT: the mutation catalogue is unreadable (%s) -- the anchor rule" % e)
         print("       would then exclude nothing, and that is NOT a count of zero.")
-        sys.exit(1)
+        sys.exit(2)
     if not sprechprobe():
         sys.exit(2)
     ankerprobe()

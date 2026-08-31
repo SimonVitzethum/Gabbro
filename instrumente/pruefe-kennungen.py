@@ -59,9 +59,18 @@ def main():
         print("== Sprechprobe ==")
         print(f"  kuenstliche Doppelbelegung K001: {'gesehen' if any(k=='K001' for k,_ in gift) else 'UEBERSEHEN'}")
         print(f"  saubere Lage:                    {'durchgelassen' if not sauber else 'FALSCHER ALARM'}")
-        return 0 if (any(k == "K001" for k, _ in gift) and not sauber) else 1
+        return 0 if (any(k == "K001" for k, _ in gift) and not sauber) else 2
 
     karte = erhebe()
+    # **`0 issued ... ALL PASS` was a GREEN run until 2026-08-31** (measured over an empty
+    # tree). Every identifier belonged to exactly one file because there were none -- the
+    # statement is true, empty, and it looks like a result. *That is W17, and this workshop
+    # has already paid for the sentence once, with `zaehle-b3.py`.*
+    if not karte:
+        print("ABBRUCH: keine einzige Kennung erhoben -- es wurde NICHTS gemessen.")
+        print("  `jede Kennung gehoert genau einer Datei` ist ueber der leeren Menge wahr")
+        print("  und sagt nichts. Eine leere Grundgesamtheit ist eine Absage (W1, W17).")
+        return 2
     b = befunde(karte)
     print(f"== Kennungen: {len(karte)} vergeben ==")
     if not b:

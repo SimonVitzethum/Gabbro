@@ -126,6 +126,16 @@ def einordnen(t: str):
 
 def haupt() -> int:
     t = texte()
+    # **Zero refusal texts is a REFUSAL, not a zero** (measured 2026-08-31 over an empty
+    # tree). Without this latch the tool printed `0 suspect · 0 load-bearing · 0 unclear`,
+    # passed its speech test -- which runs on FIXED texts and therefore passes with no
+    # sources at all -- and exited 0. **A triple zero reads like a clean stock and is an
+    # empty survey.**
+    if not t:
+        print("ABBRUCH: kein einziger Absagetext erhoben -- es wurde NICHTS gemessen.")
+        print("  Die Sprechprobe unten laeuft auf festen Texten und haette bestanden;")
+        print("  `0 verdaechtig · 0 tragend · 0 unklar` waere ein Urteil ueber nichts (W17).")
+        return 2
     verdacht, tragend, unklar = [], [], []
     for code in sorted(t):
         art, a, _ = einordnen(t[code])
@@ -210,7 +220,10 @@ def haupt() -> int:
         print(f"   GESCHEITERT -- die Fenstergrenze laeuft ueber: {treffer}")
         fehler = 1
     if fehler:
-        return 1
+        print("\n! Die Einordnung misst nicht, was sie behauptet. ABBRUCH.")
+        # 2, not 1: every count printed above rests on `einordnen`, and the probes just
+        # said that `einordnen` does not sort.
+        return 2
 
     print()
     print("== Und was das NICHT heisst ==")

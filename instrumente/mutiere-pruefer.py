@@ -3812,14 +3812,18 @@ def main():
         return 1
 
     if "--anker" in sys.argv:
+        # **Every fallen probe below ends with 2, not 1** (2026-08-31). A probe that falls
+        # says the anchor check does not measure -- and the count printed underneath is then
+        # about the tool, not about the catalogue. The DEAD ANCHORS at the end keep their 1:
+        # that one is a finding ABOUT THE CATALOGUE, not a failure of the measurement.
         print("== Sprechprobe des Ankerpruefers ==")
         if not anker_sprechprobe():
-            return 1
+            return 2
         # **R14 fuer den Flaechenpruefer**: er muss eine erfundene Flaeche sehen.
         gift = Mutation("SPRECHPROBE", "typen.rs", "x", "y", "z", "keine-flaeche")
         if gift.flaeche in FLAECHEN:
             print("  SPRECHPROBE GESCHEITERT: `keine-flaeche` steht in FLAECHEN")
-            return 1
+            return 2
         print("  erfundene Flaeche faellt:  ok")
         # **R14 for the tree check, and it took a server run to notice it was missing.**
         # A directory that is no git repository must come back as `unbekannt`, never as
@@ -3829,10 +3833,10 @@ def main():
         eigen = baumstand()
         if fremd != "unbekannt":
             print(f"  SPRECHPROBE GESCHEITERT: ein Nicht-Repository meldet `{fremd}`")
-            return 1
+            return 2
         if eigen not in ("sauber", "schmutzig"):
             print(f"  SPRECHPROBE GESCHEITERT: der eigene Baum meldet `{eigen}`")
-            return 1
+            return 2
         print(f"  Baumstand unterscheidet:   ok (fremd `unbekannt`, eigen `{eigen}`)")
         # **R14 for the area row that READS its number** (2026-08-30). It replaces a number
         # that had stood wrong since 2026-08-17 -- and without this probe it would only be
@@ -3840,7 +3844,7 @@ def main():
         ok, wort = emissionsflaeche_sprechprobe()
         print(f"  Emissionsflaeche liest:    {'ok -- ' + wort if ok else 'GESCHEITERT: ' + wort}")
         if not ok:
-            return 1
+            return 2
         tot = anker_stand()
         print(f"\n== {len(MUTATIONEN) - len(tot)} von {len(MUTATIONEN)} Ankern greifen ==")
         for m, warum in tot:

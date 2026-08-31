@@ -160,7 +160,15 @@ FUEHRT_AUS = re.compile(r"subprocess\.|os\.system|check_output|\bcargo\b|\bcc\b|
 # die Haelfte, die das misst. *Die statische Haelfte verpflichtet, sie spricht nicht frei.*
 HAT_FRIST = re.compile(r"timeout=|\btimeout\b|TimeoutExpired|\bFRIST\b|\bZEIT\b")
 HAT_PROBE = re.compile(r"[Ss]prechprobe|speech test|Gegenprobe|[Ss]elbsttest")
-HAT_ROT = re.compile(r"sys\.exit\(\s*[1-9]|SystemExit\(\s*[1-9]|exit\s+1\b|return\s+1\b|returncode")
+# **`[1-9]` and not `1` -- and this guardian reported the flaw on itself** (2026-08-31).
+# Requirement three reads *"an abort leaves with a return code other than zero"*, and the
+# pattern recognised exactly one digit of that. The moment three guardians moved their fallen
+# speech test from `return 1` to `return 2` -- from *"finding"* to *"ABORT"*, which is what
+# this requirement means -- this tool reported all three of them as violating it. **A
+# rule that punishes the right answer measures a habit, not the rule.** Same class as W16,
+# one level up: inside the guardian over the guardians.
+HAT_ROT = re.compile(
+    r"sys\.exit\(\s*[1-9]|SystemExit\(\s*[1-9]|exit\s+[1-9]\b|return\s+[1-9]\b|returncode")
 # **Eine ARBEITSMENGE in der Ausgabe**: `N von M`, `N Dateien`, `N Stellen`. Statisch ist das
 # nur ein Hinweis; `--lauf` liest die wirkliche Ausgabe, und das ist die Haelfte, die zaehlt.
 ARBEIT = re.compile(r"\b\d+\s+(?:von|of)\s+\d+\b|\b\d+\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß-]{3,}")
@@ -246,20 +254,30 @@ def sprechprobe():
                      '# Sprechprobe: `cc` und `ld` stehen hier nur im Text.\n'
                      'subprocess.run(["cargo", "test"], timeout=5)\n'
                      'sys.exit(1)\n', encoding="utf-8")
+        # **Fourth direction: an abort with `2` is RED.** The requirement says "other than
+        # zero", not "equal to one" -- and until 2026-08-31 the pattern held the digit 1.
+        # This source has NO exit with 1 and must come back clean all the same.
+        g = pathlib.Path(d) / "pruefe-zwei.py"
+        g.write_text('import subprocess, sys\n'
+                     '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
+                     'subprocess.run(["cargo", "test"], timeout=5)\n'
+                     'print("== 3 von 3 Stellen ==")\n'
+                     'sys.exit(2)\n', encoding="utf-8")
         f_gut, f_schlecht, f_gut_lc = statisch(a), statisch(b), statisch(c)
         f_prosa = statisch(e)
+        f_zwei = statisch(g)
     # **Und die vierte Forderung, an ihrer eigenen Regex.** Ein gruener Lauf ohne Zahl
     # daneben MUSS auffallen; einer mit Zahl NICHT.
     leer_faellt = not ARBEIT.search("== ALL PASS ==\nok\n")
     voll_faellt = bool(ARBEIT.search("== 23 von 23 tragen alle drei ==\n"))
-    ok = (not f_gut and not f_gut_lc and not f_prosa
+    ok = (not f_gut and not f_gut_lc and not f_prosa and not f_zwei
           and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH", "GEBIETSSCHEMA"}
           and leer_faellt and voll_faellt)
-    return ok, f_gut, f_schlecht, f_gut_lc, f_prosa, leer_faellt, voll_faellt
+    return ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, leer_faellt, voll_faellt
 
 
 def main():
-    ok, f_gut, f_schlecht, f_gut_lc, f_prosa, leer_faellt, voll_faellt = sprechprobe()
+    ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, leer_faellt, voll_faellt = sprechprobe()
     print("== Sprechprobe des Waechters ==")
     print(f"  saubere Quelle: {len(f_gut)} Verletzungen -- "
           + ("ok" if not f_gut else f"GESCHEITERT (falsches Rot: {f_gut})"))
@@ -271,13 +289,20 @@ def main():
     print(f"  cc nur als Prosa: {len(f_prosa)} Verletzungen -- "
           + ("ok (der Name im Text ist keine Aufrufstelle)"
              if not f_prosa else f"GESCHEITERT (Fehlalarm: {f_prosa})"))
+    print(f"  Abbruch mit 2:  {len(f_zwei)} Verletzungen -- "
+          + ("ok (ein Ausgang mit 2 ist ROT -- die Forderung heisst `ungleich null`)"
+             if not f_zwei else f"GESCHEITERT (falsches Rot: {f_zwei})"))
     print("  Arbeitsmenge:   " + ("ok (eine Ausgabe ohne Zahl faellt, eine mit Zahl nicht)"
                                   if leer_faellt and voll_faellt else "GESCHEITERT"))
     if not ok:
-        return 1
+        # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
+        # guardians demands a working speech test from all of them; one that fails its own
+        # has measured nothing, and everything it prints below is about itself.
+        print("\n! Der Waechter ueber den Waechtern misst nicht, was er behauptet. ABBRUCH.")
+        return 2
 
     print()
-    print("== Die vier STATISCHEN Forderungen, am Quelltext ==")
+    print("== Die STATISCHEN Forderungen, am Quelltext ==")
     befunde = []
     alle = waechter()
     for p in alle:

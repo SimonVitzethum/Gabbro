@@ -81,6 +81,21 @@ sonder = set(m_s.group(1).split()) if m_s else set()
 vok -= sonder
 term -= sonder
 
+# **Two empty sets cover each other completely, and that is not coverage** (2026-08-31).
+# Measured over an empty tree: no vocabulary table matched, no EBNF block was found, `fehlt`
+# and `tot` both came out empty -- and this file exited 0 with the line `Wortschatz: 0 EBNF
+# terminals, 0 table words`. **A closed vocabulary over nothing.** That is W17 word for word:
+# not a wrong verdict, a POSITIVE verdict about nothing, and it looks like a result.
+#
+# The `--probe` branch is exempt: the speech test runs this same file over a COPY that is
+# supposed to be readable, and it reads the globals, not the return code.
+if "--probe" not in sys.argv and not (term and vok):
+    print(f"ABBRUCH: {len(term)} EBNF-Terminale gegen {len(vok)} Tabellenwoerter -- "
+          "mindestens eine Menge ist LEER.")
+    print("  Zwei leere Mengen decken einander, und das ist kein geschlossener Wortschatz,")
+    print("  sondern eine Datei, die dieses Werkzeug nicht lesen konnte. NICHTS gemessen.")
+    sys.exit(2)
+
 fehlt = sorted(term - vok)          # in der Grammatik, nicht im Wortschatz
 tot   = sorted(vok - term)          # im Wortschatz, nirgends in der Grammatik
 
@@ -130,6 +145,9 @@ if "--probe" not in sys.argv:
     else:
         print("    SPRECHPROBE GESCHEITERT: ein erfundenes Terminal geht durch --")
         print("    dieser Waechter kann nicht rot werden und misst damit nichts.")
-        sys.exit(1)
+        # 2, not 1: the last sentence says NOTHING was measured, so the return code says it
+        # too. Reading it as a finding would send someone looking through SYNTAX.md for a
+        # gap that this run never looked for.
+        sys.exit(2)
 
 sys.exit(1 if (fehlt or tot or tot_regel) else 0)

@@ -506,6 +506,18 @@ def quellsprache():
 
 
 def main():
+    # **Zero sources is a REFUSAL, not a pass** (measured 2026-08-31 over an empty tree).
+    # Without this latch the tool printed `0 continuations in 0 sources`, `0 of 0 comment
+    # lines`, `ENGLISCH: ALL PASS` -- and returned 0. Every ratchet holds trivially when its
+    # population is empty, so the greenest run this guardian can produce is the one where it
+    # looked at nothing. *That is W17: not a wrong verdict, a positive verdict about
+    # nothing.*
+    if not QUELLEN:
+        print("ABBRUCH: keine Pruefer-Quelle unter `crates/*/src/*.rs` -- es wurde NICHTS "
+              "gemessen.")
+        print("  Ueber einer leeren Menge haelt jede Ratsche, und `ALL PASS` waere ein")
+        print("  Urteil ueber nichts.")
+        return 2
     if not sprechprobe():
         print("== ENGLISCH: der Waechter misst nicht ==")
         return 2
