@@ -134,7 +134,15 @@ atomic tiefster     : u32 publishes nothing relaxed;
 -- >
 -- > `lauf "fragment6"` in `pruefe-emission.sh` erzeugt, uebersetzt (`-O0`, `-O2`, UBSan),
 -- > FUEHRT AUS und vergleicht achtzehn Zahlen gegen eine Handschrift, die aus dem Ausschnitt
--- > ABGELEITET und COMMITTET wurde, bevor sie gemessen war. **`H` faellt von 5 auf 4.**
+-- > ABGELEITET und COMMITTET wurde, bevor sie gemessen war. ~~**`H` faellt von 5 auf 4.**~~
+--
+-- > **UND AM SELBEN TAG WIEDER GEFALLEN.** `N043` liest die Berichtszeile von
+-- > `check kstack_eichung` unten -- `measures eich.leer, eich.voll, eich.tiefe,
+-- > eich.gelaufen` -- und findet keinen Traeger `eich`. Damit prueft diese Datei nicht mehr
+-- > sauber, `gabbro emit` schreibt kein C, und der Durchstich ist WEG: **`H` steht wieder
+-- > bei 5.** *Die `lauf`-Zeile steht unveraendert da* -- und bis zum 2026-08-31 hat
+-- > `zaehle-pflichten.py` genau sie gelesen und nicht den Lauf, also sagte `H` weiter 4.
+-- > **Der Zaehler liest seit heute den Lauf** (`pruefe-emission.sh --absenkung`).
 -- >
 -- > Und die INDEXLESART steht in diesen achtzehn Zahlen drin, nicht daneben: `unberuehrt`
 -- > liefert 0, auch an einem Feld, das voll mit `MUSTER` beschrieben ist -- und damit schlaegt

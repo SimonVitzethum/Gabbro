@@ -118,13 +118,62 @@ schneide() {
 
 N_DURCHGESTOCHEN=0
 
+# **`--absenkung`: der Waechter beantwortet die Frage, auf der `H` steht** (2026-08-31).
+# -------------------------------------------------------------------------------------
+# `zaehle-pflichten.py` las die Absenkungsspalte bis heute **am QUELLTEXT dieser Datei** ab:
+# `^lauf "fragment(\d+)"`, an der blossen Anwesenheit der Zeile. **Nicht daran, ob der Lauf
+# haelt.** Am 2026-08-31 stand `F06` an `N043` (`measures eich`, ein Traeger, den es nicht
+# gibt), dieser Waechter war deswegen zu Recht ROT -- und `H` sagte weiter 4.
+#
+# > *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine
+# > ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* Solange
+# > die Zeile steht, kann der Lauf fallen und die Zahl bleibt.
+#
+# In diesem Modus laufen NUR die `fragment*`-Durchstiche, und **ein gefallener ist ein
+# ERGEBNIS und kein Abbruch**: der Zaehler braucht alle sechs Antworten, nicht die erste.
+# Je Fragment steht danach eine Zeile `DURCHSTICH fragmentN HAELT` oder `… FAELLT` da.
+NUR_ABSENKUNG=""
+for _a in "$@"; do
+    case "$_a" in
+        --absenkung) NUR_ABSENKUNG=1 ;;
+        *) echo "unbekanntes Argument: $_a -- es gibt nur --absenkung" >&2; exit 2 ;;
+    esac
+done
+
 lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
-    local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
+    local name="$1"
+    if [ -n "$NUR_ABSENKUNG" ]; then
+        case "$name" in fragment*) ;; *) return 0 ;; esac
+        absenkung_messen "$@"
+        return 0
+    fi
     # **Die Zahl wird GEZAEHLT, nicht gepflegt** (2026-08-20). Sie stand als `17` in der
     # Schlusszeile, waehrend achtzehn Einheiten liefen -- dieselbe Klasse wie die Liste, die
     # eine Regel wurde, nur eine Ebene hoeher. *Eine Kennzahl, die jemand nachtragen muss,
     # ist irgendwann falsch.*
     N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
+    lauf_kern "$@"
+}
+
+# Ein Durchstich, dessen Fall PROTOKOLLIERT statt abgebrochen wird.
+#
+# **`set -e` muss im Kind ausdruecklich wieder an.** Eine Verbundanweisung links von `||`
+# laeuft mit abgeschaltetem `errexit`, und das gilt bis in die Unterschale hinein -- ohne das
+# `set -e` liefe `lauf_kern` dort mit einer anderen Fehlersemantik als im vollen Lauf.
+# *Ein Messmodus, der anders faellt als der gemessene Lauf, misst den Modus.*
+absenkung_messen() {
+    local name="$1" rc=0
+    ( set -e; lauf_kern "$@" ) > "$ARB/$name.protokoll" 2>&1 || rc=$?
+    if [ "$rc" = 0 ]; then
+        echo "DURCHSTICH $name HAELT"
+    else
+        echo "DURCHSTICH $name FAELLT   (Ruecklauf $rc)"
+        sed 's/^/      /' "$ARB/$name.protokoll"
+    fi
+}
+
+lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
+    local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
     local c="$ARB/$name.c"
     echo "== Differenztest: $name =="
 
@@ -1569,6 +1618,49 @@ lauf "beispiel52" "$W/beispiele/52-baugatter.gab" "$TREIBER52" "42 0" \
      's/p->slots\[i\].fuellstand = v;/(void)v;/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 9 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
+# ---------------------------------------------------------------------------------------
+# *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
+# unter `H`, der Zahl, auf der K100s erstes Tor definiert ist.
+#
+# Das Gift TAUSCHT zwei Bootschritte von `F07`: `ipc_tabellen` und `autoritaet_melden`
+# wechseln die Reihenfolge, die Linearitaet bleibt heil (`p2 -> p3 -> p4`). **Damit prueft
+# das Fragment sauber, es emittiert, es UEBERSETZT ohne eine Warnung -- und erst der
+# AUSGEFUEHRTE Lauf sagt `124356` statt `123456`.** Genau das ist die Aussage, die der
+# Zaehler braucht: nicht dass eine Zeile dasteht, sondern dass das erzeugte C rechnet, was
+# das Fragment sagt.
+#
+# *Ein Gift, das schon beim Pruefen faellt, haette dieselbe Antwort aus einem anderen Grund
+# gegeben -- und dann bliebe unbelegt, dass die Ausfuehrungsstufe ueberhaupt mitzaehlt.*
+if [ -n "$NUR_ABSENKUNG" ]; then
+    echo
+    sed -e 's/^    let p3 = ipc_tabellen(p2);$/    let p3 = autoritaet_melden(p2);/' \
+        -e 's/^    let p4 = autoritaet_melden(p3);$/    let p4 = ipc_tabellen(p3);/' \
+        "$W/messung/fragmente/F07.gab" > "$ARB/f7-vertauscht.gab"
+    if cmp -s "$W/messung/fragmente/F07.gab" "$ARB/f7-vertauscht.gab"; then
+        echo "SPRECHPROBE GESCHEITERT: das Gift veraendert F07 gar nicht -- die Probe hat"
+        echo "  NICHTS gemessen, und ein Gleichstand belegt dann nichts."
+        exit 2
+    fi
+    sp_rc=0
+    ( set -e; lauf_kern "sprechprobe7" "$ARB/f7-vertauscht.gab" "$TREIBER7" "123456" \
+        's/    ipc_tabellen();/    \/* geloescht *\//' \
+        "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 4 direct forms, 7 foreign bodies (0 state their duty), 0 narrowings from foreign contracts" \
+    ) > "$ARB/sprechprobe7.protokoll" 2>&1 || sp_rc=$?
+    if [ "$sp_rc" = 0 ]; then
+        echo "SPRECHPROBE GESCHEITERT: ein Durchstich mit VERTAUSCHTEN Bootschritten HAELT."
+        echo "  Dann sagt die Zeile DURCHSTICH ... HAELT nichts ueber den Lauf aus."
+        exit 2
+    fi
+    echo "SPRECHPROBE ok (der vertauschte Durchstich faellt, Ruecklauf $sp_rc)"
+    sed -n -e 's/^  \(4\. Ergebnis:.*\)$/      \1/p' \
+           -e 's/^ *\(erwartet:.*\)$/        \1/p' \
+           -e 's/^ *\(bekommen:.*\)$/        \1/p' "$ARB/sprechprobe7.protokoll"
+    echo
+    echo "== ABSENKUNG: gemessen -- nur die Fragment-Durchstiche, Stufe 9 und 10 nicht =="
+    exit 0
+fi
+
 # **Und die Aussage, auf die es bei einem Gatter ankommt: es steht NICHT im C.**
 #
 # *Ein Gatter, das im C landet, ist kein Gatter* -- ein `#if` haette den ganzen Block
@@ -1619,6 +1711,7 @@ echo "  Pruefbau cc:   ok (-Werror, und die Probe pruefe_puffer_haelt steht dari
 #
 # Die Ausnahmen stehen einzeln und mit Grund da -- und **eine Ausnahme, die nicht mehr
 # noetig ist, faellt ebenfalls auf.** Sonst waechst hier eine zweite Liste nach.
+
 echo
 echo "== Stufe 9: jede Datei, die emittiert, muss auch uebersetzen =="
 
