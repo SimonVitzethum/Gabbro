@@ -1,0 +1,89 @@
+-- **Die Wildcards im ERZEUGER, gemessen statt gezaehlt (2026-08-31).**
+--
+-- `_ => "?"` ist dieselbe Sache wie `L104`: eine Vollstaendigkeitspruefung, die nicht
+-- fehlschlagen kann. Im Pruefer macht sie eine Absage unzitierbar; **im Erzeuger waehlt sie
+-- einen C-Typ oder einen C-Wert.** Dreizehn solche Arme stehen im Baum, sechs davon in
+-- `emit.rs` (der dreizehnte, `breite_von`, fehlte in der ersten Zaehlung -- er hat genau
+-- dieselbe Form).
+--
+-- ## Gemessen, nicht gelesen
+--
+-- Jeder der sechs Arme bekam eine Marke, der Baum wurde neu gebaut und **479 Quellen**
+-- emittiert (`beispiele/`, `beispiele/gift/`, `messung/fragmente/`, `messung/*-proben/`,
+-- `halde.gab`):
+--
+--     emit.rs  intty        `_ => "int64_t"`             0 Treffer
+--     emit.rs  breite_von   `_ => 8`                     0 Treffer
+--     emit.rs  lesewort     `_ => "gabbro_le64"`         0 Treffer
+--     emit.rs  schreibwort  `_ => "gabbro_setz_le64"`    0 Treffer
+--     emit.rs  Nutzlast     `_ => "nothing"`            19 Treffer, alle `None`
+--     emit.rs  remove-Reset `_ => "0"`                  24 Treffer
+--
+-- **Vier sind HAERTUNG, kein Befund.** `IntTy.wort` ist durch `P008`/`ist_intty` auf acht
+-- Woerter geschlossen; `intty` zaehlt sieben davon auf, `breite_von` sechs, und der Rest ist
+-- genau `{U64, I64}` bzw. `{I64}` -- richtig beantwortet. `lesewort`/`schreibwort` bekommen
+-- ihre Breite nur aus `breite_von` und sehen deshalb nie etwas ausser 1, 2, 4, 8. *Die
+-- Gefahr ist nicht heute, sondern beim naechsten Wort in `ist_intty`: es wuerde still acht
+-- Byte breit und vorzeichenbehaftet.*
+--
+-- **Der Nutzlast-Arm ist richtig geschrieben** -- seine 19 Treffer sind alle `None`, und
+-- „nothing" ist genau das. Er landet ausserdem in einem C-KOMMENTAR.
+--
+-- ## Einer ist ein BEFUND
+--
+-- `T_remove` setzt jedes Slotfeld zurueck. Eine `option index into T` bekommt `T_NONE`;
+-- **alles andere bekommt `0`**, ohne dass ein Pass das prueft. Diese Datei ist der
+-- Reproduzent -- sie geht durch (`4 items, 0 errors, 0 hints`), und der Erzeuger schreibt:
+--
+--     static void Verz_remove(Verz *t, uint32_t s) {
+--         t->slots[s].benutzt = 0;
+--         t->slots[s].stufe = 0;        <-- `u32 in 1 .. 9`: AUSSERHALB des eigenen Bereichs
+--         t->slots[s].nachbar = 0;      <-- `index into Verz`: ein GUELTIGER Index
+--     }
+--
+-- Zwei verschiedene Fehler aus einer Zeile:
+--
+-- 1. **`stufe` verlaesst seinen Typ.** `u32 in 1 .. 9` schliesst die Null aus, und jede
+--    Verengungsregel darueber rechnet danach mit einem Wert, den der Erzeuger selbst
+--    hineingeschrieben hat. *Ein Erzeuger, der den Typ verletzt, den der Pruefer gerade
+--    durchgesetzt hat, hebt den Pass auf.*
+-- 2. **`nachbar` bekommt eine LUEGE.** Ein nicht-optionaler `index into Verz` hat kein
+--    `None`, also gibt es keinen Wert fuer „kein Nachbar" -- und `0` ist nicht neutral,
+--    sondern der erste Platz. Der geraeumte Slot behauptet danach eine Kante.
+--
+-- Der saubere Korpus ist nicht betroffen: `ops` deklarieren im ganzen Baum zwei Tabellen,
+-- beide in `beispiele/47-ops-wortmenge.gab`, und ihre Felder sind `bool`, ein `u32` ohne
+-- Bereich und eine `option index into` -- fuer alle drei ist `0` bzw. `T_NONE` richtig.
+-- **Latent, nicht tot:** es braucht ein Feld mit Bereich oder eine nicht-optionale Kante,
+-- und die Sprache erlaubt beides ohne ein Wort dazu.
+--
+-- Der strukturelle Weg ist der, den `emit.rs` sonst ueberall geht: **den Wildcard streichen
+-- und den Ruecksetzwert ableiten** -- `T_NONE` fuer die optionale Kante, `0` fuer `bool` und
+-- fuer einen Bereich, der die Null enthaelt, und sonst eine Absage bei Namen. *Nicht in
+-- diesem Lauf gebaut* -- eine Aenderung am Erzeuger gehoert mit ihrer eigenen Gift- und
+-- Gegenprobe gefahren, und die Messung steht auch ohne sie.
+
+module mass::wildcard_ruecksetzung {
+
+const N : u32 = 8;
+
+table Verz count N {
+    slot {
+        benutzt : bool,
+        stufe   : u32 in 1 .. 9,
+        nachbar : index into Verz,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+}
+
+impl fn ist_belegt(v : ptr<normal, r> Verz, i : index into Verz) -> bool
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].benutzt;
+}
+
+}
