@@ -712,6 +712,32 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
     },
     Satz {
+        name: "m1.vorrang",
+        kennungen: &["M136"],
+        aussage: "No expression in the tree reads one way under Gabbro's grammar and another \
+                  way under C's. Gabbro holds `<< >> & ^ |` in ONE flat left-associative \
+                  level and puts all five BELOW the comparisons; C grades the five into four \
+                  levels and puts `& ^ |` ABOVE the comparisons. Wherever those two tables \
+                  disagree and the author wrote no parenthesis, this pass refuses.",
+        vorbehalt: "**This is a statement about the READER, not about the product.** The \
+                    emitter parenthesises the tree (`emit.rs::geklammert`), so the shipped C \
+                    computes what the checker proved even where this rule is silent -- and \
+                    `beispiele/gift/436` measures exactly that counterfactual, by demanding \
+                    that `cc -Werror` ACCEPT the generated file. The rule refuses only where \
+                    the value was measured to move (Rule A): where the left operator binds at \
+                    least as tightly as the right, C groups as Gabbro does and nothing is \
+                    said. gcc's `-Wparentheses` is wider there and SILENT at six of the nine \
+                    that matter -- it is not a second reader for this claim.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`messung/proben/VORRANG-BITSTUFEN.md`: all 25 operator pairs and 4 \
+                      comparison forms compiled and RUN, 9 + 2 of them computing a different \
+                      value. `beispiele/gift`: 2 probes (`436`, `437`), both `M136` alone. \
+                      `crates/gabbro-check/tests/vorrang.rs` pins the reach in both \
+                      directions -- 11 forms, each with the verdict it owes.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (vorrangfalle); \
+                     messung/proben/VORRANG-BITSTUFEN.md",
+    },
+    Satz {
         name: "m1.verfeinerung",
         kennungen: &["M130", "M131", "M132"],
         aussage: "Where a body carries `refines g`, the named `g` is a `spec fn` declared in \

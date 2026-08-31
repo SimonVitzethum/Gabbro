@@ -70,6 +70,12 @@ fn formen() -> Vec<(String, &'static str)> {
     v
 }
 
+/// The probe, checked and lowered -- and the refusals counted on the way through.
+///
+/// **The file deliberately carries the twelve forms `M136` refuses.** It has to: they are
+/// the ones whose value moved, and a measurement that drops them measures the easy half.
+/// So the assertion is not "nothing falls" but "exactly these fall, and nothing else" --
+/// which pins `M136`'s reach in BOTH directions at the same time.
 fn erzeuge(pfad: &Path) -> String {
     let quelle = std::fs::read_to_string(pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
     let (baum, mut absagen) = gabbro_syntax::lies(&pfad.display().to_string(), &quelle);
@@ -80,9 +86,17 @@ fn erzeuge(pfad: &Path) -> String {
         .filter(|a| a.stufe == Stufe::Fehler)
         .map(|a| a.code)
         .collect();
+    let fremd: Vec<&&str> = fehler.iter().filter(|c| **c != "M136").collect();
     assert!(
-        fehler.is_empty(),
-        "die Vorrangprobe muss sauber durchgehen, sie faellt mit {fehler:?}:\n{}",
+        fremd.is_empty(),
+        "an der Vorrangprobe darf NUR `M136` fallen, es faellt auch {fremd:?}:\n{}",
+        absagen.zeige(&quelle)
+    );
+    assert_eq!(
+        fehler.len(),
+        12,
+        "`M136` muss genau die 9 Paare und die 3 Vergleichsformen treffen -- nicht mehr \
+         (dann ist die Absage zu breit) und nicht weniger (dann traegt sie nicht):\n{}",
         absagen.zeige(&quelle)
     );
     let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
@@ -172,29 +186,43 @@ fn jede_form_rechnet_was_gabbro_meint() {
 /// So each row says what MUST carry parentheses and what must NOT.
 #[test]
 fn die_klammer_steht_wo_sie_gebraucht_wird_und_sonst_nicht() {
-    // (Gabbro expression, the C the emitter owes)
-    let faelle: [(&str, &str); 9] = [
-        // the flat level regroups in C -- the tree has to be written down
-        ("a & b << c", "return (a & b) << c;"),
-        ("a | b ^ c", "return (a | b) ^ c;"),
-        // C and Gabbro agree here, and `-Wparentheses` still fires -- stage 9 uses `-Werror`
-        ("a & b ^ c", "return (a & b) ^ c;"),
-        ("a ^ b | c", "return (a ^ b) | c;"),
+    // (Gabbro expression, the C the emitter owes, does `M136` refuse it?)
+    //
+    // The third column pins the OTHER build in both directions at once. `M136` refuses
+    // exactly where the value moved -- Rule A, no refusal without a measured defect. A wider
+    // version that refuses every mixed pair dies at the `false` rows; a narrower one that
+    // misses a shift dies at the `true` rows.
+    let faelle: [(&str, &str, bool); 11] = [
+        // the flat level regroups in C -- the tree has to be written down, and the reader
+        // has to be told, because the same characters are two programs
+        ("a & b << c", "return (a & b) << c;", true),
+        ("a | b ^ c", "return (a | b) ^ c;", true),
+        ("a ^ b >> c", "return (a ^ b) >> c;", true),
+        // C and Gabbro agree here, and `-Wparentheses` still fires -- stage 9 uses `-Werror`.
+        // The emitter writes the parenthesis; `M136` says NOTHING, because nothing moved.
+        ("a & b ^ c", "return (a & b) ^ c;", false),
+        ("a ^ b | c", "return (a ^ b) | c;", false),
+        ("a << b & c", "return (a << b) & c;", false),
         // same operator throughout: no regrouping, no warning, and still parenthesised --
-        // the rule is one rule, not a list of pairs
-        ("a & b & c", "return (a & b) & c;"),
-        // the comparison boundary: Gabbro puts the bit level below `==`, C puts it above
-        ("a & b == c", "return (a & b) == c;"),
+        // the emitter's rule is one rule, not a list of pairs
+        ("a & b & c", "return (a & b) & c;", false),
+        // the comparison boundary: Gabbro puts `& ^ |` below `==`, C puts them above
+        ("a & b == c", "return (a & b) == c;", true),
+        // and a SHIFT beside a comparison does not move -- C agrees with Gabbro there
+        ("a << b < c", "return (a << b) < c;", false),
         // a bit operator over an arithmetic one: the parenthesis is C's own grouping, but
         // without it `-Wparentheses` fires
-        ("a + b << c", "return (a + b) << c;"),
-        // and the two that must stay BARE -- strip the bit level and Gabbro's remaining
+        ("a + b << c", "return (a + b) << c;", false),
+        // and one that must stay BARE -- strip the bit level and Gabbro's remaining
         // hierarchy is C's, so a parenthesis here would be noise the corpus would notice
-        ("a + b * c", "return a + b * c;"),
-        ("a * b + c", "return a * b + c;"),
+        ("a + b * c", "return a + b * c;", false),
     ];
-    for (ausdruck, erwartet) in faelle {
-        let typ = if ausdruck.contains("==") { "bool" } else { "u32" };
+    for (ausdruck, erwartet, faellt) in faelle {
+        let typ = if ausdruck.contains("==") || ausdruck.contains(" < ") {
+            "bool"
+        } else {
+            "u32"
+        };
         let quelle = format!(
             "module p {{ type K = u32 in 0 .. 7;\n\
              impl fn f(a : K, b : K, c : K) -> {typ}\n\
@@ -208,7 +236,12 @@ fn die_klammer_steht_wo_sie_gebraucht_wird_und_sonst_nicht() {
             .filter(|a| a.stufe == Stufe::Fehler)
             .map(|a| a.code)
             .collect();
-        assert!(fehler.is_empty(), "`{ausdruck}` faellt mit {fehler:?}");
+        assert_eq!(
+            fehler,
+            if faellt { vec!["M136"] } else { Vec::new() },
+            "`{ausdruck}`: `M136` muss hier {} -- gefallen ist {fehler:?}",
+            if faellt { "fallen" } else { "SCHWEIGEN" }
+        );
         let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
         assert!(
             c.contains(erwartet),

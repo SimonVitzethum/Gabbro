@@ -1668,7 +1668,120 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **`M136` -- the same text, and it means something else in C.**
+    ///
+    /// `parse.rs::bitexpr` holds `<< >> & ^ |` in ONE flat left-associative level. C grades
+    /// them into four: `<< >>` above `&` above `^` above `|`. So `a & b << c` is
+    /// `(a & b) << c` here and `a & (b << c)` there -- **the same characters, two programs.**
+    ///
+    /// Measured on 2026-08-31, compiled and run over all 25 pairs
+    /// (`messung/proben/VORRANG-BITSTUFEN.md`): nine of them compute a different value, and
+    /// two of the four comparison forms as well. The emitter now writes the parenthesis
+    /// (`emit.rs::geklammert`), so **the shipped program computes what the checker proved.**
+    ///
+    /// > This refusal is not about the program. It is about the READER. A parenthesis in the
+    /// > generated file cannot say what the author meant, and the trap belongs to anyone who
+    /// > reads both languages.
+    ///
+    /// **What it does NOT refuse, and why** -- Rule A, no refusal without a measured defect:
+    /// where the left operator binds at least as tightly as the right, C groups exactly as
+    /// Gabbro does. `a << b & c`, `a & b ^ c`, `a & b & c` are all refused by nobody here.
+    /// gcc's `-Wparentheses` is wider and warns on three of those; it is also SILENT on six
+    /// of the nine that are wrong. Measured, both directions.
+    ///
+    /// **And a shift beside a comparison is fine**: C puts `<< >>` above the comparisons,
+    /// same as Gabbro. Only `& ^ |` sit on the other side of that line -- Ritchie's
+    /// precedence, and the reason this pass does not simply adopt C's table.
+    fn vorrangfalle(&mut self, op: BinOp, a: &Expr, b: &Expr) {
+        /// C's level for the five operators Gabbro holds in one. Higher binds tighter.
+        fn stufe(op: BinOp) -> Option<u8> {
+            Some(match op {
+                BinOp::SchiebLinks | BinOp::SchiebRechts => 3,
+                BinOp::BitUnd => 2,
+                BinOp::BitXor => 1,
+                BinOp::BitOder => 0,
+                _ => return None,
+            })
+        }
+        /// The operator of a child, but only where the author wrote NO parenthesis --
+        /// an `ExprArt::Klammer` says the grouping out loud and nothing is ambiguous.
+        fn blanker_op(e: &Expr) -> Option<BinOp> {
+            match &e.art {
+                ExprArt::Binaer(q, _, _) => Some(*q),
+                _ => None,
+            }
+        }
+
+        // **Case one: the flat level against itself.**
+        //
+        // The tree is always `(a op1 b) op2 c` -- so the node carries `op2` at the root and
+        // `op1` as its LEFT child. C regroups exactly when the left one binds LOOSER.
+        //
+        // The mirrored shape (a bare bit node on the RIGHT) cannot be built: `bitexpr` reads
+        // its right operand with `addexpr`, which never yields a bit operator. A parenthesis
+        // is the only way to get one there, and then it is an `ExprArt::Klammer`. *No branch
+        // is written for a shape the grammar cannot produce* -- it would be code no probe
+        // could reach.
+        if let (Some(p), Some(q)) = (stufe(op), blanker_op(a).and_then(stufe)) {
+            if q < p {
+                let (l, r) = (op_zeichen(blanker_op(a).unwrap_or(op)), op_zeichen(op));
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M136",
+                        a.span,
+                        format!(
+                            "`x {l} y {r} z` groups as `(x {l} y) {r} z` here and as \
+                             `x {l} (y {r} z)` in C -- write the parenthesis you mean"
+                        ),
+                    )
+                    .mit_notiz(
+                        "SYNTAX.md: Gabbro holds `<< >> & ^ |` in ONE level, C grades them \
+                         into four -- the same characters are two programs",
+                    )
+                    .mit_notiz(
+                        "the generated C carries the parenthesis and computes THIS reading; \
+                         the refusal is about the reader, not the program",
+                    ),
+                );
+            }
+        }
+
+        // **Case two: the bit level against the comparisons.**
+        //
+        // `cmpexpr = bitexpr [ cmp bitexpr ]` puts the whole bit level BELOW the comparison;
+        // C puts `& ^ |` above it. Both operands are read as `bitexpr`, so unlike case one
+        // this shape is reachable on either side.
+        if op.ist_vergleich() {
+            for seite in [a, b] {
+                let Some(q) = blanker_op(seite) else { continue };
+                if !matches!(q, BinOp::BitUnd | BinOp::BitXor | BinOp::BitOder) {
+                    continue;
+                }
+                let (l, r) = (op_zeichen(q), op_zeichen(op));
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M136",
+                        seite.span,
+                        format!(
+                            "`x {l} y {r} z` groups as `(x {l} y) {r} z` here and as \
+                             `x {l} (y {r} z)` in C -- write the parenthesis you mean"
+                        ),
+                    )
+                    .mit_notiz(
+                        "SYNTAX.md: `& ^ |` bind TIGHTER than a comparison here and looser \
+                         in C -- a shift does not, in either language",
+                    )
+                    .mit_notiz(
+                        "the generated C carries the parenthesis and computes THIS reading; \
+                         the refusal is about the reader, not the program",
+                    ),
+                );
+            }
+        }
+    }
+
     fn binaer(&mut self, op: BinOp, a: &Expr, b: &Expr, span: Span, lage: &Lage) -> Typ {
+        self.vorrangfalle(op, a, b);
         let ta = self.ausdruck(a, lage);
         let tb = self.ausdruck(b, lage);
         if op == BinOp::Und || op == BinOp::Oder {
@@ -4055,6 +4168,16 @@ fn op_zeichen(op: BinOp) -> &'static str {
         BinOp::BitUnd => "&",
         BinOp::BitOder => "|",
         BinOp::BitXor => "^",
+        // **The comparisons stood on the `_ => "?"` arm until 2026-08-31**, and nothing read
+        // them: the only caller was the overflow message, which fires in the arithmetic
+        // branch alone. `M136` names an operator pair and printed `x | y ? z` for
+        // `x | y == z` -- a refusal that cannot quote the line it is about.
+        BinOp::Gleich => "==",
+        BinOp::Ungleich => "!=",
+        BinOp::Kleiner => "<",
+        BinOp::KleinerGleich => "<=",
+        BinOp::Groesser => ">",
+        BinOp::GroesserGleich => ">=",
         _ => "?",
     }
 }

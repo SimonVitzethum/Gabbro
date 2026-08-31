@@ -1,0 +1,32 @@
+-- erwartet: M136 allein
+-- **Derselbe Text, zwei Programme -- und `cc` schweigt dazu.**
+--
+-- `parse.rs::bitexpr` haelt `<< >> & ^ |` in EINER flachen links-assoziativen Stufe. C hat
+-- dort vier: `<< >>` ueber `&` ueber `^` ueber `|`. Also liest Gabbro `a & b << c` als
+-- `(a & b) << c` und C dasselbe als `a & (b << c)`.
+--
+-- Gemessen, uebersetzt und GELAUFEN am 2026-08-31 ueber alle 25 Paare
+-- (`messung/proben/VORRANG-BITSTUFEN.md`): **neun rechnen verschieden**, und mit `a=3 b=5
+-- c=2` steht diese Zeile bei 4 gegen 0.
+--
+-- **Und das Netz hat sein Loch genau hier.** gccs `-Wparentheses` faengt drei der neun und
+-- warnt dreimal, wo nichts falsch ist -- geschwiegen wird bei ALLEN SECHS, bei denen rechts
+-- von `& ^ |` ein Schieben steht. Diese Datei ist eine davon.
+--
+-- `-- erwartet: M136 allein` sagt beide Haelften: der Pruefer muss absagen, UND `cc -Werror`
+-- muss das Erzeugnis annehmen. Die zweite Haelfte ist die Aussage ueber `emit.rs::geklammert`
+-- -- der Erzeuger schreibt den Baum hin, also ist das ausgelieferte Programm richtig, auch
+-- wenn diese eine Regel fiele. **Die Absage ist fuer den LESER, nicht fuer das Programm.**
+
+module gift::vorrang {
+
+type Klein = u32 in 0 .. 7;
+
+impl fn maske(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b << c;
+}
+
+}

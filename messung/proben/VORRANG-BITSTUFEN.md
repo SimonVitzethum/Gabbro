@@ -121,3 +121,93 @@ angleicht, importiert ihn.**
 * **Ein Tripel.** Die Tafel zeigt, *dass* neun Paare auseinanderlaufen, nicht *wie weit*.
 * **`a & b == c` steht als „gleich" da, und das ist ein Zufall dieses Tripels** — die
   Strukturen sind verschieden. Bei `a=2 b=2 c=2` faellt es auseinander.
+
+---
+
+# Die Rechnung: (a), (b), (c) — gegeneinander, nicht nach Geschmack
+
+## (a) Der Erzeuger klammert — **gebaut**
+
+**Nutzen, gemessen:** 9 von 25 Paaren rechneten falsch, jetzt 0 von 25. Dazu ein zweiter,
+unabhaengiger Nutzen: die drei `-Wparentheses`-Fehlalarme und die drei an der
+Vergleichsgrenze verschwinden, und damit besteht das Erzeugnis wieder
+`cc -std=c11 -Wall -Wextra -Werror` — das Kommando, das **Stufe 9 von
+`pruefe-emission.sh` ueber jede emittierende Datei fuehrt.**
+
+**Kosten, gemessen:** `cc -O2 -S`, roher Vergleich je Funktion, ueber die 16 Paare mit
+unveraenderter Bedeutung — dort und nur dort ist der Unterschied reiner Text:
+
+    16 von 16 byteidentisch          vorher gegen nachher
+    16 von 16 identisch              flach_X nachher gegen klammer_X vorher
+    25 von 25 identisch              flach_X gegen klammer_X, beide nachher
+     9 von 25 VERSCHIEDEN            dieselben Vergleiche vorher  <- der Riegel
+
+Die letzte Zeile ist der Riegel gegen eine leere Messung. *Der erste Lauf war eine:* die
+Assemblerdatei hatte vier Zeilen, weil der Erzeuger jede Funktion `static … unused`
+schreibt und `-O2` sie ohne Aufrufer wegwirft. Er meldete „0 identisch, 0 verschieden" —
+**und das sah aus wie ein Ergebnis** (W17).
+
+> **Die Klammer kostet nichts als Zeichen.** Der Assembler ist Byte fuer Byte derselbe.
+
+## (b) Die Grammatik bekommt Stufen wie C — **verworfen, und zwar gerechnet**
+
+**Am Korpus unsichtbar:** keine der 485 Dateien mischt ungeklammert (gemessen: `pruefe`
+und `emit` byteidentisch ueber beide Bauten). (b) wuerde dort nichts bewegen.
+
+**Und trotzdem faellt es durch, an der zweiten Grenze.** Die Bitstufen an C anzugleichen
+schliesst die Falle bei `& ^ |` gegen `<< >>` — und **laesst die bei `& ^ |` gegen die
+Vergleiche offen.** Wer die *ganze* Tafel angleicht, kauft Ritchies anerkannten Fehler ein
+(`&` unterhalb von `==`), um eine Aehnlichkeit zu gewinnen.
+
+    (b) halb   Bitstufen wie C          Falle an der Schiebestufe zu, an der Vergleichsgrenze OFFEN
+    (b) ganz   ganze Tafel wie C        beide zu, und `a & b == c` bedeutet ab jetzt `a & (b == c)`
+
+*Es gibt keine Fassung von (b), die beide Fallen schliesst, ohne einen Fehler zu
+importieren, den C selbst bereut.* **Das ist kein Geschmack, das ist die Tafel oben.**
+
+## (c) Der Pruefer sagt ab — **gebaut, als `M136`**
+
+**Warum neben (a) und nicht statt dessen:** eine Klammer im Erzeugnis heilt das
+*ausgelieferte* Programm. Sie heilt nicht, dass der AUTOR `a & b << c` geschrieben und
+`a & (b << c)` gemeint haben kann — dann hat der Pruefer etwas ueber ein Programm bewiesen,
+das niemand schreiben wollte. *Was der Leser meint, steht in keiner Klammer.*
+
+**Warum nicht breiter:** Regel A. `M136` sagt ab, **wo der Wert gemessen wandert** — neun
+Paare und drei Vergleichsformen. Wo der linke Operator mindestens so fest bindet wie der
+rechte, gruppiert C wie Gabbro, und dann gibt es keinen Mangel, den man absagen koennte.
+`a << b & c`, `a & b ^ c`, `a & b & c` gehen durch. **gcc ist dort breiter und schweigt
+zugleich bei sechs der neun, auf die es ankommt** — es ist kein zweiter Leser fuer diese
+Zusage.
+
+**Kosten am Korpus, gemessen:** 0 von 485 Dateien. `M136` feuert auf keiner.
+
+## Die Arbeitsteilung, in einer Zeile
+
+    (a) macht das PROGRAMM richtig, auch dort, wo (c) schweigt.
+    (c) macht den TEXT eindeutig, auch dort, wo (a) schon geheilt hat.
+
+`beispiele/gift/436` haelt genau diese Naht: `-- erwartet: M136 allein` verlangt, dass der
+Pruefer absagt **und** dass `cc -Werror` das Erzeugnis annimmt. Die zweite Haelfte ist die
+Gegenprobe auf (a) — sie misst das Produkt so, wie es ausgeliefert wuerde, wenn diese eine
+Regel fiele.
+
+## Was auch nach dem Bau ungemessen bleibt
+
+* **Der zweite Korpus.** Gemessen ist der eigene (485 Dateien). Ob ein fremdes Programm die
+  Form benutzt, sagt diese Zahl nicht.
+* **`clang`.** Das Warnverhalten ist an `gcc` gemessen. `-Wparentheses` ist keine Norm.
+* **`wrapping` und `float`.** Der Cast-Zweig in `emit.rs` klammert seine Operanden schon
+  selbst; dass er dabei nie regruppiert, ist gelesen und **nicht gelaufen**.
+* **Ob ein Mensch die Falle wirklich tritt.** Der Ausdruck ist mehrdeutig zwischen zwei
+  Sprachen — das ist gemessen. Dass ein Leser deshalb irrt, ist plausibel und nicht
+  gemessen. *`M136` steht auf einem Argument, nicht auf einem Vorfall.*
+
+---
+
+**Nachtrag zur Messapparatur.** Seit `M136` steht, sagt `gabbro pruefe` ueber
+`probe-vorrang-bitstufen.gab` nicht mehr `0 errors`, sondern **genau 12** — die neun Paare
+und die drei Vergleichsformen. Die Tafel oben ist gegen `9721d90` gemessen und bleibt, wie
+sie ist. `crates/gabbro-check/tests/vorrang.rs` verlangt jetzt *diese zwoelf und keine
+andere* und emittiert danach trotzdem: der Erzeuger laeuft auf dem geparsten Baum und fragt
+die Paesse nicht. **Damit misst dieselbe Datei beide Bauten** — die Reichweite von (c) und
+das Erzeugnis von (a) — und `abweichungen=0` steht weiter darunter.
