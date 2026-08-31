@@ -491,3 +491,56 @@ Datei völlig stumm machte.
 
 **Drei Posten hängen an nichts und schließen den Task** (A1, A2, A3). *Die vierte ist eine
 Entscheidung, und sie ist die einzige, die eine Bahn nicht treffen kann.*
+
+---
+
+# 10. `A1` und `A2` sind eingelöst — und `A1` hat drei Befunde abgeworfen
+
+*Gefahren am Abend des 2026-08-31, lokal (`free -g`: 31 GB gesamt, 15–17 GB verfügbar,
+20 Kerne). Die Messung im Einzelnen: [`messung/QUANTORENDOMAENEN.md`](../messung/QUANTORENDOMAENEN.md),
+der neue Tafelstand: `messung/GRAMMATIKTAFEL.md` §10.*
+
+```
+vorher   gesenkt 214 · abgesagt 0 · vom Pruefer 1 · UNGEDECKT 4
+nachher  gesenkt 217 · abgesagt 0 · vom Pruefer 1 · UNGEDECKT 1   (nur `state`)
+```
+
+| | | Stand |
+|---|---|---|
+| **A1** | drei Programme — `beispiele/55-kindkette.gab`, `56-auftragsring.gab`, `57-faedenhalt.gab` | **eingelöst**, je 0 Prüferfehler, 0 `C001`, `cc -Werror` bei `-O0` und `-O2` |
+| **A2** | der Satz der Tafel behauptet nur noch Gemessenes | **eingelöst**, `herkunft()` + fünfte Sprechproberichtung |
+| **A3** | `state` ausschreiben | **offen** |
+| **A4** | `H` buchen | **Entscheidung des Ordners** |
+
+## Der Ertrag ist nicht die Zahl — es sind die drei Neins
+
+**Der Auftrag verbot ausdrücklich, eine Zelle zu füllen, weil sie leer ist.** Also: erst der
+Gegenstand, dann die Zusicherung, dann die Frage, ob die Domäne sie trägt. Bei zweien von
+dreien lautet die Antwort nein, und *das* ist das Ergebnis:
+
+1. **`chain(a, b)` — die beiden Feldnamen liest kein Pass.** `chain(gibtsnicht, auchnicht)`,
+   `chain(belegt, belegt)` (ein `bool`, also gar keine Kante) und die vertauschte Kante
+   prüfen alle mit 0 Fehlern und emittieren. `tree { child gibtsnicht }` fällt an derselben
+   Datei an `D006`. *Die eine Domäne, die ihre Kante am Durchlauf nennt, ist die eine, deren
+   Kante niemand prüft* — und `SYNTAX.md`:1060 begründet den Umzug der Baumkante an die
+   `table` mit genau dem Argument, das auf `chain` nie zurückgefallen ist.
+2. **`queue` sagt in einer Annotation nichts, was `elems of` nicht auch sagt** — das erzeugte
+   C ist byteidentisch. Die Eindeutigkeitsregel des einen Feldarrays ist eine Regel des
+   KOSTENPASSES und greift nur an einem `traverse`. Und was `queue` hinzufügen sollte — die
+   LEBENDEN Einträge zwischen `kopf` und `zahl` — kann es nicht sagen: es nennt keines der
+   beiden Felder.
+3. **`threads` bindet eine Variable, die kein Pass liest.** `Domaene::Threads => {}` steht
+   dreimal wortgleich (`wirkungen.rs`, `m1.rs`, `gruppe.rs`). Jede andere Domäne hängt an
+   einer Deklaration (`count N`, `tree {…}`, `walk … levels`, das eine Feldarray); `threads`
+   hängt an nichts, und der Erzeuger sagt genau das.
+
+> **Keiner der drei ist hier gebaut.** Ein Programm misst den Bedarf nicht (Regel A), und
+> zwei davon sind Entscheidungen über die SPRACHE. *Eine benannte Absage ist ein Ergebnis.*
+
+## Und `A1` hätte `A2` fast unwirksam gemacht
+
+`chain`, `queue` und `threads` senken als **Quantorendomäne** ab und werden als
+**Traversierungsdomäne** namentlich abgesagt (gemessen: `messung/proben/probe-vier-zellen.gab`).
+Ihre Zelle sprang auf `gesenkt` — **und vier gemessene Absagen wären hinter einer grünen Zelle
+verschwunden.** Die Tafel druckt den Unterschied seither mit beiden Adressen: *`gesenkt` ist
+eine Aussage über das WORT, nicht über jede Stellung, die die Grammatik ihm erlaubt.*
