@@ -57,7 +57,25 @@ UMGEKEHRT = "-- erwartet: cc"
 # SINGLE class as the eighteen: `unused function` over an emitted `static inline`.
 # *A mark that rises because a file arrived is not a loosened ratchet -- but it is only not
 # one while the new file brings NO new class.* Counted: 19 files, one message class.
-MARKE_FAMILIENUNTERSCHIED = 19
+#
+# **19 -> 0 the same day, and it is HEALED and not exempted** (`emit.rs`, 2026-08-31). The
+# nineteen were never one cause: the first message of each file named an accessor from
+# THREE different emit sites -- a device bank register (`Vtd_FRR_FR_LO`), a device
+# transition (`VirtioPci_ack`, `Vtd_scharf_te`) and a `format` field reader or writer
+# (`EthKopf_ziel_hi`, `DtbKopf_setz_magie`), plus the `where` check `{n}_gueltig` and the
+# two `walk` predicates behind them. *Eighteen was a surface, and the tool said so.*
+#
+# The repair is the emitter's OWN idiom, already standing at `emit.rs` for every `static`
+# function with a body: `__attribute__((unused))` in the declaration specifiers. **The
+# `static` stays** -- an accessor that lost it would gain external linkage, and that is the
+# family of silent name collisions `N042` was built against. Measured after the repair:
+# `nm -g` over the emitted object of `messung/fragmente/F02.gab` lists **0 external
+# symbols**, and stage 9 of `pruefe-emission.sh` compiles all 101 of 101 under gcc.
+#
+# The `gabbro_*` byte helpers are deliberately NOT touched: they are emitted on demand
+# (`Erzeuger::helfer`), so the attribute would be a false statement there -- the same
+# reasoning that made the generated `ops` carry it only where this unit does not call them.
+MARKE_FAMILIENUNTERSCHIED = 0
 # The files both families reject. They are NOT this tool's finding -- stage 9 of
 # `pruefe-emission.sh` owns them and reports them, and a second register over one thing is
 # W7. They are counted here and printed, and they do not colour this run.

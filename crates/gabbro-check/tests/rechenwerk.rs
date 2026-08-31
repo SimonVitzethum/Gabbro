@@ -611,7 +611,39 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
     // fehlte. *Das `const` am Zeiger hatte ohnehin nie etwas gehalten -- es sagte nur, dass
     // `bytes` nicht umgehaengt wird, und `const N *` propagiert in C nicht nach innen.*
     assert!(c.contains("uint8_t *bytes"), "{c}");
-    assert!(c.contains("static inline void Kopf_setz_magie(Kopf *v, uint32_t x)"), "der Schreiber fehlt:\n{c}");
+    assert!(c.contains("static inline __attribute__((unused)) void Kopf_setz_magie(Kopf *v, uint32_t x)"), "der Schreiber fehlt:\n{c}");
+    // **`__attribute__((unused))` and NOT the removal of `static`** (2026-08-31). Until
+    // this day every generated `static inline` accessor carried neither: gcc says nothing
+    // about an unused `static inline` in C, **clang refuses it under `-Werror`**, and 19 of
+    // 99 emitting files fell that way (`instrumente/pruefe-uebersetzerfamilie.py`). *Stage
+    // 9's green never meant „the emitted C compiles" -- it meant „it compiles with gcc".*
+    //
+    // The repair is the emitter's own idiom, standing at every `static` function with a
+    // body since long before. **Taking `static` away would have healed the warning and
+    // bought a symbol with external linkage** -- exactly the family of silent name
+    // collisions `N042` was built against. So the two halves are asserted together, and the
+    // second is the one that would rot quietly:
+    assert!(
+        !c.contains("\ninline ") && !c.contains("\n__attribute__((unused)) inline "),
+        "kein Zugriff verliert sein `static` -- aeussere Bindung waere `N042`s Familie:\n{c}"
+    );
+    for zeile in c
+        .lines()
+        .filter(|z| z.contains("inline") && z.contains("_setz_") && !z.contains("gabbro_setz_"))
+    {
+        assert!(
+            zeile.starts_with("static inline __attribute__((unused)) "),
+            "jeder erzeugte Zugriff traegt beides, `static` und das Attribut: {zeile}"
+        );
+    }
+    // **And the byte helpers deliberately do NOT carry it**, which is the other half of the
+    // same decision: they are emitted ON DEMAND (`Erzeuger::helfer` writes only what this
+    // unit calls), so the attribute would be a false statement about the unit -- the same
+    // reasoning that gives a generated `ops` the attribute only where nothing calls it.
+    assert!(
+        c.contains("static inline void gabbro_setz_be32("),
+        "der Bedarfshelfer bleibt ohne Attribut:\n{c}"
+    );
     assert!(c.contains("gabbro_setz_be32(v->bytes + 0, x)"), "gross geschrieben:\n{c}");
     assert!(!c.contains("uint32_t magie;"), "kein Feld -- ein Zugriff:\n{c}");
     assert!(c.contains("gabbro_be32(v->bytes + 0)"), "Versatz 0, gross gelesen:\n{c}");
@@ -1022,7 +1054,7 @@ fn mirrors_schreibt_die_zustandsbits_mit() {
     // und dort nicht waere die stille Ausnahme.
     assert!(c.contains("a caller obligation, not a generated assertion"), "{c}");
     // Kein `assert(...)` im Rumpf -- der Kommentar oben enthaelt das Wort, der CODE nicht.
-    let rumpf = &c[c.find("static inline void V_setze_rtp").expect("der Uebergang")..];
+    let rumpf = &c[c.find("static inline __attribute__((unused)) void V_setze_rtp").expect("der Uebergang")..];
     assert!(!rumpf.contains("assert("), "keine erzeugte Zusicherung:\n{rumpf}");
 }
 
@@ -3512,7 +3544,7 @@ type Zelle = { bytes : [u8; KAP], }; }",
     nx    : bool @63,
 } }",
     );
-    assert!(c.contains("static inline bool P_da(const P *v)"), "ein `bool` liest sich als bool:\n{c}");
+    assert!(c.contains("static inline __attribute__((unused)) bool P_da(const P *v)"), "ein `bool` liest sich als bool:\n{c}");
     assert!(c.contains("gabbro_le64(v->bytes + 0)"), "acht Byte, nicht eines:\n{c}");
     // **Und der Achtbyteleser bringt seinen Vierbyteleser mit** -- er ist aus ihm gebaut.
     assert!(c.contains("static inline uint32_t gabbro_le32"), "die Abhaengigkeit fehlt:\n{c}");
