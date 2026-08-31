@@ -10,7 +10,7 @@ check c {
     claim    "Der Rumpf nennt einen Namen, der nirgends steht."
     measures k
     gates    tor
-    can_fail { if gibt_es_nicht >= 3 { return; } }
+    can_fail { if gibt_es_nicht >= 3 { return false; } return true; }
     floor    k >= 1
 }
 

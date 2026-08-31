@@ -29,7 +29,7 @@ check c {
     claim    "Gemessen wird etwas, das nirgends steht."
     measures gibt_es_nicht
     gates    tor
-    can_fail { if k >= 3 { return; } }
+    can_fail { if k >= 3 { return false; } return true; }
     floor    k >= 1
 }
 

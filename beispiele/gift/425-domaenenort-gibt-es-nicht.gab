@@ -1,0 +1,38 @@
+-- erwartet: D017
+-- **Der Ort, ueber den ein Quantor laeuft, muss aufloesen -- auch ausserhalb von `ensures`.**
+--
+-- `M109` liest `f.ensures` und sonst nichts (`m1.rs`, `for p in &f.ensures`). Der Korpus
+-- traegt 72 Quantorenstellen; **19 stehen in einem `ensures` und 53 nicht.** Jede der 53
+-- ist am 2026-08-31 einzeln verfaelscht worden -- der Grundname des Orts durch `zzznix`
+-- ersetzt, die Grundlast der Datei abgezogen --, und **51 blieben stumm**; die zwei, die
+-- etwas meldeten, meldeten `D012` ueber eine Praemisse und nicht ueber den Namen.
+-- *`messung/DOMAENENSTELLUNGEN.md`.*
+--
+-- Diese Datei zeigt die Stellung, die 41 der 53 traegt: die `invariant` einer `table`.
+-- Der Name `Gibtsnichtxyz` steht nirgends, und die Invariante quantifiziert damit ueber
+-- nichts -- sie steht trotzdem im Zeugnis und in der Bibliotheks-ABI.
+--
+-- **Die Gegenprobe steht in derselben Datei**: `slots of Self` in der Invariante darueber
+-- ist gruen, und `Self` ist genau der Traeger, den `M120` in einem `ensures` abweist.
+-- *Deshalb ist `D017` eine eigene Kennung und keine Ausweitung von `M109`* -- 26 der 53
+-- Orte heissen `Self`, und `M109`s Schleife haette sie alle 26 abgewiesen.
+
+module gift {
+
+const N : u32 = 32;
+
+table Kappraum count N {
+    slot {
+        belegt : bool,
+        marke  : u32,
+    }
+
+    -- die Gegenprobe: derselbe Bau, ein Traeger, den es gibt
+    invariant belegte_haben_marke cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].belegt;
+
+    invariant ueber_nichts cost O(n) runs offline :
+        forall s in slots of Gibtsnichtxyz : Self.slots[s].marke == 0;
+}
+
+}

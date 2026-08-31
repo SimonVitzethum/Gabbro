@@ -1,0 +1,33 @@
+-- erwartet: D018
+-- **Eine Warteschlange ist ein Verbund mit genau EINEM Feldarray, keine `table`.**
+--
+-- Diese Probe steht hier, weil der eigene Korpus sie geliefert hat.
+-- `messung/proben/probe-vier-zellen.gab` trug bis zum 2026-08-31 `traverse i over queue q`
+-- ueber `q : ptr<normal, rw> Warteschlange` -- ueber einem TABELLENZEIGER. Der Pruefer
+-- schwieg, und mit einer Kostenzusage sagte `K003`: *„die Domaene `queue` der Traversierung
+-- hat keine Schranke aus der Deklaration"*.
+--
+-- > **Der Satz war wahr und die Diagnose falsch.** Die Schranke fehlte nicht, weil eine
+-- > Deklaration sie verschweigt, sondern weil dieser Ort keine Warteschlange ist. *Ein
+-- > Messgeraet, das etwas anderes misst als seinen Gegenstand -- dieselbe W16-Gestalt, an
+-- > der dieser Ordner schon `walkschranken` und `rsync -a` bezahlt hat.*
+--
+-- Ein einziger Fund in 462 Korpusdateien, und er lag in der Datei, die messen sollte, ob
+-- der Pruefer die Form annimmt.
+
+module gift {
+
+const N : u32 = 8;
+
+table Warteschlange count N {
+    slot { a : u32, }
+}
+
+impl fn leeren(q : ptr<normal, rw> Warteschlange)
+    requires forall i in queue q : q.slots[i].a == 0
+    effects  { reads q.slots, writes q.slots }
+    costs    <= 4 ops
+{
+}
+
+}

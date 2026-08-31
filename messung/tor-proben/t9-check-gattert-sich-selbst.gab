@@ -7,7 +7,7 @@ check c {
     claim    "Die Pflicht wird von dem verbraucht, der sie erzeugt."
     measures k
     gates    c
-    can_fail { if k >= 3 { return; } }
+    can_fail { if k >= 3 { return false; } return true; }
     floor    k >= 1
 }
 

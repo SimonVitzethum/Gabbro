@@ -1,0 +1,44 @@
+-- erwartet: N045
+-- **Ein Weg durch die Probe, der an der schliessenden Klammer ankommt, sagt nichts.**
+--
+-- Die Schwester von `N044`, und die andere Haelfte desselben Satzes: dort sagt ein
+-- `return` nichts, hier sagt ein WEG nichts. Jedes `return` dieses Blocks traegt einen
+-- Wert -- es gibt nur eines, und der Fall `k < 3` laeuft daran vorbei.
+--
+-- Im Erzeugnis:
+--
+--     bool pruefe_c(void) { if (k >= 3) { return false; } }
+--
+-- Eine `bool`-Funktion, die ueber ihr Ende hinauslaeuft. **Und hier ist die Messung genauer
+-- als bei `N044`, und der Unterschied gehoert dazu:** `cc` meldet das ohne Schalter nur als
+-- WARNUNG (`-Wreturn-type`), nicht als Fehler -- `gcc` uebersetzt die Einheit und der
+-- Rueckgabewert ist unbestimmt. Erst `-Werror`, wie `pruefe-emission.sh` es faehrt
+-- (`cc -O0 -Wall -Wextra -Werror`), macht daraus ein Rot.
+--
+-- *Das ist die gefaehrlichere Haelfte des Paares:* `N044` faellt ueberall auf, `N045` nur
+-- dort, wo jemand die Warnungen scharf gestellt hat.
+--
+-- **Zwei Kennungen und nicht eine, weil es zwei Reparaturen sind:** `N044` nennt das
+-- `return`, das einen Wert bekommen muss, `N045` den Weg, der ein `return` bekommen muss.
+--
+-- Die Gegenprobe ist `beispiele/06-annahmen.gab`: derselbe Bau, mit `return false` im
+-- Zweig und `return true` am Ende -- gruen, und seit 2026-08-20 die einzige Stelle des
+-- Korpus, die es richtig machte.
+
+module gift {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Zaehler bleibt unter drei."
+    measures k
+    gates    tor
+    can_fail {
+        if k >= 3 { return false; }
+    }
+    floor    k >= 1
+}
+
+}

@@ -7,7 +7,7 @@ check a {
     claim    "a verlangt b."
     measures k
     gates    b
-    can_fail { if k >= 3 { return; } }
+    can_fail { if k >= 3 { return false; } return true; }
     floor    k >= 1
 }
 
@@ -15,7 +15,7 @@ check b {
     claim    "b verlangt a."
     measures k
     gates    a
-    can_fail { if k >= 3 { return; } }
+    can_fail { if k >= 3 { return false; } return true; }
     floor    k >= 1
 }
 

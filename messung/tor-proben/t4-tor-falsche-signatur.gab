@@ -9,7 +9,7 @@ check c {
     claim    "Das Tor nimmt ein Argument und gibt einen Wert zurueck."
     measures k
     gates    tor
-    can_fail { if k >= 3 { return; } }
+    can_fail { if k >= 3 { return false; } return true; }
     floor    k >= 1
 }
 

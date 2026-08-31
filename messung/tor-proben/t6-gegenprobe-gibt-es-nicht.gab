@@ -9,7 +9,7 @@ check c {
     claim        "Die Gegenprobe nennt einen Namen."
     measures     k
     gates        tor
-    can_fail     { if k >= 3 { return; } }
+    can_fail     { if k >= 3 { return false; } return true; }
     floor        k >= 1
     counterprobe "so faellt sie" expects gibt_es_nicht
 }

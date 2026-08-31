@@ -1642,8 +1642,17 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
     // Messgeraets vor die Messung. *Eine Pflicht kann von einer anderen Pflicht verbraucht
     // werden -- und genau so liest sich die Zeile: erst eichen, dann messen.*
     let mut traeger: Vec<String> = Vec::new();
+    // **The functions whose call does not come back** -- `endet_immer` needs them for
+    // `N045`, or a probe whose last statement is such a call would be refused for a path
+    // that does not exist.
+    let mut divergent: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |i| match &i.art {
-        ItemArt::Funktion(f) => traeger.push(f.name.text.clone()),
+        ItemArt::Funktion(f) => {
+            traeger.push(f.name.text.clone());
+            if f.klasse == Some(FnKlasse::Divergent) {
+                divergent.push(f.name.text.clone());
+            }
+        }
         ItemArt::Check(c) => traeger.push(c.name.text.clone()),
         _ => {}
     });
@@ -1757,6 +1766,82 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
                 }
             }
             probenrein(&c.can_fail, absagen);
+        }
+
+        // **`N044`/`N045` -- a probe yields a VERDICT, and on every path.**
+        //
+        // `can_fail` is a probe: it falls or it holds. **`return;` says neither**, and
+        // neither does running off the end of the block.
+        //
+        // Measured 2026-08-31: **six of the twelve files in `messung/tor-proben/` emit C
+        // that `cc` refuses.**
+        //
+        // ```c
+        // bool pruefe_c(void) { if (k >= 3) { return; } }
+        // ```
+        //
+        // `gabbro pruefe` reported 0 errors, `gabbro emit` no `C001`; only `cc` said
+        // *"return with no value in function returning non-void"*. **Three stages passed
+        // it, and the fourth is not part of the language** -- the same shape as the four
+        // blind walkers, one layer further out.
+        //
+        // > **And the folder already knew the fault.** `beispiele/06-annahmen.gab` carries
+        // > a comment at its own `can_fail` saying that the body returned no value at all;
+        // > it was found on 2026-08-20, and only that one body was repaired. *A comment
+        // > that names a defect with no line behind it is read as evidence*, and six files
+        // > walked back into it.
+        //
+        // Two codes, because they are two faults with two repairs: `N044` names the
+        // `return` that has to grow a value, `N045` the path that has to grow a `return`.
+        {
+            fn ohne_wert(b: &Block, absagen: &mut Absagen) {
+                for s in &b.anweisungen {
+                    if matches!(&s.art, StmtArt::Return(None)) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N044",
+                                s.span,
+                                "`return` in a `can_fail` block carries no verdict",
+                            )
+                            .mit_notiz(
+                                "a probe FALLS or it HOLDS -- `return false` and `return \
+                                 true` are the two things it can say, and a bare `return` \
+                                 is neither",
+                            )
+                            .mit_notiz(
+                                "the emitter lowers the block into a `bool` function, so \
+                                 this line becomes a `return` with no value in a non-void \
+                                 function -- refused by `cc` and by nothing before it",
+                            ),
+                        );
+                    }
+                    for k in crate::unterbloecke(s) {
+                        ohne_wert(k, absagen);
+                    }
+                }
+            }
+            ohne_wert(&c.can_fail, absagen);
+            // `divergent` is the list of names whose call does not come back; without it
+            // a probe whose last statement is such a call would be refused for a path that
+            // does not exist.
+            if !crate::endet_immer(&c.can_fail, &divergent) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N045",
+                        c.can_fail.span,
+                        format!("the `can_fail` block of `{}` can end without a verdict", c.name.text),
+                    )
+                    .mit_notiz(
+                        "not every path returns -- and the last one that does not is the \
+                         one the probe is silent about",
+                    )
+                    .mit_notiz(
+                        "the emitter lowers the block into a `bool` function; a path that \
+                         reaches its closing brace returns an indeterminate value, and no \
+                         stage before `cc` says so",
+                    ),
+                );
+            }
         }
 
         // -- N020: wer verbraucht die Pflicht?

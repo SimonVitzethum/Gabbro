@@ -127,10 +127,15 @@ pub fn fremdverengungen(baum: &Programm) -> Vec<Stelle> {
 
 fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
     let umgebung = Umgebung::sammle(baum);
-    // **`D014`-`D016`: the chain names its edge AT THE WALK, and until today nobody read
-    // it** (`messung/DOMAENENNAMEN.md`). It hangs here because the environment already
-    // stands here -- a second `Umgebung::sammle` would be a second reader of one thing.
-    crate::domaene::kettenkanten(baum, &umgebung, absagen);
+    // **The PLACE of a quantifier domain**, and all five rules live in `domaene.rs`: its
+    // name (`D017`), its type (`D018`) and the two edges of a chain (`D014`-`D016`). The
+    // call hangs here because the environment already stands here -- a second
+    // `Umgebung::sammle` would be a second reader of one thing.
+    //
+    // *And it walks EVERY position, not just `ensures`*: `messung/DOMAENENSTELLUNGEN.md`
+    // falsified each of the 53 corpus sites outside `ensures` one by one and got 51 silent
+    // runs, so the position is where the gap was, not the domain.
+    crate::domaene::domaenen(baum, &umgebung, absagen);
     let mut spezifikationen = std::collections::HashMap::new();
     sammle_spezifikationen(&baum.items, &mut spezifikationen);
     let mut spec_fns = std::collections::HashMap::new();

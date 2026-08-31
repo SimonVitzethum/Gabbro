@@ -1,0 +1,38 @@
+-- erwartet: N044
+-- **Ein `return` ohne Wert in einer Probe sagt weder „gefallen" noch „gehalten".**
+--
+-- `can_fail` ist eine PROBE (`SYNTAX.md` §13): sie faellt oder sie haelt. Der Erzeuger
+-- senkt den Block in eine `bool`-Funktion ab, und aus dieser Zeile wird
+--
+--     bool pruefe_c(void) { if (k >= 3) { return; } … }
+--
+-- **`return` ohne Wert in einer nicht-`void`-Funktion.** Gemessen am 2026-08-31 gegen den
+-- unveraenderten Pruefer: `gabbro pruefe` 0 Fehler, `gabbro emit` kein `C001`, und erst
+-- `cc` weist ab. *Drei Stufen liefen durch, und die vierte gehoert nicht zur Sprache.*
+--
+-- Sechs der zwoelf Dateien in `messung/tor-proben/` trugen genau diese Zeile, und
+-- `beispiele/06-annahmen.gab` trug den Befund seit dem 2026-08-20 als KOMMENTAR neben
+-- seinem eigenen, reparierten Rumpf -- ohne eine Zeile, die ihn faengt.
+--
+-- **Die Gegenprobe steht in derselben Datei:** `return true` am Ende ist der zweite Ausgang
+-- desselben Blocks und faellt nicht -- deshalb faellt hier `N044` allein und nicht auch
+-- `N045`. *Der Block endet auf jedem Weg; nur einer der Ausgaenge sagt nichts.*
+
+module gift {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Der Zaehler bleibt unter drei."
+    measures k
+    gates    tor
+    can_fail {
+        if k >= 3 { return; }
+        return true;
+    }
+    floor    k >= 1
+}
+
+}
