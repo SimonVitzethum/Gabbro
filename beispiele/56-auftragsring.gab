@@ -1,0 +1,123 @@
+-- 56 -- `queue <ort>`: die Domaene ueber einer Warteschlange -- und was sie NICHT sieht.
+--
+-- **Der Gegenstand ist ein Auftragsring**, die untere Haelfte eines Treibers: ein Ring aus
+-- Plaetzen, jeder haelt eine Auftragsnummer oder `LEER`. `entnehmen` gibt den Auftrag frei.
+-- Die Zusage, an der alles haengt, lautet *„kein Auftrag steht zweimal im Ring"* -- denn ein
+-- zweiter Eintrag laesst denselben Auftrag ein zweites Mal laufen, nachdem der erste Lauf
+-- ihn schon freigegeben hat. **Ein Gebrauch nach der Freigabe, im Kleinen.**
+--
+-- Der Satz ist eine Aussage ueber PAARE von Plaetzen, also braucht er zwei geschachtelte
+-- Quantoren ueber der Schlange. Ohne eine Domaene ueber ihr ist er nicht schreibbar.
+--
+-- WAS DIE DOMAENE TRAEGT
+-- ----------------------
+-- Sie bindet einen INDEX in den Puffer (`SYNTAX.md`:705), und die Schranke holt sie sich aus
+-- der Deklaration: `domaene.rs` nimmt die Laenge des **einzigen** Feldarrays des Verbunds
+-- und weigert sich zu raten, wenn es zwei gibt. Damit steht `traverse … over queue r` unter
+-- einer Kostenzusage.
+--
+-- UND WAS SIE NICHT TRAEGT -- ZWEI FUNDE, BEIDE GEMESSEN (2026-08-31)
+-- -------------------------------------------------------------------
+-- **1. Die Domaene sieht `kopf` und `zahl` nicht.** Der Satz, den man ueber einer
+-- Warteschlange eigentlich will, lautet *„jeder LEBENDE Eintrag …"* -- die zwischen `kopf`
+-- und `kopf + zahl`. `queue r` nennt weder das eine noch das andere Feld; es laeuft ueber
+-- den ganzen Puffer. **Schreibbar ist damit nur die Aussage ueber alle PLAETZE, nicht die
+-- ueber die Eintraege.** Diese Datei haelt den Unterschied klein, indem freie Plaetze `LEER`
+-- tragen -- *das ist eine Eigenschaft dieses Programms und keine der Domaene.*
+--
+-- **2. In einer Annotation sagt `queue r` nichts, was `elems of r.plaetze` nicht auch
+-- sagt.** Nachgemessen an genau dieser Datei, je 0 Prueferfehler, 0 `C001`, und dasselbe C:
+--
+--     forall j in queue r            -> unveraendert gruen
+--     forall j in elems of r.plaetze -> unveraendert gruen
+--
+-- Der Unterschied der beiden liegt in der SCHRANKE, und eine Schranke liest nur der
+-- Kostenpass -- also nur an einem `traverse`. Weiter gemessen, alles je 0 Fehler:
+--
+--     ein ZWEITES Array im Verbund   `domaene.rs` gaebe hier `None` und der Kostenpass
+--                                    `K003` -- in einer Annotation faellt nichts
+--     `queue p` ueber einem SKALAR   `p : PlatzNr` ist kein Verbund; faellt nichts
+--     `queue Auftrag` ueber einer    eine `table` ist keine Warteschlange; faellt nichts
+--       TABELLE
+--
+-- Was faellt: ein unbekannter Grundname (`M109`) und ein `ensures` ueber einem Ort, den die
+-- Funktion nicht schreibt (`M111`).
+--
+-- > **Die Eindeutigkeitsregel des einen Feldarrays ist eine Regel des KOSTENPASSES, nicht
+-- > der Domaene.** In `requires`/`ensures` ist `queue` heute ein Wort fuer `elems of` mit
+-- > weniger Text -- und der Zugewinn, den es haette, waeren die lebenden Eintraege, also
+-- > genau das, was es nicht sagen kann.
+--
+-- *Die Zelle ist gedeckt. Der Satz daneben sagt, wieviel das wert ist.*
+
+module beispiel::auftragsring {
+
+const NAUFTRAEGE : u32 = 64;
+const NPLAETZE   : u64 = 32;
+
+-- Der Leerwert. **Er steht ausserhalb des Auftragsbereichs**, also ist `plaetze[j] == LEER`
+-- entscheidbar, ohne ein `option` in einem Verbundarray zu brauchen -- das hat heute keine
+-- Darstellung (`C001`: *„`option` has no representation yet"*).
+const LEER : u32 = 64;
+
+type PlatzNr   = u32 in 0 ..< 32;
+type AuftragNr = u32 in 0 .. 64;
+
+table Auftrag count NAUFTRAEGE {
+    slot {
+        belegt : bool,
+        last   : u32,
+    }
+}
+
+-- **Genau EIN Feldarray, und das ist die Bedingung, unter der `queue` eine Schranke hat.**
+-- `kopf` und `zahl` stehen daneben und beschreiben den lebenden Ausschnitt -- die Domaene
+-- liest sie nicht.
+type Ring = {
+    plaetze : [AuftragNr; NPLAETZE],
+    kopf    : u32,
+    zahl    : u32,
+};
+
+lock RING protects { Auftrag } rank 0 held <= 200 ops;
+
+impl fn einreihen(r : ptr<normal, rw> Ring, p : PlatzNr, i : AuftragNr)
+    requires Held(RING),
+             r.plaetze[p] == LEER,
+             i != LEER,
+             -- **Der Satz, um den es geht.** Zwei Ebenen, mehr laesst die Sprache nicht zu
+             -- und mehr braucht er nicht: verschiedene Plaetze tragen verschiedene
+             -- Auftraege, ausser sie sind leer.
+             forall j in queue r : forall k in queue r :
+                 j == k || r.plaetze[j] == LEER || r.plaetze[j] != r.plaetze[k]
+    ensures  r.plaetze[p] == i,
+             forall j in queue r : forall k in queue r :
+                 j == k || r.plaetze[j] == LEER || r.plaetze[j] != r.plaetze[k]
+    effects  { reads r, writes r, locks RING }
+    costs    <= 8 ops
+{
+    r.plaetze[p] = i;
+}
+
+-- Die Gegenrichtung. **Sie ist der Grund fuer die Zusage oben:** hier faellt der Auftrag aus
+-- dem Ring, und ein zweiter Eintrag desselben Auftrags wuerde ihn danach noch einmal
+-- ausfuehren.
+impl fn entnehmen(r : ptr<normal, rw> Ring, p : PlatzNr)
+    requires Held(RING)
+    ensures  r.plaetze[p] == LEER
+    effects  { reads r, writes r, locks RING }
+    costs    <= 8 ops
+{
+    r.plaetze[p] = LEER;
+}
+
+-- `zahl` ist der lebende Ausschnitt, und er wird hier gelesen -- **nicht von der Domaene,
+-- sondern von einem gewoehnlichen Rumpf.** Der Unterschied ist der ganze Fund Nr. 1.
+impl fn ist_leer(r : ptr<normal, r> Ring) -> bool
+    effects { reads r }
+    costs   <= 4 ops
+{
+    return r.zahl == 0;
+}
+
+}
