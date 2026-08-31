@@ -289,6 +289,73 @@ Und die Deckung ist keine Heilung: eine gedeckte Stelle bricht genauso mitten im
 sie **sagt es nur**. `MARKE_TEILMESSUNG` in `pruefe-waechter.py` steht auf 49 und darf nur
 fallen.
 
+## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister
+
+*Gemessen und geheilt 2026-08-31. Der Fall stand seit heute früh gefunden, aber ungeheilt da.*
+
+`mutiere-pruefer.py --anker` war **hier grün und auf `ki-pc-fisch-101` rot**, bei
+byteidentischen Quellen. Nicht der Baum war verschieden, sondern sein Zustand als
+*Gegenstand*: der übertragene Baum ist **kein git-Repository**, `git status` endet dort mit
+**128 und leerer Ausgabe**, `baumstand()` meldet zu Recht `unbekannt` — und die Sprechprobe
+verlangte vom eigenen Baum `sauber` oder `schmutzig`. Sie fiel:
+
+```
+SPRECHPROBE GESCHEITERT: der eigene Baum meldet `unbekannt`
+```
+
+**Der Satz war falsch.** Das Werkzeug war in Ordnung; der Gegenstand fehlte. Und
+„Sprechprobe gescheitert" heißt in diesem Ordner *dieses Werkzeug misst nicht, was es
+behauptet* — die schärfste Aussage, die ein Lauf über sich selbst machen kann.
+
+> *Ein Wächter, dessen Urteil davon abhängt, auf welchem Rechner er läuft, ohne es zu sagen,
+> misst den Rechner.* Der Ordner hat diese Klasse einmal bezahlt (`pruefe-waechter.py --lauf`,
+> grün hier und rot dort, weil zwei Zähler fremde Bäume lasen — sie stehen seither in
+> `FREMDER_KORPUS`).
+
+**Die Form ist dieselbe, eine Ebene tiefer — nur trägt sie diesmal ihren Gegenstand mit.**
+Ein fremder Baum ließ sich nicht mitbringen, ein git-Repository schon: `git init`, eine
+Datei, ein Commit. Damit sind **alle drei Zustände in der eigenen Wegwerf-Ablage erreichbar**,
+auf jedem Rechner, und der umgebende Baum trägt nichts mehr zum Urteil bei — er steht als
+Angabe daneben.
+
+| Richtung | vorher | jetzt |
+|---|---|---|
+| echtes Repository | ok | ok |
+| `rsync`-Kopie ohne `.git` | **SPRECHPROBE GESCHEITERT**, `2` | ok; `Baum HIER: unbekannt` als Angabe |
+| gar kein `git` | Traceback aus `FileNotFoundError`, `1` | `ABBRUCH: der Baumstand ist NICHT GEMESSEN`, `2` |
+
+Die dritte Zeile ist die, auf die es ankommt: **ohne `git` fallen alle drei Zustände auf
+`unbekannt` zusammen**, und eine Probe mit einem einzigen erreichbaren Ausgang misst nichts.
+Das ist keine gefallene Probe, sondern eine fehlende Vorbedingung — *„nicht gemessen" statt
+„gefallen", `2` und nicht `1`.*
+
+### Die Familie — `grep` über `instrumente/`, und die zweite war die schlimmere
+
+Drei Werkzeuge stellten dieselbe Frage, jedes in seiner eigenen Kopie:
+
+| Werkzeug | ohne Repository | was das heißt |
+|---|---|---|
+| `mutiere-pruefer.py` | Sprechprobe fiel | ein funktionierendes Werkzeug nennt sich kaputt |
+| **`pruefe-luecken.py`** | las **nur `stdout`** — leer heißt *sauber* — und **schrieb dann in Quellen** | *nachgemessen: `returncode 128`, `stdout ''`, der Riegel griff NICHT* |
+| `erzeuge-mutationen.py` | `git diff --quiet` gibt 128, gelesen als *„crates/ ist nicht sauber"* | ein falscher Grund schickt den Leser einen sauberen Baum reparieren |
+
+**`pruefe-luecken.py` ist der teure Fund.** Er steht in `pruefe-waechter.py:SCHWER` mit dem
+Grund *„baut dreizehnmal neu — gehört auf den Server"* — also lief der eine Riegel, der ihn
+davon abhält, eine Mischung zu messen, **genau auf dem Rechner leer, für den er geschrieben
+wurde.** Ein Lauf, der auf halbem Weg stirbt, lässt eine verdrehte Quelle stehen. Dieselbe
+Klasse wie `W16`, und dieselbe wie die `rsync -a`-Falle in `CLAUDE.md`.
+
+`erzeuge-mutationen.py` steht **in keinem Sammellauf** — die Besetzung von `abnahme.py` liest
+`pruefe-*`, `mutiere-*` und `zaehle-*`. Ein Werkzeug, das in Quellen schreibt und das niemand
+fährt. *Genannt, nicht verschoben* — die Grenze gehört dem Ordner.
+
+**Geheilt mit einem Register statt mit drei Kopien** (W7): die drei Zustände stehen in
+`mutiere-pruefer.py:baumstand()` und werden von dort **gelesen**, wie `abnahme.py` die
+Register aus `pruefe-waechter.py` liest. Gegen die vierte Kopie steht eine statische Prüfung
+in `pruefe-waechter.py` mit Sprechprobe in drei Richtungen: **wer `git` selbst aufruft, sieht
+auf den Rücklaufwert** — *eine leere Ausgabe aus einem Befehl, der GESCHEITERT ist, ist keine
+Antwort.* Heute: 1 von 50 Werkzeugen ruft `git`, 0 ohne Riegel.
+
 ## Was diese Tafel NICHT sagt
 
 Sie liest den **Quelltext** und einen Lauf über einem leeren Baum. Ein Wächter, dessen

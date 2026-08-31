@@ -556,6 +556,47 @@ def sprechprobe_schnitt():
 # > *An abort names its reason (that is the third class of the table). A cut has to name its
 # > PLACE -- the reason is already printed, and it is a finding.*
 SAGT_WO = re.compile(r"ABGESCHNITTEN")
+
+# **WHO READS `git` -- AND WHAT DOES HE DO WITHOUT A REPOSITORY?**
+# ------------------------------------------------------------------
+# (2026-08-31. Same class as `FREMDER_KORPUS`, one level down.)
+#
+# `mutiere-pruefer.py --anker` was green here and red on `ki-pc-fisch-101` on byte-identical
+# sources. The tree there arrives by `rsync` and is **no repository**, so `git status` exits
+# 128 with an empty stdout. Three tools asked that one question, in three own copies:
+#
+# | | without a repository | |
+# |---|---|---|
+# | `mutiere-pruefer.py` | speech test FELL over its own tree reporting `unbekannt` | a working tool calling itself broken |
+# | `pruefe-luecken.py` | read `stdout` only -- empty means CLEAN, and it **writes into sources** | the guard against a mixture was inert on the server it is sent to |
+# | `erzeuge-mutationen.py` | `git diff --quiet` returns 128, read as *dirty tree* | a false reason: it sends the reader to fix a clean tree |
+#
+# > *A guardian whose verdict depends on which machine it runs on, without saying so,
+# > measures the machine.*
+#
+# The register is now ONE (`mutiere-pruefer.py:baumstand()`, three states, speech test on a
+# subject the run brings along). What this check keeps out is the FOURTH copy: whoever calls
+# `git` himself has to look at the return code, because *an empty output from a command that
+# failed is not an answer.*
+# **The CALL SITE, not the name in a message.** `git status` appears in half a dozen
+# refusal texts in this directory; a rule with false alarms gets ignored, and then it
+# protects nothing (the same lesson the sixth requirement learned over `$name-probe`).
+GIT_AUFRUF = re.compile(r"""\[\s*["']git["']|(?:^|;|\||&&|\()\s*git\s+[a-z-]+""")
+GIT_GEPRUEFT = re.compile(r"returncode|baumstand|\$\?|&&|\|\||if\s+git\b|check=True")
+
+
+def git_ohne_riegel(text):
+    """Call sites that read `git` and do NOT look at its return code within ten lines."""
+    zeilen = text.splitlines()
+    aus = []
+    for i, z in enumerate(zeilen):
+        if (_fixtur(z) or z.lstrip().startswith("#") or DRUCK_STELLE.search(z)
+                or not GIT_AUFRUF.search(z)):
+            continue
+        fenster = "\n".join(zeilen[max(0, i - 2):i + 11])
+        if not GIT_GEPRUEFT.search(fenster):
+            aus.append(i + 1)
+    return aus
 _DEF = re.compile(r"^(\s*)def\s+(\w+)")
 _WERT = re.compile(r"sys\.exit\(\s*([12])\s*\)|return\s+([12])\b|exit\s+([12])\b")
 
@@ -655,6 +696,40 @@ SIEB_ECHT = "\n".join([
 ])
 
 
+# **The speech test of the git check, in three directions.** A call site WITHOUT a look at
+# the return code must fall; one WITH it must not; and the tool name inside a printed
+# refusal must not count as a call. *A rule with false alarms gets ignored, and then it
+# protects nothing.*
+GIT_OFFEN = "\n".join([
+    "import subprocess",
+    "r = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)",
+    "if r.stdout.strip():",
+    "    print('schmutzig')",
+])
+GIT_ZU = "\n".join([
+    "import subprocess",
+    "r = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)",
+    "if r.returncode != 0:",
+    "    print('unbekannt')",
+])
+GIT_PROSA = "\n".join([
+    "print('  `git status` auf einer uebertragenen Kopie (128, leere Ausgabe).')",
+    "print('  erst committen')",
+])
+
+
+def sprechprobe_git():
+    """`[(what, ok)]` -- the bolt has to be able to fall, and must not fall everywhere."""
+    return [
+        ("ein `git`-Aufruf ohne Blick auf den Ruecklaufwert FAELLT",
+         git_ohne_riegel(GIT_OFFEN) == [2]),
+        ("derselbe Aufruf mit `returncode` kommt durch",
+         git_ohne_riegel(GIT_ZU) == []),
+        ("`git status` in einem ABSAGETEXT ist keine Aufrufstelle",
+         git_ohne_riegel(GIT_PROSA) == []),
+    ]
+
+
 def sprechprobe_sieb():
     """`[(what, ok)]` -- four directions, and only the last one gets through the sieve."""
     def zaehle(text):
@@ -717,6 +792,9 @@ def main():
     for was, sieb_ok in sprechprobe_sieb():
         print(f"  Sieb:           {'ok' if sieb_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and sieb_ok
+    for was, git_ok in sprechprobe_git():
+        print(f"  git-Riegel:     {'ok' if git_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and git_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own
@@ -826,6 +904,37 @@ def main():
         print(f"     {name:<28} {n:>3}")
     if len(offen) > 8:
         print(f"     ... und {len(offen) - 8} weitere mit je einer")
+    # **And the family beside it: whoever reads `git` looks at the return code.**
+    # Measured over EVERY tool in the directory, not merely over the cast --
+    # `erzeuge-mutationen.py` writes into sources and stands in no collective run.
+    werkzeuge = sorted(p for p in (W / "instrumente").iterdir()
+                       if p.is_file() and p.suffix in (".py", ".sh") and p.name != "__init__.py")
+    liest_git, ohne = [], {}
+    for p in werkzeuge:
+        t = p.read_text(encoding="utf-8", errors="replace")
+        stellen = [nr for nr, z in enumerate(t.splitlines(), 1)
+                   if GIT_AUFRUF.search(z) and not _fixtur(z)
+                   and not z.lstrip().startswith("#") and not DRUCK_STELLE.search(z)]
+        if not stellen:
+            continue
+        liest_git.append(p.name)
+        offene = git_ohne_riegel(t)
+        if offene:
+            ohne[p.name] = offene
+    print()
+    print(f"== {len(liest_git)} von {len(werkzeuge)} Werkzeugen lesen `git` -- "
+          f"{len(ohne)} ohne Blick auf den Ruecklaufwert ==")
+    print("   Ohne Repository endet `git status` mit **128 und LEERER Ausgabe**. Wer nur")
+    print("   `stdout` liest, liest das als *sauber* -- und `pruefe-luecken.py` hat danach")
+    print("   IN QUELLEN GESCHRIEBEN, auf genau dem Rechner, auf den `SCHWER` ihn schickt.")
+    print(f"   Es lesen: {', '.join(liest_git) if liest_git else '(keiner)'}")
+    for name, nrs in sorted(ohne.items()):
+        print(f"     !! {name:<28} Zeilen {nrs}")
+        befunde.append((name, [f"GIT-OHNE-RIEGEL:{nrs}"]))
+    if not ohne:
+        print("   Die drei Zustaende stehen an EINER Stelle (`mutiere-pruefer.py:baumstand()`)")
+        print("   und werden von dort GELESEN -- eine vierte Kopie faellt hier auf (W7).")
+
     if n_offen > MARKE_TEILMESSUNG:
         print(f"   !! RATSCHE: {n_offen} offene Teilmessungen, erlaubt {MARKE_TEILMESSUNG}.")
         befunde.append(("TEILMESSUNG", [f"{n_offen} > {MARKE_TEILMESSUNG}"]))
