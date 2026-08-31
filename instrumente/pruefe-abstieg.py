@@ -17,6 +17,10 @@ statt eine Luecke zu erben.
 """
 import re, pathlib, sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 QUELLE = WURZEL / "crates/gabbro-check/src"
 
@@ -335,6 +339,7 @@ fn sammler(b: &Block) {
 
     # **A double descent is never booked.** It is not a hole in the coverage but a run
     # time of 2^depth.
+    abschnitt.fertig()
     if doppelte_gesamt:
         print(f"== ABSTIEG: {len(doppelte_gesamt)} DOPPELTE ABSTIEGE ==")
         print("   " + ", ".join(doppelte_gesamt))
@@ -362,4 +367,4 @@ fn sammler(b: &Block) {
     return 0
 
 
-sys.exit(main())
+sys.exit(abschnitt.fahre(main))

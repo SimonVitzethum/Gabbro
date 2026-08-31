@@ -24,6 +24,12 @@ import re
 import subprocess
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 GABBRO = W / "target" / "debug" / "gabbro"
 
@@ -148,6 +154,7 @@ def main() -> int:
     print(f"== P6: {total} Pflichten, {goals} Ziele, {refused} abgesagt "
           f"({no_register} Einheiten mit Fehlern, ohne Register; "
           f"{len(files)} Dateien angesehen) ==")
+    abschnitt.fertig()
     if sum_reasons != refused:
         print(f"ABBRUCH: die Gruende summieren zu {sum_reasons}, abgesagt sind {refused}.")
         return 2
@@ -161,4 +168,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(abschnitt.fahre(main))

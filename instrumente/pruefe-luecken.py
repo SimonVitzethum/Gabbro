@@ -16,6 +16,7 @@ liefert dann denselben Rueckgabewert wie bei einer gefangenen Mutation. Ein Bele
 laeuft, ist keiner (WERKZEUGKASTEN.md W1).
 """
 import hashlib
+import importlib.util
 import pathlib, subprocess, re, sys
 # **Die Wurzel kommt aus der DATEI, nicht aus einem absoluten Pfad** (2026-08-19).
 #
@@ -105,10 +106,40 @@ def hashes():
 #
 # *Ein Werkzeug, das Quellen veraendert und die Rueckgabe nicht nachweist, verschiebt seine
 # eigenen Fehler in die Arbeit des naechsten.*
-_status = subprocess.run(["git", "status", "--porcelain", "crates/"], cwd=W,
-                         capture_output=True, text=True, timeout=FRIST)
-if _status.stdout.strip():
+#
+# **AND IT READ ONLY `stdout`, WHICH MADE IT VACUOUS ON THE SERVER** (2026-08-31). `git
+# status` on a copy that arrived by `rsync` exits **128 with an EMPTY stdout** -- there is
+# no repository to look at. This guard read that empty output as *"clean"* and went on to
+# WRITE INTO SOURCES. `pruefe-waechter.py:SCHWER` sends exactly this tool to
+# `ki-pc-fisch-101` -- *thirteen rebuilds, they belong on the server* -- so the protection
+# was inert on the one machine it was needed on.
+#
+# > *An empty output from a command that FAILED is not an answer.* Same class as `W16`: a
+# > tool that measures a mixture and looks plausible doing it.
+#
+# **The three states are READ, not reimplemented** (W7): `mutiere-pruefer.py:baumstand()`
+# already keeps them apart and carries the speech test that proves it. A second register
+# over one thing is how this flaw came to live in three files at once.
+_spec = importlib.util.spec_from_file_location(
+    "mp", pathlib.Path(__file__).resolve().parent / "mutiere-pruefer.py")
+_mp = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mp)
+_stand = _mp.baumstand(W)
+if _stand == "schmutzig":
     print("  crates/ ist nicht sauber -- erst committen. Dieses Werkzeug schreibt in Quellen.")
+    raise SystemExit(2)
+if _stand != "sauber":
+    print("ABBRUCH: `git` konnte `crates/` nicht ansehen -- es wurde NICHTS gemessen.",
+          file=sys.stderr)
+    print("  Der Baum ist WEDER sauber noch schmutzig, sondern ungemessen -- so faellt",
+          file=sys.stderr)
+    print("  `git status` auf einer per `rsync` uebertragenen Kopie (128, leere Ausgabe).",
+          file=sys.stderr)
+    print("  Dieses Werkzeug SCHREIBT in Quellen und laeuft ohne diesen Nachweis nicht:",
+          file=sys.stderr)
+    print("  ein Lauf, der auf halbem Weg stirbt, laesst eine verdrehte Quelle stehen,",
+          file=sys.stderr)
+    print("  und die naechste Messung liest eine Mischung.", file=sys.stderr)
     raise SystemExit(2)
 VORHER = hashes()
 

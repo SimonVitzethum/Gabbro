@@ -36,6 +36,12 @@ import pathlib
 import re
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 SRC = W / "crates" / "gabbro-check" / "src"
 
@@ -160,6 +166,7 @@ def main():
                   % ("bewusst" if bewusst else "UNQUAL", datei, nr, k, art, z))
 
     print()
+    abschnitt.fertig()
     if len(stellen) > MARKE_DIREKT or len(unqual) > MARKE_UNQUALIFIZIERT:
         print("== KARTEN: %d direkte Blicke (%d unqualifiziert) gegen die Marke %d / %d =="
               % (len(stellen), len(unqual), MARKE_DIREKT, MARKE_UNQUALIFIZIERT))
@@ -179,4 +186,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

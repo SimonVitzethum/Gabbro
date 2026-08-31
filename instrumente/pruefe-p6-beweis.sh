@@ -26,6 +26,9 @@
 # 2026-08-20, where the deadline was there and the requirement was not met.
 set -euo pipefail
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.sh`.
+. "$(dirname "$0")/abschnitt.sh"
+
 # **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
 # Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
 # statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
@@ -34,7 +37,7 @@ export LC_ALL=C
 
 W="$(cd "$(dirname "$0")/.." && pwd)"
 ARB="$(mktemp -d)"
-trap 'rm -rf "$ARB"' EXIT
+trap 'abschnitt_ende; rm -rf "$ARB"' EXIT
 
 GABBRO="$W/target/debug/gabbro"
 ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"
@@ -51,11 +54,11 @@ baue() {
 }
 
 if [ ! -x "$GABBRO" ]; then
-    echo "== P6-BEWEIS: KEIN GABBRO -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md) =="
+    stufe "P6-BEWEIS: KEIN GABBRO -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md)"
     exit 2
 fi
 if [ ! -x "$ISABELLE" ]; then
-    echo "== P6-BEWEIS: KEIN ISABELLE unter $ISABELLE -- NICHTS gemessen =="
+    stufe "P6-BEWEIS: KEIN ISABELLE unter $ISABELLE -- NICHTS gemessen"
     echo "  Ein fehlendes Werkzeug ist kein bestandener Test (W1)."
     exit 2
 fi
@@ -75,14 +78,14 @@ sprechprobe() {
         printf 'session P6_Probe = HOL +\n  options [document = false]\n  theories\n    P6_Probe\n' > "$d/ROOT"
         if baue "$d"; then [ "$fall" = gut ] && gut=1; else [ "$fall" = gift ] && gift=1; fi
     done
-    echo "== Sprechprobe =="
+    stufe "Sprechprobe"
     echo "  wahrer Satz geht durch:   $([ $gut  -eq 1 ] && echo ja || echo NEIN)"
     echo "  falscher Satz faellt:     $([ $gift -eq 1 ] && echo ja || echo NEIN)"
     [ $gut -eq 1 ] && [ $gift -eq 1 ]
 }
 
 if ! sprechprobe; then
-    echo "== P6-BEWEIS: der Waechter misst nicht -- Isabelle antwortet nicht wie erwartet =="
+    stufe "P6-BEWEIS: der Waechter misst nicht -- Isabelle antwortet nicht wie erwartet"
     exit 2
 fi
 
@@ -98,13 +101,13 @@ for e in "$W"/beispiele/*.gab "$W"/messung/*/*.gab; do
     fi
     name="$(printf '%s' "$out" | sed -n 's/^theory \(.*\)$/\1/p')"
     if [ -z "$name" ]; then
-        echo "== P6-BEWEIS: ${e#"$W"/} ergibt keine Theorie =="
+        stufe "P6-BEWEIS: ${e#"$W"/} ergibt keine Theorie"
         exit 1
     fi
     # **Zwei Einheiten mit demselben Stamm ueberschrieben einander lautlos**, und die
     # zweite Zahl waere dann eine, die niemand gebaut hat.
     if [ -e "$BAU/$name.thy" ]; then
-        echo "== P6-BEWEIS: zwei Einheiten heissen beide $name -- eine haette die andere ueberschrieben =="
+        stufe "P6-BEWEIS: zwei Einheiten heissen beide $name -- eine haette die andere ueberschrieben"
         exit 1
     fi
     printf '%s\n' "$out" > "$BAU/$name.thy"
@@ -117,7 +120,7 @@ done
 # Theorien ohne einen einzigen Satz baut gruen und misst nichts -- genau die Klasse, gegen
 # die W1 steht: leer und bestanden sehen gleich aus.
 if [ "$ZIELE" -eq 0 ]; then
-    echo "== P6-BEWEIS: $EINHEITEN Theorien, KEIN einziger Satz -- nichts gemessen =="
+    stufe "P6-BEWEIS: $EINHEITEN Theorien, KEIN einziger Satz -- nichts gemessen"
     echo "  Regel A verlangt, dass mindestens eine ERZEUGTE Pflicht wirklich durchgeht."
     exit 2
 fi
@@ -135,15 +138,18 @@ echo "   \$ isabelle build -D $BAU -o threads=12"
 RC=0
 baue "$BAU" || RC=$?
 cat "$BAU/log"
+# **From here on nothing more is measured** -- the build has run. What follows is the
+# verdict over it, and its non-zero exits are complete answers rather than cuts.
+abschnitt_fertig
 if [ "$RC" -eq 2 ]; then
     echo
-    echo "== P6-BEWEIS: FRIST $FRIST s UEBERSCHRITTEN -- NICHTS gemessen =="
+    stufe "P6-BEWEIS: FRIST $FRIST s UEBERSCHRITTEN -- NICHTS gemessen"
     echo "  Ein Haenger sieht aus wie „laeuft noch\", nicht wie ein Befund."
     exit 2
 fi
 if [ "$RC" -ne 0 ]; then
     echo
-    echo "== P6-BEWEIS: ROT -- eine ERZEUGTE Pflicht geht nicht durch =="
+    stufe "P6-BEWEIS: ROT -- eine ERZEUGTE Pflicht geht nicht durch"
     echo "  Und das ist die richtige Farbe: der Erzeuger sagt keine Pflicht ab, die er"
     echo "  nicht beweisen kann -- er stellt sie hin. Ein Ziel, das faellt, ist ein"
     echo "  Befund, kein Fehler des Waechters."
@@ -151,7 +157,7 @@ if [ "$RC" -ne 0 ]; then
 fi
 
 echo
-echo "== P6-BEWEIS: $ZIELE erzeugte Pflicht(en) in $EINHEITEN Theorien, ISABELLE GRUEN =="
+stufe "P6-BEWEIS: $ZIELE erzeugte Pflicht(en) in $EINHEITEN Theorien, ISABELLE GRUEN"
 echo "   Und was das NICHT heisst: dass der Bestand gedeckt ist. Es heisst zweierlei --"
 echo "   dass jede erzeugte Theorie gueltiges Isabelle IST, auch die, die nur aus benannten"
 echo "   Absagen besteht, und dass die Pflichten, die GESCHLOSSEN dastehen, halten. Wie"

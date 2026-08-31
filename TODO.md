@@ -83,6 +83,31 @@ man sich schützt, und er ist der Grund, warum die Regel oben eine Regel ist und
 
 # STUFE 0 — DIE MESSSCHICHT  ⟨Q⟩
 
+- [ ] **18 von 99 emittierenden Dateien übersetzen mit `gcc`, aber NICHT mit `clang`**
+      *(gemessen 2026-08-31, [`messung/UEBERSETZUNGSREICHWEITE.md`](messung/UEBERSETZUNGSREICHWEITE.md)
+      §7; abzulesen mit `./instrumente/pruefe-uebersetzerfamilie.py`)*. Stufe 9 und die
+      Grammatiktafel fordern beide *„jede emittierende Datei muss `cc -Werror` bestehen"* —
+      und `cc` ist auf **beiden** Rechnern ein `gcc` (13.3.0 dort, 16.2.1 hier). *Zwei
+      Übersetzer derselben Familie sind ein Übersetzer mit zwei Versionsnummern.*
+
+      ```
+      error: unused function 'Vtd_FRR_FR_LO' [-Werror,-Wunused-function]
+      ```
+
+      **Alle 18 sind dieselbe Klasse.** Der Erzeuger schreibt zu jedem Feld eines Bitformats
+      einen `static inline`-Zugriff; `gcc` warnt in C nicht über eine ungenutzte
+      `static inline`, `clang` schon. **Stufe 9s Grün hieß nie „das erzeugte C übersetzt" —
+      es hieß „es übersetzt mit gcc".**
+
+      **Die Heilung gehört dem Erzeuger** (`crates/gabbro-check/src/emit.rs`): die Zugriffe
+      entfallen, wenn niemand sie ruft, oder sie tragen eine Form, die beide Familien
+      schweigen lässt. `MARKE_FAMILIENUNTERSCHIED = 18` steht auf dem gemessenen Stand —
+      **gezogen, nicht geheilt**, und darf nur fallen. *Sie sind Schuld, kein Erfolg.*
+
+      > **Und was das NICHT sagt** (W10): dass `-Wunused-function` über einer emittierten
+      > Kopfzeile eine sinnvolle Forderung ist — das entscheidet der Ordner. Gemessen sind
+      > **zwei** Familien, nicht alle; eine dritte kann eine dritte Antwort geben.
+
 - [ ] **Der Prüfer hatte keinen Zweitlauf — und war nicht deterministisch** *(gefunden
       2026-08-24, [`messung/DETERMINISMUS.md`](messung/DETERMINISMUS.md))*. Derselbe
       Quelltext, zwanzigmal im selben Prozess: **mal `M104`, mal keine Absage.** Ursache

@@ -45,6 +45,13 @@
 # Gnadenfrist auch hat.
 set -u
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.sh`.
+# **Armed HERE and not at the `mktemp` below**: the argument check exits above that line, and
+# a notice that starts halfway down the file measures the second half. The `trap` further
+# down replaces this one and calls `abschnitt_ende` itself.
+. "$(dirname "$0")/abschnitt.sh"
+trap abschnitt_ende EXIT
+
 # **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
 # Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
 # statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
@@ -64,7 +71,7 @@ while [ $# -gt 0 ]; do
 done
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'abschnitt_ende; rm -rf "$TMP"' EXIT
 
 # ---------------------------------------------------------------------------------------
 # Die Sprechprobe. **In beide Richtungen und in die dritte** -- an erfundenen Sonden, nicht
@@ -80,7 +87,7 @@ EOF
   echo $?
 }
 
-echo "== Sprechprobe des Laeufers =="
+stufe "Sprechprobe des Laeufers"
 S0="$(probe_bauen 0)"; S1="$(probe_bauen 1)"; S77="$(probe_bauen 77)"
 echo "  eine haltende Sonde  -> $S0   (erwartet 0)"
 echo "  eine WIDERLEGENDE    -> $S1   (erwartet 1)"
@@ -130,7 +137,7 @@ if [ "$DA" -eq 0 ]; then
   exit 2
 fi
 
-echo "== Die Sonden dieses Ordners =="
+stufe "Die Sonden dieses Ordners"
 GELAUFEN=0
 WIDERLEGT=0
 UNGEBAUT=0
@@ -162,7 +169,10 @@ for f in "$W"/sonden/sonde_*.c; do
   echo
 done
 
-echo "== $GELAUFEN von $DA Sonden gelaufen, $BENANNT Sondenname(n) im Manifest benannt =="
+# **From here on nothing more is measured** -- everything below is the verdict over what
+# the loop above ran. Its `exit 1`s are complete findings, not cuts.
+abschnitt_fertig
+stufe "$GELAUFEN von $DA Sonden gelaufen, $BENANNT Sondenname(n) im Manifest benannt"
 echo "   $GESTRICHEN Sondenname(n) sind GESTRICHEN -- ihre Sonde steht nicht als Programm."
 echo "   Die dritte Zahl ist die wichtigere, und sie ist die ANKLAGE: jeder Name ohne"
 echo "   Programm war eine Zusicherung ueber das Ausbleiben einer Widerlegung. Seit dem"

@@ -23,6 +23,12 @@ import pathlib
 import re
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 60  # this tool only reads text; the deadline stands for the day that changes
 
@@ -163,6 +169,7 @@ def main():
 
     print(f"\n== Arbeitsmenge: {gesamt} offene Punkte, {len(BLOECKE)} Bloecke, "
           f"{len(ohne_marke)} Ueberschriften ohne Marke, {len(befunde)} Befunde, 5 Proben ==")
+    abschnitt.fertig()
     if befunde:
         print(f"\n== BLOECKE: {len(befunde)} BEFUNDE ==")
         for b in befunde:
@@ -180,4 +187,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

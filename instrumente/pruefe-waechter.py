@@ -74,6 +74,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt as _abschnitt   # noqa: E402  -- the shared cut notice
+
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 300
 
@@ -186,6 +189,13 @@ ABSAGEWORT = re.compile(
     r"ABBRUCH|ABORT:|KEIN LAUF|NICHTS gemessen|NICHTS geprueft|NICHTS an ihnen|"
     r"NOTHING measured|nothing measured|measures nothing|misst NICHTS|misst nicht\b|"
     r"SPRECHPROBE GESCHEITERT|[Ss]prechprobe.*GESCHEITERT|OHNE NACHWEIS|"
+    # **Any PROBE that falls, not just the one spelled `SPRECHPROBE`** (2026-08-31).
+    # The list named the forward direction by name, and `zaehle-pflichten.py` prints
+    # `RUECKWAERTSPROBE UNTAUGLICH` and `RUECKWAERTSPROBE GESCHEITERT` and ends both with
+    # `1`. **Two fallen probes reading as findings, inside the very requirement built
+    # against that** -- found by the cut sieve, not by this pattern. *A rule that lists the
+    # words it has already seen measures the words it has already seen.*
+    r"PROBE\b[^\n]*\b(?:GESCHEITERT|UNTAUGLICH)\b|"
     r"KEIN CC|KEIN GABBRO|NO GABBRO|NO LEAN|KEIN ISABELLE|Zaehlung misst|UEBERSEHEN")
 # **The CALL SITE, not the word** -- `print(` has to BEGIN the statement. The first version
 # searched for it anywhere in the line, and this guardian promptly reported itself: the
@@ -528,6 +538,289 @@ def sprechprobe_schnitt():
     return (not (a_heil and d_heil), bool(a_kap and d_kap))
 
 
+# **THE DANGEROUS SUBSET OF THE SURFACE -- and it is the SMALL one, not the big one**
+# ------------------------------------------------------------------------------------
+# `schnitt()` above counts the SURFACE: 249 exit sites behind a first one. That figure is an
+# upper bound and says so. **This is the sieve underneath it**, and it exists because a
+# surface nobody can shrink stops being read.
+#
+# Three cuts, each of which removes places that are NOT the hazard:
+#
+# 1. **Does it end the run at all?** A `return 1` inside a helper function is a VALUE, not an
+#    exit -- the caller reads it and carries on. Only `sys.exit(...)`, a `return` out of
+#    `main()`, and every `exit` in a shell script actually end the run.
+# 2. **Which return code?** `2` means ABORT: the guard says *nothing measured*, and
+#    `abnahme.py` prints it as `ABBRUCH` with its own word and its own colour. Reaching it
+#    takes a BROKEN precondition -- a missing tool, a fallen speech test, an empty
+#    population. `1` means FINDING, and a finding is reachable **with everything intact**:
+#    the tree merely has a flaw. *That is the half that needs nothing to be broken.*
+# 3. **Is there output on BOTH sides?** Output before the exit means a partial measurement
+#    exists on screen; output behind it means something was skipped. Only both together make
+#    the shape this class is named for: **a half-run that reads like a whole one.**
+#
+# What survives all three is the working list. And what takes a place OFF it is the form
+# `pruefe-emission.sh` grew on 2026-08-31: a run that stops early **says where it stopped**.
+# A file that carries that announcement is counted as covered -- its truncated runs are
+# still truncated, but they no longer look complete.
+#
+# > *An abort names its reason (that is the third class of the table). A cut has to name its
+# > PLACE -- the reason is already printed, and it is a finding.*
+# Three shapes count as covered, and each one is the WIRING, never the mere presence of the
+# helper: the word itself (a guard carrying its own `trap`, as `pruefe-emission.sh` does),
+# `abschnitt.fahre(` (Python, the wrapper around `main`), or an `EXIT` trap that calls
+# `abschnitt_ende` (shell). **`import abschnitt` or `. abschnitt.sh` alone is NOT enough** --
+# a tool that loads the helper and never hands its run to it announces nothing, and would
+# otherwise read as covered. *A rule that counts the import counts the intention.*
+SAGT_WO = re.compile(r"ABGESCHNITTEN|abschnitt\.fahre\(|trap [^\n]*abschnitt_ende")
+
+# **WHO READS `git` -- AND WHAT DOES HE DO WITHOUT A REPOSITORY?**
+# ------------------------------------------------------------------
+# (2026-08-31. Same class as `FREMDER_KORPUS`, one level down.)
+#
+# `mutiere-pruefer.py --anker` was green here and red on `ki-pc-fisch-101` on byte-identical
+# sources. The tree there arrives by `rsync` and is **no repository**, so `git status` exits
+# 128 with an empty stdout. Three tools asked that one question, in three own copies:
+#
+# | | without a repository | |
+# |---|---|---|
+# | `mutiere-pruefer.py` | speech test FELL over its own tree reporting `unbekannt` | a working tool calling itself broken |
+# | `pruefe-luecken.py` | read `stdout` only -- empty means CLEAN, and it **writes into sources** | the guard against a mixture was inert on the server it is sent to |
+# | `erzeuge-mutationen.py` | `git diff --quiet` returns 128, read as *dirty tree* | a false reason: it sends the reader to fix a clean tree |
+#
+# > *A guardian whose verdict depends on which machine it runs on, without saying so,
+# > measures the machine.*
+#
+# The register is now ONE (`mutiere-pruefer.py:baumstand()`, three states, speech test on a
+# subject the run brings along). What this check keeps out is the FOURTH copy: whoever calls
+# `git` himself has to look at the return code, because *an empty output from a command that
+# failed is not an answer.*
+# **The CALL SITE, not the name in a message.** `git status` appears in half a dozen
+# refusal texts in this directory; a rule with false alarms gets ignored, and then it
+# protects nothing (the same lesson the sixth requirement learned over `$name-probe`).
+GIT_AUFRUF = re.compile(r"""\[\s*["']git["']|(?:^|;|\||&&|\()\s*git\s+[a-z-]+""")
+GIT_GEPRUEFT = re.compile(r"returncode|baumstand|\$\?|&&|\|\||if\s+git\b|check=True")
+
+
+def git_ohne_riegel(text):
+    """Call sites that read `git` and do NOT look at its return code within ten lines."""
+    zeilen = text.splitlines()
+    aus = []
+    for i, z in enumerate(zeilen):
+        if (_fixtur(z) or z.lstrip().startswith("#") or DRUCK_STELLE.search(z)
+                or not GIT_AUFRUF.search(z)):
+            continue
+        fenster = "\n".join(zeilen[max(0, i - 2):i + 11])
+        if not GIT_GEPRUEFT.search(fenster):
+            aus.append(i + 1)
+    return aus
+_DEF = re.compile(r"^(\s*)def\s+(\w+)")
+_WERT = re.compile(r"sys\.exit\(\s*([12])\s*\)|return\s+([12])\b|exit\s+([12])\b")
+
+
+def _beendet_den_lauf(zeilen, nr, s, ist_shell):
+    """Does the exit on line `nr` end the RUN -- or merely a function?"""
+    if ist_shell:
+        return True
+    if not re.match(r"^\s*return\b", s):
+        return True          # `sys.exit(...)` -- always.
+    tiefe = len(s) - len(s.lstrip())
+    for j in range(nr - 2, -1, -1):
+        m = _DEF.match(zeilen[j])
+        if m and len(m.group(1)) < tiefe:
+            return m.group(2) == "main"
+    return False
+
+
+def schnitt_stellen(text, ist_shell):
+    """Per exit behind the first: `(line, code, ends_the_run, partial_measurement)`."""
+    zeilen = text.splitlines()
+    aus, druck = [], []
+    for nr, z in enumerate(zeilen, 1):
+        s = z.rstrip()
+        if _fixtur(s) or s.lstrip().startswith("#"):
+            continue
+        if AUSGANG_STELLE.search(s):
+            m = _WERT.search(s)
+            wert = next((g for g in m.groups() if g), "?") if m else "?"
+            aus.append((nr, wert, s))
+        if DRUCK_STELLE.search(s):
+            druck.append(nr)
+    if not aus or not druck:
+        return []
+    erster = aus[0][0]
+    if not any(d > erster for d in druck):
+        return []
+    stellen = []
+    for nr, wert, s in aus:
+        if nr <= erster:
+            continue
+        stellen.append((nr, wert, _beendet_den_lauf(zeilen, nr, s, ist_shell),
+                        any(d < nr for d in druck) and any(d > nr for d in druck)))
+    return stellen
+
+
+def teilmessungen(pfade):
+    """`(total, ending, finding, partial, covered, open_per_file)` over all guardians."""
+    gesamt = beendend = befund = teil = gedeckt = 0
+    offen = {}
+    for p in pfade:
+        t = p.read_text(encoding="utf-8", errors="replace")
+        sagt = bool(SAGT_WO.search(t))
+        n_offen = 0
+        for _, wert, beendet, ist_teil in schnitt_stellen(t, p.suffix == ".sh"):
+            gesamt += 1
+            if not beendet:
+                continue
+            beendend += 1
+            if wert != "1":
+                continue
+            befund += 1
+            if not ist_teil:
+                continue
+            teil += 1
+            if sagt:
+                gedeckt += 1
+            else:
+                n_offen += 1
+        if n_offen:
+            offen[p.name] = n_offen
+    return gesamt, beendend, befund, teil, gedeckt, offen
+
+
+# **The ratchet over the working list -- it may only FALL.**
+# Measured 2026-08-31 over `283cb26`: 249 sites, of which 246 end the run, 106 leave with
+# code 1 (reachable with nothing broken), 94 carry output on both sides -- and 45 of those
+# sat in `pruefe-emission.sh`, which prints `ABGESCHNITTEN in:` since that same day.
+# **49 stayed open, in 25 files.**
+#
+# **Same evening: 49 -> 19 -> 0.** `abschnitt.py` gave the 19 Python guards the same form,
+# `abschnitt.sh` gave it to the five shell guards, and the last two places -- two fallen
+# BACKWARD probes in `zaehle-pflichten.py` that ended with `1` -- turned out not to need the
+# form at all: *a fallen probe measured nothing, and its exit is a `2`.* Requirement six had
+# listed the forward direction by name and never saw them; this sieve did.
+#
+# **The ratchet stands at 0, and that is not a finish line.** A covered site still cuts the
+# run -- it merely SAYS so, and `abnahme.py` prints it as `TEILMESSUNG` instead of as a
+# finding. What is measured here is whether the cut is announced, never whether it is right.
+MARKE_TEILMESSUNG = 0
+
+
+# **The speech test of the sieve, in FOUR directions.** Three cuts, and each has to bite on
+# its own -- otherwise the sieve measures a habit instead of a rule.
+SIEB_HELFER = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')",
+    "def hilf():", "    return 1", "print('c')",
+])
+SIEB_ZWEI = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')", "sys.exit(2)", "print('c')",
+])
+SIEB_RAND = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')", "sys.exit(1)",
+])
+SIEB_ECHT = "\n".join([
+    "import sys", "print('a')", "sys.exit(2)", "print('b')", "sys.exit(1)", "print('c')",
+])
+
+
+# **The speech test of the git check, in three directions.** A call site WITHOUT a look at
+# the return code must fall; one WITH it must not; and the tool name inside a printed
+# refusal must not count as a call. *A rule with false alarms gets ignored, and then it
+# protects nothing.*
+GIT_OFFEN = "\n".join([
+    "import subprocess",
+    "r = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)",
+    "if r.stdout.strip():",
+    "    print('schmutzig')",
+])
+GIT_ZU = "\n".join([
+    "import subprocess",
+    "r = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)",
+    "if r.returncode != 0:",
+    "    print('unbekannt')",
+])
+GIT_PROSA = "\n".join([
+    "print('  `git status` auf einer uebertragenen Kopie (128, leere Ausgabe).')",
+    "print('  erst committen')",
+])
+
+
+def sprechprobe_git():
+    """`[(what, ok)]` -- the bolt has to be able to fall, and must not fall everywhere."""
+    return [
+        ("ein `git`-Aufruf ohne Blick auf den Ruecklaufwert FAELLT",
+         git_ohne_riegel(GIT_OFFEN) == [2]),
+        ("derselbe Aufruf mit `returncode` kommt durch",
+         git_ohne_riegel(GIT_ZU) == []),
+        ("`git status` in einem ABSAGETEXT ist keine Aufrufstelle",
+         git_ohne_riegel(GIT_PROSA) == []),
+    ]
+
+
+# **And the SHELL half gets driven too** -- `abschnitt.sh` is sourced by five guardians and
+# reached by no collective run of its own. *A tool nobody drives is indistinguishable from
+# one that does not exist*, and here it would be worse than absent: a silent `abschnitt_ende`
+# would let five guardians read as covered while announcing nothing.
+#
+# **Built line by line, every line BEGINNING with a quote** -- and that is not style. A
+# fixture written as a block string puts a bare `exit 1` at the start of a line, and the cut
+# measurement above then counts this guardian's own probe text as a real exit site. It did:
+# the surface read 253 instead of 251 the moment these two were added. *A guardian that
+# counts its own fixture measures itself* -- exactly what `_fixtur` is for.
+SCHALE_AB = "\n".join([
+    '. "%s/abschnitt.sh"',
+    "trap 'abschnitt_ende' EXIT",
+    'stufe "Stufe 4: der Differenztest"',
+    "exit 1",
+])
+SCHALE_GANZ = "\n".join([
+    '. "%s/abschnitt.sh"',
+    "trap 'abschnitt_ende' EXIT",
+    'stufe "Stufe 9: jede Datei uebersetzt"',
+    "abschnitt_fertig",
+    "exit 1",
+])
+
+
+def sprechprobe_schale():
+    """`[(what, ok)]` -- the shell notice must fire on a cut and stay quiet on a full run."""
+    ort = str(W / "instrumente")
+
+    def lauf(vorlage):
+        r = subprocess.run(["bash", "-c", vorlage % ort], capture_output=True, text=True,
+                           timeout=FRIST, cwd=W)
+        return r.returncode, r.stdout
+    rc_ab, aus_ab = lauf(SCHALE_AB)
+    rc_ganz, aus_ganz = lauf(SCHALE_GANZ)
+    return [
+        ("die Schale sagt einen Schnitt an und behaelt den Ruecklaufwert",
+         rc_ab == 1 and "ABGESCHNITTEN in: Stufe 4: der Differenztest" in aus_ab),
+        ("nach `abschnitt_fertig` schweigt sie -- auch bei 1",
+         rc_ganz == 1 and "ABGESCHNITTEN" not in aus_ganz),
+    ]
+
+
+def sprechprobe_sieb():
+    """`[(what, ok)]` -- four directions, and only the last one gets through the sieve."""
+    def zaehle(text):
+        return [(w, b, t) for _, w, b, t in schnitt_stellen(text, False)]
+    helfer = zaehle(SIEB_HELFER)
+    zwei = zaehle(SIEB_ZWEI)
+    rand = zaehle(SIEB_RAND)
+    echt = zaehle(SIEB_ECHT)
+    return [
+        # It sits in the middle of the output and would therefore read as a partial
+        # measurement -- the FIRST cut removes it, and only that one. Hence the `True`.
+        ("ein `return 1` im HELFER beendet den Lauf nicht",
+         helfer == [("1", False, True)]),
+        ("ein Ausgang mit 2 ist ein ABBRUCH, kein halbes Urteil",
+         zwei == [("2", True, True)]),
+        ("ein Befund OHNE Ausgabe dahinter ist keine Teilmessung",
+         rand == [("1", True, False)]),
+        ("ein Befund mit Ausgabe auf BEIDEN Seiten ist eine",
+         echt == [("1", True, True)]),
+    ]
+
+
 def main():
     (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
      s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt) = sprechprobe()
@@ -565,6 +858,21 @@ def main():
                                   "Ausgabe dahinter schon)"
                                   if schnitt_heil and schnitt_kaputt else "GESCHEITERT"))
     ok = ok and schnitt_heil and schnitt_kaputt
+    for was, sieb_ok in sprechprobe_sieb():
+        print(f"  Sieb:           {'ok' if sieb_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and sieb_ok
+    for was, git_ok in sprechprobe_git():
+        print(f"  git-Riegel:     {'ok' if git_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and git_ok
+    # **`abschnitt.py` is not a guardian, so no collective run reaches it** -- and a tool
+    # nobody drives is indistinguishable from one that does not exist. It is driven here,
+    # because the honesty of every guarded cut rests on it.
+    for was, ab_ok in _abschnitt.sprechprobe():
+        print(f"  Abschnitt:      {'ok' if ab_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and ab_ok
+    for was, sch_ok in sprechprobe_schale():
+        print(f"  Abschnitt (sh): {'ok' if sch_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and sch_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own
@@ -650,6 +958,67 @@ def main():
     print("   Und was diese Zahl NICHT sagt: dass einer dieser Ausgaenge falsch ist. Eine")
     print("   Sprechprobe am Dateianfang SOLL alles dahinter beenden. Sie ist die FLAECHE,")
     print("   keine Mangelliste -- sie verpflichtet, sie spricht nicht frei (W10).")
+
+    # **And underneath it the sieve: the surface turns into a working list.**
+    ges, beendend, befund, teil, gedeckt, offen = teilmessungen(alle)
+    n_offen = sum(offen.values())
+    print()
+    print(f"== Davon eine TEILMESSUNG, die wie eine ganze aussieht: {teil} von {ges} ==")
+    print(f"   {ges - beendend} beenden den Lauf gar nicht erst -- ein `return 1` im Helfer")
+    print("   ist ein WERT, den der Aufrufer liest, und kein Ausgang.")
+    print(f"   {beendend - befund} der uebrigen enden mit 2. Das ist ein ABBRUCH: der Waechter")
+    print("   sagt *nichts gemessen*, und die Abnahme druckt ihn mit eigenem Wort. Dorthin")
+    print("   kommt nur, wer etwas KAPUTT hat -- ein fehlendes Werkzeug, eine gefallene")
+    print("   Probe, eine leere Grundgesamtheit.")
+    print(f"   **{befund} enden mit 1, und die sind erreichbar, ohne dass etwas kaputt ist**:")
+    print("   ein Befund ist eine Aussage ueber den BAUM, und der Baum darf einen Fehler")
+    print(f"   haben. Von ihnen tragen {teil} Ausgabe auf BEIDEN Seiten -- davor eine halbe")
+    print("   Messung, dahinter das, was nie lief. *Das ist die gefaehrliche Menge, und sie")
+    print("   ist die kleine.*")
+    print(f"   {gedeckt} davon stehen in Dateien, die `ABGESCHNITTEN in:` drucken -- gedeckt.")
+    print(f"   **{n_offen} bleiben offen, in {len(offen)} Dateien** (Ratsche "
+          f"{MARKE_TEILMESSUNG}):")
+    for name, n in sorted(offen.items(), key=lambda r: (-r[1], r[0]))[:8]:
+        print(f"     {name:<28} {n:>3}")
+    if len(offen) > 8:
+        print(f"     ... und {len(offen) - 8} weitere mit je einer")
+    # **And the family beside it: whoever reads `git` looks at the return code.**
+    # Measured over EVERY tool in the directory, not merely over the cast --
+    # `erzeuge-mutationen.py` writes into sources and stands in no collective run.
+    werkzeuge = sorted(p for p in (W / "instrumente").iterdir()
+                       if p.is_file() and p.suffix in (".py", ".sh") and p.name != "__init__.py")
+    liest_git, ohne = [], {}
+    for p in werkzeuge:
+        t = p.read_text(encoding="utf-8", errors="replace")
+        stellen = [nr for nr, z in enumerate(t.splitlines(), 1)
+                   if GIT_AUFRUF.search(z) and not _fixtur(z)
+                   and not z.lstrip().startswith("#") and not DRUCK_STELLE.search(z)]
+        if not stellen:
+            continue
+        liest_git.append(p.name)
+        offene = git_ohne_riegel(t)
+        if offene:
+            ohne[p.name] = offene
+    print()
+    print(f"== {len(liest_git)} von {len(werkzeuge)} Werkzeugen lesen `git` -- "
+          f"{len(ohne)} ohne Blick auf den Ruecklaufwert ==")
+    print("   Ohne Repository endet `git status` mit **128 und LEERER Ausgabe**. Wer nur")
+    print("   `stdout` liest, liest das als *sauber* -- und `pruefe-luecken.py` hat danach")
+    print("   IN QUELLEN GESCHRIEBEN, auf genau dem Rechner, auf den `SCHWER` ihn schickt.")
+    print(f"   Es lesen: {', '.join(liest_git) if liest_git else '(keiner)'}")
+    for name, nrs in sorted(ohne.items()):
+        print(f"     !! {name:<28} Zeilen {nrs}")
+        befunde.append((name, [f"GIT-OHNE-RIEGEL:{nrs}"]))
+    if not ohne:
+        print("   Die drei Zustaende stehen an EINER Stelle (`mutiere-pruefer.py:baumstand()`)")
+        print("   und werden von dort GELESEN -- eine vierte Kopie faellt hier auf (W7).")
+
+    if n_offen > MARKE_TEILMESSUNG:
+        print(f"   !! RATSCHE: {n_offen} offene Teilmessungen, erlaubt {MARKE_TEILMESSUNG}.")
+        befunde.append(("TEILMESSUNG", [f"{n_offen} > {MARKE_TEILMESSUNG}"]))
+    elif n_offen < MARKE_TEILMESSUNG:
+        print(f"   Die Ratsche steht auf {MARKE_TEILMESSUNG} und ist auf {n_offen} gefallen"
+              " -- nachziehen.")
 
     if "--lauf" in sys.argv:
         print()

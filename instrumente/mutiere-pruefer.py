@@ -27,10 +27,18 @@ wiederhergestellt** -- gegen Hash geprueft. Bei jedem Abbruch ebenso.
     ./instrumente/mutiere-pruefer.py --anker      nur der Ankerstand -- ohne Bau, ohne sauberen Baum
 """
 import hashlib
+import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
+
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
@@ -4016,11 +4024,16 @@ def baumstand(wurzel=None):
     *An empty output from a command that FAILED is not an answer.* The three states are
     kept apart so that the caller cannot collapse them by accident.
     """
-    r = subprocess.run(
-        ["git", "status", "--porcelain", "crates/"],
-        cwd=wurzel or WURZEL,
-        capture_output=True,
-        text=True, timeout=FRIST)
+    try:
+        r = subprocess.run(
+            ["git", "status", "--porcelain", "crates/"],
+            cwd=wurzel or WURZEL,
+            capture_output=True,
+            text=True, timeout=FRIST)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        # **No `git` at all is the same answer as a broken `.git`, not a crash.** A tool
+        # that dies here leaves a traceback with return code 1 -- the shape of a finding.
+        return "unbekannt"
     if r.returncode != 0:
         return "unbekannt"
     return "sauber" if r.stdout.strip() == "" else "schmutzig"
@@ -4028,6 +4041,79 @@ def baumstand(wurzel=None):
 
 def sauberer_baum():
     return baumstand() == "sauber"
+
+
+# **THE RUN CARRIES ITS OWN SUBJECT -- because otherwise it measures the MACHINE**
+# --------------------------------------------------------------------------------
+# (2026-08-31, and the specimen is this tool on `ki-pc-fisch-101`.)
+#
+# `--anker` used to test `baumstand()` against TWO subjects it found lying around: a fresh
+# temporary directory (must say `unbekannt`) and **the tree it happens to stand in** (must
+# say `sauber` or `schmutzig`). On the server that tree arrives by `rsync` and is no
+# repository, so the second direction answered `unbekannt` and the probe FELL:
+#
+#     SPRECHPROBE GESCHEITERT ... `unbekannt`   (speech test fallen, own tree unknown)
+#
+# Green here, red there, on byte-identical sources -- and the sentence printed was *"this
+# tool does not measure what it claims"*, which was false. The tool was fine; the OBJECT was
+# missing.
+#
+# > *A guardian whose verdict depends on which machine it runs on, without saying so,
+# > measures the machine.* This workshop has paid for that class once already:
+# > `pruefe-waechter.py --lauf` was green here and red there because two counters read
+# > FOREIGN trees -- they stand in `FREMDER_KORPUS` since.
+#
+# **The same form, one level down.** The foreign trees could not be carried, so they got a
+# register and a named hole. A git repository CAN be carried: `git init`, one file, one
+# commit -- and then all three states are reachable in the probe's own temporary directory,
+# on every machine, with the ambient tree contributing nothing.
+#
+# What is left to the environment is `git` itself. If it is not there, no direction can be
+# distinguished from any other -- **every answer is `unbekannt`, and a probe with one
+# available outcome measures nothing.** That is not a fallen probe either; it is *not
+# measured*, and it says so with a return code of 2.
+def sprechprobe_baumstand():
+    """`(zeilen, ok, gemessen)` -- three states on a subject this run brings along itself.
+
+    `gemessen=False` means the environment has no `git`: then `unbekannt` is the only
+    reachable answer and the probe would pass for the wrong reason.
+    """
+    zeilen = []
+    if not shutil.which("git"):
+        return (["kein `git` auf diesem Rechner -- alle drei Zustaende faellen zusammen"],
+                False, False)
+    with tempfile.TemporaryDirectory() as d:
+        wurzel = pathlib.Path(d)
+        fremd = wurzel / "kein-repo"
+        (fremd / "crates").mkdir(parents=True)
+        eigen = wurzel / "repo"
+        (eigen / "crates").mkdir(parents=True)
+        quelle = eigen / "crates" / "probe.rs"
+        quelle.write_text("// speech test\n", encoding="utf-8")
+        umg = {**os.environ, "GIT_CONFIG_GLOBAL": str(wurzel / "keine-config"),
+               "GIT_CONFIG_SYSTEM": str(wurzel / "keine-config"),
+               "GIT_AUTHOR_NAME": "probe", "GIT_AUTHOR_EMAIL": "probe@example.invalid",
+               "GIT_COMMITTER_NAME": "probe", "GIT_COMMITTER_EMAIL": "probe@example.invalid"}
+        for befehl in (["git", "init", "-q"], ["git", "add", "crates/probe.rs"],
+                       ["git", "commit", "-qm", "probe"]):
+            r = subprocess.run(befehl, cwd=eigen, capture_output=True, text=True,
+                               env=umg, timeout=FRIST)
+            if r.returncode != 0:
+                zeilen.append(f"`{' '.join(befehl)}` scheiterte: "
+                              f"{(r.stderr or r.stdout).strip().splitlines()[-1:]}")
+                return zeilen, False, False
+        stand_fremd = baumstand(fremd)
+        stand_sauber = baumstand(eigen)
+        quelle.write_text("// speech test, changed\n", encoding="utf-8")
+        stand_schmutzig = baumstand(eigen)
+    for was, ist, soll in (("ein Nicht-Repository", stand_fremd, "unbekannt"),
+                           ("ein committeter Baum", stand_sauber, "sauber"),
+                           ("eine ungesicherte Aenderung", stand_schmutzig, "schmutzig")):
+        zeilen.append(f"{was}: `{ist}`" + ("" if ist == soll else f" -- ERWARTET `{soll}`"))
+    return (zeilen,
+            (stand_fremd, stand_sauber, stand_schmutzig) == ("unbekannt", "sauber",
+                                                             "schmutzig"),
+            True)
 
 
 def main():
@@ -4072,19 +4158,32 @@ def main():
             print("  SPRECHPROBE GESCHEITERT: `keine-flaeche` steht in FLAECHEN")
             return 2
         print("  erfundene Flaeche faellt:  ok")
-        # **R14 for the tree check, and it took a server run to notice it was missing.**
-        # A directory that is no git repository must come back as `unbekannt`, never as
-        # `sauber` -- that difference is the whole protection against measuring a mixture.
-        with tempfile.TemporaryDirectory() as d:
-            fremd = baumstand(d)
-        eigen = baumstand()
-        if fremd != "unbekannt":
-            print(f"  SPRECHPROBE GESCHEITERT: ein Nicht-Repository meldet `{fremd}`")
+        # **R14 for the tree check -- on a subject this run BRINGS ALONG.** Until today the
+        # second direction read the ambient tree, and on the server that tree is an `rsync`
+        # copy without a repository: the probe fell with *"SPRECHPROBE GESCHEITERT"* on a
+        # tool that was working. See `sprechprobe_baumstand()` above.
+        zeilen, baum_ok, baum_gemessen = sprechprobe_baumstand()
+        for z in zeilen:
+            print(f"  Baumstand: {z}")
+        if not baum_gemessen:
+            print("ABBRUCH: der Baumstand ist NICHT GEMESSEN -- ohne `git` faellt jeder der",
+                  file=sys.stderr)
+            print("  drei Zustaende auf `unbekannt` zusammen, und eine Probe mit einem",
+                  file=sys.stderr)
+            print("  einzigen erreichbaren Ausgang misst nichts. Das ist keine gefallene",
+                  file=sys.stderr)
+            print("  Probe, sondern eine fehlende Vorbedingung.", file=sys.stderr)
             return 2
-        if eigen not in ("sauber", "schmutzig"):
-            print(f"  SPRECHPROBE GESCHEITERT: der eigene Baum meldet `{eigen}`")
+        if not baum_ok:
+            print("  SPRECHPROBE GESCHEITERT: der Baumstand trennt die drei nicht")
             return 2
-        print(f"  Baumstand unterscheidet:   ok (fremd `unbekannt`, eigen `{eigen}`)")
+        print("  Baumstand unterscheidet:   ok (alle drei am mitgebrachten Gegenstand)")
+        # **And the AMBIENT tree stands beside it as information, not as a verdict.** It may
+        # legitimately be `unbekannt` -- that is what an `rsync` copy is -- and `main()`
+        # below prints exactly that as a named gap. *A property of the environment is not a
+        # failure of the tool.*
+        print(f"  Baum HIER:                 `{baumstand()}` (keine Forderung -- ein "
+              "uebertragener Baum ist zu Recht `unbekannt`)")
         # **R14 for the area row that READS its number** (2026-08-30). It replaces a number
         # that had stood wrong since 2026-08-17 -- and without this probe it would only be
         # another place where the same thing can happen.
@@ -4096,11 +4195,17 @@ def main():
         print(f"\n== {len(MUTATIONEN) - len(tot)} von {len(MUTATIONEN)} Ankern greifen ==")
         for m, warum in tot:
             print(f"  !! {warum:<16} {m.name:<44} {m.pfad.name}")
+        # **`--anker` is a COMPLETE run of its own** -- not a cut. Both of its ends are the
+        # end of everything this mode set out to measure, so both declare it. *This is the
+        # one line `abschnitt.py` cannot derive: from outside, a mode's last exit and a
+        # truncated run's exit look exactly alike.*
         if tot:
             print(f"\n  {len(tot)} Mutationen messen NICHTS. Die Quote laeuft sonst ueber")
             print("  einer schrumpfenden Bezugsgroesse und liest sich wie Deckung.")
+            abschnitt.fertig()
             return 1
         print("  ALL PASS")
+        abschnitt.fertig()
         return 0
 
     # **The ANCHOR check runs first, and since 2026-08-31 that order carries an argument.**
@@ -4159,6 +4264,7 @@ def main():
         print("  GESCHEITERT: das Geruest faengt nicht einmal eine tote Bereichspruefung.")
         return 1
     if "--schnell" in sys.argv:
+        abschnitt.fertig()   # `--schnell` measures the scaffold, and it measured it.
         return 0
 
     print(f"\n== {len(MUTATIONEN)} Mutationen ==\n")
@@ -4207,8 +4313,9 @@ def main():
         print("\n  Eine ueberlebende Mutation heisst: die Regel koennte ausfallen, ohne dass")
         print("  eine einzige Probe faellt. Das ist genau die Richtung, in der am 2026-08-14")
         print("  zwoelf Loecher offenstanden.")
+    abschnitt.fertig()
     return 1 if ueberlebt else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

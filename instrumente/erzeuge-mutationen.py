@@ -13,6 +13,7 @@ damit es keine zweite Fassung gibt, die jemand parallel zur Wahrheit fuehrt.
 Aufruf: `./instrumente/erzeuge-mutationen.py [--stichprobe N] [--klasse VERGL,BOOL,…]`
 """
 import hashlib
+import importlib.util
 import pathlib
 import random
 import re
@@ -20,6 +21,12 @@ import subprocess
 import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
+
+# The three tree states live in ONE place and are read from there (W7).
+_spec = importlib.util.spec_from_file_location(
+    "mp", pathlib.Path(__file__).resolve().parent / "mutiere-pruefer.py")
+_mp = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mp)
 CHECK = WURZEL / "crates/gabbro-check/src"
 ZEIT = 180
 
@@ -108,10 +115,29 @@ def main():
     if "--stichprobe" in sys.argv:
         stichprobe = int(sys.argv[sys.argv.index("--stichprobe") + 1])
 
-    if subprocess.run(
-        ["git", "diff", "--quiet", "--", "crates/"], cwd=WURZEL
-    ).returncode != 0:
+    # **THE THIRD COPY OF ONE QUESTION, AND IT GAVE THE WRONG REASON** (2026-08-31).
+    # `git diff --quiet` returns non-zero for a dirty tree AND 128 for *no repository at
+    # all* -- so on an `rsync` copy this printed its "commit first" refusal over a tree
+    # that was perfectly clean and simply not a repository. The
+    # refusal was safe, the STATEMENT was false, and a false reason sends the reader to fix
+    # something that is not broken. (`git diff` also does not see untracked files, which
+    # `git status --porcelain` does.)
+    #
+    # **Read, do not reimplement** (W7): `mutiere-pruefer.py:baumstand()` keeps the three
+    # states apart and carries the speech test that proves it, on a subject it brings along.
+    stand = _mp.baumstand(WURZEL)
+    if stand == "schmutzig":
         print("crates/ ist nicht sauber -- erst committen. Dieses Werkzeug schreibt in Quellen.")
+        return 2
+    if stand != "sauber":
+        print("ABBRUCH: `git` konnte `crates/` nicht ansehen -- es wurde NICHTS gemessen.",
+              file=sys.stderr)
+        print("  Der Baum ist WEDER sauber noch schmutzig, sondern ungemessen -- so faellt",
+              file=sys.stderr)
+        print("  `git status` auf einer per `rsync` uebertragenen Kopie (128, leere Ausgabe).",
+              file=sys.stderr)
+        print("  Dieses Werkzeug SCHREIBT in Quellen und laeuft ohne diesen Nachweis nicht.",
+              file=sys.stderr)
         return 2
 
     alle = []

@@ -46,6 +46,12 @@ import re
 import subprocess
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger als „laeuft".
 
@@ -70,7 +76,12 @@ EINTRAEGE = [
     # leaves open, and that a case with a date closed on that day.
     (
         "messung/RUECKLAUFWERTE.md",
-        r"\*\*(\d+) von 49\*\* Wächtern können mitten im Lauf",
+        # **The denominator stays PINNED and gets carried along by hand** (49 -> 50 on
+        # 2026-08-31, when `pruefe-uebersetzerfamilie.py` joined). A `\d+` there would let
+        # *"44 of 12"* pass -- the reference set is half of the claim, and a figure vouches
+        # for its denominator, not for its caption (W25). The self-check above turns a
+        # forgotten carry into a fallen speech test rather than a silent entry.
+        r"\*\*(\d+) von 50\*\* Wächtern können mitten im Lauf",
         ["./instrumente/pruefe-waechter.py"],
         r"^== Ein Abbruch MITTEN im Lauf: (\d+) von \d+ koennen",
         "Waechter, die mitten im Lauf abbrechen koennen",
@@ -1260,8 +1271,9 @@ def main():
     print("  Der README steht nicht in diesem Register, sondern in `pruefe-todo.py`.")
     print("  Zwei Register ueber derselben Sache sind W7.")
 
+    abschnitt.fertig()
     return 1 if befunde else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))
