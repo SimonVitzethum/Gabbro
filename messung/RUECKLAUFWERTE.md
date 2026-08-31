@@ -202,12 +202,24 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Sammellauf gelesen.
 * **`pruefe-grammatiktafel.py` bleibt rot**, an seinen vier `UNGEDECKT`-Zellen. Eine
   Sprachentscheidung des Ordners, kein Werkzeugfehler.
-* **`pruefe-emission.sh` ist seit dem 2026-08-31 abends eine `TEILMESSUNG`, keine `ROT`.**
-  Er stirbt in **Stufe 9 von 10** an den sechs `messung/tor-proben/`, deren erzeugtes C
-  nicht übersetzt — **Stufe 10 (die Bibliothekskette) läuft nicht.** Vorher stand er als
-  Befund da, in derselben Zeile und derselben Farbe wie ein Wächter, der zu Ende gemessen
-  hat. *Die Zahl der Befunde daneben ist eine untere Schranke*, und der Rest gehört dem,
-  der `crates/` führt.
+* ~~**`pruefe-emission.sh` ist seit dem 2026-08-31 abends eine `TEILMESSUNG`, keine
+  `ROT`.**~~ Er starb in **Stufe 9 von 10** an den sechs `messung/tor-proben/`, deren
+  erzeugtes C nicht übersetzte — **Stufe 10 (die Bibliothekskette) lief nicht.**
+  **NACHGESEHEN am 2026-08-31 über `f08e5ad`, lokal, `rc=0`: Stufe 10 läuft, und sie ist
+  nicht nur angetreten.** Alle acht ihrer Teilproben stehen mit Text da — zwei `.gabi` je
+  mit Marke, die Ausfuhr ohne die beiden privaten Helfer, `pruefe` mit 0 errors über die
+  Grenze, drei getrennt übersetzte Einheiten unter `-Werror`, drei `pub`-Namen außen, ein
+  Programm aus drei Objekten unter `-O0` **und** `-O2`, das Ergebnis `2007 65535` (der
+  private Helfer hat gedeckelt) und **zwei Sprechproben, die beide beißen**: ein
+  verfälschter privater Helfer ändert das Ergebnis, und `N039` sagt ab, wo sonst der Binder
+  es getan hätte. Stufe 9 meldet **101 von 101** und eine umgekehrte Probe. *Der Posten ist
+  eingelöst, und er war eine Aussage über den `crates/`-Baum, nicht über den Wächter.*
+
+  > **Das ist der Beleg dafür, wozu die Marke da ist**, und er ist an einem Tag entstanden.
+  > Zwei Wochen lang sah derselbe Wächter aus wie einer, der zu Ende gemessen hat; seit
+  > gestern abend sagte er, wo er aufhörte; heute hört er nicht mehr dort auf. **Die Marke
+  > hat den Befund nicht geheilt — sie hat ihn SICHTBAR gemacht**, und geheilt hat ihn, wer
+  > `crates/` führt.
 * **18 von 99 emittierenden Dateien fallen bei `clang`, nicht bei `gcc`** — alle an
   `-Wunused-function` über emittierten `static inline`-Zugriffen. `MARKE_FAMILIENUNTERSCHIED`
   steht auf 18, gezogen und nicht geheilt; die Heilung gehört `emit.rs`.
@@ -222,6 +234,21 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   **Und am selben Abend GEHEILT**, soweit eine Form das kann: 92 gefährliche Stellen, alle
   gedeckt, `MARKE_TEILMESSUNG = 0`, und die Abnahme trennt eine `TEILMESSUNG` vom Befund.
   *Was bleibt, ist die Ansage — nicht das Ausbleiben des Schnitts.*
+  **Und die Deckung wird seit dem 2026-08-31 je STELLE gezählt und nicht je Datei** —
+  92 von 92, Differenz null. Die Marke ist nicht gestiegen, und das ist gemessen.
+* **Die Klasse „nur eine Stelle der Datei ist gedeckt" ist gemessen und leer** — aber zwei
+  Wächter gelten als gedeckt, **weil sie das Wort in ihrer eigenen Beschreibung tragen**:
+  `pruefe-waechter.py` und `abnahme.py`. Beide haben heute null gefährliche Stellen, also
+  kostet es nichts; der Zähler je Stelle nimmt ihnen die Ausnahme, weil er nach der
+  VERDRAHTUNG fragt. *Es war eine gelegte Falle und kein Schaden.*
+* **Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**, und er
+  steht mit Grund da: `zaehle-b3.py` (`NICHT FAHRBAR` — die Caprock-Messbasis fehlt im
+  Arbeitsbaum). **48 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
+  schlichte Abnahme auslässt, sind einzeln nachgefahren.
+* **Die Schalenregel ist großzügig, und das ist geprüft und nicht gehofft**: ein `exit` in
+  einem Funktionsrumpf gilt als gedeckt, weil der Rumpf aus dem Hauptlauf gerufen wird.
+  Nachgesehen wurde, ob eine solche Funktion **vor** der Falle gerufen wird — in keinem der
+  sieben Schalenwächter. *Wer die Reihenfolge ändert, muss diese Zeile neu messen.*
 * **`OHNE_URTEIL` steht leer, und das ist eine Zusage an die Zukunft, keine Messung über
   sie.** Wer einen Zähler wieder herausnimmt, schreibt den Grund dazu — die Zahl der
   Ausgenommenen druckt die Abnahme.
@@ -349,12 +376,68 @@ gebaut ist.* Drei Änderungen je Wächter, keine davon je Stufenrumpf: die Quell
 `EXIT`-Falle auf `abschnitt_ende`; ein bloßes `import abschnitt` oder `. abschnitt.sh` zählt
 nicht. *Eine Regel, die die Einfuhr zählt, zählt die Absicht.*
 
-> **Und was die Deckungszahl NICHT sagt: sie ist je DATEI gemessen, nicht je Stelle.** Eine
-> Falle, die auf halber Höhe der Datei scharf wird, deckt die Ausgänge darüber nicht — und
-> das Sieb sieht es nicht. Nachgesehen wurde deshalb von Hand: `pruefe-syntax.sh` und
+> ~~**Und was die Deckungszahl NICHT sagt: sie ist je DATEI gemessen, nicht je Stelle.**~~
+> Eine Falle, die auf halber Höhe der Datei scharf wird, deckt die Ausgänge darüber nicht —
+> und das Sieb sah es nicht. Nachgesehen wurde deshalb von Hand: `pruefe-syntax.sh` und
 > `pruefe-sonden.sh` hatten je einen Ausgang **über** ihrer Falle, und beide sind
-> nachgezogen (die Falle steht jetzt unmittelbar hinter der Quelle). *Das ist eine gefundene
-> Stelle und keine gemessene Menge — die Klasse bleibt offen.*
+> nachgezogen (die Falle steht jetzt unmittelbar hinter der Quelle). ~~*Das ist eine
+> gefundene Stelle und keine gemessene Menge — die Klasse bleibt offen.*~~
+> **GEMESSEN am 2026-08-31 — siehe den nächsten Abschnitt. Es ist ein Nullbefund, und der
+> Suchweg steht daneben.**
+
+#### Die Klasse, gemessen statt gesucht — je STELLE, nicht je Datei
+
+*Gemessen 2026-08-31 über `f08e5ad`, lokal (`free -g`: 31 GB gesamt, 13 GB verfügbar,
+20 Kerne). **Kein Bau** — es wird Quelltext gelesen, sonst nichts.*
+
+Die Vorgängerbahn hat zwei Fälle **von Hand** gefunden und ihren eigenen Schlusssatz offen
+gelassen. Die Frage dahinter ist schärfer als die zwei Fälle: *wie viele Dateien gelten
+heute als gedeckt, obwohl nur EINE ihrer Stellen es ist?* Eine Datei, die als gedeckt gilt,
+weil irgendwo in ihr das richtige Wort steht, ist genau die Bauart, gegen die dieser
+Abschnitt gebaut wurde — nur eine Ebene höher.
+
+**Was „je Stelle" heißt, und es ist nicht dasselbe in beiden Sprachen:**
+
+| | wann eine Stelle gedeckt ist | warum |
+|---|---|---|
+| **Schale** | ihre Zeile steht **hinter** der `EXIT`-Falle — oder sie steht in einem Funktionsrumpf | eine Falle wird an ihrer Zeile scharf. Ein `exit` darüber läuft an ihr vorbei. |
+| **Python** | sie liegt **lexikalisch in einem `def`** | `fahre()` umschließt den Aufruf von `main`. Was auf Modulebene ausgeführt wird, läuft **vor** `fahre` — der Gegenstandsriegel etwa. |
+
+```
+92  gefaehrliche Stellen, in 25 Dateien
+92  gedeckt je DATEI    (der Zaehler von gestern abend)
+92  gedeckt je STELLE   (die Messung von heute)
+ 0  Differenz -- und 0 Dateien mit Scheindeckung
+```
+
+**Der Nullbefund ist belegt und nicht behauptet** (W25): die Verdrahtungszeile und die
+kleinste Ausgangsstelle stehen je Datei nebeneinander, und in **keiner** liegt ein Ausgang
+über seiner Falle. Die engsten Abstände sind `pruefe-beweise.sh` (Falle Zeile 21, erster
+Ausgang 72) und `pruefe-syntax.sh` (11 / 70) — beide erst am Vorabend nachgezogen, und
+genau darum liegt hier eine Null und keine Zwei. *Die Klasse ist nicht leer gewesen; sie ist
+geleert worden.*
+
+**Und die schärfere Nachfrage in derselben Messung**: erreicht ein Python-Wächter eine
+gefährliche Stelle **außerhalb** von `fahre` — durch einen Aufruf auf Modulebene? Gesucht
+wurde über alle Wächter, deren gefährliche Stellen und deren Modulebene vor der
+Verdrahtungszeile. **Kein einziger Treffer.**
+
+##### Der Fund, den die Nullzahl nicht zeigt: zwei Dateien sind aus Versehen gedeckt
+
+`SAGT_WO` liest den Dateitext. Zwei Wächter tragen das Wort `ABGESCHNITTEN` in ihrer
+**eigenen Beschreibung** und gelten damit als gedeckt, **ohne dass eine Zeile verdrahtet
+ist**:
+
+| Datei | warum sie trifft | gefährliche Stellen heute |
+|---|---|---|
+| `pruefe-waechter.py` | `SAGT_WO` selbst steht in ihr, dazu die Kommentare darüber | **0** |
+| `abnahme.py` | druckt die Marke `TEILMESSUNG` und den Text dazu | **0** |
+
+Beide haben heute **keine** gefährliche Stelle, also kostet es heute nichts. *Es ist eine
+gelegte Falle und kein Schaden* — und sie liegt ausgerechnet unter den zwei Werkzeugen, die
+diese Zahl drucken. **Ein Maßstab, der sich selbst freispricht, tut es lautlos**, und er tut
+es an dem Tag, an dem jemand dem einen eine `1` mitten im Lauf hinzufügt. Der Zähler je
+Stelle nimmt ihnen die Ausnahme, weil er nach der VERDRAHTUNG fragt und nicht nach dem Wort.
 
 **`fertig()` ist die einzige Zeile, die Urteilskraft braucht**, und sie ist unentbehrlich:
 ein Wächter, der an seinem LETZTEN Ausgang mit `1` endet, hat alles gemessen; einer, der am
@@ -400,6 +483,84 @@ Schirm steht und dahinter das, was nie lief.
 Und die Deckung ist keine Heilung: eine gedeckte Stelle bricht genauso mitten im Lauf ab —
 sie **sagt es nur**. `MARKE_TEILMESSUNG` in `pruefe-waechter.py` steht auf 0 und darf nur
 fallen.
+
+### Die Gegenzahl: wie oft wird heute WIRKLICH abgeschnitten?
+
+*Gemessen 2026-08-31 mit `./instrumente/abnahme.py`, lokal (`free -g`: 31 GB gesamt, 13 GB
+verfügbar, 20 Kerne).*
+
+`MARKE_TEILMESSUNG = 0` zählt **Stellen, die es nicht ansagen würden**. Sie sagt nichts
+darüber, wie oft ein Lauf tatsächlich mitten drin endet — das ist die andere Zahl, und die
+Abnahme trägt sie in ihrer Kopfzeile:
+
+```
+== Arbeitsmenge: 45 von 49 Waechtern haben GEMESSEN -- 44 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 1 nicht fahrbar, 3 ausgelassen
+```
+
+**Null — und der Nenner ist 45 und nicht 49** (W25). Der schlichte Lauf lässt drei teure aus,
+und **darunter ist ausgerechnet `pruefe-emission.sh`, der allein 45 der 92 gefährlichen
+Stellen trägt.** Eine Null, die den halben Gegenstand nicht angesehen hat, ist genau die
+Bauart, gegen die dieser Abschnitt steht — also ist sie hier nicht stehen geblieben:
+
+| Wächter | wie gemessen | abgeschnitten? |
+|---|---|---|
+| 45 aus der Abnahme | `abnahme.py`, ein Lauf | **0** |
+| `pruefe-emission.sh` | einzeln gefahren, `rc=0`, kein `ABGESCHNITTEN` in 282 Zeilen | **nein** |
+| `pruefe-beweise.sh` | einzeln nachgefahren | **nein** |
+| `pruefe-luecken.py` | einzeln nachgefahren: `ALL PASS`, *alle Quellen byteidentisch zurück* | **nein** |
+| `zaehle-b3.py` | `NICHT FAHRBAR` — die Caprock-Messbasis fehlt im Arbeitsbaum | *offen* |
+
+**Also: 48 von 49 gemessen, null davon abgeschnitten.** Der eine Rest hat gar nichts
+gemessen und steht mit Grund da. Das ist keine Zusage für morgen — es ist der Stand von
+heute abend.
+
+**Die Zahl steht in der Kopfzeile, auch wenn sie null ist.** Das ist kein Schmuck: eine
+gedruckte Null sagt, dass gemessen wurde; eine fehlende Zahl sagt gar nichts (W17). Ist sie
+nicht null, kommt ein eigener Block dazu, der jeden abgeschnittenen Wächter mit seinem
+Rücklaufwert und seiner STELLE nennt.
+
+**Und dass sie erscheint, ist selbst unter einer Sprechprobe**, die bei jeder Abnahme
+mitläuft: `abnahme.py:sprechprobe()` legt fünf erfundene Wächter an, darunter `pruefe-halb.sh`
+(zwei Zeilen Ausgabe, dann `ABGESCHNITTEN in: Stufe 4`, dann `exit 1`) und `pruefe-rot.sh`
+(ein voller Befund). Geprüft wird in **beide** Richtungen: der abgeschnittene **muss**
+`TEILMESSUNG` heißen und seine STELLE nennen, der volle Befund **muss** `ROT` bleiben — und
+die Arbeitsmenge muss `3` sein, was die Teilmessung mitzählt. *Eine Marke, die jedes Rot
+einfärbt, bestünde die erste Richtung und fiele an der zweiten.*
+
+> **Die zwei Zahlen messen Verschiedenes, und beide werden gebraucht.** Die Ratsche zählt
+> Stellen, die schweigen *würden*; die Kopfzeile zählt Läufe, die heute schweigen *müssten*
+> und es nicht tun. *Die erste darf nur fallen. Die zweite darf steigen* — sie ist eine
+> Aussage über den BAUM und keine über die Messapparatur.
+
+#### Und die zwei, die die Zahl drucken, standen selbst außerhalb der Form
+
+`pruefe-waechter.py` und `abnahme.py` liefen bis zum 2026-08-31 abends mit
+`sys.exit(main())`. Beide haben null gefährliche Stellen, also fielen sie aus der Ratsche
+heraus — *und das ist ein Grund, vom BEFUND ausgenommen zu sein, nie von der FORM.* Ein
+Absturz auf halber Höhe hätte bei `abnahme.py` zwanzig Zeilen auf dem Schirm gelassen und
+keine Zeile darüber, dass neunundzwanzig Wächter nie gefragt wurden: **eine halbe Abnahme,
+die wie eine ganze aussieht** — genau die Gestalt, für die die Marke da ist. Beide sind
+jetzt verdrahtet, mit `fertig()` vor der Urteilskette; die rote Abnahme von heute bleibt ein
+Befund und wird **nicht** als abgeschnitten gemeldet.
+
+##### Der Fund dabei: die Sprechprobe war nicht wiedereintrittsfest
+
+Kaum war `pruefe-waechter.py` verdrahtet, **fiel `abschnitt.py`s erste Richtung** — die,
+die es überhaupt gibt. Nicht weil die Meldung kaputt war: `pruefe-waechter.py` fährt
+`abschnitt.sprechprobe()` mit, und die läuft nun *innerhalb* eines `fahre()`. Damit stand
+`_AN` schon auf `True`, das geschachtelte `fahre` legte sich nicht um seinen Puffer, und
+`_MARKE` wurde nie gelernt. Der Lauf endete mit `2` und dieser Zeile:
+
+```
+== ABGESCHNITTEN in: ABGESCHNITTEN in: Stufe 2: der Kopf -- Ruecklaufwert 1 -- Ruecklaufwert 2 ==
+```
+
+*Eine Probe, die von dem Lauf zerstört wird, in dem sie steckt, misst diesen Lauf und nicht
+ihren Gegenstand* — dieselbe Klasse wie das `pgrep -f`, das sich selbst findet. Geheilt,
+indem `sprechprobe()` die drei Modulgrößen sichert, `_AN` zurücksetzt und alles hinterher
+zurücklegt. **Und sie ist nicht durch Nachdenken gefunden worden, sondern dadurch, dass
+jemand die Form auf ihren eigenen Träger angewandt hat.**
 
 
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister

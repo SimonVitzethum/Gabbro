@@ -565,13 +565,106 @@ def sprechprobe_schnitt():
 #
 # > *An abort names its reason (that is the third class of the table). A cut has to name its
 # > PLACE -- the reason is already printed, and it is a finding.*
-# Three shapes count as covered, and each one is the WIRING, never the mere presence of the
-# helper: the word itself (a guard carrying its own `trap`, as `pruefe-emission.sh` does),
-# `abschnitt.fahre(` (Python, the wrapper around `main`), or an `EXIT` trap that calls
-# `abschnitt_ende` (shell). **`import abschnitt` or `. abschnitt.sh` alone is NOT enough** --
-# a tool that loads the helper and never hands its run to it announces nothing, and would
-# otherwise read as covered. *A rule that counts the import counts the intention.*
+# Three shapes counted as covered, and each one was the WIRING, never the mere presence of
+# the helper: the word itself (a guard carrying its own `trap`, as `pruefe-emission.sh`
+# does), `abschnitt.fahre(` (Python, the wrapper around `main`), or an `EXIT` trap that
+# calls `abschnitt_ende` (shell). **`import abschnitt` or `. abschnitt.sh` alone was NOT
+# enough** -- a tool that loads the helper and never hands its run to it announces nothing.
+# *A rule that counts the import counts the intention.*
+#
+# **AND SINCE 2026-08-31 THIS IS NO LONGER THE COUNTER. IT IS THE COUNTER'S FOIL.**
+# `teilmessungen()` asks `stelle_gedeckt()` below, per PLACE. `SAGT_WO` reads the whole file
+# and therefore cannot tell one exit from another -- which is exactly the property the last
+# direction of `sprechprobe_deckung()` uses: the two fixtures that the per-place count
+# rejects both match this pattern. *It is kept because a sharper rule that never gets
+# compared to the blunt one is a claim, not a measurement* -- and it is kept OUT of the
+# verdict, so that nothing depends on it twice (W7).
 SAGT_WO = re.compile(r"ABGESCHNITTEN|abschnitt\.fahre\(|trap [^\n]*abschnitt_ende")
+
+# **AND COVERAGE IS COUNTED PER PLACE, NOT PER FILE** -- measured 2026-08-31.
+# --------------------------------------------------------------------------
+# `SAGT_WO` above reads the FILE. It answers *does this guardian announce a cut at all?* and
+# it was never able to answer the question underneath: *does it announce THIS one?* A trap
+# that arms halfway down the file does not cover the exits above it, and a file counted as
+# covered because one of its places is covered hides all the others -- the same shape this
+# whole section is built against, one level up.
+#
+# The previous lane found two such places BY HAND (`pruefe-syntax.sh`, `pruefe-sonden.sh`,
+# one exit each above their trap) and wrote down that the class stayed unmeasured. It is
+# measured now, and the answer is zero -- *the class was not empty, it had been emptied.*
+#
+# **What "per place" means is not the same in both languages, and that is the whole point:**
+#
+# | | a place is covered when | why |
+# |---|---|---|
+# | shell | its line is BEHIND the `EXIT` trap -- or it sits inside a function body | a trap arms at its line. An `exit` above it walks straight past. |
+# | Python | it lies lexically inside a `def` | `fahre()` wraps the CALL of `main`. Whatever runs at module level runs BEFORE `fahre` -- the subject bolt, for one. |
+#
+# **And it asks for the WIRING, never for the word.** `SAGT_WO` matches on file text, so two
+# guardians carry `ABGESCHNITTEN` in their own prose and count as covered without a single
+# line being wired: `pruefe-waechter.py` (this rule itself stands in it) and `abnahme.py`
+# (it prints the mark). Both have zero dangerous places today, so it costs nothing today --
+# *a trap laid, not a loss taken*, and it lies under exactly the two tools that print this
+# number. **A yardstick that acquits itself does it silently.**
+TRAP_STELLE = re.compile(r"trap\s+(.+?)\s+EXIT")
+SH_FUNKTION = re.compile(r"^\s*(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*\)\s*\{")
+PY_DEF = re.compile(r"^(\s*)def\s+\w+")
+
+
+def deckung_ab(text, ist_shell):
+    """From which line on is the cut notice WIRED? `None` means: nowhere."""
+    zeilen = text.splitlines()
+    if ist_shell:
+        # A guardian may carry its own notice instead of sourcing `abschnitt.sh`
+        # (`pruefe-emission.sh` does). Then the trap names ITS function.
+        eigen, akt = set(), None
+        for z in zeilen:
+            m = SH_FUNKTION.match(z)
+            if m:
+                akt = m.group(1)
+            if akt and "ABGESCHNITTEN" in z:
+                eigen.add(akt)
+        for nr, z in enumerate(zeilen, 1):
+            if _fixtur(z) or z.lstrip().startswith("#"):
+                continue
+            m = TRAP_STELLE.search(z)
+            if m and ("abschnitt_ende" in m.group(1)
+                      or any(f in m.group(1) for f in eigen)):
+                return nr
+        return None
+    for nr, z in enumerate(zeilen, 1):
+        if _fixtur(z) or z.lstrip().startswith("#"):
+            continue
+        if "abschnitt.fahre(" in z:
+            return nr
+    return None
+
+
+def _in_funktion(zeilen, nr, ist_shell):
+    """Does line `nr` (1-based) sit inside a function body?"""
+    if ist_shell:
+        offen = 0
+        for z in zeilen[:nr - 1]:
+            if SH_FUNKTION.match(z):
+                offen += 1
+            elif offen and z[:1] == "}":
+                offen -= 1
+        return offen > 0
+    s = zeilen[nr - 1]
+    tiefe = len(s) - len(s.lstrip())
+    if tiefe == 0:
+        return False
+    return any(m and len(m.group(1)) < tiefe
+               for m in (PY_DEF.match(zeilen[j]) for j in range(nr - 2, -1, -1)))
+
+
+def stelle_gedeckt(zeilen, nr, ist_shell, ab):
+    """Is the exit on line `nr` covered by the wiring that starts on line `ab`?"""
+    if ab is None:
+        return False
+    if ist_shell:
+        return nr > ab or _in_funktion(zeilen, nr, True)
+    return _in_funktion(zeilen, nr, False)
 
 # **WHO READS `git` -- AND WHAT DOES HE DO WITHOUT A REPOSITORY?**
 # ------------------------------------------------------------------
@@ -665,9 +758,11 @@ def teilmessungen(pfade):
     offen = {}
     for p in pfade:
         t = p.read_text(encoding="utf-8", errors="replace")
-        sagt = bool(SAGT_WO.search(t))
+        ist_shell = p.suffix == ".sh"
+        zeilen = t.splitlines()
+        ab = deckung_ab(t, ist_shell)
         n_offen = 0
-        for _, wert, beendet, ist_teil in schnitt_stellen(t, p.suffix == ".sh"):
+        for nr, wert, beendet, ist_teil in schnitt_stellen(t, ist_shell):
             gesamt += 1
             if not beendet:
                 continue
@@ -678,7 +773,7 @@ def teilmessungen(pfade):
             if not ist_teil:
                 continue
             teil += 1
-            if sagt:
+            if stelle_gedeckt(zeilen, nr, ist_shell, ab):
                 gedeckt += 1
             else:
                 n_offen += 1
@@ -702,6 +797,13 @@ def teilmessungen(pfade):
 # **The ratchet stands at 0, and that is not a finish line.** A covered site still cuts the
 # run -- it merely SAYS so, and `abnahme.py` prints it as `TEILMESSUNG` instead of as a
 # finding. What is measured here is whether the cut is announced, never whether it is right.
+#
+# **2026-08-31, second reading: the count moved from PER FILE to PER PLACE, and the mark did
+# not move.** That is a measurement, not luck: all 92 dangerous places in 25 files sit behind
+# their own wiring, the two tightest being `pruefe-beweise.sh` (trap on line 21, first exit
+# on 72) and `pruefe-syntax.sh` (11 / 70) -- both pulled up the evening before. *Had the mark
+# risen here, it would have been a CORRECTION and not a regression*, because the coarser
+# count could only ever have been too kind. It did not rise.
 MARKE_TEILMESSUNG = 0
 
 
@@ -799,6 +901,63 @@ def sprechprobe_schale():
     ]
 
 
+# **The speech test of the PER-PLACE count, in both directions** -- and the first one is the
+# one that matters: an uncovered place in an otherwise covered file HAS to stand out.
+# *A coverage rule that cannot fail anywhere covers everything.*
+DECKUNG_SPAET = "\n".join([          # shell: one `exit 1` above the trap, one below
+    '"echo a"',
+    '"exit 2"',
+    '"echo b"',
+    '"exit 1"',
+    '"echo c"',
+    '"trap \'abschnitt_ende\' EXIT"',
+    '"echo d"',
+    '"exit 1"',
+    '"echo e"',
+])
+DECKUNG_MODUL = "\n".join([          # python: an exit at MODULE level, before `fahre`
+    '"import sys"',
+    '"print(2)"',
+    '"sys.exit(2)"',
+    '"print(3)"',
+    '"sys.exit(1)"',
+    '"print(4)"',
+    '"def main():"',
+    '"    print(5)"',
+    '"    return 1"',
+    '"print(6)"',
+    '"sys.exit(abschnitt.fahre(main))"',
+])
+
+
+def sprechprobe_deckung():
+    """`[(what, ok)]` -- the per-place count must bite above a trap and hold below it."""
+    def messe(vorlage, ist_shell):
+        text = "\n".join(z.strip().strip('"').replace("\\'", "'")
+                          for z in vorlage.splitlines())
+        zeilen = text.splitlines()
+        ab = deckung_ab(text, ist_shell)
+        aus = [(nr, stelle_gedeckt(zeilen, nr, ist_shell, ab))
+               for nr, wert, beendet, teil in schnitt_stellen(text, ist_shell)
+               if beendet and wert == "1" and teil]
+        return ab, aus
+    ab_sh, sh = messe(DECKUNG_SPAET, True)
+    ab_py, py = messe(DECKUNG_MODUL, False)
+    return [
+        ("die Falle wird an ihrer ZEILE gefunden, nicht irgendwo", ab_sh == 6),
+        ("Schale: ein `exit 1` UEBER der Falle faellt auf -- und der darunter nicht",
+         sh == [(4, False), (8, True)]),
+        ("Python: ein Ausgang auf MODULEBENE ist ungedeckt, einer in `main` gedeckt",
+         py == [(5, False), (9, True)]),
+        ("das blosse WORT deckt nicht -- ohne Verdrahtung gibt es keine Zeile",
+         deckung_ab("# ABGESCHNITTEN in: nirgends\nimport abschnitt\n", False) is None),
+        ("und je DATEI gezaehlt saehe genau diese Probe GRUEN aus",
+         all(bool(SAGT_WO.search("\n".join(z.strip().strip('\"')
+                                           for z in v.splitlines())))
+             for v in (DECKUNG_SPAET, DECKUNG_MODUL))),
+    ]
+
+
 def sprechprobe_sieb():
     """`[(what, ok)]` -- four directions, and only the last one gets through the sieve."""
     def zaehle(text):
@@ -861,6 +1020,9 @@ def main():
     for was, sieb_ok in sprechprobe_sieb():
         print(f"  Sieb:           {'ok' if sieb_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and sieb_ok
+    for was, dk_ok in sprechprobe_deckung():
+        print(f"  Deckung/Stelle: {'ok' if dk_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and dk_ok
     for was, git_ok in sprechprobe_git():
         print(f"  git-Riegel:     {'ok' if git_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and git_ok
@@ -975,7 +1137,10 @@ def main():
     print(f"   haben. Von ihnen tragen {teil} Ausgabe auf BEIDEN Seiten -- davor eine halbe")
     print("   Messung, dahinter das, was nie lief. *Das ist die gefaehrliche Menge, und sie")
     print("   ist die kleine.*")
-    print(f"   {gedeckt} davon stehen in Dateien, die `ABGESCHNITTEN in:` drucken -- gedeckt.")
+    print(f"   {gedeckt} davon sind gedeckt -- **je STELLE gezaehlt, nicht je Datei**: die")
+    print("   Zeile liegt hinter der `EXIT`-Falle (Schale) oder in einem `def`, das `fahre()`")
+    print("   umschliesst (Python). *Eine Falle auf halber Hoehe deckt nichts darueber, und")
+    print("   das Wort `ABGESCHNITTEN` in der eigenen Beschreibung deckt gar nichts.*")
     print(f"   **{n_offen} bleiben offen, in {len(offen)} Dateien** (Ratsche "
           f"{MARKE_TEILMESSUNG}):")
     for name, n in sorted(offen.items(), key=lambda r: (-r[1], r[0]))[:8]:
@@ -1095,8 +1260,17 @@ def main():
     print("  Ruecklaufwert 124 traf. **Die Frist war da, die Forderung nicht erfuellt.**")
     print(f"  {len(SCHWER)} Waechter sind zu schwer fuer den Lauf hier und stehen mit Grund")
     print("  daneben; ihre Frist ist damit nur statisch geprueft.")
+    # **From here on nothing more is measured** -- everything above has run, and both the
+    # green end and the red one are complete.
+    _abschnitt.fertig()
     return 1 if befunde else 0
 
 
+# **AND THE GUARD OVER THE GUARDS ANNOUNCES ITS OWN CUT** -- since 2026-08-31.
+# It counted 92 covered places and was not among them, because its own dangerous set is
+# empty today. *That is a reason to be exempt from the FINDING, never from the FORM* -- a
+# crash halfway through this file would have cut every measurement below it and said
+# nothing, and the reader would have had the sections above and no hint that the rest was
+# missing. Same class, applied to the tool that names the class.
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_abschnitt.fahre(main))
