@@ -116,6 +116,7 @@ def haupt() -> int:
     # Vor dem 2026-08-20 nannten weder `m1.rs` noch `paarung.rs` das Wort `ItemArt::Check`.
     # Ein Waechter, der das nicht faende, misst nichts -- also wird es hier geprueft, indem
     # der Text kuenstlich um die beiden Vorkommen gekuerzt wird.
+    # speech_test: begin
     print("== Sprechprobe: findet der Waechter den Fall vom 2026-08-20? ==")
     ohne = {p: re.sub(r"ItemArt::Check", "ItemArt::XXX", quelle(p)) for p in ("m1", "paarung")}
     leser_ohne = [
@@ -131,6 +132,7 @@ def haupt() -> int:
         return 2
 
     print()
+    # speech_test: end
     print("== Und was das NICHT heisst ==")
     print("  Eine besetzte Zelle sagt nur, dass der QUELLTEXT den Namen nennt -- nicht, dass")
     print("  er den Rumpf betritt, und schon gar nicht, dass er ihn richtig behandelt. Die")

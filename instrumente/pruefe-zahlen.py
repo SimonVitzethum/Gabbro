@@ -1120,6 +1120,7 @@ def main():
 
     # **Die Sprechprobe zuerst, und in beide Richtungen.** Eine verstellte Zahl MUSS fallen,
     # eine unverstellte NICHT -- sonst misst dieses Werkzeug seine eigene Nachsicht.
+    # speech_test: begin
     print("== Sprechprobe des Waechters ==")
     # **Auch der Fixpunktriegel muss beissen koennen.** Ein Riegel, der nie zuschlaegt, ist
     # von einem fehlenden nicht zu unterscheiden -- genau das war die Zeitgrenze in
@@ -1197,6 +1198,7 @@ def main():
     print(f"  ok -- alle {len(EINTRAEGE)} Eintraege fallen, wenn ihre Zahl verstellt wird")
     print()
 
+    # speech_test: end
     befunde, geprueft, bewacht, ausgesetzt = pruefe_eintraege()
     print("== Kennzahlen gegen ihren Befehl ==")
     print(f"  {geprueft} von {len(EINTRAEGE)} Eintraegen nachgerechnet")

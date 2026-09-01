@@ -95,6 +95,7 @@ def main():
         return 2
     # **Sprechprobe, in beide Richtungen.** Eine erfundene Datei mit einem Fehler MUSS als
     # Fehler gezaehlt werden, eine leere nicht als null Dateien durchgehen.
+    # speech_test: begin
     probe = KORPUS / "_sprechprobe.gab"
     probe.write_text("module p { impl fn f() -> u32 { return zzunbekannt; } }\n", encoding="utf-8")
     try:
@@ -107,6 +108,7 @@ def main():
         return 2
     print(f"== Sprechprobe: ok (eine erfundene kaputte Datei zaehlt {f_probe} Fehler) ==\n")
 
+    # speech_test: end
     sauber = senken = 0
     zeilen = []
     for p in dateien:

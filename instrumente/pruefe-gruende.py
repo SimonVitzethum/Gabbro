@@ -171,6 +171,7 @@ def haupt() -> int:
     # gefunden wurde. Geprueft wird gegen die WORTLAUTE VON DAMALS -- nicht gegen die
     # heutigen, denn drei davon sind inzwischen nachgezogen.
     print()
+    # speech_test: begin
     print("== Sprechprobe: findet die Zaehlung die vier bekannten Instanzen? ==")
     damals = {
         "N011 (2026-08-19)": "is a ghost type and cannot lie in a slot field "
@@ -226,6 +227,7 @@ def haupt() -> int:
         return 2
 
     print()
+    # speech_test: end
     print("== Und was das NICHT heisst ==")
     print("  Gezaehlt wird ueber eine GESCHLOSSENE Wortliste. Eine Regel, die ihren Grund")
     print("  mit anderen Woertern sagt, faellt hier nicht auf -- die Zaehlung verpflichtet,")

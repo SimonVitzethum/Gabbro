@@ -158,6 +158,7 @@ def main():
         return 2
 
     # ---- Sprechprobe: was der Korpus nicht ausloest, muss die Probe ausloesen -------------
+    # speech_test: begin
     probe = W / "beispiele" / "_zeremonieprobe.gab"
     probe.write_text(PROBE, encoding="utf-8")
     try:
@@ -169,6 +170,7 @@ def main():
               "„0 redundant“ ununterscheidbar von einem blinden Werkzeug.", file=sys.stderr)
         return 2
 
+    # speech_test: end
     stumm = sorted(k for k in regeln if k not in treffer and k not in p_treffer)
     print("== Sprechprobe ==")
     print(f"  {len(regeln)} Regeln in der Tafel, jede mit Grund")

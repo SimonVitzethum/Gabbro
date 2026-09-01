@@ -379,10 +379,20 @@ def unsichere_stellen(wurzel, ergebnisse):
     errs downwards and the upper end upwards, and the truth lies between two counted numbers
     instead of behind an adverb.*
 
-    **What is NOT built and what it would take:** a line trace per run
-    (`zaehle-probenzweige.py` already keeps one) would say which function a run entered at all
-    and could tighten the lower end. Measured today that is worth **two places of 94** --
-    Regel A: the need is measured, not assumed.
+    **What is NOT built, what it would take, and the granularity that decides it**
+    (measured 2026-09-01, `messung/UNTERE-GRENZE.md`). A line trace per run
+    (`zaehle-probenzweige.py` already keeps one) could tighten the lower end, and the size of
+    the prize is **two places of 94 -- 2,1 %**. Regel A: the need is measured, not assumed,
+    and this one is not there.
+
+    > **But the sentence that stood here named the WRONG instrument, and the measurement
+    > found it.** It said a trace *"would say which function a run entered at all"*, and all
+    > seven uncertain places today sit in the body of `main`. A function-level trace therefore
+    > reports **7 of 7 reached**, takes the uncertainty to zero and prints
+    > `47 von 94 -- 50 %` **without an interval** -- the exact adverb-shaped claim this
+    > interval was built to replace. Only a LINE-level criterion (did the guarding line
+    > itself run?) gives the honest 2 of 7. *A refusal that names a mechanism has to name the
+    > right one; the number was right and the reason underneath it was not.*
     """
     je = {p.name: teilmessungen([p])[3] for p in besetzung(wurzel)}
     aus = {}

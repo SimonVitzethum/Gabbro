@@ -144,6 +144,7 @@ if tot:
 #
 # Sie schiebt ein erfundenes Terminal in eine KOPIE der Grammatik und verlangt, dass es als
 # „nicht in der Tabelle" faellt. Die andere Richtung ist der Lauf darueber: er meldet nichts.
+# speech_test: begin
 if "--probe" not in sys.argv:
     import subprocess, tempfile, os
     kopie = d.replace("```ebnf\n", '```ebnf\nzzprobe = "zzsprechprobe" ;\n', 1)
@@ -170,4 +171,5 @@ if "--probe" not in sys.argv:
         # gap that this run never looked for.
         sys.exit(2)
 
+# speech_test: end
 sys.exit(1 if (fehlt or tot or tot_regel) else 0)
