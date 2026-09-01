@@ -29,11 +29,11 @@ import pathlib, subprocess, re, sys
 # > dieser hier SCHREIBT in die Quellen, die er misst.
 W = pathlib.Path(__file__).resolve().parent.parent; C = W/"crates/gabbro-check/src"
 
-# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
-# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
-# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+# **Every execution with a deadline.** A hang looks like "still running", not like a finding
+# -- on 2026-08-20 twenty-one runs of `pruefe-emission.sh` stood side by side because of it,
+# the oldest for three and a half hours.
 FRIST = 1800
-# (Datei, alte Zeile aus Lauf 1, Verdrehung) -- ueber den INHALT gesucht, nicht ueber die Nummer.
+# (file, old line from run 1, twist) -- looked up by CONTENT, never by line number.
 LUECKEN = [
  # **NULLMUTATION, bewiesen** (2026-08-19) -- keine Luecke, sondern eine Verdrehung ohne
  # Wirkung. Zwei Zeilen darueber steht `if b.enthaelt_null() { return … }`, und
@@ -62,24 +62,23 @@ LUECKEN = [
  ("umgebung.rs", "BinOp::Oder => i128::from(x != 0 || y != 0),", "BinOp::Oder => i128::from(x != 0 && y != 0),"),
  ("umgebung.rs", "BinOp::Oder => i128::from(x != 0 || y != 0),", "BinOp::Oder => i128::from(x != 1 || y != 0),"),
  ("umgebung.rs", ".unwrap_or_else(|| IntBereich::voll(32, false));", ".unwrap_or_else(|| IntBereich::voll(33, false));"),
- # **BEIDE Anker in `kosten.rs` standen TOT da, und zwar seit `self.block()` einen
- # `lokal`-Parameter bekam** (nachgemessen 2026-08-31 im ersten Lauf, den es je gab).
- # Der Lauf meldete `-- ANKER WEG` und `== LUECKEN: FEHLER ==` mit Ruecklaufwert 1 --
- # und `11 von 11` darueber. **Zwei der dreizehn echten Verdrehungen hatten schlicht
- # keinen Gegenstand mehr**, und der Nenner sagte es nicht: `11 von 11` ist wahr und
- # zaehlt ueber elf, wo dreizehn stehen sollten (W25).
+ # **BOTH anchors in `kosten.rs` stood DEAD, and had done since `self.block()` gained a
+ # `lokal` parameter** (measured 2026-08-31, in the first run there had ever been). The run
+ # reported `-- ANKER WEG` and `== LUECKEN: FEHLER ==` with return code 1 -- and `11 von 11`
+ # above it. **Two of the thirteen real twists simply had no subject any more**, and the
+ # denominator did not say so: `11 von 11` is true and counts over eleven where thirteen
+ # should stand (W25).
  #
- # > *Ein Anker, der ins Leere zeigt, sagt nichts -- und ein Nenner, der sich still an ihn
- # > anpasst, sagt Falsches.*
+ # > *An anchor that points into nothing says nothing -- and a denominator that quietly
+ # > adapts to it says something false.*
  #
- # **Warum es niemand sah:** diese Datei war bis heute nie gefahren worden. Sie stand in
- # `SCHWER`, der Schnellauf liess sie aus, und `--voll` lief nicht. *Ein Anker verwittert
- # in genau dem Tempo, in dem der Baum sich bewegt, und ein Werkzeug, das nicht faehrt,
- # merkt davon nichts.*
+ # **Why nobody saw it:** this file had never been run until that day. It stands in `SCHWER`,
+ # the quick run leaves it out, and `--voll` did not run. *An anchor weathers at exactly the
+ # rate the tree moves, and a tool that does not run notices none of it.*
  ("kosten.rs", "XForm::Update { rumpf, .. } => Kosten::Zahl(1).plus(self.block(rumpf, lokal)),", "XForm::Update { rumpf, .. } => Kosten::Zahl(2).plus(self.block(rumpf, lokal)),"),
- # Der Anker wanderte, als `let … else` eine `place`-Quelle bekam (`als_ruf`): der Ruf
- # steht seitdem in einem `match`, nicht mehr in der Zeile. Nachgezogen 2026-08-19,
- # und am 2026-08-31 ein zweites Mal -- diesmal um den `lokal`-Parameter.
+ # The anchor moved when `let … else` gained a `place` source (`als_ruf`): the call has stood
+ # in a `match` since then, not in the line. Pulled up 2026-08-19, and a second time on
+ # 2026-08-31 -- that time around the `lokal` parameter.
  ("kosten.rs", "Kosten::Zahl(1).plus(quelle).plus(self.block(&l.sonst, lokal))", "Kosten::Zahl(2).plus(quelle).plus(self.block(&l.sonst, lokal))"),
  ("kbedingung.rs", "let (mut haelt, mut faellt) = (0, 0);", "let (mut haelt, mut faellt) = (1, 0);"),
  ("schablonen.rs", "n + 1,", "n + 2,"),
@@ -184,14 +183,14 @@ def beleg(r, wieviel=20):
 
 
 print("== Sprechprobe ==")
-# **`--no-fail-fast`, und der Grund steht in `CLAUDE.md`.** Der Nullauf beantwortet nicht
-# „faellt mindestens eine", sondern „steht der Baum gruen" -- und wenn er rot ist, gehoert
-# der GANZE Grund in den Beleg darunter und nicht die erste gefallene Probe. Gruen kostet es
-# nichts: dann laufen ohnehin alle.
+# **`--no-fail-fast`, and the reason stands in `CLAUDE.md`.** The zero run does not answer
+# "does at least one fall", it answers "is the tree green" -- and when it is red, the WHOLE
+# reason belongs in the evidence below, not the first fallen probe. Green it costs nothing:
+# then they all run anyway.
 #
-# *In den dreizehn Verdrehungsläufen weiter unten steht es NICHT, und das ist Absicht:* dort
-# ist die Frage wirklich „faellt mindestens eine", und ein Abbruch beim ersten Treffer ist
-# dort die richtige und die billigere Messung.
+# *In the thirteen twist runs further down it is NOT set, and that is deliberate:* there the
+# question really is "does at least one fall", and stopping at the first hit is the right and
+# the cheaper measurement.
 _r = subprocess.run(["cargo", "test", "--quiet", "--no-fail-fast"], cwd=W,
                     capture_output=True, timeout=FRIST)
 if _r.returncode != 0:
@@ -224,13 +223,13 @@ for eintrag in LUECKEN:
     p.write_text(t)
     if r.returncode != 0: zu += 1; print(f"  GEFANGEN     {d}: {alt[:56]}")
     else: offen.append((d,alt)); print(f"  !! ENTKOMMEN {d}: {alt[:56]}")
-# **DER NENNER IST DIE ZAHL DER BENANNTEN VERDREHUNGEN, NICHT DIE DER GEMESSENEN**
-# (2026-08-31, W25). Bis heute stand hier `{zu} von {zu+len(offen)}` -- ein Nenner, der sich
-# still um jeden toten Anker VERKLEINERT. Der erste Lauf, den es je gab, druckte deshalb
-# `11 von 11` ueber dreizehn benannte Verdrehungen, von denen zwei keinen Gegenstand mehr
-# hatten. **Die Zahl war wahr und ihr Nenner der falsche** -- und ein `11 von 11` liest sich
-# wie ein voller Nachweis. Jetzt stehen beide Zahlen da, und die Luecke zwischen ihnen ist
-# genau die Zahl der toten Anker.
+# **THE DENOMINATOR IS THE NUMBER OF NAMED TWISTS, NOT THE NUMBER MEASURED**
+# (2026-08-31, W25). Until that day this read `{zu} von {zu+len(offen)}` -- a denominator that
+# quietly SHRINKS around every dead anchor. The first run there had ever been therefore
+# printed `11 von 11` over thirteen named twists, two of which had no subject left. **The
+# number was true and its denominator the wrong one** -- and an `11 von 11` reads like a full
+# proof. Both numbers stand there now, and the gap between them is exactly the number of dead
+# anchors.
 _benannt = len(LUECKEN) - len(null)
 print(f"\n== {zu} von {zu+len(offen)} GEMESSENEN Verdrehungen sind ZU -- "
       f"und BENANNT sind {_benannt} ==")

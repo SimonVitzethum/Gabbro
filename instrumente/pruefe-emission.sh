@@ -822,7 +822,7 @@ int main(void) {
 lauf "fragment4" "$W/messung/fragmente/F04.gab" "$TREIBER4" \
      "42 1 7 99" \
      's/% q->n/% 1/g' \
-     "2 assumptions (0 of them NOT FALSIFIABLE, 2 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "3 assumptions (0 of them NOT FALSIFIABLE, 3 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 4d. Das Fragment F6: die Stack-Wasserstandsmarke, und sie MISST DEN INDEX ------------
 #

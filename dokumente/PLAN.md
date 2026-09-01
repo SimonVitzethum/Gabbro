@@ -1507,7 +1507,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 | | Ziel | heute | |
 |---|---|---|---|
-| `H` | 0 | **5** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ **0 verankert + 4 Absenkungen** (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
+| `H` | 0 | **4** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ **0 verankert + 4 Absenkungen** (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
 | `L` | ≤ 4 | **2** | getragen und unbewiesen; daneben aber **6 Prämissen ohne Pass**. *Der Anstieg 1 → 2 am 2026-08-28 ist der PREIS von Zuschnitt (c):* `table.ops.erhaltung` ging von ENTWORFEN auf GETRAGEN, weil `emit.rs::ops` `insert`/`remove` jetzt ausliefert und `relabel` mit `umhaengen_faellt` absagt. **Genau diese Bewegung soll die Zahl sichtbar machen** — eine Klempnereipflicht wurde nicht erledigt, sondern in die Erzeugerfläche verschoben |
 | `A` | 19 | **40** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
@@ -3386,7 +3386,7 @@ der zweite Korpus.
 ## Wo wir stehen, gemessen und nicht behauptet
 
 ```
-H = 5        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
+H = 4        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
              -- 2026-08-31 von 5 auf 4: F6 ist durchgestochen
 ```
 
@@ -3403,7 +3403,7 @@ irgendwann, eine fehlende nie.
 | **Fremdpflichten** | **11** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
 | **Vorbedingungen am Rufort** | **15** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **6** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
-| **Absenkungspflichten** | **5** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
+| **Absenkungspflichten** | **4** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
 > fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt
@@ -4545,7 +4545,19 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
 
 - [ ] `pruefe-luecken.py`: **null von fünfzehn Verdrehungen je gefahren.** Der Zweig
       `92 von 92` ruht auf einer Sprechprobe. *Dieselbe Form wie der maskierende `panic!`.*
-- [ ] Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**
+- [x] ~~Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**~~
+      **Gemessen und entschieden** (2026-09-01, `messung/ABNAHME-STELLEN.md`). Der volle Lauf
+      kostet **23 min 10 s** und druckte `hoechstens 94 von 94 -- 100 %` — *während
+      `pruefe-emission.sh`, das 45 dieser 94 trägt, nach **2,8 Sekunden** abgeschnitten
+      dastand, vier Blöcke tiefer in derselben Ausgabe.* **`besucht` hiess `gestartet`.**
+      Schneiden lohnt nicht: der einzige Hebel mit Masse kostet +32,8 s (+15 %) und hebt nur
+      die OBERE Grenze; sein Grund in `SCHWER` ist ohnehin der Ort und nicht die Zeit.
+      Gebaut wurde deshalb der schärfere Satz: **ein Intervall statt `hoechstens`** —
+      `zwischen 38 und 47 von 94 -- 40 bis 50 %`, mit den unsicheren Stellen samt Grund und
+      dem Satz, dass **eine Datei 48 % des Nenners trägt.** Der volle Lauf fand dabei zwei
+      Dinge, die kein Schnelllauf sehen kann: überlebende Mutationen und eine
+      Zeugnisbuchung, die seit `c887a9d` (22 Stunden) tot war — und hinter deren Schnitt
+      **drei weitere Befunde** lagen.
 - [x] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
       hat?** ~~Heute unbekannt.~~ **`12 von 43`, 167 Anweisungszeilen** (2026-09-01,
       `instrumente/zaehle-probenzweige.py`, `messung/PROBENZWEIGE.md`). *Und der Nenner ist

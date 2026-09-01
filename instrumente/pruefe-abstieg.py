@@ -183,26 +183,25 @@ def je_funktion(ganz, arten):
         # Nur Wege, die ueberhaupt absteigen wollen: wer keinen einzigen Unterblock
         # anfasst, ist ein Blattpruefer und keine Luecke.
         #
-        # **Und `matches!` zaehlt dabei NICHT als Anfassen** (2026-09-01). `m2::endet` fragt
-        # `matches!(&s.art, StmtArt::Match(m) if m.zweige.is_empty())` fuer den leeren
-        # `match` und steigt in keinen einzigen Block ab -- es liest `b.anweisungen.last()`
-        # und reicht die Frage an `crate::endet_immer` weiter. Der Waechter las die eine
-        # Erwaehnung als Abstiegsabsicht und meldete acht fehlende Arten.
+        # **And a `matches!` does NOT count as touching** (2026-09-01). `m2::endet` asks
+        # `matches!(&s.art, StmtArt::Match(m) if m.zweige.is_empty())` for the empty `match`
+        # and descends into no block at all -- it reads `b.anweisungen.last()` and hands the
+        # question on to `crate::endet_immer`. This guard read the one mention as an intention
+        # to descend and reported eight missing kinds.
         #
-        # **Der Ausloeser ist die REPARATUR eines frueheren Befunds gewesen.** Am 2026-08-30
-        # bekam `endet` einen erschoepfenden `match` ueber alle Arten und der Waechter wurde
-        # gruen; am 2026-08-31 wurde genau der als *viertes Register von `Return|Leave|Next`*
-        # erkannt und zu `crate::endet_immer` zusammengelegt -- und damit fiel die
-        # Artenliste weg, die den Waechter zufriedenstellte.
+        # **What triggered it was the REPAIR of an earlier finding.** On 2026-08-30 `endet`
+        # got an exhaustive `match` over every kind and this guard went green; on 2026-08-31
+        # that very match was recognised as a FOURTH register of `Return|Leave|Next` and
+        # folded into `crate::endet_immer` -- and with it went the list of kinds that had
+        # satisfied this guard.
         #
-        # > **Ein Waechter, der einen Abstieg an den Arten erkennt, die eine Funktion NENNT,
-        # > belohnt die vierte Kopie und bestraft die Zusammenlegung.** Das ist die
-        # > Gegenrichtung zu `W7`, und sie stand hier zwei Tage in der Regel.
+        # > **A guard that recognises a descent by the kinds a function NAMES rewards the
+        # > fourth copy and punishes the consolidation.** That is the opposite direction to
+        # > `W7`, and it stood in the rule for two days.
         #
-        # Die Vergroeberung ist einseitig und darum sicher: `fehlt` unten liest weiterhin den
-        # GANZEN Rumpf, eine Art also, die nur ueber ein `matches!` behandelt wird, gilt
-        # weiter als gedeckt. *Eine Erwaehnung genuegt zum Decken; nur zum ABSTEIGEN gehoert
-        # eine Weiche.*
+        # The coarsening is one-sided and therefore safe: `fehlt` below still reads the WHOLE
+        # body, so a kind handled only through a `matches!` still counts as covered. *A
+        # mention is enough to cover; only DESCENDING needs a switch.*
         if not any(re.search(r"StmtArt::" + a + r"\b", ohne_wachen(rumpf)) for a in arten):
             continue
         fehlt = [a for a in arten if not re.search(r"StmtArt::" + a + r"\b", rumpf)]

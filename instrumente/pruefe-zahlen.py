@@ -82,7 +82,11 @@ EINTRAEGE = [
         # reference set is half of the claim, and a figure vouches for its denominator, not
         # for its caption (W25). The self-check above turns a forgotten carry into a fallen
         # speech test rather than a silent entry.
-        r"\*\*(\d+) von 51\*\* Wächtern können mitten im Lauf",
+        # **The DENOMINATOR stays open in the pattern** (2026-09-01). It pinned 51, and
+        # the day a 52nd instrument arrived the entry went silent instead of red -- the
+        # guard's own fixed-point bolt caught it. *A pattern that pins the denominator stops
+        # watching the numerator the moment the population moves.*
+        r"\*\*(\d+) von \d+\*\* Wächtern können mitten im Lauf",
         ["./instrumente/pruefe-waechter.py"],
         r"^== Ein Abbruch MITTEN im Lauf: (\d+) von \d+ koennen",
         "Waechter, die mitten im Lauf abbrechen koennen",
