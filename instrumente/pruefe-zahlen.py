@@ -132,7 +132,12 @@ EINTRAEGE = [
     ),
     (
         "messung/netz/README.md",
-        r"(\d+) von 3 Proben grün",
+        # **The figure sits inside a QUOTED TRANSCRIPT of `zaehle-netz.py`.** Its German is
+        # the tool's output, not the document's prose, so the translation of that file left
+        # it standing -- *a quoted run is evidence, and a translated transcript is not one.*
+        # The English alternative is here for the day the tool's own output moves, not for
+        # the day the document did.
+        r"(\d+) (?:von 3 Proben grün|of 3 probes green)",
         ["./instrumente/zaehle-netz.py"],
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
@@ -166,14 +171,15 @@ EINTRAEGE = [
     # Commits aelter, und drei Kennungen aus Stufe 6 standen ohne Satz da.
     (
         "messung/PASSREGISTER.md",
-        r"\| Sätze im Register \| \*\*(\d+)\*\* \|",
+        r"\| (?:Sätze im Register|Sentences in the register) \| \*\*(\d+)\*\* \|",
         ["./instrumente/pruefe-saetze.py"],
         r"^   (\d+) Saetze beanspruchen \d+ Kennungen",
         "Saetze im Passregister",
     ),
     (
         "messung/PASSREGISTER.md",
-        r"\| \*\*Kennungen ohne Satz — die Ratsche\*\* \| \*\*(\d+)\*\* \|",
+        r"\| \*\*(?:Kennungen ohne Satz — die Ratsche"
+        r"|Codes without a sentence — the ratchet)\*\* \| \*\*(\d+)\*\* \|",
         ["./instrumente/pruefe-saetze.py"],
         r"^== Zahn 2: (\d+) von \d+ Kennungen ohne Satz ==",
         "Zahn 2 -- Kennungen ohne Satz",
@@ -382,14 +388,15 @@ EINTRAEGE = [
     ),
     (
         "messung/FREMDVERENGUNG.md",
-        r"\| \*\*(\d+)\*\* \| davon \*\*verengt wirklich\*\*",
+        r"\| \*\*(\d+)\*\* \| (?:davon \*\*verengt wirklich|of those \*\*really narrows)\*\*",
         ["./instrumente/zaehle-fremdverengung.py"],
         r"== (\d+) wirksame Fremdverengungen",
         "wirksame Fremdverengungen im Korpus -- die Zahl mit Wirkung im Erzeugnis",
     ),
     (
         "messung/FREMDVERENGUNG.md",
-        r"\| \*\*(\d+)\*\* \| davon \*\*sprechen ihre Pflicht aus\*\*",
+        r"\| \*\*(\d+)\*\* \| (?:davon \*\*sprechen ihre Pflicht aus"
+        r"|of those \*\*state their duty)\*\*",
         ["./instrumente/zaehle-fremdverengung.py"],
         r"aus (\d+) ausgesprochenen Vertr",
         "fremde Ruempfe, die ihre Pflicht aussprechen",
@@ -1016,6 +1023,20 @@ def _prosa(muster):
     return _ESCAPE.sub(" ", muster)
 
 
+def im_codeblock(text, pos):
+    """Steht `pos` innerhalb eines ``` -Blocks?
+
+    **A quoted run is EVIDENCE, and evidence does not get translated** -- a transcript in
+    English is no longer a transcript of anything. So a German label inside a fence does not
+    move when its document moves: it moves when the TOOL's output moves, which is a different
+    surface and a different day.
+
+    *That splits the language tail in two*, and the halves are owed different work: the prose
+    half has to be carried with the translation, the fenced half must not be touched by it.
+    """
+    return text.count("\n```", 0, pos) % 2 == 1
+
+
 def ort_von(text, pos):
     """`(line, column)` of a match -- **the PLACE, not the VALUE.**
 
@@ -1310,23 +1331,40 @@ def main():
     # the label over. **That is the size of the tail, and it belongs beside the reach and not
     # in a report**: a number that triggers work carries its handle and its denominator (W28).
     #
-    # HANDLE: the DOCUMENT pattern (not the run-output one) contains at least one word from
-    # the closed German function-word list of `pruefe-englisch.py`. Regex escapes and
-    # character classes come out first, so `\d` and `[^\n]` cannot be mistaken for prose.
+    # HANDLE: the TEXT THE ENTRY MATCHES TODAY carries at least one word from the closed
+    # German function-word list of `pruefe-englisch.py`.
+    #
+    # **The measurement is on the DOCUMENT, not on the pattern**, and the first version of it
+    # got that wrong: it tested the regex, so a pattern that had ALREADY been made bilingual
+    # still counted as German -- its German alternative was still in there. *A tool that reads
+    # its own readiness instead of its object counts the work it has done as work outstanding.*
+    #
     # *That is a LOWER bound* -- a German label built only from technical nouns
     # (`Kennzahlen`, `Terminale`) carries no function word and is not counted here (W10).
-    de_gebunden = [e for e in EINTRAEGE if _pe.deutsch(_prosa(e[1]))]
-    je_datei = {}
-    for e in de_gebunden:
+    je_datei, in_prosa, in_block, de_gebunden = {}, [], [], []
+    for e in EINTRAEGE:
+        p = W / e[0]
+        if not p.is_file():
+            continue
+        t_text = p.read_text(encoding="utf-8")
+        t = re.search(e[1], t_text)
+        if not t or not _pe.deutsch(t.group(0)):
+            continue
+        de_gebunden.append(e)
         je_datei[e[0]] = je_datei.get(e[0], 0) + 1
+        (in_block if im_codeblock(t_text, t.start()) else in_prosa).append(e)
     print()
     print(f"== Sprachbindung: {len(de_gebunden)} von {len(EINTRAEGE)} Beschriftungen sind "
           f"DEUTSCH ==")
     for datei, n in sorted(je_datei.items(), key=lambda x: (-x[1], x[0])):
         print(f"   {n:3d}  {datei}")
-    print("   Jede davon meldet UNBEWACHT, sobald ihr Dokument uebersetzt wird -- laut, nicht")
-    print("   still (die Sprechprobe oben misst genau das). *Die Zahl ist eine UNTERE")
-    print("   Schranke:* eine Beschriftung aus lauter Fachwoertern traegt kein")
+    print(f"   davon {len(in_prosa)} in PROSA und {len(in_block)} in einem ``` -Block.")
+    print("   **Nur die Prosa-Haelfte ist Arbeit dieser Uebersetzung.** Die andere steht in")
+    print("   einem zitierten Lauf, und ein uebersetztes Protokoll ist keines mehr -- sie")
+    print("   wandert, wenn die AUSGABE des Werkzeugs wandert, und nicht vorher.")
+    print("   Jede der Prosa-Haelfte meldet UNBEWACHT, sobald ihr Dokument uebersetzt wird --")
+    print("   laut, nicht still (die Sprechprobe oben misst genau das). *Die Zahl ist eine")
+    print("   UNTERE Schranke:* eine Beschriftung aus lauter Fachwoertern traegt kein")
     print("   Funktionswort und faellt hier nicht auf (W10).")
     print()
     print("== Reichweite: was dieses Register NICHT bewacht ==")

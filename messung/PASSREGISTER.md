@@ -1,172 +1,174 @@
-# Das Passregister — 56 Sätze über zwölf Pässe
+# The pass register — 56 sentences over twelve passes
 
-*Angelegt 2026-08-21 (PL.1 + PL.2). Jede Zahl unten nennt den Befehl, der sie nachrechnet.*
+*Set up 2026-08-21 (PL.1 + PL.2). Every figure below names the command that recomputes it.*
 
-> **Der Befund, mit dem das anfing:** `struct Pass` hatte kein Feld für einen Satz. Zwölf
-> Pässe entscheiden über jedes Programm, 191 Absagekennungen — und **null Sätze**. Ohne die
-> Sätze ist *„Gabbro formal verifiziert"* nicht einmal **formulierbar**: man wüsste nicht,
-> was zu beweisen wäre.
+> **The finding this started from:** `struct Pass` had no field for a sentence. Twelve
+> passes decide about every program, 191 refusal codes — and **zero sentences**. Without the
+> sentences, *"Gabbro formally verified"* is not even **formulable**: one would not know
+> what there was to prove.
 
-## Der Stand, in Zahlen
+## The state, in figures
 
 ```bash
-cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Register
-./instrumente/pruefe-saetze.py                                       # der zweite Zahn
+cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the register
+./instrumente/pruefe-saetze.py                                       # the second tooth
 ```
 
-| | | Befehl |
+| | | Command |
 |---|---:|---|
-| Sätze im Register | **86** | `gabbro paesse` |
-| davon `measured` | **68** | ein Giftprobenfall oder eine gefangene Mutation |
-| davon **`ARGUED`** | **2** | ein Korrektheitsargument ist aufgeschrieben — [`K001`](K001.md), [`H006`](H006.md). *Das erste fand eine Unterzählung um Faktor 3; der dritte Versuch ([`V2`](V2.md)) fand statt einer Messung den [Nichtdeterminismus](DETERMINISMUS.md) und blieb `CONJECTURED`* |
-| davon `CONJECTURED` | **6** | nichts misst sie |
-| davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
-| Pässe mit mindestens einem Satz | **12 von 12** | `gabbro paesse` |
-| Kennungen im Prüfer | **243** | `./pruefe-kennungen.py` |
-| davon von einem Satz beansprucht | **198** | `./instrumente/pruefe-saetze.py` |
+| Sentences in the register | **86** | `gabbro paesse` |
+| of those `measured` | **68** | a poison-probe case or a caught mutation |
+| of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
+| of those `CONJECTURED` | **6** | nothing measures them |
+| of those `PROVED` | **0** | **that is the figure PL.2 is about** |
+| Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
+| Codes in the checker | **243** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **198** | `./instrumente/pruefe-saetze.py` |
 
-> **Die fünf Zahlen oben sind am 2026-08-31 nachgezogen, und die Ratsche STEIGT — mit Grund.**
-> Der Gegenstand ist gewachsen: `N042` kam dazu (`namen.erzeugter_name_zweimal`,
-> `messung/ERZEUGERNAMEN.md`), und `pruefe-zahlen.py` hatte 73 gegen 74 gemeldet. Die vier
-> Zahlen daneben standen noch älter da — `davon measured` auf 48 statt 67, `Kennungen` auf 191
-> statt 242. *Eine Zahl, die zu tief steht, sieht aus wie eine gehaltene Ratsche und ist eine
-> vergessene.*
+> **The five figures above were carried on 2026-08-31, and the ratchet RISES — with reason.**
+> The subject grew: `N042` came in (`namen.erzeugter_name_zweimal`,
+> `messung/ERZEUGERNAMEN.md`), and `pruefe-zahlen.py` had reported 73 against 74. The four
+> figures beside it stood there older still — `of those measured` at 48 instead of 67, `Codes`
+> at 191 instead of 242. *A figure that stands too low looks like a held ratchet and is a
+> forgotten one.*
 >
-> **Und am selben Tag noch einmal um eins, aus demselben Grund:** `N043`
-> (`namen.berichtszeile`) — ein `measures`-Name ohne Träger, `messung/TORREICHWEITE.md`.
-> 74 → 75 Sätze, 242 → 243 Kennungen, 197 → 198 beansprucht, 67 → 68 `measured`; die 45
-> ohne Satz bleiben stehen. *Der zweite Zahn, zum zweiten Mal an einem Tag.*
-| **Kennungen ohne Satz — die Ratsche** | **45** | `./instrumente/pruefe-saetze.py` |
+> **And on the same day once more by one, for the same reason:** `N043`
+> (`namen.berichtszeile`) — a `measures` name without a carrier, `messung/TORREICHWEITE.md`.
+> 74 → 75 sentences, 242 → 243 codes, 197 → 198 claimed, 67 → 68 `measured`; the 45
+> without a sentence stay standing. *The second tooth, for the second time in one day.*
+| **Codes without a sentence — the ratchet** | **45** | `./instrumente/pruefe-saetze.py` |
 
-**Die Schätzung im Plan war ~22 Sätze; es sind 43 geworden.** Der Grund ist kein
-Fleiß, sondern eine Messung: mehrere Pässe halten **zwei Aussagen verschiedener Stärke**,
-und sie in einen Satz zu schreiben hätte die schwächere unter der stärkeren versteckt.
-`kosten` ist das Beispiel — siehe unten.
+**The estimate in the plan was ~22 sentences; it became 43.** The reason is not
+diligence but a measurement: several passes hold **two claims of different strength**,
+and writing them into one sentence would have hidden the weaker under the stronger.
+`kosten` is the example — see below.
 
-## Die 45 ohne Satz sind kein Vergessen, sondern eine gezogene Linie
+## The 45 without a sentence are not an oversight but a drawn line
 
 ```
 parse.rs   37     lex.rs   7     emit.rs   1
 ```
 
-**Alle 45 liegen außerhalb der `passliste()`**: der Parser ist kein Prüfpass, der Erzeuger
-auch nicht. *Trotzdem stehen sie als offen und nicht als wegdefiniert* — ein Absagetext des
-Parsers behauptet genauso etwas über ein Programm wie einer des Kostenpasses.
+**All 45 lie outside the `passliste()`**: the parser is not a checking pass, nor is the
+generator. *They stand as open nonetheless, and not as defined away* — a refusal text of the
+parser asserts just as much about a program as one of the cost pass.
 
-> **Was nicht geht, ist die Zahl kleiner zu machen, indem man die Frage ändert.** Wer sie auf
-> null bringen will, schreibt die 45 Sätze — oder das Register bekommt eine zweite Spalte für
-> „kein Pass", und *das* ist dann eine Entscheidung mit einem Datum.
+> **What does not work is making the figure smaller by changing the question.** Whoever wants
+> it at zero writes the 45 sentences — or the register gets a second column for
+> "no pass", and *that* is then a decision with a date.
 
-## Was die Zahl 43 NICHT sagt
+## What the figure 43 does NOT say
 
-> **Ein aufgeschriebener Satz ist kein bewiesener.** Das ist der ganze Vorbehalt, und er ist
-> größer als die Leistung.
+> **A written-down sentence is not a proved one.** That is the whole reservation, and it is
+> larger than the achievement.
 
-1. **`PROVED` ist leer.** Keiner der 56 Sätze war je in Isabelle. Was das Register liefert,
-   ist die **Liste der zu beweisenden Aussagen** — der Gegenstand von PL.2, nicht sein
-   Ergebnis.
-2. **`measured` misst die UMSETZUNG, nicht die REGEL.** Eine fallende Giftprobe zeigt, dass
-   der Rust in *diesem* Fall so entscheidet, wie der Satz sagt. Sie zeigt nicht, dass er es
-   überall tut, und schon gar nicht, dass die Regel richtig ist (PLAN.md PL.3, Weg (c)).
-3. **Der Wächter zählt ZUORDNUNGEN, er liest die Sätze nicht.** Ein falscher Satz zählt wie
-   ein richtiger; ein Satz, der weniger sagt als sein Pass leistet, fällt gar nicht auf (W10).
-4. **20 der 146 beanspruchten Kennungen haben KEINE Giftprobe** — davon sind 5 Hinweise, die
-   restlichen **15 sind echte Absagen, die niemand misst**:
+1. **`PROVED` is empty.** None of the 56 sentences was ever in Isabelle. What the register
+   delivers is the **list of the claims to be proved** — the subject of PL.2, not its
+   result.
+2. **`measured` measures the IMPLEMENTATION, not the RULE.** A falling poison probe shows that
+   the Rust decides in *this* case the way the sentence says. It does not show that it does so
+   everywhere, and certainly not that the rule is right (PLAN.md PL.3, path (c)).
+3. **The guardian counts ASSIGNMENTS, it does not read the sentences.** A wrong sentence counts
+   like a right one; a sentence that says less than its pass delivers is not noticed at all (W10).
+4. **20 of the 146 claimed codes have NO poison probe** — of those 5 are hints, the
+   remaining **15 are genuine refusals that nobody measures**:
    ```
    A002 A003 E004 H004 H008 K004 L105 M106 M107 M110 M114 U001 U002 U004 U005
    ```
-   *Der Satz darüber steht trotzdem auf `measured`, weil andere Kennungen desselben Satzes
-   gemessen sind. Das ist die Vergröberung dieses Registers, und sie steht hier statt in
-   einer Fußnote.*
+   *The sentence above them stands on `measured` nonetheless, because other codes of the same
+   sentence are measured. That is the coarsening of this register, and it stands here instead
+   of in a footnote.*
 
-## Die Vorbedingung über allen 56 Sätzen: ein Hinweis ist keine Absage
+## The precondition over all 56 sentences: a hint is not a refusal
 
-`Stufe::Hinweis` zählt nicht als Fehler, und nur `Stufe::Fehler` lässt den Übersetzer
-scheitern. **Fünf Kennungen sind Hinweise: `E003`, `E009`, `V003`, `S007`, `N026`.**
+`Stufe::Hinweis` does not count as an error, and only `Stufe::Fehler` makes the compiler
+fail. **Five codes are hints: `E003`, `E009`, `V003`, `S007`, `N026`.**
 
-> **Ein Programm, das „ohne Absage" durchgeht, kann Funktionen enthalten, deren Rahmen- oder
-> Paarungsaussage der Prüfer AUSDRÜCKLICH für unentscheidbar erklärt hat.** `E009` ist der
-> ehrliche dritte Zustand (R16) — sichtbar, nicht grün. **Jeder Satz dieses Registers ist um
-> genau diesen Betrag schwächer**, und deshalb steht die Zeile im Kopf von `gabbro paesse`.
+> **A program that passes "without a refusal" can contain functions whose frame or pairing
+> claim the checker has EXPRESSLY declared undecidable.** `E009` is the honest third state
+> (R16) — visible, not green. **Every sentence of this register is weaker by exactly that
+> amount**, and that is why the line stands in the head of `gabbro paesse`.
 
-## Die drei mit der größten Traglast (PL.2)
+## The three with the greatest load-bearing (PL.2)
 
-### `K001` — die Summation, und ihr gemessener Fehler steht IM Satz
+### `K001` — the summation, and its measured error stands IN the sentence
 
-**Der Satz wurde geteilt, weil die zwei Hälften verschieden stark sind:**
+**The sentence was split because the two halves are of different strength:**
 
-| | Stand | |
+| | State | |
 |---|---|---|
-| `kosten.summation` | **measured** | Anweisungen addieren; Zweig = Maximum; was hinter einem immer verlassenden `if` steht, zählt einmal; verglichen wird bei der **kleinsten Belegung** |
-| `kosten.domaenenschranke` | **measured** | `traverse` kostet Rumpf × Schranke, und die Schranke ist eine **OBERE** Schranke aus der Deklaration — seit 2026-08-31 hat **jede der fünf Domänen** eine Probe und eine Mutation |
+| `kosten.summation` | **measured** | statements add; branch = maximum; what stands behind an always-leaving `if` counts once; the comparison is made at the **smallest assignment** |
+| `kosten.domaenenschranke` | **measured** | `traverse` costs body × bound, and the bound is an **UPPER** bound out of the declaration — since 2026-08-31 **each of the five domains** has a probe and a mutation |
 
-> **Der Fehler, sichtbar gemacht statt überschrieben:** für `mappings of` las der Pass
-> `Ebenen × Knotenlänge` = **2 048**, wo die Domäne die **Blattmenge** ist,
-> `Knotenlänge ^ Ebenen` = 512⁴ = **68 719 476 736**. **Sieben Größenordnungen, drei Tage
-> getragen** — und gefunden, weil der **Erzeuger** hineinlief, nicht weil ein Test fiel.
+> **The error, made visible instead of overwritten:** for `mappings of` the pass read
+> `levels × node length` = **2 048**, where the domain is the **leaf set**,
+> `node length ^ levels` = 512⁴ = **68 719 476 736**. **Seven orders of magnitude, carried for
+> three days** — and found because the **generator** ran into it, not because a test fell.
 >
-> Er ist korrigiert (`umgebung.rs::walkschranken`). **Der Satz steht trotzdem auf
-> `CONJECTURED`**, denn `K003` hat zwei Giftproben und die messen, dass eine **fehlende**
-> Schranke abgelehnt wird — nicht, dass eine **vorhandene** stimmt. *Genau in diesem
-> Unterschied hat der Fehler drei Tage gelebt, und jede andere Domänenschranke des Passes hat
-> dieselbe Bauart und dieselbe Prüfung: keine.*
+> It is corrected (`umgebung.rs::walkschranken`). **The sentence stands on `CONJECTURED`
+> nonetheless**, for `K003` has two poison probes and they measure that a **missing** bound is
+> rejected — not that a **present** one is right. *In exactly this difference the error lived
+> for three days, and every other domain bound of the pass has the same construction and the
+> same check: none.*
 
-### `H006` — die Rangordnung
+### `H006` — the rank ordering
 
-`sperren.rangordnung` ist **measured**, und der Satz trägt den klassischen Schluss: *jede
-Sperre hat einen zur Übersetzungszeit festen Rang, auf jedem Pfad wird nur unter einem echt
-kleineren Rang genommen, also ist kein zirkuläres Warten möglich.* **Drei Bedingungen, die
-der Satz braucht und der Pass nicht voll liefert**, stehen im `vorbehalt`: die
-Interprozeduralität gibt es erst seit 2026-08-19, über einer **unvollständigen Hülle** wird
-nicht abgesagt (R16), und gedeckt sind nur **deklarierte** Sperren.
+`sperren.rangordnung` is **measured**, and the sentence carries the classical argument: *every
+lock has a rank fixed at compile time, on every path one is taken only under a strictly
+smaller rank, hence no circular waiting is possible.* **Three conditions the sentence needs and
+the pass does not fully deliver** stand in the `vorbehalt`: interprocedurality has existed only
+since 2026-08-19, over an **incomplete hull** nothing is refused (R16), and covered are only
+**declared** locks.
 
-### V2 — die relationale Verengung: der Satz mit der größten Last und der geringsten Messung
+### V2 — relational narrowing: the sentence with the greatest load and the least measurement
 
-**`v2.relationale-verengung` steht auf `CONJECTURED`, und der Grund ist strukturell:**
+**`v2.relationale-verengung` stands on `CONJECTURED`, and the reason is structural:**
 
-> **V2 hat keine eigene Kennung.** Die Regel **erweitert**, was durchgeht; wo sie nicht
-> trägt, kommt die Absage als `M104`/`M101` aus einem anderen Satz. *Damit lässt sie sich
-> nicht vergiften* — eine Probe müsste ein **Paar** zeigen (ohne Fakt fällt, mit Fakt geht
-> durch), und dafür hat das Geschirr heute keine Form.
+> **V2 has no code of its own.** The rule **widens** what passes; where it does not carry, the
+> refusal comes as `M104`/`M101` out of a different sentence. *With that it cannot be
+> poisoned* — a probe would have to show a **pair** (without the fact it falls, with the fact
+> it passes), and for that the harness has no form today.
 
-54 relationale Fundstellen der 102 flusssensitiven hängen daran. **Das ist der erste Satz,
-den PL.3 kaufen sollte.**
+54 relational occurrences of the 102 flow-sensitive ones hang on it. **That is the first
+sentence PL.3 should buy.**
 
-## Was das Aufschreiben gekostet und was es GEFUNDEN hat
+## What the writing-down cost and what it FOUND
 
-*Der häufigste Einzelbefund war nicht ein fehlender Satz, sondern ein **Modulkopf, der mehr
-behauptet als sein Code einlöst** — fünfmal, in fünf Dateien, zweimal schlicht veraltet.*
+*The most frequent single finding was not a missing sentence but a **module head that asserts
+more than its code redeems** — five times, in five files, twice simply out of date.*
 
-| Fund | Datei | Was |
+| Find | File | What |
 |---|---|---|
-| **die K-Bedingung wird nicht durchgesetzt** | `kbedingung.rs` | `k_haelt()` verlangt `breaking.is_empty()`; der Pass meldet nur Handschrift. **`breaking` wird gesammelt, gezählt, gedruckt — und nie abgesagt.** Ein Programm, das Pass 2 passiert, erfüllt die K-Bedingung **nicht notwendig** |
-| **`N028`/`N029` schlüsseln verschieden** | `namen.rs` | Karte unter dem **Kurznamen**, Nachschlag unter dem **vollen Pfad**. `m::f()` trifft nie: `N029` schweigt, `N028` schlägt **falsch** an |
-| **die Paarung ist global, nicht transitiv** | `paarung.rs` | Der Kopf sagt „transitive Menge", der Code vereinigt über **alle** Funktionen des Baums. Ein `publishes` in Modul A paart mit einem `awaits` in Modul B **ohne jede Aufrufbeziehung** |
-| ~~**der Adressraum wird nirgends geprüft**~~ **— gebaut 2026-08-24 (`R008`)** | `m3.rs` | Außer `R001` gab es **keinen** Test auf einen Raum; ein `ptr<normal, rw>` erreichte einen `ptr<mmio, rw>`-Parameter mit null Fehlern. *Jetzt muss der Raum am Rufort ÜBEREINSTIMMEN* — für Argumente, die ein blanker Parameter sind. **`code`, `boot`, `port` prüft weiter nichts, und `Typ` verliert `Raum` bei der Typbildung** |
-| **`melden` ist toter Code** | `phasen.rs` | Der Schalter, der „ein Rumpf ohne eigene `advances`-Zeile meldet nicht" unterscheiden sollte, wird durch sechs Rufstellen gereicht und **nie gelesen** |
-| **`O004` schweigt bei leerem Rumpf** | `phasen.rs` | Eine Funktion mit `advances roh -> mmu` und leerem Rumpf gibt **null Fehler**. *„Eine Strecke, die unterwegs aufhört, ist keine Strecke" — eine, die nie anfängt, ist stumm* |
-| ~~**rekursive Funktionen: keine Rahmenprüfung**~~ **— behoben 2026-08-24** | `wirkungen.rs` | Am Zyklus wurde `E009` gesetzt und **vor jeder `E008`-Prüfung zurückgekehrt**; eine unauflösbare Kante tief unten entwertete `E008` für die ganze Rufkette. *Die Hülle ist eine UNTERE Schranke — alles darin passiert wirklich, also hält die Prüfung unter Unvollständigkeit.* Sie läuft jetzt weiter; `E009` bleibt als dritter Zustand für die **Vollständigkeit**. Zehn Korpusstellen waren betroffen, Probe 261 |
-| ~~**`U005` fällt falsch**~~ **— behoben 2026-08-24, und es war SCHLIMMER** | `gruppe.rs` | Der Modulpfad war leer: ein Rang als **Modulkonstante** löste gar nicht auf, wurde `0`, und zwei Sperren mit **verschiedenen** Rängen galten als gleich. *Ein korrektes Programm fiel — mit einer Zahl, die nirgends in seiner Quelle steht.* `H014` schwieg dabei, also war die einzige Meldung die falsche. Probe 262 (die erste für `U005` überhaupt) und Test `ein_modulweiter_rang_loest_auf` |
-| ~~**`by unvisited`/`by consuming`: keine Abstiegsprüfung**~~ **— halb zu, 2026-08-24 (`S008`)** | `schleifen.rs` | `by consuming` muss jetzt ein `consumes` in seinem `touches` nennen: *die Zusage, dass die Domäne schrumpft, braucht einen Träger.* **`by unvisited` braucht nichts** — es besucht jedes Element einer endlichen Domäne höchstens einmal |
+| **the K condition is not enforced** | `kbedingung.rs` | `k_haelt()` demands `breaking.is_empty()`; the pass reports handwriting only. **`breaking` is collected, counted, printed — and never refused.** A program that passes pass 2 does **not necessarily** satisfy the K condition |
+| **`N028`/`N029` key differently** | `namen.rs` | Map under the **short name**, lookup under the **full path**. `m::f()` never hits: `N029` stays silent, `N028` fires **wrongly** |
+| **the pairing is global, not transitive** | `paarung.rs` | The head says "transitive set", the code unions over **all** functions of the tree. A `publishes` in module A pairs with an `awaits` in module B **without any call relation** |
+| ~~**the address space is checked nowhere**~~ **— built 2026-08-24 (`R008`)** | `m3.rs` | Apart from `R001` there was **no** test on a space; a `ptr<normal, rw>` reached a `ptr<mmio, rw>` parameter with zero errors. *Now the space has to MATCH at the call site* — for arguments that are a bare parameter. **`code`, `boot`, `port` are still checked by nothing, and `Typ` loses `Raum` at type formation** |
+| **`melden` is dead code** | `phasen.rs` | The switch that was to distinguish "a body without its own `advances` line does not report" is passed through six call sites and **never read** |
+| **`O004` stays silent on an empty body** | `phasen.rs` | A function with `advances roh -> mmu` and an empty body gives **zero errors**. *"A stretch that stops on the way is no stretch" — one that never starts is mute* |
+| ~~**recursive functions: no frame check**~~ **— fixed 2026-08-24** | `wirkungen.rs` | At the cycle, `E009` was set and it **returned before every `E008` check**; one unresolvable edge deep down devalued `E008` for the whole call chain. *The hull is a LOWER bound — everything in it really happens, so the check holds under incompleteness.* It now runs on; `E009` remains as the third state for **completeness**. Ten corpus sites were affected, probe 261 |
+| ~~**`U005` falls wrongly**~~ **— fixed 2026-08-24, and it was WORSE** | `gruppe.rs` | The module path was empty: a rank as a **module constant** did not resolve at all, became `0`, and two locks with **different** ranks counted as equal. *A correct program fell — with a number that stands nowhere in its source.* `H014` stayed silent meanwhile, so the only report was the wrong one. Probe 262 (the first for `U005` at all) and test `ein_modulweiter_rang_loest_auf` |
+| ~~**`by unvisited`/`by consuming`: no descent check**~~ **— half closed, 2026-08-24 (`S008`)** | `schleifen.rs` | `by consuming` must now name a `consumes` in its `touches`: *the promise that the domain shrinks needs a carrier.* **`by unvisited` needs nothing** — it visits every element of a finite domain at most once |
 
-> **Keiner dieser neun Funde ist von einem Werkzeug gemeldet worden.** Sie sind aufgefallen,
-> weil jemand den Satz aufschreiben musste und dafür nachsehen, was der Pass wirklich tut.
-> *Das ist die Leistung dieser Übung, und sie ist größer als die Liste selbst.*
+> **None of these nine finds was reported by a tool.** They came to notice because somebody
+> had to write the sentence down and look up for it what the pass really does.
+> *That is the achievement of this exercise, and it is greater than the list itself.*
 
-## Der zweite Zahn, und wie er misst
+## The second tooth, and how it measures
 
 ```bash
 ./instrumente/pruefe-saetze.py [--je-satz] [--ohne-satz]
 ```
 
-**Zwei Richtungen, und die zweite ist die schärfere:**
+**Two directions, and the second is the sharper one:**
 
 | | | |
 |---|---|---|
-| (a) | Kennung im Prüfer, kein Satz | die **Ratsche** — Marke **45**, sie darf fallen, nicht steigen |
-| (b) | Kennung im Satz, nicht im Prüfer | **immer rot, ohne Marke** — ein Satz über einer Regel, die es nicht gibt |
+| (a) | code in the checker, no sentence | the **ratchet** — mark **45**, it may fall, not rise |
+| (b) | code in a sentence, not in the checker | **always red, without a mark** — a sentence about a rule that does not exist |
 
-**Beide Richtungen sind von außen gemessen, nicht nur in der Sprechprobe** (R14/W17):
+**Both directions are measured from outside, not only in the speech test** (R14/W17):
+
+<!-- QUOTED RUN, in the tool's own language -- evidence, not prose. -->
 
 ```
 Kennung "Z999" in kosten.rs eingefügt   -> RC 1, „46 Kennungen ohne Satz, gebucht sind 45"
@@ -174,9 +176,8 @@ Kennung "Z998" in einen Satz eingefügt  -> RC 1, „steht in einem Satz und wir
 sauberer Baum                           -> RC 0
 ```
 
-> **Die zweite Probe hat beim ersten Lauf einen Fehler im Wächter selbst gefunden**: die
-> Kennungserhebung las auch `saetze.rs`, also fand sich die erfundene Kennung dort wieder und
-> galt als vorhanden. *Ein Wächter, der sich selbst mitzählt, kann in dieser Richtung nie rot
-> werden.* Behoben durch dieselbe Ausnahme, die `tests/` schon hatte — **und derselbe Fehler
-> steckte in `pruefe-kennungen.py`**, das nach dem Anlegen des Registers 146 Doppelbelegungen
-> meldete, von denen keine eine war.
+> **The second probe found an error in the guardian itself on its first run**: the code survey
+> read `saetze.rs` too, so the invented code turned up there again and counted as present.
+> *A guardian that counts itself can never go red in this direction.* Fixed by the same
+> exception `tests/` already had — **and the same error sat in `pruefe-kennungen.py`**, which
+> after the register was set up reported 146 double assignments, of which none was one.

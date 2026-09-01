@@ -1,8 +1,13 @@
-# Der Netzwerkstack — Stufe 4, und die Vorlage kommt von außen
+# The network stack — stage 4, and the template comes from outside
 
-**Gegenstand: Ethernet → ARP → IPv4 → UDP, ein Echodienst.** Geschrieben gegen **RFC 791**,
-**RFC 826**, **RFC 768** und **RFC 1071** — und geprüft gegen **veröffentlichte Testvektoren**,
-nicht gegen eigene Pakete.
+**Subject: Ethernet → ARP → IPv4 → UDP, an echo service.** Written against **RFC 791**,
+**RFC 826**, **RFC 768** and **RFC 1071** — and checked against **published test vectors**,
+not against packets of our own.
+
+<!-- The block below is a QUOTED RUN of `zaehle-netz.py`, in the tool's own language.
+     It is EVIDENCE, not prose: a translated transcript is no longer a transcript, and
+     `pruefe-zahlen.py` reads the last line of it. Do not "fix" it into English -- it moves
+     when the tool's output moves, and not before. -->
 
 ```
 $ ./instrumente/zaehle-netz.py
@@ -12,111 +17,110 @@ ok   summe  Gabbro ddf2  Gegenrechnung ddf2   RFC 1071, Abschnitt 3: die Summe
 3 von 3 Proben grün
 ```
 
-## Warum die Vektoren von außen kommen müssen
+## Why the vectors have to come from outside
 
-**Regel A: kein neues Konstrukt ohne ein Programm, das es gebraucht hat.** *Regel B, und ohne
-sie hält Regel A nicht:* ein Stack, den derselbe Autor gegen seine eigenen Testpakete schreibt,
-misst wieder, **wie gut Gabbro zu Gabbro passt**.
+**Rule A: no new construct without a program that needed it.** *Rule B, and rule A does not
+hold without it:* a stack that the same author writes against his own test packets measures,
+once again, **how well Gabbro fits Gabbro**.
 
-Deshalb dreierlei Trennung:
+Hence a threefold separation:
 
 | | |
 |---|---|
-| **die Vorlage** | die RFCs — niemand hat sie für Gabbro ausgesucht |
-| **die Vektoren** | der klassische IPv4-Kopf und RFC 1071 §3; sie standen vorher da |
-| **die Gegenrechnung** | eine **zweite Implementierung**, in Python, absichtlich anders geschrieben (dort faltet jeder Schritt, in Gabbro faltet erst das Ende zweimal) |
+| **the template** | the RFCs — nobody picked them for Gabbro |
+| **the vectors** | the classic IPv4 header and RFC 1071 §3; they were there beforehand |
+| **the counter-calculation** | a **second implementation**, in Python, deliberately written differently (there every step folds; in Gabbro only the end folds, twice) |
 
-> *Ein Vergleich gegen die eigene Zahl ist kein Vergleich* (W7). Wären beide Seiten aus
-> derselben Feder, ginge derselbe Denkfehler zweimal durch.
+> *A comparison against one's own figure is no comparison* (W7). Were both sides from the same
+> pen, the same error in reasoning would pass twice.
 
-**Die dritte Probe trägt am meisten:** die Summe über einem Kopf, in dem die Prüfsumme schon
-steht, muss **0** sein. Das ist die Eigenschaft, auf der der ganze Empfangsweg ruht — und die
-einzige der drei, die eine falsche Faltung nicht überlebt.
+**The third probe carries the most:** the sum over a header that already holds the checksum
+must be **0**. That is the property the whole receive path rests on — and the only one of the
+three that a wrong folding does not survive.
 
-## Der Ertrag: vier Löcher, die 45 Beispiele nicht gezeigt haben
+## The yield: four holes that 45 examples did not show
 
-**1. `!` hatte keine Absenkung — und das ganze saubere Korpus hat null Fundstellen.**
-
-```
-if !kopf_gueltig(k, w) { return 0; }     -- die gewöhnlichste Zeile eines Empfangswegs
-gabbro pruefe → 0 Fehler · gabbro emit → C001 „expression form"
-```
-
-*Der Korpus ist **je Konstrukt** geschrieben — eine Datei für `table`, eine für `device`. Ein
-`!` ist kein Konstrukt; es ist das, was man tut, wenn man ein Programm schreibt.* Gebaut, mit
-Gegenprobe in [`beispiele/46-verneinung.gab`](../../beispiele/46-verneinung.gab). **Das unäre
-Minus wurde ausdrücklich *nicht* mitgebaut** ([`gift/219`](../../beispiele/gift/219-unaeres-minus.gab)):
-in C bleibt `-x` auf einem vorzeichenlosen Operanden vorzeichenlos, während M1
-`i32 in -4294967295 .. 0` sagt — und kein Programm hat es gebraucht.
-
-**2. Der Fehlerkanal `-> T or R` senkte FALSCH ab, und zwar auf zwei Arten zugleich.**
+**1. `!` had no lowering — and the entire clean corpus has zero occurrences.**
 
 ```
-f(0)  →  der Ruf meldet MISSERFOLG, obwohl 0 ein gültiger Wert ist
-f(7)  →  der Ruf meldet Erfolg, und *_wert bleibt UNBERÜHRT
+if !kopf_gueltig(k, w) { return 0; }     -- the most ordinary line of a receive path
+gabbro pruefe → 0 errors · gabbro emit → C001 "expression form"
 ```
 
-Der Erzeuger schrieb `return <wert>;` in eine Funktion, deren C-Signatur `bool` zurückgibt —
-und setzte obendrein `__attribute__((const))` darauf, worauf GCC den Speicherschritt wegließ.
-**`gabbro pruefe`: 0 Fehler, 0 Hinweise. `gabbro emit`: Rücklaufwert 0. `cc` ohne `-Werror`:
-übersetzt.**
+*The corpus is written **per construct** — one file for `table`, one for `device`. A `!` is not
+a construct; it is what one does when one writes a program.* Built, with a counter-probe in
+[`beispiele/46-verneinung.gab`](../../beispiele/46-verneinung.gab). **Unary minus was
+expressly *not* built along with it**
+([`gift/219`](../../beispiele/gift/219-unaeres-minus.gab)): in C, `-x` on an unsigned operand
+stays unsigned, while M1 says `i32 in -4294967295 .. 0` — and no program needed it.
 
-> *Der ganze Korpus führt `or R` ausschließlich an `extern fn`* — also an Rümpfen, die dieser
-> Erzeuger nie sieht. **Der erste eigene Rumpf mit Fehlerkanal war dieser Stack.**
+**2. The error channel `-> T or R` lowered WRONGLY, and in two ways at once.**
 
-**3. Ein `reason`-Wert hat keinen Erzeuger — und jetzt steht es im erzeugten C.** `*_grund`
-bleibt ungeschrieben, weil `primary` keine Produktion dafür kennt. Ohne eine Zeile scheitert
-die Übersetzung unter `-Werror=unused-parameter`; der Erzeuger schreibt sie **mit dem Befund
-darin** statt sie zu verschweigen.
+```
+f(0)  →  the call reports FAILURE, although 0 is a valid value
+f(7)  →  the call reports success, and *_wert stays UNTOUCHED
+```
 
-**4. „Lies dieselben Bytes als big-endian 16-Bit-Worte" ist nicht schreibbar.** Ein `format`
-erklärt die Byteordnung *für seine Felder*; ein Feldtyp `[u16; 10]` in einem `format` wird
-zweimal abgesagt — der Feldtyp selbst, und der Zugriff darauf (*„ein Leser liefert einen WERT,
-und ein Wert hat keine Stelle in den Bytes"*, und das ist richtig).
+The generator wrote `return <value>;` into a function whose C signature returns `bool` — and
+put `__attribute__((const))` on it into the bargain, whereupon GCC dropped the store.
+**`gabbro pruefe`: 0 errors, 0 hints. `gabbro emit`: return code 0. `cc` without `-Werror`:
+compiles.**
 
-> **Die Folge steht im Prüfstand:** das Zusammensetzen der Worte aus den Bytes passiert in C,
-> nicht in Gabbro. *Die Prüfsumme rechnet Gabbro; die Sicht auf dieselben Bytes kommt von
-> außen* — und damit liegt genau der Schritt außerhalb der Sprache, den eine Sprache für
-> Netzcode können müsste.
+> *The whole corpus carries `or R` exclusively on `extern fn`* — that is, on bodies this
+> generator never sees. **The first body of our own with an error channel was this stack.**
 
-### Und die Kante steht fest, BEVOR gebaut wird *(2026-08-21)*
+**3. A `reason` value has no producer — and now it says so in the emitted C.** `*_grund` stays
+unwritten because `primary` knows no production for it. Without a line, compilation fails
+under `-Werror=unused-parameter`; the generator writes it **with the finding in it** rather
+than passing over it in silence.
 
-**Die Bytesicht darf keine Aliasfrage öffnen. Eine Sicht schreibend, alle anderen lesend, und
-der Wechsel ist ein EREIGNIS** — das ist die Gestalt von `state`/`transition`, auf Sichten
-statt auf Zustände angewandt. Die Langfassung steht in
-[`dokumente/SYNTAX.md`](../../dokumente/SYNTAX.md) §3; hier steht, warum dieser Ordner der
-Anlass ist.
+**4. "Read the same bytes as big-endian 16-bit words" is not writable.** A `format` explains
+the byte order *for its fields*; a field type `[u16; 10]` in a `format` is refused twice — the
+field type itself, and the access to it (*"a reader yields a VALUE, and a value has no place
+in the bytes"*, and that is right).
 
-**Diese Datei enthält den Fall schon.** `echo_beantworten` nimmt zwei Zeiger:
+> **The consequence stands in the test rig:** assembling the words out of the bytes happens in
+> C, not in Gabbro. *Gabbro computes the checksum; the view onto the same bytes comes from
+> outside* — and with that, precisely the step a language would need to manage for network
+> code lies outside the language.
+
+### And the edge stands settled BEFORE anything is built *(2026-08-21)*
+
+**The byte view must not open an alias question. One view writing, all others reading, and the
+switch is an EVENT** — that is the shape of `state`/`transition`, applied to views instead of
+to states. The long form stands in
+[`dokumente/SYNTAX.md`](../../dokumente/SYNTAX.md) §3; here stands why this folder is the
+occasion.
+
+**This file already contains the case.** `echo_beantworten` takes two pointers:
 
 ```gabbro
 impl fn echo_beantworten(e : ptr<normal, r>  EthKopf,
-                         k : ptr<normal, rw> IpKopf,      -- schreibend
-                         w : ptr<normal, r>  Kopfworte,   -- DIESELBEN Bytes, lesend
+                         k : ptr<normal, rw> IpKopf,      -- writing
+                         w : ptr<normal, r>  Kopfworte,   -- THE SAME bytes, reading
                          meine_ip : u32) -> u32 or Verwurf
     effects { reads e, reads w, writes k }
 ```
 
-`w` ist `kopfworte_von(k)` — dieselben zwanzig Bytes, einmal als Felder und einmal als zehn
-16-Bit-Worte. Der Rumpf prüft die Prüfsumme über `w`, und danach schreibt er `k.ttl = 64`.
-**Von dieser Zeile an ist die über `w` gelesene Antwort veraltet**; RFC 791 verlangt die
-Prüfsumme neu gerechnet, und `effects` behauptet, beide Zugriffe seien erklärt.
+`w` is `kopfworte_von(k)` — the same twenty bytes, once as fields and once as ten 16-bit words.
+The body checks the checksum over `w`, and afterwards it writes `k.ttl = 64`. **From that line
+on, the answer read through `w` is stale**; RFC 791 demands the checksum recomputed, and
+`effects` claims both accesses are declared.
 
-Gemessen am 2026-08-21 mit einer Handprobe derselben Gestalt: **0 Fehler, 0 Hinweise.**
-Ebenso schweigt `gabbro pruefe` bei `zwei(r, r)` an zwei `ptr<normal, rw>`-Parametern. Nur der
-syntaktisch gleiche Ort an zwei `own`-Parametern fällt (`R004`), und dessen eigene Notiz sagt
-den Rest: *„two DIFFERENT names pointing at the same object stay indistinguishable (M3's open
+Measured on 2026-08-21 with a hand probe of the same shape: **0 errors, 0 hints.** `gabbro
+pruefe` is equally silent for `zwei(r, r)` on two `ptr<normal, rw>` parameters. Only the
+syntactically identical site on two `own` parameters falls (`R004`), and its own note says the
+rest: *"two DIFFERENT names pointing at the same object stay indistinguishable (M3's open
 alias question)."*
 
-> **Die Rechtehälfte ist hier schon richtig** — `w` liest, `k` schreibt. **Was fehlt, ist die
-> Ereignishälfte:** nichts entwertet `w` an der Schreibstelle, nichts verbietet die Benutzung
-> danach. *Eine Bytesicht, die nur die Rechtehälfte übernimmt, erbt dieses Loch und gibt ihm
-> ein Konstrukt, hinter dem es sich verstecken kann* — dann kauft der Posten seine
-> Vollständigkeit mit einer stillen Alias-Ausnahme.
+> **The rights half is already right here** — `w` reads, `k` writes. **What is missing is the
+> event half:** nothing invalidates `w` at the write site, nothing forbids its use afterwards.
+> *A byte view that takes over only the rights half inherits this hole and gives it a construct
+> to hide behind* — and then the item buys its completeness with a silent alias exception.
 
-## Was hier NICHT steht
+## What does NOT stand here
 
-Kein TCP, keine Fragmentierung, keine variable Kopflänge (`ihl > 5` wird geprüft und nicht
-behandelt), kein Zeitgeber, keine Neuübertragung. **Der Stack ist an drei Vektoren gemessen,
-nicht an einem Netz** — was er kann, steht oben; was Gabbro dabei nicht konnte, daneben, und
-das ist der eigentliche Ertrag.
+No TCP, no fragmentation, no variable header length (`ihl > 5` is checked and not handled), no
+timer, no retransmission. **The stack is measured against three vectors, not against a
+network** — what it can do stands above; what Gabbro could not do meanwhile stands beside it,
+and that is the real yield.

@@ -1,21 +1,23 @@
-# Die Zusage eines fremden Rumpfs ist eine Tatsache im Prüfer — und sie entscheidet
+# A foreign body's promise is a fact inside the checker — and it decides
 
-> **Gemessen am 2026-08-21.** Gegenstand ist nicht, ob eine `ensures`-Zeile an einem
-> rumpflosen `extern fn` *dasteht*, sondern ob sie im Rufer **etwas bewegt**. Das sind zwei
-> verschiedene Zahlen, und bis heute stand nur die erste irgendwo.
+> **Measured on 2026-08-21.** The subject is not whether an `ensures` line on a body-less
+> `extern fn` *stands there*, but whether it **moves anything** at the caller. Those are two
+> different figures, and until today only the first stood anywhere.
 
-## Der Befehl
+## The command
 
 ```
-./instrumente/zaehle-fremdverengung.py                 -- die Zahl für den ganzen Korpus
-./instrumente/zaehle-fremdverengung.py --stellen       -- jede Stelle mit Datei, Zeile und Klausel
-./instrumente/zaehle-fremdverengung.py --sprechprobe   -- nur die Sprechprobe, in beide Richtungen
-gabbro zeugnis <datei.gab>                 -- dieselbe Zahl je Datei, Abschnitt F
+./instrumente/zaehle-fremdverengung.py                 -- the figure for the whole corpus
+./instrumente/zaehle-fremdverengung.py --stellen       -- every site with file, line and clause
+./instrumente/zaehle-fremdverengung.py --sprechprobe   -- only the speech test, in both directions
+gabbro zeugnis <datei.gab>                 -- the same figure per file, section F
 ```
 
-Alles davon gehört auf `ki-pc-fisch-101` (`cargo run`, `CLAUDE.md`).
+All of it belongs on `ki-pc-fisch-101` (`cargo run`, `CLAUDE.md`).
 
-## Die Zahl
+## The figure
+
+<!-- QUOTED RUN, in the tool's own language -- evidence, not prose. -->
 
 ```
 == 1 wirksame Fremdverengungen aus 10 ausgesprochenen Verträgen, 57 von 61 Dateien mit Zeugnis ==
@@ -24,11 +26,11 @@ Alles davon gehört auf `ki-pc-fisch-101` (`cargo run`, `CLAUDE.md`).
 
 | | |
 |---|---|
-| **109** | fremde Rümpfe im Korpus (`beispiele/*.gab` + `messung/*/*.gab`) |
-| **12** | davon **sprechen ihre Pflicht aus** — `ensures` oder `maintains` an einer Deklaration ohne Rumpf |
-| **1** | davon **verengt wirklich** etwas beim Rufer |
+| **109** | foreign bodies in the corpus (`beispiele/*.gab` + `messung/*/*.gab`) |
+| **12** | of those **state their duty** — `ensures` or `maintains` on a declaration without a body |
+| **1** | of those **really narrows** something at the caller |
 
-Die eine Stelle:
+The one site:
 
 ```
 F  FOREIGN CONTRACTS THAT NARROWED -- a foreign `ensures` became a FACT here
@@ -36,35 +38,35 @@ F  FOREIGN CONTRACTS THAT NARROWED -- a foreign `ensures` became a FACT here
             u32 in 0 .. 4096  ->  u32 in 1 .. 4096
 ```
 
-## Warum die anderen neun nichts bewegen — und das ist der Ertrag der Messung
+## Why the other nine move nothing — and that is the yield of the measurement
 
-**Sechs von zehn nennen gar nicht `result`.** `beispiele/22-bootstrecke.gab` sagt
-`ensures mmu_an_zahl == 1`, also eine Aussage über den **Weltzustand**. Der Prüfer liest aus
-einem fremden `ensures` nur `result <op> <Zahl>` und `result <op> <Ort>`; alles andere bleibt
-liegen (W10, und es steht als solches im Modulkopf).
+**Six of ten do not name `result` at all.** `beispiele/22-bootstrecke.gab` says
+`ensures mmu_an_zahl == 1`, that is, a claim about the **world state**. Out of a foreign
+`ensures` the checker reads only `result <op> <number>` and `result <op> <place>`; everything
+else is left lying (W10, and it stands as such in the module head).
 
-**Zwei weitere nennen `result` und bewegen trotzdem nichts** — weil die Grenze schon dort
-steht. Die dritte Zeile steht zum Vergleich daneben:
+**Two more name `result` and still move nothing** — because the bound already stands there.
+The third line stands beside them for comparison:
 
-| Datei | Klausel | Ergebnistyp | bewegt |
+| File | Clause | Result type | moves |
 |---|---|---|---|
-| `beispiele/41-handschlag.gab`:101 | `result >= 1` | `Laenge = u32 in 1 .. 4096` | nichts |
-| `beispiele/06-annahmen.gab`:115 | `result >= 1` | `Stapelgroesse = u64 in 1 .. 1048576` | nichts |
+| `beispiele/41-handschlag.gab`:101 | `result >= 1` | `Laenge = u32 in 1 .. 4096` | nothing |
+| `beispiele/06-annahmen.gab`:115 | `result >= 1` | `Stapelgroesse = u64 in 1 .. 1048576` | nothing |
 | `beispiele/39-auftragsdienst.gab`:115 | `result >= 1` | `Rest = u32 in 0 .. 4096` | **`0 ..` → `1 ..`** |
 
-> Drei Zeilen, wortgleich, an derselben Bauform — und **eine davon ist Vertrauensfläche mit
-> Wirkung, zwei sind Zierde.** Genau deshalb zählt das Zeugnis die *wirksame* Verengung und
-> nicht die vorhandene Klausel.
+> Three lines, word for word the same, on the same construction — and **one of them is trust
+> surface with an effect, two are ornament.** Precisely for that reason the certificate counts
+> the *effective* narrowing and not the present clause.
 
-**Und die vierte `result`-Klausel ist tot, ohne dass ihr etwas fehlt:**
+**And the fourth `result` clause is dead without anything being missing from it:**
 `beispiele/22-bootstrecke.gab`:72
-erklärt `melde_roh(...) -> u32 ensures result <= 4096` — die Form, die verengen *würde*. Die
-Funktion wird in der Einheit nirgends gerufen. *Eine Verengung ohne Rufstelle ist keine.*
+declares `melde_roh(...) -> u32 ensures result <= 4096` — the form that *would* narrow. The
+function is called nowhere in the unit. *A narrowing without a call site is none.*
 
-## Hälfte (a): die Fläche wird schon geführt — nachgeprüft, nicht angenommen
+## Half (a): the surface is already carried — checked, not assumed
 
-Handprobe an einer echten Korpusdatei, `beispiele/22-bootstrecke.gab` — der Datei mit den
-meisten ausgesprochenen Fremdpflichten des Korpus:
+Hand probe on a real corpus file, `beispiele/22-bootstrecke.gab` — the file with the most
+stated foreign duties in the corpus:
 
 ```
 $ gabbro zeugnis beispiele/22-bootstrecke.gab
@@ -85,75 +87,76 @@ F  Foreign duty (7)
 == 7 obligations: 0 preservation, 0 postcondition, 7 foreign, 0 precondition ==
 ```
 
-**Die Fläche steht also wirklich schon da**, an zwei Stellen und mit Namen: `zeugnis`
-Abschnitt E (was der Prüfer glaubt) und `pflichten` Klasse `F` (was ein Mensch schuldet).
-*(a) war eine Buchung und keine Lücke.* Neu ist ausschließlich die letzte Zahl der
-Befundzeile — und sie steht dort, weil eine Fläche und eine Wirkung zwei verschiedene Dinge
-sind.
+**So the surface really does stand there already**, in two places and by name: `zeugnis`
+section E (what the checker believes) and `pflichten` class `F` (what a human owes).
+*(a) was a booking and not a gap.* New is only the last figure of the finding line — and it
+stands there because a surface and an effect are two different things.
 
-## Was diese Zahl NICHT sagt
+## What this figure does NOT say
 
-* **Sie ist eine UNTERE Schranke der Fläche.** Gezählt wird nur über Einheiten, aus denen ein
-  Zeugnis entsteht, und das entsteht nur ohne Fehler. Vier Fragmentdateien (`F01`, `F03`,
-  `F05`, `F09`) tragen heute Fehler und sind nicht gemessen; die 222 Giftdateien sind
-  bauartbedingt abgewiesen und werden gar nicht erst angesehen.
-* **Sie ist in der anderen Richtung eine OBERE Schranke der GEBRAUCHTEN Tatsachen.** Gebucht
-  wird, dass eine Tatsache *entstanden* ist — nicht, dass irgendeine Absage später auf ihr
-  ruht. Für die relationale Hälfte (`ensures result <= s.len`, `Fakt::Beziehung`) gilt das
-  besonders: eine Beziehung, die niemand liest, zählt hier trotzdem.
-* **Sie sagt nichts darüber, ob die Zusage stimmt.** Sie sagt, dass Gabbro sie glaubt. Ein
-  fremder Rumpf, der `result >= 1` verspricht und `0` liefert, macht die Verengung falsch —
-  und diese Übersetzung sagt darüber nichts. *Wer nicht prüfen kann, exportiert.*
-* **Sie sagt nichts über `impl fn`.** Dieselbe Verengung an einem Rumpf, den Gabbro sieht,
-  ist eine Ableitung, die Gabbro einmal selbst nachrechnen wird. Sie steht bewusst nicht in
-  dieser Zahl — sonst wäre die Vertrauensfläche zu groß statt zu klein.
+* **It is a LOWER bound on the surface.** Counted are only units out of which a certificate
+  arises, and that arises only without errors. Four fragment files (`F01`, `F03`,
+  `F05`, `F09`) carry errors today and are not measured; the 222 poison files are refused by
+  construction and are not looked at in the first place.
+* **In the other direction it is an UPPER bound on the facts USED.** What is booked is that a
+  fact *arose* — not that any refusal later rests on it. For the relational half
+  (`ensures result <= s.len`, `Fakt::Beziehung`) that holds especially: a relation nobody
+  reads counts here nonetheless.
+* **It says nothing about whether the promise is true.** It says that Gabbro believes it. A
+  foreign body that promises `result >= 1` and delivers `0` makes the narrowing wrong —
+  and this translation says nothing about that. *Whoever cannot check, exports.*
+* **It says nothing about `impl fn`.** The same narrowing on a body Gabbro sees is a
+  derivation Gabbro will one day recompute itself. It deliberately does not stand in this
+  figure — otherwise the trust surface would be too large instead of too small.
 
-## `M115` — die Gegenrichtung, und warum sie NICHT dieselbe Klasse ist
+## `M115` — the counter-direction, and why it is NOT the same class
 
-`m1::requires_pruefen` liest das `requires` des **fremden** Gerufenen und sagt am Rufort ab
-(`M115`), wo der Bereich des Arguments die Vorbedingung ausschließt. Auch dort entscheidet
-ein fremder Vertrag über die Annahme eines Programms. Trotzdem steht sie nicht in Abschnitt F:
+`m1::requires_pruefen` reads the `requires` of the **foreign** callee and refuses at the call
+site (`M115`) where the range of the argument excludes the precondition. There too a foreign
+contract decides about the acceptance of a program. It still does not stand in section F:
 
-| | `ensures` → Verengung | `requires` → `M115` |
+| | `ensures` → narrowing | `requires` → `M115` |
 |---|---|---|
-| Richtung | der Prüfer glaubt **mehr** | der Prüfer glaubt **weniger** |
-| Fehlerfolge | ein falsches Programm geht durch | ein richtiges Programm wird abgewiesen |
-| Wirkung im Erzeugnis | ja — ein engerer Bereich besteht Prüfungen, die ein weiterer nicht besteht | nein — es entsteht kein Code, es entsteht eine Absage |
+| Direction | the checker believes **more** | the checker believes **less** |
+| Consequence of an error | a wrong program passes | a right program is refused |
+| Effect in the product | yes — a narrower range passes checks a wider one does not | no — no code arises, a refusal arises |
 
-> **Eine falsche Vorbedingung an einer fremden Deklaration kann ein richtiges Programm
-> abweisen; sie kann kein falsches durchlassen.** Deshalb ist sie Zeremonie und kein
-> Vertrauensposten. Der Satz steht auch im Zeugnis, unter Abschnitt F — damit die
-> Entscheidung dort nachlesbar ist, wo jemand nach ihr sucht.
+> **A wrong precondition on a foreign declaration can refuse a right program; it cannot let a
+> wrong one through.** That is why it is ceremony and not a trust item. The sentence stands in
+> the certificate too, under section F — so that the decision can be read up where somebody
+> looks for it.
 
-Die *Menge* der offenen Vorbedingungen am Rufort wird schon gezählt, an der richtigen Stelle:
-`gabbro pflichten` führt sie als `V` (`pflichten::Art::Vorbedingung`), mit ihren beiden
-Schranken daneben.
+The *set* of open preconditions at the call site is already counted, in the right place:
+`gabbro pflichten` carries them as `V` (`pflichten::Art::Vorbedingung`), with both of their
+bounds beside them.
 
-## Warum es EIN Leser ist und nicht zwei
+## Why it is ONE reader and not two
 
-`crates/gabbro-check/src/fremdverengung.rs` beantwortet die Frage *„verengt diese
-`ensures`-Klausel, und wie?"* genau einmal: `bereich_aus_ensures` liefert den verengten Typ
-**und** die Schritte, die dahin geführt haben. M1 nimmt den Typ und rechnet damit weiter, das
-Zeugnis nimmt die Schritte und druckt sie ab.
+`crates/gabbro-check/src/fremdverengung.rs` answers the question *"does this `ensures` clause
+narrow, and how?"* exactly once: `bereich_aus_ensures` yields the narrowed type **and** the
+steps that led there. M1 takes the type and computes on with it, the certificate takes the
+steps and prints them out.
 
-> Ein Zeugnis, das den Baum selbst noch einmal nach `ensures`-Klauseln absucht, wäre der
-> zweite Leser gewesen — und **genau diese Bauart hat am 2026-08-20 eine Tatsache verloren,
-> die zwei Leser hatte und von der nur einer las** (`verbundwert`, ein `let`-Typ, der zu
-> `c->len` wurde). Deshalb bekommt `zeugnis::zeige` seit heute den Quelltext und die Liste
-> des **Passes** statt einer zweiten eigenen Lesung.
+> A certificate that searched the tree once more for `ensures` clauses would have been the
+> second reader — and **precisely this construction lost a fact on 2026-08-20 that had two
+> readers and of which only one read** (`verbundwert`, a `let` type that became `c->len`).
+> That is why `zeugnis::zeige` gets the source text and the list of the **pass** since today,
+> instead of a second reading of its own.
 
-## Die Sprechproben, die rot werden können
+## The speech tests that can go red
 
-| Wo | Was fällt |
+| Where | What falls |
 |---|---|
-| `tests/beispiele.rs::eine_fremdverengung_steht_mit_namen_im_zeugnis` | die Stelle verschwindet aus dem Zeugnis |
-| `tests/beispiele.rs::eine_klausel_ohne_wirkung_steht_nicht_unter_f` | eine Klausel ohne Wirkung wird mitgezählt |
-| `tests/beispiele.rs::ein_eigener_rumpf_zaehlt_nicht_als_fremdverengung` | ein `impl fn` landet in der Vertrauensfläche |
-| `tests/beispiele.rs::auch_die_relationale_nachbedingung_wird_gebucht` | die relationale Hälfte fällt aus der Buchung |
-| `./instrumente/zaehle-fremdverengung.py --sprechprobe` | beide Richtungen an zwei Einheiten, die sich in **einem Zeichen** unterscheiden |
+| `tests/beispiele.rs::eine_fremdverengung_steht_mit_namen_im_zeugnis` | the site disappears from the certificate |
+| `tests/beispiele.rs::eine_klausel_ohne_wirkung_steht_nicht_unter_f` | a clause without an effect is counted |
+| `tests/beispiele.rs::ein_eigener_rumpf_zaehlt_nicht_als_fremdverengung` | an `impl fn` lands in the trust surface |
+| `tests/beispiele.rs::auch_die_relationale_nachbedingung_wird_gebucht` | the relational half drops out of the booking |
+| `./instrumente/zaehle-fremdverengung.py --sprechprobe` | both directions on two units that differ in **one character** |
 
-**Und der Zähler selbst kann rot werden — gemessen, nicht behauptet.** Mit der Mutation
-`fremdverengung-zaehlt-jede-klausel` im Prüfer:
+**And the counter itself can go red — measured, not asserted.** With the mutation
+`fremdverengung-zaehlt-jede-klausel` in the checker:
+
+<!-- QUOTED RUN, in the tool's own language -- evidence, not prose. -->
 
 ```
 == Sprechprobe, in beide Richtungen ==
@@ -162,7 +165,7 @@ Zeugnis nimmt die Schritte und druckt sie ab.
 RC mit Mutation = 1        RC ohne Mutation = 0
 ```
 
-Und vier Mutationen in `mutiere-pruefer.py`, alle vier **gefangen** (einzeln gefahren auf
+And four mutations in `mutiere-pruefer.py`, all four **caught** (run individually on
 `ki-pc-fisch-101`, 2026-08-21):
 
 ```
@@ -172,17 +175,17 @@ gefangen   fremdverengung-vergisst-die-beziehung
 gefangen   zeugnis-druckt-abschnitt-f-nicht
 ```
 
-## Abweichungen von der Buchführung, nachgerechnet
+## Divergences from the bookkeeping, recomputed
 
-Der TODO-Posten nennt **89 fremde Rümpfe, 10 mit `ensures`, „und aus jedem verengt M1"**.
-Nachgemessen am 2026-08-21:
+The TODO item names **89 foreign bodies, 10 with `ensures`, "and M1 narrows out of every
+one"**. Re-measured on 2026-08-21:
 
-| gebucht | gemessen | Befehl |
+| booked | measured | Command |
 |---|---|---|
-| 89 fremde Rümpfe | **80** in `beispiele/`, **109** über den ganzen `.gab`-Korpus | `./instrumente/zaehle-fremdverengung.py` |
-| 10 mit `ensures` | **10** — bestätigt | `./instrumente/zaehle-fremdverengung.py` |
-| „aus jedem verengt M1" | **1 von 10** | `./instrumente/zaehle-fremdverengung.py --stellen` |
+| 89 foreign bodies | **80** in `beispiele/`, **109** over the whole `.gab` corpus | `./instrumente/zaehle-fremdverengung.py` |
+| 10 with `ensures` | **10** — confirmed | `./instrumente/zaehle-fremdverengung.py` |
+| "M1 narrows out of every one" | **1 of 10** | `./instrumente/zaehle-fremdverengung.py --stellen` |
 
-*Die dritte Abweichung ist die, auf die es ankommt.* Sie war nicht nachzählbar, solange keine
-Zahl über die *Wirkung* geführt wurde — und genau das ist der Grund, dass der Posten einen
-eigenen Zähler bekommen hat statt einer Zeile in der Annahmenfläche.
+*The third divergence is the one that matters.* It was not countable as long as no figure was
+carried about the *effect* — and precisely that is why the item got a counter of its own
+instead of a line in the assumption surface.
