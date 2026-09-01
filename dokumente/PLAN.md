@@ -4652,14 +4652,31 @@ Domänen ruhen auf gar keiner Schranke (`chain(…) in`, `fields of`, `threads`)
       darauf typkorrekt und falsch** — und der RMW-Erzeuger baut ihn.
 - [ ] RMW auf ein Gerät ist drei Erzeugerschritte, **die Atomarität steht nirgends.**
 
-## OB5 — Der Bau, und `0 computed edge(s)` · **Voraussetzung, nicht Nebensache**
+## OB5 — Der Bau, und `0 computed edge(s)` · ~~**Voraussetzung, nicht Nebensache**~~ **GEBAUT 2026-09-01**
 
-> Der Bau rechnet den Graphen und verbindet nichts. **Solange kein Programm aus zwei
-> Einheiten besteht, ist jede Aussage über Modularität — Effektableitung über den
-> Aufrufgraphen, Annahmen-Import, Profile — an einem Fall gemessen, den es noch nicht gibt.**
+> ~~Der Bau rechnet den Graphen und verbindet nichts.~~ **Er verbindet.** `gabbro build`
+> über `messung/einheit-proben/zwei-einheiten.bau` baut zwei Einheiten, trägt die Kante als
+> `.gabi`-Vorspann, bindet — und `target/bau-zwei/haupt` **läuft** und antwortet **137**
+> (`= 100 + 37`, die `100` von einem **privaten** Helfer der anderen Einheit gedeckelt).
+> Die Rechnung, die Proben und was offen bleibt: `dokumente/BAUSYSTEM.md`, Abschnitt
+> *„Die Kante, gebaut und gelaufen"*.
 
-- [ ] Die Kante zwischen zwei Einheiten. `emit --unit` gibt es nicht.
-- [ ] Kein `--with` im Bau, `unit … program` nie gelaufen, `--testbuild` ohne Probe.
+- [x] Die Kante zwischen zwei Einheiten. ~~`emit --unit` gibt es nicht.~~ Es gibt es, und
+      `abi --unit` dazu — *dieselben zwei Dateien: **sieben** Absagen ohne die Fahne, null
+      mit ihr.* Die Fähigkeit steckte in `bau.rs` und hatte keinen Namen auf der
+      Kommandozeile.
+- [x] ~~Kein `--with` im Bau~~ — der Vorspann ist die **transitive** Hülle, und die Abdrücke
+      der Unterbauten gehen in den eigenen: *eine Änderung im **privaten** Rumpf bewegt die
+      `.gabi` nicht und das Objekt schon.*
+- [x] ~~`unit … program` nie gelaufen~~ — gelaufen, und der Bindeschritt kann absagen
+      (`gift-programm-ohne-main.bau`).
+- [ ] **`--testbuild` geht in den Abdruck, und keine Probe fährt es** — als einziger Punkt
+      dieses Postens unverändert offen.
+- [ ] **Und ein Gabbro-Programm kann nicht DRUCKEN.** `printf`, `puts`, `putchar` stehen in
+      der Tafel von `cnamen.rs`, und `N041` sagt jede `extern fn` darauf ab — *ohne Ausnahme
+      für eine absichtliche fremde Bindung, was `extern fn` gerade ist.* Das Ergebnis
+      verlässt das Programm als Rückgabewert von `main`; was druckt, ist ein C-Treiber
+      daneben. **Gehört zu `OB7`, nicht hierher, aber gemessen wurde es hier.**
 
 ## OB6 — Die Schreiblast · `705 → 0` bei bleibenden `188`
 

@@ -346,20 +346,19 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     for name in &reihenfolge {
         let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
         let quellen = &quellen_je_einheit[name];
-        let unterbau = geschlossene_grundlage(name, &kanten, &reihenfolge);
         // **The preamble is the interfaces of everything this unit rests on**, deepest first.
         // *That is the edge*: without it `use fach::lies` in another unit is `E009`, and the
         // costs clause on top of it is `K003`. A build that computed the graph and did not
         // carry it was a graph with nothing on it.
-        let mut vorspann = String::new();
-        let mut unterabdruecke: Vec<String> = Vec::new();
+        let namen = geschlossene_grundlage(name, &kanten, &reihenfolge);
+        let mut unten = Unterbau { vorspann: String::new(), abdruecke: Vec::new(), namen };
         let mut fehlt: Option<String> = None;
-        for u in &unterbau {
+        for u in &unten.namen {
             match (gabi_je_einheit.get(u), abdruck_je_einheit.get(u)) {
                 (Some(g), Some(a)) => {
-                    vorspann.push_str(g);
-                    vorspann.push('\n');
-                    unterabdruecke.push(a.clone());
+                    unten.vorspann.push_str(g);
+                    unten.vorspann.push('\n');
+                    unten.abdruecke.push(a.clone());
                 }
                 // A unit this one rests on was refused. **It is not built on top of the
                 // wreck** -- and it is not called "current" either.
@@ -371,7 +370,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             println!("REFUSED  {name}: the unit `{u}` it rests on was not built");
             continue;
         }
-        match baue_einheit(&manifest, e, quellen, &vorspann, &unterabdruecke, &unterbau, bau, pruefbau) {
+        match baue_einheit(&manifest, e, quellen, &unten, bau, pruefbau) {
             Ergebnis::Gebaut { gabi, abdruck } => {
                 gebaut += 1;
                 gabi_je_einheit.insert(name.clone(), gabi);
@@ -492,14 +491,26 @@ fn sortiere(manifest: &Manifest, kanten: &[(String, String)]) -> Result<Vec<Stri
     Ok(fertig)
 }
 
-#[allow(clippy::too_many_arguments)]
+/// **Everything a unit gets from the units below it, in one place.**
+///
+/// The three fields are three uses of one closure and must not drift apart: the interfaces go
+/// in front of the source, the fingerprints go into the fingerprint, and the object files go
+/// on the linker's command line. *Passing them as three loose arguments is how two of them
+/// end up computed from different closures.*
+struct Unterbau {
+    /// The `.gabi` of everything below, deepest first.
+    vorspann: String,
+    /// Their fingerprints, in the same order.
+    abdruecke: Vec<String>,
+    /// Their names, in the same order -- the objects to link.
+    namen: Vec<String>,
+}
+
 fn baue_einheit(
     manifest: &Manifest,
     e: &Einheit,
     quellen: &[(String, String)],
-    vorspann: &str,
-    unterabdruecke: &[String],
-    unterbau: &[String],
+    unten: &Unterbau,
     bau: gabbro_check::gatter::Bau,
     pruefbau: bool,
 ) -> Ergebnis {
@@ -519,7 +530,7 @@ fn baue_einheit(
     teile.push(compilerzeile.as_bytes());
     let modus: &[u8] = if pruefbau { b"testbuild" } else { b"shipping" };
     teile.push(modus);
-    for a in unterabdruecke {
+    for a in &unten.abdruecke {
         teile.push(a.as_bytes());
     }
     let abdruck = abdruck64(&teile);
@@ -552,7 +563,7 @@ fn baue_einheit(
     // **Checked, translated AND described as ONE unit**, out of `uebersetze_einheit` -- the
     // same function `gabbro emit --unit` runs. *Two renderings of one glued parse would be a
     // second register over the same thing*, and so would two parses of it.
-    let (c, gabi) = match crate::uebersetze_einheit(vorspann, quellen, bau, crate::Strom::Aus) {
+    let (c, gabi) = match crate::uebersetze_einheit(&unten.vorspann, quellen, bau, crate::Strom::Aus) {
         crate::Einheitsbau::Fertig { c, gabi } => (c, gabi),
         crate::Einheitsbau::Abgesagt(n) => {
             return Ergebnis::Abgesagt(format!("{n} error(s) -- no C written"));
@@ -591,7 +602,7 @@ fn baue_einheit(
         let mut binde = std::process::Command::new(&manifest.compiler[0]);
         binde.args(&manifest.compiler[1..]);
         binde.arg("-o").arg(&erzeugnis).arg(&objekt);
-        for u in unterbau {
+        for u in &unten.namen {
             binde.arg(PathBuf::from(&manifest.ausgabe).join(format!("{u}.o")));
         }
         let aus = match binde.output() {
@@ -604,9 +615,9 @@ fn baue_einheit(
             eprint!("{}", String::from_utf8_lossy(&aus.stderr));
             return Ergebnis::Abgesagt(format!(
                 "the linker refused {} object(s) -- `{}` and the {} it rests on",
-                unterbau.len() + 1,
+                unten.namen.len() + 1,
                 e.name,
-                unterbau.len()
+                unten.namen.len()
             ));
         }
     }

@@ -2047,7 +2047,12 @@ MARKE_EMIT=62
 # refusal there was repaired, so it lowers to C and compiles.
 # **40 -> 45 on 2026-09-01**, same movement: the measurement probes for certificate
 # injectivity, two-gibibyte linking, witness duty, wildcard reset and loop-promise shadowing.
-MARKE_EMIT_M=45
+# **45 -> 46 on 2026-09-01** (`OB5`): `messung/einheit-proben/prog-vorrat.gab`, the carrier
+# file of the two-unit program. It declares a table and no body, so it lowers alone; its
+# three companions do NOT -- two need the other file of their unit and one needs the `.gabi`
+# across the unit boundary. *A corpus of units has files that only translate together, and
+# this ratchet counts the ones that do not have to.*
+MARKE_EMIT_M=46
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

@@ -167,7 +167,13 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # **282 -> 286 on 2026-09-01, and the mark RISES with its reason.** The `OB4` lane added
 # `beispiele/58`-`62` and nine poison probes; four of them cite a rule they do not issue.
 # **The target stays 207** -- the object grew, the debt did not.
-MARKE = 286
+#
+# **286 -> 289 on 2026-09-01, and the mark RISES with its reason.** The `OB5` lane carried
+# the edge between two units into `bau.rs`, and the three new comments there name the three
+# refusals the edge is ABOUT: `E009` and `K003` (what a call across the boundary costs
+# without the bridge) and `N038` (why the preamble has to be the transitive closure). All
+# three are issued elsewhere; **the target stays 207** -- the object grew, the debt did not.
+MARKE = 289
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
