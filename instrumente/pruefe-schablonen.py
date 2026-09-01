@@ -124,6 +124,7 @@ SAUBER = """--   of those PREMISES WITHOUT A PASS (tooth 3): 1 -- a proof nothin
 
 
 def main():
+    # speech_test: begin
     g, _ = lies(GIFT)
     s, _ = lies(SAUBER)
     # **2, not 1 -- and this file already knew it three lines further down.** Every other
@@ -140,6 +141,7 @@ def main():
         return 2
     print("== Sprechprobe: ok (adresslos faellt auf, mit Adresse geht durch) ==\n")
 
+    # speech_test: end
     r = lauf("schablonen")
     if r.returncode != 0 or "tooth 3" not in r.stdout:
         print("ABBRUCH: `gabbro schablonen` lief nicht -- das ist KEINE Zaehlung von null.",

@@ -124,6 +124,7 @@ def main():
 
     # **Sprechprobe, in beide Richtungen.** Ein absichtlich falscher Vektor MUSS auffallen,
     # sonst vergleicht dieser Pruefstand zwei Zahlen, die er selbst erzeugt hat (W17).
+    # speech_test: begin
     if rfc1071(bytes.fromhex(KOPF_OHNE)) != 0xB861:
         print("SPRECHPROBE GESCHEITERT: die zweite Implementierung trifft den "
               "veroeffentlichten Vektor nicht.", file=sys.stderr)
@@ -138,6 +139,7 @@ def main():
         return 2
     print("== Sprechprobe: ok (der veroeffentlichte Vektor trifft, ein veraenderter nicht) ==\n")
 
+    # speech_test: end
     r = lauf([str(BIN), "emit", str(QUELLE)])
     if r.returncode != 0 or "kopfsumme" not in r.stdout:
         print("ABBRUCH: `gabbro emit` lief nicht durch:\n" + r.stderr[:800], file=sys.stderr)

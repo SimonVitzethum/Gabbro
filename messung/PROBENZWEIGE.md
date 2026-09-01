@@ -1,4 +1,4 @@
-# Zweige, die nur die Sprechprobe je erreicht hat — **12 von 43**, und der Nenner ist die Hälfte der Antwort
+# Zweige, die nur die Sprechprobe je erreicht hat — **14 von 43**, und der Nenner ist die Hälfte der Antwort
 
 *Gemessen am 2026-09-01 über `acec1df`, lokal (`free -g`: 31 GB gesamt, 13 GB verfügbar,
 20 Kerne), in 5 min 30 s. Werkzeug: `instrumente/zaehle-probenzweige.py`.*
@@ -160,3 +160,139 @@ Ende nicht.
 Die Zahl der TRÄGER bewegte sich nicht: `abnahme.py` war schon einer der zwölf. *Ein Zähler
 über Instrumenten sagt nichts darüber, wie viel jeder einzelne trägt* — deshalb führt die
 Ratsche beide Zahlen.
+
+---
+
+# Nachtrag 2026-09-01, zweite Lesung: **das blinde Loch fällt von 15 auf 6, und zwei der Neun tragen wirklich**
+
+*Gemessen lokal (`free -g`: 31 GB gesamt, 14 verfügbar, 20 Kerne), voller Lauf über 43
+Instrumente. Die Zahl steigt — und der Anstieg ist eine **Korrektur**, kein Rückschritt:*
+
+```
+                    erste Lesung        zweite Lesung
+blind (keine Probe, die die Spur sieht)   15 von 43      6 von 43
+Traeger                                   12             14
+Anweisungszeilen                         172            189
+```
+
+## Was gebaut wurde, und warum nicht das andere
+
+Die erste Lesung nannte die schärfste Einschränkung selbst: *die Spur erkennt eine Probe am
+FUNKTIONSNAMEN, und 15 von 43 fahren ihre im Rumpf von `main`.* Zwei Wege standen offen.
+
+| | Kosten | Risiko |
+|---|---|---|
+| die Probe in eine benannte Funktion **heben** | 15 Umbauten an tragendem Code, je mit Parametern aus dem Rumpf von `main` | ein gebrochener Wächter — *um eine Messung zu ermöglichen* |
+| ein **Markenpaar** `# speech_test: begin/end` | 2 Kommentarzeilen je Datei | keines: ein Kommentar ändert kein Verhalten |
+
+**Regel A: die billigere Apparatur zuerst, und der Gegenstand bleibt unberührt.** Innerhalb
+der Spanne wird der Zustand ZEILENweise statt rahmenweise gesetzt; was von dort gerufen
+wird, erbt ihn genau wie aus einer benannten Funktion. Die markierten Zeilen selbst werden
+wie ein Probenkörper abgezogen.
+
+Zwei neue Richtungen in der Sprechprobe halten das ehrlich (jetzt **acht**): eine markierte
+Probe muss **denselben** Zweig finden wie eine benannte, und ein `begin` ohne `end` wird
+**abgelehnt** statt als leere Spanne gelesen — *eine offene Marke verschlänge sonst den Rest
+der Datei auf die Probenseite, und der Zähler stiege über nichts.*
+
+## Die Antwort auf die eigentliche Frage: **2 von 9**
+
+Neun der 15 haben einen markierbaren Probenblock bekommen. Davon tragen **zwei** wirklich
+einen probenexklusiven Zweig:
+
+| markiert | nur Probe | was |
+|---|---:|---|
+| `pruefe-zahlen.py` | **15** | 8 davon die ganze Funktion `lauf()` — siehe die dritte Form unten |
+| `pruefe-widerruf.py` | **2** | der Aufzeichnungsweg eines Befundes |
+| `pruefe-gruende` · `-reichweite` · `-schablonen` · `-wortschatz` · `zaehle-fragmente` · `-netz` · `-zeremonie` | 0 | |
+
+*Die 15 waren 14, bis `pruefe-zahlen.py` grün wurde:* der Wächter fand eine Zahl in
+`TODO.md`, die diese Bahn zwei Minuten vorher durch das Schreiben zweier Dateien ungültig
+gemacht hatte. Repariert erreicht er sein grünes Ende — **und dieses Ende ist eine weitere
+Zeile, an die nur die Probe kommt.** *Ein Wächter, der grün wird, HEBT diese Zahl* (Punkt 6),
+und eine Marke ohne diesen Satz daneben liest sich wie ein Rückschritt.
+
+**Für sieben der neun war die gemessene Null gerechtfertigt** — und das ist ein Ergebnis,
+kein Nullbefund. Bei `pruefe-widerruf.py` sind es die zwei Zeilen, die einen lebenden
+Widerruf aufzeichnen: **jeder widerrufene Satz im Baum ist heute durchgestrichen**, also
+erreicht nur die vergiftete Kopie der Sprechprobe `treffer.append`. *Erreichbar, unbelegt,
+und belegt in der Sekunde, in der jemand einen Widerruf lebend hinschreibt.*
+
+## Eine DRITTE Form, und sie ist die interessanteste
+
+`pruefe-zahlen.lauf()` — die Funktion, die jeden bewachten Befehl mit Frist fährt, den
+Selbstbezugsriegel hält und die `MISCHUNG`-Aussetzung bucht — wird in diesem Lauf **nur aus
+der Sprechprobe heraus betreten.** Nicht, weil es keinen anderen Weg gäbe:
+
+```
+Sprechprobe:  pruefe_eintraege(verstellen=nr)  fuer jeden Eintrag   ->  fuellt den Cache
+danach:       pruefe_eintraege()                                    ->  LIEST den Cache
+```
+
+> **Die Fixtur war zuerst da.** Die Zeile ist nicht unerreichbar — sie ist schon abgearbeitet,
+> wenn der echte Durchgang kommt. Gebucht wird sie trotzdem, weil der Lauf es so getan hat;
+> hier steht sie, weil *„nichts außer der Fixtur kommt dorthin"* genau das ist, was sie
+> **nicht** zeigt.
+
+Damit sind es drei Formen, nicht zwei: eine Funktion ohne Weg dorthin · ein Befundweg, den
+heute nichts auslöst · **und eine, der die Probe zuvorkommt.**
+
+## Die sechs, die blind bleiben — drei Klassen, keine Restmenge
+
+* **Hinter einer Betriebsartweiche**: `zaehle-pflichten.py` (`--spalten`, `--haengend`),
+  `zaehle-bereichspflichten.py` (`--selbstprobe`). Der gespurte Lauf nimmt sie nicht. *Sie zu
+  markieren hieße, die Blindheit zu verstecken statt sie aufzuheben.*
+* **Kein Fixturblock, weil es keinen geben kann**: bei `pruefe-notation.py` ist der ganze
+  Gegenstand erfundener Text, den der echte Prüfer frisst; bei
+  `pruefe-uebersetzerfamilie.py` ist die „Sprechprobe" eine Vorbedingung an die Umgebung
+  (*zwei Übersetzer derselben Familie sind einer*).
+* **Gar keine Sprechprobe**: `zaehle-b3.py` darf das (`pruefe-waechter.ZAEHLER`).
+  **`zaehle-empfindlichkeit.py` nicht** — und es besteht die Pflicht trotzdem.
+
+### Der Befund über den Wächter: **`HAT_PROBE` lässt sich mit dem Wort bezahlen**
+
+`pruefe-waechter.py` verlangt von jedem Nicht-Zähler eine Sprechprobe und prüft das mit
+`HAT_PROBE = /[Ss]prechprobe|speech test|Gegenprobe|[Ss]elbsttest/` **über den ganzen
+Dateitext.** In `zaehle-empfindlichkeit.py` steht das Wort in einem **gedruckten Satz über
+den Gegenstand**:
+
+```
+print("   fuer sie ist die Uebersetzungsprobe die einzige Gegenprobe. Faellt die eine")
+```
+
+Eine Sprechprobe hat die Datei nicht. **Gemeldet, nicht geheilt:** eine schärfere Textregel
+(nur Code, nicht Ausgabe) hätte Fehlalarme über jeder Probe, die ihr Wort nur im Kommentar
+und im `print` trägt — und das sind fast alle. *Die schärfere Antwort ist nicht eine zweite
+Textregel, sondern genau diese Spur: wer keine Marke und keinen Namen hat, fällt jetzt als
+BLIND auf statt als sauber.*
+
+## Die acht Schalenwächter: **abgesagt, und diesmal gerechnet**
+
+Die erste Lesung schrieb *„für sie ist die Zahl kein Wert"* und ließ es dabei. Der Preis ist
+jetzt gemessen — alle acht einmal gefahren, alle grün:
+
+| | s | ruft |
+|---|---:|---|
+| `pruefe-lean-beweis.sh` | 78,3 | `lake` |
+| `pruefe-emission.sh` | 33,5 | `cargo run` je Einheit, `cc` |
+| `pruefe-p6-beweis.sh` | 19,3 | `isabelle` |
+| `pruefe-beweise.sh` | 8,2 | `isabelle` (warm; kalt 33,0) |
+| `pruefe-lean-programm.sh` | 2,6 | `lake` |
+| `pruefe-sonden.sh` | 0,5 | `cc` |
+| `pruefe-syntax.sh` | 0,3 | `cargo` |
+| `zaehle-fallen.sh` | 0,0 | — |
+| **zusammen** | **142,7** | **7 von 8 rufen `cargo`/`cc`/`isabelle`/`lake`** |
+
+`zaehle-probenzweige.py` kostet heute **2 min 11 s** ohne die Abnahme. Die acht dazu wären
+**+142,7 s** — und mit ihnen zöge die ganze Bau- und Beweiskette in ein Messwerkzeug ein,
+das schon in `SCHWER` steht. `pruefe-emission.sh` steht dort **selbst**, und der Grund ist
+der ORT und nicht die Zeit (`CLAUDE.md`).
+
+**Und es wäre nicht ein Zusatz, sondern ein zweites Instrument.** `bash -x` misst Befehle;
+die Rahmenvererbung dieser Messung — *wer von einer Probe gerufen wird, liegt auf der
+Probenseite* — braucht `${BASH_LINENO[*]}` in `PS4` und eine Kellerrekonstruktion, mit
+eigener Sprechprobe in beide Richtungen.
+
+> **Die Absage steht jetzt in der Antwortzeile selbst und nicht in einer Fußnote.** `14 von
+> 43` liest sich sonst wie eine Aussage über die Werkstatt; **43 von 52** ist die Zahl, für
+> die sie gilt, und die neun fehlenden haben einen Preis mit Sekunden daran.

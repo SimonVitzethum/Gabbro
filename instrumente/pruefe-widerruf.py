@@ -298,6 +298,7 @@ def main():
     # ZAHN 2 (R14) -- der Waechter weist nach, dass er messen kann. Beide Richtungen:
     # der eingesetzte Satz musz fallen, der durchgestrichene nicht.
     probe = W / "dokumente" / "PLAN.md"
+    # speech_test: begin
     roh = probe.read_text()
     gift = roh + "\n\nGleitkomma ist nicht im Kern, und dabei bleibt es.\n"
     sauber = roh + "\n\n~~Gleitkomma ist nicht im Kern~~ -- gefallen 2026-08-18.\n"
@@ -311,6 +312,7 @@ def main():
         print("== WIDERRUF: der Waechter misst nicht ==")
         return 2
 
+    # speech_test: end
     if befunde:
         print("\n== WIDERRUF: %d lebende Vorkommen ==" % len(befunde))
         print("   Durchstreichen mit Datum, nicht loeschen -- oder den Eintrag zuruecknehmen,")

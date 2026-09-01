@@ -60,9 +60,15 @@ schon gebautes Binärprogramm, ein `cc` auf einer Datei, und die Textwächter
 die Gewohnheit.*
 
 **Der Mutationslauf misst sich selbst**: `./instrumente/mutiere-pruefer.py` über alle
-~~159~~ **340** Mutationen braucht ~~2 min 20 s~~ **10 min 25 s** lokal (nachgemessen
-2026-08-30; die alte Zahl stammt vom 2026-08-19, und der Katalog ist seither auf mehr als das
-Doppelte gewachsen). *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
+~~159~~ ~~340~~ **377** Mutationen braucht ~~2 min 20 s~~ ~~10 min 25 s~~ **13 min 20 s**
+lokal (nachgemessen 2026-09-01). *Ein Katalog, der wächst, macht jede Zahl daneben zu einer
+Jahreszahl* — und diese hier war es nach zwei Tagen wieder.
+
+> **Und der Lauf fängt 375 von 376 gültigen Mutationen (99 %).** Die eine Überlebende,
+> `ungelesene-bindung-bekommt-kein-void` in `emit.rs`, ist **nachgemessen und nicht
+> geglaubt**: angewandt, gebaut, Quelle byteweise gegen SHA-256 zurückgestellt. Sie fällt
+> — nur nicht hier, sondern an `pruefe-emission.sh` Stufe 9 (`unused variable 'r2'`,
+> 111 von 112). ***`375 von 376` ist eine Aussage über `cargo test`, nicht über den Baum.***
 `--anker` kostet gar nichts — reines Textzählen, kein Bau. *Vor dem Lauf muss `crates/`
 sauber sein; die Probe schreibt in Quellen, und zwei Läufe auf denselben Dateien
 zerstören einander.*

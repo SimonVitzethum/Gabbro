@@ -36,10 +36,11 @@ WAS DIESE MESSUNG NICHT SIEHT
 
 1. **Schalenwaechter.** Acht der Instrumente sind `sh`; hier laufen Python-Zeilen durch eine
    Python-Spur. Fuer sie ist die Zahl **kein Null, sondern kein Wert.**
-2. **Wer keine Probenfunktion mit Namen hat.** Die Spur erkennt eine Probe an ihrem
-   FUNKTIONSNAMEN. Ein Waechter, dessen Probe im Rumpf von `main` steht, hat eine leere
+2. **Wer keine Probe traegt, die diese Spur SIEHT.** Zwei Wege hinein: ein FUNKTIONSNAME aus
+   `PROBENNAME`, oder ein Markenpaar `# speech_test: begin` / `# speech_test: end` um einen
+   Probenblock im Rumpf einer anderen Funktion. Wer keinen von beiden hat, hat eine leere
    PROBE-Menge -- und die Null darunter ist eine Aussage ueber diese Messung, nicht ueber
-   ihn.
+   ihn. *Am 2026-09-01 waren das 15 von 43; die Marke ist die Antwort darauf.*
 3. **Die Teuren.** Wer baut oder in Quellen schreibt, laeuft hier nicht (`SCHWER` aus
    `pruefe-waechter.py`). `mutiere-pruefer.py` laeuft mit `--anker` wie im Schnellauf -- was
    hinter dem vollen Lauf liegt, ist ungesehen.
@@ -91,6 +92,52 @@ FRIST = 600
 # *A rule with false alarms gets ignored, and then it protects nothing.*
 PROBENNAME = re.compile(r"sprechprobe|selbsttest|gegenprobe|speech_test|probe[n]?$", re.I)
 
+# **THE SECOND WAY IN, AND IT EXISTS BECAUSE THE FIRST ONE WAS BLIND AT 15 OF 43.**
+#
+# The name rule above only sees a probe that lives in a function OF ITS OWN. Fifteen of the
+# 43 traceable instruments run theirs in the body of `main`, and for those the measured zero
+# said something about this trace and nothing about them (`messung/PROBENZWEIGE.md`).
+#
+# Two ways out were weighed. *Lifting the probe into a named function* touches the guardian
+# itself -- fifteen refactorings of load-bearing code, each able to break a guardian, to make
+# a measurement possible. *A marker pair* touches two comment lines per file, cannot change
+# behaviour, and lives AT THE SITE, so it moves when the code moves. **Regel A: the cheaper
+# apparatus first, and the subject stays untouched.**
+#
+#     # speech_test: begin
+#     ...
+#     # speech_test: end
+#
+# Inside the span the state is set PER LINE instead of per frame; everything called from
+# there inherits it exactly as it would from a named function, and the marked lines
+# themselves are subtracted like a probe body. *The two ways then measure the same thing,
+# and neither is a second register over the other* (W7) -- one file uses one of them.
+MARKE_ANFANG = re.compile(r"^\s*#.*\bspeech_test:\s*begin\b")
+MARKE_ENDE = re.compile(r"^\s*#.*\bspeech_test:\s*end\b")
+
+
+def probenspannen(pfad):
+    """Line numbers between a `speech_test: begin` / `end` pair -- markers included.
+
+    **An unbalanced pair is an error and not an empty span.** A `begin` without an `end`
+    would silently swallow the whole rest of the file into the probe side, and the count
+    would rise over nothing.
+    """
+    drin, offen = set(), None
+    for nr, z in enumerate(pfad.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if MARKE_ANFANG.search(z):
+            if offen is not None:
+                raise ValueError(f"{pfad.name}:{nr} zweites `begin` ohne `end`")
+            offen = nr
+        elif MARKE_ENDE.search(z):
+            if offen is None:
+                raise ValueError(f"{pfad.name}:{nr} `end` ohne `begin`")
+            drin.update(range(offen, nr + 1))
+            offen = None
+    if offen is not None:
+        raise ValueError(f"{pfad.name}:{offen} `begin` ohne `end`")
+    return drin
+
 
 def register():
     """The registers out of `pruefe-waechter.py` and `abnahme.py` -- READ, never copied (W7).
@@ -121,11 +168,12 @@ def probenkoerper(pfad):
     for k in ast.walk(baum):
         if isinstance(k, (ast.FunctionDef, ast.AsyncFunctionDef)) and PROBENNAME.search(k.name):
             drin.update(range(k.lineno, (k.end_lineno or k.lineno) + 1))
+    drin |= probenspannen(pfad)
     return drin
 
 
 def hat_probenfunktion(pfad):
-    """Does this instrument carry a probe under a NAME the trace can see?"""
+    """Does this instrument carry a probe this trace can SEE -- named or marked?"""
     koerper = probenkoerper(pfad)
     return bool(koerper)
 
@@ -178,17 +226,30 @@ def spur(ziel, ablage, argv):
     """
     zieltext = str(ziel)
     probe, echt, zustand = set(), set(), {}
+    # **The inherited half is kept apart from the effective one**, because inside a marked
+    # span the effective state changes LINE BY LINE while the inherited one must not: a frame
+    # called from a probe stays on the probe side even when it walks past the marker.
+    geerbt = {}
+    try:
+        spann = probenspannen(ziel)
+    except ValueError as e:
+        print(f"MARKIERUNG KAPUTT: {e}", file=sys.stderr)
+        spann = set()
 
     def lokal_still(frame, event, arg):
         if event == "return":
             zustand.pop(frame, None)
+            geerbt.pop(frame, None)
         return lokal_still
 
     def lokal(frame, event, arg):
         if event == "line":
+            if not geerbt.get(frame, False):
+                zustand[frame] = frame.f_lineno in spann
             (probe if zustand.get(frame) else echt).add(frame.f_lineno)
         elif event == "return":
             zustand.pop(frame, None)
+            geerbt.pop(frame, None)
         return lokal
 
     def global_(frame, event, arg):
@@ -198,6 +259,7 @@ def spur(ziel, ablage, argv):
         if not drin and PROBENNAME.search(frame.f_code.co_name or ""):
             drin = True
         zustand[frame] = drin
+        geerbt[frame] = drin
         if frame.f_code.co_filename == zieltext:
             return lokal
         # Frames outside the instrument still carry the state on -- they merely do not get
@@ -314,7 +376,22 @@ def messe(fahrbar, nur=None):
 # guardian that ends RED today does not reach its own green ending, and those lines then look
 # probe-borne. The table prints every return code beside the count, so a rise can be told
 # apart from a repair -- and a rise errs towards red, which is the direction a mark may err in.
-MARKE = 12
+#
+# **12 -> 14 and 172 -> 188, and the rise is a CORRECTION, not a regression** (2026-09-01,
+# same day, second reading). Nothing in the tree got worse: the marker pair took the blind
+# spot from 15 of 43 down to 6, and two of the nine newly visible instruments turned out to
+# carry the class after all --
+#
+#     pruefe-widerruf.py    2 lines   the recording path of a finding: every revoked
+#                                     sentence in the tree is struck through today, so
+#                                     only the poisoned copy reaches `treffer.append`
+#     pruefe-zahlen.py     15 lines   8 of them the WHOLE of `lauf()`
+#
+# *A mark that may only fall would have hidden exactly this.* It is written down here rather
+# than argued away, because the same rule protects both directions: a rise that comes from a
+# sharper instrument has to say so, or it is indistinguishable from a rise that comes from
+# worse code.
+MARKE = 14
 # **167 -> 172 within the hour, and the five are MINE** (2026-09-01). The interval that
 # `abnahme.py` now prints instead of `hoechstens` brought `spanne()` and
 # `unsichere_stellen()` with it -- and five of their lines are reached today only from the
@@ -322,7 +399,19 @@ MARKE = 12
 # own green ending. *The tool that counts the class caught the code written beside it in the
 # same hour* -- which is what a ratchet over one's own workshop is for. The count of
 # CARRIERS did not move: `abnahme.py` was already one of the twelve.
-MARKE_ZEILEN = 172
+#
+# **And `pruefe-zahlen.lauf()` is a THIRD form, which is why its eight lines are booked with
+# a caveat and not celebrated.** The speech test drives `pruefe_eintraege(verstellen=nr)`
+# over every entry, and that fills the command CACHE. The real pass afterwards reads the
+# cache and never enters `lauf` at all. *The line was not unreachable -- the fixture got
+# there first.* Booked as measured, because that is what the run did; named here, because
+# "nothing but the fixture can get there" is exactly what it does NOT show.
+# **188 -> 189 between two runs of the same hour, and the cause is point 6 of the header.**
+# `pruefe-zahlen.py` ended RED in the first run (a guarded number in `TODO.md` that this very
+# lane had invalidated by writing two files). Repaired, it reaches its own green ending -- and
+# that ending is one more line only the probe gets to. *A guardian that goes green ADDS to
+# this count, and a mark read without that sentence looks like a regression.*
+MARKE_ZEILEN = 189
 
 # **Booked instead of healed -- empty, and that is a measurement.**
 # *An empty booking is the only honest starting state -- what goes in has to be argued for.*
@@ -330,7 +419,7 @@ GEBUCHT = {}
 
 
 def sprechprobe():
-    """**In sechs Richtungen, auf ERFUNDENEN Instrumenten.**
+    """**In acht Richtungen, auf ERFUNDENEN Instrumenten.**
 
     Die Spur ist der ganze Waechter; eine Probe, die nur die Tafel prueft, prueft die
     Beschriftung. Also laufen hier vier gebaute Instrumente wirklich durch dieselbe Spur, die
@@ -404,6 +493,33 @@ def sprechprobe():
             "if not sprechprobe():\n"
             "    sys.exit(2)\n"
             "sys.exit(main())\n", encoding="utf-8")
+        # **The marker pair, and it has to measure the SAME thing the name does.** Same
+        # program as `pruefe-blind.py`, except the probe lives in the body of `main` and is
+        # bracketed instead of named. If the marked form found less, the fifteen would be
+        # measured with a weaker instrument than the twenty-eight.
+        (dp / "pruefe-markiert.py").write_text(
+            "import sys\n"
+            "def satz(luecke):\n"
+            "    if luecke:\n"
+            "        return 'mit Luecke'\n"
+            "    return 'ohne Luecke'\n"
+            "def main():\n"
+            "    # speech_test: begin\n"
+            "    if satz(True) != 'mit Luecke':\n"
+            "        return 2\n"
+            "    # speech_test: end\n"
+            "    print(satz(False))\n"
+            "    return 0\n"
+            "sys.exit(main())\n", encoding="utf-8")
+        # A marker pair that does not close. It must be REFUSED, not read as an empty span --
+        # an unclosed `begin` would swallow the rest of the file onto the probe side.
+        (dp / "pruefe-offen.py").write_text(
+            "import sys\n"
+            "def main():\n"
+            "    # speech_test: begin\n"
+            "    print('gemessen')\n"
+            "    return 0\n"
+            "sys.exit(main())\n", encoding="utf-8")
         # No probe under a name the trace can see. It must fall out as BLIND, never as clean.
         (dp / "pruefe-namenlos.py").write_text(
             "import sys\n"
@@ -441,6 +557,18 @@ def sprechprobe():
         proben.append(("wer keine benannte Probe hat, faellt als BLIND auf und nicht als sauber",
                        hat_probenfunktion(dp / "pruefe-blind.py")
                        and not hat_probenfunktion(dp / "pruefe-namenlos.py")))
+        markiert = eine("markiert", dp / "pruefe-markiert.py")
+        proben.append(("ein MARKIERTER Probenblock im Rumpf von `main` findet denselben "
+                       "Zweig wie eine benannte Probe",
+                       bool(markiert) and markiert["nur_probe"] == [4]
+                       and hat_probenfunktion(dp / "pruefe-markiert.py")))
+        try:
+            probenspannen(dp / "pruefe-offen.py")
+            offen_ok = False
+        except ValueError:
+            offen_ok = True
+        proben.append(("ein `begin` ohne `end` wird ABGELEHNT und nicht als leere Spanne "
+                       "gelesen", offen_ok))
     return proben
 
 
@@ -450,8 +578,8 @@ def main():
     if "--nur" in sys.argv:
         nur = sys.argv[sys.argv.index("--nur") + 1]
 
-    print("== Sprechprobe -- auf erfundenen Instrumenten, in sechs Richtungen ==")
     proben = sprechprobe()
+    print(f"== Sprechprobe -- auf erfundenen Instrumenten, in {len(proben)} Richtungen ==")
     for was, ok in proben:
         print(f"  {'ok         ' if ok else 'GESCHEITERT'}  {was}")
     if not all(ok for _, ok in proben):
@@ -468,6 +596,7 @@ def main():
 
     kann = sorted(n for n, (k, *_) in fahrbar.items() if k)
     nicht = sorted((n, g) for n, (k, g, _) in fahrbar.items() if not k)
+    schalen = [n for n, g in nicht if "Schalenwaechter" in g]
     ohne_probe = sorted(n for n in kann if not hat_probenfunktion(INST / n))
 
     print()
@@ -475,11 +604,14 @@ def main():
           f"spurbar ==")
     for n, g in nicht:
         print(f"   {n:<28} {g}")
-    print(f"   Und {len(ohne_probe)} der {len(kann)} spurbaren tragen KEINE Probe unter "
-          f"einem Namen,")
-    print("   den diese Spur sieht -- ihre Null ist eine Aussage ueber die Messung und")
-    print("   nicht ueber sie:")
+    markiert = sorted(n for n in kann if probenspannen(INST / n))
+    print(f"   Und {len(ohne_probe)} der {len(kann)} spurbaren tragen KEINE Probe, die diese "
+          f"Spur sieht --")
+    print("   weder unter einem Namen noch zwischen `speech_test: begin/end`. Ihre Null ist")
+    print("   eine Aussage ueber die Messung und nicht ueber sie:")
     print("   " + (", ".join(ohne_probe) if ohne_probe else "(keiner)"))
+    print(f"   {len(markiert)} tragen eine MARKIERTE Probe im Rumpf einer anderen Funktion:")
+    print("   " + (", ".join(markiert) if markiert else "(keiner)"))
     print(f"   **Dieses Werkzeug selbst steht nicht im Nenner.** Es faehrt die anderen; "
           f"sich")
     print("   selbst zu fahren hiesse, sich selbst zu fahren -- dieselbe Klasse wie das")
@@ -522,9 +654,27 @@ def main():
           f"einen Zweig, ==")
     print(f"   den nur die Sprechprobe je erreicht hat -- {zeilen_gesamt} Anweisungszeilen.")
     print(f"   Der Nenner der FRAGE ist {len(fahrbar)}: {len(nicht)} sind nicht spurbar und")
-    print(f"   {len(ohne_probe)} tragen keine benannte Probe. **{len(gemessen)} von "
-          f"{len(fahrbar)} ist die Zahl,")
+    print(f"   {len(ohne_probe)} tragen keine Probe, die diese Spur sieht. **{len(gemessen)} "
+          f"von {len(fahrbar)} ist die Zahl,")
     print("   fuer die diese Antwort gilt** (W25: eine Zahl belegt ihren Nenner).")
+    print()
+    # **Die acht Schalenwaechter sind KEINE Null, und das muss in der Antwort stehen und
+    # nicht in einer Fussnote** -- sonst liest sich `14 von 43` wie eine Aussage ueber die
+    # Werkstatt. Die Absage ist GERECHNET (2026-09-01) und nicht geschaetzt.
+    print(f"   **Und die {len(schalen)} Schalenwaechter sind keine Null, sondern KEIN WERT.**"
+          f" Was sie zu")
+    print("   messen kostete, ist ausgerechnet und nicht geschaetzt (2026-09-01, alle acht")
+    print("   gruen gefahren): **142,7 s fuer EINEN Lauf je Waechter** --")
+    print("     pruefe-lean-beweis.sh 78,3 · pruefe-emission.sh 33,5 · pruefe-p6-beweis.sh 19,3")
+    print("     pruefe-beweise.sh 8,2 · pruefe-lean-programm.sh 2,6 · sonden 0,5 · syntax 0,3")
+    print("     zaehle-fallen.sh 0,0")
+    print("   **SIEBEN der acht rufen `cargo`, `cc`, `isabelle` oder `lake`.** Sie zu spuren")
+    print("   hiesse, die ganze Bau- und Beweiskette in ein Messwerkzeug zu legen, das schon")
+    print("   heute in `SCHWER` steht -- und `pruefe-emission.sh` steht dort selbst, wegen")
+    print("   des ORTES und nicht der Zeit (`CLAUDE.md`). Dazu kaeme ein ZWEITER Spurer:")
+    print("   `bash -x` misst Befehle, und die Rahmenvererbung dieser Messung braucht")
+    print("   `${BASH_LINENO[*]}` in `PS4` samt Kellerrekonstruktion -- ein eigenes")
+    print("   Instrument mit eigener Sprechprobe, kein Zusatz. *Abgesagt, gerechnet.*")
     print()
     print(f"   **Und es sind ZWEI Klassen, nicht eine.** {len(mit_ganz)} Instrumente / "
           f"{ganz_gesamt} Zeilen liegen in")
