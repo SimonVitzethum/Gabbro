@@ -199,6 +199,7 @@ const FAHNEN: &[Fahne] = &[
 /// > registers; that is the whole reason this file reads `main.rs`.*
 const UNTERBEFEHLE: &[&[&str]] = &[
     &["abi"],
+    &["new"],
     &["check", "pruefe"],
     &["build", "bau"],
     &["emit"],

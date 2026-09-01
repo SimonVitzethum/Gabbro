@@ -1,0 +1,18 @@
+-- erwartet: P001
+-- **«B3», paper cut 3 of five -- and the sharpest of them.**
+--
+-- `effects pure` is what a reader writes after `581` taught them the word `pure`. The bare
+-- refusal is *"`{` expected, `pure` found"*: true, correct, and it does not say that
+-- `effects` takes a BRACE LIST. **The reader has no way to guess a brace around one word.**
+--
+-- *This is the one paper cut that cost an attempt while the refusal was perfect.*
+module gift582 {
+
+pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
+    effects pure
+    costs <= 4 ops
+{
+    return a + b;
+}
+
+}

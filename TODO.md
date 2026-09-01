@@ -729,7 +729,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2755 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
+      Heute **2776 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -3788,8 +3788,8 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      61 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 302, die
-      ueberhaupt eine Kennung erwarten)
+      62 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 370
+      Giftproben)
       ```
 
       **Bei `P034` steht der Fall konkret:** `gift/05-auffangzweig` prüft die eine Regel,
@@ -3820,6 +3820,19 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
 
       **Geheilt ist genau einer: `P034`** — das verirrte `pub` heißt jetzt `P041`. Beide
       Ratschen sind daraufhin **gefallen: 20 → 19 Kandidaten, 61 → 59 Proben.**
+
+      > **Am 2026-09-01 steht die Marke bei 62, und der Grund steht hier.** Der
+      > Auffahrt-Zweig hat fünf Giftproben (`580`–`584`) für die «B3»-Hinweise gelegt, und
+      > eine davon zeigt auf eine Kennung, die **schon vorher** mehrdeutig war. Die Zahl der
+      > *Kandidaten* ist **unverändert 20** — es ist keine Kennung neu mehrdeutig geworden,
+      > es zeigt eine Probe mehr auf eine alte. *Der Gegenstand ist gewachsen, nicht der
+      > Schaden.*
+      >
+      > **Und der Nenner ist mitgewandert: `62 von 370`, wo früher `61 von 302` stand.**
+      > Das sind zwei verschiedene Grundmengen — dort „Proben, die überhaupt eine Kennung
+      > erwarten", hier alle Giftproben. **`W25`: eine Zahl beweist ihren Nenner, nicht ihr
+      > Etikett** — wer die 61 und die 62 nebeneinander liest, liest zwei Quotienten mit
+      > verschiedenen Böden.
 
       **Warum die acht übrigen aus Gruppe A hier NICHT geheilt sind, und es ist keine
       Aufwandsfrage:** `E008` hat vier Vergabestellen, `R009` fünf — sie zu trennen hieße zu

@@ -1,0 +1,17 @@
+-- erwartet: P014
+-- **«B3», paper cut 2 of five.** `effects {}` -- the reader has understood that a clause is
+-- needed and has read the empty list as *"this function has no effects"*.
+--
+-- **It is not that; it is a syntax error**, and the word for "no effects" is `pure`. The
+-- refusal listed the nine effect words and left the reader to work out that none of them
+-- being applicable is itself spelled with one of them. *One line ends the attempt.*
+module gift581 {
+
+pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
+    effects {}
+    costs <= 4 ops
+{
+    return a + b;
+}
+
+}

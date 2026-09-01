@@ -176,6 +176,22 @@ impl<'a> Parser<'a> {
     }
 
     fn erwarte_z(&mut self, z: Z) -> Erg<Span> {
+        self.erwarte_z_mit(z, None)
+    }
+
+    /// **The ONE place `P001` is issued for a missing character**, and the note is a
+    /// parameter rather than a second call site.
+    ///
+    /// *Measured on 2026-09-01, and the measurement changed the design:* a refusal
+    /// constructed a second time inside `effects_block` -- the obvious way to write the
+    /// «B3» hint -- moved `pruefe-vergabe.py` from **20 ambiguous identifiers to 21** and
+    /// devalued **three more poison probes** (61 -> 64 of 360). A code with three unrelated
+    /// issue sites can no longer say which rule a probe on it measured. **The ratchet says
+    /// the number may fall and not rise**, so the note travels down to the site instead.
+    ///
+    /// > *The watcher counts the identifier inside a refusal CONSTRUCTOR*, so a comment
+    /// > that spells one out is counted as a site. This one deliberately does not.
+    fn erwarte_z_mit(&mut self, z: Z, notiz: Option<&str>) -> Erg<Span> {
         if self.ist_z(z) {
             Ok(self.vor().span)
         } else {
@@ -186,45 +202,24 @@ impl<'a> Parser<'a> {
                 t.span,
                 format!("`{}` expected, {} found", z.text(), gefunden),
             );
-            // **A paper cut, and the cure is the NOTE and not the grammar.** `;` expected
-            // and `}` found means exactly one thing everywhere it can happen: the entry
-            // before the closing brace was not terminated. The refusal named the missing
-            // token and left the RULE unsaid -- and a reader who does not already know the
-            // rule cannot read it off `` `;` expected ``.
+            if let Some(n) = notiz {
+                a = a.mit_notiz(n);
+            }
+            // **«B3» hint 5.** `narrow s to 0 .. 100 else { return 0 }` -- the semicolon is
+            // missing INSIDE the block, and the caret sits on the closing brace. The reader
+            // of the measured session read that as *"a `;` goes AFTER the block"* and wrote
+            // `};`, which is `P033` and the next attempt.
             //
-            // *Nothing becomes sayable by this line.* Making the last `;` optional would be
-            // the other cure, and it is the expensive one: two spellings for one statement
-            // list, and `{ return 0 return 1 }` legal on the way.
+            // **The pair is exactly `;` expected and `}` found**, and that pair means one
+            // thing only: a statement ran into the end of its block without its terminator.
+            // *The counter-proposal is spelled out because the two attempts are neighbours.*
             if z == Z::Semi && t.art == Art::Zeichen(Z::GeschweiftZu) {
                 a = a.mit_notiz(
-                    "`;` terminates, it does not separate -- the last entry before `}` too",
+                    "the LAST statement of a block ends with `;` too -- \
+                     `else { return 0; }`, and no `;` after the closing brace",
                 );
             }
             self.absage(a);
-            Err(Abbruch)
-        }
-    }
-
-    /// `erwarte_z` with a note under the site -- the shape that was meant, in one line.
-    ///
-    /// **Zero grammar, zero risk.** `P001` says which token is missing; at a handful of
-    /// sites that is not enough to write the form down, because the missing token is a
-    /// brace and the reader has no way to know a BRACE LIST is meant. The note carries the
-    /// form; what parses is unchanged.
-    fn erwarte_z_notiz(&mut self, z: Z, notiz: &'static str) -> Erg<Span> {
-        if self.ist_z(z) {
-            Ok(self.vor().span)
-        } else {
-            let t = self.blick();
-            let gefunden = t.benennung(self.quelle);
-            self.absage(
-                Absage::fehler(
-                    "P001",
-                    t.span,
-                    format!("`{}` expected, {} found", z.text(), gefunden),
-                )
-                .mit_notiz(notiz),
-            );
             Err(Abbruch)
         }
     }
@@ -633,21 +628,12 @@ impl<'a> Parser<'a> {
         self.tiefer(|p| p.moduledecl_innen(oeffentlich))
     }
 
-    /// **The paper cut BEFORE the eight attempts, and it stands in line one.** `module m;`
-    /// is what the newcomer writes -- the file header of half the languages next door -- and
-    /// the refusal was *„`{` expected, `;` found"* on the very first line, in front of
-    /// everything else the file gets wrong.
-    ///
-    /// The note carries the form. **It does not make `module m;` legal**, and that is not a
-    /// nicety: a file header would mean „everything below is inside this module", which is a
-    /// statement about SCOPE and not about notation. *`usedecl` says `;` and means one item;
-    /// `moduledecl` says `{ … }` and means a body.*
     fn moduledecl_innen(&mut self, oeffentlich: bool) -> Erg<Modul> {
         self.erwarte_kw(Kw::Module)?;
         let pfad = self.pfad()?;
-        self.erwarte_z_notiz(
+        self.erwarte_z_mit(
             Z::GeschweiftAuf,
-            "`module` carries a brace body -- `module m { … }`, not `module m;`",
+            Some("`module` carries a brace body -- `module m { \u{2026} }`, not `module m;`"),
         )?;
         let mut items = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
@@ -2459,41 +2445,21 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// **The sharpest paper cut of the eight attempts at „add two numbers" (`PLAN-HARDWARE.md`
-    /// §49 B3), and it is cured with a NOTE.**
-    ///
-    /// `effects pure` gave *„`{` expected, `pure` found"*. The writer had the right word in
-    /// the right place and no way to learn that a brace list is meant -- the refusal names
-    /// the token and not the form.
-    ///
-    /// **What was NOT done, and why:** accepting `effects pure` beside `effects { pure }` is
-    /// the other cure and costs a second spelling for one meaning. *That is the trade this
-    /// language refuses everywhere else* -- the lexer refuses `0X` beside `0x` („one
-    /// spelling, not two"), the parser refuses the braced record literal, and the empty list
-    /// below is refused because `pure` already says it. **A paper cut is removed by saying
-    /// the form, not by growing the grammar.**
     fn effects_block(&mut self) -> Erg<Wirkungen> {
         let anfang = self.erwarte_kw(Kw::Effects)?;
-        self.erwarte_z_notiz(
+        // **«B3» hint 3 -- the sharpest of the five measured paper cuts.**
+        //
+        // `effects pure` is what a reader writes after `E001` told them the clause is
+        // missing, and the bare `P001` answers *"`{` expected, `pure` found"*. That is true
+        // and it teaches nothing: the reader has no way to know a BRACE LIST is meant. Here
+        // the site is known, so the counter-proposal travels down to the refusal.
+        self.erwarte_z_mit(
             Z::GeschweiftAuf,
-            "`effects` takes a brace list -- `effects { pure }`, even for ONE effect",
+            Some(
+                "`effects` takes a BRACE LIST and not a bare word: `effects { pure }`, \
+                 `effects { reads p, writes q }`",
+            ),
         )?;
-        // **`effects { }` keeps its refusal, and the calculation is written down.** The
-        // meaning „this function has no effects" EXISTS and is spelled `pure`; an empty list
-        // would be a second spelling for it, and one of the two would be the one nobody
-        // reads. What the old text did not carry was the substitute -- it listed the nine
-        // effect words and left the reader to guess which of them means „none".
-        if self.ist_z(Z::GeschweiftZu) {
-            let sp = self.span();
-            self.absage(
-                Absage::fehler("P014", sp, "`effects { }` is empty")
-                    .mit_notiz("a function without effects writes `effects { pure }`")
-                    .mit_notiz(
-                        "reads writes locks masks allocs consumes publishes diverges pure",
-                    ),
-            );
-            return Err(Abbruch);
-        }
         let liste = self.efflist()?;
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Wirkungen {
@@ -2555,16 +2521,24 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 let gefunden = t.benennung(self.quelle);
-                self.absage(
-                    Absage::fehler(
-                        "P014",
-                        t.span,
-                        format!("effect expected, {gefunden} found"),
-                    )
-                    .mit_notiz(
-                        "reads writes locks masks allocs consumes publishes diverges pure",
-                    ),
-                );
+                let mut a = Absage::fehler(
+                    "P014",
+                    t.span,
+                    format!("effect expected, {gefunden} found"),
+                )
+                .mit_notiz("reads writes locks masks allocs consumes publishes diverges pure");
+                // **«B3» hint 2.** `effects {}` is the second thing a reader writes after
+                // `E001`, and the list above answers *what* an effect is without answering
+                // *why an empty list is not "none"*. The empty case is recognisable here --
+                // the closing brace stands where an effect should -- so it gets the one
+                // line that ends the attempt.
+                if t.art == Art::Zeichen(Z::GeschweiftZu) {
+                    a = a.mit_notiz(
+                        "an EMPTY list is not `no effects`: the word for that is `pure` -- \
+                         `effects { pure }`",
+                    );
+                }
+                self.absage(a);
                 return Err(Abbruch);
             }
         };
@@ -2654,13 +2628,10 @@ impl<'a> Parser<'a> {
     fn stmt(&mut self) -> Erg<Stmt> {
         let anfang = self.span();
         if self.ist_z(Z::Semi) {
-            // **The same refusal, and the writer sees two different things.** After a block
-            // the text on the page is `};` -- nobody reads that as „a semicolon on its own",
-            // and the old wording asked the reader to find a lone `;` that is not there.
-            // *The rule is the same one; what moves is which half of it is said first.*
-            //
-            // The refusal STAYS: `};` and `}` would be two spellings of one statement, and
-            // the stray `;` is far more often a form carried over from C than a decision.
+            // **A paper cut, and the cure is the TEXT.** `;` alone after a closed block is
+            // the commonest way to write one token too many, and \u{201e}a semicolon on its own
+            // is not a statement\u{201c} does not say that the block before it was already
+            // finished. The site knows which of the two happened -- so it says which.
             let nach_block = self.pos > 0
                 && self.tokens[self.pos - 1].art == Art::Zeichen(Z::GeschweiftZu);
             let text = if nach_block {
@@ -2669,11 +2640,12 @@ impl<'a> Parser<'a> {
                 "a semicolon on its own is not a statement"
             };
             self.absage(
-                Absage::fehler("P033", anfang, text).mit_notiz(
-                    "the forms with a block -- `if`, `match`, `traverse`, `retry`, \
-                     `forever`, `breaking`, `narrow … else`, `locks`, `let … else` -- \
-                     carry NO trailing semicolon",
-                ),
+                Absage::fehler("P033", anfang, text)
+                    .mit_notiz(
+                        "the forms with a block -- `if`, `match`, `traverse`, `retry`, \
+                         `forever`, `breaking`, `narrow … else`, `locks`, `let … else` -- \
+                         carry NO trailing semicolon",
+                    ),
             );
             return Err(Abbruch);
         }

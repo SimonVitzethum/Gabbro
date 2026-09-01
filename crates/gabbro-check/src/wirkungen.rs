@@ -856,6 +856,18 @@ fn funktion(
                     .mit_notiz(
                         "the omission was at once the strongest promise and the cheapest \
                             one to write",
+                    )
+                    // **«B3» hint 1, and it is the one that shortens the whole session.**
+                    //
+                    // Measured: after this refusal the next two attempts were `effects {}`
+                    // and `effects pure`. Both are correct refusals of their own, and both
+                    // are attempts that were spent GUESSING THE SHAPE of a clause this
+                    // message named without showing. *Naming what is missing and not what
+                    // to write costs one attempt per reader, every time.*
+                    .mit_notiz(
+                        "the clause is a BRACE LIST and it is never empty: `effects { pure }` \
+                            for a function that touches nothing, otherwise \
+                            `effects { reads p, writes q }`",
                     ),
                 );
             }

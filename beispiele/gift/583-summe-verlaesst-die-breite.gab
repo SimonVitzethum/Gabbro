@@ -1,0 +1,21 @@
+-- erwartet: M104
+-- **«B3», paper cut 4 of five.** `u32 + u32` with a `u64` return type.
+--
+-- The reader read *"`u32 + u32` leaves the width of the result type"*, concluded that the
+-- RESULT TYPE was too small, widened it to `u64` -- **and got the identical refusal back.**
+-- The width that is left is the width of the OPERANDS, and a wider return type does not
+-- widen them.
+--
+-- *A message that names the fault without naming the line it lives on sends the reader to
+-- the wrong line*, and here it cost a whole attempt. The three shapes that DO work are in
+-- `TUTORIAL.md` and in the note under this refusal.
+module gift583 {
+
+pub fn sum(a : u32, b : u32) -> u64
+    effects { pure }
+    costs <= 4 ops
+{
+    return a + b;
+}
+
+}

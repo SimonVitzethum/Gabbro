@@ -239,7 +239,7 @@ fn effects_ohne_klammern_nennt_die_form() {
     faellt_mit_notiz(
         "impl fn f() effects pure { }",
         "P001",
-        "`effects` takes a brace list",
+        "takes a BRACE LIST and not a bare word",
     );
 }
 
@@ -251,7 +251,7 @@ fn leere_wirkungsliste_nennt_pure() {
     faellt_mit_notiz(
         "impl fn f() effects { } { }",
         "P014",
-        "writes `effects { pure }`",
+        "an EMPTY list is not `no effects`",
     );
 }
 
@@ -262,7 +262,7 @@ fn fehlender_strichpunkt_nennt_die_regel() {
     faellt_mit_notiz(
         "impl fn f() effects { pure } { return 0 }",
         "P001",
-        "`;` terminates, it does not separate",
+        "the LAST statement of a block ends with `;` too",
     );
 }
 

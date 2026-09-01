@@ -9,6 +9,7 @@ use gabbro_syntax::diag::Stufe;
 
 mod bau;
 mod fragmente;
+mod new;
 
 /// **A reader that stops reading must not look like a crash.**
 ///
@@ -160,6 +161,10 @@ fn main() -> std::process::ExitCode {
         // reckoning that decided its shape stands in `dokumente/BAUSYSTEM.md`, and it was
         // written before the first line of `bau.rs`.
         "build" | "bau" => bau::befehl(rest),
+        // **«B3»: the on-ramp.** English first name and no second one -- the working
+        // language was set to English on 2026-09-01, and a NEW subcommand that shipped a
+        // German spelling would be a pair nobody asked for.
+        "new" => new::befehl(rest),
         // The emitter, since 2026-08-17 -- what it covers and what it refuses stands at
         // `command_emit` below, where the code is.
         "emit" => command_emit(befehl, rest),
@@ -575,6 +580,11 @@ fn hilfe() {
     eprintln!(
         "gabbro -- compiler and checker for Gabbro (stage P2 + three passes)
 
+  gabbro new <name>                 write `<name>.gab` and `<name>.bau` into this directory.
+                                    They CHECK, BUILD and RUN as written -- the skeleton is
+                                    the irreducible file measured out of `beispiele/63`, and
+                                    every clause in it carries the reason it stands there.
+                                    Start here; `TUTORIAL.md` is the long form
   gabbro check|pruefe [--with L.gabi]… [--unit] [--passes] <file.gab>…
                                     read, parse and run the built passes. The \"not checked
                                     in this run\" register is SUMMARISED (count per state and

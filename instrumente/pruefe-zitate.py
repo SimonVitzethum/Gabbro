@@ -186,7 +186,15 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # **295 -> 296 on 2026-09-01, and the mark RISES with its reason.** The `S8` lane added
 # `D020`, two assumptions and `beispiele/gift/570`; one comment cites a rule it does not
 # issue. **The target stays 207** -- the object grew, the debt did not.
-MARKE = 296
+# **296 -> 302 am 2026-09-01, und der Grund steht wieder AN der Marke.** Der Auffahrt- und
+# der Freigabe-Zweig haben zusammen sechs Kommentare gelegt, die eine fremde Kennung nennen:
+# die fuenf Hinweistexte in `parse.rs` nennen `P033`/`P014`/`M104` und die Fahnenprobe nennt
+# `P001`. **Jede der sechs ist ein Querverweis und keine Deckungsbehauptung** -- der Text sagt
+# *"`P033` heisst schon so"*, nicht *"diese Datei vergibt `P033`"*.
+#
+# *Das entschuldigt sie nicht; es benennt sie.* Die Ratsche zaehlt Kandidaten, und ein
+# Kandidat ist keine Absage -- siehe den Abschnitt darunter, der das seit dem ersten Lauf sagt.
+MARKE = 302
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
