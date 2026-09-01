@@ -665,6 +665,40 @@ pub const D1D2: &[Satz] = &[
                      messung/DOMAENENSTELLUNGEN.md §7",
     },
     Satz {
+        name: "d.abbildungsfeld",
+        kennungen: &["D020"],
+        aussage: "The FIELD names of a bound MAPPING resolve. The fourth question at a \
+                  quantifier and the first about the VARIABLE: `D017` reads the base name, \
+                  `D018` its kind, `D019` the field names of its suffix -- and all three stop \
+                  at the PLACE. **`mappings of` is the one domain that binds a record** \
+                  (`SPRACHE.md` §6), so it is the one where `m.field` means anything, and it \
+                  was the one nobody read. A mapping carries the fields of the node `format` \
+                  plus three the domain synthesises from the POSITION -- `va`, `level`, \
+                  `index`.",
+        vorbehalt: "**Silent wherever the `walk` did not resolve** -- no walk name, no node \
+                    `format`, no field list, no refusal. Same discipline as `D019`. And it \
+                    says nothing about what a field MEANS: whether `m.schreibbar` is the leaf \
+                    entry's bit or the conjunction over the path is a reading this tree has \
+                    not made, and this rule does not make it either -- it holds that the name \
+                    stands somewhere.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-01 against the UNCHANGED checker: a `walk` over `[Pte; \
+                      512]` with `forall m in mappings of Self : !m.gibtsnicht` in an \
+                      `invariant` gave `3 items, 0 errors, 0 hints` -- **`Pte` has no field of \
+                      that name and no pass said so.** The control in the same run: the same \
+                      line with a falsified BASE name (`mappings of GibtsNicht`) does fall, at \
+                      `D017` -- *the base is read and the variable's field is not.* The cause \
+                      stands in `domaene.rs`: `ortsfelder_pruefen` returns early on a bound \
+                      name because a quantifier variable carries no type there, and for \
+                      `mappings of` the type is no guess. Poison is beispiele/gift/570, whose \
+                      two counter-probes (an entry field and `va`) stay silent in the same \
+                      file. Over all 533 files -- 171 corpus plus 362 gift -- the rule falls \
+                      in ZERO.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; \
+                     beispiele/gift/570-mapping-field-not-declared.gab; \
+                     dokumente/PLAN-HARDWARE.md §5",
+    },
+    Satz {
         name: "d.domaenenort",
         kennungen: &["D017", "D018"],
         aussage: "The PLACE a quantifier domain runs over is held twice: its base name \

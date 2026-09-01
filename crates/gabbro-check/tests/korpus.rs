@@ -108,6 +108,14 @@ const BENANNT: &[&str] = &[
     // read it either. The control in the same run: the same place with a falsified BASE
     // name does fall, at `M109`. *The base is read and the field is not.*
     "D019",
+    // 2026-09-01, the fourth question at the same place and the first about the VARIABLE.
+    // `D017`/`D018`/`D019` all stop at the PLACE; `mappings of` is the one domain that binds
+    // a record, so it is the one where `m.field` means anything -- and `forall m in mappings
+    // of Self : !m.gibtsnicht` passed with `0 errors, 0 hints`. The control in the same run
+    // (a falsified BASE name) fell at `D017`. `dokumente/PLAN-HARDWARE.md` §5 rests on the
+    // split this rule makes readable: entry fields travel with a grafted subtree, `va` does
+    // not.
+    "D020",
     // 2026-08-31, the other half of the `N044` sentence: `N044` sees THAT a verdict is
     // missing, `M135` sees whether the one that is there is a verdict at all. `passt` ends
     // in a comparison of RANGES and `bool` has none, so the whole boundary fell through a

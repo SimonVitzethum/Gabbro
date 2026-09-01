@@ -7373,6 +7373,91 @@ impl fn f() -> bool
     );
 }
 
+/// **`D020`: the FIELD names of a bound MAPPING.**
+///
+/// The fourth question at a quantifier and the first about the VARIABLE. `D017`/`D018`/`D019`
+/// all stop at the PLACE, and `ortsfelder_pruefen` says why in its own second line: *"a
+/// quantifier variable carries no type in this pass"*. **For `mappings of` it does** -- the
+/// type stands in the `walk` declaration, and `mappings of` is the one domain that binds a
+/// record rather than an index (`SPRACHE.md` §6).
+///
+/// Measured 2026-09-01 against the unchanged checker: `forall m in mappings of Self :
+/// !m.gibtsnicht` gave `3 items, 0 errors, 0 hints`. The control in the same run -- the same
+/// line with a falsified BASE name -- fell at `D017`.
+///
+/// The two counter-probes below are the reason the rule is not tidiness: an ENTRY field
+/// travels with a grafted subtree, and `va` does not, because it is synthesised from the
+/// position. `dokumente/PLAN-HARDWARE.md` §5 Layer 2 turns on that split.
+#[test]
+fn der_feldname_einer_gebundenen_abbildung() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(pred: &str) -> String {
+        format!(
+            "module t {{
+format Pte endian little {{
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    frei       : u64 @[11:2] reserved,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    hoch       : u64 @[62:52] reserved,
+    nx         : bool @63,
+}}
+walk Tabelle levels 4 {{
+    node : [Pte; 512],
+    down : rahmen when it.praesent,
+    leaf : !it.praesent,
+    invariant i cost O(n) runs online : {pred};
+}} }}"
+        )
+    }
+
+    // 1 -- the poison: a name that is neither an entry field nor a position field.
+    let erfunden = absagen(&mit("forall m in mappings of Self : !m.gibtsnicht"));
+    assert!(
+        erfunden.iter().any(|c| c == "D020"),
+        "an invented field on a bound mapping has to fall: {erfunden:?}"
+    );
+
+    // 2 -- counter-probe: fields of the node `format`. They travel with the entry.
+    let eintragsbits = absagen(&mit(
+        "forall m in mappings of Self : !(m.schreibbar && !m.nx)",
+    ));
+    assert!(
+        !eintragsbits.iter().any(|c| c == "D020"),
+        "the node format's own fields carry: {eintragsbits:?}"
+    );
+
+    // 3 -- counter-probe: `va` stands in NO `format` and is carried by the domain
+    // (`SPRACHE.md`:930, "including virtual address and level"). It is the field that makes
+    // an invariant path-DEPENDENT, and refusing it would refuse the sharper half.
+    let stellung = absagen(&mit(
+        "forall m in mappings of Self : m.va < 0xFFFF_8000_0000_0000 || !m.praesent",
+    ));
+    assert!(
+        !stellung.iter().any(|c| c == "D020"),
+        "`va`, `level` and `index` come from the POSITION and stand in no `format`: \
+         {stellung:?}"
+    );
+
+    // 4 -- a domain that is not `mappings of` binds an INDEX, and an index has no fields.
+    // The rule must not spread to it: `D019` and `M134` own that question.
+    let andere_domaene = absagen(
+        "module t {
+table K count 8 { slots { marke : u32, } }
+impl fn f(k : ptr<normal, r> K) -> bool
+    requires forall s in slots of k : k.slots[s].marke == 0
+    effects { reads k.slots } costs <= 4 ops { return true; } }",
+    );
+    assert!(
+        !andere_domaene.iter().any(|c| c == "D020"),
+        "`slots of` binds an index, not a mapping: {andere_domaene:?}"
+    );
+}
+
 /// **`N044`/`N045`: a probe yields a VERDICT, and on every path.**
 ///
 /// `can_fail` is a probe -- it falls or it holds (`SYNTAX.md` §13). Measured 2026-08-31

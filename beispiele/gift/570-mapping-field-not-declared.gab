@@ -1,0 +1,72 @@
+-- erwartet: D020
+-- **A field of a BOUND MAPPING that stands nowhere.**
+--
+-- The fourth question at a quantifier, and the first one about the VARIABLE instead of the
+-- place. `D017` reads the base name, `D018` its kind, `D019` the field names of its suffix --
+-- and all three stop at the place. **`mappings of` is the one domain that binds a record**
+-- (`SPRACHE.md` §6: *"A domain binds the ADDRESS of an entry … `mappings of` is the one
+-- exception"*), so it is the one domain where `m.field` means anything at all, and it was the
+-- one nobody read.
+--
+-- MEASURED 2026-09-01 against the UNCHANGED checker: this very declaration, with
+-- `!m.gibtsnicht` in an `invariant`, gave
+--
+--     …: 3 items, 0 errors, 0 hints
+--
+-- **`Pte` has no field of that name and no pass said so.** The control in the same run: the
+-- same line with a falsified BASE name (`mappings of GibtsNicht`) does fall, at `D017`.
+-- *The base is read and the variable's field is not.* Word for word the sentence `D019` says
+-- one level down -- and the cause is the same and it is written in `domaene.rs`:
+-- `ortsfelder_pruefen` **returns early on a bound name**, because a quantifier variable
+-- carries no type in that pass. For `mappings of` the type is no guess: it stands in the
+-- `walk` declaration, three lines above.
+--
+-- WHY THIS ONE IS NOT A TIDINESS RULE
+-- ------------------------------------
+-- A mapping carries TWO families of field, and the second one decides a cost question.
+-- The node `format` gives the ENTRY's bits; `va`, `level` and `index` are SYNTHESISED from
+-- the position (`SPRACHE.md`:930, *"including virtual address and level"*). An invariant that
+-- reads only entry bits survives a subtree being grafted anywhere; one that reads `va` does
+-- not, because a graft re-derives every `va` under it **without a single bit changing**.
+-- `PLAN-HARDWARE.md` §5 Layer 2 turns on exactly that split, and until this rule nothing in
+-- the tree could make it.
+--
+-- THE COUNTER-PROBE STANDS IN THE SAME FILE
+-- ------------------------------------------
+-- `wx_getrennt` reads `m.schreibbar` and `m.nx` -- fields of the node `format` -- and
+-- `stellung_wird_gelesen` reads `m.va`, which is not in the `format` at all and is carried by
+-- the domain. Neither falls. **Three invariants over one `walk`, and only the invented field
+-- is refused.**
+
+module gift {
+
+format Pte endian little {
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    nutzer     : bool @2,
+    pte_frei   : u64 @[11:3] reserved,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    pte_hoch   : u64 @[62:52] reserved,
+    nx         : bool @63,
+}
+
+walk Seitentabelle levels 4 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent,
+    leaf : !it.praesent,
+
+    -- Counter-probe 1: fields of the node `format`. Does not fall.
+    invariant wx_getrennt cost O(n) runs online :
+        forall m in mappings of Self : !(m.schreibbar && !m.nx);
+
+    -- Counter-probe 2: `va` stands in NO `format` and is carried by the domain.
+    -- Does not fall either.
+    invariant stellung_wird_gelesen cost O(n) runs offline :
+        forall m in mappings of Self : m.va < 0xFFFF_8000_0000_0000 || !m.nutzer;
+
+    -- THE POISON: `gibtsnicht` is neither in the `format` nor among the three position fields.
+    invariant erfundenes_feld cost O(n) runs online :
+        forall m in mappings of Self : !m.gibtsnicht;
+}
+
+}
