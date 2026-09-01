@@ -4546,8 +4546,15 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
 - [ ] `pruefe-luecken.py`: **null von fünfzehn Verdrehungen je gefahren.** Der Zweig
       `92 von 92` ruht auf einer Sprechprobe. *Dieselbe Form wie der maskierende `panic!`.*
 - [ ] Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**
-- [ ] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
-      hat?** Heute unbekannt.
+- [x] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
+      hat?** ~~Heute unbekannt.~~ **`12 von 43`, 167 Anweisungszeilen** (2026-09-01,
+      `instrumente/zaehle-probenzweige.py`, `messung/PROBENZWEIGE.md`). *Und der Nenner ist
+      die Hälfte der Antwort:* 43 von 52 sind überhaupt spurbar — 8 Schalenwächter, 1 zu
+      teuer — und **15 der 43 tragen ihre Sprechprobe im Rumpf von `main` statt in einer
+      Funktion mit Namen**; für die ist die gemessene Null eine Aussage über die Messung.
+      Es sind **zwei Klassen**: 4 Instrumente / 37 Zeilen liegen in einer Funktion, die der
+      echte Lauf NIE betritt (darunter `abnahme.schlusssatz`, der Fall, der die Frage
+      auslöste); der Rest ist der Befundweg eines Wächters, der heute nichts findet.
 - [ ] `pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
       `Wenn`/`Match`-Arme → **2^Tiefe**. *Dritter Befund in `m2` über denselben Gegenstand —
       die Frage ist nicht die Stelle, sondern ob `m2` einen eigenen Abstiegsbegriff führt.*

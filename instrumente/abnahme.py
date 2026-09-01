@@ -142,7 +142,13 @@ FRIST_ABNAHME = 2 * FRIST
 # `--anker` counts text and builds nothing (`CLAUDE.md`), and it is the half that catches a
 # dead anchor -- a mutation whose source line moved away silently shrinks the denominator and
 # reads like coverage. The expensive half stays behind `--voll` and is named there.
-SCHNELL_TEIL = {"mutiere-pruefer.py": ["--anker"]}
+#
+# **`zaehle-probenzweige.py` has the same shape and a sharper reason.** Its cheap half prints
+# the DENOMINATOR -- how many instruments its trace can see at all, and who is blind to it and
+# why -- and builds nothing. Its expensive half runs every instrument, THIS RUN among them,
+# and that is what keeps it out of here: two nested levels of it were standing after eleven
+# minutes on 2026-09-01. *The half that runs is also the half that recurses.*
+SCHNELL_TEIL = {"mutiere-pruefer.py": ["--anker"], "zaehle-probenzweige.py": ["--anker"]}
 
 # A Python interpreter that dies in its own prologue has not rendered a verdict. This is the
 # ONE signal that separates "did not run" from "found something".

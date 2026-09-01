@@ -107,6 +107,14 @@ SCHWER = {
         "`cargo run` je Einheit -- gehoert auf den Server; 13,7 s dort (2026-08-20)",
     "pruefe-luecken.py":
         "baut dreizehnmal neu -- gehoert auf den Server; 10,7 s / 27,8 s CPU dort (2026-08-20)",
+    # **And this one is in here for a reason none of the others has: it would run THIS RUN.**
+    # It drives every instrument under a line trace, and the acceptance is one of them --
+    # which drives it again. Measured 2026-09-01: three nested levels were standing after
+    # eleven minutes before the register said no. *A guardian whose object contains its own
+    # caller has no fixed point, and `SCHWER` is where that is written down.*
+    "zaehle-probenzweige.py":
+        "faehrt 43 Instrumente unter `sys.settrace` -- darunter diese Abnahme, die ihn "
+        "wieder faehrt; 2 min 11 s ohne sie (2026-09-01)",
 }
 # **WHAT AN OMITTED GUARDIAN TAKES WITH IT -- in its OWN unit** (2026-08-31).
 #
@@ -153,6 +161,9 @@ GEGENSTAND = {
     "zaehle-c-formen.py":
         "102 emittierende Uebersetzungseinheiten / 8001 Zeilen erzeugtes C, "
         "gegen 101 Formen aus `BEWEIS.md` Item 2 §1",
+    "zaehle-probenzweige.py":
+        "43 von 52 Instrumenten unter einer geteilten Zeilenspur -- die Zweige, "
+        "die nur die Sprechprobe je erreicht hat",
 }
 # **Waechter, deren Gegenstand ein FREMDER BAUM ist** -- einer, der nicht in diesem
 # Verzeichnis liegt und den `git` nicht mitbringt. Je Eintrag: der Pfad und was dort steht.
