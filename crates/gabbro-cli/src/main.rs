@@ -71,12 +71,12 @@ fn main() -> std::process::ExitCode {
             // (`huelle_der_gerufenen`), and until today this command printed the
             // DECLARATION straight back. *No elaborator is built here -- what is measured
             // is whether one would be worth building.*
-            let berechnet = rest.iter().any(|a| a == "--berechnet");
-            let vergleich = rest.iter().any(|a| a == "--vergleich");
+            let berechnet = rest.iter().any(|a| a == "--computed" || a == "--berechnet");
+            let vergleich = rest.iter().any(|a| a == "--compare" || a == "--vergleich");
             // **`--weit` also counts the reads over parameters.** The difference between
             // the two runs IS the measurement: it says how much still lies between the pass
             // that CHECKS the line and an elaborator that would WRITE it.
-            let weit = rest.iter().any(|a| a == "--weit");
+            let weit = rest.iter().any(|a| a == "--wide" || a == "--weit");
             // **`--unit` writes ONE interface for a unit of several files.**
             //
             // Without it a two-file library had no interface at all: run per file, the second
@@ -96,7 +96,14 @@ fn main() -> std::process::ExitCode {
                 .filter(|a| {
                     !matches!(
                         a.as_str(),
-                        "--berechnet" | "--vergleich" | "--weit" | "--unit" | "--einheit"
+                        "--computed"
+                            | "--berechnet"
+                            | "--compare"
+                            | "--vergleich"
+                            | "--wide"
+                            | "--weit"
+                            | "--unit"
+                            | "--einheit"
                     )
                 })
                 .cloned()
@@ -227,8 +234,11 @@ fn main() -> std::process::ExitCode {
                 eprintln!("gabbro alias: no file named");
                 return std::process::ExitCode::from(2);
             }
-            let leise = rest.iter().any(|a| a == "--summe");
-            let rest: Vec<&String> = rest.iter().filter(|a| a.as_str() != "--summe").collect();
+            let leise = rest.iter().any(|a| a == "--total" || a == "--summe");
+            let rest: Vec<&String> = rest
+                .iter()
+                .filter(|a| !matches!(a.as_str(), "--total" | "--summe"))
+                .collect();
             let mut schlecht = false;
             let mut summe = gabbro_check::alias::Flaeche::default();
             let mehrere = rest.len() > 1;
@@ -471,11 +481,11 @@ fn main() -> std::process::ExitCode {
         // Zahl sinken?). *Ohne die zweite misst „Nutzbarkeit" die Menge aller Klauseln und
         // draengt gegen die Zusage der Sprache.*
         "ceremony" | "zeremonie" => {
-            if rest.iter().any(|x| x == "--tafel") {
+            if rest.iter().any(|x| x == "--table" || x == "--tafel") {
                 print!("{}", gabbro_check::zeremonie::tafel());
                 return std::process::ExitCode::SUCCESS;
             }
-            let ausfuehrlich = rest.iter().any(|x| x == "--je-stelle");
+            let ausfuehrlich = rest.iter().any(|x| x == "--per-site" || x == "--je-stelle");
             let dateien: Vec<&String> = rest.iter().filter(|x| !x.starts_with("--")).collect();
             if dateien.is_empty() {
                 eprintln!("gabbro zeremonie: no file named");
@@ -522,7 +532,7 @@ fn main() -> std::process::ExitCode {
         // die Ratsche in `pruefe-schablonen.py`, und **dieses Tor ist das ZIEL.**
         "templates" | "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
-            if rest.iter().any(|x| x == "--tor") {
+            if rest.iter().any(|x| x == "--gate" || x == "--tor") {
                 let luft = gabbro_check::schablonen::in_der_luft();
                 if !luft.is_empty() {
                     eprintln!(
@@ -542,7 +552,10 @@ fn main() -> std::process::ExitCode {
             befehl_paesse();
             print!(
                 "{}",
-                gabbro_check::saetze::zeige(rest.iter().any(|x| x == "--je-satz"))
+                gabbro_check::saetze::zeige(
+                    rest.iter()
+                        .any(|x| x == "--per-statement" || x == "--je-satz"),
+                )
             );
             std::process::ExitCode::SUCCESS
         }
@@ -562,10 +575,10 @@ fn hilfe() {
     eprintln!(
         "gabbro -- compiler and checker for Gabbro (stage P2 + three passes)
 
-  gabbro check|pruefe [--with L.gabi]… [--unit] [--paesse] <file.gab>…
+  gabbro check|pruefe [--with L.gabi]… [--unit] [--passes] <file.gab>…
                                     read, parse and run the built passes. The \"not checked
                                     in this run\" register is SUMMARISED (count per state and
-                                    a fingerprint); `--paesse` prints it in full. *It is a
+                                    a fingerprint); `--passes` prints it in full. *It is a
                                     property of the binary, not of the file* -- printing
                                     1 122 words of it beside 20 words of finding, at every
                                     run, is a disclosure nobody reads
@@ -573,7 +586,7 @@ fn hilfe() {
                                     no bodies -- valid Gabbro, no second format. `--unit`
                                     writes ONE interface for a unit of several files; a
                                     two-file library has none without it
-  gabbro abi --vergleich [--with L.gabi]… [--weit] <file.gab>…
+  gabbro abi --compare [--with L.gabi]… [--wide] <file.gab>…
                                     the COMPUTED effect hull against the WRITTEN one.
                                     `--with` runs it ACROSS a unit boundary -- without it
                                     the caller's file alone carries `K003` and is skipped
@@ -581,12 +594,13 @@ fn hilfe() {
                                     every ```gabbro block of a markdown file, one by one
   gabbro assumptions|annahmen <file.gab>…
                                     the assumption manifest: proved under A1…An
-  gabbro passes|paesse [--je-satz]  the pass list -- built AND open -- and THE PASS
+  gabbro passes|paesse [--per-statement]
+                                    the pass list -- built AND open -- and THE PASS
                                     REGISTER: the sentence each pass owes, with its
-                                    state. `--je-satz` prints each sentence in full
-  gabbro templates|schablonen [--tor]
+                                    state. `--per-statement` prints each sentence in full
+  gabbro templates|schablonen [--gate]
                                     the generator templates: the third counting column.
-                                    `--tor` FALLS while a proved template has a premise
+                                    `--gate` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
   gabbro k-condition|k-bedingung <file.gab>…
                                     per carrier: are ALL write sites generated? (measurement 2)
@@ -627,15 +641,18 @@ fn hilfe() {
   gabbro certificate|zeugnis <file.gab>…
                                     what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines
-  gabbro ceremony|zeremonie [--je-stelle | --tafel] <file.gab>…
+  gabbro ceremony|zeremonie [--per-site | --table] <file.gab>…
                                     every clause and annotation, in three columns --
                                     derivable / redundant / load-bearing. The CALIBRATION
-                                    travels with the tool: `--tafel` prints, per rule,
+                                    travels with the tool: `--table` prints, per rule,
                                     whether its number may fall AND why
 
-Every subcommand has an ENGLISH first name; the German second name keeps working and is
-printed after the `|`. A refusal names the spelling that was TYPED, not the first name --
-otherwise a run under the second name would report a command nobody called (W16).
+Every subcommand AND every flag has an ENGLISH first name; the German second name keeps
+working. For sub-commands it is printed after the `|`; for flags only the first name is
+printed here, and the second is `--einheit --paesse --je-satz --je-stelle --tafel --tor
+--berechnet --vergleich --weit --summe --ursprung --sperrrang --eng --trocken --hilfe`. A
+refusal names the spelling that was TYPED, not the first name -- otherwise a run under the
+second name would report a command nobody called (W16).
 
 Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
     );
@@ -1224,7 +1241,7 @@ fn items_im_bereich(baum: &gabbro_syntax::ast::Programm, von: usize, bis: usize)
 fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     // **`--paesse` prints the FULL register, and since 2026-08-25 it no longer prints
     // itself.** See `register_kurz` for the measurement and the reason.
-    let voll = argumente.iter().any(|a| a == "--paesse");
+    let voll = argumente.iter().any(|a| a == "--passes" || a == "--paesse");
     // **`--unit` checks the named files as ONE translation unit** (German second name
     // `--einheit`; NOT called an alias here -- `gabbro alias` is a subcommand about POINTER
     // aliasing, and one word for two things is how a register starts to drift). Without it every file is its own unit -- see the loop below, and see
@@ -1232,7 +1249,12 @@ fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode 
     let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
     let argumente: Vec<String> = argumente
         .iter()
-        .filter(|a| !matches!(a.as_str(), "--paesse" | "--unit" | "--einheit"))
+        .filter(|a| {
+            !matches!(
+                a.as_str(),
+                "--passes" | "--paesse" | "--unit" | "--einheit"
+            )
+        })
         .cloned()
         .collect();
     // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
@@ -1757,29 +1779,32 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
 
 /// **`gabbro effects` -- what the compiler would WRITE, and where each entry comes from.**
 ///
-/// Five shapes, and the flags stay German like `abi`'s (`ERSTNAMEN.md`: the sub-command's
-/// first name is English, the flags of this family are not):
+/// Five shapes. **The sentence that stood here until 2026-09-01 -- *"the flags stay German
+/// like `abi`'s"* -- is REVOKED**: since today every flag carries an English first name too,
+/// on the same additive path the sub-commands took, and the German spelling keeps working.
+/// `ERSTNAMEN.md` §5 named the gap; it is closed, and the doc comment that repeated the old
+/// state would have outlived it by exactly the class `pruefe-widerruf.py` guards.
 ///
 /// | | |
 /// |---|---|
 /// | *(nothing)* | one derived `effects` line per function |
-/// | `--ursprung` | each entry with its origin path, hop by hop |
-/// | `--vergleich` | the derived set held against the WRITTEN one, per entry |
-/// | `--sperrrang` | the lock-rank pass over both bases, and what the derivation frees |
-/// | `--eng` | leave out reads through parameters, as the read half of the effects pass does |
+/// | `--origin` / `--ursprung` | each entry with its origin path, hop by hop |
+/// | `--compare` / `--vergleich` | the derived set held against the WRITTEN one, per entry |
+/// | `--lock-rank` / `--sperrrang` | the lock-rank pass over both bases, and what the derivation frees |
+/// | `--narrow` / `--eng` | leave out reads through parameters, as the read half of the effects pass does |
 ///
-/// **`--eng` is an opt-OUT here and `--weit` an opt-IN at `abi`, and that is not an
-/// inconsistency but the difference between the two questions.** `abi --vergleich` asks
+/// **`--narrow` is an opt-OUT here and `--wide` an opt-IN at `abi`, and that is not an
+/// inconsistency but the difference between the two questions.** `abi --compare` asks
 /// *"does the written line agree with what the passes check?"* -- and the passes leave
 /// parameter reads out, with a reason given where that filter lives. This command asks *"what would an elaborator have to
 /// write?"*, and it has to write `reads p.slots`: the caller wants to know what happens to
 /// his pointer. *A default that answered the other question would make every measurement
 /// taken with it wrong in the same direction.*
 fn befehl_wirkungen(rest: &[String]) -> std::process::ExitCode {
-    let ursprung = rest.iter().any(|a| a == "--ursprung");
-    let vergleich = rest.iter().any(|a| a == "--vergleich");
-    let sperrrang = rest.iter().any(|a| a == "--sperrrang");
-    let weit = !rest.iter().any(|a| a == "--eng");
+    let ursprung = rest.iter().any(|a| a == "--origin" || a == "--ursprung");
+    let vergleich = rest.iter().any(|a| a == "--compare" || a == "--vergleich");
+    let sperrrang = rest.iter().any(|a| a == "--lock-rank" || a == "--sperrrang");
+    let weit = !rest.iter().any(|a| a == "--narrow" || a == "--eng");
     let nur: Option<&String> = rest
         .iter()
         .position(|a| a == "--fn")
