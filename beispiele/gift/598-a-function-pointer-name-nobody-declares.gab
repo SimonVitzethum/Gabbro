@@ -1,0 +1,44 @@
+-- erwartet: M109
+-- **`&f` names a function, and one character took the name check away** (2026-09-02).
+--
+-- `m1::sammle_namen_pred` collects the names of an `ensures` so that `M109` can hold them
+-- against the declarations. Its walker enumerated eight expression forms -- including
+-- `sizeof`/`lenof`/`aligned`, which were added on 2026-08-21 for exactly this reason -- and
+-- closed with `_ => {}`. **`ExprArt::FnWert` was not among them.**
+--
+--     ensures result == tippfehler     ->  M109  `tippfehler` … is not declared here
+--     ensures result == &tippfehler    ->  0 errors
+--
+-- `FnWert(Pfad)` carries no sub-expression, so it looks like a leaf and fell in with the
+-- leaves. *It is a leaf that NAMES something* -- and `M109` exists for exactly the names
+-- nobody writes wrong: *"eine Nachbedingung, deren Namen nicht aufloesen, steht im Zeugnis
+-- und in der Bibliotheks-ABI -- und sagt nichts."*
+--
+-- **The two forms resolve in different tables, and that is why the repair carries the `&`
+-- into the collected name.** A bare name in value position is a PLACE (`ast.rs`, at
+-- `FnWert`); with the `&` it is a FUNCTION. The bare form has to keep falling and the `&`
+-- form has to resolve among functions -- one list of strings, two questions.
+module gift::a_function_pointer_name_nobody_declares {
+
+static mut Z : u32 = 0;
+
+type Probe = fn() -> bool
+    effects { reads Z }
+    costs   <= 4 ops;
+
+impl fn hart_bereit() -> bool
+    effects { reads Z }
+    costs   <= 3 ops
+{
+    return Z == 1;
+}
+
+impl fn baue() -> Probe
+    ensures result == &tippfehler
+    effects { pure }
+    costs   <= 2 ops
+{
+    return &hart_bereit;
+}
+
+}

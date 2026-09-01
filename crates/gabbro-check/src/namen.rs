@@ -621,7 +621,41 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
                 ex(a, aus);
                 ex(b, aus);
             }
+            // **A call in INDEX position carried no demand with it** (measured 2026-09-02).
+            //
+            // ```text
+            // let i = rdtscp(); return t.slots[i].x;   ->  N016 (and K003)
+            // return t.slots[rdtscp()].x;              ->  0 errors
+            // ```
+            //
+            // `rdtscp` is an axiom with `requires Has(RDTSCP)`. **Whoever calls carries the
+            // demand on** -- and the two bodies are the same body, one with the `let`
+            // folded in. *The rule was applied to the statement and to the argument list,
+            // and to nothing else this collector could reach.*
+            //
+            // `aligned(a, b)` evaluates both of its expressions and can hold a call in
+            // either; `sizeof`/`lenof` over a place take their value from the DECLARATION
+            // (`C001`), so only the indices of that place are evaluated. `old(place)` is
+            // specification and this collector only ever sees a BODY -- it stays below.
+            ExprArt::Ort(o) => rufe_in_ort(o, aus),
+            ExprArt::Eingebaut(g) => match &**g {
+                Eingebaut::Aligned(a, b) => {
+                    ex(a, aus);
+                    ex(b, aus);
+                }
+                Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                    rufe_in_ort(o, aus)
+                }
+                Eingebaut::Sizeof(TypOderOrt::Typ(_)) | Eingebaut::Lenof(TypOderOrt::Typ(_)) => {}
+            },
             _ => {}
+        }
+    }
+    fn rufe_in_ort(o: &Ort, aus: &mut Vec<(String, Span)>) {
+        for suf in &o.suffixe {
+            if let OrtSuffix::Index(ix) = suf {
+                ex(ix, aus);
+            }
         }
     }
     for s in &b.anweisungen {
@@ -2827,7 +2861,38 @@ fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
                 aus_expr(a, aus);
                 aus_expr(b, aus);
             }
+            // **A qualified call in INDEX position crossed the module boundary in
+            // silence** (measured 2026-09-02).
+            //
+            // ```text
+            // let i = w::a::heimlich(); return t.slots[i].x;   ->  N025
+            // return t.slots[w::a::heimlich()].x;              ->  0 errors
+            // ```
+            //
+            // `heimlich` is not `pub`. *`D004`, the wall around an `opaque type`, argues
+            // from exactly this boundary -- a boundary that one pair of brackets walks
+            // through is none.* Same three decisions as in `sammle_rufe` above, and for
+            // the same reasons: an index is evaluated, `aligned` evaluates both sides,
+            // `sizeof`/`lenof` reach only the indices of their place.
+            ExprArt::Ort(o) => qualifizierte_in_ort(o, aus),
+            ExprArt::Eingebaut(g) => match &**g {
+                Eingebaut::Aligned(a, b) => {
+                    aus_expr(a, aus);
+                    aus_expr(b, aus);
+                }
+                Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                    qualifizierte_in_ort(o, aus)
+                }
+                Eingebaut::Sizeof(TypOderOrt::Typ(_)) | Eingebaut::Lenof(TypOderOrt::Typ(_)) => {}
+            },
             _ => {}
+        }
+    }
+    fn qualifizierte_in_ort(o: &Ort, aus: &mut Vec<(String, Span)>) {
+        for suf in &o.suffixe {
+            if let OrtSuffix::Index(ix) = suf {
+                aus_expr(ix, aus);
+            }
         }
     }
     for s in &b.anweisungen {

@@ -539,7 +539,16 @@ fn matchpruefen(
 ) {
     for s in &b.anweisungen {
         if let StmtArt::Match(m) = &s.art {
-            if let ExprArt::Ort(o) = &m.gegenstand.art {
+            // **`match (a)` named no variants at all** (measured 2026-09-02). The subject
+            // was read with a bare `if let ExprArt::Ort(…)`, so one pair of brackets took
+            // the whole check away: `match a { Speicher, Endpunkt }` over a three-variant
+            // `tagged type` fell at `D005`, `match (a) { … }` gave **0 errors**.
+            //
+            // *The rule this pass carries is the one the language states about ITSELF* --
+            // "a `tagged type` is the one form in which the language states a CLOSED case
+            // distinction, and there is no catch-all branch". **A closedness that a bracket
+            // suspends is none.**
+            if let ExprArt::Ort(o) = &crate::ohne_klammern(&m.gegenstand).art {
                 let t = u.typ_von_ort(modul, o, lokal);
                 // **Der Name des Summentyps, nicht seine Struktur.** Ein `tagged` löst auf
                 // `Typ::Summe { name, .. }` auf; nur über den Namen finden wir die

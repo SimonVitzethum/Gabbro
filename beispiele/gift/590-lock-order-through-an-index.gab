@@ -1,0 +1,51 @@
+-- erwartet: H012
+-- **A call in INDEX position took no lock order with it** (2026-09-02).
+--
+-- `geteilt::rufprobe_expr` named four expression forms -- `Ruf`, `Klammer`, `Unaer`,
+-- `Binaer` -- and closed with `_ => {}`. `ExprArt::Ort` was not among them, so every
+-- expression standing in an index went unread, and with it every call in one.
+--
+-- Measured, both directions, on the same body:
+--
+--     locks LA { a = 1; let i = nimmt_lb(); return t.slots[i].x; }  ->  H012
+--     locks LA { a = 1; return t.slots[nimmt_lb()].x;            }  ->  0 errors
+--
+-- The second body is the first one with the `let` folded in. `nimmt_lb` takes `LB`
+-- (rank 1) while `LA` (rank 5) is held: **a lock-order inversion, and the rule that exists
+-- to forbid it did not see the call.**
+--
+-- *`beispiele/gift/179` names `H011`/`H012` in index position among the five findings of
+-- one cause and reads as cured.* It was cured in the EFFECT readers -- the 2026-08-20
+-- rebuild pulled those onto `alle_ausdruecke`. **This pass reads calls of its own**, and
+-- nobody pulled it along. A finding repaired at ONE of its sites reads as a finding
+-- repaired (`lib.rs`, over `endet_immer`).
+module gift::lock_order_through_an_index {
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+
+table T count 4 { slot { x : u32, } }
+
+lock LA protects { a } rank 5 held <= 100 ops;
+lock LB protects { b } rank 1 held <= 100 ops;
+
+impl fn nimmt_lb() -> u32 in 0 .. 3
+    effects { writes b, locks LB }
+    costs <= 8 ops
+{
+    locks LB { b = 1; }
+    return 1;
+}
+
+impl fn f(t : ptr<normal, r> T) -> u32
+    effects { reads t, writes a, writes b, locks LA, locks LB }
+    costs <= 64 ops
+{
+    locks LA {
+        a = 1;
+        return t.slots[nimmt_lb()].x;
+    }
+    return 0;
+}
+
+}

@@ -1346,6 +1346,52 @@ fn rufprobe_expr(
             rufprobe_expr(a, span, offen, kette, sperren, rw, absagen);
             rufprobe_expr(b, span, offen, kette, sperren, rw, absagen);
         }
+
+        // **A call in INDEX position took no lock order with it** (measured 2026-09-02).
+        //
+        // ```text
+        // locks LA { a = 1; let i = nimmt_lb(); return t.slots[i].x; }  ->  H012
+        // locks LA { a = 1; return t.slots[nimmt_lb()].x;            }  ->  0 errors
+        // ```
+        //
+        // `nimmt_lb` takes `LB` (rank 1) while `LA` (rank 5) is held: a lock-order
+        // inversion, and the second body is the first one with the `let` folded in.
+        // *`beispiele/gift/179` says this class was cured on 2026-08-20 -- it was cured in
+        // the EFFECT readers, and this pass reads calls of its own.*
+        //
+        // **Decided per form, with the reason beside it:**
+        //
+        // * an index expression is evaluated at run time, wherever it stands, so a call in
+        //   it is a call at this site -- `H012` and `H005` are about the moment of the
+        //   call and about nothing else;
+        // * `aligned(a, b)` likewise evaluates both of its expressions;
+        // * `sizeof`/`lenof` over a place take their value from the DECLARATION (`C001`),
+        //   so the place is not touched -- **but its indices are**;
+        // * `old(place)` is specification over the PRE-state and is not a call site: the
+        //   lock chain here is the one that stands at run time, and `ensures` runs in no
+        //   chain at all. It stays in the catch-all.
+        ExprArt::Ort(o) => {
+            for suf in &o.suffixe {
+                if let OrtSuffix::Index(ix) = suf {
+                    rufprobe_expr(ix, span, offen, kette, sperren, rw, absagen);
+                }
+            }
+        }
+        ExprArt::Eingebaut(g) => match &**g {
+            Eingebaut::Aligned(a, b) => {
+                rufprobe_expr(a, span, offen, kette, sperren, rw, absagen);
+                rufprobe_expr(b, span, offen, kette, sperren, rw, absagen);
+            }
+            Eingebaut::Sizeof(x) | Eingebaut::Lenof(x) => {
+                if let TypOderOrt::Ort(o) = x {
+                    for suf in &o.suffixe {
+                        if let OrtSuffix::Index(ix) = suf {
+                            rufprobe_expr(ix, span, offen, kette, sperren, rw, absagen);
+                        }
+                    }
+                }
+            }
+        },
         _ => {}
     }
 }

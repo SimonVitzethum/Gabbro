@@ -1,0 +1,34 @@
+-- erwartet: D005
+-- **`match (a)` named no variants at all** (2026-09-02).
+--
+-- `kbedingung::matchpruefen` read the subject with a bare `if let ExprArt::Ort(o) =
+-- &m.gegenstand.art`. A `Klammer` is not an `Ort`, so the whole exhaustiveness check
+-- silently did not run:
+--
+--     match a  { Speicher, Endpunkt }   ->  D005  does not name: `Leer`
+--     match (a) { Speicher, Endpunkt }  ->  0 errors
+--
+-- **The rule this pass carries is the one the language states about ITSELF.** `gift/159`
+-- says it: *a `tagged type` is the one form in which the language states a CLOSED case
+-- distinction, and there is no catch-all branch* -- and *a `match` without all its arms is
+-- exactly the `_ => {}` the checker has forbidden itself* (W15).
+--
+-- *A closedness that a pair of brackets suspends is none.* The repair is the same one line
+-- as in `596`, `597` and `m2.rs`: `crate::ohne_klammern`, which now stands once in
+-- `lib.rs` instead of privately in `kosten.rs`.
+module gift::match_in_brackets_names_nothing {
+
+type Pa = u64;
+tagged type Art = { Speicher(Pa), Endpunkt(u32), Leer };
+
+static mut z : u32 = 0;
+
+impl fn f(a : Art) effects { writes z } costs <= 8 ops
+{
+    match (a) {
+        Speicher(p) => { z = 1; }
+        Endpunkt(e) => { z = 2; }
+    }
+}
+
+}

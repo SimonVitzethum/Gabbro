@@ -4217,13 +4217,30 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
 /// **Ruft dieser Rumpf irgendetwas?** Erschöpfend über `unterbloecke`/`eigene_ausdruecke`,
 /// also ohne die Sammelzweig-Blindheit, an der `sammle_rufe` bis 2026-08-19 litt.
 fn ruft_irgendwas(b: &Block) -> bool {
+    // **The descent was exhaustive over STATEMENTS and hand-rolled one level below**
+    // (measured 2026-09-02). `in_expr` named four forms and closed with `_ => false`, so a
+    // call in INDEX position was no call:
+    //
+    // ```text
+    // let i = fremd(); return t.slots[i].x;   ->  static uint32_t f(const T *restrict t)
+    // return t.slots[fremd()].x;              ->  … __attribute__((pure))
+    // ```
+    //
+    // Two bodies of the same meaning, and the attribute depends on where the call sits.
+    // *`beispiele/gift/179` names this very consequence in its own text and expects
+    // `E008`; with a `pure` callee no `E008` falls, and the attribute comes back.*
+    // Compiled: `cc -O2 -fno-inline` deletes BOTH calls in the second form -- `zaehler`
+    // ends at 0 -- and keeps both in the first.
+    //
+    // **`alle_ausdruecke` decides every form once, and the reasons stand at
+    // `unterausdruecke`:** an index is evaluated, `aligned` evaluates both sides,
+    // `sizeof`/`lenof` reach only the indices of their place, and `&f` names a function
+    // without calling it. *There is nothing left here for a catch-all to answer
+    // silently.*
     fn in_expr(e: &Expr) -> bool {
-        match &e.art {
-            ExprArt::Ruf(_) => true,
-            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => in_expr(x),
-            ExprArt::Binaer(_, a, b) => in_expr(a) || in_expr(b),
-            _ => false,
-        }
+        crate::alle_ausdruecke(e)
+            .into_iter()
+            .any(|x| matches!(x.art, ExprArt::Ruf(_)))
     }
     b.anweisungen.iter().any(|s| {
         matches!(s.art, StmtArt::Ruf(_) | StmtArt::LetSonst(_))

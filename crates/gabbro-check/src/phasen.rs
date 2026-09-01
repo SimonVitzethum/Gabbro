@@ -367,7 +367,7 @@ fn fluss(
         registerzugriffe(s, umfeld, stand, absagen);
         match &s.art {
             StmtArt::Let(l) => {
-                if let ExprArt::Ruf(r) = &l.wert.art {
+                if let ExprArt::Ruf(r) = &crate::ohne_klammern(&l.wert).art {
                     if let Some(neu) = anwenden(r, u, modul, schritte, stand, absagen) {
                         stand.insert(l.name.text.clone(), neu.clone());
                         zuletzt = Some(neu);
@@ -390,8 +390,15 @@ fn fluss(
             // > *Two bodies of identical meaning, one caught and one not, purely by where the
             // > call sits.* The same shape as the `else if` under-count in `kosten.rs`, and
             // > found the same way: by asking what the pass does NOT descend into (W16).
+            //
+            // **And on 2026-09-02 the same body walked through again, one bracket further:**
+            // `return (schritt(p));` and `let q = (schritt(p));` both gave **0 errors**
+            // while the bracketless forms fell at `O004`. *A finding repaired at ONE of its
+            // forms reads as a finding repaired* -- the sentence stands over `endet_immer`
+            // in `lib.rs` and it held here too. `crate::ohne_klammern` is now the one line
+            // that answers it, in this pass and in three others.
             StmtArt::Return(Some(e)) => {
-                if let ExprArt::Ruf(r) = &e.art {
+                if let ExprArt::Ruf(r) = &crate::ohne_klammern(e).art {
                     if let Some(neu) = anwenden(r, u, modul, schritte, stand, absagen) {
                         zuletzt = Some(neu);
                     }

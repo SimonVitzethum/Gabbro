@@ -1,0 +1,35 @@
+-- erwartet: O004
+-- **The same body walked through again, one bracket further** (2026-09-02).
+--
+-- `gift/258` closed this hole on 2026-08-24 and wrote the sentence that dates it:
+-- *"two bodies of the same meaning, one caught and one not -- purely by where the call
+-- sits."* The repair added a `StmtArt::Return` arm to `phasen::fluss` and read it with
+-- `if let ExprArt::Ruf(r) = &e.art`.
+--
+--     return schritt(p);      ->  O004  the body reaches `mmu`
+--     return (schritt(p));    ->  0 errors
+--
+-- **Now it is: allein danach, ob eine Klammer darum steht.** The `let` form of the same
+-- lie is `597`; both went silent for the same reason and are repaired by the same line.
+--
+-- *A finding repaired at ONE of its forms reads as a finding repaired* -- the sentence
+-- stands over `endet_immer` in `lib.rs`, and this is its fourth recorded instance.
+module gift::phase_step_in_brackets {
+
+linear ghost type BootPhase order { roh, mmu, caps, bereit };
+
+static mut welt : u32 = 0;
+
+extern fn schritt(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects  { consumes p, writes welt } costs <= 8 ops;
+
+impl fn falsch(p : BootPhase) -> BootPhase
+    advances roh -> bereit
+    effects  { consumes p, writes welt }
+    costs    <= 16 ops
+{
+    return (schritt(p));
+}
+
+}

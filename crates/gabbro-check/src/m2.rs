@@ -342,7 +342,15 @@ fn gehe(
                 ausdruck(e, s.span, v, zust, absagen);
                 // **Wer zurueckgibt, verbraucht nicht -- er reicht WEITER.** Fuer diese
                 // Buchhaltung ist beides dasselbe: der Wert ist hier nicht mehr offen.
-                if let ExprArt::Ort(o) = &e.art {
+                //
+                // **And a pair of brackets used to make it open again** (measured
+                // 2026-09-02): `return p;` passed, `return (p);` fell at `L107` -- *`p` is
+                // created here and consumed on no path.* The value leaves the function in
+                // both bodies; only the walker stopped at the bracket. **This is the
+                // refusal direction of the same defect that cost `O004` and `D005` a
+                // finding**, and it is the more embarrassing of the two: a correct program,
+                // refused for its punctuation.
+                if let ExprArt::Ort(o) = &crate::ohne_klammern(e).art {
                     if o.suffixe.is_empty() {
                         if let Some((z, _, _, _)) = zust.get_mut(&o.basis.text) {
                             *z = Zustand::Verbraucht;

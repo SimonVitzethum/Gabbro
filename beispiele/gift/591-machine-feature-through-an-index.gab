@@ -1,0 +1,37 @@
+-- erwartet: N016
+-- **A call in INDEX position carried no demand with it** (2026-09-02).
+--
+-- `namen::sammle_rufe` descends over `unterbloecke` and `eigene_ausdruecke` -- exhaustive
+-- at the STATEMENT level -- and then hands each expression to a hand-rolled `ex` that named
+-- `Ruf`, `Klammer`, `Unaer`, `Binaer` and closed with `_ => {}`. An index is an expression
+-- that `ex` never entered.
+--
+--     let i = zeit(); return t.slots[i].x;   ->  N016
+--     return t.slots[zeit()].x;              ->  0 errors
+--
+-- `zeit` demands `Has(RDTSCP)`. **Whoever calls carries the demand on, until somebody
+-- declares it** -- and one pair of brackets ended the carrying. *The rule was applied to
+-- the statement and to the argument list, and to nothing else this collector could reach.*
+--
+-- The same walker shape lost `N025` at the module boundary (`592`) and `H012` at the lock
+-- order (`590`). **One question, three passes, three private answers.**
+module gift::machine_feature_through_an_index {
+
+table T count 4 { slot { x : u32, } }
+
+impl fn zeit() -> u32 in 0 .. 3
+    requires Has(RDTSCP)
+    effects  { pure }
+    costs    <= 2 ops
+{
+    return 1;
+}
+
+impl fn f(t : ptr<normal, r> T) -> u32
+    effects { reads t }
+    costs   <= 32 ops
+{
+    return t.slots[zeit()].x;
+}
+
+}
