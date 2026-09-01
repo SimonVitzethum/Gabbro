@@ -613,7 +613,7 @@ impl Graph {
 /// des Gerufenen, und das Argument an dieser Stelle ist kein Ort (`f(g(x))`, ein Literal).
 /// *Dann erbt der Rufer einen Namen, den es bei ihm nicht gibt* — und statt ihn
 /// stillschweigend stehen zu lassen, macht das die Hülle unvollständig (`E009`).
-fn ersetze(
+pub(crate) fn ersetze(
     wirkung: &str,
     parameter: &[Option<String>],
     argumente: &[Option<String>],

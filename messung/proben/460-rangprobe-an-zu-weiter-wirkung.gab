@@ -1,0 +1,76 @@
+-- erwartet: H012
+-- 460 -- **Eine Rangprüfung, die an einer geerbten `locks`-Zeile scheitert, und das
+-- Programm ist richtig.**
+--
+-- `PLAN-HARDWARE.md` §21 zählt `effects` als Buchführung; der Auftrag fragt, ob eine zu
+-- weite Menge den Sperrrangpass **strenger als nötig** macht. Sie tut es, und der Weg
+-- dorthin ist nicht der erwartete.
+--
+-- ## `locks X` heisst zweierlei, und zwei Pässe lesen es verschieden
+--
+-- | | |
+-- |---|---|
+-- | `H007` liest | *„`X` ist hier GEHALTEN"* — eine Erlaubnis |
+-- | `H012` liest | *„dieser Aufruf NIMMT `X`"* — eine Erwerbung |
+--
+-- Für eine Funktion mit `requires Held(X)` ist die zweite Lesart **falsch**: sie nimmt
+-- nichts, der Rufer hält es schon. `H011` lässt die Zeile deshalb ausdrücklich zu
+-- (*„redeemed … by `requires Held(…)` -- the caller's duty"*), und `H012` holt sie sich
+-- über `Rufwissen::nimmt` → `aufrufgraph::huelle` trotzdem.
+--
+-- ## Der Fall, in seiner kleinsten Form
+--
+-- `KLEIN` Rang 1, `GROSS` Rang 2, die Ordnung läuft aufwärts. `oben` nimmt sie **in der
+-- richtigen Reihenfolge** — erst `KLEIN`, dann `GROSS` — und ruft darin `helfer`, der
+-- `KLEIN` nur VERLANGT. Keine Verklemmung ist möglich; keine Sperre wird zweimal genommen.
+--
+--     [H012] this call takes `KLEIN` (rank 1) while `GROSS` (rank 2) is held here
+--
+-- **Die Absage entsteht nicht am Programm, sondern an der Buchführung darüber.** Die
+-- Ableitung (`crates/gabbro-check/src/ableitung.rs`) geht über den **Rumpf** und findet in
+-- `helfer` kein `locks` — unter der abgeleiteten Menge geht diese Rangprüfung durch.
+--
+-- > **Das ist der Beleg, dass Überdeklaration nicht nur Zeremonie ist, sondern Reibung** —
+-- > und zugleich ein Befund über `H012`, der auch ohne jede Ableitung steht: *eine Absage,
+-- > die eine Erlaubnis für eine Erwerbung hält.*
+--
+-- Gemessen mit `gabbro effects --sperrrang`, das **beide Basen durch DENSELBEN Pass** fährt.
+-- *Zwei Basen durch zwei Pässe verglichen misst den Unterschied der Pässe.*
+
+module probe460 {
+
+pub const N : u32 = 8;
+
+pub table T count N {
+    slot { a : u32, }
+}
+
+pub table U count N {
+    slot { b : u32, }
+}
+
+pub lock KLEIN protects { T } rank 1 held <= 40 ops;
+pub lock GROSS protects { U } rank 2 held <= 40 ops;
+
+-- **Die Zeile, um die es geht.** `locks KLEIN` steht da, weil `H007` sonst jeden Zugriff
+-- auf `T` als ungeschuetzt liest -- genommen wird `KLEIN` hier nicht.
+pub impl fn helfer(i : index into T) -> u32
+    requires Held(KLEIN)
+    effects  { reads T.slots, locks KLEIN }
+    costs    <= 20 ops
+{
+    return T.slots[i].a;
+}
+
+pub impl fn oben(i : index into T) -> u32
+    effects { reads T.slots, locks GROSS, locks KLEIN }
+    costs   <= 80 ops
+{
+    locks KLEIN {
+        locks GROSS {
+            return helfer(i);
+        }
+    }
+}
+
+}

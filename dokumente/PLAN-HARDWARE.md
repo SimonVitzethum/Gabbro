@@ -831,6 +831,12 @@ Frage**.
 **Die Marke: `705 → 0` bei bleibenden `188`.** Sie hängt an keiner Programmgröße — *die
 Buchführung skaliert mit dem Code, die Logik mit dem Problem.*
 
+> **Die `462` unter T1 ist seit dem 2026-09-01 nachgerechnet und hält nicht.** Über
+> `beispiele/*.gab` stehen **439** `effects`-Einträge an einer Funktionsdeklaration, davon
+> **359 an einer Funktion mit Rumpf** und **80 an `extern`/`prim`** — und die 80 sind
+> Vertrauensfläche, die nicht auf null gehen kann. Ein Textzähler findet **538** Einträge
+> überhaupt. *Welche 64 Dateien und welche Träger die 462 meinten, steht nirgends.* **§38.**
+
 ---
 
 ## §22 — Und beide großen Posten rechnet der Übersetzer schon selbst
@@ -927,6 +933,11 @@ existiert schon.**
 
 *Die Zahl `6` gehört in den Auftrag, damit niemand die DAG-Annahme als gegeben mitnimmt.*
 
+> **Das Verbandsargument ist FALSCH, gemessen am Bau (2026-09-01).** Die Ortsmenge ist nicht
+> endlich: `aufrufgraph::ersetze` erzeugt beim Tragen über den Aufrufrand neue Orte, und in
+> einem Zyklus wächst der Ortsausdruck ohne Schranke. Der Schluss überlebt — mit einer
+> **Verbreiterung**, die die Ortstiefe kappt — das Argument nicht. **§38.**
+
 ---
 
 ## §25 — Was der Plan sonst nicht bepreist: die Diagnose wandert
@@ -945,9 +956,11 @@ in fester Ordnung, **damit** ein Werkzeug „hier fehlt `effects`" sagen kann.
 **Die Ableitung handelt Lokalität gegen Schreibarbeit.** Das ist bezahlbar, aber es gehört
 bepreist:
 
-- [ ] Die abgeleitete Menge muss **abrufbar** sein (`gabbro effects <fn>`).
+- [x] Die abgeleitete Menge muss **abrufbar** sein (`gabbro effects <fn>`) — **gebaut
+      2026-09-01**, samt `--ursprung`, `--vergleich`, `--sperrrang`, `--eng`.
 - [ ] Ein Widerspruch muss den **Ursprung** nennen, nicht nur die Stelle, an der er
       auffällt. *Der Pfad ist rückverfolgbar — das ist keine neue Analyse, nur eine Ausgabe.*
+      **Der Pfad steht (`Ableitung::pfad`), in einer Absage steht er nicht** — §41.
 
 ---
 
@@ -967,12 +980,20 @@ gemessene Zahl unter einem Wächter**, wie `377 von 377 Ankern`.
 > 211 deklarierten — und der Nutzer schreibt `costs` nur noch, wo er enger sein will als die
 > Messung.
 
+**Die Richtung dieses Satzes stimmt nicht** (gemessen 2026-09-01): in `beispiele/` stehen
+**210 `costs <=`-Zeilen** und nur **179 Stellen mit gerechneter Zahl** — die Differenz sind
+`extern`/`prim` ohne Rumpf. *Ein gemessener Wächter deckt WENIGER Stellen.* Stärker wird er
+in der **Richtung**, nicht in der Fläche: heute dürfen sich **61 % der Rümpfe verdoppeln**,
+ohne dass `costs` beisst. **§40 trägt die ganze Rechnung.**
+
 Für `effects` gilt dasselbe in schwächerer Form: eine stille Verbreiterung einer
 Blattfunktion verbreitert vierzig Aufrufer, und heute merkt man es an vierzig Stellen.
 
 - [ ] **Ob das Firewall oder Lärm ist, ist messbar:** wie viele der 462 Einträge würden bei
       stiller Verbreiterung etwas ändern, **das der Prüfer nicht ohnehin fängt?** *Falls
-      fast keine — Lärm, und der Fall ist gemacht.*
+      fast keine — Lärm, und der Fall ist gemacht.* **Eine Teilantwort steht in §39:** an
+      genau EINER Stelle im ganzen Baum ändert die engere Menge etwas — und die Stelle
+      musste gebaut werden, weil der Korpus sie nicht hat.
 
 ---
 
@@ -1020,11 +1041,15 @@ leitet die Schranke schon aus `count` ab — für diese Aliase tut es niemand.
 | | |
 |---|---|
 | **steht schon** | §23, die Polsterungsmessung — **87 % gepolstert, 397 über 50 %** |
-| **1** | **`effects` ableiten** — Quellanalyse, 462 Stellen, `aufrufgraph.rs` existiert |
-| **2** | `gabbro effects <fn>` + Ursprungspfad im Widerspruch (§25) |
-| **3** | **`costs` unter einen Wächter** (§26) — *bevor* die Ableitung kommt, nicht danach |
+| **1** | ~~**`effects` ableiten**~~ — **GEBAUT 2026-09-01**, `crates/gabbro-check/src/ableitung.rs`. Nicht 462 Stellen, sondern **359 vergleichbare**; siehe §38 |
+| **2** | ~~`gabbro effects <fn>` + Ursprungspfad~~ — **GEBAUT**, `--ursprung` läuft. *Aber in keiner Absage* — §41 |
+| **3** | `costs` unter einen Wächter (§26) — **die Rechnung steht in §40, gebaut ist nichts** |
 | **4** | `costs` ableiten — **nach** §1, weil die Zahl sonst die Wildcards erbt |
 | **5** | §27 klären: `progress`/T11, und wie viele der 26 T12 Abschriften sind |
+
+> **Und keine einzige Deklaration ist gefallen.** Was steht, ist der Zwischenzustand aus §1
+> des Auftrags — beide Register über derselben Sache, vergleichbar. *Die Marke `705 → 0` ist
+> unbewegt.*
 
 **Und die Marke steht, bevor gebaut wird: `705 → 0`, `188` bleiben.** Sie kann fallieren,
 und das ist der Punkt.
@@ -1310,3 +1335,243 @@ Ebenso `PLANER` über `requires Held(PLANER)`.
 
 **Damit ist die Frage, ob die 462 Abschriften stimmen, bis zur Ableitung unbeantwortbar** —
 und das ist selbst das Argument für den Zwischenschritt aus §28.
+
+---
+
+## §38 — Der Zwischenzustand, GEMESSEN — und drei Zahlen dieses Teils sind falsch
+
+*Angefügt 2026-09-01, nach dem Bau von `crates/gabbro-check/src/ableitung.rs`. §37 sagt, die
+Frage sei „bis zur Ableitung unbeantwortbar". **Sie ist jetzt beantwortet.***
+
+### Die Grundgesamtheit ist nicht 462
+
+`gabbro abi --vergleich` und `gabbro effects --vergleich` zählen jetzt **je Eintrag** statt
+je Funktion. Über `beispiele/*.gab` (62 Dateien):
+
+```
+  effects-Eintraege an einer Funktionsdeklaration     439   (AST, massgeblich)
+      auf einer Funktion MIT Rumpf                    359   (170 Funktionen)
+      auf `extern`/`prim` -- OHNE Rumpf                80   ( 69 Funktionen)
+
+  effects-Eintraege ueberhaupt (Textzaehlung)         538
+      der Rest steht an `forever`, `retry`, `axiom`,
+      `transition` und an FUNKTIONSZEIGERTYPEN
+```
+
+> **Die 80 können nie auf null gehen.** Kein Rumpf, nichts abzuleiten — die `effects`-Zeile
+> eines `extern fn` ist die **Vertrauensfläche**, keine Buchführung. Sie in die Marke zu
+> zählen verspräche eine Ersparnis, die kein Bau liefern kann.
+
+**Und die 462 aus §21 sind keine dieser Zahlen.** Der Satz dort nennt 64 Dateien; welche zwei
+über `beispiele/` hinaus und welche Träger mitgezählt sind, steht nirgends. *Bis das
+nachgetragen ist, ist 462 eine Jahreszahl* — die belastbare Zahl ist **359 vergleichbare
+Einträge**.
+
+### Die Vergleichszahl
+
+Zwei Basen, dieselben Urteilsregeln (`deckt_a4`, `Urteil`), damit der Unterschied die Basen
+misst und nicht die Regeln:
+
+```
+                                Huelle ueber       Ableitung ueber
+                                DEKLARATIONEN      RUEMPFE
+  STIMMT   deckt Abgeleitetes        263                264
+  STIMMT   `pure`, Menge leer         28                 28
+  ZU WEIT  deckt nichts               57                 59
+  ZU ENG   `pure` widerlegt            4                  4
+  ausserhalb `diverges`                4                  4
+  UNGEMESSEN, Huelle reisst (R16)      3                  0
+  ------------------------------------------------------------
+                                     359                359
+
+  ZU ENG -- abgeleitet, von keiner Zeile gedeckt
+                                      31                 39
+```
+
+**59 von 359 — 16 % — tragen nichts.** Kein Wort sagt es heute: `E005` feuert bei
+Widerspruch, nicht bei Auslassung.
+
+*Ohne `--weit`* — also mit der Filterung, die `E010` selbst anlegt — stünden dort 95 statt
+57. **Das wäre ein Messfehler und keine Polsterung:** die Ableitung liesse dann Lesungen über
+Parameter aus, und jedes deklarierte `reads t.slots` sähe wie Überdeklaration aus. *Ein
+Erzeuger, der die Zeile SCHREIBT, muss `reads p.slots` schreiben — der Aufrufer will wissen,
+was mit seinem Zeiger geschieht.*
+
+Die 4 widerlegten `pure` und die 39 ungedeckten Abgeleiteten sind **kein Rahmenbruch**: die
+Funktionstafel weist sie als *„no known world name — `E008`/`E010` stay silent, with
+reason"* aus.
+
+### §24 sagt „endlicher Verband", und der Verband ist nicht endlich
+
+> *„Wirkungen bilden einen endlichen Verband (Vereinigung über eine endliche Ortsmenge), also
+> konvergiert der Fixpunkt über den Zyklen ohnehin."*
+
+**Die Ortsmenge ist nicht endlich.** `aufrufgraph::ersetze` trägt einen Ort über den
+Aufrufrand, indem es den Parameternamen durch den Argumentausdruck ersetzt — in einem Zyklus
+wächst er:
+
+```
+writes k.wert  ->  writes k.kind.wert  ->  writes k.kind.kind.wert  ->  …
+```
+
+*Der Verband ist endlich, solange niemand neue Orte erzeugt; genau das tut die Brücke über
+den Aufrufrand.* Die Ableitung trägt deshalb eine **Verbreiterung**: ein Ort tiefer als vier
+Schritte wird auf sein Präfix gekürzt — grob in die sichere Richtung, weil `deckt` über
+Präfixe arbeitet. **Sie feuert im ganzen Korpus 0×**, und die Zahl steht in jeder Ausgabe.
+
+**Der Schluss aus §24 überlebt, das Argument nicht.** Und was die Ableitung dafür KANN:
+
+```
+beispiel::rekursion   Huelle:    incomplete -- «cycle over `absteigen`»
+                      Ableitung: effects { writes summe }
+```
+
+`UNGEMESSEN` fällt von 3 auf 0.
+
+### Ein vierter Fall einer bekannten Klasse
+
+Der Aufrufgraph trägt Knoten, die **keine `fn`-Items** sind: Geräteübergänge, Gerätegriffe
+und **erzeugte Tabellenops**. `aufrufgraph.rs` nennt die ersten beiden *„eine Lücke im
+GRAPHEN, nicht im Programm"* und die dritte *„dritte Instanz derselben Reparatur an derselben
+Stelle"*. **Die erste Fassung der Ableitung sah sie nicht** — 18 Funktionen meldeten
+„unknown to the graph" gegen 3 bei der Hülle. *Gefunden, weil zwei Basen nebeneinanderstanden.*
+
+Sie bekommen einen eigenen Herkunftsweg (`Vertrag`), nicht `Rand`: **`Rand` heisst „hier hört
+die geprüfte Welt auf", `Vertrag` heisst „hier hat der Übersetzer die Zeile schon
+geschrieben".** Ein erzeugtes `T::insert` in die Vertrauensfläche zu zählen blähte die nicht
+entfernbare Hälfte der Marke mit Einträgen auf, die nie jemand getippt hat.
+
+---
+
+## §39 — Die Reibung ist belegt, und `H012` liest eine Erlaubnis als Erwerbung
+
+*§3 des Auftrags: geht eine heute abgesagte Rangprüfung unter der engeren Menge durch?*
+**Ja — aber der erwartete Weg ist versperrt, und zwar von einem Wächter, den es schon gibt.**
+
+Die Vermutung lautete: eine zu weite Menge nennt eine nie berührte Sperre, `H012` sagt
+deshalb eine richtige Reihenfolge ab. **Der direkte Fall fällt schon:**
+
+```
+[H011] `helfer` declares `locks KLEIN` but never takes it
+```
+
+*Überdeklaration von `locks` ist also NICHT still.* Offen bleibt der Weg, den `H011`
+ausdrücklich zulässt — eine Zeile, die durch `requires Held(…)` eingelöst wird, *„the
+caller's duty"*. Und dort lesen zwei Pässe dasselbe Wort verschieden:
+
+| | |
+|---|---|
+| `H007` liest | *„`X` ist hier GEHALTEN"* — eine **Erlaubnis** |
+| `H012` liest | *„dieser Aufruf NIMMT `X`"* — eine **Erwerbung** |
+
+Für eine Funktion mit `requires Held(X)` ist die zweite Lesart **falsch**. `H012` holt sie
+sich über `Rufwissen::nimmt` → `aufrufgraph::huelle` trotzdem.
+
+`messung/proben/460-rangprobe-an-zu-weiter-wirkung.gab`: `KLEIN` Rang 1, `GROSS` Rang 2, **in
+der richtigen Reihenfolge genommen**, darin ein Ruf auf eine Funktion, die `KLEIN` nur
+verlangt.
+
+```
+$ gabbro effects --sperrrang beispiele/*.gab beispiele/gift/*.gab messung/proben/*.gab
+  units read                                   446
+  rank refusals that stand in BOTH               5
+  rank refusals the derivation FREES             1
+      H012 …/460-rangprobe-an-zu-weiter-wirkung.gab
+  rank refusals only the derivation raises       0
+```
+
+**Die fünf Giftproben behalten ihren Biss** — die Ableitung nimmt einem `extern fn` seine
+Deklaration nicht weg, sie IST dort die Quelle. **Und die dritte Spalte ist leer, wie sie sein
+muss.**
+
+> **Im heutigen Korpus kommt keine Absage frei; der Fall musste gebaut werden.** Der Grund ist
+> nicht, dass es ihn nicht gibt, sondern dass keine Korpusdatei ein `requires Held(X)` unter
+> eine höherrangige Sperre stellt. *Das ist eine Aussage über den Korpus, nicht über die
+> Sprache* — und der `H012`-Befund steht auch ohne jede Ableitung.
+
+---
+
+## §40 — Was ein `costs`-Wächter kostete, und §26 hat die Richtung falsch
+
+*§4 des Auftrags: **nur die Rechnung, kein Bau.** Gemessen 2026-09-01 über 522 `.gab`-Dateien
+mit `gabbro costs`.*
+
+### Die Grundgesamtheit
+
+```
+  Stellen mit gerechneter Zahl                       718
+      davon slack >= 0                               697
+      davon slack <  0                                21   <- 20 Giftproben + `33-rekursion`
+  Der ganze Lauf ueber 522 Dateien                   0,6 s
+```
+
+*Die eine saubere Datei mit negativem `slack` ist `beispiele/33-rekursion.gab`: `absteigen`
+rechnet 70 gegen zugesagte 64, weil ein Zyklus die Zusage EINES Durchgangs meint («K5.4»).
+`pruefe` sagt dazu nichts — **eine Stelle, an der `costs` und `gabbro costs` verschieden
+rechnen, und das steht bisher nirgends.***
+
+### Was die Schranke heute NICHT hält
+
+```
+  Summe slack ueber 697 Stellen             491 574 ops
+  Median slack                                    4 ops
+  Mittel                                        705 ops        <- die Verteilung ist schief
+  Zusage / gerechnet     Median 2,62   Mittel 11,9   Max 1562
+
+  Stellen, an denen der Rumpf sich VERDOPPELN darf,
+  ohne dass `costs` beisst                        423   (61 %)
+  ... verZEHNfachen                                75   (11 %)
+```
+
+> **An 61 % der Stellen darf der Rumpf doppelt so teuer werden, ohne dass ein Wächter
+> aufwacht.** Das ist die Ratsche, die §26 erhalten will — sie hält heute an drei von zehn
+> Stellen etwas.
+
+### Was ein gemessener Wächter kostete
+
+| | |
+|---|---|
+| **Messdatei** | 718 Zeilen, ~10 KB — je Stelle `modul::name` und die gerechnete Zahl |
+| **Laufzeit** | **0,6 s** über den ganzen Korpus, gegen 23 min für den vollen Lauf |
+| **Bau** | ein Schreibmodus an `gabbro costs` und ein Vergleichsskript nach dem Muster von `377/377` |
+| **Pflege** | *ungemessen* — wie oft eine legitime Änderung eine Zeile bewegt, sagt nur ein Lauf über die Historie |
+
+### Und §26 hat die Richtung falsch
+
+> §26: *„Damit ist die Ratsche STÄRKER als heute — **sie deckt dann alle Stellen statt nur
+> die 211 deklarierten**."*
+
+**Das stimmt nicht.** In `beispiele/` stehen **210 `costs <=`-Zeilen** und nur **179 Stellen
+mit gerechneter Zahl** — die Differenz sind `extern`/`prim` ohne Rumpf, dieselbe Struktur wie
+bei `effects`. *Ein gemessener Wächter deckt WENIGER Stellen, nicht mehr.*
+
+**Stärker wird er in einer anderen Achse, und die ist die wichtigere:**
+
+| | heute | mit Wächter |
+|---|---|---|
+| **Stellen** | 210 (auch ohne Rumpf) | 179 (nur mit Rumpf) |
+| **Richtung** | nur Überschreiten einer gepolsterten Decke | **jede Bewegung, in beide Richtungen** |
+| **Auflösung** | 61 % dürfen sich verdoppeln | eine einzige Op fällt auf |
+
+*Die Zusage bleibt daneben nötig — für die 31 Stellen ohne Rumpf ist sie das Einzige, was es
+gibt.* **Was fällt, ist die Pflicht, sie überall hinzuschreiben; was bleibt, ist das Recht,
+sie enger zu setzen als die Messung.**
+
+---
+
+## §41 — Was nach diesen drei Bahnen UNGEMESSEN bleibt
+
+* **Die Marke selbst ist nicht bewegt.** Gebaut ist die Ableitung und ihre Messung; **keine
+  einzige Deklaration ist gefallen.** `705 → 0` steht unverändert offen.
+* **Der Erzeuger ist nicht angefasst** — richtig so (§24), aber damit ist auch nicht
+  gemessen, was eine abgeleitete `costs`-Zahl von den zwölf Wildcards erbte.
+* **Ob die Ableitung als PFLICHT trägt, ist offen.** Sie rechnet heute neben den Pässen; ob
+  `E005`/`E008`/`E010` mit ihr statt mit der Deklaration dasselbe sagen, ist nicht gefahren.
+* **Die Verbreiterung ist im Korpus nie gelaufen** (0×). Dass sie funktioniert, sagt eine
+  Probe, nicht der Korpus.
+* **Der Ursprungspfad ist abrufbar, aber in keiner Absage.** `E005` nennt ihn nicht; §25
+  verlangt es für den Zustand NACH dem Fall der Deklaration, und der ist nicht da.
+* **Die Zahl 462 ist nicht rekonstruiert** — 439 an Funktionen, 538 überhaupt, und welche 64
+  Dateien §21 meinte, steht nirgends.
+* **Die Pflegekosten eines `costs`-Wächters sind nicht gemessen**, nur seine Laufzeit.
+* **`progress`/T11 und die 26 T12-Abschriften (§27) sind unberührt.**

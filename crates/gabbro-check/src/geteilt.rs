@@ -96,6 +96,16 @@ struct Rufwissen<'a> {
     g: &'a crate::aufrufgraph::Graph,
     verlangt: &'a BTreeMap<String, Vec<(String, bool)>>,
     modul: &'a str,
+    /// **Where `nimmt` gets its locks from -- and the two answers are not the same.**
+    ///
+    /// `None` is today's basis: the hull over the DECLARED `effects`. `Some(..)` is the
+    /// derivation over the bodies (`ableitung.rs`), which is what remains once the
+    /// declarations fall.
+    ///
+    /// > It is one field and not a second pass **on purpose.** Comparing two bases through
+    /// > two passes measures the difference between the passes. *`W7` -- two registers over
+    /// > the same thing.*
+    abgeleitet: Option<&'a crate::ableitung::Ableitung>,
 }
 
 impl Rufwissen<'_> {
@@ -114,6 +124,23 @@ impl Rufwissen<'_> {
         else {
             return Vec::new();
         };
+        // **The derivation, when one was handed in.** Same filter, other basis -- see
+        // `Rufwissen::abgeleitet`.
+        if let Some(ab) = self.abgeleitet {
+            let Some(a) = ab.je.get(&voll) else { return Vec::new() };
+            if a.unvollstaendig.is_some() {
+                return Vec::new();
+            }
+            return a
+                .wirkungen
+                .iter()
+                .filter_map(|w| {
+                    w.strip_prefix("locks shared ")
+                        .or_else(|| w.strip_prefix("locks "))
+                        .map(str::to_string)
+                })
+                .collect();
+        }
         let h = self.g.huelle(&voll);
         // **Über einer unvollständigen Hülle wird nicht abgesagt** (R16).
         if h.unvollstaendig.is_some() {
@@ -137,7 +164,46 @@ impl Rufwissen<'_> {
     }
 }
 
+/// **The two rules of this pass that read the callee's effect hull.**
+///
+/// They stand here and not at the caller for the reason `pruefe-kennungen.py` enforces: a
+/// code that appears in two files makes every poison probe naming it ambiguous -- *it falls
+/// green while the rule it meant may have failed.* `gabbro effects --sperrrang` filters a
+/// run's diagnostics through this list instead of spelling the codes again.
+///
+/// ## What the two-basis measurement asks, and which column belongs empty
+///
+/// `H012` asks the callee's effect hull *"does this call take a lock?"*. An over-wide
+/// `effects` set therefore makes this pass **stricter than necessary** -- it can refuse a
+/// correct lock order because a lock nobody touches stands in the frame.
+///
+/// > **A refusal that appears ONLY under the derivation would be a finding about `H011`,
+/// > not about the derivation.** `H011` demands that a declared `locks` be redeemed -- by a
+/// > block in this body, by a callee whose hull carries it, or by `requires Held(…)`. So the
+/// > derivation cannot find a lock the written line omits, and that column stays at zero.
+///
+/// **And the way the padding survives `H011` is the third of those three redemptions.**
+/// `requires Held(X)` makes `locks X` legitimate and means *"X is held here"* -- while
+/// `H012` reads the same word as *"this call TAKES X"*. For a function that only requires
+/// the lock the second reading is false. *Measured at
+/// `messung/proben/460-rangprobe-an-zu-weiter-wirkung.gab`: one refusal, and the program is
+/// correct.*
+pub const RANGREGELN: [&str; 2] = ["H006", "H012"];
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    pass_mit(baum, absagen, None)
+}
+
+/// **The same pass, with the lock question answered from the DERIVATION.**
+///
+/// The one caller outside the compiler is `gabbro effects --sperrrang`, which runs the pass
+/// twice and diffs the diagnostics. **`pass` itself is untouched** -- the derivation decides
+/// nothing yet, it is measured against what decides today.
+pub fn pass_mit(
+    baum: &Programm,
+    absagen: &mut Absagen,
+    abgeleitet: Option<&crate::ableitung::Ableitung>,
+) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let mut sperren: BTreeMap<String, Sperre> = BTreeMap::new();
     // **Der Modulpfad statt `""`** («K5.2», 2026-08-19). `rank NKERNE` in einem
@@ -208,7 +274,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let rw = Rufwissen { u: &u, g: &g, verlangt: &verlangt, modul };
+        let rw = Rufwissen { u: &u, g: &g, verlangt: &verlangt, modul, abgeleitet };
         block(b, &[], &[], &[], &sperren, &rw, &mut geteilt_genommen, absagen);
     });
 

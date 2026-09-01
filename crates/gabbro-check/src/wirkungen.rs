@@ -502,20 +502,45 @@ pub fn rumpfwirkungen_mit(
     weltnamen: &[String],
     weit: bool,
 ) -> std::collections::BTreeSet<String> {
+    rumpfwirkungen_mit_ort(f, b, konstanten, weltnamen, weit)
+        .into_keys()
+        .collect()
+}
+
+/// **The same set, but each effect with the SPAN of the deed that produced it.**
+///
+/// The derivation (`ableitung.rs`) has to answer *"where does this effect come from?"* --
+/// and the honest answer for the body's own half is a line of that body.
+///
+/// > It is a wrapper and not a copy **on purpose.** Two functions that both decide what
+/// > counts as an effect are two registers over the same thing (`W7`), and the one that
+/// > nobody reads drifts. *The filter lives here once; `rumpfwirkungen_mit` throws the
+/// > spans away and keeps the set.*
+///
+/// A `BTreeMap` and not a list: the same place may be touched twice, and the effect is one.
+/// **The FIRST deed wins** -- the earliest line in the body is the one a reader wants
+/// pointed at.
+pub fn rumpfwirkungen_mit_ort(
+    f: &FnDecl,
+    b: &Block,
+    konstanten: &[String],
+    weltnamen: &[String],
+    weit: bool,
+) -> std::collections::BTreeMap<String, Span> {
     let mut taten = Taten::default();
     sammle_taten(b, &mut taten);
     let mut lok = Vec::new();
     lokale(b, &mut lok);
-    let mut aus = std::collections::BTreeSet::new();
+    let mut aus: std::collections::BTreeMap<String, Span> = Default::default();
     let grund = |o: &str| o.split(['.', '[', '-']).next().unwrap_or(o).to_string();
 
-    for (ort, _) in &taten.schreibt {
+    for (ort, sp) in &taten.schreibt {
         if lok.iter().any(|l| l == &grund(ort)) {
             continue;
         }
-        aus.insert(format!("writes {ort}"));
+        aus.entry(format!("writes {ort}")).or_insert(*sp);
     }
-    for (ort, _) in &taten.liest {
+    for (ort, sp) in &taten.liest {
         let gr = grund(ort);
         if lok.iter().any(|l| l == &gr) || konstanten.iter().any(|k| k == &gr) {
             continue;
@@ -535,14 +560,15 @@ pub fn rumpfwirkungen_mit(
         if weit && ist_parameter && ort == &gr {
             continue;
         }
-        aus.insert(format!("reads {ort}"));
+        aus.entry(format!("reads {ort}")).or_insert(*sp);
     }
-    for (ort, _, geteilt) in &taten.sperrt {
-        aus.insert(if *geteilt {
+    for (ort, sp, geteilt) in &taten.sperrt {
+        aus.entry(if *geteilt {
             format!("locks shared {ort}")
         } else {
             format!("locks {ort}")
-        });
+        })
+        .or_insert(*sp);
     }
     aus
 }
