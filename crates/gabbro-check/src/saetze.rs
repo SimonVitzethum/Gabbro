@@ -676,11 +676,17 @@ pub const D1D2: &[Satz] = &[
                   plus three the domain synthesises from the POSITION -- `va`, `level`, \
                   `index`.",
         vorbehalt: "**Silent wherever the `walk` did not resolve** -- no walk name, no node \
-                    `format`, no field list, no refusal. Same discipline as `D019`. And it \
-                    says nothing about what a field MEANS: whether `m.schreibbar` is the leaf \
-                    entry's bit or the conjunction over the path is a reading this tree has \
-                    not made, and this rule does not make it either -- it holds that the name \
-                    stands somewhere.",
+                    `format`, no field list, no refusal. Same discipline as `D019`. **And \
+                    silent under an inner quantifier that REBINDS the name**, which the rule \
+                    got wrong on its first day: `forall m in mappings of a : forall m in \
+                    mappings of b : m.belegt` was refused against `a`'s node `format`. The \
+                    shape is reachable only through `mappings of`, because the other seven \
+                    domains bind an index -- *a rule that is right only because the \
+                    neighbouring domains cannot express the shape is right by accident.* And \
+                    it says nothing about what a field MEANS: whether `m.schreibbar` is the \
+                    leaf entry's bit or the conjunction over the path is a reading this tree \
+                    has not made, and this rule does not make it either -- it holds that the \
+                    name stands somewhere.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured 2026-09-01 against the UNCHANGED checker: a `walk` over `[Pte; \
                       512]` with `forall m in mappings of Self : !m.gibtsnicht` in an \

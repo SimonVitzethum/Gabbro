@@ -595,7 +595,7 @@ fn abbildungsfelder_pruefen(q: &gabbro_syntax::ast::Quantor, s: &Sicht, absagen:
     let Some(felder) = s.u.formate.get(&knoten) else { return };
     let v = &q.variable.text;
     let mut orte = Vec::new();
-    pred_orte(&q.rumpf, &mut orte);
+    pred_orte(&q.rumpf, v, &mut orte);
     for ort in orte {
         if &ort.basis.text != v {
             continue;
@@ -641,9 +641,16 @@ fn abbildungsfelder_pruefen(q: &gabbro_syntax::ast::Quantor, s: &Sicht, absagen:
 /// re-derives them, and no bit of the table has to change for that to happen.
 const STELLUNGSFELDER: &[&str] = &["va", "level", "index"];
 
-/// Every place a predicate mentions -- the walker `alle_orte` performs over an EXPRESSION,
-/// lifted to the predicate forms that hold one.
-fn pred_orte<'p>(p: &'p Pred, aus: &mut Vec<&'p Ort>) {
+/// Every place a predicate mentions under the name `v` -- the walker `alle_orte` performs
+/// over an EXPRESSION, lifted to the predicate forms that hold one.
+///
+/// **It stops at an inner quantifier that REBINDS `v`.** Nesting is at most two
+/// (`SPRACHE.md` §6), so `forall m in mappings of Self : exists m in slots of k : …` is
+/// writable, and there the inner `m` is a table index with no fields of the walk's node
+/// `format` at all. *A rule that refused it would refuse the name the inner line just
+/// introduced* -- the same shadowing question `aus_pred` answers with its `geb` stack, and
+/// the same sentence `grundname_pruefen` writes about a bound base name.
+fn pred_orte<'p>(p: &'p Pred, v: &str, aus: &mut Vec<&'p Ort>) {
     match &p.art {
         PredArt::Vergleich(e) => aus.extend(crate::alle_orte(e)),
         PredArt::Element(e, _) => aus.extend(crate::alle_orte(e)),
@@ -651,11 +658,15 @@ fn pred_orte<'p>(p: &'p Pred, aus: &mut Vec<&'p Ort>) {
             aus.push(von);
             aus.push(nach);
         }
-        PredArt::Quantor(q) => pred_orte(&q.rumpf, aus),
-        PredArt::Klammer(i) | PredArt::Nicht(i) => pred_orte(i, aus),
+        PredArt::Quantor(q) => {
+            if q.variable.text != v {
+                pred_orte(&q.rumpf, v, aus);
+            }
+        }
+        PredArt::Klammer(i) | PredArt::Nicht(i) => pred_orte(i, v, aus),
         PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
-            pred_orte(a, aus);
-            pred_orte(b, aus);
+            pred_orte(a, v, aus);
+            pred_orte(b, v, aus);
         }
         // **No `_` arm**, for the reason `aus_pred` states twenty lines down: a new predicate
         // kind must fail to compile here rather than slip past.

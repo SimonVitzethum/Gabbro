@@ -7456,6 +7456,43 @@ impl fn f(k : ptr<normal, r> K) -> bool
         !andere_domaene.iter().any(|c| c == "D020"),
         "`slots of` binds an index, not a mapping: {andere_domaene:?}"
     );
+
+    // 5 -- **an inner quantifier that REBINDS the name, and this one was measured wrong
+    // first.** The rule as committed in `ca1831b` walked the whole body for `m.field` and
+    // read the INNER `m` -- a mapping of `Zwei` -- against the OUTER walk's node `format`:
+    //
+    //     error: [D020] `m.belegt` is not a field of a mapping
+    //       = `mappings of` binds a leaf entry of `Eins` …
+    //
+    // **A false refusal**, and `belegt` is a perfectly good field of `Bz`. It is reachable
+    // only through `mappings of`, because that is the one domain that binds a record; the
+    // other seven bind an index and would have hidden the fault. *A rule that is right only
+    // because the neighbouring domains cannot express the shape is right by accident.*
+    let geschachtelt = absagen(
+        "module t {
+format Pte endian little {
+    praesent : bool @0,
+    frei     : u64 @[11:1] reserved,
+    rahmen   : u64 embeds [51:12] scale 4096,
+    hoch     : u64 @[63:52] reserved,
+}
+format Bz endian little {
+    belegt  : bool @0,
+    bz_frei : u64 @[11:1] reserved,
+    block   : u64 embeds [51:12] scale 4096,
+    bz_hoch : u64 @[63:52] reserved,
+}
+walk Eins levels 4 { node : [Pte; 512], down : rahmen when it.praesent, leaf : !it.praesent, }
+walk Zwei levels 3 { node : [Bz; 256], down : block when it.belegt, leaf : !it.belegt, }
+spec fn zwei(a : ptr<normal, r> Eins, b : ptr<normal, r> Zwei) -> bool
+    effects { pure }
+    = forall m in mappings of a : forall m in mappings of b : m.belegt; }",
+    );
+    assert!(
+        !geschachtelt.iter().any(|c| c == "D020"),
+        "a rebinding inner quantifier must not be read against the outer walk: \
+         {geschachtelt:?}"
+    );
 }
 
 /// **`N044`/`N045`: a probe yields a VERDICT, and on every path.**
