@@ -9,7 +9,7 @@ Vorbild im Baum (`main.rs`:448 führte schon `"--hilfe" | "-h" | "hilfe"`).
 
 ---
 
-## 1. Die zwölf Paare
+## 1. Die zwölf Paare — ~~zwölf~~ **vierzehn**, siehe die Berichtigung darunter
 
 **Englischer Erstname zuerst, deutscher Zweitname läuft weiter.**
 
@@ -29,8 +29,21 @@ Vorbild im Baum (`main.rs`:448 führte schon `"--hilfe" | "-h" | "hilfe"`).
 | `passes` | `paesse` |
 | `help` / `--help` | `hilfe` / `--hilfe` / `-h` |
 
-**Nicht in der Tabelle, weil sie von Anfang an englisch waren:** `abi`, `emit`, `lean` — und
-`build` (der neue Bau, mit dem Zweitnamen `bau`). *Ein Paar aus einem Wort ist kein Paar.*
+**Nicht in der Tabelle, weil sie von Anfang an englisch waren:** `abi`, `emit`, `lean`.
+*Ein Paar aus einem Wort ist kein Paar.*
+
+> **BERICHTIGT am 2026-09-01, und der Finder war ein Wächter, der die QUELLE liest.** Die
+> Tafel oben war an zwei Stellen falsch:
+>
+> * **`effects` | `wirkungen` fehlte ganz.** Ein echtes Paar, in keiner Zeile.
+> * **`build` | `bau` stand unter „von Anfang an englisch"** — aber `bau` ist ein deutscher
+>   Zweitname wie `kosten` oder `pruefe`. Der Satz stimmte für `abi`, `emit` und `lean` und
+>   wurde auf ein viertes Wort mitgezogen, für das er nicht gilt.
+>
+> *Beides fand `crates/gabbro-cli/tests/fahnen.rs` beim ersten Lauf, weil er die Arme von
+> `match befehl.as_str()` zählt statt eine Liste zu lesen.* **Vierzehn Paare, nicht zwölf** —
+> und `PAARE` in `erstnamen.rs` treibt weiter zwölf davon. *Ein handgeführtes Register läuft
+> von seinem Gegenstand weg; das ist das ganze Argument für eines, das ihn liest.*
 
 **`alias` behält seinen Namen.** Er ist englisch, und er bedeutet hier den **Zeigeralias** —
 `gabbro alias` misst die Aliasfläche eines Korpus. Genau darum heißt die zweite Schreibweise in
@@ -89,10 +102,25 @@ ist.*
   beantwortet.*
 * **Die deutschen Zweitnamen haben kein Ablaufdatum.** Nichts in diesem Bau sagt, wann oder ob
   sie fallen.
-* **Die FAHNEN sind nur teilweise englisch.** `--paesse`, `--je-satz`, `--je-stelle`,
+* ~~**Die FAHNEN sind nur teilweise englisch.** `--paesse`, `--je-satz`, `--je-stelle`,
   `--tafel`, `--tor`, `--berechnet`, `--vergleich`, `--weit` stehen weiter deutsch; neu kamen
   `--unit`/`--einheit` und `--dry-run`/`--trocken` als Paare dazu. **Eine Fahnenrechnung wie
-  die Befehlsrechnung ist nicht gemacht worden.**
-* **Die Hilfe ist die einzige Stelle, an der die Regel steht.** Kein Wächter prüft, dass ein
+  die Befehlsrechnung ist nicht gemacht worden.**~~ — **eingelöst 2026-09-01, und die
+  Aufzählung hier war ZU KURZ.** Es sind **zwölf** deutsche Fahnen, nicht acht: dazu kommen
+  `--summe`, `--ursprung`, `--sperrrang` und `--eng`, **die in gar keiner Hilfe stehen** und
+  darum in keinen Handgriff geraten sind. *Wer Fahnen von einem Hilfebildschirm abliest,
+  zählt das Dokumentierte und nicht das Angenommene.* Alle zwölf haben seit heute einen
+  englischen Erstnamen, additiv, und alle fünfzehn Paare sind byteweise gleich gemessen.
+* ~~**Die Hilfe ist die einzige Stelle, an der die Regel steht.** Kein Wächter prüft, dass ein
   NEUER Unterbefehl einen englischen Erstnamen bekommt — `erstnamen.rs` hält die zwölf, die es
-  gibt, und nicht den dreizehnten, den jemand morgen hinzufügt.
+  gibt, und nicht den dreizehnten, den jemand morgen hinzufügt.~~ — **eingelöst 2026-09-01
+  durch `crates/gabbro-cli/tests/fahnen.rs`**, für Fahnen UND Unterbefehle. Er liest
+  `crates/gabbro-cli/src/*.rs` als **Muster, nicht als Liste**, und ist rot, sobald eine
+  Schreibweise auftaucht, über die niemand entschieden hat — *in jeder Sprache.* Gegenprobe
+  am echten Baum: ein eingesetztes `--zaehler` in `main.rs` färbt ihn rot (`exit=101`), die
+  Quelle steht byteweise gegen SHA-256 zurück.
+* **Was der neue Wächter NICHT kann (W10):** entscheiden, ob ein Wort englisch ist. Die
+  deutsche Wortliste ist geschlossen, sie verpflichtet und spricht nicht frei. **Die Schicht,
+  die wirklich hält, ist die Vollständigkeit** — sie feuert auf jede neue Schreibweise, auch
+  auf eine englische. *Das kostet eine Zeile Register je Fahne, und dafür gibt es kein stilles
+  Abdriften.*
