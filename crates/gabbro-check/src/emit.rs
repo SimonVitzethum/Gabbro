@@ -4018,12 +4018,18 @@ fn fnzeiger_deklarator(z: &FnZeiger, name: &str, u: &Namen) -> Option<String> {
     Some(format!("{rueck} (*{name})({params})"))
 }
 
-fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
+/// **The C word of a type that needs NO unit context** -- the primitive rows of `ctyp`.
+///
+/// Split out on 2026-09-01 because a second reader appeared: `N046` compares the lowering of
+/// an `extern fn` against the signature C already knows for the name, and it has no `Namen`
+/// to resolve a `table` or a range type with. **What it CAN spell, it must spell exactly the
+/// way `emit.rs` does** -- two spellings of one fact is the shape a false green comes in.
+///
+/// *`None` is not "unknown", it is "not decidable without the unit"* -- and the caller behind
+/// `N046` turns that into a refusal, never into a pass.
+pub(crate) fn ctyp_primitiv(t: &TypExpr) -> Option<&'static str> {
     match t {
-        // The abstract declarator -- a function pointer in a position that has no name of
-        // its own (a parameter, a result). See `fnzeiger_deklarator`.
-        TypExpr::FnZeiger(z) => fnzeiger_deklarator(z, "", u),
-        TypExpr::Int(i) => intty(i),
+        TypExpr::Int(i) => ganzzahlwort(i.wort).map(|(c, _)| c),
         // **«F»: `f32`/`f64` senken zu `float`/`double` ab -- und mehr sagt der Erzeuger
         // nicht.** Der Bereich ist ein M1-Faktum und lebt im Pruefer, genau wie beim
         // Ganzzahlbereich; die zwei Bits ebenso.
@@ -4034,25 +4040,51 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
         // silently have become a `double`. *Now there is `None`, and `ctyp`'s callers
         // refuse by name.*
         TypExpr::Float(f) => match f.wort {
-            gabbro_syntax::kw::Kw::F32 => Some("float".into()),
-            gabbro_syntax::kw::Kw::F64 => Some("double".into()),
+            gabbro_syntax::kw::Kw::F32 => Some("float"),
+            gabbro_syntax::kw::Kw::F64 => Some("double"),
             _ => None,
         },
-        TypExpr::Bool(_) => Some("bool".into()),
+        TypExpr::Bool(_) => Some("bool"),
+        TypExpr::Pfad(p) => primitivwort(&p.teile.last()?.text),
+        _ => None,
+    }
+}
+
+/// The primitive type words, by their Gabbro spelling. **The one home of these eleven rows.**
+pub(crate) fn primitivwort(n: &str) -> Option<&'static str> {
+    Some(match n {
+        "bool" => "bool",
+        "u8" => "uint8_t",
+        "u16" => "uint16_t",
+        "u32" => "uint32_t",
+        "u64" => "uint64_t",
+        "i8" => "int8_t",
+        "i16" => "int16_t",
+        "i32" => "int32_t",
+        "i64" => "int64_t",
+        "f32" => "float",
+        "f64" => "double",
+        _ => return None,
+    })
+}
+
+fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
+    // **The rows that need no unit** stand in `ctyp_primitiv` and are read from TWO places
+    // now: here, and the signature comparison behind `N046`. *A second reader is exactly the
+    // moment a table stops being allowed two homes.*
+    if let Some(c) = ctyp_primitiv(t) {
+        return Some(c.into());
+    }
+    match t {
+        // The abstract declarator -- a function pointer in a position that has no name of
+        // its own (a parameter, a result). See `fnzeiger_deklarator`.
+        TypExpr::FnZeiger(z) => fnzeiger_deklarator(z, "", u),
+        // The three primitive shapes are answered above. A word the width table does not
+        // carry has no C here, and the callers turn the `None` into `C001` by name.
+        TypExpr::Int(_) | TypExpr::Float(_) | TypExpr::Bool(_) => None,
         TypExpr::Pfad(p) => {
             let n = p.teile.last()?.text.clone();
             Some(match n.as_str() {
-                "bool" => "bool".into(),
-                "u8" => "uint8_t".into(),
-                "u16" => "uint16_t".into(),
-                "u32" => "uint32_t".into(),
-                "u64" => "uint64_t".into(),
-                "i8" => "int8_t".into(),
-                "i16" => "int16_t".into(),
-                "i32" => "int32_t".into(),
-                "i64" => "int64_t".into(),
-                "f32" => "float".into(),
-                "f64" => "double".into(),
                 // **A path naming a table IS the struct.** The first version lowered it to
                 // `uint32_t` and called that a coarsening in the safe direction -- it was not
                 // coarse, it was wrong: `ptr<normal, r> Objekte` became `const uint32_t *`,

@@ -1,0 +1,45 @@
+-- **Ein Gabbro-Programm, das etwas ausgibt.**
+--
+-- Bis zum 2026-09-01 gab es das nicht, und der Grund war kein Sprachgrund: `N041` hielt
+-- jedes benannte Item ausser `module` und `use`, also auch `extern fn` -- das Konstrukt,
+-- dessen ganzer Zweck die absichtliche Bindung an einen vorhandenen C-Namen ist. `putchar`,
+-- `puts` und `printf` stehen alle drei in der 558-Namen-Tafel, und damit war die Eingangstuer
+-- jeder Sprache zu: **die erste Handlung jedes Lernenden ist, etwas auszugeben.**
+--
+-- Was hier steht, ist die richtige Pruefung an der Stelle der falschen. `putchar` ist in C
+-- `int putchar(int)`; die Zeile darunter senkt zu `int32_t putchar(int32_t);` ab, und das ist
+-- genau die Deklaration, die `cc` schon kennt. **Ein `u32` daneben waere der Fehler**, und
+-- `N046` sagt ihn ab, mit der Zeile, die passt, in der Absage.
+module beispiel::druckt {
+
+-- `int putchar(int)` -- C's eigene Deklaration, gemessen mit `cc -aux-info` und in
+-- `cnamen.rs::SIGNATUR` eingetragen. `writes ausgabe` benennt die Senke; sie ist kein
+-- Speicher dieser Einheit, sondern das, was hinter dem C-Namen liegt.
+extern fn putchar(c : i32) -> i32 effects { writes ausgabe } costs <= 8 ops;
+
+-- **`Hallo` -- ein Zeichen je Ruf, und der Rueckgabewert wird VERWORFEN.**
+--
+-- `putchar` gibt das geschriebene Zeichen zurueck (oder `EOF`), und dieses Programm liest es
+-- nicht. **Wie verwirft man einen Rueckgabewert in Gabbro?** `let _ = putchar(72);` gibt es
+-- nicht -- `P034` sagt ab: *„`_` on its own is not an identifier"*, und das aus gutem Grund,
+-- denn dieselbe Regel haelt den Auffangzweig aus dem `match` heraus.
+--
+-- **Der nackte Ruf als Anweisung ist der Weg, und er stand die ganze Zeit da**: `putchar(72);`
+-- geht durch, mit 0 Fehlern. *Gemessen am 2026-09-01 an drei Formen -- nackt, `let _ =`,
+-- `let a =`; die erste und die dritte gehen, die zweite nicht.* Damit ist die Frage
+-- beantwortet und es gibt keinen zweiten Befund: die Eingangstuer hatte EIN Schloss, nicht
+-- zwei.
+pub fn haupt() -> i32 in 0 .. 1
+    effects { writes ausgabe }
+    costs   <= 80 ops
+{
+    putchar(72);   -- H
+    putchar(97);   -- a
+    putchar(108);  -- l
+    putchar(108);  -- l
+    putchar(111);  -- o
+    putchar(10);   -- Zeilenumbruch
+    return 0;
+}
+
+}

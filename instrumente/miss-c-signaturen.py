@@ -170,11 +170,23 @@ def gabbro_form(name: str, c: str) -> str:
     return f"extern fn {name}({kopf}){schwanz}"
 
 
-def messen() -> tuple[dict[str, tuple[str, str]], Counter, dict[str, str]]:
-    """(name -> (signature, Gabbro form)), the tally, and (name -> refusal reason)."""
+def c_wort(sig: tuple[str, list[str]]) -> str:
+    """C's declaration in C's OWN words -- what the refusal shows the writer."""
+    r, args = sig
+    return f"{r}({', '.join(args) or 'void'})"
+
+
+def messen() -> tuple[dict[str, tuple[str, str, str]], Counter, dict[str, str]]:
+    """(name -> (C words, lowering, Gabbro form)), the tally, and (name -> reason).
+
+    **The lowering and the Gabbro form are empty exactly when no `extern fn` can bind the
+    name** -- and the row stands there anyway, because a refusal that shows
+    `void *(void *, const void *, unsigned long)` explains itself and one that says
+    "taken" does not.
+    """
     c11, hdr, ein = tafel_lesen()
     aux = signaturen_aus_aux()
-    tafel: dict[str, tuple[str, str]] = {}
+    tafel: dict[str, tuple[str, str, str]] = {}
     grund: dict[str, str] = {}
     z: Counter = Counter()
 
@@ -199,9 +211,10 @@ def messen() -> tuple[dict[str, tuple[str, str]], Counter, dict[str, str]]:
         sig, warum = absenkbar(aux[n])
         if sig is None:
             grund[n] = warum
+            tafel[n] = (c_wort(aux[n]), "", "")
             z["Header/Funktion nicht bindbar"] += 1
         else:
-            tafel[n] = (sig, gabbro_form(n, sig))
+            tafel[n] = (c_wort(aux[n]), sig, gabbro_form(n, sig))
             z["Header/Funktion BINDBAR"] += 1
 
     for n in ein:
@@ -213,9 +226,10 @@ def messen() -> tuple[dict[str, tuple[str, str]], Counter, dict[str, str]]:
         sig, warum = absenkbar(s)
         if sig is None:
             grund[n] = warum
+            tafel[n] = (c_wort(s), "", "")
             z["Eingebaut nicht bindbar"] += 1
         else:
-            tafel[n] = (sig, gabbro_form(n, sig))
+            tafel[n] = (c_wort(s), sig, gabbro_form(n, sig))
             z["Eingebaut BINDBAR"] += 1
     return tafel, z, grund
 
@@ -240,7 +254,9 @@ def tafel_gegen_cc(tafel: dict[str, tuple[str, str]]) -> list[str]:
     *What passes here passes in the generated C.*
     """
     kaputt = []
-    for n, (sig, _g) in sorted(tafel.items()):
+    for n, (_c, sig, _g) in sorted(tafel.items()):
+        if not sig:
+            continue
         m = re.match(r"^(\w+)\((.*)\)$", sig)
         r, a = m.group(1), m.group(2)
         ps = "void" if a == "void" else ", ".join(
@@ -253,17 +269,18 @@ def tafel_gegen_cc(tafel: dict[str, tuple[str, str]]) -> list[str]:
 
 
 def rust_tafel(tafel: dict[str, tuple[str, str]]) -> str:
-    zeilen = [f'    ("{n}", "{s}", "{g}"),' for n, (s, g) in sorted(tafel.items())]
-    return (f"static SIGNATUR: [(&str, &str, &str); {len(tafel)}] = [\n"
+    zeilen = [f'    ("{n}", "{c}", "{s}", "{g}"),'
+              for n, (c, s, g) in sorted(tafel.items())]
+    return (f"static SIGNATUR: [(&str, &str, &str, &str); {len(tafel)}] = [\n"
             + "\n".join(zeilen) + "\n];\n")
 
 
-def eingebaute_tafel() -> dict[str, tuple[str, str]]:
+def eingebaute_tafel() -> dict[str, tuple[str, str, str]]:
     q = open(CNAMEN, encoding="utf-8").read()
     i = q.index("static SIGNATUR")
     b = q[i:q.index("];", i)]
-    return {n: (s, g) for n, s, g in
-            re.findall(r'\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)', b)}
+    return {n: (c, s, g) for n, c, s, g in
+            re.findall(r'\("([^"]*)",\s*"([^"]*)",\s*"([^"]*)",\s*"([^"]*)"\)', b)}
 
 
 def main() -> int:
@@ -282,15 +299,17 @@ def main() -> int:
                                  and k.split("/")[1] in ("Makro", "Typedef", "Funktion",
                                                          "unklar")) + z["Eingebaut"]
     print(f"\n  Tafel gesamt: {gesamt}")
-    print(f"  BINDBAR (Signatur bekannt): {len(tafel)}")
-    print(f"  nicht bindbar (Absage mit Grund): {gesamt - len(tafel)}")
+    bindbar = sum(1 for _c, s, _g in tafel.values() if s)
+    print(f"  Zeilen in SIGNATUR (C's Deklaration lesbar): {len(tafel)}")
+    print(f"  davon BINDBAR (Signatur bekannt): {bindbar}")
+    print(f"  nicht bindbar (Absage mit Grund): {gesamt - bindbar}")
     print(f"\n  Aequivalenzen geprueft: {len(GLEICH) - 1}, davon kaputt: {len(kaputt)}")
     for k in kaputt:
         print(f"    KAPUTT: {k}")
 
     cc_kaputt = tafel_gegen_cc(tafel)
-    print(f"  Tafelzeilen durch `cc -Wall -Wextra -Werror`: "
-          f"{len(tafel) - len(cc_kaputt)}/{len(tafel)} gruen")
+    print(f"  bindbare Tafelzeilen durch `cc -Wall -Wextra -Werror`: "
+          f"{bindbar - len(cc_kaputt)}/{bindbar} gruen")
     for k in cc_kaputt[:10]:
         print(f"    KAPUTT: {k}")
 

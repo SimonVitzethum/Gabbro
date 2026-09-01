@@ -1,0 +1,29 @@
+-- erwartet: N046
+-- **Ein Vergleich, der nicht entscheiden kann, sagt AB -- er laesst nicht durch.**
+--
+-- `Zeichen` ist ein benannter Bereichstyp. Er senkt zu `int32_t` ab und WAERE damit die
+-- richtige Bindung -- aber die Auskunft dazu steht in der Einheit, und der Signaturvergleich
+-- hat sie nicht: er senkt nur die Zeilen ab, die ohne Einheitenkontext auskommen
+-- (`emit.rs::ctyp_primitiv`), dazu `never` und ein fehlendes Ergebnis.
+--
+-- **Die sichere Richtung ist die, in der ein unentschiedener Vergleich absagt.** Der ganze
+-- Zweck der Regel ist, dass `cc` es nicht als Erster merkt; ein Vergleich, der bei
+-- Unkenntnis durchlaesst, gaebe genau das auf. *Dieselbe Linie wie `ctyp`, das lieber
+-- `None` liefert als einen plausiblen Typ.*
+--
+-- Das ist eine bekannte Verengung und keine Luecke: sie steht im Vorbehalt des Satzes
+-- `namen.extern_bindet_c_namen`, und die Absage sagt sie laut.
+
+module gift {
+
+type Zeichen = i32 in 0 .. 255;
+
+extern fn putchar(c : Zeichen) -> i32 effects { writes ausgabe } costs <= 8 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

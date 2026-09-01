@@ -2163,15 +2163,67 @@ pub const SPERREN: &[Satz] = &[
                     -- those are one libc's spelling, not C's.\n\
                     **And it does not look inside bodies.** A `let` or a parameter named \
                     `exit` lowers to a local, and a local shadowing a built-in is measured to \
-                    compile. The rule holds every named item except `module` and `use`.",
+                    compile.\n\
+                    **The rule holds every named item except `module`, `use` -- and \
+                    `extern fn`** (2026-09-01). At an `extern fn` taking C's name is the \
+                    POINT, so the question is the signature and it is asked by `N046`. *Until \
+                    that day this rule held it too, and no Gabbro program could print: \
+                    `putchar`, `puts` and `printf` all stand in the table.*",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/408-c-name-eingebaut.gab (built-in), 409 (`<math.h>`), \
-                      410 (C11 keyword); counter-probe messung/proben/probe-c-namen-frei.gab \
-                      -- `read` `write` `open` `close` `signal` are POSIX, not C, and pass \
-                      with 0 errors. Over the 418 `.gab` files the table has exactly ONE hit \
-                      outside its own probes: `exit` in `messung/fragmente/F05.gab`.",
+        gemessen_an: "beispiele/gift/410-c-name-schluesselwort.gab (C11 keyword), 409 \
+                      (a `<math.h>` name), 510 (a macro at an `extern fn`), 511 (`printf`, \
+                      variadic); \
+                      counter-probe messung/proben/probe-c-namen-frei.gab -- `read` `write` \
+                      `open` `close` `signal` are POSIX, not C, and pass with 0 errors. \
+                      **Recounted 2026-09-01 with its handle** (`W28`): over the 526 `.gab` \
+                      files and their 1012 distinct item names the table has FOUR hits, three \
+                      of them this rule's own poison probes. The single corpus site is \
+                      `extern fn exit` in `messung/fragmente/F05.gab` -- the construct the \
+                      rule no longer holds.",
         fundstelle: "crates/gabbro-check/src/namen.rs::name_gehoert_schon_c; \
                      crates/gabbro-check/src/cnamen.rs; messung/C-NAMEN.md",
+    },
+    Satz {
+        name: "namen.extern_bindet_c_namen",
+        kennungen: &["N046"],
+        aussage: "An `extern fn` that names a function C already declares must lower to the \
+                  SAME signature. Taking the name is the construct's purpose, so the name is \
+                  not the question -- the question is whether `int32_t putchar(int32_t);` is \
+                  what C knows, and `cc` refuses a declaration that disagrees \
+                  (`-Wbuiltin-declaration-mismatch`). Where C's declaration cannot be written \
+                  in Gabbro at all, `N041` still refuses and SHOWS that declaration.",
+        vorbehalt: "**The signature table is measured and it covers 138 of the 558 names** \
+                    (2026-09-01, `./instrumente/miss-c-signaturen.py`). The other 420 can be \
+                    bound by no `extern fn` whatever its signature: 37 C11 keywords, 129 \
+                    header macros (the preprocessor rewrites the name before the parser sees \
+                    a declaration), 67 header typedefs, and 187 functions whose C declaration \
+                    takes `char *`, `void *`, `_Complex`, `long double` or a variadic list. \
+                    *Each of the 138 was handed to `cc -std=c11 -O0 -Wall -Wextra -Werror` as \
+                    the declaration `emit.rs` would write: 138 of 138 green.*\n\
+                    **The equivalences are measured, not assumed.** `int == int32_t` and \
+                    `long == int64_t` hold under LP64 and are checked by \
+                    `_Static_assert(__builtin_types_compatible_p(...))`; `long long` FAILS \
+                    that check against `int64_t` and is therefore absent, which keeps \
+                    `llabs`, `llrint` and `llround` out of the table. A different toolchain \
+                    can spell these differently, and then the table is a measurement of that \
+                    one -- the same footing the 558-name table already stands on.\n\
+                    **What it does NOT do** (W10): the comparison lowers only the types that \
+                    need no unit context (`emit.rs::ctyp_primitiv`) plus `never` and a missing \
+                    result, both `void`. A parameter typed by a `table`, a named range type or \
+                    a pointer makes the comparison undecidable -- and then it REFUSES, it does \
+                    not pass. *`_Noreturn` is outside the comparison: `cc` accepts \
+                    `void exit(int32_t);` and `_Noreturn void exit(int32_t);` alike.* And it \
+                    checks the declaration, never the definition on the C side: that the named \
+                    function EXISTS is the linker's finding, not this pass's.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/63-druckt.gab -- `extern fn putchar(c : i32) -> i32`, 0 \
+                      errors, the generated C compiles under `cc -std=c11 -O0 -Wall -Wextra \
+                      -Werror` and the program prints `Hallo`. Poison probes 510-513. The \
+                      counter-form `extern fn putchar(c : u32) -> u32` is refused by this \
+                      rule AND by `cc`.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::extern_bindet_c_namen; \
+                     crates/gabbro-check/src/cnamen.rs::SIGNATUR; \
+                     instrumente/miss-c-signaturen.py",
     },
     Satz {
         name: "namen.erzeugter_name_zweimal",
