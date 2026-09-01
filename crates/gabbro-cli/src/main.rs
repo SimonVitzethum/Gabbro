@@ -1452,7 +1452,7 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
 
 /// **`gabbro effects` -- what the compiler would WRITE, and where each entry comes from.**
 ///
-/// Four shapes, and the flags stay German like `abi`'s (`ERSTNAMEN.md`: the sub-command's
+/// Five shapes, and the flags stay German like `abi`'s (`ERSTNAMEN.md`: the sub-command's
 /// first name is English, the flags of this family are not):
 ///
 /// | | |
@@ -1460,6 +1460,7 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
 /// | *(nothing)* | one derived `effects` line per function |
 /// | `--ursprung` | each entry with its origin path, hop by hop |
 /// | `--vergleich` | the derived set held against the WRITTEN one, per entry |
+/// | `--sperrrang` | the lock-rank pass over both bases, and what the derivation frees |
 /// | `--eng` | leave out reads through parameters, exactly as `E010` does |
 ///
 /// **`--eng` is an opt-OUT here and `--weit` an opt-IN at `abi`, and that is not an
@@ -1472,6 +1473,7 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
 fn befehl_wirkungen(rest: &[String]) -> std::process::ExitCode {
     let ursprung = rest.iter().any(|a| a == "--ursprung");
     let vergleich = rest.iter().any(|a| a == "--vergleich");
+    let sperrrang = rest.iter().any(|a| a == "--sperrrang");
     let weit = !rest.iter().any(|a| a == "--eng");
     let nur: Option<&String> = rest
         .iter()
@@ -1488,6 +1490,9 @@ fn befehl_wirkungen(rest: &[String]) -> std::process::ExitCode {
     if dateien.is_empty() {
         eprintln!("gabbro effects: no file named");
         return std::process::ExitCode::from(2);
+    }
+    if sperrrang {
+        return wirkungen_sperrrang(&dateien);
     }
     if vergleich {
         return wirkungen_vergleich(&dateien, weit);
@@ -1649,5 +1654,90 @@ fn wirkungen_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCod
     println!("     ^ counted on the DERIVED side; a hole is not one of the written entries.");
     println!();
     println!("  fixpoint: at most {runden_max} rounds, widening fired {verbreitert}x");
+    std::process::ExitCode::SUCCESS
+}
+
+/// **Does a lock-rank refusal come free under the narrower set?** (`PLAN-HARDWARE.md`, the
+/// third question of the assignment.)
+///
+/// `effects` feeds the lock-rank pass: `H012` asks the callee's effect hull *"does this call
+/// take a lock?"*. An over-wide set does not make the checker wrong, it makes it **stricter
+/// than necessary** -- it can refuse a correct lock order because a lock nobody ever touches
+/// stands in the frame.
+///
+/// The measurement runs **the same pass twice**, once over each basis, and diffs the
+/// diagnostics. *Two bases through two passes would measure the difference between the
+/// passes.* A refusal that stands in the left column and not in the right is a refusal the
+/// derivation frees.
+///
+/// > **And the direction that must stay empty is the other one.** A refusal that appears
+/// > only under the derivation would mean the derivation finds a lock the declaration does
+/// > not name -- and by `H011` that cannot happen. Should the column move off zero, the
+/// > finding is about `H011`, not about the derivation.
+fn wirkungen_sperrrang(dateien: &[&String]) -> std::process::ExitCode {
+    let mut frei: Vec<String> = Vec::new();
+    let mut neu: Vec<String> = Vec::new();
+    let mut gleich = 0usize;
+    let mut gelesen = 0usize;
+    for datei in dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei.as_str()) else {
+            eprintln!("gabbro: {datei} not readable");
+            return std::process::ExitCode::from(2);
+        };
+        let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+        gelesen += 1;
+        // **`--weit` is wrong here, and the reason is the question.** The lock half of the
+        // set does not depend on whether parameter reads count; taking the narrow basis
+        // keeps the two runs comparable to what `E010` itself would see.
+        let ab = gabbro_check::ableitung::leite_ab(&baum, false);
+
+        let mut a_heute = gabbro_syntax::diag::Absagen::neu(datei.as_str());
+        gabbro_check::geteilt::pass(&baum, &mut a_heute);
+        let mut a_abgeleitet = gabbro_syntax::diag::Absagen::neu(datei.as_str());
+        gabbro_check::geteilt::pass_mit(&baum, &mut a_abgeleitet, Some(&ab));
+
+        // Only the two rank rules -- the rest of the pass does not read the effect hull, and
+        // counting it in would report movement this question did not cause.
+        let raenge = |a: &gabbro_syntax::diag::Absagen| -> Vec<String> {
+            a.absagen
+                .iter()
+                .filter(|d| gabbro_check::geteilt::RANGREGELN.contains(&d.code))
+                .map(|d| format!("{} {}:{} {}", d.code, datei, d.span.von, d.text))
+                .collect()
+        };
+        let h = raenge(&a_heute);
+        let n = raenge(&a_abgeleitet);
+        for x in &h {
+            if n.contains(x) {
+                gleich += 1;
+            } else {
+                frei.push(x.clone());
+            }
+        }
+        for x in &n {
+            if !h.contains(x) {
+                neu.push(x.clone());
+            }
+        }
+    }
+    println!("== The lock-rank pass over TWO bases, run twice ==");
+    println!("   left  the hull over the DECLARED `effects` -- what decides today");
+    println!("   right the derivation over the BODIES (`ableitung.rs`)");
+    println!();
+    println!("  units read                                  {gelesen:>4}");
+    println!("  rank refusals that stand in BOTH             {gleich:>4}");
+    println!("  rank refusals the derivation FREES           {:>4}", frei.len());
+    for z in &frei {
+        println!("      {z}");
+    }
+    println!("  rank refusals only the derivation raises     {:>4}", neu.len());
+    for z in &neu {
+        println!("      {z}");
+    }
+    if !neu.is_empty() {
+        println!("      ^ this column belongs empty: `H011` demands that a declared `locks`");
+        println!("        be redeemed, so the derivation cannot find one the line omits.");
+        println!("        Should it move off zero, the finding is about `H011`.");
+    }
     std::process::ExitCode::SUCCESS
 }
