@@ -106,6 +106,14 @@ missing.
 | `format` / `table` | library | declarations over M1/M3/D2 |
 | **`check`** | **M2** | **see below — the prettiest derivation** |
 
+> **The typestate row is a DERIVATION, and it was proposed as a construct on 2026-09-01.**
+> `PLAN-HARDWARE.md` §42 wanted a word `phase`, generalised over `table`, `ops`, `fn` and
+> `reg`. Recomputed and refused (`messung/PHASENKONSTRUKT.md`): it lowers the vocabulary by
+> **one** word, not four, and the *"one lowering theorem instead of four"* it promised is
+> **zero instead of zero** — a ghost mark emits no C, so there is nothing for a lowering
+> theorem to be about. *The row above already had it right: a linear value whose type carries
+> the state. **M2**, not a construct.*
+
 ### The four old design rules — they are now DERIVATIONS, not rules
 
 Rule 1 is **M4**, rule 2 is **M1 + M4**, rule 3 is **D2**, rule 4 is **D1 + D2**. They still

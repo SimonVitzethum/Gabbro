@@ -170,3 +170,24 @@ schwächere Aussage und schliesst die gemessene Stelle trotzdem.*
 * **Sie senkt nichts ab.** Der Erzeuger sieht die Phase nicht; `class` war noch nie eine
   Absenkung, sondern eine Ablehnung. *Der phasenklassierte Zugriff ist geprüft oder gar
   nicht — er wird nicht anders übersetzt.*
+
+---
+
+## Nachtrag, 2026-09-01 — **Form 3 ist am vierten Tag wiedergekommen, unter einem anderen Namen**
+
+`PLAN-HARDWARE.md` §42 hat vorgeschlagen, den Mechanismus zu einem Wort `phase` zu
+verallgemeinern, **anwendbar auf `table`, `ops`, `fn` und `reg`**. Die ersten beiden Träger
+haben keinen Wert in einer Signatur, durch den eine Stufe fließen könnte — *damit ist es
+genau Form 3 aus §2*, und die Absage dort gilt wörtlich weiter: **eine Behauptung des Rufers
+und ein zweiter Mechanismus neben der Ordnung (W7).**
+
+Nachgerechnet in **`messung/PHASENKONSTRUKT.md`**, und drei Zahlen daraus gehören neben §4:
+
+* Der Handel wäre **ein Wort** (`order` + `advances` fallen, `phase` kommt), nicht vier.
+* Der versprochene *„EINE Absenkungssatz statt vier"* ist **null statt null** — §4 oben sagt
+  es schon, und `emit.rs`:44 sagt die andere Hälfte: *„ghost types (they lower to NOTHING)"*.
+* Die sechs Fundstellen von `class … in <phase>` wurden als Posten gezählt. **Sie kosten
+  heute nichts** — §2 Form 1 hat das als ihren ersten Vorzug gebucht.
+
+> *Eine Entscheidung, die einen BEGRIFF als Grund hatte, muss ihn beim nächsten Vorschlag
+> noch einmal aussprechen — sonst liest ihn jemand als Preisfrage und rechnet ihn nach.*
