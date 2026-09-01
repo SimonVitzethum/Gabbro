@@ -170,6 +170,24 @@ impl Rufwissen<'_> {
 /// code that appears in two files makes every poison probe naming it ambiguous -- *it falls
 /// green while the rule it meant may have failed.* `gabbro effects --sperrrang` filters a
 /// run's diagnostics through this list instead of spelling the codes again.
+///
+/// ## What the two-basis measurement asks, and which column belongs empty
+///
+/// `H012` asks the callee's effect hull *"does this call take a lock?"*. An over-wide
+/// `effects` set therefore makes this pass **stricter than necessary** -- it can refuse a
+/// correct lock order because a lock nobody touches stands in the frame.
+///
+/// > **A refusal that appears ONLY under the derivation would be a finding about `H011`,
+/// > not about the derivation.** `H011` demands that a declared `locks` be redeemed -- by a
+/// > block in this body, by a callee whose hull carries it, or by `requires Held(…)`. So the
+/// > derivation cannot find a lock the written line omits, and that column stays at zero.
+///
+/// **And the way the padding survives `H011` is the third of those three redemptions.**
+/// `requires Held(X)` makes `locks X` legitimate and means *"X is held here"* -- while
+/// `H012` reads the same word as *"this call TAKES X"*. For a function that only requires
+/// the lock the second reading is false. *Measured at
+/// `messung/proben/460-rangprobe-an-zu-weiter-wirkung.gab`: one refusal, and the program is
+/// correct.*
 pub const RANGREGELN: [&str; 2] = ["H006", "H012"];
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {

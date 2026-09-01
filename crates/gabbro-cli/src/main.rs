@@ -1461,12 +1461,12 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
 /// | `--ursprung` | each entry with its origin path, hop by hop |
 /// | `--vergleich` | the derived set held against the WRITTEN one, per entry |
 /// | `--sperrrang` | the lock-rank pass over both bases, and what the derivation frees |
-/// | `--eng` | leave out reads through parameters, exactly as `E010` does |
+/// | `--eng` | leave out reads through parameters, as the read half of the effects pass does |
 ///
 /// **`--eng` is an opt-OUT here and `--weit` an opt-IN at `abi`, and that is not an
 /// inconsistency but the difference between the two questions.** `abi --vergleich` asks
 /// *"does the written line agree with what the passes check?"* -- and the passes leave
-/// parameter reads out, with a reason. This command asks *"what would an elaborator have to
+/// parameter reads out, with a reason given where that filter lives. This command asks *"what would an elaborator have to
 /// write?"*, and it has to write `reads p.slots`: the caller wants to know what happens to
 /// his pointer. *A default that answered the other question would make every measurement
 /// taken with it wrong in the same direction.*
@@ -1660,20 +1660,18 @@ fn wirkungen_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCod
 /// **Does a lock-rank refusal come free under the narrower set?** (`PLAN-HARDWARE.md`, the
 /// third question of the assignment.)
 ///
-/// `effects` feeds the lock-rank pass: `H012` asks the callee's effect hull *"does this call
-/// take a lock?"*. An over-wide set does not make the checker wrong, it makes it **stricter
-/// than necessary** -- it can refuse a correct lock order because a lock nobody ever touches
-/// stands in the frame.
+/// `effects` feeds the lock-rank pass, so an over-wide set does not make the checker wrong
+/// but **stricter than necessary** -- it can refuse a correct lock order because a lock
+/// nobody ever touches stands in the frame.
 ///
 /// The measurement runs **the same pass twice**, once over each basis, and diffs the
 /// diagnostics. *Two bases through two passes would measure the difference between the
 /// passes.* A refusal that stands in the left column and not in the right is a refusal the
 /// derivation frees.
 ///
-/// > **And the direction that must stay empty is the other one.** A refusal that appears
-/// > only under the derivation would mean the derivation finds a lock the declaration does
-/// > not name -- and by `H011` that cannot happen. Should the column move off zero, the
-/// > finding is about `H011`, not about the derivation.
+/// **Which rules are read out, and why the third column belongs empty, stands beside the
+/// rules themselves** -- `geteilt::RANGREGELN` and `geteilt::pass_mit`. *A command that
+/// re-explains a rule it does not issue makes a claim nobody checks.*
 fn wirkungen_sperrrang(dateien: &[&String]) -> std::process::ExitCode {
     let mut frei: Vec<String> = Vec::new();
     let mut neu: Vec<String> = Vec::new();
@@ -1687,8 +1685,8 @@ fn wirkungen_sperrrang(dateien: &[&String]) -> std::process::ExitCode {
         let (baum, _) = gabbro_syntax::lies(datei, &quelle);
         gelesen += 1;
         // **`--weit` is wrong here, and the reason is the question.** The lock half of the
-        // set does not depend on whether parameter reads count; taking the narrow basis
-        // keeps the two runs comparable to what `E010` itself would see.
+        // set does not depend on whether parameter reads count; the narrow basis is the one
+        // the read half of the effects pass itself works over.
         let ab = gabbro_check::ableitung::leite_ab(&baum, false);
 
         let mut a_heute = gabbro_syntax::diag::Absagen::neu(datei.as_str());
