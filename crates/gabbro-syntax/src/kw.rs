@@ -5,6 +5,18 @@
 //! of the same table, and `tests/wortschatz.rs` holds the two against each other -- otherwise
 //! it would be a number a human runs parallel to the truth (trap 80).
 //!
+//! **AND THERE IS A RATCHET OVER THE NUMBER** -- `instrumente/zaehle-wortschatz.py`, two
+//! marks, and together they are the rule of `PLAN-HARDWARE.md` §11 mechanically:
+//!
+//! > *A new word names either the word it displaces, or the measurement saying that no
+//! > existing form carries it.*
+//!
+//! The first mark counts the words (221); the second counts the words WITHOUT a reason at
+//! the entry (208). A swap leaves both standing, an addition raises the first, an addition
+//! without a reason raises both. **A reason is a comment block of at least two lines
+//! directly above the entry** -- it stands there and not in the commit message, because it
+//! travels with the word. *Whoever raises a mark writes the ledger line beside it.*
+//!
 //! **Reserved versus contextual.** A word of the table is not an identifier. Exempt are the
 //! **single-letter** words `r`, `w`, `x`: `pruefe-wortschatz.py` itself excludes them from the
 //! coverage check (*"single-character terminals come from character ranges and are not
