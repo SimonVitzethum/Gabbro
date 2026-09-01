@@ -1,0 +1,27 @@
+-- erwartet: N041
+-- **Ein `extern fn` auf einen MAKRONAMEN -- und hier bleibt `N041` richtig.**
+--
+-- Seit dem 2026-09-01 haelt `N041` die `extern fn` nicht mehr pauschal: das Konstrukt ist
+-- dazu da, einen Namen zu binden, den C schon hat. **Aber `NAN` ist keine Funktion.** Es ist
+-- ein Makro aus `<math.h>`, und ein Makro hat gar keine Deklarationsstelle -- der
+-- Praeprozessor schreibt den Namen um, bevor der Parser eine Deklaration sieht. Es gibt
+-- keine Signatur, mit der man uebereinstimmen koennte.
+--
+-- Dieselbe Absage trifft die 37 C11-Woerter und die 67 Typedefs der vier Header. **420 der
+-- 558 Namen liegen in dieser Lage** -- gemessen mit `./instrumente/miss-c-signaturen.py`,
+-- und die Absage nennt die Klasse, statt zu sagen, der Name sei „vergeben".
+--
+-- Gegenstueck: `beispiele/63-druckt.gab` -- `putchar` IST eine Funktion, und die Bindung
+-- geht durch.
+
+module gift {
+
+extern fn NAN(x : f64) -> f64 effects { pure } costs <= 4 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

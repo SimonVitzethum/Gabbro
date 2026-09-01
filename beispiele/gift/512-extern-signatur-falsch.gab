@@ -1,0 +1,28 @@
+-- erwartet: N046
+-- **Der echte Mangel: der Name stimmt, die SIGNATUR nicht.**
+--
+-- `putchar` ist in C `int putchar(int)`. Diese Zeile senkt zu `uint32_t putchar(uint32_t);`
+-- ab, und `cc` weist das zurueck:
+--
+--     error: mismatch in return type of built-in function 'putchar'; expected 'int'
+--           [-Werror=builtin-declaration-mismatch]
+--
+-- **Bis zum 2026-09-01 sagte `N041` hier den NAMEN ab**, und damit dieselbe Zeile mit `i32`
+-- gleich mit -- die, die durchgeht und druckt. *Die Regel widersprach ihrem eigenen Grund:
+-- geschrieben, weil eine Absenkung, die mit C's Deklaration kollidiert, nicht uebersetzt, und
+-- angewandt auf das eine Konstrukt, bei dem Uebereinstimmung das ZIEL ist.*
+--
+-- Die Absage nennt die Zeile, die passt: `extern fn putchar(a : i32) -> i32`.
+-- Gegenstueck: `beispiele/63-druckt.gab`.
+
+module gift {
+
+extern fn putchar(c : u32) -> u32 effects { writes ausgabe } costs <= 8 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

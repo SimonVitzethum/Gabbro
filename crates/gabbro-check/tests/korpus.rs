@@ -246,12 +246,20 @@ const BENANNT: &[&str] = &[
     // > *The number was known and the checker was silent* -- the same shape as a clause that
     // > parses and is dropped. **Now it speaks, and the tally has a reader.**
     "N040",
-    // **`N041` -- and over the frozen excerpt it is the finding, not a side effect.**
+    // **`N041` -- the class refusal, and over the frozen corpus it no longer fires.**
+    //
+    // It stays in this list because it is the answer for a definING item: `pub fn exit`,
+    // `const NAN`, `type switch`. The corpus holds none today, and an allow-list entry
+    // nobody reaches is cheaper than one that is missing when somebody writes the line.
+    "N041",
+    // **`N046` -- and over the frozen excerpt it is the finding, not a side effect.**
     //
     // `FRAGMENTE.md`:1028 writes `extern fn exit() -> never effects { diverges };`, and the
-    // body above it calls `exit()` at eight sites. **C owns that name**: the generator writes
-    // `_Noreturn void exit(void);` and `cc` answers *conflicting types for built-in function
-    // 'exit'; expected 'void(int)'*. Measured 2026-08-31, `messung/C-NAMEN.md`.
+    // body above it calls `exit()` at eight sites. **C owns that name, and here that is the
+    // POINT** -- an `extern fn` exists to bind it. What is wrong is the SIGNATURE: the
+    // generator writes `_Noreturn void exit(void);` and `cc` answers *conflicting types for
+    // built-in function 'exit'; expected 'void(int)'*. The parameter is missing, not the
+    // right to the name. Measured 2026-08-31 (`messung/C-NAMEN.md`), re-diagnosed 2026-09-01.
     //
     // > **The line was ADDED to the excerpt on 2026-08-15**, with the note above it saying
     // > `exit` and `signal` had been called and never declared -- and it thereby became part
@@ -260,7 +268,12 @@ const BENANNT: &[&str] = &[
     // > checker was silent, the emitter wrote 199 lines of C, and the foreign compiler
     // > refused them. *A finding that only the third tool can see is not a finding, it is a
     // > surprise.*
-    "N041",
+    //
+    // > **And from 2026-08-31 to 2026-09-01 it was named WRONGLY**, which is the cheaper of
+    // > the two failures but not a free one: `N041` said the name was taken and told the
+    // > writer to rename. *`exit` is exactly the name that line wants* -- the fix is
+    // > `extern fn exit(a : i32)`, and only `N046` says so.
+    "N046",
     // **`N043` -- the report line of `check kstack_eichung`, and it names a carrier that is
     // in no excerpt.**
     //

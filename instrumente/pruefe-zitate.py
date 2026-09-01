@@ -173,7 +173,12 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # refusals the edge is ABOUT: `E009` and `K003` (what a call across the boundary costs
 # without the bridge) and `N038` (why the preamble has to be the transitive closure). All
 # three are issued elsewhere; **the target stays 207** -- the object grew, the debt did not.
-MARKE = 289
+# **289 -> 292 on 2026-09-01, and the mark RISES with its reason.** The `extern fn` lane
+# added `beispiele/63-druckt.gab`, five poison probes and one measurement probe; three of
+# them cite a rule they do not issue -- `P034` (why the bare call and not `let _ =`), `N041`
+# (which the printing example is ABOUT and which no longer fires on it) and `N046` named
+# from the sibling probes. **The target stays 207** -- the object grew, the debt did not.
+MARKE = 292
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

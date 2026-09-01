@@ -6,10 +6,10 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 ```
 $ ./instrumente/zaehle-zeremonie.py
 68 Dateien gemessen, 4 abgelehnt
-  ableitbar       76        A1  4 · A4 72
+  ableitbar       77        A1  4 · A4 73
   redundant        0
   tragend       1061
-76 von 1137 Stellen dürfen sinken
+77 von 1142 Stellen dürfen sinken
 ```
 
 > **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**

@@ -1966,7 +1966,11 @@ echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECH
 # night's work: `58` (free list, two forms), `59` (an entry that hardware throws), `60` (an
 # assumption naming its machine), `61` (`~`), `62` (`u32::max` in an expression). Every one
 # is the counterprobe a build was not allowed without.
-MARKE_EMIT=62
+# **62 -> 63 on 2026-09-01, and the object grew by the one example that had been
+# impossible**: `beispiele/63-druckt.gab`, the first Gabbro program that PRINTS. Until that
+# day `N041` refused every `extern fn` on a name C owns, and `putchar`, `puts` and `printf`
+# are all three such names -- so the corpus had no program with output at all.
+MARKE_EMIT=63
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -2052,7 +2056,10 @@ MARKE_EMIT=62
 # three companions do NOT -- two need the other file of their unit and one needs the `.gabi`
 # across the unit boundary. *A corpus of units has files that only translate together, and
 # this ratchet counts the ones that do not have to.*
-MARKE_EMIT_M=46
+# **46 -> 47 on 2026-09-01**: `messung/proben/probe-extern-bindet-c.gab`, the counter-probe
+# to `N046` -- five `extern fn` on names C already declares, each with the signature C knows.
+# It lowers alone and compiles, which is the whole claim it makes.
+MARKE_EMIT_M=47
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

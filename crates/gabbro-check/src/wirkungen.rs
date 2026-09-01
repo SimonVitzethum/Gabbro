@@ -136,10 +136,12 @@ fn probenrumpf(c: &Check, modul: &str, g: &crate::aufrufgraph::Graph, absagen: &
                 ),
             )
             .mit_notiz(
-                "a `check` carries no `effects`, no `costs` and no `locks` -- so its body                  may read, compute, compare and return, and nothing else",
+                "a `check` carries no `effects`, no `costs` and no `locks` -- so its body may read, \
+                 compute, compare and return, and nothing else",
             )
             .mit_notiz(
-                "`N027` says the same about statements: a body without a contract may not                  do what needs one",
+                "`N027` says the same about statements: a body without a contract may not do what \
+                 needs one",
             ),
         );
     }

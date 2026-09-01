@@ -1,0 +1,26 @@
+-- erwartet: N041
+-- **Ein `extern fn` auf `printf` -- C hat eine Deklaration, und Gabbro kann sie nicht
+-- schreiben.**
+--
+-- `printf` ist `int(const char *, ...)`. Beides fehlt: Gabbro hat keine variadische
+-- Parameterliste und kein `char *`. **Die Absage zeigt C's Deklaration**, statt zu sagen, der
+-- Name sei vergeben -- denn genau das ist die Auskunft, die der Schreiber braucht: nicht
+-- „nimm einen anderen Namen", sondern „diese Funktion ist von hier aus nicht erreichbar".
+--
+-- 187 der 558 Namen liegen so: `char *`, `void *`, `_Complex`, `long double` oder variadisch.
+-- *Gemessen mit `./instrumente/miss-c-signaturen.py`.*
+--
+-- > **Und darum druckt `beispiele/63-druckt.gab` mit `putchar` und nicht mit `printf`.** Die
+-- > Eingangstuer ist offen, aber sie ist genau so breit wie die Typen, die Gabbro hat.
+
+module gift {
+
+extern fn printf(c : i32) -> i32 effects { writes ausgabe } costs <= 8 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

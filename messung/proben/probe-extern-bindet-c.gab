@@ -1,0 +1,44 @@
+-- **Die Gegenprobe zu `N046`: was PASST, geht durch.**
+--
+-- Eine Regel, die eine Signatur verlangt, ist nur dann eine Regel und keine Wand, wenn die
+-- richtige Signatur durchgeht. Diese fuenf binden Namen, die C schon hat -- **jeder mit
+-- genau der Deklaration, die `cc` kennt**, gelesen mit `cc -aux-info` und
+-- `-Wbuiltin-declaration-mismatch`, eingetragen in `cnamen.rs::SIGNATUR`:
+--
+--   `putchar`  `int(int)`              die Eingangstuer -- siehe `beispiele/63-druckt.gab`
+--   `abs`      `int(int)`              eingebaut, ohne jeden `#include` bekannt
+--   `sqrt`     `double(double)`        aus `<math.h>`, das jede erzeugte Einheit einschliesst
+--   `exit`     `void(int)`             der eine Korpustreffer -- hier mit dem Parameter
+--   `abort`    `void(void)`            ohne Argument und ohne Ergebnis
+--
+-- **`-> never` steht bei `exit` und `abort` und stoert nicht**: `_Noreturn` ist nicht Teil des
+-- Vergleichs, gemessen 2026-09-01 -- `cc` nimmt `void exit(int32_t);` und
+-- `_Noreturn void exit(int32_t);` gleichermassen an.
+--
+-- **Und der Rumpf ruft nur `putchar`, nicht `abs`** -- gemessen am 2026-09-01: der nackte
+-- Ruf als Anweisung verwirft den Rueckgabewert, aber `abs(z);` senkt zu `abs(z);` ab, und
+-- `cc -Wall -Wextra -Werror` weist das als *statement with no effect* zurueck. `putchar(72);`
+-- geht durch, weil `putchar` schreibt. **Die Verwerfungsform gilt also nur fuer Rufe mit
+-- Wirkung** -- eine reine Funktion, deren Ergebnis niemand liest, ist in C kein Satz.
+-- *Der Vorlauf `pruefe-emission.sh` hat das gefunden, nicht der Pruefer: `N046` ist eine
+-- Regel ueber die Signatur, nicht ueber die Ruf-Stelle.*
+--
+-- Diese Datei ist eine MESSUNG und kein Beispiel: sie muss 0 Fehler geben.
+
+module probe::extern_bindet_c {
+
+extern fn putchar(c : i32) -> i32 effects { writes ausgabe } costs <= 8 ops;
+extern fn abs(x : i32) -> i32      effects { pure }          costs <= 2 ops;
+extern fn sqrt(x : f64) -> f64     effects { pure }          costs <= 8 ops;
+extern fn exit(k : i32) -> never   effects { diverges }      costs <= 1 ops;
+extern fn abort() -> never         effects { diverges }      costs <= 1 ops;
+
+impl fn haupt(z : i32 in 0 .. 100) -> i32 in 0 .. 1
+    effects { writes ausgabe }
+    costs <= 40 ops
+{
+    putchar(z);
+    return 0;
+}
+
+}

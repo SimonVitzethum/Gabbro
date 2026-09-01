@@ -159,8 +159,34 @@ fn erzeugter_name_zweimal(baum: &Programm, absagen: &mut Absagen) {
 /// > names and touches one line is not a tightening of the tree; it is an answer to a case
 /// > nobody had written down.*
 ///
-/// The rule holds every named item except `module` and `use`: a module declares no C
-/// identifier, and `use` declares no name at all.
+/// The rule holds every named item except `module`, `use` -- and `extern fn`. A module
+/// declares no C identifier, `use` declares no name at all, and **an `extern fn` MEANS to take
+/// the name**; see `extern_bindet_c_namen` for what stands there instead.
+///
+/// > **`extern fn` was in this rule until 2026-09-01, and it cost the language its front
+/// > door.** `putchar`, `puts` and `printf` all stand in the table, so no Gabbro program could
+/// > print -- *the first thing anybody does in a new language.* The rule contradicted its own
+/// > reason: it was written because a lowering that collides with C's declaration does not
+/// > compile, and at an `extern fn` **agreement is the goal, not the collision.**
+///
+/// > **What it cost, counted with its handle** (`W28`, 2026-09-01). Over the 526 `.gab` files
+/// > and their 1012 distinct item names the 558-name table has **four** hits:
+/// >
+/// > ```text
+/// > beispiele/gift/408-c-name-eingebaut.gab:17     extern fn exit
+/// > beispiele/gift/409 (a `<math.h>` name):19       const NAN
+/// > beispiele/gift/410-c-name-schluesselwort.gab:18  pub fn switch
+/// > messung/fragmente/F05.gab:205                  extern fn exit
+/// > ```
+/// >
+/// > **Three of the four are this rule's own poison probes.** The one site in the corpus is an
+/// > `extern fn` -- the construct the rule should never have held. *A rule that forbids 558
+/// > names, touches one line, and that line is the one case it gets wrong.*
+/// >
+/// > The handle: `sh` over `git ls-files '*.gab'` with `gabbro pruefe` per file, grepping
+/// > `[N041]`; cross-checked by a regex over the declaration forms against the table read out
+/// > of `cnamen.rs`. Both give 4 sites / 3 distinct names. 32 of the 526 files carry a parse
+/// > error of some kind and can hide a hit -- *that is the denominator, and it is named.*
 fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item(baum, &mut |item| {
         if matches!(item.art, ItemArt::Modul(_) | ItemArt::Use(_)) {
@@ -168,6 +194,13 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
         }
         let Some(name) = item.art.name() else { return };
         let Some(klasse) = crate::cnamen::vergeben(&name.text) else { return };
+        // **The one item that means to take the name gets the other question asked.**
+        if let ItemArt::Funktion(f) = &item.art {
+            if f.klasse == Some(FnKlasse::Extern) {
+                extern_bindet_c_namen(f, name, klasse, absagen);
+                return;
+            }
+        }
         absagen.schiebe(
             Absage::fehler(
                 "N041",
@@ -190,6 +223,160 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
             ),
         );
     });
+}
+
+/// **`N046` -- an `extern fn` binds a name C has, and the SIGNATURE has to agree.**
+///
+/// This is the question `N041` asked wrongly at this one construct. `extern fn` exists to
+/// bind a name the C side already carries; that the name is taken is the POINT. What breaks
+/// the build is a declaration C disagrees with:
+///
+/// ```text
+/// extern fn putchar(c : u32) -> u32   ->  uint32_t putchar(uint32_t c);
+///     error: mismatch in return type of built-in function 'putchar'; expected 'int'
+/// extern fn putchar(c : i32) -> i32   ->  int32_t putchar(int32_t c);
+///     (accepted -- and the program prints)
+/// ```
+///
+/// **Both lines are measured** (2026-09-01, `cc -std=c11 -O0 -Wall -Wextra -Werror`), and the
+/// second is the one that opened the front door: a Gabbro program can print.
+///
+/// Three outcomes, and none of them is a pass by omission:
+///
+/// | what the table says | what happens |
+/// |---|---|
+/// | no readable C declaration -- keyword, macro, typedef | **`N041`**, with the class as the reason |
+/// | a declaration Gabbro cannot write (`char *`, `_Complex`, variadic) | **`N041`**, and it SHOWS C's declaration |
+/// | a declaration Gabbro can write | **`N046`** unless the lowering matches exactly |
+///
+/// **A signature this checker cannot spell is a refusal, never a pass.** `ctyp_primitiv`
+/// answers only the rows that need no unit context; a parameter typed by a `table` or a range
+/// type gives `None`, and `None` goes to `N046` with that said out loud. *The safe direction
+/// is the one where an undecided comparison refuses* -- the whole point of the rule is that
+/// `cc` must not be the first tool to find out.
+fn extern_bindet_c_namen(
+    f: &FnDecl,
+    name: &Ident,
+    klasse: crate::cnamen::Klasse,
+    absagen: &mut Absagen,
+) {
+    let sig = crate::cnamen::signatur(&name.text);
+
+    // **No readable C declaration** -- a keyword, a macro or a typedef. None of the three is
+    // a function, so there is no signature to agree with and nothing an `extern fn` can bind.
+    let Some(sig) = sig else {
+        absagen.schiebe(
+            Absage::fehler(
+                "N041",
+                name.span,
+                format!("`{}` is a name C has already taken", name.text),
+            )
+            .mit_notiz(klasse.fundort(&name.text))
+            .mit_notiz(
+                "an `extern fn` binds a name C already has -- but C declares no FUNCTION of this \
+                 name: a keyword, a macro and a typedef are none, and none of them can stand where \
+                 the generated unit would write this declaration",
+            )
+            .mit_notiz(
+                "measured 2026-09-01; the table, its split and its command stand in \
+                 `crates/gabbro-check/src/cnamen.rs` and `./instrumente/miss-c-signaturen.py`",
+            ),
+        );
+        return;
+    };
+
+    // **C declares a function, and Gabbro has no form for its types.** The refusal shows the
+    // declaration -- `int(const char *, ...)` explains itself, "the name is taken" does not.
+    if !sig.bindbar() {
+        absagen.schiebe(
+            Absage::fehler(
+                "N041",
+                name.span,
+                format!("`{}` is a name C has already taken", name.text),
+            )
+            .mit_notiz(format!(
+                "C declares `{} {}` -- and Gabbro has no form for it: no variadic parameter list, no \
+                 `char *`, no `void *`, no `_Complex` and no `long double`",
+                sig.c.split('(').next().unwrap_or(""),
+                format_args!("{}{}", name.text, &sig.c[sig.c.find('(').unwrap_or(0)..]),
+            ))
+            .mit_notiz(klasse.fundort(&name.text))
+            .mit_notiz(
+                "the declaration would compile to something C disagrees with -- rename it, and reach \
+                 the C function through one that CAN be written",
+            ),
+        );
+        return;
+    }
+
+    // **The lowering, computed exactly the way `emit.rs` computes it.**
+    let unsere = absenkung_der_signatur(f);
+    let Some(unsere) = unsere else {
+        absagen.schiebe(
+            Absage::fehler(
+                "N046",
+                name.span,
+                format!(
+                    "`{}` must match the declaration C already has, and this one cannot be compared",
+                    name.text
+                ),
+            )
+            .mit_notiz(format!("C declares `{}`, and Gabbro writes it `{}`", sig.c, sig.form))
+            .mit_notiz(
+                "a parameter or the result has a type this comparison cannot lower on its own -- a \
+                 `table`, a named range type or a pointer. At a name C already owns the answer has \
+                 to be exact, so an undecided comparison refuses",
+            ),
+        );
+        return;
+    };
+    if unsere != sig.absenkung {
+        absagen.schiebe(
+            Absage::fehler(
+                "N046",
+                name.span,
+                format!(
+                    "`{}` does not match the declaration C already has",
+                    name.text
+                ),
+            )
+            .mit_notiz(format!(
+                "this declaration becomes `{}` in the generated unit; C declares `{}`",
+                unsere, sig.c
+            ))
+            .mit_notiz(format!("the line that matches is `{};`", sig.form))
+            .mit_notiz(
+                "the name is right -- an `extern fn` is MEANT to take a name C has. What has to \
+                 agree is the signature, and `cc` refuses a declaration that does not \
+                 (`-Wbuiltin-declaration-mismatch`)",
+            ),
+        );
+    }
+}
+
+/// The signature of an `extern fn` in the spelling the table carries -- `int32_t(int32_t)`.
+///
+/// **`None` means undecidable here, and the caller turns that into a refusal.** The types this
+/// can lower are exactly `emit.rs`'s primitive rows (`ctyp_primitiv`), plus `never` and a
+/// missing result, both of which lower to `void`. *`_Noreturn` is not part of the comparison:
+/// measured 2026-09-01, `cc` accepts `void exit(int32_t);` and `_Noreturn void exit(int32_t);`
+/// alike -- the mismatch warning reads the type, not the specifier.*
+fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
+    let ergebnis = match &f.ergebnis {
+        None => "void",
+        Some(TypExpr::Never(_)) => "void",
+        Some(t) => crate::emit::ctyp_primitiv(t)?,
+    };
+    let mut teile = Vec::with_capacity(f.parameter.len());
+    for p in &f.parameter {
+        teile.push(crate::emit::ctyp_primitiv(&p.typ)?);
+    }
+    let args = if teile.is_empty() {
+        "void".to_string()
+    } else {
+        teile.join(",")
+    };
+    Some(format!("{ergebnis}({args})"))
 }
 
 /// **The words an effect line may use at a function pointer type -- and why the list is
@@ -382,10 +569,12 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
                         format!("`{ziel}` requires `Has({m})`, and `{}` does not carry it", f.name.text),
                     )
                     .mit_notiz(
-                        "a machine feature is not established by calling -- whoever calls                          carries the demand on, until somebody declares it",
+                        "a machine feature is not established by calling -- whoever calls carries \
+                         the demand on, until somebody declares it",
                     )
                     .mit_notiz(
-                        "the same rule `requires Held(L)` runs through the call graph with                          (`H005`); it is the second predicate of the same shape",
+                        "the same rule `requires Held(L)` runs through the call graph with (`H005`); \
+                         it is the second predicate of the same shape",
                     ),
                 );
             }
@@ -978,7 +1167,8 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
                                 format!("`{}` stands in both `preserves` and `clobbers`", c.text),
                             )
                             .mit_notiz(
-                                "what is preserved is not destroyed -- the entry contract                                  would promise both at once",
+                                "what is preserved is not destroyed -- the entry contract would \
+                                 promise both at once",
                             )
                             .mit_notiz(format!("first at `preserves` {}", p.text)),
                         );
@@ -1565,10 +1755,12 @@ fn dispatch_loest_auf(baum: &Programm, absagen: &mut Absagen) {
                 format!("`dispatch {}` of `{}` names no declared function", pfad.text(), wo.text),
             )
             .mit_notiz(
-                "`dispatch` is the way onward -- the one line at which an entry or the boot                  path hands over to ordinary code",
+                "`dispatch` is the way onward -- the one line at which an entry or the boot path \
+                 hands over to ordinary code",
             )
             .mit_notiz(
-                "pointing nowhere makes the entry a declaration without a continuation, and                  the generator would emit a jump to a symbol the linker looks for in vain",
+                "pointing nowhere makes the entry a declaration without a continuation, and the \
+                 generator would emit a jump to a symbol the linker looks for in vain",
             ),
         );
     });

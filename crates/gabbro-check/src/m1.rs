@@ -3614,7 +3614,8 @@ impl<'a> Pruefer<'a> {
                     format!("`{genannt}` in `refines` is not a declared `spec fn`"),
                 )
                 .mit_notiz(
-                    "a refinement obligation over a statement that does not exist is worse                         than none -- the prover assumes it",
+                    "a refinement obligation over a statement that does not exist is worse than none \
+                     -- the prover assumes it",
                 ),
             );
             return;
@@ -3631,7 +3632,8 @@ impl<'a> Pruefer<'a> {
                     ),
                 )
                 .mit_notiz(
-                    "a refinement between functions of different arity is none -- the                         generated obligation would carry unbound variables",
+                    "a refinement between functions of different arity is none -- the generated \
+                     obligation would carry unbound variables",
                 ),
             );
         }

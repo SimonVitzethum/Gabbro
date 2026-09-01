@@ -1891,6 +1891,30 @@ MUTATIONEN = [
         "Giftprobe faellt (408).",
     ),
     Mutation(
+        "die-signatur-darf-abweichen",
+        "namen.rs",
+        "    if unsere != sig.absenkung {",
+        "    if false && unsere != sig.absenkung {",
+        "N046 -- der Signaturvergleich am `extern fn` faellt aus. `extern fn putchar(c : u32) "
+        "-> u32` geht wieder durch, der Erzeuger schreibt `uint32_t putchar(uint32_t c);`, "
+        "und `cc` antwortet *mismatch in return type of built-in function*. Die beiden "
+        "anderen Arme bleiben wach -- ein Makroname faellt weiter an `N041` (510), eine "
+        "unentscheidbare Signatur weiter an `N046` (514). **ZWEI Giftproben fallen (512, "
+        "513)**, und das ist kein Ausrutscher: beide sind genau derselbe Fehler an zwei "
+        "Namen, und die Regel hat nur diesen einen Arm dafuer.",
+    ),
+    Mutation(
+        "extern-darf-jeden-c-namen-nehmen",
+        "namen.rs",
+        "            if f.klasse == Some(FnKlasse::Extern) {",
+        "            if false && f.klasse == Some(FnKlasse::Extern) {",
+        "N041/N046 -- die Weiche faellt aus, und `extern fn` landet wieder in der pauschalen "
+        "Namensabsage. Das ist der Zustand vor dem 2026-09-01: `beispiele/63-druckt.gab` "
+        "faellt an `N041`, obwohl seine Zeile uebersetzt und laeuft. **Die Mutation bewegt "
+        "keine Giftprobe in Richtung gruen -- sie macht ein SAUBERES Beispiel rot**, und "
+        "genau das ist der Nachweis, dass die Weiche etwas traegt.",
+    ),
+    Mutation(
         "zwei-erzeugernamen-duerfen-gleich-sein",
         "namen.rs",
         "        if gruppe.len() < 2 {",

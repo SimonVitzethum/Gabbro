@@ -1,0 +1,27 @@
+-- erwartet: N046
+-- **Der eine Fund im Korpus, jetzt mit der richtigen Absage.**
+--
+-- `extern fn exit() -> never` steht seit dem 2026-08-15 in `messung/fragmente/F05.gab` und
+-- war der EINZIGE Treffer der 558-Namen-Tafel ausserhalb ihrer eigenen Giftproben --
+-- nachgezaehlt am 2026-09-01 ueber 526 `.gab`-Dateien und 1012 verschiedene Item-Namen
+-- (`W28`, Griff: `./instrumente/miss-c-signaturen.py` und ein Lauf des Pruefers je Datei).
+--
+-- **Der Fund war echt und die Diagnose falsch.** C's `exit` ist `void(int)`; diese Zeile
+-- senkt zu `_Noreturn void exit(void);` ab, und `cc` antwortet *conflicting types for
+-- built-in function 'exit'; expected 'void(int)'*. Es fehlt ein Parameter -- nicht der Name.
+--
+-- Die Zeile, die passt, steht in der Absage: `extern fn exit(a : i32)`. Und `-> never` darf
+-- dabeistehen: **`_Noreturn` ist nicht Teil des Vergleichs**, gemessen 2026-09-01 -- `cc`
+-- nimmt `void exit(int32_t);` und `_Noreturn void exit(int32_t);` gleichermassen an.
+
+module gift {
+
+extern fn exit() -> never effects { diverges };
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

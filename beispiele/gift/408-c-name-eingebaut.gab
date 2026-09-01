@@ -9,12 +9,21 @@
 -- > Regel sagte der Pruefer zu genau diesem Text `3 items, 0 errors, 0 hints`, der Erzeuger
 -- > schrieb 20 Zeilen C, und erst das dritte Werkzeug fiel. `messung/C-NAMEN.md` §1.
 --
+-- **Diese Probe stand bis zum 2026-09-01 an einem `extern fn`, und das war die falsche
+-- Stelle** -- dort ist die Frage seither die Signatur (`N046`, Proben 512 und 513). Die
+-- KLASSE prueft sie unveraendert weiter, nur an einem definierenden Item: `pub fn exit`
+-- schreibt der Erzeuger unveraendert ins C, und da kollidiert der Name mit sich selbst.
+--
 -- Gegenprobe: `messung/proben/probe-c-namen-frei.gab` -- `read` und `write` sind POSIX und
 -- KEINE eingebauten Funktionen; dieselbe Form geht dort mit 0 Fehlern durch.
 
 module gift {
 
-extern fn exit() -> never effects { diverges };
+pub fn exit() -> u64
+    effects { pure }
+{
+    return 1;
+}
 
 pub fn haupt() -> u64
     effects { pure }
