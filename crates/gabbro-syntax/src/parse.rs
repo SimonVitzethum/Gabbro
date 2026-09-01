@@ -197,8 +197,7 @@ impl<'a> Parser<'a> {
             // list, and `{ return 0 return 1 }` legal on the way.
             if z == Z::Semi && t.art == Art::Zeichen(Z::GeschweiftZu) {
                 a = a.mit_notiz(
-                    "`;` terminates, it does not separate -- the LAST entry before a `}` \
-                     carries one too",
+                    "`;` terminates, it does not separate -- the last entry before `}` too",
                 );
             }
             self.absage(a);
@@ -648,8 +647,7 @@ impl<'a> Parser<'a> {
         let pfad = self.pfad()?;
         self.erwarte_z_notiz(
             Z::GeschweiftAuf,
-            "`module` carries a brace body -- `module m { … }`; there is no `module m;` \
-             file header",
+            "`module` carries a brace body -- `module m { … }`, not `module m;`",
         )?;
         let mut items = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
@@ -2478,8 +2476,7 @@ impl<'a> Parser<'a> {
         let anfang = self.erwarte_kw(Kw::Effects)?;
         self.erwarte_z_notiz(
             Z::GeschweiftAuf,
-            "`effects` takes a brace list -- `effects { pure }`, and a single effect \
-             stands in braces too",
+            "`effects` takes a brace list -- `effects { pure }`, even for ONE effect",
         )?;
         // **`effects { }` keeps its refusal, and the calculation is written down.** The
         // meaning „this function has no effects" EXISTS and is spelled `pure`; an empty list

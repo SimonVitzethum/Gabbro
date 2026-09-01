@@ -1757,6 +1757,102 @@ decision the caller can act on; a silent migration would not be.*
 
 ---
 
+## Every reader refusal, split — notation or claim (2026-09-01)
+
+`PLAN-HARDWARE.md` §49 B3 counts eight attempts at *„add two numbers"* by somebody with the
+grammar and 63 examples open, and calls five of the seven refusals **syntax paper cuts.**
+This section is the measurement behind that word, over every code the reader issues.
+
+> **The test is not „is it annoying".** It is: *what would become sayable that is not sayable
+> today, and is that thing wrong?* If nothing wrong becomes sayable, it was a paper cut.
+
+| | | |
+|---|---|---|
+| **a paper cut** | notation | nothing is safer because the user wrote it the other way |
+| **a guarantee** | claim | removing it makes a WRONG program acceptable |
+
+**The count: 39 P-codes and 7 L-codes.** `P031` and `P032` stand only in comments — they were
+retired, and 39 is the number after that.
+
+| | notation | mixed | claim |
+|---|---|---|---|
+| **P** | `P033` | `P001` `P014` | the other 36 |
+| **L** | `L004` | — | the other 6 |
+
+### The two mixed ones, and why neither was SPLIT
+
+`P001` (*„`X` expected, `Y` found"*) is the generic expectation and it goes both ways: at
+`static TAB : Treiber;` it says the only thing there is to say, and at `effects pure` the
+writer had the right word in the right place and could not tell that a brace list was meant.
+
+**A code that is a cut in one place and a guarantee in another must be split — but this is
+not that case.** `P034` was split off into `P041` because two *unrelated rules* shared one
+identifier, and a probe on it covered neither. Here the rule is ONE (*this token was expected
+at this site*); what differed was how much a reader could reconstruct from it. **So the split
+went into the TEXT and not into the code:** three sites now carry a note naming the form.
+*A second identifier for the same rule would be a coverage claim that is none.*
+
+`P014` is the same shape: *„effect expected"* is a closed-set refusal everywhere except at
+`effects { }`, where an effect list was written and is empty.
+
+### What was cured, and it was the message every time
+
+| written | refusal before | now, additionally |
+|---|---|---|
+| `module m;` | `` `{` expected, `;` found `` | `` `module` carries a brace body -- `module m { … }` `` |
+| `effects pure` | `` `{` expected, `pure` found `` | `` `effects` takes a brace list -- `effects { pure }` `` |
+| `effects { }` | *effect expected, closing brace found* | `` `effects { }` is empty `` · *a function without effects writes `effects { pure }`* |
+| `{ return 0 }` | `` `;` expected, `}` found `` | `` `;` terminates, it does not separate `` |
+| `else { … };` | *a semicolon on its own is not a statement* | *a block form ends with its `}` — the `;` after it is one token too many* |
+
+**Not one of the five changes what parses.** No production, no keyword, no lexer rule, and
+the vocabulary marks stand where they stood: 221 words, 208 without a reason, 333 positions.
+
+### Why the OTHER cure was refused, and it is a calculation
+
+Accepting `effects pure` beside `effects { pure }` is the second way to remove a paper cut,
+and it costs **a second spelling for one meaning.** That is the trade this language refuses
+everywhere else, and the refusals name each other:
+
+* the lexer refuses `0X` beside `0x` (`L004`) — *„one spelling, not two", and the rule stood
+  there already* (§Lexis);
+* `P037` refuses the braced record literal — *„what is given up: one character";*
+* the empty effect list is refused because `pure` already says it, on purpose.
+
+*A paper cut about notation is removed by SAYING the notation.* The one place where the
+folder did buy a second spelling is the trailing comma, and it bought it to replace **three**
+different rules with one — a trade, not an addition.
+
+### The one refusal whose subject IS notation and which is still a claim
+
+`P037` (no braced record literal) looks like the purest notation rule in the language:
+`P { a: 1 }` and `P(a: 1)` would be the same value. It is a claim all the same, and the
+ground is a count: at 76 corpus sites a `{` follows an expression directly, and accepting the
+braced form **misreads all 76 without a gate firing.** *A refusal about notation can still
+carry a claim — about the grammar, not about the program* — and that is why the boundary is
+drawn per refusal and not per family.
+
+### What was measured and left standing
+
+* **`L004`** is a paper cut by the definition and stays: the decision *„one spelling, not
+  two"* is older than this measurement, and the refusal already names the cure in its own
+  note. Removing it would be a language change, not the removal of a paper cut.
+* **`effects { }`** stays refused, and the calculation is in the table above.
+* **The follow-on error after a missing `;`** stays, and it is the ugliest thing left here:
+  the block recovery eats one brace too many, so `{ return 0 }` costs a second, bogus
+  *„no item starts here: `}`"* two lines down. `beispiele/gift/44-uebergang-mit-zeigerpfeil`
+  has the same shape today — repairing the recovery would MOVE a corpus file, and the claim
+  of this whole change is that nothing moved.
+* **`M104`** (*„`u32 + u32` leaves the width of the result type"*) is attempt 4 of the eight
+  and is a **guarantee**, not a cut: *if the result range does not fit, it is a compile error
+  and not a wrap-around.* So is `E001`, the missing `effects` clause of attempt 1.
+
+The counter-direction: `instrumente/vergleiche-binaerprogramme.py` over all 539 `.gab` of the
+tree, `pruefe` output AND emitted C, byte-wise, two binaries — **0 files moved.** The poison
+corpus grew by the five probes `620`–`624` and **not one existing probe changed its verdict.**
+
+---
+
 ## Open items — as of 2026-08-14, after the definition
 
 **The nine design questions are decided in [`SPRACHE.md`](SPRACHE.md) §18 (F1–F9).**
