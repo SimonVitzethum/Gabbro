@@ -279,9 +279,27 @@ left is the width of the OPERANDS.** `a` and `b` are full-range `u32`, so their 
 `8589934590`, which no `u32` holds. *Widening the return type changes nothing* — that attempt
 was made, and it got the identical refusal back.
 
-Three ways out, all measured, in the order to try them:
+### The types, and their limits
 
-**(a) Say what the operands are.** Usually the honest one — you rarely mean *any* `u32`:
+You will need these numbers to write a range, and nothing else in the file states them:
+
+| | signed | unsigned |
+|---|---|---|
+| 8 bits | `i8` −128 … 127 | `u8` 0 … 255 |
+| 16 bits | `i16` −32 768 … 32 767 | `u16` 0 … 65 535 |
+| 32 bits | `i32` −2 147 483 648 … 2 147 483 647 | `u32` 0 … 4 294 967 295 |
+| 64 bits | `i64` −9 223 372 036 854 775 808 … 9 223 372 036 854 775 807 | `u64` 0 … 18 446 744 073 709 551 615 |
+
+You do not have to type them out: **`u32::max` and `i64::max` are expressions**, and a
+`const` is the readable way to name a bound you use twice.
+
+### Three ways out
+
+They are **alternatives chosen by where the knowledge lives**, not a ranking. (a) if the
+caller can promise it, (b) if the result genuinely needs the room, (c) if nobody knows until
+run time.
+
+**(a) Say what the operands are** — when you can. You rarely mean *any* `u32`:
 
 ```gabbro
 module tutorial::ranged {
@@ -313,7 +331,39 @@ pub fn sum(a : u32, b : u32) -> u64
 }
 ```
 
-**(c) `narrow`, when the range is not known until run time.** Section 7.
+**(c) `narrow`, when the range is not known until run time** — because the values come from
+outside and the parameters must stay unrestricted. Section 7 is that case, and **an
+unrestricted parameter is not a mistake**; it is the honest signature for a value you did not
+get to choose.
+
+### One worked function, with the rest of the arithmetic
+
+Nothing above needed a second operator or a parenthesis. Both exist, and they bind as they do
+in C:
+
+```gabbro
+module tutorial::limits {
+
+const HALF : u32 = 2147483647;
+
+-- `lo` and `hi` are unrestricted -- they come from outside. `narrow` buys the range that
+-- makes `lo + hi` fit, and `HALF + HALF` is 4 294 967 294, one under `u32::max`.
+pub fn midpoint(lo : u32, hi : u32) -> u32
+    effects { pure }
+    costs   <= 6 ops
+{
+    narrow lo to 0 .. HALF else { return 0; }
+    narrow hi to 0 .. HALF else { return 0; }
+    return (lo + hi) / 2;
+}
+
+}
+```
+
+Two things in there that no earlier example shows: **a result whose range is NARROWER than
+its declared type is fine** — `0 .. 2147483647` goes into a plain `u32` without a word, and
+only *leaving* a range is an error — and `const` names a bound so that the two `narrow` lines
+cannot drift apart.
 
 ### The range travels UP
 
