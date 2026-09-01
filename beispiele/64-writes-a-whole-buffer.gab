@@ -1,0 +1,99 @@
+-- **Das zweite druckende Programm -- und es schreibt einen GANZEN Puffer, nicht ein Zeichen.**
+--
+-- `beispiele/63-druckt.gab` geht durch `putchar`: ein Wert je Ruf, keine Laenge, keine
+-- Zeichenkette. Diese Datei geht durch `write` -- **ein Ruf, ein Zeiger, eine Zahl** -- und
+-- der Unterschied zwischen den beiden ist die ganze Antwort auf `B2`.
+--
+-- ## Die Frage war als Signaturfrage gestellt und ist keine
+--
+-- Sie lautete: reicht es, dass `N046` ein `[u8; N]` als `char *` durchlaesst, wenn der
+-- Schreiber es hinschreibt? **Nein** -- denn ein `[u8; N]` traegt eine LAENGE und ein
+-- `const char *` einen ABSCHLUSS, und das sind zwei verschiedene Arten, ein Ende zu markieren:
+--
+--   `write(fd, p, n)`   das Ende steht in der SIGNATUR. Der Gerufene liest genau `n` Bytes,
+--                       und was in den Daten steht, entscheidet daran nichts.
+--   `puts(s)`           das Ende steht in den DATEN. Der Gerufene liest, bis er eine Null
+--                       findet -- und wie weit das ist, steht NIRGENDS in der Signatur.
+--
+-- **Und der Unterschied ist nicht, dass die erste Form sicher waere.** `write(1, p, 999)`
+-- ueber einen Puffer von 64 Bytes ist derselbe Speicherfehler, ein Argument weiter. Der
+-- Unterschied ist, dass die Pflicht sich HINSCHREIBEN laesst -- `requires n <= KAP` -- und
+-- dass der Pruefer sie an jeder Rufstelle einloest. *Bei einem Abschluss-Scan gibt es
+-- nichts zu halten: kein Ausdruck ueber den Parametern beschraenkt ihn.*
+--
+-- > **Gemessen am 2026-09-02**, und daran haengt `N052`:
+-- >
+-- > ```text
+-- > error: [M115] `write` requires `n <= 64`, and the argument lies in 999 .. 999
+-- >        = the callee's precondition is not merely unproved at this site but EXCLUDED
+-- > ```
+-- >
+-- > Die Zeile steht als Giftprobe in `beispiele/gift/633-length-past-the-buffer.gab`.
+--
+-- ## Und `write` war bis heute ein falsches Gruen
+--
+-- `N041` haelt die Namen, die *C11* vergeben hat. **`write` ist POSIX und stand darum in
+-- keiner Tafel** -- die Zeile prueft mit 0 Fehlern, der Erzeuger schrieb
+-- `int64_t write(int32_t fd, const Text *p, uint64_t n);`, `cc` uebersetzte das anstandslos,
+-- und der Binder fand das echte `write` dahinter: **mit einer Deklaration, die ihm
+-- widerspricht.** Mit `#include <unistd.h>` daneben sagt `cc` *„abweichende Typen fuer
+-- »write«"*; ohne den Header sagt niemand etwas. *Dieselbe Form, gegen die `N041` gebaut
+-- wurde, eine Namensschicht weiter.*
+--
+-- Seit heute steht `<unistd.h>` gemessen in `cnamen.rs::POSIX`, und `N046` haelt die Zeile
+-- gegen `ssize_t write(int, const void *, size_t)`. Der Erzeuger schreibt jetzt **C's eigene
+-- Deklaration** -- `const void *` und nicht `const uint8_t *` --, und die ist mit dem echten
+-- `write` vertraeglich: gemessen, mit `<unistd.h>` daneben, unter `-Wall -Wextra -Werror`.
+-- Der Ruf uebergibt einen `uint8_t *`, und diese Umwandlung ist C's eigene und stillschweigend.
+--
+-- **Es hat kein Wort gekostet.** `ptr<normal, r> u8` steht schon in der Sprache; dazu kamen
+-- eine Tafel und die Einsicht, dass C an dieser Stelle WENIGER sagt als Gabbro -- und dass ein
+-- Erzeuger, der C's Wort schreibt, nichts verschweigt, sondern die Deklaration ihrem
+-- Eigentuemer laesst. Die Marken 221 / 208 / 333 stehen still.
+--
+-- > **Warum der Puffer eine nackte Reihung ist und kein Verbund mit `len` darin.** Gabbro hat
+-- > keinen Adressoperator: `&PUFFER` sagt `M127` ab (*„`&` macht eine FUNKTION zu einem
+-- > Wert"*), und ein Verbund, der an einem Zeigerparameter steht, geht als WERT hinueber --
+-- > `cc` weist das zurueck. **Eine Reihung ist die eine Adresse, die C von selbst hergibt**,
+-- > und darum steht die Laenge hier daneben statt darin. *Das ist eine gemessene Grenze und
+-- > keine Form dieses Beispiels;* sie steht als Befund im Protokoll.
+module beispiel::puffer {
+
+pub const KAP : u32 = 64;
+
+-- **Der Puffer und seine Laenge -- und die Laenge traegt ihre Schranke im TYP.**
+-- `u32 in 0 .. KAP` ist genau die Tatsache, aus der `M115` unten `n <= 64` einloest.
+pub static mut PUFFER : [u8; KAP] = 0;
+pub static mut LAENGE : u32 in 0 .. KAP = 0;
+
+-- `ssize_t write(int, const void *, size_t)` -- POSIX, gemessen mit `cc -aux-info` aus
+-- `<unistd.h>` und in `cnamen.rs::POSIX` eingetragen.
+--
+-- **Das `requires` ist der ganze Ertrag der Regel.** Ohne es waere `n` eine Zahl, die
+-- irgendwoher kommt; mit ihm ist es eine Pflicht, und der Pruefer haelt sie.
+extern fn write(fd : i32, p : ptr<normal, r> u8, n : u64) -> i64
+    requires n <= 64
+    effects  { writes ausgabe, reads p }
+    costs    <= 16 ops;
+
+pub fn main() -> i32 in 0 .. 1
+    effects { reads PUFFER, writes PUFFER, reads LAENGE, writes LAENGE, writes ausgabe }
+    costs   <= 200 ops
+{
+    -- `Puffer` und ein Zeilenumbruch -- Byte fuer Byte hinein, und EIN Ruf hinaus.
+    PUFFER[0] = 80;    -- P
+    PUFFER[1] = 117;   -- u
+    PUFFER[2] = 102;   -- f
+    PUFFER[3] = 102;   -- f
+    PUFFER[4] = 101;   -- e
+    PUFFER[5] = 114;   -- r
+    PUFFER[6] = 10;    -- Zeilenumbruch
+    LAENGE = 7;
+
+    -- **Die Pflicht wird hier eingeloest und nicht geglaubt.** `LAENGE` liegt nach seinem
+    -- Bereichstyp in `0 .. KAP`, also gilt `LAENGE <= 64` -- und genau das verlangt `write`.
+    write(1, PUFFER, LAENGE);
+    return 0;
+}
+
+}

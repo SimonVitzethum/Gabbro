@@ -211,7 +211,16 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # `m1` cites `M109` for `&f`; `emit` cites `E008`; `kosten` and `namen` cite the emitter's own
 # `C001`/`D004` for the counter-direction. Cross-references and quoted refusals -- evidence,
 # not coverage claims. *Same category as the 306 -> 308 booking, eight arms further.*
-MARKE = 316
+# **316 -> 323 on 2026-09-02, and the seven come from `B2`'s answer.** `N052` and the POSIX
+# table are stated by REFERENCE to the rules they sit between, and each reference is the
+# argument rather than a coverage claim: `cnamen.rs` cites `M115` (the obligation a
+# length-taking binding makes discharge-able) and `W7` (why `POSIX` is not folded into
+# `vergeben`); `namen.rs` cites `N041`, `N046` and `M115` at the new refusal and `ZEIGER` in
+# `miss-c-signaturen.py` for the parameter/result asymmetry; `emit.rs` cites `N046` and `W7`
+# where `zeiger_schreibend` and `aus_ctafel` got their second reader; `saetze.rs` cites
+# `P034`/`P041` for why a second code -- not a wider `N041` -- was the right shape.
+# *Cross-references and quoted refusals. What each one asserts is about the CITED rule.*
+MARKE = 323
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

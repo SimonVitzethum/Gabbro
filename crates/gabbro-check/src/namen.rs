@@ -193,14 +193,24 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
             return;
         }
         let Some(name) = item.art.name() else { return };
-        let Some(klasse) = crate::cnamen::vergeben(&name.text) else { return };
+        let vergeben = crate::cnamen::vergeben(&name.text);
         // **The one item that means to take the name gets the other question asked.**
         if let ItemArt::Funktion(f) = &item.art {
             if f.klasse == Some(FnKlasse::Extern) {
-                extern_bindet_c_namen(f, name, klasse, absagen);
+                // **And at THIS construct the POSIX table is read too** -- an `extern fn`
+                // asks for the C side's symbol, so a POSIX name is a real declaration to
+                // agree with. It is read nowhere else; see `cnamen::posix` for the edge and
+                // why a Gabbro `fn read` is none of this rule's business.
+                let klasse = vergeben.or_else(|| {
+                    crate::cnamen::posix(&name.text).map(crate::cnamen::Klasse::Posix)
+                });
+                if let Some(klasse) = klasse {
+                    extern_bindet_c_namen(f, name, klasse, absagen);
+                }
                 return;
             }
         }
+        let Some(klasse) = vergeben else { return };
         absagen.schiebe(
             Absage::fehler(
                 "N041",
@@ -285,8 +295,51 @@ fn extern_bindet_c_namen(
         return;
     };
 
+    // **`N052` -- the end of the data is IN the data, and no clause can bound it.**
+    //
+    // This stands BEFORE the spelling question on purpose. For `puts` both refusals apply --
+    // C says `const char *` and Gabbro has no `char` -- but only one of them survives a
+    // change to Gabbro: **a `char` type would take the spelling refusal away and leave the
+    // read unbounded.** *The deeper reason is the one that gets named.*
+    if crate::cnamen::endet_in_den_daten(&name.text) {
+        absagen.schiebe(
+            Absage::fehler(
+                "N052",
+                name.span,
+                format!(
+                    "`{}` finds the end of its data IN the data, and Gabbro cannot promise it",
+                    name.text
+                ),
+            )
+            .mit_notiz(format!(
+                "C declares `{}` -- a pointer with no count beside it, so the callee reads \
+                 until it meets a terminator and how far that is stands NOWHERE in the \
+                 signature",
+                deklaration(&name.text, sig.c),
+            ))
+            .mit_notiz(
+                "a Gabbro array carries its length in its TYPE: `[u8; N]` says where it ends \
+                 and says nothing about a byte inside it. Handing one to this function \
+                 promises a terminator the type does not require, and the C side reads past \
+                 the end when it is not there",
+            )
+            .mit_notiz(
+                "what CAN be bound is what takes a count -- `write(fd, p, n)` puts the end in \
+                 the signature, and `requires n <= N` is an obligation `M115` discharges at \
+                 every call site. There is no clause that bounds a terminator scan",
+            )
+            .mit_notiz(klasse.fundort(&name.text)),
+        );
+        return;
+    }
+
     // **C declares a function, and Gabbro has no form for its types.** The refusal shows the
     // declaration -- `int(const char *, ...)` explains itself, "the name is taken" does not.
+    //
+    // **And it names the ONE word that blocks it** (2026-09-02). Until then the note listed
+    // all five candidates and left the reader to find theirs; `void *(void *, const void *,
+    // long unsigned int)` against *"no variadic parameter list, no `char *`, no `void *`, no
+    // `_Complex` and no `long double`"* is a laundry list where a sentence belongs.
     if !sig.bindbar() {
         absagen.schiebe(
             Absage::fehler(
@@ -295,10 +348,9 @@ fn extern_bindet_c_namen(
                 format!("`{}` is a name C has already taken", name.text),
             )
             .mit_notiz(format!(
-                "C declares `{} {}` -- and Gabbro has no form for it: no variadic parameter list, no \
-                 `char *`, no `void *`, no `_Complex` and no `long double`",
-                sig.c.split('(').next().unwrap_or(""),
-                format_args!("{}{}", name.text, &sig.c[sig.c.find('(').unwrap_or(0)..]),
+                "C declares `{}` -- and {}",
+                deklaration(&name.text, sig.c),
+                sperrwort(sig.c),
             ))
             .mit_notiz(klasse.fundort(&name.text))
             .mit_notiz(
@@ -354,6 +406,63 @@ fn extern_bindet_c_namen(
     }
 }
 
+/// C's declaration with the NAME in it -- `int puts(const char *)` and not `int(const char *)`.
+///
+/// *A refusal that shows a bare type asks the reader to put the name back.*
+fn deklaration(name: &str, c: &str) -> String {
+    match c.find('(') {
+        Some(i) => {
+            let rueck = c[..i].trim_end();
+            // **No space after a `*`** -- `void *memcpy(…)` is how C spells it, and a
+            // refusal that shows C's declaration should show C's spelling of it.
+            let luecke = if rueck.ends_with('*') { "" } else { " " };
+            format!("{rueck}{luecke}{name}{}", &c[i..])
+        }
+        None => format!("{c} {name}"),
+    }
+}
+
+/// **The ONE word in C's declaration that Gabbro cannot write** -- the reason, not the list.
+///
+/// The order is the order of the test in `absenkbar` (`./instrumente/miss-c-signaturen.py`),
+/// so the sentence names the word that actually stopped the measurement. **A `void *` in a
+/// PARAMETER is not in this list**, because since 2026-09-02 it is writable -- one that
+/// stands in the RESULT still is, and the two are told apart here as they are there.
+fn sperrwort(c: &str) -> &'static str {
+    let (ergebnis, argumente) = match c.find('(') {
+        Some(i) => (&c[..i], &c[i..]),
+        None => (c, ""),
+    };
+    // **Unreachable for the measured population, and that is a finding, not a gap.** Over
+    // both tables there are TEN variadic declarations and all ten carry a `const char *` --
+    // seven read their arity out of a format string, and `execl`/`execle`/`execlp` read their
+    // list up to a NULL pointer. *In C11, being variadic and finding your end in the data are
+    // the same fact*, so `N052` answers every one of them first. The branch stays because a
+    // table is a measurement of TODAY; `beispiele/gift/511` carries the count.
+    if argumente.contains("...") {
+        return "Gabbro has no variadic parameter list";
+    }
+    if ergebnis.contains('*') {
+        return "it RETURNS a pointer whose type C has already erased -- Gabbro would have to \
+                invent an element type that nothing on either side can check. A `void *` that \
+                comes IN runs the other way and IS allowed: there Gabbro supplies precision C \
+                did not ask for, and the conversion is C's own";
+    }
+    if c.contains("char *") {
+        return "Gabbro has no `char`: C keeps `char`, `signed char` and `unsigned char` apart \
+                as three types, and `ptr<code, r> u8` lowers to `const uint8_t *`, which is \
+                none of them";
+    }
+    if c.contains("_Complex") {
+        return "Gabbro has no `_Complex`";
+    }
+    if c.contains("long double") {
+        return "Gabbro has no `long double` -- `f64` is `double`, and the two are different \
+                types even where a compiler gives them the same width";
+    }
+    "Gabbro has no form for a type in it"
+}
+
 /// The signature of an `extern fn` in the spelling the table carries -- `int32_t(int32_t)`.
 ///
 /// **`None` means undecidable here, and the caller turns that into a refusal.** The types this
@@ -365,10 +474,25 @@ fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
     let ergebnis = match &f.ergebnis {
         None => "void",
         Some(TypExpr::Never(_)) => "void",
+        // **A pointer RESULT stays undecidable, and that is the asymmetry, not an omission.**
+        // See `sperrwort` and `ZEIGER` in `./instrumente/miss-c-signaturen.py`.
         Some(t) => crate::emit::ctyp_primitiv(t)?,
     };
     let mut teile = Vec::with_capacity(f.parameter.len());
     for p in &f.parameter {
+        // **A pointer PARAMETER is `void *`, and it needs no unit context to say so.**
+        //
+        // The target type is the writer's and stays theirs -- C erased it, and this
+        // comparison does not have to resolve it to know that C's word is `void *`. *That is
+        // the one reason a pointer can be compared here at all while a `table` cannot.*
+        if let TypExpr::Zeiger(z) = &p.typ {
+            teile.push(if crate::emit::zeiger_schreibend(z) {
+                "void *"
+            } else {
+                "const void *"
+            });
+            continue;
+        }
         teile.push(crate::emit::ctyp_primitiv(&p.typ)?);
     }
     let args = if teile.is_empty() {

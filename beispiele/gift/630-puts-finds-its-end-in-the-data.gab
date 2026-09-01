@@ -1,0 +1,31 @@
+-- erwartet: N052
+-- **Ein `extern fn` auf `puts` -- und die Absage ist NICHT mehr die Buchstabierfrage.**
+--
+-- Bis zum 2026-09-02 fiel diese Zeile an `N041`: *„C declares `int puts(const char *)` -- and
+-- Gabbro has no form for it: no variadic parameter list, no `char *` …"*. Das stimmte und war
+-- der flachere von zwei Gruenden.
+--
+-- **Der tiefere:** `puts` findet das Ende seiner Daten IN den Daten. Ein Zeiger ohne Zahl
+-- daneben heisst, der Gerufene liest bis zu einer Null -- und wie weit das ist, steht nirgends
+-- in der Signatur. Ein `[u8; N]` traegt sein Ende im TYP und sagt ueber ein Byte darin gar
+-- nichts; es an `puts` zu geben verspricht einen Abschluss, den der Typ nicht verlangt.
+--
+-- **Warum der tiefere Grund zuerst genannt wird:** `N041` verschwaende an dem Tag, an dem
+-- Gabbro ein `char` bekaeme -- und der ungebundene Lesevorgang stuende noch da. *Die Absage,
+-- die eine Aenderung der Sprache ueberlebt, ist die, die den Fall wirklich beschreibt.*
+--
+-- Die Gegenform steht in `beispiele/64-writes-a-whole-buffer.gab`: `write(fd, p, n)` legt das
+-- Ende in die Signatur, `requires n <= KAP` schreibt die Pflicht hin, und `M115` loest sie
+-- an jeder Rufstelle ein.
+
+module gift {
+
+extern fn puts(s : ptr<code, r> u8) -> i32 effects { writes ausgabe } costs <= 8 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

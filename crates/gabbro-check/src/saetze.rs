@@ -2232,14 +2232,28 @@ pub const SPERREN: &[Satz] = &[
                   what C knows, and `cc` refuses a declaration that disagrees \
                   (`-Wbuiltin-declaration-mismatch`). Where C's declaration cannot be written \
                   in Gabbro at all, `N041` still refuses and SHOWS that declaration.",
-        vorbehalt: "**The signature table is measured and it covers 138 of the 558 names** \
-                    (2026-09-01, `./instrumente/miss-c-signaturen.py`). The other 420 can be \
+        vorbehalt: "**The signature table is measured and it covers 149 of the 558 names** \
+                    (2026-09-02, `./instrumente/miss-c-signaturen.py`). The other 409 can be \
                     bound by no `extern fn` whatever its signature: 37 C11 keywords, 129 \
                     header macros (the preprocessor rewrites the name before the parser sees \
-                    a declaration), 67 header typedefs, and 187 functions whose C declaration \
-                    takes `char *`, `void *`, `_Complex`, `long double` or a variadic list. \
-                    *Each of the 138 was handed to `cc -std=c11 -O0 -Wall -Wextra -Werror` as \
-                    the declaration `emit.rs` would write: 138 of 138 green.*\n\
+                    a declaration), 67 header typedefs, and 176 functions whose C declaration \
+                    RETURNS a pointer or takes `char *`, `_Complex`, `long double` or a \
+                    variadic list. *Each of the 149 was handed to `cc -std=c11 -O0 -Wall \
+                    -Wextra -Werror` as the declaration `emit.rs` would write: 149 of 149 \
+                    green.*\n\
+                    **`void *` moved from the second list to the first on 2026-09-02, in a \
+                    PARAMETER only.** A `void *` that comes IN takes the writer's own pointer \
+                    and erases it -- Gabbro supplies precision C did not ask for, and the \
+                    conversion is C's own. A `void *` that goes OUT would make Gabbro invent \
+                    an element type nothing can check. *So `write`, `read`, `fwrite` and \
+                    `memcmp` are bindable and `memcpy`, `memmove`, `memset` and `memchr` are \
+                    not -- all four of the second group for their RESULT.*\n\
+                    **And the unit then writes C's declaration and not this lowering** -- \
+                    `emit.rs::aus_ctafel` reads the table's own column. For every `extern fn` \
+                    that passed this rule before, the two are the same string; the one place \
+                    they differ is a `void *` parameter, where C's word has to stand or `cc` \
+                    disagrees with the real function the moment a POSIX header is in the same \
+                    translation unit.\n\
                     **The equivalences are measured, not assumed.** `int == int32_t` and \
                     `long == int64_t` hold under LP64 and are checked by \
                     `_Static_assert(__builtin_types_compatible_p(...))`; `long long` FAILS \
@@ -2264,6 +2278,46 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/namen.rs::extern_bindet_c_namen; \
                      crates/gabbro-check/src/cnamen.rs::SIGNATUR; \
                      instrumente/miss-c-signaturen.py",
+    },
+    Satz {
+        name: "namen.endet_in_den_daten",
+        kennungen: &["N052"],
+        aussage: "An `extern fn` on a C function that finds the end of its data IN the data \
+                  is refused -- not because Gabbro cannot spell `char *`, but because the \
+                  obligation such a call puts on the caller cannot be written down. A \
+                  pointer with no count beside it means the callee reads until it meets a \
+                  terminator, and how far that is stands nowhere in the signature. What CAN \
+                  be bound is what takes a count: `write(fd, p, n)` puts the end in the \
+                  signature, `requires n <= N` states the obligation, and `M115` discharges \
+                  it at the call site.",
+        vorbehalt: "**This rule stands BEFORE the spelling refusal, and the order is the \
+                    argument.** For `puts` both apply -- C says `const char *` and Gabbro has \
+                    no `char` -- but only one survives a change to Gabbro: a `char` type \
+                    would take `N041` away and leave the read unbounded. *The reason that \
+                    does not depend on today's type table is the one that gets named.*\n\
+                    **The population is DERIVED from the declarations and the derivation has \
+                    four named exceptions** (44 names over both tables, \
+                    `./instrumente/miss-c-signaturen.py --abschluss`). The test is *a `char \
+                    *` parameter with no count beside it*. `snprintf`, `vsnprintf` and \
+                    `strftime` carry a count that bounds the OUTPUT while the format string \
+                    is still scanned; `strncat` carries one that bounds the READ while the \
+                    write starts at the destination's own NUL. `strncpy` and `strncmp` look \
+                    like the family and are NOT in it: both sides of each are bounded by the \
+                    count.\n\
+                    **What it does NOT claim** (W10): that a length-taking binding is safe. \
+                    It is not -- `write(1, t, 999)` over a 64-byte buffer is the same memory \
+                    error one argument over. The rule says the danger is EXPRESSIBLE and the \
+                    checker already holds it, and says nothing about whether the writer chose \
+                    the right bound. *A terminator scan leaves nothing to hold at all.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/630-puts-finds-its-end-in-the-data.gab, 631 (`strlen`), 632 \
+                      (`strcpy`); the counter-form is beispiele/64-writes-a-whole-buffer.gab \
+                      -- `extern fn write` with `requires n <= KAP`, 0 errors, compiled under \
+                      `-Wall -Wextra -Werror` and RUN. And the obligation bites: with the \
+                      argument out of range `M115` refuses (measured 2026-09-02, \
+                      beispiele/gift/633-length-past-the-buffer.gab).",
+        fundstelle: "crates/gabbro-check/src/namen.rs::extern_bindet_c_namen; \
+                     crates/gabbro-check/src/cnamen.rs::ABSCHLUSS",
     },
     Satz {
         name: "namen.erzeugter_name_zweimal",

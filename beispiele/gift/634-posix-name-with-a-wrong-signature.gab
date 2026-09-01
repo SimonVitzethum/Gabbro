@@ -1,0 +1,38 @@
+-- erwartet: N046
+-- **Das Loch, das `N041` nicht sah: POSIX faellt durch die C11-Tafel.**
+--
+-- Bis zum 2026-09-02 stand genau diese Zeile in `messung/proben/probe-c-namen-frei.gab` als
+-- BEWEIS dafuer, dass `write` frei sei -- *„POSIX, nicht C11 -- keine eingebaute Funktion von
+-- GCC"*. Das erste stimmte, das zweite auch, und der Schluss war trotzdem falsch:
+--
+--     extern fn write(fd : u64, w : u64)   ->  void write(uint64_t fd, uint64_t w);
+--     gabbro pruefe: 0 errors
+--     cc ohne Header:            uebersetzt, bindet, und ruft das ECHTE `write`
+--     cc mit <unistd.h> daneben: „abweichende Typen fuer »write«"
+--
+-- Die erzeugte Einheit schreibt keinen POSIX-Header, also hat `cc` nichts, dem die
+-- Deklaration widersprechen koennte. **Die Absage, die vom fremden Uebersetzer haette kommen
+-- sollen, kann von ihm gar nicht kommen** -- und darum muss der Pruefer sie halten. Dieselbe
+-- Form, gegen die `N041` gebaut wurde (`messung/ERZEUGERNAMEN.md`: *„gabbro pruefe said 0
+-- errors, gabbro emit wrote the unit without a C001, and cc answered redefinition"*), eine
+-- Namensschicht weiter.
+--
+-- *Die Zeile, die passt, steht in der Absage:* `extern fn write(a : i32, b : ptr<normal, r> T,
+-- c : u64) -> i64`. Sie steht gebaut und gelaufen in `beispiele/64-writes-a-whole-buffer.gab`.
+--
+-- > **Und die Tafel nennt ihre Kante.** Gemessen ist `<unistd.h>` und sonst nichts:
+-- > `<signal.h>`, `<sys/socket.h>` und `<fcntl.h>` liegen ausserhalb, und `signal` und `recv`
+-- > in `messung/fragmente/F05.gab` binden bis heute ungeprueft. *Ein Loch mit einem Namen
+-- > darauf ist kein Gruen.*
+
+module gift {
+
+extern fn write(fd : u64, w : u64) effects { writes fd } costs <= 4 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

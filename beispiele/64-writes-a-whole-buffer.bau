@@ -1,0 +1,14 @@
+-- **Das Manifest fuer das zweite druckende Programm -- eines, das einen PUFFER schreibt.**
+--
+-- Wie `63-druckt.bau`: eine Einheit, eine Quelle, keine handgeschriebene C-Zeile. Der
+-- Unterschied steht in der Quelle daneben -- `63` ruft `putchar` je Zeichen, `64` ruft
+-- `write` genau einmal und uebergibt Zeiger und Laenge.
+--
+-- `write` ist POSIX und wird von `cc` ohne ein Wort in diesem Manifest gebunden -- **derselbe
+-- gehostete Fall wie nebenan**, und genau der Fall, in dem bis zum 2026-09-02 niemand geprueft
+-- hat, ob die erzeugte Deklaration zu der echten passt.
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-puffer
+
+unit puffer program
+    beispiele/64-writes-a-whole-buffer.gab

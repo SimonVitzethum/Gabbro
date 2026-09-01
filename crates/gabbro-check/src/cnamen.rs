@@ -35,6 +35,10 @@ pub enum Klasse {
     Header(&'static str),
     /// A built-in function of the C implementation -- known without any `#include`.
     Eingebaut,
+    /// **Declared by a POSIX header the generated unit does NOT include.** The dangerous
+    /// class: nothing in the translation unit contradicts a wrong declaration, so `cc` has
+    /// no conflict to report and the link succeeds against a signature nobody checked.
+    Posix(&'static str),
 }
 
 impl Klasse {
@@ -50,6 +54,11 @@ impl Klasse {
             Klasse::Eingebaut => format!(
                 "`{name}` is a built-in function of the C implementation -- \
                  `cc` knows it without any `#include`"
+            ),
+            Klasse::Posix(h) => format!(
+                "`{name}` is declared by `<{h}>`, which NO generated unit includes -- so `cc` \
+                 sees no conflict, and the link finds the real symbol behind whatever this \
+                 unit declared"
             ),
         }
     }
@@ -284,10 +293,54 @@ impl Signatur {
 
 /// **The lookup.** `None` means: this measurement could read no C declaration for the name --
 /// it is a keyword, a macro or a typedef, and none of the three is a function.
+///
+/// **Both tables, C11 first.** A name that stands in both is C11's -- see `POSIX`, which is
+/// generated with the C11 names already subtracted, so the case does not arise and the order
+/// is a statement about which table OWNS a name rather than a tie-break.
 pub fn signatur(name: &str) -> Option<Signatur> {
-    let i = SIGNATUR.binary_search_by_key(&name, |(n, ..)| n).ok()?;
-    let (_, c, absenkung, form) = SIGNATUR[i];
+    if let Ok(i) = SIGNATUR.binary_search_by_key(&name, |(n, ..)| n) {
+        let (_, c, absenkung, form) = SIGNATUR[i];
+        return Some(Signatur { c, absenkung, form });
+    }
+    let i = POSIX.binary_search_by_key(&name, |(n, ..)| n).ok()?;
+    let (_, c, absenkung, form) = POSIX[i];
     Some(Signatur { c, absenkung, form })
+}
+
+/// **Does a POSIX header declare this name?** `Some(header)` -- and the header is the whole
+/// answer to *how far the guard reaches*; see `POSIX`.
+///
+/// **Read at an `extern fn` and NOWHERE else, and that is the edge, not an oversight.** An
+/// `extern fn` ASKS for the C side's symbol: it says *"the thing behind this name already
+/// exists, and here is its shape"*, and a wrong shape is a wrong call. A Gabbro `fn read`
+/// DEFINES its own and asks libc for nothing -- refusing it would forbid an ordinary English
+/// word on the strength of a symbol the program never reaches for.
+///
+/// *That is why this is not folded into `vergeben`*, which `N041` reads for every named item:
+/// `read`, `write`, `open`, `close`, `link`, `access`, `pause` and `sleep` are words, and a
+/// rule that forbids them everywhere would cost far more than the hole it closes.
+pub fn posix(name: &str) -> Option<&'static str> {
+    POSIX
+        .binary_search_by_key(&name, |(n, ..)| n)
+        .ok()
+        .map(|_| POSIX_KOPF)
+}
+
+/// **Does this function find the end of its data IN the data?** -- the rule of `N052`.
+///
+/// See the head of `ABSCHLUSS` for the argument. `true` means: the callee reads until it
+/// meets a terminator, and **how far that is stands nowhere in the signature.**
+pub fn endet_in_den_daten(name: &str) -> bool {
+    ABSCHLUSS.binary_search(&name).is_ok()
+}
+
+/// How many rows each of the two new tables carries -- read by the probe, one home per number.
+pub fn posixumfang() -> (usize, usize, usize) {
+    (
+        POSIX.len(),
+        POSIX.iter().filter(|(_, _, a, _)| !a.is_empty()).count(),
+        ABSCHLUSS.len(),
+    )
 }
 
 /// How many rows the signature table carries, and how many of them are bindable.
@@ -313,8 +366,15 @@ pub fn signaturumfang() -> (usize, usize) {
 /// > | header macro | 129 | 0 -- the preprocessor rewrites the name before the parser sees it |
 /// > | header typedef | 67 | 0 -- no function in the same scope can carry it |
 /// > | header function | 170 | 99 |
-/// > | built-in function | 155 | 39 |
-/// > | **total** | **558** | **138** |
+/// > | built-in function | 155 | 50 |
+/// > | **total** | **558** | **149** |
+///
+/// > **138 → 149 on 2026-09-02, and the eleven come from ONE decision**: a `void *` in a
+/// > PARAMETER is writable and a `void *` as a RESULT is not. `fwrite`, `memcmp`, `free`,
+/// > `fputc`, `putc` and the six `<fenv.h>` calls gained a form; `memcpy`, `memmove`,
+/// > `memset` and `memchr` did not, and all four for the same reason -- they RETURN one.
+/// > *The split is not a taste; it is which way the precision flows.* See `ZEIGER` in
+/// > `./instrumente/miss-c-signaturen.py` and `ABSCHLUSS` below.
 ///
 /// **`long long` is deliberately not treated as `int64_t`, and that is measured**:
 /// `_Static_assert(__builtin_types_compatible_p(long long, int64_t))` FAILS here -- `int64_t`
@@ -323,7 +383,7 @@ pub fn signaturumfang() -> (usize, usize) {
 /// that replaces a rule and is itself wrong, in the expensive direction.
 ///
 /// Every bindable row was handed to `cc -std=c11 -O0 -Wall -Wextra -Werror` as the
-/// declaration `emit.rs` would write: **138 of 138 green.** *A signature table nobody has
+/// declaration `emit.rs` would write: **149 of 149 green.** *A signature table nobody has
 /// compiled is an assertion.*
 static SIGNATUR: [(&str, &str, &str, &str); 325] = [
     ("abort", "void(void)", "void(void)", "extern fn abort()"),
@@ -455,16 +515,16 @@ static SIGNATUR: [(&str, &str, &str, &str); 325] = [
     ("fdimf", "float(float, float)", "float(float,float)", "extern fn fdimf(a : f32, b : f32) -> f32"),
     ("fdiml", "long double(long double, long double)", "", ""),
     ("feclearexcept", "int(int)", "int32_t(int32_t)", "extern fn feclearexcept(a : i32) -> i32"),
-    ("fegetenv", "int(void *)", "", ""),
-    ("fegetexceptflag", "int(void *, int)", "", ""),
+    ("fegetenv", "int(void *)", "int32_t(void *)", "extern fn fegetenv(a : ptr<normal, rw> T) -> i32"),
+    ("fegetexceptflag", "int(void *, int)", "int32_t(void *,int32_t)", "extern fn fegetexceptflag(a : ptr<normal, rw> T, b : i32) -> i32"),
     ("fegetround", "int(void)", "int32_t(void)", "extern fn fegetround() -> i32"),
-    ("feholdexcept", "int(void *)", "", ""),
+    ("feholdexcept", "int(void *)", "int32_t(void *)", "extern fn feholdexcept(a : ptr<normal, rw> T) -> i32"),
     ("feraiseexcept", "int(int)", "int32_t(int32_t)", "extern fn feraiseexcept(a : i32) -> i32"),
-    ("fesetenv", "int(const void *)", "", ""),
-    ("fesetexceptflag", "int(const void *, int)", "", ""),
+    ("fesetenv", "int(const void *)", "int32_t(const void *)", "extern fn fesetenv(a : ptr<normal, r> T) -> i32"),
+    ("fesetexceptflag", "int(const void *, int)", "int32_t(const void *,int32_t)", "extern fn fesetexceptflag(a : ptr<normal, r> T, b : i32) -> i32"),
     ("fesetround", "int(int)", "int32_t(int32_t)", "extern fn fesetround(a : i32) -> i32"),
     ("fetestexcept", "int(int)", "int32_t(int32_t)", "extern fn fetestexcept(a : i32) -> i32"),
-    ("feupdateenv", "int(const void *)", "", ""),
+    ("feupdateenv", "int(const void *)", "int32_t(const void *)", "extern fn feupdateenv(a : ptr<normal, r> T) -> i32"),
     ("floorf", "float(float)", "float(float)", "extern fn floorf(a : f32) -> f32"),
     ("floorl", "long double(long double)", "", ""),
     ("fma", "double(double, double, double)", "double(double,double,double)", "extern fn fma(a : f64, b : f64, c : f64) -> f64"),
@@ -480,14 +540,14 @@ static SIGNATUR: [(&str, &str, &str, &str); 325] = [
     ("fmodf", "float(float, float)", "float(float,float)", "extern fn fmodf(a : f32, b : f32) -> f32"),
     ("fmodl", "long double(long double, long double)", "", ""),
     ("fprintf", "int(void *, const char *, ...)", "", ""),
-    ("fputc", "int(int, void *)", "", ""),
+    ("fputc", "int(int, void *)", "int32_t(int32_t,void *)", "extern fn fputc(a : i32, b : ptr<normal, rw> T) -> i32"),
     ("fputs", "int(const char *, void *)", "", ""),
-    ("free", "void(void *)", "", ""),
+    ("free", "void(void *)", "void(void *)", "extern fn free(a : ptr<normal, rw> T)"),
     ("frexp", "double(double, int *)", "", ""),
     ("frexpf", "float(float, int *)", "", ""),
     ("frexpl", "long double(long double, int *)", "", ""),
     ("fscanf", "int(void *, const char *, ...)", "", ""),
-    ("fwrite", "long unsigned int(const void *, long unsigned int, long unsigned int, void *)", "", ""),
+    ("fwrite", "long unsigned int(const void *, long unsigned int, long unsigned int, void *)", "uint64_t(const void *,uint64_t,uint64_t,void *)", "extern fn fwrite(a : ptr<normal, r> T, b : u64, c : u64, d : ptr<normal, rw> T) -> u64"),
     ("hypot", "double(double, double)", "double(double,double)", "extern fn hypot(a : f64, b : f64) -> f64"),
     ("hypotf", "float(float, float)", "float(float,float)", "extern fn hypotf(a : f32, b : f32) -> f32"),
     ("hypotl", "long double(long double, long double)", "", ""),
@@ -556,7 +616,7 @@ static SIGNATUR: [(&str, &str, &str, &str); 325] = [
     ("lroundl", "long int(long double)", "", ""),
     ("malloc", "void *(long unsigned int)", "", ""),
     ("memchr", "void *(const void *, int, long unsigned int)", "", ""),
-    ("memcmp", "int(const void *, const void *, long unsigned int)", "", ""),
+    ("memcmp", "int(const void *, const void *, long unsigned int)", "int32_t(const void *,const void *,uint64_t)", "extern fn memcmp(a : ptr<normal, r> T, b : ptr<normal, r> T, c : u64) -> i32"),
     ("memcpy", "void *(void *, const void *, long unsigned int)", "", ""),
     ("memmove", "void *(void *, const void *, long unsigned int)", "", ""),
     ("memset", "void *(void *, int, long unsigned int)", "", ""),
@@ -579,7 +639,7 @@ static SIGNATUR: [(&str, &str, &str, &str); 325] = [
     ("powf", "float(float, float)", "float(float,float)", "extern fn powf(a : f32, b : f32) -> f32"),
     ("powl", "long double(long double, long double)", "", ""),
     ("printf", "int(const char *, ...)", "", ""),
-    ("putc", "int(int, void *)", "", ""),
+    ("putc", "int(int, void *)", "int32_t(int32_t,void *)", "extern fn putc(a : i32, b : ptr<normal, rw> T) -> i32"),
     ("putchar", "int(int)", "int32_t(int32_t)", "extern fn putchar(a : i32) -> i32"),
     ("puts", "int(const char *)", "", ""),
     ("realloc", "void *(void *, long unsigned int)", "", ""),
@@ -653,3 +713,188 @@ static SIGNATUR: [(&str, &str, &str, &str); 325] = [
     ("vsscanf", "int(const char *, const char *, __va_list_tag *)", "", ""),
 ];
 
+
+/// **The rule: what is bound is what says where the data ends.**
+///
+/// `B2` asked the string question as a SIGNATURE question -- *"is it enough that `N046` lets
+/// `[u8; N]` through as `char *` if the user writes it down?"* It is not, and the reason is
+/// not about spelling:
+///
+/// > `[u8; N]` carries a LENGTH. `const char *` carries a TERMINATOR. Those are two different
+/// > ways of marking an end, and the binding must translate one into the other. If a
+/// > `[u8; N]` without a trailing NUL goes to `puts`, the C side reads past the end.
+///
+/// So the question at an `extern fn` is not *"can Gabbro spell this type"* but **"can Gabbro
+/// write down the obligation this call puts on the caller?"** -- and that has a measured
+/// answer, which is why this is a rule and not a preference:
+///
+/// | how the callee finds the end | the obligation | can Gabbro state it? |
+/// |---|---|---|
+/// | a COUNT in the signature -- `write(fd, p, n)` | `n` must not exceed the buffer | **yes** -- `requires n <= KAP`, and `M115` discharges it at every call site |
+/// | a TERMINATOR in the data -- `puts(s)` | there must be a NUL at or before the end | **no** -- nothing in the signature names how far the callee reads |
+///
+/// **The first row is measured, not argued.** With `extern fn write(…, n : u64) requires
+/// n <= 8`, the call `write(1, t, 999)` is refused:
+///
+/// ```text
+/// error: [M115] `write` requires `n <= 8`, and the argument lies in 999 .. 999
+///        = the callee's precondition is not merely unproved at this site but EXCLUDED
+/// ```
+///
+/// *A length-taking binding does not make the call safe -- it makes the danger EXPRESSIBLE,
+/// and the checker already holds it.* That is the whole difference. A terminator-taking
+/// binding leaves nothing to hold: there is no expression over the parameters that bounds the
+/// read, because the bound is a byte somewhere in the data.
+///
+/// **And this explains `putchar` at the same time.** It takes a value, has no end to find,
+/// and needs no obligation -- which is why the front door opened on 2026-09-01 with a
+/// value-taking call and no string. *Three kinds, one test, and the answer follows from the
+/// representation instead of from a judgement about C's library.*
+///
+/// > **What the rule REFUSES to claim.** It says nothing about whether `n` is the length the
+/// > writer meant -- only that `n` can be bounded and that the bound is checked where the
+/// > call stands. The obligation still has to be written; the rule makes it writable.
+///
+/// **The names whose end is in the data**, over both tables. Generated by
+/// `./instrumente/miss-c-signaturen.py --abschluss`, and the test it runs is on the
+/// DECLARATION: *a `char *` parameter with no count beside it.* Four names where the
+/// derivation is wrong are named in the script and added by hand -- `snprintf`, `vsnprintf`
+/// and `strftime` carry a count that bounds the OUTPUT while the format string is still
+/// scanned, and `strncat` carries one that bounds the READ while the write starts at the
+/// destination's own NUL. *A derivation with four named exceptions is a measurement.*
+static ABSCHLUSS: [&str; 44] = [
+    "access",
+    "chdir",
+    "chown",
+    "execl",
+    "execle",
+    "execlp",
+    "execv",
+    "execve",
+    "execvp",
+    "fprintf",
+    "fputs",
+    "fscanf",
+    "link",
+    "nan",
+    "nanf",
+    "nanl",
+    "pathconf",
+    "printf",
+    "puts",
+    "rmdir",
+    "scanf",
+    "snprintf",
+    "sprintf",
+    "sscanf",
+    "strcat",
+    "strchr",
+    "strcmp",
+    "strcpy",
+    "strcspn",
+    "strftime",
+    "strlen",
+    "strncat",
+    "strpbrk",
+    "strrchr",
+    "strspn",
+    "strstr",
+    "unlink",
+    "vfprintf",
+    "vfscanf",
+    "vprintf",
+    "vscanf",
+    "vsnprintf",
+    "vsprintf",
+    "vsscanf",
+];
+
+/// **The header this measurement reads -- and the whole of the guard's POSIX edge.**
+pub const POSIX_KOPF: &str = "unistd.h";
+
+/// **The names `<unistd.h>` declares, and the hole they were found in.**
+///
+/// `N041` guards the names *C11* took. **POSIX falls straight through that net**, and the
+/// shape is the one `N041` itself was built against, one namespace over:
+///
+/// ```text
+/// extern fn write(fd : i32, p : ptr<normal, r> Text, n : u64) -> i64
+///     ->  int64_t write(int32_t fd, const Text *p, uint64_t n);
+///     gabbro pruefe: 0 errors      cc (no header): compiles, links, RUNS
+///     cc with <unistd.h> beside it: error: conflicting types for 'write';
+///                                   the real one is ssize_t(int, const void *, size_t)
+/// ```
+///
+/// *Measured 2026-09-02.* The generated unit includes no POSIX header, so `cc` never sees the
+/// second declaration and has nothing to complain about. **The refusal that should have come
+/// from the foreign compiler cannot come from it at all** -- which is exactly why the
+/// checker has to hold it, and why `messung/proben/probe-c-namen-frei.gab` was wrong to hold
+/// these five names up as *free*: they are not taken by C11 and they are not free either.
+///
+/// > **How far it reaches, exactly.** One header, measured with `cc -aux-info`, and only the
+/// > declarations whose site IS `<unistd.h>` -- 47 names after the C11 table's are subtracted,
+/// > **13 of them bindable** and all 13 through `cc -Wall -Wextra -Werror`.
+/// >
+/// > **What is OUTSIDE, and named rather than implied:**
+/// >
+/// > * every other POSIX header -- `<signal.h>`, `<sys/socket.h>`, `<fcntl.h>`, `<pthread.h>`.
+/// >   *The corpus reaches two of them today:* `signal` and `recv` in `messung/fragmente/F05.gab`
+/// >   bind unchecked, and that is a hole with a name on it, not a green.
+/// > * every GNU extension, every other library, and every symbol the writer links themself.
+/// > * the glibc spellings `__pid_t`, `__uid_t`, `__gid_t`, `__off_t`: a table that resolved
+/// >   them would measure glibc and call it POSIX -- the same decision the 558-name table
+/// >   already took for the 883 underscore macros. *So `getpid` is not bindable, and the
+/// >   refusal names the type it could not read.*
+/// > * this is a measurement of THIS toolchain, LP64, and it says so the way the C11 half does.
+///
+/// **Read at an `extern fn` and nowhere else** -- see `posix` for why that boundary is the
+/// right one and not a shortcut.
+static POSIX: [(&str, &str, &str, &str); 47] = [
+    ("_exit", "void(int)", "void(int32_t)", "extern fn _exit(a : i32)"),
+    ("access", "int(const char *, int)", "", ""),
+    ("alarm", "unsigned int(unsigned int)", "uint32_t(uint32_t)", "extern fn alarm(a : u32) -> u32"),
+    ("chdir", "int(const char *)", "", ""),
+    ("chown", "int(const char *, __uid_t, __gid_t)", "", ""),
+    ("close", "int(int)", "int32_t(int32_t)", "extern fn close(a : i32) -> i32"),
+    ("dup", "int(int)", "int32_t(int32_t)", "extern fn dup(a : i32) -> i32"),
+    ("dup2", "int(int, int)", "int32_t(int32_t,int32_t)", "extern fn dup2(a : i32, b : i32) -> i32"),
+    ("execl", "int(const char *, const char *, ...)", "", ""),
+    ("execle", "int(const char *, const char *, ...)", "", ""),
+    ("execlp", "int(const char *, const char *, ...)", "", ""),
+    ("execv", "int(const char *, char *const *)", "", ""),
+    ("execve", "int(const char *, char *const *, char *const *)", "", ""),
+    ("execvp", "int(const char *, char *const *)", "", ""),
+    ("fork", "__pid_t(void)", "", ""),
+    ("fpathconf", "long int(int, int)", "int64_t(int32_t,int32_t)", "extern fn fpathconf(a : i32, b : i32) -> i64"),
+    ("fsync", "int(int)", "int32_t(int32_t)", "extern fn fsync(a : i32) -> i32"),
+    ("getcwd", "char *(char *, size_t)", "", ""),
+    ("getegid", "__gid_t(void)", "", ""),
+    ("geteuid", "__uid_t(void)", "", ""),
+    ("getgid", "__gid_t(void)", "", ""),
+    ("getgroups", "int(int, __gid_t *)", "", ""),
+    ("getlogin", "char *(void)", "", ""),
+    ("getpgrp", "__pid_t(void)", "", ""),
+    ("getpid", "__pid_t(void)", "", ""),
+    ("getppid", "__pid_t(void)", "", ""),
+    ("getuid", "__uid_t(void)", "", ""),
+    ("isatty", "int(int)", "int32_t(int32_t)", "extern fn isatty(a : i32) -> i32"),
+    ("link", "int(const char *, const char *)", "", ""),
+    ("lseek", "__off_t(int, __off_t, int)", "", ""),
+    ("pathconf", "long int(const char *, int)", "", ""),
+    ("pause", "int(void)", "int32_t(void)", "extern fn pause() -> i32"),
+    ("pipe", "int(int *)", "", ""),
+    ("read", "ssize_t(int, void *, size_t)", "int64_t(int32_t,void *,uint64_t)", "extern fn read(a : i32, b : ptr<normal, rw> T, c : u64) -> i64"),
+    ("rmdir", "int(const char *)", "", ""),
+    ("setgid", "int(__gid_t)", "", ""),
+    ("setpgid", "int(__pid_t, __pid_t)", "", ""),
+    ("setsid", "__pid_t(void)", "", ""),
+    ("setuid", "int(__uid_t)", "", ""),
+    ("sleep", "unsigned int(unsigned int)", "uint32_t(uint32_t)", "extern fn sleep(a : u32) -> u32"),
+    ("sysconf", "long int(int)", "int64_t(int32_t)", "extern fn sysconf(a : i32) -> i64"),
+    ("tcgetpgrp", "__pid_t(int)", "", ""),
+    ("tcsetpgrp", "int(int, __pid_t)", "", ""),
+    ("ttyname", "char *(int)", "", ""),
+    ("ttyname_r", "int(int, char *, size_t)", "", ""),
+    ("unlink", "int(const char *)", "", ""),
+    ("write", "ssize_t(int, const void *, size_t)", "int64_t(int32_t,const void *,uint64_t)", "extern fn write(a : i32, b : ptr<normal, r> T, c : u64) -> i64"),
+];

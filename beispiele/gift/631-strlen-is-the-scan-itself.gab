@@ -1,0 +1,22 @@
+-- erwartet: N052
+-- **`strlen` ist der Fall in Reinform: die Funktion IST der Abschluss-Scan.**
+--
+-- `long unsigned int strlen(const char *)` -- ein Zeiger, keine Zahl, und der ganze Zweck der
+-- Funktion ist, das Ende zu SUCHEN. Es gibt keine Signatur, in der die Antwort schon steht,
+-- und darum auch kein `requires`, das den Lesevorgang beschraenkt.
+--
+-- Wer die Laenge eines Gabbro-Puffers braucht, liest sie ab: sie steht im Typ (`[u8; KAP]`)
+-- oder daneben (`len : u32 in 0 .. KAP`). *Sie durch C zu erfragen hiesse, eine gepruefte
+-- Zahl gegen einen ungebundenen Lesevorgang zu tauschen.*
+
+module gift {
+
+extern fn strlen(s : ptr<code, r> u8) -> u64 effects { reads s } costs <= 64 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}
