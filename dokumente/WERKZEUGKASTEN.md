@@ -1101,10 +1101,23 @@ eine andere:
 *Ein Werkzeug ohne Griff für eine Frage beantwortet sie nicht mit Schweigen — es beantwortet
 sie gar nicht, und Schweigen ist die Form, in der das ankommt.*
 
-**Und die teuerste Form davon steht in `N041`:** die Regel hält jedes benannte Item außer
+**Und die teuerste Form davon stand in `N041`:** die Regel hielt jedes benannte Item außer
 `module` und `use`, also auch `extern fn` — *das Konstrukt, dessen Zweck die absichtliche
-Bindung an einen C-Namen ist.* Damit kann ein Gabbro-Programm nicht drucken, und **acht
+Bindung an einen C-Namen ist.* Damit konnte ein Gabbro-Programm nicht drucken, und **acht
 Anläufe für „addiere zwei Zahlen" haben eine Erklärung, die nicht die Sprache ist.**
+
+> **Eingelöst am 2026-09-01, und die Einlösung war eine ÄNDERUNG und keine Ausnahme.**
+> `beispiele/63-druckt.gab` gibt `Hallo` aus — geprüft, erzeugt, unter `-Wall -Wextra -Werror`
+> übersetzt und gelaufen. An der Stelle der falschen Frage steht `N046` und stellt die
+> richtige: **stimmt die Signatur mit der, die C schon kennt?**
+>
+> *Und die Frage war wirklich nicht stellbar, nicht bloß unbeantwortet* — genau die Form, die
+> `W27` beschreibt. Der Prüfer hatte keine Tafel der C-Signaturen, also konnte er nur über
+> den Namen urteilen, und ein Urteil über den Namen ist bei diesem Konstrukt immer ein Nein.
+> **Der Griff dazu fehlte ebenfalls**: `./instrumente/miss-c-signaturen.py` liest die
+> Signaturen heute aus `cc` selbst (`-aux-info`, `expected '…'`) und hält die eingebaute
+> Tafel dagegen. *Erst mit dem Griff war überhaupt sichtbar, dass 138 der 558 Namen bindbar
+> sind und 420 nicht — vorher sah beides gleich aus.*
 
 ---
 

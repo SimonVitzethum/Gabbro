@@ -320,6 +320,13 @@ darunter.
          je Klasse —, eine Gegenprobe, eine Mutation. Über 418 Dateien trifft die Regel
          **genau eine** Zeile, und es ist diese.
 
+         > **Nachgezählt am 2026-09-01 mit ihrem Griff (`W28`): 526 Dateien, 1012
+         > verschiedene Item-Namen, VIER Treffer — drei davon die eigenen Giftproben.** Die
+         > eine Korpusstelle ist diese hier, und sie war FALSCH DIAGNOSTIZIERT: `extern fn` ist
+         > das Konstrukt, dessen Zweck die Bindung an C's Namen ist. Seit demselben Tag stellt
+         > `N046` dort die Signaturfrage, und `N041` bleibt für definierende Items.
+         > *`beispiele/63-druckt.gab` druckt seither `Hallo`.*
+
          > **Und der Satz daneben war zu einem Viertel falsch.** Er lautete: *„Ein Nutzer, der
          > seine Funktion `exit`, `abort`, `free` oder **`read`** nennt, erfährt es vom fremden
          > Übersetzer."* **`read` erfährt nichts** — POSIX, keine eingebaute Funktion von GCC,
@@ -332,6 +339,11 @@ darunter.
          Deklaration, acht Rufstellen im Rumpf), umbenennen wäre ein Umschreiben, und der
          `verlorene_zeilen`-Riegel in `pruefe-emission.sh` hält genau das auf. **`F05` fällt
          jetzt am PRÜFER statt am fremden Übersetzer** — siehe `messung/F05-UNERREICHBAR.md`.
+
+         > **Und seit dem 2026-09-01 fällt es mit der richtigen Absage.** Nicht *„benenne um"*
+         > — der Name ist richtig —, sondern: *„this declaration becomes `void(void)`; C
+         > declares `void(int)`; die Zeile, die passt, ist `extern fn exit(a : i32)`."* **Die
+         > Wand ist damit einen Parameter dick und nicht mehr einen Namen.**
       2. `Op _m2 = decode_op(m->op);` — *invalid type argument of `->` (have `uint64_t`)*.
          Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und ~~**kein Pass sagt
          etwas**~~ — **GEBAUT am 2026-08-31 als `M134`** in `M1`, genau wo dieser Punkt es
