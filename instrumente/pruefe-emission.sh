@@ -131,12 +131,73 @@ PROBE_B
     rm -rf "$d"
     return $ok
 }
+
+# **Und die dritte Sprechprobe entscheidet, OB Stufe 6b ueberhaupt etwas messen kann**
+# (2026-09-02). Sie ist die einzige, die nicht rot faerbt, wenn sie nicht haelt -- weil ihre
+# Antwort eine Eigenschaft der MASCHINE ist und keine des Baums.
+#
+# Drei Ausgaenge, und alle drei sind verschieden:
+#
+#   * ASan uebersetzt nicht, oder ein sauberes Programm bricht vor `main` ab
+#     -> `ASAN_LAEUFT=0`. Auf dem Arbeitsrechner (gehaerteter Kern) ist das der Fall: der
+#        Schattenspeicher kollidiert mit der Speicherkarte. Stufe 6b sagt dann je Einheit
+#        `NICHT GEFAHREN`, und die Schlusszeile zaehlt sie. **Kein Haken.**
+#   * ASan startet, faengt aber einen echten Heap-Ueberlauf NICHT -> ebenfalls `0`, und das
+#     ist der wichtigere Zweig: *ein Sanitizer, der laeuft und nichts findet, ist die
+#     schlimmste Antwort von allen* (`W1`, und die Regel des Hauses ueber fehlende Werkzeuge).
+#   * beides haelt -> `ASAN_LAEUFT=1`, und Stufe 6b misst.
+ASAN_LAEUFT=0
+sprechprobe_asan() {
+    local d; d="$(mktemp -d)"
+    cat > "$d/sauber.c" <<'PROBE_S'
+#include <stdio.h>
+#include <stdlib.h>
+int main(void) { char *p = malloc(4); p[0] = 1; printf("%d\n", (int)p[0]); free(p); return 0; }
+PROBE_S
+    # **Die Groesse und der Index sind `volatile`, und das ist der ganze Trick.** Mit
+    # `malloc(4)` und `p[7]` als Konstanten faltet `gcc -O1` die Belegung weg, ASan sieht
+    # keinen Heap mehr und schweigt -- **und eine schweigende Gegenprobe liest sich wie eine
+    # Maschine ohne ASan.** Genau so ist diese Sprechprobe am 2026-09-02 auf `fisch` zuerst
+    # gescheitert, wo ASan in Wahrheit tadellos laeuft. *Ein Messgeraet, dessen Gegenprobe
+    # der Optimierer entfernt, meldet die Abwesenheit seines eigenen Gegenstands.*
+    cat > "$d/kaputt.c" <<'PROBE_K'
+#include <stdio.h>
+#include <stdlib.h>
+volatile int n = 4;
+volatile int k = 7;
+int main(void) {
+    char *p = malloc((size_t)n);
+    if (!p) return 2;
+    p[k] = 1;
+    printf("%d\n", (int)p[k]);
+    free(p);
+    return 0;
+}
+PROBE_K
+    if ! cc -std=c11 -O1 -fsanitize=address -o "$d/sauber" "$d/sauber.c" 2>/dev/null; then
+        echo "  Sprechprobe A: KEIN ASAN -- Stufe 6b kann nichts messen (nicht uebersetzbar)"
+    elif ! ASAN_OPTIONS=detect_leaks=0 "$d/sauber" > /dev/null 2>&1; then
+        echo "  Sprechprobe A: ASan STARTET NICHT auf dieser Maschine (Schattenspeicher)"
+        echo "                 -- Stufe 6b meldet je Einheit NICHT GEFAHREN, kein Haken."
+    elif ! cc -std=c11 -O1 -fsanitize=address -w -o "$d/kaputt" "$d/kaputt.c" 2>/dev/null; then
+        echo "  Sprechprobe A: KEIN ASAN fuer die Gegenprobe -- Stufe 6b bleibt aus"
+    elif ASAN_OPTIONS=detect_leaks=0 "$d/kaputt" > /dev/null 2>&1; then
+        echo "  Sprechprobe A: GESCHEITERT -- ein Heap-Ueberlauf kam DURCH, ASan schweigt."
+        echo "                 Ein Werkzeug, das laeuft und nichts findet, ist die schlimmste Antwort."
+    else
+        ASAN_LAEUFT=1
+        echo "  Sprechprobe A: ok (sauber laeuft, ein Heap-Ueberlauf faellt)"
+    fi
+    rm -rf "$d"
+}
+
 LETZTE_STUFE="der Sprechprobe des Kopfes"
 echo "== Sprechprobe: koennen die neuen Stufen ueberhaupt fallen? =="
 if ! sprechprobe_ub; then
     echo "== EMISSION: die Sprechprobe haelt nicht -- ein Haken ohne Messung ist schlimmer als keiner =="
     exit 2
 fi
+sprechprobe_asan
 echo
 
 # Schneidet den ```gabbro-Block, der eine gegebene Zeile enthaelt, aus einer Markdown-Datei.
@@ -316,6 +377,47 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
         echo "  6. UBSan:      ANDERES ERGEBNIS"; echo "     $ist / $ist_ub"; exit 1
     fi
     echo "  6. UBSan:      ok (kein Fund, gleiches Ergebnis)"
+
+    # 6b. **ASan, und bis zum 2026-09-02 war das eine NICHT GEFAHRENE Probe.**
+    #
+    #     Der Kommentar an Stufe 6 sagte, warum: auf dem Arbeitsrechner (gehaerteter Kern)
+    #     kollidiert ASans Schattenspeicher mit der Speicherkarte, und der Lauf bricht vor
+    #     `main` ab. `TODO.md` fuehrte die Zeile als offen und nannte sie **„ortsgebunden,
+    #     nicht schwer"**. Der Ort ist `ki-pc-fisch-101`, wo ASan laeuft -- nachgemessen mit
+    #     einem Heap-Ueberlauf, den er faengt, und einem sauberen Programm, das er durchlaesst.
+    #
+    #     **Die Fallunterscheidung steht deshalb im Waechter und nicht im Kopf des Fahrers**,
+    #     und sie faellt auf die Seite von `W1`: wo ASan nicht startet, sagt diese Zeile
+    #     `NICHT GEFAHREN` und faerbt den Waechter NICHT gruen fuer etwas, das nie lief.
+    #     *Eine uebersprungene Probe senkt die Zahl, sie laesst sie nicht unberuehrt.*
+    #
+    #     `detect_leaks=0`: die Erzeugnisse belegen bewusst und geben nichts zurueck -- ein
+    #     Leck ist hier keine Aussage ueber den Erzeuger.
+    if [ "$ASAN_LAEUFT" = "0" ]; then
+        echo "  6b. ASan:      NICHT GEFAHREN -- ASan startet auf diesem Rechner nicht"
+        # **Gezaehlt wird in eine DATEI und nicht in eine Variable**, weil `lauf_kern` in
+        # einer Subshell laeuft (`( set -e; lauf_kern … )`): ein `$((x + 1))` darin stirbt
+        # mit ihr, und die Schlusszeile haette `0 von 0` gemeldet -- eine leere
+        # Grundgesamtheit, die wie ein Urteil aussieht (`W17`).
+        echo "$name" >> "$ARB/asan-ungefahren"
+    elif ! cc -std=c11 -O1 -fsanitize=address,undefined -fno-sanitize-recover=all \
+            -I"$ARB" -o "$ARB/$name-probe-as" "$ARB/$name-treiber.c" 2> "$ARB/ccfehler4"; then
+        echo "  6b. ASan:      GESCHEITERT beim Uebersetzen"; head -20 "$ARB/ccfehler4"; exit 1
+    else
+        local ist_as
+        ist_as="$(ASAN_OPTIONS=detect_leaks=0 "$ARB/$name-probe-as" 2> "$ARB/asfehler")" || {
+            echo "  6b. ASan:      SCHLAEGT AN -- ein Speicherfehler im erzeugten C"
+            head -20 "$ARB/asfehler"; exit 1
+        }
+        if [ -s "$ARB/asfehler" ]; then
+            echo "  6b. ASan:      MELDUNG auf stderr"; head -20 "$ARB/asfehler"; exit 1
+        fi
+        if [ "$ist_as" != "$ist" ]; then
+            echo "  6b. ASan:      ANDERES ERGEBNIS"; echo "     $ist / $ist_as"; exit 1
+        fi
+        echo "  6b. ASan:      ok (kein Fund, gleiches Ergebnis)"
+        echo "$name" >> "$ARB/asan-gefahren"
+    fi
 
     # 7. **Das Uebersetzungszeugnis** -- K100.4, Weg (b). Die Differenztests messen EIN
     #    Ergebnis; das Zeugnis zaehlt auf, worauf die Uebersetzung ruht. Die Bedingung hier ist
@@ -2342,3 +2444,19 @@ echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeu
 echo "  AUSGEFUEHRT und mit einer Handschrift verglichen. Die Regel darueber ist"
 echo "  schwaecher: sie fragt nur, ob der C-Uebersetzer die Ausgabe annimmt. Ein"
 echo "  Programm, das uebersetzt und falsch rechnet, faellt ihr nicht auf."
+
+# **Und die ASan-Zahl steht daneben, weil sie ORTSGEBUNDEN ist** (2026-09-02). Sie ist die
+# einzige Zeile dieses Waechters, deren Wert von der Maschine abhaengt und nicht vom Baum:
+# auf `ki-pc-fisch-101` laeuft ASan, auf dem Arbeitsrechner nicht. *Wer sie nicht ausdruckt,
+# liest denselben gruenen Waechter zweimal und weiss nicht, dass er zwei Dinge gemessen hat.*
+n_as_ok=0;  [ -f "$ARB/asan-gefahren" ]   && n_as_ok=$(grep -c '' "$ARB/asan-gefahren")
+n_as_nix=0; [ -f "$ARB/asan-ungefahren" ] && n_as_nix=$(grep -c '' "$ARB/asan-ungefahren")
+if [ "$ASAN_LAEUFT" = "1" ]; then
+    echo "  ASan (Stufe 6b): $n_as_ok Einheit(en) unter -fsanitize=address,undefined gefahren,"
+    echo "  kein Fund. Diese Zahl ist ORTSGEBUNDEN: auf einem Rechner, dessen Kern ASans"
+    echo "  Schattenspeicher nicht zulaesst, steht hier 0 und der Waechter bleibt gruen --"
+    echo "  dann ist es eine NICHT GEFAHRENE Probe und keine bestandene."
+else
+    echo "  ASan (Stufe 6b): NICHT GEFAHREN auf dieser Maschine ($n_as_nix Einheit(en))."
+    echo "  Das ist keine bestandene Probe. Der Ort, an dem sie laeuft, ist ki-pc-fisch-101."
+fi

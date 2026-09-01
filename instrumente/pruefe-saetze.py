@@ -64,7 +64,26 @@ FRIST = 60
 #
 # The mark rises here because the object grew, and it falls again the day someone shows that
 # a rule and a premise are the same sentence.
-MARKE = 48
+#
+# **48 -> 50 on 2026-09-02, and the two new ones are `N050` and `N051`.** MEASURED before it
+# was written: the code total went 263 -> 265, the sentence-less count 48 -> 50, and neither
+# code is named in `saetze.rs` or anywhere under `beweise/`. *The delta is exactly these two
+# and nothing else moved.*
+#
+# The reason is the one above, one layer down. `Device_Konstruktor.thy` proves
+# `bankeintraege_ueberlappen_nicht` and `getrennte_register_treffen_getrennte_zellen` **in an
+# address space with no word width**. `N047`-`N049` establish those premises; `N050` and
+# `N051` keep the CONCLUSIONS true of the emitted C, where the arithmetic is `unsigned int`
+# and `uintptr_t`:
+#
+#   * `N050` -- with `i * stride` computed in 32 bits, two distinct `i` can name the same
+#     address. The theorem still holds; **the C stops being a model of it.**
+#   * `N051` -- an offset above `u64::MAX` has no address at all to be separate from.
+#
+# A theorem of their own would have to be a theorem about C's integer widths, and that is not
+# what the proof layer models. *Writing one would be a second statement of a fact the emitter
+# already owns* -- the same objection the 45 -> 48 entry makes, about a different premise.
+MARKE = 50
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

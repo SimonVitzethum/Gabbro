@@ -1425,6 +1425,11 @@ fn device(d: &Device, absagen: &mut Absagen) {
         doppelt(&mut gesehen, &r.name.text, r.name.span, "Register", absagen);
         regfelder(r, absagen);
     }
+    // **`N051` runs FIRST, because it is the one that says the number is unreadable.** The
+    // rules below it do arithmetic on the same literals; they are saturating and total on
+    // their own, but a reader who gets `N009` about an offset of `2^100` has been told the
+    // second-most useful thing.
+    lagenbreite_pruefen(d, absagen);
     registerlagen(&d.register, &d.name.text, absagen);
     ausrichtung_pruefen(&d.register, &d.name.text, absagen);
     bankausdehnung_pruefen(d, absagen);
@@ -1439,6 +1444,7 @@ fn device(d: &Device, absagen: &mut Absagen) {
         ausrichtung_pruefen(&b.register, &b.name.text, absagen);
         schritt_pruefen(b, absagen);
         bankzelle_pruefen(b, absagen);
+        bankbreite_pruefen(b, absagen);
     }
     let mut uebergaenge = HashMap::new();
     for u in &d.uebergaenge {
@@ -1537,13 +1543,22 @@ fn formatbitlagen(f: &Format, absagen: &mut Absagen) {
 /// einer Ebene: die Register eines `device` unter sich, die einer `bank` unter sich. *Eine
 /// Bank liegt an einer berechneten Basis; sie gegen die Hauptebene zu halten hiesse, die
 /// Basis zu raten.*
+///
+/// **The arithmetic is `u128` and SATURATING, and that is not tidiness** (2026-09-02). It
+/// read `*v as i128` -- a lossy cast on a `u128` literal the user typed. At `@u128::MAX`
+/// that is `-1`, so the register was placed at `-1 .. 7` and compared against real ones;
+/// at `2^127-1` the `+ breite` overflowed `i128` and the checker **panicked in debug and
+/// wrapped in release**. Found by `instrumente/fuzze-grenzen.py`, the same shape as
+/// `@[u128::MAX:0]`. `N051` now refuses the value outright, but this line does not depend
+/// on that: *a rule that is only total because another rule runs first is total by
+/// accident.*
 fn registerlagen(regs: &[RegDecl], wo: &str, absagen: &mut Absagen) {
-    let mut belegt: Vec<(i128, i128, &Ident)> = Vec::new();
+    let mut belegt: Vec<(u128, u128, &Ident)> = Vec::new();
     for r in regs {
         let ExprArt::Zahl(v) = &r.versatz.art else { continue };
-        let von = *v as i128;
-        let breite = crate::bitlage::aus_intty(&r.typ).0 as i128;
-        let bis = von + breite;
+        let von = *v;
+        let breite = u128::from(crate::bitlage::aus_intty(&r.typ).0);
+        let bis = von.saturating_add(breite);
         for (v2, b2, andere) in &belegt {
             if von < *b2 && *v2 < bis {
                 absagen.schiebe(
@@ -1613,13 +1628,23 @@ fn schritt_pruefen(b: &Bank, absagen: &mut Absagen) {
 ///
 /// Judged only where BOTH sides are literal: `02-geraet.gab` writes `bank FRR at CAP.FRO *
 /// 16`, and that stays silent -- `W10`, as at `N009`.
+///
+/// **The arithmetic is `u128` and SATURATING, and it was neither on the day this rule was
+/// written** (2026-09-02). `(*schritt as i128) * (*anzahl as i128)` is a lossy cast followed
+/// by a multiplication that overflows: at `count 2^127-1` the checker **panicked in debug
+/// and answered `0 errors` in release**, and at `count u128::MAX` the cast made the product
+/// negative, so `bis <= von` sent the bank down the *"`N010` owns the empty bank"* branch
+/// and BOTH builds accepted it in silence. Found by `instrumente/fuzze-grenzen.py` on the
+/// day after this rule landed -- *the audit method that produced `N049` also produced its
+/// first defect.*
 fn bankausdehnung_pruefen(d: &Device, absagen: &mut Absagen) {
     // (name, from, to) of everything whose extent is decidable here
-    let mut belegt: Vec<(&Ident, i128, i128)> = Vec::new();
+    let mut belegt: Vec<(&Ident, u128, u128)> = Vec::new();
     for r in &d.register {
         let ExprArt::Zahl(v) = &r.versatz.art else { continue };
-        let von = *v as i128;
-        belegt.push((&r.name, von, von + i128::from(crate::bitlage::aus_intty(&r.typ).0)));
+        let von = *v;
+        let breite = u128::from(crate::bitlage::aus_intty(&r.typ).0);
+        belegt.push((&r.name, von, von.saturating_add(breite)));
     }
     for b in &d.baenke {
         let (ExprArt::Zahl(basis), ExprArt::Zahl(schritt), ExprArt::Zahl(anzahl)) =
@@ -1627,8 +1652,8 @@ fn bankausdehnung_pruefen(d: &Device, absagen: &mut Absagen) {
         else {
             continue;
         };
-        let von = *basis as i128;
-        let bis = von + (*schritt as i128) * (*anzahl as i128);
+        let von = *basis;
+        let bis = von.saturating_add(schritt.saturating_mul(*anzahl));
         if bis <= von {
             continue; // `N010` owns the empty bank
         }
@@ -1683,8 +1708,8 @@ fn bankausdehnung_pruefen(d: &Device, absagen: &mut Absagen) {
 fn ausrichtung_pruefen(regs: &[RegDecl], wo: &str, absagen: &mut Absagen) {
     for r in regs {
         let ExprArt::Zahl(v) = &r.versatz.art else { continue };
-        let breite = i128::from(crate::bitlage::aus_intty(&r.typ).0);
-        let von = *v as i128;
+        let breite = u128::from(crate::bitlage::aus_intty(&r.typ).0);
+        let von = *v;
         if breite > 1 && von % breite != 0 {
             absagen.schiebe(
                 Absage::fehler(
@@ -1728,15 +1753,15 @@ fn ausrichtung_pruefen(regs: &[RegDecl], wo: &str, absagen: &mut Absagen) {
 /// reach past the end of its cell. Same limit as `N009`: literal stride, literal offset.
 fn bankzelle_pruefen(b: &Bank, absagen: &mut Absagen) {
     let ExprArt::Zahl(schritt) = &b.schritt.art else { return };
-    let schritt = *schritt as i128;
+    let schritt = *schritt;
     if schritt == 0 {
         return; // `N010` says this one, and says it better
     }
     for r in &b.register {
         let ExprArt::Zahl(v) = &r.versatz.art else { continue };
-        let von = *v as i128;
-        let breite = i128::from(crate::bitlage::aus_intty(&r.typ).0);
-        if von + breite > schritt {
+        let von = *v;
+        let breite = u128::from(crate::bitlage::aus_intty(&r.typ).0);
+        if von.saturating_add(breite) > schritt {
             absagen.schiebe(
                 Absage::fehler(
                     "N048",
@@ -1745,7 +1770,12 @@ fn bankzelle_pruefen(b: &Bank, absagen: &mut Absagen) {
                         "`{name}` covers {von:#x}..{bis:#x} in a cell of `stride {schritt}` \
                          in bank `{bank}` -- element k and element k+1 name the same bytes",
                         name = r.name.text,
-                        bis = von + breite,
+                        // **Saturating here too, and this line is why it is worth saying
+                        // twice.** The CONDITION above was repaired first and this one was
+                        // not, so the rule decided correctly and then panicked while
+                        // wording the refusal -- three cases of `fuzze-grenzen.py` fell
+                        // exactly here. *A message is code.*
+                        bis = von.saturating_add(breite),
                         bank = b.name.text,
                     ),
                 )
@@ -1754,6 +1784,154 @@ fn bankzelle_pruefen(b: &Bank, absagen: &mut Absagen) {
                      register reaching past its cell makes that theorem false, not vacuous",
                 ),
             );
+        }
+    }
+}
+
+/// **`N050` -- a bank whose index arithmetic does not FIT the word the emitter computes it in.**
+///
+/// **Measured on 2026-09-01, and like `N047`-`N049` it came out of the emitted C.**
+/// `clang-tidy` reports `bugprone-implicit-widening-of-multiplication-result` at every bank
+/// accessor: the product is formed in `unsigned int` and only then widened to the pointer's
+/// width. On the corpus every product is small -- and nothing HELD it there:
+///
+/// ```text
+/// bank F at 0x0 stride 0x100000 count 0x10000 { reg X : u64 @0x0 class rw }  -- 0 errors
+/// -> return *(volatile uint64_t *)(d->basis + (0) + i * 1048576u + 0u);
+/// ```
+///
+/// `i` is a `uint32_t` bounded by `count`, and `1048576u` is an `unsigned int`. At
+/// `i = 65535` the product is `0xFFFFF00000`, which does not fit in 32 bits: the emitted
+/// expression yields `0xFFF00000`. **`F[65535].X` reads a register 64 GiB below the one it
+/// names, and no pass and no C compiler says a word.**
+///
+/// > The same shape as `N047`/`N048`/`N049` and the same sentence applies: *a language whose
+/// > reason for existing is that MMIO addresses are provably right accepted an address that
+/// > is provably wrong.* Here the address is not merely unaligned -- it is a different
+/// > address.
+///
+/// **This is a statement about the LOWERING, not about the hardware.** A device that really
+/// spans more than 4 GiB of index arithmetic is a legitimate thing to declare -- the audit of
+/// 2026-09-01 measured `an offset beyond 4 GiB` and ruled it *correct as accepted*. What is
+/// not legitimate is lowering it into a 32-bit multiply. Until the emitter computes bank
+/// offsets in `uint64_t`, the checker holds the declaration inside what the emitter can
+/// represent, and says which of the two it is in its own note.
+///
+/// Judged where `stride`, `count` and the register offset are all literals -- the same limit
+/// as `N048` and `N049`, and for the same reason (`W10`: a lower bound neither refuses nor
+/// acquits).
+fn bankbreite_pruefen(b: &Bank, absagen: &mut Absagen) {
+    let (ExprArt::Zahl(schritt), ExprArt::Zahl(anzahl)) = (&b.schritt.art, &b.anzahl.art) else {
+        return;
+    };
+    let (schritt, anzahl) = (*schritt, *anzahl);
+    if schritt == 0 || anzahl == 0 {
+        return; // `N010` owns `stride 0`; a bank with no cells has no access
+    }
+    // The emitted expression is `i * schritt + off` with `i <= anzahl - 1`, and every term
+    // is an `unsigned int`. The LARGEST value it must represent is the one below.
+    //
+    // **SATURATING, and the first draft of this rule was not** -- it multiplied in `i128`
+    // and inherited the very overflow it was written beside. *A repair carrying its own
+    // defect looks like a repair.*
+    let hoechster = (anzahl - 1).saturating_mul(schritt);
+    const U32: u128 = u32::MAX as u128;
+    for r in &b.register {
+        let ExprArt::Zahl(v) = &r.versatz.art else { continue };
+        let ganz = hoechster.saturating_add(*v);
+        if ganz > U32 {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N050",
+                    b.name.span,
+                    format!(
+                        "bank `{bank}` reaches offset {ganz:#x} at `{name}` of its last cell \
+                         -- the emitted `i * {schritt}u + {off}u` is `unsigned int` \
+                         arithmetic and wraps at {U32:#x}",
+                        bank = b.name.text,
+                        name = r.name.text,
+                        off = *v,
+                    ),
+                )
+                .mit_notiz(
+                    "the lowering is `*(volatile uintN_t *)(d->basis + (base) + i * strideu \
+                     + offu)`: the product is formed in 32 bits and only then widened, so \
+                     the last cells name addresses that are not merely misaligned but WRONG",
+                )
+                .mit_notiz(
+                    "a device this wide is a legitimate declaration -- what is not \
+                     legitimate is lowering it into a 32-bit multiply. Either narrow \
+                     `count`/`stride`, or the emitter has to compute in `uint64_t` first",
+                ),
+            );
+            break;
+        }
+    }
+}
+
+/// **`N051` -- a layout number wider than the pointer arithmetic it is lowered into.**
+///
+/// Gabbro's integer literals are `u128`; the address arithmetic the emitter writes is not.
+/// Every device access is lowered onto `volatile uint8_t *basis`, so the offset added to it
+/// has to fit a `uintptr_t` -- 64 bits on every target this emitter has. Above that there is
+/// no C constant to write and no address to name.
+///
+/// **Until 2026-09-02 nothing said so, and the rules above it read the number anyway:**
+///
+/// ```text
+/// reg X : u64 @0x100000000000000000 class rw     -- 2^68, and a multiple of 8
+/// -> 3 items, 0 errors, 0 hints
+/// ```
+///
+/// `N047` stays silent because `2^68 % 8 == 0`; `N009` compares it against nothing. The
+/// declaration is accepted and cannot be lowered. *The `u128` literal is the front end being
+/// generous; the back end never got the message.*
+///
+/// > **Found by `instrumente/fuzze-grenzen.py`, in the same sweep that found `N049`'s own
+/// > overflow.** The neighbouring case, `@u128::MAX`, *did* fall -- with `N047`, and for the
+/// > wrong reason: the offset had been cast to `i128`, came out `-1`, and `-1 % 8 != 0`.
+/// > **A rule that is right by two errors cancelling is not a rule that holds.**
+///
+/// Judged on literals only, the same limit as `N047`-`N050`.
+fn lagenbreite_pruefen(d: &Device, absagen: &mut Absagen) {
+    const U64: u128 = u64::MAX as u128;
+    let mut sage = |was: &str, name: &Ident, wert: u128| {
+        if wert > U64 {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N051",
+                    name.span,
+                    format!(
+                        "{was} `{}` is {wert:#x} in `{}` -- that does not fit the 64-bit \
+                         pointer arithmetic the access is lowered into",
+                        name.text, d.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "the access is `*(volatile uintN_t *)(d->basis + <offset>)` and `basis` \
+                     is a `volatile uint8_t *`: an offset above `u64::MAX` names no address \
+                     on any target this emitter has",
+                )
+                .mit_notiz(
+                    "Gabbro's integer literals are `u128`; that is the front end being \
+                     generous, and it does not widen the machine underneath",
+                ),
+            );
+        }
+    };
+    for r in &d.register {
+        if let ExprArt::Zahl(v) = &r.versatz.art {
+            sage("register", &r.name, *v);
+        }
+    }
+    for b in &d.baenke {
+        if let ExprArt::Zahl(v) = &b.basis.art {
+            sage("bank base", &b.name, *v);
+        }
+        for r in &b.register {
+            if let ExprArt::Zahl(v) = &r.versatz.art {
+                sage("register", &r.name, *v);
+            }
         }
     }
 }

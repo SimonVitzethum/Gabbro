@@ -1700,8 +1700,35 @@ pub fn emittiere_mit(
             // **Und dafuer gibt es heute keinen Pass** -- ein `static`, den niemand nennt,
             // faellt nirgends auf. In `TODO.md` gebucht; hier stillgelegt, nicht
             // verschwiegen.
+            // **A POINTER OUT OF A NUMBER GOES THROUGH `(uintptr_t)`, and that is the whole
+            // difference between undefined and implementation-defined** (2026-09-02).
+            //
+            // `static tz : ptr<normal, rw> Platz = 0;` produced
+            //
+            //     static Platz * const tz __attribute__((unused)) = 0;
+            //
+            // and that `0` is a **null pointer constant** under C11 6.3.2.3p3. The body
+            // below it writes `tz->slots[i].a = 5;`, so the emitted C dereferences a null
+            // pointer -- **undefined behaviour, C11 6.5.3.2p4.** Found by `clang --analyze`
+            // (`core.NullDereference`) over `beispiele/38`, the only site in the corpus with
+            // this shape, in the audit of 2026-09-02.
+            //
+            // > `dokumente/BEWEIS.md` carries the class *null pointer* as *"Gabbro has no
+            // > `null`"* with residual risk **only at the `extern` boundary**. This file is
+            // > not at the `extern` boundary. *The row was right about the LANGUAGE and
+            // > wrong about the PRODUCT.*
+            //
+            // **The cure was already in this same emitter.** The MMIO path has always
+            // written `(volatile uint8_t *)(uintptr_t)GERAETEBASIS`: converting an INTEGER
+            // to a pointer is *implementation-defined* (6.3.2.3p5) rather than undefined,
+            // and that is exactly what a place naming a fixed address on bare metal needs.
+            // Address 0 there is a vector slot and not a mistake; **what was wrong is the
+            // spelling, not the intent.** Two spellings for one thing were `W7`; now there
+            // is one.
+            let zeigertyp = c.trim_end().ends_with('*');
+            let wert = if zeigertyp { format!("({}) (uintptr_t){w}", c.trim_end()) } else { w };
             aus.push_str(&format!(
-                "\nstatic {konst}{c} {konst_nach}{}{abschnitt} __attribute__((unused)) = {w};\n",
+                "\nstatic {konst}{c} {konst_nach}{}{abschnitt} __attribute__((unused)) = {wert};\n",
                 st.name.text
             ));
         }

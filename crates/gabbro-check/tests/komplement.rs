@@ -310,6 +310,53 @@ fn eine_w1c_quittierung_schreibt_das_ganze_wort_ohne_zu_lesen() {
     let _ = std::fs::remove_file(&ziel);
 }
 
+// ---------------------------------------------------------------------------------------
+// **A POINTER OUT OF A NUMBER GOES THROUGH `(uintptr_t)`, and that is the whole difference
+// between undefined and implementation-defined.**
+//
+// Found on 2026-09-02 by `clang --analyze` over the emitted C -- `core.NullDereference`, the
+// only one in 121 emitted units. It is held in this file because the helper above already
+// lowers a clean `beispiele/` file and reads the result back.
+// ---------------------------------------------------------------------------------------
+
+/// **`beispiele/38` wrote a null pointer constant into the C and then dereferenced it.**
+///
+/// ```text
+/// static tz : ptr<normal, rw> Platz = 0;      -- 4 items, 0 errors, 0 hints
+/// -> static Platz * const tz __attribute__((unused)) = 0;
+/// -> tz->slots[i].a = 5;
+/// ```
+///
+/// The `0` there is a **null pointer constant** (C11 6.3.2.3p3), so the body below it is a
+/// null dereference -- **undefined behaviour, C11 6.5.3.2p4**. On bare metal address 0 is a
+/// vector slot and naming it is legitimate; *what was wrong is the spelling, not the intent*,
+/// and the emitter already had the right one: the MMIO path has written
+/// `(volatile uint8_t *)(uintptr_t)GERAETEBASIS` since it existed. Converting an INTEGER to
+/// a pointer is implementation-defined (6.3.2.3p5), not undefined.
+///
+/// > `dokumente/BEWEIS.md` carries the class *null pointer* with *"Gabbro has no `null`"* and
+/// > residual risk **only at the `extern` boundary**. This file is not at the `extern`
+/// > boundary. The row was right about the LANGUAGE and wrong about the PRODUCT.
+///
+/// **This probe can fall**, and it falls the moment the cast is dropped: the first assertion
+/// names the exact text, the second forbids the shape it replaced.
+#[test]
+fn ein_zeiger_aus_einer_zahl_traegt_den_uintptr_cast() {
+    let c = emittiere("38-unveraenderlicher-zeiger.gab");
+    assert!(
+        c.contains("(uintptr_t)0"),
+        "the pointer static is not lowered through `(uintptr_t)` -- then the emitted C holds \
+         a null pointer constant, and the body below it dereferences it:\n{c}"
+    );
+    // **And the shape it replaced has to be gone.** Without this line an emitter that writes
+    // BOTH -- the cast somewhere and a bare `= 0` for the pointer -- would stay green.
+    assert!(
+        !c.contains("const tz __attribute__((unused)) = 0;"),
+        "the pointer static still carries a bare `= 0`, which is C's null pointer \
+         constant:\n{c}"
+    );
+}
+
 const W1CTREIBER: &str = r#"
 #include <stdio.h>
 #include <string.h>

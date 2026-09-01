@@ -928,7 +928,7 @@ the generated C have"**:
 | 6 | **evaluation order / sequence points** | **E2**: assignment is not an expression, one effect per statement. **The whole class disappears** | none |
 | 7 | **implicit conversion / integer promotion** | **E3** in the source text; the emission places **explicit casts everywhere** | none, but **to be checked mechanically** |
 | 8 | **uninitialised read** | E3: nothing is implicit, every declaration has a value | none |
-| 9 | **null pointer** | Gabbro has no `null`; `option` is `tagged` | **only at the `extern` boundary** |
+| 9 | **null pointer** | Gabbro has no `null`; `option` is `tagged` — **but a `ptr` initialised to a NUMBER is one in C**, and the emission now writes it through `(uintptr_t)` | **the `extern` boundary, and the fixed-address idiom below** |
 | 10 | **`union` reinterpretation** | `tagged` writes and reads **via the tag**; C11 explicitly permits reading another member | padding bytes stay unspecified — **never read** |
 | 11 | **`restrict` wrong** | generated from `effects`. **If `effects` is wrong, that is C UB** — a **proof export into C's rules** | **a real trust transfer, named** |
 | 12 | **`volatile` semantics** | weakly specified; MMIO practice. **seL4 excludes exactly this** | **axiom, named** (A12/A17) |
@@ -937,6 +937,32 @@ the generated C have"**:
 > exports a Gabbro promise into C's UB rules, and `volatile` (12) is an axiom anyway. **Everything
 > else dies on a rule that is already there for another reason** — E2 and E3 pay a second time
 > here.
+
+#### Row 9 was right about the language and wrong about the product (2026-09-02)
+
+*"Gabbro has no `null`"* is true of the source language and was not true of the emission.
+`beispiele/38-unveraenderlicher-zeiger.gab` writes
+
+```
+static tz : ptr<normal, rw> Platz = 0;      -- 4 items, 0 errors, 0 hints
+```
+
+and until this date that lowered to `static Platz * const tz … = 0;`. **The `0` is a null
+pointer constant** (C11 6.3.2.3p3), the body below it writes `tz->slots[i].a = 5;`, and that
+is undefined behaviour under 6.5.3.2p4. The file is not at the `extern` boundary, which is
+the only residual risk the row named.
+
+**Found by `clang --analyze` over the emitted C** — `core.NullDereference`, the single such
+finding in 121 emitted units, in the audit method of 2026-09-01: hand an output the project
+already produces to a tool that did not write it.
+
+*The intent was never wrong.* On bare metal address 0 is a vector slot, and naming it is what
+this language is for. The spelling was wrong, and **the emitter already held the right one**:
+the MMIO path has written `(volatile uint8_t *)(uintptr_t)GERAETEBASIS` since it existed, and
+converting an *integer* to a pointer is implementation-defined (6.3.2.3p5) rather than
+undefined. Two spellings for one thing were `W7`; there is now one. Held by
+`crates/gabbro-check/tests/komplement.rs::ein_zeiger_aus_einer_zahl_traegt_den_uintptr_cast`,
+which falls in both directions.
 
 ---
 

@@ -807,3 +807,89 @@ fn aligned_umgeht_die_sperre_nicht() {
     faellt_mit(&quelle("if wert == 4 { return 1; } return 0;"), "H007");
     faellt_mit(&quelle("if aligned(wert, 4) { return 1; } return 0;"), "H007");
 }
+
+/// **`N050` -- the same audit method one day later, and one layer DOWN.**
+///
+/// `N047`-`N049` judge the layout. This one judges whether the layout survives the LOWERING:
+/// every bank accessor is emitted as
+///
+/// ```c
+/// return *(volatile uint64_t *)(d->basis + (base) + i * <stride>u + <off>u);
+/// ```
+///
+/// with `uint32_t i` and an `unsigned int` stride, so the product is formed in 32 bits and
+/// only THEN widened to the pointer. `clang-tidy` names the site
+/// `bugprone-implicit-widening-of-multiplication-result` at every one of them.
+///
+/// The boundary is exact and both sides of it are driven here, because *a rule that only
+/// ever fires proves nothing about where it stops*: `0xFFF * 0x100000` is `0xFFF00000` and
+/// fits; one more cell does not.
+#[test]
+fn bankindex_jenseits_der_wortbreite_faellt() {
+    let d = |bank: &str| {
+        format!("module p {{ opaque type Pa = u64;\ndevice D(basis : Pa) at mmio {{\n{bank}\n}}\n}}")
+    };
+    // `(0x10000 - 1) * 0x100000` is `0xFFFFF00000` -- 36 bits into a 32-bit multiply.
+    faellt_mit(&d("bank F at 0x0 stride 0x100000 count 0x10000 { reg X : u64 @0x0 class rw }"), "N050");
+    // The stride alone is enough when the count is large.
+    faellt_mit(&d("bank F at 0x0 stride 0x10000 count 0x10001 { reg X : u64 @0x0 class rw }"), "N050");
+    // And the register's own offset counts -- it is the `+ offu` of the same expression.
+    faellt_mit(
+        &d("bank F at 0x0 stride 0x100000 count 0x1000 { reg X : u64 @0x100000 class rw }"),
+        "N050",
+    );
+
+    // **The counter-direction, and the first case is the boundary itself:**
+    // `0xFFF * 0x100000 == 0xFFF00000`, the largest product that still fits.
+    faellt_nicht(&d("bank F at 0x0 stride 0x100000 count 0x1000 { reg X : u64 @0x0 class rw }"));
+    // The corpus shape -- `02-geraet.gab` writes `stride 16 count 256`.
+    faellt_nicht(&d(
+        "bank F at 0x100 stride 16 count 256 { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
+    ));
+    // A COMPUTED stride or count stays silent, the same limit `N048`/`N049` set themselves.
+    faellt_nicht(&d(
+        "reg CAP : u64 @0x08 class r fields { FRO @[33:24], }\n\
+         bank F at 0x0 stride 16 count CAP.FRO { reg X : u64 @0x0 class rw }",
+    ));
+}
+
+/// **`N051`, and the three cases below it are the reason the arithmetic changed too.**
+///
+/// Gabbro's literals are `u128`; the address arithmetic they lower into is 64-bit. Above
+/// `u64::MAX` there is no C constant to write and no address to name -- and until 2026-09-02
+/// nothing said so, while the rules that DO read those literals read them through
+/// `*v as i128`.
+///
+/// The last two assertions are the ones that would have caught the old code: at `u128::MAX`
+/// the lossy cast produced `-1`, and at `2^127-1` the following `+ width` overflowed `i128`
+/// -- a panic in debug, a wrap in release. **They must now answer by NAME in both builds**,
+/// and `instrumente/fuzze-grenzen.py` is what holds that over the whole grammar.
+#[test]
+fn registerlage_jenseits_der_zeigerbreite_faellt() {
+    let d = |inhalt: &str| {
+        format!("module p {{ opaque type Pa = u64;\ndevice D(basis : Pa) at mmio {{\n{inhalt}\n}}\n}}")
+    };
+    // 2^68, and a multiple of 8 -- so `N047` has nothing to say about it.
+    faellt_mit(&d("reg X : u64 @0x100000000000000000 class rw"), "N051");
+    faellt_mit(
+        &d("bank F at 0x100000000000000000 stride 8 count 4 { reg X : u64 @0x0 class rw }"),
+        "N051",
+    );
+    faellt_mit(
+        &d("bank F at 0x0 stride 8 count 4 { reg X : u64 @0x100000000000000000 class rw }"),
+        "N051",
+    );
+    // The two that used to end in a panic or a silent accept -- now a NAME, in both builds.
+    faellt_mit(&d("reg X : u64 @340282366920938463463374607431768211455 class rw"), "N051");
+    faellt_mit(&d("reg X : u64 @170141183460469231731687303715884105727 class rw"), "N051");
+
+    // **The counter-direction, and the first case is the boundary itself:** `u64::MAX - 7`
+    // is the last 8-aligned offset that still fits, and it must stay silent.
+    faellt_nicht(&d("reg X : u64 @0xFFFFFFFFFFFFFFF8 class rw"));
+    faellt_nicht(&d("reg X : u64 @0x1000 class rw"));
+    // A COMPUTED base is not a literal and stays outside, as everywhere in this family.
+    faellt_nicht(&d(
+        "reg CAP : u64 @0x08 class r fields { FRO @[33:24], }\n\
+         bank F at CAP.FRO * 16 stride 16 count 8 { reg X : u64 @0x0 class rw }",
+    ));
+}

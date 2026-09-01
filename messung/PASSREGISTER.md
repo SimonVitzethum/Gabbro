@@ -36,14 +36,14 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (`namen.berichtszeile`) — a `measures` name without a carrier, `messung/TORREICHWEITE.md`.
 > 74 → 75 sentences, 242 → 243 codes, 197 → 198 claimed, 67 → 68 `measured`; the 45
 > without a sentence stay standing. *The second tooth, for the second time in one day.*
-| **Codes without a sentence — the ratchet** | **48** | `./instrumente/pruefe-saetze.py` |
+| **Codes without a sentence — the ratchet** | **50** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not
 diligence but a measurement: several passes hold **two claims of different strength**,
 and writing them into one sentence would have hidden the weaker under the stronger.
 `kosten` is the example — see below.
 
-## The 48 without a sentence are not an oversight but a drawn line
+## The 50 without a sentence are not an oversight but a drawn line
 
 > **45 → 48 on 2026-09-01.** `N047`, `N048` and `N049` came out of the register-layout audit
 > and stand without a theorem **on purpose**: `Device_Konstruktor.thy` proves
@@ -52,6 +52,19 @@ and writing them into one sentence would have hidden the weaker under the strong
 > they do not need one of their own.** A theorem apiece would be a fourth statement of the
 > same fact — and the sixth class in pure form, one layer up: *a pass whose premise nothing
 > needs has moved the trust base, not shrunk it.*
+>
+> **48 → 50 on 2026-09-02, and the reason is the one above, one layer DOWN.** `N050` and
+> `N051` came out of the same audit method applied to the emitted C, and neither establishes a
+> premise — **they keep the CONCLUSIONS true of the lowering.** `Device_Konstruktor.thy`
+> reasons in an address space with no word width; the emitted bank accessor computes
+> `i * stride` in `unsigned int`, so with a wide enough bank two distinct `i` name the same
+> address. *The theorem still holds; the C stops being a model of it.* `N051` is the same
+> sentence for `uintptr_t`: an offset above `u64::MAX` has no address to be separate from.
+>
+> A theorem apiece would have to be a theorem about C's integer widths, and that is not what
+> the proof layer models. **Measured before it was written:** codes 263 → 265, sentence-less
+> 48 → 50, and neither code is named in `saetze.rs` or under `beweise/` — the delta is exactly
+> these two.
 
 ```
 parse.rs   37     lex.rs   7     emit.rs   1

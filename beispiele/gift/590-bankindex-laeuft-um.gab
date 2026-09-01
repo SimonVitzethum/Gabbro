@@ -1,0 +1,44 @@
+-- erwartet: N050
+-- **A bank the checker measures in `i128` and the emitter computes in `unsigned int`.**
+--
+-- `N049` already works out a bank's extent exactly -- in `i128`, so it never wraps:
+--
+--     let bis = von + (*schritt as i128) * (*anzahl as i128);
+--
+-- The EMITTER does not. Every bank accessor is lowered as
+--
+--     return *(volatile uint64_t *)(d->basis + (base) + i * <stride>u + <off>u);
+--
+-- with `uint32_t i` and an `unsigned int` stride, so the product is formed in 32 bits and
+-- only THEN widened to the pointer. `clang-tidy` says so at every one of these sites
+-- (`bugprone-implicit-widening-of-multiplication-result`); on the corpus every product was
+-- small, and nothing held it there.
+--
+-- Here it is not small. `count 0x10000`, `stride 0x100000`, so the last cell sits at
+--
+--     0xFFFF * 0x100000 = 0xFFFFF00000        what the declaration says
+--     0xFFFFF00000 mod 2^32 = 0xFFF00000      what the emitted C computes
+--
+-- **`F[65535].X` names a register 64 GiB below the one it declares**, with `0 errors,
+-- 0 hints` before this refusal existed. That is not a misalignment like `N047` -- it is a
+-- different address.
+--
+-- WHY THIS IS A REFUSAL AND NOT AN EMITTER REPAIR
+-- -----------------------------------------------
+-- A device spanning more than 4 GiB of index arithmetic is a legitimate declaration; the
+-- audit of 2026-09-01 measured `an offset beyond 4 GiB` and ruled it correct as accepted.
+-- So the honest reading is that the LOWERING is too narrow, not the declaration. Until the
+-- emitter computes bank offsets in `uint64_t`, the checker holds the declaration inside what
+-- the emitter can represent -- and `N050`'s second note says which of the two it is, so the
+-- refusal does not read as a claim about hardware.
+module gift588 {
+
+opaque type Pa = u64;
+
+device Weit(basis : Pa) at mmio {
+    bank F at 0x0 stride 0x100000 count 0x10000 {
+        reg X : u64 @0x0 class rw
+    }
+}
+
+}
