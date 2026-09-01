@@ -310,10 +310,12 @@ fn abstieg_pruefen(t: &Traverse, absagen: &mut Absagen) {
                     "`by consuming` names no `consumes` in its `touches`".to_string(),
                 )
                 .mit_notiz(
-                    "`by consuming` says the domain SHRINKS -- termination and the leaf-first                         order both rest on that, and without a `consumes` the claim has no                         carrier",
+                    "`by consuming` says the domain SHRINKS -- termination and the leaf-first order \
+                     both rest on that, and without a `consumes` the claim has no carrier",
                 )
                 .mit_notiz(
-                    "checked is the NECESSARY condition, not the sufficient one: THAT it                         shrinks on every pass is the prover's business, as at `S005`",
+                    "checked is the NECESSARY condition, not the sufficient one: THAT it shrinks on \
+                     every pass is the prover's business, as at `S005`",
                 ),
             );
         }

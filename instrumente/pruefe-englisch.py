@@ -286,6 +286,49 @@ TRENNT = re.compile(r'(?:\s|\\n|\\x20|\\t|"|\w-)$')
 LESBAR_QUELLEN = sorted(W.glob("crates/*/src/*.rs"))
 
 
+# **THE BURST SEAM -- the mirror image of the glued one, and nothing measured it.**
+#
+# `naehte` above counts a seam where a space is MISSING (`word` + `word`). The other
+# direction is a seam that never became one: a `\`-continuation that was eaten before it
+# reached the file, leaving the following line's indentation INSIDE the string.
+#
+#     "a `check` carries no `effects` -- so its body                  may read, compute"
+#
+# **That reaches the user, and both guardians called it green.** `naehte` sees no `\`, so it
+# does not count the seam at all; the German guard reads words, not spacing. *Measured
+# 2026-09-01: fifteen such strings stood in the tree*, five in `namen.rs` and ten across
+# `emit.rs`, `m1.rs`, `schleifen.rs` and `wirkungen.rs`.
+#
+# > **The class is `W16` from the other side.** A device that measures one direction of a
+# > defect reports the mirror image as absence. *The glued seam was found in 2026-08-19 and
+# > guarded the same day; its twin ran for two weeks behind a green light.*
+#
+# Two conditions, and the second one was learned the hard way. **The run has to stand INSIDE
+# a string literal**: a first version searched the whole line and reported all 202 aligned
+# rows of `kw.rs` (`Module        => "module",        res;`) -- the blanks there are between
+# the variant and the arrow, outside every quote, and they are a table column on purpose.
+# *A guardian that reports 202 sites of which 0 are its subject measures alignment and calls
+# it prose.* And six blanks, not two: prose on both sides, six deep.
+GEPLATZT = re.compile(r'"[^"\n]*[a-z,;)`]      +[a-z(`][^"\n]*"')
+
+
+def geplatzte_naehte(quellen):
+    """Every string literal with a run of blanks in mid-sentence. **A lost continuation.**
+
+    Skips anything carrying `\n` -- a multi-line C template or test fixture aligns on
+    purpose. Skips comment lines: a comment does not reach the user.
+    """
+    gefunden = []
+    for f in quellen:
+        for i, z in enumerate(f.read_text(encoding="utf-8", errors="replace").split("\n")):
+            if z.lstrip().startswith("//") or '"' not in z or "\\n" in z:
+                continue
+            m = GEPLATZT.search(z)
+            if m:
+                gefunden.append((f.name, i + 1, z.strip()[:70]))
+    return gefunden
+
+
 def naehte(quellen):
     """Jede Zeilenfortsetzung in einer Zeichenkette, und ob sie trennt.
 
@@ -325,7 +368,21 @@ def lesbarkeitsprobe():
         b.write_text(sauber, encoding="utf-8")
         _, kg = naehte([a])
         _, ks = naehte([b])
-    return len(kg) == 1, len(ks) == 0
+        # **The burst seam, in three directions, because the third is the one that was
+        # wrong.** A guardian that fires on prose and stays quiet on clean prose still
+        # measures nothing useful if it also fires on an aligned table -- that was the first
+        # version, 202 sites and none of them its subject.
+        gp = pathlib.Path(d) / "geplatzt.rs"
+        gp.write_text('let x = "that is                  a lost continuation";\n',
+                      encoding="utf-8")
+        gs = pathlib.Path(d) / "gesund.rs"
+        gs.write_text('let x = "that is a kept continuation";\n', encoding="utf-8")
+        gt = pathlib.Path(d) / "tafel.rs"
+        gt.write_text('    Module        => "module",        res;\n', encoding="utf-8")
+        pg = len(geplatzte_naehte([gp])) == 1
+        ps = len(geplatzte_naehte([gs])) == 0
+        pt = len(geplatzte_naehte([gt])) == 0
+    return len(kg) == 1, len(ks) == 0, pg, ps, pt
 
 
 def sprechprobe():
@@ -425,6 +482,12 @@ MARKE_PY = 1067           # 1072 -> 1070 on 2026-08-31: two German comment lines
 # came back English. *That is the shape the mark is supposed to move in* -- not a translation
 # campaign, a line taken along by work that had to touch it anyway.
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
+
+# **THE BURST SEAM, and it starts at ZERO because the population was cleared the day it was
+# measured.** Fifteen stood in the tree on 2026-09-01 and all fifteen were repaired in the
+# same pass -- so there is no debt to book, and any rise is a new one. *Unlike the feeder
+# mark, which starts at 23 because what is left there are names and not prose.*
+MARKE_GEPLATZT = 0
 
 # **THE FEEDER MARK -- IT CAME INTO BEING TODAY AND SO RISES FROM NOTHING TO 179.**
 #
@@ -609,10 +672,13 @@ def main():
     if not sprechprobe():
         print("== ENGLISCH: der Waechter misst nicht ==")
         return 2
-    gift_faellt, sauber_frei = lesbarkeitsprobe()
+    gift_faellt, sauber_frei, pg, ps, pt = lesbarkeitsprobe()
     print("  geklebte Naht faellt:    %s" % ("ja" if gift_faellt else "NEIN"))
     print("  getrennte bleibt frei:   %s" % ("ja" if sauber_frei else "NEIN"))
-    if not (gift_faellt and sauber_frei):
+    print("  geplatzte Naht faellt:   %s" % ("ja" if pg else "NEIN"))
+    print("  gesunder Satz bleibt frei:      %s" % ("ja" if ps else "NEIN"))
+    print("  ausgerichtete Tafel bleibt frei: %s" % ("ja" if pt else "NEIN"))
+    if not (gift_faellt and sauber_frei and pg and ps and pt):
         print("== LESBARKEIT: der Waechter misst nicht ==")
         return 2
     sf, sr, zf, zr, kk = flaechenprobe()
@@ -631,6 +697,11 @@ def main():
     for datei, zeile, vor, nach in klebt:
         print("  KLEBT  %s:%d  …%s|%s…" % (datei, zeile, vor, nach))
     print("  %d von %d Naehten kleben" % (len(klebt), naht_gesamt))
+    geplatzt = geplatzte_naehte(LESBAR_QUELLEN)
+    for datei, zeile, text in geplatzt:
+        print("  GEPLATZT  %s:%d  %s" % (datei, zeile, text))
+    print("  %d Naht(e) GEPLATZT -- die Gegenrichtung, gemessen seit 2026-09-01"
+          % len(geplatzt))
     print("   Und was das NICHT heisst: gemessen wird die NAHT, nicht der Satz. Eine Meldung,")
     print("   die aus zwei Zeichenketten zusammengesetzt wird, geht hier nicht durch die")
     print("   Fortsetzung -- der Waechter verpflichtet, er spricht nicht frei (W10).")
@@ -667,6 +738,11 @@ def main():
         print("   Dieselbe Klasse wie die 161 vom 2026-08-19 -- englisch und unlesbar.")
         return 1
     ratsche = 0
+    if len(geplatzt) > MARKE_GEPLATZT:
+        print("\n  RATSCHE GEBROCHEN: %d geplatzte Naehte, gebucht sind %d."
+              % (len(geplatzt), MARKE_GEPLATZT))
+        print("   Eine verlorene `\\`-Fortsetzung laesst die Einrueckung IN der Meldung.")
+        ratsche = 1
     if rs_d > MARKE_KOMMENTARE:
         print("\n  RATSCHE GEBROCHEN: %d deutsche Kommentarzeilen, gebucht sind %d."
               % (rs_d, MARKE_KOMMENTARE))

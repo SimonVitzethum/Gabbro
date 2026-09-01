@@ -1612,7 +1612,11 @@ pub fn emittiere_mit(
                         weigere(
                             absagen,
                             st.name.span,
-                            "`static` of a `tagged` type or a record initialised with a plain                              number -- which variant the zero is, the declaration does not                              say, and a record has no scalar value. **A record initialised by                              its LABELLED CALL lowers since 2026-08-25** -- write                              `T(f: …, g: …)`, which says field by field what the number does                              not",
+                            "`static` of a `tagged` type or a record initialised with a plain number \
+                             -- which variant the zero is, the declaration does not say, and a \
+                             record has no scalar value. **A record initialised by its LABELLED CALL \
+                             lowers since 2026-08-25** -- write `T(f: …, g: …)`, which says field by \
+                             field what the number does not",
                         );
                         return;
                     }
@@ -5539,7 +5543,9 @@ fn anweisung(
                         weigere(
                             absagen,
                             s.span,
-                            "a compound assignment to a `format` field -- it would be a read                              and a write through two separate calls, and over a buffer a                              device also writes, whether the two see the same bytes is the                              question itself",
+                            "a compound assignment to a `format` field -- it would be a read and a \
+                             write through two separate calls, and over a buffer a device also \
+                             writes, whether the two see the same bytes is the question itself",
                         );
                         return;
                     }
@@ -8063,7 +8069,8 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         weigere(
             absagen,
             r.span,
-            "`transition` call whose argument is not a handle of THAT device -- the              transition belongs to a declaration, and which one is not a guess",
+            "`transition` call whose argument is not a handle of THAT device -- the transition \
+             belongs to a declaration, and which one is not a guess",
         );
         return String::new();
     }
@@ -8233,7 +8240,8 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
             weigere(
                 absagen,
                 f.span,
-                "a `format` field followed by more suffixes -- a reader returns a VALUE, and                  a value has no place inside the bytes",
+                "a `format` field followed by more suffixes -- a reader returns a VALUE, and a value \
+                 has no place inside the bytes",
             );
             return String::new();
         }
