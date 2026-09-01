@@ -1,0 +1,27 @@
+-- **Das Zweieinheitenprogramm** -- der Posten `OB5`, und er ist eine AENDERUNG und keine Zahl.
+--
+-- Bis zum 2026-09-01 stand hier ein Beispiel mit EINER Einheit aus zwei Dateien, und der Bau
+-- meldete `0 computed edge(s)`. Das war eine ehrliche Null: der Graph wurde gerechnet, nach
+-- Reihenfolge sortiert und ein Zyklus beim Namen abgesagt -- **nur gab es nie eine Kante.**
+-- Damit war jede Aussage ueber Modularitaet an einem Fall gemessen, den niemand gebaut hatte.
+--
+-- Hier steht der Fall. Zwei Einheiten, und die zweite BRAUCHT die erste:
+--
+--     rechenwerk (object)   prog-vorrat.gab + prog-werk.gab   -> rechenwerk.o
+--          ^                                                     rechenwerk.gabi
+--          | use werk::ablegen, use werk::holen, use vorrat::Regal
+--     haupt (program)       prog-haupt.gab                    -> haupt.o + BINDEN
+--
+-- Was das Manifest NICHT nennt, und der Grund ist W7: die Kante. Sie steht als drei
+-- `use`-Zeilen in `prog-haupt.gab`, der Bau liest sie dort und rechnet daraus, welche
+-- Schnittstelle vor welche Einheit gehoert.
+
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-zwei
+
+unit rechenwerk object
+    messung/einheit-proben/prog-vorrat.gab
+    messung/einheit-proben/prog-werk.gab
+
+unit haupt program
+    messung/einheit-proben/prog-haupt.gab

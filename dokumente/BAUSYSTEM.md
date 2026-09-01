@@ -158,8 +158,11 @@ und 489 nicht ansieht, darf nicht wie ein Bau über den Baum aussehen.
 
 ## 6. Was diese Rechnung NICHT entscheidet
 
-* **Wie eine Einheit gegen eine andere linkt.** Der Graph wird gerechnet; ob die Kante als
-  `.gabi`-Vorspann (`--with`) oder als C-Kopf getragen wird, ist offen.
+* ~~**Wie eine Einheit gegen eine andere linkt.**~~ **Entschieden und gebaut am 2026-09-01:
+  als `.gabi`-Vorspann.** Der Grund steht nicht im Geschmack, sondern in der Prüfung: ein
+  C-Kopf trüge Typen und keine Verträge, und `effects`, `costs`, `requires` gingen genau da
+  verloren, wo sie geprüft werden müssten. Siehe den Abschnitt *„Die Kante, gebaut und
+  gelaufen"* am Ende.
 * **Ob `arch` über eine Einheit hinweg widerspruchsfrei sein muss.** Zwei Dateien einer Einheit
   mit verschiedenen `arch` sind ungemessen.
 * **Was bei einem Zyklus zwischen Einheiten geschieht.** Der Graph kann einen tragen; ob er
@@ -172,6 +175,12 @@ und 489 nicht ansieht, darf nicht wie ein Bau über den Baum aussehen.
 # Was davon LÄUFT (2026-08-31)
 
 `gabbro build` (deutscher Zweitname `bau`), `crates/gabbro-cli/src/bau.rs`, 9 Proben grün.
+
+> **Die Zahlen dieses Abschnitts sind die vom 2026-08-31 und werden nicht nachgezogen.** Der
+> Korpus ist seither von 491 auf 525 `.gab`-Dateien gewachsen, also stimmt jede Zahl darunter
+> als *Messung jenes Tages* und keine als Aussage über heute. *Eine Zahl, die man nachzieht,
+> ohne sie neu zu messen, ist eine Behauptung mit einem Datum davor.* Was heute läuft, steht
+> unter **„Die Kante, gebaut und gelaufen"** am Ende — mit eigenen Zahlen und eigenem Datum.
 
 ## Der Lauf über dem Beispiel
 
@@ -237,14 +246,141 @@ Register über derselben Sache.*
 > an diesem Tag hat eine überlebende Mutation eine blinde Probe benannt** — und beide Male war
 > die Blindheit dieselbe: die Probe sah dorthin, wo ich den Fehler erwartet hatte.
 
+---
+
+# Die Kante, gebaut und gelaufen (2026-09-01, `OB5`)
+
+**Der Posten war eine ÄNDERUNG und keine Zahl, und hier ist sie:**
+
+```
+$ gabbro build messung/einheit-proben/zwei-einheiten.bau
+built    rechenwerk
+built    haupt
+$ target/bau-zwei/haupt ; echo $?
+137
+```
+
+**137 = 100 + 37.** Die `100` ist eine `5000`, die ein **privater** Helfer der *anderen*
+Einheit gedeckelt hat; die `37` ging unberührt durch. *Eine Zahl, für die beide Hälften der
+Grenze stimmen müssen.*
+
+```
+rechenwerk (object)   prog-vorrat.gab + prog-werk.gab  ->  rechenwerk.o + rechenwerk.gabi
+     ^                                                     als EINE Einheit geprueft,
+     | use werk::ablegen, use werk::holen, use vorrat::Regal    uebersetzt UND beschrieben
+haupt (program)       prog-haupt.gab                   ->  haupt.o, dann der BINDER
+```
+
+## Was der Bau dafür können musste — drei Dinge, und das dritte hat einen Preis
+
+1. **`emit --unit` und `abi --unit`.** *Eine Einheit, die als Einheit PRÜFT, wurde nicht als
+   Einheit ÜBERSETZT* — `pruefe --unit` klebte die Dateien, `emit` lief je Datei. Gemessen an
+   denselben zwei Dateien: **sieben Absagen ohne die Fahne, null mit ihr.** Die Fähigkeit gab
+   es, *in `bau.rs` eingebaut und ohne Namen auf der Kommandozeile* — die Gestalt, die ein
+   fehlendes und ein verstecktes Merkmal teilen.
+2. **Die Kante wird getragen, nicht nur gerechnet.** Vor jeder Einheit steht die `.gabi` von
+   allem, worauf sie steht — **transitiv** und in Bauereihenfolge. *Nur direkte Kanten reichen
+   nicht:* die Schnittstelle von `b` nennt einen Typ, den `a` erklärt, und eine Schnittstelle,
+   die etwas nennt und nicht erklärt, ist genau das, was `N038` innen absagt.
+3. **Die Abdrücke der Unterbauten gehen in den eigenen Abdruck.** Das war der Preis, und es
+   ist die Falle, gegen die Abschnitt 4 steht: *eine Änderung im **privaten** Rumpf bewegt die
+   `.gabi` nicht und das Objekt schon.* Gemessen: `return 100` → `return 99`, `.gabi`
+   byteidentisch, `haupt` **gebaut** (nicht „current"), Ergebnis 136. Ohne die Kette wäre das
+   Programm aktuell gemeldet worden — über einer Bibliothek, die es nicht mehr enthält.
+
+## Acht Proben, fünf davon Gegenrichtung
+
+| Probe | was sie hält |
+|---|---|
+| `das_zweieinheitenprogramm_uebersetzt_und_laeuft` | 1 gerechnete Kante, gebunden, `137` |
+| `ohne_die_kante_faellt_das_programm` | dasselbe Programm ohne die Einheit darunter: `K003` |
+| `ein_programm_ohne_main_faellt_am_binder` | der Bindeschritt läuft und sagt wirklich ab |
+| `was_pub_nicht_traegt_bindet_nicht` | `nm -g`: außen genau `ablegen holen` |
+| `eine_aenderung_im_privaten_rumpf_baut_das_programm_neu` | die Abdruckkette |
+| `der_treiber_druckt_und_wird_verglichen` | `100 37 100`, mit Sprechprobe |
+| `die_effektableitung_sieht_ueber_die_grenze` | `identical`, und `E008` in der Gegenrichtung |
+| `eine_annahme_traegt_nicht_ueber_die_grenze` | 1 Annahme diesseits, **0** jenseits |
+
+## Die zwei Messungen, die vorher nicht zu stellen waren
+
+### Die Effektableitung SIEHT über die Grenze
+
+```
+$ gabbro abi --vergleich --with target/bau-zwei/rechenwerk.gabi …/prog-haupt.gab
+  identical      haupt::main
+  units read  1        functions with `effects` and a body  1
+  identical  1  100.0 %
+```
+
+`main` fasst selbst **keinen** Ort an — die zwei Wirkungen `reads Regal.slots` und
+`writes Regal.slots` können nur aus den Verträgen der zwei Gerufenen stammen, und die kamen
+aus der `.gabi`. **Und die Gegenrichtung ist der Befund, den `OB6` nicht finden konnte:** eine
+Wirkung, die jenseits der Grenze getan und diesseits nicht erklärt wird, fällt an `E008` —
+*weil geprüft wird, nicht weil geschwiegen wird.* Ohne die Brücke fällt dieselbe Datei an
+`K003`, und über die Auslassung sagt niemand ein Wort.
+
+> **Dabei fiel ein Fehler heraus, den es vor der Brücke nicht geben konnte.**
+> `pruefe --with` (der Pfad je Datei) rendert gegen den **geklebten** Text und druckte den
+> Dateinamen neben einer Zeilennummer der Verkettung: `…-die-grenze.gab:42:13` über einer
+> Datei von 28 Zeilen. *Genau der Fehler, gegen den `Stueck` und `zeige_je_stueck` gebaut
+> wurden* — einen Pfad neben dem, in dem sie standen. Er wurde erst sichtbar, als eine Absage
+> zum ersten Mal aus einer `.gabi`-Brücke kam. Jetzt: `:17:13`.
+
+### Eine `assume` trägt NICHT über die Grenze
+
+```
+$ gabbro annahmen …/prog-vorrat.gab   ->  -- 1 Annahmen   fach_zahl_passt_in_den_index
+$ gabbro annahmen …/prog-haupt.gab    ->  -- 0 Annahmen
+$ grep -c assume target/bau-zwei/rechenwerk.gabi  ->  0
+```
+
+**Das ist eine Entscheidung und kein Loch** — `abi.rs` sagt sie in seinem eigenen Kopf: eine
+Bibliothek, die ihre `assume`-Zeilen mitschickt, zwingt jedem Importeur ihre Maschine auf, und
+ein `override` beim Import ist keine Ersetzung, sondern eine **Beweispflicht** («ABI4»).
+
+> **Was daran der Befund ist: an der Grenze sagt nichts, dass sie getroffen wurde.** Die
+> Bibliothek ist unter einer Annahme bewiesen, das Programm unter keiner, `gabbro pruefe`
+> geht mit `0 errors, 0 hints` durch und nennt das Wort nicht. *`OB8` sagt „Plattformannahmen
+> pro Programm NULL — heute sechs von sechs"; jetzt gibt es einen Ort, an dem eine Annahme
+> einmal stehen könnte, und sie trägt nicht dorthin.* Die Importform aus `§32` ist damit
+> **nicht unmöglich, sondern ungebaut** — die Brücke steht, nur geht diese Fracht nicht
+> darüber.
+
+## Und ein Gabbro-Programm kann nicht drucken
+
+Das Ergebnis verlässt `haupt` als Rückgabewert von `main`, und das ist keine Bequemlichkeit:
+
+```
+error: [N041] `putchar` is a name C has already taken
+  = `putchar` is a built-in function of the C implementation
+```
+
+`printf`, `puts` und `putchar` stehen alle drei in der Tafel von `cnamen.rs`. **Der Wächter
+hat recht, und er hat keine Ausnahme für eine ABSICHTLICHE fremde Bindung** — genau die, für
+die `extern fn` da ist. Was gedruckt wird, druckt ein C-Treiber daneben, gebunden gegen das
+`rechenwerk.o` dieses Baus, in der Gestalt von `pruefe-emission.sh` Stufe 10:
+**`100 37 100`**, mit Sprechprobe. *Der Treiber ist das Messgerät und nicht Teil des
+Programms.*
+
+*Abgelehnt und nicht gebaut:* `extern fn write` — der Name ist frei — mit einem
+`ptr<normal, r> Puffer` statt `const void *`. Das bindet und rechnet, und es ist eine
+**unverträgliche Deklaration einer externen Funktion**, also undefiniert. Ein
+Vorzeigebeispiel, das der C-Norm widerspricht, ist keines.
+
 ## Was NICHT läuft
 
-* **Kein Link zwischen zwei Einheiten.** Der Graph wird gerechnet und topologisch sortiert,
-  und ein Zyklus wird beim Namen abgesagt — **aber es gibt kein Beispiel mit zwei Einheiten**,
-  also ist die Kante **ungemessen**. `0 computed edge(s)` ist eine ehrliche Null und kein
-  Beleg.
-* **`--with` und der Bau kennen einander nicht.** Eine Einheit kann heute keine `.gabi` ziehen.
-* **`unit … program` ist nie gelaufen.** Der Zweig existiert (`cc` ohne `-c`), aber das
-  Beispiel ist ein `object`; ein `program` bräuchte ein `main`.
+* **Kein `main` in der Sprache, und kein Wort darüber.** `main` ist ein gewöhnlicher `pub fn`,
+  dessen Name zufällig der ist, den der Binder sucht. Nichts prüft, dass ein
+  `unit … program` genau einen hat — das tut der Binder, drei Werkzeuge später.
+* **Ein Zyklus ZWISCHEN Einheiten ist weiter ungemessen.** Der Sortierer sagt ihn beim Namen
+  ab, und es gibt kein Manifest, das einen trägt.
+* **`arch` über eine Einheitengrenze ist ungemessen.** Zwei Einheiten mit verschiedenem `arch`
+  mischt heute niemand, und die `.gabi` trägt kein `arch`.
+* **Sperrränge über die Grenze:** sie *reisen* seit dem 2026-08-21, und `H012` fällt über eine
+  Einheitengrenze — aber **nicht über eine BAU-Grenze**: `zwei-einheiten.bau` hat keinen Ring,
+  also ist der Fall im Bau ungemessen.
 * **Parallelität gibt es nicht.** Die Einheiten laufen der Reihe nach.
 * **`--testbuild` geht in den Abdruck, aber keine Probe fährt es.**
+* **Kein Fremdobjekt im Manifest.** Ein `program`, dessen `extern fn` von einer C-Datei
+  bedient wird, ist nicht baubar — der Treiber oben wird von der Probe gebunden, nicht vom
+  Bau.

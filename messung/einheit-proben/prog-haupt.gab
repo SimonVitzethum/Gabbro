@@ -1,0 +1,30 @@
+-- **Einheit `haupt` -- das Programm, und es BRAUCHT die andere Einheit.**
+--
+-- Es traegt keine Tabelle, keinen Rechenschritt und keinen Helfer. Was es tut, tut es ueber
+-- die Grenze: `ablegen` und `holen` stehen in `rechenwerk`, die Tabelle darunter auch. **Ohne
+-- die `.gabi` der anderen Einheit faellt diese Datei an `E009` und `K003`** -- gemessen, nicht
+-- behauptet, und die Probe dazu heisst `ohne_die_kante_faellt_das_programm`.
+--
+-- Das Ergebnis verlaesst das Programm als Rueckgabewert von `main`. **Drucken kann ein
+-- Gabbro-Programm nicht**, und das ist gemessen: `printf`, `puts` und `putchar` stehen alle
+-- drei in der Tafel von `cnamen.rs`, und `N041` sagt jede `extern fn` darauf ab. Was gedruckt
+-- wird, druckt der Treiber daneben -- der ist Messgeraet und nicht Teil des Programms.
+module haupt {
+
+use werk::ablegen;
+use werk::holen;
+use vorrat::Regal;
+
+pub impl fn main() -> i32 in 0 .. 200
+    effects { reads Regal.slots, writes Regal.slots }
+    costs   <= 90 ops
+{
+    -- 5000 liegt weit ueber der Schranke des privaten Helfers: hier landet 100.
+    ablegen(2, 5000);
+    ablegen(5, 37);
+    let a : i32 in 0 .. 100 = holen(2);
+    let b : i32 in 0 .. 100 = holen(5);
+    return a + b;
+}
+
+}

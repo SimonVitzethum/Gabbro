@@ -1,0 +1,37 @@
+-- **Einheit `rechenwerk`, Datei 1 von 2 -- der Traeger.**
+--
+-- Sie erklaert die Tabelle und den Mengentyp und traegt keinen einzigen Rumpf. Das ist
+-- Absicht und der halbe Grund, warum diese Probe existiert: die Einheit besteht aus ZWEI
+-- Dateien, also kann sie nur als Einheit geprueft, uebersetzt und beschrieben werden.
+-- Einzeln gefahren nennt die zweite Datei `Regal` und `Menge` und findet sie nicht.
+--
+-- `Menge` ist vorzeichenbehaftet, und das ist keine Laune: das Ergebnis des Programms
+-- verlaesst es als Rueckgabewert von `main`, und `main` gibt in C ein `int` zurueck. Ein
+-- `u32` dort waere `uint32_t main(void)`, und das faellt an `cc -Wall -Wextra -Werror`.
+module vorrat {
+
+-- **Eine Annahme, und sie steht hier, um an der Einheitengrenze VERLOREN zu gehen.**
+--
+-- `abi.rs` sagt es in seinem eigenen Kopf: eine Bibliothek, die ihre `assume`-Zeilen
+-- mitschickt, zwingt jedem Importeur ihre Maschine auf, und ein `override` beim Import ist
+-- keine Ersetzung, sondern eine Beweispflicht («ABI4»). Solange die Pflicht nicht gezaehlt
+-- wird, traegt die Schnittstelle sie gar nicht erst hinueber.
+--
+-- **Die Folge ist gemessen und steht in `dokumente/BAUSYSTEM.md`:** die `.gabi` dieser
+-- Einheit nennt das Wort `assume` nicht, `gabbro annahmen` findet in der anderen Einheit
+-- NULL Annahmen, und das gebundene Programm hat damit ein Zeugnis, das je Einheit ein
+-- anderes ist. *Das ist kein Schweigen der Sprache, sondern eine Entscheidung -- nur sagt
+-- an der Grenze nichts, dass sie getroffen wurde.*
+assume fach_zahl_passt_in_den_index
+    "Die Zahl der Faecher bleibt unter der Schranke, die ein `index into Regal` traegt."
+    unfalsifiable "eine Sonde muesste den Uebersetzer selbst befragen, nicht die Maschine";
+
+pub const NFAECHER : u32 = 8;
+
+pub type Menge = i32 in 0 .. 100;
+
+pub table Regal count NFAECHER {
+    slot { menge : Menge, }
+}
+
+}
