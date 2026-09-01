@@ -1,0 +1,34 @@
+-- erwartet: K001
+-- **The twin of `593`, one expression form further** (2026-09-02).
+--
+-- `kosten::ausdruck` priced `ExprArt::Eingebaut(_)` as a flat `Kosten::Zahl(1)` -- the
+-- underscore is the whole finding. `aligned(a, b)` carries TWO expressions and evaluates
+-- both at run time.
+--
+--     let i = teuer(); if aligned(i, 4) { … }   ->  K001, the body costs 103
+--     if aligned(teuer(), 4) { … }              ->  0 errors
+--
+-- This is the third pass to lose a subtree under `ExprArt::Eingebaut`. `wirkungen` and
+-- `geteilt` lost theirs on 2026-09-01 (`588`, `589`) and were repaired per form; the
+-- argument that settles `lenof`/`sizeof` there settles them here too, and it comes from
+-- the emitter's own `C001`: *the length comes from the DECLARATION, not from the content.*
+-- **So the place is not loaded and its indices are** -- and `aligned` pays for both of its
+-- sides.
+module gift::cost_of_a_call_inside_aligned {
+
+impl fn teuer() -> u32 in 0 .. 3
+    effects { pure }
+    costs   <= 100 ops
+{
+    return 1;
+}
+
+impl fn f() -> u32 in 0 .. 1
+    effects { pure }
+    costs   <= 3 ops
+{
+    if aligned(teuer(), 4) { return 1; }
+    return 0;
+}
+
+}

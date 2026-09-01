@@ -204,7 +204,14 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # `geteilt::orte_in`) each cite `E010`/`H007` and the emitter's `C001` to say what the
 # measurement WAS and where the counter-argument comes from. Cross-references, and this time
 # the cited text is a quoted refusal -- evidence, not a coverage claim.
-MARKE = 308
+# **308 -> 316 on 2026-09-02.** The ExprArt-walker examination closed ten more index/bracket
+# holes, and each repaired arm cites the code it now catches and the argument that settled it:
+# `geteilt`/`namen`/`kosten` cite `H012`/`N016`/`N025`/`K001` for the call-in-an-index; the
+# `ohne_klammern` arms in `phasen`/`m2`/`kbedingung`/`lib` cite `O004`/`L107`/`D005`/`W15`;
+# `m1` cites `M109` for `&f`; `emit` cites `E008`; `kosten` and `namen` cite the emitter's own
+# `C001`/`D004` for the counter-direction. Cross-references and quoted refusals -- evidence,
+# not coverage claims. *Same category as the 306 -> 308 booking, eight arms further.*
+MARKE = 316
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

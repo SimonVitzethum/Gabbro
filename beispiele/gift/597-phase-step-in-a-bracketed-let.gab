@@ -1,0 +1,34 @@
+-- erwartet: O004
+-- **The `let` half of `596`, and it was silent for the same reason** (2026-09-02).
+--
+-- `phasen::fluss` reads the initialiser of a `let` with `if let ExprArt::Ruf(r) =
+-- &l.wert.art`. The bracketed form is a `Klammer`, so no step was applied and the mark
+-- never moved.
+--
+--     let q = schritt(p); return q;      ->  O004  the body reaches `mmu`
+--     let q = (schritt(p)); return q;    ->  0 errors
+--
+-- **Two probes and not one, because the two arms are two lines** and a repair to either
+-- one alone reads as a repair. That is the lesson of `gift/258` applied to its own
+-- successor: `258` fixed the `return` arm while the `let` arm was already right, and
+-- 2026-09-02 found both of them wrong about brackets.
+module gift::phase_step_in_a_bracketed_let {
+
+linear ghost type BootPhase order { roh, mmu, caps, bereit };
+
+static mut welt : u32 = 0;
+
+extern fn schritt(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects  { consumes p, writes welt } costs <= 8 ops;
+
+impl fn falsch(p : BootPhase) -> BootPhase
+    advances roh -> bereit
+    effects  { consumes p, writes welt }
+    costs    <= 16 ops
+{
+    let q = (schritt(p));
+    return q;
+}
+
+}

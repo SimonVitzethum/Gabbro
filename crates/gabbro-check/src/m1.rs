@@ -3519,6 +3519,35 @@ impl<'a> Pruefer<'a> {
                     );
                     continue;
                 }
+                // **`&f` -- the producer of a function pointer, and its name is a FUNCTION
+                // name.** It resolves in a different table from every other name here, and
+                // it is neither `result` nor a written place: whatever else the
+                // postcondition says, this half of it establishes nothing.
+                if let Some(fnname) = n.strip_prefix('&') {
+                    let bekannt = self
+                        .u
+                        .kandidaten_aufloesbar(&self.modul, fnname)
+                        .iter()
+                        .any(|k| self.u.funktionen.contains_key(k));
+                    if !bekannt {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M109",
+                                p.span,
+                                format!("`{fnname}` in `ensures` is not declared here"),
+                            )
+                            .mit_notiz(
+                                "`&f` makes a function into a value, so the name has to be \
+                                    a function -- and this one is none",
+                            )
+                            .mit_notiz(
+                                "a postcondition whose names do not resolve stands in the \
+                                    certificate and in the library ABI -- and says nothing",
+                            ),
+                        );
+                    }
+                    continue;
+                }
                 if geschrieben.iter().any(|g| g == n) {
                     nennt_geschriebenes = true;
                 }
@@ -4399,6 +4428,24 @@ fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<Str
                     aus_expr(b, gebunden, out);
                 }
             },
+            // **`&f` names a function, and one character took the name check away**
+            // (measured 2026-09-02).
+            //
+            // ```text
+            // ensures result == tippfehler     ->  M109  `tippfehler` … is not declared here
+            // ensures result == &tippfehler    ->  0 errors
+            // ```
+            //
+            // `ExprArt::FnWert` carries a `Pfad` and no sub-expression, so it looked like a
+            // leaf and fell into the catch-all with the leaves. *It is a leaf that NAMES
+            // something* -- and `M109` exists for exactly the names nobody writes wrong.
+            //
+            // **The `&` is carried into the name on purpose.** A bare `hart_bereit` in value
+            // position is a PLACE (`ast.rs`, on `FnWert`: *"a bare name in value position is
+            // a `place`"*), and the two must not be looked up in the same table: the bare
+            // form has to keep falling, the `&` form has to resolve among FUNCTIONS. One
+            // list of strings, two questions -- the marker says which.
+            ExprArt::FnWert(p) => out.push(format!("&{}", p.text())),
             _ => {}
         }
     }

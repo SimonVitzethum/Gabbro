@@ -2037,15 +2037,39 @@ fn eine_bitlage_liegt_im_eigenen_wort() {
 /// *Dieser Test steht hier und nicht nur im Emissionswächter, weil `mutiere-pruefer.py` nur
 /// `cargo test` fährt: eine Regel, deren einzige Probe ein Shell-Wächter ist, kann keine
 /// Mutation fangen.*
+///
+/// > **And on 2026-09-02 the rule was measured a second time, one expression level down.**
+/// > `ruft_irgendwas` descends over `unterbloecke`/`eigene_ausdruecke` -- exhaustive at the
+/// > statement level -- and handed each expression to a hand-rolled `in_expr` that named
+/// > four forms and closed with `_ => false`. **A call in INDEX position was no call:**
+/// >
+/// > ```text
+/// > let i = fremd(); return t.slots[i].x;   ->  static uint32_t f(const T *restrict t);
+/// > return t.slots[fremd()].x;              ->  … __attribute__((pure));
+/// > ```
+/// >
+/// > Two bodies of the same meaning, and the attribute depended on where the call sat.
+/// > Compiled and run: with `cc -O2 -fno-inline` the second form loses BOTH calls -- the
+/// > counter in `fremd` ends at 0 -- while the first keeps them. *`beispiele/gift/179`
+/// > names this very consequence in its own text and expects `E008`; with a `pure` callee
+/// > no `E008` falls, and the attribute came back.*
 #[test]
 fn ein_wirkungsattribut_geht_nur_an_wen_nichts_ruft() {
     let q = r#"
 module m {
 static mut z : u32 = 0;
+table T count 4 { slot { x : u32, } }
 extern fn fremd() -> u32 effects { reads z } costs <= 1 ops;
+extern fn rein() -> u32 in 0 .. 3 effects { pure } costs <= 1 ops;
 impl fn blatt(a : u32 in 0 .. 10) -> u32 effects { pure } costs <= 1 ops { return a; }
 impl fn liest() -> u32 effects { reads z } costs <= 1 ops { return z; }
 impl fn ruft() -> u32 effects { reads z } costs <= 4 ops { return fremd(); }
+impl fn ruft_im_index(t : ptr<normal, r> T) -> u32 effects { reads t } costs <= 32 ops
+{ return t.slots[rein()].x; }
+impl fn ruft_in_aligned() -> u32 in 0 .. 1 effects { pure } costs <= 32 ops
+{ if aligned(rein(), 4) { return 1; } return 0; }
+impl fn liest_ohne_ruf(t : ptr<normal, r> T, i : u32 in 0 .. 3) -> u32
+    effects { reads t } costs <= 4 ops { return t.slots[i].x; }
 }
 "#;
     let (baum, mut absagen) = gabbro_syntax::lies("attribut.gab", q);
@@ -2082,7 +2106,24 @@ impl fn ruft() -> u32 effects { reads z } costs <= 4 ops { return fremd(); }
             "wer RUFT, bekommt KEINS -- unter dem Ruf kann ein fremder Rumpf liegen: {}",
             zeile("ruft")
         );
+        // **And whoever calls in an INDEX calls** (2026-09-02). Both forms, because they
+        // are two expression kinds: the index of a place and the operands of `aligned`.
+        for wo in ["ruft_im_index", "ruft_in_aligned"] {
+            assert!(
+                !zeile(wo).contains(verboten),
+                "a call in `{wo}` is a call -- the brackets change nothing: {}",
+                zeile(wo)
+            );
+        }
     }
+    // **The counter-direction, and without it the test measures nothing.** A body that only
+    // reads ONE place with an index and calls nothing must still get the attribute --
+    // otherwise the repair would be a switch-off and this test would pass beside it.
+    assert!(
+        zeile("liest_ohne_ruf").contains("__attribute__((pure))"),
+        "a reader with an index and no call keeps `pure`: {}",
+        zeile("liest_ohne_ruf")
+    );
 }
 
 /// **Ein `asm`-Block wird `__volatile__` abgesenkt** («OPT3», 2026-08-19).

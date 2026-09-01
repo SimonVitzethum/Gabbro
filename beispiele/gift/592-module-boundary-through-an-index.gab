@@ -1,0 +1,42 @@
+-- erwartet: N025
+-- **A qualified call in INDEX position crossed the module boundary in silence**
+-- (2026-09-02).
+--
+-- `namen::sammle_qualifizierte_rufe` is the only reader of `N025`, and its walker named
+-- `Ruf`, `Klammer`, `Unaer` and `Binaer`. An index went to `_ => {}`.
+--
+--     let i = w::a::heimlich(); return t.slots[i].x;   ->  N025
+--     return t.slots[w::a::heimlich()].x;              ->  0 errors
+--
+-- `heimlich` is not `pub`. **`D004`, the wall around an `opaque type`, argues from exactly
+-- this boundary** -- *"die Tuer ist die MODULGRENZE"*. A boundary that one pair of brackets
+-- walks through is none, and the poison probe that first bought `pub` its reader
+-- (`gift/169`) says as much in its own words: *"Eine Grenze, die niemand prueft, ist
+-- keine."*
+module gift::module_boundary_through_an_index {
+
+module a {
+
+impl fn heimlich() -> u32 in 0 .. 3
+    effects { pure }
+    costs   <= 1 ops
+{
+    return 1;
+}
+
+}
+
+module b {
+
+table T count 4 { slot { x : u32, } }
+
+impl fn f(t : ptr<normal, r> T) -> u32
+    effects { reads t }
+    costs   <= 32 ops
+{
+    return t.slots[gift::module_boundary_through_an_index::a::heimlich()].x;
+}
+
+}
+
+}

@@ -731,21 +731,63 @@ impl<'a> Rechner<'a> {
             | ExprArt::Ergebnis => {
                 Kosten::Zahl(0)
             }
-            // Ein Laden ist eine Primitive.
-            ExprArt::Ort(o) => Kosten::Zahl(
-                1 + o
-                    .suffixe
-                    .iter()
-                    .filter(|s| matches!(s, OrtSuffix::Index(_)))
-                    .count() as i128,
-            ),
+            // **A load is a primitive -- and an index is an EXPRESSION.**
+            //
+            // Until 2026-09-02 this read `1 + <number of index suffixes>`: a figure that
+            // COUNTS the index and never looks at it. Measured, the same function twice:
+            //
+            // ```text
+            // let i = teuer(); return t.slots[i].x;   ->  K001  <= 3 ops, the body costs 103
+            // return t.slots[teuer()].x;              ->  0 errors
+            // ```
+            //
+            // `teuer` declares `costs <= 100 ops`. **And this `match` is EXHAUSTIVE** -- all
+            // fourteen arms stand here and the compiler forces them
+            // (`miss-erschoepfung.py`). *Exhaustiveness over the enumeration is not descent
+            // into the node:* naming `ExprArt::Ort` and not entering its index is a branch
+            // written out that still sees nothing. **The 43 hand-rolled walkers were the
+            // question; this arm was never one of them and was blind anyway.**
+            //
+            // **The flat `1` was the cost of the COMMONEST index, not the cost of
+            // indexing:** a bare name costs one load, and that is exactly what `ausdruck`
+            // now returns for it. A constant index therefore costs nothing -- which the
+            // first line of this very function already says about every constant.
+            ExprArt::Ort(o) => crate::ausdruecke_im_ort(o)
+                .into_iter()
+                .fold(Kosten::Zahl(1), |k, ix| k.plus(self.ausdruck(ix, lokal))),
             ExprArt::Alt(_) => Kosten::Zahl(0),
             ExprArt::Klammer(i) => self.ausdruck(i, lokal),
             ExprArt::Unaer(_, i) => Kosten::Zahl(1).plus(self.ausdruck(i, lokal)),
             ExprArt::Binaer(_, a, b) => {
                 Kosten::Zahl(1).plus(self.ausdruck(a, lokal)).plus(self.ausdruck(b, lokal))
             }
-            ExprArt::Eingebaut(_) => Kosten::Zahl(1),
+            // **`aligned(a, b)` evaluates TWO expressions, and both of them cost.**
+            //
+            // ```text
+            // let i = teuer(); if aligned(i, 4) { … }   ->  K001  <= 3 ops, the body costs 102
+            // if aligned(teuer(), 4) { … }              ->  0 errors
+            // ```
+            //
+            // The same decision as in `wirkungen::liest_expr` and `geteilt::orte_in`, per
+            // form and with the reason beside it: `aligned` evaluates both sides at run
+            // time; `sizeof`/`lenof` over a place take their value from the DECLARATION
+            // (`C001`), so the place is not loaded -- **but its indices are**.
+            //
+            // The `1` stays underneath: the alignment test itself is an operation, and over
+            // a TYPE everything else about it is a compile-time constant.
+            ExprArt::Eingebaut(g) => match &**g {
+                Eingebaut::Aligned(a, b) => Kosten::Zahl(1)
+                    .plus(self.ausdruck(a, lokal))
+                    .plus(self.ausdruck(b, lokal)),
+                Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                    crate::ausdruecke_im_ort(o)
+                        .into_iter()
+                        .fold(Kosten::Zahl(1), |k, ix| k.plus(self.ausdruck(ix, lokal)))
+                }
+                Eingebaut::Sizeof(TypOderOrt::Typ(_)) | Eingebaut::Lenof(TypOderOrt::Typ(_)) => {
+                    Kosten::Zahl(1)
+                }
+            },
             ExprArt::Ruf(r) => self.ruf(r, lokal),
         }
     }
@@ -1294,12 +1336,10 @@ fn sammle_rufe_roh<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
 /// und `n + 1` (eine Aenderung nach OBEN). *Aus der strengen Lesart kann man lockern, nie
 /// umgekehrt.*
 fn faellt_syntaktisch(arg: Option<&Expr>, mass: &str) -> bool {
-    fn ohne_klammern(e: &Expr) -> &Expr {
-        match &e.art {
-            ExprArt::Klammer(x) => ohne_klammern(x),
-            _ => e,
-        }
-    }
+    // **This pass had the right line and kept it to itself.** Three others asked the same
+    // question with a bare `if let` and a bracket answered no (`O004`, `D005`, `L107`,
+    // measured 2026-09-02); the line now stands once, in `lib.rs`.
+    use crate::ohne_klammern;
     let Some(a) = arg else { return false };
     let ExprArt::Binaer(op, links, rechts) = &ohne_klammern(a).art else {
         return false;

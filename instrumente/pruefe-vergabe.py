@@ -191,7 +191,14 @@ MARKE = 20
 # five poison probes (`580`-`584`) for the «B3» hints, and one of them points at an identifier
 # that was ambiguous ALREADY. No identifier became newly ambiguous; one more probe points at
 # an old one. *The object grew, not the damage.*
-MARKE_PROBEN = 62
+# **62 -> 63 on 2026-09-02, and the CANDIDATES stand unmoved at 20.** The ExprArt-walker
+# examination laid nine poison probes (`590`-`598`); `598` points at `M109`, which had more
+# than one issuance site ALREADY (it was on the list before this build, and the `&f` repair
+# added a third site without making it newly so). No identifier became newly ambiguous; one
+# more probe points at an old one. *The object grew, not the damage* -- and the sharp guard
+# for `598` is the unit test `ein_fnwert_in_ensures_nennt_einen_namen`, which names the
+# program, not the code.
+MARKE_PROBEN = 63
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

@@ -1,0 +1,40 @@
+-- erwartet: K001
+-- **A hundred operations in index position cost two** (2026-09-02).
+--
+-- `kosten::ausdruck` priced a place as `1 + <number of index suffixes>`: a figure that
+-- COUNTS the index and never looks at it.
+--
+--     let i = teuer(); return t.slots[i].x;   ->  K001, the body costs 103
+--     return t.slots[teuer()].x;              ->  0 errors
+--
+-- `teuer` declares `costs <= 100 ops`, and `f` promises three. **`costs` is the pass
+-- without which termination is declared instead of checked** -- and a call could stand
+-- inside a pair of brackets for free.
+--
+-- > **And this walker is EXHAUSTIVE.** All fourteen `ExprArt` arms stand in it, and the
+-- > compiler forces every one of them (`instrumente/miss-erschoepfung.py` counts
+-- > `ExprArt 14 variants -> 14 forced`). *Exhaustiveness over the enumeration is not
+-- > descent into the node:* naming `ExprArt::Ort` and not entering its index is a branch
+-- > written out that still sees nothing.
+--
+-- The 43 hand-rolled walkers were the question that led here. **This arm was never one of
+-- them and was blind anyway** -- which is the sharpest thing the whole examination found.
+module gift::cost_of_a_call_in_an_index {
+
+table T count 4 { slot { x : u32, } }
+
+impl fn teuer() -> u32 in 0 .. 3
+    effects { pure }
+    costs   <= 100 ops
+{
+    return 1;
+}
+
+impl fn f(t : ptr<normal, r> T) -> u32
+    effects { reads t }
+    costs   <= 3 ops
+{
+    return t.slots[teuer()].x;
+}
+
+}

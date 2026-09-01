@@ -807,3 +807,272 @@ fn aligned_umgeht_die_sperre_nicht() {
     faellt_mit(&quelle("if wert == 4 { return 1; } return 0;"), "H007");
     faellt_mit(&quelle("if aligned(wert, 4) { return 1; } return 0;"), "H007");
 }
+
+// -- The index, and the bracket: two blind spots one level under the statement ------------
+//
+// **`ExprArt` holds 14 variants and the checker held 42 hand-rolled walkers over them**
+// (measured 2026-09-02, `instrumente/miss-erschoepfung.py` beside it). The examination
+// asked of each one what DROPPING a form costs, and the answer came back the same twice
+// over: a walker that names `ExprArt::Ort` without entering its index, and a walker that
+// asks what a value IS without stepping through `ExprArt::Klammer`.
+//
+// *The two shapes point in opposite directions* -- the first loses a guarantee, the second
+// refused a correct program -- and each test below therefore carries both directions.
+
+/// **A call in INDEX position took no lock order with it** (`beispiele/gift/590`).
+///
+/// `geteilt::rufprobe_expr` named `Ruf`, `Klammer`, `Unaer`, `Binaer` and closed with
+/// `_ => {}`. `H012` (rank order across a call) and `H005` (exclusive demand under a shared
+/// hold) are both decided there.
+#[test]
+fn ein_ruf_im_index_traegt_die_sperrordnung() {
+    // `wirkungen` names the effects `f` declares -- the counter-direction below takes no
+    // second lock, and declaring one it never takes would fall at `H011` for a reason that
+    // has nothing to do with this test.
+    let quelle = |wirkungen: &str, rumpf: &str| {
+        format!(
+            "module p {{\nstatic mut a : u32 = 0;\nstatic mut b : u32 = 0;\n\
+             table T count 4 {{ slot {{ x : u32, }} }}\n\
+             lock LA protects {{ a }} rank 5 held <= 100 ops;\n\
+             lock LB protects {{ b }} rank 1 held <= 100 ops;\n\
+             impl fn nimmt_lb() -> u32 in 0 .. 3 effects {{ writes b, locks LB }} \
+             costs <= 8 ops {{ locks LB {{ b = 1; }} return 1; }}\n\
+             impl fn frei() -> u32 in 0 .. 3 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n\
+             impl fn f(t : ptr<normal, r> T) -> u32 effects {{ {wirkungen} }} \
+             costs <= 64 ops {{ locks LA {{ a = 1; {rumpf} }} return 0; }}\n}}"
+        )
+    };
+    let nimmt_beide = "reads t, writes a, writes b, locks LA, locks LB";
+    // Both forms of the same body -- the second is the first with the `let` folded in.
+    faellt_mit(
+        &quelle(nimmt_beide, "let i = nimmt_lb(); return t.slots[i].x;"),
+        "H012",
+    );
+    faellt_mit(&quelle(nimmt_beide, "return t.slots[nimmt_lb()].x;"), "H012");
+    // **The counter-direction: a callee that takes NO lock stays legal in an index.**
+    // Without it the repair could be "refuse every call in an index" and nothing here would
+    // say so.
+    faellt_nicht(&quelle(
+        "reads t, writes a, locks LA",
+        "return t.slots[frei()].x;",
+    ));
+}
+
+/// **A call in INDEX position carried no `Has(…)` demand with it** (`beispiele/gift/591`).
+#[test]
+fn ein_ruf_im_index_traegt_die_merkmalsforderung() {
+    let quelle = |kopf: &str, rumpf: &str| {
+        format!(
+            "module p {{\ntable T count 4 {{ slot {{ x : u32, }} }}\n\
+             impl fn zeit() -> u32 in 0 .. 3 {kopf} effects {{ pure }} costs <= 2 ops \
+             {{ return 1; }}\n\
+             impl fn f(t : ptr<normal, r> T) -> u32 effects {{ reads t }} costs <= 32 ops \
+             {{ {rumpf} }}\n}}"
+        )
+    };
+    faellt_mit(
+        &quelle("requires Has(RDTSCP)", "let i = zeit(); return t.slots[i].x;"),
+        "N016",
+    );
+    faellt_mit(
+        &quelle("requires Has(RDTSCP)", "return t.slots[zeit()].x;"),
+        "N016",
+    );
+    // The counter-direction: without the demand the same call in the same place is clean.
+    faellt_nicht(&quelle("", "return t.slots[zeit()].x;"));
+}
+
+/// **A qualified call in INDEX position crossed the module boundary in silence**
+/// (`beispiele/gift/592`).
+#[test]
+fn ein_qualifizierter_ruf_im_index_trifft_die_modulgrenze() {
+    let quelle = |sichtbar: &str, rumpf: &str| {
+        format!(
+            "module w {{\nmodule a {{\n\
+             {sichtbar} fn heimlich() -> u32 in 0 .. 3 effects {{ pure }} costs <= 1 ops \
+             {{ return 1; }}\n}}\n\
+             module b {{\ntable T count 4 {{ slot {{ x : u32, }} }}\n\
+             impl fn f(t : ptr<normal, r> T) -> u32 effects {{ reads t }} costs <= 32 ops \
+             {{ {rumpf} }}\n}}\n}}"
+        )
+    };
+    faellt_mit(
+        &quelle("impl", "let i = w::a::heimlich(); return t.slots[i].x;"),
+        "N025",
+    );
+    faellt_mit(&quelle("impl", "return t.slots[w::a::heimlich()].x;"), "N025");
+    // The counter-direction: with `pub` the very same call is the normal case.
+    faellt_nicht(&quelle("pub impl", "return t.slots[w::a::heimlich()].x;"));
+}
+
+/// **A hundred operations in index position cost two** (`beispiele/gift/593`, `594`).
+///
+/// `kosten::ausdruck` is EXHAUSTIVE over `ExprArt` -- all fourteen arms, compiler-forced --
+/// and it priced a place as `1 + <number of index suffixes>`. *Exhaustiveness over the
+/// enumeration is not descent into the node.*
+#[test]
+fn ein_ruf_im_index_kostet_was_er_kostet() {
+    let quelle = |zusage: &str, rumpf: &str| {
+        format!(
+            "module p {{\ntable T count 4 {{ slot {{ x : u32, }} }}\n\
+             impl fn teuer() -> u32 in 0 .. 3 effects {{ pure }} costs <= 100 ops \
+             {{ return 1; }}\n\
+             impl fn f(t : ptr<normal, r> T, i : u32 in 0 .. 3) -> u32 \
+             effects {{ reads t }} costs <= {zusage} ops {{ {rumpf} }}\n}}"
+        )
+    };
+    faellt_mit(&quelle("3", "let k = teuer(); return t.slots[k].x;"), "K001");
+    faellt_mit(&quelle("3", "return t.slots[teuer()].x;"), "K001");
+    faellt_mit(
+        &quelle("3", "if aligned(teuer(), 4) { return 1; } return 0;"),
+        "K001",
+    );
+    faellt_nicht(&quelle("120", "return t.slots[teuer()].x;"));
+
+    // **The counter-direction is a NUMBER here, not a code.** A repair that raised every
+    // place by one would pass every assertion above and quietly refuse working programs.
+    // `t.slots[i].x` cost 2 before this change and costs 2 after it: the flat `1` per index
+    // suffix WAS the cost of the commonest index, and `ausdruck` now returns it for a bare
+    // name of its own accord.
+    faellt_nicht(&quelle("2", "return t.slots[i].x;"));
+    faellt_mit(&quelle("1", "return t.slots[i].x;"), "K001");
+    // And a CONSTANT index costs nothing -- which is what the first line of `ausdruck`
+    // already says about every constant. *This one number did move, downwards, on purpose.*
+    faellt_nicht(&quelle("1", "return t.slots[1].x;"));
+}
+
+/// **`match (a)` named no variants at all** (`beispiele/gift/595`).
+///
+/// The subject was read with a bare `if let ExprArt::Ort(…)`, so one pair of brackets took
+/// the whole `D005` check away -- the rule by which the language forbids its users the
+/// catch-all it has forbidden itself (W15).
+#[test]
+fn eine_klammer_nimmt_dem_match_seine_erschoepfung_nicht() {
+    let quelle = |gegenstand: &str, zweige: &str| {
+        format!(
+            "module p {{\ntype Pa = u64;\n\
+             tagged type Art = {{ Speicher(Pa), Endpunkt(u32), Leer }};\n\
+             static mut z : u32 = 0;\n\
+             impl fn f(a : Art) effects {{ writes z }} costs <= 8 ops \
+             {{ match {gegenstand} {{ {zweige} }} }}\n}}"
+        )
+    };
+    let unvollstaendig = "Speicher(p) => { z = 1; } Endpunkt(e) => { z = 2; }";
+    let vollstaendig = "Speicher(p) => { z = 1; } Endpunkt(e) => { z = 2; } Leer => { z = 3; }";
+    faellt_mit(&quelle("a", unvollstaendig), "D005");
+    faellt_mit(&quelle("(a)", unvollstaendig), "D005");
+    // The counter-direction: brackets around a COMPLETE `match` are still just brackets.
+    faellt_nicht(&quelle("a", vollstaendig));
+    faellt_nicht(&quelle("(a)", vollstaendig));
+}
+
+/// **A phase step in brackets was invisible** (`beispiele/gift/596`, `597`).
+///
+/// `gift/258` closed the `return` form on 2026-08-24 with the sentence *"two bodies of the
+/// same meaning, one caught and one not -- purely by where the call sits."* It is now:
+/// purely by whether a bracket stands around it.
+#[test]
+fn eine_klammer_verbirgt_keinen_phasenschritt() {
+    let quelle = |zusage: &str, rumpf: &str| {
+        format!(
+            "module p {{\nlinear ghost type BootPhase order {{ roh, mmu, caps, bereit }};\n\
+             static mut welt : u32 = 0;\n\
+             extern fn schritt(p : BootPhase) -> BootPhase advances roh -> mmu \
+             effects {{ consumes p, writes welt }} costs <= 8 ops;\n\
+             impl fn f(p : BootPhase) -> BootPhase advances roh -> {zusage} \
+             effects {{ consumes p, writes welt }} costs <= 16 ops {{ {rumpf} }}\n}}"
+        )
+    };
+    // The lie, in all four shapes it can take.
+    faellt_mit(&quelle("bereit", "return schritt(p);"), "O004");
+    faellt_mit(&quelle("bereit", "return (schritt(p));"), "O004");
+    faellt_mit(&quelle("bereit", "let q = schritt(p); return q;"), "O004");
+    faellt_mit(&quelle("bereit", "let q = (schritt(p)); return q;"), "O004");
+    // **The counter-direction: the TRUTH in brackets is still the truth.** Without it the
+    // repair could be "a bracketed call reaches no stage at all", which would refuse every
+    // honest body written this way.
+    faellt_nicht(&quelle("mmu", "return (schritt(p));"));
+    faellt_nicht(&quelle("mmu", "let q = (schritt(p)); return q;"));
+}
+
+/// **A bracket made a returned linear value open again** (measured 2026-09-02).
+///
+/// `m2::gehe` books a `return` of a place as "handed on, not open" with a bare
+/// `if let ExprArt::Ort(…)`. `return p;` passed; `return (p);` fell at `L107` -- *`p` is
+/// created here and consumed on no path.* **The refusal direction of the same defect**, and
+/// the more embarrassing of the two: a correct program, refused for its punctuation.
+#[test]
+fn eine_klammer_macht_keinen_linearen_wert_offen() {
+    let quelle = |rumpf: &str| {
+        format!(
+            "module p {{\nlinear type Parked;\n\
+             extern fn parken() -> Parked effects {{ pure }} costs <= 2 ops;\n\
+             impl fn weiter() -> Parked effects {{ pure }} costs <= 32 ops {{ {rumpf} }}\n}}"
+        )
+    };
+    faellt_nicht(&quelle("let p = parken(); return p;"));
+    faellt_nicht(&quelle("let p = parken(); return (p);"));
+    // The counter-direction, and here it is the one that carries the claim: the real leak
+    // must still fall, or the repair is just a silenced pass.
+    faellt_mit(
+        "module p {\nlinear type Parked;\n\
+         extern fn parken() -> Parked effects { pure } costs <= 2 ops;\n\
+         impl fn leck() effects { pure } costs <= 32 ops { let p = parken(); }\n}",
+        "L107",
+    );
+}
+
+/// **`&f` names a function, and one character took the name check away**
+/// (`beispiele/gift/598`).
+///
+/// `ExprArt::FnWert` carries no sub-expression, so `m1::sammle_namen_pred` treated it like a
+/// leaf and let it fall into the catch-all with the leaves. *It is a leaf that NAMES
+/// something.*
+#[test]
+fn ein_fnwert_in_ensures_nennt_einen_namen() {
+    let quelle = |zusage: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             type Probe = fn() -> bool effects {{ reads Z }} costs <= 4 ops;\n\
+             impl fn hart_bereit() -> bool effects {{ reads Z }} costs <= 3 ops \
+             {{ return Z == 1; }}\n\
+             impl fn baue() -> Probe ensures {zusage} effects {{ pure }} costs <= 2 ops \
+             {{ return &hart_bereit; }}\n}}"
+        )
+    };
+    // The bare name always fell; the one behind an `&` did not.
+    faellt_mit(&quelle("result == tippfehler"), "M109");
+    faellt_mit(&quelle("result == &tippfehler"), "M109");
+    // **The counter-direction, and it is the decision this repair had to make and not
+    // guess.** `&hart_bereit` resolves among FUNCTIONS, not among globals -- looking the two
+    // up in one table would have refused every honest producer in the corpus.
+    faellt_nicht(&quelle("result == &hart_bereit"));
+}
+
+/// **A carrier named only inside `aligned(...)` counted for nothing** (measured 2026-09-02).
+///
+/// `gruppe::expr_namen` collects the carriers a connecting invariant names, and `U007`
+/// refuses the group when it names fewer than two. The walker dropped `ExprArt::Eingebaut`
+/// under the catch-all, so a second carrier mentioned only inside `aligned(...)` was invisible
+/// -- and a VALID group was refused. This is the over-refusal direction of the bracket/index
+/// family: fewer names means MORE `U007`, so no single-carrier invariant slips through.
+#[test]
+fn ein_traeger_in_aligned_verbindet_die_gruppe() {
+    let quelle = |inv: &str| {
+        format!(
+            "module p {{\ntable A count 64 {{ slot {{ wartet : u32, }} }}\n\
+             table B count 256 {{ slot {{ gruende : u32, }} }}\n\
+             lock LA protects {{ A }} rank 1 held <= 40 ops;\n\
+             lock LB protects {{ B }} rank 2 held <= 40 ops;\n\
+             group G over {{ A, B }} {{\n\
+             invariant conn cost O(n) runs offline :\n\
+             forall e in slots of A : {inv};\n}}\n}}"
+        )
+    };
+    // Both carriers named, but the second only inside `aligned` -- a valid connecting
+    // invariant, and it must NOT fall.
+    faellt_nicht(&quelle("aligned(B.slots[A.slots[e].wartet].gruende, 4)"));
+    // **The counter-direction, and it carries the claim:** an invariant that names only ONE
+    // carrier -- even through `aligned` -- must still fall, or the fix has blinded `U007`.
+    faellt_mit(&quelle("aligned(A.slots[e].wartet, 4)"), "U007");
+}

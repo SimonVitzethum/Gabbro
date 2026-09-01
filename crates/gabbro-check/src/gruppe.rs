@@ -554,6 +554,38 @@ fn expr_namen(e: &Expr, aus: &mut Vec<String>) {
                 expr_namen(a, aus);
             }
         }
+        // **A carrier named only inside `aligned(...)` counted for nothing** (measured
+        // 2026-09-02). `U007` asks whether a connecting invariant names two carriers, and
+        // the walker dropped `Eingebaut` under the catch-all:
+        //
+        // ```text
+        // forall e in slots of A : B.slots[..].g > 0          ->  2 carriers, ok
+        // forall e in slots of A : aligned(B.slots[..].g, 4)  ->  U007: names 1 carrier
+        // ```
+        //
+        // The second invariant names `B` as surely as the first -- `aligned` evaluates it at
+        // run time. Dropping it made `U007` REFUSE a valid group, the same over-refusal the
+        // bracket holes caused elsewhere: fewer names means more `U007`, never fewer, so no
+        // single-carrier invariant slips through -- but a two-carrier one written this way
+        // was rejected. **Decided per form**, as everywhere: `aligned` names both operands;
+        // `sizeof`/`lenof` over a place name that place (its identity is what the invariant
+        // connects, even if the value comes from the declaration); `old(x)` names its place.
+        ExprArt::Eingebaut(g) => match &**g {
+            Eingebaut::Aligned(a, b) => {
+                expr_namen(a, aus);
+                expr_namen(b, aus);
+            }
+            Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                aus.push(o.basis.text.clone());
+                for suf in &o.suffixe {
+                    if let OrtSuffix::Index(ix) = suf {
+                        expr_namen(ix, aus);
+                    }
+                }
+            }
+            Eingebaut::Sizeof(TypOderOrt::Typ(_)) | Eingebaut::Lenof(TypOderOrt::Typ(_)) => {}
+        },
+        ExprArt::Alt(o) => aus.push(o.basis.text.clone()),
         _ => {}
     }
 }

@@ -802,6 +802,30 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
     aus
 }
 
+/// **The expression a pair of brackets stands around** — `(x)` is `x`, however deep.
+///
+/// Four passes asked *"is the right-hand side a call?"* or *"is it a place?"* with a bare
+/// `if let ExprArt::Ruf(…)`, and a pair of brackets answered no. **Measured 2026-09-02, and
+/// the three findings do not point the same way:**
+///
+/// ```text
+/// return schritt(p);      ->  O004         return (schritt(p));    ->  0 errors
+/// match a { … }           ->  D005         match (a) { … }         ->  0 errors
+/// return p;               ->  0 errors     return (p);             ->  L107
+/// ```
+///
+/// The first two lose a guarantee, the third refuses a correct program — *a walker that
+/// stops at a bracket errs in whichever direction its caller happens to face.*
+/// `ExprArt::Klammer` exists because the emitter must reproduce the brackets it was given
+/// (`M1` reads precedence out of them); **for every pass that asks what a value IS, they
+/// carry nothing**, and this is the one line that says so.
+pub fn ohne_klammern(e: &Expr) -> &Expr {
+    match &e.art {
+        ExprArt::Klammer(x) => ohne_klammern(x),
+        _ => e,
+    }
+}
+
 /// Die Ausdrücke IN einem Ort — jeder Index. `c.slots[i].x` trägt `i`.
 pub fn ausdruecke_im_ort(o: &Ort) -> Vec<&Expr> {
     o.suffixe
