@@ -1968,15 +1968,33 @@ den gehosteten Fall mit *nein* beantwortet.
 
 - [ ] Ein Eintritt in der Sprache, oder eine benannte Absage mit Grund. **Gegen die Ratsche.**
 
-### B2 — Zeichenketten · **gemessen unmöglich, nicht ungebaut**
+### B2 — Zeichenketten · ~~**gemessen unmöglich**~~ **BERICHTIGT: sie gehen HEUTE**
 
-> **Gabbro hat kein `char`**, und C hält `char`/`signed char`/`unsigned char` auseinander.
-> Drei Zeigerformen gegen `puts` sind gemessen abgewiesen.
+> **Zurückgezogen 2026-09-01, eine Stunde nach dem Schreiben.** Der Satz *„Zeichenketten­ausgabe ist unerreichbar"* stammt aus einem Bahnbericht und ist **hier ungeprüft
+> weitergereicht worden.** Gemessen:
 
-`beispiele/63` druckt `Hallo` **Zeichen für Zeichen**. Das ist ehrlich und es ist keine Beta.
+```gabbro
+type Kette = { bytes : [u8; 64], len : u32 in 0 .. 64, };
+extern fn schreib(fd : i32, p : ptr<normal, r> Kette, n : u64) -> i64
+    effects { reads p, writes ausgabe } costs <= 8 ops;
 
-- [ ] Rechnen, was ein `char` kostet — **ein Wort gegen die Ratsche**, und der Handel ist
-      nicht offensichtlich: `32-zeichenkette.gab` existiert seit dem 2026-08-19.
+$ gabbro pruefe   5 items, 0 errors, 0 hints
+$ ./st            Hallo
+```
+
+**Eine beliebige Zeichenkette geht, ohne ein neues Wort.** `32-zeichenkette.gab` trägt den
+Puffer mit Länge seit dem 2026-08-19, und ein `ptr<normal, r>` darauf bindet an jede
+C-Funktion, die man selbst deklariert.
+
+**Was NICHT geht, ist eng und benannt:** `puts` und `printf` wollen `const char *`, und
+Gabbro hat `u8`. *Das ist eine Signaturfrage an der `extern`-Grenze, keine Typsystemfrage* —
+und `N046` ist genau der Pass, der sie stellt.
+
+- [ ] Rechnen, was ein `char` an der **`extern`-Grenze** kostet — nicht in der Sprache.
+      *Vielleicht reicht, dass `N046` `[u8; N]` gegen `char *` durchlässt, wenn der Nutzer es
+      hinschreibt.*
+- [ ] `beispiele/63` druckt Zeichen für Zeichen, **weil `putchar` die einfachste bindbare
+      Form war — nicht, weil mehr unmöglich wäre.** Ein zweites Beispiel gehört daneben.
 
 ### B3 — Der Auffahrtsweg
 

@@ -158,6 +158,30 @@ Bekannte Instanzen im Baum:
 > Ein Standardzweig, der still das Falsche tut, und ein Abbruch, der still den Rest verdeckt —
 > *beides Stellen, an denen etwas ohne Meldung verschwindet.*
 
+## Die Arbeitssprache ist ENGLISCH — alles ausser dem Gespraech
+
+**Gesetzt am 2026-09-01.** Der Baum zeigt auf `github.com/SimonVitzethum/Gabbro`, und was
+dort steht, liest jemand, der kein Deutsch kann.
+
+| | |
+|---|---|
+| **Englisch** | `crates/` und `instrumente/` (Kommentare, seit jeher) · **`.md`-Dokumente** · **`TODO.md`, `DONE.md`, `README.md`** · **Commit-Nachrichten** · Diagnostik · `gabbro hilfe` |
+| **Deutsch bleibt** | nur das Gespraech mit dem Ordner |
+
+**Und die Reihenfolge ist die ganze Regel** — sie steht seit dem 2026-08-31 gemessen da:
+
+> **SIEBEN Waechter lesen deutschen Dokumenttext**, und **VIER werden davon STILL BLIND**
+> (`pruefe-todo.py`, `-zahlen.py`, `-grammatiktafel.py`, `-widerruf.py`), drei laut rot.
+> *Eine blosse Umformulierung einer `TODO.md`-Beschriftung liess ein Muster ins Leere
+> greifen -- und die TODO-Haelfte sagte es bis zum 2026-08-28 nicht.*
+
+**Muster werden zweisprachig, BEVOR das Dokument sich bewegt.** Wer ein Dokument uebersetzt
+und den Waechter danach nachzieht, hat dazwischen einen Lauf, der gruen meldet und nichts
+misst.
+
+*Der Umfang, gemessen: 98 `.md`, 40 879 Zeilen, davon rund die Haelfte deutsch. Die
+Commit-Historie wird NICHT umgeschrieben -- sie ist ein Protokoll, kein Dokument.*
+
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).
