@@ -1108,7 +1108,7 @@ Anläufe für „addiere zwei Zahlen" haben eine Erklärung, die nicht die Sprac
 
 ---
 
-## W28 — Eine Zahl, die eine Bahn auslöst, gehört mit ihrem GRIFF in den Auftrag
+## W28 — Eine Zahl, die eine Bahn auslöst, trägt ihren GRIFF und ihren NENNER
 
 *Gebucht 2026-09-01, nach der sechsten Instanz von `W16` — und die traf diesmal keine
 Messung, sondern eine **Priorisierung**.*
@@ -1135,3 +1135,43 @@ Begründungszahl **lenkt eine Bahn und verschwindet danach.**
 der Steigung ein Missverhältnis. **Aber das ist Glück, kein Verdienst.*** Der Satz, der es
 benennt, stand zwei Antworten vorher im selben Gespräch: *der Unterschied zwischen einem
 Argument, das an einer Messung hängt, und einem, das an der Struktur hängt.*
+
+
+### Die zweite Zeile, angefügt nach der achten Instanz
+
+**Zwei der sechs `W16`-Fälle haben denselben speziellen Grund: `gift/` im Nenner.**
+
+```
+die Domaenenrechnung   17 Woerter fallen   ->   gemessen 3
+§42, eine Antwort spaeter   14 / 31 / 6 / 102   ->   im Ratschenkorpus 3 / 12 / 3 / 52
+                            elf von vierzehn `order` sind GIFTPROBEN
+```
+
+> **Ein Korpus, dessen Zweck Ablehnung ist, in einer Zählung von BENUTZUNG.**
+
+Das ist kein Aufmerksamkeitsfehler, sondern ein **fehlender Standardbereich**. Bei den
+Ergebniszahlen steht der Nenner längst daneben — *„159 Dateien ohne `gift/`"* mit
+Begründung. **Bei den Anlasszahlen nicht**, und das ist dieselbe Asymmetrie wie beim Griff:
+`W7` deckt Ergebnisse, nicht Anlässe.
+
+**Damit hat die Regel zwei Zeilen, und sie fangen die achte Instanz zusammen mit der
+sechsten:**
+
+> **Eine Zahl, die eine Bahn auslöst, trägt ihren GRIFF und ihren NENNER.** Jede
+> Häufigkeitsmessung läuft ohne `gift/`, **es sei denn, jemand schreibt das Gegenteil hin.**
+
+### Und der Standardbereich fehlt auch in einem laufenden Werkzeug
+
+*Gemessen 2026-09-01, während diese Zeile geschrieben wurde:*
+
+```
+zaehle-formate.py:166   beispiele/**/*.gab + messung/**/*.gab
+                        521 Dateien, davon 358 aus `gift/`
+gemeldet: „523 Dateien im Korpus, 46 format-Deklarationen"
+nachgezaehlt: 39 Deklarationen, davon 13 in `gift/` -- ein DRITTEL
+```
+
+**`W7` deckt sie formal — der Nenner steht in der Zeile.** Sie ist trotzdem falsch, *weil
+niemand nach dem Nenner gefragt hat.* Von 21 Werkzeugen, die über `.gab` zählen, nennen
+**vier** `gift/` nicht; zwei davon wählen eine Teilmenge, die es ohnehin ausschließt, und
+**zwei nicht.**
