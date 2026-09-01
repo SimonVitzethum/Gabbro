@@ -29,6 +29,26 @@ pub struct Sicht<'a> {
 }
 
 impl<'a> Sicht<'a> {
+    /// **The `walk` a `mappings of` place stands for -- qualified and bare.**
+    ///
+    /// The place names the PARAMETER (`mappings of w`), not the walk; the name comes out of
+    /// the type, the way it does for tables. `Self` inside the declaration falls through to
+    /// the base name, which is then the walk's own name.
+    ///
+    /// *Extracted on 2026-09-01 because a second reader appeared:* `domaenenschranke` asks
+    /// for the leaf COUNT, `D020` for the node FORMAT, and both start from this one
+    /// resolution. **Two readers of one lookup, written once** -- the rule this file's own
+    /// head paragraph states about `kosten.rs` and `m1.rs`.
+    fn walkname(&self, o: &Ort) -> (String, String) {
+        let name = match self.u.typ_von_ort(self.modul, o, self.lokal).durchgreifen() {
+            Typ::Benannt { name, .. } => name.clone(),
+            Typ::Verbundname(n) => n.clone(),
+            _ => o.basis.text.clone(),
+        };
+        let kurz = name.rsplit("::").next().unwrap_or(&name).to_string();
+        (name, kurz)
+    }
+
     /// Die Schranke einer Domaene, soweit die Deklaration sie nennt.
     pub fn domaenenschranke(&self, d: &Domaene) -> Option<i128> {
         // **`elems of <Feld>` -- die Laenge steht im Typ, und niemand las sie.**
@@ -90,14 +110,7 @@ impl<'a> Sicht<'a> {
             // Laufzeit-Traversierung darueber gibt es damit nicht mehr, und das ist die
             // wahre Aussage statt der bequemen.*
             Domaene::AbbildungenVon(o) => {
-                // Der Ort nennt den PARAMETER (`mappings of w`), nicht den Walk -- der
-                // Name kommt aus dem Typ, wie bei den Tabellen.
-                let name = match self.u.typ_von_ort(self.modul, o, &*self.lokal).durchgreifen() {
-                    Typ::Benannt { name, .. } => name.clone(),
-                    Typ::Verbundname(n) => n.clone(),
-                    _ => o.basis.text.clone(),
-                };
-                let kurz = name.rsplit("::").next().unwrap_or(&name).to_string();
+                let (name, kurz) = self.walkname(o);
                 return self
                     .u
                     .walkschranken
@@ -509,6 +522,7 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
     match &p.art {
         PredArt::Quantor(q) => {
             domaene_pruefen(&q.domaene, s, st, geb, absagen);
+            abbildungsfelder_pruefen(q, s, absagen);
             // The quantifier DECLARES its variable, and an inner domain may run over it --
             // without this the rule would refuse the name the outer line just introduced.
             geb.push(q.variable.text.clone());
@@ -527,6 +541,136 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         | PredArt::Element(_, _)
         | PredArt::Erreicht { .. }
         | PredArt::Held { .. } => {}
+    }
+}
+
+/// **`D020` -- the FIELD names of a bound MAPPING resolve.**
+///
+/// The fourth question at a quantifier, and the first one about the VARIABLE rather than the
+/// place: `D017` reads the base name, `D018` its kind, `D019` the field names of its suffix
+/// -- and all three stop at the place. `mappings of` is **the one domain that binds a record**
+/// (`SPRACHE.md` §6: *"A domain binds the ADDRESS of an entry … `mappings of` is the one
+/// exception"*), so it is the one domain where `m.field` means anything at all, and the one
+/// where nobody read it.
+///
+/// **Measured 2026-09-01 against the UNCHANGED checker.** A `walk` over `[Pte; 512]` with
+///
+/// ```gabbro
+/// invariant erfundenes_feld cost O(n) runs online :
+///     forall m in mappings of Self : !m.gibtsnicht;
+/// ```
+///
+/// gave `3 items, 0 errors, 0 hints` -- **`Pte` has no field of that name and no pass said
+/// so.** The control in the same run: falsifying the BASE name (`mappings of GibtsNicht`)
+/// does fall, at `D017`. *The base is read and the variable's field is not* -- word for word
+/// the sentence `D019` says one level down, and the reason is the same: `ortsfelder_pruefen`
+/// **returns early on a bound name**, because a quantifier variable carries no type in that
+/// pass. For `mappings of` the type is not a guess: it stands in the `walk` declaration.
+///
+/// ## Two families, and the second one is the whole point of Layer 2
+///
+/// A mapping carries the fields of the node `format` (`walkknoten`) **and** three the domain
+/// synthesises from the position -- `SPRACHE.md`:930, *"including virtual address and level"*.
+/// The distinction is not cosmetic: an invariant that reads only entry fields is preserved by
+/// grafting a subtree anywhere, and one that reads `va` is not. **`PLAN-HARDWARE.md` §5
+/// Layer 2 rests on exactly this split, and without this pass nothing in the tree could make
+/// it.**
+///
+/// ## Silent wherever the walk did not resolve
+///
+/// Same discipline as `D019`: no `walk` name, no node `format`, no field list -- no refusal.
+/// A rule that says nothing about an unknown carrier says nothing at all.
+fn abbildungsfelder_pruefen(q: &gabbro_syntax::ast::Quantor, s: &Sicht, absagen: &mut Absagen) {
+    let Domaene::AbbildungenVon(o) = &q.domaene else { return };
+    let (name, kurz) = s.walkname(o);
+    let Some(knoten) = s
+        .u
+        .walkknoten
+        .iter()
+        .find(|(k, _)| *k == &name || k.rsplit("::").next() == Some(kurz.as_str()))
+        .map(|(_, v)| v.clone())
+    else {
+        return;
+    };
+    let Some(felder) = s.u.formate.get(&knoten) else { return };
+    let v = &q.variable.text;
+    let mut orte = Vec::new();
+    pred_orte(&q.rumpf, v, &mut orte);
+    for ort in orte {
+        if &ort.basis.text != v {
+            continue;
+        }
+        let Some(OrtSuffix::Feld(f) | OrtSuffix::Ueber(f)) = ort.suffixe.first() else {
+            continue;
+        };
+        if STELLUNGSFELDER.contains(&f.text.as_str())
+            || felder.iter().any(|(n, _)| n == &f.text)
+        {
+            continue;
+        }
+        let hat: Vec<&str> = STELLUNGSFELDER
+            .iter()
+            .copied()
+            .chain(felder.iter().map(|(n, _)| n.as_str()))
+            .collect();
+        absagen.schiebe(
+            Absage::fehler(
+                "D020",
+                f.span,
+                format!("`{v}.{}` is not a field of a mapping", f.text),
+            )
+            .mit_notiz(format!(
+                "`mappings of` binds a leaf entry of `{}` together with its position -- a \
+                 quantifier over a field that stands nowhere ranges over nothing, and it \
+                 stands in the certificate and in the library ABI. `D019` says the same \
+                 sentence about the field names of the PLACE",
+                kurz
+            ))
+            .mit_notiz(format!("it has: {}", hat.join(", "))),
+        );
+    }
+}
+
+/// **The three fields a mapping carries that the node `format` does not.**
+///
+/// They come from the POSITION, not from the entry -- `SPRACHE.md`:930, *"quantifies over all
+/// reachable leaf entries of a `walk` structure, including virtual address and level"*, and
+/// `messung/fragmente/F09.gab`:67, *"per mapping `va`, `level` and `index[level]` stand
+/// ready"*. **A predicate that reads one of these is PATH-DEPENDENT**, and that is the
+/// property `PLAN-HARDWARE.md` §5 Layer 2 turns on: an entry write moves them, a graft
+/// re-derives them, and no bit of the table has to change for that to happen.
+const STELLUNGSFELDER: &[&str] = &["va", "level", "index"];
+
+/// Every place a predicate mentions under the name `v` -- the walker `alle_orte` performs
+/// over an EXPRESSION, lifted to the predicate forms that hold one.
+///
+/// **It stops at an inner quantifier that REBINDS `v`.** Nesting is at most two
+/// (`SPRACHE.md` §6), so `forall m in mappings of Self : exists m in slots of k : …` is
+/// writable, and there the inner `m` is a table index with no fields of the walk's node
+/// `format` at all. *A rule that refused it would refuse the name the inner line just
+/// introduced* -- the same shadowing question `aus_pred` answers with its `geb` stack, and
+/// the same sentence `grundname_pruefen` writes about a bound base name.
+fn pred_orte<'p>(p: &'p Pred, v: &str, aus: &mut Vec<&'p Ort>) {
+    match &p.art {
+        PredArt::Vergleich(e) => aus.extend(crate::alle_orte(e)),
+        PredArt::Element(e, _) => aus.extend(crate::alle_orte(e)),
+        PredArt::Erreicht { von, nach, .. } => {
+            aus.push(von);
+            aus.push(nach);
+        }
+        PredArt::Quantor(q) => {
+            if q.variable.text != v {
+                pred_orte(&q.rumpf, v, aus);
+            }
+        }
+        PredArt::Klammer(i) | PredArt::Nicht(i) => pred_orte(i, v, aus),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            pred_orte(a, v, aus);
+            pred_orte(b, v, aus);
+        }
+        // **No `_` arm**, for the reason `aus_pred` states twenty lines down: a new predicate
+        // kind must fail to compile here rather than slip past.
+        PredArt::Held { .. } => {}
     }
 }
 

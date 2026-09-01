@@ -145,6 +145,18 @@ pub struct Umgebung {
     /// named the wrong thing -- the `W16` shape: an instrument measuring something other
     /// than its subject. **The name lives here, the number lives there.**
     pub walknamen: HashSet<String>,
+    /// **`walk`-Name -> der Name des `format`, das seine Knoteneintraege beschreibt.**
+    ///
+    /// The third question about a `walk`, next to its name and its leaf count -- and the one
+    /// that says what a BOUND MAPPING carries. `mappings of` is the only domain that binds a
+    /// record instead of an index (`SPRACHE.md` §6), and until 2026-09-01 nothing anywhere
+    /// could answer *which fields that record has*: `forall m in mappings of Self :
+    /// !m.gibtsnicht` passed with `0 errors, 0 hints` over an unchanged checker.
+    ///
+    /// **Two field families, and only one of them comes from here.** The node `format` gives
+    /// the ENTRY's fields; `va`, `level` and `index` are SYNTHESISED from the position
+    /// (`SPRACHE.md`:930, *"including virtual address and level"*). `D020` holds both.
+    pub walkknoten: HashMap<String, String>,
     /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
     pub uebergangskosten: HashMap<String, i128>,
     pub formate: HashMap<String, Vec<(String, Typ)>>,
@@ -812,6 +824,16 @@ impl Umgebung {
                     // saying otherwise turns a bound problem into a name problem, and the
                     // reader goes looking for a declaration that is right there.
                     self.walknamen.insert(q(&w.name.text));
+                    // **The node element type -- what a BOUND MAPPING carries.** The emitter
+                    // already refuses a `node` element that is not a named `format`
+                    // (`emit.rs::walk_`); the name is kept here so that `D020` can read the
+                    // entry's fields without walking the tree a second time.
+                    if let TypExpr::Pfad(p) = &w.knoten.element {
+                        if let Some(letztes) = p.teile.last() {
+                            self.walkknoten
+                                .insert(q(&w.name.text), q(&letztes.text));
+                        }
+                    }
                     let ebenen = self.konst_wert(pfad, &w.ebenen);
                     let laenge = self.konst_wert(pfad, &w.knoten.laenge);
                     if let (Some(e), Some(l)) = (ebenen, laenge) {

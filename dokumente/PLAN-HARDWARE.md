@@ -294,7 +294,10 @@ Code.**
 
 ---
 
-## §5 — Seitentabellen: drei Schichten, und die billigste ist die dritte
+## §5 — Page tables: three layers, and the CHEAPEST one was measured against the wrong thing
+
+*Rewritten 2026-09-01, after the first measurement against an existing SYSTEM instead of
+against this tree. Three of the four claims this section stood on moved.*
 
 ```gabbro
 walk Seitentabelle levels 4 {
@@ -305,69 +308,264 @@ walk Seitentabelle levels 4 {
 }
 ```
 
-Was das erzeugte C dazu sagt:
+`walk` carries **structure and termination** (4 levels, 512 entries, the descent ends by
+construction). The invariant it does not carry — and since 2026-08-31 the emitted C says so
+under its own name instead of claiming the opposite:
 
 ```c
-/* invariant wx_getrennt runs online -- COMPILE TIME (W6), not re-checked here;
- *   it quantifies over `mappings of`, whose bound is an open finding
- *   about the COST PASS. This descent walks ONE path and claims nothing
- *   about the domain */
+/* invariant wx_getrennt runs online -- NOT checked here and by no pass either;
+ *   it stands as a `W` obligation in `gabbro pflichten`. */
 ```
 
-`walk` trägt **Struktur und Terminierung** (4 Ebenen, 512 Einträge, Abstieg endet durch
-Konstruktion). Die Invariante trägt es nicht.
+- [x] **`runs online` without a generated check.** Closed 2026-08-31, and NOT as `C001`: the
+      word `online` names three classes and only one fails. Booked as a `W` obligation
+      instead. *A rule over the word would have hit two working registers to reach the one
+      that does not work.*
 
-### Der Befund vor den drei Schichten
+### The register, measured
 
-> **`device … at dma` senkt nicht ab und sagt es unter Namen: `C001`. `walk … invariant …
-> runs online` senkt ab, erzeugt Code, und schreibt in einen KOMMENTAR, dass es das
-> Versprochene nicht tut.**
->
-> Zwei Konstrukte derselben Sprache behandeln dasselbe Versagen verschieden, und nur eines
-> davon ist im Prüferprotokoll sichtbar.
+```
+handle:  ./target/debug/gabbro pflichten <file> | grep '^W'
+         over beispiele/*.gab + messung/*/*.gab   --   171 files, no gift/
 
-- [ ] **`runs online` ohne erzeugte Prüfung ist `C001`.** Kostet nichts, und die Lücke steht
-      danach in der Absageliste statt im C-Kommentar — gezählt wie die anderen `H`-Pflichten.
+beispiele/07-eintritt-und-boot.gab    wx_getrennt · kein_nutzer_im_kern            2
+messung/grammatik/blocklauf.gab       kein_block_im_kopf · geteilt_bleibt_lesbar   2
+messung/proben/probe-stellungen.gab   s9_mappings                                  1
+```
 
-### Schicht 1 — TLB *(billig, real ausnutzbar, kein Beweisanteil)*
+`instrumente/zaehle-lean.py` books the same five under `walk-invariant`: *"owed by NOBODY."*
 
-W⊕X kann im Speicher gelten und **in einem veralteten TLB-Eintrag verletzt sein** — und
-dieser Eintrag ist die Abbildung, die die Hardware tatsächlich benutzt. Zwischen dem
-Schreiben eines PTE und dem `invlpg`/`TLBI` existiert ein Fenster; **bei mehreren Kernen ist
-es kein Fenster, sondern ein Shootdown-Protokoll.**
+### `W29` first: count the uses BEFORE the rule, and ask whether they go wrong the same way
 
-**Kein Konstrukt der Sprache nennt es.** Gemessen: `tlb`/`invlpg`/`shootdown` kommen in
-keinem Sprachkonstrukt vor.
+**The five `walk` declarations are not five page tables.**
 
-- [ ] Ein `mapping`-Konstrukt, **dessen Absenkung die Invalidierung selbst erzeugt.** Die
-      Regel ist mechanisch: PTE-Schreiben erzeugt `invlpg`/`TLBI`, und für mehrere Kerne
-      wird **der Shootdown Teil der Absenkung statt Sache des Aufrufers.**
+| what it is | files | levels × width |
+|---|---|---|
+| an x86_64 page table | `beispiele/07`, `messung/fragmente/F09` | 4 × 512 |
+| a filesystem **inode block tree** | `messung/grammatik/blocklauf` | 3 × 256 |
+| a domain-position probe | `probe-stellungen`, `probe-neun-domaenen` | 2 × 512 |
 
-*Bestes Verhältnis von allen: ein vergessener Shootdown ist ein realer Ausnutzungspfad, und
-die Reparatur braucht keine neue Theorie.*
+> **A rule that fires on `walk` and means "page table" is wrong for three of five** — and
+> `blocklauf.gab` was written to catch exactly that: *"If `walk` can only describe page
+> tables, it shows up here."* **The distribution is not uniform, and it runs against the
+> reading §5 used to assume.**
 
-### Schicht 2 — Erhaltung *(mittel)*
+---
 
-**W⊕X ist keine Eigenschaft des Abstiegs, sondern der Änderung.** Erhalten werden muss die
-Invariante an jeder Stelle, die einen PTE schreibt.
+### Layer 1 — TLB · **the construct has a WITNESS, and the rule does not belong at the write**
 
-- [ ] Ein `mapping`-Konstrukt mit der `walk`-Invariante als **Nachbedingung**.
+*The demand cannot be measured on this tree. Measuring it there would be a circle:* a PTE
+write without an invalidation construct is not sensibly writable today, so it does not stand
+in the corpus, so Rule A refuses, so the construct never comes into being. **The corpus
+carries zero statements that write a page-table entry** — 3 of 6 walk-typed places are
+writable, one is a declaration without a body and two have empty bodies — *and that number
+says nothing about the need.*
 
-Und die Präzisierung, die die Kosten halbiert:
+**The witness is `../caprock-messbasis` (branch `arch/x86_64`, read-only, never committed
+into). Measured 2026-09-01:**
 
-> **Ein einzelner PTE-Schreibvorgang kann W⊕X nur an dem einen Eintrag verletzen, den er
-> schreibt.** Als Induktion geführt statt als globale Aussage braucht die Prüfung keine
-> Quantifizierung über die Domäne — **und damit fällt `mappings of` als Kostenproblem für
-> diese Invariante weg.**
+```
+handle:  a line that ASSIGNS and whose VALUE is a page-table entry -- a descriptor helper,
+         a raw entry OR-ed from the flag constants, or a bare 0 -- plus every
+         `write_entry(…)` call in vtd.rs. The handle is the RIGHT-hand side, because the
+         target shapes vary: `pd[i] =`, `*e =`, `pt[b].0[i] =`,
+         `unsafe { table_mut(p)[i] = … }`, `(*addr_of_mut!(PDPT)).0[g] =`.
+         Invalidation distance is counted in CALL FRAMES, not in lines.
+denominator: crates/caprock-hal/src/x86_64/{mmu.rs, vtd.rs}, 139 .rs / 75 294 lines in tree
 
-### Schicht 3 — Selbstbezug *(Forschungsanteil)*
+page-table entry writes                                          51
+   mmu.rs   (x86_64 page tables)                    37 in 22 functions
+            (the 22nd is `adopt_high_ram`, added by hand -- see below)
+   vtd.rs   (VT-d root, context and second-level)   14 `write_entry` call sites
 
-Der Kern verändert die Abbildung, unter der sein eigener Code läuft. **Niemand hat das
-gelöst;** seL4 zieht den Schnitt und beweist funktionale Korrektheit unter der Annahme, dass
-der Kern gemappt bleibt.
+by KIND of change, and the classes do NOT go wrong in the same direction:
 
-- [ ] Ein Konstrukt, das erklärt, **welcher Bereich unter jeder Änderung unverändert bleiben
-      muss** — die ehrliche Kodierung davon.
+   CHANGE or REMOVE of a LIVE entry      6 fns   7 writes    invalidate 6 of 6
+       protect_page · guard_unmap · guard_remap · guard_block ·
+       vspace_unmap_page · vspace_unmap_block
+       four in their own frame, two via `vspace_unmap` -> `flush_asid`
+   ADD of a new entry                   13 fns  26 writes    3 own · 3 caller · 7 NEVER
+   teardown of an unreachable table      3 fns   4 writes    3 via `vspace_teardown`
+   the IOMMU half                       14 writes            14 of 14, inside the write
+   SWITCH (CR3; writes no entry at all)  set_user_vspace, and `axiom write_cr3` has it
+```
+
+*One of the 51 was added by hand:* `adopt_high_ram`:507 splits its assignment across two
+lines, and a line-based handle cannot see it. **It is named rather than quietly dropped** —
+the number is 51 because a human read the miss, not because the grep said so.
+
+**Every single change to a live mapping invalidates. Six of six, and not one is missing.** A
+rule *"a PTE write emits `invlpg`"* would therefore be **redundant where it is right and
+wrong where it is not**: it would add an invalidation to twenty-six ADD writes, fourteen of
+which deliberately omit it.
+
+> **The rule belongs at the KIND of change, not at the write.** Change or removal of a live
+> entry → invalidation, and on several cores a shootdown. Addition → rests on a named
+> assumption. Address-space switch → CR3, already carried by `axiom write_cr3`.
+
+**And the architectural half is not a language question.** Whether not-present → present
+needs an invalidation is a statement about the machine: Intel's SDM *permits* implementations
+to cache not-present entries in the paging-structure caches, and AArch64's safe answer
+differs. Caprock states it in prose at `mmu.rs`:379 and acts on it inconsistently — 6 of 13
+ADD functions invalidate anyway.
+
+- [x] **Written down as the assumption it is, 2026-09-01**, and it cost no word:
+      `beispiele/06-annahmen.gab`, `assume neuer_eintrag_verdraengt_nichts arch x86_64 …
+      falsifier sonde_praesent_ohne_invalidierung`. *A lowering that decided this would decide
+      it for both architectures at once, and for one of them wrongly.*
+
+**And the sentence that used to launch this layer was measured on the wrong denominator
+(`W28`).** It read *"no construct of the language names it; measured, `tlb`/`invlpg`/
+`shootdown` occur in no language construct."* True of the **vocabulary**, and read as a
+statement about **coverage**. In the corpus the TLB is named four times in two files —
+`axiom invlpg(v : u64) effects { writes tlb } falsifier sonde_invlpg` stands in
+`beispiele/06`, and `SPRACHE.md`:285 assigns privileged instructions to the axiom layer on
+purpose.
+
+#### The success mark, and it is not `unsafe`
+
+`flush_va_global` is one `unsafe { asm!("invlpg …") }`. Counting those is the wrong mark:
+**the `unsafe` does not disappear, it moves from the caller's discipline into the lowering.**
+
+*Caprock has already made that move by hand, in the IOMMU half, and says why in its own
+words* (`vtd.rs`:1261):
+
+> *"Damit das keine Disziplinfrage bleibt, geht **jeder** Tabellenschreibzugriff durch
+> `write_entry`, das nie ohne Flush zurückkehrt."*
+
+`write_entry(addr, v)` is `write_volatile` plus `flush_entry`, and 14 call sites go through
+it. **That is the construct of Layer 1, written in Rust, enforced by a comment.** So the mark
+is *forgettable sites* — places that could omit the invalidation and still compile:
+
+```
+                        forgettable today      under the construct
+Caprock MMU  (37 writes)        37                      0
+Caprock IOMMU (14 writes)        0  -- by hand           0
+```
+
+**The IOMMU column is the whole argument in two numbers.** Someone needed this badly enough
+to build it manually for one of two families; the other family is still discipline, and 6 of
+6 correct there is a fact about today, not a guarantee.
+
+- [ ] **Not built here, and the reason is ordering, not doubt.** The rule needs the KIND of
+      change as a language notion, and `walk` does not distinguish an ADD from a CHANGE
+      today. *Building the lowering first would emit the invalidation at
+      twenty-six ADD writes, fourteen of which Caprock deliberately leaves bare.*
+
+### Layer 2 — Preservation · **the induction breaks, and it breaks on a reading nobody made**
+
+**W⊕X is not a property of the descent but of the CHANGE.** And the sharpening that was
+supposed to halve the cost:
+
+> ~~A single PTE write can violate W⊕X only at the one entry it writes. Carried as an
+> INDUCTION, the check needs no quantification over the domain — and `mappings of` drops out
+> as a cost problem.~~
+
+**It is false, and the counter-example is the hierarchy.** On x86-64 the effective permission
+of a mapping is not the leaf's bit: effective W is the **conjunction** of `RW` over the whole
+path, effective X the **negation of the disjunction** of `NX`. So:
+
+> Take a leaf with `RW=1, NX=0` under a PML4 entry with `RW=0`. Effective W is 0 — W⊕X holds.
+> **Now write that one PML4 entry, setting `RW=1`. Nothing at the leaf changed.** W⊕X is now
+> violated at every executable leaf below it — **up to 512³ = 134 217 728 entries the write
+> never touched.**
+
+**And whether that counter-example exists at all depends on a reading this tree has never
+made.** `mappings of` is decided as the leaf SET (`SPRACHE.md`:930, bound `node length ^
+levels` = 68 719 476 736); what `m.schreibbar` MEANS is not decided anywhere:
+
+| reading of `m.schreibbar` | is it the hardware property? | is the entry-induction sound? |
+|---|---|---|
+| **the leaf entry's own bit** | **no** — strictly stronger; refuses tables x86 permits | yes, plus a domain-growth side condition |
+| **effective (∧/∨ over the path)** | **yes** | **no** — one interior write moves up to 512³ leaves |
+
+> **The two properties Layer 2 needs cannot both hold, and nobody has chosen.** *That is the
+> finding, and it is worse than the cost question it was hiding.*
+
+**A second, independent break, and it needs no permission hierarchy at all.** A bound mapping
+carries two families of field:
+
+| | | survives a graft? |
+|---|---|---|
+| fields of the node `format` | `m.schreibbar`, `m.nx`, `m.block` | **yes** — they travel with the entry |
+| fields the domain SYNTHESISES | `m.va`, `m.level`, `m.index` | **no** — derived from the PATH |
+
+Grafting a subtree that satisfied `kein_nutzer_im_kern` below `index[0] = 0` under
+`index[0] = 256` **re-derives every `va` in it** and breaks the invariant — *without a single
+bit changing anywhere in the table.* Over the five corpus invariants:
+
+```
+handle:  does the predicate mention `va`, `level` or `index`?
+
+path-INDEPENDENT   4 of 5   wx_getrennt · kein_block_im_kopf ·
+                            geteilt_bleibt_lesbar · s9_mappings
+path-DEPENDENT     1 of 5   kein_nutzer_im_kern   beispiele/07:34
+```
+
+**One of the two invariants §5 quotes.** And until 2026-09-01 no pass could tell them apart,
+because no pass read the field names of a bound mapping at all — `forall m in mappings of
+Self : !m.gibtsnicht` passed with `0 errors, 0 hints`. That is now `D020`
+(`beispiele/gift/570`), and it cost no word.
+
+#### The way out, and it is blocked twice — measured, not assumed
+
+Carrying the induction over **PATHS** instead of entries repairs the hierarchy break: the
+check stays local but needs the ancestors' permissions. `ancestors of` exists. It does not
+reach here:
+
+```
+forall a in ancestors of Self : …   inside a `walk` invariant
+  error: [D018] `ancestors of Self` needs a slot of a table, and `Self` is a `walk`
+```
+
+1. **`D018` refuses it by kind** — `ancestors of` takes a table or an index into one.
+2. **And the bound is silent behind it.** `domaenenschranke` answers `VorfahrenVon` out of a
+   table's capacity; a `walk` has no table, so it would return `None` and `K003` would ask for
+   a declaration. *The bound is not missing in principle* — an ancestor chain in a `walk` is
+   `levels` long and that stands in the declaration — **it is one field nobody reads for this
+   purpose.**
+
+> **Do not build across that coupling.** A path induction built before the bound stands
+> inherits exactly the cost problem it was meant to dissolve. *And a correction to `§51 S1`
+> while this was measured: `domaenenschranke` has **two** callers, not one — `kosten.rs`:665
+> and `m1.rs`:3824. This file's own head paragraph has said so since 2026-08-19.*
+
+- [ ] **A `mapping` construct with the `walk` invariant as a postcondition — not built.**
+      Ordered behind: (a) deciding what `m.schreibbar` means, (b) `ancestors of` over a
+      `walk`, (c) its bound. *Only (c) is arithmetic; (a) is the one that decides whether the
+      invariant means what its name says.*
+
+### Layer 3 — Self-reference · **booked as an assumption, and that is more than it looks**
+
+The kernel changes the mapping under which its own code runs. seL4 draws the cut and proves
+functional correctness **under the assumption that the kernel stays mapped**.
+
+**Measured over all of Caprock (139 `.rs`, 75 294 lines): no site, no comment, no document
+writes down which region must stay unchanged under every change.** *Probably because there is
+no form for it* — which makes the sentence below the first of its kind in reach, and for the
+same reason **unchecked**: there is no version to hold it against.
+
+What such a statement has to say is three clauses, and only two are expressible:
+
+1. **A REGION, named in the declaration.** `beispiele/07` already writes the negative half
+   with no new word: `ensures !exists m in mappings of kern_wurzel : m.rahmen >=
+   BOOT_RAHMEN_UNTEN && …`. The self-reference clause is that sentence turned around.
+2. **The MOMENT it must hold — and this is the half nothing can say.** A postcondition speaks
+   about the state after a body; the kernel's own mapping must survive **every intermediate
+   state**, because an interrupt can arrive between two entry writes. *That is a statement
+   about a TRACE*, and `§51 S2` books the same wall for frame conditions.
+3. **Which region counts as "the kernel's own" — and the construct must not guess.** `.boot`
+   is a link-time stretch and not a bit in the entry; `beispiele/07` passes
+   `BOOT_RAHMEN_UNTEN`/`_OBEN` in from the linker, and a self-reference clause takes the same
+   road.
+
+- [x] **Booked as an `assume` and not as an `invariant`, 2026-09-01**, because of clause 2:
+      `assume kern_bleibt_unter_jeder_aenderung_abgebildet … falsifier sonde_kern_entmappt`.
+      **An assumption no probe could contradict would not be a statement** (`N031`); this one
+      has a concrete probe — *unmap the region artificially and see whether the system falls.*
+- [ ] **Do not build a construct.** Two of three clauses would look complete while the third
+      is the one seL4 also only assumes. *A construct that hides that is worse than an
+      assumption that names it.*
 
 ---
 
@@ -2062,7 +2260,7 @@ am Prozess.*
 
 Siebzehn Wörter, keine benutzerdefinierten. **Eine neue Datenstruktur braucht den
 Sprachautor.** Gerechnet, nicht gebaut: die Regel senkt **drei** Wörter, nicht siebzehn —
-*und trägt trotzdem, weil `domaenenschranke` genau EINEN Aufrufer hat.* Ohne `costs`-Zeile
+*und trägt trotzdem, weil `domaenenschranke` wenige Aufrufer hat* — **ZWEI, nachgezählt 2026-09-01**, nicht einen: `kosten.rs`:665 und `m1.rs`:3824. *Die Kopfzeile von `domaene.rs` sagt es seit dem 2026-08-19 selbst, und die Zahl daneben war eine Jahreszahl.* Ohne `costs`-Zeile
 fragt niemand nach der Schranke einer Domäne, und `reach … via` steht seit jeher in der
 Grammatik.
 
@@ -2126,11 +2324,24 @@ nicht für x86-I/O.**
 W1C- und geteilte Register unterscheidet, wäre die Fortsetzung der Phasenklasse — *und
 §42 hat gezeigt, dass diese Familie teurer ist, als sie aussieht.*
 
-### S8 — Die drei Schichten der Seitentabelle
+### S8 — The three layers of the page table · **all three moved on 2026-09-01**
 
-**TLB** (kein Konstrukt nennt `invlpg`/`TLBI`/Shootdown, billig und real ausnutzbar) ·
-**Erhaltung** (die Invariante hängt am Abstieg statt an der Änderung; als Induktion geführt
-braucht sie keine Quantifizierung) · **Selbstbezug** (ungelöst, auch bei seL4).
+*The old entry read: TLB (no construct names `invlpg`/`TLBI`/shootdown, cheap and really
+exploitable) · preservation (as an induction it needs no quantification) · self-reference
+(unsolved, seL4 too). **Measured against Caprock, two of those three were wrong and the third
+was booked in the wrong form.*** `§5` carries it in full; the short version:
+
+| | |
+|---|---|
+| **TLB** | The construct has a **witness**, not a demand: 51 page-table entry writes in Caprock, and its IOMMU half already routes every one of them through a hand-written `write_entry` that *"never returns without a flush"*. But **the rule belongs at the KIND of change**: all 6 change/remove functions invalidate, and 7 of 13 ADD functions deliberately do not. The architectural half is now `assume neuer_eintrag_verdraengt_nichts arch x86_64`. |
+| **Preservation** | The induction **breaks on the permission hierarchy** — one interior `RW` bit moves up to 512³ leaves the write never touched — *and whether it breaks at all depends on what `m.schreibbar` means, which nothing in this tree decides.* The way out (induction over PATHS) is blocked twice: `D018` refuses `ancestors of` over a `walk`, and the bound behind it is silent. **Do not build across that coupling.** |
+| **Self-reference** | **Nothing in Caprock writes it down**, not even as a comment. Booked as `assume kern_bleibt_unter_jeder_aenderung_abgebildet … falsifier sonde_kern_entmappt`, because its load-bearing clause is about a TRACE and no `ensures` can say it. |
+
+**And the general rule this section paid for twice** (`W29`): *before a rule over a word
+belongs a count of its uses — and not only how many, but whether they go wrong in the SAME
+DIRECTION.* Over `walk`: two page tables, one **inode block tree**, two grammar probes. Over
+a PTE write: four kinds, and a rule at the write would be redundant for one and wrong for
+another. **Two uses that mask each other are worse than ten that do the same thing.**
 
 ### Und was NICHT mehr offen ist
 

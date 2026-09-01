@@ -87,7 +87,12 @@ UMGEBUNG = W / "crates" / "gabbro-check" / "src" / "umgebung.rs"
 #
 # The old value stood at 27 from 2026-08-25 with the note *„25 of them in the emitter"*. That
 # sentence was the finding, written down and read as background for five days.
-RATSCHE = 2
+# **2 -> 3 on 2026-09-01, and the mark RISES with its reason.** `D020` (the `S8` lane) reads
+# `u.formate` at `domaene.rs`:595 with a plainly passed name -- it checks that the field name
+# of a `mappings of` binder stands somewhere, and the format map is one of the places it must
+# look. *A third site on this map is a third place where a module-unaware lookup could hide,
+# and it is named rather than counted away.* **The mark may only fall from here.**
+RATSCHE = 3
 
 # A computed key: a variable one can see was built.
 BERECHNET = re.compile(r"^&?(schluessel|schl|k|q|key|pfad|voll|qual)\b")

@@ -182,7 +182,11 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # **292 -> 293 on 2026-09-01, and the mark RISES with its reason.** The entry-point lane
 # added `beispiele/63-druckt.bau` and the entry rule in `bau.rs`; one comment cites a rule it
 # does not issue. **The target stays 207** -- the object grew, the debt did not.
-MARKE = 295
+#
+# **295 -> 296 on 2026-09-01, and the mark RISES with its reason.** The `S8` lane added
+# `D020`, two assumptions and `beispiele/gift/570`; one comment cites a rule it does not
+# issue. **The target stays 207** -- the object grew, the debt did not.
+MARKE = 296
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
