@@ -85,7 +85,7 @@ exhaustive old narrow to induction order advances
 reads writes locks masks allocs consumes publishes diverges pure
 if else match traverse over by touches retry forever until
 bounded progress on_exceeded per_pass return let mut
-unvisited consuming decreasing leave leaves next ops result
+unvisited consuming leave leaves next ops result
 exchange update returns insert remove relabel
 ptr normal mmio dma code boot r w rw x own
 format table slot invariant reason state transition device reg

@@ -521,14 +521,37 @@ Gabbro überall macht, und er ist bisher nirgends **beziffert**.
       word."* **Die Stellungszahl ist keine Ratsche und soll steigen:** fällt die erste, ohne
       dass die zweite steigt, wurde Ausdruck verloren statt getauscht.
 
-### Ein Kandidat steht in der eigenen Tafel
+### Ein Kandidat stand in der eigenen Tafel — und er ist GEFALLEN
 
 `by decreasing e` — *„the same walk. The measure is a witness and says nothing about the run
 that `unvisited` does not."*
 
-**Es ist ein Beweiszeuge, kein Laufmodus.** Als dritter Modus neben `unvisited`/`consuming`
-steht es in der falschen Zone; es gehört zu den **Verträgen**, nicht zum Ablauf.
+**Es war ein Beweiszeuge, kein Laufmodus.** Als dritter Modus neben `unvisited`/`consuming`
+stand es in der falschen Zone; es gehört zu den **Verträgen**, nicht zum Ablauf.
 *Drei Modi, zwei Läufe.*
+
+> **Ausgeführt am 2026-09-01, als erster Fall der Ratsche von §11.** Die Grammatik lautet
+> jetzt `"by" ( "unvisited" | "consuming" ) [ "decreases" expr ]`, und `decreasing` ist aus
+> `kw.rs` verschwunden: **222 → 221 Wörter, null neue.** Gemessen wurde vorher genau die
+> Frage, die dieser Abschnitt stellt — *spart die Verschiebung ein Wort oder verschiebt sie
+> nur eines?* Sie spart: das Wort, das den Zeugen jetzt trägt, ist `decreases`, und das stand
+> seit «K5.4» am `fn`-Kopf für dasselbe Maß über der Rekursion.
+>
+> *Dieselbe Bewegung, dieselbe Produktion, drei Tage früher:* `invariant` ging von der
+> `table` an alle drei Schleifenformen, und `SYNTAX.md` sagt dazu *„It is not a new word."*
+>
+> **Und die Ausschließlichkeit fiel mit:** `by consuming decreases e` ist schreibbar und war
+> es nicht. **Die Stellungszahl blieb dabei bei 333** — `decreasing` hatte eine Stellung,
+> `decreases` hat jetzt zwei statt einer (`fndecl` **und** `traverse`). Die Summe steht, der
+> Nenner fiel um eins, und 1,49 wurde 1,50 je Terminal. *Das ist die Gestalt, in der so ein
+> Handel einer ist: die Reichweite bleibt, der Wortschatz wird kleiner.* Wäre die Summe
+> mitgefallen, wäre Ausdruck verschwunden statt getauscht — und `zaehle-wortschatz.py` druckt
+> beide Zahlen nebeneinander, damit man das eine vom anderen unterscheiden kann.
+>
+> Der Preis, vollständig: 3 Dateien in `gabbro-syntax` · **4 Lesestellen in `gabbro-check`**
+> (`lib.rs`, `schleifen.rs`, `zeremonie.rs`, `emit.rs`) · 11 Korpusstellen in 11 Dateien ·
+> 9 Teststellen · 2 Grammatikblöcke. `cargo test --no-fail-fast` 15 Sammlungen grün,
+> `pruefe-emission.sh` `ALL PASS`, alle vier Giftproben mit unveränderter Kennung.
 
 ---
 

@@ -4486,8 +4486,21 @@ bezahlt, jede neue Rekursionsform bekommt ein Konstrukt statt eines Terminierung
       *`invariant` wanderte von der `table` an alle drei Schleifenformen, ohne dass ein Wort
       dazukam.* Die Stellungszahl ist ausdrücklich **keine** Ratsche: sie soll steigen, und
       wenn die erste fällt, ohne dass sie steigt, wurde Ausdruck verloren statt getauscht.
-- [ ] `by decreasing e` steht als dritter Laufmodus und ist ein **Beweiszeuge**. *Drei Modi,
-      zwei Läufe.*
+- [x] ~~`by decreasing e` steht als dritter Laufmodus~~ — **das Wort ist GEFALLEN**
+      (2026-09-01). *Drei Modi, zwei Läufe* — also zwei Läufe: `by ( unvisited | consuming )
+      [ decreases expr ]`. **Es ist der erste Fall der Ratsche, und er spart, statt zu
+      verschieben:** der Zeuge zieht in die Vertragszone, und das Wort dort — `decreases` an
+      einem `fn`-Kopf, «K5.4» — trägt schon genau dieses Maß, nur über der Rekursion statt
+      über den Durchgängen. **222 → 221 Wörter, null neue.**
+      Der Erzeuger hatte den Grund seit dem 2026-08-20 selbst aufgeschrieben: *„`by
+      decreasing` — DASSELBE; das Maß ist ein Terminierungszeuge und sagt über den Lauf
+      nichts, was `unvisited` nicht schon sagt."* **Und die Klausel ist jetzt nicht mehr
+      ausschließend:** `by consuming decreases e` ist schreibbar und war es nicht.
+      **Die Stellungszahl blieb dabei bei 333, und das ist nachgemessen und nicht gehofft:**
+      `decreasing` hatte eine Stellung, `decreases` hat jetzt zwei statt einer (`fndecl` und
+      `traverse`) — die Summe steht, der Nenner fiel, und 1,49 wurde 1,50 je Terminal. *Der
+      Handel ist einer, weil die Reichweite blieb, während der Wortschatz kleiner wurde;
+      hätte auch die Summe verloren, wäre Ausdruck verschwunden statt getauscht worden.*
 
 ## OA2 — Domänen sind geschlossen · **der schärfste Widerspruch zum Ziel**
 

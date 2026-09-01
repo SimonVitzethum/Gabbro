@@ -144,7 +144,7 @@ denominator that shines instead of the one that costs.*
 | | | |
 |---|---|---|
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 258 diagnostics · `gabbro paesse` |
-| **Grammar** | **154 EBNF rules**, closed and reachable | vocabulary covers every terminal, 219 / 219 |
+| **Grammar** | **154 EBNF rules**, closed and reachable | vocabulary covers every terminal, 218 / 218 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Pass register** | **81 statements over 12 passes — 74 measured, **2 ARGUED**, 5 conjectured, 0 PROVED.** 45 of 258 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
 | **Guardians** | 28, and ~~44 of 44~~ ~~45 of 45~~ ~~47 of 47~~ ~~49 of 49~~ ~~50 of 50~~ ~~52 of 52~~ ~~53 of 53~~ **54 of 54 instruments carry all five requirements** — four read statically (deadline · two-way speech test · red on abort · **pinned locale**), the fifth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The locale demand joined on 2026-08-25: under `de_DE.UTF-8` the linker says `Mehrfachdefinition von`, and `pruefe-emission.sh` reported an error that did not exist.* *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **294 of 294 mutations caught** *(run 2026-08-24, `ki-pc-fisch-101`)* |

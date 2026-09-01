@@ -90,7 +90,7 @@ check kontostand {
         -- die Kette traegt Verweise von Glied zu Glied, und die muessen ueber den ganzen
         -- Aufstieg gueltig bleiben.
         observes BACCT {
-            traverse v of wurzel over ancestors of Konten.slots[wurzel] by decreasing v {
+            traverse v of wurzel over ancestors of Konten.slots[wurzel] by unvisited decreases v {
                 if Konten.slots[v].zaehler > schwelle {
                     return false;
                 }

@@ -68,7 +68,7 @@ impl fn f(g : index into Topologie, v : index into Riesen) -> u32
     effects { reads Topologie.slots, reads Riesen.slots }
 {
     let mut summe : u32 in 0 .. 65535 = 0;
-    traverse v of g over ancestors of g by decreasing v
+    traverse v of g over ancestors of g by unvisited decreases v
         touches reads Topologie.slots
     {
         traverse d of v over descendants of v by unvisited

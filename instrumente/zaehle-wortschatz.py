@@ -73,7 +73,16 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # **Whoever raises this line writes beside it WHICH word was displaced, or the measurement
 # saying that no existing form carries the new one.** A raise without one of the two is the
 # growth rule this mark exists against.
-MARKE_WOERTER = 222
+#
+# **222 -> 221 on the same day, and by the ratchet's OWN first case.** `decreasing` fell: it
+# stood as a third run form at `traverse` while the emitter had written down since
+# 2026-08-20 that it is not one -- *three modes, two runs*. The witness became a clause,
+# `by ( unvisited | consuming ) [ decreases expr ]`, and the word it is spelled with was
+# already in the vocabulary («K5.4», at a `fn` head, the same measure over the recursion).
+# **Nothing new was added**, and the position count stayed at 333 while this denominator
+# fell -- 1,49 became 1,50 per terminal. *That is the shape of a trade; a fall in both would
+# have been a loss.*
+MARKE_WOERTER = 221
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #
@@ -85,7 +94,12 @@ MARKE_WOERTER = 222
 # **Two-hundred-ten missing reasons are NOT a backlog to work off**, and that is why this is
 # a ratchet and not a target. The rule is about the NEXT word. What the mark buys is that
 # the next one cannot arrive silently -- and every reason written on the way past lowers it.
-MARKE_OHNE_GRUND = 210
+#
+# **210 -> 208 on 2026-09-01**, out of the same change: one word left the population, and the
+# ledger entry for its fall sits above `unvisited`, which therefore now carries a reason too.
+# *A mark that is only ever touched on the way up is a mark and not a ratchet* -- so it
+# travels down with the measurement, in the same run that measured it.
+MARKE_OHNE_GRUND = 208
 
 # **The single lowering theorem, booked with its address.** `beweise/Absenkung_Parametrisch.thy`
 # holds `ops relabel` against the emitted C -- and its result is that the sentence *"the

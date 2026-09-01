@@ -1205,8 +1205,9 @@ pub const SCHLEIFEN: &[Satz] = &[
     Satz {
         name: "schleifen.fortschritt",
         kennungen: &["S003", "S004", "S005", "S006", "S007", "S008"],
-        aussage: "A `progress X` names a declared and FALSIFIABLE assumption, a `by \
-                  decreasing` measure names the traversal variable or a name the body writes, \
+        aussage: "A `progress X` names a declared and FALSIFIABLE assumption, a \
+                  `decreases` measure names the traversal variable or a name the body \
+                  writes, \
                   a `by consuming` names at least one `consumes` in its `touches` (`S008`), \
                   and an `on_exceeded` names a function that returns.",
         vorbehalt: "**Necessary, not sufficient, and the pass says so: it is NOT checked \

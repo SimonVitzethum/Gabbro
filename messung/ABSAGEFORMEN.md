@@ -390,7 +390,7 @@ Was an `F05` übrig bleibt, hat seit heute seinen eigenen Satz und ist U10.
 | `6184` | `ancestors of` over a place that names no table | ungemessen |  |
 | `6188` | `ancestors of` over a table whose `tree` names no `parent` edge -- «B41b»: the edge stands at the table, and a missing one is an ANSWER, not a gap | mit Fehler | beispiele/gift/69-vorfahren-ohne-schranke.gab `K003` |
 | `6197` | `ancestors of` over a table without `count` -- no sentinel | ungemessen |  |
-| `6262` | `descendants of … by decreasing` -- a measure over a tree walk is not decided: which of the two orders it constrains is not written anywhere | ungemessen |  |
+| `6262` | ~~`descendants of … by decreasing`~~ **`descendants of … decreases`** -- a measure over a tree walk is not decided: which of the two orders it constrains is not written anywhere | ungemessen |  |
 | `6272` | `descendants of` over a place that names no table | ungemessen |  |
 | `6276` | `descendants of` over a table with no `tree` -- «B41b»: the edge stands at the table, and this one names none | mit Fehler | beispiele/gift/195-descendants-ohne-tree.gab `S008` · beispiele/gift/296-schleifeninvariante-nennt-nichts.gab `M133` |
 | `6285` | `descendants of` needs all three edges -- `child` and `sibling` to walk down, `parent` to come back WITHOUT a stack (one as deep as the tree is hig… | mit Fehler | beispiele/gift/196-descendants-nur-mit-elter.gab `S008` |

@@ -746,10 +746,10 @@ impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 op
     // **2. Der Abstieg ist seit Stufe 3 entschieden, und zwar UNGLEICH** (2026-08-20).
     //
     // Bis dahin stand hier *„was es fuer den LAUF heisst, ist nicht entschieden"* -- fuer
-    // BEIDE Ordnungen, und fuer `by decreasing` war das eine offene Frage ueber etwas ohne
+    // BEIDE Ordnungen, und fuer `decreases` war das eine offene Frage ueber etwas ohne
     // Laufwirkung. Die Entscheidung trennt sie:
     //
-    //   `by decreasing`  ein Terminierungszeuge, LAEUFT wie `by unvisited`
+    //   `decreases`  ein Terminierungszeuge, LAEUFT wie `by unvisited`
     //   `by consuming`   derselbe Lauf PLUS die Entnahme -- und die ist erzeugter Code
     let (_, f) = c_von(
         "module t { table W count 16 { slot { a : bool, } }
@@ -763,9 +763,9 @@ impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 op
     let (c, f) = c_von(
         "module t { table W count 16 { slot { a : bool, } }
 impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 ops
-{ traverse i over slots of w by decreasing (16 - i) touches writes w.slots { w.slots[i].a = false; } } }",
+{ traverse i over slots of w by unvisited decreases (16 - i) touches writes w.slots { w.slots[i].a = false; } } }",
     );
-    assert!(f.is_empty(), "`by decreasing` hat keine Laufwirkung und senkt ab: {f:?}");
+    assert!(f.is_empty(), "`decreases` hat keine Laufwirkung und senkt ab: {f:?}");
     assert!(c.contains("i < (uint32_t)(sizeof("), "dieselbe Laufform wie `by unvisited`:\n{c}");
 
     // **2b. «B12» ist entschieden: `elems of` bindet einen INDEX.** Aus dem Index bekommt
@@ -6853,10 +6853,10 @@ impl fn f(x : Fund, g : index into T) -> u32
 
     // 1 -- the traversal variable holds in the BODY, not only in its own `invariant`.
     let a = absagen(&mit(
-        "traverse a of g over ancestors of g by decreasing a
+        "traverse a of g over ancestors of g by unvisited decreases a
              touches reads T.slots
          {
-             traverse b of g over ancestors of g by decreasing b
+             traverse b of g over ancestors of g by unvisited decreases b
                  touches reads T.slots
                  invariant forall k in descendants of a : T.slots[k].wert == 0
              { }
@@ -6872,7 +6872,7 @@ impl fn f(x : Fund, g : index into T) -> u32
         "match x {
              Nichts => { }
              Knoten(k) => {
-                 traverse a of g over ancestors of g by decreasing a
+                 traverse a of g over ancestors of g by unvisited decreases a
                      touches reads T.slots
                      invariant forall z in descendants of k : T.slots[z].wert == 0
                  { }
@@ -6889,10 +6889,10 @@ impl fn f(x : Fund, g : index into T) -> u32
     for (was, rumpf) in [
         (
             "nach der Traversierung",
-            "traverse a of g over ancestors of g by decreasing a
+            "traverse a of g over ancestors of g by unvisited decreases a
                  touches reads T.slots
              { }
-             traverse b of g over ancestors of g by decreasing b
+             traverse b of g over ancestors of g by unvisited decreases b
                  touches reads T.slots
                  invariant forall k in descendants of a : T.slots[k].wert == 0
              { }",
@@ -6900,7 +6900,7 @@ impl fn f(x : Fund, g : index into T) -> u32
         (
             "nach dem `match`",
             "match x { Nichts => { } Knoten(k) => { } }
-             traverse a of g over ancestors of g by decreasing a
+             traverse a of g over ancestors of g by unvisited decreases a
                  touches reads T.slots
                  invariant forall z in descendants of k : T.slots[z].wert == 0
              { }",
@@ -6910,7 +6910,7 @@ impl fn f(x : Fund, g : index into T) -> u32
             "match x {
                  Knoten(k) => { }
                  Nichts => {
-                     traverse a of g over ancestors of g by decreasing a
+                     traverse a of g over ancestors of g by unvisited decreases a
                          touches reads T.slots
                          invariant forall z in descendants of k : T.slots[z].wert == 0
                      { }
@@ -7010,7 +7010,7 @@ impl fn f(g : index into Topologie, {param} : index into Riesen) -> u32
     effects {{ reads Topologie.slots, reads Riesen.slots }}
 {{
     let mut summe : u32 in 0 .. 65535 = 0;
-    traverse v of g over ancestors of g by decreasing v
+    traverse v of g over ancestors of g by unvisited decreases v
         touches reads Topologie.slots
     {{
         traverse d of v over descendants of v by unvisited

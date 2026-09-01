@@ -160,7 +160,7 @@ impl fn anfrage_beantworten(a : Anfrage) -> Zaehlerwert
             -- hintereinander waeren zwei Gnadenfristen, und die Kette koennte zwischen
             -- ihnen zerfallen.
             observes BACCT {
-                traverse v of i over ancestors of Konten.slots[i] by decreasing v {
+                traverse v of i over ancestors of Konten.slots[i] by unvisited decreases v {
                     -- **Je Kettenglied wird die Frische neu geholt**: ein Stand, der vor
                     -- dem Aufstieg gelesen wurde, sagt ueber das gerade besuchte Glied
                     -- nichts.
@@ -281,7 +281,7 @@ impl fn abgleichen(i : index into Konten) -> Zaehlerwert
     {
         observes BACCT {
             -- Die Kette nach oben: ein Konto zaehlt fuer sein Oberkonto mit.
-            traverse v of i over ancestors of Konten.slots[i] by decreasing v {
+            traverse v of i over ancestors of Konten.slots[i] by unvisited decreases v {
                 gesehen = Konten.slots[v].zaehler;
             }
             -- Und der Platz, den die Rueckgewinnung als naechstes nimmt, wird mitgelesen --

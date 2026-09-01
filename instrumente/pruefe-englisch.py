@@ -411,7 +411,7 @@ def flaechenprobe():
 MARKE_KOMMENTARE = 7892   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
 # **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
 # MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
-MARKE_PY = 1069           # 1072 -> 1070 on 2026-08-31: two German comment lines in
+MARKE_PY = 1067           # 1072 -> 1070 on 2026-08-31: two German comment lines in
                           # `pruefe-kennungen.py` went into an English docstring
 # **-> 1069 on 2026-09-01, and the mark was ALREADY slack when it was found.** Measured while
 # `zaehle-wortschatz.py` was being built: the file was moved aside and the run repeated, and
@@ -420,6 +420,10 @@ MARKE_PY = 1069           # 1072 -> 1070 on 2026-08-31: two German comment lines
 # touched on the way up is a mark, not a ratchet*, and this file says so four lines higher
 # about itself. **A slack mark is invisible: it is green, and it is green about one line of
 # room that was never earned.**
+# **-> 1067 later the same day.** Two more fell in `mutiere-pruefer.py`, on the way past: the
+# comment on the descent anchor was rewritten when `decreasing` left the vocabulary, and it
+# came back English. *That is the shape the mark is supposed to move in* -- not a translation
+# campaign, a line taken along by work that had to touch it anyway.
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 
 # **THE FEEDER MARK -- IT CAME INTO BEING TODAY AND SO RISES FROM NOTHING TO 179.**

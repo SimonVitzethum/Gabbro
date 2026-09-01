@@ -6876,15 +6876,20 @@ fn nachfahren(
         // ungeprueftes Stueck Erzeuger. *Das ist der Unterschied zwischen einer Absenkung
         // und einer Vorratshaltung.*
         Abstieg::Verbrauchend | Abstieg::Unbesucht => {}
-        Abstieg::Fallend(_) => {
-            weigere(
-                absagen,
-                s.span,
-                "`descendants of … by decreasing` -- a measure over a tree walk is not \
-                 decided: which of the two orders it constrains is not written anywhere",
-            );
-            return;
-        }
+    }
+    // **The refusal follows the witness out of `Abstieg`** (2026-09-01). It was a match arm
+    // on the third run form; the third run form is gone, and the measure is now a clause
+    // that either stands here or does not. *The refusal is unchanged in reach and in
+    // wording: this emitter still does not know which of the two tree orders a measure
+    // constrains.*
+    if x.mass.is_some() {
+        weigere(
+            absagen,
+            s.span,
+            "`descendants of … decreases` -- a measure over a tree walk is not \
+             decided: which of the two orders it constrains is not written anywhere",
+        );
+        return;
     }
     let Some((tab, basis, wurzel)) = baumsicht(o, u, absagen) else {
         weigere(absagen, s.span, "`descendants of` over a place that names no table");

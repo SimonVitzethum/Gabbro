@@ -730,11 +730,13 @@ fn schleife(
 ) {
     match sch {
         Schleife::Traverse(t) => {
-            if let Abstieg::Fallend(e) = &t.abstieg {
+            // `t.mass` since 2026-09-01: the witness is a clause, not a run form. The
+            // ceremony line names it the way the source spells it.
+            if let Some(e) = &t.mass {
                 aus.push(Stelle {
                     regel: "T6",
                     ort: ort.to_string(),
-                    was: format!("by decreasing {}", schnitt(quelle, e.span)),
+                    was: format!("decreases {}", schnitt(quelle, e.span)),
                     nachweis: None,
                 });
             }

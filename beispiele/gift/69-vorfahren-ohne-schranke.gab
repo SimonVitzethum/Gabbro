@@ -31,7 +31,7 @@ impl fn hoehe(g : index into Topologie) -> u32
     costs   <= 900 ops
 {
     locks TOPO {
-        traverse v of g over ancestors of g by decreasing v {
+        traverse v of g over ancestors of g by unvisited decreases v {
             Topologie.slots[v].elter = None;
         }
     }

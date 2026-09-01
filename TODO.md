@@ -713,7 +713,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2630 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2632 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -1091,7 +1091,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      154 EBNF-Regeln und 219 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      154 EBNF-Regeln und 218 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -1107,7 +1107,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       claims) or renaming (then every user carries the list in their head).
       **The compiler today admits words as names only after `.`/`->` and before `:`.**
       *Kein Messposten: die Zahlen (neun Wörter, elf Stellen) stehen, und `pruefe-wortschatz.py`
-      hält 219 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
+      hält 218 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
       in beiden Richtungen daneben.* Bleibt offen.
 
 - [ ] **Per template at least one mutation that falls ONLY if the once-obligation is really
@@ -4697,7 +4697,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 154 / 219) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 154 / 218) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

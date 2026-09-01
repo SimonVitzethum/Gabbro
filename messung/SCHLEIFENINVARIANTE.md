@@ -25,7 +25,7 @@ also gar nicht geschrieben werden können.*
 
 | | |
 |---|---|
-| **das MASS** | trägt sie. `traverse … by consuming`/`by decreasing e`, `retry … bounded 1024 ops`, `forever … per_pass bounded 60000 ops on_exceeded …`. Dazu `K008`/`K009` an der Rekursion. **Terminierung ist Sprachsache und steht.** |
+| **das MASS** | trägt sie. `traverse … by consuming`/`… decreases e`, `retry … bounded 1024 ops`, `forever … per_pass bounded 60000 ops on_exceeded …`. Dazu `K008`/`K009` an der Rekursion. **Terminierung ist Sprachsache und steht.** |
 | **die AUSSAGE** | trägt sie nicht. Was *über* der Schleife gilt — die Invariante — hat kein Wort. |
 
 **Und genau darum kann ein Beweiser über den Ausgang einer Schleife nichts sagen.** Nicht,

@@ -1339,6 +1339,23 @@ pub struct Traverse {
     pub gegenstand: Option<Expr>,
     pub domaene: Domaene,
     pub abstieg: Abstieg,
+    /// `decreases e` -- **the descent WITNESS, and it is not a run form.**
+    ///
+    /// Until 2026-09-01 this stood as `Abstieg::Fallend(e)`, a third value beside
+    /// `unvisited` and `consuming`. The emitter had already written down why that is the
+    /// wrong zone (`emit.rs`, stage 3, 2026-08-20): *"`by decreasing` -- the SAME as
+    /// `by unvisited`; the measure is a termination witness and says nothing about the run
+    /// that `unvisited` does not."* **Three modes, two runs** -- so the witness moved out of
+    /// the mode and into a clause of its own, and the word it is spelled with is the one the
+    /// contract zone already uses for exactly this job at a `fn` («K5.4»).
+    ///
+    /// *Same move, same production, three days earlier:* `invariant` went from the `table`
+    /// to all three loop forms, and `SYNTAX.md` says of it *"It is not a new word."*
+    ///
+    /// **And the exclusivity fell with it:** `by consuming decreases e` is expressible now
+    /// and was not before. The vocabulary lost a word and the grammar gained a position --
+    /// the two numbers `zaehle-wortschatz.py` prints, moving in opposite directions.
+    pub mass: Option<Expr>,
     pub touches: Option<Wirkungen>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
     /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
@@ -1347,11 +1364,14 @@ pub struct Traverse {
     pub span: Span,
 }
 
+/// The run form of a `traverse` -- **two, because there are two runs.**
+///
+/// The descent witness is `Traverse::mass` and no longer a variant here; the reason stands
+/// there.
 #[derive(Debug, Clone)]
 pub enum Abstieg {
     Unbesucht,
     Verbrauchend,
-    Fallend(Expr),
 }
 
 #[derive(Debug, Clone)]

@@ -258,16 +258,21 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
 /// **Nicht:** dass das Mass faellt. Das ist eine Aussage ueber Werte und gehoert dem
 /// Beweiser -- `consuming.ordnung` (S1) fuehrt sie als Schablone.
 ///
-/// **Sondern:** dass es sich ueberhaupt bewegen KANN. Ein `by decreasing E`, in dem weder die
+/// **Sondern:** dass es sich ueberhaupt bewegen KANN. Ein `decreases E`, in dem weder die
 /// Traversierungsvariable noch ein Name vorkommt, den der Rumpf schreibt, ist ueber alle
 /// Durchgaenge KONSTANT -- und ein konstantes Mass faellt nie.
 ///
 /// ```gabbro
-/// traverse v of g over ancestors of g by decreasing v         -- die Variable, ok
-/// traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i)
-///                                                              -- `i` schreibt der Rumpf, ok
-/// traverse i over slots of w by unvisited by decreasing GRENZE -- KONSTANT
+/// traverse v of g over ancestors of g by unvisited decreases v   -- die Variable, ok
+/// traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - i)
+///                                                                -- `i` schreibt der Rumpf, ok
+/// traverse i over slots of w by unvisited decreases GRENZE       -- KONSTANT
 /// ```
+///
+/// **And since 2026-09-01 this check reaches one run form further.** While the measure WAS
+/// the third alternative, `by consuming` could not carry one; it is a clause of its own now,
+/// and `by consuming decreases e` falls here just the same. *The reach grew because a word
+/// fell* -- which is the direction in which such a trade is one.
 ///
 /// > **Es ist die notwendige Bedingung, nicht die hinreichende** -- und genau darum steht sie
 /// > hier statt beim Beweiser. *Eine notwendige Bedingung, die ein Pass halten kann, ist mehr
@@ -313,7 +318,10 @@ fn abstieg_pruefen(t: &Traverse, absagen: &mut Absagen) {
             );
         }
     }
-    let Abstieg::Fallend(e) = &t.abstieg else { return };
+    // **`t.mass` since 2026-09-01** -- the witness left `Abstieg` and became its own
+    // clause, so this check no longer asks about the run form at all. It reaches
+    // `by consuming decreases e` too, which was unwritable before.
+    let Some(e) = &t.mass else { return };
     let mut namen = Vec::new();
     namen_im_ausdruck(e, &mut namen);
     if namen.is_empty() {
