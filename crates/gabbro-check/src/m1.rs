@@ -1611,6 +1611,60 @@ impl<'a> Pruefer<'a> {
             }
             ExprArt::Klammer(i) => self.ausdruck_roh(i, lage),
             ExprArt::Ort(o) => {
+                // **`u32::max` is a NUMBER, and until 2026-09-01 M1 did not know it.**
+                //
+                // «G5» put both segments into the vocabulary and the constant folder has read
+                // the pair ever since -- `const G : u32 = u32::max;` lowers to
+                // `#define G 4294967295u`, correctly. **In an EXPRESSION nobody asked it.**
+                // Measured: `return w ^ u32::max;` with `w : u16` passed with 0 errors and
+                // booked two of three expressions as untyped, while the same mask spelled
+                // `4294967295` falls at `M104` *(`u16 ^ u32 in 4294967295 .. 4294967295`
+                // leaves the width of the result type)* and at `M101`.
+                //
+                // > *Two spellings of one number, one of them checked.* The named limit is
+                // > the form this language offers instead of a magic constant -- and it was
+                // > the one that escaped the width rule.
+                //
+                // It stands BEFORE `name_aufloesen`, because `u32` is not a name a body
+                // declares and asking that question first is how the form got treated as a
+                // place. The value comes from `umgebung::grenzwort`, the same reader the
+                // folder uses (W7).
+                if let Some((breite, vz, w)) = crate::umgebung::grenzwort(o) {
+                    return Typ::Ganzzahl(IntBereich::genau(breite, vz, w, w));
+                }
+                // **And a MISSPELLED limit is the same defect, one field name over.**
+                //
+                // `u32::gross` measured on the repaired binary: 0 errors, 0 hints, two of
+                // three expressions untyped -- and `gabbro emit` writes `u32->gross`.
+                // *Repairing `max` and `min` alone would have closed the two spellings
+                // somebody happened to try and left the family open.*
+                //
+                // An integer word has exactly two members, and neither a declaration nor a
+                // `let` can give it a third: `u32` is a WORD, not a name a body binds. So
+                // this is not `M119` ("declared nowhere", fixed by a declaration) -- there
+                // is no declaration that would fix it.
+                if let (Some(kw), 1, Some(OrtSuffix::Feld(f))) =
+                    (gabbro_syntax::kw::Kw::suche(&o.basis.text), o.suffixe.len(), o.suffixe.first())
+                {
+                    if kw.ist_intty() {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M138",
+                                e.span,
+                                format!(
+                                    "`{}::{}` -- an integer word has `max` and `min`, and \
+                                     nothing else",
+                                    o.basis.text, f.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "`u32` is a word of the closed vocabulary, not a name a \
+                                 declaration could give another member",
+                            ),
+                        );
+                        return Typ::Unbekannt;
+                    }
+                }
                 self.name_aufloesen(o, lage);
                 // **Die INDIZES sind Ausdruecke, und M1 zaehlte sie nicht.** `t.slots[j].x`
                 // mit unbekanntem `j` galt als *ein* Ausdruck mit 100 % Deckung.

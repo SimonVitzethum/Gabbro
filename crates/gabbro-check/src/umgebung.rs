@@ -933,25 +933,8 @@ impl Umgebung {
             }
             ExprArt::Ort(o) => {
                 // `u64::max` und `i32::min` -- die Grenzen einer Breite als Konstante.
-                if o.suffixe.len() == 1 {
-                    if let (Some(kw), OrtSuffix::Feld(f)) =
-                        (Kw::suche(&o.basis.text), &o.suffixe[0])
-                    {
-                        if kw.ist_intty() {
-                            // A word without a width has no `max` and no `min` -- the
-                            // constant then does not stand, and that is the honest answer.
-                            // (`ist_intty` and the table cover each other today; should
-                            // they drift apart, a constant drops out here instead of a
-                            // wrong one coming into being.)
-                            let Some((breite, vz)) = breite_von(kw) else { return None };
-                            let (lo, hi) = grenzen(breite, vz);
-                            return match f.text.as_str() {
-                                "max" => Some(hi),
-                                "min" => Some(lo),
-                                _ => None,
-                            };
-                        }
-                    }
+                if let Some((_, _, w)) = grenzwort(o) {
+                    return Some(w);
                 }
                 if !o.suffixe.is_empty() {
                     return None;
@@ -1586,6 +1569,46 @@ pub enum Feldurteil {
     KeineFelder,
     /// The carrier's type did not resolve. **Nothing is claimed** (W10).
     Unklar,
+}
+
+/// **`u32::max` and `i32::min` -- the limits of a width, read ONCE for three callers.**
+///
+/// «G5» made both segments vocabulary words, and the constant folder above has read the pair
+/// since that day. **What it did not do was tell anyone else** -- and measured 2026-09-01
+/// that cost two things at once:
+///
+/// * M1 gave the form no type. `return w ^ u32::max;` with `w : u16` passed with **0 errors**
+///   and booked two of three expressions as untyped, while the same mask written out as
+///   `4294967295` falls at `M104` and `M101`. *Two spellings of one number, and only one of
+///   them is checked.*
+/// * The emitter lowered it as a PLACE: `w ^ u32->max` -- a field access through a pointer to
+///   a variable that does not exist. `cc` said `u32 undeclared`, and that is the one refusal
+///   this generator must never delegate.
+///
+/// > The `const` path was right the whole time (`#define G 4294967295u`), because it asks
+/// > this folder. **The defect was never the folding; it was that only one caller asked.**
+///
+/// Returns the width, the signedness and the value. `None` for anything that is not this
+/// form -- including a word without a width, where the honest answer is that the constant
+/// does not stand (see `breite_von`).
+pub fn grenzwort(o: &Ort) -> Option<(u8, bool, i128)> {
+    if o.suffixe.len() != 1 {
+        return None;
+    }
+    let (Some(kw), OrtSuffix::Feld(f)) = (Kw::suche(&o.basis.text), &o.suffixe[0]) else {
+        return None;
+    };
+    if !kw.ist_intty() {
+        return None;
+    }
+    let (breite, vz) = breite_von(kw)?;
+    let (lo, hi) = grenzen(breite, vz);
+    let wert = match f.text.as_str() {
+        "max" => hi,
+        "min" => lo,
+        _ => return None,
+    };
+    Some((breite, vz, wert))
 }
 
 /// Width in BITS and signedness of an integer word -- **or `None`.**

@@ -8066,6 +8066,23 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
             return x.clone();
         }
     }
+    // **`u32::max` in an EXPRESSION -- and it lowered to `u32->max`.**
+    //
+    // Measured 2026-09-01: `return w ^ u32::max;` checks clean and emits `w ^ u32->max`, a
+    // field access through a pointer to a variable no declaration ever made. `cc` says
+    // `u32 undeclared`. *The one refusal this generator must never delegate is the one it
+    // does not even know it is making* -- and this was not a refusal at all, it was a place
+    // lowering that happened to fit.
+    //
+    // > The `const` path was right the whole time and writes `#define G 4294967295u`. It is
+    // > right because it asks `umgebung.rs`. **The defect was one caller that did not.**
+    //
+    // The suffix follows the same rule as the `#define`: `u` for a non-negative value, none
+    // for `i32::min` -- an `-2147483648u` would not merely be ugly, it would be another
+    // number.
+    if let Some((_, _, w)) = crate::umgebung::grenzwort(o) {
+        return if w < 0 { format!("({w})") } else { format!("{w}u") };
+    }
     // **Ein blankes `None` an einer Stelle, die keine Option ist, wird ABGELEHNT.**
     //
     // Bis zum 2026-08-19 fiel es hier durch und wurde der C-Bezeichner `None` -- ein Name,
