@@ -1675,7 +1675,15 @@ um acht gewachsen, während der Absenkungssatz bei eins blieb — also gilt hier
 verlangt: jedes muss nennen, welches Wort es ablöst oder warum keine vorhandene Form es
 trägt. Sortiert nach diesem Handel, nicht nach Reiz.*
 
-## §42 — `phase` verallgemeinern · **der einzige, der den Wortschatz SENKT**
+## §42 — ~~`phase` verallgemeinern · **der einzige, der den Wortschatz SENKT**~~ **NACHGERECHNET UND ABGELEHNT**
+
+> **Ausgerechnet am 2026-09-01, Regel A, und die Rechnung trägt nicht:
+> `messung/PHASENKONSTRUKT.md`.** Es fällt **EIN** Wort (221 → 220), nicht vier. Der
+> versprochene Absenkungssatz ist **null statt null** — eine Geistmarke senkt nichts ab.
+> Zwei der vier „weiteren Stellen" haben das Konstrukt schon, eine braucht keines, eine ist
+> kein Gang, sondern ein Baum. **Und die vier Zahlen unten sind über dem Giftkorpus
+> erhoben.** *Der Rest dieses Abschnitts steht als Gegenstand der Rechnung, nicht als
+> Vorschlag.*
 
 `class rw in setup, r in live` über `linear ghost type QueuePhase order { setup, live }` ist
 heute an `reg` gefesselt. **Der Mechanismus dahinter ist allgemein: eine lineare, geordnete
@@ -1684,29 +1692,58 @@ Geistermarke schaltet erlaubte Operationen.**
 *Gemessen 2026-09-01 — das Muster liegt schon breit im Baum:*
 
 ```
-linear ghost type … order { … }     14
-advances <a> -> <b>                 31
-class … in <phase>                   6      <- nur hier ist es ein KONSTRUKT
-consumes …                         102      <- die Handkombination
+linear ghost type … order { … }     14      -> im Ratschenkorpus: 3   (11 in `gift/`)
+advances <a> -> <b>                 31      -> im Ratschenkorpus: 12  (19 in `gift/`)
+class … in <phase>                   6      -> im Ratschenkorpus: 3   (4 in `gift/`)
+consumes …                         102      -> im Ratschenkorpus: 52  (50 in `gift/`)
 ```
 
-**Vier weitere Stellen tragen dasselbe Muster ohne Konstrukt:**
+> **Die Grundgesamtheit stand nicht dabei, und sie ist der erste Befund.** Die Zahlen sind
+> über **alle 526 `.gab`** erhoben, darunter die **357 Giftproben**. Die Ratsche, gegen die
+> dieser Vorschlag sich rechtfertigen muss, misst über **164**. *Eine Giftprobe ist ein
+> Programm, das FALLEN soll — wie oft ein Konstrukt darin steht, misst die Gründlichkeit der
+> Begiftung und nicht den Bedarf.* **Elf der vierzehn `order`-Deklarationen sind Giftproben;
+> das Konstrukt liegt in drei echten Programmen.**
 
-* **`count`/`backed`** — nach dem Wiederwachsen ist der Platz *uninitialisiert*, dann
-  *beschrieben*. **Die fehlende Initialisierungspflicht aus §5 IST eine Phase.**
-* **Eine Capability im CDT** — abgeleitet, delegiert, widerrufen.
-* **`boot`** — vor und nach `bss_nullen` gelten verschiedene Zugriffsrechte.
-* **Speicher zwischen Kern und Gerät** — genau das, wofür `consumes` plus Phase heute von
-  Hand kombiniert wird, 102 Mal.
+~~**Vier weitere Stellen tragen dasselbe Muster ohne Konstrukt:**~~ **Zwei davon tragen es
+MIT Konstrukt, und die Nachrechnung steht rechts:**
 
-> **Ein Konstrukt `phase`, auf `table`, `ops`, `fn` und `reg` anwendbar, ersetzt Sonderregeln
-> in vier Bereichen und bekommt EINEN Absenkungssatz statt vier.**
+| geschrieben | nachgeschlagen |
+|---|---|
+| **`count`/`backed`** — nach dem Wiederwachsen *uninitialisiert*, dann *beschrieben*; „die fehlende Initialisierungspflicht aus §5 IST eine Phase" | **braucht keines.** `PLAN.md`:2577–2580 hat es entschieden: *„entweder **monoton** … oder das Verkleinern ist ein Phasenschritt … **Für das Zweite gibt es die «B37»-Maschinerie schon (`order`/`advances`), und für das Erste braucht es nichts.**"* — *und die §5 hier trägt Seitentabellen und W⊕X, nicht die Hinterlegung* |
+| **Eine Capability im CDT** — abgeleitet, delegiert, widerrufen | **die einzige echte Lücke — und `phase` schließt sie nicht.** Eine `order` liegt auf EINER Marke, `phasen.rs` verfolgt sie je Rumpf und je Variable; ein Widerruf läuft rekursiv über einen **Baum**, und `O002` prüft einen Vorwärtsschritt zwischen zwei Stufen |
+| **`boot`** — vor und nach `bss_nullen` | **hat das Konstrukt.** `beispiele/22-bootstrecke.gab`:55 führt `order { roh, mmu, caps, eps, autoritaet, dienste }` und **sechs** `advances`-Zeilen |
+| **Speicher zwischen Kern und Gerät** — *„wofür `consumes` plus Phase heute von Hand kombiniert wird, 102 Mal"* | **umgekehrt.** Von 104 `consumes` stehen **30** in einer `fn`, die `advances` trägt — *das ist das Konstrukt, nicht seine Handnachbildung*. Die **74** anderen haben gar keine Phase: eine Sperre, ein Zeuge, ein weggegebener Puffer |
+
+> ~~**Ein Konstrukt `phase`, auf `table`, `ops`, `fn` und `reg` anwendbar, ersetzt Sonderregeln
+> in vier Bereichen und bekommt EINEN Absenkungssatz statt vier.**~~
+>
+> **`table` und `ops` haben keinen Wert in einer Signatur, durch den eine Stufe fließen
+> könnte.** Ein `phase` dort ist `PHASENKLASSE.md` §2 **Form 3**, am 2026-08-28 mit Grund
+> abgelehnt: *„eine BEHAUPTUNG des Rufers, keine Tatsache"* und *„ein ZWEITER Mechanismus
+> neben der Ordnung (W7)"*. **Und die vier Absenkungssätze gibt es nicht:** `emit.rs`:44
+> *„ghost types (they lower to NOTHING)"*, `PHASENKLASSE.md` §4 *„Sie senkt nichts ab."*
+> *Viermal nichts ist nichts, und einmal nichts auch.*
 
 *Der Name in der Literatur ist **Typestate**. Dass er hier unabhängig für Register gefunden
-wurde, spricht dafür, dass er in der Domäne liegt.*
+wurde, spricht dafür, dass er in der Domäne liegt* — und `SPRACHE.md`:100 bucht ihn seit
+jeher als **M2**, *„linear value whose type carries the state"*: **eine Ableitung, kein
+Konstrukt. Dort steht er richtig.**
 
-- [ ] **Nach der Domänenregel der zweitbeste Eröffnungsfall für die Ratsche** — er ist der
-      einzige der fünf, der die Wortzahl senkt statt sie zu heben.
+- [x] ~~**Nach der Domänenregel der zweitbeste Eröffnungsfall für die Ratsche**~~
+      **NICHT GEBAUT, und die Absage ist das Ergebnis** (2026-09-01,
+      `messung/PHASENKONSTRUKT.md`). Er senkt die Wortzahl, aber **um eins**: `order` und
+      `advances` sind der ganze Bestand (`phasen.rs`:29 — *„Der Wortschatz waechst um `order`
+      und `advances` — einmal, nicht je Schritt"*), `phase` kommt dafür, `class`/`in` an
+      `regphasen` kosten heute schon nichts, und `consumes` bleibt für seine 74 phasenfreien
+      Stellen. **Ein Wort ist zu wenig dafür, eine vier Tage alte Begriffsentscheidung
+      zurückzunehmen.**
+- [ ] **Der Satz, der bleibt, ist keiner dieses Abschnitts:** ein **Erhaltungssatz über der
+      Stufenverfolgung** (Bauart `Table_Ops_Erhaltung.thy`, nicht
+      `Absenkung_Parametrisch.thy`). Er hängt an einer operationalen Semantik des
+      Phasenflusses, an der Löschungsaussage als Theorie und am Schnitt im Wortlaut — **drei
+      Dinge, die es nicht gibt.** *Er ließe sich schreiben, ohne dass ein Wort dazukäme oder
+      fiele, und gehört damit unter §31.*
 
 ## §43 — `ghost` und `witness` trennen · **ein Widerspruch, keine Lücke**
 
@@ -1719,12 +1756,37 @@ ghost     wird geloescht, hat keine C-Form, existiert nur fuer den Pruefer
 witness   bleibt im C, ist linear, nur lesbar, sein Nutzdatenwert ist ein gewoehnlicher Wert
 ```
 
-> Damit ist `Griff` ein `witness`, **die Absenkung ist trivial — der Index steht ohnehin im
-> C** — und die Erasure-Regel für `ghost` bleibt unangetastet statt einen Sonderfall zu
+> Damit ist `Griff` ein `witness`, ~~**die Absenkung ist trivial — der Index steht ohnehin im
+> C**~~ — und die Erasure-Regel für `ghost` bleibt unangetastet statt einen Sonderfall zu
 > bekommen.
 
-- [ ] **Ein Wort mehr, aber es löst einen WIDERSPRUCH statt eine Lücke zu stopfen.** Das ist
-      der Handel, den die Ratsche verlangt, und er ist hier sauber.
+> **Die durchgestrichene Hälfte war am Tag vor diesem Vorschlag schon widerlegt**
+> (`messung/proben/probe-zeugenpflicht.gab`:33–58, gemessen 2026-08-31):
+>
+> *„**Gemessen stimmt das nicht.** `Griff` ist `ghost` und wird vor der Codeerzeugung
+> geloescht — sein Nutzdatenwert mit ihm. … Der Zeuge ist weg; der Index ueberlebt **nur,
+> weil er als eigenes Argument danebensteht.** … **Drei fehlende Absenkungen, nicht eine**,
+> und die tragfaehige kostet ein Maschinenwort je Zeuge."*
+>
+> ```
+> linear type Griff(index into Arena);
+> [C001] no lowering: return type       (`-> Griff`)
+> [C001] no lowering: parameter type    (`g : Griff`)
+> [C001] no lowering: `match` over something other than an `option index into T`
+> ```
+
+- [x] ~~**Ein Wort mehr, aber es löst einen WIDERSPRUCH statt eine Lücke zu stopfen.**~~
+      **Es ist gar kein Wort** (2026-09-01, `messung/PHASENKONSTRUKT.md` §7). `typedecl`
+      schreibt seit jeher `[ "linear" [ "ghost" ] ]` — **das Weglassen von `ghost` IST die
+      Unterscheidung**, und die Probe misst `linear type Griff(index into Arena);` mit
+      *8 items, 0 errors, 0 hints*. Was fehlt, sind **drei `C001` im Erzeuger**, und *kein
+      neues Wort schließt ein `C001`.*
+- [ ] **Der Posten gehört unter §31** („Absenkungsabdeckung — alle erzeugten Formen"), nicht
+      in eine Liste, die sich gegen die Wortschatzratsche rechtfertigen muss.
+- [ ] **Und die Wechselwirkung mit §42 ist ein Aufschlag, kein Rabatt.** Heute ist alles, was
+      §42 anfasst, `ghost` und senkt darum nichts ab. Eine Phase an einem `witness` liegt auf
+      einem Wert, **der ins C überlebt** — damit trüge die Phasenmaschinerie zum ersten Mal
+      eine Absenkungsschuld. *§42 ist billig, weil er unsichtbar ist; §43 macht ihn sichtbar.*
 
 ## §44 — Die dritte Stufe für `OA3` · **Zählbarkeit, nicht Sicherheit**
 
@@ -1795,8 +1857,21 @@ Die Reihenfolge folgt daraus und nicht aus dem Reiz:
 
 | | Handel | Wortzahl |
 |---|---|---|
-| **§42 `phase`** | ersetzt Sonderregeln in vier Bereichen, ein Satz statt vier | **senkt** |
+| ~~**§42 `phase`**~~ | ~~ersetzt Sonderregeln in vier Bereichen, ein Satz statt vier~~ | ~~**senkt**~~ |
 | **§45 Vertrauensliste** | konzeptuell, kein neues Wort | **neutral** |
 | **§46 `platform`/`device`** | löst `arch`-an-`assume` mit auf | +2, −1 |
-| **§43 `witness`** | löst einen Widerspruch, macht drei Absenkungen trivial | +1 |
+| ~~**§43 `witness`**~~ | ~~löst einen Widerspruch, macht drei Absenkungen trivial~~ | ~~+1~~ |
 | **§44 dritte Stufe** | Zählbarkeit — **braucht die Zahl vorher** | +1, ungemessen |
+
+**Die Tafel ist am 2026-09-01 nachgerechnet, und zwei Zeilen sind gefallen**
+(`messung/PHASENKONSTRUKT.md`):
+
+| | gerechnet | Wortzahl |
+|---|---|---|
+| **§42 `phase`** | **NICHT GEBAUT.** Zwei der vier Bereiche haben das Konstrukt schon, einer braucht keines; der Satz ist **null statt null** | **senkt — um EINS**, nicht um vier |
+| **§43 `witness`** | **kein Wortschatzposten.** `typedecl` trägt die Unterscheidung schon; es fehlen drei `C001` im Erzeuger | **±0** |
+
+> **Und der Vorschlagende war Teil des Problems, das er benannt hat — nur anders, als §47 es
+> befürchtet hat.** Nicht durch acht neue Wörter: durch **vier Zahlen ohne Grundgesamtheit**
+> und **eine Trivialitätsbehauptung, deren Widerlegung einen Tag alt im selben Baum lag.**
+> *Die Ratsche zählt Wörter; sie zählt keine Messungen, die niemand nachgeschlagen hat.*
