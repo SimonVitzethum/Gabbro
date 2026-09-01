@@ -1,0 +1,20 @@
+-- erwartet: N048
+-- **Between `N009` (two registers overlap) and `N010` (`stride 0`) stood the case nobody
+-- asked: a register eight bytes wide in a cell four bytes long.**
+--
+-- `F[0].X` reads eight bytes at `basis+0x100`, `F[1].X` eight at `basis+0x104` -- they
+-- overlap by four, and `basis+0x104` is not 8-aligned even when `basis` is. `N009` compares
+-- registers against EACH OTHER and never against the stride, so a bank aliased itself in
+-- silence.
+module gift586 {
+
+opaque type Pa = u64;
+
+device Eng(basis : Pa) at mmio {
+    reg C : u64 @0x00 class r
+    bank F at 0x100 stride 4 count 8 {
+        reg X : u64 @0x0 class rw
+    }
+}
+
+}

@@ -672,3 +672,52 @@ impl fn ruf() -> u32 effects { pure } costs <= 12 ops {
         "M123",
     );
 }
+
+// -- `N047` / `N048`: the register layout, in both directions -----------------------------
+
+/// **The audit of 2026-09-01, and it came out of the emitted C rather than out of a reading.**
+///
+/// `clang -Wcast-align` over all 63 emitted units reports 54 casts from `volatile uint8_t *`
+/// to a wider type -- every one an MMIO access. On the corpus each is in fact aligned; what
+/// was missing was anything that HELD it there.
+#[test]
+fn unausgerichtete_registerlage_faellt() {
+    let d = |reg: &str| {
+        format!("module p {{ opaque type Pa = u64;\ndevice D(basis : Pa) at mmio {{\n{reg}\n}}\n}}")
+    };
+    faellt_mit(&d("reg A : u64 @0x04 class rw"), "N047");
+    faellt_mit(&d("reg A : u32 @0x21 class rw"), "N047");
+    faellt_mit(&d("reg A : u16 @0x03 class rw"), "N047");
+
+    // **The counter-direction, and the third case is the one that matters:** a byte-wide
+    // register is aligned at every offset, and the rule must not invent a refusal for it.
+    faellt_nicht(&d("reg A : u64 @0x08 class rw"));
+    faellt_nicht(&d("reg A : u8 @0x03 class rw"));
+    // The corpus shape itself -- `02-geraet.gab` writes exactly this pair.
+    faellt_nicht(&d("reg A : u32 @0x18 class rw\nreg B : u32 @0x1c class rw"));
+}
+
+/// **Between `N009` (two registers overlap) and `N010` (`stride 0`) stood the case nobody
+/// asked: a register eight bytes wide in a cell four bytes long.**
+///
+/// `N009` compares registers against EACH OTHER and never against the stride, so `F[0].X`
+/// and `F[1].X` named the same bytes and the checker said `0 errors`.
+#[test]
+fn bankregister_jenseits_der_zelle_faellt() {
+    let d = |bank: &str| {
+        format!(
+            "module p {{ opaque type Pa = u64;\ndevice D(basis : Pa) at mmio {{\n\
+             reg C : u64 @0x00 class r\n{bank}\n}}\n}}"
+        )
+    };
+    // wider than the cell
+    faellt_mit(&d("bank F at 0x100 stride 4 count 8 { reg X : u64 @0x0 class rw }"), "N048");
+    // inside the cell by its offset, past it by its width
+    faellt_mit(&d("bank F at 0x100 stride 8 count 8 { reg X : u64 @0x10 class rw }"), "N048");
+
+    // **The counter-direction is the real bank of `02-geraet.gab`:** stride 16, two 64-bit
+    // registers at 0 and 8. It fits exactly, and exactly-fitting must stay silent.
+    faellt_nicht(&d(
+        "bank F at 0x100 stride 16 count 8 { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
+    ));
+}

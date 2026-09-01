@@ -187,7 +187,11 @@ MARKE = 20
 # stands alone under `P034`, `45` alone under `P041`, and neither carries the other any more.
 # **59 -> 61 on 2026-09-01**, same movement: nine new poison probes point at identifiers
 # that carry a candidate. The TARGET is unchanged -- what grew is the corpus, not the debt.
-MARKE_PROBEN = 61
+# **61 -> 62 on 2026-09-01, and the CANDIDATES stand unmoved at 20.** The on-ramp lane laid
+# five poison probes (`580`-`584`) for the «B3» hints, and one of them points at an identifier
+# that was ambiguous ALREADY. No identifier became newly ambiguous; one more probe points at
+# an old one. *The object grew, not the damage.*
+MARKE_PROBEN = 62
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

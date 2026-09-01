@@ -4933,16 +4933,28 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       Eingang (`259`, `58`, `415`), über dem sauberen Korpus null. Mit hängt daran, ob `code`
       und `boot` bleiben — zusammen **drei** Zeigerstellen, null `device`-Stellen.
 
-- [ ] **Vier Terminale sind `UNGEDECKT`: `chain`, `queue`, `state`, `threads`.**
-      `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. **Nachgemessen am 2026-08-31**
-      (`messung/proben/probe-vier-zellen.gab`, nicht aus dem Schweigen der Texte
-      geschlossen): in einem `divergent fn` prüfen alle vier mit **0 Fehlern** und fallen an
-      vier `C001`. Mit einer Kostenzusage fängt `K003` zwei davon — und genau daran hängt
-      alles: **`K003` ist die einzige Regel zwischen den Absagen des Erzeugers und dem
-      Prüfer, und sie hängt an einer Zusage, die ein `divergent fn` nicht macht.**
-      Der Ausgang steht im Plan: *im PRÜFER absagen, dann wandert die Zelle nach
-      `vom Pruefer`.* **Das ist eine Entscheidung über die SPRACHE** (vier Formen fallen aus
-      Gabbro heraus) und gehört der Bahn, die am Prüfer arbeitet.
+- [ ] **ONE terminal is `UNGEDECKT`, and it is `state`.** `pruefe-grammatiktafel.py` reports
+      it red, with an address. **This entry read `chain`, `queue`, `state`, `threads` until
+      `4673a07`**, which closed three of them -- not with programs written against this list
+      (trap 80), but with three that NEED a chain, a queue and a thread domain
+      (`beispiele/55`-`57`); `messung/proben/probe-neun-domaenen.gab` then gave each a second
+      carrier. *Re-measured 2026-09-01 at `12d91a9`: `1 von 218 Terminalen UNGEDECKT`, and the
+      tool names `state` alone. The DENOMINATOR moved too -- `decreasing` left the language
+      (`56455f9`), so 219 became 218.*
+
+      **Why `state` is the one that stays, measured and not inferred from the silence of the
+      texts:** in a `divergent fn` it checks with **0 errors** and falls at a `C001`
+      (`messung/proben/probe-vier-zellen.gab`, 2026-08-31); with a cost promise `K003` caught
+      two of the original four, and **`K003` is the only rule between the emitter's refusals
+      and the checker -- it hangs on a promise a `divergent fn` does not make.** The reason
+      the cell is `UNGEDECKT` rather than `abgesagt` is one line further in: `gruppe.rs`:123
+      writes `state` into a **`.mit_notiz`** hung on `Absage::fehler("U001", …)`, and this
+      table reads the `Absage::fehler` TEXT. *Over all of `gabbro-check/src` except `emit.rs`,
+      the count of checker-error texts naming `state` is **0** (re-measured 2026-09-01).* A
+      note is not a refusal, and the table is right not to read it as one.
+      The exit stands in the plan (§49 B6): *refuse it in the CHECKER, then the cell moves to
+      `vom Pruefer`* -- extend the refusal by exactly two lines, do not build the form. **That
+      is a decision about the LANGUAGE** and belongs to the lane working on the checker.
 
 - [ ] **Der Sauberkeitsschutz des Mutationslaufs war auf dem SERVER wirkungslos, und die
       Ursache ist eine leere Ausgabe.** Auf einer per `rsync` übertragenen Kopie zeigt

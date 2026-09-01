@@ -1,0 +1,17 @@
+-- erwartet: N047
+-- **The finding came out of the emitted C, not out of a reading.** `clang -Wcast-align` over
+-- all 63 emitted units reports 54 casts from `volatile uint8_t *` to a wider type -- every one
+-- of them an MMIO access. On the corpus each is in fact aligned, and **nothing held it there**.
+--
+-- `*(volatile uint64_t *)(basis + 4)` is undefined behaviour under C11 6.3.2.3p7 as soon as
+-- `basis` is 8-aligned, it FAULTS on aarch64 and riscv, and on x86 it splits into two bus
+-- transactions -- *which is not one register read.*
+module gift585 {
+
+opaque type Pa = u64;
+
+device Schief(basis : Pa) at mmio {
+    reg KRUMM : u64 @0x04 class rw
+}
+
+}

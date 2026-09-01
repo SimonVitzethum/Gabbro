@@ -1426,6 +1426,7 @@ fn device(d: &Device, absagen: &mut Absagen) {
         regfelder(r, absagen);
     }
     registerlagen(&d.register, &d.name.text, absagen);
+    ausrichtung_pruefen(&d.register, &d.name.text, absagen);
     for b in &d.baenke {
         doppelt(&mut gesehen, &b.name.text, b.name.span, "Bank", absagen);
         let mut innen = HashMap::new();
@@ -1434,7 +1435,9 @@ fn device(d: &Device, absagen: &mut Absagen) {
             regfelder(r, absagen);
         }
         registerlagen(&b.register, &b.name.text, absagen);
+        ausrichtung_pruefen(&b.register, &b.name.text, absagen);
         schritt_pruefen(b, absagen);
+        bankzelle_pruefen(b, absagen);
     }
     let mut uebergaenge = HashMap::new();
     for u in &d.uebergaenge {
@@ -1586,6 +1589,107 @@ fn schritt_pruefen(b: &Bank, absagen: &mut Absagen) {
                  not intersect. Right and useless is not a passed check",
             ),
         );
+    }
+}
+
+/// **`N047` -- a register whose offset is not a multiple of its own width.**
+///
+/// **Measured on 2026-09-01, and the finding came out of the emitted C, not out of a
+/// reading.** `clang -Wcast-align` over all 63 emitted units reports 54 casts from
+/// `volatile uint8_t *` to a wider type; every one of them is an MMIO access. On the
+/// corpus each is in fact aligned -- but nothing HELD it there:
+///
+/// ```text
+/// reg KRUMM : u64 @0x04 class rw     -- 0 errors, 0 hints
+/// -> return (*(volatile uint64_t *)(d->basis + 4));
+/// ```
+///
+/// That expression is **undefined behaviour under C11 6.3.2.3p7** as soon as `basis` is
+/// 8-aligned, it **faults** on aarch64 and riscv, and on x86 it splits into two bus
+/// transactions -- which destroys exactly the atomicity a 64-bit register read is declared
+/// to have. *A language whose reason for existing is that MMIO addresses are provably right
+/// accepted an address that is provably wrong.*
+///
+/// **The limit is the same one `N009` writes down, and for the same reason:** only a
+/// LITERAL offset is judged. `CAP.FRO * 16` stays silent -- `W10`, a lower bound neither
+/// refuses nor acquits. And the base is not judged either: `basis` is a run-time value, so
+/// natural alignment RELATIVE to the base is what can be decided here. That is the rule all
+/// real hardware satisfies, and it is the one the emitted cast needs.
+fn ausrichtung_pruefen(regs: &[RegDecl], wo: &str, absagen: &mut Absagen) {
+    for r in regs {
+        let ExprArt::Zahl(v) = &r.versatz.art else { continue };
+        let breite = i128::from(crate::bitlage::aus_intty(&r.typ).0);
+        let von = *v as i128;
+        if breite > 1 && von % breite != 0 {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N047",
+                    r.name.span,
+                    format!(
+                        "`{}` is {breite} bytes wide and sits at {von:#x} in `{wo}` -- \
+                         {von:#x} is not a multiple of {breite}",
+                        r.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "the emitted access is `*(volatile uintN_t *)(basis + off)`: unaligned \
+                     it is undefined behaviour in C, it FAULTS on aarch64 and riscv, and on \
+                     x86 it splits into two bus transactions -- which is not one register read",
+                )
+                .mit_notiz("real registers are naturally aligned; if this one is not, the \
+                            offset is a typo and not a device"),
+            );
+        }
+    }
+}
+
+/// **`N048` -- a bank register that does not FIT into its own cell.**
+///
+/// `N009` refuses two registers that overlap, and `N010` refuses `stride 0`. Between the two
+/// stood the case nobody asked: **a register 8 bytes wide in a cell 4 bytes long.** The
+/// checker said `0 errors`, and the emitter wrote
+///
+/// ```text
+/// bank F at 0x100 stride 4 count 8 { reg X : u64 @0x0 class rw }
+/// -> return *(volatile uint64_t *)(d->basis + (256) + i * 4u + 0u);
+/// ```
+///
+/// `F[0].X` reads eight bytes at `basis+256`, `F[1].X` eight at `basis+260`. **They overlap
+/// by four** -- and `basis+260` is not 8-aligned even when `basis` is. *`N009` compares
+/// registers against each other and never against the STRIDE, so a bank aliases itself
+/// silently.*
+///
+/// Both halves are decided here: a register may not be wider than the stride, and it may not
+/// reach past the end of its cell. Same limit as `N009`: literal stride, literal offset.
+fn bankzelle_pruefen(b: &Bank, absagen: &mut Absagen) {
+    let ExprArt::Zahl(schritt) = &b.schritt.art else { return };
+    let schritt = *schritt as i128;
+    if schritt == 0 {
+        return; // `N010` says this one, and says it better
+    }
+    for r in &b.register {
+        let ExprArt::Zahl(v) = &r.versatz.art else { continue };
+        let von = *v as i128;
+        let breite = i128::from(crate::bitlage::aus_intty(&r.typ).0);
+        if von + breite > schritt {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N048",
+                    r.name.span,
+                    format!(
+                        "`{name}` covers {von:#x}..{bis:#x} in a cell of `stride {schritt}` \
+                         in bank `{bank}` -- element k and element k+1 name the same bytes",
+                        name = r.name.text,
+                        bis = von + breite,
+                        bank = b.name.text,
+                    ),
+                )
+                .mit_notiz(
+                    "`Device_Konstruktor.thy` proves `bankeintraege_ueberlappen_nicht` -- a \
+                     register reaching past its cell makes that theorem false, not vacuous",
+                ),
+            );
+        }
     }
 }
 
