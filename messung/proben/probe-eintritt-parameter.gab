@@ -1,3 +1,4 @@
+-- erwartet: cc
 -- **Gift for the entry rule: the entry takes an argument.**
 --
 -- C allows `int main(void)` and `int main(int, char **)` and nothing else. Gabbro has no type

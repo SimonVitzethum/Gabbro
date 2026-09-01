@@ -1,3 +1,4 @@
+-- erwartet: cc
 -- **Gift for the entry rule: TWO entries -- and `N039` does not see this pair.**
 --
 -- `N039` refuses two exported items of one C name. Here only ONE of the two is `pub`, so

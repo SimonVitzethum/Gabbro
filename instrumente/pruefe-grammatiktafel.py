@@ -5,9 +5,11 @@
 Felder. Das beantwortet die Vollstaendigkeitsfrage nicht, und das Werkzeug sagt es selbst:
 *der Korpus ist von der Sprache nach aussen geschrieben.* **Falle 80.**
 
-Hier ist die Grundgesamtheit die **Grammatik**: `dokumente/SYNTAX.md` fuehrt 154 Regeln und
-**219 Terminale**, und das ist die Menge, die „beliebig" meint. Je Terminal genau ein
-Zustand:
+The population here is the **grammar**: the rules and terminals `dokumente/SYNTAX.md` carries,
+and that is the set „beliebig" means. **Its size is NOT written here.** It moves with the
+grammar -- it read 219 while `decreasing` was still a word and 218 the hour after -- and a
+frozen copy standing beside a computed one is the very fault this table exists to catch (`W7`).
+The run prints the size in its own heading. One state per terminal, and exactly one:
 
     gesenkt       ein Programm mit diesem Wort emittiert C, das `cc -Werror` ANNIMMT
     abgesagt      der Erzeuger sagt es benannt ab, und ein PRUEFERFEHLER nennt es auch
@@ -76,8 +78,8 @@ bezahlt, dass es keine dritte Kopie der Terminalliste gibt.
 
 WIE EMPFINDLICH DIE MESSUNG IST -- ALS ZAHL, NICHT ALS SATZ
 --------------------------------------------------------------
-125 der 219 Terminale sind **nur durch Absenkung** gedeckt; fuer sie ist das
-Uebersetzungstor die einzige Gegenprobe. Ein Wort, das in genau EINER uebersetzenden Datei
+Most of the terminals are covered by LOWERING ALONE -- the run prints how many, because that
+count moves with the corpus -- and for those the translation gate is the only counter-check. Ein Wort, das in genau EINER uebersetzenden Datei
 steht, faellt mit dieser Datei -- *eine Deckung, die an einer Datei haengt, misst die Datei
 und nicht die Sprache.* Am Morgen des 2026-08-31 waren das **25 Woerter an neun Dateien**,
 neun davon allein in `beispiele/07-eintritt-und-boot.gab`.
@@ -122,7 +124,7 @@ selbst kostet nichts als Text -- sie liest die Traegerkarte, die ohnehin gerechn
 
     ./instrumente/pruefe-grammatiktafel.py            die Tafel und das Urteil
     ./instrumente/pruefe-grammatiktafel.py --probe    nur die Sprechprobe
-    ./instrumente/pruefe-grammatiktafel.py --tafel    alle 219 Zeilen
+    ./instrumente/pruefe-grammatiktafel.py --tafel    one line per terminal
 """
 import collections
 import contextlib
@@ -574,7 +576,7 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
         proben.append((f"und im sauberen Lauf ist `{w}` gesenkt", sauber[w] == "gesenkt"))
 
     # (b) The INVENTED grammar rule -- through a COPY of `SYNTAX.md`, hence through the very
-    #     extraction that also yields the real 219, and not through a second one.
+    #     extraction that also yields the real terminal set, and not through a second one.
     import tempfile
     kopie = SYNTAX.read_text().replace("```ebnf\n", '```ebnf\nzzprobe = "zztafelprobe" ;\n', 1)
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f:

@@ -2059,7 +2059,13 @@ MARKE_EMIT=63
 # **46 -> 47 on 2026-09-01**: `messung/proben/probe-extern-bindet-c.gab`, the counter-probe
 # to `N046` -- five `extern fn` on names C already declares, each with the signature C knows.
 # It lowers alone and compiles, which is the whole claim it makes.
-MARKE_EMIT_M=47
+# **47 -> 52 on 2026-09-01, and the five files are the `B001` entry corpus** (`1c9243c`).
+# `probe-eintritt.gab` is the hosted entry itself, `-ungebunden` the rebuilt speaking probe
+# for the LINK step; both lower and compile. The other three -- `-parameter`, `-privat`,
+# `-zwei` -- carry `-- erwartet: cc` and stand in this denominator exactly the way
+# `gift/414` does: they emit, and their C MUST fall. *The object grew by five, and the
+# ratchet counts emitting files, not passing ones.*
+MARKE_EMIT_M=52
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -2089,14 +2095,30 @@ MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten dar
 # wofuer die Population da ist. Wer hier dieselbe Ratsche wie nebenan haengt, meldet die gute
 # Arbeit als Bruch. Beide Seiten sind trotzdem ein Befund: ein Anstieg heisst, dass eine Probe
 # durchrutscht, ein Abstieg, dass die Marke nachzuziehen ist.
-MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/413` (`-- erwartet: cc`)
+MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
 # mehr -- und ein Zweig, den nichts betritt, ist gruen, ohne etwas zu sagen. *Genau der Fall,
 # an dem die Sprechprobe der Grammatiktafel am 2026-08-31 gestorben ist: die Arbeit, die den
 # Baum verbessert, hat den Waechter abgeschaltet.* Hier faellt es auf.
-MARKE_UMGEKEHRT=1
+# **1 -> 4 on 2026-09-01, and the three that came in had been RED across two lanes.** The
+# `B001` poison probes went into the tree without the marker, so this stage read them as
+# `UEBERSETZT NICHT` -- three files whose OWN HEADERS predict, word for word, the `cc`
+# diagnostic they then got:
+#
+#     -parameter   "`main` takes only zero or two arguments"      [-Werror=main]
+#     -privat      "`main` is normally a non-static function"     [-Werror=main]
+#     -zwei        "static declaration of `main` follows non-static declaration"
+#
+# *What the marker buys is not a green line, it is a measurement.* The commit that built
+# `B001` states in PROSE who refused each entry shape before the rule existed -- `cc` for
+# the private one, `cc` for the parametrised one, nobody for a `pub` beside a private. From
+# here on this stage CHECKS that table every run instead of quoting it, and the reverse
+# direction bites too: if any of the three ever compiles, `B001` has stopped covering a
+# shape a foreign tool used to catch. **A probe that cannot bite reads like one that never
+# could.**
+MARKE_UMGEKEHRT=4
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then
