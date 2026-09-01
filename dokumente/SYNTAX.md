@@ -345,7 +345,15 @@ markorder  = "order" "{" identlist "}" ;
 
    `order` steht VOR dem `=`, weil es kein Rumpf ist: eine Ordnung sagt nichts darueber,
    woraus der Wert besteht, sondern welche Schritte auf ihm zulaessig sind. Ein
-   `linear ghost type` hat ohnehin keinen Rumpf. *)
+   `linear ghost type` hat ohnehin keinen Rumpf.
+
+   **Diese zwei Woerter -- `order` und `advances` -- sind der GANZE Bestand der
+   Phasenmaschinerie**, und das ist am 2026-09-01 nachgezaehlt worden, weil
+   `PLAN-HARDWARE.md` §42 vier zu sehen glaubte. `class`/`in` an `regphasen` kosten nichts,
+   `consumes` traegt 74 von 104 Fundstellen ohne jede Phase, und von zwanzig
+   `linear ghost type` im Korpus haben drei eine `order`. Ein Wort `phase`, das beide
+   abloeste, senkte den Wortschatz um EINS -- und muesste dafuer `PHASENKLASSE.md` §2
+   Form 3 zuruecknehmen. **Nicht gebaut**, `messung/PHASENKONSTRUKT.md`. *)
 typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
            | indexty ;
 indexty    = [ "option" ] "index" "into" ident ;
@@ -1325,7 +1333,13 @@ regphasen = "in" ident { "," regklasse "in" ident } ;
              Am Zugriff entscheidet die Stufe, auf der die Marke steht (`R005`/`R006`); wo
              KEINE Marke dieser Ordnung im Sichtbereich ist, gilt, was JEDE Stufe erlaubt.
              Damit bleibt die lineare Marke eine Erlaubnis, die niemand halten muss --
-             gesagt ist nur, was ohne sie folgt. s. `messung/PHASENKLASSE.md`. *)
+             gesagt ist nur, was ohne sie folgt. s. `messung/PHASENKLASSE.md`.
+
+             2026-09-01: `PLAN-HARDWARE.md` §42 wollte diese Form zu einem eigenen Wort
+             `phase` verallgemeinern und zaehlte die sechs Fundstellen als Posten. **Sie
+             sind keiner** -- die Zeile darueber sagt, warum: `in` und `class` kosten hier
+             NICHTS. Ein Wort, das nie gekauft wurde, laesst sich nicht zurueckgeben.
+             Nachgerechnet und abgelehnt in `messung/PHASENKONSTRUKT.md`. *)
 regfeld = ident "@" bitpos [ "class" regklasse ] ;
           (* «B23», 2026-08-20: bis dahin trug `regdecl` EINE Klasse fuer das ganze Wort.
              FSTS ist gemischt -- 7:0 sind RW1C, 15:8 (FRI) sind nur lesbar, und FRI ist die
