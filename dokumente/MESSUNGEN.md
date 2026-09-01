@@ -11558,3 +11558,71 @@ zaehle-lean.py       75 Pflichten, 9 Ziele, 66 abgesagt
 **Die eine rote Ratsche steht mit Absicht offen:** die neun Suchschritte liegen sämtlich im
 `umhaengen`-Beweis von `Table_Ops_Erhaltung.thy` (40 − 9 = 31). *Sie werden gezahlt, nicht
 nachgezogen* — die Marke existiert wegen 21 Minuten und 11 GB am 2026-08-17.
+
+
+---
+
+# 2026-09-01 — `pruefe-lean-beweis.sh` auf `fisch`: die Frist hat 20 % Luft, nicht 200 %
+
+**`TODO.md` verlangt seit dem 2026-08-30 ausdrücklich *„eine Messung unter Last, keine größere
+Zahl"*. Hier ist sie, zweimal — und sie fällt schlechter aus als die Kompensation annahm.**
+
+Gefahren auf `ki-pc-fisch-101` aus eigenem Verzeichnis (`gabbro-rel`, **beide** `rsync`), Baum
+auf `b05a6fd`, `cargo build` dort, Korpus beidseitig nachgezählt: **171 Dateien hier und
+dort** (`beispiele/*.gab` 63 + `messung/*/*.gab` 108).
+
+```
+Lauf 1   482,4 s   load average 3,18   exit 0   LEAN GREEN
+Lauf 2   456,9 s   load average 3,20   exit 0   LEAN GREEN
+         121 Einheiten -> 121 Module, 10 erzeugte Pflichten
+```
+
+## Die Reihe, und der neueste Punkt ist der langsamste
+
+| wann | Last | Einheiten | Zeit | je Einheit |
+|---|---|---|---|---|
+| 2026-08-30, leerer `fisch` | ~0 | *(nicht notiert)* | 194 s / 205 s | — |
+| `ABNAHME-VOLL.md` | 10–15 | 140 | 381,2 s | 2,72 s |
+| heute, Lauf 1 | 3,18 | 121 | 482,4 s | 3,99 s |
+| heute, Lauf 2 | 3,20 | 121 | 456,9 s | 3,78 s |
+
+**Die Last erklärt es NICHT.** Der Lauf von heute ist bei einem Viertel der Last und mit
+neunzehn Einheiten WENIGER um knapp ein Viertel langsamer (469,7 s gegen 381,2 s) als der
+unter `load average` 10–15. *Je
+Einheit sind es 3,88 s statt 2,72 s — plus 43 % —, und das ist eine Aussage über den
+Gegenstand, nicht über die Maschine.*
+
+> **`fisch` war an keinem der beiden Läufe leer**, und das ist gemessen: `ps` nennt zwei
+> Prozesse bei 100 % CPU, `qwen35_server` und ein `gabbro` aus einer anderen Bahn. Bei
+> 16 Kernen ist das `load average` 3,2 — **die Maschine, die `CLAUDE.md` vorschreibt, ist im
+> Regelbetrieb nicht leer.** Eine Frist gegen ihren Leerlaufwert zu setzen misst einen
+> Zustand, den es beim Laufen nicht gibt.
+
+## Was das für die Frist heißt
+
+`FRIST_ABNAHME = 2 × FRIST = 600 s`. Gegen den Mittelwert von heute (**469,7 s**) sind das
+**78 % der Frist**, gegen den schlechteren Lauf **80 %**.
+
+* **Die Frist wurde NICHT erhöht, und das war richtig** — sie ist genau der Riegel, der die
+  Frage stellt. *Sie zu heben, weil sie greift, macht unsichtbar, wogegen sie steht.*
+* **Aber die Erklärung „lokal ist das Problem" trägt nicht.** Die lokalen 729,4 s sind das
+  1,55-fache des heutigen Servermittels, nicht ein anderes Regime. **Der Wächter liegt
+  überall dicht an seiner Frist**, und auf dem vorgeschriebenen Rechner mit 20 % Luft.
+* **Bei 3,88 s je Einheit ist die Frist bei rund 155 Einheiten erreicht.** Heute sind es 121;
+  `ABNAHME-VOLL.md` hat schon einmal 140 gezählt. *Der Abstand zur Frist ist keine
+  Zeitreserve, er ist eine Korpusreserve — und der Korpus wächst.*
+
+## Was ungemessen bleibt
+
+* **Warum die Kosten je Einheit um 43 % gestiegen sind.** Zwei Größen haben sich zwischen den
+  Punkten bewegt — Baumstand und Einheitenzuschnitt (140 → 121 bei 171 Dateien) —, und dieser
+  Lauf trennt sie nicht. *Er stellt die Frage, er beantwortet sie nicht.*
+* **Der Leerlaufwert von heute.** `fisch` war an keinem Punkt frei; 194/205 s stammen vom
+  2026-08-30 und von einem anderen Baum. Ein Vergleich Leerlauf-zu-Leerlauf existiert nicht.
+* **Ob `lean` selbst mehrfädig läuft** und wie stark es damit gegen die zwei fremden
+  Volllastprozesse steht. Der Wächter ruft `lean` je Modul nacheinander; was innerhalb eines
+  Aufrufs passiert, ist hier nicht gemessen.
+
+*Zum Vergleich, im selben Verzeichnis und derselben Übertragung gefahren:* `isabelle build -D
+beweise -o threads=12` braucht auf `fisch` **10,1 s Wanduhr bei 46 s CPU** über fünfzehn
+Theorien. **Die Beweisseite ist nicht das Problem, die Lean-Kette ist es.**

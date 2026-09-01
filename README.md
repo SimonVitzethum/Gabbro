@@ -185,13 +185,43 @@ in one day. When you find a number here, you can re-run it.
 | [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) | findings whose subject is Caprock — found here, belonging there |
 | [`beweise/`](beweise/) | the Isabelle theories — each names what it does **not** prove |
 
+## Installing it
+
+**Zero external dependencies** — the three crates depend on `std` and on each other, and on
+nothing else (`cargo tree`, 2026-09-01). So there is no lock file to trust and no registry to
+reach:
+
+```
+git clone https://github.com/SimonVitzethum/Gabbro
+cd Gabbro
+cargo install --path crates/gabbro-cli     # `gabbro` into ~/.cargo/bin -- 11,8 s, 4,9 MiB
+gabbro check beispiele/01-tabelle.gab
+```
+
+**Rust 1.86 or newer**, and that is measured rather than guessed: `f64::next_up`/`next_down`
+became stable in 1.86.0, and on 1.75 or 1.80 the build ends at `E0658`. **`cc` is needed at
+RUN time, not at build time** — only `gabbro build` calls it, to compile and link the C this
+compiler emits. Everything else (`check`, `emit`, `abi`, `costs`, `effects`, `obligations`,
+`certificate`, `lean`) reads and writes files and needs no C compiler at all.
+
+## Versions
+
+```
+0.0.1    now, the first tag
+0.1.0    „ist dann beta"
+1.0.0    „dann Alpha"
+```
+
+*Note that this names `1.0.0` "Alpha" after `0.1.0` "Beta", which is the reverse of the usual
+order; it is the intended scheme and not a typo.*
+
 ## Running it
 
 ```
-cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
-cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
-cargo run --bin gabbro -- schablonen                 # the proof-template register
-cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
+cargo run --bin gabbro -- check beispiele/*.gab      # check files
+cargo run --bin gabbro -- passes                     # what each pass does and does NOT do
+cargo run --bin gabbro -- templates                  # the proof-template register
+cargo run --bin gabbro -- obligations beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test                                           # 252 tests
 ./instrumente/mutiere-pruefer.py                                 # damage one rule at a time: 340 mutations, 372 anchors
 ./instrumente/pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings

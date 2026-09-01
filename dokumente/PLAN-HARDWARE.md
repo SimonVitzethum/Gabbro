@@ -2205,15 +2205,26 @@ Absagen waren Syntaxpapierschnitte.
 ### B4 — Die Fläche, die schon steht
 
 ```
-englische Erstnamen    12, additiv, null von 608 Aufrufstellen gekostet
+englische Erstnamen    12 Unterbefehle + 12 FAHNEN, additiv, null von 608 Aufrufstellen
 Diagnostik             33 deutsche Meldungen -> 0
 SIGPIPE                rc=101 -> 0
 zwei Einheiten         `137`, uebersetzt und gelaufen
 Bau                    inkrementell nach INHALT, mit Deckungszeile
 ```
 
-- [ ] Übrig: **die Fahnen sind nur teilweise englisch**, und **kein Wächter erzwingt einen
-      englischen Erstnamen für einen NEUEN Unterbefehl.**
+- [x] **Die Fahnen sind englisch, seit dem 2026-09-01** — und es waren **ZWÖLF und nicht
+      sechs.** Beide vorhandenen Handgriffe waren zu kurz: `gabbro help` nennt sechs,
+      `ERSTNAMEN.md` §5 acht. Vier Fahnen (`--summe`, `--ursprung`, `--sperrrang`, `--eng`)
+      werden angenommen und stehen **in gar keiner Hilfe**, und `--je` war eine Wortspaltung
+      aus `--je-satz` und `--je-stelle`. *Eine Liste von einem Hilfebildschirm zählt, was
+      dokumentiert ist, nicht was angenommen wird.*
+- [x] **Ein Wächter erzwingt jetzt den englischen Erstnamen** — für die nächste Fahne UND den
+      dreizehnten Unterbefehl: `crates/gabbro-cli/tests/fahnen.rs` liest die **QUELLE**, nicht
+      eine Liste, und war rot auf ein eingesetztes `--zaehler` (`exit=101`, Quelle byteweise
+      gegen SHA-256 zurückgestellt). *Und er hat beim ersten Lauf zwei Paare gefunden, die die
+      handgeführte Liste verloren hatte:* `effects|wirkungen` steht in keiner Tafel, und
+      `build|bau` war unter „von Anfang an englisch" abgelegt, obwohl `bau` ein deutscher
+      Zweitname ist wie jeder andere.
 
 ### B5 — `at port` ist abgesagt, nicht gelöst
 
@@ -2355,27 +2366,90 @@ ein gehosteter Eintritt                                       zu, `2110702`, OHN
 
 ---
 
-## §52 — Auslieferung: AUR-Paket
+## §52 — Auslieferung: AUR-Paket · **die Vorbedingung steht, und der Weg ist GEMESSEN**
 
-*Der Befund, der es billig macht, ist gemessen:*
+*Der Befund, der es billig macht, ist gemessen — und am 2026-09-01 nachgemessen statt zitiert:*
 
 ```
-Abhaengigkeiten der drei Kisten:   NULL externe
-version                            0.0.1        git tag       0
+Abhaengigkeiten der drei Kisten:   NULL externe   `cargo tree`: drei Pfadkisten, sonst nichts
+version                            0.0.1          git tag       1  (war 0)
 ```
 
-**Ein `PKGBUILD` für `gabbro-git` ist damit fünfzehn Zeilen** — `cargo build --release`, ein
-Binärprogramm, keine Bibliothek, keine Systemabhängigkeit außer `cc` zur *Laufzeit* (für
-`gabbro build`).
+**Der Tag `0.0.1` steht seit dem 2026-09-01 auf `b05a6fd`** — annotiert, mit dem
+Freigabeschema im Text, **und NICHT gepusht**: das entscheidet der Ordner. *Damit ist der
+Punkt, der „die eigentliche Arbeit" hieß, erledigt, und §52 ist von einer Vorbedingung auf
+eine Rechnung geschrumpft.*
 
-- [ ] **Vorbedingung, und sie ist die eigentliche Arbeit:** eine **Version** und ein **Tag**.
-      Heute `0.0.1` und null Tags — *ein AUR-Paket ohne Freigabe zeigt auf einen bewegten
-      Zweig.*
-- [ ] `depends`: `gcc` (Laufzeit, für `gabbro build`), `makedepends`: `rust`. **Isabelle und
-      Lean gehören NICHT hinein** — sie prüfen den Baum, nicht das Erzeugnis.
-- [ ] Die Prüfsumme über ein Freigabearchiv, nicht über `HEAD`.
+### Der ganze Weg, einmal gefahren
 
-*Aufwand: eine Bahn, und der größere Teil davon ist die Freigabe selbst.*
+**Nicht überschlagen, sondern durchlaufen** — Archiv aus dem Tag, ausgepackt, `--frozen
+--offline` gebaut, Binärprogramm über den Korpus gefahren:
+
+| Schritt | gemessen |
+|---|---|
+| `git archive --prefix=Gabbro-0.0.1/ 0.0.1` | **3 293 628 Byte**, 925 Einträge |
+| `cargo build --frozen --release --offline` | **10,65 s** |
+| `target/release/gabbro` | **5 117 496 Byte** (4,9 MiB) |
+| `gabbro check beispiele/01-tabelle.gab` | läuft, `0 errors` |
+
+**`--offline` und `--frozen` gehen, weil `Cargo.lock` 352 Byte hat und keine Registry nennt.**
+*Das ist der eigentliche Grund, warum dieses Paket billig ist: kein `cargo fetch` im
+`prepare()`, keine Netzstufe, keine Lieferkette, die jemand prüfen müsste.*
+
+### Was in den `PKGBUILD` gehört — jede Zeile mit ihrem Beleg
+
+```
+pkgname=gabbro
+pkgver=0.0.1
+arch=('x86_64')
+url='https://github.com/SimonVitzethum/Gabbro'
+license=('AGPL-3.0-only')                # Cargo.toml; die Zusatzerlaubnis ist KEIN SPDX-Ausdruck
+depends=('gcc')                          # LAUFZEIT: `cc` fuer `gabbro build`
+makedepends=('rust')                     # >= 1.86 -- `f64::next_up`/`next_down`
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz")
+build()   { cd "Gabbro-$pkgver"; cargo build --frozen --release --offline; }
+check()   { cd "Gabbro-$pkgver"; cargo test  --frozen --offline --no-fail-fast; }
+package() { install -Dm755 "Gabbro-$pkgver/target/release/gabbro" "$pkgdir/usr/bin/gabbro"
+            install -Dm644 "Gabbro-$pkgver/LICENSE"          "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+            install -Dm644 "Gabbro-$pkgver/LIZENZ-ZUSATZ.md" "$pkgdir/usr/share/licenses/$pkgname/LIZENZ-ZUSATZ.md" }
+```
+
+* **`depends=('gcc')`, und das ist nachgeschlagen und nicht geraten:** `pacman -Qo
+  /usr/bin/cc` nennt `gcc`. Gebraucht wird es **allein von `gabbro build`** — `bau.rs`:742
+  und :763 sind die *einzigen* zwei `Command::new` im ganzen Baum. `check`, `emit`, `abi`,
+  `costs`, `effects`, `obligations`, `certificate` und `lean` lesen und schreiben Dateien.
+* **`ldd` auf dem gebauten Programm: `libgcc_s`, `libc`, sonst nichts.** Kein `gcc-libs` von
+  Hand — namcap zieht es aus genau dieser Liste.
+* **`LIZENZ-ZUSATZ.md` muss mit ins Paket.** `AGPL-3.0-only` steht in Archs
+  `/usr/share/licenses/common`, die **Zusatzerlaubnis nach AGPL §7 aber nirgends** — und sie
+  ist die Hälfte, die den Nutzer betrifft. *Ein Paket, das nur den SPDX-Ausdruck mitliefert,
+  liefert die halbe Lizenz.*
+* **Isabelle und Lean gehören NICHT hinein**, in keiner der drei Listen. Sie prüfen den
+  **Baum**, nicht das **Erzeugnis** — `beweise/` und `programmlogik/` fahren hier und nicht
+  beim Nutzer. *Ein `makedepends` auf einen Beweiser wäre die Aussage, ein Paket sei ohne ihn
+  nicht baubar, und sie wäre falsch.*
+* **`check()` braucht kein `gcc` über `base-devel` hinaus.** `cargo` braucht ohnehin einen
+  Binder, und `base-devel` ist bei `makepkg` gesetzt; die Proben selbst rufen keinen
+  C-Übersetzer (`eintritt.rs`:247 sagt es wörtlich: *„no C, no compiler, no linker"*).
+
+### Und die Prüfsumme ist der eine Posten, der offen BLEIBT
+
+*Die `sha256` meines Archivs ist `a0f3da02…` — **und sie ist für den `PKGBUILD` wertlos.***
+`git archive` und GitHubs Tarball sind nicht byteidentisch: Kompressionsstufe und Zeitstempel
+gehören dem Erzeuger, nicht dem Baum. **Die Zahl, die in den `PKGBUILD` gehört, kann erst
+gemessen werden, wenn der Tag GEPUSHT ist** — und das entscheidet der Ordner.
+
+> *Dieselbe Klasse wie `W16`: eine Prüfsumme über das falsche Artefakt sieht aus wie eine
+> Prüfsumme.*
+
+- [x] **Version und Tag** — `0.0.1`, annotiert, auf `b05a6fd`, ungepusht.
+- [x] `depends` / `makedepends` gerechnet, jede Zeile mit Beleg.
+- [ ] **Die Prüfsumme über das Freigabearchiv** — hängt am Push, nicht an dieser Bahn.
+- [ ] **`aur/`-Dateien liegen NICHT in diesem Baum**, und das ist eine Entscheidung: ein
+      `PKGBUILD` gehört ins AUR-Repositorium, nicht neben den Übersetzer. *Er stünde hier als
+      zweites Register über dieselbe Sache.*
+
+*Aufwand: die Bahn ist gefahren; was bleibt, ist der Push und fünfzehn Zeilen abtippen.*
 
 ---
 
@@ -2388,6 +2462,11 @@ $ cargo build --target wasm32-wasip1 -p gabbro-cli --release
   Finished `release` profile in 11,50s
   target/wasm32-wasip1/release/gabbro.wasm    3 152 325 Byte  (3,0 MiB)
 ```
+
+> **Nachgemessen am selben Tag auf `b05a6fd`, aus sauberem Zielverzeichnis: 9,67 s und
+> 3 165 896 Byte.** Die Zeit ist eine andere Maschine, aber **die 13 571 Byte sind es nicht** —
+> sie sind sechzehn Commits. *Die obere Zahl trägt `2110702` als Handgriff und nicht nur ein
+> Datum, und das ist der Unterschied zwischen einer Messung und einer Jahreszahl.*
 
 **Null Abhängigkeiten, `unsafe_code = forbid`, kein Systemruf außer Datei-Ein/Ausgabe** —
 das ist der Grund, warum es beim ersten Versuch durchläuft.
@@ -2443,8 +2522,8 @@ dass sein Rumpf 48 von 64 zugesagten Ops braucht, ohne einen Befehl zu tippen. *
 | # | | warum |
 |---|---|---|
 | **1** | **`gabbro.wasm` einmal LAUFEN lassen** | 3,0 MiB gebaut und nie ausgeführt. *Eine Messung von Minuten, und sie trägt §53 ganz* |
-| **2** | Freigabe: Version + Tag | Vorbedingung für §52, und ohnehin Beta-Tor |
-| **3** | AUR-`PKGBUILD` | fünfzehn Zeilen, sobald 2 steht |
+| ~~**2**~~ | ~~Freigabe: Version + Tag~~ | **erledigt 2026-09-01**: `0.0.1` annotiert auf `b05a6fd`, ungepusht |
+| ~~**3**~~ | ~~AUR-`PKGBUILD`~~ | **gerechnet 2026-09-01** (§52), der ganze Weg einmal gefahren. Offen bleibt allein die Prüfsumme, und die hängt am Push |
 | **4** | Erweiterung Stufe 1 | die Eingangstür für einen zweiten Menschen |
 | **5** | **S1 Domänenregel** | der billigste Sprachposten mit echtem Ertrag |
 | **6** | S3 `char` an der Grenze · S5 die zwei kleinen | je eine Rechnung gegen die Ratsche |
