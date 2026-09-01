@@ -1,0 +1,28 @@
+-- **Gift: eine Wirkung, die ueber die Grenze getan und diesseits nicht erklaert wird.**
+--
+-- Derselbe Rumpf wie `prog-haupt.gab`, nur fehlt in der `effects`-Liste das `writes`. Das
+-- Schreiben findet in der ANDEREN Einheit statt -- `ablegen` traegt es in seiner Signatur --,
+-- und hier steht nur noch das Lesen.
+--
+-- **Diese Probe ist die Gegenrichtung zur Effektableitung ueber die Grenze.** Ohne die
+-- `.gabi` faellt die Datei an `K003`, also an der fehlenden Aufloesung, und ueber die
+-- Auslassung sagt niemand etwas. Mit der `.gabi` faellt sie an `E005` -- **weil geprueft
+-- wird, nicht weil geschwiegen wird.** *Eine Absage, die es nur mit der Bruecke gibt.*
+module luecke {
+
+use werk::ablegen;
+use werk::holen;
+use vorrat::Regal;
+
+pub impl fn rechnen() -> i32 in 0 .. 200
+    effects { reads Regal.slots }
+    costs   <= 90 ops
+{
+    ablegen(2, 5000);
+    ablegen(5, 37);
+    let a : i32 in 0 .. 100 = holen(2);
+    let b : i32 in 0 .. 100 = holen(5);
+    return a + b;
+}
+
+}

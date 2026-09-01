@@ -277,6 +277,134 @@ fn der_treiber_druckt_und_wird_verglichen() {
     assert_eq!(ist_gift, "5000 37 100", "and it changes it in exactly the one place");
 }
 
+// =========================================================================================
+// **The two measurements that were unaskable until the boundary existed.**
+//
+// `OB5` blocks them by name: effect derivation across a module boundary, and assumption
+// import. Both were "measured" before at a case nobody had built -- which is not a
+// measurement, it is a guess with a number beside it.
+
+/// **The derivation DOES see the callee in the other unit** -- and the finding `OB6` could
+/// not find comes with it.
+///
+/// Two directions in one test, because only the pair says anything:
+///
+/// * a caller whose `effects` list is right comes out `identical` at `abi --vergleich`
+///   -- and the read and the write it names can ONLY come from the two callees, since its
+///   own body touches no place at all;
+/// * a caller that drops the `writes` falls at **`E008`** -- *because it is checked, not
+///   because it is silent.* Without the bridge the same file falls at `K003`, at the missing
+///   resolution, and about the omission nobody says a word.
+#[test]
+fn die_effektableitung_sieht_ueber_die_grenze() {
+    let _sperre = SPERRE.lock().expect("lock");
+    let (aus, fehler, code) = baue();
+    assert_eq!(code, 0, "the build writes the interface first:\n{aus}\n{fehler}");
+    let gabi = format!("{AUS}/rechenwerk.gabi");
+
+    let (aus, fehler, code) = lauf(&[
+        "abi",
+        "--vergleich",
+        "--with",
+        &gabi,
+        "messung/einheit-proben/prog-haupt.gab",
+    ]);
+    assert_eq!(code, 0, "the comparison runs across the boundary:\n{aus}\n{fehler}");
+    assert!(
+        aus.contains("identical      haupt::main"),
+        "the computed hull equals the written list -- and the two effects in it were derived \
+         THROUGH the `.gabi`, because `main` touches no place itself:\n{aus}"
+    );
+    assert!(
+        aus.contains("units read  1") && !aus.contains("NO FUNCTION LOOKED AT"),
+        "and the population is not empty -- a zero here would be no measurement (W1):\n{aus}"
+    );
+
+    // **Without the bridge the same command measures nothing, and says so.**
+    let (aus, _, _) = lauf(&["abi", "--vergleich", "messung/einheit-proben/prog-haupt.gab"]);
+    assert!(
+        aus.contains("units REJECTED") && aus.contains("NO FUNCTION LOOKED AT"),
+        "alone the file is rejected, and the command refuses to call that a result:\n{aus}"
+    );
+
+    // **Counter-direction: an effect performed across the boundary and not declared falls.**
+    let gift = "messung/einheit-proben/gift-wirkung-fehlt-ueber-die-grenze.gab";
+    let (aus, _, code) = lauf(&["pruefe", "--with", &gabi, gift]);
+    assert_eq!(code, 1, "refused:\n{aus}");
+    assert!(
+        aus.contains("[E008]") && aus.contains("calls something with `writes Regal.slots`"),
+        "at the effect, by name:\n{aus}"
+    );
+    // **And the site is in the FILE.** Until 2026-09-01 this path rendered against the joined
+    // text and printed a line number of the concatenation beside the file's name.
+    assert!(
+        aus.contains(&format!("{gift}:17:13")),
+        "line 17 of a file of 28 lines, not a line of the preamble plus the file:\n{aus}"
+    );
+
+    let (aus, _, code) = lauf(&["pruefe", gift]);
+    assert_eq!(code, 1, "alone it also falls -- but at something else:\n{aus}");
+    assert!(
+        aus.contains("[K003]") && !aus.contains("[E008]"),
+        "at the missing resolution, and NOT at the missing effect: the omission is invisible \
+         without the bridge:\n{aus}"
+    );
+}
+
+/// **An `assume` does NOT travel across the unit boundary -- measured, and it is a decision.**
+///
+/// `abi.rs` says so in its own head: a library that ships its `assume` lines forces its
+/// machine on every importer, and an override at the import is not a replacement but a proof
+/// obligation («ABI4»). *Until that obligation is counted, it is more honest not to carry the
+/// assumption over at all.*
+///
+/// What this test holds is the CONSEQUENCE, so that it is written down rather than deduced:
+/// the library is proved under one assumption, the program is proved under none, and **at the
+/// boundary nothing says that an assumption was dropped.** That is `OB8`'s "platform
+/// assumptions per program NULL" seen from the other side -- there is now a place where an
+/// assumption COULD stand once, and it does not carry.
+#[test]
+fn eine_annahme_traegt_nicht_ueber_die_grenze() {
+    let _sperre = SPERRE.lock().expect("lock");
+    let (aus, fehler, code) = baue();
+    assert_eq!(code, 0, "the build runs:\n{aus}\n{fehler}");
+
+    let (aus, _, code) = lauf(&["annahmen", "messung/einheit-proben/prog-vorrat.gab"]);
+    assert_eq!(code, 0, "the library's manifest:\n{aus}");
+    assert!(aus.contains("-- 1 Annahmen"), "the library has exactly one:\n{aus}");
+    assert!(aus.contains("fach_zahl_passt_in_den_index"), "by name:\n{aus}");
+
+    let gabi = std::fs::read_to_string(wurzel().join(AUS).join("rechenwerk.gabi"))
+        .expect("the build wrote an interface");
+    assert!(
+        !gabi.contains("assume") && !gabi.contains("fach_zahl_passt_in_den_index"),
+        "and the interface carries neither the word nor the name:\n{gabi}"
+    );
+
+    let (aus, _, code) = lauf(&["annahmen", "messung/einheit-proben/prog-haupt.gab"]);
+    assert_eq!(code, 0, "the program's manifest:\n{aus}");
+    assert!(
+        aus.contains("-- 0 Annahmen"),
+        "the program that USES the library is proved under none of its assumptions -- and \
+         nothing at the boundary says one was dropped:\n{aus}"
+    );
+
+    // **The counter-direction: the program does not fall for it either.** *Silence in both
+    // directions is the whole finding* -- there is no refusal, no hint and no line in a
+    // certificate that names the loss.
+    let (aus, _, code) = lauf(&[
+        "pruefe",
+        "--with",
+        &format!("{AUS}/rechenwerk.gabi"),
+        "messung/einheit-proben/prog-haupt.gab",
+    ]);
+    assert_eq!(code, 0, "it checks clean across the boundary:\n{aus}");
+    assert!(
+        !aus.to_lowercase().contains("assum"),
+        "and not one word about the assumption it was NOT proved under:\n{aus}"
+    );
+}
+
 /// `cc` with the manifest's own flags. **A driver built more leniently than the unit under it
 /// would hide the very warnings the manifest asked for.**
 fn uebersetze(eingaben: &[&Path], ziel: &Path) {

@@ -542,7 +542,7 @@ fn baue_einheit(
     // its interface to its dependents, **the interface is an artefact of this build too**: a
     // deleted `.gabi` with a valid record would leave the next unit without its bridge.
     if let Ok(alt) = std::fs::read_to_string(&marke) {
-        if alt.trim() == abdruck_text && erzeugnis.exists() {
+        if alt.trim() == format!("{abdruck:016x}") && erzeugnis.exists() {
             if let Ok(gabi) = std::fs::read_to_string(&gabi_pfad) {
                 return Ergebnis::Aktuell { gabi, abdruck: abdruck_text };
             }

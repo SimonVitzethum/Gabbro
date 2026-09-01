@@ -84,13 +84,39 @@ fn main() -> std::process::ExitCode {
             // it cannot check alone. *A library that cannot be split into two files is not a
             // library, and the manifest's whole subject is which files form a unit.*
             let einheit = rest.iter().any(|a| a == "--unit" || a == "--einheit");
-            let rest: Vec<&String> = rest.iter().filter(|a| !a.starts_with("--")).collect();
-            if rest.is_empty() {
-                eprintln!("gabbro abi: no file named");
-                return std::process::ExitCode::from(2);
-            }
+            // **`--with` reaches `--vergleich` too, since 2026-09-01.**
+            //
+            // Until then the effect comparison could not be run ACROSS a unit boundary at
+            // all: the caller's file alone carries `K003` (*"promises costs, but `ablegen` is
+            // not declared here"*), and this command skips a file the passes rejected. *So
+            // the one question `OB5` unblocks -- does the derivation see the callee in the
+            // other unit? -- was unaskable, and it looked like an answer of "no".*
+            let ohne_fahnen: Vec<String> = rest
+                .iter()
+                .filter(|a| {
+                    !matches!(
+                        a.as_str(),
+                        "--berechnet" | "--vergleich" | "--weit" | "--unit" | "--einheit"
+                    )
+                })
+                .cloned()
+                .collect();
+            let (rest, mit) = match split_with("abi", &ohne_fahnen) {
+                Ok(x) => x,
+                Err(c) => return c,
+            };
+            let vorspann = match read_preamble("abi", &mit) {
+                Ok(v) => v,
+                Err(c) => return c,
+            };
+            let rest: Vec<&String> = rest.iter().collect();
             if vergleich {
-                return befehl_abi_vergleich(&rest, weit);
+                return befehl_abi_vergleich(&rest, weit, &vorspann);
+            }
+            if !vorspann.is_empty() {
+                eprintln!("gabbro abi: `--with` is built for `--vergleich` only -- an interface \
+                           written under another one would re-export it");
+                return std::process::ExitCode::from(2);
             }
             if einheit {
                 if berechnet {
@@ -543,8 +569,14 @@ fn hilfe() {
                                     property of the binary, not of the file* -- printing
                                     1 122 words of it beside 20 words of finding, at every
                                     run, is a disclosure nobody reads
-  gabbro abi        <file.gab>…     write the library interface: `pub` declarations,
-                                    no bodies -- valid Gabbro, no second format
+  gabbro abi [--unit] <file.gab>…   write the library interface: `pub` declarations,
+                                    no bodies -- valid Gabbro, no second format. `--unit`
+                                    writes ONE interface for a unit of several files; a
+                                    two-file library has none without it
+  gabbro abi --vergleich [--with L.gabi]… [--weit] <file.gab>…
+                                    the COMPUTED effect hull against the WRITTEN one.
+                                    `--with` runs it ACROSS a unit boundary -- without it
+                                    the caller's file alone carries `K003` and is skipped
   gabbro fragments|fragmente <file.md>…
                                     every ```gabbro block of a markdown file, one by one
   gabbro assumptions|annahmen <file.gab>…
@@ -576,10 +608,13 @@ fn hilfe() {
   gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus
                                     a missing alias analysis could be about. Two upper
                                     bounds and two lower ones, printed together; no refusal
-  gabbro emit [--with L.gabi]… [--testbuild] <file.gab>…
+  gabbro emit [--with L.gabi]… [--unit] [--testbuild] <file.gab>…
                                     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know. A `.gabi` lowers to a
                                     C HEADER: typedefs and prototypes, no objects.
+                                    `--unit` lowers the named files as ONE translation
+                                    unit, the counterpart of `pruefe --unit`: what checks
+                                    as a unit is translated as one.
                                     WITHOUT `--testbuild` this is the SHIPPING build: an
                                     item marked `when TESTBUILD` produces no line of C
   gabbro lean       <file.gab>…     the whole PROGRAM as a Lean 4 module: every body, every
@@ -746,6 +781,7 @@ fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
         Ok(v) => v,
         Err(c) => return c,
     };
+    // One unit or one file per unit -- the fork stands here and nowhere else.
     if einheit {
         return emittiere_als_einheit(getippt, &dateien, &vorspann, bau);
     }
@@ -777,7 +813,21 @@ fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
         register.nimm_auf(datei, &baum, versatz, &mut absagen);
         let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);
         if absagen.fehler_zahl() > 0 {
-            eprint!("{}", absagen.zeige(&ganz));
+            // The same offset map as at `pruefe` and at `build` -- see the note there. A site
+            // rendered against the joined text carries a line number in no file at all.
+            let stueck = [Stueck {
+                datei: datei.to_string(),
+                quelle: quelle.clone(),
+                von: versatz,
+                bis: ganz.len(),
+            }];
+            for a in zeige_je_stueck(&absagen, &stueck, Strom::Fehler, &mut |_, _| {}) {
+                eprintln!(
+                    "gabbro: [{}] fell outside the file -- its line number is the `--with` \
+                     PREAMBLE's: {}",
+                    a.code, a.text
+                );
+            }
             eprintln!("gabbro {getippt}: {datei} has errors -- no C written");
             schlecht = true;
             continue;
@@ -1243,7 +1293,29 @@ fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode 
             absagen.absagen.retain(|a| a.span.von as usize >= versatz);
         }
         if !absagen.leer() {
-            print!("{}", absagen.zeige(&ganz));
+            // **The site is the site in the FILE, and until 2026-09-01 it was not.**
+            //
+            // With a `--with` preamble in front, this path rendered against the JOINED text
+            // and printed the file's name beside a line number of the concatenation: a
+            // refusal at line 17 of a 28-line file came out as `:42:13`. *The exact fault
+            // `Stueck` and `zeige_je_stueck` exist to prevent*, one path over from where they
+            // were built -- `pruefe --unit` had the map, `pruefe --with` did not. It surfaced
+            // the first time a refusal came out of a `.gabi` bridge, which could not happen
+            // before there was a two-unit program to bridge. The probe stands in
+            // `tests/zweieinheiten.rs`.
+            let stueck = [Stueck {
+                datei: datei.to_string(),
+                quelle: quelle.clone(),
+                von: versatz,
+                bis: ganz.len(),
+            }];
+            for a in zeige_je_stueck(&absagen, &stueck, Strom::Aus, &mut |_, _| {}) {
+                println!(
+                    "  [{}] fell outside the file -- its line number is the `--with` \
+                     PREAMBLE's: {}",
+                    a.code, a.text
+                );
+            }
         }
         let f = absagen.fehler_zahl();
         let h = absagen.absagen.len() - f;
@@ -1421,7 +1493,11 @@ fn abdruck(text: &str) -> u32 {
 /// | **narrower** | the declaration promises MORE than the body does -- blunt, not wrong |
 /// | **broader** | the declaration promises TOO LITTLE -- **this column belongs empty**, `E005`/`E008`/`E010` stand in front of it |
 /// | **incomplete** | the hull tears, and the edge is NAMED (R16) |
-fn befehl_abi_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCode {
+fn befehl_abi_vergleich(
+    dateien: &[&String],
+    weit: bool,
+    vorspann: &str,
+) -> std::process::ExitCode {
     use gabbro_check::abi::Urteil;
     let (mut ident, mut enger, mut breiter, mut unvoll) = (0usize, 0usize, 0usize, 0usize);
     // **And the same four numbers over the `impl fn` ONLY.** «A4» asks after them: a
@@ -1448,10 +1524,28 @@ fn befehl_abi_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCo
     let mut b_fn_mit = 0usize;
     let mut b_fn_ohne = 0usize;
     let mut weit_zeilen: Vec<String> = Vec::new();
+    // **The interfaces of the preamble are NOT part of the population.** They carry no body,
+    // so nothing can be derived over them -- counting them would put entries into the tally
+    // that no elaborator would ever have to write.
+    let vorspann_module: std::collections::BTreeSet<String> = if vorspann.is_empty() {
+        Default::default()
+    } else {
+        let (vbaum, _) = gabbro_syntax::lies("<interface>", vorspann);
+        let mut m = std::collections::BTreeSet::new();
+        gabbro_check::fuer_jedes_item_im_modul(&vbaum, &mut |_, modul| {
+            m.insert(modul.to_string());
+        });
+        m
+    };
     for datei in dateien {
-        let Ok(quelle) = std::fs::read_to_string(datei.as_str()) else {
+        let Ok(eigene) = std::fs::read_to_string(datei.as_str()) else {
             eprintln!("gabbro: {datei} not readable");
             return std::process::ExitCode::from(2);
+        };
+        let quelle = if vorspann.is_empty() {
+            eigene
+        } else {
+            format!("{vorspann}\n{eigene}")
         };
         let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
         gabbro_check::pruefe(&baum, &mut absagen);
@@ -1469,6 +1563,9 @@ fn befehl_abi_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCo
         b_fn_mit += b.fn_mit_rumpf;
         b_fn_ohne += b.fn_ohne_rumpf;
         for v in gabbro_check::abi::vergleiche_mit(&baum, weit) {
+            if vorspann_module.contains(&v.modul) {
+                continue;
+            }
             let e = gabbro_check::abi::eintraege(&v);
             e_tragend += e.tragend.len();
             e_zu_weit += e.zu_weit.len();
