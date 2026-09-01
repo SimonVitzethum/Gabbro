@@ -44,10 +44,21 @@ BLOECKE = {
 
 # The headings BEFORE the first stage carry no block: they are the head of the file and hold
 # no items. Should one ever appear there, the guardian falls at the mark, not here.
+#
+# **Both spellings, since 2026-09-01.** These are HEADINGS of `TODO.md`, matched by their
+# literal text, and `TODO.md` is moving into English. A head heading that stops being
+# recognised does not vanish quietly here -- it turns up as *"heading without a block mark"*
+# and the counter goes red over a file that is perfectly in order. The German entries stay:
+# a tool that knows only the new spelling breaks on the first tree that has not moved.
 KOPF = ("# Gabbro — offene Punkte", "# Die vier Ziele", "# Die Reihenfolge",
-        "# DIE REGEL ÜBER ALLEM")
+        "# DIE REGEL ÜBER ALLEM",
+        "# Gabbro — open items", "# The four goals", "# The order",
+        "# THE RULE ABOVE ALL")
 
 MARKE = re.compile(r"⟨([A-Z])⟩")
+# `# STUFE 1` today, `# STAGE 1` after the move -- the stage heading is the join between the
+# heading marks and the block column of *Die Reihenfolge*, and it is one German noun.
+STUFE = re.compile(r"^# (?:STUFE|STAGE) (\d)")
 
 
 def lies(text):
@@ -93,10 +104,10 @@ def tabelle(text):
     """
     marken = {}
     for z in text.split("\n"):
-        if z.startswith("# STUFE "):
-            m = re.match(r"# STUFE (\d)", z)
+        m = STUFE.match(z)
+        if m:
             b = MARKE.search(z)
-            if m and b:
+            if b:
                 marken[m.group(1)] = b.group(1)
     befunde = []
     for m in re.finditer(r"^\| \*\*(\d)\*\* \| [^|]* \| \*\*([A-Z])\*\* \|", text, re.M):
@@ -124,13 +135,28 @@ def sprechprobe():
     c = len(lies(fremd)[2]) == 1
     d = lies(stich)[0]["A"] == 1 and lies(stich)[0]["B"] == 1
     e = bool(tabelle("# STUFE 1 — X  ⟨A⟩\n| **1** | y | **C** | z |\n"))
+    # **The counter-direction, and it is a LANGUAGE direction** (2026-09-01). Every line
+    # above is German invented text, so all five probes would keep saying `ok` on the day
+    # `TODO.md` became English and this counter stopped finding a single stage. The same
+    # five, in English: the numbers have to come out identical, or the reader is bound to a
+    # German noun and nobody would have been told.
+    roh_en = "# STAGE 1 — X  ⟨A⟩\n- [ ] one\n- [ ] two\n"
+    kopf_en = "# The four goals\n- [ ] one\n"
+    f = (lies(roh_en)[0]["A"] == 2 and not lies(roh_en)[1]
+         and bool(tabelle("# STAGE 1 — X  ⟨A⟩\n| **1** | y | **C** | z |\n"))
+         and not lies(kopf_en)[1])
     print("== Sprechprobe der Blockzählung ==")
     print(f"  saubere Marke zählt:        {'ok' if a else 'FEHLER'}")
     print(f"  fehlende Marke fällt auf:   {'ok' if b else 'FEHLER'}")
     print(f"  erfundener Block fällt auf: {'ok' if c else 'FEHLER'}")
     print(f"  Marke am Punkt sticht:      {'ok' if d else 'FEHLER'}")
     print(f"  Tabelle gegen Überschrift:  {'ok' if e else 'FEHLER'}")
-    return all((a, b, c, d, e))
+    print(f"  dasselbe auf ENGLISCH:      {'ok' if f else 'FEHLER'}")
+    # **The probe count is DERIVED, not typed.** The workload line below carried a literal
+    # `5 Proben`, and adding the sixth would have left it standing at five -- a number about
+    # this tool's own thoroughness, kept by hand. *That is the class this folder counts.*
+    proben = (a, b, c, d, e, f)
+    return all(proben), len(proben)
 
 
 def main():
@@ -141,7 +167,8 @@ def main():
     if not (W / "TODO.md").is_file():
         print("ABBRUCH: TODO.md fehlt -- es wird NICHT null gezaehlt.", file=sys.stderr)
         return 2
-    if not sprechprobe():
+    probe_ok, n_proben = sprechprobe()
+    if not probe_ok:
         print("\n== BLOECKE: die Sprechprobe faellt -- die Zahlen darunter sind wertlos ==")
         # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
         # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
@@ -168,7 +195,8 @@ def main():
     befunde += [f"Die Reihenfolge: {b}" for b in t_befunde]
 
     print(f"\n== Arbeitsmenge: {gesamt} offene Punkte, {len(BLOECKE)} Bloecke, "
-          f"{len(ohne_marke)} Ueberschriften ohne Marke, {len(befunde)} Befunde, 5 Proben ==")
+          f"{len(ohne_marke)} Ueberschriften ohne Marke, {len(befunde)} Befunde, "
+          f"{n_proben} Proben ==")
     abschnitt.fertig()
     if befunde:
         print(f"\n== BLOECKE: {len(befunde)} BEFUNDE ==")

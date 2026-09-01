@@ -40,6 +40,7 @@ Prozessumgebung: sie wird an jeden Registerbefehl vererbt, und wer sie beim Star
 ist von sich selbst gerufen worden.* **Er wird an einem echten Kindprozess gemessen, nicht
 behauptet.**
 """
+import importlib.util
 import os
 import pathlib
 import re
@@ -51,6 +52,16 @@ import sys
 # `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import abschnitt  # noqa: E402
+
+# **The German word list is READ here, not copied** (W7). `pruefe-englisch.py`
+# holds the closed list of German function words and the reasons for every omission in it
+# (`die` and `war` are English words too, so they are not in it). A second copy here would
+# be a second register over one thing, and it would drift the first time somebody tunes one
+# of them.
+_spec = importlib.util.spec_from_file_location(
+    "pruefe_englisch", pathlib.Path(__file__).resolve().parent / "pruefe-englisch.py")
+_pe = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_pe)
 
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger als „laeuft".
@@ -995,6 +1006,15 @@ def lauf(befehl):
 
 ZWISCHEN = {}
 
+# **A pattern is not a sentence** -- `\d`, `[^\n]` and `(?:…)` are not prose, and a language
+# test that reads them as prose measures the regex dialect instead of the label.
+_ESCAPE = re.compile(r"\\[a-zA-Z]|\[[^\]]*\]|\(\?[a-zA-Z:=!<]*")
+
+
+def _prosa(muster):
+    """Der Klartext eines Musters -- Escapes und Zeichenklassen heraus."""
+    return _ESCAPE.sub(" ", muster)
+
 
 def ort_von(text, pos):
     """`(line, column)` of a match -- **the PLACE, not the VALUE.**
@@ -1041,11 +1061,17 @@ def zitierte_zellen(text):
                if z.lstrip().startswith(">"))
 
 
-def pruefe_eintraege(verstellen=None):
+def pruefe_eintraege(verstellen=None, entfernen=None):
     """Alle Eintraege gegen ihren Befehl.
 
     `verstellen` verstellt die Zahl IM TEXT (nur im Speicher) -- das ist die Sprechprobe.
     **Ein Waechter, der nicht rot werden kann, misst nichts** (R14).
+
+    `entfernen` loescht die ganze getroffene Stelle statt nur die Zahl darin -- **die
+    Sprechprobe fuer die BESCHRIFTUNG.** A reworded or translated label is not a wrong
+    figure, it is a lost object, and the two fail in different directions: a wrong figure
+    is loud, a lost object is quiet unless somebody made it loud. *This tool did make it
+    loud; that was a claim in a comment until it was measured here.*
     """
     befunde, geprueft, bewacht = [], 0, {}
     ausgesetzt = []
@@ -1060,6 +1086,13 @@ def pruefe_eintraege(verstellen=None):
             t = re.search(muster, text)
             if t:
                 text = (text[: t.start(1)] + "999999" + text[t.end(1) :])
+        if entfernen is not None and nr == entfernen:
+            # **EVERY occurrence, not just the first.** A translation does not move one
+            # sentence, it moves the file -- so the probe has to leave nothing behind.
+            # *Removing only the first hit measured that a SECOND one exists, not that the
+            # entry is guarded*, and one entry passed on exactly that: its label stands TWICE
+            # in `TODO.md`, the second time inside a struck-through paragraph.
+            text = re.sub(muster, "", text)
         treffer = re.search(muster, text)
         if not treffer:
             befunde.append(f"{datei}: das Muster fuer „{was}\" trifft nichts mehr -- "
@@ -1196,6 +1229,49 @@ def main():
             print(f"     {x}")
         return 2
     print(f"  ok -- alle {len(EINTRAEGE)} Eintraege fallen, wenn ihre Zahl verstellt wird")
+    # **The third direction: what if the LABEL goes instead of the figure?** (2026-09-01)
+    #
+    # The probe above tampers with the FIGURE. It would keep saying `ok` on the day a document
+    # was translated and every pattern here lost its object -- *because an entry that measures
+    # nothing and an entry that measures right both report nothing.* This tool answers
+    # `UNBEWACHT` in that case, and until today that was a sentence in a comment beside the
+    # code rather than a measurement. **Here it is measured, per entry, over the real text.**
+    #
+    # This is the half that makes the translation SAFE rather than merely loud: whoever moves
+    # a document without carrying its label over gets a named finding, not a silent register.
+    blind = []
+    for nr in range(len(EINTRAEGE)):
+        b, _, _, _ = pruefe_eintraege(entfernen=nr)
+        if not any("UNBEWACHT" in x for x in b):
+            blind.append(EINTRAEGE[nr][4])
+    if blind:
+        print(f"  GESCHEITERT -- {len(blind)} Eintraege melden NICHTS, wenn ihre "
+              f"Beschriftung verschwindet:")
+        for x in blind:
+            print(f"     {x}")
+        return 2
+    print(f"  ok -- alle {len(EINTRAEGE)} Eintraege melden UNBEWACHT, wenn ihre "
+          f"Beschriftung verschwindet")
+    # **And how many patterns hit MORE THAN ONCE?** (2026-09-01)
+    #
+    # `re.search` takes the first hit, so an entry with two hits guards one of them and holds
+    # the other in reserve without saying so. **Translate the first and the register does not
+    # report `UNBEWACHT` -- it quietly moves to the second**, which may be a struck-through,
+    # retracted figure. *That is a silent path inside a guardian whose whole selling point is
+    # that it is loud*, and it was found by the probe above rather than by reading.
+    #
+    # It is PRINTED, not fatal: a second hit is not wrong today, it is unwatched tomorrow.
+    mehrfach = []
+    for datei, muster, _, _, was in EINTRAEGE:
+        p = W / datei
+        if p.is_file() and len(re.findall(muster, p.read_text(encoding="utf-8"))) > 1:
+            mehrfach.append(f"{datei}: {was}")
+    if mehrfach:
+        print(f"  {len(mehrfach)} Muster treffen MEHR ALS EINMAL -- bewacht ist der erste")
+        print("  Treffer, der zweite steht in Reserve und wird beim Uebersetzen still")
+        print("  eingenommen:")
+        for x in mehrfach:
+            print(f"     {x}")
     print()
 
     # speech_test: end
@@ -1225,6 +1301,33 @@ def main():
                 g = unbewachbar_grund(datei, zeile)
                 offen.append((datei, z, zeile.strip()[:70],
                               bool(TRAEGT.search(zeile)), g))
+    print()
+    # **How many entries hang on a GERMAN label?** (2026-09-01)
+    #
+    # The folder is moving into English, and this register matches on LABEL TEXT. Every entry
+    # whose pattern carries a German function word is bound to a document that has not moved
+    # yet -- and on the day it moves, that entry reports `UNBEWACHT` until somebody carries
+    # the label over. **That is the size of the tail, and it belongs beside the reach and not
+    # in a report**: a number that triggers work carries its handle and its denominator (W28).
+    #
+    # HANDLE: the DOCUMENT pattern (not the run-output one) contains at least one word from
+    # the closed German function-word list of `pruefe-englisch.py`. Regex escapes and
+    # character classes come out first, so `\d` and `[^\n]` cannot be mistaken for prose.
+    # *That is a LOWER bound* -- a German label built only from technical nouns
+    # (`Kennzahlen`, `Terminale`) carries no function word and is not counted here (W10).
+    de_gebunden = [e for e in EINTRAEGE if _pe.deutsch(_prosa(e[1]))]
+    je_datei = {}
+    for e in de_gebunden:
+        je_datei[e[0]] = je_datei.get(e[0], 0) + 1
+    print()
+    print(f"== Sprachbindung: {len(de_gebunden)} von {len(EINTRAEGE)} Beschriftungen sind "
+          f"DEUTSCH ==")
+    for datei, n in sorted(je_datei.items(), key=lambda x: (-x[1], x[0])):
+        print(f"   {n:3d}  {datei}")
+    print("   Jede davon meldet UNBEWACHT, sobald ihr Dokument uebersetzt wird -- laut, nicht")
+    print("   still (die Sprechprobe oben misst genau das). *Die Zahl ist eine UNTERE")
+    print("   Schranke:* eine Beschriftung aus lauter Fachwoertern traegt kein")
+    print("   Funktionswort und faellt hier nicht auf (W10).")
     print()
     print("== Reichweite: was dieses Register NICHT bewacht ==")
     traegt = [o for o in offen if o[3]]

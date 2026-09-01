@@ -372,17 +372,26 @@ def heutige_zahlen():
                        timeout=FRIST)
     m = re.search(r"(\d+) Kennzahlen mit Befehl, (\d+) fettgedruckte", z.stdout)
     k_heute, f_heute = (m.group(1), m.group(2)) if m else ("?", "?")
+    # **Both spellings, since 2026-09-01 -- and rule 3 is why the German half MUST stay.**
+    # A pattern without a hit is a finding here, so an alternative that has lost its object
+    # does not go quiet, it goes red. *Dropping the German half would therefore turn every
+    # not-yet-translated tree red*, which is the mirrored form of the same hole: a guardian
+    # that fits exactly one state of the document.
     return [
-        (r"\*\*(\d+) Kennzahlen mit Befehl\*\*", k_heute, "Kennzahlen mit Befehl"),
-        (r"heute (\d+)\s*\n?\s*Kennzahlen mit Befehl", k_heute, "Kennzahlen mit Befehl (Prosa)"),
-        (r"\*\*(\d+) fettgedruckte Zahlen in Tabellenzellen ohne einen\*\*", f_heute,
+        (r"\*\*(\d+) (?:Kennzahlen mit Befehl|metrics with a command)\*\*", k_heute,
+         "Kennzahlen mit Befehl"),
+        (r"(?:heute|today) (\d+)\s*\n?\s*(?:Kennzahlen mit Befehl|metrics with a command)",
+         k_heute, "Kennzahlen mit Befehl (Prosa)"),
+        (r"\*\*(\d+) (?:fettgedruckte Zahlen in Tabellenzellen ohne einen"
+         r"|bold numbers in table cells without one)\*\*", f_heute,
          "unbewachte fettgedruckte Zahlen"),
         # **The rule count stands in `TODO.md` today as „153 EBNF-Regeln"**, no longer as
         # „**N Regeln, 0 offen**" -- the old wording has been gone for weeks. *So this pattern
         # hit nothing, and the TODO half did not say so until 2026-08-28.* Here the pattern is
         # pulled onto the wording that stands there, not the text onto a pattern: a number
         # that stands elsewhere is not reworded, it has moved.
-        (r"(\d+) (?:EBNF-Regeln|Regeln, 0 offen|rules, 0 open)", r_heute, "EBNF-Regeln"),
+        (r"(\d+) (?:EBNF-Regeln|EBNF rules|Regeln, 0 offen|rules, 0 open)", r_heute,
+         "EBNF-Regeln"),
         (r"(\d+) (?:Terminale gegen|terminals against)", t_heute, "EBNF-Terminale"),
         (r"\((?:heute|today) (\d+) / \d+\)", r_heute, "EBNF-Regeln (heute-Klammer)"),
         (r"\((?:heute|today) \d+ / (\d+)\)", t_heute, "EBNF-Terminale (heute-Klammer)"),
@@ -595,8 +604,34 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
 
 **Ausschliesslich Offenes.**
 """
+    # **The same two lists in ENGLISH** (2026-09-01). Every template above is German invented
+    # text, so all of them would keep saying `ok` on the day `TODO.md` became English and
+    # this guardian stopped recognising a single one of its six rules. *A speech test written
+    # in the language the object is leaving proves nothing about the day after.*
+    gift_en = """# Probe
+
+- [x] **Something done** stands here.
+- [ ] **The `narrow` full count** once.
+- [ ] **The `narrow` full count** twice.
+
+## P1 — `check` without a language
+
+Numbers left standing from P1: 117 rules, 187 terminals (today 1 / 1)
+
+**Exclusively what is open.**
+"""
+    sauber_en = """# Probe
+
+- [ ] **Something open** stands here.
+
+## `check` without a language
+
+**Exclusively what is open.**
+"""
     b_gift = pruefe(gift, zahlen)
     b_sauber = pruefe(sauber, zahlen)
+    b_gift_en = pruefe(gift_en, zahlen)
+    b_sauber_en = pruefe(sauber_en, zahlen)
     # **Fuenf statt drei, seit die heute-Klammer mitgeprueft wird.** Die Marke wandert mit dem
     # Waechter mit: eine Untergrenze, die stehenbleibt, waehrend Regeln dazukommen, misst
     # irgendwann nur noch die aeltesten.
@@ -606,6 +641,40 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
         print(f"     {b}")
     print(f"  Saubere Liste: {len(b_sauber)} Befunde", end="")
     print(" -- ok" if not b_sauber else " -- GESCHEITERT (falsches Rot)")
+    print(f"  Giftliste EN:  {len(b_gift_en)} Befunde", end="")
+    print(" -- ok" if len(b_gift_en) >= 5 else " -- GESCHEITERT (blind auf Englisch)")
+    for b in b_gift_en:
+        print(f"     {b}")
+    print(f"  Saubere EN:    {len(b_sauber_en)} Befunde", end="")
+    print(" -- ok" if not b_sauber_en else " -- GESCHEITERT (falsches Rot auf Englisch)")
+    for b in b_sauber_en:
+        print(f"     {b}")
+
+    # **The three bilingual number patterns, measured on the ENGLISH spelling.**
+    #
+    # Rule 3 makes a pattern without a hit a FINDING, so a German-only pattern would go red
+    # after the translation rather than quiet. **That is not enough.** A red over a file that
+    # is in order is a false red, and a false red gets switched off; the point of the second
+    # spelling is that the guardian keeps MEASURING, not that it keeps complaining.
+    #
+    # The yardsticks come out of the live `zahlen` list, never out of a literal here -- a
+    # probe that types its own expected value measures how well it was typed.
+    heute_je = {was: h for _, h, was in zahlen}
+    k = heute_je.get("Kennzahlen mit Befehl")
+    fz = heute_je.get("unbewachte fettgedruckte Zahlen")
+    rg = heute_je.get("EBNF-Regeln")
+    en_falsch = ("**999 metrics with a command** · **999 bold numbers in table cells "
+                 "without one** · 999 EBNF rules\n")
+    en_richtig = (f"**{k} metrics with a command** · **{fz} bold numbers in table cells "
+                  f"without one** · {rg} EBNF rules\n")
+    en_b = pruefe(en_falsch, zahlen)
+    en_s = pruefe(en_richtig, zahlen)
+    en_ok = len(en_b) >= 3 and not en_s
+    print(f"  EN-Beschriftung: {len(en_b)} Befunde bei verstellten Zahlen, "
+          f"{len(en_s)} bei richtigen", end="")
+    print(" -- ok" if en_ok else " -- GESCHEITERT (die englische Schreibweise ist unbewacht)")
+    for b in en_b + en_s:
+        print(f"     {b}")
 
     # **The DONE count, both ways** (2026-08-30). It lives in the same function as the other
     # rules and would otherwise be carried along by the two lists above -- *a rule that is
@@ -674,7 +743,8 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
     for b in r_sauber:
         print(f"     {b}")
 
-    return len(b_gift) >= 5 and not b_sauber and bool(getroffen) and not r_sauber and d_ok
+    return (len(b_gift) >= 5 and not b_sauber and bool(getroffen) and not r_sauber and d_ok
+            and len(b_gift_en) >= 5 and not b_sauber_en and en_ok)
 
 
 def main():

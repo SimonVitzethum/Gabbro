@@ -229,12 +229,16 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~
-  **48 von 53** Wächtern können mitten im Lauf abbrechen, ~~258~~
-  **263 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  **48 von 53** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~
+  **266 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
   entstand — grün davor, rot danach, beides gemessen. **Genau dafür steht das Register.***
+  *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
+  `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
+  eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und
+  `pruefe-zahlen.py` einen Eintrag, der beim Verlust seiner Beschriftung stumm bliebe.*
   **Und am selben Abend GEHEILT**, soweit eine Form das kann: 92 gefährliche Stellen, alle
   gedeckt, `MARKE_TEILMESSUNG = 0`, und die Abnahme trennt eine `TEILMESSUNG` vom Befund.
   *Was bleibt, ist die Ansage — nicht das Ausbleiben des Schnitts.*
