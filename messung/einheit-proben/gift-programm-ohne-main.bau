@@ -1,0 +1,16 @@
+-- **Gift: `unit … program` ueber einer Einheit, die kein `main` hat.**
+--
+-- Dieselben zwei Dateien wie die Bibliothek in `zwei-einheiten.bau`, nur als `program`
+-- ausgewiesen. Sie pruefen sauber, sie uebersetzen sauber, und der Binder sagt ab -- *und das
+-- ist die einzige Stelle im ganzen Bau, an der etwas ueber MEHR ALS EINE Einheit entschieden
+-- wird.*
+--
+-- **Ohne diese Probe misst nichts, dass der Bindeschritt ueberhaupt laeuft.** Ein `program`,
+-- das in Wahrheit nur ein `object` schreibt, saehe von aussen genauso aus.
+
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-ohne-main
+
+unit ohnemain program
+    messung/einheit-proben/prog-vorrat.gab
+    messung/einheit-proben/prog-werk.gab

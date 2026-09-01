@@ -1,0 +1,21 @@
+-- **Einheit `rechenwerk`, Datei 1 von 2 -- der Traeger.**
+--
+-- Sie erklaert die Tabelle und den Mengentyp und traegt keinen einzigen Rumpf. Das ist
+-- Absicht und der halbe Grund, warum diese Probe existiert: die Einheit besteht aus ZWEI
+-- Dateien, also kann sie nur als Einheit geprueft, uebersetzt und beschrieben werden.
+-- Einzeln gefahren nennt die zweite Datei `Regal` und `Menge` und findet sie nicht.
+--
+-- `Menge` ist vorzeichenbehaftet, und das ist keine Laune: das Ergebnis des Programms
+-- verlaesst es als Rueckgabewert von `main`, und `main` gibt in C ein `int` zurueck. Ein
+-- `u32` dort waere `uint32_t main(void)`, und das faellt an `cc -Wall -Wextra -Werror`.
+module vorrat {
+
+pub const NFAECHER : u32 = 8;
+
+pub type Menge = i32 in 0 .. 100;
+
+pub table Regal count NFAECHER {
+    slot { menge : Menge, }
+}
+
+}

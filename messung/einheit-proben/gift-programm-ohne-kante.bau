@@ -1,0 +1,15 @@
+-- **Gift: das Programm ohne die Einheit, auf der es steht.**
+--
+-- Dieselbe Datei wie in `zwei-einheiten.bau`, nur ohne die Einheit `rechenwerk` daneben. Der
+-- Graph hat dann keine Kante zu rechnen, und der Vorspann ist leer -- also loesen `ablegen`
+-- und `holen` nicht auf, und `K003` sagt ab: *"promises costs, but `ablegen` is not declared
+-- here"*.
+--
+-- **Diese Probe ist der Beleg, dass die Kante GETRAGEN wird und nicht nur gerechnet.** Ohne
+-- sie hiesse „das Programm uebersetzt" nur, dass die zwei Dateien zufaellig zusammenpassen.
+
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-ohne-kante
+
+unit haupt program
+    messung/einheit-proben/prog-haupt.gab

@@ -1,0 +1,39 @@
+-- **Einheit `rechenwerk`, Datei 2 von 2 -- die Ruempfe.**
+--
+-- Sie schreibt in eine Tabelle, die in Datei 1 steht, und sie fuehrt einen PRIVATEN Helfer:
+-- `deckeln` traegt kein `pub` und wird im C `static`. **Das ist die Aussage, die erst ein
+-- Binder pruefen kann** -- `nm` fragt ihn und nicht den Erzeuger.
+module werk {
+
+use vorrat::Regal;
+use vorrat::Menge;
+
+-- **Privat, und er rechnet mit.** Ohne die Deckelung stuende in Fach 2 die rohe Zahl, und
+-- das Ergebnis des Programms waere ein anderes. *Ein privater Helfer, den man wegnehmen
+-- kann, ohne dass die Handschrift sich ruehrt, misst nichts.*
+impl fn deckeln(w : i32 in 0 .. 20000) -> Menge
+    effects { pure }
+    costs   <= 6 ops
+{
+    if w > 100 {
+        return 100;
+    }
+    return w;
+}
+
+pub impl fn ablegen(i : index into Regal, w : i32 in 0 .. 20000) -> bool
+    effects { writes Regal.slots }
+    costs   <= 20 ops
+{
+    Regal.slots[i].menge = deckeln(w);
+    return true;
+}
+
+pub impl fn holen(i : index into Regal) -> Menge
+    effects { reads Regal.slots }
+    costs   <= 10 ops
+{
+    return Regal.slots[i].menge;
+}
+
+}
