@@ -1075,3 +1075,63 @@ LETZTEN Ausgang mit `1` endet, hat alles gemessen; einer, der am vorletzten mit 
 nicht. **Von außen sieht beides gleich aus.** Der erste Versuch setzte sie vor die letzte
 Rückgabe und ließ `pruefe-grammatiktafel.py` seinen vollständigen Befund als abgeschnitten
 melden — sie gehört vor die **Urteilskette**.
+
+---
+
+## W27 — Fehlender Griff, gelesen als fehlende Fähigkeit
+
+*Gebucht 2026-09-01, nach **drei** Instanzen in einer einzigen Bahn.*
+
+> **Die Frage war unstellbar, und das sah aus wie ein Nein.**
+
+| | |
+|---|---|
+| `--with` erreichte `--vergleich` nicht | *„sieht die Ableitung über die Grenze?"* war **nicht fragbar** — und die Abwesenheit einer Antwort las sich wie eine negative |
+| `emit --unit` gab es nicht | **Die Fähigkeit steckte in `bau.rs` und hatte keinen Namen auf der Kommandozeile** — dieselben zwei Dateien: 7 Absagen ohne die Fahne, 0 mit ihr, byteidentisches C |
+| `assume` an der Einheitengrenze | **nicht unmöglich, sondern ungebaut** — und nichts an der Grenze sagt, dass die Entscheidung getroffen wurde |
+
+### Warum das eine eigene Zeile ist und nicht W16
+
+Bei `W16` **misst ein Messgerät etwas anderes als seinen Gegenstand** — die Gegenmaßnahme ist,
+das Gerät zu prüfen. Hier **kann es die Frage gar nicht annehmen**, und die Gegenmaßnahme ist
+eine andere:
+
+> **Fragen, ob die Antwort „nein" heißt oder „nicht gefragt".**
+
+*Ein Werkzeug ohne Griff für eine Frage beantwortet sie nicht mit Schweigen — es beantwortet
+sie gar nicht, und Schweigen ist die Form, in der das ankommt.*
+
+**Und die teuerste Form davon steht in `N041`:** die Regel hält jedes benannte Item außer
+`module` und `use`, also auch `extern fn` — *das Konstrukt, dessen Zweck die absichtliche
+Bindung an einen C-Namen ist.* Damit kann ein Gabbro-Programm nicht drucken, und **acht
+Anläufe für „addiere zwei Zahlen" haben eine Erklärung, die nicht die Sprache ist.**
+
+---
+
+## W28 — Eine Zahl, die eine Bahn auslöst, gehört mit ihrem GRIFF in den Auftrag
+
+*Gebucht 2026-09-01, nach der sechsten Instanz von `W16` — und die traf diesmal keine
+Messung, sondern eine **Priorisierung**.*
+
+Der Auftrag an die Wortschatzratsche trug als Dringlichkeitsbeleg: *„226 → 234 Wörter an
+einem Tag."* Der Griff dahinter:
+
+```
+grep -oE '"[a-z_][a-z0-9_]*"' kw.rs | sort -u | wc -l   ->   234
+```
+
+Er nimmt **jede kleingeschriebene Zeichenkette der Datei**: fünfzehn aus Kommentaren zu viel,
+die drei großgeschriebenen zu wenig. **Nachgezählt war die Zahl nie 234 und nie 226** —
+219 · 220 · 222 über acht Tage.
+
+> **Bei `grep -oE '"[a-z_]…"' kw.rs` hätte jeder Leser gesehen, dass Kommentare mitzählen.**
+
+**Für ERGEBNISzahlen führt der Baum das längst** — `W7`, der Nenner neben jeder Zahl, die
+Gegenprobe im Wächter. **Für BEGRÜNDUNGSzahlen nicht**, und genau dort ist der Schaden
+größer: eine falsche Ergebniszahl wird beim nächsten Lauf rot, eine falsche
+Begründungszahl **lenkt eine Bahn und verschwindet danach.**
+
+*Das Ergebnis stimmte hier trotzdem — 221 Wörter und ein Absenkungssatz sind unabhängig von
+der Steigung ein Missverhältnis. **Aber das ist Glück, kein Verdienst.*** Der Satz, der es
+benennt, stand zwei Antworten vorher im selben Gespräch: *der Unterschied zwischen einem
+Argument, das an einer Messung hängt, und einem, das an der Struktur hängt.*
