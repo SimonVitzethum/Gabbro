@@ -1,0 +1,43 @@
+-- erwartet: R012
+-- **Gift 449 -- die andere Haelfte: `rc`, und dort ist schon das LESEN der Verlust.**
+--
+-- `w1c` und `rc` sind die zwei Klassen, bei denen ein Zugriff eine Nebenwirkung hat statt
+-- eines Verbots (`m3.rs::darf_lesen_reg`). Ein Lese-Aendere-Schreib-Zug faellt an beiden,
+-- aber aus entgegengesetzten Gruenden:
+--
+--     w1c   das ZURUECKSCHREIBEN loescht, was das Lesen mitgenommen hat
+--     rc    das LESEN loescht, und der Zug faengt damit an
+--
+-- Bei `rc` ist die Sache sogar schaerfer: die drei C-Zeilen fangen mit einem `volatile`-Lesen
+-- an, und das Geraet loescht sein Ueberlaufbit in genau dem Augenblick. **Der Wert, den der
+-- Zug dann zurueckschreibt, beschreibt einen Zustand, den es nicht mehr gibt.**
+--
+-- > Ohne die getrennte Probe waere die Regel an EINER Klasse gemessen, und die Meldung
+-- > nennt sie einzeln beim Namen -- eine gemeinsame Absage haette den `rc`-Grund als
+-- > `w1c`-Grund ausgegeben.
+--
+-- *Regel A:* der Bedarfsbeleg fuer `rc` steht in `messung/grammatik/raumworte.gab`:67 und
+-- `messung/grammatik/geraeteworte.gab`:26 -- zwei erklaerte `rc`-Register, beide bis heute
+-- nur gelesen. Diese Probe zeigt, was passierte, wenn eines von ihnen ein Bit bekaeme.
+
+module gift449 {
+
+-- **Und das Register ist `class rw` mit einem `rc`-FELD, nicht durchgehend `rc`.** Ein
+-- durchgehend `rc`-Register faengt schon `R006` ab -- es ist gar nicht schreibbar --, und
+-- dann haette diese Probe zwei andere Regeln gemessen als die, die sie behauptet. *Hier ist
+-- das geschriebene Feld gewoehnlich; heikel ist der NACHBAR im selben Wort.*
+device Zaehlwerk(basis : u64) at mmio {
+    reg STATUS : u32 @0x00 class rw fields {
+        UEBERLAUF @0 class rc,
+        GESEHEN   @1,
+    }
+}
+
+impl fn merken(z : ptr<mmio, rw> Zaehlwerk)
+    effects { writes z.STATUS }
+    costs    <= 4 ops
+{
+    z.STATUS.GESEHEN = 1;
+}
+
+}

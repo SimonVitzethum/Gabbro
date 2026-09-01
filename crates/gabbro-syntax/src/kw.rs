@@ -161,6 +161,23 @@ wortschatz! {
     Device        => "device",        res;
     Reg           => "reg",           res;
     Class         => "class",         res;
+    // **`w1c` and `rc` stand HERE and not among the types** (2026-09-01, `OB4`).
+    //
+    // They stood in the `-- Types --` block beside `u8` and `bool` until today, and that
+    // placement was not a filing mistake -- it was the whole defect in one line. **A
+    // write-1-to-clear register is not a number of another type, it is an access
+    // BEHAVIOUR**, and as long as it was filed as a type nothing treated it as one: the
+    // emitter's read-modify-write asked the REGISTER's class, never the field's, and
+    // `beispiele/45` shipped an acknowledgement of `PFO` that cleared `PPF` along with it.
+    //
+    // The two of them belong to `class`, beside `rw`/`r`/`w` -- those three live one block
+    // up under `-- Pointers --` because a pointer right and a register class share the
+    // spelling. *These two do not, and that is why they were the ones that drifted.*
+    //
+    // The refusal is `R012` in `m3.rs`; the word list is the place where it stops looking
+    // like a type.
+    W1c           => "w1c",           res;
+    Rc            => "rc",            res;
     Fields        => "fields",        res;
     Bank          => "bank",          res;
     At            => "at",            res;
@@ -351,8 +368,6 @@ wortschatz! {
     Finite        => "finite",        res;
     Bool          => "bool",          res;
     Never         => "never",         res;
-    W1c           => "w1c",           res;
-    Rc            => "rc",            res;
 
     // -- Built-in ------------------------------------------------------------------------
     Sizeof        => "sizeof",        res;

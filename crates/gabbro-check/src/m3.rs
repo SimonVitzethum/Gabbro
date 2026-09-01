@@ -478,6 +478,7 @@ fn klassenblock(
                 if !matches!(z.op, ZuwOp::Setzt) {
                     klassenpruefung(&z.ziel, s.span, true, geraete, griffe, absagen);
                 }
+                rmw_pruefung(&z.ziel, s.span, geraete, griffe, absagen);
             }
             StmtArt::Publish(p) => {
                 klassenpruefung(&p.ziel, s.span, false, geraete, griffe, absagen)
@@ -594,6 +595,101 @@ fn klassenpruefung(
         ));
     }
     absagen.schiebe(a);
+}
+
+/// **`R012` -- a read-modify-write on a word whose READ or WRITE has a side effect.**
+///
+/// Writing one bit field means writing the whole word, so the emitter reads it first and puts
+/// the untouched bits back. **That is only harmless where putting a bit back is a no-op**, and
+/// `w1c` and `rc` are exactly the two classes where it is not:
+///
+/// * `w1c` -- writing a one CLEARS. The read picks up every error bit currently set, the
+///   write-back sets those ones again, and each of them clears. *Acknowledging one bit
+///   silently acknowledges every bit that was standing.*
+/// * `rc` -- reading CLEARS. The read of the read-modify-write is itself the loss.
+///
+/// **And this is not a rule about the FIELD, it is a rule about the WORD.** `beispiele/45`
+/// declares `FSTS` as `class rw` with two `w1c` fields inside it; the register class was the
+/// only thing the emitter looked at, so the word passed as ordinary and the generated
+/// acknowledgement of `PFO` cleared `PPF` along with it -- measured, shipped, and green in
+/// every pass:
+///
+/// ```c
+/// uint32_t _v = (*(volatile uint32_t *)(v->basis + 52));
+/// (*(volatile uint32_t *)(v->basis + 52)) =
+///     (uint32_t)((_v & (uint32_t)~(uint32_t)1u) | ((uint32_t)(1) << 0u & (uint32_t)1u));
+/// ```
+///
+/// > That is why `w1c` moving out of the *type* words and in beside `class` is not
+/// > housekeeping. **A write-1-to-clear register is not a number of another type, it is an
+/// > access BEHAVIOUR** -- and as long as it was filed as a type, a read-modify-write over it
+/// > was type-correct and wrong.
+///
+/// **The exits both exist and neither is `extern`:** the whole-word write `v.FSTS = 1;`
+/// lowers to a single volatile store with no read, and `transition` writes the whole word
+/// too -- with `mirrors` it reads the MIRROR, a different register, never the target.
+///
+/// *Not `R006`:* that one says the place is not writable. A `w1c` field IS writable
+/// (`darf_schreiben_reg` says so, correctly). What is refused here is one particular WAY of
+/// writing it.
+fn rmw_pruefung(
+    o: &Ort,
+    span: Span,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    let Some(t) = ort_register(o, geraete, griffe) else {
+        return;
+    };
+    // A whole-word write is not a read-modify-write, and it is the answer to this refusal.
+    if t.feld.is_none() {
+        return;
+    }
+    // **A phase-classed register is not decided here**, exactly as in `klassenpruefung`:
+    // which class holds depends on the stage, and the stage is walked in `phasen.rs`.
+    if !t.info.phasen.is_empty() {
+        return;
+    }
+    // The whole word, not the addressed field: the read picks up every bit of it.
+    let heikel = |k: &RegKlasse| matches!(k, RegKlasse::W1c | RegKlasse::Rc);
+    let schuldig = if heikel(&t.info.klasse) {
+        Some((t.reg.text.clone(), t.info.klasse))
+    } else {
+        t.info
+            .felder
+            .iter()
+            .find(|(_, k)| heikel(k))
+            .map(|(n, k)| (format!("{}.{n}", t.reg.text), *k))
+    };
+    let Some((stelle, klasse)) = schuldig else { return };
+    let wort = klassenwort(klasse);
+    let wirkung = if klasse == RegKlasse::W1c {
+        "writing a one CLEARS, so the read-modify-write puts back every bit that was \
+         standing and clears it"
+    } else {
+        "reading CLEARS, so the read of the read-modify-write is itself the loss"
+    };
+    absagen.schiebe(
+        Absage::fehler(
+            "R012",
+            span,
+            format!(
+                "`{}` writes ONE BIT of a word that carries `class {wort}` at `{stelle}`",
+                o.text()
+            ),
+        )
+        .mit_notiz(format!("`{wort}`: {wirkung}"))
+        .mit_notiz(format!(
+            "writing a bit field is a read-modify-write on the WHOLE word `{}`, and the \
+             class of the word decides, not the class of the field",
+            t.reg.text
+        ))
+        .mit_notiz(
+            "the whole-word write `d.REG = <bits>;` emits a single store without a read, and \
+             `transition` writes the whole word as well",
+        ),
+    );
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {

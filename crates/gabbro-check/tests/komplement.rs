@@ -253,3 +253,81 @@ int main(void) {
     return 0;
 }
 "#;
+
+/// **The third half of the same item: a read-modify-write on a W1C word.**
+///
+/// `beispiele/45` declares `FSTS` as `class rw` with two `w1c` fields, and until 2026-09-01
+/// its acknowledgement of `PFO` lowered to a read-modify-write. On the hardware that word
+/// describes, **writing a one CLEARS**: the read picks up every error bit standing, the
+/// write-back sets those ones again, and each of them clears. *Acknowledging one bit
+/// acknowledged all of them, and every pass was green.*
+///
+/// The probe RUNS the emitted C over a plain buffer, because that is enough to separate the
+/// two lowerings: with the whole-word write the buffer afterwards holds exactly bit 0 (a one
+/// aimed at `PFO` alone); with the read-modify-write it holds `0b11` -- a one aimed at `PPF`
+/// as well, which on the real device is the silently swallowed error.
+#[test]
+fn eine_w1c_quittierung_schreibt_das_ganze_wort_ohne_zu_lesen() {
+    let mut c = emittiere("45-gemischte-registerklasse.gab");
+    assert!(
+        !c.contains("uint32_t _v = "),
+        "the acknowledgement still READS the word before writing it:\n{c}"
+    );
+    c.push_str(W1CTREIBER);
+
+    let d = std::env::temp_dir().join("gabbro-w1c");
+    std::fs::create_dir_all(&d).expect("the work directory is writable");
+    let quelle = d.join("lauf.c");
+    let ziel = d.join("lauf");
+    std::fs::write(&quelle, &c).expect("the emitted C is writable");
+    let bau = Command::new("cc")
+        .args(["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror"])
+        .arg("-o")
+        .arg(&ziel)
+        .arg(&quelle)
+        .output();
+    let bau = match bau {
+        Ok(r) => r,
+        Err(e) => panic!("`cc` cannot be started ({e}) -- NOTHING measured"),
+    };
+    assert!(
+        bau.status.success(),
+        "the emitted C does not compile under `-Wall -Wextra -Werror`:\n{}\n{}",
+        String::from_utf8_lossy(&bau.stderr),
+        quelle.display()
+    );
+    let lauf = Command::new(&ziel)
+        .output()
+        .unwrap_or_else(|e| panic!("the compiled program does not run ({e}) -- NOTHING measured"));
+    assert!(lauf.status.success(), "the compiled program aborts");
+    let aus = String::from_utf8_lossy(&lauf.stdout);
+    assert!(
+        aus.contains("quittiert=1"),
+        "the acknowledgement aims a one at more than `PFO` -- on a W1C word every one of \
+         them clears:\n{aus}"
+    );
+    let _ = std::fs::remove_file(&quelle);
+    let _ = std::fs::remove_file(&ziel);
+}
+
+const W1CTREIBER: &str = r#"
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    /* A stand-in for the register window. Enough to tell the two lowerings apart: the
+       question is not what the device does with the word, it is WHICH word gets written. */
+    static volatile uint8_t fenster[256];
+    memset((void *)fenster, 0, sizeof fenster);
+    Vtd v = { fenster };
+    /* Both error bits are standing, and the index says entry 7. */
+    *(volatile uint32_t *)(fenster + 0x34) = 0x0703u;
+    if (fehlerindex(&v) != 7u) { printf("INDEX FALSCH\n"); return 1; }
+    fehler_quittieren(&v);
+    unsigned geschrieben = (unsigned)*(volatile uint32_t *)(fenster + 0x34);
+    /* 1 = a one at PFO alone.  3 = a one at PPF too, and on the device that clears an
+       error nobody acknowledged. */
+    printf("quittiert=%u\n", geschrieben);
+    return 0;
+}
+"#;
