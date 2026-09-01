@@ -2047,3 +2047,194 @@ nicht für x86-I/O.**
 Rümpfen`, `1 Absenkungssatz von 65`, die Naht zwischen zwei Beweisern, die in keiner Logik
 existiert. *Eine Beta braucht keinen Beweis — sie braucht einen Prüfer, der nicht lügt. Aber
 der Satz, dass ein verifiziertes Gabbro dem Nutzer die Arbeit abnimmt, hängt an ihr.*
+
+---
+
+# TEIL VIII — Die Sprache selbst, und zwei Auslieferungswege
+
+*Angefügt 2026-09-01 auf `2110702`. **Teil VII beantwortete, was für eine Beta fehlt. Dieser
+Teil trennt davon, was an der SPRACHE offen ist** — nicht am Werkzeug, nicht am Beweis, nicht
+am Prozess.*
+
+## §51 — Was an der Sprache offen ist, nach Gewicht
+
+### S1 — Domänen sind geschlossen · **der schärfste Widerspruch zum Ziel**
+
+Siebzehn Wörter, keine benutzerdefinierten. **Eine neue Datenstruktur braucht den
+Sprachautor.** Gerechnet, nicht gebaut: die Regel senkt **drei** Wörter, nicht siebzehn —
+*und trägt trotzdem, weil `domaenenschranke` genau EINEN Aufrufer hat.* Ohne `costs`-Zeile
+fragt niemand nach der Schranke einer Domäne, und `reach … via` steht seit jeher in der
+Grammatik.
+
+- [ ] Der billigste offene Sprachposten mit echtem Ertrag. *Nicht Wortschatz, sondern
+      **Schranke**: von „wird gefragt" nach „steht fest".*
+
+### S2 — `spec fn` kann keine Rahmenbedingung ausdrücken
+
+> *„`raeumen` fasst kein anderes Fach an"* ist ein **Quantor**, und Rahmenbedingungen sind
+> der häufigste Inhalt einer Kernspezifikation. **Dafür verlässt der Nutzer heute die
+> Sprache.**
+
+Und das ist der eine Posten, den Verifikation nicht heilt: *verifiziert man einen Prüfer, der
+eine Eigenschaft nicht formulieren kann, hat man einen verifizierten Prüfer, der sie immer
+noch nicht formulieren kann.*
+
+### S3 — `char` an der `extern`-Grenze
+
+Beliebige Zeichenketten gehen **heute** (`ptr<normal, r>` auf einen Puffer mit Länge). Was
+nicht geht: `puts`/`printf` wollen `const char *`, Gabbro hat `u8`.
+
+> **Eine Signaturfrage an der `extern`-Grenze, keine Typsystemfrage.** `N046` ist der Pass,
+> der sie stellt.
+
+- [ ] Rechnen, ob `N046` `[u8; N]` gegen `char *` durchlassen soll, wenn der Nutzer es
+      hinschreibt. *Kein Wort in der Sprache.*
+
+### S4 — Der Ausstieg ist binär
+
+Sprache oder `extern`. Ada hat einen Abstiegspfad; **Gabbros Form läge schon da** — `check`
+existiert, die Absagedisziplin existiert.
+
+> Eine Pflicht, die statisch nicht fällt, wird eine **benannte Laufzeitabsage** statt eines
+> `extern`. **Der Gewinn ist Zählbarkeit, nicht Sicherheit** — heute ist jeder Ausstieg ein
+> `extern`, und `extern` ist ununterscheidbar breit.
+
+- [ ] **Braucht die Zahl vorher:** wie viele der heutigen `extern` fielen in die mittlere
+      Stufe? *Ohne sie ein Wort ohne gemessenen Bedarf.*
+
+### S5 — Zwei kleine, beide gemessen
+
+```
+`let x = if b { a } else { 0 };`   error: [P002] `if` is a word of the vocabulary,
+                                                not an identifier
+`type W = u32 wrapping;`           error: [P001] `;` expected, `wrapping` found
+```
+
+`if` als Ausdruck: **der Erzeuger schreibt `?:` selbst** (8 Stellen), die Sprache kann es
+nicht. `wrapping` am Typalias: `reg`- und Slotfelder tragen es, ein `type` nicht — *für
+Bitcode, wo jede Rechnung umlaufen SOLL, eine unnötige Asymmetrie.*
+
+### S6 — `at port` ist abgesagt, nicht gelöst
+
+*Eine abgesagte Absenkung ist ein Loch im Anspruch, kein geschlossener Punkt.* Solange
+Portzugriffe außerhalb der Sprache stattfinden, gilt „MMIO gelöst" **für memory-mapped und
+nicht für x86-I/O.**
+
+### S7 — RMW auf ein Gerät hat keine Atomarität
+
+`R012` nimmt nur Fälle weg, die **auch ohne Unterbrechung** falsch sind. Ein `modify`, das
+W1C- und geteilte Register unterscheidet, wäre die Fortsetzung der Phasenklasse — *und
+§42 hat gezeigt, dass diese Familie teurer ist, als sie aussieht.*
+
+### S8 — Die drei Schichten der Seitentabelle
+
+**TLB** (kein Konstrukt nennt `invlpg`/`TLBI`/Shootdown, billig und real ausnutzbar) ·
+**Erhaltung** (die Invariante hängt am Abstieg statt an der Änderung; als Induktion geführt
+braucht sie keine Quantifizierung) · **Selbstbezug** (ungelöst, auch bei seL4).
+
+### Und was NICHT mehr offen ist
+
+```
+`~` · `u32::max` im Ausdruck · `w1c` als Zugriffsklasse       zu, `ff9d29a`
+Vorrang der Bitoperatoren                                     zu, `d8c79d1`
+Zeichenketten IM Programm                                     gingen die ganze Zeit
+Parametrizitaet                                               gemessen erledigt: 5 Skelette mehrfach
+ein gehosteter Eintritt                                       zu, `2110702`, OHNE neues Wort
+```
+
+---
+
+## §52 — Auslieferung: AUR-Paket
+
+*Der Befund, der es billig macht, ist gemessen:*
+
+```
+Abhaengigkeiten der drei Kisten:   NULL externe
+version                            0.0.1        git tag       0
+```
+
+**Ein `PKGBUILD` für `gabbro-git` ist damit fünfzehn Zeilen** — `cargo build --release`, ein
+Binärprogramm, keine Bibliothek, keine Systemabhängigkeit außer `cc` zur *Laufzeit* (für
+`gabbro build`).
+
+- [ ] **Vorbedingung, und sie ist die eigentliche Arbeit:** eine **Version** und ein **Tag**.
+      Heute `0.0.1` und null Tags — *ein AUR-Paket ohne Freigabe zeigt auf einen bewegten
+      Zweig.*
+- [ ] `depends`: `gcc` (Laufzeit, für `gabbro build`), `makedepends`: `rust`. **Isabelle und
+      Lean gehören NICHT hinein** — sie prüfen den Baum, nicht das Erzeugnis.
+- [ ] Die Prüfsumme über ein Freigabearchiv, nicht über `HEAD`.
+
+*Aufwand: eine Bahn, und der größere Teil davon ist die Freigabe selbst.*
+
+---
+
+## §53 — Auslieferung: WASM und eine VS-Code-Erweiterung
+
+**Gemessen 2026-09-01, und es geht heute:**
+
+```
+$ cargo build --target wasm32-wasip1 -p gabbro-cli --release
+  Finished `release` profile in 11,50s
+  target/wasm32-wasip1/release/gabbro.wasm    3 152 325 Byte  (3,0 MiB)
+```
+
+**Null Abhängigkeiten, `unsafe_code = forbid`, kein Systemruf außer Datei-Ein/Ausgabe** —
+das ist der Grund, warum es beim ersten Versuch durchläuft.
+
+### Was in WASM geht und was nicht — die Trennung ist scharf
+
+| | |
+|---|---|
+| **geht** | `check` · `emit` · `abi` · `costs` · `effects` · `obligations` · `certificate` · `lean` — **alles, was liest und schreibt** |
+| **geht NICHT** | `build`. `bau.rs:742` und `:763` rufen `std::process::Command` für `cc` und den Binder. *In WASM gibt es keinen Kindprozess.* |
+
+- [ ] **Und das ist keine Einschränkung, sondern die richtige Trennung:** eine Erweiterung
+      soll prüfen und Diagnostik zeigen, nicht binden. `build` bleibt beim lokalen
+      Binärprogramm.
+
+### Die Erweiterung, in drei Stufen
+
+**Stufe 1 — Diagnostik ohne LSP.** Die Erweiterung ruft `gabbro.wasm check` bei jedem
+Speichern und übersetzt die Ausgabe in `Diagnostic`s. **Das Format liegt schon dafür bereit:**
+
+```
+error: [M101] datei.gab:2:12: the return value requires `u32`, …
+    2 |     return a + b;
+      |            ^^^^^
+      = M1: every operation must stay inside the range of its result type
+```
+
+*Kennung, Datei, Zeile, Spalte, Spanne, Erklärung — eine Zeile Regex je Feld.* **Und die
+Fußzeile `Not checked in this run: 9 passes CARRIED` gehört in die Statusleiste, nicht
+weggeworfen** — sie ist das, was Gabbro von anderen Übersetzern unterscheidet.
+
+**Stufe 2 — Syntaxhervorhebung.** 221 Wörter, und **die Liste ist maschinenlesbar**
+(`kw.rs`, geratscht). *Eine TextMate-Grammatik aus `zaehle-wortschatz.py` zu erzeugen ist
+richtiger, als sie zu schreiben* — dann kann sie nicht veralten.
+
+**Stufe 3 — was Gabbro kann und andere nicht.** `gabbro costs` druckt `computed / promised /
+slack` je Rumpf. **Das gehört als Inlay-Hinweis an die `costs`-Zeile** — der Nutzer sieht,
+dass sein Rumpf 48 von 64 zugesagten Ops braucht, ohne einen Befehl zu tippen. *Dasselbe für
+`gabbro effects --vergleich`: zu weit deklarierte Wirkungen als schwacher Hinweis.*
+
+- [ ] **Reihenfolge: Stufe 1 zuerst und allein.** Sie ist die Eingangstür für einen zweiten
+      Menschen, und sie braucht kein LSP.
+- [ ] Kein `wasm-bindgen`, kein `wasm-pack`: **`wasip1` läuft in VS Code über
+      `@vscode/wasm-wasi`**, und die Abhängigkeitsfreiheit bleibt erhalten.
+- [ ] *Ungemessen: kein WASM-Laufzeitsystem auf diesem Rechner. Die 3,0 MiB sind gebaut, aber
+      NICHT gelaufen* — `wasmtime` fehlt, und das gehört gemessen, bevor jemand die
+      Erweiterung schreibt.
+
+---
+
+## §54 — Reihenfolge für Teil VIII
+
+| # | | warum |
+|---|---|---|
+| **1** | **`gabbro.wasm` einmal LAUFEN lassen** | 3,0 MiB gebaut und nie ausgeführt. *Eine Messung von Minuten, und sie trägt §53 ganz* |
+| **2** | Freigabe: Version + Tag | Vorbedingung für §52, und ohnehin Beta-Tor |
+| **3** | AUR-`PKGBUILD` | fünfzehn Zeilen, sobald 2 steht |
+| **4** | Erweiterung Stufe 1 | die Eingangstür für einen zweiten Menschen |
+| **5** | **S1 Domänenregel** | der billigste Sprachposten mit echtem Ertrag |
+| **6** | S3 `char` an der Grenze · S5 die zwei kleinen | je eine Rechnung gegen die Ratsche |
+| **7** | S2 · S4 · S6 · S7 · S8 | Forschungs- und Entwurfsanteil |
