@@ -261,7 +261,12 @@ def main():
     print("   %s" % ", ".join(mit_grund))
     print("   %d ohne, Marke %d -- auch das eine Ratsche, und sie laeuft nach unten."
           % (len(ohne_grund), MARKE_OHNE_GRUND))
-    print("   **Die 210 sind kein Rueckstand, den jemand abarbeiten soll.** Die Regel gilt")
+    # **The number in the sentence is the COMPUTED one.** The first draft wrote `210` into
+    # the prose beside a number this run works out, and the two disagreed the moment a word
+    # fell -- a hand-kept figure running parallel to the truth, one line apart. *Trap 80, in
+    # a tool built against exactly that.*
+    print("   **Die %d sind kein Rueckstand, den jemand abarbeiten soll.** Die Regel gilt"
+          % len(ohne_grund))
     print("   dem NAECHSTEN Wort; was die Marke kauft, ist, dass es nicht still ankommt.")
     print()
 
