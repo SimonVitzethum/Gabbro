@@ -3389,7 +3389,21 @@ impl<'a> Pruefer<'a> {
             .mit_notiz(
                 "SYNTAX.md §4: if the result range does not fit, it is a compile error \
                     and not a wrap-around",
-            ),
+            )
+            // **«B3» hint 4.** The measured session read this refusal, changed the RETURN
+            // type from `u32` to `u64`, and got the same refusal back -- because the width
+            // that is left is the width of the OPERANDS, and a wider return type does not
+            // widen them. *A message that names the fault without naming where it lives
+            // sends the reader to the wrong line, and that cost one whole attempt.*
+            .mit_notiz(
+                "the width that is left is the OPERANDS' -- a wider RETURN type does not \
+                    widen them",
+            )
+            // The ways out are the ones measured green on 2026-09-01, in the order to try
+            // them. **The third one is only a way out while a wider type exists**: at 64
+            // bits there is none, and offering it there would be advice that cannot be
+            // followed.
+            .mit_notiz(wege_aus_der_breite(a, b)),
         );
     }
 
@@ -4541,6 +4555,33 @@ fn grundname_von(e: &Expr, lage: &Lage) -> Option<String> {
             _ => None,
         },
         _ => None,
+    }
+}
+
+/// **The ways out of `M104`, and the third one is offered only where it exists.**
+///
+/// *«B3», hint 4 of five.* The measured `add two numbers` session read *"`u32 + u32` leaves
+/// the width of the result type"*, changed the RETURN type to `u64` and got the identical
+/// refusal back. The message named the fault and not the LINE it lives on -- the operands.
+///
+/// Three shapes were measured green on 2026-09-01, and they are named in the order a reader
+/// should try them: a range on the declaration, a `narrow` before the line, a wider binding.
+/// **The last one stops being a way out at 64 bits**, where there is no wider type, and an
+/// message that offered it there would be advice nobody can follow.
+fn wege_aus_der_breite(a: &IntBereich, b: &IntBereich) -> String {
+    let breite = a.breite.max(b.breite);
+    let art = if a.vorzeichen || b.vorzeichen { 'i' } else { 'u' };
+    let kopf = format!(
+        "two ways out: put a range on the operands where they are DECLARED \
+         (`x : {art}{breite} in 0 .. N`), or `narrow x to 0 .. N else {{ … }}` before this line"
+    );
+    if breite >= 64 {
+        format!("{kopf} -- at 64 bits there is no wider type to bind into")
+    } else {
+        format!(
+            "{kopf}; or bind each operand into a wider type first \
+             (`let w : {art}64 = x;`), and then the sum has room"
+        )
     }
 }
 

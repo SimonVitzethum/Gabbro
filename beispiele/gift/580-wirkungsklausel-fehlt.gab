@@ -1,0 +1,18 @@
+-- erwartet: E001
+-- **«B3», paper cut 1 of five.** The first attempt at `add two numbers`, and it is the
+-- attempt every reader makes: a function written the way it is written in every other
+-- language. `effects` is obligatory and not fail-open, so it falls -- correctly.
+--
+-- **What this probe holds is the NOTE under the refusal, not the refusal.** The measured
+-- session read *"`sum` has no `effects` clause"* and then spent two more attempts guessing
+-- the SHAPE of the clause: `effects {}` (`581`) and `effects pure` (`582`). A message that
+-- names what is missing without showing what to write costs one attempt per reader.
+module gift580 {
+
+pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
+    costs <= 4 ops
+{
+    return a + b;
+}
+
+}

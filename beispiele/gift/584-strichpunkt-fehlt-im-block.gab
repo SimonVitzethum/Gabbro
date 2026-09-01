@@ -1,0 +1,21 @@
+-- erwartet: P001
+-- **«B3», paper cut 5 of five.** `narrow s to 0 .. 100 else { return 0 }` -- the semicolon is
+-- missing INSIDE the block, and the caret sits on the closing brace.
+--
+-- **The next attempt read that caret as "a semicolon goes AFTER the block"** and wrote
+-- `else { return 0; };`, which is `P033` -- and `P033` already carries the line that ends
+-- THAT attempt (*"the forms with a block carry NO trailing semicolon"*, and it names
+-- `narrow … else` among them). **So paper cut 6 was already covered and this one was not:**
+-- the pair `;` expected / `}` found means exactly one thing, and it did not say it.
+module gift584 {
+
+pub fn sum(a : u32, b : u32) -> u32 in 0 .. 100
+    effects { pure }
+    costs <= 8 ops
+{
+    narrow a to 0 .. 50 else { return 0 }
+    narrow b to 0 .. 50 else { return 0; }
+    return a + b;
+}
+
+}

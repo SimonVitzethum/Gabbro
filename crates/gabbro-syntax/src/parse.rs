@@ -176,16 +176,50 @@ impl<'a> Parser<'a> {
     }
 
     fn erwarte_z(&mut self, z: Z) -> Erg<Span> {
+        self.erwarte_z_mit(z, None)
+    }
+
+    /// **The ONE place `P001` is issued for a missing character**, and the note is a
+    /// parameter rather than a second call site.
+    ///
+    /// *Measured on 2026-09-01, and the measurement changed the design:* a refusal
+    /// constructed a second time inside `effects_block` -- the obvious way to write the
+    /// «B3» hint -- moved `pruefe-vergabe.py` from **20 ambiguous identifiers to 21** and
+    /// devalued **three more poison probes** (61 -> 64 of 360). A code with three unrelated
+    /// issue sites can no longer say which rule a probe on it measured. **The ratchet says
+    /// the number may fall and not rise**, so the note travels down to the site instead.
+    ///
+    /// > *The watcher counts the identifier inside a refusal CONSTRUCTOR*, so a comment
+    /// > that spells one out is counted as a site. This one deliberately does not.
+    fn erwarte_z_mit(&mut self, z: Z, notiz: Option<&str>) -> Erg<Span> {
         if self.ist_z(z) {
             Ok(self.vor().span)
         } else {
             let t = self.blick();
             let gefunden = t.benennung(self.quelle);
-            self.absage(Absage::fehler(
+            let mut a = Absage::fehler(
                 "P001",
                 t.span,
                 format!("`{}` expected, {} found", z.text(), gefunden),
-            ));
+            );
+            if let Some(n) = notiz {
+                a = a.mit_notiz(n);
+            }
+            // **«B3» hint 5.** `narrow s to 0 .. 100 else { return 0 }` -- the semicolon is
+            // missing INSIDE the block, and the caret sits on the closing brace. The reader
+            // of the measured session read that as *"a `;` goes AFTER the block"* and wrote
+            // `};`, which is `P033` and the next attempt.
+            //
+            // **The pair is exactly `;` expected and `}` found**, and that pair means one
+            // thing only: a statement ran into the end of its block without its terminator.
+            // *The counter-proposal is spelled out because the two attempts are neighbours.*
+            if z == Z::Semi && t.art == Art::Zeichen(Z::GeschweiftZu) {
+                a = a.mit_notiz(
+                    "the LAST statement of a block ends with `;` too -- \
+                     `else { return 0; }`, and no `;` after the closing brace",
+                );
+            }
+            self.absage(a);
             Err(Abbruch)
         }
     }
@@ -2410,7 +2444,19 @@ impl<'a> Parser<'a> {
 
     fn effects_block(&mut self) -> Erg<Wirkungen> {
         let anfang = self.erwarte_kw(Kw::Effects)?;
-        self.erwarte_z(Z::GeschweiftAuf)?;
+        // **«B3» hint 3 -- the sharpest of the five measured paper cuts.**
+        //
+        // `effects pure` is what a reader writes after `E001` told them the clause is
+        // missing, and the bare `P001` answers *"`{` expected, `pure` found"*. That is true
+        // and it teaches nothing: the reader has no way to know a BRACE LIST is meant. Here
+        // the site is known, so the counter-proposal travels down to the refusal.
+        self.erwarte_z_mit(
+            Z::GeschweiftAuf,
+            Some(
+                "`effects` takes a BRACE LIST and not a bare word: `effects { pure }`, \
+                 `effects { reads p, writes q }`",
+            ),
+        )?;
         let liste = self.efflist()?;
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Wirkungen {
@@ -2472,16 +2518,24 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 let gefunden = t.benennung(self.quelle);
-                self.absage(
-                    Absage::fehler(
-                        "P014",
-                        t.span,
-                        format!("effect expected, {gefunden} found"),
-                    )
-                    .mit_notiz(
-                        "reads writes locks masks allocs consumes publishes diverges pure",
-                    ),
-                );
+                let mut a = Absage::fehler(
+                    "P014",
+                    t.span,
+                    format!("effect expected, {gefunden} found"),
+                )
+                .mit_notiz("reads writes locks masks allocs consumes publishes diverges pure");
+                // **«B3» hint 2.** `effects {}` is the second thing a reader writes after
+                // `E001`, and the list above answers *what* an effect is without answering
+                // *why an empty list is not "none"*. The empty case is recognisable here --
+                // the closing brace stands where an effect should -- so it gets the one
+                // line that ends the attempt.
+                if t.art == Art::Zeichen(Z::GeschweiftZu) {
+                    a = a.mit_notiz(
+                        "an EMPTY list is not `no effects`: the word for that is `pure` -- \
+                         `effects { pure }`",
+                    );
+                }
+                self.absage(a);
                 return Err(Abbruch);
             }
         };
