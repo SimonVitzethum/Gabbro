@@ -4510,9 +4510,29 @@ Siebzehn Wörter, keine benutzerdefinierten.
 > beweist nur seine eigene Logik"* heißt, ist das der schärfste Widerspruch im Entwurf.
 
 - [ ] Eine Domäne als **deklarierte Erreichbarkeit über einem Tabellenfeld, mit
-      Wohlfundiertheitsnachweis an der Deklaration.** Ein Wort statt siebzehn, ein
-      parametrischer Absenkungssatz statt siebzehn. *Löst zugleich `zeugnis.rs:758` und die
-      `mappings of`-Schranke.*
+      Wohlfundiertheitsnachweis an der Deklaration.** ~~Ein Wort statt siebzehn, ein
+      parametrischer Absenkungssatz statt siebzehn.~~ **Gerechnet am 2026-09-01,
+      `messung/DOMAENENREGEL.md` — der Posten steht, seine Zahlen nicht:**
+
+      | | behauptet | gemessen |
+      |---|---|---|
+      | Wörter, die fallen | 17 | **3** (`chain`, `descendants`, `ancestors`), evtl. 4 |
+      | Wörter, die dazukommen | 1 | **0** — `reaches` und `via` stehen schon, als PRÄDIKAT |
+      | Formen, die die Regel ersetzt | alle | **4 von 9**, 40 von 113 Korpusstellen |
+      | Absenkungssätze | 17 → 1 | **0 → 1** — über keiner Domäne steht heute einer |
+      | `zeugnis.rs:758` | eine Wildcard mit fünf Fällen | **seit `e5e555d` neun Zweige** |
+
+      **Der eigentliche Fund: `reach = place "reaches" place "via" ident` gibt es seit jeher**
+      (`SYNTAX.md`:709), und `beispiele/47`:194 sagt selbst, dass es dort steht, wo sonst
+      `ancestors of` stünde. Die Regel ist also kein neues Konstrukt, sondern **eine
+      vorhandene Form aus der Prädikat- in die Domänenseite gehoben** — ein Alternativzweig,
+      null neue Wörter.
+      **Und die Rechtfertigung ist nicht der Wortschatz (3 von 221, 1,4 %), sondern die
+      SCHRANKE:** `domaenenschranke` hat genau EINEN Aufrufer, den Kostenpass. Ohne
+      `costs`-Zeile fragt niemand nach der Schranke einer Domäne. *Ein Nachweis an der
+      Deklaration verlegt sie von „wird gefragt, wenn `costs` dasteht" nach „steht fest".*
+      Nicht gebaut: 41 Korpusstellen in 23 Dateien, fünf Prüferdateien, und der ERZEUGER —
+      das Vierfache des `decreasing`-Falls, und über zwei Bahnen.
 
 ## OA3 — Der Ausstieg ist binär
 

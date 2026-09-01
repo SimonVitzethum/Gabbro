@@ -573,8 +573,45 @@ Deshalb braucht **jede neue Datenstruktur ein neues Domänenwort.**
 Terminierungsfrage wieder. Sondern:
 
 - [ ] **Eine Domäne als deklarierte Erreichbarkeit über einem Tabellenfeld, mit
-      Wohlfundiertheitsnachweis an der Deklaration.** *Ein Wort statt siebzehn, ein
-      parametrischer Absenkungssatz statt siebzehn einzelner.*
+      Wohlfundiertheitsnachweis an der Deklaration.** ~~*Ein Wort statt siebzehn, ein
+      parametrischer Absenkungssatz statt siebzehn einzelner.*~~
+
+> **Gerechnet am 2026-09-01 gegen die Ratsche von §11** (`messung/DOMAENENREGEL.md`). Der
+> Posten steht; jede seiner vier Zahlen ist zu groß.
+>
+> * **Die siebzehn sind keine Messung.** Die Produktion `domain` nennt **elf** Terminale; die
+>   Liste oben enthält acht, die nicht darin stehen (`child`, `parent`, `sibling`, `tree`,
+>   `observed`, `occupied`, `reaches`, `levels`), und verliert zwei, die darin stehen
+>   (`fields`, `in`). `of` und `in` können ohnehin nicht fallen — `in` steht in neun Regeln.
+> * **Nur VIER der neun Formen sind Erreichbarkeit über einem Tabellenfeld.** `slots of` und
+>   `elems of` sind Indexbereiche (53 der 113 Korpusstellen), `fields of` eine statische
+>   Liste, `threads` eine Aussage über die Maschine. Die Regel erreicht **35 %** der Stellen.
+> * **`tree`/`parent`/`child`/`sibling` können nicht fallen:** `opsruf.rs`:244 und
+>   `emit.rs`:2488/2613 lesen die Kante für den `relabel`-Erzeuger, und
+>   `Absenkung_Parametrisch.thy` beweist darüber. *«B41b» hat sie 2026-08-20 ausdrücklich zur
+>   STRUKTUR erklärt, nicht zum Durchlauf.*
+> * **Es gibt keine siebzehn Absenkungssätze abzulösen — es gibt EINEN im ganzen Baum**, und
+>   der handelt von `ops relabel`. Die Bewegung ist **0 → 1**: die Regel *ermöglicht*
+>   Beweisarbeit, sie spart keine. Das ist die bessere Begründung, nicht die schwächere.
+> * **`zeugnis.rs:758` gibt es nicht mehr** — seit `e5e555d` neun einzelne Zweige und neun
+>   Begründungen. §6 ist eingelöst; was bleibt, ist die andere Hälfte.
+>
+> **Der Fund, der den Posten trägt:** `reach = place "reaches" place "via" ident` steht seit
+> jeher in der Grammatik (:709), `reaches` und `via` sind Wortschatzwörter, und
+> `beispiele/47`:194 begründet selbst, warum dort `reaches` und nicht `ancestors of` steht.
+> **Die Regel ist eine vorhandene Form, aus der Prädikat- in die Domänenseite gehoben** — ein
+> Alternativzweig, **null neue Wörter**, drei abgelöste (221 → 218), Stellungen 333 → 332 auf
+> 219 Terminale, also **1,50 → 1,52 je Terminal**.
+>
+> **Und die Rechtfertigung ist die Schranke, nicht der Wortschatz.** `domaenenschranke` hat
+> genau EINEN Aufrufer: `kosten.rs`:665. *Ohne `costs`-Zeile fragt niemand nach der Schranke
+> einer Domäne* — `domaene.rs` sagt es an einer anderen Domäne selbst: „der Fall stand nie
+> auf … also fragte der Kostenpass nie." Ein Nachweis an der Deklaration verlegt die Schranke
+> von *„wird gefragt"* nach *„steht fest"*, und das erreicht jede Funktion ohne `costs`.
+>
+> **Nicht gebaut, Regel A und die Bahngrenze:** 41 Korpusstellen in 23 Dateien, fünf
+> Prüferdateien und der ERZEUGER. *Der `decreasing`-Fall desselben Tages war 11 Korpusstellen
+> und 4 Prüferstellen; dieser ist das Vierfache.*
 
 Das ist **dieselbe Bewegung, die `Absenkung_Parametrisch.thy` an der Zielsemantik macht,
 nur an der Domänenseite — und sie hat dort schon funktioniert.**
