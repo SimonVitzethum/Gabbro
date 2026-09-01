@@ -4460,17 +4460,32 @@ anderen** — *jede Zahl unten wird durch sie neu bewertet, nach oben oder nach 
 ## OA1 — Der Wortschatz ist unverwaltet · **das Größte**
 
 ```
-234 Woerter (C: 32, Ada: 70)   ·   64 Formen im Erzeugnis   ·   EIN Absenkungssatz
+~~234~~ 222 Woerter (C: 32, Ada: 70)  ·  64 Formen im Erzeugnis  ·  EIN Absenkungssatz
 ```
 
 Nicht „noch nicht bewiesen", sondern **eine Wachstumsregel**: Totalität wird mit Vokabular
 bezahlt, jede neue Rekursionsform bekommt ein Konstrukt statt eines Terminierungsarguments.
 
-> **Es gibt keine Regel, die das bremst, und keine Zahl, die es misst** — nicht weil 234 zu
+> **Es gibt keine Regel, die das bremst, und keine Zahl, die es misst** — nicht weil 222 zu
 > viel wären, sondern weil die Zahl steigt und niemand sie führt.
 
-- [ ] Eine Ratsche: *ein neues Wort nennt entweder das Wort, das es ablöst, oder die
-      Messung, warum keine vorhandene Form es trägt.*
+> **Und die 234 war selbst der Beleg dafür** (2026-09-01, `instrumente/zaehle-wortschatz.py`).
+> Sie ist reproduzierbar: `grep -oE '"[a-z_][a-z0-9_]*"' kw.rs | sort -u | wc -l` → 234. Der
+> Ausdruck nimmt jede kleingeschriebene Zeichenkette der **Datei**, also **15** aus den
+> Kommentaren, und verliert die **3** großgeschriebenen Wörter (`None`, `Self`, `Some`).
+> *Zwei Fehler in verschiedene Richtungen, netto zwölf zu viel* — und weil 234 plausibel
+> aussah, hat sie niemand nachgerechnet. Über die ganze Historie von `kw.rs` nachgezählt war
+> sie **nie** 234 und nie 226.
+
+- [x] ~~Eine Ratsche:~~ **`instrumente/zaehle-wortschatz.py`, zwei Marken** (2026-09-01).
+      *Ein neues Wort nennt entweder das Wort, das es ablöst, oder die Messung, warum keine
+      vorhandene Form es trägt* — die erste Marke zählt die Wörter (222), die zweite die
+      Wörter **ohne Grund am Eintrag** (210 von 222). Ein Tausch lässt beide stehen, ein
+      Zuwachs hebt die erste, ein Zuwachs ohne Grund beide. **Was sie NICHT fängt, steht als
+      Zahl in ihrer Ausgabe:** 333 Stellungen (Terminal × EBNF-Regel) auf 223 Terminale —
+      *`invariant` wanderte von der `table` an alle drei Schleifenformen, ohne dass ein Wort
+      dazukam.* Die Stellungszahl ist ausdrücklich **keine** Ratsche: sie soll steigen, und
+      wenn die erste fällt, ohne dass sie steigt, wurde Ausdruck verloren statt getauscht.
 - [ ] `by decreasing e` steht als dritter Laufmodus und ist ein **Beweiszeuge**. *Drei Modi,
       zwei Läufe.*
 

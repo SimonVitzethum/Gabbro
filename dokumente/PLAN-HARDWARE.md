@@ -492,9 +492,15 @@ Annahme statt in einem Beweis** — nur diesmal an der Sprache statt am Blech.*
 ## §11 — Ein Wort ist eine erzeugte Form, und jede erzeugte Form braucht einen Satz
 
 ```
-Wortschatz (kw.rs)   234 Woerter      C: 32      Ada: 70
+Wortschatz (kw.rs)   ~~234~~ 222 Woerter      C: 32      Ada: 70
 Absenkungssaetze     Absenkung_Parametrisch.thy deckt EINE (`ops relabel`)
 ```
+
+> **Die 234 war falsch, und der Irrtum ist reproduziert** (2026-09-01,
+> `instrumente/zaehle-wortschatz.py`): ein naiver `grep` über die **Datei** zählt 15 Wörter
+> aus Kommentaren mit und verliert `None`, `Self`, `Some`. Die Grundgesamtheit ist der
+> Makroaufruf `wortschatz! { … }`; nachgezählt sind es **222** (213 reserviert, 9
+> kontextuell), davon **221 im Korpus benutzt** und **eines nur reserviert** (`masked`).
 
 > **Die Beweislast wächst mit dem WORTSCHATZ, nicht mit der Programmgröße.**
 
@@ -502,10 +508,18 @@ Und sie wächst, weil **Totalität mit Vokabular bezahlt wird**: jede neue Rekur
 braucht ein neues Konstrukt statt eines Terminierungsbeweises. Das ist der Handel, den
 Gabbro überall macht, und er ist bisher nirgends **beziffert**.
 
-- [ ] **Eine Ratsche auf den Wortschatz**, wie der Baum sie sonst überall führt: *ein neues
-      Wort nennt entweder das Wort, das es ablöst, oder die Messung, warum keine vorhandene
-      Form es trägt.* **Das ist die Zahl, die im ganzen Dokumentensatz fehlt**, während
-      `narrow ≤ 24` als Widerlegungsmarke sauber gesetzt ist.
+- [x] ~~**Eine Ratsche auf den Wortschatz**~~ — **gebaut** (2026-09-01,
+      `instrumente/zaehle-wortschatz.py`). *Ein neues Wort nennt entweder das Wort, das es
+      ablöst, oder die Messung, warum keine vorhandene Form es trägt* — **zwei Marken**, weil
+      die Regel zwei Hälften hat: `MARKE_WOERTER = 222` und `MARKE_OHNE_GRUND = 210`. Ein
+      Tausch lässt beide stehen, ein Zuwachs hebt die erste, ein Zuwachs ohne Grund am
+      Eintrag beide.
+      **Und was sie nicht fängt, steht als Zahl daneben:** 333 Stellungen (Terminal ×
+      EBNF-Regel) auf 223 Terminale, 1,49 je Terminal. *Ein Wort, das ein anderes still
+      weiter macht, wächst nicht in der ersten Zahl* — `invariant` ging am 2026-08-28 von der
+      `table` an alle drei Schleifenformen, und `SYNTAX.md` sagt selbst *„It is not a new
+      word."* **Die Stellungszahl ist keine Ratsche und soll steigen:** fällt die erste, ohne
+      dass die zweite steigt, wurde Ausdruck verloren statt getauscht.
 
 ### Ein Kandidat steht in der eigenen Tafel
 
