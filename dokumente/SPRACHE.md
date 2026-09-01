@@ -1149,7 +1149,7 @@ loopform = traverse | retry | forever ;
 
 traverse = "traverse" ident [ "of" expr ]
            "over" domain
-           "by" ( "unvisited" | "consuming" | "decreasing" expr )
+           "by" ( "unvisited" | "consuming" ) [ "decreases" expr ]
            [ "touches" efflist ]
            block ;
 

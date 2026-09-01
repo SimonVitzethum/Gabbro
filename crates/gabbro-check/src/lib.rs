@@ -656,11 +656,9 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         // die Übersetzungszeit und wird nie ausgeführt.
         StmtArt::Schleife(sch) => match sch.as_ref() {
             Schleife::Traverse(t) => {
-                let mut v: Vec<&Expr> = t.gegenstand.iter().collect();
-                if let Abstieg::Fallend(m) = &t.abstieg {
-                    v.push(m);
-                }
-                v
+                // `t.mass` since 2026-09-01 -- the witness left `Abstieg` and became a
+                // clause of its own; it is still an expression the loop evaluates.
+                t.gegenstand.iter().chain(t.mass.iter()).collect()
             }
             Schleife::Retry(_) | Schleife::Forever(_) => Vec::new(),
         },

@@ -5,6 +5,18 @@
 //! of the same table, and `tests/wortschatz.rs` holds the two against each other -- otherwise
 //! it would be a number a human runs parallel to the truth (trap 80).
 //!
+//! **AND THERE IS A RATCHET OVER THE NUMBER** -- `instrumente/zaehle-wortschatz.py`, two
+//! marks, and together they are the rule of `PLAN-HARDWARE.md` §11 mechanically:
+//!
+//! > *A new word names either the word it displaces, or the measurement saying that no
+//! > existing form carries it.*
+//!
+//! The first mark counts the words (221); the second counts the words WITHOUT a reason at
+//! the entry (208). A swap leaves both standing, an addition raises the first, an addition
+//! without a reason raises both. **A reason is a comment block of at least two lines
+//! directly above the entry** -- it stands there and not in the commit message, because it
+//! travels with the word. *Whoever raises a mark writes the ledger line beside it.*
+//!
 //! **Reserved versus contextual.** A word of the table is not an identifier. Exempt are the
 //! **single-letter** words `r`, `w`, `x`: `pruefe-wortschatz.py` itself excludes them from the
 //! coverage check (*"single-character terminals come from character ranges and are not
@@ -115,9 +127,26 @@ wortschatz! {
     Return        => "return",        res;
     Let           => "let",           res;
     Mut           => "mut",           res;
+    // **`decreasing` FELL here on 2026-09-01 -- 222 words, now 221.**
+    //
+    // It stood as a third run form beside these two, and the emitter had written down since
+    // 2026-08-20 (stage 3) that it is not one: *"`by decreasing` -- the SAME as
+    // `by unvisited`; the measure is a termination witness and says nothing about the run
+    // that `unvisited` does not."* **Three modes, two runs.** A witness belongs to the
+    // CONTRACTS, and the contracts already spell it: `decreases` at a `fn` head is the same
+    // measure over the recursion that this one is over the passes («K5.4»).
+    //
+    // So the word it is displaced BY is `decreases`, which was already there -- the trade
+    // this line is the ledger entry for. *Same move, same production, three days earlier:*
+    // `invariant` went from the `table` to all three loop forms, and `SYNTAX.md` says of it
+    // *"It is not a new word."*
+    //
+    // **And the grammar got wider while the vocabulary got smaller:** the three used to be
+    // exclusive, so `by consuming decreases e` was unwritable; it is writable now.
+    // `instrumente/zaehle-wortschatz.py` prints both numbers, and they moved in opposite
+    // directions -- which is the only shape in which such a trade is one.
     Unvisited     => "unvisited",     res;
     Consuming     => "consuming",     res;
-    Decreasing    => "decreasing",    res;
     Leave         => "leave",         res;
     Leaves        => "leaves",        res;
     Next          => "next",          res;

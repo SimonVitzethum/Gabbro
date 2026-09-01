@@ -4460,19 +4460,47 @@ anderen** — *jede Zahl unten wird durch sie neu bewertet, nach oben oder nach 
 ## OA1 — Der Wortschatz ist unverwaltet · **das Größte**
 
 ```
-234 Woerter (C: 32, Ada: 70)   ·   64 Formen im Erzeugnis   ·   EIN Absenkungssatz
+~~234~~ 222 Woerter (C: 32, Ada: 70)  ·  64 Formen im Erzeugnis  ·  EIN Absenkungssatz
 ```
 
 Nicht „noch nicht bewiesen", sondern **eine Wachstumsregel**: Totalität wird mit Vokabular
 bezahlt, jede neue Rekursionsform bekommt ein Konstrukt statt eines Terminierungsarguments.
 
-> **Es gibt keine Regel, die das bremst, und keine Zahl, die es misst** — nicht weil 234 zu
+> **Es gibt keine Regel, die das bremst, und keine Zahl, die es misst** — nicht weil 222 zu
 > viel wären, sondern weil die Zahl steigt und niemand sie führt.
 
-- [ ] Eine Ratsche: *ein neues Wort nennt entweder das Wort, das es ablöst, oder die
-      Messung, warum keine vorhandene Form es trägt.*
-- [ ] `by decreasing e` steht als dritter Laufmodus und ist ein **Beweiszeuge**. *Drei Modi,
-      zwei Läufe.*
+> **Und die 234 war selbst der Beleg dafür** (2026-09-01, `instrumente/zaehle-wortschatz.py`).
+> Sie ist reproduzierbar: `grep -oE '"[a-z_][a-z0-9_]*"' kw.rs | sort -u | wc -l` → 234. Der
+> Ausdruck nimmt jede kleingeschriebene Zeichenkette der **Datei**, also **15** aus den
+> Kommentaren, und verliert die **3** großgeschriebenen Wörter (`None`, `Self`, `Some`).
+> *Zwei Fehler in verschiedene Richtungen, netto zwölf zu viel* — und weil 234 plausibel
+> aussah, hat sie niemand nachgerechnet. Über die ganze Historie von `kw.rs` nachgezählt war
+> sie **nie** 234 und nie 226.
+
+- [x] ~~Eine Ratsche:~~ **`instrumente/zaehle-wortschatz.py`, zwei Marken** (2026-09-01).
+      *Ein neues Wort nennt entweder das Wort, das es ablöst, oder die Messung, warum keine
+      vorhandene Form es trägt* — die erste Marke zählt die Wörter (222), die zweite die
+      Wörter **ohne Grund am Eintrag** (210 von 222). Ein Tausch lässt beide stehen, ein
+      Zuwachs hebt die erste, ein Zuwachs ohne Grund beide. **Was sie NICHT fängt, steht als
+      Zahl in ihrer Ausgabe:** 333 Stellungen (Terminal × EBNF-Regel) auf 223 Terminale —
+      *`invariant` wanderte von der `table` an alle drei Schleifenformen, ohne dass ein Wort
+      dazukam.* Die Stellungszahl ist ausdrücklich **keine** Ratsche: sie soll steigen, und
+      wenn die erste fällt, ohne dass sie steigt, wurde Ausdruck verloren statt getauscht.
+- [x] ~~`by decreasing e` steht als dritter Laufmodus~~ — **das Wort ist GEFALLEN**
+      (2026-09-01). *Drei Modi, zwei Läufe* — also zwei Läufe: `by ( unvisited | consuming )
+      [ decreases expr ]`. **Es ist der erste Fall der Ratsche, und er spart, statt zu
+      verschieben:** der Zeuge zieht in die Vertragszone, und das Wort dort — `decreases` an
+      einem `fn`-Kopf, «K5.4» — trägt schon genau dieses Maß, nur über der Rekursion statt
+      über den Durchgängen. **222 → 221 Wörter, null neue.**
+      Der Erzeuger hatte den Grund seit dem 2026-08-20 selbst aufgeschrieben: *„`by
+      decreasing` — DASSELBE; das Maß ist ein Terminierungszeuge und sagt über den Lauf
+      nichts, was `unvisited` nicht schon sagt."* **Und die Klausel ist jetzt nicht mehr
+      ausschließend:** `by consuming decreases e` ist schreibbar und war es nicht.
+      **Die Stellungszahl blieb dabei bei 333, und das ist nachgemessen und nicht gehofft:**
+      `decreasing` hatte eine Stellung, `decreases` hat jetzt zwei statt einer (`fndecl` und
+      `traverse`) — die Summe steht, der Nenner fiel, und 1,49 wurde 1,50 je Terminal. *Der
+      Handel ist einer, weil die Reichweite blieb, während der Wortschatz kleiner wurde;
+      hätte auch die Summe verloren, wäre Ausdruck verschwunden statt getauscht worden.*
 
 ## OA2 — Domänen sind geschlossen · **der schärfste Widerspruch zum Ziel**
 
@@ -4482,9 +4510,29 @@ Siebzehn Wörter, keine benutzerdefinierten.
 > beweist nur seine eigene Logik"* heißt, ist das der schärfste Widerspruch im Entwurf.
 
 - [ ] Eine Domäne als **deklarierte Erreichbarkeit über einem Tabellenfeld, mit
-      Wohlfundiertheitsnachweis an der Deklaration.** Ein Wort statt siebzehn, ein
-      parametrischer Absenkungssatz statt siebzehn. *Löst zugleich `zeugnis.rs:758` und die
-      `mappings of`-Schranke.*
+      Wohlfundiertheitsnachweis an der Deklaration.** ~~Ein Wort statt siebzehn, ein
+      parametrischer Absenkungssatz statt siebzehn.~~ **Gerechnet am 2026-09-01,
+      `messung/DOMAENENREGEL.md` — der Posten steht, seine Zahlen nicht:**
+
+      | | behauptet | gemessen |
+      |---|---|---|
+      | Wörter, die fallen | 17 | **3** (`chain`, `descendants`, `ancestors`), evtl. 4 |
+      | Wörter, die dazukommen | 1 | **0** — `reaches` und `via` stehen schon, als PRÄDIKAT |
+      | Formen, die die Regel ersetzt | alle | **4 von 9**, 40 von 113 Korpusstellen |
+      | Absenkungssätze | 17 → 1 | **0 → 1** — über keiner Domäne steht heute einer |
+      | `zeugnis.rs:758` | eine Wildcard mit fünf Fällen | **seit `e5e555d` neun Zweige** |
+
+      **Der eigentliche Fund: `reach = place "reaches" place "via" ident` gibt es seit jeher**
+      (`SYNTAX.md`:709), und `beispiele/47`:194 sagt selbst, dass es dort steht, wo sonst
+      `ancestors of` stünde. Die Regel ist also kein neues Konstrukt, sondern **eine
+      vorhandene Form aus der Prädikat- in die Domänenseite gehoben** — ein Alternativzweig,
+      null neue Wörter.
+      **Und die Rechtfertigung ist nicht der Wortschatz (3 von 221, 1,4 %), sondern die
+      SCHRANKE:** `domaenenschranke` hat genau EINEN Aufrufer, den Kostenpass. Ohne
+      `costs`-Zeile fragt niemand nach der Schranke einer Domäne. *Ein Nachweis an der
+      Deklaration verlegt sie von „wird gefragt, wenn `costs` dasteht" nach „steht fest".*
+      Nicht gebaut: 41 Korpusstellen in 23 Dateien, fünf Prüferdateien, und der ERZEUGER —
+      das Vierfache des `decreasing`-Falls, und über zwei Bahnen.
 
 ## OA3 — Der Ausstieg ist binär
 

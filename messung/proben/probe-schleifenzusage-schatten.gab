@@ -106,7 +106,7 @@ impl fn unter_der_sperre(g : index into Topologie, v : index into Riesen) -> u32
     effects { reads Topologie.slots, reads Riesen.slots, locks TOPO }
 {
     let mut summe : u32 in 0 .. 65535 = 0;
-    traverse v of g over ancestors of g by decreasing v
+    traverse v of g over ancestors of g by unvisited decreases v
         touches reads Topologie.slots
     {
         locks TOPO {

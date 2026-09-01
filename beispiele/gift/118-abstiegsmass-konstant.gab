@@ -19,7 +19,7 @@ table W count GRENZE { slot { a : u32 in 0 .. 10, } }
 impl fn f(w : ptr<normal, r> W)
     effects { reads w.slots } costs <= 200 ops
 {
-    traverse i over slots of w by decreasing GRENZE
+    traverse i over slots of w by unvisited decreases GRENZE
         touches reads w.slots
     { }
     return;

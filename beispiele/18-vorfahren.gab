@@ -47,7 +47,7 @@ impl fn liegt_unter(g : index into Topologie, wurzel : index into Topologie) -> 
     costs   <= 900 ops
 {
     locks TOPO {
-        traverse v of g over ancestors of g by decreasing v {
+        traverse v of g over ancestors of g by unvisited decreases v {
             if v == wurzel {
                 return true;
             }

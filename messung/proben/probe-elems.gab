@@ -19,7 +19,7 @@ impl fn als_u64(s : ptr<normal, r+own> Feld) -> u64
     effects { reads s }
 {
     let mut n : u64 in 0 .. WORTE = 0;
-    traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - n)
+    traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - n)
         touches reads s
     {
         if w != MUSTER { return n; }

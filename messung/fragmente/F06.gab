@@ -194,7 +194,7 @@ impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
     let mut i : u64 in 0 .. STACK_MAX = 0;
     -- «B30» `touches` nimmt eine `efflist` OHNE Klammern (:340), waehrend `effects`
     -- ueberall sonst geklammert ist. Die Vorlage schrieb `touches { reads s }`.
-    traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i)
+    traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - i)
         touches reads s
     {
         if w != MUSTER { return i * 8; }

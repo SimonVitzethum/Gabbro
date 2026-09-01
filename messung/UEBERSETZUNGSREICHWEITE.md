@@ -30,7 +30,7 @@ Bei `-O0` **und** bei `-O2`.
 Die Zeile in Gabbro:
 
 ```gabbro
-traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i) touches reads s
+traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - i) touches reads s
 {
     if w != MUSTER { return i * 8; }
     i += 1;

@@ -2096,8 +2096,9 @@ MUTATIONEN = [
     ),
     Mutation(
         # **Der Anker ist umgezogen, weil die Lesart entschieden ist** (2026-08-20, Stufe 3).
-        # Bis dahin wurden `by consuming` UND `by decreasing` abgelehnt, mit *„was es fuer
-        # den Lauf heisst, ist nicht entschieden"*. Jetzt laeuft `by decreasing` wie
+        # Until then `by consuming` AND `by decreasing` were both refused with *"what it
+        # means for the RUN is not decided"*. The word `decreasing` fell on 2026-09-01 and
+        # the clause is spelled `decreases` now; it runs like
         # `by unvisited` -- und nur `by consuming` bleibt abgelehnt, weil die ENTNAHME
         # erzeugter Code ist. Die Mutation dreht genau diesen Rest um.
         # *Der Anker traegt die Absagezeile mit*, weil `if matches!(…, Verbrauchend)` seit

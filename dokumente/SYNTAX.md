@@ -88,7 +88,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
-             unvisited consuming decreasing leave leaves next ops result
+             unvisited consuming leave leaves next ops result
              exchange update returns insert remove relabel
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
@@ -984,7 +984,8 @@ loopform   = traverse | retry | forever ;
 
 traverse   = "traverse" ident [ "of" expr ]
              "over"  domain
-             "by"    ( "unvisited" | "consuming" | "decreasing" expr )
+             "by"    ( "unvisited" | "consuming" )
+             [ "decreases" expr ]
              [ "touches" efflist ]
              block ;
 
@@ -1021,8 +1022,23 @@ start; this is the statement.* `M133` refuses one that names nothing.
 | | proves | run |
 |---|---|---|
 | **`by unvisited`** | each entry once | walk the whole domain, order open |
-| **`by decreasing e`** | `e` falls each pass — termination | **the same walk.** The measure is a witness and says nothing about the run that `unvisited` does not |
 | **`by consuming`** | the entry is removed | the same walk **plus the removal**, and the removal is a generated `ops` operation |
+| **`decreases e`** | `e` falls each pass — termination | **the same walk.** The measure is a witness and says nothing about the run that `unvisited` does not |
+
+> **And on 2026-09-01 that reading was carried out in the grammar: `decreasing` FELL.** It
+> stood as a third alternative beside the two run forms while its own row said it is not one
+> — *three modes, two runs.* A witness belongs to the contracts, and the contracts already
+> spell it: `decreases` at a `fn` head («K5.4») is the same measure over the recursion that
+> this one is over the passes. **The word it is replaced by was already in the vocabulary**,
+> so the change costs nothing and returns one: `kw.rs` went from 222 words to 221.
+>
+> *It is the same move, at the same production, three days earlier:* `invariant` went from
+> the `table` to all three loop forms, and this document says of it *"It is not a new word."*
+>
+> **The clause is OPTIONAL and no longer exclusive.** `by consuming decreases e` is writable
+> now and was not before — the vocabulary lost a word and the grammar gained a position, and
+> `instrumente/zaehle-wortschatz.py` prints both numbers precisely so that a trade can be
+> told apart from a loss.
 
 > **«B10» is thereby answered, and the answer is „yes, and that IS the meaning":** `by
 > consuming` empties the whole queue. The IPC fastpath wants *the first live receiver* and

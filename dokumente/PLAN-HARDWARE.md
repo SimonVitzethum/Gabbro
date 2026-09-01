@@ -492,9 +492,15 @@ Annahme statt in einem Beweis** — nur diesmal an der Sprache statt am Blech.*
 ## §11 — Ein Wort ist eine erzeugte Form, und jede erzeugte Form braucht einen Satz
 
 ```
-Wortschatz (kw.rs)   234 Woerter      C: 32      Ada: 70
+Wortschatz (kw.rs)   ~~234~~ 222 Woerter      C: 32      Ada: 70
 Absenkungssaetze     Absenkung_Parametrisch.thy deckt EINE (`ops relabel`)
 ```
+
+> **Die 234 war falsch, und der Irrtum ist reproduziert** (2026-09-01,
+> `instrumente/zaehle-wortschatz.py`): ein naiver `grep` über die **Datei** zählt 15 Wörter
+> aus Kommentaren mit und verliert `None`, `Self`, `Some`. Die Grundgesamtheit ist der
+> Makroaufruf `wortschatz! { … }`; nachgezählt sind es **222** (213 reserviert, 9
+> kontextuell), davon **221 im Korpus benutzt** und **eines nur reserviert** (`masked`).
 
 > **Die Beweislast wächst mit dem WORTSCHATZ, nicht mit der Programmgröße.**
 
@@ -502,19 +508,50 @@ Und sie wächst, weil **Totalität mit Vokabular bezahlt wird**: jede neue Rekur
 braucht ein neues Konstrukt statt eines Terminierungsbeweises. Das ist der Handel, den
 Gabbro überall macht, und er ist bisher nirgends **beziffert**.
 
-- [ ] **Eine Ratsche auf den Wortschatz**, wie der Baum sie sonst überall führt: *ein neues
-      Wort nennt entweder das Wort, das es ablöst, oder die Messung, warum keine vorhandene
-      Form es trägt.* **Das ist die Zahl, die im ganzen Dokumentensatz fehlt**, während
-      `narrow ≤ 24` als Widerlegungsmarke sauber gesetzt ist.
+- [x] ~~**Eine Ratsche auf den Wortschatz**~~ — **gebaut** (2026-09-01,
+      `instrumente/zaehle-wortschatz.py`). *Ein neues Wort nennt entweder das Wort, das es
+      ablöst, oder die Messung, warum keine vorhandene Form es trägt* — **zwei Marken**, weil
+      die Regel zwei Hälften hat: `MARKE_WOERTER = 222` und `MARKE_OHNE_GRUND = 210`. Ein
+      Tausch lässt beide stehen, ein Zuwachs hebt die erste, ein Zuwachs ohne Grund am
+      Eintrag beide.
+      **Und was sie nicht fängt, steht als Zahl daneben:** 333 Stellungen (Terminal ×
+      EBNF-Regel) auf 223 Terminale, 1,49 je Terminal. *Ein Wort, das ein anderes still
+      weiter macht, wächst nicht in der ersten Zahl* — `invariant` ging am 2026-08-28 von der
+      `table` an alle drei Schleifenformen, und `SYNTAX.md` sagt selbst *„It is not a new
+      word."* **Die Stellungszahl ist keine Ratsche und soll steigen:** fällt die erste, ohne
+      dass die zweite steigt, wurde Ausdruck verloren statt getauscht.
 
-### Ein Kandidat steht in der eigenen Tafel
+### Ein Kandidat stand in der eigenen Tafel — und er ist GEFALLEN
 
 `by decreasing e` — *„the same walk. The measure is a witness and says nothing about the run
 that `unvisited` does not."*
 
-**Es ist ein Beweiszeuge, kein Laufmodus.** Als dritter Modus neben `unvisited`/`consuming`
-steht es in der falschen Zone; es gehört zu den **Verträgen**, nicht zum Ablauf.
+**Es war ein Beweiszeuge, kein Laufmodus.** Als dritter Modus neben `unvisited`/`consuming`
+stand es in der falschen Zone; es gehört zu den **Verträgen**, nicht zum Ablauf.
 *Drei Modi, zwei Läufe.*
+
+> **Ausgeführt am 2026-09-01, als erster Fall der Ratsche von §11.** Die Grammatik lautet
+> jetzt `"by" ( "unvisited" | "consuming" ) [ "decreases" expr ]`, und `decreasing` ist aus
+> `kw.rs` verschwunden: **222 → 221 Wörter, null neue.** Gemessen wurde vorher genau die
+> Frage, die dieser Abschnitt stellt — *spart die Verschiebung ein Wort oder verschiebt sie
+> nur eines?* Sie spart: das Wort, das den Zeugen jetzt trägt, ist `decreases`, und das stand
+> seit «K5.4» am `fn`-Kopf für dasselbe Maß über der Rekursion.
+>
+> *Dieselbe Bewegung, dieselbe Produktion, drei Tage früher:* `invariant` ging von der
+> `table` an alle drei Schleifenformen, und `SYNTAX.md` sagt dazu *„It is not a new word."*
+>
+> **Und die Ausschließlichkeit fiel mit:** `by consuming decreases e` ist schreibbar und war
+> es nicht. **Die Stellungszahl blieb dabei bei 333** — `decreasing` hatte eine Stellung,
+> `decreases` hat jetzt zwei statt einer (`fndecl` **und** `traverse`). Die Summe steht, der
+> Nenner fiel um eins, und 1,49 wurde 1,50 je Terminal. *Das ist die Gestalt, in der so ein
+> Handel einer ist: die Reichweite bleibt, der Wortschatz wird kleiner.* Wäre die Summe
+> mitgefallen, wäre Ausdruck verschwunden statt getauscht — und `zaehle-wortschatz.py` druckt
+> beide Zahlen nebeneinander, damit man das eine vom anderen unterscheiden kann.
+>
+> Der Preis, vollständig: 3 Dateien in `gabbro-syntax` · **4 Lesestellen in `gabbro-check`**
+> (`lib.rs`, `schleifen.rs`, `zeremonie.rs`, `emit.rs`) · 11 Korpusstellen in 11 Dateien ·
+> 9 Teststellen · 2 Grammatikblöcke. `cargo test --no-fail-fast` 15 Sammlungen grün,
+> `pruefe-emission.sh` `ALL PASS`, alle vier Giftproben mit unveränderter Kennung.
 
 ---
 
@@ -536,8 +573,45 @@ Deshalb braucht **jede neue Datenstruktur ein neues Domänenwort.**
 Terminierungsfrage wieder. Sondern:
 
 - [ ] **Eine Domäne als deklarierte Erreichbarkeit über einem Tabellenfeld, mit
-      Wohlfundiertheitsnachweis an der Deklaration.** *Ein Wort statt siebzehn, ein
-      parametrischer Absenkungssatz statt siebzehn einzelner.*
+      Wohlfundiertheitsnachweis an der Deklaration.** ~~*Ein Wort statt siebzehn, ein
+      parametrischer Absenkungssatz statt siebzehn einzelner.*~~
+
+> **Gerechnet am 2026-09-01 gegen die Ratsche von §11** (`messung/DOMAENENREGEL.md`). Der
+> Posten steht; jede seiner vier Zahlen ist zu groß.
+>
+> * **Die siebzehn sind keine Messung.** Die Produktion `domain` nennt **elf** Terminale; die
+>   Liste oben enthält acht, die nicht darin stehen (`child`, `parent`, `sibling`, `tree`,
+>   `observed`, `occupied`, `reaches`, `levels`), und verliert zwei, die darin stehen
+>   (`fields`, `in`). `of` und `in` können ohnehin nicht fallen — `in` steht in neun Regeln.
+> * **Nur VIER der neun Formen sind Erreichbarkeit über einem Tabellenfeld.** `slots of` und
+>   `elems of` sind Indexbereiche (53 der 113 Korpusstellen), `fields of` eine statische
+>   Liste, `threads` eine Aussage über die Maschine. Die Regel erreicht **35 %** der Stellen.
+> * **`tree`/`parent`/`child`/`sibling` können nicht fallen:** `opsruf.rs`:244 und
+>   `emit.rs`:2488/2613 lesen die Kante für den `relabel`-Erzeuger, und
+>   `Absenkung_Parametrisch.thy` beweist darüber. *«B41b» hat sie 2026-08-20 ausdrücklich zur
+>   STRUKTUR erklärt, nicht zum Durchlauf.*
+> * **Es gibt keine siebzehn Absenkungssätze abzulösen — es gibt EINEN im ganzen Baum**, und
+>   der handelt von `ops relabel`. Die Bewegung ist **0 → 1**: die Regel *ermöglicht*
+>   Beweisarbeit, sie spart keine. Das ist die bessere Begründung, nicht die schwächere.
+> * **`zeugnis.rs:758` gibt es nicht mehr** — seit `e5e555d` neun einzelne Zweige und neun
+>   Begründungen. §6 ist eingelöst; was bleibt, ist die andere Hälfte.
+>
+> **Der Fund, der den Posten trägt:** `reach = place "reaches" place "via" ident` steht seit
+> jeher in der Grammatik (:709), `reaches` und `via` sind Wortschatzwörter, und
+> `beispiele/47`:194 begründet selbst, warum dort `reaches` und nicht `ancestors of` steht.
+> **Die Regel ist eine vorhandene Form, aus der Prädikat- in die Domänenseite gehoben** — ein
+> Alternativzweig, **null neue Wörter**, drei abgelöste (221 → 218), Stellungen 333 → 332 auf
+> 219 Terminale, also **1,50 → 1,52 je Terminal**.
+>
+> **Und die Rechtfertigung ist die Schranke, nicht der Wortschatz.** `domaenenschranke` hat
+> genau EINEN Aufrufer: `kosten.rs`:665. *Ohne `costs`-Zeile fragt niemand nach der Schranke
+> einer Domäne* — `domaene.rs` sagt es an einer anderen Domäne selbst: „der Fall stand nie
+> auf … also fragte der Kostenpass nie." Ein Nachweis an der Deklaration verlegt die Schranke
+> von *„wird gefragt"* nach *„steht fest"*, und das erreicht jede Funktion ohne `costs`.
+>
+> **Nicht gebaut, Regel A und die Bahngrenze:** 41 Korpusstellen in 23 Dateien, fünf
+> Prüferdateien und der ERZEUGER. *Der `decreasing`-Fall desselben Tages war 11 Korpusstellen
+> und 4 Prüferstellen; dieser ist das Vierfache.*
 
 Das ist **dieselbe Bewegung, die `Absenkung_Parametrisch.thy` an der Zielsemantik macht,
 nur an der Domänenseite — und sie hat dort schon funktioniert.**

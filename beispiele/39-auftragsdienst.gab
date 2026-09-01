@@ -91,7 +91,7 @@ impl fn buendel_von(q : ptr<normal, r> Auftraege, i : index into Auftraege)
     effects  { reads q.slots, locks WARTESCHLANGE }
     costs    <= 600 ops
 {
-    traverse v of i over ancestors of q.slots[i] by decreasing v {
+    traverse v of i over ancestors of q.slots[i] by unvisited decreases v {
         return Some(v);
     }
     return None;

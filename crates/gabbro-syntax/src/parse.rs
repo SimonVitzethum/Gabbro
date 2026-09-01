@@ -2997,10 +2997,6 @@ impl<'a> Parser<'a> {
                 self.pos += 1;
                 Abstieg::Verbrauchend
             }
-            Art::Wort(Kw::Decreasing) => {
-                self.pos += 1;
-                Abstieg::Fallend(self.expr()?)
-            }
             _ => {
                 let t = self.blick();
                 let gefunden = t.benennung(self.quelle);
@@ -3008,12 +3004,26 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P019",
                         t.span,
-                        format!("descent measure expected, {gefunden} found"),
+                        format!("run form expected, {gefunden} found"),
                     )
-                    .mit_notiz("`by unvisited` · `by consuming` · `by decreasing expr`"),
+                    .mit_notiz(
+                        "`by unvisited` · `by consuming`, each optionally followed by \
+                         `decreases expr`",
+                    ),
                 );
                 return Err(Abbruch);
             }
+        };
+        // **`decreases e` -- the witness, and it stands where the contract words stand.**
+        //
+        // It is OPTIONAL and it is not a third run form: `emit.rs` decided on 2026-08-20
+        // that a falling measure walks the same walk `unvisited` does. The word is the one
+        // «K5.4» already uses at a `fn` head for the identical job, so the vocabulary paid
+        // nothing for the clause -- it got a word back.
+        let mass = if self.friss_kw(Kw::Decreases) {
+            Some(self.expr()?)
+        } else {
+            None
         };
         let touches = if self.friss_kw(Kw::Touches) {
             let liste = self.efflist()?;
@@ -3031,6 +3041,7 @@ impl<'a> Parser<'a> {
             gegenstand,
             domaene,
             abstieg,
+            mass,
             touches,
             invariante,
             rumpf,
