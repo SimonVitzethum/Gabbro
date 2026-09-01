@@ -605,6 +605,42 @@ fn jeder_fahnen_erstname_tut_dasselbe_wie_sein_zweitname() {
     }
 }
 
+/// **The two pairs `PAARE` never drove.**
+///
+/// `jeder_unterbefehl_der_quelle_steht_im_register` proves they EXIST; it does not prove the
+/// two spellings do the same thing. `erstnamen.rs` drives twelve pairs and these are not
+/// among them -- `effects|wirkungen` stands in no table at all, and `build|bau` was filed
+/// under "English from the start". **So until today nothing measured that `gabbro wirkungen`
+/// and `gabbro effects` are one command.**
+///
+/// They are not simply added to `PAARE` next door because that list drives every pair with
+/// ONE call shape, and `build` needs a manifest: `gabbro build <file.gab>` exits 2 for both
+/// spellings, which is the vacuous agreement `PAARE`'s own `assert_ne!(a.2, 2)` exists to
+/// refuse. *A pair that only agrees on how it fails has not been measured.*
+#[test]
+fn die_zwei_paare_die_erstnamen_rs_nicht_faehrt_tun_dasselbe() {
+    const OFFEN: &[(&[&str], &[&str])] = &[
+        (&["effects", DATEI], &["wirkungen", DATEI]),
+        (
+            &["build", "--dry-run", "programmlogik/beispiel/gabbro.bau"],
+            &["bau", "--dry-run", "programmlogik/beispiel/gabbro.bau"],
+        ),
+    ];
+    for (englisch, deutsch) in OFFEN {
+        let a = lauf(englisch);
+        let b = lauf(deutsch);
+        assert_eq!(
+            a, b,
+            "`{englisch:?}` and `{deutsch:?}` are one command, in stdout, stderr and exit code"
+        );
+        assert_ne!(
+            a.2, 2,
+            "`{englisch:?}` is a KNOWN call -- exit 2 would mean both spellings fell into the \
+             unknown arm, and two identical refusals prove nothing"
+        );
+    }
+}
+
 /// **The rule stands in the help, not only in this file.**
 ///
 /// A user does not read the test suite. `ERSTNAMEN.md` §5 booked *"the help is the only
