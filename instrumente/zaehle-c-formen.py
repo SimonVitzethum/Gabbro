@@ -127,7 +127,13 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # > **A rise out of a sharper measurement is not a rise of the object** -- but it belongs at
 # > the mark with the same reasoning, or the mark becomes a place where numbers grow in
 # > silence.
-MARKE_TABELLE = 64
+# **64 -> 65 on 2026-09-01, and the reason belongs AT the mark.** `~` was added to the
+# language (`OB4`), and the emitter now writes a unary complement where before it wrote an
+# xor against an all-ones literal. **The C semantics Gabbro must one day formalise got one
+# form bigger** -- and that is the same movement as a growing axiom layer, which is why this
+# mark exists. *The form was already in the emitted C for `reg` read-modify-write; what is
+# new is that a SOURCE line can now produce it.*
+MARKE_TABELLE = 65
 MARKE_UNERLAUBT = 30
 
 # **The same sieve `zaehle-absagen.korpuslauf` uses, and for its reason** (W7). `rglob` from

@@ -1,0 +1,42 @@
+-- erwartet: R012
+-- **Gift 448 -- ein Lese-Aendere-Schreib-Zug auf einem W1C-Wort, und er stand AUSGELIEFERT.**
+--
+-- Bis zum 2026-09-01 schrieb `beispiele/45` genau diese Zeile, und der Erzeuger baute daraus:
+--
+--     uint32_t _v = (*(volatile uint32_t *)(v->basis + 52));
+--     (*(volatile uint32_t *)(v->basis + 52)) =
+--         (uint32_t)((_v & (uint32_t)~(uint32_t)1u) | ((uint32_t)(1) << 0u & (uint32_t)1u));
+--
+-- **Das Lesen holt jedes gesetzte Fehlerbit mit, das Zurueckschreiben setzt die Eins wieder
+-- -- und eine Eins LOESCHT.** Ein Treiber, der `PFO` quittiert, verliert lautlos den Fehler,
+-- den `PPF` gemeldet hat. *Null Fehler in jedem Pass, uebersetzt unter `-Werror`, falsch.*
+--
+-- Der Erzeuger sah nur die Klasse des REGISTERS. `FSTS` ist `class rw`, also galt das Wort
+-- als gewoehnlich -- und die Klasse der FELDER stand daneben und wurde nicht gefragt.
+--
+-- > **Und darum ist die Regel eine Regel ueber das WORT, nicht ueber das Feld.** Auch ein
+-- > gewoehnliches `rw`-Feld desselben Registers duerfte so nicht geschrieben werden: das
+-- > Lesen holt die W1C-Nachbarn genauso mit.
+--
+-- Die Heilung steht in `beispiele/45` und braucht kein neues Wort: `v.FSTS = 1;` senkt zu
+-- einem einzigen `volatile`-Schreibzug ab, ohne Lesen. `transition` schreibt ebenfalls das
+-- ganze Wort -- mit `mirrors` liest es das SPIEGELREGISTER, nie das Ziel.
+
+module gift448 {
+
+device Vtd(basis : u64) at mmio {
+    reg FSTS : u32 @0x34 class rw fields {
+        PFO @0  class w1c,
+        PPF @1  class w1c,
+        FRI @[15:8] class r,
+    }
+}
+
+impl fn fehler_quittieren(v : ptr<mmio, rw> Vtd)
+    effects { writes v.FSTS }
+    costs    <= 4 ops
+{
+    v.FSTS.PFO = 1;
+}
+
+}

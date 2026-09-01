@@ -799,6 +799,7 @@ fn ausdruckstext(e: &Expr) -> Option<String> {
         ExprArt::Klammer(i) => ausdruckstext(i),
         ExprArt::Unaer(UnOp::Nicht, i) => Some(format!("!{}", ausdruckstext(i)?)),
         ExprArt::Unaer(UnOp::Negativ, i) => Some(format!("-{}", ausdruckstext(i)?)),
+        ExprArt::Unaer(UnOp::BitNicht, i) => Some(format!("~{}", ausdruckstext(i)?)),
         ExprArt::Binaer(op, a, b) => Some(format!(
             "({}{}{})",
             ausdruckstext(a)?,

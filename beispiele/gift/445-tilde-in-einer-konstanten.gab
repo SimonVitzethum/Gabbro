@@ -1,0 +1,31 @@
+-- erwartet: C001
+-- **Gift 445 -- `~` in einem `const`, und die Absage daneben waere die falsche gewesen.**
+--
+-- `const H : u32 = ~G;` ist ein konstanter Ausdruck. Er ist bloss keiner, den
+-- `umgebung.rs::auswerten` falten kann: dort wird in `i128` gerechnet, und das Komplement
+-- ueber `n` Bit ist `2^n - 1 - x` mit einem `n`, das der Falter nicht hat -- ein `const`
+-- traegt seine Breite in der Deklaration, und die sieht der Falter nicht.
+--
+-- **Bis zum 2026-09-01 waere das durch den Sammelzweig gefallen und haette `const with a
+-- non-constant value` geheissen.** Der Satz ist falsch: der Wert IST konstant. *Ein Leser,
+-- der ihm folgt, sucht eine Variable und findet einen fehlenden Falter.*
+--
+-- > Dieselbe Gestalt wie die Absagen, die dieser Ordner schon fuenfmal getrennt hat -- eine
+-- > Weigerung, deren Reichweite und deren Grund auseinandergehen.
+--
+-- Gefaltet wird nicht (Regel A: null Korpusstellen). Die Form fuer die Allesbits-Konstante
+-- steht daneben und heisst `u32::max`.
+
+module gift445 {
+
+const G : u32 = 255;
+const H : u32 = ~G;
+
+impl fn nutze() -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return H;
+}
+
+}

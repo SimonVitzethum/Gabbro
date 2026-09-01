@@ -1,0 +1,28 @@
+-- erwartet: M138
+-- **Gift 447 -- ein Grundtyp mit einem dritten Mitglied.**
+--
+-- `u32::max` und `u32::min` gibt es. `u32::gross` gibt es nicht -- und bis zum 2026-09-01
+-- sagte das niemand:
+--
+--     gabbro pruefe:  0 errors, 0 hints, 2 von 3 Ausdruecken ohne Typ
+--     gabbro emit:    `return w ^ u32->gross;`
+--
+-- Ein Feldzugriff durch einen Zeiger auf eine Variable, die keine Deklaration je angelegt
+-- hat. **Dieselbe Absenkung, die `u32::max` bekam, solange auch DIE niemand kannte** --
+-- und genau darum steht diese Probe hier: die Reparatur an `max`/`min` haette die zwei
+-- Schreibweisen geschlossen, die jemand ausprobiert hat, und die Familie offengelassen.
+--
+-- > Es ist NICHT `M119`. Der sagt *„nirgends erklaert"*, und seine Heilung ist eine
+-- > Deklaration. Hier gibt es keine, die hilft: `u32` ist ein Wort des geschlossenen
+-- > Wortschatzes, kein Name, dem irgendeine Zeile ein Mitglied geben koennte.
+
+module gift447 {
+
+impl fn f(w : u32) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return w ^ u32::gross;
+}
+
+}

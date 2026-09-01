@@ -45,6 +45,17 @@ FRIST = 120
 # would say the channel still owes something it does not.
 GRUENDE = [
     ("foreign-body", "an `ensures` at a foreign body -- an ASSUMPTION, not a goal"),
+    # **Added 2026-09-01, and the ORDER of the two repairs is the finding.** `Art::Walkinvariante`
+    # entered `pflichten.rs`; `LeanReason::WalkInvariant` was declared but left out of
+    # `LeanReason::ALL`, so `beispiele/07`'s two walk invariants were refused with no reason
+    # line and the balance stopped adding up. Repairing THAT made this tool say
+    # `UNKNOWN refusal reason` -- *the second register, one step behind the first.*
+    #
+    # > **Three lists over one set: `Art`, `LeanReason::ALL`, and this table. A new duty kind
+    # > has to be written into all three, and nothing holds them together.**
+    ("walk-invariant", "an invariant of a `walk` -- quantified over `mappings of`, whose "
+                       "bound is `node length ^ levels`; owed by NOBODY, unlike a table "
+                       "invariant, which a `maintains` names"),
     ("table-invariant", "`maintains` names a table invariant: quantified over every slot"),
     ("call-site", "a precondition at a call site -- the Isabelle channel carries those"),
     ("device-promise", "a promise at hardware Gabbro does not see"),

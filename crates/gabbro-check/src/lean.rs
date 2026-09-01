@@ -288,11 +288,22 @@ impl LeanReason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 32] = [
+    /// **`WalkInvariant` was declared and NOT listed here** (found 2026-09-01 by
+    /// `zaehle-lean.py`, which aborted with *„the reasons count 1, refused are 3"*). The
+    /// variant went into the enum with `Art::Walkinvariante`, the summary loop runs over
+    /// THIS array, and the two walk invariants of `beispiele/07` were refused **without a
+    /// reason line** — the balance stopped adding up.
+    ///
+    /// *A hand-written list that must be exhaustive, and the compiler does not hold it: the
+    /// same shape as a `_` arm over a language enum, only inverted — there a case is
+    /// silently answered, here it is silently dropped.* The speech test below now holds the
+    /// length against `strum`-free arithmetic instead of a literal nobody re-counts.
+    pub const ALL: [LeanReason; 33] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
         LeanReason::DevicePromise,
+        LeanReason::WalkInvariant,
         LeanReason::CallStatement,
         LeanReason::Loop,
         LeanReason::Concurrent,
@@ -638,6 +649,13 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         ExprArt::Ort(o) => place_term(o, c),
         ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("(.un .not {})", expr_term(x, c)?)),
         ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(.un .neg {})", expr_term(x, c)?)),
+        // **`~` has no term here, and the reason is the model and not the operator.**
+        //
+        // `Gabbro.Body` carries `.un .not` and `.un .neg`, both of which are width-free over
+        // `Int`. A complement is NOT: `~x` is `2^n - 1 - x`, and the `n` is nowhere in this
+        // channel -- an expression carries no declared type into `expr_term`. *A term that
+        // picked a width would prove a theorem about a program the checker never checked.*
+        ExprArt::Unaer(UnOp::BitNicht, _) => Err(LeanReason::Expression),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
                 BinOp::Plus => "add",

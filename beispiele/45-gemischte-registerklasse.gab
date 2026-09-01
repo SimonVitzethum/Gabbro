@@ -52,11 +52,31 @@ impl fn fehlerindex(v : ptr<mmio, rw> Vtd) -> u32
 
 -- **Und die Fehlerbits werden geloescht** -- `w1c` ist schreibbar UND lesbar; eine Eins
 -- loescht. Genau darum ist es keine eigene Verbotsklasse, sondern eine Nebenwirkung.
+--
+-- > **3. BEFUND, 2026-09-01, und er stand hier AUSGELIEFERT.** Bis heute stand an dieser
+-- > Stelle `v.FSTS.PFO = 1;`, und der Erzeuger baute daraus einen Lese-Aendere-Schreib-Zug:
+-- >
+-- > ```c
+-- > uint32_t _v = (*(volatile uint32_t *)(v->basis + 52));
+-- > (*(volatile uint32_t *)(v->basis + 52)) =
+-- >     (uint32_t)((_v & (uint32_t)~(uint32_t)1u) | ((uint32_t)(1) << 0u & (uint32_t)1u));
+-- > ```
+-- >
+-- > **Auf einem W1C-Wort quittiert das jedes Bit, das gerade stand.** Das Lesen holt `PPF`
+-- > mit, das Zurueckschreiben setzt die Eins wieder -- und eine Eins LOESCHT. Ein Treiber,
+-- > der `PFO` quittiert, verliert lautlos den Fehler, den `PPF` gemeldet hat.
+-- >
+-- > Der Erzeuger sah nur die Klasse des REGISTERS (`class rw`), nie die des Feldes. *Null
+-- > Fehler in jedem Pass, uebersetzt unter `-Werror`, und falsch.* `R012` sagt es jetzt.
+--
+-- **Die richtige Form ist der Schreibzug auf das ganze Wort**: eine Eins an Bit 0, Nullen
+-- ueberall sonst. Kein Lesen, also nichts, was versehentlich mitquittiert wird -- das C ist
+-- ein einziger `volatile`-Speicherzug.
 impl fn fehler_quittieren(v : ptr<mmio, rw> Vtd)
     effects { writes v.FSTS }
     costs    <= 4 ops
 {
-    v.FSTS.PFO = 1;
+    v.FSTS = 1;
 }
 
 -- Ein `class r`-Register wird gelesen, ein `class w` geschrieben -- die zwei Faelle, die

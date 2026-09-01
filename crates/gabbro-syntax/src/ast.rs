@@ -528,6 +528,19 @@ pub enum ExprArt {
 pub enum UnOp {
     Nicht,
     Negativ,
+    /// **`~` -- the bitwise complement, and its whole difficulty is the WIDTH.**
+    ///
+    /// It is the one arithmetic operation whose result is not readable off the operands'
+    /// values: `~x` over `u16` and `~x` over `u32` differ in sixteen bits for the same `x`.
+    /// The written-out form the corpus used instead (`x ^ 65535`) carries that width as a
+    /// decimal literal beside the type -- *a second register over the same fact* -- and
+    /// widening the carrier turns the inversion into something else with no pass saying so
+    /// (measured 2026-09-01: `c : u32`, `c ^ 65535`, zero errors and zero hints).
+    ///
+    /// **The `^`-form is NOT displaced.** A xor against a mask that is not all-ones is a
+    /// different operation, and the corpus writes those. What `~` displaces is the idiom
+    /// *"xor against the all-ones literal of my own width"*, and only that.
+    BitNicht,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

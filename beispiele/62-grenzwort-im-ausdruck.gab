@@ -1,0 +1,71 @@
+-- 62 -- **`u32::max` in einem AUSDRUCK -- und bis zum 2026-09-01 senkte es zu `u32->max` ab.**
+--
+-- «G5» hat 2026-08-15 beide Segmente zu Wortschatzwoertern gemacht: `pathseg` laesst einen
+-- Grundtyp als erstes Segment zu, und damit hat die Sprache ihre Grenzwerte, ohne den
+-- Wortschatz aufzuweichen. `beispiele/11` zeigt die `const`-Seite, und sie war immer richtig:
+--
+--     const OBERGRENZE : u64 = u64::max;      ->   #define OBERGRENZE 18446744073709551615u
+--
+-- **Im Rumpf war es etwas anderes**, und gemessen sah das so aus:
+--
+--     return w ^ u32::max;    gabbro pruefe: 0 errors
+--                             gabbro emit:   `return w ^ u32->max;`
+--                             cc:            »u32« nicht deklariert
+--
+-- Ein Feldzugriff durch einen Zeiger auf eine Variable, die keine Deklaration je angelegt
+-- hat. *Der Erzeuger hat nicht abgesagt -- er hat den Ort abgesenkt, und der Ort passte
+-- zufaellig auf die Form.*
+--
+-- **Und die zweite Haelfte ist die groessere: M1 gab der Form gar keinen Typ.** Derselbe
+-- Rumpf mit der Maske als Ziffernfolge faellt:
+--
+--     w : u16, `w ^ 4294967295`   ->   M104 (verlaesst die Breite) und M101
+--     w : u16, `w ^ u32::max`     ->   0 Fehler, 0 Hinweise, 2 von 3 Ausdruecken ohne Typ
+--
+-- > **Zwei Schreibweisen derselben Zahl, und nur eine wird geprueft** (W7). Der benannte
+-- > Grenzwert ist die Form, die diese Sprache statt einer magischen Konstante anbietet --
+-- > und ausgerechnet er lief an der Breitenregel vorbei.
+--
+-- Die Heilung ist EIN Leser (`umgebung::grenzwort`), den jetzt drei Stellen fragen: der
+-- Konstantenfalter, M1 und der Erzeuger. *Der Falter hatte ihn die ganze Zeit; was fehlte,
+-- war nicht die Rechnung, sondern dass nur ein Rufer sie kannte.*
+
+module beispiel62 {
+
+-- Die Maskeninvertierung ueber dem benannten Grenzwert -- die Form, die `OA3` als den
+-- billigen Weg nach `extern` nennt und die es bis heute nicht gab.
+impl fn invertiere(w : u32) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return w ^ u32::max;
+}
+
+-- **Der Grenzwert als SCHRANKE, nicht als Maske.** `u16::max` ist hier eine Zahl im
+-- Vergleich, und M1 rechnet mit ihr statt sie zu uebersehen.
+impl fn passt_in_16(w : u32) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return w <= u16::max;
+}
+
+-- **Und die untere Grenze eines vorzeichenbehafteten Wortes** -- sie traegt kein `u` im
+-- erzeugten C, denn `-2147483648u` waere nicht bloss haesslich, sondern eine andere Zahl.
+impl fn ist_kleinster(x : i32) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return x == i32::min;
+}
+
+-- Das Zusammenspiel mit dem Komplement aus `beispiele/61`: beide schreiben dieselbe Maske,
+-- und beide muessen dieselbe Zahl erzeugen.
+impl fn zwei_wege_eine_maske(w : u8) -> bool
+    effects { pure }
+    costs   <= 12 ops
+{
+    return (w ^ u8::max) == ~w;
+}
+
+}

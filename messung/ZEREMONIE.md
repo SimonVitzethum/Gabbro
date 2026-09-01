@@ -5,11 +5,11 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-64 Dateien gemessen, 4 abgelehnt
-  ableitbar       68        A1  4 · A4 64
+68 Dateien gemessen, 4 abgelehnt
+  ableitbar       76        A1  4 · A4 72
   redundant        0
-  tragend       1011
-76 von 1110 Stellen dürfen sinken
+  tragend       1061
+76 von 1137 Stellen dürfen sinken
 ```
 
 > **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**
@@ -170,3 +170,8 @@ nutzbar, sondern ungemessen.**
 > `tragend` von 986 auf 1011. *Die Quote bewegt sich nicht, weil jemand nachlässiger
 > geworden wäre, sondern weil der Korpus gewachsen ist* — und genau darum steht der Nenner
 > hier und nicht nur der Zähler (W11).
+
+> **1110 → 1137 am 2026-09-01, und wieder ist es der NENNER.** Fünf saubere Beispiele und
+> neun Giftproben kamen mit `~`, `w1c` und der Verdrahtungsbahn dazu; `ableitbar` steigt
+> 68 → 76, `tragend` 1011 → 1061. *Die Quote bewegt sich, weil der Korpus wächst — und darum
+> steht der Nenner hier und nicht nur der Zähler* (W11).

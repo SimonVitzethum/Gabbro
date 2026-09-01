@@ -819,10 +819,15 @@ int main(void) {
 # **Das Gift nimmt dem Griff seinen Parameter.** `% q->n` wird `% 1`; danach ist `platz`
 # immer 0, der zweite `publish` ueberschreibt den ersten Platz, und `s` zeigt auf 0 statt 3.
 # *Ohne diese Sprechprobe wuerde der Lauf nicht messen, ob der Geraeteparameter etwas tut.*
+# **2 -> 3 assumptions on 2026-09-01, and the OBJECT grew.** `dma_kohaerent` was a
+# CONJUNCTION under one name -- coherence AND ordering, two independent claims, one
+# falsifier -- and it is now two assumptions, each with `arch x86_64` and its own probe.
+# `F04.gab` names it, so its certificate counts one more. *The certificate got longer
+# because the trust base got HONEST, not because it grew.*
 lauf "fragment4" "$W/messung/fragmente/F04.gab" "$TREIBER4" \
      "42 1 7 99" \
      's/% q->n/% 1/g' \
-     "2 assumptions (0 of them NOT FALSIFIABLE, 2 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "3 assumptions (0 of them NOT FALSIFIABLE, 3 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 4d. Das Fragment F6: die Stack-Wasserstandsmarke, und sie MISST DEN INDEX ------------
 #
@@ -1957,7 +1962,11 @@ echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECH
 # emittierende Dateien in beispiele/ -- die Marke gehoert nachgezogen (der gute Fall, und
 # trotzdem ein Befund)"* -- und genau so ist sie nachgezogen: **der Gegenstand ist gewachsen,
 # also darf die Zahl steigen, und der Grund steht an der Marke.**
-MARKE_EMIT=57
+# **57 -> 62 on 2026-09-01, and the OBJECT grew.** Five clean examples came with the
+# night's work: `58` (free list, two forms), `59` (an entry that hardware throws), `60` (an
+# assumption naming its machine), `61` (`~`), `62` (`u32::max` in an expression). Every one
+# is the counterprobe a build was not allowed without.
+MARKE_EMIT=62
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -2036,12 +2045,20 @@ MARKE_EMIT=57
 # `messung/proben/probe-probenurteil-schleife.gab` -- a probe whose only exits stand inside
 # a `forever`, the carrier of the `N045` measurement. It checks green since the false
 # refusal there was repaired, so it lowers to C and compiles.
-MARKE_EMIT_M=40
+# **40 -> 45 on 2026-09-01**, same movement: the measurement probes for certificate
+# injectivity, two-gibibyte linking, witness duty, wildcard reset and loop-promise shadowing.
+MARKE_EMIT_M=45
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
 MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt ab
-MARKE_EMIT_X=0      # alles uebrige, `halde.gab` eingeschlossen: heute emittiert davon keines
+# **0 -> 1 on 2026-09-01, and this one is not bookkeeping.** `halde.gab` -- the only file
+# in the tree at the target scale -- did NOT emit until tonight: it fell at an `L104` false
+# alarm, `g is consumed a second time`, because `m2` ran a `narrow … else` arm as
+# straight-line code and merged its state into the join. The arm was healed (`f1831fa`), and
+# the file has emitted since. *A mark that stood at zero because a false refusal held the
+# only witness.*
+MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten darueber
 #
 # **Und `arbeitsprotokoll/` ist ausgenommen, weil es nicht im Baum ist** (2026-08-31). Der
 # erste Lauf dieser erweiterten Reichweite meldete `NEUE WURZEL EMITTIERT: 2` -- beide unter

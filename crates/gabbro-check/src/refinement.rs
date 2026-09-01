@@ -357,6 +357,11 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
         ExprArt::Ort(o) if o.suffixe.is_empty() => binding.get(&o.basis.text),
         ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("\\<not> ({})", expr_term(x, binding)?)),
         ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("- ({})", expr_term(x, binding)?)),
+        // **`~` joins the bit operations below, and for the same two reasons.** The
+        // complement over `n` bits is `2^n - 1 - x`, and this emitter's terms are over
+        // `int` -- there is no width in them. `HOL-Library` would carry `NOT`; this theory
+        // imports `Main`.
+        ExprArt::Unaer(UnOp::BitNicht, _) => Err(Reason::NoTerm),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
                 BinOp::Oder => "\\<or>",

@@ -776,6 +776,63 @@ pub const M1: &[Satz] = &[
                      messung/proben/VORRANG-BITSTUFEN.md",
     },
     Satz {
+        name: "m1.komplement",
+        kennungen: &["M137", "M138"],
+        aussage: "Every `~` this pass accepts stands over an operand whose WIDTH a \
+                  declaration gives, and the range it produces is the exact complement over \
+                  that width: `MAX - x.max .. MAX - x.min`. A literal and a signed operand \
+                  are refused by name, so no accepted `~` takes its width from C's integer \
+                  promotion. `M138` closes the same question one form over: an integer word \
+                  has `max` and `min`, and a third member is refused rather than lowered as \
+                  a place.",
+        vorbehalt: "**It says nothing about the EMITTED C**, and that is where the whole \
+                    difficulty of this operator lives: `~(uint16_t)x` promotes to `int` in C \
+                    and the checked width is gone. The cast is the emitter\u{27}s (`({c})~({c})(x)`) \
+                    and is measured there, not here. *Measured 2026-09-01: with the outer \
+                    cast stripped at one site, `cc -std=c11 -Wall -Wextra -Werror` compiles \
+                    WITHOUT a warning and the program computes `4294905615` where this pass \
+                    says `u16 in 0 .. 65535`.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/61-invertierung.gab`, emitted, compiled at `-O0` and `-O2` \
+                      and RUN over eight values; `beispiele/62-grenzwort-im-ausdruck.gab` \
+                      likewise. `beispiele/gift`: 4 probes (`443` literal, `444` signed, \
+                      `445` in a `const`, `447` a third member), each with its code alone. \
+                      `crates/gabbro-check/tests/komplement.rs` pins the emitted text in \
+                      both directions. Five hand mutations, built: four caught, and the \
+                      fifth -- coarsening the range to the full width -- was caught by \
+                      NOTHING until `hohes_nibble` was added.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; crates/gabbro-check/src/emit.rs; \
+                     dokumente/SYNTAX.md \u{a7}4",
+    },
+    Satz {
+        name: "m3.lese_aendere_schreibe",
+        kennungen: &["R012"],
+        aussage: "No accepted program writes one bit field of a device word whose READ or \
+                  whose WRITE has a side effect. Writing a bit field is a read-modify-write \
+                  on the whole word; on a `w1c` word the write-back sets every bit the read \
+                  picked up and each of them CLEARS, and on an `rc` word the read is itself \
+                  the loss. The rule is over the WORD, not over the addressed field: a plain \
+                  `rw` field of a word with `w1c` neighbours carries the same defect.",
+        vorbehalt: "**It is not a statement about atomicity.** A read-modify-write on a \
+                    device is three generated steps and nothing anywhere says they are one \
+                    -- that is a separate open item (`OB4`), and this rule does not touch \
+                    it. What it removes is the case where the three steps are wrong even \
+                    when nothing interrupts them. *And it says nothing about the exit it \
+                    names*: that `d.REG = <bits>;` lowers to a single store is measured in \
+                    the emitter, not asserted here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "**A DELIVERED defect**, found 2026-09-01: `beispiele/45` acknowledged \
+                      `FSTS.PFO` through a read-modify-write on a word with two `w1c` \
+                      fields, green in every pass and compiling under `-Werror`. \
+                      `beispiele/gift`: 2 probes (`448` w1c, `449` rc), each `R012` alone; \
+                      `218` now carries it as an accompanying code. \
+                      `crates/gabbro-check/tests/komplement.rs` RUNS the repaired \
+                      acknowledgement over a stand-in register window and demands the word \
+                      `1` rather than `3`. Four hand mutations, built, all four caught.",
+        fundstelle: "crates/gabbro-check/src/m3.rs (rmw_pruefung); \
+                     crates/gabbro-syntax/src/kw.rs",
+    },
+    Satz {
         name: "m1.verfeinerung",
         kennungen: &["M130", "M131", "M132"],
         aussage: "Where a body carries `refines g`, the named `g` is a `spec fn` declared in \

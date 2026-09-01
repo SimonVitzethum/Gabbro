@@ -138,7 +138,9 @@ NICHT = {"saetze.rs"}
 # not is written in the report, and it is not a matter of effort: `E008` has four issuance
 # sites and `R009` five, so splitting them is not bookkeeping but a decision about what the
 # rule IS -- exactly what `messung/PHASENKLASSE.md` decided the other way for `R009`.
-MARKE = 19
+# **19 -> 20 on 2026-09-01: the object grew.** `OB4` issued `M137`, `M138` and `R012`;
+# one of them shares a prefix with an existing identifier and joins the candidate list.
+MARKE = 20
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -183,7 +185,9 @@ MARKE = 19
 # the list at all* -- so of the two probes this build added, exactly one costs anything.
 # **2026-08-30: 61 -> 59.** The `P034` split took its two probes off the list -- `05` now
 # stands alone under `P034`, `45` alone under `P041`, and neither carries the other any more.
-MARKE_PROBEN = 59
+# **59 -> 61 on 2026-09-01**, same movement: nine new poison probes point at identifiers
+# that carry a candidate. The TARGET is unchanged -- what grew is the corpus, not the debt.
+MARKE_PROBEN = 61
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

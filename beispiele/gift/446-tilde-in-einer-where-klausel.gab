@@ -1,0 +1,25 @@
+-- erwartet: C001
+-- **Gift 446 -- `~` in der `where`-Klausel eines `format`, und der Grund ist wieder die
+-- Breite.**
+--
+-- Eine `where`-Klausel senkt zu einer Pruefkoerperfunktion ab, in der genau ein Objekt
+-- steht: `v`, der Puffer. Ein blanker Feldname wird dort zu einem LESER -- `Kopf_marke(v)`
+-- --, und welche C-Breite dieser Leser zurueckgibt, steht in der `format`-Deklaration und
+-- nicht in dem Absenker, der die Klausel schreibt.
+--
+-- > Ohne die Breite waere das erzeugte `~` ein `int`-Komplement. **Genau der Fehler, gegen
+-- > den dieser Operator gebaut wurde**, in der einen Ecke des Erzeugers, die ihn nicht
+-- > sehen kann.
+--
+-- Also: abgesagt beim Namen, statt eine Breite zu raten. Null Korpusstellen fragen danach
+-- (Regel A). *Die Absage nennt die Stelle UND den Grund -- ein Leser, der `~` hier braucht,
+-- weiss danach, was fehlt: nicht der Operator, sondern der Typ des Lesers.*
+
+module gift446 {
+
+format Kopf endian little {
+    marke : u32 where ~marke != 0,
+    laenge : u32 offset_into Self where laenge <= lenof(Self),
+}
+
+}

@@ -1611,6 +1611,60 @@ impl<'a> Pruefer<'a> {
             }
             ExprArt::Klammer(i) => self.ausdruck_roh(i, lage),
             ExprArt::Ort(o) => {
+                // **`u32::max` is a NUMBER, and until 2026-09-01 M1 did not know it.**
+                //
+                // «G5» put both segments into the vocabulary and the constant folder has read
+                // the pair ever since -- `const G : u32 = u32::max;` lowers to
+                // `#define G 4294967295u`, correctly. **In an EXPRESSION nobody asked it.**
+                // Measured: `return w ^ u32::max;` with `w : u16` passed with 0 errors and
+                // booked two of three expressions as untyped, while the same mask spelled
+                // `4294967295` falls at `M104` *(`u16 ^ u32 in 4294967295 .. 4294967295`
+                // leaves the width of the result type)* and at `M101`.
+                //
+                // > *Two spellings of one number, one of them checked.* The named limit is
+                // > the form this language offers instead of a magic constant -- and it was
+                // > the one that escaped the width rule.
+                //
+                // It stands BEFORE `name_aufloesen`, because `u32` is not a name a body
+                // declares and asking that question first is how the form got treated as a
+                // place. The value comes from `umgebung::grenzwort`, the same reader the
+                // folder uses (W7).
+                if let Some((breite, vz, w)) = crate::umgebung::grenzwort(o) {
+                    return Typ::Ganzzahl(IntBereich::genau(breite, vz, w, w));
+                }
+                // **And a MISSPELLED limit is the same defect, one field name over.**
+                //
+                // `u32::gross` measured on the repaired binary: 0 errors, 0 hints, two of
+                // three expressions untyped -- and `gabbro emit` writes `u32->gross`.
+                // *Repairing `max` and `min` alone would have closed the two spellings
+                // somebody happened to try and left the family open.*
+                //
+                // An integer word has exactly two members, and neither a declaration nor a
+                // `let` can give it a third: `u32` is a WORD, not a name a body binds. So
+                // this is not `M119` ("declared nowhere", fixed by a declaration) -- there
+                // is no declaration that would fix it.
+                if let (Some(kw), 1, Some(OrtSuffix::Feld(f))) =
+                    (gabbro_syntax::kw::Kw::suche(&o.basis.text), o.suffixe.len(), o.suffixe.first())
+                {
+                    if kw.ist_intty() {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M138",
+                                e.span,
+                                format!(
+                                    "`{}::{}` -- an integer word has `max` and `min`, and \
+                                     nothing else",
+                                    o.basis.text, f.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "`u32` is a word of the closed vocabulary, not a name a \
+                                 declaration could give another member",
+                            ),
+                        );
+                        return Typ::Unbekannt;
+                    }
+                }
                 self.name_aufloesen(o, lage);
                 // **Die INDIZES sind Ausdruecke, und M1 zaehlte sie nicht.** `t.slots[j].x`
                 // mit unbekanntem `j` galt als *ein* Ausdruck mit 100 % Deckung.
@@ -1663,6 +1717,64 @@ impl<'a> Pruefer<'a> {
                     )),
                     None => Typ::Unbekannt,
                 }
+            }
+            // **`~x` -- and the operand's WIDTH is the whole rule.**
+            //
+            // The complement over `n` bits is `MAX - x`, and it is order-reversing and
+            // bijective: the range of `~x` is exactly `MAX - x.max .. MAX - x.min`. *No
+            // widening, no approximation* -- unlike `+` or `*`, the complement can never
+            // leave the width it is taken in, so `M104` has nothing to say about this node
+            // and everything to say about the one above it.
+            //
+            // **Two operands are refused by name rather than guessed at:**
+            //
+            // * A LITERAL has no width (`IntBereich::konstante` gives it the smallest one it
+            //   fits into, marked `literal`). `~5` would then be `250` over `u8` and
+            //   `4294967290` over `u32`, and nothing in the source says which. *C answers
+            //   this question with the integer promotion, and that answer is the trap this
+            //   whole construct stands against.* The named limit is the form for the
+            //   all-ones constant: `u32::max`.
+            // * A SIGNED operand. `~x` on `i32` is `-x-1` in C -- a perfectly defined
+            //   operation and a different one from "invert the bits of a word". Zero corpus
+            //   sites ask for it, and Rule A says a construct without a measured need does
+            //   not get built.
+            ExprArt::Unaer(UnOp::BitNicht, i) => {
+                let t = self.ausdruck(i, lage);
+                let Some(b) = t.bereich() else { return Typ::Unbekannt };
+                if b.literal {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M137",
+                            e.span,
+                            format!(
+                                "`~` over a literal -- `{}` carries no width, and the \
+                                 complement is a different number in every one",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "the all-ones constant of a width has its own form: `u32::max`",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                if b.vorzeichen {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M137",
+                            e.span,
+                            format!("`~` over the signed `{}`", b.text()),
+                        )
+                        .mit_notiz(
+                            "`~` inverts the bits of an unsigned word; on a signed one C \
+                             computes `-x-1`, and that is a different operation with no \
+                             corpus site asking for it",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                let (_, hi) = typen::grenzen(b.breite, false);
+                Typ::Ganzzahl(IntBereich::genau(b.breite, false, hi - b.max, hi - b.min))
             }
             ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage),
         }
