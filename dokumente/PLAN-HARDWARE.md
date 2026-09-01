@@ -1875,3 +1875,157 @@ Die Reihenfolge folgt daraus und nicht aus dem Reiz:
 > befürchtet hat.** Nicht durch acht neue Wörter: durch **vier Zahlen ohne Grundgesamtheit**
 > und **eine Trivialitätsbehauptung, deren Widerlegung einen Tag alt im selben Baum lag.**
 > *Die Ratsche zählt Wörter; sie zählt keine Messungen, die niemand nachgeschlagen hat.*
+
+---
+
+# TEIL VII — Der Restbeweis unter einem verifizierten Gabbro, und der Weg zur Beta
+
+*Angefügt 2026-09-01, Stand `aecd27f`. **Zwei Fragen, und die erste ist die schärfere:
+angenommen Gabbro selbst wäre formal verifiziert — was bliebe dem Nutzer?***
+
+## §48 — Die Antwort ist „ja, plus drei", und die drei sind gemessen
+
+**Was ein verifiziertes Gabbro abnimmt:** die 99 Pflichten wären dann **die richtigen** —
+Gabbro garantiert, dass es keine übersieht — und die Absenkung wäre bewiesen: *was der
+Prüfer annimmt, führt die Maschine aus.* **Das ist der große Teil, und er ist echt.**
+
+### Was bleibt, gemessen über die 165 sauberen Dateien
+
+```
+1  EIGENE LOGIK           99 Pflichten
+     postcondition 29 · precondition 23 · preservation 9
+     loop invariant 5 · walk invariant 5 · refinement 1
+2  HARDWAREANNAHMEN       46 `assume` + 15 device-Pflichten
+3  FREMDE RUEMPFE         12 foreign-Pflichten -- und in einem ECHTEN Programm
+                          ein Viertel bis ein Drittel aller Funktionen:
+                          virtio-net 2/8 · udp-echo 3/10 · zaehlwerk 4/11
+4  DIE C-WERKZEUGKETTE     9 `entry`-Verteiler + `cc` + Binder
+```
+
+### Punkt 3 ist der, den niemand nennt, und er schrumpft durch keinen Beweiser
+
+`gabbro lean` sagt es über jeden `extern`-Vertrag selbst:
+
+> *„an `ensures` at a body Gabbro never sees: **an ASSUMPTION, not a goal**"*
+
+**Ein verifiziertes Gabbro beweist, dass es den Vertrag richtig VERWENDET — nicht, dass der
+Vertrag STIMMT.** Und er wird nicht kleiner, weil jemand einen Beweiser baut. *Er wird
+kleiner, indem mehr in Gabbro geschrieben wird.*
+
+- [ ] **Die fünfte Marke, die niemand führt: wie viel Prozent eines echten Kerns steht am
+      Ende in Gabbro statt daneben?** Bei `virtio-net` sind es heute **75 %.**
+
+### Punkt 4 fällt — sobald jemand die Teilmenge prüft
+
+**CompCert schließt genau diese Lücke**, und das ist die realistische Antwort. Die Bedingung
+ist messbar, **und der Gegenstand liegt seit `09d6c4f` aufgezählt vor: 65 Formen.**
+
+Die Kandidaten, bei denen CompCert zurückhaltend ist — *gezählt im Erzeugnis:*
+
+```
+__attribute__   696      volatile      120      restrict      260
+_Atomic          39      _Noreturn      20      __asm__         2
+__builtin_unreachable 5  _Static_assert  1
+```
+
+- [ ] **Die 65 Formen gegen CompCerts Teilmenge halten.** *Eine Messung von Stunden, kein
+      Projekt* — und sie entscheidet, ob Punkt 4 ein Posten ist oder eine Fußnote.
+
+**Ein eigener Gabbro-Übersetzer** ist die andere Antwort und **nicht die einfachere**: der
+Absenkungssatz zielte dann auf Maschinencode statt auf C. *Es sei denn, er geht durch einen
+verifizierten Rücken — dann verschwinden die 64 Formen ohne Satz, weil es keine C-Formen
+mehr gibt.*
+
+### Und einer, der keine Beweispflicht ist, sondern eine Sprachgrenze
+
+> **Was nicht sagbar ist, wird durch Verifikation von Gabbro nicht sagbar.** `spec fn` kann
+> keine Rahmenbedingung ausdrücken — *„`raeumen` fasst kein anderes Fach an"* ist ein
+> Quantor. **Verifiziert man einen Prüfer, der eine Eigenschaft nicht formulieren kann, hat
+> man einen verifizierten Prüfer, der sie immer noch nicht formulieren kann.**
+
+### Die ehrliche Fassung
+
+> **Ja — für alles, was in Gabbro geschrieben ist.** Der Nutzer beweist seine Logik und seine
+> Hardwareannahmen, **und jede Zeile, die er nicht in Gabbro geschrieben hat, bleibt sein
+> Problem.**
+
+---
+
+## §49 — Beta: was fehlt, ausgeplant
+
+*Die Eingangstür ist seit `aecd27f` offen — ein Gabbro-Programm druckt `Hallo`. Damit ist
+zum ersten Mal ein Beta-Plan schreibbar, der nicht `N041` misst.*
+
+### B1 — Der Eintritt · **blockiert alles darunter**
+
+```
+`int main` im Erzeugnis:  0        `pub fn haupt` braucht einen C-Treiber
+```
+
+**Nichts prüft, dass ein `program` genau einen Eintritt hat.** Solange ein Gabbro-Programm
+einen handgeschriebenen C-Treiber braucht, um zu laufen, ist die Klempnereifrage `K100` für
+den gehosteten Fall mit *nein* beantwortet.
+
+- [ ] Ein Eintritt in der Sprache, oder eine benannte Absage mit Grund. **Gegen die Ratsche.**
+
+### B2 — Zeichenketten · **gemessen unmöglich, nicht ungebaut**
+
+> **Gabbro hat kein `char`**, und C hält `char`/`signed char`/`unsigned char` auseinander.
+> Drei Zeigerformen gegen `puts` sind gemessen abgewiesen.
+
+`beispiele/63` druckt `Hallo` **Zeichen für Zeichen**. Das ist ehrlich und es ist keine Beta.
+
+- [ ] Rechnen, was ein `char` kostet — **ein Wort gegen die Ratsche**, und der Handel ist
+      nicht offensichtlich: `32-zeichenkette.gab` existiert seit dem 2026-08-19.
+
+### B3 — Der Auffahrtsweg
+
+**Acht Anläufe für „addiere zwei Zahlen"**, von jemandem mit vollem Zugang. Fünf der sieben
+Absagen waren Syntaxpapierschnitte.
+
+- [ ] `gabbro new` · ein Tutorial · fünf „meintest du"-Hinweise auf genau diese fünf.
+- [ ] **Und der Test danach ist nicht meiner:** ein zweiter Mensch, oder der ungesehene Port.
+
+### B4 — Die Fläche, die schon steht
+
+```
+englische Erstnamen    12, additiv, null von 608 Aufrufstellen gekostet
+Diagnostik             33 deutsche Meldungen -> 0
+SIGPIPE                rc=101 -> 0
+zwei Einheiten         `137`, uebersetzt und gelaufen
+Bau                    inkrementell nach INHALT, mit Deckungszeile
+```
+
+- [ ] Übrig: **die Fahnen sind nur teilweise englisch**, und **kein Wächter erzwingt einen
+      englischen Erstnamen für einen NEUEN Unterbefehl.**
+
+### B5 — `at port` ist abgesagt, nicht gelöst
+
+*Eine abgesagte Absenkung ist ein Loch im Anspruch, kein geschlossener Punkt.* Solange
+Portzugriffe außerhalb der Sprache stattfinden, gilt „MMIO gelöst" **für memory-mapped und
+nicht für x86-I/O.**
+
+### B6 — Und die zwei Entscheidungen beim Ordner
+
+- [ ] **`H = 4`** — alle vier hängen an Programmen, die Gabbro nicht annimmt, jede Absage
+      nachgemessen. *Sieben von zehn buchen, oder den vier eine eigene Spalte.*
+- [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
+      rote Wächter seit drei Tagen.**
+
+---
+
+## §50 — Die Reihenfolge, und sie folgt aus §48
+
+| # | | warum hier |
+|---|---|---|
+| **1** | **B1 Eintritt** | blockiert jeden Lernbarkeitstest und `K100` |
+| **2** | **Die 65 Formen gegen CompCert** | entscheidet, ob Punkt 4 aus §48 ein Posten ist. *Stunden, kein Projekt* |
+| **3** | **Der ungesehene Port** | die einzige Messung, die die Liste umschreiben kann — **und die einzige, die schlecht ausgehen kann** |
+| **4** | B2 Zeichenketten | mit der Ratschenrechnung davor |
+| **5** | B3 Auffahrtsweg | erst sinnvoll, wenn B1 und B2 stehen |
+| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — heute 75 % bei einem Treiber |
+
+**Und was NICHT auf dieser Liste steht, gehört ausgesprochen:** die Beweisseite. `145 von 381
+Rümpfen`, `1 Absenkungssatz von 65`, die Naht zwischen zwei Beweisern, die in keiner Logik
+existiert. *Eine Beta braucht keinen Beweis — sie braucht einen Prüfer, der nicht lügt. Aber
+der Satz, dass ein verifiziertes Gabbro dem Nutzer die Arbeit abnimmt, hängt an ihr.*
