@@ -10,6 +10,16 @@
 -- `int putchar(int)`; die Zeile darunter senkt zu `int32_t putchar(int32_t);` ab, und das ist
 -- genau die Deklaration, die `cc` schon kennt. **Ein `u32` daneben waere der Fehler**, und
 -- `N046` sagt ihn ab, mit der Zeile, die passt, in der Absage.
+-- **Und wie BREIT die Tuer ist, steht daneben und ist gemessen:** ein Zeichen je Ruf, und
+-- keine Zeichenkette. `puts` ist `int(const char *)`, und **Gabbro hat kein `char`** --
+-- `ptr<code, r> i8` senkt zu `const int8_t *` ab, `ptr<code, r> u8` zu `const uint8_t *`,
+-- und `cc` weist beide zurueck: *conflicting types for built-in function 'puts'; expected
+-- 'int(const char *)'*. C haelt `char`, `signed char` und `unsigned char` als DREI Typen
+-- auseinander, auch wo zwei davon dieselbe Darstellung haben.
+--
+-- *Das ist ein gemessenes Nein und keine Luecke im Pruefer:* `N041` sagt `puts` weiter ab und
+-- zeigt dabei C's Deklaration. **Die Eingangstuer ist offen und genau so breit wie die Typen,
+-- die Gabbro hat.**
 module beispiel::druckt {
 
 -- `int putchar(int)` -- C's eigene Deklaration, gemessen mit `cc -aux-info` und in
