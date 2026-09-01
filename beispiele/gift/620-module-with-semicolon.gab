@@ -1,0 +1,15 @@
+-- erwartet: P001
+-- **The paper cut that stands in LINE ONE**, and it was measured on the way to
+-- `PLAN-HARDWARE.md` §49 B3: a newcomer writes the file header of the language next door.
+--
+-- `module m;` is not a notation question. A file header would mean *"everything below is
+-- inside this module"* -- a statement about SCOPE, and `moduledecl` says `{ … }` and means a
+-- body. **The refusal stays; what was missing was the FORM in the refusal.** Until
+-- 2026-09-01 it read `` `{` expected, `;` found `` and nothing else, in front of every other
+-- finding of the file, and a reader who does not know the grammar could not read the shape
+-- off it.
+--
+-- The note under the site now carries it. *Nothing became sayable* -- this file falls today
+-- exactly as it fell yesterday, and `crates/gabbro-syntax/tests/sprechprobe.rs` holds the
+-- note itself, which no poison probe can (the harness matches CODES).
+module m;

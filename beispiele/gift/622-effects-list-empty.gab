@@ -1,0 +1,20 @@
+-- erwartet: P014
+-- **The AMBIGUOUS one of the eight attempts** (`PLAN-HARDWARE.md` §49 B3, attempt 2 of 8) --
+-- and the calculation says KEEP the refusal.
+--
+-- The test is: what becomes sayable, and is it wrong? `effects { }` would mean "this
+-- function has no effects", and that meaning already EXISTS and is spelled `effects
+-- { pure }`. Two spellings for one meaning, one of which nobody reads -- and `E001` calls
+-- the missing clause *"at once the strongest promise and the cheapest one to write"*, which
+-- is exactly the reason the promise must be WRITTEN and not left as an empty pair of braces.
+--
+-- **What was a paper cut was the MESSAGE, and only that.** It read `effect expected, `}`
+-- found` and listed the nine effect words -- leaving the reader to work out which of the
+-- nine means "none". It now names the substitute.
+module m {
+impl fn addiere(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { } costs <= 3 ops
+{
+    return a + b;
+}
+}
