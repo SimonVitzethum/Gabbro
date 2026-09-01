@@ -1,8 +1,8 @@
--- **Counter-probe: `B001` passes and the LINKER refuses.**
+-- **Counter-probe: the entry rule passes and the LINKER refuses.**
 --
--- The entry is there, `pub`, and takes no argument -- so `B001` says nothing. What no unit of
+-- The entry is there, `pub`, and takes no argument -- so the entry rule says nothing. What no unit of
 -- this build defines is `nirgendwo_definiert`. *This is the probe that the binder runs at all*,
--- rebuilt after `B001` took the case the old one stood on.
+-- rebuilt after the entry rule took the case the old one stood on.
 compiler cc -std=c11 -O0 -Wall -Wextra -Werror
 out      target/bau-eintritt-ungebunden
 

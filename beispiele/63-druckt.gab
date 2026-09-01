@@ -20,6 +20,18 @@
 -- *Das ist ein gemessenes Nein und keine Luecke im Pruefer:* `N041` sagt `puts` weiter ab und
 -- zeigt dabei C's Deklaration. **Die Eingangstuer ist offen und genau so breit wie die Typen,
 -- die Gabbro hat.**
+-- **And since 2026-09-01 it runs out of a manifest, with NO hand-written C.**
+--
+-- The function was called `haupt` and needed a C driver beside it to call it. It is called
+-- `main` now, and that makes it the one the linker looks for: `emit.rs` does not mangle, so
+-- the Gabbro name IS the C name. `63-druckt.bau` next door names this file as a
+-- `unit ... program`; `gabbro build` writes the C, calls `cc`, links -- and the binary
+-- prints `Hallo`.
+--
+-- **It cost no word.** `main` is an identifier and not a keyword; the marks 221 / 208 / 333
+-- stand still. What was added is the entry rule in the build: *a `program` names exactly one entry,
+-- a library names none.* Before it, that case was refused by `ld`, three tools later and in
+-- the system's language.
 module beispiel::druckt {
 
 -- `int putchar(int)` -- C's eigene Deklaration, gemessen mit `cc -aux-info` und in
@@ -39,7 +51,7 @@ extern fn putchar(c : i32) -> i32 effects { writes ausgabe } costs <= 8 ops;
 -- `let a =`; die erste und die dritte gehen, die zweite nicht.* Damit ist die Frage
 -- beantwortet und es gibt keinen zweiten Befund: die Eingangstuer hatte EIN Schloss, nicht
 -- zwei.
-pub fn haupt() -> i32 in 0 .. 1
+pub fn main() -> i32 in 0 .. 1
     effects { writes ausgabe }
     costs   <= 80 ops
 {

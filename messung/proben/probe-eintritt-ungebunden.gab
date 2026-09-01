@@ -1,11 +1,11 @@
--- **The speaking probe for the LINK step, and it is here because `B001` took the old one.**
+-- **The speaking probe for the LINK step, and it is here because the entry rule took the old one.**
 --
 -- Until 2026-09-01 `ein_programm_ohne_main_faellt_am_binder` was the only proof that the
 -- binder runs at all: a `program` that in truth wrote nothing but an object would look the
--- same from outside. **`B001` now refuses that case one tool earlier**, and a rule that moves
+-- same from outside. **the entry rule now refuses that case one tool earlier**, and a rule that moves
 -- a refusal upstream also takes away the probe that lived on it.
 --
--- So the probe is rebuilt on a case `B001` does NOT cover: an `extern fn` that no unit of
+-- So the probe is rebuilt on a case the entry rule does NOT cover: an `extern fn` that no unit of
 -- this build defines. It checks clean, it translates clean, `cc -c` accepts it -- and `ld`
 -- refuses, which is the statement wanted: *the binder runs, and it can say no.*
 module probe::eintritt::ungebunden {

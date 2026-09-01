@@ -1,4 +1,4 @@
--- **Gift for `B001`: two entries, and only one of them is `pub` -- so `N039` is silent.**
+-- **Gift for the entry rule: two entries, and only one of them is `pub` -- so `N039` is silent.**
 compiler cc -std=c11 -O0 -Wall -Wextra -Werror
 out      target/bau-eintritt-zwei
 

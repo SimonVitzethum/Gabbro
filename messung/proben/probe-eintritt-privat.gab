@@ -1,4 +1,4 @@
--- **Gift for `B001`: the entry is there, and it is private.**
+-- **Gift for the entry rule: the entry is there, and it is private.**
 --
 -- It lowers to `static int32_t main(void)` -- a symbol the linker never sees. `cc` catches it
 -- with `-Werror=main` (*"`main` is normally a non-static function"*), but in C's words and in

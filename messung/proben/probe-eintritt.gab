@@ -5,7 +5,7 @@
 -- different construct (a hardware-entered interrupt stub with a register footprint, a vector
 -- and a dispatch, and it emits a prototype instead of a body).
 --
--- What `B001` adds is not the entry but the CHECK: until 2026-09-01 nothing held that a
+-- What the entry rule adds is not the entry but the CHECK: until 2026-09-01 nothing held that a
 -- `unit ... program` has exactly one, and the refusal came from `ld` three tools later.
 module probe::eintritt {
 

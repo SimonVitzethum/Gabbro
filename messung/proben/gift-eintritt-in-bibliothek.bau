@@ -1,4 +1,4 @@
--- **Gift for `B001`: an `object` that declares the entry.**
+-- **Gift for the entry rule: an `object` that declares the entry.**
 --
 -- The SAME source as `eintritt.bau`, declared `object` instead of `program`. It is the one
 -- question a single file cannot answer -- and a library that defines `main` collides with

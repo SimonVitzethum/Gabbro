@@ -1,4 +1,4 @@
--- **Gift for `B001`: the entry takes an argument.**
+-- **Gift for the entry rule: the entry takes an argument.**
 --
 -- C allows `int main(void)` and `int main(int, char **)` and nothing else. Gabbro has no type
 -- for the second -- `char` is not a Gabbro type, which is the same seam `beispiele/63` names

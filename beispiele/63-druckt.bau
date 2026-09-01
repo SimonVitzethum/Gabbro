@@ -1,0 +1,13 @@
+-- **The manifest for the first Gabbro program that PRINTS -- and it prints out of a build.**
+--
+-- `B1`'s acceptance criterion is a CHANGE and not a number: *a `.gab` file plus a manifest,
+-- `gabbro build`, and the binary runs -- with NO hand-written C.* This is that file.
+--
+-- One unit, one source, no library below it. The `putchar` it calls is libc's, and libc is
+-- linked by `cc` without anything in this manifest saying so -- **that is the hosted case,
+-- and it is the whole difference to `beispiele/07` and the bare-metal half of the corpus.**
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-hallo
+
+unit hallo program
+    beispiele/63-druckt.gab

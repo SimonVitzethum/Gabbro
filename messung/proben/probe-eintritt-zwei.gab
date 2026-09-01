@@ -1,4 +1,4 @@
--- **Gift for `B001`: TWO entries -- and `N039` does not see this pair.**
+-- **Gift for the entry rule: TWO entries -- and `N039` does not see this pair.**
 --
 -- `N039` refuses two exported items of one C name. Here only ONE of the two is `pub`, so
 -- there is no second symbol and `N039` stays silent -- while the unit still declares the

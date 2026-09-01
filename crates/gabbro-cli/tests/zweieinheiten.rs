@@ -19,13 +19,17 @@
 //! that a PRIVATE helper of the other unit capped; the `37` went through untouched. *A number
 //! that both halves of the boundary had to be right to produce.*
 //!
-//! > **Why the result travels as an exit status and not as printed text.** A Gabbro program
-//! > cannot print: `printf`, `puts` and `putchar` all stand in the table of `cnamen.rs`, and
-//! > `N041` refuses an `extern fn` on any of them -- *the guard is right, and it has no
-//! > exemption for a deliberate foreign binding.* So what prints stands beside the program:
+//! > **Why the result travels here as an exit status and not as printed text.** This file's
+//! > program has no `extern fn` at all, so what prints stands beside it:
 //! > `der_treiber_druckt_und_wird_verglichen` links a C driver against the very
 //! > `rechenwerk.o` this build wrote, the same shape `pruefe-emission.sh` Stufe 10 uses.
 //! > **The driver is the instrument, not part of the program.**
+//! >
+//! > *The reason given here until 2026-09-01 was wrong and is withdrawn:* it read *"a Gabbro
+//! > program cannot print -- `N041` refuses an `extern fn` on `putchar`"*. It does not.
+//! > `beispiele/63-druckt.gab` binds `putchar` and prints `Hallo` out of a build with no
+//! > driver at all (`eintritt.rs::beispiel_63_druckt_aus_einem_bau_ohne_treiber`). **What was
+//! > true of THIS program was written down as true of the language.**
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -120,9 +124,9 @@ fn ohne_die_kante_faellt_das_programm() {
 
 /// **Counter-direction: a `program` over two files that carry no `main`.**
 ///
-/// > **This test measured the LINKER until 2026-09-01, and `B001` took the case away from
+/// > **This test measured the LINKER until 2026-09-01, and the entry rule took the case away from
 /// > it.** The refusal used to read *"the linker refused 1 object(s)"* -- `ld`'s words, in
-/// > the system's language, three tools after the mistake. It now falls at `B001`, in
+/// > the system's language, three tools after the mistake. It now falls at the entry rule, in
 /// > Gabbro's words and *before the C is written*.
 ///
 /// The statement the old form carried -- **the binder runs at all, and it can say no** -- did
@@ -131,11 +135,11 @@ fn ohne_die_kante_faellt_das_programm() {
 /// `extern fn` nothing defines. *Without that second file this change would have traded a
 /// measurement for a rule and called it progress.*
 #[test]
-fn ein_programm_ohne_main_faellt_an_b001() {
+fn ein_programm_ohne_main_faellt_an_der_eintrittsregel() {
     let (aus, fehler, code) = lauf(&["build", "messung/einheit-proben/gift-programm-ohne-main.bau"]);
     assert_eq!(code, 1, "refused:\n{aus}\n{fehler}");
     assert!(
-        aus.contains("REFUSED  ohnemain") && aus.contains("[B001]"),
+        aus.contains("REFUSED  ohnemain") && aus.contains("declares no `main`"),
         "and it is GABBRO that refuses, by name:\n{aus}"
     );
     assert!(
