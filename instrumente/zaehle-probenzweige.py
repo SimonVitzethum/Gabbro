@@ -376,7 +376,22 @@ def messe(fahrbar, nur=None):
 # guardian that ends RED today does not reach its own green ending, and those lines then look
 # probe-borne. The table prints every return code beside the count, so a rise can be told
 # apart from a repair -- and a rise errs towards red, which is the direction a mark may err in.
-MARKE = 12
+#
+# **12 -> 14 and 172 -> 188, and the rise is a CORRECTION, not a regression** (2026-09-01,
+# same day, second reading). Nothing in the tree got worse: the marker pair took the blind
+# spot from 15 of 43 down to 6, and two of the nine newly visible instruments turned out to
+# carry the class after all --
+#
+#     pruefe-widerruf.py    2 lines   the recording path of a finding: every revoked
+#                                     sentence in the tree is struck through today, so
+#                                     only the poisoned copy reaches `treffer.append`
+#     pruefe-zahlen.py     15 lines   8 of them the WHOLE of `lauf()`
+#
+# *A mark that may only fall would have hidden exactly this.* It is written down here rather
+# than argued away, because the same rule protects both directions: a rise that comes from a
+# sharper instrument has to say so, or it is indistinguishable from a rise that comes from
+# worse code.
+MARKE = 14
 # **167 -> 172 within the hour, and the five are MINE** (2026-09-01). The interval that
 # `abnahme.py` now prints instead of `hoechstens` brought `spanne()` and
 # `unsichere_stellen()` with it -- and five of their lines are reached today only from the
@@ -384,7 +399,19 @@ MARKE = 12
 # own green ending. *The tool that counts the class caught the code written beside it in the
 # same hour* -- which is what a ratchet over one's own workshop is for. The count of
 # CARRIERS did not move: `abnahme.py` was already one of the twelve.
-MARKE_ZEILEN = 172
+#
+# **And `pruefe-zahlen.lauf()` is a THIRD form, which is why its eight lines are booked with
+# a caveat and not celebrated.** The speech test drives `pruefe_eintraege(verstellen=nr)`
+# over every entry, and that fills the command CACHE. The real pass afterwards reads the
+# cache and never enters `lauf` at all. *The line was not unreachable -- the fixture got
+# there first.* Booked as measured, because that is what the run did; named here, because
+# "nothing but the fixture can get there" is exactly what it does NOT show.
+# **188 -> 189 between two runs of the same hour, and the cause is point 6 of the header.**
+# `pruefe-zahlen.py` ended RED in the first run (a guarded number in `TODO.md` that this very
+# lane had invalidated by writing two files). Repaired, it reaches its own green ending -- and
+# that ending is one more line only the probe gets to. *A guardian that goes green ADDS to
+# this count, and a mark read without that sentence looks like a regression.*
+MARKE_ZEILEN = 189
 
 # **Booked instead of healed -- empty, and that is a measurement.**
 # *An empty booking is the only honest starting state -- what goes in has to be argued for.*
@@ -569,6 +596,7 @@ def main():
 
     kann = sorted(n for n, (k, *_) in fahrbar.items() if k)
     nicht = sorted((n, g) for n, (k, g, _) in fahrbar.items() if not k)
+    schalen = [n for n, g in nicht if "Schalenwaechter" in g]
     ohne_probe = sorted(n for n in kann if not hat_probenfunktion(INST / n))
 
     print()
@@ -626,9 +654,27 @@ def main():
           f"einen Zweig, ==")
     print(f"   den nur die Sprechprobe je erreicht hat -- {zeilen_gesamt} Anweisungszeilen.")
     print(f"   Der Nenner der FRAGE ist {len(fahrbar)}: {len(nicht)} sind nicht spurbar und")
-    print(f"   {len(ohne_probe)} tragen keine benannte Probe. **{len(gemessen)} von "
-          f"{len(fahrbar)} ist die Zahl,")
+    print(f"   {len(ohne_probe)} tragen keine Probe, die diese Spur sieht. **{len(gemessen)} "
+          f"von {len(fahrbar)} ist die Zahl,")
     print("   fuer die diese Antwort gilt** (W25: eine Zahl belegt ihren Nenner).")
+    print()
+    # **Die acht Schalenwaechter sind KEINE Null, und das muss in der Antwort stehen und
+    # nicht in einer Fussnote** -- sonst liest sich `14 von 43` wie eine Aussage ueber die
+    # Werkstatt. Die Absage ist GERECHNET (2026-09-01) und nicht geschaetzt.
+    print(f"   **Und die {len(schalen)} Schalenwaechter sind keine Null, sondern KEIN WERT.**"
+          f" Was sie zu")
+    print("   messen kostete, ist ausgerechnet und nicht geschaetzt (2026-09-01, alle acht")
+    print("   gruen gefahren): **142,7 s fuer EINEN Lauf je Waechter** --")
+    print("     pruefe-lean-beweis.sh 78,3 · pruefe-emission.sh 33,5 · pruefe-p6-beweis.sh 19,3")
+    print("     pruefe-beweise.sh 8,2 · pruefe-lean-programm.sh 2,6 · sonden 0,5 · syntax 0,3")
+    print("     zaehle-fallen.sh 0,0")
+    print("   **SIEBEN der acht rufen `cargo`, `cc`, `isabelle` oder `lake`.** Sie zu spuren")
+    print("   hiesse, die ganze Bau- und Beweiskette in ein Messwerkzeug zu legen, das schon")
+    print("   heute in `SCHWER` steht -- und `pruefe-emission.sh` steht dort selbst, wegen")
+    print("   des ORTES und nicht der Zeit (`CLAUDE.md`). Dazu kaeme ein ZWEITER Spurer:")
+    print("   `bash -x` misst Befehle, und die Rahmenvererbung dieser Messung braucht")
+    print("   `${BASH_LINENO[*]}` in `PS4` samt Kellerrekonstruktion -- ein eigenes")
+    print("   Instrument mit eigener Sprechprobe, kein Zusatz. *Abgesagt, gerechnet.*")
     print()
     print(f"   **Und es sind ZWEI Klassen, nicht eine.** {len(mit_ganz)} Instrumente / "
           f"{ganz_gesamt} Zeilen liegen in")

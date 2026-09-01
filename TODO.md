@@ -517,7 +517,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 165 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 167 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *165 → 167 am 2026-09-01: `messung/UNTERE-GRENZE.md` und `messung/VOLLER-LAUF-GELESEN.md`
+      kamen dazu. **Der Wächter hat die Bahn korrigiert, die ihn gerade gemessen hat** — zwei
+      neue Meßprotokolle, und die Zahl daneben war zwei Minuten später falsch.*
       *163 → 165 am 2026-09-01: `messung/PROBENZWEIGE.md` und `instrumente/zaehle-probenzweige.py`
       kamen dazu — das Werkzeug, das erstmals gemessen hat, welche Zweige nur die Sprechprobe
       je erreicht hat. **Es steht in seinem eigenen Gegenstand**, und das ist kein Fehler:

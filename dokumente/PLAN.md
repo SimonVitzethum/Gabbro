@@ -4559,14 +4559,51 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
       Zeugnisbuchung, die seit `c887a9d` (22 Stunden) tot war — und hinter deren Schnitt
       **drei weitere Befunde** lagen.
 - [x] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
-      hat?** ~~Heute unbekannt.~~ **`12 von 43`, 172 Anweisungszeilen** (2026-09-01,
-      `instrumente/zaehle-probenzweige.py`, `messung/PROBENZWEIGE.md`). *Und der Nenner ist
-      die Hälfte der Antwort:* 43 von 52 sind überhaupt spurbar — 8 Schalenwächter, 1 zu
-      teuer — und **15 der 43 tragen ihre Sprechprobe im Rumpf von `main` statt in einer
-      Funktion mit Namen**; für die ist die gemessene Null eine Aussage über die Messung.
-      Es sind **zwei Klassen**: 4 Instrumente / 37 Zeilen liegen in einer Funktion, die der
-      echte Lauf NIE betritt (darunter `abnahme.schlusssatz`, der Fall, der die Frage
-      auslöste); der Rest ist der Befundweg eines Wächters, der heute nichts findet.
+      hat?** ~~Heute unbekannt.~~ ~~`12 von 43`, 172 Zeilen.~~ **`14 von 43`, 188
+      Anweisungszeilen** (2026-09-01, zweite Lesung, `messung/PROBENZWEIGE.md`). *Der
+      Anstieg ist eine KORREKTUR:* das Markenpaar `# speech_test: begin/end` nimmt die
+      Blindheit von **15 von 43 auf 6** — und **2 der 9 neu sichtbaren Instrumente tragen
+      die Klasse wirklich** (`pruefe-zahlen.py` 14, `pruefe-widerruf.py` 2). *Für sieben von
+      neun war die gemessene Null gerechtfertigt, und das ist das Ergebnis.* Gebaut wurde
+      die Marke und nicht der Umbau: **fünfzehn Sprechproben aus `main` zu heben, um eine
+      Messung zu ermöglichen, riskiert fünfzehn Wächter** — zwei Kommentarzeilen je Datei
+      riskieren nichts und wandern mit dem Code.
+      Es sind jetzt **drei Klassen**: eine Funktion ohne Weg dorthin · ein Befundweg, den
+      heute nichts auslöst · **und eine, der die Probe zuvorkommt** (`pruefe-zahlen.lauf()`
+      — die Sprechprobe füllt den Befehlscache, den der echte Durchgang danach nur noch
+      liest).
+- [x] **Die 8 Schalenwächter: abgesagt, und diesmal gerechnet.** Alle acht einmal gefahren,
+      alle grün: **142,7 s** zusammen, und **7 von 8 rufen `cargo`, `cc`, `isabelle` oder
+      `lake`**. Sie zu spuren hieße die ganze Bau- und Beweiskette in ein Messwerkzeug zu
+      legen, das schon in `SCHWER` steht — und `bash -x` misst Befehle, nicht Rahmen: die
+      Vererbungsregel bräuchte `${BASH_LINENO[*]}` in `PS4` samt Kellerrekonstruktion, also
+      ein **zweites Instrument mit eigener Sprechprobe**. Die Absage steht seither in der
+      Antwortzeile selbst statt in einer Fußnote.
+- [x] **`HAT_PROBE` lässt sich mit dem Wort bezahlen** — `zaehle-empfindlichkeit.py` hat
+      **gar keine Sprechprobe** und besteht die Pflicht aus `pruefe-waechter.py`, weil das
+      Wort `Gegenprobe` in einem GEDRUCKTEN Satz über den Gegenstand steht. *Gemeldet, nicht
+      geheilt:* eine schärfere Textregel hätte Fehlalarme über fast jeder echten Probe. Die
+      schärfere Antwort ist die Spur selbst — wer weder Namen noch Marke trägt, fällt jetzt
+      als BLIND auf statt als sauber.
+- [x] **Die untere Grenze der Abnahme: 2 von 94, nicht gebaut** (`messung/UNTERE-GRENZE.md`).
+      Die Zahl aus `ABNAHME-STELLEN.md` stimmt — **und das Werkzeug, das die Absage nannte,
+      hätte sie nicht erzeugt.** Alle sieben unsicheren Stellen stehen im Rumpf von `main`;
+      eine Spur nach FUNKTION meldet `7 von 7` erreicht, nimmt die Unsicherheit auf null und
+      druckt `47 von 94 -- 50 %` **ohne Intervall**. Nur die ZEILENgenaue Frage gibt die 2.
+- [x] **Stufe 10 (die Bibliothekskette) ist gefahren: acht von acht grün**, `pruefe-emission.sh`
+      `ALL PASS` in 33,5 s (`messung/VOLLER-LAUF-GELESEN.md`). **Der Befund liegt eine Ebene
+      höher:** die Rechnung in `ABNAHME-STELLEN.md` (*„+32,8 s, obere Grenze +45, untere
+      +0"*) ist zwölf Stunden nach ihrer Messung abgelaufen — der Wächter ist nicht mehr
+      abgeschnitten, also kaufen dieselben 33 s **beide** Grenzen: `zwischen 85 und 92 von
+      94`. Nicht gebaut: sein `SCHWER`-Grund ist der ORT (`cargo run` je Einheit), und der
+      hat sich nicht bewegt.
+- [x] **Welche Mutationen überleben: EINE von 376** (`messung/VOLLER-LAUF-GELESEN.md`,
+      13 min 20 s). `ungelesene-bindung-bekommt-kein-void` in `emit.rs` — und sie ist kein
+      blinder Fleck, sondern einer an der falschen Stelle: **nachgemessen fängt sie
+      `pruefe-emission.sh` Stufe 9** an `messung/proben/probe-let-ohne-leser.gab`
+      (`unused variable 'r2'`, `111 von 112`). *`375 von 376` ist eine Aussage über
+      `cargo test`, nicht über den Baum.* Der Befund liegt in `crates/` — gemeldet, nicht
+      geheilt.
 - [x] ~~`pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
       `Wenn`/`Match`-Arme → **2^Tiefe**.~~ **Beide Meldungen waren FALSCH, und `m2` führt
       keinen eigenen Abstiegsbegriff** (2026-09-01, `messung/ABSTIEG.md` §6). Die Wache
