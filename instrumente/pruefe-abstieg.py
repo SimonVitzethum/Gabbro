@@ -74,6 +74,64 @@ def funktionen(s):
     return aus
 
 
+def klammerspanne(text, ab):
+    """`text[ab:e]` bis zur SCHLIESSENDEN Klammer -- `ab` steht hinter der oeffnenden."""
+    tiefe, j = 1, ab
+    while j < len(text) and tiefe:
+        if text[j] == "(":
+            tiefe += 1
+        elif text[j] == ")":
+            tiefe -= 1
+        j += 1
+    return text[ab:j - 1], j
+
+
+def wachen(rumpf):
+    """Die Arten, die eine **negierte** `!matches!(&s.art, …)`-Wache ausdruecklich ausnimmt.
+
+    **`rustfmt` bricht die Wache um, und bis zum 2026-09-01 las dieser Waechter sie
+    ZEILENWEISE.** In `m2::gehe` steht sie vierzeilig --
+
+        if !matches!(
+            &s.art,
+            StmtArt::Wenn(_) | StmtArt::Match(_) | StmtArt::Narrow(_) | StmtArt::LetSonst(_)
+        ) {
+
+    -- und `"!matches!(&s.art," in zeile` traf damit nichts. Die Wache galt als leer, die
+    zwei von Hand behandelten Arme als ungeschuetzte Rekursion, und der Waechter meldete
+    **`m2::gehe: 2 DOPPELTE ABSTIEGE`** ueber Code, in dem die Absicherung woertlich
+    dasteht. *Ein Werkzeug, das Rust zeilenweise liest, misst den Zeilenumbruch.*
+
+    Gelesen wird jetzt ueber die Klammerung, und **nur die negierte Form**: ein positives
+    `matches!(&s.art, StmtArt::Schleife(_))` waehlt einen Fall AUS, es nimmt keinen aus.
+    """
+    aus = set()
+    for m in re.finditer(r"!\s*matches!\s*\(", rumpf):
+        arg, _ = klammerspanne(rumpf, m.end())
+        if not re.match(r"\s*&s\.art\s*,", arg):
+            continue
+        aus |= set(re.findall(r"StmtArt::([A-Za-z]+)", arg))
+    return aus
+
+
+def ohne_wachen(rumpf):
+    """Derselbe Rumpf, aber jedes `matches!( … )` ausgeleert.
+
+    **Eine `matches!`-Frage ist keine Weiche.** Wer wissen will, ob eine Funktion ueberhaupt
+    ABSTEIGT, darf ihre Praedikate nicht als Abstieg lesen -- sonst gilt `m2::endet` als
+    Absteiger, weil es fuer den leeren `match` einen Sonderfall abfragt.
+    """
+    aus, i = [], 0
+    for m in re.finditer(r"matches!\s*\(", rumpf):
+        if m.start() < i:
+            continue
+        arg, ende = klammerspanne(rumpf, m.end())
+        aus.append(rumpf[i:m.start()])
+        i = ende
+    aus.append(rumpf[i:])
+    return "".join(aus)
+
+
 def doppelt(name, rumpf, arten):
     """Arme, die neben `unterbloecke` noch **ungeschuetzt** selbst rekursieren.
 
@@ -87,11 +145,7 @@ def doppelt(name, rumpf, arten):
     """
     schnitt = rumpf.find("crate::unterbloecke(")
     kopf = rumpf[:schnitt] if schnitt > 0 else rumpf
-    # Die Arten, die die Wache ausdruecklich ausnimmt.
-    wache = set()
-    for zeile in rumpf.split("\n"):
-        if "!matches!(&s.art," in zeile:
-            wache |= set(re.findall(r"StmtArt::([A-Za-z]+)", zeile))
+    wache = wachen(rumpf)
     aus = []
     teile = re.split(r"(StmtArt::[A-Za-z]+)", kopf)
     for i in range(1, len(teile), 2):
@@ -128,7 +182,27 @@ def je_funktion(ganz, arten):
             continue
         # Nur Wege, die ueberhaupt absteigen wollen: wer keinen einzigen Unterblock
         # anfasst, ist ein Blattpruefer und keine Luecke.
-        if not any(re.search(r"StmtArt::" + a + r"\b", rumpf) for a in arten):
+        #
+        # **And a `matches!` does NOT count as touching** (2026-09-01). `m2::endet` asks
+        # `matches!(&s.art, StmtArt::Match(m) if m.zweige.is_empty())` for the empty `match`
+        # and descends into no block at all -- it reads `b.anweisungen.last()` and hands the
+        # question on to `crate::endet_immer`. This guard read the one mention as an intention
+        # to descend and reported eight missing kinds.
+        #
+        # **What triggered it was the REPAIR of an earlier finding.** On 2026-08-30 `endet`
+        # got an exhaustive `match` over every kind and this guard went green; on 2026-08-31
+        # that very match was recognised as a FOURTH register of `Return|Leave|Next` and
+        # folded into `crate::endet_immer` -- and with it went the list of kinds that had
+        # satisfied this guard.
+        #
+        # > **A guard that recognises a descent by the kinds a function NAMES rewards the
+        # > fourth copy and punishes the consolidation.** That is the opposite direction to
+        # > `W7`, and it stood in the rule for two days.
+        #
+        # The coarsening is one-sided and therefore safe: `fehlt` below still reads the WHOLE
+        # body, so a kind handled only through a `matches!` still counts as covered. *A
+        # mention is enough to cover; only DESCENDING needs a switch.*
+        if not any(re.search(r"StmtArt::" + a + r"\b", ohne_wachen(rumpf)) for a in arten):
             continue
         fehlt = [a for a in arten if not re.search(r"StmtArt::" + a + r"\b", rumpf)]
         if not fehlt:
@@ -336,6 +410,47 @@ fn sammler(b: &Block) {
     if fehler := buchungs_sprechprobe(arten):
         absage(f"SPRECHPROBE GESCHEITERT: {fehler}")
     print("  (Sprechprobe: neu, gebucht und veraltet werden unterschieden -- ok)")
+    # **The fifth and sixth, since 2026-09-01: the two ways this guard READ Rust wrong.**
+    # Both of them produced a red exit over code in which the right thing stood written, and
+    # both counter-directions are here, because a rule that excuses everything is the same
+    # failure as one that excuses nothing -- only quieter.
+    umbrochen = """fn probe(b: &Block) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Wenn(w) => probe(w),
+            _ => {}
+        }
+        if !matches!(
+            &s.art,
+            StmtArt::Wenn(_)
+        ) {
+            for k in crate::unterbloecke(s) { probe(k); }
+        }
+    }
+}"""
+    if doppelt("probe", umbrochen, arten):
+        absage("SPRECHPROBE GESCHEITERT: eine UMBROCHENE `!matches!`-Wache wird nicht gelesen")
+    if "Wenn" not in doppelt("probe", umbrochen.replace("StmtArt::Wenn(_)\n", "StmtArt::Sperrt(_)\n"),
+                             arten):
+        absage("SPRECHPROBE GESCHEITERT: eine Wache ueber der FALSCHEN Art entschuldigt trotzdem")
+    praedikat = """
+fn endet(b: &Block) -> bool {
+    if let Some(s) = b.anweisungen.last() {
+        if matches!(&s.art, StmtArt::Match(m) if m.zweige.is_empty()) {
+            return false;
+        }
+    }
+    crate::endet_immer(b)
+}"""
+    _, l3, _ = je_funktion(praedikat, arten)
+    if any(n == "endet" for n, _ in l3):
+        absage("SPRECHPROBE GESCHEITERT: ein `matches!`-Praedikat gilt weiter als Abstieg")
+    dispatcher = praedikat.replace("if matches!(&s.art, StmtArt::Match(m) if m.zweige.is_empty()) {",
+                                   "if let StmtArt::Match(m) = &s.art {")
+    if not any(n == "endet" for n, _ in je_funktion(dispatcher, arten)[1]):
+        absage("SPRECHPROBE GESCHEITERT: eine echte Weiche faellt nicht mehr als Luecke auf")
+    print("  (Sprechprobe: eine umbrochene `!matches!`-Wache zaehlt, eine fremde nicht -- ok)")
+    print("  (Sprechprobe: `matches!` ist eine Frage und keine Weiche -- ok)")
 
     # **A double descent is never booked.** It is not a hole in the coverage but a run
     # time of 2^depth.

@@ -4545,12 +4545,39 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
 
 - [ ] `pruefe-luecken.py`: **null von fünfzehn Verdrehungen je gefahren.** Der Zweig
       `92 von 92` ruht auf einer Sprechprobe. *Dieselbe Form wie der maskierende `panic!`.*
-- [ ] Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**
-- [ ] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
-      hat?** Heute unbekannt.
-- [ ] `pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
-      `Wenn`/`Match`-Arme → **2^Tiefe**. *Dritter Befund in `m2` über denselben Gegenstand —
-      die Frage ist nicht die Stelle, sondern ob `m2` einen eigenen Abstiegsbegriff führt.*
+- [x] ~~Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**~~
+      **Gemessen und entschieden** (2026-09-01, `messung/ABNAHME-STELLEN.md`). Der volle Lauf
+      kostet **23 min 10 s** und druckte `hoechstens 94 von 94 -- 100 %` — *während
+      `pruefe-emission.sh`, das 45 dieser 94 trägt, nach **2,8 Sekunden** abgeschnitten
+      dastand, vier Blöcke tiefer in derselben Ausgabe.* **`besucht` hiess `gestartet`.**
+      Schneiden lohnt nicht: der einzige Hebel mit Masse kostet +32,8 s (+15 %) und hebt nur
+      die OBERE Grenze; sein Grund in `SCHWER` ist ohnehin der Ort und nicht die Zeit.
+      Gebaut wurde deshalb der schärfere Satz: **ein Intervall statt `hoechstens`** —
+      `zwischen 38 und 47 von 94 -- 40 bis 50 %`, mit den unsicheren Stellen samt Grund und
+      dem Satz, dass **eine Datei 48 % des Nenners trägt.** Der volle Lauf fand dabei zwei
+      Dinge, die kein Schnelllauf sehen kann: überlebende Mutationen und eine
+      Zeugnisbuchung, die seit `c887a9d` (22 Stunden) tot war — und hinter deren Schnitt
+      **drei weitere Befunde** lagen.
+- [x] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
+      hat?** ~~Heute unbekannt.~~ **`12 von 43`, 172 Anweisungszeilen** (2026-09-01,
+      `instrumente/zaehle-probenzweige.py`, `messung/PROBENZWEIGE.md`). *Und der Nenner ist
+      die Hälfte der Antwort:* 43 von 52 sind überhaupt spurbar — 8 Schalenwächter, 1 zu
+      teuer — und **15 der 43 tragen ihre Sprechprobe im Rumpf von `main` statt in einer
+      Funktion mit Namen**; für die ist die gemessene Null eine Aussage über die Messung.
+      Es sind **zwei Klassen**: 4 Instrumente / 37 Zeilen liegen in einer Funktion, die der
+      echte Lauf NIE betritt (darunter `abnahme.schlusssatz`, der Fall, der die Frage
+      auslöste); der Rest ist der Befundweg eines Wächters, der heute nichts findet.
+- [x] ~~`pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
+      `Wenn`/`Match`-Arme → **2^Tiefe**.~~ **Beide Meldungen waren FALSCH, und `m2` führt
+      keinen eigenen Abstiegsbegriff** (2026-09-01, `messung/ABSTIEG.md` §6). Die Wache
+      steht wörtlich im Code — `rustfmt` bricht sie vierzeilig um, und der Wächter suchte
+      `"!matches!(&s.art," in zeile`. Und `m2::endet` steigt gar nicht ab: es fragt
+      `crate::endet_immer` und nennt EINE Art in einem `matches!`. *Der zweite Befund ist die
+      Folge der Reparatur des ersten:* am 2026-08-31 wurde `endet`s erschöpfender `match`
+      als viertes Register zusammengelegt — und damit fiel die Artenliste weg, die den
+      Wächter zufriedenstellte. **Ein Wächter, der den Abstieg an den genannten Arten
+      erkennt, belohnt die vierte Kopie und bestraft die Zusammenlegung.** Repariert wurde
+      der Leser, `crates/` blieb unberührt. `rc=0`.
 
 ## OB2 — Der Erzeuger als Vertrauensbasis · **läuft**
 

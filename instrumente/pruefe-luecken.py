@@ -29,11 +29,11 @@ import pathlib, subprocess, re, sys
 # > dieser hier SCHREIBT in die Quellen, die er misst.
 W = pathlib.Path(__file__).resolve().parent.parent; C = W/"crates/gabbro-check/src"
 
-# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
-# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
-# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+# **Every execution with a deadline.** A hang looks like "still running", not like a finding
+# -- on 2026-08-20 twenty-one runs of `pruefe-emission.sh` stood side by side because of it,
+# the oldest for three and a half hours.
 FRIST = 1800
-# (Datei, alte Zeile aus Lauf 1, Verdrehung) -- ueber den INHALT gesucht, nicht ueber die Nummer.
+# (file, old line from run 1, twist) -- looked up by CONTENT, never by line number.
 LUECKEN = [
  # **NULLMUTATION, bewiesen** (2026-08-19) -- keine Luecke, sondern eine Verdrehung ohne
  # Wirkung. Zwei Zeilen darueber steht `if b.enthaelt_null() { return … }`, und

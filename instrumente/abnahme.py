@@ -142,7 +142,13 @@ FRIST_ABNAHME = 2 * FRIST
 # `--anker` counts text and builds nothing (`CLAUDE.md`), and it is the half that catches a
 # dead anchor -- a mutation whose source line moved away silently shrinks the denominator and
 # reads like coverage. The expensive half stays behind `--voll` and is named there.
-SCHNELL_TEIL = {"mutiere-pruefer.py": ["--anker"]}
+#
+# **`zaehle-probenzweige.py` has the same shape and a sharper reason.** Its cheap half prints
+# the DENOMINATOR -- how many instruments its trace can see at all, and who is blind to it and
+# why -- and builds nothing. Its expensive half runs every instrument, THIS RUN among them,
+# and that is what keeps it out of here: two nested levels of it were standing after eleven
+# minutes on 2026-09-01. *The half that runs is also the half that recurses.*
+SCHNELL_TEIL = {"mutiere-pruefer.py": ["--anker"], "zaehle-probenzweige.py": ["--anker"]}
 
 # A Python interpreter that dies in its own prologue has not rendered a verdict. This is the
 # ONE signal that separates "did not run" from "found something".
@@ -322,11 +328,21 @@ def gegenstand(wurzel, ergebnisse):
     this is not a second register over the same thing (W7): it is the same register read a
     second way, and a guardian that gains a place gains it in both numbers at once.
 
-    **`gesehen` is an UPPER bound, and it says so where it is printed.** A guardian run with
-    only half its arguments (`SCHNELL_TEIL`) counts as seen because it started; the places
-    behind the half that did not run were not visited. A `TEILMESSUNG` counts as seen for the
-    same reason and for the same lie -- it stopped somewhere in the middle. *Both push the
-    number up, never down, which is the direction a bound may err in.*
+    **`gesehen` is an UPPER bound, and since 2026-09-01 it is not printed alone.** A guardian
+    run with only half its arguments (`SCHNELL_TEIL`) counts as seen because it started; a
+    `TEILMESSUNG` counts as seen for the same reason and the same lie. Both push the number
+    up, never down -- and `unsichere_stellen()` below counts HOW FAR up, so that the line can
+    print an interval instead of an adverb.
+
+    > **The measurement that forced it:** the full run of 2026-09-01 printed
+    > `hoechstens 94 von 94 gefaehrlichen Stellen besucht -- 100 %` and, four blocks further
+    > down, that `pruefe-emission.sh` had been CUT after 2,8 seconds. That guardian carries
+    > 45 of those 94. *A bound that reads `100 %` over a guardian which stopped in its fourth
+    > second is not too kind, it is wrong in the reader's head.*
+
+    The fourth return value is the per-guardian table, so whoever prints the fraction can also
+    say whether the denominator is spread or dominated by a single file. *One register, read
+    once* (W7).
     """
     je = {p.name: teilmessungen([p])[3] for p in besetzung(wurzel)}
     gesamt = sum(je.values())
@@ -334,10 +350,69 @@ def gegenstand(wurzel, ergebnisse):
     # same three that fall out of the work quantity in `urteil()` -- one boundary, drawn once.
     ungesehen = {n: je.get(n, 0) for n, m, *_ in ergebnisse
                  if m in ("ausgelassen", "NICHT FAHRBAR", "ABBRUCH") and je.get(n, 0)}
-    return gesamt - sum(ungesehen.values()), gesamt, ungesehen
+    return gesamt - sum(ungesehen.values()), gesamt, ungesehen, je
 
 
-def schlusssatz(gemessen, gruen, wieviele, gesehen, g_gesamt, luecke):
+def halb_gefahren(name, bem):
+    """Did this guardian run only its CHEAP half? -- one question, one place (W7).
+
+    It is asked from two sides: the block *"expensive ones omitted or halved"* lists them, and
+    `unsichere_stellen()` takes them out of the object. *Two phrasings of one question is how
+    a list and a fraction come apart.*
+    """
+    return name in SCHNELL_TEIL and "--voll" in bem
+
+
+def unsichere_stellen(wurzel, ergebnisse):
+    """`(anzahl, {name: (n, grund)})` -- booked as *visited* without being able to be.
+
+    Two sources, and both were occupied in the full run of 2026-09-01:
+
+    * **half run** -- `SCHNELL_TEIL` hands the guardian its cheap half. Which of its places
+      lie behind the expensive one, no operating mode says.
+    * **cut** -- a `TEILMESSUNG` left in the middle of its run. What stood behind the cut did
+      not run. `pruefe-emission.sh` was cut after 2,8 s with 45 places to its name.
+
+    **Both are subtracted WHOLE, and that is too much.** `mutiere-pruefer.py --anker` provably
+    reaches two of its five (they stand before the mode switch); `pruefe-englisch.py` provably
+    reaches none of its two (both stand behind the heading it stops at). *So the lower end
+    errs downwards and the upper end upwards, and the truth lies between two counted numbers
+    instead of behind an adverb.*
+
+    **What is NOT built and what it would take:** a line trace per run
+    (`zaehle-probenzweige.py` already keeps one) would say which function a run entered at all
+    and could tighten the lower end. Measured today that is worth **two places of 94** --
+    Regel A: the need is measured, not assumed.
+    """
+    je = {p.name: teilmessungen([p])[3] for p in besetzung(wurzel)}
+    aus = {}
+    for name, marke, _, _, bem in ergebnisse:
+        n = je.get(name, 0)
+        if not n:
+            continue
+        if marke == "TEILMESSUNG":
+            aus[name] = (n, "ABGESCHNITTEN -- was hinter dem Schnitt stand, lief nicht")
+        elif halb_gefahren(name, bem):
+            aus[name] = (n, f"nur `{' '.join(SCHNELL_TEIL[name])}` gefahren")
+    return sum(n for n, _ in aus.values()), aus
+
+
+def spanne(untere, gesehen, g_gesamt):
+    """Der Gegenstandssatz -- ein INTERVALL, wo eines noetig ist, sonst eine Zahl.
+
+    **`hoechstens` nennt die Richtung des Irrtums und nicht seine Groesse.** Am 2026-09-01 war
+    die Groesse 47 von 94, und das Wort stand daneben, als waere es eine Beruhigung.
+    """
+    if not g_gesamt:
+        return f"{gesehen} von {g_gesamt} gefaehrlichen Stellen besucht"
+    if untere is None or untere >= gesehen:
+        return (f"{gesehen} von {g_gesamt} gefaehrlichen Stellen besucht"
+                f" -- {round(100 * gesehen / g_gesamt)} %")
+    return (f"zwischen {untere} und {gesehen} von {g_gesamt} gefaehrlichen Stellen besucht"
+            f" -- {round(100 * untere / g_gesamt)} bis {round(100 * gesehen / g_gesamt)} %")
+
+
+def schlusssatz(gemessen, gruen, wieviele, gesehen, g_gesamt, luecke, untere=None):
     """The closing sentence, as a list of lines -- **two sentences, not one with a suffix.**
 
     **Green with a named gap is not the same as green, and it is not red either**
@@ -350,15 +425,14 @@ def schlusssatz(gemessen, gruen, wieviele, gesehen, g_gesamt, luecke):
     *It is a function and not four `print` calls inside `main` so that the speech test can
     read both directions* -- the number underneath was already provable, the SENTENCE was not.
     """
-    anteil = f" -- {round(100 * gesehen / g_gesamt)} %" if g_gesamt else ""
+    satz = spanne(untere, gesehen, g_gesamt)
     if luecke:
         return [f"  ABNAHME GRUEN MIT BENANNTER LUECKE: {gemessen} von {wieviele} Waechtern,",
-                f"  und hoechstens {gesehen} von {g_gesamt} gefaehrlichen Stellen{anteil}."
-                "  **Gruen heisst hier:",
+                f"  und {satz}.  **Gruen heisst hier:",
                 "  was gefahren wurde, ist sauber** -- nicht, dass der Baum es ist. Der",
                 "  Rest steht oben mit Namen und Zahl, und `--voll` faehrt ihn."]
     return [f"  ABNAHME GRUEN: {gruen} von {gruen} messenden Waechtern -- und",
-            f"  {gesehen} von {g_gesamt} gefaehrlichen Stellen. **Kein Wort davon ist",
+            f"  {satz}. **Kein Wort davon ist",
             "  ausgelassen, und keiner ist ungesehen geblieben.**"]
 
 
@@ -452,19 +526,36 @@ def sprechprobe():
             f.chmod(0o755)
         voll_erg = [("pruefe-tief.sh", "ROT", 1, 0.0, ""),
                     ("pruefe-flach.sh", "gruen", 0, 0.0, "")]
-        g1, ges1, off1 = gegenstand(gp, voll_erg)
+        g1, ges1, off1, je1 = gegenstand(gp, voll_erg)
         proben.append(("der GEGENSTAND wird gezaehlt, nicht die Besetzung: 2 Stellen",
-                       ges1 == 2 and g1 == 2 and not off1))
+                       ges1 == 2 and g1 == 2 and not off1 and je1 == {"pruefe-tief.sh": 2,
+                                                                      "pruefe-flach.sh": 0}))
         aus_erg = [("pruefe-tief.sh", "ausgelassen", None, 0.0, ""),
                    ("pruefe-flach.sh", "gruen", 0, 0.0, "")]
-        g2, ges2, off2 = gegenstand(gp, aus_erg)
+        g2, ges2, off2, _ = gegenstand(gp, aus_erg)
         proben.append(("ein ausgelassener Waechter NIMMT SEINEN GEGENSTAND MIT: 0 von 2",
                        ges2 == 2 and g2 == 0 and off2 == {"pruefe-tief.sh": 2}))
         leer_erg = [("pruefe-tief.sh", "gruen", 0, 0.0, ""),
                     ("pruefe-flach.sh", "ausgelassen", None, 0.0, "")]
-        g3, ges3, off3 = gegenstand(gp, leer_erg)
+        g3, ges3, off3, _ = gegenstand(gp, leer_erg)
         proben.append(("und eine Auslassung OHNE Gegenstand oeffnet keine Luecke: 2 von 2",
                        ges3 == 2 and g3 == 2 and not off3))
+        # **THE INTERVAL -- three directions, and the third is the one that keeps it honest**
+        # (2026-09-01). A run in which nothing is uncertain must NOT print an interval, or the
+        # line warns always and therefore says nothing.
+        schnitt_erg = [("pruefe-tief.sh", "TEILMESSUNG", 1, 0.0, "ABGESCHNITTEN in: Stufe 1"),
+                       ("pruefe-flach.sh", "gruen", 0, 0.0, "")]
+        u1, u1_je = unsichere_stellen(gp, schnitt_erg)
+        proben.append(("eine TEILMESSUNG nimmt ihre Stellen aus der unteren Grenze: 2",
+                       u1 == 2 and set(u1_je) == {"pruefe-tief.sh"}))
+        u2, _ = unsichere_stellen(gp, voll_erg)
+        proben.append(("ein ganz gefahrener Waechter macht KEINE Stelle unsicher",
+                       u2 == 0))
+        proben.append(("und der Satz traegt dann kein Intervall -- 2 von 2",
+                       "zwischen" not in spanne(2, 2, 2) and "2 von 2" in spanne(2, 2, 2)))
+        proben.append(("mit Unsicherheit traegt er eines, mit BEIDEN Enden",
+                       spanne(0, 2, 2).startswith("zwischen 0 und 2 von 2")
+                       and "0 bis 100 %" in spanne(0, 2, 2)))
     # **AND THE SENTENCE ITSELF, in both directions.** The number above was provable, the
     # closing line was not -- and the closing line is what a reader actually reads. Two
     # requirements, and the second is the one that is easy to lose: a gap must be visible,
@@ -480,6 +571,13 @@ def sprechprobe():
     proben.append(("beide bleiben GRUEN -- die Luecke ist kein Befund",
                    mit.lstrip().startswith("ABNAHME GRUEN")
                    and ohne.lstrip().startswith("ABNAHME GRUEN") and mit != ohne))
+    # **And the closing line carries the interval too, in both directions.** The number above
+    # was provable, the SENTENCE was not -- and the sentence is what a reader reads.
+    eng = "\n".join(schlusssatz(49, 49, 49, 94, 94, luecke=False, untere=47))
+    proben.append(("die Schlusszeile traegt das Intervall, wenn es eines gibt",
+                   "zwischen 47 und 94 von 94" in eng and "50 bis 100 %" in eng))
+    proben.append(("und sie traegt keines, wenn nichts unsicher ist",
+                   "zwischen" not in ohne))
     return proben
 
 
@@ -519,10 +617,10 @@ def main():
     # **AND THE SECOND NUMBER, over the OBJECT** (2026-08-31). The line above counts
     # guardians; a tree is not measured in guardians. See `gegenstand()` for why the unit is
     # the dangerous places and why the count is an upper bound.
-    gesehen, g_gesamt, ungesehen = gegenstand(inst, erg)
-    anteil = f" -- {round(100 * gesehen / g_gesamt)} %" if g_gesamt else ""
-    print(f"== Und ihr GEGENSTAND: hoechstens {gesehen} von {g_gesamt} gefaehrlichen "
-          f"Stellen besucht{anteil} ==")
+    gesehen, g_gesamt, ungesehen, je_stellen = gegenstand(inst, erg)
+    unsicher, unsicher_je = unsichere_stellen(inst, erg)
+    untere = gesehen - unsicher
+    print(f"== Und ihr GEGENSTAND: {spanne(untere, gesehen, g_gesamt)} ==")
     # **And the ones whose object is NOT in this unit get named anyway.** `zaehle-b3.py`
     # carries zero dangerous places and 105 files of a foreign tree: it costs nothing in the
     # fraction and everything in the thing measured. *Whoever prints only the fraction loses
@@ -539,14 +637,38 @@ def main():
     else:
         print("   Kein ungefahrener Waechter traegt eine -- der Lauf hat den ganzen")
         print("   gezaehlten Gegenstand angesehen.")
+    # **The interval, and who makes it one** (2026-09-01). Until today the line carried the
+    # word `hoechstens`, and a word names the DIRECTION of an error, never its size. The full
+    # run of that morning printed `94 von 94 -- 100 %` while `pruefe-emission.sh`, which
+    # carries 45 of those 94, had been cut after 2,8 seconds. *The number was an upper bound
+    # and it read like a result.*
+    if unsicher:
+        print(f"   {unsicher} davon sind als *besucht* GEBUCHT, ohne dass der Lauf sie "
+              f"erreicht haben kann --")
+        print("   `besucht` heisst hier GESTARTET:")
+        for name, (n, grund) in sorted(unsicher_je.items(), key=lambda r: (-r[1][0], r[0])):
+            print(f"     {name:<26} {n:>3} Stellen   {grund}")
+        print("   **Darum ein Intervall und kein `hoechstens`.** Die untere Grenze zieht sie")
+        print("   GANZ ab und irrt damit nach unten; die obere zaehlt sie ganz mit und irrt")
+        print("   nach oben. *Die Wahrheit liegt zwischen zwei gezaehlten Zahlen statt")
+        print("   hinter einem Adverb.*")
+    # **And whether the denominator is spread at all.** A fraction over a denominator that one
+    # file dominates is first of all a statement about that file (W25).
+    if je_stellen and g_gesamt:
+        n_max, k_max = max((v, k) for k, v in je_stellen.items())
+        if n_max * 3 >= g_gesamt:
+            print(f"   **Und der Nenner ist nicht verteilt:** `{k_max}` allein traegt "
+                  f"{n_max} der {g_gesamt}")
+            print(f"   Stellen ({round(100 * n_max / g_gesamt)} %). Wer diesen Bruch liest, "
+                  f"liest zuerst eine Aussage")
+            print("   ueber EINE Datei -- und erst danach eine ueber die anderen.")
     print(f"   **`{gemessen} von {len(alle)} Waechtern` und `{gesehen} von {g_gesamt} "
           f"Stellen` sind ZWEI Zahlen.**")
     print("   Die erste stand hier seit jeher, die zweite nicht -- und die zweite ist die")
     print("   ueber den GEGENSTAND (W25: eine Zahl belegt ihren Nenner, nicht ihre")
-    print("   Beschriftung). *Hoechstens*, weil ein halb gefahrener Waechter und eine")
-    print("   TEILMESSUNG hier als gesehen zaehlen -- die Schranke irrt nach OBEN.")
+    print("   Beschriftung).")
 
-    teilweise = [n for n, m, _, _, b in erg if n in SCHNELL_TEIL and "--voll" in b]
+    teilweise = [n for n, m, _, _, b in erg if halb_gefahren(n, b)]
     if aus or teilweise:
         print()
         print(f"== {aus + len(teilweise)} teure AUSGELASSEN oder halbiert -- "
@@ -629,7 +751,7 @@ def main():
         # directions -- see there for why green with a named gap stays green.
         print()
         for zeile in schlusssatz(gemessen, gruen, len(alle), gesehen, g_gesamt,
-                                 bool(benannt or nf)):
+                                 bool(benannt or nf), untere):
             print(zeile)
     return code
 
