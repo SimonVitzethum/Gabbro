@@ -134,6 +134,45 @@ fn das_tutorial_nennt_gabbro_costs_bei_der_ersten_kostenzeile() {
     );
 }
 
+/// **The showcase in section 8 carries the number the tool prints, and this holds it.**
+///
+/// *Found by a reader who had only `TUTORIAL.md` and the binary*, 2026-09-01. Section 5 says
+/// *"copy the number down -- a `costs` line is a measurement, not an estimate"*; section 8
+/// then showed `costs <= 4 ops` over a body `gabbro costs` computes as **3**, annotated *"read
+/// off `gabbro costs`, not guessed"*. **Both could not be true**, and the reader followed
+/// section 5 and wrote 3.
+///
+/// A tutorial whose worked example breaks its own sharpest rule teaches the rule it shows,
+/// not the rule it states. The showcase now runs at `slack 0`, and this probe keeps it there.
+///
+/// > *The other blocks in the file are allowed slack on purpose* -- section 5 says a bound
+/// > above the computed number is often the right call. **The final example is the one that
+/// > has to demonstrate the practice**, so it is the only one held.
+#[test]
+fn das_letzte_beispiel_traegt_die_gerechnete_zahl() {
+    let md = tutorial();
+    let block = korpus::schneide(&md)
+        .into_iter()
+        .find(|b| b.text.contains("module tutorial::add_two"))
+        .expect("section 8 carries the worked example");
+    let (baum, _) = gabbro_syntax::lies("TUTORIAL.md", &block.text);
+    let bericht = gabbro_check::kosten::bericht(&baum);
+    let zeile = bericht
+        .lines()
+        .find(|z| z.starts_with("sum\t"))
+        .unwrap_or_else(|| panic!("the example declares `sum`:\n{bericht}"));
+    let spalten: Vec<&str> = zeile.split('\t').collect();
+    assert_eq!(
+        spalten.get(1),
+        spalten.get(2),
+        "section 8 promises `{}` ops over a body that costs `{}` -- the tutorial's own rule \
+         is to copy the computed number down, and its worked example is where a reader \
+         looks for the practice:\n{bericht}",
+        spalten.get(2).unwrap_or(&"?"),
+        spalten.get(1).unwrap_or(&"?")
+    );
+}
+
 /// **The footer is on page one.** *No other compiler tells you what it did not look at*, and
 /// a reader should meet that where they meet the tool, not discover it.
 #[test]

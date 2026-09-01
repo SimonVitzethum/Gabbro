@@ -62,6 +62,27 @@ open.
 Meet it here rather than discovering it later: **a green Gabbro run is a green run of the
 passes that ran.**
 
+### `0 errors, 0 hints` — and the second number is not the first
+
+An **error** refuses the program: nothing is emitted, the exit code is `1`. A **hint** is a
+finding that does not refuse — the checker has something to say and cannot call it wrong. The
+one you will meet first is `E009`:
+
+```
+hint: [E009] the call effects of `main` are undecidable: `m::putchar` declares no `effects`
+```
+
+*That is not a stylistic remark.* It says a pass could not decide something about your
+program, and the cure is always to give the checker what it was missing — here, an `effects`
+clause on the `extern fn`. **Treat a hint as an error whose cause is on your side of the
+line**, and the count will stay at zero on its own.
+
+### And the two file kinds
+
+A `.gab` file is source. A `.bau` file is a **manifest** — which sources form a unit, whether
+that unit is a `program` or an `object`, which C compiler builds it, where the artefacts go.
+`gabbro check` takes `.gab` paths; `gabbro build` takes the `.bau`.
+
 ---
 
 ## 3 — The shape
@@ -69,15 +90,21 @@ passes that ran.**
 Every function is the same six parts, in this order:
 
 ```
-      pub  fn  clamp(x : u32) -> u32 in 0 .. 100
-                 |     |          |
-      export   name  parameters  return type, with its RANGE
+      pub  fn  clamp(x : u32 in 0 .. 100) -> u32 in 0 .. 100
+                 |     |                       |
+      export   name  parameters, WITH RANGES   return type, with its range
           effects { pure }        <- what it touches.  OBLIGATORY
           costs   <= 4 ops        <- what it costs.    optional, and never guessed
       {
           ...                     <- the body
       }
 ```
+
+**The ranges on the parameters are not decoration either** — section 6 is about what happens
+when you leave them off, and leaving them off is the single most expensive habit a newcomer
+can bring from C. *A first version of this diagram wrote `x : u32` and put the range only on
+the return type; that is exactly the shape section 6 refuses, and a reader with nothing but
+this file burned an attempt on it.*
 
 Written out, and this checks:
 
@@ -103,8 +130,9 @@ Four things about that block are worth more than the rest of this section:
   linker never sees it. The build refuses by name; the checker does not, because it is a
   build rule and not a language rule.
 * **`effects` is obligatory.** Section 4.
-* **`costs` is optional.** Section 5 — and section 5 is the one to read even if you skip
-  the rest.
+* **`costs` is optional — and you never write that number out of your head.** `gabbro costs
+  <file.gab>` computes what the body costs and prints it beside what the line promises.
+  Section 5, and it is the one to read even if you skip the rest.
 
 ---
 
@@ -225,8 +253,10 @@ Two consequences of *„a call counts the declared costs of the callee"*:
 
 * A callee **without** a `costs` line makes the caller's promise uncheckable, and `K003`
   refuses it. If you promise, everything you call must promise.
-* `costs` is a **bound**, not a budget. `slack 16` is fine. It is there so that a body which
-  grows past its promise says so at compile time instead of at three in the morning.
+* `costs` is a **bound**, not a budget. `slack 16` is fine, and a bound above the computed
+  number is often the right call — it is headroom you chose. **What is never fine is a number
+  nobody computed.** Run the tool, then decide the bound; the promise exists so that a body
+  which grows past it says so at compile time instead of at three in the morning.
 
 ---
 
@@ -372,7 +402,7 @@ module tutorial::add_two {
 
 pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
     effects { pure }
-    costs   <= 4 ops
+    costs   <= 3 ops
 {
     return a + b;
 }
@@ -383,7 +413,8 @@ pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
 * `pub fn sum` — **not `add`.** See section 9.
 * the parameter ranges, so that `a + b` fits (6a)
 * `effects { pure }` — brace list, never empty (4)
-* `costs <= 4 ops` — read off `gabbro costs`, not guessed (5)
+* `costs <= 3 ops` — **`gabbro costs` on this body prints `computed 3`, and this line is that
+  number.** Not a guess, and not the `4` that would look tidier (5)
 
 ---
 
