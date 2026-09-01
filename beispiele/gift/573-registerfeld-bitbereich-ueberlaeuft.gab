@@ -1,0 +1,34 @@
+-- erwartet: N007
+-- **The same overflow at the SISTER line, and it needed its own probe.**
+--
+-- `beispiele/gift/572` covers `umgebung.rs::typ_von_feld_mit`, which reads a `format` field.
+-- A `device` register field takes a different route -- `typ_von_reg`, thirty lines down --
+-- and it carried a byte-for-byte copy of the same arithmetic:
+--
+--     let w = (h.max(t) - h.min(t) + 1) as u32;
+--
+-- Measured 2026-09-01 against the unchanged checker, this file panicked at
+-- `umgebung.rs:1364`, exit 101, while `586` panicked at `1334`. **Two lines, two probes** --
+-- a single probe would have left whichever line it did not touch free to keep the defect,
+-- and the two are far enough apart in the file that a repair to one does not draw the eye to
+-- the other. *That is what happened when the line was written twice in the first place.*
+--
+-- WHY THE `reg` PATH LOOKED SAFE AND WAS NOT
+-- ------------------------------------------
+-- A `reg` carrier is always a literal integer type (`reg CTRL : u32`), never a path, so
+-- `bitlage::wortbreite` cannot be walked past here the way it can at a `format` field --
+-- `N007` covers every register field with no alias hole at all. That is exactly why the
+-- crash was surprising: **the guard was complete and it still ran too late.** The
+-- environment is built before the first pass, so a complete rule three passes downstream
+-- protects nothing from arithmetic upstream of it.
+--
+-- The order is the whole finding. `N007` was never wrong; it was never asked.
+module gift::registerbitbereich {
+
+opaque type Pa = u64;
+
+device Dev(basis : Pa) at mmio {
+    reg CTRL : u32 @0x00 class rw fields { A @[340282366920938463463374607431768211455:0], }
+}
+
+}

@@ -164,6 +164,15 @@ GEGENSTAND = {
     "zaehle-probenzweige.py":
         "43 von 52 Instrumenten unter einer geteilten Zeilenspur -- die Zweige, "
         "die nur die Sprechprobe je erreicht hat",
+    # **Nicht teuer -- 3,6 s kalt auf `fisch`, 5,5 s lokal -- aber sein Gegenstand haengt an
+    # einem Bauteil, das der Rechner nicht haben muss.** `cargo-clippy` stand am 2026-09-01
+    # auf `ki-pc-fisch-101` NICHT zur Verfuegung, und der erste Lauf dieses Auftrags meldete
+    # darueber `Ruecklaufwert 0` bei null Warnungen: ein fehlendes Werkzeug liest sich genau
+    # wie ein sauberer Baum. *Derselbe Fall wie `zaehle-c-formen.py`* -- „gelaufen" und
+    # „gemessen" gehen auseinander, und darum steht er hier mit seiner Vorbedingung.
+    "pruefe-umwandlungen.py":
+        "33 abschneidende Umwandlungen in 50 Quellen von `crates/*/src/` -- "
+        "braucht `cargo-clippy`, sonst Ruecklaufwert 2 und NICHTS gemessen",
 }
 # **Waechter, deren Gegenstand ein FREMDER BAUM ist** -- einer, der nicht in diesem
 # Verzeichnis liegt und den `git` nicht mitbringt. Je Eintrag: der Pfad und was dort steht.

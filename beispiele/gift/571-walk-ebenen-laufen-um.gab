@@ -1,0 +1,59 @@
+-- erwartet: K003
+-- **`levels` wrapped modulo 2^32, and the wrong bound was CERTIFIED.**
+--
+-- The checker does in Rust exactly what `M104` forbids in its object language. The leaf
+-- bound of a `walk` is `node length ^ levels` (`umgebung.rs::walkschranken`), and until
+-- 2026-09-01 the exponent reached `checked_pow` through `e as u32`. `levels` is a
+-- user-written constant, so that cast wrapped a number the USER controls:
+--
+--     levels 4294967296   ->  e as u32 == 0  ->  512^0 = 1
+--     levels 4294967297   ->  e as u32 == 1  ->  512^1 = 512     (== levels 1)
+--     levels 4294967298   ->  e as u32 == 2  ->  512^2 = 262144  (== levels 2)
+--
+-- A clean modulus, not a corner case. **Measured against the unchanged checker**, this very
+-- file gave
+--
+--     …: 4 items, 0 errors, 0 hints
+--     zaehle	1	1	0        (`gabbro costs`: computed 1, promised 1, slack 0)
+--
+-- `costs <= 1 ops` was accepted for a traversal over the whole mapping set, and
+-- `gabbro costs` printed it as a MEASUREMENT -- the one thing the tool says it never
+-- estimates. The promise is wrong by a factor of `512^4294967296`.
+--
+-- WHY `K003` AND NOT A NEW CODE
+-- -----------------------------
+-- The repair is not a new rule but the one three lines further down that was already
+-- written: *"if the power overflows there is NO bound -- `K003` then says it is missing
+-- instead of carrying a false one."* An exponent that does not fit `u32` is the same case,
+-- because it IS one. So the file falls where an unusable `levels` was always meant to fall,
+-- and the fix removed a hole rather than adding a rule.
+--
+-- THE CONTROL STANDS IN `beispiele/07-eintritt-und-boot.gab`
+-- ----------------------------------------------------------
+-- `walk Seitentabelle levels 4` still computes `512^4 = 68719476736`, and `levels 1` and
+-- `levels 2` still measure 512 and 262144. **The repair moved the impossible values only.**
+module gift::walkebenen {
+
+format Pte endian little {
+    praesent : bool @0,
+    rest     : u64 @[63:1] reserved,
+}
+
+walk T levels 4294967296 {
+    node : [Pte; 512],
+    down : rest when it.praesent,
+    leaf : it.praesent,
+}
+
+impl fn zaehle(p : ptr<normal, rw> T)
+    effects { writes p }
+    costs   <= 1 ops
+{
+    traverse m over mappings of T by unvisited
+        touches writes p
+    {
+        p.praesent = false;
+    }
+}
+
+}

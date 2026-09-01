@@ -840,8 +840,23 @@ impl Umgebung {
                         // **`l^e`, nicht `e*l`** -- die Blaetter, nicht ein Pfad. Ueberlaeuft
                         // die Potenz, gibt es KEINE Schranke: `K003` sagt dann, dass sie
                         // fehlt, statt eine falsche zu fuehren.
+                        // **And the EXPONENT has to survive the cast** (2026-09-01). Until
+                        // this line `e as u32` wrapped a user-written `levels` modulo 2^32:
+                        // `levels 4294967296` arrived here as `0` and the leaf bound became
+                        // `512^0 = 1`, so a `traverse` over the whole table cost **1 op**
+                        // and `costs <= 1 ops` was CERTIFIED at `slack 0`. `levels
+                        // 4294967297` measured identically to `levels 1`, and `4294967298`
+                        // to `2` -- the wrap was a clean modulus, not a corner.
+                        //
+                        // *This is the wrap-around `M104` forbids in the object language,
+                        // done by the checker to a number the user wrote.* An exponent that
+                        // does not fit `u32` is treated exactly like a power that overflows,
+                        // because it IS one: no bound, and `K003` asks for the declaration
+                        // instead of carrying a false one.
                         if e > 0 && l > 0 {
-                            if let Some(n) = (l as u128).checked_pow(e as u32) {
+                            if let Some(n) =
+                                u32::try_from(e).ok().and_then(|e| (l as u128).checked_pow(e))
+                            {
                                 self.walkschranken.insert(q(&w.name.text), n);
                             }
                         }
@@ -1331,11 +1346,26 @@ impl Umgebung {
                 Typ::Ganzzahl(IntBereich::genau(b.breite, false, 0, 1))
             }
             (Some(BitPos::Bereich(h, t)), Some(b)) => {
-                let breite_feld = (h.max(t) - h.min(t) + 1) as u32;
-                let max = if breite_feld >= 127 {
+                // **The width is computed in `u128`, and it never leaves it** (2026-09-01).
+                //
+                // `(h.max(t) - h.min(t) + 1) as u32` had two ways to lie about a width the
+                // USER wrote, and the environment is built BEFORE `N007` runs -- so neither
+                // was caught by the `«B24»` refusal three passes later:
+                //
+                // * `@[u128::MAX:0]` overflowed the `+ 1` outright. **`gabbro check` died
+                //   with `attempt to add with overflow`, exit 101, before any diagnostic.**
+                //   In a RELEASE build -- the one `cargo install` produces -- overflow
+                //   checks are off and the same line wraps to width `0` in silence.
+                // * any width `>= 2^32` wrapped modulo `2^32` into a plausible small one.
+                //
+                // The `-1`/`+1` dance keeps the arithmetic inside `u128` without a
+                // saturating call: `h.max(t) - h.min(t)` cannot overflow, and the branch
+                // shifts by at most 126.
+                let abstand = h.max(t) - h.min(t);
+                let max = if abstand >= 126 {
                     b.max
                 } else {
-                    (1i128 << breite_feld) - 1
+                    (1i128 << (abstand + 1)) - 1
                 };
                 Typ::Ganzzahl(IntBereich::genau(b.breite, false, 0, max.min(b.max)))
             }
@@ -1361,8 +1391,18 @@ impl Umgebung {
                 let b = match bp {
                     BitPos::Bit(_) => IntBereich::genau(bereich.breite, false, 0, 1),
                     BitPos::Bereich(h, t) => {
-                        let w = (h.max(t) - h.min(t) + 1) as u32;
-                        let max = if w >= 127 { bereich.max } else { (1i128 << w) - 1 };
+                        // Same arithmetic and the same reason as `typ_von_feld_mit` above:
+                        // `@[u128::MAX:0]` on a `reg` killed the checker here, at the sister
+                        // line, and a width `>= 2^32` wrapped. **A `reg` carrier is always a
+                        // literal integer type, so `N007` has no alias hole here** -- but it
+                        // still runs after this, which is exactly why the crash was
+                        // reachable at all.
+                        let abstand = h.max(t) - h.min(t);
+                        let max = if abstand >= 126 {
+                            bereich.max
+                        } else {
+                            (1i128 << (abstand + 1)) - 1
+                        };
                         IntBereich::genau(bereich.breite, false, 0, max)
                     }
                 };

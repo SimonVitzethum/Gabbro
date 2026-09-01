@@ -1,0 +1,44 @@
+-- erwartet: N007
+-- **A bit range whose WIDTH killed the checker before any pass could refuse it.**
+--
+-- `N007` has said since 2026-08-18 that a position lies inside the field's own word, and it
+-- says it correctly, in `u128`. But the ENVIRONMENT is built before any pass runs, and
+-- `umgebung.rs::typ_von_feld_mit` computed the field's range first:
+--
+--     let breite_feld = (h.max(t) - h.min(t) + 1) as u32;
+--
+-- Both halves of that line lied about a width the user wrote:
+--
+-- * `@[u128::MAX:0]` overflowed the `+ 1`. **`gabbro check` died with `attempt to add with
+--   overflow`, exit 101** -- no diagnostic, no `N007`, no file name.
+-- * any width `>= 2^32` wrapped modulo `2^32` into a plausible small one.
+--
+-- THE TWO BUILD PROFILES DISAGREED, AND THAT IS THE SHARPEST FORM OF IT
+-- ---------------------------------------------------------------------
+-- There is no `[profile.release]` in `Cargo.toml`, so overflow checks are OFF in release --
+-- and release is what `cargo install --path crates/gabbro-cli` produces, the install
+-- `README.md` documents. Measured 2026-09-01 on ONE file with a `type W = u32;` carrier:
+--
+--     debug build    ->  panicked at umgebung.rs:1334, exit 101
+--     release build  ->  3 items, 0 errors, 0 hints, exit 0
+--
+-- **The shipped binary does not crash; it computes a wrapped width in silence.** A crash is
+-- at least a measurement. The same source file, two answers, and the honest one is the one
+-- nobody ships.
+--
+-- WHY THIS FILE USES A LITERAL `u32` CARRIER
+-- ------------------------------------------
+-- With a plain integer carrier `N007` fires as soon as the environment survives, so the file
+-- falls by name and the probe is one-sided in the useful direction: **red by panic before the
+-- repair, green by `N007` after.** The variant with a `type W = u32;` carrier does NOT fall
+-- even now -- `bitlage::wortbreite` matches `TypExpr::Int` syntactically and an alias walks
+-- past it. *That hole is real and it is not this file's claim*; it is written up in the
+-- report as its own lane, because repairing it needs the environment inside `bitlage`, and a
+-- probe that cannot fall is not a probe.
+module gift::bitbereich {
+
+format F endian big {
+    a : u32 @[340282366920938463463374607431768211455:0],
+}
+
+}
