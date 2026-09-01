@@ -524,3 +524,64 @@ pub fn bestand(baum: &Programm) -> Bestand {
     });
     b
 }
+
+/// **The same comparison, but against the DERIVATION instead of the hull over the
+/// declarations** (`ableitung.rs`).
+///
+/// > It shares `deckt_a4`, `ortlos` and `Urteil` with `vergleiche_mit` **on purpose.** Two
+/// > bases judged by two rules measure the difference between the rules; judged by one rule
+/// > they measure the difference between the bases. *That difference is the whole point:*
+/// > the hull inherits a callee's over-declaration, the derivation cannot.
+pub fn vergleiche_abgeleitet(baum: &Programm, weit: bool) -> Vec<Vergleich> {
+    let ab = crate::ableitung::leite_ab(baum, weit);
+    let (_, weltnamen) = crate::wirkungen::welt_und_konstanten(baum);
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let (Some(w), FnRumpf::Block(_)) = (&f.effects, &f.rumpf) else {
+            return;
+        };
+        let key = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let Some(a) = ab.je.get(&key) else { return };
+        let deklariert: Vec<String> = w.liste.iter().map(|e| e.art.text()).collect();
+        let berechnet: Vec<String> = a.wirkungen.iter().cloned().collect();
+        let urteil = if let Some(grund) = &a.unvollstaendig {
+            Urteil::Unvollstaendig(grund.clone())
+        } else {
+            let ungedeckt: Vec<String> = berechnet
+                .iter()
+                .filter(|b| !ortlos(b) && !deklariert.iter().any(|d| deckt_a4(d, b)))
+                .cloned()
+                .collect();
+            let bekannt = ungedeckt.iter().any(|b| {
+                b.rsplit_once(' ').is_some_and(|(_, o)| {
+                    let gr = o.split(['.', '[']).next().unwrap_or(o);
+                    weltnamen.iter().any(|k| k == gr)
+                })
+            });
+            let unbegruendet: Vec<String> = deklariert
+                .iter()
+                .filter(|d| !ortlos(d) && !berechnet.iter().any(|b| deckt_a4(d, b)))
+                .cloned()
+                .collect();
+            if !ungedeckt.is_empty() {
+                Urteil::Breiter(ungedeckt, bekannt)
+            } else if !unbegruendet.is_empty() {
+                Urteil::Enger(unbegruendet)
+            } else {
+                Urteil::Identisch
+            }
+        };
+        aus.push(Vergleich {
+            modul: modul.to_string(),
+            name: f.name.text.clone(),
+            klasse: f.klasse,
+            deklariert,
+            berechnet,
+            urteil,
+        });
+    });
+    aus
+}

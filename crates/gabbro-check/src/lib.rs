@@ -51,6 +51,10 @@ pub mod geteilt;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
+/// **«T1» -- the fixpoint over the BODIES**, as against the hull over the declarations in
+/// `aufrufgraph`. See the module head: a derivation that takes a callee's *declared* effects
+/// covers up exactly the error it is meant to find.
+pub mod ableitung;
 pub mod kontexte;
 pub mod kosten;
 mod m1;

@@ -136,6 +136,19 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **«T1»: the DERIVED effect set, and it is retrievable** (`PLAN-HARDWARE.md` §25).
+        //
+        // Deriving the line instead of demanding it **trades locality for writing work**:
+        // `E005` today quotes the very statement that breaks the frame, and after the
+        // derivation the contradiction surfaces at a caller, at a lock-rank check, at a
+        // `pure` three levels up. *The same shape as `op_zeichen`: a refusal that cannot
+        // quote the line it is about.*
+        //
+        // That trade is payable, and this command is half the price: **whoever is refused
+        // somewhere else can ask here where the effect comes from.** `--ursprung` prints the
+        // path, hop by hop, down to the body that does the deed or to the edge where a
+        // declaration is the source.
+        "effects" | "wirkungen" => befehl_wirkungen(rest),
         "costs" | "kosten" => {
             if rest.is_empty() {
                 eprintln!("gabbro kosten: no file named");
@@ -1435,4 +1448,206 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
             .sum()
     }
     geh(&baum.items)
+}
+
+/// **`gabbro effects` -- what the compiler would WRITE, and where each entry comes from.**
+///
+/// Four shapes, and the flags stay German like `abi`'s (`ERSTNAMEN.md`: the sub-command's
+/// first name is English, the flags of this family are not):
+///
+/// | | |
+/// |---|---|
+/// | *(nothing)* | one derived `effects` line per function |
+/// | `--ursprung` | each entry with its origin path, hop by hop |
+/// | `--vergleich` | the derived set held against the WRITTEN one, per entry |
+/// | `--eng` | leave out reads through parameters, exactly as `E010` does |
+///
+/// **`--eng` is an opt-OUT here and `--weit` an opt-IN at `abi`, and that is not an
+/// inconsistency but the difference between the two questions.** `abi --vergleich` asks
+/// *"does the written line agree with what the passes check?"* -- and the passes leave
+/// parameter reads out, with a reason. This command asks *"what would an elaborator have to
+/// write?"*, and it has to write `reads p.slots`: the caller wants to know what happens to
+/// his pointer. *A default that answered the other question would make every measurement
+/// taken with it wrong in the same direction.*
+fn befehl_wirkungen(rest: &[String]) -> std::process::ExitCode {
+    let ursprung = rest.iter().any(|a| a == "--ursprung");
+    let vergleich = rest.iter().any(|a| a == "--vergleich");
+    let weit = !rest.iter().any(|a| a == "--eng");
+    let nur: Option<&String> = rest
+        .iter()
+        .position(|a| a == "--fn")
+        .and_then(|i| rest.get(i + 1));
+    let dateien: Vec<&String> = rest
+        .iter()
+        .enumerate()
+        .filter(|(i, a)| {
+            !a.starts_with("--") && Some(*i) != rest.iter().position(|x| x == "--fn").map(|p| p + 1)
+        })
+        .map(|(_, a)| a)
+        .collect();
+    if dateien.is_empty() {
+        eprintln!("gabbro effects: no file named");
+        return std::process::ExitCode::from(2);
+    }
+    if vergleich {
+        return wirkungen_vergleich(&dateien, weit);
+    }
+    let mut gefunden = 0usize;
+    let mut runden_max = 0usize;
+    let mut verbreitert = 0usize;
+    for datei in &dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei.as_str()) else {
+            eprintln!("gabbro: {datei} not readable");
+            return std::process::ExitCode::from(2);
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        // **A unit with errors is not silently skipped, and it is not silently used
+        // either.** The derivation runs over a tree the passes rejected -- the set it
+        // produces is a statement about a program that does not compile.
+        if absagen.fehler_zahl() > 0 {
+            eprintln!("gabbro effects: {datei} has errors -- the derivation would speak about a program that does not compile");
+            return std::process::ExitCode::from(1);
+        }
+        let ab = gabbro_check::ableitung::leite_ab(&baum, weit);
+        runden_max = runden_max.max(ab.runden);
+        verbreitert += ab.verbreitert;
+        if ab.abgebrochen {
+            eprintln!("gabbro effects: {datei}: the fixpoint did not settle -- every set below is a LOWER BOUND");
+        }
+        if dateien.len() > 1 && nur.is_none() {
+            println!("== {datei} ==");
+        }
+        for (name, a) in &ab.je {
+            if let Some(n) = nur {
+                if name != n && !name.ends_with(&format!("::{n}")) {
+                    continue;
+                }
+            }
+            gefunden += 1;
+            println!("{name}");
+            println!("    {}", gabbro_check::ableitung::zeile(a));
+            if let Some(g) = &a.unvollstaendig {
+                println!("    -- LOWER BOUND (R16): {g}");
+            }
+            if ursprung {
+                for w in &a.wirkungen {
+                    println!("    {w}");
+                    for (wo, was, weg) in ab.pfad(name, w) {
+                        println!(
+                            "        {wo}  `{was}`  --  {}",
+                            gabbro_check::ableitung::weg_text(&weg)
+                        );
+                    }
+                }
+            }
+        }
+    }
+    if let Some(n) = nur {
+        if gefunden == 0 {
+            eprintln!("gabbro effects: no function named `{n}` in the files given");
+            return std::process::ExitCode::from(1);
+        }
+    }
+    println!();
+    println!("  fixpoint: at most {runden_max} rounds, widening fired {verbreitert}x");
+    println!("  reads through parameters: {}",
+             if weit { "counted in (an elaborator has to write them)" } else { "left out (`--eng`, as in `E010`)" });
+    std::process::ExitCode::SUCCESS
+}
+
+/// The entry tally over the DERIVATION -- the same six columns as `abi --vergleich`, over a
+/// basis that cannot inherit a callee's over-declaration.
+fn wirkungen_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCode {
+    let mut e_tragend = 0usize;
+    let mut e_zu_weit = 0usize;
+    let mut e_zu_eng = 0usize;
+    let mut e_rein = 0usize;
+    let mut e_rein_falsch = 0usize;
+    let mut e_ausserhalb = 0usize;
+    let mut e_ungemessen = 0usize;
+    let mut b_mit = 0usize;
+    let mut b_ohne = 0usize;
+    let mut b_fn_mit = 0usize;
+    let mut b_fn_ohne = 0usize;
+    let mut gelesen = 0usize;
+    let mut abgewiesen: Vec<String> = Vec::new();
+    let mut weit_zeilen: Vec<String> = Vec::new();
+    let mut runden_max = 0usize;
+    let mut verbreitert = 0usize;
+    for datei in dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei.as_str()) else {
+            eprintln!("gabbro: {datei} not readable");
+            return std::process::ExitCode::from(2);
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        if absagen.fehler_zahl() > 0 {
+            abgewiesen.push((*datei).clone());
+            continue;
+        }
+        gelesen += 1;
+        let ab = gabbro_check::ableitung::leite_ab(&baum, weit);
+        runden_max = runden_max.max(ab.runden);
+        verbreitert += ab.verbreitert;
+        let b = gabbro_check::abi::bestand(&baum);
+        b_mit += b.mit_rumpf;
+        b_ohne += b.ohne_rumpf;
+        b_fn_mit += b.fn_mit_rumpf;
+        b_fn_ohne += b.fn_ohne_rumpf;
+        for v in gabbro_check::abi::vergleiche_abgeleitet(&baum, weit) {
+            let e = gabbro_check::abi::eintraege(&v);
+            e_tragend += e.tragend.len();
+            e_zu_weit += e.zu_weit.len();
+            e_zu_eng += e.zu_eng.len();
+            e_rein += e.rein_stimmt.len();
+            e_rein_falsch += e.rein_falsch.len();
+            e_ausserhalb += e.ausserhalb.len();
+            e_ungemessen += e.ungemessen.len();
+            for w in &e.zu_weit {
+                weit_zeilen.push(format!("  too wide   {}::{}   {w}", v.modul, v.name));
+            }
+        }
+    }
+    println!("== «T1»: the DERIVED effect set against the WRITTEN one, PER ENTRY ==");
+    println!("   basis: the fixpoint over the BODIES (`ableitung.rs`), not the hull over the");
+    println!("   declarations -- a callee's over-declaration cannot leak into a caller here.");
+    println!();
+    for z in &weit_zeilen {
+        println!("{z}");
+    }
+    println!();
+    println!("  units read  {gelesen}");
+    if !abgewiesen.is_empty() {
+        println!("  units REJECTED (errors -- not counted)  {}:", abgewiesen.len());
+        for d in &abgewiesen {
+            println!("      {d}");
+        }
+    }
+    println!("  `effects` entries in those units            {:>4}", b_mit + b_ohne);
+    println!("      on a function WITH a body               {b_mit:>4}   ({b_fn_mit} functions)");
+    println!("      on `extern`/`prim` -- NO body           {b_ohne:>4}   ({b_fn_ohne} functions)");
+    println!("        ^ TRUST SURFACE. No body, nothing to derive from -- these can never go");
+    println!("          to zero, and counting them into the mark would promise a saving that");
+    println!("          no build can deliver.");
+    println!();
+    let messbar =
+        e_tragend + e_zu_weit + e_rein + e_rein_falsch + e_ausserhalb + e_ungemessen;
+    println!("  entries the comparison could look at        {messbar:>4}");
+    println!("  ---------------------------------------------");
+    println!("  RIGHT   -- covers a derived effect          {e_tragend:>4}");
+    println!("  RIGHT   -- `pure`, derived set empty        {e_rein:>4}");
+    println!("  TOO WIDE-- covers nothing derived           {e_zu_weit:>4}");
+    println!("  TOO NARROW -- `pure` contradicted           {e_rein_falsch:>4}");
+    println!("  outside -- `diverges`, not a place          {e_ausserhalb:>4}");
+    println!("  UNMEASURED -- lower bound (R16)             {e_ungemessen:>4}");
+    if messbar != b_mit {
+        println!("  !! the columns do not add up to {b_mit} -- the partition is broken");
+    }
+    println!();
+    println!("  TOO NARROW -- derived, covered by no line   {e_zu_eng:>4}");
+    println!("     ^ counted on the DERIVED side; a hole is not one of the written entries.");
+    println!();
+    println!("  fixpoint: at most {runden_max} rounds, widening fired {verbreitert}x");
+    std::process::ExitCode::SUCCESS
 }
