@@ -15,6 +15,14 @@
 -- Vergleichs, gemessen 2026-09-01 -- `cc` nimmt `void exit(int32_t);` und
 -- `_Noreturn void exit(int32_t);` gleichermassen an.
 --
+-- **Und der Rumpf ruft nur `putchar`, nicht `abs`** -- gemessen am 2026-09-01: der nackte
+-- Ruf als Anweisung verwirft den Rueckgabewert, aber `abs(z);` senkt zu `abs(z);` ab, und
+-- `cc -Wall -Wextra -Werror` weist das als *statement with no effect* zurueck. `putchar(72);`
+-- geht durch, weil `putchar` schreibt. **Die Verwerfungsform gilt also nur fuer Rufe mit
+-- Wirkung** -- eine reine Funktion, deren Ergebnis niemand liest, ist in C kein Satz.
+-- *Der Vorlauf `pruefe-emission.sh` hat das gefunden, nicht der Pruefer: `N046` ist eine
+-- Regel ueber die Signatur, nicht ueber die Ruf-Stelle.*
+--
 -- Diese Datei ist eine MESSUNG und kein Beispiel: sie muss 0 Fehler geben.
 
 module probe::extern_bindet_c {
@@ -30,7 +38,6 @@ impl fn haupt(z : i32 in 0 .. 100) -> i32 in 0 .. 1
     costs <= 40 ops
 {
     putchar(z);
-    abs(z);
     return 0;
 }
 
