@@ -529,7 +529,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 171 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 172 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *168 → 169 am 2026-09-01: `messung/PHASENKONSTRUKT.md` kam dazu — die Nachrechnung von
       `§42`, die selbst zwei Widerrufe buchte (die Tafel über dem Giftkorpus, und `§43`s
       „trivial"). **Ein Dokument, das Widerrufe schreibt, hebt den Nenner, gegen den sie
@@ -642,11 +642,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **96 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **97 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 114 sind tragend, 5 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 114 sind tragend, 6 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -707,6 +707,20 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       diesem Rechner nicht (gehärteter Kern, Schattenspeicher-Kollision). *Keine bestandene
       Probe, sondern eine nicht gefahrene* — und damit derselbe Fall wie der zweite Korpus
       zwei Punkte höher: **ortsgebunden, nicht schwer.**
+      **Gefahren am 2026-09-02, und der Ort war die ganze Schwierigkeit.** Stufe 6b übersetzt
+      jede durchgestochene Einheit ein weiteres Mal unter
+      `-fsanitize=address,undefined -fno-sanitize-recover=all`, führt sie aus und verlangt
+      dasselbe Ergebnis: **24 Einheiten auf `ki-pc-fisch-101`, kein Fund.** Auf dem
+      Arbeitsrechner meldet dieselbe Stufe je Einheit `NICHT GEFAHREN` und färbt den Wächter
+      *nicht* grün — die Fallunterscheidung steht jetzt im Wächter statt im Kopf des Fahrers,
+      und die Schlusszeile druckt aus, welcher der beiden Fälle gemessen wurde. *Eine Zahl,
+      die von der Maschine abhängt, gehört neben das Urteil und nicht dahinter.*
+      **Die Sprechprobe dazu ist selbst ein Befund gewesen:** die erste Fassung ihrer
+      Gegenprobe war `malloc(4)` mit `p[7]`, beide konstant — `gcc -O1` faltet die Belegung
+      weg, ASan sieht keinen Heap und schweigt. Damit meldete `fisch`, wo ASan tadellos läuft,
+      *„ASan schweigt"* und die ganze Stufe blieb aus. `volatile` an Größe und Index heilt es.
+      *Ein Messgerät, dessen Gegenprobe der Optimierer entfernt, meldet die Abwesenheit seines
+      eigenen Gegenstands.*
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
       *(2026-08-19, nachgemessen 2026-08-20)*. **23 von 23 Item-Arten** sind „gelesen" —
@@ -729,7 +743,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2785 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
+      Heute **2795 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -3638,7 +3652,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7886 von 17687 Kommentarzeilen** im Pruefer sind deutsch
+**7887 von 17687 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -3858,7 +3872,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 263 Codes, 48 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 265 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
 **Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*

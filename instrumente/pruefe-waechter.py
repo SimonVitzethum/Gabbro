@@ -509,8 +509,17 @@ def waechter():
     # not called `pruefe-*` and would have slipped through every mesh above -- a tool that
     # establishes the reach of acceptance while standing outside acceptance itself. *Exactly
     # what it was built against, one level up.*
+    #
+    # **`fuzze-*` joined on 2026-09-02, and for the same reason a second time.** The boundary
+    # sweep is not called `pruefe-*` either, and it carries a judgement about the checker --
+    # *a tool that hunts for a third answer while standing outside every mesh that asks
+    # whether a tool can speak.* The class the line above names is not a one-off: **every new
+    # verb invents a new prefix**, and each one silently leaves this net. The glob is widened
+    # rather than the file renamed, so the next `fuzze-*` is inside it on the day it is
+    # written.
     for p in sorted(W.glob("instrumente/pruefe-*.py")) + sorted(W.glob("instrumente/pruefe-*.sh")) \
             + sorted(W.glob("instrumente/zaehle-*.py")) + sorted(W.glob("instrumente/zaehle-*.sh")) \
+            + sorted(W.glob("instrumente/fuzze-*.py")) \
             + sorted(W.glob("instrumente/mutiere-*.py")) + sorted(W.glob("instrumente/abnahme.py")):
         aus.append(p)
     return aus

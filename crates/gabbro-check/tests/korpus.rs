@@ -303,6 +303,17 @@ const BENANNT: &[&str] = &[
     "N047",
     "N048",
     "N049",
+    // **`N050` -- the same audit method, one day later, one layer down.** `N047`-`N049` judge
+    // the LAYOUT; `N050` judges whether the layout survives the LOWERING. The bank accessor
+    // computes `i * stride` in `unsigned int`, so a bank wide enough wraps at 2^32 and the
+    // last cells name addresses that are simply different. Found by handing the emitted C to
+    // `clang-tidy`, which calls the site `bugprone-implicit-widening-of-multiplication-result`.
+    "N050",
+    // **`N051` -- the front end's `u128` literal meeting the back end's 64-bit pointer.**
+    // `reg X : u64 @0x100000000000000000` was accepted with `0 errors` because `N047` only
+    // asks about alignment and `2^68` is a multiple of 8. Found by
+    // `instrumente/fuzze-grenzen.py` in the sweep that also found `N049`'s own overflow.
+    "N051",
 ];
 
 #[test]

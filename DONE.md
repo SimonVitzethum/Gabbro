@@ -858,7 +858,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**63 clean examples, 379 poison probes, 357 tests · 53 translation units** —
+**63 clean examples, 381 poison probes, 360 tests · 53 translation units** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`
 
 > **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean

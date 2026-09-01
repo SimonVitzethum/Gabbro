@@ -1,0 +1,39 @@
+-- erwartet: N051
+-- **The front end's `u128` literal meeting the back end's 64-bit pointer.**
+--
+-- Gabbro's integer literals are `u128`. The address arithmetic they are lowered into is not:
+-- every device access becomes
+--
+--     *(volatile uintN_t *)(d->basis + <offset>)
+--
+-- with `basis` a `volatile uint8_t *`. An offset above `u64::MAX` names no address on any
+-- target this emitter has, and there is no C constant to write for it.
+--
+-- `0x100000000000000000` is `2^68`. Until 2026-09-02 the file below was accepted with
+-- **`3 items, 0 errors, 0 hints`**:
+--
+--   * `N047` asks only whether the offset is a multiple of the register's width, and
+--     `2^68 % 8 == 0`;
+--   * `N009` compares registers against each other, and there is only one.
+--
+-- THE NEIGHBOURING CASE FELL, AND FOR THE WRONG REASON
+-- ----------------------------------------------------
+-- `@u128::MAX` did NOT slip through -- it fell with `N047`. That looked like coverage and was
+-- not: the offset was read as `*v as i128`, a lossy cast that turns `u128::MAX` into `-1`,
+-- and `-1 % 8 != 0`. **A rule that is right because two errors cancel is not a rule that
+-- holds** -- move the literal to any aligned value above `2^64` and the cancellation stops.
+--
+-- Both halves are repaired: the casts are gone (the layout rules now compute in `u128`, and
+-- saturating), and `N051` says the thing that was never said.
+--
+-- Found by `instrumente/fuzze-grenzen.py`, in the sweep that also found that `N049`'s own
+-- extent arithmetic panicked in debug and wrapped in release.
+module gift589 {
+
+opaque type Pa = u64;
+
+device D(basis : Pa) at mmio {
+    reg X : u64 @0x100000000000000000 class rw
+}
+
+}
