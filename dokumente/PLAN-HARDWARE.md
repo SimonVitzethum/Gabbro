@@ -1388,8 +1388,24 @@ misst und nicht die Regeln:
                                       31                 39
 ```
 
-**59 von 359 — 16 % — tragen nichts.** Kein Wort sagt es heute: `E005` feuert bei
-Widerspruch, nicht bei Auslassung.
+**~~59 von 359 — 16 % — tragen nichts.~~ ZURÜCKGEZOGEN am 2026-09-01, nicht korrigiert.**
+
+> `huelle_der_gerufenen` nimmt vom Gerufenen seine **deklarierten** Effekte und **vererbt
+> damit dessen Polsterung an den Rufer — sie deckt genau den Fehler zu, den sie finden
+> soll.** Liegt die Hüllenrechnung auf dem Messpfad, ist die Zahl **systematisch nach unten
+> verzerrt: je gepolsterter der Gerufene, desto weniger fällt der Rufer auf.** Bei 87 %
+> gepolsterten Kostenzusagen ist das kein Randeffekt.
+>
+> **Und darum ist sie keine untere Schranke, sondern unbekannt.** *Eine Zahl aus einem
+> Werkzeug mit bekanntem Maskierungsfehler ist nicht vorsichtig, sie ist unbelegt.* Sie wird
+> nach der Reparatur neu gefahren, nicht nachgerechnet.
+
+**Vierte Instanz derselben Gestalt in zwei Tagen:** der maskierende `panic!` (der erste
+Treffer verdeckt jeden späteren) · die Namenszählung statt Ortserreichung (`ancestors of`
+fasst an, ohne zu nennen) · Handbuchnamen als Programmnamen gelesen · **jetzt die Hülle.**
+
+Was von der Messung STEHT: `E005` feuert bei Widerspruch, **nicht bei Auslassung** — und
+Überdeklaration ist gemessen still. *Der Mangel ist belegt, sein Umfang nicht.*
 
 *Ohne `--weit`* — also mit der Filterung, die `E010` selbst anlegt — stünden dort 95 statt
 57. **Das wäre ein Messfehler und keine Polsterung:** die Ableitung liesse dann Lesungen über
