@@ -315,7 +315,14 @@ def messe(fahrbar, nur=None):
 # probe-borne. The table prints every return code beside the count, so a rise can be told
 # apart from a repair -- and a rise errs towards red, which is the direction a mark may err in.
 MARKE = 12
-MARKE_ZEILEN = 167
+# **167 -> 172 within the hour, and the five are MINE** (2026-09-01). The interval that
+# `abnahme.py` now prints instead of `hoechstens` brought `spanne()` and
+# `unsichere_stellen()` with it -- and five of their lines are reached today only from the
+# speech test, because this tree makes the acceptance end with `2` and it never gets to its
+# own green ending. *The tool that counts the class caught the code written beside it in the
+# same hour* -- which is what a ratchet over one's own workshop is for. The count of
+# CARRIERS did not move: `abnahme.py` was already one of the twelve.
+MARKE_ZEILEN = 172
 
 # **Booked instead of healed -- empty, and that is a measurement.**
 # *An empty booking is the only honest starting state -- what goes in has to be argued for.*

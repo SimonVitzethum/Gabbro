@@ -4559,7 +4559,7 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
       Zeugnisbuchung, die seit `c887a9d` (22 Stunden) tot war — und hinter deren Schnitt
       **drei weitere Befunde** lagen.
 - [x] **Wie viele der 51 Instrumente haben einen Zweig, den nur die Sprechprobe je erreicht
-      hat?** ~~Heute unbekannt.~~ **`12 von 43`, 167 Anweisungszeilen** (2026-09-01,
+      hat?** ~~Heute unbekannt.~~ **`12 von 43`, 172 Anweisungszeilen** (2026-09-01,
       `instrumente/zaehle-probenzweige.py`, `messung/PROBENZWEIGE.md`). *Und der Nenner ist
       die Hälfte der Antwort:* 43 von 52 sind überhaupt spurbar — 8 Schalenwächter, 1 zu
       teuer — und **15 der 43 tragen ihre Sprechprobe im Rumpf von `main` statt in einer

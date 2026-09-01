@@ -21,7 +21,7 @@ weil in jedem echten Lauf etwas ausgelassen ist.
 ## Die Zahl
 
 ```
-12 von 43 gemessenen Instrumenten tragen einen Zweig,      167 Anweisungszeilen
+12 von 43 gemessenen Instrumenten tragen einen Zweig,      172 Anweisungszeilen
    den nur die Sprechprobe je erreicht hat
  4 davon liegen in einer Funktion, die der echte Lauf       37 Anweisungszeilen
    NIE BETRETEN hat
@@ -68,7 +68,7 @@ ihre eigenen Zeilen erreicht, ist kein Befund.
 | `pruefe-todo.py` | 69 | 6 | 0 |
 | `pruefe-waechter.py` | 28 | 14 | 0 |
 | `zaehle-c-formen.py` | 17 | — | 0 |
-| `abnahme.py` | 14 | 9 | **2** |
+| `abnahme.py` | 19 | 9 | **2** |
 | `pruefe-grammatiktafel.py` | 12 | — | **1** |
 | `mutiere-pruefer.py --anker` | 9 | 8 | 0 |
 | `zaehle-bloecke.py` | 8 | — | 0 |
@@ -88,7 +88,7 @@ wiedergefunden. Ebenso `pruefe-waechter.hauptauscheckung` und `korpus_ort`, die
 **Dort ist die Probe der einzige Aufrufer, den es je gab.** Nicht „heute nicht gefeuert",
 sondern *es gibt keinen Weg dorthin, den ein Lauf dieses Baumes nimmt.*
 
-### 2. Ein Zweig in einer Funktion, die der Lauf betritt — der Rest, 130 Zeilen
+### 2. Ein Zweig in einer Funktion, die der Lauf betritt — der Rest, 135 Zeilen
 
 Fast immer der **Befundweg eines Wächters, der heute nichts findet**: `pruefe-todo.pruefe()`
 läuft, und seine sechs `befunde.append(...)`-Zweige feuern nur auf den erfundenen
@@ -114,13 +114,15 @@ Instanz der Klasse.
    keine Zeile, die fehlen könnte.
 5. **EIN Lauf, EIN Satz Argumente.** Eine Zeile, die nur `--voll` erreicht, steht nicht in
    ECHT — berührt die Probe sie, fällt sie hier auf. *Überschätzung in die sichere Richtung.*
-6. **Den Zustand des Baumes am Messtag.** Sechs der 43 Läufe endeten selbst nicht mit 0
-   (`abnahme.py`, `pruefe-abstieg.py`, `pruefe-englisch.py`, `pruefe-grammatiktafel.py`,
-   `pruefe-zahlen.py`, `zaehle-lean.py`); ihr grünes Ende ist heute unerreicht, und dessen
-   Zeilen sehen darum probenbelegt aus. **`abnahme.py`s 14 Zeilen sind genau davon
+6. **Den Zustand des Baumes am Messtag** — und das ist nicht theoretisch, es hat sich
+   innerhalb einer Stunde bewegt. Beim ersten Lauf endeten **sechs** der 43 selbst nicht mit
+   0, beim letzten nur noch **drei** (`abnahme.py`, `pruefe-grammatiktafel.py`,
+   `zaehle-lean.py`), weil `pruefe-abstieg.py`, `pruefe-englisch.py` und `pruefe-zahlen.py`
+   inzwischen grün sind. Ein rot endender Wächter erreicht sein grünes Ende nicht, und dessen
+   Zeilen sehen darum probenbelegt aus. **`abnahme.py`s 19 Zeilen sind genau davon
    betroffen:** wäre der Lauf grün gewesen, wäre nur der Zweig `92 von 92` übrig geblieben
-   und nicht auch der mit der Lücke. *Die Tafel druckt jeden Rücklaufwert daneben, damit
-   das nicht verschwindet.*
+   und nicht auch der mit der Lücke. *Die Tafel druckt jeden Rücklaufwert daneben, damit das
+   nicht verschwindet.*
 7. **Sich selbst.** Das Werkzeug fährt die anderen. Dieselbe Klasse wie das `pgrep -f`, das
    sich in `CLAUDE.md` selbst gefunden hat.
 
@@ -142,3 +144,19 @@ standen **drei geschachtelte Ebenen** nebeneinander. Es steht seither in
 
 > *Ein Werkzeug, dessen Gegenstand seinen eigenen Aufrufer enthält, hat keinen Fixpunkt* —
 > und `SCHWER` ist die Stelle, an der das aufgeschrieben wird.
+
+
+## Nachtrag derselben Stunde: **167 → 172, und die fünf sind meine**
+
+`abnahme.py` druckt seit derselben Sitzung ein **Intervall** statt `hoechstens`
+(`messung/ABNAHME-STELLEN.md`). Die zwei Funktionen, die dafür entstanden sind — `spanne()`
+und `unsichere_stellen()` —, brachten **fünf Zeilen mit, die heute nur die Sprechprobe
+erreicht**: dieser Baum lässt die Abnahme mit `2` enden, und sie kommt an ihr eigenes grünes
+Ende nicht.
+
+> **Das Werkzeug, das die Klasse zählt, hat den Code erwischt, der in derselben Stunde
+> danebengeschrieben wurde.** Genau dafür steht eine Ratsche über der eigenen Werkstatt.
+
+Die Zahl der TRÄGER bewegte sich nicht: `abnahme.py` war schon einer der zwölf. *Ein Zähler
+über Instrumenten sagt nichts darüber, wie viel jeder einzelne trägt* — deshalb führt die
+Ratsche beide Zahlen.
