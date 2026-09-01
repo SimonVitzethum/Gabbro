@@ -1,0 +1,22 @@
+-- erwartet: E010
+-- **`aligned(p, n)` liest `p`, und bis zum 2026-09-01 sah das kein Pass.** `liest_expr` in
+-- `wirkungen.rs` zaehlte fuenf Ausdrucksformen auf und fing den Rest mit `_ => {}` -- also
+-- fiel unter `ExprArt::Eingebaut` der GANZE Teilbaum weg, samt der Orte darin.
+--
+-- Gemessen, beide Richtungen:  `if g == 4` unter `effects { pure }` faellt mit `E010`,
+-- `if aligned(g, 4)` gab **0 errors**. Ein Ruf in derselben Klammer wurde gefangen (`E008`) --
+-- die Reparatur vom 2026-08-20 hatte die RUF-Leser auf `alle_ausdruecke` gezogen und den
+-- Ortsleser von Hand stehen lassen.
+module gift588 {
+
+static g : u32 in 0 .. 100 = 4;
+
+pub fn b() -> u32 in 0 .. 1
+    effects { pure }
+    costs <= 3 ops
+{
+    if aligned(g, 4) { return 1; }
+    return 0;
+}
+
+}

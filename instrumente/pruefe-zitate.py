@@ -200,7 +200,11 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # sibling OF, and the corpus registry cites all three. Cross-references again, not coverage
 # claims -- the text says *"`N009` compares registers against each other and never against
 # the stride"*, which is a statement about `N009` and not about the file it stands in.
-MARKE = 306
+# **306 -> 308 on 2026-09-01.** The two repaired walkers (`wirkungen::liest_expr`,
+# `geteilt::orte_in`) each cite `E010`/`H007` and the emitter's `C001` to say what the
+# measurement WAS and where the counter-argument comes from. Cross-references, and this time
+# the cited text is a quoted refusal -- evidence, not a coverage claim.
+MARKE = 308
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

@@ -1014,6 +1014,43 @@ fn orte_in(e: &Expr, f: &mut impl FnMut(&Ort)) {
                 orte_in(a, f);
             }
         }
+
+        // **`aligned(p, n)` READS `p`, and until 2026-09-01 no pass saw it.** `Eingebaut` was
+        // missing from the enumeration, so the whole subtree fell under the catch-all -- the
+        // places inside it with everything else. Measured, both directions:
+        //
+        // ```text
+        // if g == 4           under effects { pure }  ->  E010
+        // if aligned(g, 4)    under effects { pure }  ->  0 errors
+        // if wert == 4        outside its lock        ->  H007
+        // if aligned(wert, 4) outside its lock        ->  0 errors
+        // ```
+        //
+        // **Decided per form, with the reason beside it** -- not by a walker that answers the
+        // question silently:
+        //
+        // * `aligned(a, b)` evaluates BOTH expressions at run time. Both are reads.
+        // * `lenof`/`sizeof` over a place take their value from the DECLARATION, not from the
+        //   content -- the emitter says so itself (`C001`: *"the length would have to come
+        //   from somewhere other than the declaration, and there is no such place"*). So the
+        //   place is NOT a read. **Its indices are**: `lenof(c.slots[i])` evaluates `i`.
+        // * over a TYPE nothing is read at all.
+        ExprArt::Eingebaut(g) => match &**g {
+            gabbro_syntax::ast::Eingebaut::Aligned(a, b) => {
+                orte_in(a, f);
+                orte_in(b, f);
+            }
+            gabbro_syntax::ast::Eingebaut::Sizeof(x)
+            | gabbro_syntax::ast::Eingebaut::Lenof(x) => {
+                if let gabbro_syntax::ast::TypOderOrt::Ort(o) = x {
+                    for suf in &o.suffixe {
+                        if let OrtSuffix::Index(ix) = suf {
+                            orte_in(ix, f);
+                        }
+                    }
+                }
+            }
+        },
         _ => {}
     }
 }

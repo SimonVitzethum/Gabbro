@@ -764,3 +764,46 @@ fn bank_ueber_fremden_bytes_faellt() {
            { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
     ));
 }
+
+/// **`aligned(p, n)` reads `p`, and until 2026-09-01 no pass saw it.**
+///
+/// `wirkungen::liest_expr` and `geteilt::orte_in` are the same walker word for word: five
+/// expression kinds enumerated and `_ => {}` for the rest. `ExprArt::Eingebaut` fell under the
+/// catch-all, so the whole subtree vanished — places and all. The 2026-08-20 repair moved the
+/// CALL readers onto `alle_ausdruecke` and left the PLACE readers hand-rolled.
+#[test]
+fn aligned_verbirgt_kein_lesen() {
+    let quelle = |rumpf: &str| {
+        format!(
+            "module p {{\nstatic g : u32 in 0 .. 100 = 4;\n\
+             impl fn b() -> u32 in 0 .. 1 effects {{ pure }} costs <= 3 ops {{ {rumpf} }}\n}}"
+        )
+    };
+    // The plain comparison always fell; the wrapped one did not.
+    faellt_mit(&quelle("if g == 4 { return 1; } return 0;"), "E010");
+    faellt_mit(&quelle("if aligned(g, 4) { return 1; } return 0;"), "E010");
+
+    // **The counter-direction is the decision this fix had to make and not guess.** `lenof`
+    // and `sizeof` over a place take their value from the DECLARATION, not from the content —
+    // the emitter says so itself (`C001`: *"the length would have to come from somewhere other
+    // than the declaration"*). So a place under `lenof` is NOT a read, and a `pure` function
+    // may carry one.
+    faellt_nicht(
+        "module p {\ntype Z = u32 in 0 .. 10;\ntable T count 8 { slot { a : Z, } }\n\
+         impl fn f() -> u32 in 0 .. 64 effects { pure } costs <= 2 ops { return lenof(T.slots); }\n}",
+    );
+}
+
+/// The twin, one pass further — and there it is a race.
+#[test]
+fn aligned_umgeht_die_sperre_nicht() {
+    let quelle = |rumpf: &str| {
+        format!(
+            "module p {{\nstatic wert : u32 in 0 .. 100 = 4;\n\
+             lock L protects {{ wert }} rank 0 held <= 400 ops;\n\
+             impl fn b() -> u32 in 0 .. 1 effects {{ reads wert }} costs <= 3 ops {{ {rumpf} }}\n}}"
+        )
+    };
+    faellt_mit(&quelle("if wert == 4 { return 1; } return 0;"), "H007");
+    faellt_mit(&quelle("if aligned(wert, 4) { return 1; } return 0;"), "H007");
+}

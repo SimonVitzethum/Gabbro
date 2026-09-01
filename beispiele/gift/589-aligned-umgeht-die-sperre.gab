@@ -1,0 +1,22 @@
+-- erwartet: H007
+-- **Der Zwilling desselben Lochs, ein Pass weiter, und dort ist es ein Rennen.**
+-- `geteilt::orte_in` ist wortgleich mit `wirkungen::liest_expr`, und es traegt `protects`.
+--
+-- `if wert == 4` ausserhalb der Sperre faellt mit `H007`. `if aligned(wert, 4)` gab
+-- **0 errors** -- ein ungeschuetzter Zugriff auf einen gesperrten Platz, in einer Sprache,
+-- deren Sperrdisziplin genau davor steht.
+module gift589 {
+
+static wert : u32 in 0 .. 100 = 4;
+
+lock L protects { wert } rank 0 held <= 400 ops;
+
+impl fn b() -> u32 in 0 .. 1
+    effects { reads wert }
+    costs <= 3 ops
+{
+    if aligned(wert, 4) { return 1; }
+    return 0;
+}
+
+}
