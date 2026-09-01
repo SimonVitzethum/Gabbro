@@ -1,0 +1,20 @@
+-- erwartet: P001
+-- **Attempt 5 of the eight** (`PLAN-HARDWARE.md` §49 B3): the `;` is missing INSIDE the
+-- block, and the refusal said `` `;` expected, `}` found `` without ever saying the rule.
+--
+-- The rule is one sentence and it holds at every site where a `;` can be expected: **`;`
+-- terminates, it does not separate.** The note carries it now, and it is set in `erwarte_z`
+-- for the case `;` expected / `}` found, which is the only shape that can mean this.
+--
+-- **The other cure was rejected**, and here it is not even close: making the last `;`
+-- optional buys one character and makes `{ return 0 return 1 }` a statement list. *A
+-- separator that is sometimes absent is not a separator.*
+module m {
+impl fn addiere(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure } costs <= 6 ops
+{
+    let s : u32 in 0 .. 4294967295 = a + b;
+    narrow s to 0 .. 200 else { return 0 }
+    return s;
+}
+}

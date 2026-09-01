@@ -1,0 +1,22 @@
+-- erwartet: P033
+-- **Attempt 6 of the eight** (`PLAN-HARDWARE.md` §49 B3), and it is the mirror image of
+-- `623`: the writer put the `;` back, and now it is one too many.
+--
+-- The refusal is right and stays -- `}` and `};` would be two spellings of one statement --
+-- but until 2026-09-01 it read *"a semicolon on its own is not a statement"*, and what
+-- stands on the page is `};`. **Nobody reads `};` as a semicolon on its own.** The refusal
+-- described the parser's view of the token stream and asked the reader to find a lone `;`
+-- that is not there.
+--
+-- Same code, same rule, same set of accepted programs; the text now depends on whether a
+-- `}` stands in front of the `;`. *A refusal that describes the reader's page instead of the
+-- parser's state costs nothing and is the whole cure for a paper cut.*
+module m {
+impl fn addiere(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure } costs <= 6 ops
+{
+    let s : u32 in 0 .. 4294967295 = a + b;
+    narrow s to 0 .. 200 else { return 0; };
+    return s;
+}
+}
