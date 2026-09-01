@@ -55,7 +55,7 @@ Die Grundlage ist nicht der Korpus, sondern die Wortliste und die Grammatik:
 ```bash
 ./instrumente/zaehle-wortschatz.py          # 221 / 208 / 333
 grep -n 'Order\|Advances\|Consumes\|Retires' crates/gabbro-syntax/src/kw.rs
-sed -n '334,335p;784p;1300p;1315p' dokumente/SYNTAX.md
+sed -n '333,335p;792p;1308p;1323p' dokumente/SYNTAX.md
 ```
 
 | Wort | Stellungen heute | was `§42` mit ihm vorhat | **Befund** |
@@ -83,7 +83,7 @@ Tafel aufzählt, kostet heute schon nichts.
 
 ### 2.1 `class … in <phase>` ist bereits der Nullfall — es gibt dort nichts zu senken
 
-`SYNTAX.md`:1315 führt `regphasen = "in" ident { "," regklasse "in" ident } ;` und schreibt
+`SYNTAX.md`:1323 führt `regphasen = "in" ident { "," regklasse "in" ident } ;` und schreibt
 den Grund daneben: *„KEIN neues Terminal: `in` ist seit jeher reserviert, `class` steht
 schon hier."* `§42` zählt die sechs Fundstellen als Posten seiner Rechnung. **Sie sind
 keiner.** Ein Wort, das nie gekauft wurde, lässt sich nicht zurückgeben.
@@ -205,6 +205,18 @@ Marke. Die anderen zwei (`table`, `ops`) haben keine — dort ist `phase` entwed
 Behauptung oder ein zweiter Mechanismus. *Der Vorschlag verallgemeinert nicht ein Konstrukt
 über vier Träger; er verallgemeinert einen Namen über zwei Mechanismen.*
 
+> **Und `fn` steht in beiden Lagern, je nachdem was `phase` dort heißt** — die Unterscheidung
+> ist die von `PHASENKLASSE.md` §2 und gehört ausgesprochen, nicht verwischt:
+>
+> * `fn … phase <a> -> <b>` **ist** `advances` unter neuem Namen. Die Marke fließt weiter
+>   durch die Signatur, `O003`/`O004`/`O006` greifen unverändert. **Zulässiger Tausch** —
+>   und genau dieser Zweig ist es, der das eine Wort senkt.
+> * `fn … phase <s>` — die Funktion behauptet eine Stufe, ohne einen Schritt zu tun. **Das
+>   ist Form 3 wörtlich**, und §2 hat es am 2026-08-28 abgelehnt.
+>
+> `§42` schreibt nicht hin, welchen der beiden es meint. **Die Rechnung oben nimmt den
+> günstigeren an** — den Tausch —, und selbst unter dieser Annahme kommt sie auf ein Wort.
+
 ### (c) Was `order` trägt, braucht `class … in` gar nicht — und umgekehrt
 
 `class rw in setup, r in live` braucht die **Stufenmenge** und die Vollständigkeit (`R009`).
@@ -312,22 +324,22 @@ Satz (phasen_pass_ist_korrekt).
 |---|---|---|
 | **`boot`** — vor/nach `bss_nullen` | `beispiele/22-bootstrecke.gab`: `linear ghost type BootPhase order { roh, mmu, caps, eps, autoritaet, dienste }` + **6× `advances`** | **hat das Konstrukt.** Keine Handkombination |
 | **Speicher Kern↔Gerät** | 30 von 104 `consumes` in einer `fn` mit `advances` (Abschnitt 2.2) | **hat das Konstrukt.** Die 74 anderen haben keine Phase |
-| **`count`/`backed`** | `dokumente/PLAN.md`:2577–2580 | **braucht keines** — s. unten |
-| **Capability im CDT** | `dokumente/SPRACHE.md`:1546 | **einzige echte Lücke — und `phase` schließt sie nicht** |
+| **`count`/`backed`** | `dokumente/PLAN.md`:2578–2580 | **braucht keines** — s. unten |
+| **Capability im CDT** | `dokumente/SPRACHE.md`:1554 | **einzige echte Lücke — und `phase` schließt sie nicht** |
 
 ### `count`/`backed`: `PLAN.md` hat die Frage vor Wochen beantwortet
 
 > *„Also entweder **monoton** — die einfache, ehrliche Fassung — oder das Verkleinern ist ein
 > Phasenschritt, nach dem kein alter Index überlebt. **Für das Zweite gibt es die
 > «B37»-Maschinerie schon (`order`/`advances`), und für das Erste braucht es nichts.**"*
-> — `dokumente/PLAN.md`:2577–2580
+> — `dokumente/PLAN.md`:2578–2580
 
 **Beide Zweige sind versorgt, und keiner davon durch ein neues Wort.** `§42` zählt die Stelle
 als fünfte Rechtfertigung; sie ist keine.
 
 ### Die CDT ist die einzige offene — und sie ist keine Kette
 
-`SPRACHE.md`:1546 bucht *CapSpace/CDT einschließlich `revoke`* als `table … ops` + `by
+`SPRACHE.md`:1554 bucht *CapSpace/CDT einschließlich `revoke`* als `table … ops` + `by
 consuming` + `by induction over`. Der Grund, warum `order`/`advances` dort nicht greift, ist
 **nicht** ein fehlendes Wort:
 
@@ -430,7 +442,7 @@ type carries the state"* — **eine Ableitung, kein Konstrukt.** Genau dort steh
   in einer *anderen* Funktion steht, zählt hier als phasenfrei.
 * **Der K9-Befund zu `count`/`backed`** (`setzen(100); setzen(200); narrow i to
   0..<hinterlegt; return h.slots[i].wert;` bei `i = 150` → 0 errors, 0 hints) **ist in diesem
-  Baum nicht auffindbar** — weder in `dokumente/` noch in `messung/`. `PLAN.md`:2577 trägt die
+  Baum nicht auffindbar** — weder in `dokumente/` noch in `messung/`. `PLAN.md`:2578 trägt die
   *Entscheidung*, nicht die Messung. **Nachgerechnet ist hier die Entscheidung, nicht der
   Befund.**
 * **Die zwei Zahlen, die um zwei danebenliegen** (`§42`: 6 und 102; hier: 7 bzw. 5 und 104
