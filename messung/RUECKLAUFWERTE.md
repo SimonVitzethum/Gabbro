@@ -876,6 +876,31 @@ in `pruefe-waechter.py` mit Sprechprobe in drei Richtungen: **wer `git` selbst a
 auf den Rücklaufwert** — *eine leere Ausgabe aus einem Befehl, der GESCHEITERT ist, ist keine
 Antwort.* Heute: 1 von 50 Werkzeugen ruft `git`, 0 ohne Riegel.
 
+### And a fourth sibling: the verdict that hung on the LOAD, not on the machine
+
+*Measured 2026-09-01, on `ki-pc-fisch-101`, three runs of the same tree.*
+
+| run | `pruefe-lean-beweis.sh` | verdict in `abnahme.py` |
+|---|---:|---|
+| baseline, `717f235` | **441.6 s** | `gruen [0]` |
+| the same tree, one hour later | **> 600 s** | **`ABBRUCH — HAENGT, Frist 600 s`** |
+| standing alone, timed | **729.4 s** | `LEAN GREEN`, exit **0** |
+
+**The guardian is green and says so; the collecting run says nothing was measured.** The
+deadline is right to fire — a hang and a slow run are indistinguishable from outside, and
+that is exactly why the deadline exists. But the third line is the one that settles it: the
+same tree, the same tool, **green in 729 s**, and the only thing that changed between run one
+and run two is what else the machine was doing (`load average` 3.2, eight users).
+
+> *An abort out of a deadline is no more a finding than an abort out of memory* — `CLAUDE.md`
+> says the second, and this is the first, one class over. **A `2` says the SETUP has to
+> change**, and the setup here is the machine, not the tree.
+
+**What was NOT done, and deliberately:** the deadline was not raised. Moving a limit until
+the run fits under it is the same move as touching a binary to fool a timestamp check — it
+makes exactly the state invisible that the limit exists to catch. *The honest carrier of this
+figure is this table, not a larger number in `FRIST`.*
+
 ## Was diese Tafel NICHT sagt
 
 Sie liest den **Quelltext** und einen Lauf über einem leeren Baum. Ein Wächter, dessen
