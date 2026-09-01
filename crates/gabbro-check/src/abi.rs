@@ -64,6 +64,17 @@ pub const MARKE: &str = "-- @gabi 1";
 /// * die WELTZUSTÄNDE, die eine `effects`-Liste nennt (sonst nennt sie ins Leere),
 /// * die Trägerdeklarationen, ohne die ein `index into T` keine Schranke hat.
 pub fn schreibe(baum: &Programm, quelle: &str) -> String {
+    schreibe_ab(baum, quelle, 0)
+}
+
+/// **The interface of a unit that was itself checked against OTHER interfaces.**
+///
+/// `ab` is the byte at which the unit's own text begins; everything before it came in through
+/// `--with` and belongs to somebody else's object file. *Without the cut, a chain of three
+/// units would have the middle one re-export the first's declarations* -- and the linker
+/// would then see the same symbol promised by two interfaces, which is a collision nobody
+/// wrote.
+pub fn schreibe_ab(baum: &Programm, quelle: &str, ab: usize) -> String {
     let mut aus = String::new();
     let mut nach_modul: std::collections::BTreeMap<String, Vec<String>> = Default::default();
     aus.push_str(MARKE);
@@ -86,6 +97,10 @@ pub fn schreibe(baum: &Programm, quelle: &str) -> String {
     // declaration that names something private. **The same class, from the other side:**
     // there the consequence was made honest, here the cause falls.
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        // An item of the `--with` preamble is not this unit's to export -- see `schreibe_ab`.
+        if (item.span.von as usize) < ab {
+            return;
+        }
         // **A gated item is not in the interface, and the interface is the SHIPPING one**
         // («TB», 2026-08-28).
         //

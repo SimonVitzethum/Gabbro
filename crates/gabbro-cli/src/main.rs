@@ -77,6 +77,13 @@ fn main() -> std::process::ExitCode {
             // the two runs IS the measurement: it says how much still lies between the pass
             // that CHECKS the line and an elaborator that would WRITE it.
             let weit = rest.iter().any(|a| a == "--weit");
+            // **`--unit` writes ONE interface for a unit of several files.**
+            //
+            // Without it a two-file library had no interface at all: run per file, the second
+            // file's heads name types the first declares, and `gabbro abi` refuses the file
+            // it cannot check alone. *A library that cannot be split into two files is not a
+            // library, and the manifest's whole subject is which files form a unit.*
+            let einheit = rest.iter().any(|a| a == "--unit" || a == "--einheit");
             let rest: Vec<&String> = rest.iter().filter(|a| !a.starts_with("--")).collect();
             if rest.is_empty() {
                 eprintln!("gabbro abi: no file named");
@@ -84,6 +91,14 @@ fn main() -> std::process::ExitCode {
             }
             if vergleich {
                 return befehl_abi_vergleich(&rest, weit);
+            }
+            if einheit {
+                if berechnet {
+                    eprintln!("gabbro abi: `--berechnet` and `--unit` are not built together");
+                    return std::process::ExitCode::from(2);
+                }
+                let dateien: Vec<String> = rest.iter().map(|s| (*s).clone()).collect();
+                return schreibe_einheits_abi(&dateien);
             }
             for datei in rest {
                 let Ok(quelle) = std::fs::read_to_string(datei) else {
@@ -702,8 +717,22 @@ fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     // out of a check build -- a missing symbol, and loud. The other default would put the
     // check harness into the shipped artefact, and nothing would say so.
     let pruefbau = argumente.iter().any(|a| a == "--testbuild");
-    let argumente: Vec<String> =
-        argumente.iter().filter(|a| a.as_str() != "--testbuild").cloned().collect();
+    // **`--unit` translates the named files as ONE translation unit** (German second name
+    // `--einheit`), the same word and the same meaning as at `pruefe`.
+    //
+    // > **Until 2026-09-01 the two halves did not match, and that was the hole under `OB5`:
+    // > a unit that CHECKS as a unit was not TRANSLATED as one.** `pruefe --unit` joined the
+    // > files and resolved the names across them; `emit` ran once per file, so the second
+    // > file's `use lager::Faecher` found nothing and the C came out per file or not at all.
+    // > `gabbro build` did the joined emit inside itself and had no name on the command
+    // > line -- *the capability existed and was unreachable*, which is the shape a missing
+    // > feature and a hidden one share.
+    let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
+    let argumente: Vec<String> = argumente
+        .iter()
+        .filter(|a| !matches!(a.as_str(), "--testbuild" | "--unit" | "--einheit"))
+        .cloned()
+        .collect();
     let (dateien, mit) = match split_with(getippt, &argumente) {
         Ok(x) => x,
         Err(c) => return c,
@@ -717,6 +746,9 @@ fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
         Ok(v) => v,
         Err(c) => return c,
     };
+    if einheit {
+        return emittiere_als_einheit(getippt, &dateien, &vorspann, bau);
+    }
     let mut schlecht = false;
     // **A build is more than one file** (the ABI work, 2026-08-25). The C name is the
     // Gabbro name, and two units of ONE run that both carry a `pub fn lesen` emit the same
@@ -759,6 +791,134 @@ fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     }
 }
 
+/// **`gabbro emit --unit a.gab b.gab` -- the named files as ONE translation unit.**
+///
+/// The counterpart of `pruefe --unit`, and it exists because the pair was broken: what
+/// checked as a unit could not be translated as one. See `command_emit` for the measurement.
+fn emittiere_als_einheit(
+    getippt: &str,
+    dateien: &[String],
+    vorspann: &str,
+    bau: gabbro_check::gatter::Bau,
+) -> std::process::ExitCode {
+    let quellen = match lies_quellen(dateien) {
+        Ok(q) => q,
+        Err(e) => {
+            eprintln!("gabbro {getippt}: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    // **The refusals go to STDERR here and to STDOUT at `pruefe` and `build`**, and that is
+    // not a slip: this command writes the C to stdout, so a diagnostic on the same stream
+    // would land inside the translation unit of whoever piped it into a file.
+    match uebersetze_einheit(vorspann, &quellen, bau, Strom::Fehler) {
+        Einheitsbau::Fertig { c, .. } => {
+            print!("{c}");
+            std::process::ExitCode::SUCCESS
+        }
+        Einheitsbau::Abgesagt(n) => {
+            eprintln!(
+                "gabbro {getippt}: the unit of {} file(s) has {n} error(s) -- no C written",
+                dateien.len()
+            );
+            std::process::ExitCode::from(1)
+        }
+    }
+}
+
+/// **`gabbro abi --unit a.gab b.gab` -- ONE interface for a unit of several files.**
+///
+/// It goes through `uebersetze_einheit` and not past it, so the interface comes out of the
+/// same checked parse that would produce the object. *An interface written from a parse the
+/// generator never saw is a promise nobody kept.*
+fn schreibe_einheits_abi(dateien: &[String]) -> std::process::ExitCode {
+    let quellen = match lies_quellen(dateien) {
+        Ok(q) => q,
+        Err(e) => {
+            eprintln!("gabbro abi: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    // **The SHIPPING build**, as everywhere a `.gabi` is written: an interface names no
+    // build, and a gated item binds only in one the interface cannot name.
+    let bau = gabbro_check::gatter::Bau::Auslieferung;
+    match uebersetze_einheit("", &quellen, bau, Strom::Fehler) {
+        Einheitsbau::Fertig { gabi, .. } => {
+            print!("{gabi}");
+            std::process::ExitCode::SUCCESS
+        }
+        Einheitsbau::Abgesagt(n) => {
+            eprintln!(
+                "gabbro abi: the unit of {} file(s) has {n} error(s) -- no interface written",
+                dateien.len()
+            );
+            std::process::ExitCode::from(1)
+        }
+    }
+}
+
+/// What translating one unit came to.
+pub(crate) enum Einheitsbau {
+    /// **The C and the interface, out of ONE checked parse.**
+    ///
+    /// They are handed back together on purpose. A build that parsed once for the object and
+    /// once for the `.gabi` could ship an interface that promises what the object does not
+    /// carry -- and that mismatch would surface at the linker of a THIRD party, which is the
+    /// worst place a Gabbro refusal can turn up.
+    Fertig { c: String, gabi: String },
+    /// The number of errors. **They are already rendered** -- into the files they came from,
+    /// through `zeige_je_stueck`.
+    Abgesagt(usize),
+}
+
+/// **Check and translate a file list as ONE unit -- the one place that does it.**
+///
+/// `emit --unit` and `gabbro build` both need exactly this, and before 2026-09-01 the build
+/// carried its own copy: parse the joined text, run the passes, emit, and render the refusals
+/// back into the files. *Two renderings of one glued parse would be a second register over
+/// the same thing* -- the build's own comment said so about the renderer and then kept a
+/// second copy of everything around it.
+///
+/// **The binding register runs here too, over the joined text.** The build did not have one
+/// at all: a unit whose two files both declare `module a` was a collision no build could see,
+/// though `pruefe --unit` had refused it since 2026-08-21.
+pub(crate) fn uebersetze_einheit(
+    vorspann: &str,
+    quellen: &[(String, String)],
+    bau: gabbro_check::gatter::Bau,
+    nach: Strom,
+) -> Einheitsbau {
+    let Einheitstext { ganz, vorspann_ende, stuecke } = klebe_einheit(vorspann, quellen);
+    let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    // **One unit, one name in the register**, and the preamble is not part of it: what a
+    // `.gabi` declares is a promise about someone else's object file, not a second definition.
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    register.nimm_auf("<unit>", &baum, vorspann_ende, &mut absagen);
+    let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);
+    if absagen.fehler_zahl() == 0 {
+        let gabi = gabbro_check::abi::schreibe_ab(&baum, &ganz, vorspann_ende);
+        return Einheitsbau::Fertig { c, gabi };
+    }
+    let n = absagen.fehler_zahl();
+    let rest = zeige_je_stueck(&absagen, &stuecke, nach, &mut |_, _| {});
+    // Refusals whose site lies in the `--with` preamble or outside every piece. **They are
+    // named, not dropped** -- a partition that swallows what it cannot place looks exactly
+    // like a clean run.
+    for a in &rest {
+        let zeile = format!(
+            "gabbro: [{}] outside every file of the unit -- it belongs to the `--with` \
+             preamble, and its line number is the PREAMBLE's: {}",
+            a.code, a.text
+        );
+        match nach {
+            Strom::Aus => println!("{zeile}"),
+            Strom::Fehler => eprintln!("{zeile}"),
+        }
+    }
+    Einheitsbau::Abgesagt(n)
+}
+
 /// One file of a joined unit, and where its text sits in the joined source.
 ///
 /// **The byte range is the whole point.** Without it a refusal that comes out of the joined
@@ -770,6 +930,67 @@ pub(crate) struct Stueck {
     pub quelle: String,
     pub von: usize,
     pub bis: usize,
+}
+
+/// The joined text of one unit, and the map back into the files it came from.
+pub(crate) struct Einheitstext {
+    pub ganz: String,
+    /// Everything before this offset belongs to the `--with` interfaces, not to the unit.
+    pub vorspann_ende: usize,
+    pub stuecke: Vec<Stueck>,
+}
+
+/// **Glue a file list into ONE translation unit** -- the one place that does it.
+///
+/// Three commands join a unit: `pruefe --unit`, `emit --unit` and `gabbro build`. Until
+/// 2026-09-01 two of them carried their own copy of this byte arithmetic, and *the copies had
+/// already drifted*: the build's did not carry a `--with` preamble at all, so a unit that
+/// checked against a library on the command line could not be built out of a manifest. **A
+/// second register over the same thing, and the drift was in the direction that looks like a
+/// missing feature rather than a bug.**
+pub(crate) fn klebe_einheit(vorspann: &str, quellen: &[(String, String)]) -> Einheitstext {
+    let mut ganz = String::new();
+    if !vorspann.is_empty() {
+        ganz.push_str(vorspann);
+        ganz.push('\n');
+    }
+    let vorspann_ende = ganz.len();
+    let mut stuecke: Vec<Stueck> = Vec::new();
+    for (datei, quelle) in quellen {
+        let von = ganz.len();
+        ganz.push_str(quelle);
+        // **Always a newline, never a conditional one.** A file that ends without one would
+        // otherwise glue its last token to the next file's first, and the joined parse would
+        // read a construct that stands in no source.
+        ganz.push('\n');
+        let bis = ganz.len();
+        stuecke.push(Stueck { datei: datei.clone(), quelle: quelle.clone(), von, bis });
+    }
+    Einheitstext { ganz, vorspann_ende, stuecke }
+}
+
+/// Reads the files of a unit, in the order they were named. **The order is the manifest's**,
+/// and it is kept: it is what the fingerprint and the joined text are taken over.
+pub(crate) fn lies_quellen(dateien: &[String]) -> Result<Vec<(String, String)>, String> {
+    let mut quellen = Vec::new();
+    for datei in dateien {
+        match std::fs::read_to_string(datei) {
+            Ok(q) => quellen.push((datei.clone(), q)),
+            Err(e) => return Err(format!("{datei}: {e}")),
+        }
+    }
+    Ok(quellen)
+}
+
+/// Where the rendered refusals of a joined parse go.
+///
+/// **`gabbro emit` writes the C to stdout**, so its refusals must not: a harness that pipes
+/// the output into a `.c` file would otherwise find a diagnostic inside the translation unit.
+/// `pruefe` and `build` print theirs to stdout, and that is where their harnesses look.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Strom {
+    Aus,
+    Fehler,
 }
 
 /// **The refusals of a joined parse, rendered into the files they came from.**
@@ -785,6 +1006,7 @@ pub(crate) struct Stueck {
 pub(crate) fn zeige_je_stueck(
     absagen: &gabbro_syntax::Absagen,
     stuecke: &[Stueck],
+    nach: Strom,
     je_datei: &mut dyn FnMut(&str, &gabbro_syntax::Absagen),
 ) -> Vec<gabbro_syntax::diag::Absage> {
     let mut gezeigt = vec![false; absagen.absagen.len()];
@@ -802,7 +1024,10 @@ pub(crate) fn zeige_je_stueck(
             eigene.schiebe(a);
         }
         if !eigene.leer() {
-            print!("{}", eigene.zeige(&s.quelle));
+            match nach {
+                Strom::Aus => print!("{}", eigene.zeige(&s.quelle)),
+                Strom::Fehler => eprint!("{}", eigene.zeige(&s.quelle)),
+            }
         }
         je_datei(&s.datei, &eigene);
     }
@@ -835,31 +1060,14 @@ fn pruefe_als_einheit(
     vorspann: &str,
     voll: bool,
 ) -> std::process::ExitCode {
-    let mut ganz = String::new();
-    if !vorspann.is_empty() {
-        ganz.push_str(vorspann);
-        ganz.push('\n');
-    }
-    // Everything before this offset belongs to the interfaces, not to the unit.
-    let vorspann_ende = ganz.len();
-    let mut stuecke: Vec<Stueck> = Vec::new();
-    for datei in dateien {
-        let quelle = match std::fs::read_to_string(datei) {
-            Ok(q) => q,
-            Err(e) => {
-                eprintln!("gabbro: {datei}: {e}");
-                return std::process::ExitCode::from(2);
-            }
-        };
-        let von = ganz.len();
-        ganz.push_str(&quelle);
-        // **Always a newline, never a conditional one.** A file that ends without one would
-        // otherwise glue its last token to the next file's first, and the joined parse would
-        // read a construct that stands in no source.
-        ganz.push('\n');
-        let bis = ganz.len();
-        stuecke.push(Stueck { datei: datei.clone(), quelle, von, bis });
-    }
+    let quellen = match lies_quellen(dateien) {
+        Ok(q) => q,
+        Err(e) => {
+            eprintln!("gabbro: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    let Einheitstext { ganz, vorspann_ende, stuecke } = klebe_einheit(vorspann, &quellen);
 
     let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
     let bericht = pruefe(&baum, &mut absagen);
@@ -890,7 +1098,7 @@ fn pruefe_als_einheit(
     let mut items_gesamt = 0usize;
     let bereiche: Vec<(usize, usize)> = stuecke.iter().map(|s| (s.von, s.bis)).collect();
     let mut i_stueck = 0usize;
-    let rest = zeige_je_stueck(&absagen, &stuecke, &mut |datei, eigene| {
+    let rest = zeige_je_stueck(&absagen, &stuecke, Strom::Aus, &mut |datei, eigene| {
         let f = eigene.fehler_zahl();
         let h = eigene.absagen.len() - f;
         fehler += f;
