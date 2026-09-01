@@ -2113,6 +2113,21 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
 - [ ] **Die fünfte Marke, die niemand führt: wie viel Prozent eines echten Kerns steht am
       Ende in Gabbro statt daneben?** Bei `virtio-net` sind es heute **75 %.**
 
+      > **Die Zerlegung gehört DAVOR, und sie ist billiger als die Marke selbst**
+      > (Ordner, 2026-09-02). Die 25 % daneben haben drei verschieden teure Gründe:
+      >
+      > | Kategorie | was sie kostet |
+      > |---|---|
+      > | Klempnerei | verschwindet nach `B1`/`B2` — **von allein** |
+      > | Hardwarebefehle | hängen am C-Ziel, siehe `B5` — **ein Posten, nicht viele** |
+      > | was Gabbro nicht ausdrücken kann | **`S2`** — der Posten, den keine Verifikation heilt |
+      >
+      > **Nur die dritte Kategorie ist eine Aussage über die SPRACHE.** Bestehen die 25 %
+      > überwiegend aus den ersten beiden, ist die Marke gut und wird von allein besser. Ist
+      > ein Drittel davon Rahmenbedingung, die `spec fn` nicht formulieren kann, misst sie
+      > etwas, das keine Bahn schließt. *Eine Zahl, deren Kategorien man nicht kennt, ist
+      > `W25` mit einem Prozentzeichen.*
+
 ### Punkt 4 fällt — sobald jemand die Teilmenge prüft
 
 **CompCert schließt genau diese Lücke**, und das ist die realistische Antwort. Die Bedingung
@@ -2188,9 +2203,40 @@ C-Funktion, die man selbst deklariert.
 Gabbro hat `u8`. *Das ist eine Signaturfrage an der `extern`-Grenze, keine Typsystemfrage* —
 und `N046` ist genau der Pass, der sie stellt.
 
-- [ ] Rechnen, was ein `char` an der **`extern`-Grenze** kostet — nicht in der Sprache.
+- [ ] ~~Rechnen, was ein `char` an der **`extern`-Grenze** kostet — nicht in der Sprache.
       *Vielleicht reicht, dass `N046` `[u8; N]` gegen `char *` durchlässt, wenn der Nutzer es
-      hinschreibt.*
+      hinschreibt.*~~ **FALSCH GERAHMT, berichtigt vom Ordner am 2026-09-02.**
+
+      > **`[u8; N]` trägt eine LÄNGE. `const char *` trägt einen TERMINATOR.** Das sind zwei
+      > verschiedene Arten, ein Ende zu markieren, und die Bindung muss eine in die andere
+      > übersetzen. Geht ein `[u8; N]` ohne abschließende Null an `puts`, liest die C-Seite
+      > über das Ende hinaus — **ein Speicherfehler, erzeugt genau von der Entscheidung, die
+      > `B2` treffen soll, an der einzigen Stelle, an der Gabbro keine Schranke mehr hält.**
+
+      **Die Regel, und sie folgt aus der Repräsentation statt aus einem Geschmacksurteil:
+      gebunden wird, was eine LÄNGE nimmt.** `write(1, buf, n)` passt exakt auf `[u8; N]` —
+      Zeiger plus Länge, kein Terminator, kein Vertrauen. `fwrite` genauso. `puts` und
+      `strlen` passen strukturell nicht und sollen es nicht. *Dieselbe Regel erklärt, warum
+      `putchar` heute geht: es nimmt einen WERT, keine Länge.*
+
+      **Gemessen 2026-09-02, und der Zustand ist schlechter als „ungeprüft":**
+
+      | | |
+      |---|---|
+      | Einträge in `cnamen.rs` | **325**, davon **138 mit einer Gabbro-Form** |
+      | alle 138 | nehmen WERTE (math, ctype, `putchar`, `abort`, `exit`) |
+      | mit Länge UND Form | **null** |
+
+      `write` bindet **heute mit `0 errors`** — weil es POSIX ist und in der C11-Tafel gar
+      nicht vorkommt. Der Erzeuger schreibt `int64_t write(int32_t, const Text *, uint64_t);`
+      und **das widerspricht dem echten** `ssize_t write(int, const void *, size_t)`: mit
+      `<unistd.h>` daneben sagt `gcc` *„abweichende Typen für »write«"*, ohne den Kopf bindet
+      es still gegen eine unverträgliche Deklaration.
+
+      > **`N041` bewacht C11-Namen. POSIX fällt durchs Netz** — dieselbe Gestalt, gegen die
+      > `N041` gebaut wurde (`erzeugernamen.rs`: *„`gabbro pruefe` sagte `0 errors`, `gabbro
+      > emit` schrieb die Einheit ohne `C001`, und `cc` antwortete `redefinition`"*), einen
+      > Namensraum weiter.
 - [ ] `beispiele/63` druckt Zeichen für Zeichen, **weil `putchar` die einfachste bindbare
       Form war — nicht, weil mehr unmöglich wäre.** Ein zweites Beispiel gehört daneben.
 
@@ -2226,11 +2272,49 @@ Bau                    inkrementell nach INHALT, mit Deckungszeile
       `build|bau` war unter „von Anfang an englisch" abgelegt, obwohl `bau` ein deutscher
       Zweitname ist wie jeder andere.
 
-### B5 — `at port` ist abgesagt, nicht gelöst
+### B5 — ~~`at port` ist abgesagt~~ **Die Hardwarebefehlsebene liegt außerhalb des C-Ziels**
 
-*Eine abgesagte Absenkung ist ein Loch im Anspruch, kein geschlossener Punkt.* Solange
-Portzugriffe außerhalb der Sprache stattfinden, gilt „MMIO gelöst" **für memory-mapped und
-nicht für x86-I/O.**
+*Eine abgesagte Absenkung ist ein Loch im Anspruch, kein geschlossener Punkt.*
+
+**Umgebucht am 2026-09-02 auf Verlangen des Ordners, und die Zusammenlegung ist der Punkt:**
+`at port` ist ausgeschlossen, weil reines C keine Port-I/O hat. **Dasselbe gilt für `invlpg`,
+`TLBI`, `DSB`/`sfence` und den Shootdown — kein einziges davon ist in C ausdrückbar.**
+
+> **Das ist kein Stapel von Einzellöchern, sondern eine Eigenschaft der ZIELWAHL: C11 hat
+> eine Ausdrucksdecke, und sie verläuft exakt an der Hardwaregrenze — genau dort, wo Gabbros
+> stärkste Konstrukte liegen.** Als ein Posten geführt ist es ein Entwurfsschnitt, den man
+> einmal macht; als vier Löcher ist es viermal dieselbe Diskussion.
+
+Gemessen, beide Absagen kommen vom ERZEUGER und nennen dieselbe Ursache:
+
+```
+device … at port   C001  „the port space is reached by `in`/`out`, and this generator
+                          writes a volatile load at `basis + offset`"
+device … at dma    C001  „which barrier a DMA access needs is a statement about the
+                          MEMORY MODEL"            (ohne `assume dma_kohaerent`)
+```
+
+**Und jetzt der Fund, der die Schätzung halbiert: der Ausstieg EXISTIERT bereits.**
+`beispiele/36-asm.gab`:18 schreibt einen x86-Portzugriff, heute, mit `0 errors`:
+
+```gabbro
+impl fn ausgeben(tor : u16, wert : u8)
+    effects { writes GERAET }   costs <= 1 ops   arch x86_64
+    = asm { "outb %[wert], %[tor]" in { wert : "a", tor : "d" } clobbers { memory } };
+```
+
+Der Erzeuger senkt das zu `__asm__ __volatile__` ab. **Der `asm`-Rumpf ist ein BENANNTES,
+gezähltes Fenster** — mit Wirkungsliste, Kostenschranke, `clobbers` und `arch`-Riegel, genau
+das, was `parse.rs` dem Wort `unsafe` entgegenhält: *„there are no unsafe windows; what
+touches the machine stands in `axiom`, `raw fn` or `prim fn` — named and counted."*
+
+> **Was fehlt, ist nicht der Ausstieg, sondern seine VERDRAHTUNG.** `device … at port` und
+> `asm` stehen beide im Baum, beide richtig, und dass das eine zum anderen absenken könnte,
+> gehört zu keinem von beiden — **`OA4` in Reinform**, achte Instanz.
+
+*Nebenbei ist das die ehrlichste Antwort auf „Gabbro ohne `unsafe`": es stimmt in der
+Sprache, und die Stelle, an der es nicht mehr stimmt, ist nicht Gabbros Entwurf, sondern das
+Ziel.*
 
 ### B6 — Und die zwei Entscheidungen beim Ordner
 
