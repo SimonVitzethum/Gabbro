@@ -412,3 +412,115 @@ pub fn schreibe_berechnet(baum: &Programm, quelle: &str) -> String {
     }
     aus
 }
+
+// =======================================================================================
+// «T1» -- THE TALLY PER ENTRY, NOT PER FUNCTION
+// =======================================================================================
+
+/// **The comparison per WRITTEN LINE, and it is a different question from `Vergleich`.**
+///
+/// `Urteil` judges a whole function: one narrower entry makes the whole row *narrower*.
+/// The target mark counts **entries** -- 462 of them -- and it asks of each one: *would a
+/// derivation have written this line?* A function with six correct entries and one
+/// unwarranted one is one row there and seven entries here.
+///
+/// > **And the two directions do not live in the same population.** *Too wide* is a
+/// > property of a WRITTEN entry -- it stands there and carries nothing. *Too narrow* is a
+/// > property of a DERIVED effect that no written entry covers; it is a hole, and holes are
+/// > not among the 462. Adding the two into one quota would divide by a population that
+/// > contains only one of them.
+#[derive(Debug, Default, Clone)]
+pub struct Eintraege {
+    /// Written entries that cover at least one derived effect -- a derivation would have
+    /// written them.
+    pub tragend: Vec<String>,
+    /// Written entries that cover NOTHING derived. **Over-declaration, and it is silent.**
+    pub zu_weit: Vec<String>,
+    /// Derived effects that no written entry covers. **A hole -- and NOT one of the 462.**
+    pub zu_eng: Vec<String>,
+    /// `pure` over an empty derived set -- exactly right, and derivable as the empty set.
+    pub rein_stimmt: Vec<String>,
+    /// A written `pure` that the derivation CONTRADICTS. **It is a written entry**, so it
+    /// belongs in the partition over the 462 -- putting it into `zu_eng` (which counts
+    /// DERIVED effects) would make the written columns not add up to their population.
+    pub rein_falsch: Vec<String>,
+    /// `diverges`: a statement about termination, not about a place. **This analysis does
+    /// not derive it**, and counting it as over-declaration would report a saving that the
+    /// derivation cannot make.
+    pub ausserhalb: Vec<String>,
+    /// The hull tears (R16). Every entry of this function is UNMEASURED -- neither right
+    /// nor wrong -- and it says so instead of counting them as correct.
+    pub ungemessen: Vec<String>,
+}
+
+/// The entry tally over one function.
+pub fn eintraege(v: &Vergleich) -> Eintraege {
+    let mut e = Eintraege::default();
+    let mit_ort: Vec<&String> = v.berechnet.iter().filter(|b| !ortlos(b)).collect();
+    if let Urteil::Unvollstaendig(_) = &v.urteil {
+        e.ungemessen = v.deklariert.clone();
+        return e;
+    }
+    for d in &v.deklariert {
+        if d == "diverges" {
+            e.ausserhalb.push(d.clone());
+            continue;
+        }
+        if d == "pure" {
+            // **`pure` is not ceremony when it is true** -- it is the empty set written
+            // down, and a derivation produces exactly that. It is over-declaration only in
+            // the sense that nobody had to write it.
+            if mit_ort.is_empty() {
+                e.rein_stimmt.push(d.clone());
+            } else {
+                e.rein_falsch.push(d.clone());
+            }
+            continue;
+        }
+        if mit_ort.iter().any(|b| deckt_a4(d, b)) {
+            e.tragend.push(d.clone());
+        } else {
+            e.zu_weit.push(d.clone());
+        }
+    }
+    for b in &mit_ort {
+        if !v.deklariert.iter().any(|d| deckt_a4(d, b)) {
+            e.zu_eng.push((*b).clone());
+        }
+    }
+    e
+}
+
+/// **The population BESIDE the quota** (R16): how many `effects` entries does a unit carry
+/// at all, and how many of them stand on a function a derivation could ever look at?
+///
+/// *An `extern fn` has no body.* Its `effects` line is not bookkeeping -- it is the trust
+/// surface, the place where the checked world ends. **Those entries can never go to zero**,
+/// and counting them into the mark would promise a saving that no build can deliver.
+#[derive(Debug, Default, Clone)]
+pub struct Bestand {
+    /// Entries on a function with a body -- the population the mark speaks about.
+    pub mit_rumpf: usize,
+    /// Entries on `extern`/`prim`/`spec` -- no body, nothing to derive from.
+    pub ohne_rumpf: usize,
+    /// Functions carrying an `effects` clause, split the same way.
+    pub fn_mit_rumpf: usize,
+    pub fn_ohne_rumpf: usize,
+}
+
+pub fn bestand(baum: &Programm) -> Bestand {
+    let mut b = Bestand::default();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            let Some(w) = &f.effects else { return };
+            if matches!(f.rumpf, FnRumpf::Block(_)) {
+                b.mit_rumpf += w.liste.len();
+                b.fn_mit_rumpf += 1;
+            } else {
+                b.ohne_rumpf += w.liste.len();
+                b.fn_ohne_rumpf += 1;
+            }
+        }
+    });
+    b
+}

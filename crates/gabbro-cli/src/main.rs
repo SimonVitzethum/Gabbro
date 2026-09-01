@@ -1212,6 +1212,21 @@ fn befehl_abi_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCo
     let mut zeilen: Vec<String> = Vec::new();
     let mut dateien_gelesen = 0usize;
     let mut dateien_abgewiesen: Vec<String> = Vec::new();
+    // **The tally per ENTRY -- the population the target mark counts.** Six numbers, and
+    // they do not add up to one quota on purpose: `zu_eng` is a count of DERIVED effects
+    // that no line covers, and those are not among the written entries.
+    let mut e_tragend = 0usize;
+    let mut e_zu_weit = 0usize;
+    let mut e_zu_eng = 0usize;
+    let mut e_rein = 0usize;
+    let mut e_rein_falsch = 0usize;
+    let mut e_ausserhalb = 0usize;
+    let mut e_ungemessen = 0usize;
+    let mut b_mit = 0usize;
+    let mut b_ohne = 0usize;
+    let mut b_fn_mit = 0usize;
+    let mut b_fn_ohne = 0usize;
+    let mut weit_zeilen: Vec<String> = Vec::new();
     for datei in dateien {
         let Ok(quelle) = std::fs::read_to_string(datei.as_str()) else {
             eprintln!("gabbro: {datei} not readable");
@@ -1227,7 +1242,23 @@ fn befehl_abi_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCo
             continue;
         }
         dateien_gelesen += 1;
+        let b = gabbro_check::abi::bestand(&baum);
+        b_mit += b.mit_rumpf;
+        b_ohne += b.ohne_rumpf;
+        b_fn_mit += b.fn_mit_rumpf;
+        b_fn_ohne += b.fn_ohne_rumpf;
         for v in gabbro_check::abi::vergleiche_mit(&baum, weit) {
+            let e = gabbro_check::abi::eintraege(&v);
+            e_tragend += e.tragend.len();
+            e_zu_weit += e.zu_weit.len();
+            e_zu_eng += e.zu_eng.len();
+            e_rein += e.rein_stimmt.len();
+            e_rein_falsch += e.rein_falsch.len();
+            e_ausserhalb += e.ausserhalb.len();
+            e_ungemessen += e.ungemessen.len();
+            for w in &e.zu_weit {
+                weit_zeilen.push(format!("  too wide   {}::{}   {w}", v.modul, v.name));
+            }
             let ort = format!("{}::{}", v.modul, v.name);
             let ist_impl = v.klasse == Some(gabbro_syntax::ast::FnKlasse::Impl);
             let mut buche = |i: usize| { if ist_impl { i4[i] += 1; } };
@@ -1320,6 +1351,38 @@ fn befehl_abi_vergleich(dateien: &[&String], weit: bool) -> std::process::ExitCo
     println!("  **BROADER belongs empty.** `E005`, `E008` and `E010` demand that every");
     println!("  performed effect stand in the list -- should this column move off zero, the");
     println!("  finding is not one about the elaborator but one about those three.");
+    println!();
+    println!("== PER ENTRY -- the population the target mark counts ==");
+    for z in &weit_zeilen {
+        println!("{z}");
+    }
+    if !weit_zeilen.is_empty() {
+        println!();
+    }
+    println!("  `effects` entries in the whole corpus       {:>4}", b_mit + b_ohne);
+    println!("      on a function WITH a body               {b_mit:>4}   ({b_fn_mit} functions)");
+    println!("      on `extern`/`prim` -- NO body           {b_ohne:>4}   ({b_fn_ohne} functions)");
+    println!("        ^ these can never go to zero: no body, nothing to derive from.");
+    println!("          An `extern fn` effect line is the TRUST SURFACE, not bookkeeping.");
+    println!();
+    let messbar =
+        e_tragend + e_zu_weit + e_rein + e_rein_falsch + e_ausserhalb + e_ungemessen;
+    println!("  entries the comparison could look at        {messbar:>4}");
+    println!("  ---------------------------------------------");
+    println!("  RIGHT   -- covers a derived effect          {e_tragend:>4}");
+    println!("  RIGHT   -- `pure`, derived set empty        {e_rein:>4}");
+    println!("  TOO WIDE-- covers nothing derived           {e_zu_weit:>4}");
+    println!("  TOO NARROW -- `pure` contradicted           {e_rein_falsch:>4}");
+    println!("  outside -- `diverges`, not a place          {e_ausserhalb:>4}");
+    println!("  UNMEASURED -- the hull tears (R16)          {e_ungemessen:>4}");
+    if messbar != b_mit {
+        println!("  !! the columns do not add up to {b_mit} -- the partition is broken");
+    }
+    println!();
+    println!("  TOO NARROW -- derived, covered by no line   {e_zu_eng:>4}");
+    println!("     ^ counted on the DERIVED side. These are holes, and a hole is not one of");
+    println!("       the written entries -- adding it into the quota above would divide by a");
+    println!("       population that does not contain it.");
     std::process::ExitCode::SUCCESS
 }
 
