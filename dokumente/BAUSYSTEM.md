@@ -294,7 +294,7 @@ haupt (program)       prog-haupt.gab                   ->  haupt.o, dann der BIN
 |---|---|
 | `das_zweieinheitenprogramm_uebersetzt_und_laeuft` | 1 gerechnete Kante, gebunden, `137` |
 | `ohne_die_kante_faellt_das_programm` | dasselbe Programm ohne die Einheit darunter: `K003` |
-| `ein_programm_ohne_main_faellt_am_binder` | der Bindeschritt läuft und sagt wirklich ab |
+| `ein_programm_ohne_main_faellt_an_der_eintrittsregel` | der Bindeschritt läuft und sagt wirklich ab |
 | `was_pub_nicht_traegt_bindet_nicht` | `nm -g`: außen genau `ablegen holen` |
 | `eine_aenderung_im_privaten_rumpf_baut_das_programm_neu` | die Abdruckkette |
 | `der_treiber_druckt_und_wird_verglichen` | `100 37 100`, mit Sprechprobe |
@@ -369,7 +369,7 @@ Vorzeigebeispiel, das der C-Norm widerspricht, ist keines.
 
 ## Was NICHT läuft
 
-* **Kein `main` in der Sprache, und kein Wort darüber.** `main` ist ein gewöhnlicher `pub fn`,
+* **~~Kein `main` in der Sprache~~ **ERLEDIGT 2026-09-01**: kein Wort dazu, aber eine Regel — ein `unit … program` ohne genau einen `pub fn main` fällt jetzt IM PRÜFER statt am Binder. Vormals: kein `main` in der Sprache, und kein Wort darüber.** `main` ist ein gewöhnlicher `pub fn`,
   dessen Name zufällig der ist, den der Binder sucht. Nichts prüft, dass ein
   `unit … program` genau einen hat — das tut der Binder, drei Werkzeuge später.
 * **Ein Zyklus ZWISCHEN Einheiten ist weiter ungemessen.** Der Sortierer sagt ihn beim Namen

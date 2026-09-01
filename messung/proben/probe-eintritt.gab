@@ -1,0 +1,20 @@
+-- **The hosted entry, and it is an ordinary `pub fn`.**
+--
+-- `emit.rs` does not mangle: the C name IS the Gabbro name, so this function becomes C's
+-- `main` and the linker finds it. **No word was added for this** -- `entry` next door is a
+-- different construct (a hardware-entered interrupt stub with a register footprint, a vector
+-- and a dispatch, and it emits a prototype instead of a body).
+--
+-- What the entry rule adds is not the entry but the CHECK: until 2026-09-01 nothing held that a
+-- `unit ... program` has exactly one, and the refusal came from `ld` three tools later.
+module probe::eintritt {
+
+-- 41 and not 0, so a passing run is distinguishable from a program that did nothing.
+pub fn main() -> i32 in 0 .. 100
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 41;
+}
+
+}

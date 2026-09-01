@@ -1,0 +1,6 @@
+-- **Gift for the entry rule: the entry takes an argument, and C's `main` takes none or two.**
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-eintritt-parameter
+
+unit parameter program
+    messung/proben/probe-eintritt-parameter.gab

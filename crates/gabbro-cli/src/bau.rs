@@ -189,25 +189,56 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     Ok(Manifest { compiler, ausgabe, einheiten })
 }
 
-/// The modules a unit DECLARES, and the modules it USES -- both read out of the sources.
+/// **The name the linker looks for, and this is the only place in the tree that spells it.**
+///
+/// It is **not a Gabbro word**: `emit.rs` does not mangle, so a `pub fn main` in a source IS
+/// C's `main` in the artefact. *That is why the entry rule is a build rule and not a language
+/// change* -- there is nothing to add to the vocabulary, only something to check.
+const EINTRITT: &str = "main";
+
+/// **What the sources declare under the entry name -- where it stands and what shape it has.**
+///
+/// All three fields are what a refusal has to say: *which* file, whether the linker can see
+/// it, and whether C would accept the signature. A bare count would answer "how many" and
+/// leave every other question to `cc`.
+#[derive(Debug, Clone)]
+struct Eintritt {
+    datei: String,
+    modul: String,
+    oeffentlich: bool,
+    parameter: usize,
+}
+
+/// The modules a unit declares and uses, **and every declaration of the entry name** -- all
+/// three out of ONE parse of each file.
 ///
 /// **This is the half the manifest must not carry.** `module` and `use` stand in the files;
-/// asking them is a read, writing them down again is a second register.
-fn modulkarte(quellen: &[(String, String)]) -> (BTreeSet<String>, BTreeSet<String>) {
+/// asking them is a read, writing them down again is a second register (W7). *The entry is
+/// the same kind of thing* -- it stands in a source, and the manifest says only whether the
+/// unit that holds it is a `program`.
+///
+/// *A second parse for the entry would be a second reading of one text*, and the two could
+/// drift apart the first time either walk learned to nest differently.
+fn modulkarte(
+    quellen: &[(String, String)],
+) -> (BTreeSet<String>, BTreeSet<String>, Vec<Eintritt>) {
     let mut deklariert = BTreeSet::new();
     let mut benutzt = BTreeSet::new();
-    for (_, quelle) in quellen {
+    let mut eintritte = Vec::new();
+    for (datei, quelle) in quellen {
         let (baum, _) = gabbro_syntax::lies("<scan>", quelle);
-        sammle(&baum.items, "", &mut deklariert, &mut benutzt);
+        sammle(&baum.items, "", datei, &mut deklariert, &mut benutzt, &mut eintritte);
     }
-    (deklariert, benutzt)
+    (deklariert, benutzt, eintritte)
 }
 
 fn sammle(
     items: &[gabbro_syntax::ast::Item],
     pfad: &str,
+    datei: &str,
     deklariert: &mut BTreeSet<String>,
     benutzt: &mut BTreeSet<String>,
+    eintritte: &mut Vec<Eintritt>,
 ) {
     use gabbro_syntax::ast::ItemArt;
     for i in items {
@@ -219,7 +250,7 @@ fn sammle(
                     format!("{pfad}::{}", m.pfad.text())
                 };
                 deklariert.insert(voll.clone());
-                sammle(&m.items, &voll, deklariert, benutzt);
+                sammle(&m.items, &voll, datei, deklariert, benutzt, eintritte);
             }
             ItemArt::Use(u) => {
                 // `use a::b::C;` names the MODULE `a::b` -- the last part is the item.
@@ -228,8 +259,115 @@ fn sammle(
                     benutzt.insert(t[..i].to_string());
                 }
             }
+            // **A function of the entry name, wherever it stands.** The module is recorded
+            // and not compared: `main` is a C name, and C has one namespace -- a `main` deep
+            // in a module is the same symbol as one at the top.
+            ItemArt::Funktion(f) if f.name.text == EINTRITT => eintritte.push(Eintritt {
+                datei: datei.to_string(),
+                modul: if pfad.is_empty() { String::from("(top level)") } else { pfad.to_string() },
+                oeffentlich: f.oeffentlich,
+                parameter: f.parameter.len(),
+            }),
             _ => {}
         }
+    }
+}
+
+/// **The entry rule -- a `program` names exactly one entry, and an `object` names none.**
+///
+/// *Measured on 2026-09-01, and the finding is that most of "exactly one" already stood:*
+///
+/// | case | who refused it BEFORE this rule |
+/// |---|---|
+/// | one `pub fn main()` in a `program` | nobody -- it builds, links and runs |
+/// | two `pub fn main` in one unit | **`N039`**, by name, in Gabbro |
+/// | zero `main` in a `program` | `ld`, *"undefined reference to `main`"* |
+/// | a private `fn main` | `cc -Werror=main`, *"normally a non-static function"* |
+/// | a wrong return type or arity | `cc -Werror=main` |
+///
+/// **The three lower rows are the rule's whole reason.** They are refusals from foreign
+/// tools, in the system's language, one and three tools downstream -- and the first of them
+/// is the case a learner hits: *a `program` whose entry is simply not there.* `N039` covers
+/// the duplicate only where BOTH are exported; a `pub` one beside a private one is two
+/// entries and no `N039`.
+///
+/// **It costs no word.** `main` is an identifier, not a keyword; the vocabulary marks
+/// (221 / 208 / 333) do not move, and `entry` is untouched -- that word declares an
+/// *interrupt* stub entered by hardware, with a register footprint, a vector and a dispatch,
+/// and it emits a prototype rather than a body. *A hosted entry is a different construct that
+/// happens to share an English word.*
+///
+/// > **And it carries no identifier, which was measured and not assumed.** It read `B001` for
+/// > one commit, until two guards said independently that the identifier space belongs to the
+/// > CHECKER. `pruefe-kennungen.py` raised the count from 259 to 260 -- a number `TODO.md`
+/// > and `README.md` both carry -- and `pruefe-saetze.py` raised the harder objection:
+/// > its count of identifiers that owe a statement is a **ratchet** (`messung/PASSREGISTER.md`: 45, *may fall, not
+/// > rise*), and `TODO.md` states the rule outright -- **no new refusal code without its
+/// > statement.**
+/// >
+/// > **There is no statement to give it.** A `Satz` says what is true of a program that passed
+/// > the checker without a refusal; this rule is about a MANIFEST, which no pass ever sees.
+/// > Registering it would have meant a thirteenth pass, and `paesse.rs` holds that list at
+/// > twelve against `SPRACHE.md` Teil III §6 -- *the twelve is a claim about the language, not
+/// > a container with room in it.*
+/// >
+/// > So the refusal speaks in sentences, like the four this file already had: a module in two
+/// > units, a cycle, an empty unit, a linker that said no. **The convention was already here;
+/// > the identifier was the deviation.** *What it costs, named: no `-- erwartet: CODE` poison
+/// > probe can name this rule -- and that convention does not reach here anyway, because it
+/// > is for `.gab` files the checker reads and these probes are `.bau` manifests.*
+fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
+    let ort = |e: &Eintritt| format!("`{}::{EINTRITT}` in {}", e.modul, e.datei);
+    match art {
+        Art::Programm => match eintritte.len() {
+            0 => Some(format!(
+                "this `program` declares no `{EINTRITT}` -- the hosted entry is a \
+                 `pub fn {EINTRITT}()` and this unit has none\n\
+                 \x20        = without this rule the refusal is `ld`'s (\"undefined \
+                 reference to `{EINTRITT}`\"), three tools later and in the system's language"
+            )),
+            1 => {
+                let e = &eintritte[0];
+                if !e.oeffentlich {
+                    return Some(format!(
+                        "{} is not `pub` -- it lowers to a `static` function and the \
+                         linker never sees it\n\
+                         \x20        = the entry is an EXPORTED name; write `pub fn \
+                         {EINTRITT}()`",
+                        ort(e)
+                    ));
+                }
+                if e.parameter != 0 {
+                    return Some(format!(
+                        "{} takes {} parameter(s) -- the hosted entry takes none\n\
+                         \x20        = C allows `int {EINTRITT}(void)` and `int \
+                         {EINTRITT}(int, char **)`; Gabbro writes the first, and it has no \
+                         type for the second",
+                        ort(e),
+                        e.parameter
+                    ));
+                }
+                None
+            }
+            n => Some(format!(
+                "this `program` declares `{EINTRITT}` {n} times -- {}\n\
+                 \x20        = a program has exactly one entry. `N039` catches the case \
+                 where both are `pub`; this one also catches a `pub` beside a private",
+                eintritte.iter().map(ort).collect::<Vec<_>>().join(", ")
+            )),
+        },
+        // A library that defines the entry collides with the program that links it -- and it
+        // collides at the LINKER, over two units, which is exactly the seam nothing else in
+        // this build sees.
+        Art::Objekt => eintritte.first().map(|e| {
+            format!(
+                "this `object` declares {} -- a library unit that defines the entry \
+                 collides with the `program` that links it\n\
+                 \x20        = `{EINTRITT}` belongs to the `program` unit; declare this unit \
+                 `program`, or rename the function",
+                ort(e)
+            )
+        }),
     }
 }
 
@@ -265,6 +403,9 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let mut quellen_je_einheit: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
     let mut modul_zu_einheit: BTreeMap<String, String> = BTreeMap::new();
     let mut benutzt_je_einheit: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    // **Every declaration of the entry name, per unit** -- the one question the manifest can
+    // answer and a single file cannot: `object` or `program` (see `eintrittsregel`).
+    let mut eintritte_je_einheit: BTreeMap<String, Vec<Eintritt>> = BTreeMap::new();
     for e in &manifest.einheiten {
         let mut quellen = Vec::new();
         for d in &e.dateien {
@@ -276,7 +417,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 }
             }
         }
-        let (deklariert, benutzt) = modulkarte(&quellen);
+        let (deklariert, benutzt, eintritte) = modulkarte(&quellen);
+        eintritte_je_einheit.insert(e.name.clone(), eintritte);
         for m in deklariert {
             // **A module name belongs to at most one unit of a build.** Across the whole tree
             // it does not (`module gift` has 122 files); inside one build it must, or a `use`
@@ -320,15 +462,26 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         println!("manifest {}", manifestpfad.display());
         println!("  compiler {}", manifest.compiler.join(" "));
         println!("  out      {}", manifest.ausgabe);
+        // **The dry run carries the entry rule too, and that is the point of a dry run.** The entry
+        // is read out of the sources this manifest names -- no C, no compiler, no linker --
+        // so a plan that could not link is a plan that says so before anything is written.
+        let mut befunde = 0usize;
         for name in &reihenfolge {
             let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
             println!("  unit {name} ({} file(s))", e.dateien.len());
+            if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
+                befunde += 1;
+                println!("  REFUSED  {name}: {befund}");
+            }
         }
         println!("  {} computed edge(s) between units", kanten.len());
         for (a, b) in &kanten {
             println!("    {a} -> {b}");
         }
-        deckungszeile(&manifest, 0, 0, 0);
+        deckungszeile(&manifest, 0, 0, befunde);
+        if befunde > 0 {
+            return std::process::ExitCode::from(1);
+        }
         return std::process::ExitCode::SUCCESS;
     }
 
@@ -368,6 +521,14 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         if let Some(u) = fehlt {
             abgesagt += 1;
             println!("REFUSED  {name}: the unit `{u}` it rests on was not built");
+            continue;
+        }
+        // **The entry rule runs BEFORE the C is written.** A `program` without an entry translates
+        // cleanly, compiles cleanly and dies at the linker -- so a rule that ran afterwards
+        // would say the same thing `ld` says, only later.
+        if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
+            abgesagt += 1;
+            println!("REFUSED  {name}: {befund}");
             continue;
         }
         match baue_einheit(&manifest, e, quellen, &unten, bau, pruefbau) {

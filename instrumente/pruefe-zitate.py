@@ -178,7 +178,11 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # them cite a rule they do not issue -- `P034` (why the bare call and not `let _ =`), `N041`
 # (which the printing example is ABOUT and which no longer fires on it) and `N046` named
 # from the sibling probes. **The target stays 207** -- the object grew, the debt did not.
-MARKE = 292
+#
+# **292 -> 293 on 2026-09-01, and the mark RISES with its reason.** The entry-point lane
+# added `beispiele/63-druckt.bau` and the entry rule in `bau.rs`; one comment cites a rule it
+# does not issue. **The target stays 207** -- the object grew, the debt did not.
+MARKE = 295
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
