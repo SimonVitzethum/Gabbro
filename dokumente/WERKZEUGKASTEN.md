@@ -1188,3 +1188,38 @@ nachgezaehlt: 39 Deklarationen, davon 13 in `gift/` -- ein DRITTEL
 niemand nach dem Nenner gefragt hat.* Von 21 Werkzeugen, die über `.gab` zählen, nennen
 **vier** `gift/` nicht; zwei davon wählen eine Teilmenge, die es ohnehin ausschließt, und
 **zwei nicht.**
+
+---
+
+## W29 — Vor einer Regel über einem WORT steht die Auszählung seiner Verwendungen
+
+*Gebucht 2026-09-01, nach der dritten Instanz.*
+
+> **Eine Regel über einem Schlüsselwort trifft ALLE seine Verwendungen, und die Verteilung
+> dahinter ist selten einheitlich.**
+
+| Wort | die Regel wollte | die Verteilung war |
+|---|---|---|
+| `runs online` | *„ohne erzeugte Prüfung → `C001`"* | **drei KLASSEN:** `table … ops` (3) trägt es über eine maschinengeprüfte Schablone · `table` ohne `ops` (5) als `E`-Pflicht · **`walk` (3) durch nichts** |
+| `narrow … else` | einen Terminator nachtragen | **drei KONSTRUKTE derselben Bauart:** `narrow … else`, `let … else`, der `exchange`-`update`-Rumpf — der Kommentar nennt sie zusammen |
+| `_ =>` | Wildcards streichen | **drei KATEGORIEN:** tote Verteidigung (4) · tragender Standardzweig (6) · echter Befund (1) |
+
+**Dreimal dieselbe Bewegung — eine Regel über der OBERFLÄCHE statt über der SACHE.**
+
+> *Eine Regel über dem Wort `online` hätte zwei funktionierende Register getroffen, um an das
+> eine zu kommen, das nicht funktioniert.*
+
+**Die Auszählung ist billiger als die Regel**, und sie hat drei mögliche Ausgänge, von denen
+zwei die Regel verhindern:
+
+```
+einheitlich   ->  die Regel ist richtig, und das ist jetzt GEMESSEN statt vermutet
+mehrere       ->  die Regel trifft zu breit -- sie gehoert an die Klasse, nicht an das Wort
+eine Klasse   ->  die Regel ist eine Absage ueber einen Fall; Regel A entscheidet
+```
+
+**Und der Nachtrag aus derselben Stunde:** wenn die Auszählung über den *eigenen Korpus*
+läuft, ist sie selbstbestätigend — *ein Konstrukt, das heute nicht sinnvoll schreibbar ist,
+steht nicht da, also sagt Regel A ab, also entsteht es nie.* **Das ist ein Zirkel, kein
+Befund.** Wo ein externer Zeuge existiert — `../caprock-messbasis`, 139 Dateien, 75 294
+Zeilen — **ist er stärker als der Korpus, und die Frage gehört an ihn gestellt.**
