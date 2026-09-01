@@ -198,3 +198,106 @@ fn erholung_zeigt_mehr_als_einen_befund() {
         .count();
     assert_eq!(fehler, 2, "beide Befunde muessen erscheinen:\n{}", absagen.zeige(quelle));
 }
+
+// -- The five paper cuts of `PLAN-HARDWARE.md` §49 B3 ------------------------------------
+//
+// **A poison probe cannot hold any of these**, and that is why they stand here: the corpus
+// harness matches CODES, and nothing about these five changes a code. What changed is the
+// text under the site -- the shape that was meant, in one line. *A cure that no guardian
+// reads is a cure until the next rewrite.*
+
+/// The expected code falls AND its refusal carries the given note.
+///
+/// **Both halves, or neither is a measurement.** Asserting only the code would pass with the
+/// note deleted; asserting only the note would pass with the refusal moved to another rule.
+fn faellt_mit_notiz(quelle: &str, code: &str, teil: &str) {
+    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    let treffer: Vec<_> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler && a.code == code)
+        .collect();
+    assert!(
+        !treffer.is_empty(),
+        "expected {code}:\n{quelle}\n{}",
+        absagen.zeige(quelle)
+    );
+    assert!(
+        treffer
+            .iter()
+            .any(|a| a.notizen.iter().any(|n| n.contains(teil))),
+        "{code} fell, but no note carries {teil:?}:\n{quelle}\n{}",
+        absagen.zeige(quelle)
+    );
+}
+
+#[test]
+fn effects_ohne_klammern_nennt_die_form() {
+    // Attempt 3 of 8, the sharpest: the right word in the right place, and `` `{` expected ``
+    // as the whole answer.
+    faellt_nicht("impl fn f() effects { pure } { }");
+    faellt_mit_notiz(
+        "impl fn f() effects pure { }",
+        "P001",
+        "`effects` takes a brace list",
+    );
+}
+
+#[test]
+fn leere_wirkungsliste_nennt_pure() {
+    // Attempt 2 of 8, the ambiguous one -- the refusal STAYS, because `pure` says the same
+    // thing on purpose. What was the paper cut is that the old text listed nine words and
+    // left the reader to work out which of them means "none".
+    faellt_mit_notiz(
+        "impl fn f() effects { } { }",
+        "P014",
+        "writes `effects { pure }`",
+    );
+}
+
+#[test]
+fn fehlender_strichpunkt_nennt_die_regel() {
+    // Attempt 5 of 8. `;` expected / `}` found has exactly one meaning wherever it can
+    // happen, and the rule fits in a line.
+    faellt_mit_notiz(
+        "impl fn f() effects { pure } { return 0 }",
+        "P001",
+        "`;` terminates, it does not separate",
+    );
+}
+
+#[test]
+fn strichpunkt_nach_block_beschreibt_die_seite() {
+    // Attempt 6 of 8. Same code, same rule, same accepted programs -- the text now says what
+    // stands on the PAGE (`};`) instead of what the parser sees (a `;` on its own).
+    let quelle = "impl fn f() effects { pure } { if x { }; }";
+    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    let treffer: Vec<_> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler && a.code == "P033")
+        .collect();
+    assert!(
+        treffer.iter().any(|a| a.text.contains("one token too many")),
+        "P033 after a block must describe the page:\n{}",
+        absagen.zeige(quelle)
+    );
+    // And the other half of the same code keeps its own wording -- a `;` with no block in
+    // front of it IS a semicolon on its own.
+    let allein = "impl fn f() effects { pure } { ; }";
+    let (_, a2) = gabbro_syntax::lies("<probe>", allein);
+    assert!(
+        a2.absagen
+            .iter()
+            .any(|a| a.code == "P033" && a.text.contains("on its own")),
+        "P033 without a block in front keeps its wording:\n{}",
+        a2.zeige(allein)
+    );
+}
+
+#[test]
+fn modul_mit_strichpunkt_nennt_den_rumpf() {
+    // The cut BEFORE the eight attempts, and it stands in line one of the file.
+    faellt_nicht("module m { }");
+    faellt_mit_notiz("module m;", "P001", "`module` carries a brace body");
+}
