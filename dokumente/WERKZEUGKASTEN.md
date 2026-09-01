@@ -1191,7 +1191,7 @@ niemand nach dem Nenner gefragt hat.* Von 21 Werkzeugen, die über `.gab` zähle
 
 ---
 
-## W29 — Vor einer Regel über einem WORT steht die Auszählung seiner Verwendungen
+## W29 — Vor einer Regel über einem WORT steht die Auszählung seiner Verwendungen — und ihrer RICHTUNG
 
 *Gebucht 2026-09-01, nach der dritten Instanz.*
 
@@ -1223,3 +1223,36 @@ läuft, ist sie selbstbestätigend — *ein Konstrukt, das heute nicht sinnvoll 
 steht nicht da, also sagt Regel A ab, also entsteht es nie.* **Das ist ein Zirkel, kein
 Befund.** Wo ein externer Zeuge existiert — `../caprock-messbasis`, 139 Dateien, 75 294
 Zeilen — **ist er stärker als der Korpus, und die Frage gehört an ihn gestellt.**
+
+
+### Die zweite Hälfte: nicht nur wie viele, sondern ob sie in dieselbe Richtung falsch gehen
+
+*Angefügt 2026-09-01, weil eine Auszählung, die nur zählt, die Reparatur falsch ordnet.*
+
+Bei `_ =>` waren die drei Kategorien **nach Gefährlichkeit** getrennt — stiller
+Speicherfehler · falscher Typ · falscher Wert — **und die Reihenfolge der Reparatur hing
+genau daran, nicht an der Häufigkeit.** *Eine Auszählung, die nur zählt, hätte `3488` nicht
+vor `3690` gesetzt.*
+
+> **Zwei Verwendungen, die einander MASKIEREN, sind schlimmer als zehn, die dasselbe tun.**
+
+**Und die Instanz, an der es zuerst gegriffen hat**, steht in `../caprock-messbasis`:
+
+```
+mmu.rs, fuenf Stellen, die eine Abbildung aendern   flush im Rumpf
+  map_device_window_global · map_device_page               0   <- ADDIEREN
+  map_device_block_global                                  0   <- ADDIEREN
+  protect_page                                             1   <- AENDERT Rechte
+  set_user_vspace                                          9   <- WECHSELT Adressraum
+```
+
+**Drei addieren, eine ändert, eine wechselt.** Eine Regel *„jeder PTE-Schreibvorgang
+invalidiert"* wäre **für drei von fünf falsch** — sie fügte eine Invalidierung hinzu, die ein
+Übergang von *nicht vorhanden* nach *vorhanden* auf x86 nicht braucht.
+
+> **Die Regel gehört an die ART der Änderung, nicht an das Schreiben.** Und ob der
+> Additionsfall eine Invalidierung braucht, ist **eine Architekturfrage, keine Sprachfrage**
+> — also ein `assume … arch` mit Falsifikator, nicht eine Entscheidung in der Absenkung.
+
+*Ohne die Richtungsfrage hätte die Zählung `5 von 5` gemeldet und die Regel gerechtfertigt,
+die für drei davon falsch ist.*
