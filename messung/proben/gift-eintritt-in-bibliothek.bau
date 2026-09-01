@@ -1,0 +1,10 @@
+-- **Gift for `B001`: an `object` that declares the entry.**
+--
+-- The SAME source as `eintritt.bau`, declared `object` instead of `program`. It is the one
+-- question a single file cannot answer -- and a library that defines `main` collides with
+-- the program that links it, at the linker, over two units.
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-eintritt-bib
+
+unit bibliothek object
+    messung/proben/probe-eintritt.gab

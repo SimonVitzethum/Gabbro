@@ -1,0 +1,9 @@
+-- **A hosted Gabbro program, built out of ONE file and a manifest -- and no hand-written C.**
+--
+-- The acceptance criterion of `B1` is a CHANGE and not a number: `gabbro build`, and the
+-- binary runs. It answers `41`.
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-eintritt
+
+unit eintritt program
+    messung/proben/probe-eintritt.gab

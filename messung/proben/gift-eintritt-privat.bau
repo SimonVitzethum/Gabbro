@@ -1,0 +1,6 @@
+-- **Gift for `B001`: the entry is not `pub`.**
+compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+out      target/bau-eintritt-privat
+
+unit privat program
+    messung/proben/probe-eintritt-privat.gab

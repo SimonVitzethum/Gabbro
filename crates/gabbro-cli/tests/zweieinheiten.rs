@@ -118,18 +118,29 @@ fn ohne_die_kante_faellt_das_programm() {
     );
 }
 
-/// **Counter-direction: the LINK step really runs, and it can really refuse.**
+/// **Counter-direction: a `program` over two files that carry no `main`.**
 ///
-/// A `program` over two files that carry no `main`. They check clean and they translate
-/// clean -- *a `program` that in truth only wrote an object would look the same from
-/// outside.*
+/// > **This test measured the LINKER until 2026-09-01, and `B001` took the case away from
+/// > it.** The refusal used to read *"the linker refused 1 object(s)"* -- `ld`'s words, in
+/// > the system's language, three tools after the mistake. It now falls at `B001`, in
+/// > Gabbro's words and *before the C is written*.
+///
+/// The statement the old form carried -- **the binder runs at all, and it can say no** -- did
+/// not move with it, and a rule that moves a refusal upstream also takes away the probe that
+/// lived on it. It is rebuilt in `eintritt.rs::der_binder_laeuft_und_kann_absagen`, on an
+/// `extern fn` nothing defines. *Without that second file this change would have traded a
+/// measurement for a rule and called it progress.*
 #[test]
-fn ein_programm_ohne_main_faellt_am_binder() {
+fn ein_programm_ohne_main_faellt_an_b001() {
     let (aus, fehler, code) = lauf(&["build", "messung/einheit-proben/gift-programm-ohne-main.bau"]);
     assert_eq!(code, 1, "refused:\n{aus}\n{fehler}");
     assert!(
-        aus.contains("REFUSED  ohnemain") && aus.contains("the linker refused"),
-        "and it is the LINKER that refused, not the checker and not `cc -c`:\n{aus}"
+        aus.contains("REFUSED  ohnemain") && aus.contains("[B001]"),
+        "and it is GABBRO that refuses, by name:\n{aus}"
+    );
+    assert!(
+        !aus.contains("the linker refused"),
+        "one tool earlier than it used to -- the linker is never reached:\n{aus}"
     );
 }
 

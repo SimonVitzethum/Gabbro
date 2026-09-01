@@ -1,0 +1,18 @@
+-- **Gift for `B001`: the entry takes an argument.**
+--
+-- C allows `int main(void)` and `int main(int, char **)` and nothing else. Gabbro has no type
+-- for the second -- `char` is not a Gabbro type, which is the same seam `beispiele/63` names
+-- for `puts` -- so the only shape it can write is the first.
+--
+-- Measured: `cc -Wall -Werror` catches it (*"`main` takes either zero or two arguments"*),
+-- in C's words. **The file checks clean**; a one-argument function is ordinary Gabbro.
+module probe::eintritt::parameter {
+
+pub fn main(z : i32 in 0 .. 100) -> i32 in 0 .. 100
+    effects { pure }
+    costs   <= 8 ops
+{
+    return z;
+}
+
+}

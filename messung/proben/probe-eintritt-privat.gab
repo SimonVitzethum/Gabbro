@@ -1,0 +1,16 @@
+-- **Gift for `B001`: the entry is there, and it is private.**
+--
+-- It lowers to `static int32_t main(void)` -- a symbol the linker never sees. `cc` catches it
+-- with `-Werror=main` (*"`main` is normally a non-static function"*), but in C's words and in
+-- the system's language, one tool downstream. **The file itself checks CLEAN**: a private
+-- function is nothing Gabbro objects to, which is exactly why the manifest has to.
+module probe::eintritt::privat {
+
+fn main() -> i32 in 0 .. 100
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 41;
+}
+
+}

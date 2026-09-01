@@ -1,0 +1,26 @@
+-- **The speaking probe for the LINK step, and it is here because `B001` took the old one.**
+--
+-- Until 2026-09-01 `ein_programm_ohne_main_faellt_am_binder` was the only proof that the
+-- binder runs at all: a `program` that in truth wrote nothing but an object would look the
+-- same from outside. **`B001` now refuses that case one tool earlier**, and a rule that moves
+-- a refusal upstream also takes away the probe that lived on it.
+--
+-- So the probe is rebuilt on a case `B001` does NOT cover: an `extern fn` that no unit of
+-- this build defines. It checks clean, it translates clean, `cc -c` accepts it -- and `ld`
+-- refuses, which is the statement wanted: *the binder runs, and it can say no.*
+module probe::eintritt::ungebunden {
+
+-- A name C does not own (`cnamen.rs` would refuse one that it did) and no `.gab` defines.
+extern fn nirgendwo_definiert(z : i32) -> i32 effects { pure } costs <= 8 ops;
+
+pub fn main() -> i32 in 0 .. 100
+    effects { pure }
+    costs   <= 16 ops
+{
+    -- The bare call is the reference; the return value is discarded, the way
+    -- `beispiele/63` discards `putchar`'s.
+    nirgendwo_definiert(41);
+    return 41;
+}
+
+}

@@ -1,0 +1,29 @@
+-- **Gift for `B001`: TWO entries -- and `N039` does not see this pair.**
+--
+-- `N039` refuses two exported items of one C name. Here only ONE of the two is `pub`, so
+-- there is no second symbol and `N039` stays silent -- while the unit still declares the
+-- entry name twice, and `cc` refuses the pair for the *other* reason (`static main`).
+--
+-- *That is the gap the count closes:* "exactly one entry" is not the same question as "no
+-- two exported names", and until this file nothing asked the first one.
+module probe::zwei::a {
+
+pub fn main() -> i32 in 0 .. 100
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 41;
+}
+
+}
+
+module probe::zwei::b {
+
+fn main() -> i32 in 0 .. 100
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 7;
+}
+
+}
