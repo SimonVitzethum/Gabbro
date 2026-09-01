@@ -20,6 +20,53 @@ assume tlb_ist_nach_cr3_leer
     "Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege."
     falsifier sonde_tlb_nach_cr3;
 
+-- **Die dritte TLB-Annahme, und sie stand bis zum 2026-09-01 in einem FREMDEN Kommentar.**
+--
+-- `../caprock-messbasis`, `crates/caprock-hal/src/x86_64/mmu.rs`:379, woertlich:
+--
+--   *„Zusaetzlich gilt: die Eintraege waren vorher NICHT PRAESENT, und nicht praesente
+--   Eintraege legt x86 nicht in den Paging-Structure-Caches ab -- ein hinzugefuegter Eintrag
+--   muss also gar nichts verdraengen."*
+--
+-- **Das ist keine Bequemlichkeit, sondern der Satz, an dem eine ganze Klasse von
+-- Schreibvorgaengen haengt.** Gemessen ueber Caprocks x86_64-MMU am 2026-09-01: von den
+-- Funktionen, die einen Seiteneintrag schreiben, invalidieren **alle fuenf**, die einen
+-- LEBENDEN Eintrag aendern oder wegnehmen -- und von den neun, die einen Eintrag HINZUFUEGEN,
+-- tun es zwei im eigenen Rumpf, drei ueber ihren Rufer und **vier gar nicht**.
+--
+-- > **Der Klasse fehlt keine Invalidierung, ihr fehlt eine Entscheidung.** Vier gegen fuenf
+-- > ist keine Nachlaessigkeit, sondern eine Annahme, die niemand hingeschrieben hat -- und
+-- > solange sie nirgends steht, sieht ein vergessener Flush genauso aus wie ein bewusst
+-- > weggelassener.
+--
+-- `arch x86_64` steht dran, weil die Antwort architekturabhaengig ist: Intels SDM ERLAUBT
+-- Implementierungen, nicht praesente Eintraege in den Paging-Structure-Caches zu halten, und
+-- fuer AArch64 ist die sichere Antwort eine andere. **Eine Absenkung, die das entscheidet,
+-- entscheidet es fuer beide Architekturen zugleich und fuer eine davon falsch.**
+assume neuer_eintrag_verdraengt_nichts arch x86_64
+    "Ein Eintrag, der von nicht-praesent auf praesent wechselt, verdraengt keinen zwischengespeicherten Uebersetzungsschritt."
+    falsifier sonde_praesent_ohne_invalidierung;
+
+-- **Der seL4-Schnitt, und er stand bisher NIRGENDS -- auch nicht als Kommentar.**
+--
+-- Der Kern veraendert die Abbildung, unter der sein eigener Code laeuft. seL4 zieht den
+-- Schnitt und beweist funktionale Korrektheit UNTER der Annahme, dass der Kern abgebildet
+-- bleibt. **Gemessen am 2026-09-01 ueber `../caprock-messbasis` (139 `.rs`, 75 294 Zeilen):
+-- keine Stelle, kein Kommentar, kein Dokument schreibt hin, welcher Bereich unter jeder
+-- Aenderung unveraendert bleiben muss.** Der Satz hier ist damit der erste seiner Art im
+-- Umkreis -- und genau deshalb ist er UNGEPRUEFT: es gibt keine Fassung, gegen die man ihn
+-- halten koennte.
+--
+-- **Er steht als `assume` und nicht als `invariant`, und der Grund ist die zweite Haelfte
+-- des Satzes.** „Bleibt abgebildet" waere ueber `mappings of` formulierbar; *„waehrend jeder
+-- Zwischenzustand einer Aenderung"* ist es nicht -- eine Nachbedingung redet ueber den
+-- Zustand NACH einem Rumpf, und zwischen zwei Eintragsschreibvorgaengen kann ein Interrupt
+-- ankommen. Das ist eine Aussage ueber einen LAUF, und dafuer hat diese Sprache keine Form
+-- (`PLAN-HARDWARE.md` §51 S2, dieselbe Wand wie bei Rahmenbedingungen).
+assume kern_bleibt_unter_jeder_aenderung_abgebildet
+    "Die Rahmen des Kerntexts bleiben waehrend jedes Zwischenzustands jeder Tabellenaenderung abgebildet und ausfuehrbar."
+    falsifier sonde_kern_entmappt;
+
 assume x2apic_zweischritt
     "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
     unfalsifiable "qemu64 hat kein x2APIC -- die Sonde hat hier kein Geraet";
