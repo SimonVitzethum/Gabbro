@@ -1591,3 +1591,138 @@ sie enger zu setzen als die Messung.**
   Dateien §21 meinte, steht nirgends.
 * **Die Pflegekosten eines `costs`-Wächters sind nicht gemessen**, nur seine Laufzeit.
 * **`progress`/T11 und die 26 T12-Abschriften (§27) sind unberührt.**
+
+---
+
+# TEIL VI — Fünf Vorschläge, und sie müssen sich gegen die Ratsche rechtfertigen
+
+*Angefügt 2026-09-01. **Drei der fünf sind selbst Wörter.** Der Wortschatz ist an einem Tag
+um acht gewachsen, während der Absenkungssatz bei eins blieb — also gilt hier, was §11
+verlangt: jedes muss nennen, welches Wort es ablöst oder warum keine vorhandene Form es
+trägt. Sortiert nach diesem Handel, nicht nach Reiz.*
+
+## §42 — `phase` verallgemeinern · **der einzige, der den Wortschatz SENKT**
+
+`class rw in setup, r in live` über `linear ghost type QueuePhase order { setup, live }` ist
+heute an `reg` gefesselt. **Der Mechanismus dahinter ist allgemein: eine lineare, geordnete
+Geistermarke schaltet erlaubte Operationen.**
+
+*Gemessen 2026-09-01 — das Muster liegt schon breit im Baum:*
+
+```
+linear ghost type … order { … }     14
+advances <a> -> <b>                 31
+class … in <phase>                   6      <- nur hier ist es ein KONSTRUKT
+consumes …                         102      <- die Handkombination
+```
+
+**Vier weitere Stellen tragen dasselbe Muster ohne Konstrukt:**
+
+* **`count`/`backed`** — nach dem Wiederwachsen ist der Platz *uninitialisiert*, dann
+  *beschrieben*. **Die fehlende Initialisierungspflicht aus §5 IST eine Phase.**
+* **Eine Capability im CDT** — abgeleitet, delegiert, widerrufen.
+* **`boot`** — vor und nach `bss_nullen` gelten verschiedene Zugriffsrechte.
+* **Speicher zwischen Kern und Gerät** — genau das, wofür `consumes` plus Phase heute von
+  Hand kombiniert wird, 102 Mal.
+
+> **Ein Konstrukt `phase`, auf `table`, `ops`, `fn` und `reg` anwendbar, ersetzt Sonderregeln
+> in vier Bereichen und bekommt EINEN Absenkungssatz statt vier.**
+
+*Der Name in der Literatur ist **Typestate**. Dass er hier unabhängig für Register gefunden
+wurde, spricht dafür, dass er in der Domäne liegt.*
+
+- [ ] **Nach der Domänenregel der zweitbeste Eröffnungsfall für die Ratsche** — er ist der
+      einzige der fünf, der die Wortzahl senkt statt sie zu heben.
+
+## §43 — `ghost` und `witness` trennen · **ein Widerspruch, keine Lücke**
+
+Die drei fehlenden Absenkungen aus §31 kamen aus einem Widerspruch:
+**`Griff(index into Arena)` ist als `ghost` deklariert und trägt einen Nutzdatenwert, den das
+C braucht.** Geistern und Datentragen sind zwei Dinge, und ein Wort erledigt beides.
+
+```
+ghost     wird geloescht, hat keine C-Form, existiert nur fuer den Pruefer
+witness   bleibt im C, ist linear, nur lesbar, sein Nutzdatenwert ist ein gewoehnlicher Wert
+```
+
+> Damit ist `Griff` ein `witness`, **die Absenkung ist trivial — der Index steht ohnehin im
+> C** — und die Erasure-Regel für `ghost` bleibt unangetastet statt einen Sonderfall zu
+> bekommen.
+
+- [ ] **Ein Wort mehr, aber es löst einen WIDERSPRUCH statt eine Lücke zu stopfen.** Das ist
+      der Handel, den die Ratsche verlangt, und er ist hier sauber.
+
+## §44 — Die dritte Stufe für `OA3` · **Zählbarkeit, nicht Sicherheit**
+
+Der binäre Ausstieg — Sprache oder `extern`. **Adas Form (Laufzeitausnahme) passt nicht;
+Gabbros passt schon da:** `check` existiert, die Absagedisziplin existiert, die Numerierung
+existiert.
+
+> **Eine Pflicht, die statisch nicht fällt, wird eine BENANNTE LAUFZEITABSAGE.** Sie bleibt
+> *in* der Sprache, zählt in einer eigenen Liste, und das Zeugnis trägt sie.
+
+**Der Gewinn ist nicht Sicherheit, sondern Zählbarkeit.** Heute ist jeder Ausstieg ein
+`extern`, und **`extern` ist ununterscheidbar breit.** Danach gibt es drei Stufen —
+*bewiesen · geprüft-zur-Laufzeit · außerhalb* — und **die mittlere fängt genau die Fälle ab,
+die heute unnötig ganz nach draußen gehen.**
+
+- [ ] Rechnen, wie viele der heutigen `extern` in die mittlere Stufe fielen. *Ohne die Zahl
+      ist es ein Wort ohne gemessenen Bedarf.*
+
+## §45 — EINE Vertrauensliste, nicht drei
+
+*Gemessen 2026-09-01 — heute steht sie an drei Orten, und alle drei sagen dasselbe:*
+
+```
+assume-Klauseln in der Quelle          73
+C001-Weigerungen des Erzeugers        149
+erzeugte Formen ohne Absenkungssatz    64 von 65
+```
+
+> *Hier wird geglaubt statt bewiesen* — dreimal, an drei Orten, ohne gemeinsamen Nenner.
+
+**Der Vorschlag ist konzeptuell, nicht syntaktisch: eine Übersetzung erzeugt genau EINE
+Vertrauensliste**, und sie enthält alle drei Quellen.
+
+Dann ist *„was muss ich glauben, um diesem Binärcode zu trauen"* **mit einem Befehl
+beantwortbar**, und §35s Marke — Annahmen bei Programm n+1 — ist **an einem Artefakt messbar
+statt an einem `grep`.**
+
+- [ ] Und das ist der Punkt, an dem **`progress` seinen Platz findet**: eine Umgebungsannahme
+      mit Falsifikator gehört in diese Liste, **nicht unter `T6`** (§27, dritte Fundstelle).
+
+## §46 — `platform` und `device` als Annahmeträger
+
+Die Zweiteilung ist gemessen (§36): **sechsmal dieselbe Zeitgeberaussage, weil es keinen Ort
+für eine Plattformaussage gibt.** Die Form ist klein:
+
+```gabbro
+platform x86_64 { assume … }        device Virtq { assume … }
+```
+
+Ein Programm **erbt statt zu kopieren.** *`arch` an `assume` löst sich damit von selbst, weil
+der Block es trägt* — und der Posten aus §3/§15/§32 fällt von dieser Seite mit.
+
+- [ ] **Und die Marke wird in EINEM Lauf prüfbar:** eine Plattformannahme in einer
+      Programmdatei ist dann **ein Fehler, kein Stilproblem.**
+
+---
+
+## §47 — Was ausdrücklich NICHT vorgeschlagen wird
+
+**Nichts Neues an den Hardwarekonstrukten, bevor die Ratsche steht.**
+
+> Der Wortschatz ist an einem Tag um acht Wörter gewachsen, während der Absenkungssatz bei
+> eins blieb — **und drei der fünf Vorschläge oben sind selbst Wörter. Sie müssen sich gegen
+> die Ratsche rechtfertigen, sonst ist der Vorschlagende Teil des Problems, das er benannt
+> hat.**
+
+Die Reihenfolge folgt daraus und nicht aus dem Reiz:
+
+| | Handel | Wortzahl |
+|---|---|---|
+| **§42 `phase`** | ersetzt Sonderregeln in vier Bereichen, ein Satz statt vier | **senkt** |
+| **§45 Vertrauensliste** | konzeptuell, kein neues Wort | **neutral** |
+| **§46 `platform`/`device`** | löst `arch`-an-`assume` mit auf | +2, −1 |
+| **§43 `witness`** | löst einen Widerspruch, macht drei Absenkungen trivial | +1 |
+| **§44 dritte Stufe** | Zählbarkeit — **braucht die Zahl vorher** | +1, ungemessen |
