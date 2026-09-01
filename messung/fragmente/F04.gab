@@ -108,8 +108,17 @@ device VirtioPci(base : Pa) at mmio {
 -- ist — und nicht an einem Geraeteregister. SYNTAX.md fuehrt genau das als offenen Punkt
 -- (:598): die sicherheitskritischste Veroeffentlichung im Baum ist gar kein Atomic.
 
+-- **`N049`, 2026-09-01: dieser Block war in sich WIDERSPRUECHLICH, und die Regel hat es im
+-- ersten Lauf gefunden.** Er fuehrte dreimal `count 256`, waehrend seine Versaetze die einer
+-- Warteschlange der Groesse **16** sind. Bei 256 deckt `DESC` allein `0x000..0x1000` -- und
+-- damit liegt **jedes andere Register und jede andere Bank dieses Geraets INNERHALB von
+-- `DESC`**. `DESC[16].addr` und `AVAIL_FLAGS` waeren dieselben Bytes.
+--
+-- Bei 16 geht die Rechnung genau auf, und es ist die klassische geteilte virtio-Schlange:
+-- `DESC` 16x16 = `0x100`, `avail` bei `0x100` mit Ring `0x104..0x124`, `used` bei `0x200`
+-- mit Ring `0x204..0x284`. *Die Versaetze waren richtig; die Anzahl war es nicht.*
 device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
-    bank DESC at 0x000 stride 16 count 256 {
+    bank DESC at 0x000 stride 16 count 16 {
         reg addr  : u64 @0x0 class w
         reg len   : u32 @0x8 class w
         reg flags : u16 @0xc class w fields { NEXT @0, WRITE @1, }
@@ -117,10 +126,10 @@ device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
     }
     reg AVAIL_FLAGS : u16 @0x100 class rw
     reg AVAIL_IDX   : u16 wrapping @0x102 class rw
-    bank AVAIL_RING at 0x104 stride 2 count 256 { reg e : u16 @0x0 class w }
+    bank AVAIL_RING at 0x104 stride 2 count 16 { reg e : u16 @0x0 class w }
     reg USED_FLAGS  : u16 @0x200 class rw
     reg USED_IDX    : u16 @0x202 class rw
-    bank USED_RING at 0x204 stride 8 count 256 {
+    bank USED_RING at 0x204 stride 8 count 16 {
         reg id  : u32 @0x0 class rw
         reg len : u32 @0x4 class rw
     }

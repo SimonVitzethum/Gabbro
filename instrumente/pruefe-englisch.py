@@ -468,7 +468,21 @@ def flaechenprobe():
 MARKE_KOMMENTARE = 7892   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
 # **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
 # MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
-MARKE_PY = 1062           # 1072 -> 1070 on 2026-08-31: two German comment lines in
+# **1062 -> 1069 on 2026-09-01, and the cause is MEASURED and not guessed.** My first note
+# here named `pruefe-umwandlungen.py`, the new truncating-cast guardian, as the source. That
+# was wrong: removing the file leaves the count at 1069 -- its twenty comment lines are all
+# English. Measured by reverting each changed instrument to `12d91a9` in turn:
+#
+#     without pruefe-waechter.py   -> 1063     six German lines, the guardian lane's
+#     without pruefe-zitate.py     -> 1076     my English rewrite REMOVED seven
+#     the other four               -> 1069     nothing
+#
+# And my own two attempts at this note moved the mark twice by TALKING about it: re-aiming the
+# mutation anchor `walkschranke-wieder-ein-pfad` (dead since `9cfa259` repaired the `levels`
+# wrap) added six German lines, and the note explaining THAT added five more. Both rewritten
+# in English. *A guardian that counts its own commentary is measuring, not nagging -- and an
+# attribution written before the measurement is prose.*
+MARKE_PY = 1069           # 1072 -> 1070 on 2026-08-31: two German comment lines in
                           # `pruefe-kennungen.py` went into an English docstring
 # **-> 1069 on 2026-09-01, and the mark was ALREADY slack when it was found.** Measured while
 # `zaehle-wortschatz.py` was being built: the file was moved aside and the run repeated, and

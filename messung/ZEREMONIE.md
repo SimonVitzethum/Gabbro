@@ -10,6 +10,16 @@ $ ./instrumente/zaehle-zeremonie.py
   redundant        0
   tragend       1061
 77 von 1144 Stellen dürfen sinken
+
+> **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
+> zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.
+> Drei Läufe hintereinander sagen jetzt übereinstimmend `77 + 1067 = 1144`; eine Stunde vorher
+> sagten sie ebenso übereinstimmend `1111`. **Nicht der Korpus hat sich bewegt, sondern der
+> Zeitpunkt.**
+>
+> *Eine korpusweite Zählung, die genommen wird, während ein anderer Schreiber den Baum hält,
+> misst den Schreiber und nicht den Korpus.* Innerhalb eines Augenblicks ist sie stabil, und
+> genau das macht sie glaubwürdig aussehen.
 ```
 
 > **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**

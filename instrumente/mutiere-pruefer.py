@@ -718,8 +718,13 @@ MUTATIONEN = [
     Mutation(
         "walkschranke-wieder-ein-pfad",
         "umgebung.rs",
-        "                            if let Some(n) = (l as u128).checked_pow(e as u32) {",
-        "                            if let Some(n) = (l as u128).checked_mul(e as u128) {",
+        # **Re-aimed 2026-09-01.** The anchor pointed at `checked_pow(e as u32)`, and that
+        # `e as u32` WAS the defect `9cfa259` repaired -- `levels` wrapped modulo 2^32. From
+        # that commit the anchor matched no line at all: `--anker` reported `378 von 379` and
+        # `FEHLT`. *An anchor that no longer matches is a rule without mutation coverage, and
+        # the tool says so out loud.*
+        "                                u32::try_from(e).ok().and_then(|e| (l as u128).checked_pow(e))",
+        "                                u32::try_from(e).ok().and_then(|e| (l as u128).checked_mul(e as u128))",
         "the bound of `mappings of` is `levels x node length` again instead of "
         "`node length ^ levels` -- one descent path, handed out as the leaf set",
     ),

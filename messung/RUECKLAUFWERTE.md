@@ -229,12 +229,15 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~
-  **48 von 53** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~
-  **266 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  **49 von 54** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~
+  **269 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
   entstand — grün davor, rot danach, beides gemessen. **Genau dafür steht das Register.***
+  *266 → 269 am 2026-09-01, zweite Runde: `N047`, `N048` und `N049` aus dem
+  Registerlagen-Audit, drei neue `absagen.schiebe` in `namen.rs`. Und ein Wächter mehr
+  (53 → 54) aus der Waechterspur.*
   *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
   `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
   eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und

@@ -36,14 +36,22 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (`namen.berichtszeile`) — a `measures` name without a carrier, `messung/TORREICHWEITE.md`.
 > 74 → 75 sentences, 242 → 243 codes, 197 → 198 claimed, 67 → 68 `measured`; the 45
 > without a sentence stay standing. *The second tooth, for the second time in one day.*
-| **Codes without a sentence — the ratchet** | **45** | `./instrumente/pruefe-saetze.py` |
+| **Codes without a sentence — the ratchet** | **48** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not
 diligence but a measurement: several passes hold **two claims of different strength**,
 and writing them into one sentence would have hidden the weaker under the stronger.
 `kosten` is the example — see below.
 
-## The 45 without a sentence are not an oversight but a drawn line
+## The 48 without a sentence are not an oversight but a drawn line
+
+> **45 → 48 on 2026-09-01.** `N047`, `N048` and `N049` came out of the register-layout audit
+> and stand without a theorem **on purpose**: `Device_Konstruktor.thy` proves
+> `getrennte_register_treffen_getrennte_zellen` UNDER the premise `getrennt r s`, and
+> `bankeintraege_ueberlappen_nicht` for the bank. **The three rules ESTABLISH those premises;
+> they do not need one of their own.** A theorem apiece would be a fourth statement of the
+> same fact — and the sixth class in pure form, one layer up: *a pass whose premise nothing
+> needs has moved the trust base, not shrunk it.*
 
 ```
 parse.rs   37     lex.rs   7     emit.rs   1
@@ -169,9 +177,13 @@ more than its code redeems** — five times, in five files, twice simply out of 
 **Both directions are measured from outside, not only in the speech test** (R14/W17):
 
 <!-- QUOTED RUN, in the tool's own language -- evidence, not prose. -->
+<!-- Re-run 2026-09-01: the mark moved 45 -> 48 (`N047`/`N048`/`N049` from the register-layout
+     audit stand without a theorem, on purpose -- they ESTABLISH the premise of
+     `Device_Konstruktor.thy` rather than needing one). The transcript is re-taken rather than
+     patched: a quoted run that nobody re-ran is prose with a monospace font. -->
 
 ```
-Kennung "Z999" in kosten.rs eingefügt   -> RC 1, „46 Kennungen ohne Satz, gebucht sind 45"
+Kennung "Z999" in kosten.rs eingefügt   -> RC 1, „49 Kennungen ohne Satz, gebucht sind 48"
 Kennung "Z998" in einen Satz eingefügt  -> RC 1, „steht in einem Satz und wird von KEINER Datei vergeben"
 sauberer Baum                           -> RC 0
 ```

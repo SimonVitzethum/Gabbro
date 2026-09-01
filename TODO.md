@@ -529,7 +529,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 170 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 171 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *168 → 169 am 2026-09-01: `messung/PHASENKONSTRUKT.md` kam dazu — die Nachrechnung von
       `§42`, die selbst zwei Widerrufe buchte (die Tafel über dem Giftkorpus, und `§43`s
       „trivial"). **Ein Dokument, das Widerrufe schreibt, hebt den Nenner, gegen den sie
@@ -642,11 +642,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **95 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **96 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 114 sind tragend, 3 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 114 sind tragend, 5 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -729,7 +729,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2776 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
+      Heute **2785 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -860,7 +860,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Zwei der drei Faelle sind mit `N007`/`N008` in den Pruefer gezogen; **die Luecke im Wort
       bleibt bewusst `C001`**, weil erst die Absenkung eine bestimmte Wortgrenze braucht.
       **Nachgezählt 2026-08-20: `C001` steht an sechs Stellen im Prüfer und wird an fünfzehn
-      Stellen im Korpus erwartet** — und `./instrumente/pruefe-gruende.py` führt `C001` als **verdächtig**
+      Stellen im Korpus erwartet** — und `./instrumente/pruefe-gruende.py` führt heute
+      **5 verdächtige, 114 tragende, 96 unklare** Kennungen *(3 → 5 und 95 → 96 am
+      2026-09-01: die Registerlagen-Regeln `N047`/`N048`/`N049` begründen sich ausdrücklich
+      über die DARSTELLUNG — über die Adresse, die der Erzeuger schreibt —, und genau das ist
+      hier die Frage und nicht der Vorwurf)*, darunter `C001` als **verdächtig**
       (*„no lowering, byte, bytes"*), also als eine Regel, die sich über die Darstellung
       begründet. *Das ist derselbe Befund aus der anderen Richtung: die Kennung nennt die
       Absenkung, und gemeint ist teils die Wortbreite.*
@@ -3854,7 +3858,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 260 Codes, 45 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 263 Codes, 48 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
 **Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*
