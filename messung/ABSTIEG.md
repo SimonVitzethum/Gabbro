@@ -203,3 +203,102 @@ Beides berichtigt: die Literale werden aus `n_b`/`n_g` abgeleitet, und `d_ok` st
 * **Keine Mutation im Katalog von `mutiere-pruefer.py`.** Die Berichtigung an `m2::endet` ist
   von zwei Korpusdateien gedeckt, und eine davon ist eine Giftdatei, die genau an dieser
   Unterscheidung fällt. *Eine Mutation gehört dorthin, wo keine Probe steht.*
+
+---
+
+# 6. Zwei Tage später: derselbe Wächter, dieselbe Datei — und beide Male lag es am LESER
+
+*Gemessen am 2026-09-01 über `acec1df`.* `pruefe-abstieg.py` stand wieder auf `rc=1`:
+
+```
+  m2::gehe                 DOPPELTER ABSTIEG in: Wenn
+  m2::gehe                 DOPPELTER ABSTIEG in: Match
+  m2::endet              OHNE ABSTIEG in: Bricht, Exchange, LetSonst, Narrow,
+                                          Observiert, Schleife, Sperrt, Wenn
+```
+
+**Dritter Befund in `m2` über denselben Gegenstand.** Die Frage war deshalb nicht die Stelle,
+sondern: *führt `m2` einen eigenen Abstiegsbegriff, den `m1` und `lib` nicht teilen?*
+
+## Die Antwort ist NEIN — und beide Meldungen sind falsch
+
+`m2::gehe` nimmt `crate::unterbloecke`, `m2::endet` fragt `crate::endet_immer`. Beides sind
+die gemeinsamen Register. Was `m2` daneben hat, ist keine zweite Definition von *Abstieg*,
+sondern eine **zweite Achse**: seine vier abgleichenden Arten (`if`, `match`, `narrow … else`,
+`let … else`) laufen je Zweig mit anschließendem Abgleich, alle übrigen Unterblöcke laufen
+geradlinig über den gemeinsamen Absteiger. Das steht wörtlich im Code:
+
+```rust
+if !matches!(
+    &s.art,
+    StmtArt::Wenn(_) | StmtArt::Match(_) | StmtArt::Narrow(_) | StmtArt::LetSonst(_)
+) {
+    for k in crate::unterbloecke(s) { gehe(k, …); }
+}
+```
+
+### Befund 1 — der Wächter las Rust ZEILENWEISE
+
+Die Wache wurde mit `"!matches!(&s.art," in zeile` gesucht. `rustfmt` bricht sie vierzeilig
+um, `&s.art` steht allein auf Zeile zwei, **das Muster trifft nichts** — und damit galt die
+Wache als leer und die zwei von Hand behandelten Arme als ungeschützte Rekursion.
+
+> *Ein Werkzeug, das Rust zeilenweise liest, misst den Zeilenumbruch.* Dieselbe Klasse wie
+> `W16`: die Messapparatur, nicht der Gegenstand.
+
+Gelesen wird jetzt über die Klammerung (`wachen()`), und nur die **negierte** Form: ein
+positives `matches!(&s.art, StmtArt::Schleife(_))` wählt einen Fall AUS, es nimmt keinen aus.
+
+### Befund 2 — und er ist die Folge einer REPARATUR
+
+`m2::endet` steigt in keinen Block ab. Es liest `b.anweisungen.last()`, fängt den leeren
+`match` ab und reicht die Frage an `crate::endet_immer` weiter. Genannt wird darin **eine**
+Anweisungsart, in einem `matches!`, und der Wächter las diese eine Erwähnung als
+Abstiegsabsicht.
+
+**Der Auslöser war der vorige Befund.** Am 2026-08-30 bekam `endet` einen erschöpfenden
+`match` über alle Arten — Abschnitt 2 oben — und der Wächter wurde grün. Am 2026-08-31 wurde
+genau dieser `match` als **viertes Register von `Return|Leave|Next`** erkannt (`1548879`) und
+zu `crate::endet_immer` zusammengelegt. Damit fiel die Artenliste weg, die den Wächter
+zufriedengestellt hatte.
+
+> **Ein Wächter, der einen Abstieg an den Arten erkennt, die eine Funktion NENNT, belohnt die
+> vierte Kopie und bestraft die Zusammenlegung.** Das ist die Gegenrichtung zu `W7`, und sie
+> stand zwei Tage in der Regel.
+
+Und Abschnitt 1 dieses Dokuments hatte es am 2026-08-30 schon geschrieben: *„`m2::endet` ist
+kein Abstieg, sondern ein Prädikat."* **Der Satz stand da, die Regel kannte ihn nicht.**
+
+### Die Regel jetzt, und sie ist einseitig
+
+`matches!( … )` wird ausgeleert, bevor gefragt wird, *ob diese Funktion überhaupt absteigt*.
+Für `fehlt` — welche Arten behandelt sie? — zählt weiter der **ganze** Rumpf.
+
+> *Eine Erwähnung genügt zum Decken; nur zum ABSTEIGEN gehört eine Weiche.*
+
+Damit kann die Änderung eine echte Lücke nicht verstecken: sie nimmt nur Funktionen aus der
+Grundgesamtheit, die keine einzige Weiche über `StmtArt` tragen.
+
+### Zwei neue Richtungen in der Sprechprobe, mit ihren Gegenrichtungen
+
+| Richtung | erfundener Fall | verlangt |
+|---|---|---|
+| umbrochene Wache | `!matches!(\n &s.art,\n StmtArt::Wenn(_)\n)` über dem Absteiger | **kein** doppelter Abstieg |
+| Gegenrichtung | dieselbe Wache über `StmtArt::Sperrt(_)` | `Wenn` fällt weiter auf |
+| `matches!` ist eine Frage | `endet` mit `matches!(&s.art, StmtArt::Match(m) if …)` | **keine** Lücke |
+| Gegenrichtung | dasselbe als `if let StmtArt::Match(m) = &s.art` | Lücke bleibt |
+
+*Eine Regel ohne ihre Gegenrichtung entschuldigt alles und ist dieselbe Anzeige wie die, die
+alles anzeigt.*
+
+### Danach
+
+```
+$ ./instrumente/pruefe-abstieg.py
+  m1 … m2 … kbedingung   gedeckt
+  emit::rumpf_als_wert   weigert sich benannt (8 Arten)
+== ABSTIEG: ALL PASS -- jeder Pass erreicht jeden Unterblock ==      rc=0
+```
+
+**In `crates/` wurde nichts geändert.** Die zweite Bahn hält `m2.rs`; sie musste nicht
+angefasst werden, weil dort nichts kaputt war.

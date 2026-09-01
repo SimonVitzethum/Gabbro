@@ -4555,9 +4555,17 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
       Es sind **zwei Klassen**: 4 Instrumente / 37 Zeilen liegen in einer Funktion, die der
       echte Lauf NIE betritt (darunter `abnahme.schlusssatz`, der Fall, der die Frage
       auslöste); der Rest ist der Befundweg eines Wächters, der heute nichts findet.
-- [ ] `pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
-      `Wenn`/`Match`-Arme → **2^Tiefe**. *Dritter Befund in `m2` über denselben Gegenstand —
-      die Frage ist nicht die Stelle, sondern ob `m2` einen eigenen Abstiegsbegriff führt.*
+- [x] ~~`pruefe-abstieg.py` ROT: `m2::gehe` nimmt `unterbloecke` UND hält eigene
+      `Wenn`/`Match`-Arme → **2^Tiefe**.~~ **Beide Meldungen waren FALSCH, und `m2` führt
+      keinen eigenen Abstiegsbegriff** (2026-09-01, `messung/ABSTIEG.md` §6). Die Wache
+      steht wörtlich im Code — `rustfmt` bricht sie vierzeilig um, und der Wächter suchte
+      `"!matches!(&s.art," in zeile`. Und `m2::endet` steigt gar nicht ab: es fragt
+      `crate::endet_immer` und nennt EINE Art in einem `matches!`. *Der zweite Befund ist die
+      Folge der Reparatur des ersten:* am 2026-08-31 wurde `endet`s erschöpfender `match`
+      als viertes Register zusammengelegt — und damit fiel die Artenliste weg, die den
+      Wächter zufriedenstellte. **Ein Wächter, der den Abstieg an den genannten Arten
+      erkennt, belohnt die vierte Kopie und bestraft die Zusammenlegung.** Repariert wurde
+      der Leser, `crates/` blieb unberührt. `rc=0`.
 
 ## OB2 — Der Erzeuger als Vertrauensbasis · **läuft**
 
