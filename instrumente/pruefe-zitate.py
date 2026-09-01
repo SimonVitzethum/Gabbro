@@ -195,7 +195,12 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 #
 # *That does not acquit them; it names them.* The ratchet counts candidates, and a candidate
 # is not a refusal -- see the section below, which has said so since the first run.
-MARKE = 302
+# **302 -> 306 on 2026-09-01.** The register-layout audit laid four comments that name a
+# foreign identifier: `N047`/`N048`/`N049` each cite `N009` or `N010` to say what they are the
+# sibling OF, and the corpus registry cites all three. Cross-references again, not coverage
+# claims -- the text says *"`N009` compares registers against each other and never against
+# the stride"*, which is a statement about `N009` and not about the file it stands in.
+MARKE = 306
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

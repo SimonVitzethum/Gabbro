@@ -54,7 +54,17 @@ FRIST = 60
 # null bringen will, schreibt die 45 Saetze -- oder das Register bekommt eine zweite Spalte
 # fuer „kein Pass". **Was NICHT geht, ist die Zahl kleiner zu machen, indem man die Frage
 # aendert.**
-MARKE = 45
+# **45 -> 48 on 2026-09-01, and the three new ones are `N047`, `N048` and `N049`.** The
+# register-layout audit added three refusals, and none of them has an Isabelle theorem behind
+# it. *That is the honest state and not an oversight:* `Device_Konstruktor.thy` proves
+# `getrennte_register_treffen_getrennte_zellen` under the premise `getrennt r s`, and
+# `bankeintraege_ueberlappen_nicht` for the bank -- **the three new rules ESTABLISH those
+# premises, they do not need one of their own.** Writing a theorem for each would be a fourth
+# statement of the same fact.
+#
+# The mark rises here because the object grew, and it falls again the day someone shows that
+# a rule and a premise are the same sentence.
+MARKE = 48
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

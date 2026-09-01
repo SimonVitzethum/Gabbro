@@ -721,3 +721,46 @@ fn bankregister_jenseits_der_zelle_faellt() {
         "bank F at 0x100 stride 16 count 8 { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
     ));
 }
+
+/// **`N049` -- and the reason it exists is that `N009`'s reason stopped applying.**
+///
+/// `N009` writes down why it stays out: *"a bank sits at a COMPUTED base; holding it against
+/// the main level would mean guessing the base."* True -- and irrelevant the moment the base
+/// is a literal. Then the comparison is exact, and the case it protected is real.
+#[test]
+fn bank_ueber_fremden_bytes_faellt() {
+    let d = |inhalt: &str| {
+        format!("module p {{ opaque type Pa = u64;\ndevice D(basis : Pa) at mmio {{\n{inhalt}\n}}\n}}")
+    };
+    faellt_mit(
+        &d("reg C : u64 @0x100 class rw\nbank F at 0x100 stride 8 count 8 { reg X : u64 @0x0 class rw }"),
+        "N049",
+    );
+    faellt_mit(
+        &d("reg C : u64 @0x138 class rw\nbank F at 0x100 stride 8 count 8 { reg X : u64 @0x0 class rw }"),
+        "N049",
+    );
+    faellt_mit(
+        &d("reg C : u64 @0 class r\n\
+            bank F at 0x100 stride 8 count 8 { reg X : u64 @0x0 class rw }\n\
+            bank G at 0x120 stride 8 count 8 { reg Y : u64 @0x0 class rw }"),
+        "N049",
+    );
+
+    // **The counter-direction, and the last case is the one that keeps the rule honest:** a
+    // COMPUTED base stays silent, exactly as `N009` promises for itself. `02-geraet.gab`
+    // writes `bank FRR at CAP.FRO * 16`.
+    faellt_nicht(&d(
+        "reg C : u64 @0xf8 class rw\nbank F at 0x100 stride 8 count 8 { reg X : u64 @0x0 class rw }",
+    ));
+    faellt_nicht(&d(
+        "reg C : u64 @0 class r\n\
+         bank F at 0x100 stride 8 count 4 { reg X : u64 @0x0 class rw }\n\
+         bank G at 0x120 stride 8 count 4 { reg Y : u64 @0x0 class rw }",
+    ));
+    faellt_nicht(&d(
+        "reg CAP : u64 @0x08 class r fields { FRO @[33:24], }\n\
+         bank F at CAP.FRO * 16 stride 16 count 256 \
+           { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
+    ));
+}

@@ -1,0 +1,21 @@
+-- erwartet: N049
+-- **`N009` sagt in seiner eigenen Erlaeuterung, warum es sich hier heraushaelt:** *„eine Bank
+-- liegt an einer BERECHNETEN Basis; sie gegen die Hauptebene zu halten hiesse, die Basis zu
+-- raten."* Das ist ein guter Grund -- **und er hoert in dem Augenblick auf zu gelten, in dem
+-- die Basis ein Zahlliteral ist.** Dann ist der Vergleich exakt.
+--
+-- `d.C` und `d.F[0].X` sind beide `*(volatile uint64_t *)(d->basis + 256)`. Eine Zelle, zwei
+-- Namen -- und die ganze Maschinerie darueber (`class`, `mirrors`, `transition`, jede
+-- Wirkungsliste) rechnet mit zwei Orten.
+module gift587 {
+
+opaque type Pa = u64;
+
+device Doppelt(basis : Pa) at mmio {
+    reg C : u64 @0x100 class rw
+    bank F at 0x100 stride 8 count 8 {
+        reg X : u64 @0x0 class rw
+    }
+}
+
+}

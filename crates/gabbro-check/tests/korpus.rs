@@ -296,6 +296,13 @@ const BENANNT: &[&str] = &[
     // > been outside every rule that reads the list. *A quantity nobody declared is also a
     // > quantity nobody can check* -- and until 2026-08-31 nothing said so.
     "N043",
+    // **The register layout, audited 2026-09-01 out of the emitted C.** `N047` an offset that
+    // is not a multiple of its own width, `N048` a bank register that does not fit its cell,
+    // `N049` a bank that covers bytes something else already names. All three judge LITERALS
+    // only -- the same limit `N009` writes down for itself.
+    "N047",
+    "N048",
+    "N049",
 ];
 
 #[test]

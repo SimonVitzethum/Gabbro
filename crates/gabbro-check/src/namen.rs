@@ -1427,6 +1427,7 @@ fn device(d: &Device, absagen: &mut Absagen) {
     }
     registerlagen(&d.register, &d.name.text, absagen);
     ausrichtung_pruefen(&d.register, &d.name.text, absagen);
+    bankausdehnung_pruefen(d, absagen);
     for b in &d.baenke {
         doppelt(&mut gesehen, &b.name.text, b.name.span, "Bank", absagen);
         let mut innen = HashMap::new();
@@ -1589,6 +1590,70 @@ fn schritt_pruefen(b: &Bank, absagen: &mut Absagen) {
                  not intersect. Right and useless is not a passed check",
             ),
         );
+    }
+}
+
+/// **`N049` -- a bank that covers bytes something else already names.**
+///
+/// `N009` says in its own doc why it stays out of this: *"a bank sits at a COMPUTED base;
+/// holding it against the main level would mean guessing the base."* **That reason is a good
+/// one -- and it stops applying the moment the base is a literal.** Then the comparison is
+/// exact, and the case it was protecting turns out to be real:
+///
+/// ```text
+/// reg C : u64 @0x100 class rw
+/// bank F at 0x100 stride 8 count 8 { reg X : u64 @0x0 class rw }   -- 0 errors
+/// -> d.C        is  *(volatile uint64_t *)(d->basis + 256)
+/// -> d.F[0].X   is  *(volatile uint64_t *)(d->basis + (256) + i * 8u + 0u)
+/// ```
+///
+/// **One cell, two names** -- and the whole machinery above it (`class`, `mirrors`,
+/// `transition`, the effect lists) reasons about them as two places. A `writes C` says
+/// nothing about `F[0].X`, and they are the same bytes.
+///
+/// Judged only where BOTH sides are literal: `02-geraet.gab` writes `bank FRR at CAP.FRO *
+/// 16`, and that stays silent -- `W10`, as at `N009`.
+fn bankausdehnung_pruefen(d: &Device, absagen: &mut Absagen) {
+    // (name, from, to) of everything whose extent is decidable here
+    let mut belegt: Vec<(&Ident, i128, i128)> = Vec::new();
+    for r in &d.register {
+        let ExprArt::Zahl(v) = &r.versatz.art else { continue };
+        let von = *v as i128;
+        belegt.push((&r.name, von, von + i128::from(crate::bitlage::aus_intty(&r.typ).0)));
+    }
+    for b in &d.baenke {
+        let (ExprArt::Zahl(basis), ExprArt::Zahl(schritt), ExprArt::Zahl(anzahl)) =
+            (&b.basis.art, &b.schritt.art, &b.anzahl.art)
+        else {
+            continue;
+        };
+        let von = *basis as i128;
+        let bis = von + (*schritt as i128) * (*anzahl as i128);
+        if bis <= von {
+            continue; // `N010` owns the empty bank
+        }
+        for (name, v2, b2) in &belegt {
+            if von < *b2 && *v2 < bis {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N049",
+                        b.name.span,
+                        format!(
+                            "bank `{}` covers {von:#x}..{bis:#x} and `{}` covers \
+                             {v2:#x}..{b2:#x} in `{}` -- the same bytes carry two names",
+                            b.name.text, name.text, d.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "`class`, `mirrors`, `transition` and every effect list above reason \
+                         about them as two places: a `writes` on the one says nothing about \
+                         the other",
+                    ),
+                );
+                break;
+            }
+        }
+        belegt.push((&b.name, von, bis));
     }
 }
 
