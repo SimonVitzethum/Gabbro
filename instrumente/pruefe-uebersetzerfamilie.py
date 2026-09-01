@@ -82,7 +82,14 @@ MARKE_FAMILIENUNTERSCHIED = 0
 # **6 -> 0 the same day, and this mark FALLS.** The six were the gate probes carrying
 # `can_fail { … return; }`; `N044`/`N045` healed them -- repaired, never exempted.
 # *A ceiling that falls is the only proof that it was a ceiling.*
-MARKE_BEIDE_ROT = 0
+# **0 -> 3 on 2026-09-01, and the OBJECT grew.** The entry-point lane added three counter-
+# probes for the new entry rule -- `probe-eintritt-parameter`, `-privat`, `-zwei`. Both
+# compilers reject them **by design**: a program with a parameterised, a private, or a
+# doubled entry must not link. *They are poison, and poison that both compilers agree on is
+# the point of the probe, not a generator defect.*
+#
+# **The mark is PULLED, not healed** -- and it may only fall from here.
+MARKE_BEIDE_ROT = 3
 
 
 def fassung(werkzeug):

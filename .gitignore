@@ -19,3 +19,12 @@ __pycache__/
 *.pyc
 programmlogik/.lake/
 programmlogik/lake-manifest.json
+
+# **Ein Heredoc-Unfall vom 2026-09-01**: `python3 -c "
+import sys,re,collections"` ohne
+# Anfuehrungszeichen liess die Shell `import` als Befehl laufen -- ImageMagick, und es schrieb
+# eine 23,7-MB-PostScript-Datei namens `sys,re,collections` ins Wurzelverzeichnis. Sie kam
+# in `bbfcbdc` mit `git add -A` in die Historie. *Ein Muster hier ist billiger als die
+# Aufmerksamkeit, die es ersetzt.*
+*.ps
+sys,re,collections

@@ -468,7 +468,7 @@ def flaechenprobe():
 MARKE_KOMMENTARE = 7892   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
 # **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
 # MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
-MARKE_PY = 1067           # 1072 -> 1070 on 2026-08-31: two German comment lines in
+MARKE_PY = 1062           # 1072 -> 1070 on 2026-08-31: two German comment lines in
                           # `pruefe-kennungen.py` went into an English docstring
 # **-> 1069 on 2026-09-01, and the mark was ALREADY slack when it was found.** Measured while
 # `zaehle-wortschatz.py` was being built: the file was moved aside and the run repeated, and
@@ -481,6 +481,11 @@ MARKE_PY = 1067           # 1072 -> 1070 on 2026-08-31: two German comment lines
 # comment on the descent anchor was rewritten when `decreasing` left the vocabulary, and it
 # came back English. *That is the shape the mark is supposed to move in* -- not a translation
 # campaign, a line taken along by work that had to touch it anyway.
+# **-> 1062 on 2026-09-01, and this time the guardian caught the OTHER direction first.** The
+# bilingual round rewrote the heads of `pruefe-widerruf.py`, `-wortschatz.py`, `-zahlen.py` and
+# `-todo.py`, and ten of the new comment lines came out GERMAN: the mark broke at 1071 and
+# named the count. *The break was the useful part* -- the working language had changed four
+# hours earlier, and the fingers had not. Ten translated, five of the old ones gone with them.
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 
 # **THE BURST SEAM, and it starts at ZERO because the population was cleared the day it was

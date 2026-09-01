@@ -229,12 +229,16 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~
-  **48 von 53** Wächtern können mitten im Lauf abbrechen, ~~258~~
-  **263 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  **48 von 53** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~
+  **266 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
   entstand — grün davor, rot danach, beides gemessen. **Genau dafür steht das Register.***
+  *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
+  `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
+  eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und
+  `pruefe-zahlen.py` einen Eintrag, der beim Verlust seiner Beschriftung stumm bliebe.*
   **Und am selben Abend GEHEILT**, soweit eine Form das kann: 92 gefährliche Stellen, alle
   gedeckt, `MARKE_TEILMESSUNG = 0`, und die Abnahme trennt eine `TEILMESSUNG` vom Befund.
   *Was bleibt, ist die Ansage — nicht das Ausbleiben des Schnitts.*
@@ -871,6 +875,31 @@ Register aus `pruefe-waechter.py` liest. Gegen die vierte Kopie steht eine stati
 in `pruefe-waechter.py` mit Sprechprobe in drei Richtungen: **wer `git` selbst aufruft, sieht
 auf den Rücklaufwert** — *eine leere Ausgabe aus einem Befehl, der GESCHEITERT ist, ist keine
 Antwort.* Heute: 1 von 50 Werkzeugen ruft `git`, 0 ohne Riegel.
+
+### And a fourth sibling: the verdict that hung on the LOAD, not on the machine
+
+*Measured 2026-09-01, on `ki-pc-fisch-101`, three runs of the same tree.*
+
+| run | `pruefe-lean-beweis.sh` | verdict in `abnahme.py` |
+|---|---:|---|
+| baseline, `717f235` | **441.6 s** | `gruen [0]` |
+| the same tree, one hour later | **> 600 s** | **`ABBRUCH — HAENGT, Frist 600 s`** |
+| standing alone, timed | **729.4 s** | `LEAN GREEN`, exit **0** |
+
+**The guardian is green and says so; the collecting run says nothing was measured.** The
+deadline is right to fire — a hang and a slow run are indistinguishable from outside, and
+that is exactly why the deadline exists. But the third line is the one that settles it: the
+same tree, the same tool, **green in 729 s**, and the only thing that changed between run one
+and run two is what else the machine was doing (`load average` 3.2, eight users).
+
+> *An abort out of a deadline is no more a finding than an abort out of memory* — `CLAUDE.md`
+> says the second, and this is the first, one class over. **A `2` says the SETUP has to
+> change**, and the setup here is the machine, not the tree.
+
+**What was NOT done, and deliberately:** the deadline was not raised. Moving a limit until
+the run fits under it is the same move as touching a binary to fool a timestamp check — it
+makes exactly the state invisible that the limit exists to catch. *The honest carrier of this
+figure is this table, not a larger number in `FRIST`.*
 
 ## Was diese Tafel NICHT sagt
 
