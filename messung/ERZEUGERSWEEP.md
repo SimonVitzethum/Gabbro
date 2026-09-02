@@ -30,16 +30,19 @@ Nothing measured whether it keeps it.
 
 ## 2. The denominators, and there are seven of them
 
-| | |
-|---:|---|
-| **5 889** | cases generated, over **64** declaration forms |
-| **3 517** | accepted by the checker — **the population of this property** |
-| 2 372 | refused by the checker; the emitter never sees them |
-| **3 046** | lowered by the emitter |
-| **471** | refused BY NAME at the emitter |
-| **2 773** of 3 046 | compile under the gate — **273 do not** |
-| **1 382** | could be **oracled**: the swept value is findable in the C at all |
-| 1 664 | lowered, compiled, and only shape-checked — no oracle exists for them |
+| | | before the §9 repair |
+|---:|---|---:|
+| **5 889** | cases generated, over **64** declaration forms | 5 889 |
+| **3 517** | accepted by the checker — **the population of this property** | 3 517 |
+| 2 372 | refused by the checker; the emitter never sees them | 2 372 |
+| **3 039** | lowered by the emitter | 3 046 |
+| **478** | refused BY NAME at the emitter | 471 |
+| **2 766** of 3 039 | compile under the gate — **273 do not** | 2 773 of 3 046 |
+| **1 375** | could be **oracled**: the swept value is findable in the C at all | 1 382 |
+| 1 664 | lowered, compiled, and only shape-checked — no oracle exists for them | 1 664 |
+
+*The right column is the same run before `table count 0` was refused (§9); seven cases moved
+from `lowered` to `refused by name`, which is the whole of the difference.*
 
 **21 of 64 forms carry the swept NUMBER into their C**, and **3 of 64 carry the swept NAME.**
 The rest are ghost declarations, compile-time clauses and bare types whose C never held the
@@ -61,11 +64,14 @@ some accepted rung demonstrably put its own value into a C the baseline's C does
 
 Beside the property, three further nets, each reported apart:
 
-| net | | count |
-|---|---|---:|
-| 5 | not ISO C (`-Wpedantic`) | 23 |
-| 6 | an identifier past C11 5.2.4.1 significance | 58 |
-| 7 | degenerate constant arithmetic (`* 0`) | 3 |
+| net | | count | before §9 |
+|---|---|---:|---:|
+| 5 | not ISO C (`-Wpedantic`) | **16** | 23 |
+| 6 | an identifier past C11 5.2.4.1 significance | 58 | 58 |
+| 7 | degenerate constant arithmetic (`* 0`) | 3 | 3 |
+
+*Net 5 fell by seven for the same reason: those seven were the zero-size array of §9, three
+at `table count 0` and four through a `const` bound.*
 
 ---
 

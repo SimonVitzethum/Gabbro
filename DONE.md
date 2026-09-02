@@ -26,6 +26,7 @@ that sweep's form table rather than copying it (`W7`).
 | **5 889** | cases over **64** forms — 63 shared, 1 this sweep owns | `instrumente/fuzze-erzeuger.py` |
 | **3 517** | accepted by the checker: the population | `instrumente/fuzze-erzeuger.py` |
 | **342** | break the promise — 273 non-compiling C, 69 the oracle caught | `messung/ERZEUGERSWEEP.md` §3, §4 |
+| **1** | of the two zeros that escaped is **closed the same day, with no new code** — `table count 0` was an out-of-bounds read in the artefact, and the cause was a `.filter(\|n\| *n > 0)` that read an empty domain as an unknown one | `messung/ERZEUGERSWEEP.md` §9 · `beispiele/gift/647` |
 | **0** | a third answer: no panic, no timeout, no unnamed exit, and all **471** refusals carried their note | `messung/ERZEUGERSWEEP.md` §5 |
 | **0** | debug/release disagreements — the C was **byte-identical** every time | `messung/ERZEUGERSWEEP.md` §5 |
 | **1 382** of 3 046 | lowered cases could be **oracled**; the other 1 664 are shape-checked only, and that is the larger half | `messung/ERZEUGERSWEEP.md` §2 |
