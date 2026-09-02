@@ -1608,3 +1608,120 @@ fn ein_praedikat_darf_nennen_was_ein_rumpf_nicht_kann() {
         "`ensures` has a reader, and two refusals for one fault is worse than one"
     );
 }
+
+/// **`N054` -- a feature name is ONE bare name, and until 2026-09-02 nothing said so.**
+///
+/// The measurement first, because the rule is a decision about where a line runs: eleven
+/// written forms across six predicate positions, **64 of 66 accepted**
+/// (`messung/PREDICATE-NAMES.md` §5).
+///
+/// **What stays undecided, deliberately:** whether the name IS a feature of the machine.
+/// `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID probe (A14); that probe
+/// does not exist, no `mints Has(F)` form exists, and nothing in the language declares a
+/// feature name. *A resolver would need a declared list, and there is none to hold it
+/// against* -- so the five bare-name forms below stay silent on purpose, and the test says
+/// so rather than leaving the reader to notice.
+#[test]
+fn eine_merkmalsforderung_ist_ein_name() {
+    let axiom = |req: &str| {
+        format!(
+            "module p {{\nconst G : u32 = 8;\nstatic mut Z : u32 = 0;\n\
+             lock L protects {{ Z }} rank 0 held <= 40 ops masks irqs;\n\
+             table T count G {{ slot {{ w : u32, }} }}\n\
+             axiom zg() -> u64 requires {req} effects {{ pure }} unfalsifiable \"probe\";\n}}"
+        )
+    };
+    // The shape, in all five ways it can be wrong.
+    faellt_mit(&axiom("Has()"), "N054");
+    faellt_mit(&axiom("Has(7)"), "N054");
+    faellt_mit(&axiom("Has(G + 1)"), "N054");
+    faellt_mit(&axiom("Has(T.slots)"), "N054");
+    // **The sharpest of the five**: every reader takes the first argument, so this reads as
+    // a demand for two features and is one for the first.
+    faellt_mit(&axiom("Has(RDTSCP, XSAVE)"), "N054");
+
+    // **The counter-direction, and the larger half.** A bare name goes through, whatever it
+    // is -- that is the question a declared list would answer and this compiler has none.
+    faellt_nicht(&axiom("Has(RDTSCP)"));
+    faellt_nicht(&axiom("Has(GIBTESNICHTAUFDERWELT)"));
+    faellt_nicht(&axiom("Has(L)"));
+    faellt_nicht(&axiom("Has(G)"));
+
+    // The form is writable in every predicate position, so the rule reads every one of
+    // them: a `requires` at a function, a device promise, a table `invariant`.
+    let fn_req = |req: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             impl fn f() requires {req} effects {{ writes Z }} costs <= 4 ops {{ Z = 1; }}\n}}"
+        )
+    };
+    faellt_mit(&fn_req("Has(7)"), "N054");
+    faellt_nicht(&fn_req("Has(RDTSCP)"));
+
+    let zusage = |req: &str| {
+        format!(
+            "module p {{\nopaque type Pa = u64;\n\
+             device D(basis : Pa) at mmio {{\n\
+             reg S : u32 @0x0 class r fields {{ A @31, }} requires {req}\n}}\n}}"
+        )
+    };
+    faellt_mit(&zusage("Has(RDTSCP, XSAVE)"), "N054");
+    faellt_nicht(&zusage("Has(RDTSCP)"));
+
+    let inv = |pred: &str| {
+        format!(
+            "module p {{\nconst G : u32 = 8;\n\
+             table T count G {{ slot {{ w : u32, }}\n\
+             invariant i cost O(n) runs offline : {pred};\n}}\n}}"
+        )
+    };
+    faellt_mit(&inv("Has(1) && forall q in slots of Self : Self.slots[q].w == 0"), "N054");
+    faellt_nicht(&inv("Has(RDTSCP) && forall q in slots of Self : Self.slots[q].w == 0"));
+}
+
+/// **`Has(F)` is not a call, and reading it as one put `E009` over a CORRECT program.**
+///
+/// `requires Has(X)` at a function is the very form `N016` was built to propagate
+/// (2026-08-19) -- and the call-graph collector read the same words as an edge to a function
+/// nobody declared, then declared the effect hull of that function a LOWER BOUND:
+///
+/// ```text
+/// impl fn jetzt() -> u64 requires Has(RDTSCP) effects { reads uhr } costs <= 40 ops
+///   -> hint: [E009] the call effects of `jetzt` are undecidable: `Has` is unknown to the graph
+/// ```
+///
+/// *One construct, two readers, and the second says the writer mistyped a name.* `Held(L)`
+/// has the same shape the moment brackets stand around it, because `(Held(L))` parses as a
+/// bracketed COMPARISON and not as `PredArt::Held`.
+#[test]
+fn ein_praedikatswort_ist_keine_rufkante() {
+    let quelle = |req: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             lock L protects {{ Z }} rank 0 held <= 100 ops masks irqs;\n\
+             impl fn f() requires {req} effects {{ writes Z, locks L }} costs <= 40 ops \
+             {{ locks L {{ Z = 1; }} }}\n}}"
+        )
+    };
+    let ohne_e009 = |req: &str| {
+        let c = codes(&quelle(req));
+        assert!(
+            !c.iter().any(|(k, _)| *k == "E009"),
+            "`{req}` is a predicate word and not a call edge, but the hull says {c:?}"
+        );
+    };
+    ohne_e009("Has(RDTSCP)");
+    ohne_e009("Held(L)");
+    ohne_e009("(Held(L))");
+    ohne_e009("Z == 0 && Has(RDTSCP)");
+    ohne_e009("(Z == 0) && (Held(L))");
+
+    // **The counter-direction: a real unknown callee in a contract still says so.** A rule
+    // that filtered by "looks like a pseudo-call" rather than by the two names would have
+    // taken this hint with it.
+    let c = codes(&quelle("gibtesnicht() == 1"));
+    assert!(
+        c.iter().any(|(k, _)| *k == "E009"),
+        "an unknown callee in a `requires` must still make the hull a lower bound: {c:?}"
+    );
+}

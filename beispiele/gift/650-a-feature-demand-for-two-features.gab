@@ -1,0 +1,29 @@
+-- erwartet: N054
+-- **The other direction of the device tier: feature names were checked against nothing.**
+--
+-- Measured 2026-09-02, eleven written forms across six predicate positions: **64 of 66
+-- accepted.** `Has()` with no argument, `Has(7)`, `Has(GRENZE + 1)`, `Has(T.slots)` and the
+-- line below all gave `0 errors, 0 hints`. The two that fell did so at `N053` and about the
+-- SECOND argument, not about the form.
+--
+-- **This one is the sharpest of the five, and it is why the rule is an error.**
+-- `Has(RDTSCP, XSAVE)` reads as a demand for two features and is a demand for one: every
+-- reader of the form takes `argumente.first()` -- `namen.rs::has_aus_pred` since
+-- 2026-08-19 -- and the rest of the list has never been read by anybody. *A form whose
+-- second half is silently dropped is the shape this folder pays for over and over.*
+--
+-- **What this rule deliberately does NOT decide: whether `RDTSCP` is a feature at all.**
+-- `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID probe (A14), that probe does
+-- not exist, and nothing in the language declares a feature name. Checking the NAME needs a
+-- declared list, and who declares it is an owner's decision -- a house table under `arch`,
+-- the way `cnamen.rs::SIGNATUR` carries what C has taken, or a language form that mints the
+-- witness. **The SHAPE needs neither, and that is what falls here.**
+
+module gift::merkmalsforderung_fuer_zwei_merkmale {
+
+axiom xsave_und_zeit() -> u64
+    requires Has(RDTSCP, XSAVE)
+    effects  { pure }
+    unfalsifiable "two feature names under one demand, and the second is never read";
+
+}

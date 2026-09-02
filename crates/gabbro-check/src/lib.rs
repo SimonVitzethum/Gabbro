@@ -751,6 +751,33 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
     }
 }
 
+/// **`Has(F)` and `Held(L)` are spelled as a CALL and are not one.**
+///
+/// The grammar has a `PredArt::Held`, so the bare form is its own predicate -- but the
+/// moment brackets stand around it (`(Held(L))`) the parser reads `PredArt::Klammer` over a
+/// comparison, and the comparison holds an ordinary `ExprArt::Ruf`. **`Has` has no
+/// `PredArt` at all** and is always a call in the tree; every reader of it matches on the
+/// callee name.
+///
+/// Measured 2026-09-02, and it is a false diagnostic on a CORRECT program:
+///
+/// ```text
+/// impl fn jetzt() -> u64 requires Has(RDTSCP) effects { reads uhr } costs <= 40 ops
+///   -> hint: [E009] the call effects of `jetzt` are undecidable: `Has` is unknown to the graph
+/// ```
+///
+/// `requires Has(X)` at a function is exactly the form `N016` was built to propagate
+/// (`namen.rs`, 2026-08-19) -- and the effect hull reads the same words as a call to a
+/// function nobody declared, then declares itself a LOWER BOUND for the whole function.
+/// *One construct, two readers, and the second says the writer mistyped a name.*
+///
+/// **The list is closed and it is these two.** Neither is a function, neither has a body,
+/// and neither can be an edge in a call graph; `Some`/`None` and a record value are already
+/// filtered one layer down, and this is the same kind of filter for the same reason.
+pub fn ist_praedikatswort(r: &Ruf) -> bool {
+    r.heisst("Has") || r.heisst("Held")
+}
+
 /// **EVERY predicate this item carries -- exhaustive over `ItemArt`, no `_` arm.**
 ///
 /// `eigene_praedikate` answers the same question one statement at a time, and every caller
@@ -811,7 +838,8 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
             praedikate_im_block(&c.can_fail, &mut aus);
         }
         // A `type` may hold a function POINTER, and that carries a contract -- the two
-        // clauses `N037` refuses. `praedikate_im_typ` above has already collected them:
+        // clauses `N037` in `namen.rs` refuses. `praedikate_im_typ` above has already
+        // collected them:
         // a rule that reads a predicate must be able to speak about a form that ALSO falls
         // for being one, rather than seeing nothing there.
         ItemArt::Typ(_) => {}

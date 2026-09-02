@@ -16,14 +16,14 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **92** | `gabbro paesse` |
-| of those `measured` | **68** | a poison-probe case or a caught mutation |
+| Sentences in the register | **94** | `gabbro paesse` |
+| of those `measured` | **87** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
-| of those `CONJECTURED` | **6** | nothing measures them |
+| of those `CONJECTURED` | **5** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **243** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **198** | `./instrumente/pruefe-saetze.py` |
+| Codes in the checker | **274** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **223** | `./instrumente/pruefe-saetze.py` |
 
 > **The five figures above were carried on 2026-08-31, and the ratchet RISES — with reason.**
 > The subject grew: `N042` came in (`namen.erzeugter_name_zweimal`,
@@ -36,6 +36,17 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (`namen.berichtszeile`) — a `measures` name without a carrier, `messung/TORREICHWEITE.md`.
 > 74 → 75 sentences, 242 → 243 codes, 197 → 198 claimed, 67 → 68 `measured`; the 45
 > without a sentence stay standing. *The second tooth, for the second time in one day.*
+>
+> **2026-09-02, and this time the ratchet does NOT move.** `D021`
+> (`d.praedikatsname`, the base name of a place in a predicate) and `N054`
+> (`n.merkmalsform`, a feature demand names one bare name) came in **with their sentences in
+> the same commit** — 92 → 94 sentences, 272 → 274 codes, 221 → 223 claimed, and **51
+> without a sentence, unmoved.** `messung/PREDICATE-NAMES.md`.
+>
+> *The four figures beside them were stale again* — `measured` stood at 68 where the run
+> says 87, `Codes` at 243 where it says 274, `claimed` at 198 where it says 223. They are
+> recomputed here rather than incremented, because incrementing a forgotten figure carries
+> the forgetting forward.
 | **Codes without a sentence — the ratchet** | **51** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not

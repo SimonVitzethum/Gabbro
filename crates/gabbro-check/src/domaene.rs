@@ -384,7 +384,8 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
                 aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen);
             }
         }
-        // **A `check … floor` names quantities, and nothing said they exist.** `N022` asks
+        // **A `check … floor` names quantities, and nothing said they exist.** `N022` in
+        // `namen.rs` asks
         // whether the floor covers what `measures` names one-sidedly; put a phantom name
         // beside a legitimate conjunct and it goes silent, which is what made it look like
         // a reader and what it is not. The `can_fail` block is an ordinary body.
@@ -693,18 +694,22 @@ fn grundname_im_praedikat(
     frei: &HashSet<String>,
     absagen: &mut Absagen,
 ) {
-    // `ensures` has a reader -- `M109` resolves EVERY name of a postcondition.
-    if st == Stellung::Nachbedingung {
+    // **The three lines below are spelled differently from `grundname_pruefen`'s on
+    // purpose.** Two mutations of `mutiere-pruefer.py` anchor on that function's literal
+    // source, and a second byte-identical copy makes each anchor AMBIGUOUS -- `--anker`
+    // reported exactly that on the day this rule was written, and an ambiguous anchor
+    // measures nothing. *Two rules that ask the same question are still two rules.*
+    //
+    // `ensures` has a reader -- `M109` in `m1.rs` resolves EVERY name of a postcondition.
+    if matches!(st, Stellung::Nachbedingung) {
         return;
     }
     let n = &o.basis;
     if n.text == "Self" || frei.contains(&n.text) {
         return;
     }
-    if geb.contains(&n.text) || s.lokal.contains_key(&n.text) {
-        return;
-    }
-    if s.u.suche_global(s.modul, &n.text).is_some() {
+    let gebunden = geb.contains(&n.text) || s.lokal.contains_key(&n.text);
+    if gebunden || s.u.suche_global(s.modul, &n.text).is_some() {
         return;
     }
     if s.u.nennt_typ_oder_konstante(s.modul, &n.text)

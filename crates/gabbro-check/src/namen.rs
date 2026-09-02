@@ -29,6 +29,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     pro_kern_und_gegenprobe(baum, absagen);
     dispatch_loest_auf(baum, absagen);
     maschineneigenschaft(baum, absagen);
+    merkmalsname_ist_ein_name(baum, absagen);
     geraetezusage_nennt_ihre_stelle(baum, absagen);
     verbund_ohne_groesse(baum, absagen);
     check_traegt_seine_pflicht(baum, absagen);
@@ -702,6 +703,84 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
                          it is the second predicate of the same shape",
                     ),
                 );
+            }
+        }
+    });
+}
+
+/// **`N054` -- `Has(…)` names ONE machine feature, and a feature is a bare NAME.**
+///
+/// The other direction of the device tier, and it was measured before it was decided
+/// (`messung/PREDICATE-NAMES.md` §5): **eleven written forms x six predicate positions, 64
+/// of 66 accepted.** `Has()` with no argument, `Has(7)`, `Has(GRENZE + 1)`,
+/// `Has(Platten.slots)` and `Has(RDTSCP, XSAVE)` all gave `0 errors, 0 hints`. The two that
+/// fell did so at `N053` and about the SECOND argument, not about the form.
+///
+/// ## What is decidable here, and what is not -- the line, with the reason on both sides
+///
+/// **Whether `RDTSCP` is a feature of the machine is NOT decidable in this tree.**
+/// `SPRACHE.md` §2 of the x86_64 catalogue says where the answer would come from: *"the
+/// CPUID probe is the only generator of `ghost Has(Feature)`"* (A14). That probe does not
+/// exist, no `mints Has(F)` form exists, and **nothing in the language declares a feature
+/// name.** Checking the NAME therefore needs a declared list, and who declares it is an
+/// owner's decision with two shapes -- a house table under `arch`, the way
+/// `cnamen.rs::SIGNATUR` carries what C has taken (no new word), or a language form that
+/// mints the witness (a new word, and the vocabulary ratchet stands at 221/208/333). *That
+/// is named and not built here.*
+///
+/// **The SHAPE is decidable without any of that, and it is what this rule takes.** A
+/// machine feature is one name. `Has()` demands nothing, `Has(7)` demands a number,
+/// `Has(a, b)` demands two things through a form that reads one -- `has_aus_pred` takes
+/// `argumente.first()` and the rest of the list has never been read by anybody.
+///
+/// > **And that last one is the sharpest of the five**: `Has(RDTSCP, XSAVE)` looks like it
+/// > demands both features and demands one. A form whose second half is silently dropped is
+/// > the shape this folder pays for over and over.
+///
+/// `Has` is spelled as a call and is not one -- there is no `PredArt::Has`, so every reader
+/// of it matches on the callee name. This rule reads EVERY predicate of the tree
+/// (`crate::praedikate_im_item`), because the sweep showed the form is writable in all
+/// nineteen positions and was checked in none.
+fn merkmalsname_ist_ein_name(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |i| {
+        for p in crate::praedikate_im_item(i) {
+            for e in crate::ausdruecke_im_praedikat(p) {
+                for x in crate::alle_ausdruecke(e) {
+                    let ExprArt::Ruf(r) = &x.art else { continue };
+                    if !r.heisst("Has") {
+                        continue;
+                    }
+                    let gestalt = match r.argumente.len() {
+                        1 => match &crate::ohne_klammern(&r.argumente[0]).art {
+                            ExprArt::Ort(o) if o.suffixe.is_empty() => continue,
+                            ExprArt::Ort(_) => "a place with a suffix",
+                            _ => "an expression",
+                        },
+                        0 => "nothing",
+                        n => {
+                            let _ = n;
+                            "more than one thing"
+                        }
+                    };
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N054",
+                            x.span,
+                            format!("`Has(…)` names {gestalt} -- a machine feature is ONE name"),
+                        )
+                        .mit_notiz(
+                            "every reader of this form takes the FIRST argument and it has \
+                             to be a bare name: `Has(RDTSCP, XSAVE)` reads as a demand for \
+                             two features and is one for the first",
+                        )
+                        .mit_notiz(
+                            "whether the name IS a feature of the machine is a different \
+                             question and this compiler cannot answer it -- `SPRACHE.md` \
+                             puts the only generator of `Has(F)` at the CPUID probe, and no \
+                             list of feature names exists in the language",
+                        ),
+                    );
+                }
             }
         }
     });

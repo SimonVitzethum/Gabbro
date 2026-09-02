@@ -397,6 +397,22 @@ const BENANNT: &[&str] = &[
     // > wrote `c.slots[s] reaches WURZEL via parent` -- byte for byte the excerpt's own line
     // > -- and no unit of that file declared `WURZEL`.
     "D021",
+    // **`N054` -- `Has(…)` names ONE machine feature, and a feature is a bare NAME**
+    // (2026-09-02). The other direction of the same tier: `D021` holds a PREDICATE name
+    // against the tree, this holds a FEATURE name against the only thing that can be held
+    // without a declared list -- its shape.
+    //
+    // Measured first: eleven written forms x six positions, **64 of 66 accepted**.
+    // `Has()`, `Has(7)`, `Has(GRENZE + 1)`, `Has(T.slots)` and `Has(RDTSCP, XSAVE)` all
+    // gave `0 errors, 0 hints`. The last is the sharpest -- every reader of the form takes
+    // `argumente.first()`, so it reads as a demand for two features and is one for the
+    // first.
+    //
+    // > Whether the NAME is a feature of the machine stays undecided here and says so in
+    // > its own second note: `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID
+    // > probe, that probe does not exist, and no list of feature names exists in the
+    // > language.
+    "N054",
 ];
 
 #[test]
