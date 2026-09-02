@@ -2077,7 +2077,13 @@ echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECH
 # instead of a `putchar` per byte. It is the counter-form of `N052`: what is bound is what
 # carries its end in the SIGNATURE, and `requires n <= KAP` is the obligation `M115` then
 # discharges at the call site. *A terminator scan leaves nothing to discharge.*
-MARKE_EMIT=64
+# **64 -> 65 on 2026-09-02, and the object grew by a SPACE the emitter used to refuse whole**:
+# `beispiele/65-port-space.gab`, a 16550 at COM1 as a `device … at port`. Every access form in
+# it lowers to an `in`/`out` instruction -- register read, register write, field read, an
+# acknowledgement, a bit-field read-modify-write, a `transition` -- where the emitter used to
+# answer `C001` for all of them at once. *Rule A's second half: no refusal without a measured
+# defect, and the defect under this one had been repaired.*
+MARKE_EMIT=65
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -2172,6 +2178,25 @@ MARKE_EMIT=64
 # `-zwei` -- carry `-- erwartet: cc` and stand in this denominator exactly the way
 # `gift/414` does: they emit, and their C MUST fall. *The object grew by five, and the
 # ratchet counts emitting files, not passing ones.*
+# **The number stays 52 on 2026-09-02, and it is a DIFFERENT 52 -- two files traded places,
+# and each move is worth its own line.**
+#
+# Measured, not assumed: the base binary of `178e260` emits **51** files under `messung/`,
+# so this mark was ALREADY broken at master, in the direction its own message names -- *a
+# file has LEFT emission.* The file is `messung/fragmente/F01.gab`, and it left through
+# `D021` (`fb258db`): the pass now refuses a place's base name that no declaration carries,
+# and `F01` had named `WURZEL` into the void since it was written. **That is the good
+# direction** -- the checker catches it before the emitter is asked -- and nobody pulled the
+# mark down behind it.
+#
+# The file that arrives is `messung/proben/probe-port-nachfrage.gab`. It was written to
+# measure the demand that `emit.rs`'s `at port` refusal named as its own condition -- *"zero
+# `device … at port` in 426 files"* -- and it checked with 0 errors and refused at the
+# emitter, which is why it was not in this number. It lowers since the `in`/`out` work.
+#
+# > *A number that is right again for a reason it was not booked for is exactly the case
+# > this file's own ratchet message warns about,* so it is written out rather than left to
+# > look like nothing happened.
 MARKE_EMIT_M=52
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.

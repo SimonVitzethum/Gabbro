@@ -254,7 +254,14 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # re-running: **337 without them, 339 with them, nothing else moved.** *Two citations, and
 # both are the kind this tool exists to make visible -- a comment in the EMITTER claiming what
 # a CHECKER rule does.*
-MARKE = 339
+# **339 -> 342 on 2026-09-02, and the CAUSE was measured the way the line above demands.**
+# `at port` grew a lowering (`in`/`out`), and its comments in `emit.rs` cite four rules that
+# live in the CHECKER: `R002` and `R003` at the accessor pair -- *what the checker decided the
+# machine does not decide again* (W6) -- and `N026` at the `memory` clobber. Measured by
+# restoring `emit.rs` alone from `178e260` and re-running: **339 without it, 342 with it,
+# nothing else moved.** *Five citation sites, three candidates -- the tool counts what it
+# counts, and the difference is its own paragraph rule, not a miscount.*
+MARKE = 342
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries 340 mutations, and every one of them holds a

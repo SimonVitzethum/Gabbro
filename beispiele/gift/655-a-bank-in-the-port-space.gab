@@ -1,0 +1,45 @@
+-- erwartet: C001
+-- 655 -- **A `bank` at a `device … at port`, and nothing bounds it inside 16 bits.**
+--
+-- A bank is a register set at a base the driver only learns at run time -- `bank FRR at
+-- CAP.FRO * 16 stride 16 count 256` reads its own location out of a register. In the memory
+-- space that is address arithmetic and the generated accessor carries it; a 64-bit pointer
+-- has room for whatever the device reports.
+--
+-- **The port space is 16 bits wide and ends there.** The accessor would compute
+--
+--     basis + base + i * stride + offset
+--
+-- and hand it to `in`/`out` as a `uint16_t`. `count` bounds the INDEX -- that is M1, and it
+-- holds. **Nothing in the declaration bounds `base`**, and it is the one term that comes from
+-- the device. A device that reports a large base gets a truncated port number, and the port
+-- it then names is a port that answers.
+--
+-- *Rule A points the same way.* Zero banks at a port device in the corpus, and the hardware
+-- the space is made of -- `0x3f8`, `0xcf8`/`0xcfc`, the PIC, the PIT -- is fixed ports, not a
+-- strided array. **A refusal here costs nothing and takes back nothing.**
+--
+-- > The plain registers of the same device lower. It is the `bank` that has no lowering, and
+-- > the refusal says so at the `bank` and not at the device.
+
+module gift::bank_im_portraum {
+
+assume portraum_ist_x86 arch x86_64
+    "The port space and its `in`/`out` instructions exist on x86 and nowhere else."
+    falsifier sonde_portraum;
+
+device Pci(basis : u16) at port {
+    reg ADDR : u32 @0x00 class w
+    bank FENSTER at 4 stride 4 count 8 {
+        reg WERT : u32 @0x00 class rw
+    }
+}
+
+impl fn lies_fenster(p : ptr<port, rw> Pci, i : u32 in 0 .. 7) -> u32
+    effects { reads p.FENSTER }
+    costs   <= 4 ops
+{
+    return p.FENSTER[i].WERT;
+}
+
+}

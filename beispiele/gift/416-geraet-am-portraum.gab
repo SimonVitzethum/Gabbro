@@ -31,6 +31,28 @@
 -- die dritte aus einem eigenen Grund: `at normal` fragt, ob es ueberhaupt ein Geraetezugriff
 -- ist; `at dma` fragt nach der Barriere; **diese fragt nichts -- sie nimmt eine falsche
 -- Antwort zurueck.**
+--
+-- 2026-09-02: WAS DIESE PROBE JETZT MISST -- DIE ZWEITE HAELFTE
+-- ------------------------------------------------------------
+-- **`at port` senkt seit heute ab**, und die Zahl, die die Absage oben begruendete, gilt
+-- nicht mehr: `messung/proben/probe-port-nachfrage.gab` und `beispiele/65-port-space.gab`
+-- sind Portgeraete, und beide werden zu `in`/`out`. *Regel A hat zwei Haelften, und die
+-- zweite ist: keine Weigerung ohne gemessenen Mangel.*
+--
+-- **Diese Datei faellt trotzdem, und zwar an genau der Haelfte, die ihr eigener Kopf schon
+-- benannt hat** -- sie traegt kein `arch`. Der Erzeuger verlangt das Wort jetzt, statt es zu
+-- raten, derselbe Zug wie `assume dma_kohaerent` fuenf Zeilen weiter:
+--
+--     `device … at port` in a unit that does not declare `arch x86_64`
+--     -- this unit names no architecture at all
+--
+-- *Der Kopf war die ganze Zeit richtig; nur der Erzeuger las ihn nicht.* Die Probe ist damit
+-- schaerfer als vorher: sie misst nicht mehr eine fehlende Absenkung, sondern **eine
+-- vorhandene, die ohne Erlaubnis geschrieben wuerde**.
+--
+-- > Und `ptr<mmio, r> SerialCom1` weiter unten ist kein zweiter Mangel. Der Raum am ZEIGER
+-- > entscheidet die Zugriffsform nicht -- das tut die `device`-Deklaration --, und dass der
+-- > Raum am Zeiger zum Ziel passt, traegt der Pruefer (`R008`, `messung/ADRESSRAEUME.md` §5).
 
 module gift::geraetportraum {
 
