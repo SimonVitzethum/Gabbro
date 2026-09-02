@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 182 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 183 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *179 → 181 on 2026-09-02: `dokumente/GABBROV.md` and `messung/GABBROV-V1.md` joined —
       the GabbroV design and V1's measurement over it (56 of 66 L obligations sayable in the
       Lean fragment, `G1` does not fire). **The cause was measured the way the entry below
