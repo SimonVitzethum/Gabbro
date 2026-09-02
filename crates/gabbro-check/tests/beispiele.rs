@@ -537,7 +537,7 @@ fn ein_requires_am_register_wird_gezaehlt() {
     let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
     let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
     let bericht = gabbro_check::pflichten::zeige(&baum, "F04.gab");
-    for stueck in ["Device promise at a register", "reg QUEUE_SIZE requires", "1 device"] {
+    for stueck in ["Device promise (`reg` or `transition`)", "reg QUEUE_SIZE requires", "1 device"] {
         assert!(bericht.contains(stueck), "fehlt: {stueck}\n{bericht}");
     }
 }

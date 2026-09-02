@@ -598,9 +598,33 @@ fn format_(f: &Format, quelle: &str, aus: &mut Vec<Stelle>) {
     }
 }
 
+/// **The ceremony of a `device` -- and until 2026-09-02 it stopped at the top level.**
+///
+/// The report's own header reads *"Every clause and annotation: text that describes no
+/// computation step."* Two kinds of site were missing from that "every", and both were
+/// found by counting the assumption tier rather than by reading this function:
+///
+/// | missing | corpus sites |
+/// |---|---|
+/// | `transition … requires` | **13** |
+/// | a register inside a `bank` (and its per-field classes) | **17** |
+///
+/// `beispiele/02-geraet.gab` carries three `transition … requires` and `gabbro zeremonie
+/// --je-stelle` listed **none** of them; the two `T3` it printed were the `requires` and
+/// `ensures` of the one `impl fn`. *A census that misses a clause reports a corpus tidier
+/// than the one on disk*, and the direction of that error is the dangerous one: ceremony
+/// undercounted looks like ceremony not incurred.
+///
+/// **The rule is `T3` and not a new one.** `T3` reads *"`requires` / `ensures` that no other
+/// clause repeats"*, and a device promise is exactly that -- the `reg` half has stood under
+/// `T3` since this function existed. **A new rule would have been the second register over
+/// one matter**; what was missing is the walk, not the judgement.
+///
+/// > *It does not decide whether the promise holds.* That is hardware, `gabbro pflichten`
+/// > books it as an assumption (`D`), and no count here changes it.
 fn geraet(d: &Device, quelle: &str, aus: &mut Vec<Stelle>) {
     let ort = format!("device {}", d.name.text);
-    for r in &d.register {
+    let nimm = |r: &RegDecl, aus: &mut Vec<Stelle>| {
         aus.push(Stelle {
             regel: "T10",
             ort: ort.clone(),
@@ -622,6 +646,29 @@ fn geraet(d: &Device, quelle: &str, aus: &mut Vec<Stelle>) {
                 regel: "T3",
                 ort: ort.clone(),
                 was: format!("{} requires {}", r.name.text, schnitt(quelle, p.span)),
+                nachweis: None,
+            });
+        }
+    };
+    for r in &d.register {
+        nimm(r, aus);
+    }
+    // A register inside a `bank` is a register: same class, same fields, same clause.
+    for b in &d.baenke {
+        for r in &b.register {
+            nimm(r, aus);
+        }
+    }
+    for u in &d.uebergaenge {
+        if let Some(p) = &u.requires {
+            aus.push(Stelle {
+                regel: "T3",
+                ort: ort.clone(),
+                was: format!(
+                    "transition {} requires {}",
+                    u.name.text,
+                    schnitt(quelle, p.span)
+                ),
                 nachweis: None,
             });
         }
