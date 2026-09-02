@@ -75,8 +75,8 @@ Erzeugnis stehen:
 * Die drei `cc`-Klassen bleiben ohne `--uebersetzer` **ungemessen** und heissen dann so.
 * Was das Werkzeug ueberhaupt nicht sehen kann, steht in `UNGEMESSEN` unten -- mit Namen.
 
-**Menge B ist dagegen eine OBERE Schranke:** ein Eintrag gilt als tot, wenn diese 102
-Einheiten ihn nicht ausloesen (von 485 versionierten `.gab`, Stand 2026-08-31). Ein 103. Programm kann ihn wiederbeleben. *Darum ist der
+**Menge B ist dagegen eine OBERE Schranke:** ein Eintrag gilt als tot, wenn diese 127
+Einheiten ihn nicht ausloesen (von 601 versionierten `.gab`, Stand 2026-09-02). Ein 128. Programm kann ihn wiederbeleben. *Darum ist der
 Nenner gedruckt, und darum ist die Zahl eine Ratsche und kein Beweis.*
 
 DIE RATSCHE
@@ -144,8 +144,37 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # emitter writes C's own declaration for a bound name, so `const void *` reaches the artefact.
 # **The C semantics Gabbro must one day formalise got one form bigger**, and that is the
 # movement this mark exists to make visible.
-MARKE_TABELLE = 66
-MARKE_UNERLAUBT = 31
+# **66 -> 67 and 31 -> 32 on 2026-09-02, MEASURED the same way, and this one is NOT
+# bookkeeping.** The counter of `fd8b53a` -- the commit where the mark last held -- was
+# rebuilt into a scratch tree and run beside this one, both with `--uebersetzer`:
+#
+#     alt: 66 forms   neu: 67 forms   NEW: `implizite umwandlung`   GONE: --
+#
+# *This file is byte-identical between `fd8b53a` and here* (`git diff fd8b53a HEAD --
+# instrumente/zaehle-c-formen.py` is empty), so the tool did not move. Neither did the
+# emitter: `gabbro emit` of the unit below gives the SAME MD5 from both binaries. **What grew
+# is the corpus.**
+#
+# The one unit is `beispiele/gift/641`, which arrived on 2026-09-02 as the probe for `D1`
+# (`messung/ERZEUGERSWEEP.md`). And the form is a SHADOW of that defect, not a second one:
+# `T_absteigen` calls `Pte_rest`, which no accessor declares, C assumes `int` for an
+# undeclared callee, and `int -> uint64_t` is the sign conversion `-Wsign-conversion`
+# reports. **Spliced a `Pte_rest` reader into the emitted C and recompiled: ZERO warnings
+# under all nine measuring switches.** One defect, two complaints.
+#
+# **So it is the third outcome and not the first two:** `implicit conversion` is on the NEVER
+# list (*"none, but to be checked mechanically"* -- and this IS that check), no catalogue
+# line covers it, and the form does not belong in the emitted C at all. The mark therefore
+# stands at 67/32 with a NAMED exit: **it falls back to 66/31 the day `D1` is fixed**, and
+# until then this number is on loan from an open defect. *Whoever finds it red again should
+# fix `D1`, not the number.*
+#
+# > Worth its own line: this is the SECOND instrument to report `D1`, after
+# > `fuzze-erzeuger.py` found it. Two registers over one thing is usually the mistake; here
+# > they arrived from opposite ends -- a sweep over generated programs and a census over
+# > emitted forms -- and that is what makes the agreement worth something.
+MARKE_TABELLE = 67
+MARKE_UNERLAUBT = 32
 
 # ---------------------------------------------------------------------------------------
 # **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price
@@ -164,6 +193,48 @@ MARKE_UNERLAUBT = 31
 #
 # `§50` #2 came out of the Beta path on 2026-09-02 and the posten stands. **When it is picked
 # up, this line is where its price starts.**
+#
+# ANSWERED 2026-09-02, BY COUNTING THE JUMPS AND NOT BY READING `emit.rs`
+# -----------------------------------------------------------------------
+# The question above ("could the loop exits be structured?") assumed all 27 jumps ARE loop
+# exits. They are not. Classified by the label the emitter writes, over the same 127 units:
+#
+#     leave           8 jumps    7 labels    `leave d`  -- a named loop exit
+#     next            7 jumps    3 labels    `next d`   -- a named loop pass
+#     exchange-join  12 jumps    6 labels    the `_fertig` join of an `update` body
+#
+# **The 12 are not loop exits at ALL**, and the allow list -- *"goto ONLY as a generated loop
+# exit"* -- does not reach them. They sit INSIDE the `for (;;)` of a bounded CAS loop and
+# jump forward to the end of a plain block, leaving no loop. *Nearly half of the permitted
+# uses are outside what the permission says.* The `UNGEMESSEN` section below has always named
+# this gap (*"counted is `goto`, not WHAT FOR"*); this is that measurement.
+#
+# **The two halves answer the structuring question in opposite directions.**
+#
+#   `leave`/`next` -- the jump STAYS. The label names a SPECIFIC enclosing loop, and C's
+#   `break`/`continue` always bind the innermost one; `emit.rs` says so where it writes them.
+#   A structured form needs one flag per enclosing level plus a guard between the levels --
+#   Boehm-Jacopini -- and those flags are exactly what a proof would then carry instead of
+#   the jump. **No saving, only a different shape.**
+#
+#   `exchange-join` -- the jump is REMOVABLE in every shape the corpus contains. All six
+#   bodies are the same:
+#
+#       if (v < K) { _cn = v + 1; goto _cn_fertig; }
+#       _cn = v;    goto _cn_fertig;
+#       _cn_fertig: ;                      /* the second jump goes to the NEXT LINE */
+#
+#   and the structured form is exact, with no flag and no duplication:
+#   `if (v < K) { _cn = v + 1; } else { _cn = v; }`. What blocks the general case is an inner
+#   `if` that falls through -- then the remainder has to be duplicated into both arms or
+#   guarded by a flag. Since 2026-09-02 the outer body can no longer fall through (`C001`,
+#   `beispiele/gift/658`), so only the inner one is left.
+#
+# *That is the size of the prize, and it is worth naming precisely:* structuring the join
+# would take `goto` from 27 to 15 and `sprungmarke` from 16 to 10. It would NOT take the
+# construct off the list, and the price above is paid the moment ONE jump remains. **A
+# control-flow graph with fifteen edges is still a control-flow graph.** Whoever picks up
+# `§50` #2 pays for `leave`/`next` or for nothing.
 # ---------------------------------------------------------------------------------------
 
 # **The same sieve `zaehle-absagen.korpuslauf` uses, and for its reason** (W7). `rglob` from
@@ -1205,6 +1276,14 @@ def main():
             print("   -- das hier ist die mechanische Pruefung.")
         for f, (t, ds) in sorted(cc.items()):
             print(f"   {t:5}  {f:28} in {len(ds)} Datei(en)")
+            # **The names, and not just the count** (2026-09-02). Three of these forms are
+            # on the never list, so a hit here is a finding -- and a finding whose place is
+            # missing costs the next reader the whole search back to the unit. It cost one:
+            # the rise to 67/32 was one `-Wsign-conversion` over 127 units, and nothing in
+            # this report said which. `--stellen` does not help either; it walks the LEXICAL
+            # sites, and these come from the second instrument.
+            for d in sorted(ds):
+                print(f"          {d}")
 
     if stellen:
         print()
@@ -1246,10 +1325,14 @@ def main():
     print("     Komma auf Anweisungsebene ist ohne Deklarationsparser nicht vom Deklarator-")
     print("     trenner zu unterscheiden und wird NICHT gezaehlt -- untere Schranke.")
     print("   * `goto` als `generated loop exit`: gezaehlt wird `goto`, nicht WOZU. Ob jeder")
-    print("     Sprung ein Schleifenausgang ist, sagt diese Zaehlung nicht.")
+    print("     Sprung ein Schleifenausgang ist, sagt diese Zaehlung nicht -- und am")
+    print("     2026-09-02 war er es NICHT: 15 der 27 sind `leave`/`next`, die anderen 12")
+    print("     sind der `_fertig`-Verbund eines `update` und verlassen keine Schleife.")
+    print("     Einmal von Hand nachgezaehlt, die Notiz an `MARKE_TABELLE` traegt es; dieser")
+    print("     Lauf misst es weiterhin nicht.")
     print("   * `asm` `at exactly one emission site`: gezaehlt werden die Vorkommen im C,")
     print("     nicht die Stellen in `emit.rs`.")
-    print("   * Menge B ist eine OBERE Schranke: ein 103. Programm kann einen toten Eintrag")
+    print("   * Menge B ist eine OBERE Schranke: ein 128. Programm kann einen toten Eintrag")
     print("     wiederbeleben.")
 
     print()

@@ -2204,8 +2204,7 @@ MARKE_EMIT=65
 # `geraetewerte` and the artefact wrote `c->basis` about a value. Checker silent, emitter
 # exit 0, `cc` refusing: the one reader was the C compiler, and this stage is where it now
 # reads at every run.
-MARKE_EMIT_M=53
-# **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
+MARKE_EMIT_M=53# **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
 MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt ab

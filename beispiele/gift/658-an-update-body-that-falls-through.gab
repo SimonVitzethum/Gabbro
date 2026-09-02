@@ -1,0 +1,74 @@
+-- erwartet: C001
+-- **An `exchange update` body that answers on one path only, and the C proposes a value
+-- nobody wrote.**
+--
+-- The lowering of `update` declares the new value and lets the body assign it:
+--
+--     uint32_t _cn1;
+--     {
+--         const uint32_t v = _cx1;
+--         if (v < GRENZE) {
+--             _cn1 = v + 1; goto _cn1_fertig;
+--         }
+--         _cn1_fertig: ;
+--     }
+--     if (atomic_compare_exchange_weak_explicit(&ZAEHLER, &_cx1, _cn1, …)) break;
+--
+-- With `v == GRENZE` the branch is skipped, `_cn1` is never assigned, and its indeterminate
+-- value goes straight into the compare-exchange as the proposed new one. **On a live
+-- atomic.** The type is `u32 in 0 .. GRENZE`, so the skipped branch is not a corner: it is
+-- the saturating case the body was written for.
+--
+-- MEASURED 2026-09-02, AND FOUR OF FIVE INSTRUMENTS SAW NOTHING
+-- ------------------------------------------------------------
+-- `gabbro pruefe` reported `7 items, 0 errors, 0 hints`. `gabbro emit` left with `0` and
+-- wrote the unit. `cc -std=c11 -Wall -Wextra` was silent at `-O0`, at `-O1` and at `-O2`
+-- (gcc 13.3.0), which is the whole of what `pruefe-emission.sh` asks. Only a SECOND
+-- compiler named it:
+--
+--     clang: warning: variable '_cn1' is used uninitialized whenever 'if' condition is
+--            false [-Wsometimes-uninitialized]
+--
+-- **A gate that one compiler passes is not a gate**, and `C001` is the promise that stands
+-- in front of it: *the emitter refuses by name instead of emitting something plausible*.
+--
+-- WHY ONE LINE SETTLES IT
+-- -----------------------
+-- The body admits `return <expr>` and `if <expr> { … }` with no `else`, so an `if` never
+-- closes a path -- its false side always falls through to what follows. A block answers on
+-- every path exactly when one of its OWN statements is a `return`; a nested one never
+-- repairs that. Every `update` body in the corpus ends in a bare `return v;` and none of
+-- them moved.
+--
+-- *The neighbour worth naming: this is also the only reason the join label exists.* Of the
+-- 27 `goto` the corpus emits, 12 jump to such a label and none of the 12 leaves a loop --
+-- see the note at `MARKE_TABELLE` in `instrumente/zaehle-c-formen.py`.
+
+module gift::update_rumpf_faellt_durch {
+
+const NKERNE : u32 = 64;
+const GRENZE : u32 = 1000;
+
+type Zaehlerwert = u32 in 0 .. GRENZE;
+
+atomic ZAEHLER : Zaehlerwert relaxed;
+
+extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
+
+impl fn zaehler_erhoehen() -> Zaehlerwert
+    effects { reads ZAEHLER, writes ZAEHLER }
+    costs   <= 2048 ops
+{
+    -- No `return v;` under the `if`. The saturating path answers nothing.
+    let alt = ZAEHLER exchange update(v)
+        bounded NKERNE * 4 ops
+        on_exceeded zu_viel_streit
+    {
+        if v < GRENZE {
+            return v + 1;
+        }
+    } publishes nothing;
+    return alt;
+}
+
+}
