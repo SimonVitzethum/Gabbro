@@ -10,6 +10,52 @@
 
 ---
 
+## The emitter has an instrument *(2026-09-02)*
+
+**`instrumente/fuzze-erzeuger.py`** holds `gabbro emit` to the promise its own refusal code
+was written for: *the emitter refuses by name instead of emitting something plausible*
+(`C001`). For every input the checker accepts, the emitter must **lower it** — and the C must
+compile under `cc -std=c11 -O0 -Wall -Wextra -Werror -c` — or **refuse by name, with a note**.
+
+It closes the gap `fuzze-grenzen.py` names in its own closing note (*"`gabbro emit` is not
+part of the property … the obvious next instrument, and it does not exist"*), and it reads
+that sweep's form table rather than copying it (`W7`).
+
+| | | evidence |
+|---:|---|---|
+| **5 889** | cases over **64** forms — 63 shared, 1 this sweep owns | `instrumente/fuzze-erzeuger.py` |
+| **3 517** | accepted by the checker: the population | `instrumente/fuzze-erzeuger.py` |
+| **342** | break the promise — 273 non-compiling C, 69 the oracle caught | `messung/ERZEUGERSWEEP.md` §3, §4 |
+| **0** | a third answer: no panic, no timeout, no unnamed exit, and all **471** refusals carried their note | `messung/ERZEUGERSWEEP.md` §5 |
+| **0** | debug/release disagreements — the C was **byte-identical** every time | `messung/ERZEUGERSWEEP.md` §5 |
+| **1 382** of 3 046 | lowered cases could be **oracled**; the other 1 664 are shape-checked only, and that is the larger half | `messung/ERZEUGERSWEEP.md` §2 |
+
+**The oracle calibrates itself.** A form counts as oracle-able only where an accepted rung
+demonstrably put its own value into a C the baseline's C does not carry — so a `costs`
+clause, a bare range type and a ghost `spec fn` fall out of *both* the numerator and the
+denominator rather than counting as clean (`W25`).
+
+Six emitter defects, each with a poison probe carrying `-- erwartet: cc` (checker silent,
+`cc` refuses — both directions): `gift/641` … `gift/646`. Full numbers, reproduction and the
+self-check against the four cases that were already lying in the tree:
+[`messung/ERZEUGERSWEEP.md`](messung/ERZEUGERSWEEP.md).
+
+> **The most expensive of the six is `D1`, and the reason is its LOCATION.** The two `walk`
+> templates of `instrumente/fuzze-grenzen.py` carry it at their own known-good baseline. That
+> sweep validates a baseline against the CHECKER and never against the emitter, so 130 of its
+> cases had been lowering to C that does not compile for two days — under a green run.
+> *A baseline is only good against the question it was asked.*
+
+**And the self-check found its own blind spot.** `aligned-n` puts its swept value in a
+`spec fn`, which is ghost: the whole emitted C is the twelve-line preamble. The shared
+template could not say one word about how `aligned` lowers, so this sweep added a form of its
+own — `aligned-im-rumpf`, the same call in an `impl fn` body. Result: 94 accepted rungs,
+**94 × `REFUSE C001`.** The emitter keeps its promise there, for the wrong reason, exactly as
+`messung/AUDIT-2026-09-02.md` §7.7 item 2 says — and *the modulo by zero that item names does
+not exist today.*
+
+---
+
 ## The pattern, with its third data point *(2026-08-20)*
 
 > **The corpus is written from the language outward; the faults sit at the combinations.**
