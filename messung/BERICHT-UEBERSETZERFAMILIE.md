@@ -109,7 +109,7 @@ The gap is not the flags and not the families. It is the quantifier and the tens
 **So: `D1`'s shape a third time.** The tool is right, its zero is true, and it was misread —
 by its own docstring, which promises a *difference between two compiler families* without
 saying over which population that difference is quantified. **The finding is the missing
-sentence, not a wrong number.** That sentence is added in this lane (§5).
+sentence, not a wrong number.** That sentence is added in this lane (§5.3).
 
 ---
 
@@ -246,7 +246,51 @@ census would have added a flag to a population that structurally excludes the su
 **No third place was added.** The rule *"every file that emits must pass `cc -Werror`"* now
 reads *"…must pass `cc -Werror` and `clang -Werror`"*, in the one place that already owned it.
 
-### 5.1 What this lane changed
+### 5.1 The gate BITES, and that was measured and not assumed
+
+A gate whose new branch cannot fire is a green line, so stage 9 carries a two-sided speech
+test (`Sprechprobe 9b`) that compiles the CAS shape itself: half (a) fails the run if `cc`
+*catches* it — because then the second family adds nothing and the reason for the extension is
+gone; half (b) fails the run if `clang` *lets it through* — because then `n_clang_ok von n_ok`
+is a number without a claim. Both halves ran green on `ki-pc-fisch-101` under clang 18.1.3:
+
+```
+Sprechprobe 9b: ok (cc nimmt die CAS-Gestalt an, clang lehnt sie ab)
+```
+
+*A guardian whose occasion has lapsed is a finding* — that reading is built into the branch,
+so the day the emitter or gcc changes, the gate says so instead of going quietly green.
+
+### 5.2 The run, on the machine the tree is measured on
+
+`ki-pc-fisch-101`, `free -g` 110 total / 85 available, 16 cores:
+
+```
+./instrumente/pruefe-emission.sh          EXIT=0   EMISSION: ALL PASS
+    120 von 120 emittierenden Dateien uebersetzen; 10 umgekehrte Proben -> 130 emittieren
+    120 von 120, die cc annimmt, nimmt auch `clang` an   (18.1.3 gegen gcc 13.3.0)
+      1 von 10 umgekehrten Proben beissen nur unter `cc`  (Marke 1)
+cargo test --offline --no-fail-fast       EXIT=0   399 passed, 0 failed, 31 result lines
+```
+
+**The gate's own population and this report's census are the same 120**, arrived at
+independently — stage 9 by its `find`, this census by `rglob`. That agreement is the reason
+the numbers in §3 can be read as a statement about stage 9's subject and not about a
+neighbouring set.
+
+Ratchets after the change: `zaehle-wortschatz.py` **221 / 208 / 333** unmoved,
+`pruefe-englisch.py` **7883 / 1069** unmoved (the instrument comment TOTAL rises 5496 → 5542
+by the English block added below, and the German count does not move — which is what the
+ratchet asks).
+
+**One mark did move, and it was this lane's own file.** `pruefe-zahlen.py` went red with
+*"Dateien, die der Widerrufwaechter liest steht als 176, der Lauf sagt 177"*. Cause measured
+the way this tree asks: the new report was moved out of the tree, the run went green, the
+report was moved back and the run went red again. `TODO.md` carries the number to 177 with
+the reason written at it. *A mark that moves for a document its own lane wrote is not a
+finding about the tree — but only a measurement can say that, and the measurement is cheap.*
+
+### 5.3 What this lane changed
 
 1. **`instrumente/pruefe-uebersetzerfamilie.py`** — the missing sentence of §2, at the tool's
    own docstring and at `MARKE_FAMILIENUNTERSCHIED`. Its zero is true; a reader had no way to

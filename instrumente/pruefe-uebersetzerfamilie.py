@@ -21,6 +21,13 @@ Gegenstand ist ein anderer, naemlich der UNTERSCHIED).
 auch eine Warnung sein, die `gcc` nicht kennt. Die Ausgabe nennt je Datei die erste Zeile
 der Meldung, damit der Leser das selbst entscheidet -- die Zahl verpflichtet, sie spricht
 nicht frei.
+
+**Und WORUEBER die Zahl spricht, stand bis zum 2026-09-02 nirgends** -- der Nenner ist, was
+`gabbro emit` HEUTE annimmt. Eine Quelle, die `C001` abweist, faellt heraus; damit verlaesst
+jeder verstandene Erzeugerfehler diese Menge genau in dem Augenblick, in dem er zu einer
+Absage wird. *Ein Zensus ueber dem Korpus, kein Tor.* Der lange Kasten an
+`MARKE_FAMILIENUNTERSCHIED` misst es aus, `messung/BERICHT-UEBERSETZERFAMILIE.md` schreibt es
+aus, und das Tor steht an Stufe 9 von `pruefe-emission.sh`.
 """
 import pathlib
 import subprocess
@@ -75,6 +82,49 @@ UMGEKEHRT = "-- erwartet: cc"
 # The `gabbro_*` byte helpers are deliberately NOT touched: they are emitted on demand
 # (`Erzeuger::helfer`), so the attribute would be a false statement there -- the same
 # reasoning that made the generated `ops` carry it only where this unit does not call them.
+#
+# =======================================================================================
+# **WHAT THIS ZERO IS QUANTIFIED OVER -- and the sentence was missing until 2026-09-02.**
+#
+# The occasion: a generator defect reached the tree at `0e328c7` that is EXACTLY this tool's
+# class. An `exchange update` body answering on one path only handed the compare-exchange a
+# value the emitter never wrote; `cc` was silent at `-O0`, `-O1` and `-O2`, and clang named
+# it in one line. **This tool booked `0 Unterschiede` across it, and that zero was TRUE.**
+#
+# Three measured reasons (`messung/BERICHT-UEBERSETZERFAMILIE.md`, 2026-09-02), and the third
+# one settles it:
+#
+#   1. **The flags were never the gap.** `-Wsometimes-uninitialized` sits INSIDE clang's
+#      `-Wall`, so `FLAGGEN` above already rejects that C. Reconstructed and re-run:
+#      `gcc … -Werror` exit 0, `clang … -Werror` exit 1. Had the file been in the population
+#      below, this tool would have gone red on its first run.
+#   2. **No committed unit triggered it.** The defect lived in `emit.rs`. Every `update` body
+#      in the corpus ends in a bare `return v;`, so no `.gab` carried the shape.
+#   3. **And the corpus never CAN carry it.** `emittiert()` skips every source that
+#      `gabbro emit` refuses. The one file in the tree with the shape --
+#      `beispiele/gift/658-an-update-body-that-falls-through.gab` -- says `-- erwartet: C001`
+#      in its own first line, so it never emits. It arrived in the SAME commit as the repair,
+#      so no state of the history ever had a `.gab` that emitted the broken C.
+#
+# > *The probe that documents a defect is invisible to the instrument that would have named
+# > it* -- by necessity, because a generator defect, once understood, becomes a `C001` refusal
+# > and a refused file leaves the emitting population. **This tool's denominator shrinks by
+# > exactly the class that was just learned.**
+#
+# So what this file measures is a CENSUS over what is already committed, and it runs after the
+# fact. It is a regression detector: it can only find a generator defect that some clean,
+# committed file happens to trigger by accident. **A GATE, which asks the same question at the
+# moment a unit arrives, is a different instrument** -- and it stands since `6214aa2` at stage
+# 9 of `pruefe-emission.sh`, where `clang -Werror` now runs beside `cc -Werror` on every
+# emitting unit. *Two questions; only the first was being asked here, and nothing said so.*
+#
+# The census behind the choice of flags, over 120 emitting units on both machines
+# (clang 18.1.3 and 22.1.8): `-Wall -Wextra` alone finds 0, `-Wsometimes-uninitialized`,
+# `-Wconditional-uninitialized`, `-Wshadow` and seven `-Wtautological-*` add 0,
+# `-Wcast-align` adds 100 over 15 units that `gcc -Wcast-align=strict` names identically
+# (so: no family difference at all), and `-Wunreachable-code-aggressive` adds 37 over 10
+# units of deliberate terminator. **The minimal added switch set is EMPTY**, which is why
+# `FLAGGEN` stays as it is.
 MARKE_FAMILIENUNTERSCHIED = 0
 # The files both families reject. They are NOT this tool's finding -- stage 9 of
 # `pruefe-emission.sh` owns them and reports them, and a second register over one thing is
@@ -235,6 +285,18 @@ def main():
     print("   die erste Meldungszeile daneben. *Die Zahl verpflichtet, sie spricht nicht")
     print("   frei* (W10). Und gemessen ist der Unterschied ZWEIER Uebersetzer, nicht der")
     print("   aller: eine dritte Familie kann eine dritte Antwort geben.")
+    # **The number gets its quantifier printed EVERY run** -- see the block at
+    # `MARKE_FAMILIENUNTERSCHIED`. A reader who takes the zero for "no generator defect of
+    # this class exists" reads a claim this population cannot make.
+    print()
+    print(f"== Worueber diese Zahl ueberhaupt spricht: {n_emit} emittierende Dateien ==")
+    print("   Der Nenner ist, was `gabbro emit` HEUTE annimmt -- eine Quelle, die `C001`")
+    print("   abweist, faellt heraus. Damit verlaesst jeder verstandene Erzeugerfehler")
+    print("   genau in dem Augenblick diese Menge, in dem er zu einer Absage wird, und")
+    print("   seine Giftprobe kommt hier nie an. **Ein Zensus ueber dem Korpus, kein Tor:**")
+    print("   das Tor steht an Stufe 9 von `pruefe-emission.sh`, wo `clang -Werror` seit")
+    print("   dem 2026-09-02 neben `cc -Werror` laeuft. Gemessen und ausgeschrieben in")
+    print("   `messung/BERICHT-UEBERSETZERFAMILIE.md`.")
 
     n_unt = len(nur_a) + len(nur_b)
     print()

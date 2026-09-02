@@ -553,7 +553,12 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 176 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 177 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *176 → 177 on 2026-09-02: `messung/BERICHT-UEBERSETZERFAMILIE.md` joined — the report on
+      why the two-family probe saw nothing. **The guardian named the carry before a reader did**
+      (`pruefe-zahlen.py`, `176` against a run of `177`), and the cause was measured the way
+      this file asks for: the new document was removed, the run went green, the document came
+      back. A mark that moves for a file its own lane wrote is not a finding about the tree.*
       *168 → 169 am 2026-09-01: `messung/PHASENKONSTRUKT.md` kam dazu — die Nachrechnung von
       `§42`, die selbst zwei Widerrufe buchte (die Tafel über dem Giftkorpus, und `§43`s
       „trivial"). **Ein Dokument, das Widerrufe schreibt, hebt den Nenner, gegen den sie
