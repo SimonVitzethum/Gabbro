@@ -1200,6 +1200,18 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `walk`-Schablonen von `fuzze-grenzen.py` tragen ihn an ihrem eigenen BEKANNT-GUTEN
       Grundwert, und jener Lauf prueft seine Grundlinie nur gegen den Pruefer.*
 
+- [ ] **Die `C001`-Meldung zu `aligned` ist ueber SICH SELBST falsch, gemessen 2026-09-02.**
+      Sie lautet *„`sizeof` / `aligned` outside a `format` predicate -- inside one they lower
+      against the buffer (`v->len`)"*. **Innerhalb eines `format`-Praedikats senkt `aligned`
+      nicht ab -- es faellt dort mit derselben Absage.** Gemessen an
+      `format F { adr : u64 @[63:0] where aligned(adr, 0), }`: `2 items, 0 errors, 0 hints`
+      beim Pruefer, `C001` beim Erzeuger, mit genau diesem Text. `ausdruck_format` schickt
+      jedes `Eingebaut` ausser `lenof` an `ausdruck`, und der sagt ab.
+      *Eine Absage, die eine Stelle nennt, an der es angeblich ginge, schickt den Leser
+      dorthin -- und dort geht es auch nicht.* **Die billige Haelfte ist der Satz; die teure
+      ist die Frage, ob `aligned` dort absenken SOLL** (dann ist die Meldung eine
+      Bauanleitung) oder nicht (dann gehoert der Halbsatz weg).
+
 - [ ] **`aligned(p, 0)` und `aligned(p, 3)` -- die Absage steht, der GRUND nicht** (aus
       [`messung/AUDIT-2026-09-02.md`](messung/AUDIT-2026-09-02.md) 7.7 Punkt 2, am 2026-09-02
       gemessen statt vermutet). Der Erzeuger sagt beide beim Namen ab, 94 von 94 angenommenen
