@@ -203,6 +203,27 @@ proved since `N047`–`N049`. It belongs on neither list.
   `MARKE_TABELLE` in `zaehle-c-formen.py` describes. **Style**, and a gate red on 10 of 120
   units on its first day is not a gate.
 
+### 3.6 The gate compiles at `-O0`, and that costs nothing — swept
+
+Stage 9 and this census compile at the default `-O0`. gcc was swept at `-O0`, `-O1` and `-O2`
+when the defect was found; clang never was, so the question *"does the gate lose anything by
+not optimising?"* stood open. Swept over the same 120-unit cache, both families, four levels,
+gate flag set (`-std=c11 -Wall -Wextra`):
+
+```
+clang -O0/-O1/-O2/-O3    0 hits over 0 of 120 units
+gcc   -O0/-O1/-O2/-O3    0 hits over 0 of 120 units
+```
+
+**Bit-identical at every level.** Over the full 130-file cache — the 10 reverse probes
+included, whose C is *supposed* to fall — the tally is likewise invariant across all four
+levels (clang 9 hits / 6 units, gcc 8 / 7), and every one of those hits belongs to a reverse
+probe. *An `-O` level buys this gate nothing, and it is now measured rather than assumed.*
+The reason is structural and worth naming: `-Wsometimes-uninitialized` is clang's
+**semantic-analysis** warning, computed from the CFG before any optimisation — unlike gcc's
+`-Wmaybe-uninitialized`, which needs the optimiser and is why the gcc sweep was necessary in
+the first place.
+
 ---
 
 ## 4. The minimal switch set, and the argument per switch
@@ -312,8 +333,6 @@ finding about the tree — but only a measurement can say that, and the measurem
 * **Whether `-Weverything`'s style tags stay at zero information as the corpus grows.** The
   census is a snapshot over 120 units. `unsafe-buffer-usage` at 914 hits is the tag most
   likely to one day hide something real inside its own volume, and nothing watches it.
-* **Optimisation levels under clang.** Stage 9 and this census compile at the default `-O0`.
-  gcc was measured at `-O0`, `-O1` and `-O2` when the defect was found; clang was not swept
-  across `-O` levels here.
+* ~~**Optimisation levels under clang.**~~ **Measured and closed** — see §3.6.
 * **Every `.gab` that does not emit.** 482 of 612 files never reach a C compiler at all. Their
   refusals are `pruefe-gifttreffer.py`'s object, not this one's.
