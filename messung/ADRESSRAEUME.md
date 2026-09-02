@@ -207,3 +207,120 @@ und die Ausdrucksabsenkung trägt ihn nicht.
   `device`-Typ, und dort trägt es die Geräteabsenkung. Die drei Gegenbeispiele liegen in
   `gift/` und fallen aus anderen Gründen. *Ein `mmio`-Zeiger auf einen gewöhnlichen Verbund
   ist heute keine gemessene Form* — er steht als Posten im `TODO.md` und nicht als Absage.
+
+---
+
+## §10 — 2026-09-02: `in`/`out` is built, and §9's first and third bullets are withdrawn
+
+*This section is in English; the ones above it are not. The working language was set on
+2026-09-01 and the document has not been carried over — what is written NEW is written in it.*
+
+**§7 said `in`/`out` was not covered by Rule A, and named the exact condition under which it
+would be**: *"whoever builds it, builds it against no program."* On 2026-09-02 there is a
+program. `messung/proben/probe-port-nachfrage.gab` is a 16550 at COM1 — the very device
+`emit.rs`'s own refusal names as its example (`reg LSR : u8 @0x3FD`) — checking with 0 errors
+and 0 hints, with a watchdog, a bound, a declared progress assumption and a falsifier.
+
+> *Rule A has two halves and the second is quoted less often:* **no construct without measured
+> demand — and no refusal without a measured defect.** §7 discharged the first half. The
+> second is what expired.
+
+### §10.1 What `in`/`out` demands that a volatile load does not
+
+Four things, and each is either a line of the lowering or a refusal beside it.
+
+| | the demand | what it costs |
+|---|---|---|
+| **1** | **a port NUMBER, not an address** — 16 bits, in `dx` or as an 8-bit immediate; the GCC constraint `"Nd"` *is* that pair | the handle carries `uint16_t basis`, not `volatile uint8_t *basis`; the constructor casts to the number and makes no pointer |
+| **2** | **the width picks the INSTRUCTION** — `inb`/`inw`/`inl`, and the list stops at 32 bits | a `u64` register at a port device is **refused by name**; `at mmio` lowers the same declaration |
+| **3** | **the access is not an lvalue** — `in` and `out` are two instructions with nothing between them | a register becomes a FUNCTION PAIR; a compound assignment, which used to carry itself, is **refused by name** |
+| **4** | **the number must fit** — the space is 16 bits and ends there | an offset past `0xffff` and a base wider than `u16` are **refused by name** |
+
+Demand 3 is the one that reaches furthest, because the emitter's own comment states the mmio
+decision and its reason: *"the access lowers as a PLACE and not as a function pair — that way
+`+=` carries itself."* That sentence is true of `at mmio` and false here, and everything that
+leaned on it had to be revisited: the assignment branch, the bit-field read-modify-write, the
+`transition`, and the mirror read inside it.
+
+### §10.2 The shape, and it is a wiring job
+
+Per register, two generated accessors named for the instruction they issue:
+
+```c
+typedef struct { uint16_t basis; } Com1;
+
+static inline __attribute__((unused)) uint8_t Com1_LSR_in(const Com1 *d) {
+    uint8_t _w;
+    __asm__ __volatile__("inb %w[tor], %b[wert]\n"
+        : [wert] "=a" (_w)
+        : [tor] "Nd" ((uint16_t)(d->basis + 5u))
+        : "memory");
+    return _w;
+}
+```
+
+**Nothing here is new machinery.** `beispiele/36-asm.gab` has written `outb` by hand through
+an `asm` body since it was added, with an effect list, a cost bound, `clobbers { memory }` and
+an `arch` guard, and this emitter has lowered that to `__asm__ __volatile__` with operand
+lists all along. What was missing was the wiring of two forms that both already stood in the
+tree — **`OA4` in pure form, its eighth instance.**
+
+`"a"`/`"=a"` is not a preference: `in` and `out` read and write the accumulator and no other
+register. `memory` in the clobber list is the default and not the exception (`N026`).
+
+### §10.3 The `arch x86_64` duty — §9's third bullet, and it named its own date
+
+§9 said the duty *"belongs to the day `at port` gets a lowering, and stands here until then"*.
+This is that day. The unit must NAME `x86_64`, through any clause that carries an `arch` word
+— an `entry`, an `entrust`, a `boot`, a function or an `assume`. Same move as
+`assume dma_kohaerent` five lines away in the same function: **the emitter does not guess the
+machine, it demands that the unit say so.**
+
+*The duty sits at the DEVICE and not at the function that reads it*, and that is decided and
+not incidental: the instruction lives in exactly one place per register — the accessor — and a
+body that calls `Com1_LSR_in(c)` contains portable C. The accessor is emitted whether or not
+any function calls it, which is the other half of the same argument.
+
+### §10.4 The refusals, by form
+
+| form | refused because |
+|---|---|
+| a register wider than 32 bits | there is no `inq`; splitting it over two ports would be a device the declaration does not describe |
+| `bank` in the port space | the base is read at run time and **nothing bounds `base + i * stride + offset` inside 16 bits** — `count` bounds the index, not the base |
+| a base wider than `u16` | the handle would drop the high bits silently, into a port that answers |
+| an offset past `0xffff` | outside the alphabet |
+| a compound assignment | two accesses to a register the device also writes, and which one sees the device's value has no answer |
+| a bit field of a register that is not `class rw` | trap 4, unchanged from `at mmio` |
+| `ptr<port, …>` at a non-device | **the old refusal, narrowed by exactly the sentence that set it** — *"until a `device … at port` exists to lower"*. For a plain record nothing has changed and nothing is being withheld: there is no lowering |
+
+Probes: `beispiele/gift/653`–`657`, one per form, each checking with 0 errors so that what
+falls is the EMITTER. `beispiele/gift/416` still falls and now measures the `arch` half, which
+its own header has named since 2026-08-31.
+
+### §10.5 What the test is, and what its limit is
+
+**Not `cc -Werror` alone.** Port I/O cannot be executed in userspace, so the honest gate is
+assembly plus a disassembly check: compile with `-c`, then `objdump -d` and read the opcodes.
+
+```
+-O0   ee        out %al,(%dx)      66 ed     in (%dx),%ax      ed      in (%dx),%eax
+-O2   e6 43     out %al,$0x43      66 e7 40  out %ax,$0x40     e5 48   in $0x48,%eax
+```
+
+At `-O2` the compiler folds `0x40 + 3` and takes the **immediate** form — which is `"Nd"`
+keeping its half of the bargain, measured rather than asserted. *The limit stands beside the
+result: compiled and disassembled, not run.* Whether a real 16550 answers is a statement about
+a machine, and the language has a word for that kind of statement — it is `assume`, and
+`beispiele/65-port-space.gab` carries two.
+
+### §10.6 What is STILL not built
+
+* **A refusal over a space MISMATCH between pointer and device.** `ptr<mmio, …> Com1` at a
+  `device Com1 … at port` lowers through the port accessors, because the access form comes
+  from the DEVICE declaration, which is where the truth is. The signature's space word then
+  says something the artefact does not do — but the space at a pointer is a statement about a
+  pointer's ORIGIN and the checker carries it (§5, `R008`). *A second rule in the emitter over
+  a fact a pass already holds is W7.*
+* **`bank` at a port device.** Refused, not lowered. To lower it the declaration would have to
+  bound the base, and no clause does.
+* **`at boot` and `at code`.** §7 rules both out and the reasoning is unchanged.

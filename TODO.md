@@ -432,8 +432,8 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **40 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **35 davon unqualifiziert**.
+      **45 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
+      Kandidatenschleife und **40 davon unqualifiziert**.
       *40 → 38 am 2026-08-31: `emit.rs` las dieselbe Karte an vier Stellen selbst
       (`vorzeichen`, `ctyp` zweimal, die neue Rücksetzableitung); jetzt liest sie
       `traegertyp` einmal. **Ein Leser ist eine Stelle, die man heilen kann; vier sind vier,
@@ -539,7 +539,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 175 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 176 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *168 → 169 am 2026-09-01: `messung/PHASENKONSTRUKT.md` kam dazu — die Nachrechnung von
       `§42`, die selbst zwei Widerrufe buchte (die Tafel über dem Giftkorpus, und `§43`s
       „trivial"). **Ein Dokument, das Widerrufe schreibt, hebt den Nenner, gegen den sie
@@ -758,7 +758,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3131 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3159 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
       2134, als `manifest.rs` mit zwei Fortsetzungen weniger auskam.* **Die Zahl bewegt sich
@@ -3013,7 +3013,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**106 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**107 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
@@ -3752,7 +3752,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7886 von 21538 Kommentarzeilen** im Pruefer sind deutsch
+**7883 von 21538 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -4956,17 +4956,16 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
 
 ## Aus den zwei Erzeugerfehlern des 2026-08-31 — [`messung/ADRESSRAEUME.md`](messung/ADRESSRAEUME.md), [`messung/ERZEUGERNAMEN.md`](messung/ERZEUGERNAMEN.md)
 
-- [ ] **`at port` hat keine Absenkung, und `in`/`out` zu bauen ist heute nicht gedeckt.**
-      `SPRACHE.md` sagt seit langem *„`at port` lowers accesses to `in`/`out` instead of to
-      volatile loads/stores"*; der Erzeuger schrieb stattdessen `*(volatile uint8_t
-      *)(d->basis + 0x3FD)` — **die Portnummer als Speicherversatz**. Seit heute wird
-      `device … at port` abgewiesen (`C001`, `beispiele/gift/416`), und ein Rumpf mit
-      `ptr<port, …>` ebenso (`beispiele/gift/415`). *Die Absage ist die ehrliche Antwort und
-      nicht die Absenkung:* der Korpus hält **null** `at port`-Geräte, und `in`/`out`
-      brauchen eine Portnummer, die ein Verbundfeld hinter einem Zeiger nicht ist. **Der
-      Auslöser ist ein Programm, kein Termin** — sobald ein `device … at port` geschrieben
-      wird, wird die Absenkung fällig, und mit ihr die `arch x86_64`-Pflicht aus
-      `SPRACHE.md`:2189, die heute ebenfalls nicht gehalten wird.
+- [ ] **A `bank` at a `device … at port` has no lowering, and to give it one the DECLARATION
+      would have to bound the base.** `at port` lowers since 2026-09-02
+      (`DONE.md`, `messung/ADRESSRAEUME.md` §10) and a bank is the one form inside it that
+      does not: its base is read out of a register at run time, `count` bounds the index and
+      **nothing bounds `base + i * stride + offset` inside the 16 bits the port space has**.
+      Emitting the `in` anyway would truncate into a port that answers, so it is refused by
+      name (`beispiele/gift/655`). *The trigger is a program and not a date* — PCI
+      configuration is `0xcf8`/`0xcfc`, two fixed ports, and nothing in the corpus wants a
+      strided one. **Whoever needs it needs a clause that bounds a bank base**, and that is a
+      language question and not an emitter one.
 
 - [ ] **Ein `ptr<mmio, …>` auf einen gewöhnlichen Verbund senkt zu einem gewöhnlichen
       Ladebefehl ab.** `ctyp` liest `z.raum` für **keinen** Raum; dass `mmio` trotzdem

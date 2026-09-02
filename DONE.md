@@ -10,6 +10,55 @@
 
 ---
 
+## The sixth address space lowers: `device … at port` becomes `in`/`out` *(2026-09-02)*
+
+**`emit.rs` refused every `device … at port` and gave Rule A with a number as the reason:**
+*"zero `device … at port` in 426 files — building `in`/`out` instead would be a construct
+without a measured need."* The number was the whole argument, and
+`messung/proben/probe-port-nachfrage.gab` took it away: a 16550 UART at COM1, the very device
+the refusal named as its own example, checking with 0 errors and 0 hints.
+
+> *Rule A has two halves and the second is quoted less often:* **no construct without measured
+> demand — and no refusal without a measured defect.**
+
+**It is a wiring job, not a design cut.** `beispiele/36-asm.gab` has written `outb` by hand
+through an `asm` body — effect list, cost bound, `clobbers { memory }`, `arch x86_64` — and
+this emitter has lowered that to `__asm__ __volatile__` all along. Both constructs stood in
+the tree, both correct, and *that one could lower to the other belonged to neither*: `OA4` in
+pure form, its eighth instance.
+
+### What `in`/`out` demands that a volatile load does not
+
+| | the demand | what it costs |
+|---:|---|---|
+| 1 | a port **NUMBER**, not an address — 16 bits, in `dx` or as an 8-bit immediate, which is what the constraint `"Nd"` says | the handle carries `uint16_t basis`, not `volatile uint8_t *basis` |
+| 2 | the width picks the **INSTRUCTION** — `inb`/`inw`/`inl`, and the list stops at 32 bits | a `u64` register is **refused by name**; `at mmio` lowers the same declaration |
+| 3 | the access is **not an lvalue** — `in` and `out` are two instructions with nothing between them | a register becomes a function pair; a compound assignment, which used to carry itself, is **refused by name** |
+| 4 | the number must **fit** — the space is 16 bits and ends there | an offset past `0xffff` and a base wider than `u16` are **refused by name** |
+
+**And the second half of the same broken promise**: `SPRACHE.md` makes a port device
+*"declarable only under `arch x86_64`"*, and the probe carried none and was accepted. The unit
+must now NAME the machine — at an `entry`, a `boot`, an `entrust`, a function or an `assume`.
+Same move as `assume dma_kohaerent` five lines away: **the emitter demands the word instead of
+guessing it.**
+
+| | | evidence |
+|---:|---|---|
+| **6** | access forms lower — register read, register write, field read, an acknowledgement, a bit-field read-modify-write, a `transition` | `beispiele/65-port-space.gab` |
+| **7** | forms refused **by name** with `C001`, one poison probe each, every one checking with 0 errors so that what falls is the emitter | `beispiele/gift/653-a-sixty-four-bit-register-at-a-port.gab` … `657`, `415`, `416` |
+| **9** | `in`/`out` opcodes read out of the object file at `-O2` with `objdump -d`; at `-O0` the three widths are `ee`, `66 ed`, `ed` | `messung/ADRESSRAEUME.md` §10.5 |
+| **1** | addressing mode confirmed rather than asserted: at `-O2` the compiler folds `0x40 + 3` and takes the **immediate** form `e6 43` | `messung/ADRESSRAEUME.md` §10.5 |
+| **0** | change in the emitter sweep — 3 172 of 3 514, shapes 1–4: 342, nets 5–7: 77, byte-identical before and after | `instrumente/fuzze-erzeuger.py` |
+| **0** | red tests; the vocabulary ratchet (221/208/333) did **not** move — two existing constructs were wired, no word was taken | `cargo test --offline --no-fail-fast` (399) |
+
+**The limit stands beside the result.** Port I/O cannot be executed in userspace, so the gate
+is assembly plus a disassembly check — compiled and disassembled, **not run**. Whether a real
+16550 answers is a statement about a machine, and the language has a word for that: it is
+`assume`, and `beispiele/65-port-space.gab` carries two. Full reasoning, refusal table and
+what is still NOT built: `messung/ADRESSRAEUME.md` §10.
+
+---
+
 ## The emitter has an instrument *(2026-09-02)*
 
 **`instrumente/fuzze-erzeuger.py`** holds `gabbro emit` to the promise its own refusal code
@@ -1001,7 +1050,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**64 clean examples, 423 poison probes, 399 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.
+**65 clean examples, 428 poison probes, 399 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.
 >
 > | | booked | measured | by what |
 > |---|---:|---:|---|
