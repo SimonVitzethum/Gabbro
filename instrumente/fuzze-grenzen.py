@@ -38,6 +38,16 @@ value `N051` exists for, because both builds then accepted it, together. The rul
 catches THAT is the poison corpus (`beispiele/gift/`), one probe per named refusal, in both
 directions. *These two instruments do not overlap; neither replaces the other.*
 
+**But the ANSWER DISTRIBUTION below does see it, and that was measured too.** The same
+plant, diffed against the green run of the same tree:
+
+    bank-at      green  : 84 x ACCEPT, 11 x L005, 10 x REFUSE N051, ...
+                 planted: 94 x ACCEPT, 11 x L005,                   ...
+
+Ten refusals became silent acceptances and the pass/fail line did not move; the
+distribution did. *It is not a verdict -- a form is allowed to change its mind when a rule
+changes -- but it is a QUESTION, and this defect only ever needed someone to ask.*
+
 WHAT THE SELF-CHECK MEASURED, 2026-09-02
 ----------------------------------------
 `registerlagen()` was put back to its pre-repair `as i128` arithmetic and `N051` was taken
