@@ -220,8 +220,12 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # where `zeiger_schreibend` and `aus_ctafel` got their second reader; `saetze.rs` cites
 # `P034`/`P041` for why a second code -- not a wider `N041` -- was the right shape.
 # *Cross-references and quoted refusals. What each one asserts is about the CITED rule.*
-MARKE = 323
-
+# **323 -> 325 at the merge on 2026-09-02, and the number is MEASURED and not summed.** Two
+# lanes moved this mark independently: the `B2` lane to 323, the boundary-sweep lane to 318,
+# both from 316. **Neither number is the union** -- the merged tree measures 325, because the
+# two sets of new comments overlap in none of their citations. *Picking a side or adding the
+# deltas would both have been wrong, and the tool says which by refusing to agree with either.*
+MARKE = 325
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #

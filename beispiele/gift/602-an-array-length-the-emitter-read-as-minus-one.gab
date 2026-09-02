@@ -1,0 +1,48 @@
+-- erwartet: C001
+-- **The emitter's own `as` cast -- the same defect as `registerlagen()`, one file over.**
+--
+-- `emit.rs` reads every compile-time number through
+--
+--     fn konst_zahl(e : &Expr) -> Option<i128> {
+--         ExprArt::Zahl(n) => Some(*n as i128),      -- until 2026-09-02
+--     }
+--
+-- Gabbro's literals are `u128`; `i128` is narrower, and `as` is silent where the two
+-- disagree. `u128::MAX as i128` is `-1`.
+--
+-- WHAT THAT PUT IN THE GENERATED FILE
+-- ------------------------------------
+-- The length below arrived as `-1`, and the refusal that came back read
+--
+--     no lowering: `static` array of length zero -- C has no such object
+--
+-- **a diagnostic that is wrong about the very number it is quoting.** The array is not of
+-- length zero; it is of length `2^128 - 1`, and the emitter could not say so because it had
+-- already thrown the number away. *A rule that is right because two errors cancel is not a
+-- rule that holds* -- written on 2026-09-01 about `N047`, and it was true here at the same
+-- time.
+--
+-- The other end of the same cast did not even refuse:
+--
+--     entry e vector 340282366920938463463374607431768211455 arch x86_64 { … }
+--     ->  3 items, 0 errors, 0 hints
+--     ->  /* entry e -- arch x86_64
+--          * vector -1
+--
+-- The emitter did not fail. **It wrote a different number** -- and the vector is what the
+-- hardware indexes its table with.
+--
+-- THE FENCE, AND NOT THE WIDENING
+-- --------------------------------
+-- `i128` is not too narrow for any address this back end writes; the cast was lying about
+-- which numbers fit. `konst_zahl` now answers `i128::try_from(*n).ok()`, so a literal it
+-- cannot represent is *not a constant this unit can read* -- and all sixteen of its callers
+-- already had that branch.
+--
+-- Found by `instrumente/fuzze-grenzen.py`: the checker waved every rung of the ladder
+-- through here, so the finding is in the C, not in the report.
+module gift602 {
+
+static mut A : [u64; 340282366920938463463374607431768211455] = 0;
+
+}

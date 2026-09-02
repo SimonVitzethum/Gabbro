@@ -2123,9 +2123,38 @@ fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
     );
 }
 
+/// **`try_from` and NOT `as`, and that is the same defect as `registerlagen()` had.**
+///
+/// Gabbro's literals are `u128`; this returns `i128`. `*n as i128` is silent where the two
+/// disagree, and `u128::MAX as i128` is `-1`. Until 2026-09-02 that number went straight
+/// into the generated file:
+///
+/// ```text
+/// entry e vector 340282366920938463463374607431768211455 arch x86_64 { … }
+///   ->  3 items, 0 errors, 0 hints
+///   ->  /* entry e -- arch x86_64
+///        * vector -1
+/// ```
+///
+/// **The emitter did not fail. It wrote a different number**, and the vector is what the
+/// hardware indexes its table with. `static mut A : [u64; u128::MAX]` came out the other
+/// way: the length arrived as `-1` and the refusal read *"array of length zero -- C has no
+/// such object"*, a diagnostic that is wrong about the very number it is quoting. *A rule
+/// that is right because two errors cancel is not a rule that holds* -- written on
+/// 2026-09-01 about `N047`, and true here one file over.
+///
+/// Sixteen sites read this: bank stride and count, register offsets, array lengths, `walk`
+/// levels and node width, the entry vector, the nesting bound, `const` and `static` values.
+/// **They all already have a `None` branch** -- "not a constant this unit can read" -- and
+/// that is where a number the emitter cannot represent belongs. *The fence, and not the
+/// widening: `i128` is not too narrow for any address this back end writes; the cast was
+/// simply lying about which numbers fit.*
+///
+/// Found by `instrumente/fuzze-grenzen.py`, by reading the C it emitted for the rungs the
+/// checker waved through.
 fn konst_zahl(e: &Expr) -> Option<i128> {
     match &e.art {
-        ExprArt::Zahl(n) => Some(*n as i128),
+        ExprArt::Zahl(n) => i128::try_from(*n).ok(),
         _ => None,
     }
 }
