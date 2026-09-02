@@ -1,0 +1,60 @@
+-- **Die gemessene NACHFRAGE, die Regel A verlangt** -- geschrieben 2026-09-02.
+--
+-- `emit.rs` weist `device … at port` ab und begruendet es ausdruecklich mit Regel A:
+-- *„What it costs: nothing. Zero `device … at port` in 426 files (34 `mmio`, 5 `dma`).
+-- Building `in`/`out` instead would be a construct without a measured need."*
+--
+-- **Das war richtig, solange niemand ein Portgeraet schrieb. Hier ist eines.** Ein 16550 an
+-- COM1 -- das kanonische Portgeraet, und dasselbe, das der Kommentar in `emit.rs` als
+-- Beispiel nennt (`reg LSR : u8 @0x3FD`).
+--
+-- Die Datei **prueft mit 0 Fehlern und 0 Hinweisen**, 100 % Typdeckung, samt Wachhund mit
+-- Schranke, Fortschrittsannahme und Falsifikator. **Abgewiesen wird sie NUR vom Erzeuger**,
+-- an genau zwei Stellen, beide mit derselben Ursache:
+--
+--     no lowering: `device … at port`
+--     no lowering: a body that carries a `ptr<port, …>`
+--
+-- **Der Ausstieg existiert schon.** `beispiele/36-asm.gab`:18 schreibt `outb` ueber
+-- `asm { … in { … } clobbers { memory } }`, mit Wirkungsliste, Kostenschranke und
+-- `arch x86_64`, und der Erzeuger senkt das zu `__asm__ __volatile__` ab. Was fehlt, ist die
+-- VERDRAHTUNG dieser beiden vorhandenen Formen -- `OA4` in Reinform.
+--
+-- *Diese Datei ist kein Beispiel und keine Giftprobe. Sie ist der Nachweis, dass die
+-- Bedingung erfuellt ist, unter der der Erzeuger seine eigene Absage aufheben darf.*
+module probe::uart {
+
+opaque type Tor = u64;
+
+assume uart_leert_sich arch x86_64
+    "Ein 16550 setzt THRE, sobald das Halteregister geleert ist."
+    falsifier sonde_uart_leert_sich;
+
+extern fn uart_haengt() -> never effects { diverges } costs <= 1 ops;
+
+device Com1(basis : Tor) at port {
+    reg THR : u8 @0x00 class w
+    reg LSR : u8 @0x05 class r fields { THRE @5, }
+}
+
+impl fn bereit(c : ptr<port, rw> Com1) -> bool
+    effects { reads c.LSR }
+    costs <= 2 ops
+{
+    return c.LSR.THRE == 1;
+}
+
+impl fn sende(c : ptr<port, rw> Com1, b : u8)
+    effects { reads c.LSR, writes c.THR }
+    costs <= 1026 ops
+{
+    retry warten until c.LSR.THRE == 1
+        bounded 1024 ops
+        progress uart_leert_sich
+        on_exceeded uart_haengt
+        effects { reads c.LSR }
+    { }
+    c.THR = b;
+}
+
+}

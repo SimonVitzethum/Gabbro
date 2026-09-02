@@ -2386,6 +2386,24 @@ touches the machine stands in `axiom`, `raw fn` or `prim fn` — named and count
 > `asm` stehen beide im Baum, beide richtig, und dass das eine zum anderen absenken könnte,
 > gehört zu keinem von beiden — **`OA4` in Reinform**, achte Instanz.
 
+**Und am 2026-09-02 ist die Bedingung erfüllt, unter der der Erzeuger seine eigene Absage
+aufheben darf.** Er begründet sie mit Regel A und mit einer Zahl: *„Zero `device … at port` in
+426 files."* Das war richtig, solange niemand ein Portgerät schrieb — **jetzt steht eines im
+Baum**: `messung/proben/probe-port-nachfrage.gab`, ein 16550 an COM1, dasselbe Gerät, das der
+Kommentar in `emit.rs` selbst als Beispiel nennt.
+
+    gabbro pruefe   7 items, 0 errors, 0 hints   (100 % Typdeckung)
+    gabbro emit     no lowering: `device … at port`
+                    no lowering: a body that carries a `ptr<port, …>`
+
+Samt Wachhund mit Schranke, Fortschrittsannahme (`assume … arch x86_64` mit Falsifikator) und
+`on_exceeded`. **Der Prüfer nimmt alles an; nur die Absenkung fehlt** — und die beiden Formen,
+die sie bräuchte, stehen beide im Baum.
+
+> *Regel A hat zwei Hälften, und die zweite wird seltener zitiert: **kein Konstrukt ohne
+> gemessene Nachfrage — und keine Weigerung ohne gemessenen Mangel.** Die Nachfrage ist
+> hiermit gemessen.*
+
 *Nebenbei ist das die ehrlichste Antwort auf „Gabbro ohne `unsafe`": es stimmt in der
 Sprache, und die Stelle, an der es nicht mehr stimmt, ist nicht Gabbros Entwurf, sondern das
 Ziel.*
