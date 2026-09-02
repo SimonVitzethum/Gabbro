@@ -114,6 +114,19 @@ MARKE_OHNE_GRUND = 208
 # claim.* The upper bound is printed, with its refutation.
 ABSENKUNGSSAETZE = 1
 ABSENKUNG_ADRESSE = "beweise/Absenkung_Parametrisch.thy -- `ops relabel`, und der Satz FAELLT"
+# **An address is a claim about a place, and nothing went there** (2026-09-02). The two
+# lines above are a Python constant printed as a standing fact about a theorem in another
+# language: that the file exists, that it is about `ops relabel`, and that the sentence
+# falls. None of the three was checked -- a rename, a move or a repair of that theorem would
+# leave this line saying something false, with nothing to catch it.
+#
+# The first two are text and are checked here. The third is not text and is NOT checked
+# here: whether the theorem still goes through is what `isabelle build` says, and the way
+# there is `./instrumente/pruefe-beweise.sh`. **The run says which of the three it verified**
+# rather than letting the printed sentence imply all three.
+ABSENKUNG_DATEI = "beweise/Absenkung_Parametrisch.thy"
+ABSENKUNG_NAMEN = ("relabel_am_freien_platz_ist_wirkungslos",
+                   "absenkung_geht_am_freien_platz_auseinander")
 
 # Character material: single-character terminals come out of ranges and are not words.
 # Same exception, and for the same reason, as in `pruefe-wortschatz.py`.
@@ -303,6 +316,24 @@ def main():
     genannt, nthy = beweisdeckung([e[1] for e in liste])
     print("== Die Beweisschuld: %d Absenkungssatz auf %d Woerter ==" % (ABSENKUNGSSAETZE, n))
     print("   %s" % ABSENKUNG_ADRESSE)
+    p_abs = W / ABSENKUNG_DATEI
+    if not p_abs.is_file():
+        print("   ABBRUCH: diese Datei gibt es nicht. Die Zeile darueber ist eine Adresse,")
+        print("   und eine Adresse ohne Ort ist keine Buchung. *Was hier steht, waere dann")
+        print("   eine Behauptung ueber einen Beweis, den niemand mehr findet.*")
+        return 2
+    t_abs = p_abs.read_text(encoding="utf-8")
+    fehlend = [s for s in ABSENKUNG_NAMEN if s not in t_abs]
+    if fehlend:
+        print("   ABBRUCH: die Datei steht da, aber diese Saetze nicht mehr: %s"
+              % ", ".join(fehlend))
+        print("   Umbenannt oder entfernt -- so oder so sagt die Adresse etwas anderes,")
+        print("   als sie behauptet.")
+        return 2
+    print("   geprueft: die Datei steht da und traegt beide Saetze (%s)."
+          % ", ".join(ABSENKUNG_NAMEN))
+    print("   NICHT geprueft: ob der Satz heute noch faellt. Das sagt `isabelle build`,")
+    print("   und der Weg dorthin ist `./instrumente/pruefe-beweise.sh`.")
     if genannt is None:
         print("   (`beweise/` fehlt -- die obere Schranke wurde NICHT erhoben)")
     else:

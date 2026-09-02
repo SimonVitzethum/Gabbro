@@ -475,11 +475,39 @@ def sprechprobe():
         '}\n'
     )
     gefunden = {t for _, t, _ in formen(gift)}
+    # **`KOPF` stood outside this probe, and it decides the OTHER half** (2026-09-02).
+    #
+    # Everything above measures `formen()`, which reads `emit.rs`. `KOPF` reads the
+    # checker's stderr and decides which line is a refusal at all -- and it was only ever
+    # driven against real output, never against a line brought along. A non-matching line is
+    # skipped in silence (`if not k or ...: continue`), so a wording drift in
+    # `Absagen::zeige` collapses `codes` to empty for every file, and `--korpus` then reports
+    # zero forms UNCOVERED. **Zero uncovered is what a perfect run looks like.**
+    #
+    # Checked against the emitter today (`crates/gabbro-syntax/src/diag.rs`): the format is
+    # `error: [CODE] file:line:col: text`. Brought along here rather than fetched, so the
+    # probe cannot drift with its subject -- and driven in the failing direction too, since
+    # a pattern that matches everything is as broken as one that matches nothing.
+    k_gut = KOPF.match("error: [N051] beispiele/x.gab:12:3: eine erfundene Absage")
+    k_alt = KOPF.match("Fehler: [M104] a/b.gab:1:1: die deutsche Schreibung")
+    # A `warning:` MATCHES and must stay distinguishable -- the caller keeps only
+    # `Fehler`/`error` (`:432`), so the first group carries that decision.
+    k_warn = KOPF.match("warning: [W001] x.gab:2:2: keine Absage")
+    # A `hint:` matches NOTHING here: the alternation names four words and this is not one.
+    k_hin = KOPF.match("hint: [H001] x.gab:2:2: kein Fehler")
+    k_kein = KOPF.match("error: irgendwas ohne Kennung")
     proben = [
         ("eine Absage wird gefunden", "zzsprechprobe eine erfundene Form" in gefunden),
         ("ein TEXTZWEIG hinter einem `match` zaehlt einzeln", "zzzweig ein Textzweig" in gefunden),
         ("ein Zweig, der ABSENKT, zaehlt NICHT", len(gefunden) == 2),
         ("ein Quelltext ohne Weigerung ergibt null", not formen("fn f() { g(); }\n")),
+        ("`KOPF` liest die heutige Zeile", bool(k_gut) and k_gut.group(2) == "N051"
+         and k_gut.group(3) == "beispiele/x.gab"),
+        ("`KOPF` liest die deutsche Schreibung noch", bool(k_alt) and k_alt.group(1) == "Fehler"),
+        ("`KOPF` haelt `warning` neben `error` auseinander",
+         bool(k_warn) and k_warn.group(1) == "warning"),
+        ("`KOPF` nimmt einen `hint` gar nicht erst auf", k_hin is None),
+        ("`KOPF` faellt auf eine Zeile OHNE Kennung nicht herein", k_kein is None),
     ]
     return proben
 
