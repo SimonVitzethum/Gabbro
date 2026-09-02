@@ -149,3 +149,53 @@ for `static-array-nichtnull` is `M140` at every rung, which is section 2.
 
 *This is the narrow, measured answer the mandate asked for: **array initialisers are the
 only site in the emitter whose output grows with a value.** One of fifty-four.*
+
+## 5. THE SWEEP FINDS IT -- and this is BEFORE any repair
+
+`fuzze-erzeuger.py` gains **net 8: THE EMITTER DID NOT HALT**, beside the property rather
+than inside it, for a reason that is measured:
+
+* **Shape 1 already names a timeout, and it can only ever see one on an input the checker
+  ACCEPTED.** The tool's `eine_probe` returns at the checker's verdict; the emitter is not
+  started on the rest.
+* **This case has no accepted population and never will.** `M140` refuses every rung of a
+  non-zero array initialiser, the known-good baseline included -- and a form whose baseline
+  the checker refuses stops the whole run with *THE GENERATOR IS BROKEN*, which is the right
+  behaviour for a property about accepted inputs. So the non-zero rung cannot be added to the
+  shared table; it needs a table of its own, and `HALT_FORMEN` says so at the site.
+* **Halting is a property of the RUN, not of the C.** Nets 5 to 7 all read the emitted text;
+  here there is no text to read. Only a deadline can see it.
+
+The rungs, three of which must stay silent:
+
+| rung | what it is | before the repair |
+|---|---|---|
+| `8` | the shared table's own known-good length | halts, exit 1 |
+| `4096` | a page of `u64`, 8x the corpus's largest array | halts, exit 1 |
+| `1000000` | a million elements, 0.091 s | halts, exit 1 |
+| `100000000` | the mandate's own reproducer | **TIMEOUT at 3 s** |
+| `1152921504606846975` | `PTRDIFF_MAX / 8`, the largest `[u64; n]` `D5` allows | **PANIC, `capacity overflow`** |
+
+```
+-- 8. THE EMITTER DID NOT HALT -- a deadline is the only reader of this: 2 --
+   the back end runs BEFORE `command_emit` reads the verdict, so a refused input still drives it
+   array-nichtnull  (2)
+      `100000000`  the checker refused it, and `gabbro emit` still ran the back end -- no answer within the deadline
+      `1152921504606846975`  the back end PANICKED on an input the checker had refused: thread 'main' panicked at
+                             library/alloc/src/raw_vec/mod.rs:28:5: / capacity overflow
+```
+
+**Two faces of one defect, and the second was not in the mandate.** Past
+`isize::MAX / size_of::<String>()` the `collect::<Vec<_>>()` reserves its slots up front and
+`raw_vec` answers *capacity overflow* in two milliseconds. So the same slot gives a hang at
+one size and a panic at another -- both third answers, both closed by one fence.
+
+**And the boundary rung was wrong the first time, which is worth writing down.**
+`(1 << 63) // 8` is `PTRDIFF_MAX + 1` over eight, so `D5` refuses it by name and net 8 came
+back reporting only the timeout. *An off-by-one in a boundary rung does not look like a bug;
+it looks like a repair.* Corrected to `((1 << 63) - 1) // 8`, and the panic appeared.
+
+The net's own speech test runs in both directions before the sweep, over `sleep`: a process
+that outlives its deadline must come back `TIMEOUT`, one that finishes at once must not.
+`lauf` swallows every exception by contract, so a broken deadline would come back as a clean
+answer and every hang would count as a halt. **Speech test 11 probes -> 13.**
