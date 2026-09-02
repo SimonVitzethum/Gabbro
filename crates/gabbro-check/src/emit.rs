@@ -3211,10 +3211,15 @@ fn portzugriff(d: &Device, r: &RegDecl, aus: &mut String, u: &Namen) {
     let Some((versatz, breite)) = g.reg.get(&r.name.text) else {
         return;
     };
+    // **The fourth row does not exist, and it is REFUSED and not defaulted.** `geraet` returns
+    // before this function is reached for any register wider than 32 bits, by name and with
+    // the reason -- so the arm below covers `uint32_t` and nothing else. *A catch-all that
+    // quietly picks a width would be the shape this whole refusal was written against.*
     let bits: u32 = match breite.as_str() {
         "uint8_t" => 8,
         "uint16_t" => 16,
-        _ => 32,
+        "uint32_t" => 32,
+        _ => return,
     };
     let (befehl, op) = portbuchstaben(bits);
     let (dev, reg) = (&d.name.text, &r.name.text);
@@ -5127,25 +5132,50 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
     }
     // **Und die `let`-gebundenen Geraetegriffe** -- `let v = Vtd(basis);`. Sie sind WERTE,
     // und der Ruf eines `transition` darauf nimmt ihre Adresse.
+    //
+    // > **And the name has to LEAVE `geraetezeiger`, which it did not until 2026-09-02.**
+    // > That map is global and conservative by TYPE: it drops a name only when two functions
+    // > declare it at two DIFFERENT device types. So a unit with
+    // >
+    // >     impl fn stand(c : ptr<mmio, rw> Com1) -> u8 { … }
+    // >     impl fn baut()  { let c = Com1(0x3f8); c.THR = b; }
+    // >
+    // > left `c -> Com1` standing in `geraetezeiger`, and `ort` asks that map FIRST -- so the
+    // > value `c` lowered to `c->basis` and `cc` said *`invalid type argument of '->'`*.
+    // > Checker silent, emitter exit 0, and the C does not build. **Measured at `178e260` on
+    // > an `at mmio` device**, so it is not new and it is not about the port space; the port
+    // > lowering only makes it louder, because there the same name goes into an accessor call
+    // > where `&c` was owed.
+    // >
+    // > *The parameter loop above already had the rule and says it in one line -- „erst
+    // > loeschen, dann eintragen" -- and this loop only did the second half.* The removal is
+    // > held back for a name this function also DECLARES as a parameter: two bindings under
+    // > one name are two questions, and this map answers one (the sentence the ghost fixpoint
+    // > above uses for the same case).
     if let FnRumpf::Block(b) = &f.rumpf {
-        fn im_block(b: &Block, u: &Namen, lokal: &mut Namen) {
+        fn im_block(b: &Block, u: &Namen, lokal: &mut Namen, parameter: &BTreeSet<String>) {
             for s in &b.anweisungen {
                 if let StmtArt::Let(l) = &s.art {
                     if let ExprArt::Ruf(r) = &l.wert.art {
                         let Some(n) = r.path().map(|p| p.text()) else { continue };
                         if u.geraete.contains_key(&n) {
+                            if !parameter.contains(&l.name.text) {
+                                lokal.geraetezeiger.remove(&l.name.text);
+                            }
                             lokal.geraetewerte.insert(l.name.text.clone(), n);
                             lokal.werte.insert(l.name.text.clone());
                         }
                     }
                 }
                 for k in crate::unterbloecke(s) {
-                    im_block(k, u, lokal);
+                    im_block(k, u, lokal, parameter);
                 }
             }
         }
+        let eigene: BTreeSet<String> =
+            f.parameter.iter().map(|p| p.name.text.clone()).collect();
         let mut gefunden = lokal.clone();
-        im_block(b, u, &mut gefunden);
+        im_block(b, u, &mut gefunden, &eigene);
         lokal = gefunden;
         lokale_lets(b, &mut lokal);
     }

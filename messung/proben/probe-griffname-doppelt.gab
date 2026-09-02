@@ -1,0 +1,86 @@
+-- **A device handle bound by `let`, under a name another function takes as a POINTER.**
+--
+-- Found on 2026-09-02 while wiring `at port`, and it is **older than that work and not about
+-- the port space**: the same shape at `at mmio` emits from the binary of `178e260` as
+--
+--     Com1 c = (Com1){ .basis = (volatile uint8_t *)(uintptr_t)1016 };
+--     (*(volatile uint8_t *)(c->basis + 0)) = b;
+--
+-- — `c` is a VALUE and the artefact writes `c->basis`. `gabbro pruefe` says nothing,
+-- `gabbro emit` returns 0, and `cc` says *`invalid type argument of '->'`*. The one reader is
+-- the C compiler, and `emit.rs` already refuses to delegate that answer elsewhere: the note
+-- beside the `static` of a record says so in as many words.
+--
+-- THE CAUSE, AND IT IS A HALF-APPLIED RULE
+-- ----------------------------------------
+-- `geraetezeiger` is built over the WHOLE unit and is conservative by TYPE: a name drops out
+-- only if two functions declare it at two *different* device types. Here both mean `Com1`, so
+-- nothing collides and `c -> Com1` stands. `ort` asks that map before `geraetewerte`, so the
+-- pointer answer wins over the local one.
+--
+-- The parameter loop of `eigene_sicht` has the rule and writes it in one line — *„erst
+-- loeschen, dann eintragen"* — and the `let` loop next to it did only the second half. **A
+-- rule stated once and applied at one of its two sites** is the shape this folder pays for
+-- again and again.
+--
+-- WHY IT NEEDS A NAME COLLISION TO SHOW
+-- -------------------------------------
+-- Without a second function using the same name as a pointer, `geraetezeiger` never learns
+-- the name at all and `geraetewerte` answers. `beispiele/09-ohne-zeiger.gab` writes
+-- `let v = Vtd(basis);` and is right for exactly that reason. *A defect that needs two
+-- declarations to appear is invisible to a corpus of one-declaration examples.*
+--
+-- Both spaces stand here, because the artefact differs between them and the defect does not:
+-- at `mmio` the handle is dereferenced with the wrong operator, at `port` the accessor is
+-- handed a value where an address was owed (`Com1_THR_out(c, …)` instead of `&c`).
+module probe::griffname {
+
+assume portraum_ist_x86 arch x86_64
+    "The port space is reached by `in`/`out`, and those instructions exist on x86 only."
+    falsifier sonde_portraum;
+
+static mut GERAET : u32 = 0;
+
+device Mem(basis : u64) at mmio {
+    reg DATA : u8 @0x00 class rw
+}
+
+device Tor(basis : u16) at port {
+    reg DATA : u8 @0x00 class rw
+}
+
+-- The two names that also stand as `let` bindings below.
+impl fn mem_lesen(m : ptr<mmio, rw> Mem) -> u8
+    effects { reads m.DATA }
+    costs   <= 2 ops
+{
+    return m.DATA;
+}
+
+impl fn tor_lesen(t : ptr<port, rw> Tor) -> u8
+    effects { reads t.DATA }
+    costs   <= 2 ops
+{
+    return t.DATA;
+}
+
+-- And the same names, bound here as VALUES.
+impl fn mem_bauen(b : u8) -> u8
+    effects { writes GERAET }
+    costs   <= 8 ops
+{
+    let m = Mem(0xfee00000);
+    m.DATA = b;
+    return m.DATA;
+}
+
+impl fn tor_bauen(b : u8) -> u8
+    effects { writes GERAET }
+    costs   <= 8 ops
+{
+    let t = Tor(0x3f8);
+    t.DATA = b;
+    return t.DATA;
+}
+
+}
