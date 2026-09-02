@@ -92,8 +92,8 @@ def lauf(d, alt, neu):
     """Eine Verdrehung anwenden, bauen, pruefen, zuruecknehmen. Gibt den Zustand."""
     p = C / d
     t = p.read_text()
-    if alt not in t:
-        return "WEG", t
+    if (warum := _mp.ankerstand(t, alt)) is not None:
+        return ("WEG" if warum == "FEHLT" else warum), t
     p.write_text(t.replace(alt, neu, 1))
     b = subprocess.run(["cargo", "build", "--tests", "--quiet"], cwd=W, capture_output=True, timeout=FRIST)
     if b.returncode != 0:
@@ -183,6 +183,27 @@ def beleg(r, wieviel=20):
 
 
 print("== Sprechprobe ==")
+# **THE SPEECH TEST OF THE ANCHOR CHECK, BOTH WAYS -- and it costs nothing.** Pure text
+# counting, no build, so it runs BEFORE the zero run: whatever fails here turns every figure
+# below into a claim about the wrong place in the source.
+#
+# **The first direction was open until 2026-09-02.** Measured against the very anchor the
+# catalogue still carries: a second `n + 1,` anywhere above the intended site in
+# `schablonen.rs`, and `t.replace(alt, neu, 1)` twists the new one instead of the old --
+# silently, printing `GEFANGEN` about a site it left untouched.
+_zwei = "    for (n, s) in A.iter() {\n        n + 1,\n    }\n    let x = spalte(\n        n + 1,\n    );\n"
+_eins = "    for (n, s) in A.iter() {\n        n + 1,\n    }\n"
+_proben = [
+    ("ein zweideutiger Anker faellt auf", _mp.ankerstand(_zwei, "n + 1,"), "MEHRDEUTIG (2x)"),
+    ("ein toter Anker faellt auf     ", _mp.ankerstand(_eins, "n + 3,"), "FEHLT"),
+    ("ein eindeutiger bleibt still   ", _mp.ankerstand(_eins, "n + 1,"), None),
+]
+for _was, _ist, _soll in _proben:
+    print(f"  {_was}: {'ok' if _ist == _soll else 'GESCHEITERT'} (`{_ist}`)")
+if any(_ist != _soll for _, _ist, _soll in _proben):
+    print("  SPRECHPROBE GESCHEITERT: der Ankerpruefer trennt die drei Zustaende nicht.")
+    print("  Ohne diese Trennung verdreht ein Lauf stumm die falsche Stelle und bucht sie.")
+    raise SystemExit(2)
 # **`--no-fail-fast`, and the reason stands in `CLAUDE.md`.** The zero run does not answer
 # „does at least one fall", but „is the tree green" -- and when it is red, the WHOLE reason
 # belongs in the evidence below, not the first probe that fell. Green costs nothing: then
@@ -207,9 +228,28 @@ for eintrag in LUECKEN:
         null.append((d, alt, z))
         print(f"  ~~ NULLMUTATION {d}: {alt[:52]}  ({z})")
         continue
+    # **PRESENCE IS NOT THE QUESTION -- UNIQUENESS IS** (2026-09-02). Until today this read
+    # `if alt not in t`, and the line below then twisted the FIRST of however many sites the
+    # anchor matched. The docstring at the head of this file records the day that fired: one
+    # and the same source line stood in two functions, `str.replace(alt, neu, 1)` silently
+    # hit the first, and nobody noticed -- because that particular twist had no effect
+    # anyway. *Two flaws covering for each other.*
+    #
+    # **The remedy chosen back then was to widen two anchors.** That closes two instances,
+    # never the class: two of the anchors below are one edit in the checker away from
+    # matching twice, and the tool would go on printing `GEFANGEN` about a twist it never
+    # applied at the place it names.
+    #
+    # > *An ambiguous anchor is worse than a dead one: the dead one says nothing, this one
+    # > says something false* -- and it says it in the numerator.
+    #
+    # The rule is READ, never rebuilt (W7): `mutiere-pruefer.py:ankerstand()` has carried the
+    # count since before this file existed.
     p = C/d; t = p.read_text()
-    if alt not in t:
-        weg += 1; print(f"  -- ANKER WEG  {d}: {alt[:56]}"); continue
+    if (warum := _mp.ankerstand(t, alt)) is not None:
+        weg += 1
+        print(f"  -- ANKER {'WEG' if warum == 'FEHLT' else warum}  {d}: {alt[:56]}")
+        continue
     p.write_text(t.replace(alt, neu, 1))
     # **Uebersetzt der Mutant ueberhaupt?** Ein Bauabbruch sieht fuer `cargo test` genauso
     # aus wie eine gefangene Mutation -- und zaehlt in dieser Fassung als GEFANGEN, obwohl
@@ -233,8 +273,10 @@ _benannt = len(LUECKEN) - len(null)
 print(f"\n== {zu} von {zu+len(offen)} GEMESSENEN Verdrehungen sind ZU -- "
       f"und BENANNT sind {_benannt} ==")
 if weg:
-    print(f"   {weg} von {_benannt} haben keinen Gegenstand mehr: der Anker steht nicht")
-    print("   mehr in der Quelle. Ueber sie sagt dieser Lauf WEDER JA NOCH NEIN -- sie")
+    print(f"   {weg} von {_benannt} haben keinen BESTIMMTEN Gegenstand: der Anker steht")
+    print("   nicht mehr in der Quelle (`WEG`) oder mehr als einmal (`MEHRDEUTIG`), und im")
+    print("   zweiten Fall waere gar nicht gesagt, WELCHE Stelle gemessen wuerde.")
+    print("   Ueber sie sagt dieser Lauf WEDER JA NOCH NEIN -- sie")
     print("   fehlen im Zaehler und sie fehlen im Nenner, und genau darum steht die")
     print("   benannte Zahl daneben (W25: eine Zahl belegt ihren Nenner).")
 if null:

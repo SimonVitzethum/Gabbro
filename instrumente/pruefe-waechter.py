@@ -68,6 +68,7 @@ gemessen** gezaehlt statt als Befund gedruckt -- mit seiner Zahl in der Schlussz
 Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum -- und `zaehle-b3.py` lief bis
 heute darueber bis in eine `ZeroDivisionError`.
 """
+import importlib.util
 import pathlib
 import re
 import subprocess
@@ -128,6 +129,49 @@ SCHWER = {
         "braucht BEIDE Bauprofile und `cc`, sonst Ruecklaufwert 2 und NICHTS gemessen; "
         "5889 Faelle, 10,2 s Wanduhr / 85 s CPU auf `fisch` (2026-09-02)",
 }
+def mutationskatalog(wurzel=None):
+    """**How many mutations does the catalogue carry TODAY?** Read, never remembered (W7).
+
+    Until 2026-09-02 this said `372`, measured on 2026-08-31 and never again. On that later
+    day the catalogue held **383** -- eleven more, while the entry beside it went on reading
+    like a measurement. *A figure standing next to a growing catalogue does not read as
+    stale; it reads as the state of things* -- which is the very sentence that turned the
+    `code` row of `mutiere-pruefer.py:FLAECHEN` into a reader.
+
+    `-1` when the catalogue cannot be read. **A zero would be wrong here**: zero is a valid
+    state ("no subject left"), and telling *empty* apart from *unmeasured* is what this whole
+    register exists for.
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "mp_katalog", (wurzel or W) / "instrumente" / "mutiere-pruefer.py")
+        mp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mp)
+        return len(mp.MUTATIONEN)
+    except Exception:
+        return -1
+
+
+def sprechprobe_katalog():
+    """`[(what, ok)]` -- **does the reader read, or does it remember?**
+
+    The second direction is the one a hardcoded figure cannot pass: over a PLANTED catalogue
+    of three entries the answer has to be `3`. A guardian that keeps its number while its
+    subject moves is measuring itself.
+    """
+    echt = mutationskatalog()
+    with tempfile.TemporaryDirectory() as d:
+        ort = pathlib.Path(d)
+        (ort / "instrumente").mkdir()
+        (ort / "instrumente" / "mutiere-pruefer.py").write_text(
+            "class M:\n    pass\nMUTATIONEN = [M(), M(), M()]\n", encoding="utf-8")
+        untergeschoben = mutationskatalog(ort)
+    return [
+        (f"der Katalog wird GELESEN: {echt} Mutationen", echt > 0),
+        ("ein untergeschobener Katalog mit 3 Eintraegen ergibt 3", untergeschoben == 3),
+    ]
+
+
 # **WHAT AN OMITTED GUARDIAN TAKES WITH IT -- in its OWN unit** (2026-08-31).
 #
 # `SCHWER` above says why a guardian is expensive. It does not say what stays UNMEASURED when
@@ -149,9 +193,15 @@ SCHWER = {
 # and there is no counted total for the other 45 guardians to divide it by. The number that
 # HAS a denominator is the other one -- the dangerous places, counted by `teilmessungen()`
 # over every guardian alike. This register exists to be NAMED beside it, never summed into it.
+#
+# **The 372 in the paragraph above is that day's figure and stays one; the ROW below no
+# longer holds a figure at all.** It asks `mutationskatalog()`, which read **383** on
+# 2026-09-02 -- eleven more than the number that had stood in the row since 2026-08-31,
+# reading like a measurement the whole time. *A dated sentence ages honestly; a live
+# register beside a growing catalogue does not.*
 GEGENSTAND = {
     "mutiere-pruefer.py":
-        "372 Mutationen, je ein `cargo build` und ein `cargo test`",
+        f"{mutationskatalog()} Mutationen, je ein `cargo build` und ein `cargo test`",
     "pruefe-beweise.sh":
         "15 Isabelle-Theorien (`beweise/ROOT`)",
     "pruefe-emission.sh":
@@ -515,8 +565,9 @@ KOMMENTARZEILE = re.compile(r"(?m)^\s*#.*$")
 HAT_GEBIETSSCHEMA = re.compile(r"\bLC_ALL\b")
 
 
-def waechter():
+def waechter(wurzel=None):
     aus = []
+    w = wurzel or W
     # **`abnahme.py` joined on 2026-08-30, and it very nearly did not.** The collective run is
     # not called `pruefe-*` and would have slipped through every mesh above -- a tool that
     # establishes the reach of acceptance while standing outside acceptance itself. *Exactly
@@ -529,12 +580,82 @@ def waechter():
     # verb invents a new prefix**, and each one silently leaves this net. The glob is widened
     # rather than the file renamed, so the next `fuzze-*` is inside it on the day it is
     # written.
-    for p in sorted(W.glob("instrumente/pruefe-*.py")) + sorted(W.glob("instrumente/pruefe-*.sh")) \
-            + sorted(W.glob("instrumente/zaehle-*.py")) + sorted(W.glob("instrumente/zaehle-*.sh")) \
-            + sorted(W.glob("instrumente/fuzze-*.py")) \
-            + sorted(W.glob("instrumente/mutiere-*.py")) + sorted(W.glob("instrumente/abnahme.py")):
+    for p in sorted(w.glob("instrumente/pruefe-*.py")) + sorted(w.glob("instrumente/pruefe-*.sh")) \
+            + sorted(w.glob("instrumente/zaehle-*.py")) + sorted(w.glob("instrumente/zaehle-*.sh")) \
+            + sorted(w.glob("instrumente/fuzze-*.py")) \
+            + sorted(w.glob("instrumente/mutiere-*.py")) + sorted(w.glob("instrumente/abnahme.py")):
         aus.append(p)
     return aus
+
+
+# **THE CAST IS A NAME PATTERN, AND EVERY NEW VERB LEAVES IT IN SILENCE**
+# --------------------------------------------------------------------------------
+# (2026-09-02, measured rather than supposed.)
+#
+# `waechter()` above says so itself -- *"every new verb invents a new prefix, and each one
+# silently leaves this net"* -- then heals it by widening. On 2026-09-02 six tools in
+# `instrumente/` stood outside, in this proportion:
+#
+#     INSIDE    0 out of 57 carry a violation
+#     OUTSIDE   3 out of  6:  vergleiche-binaerprogramme.py  SPRECHPROBE
+#                             miss-c-signaturen.py           FRIST, SPRECHPROBE
+#                             abschnitt.sh                   SPRECHPROBE
+#
+# > **This guardian was green over 57 tools because the three able to redden it were named
+# > outside its glob.** Exactly the class it was built against, one level above its own
+# > verdict: *a tool no list reaches cannot be told apart from a flawless one -- it is simply
+# > absent.*
+#
+# The glob stays as it is. Widening has failed to prevent the next case three times over,
+# and it drags `--lauf` along: to RUN a sourced library, or a tool making 1200 `cc` calls,
+# is a decision about the collective run. What happens instead: the hole gets COUNTED and
+# named -- and it turns RED as soon as a tool outside carries a violation without a reason.
+# *A hole with a name is no tick, and no cross either.*
+AUSSERHALB_GEBUCHT = {
+    "abschnitt.sh":
+        "eine EINGEBUNDENE Schalenbibliothek, kein Waechter -- sie hat kein eigenes `main`, "
+        "und ihre Sprechprobe wird in DIESER Datei gefahren (`sprechprobe_schale()`), "
+        "in beide Richtungen, bei jedem Lauf",
+}
+
+
+def ausserhalb_der_besetzung(wurzel=None):
+    """Every tool in `instrumente/` that `waechter()` does NOT reach."""
+    w = wurzel or W
+    drin = {p.name for p in waechter(w)}
+    return sorted(p for p in w.glob("instrumente/*")
+                  if p.suffix in (".py", ".sh") and p.name not in drin)
+
+
+def sprechprobe_besetzung():
+    """`[(what, ok)]` -- **is a tool outside the pattern really SEEN?**
+
+    Both ways, on a subject this run brings along: an `instrumente/` holding three files whose
+    names the cast matches differently. *A count that fails to find whoever stands outside
+    reports zero, and reads like zero.*
+    """
+    ganz = ("import subprocess\n"
+            "# Sprechprobe: eine kaputte Eingabe MUSS fallen\n"
+            "subprocess.run(['x'], timeout=5)\n"
+            "raise SystemExit(2)\n")
+    nackt = "print('nichts')\n"
+    with tempfile.TemporaryDirectory() as d:
+        ort = pathlib.Path(d)
+        (ort / "instrumente").mkdir()
+        (ort / "instrumente" / "vergleiche-heil.py").write_text(ganz, encoding="utf-8")
+        (ort / "instrumente" / "schnuppere-kaputt.py").write_text(nackt, encoding="utf-8")
+        (ort / "instrumente" / "pruefe-drin.py").write_text(ganz, encoding="utf-8")
+        namen = [q.name for q in ausserhalb_der_besetzung(ort)]
+        kaputt = statisch(ort / "instrumente" / "schnuppere-kaputt.py")
+        heil = statisch(ort / "instrumente" / "vergleiche-heil.py")
+    return [
+        ("ein Werkzeug mit unbekanntem Verb steht AUSSERHALB",
+         namen == ["schnuppere-kaputt.py", "vergleiche-heil.py"]),
+        ("und eines mit bekanntem Verb NICHT", "pruefe-drin.py" not in namen),
+        (f"das nackte faellt dort auf: {', '.join(kaputt) or 'NICHTS'}",
+         set(kaputt) == {"SPRECHPROBE", "ROT-BEI-ABBRUCH"}),
+        ("das vollstaendige bleibt still", heil == []),
+    ]
 
 
 def statisch(p):
@@ -1215,6 +1336,18 @@ def main():
     for was, sch_ok in sprechprobe_schale():
         print(f"  Abschnitt (sh): {'ok' if sch_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and sch_ok
+    # **R14 for the ONE row in `GEGENSTAND` that reads a number** (2026-09-02). Until today
+    # the figure stood there fixed while the catalogue had grown by eleven. *A reader with no
+    # probe cannot be told apart from a hardcoded constant.*
+    for was, kat_ok in sprechprobe_katalog():
+        print(f"  Katalog:        {'ok' if kat_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and kat_ok
+    # **R14 for the count of what stands outside** (2026-09-02). It is the single place
+    # where this guardian judges its OWN cast -- and a count finding nobody looks exactly
+    # like a count where there is nobody to find.
+    for was, bs_ok in sprechprobe_besetzung():
+        print(f"  Besetzung:      {'ok' if bs_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and bs_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own
@@ -1277,6 +1410,35 @@ def main():
         print(f"   Und {len(ABBRUCH_GEBUCHT)} GEBUCHT, mit Grund:")
         for name, grund in sorted(ABBRUCH_GEBUCHT.items()):
             print(f"     {name}: {grund}")
+
+    # **AND WHOM THE PATTERN FAILS TO REACH -- counted, never guessed** (2026-09-02).
+    draussen = ausserhalb_der_besetzung()
+    print()
+    print(f"== Ausserhalb der Besetzung: {len(draussen)} von "
+          f"{len(alle) + len(draussen)} Werkzeugen in `instrumente/` ==")
+    print("   Die Besetzung oben ist ein NAMENSMUSTER, und jedes neue Verb erfindet ein")
+    print("   neues Vorsilbenwort. Diese Zeile nennt, wen es kostet -- gemessen am")
+    print("   2026-09-02: 0 von 57 INNERHALB trugen eine Verletzung, 3 von 6 ausserhalb.")
+    offen_draussen = []
+    for q in draussen:
+        fehlt = statisch(q)
+        grund = AUSSERHALB_GEBUCHT.get(q.name)
+        if fehlt and not grund:
+            offen_draussen.append((q.name, fehlt))
+            print(f"     !! {q.name:<30} {', '.join(fehlt)}")
+        elif fehlt:
+            print(f"        {q.name:<30} {', '.join(fehlt)} -- GEBUCHT: {grund}")
+        else:
+            print(f"        {q.name:<30} traegt die vier ohnehin")
+    if offen_draussen:
+        befunde.append(("ausserhalb der Besetzung", offen_draussen))
+        print("   Ein Werkzeug, das keine Liste erreicht, ist von einem fehlerfreien nicht")
+        print("   zu unterscheiden -- es fehlt einfach. *Dieselbe Klasse wie ein toter")
+        print("   Anker, eine Ebene ueber dem Urteil.*")
+    print("   **`abnahme.py:besetzung()` traegt DIESELBE Form** -- auch dort ist die")
+    print("   Besetzung ein Glob ueber `pruefe-*`, `mutiere-*`, `zaehle-*`. Hier steht sie")
+    print("   nur benannt; sie zu weiten heisst, diese Werkzeuge auch zu FAHREN, und das")
+    print("   ist eine Entscheidung ueber den Sammellauf und nicht ueber diesen Waechter.")
 
     # **The cut in the middle of the run -- the item the empty tree leaves open.**
     geschnitten = []

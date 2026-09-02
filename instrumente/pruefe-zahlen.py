@@ -492,6 +492,21 @@ EINTRAEGE = [
         r"== (\d+) von \d+ Ankern greifen",
         "Mutationsanker, die im Pruefer wirklich sitzen",
     ),
+    # **THE FRONT PAGE STOOD UNBOUND, WHICH IS WHY IT HAD DRIFTED FURTHEST** (2026-09-02).
+    # `README.md` said *"340 mutations, 372 anchors"* -- two figures already contradicting
+    # each other, because every anchor belongs to exactly one mutation. The catalogue held
+    # **383**. The entry above binds that same figure in `TODO.md`, week after week; the
+    # README line beside it was never a second figure, only an unbound copy.
+    #
+    # > *A register no guardian reads ages exactly as fast as one that does not exist* --
+    # > it merely looks like a measurement while doing so.
+    (
+        "README.md",
+        r"damage one rule at a time: (\d+) mutations",
+        ["./instrumente/mutiere-pruefer.py", "--anker"],
+        r"== \d+ von (\d+) Ankern greifen",
+        "Mutationen im Katalog -- die Zahl auf der Vorderseite",
+    ),
     (
         "TODO.md",
         r"\*\*(\d+) Zeilenfortsetzungen\*\* in den Quellen",

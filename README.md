@@ -217,8 +217,8 @@ cargo run --bin gabbro -- check beispiele/*.gab      # check files
 cargo run --bin gabbro -- passes                     # what each pass does and does NOT do
 cargo run --bin gabbro -- templates                  # the proof-template register
 cargo run --bin gabbro -- obligations beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test                                           # 252 tests
-./instrumente/mutiere-pruefer.py                                 # damage one rule at a time: 340 mutations, 372 anchors
+cargo test --no-fail-fast                            # 399 tests (2026-09-02)
+./instrumente/mutiere-pruefer.py                                 # damage one rule at a time: 383 mutations, one anchor each
 ./instrumente/pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./instrumente/pruefe-klauseln.py                                 # declared, exported, never read
 ./instrumente/pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

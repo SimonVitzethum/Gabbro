@@ -230,7 +230,7 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
   **51 von 57** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ **288 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~281~~ ~~288~~ **290 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
@@ -253,6 +253,13 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Lauf grün aussehen könnte, ohne den Erzeuger je aufgerufen zu haben.** Die Ursache wurde
   gemessen und nicht vermutet: mit den drei neuen Dateien beiseitegelegt meldet
   `pruefe-zahlen.py` null Befunde, mit ihnen sechs.*
+  *288 → 290 am 2026-09-02, und beide aus EINER Datei: `instrumente/mutiere-pruefer.py`
+  (12 → 14 Ausgänge, per Datei nachgerechnet gegen `178e260`). Es sind die zwei neuen
+  Absagen der Reparatur am Übersetzungsurteil: eine gefallene Sprechprobe über dem Urteil
+  selbst (`--anker`, Rücklaufwert 2) und ein Gerüstlauf, in dem eine Mutation, die NICHT
+  ÜBERSETZT, als Messung gebucht würde (Rücklaufwert 1). **Beide sagen, dass nichts
+  gemessen wurde, statt es wie Deckung aussehen zu lassen** — was genau der Fehler war,
+  den sie schließen: ein Bauabbruch, gebucht als `gefangen`.*
   *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
   `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
   eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und

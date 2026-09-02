@@ -471,7 +471,7 @@ Datei völlig stumm machte.
   und ist seit dem 2026-08-28 fällig.
 * **Der zweite Korpus** — gebucht als Teil des `caprock-part`-Laufs, mit seiner Bedingung.
 * **Die Bezeichnerhälfte der Übersetzung** — 328 von 1058 tragen einen deutschen Stamm, und
-  `mutiere-pruefer.py` trägt 360 Anker, die wörtliche Quellzeilen sind.
+  `mutiere-pruefer.py` trägt 383 Anker (`--anker`, 2026-09-02), die wörtliche Quellzeilen sind.
 
 ## D — Die Reihenfolge, und woran sie hängt
 

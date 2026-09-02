@@ -83,6 +83,11 @@ GLEICH_POSIX = {"size_t": "uint64_t", "ssize_t": "int64_t"}
 
 UMGEBUNG = dict(os.environ, LC_ALL="C")
 _TMP = tempfile.mkdtemp(prefix="gabbro-csig-")
+# **Every execution with a deadline** -- the house rule, and this file stood outside it until
+# 2026-09-02. A hang looks like "still running", not like a finding; on 2026-08-20 twenty-one
+# runs of `pruefe-emission.sh` stood side by side because of exactly that, the oldest for
+# three and a half hours. This tool drives `cc` about 1200 times in a run.
+FRIST = 120
 
 
 def _cc(rumpf: str, *zusatz: str) -> subprocess.CompletedProcess:
@@ -90,7 +95,31 @@ def _cc(rumpf: str, *zusatz: str) -> subprocess.CompletedProcess:
     with open(c, "w", encoding="utf-8") as f:
         f.write(KOPF + rumpf)
     return subprocess.run(["cc", "-std=c11", "-O0", *zusatz, "-fsyntax-only", c],
-                          capture_output=True, text=True, env=UMGEBUNG)
+                          capture_output=True, text=True, env=UMGEBUNG, timeout=FRIST)
+
+
+def sprechprobe() -> list[tuple[str, bool]]:
+    """**Sieht dieses Werkzeug ueberhaupt einen Unterschied?** In beide Richtungen.
+
+    Everything this file reports rests on one harness: `_cc` writes a fragment and reads a
+    return code. **If that harness is broken, every answer comes out the same** -- and the
+    same way round, because a `cc` that always fails makes every name unbindable and a `cc`
+    that always succeeds makes every equivalence hold. Both look like a measurement.
+
+    That is `D1` word for word: a broken fixture in `fuzze-grenzen.py` lowered 130 cases to
+    non-compiling C for two days under a green run, and 195 of 273 non-compiling cases were
+    three broken fixtures counted 195 times. *A fixture nobody has seen catching anything is
+    not a fixture.*
+
+    The subject is brought along, not found: two `_Static_assert`s over types every C
+    implementation has, one true and one false.
+    """
+    gut = _cc('_Static_assert(__builtin_types_compatible_p(int, int), "x");\n')
+    schlecht = _cc('_Static_assert(__builtin_types_compatible_p(int, double), "x");\n')
+    return [
+        ("eine WAHRE Aequivalenz (`int` == `int`) kommt durch", gut.returncode == 0),
+        ("eine FALSCHE (`int` == `double`) faellt", schlecht.returncode != 0),
+    ]
 
 
 def tafel_lesen() -> tuple[list[str], list[tuple[str, str]], list[str]]:
@@ -123,7 +152,7 @@ def signaturen_aus_aux() -> dict[str, tuple[str, list[str]]]:
     with open(c, "w", encoding="utf-8") as f:
         f.write(KOPF)
     subprocess.run(["cc", "-std=c11", "-aux-info", info, "-fsyntax-only", c],
-                   capture_output=True, text=True, env=UMGEBUNG, cwd=_TMP)
+                   capture_output=True, text=True, env=UMGEBUNG, cwd=_TMP, timeout=FRIST)
     aus: dict[str, tuple[str, list[str]]] = {}
     for zeile in open(info, encoding="utf-8"):
         m = re.match(r"^/\*.*\*/\s*extern\s+(.*?)\s*;\s*$", zeile.strip())
@@ -278,7 +307,7 @@ def posix_signaturen() -> dict[str, tuple[str, list[str]]]:
     with open(c, "w", encoding="utf-8") as f:
         f.write(f"#include <{POSIX_KOPF}>\n")
     subprocess.run(["cc", "-std=c11", "-aux-info", info, "-fsyntax-only", c],
-                   capture_output=True, text=True, env=UMGEBUNG, cwd=_TMP)
+                   capture_output=True, text=True, env=UMGEBUNG, cwd=_TMP, timeout=FRIST)
     aus: dict[str, tuple[str, list[str]]] = {}
     for zeile in open(info, encoding="utf-8"):
         m = re.match(r"^/\*\s*(\S+):\d+:\w+\s*\*/\s*extern\s+(.*?)\s*;\s*$", zeile.strip())
@@ -445,6 +474,30 @@ def abschluss_messen(tafeln: list[dict[str, tuple[str, str, str]]],
 
 
 def main() -> int:
+    # **The speech test runs FIRST, and it costs two `cc` calls.** What it protects is the
+    # other ~1200: a harness that cannot tell a true equivalence from a false one reports the
+    # same table either way.
+    print("== Sprechprobe ==")
+    try:
+        proben = sprechprobe()
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        print(f"ABBRUCH: `cc` laesst sich nicht fahren ({type(e).__name__}) -- es wurde",
+              file=sys.stderr)
+        print("  NICHTS gemessen. Das ist keine gefallene Probe, sondern eine fehlende",
+              file=sys.stderr)
+        print("  Vorbedingung: ohne `cc` hat dieses Werkzeug keinen Gegenstand.",
+              file=sys.stderr)
+        return 2
+    for was, ok in proben:
+        print(f"  {'ok' if ok else 'GESCHEITERT'} -- {was}")
+    if not all(ok for _, ok in proben):
+        print("ABBRUCH: die `cc`-Vorrichtung unterscheidet nicht -- jede Zahl darunter",
+              file=sys.stderr)
+        print("  waere ueber demselben Ruecklaufwert gerechnet und saehe wie eine Messung",
+              file=sys.stderr)
+        print("  aus. Das ist KEIN gruener Lauf.", file=sys.stderr)
+        return 2
+
     tafel, z, grund = messen()
     ptafel, pgrund = posix_messen()
     if "--tafel" in sys.argv:
