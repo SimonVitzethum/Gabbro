@@ -416,7 +416,20 @@ def ankerprobe():
     if ohne == mit:
         print("   Zero today -- no anchor carries an identifier in backticks. The two")
         print("   populations are disjoint, and this line is what keeps that CHECKED.")
-    return True
+    # **CHECKED had meant PRINTED** (2026-09-02). This function computed the difference,
+    # printed it, and returned `True` come what may; the caller ignored the answer, and the
+    # promise two hundred lines up -- *"it will speak up on the day it stops holding"* --
+    # rested on a reader noticing a number in a wall of output.
+    #
+    # And the direction it fails in is the quiet one. `MARKE` fires on `>` alone, so an
+    # anchor that starts swallowing a real citation LOWERS the candidate count and the run
+    # stays green -- the correction hides exactly what the mark is there to catch, and the
+    # count going down is the shape of good news.
+    #
+    # *Nothing here is a defect in the checker.* It is a statement that this tool's own
+    # population correction has begun to cost something, so it is a finding about the
+    # instrument, and the run says which entries went.
+    return ohne - mit
 
 
 def main():
@@ -439,7 +452,7 @@ def main():
         sys.exit(2)
     if not sprechprobe():
         sys.exit(2)
-    ankerprobe()
+    verdeckt = ankerprobe()
     kand = erhebe()
     je_datei = {}
     for d, _, _, _ in kand:
@@ -467,6 +480,15 @@ def main():
     schlecht = 0
     if MARKE is not None and len(kand) > MARKE:
         print("\n  RATCHET BROKEN: %d candidates, %d booked." % (len(kand), MARKE))
+        schlecht = 1
+    if verdeckt:
+        print("\n  THE ANCHOR RULE NOW HIDES %d CANDIDATE(S)." % verdeckt)
+        print("  It removed nothing on every run before this one, which is why the mark")
+        print("  above could be read as a count of the whole population. It cannot now:")
+        print("  the mark only fires upward, so a correction that takes candidates away")
+        print("  moves the number in the direction that reads as progress.")
+        print("  Compare `erhebe()` against `erhebe(anker=False)` and decide per entry")
+        print("  whether the anchor or the citation is the thing that moved.")
         schlecht = 1
     print("\n== Work done: %d files, %d issued identifiers, %d candidates, 3 probes ==" % (
         len(list(W.glob("crates/*/src/*.rs"))),
