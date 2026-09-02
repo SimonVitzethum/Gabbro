@@ -16,7 +16,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **90** | `gabbro paesse` |
+| Sentences in the register | **91** | `gabbro paesse` |
 | of those `measured` | **68** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
@@ -36,7 +36,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (`namen.berichtszeile`) — a `measures` name without a carrier, `messung/TORREICHWEITE.md`.
 > 74 → 75 sentences, 242 → 243 codes, 197 → 198 claimed, 67 → 68 `measured`; the 45
 > without a sentence stay standing. *The second tooth, for the second time in one day.*
-| **Codes without a sentence — the ratchet** | **50** | `./instrumente/pruefe-saetze.py` |
+| **Codes without a sentence — the ratchet** | **51** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not
 diligence but a measurement: several passes hold **two claims of different strength**,
@@ -164,6 +164,8 @@ more than its code redeems** — five times, in five files, twice simply out of 
 | **`N028`/`N029` key differently** | `namen.rs` | Map under the **short name**, lookup under the **full path**. `m::f()` never hits: `N029` stays silent, `N028` fires **wrongly** |
 | **the pairing is global, not transitive** | `paarung.rs` | The head says "transitive set", the code unions over **all** functions of the tree. A `publishes` in module A pairs with an `awaits` in module B **without any call relation** |
 | ~~**the address space is checked nowhere**~~ **— built 2026-08-24 (`R008`)** | `m3.rs` | Apart from `R001` there was **no** test on a space; a `ptr<normal, rw>` reached a `ptr<mmio, rw>` parameter with zero errors. *Now the space has to MATCH at the call site* — for arguments that are a bare parameter. **`code`, `boot`, `port` are still checked by nothing, and `Typ` loses `Raum` at type formation** |
+| ~~**the pointer RIGHTS are checked nowhere either**~~ **— built 2026-09-02 (`R013`)** | `m3.rs` | `R008` read `z.raum` and stopped; **`z.rechte` sits in the same struct and no line compared it.** A `ptr<normal, r>` reached a `ptr<normal, rw>` parameter with zero errors, the emitter wrote `const Text *` into `Text *`, and `cc` said *discards `const` qualifier*. **Unlike the space, rights NARROW**: `rw` at an `r` parameter must stay silent. *Compared are `r`, `w`, `x`; `own` counts as read and write (the emitter's own answer), and whether OWNERSHIP may be handed over is still asked by nobody* |
+| ~~**`M128` compares no parameter type and no result**~~ **— built 2026-09-02 (`M141`)** | `m1.rs` | `fnptr_passt` held arity, effects and cost and nothing else, so `&eng` with `eng(b : u8) -> u8` sat in a `fn(u32) -> u32` slot with **0 errors and `100 % coverage`** while `cc` refused the emitted `.f = &eng`. **A code of its own**: `M128` is a subsumption (*promise less, never more*), a signature is an EQUALITY — nothing converts at an indirect call. *The declared RANGE is still held by nobody there, and that half `cc` cannot see at all* |
 | **`melden` is dead code** | `phasen.rs` | The switch that was to distinguish "a body without its own `advances` line does not report" is passed through six call sites and **never read** |
 | **`O004` stays silent on an empty body** | `phasen.rs` | A function with `advances roh -> mmu` and an empty body gives **zero errors**. *"A stretch that stops on the way is no stretch" — one that never starts is mute* |
 | ~~**recursive functions: no frame check**~~ **— fixed 2026-08-24** | `wirkungen.rs` | At the cycle, `E009` was set and it **returned before every `E008` check**; one unresolvable edge deep down devalued `E008` for the whole call chain. *The hull is a LOWER bound — everything in it really happens, so the check holds under incompleteness.* It now runs on; `E009` remains as the third state for **completeness**. Ten corpus sites were affected, probe 261 |

@@ -1,0 +1,43 @@
+-- erwartet: M142
+-- **Poison 609 -- the RESULT half of the signature, and it is a separate reading.**
+--
+-- 608 falsifies a parameter; this one falsifies the result, and the two are not the same
+-- defect. A parameter mismatch is a machine word at a position that exists on both sides;
+-- **here the position does not exist at all** -- `still` promises no result, the slot
+-- promises a `u32`, and a caller through the slot reads a register nobody wrote.
+--
+-- Measured 2026-09-02 against the unchanged checker: **0 errors, 0 hints**, and
+-- `100 % coverage` printed underneath. The emitter writes `static void still(uint32_t b);`
+-- and `.f = &still`, and `cc -Werror` refuses it: *initialization of
+-- `uint32_t (*)(uint32_t)` from incompatible pointer type `void (*)(uint32_t)`*.
+-- **C compares the whole signature; the checker had no word for the result at all.**
+--
+-- **A probe of its own and not a duplicate of 608**: `M142` reaches the result only after
+-- every parameter has passed, so a repair that broke the result arm alone would leave 608
+-- green. *One probe per reading is what makes a code's coverage claim mean something.*
+
+module gift::a_function_pointer_that_answers_nothing {
+
+static mut STAND : u32 = 0;
+
+type Tafel = {
+    f : fn(u32) -> u32
+        effects { writes STAND }
+        costs   <= 4 ops,
+};
+
+impl fn still(b : u32)
+    effects { writes STAND }
+    costs   <= 3 ops
+{
+    STAND = b;
+}
+
+impl fn baue() -> Tafel
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Tafel(f: &still);
+}
+
+}

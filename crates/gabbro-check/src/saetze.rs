@@ -912,14 +912,20 @@ pub const M1: &[Satz] = &[
                     rules and are left to them: `bool` against a number is `M135` with its \
                     `0 .. 1` exception, a reason value is `M124`, the literal zero is the \
                     null pointer and the aggregate zero-initialiser, and an array at a \
-                    pointer to its element is C's decay. **And it does NOT compare a \
+                    pointer to its element is C's decay. ~~**And it does NOT compare a \
                     function pointer's parameter or result types** -- `M128` holds arity, \
                     effects and cost at a `fn(...)` slot and nothing else, so `fn(u8)` still \
                     fits a `fn(u32) -> u32` slot with `cc` as the only reader. Nor does it \
                     hold pointer RIGHTS at a call: a `ptr<normal, r>` argument at a \
                     `ptr<normal, rw>` parameter passes here and at `R008`, which compares \
-                    the address space alone. Both are named in TODO.md and measured, not \
-                    closed.",
+                    the address space alone.~~ **Both closed 2026-09-02, and NEITHER of them \
+                    here** -- the two residues were structural, and each landed where its \
+                    data lives: the signature as `M142` beside `M128`, because `Typ::FnPtr` \
+                    has carried the parameter and result types all along; the rights as \
+                    `R013` beside `R008` in M3, because `Typ::Zeiger` carries neither space \
+                    nor rights and only the DECLARATION still has them. *This rule still \
+                    compares shapes and nothing else -- a `fn(...)` contract and a pointer's \
+                    rights are now two other codes' business.*",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured 2026-09-02 against the UNCHANGED checker: 18 parameter kinds \
                       x 18 argument kinds, the wrong thing passed at a call, one file per \
@@ -1075,27 +1081,51 @@ pub const M1: &[Satz] = &[
     },
     Satz {
         name: "m1.fnzeiger",
-        kennungen: &["M127", "M128", "M129"],
+        kennungen: &["M127", "M128", "M129", "M141"],
         aussage: "A function pointer value comes only from `&f` where `f` is a declared \
-                  function (`M127`), and it goes only into a slot whose contract COVERS the \
-                  function's own: every effect `f` declares is one the slot allows, and `f` \
-                  costs at most what the slot promises (`M128`). A call through a place is \
-                  admitted only where that place has a function pointer type (`M129`), and \
-                  its arguments and result are held against the contract's. **What every \
-                  pass downstream computes with at an indirect call is therefore a fact about \
-                  some real function, not the wish written at the type.**",
-        vorbehalt: "Subsumption is checked on the effect SET and the cost NUMBER, and on the \
-                    arity -- **not on the parameter types**, which are compared only at the \
-                    call. Two pointer types with the same arity and compatible contracts but \
-                    different parameter types are therefore interchangeable here, and the \
-                    mismatch surfaces one level down, at `M104`, or not at all when nobody \
-                    calls through the slot. *`ensures` at the function is not carried into \
-                    the pointer type at all* -- a caller through the pointer learns nothing \
-                    from it.",
+                  function (`M127`), and it goes only into a slot it can stand in for. That \
+                  is TWO independent conditions and they point in opposite directions. The \
+                  CONTRACT is subsumed (`M128`): every effect `f` declares is one the slot \
+                  allows, `f` costs at most what the slot promises, and the arity agrees -- \
+                  a pointer may promise LESS than its slot, never more. The SIGNATURE is \
+                  EQUAL (`M141`): each parameter type and the result are the same machine \
+                  value on both sides, because nothing converts at an indirect call. A call \
+                  through a place is admitted only where that place has a function pointer \
+                  type (`M129`), and its arguments and result are held against the \
+                  contract's. **What every pass downstream computes with at an indirect call \
+                  is therefore a fact about some real function, not the wish written at the \
+                  type.**",
+        vorbehalt: "~~Subsumption is checked on the effect SET and the cost NUMBER, and on \
+                    the arity -- **not on the parameter types**, which are compared only at \
+                    the call.~~ **Closed 2026-09-02 by `M141`.** What is still NOT held is \
+                    the declared RANGE of a number at a `fn(...)` slot: `u32 in 0 .. 9` and \
+                    `u32` are one C type and one ABI, so `M141` passes them -- but a function \
+                    declaring the narrower one accepts LESS than the slot promises, and a \
+                    caller through the slot may hand it 1000. *`cc` cannot see that half at \
+                    all*, and it is a CONTRAVARIANCE rule with its own direction, so it is \
+                    booked in TODO.md rather than folded in here. Nor are parameter NAMES \
+                    compared, and deliberately: a name at a pointer type binds nothing unless \
+                    an effect line reads it (`ast::FnZeigerParam`). *`ensures` at the \
+                    function is not carried into the pointer type at all* -- a caller through \
+                    the pointer learns nothing from it.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: one probe each on `M127` (244), `M128` (241) and \
-                      `M129` (245); the positive side is beispiele/49.",
-        fundstelle: "crates/gabbro-check/src/m1.rs; SYNTAX.md fnptr",
+                      `M129` (245); the positive side is beispiele/49. **`M141` reproduced \
+                      2026-09-02 against the UNCHANGED checker at all three stages**: `&eng` \
+                      with `eng(b : u8) -> u8` in a `fn(u32) -> u32` slot gave `4 items, 0 \
+                      errors, 0 hints` and `100 % coverage`, the emitter wrote `.f = &eng`, \
+                      and `cc -Werror` refused it -- *initialization of `uint32_t \
+                      (*)(uint32_t)` from incompatible pointer type `uint8_t (*)(uint8_t)`*. \
+                      Two probes, one per reading: `608` falsifies a parameter, `609` the \
+                      result (`void (*)(uint32_t)`), and the second is not a duplicate -- the \
+                      result is reached only after every parameter passed. Speech test \
+                      `crates/gabbro-check/tests/rechte.rs` drives BOTH directions, and the \
+                      pair `u8` at a `u32` slot AND `u32` at a `u8` slot is the evidence that \
+                      this is an equality and not `M128`'s subsumption; one row holds the two \
+                      codes apart at an arity mismatch. **Zero sites in the corpus: all 468 \
+                      files verdict-identical before and after.**",
+        fundstelle: "crates/gabbro-check/src/m1.rs (fnptr_passt, fnptr_signatur_passt, \
+                    darstellung_grund); SYNTAX.md fnptr",
     },
     Satz {
         name: "m1.endlichkeit",
@@ -1155,8 +1185,11 @@ pub const M3: &[Satz] = &[
                     declaration still has it. *Carrying the space in the semantic type is the \
                     bigger fix and is not built.* And it compares two spaces for equality: \
                     there is no lattice, so nothing says whether any conversion would ever be \
-                    legitimate. **`R001` remains the only other space test** (`raum == Dma` \
-                    at an `ops` carrier); `code`, `boot` and `port` are still checked by \
+                    legitimate. **That is the difference to `R013`, which was added beside it \
+                    on 2026-09-02**: rights DO have a lattice and narrow at a call, so the \
+                    two halves of one pointer declaration are held by two rules pointing \
+                    different ways. **`R001` remains the only other space test** (`raum == \
+                    Dma` at an `ops` carrier); `code`, `boot` and `port` are still checked by \
                     nothing at all.",
         stand: Satzstand::Gemessen,
         gemessen_an: "**Built 2026-08-24 from the pass register's own finding** -- *the address \
@@ -1167,6 +1200,47 @@ pub const M3: &[Satz] = &[
                       `beispiele/gift/259-raum-laeuft-durch.gab`, anchor \
                       `adressraum-egal-am-rufort`; zero sites in the corpus.",
         fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt; messung/PASSREGISTER.md",
+    },
+    Satz {
+        name: "m3.zeigerrechte",
+        kennungen: &["R013"],
+        aussage: "A pointer argument that is a bare PARAMETER of the caller carries every \
+                  access right the parameter it reaches demands. Rights NARROW at a call and \
+                  never widen: a `rw` argument fits an `r` parameter -- the callee promises \
+                  to do less than it could -- and an `r` argument does not fit a `rw` one. A \
+                  callee may therefore act on the rights it declares without asking whether \
+                  its caller ever had them.",
+        vorbehalt: "**Compared are the three access atoms `r`, `w` and `x`, and NOT `own`.** \
+                    Ownership is a linearity question and belongs to `R004`/`R007`; what this \
+                    rule answers is what the holder may DO with the memory. `own` therefore \
+                    counts AS read and write -- which is the emitter's own answer \
+                    (`emit::zeiger_schreibend`, the one home of the `const` decision) and not \
+                    a second one -- so a `rw` argument reaches an `own` parameter without a \
+                    word, and whether ownership may be handed over at all is asked by nobody. \
+                    **And it inherits `R008`'s under-approximation whole**: only a bare \
+                    parameter name is compared, because `Typ::Zeiger(Box<Typ>)` drops the \
+                    rights exactly as it drops `Raum`, and a field, a local, a `let`, a return \
+                    value or a global carries no declared right this pass can read. *Carrying \
+                    the rights in the semantic type is the same bigger fix `R008` names, and \
+                    it is still not built.* `x` has one site in the whole corpus and that one \
+                    is prose in `SPRACHE.md`, so the execute atom is written and unexercised.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "**Reproduced 2026-09-02 against the UNCHANGED checker before a line was \
+                      written**, at all three stages: `beispiele/gift/607` gave `4 items, 0 \
+                      errors, 0 hints`, the emitter wrote `static void ruft(const Text \
+                      *restrict q) { schreibt(q); }` into a `Text *restrict` parameter, and \
+                      `cc -O0 -Wall -Wextra -Werror` refused it -- *passing argument 1 of \
+                      'schreibt' discards 'const' qualifier from pointer target type*. **The \
+                      `N041` shape: the checker confirmed and the foreign compiler held the \
+                      line.** Probe `beispiele/gift/607-pointer-rights-widen-at-a-call.gab`; \
+                      speech test `crates/gabbro-check/tests/rechte.rs` drives BOTH directions \
+                      -- 4 rows that must fall, 7 correct calls that must stay silent, \
+                      including `rw + own` and `r + w` spelled out. **Zero sites in the \
+                      corpus: all 468 files verdict-identical before and after**, which is the \
+                      counter-direction, and `tests/gestalt.rs` had already pinned the \
+                      narrowing row (*a wider right at a narrower slot*) before this rule \
+                      existed.",
+        fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt (beside `R008`); TODO.md",
     },
     Satz {
         name: "m3.syntaktischer-alias",

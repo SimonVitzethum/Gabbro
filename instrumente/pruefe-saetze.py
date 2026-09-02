@@ -83,7 +83,14 @@ FRIST = 60
 # A theorem of their own would have to be a theorem about C's integer widths, and that is not
 # what the proof layer models. *Writing one would be a second statement of a fact the emitter
 # already owns* -- the same objection the 45 -> 48 entry makes, about a different premise.
-MARKE = 50
+# **50 -> 51 on 2026-09-02, and the one new code is `R013`.** The rights rule landed beside
+# `R008` in M3, where the DECLARATION still carries the access rights that `Typ::Zeiger` drops.
+# It stands without a sentence because the sentence it would need is `m3.rechte`, and nobody
+# has written what M3 promises about rights AT A CALL -- only about a place.
+#
+# *The mark rises because the object grew, and it falls the day that sentence is written.*
+# `M142` came WITH its sentence (`m1.signatur`), which is why the rise is one and not two.
+MARKE = 51
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

@@ -52,8 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~89~~ 90 Sätze über 12 von 12 Pässen (75, 79 und 80 am 2026-08-31, 88 und 89 am 2026-09-02) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
-
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~90~~ 91 Sätze über 12 von 12 Pässen (75, 79 und 80 am 2026-08-31, 88, 89, 90 und 91 am 2026-09-02) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
 steht nach dem, was die Ziele einlöst. Der alte Pfad ist damit nicht widerlegt: seine offenen
@@ -653,10 +652,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **97 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
+- [ ] **98 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 117 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 118 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -759,8 +758,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2952 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
-      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
+      Heute **3026 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
       das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
@@ -3886,8 +3884,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 90 Sätze über 269 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
-— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 91 Sätze über 271 Codes, 51 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
@@ -5050,20 +5047,52 @@ stehen in `DONE.md`. Was hier bleibt, ist der Rest, den die Messung DANEBEN aufg
       benannt statt still — was bleibt, ist die Entscheidung, ob die Sprache ein Adress-von
       für Speicher bekommt. *Sie ist eine Sprachfrage und gehört dem Ordner.*
 
-- [ ] **`M128` vergleicht an einem `fn(…)`-Slot weder die PARAMETERTYPEN noch das ERGEBNIS.**
-      Gemessen am 2026-09-02 im selben Lauf, der `M139` hervorbrachte: `fn(u8)` passt still in
-      einen Slot `fn(u32) -> u32`, weil `fnptr_passt` nur Stelligkeit, Wirkungen und Kosten
-      hält — *drei Lesarten einer Zusage, und die vierte, welche Werte durch den Zeiger
-      gehen, steht nicht da.* `cc` weist es zurück (*incompatible pointer type*), also ist es
-      dieselbe `N041`-Form eine Stufe zu spät. **Der Gegenstand ist derselbe wie bei `M139`
-      und die Regel ist eine andere** — deshalb hier und nicht dort: `M128` hat eigene
-      Giftproben (`gift/241`), und wer die Regel erweitert, zieht ihre Aussage mit.
+- [ ] ~~**`M128` vergleicht an einem `fn(…)`-Slot weder die PARAMETERTYPEN noch das
+      ERGEBNIS.**~~ — **CLOSED 2026-09-02 as `M141`**, and the code is a new one on purpose.
+      The residue reproduced exactly as booked: `&eng` with `eng(b : u8) -> u8` in a
+      `fn(u32) -> u32` slot gave **`0 errors, 0 hints` and `100 % coverage`**, the emitter
+      wrote `.f = &eng` faithfully, and `cc -Werror` refused it — *initialization of
+      `uint32_t (*)(uint32_t)` from incompatible pointer type `uint8_t (*)(uint8_t)`*.
+      **Not a fourth reading of `M128`**: that rule's own note says *may promise LESS than
+      its slot, never more*, and a signature is an EQUALITY — nothing converts at an
+      indirect call, so `fn(u32)` at a `fn(u8)` slot is exactly as wrong as the reverse.
+      *An equality under an identifier whose sentence is a subsumption would have left
+      `gift/241` green while this half was out.* Probes `gift/608` (a parameter) and
+      `gift/609` (the result); speech test `crates/gabbro-check/tests/rechte.rs` drives both
+      directions and holds the two codes apart at an arity mismatch.
 
-- [ ] **Die RECHTE eines Zeigers werden am Ruf nicht gehalten.** `R008` vergleicht je
-      Zeigerparameter den ADRESSRAUM und sagt es selbst; die Rechte danebendran vergleicht
-      niemand. Gemessen am 2026-09-02: ein `ptr<normal, r> Text` an einem
-      `ptr<normal, rw> Text`-Parameter geht mit **0 Fehlern** durch, der Erzeuger schreibt
-      einen `const Text *` in ein `Text *`, und `cc` verwirft die Qualifizierung.
-      **`M139` lässt es liegen**, weil `Typ::Zeiger` weder Raum noch Rechte trägt — die
-      Auskunft steht am `TypExpr`, wo `R008` schon liest. *Ein Pass, zwei Hälften einer
-      Zeigerdeklaration, und nur eine wird gelesen.*
+      > **What `M141` compares, per component:** each parameter type and the result, as a
+      > MACHINE WORD — shape (`gestalt_grund`, one home and not a second), then the pointee
+      > behind a pointer, then width and signedness. **Arity stays `M128`'s** and `M141`
+      > returns before it: position `i` cannot be compared where there is none.
+      > `effects` and `costs` stay `M128`'s too.
+
+- [ ] **The declared RANGE is not held at a `fn(…)` slot** — the half `cc` cannot see, split
+      off from the entry above when `M141` was built. `u32 in 0 .. 9` and `u32` are one C
+      type and one ABI, so `M141` passes them; but a function declaring the narrower one
+      accepts LESS than the slot promises, and a caller through the slot may hand it 1000.
+      **This is a CONTRAVARIANCE rule** — contravariant in the parameters, covariant in the
+      result — *and that is a different direction from both rules that stand there now*:
+      `M128` subsumes a contract, `M141` equates a representation. Writing it into `M141`
+      would have made a rule about representation quietly also a rule about values, so it is
+      booked instead of smuggled. `crates/gabbro-check/tests/rechte.rs` pins the current
+      answer (*a declared RANGE the slot does not repeat — one C word, one ABI*), so the day
+      this is built, that row is the one that has to move.
+
+- [ ] ~~**Die RECHTE eines Zeigers werden am Ruf nicht gehalten.**~~ — **CLOSED 2026-09-02
+      as `R013`**, beside `R008` in M3 and not in `m1.rs`, exactly where the residue said it
+      belonged: `Typ::Zeiger` carries neither space nor rights, and the declaration
+      (`TypExpr::Zeiger(z)`) is the only place they survive. Reproduced first: `4 items,
+      0 errors, 0 hints`, the emitter wrote `static void ruft(const Text *restrict q) {
+      schreibt(q); }`, and `cc -Werror` said *passing argument 1 of 'schreibt' discards
+      'const' qualifier*. Probe `gift/607`.
+
+      > **And the direction is the whole rule, unlike the space beside it.** `R008` asks
+      > `ist != soll` and is right to — there is no lattice over `mmio` and `normal`.
+      > Rights have one: `rw` at an `r` parameter NARROWS and must stay silent (`D004` rests
+      > on that reading, and `tests/gestalt.rs` had the row before `R013` existed), while
+      > `r` at an `rw` parameter is the unsound one. **Compared are `r`, `w` and `x`; `own`
+      > counts AS read and write** — the emitter's own answer, `emit::zeiger_schreibend` —
+      > **and ownership itself is still asked by nobody**: a `rw` argument reaches an `own`
+      > parameter without a word, and whether it may is `R004`/`R007`'s question, not this
+      > one's.

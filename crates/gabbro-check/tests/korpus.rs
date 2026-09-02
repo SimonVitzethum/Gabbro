@@ -131,6 +131,14 @@ const BENANNT: &[&str] = &[
     // emitter refused 96 -- which is the `N041` shape, a trust base holding one stage too
     // late -- and 22 reached green C.
     "M140",
+    // 2026-09-02, the residue `M140`'s own reservation named: `M128` holds arity, effects
+    // and cost at a `fn(...)` slot and **nothing about the values that travel through it**.
+    // `&eng` with `eng(b : u8) -> u8` went into a `fn(u32) -> u32` slot with `0 errors` and
+    // `100 % coverage`; `cc` refused the emitted `.f = &eng` as an *incompatible pointer
+    // type*. **A code of its own and not a fourth reading of `M128`**: `M128`'s sentence is
+    // *promise no LESS than the slot*, and a signature is an EQUALITY -- nothing converts at
+    // an indirect call, so `fn(u32)` at a `fn(u8)` slot is just as wrong as the reverse.
+    "M142",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.
@@ -196,6 +204,13 @@ const BENANNT: &[&str] = &[
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
     "R001", "R002", "R003", "R004", // M3, Raeume, Rechte -- und zweimal `own` auf denselben Ort
+    // 2026-09-02, beside `R008` and out of the same measurement: `R008` reads `z.raum` and
+    // stops, `z.rechte` sits in the same struct and nothing read it. A `ptr<normal, r>`
+    // reached a `ptr<normal, rw>` parameter with **0 errors**; the emitter wrote
+    // `const Text *` into a `Text *` and `cc` said *discards `const` qualifier*.
+    // **And unlike the space, rights are not symmetric** -- `rw` at an `r` slot is
+    // narrowing and must stay silent, and `tests/gestalt.rs` already pinned that row.
+    "R013",
     // **Die Versiegelung eines `asm`-Rumpfes** («OPT3»): `arch`, `effects`, `costs`, und ein
     // Operand, der ein Parameter sein muss. Geprueft wird die FORM, nicht der Befehlstext --
     // den liest Gabbro nicht, und das ist der Kern der Sache.

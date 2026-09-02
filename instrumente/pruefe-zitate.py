@@ -230,7 +230,23 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # a mark moved by two lanes is neither lane's number* -- the citations do not overlap, so
 # neither picking a side nor adding the deltas lands on it. All seven of the lane's own are in
 # `m1.rs` at the one new rule, each naming a boundary of it.
-MARKE = 332
+# **332 -> 334 on 2026-09-02, and this time the cause WAS measured before it was written.**
+# The two residues `M140` left open were closed as `R013` (pointer rights at a call, beside
+# `R008` in M3) and `M141` (the signature at a `fn(...)` slot, beside `M128`). The same tree
+# at `HEAD` measures 332 and this one measures 334, so the delta is exactly two and both are
+# in `m1.rs`: `N041` in `fnptr_signatur_passt`'s head -- *the checker confirms and `cc` holds
+# the line*, the shape the rule was built against -- and `C001` at `darstellung_grund`'s array
+# arm, which is reached only through a pointer BECAUSE an array cannot be a parameter.
+# *Both name a boundary of the new rule rather than claim coverage.*
+#
+# **`R013`'s own citations are not in this number, and that is the tool being right:** the
+# comments beside it cite `R008`, `R004` and `R007`, and all three are ISSUED in `m3.rs`.
+# A citation is only a candidate where the cited rule lives somewhere else.
+# **334 -> 337 at the merge on 2026-09-02.** The rights/signature lane booked 334 on its own
+# base; the merged tree measures 337. *Fourth time this week that a mark moved by two lanes is
+# neither lane's number* -- the citation sets do not overlap, so neither picking nor adding
+# lands on it. Measuring the MERGED tree is the only thing that does.
+MARKE = 337
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries 340 mutations, and every one of them holds a
