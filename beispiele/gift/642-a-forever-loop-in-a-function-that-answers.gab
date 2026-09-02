@@ -1,0 +1,53 @@
+-- erwartet: cc
+-- **642 -- a `forever` loop is the whole body of a function that returns a value.**
+--
+-- The loop never leaves, so Gabbro needs no `return` after it, and the checker is right to
+-- say so: `5 items, 0 errors, 0 hints`. The emitter lowers it to `for (;;) { … }` and stops
+-- there, which is the shape a C programmer would write by hand -- and
+-- `cc -std=c11 -Wall -Wextra -Werror` answers
+--
+--     no return statement in function returning non-void [-Werror=return-type]
+--
+-- **GCC's `-Wreturn-type` is syntactic at the front end**, measured on the plain C beside
+-- the generated file: `static uint64_t g(void) { for (;;) { x = 1; } }` draws the same
+-- error with no Gabbro anywhere near it. So this is not a quirk of what the emitter wrote
+-- around the loop; it is the gate this folder compiles every unit under, and the emitter
+-- does not clear it.
+--
+-- **The corpus never showed it, and the reason is measurable**: `pruefe-emission.sh`
+-- reports 117 of 117 units compiling, and not one of them puts a `forever` in a function
+-- that answers. *A gate over a corpus measures the corpus.*
+--
+-- > Found 2026-09-02 by `instrumente/fuzze-erzeuger.py`: 65 of 65 accepted rungs of the
+-- > `forever-schranke` form failed the compile gate, at every bound from `1` to `2^127`.
+-- > **The bound is not the defect** -- the swept slot has nothing to do with it, and that is
+-- > exactly the class a form-wise sweep is good at showing: one answer at every rung means
+-- > the finding sits in the FORM.
+--
+-- The lowering that would clear it is a one-liner (`__builtin_unreachable();` after the
+-- loop, in the same family as the `__attribute__((unused))` the emitter already writes),
+-- and the day it lands this file goes red and asks to be re-classified.
+
+module gift::forever_in_a_function_that_answers {
+
+static mut erledigt : u64 = 0;
+
+assume zeitgeber_tickt "the timer ticks" falsifier wachhund_schlug_an;
+
+extern fn wachhund_schlug_an() -> never
+    effects { diverges };
+
+impl fn g() -> u64
+    effects { reads erledigt, writes erledigt }
+{
+    forever runde
+        per_pass bounded 4096 ops
+        on_exceeded wachhund_schlug_an
+        effects { reads erledigt, writes erledigt }
+        progress zeitgeber_tickt
+    {
+        erledigt = 1;
+    }
+}
+
+}

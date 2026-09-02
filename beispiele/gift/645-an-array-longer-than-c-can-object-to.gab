@@ -1,0 +1,23 @@
+-- erwartet: cc
+-- **645 -- a `static` array whose length no C object can have.**
+--
+-- `[u64; 2^63 - 1]` is accepted -- the length is a `u64` and fits. The emitter writes it out
+-- as the array bound and `cc` answers
+--
+--     size of array `A` exceeds maximum object size `9223372036854775807`
+--
+-- **`gift/602` is the neighbour, and the pair is the point.** That one carries the length the
+-- emitter READ WRONG (`2^128 - 1` came back as `-1`, and the array was declared `[-1]`); this
+-- one carries a length the emitter reads exactly right and writes into a C declaration that
+-- cannot exist. *One is a lossy conversion, the other is a missing bound* -- and until
+-- 2026-09-02 the same slot of the same grammar rule produced both.
+--
+-- Found by `instrumente/fuzze-erzeuger.py`: the `array-laenge` form gave 12 non-compiling
+-- cases at the top of the ladder, and this is the lowest of them -- the last value that is
+-- still an honest `u64`.
+
+module gift::array_longer_than_c_can_object_to {
+
+static mut A : [u64; 9223372036854775807] = 0;
+
+}

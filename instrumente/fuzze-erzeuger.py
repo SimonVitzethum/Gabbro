@@ -136,6 +136,43 @@ def grenzen_laden():
 
 
 # ==========================================================================================
+# THE FORMS THIS SWEEP OWNS -- because the EMITTER's question is not the CHECKER's
+# ==========================================================================================
+#
+# The 63 shared templates were written to drive a slot past the CHECKER, and a template that
+# does that perfectly can still put the slot somewhere the emitter never looks. **Measured:
+# `aligned-n` places its swept value in a `spec fn`, which is ghost -- its whole emitted C is
+# the twelve-line preamble, with no declaration in it at all.** So the shared form cannot say
+# one word about how `aligned` lowers, and it never could.
+#
+# > *That is not a fault of the other sweep.* Its property is about acceptance, and a ghost
+# > function is accepted exactly as loudly as any other. It is a fault of REUSING a table
+# > across two questions, and the cure is to add the difference here rather than to move the
+# > shared numbers -- `fuzze-grenzen.py` publishes `63 forms / 5778 cases`, and a form added
+# > there for this question would silently restate that mark as something else.
+#
+# So: forms that exist because of the emitter, kept apart, counted apart, and each with the
+# measurement that says why the shared one does not reach.
+EIGENE_FORMEN = {
+    # `aligned(p, n)` where the emitter can see it: in an `impl fn` body, which is not ghost.
+    # `messung/AUDIT-2026-09-02.md` 7.7 item 2 says `aligned(p, 0)` and `aligned(p, 3)` are
+    # accepted and that *"an alignment of zero lowers to a modulo by zero"* -- this form is
+    # what turns that into a measurement instead of a expectation.
+    "aligned-im-rumpf": """module f {{
+impl fn g(a : u64) -> u64
+    effects {{ pure }}
+    costs   <= 4 ops
+{{
+    if aligned(a, {V}) {{ return 1; }}
+    return 0;
+}}
+}}""",
+}
+EIGENE_GUT = {"aligned-im-rumpf": "4"}
+EIGENE_LEITER = {"aligned-im-rumpf": "zahl"}
+
+
+# ==========================================================================================
 # READING THE ANSWER
 # ==========================================================================================
 
@@ -269,26 +306,86 @@ def entartet(c):
 #
 # *Each of these was found by this tool on its first full run, not entered from a list.*
 GEBUCHT = {
-    ("NOT-ISO", "table-count"):
-        (2, "`table count 0` lowers to `T_slot slots[0]` -- ISO C forbids a zero-size "
-            "array, GCC takes it as an extension. AUDIT-2026-09-02 7.7 item 4 books it as "
-            "`refused at emit`, and that is the half this run corrects: it is NOT refused"),
-    ("NOT-ISO", "const-als-schranke"):
-        (2, "the same zero-size array through a `const` used as the table bound"),
-    ("NOT-ISO", "acc-percpu"):
-        (2, "`accumulates ... per cpu 0` lowers to a zero-size cell array"),
-    ("NAME-LEN", "name-const"):
-        (11, "AUDIT-2026-09-02 7.7 item 5 -- a name of any length is written into C"),
-    ("NAME-LEN", "name-fn"): (11, "the same, at a function name"),
-    ("NAME-LEN", "name-feld"): (11, "the same, at a `format` field"),
-    ("NAME-LEN", "name-reg"): (11, "the same, at a device register"),
-    ("NAME-LEN", "name-tabelle"): (11, "the same, at a table"),
-    ("NAME-LEN", "name-typ"): (11, "the same, at an opaque type"),
-    ("NAME-LEN", "name-parameter"): (11, "the same, at a parameter"),
-    ("NAME-LEN", "name-modul"): (11, "the same, at a module -- it prefixes every C name"),
-    ("ENTARTET", "embeds-scale"):
-        (1, "AUDIT-2026-09-02 7.7 item 4 -- `embeds ... scale 0` lowers, and the extracted "
-            "frame number is multiplied by zero, so every record yields address zero"),
+    # ---- SIX EMITTER DEFECTS, and the count beside each is per FORM -------------------
+    #
+    # **`D1` -- a `walk` descends through a `reserved` field, which gets no reader.**
+    # `beispiele/gift/641`. The two `walk` templates of `fuzze-grenzen.py` carry this at
+    # their own known-good baseline, so 130 of that sweep's cases had been lowering to C
+    # that does not compile since 2026-09-02, under a green run.
+    ("NICHT-UEBERSETZBAR", "walk-knoten"): (65, "D1 -- gift/641, `Pte_rest` implicitly declared"),
+    ("NICHT-UEBERSETZBAR", "walk-levels"): (65, "D1 -- gift/641, the same at the other slot"),
+    #
+    # **`D2` -- a `forever` loop is the whole body of a function that returns a value.**
+    # `beispiele/gift/642`. Every accepted rung fails, at every bound: the swept slot has
+    # nothing to do with it, and the finding sits in the FORM.
+    ("NICHT-UEBERSETZBAR", "forever-schranke"):
+        (65, "D2 -- gift/642, `no return statement in function returning non-void`"),
+    #
+    # **`D3` -- an integer literal written into C with no `u` suffix.** `beispiele/gift/643`.
+    # The widest of the six: nine slots, one missing character.
+    ("NICHT-UEBERSETZBAR", "ausdruck"): (6, "D3 -- gift/643, `return <2^64-1>;`"),
+    ("NICHT-UEBERSETZBAR", "if-bedingung"): (10, "D3 -- gift/643, and D4 at the top rungs"),
+    ("NICHT-UEBERSETZBAR", "let-wert"): (6, "D3 -- gift/643"),
+    ("NICHT-UEBERSETZBAR", "static-wert"): (6, "D3 -- gift/643"),
+    ("NICHT-UEBERSETZBAR", "zuweisung"): (6, "D3 -- gift/643"),
+    ("NICHT-UEBERSETZBAR", "bank-at"): (6, "D3 -- gift/643, inside the bank accessor"),
+    ("NICHT-UEBERSETZBAR", "reason-code"): (16, "D3 -- gift/643, and D4 at the top rungs"),
+    #
+    # **`D4` -- a literal wider than every C integer type reaches the C anyway.**
+    # `beispiele/gift/644`. The 2026-09-02 repair of `konst_zahl` stopped `2^128 - 1` coming
+    # out as `-1`; `2^64` fits `i128` perfectly well, so it is handed over and written.
+    ("NICHT-UEBERSETZBAR", "embeds-scale"): (4, "D4 -- gift/644, `* <2^64>u`"),
+    #
+    # **`D5` -- an array length past C's maximum object size.** `beispiele/gift/645`.
+    ("NICHT-UEBERSETZBAR", "array-laenge"): (12, "D5 -- gift/645, and D3/D4 at the top rungs"),
+    #
+    # **`D6` -- a `section` name copied into a C string with nothing escaped.**
+    # `beispiele/gift/646`. Four shapes, two seen by the compiler and two only by the
+    # assembler -- which is why this tool compiles with `-c` and not `-fsyntax-only`.
+    ("NICHT-UEBERSETZBAR", "text-abschnitt"): (6, "D6 -- gift/646"),
+    #
+    # ---- THE ORACLE ------------------------------------------------------------------
+    #
+    # **`D7` -- an `entry` number the emitter cannot write, and it writes the unit anyway.**
+    # `messung/AUDIT-2026-09-02.md` 7.7 item 3 books it: the diagnostic says *"vector: not a
+    # constant in this unit"*, and it IS a constant -- one the emitter cannot represent. The
+    # honest answer is a named refusal at check time, in the `N051` family.
+    ("ORAKEL", "entry-vector"): (23, "D7 -- AUDIT-2026-09-02 7.7 item 3"),
+    ("ORAKEL", "entry-ist"): (23, "D7 -- the same, at the stack-table index"),
+    ("ORAKEL", "entry-nested-bounded"): (23, "D7 -- the same, at the nesting bound"),
+    #
+    # ---- BESIDE THE PROPERTY ---------------------------------------------------------
+    #
+    # **`D8` -- a zero-size array.** GCC takes it as an extension, ISO C forbids it.
+    # `messung/AUDIT-2026-09-02.md` 7.7 item 4 books `table count 0` as *refused at emit*;
+    # **it is not refused** -- it lowers to `T_slot slots[0]`, and that is the half this
+    # instrument corrects. (`[u64; 0]` IS refused, and `aligned(p, 0)` is refused too,
+    # so both keep the property -- the sweep sees them as `REFUSE C001`.)
+    ("NOT-ISO", "table-count"): (3, "D8 -- `T_slot slots[0]`, and AUDIT 7.7 item 4 books it wrongly"),
+    ("NOT-ISO", "const-als-schranke"): (4, "D8 -- the same array through a `const` bound"),
+    #
+    # **`D9` -- a `reason` code past `INT_MAX`.** ISO C restricts an enumerator to the range
+    # of `int` before C2X; GCC widens it silently.
+    ("NOT-ISO", "reason-code"): (13, "D9 -- `ISO C restricts enumerator values to range of int`"),
+    ("NOT-ISO", "text-abschnitt"): (3, "D6 again, seen a second time by -Wpedantic"),
+    #
+    # **`D10` -- an identifier past C11 5.2.4.1 significance.**
+    # `messung/AUDIT-2026-09-02.md` 7.7 item 5. Four of the eight name positions reach C
+    # with the user's own spelling; the other four do not, and that asymmetry is a
+    # measurement rather than a repair (`name-modul`, `-parameter`, `-reg`, `-typ` all give
+    # 0). The two `text-*` entries are the same rule at a STRING that becomes part of a C
+    # name.
+    ("NAME-LEN", "name-const"): (12, "D10 -- AUDIT-2026-09-02 7.7 item 5"),
+    ("NAME-LEN", "name-fn"): (12, "D10 -- at a function name"),
+    ("NAME-LEN", "name-feld"): (13, "D10 -- at a `format` field, and the prefix adds seven"),
+    ("NAME-LEN", "name-tabelle"): (13, "D10 -- at a table, and the suffix adds five"),
+    ("NAME-LEN", "text-abschnitt"): (4, "D10 -- a long section name is a long C token"),
+    ("NAME-LEN", "text-grund"): (4, "D10 -- a long reason message is a long C token"),
+    #
+    # **`D11` -- `embeds ... scale 0`.** `messung/AUDIT-2026-09-02.md` 7.7 item 4: the
+    # extracted frame number is multiplied by zero, so every record yields address zero.
+    # Three rungs write the same zero (`0`, `0x0`, `0b0`).
+    ("ENTARTET", "embeds-scale"): (3, "D11 -- AUDIT-2026-09-02 7.7 item 4"),
 }
 
 
@@ -443,6 +540,8 @@ def main():
         return 2
     print(f"   {len(g.FORMEN)} declaration forms read out of `fuzze-grenzen.py` "
           f"-- one table, not two (W7)")
+    print(f"   {len(EIGENE_FORMEN)} more this sweep OWNS -- a slot the shared table places "
+          f"where the emitter never looks")
 
     if not args.debug or not args.release:
         print("   `--debug` and `--release` are both required: the two profiles must AGREE,")
@@ -473,7 +572,13 @@ def main():
     print("   11 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
     print("   decimal / hex / signed literals, net 6 and net 7. All spoke.")
 
-    formen = {k: v for k, v in g.FORMEN.items() if not args.nur or k == args.nur}
+    alle_formen = dict(g.FORMEN)
+    alle_formen.update(EIGENE_FORMEN)
+    gut = dict(g.GUT)
+    gut.update(EIGENE_GUT)
+    leiter_von = dict(g.LEITER)
+    leiter_von.update(EIGENE_LEITER)
+    formen = {k: v for k, v in alle_formen.items() if not args.nur or k == args.nur}
     if not formen:
         print()
         print(f"== `--nur {args.nur}` names no form, so NOTHING was measured ==")
@@ -491,8 +596,8 @@ def main():
         auftraege = []
         for form in sorted(formen):
             p = arb / f"basis-{form}.gab"
-            auftraege.append((form, g.GUT[form],
-                              formen[form].format(V=g.GUT[form]) + "\n", p,
+            auftraege.append((form, gut[form],
+                              formen[form].format(V=gut[form]) + "\n", p,
                               args.debug, args.release, cc, set(), set()))
         for e in pool.map(eine_probe, auftraege):
             if not e["angenommen"]:
@@ -523,7 +628,7 @@ def main():
     auftraege = []
     n = 0
     for form in sorted(formen):
-        leiter = g.LEITERN[g.LEITER.get(form, "zahl")]
+        leiter = g.LEITERN[leiter_von.get(form, "zahl")]
         for wert in leiter:
             n += 1
             p = arb / f"{form}--{n:05d}.gab"

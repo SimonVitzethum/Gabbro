@@ -1,0 +1,42 @@
+-- erwartet: cc
+-- **641 -- a `walk` descends through a `reserved` field, and `reserved` fields get no
+-- reader.**
+--
+-- `emit.rs` writes one accessor per `format` field, and it writes NONE for a field marked
+-- `reserved` -- that is what the word is for. The descent function of a `walk` lowers
+-- `down : <field> when …` into a call on exactly that accessor:
+--
+--     if (!knoten_zu(Pte_rest(it), &k)) return false;
+--
+-- Nothing joins the two facts. `gabbro pruefe` says `3 items, 0 errors, 0 hints`,
+-- `gabbro emit` writes the unit without a single `C001`, and `cc` says
+--
+--     implicit declaration of function `Pte_rest`; did you mean `Pte_praesent`?
+--
+-- **Found on 2026-09-02 by `instrumente/fuzze-erzeuger.py`, and the place it was found is
+-- the point.** The two `walk` templates of `instrumente/fuzze-grenzen.py` carry this exact
+-- shape at their own KNOWN-GOOD baseline. That sweep validates a baseline against the
+-- CHECKER and never against the emitter, so 130 of its cases had been lowering to C that
+-- does not compile for two days, under a green run. *A baseline is only good against the
+-- question it was asked.*
+--
+-- > The neighbouring defect is the reason this is a probe and not a repair in passing: the
+-- > right answer is not obvious. Either `reserved` grows a reader for internal use, or the
+-- > CHECKER refuses a `down`/`leaf` over a field that has none. The second is the smaller
+-- > claim and it belongs to whoever owns the descent rules.
+
+module gift::descent_over_a_field_with_no_reader {
+
+format Pte endian little {
+    praesent : bool @0,
+    rest     : u64 @[63:1] reserved,
+}
+
+-- `down` names `rest`, and `rest` is `reserved`. The descent calls `Pte_rest(it)`.
+walk T levels 4 {
+    node : [Pte; 512],
+    down : rest when it.praesent,
+    leaf : it.praesent,
+}
+
+}
