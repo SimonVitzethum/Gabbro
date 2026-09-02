@@ -2199,46 +2199,82 @@ $ ./st            Hallo
 Puffer mit Länge seit dem 2026-08-19, und ein `ptr<normal, r>` darauf bindet an jede
 C-Funktion, die man selbst deklariert.
 
-**Was NICHT geht, ist eng und benannt:** `puts` und `printf` wollen `const char *`, und
-Gabbro hat `u8`. *Das ist eine Signaturfrage an der `extern`-Grenze, keine Typsystemfrage* —
-und `N046` ist genau der Pass, der sie stellt.
+~~**Was NICHT geht, ist eng und benannt:** `puts` und `printf` wollen `const char *`, und
+Gabbro hat `u8`. *Das ist eine Signaturfrage an der `extern`-Grenze, keine Typsystemfrage.*~~
 
-- [ ] ~~Rechnen, was ein `char` an der **`extern`-Grenze** kostet — nicht in der Sprache.
-      *Vielleicht reicht, dass `N046` `[u8; N]` gegen `char *` durchlässt, wenn der Nutzer es
-      hinschreibt.*~~ **FALSCH GERAHMT, berichtigt vom Ordner am 2026-09-02.**
+> **BERICHTIGT am 2026-09-02, und diesmal war die FRAGE falsch gestellt.** Sie war als
+> Signaturfrage gebucht — *„vielleicht reicht, dass `N046` `[u8; N]` gegen `char *`
+> durchlässt, wenn der Nutzer es hinschreibt"*. Das ist genau die Buchung, die einen
+> Speicherfehler erzeugt:
+>
+> **`[u8; N]` trägt eine LÄNGE, `const char *` trägt einen ABSCHLUSS.** Das sind zwei
+> verschiedene Arten, ein Ende zu markieren, und die Bindung müsste die eine in die andere
+> übersetzen. Geht ein `[u8; N]` ohne abschließende Null an `puts`, liest die C-Seite über das
+> Ende hinaus — *an der einen Stelle, an der Gabbro keine Schranke mehr hält.*
 
-      > **`[u8; N]` trägt eine LÄNGE. `const char *` trägt einen TERMINATOR.** Das sind zwei
-      > verschiedene Arten, ein Ende zu markieren, und die Bindung muss eine in die andere
-      > übersetzen. Geht ein `[u8; N]` ohne abschließende Null an `puts`, liest die C-Seite
-      > über das Ende hinaus — **ein Speicherfehler, erzeugt genau von der Entscheidung, die
-      > `B2` treffen soll, an der einzigen Stelle, an der Gabbro keine Schranke mehr hält.**
+**Die Regel, und sie folgt aus der Darstellung und nicht aus einem Geschmack:**
 
-      **Die Regel, und sie folgt aus der Repräsentation statt aus einem Geschmacksurteil:
-      gebunden wird, was eine LÄNGE nimmt.** `write(1, buf, n)` passt exakt auf `[u8; N]` —
-      Zeiger plus Länge, kein Terminator, kein Vertrauen. `fwrite` genauso. `puts` und
-      `strlen` passen strukturell nicht und sollen es nicht. *Dieselbe Regel erklärt, warum
-      `putchar` heute geht: es nimmt einen WERT, keine Länge.*
+> **Gebunden wird, was sein Ende in der SIGNATUR trägt. Nicht gebunden wird, was es in den
+> DATEN sucht.**
 
-      **Gemessen 2026-09-02, und der Zustand ist schlechter als „ungeprüft":**
+Der Grund ist nicht, dass die erste Form sicher wäre — `write(1, p, 999)` über 64 Bytes ist
+derselbe Fehler, ein Argument weiter. Der Grund ist, dass die Pflicht sich **hinschreiben**
+lässt und der Prüfer sie **schon hält**:
 
-      | | |
-      |---|---|
-      | Einträge in `cnamen.rs` | **325**, davon **138 mit einer Gabbro-Form** |
-      | alle 138 | nehmen WERTE (math, ctype, `putchar`, `abort`, `exit`) |
-      | mit Länge UND Form | **null** |
+| wie der Gerufene das Ende findet | die Pflicht | schreibbar? |
+|---|---|---|
+| eine ZAHL in der Signatur — `write(fd, p, n)` | `n` darf den Puffer nicht überschreiten | **ja** — `requires n <= KAP`, und `M115` löst es an jeder Rufstelle ein |
+| ein ABSCHLUSS in den Daten — `puts(s)` | irgendwo muss eine Null stehen | **nein** — kein Ausdruck über den Parametern beschränkt den Lesevorgang |
 
-      `write` bindet **heute mit `0 errors`** — weil es POSIX ist und in der C11-Tafel gar
-      nicht vorkommt. Der Erzeuger schreibt `int64_t write(int32_t, const Text *, uint64_t);`
-      und **das widerspricht dem echten** `ssize_t write(int, const void *, size_t)`: mit
-      `<unistd.h>` daneben sagt `gcc` *„abweichende Typen für »write«"*, ohne den Kopf bindet
-      es still gegen eine unverträgliche Deklaration.
+*Gemessen:* `error: [M115] `write` requires `n <= 64`, and the argument lies in 999 .. 999`
+(`beispiele/gift/633-length-past-the-buffer.gab`). **Eine längennehmende Bindung macht den Ruf
+nicht sicher; sie macht die Gefahr AUSSPRECHBAR** — und das ist der ganze Unterschied.
 
-      > **`N041` bewacht C11-Namen. POSIX fällt durchs Netz** — dieselbe Gestalt, gegen die
-      > `N041` gebaut wurde (`erzeugernamen.rs`: *„`gabbro pruefe` sagte `0 errors`, `gabbro
-      > emit` schrieb die Einheit ohne `C001`, und `cc` antwortete `redefinition`"*), einen
-      > Namensraum weiter.
-- [ ] `beispiele/63` druckt Zeichen für Zeichen, **weil `putchar` die einfachste bindbare
-      Form war — nicht, weil mehr unmöglich wäre.** Ein zweites Beispiel gehört daneben.
+Und dieselbe Regel erklärt `putchar` mit: es nimmt einen WERT, hat kein Ende zu finden und
+braucht keine Pflicht. *Drei Sorten, ein Test.*
+
+- [x] **`N052` gebaut** (`cnamen.rs::ABSCHLUSS`, 44 Namen über beide Tafeln, abgeleitet aus den
+      Deklarationen mit **vier benannten Ausnahmen**). Er steht VOR `N041`, und die Reihenfolge
+      ist das Argument: `N041` weist eine SCHREIBWEISE ab und verschwände an dem Tag, an dem
+      Gabbro ein `char` bekäme — `N052` weist eine DARSTELLUNG ab und bliebe stehen.
+- [x] **`void *` ist in einem PARAMETER schreibbar, im ERGEBNIS nicht** — und die Asymmetrie
+      ist die Regel, nicht die Bequemlichkeit. Herein erzeugt Gabbro Genauigkeit, nach der C
+      nicht gefragt hat; hinaus müsste es welche ERFINDEN. Damit sind `write`, `read`,
+      `fwrite` und `memcmp` bindbar und `memcpy`, `memmove`, `memset` und `memchr` nicht —
+      **alle vier an ihrem Rückgabewert.** Die Tafel wuchs von 138 auf **149 bindbare Zeilen,
+      149/149 durch `cc -Wall -Wextra -Werror`.**
+- [x] **Das POSIX-Loch geschlossen, soweit gemessen.** `write` band bis heute mit 0 Fehlern und
+      einer Deklaration, die der echten WIDERSPRICHT (`int64_t write(int32_t, const Text *,
+      uint64_t)` gegen `ssize_t write(int, const void *, size_t)`) — die erzeugte Einheit
+      schreibt keinen POSIX-Header, also hatte `cc` nichts zu beanstanden. *Dieselbe Form,
+      gegen die `N041` gebaut wurde, eine Namensschicht weiter.* Jetzt steht `<unistd.h>`
+      gemessen in `cnamen.rs::POSIX` (47 Zeilen, 13 bindbar), und der Erzeuger schreibt **C's
+      eigene Deklaration**.
+- [x] **Das zweite Beispiel steht:** `beispiele/64-writes-a-whole-buffer.gab` schreibt einen
+      ganzen Puffer mit EINEM `write(fd, p, n)`, gebaut aus einem Manifest, übersetzt unter
+      `-Wall -Wextra -Werror`, **gelaufen** — Ausgabe `Puffer\n`, sieben Bytes.
+- [ ] **Die Kante der Tafel ist genannt und nicht geschlossen:** `<signal.h>`,
+      `<sys/socket.h>` und `<fcntl.h>` liegen außerhalb, und `signal` und `recv` in
+      `messung/fragmente/F05.gab` binden bis heute ungeprüft. *Ein Loch mit einem Namen darauf
+      ist kein Grün.*
+- [ ] **DREI Befunde daneben, und keiner davon ist `B2`** (2026-09-02, gemessen):
+      **(1)** an einem Zeigerparameter prüft M1 das Argument GAR NICHT — ein `u32`, ein `bool`
+      und ein Zeiger auf den falschen Verbund gehen alle drei mit 0 Fehlern durch;
+      **(2)** Gabbro kann auf seinen eigenen Speicher keinen Zeiger bilden (`&x` sagt `M127`
+      ab), und ein `static`-Verbund an einem Zeigerparameter geht als WERT hinüber, was `cc`
+      zurückweist — *darum trägt `beispiele/64` eine nackte Reihung und die Länge daneben*;
+      **(3)** ein `static`-Verbund mit einem Reihungsfeld senkt zu `{ .bytes = 0 }` ab und
+      fällt an `-Wmissing-braces`.
+
+**Und der Zustand vorher war schlechter als „ungeprüft", gemessen am 2026-09-02:**
+
+| | |
+|---|---|
+| Einträge in `cnamen.rs` | **325**, davon **138 mit einer Gabbro-Form** |
+| alle 138 | nehmen WERTE (math, ctype, `putchar`, `abort`, `exit`) |
+| mit Länge UND Form | **null** |
+
+*Die Regel stand also schon da, unausgesprochen: gebunden war, was einen Wert nimmt.*
 
 ### B3 — Der Auffahrtsweg
 

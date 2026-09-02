@@ -4081,6 +4081,21 @@ pub(crate) fn ctyp_primitiv(t: &TypExpr) -> Option<&'static str> {
     }
 }
 
+/// **Does this pointer let the callee WRITE?** -- the one home of the `const` decision.
+///
+/// Split out on 2026-09-02 because a second reader appeared: the `N046` signature comparison
+/// has to decide `void *` against `const void *` for a bound `extern fn`, and it decides it
+/// from the same rights list this does. *Two spellings of one fact is the register `W7` warns
+/// about, and here the second would disagree at exactly `Recht::Eigen`.*
+pub(crate) fn zeiger_schreibend(z: &gabbro_syntax::ast::PtrTy) -> bool {
+    z.rechte.iter().any(|r| {
+        matches!(
+            r,
+            Recht::Schreiben | Recht::LesenSchreiben | Recht::Eigen(_)
+        )
+    })
+}
+
 /// The primitive type words, by their Gabbro spelling. **The one home of these eleven rows.**
 pub(crate) fn primitivwort(n: &str) -> Option<&'static str> {
     Some(match n {
@@ -4195,16 +4210,7 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                     _ => return None,
                 },
             };
-            let konst = if z.rechte.iter().any(|r| {
-                matches!(
-                    r,
-                    Recht::Schreiben | Recht::LesenSchreiben | Recht::Eigen(_)
-                )
-            }) {
-                ""
-            } else {
-                "const "
-            };
+            let konst = if zeiger_schreibend(z) { "" } else { "const " };
             Some(format!("{konst}{ziel} *"))
         }
         _ => None,
@@ -4783,6 +4789,41 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
     }
 }
 
+/// **C's own declaration, with this `extern fn`'s parameter names in it.**
+///
+/// Reads `cnamen.rs::Signatur::absenkung` -- `int64_t(int32_t,const void *,uint64_t)` -- and
+/// pairs each type with the name the writer chose. `None` when the arity does not match,
+/// which cannot happen behind `N046` and is refused here rather than trusted: *a table and a
+/// declaration that disagree about how many parameters there are is the one case where
+/// writing the table's answer would be writing over the writer's.*
+fn aus_ctafel(sig: &crate::cnamen::Signatur, f: &FnDecl) -> Option<(String, String)> {
+    let i = sig.absenkung.find('(')?;
+    let rueck = sig.absenkung[..i].to_string();
+    let inner = sig.absenkung[i + 1..].strip_suffix(')')?;
+    let typen: Vec<&str> = if inner == "void" {
+        Vec::new()
+    } else {
+        inner.split(',').collect()
+    };
+    if typen.len() != f.parameter.len() {
+        return None;
+    }
+    let liste = if typen.is_empty() {
+        "void".to_string()
+    } else {
+        typen
+            .iter()
+            .zip(&f.parameter)
+            .map(|(t, p)| {
+                let luecke = if t.ends_with('*') { "" } else { " " };
+                format!("{t}{luecke}{}", p.name.text)
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    Some((rueck, liste))
+}
+
 /// **The lowered CORE of a prototype: the return type and the parameter list.**
 ///
 /// Split out on 2026-08-31 so that the same declaration is lowered by the same code twice --
@@ -4799,6 +4840,29 @@ fn prototyp_kern(
 ) -> Result<(String, String), (gabbro_syntax::span::Span, &'static str)> {
     let eigen = eigene_sicht(f, u);
     let u = &eigen;
+    // **For a name C already declares, the generated unit writes C's declaration** (2026-09-02).
+    //
+    // The construct's whole meaning is *"this name already has a declaration over there"*, so
+    // the prototype belongs to C and not to this lowering. `N046` has held the two against
+    // each other since 2026-09-01 -- **for every `extern fn` that gets this far they are the
+    // same string**, and the table's own counter-probe compiled all 149 of them. *This is
+    // therefore a no-op for every program that compiled yesterday.*
+    //
+    // What it is NOT a no-op for is the one row where C is less specific than Gabbro: a
+    // `void *` parameter. `extern fn write(fd : i32, p : ptr<normal, r> Text, n : u64)` says
+    // `Text` and means it -- and C's declaration says `const void *`, which is what has to
+    // stand in the unit or `cc` disagrees with the real `write` the moment a POSIX header is
+    // in the same translation unit. *The call passes a `const Text *` into it, and that
+    // conversion is C's own and implicit.*
+    if f.klasse == Some(FnKlasse::Extern) {
+        if let Some(sig) = crate::cnamen::signatur(&f.name.text) {
+            if sig.bindbar() {
+                if let Some(k) = aus_ctafel(&sig, f) {
+                    return Ok(k);
+                }
+            }
+        }
+    }
     // **The ghost return becomes `void` — not a lowering but an ERASURE.** `mmu_an` hands the
     // boot token on; the token is the checker's argument and nothing the machine can hold.
     let rueck = match &f.ergebnis {

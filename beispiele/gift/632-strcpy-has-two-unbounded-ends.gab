@@ -1,0 +1,27 @@
+-- erwartet: N052
+-- **`strcpy` -- zwei Zeiger, keine Zahl, und ZWEI ungebundene Enden.**
+--
+-- `char *strcpy(char *, const char *)` liest die Quelle bis zu ihrer Null und schreibt so
+-- viele Bytes ins Ziel. Beide Weiten stehen in den Daten, keine in der Signatur.
+--
+-- **`strncpy` steht NICHT in dieser Tafel**, und das ist kein Versehen: `strncpy(char *,
+-- const char *, size_t)` liest hoechstens `n` und schreibt genau `n`, auch ohne Null. *Die
+-- Zahl beschraenkt beide Seiten -- die Ableitung in `miss-c-signaturen.py` erkennt das, und
+-- `strncpy` faellt darum an `N041` (Gabbro hat kein `char`) und nicht hier.*
+--
+-- **`strncat` dagegen steht darin, obwohl es eine Zahl traegt** -- sie beschraenkt das LESEN
+-- aus der Quelle, und das Schreiben beginnt an der Null des ZIELS, die `strncat` erst suchen
+-- muss. *Die Zahl beschraenkt die falsche Haelfte.*
+
+module gift {
+
+extern fn strcpy(d : ptr<normal, rw> u8, s : ptr<code, r> u8) -> u64
+    effects { reads s, writes d } costs <= 64 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

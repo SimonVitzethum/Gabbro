@@ -3401,7 +3401,7 @@ irgendwann, eine fehlende nie.
 | **Erhaltungspflichten** | **6** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand. *5 → 6 am 2026-08-31: `beispiele/55-kindkette.gab` erhält `kind_zeigt_zurueck` — die Zahl steigt mit dem Korpus* |
 | **ZUSAGE ohne Leser** | **0** | `./instrumente/pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
 | **Fremdpflichten** | **11** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
-| **Vorbedingungen am Rufort** | **15** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
+| **Vorbedingungen am Rufort** | **16** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **6** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
 | **Absenkungspflichten** | **4** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
 

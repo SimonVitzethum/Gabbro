@@ -1,0 +1,35 @@
+-- erwartet: N041
+-- **`memcpy` nimmt eine Laenge und ist trotzdem nicht bindbar -- und der Grund steht im
+-- ERGEBNIS.**
+--
+-- Die Regel lautet: gebunden wird, was sein Ende in der Signatur traegt. `memcpy(void *,
+-- const void *, size_t)` tut das -- und faellt an der anderen Haelfte derselben Regel.
+--
+--   ein `void *`, das HEREIN kommt   Gabbro sagt `ptr<normal, r> T`, C loescht den
+--                                    Elementtyp. **Gabbro liefert Genauigkeit, nach der C
+--                                    nicht gefragt hat**, und die Umwandlung ist C's eigene.
+--                                    *Seit dem 2026-09-02 erlaubt.*
+--   ein `void *`, das HINAUS geht    Gabbro muesste `ptr<normal, rw> u8` fuer etwas sagen,
+--                                    das C als „irgendein Objekt" fuehrt. **Gabbro wuerde
+--                                    Genauigkeit ERFINDEN**, und keine der beiden Seiten
+--                                    kann sie pruefen.
+--
+-- Darum sind `write`, `read`, `fwrite` und `memcmp` bindbar und `memcpy`, `memmove`, `memset`
+-- und `memchr` nicht -- **alle vier der zweiten Gruppe an ihrem Rueckgabewert.** *Die
+-- Trennung ist keine Geschmacksfrage; sie ist die Richtung, in die die Genauigkeit fliesst.*
+--
+-- > Und dass `memcpy` seinen ersten Parameter zurueckgibt, waere kein Gegenargument, sondern
+-- > eines dafuer: die Zusage steht in C's Prosa und nicht in C's Typ.
+
+module gift {
+
+extern fn memcpy(d : ptr<normal, rw> u8, s : ptr<normal, r> u8, n : u64) -> ptr<normal, rw> u8
+    effects { reads s, writes d } costs <= 64 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

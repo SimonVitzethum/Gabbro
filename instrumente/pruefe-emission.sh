@@ -2072,7 +2072,12 @@ echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECH
 # impossible**: `beispiele/63-druckt.gab`, the first Gabbro program that PRINTS. Until that
 # day `N041` refused every `extern fn` on a name C owns, and `putchar`, `puts` and `printf`
 # are all three such names -- so the corpus had no program with output at all.
-MARKE_EMIT=63
+# **63 -> 64 on 2026-09-02, and the object grew by the SECOND printing program**:
+# `beispiele/64-writes-a-whole-buffer.gab` writes a whole buffer through ONE `write(fd, p, n)`
+# instead of a `putchar` per byte. It is the counter-form of `N052`: what is bound is what
+# carries its end in the SIGNATURE, and `requires n <= KAP` is the obligation `M115` then
+# discharges at the call site. *A terminator scan leaves nothing to discharge.*
+MARKE_EMIT=64
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

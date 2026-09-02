@@ -1,39 +1,72 @@
 -- **Die Gegenprobe zu `N041`: was NICHT vergeben ist, geht durch.**
 --
 -- Eine Regel, die 558 Namen abweist, ist nur dann eine Regel und keine Wand, wenn die
--- Nachbarn durchgehen. Diese vier sehen aus wie C-Bibliotheksnamen und sind KEINE:
+-- Nachbarn durchgehen.
 --
---   `read` `write`   POSIX, nicht C11 -- keine eingebaute Funktion von GCC
---   `open` `close`   POSIX, und in keinem der vier Header
---   `signal`         steht in `<signal.h>`, das der Erzeuger NICHT schreibt, und ist keine
---                    eingebaute Funktion
+-- ## Was hier bis zum 2026-09-02 stand, war zur Haelfte falsch
 --
--- **Gemessen am 2026-08-31** (`messung/C-NAMEN.md` §4): `uint64_t read(uint64_t);` uebersetzt
--- unter `cc -std=c11 -O0 -Wall -Wextra -Werror` tadellos.
+-- Die Datei fuehrte `read` `write` `open` `close` `signal` als BEWEIS dafuer, dass diese Namen
+-- frei seien -- *„POSIX, nicht C11 -- keine eingebaute Funktion von GCC"*. Beide Halbsaetze
+-- stimmten. **Der Schluss stimmte nicht:**
 --
--- > **Und damit ist `TODO.md`:286 widerlegt.** Dort stand: *„Ein Nutzer, der seine Funktion
--- > `exit`, `abort`, `free` oder `read` nennt, erfaehrt es vom fremden Uebersetzer."* Drei von
--- > vier stimmten. Das vierte war danebengegriffen, und niemand hat es nachgerechnet, weil
--- > die ersten drei trugen.
+--     extern fn write(fd : u64, w : u64)   ->  void write(uint64_t fd, uint64_t w);
+--     gabbro pruefe: 0 errors
+--     cc ohne Header:            uebersetzt, bindet, ruft das ECHTE `write`
+--     cc mit <unistd.h> daneben: „abweichende Typen fuer »write«"
+--
+-- Die erzeugte Einheit schreibt keinen POSIX-Header, also hat `cc` nichts, dem die
+-- Deklaration widersprechen koennte. **Nicht vergeben und frei sind zwei verschiedene
+-- Sachen**, und diese Datei hat elf Tage lang die eine fuer die andere genommen.
+--
+-- Seit dem 2026-09-02 steht `<unistd.h>` gemessen in `cnamen.rs::POSIX`. Drei der fuenf Zeilen
+-- fielen sofort an `N046` (`beispiele/gift/634`). Was hier steht, ist die Datei danach, und
+-- sie traegt jetzt DREI Aussagen statt einer.
+--
+-- ## 1. Ein Name, den wirklich niemand vergeben hat
+--
+-- `plattenschritt` und `nimm_wache` stehen in keiner der beiden Tafeln und in keinem Header.
+-- *Das ist der Fall, fuer den diese Datei da ist.*
+--
+-- ## 2. Ein POSIX-Name mit der RICHTIGEN Signatur
+--
+-- `close` ist gemessen (`int close(int)`), und die passende Zeile geht durch. **Eine Tafel,
+-- die nur abweist, waere eine Wand; diese hier gibt dreizehn `<unistd.h>`-Namen frei**, und
+-- `close` ist der Beleg. Die unpassende Zeile daneben faellt an `N046`, nicht an `cc`.
+--
+-- ## 3. Zwei Namen, die durchgehen, weil NIEMAND sie gemessen hat
+--
+-- `open` steht in `<fcntl.h>`, `signal` in `<signal.h>` -- und die Messung liest nur
+-- `<unistd.h>`. **Diese beiden Zeilen sind kein Gruen, sondern eine Kante mit einem Namen
+-- darauf.** `int open(const char *, int, ...)` und `void (*signal(int, void (*)(int)))(int)`
+-- sind die echten Deklarationen, und keine der beiden hat mit dem zu tun, was hier steht.
+--
+-- *Eine Tafel, die eine Vollstaendigkeit behauptet, die sie nicht hat, ist schlimmer als
+-- eine, die ihre Kante nennt.* Darum stehen die zwei Zeilen weiter da -- als Messpunkt fuer
+-- den Tag, an dem die Tafel breiter wird.
 --
 -- Diese Datei ist eine MESSUNG und kein Beispiel: sie muss 0 Fehler geben.
 
 module probe::c_namen_frei {
 
-extern fn read(fd : u64) -> u64 effects { reads fd } costs <= 4 ops;
-extern fn write(fd : u64, w : u64) effects { writes fd } costs <= 4 ops;
+-- 1. wirklich frei
+extern fn plattenschritt(fd : u64) -> u64 effects { reads fd } costs <= 4 ops;
+extern fn nimm_wache(a : u64, w : u64) effects { writes a } costs <= 4 ops;
+
+-- 2. POSIX, gemessen, und mit der Zeile, die passt
+extern fn close(a : i32) -> i32 effects { writes ausgabe } costs <= 4 ops;
+
+-- 3. POSIX, NICHT gemessen -- `<fcntl.h>` und `<signal.h>` liest niemand
 extern fn open(a : u64) -> u64 effects { reads a } costs <= 4 ops;
-extern fn close(a : u64) effects { writes a } costs <= 4 ops;
 extern fn signal(n : u64, w : u64) effects { writes n } costs <= 4 ops;
 
 impl fn haupt(fd : u64) -> u64
-    effects { reads fd, writes fd }
+    effects { reads fd, writes fd, writes ausgabe }
     costs <= 32 ops
 {
-    let a = read(fd);
-    write(fd, a);
+    let a = plattenschritt(fd);
+    nimm_wache(fd, a);
     signal(fd, a);
-    close(fd);
+    let s = close(1);
     return open(a);
 }
 

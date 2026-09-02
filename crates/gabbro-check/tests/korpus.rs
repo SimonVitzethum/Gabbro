@@ -314,6 +314,13 @@ const BENANNT: &[&str] = &[
     // asks about alignment and `2^68` is a multiple of 8. Found by
     // `instrumente/fuzze-grenzen.py` in the sweep that also found `N049`'s own overflow.
     "N051",
+    // **`N052`, 2026-09-02: the end of the data is IN the data.** Split off from `N041` for
+    // the same reason `P041` was split off from `P034`: two unrelated rules stood under one
+    // identifier. `N041` refuses a SPELLING -- a `char *` Gabbro cannot write -- and would
+    // go away the day Gabbro grew a `char`. `N052` refuses a REPRESENTATION: a terminator
+    // scan has no bound anywhere in the signature, so no `requires` can hold it, and that
+    // stands whatever types the language gains.
+    "N052",
 ];
 
 #[test]

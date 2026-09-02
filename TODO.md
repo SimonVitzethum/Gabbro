@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~80~~ 87 Sätze über 12 von 12 Pässen (75 und 79 am 2026-08-31 früh) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~80~~ 88 Sätze über 12 von 12 Pässen (75 und 79 am 2026-08-31 früh) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -334,6 +334,17 @@ darunter.
          > tadellos (gemessen, `messung/proben/probe-c-namen-frei.gab`). *Drei von vier
          > Beispielen trugen, und darum hat das vierte niemand nachgerechnet.*
 
+         > **Und die Gegenprobe selbst war das Loch** (2026-09-02). Sie fuehrte `read`
+         > `write` `open` `close` `signal` als BEWEIS dafuer, dass diese Namen frei seien.
+         > *Nicht vergeben und frei sind zwei verschiedene Sachen:* `void write(uint64_t,
+         > uint64_t);` uebersetzt nur darum tadellos, weil die erzeugte Einheit keinen
+         > POSIX-Header schreibt -- mit `<unistd.h>` daneben sagt `cc` **„abweichende Typen
+         > fuer »write«"**. Die Absage, die vom fremden Uebersetzer haette kommen sollen,
+         > kann von ihm gar nicht kommen. Seit dem 2026-09-02 steht `<unistd.h>` gemessen in
+         > `cnamen.rs::POSIX` (47 Zeilen, 13 bindbar), die Tafel wird **nur an einer
+         > `extern fn` gelesen** -- ein Gabbro-`fn read` definiert seins und fragt libc nach
+         > nichts --, und drei der fuenf Zeilen fielen sofort.
+
          Für `F05` bleibt es eine Wand, und die Regel macht sie SICHTBAR statt sie
          wegzunehmen: `exit()` steht im EINGEFRORENEN Ausschnitt (`FRAGMENTE.md`:1028 die
          Deklaration, acht Rufstellen im Rumpf), umbenennen wäre ein Umschreiben, und der
@@ -529,7 +540,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 172 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 173 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *168 → 169 am 2026-09-01: `messung/PHASENKONSTRUKT.md` kam dazu — die Nachrechnung von
       `§42`, die selbst zwei Widerrufe buchte (die Tafel über dem Giftkorpus, und `§43`s
       „trivial"). **Ein Dokument, das Widerrufe schreibt, hebt den Nenner, gegen den sie
@@ -642,11 +653,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **97 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **96 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 114 sind tragend, 6 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 115 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -743,7 +754,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2797 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
+      Heute **2856 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -2913,7 +2924,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**105 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**106 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
@@ -3872,7 +3883,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 265 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 266 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
 **Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*
@@ -5015,3 +5026,40 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       demselben Erzeugnis geben zwei Antworten auf eine Frage** — wer den Schalter setzt,
       setzt ihn an BEIDEN Stellen oder gar nicht. *Die Messung sagt nur, dass der Weg frei
       ist; ihn zu gehen ist eine Wahl.*
+
+## Aus der `B2`-Bahn, 2026-09-02 (`dokumente/PLAN-HARDWARE.md` §49, `N052`)
+
+*Drei Befunde, die beim Schreiben des zweiten druckenden Beispiels abfielen. **Keiner davon
+ist `B2`**, und alle drei sind grösser als der Posten, der sie gefunden hat.*
+
+- [ ] **An einem Zeigerparameter prüft M1 das Argument GAR NICHT.** Gemessen am 2026-09-02
+      gegen `impl fn nimmt(p : ptr<normal, r> Text)` — vier Rufe, und der Typ des Arguments
+      spielt in keinem eine Rolle:
+
+      ```text
+      nimmt(KAP)      ein u32     0 Typfehler   (nur E008, weil `pure` nicht stimmte)
+      nimmt(PUFFER)   ein static  0 Fehler
+      nimmt(q)        ptr<normal, r> Andr -- der FALSCHE Verbund   0 Fehler
+      nimmt(true)     ein bool    0 Typfehler
+      ```
+
+      Der dritte ist der teuerste: **ein Zeiger auf den falschen Verbund geht durch**, und der
+      Erzeuger schreibt `const Andr *` in ein `const Text *`. *`N030` hält fest, dass
+      `opaque`, `linear`, `ghost` und `tagged` NOMINAL sind — an dieser Stelle wird die
+      Nominalität nicht gelesen.* Der Pass fehlt, nicht die Regel.
+
+- [ ] **Gabbro kann auf seinen eigenen Speicher keinen Zeiger bilden.** `&PUFFER` sagt `M127`
+      ab (*„`&` macht eine FUNKTION zu einem Wert; es gibt kein Adress-von für eine Variable
+      oder einen Typ"*), und ein `static`-Verbund, der an einem Zeigerparameter steht, geht als
+      WERT hinüber — was `cc` zurückweist (*„Inkompatibler Typ für Argument 2"*). **Eine
+      Reihung ist die eine Adresse, die C von selbst hergibt**, und darum trägt
+      `beispiele/64-writes-a-whole-buffer.gab` eine nackte `[u8; KAP]` mit der Länge daneben
+      statt einen Verbund aus beidem. *Das ist eine gemessene Grenze und keine Form des
+      Beispiels.* Sie hängt am Punkt darüber: dass der Ruf durchgeht, ist dieselbe Blindheit.
+
+- [ ] **Ein `static`-Verbund mit einem Reihungsfeld senkt zu `{ .bytes = 0 }` ab.** `cc`
+      weist das unter `-Wall -Wextra -Werror` zurück (*„geschweifte Klammern fehlen um
+      Initialisierung", `-Werror=missing-braces`*). `verbundmarken` in `emit.rs` schreibt den
+      Skalar durch, ohne den erklärten Feldtyp anzusehen; gebraucht wird `{0}`, wo das Feld
+      eine Reihung ist. **Der Prüfer sagt 0 Fehler und der Erzeuger schreibt C, das nicht
+      übersetzt** — dieselbe Form wie `N041` und `N046`, nur im Erzeuger statt an der Grenze.

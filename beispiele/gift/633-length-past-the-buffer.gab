@@ -1,0 +1,36 @@
+-- erwartet: M115
+-- **Die Gegenprobe zu `N052`: eine Laenge ist nicht darum sicher, weil sie eine Laenge ist.**
+--
+-- `beispiele/64-writes-a-whole-buffer.gab` bindet `write(fd, p, n)` und begruendet das damit,
+-- dass die Pflicht sich hinschreiben laesst. **Diese Datei zeigt, dass sie auch BEISST.**
+--
+-- 999 ueber einem Puffer von 64 Bytes ist derselbe Speicherfehler, den `puts` ohne Null
+-- machen wuerde -- ein Argument weiter. Der Unterschied ist der ganze Ertrag der Regel:
+--
+--   `puts(s)`             kein Ausdruck ueber den Parametern beschraenkt den Lesevorgang.
+--                         **Es gibt nichts zu pruefen.**
+--   `write(fd, p, 999)`   `requires n <= 64` steht da, und `M115` haelt das Argument dagegen.
+--                         **Der Bereich schliesst die Vorbedingung AUS, nicht bloss unbewiesen.**
+--
+-- *Eine laengennehmende Bindung macht den Ruf nicht sicher; sie macht die Gefahr
+-- AUSSPRECHBAR -- und der Pruefer haelt sie schon.*
+
+module gift {
+
+const KAP : u32 = 64;
+
+pub static mut PUFFER : [u8; KAP] = 0;
+
+extern fn write(fd : i32, p : ptr<normal, r> u8, n : u64) -> i64
+    requires n <= 64
+    effects  { writes ausgabe, reads p }
+    costs    <= 16 ops;
+
+pub fn haupt() -> i64
+    effects { reads PUFFER, writes ausgabe }
+    costs   <= 40 ops
+{
+    return write(1, PUFFER, 999);
+}
+
+}
