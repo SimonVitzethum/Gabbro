@@ -159,10 +159,10 @@ def main():
         # hands back the code for a clean pass, has written its finding where only a reader
         # can act on it -- and every caller of this file reads the number, not the text.
         #
-        # `messe()` says the same thing four hundred lines up, about its own subject: over a
-        # checker that never answered, *"das kein Ergebnis von null Pflichten, sondern gar
-        # kein Ergebnis"*. This branch is that sentence one level higher, and it lacked the
-        # exit the other one has.
+        # `messe()` says the same thing further up, about its own subject: over a checker
+        # that never answered, what comes back is no result AT ALL, never a result of zero
+        # obligations. This branch is that sentence one level higher, and it lacked the exit
+        # the other one has.
         #
         # `2`, like tooth 0 above: the SETUP has to change, not the tree.
         print("  ABBRUCH: die Zahl darunter waere keine Messung.", file=sys.stderr)

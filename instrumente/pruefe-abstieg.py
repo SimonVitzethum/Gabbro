@@ -55,8 +55,8 @@ PAESSE = ["m1", "m2", "m3", "kosten", "wirkungen", "geteilt", "phasen", "paarung
           "schleifen", "gruppe", "aufrufgraph", "zeugnis", "namen", "kbedingung", "emit"]
 
 # **THE LIST ABOVE IS A FIXTURE, AND UNTIL TODAY NOTHING COMPARED IT TO THE TREE**
-# (2026-09-02). It is hand-written; the closing line of this run says *jeder Pass erreicht
-# jeden Unterblock*, and `jeder` is a claim about a population this file never counted.
+# (2026-09-02). It is hand-written, and the closing line of this run quantifies over EVERY
+# pass -- a claim about a population this file never counted.
 #
 # Measured: 19 files under `crates/gabbro-check/src` carry a `StmtArt::` arm for a
 # block-bearing kind. Fifteen names stand above. **The claim covered part of what descends,

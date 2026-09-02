@@ -1437,10 +1437,10 @@ def main():
     # **AND THE REACH ABOVE IS A REACH INTO FIVE FILES** (2026-09-02).
     #
     # `BEWACHTE_DATEIEN` is a fixed list -- not even a glob -- and everything printed under
-    # the heading *was dieses Register NICHT bewacht* was counted inside it. **A section
-    # that accounts for what is unguarded, over a population chosen by hand, accounts for
-    # the wrong thing:** it says how much of five documents lacks a command, and reads as
-    # how much of the folder does.
+    # the heading above, the one that promises to account for what this register does NOT
+    # guard, was counted inside it. **A reckoning of the unguarded, over a population chosen
+    # by hand, reckons the wrong thing:** it says how much of five documents lacks a
+    # command, and reads as how much of the folder does.
     #
     # The format this register polices is `KENNZAHL`, a bold number in a table cell, and
     # nothing stops that format from appearing anywhere. So the same pattern goes over every

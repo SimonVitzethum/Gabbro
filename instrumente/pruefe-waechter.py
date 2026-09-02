@@ -338,7 +338,75 @@ def korpus_fehlt(name):
 # Frist und roten Abbruch wie jedes andere.
 ZAEHLER = {"zaehle-b3.py", "zaehle-bereichspflichten.py", "zaehle-narrow.py", "zaehle-fallen.sh"}
 
-FUEHRT_AUS = re.compile(r"subprocess\.|os\.system|check_output|\bcargo\b|\bcc\b|\bisabelle\b")
+# **A BARE WORD IS NOT A CALL SITE, and this pattern read three of them as one** (2026-09-02).
+#
+# `\bcargo\b|\bcc\b|\bisabelle\b` matched the NAME anywhere: in a comment, in a printed
+# sentence, inside backticks. A tool that mentions one of the three and executes nothing was
+# told it lacks a deadline for something it never runs. Measured the day this line changed:
+# `zaehle-wortschatz.py` gained a printed sentence pointing a reader at `isabelle build` and
+# went red for `FRIST` -- a guardian reporting a defect its own subject does not have.
+#
+# **The rule that separates the two is CODE against TEXT, and not a call shape.** A first
+# attempt demanded the shape `GIT_AUFRUF` uses -- argv element, or command position after a
+# separator -- and it was MEASURED WRONG before it was committed: `cc "${CFLAGS[@]}"` in
+# `pruefe-sonden.sh`, `timeout "$FRIST" cargo build` in `pruefe-syntax.sh` and two more real
+# call sites stopped matching. *A stricter rule that stops seeing four executing tools is a
+# worse defect than the false alarm it removes,* and it would have gone in unnoticed: all
+# four carry a deadline anyway, so no verdict moved.
+#
+# What holds instead: strip comments and quoted strings, then look for the name. A compiler
+# invoked from a shell stands bare on its line; a compiler NAMED in prose stands in a
+# comment, in an `echo` or in a `print`. `subprocess.`, `os.system` and `check_output` are
+# matched before the stripping and are untouched by it -- and `subprocess.run(["cc", ...])`
+# is caught by those, never by the bare name.
+#
+# > A rule that already knows the difference in one place, and not in the place next to it
+# > -- the same shape as a corpus guard written for one of two populations.
+# **Three forms that survive the stripping, because each is code that happens to live in a
+# string.** Measured while this rule was being written, over all 63 tools:
+#
+#   `ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"`   pruefe-beweise.sh:32
+#   `shutil.which("cc")`                                          zaehle-empfindlichkeit.py:84
+#
+# The first runs the prover through `"$ISABELLE"` two lines later and the bare name never
+# stands on a line of its own; the second asks for a tool it then drives through an imported
+# module. Both carry a deadline today, so neither verdict moved -- *which is exactly why
+# they had to be found by comparing the two rules over the whole population and not by
+# watching the colour.*
+FUEHRT_AUS_ROH = re.compile(
+    r"subprocess\.|os\.system|check_output|shutil\.which\("
+    r"|[A-Z_]+=[^\n]*\b(?:cargo|cc|clang|isabelle|lean)\b")
+FUEHRT_AUS_NAME = re.compile(r"\b(?:cargo|cc|clang|isabelle|lean)\b")
+
+
+def ohne_text(t):
+    """Source with comments and quoted spans removed -- what is left is code.
+
+    One pass, three states. Deliberately coarse: it does not parse heredocs or nested
+    quoting, and it does not need to. **Coarse in the safe direction** -- a span it fails to
+    strip stays visible to the pattern, so the requirement is at worst demanded once too
+    often, never once too seldom (W10).
+    """
+    aus, i, n = [], 0, len(t)
+    while i < n:
+        c = t[i]
+        if c == "#":
+            j = t.find("\n", i)
+            i = n if j < 0 else j
+        elif c in "\"'":
+            j, quote = i + 1, c
+            while j < n and t[j] != quote:
+                j += 2 if t[j] == "\\" else 1
+            aus.append(" ")
+            i = j + 1
+        else:
+            aus.append(c)
+            i += 1
+    return "".join(aus)
+
+
+def fuehrt_aus(t):
+    return bool(FUEHRT_AUS_ROH.search(t) or FUEHRT_AUS_NAME.search(ohne_text(t)))
 # **Eine DEKLARIERTE Frist** -- `timeout`, `timeout=`, `TimeoutExpired` oder eine benannte
 # Konstante (`FRIST`, `ZEIT`). Dass sie dasteht, heisst nicht, dass sie greift; `--lauf` ist
 # die Haelfte, die das misst. *Die statische Haelfte verpflichtet, sie spricht nicht frei.*
@@ -667,7 +735,7 @@ def statisch(p):
             fehlt.append("ABSAGE-MIT-1 (Zeile " + ", ".join(map(str, stellen)) + ")")
         if stellen := stumme_probe_mit_eins(t):
             fehlt.append("STUMME-PROBE-MIT-1 (Zeile " + ", ".join(map(str, stellen)) + ")")
-    if FUEHRT_AUS.search(t) and not HAT_FRIST.search(t):
+    if fuehrt_aus(t) and not HAT_FRIST.search(t):
         fehlt.append("FRIST")
     if p.name not in ZAEHLER and not HAT_PROBE.search(t):
         fehlt.append("SPRECHPROBE")
@@ -715,6 +783,23 @@ def sprechprobe():
                      '# Sprechprobe: `cc` und `ld` stehen hier nur im Text.\n'
                      'subprocess.run(["cargo", "test"], timeout=5)\n'
                      'sys.exit(1)\n', encoding="utf-8")
+        # **And the same direction WITHOUT a deadline, because the probe above passed for
+        # the wrong reason** (2026-09-02). It carries `timeout=5`, so `HAT_FRIST` matched
+        # whatever `FUEHRT_AUS` did -- the probe could not tell *prose was ignored* from
+        # *prose was flagged and the deadline covered it anyway*. **A green that two
+        # different mechanisms can produce measures neither.**
+        #
+        # This source executes NOTHING and names three tools in prose. Before the call-site
+        # repair it came back `FRIST`; it must come back clean.
+        f = pathlib.Path(d) / "pruefe-prosa-ohne-frist.py"
+        f.write_text('import sys\n'
+                     '# Sprechprobe: `cargo`, `cc` und `isabelle build` stehen hier nur\n'
+                     '# im Text -- dieses Werkzeug fuehrt nichts aus.\n'
+                     'def sprechprobe():\n'
+                     '    return True\n'
+                     'print("== 3 von 3 Stellen ==")\n'
+                     'print("ABBRUCH: nichts gemessen.")\n'
+                     'sys.exit(2)\n', encoding="utf-8")
         # **Fourth direction: an abort with `2` is RED.** The requirement says "other than
         # zero", not "equal to one" -- and until 2026-08-31 the pattern held the digit 1.
         # This source has NO exit with 1 and must come back clean all the same.
@@ -753,6 +838,7 @@ def sprechprobe():
                      encoding="utf-8")
         f_gut, f_schlecht, f_gut_lc = statisch(a), statisch(b), statisch(c)
         f_prosa = statisch(e)
+        f_prosa_of = statisch(f)
         f_zwei = statisch(g)
         f_a1, f_a2 = statisch(h), statisch(i)
         f_s1, f_s2 = statisch(j), statisch(k)
@@ -766,11 +852,12 @@ def sprechprobe():
     voll_faellt = bool(ARBEIT.search("== 23 von 23 tragen alle drei ==\n"))
     a1 = len(f_a1) == 1 and f_a1[0].startswith("ABSAGE-MIT-1")
     s1 = len(f_s1) == 1 and f_s1[0].startswith("STUMME-PROBE-MIT-1")
-    ok = (not f_gut and not f_gut_lc and not f_prosa and not f_zwei and a1 and not f_a2
+    ok = (not f_gut and not f_gut_lc and not f_prosa and not f_prosa_of
+          and not f_zwei and a1 and not f_a2
           and s1 and not f_s2 and stumm_ist_stumm
           and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH", "GEBIETSSCHEMA"}
           and leer_faellt and voll_faellt)
-    return (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
+    return (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_prosa_of, f_zwei, a1, f_a2,
             s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt)
 
 
@@ -1279,7 +1366,7 @@ def sprechprobe_sieb():
 
 
 def main():
-    (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
+    (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_prosa_of, f_zwei, a1, f_a2,
      s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt) = sprechprobe()
     print("== Sprechprobe des Waechters ==")
     print(f"  saubere Quelle: {len(f_gut)} Verletzungen -- "
@@ -1292,6 +1379,10 @@ def main():
     print(f"  cc nur als Prosa: {len(f_prosa)} Verletzungen -- "
           + ("ok (der Name im Text ist keine Aufrufstelle)"
              if not f_prosa else f"GESCHEITERT (Fehlalarm: {f_prosa})"))
+    print(f"  Prosa OHNE Frist: {len(f_prosa_of)} Verletzungen -- "
+          + ("ok (ein Werkzeug, das nichts ausfuehrt, braucht keine Frist fuer das, "
+             "was es nur ERWAEHNT)"
+             if not f_prosa_of else f"GESCHEITERT (Fehlalarm: {f_prosa_of})"))
     print(f"  Abbruch mit 2:  {len(f_zwei)} Verletzungen -- "
           + ("ok (ein Ausgang mit 2 ist ROT -- die Forderung heisst `ungleich null`)"
              if not f_zwei else f"GESCHEITERT (falsches Rot: {f_zwei})"))

@@ -47,10 +47,9 @@ CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 # compared the two. Measured on `a2cd217`: `pruefe` really calls fifteen passes and twelve
 # names stood here -- **`bindung`, `gatter` and `kontexte` were missing.**
 #
-# The verdict below is `UNGELESEN  \`X\` -- KEIN Pass nennt es`, and `KEIN` was quantifying
-# over a list, not over the checker. Three passes could have named an item kind and the
-# table would still have called it unread. *A blind spot reported as a measurement of blind
-# spots.*
+# The verdict below reports an item kind as READ BY NO PASS, and that quantifier ranged over
+# a list rather than over the checker. Three passes could have named a kind and the table
+# would still have called it unread. *A blind spot reported as a measurement of blind spots.*
 #
 # `pruefe-abstieg.py:mit_block()` already reads its list out of `lib.rs` for this reason
 # (W7: the rule is READ, never written twice). This does the same thing to the other half.

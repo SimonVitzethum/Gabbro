@@ -1337,7 +1337,8 @@ def main():
 
     print()
     print("== Die Ratsche")
-    # **THE HEADLINE SAYS `aus BEWEIS.md §1`, AND THIS FILE NEVER OPENED IT** (2026-09-02).
+    # **THE HEADLINE NAMES `BEWEIS.md` §1 AS ITS SOURCE, AND THIS FILE NEVER OPENED IT**
+    # (2026-09-02).
     #
     # `KATALOG` is a hand transcription of that section's allow list and never list, down to
     # the `quelle` strings that quote it. Nothing read the document back -- so the day
