@@ -68,6 +68,7 @@ gemessen** gezaehlt statt als Befund gedruckt -- mit seiner Zahl in der Schlussz
 Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum -- und `zaehle-b3.py` lief bis
 heute darueber bis in eine `ZeroDivisionError`.
 """
+import importlib.util
 import pathlib
 import re
 import subprocess
@@ -149,9 +150,52 @@ SCHWER = {
 # and there is no counted total for the other 45 guardians to divide it by. The number that
 # HAS a denominator is the other one -- the dangerous places, counted by `teilmessungen()`
 # over every guardian alike. This register exists to be NAMED beside it, never summed into it.
+def mutationskatalog(wurzel=None):
+    """**Wie viele Mutationen traegt der Katalog HEUTE?** Gelesen, nicht erinnert (W7).
+
+    Bis zum 2026-09-02 stand hier `372`, gemessen am 2026-08-31 und danach nie wieder. Der
+    Katalog stand an dem Tag bei **383** -- elf mehr, und der Eintrag daneben las sich
+    unveraendert wie eine Messung. *Eine Zahl, die neben einem wachsenden Katalog steht,
+    liest sich nicht als veraltet, sondern als Stand* -- genau der Satz, mit dem
+    `mutiere-pruefer.py:FLAECHEN` seine eigene `code`-Zeile zum Leser gemacht hat.
+
+    `-1`, wenn der Katalog nicht lesbar ist. **Eine Null waere hier falsch**: sie ist ein
+    gueltiger Stand ("kein Gegenstand mehr"), und die Unterscheidung zwischen *leer* und
+    *ungemessen* ist die, um die es in diesem ganzen Register geht.
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "mp_katalog", (wurzel or W) / "instrumente" / "mutiere-pruefer.py")
+        mp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mp)
+        return len(mp.MUTATIONEN)
+    except Exception:
+        return -1
+
+
+def sprechprobe_katalog():
+    """`[(what, ok)]` -- **liest der Leser, oder erinnert er sich?**
+
+    Die zweite Richtung ist die, die eine feste Zahl nicht bestehen kann: ueber einem
+    UNTERGESCHOBENEN Katalog mit drei Eintraegen muss `3` herauskommen. Ein Waechter, der
+    seine Zahl behaelt, wenn der Gegenstand sich bewegt, misst sich selbst.
+    """
+    echt = mutationskatalog()
+    with tempfile.TemporaryDirectory() as d:
+        ort = pathlib.Path(d)
+        (ort / "instrumente").mkdir()
+        (ort / "instrumente" / "mutiere-pruefer.py").write_text(
+            "class M:\n    pass\nMUTATIONEN = [M(), M(), M()]\n", encoding="utf-8")
+        untergeschoben = mutationskatalog(ort)
+    return [
+        (f"der Katalog wird GELESEN: {echt} Mutationen", echt > 0),
+        ("ein untergeschobener Katalog mit 3 Eintraegen ergibt 3", untergeschoben == 3),
+    ]
+
+
 GEGENSTAND = {
     "mutiere-pruefer.py":
-        "372 Mutationen, je ein `cargo build` und ein `cargo test`",
+        f"{mutationskatalog()} Mutationen, je ein `cargo build` und ein `cargo test`",
     "pruefe-beweise.sh":
         "15 Isabelle-Theorien (`beweise/ROOT`)",
     "pruefe-emission.sh":
@@ -1215,6 +1259,12 @@ def main():
     for was, sch_ok in sprechprobe_schale():
         print(f"  Abschnitt (sh): {'ok' if sch_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and sch_ok
+    # **R14 fuer die EINZIGE Zeile in `GEGENSTAND`, die eine Zahl liest** (2026-09-02). Bis
+    # heute stand die Zahl fest da, und der Katalog war um elf gewachsen. *Ein Leser ohne
+    # Probe ist von einer festen Zahl nicht zu unterscheiden.*
+    for was, kat_ok in sprechprobe_katalog():
+        print(f"  Katalog:        {'ok' if kat_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and kat_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own

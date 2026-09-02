@@ -124,7 +124,8 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 #
 # `emit.rs` holds 135 anchor lines and exactly ONE of them is a comment, which cites nothing.
 # **So none of the 40 `emit.rs` comments this guardian names is an anchor, and rewriting them
-# cannot move `--anker` off 340 of 340.** The two populations are disjoint by construction:
+# cannot move `--anker` off ALL of its anchors.** The two populations are disjoint by
+# construction:
 # an anchor is a run of source text, a candidate needs an identifier in backticks, and no
 # anchor has one.
 #
@@ -257,7 +258,8 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 MARKE = 339
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
-# `instrumente/mutiere-pruefer.py` carries 340 mutations, and every one of them holds a
+# `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on
+# 2026-09-02, and the count is READ below rather than written here. Every one of them holds a
 # LITERAL run of source text as its anchor. An anchor the rewritten source no longer contains
 # falls to `ANKER FEHLT` -- and the catalogue keeps reporting coverage over a shrinking base
 # (W14). So a comment line that is part of an anchor is a MEASURING SURFACE of another tool,
@@ -267,8 +269,9 @@ MARKE = 339
 # probes belong in hit counts, never in a demand count.
 #
 # > **And what the measurement said when the rule went in: it removes NOTHING.** Of 499
-# > distinct anchor lines exactly **4** are comments, and **not one of the 340 anchors carries
-# > an identifier in backticks at all**. The two populations are disjoint -- so the ground on
+# > distinct anchor lines exactly **4** are comments, and **not one of the anchors carries
+# > an identifier in backticks at all** (340 anchors on the day of that measurement). The two
+# > populations are disjoint -- so the ground on
 # > which this correction was ordered ("reaching 207 can silence `--anker`") does not hold.
 # > *See `messung/ANKERHAKEN.md` for the full count.*
 #

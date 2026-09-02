@@ -492,6 +492,22 @@ EINTRAEGE = [
         r"== (\d+) von \d+ Ankern greifen",
         "Mutationsanker, die im Pruefer wirklich sitzen",
     ),
+    # **Die VORDERSEITE stand ungebunden daneben, und darum war sie am weitesten weg**
+    # (2026-09-02). `README.md` sagte *„340 mutations, 372 anchors"* -- zwei Zahlen, die
+    # einander schon widersprachen, denn ein Anker gehoert genau einer Mutation. Der Katalog
+    # stand bei **383**. Die Zeile darueber bindet dieselbe Zahl in `TODO.md` seit Wochen;
+    # dass die README-Zeile daneben stehen blieb, ist keine zweite Zahl, sondern eine
+    # ungebundene Kopie derselben.
+    #
+    # > *Ein Register, das kein Waechter liest, altert genau so schnell wie eins, das es nicht
+    # > gibt* -- nur sieht es dabei wie eine Messung aus.
+    (
+        "README.md",
+        r"damage one rule at a time: (\d+) mutations",
+        ["./instrumente/mutiere-pruefer.py", "--anker"],
+        r"== \d+ von (\d+) Ankern greifen",
+        "Mutationen im Katalog -- die Zahl auf der Vorderseite",
+    ),
     (
         "TODO.md",
         r"\*\*(\d+) Zeilenfortsetzungen\*\* in den Quellen",
