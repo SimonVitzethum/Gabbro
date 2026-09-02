@@ -148,13 +148,25 @@ postcondition holds trivially and the check says nothing.
 Both are cheap and only buildable early. They belong to the same class as `W16` and the
 aborting measurement run: a tool that looks plausible and measures nothing.
 
-> **And the V1 walk found two rows that belong HERE rather than under `obligation`.** `L42`
-> (*"it ends because the DEVICE completes or faults"*) and `L46` (*"it makes progress because a
-> client calls or the endpoint is revoked"*) have their progress measure outside the program's
-> state. They are assumptions, and the manifest books them as obligations. *The counter-probe
-> that makes this a class rather than a complaint is `L66` — "it ends because a TOKEN is
-> consumed" — whose measure is a place in the program, and which the fragment holds without
-> trouble.*
+> **And the V1 walk found three rows that are booked TWICE — here and under `obligation`.**
+> The ten fragments carry exactly three `progress` clauses, and all three stand in the source
+> as `assume` declarations already:
+>
+> | the `assume` | the same name as `progress` | ALSO booked in `PFLICHTEN.md` as |
+> |---|---|---|
+> | `F04.gab`:33 `device_completes_or_faults` | `FRAGMENTE.md`:887 | **L42**, logic obligation |
+> | `F05.gab`:87 `client_calls_or_endpoint_revoked` | `FRAGMENTE.md`:981 | **L46**, logic obligation |
+> | `F10.gab`:62 `token_verbraucht` | `FRAGMENTE.md`:1656 | **L66**, logic obligation |
+>
+> `SYNTAX.md`:1074 states the rule — *"`progress` names WHO ends it — an assumption about the
+> environment, with a falsifier"* — and `F10.gab`:60 repeats it as the reason its own `assume`
+> is there: *"without `assume` the name stands in no manifest."*
+>
+> **Two of the three (L42, L46) are among the ten V1 could not say — and the reason they cannot
+> be said as obligations is precisely that they are not obligations.** Moving them is a
+> correction to the manifest, not a construction. *What separates L66, which the fragment does
+> hold, is not the construct but the referent of the named predicate: `token_verbraucht` is
+> about the program, the other two are about the world.*
 
 ---
 
@@ -286,6 +298,7 @@ the assumption that it is right.
 | V0 | fix the meaning of the obligation texts for a handful of manifest lines | in writing, against real lines from `PFLICHTEN.md` |
 | V1 | Lean fragment, translation, rejection outside it | the 66 L obligations of the ten fragments expressible — or named which are not |
 | V2 | assumption check: satisfiability, vacuity | the assumption set of the ten fragments has a model |
+| | *costed 2026-09-02, not built* | **the set is 8, and every one is a PROSE SENTENCE** — so `G5` can neither fire nor be cleared. The cost is not a solver call but the formalisation, and it is harder than V1's because the assumptions speak about the world. **Vacuity is the cheap half and needs no assumption formalisation at all.** `messung/GABBROV-V1.md` §6 |
 | V3 | certificate checking in Lean | share with a recomputed certificate measured |
 | V4 | write-back into the manifest, ratchet over names | one real `obligation` from `open` to `passed` |
 
