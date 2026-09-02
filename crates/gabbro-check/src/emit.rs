@@ -6156,6 +6156,38 @@ fn anweisung(
                         );
                         return;
                     }
+                    // **An `update` body that can fall through leaves the CAS operand
+                    // UNDEFINED, and no C compiler on this machine says so at `-O0`.**
+                    //
+                    // The lowering declares `_cn` and then lets the body assign it. Every
+                    // path that reaches no `return` reaches the
+                    // `atomic_compare_exchange_weak_explicit` with `_cn` still indeterminate
+                    // -- an undefined value proposed as the new one, on a live atomic.
+                    // Measured 2026-09-02 on `beispiele/gift/658`: `gabbro pruefe` reports
+                    // `0 errors`, `gabbro emit` leaves with `0`, and `cc -Wall -Wextra` is
+                    // silent at `-O0`, `-O1` AND `-O2`. Only `clang
+                    // -Wsometimes-uninitialized` names it. **A second compiler is not the
+                    // gate this generator promises to be**: `C001` is the promise that it
+                    // refuses rather than guesses, and a value it never wrote is a guess.
+                    //
+                    // *Why the shape of the body settles this with one line:* the body
+                    // admits `return <expr>` and `if <expr> { … }` with no `else`, so an
+                    // `if` never closes a path -- its false side always falls through to
+                    // what follows. A block therefore answers on every path exactly when one
+                    // of its OWN statements is a `return`, and a nested one never repairs
+                    // that. The corpus body ends in a bare `return v;` and is untouched.
+                    if !rumpf.anweisungen.iter().any(|a| matches!(&a.art, StmtArt::Return(Some(_)))) {
+                        weigere(
+                            absagen,
+                            rumpf.span,
+                            "`update` body that can fall through without a `return` -- it \
+                             computes old -> new, and a path that answers nothing would hand \
+                             the compare-exchange a value this generator never wrote. An \
+                             `if` here has no `else`, so only a `return` of its own closes \
+                             the body",
+                        );
+                        return;
+                    }
                     // **Die Schranke geht als AUSDRUCK hinaus, nicht als Zahl.** `NKERNE * 4`
                     // steht im Erzeugnis mit `NKERNE` als `#define` daneben -- *wer die
                     // Kernzahl aendert, aendert die Schranke mit*, und niemand muss eine
