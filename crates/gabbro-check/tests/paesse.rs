@@ -697,6 +697,60 @@ fn unausgerichtete_registerlage_faellt() {
     faellt_nicht(&d("reg A : u32 @0x18 class rw\nreg B : u32 @0x1c class rw"));
 }
 
+/// **`N053` -- the assumption tier, and both halves of what it decides** (2026-09-02).
+///
+/// `reg … requires` and `transition … requires` were the two clauses NO pass read. Measured
+/// over the whole tree that day: 4 `reg` sites, 13 `transition` sites, 2 `axiom` sites --
+/// nineteen premises, and eight hand-made counter-forms all `0 errors, 0 hints` under
+/// `gabbro pruefe` AND `gabbro emit`.
+///
+/// **What falls** is the half that needs no machine: a place that does not exist. **What
+/// stays silent** is the half that does: whether the premise is true. `requires 1 == 2` at a
+/// `transition` is a false statement about hardware, and it is not this rule's question --
+/// the clause is an ASSUMPTION and `gabbro pflichten` counts it as one.
+#[test]
+fn eine_geraetezusage_nennt_eine_stelle_die_es_gibt() {
+    let uebergang = |pred: &str| {
+        format!(
+            "module p {{\n\
+             device Vtd(basis : u64) at mmio {{\n\
+             reg GCMD : u32 @0x18 class w fields {{ TE @31, }}\n\
+             reg GSTS : u32 @0x1c class r fields {{ TES @31, RTPS @30, }}\n\
+             transition an {{ GCMD.TE: 0 -> 1 }} requires {pred} effects {{ writes GCMD }}\n\
+             }}\n}}"
+        )
+    };
+    // A field the register does not declare, and a register the device does not declare.
+    faellt_mit(&uebergang("GSTS.NICHTDA == 1"), "N053");
+    faellt_mit(&uebergang("KEINREGISTER.X == 1"), "N053");
+    // The counter-direction: the places that ARE there stay silent, in every combination.
+    faellt_nicht(&uebergang("GSTS.RTPS == 1"));
+    faellt_nicht(&uebergang("GSTS.TES == 0 || GSTS.RTPS == 1"));
+    // **And the calibration that says what the rule is NOT.** Both of these are statements
+    // about the machine -- one plainly false, one out of range for the bit it names -- and
+    // deciding them is not a thing a checker can do. *A rule that fell here would be
+    // pretending to know the hardware.*
+    faellt_nicht(&uebergang("1 == 2"));
+    faellt_nicht(&uebergang("GSTS.RTPS == 99999"));
+
+    // The same rule at the OTHER clause. `TIEFE` is the register itself, bare; `QMAX` is
+    // the live shape out of `messung/fragmente/F04.gab`:73, where it stood nowhere.
+    let register = |pred: &str, konst: &str| {
+        format!(
+            "module p {{\n{konst}\
+             device Tiefengeraet(basis : u64) at mmio {{\n\
+             reg TIEFE : u32 @0x08 class r requires {pred}\n\
+             }}\n}}"
+        )
+    };
+    faellt_mit(&register("TIEFE <= QMAX", ""), "N053");
+    faellt_mit(&register("NICHTDA <= 8", ""), "N053");
+    faellt_nicht(&register("TIEFE <= 8", ""));
+    // A name the unit DOES declare is not a finding -- the direction of the error is the
+    // one `N033`, `S003`, `S007` and `H016` already carry.
+    faellt_nicht(&register("TIEFE <= QMAX", "const QMAX : u32 = 8;\n"));
+}
+
 /// **Between `N009` (two registers overlap) and `N010` (`stride 0`) stood the case nobody
 /// asked: a register eight bytes wide in a cell four bytes long.**
 ///

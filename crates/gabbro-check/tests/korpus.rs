@@ -349,6 +349,21 @@ const BENANNT: &[&str] = &[
     // same free number on 2026-09-02, and this one made three. *A free number is only
     // free against the tree one has, and three lanes each had a different tree.*
     "M141",
+    // **`N053`, 2026-09-02: the ASSUMPTION TIER, which until today no pass read at all.**
+    // `reg … requires` (4 sites) and `transition … requires` (13) were counted by
+    // `gabbro pflichten` as device promises and by nothing else; eight hand-made
+    // counter-forms all gave `0 errors, 0 hints` under `pruefe` AND under `emit`.
+    //
+    // It refuses the half that is decidable without knowing the machine: **a premise over
+    // a place that does not exist.** Whether `GSTS.RTPS == 1` HOLDS stays an assumption and
+    // is not touched -- the same line `M141` draws one construct over. The asymmetry that
+    // made it worth building: the STEP of the same `transition` has been held to the
+    // device's own registers by `C001` since it existed.
+    //
+    // > It found one in the tree it was written against: `messung/fragmente/F04.gab`:73
+    // > wrote `requires QUEUE_SIZE <= QMAX` and `QMAX` stood nowhere -- booked as open in
+    // > that file's own head since 2026-08-20, *"because no pass reads `RegDecl::requires`"*.
+    "N053",
 ];
 
 #[test]

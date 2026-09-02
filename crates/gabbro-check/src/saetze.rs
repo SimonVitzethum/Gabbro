@@ -2418,6 +2418,44 @@ pub const SPERREN: &[Satz] = &[
                      crates/gabbro-check/src/cnamen.rs::ABSCHLUSS",
     },
     Satz {
+        name: "namen.geraetezusage_nennt_ihre_stelle",
+        kennungen: &["N053"],
+        aussage: "Every place a `reg … requires` or a `transition … requires` names EXISTS: \
+                  a bare name is a register of that device, a parameter of it, a bank of it, \
+                  or something the unit declares at top level; a `.field` suffix on one of \
+                  its registers is a field that register declares. A premise over a place \
+                  that does not exist is a premise nothing can establish, and it is refused \
+                  before it can be counted as an assumption.",
+        vorbehalt: "**It does not decide whether the premise HOLDS, and that is deliberate.** \
+                    `requires GSTS.RTPS == 1` is a statement about HARDWARE: the program \
+                    cannot establish it, no pass should pretend to, and `1 == 2` in the same \
+                    slot passes this rule in silence. It stays an assumption and is counted \
+                    as one -- `gabbro pflichten` prints it under `D`, device promise. *The \
+                    cheap and correct answer for an assumption is to make it visible where \
+                    assumptions are counted, not to make a pass verify it* -- this rule takes \
+                    only the half that needs no machine.\n\
+                    **The known set is what THIS unit declares plus the last segment of every \
+                    `use`,** the same limit `N033`, `S003`, `S007` and `H016` write down: an \
+                    excerpt that names something outside the cut is refused rather than \
+                    silently believed. A `Has(…)` argument is a machine feature and no place \
+                    (`N016` reads those); a quantifier variable is bound by its quantifier. \
+                    **Indices are not judged here** -- a literal index out of a table's \
+                    `count` is `M141`, in the pass that already walks predicate positions.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/639-a-device-promise-over-a-field-that-is-not-there.gab \
+                      (a `transition` premise over `GSTS.NICHTDA`) and \
+                      beispiele/gift/640-a-register-promise-over-a-name-nobody-declares.gab \
+                      (a `reg` premise over an undeclared `QMAX`); both fall with N053 ALONE. \
+                      The silent direction is the corpus: all 19 sites of the three clauses \
+                      (4 `reg`, 13 `transition`, 2 `axiom`) pass, and the whole-tree sweep on \
+                      2026-09-02 produced exactly ONE finding -- \
+                      `messung/fragmente/F04.gab`:73, a gap that file's own head had carried \
+                      as open since 2026-08-20. And the calibration in the other direction: \
+                      `requires 1 == 2` and `requires GSTS.RTPS == 99999` stay silent, \
+                      because neither is a question this rule asks.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::geraetezusage_nennt_ihre_stelle",
+    },
+    Satz {
         name: "namen.erzeugter_name_zweimal",
         kennungen: &["N042"],
         aussage: "Two Gabbro declarations that get the SAME C name are refused at the second \

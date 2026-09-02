@@ -1,0 +1,37 @@
+-- erwartet: N053
+-- **Die Annahmenschicht war die eine Stufe, die GAR NICHTS geprueft hat** -- gemessen am
+-- 2026-09-02 ueber den ganzen Baum: `reg … requires` steht an 4 Stellen, `transition …
+-- requires` an 13, `axiom … requires` an 2. Neunzehn Praemissen, und kein Pass sah in eine
+-- einzige hinein.
+--
+-- Acht handgemachte Gegenformen liefen davor durch, alle acht mit `0 errors, 0 hints`:
+-- ein Feld, das es nicht gibt; ein Register, das es nicht gibt; `1 == 2`; ein Wert, der
+-- nicht ins Bit passt -- unter `gabbro pruefe` UND unter `gabbro emit`.
+--
+-- **Die Unsymmetrie ist das ganze Argument.** Der SCHRITT desselben `transition` faellt:
+-- `GCMD.NICHTDA: 0 -> 1` bekommt `C001` *„`transition` on an unknown register field"* aus
+-- dem Erzeuger. Die Praemisse eine Zeile darunter las niemand.
+--
+-- > `N053` entscheidet NICHT, ob die Praemisse gilt. `GSTS.RTPS == 1` ist eine Aussage
+-- > ueber Hardware; das Programm kann sie nicht herstellen, und kein Pass soll so tun.
+-- > Sie bleibt eine Annahme und wird als solche gezaehlt (`gabbro pflichten`, Spalte `D`).
+-- > Entscheidbar ist die andere Haelfte, und sie ist die von `M141` ein Konstrukt weiter:
+-- > **eine Praemisse ueber eine Stelle, die es nicht gibt, ist eine Praemisse, die nichts
+-- > herstellen kann.**
+
+module gift::zusage_ueber_ein_feld_das_es_nicht_gibt {
+
+opaque type Pa = u64;
+
+device Vtd(basis : Pa) at mmio {
+    reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, }
+    reg GSTS : u32 @0x1c class r  fields { TES @31, RTPS @30, }
+
+    -- `GSTS` gibt es, `NICHTDA` nicht. Der Schritt darueber nennt `GCMD.TE` und ist
+    -- richtig -- die Klausel darunter nennt ein Bit, das kein Treiber je lesen kann.
+    transition uebersetzung_an { GCMD.TE: 0 -> 1 }
+        requires GSTS.NICHTDA == 1
+        effects  { writes GCMD }
+}
+
+}

@@ -60,6 +60,8 @@ fn e(name: &str, art: &'static str, sonde: &str, aussage: &str) -> Eintrag {
         arch: None,
         klasse: Klasse::Falsifizierbar { sonde: sonde.into() },
         aussage: aussage.into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     }
 }
 
@@ -102,6 +104,8 @@ fn derselbe_name_mit_anderem_inhalt_ist_ein_widerspruch() {
         arch: None,
         klasse: Klasse::NichtFalsifizierbar { grund: "keine Sonde".into() },
         aussage: "writes tlb".into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     };
     let (_, streit) = vereinige(vec![e("write_cr3", "axiom", "sonde_cr3", "writes tlb"), mit_grund]);
     assert_eq!(
@@ -128,6 +132,8 @@ fn zwei_maschinen_sind_zwei_annahmen() {
         arch: Some("x86_64".into()),
         klasse: Klasse::Falsifizierbar { sonde: "probe_mp_x86".into() },
         aussage: "TSO: mov genuegt".into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     };
     let arm = Eintrag {
         name: "c11_release_acquire".into(),
@@ -135,6 +141,8 @@ fn zwei_maschinen_sind_zwei_annahmen() {
         arch: Some("aarch64".into()),
         klasse: Klasse::Falsifizierbar { sonde: "probe_mp_aarch64".into() },
         aussage: "stlr/ldar tragen release/acquire".into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     };
     let (menge, streit) = vereinige(vec![x86.clone(), arm]);
     assert!(streit.is_empty(), "zwei Maschinen sind kein Widerspruch: {streit:?}");
@@ -159,4 +167,67 @@ fn die_zaehlzeile_zaehlt_die_menge_und_nicht_die_liste() {
         1,
         "eine Zeile je Annahme:\n{text}"
     );
+}
+
+/// **The `requires` of an `axiom` reaches the manifest -- and until 2026-09-02 it did not.**
+///
+/// The promise this file carries reads *proved under A1…An*, and A1 was printed as
+/// `rdtscp` where the program declares `rdtscp` UNDER `Has(RDTSCP)`. A reader who went and
+/// checked A1 checked a stronger statement than the program made. **Same argument as
+/// `Eintrag::arch` one field up:** a side condition is part of the identity.
+#[test]
+fn die_vorbedingung_eines_axioms_steht_im_manifest() {
+    let q = "module t {
+axiom rdtscp() -> u64 requires Has(RDTSCP) effects { reads uhr } falsifier sonde_rdtscp;
+axiom wbinvd() effects { writes cache } falsifier sonde_wbinvd;
+}";
+    let e = gabbro_check::manifest::sammle_mit_quelle(&baum(q), q);
+    let ts = e.iter().find(|x| x.name == "rdtscp").expect("rdtscp");
+    assert_eq!(ts.voraussetzungen, 1, "eine Klausel: {ts:?}");
+    assert_eq!(ts.voraussetzung_text.as_deref(), Some("Has(RDTSCP)"), "{ts:?}");
+
+    // **The counter-direction, and it is the one that keeps the column honest:** an axiom
+    // WITHOUT a precondition must not grow one, or every line would read as conditional.
+    let wb = e.iter().find(|x| x.name == "wbinvd").expect("wbinvd");
+    assert_eq!(wb.voraussetzungen, 0);
+    assert_eq!(wb.voraussetzung_text, None);
+
+    let text = gabbro_check::manifest::zeige(&e);
+    assert!(text.contains("Has(RDTSCP)"), "und es steht in der Tabelle:\n{text}");
+    assert!(text.contains("Voraussetzung"), "die Spalte ist ueberschrieben:\n{text}");
+
+    // **Without the source the WORDING is missing and the CLAUSE is not.** `sammle` is used
+    // where no source is at hand (the emitted header, the certificate), and a blank cell
+    // there would read as "this axiom is unconditional".
+    let ohne = sammle(&baum(q));
+    let ts = ohne.iter().find(|x| x.name == "rdtscp").expect("rdtscp");
+    assert_eq!(ts.voraussetzungen, 1, "die ZAHL ist eine Tatsache des Baums");
+    assert_eq!(ts.voraussetzung_text, None, "der Wortlaut braucht die Quelle");
+    assert!(
+        gabbro_check::manifest::zeige(&ohne).contains("? (1)"),
+        "und die Tabelle sagt, dass sie ihn nicht hat"
+    );
+}
+
+/// **Two files, one axiom name, two different preconditions -- a contradiction.**
+///
+/// `vereinige` compared name, kind, class and statement. A precondition was none of those,
+/// so `axiom rdtscp requires Has(RDTSCP)` in one file and a bare `axiom rdtscp` in another
+/// merged into one entry -- *and the merged one was whichever came first.*
+#[test]
+fn zwei_vorbedingungen_unter_einem_namen_sind_ein_widerspruch() {
+    let mit = Eintrag {
+        voraussetzungen: 1,
+        voraussetzung_text: Some("Has(RDTSCP)".into()),
+        ..e("rdtscp", "axiom", "sonde", "reads uhr")
+    };
+    let ohne = e("rdtscp", "axiom", "sonde", "reads uhr");
+    let (_, streit) = vereinige(vec![mit.clone(), ohne]);
+    assert_eq!(streit.len(), 1, "bedingt und unbedingt sind zwei Annahmen: {streit:?}");
+    assert!(streit[0].contains("rdtscp"));
+
+    // Twice the SAME precondition stays one assumption -- the duplicate case is untouched.
+    let (menge, streit) = vereinige(vec![mit.clone(), mit]);
+    assert!(streit.is_empty(), "gleiche Vorbedingung ist kein Streit: {streit:?}");
+    assert_eq!(menge.len(), 1);
 }

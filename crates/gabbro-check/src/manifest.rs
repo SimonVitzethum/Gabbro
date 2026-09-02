@@ -36,6 +36,32 @@ pub struct Eintrag {
     pub klasse: Klasse,
     /// Bei `assume` der erklaerende Satz, bei `axiom` die Wirkungen.
     pub aussage: String,
+    /// **The `requires` of an `axiom` -- and until 2026-09-02 it stood in NO manifest at
+    /// all.**
+    ///
+    /// ```gabbro
+    /// axiom rdtscp() -> u64 requires Has(RDTSCP) effects { reads uhr } falsifier sonde;
+    /// ```
+    ///
+    /// `gabbro annahmen` printed `A1 rdtscp axiom -- ungedeckt -- reads uhr` and not one
+    /// word about `Has(RDTSCP)`. **The promise this file exists to carry is *proved under
+    /// A1…An*, and A1 was not `rdtscp`** -- it was `rdtscp` UNDER a machine feature. A
+    /// reader who went and checked A1 checked a stronger statement than the program made.
+    ///
+    /// **This is the same argument [`Eintrag::arch`] carries one field up**, and it was
+    /// settled there on 2026-08-31: *a statement about a machine is only the same statement
+    /// when the machine is the same.* A side condition is part of the identity for exactly
+    /// the same reason, and [`vereinige`] compares it.
+    ///
+    /// The count is a fact of the TREE; the wording needs the source, so it is `None`
+    /// wherever the manifest is collected without one ([`sammle`], for the emitted header
+    /// and the certificate). *A missing wording must not read as a missing clause* --
+    /// hence two fields and not one.
+    pub voraussetzungen: usize,
+    /// The clauses as they stood in the source, joined by `, ` -- see [`voraussetzungen`].
+    ///
+    /// [`voraussetzungen`]: Eintrag::voraussetzungen
+    pub voraussetzung_text: Option<String>,
 }
 
 /// **«F»: die zwei Annahmen, die eine Gleitkommaeinheit MITBRINGT.**
@@ -88,6 +114,8 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
                   (MXCSR/FPCR) and therefore an implicit input of every operation -- the \
                   probe reads it and falls if it is a different one."
             .into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     });
     out.push(Eintrag {
         name: "gleitkomma_x86_rechnet_mit_sse2".into(),
@@ -101,6 +129,8 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
                   computed then fails to hold. The probe evaluates an expression whose \
                   result differs between 64 and 80 bits."
             .into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     });
 }
 
@@ -148,6 +178,8 @@ fn sperrabdruckannahme(baum: &Programm, out: &mut Vec<Eintrag>) {
                   top of it that the intermediate state has no consequence -- the assumption \
                   itself does not fall into the theorem but here."
             .into(),
+        voraussetzungen: 0,
+        voraussetzung_text: None,
     });
 }
 
@@ -196,31 +228,47 @@ fn stilllegungsannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
                  the probe accesses an address of the space and must fault.",
                 f.name.text
             ),
+            voraussetzungen: 0,
+            voraussetzung_text: None,
         });
     });
 }
 
-/// Sammelt die Annahmenmenge eines Baums.
+/// Sammelt die Annahmenmenge eines Baums -- **without the source**, so without the wording
+/// of a precondition. See [`Eintrag::voraussetzungen`].
 pub fn sammle(baum: &Programm) -> Vec<Eintrag> {
+    sammle_mit_quelle(baum, "")
+}
+
+/// Like [`sammle`], but **with the source** -- then every `axiom` line carries the wording
+/// of its `requires` clauses and not only their count.
+///
+/// The cut is `zeremonie::schnitt`, and that is not an accident: *one wording, two tools,
+/// one truncation limit.*
+pub fn sammle_mit_quelle(baum: &Programm, quelle: &str) -> Vec<Eintrag> {
     let mut out = Vec::new();
     gleitkommaannahmen(baum, &mut out);
     sperrabdruckannahme(baum, &mut out);
     stilllegungsannahmen(baum, &mut out);
-    sammle_items(&baum.items, &mut out);
+    sammle_items(&baum.items, quelle, &mut out);
     out.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     out
 }
 
-fn sammle_items(items: &[Item], out: &mut Vec<Eintrag>) {
+fn sammle_items(items: &[Item], quelle: &str, out: &mut Vec<Eintrag>) {
     for i in items {
         match &i.art {
-            ItemArt::Modul(m) => sammle_items(&m.items, out),
+            ItemArt::Modul(m) => sammle_items(&m.items, quelle, out),
+            // **An `assume` carries no `requires`** -- the grammar has none there, and its
+            // whole statement is the text literal. The zero is a fact, not a gap.
             ItemArt::Assume(a) => out.push(Eintrag {
                 name: a.name.text.clone(),
                 art: "assume",
                 arch: a.arch.as_ref().map(|x| x.text.clone()),
                 klasse: klasse(&a.klasse),
                 aussage: a.text.text.clone(),
+                voraussetzungen: 0,
+                voraussetzung_text: None,
             }),
             ItemArt::Axiom(a) => out.push(Eintrag {
                 name: a.name.text.clone(),
@@ -234,6 +282,18 @@ fn sammle_items(items: &[Item], out: &mut Vec<Eintrag>) {
                     .map(|e| e.art.text())
                     .collect::<Vec<_>>()
                     .join(", "),
+                voraussetzungen: a.requires.len(),
+                voraussetzung_text: if a.requires.is_empty() || quelle.is_empty() {
+                    None
+                } else {
+                    Some(
+                        a.requires
+                            .iter()
+                            .map(|p| crate::zeremonie::schnitt(quelle, p.span))
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                    )
+                },
             }),
             _ => {}
         }
@@ -264,7 +324,16 @@ pub fn vereinige(alle: Vec<Eintrag>) -> (Vec<Eintrag>, Vec<String>) {
         match aus.iter().find(|a| a.name == e.name && a.arch == e.arch) {
             None => aus.push(e),
             Some(vorher) => {
-                if vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage {
+                // **The precondition is part of the content** -- see
+                // [`Eintrag::voraussetzungen`]. Two files that declare `axiom rdtscp` once
+                // under `Has(RDTSCP)` and once unconditionally do not declare the same
+                // assumption, and before 2026-09-02 this comparison could not tell.
+                if vorher.art != e.art
+                    || vorher.klasse != e.klasse
+                    || vorher.aussage != e.aussage
+                    || vorher.voraussetzungen != e.voraussetzungen
+                    || vorher.voraussetzung_text != e.voraussetzung_text
+                {
                     streit.push(format!(
                         "`{}` is declared twice with different content -- \
                          a contradiction in the assumption set, not a duplicate",
@@ -320,12 +389,18 @@ pub fn gedeckt(sonde: &str) -> bool {
 }
 
 /// Zeilenformat, stabil und ohne Werkzeug lesbar:
-/// `A<n>\t<name>\t<art>\t<klasse>\t<sonde|grund>\t<aussage>`
+/// `A<n>\t<name>\t<art>\t<klasse>\t<sonde|grund>\t<voraussetzung>\t<aussage>`
+///
+/// **The `Voraussetzung` column stands since 2026-09-02** and is the answer to
+/// [`Eintrag::voraussetzungen`]: an assumption under a condition is a different assumption
+/// from the same one without. `--` means *no clause*; `?` means *a clause whose wording this
+/// run does not have* -- and telling those two apart is the whole reason the entry carries
+/// two fields instead of one.
 pub fn zeige(eintraege: &[Eintrag]) -> String {
     let mut out = String::new();
     let mut gestrichen = 0usize;
     out.push_str("-- The assumption set. The promise reads: proved under A1…An.\n");
-    out.push_str("-- Nr\tName\tArt\tMaschine\tKlasse\tSonde/Grund\tAussage\n");
+    out.push_str("-- Nr\tName\tArt\tMaschine\tKlasse\tSonde/Grund\tVoraussetzung\tAussage\n");
     for (n, e) in eintraege.iter().enumerate() {
         let (kl, wie) = match &e.klasse {
             // **The name stands only where the probe stands as a program** -- see [`gedeckt`].
@@ -339,8 +414,14 @@ pub fn zeige(eintraege: &[Eintrag]) -> String {
             }
             Klasse::NichtFalsifizierbar { grund } => ("nicht-falsifizierbar", grund.as_str()),
         };
+        // `--` no clause, `?` a clause whose wording this run does not have.
+        let vor = match (e.voraussetzungen, &e.voraussetzung_text) {
+            (0, _) => "--".to_string(),
+            (_, Some(t)) => t.clone(),
+            (n, None) => format!("? ({n})"),
+        };
         out.push_str(&format!(
-            "A{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+            "A{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             n + 1,
             e.name,
             e.art,
@@ -349,6 +430,7 @@ pub fn zeige(eintraege: &[Eintrag]) -> String {
             e.arch.as_deref().unwrap_or("--"),
             kl,
             wie,
+            vor,
             e.aussage
         ));
     }

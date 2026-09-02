@@ -1,0 +1,28 @@
+-- erwartet: N053
+-- **Die zweite Haelfte von `N053`, und sie hat im eigenen Baum eine lebende Instanz.**
+-- `messung/fragmente/F04.gab`:73 schrieb `requires QUEUE_SIZE <= QMAX`, und `QMAX` stand
+-- **nirgends**. Der Kopf jener Datei fuehrte es seit dem 2026-08-20 als offen und nannte
+-- den Grund gleich mit: *„faellt trotzdem nicht auf, weil kein Pass `RegDecl::requires`
+-- liest"*. Seit dem 2026-09-02 liest einer.
+--
+-- Hier steht dieselbe Form ohne die Ausrede eines Ausschnitts: `Geraetelug` ist erklaert,
+-- `QUEUE_SIZE` ist ein Register dieses Geraets -- und `QMAX` ist ein Wort, das diese
+-- Einheit nirgends deklariert.
+--
+-- **Die Fehlerrichtung ist die von `N033`, `S003`, `S007` und `H016`:** bekannt ist, was
+-- DIESE Einheit deklariert, dazu das letzte Glied jedes `use`. Ein von aussen geholter und
+-- hier nicht wiederholter Name liest sich als unbekannt. *Ein Ausschnitt, der etwas
+-- ausserhalb des Schnitts nennt, wird abgewiesen und nicht stillschweigend geglaubt.*
+
+module gift::registerzusage_ueber_einen_namen_den_niemand_erklaert {
+
+reason Geraetelug {
+    ZuGross = 1 "das Geraet meldet eine Warteschlange ueber der Obergrenze"
+    exhaustive
+}
+
+device Virtio(basis : u64) at mmio {
+    reg QUEUE_SIZE : u16 @0x0c class r requires QUEUE_SIZE <= QMAX else Geraetelug::ZuGross
+}
+
+}
