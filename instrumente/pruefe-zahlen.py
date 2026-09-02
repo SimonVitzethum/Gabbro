@@ -1434,6 +1434,54 @@ def main():
     print("  Der README steht nicht in diesem Register, sondern in `pruefe-todo.py`.")
     print("  Zwei Register ueber derselben Sache sind W7.")
 
+    # **AND THE REACH ABOVE IS A REACH INTO FIVE FILES** (2026-09-02).
+    #
+    # `BEWACHTE_DATEIEN` is a fixed list -- not even a glob -- and everything printed under
+    # the heading *was dieses Register NICHT bewacht* was counted inside it. **A section
+    # that accounts for what is unguarded, over a population chosen by hand, accounts for
+    # the wrong thing:** it says how much of five documents lacks a command, and reads as
+    # how much of the folder does.
+    #
+    # The format this register polices is `KENNZAHL`, a bold number in a table cell, and
+    # nothing stops that format from appearing anywhere. So the same pattern goes over every
+    # `.md` in the tree, and the files that carry it while standing outside are NAMED.
+    #
+    # *This is a report and not a refusal.* Widening `BEWACHTE_DATEIEN` would put every
+    # measurement document under a command register, and that is a decision about the
+    # folder, not about this guardian. The fixpoint lock (W18) forbids it guarding its own
+    # reach anyway -- `pruefe-todo.py` holds that. **What it can do is stop implying a
+    # denominator it never counted.**
+    aussen = []
+    for p in sorted(W.rglob("*.md")):
+        rel = p.relative_to(W).as_posix()
+        if rel in BEWACHTE_DATEIEN or ".git/" in rel or "/target/" in rel \
+                or rel.startswith(".claude/"):
+            continue
+        n = len(KENNZAHL.findall(p.read_text(encoding="utf-8", errors="replace")))
+        if n:
+            aussen.append((n, rel))
+    aussen.sort(key=lambda x: (-x[0], x[1]))
+    ges = sum(n for n, _ in aussen)
+    print()
+    print(f"== Und WORUEBER die Reichweite oben nichts sagt: {ges} Zellen in "
+          f"{len(aussen)} Dateien ==")
+    print(f"   `BEWACHTE_DATEIEN` nennt {len(BEWACHTE_DATEIEN)} Dokumente. Die Zeilen")
+    print("   darueber zaehlen NUR in diesen fuenf. Dieselbe Form -- eine fette Zahl in")
+    print("   einer Tabellenzelle -- steht auch hier, und keine davon hat einen Befehl:")
+    for n, rel in aussen[:12]:
+        print(f"   {n:4d}  {rel}")
+    if len(aussen) > 12:
+        print(f"   ... und {len(aussen) - 12} weitere Dateien mit zusammen "
+              f"{sum(n for n, _ in aussen[12:])} Zellen")
+    if not aussen:
+        # A zero here means either that every such cell is inside the five, or that
+        # `KENNZAHL` stopped matching -- and those two read alike. The second is caught one
+        # level up: `zellen()` uses the same pattern and the speech test drives it in both
+        # directions, so a dead pattern aborts before this line is reached.
+        print("   Null -- entweder steht die Form nirgends sonst, oder sie trifft nicht")
+        print("   mehr. Das Zweite faellt an der Sprechprobe oben, nicht hier.")
+    print("   *Eine Reichweite, die ihren eigenen Nenner waehlt, misst ihre Auswahl.*")
+
     abschnitt.fertig()
     return 1 if befunde else 0
 

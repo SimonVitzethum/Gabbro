@@ -1337,6 +1337,52 @@ def main():
 
     print()
     print("== Die Ratsche")
+    # **THE HEADLINE SAYS `aus BEWEIS.md §1`, AND THIS FILE NEVER OPENED IT** (2026-09-02).
+    #
+    # `KATALOG` is a hand transcription of that section's allow list and never list, down to
+    # the `quelle` strings that quote it. Nothing read the document back -- so the day
+    # somebody edits the list there and not here, the count goes on saying it came from a
+    # place it no longer agrees with. *A citation nobody follows is a claim.*
+    #
+    # What goes in is the cheap half and not a second parser: the document records the
+    # RESULT of this very counter in a table, and that figure is readable. It is a dated
+    # record, so a divergence is a REPORT and not a finding -- but a citation that cannot be
+    # found at all is a finding, because then the headline above rests on nothing.
+    urkunde = W / "dokumente" / "BEWEIS.md"
+    gebucht_dort = {}
+    if urkunde.is_file():
+        t_urk = urkunde.read_text(encoding="utf-8")
+        for schluessel, muster in (
+                ("MARKE_TABELLE",
+                 r"\|\s*\*\*Forms in the emitted C\*\*\s*\|\s*\*\*(\d+)\*\*"),
+                ("MARKE_UNERLAUBT",
+                 r"\|\s*\*\*C\*\*[^|]*\|\s*\*\*(\d+)\*\*")):
+            m = re.search(muster, t_urk)
+            if m:
+                gebucht_dort[schluessel] = int(m.group(1))
+    print()
+    if len(gebucht_dort) < 2:
+        print("== ABBRUCH: `BEWEIS.md` §1 nennt seine eigene Zahl nicht mehr ==")
+        print("   Die Kopfzeile oben sagt `Katalog: N Formen aus `BEWEIS.md` §1`. Dieses")
+        print("   Werkzeug liest die Urkunde an genau einer Stelle -- der Tafel, in der sie")
+        print("   das Ergebnis dieses Zaehlers festhaelt -- und findet sie nicht mehr.")
+        print("   Damit ist die Herkunftsangabe unbelegt, und der Katalog ist eine")
+        print("   Abschrift ohne Vorlage. *Ein Zitat, dem niemand nachgeht, ist eine")
+        print("   Behauptung.*")
+        abschnitt.fertig()
+        return 2
+    print("== Die Urkunde, GELESEN und nicht zitiert (`dokumente/BEWEIS.md` §1a) ==")
+    for name, dort in sorted(gebucht_dort.items()):
+        hier = MARKE_TABELLE if name == "MARKE_TABELLE" else MARKE_UNERLAUBT
+        gleich = "=" if dort == hier else "AUSEINANDER"
+        print(f"   {name:16} Urkunde {dort:3}   Marke hier {hier:3}   {gleich}")
+    if any(gebucht_dort[k] != (MARKE_TABELLE if k == "MARKE_TABELLE" else MARKE_UNERLAUBT)
+           for k in gebucht_dort):
+        print("   Die Tafel dort traegt ein Datum und ist ein PROTOKOLL -- sie darf")
+        print("   zurueckliegen. Sie steht hier, damit der Abstand jemandem auffaellt,")
+        print("   und nicht, damit er faellt. **Was NICHT gelesen wird, ist die Erlaubt-")
+        print("   und die Nie-Liste selbst: `KATALOG` bleibt eine Abschrift.**")
+
     befund = []
     for name, marke, ist in (("MARKE_TABELLE", MARKE_TABELLE, benutzt),
                              ("MARKE_UNERLAUBT", MARKE_UNERLAUBT, len(cn) + len(cu) + len(cw))):
