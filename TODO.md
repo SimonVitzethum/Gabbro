@@ -553,7 +553,24 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 182 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 183 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
+      über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
+      dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei
+      weggenommen, `pruefe-zahlen.py` grün mit Rücklaufwert 0, Datei zurück.*
+      *__DIE ZAHL WAR AUF BEIDEN SEITEN EINZELN RICHTIG UND IM MERGE FALSCH.__ Diese Spur
+      zog 181 → 182 für ihr eines Dokument, `master` zog 181 → 182 für seine zwei; git
+      führte zwei gleiche Zahlen konfliktfrei zu EINER zusammen, und der Waechter sagte
+      erst nach dem Merge 183. Beide Seiten waren grün, das Ergebnis nicht — eine
+      Zusammenführung, die Zahlen ADDIERT, hat keinen Textkonflikt.*
+      *179 → 181 on 2026-09-02: `dokumente/GABBROV.md` and `messung/GABBROV-V1.md` joined —
+      the GabbroV design and V1's measurement over it (56 of 66 L obligations sayable in the
+      Lean fragment, `G1` does not fire). **The cause was measured the way the entry below
+      asks and in the same lane:** the two files were removed, `pruefe-zahlen.py` went green
+      with exit 0, they came back. And the guardian reach of a NEW `dokumente/*.md` was
+      measured with them — of the four guardians that go silently blind, exactly one reads such
+      a file (`pruefe-widerruf.py`, `glob("dokumente/*.md")`), and it is already bilingual:
+      24 of 24 probes, German AND English per entry.*
       *178 → 179 on 2026-09-02: `messung/LEAN-REICHWEITE.md` joined — how far the Lean channel
       reaches over an ARBITRARY program (10 of 44 `body-effect` obligations). **The same lane
       that wrote the document was the one the mark moved for**, and the cause was measured the
