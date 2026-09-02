@@ -5,11 +5,11 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-68 Dateien gemessen, 4 abgelehnt
-  ableitbar       77        A1  4 · A4 73
+70 Dateien gemessen, 4 abgelehnt
+  ableitbar       78        A1  4 · A4 74
   redundant        0
-  tragend       1061
-78 von 1156 Stellen dürfen sinken
+  tragend       1103
+78 von 1181 Stellen dürfen sinken
 
 > **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
 > zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.
@@ -21,6 +21,30 @@ $ ./instrumente/zaehle-zeremonie.py
 > misst den Schreiber und nicht den Korpus.* Innerhalb eines Augenblicks ist sie stabil, und
 > genau das macht sie glaubwürdig aussehen.
 ```
+
+> **~~1156~~ 1181 am 2026-09-02, and every one of the 25 is a site that was on disk all
+> along.** Nothing was written into the corpus; `zeremonie.rs::geraet()` stopped at the top
+> level of a `device` and two kinds of site were below it. The report's own header says
+> *"Every clause and annotation"*, so the miss was in the census and not in the corpus:
+>
+> | | Lehrkorpus | | real code |
+> |---|---|---|---|
+> | `T3` `transition … requires` | **+12** | `02`:3 · `09`:1 · `20`:2 · `45`:1 · `F02`:5 | **+1** (`virtio-net`) |
+> | `T10` a register inside a `bank` | **+13** | `02`:2 · `F02`:4 · `F04`:7 | 0 |
+> | | `T3` 85 → 97, `T10` 60 → 73 | | 109 → 110 |
+>
+> **The delta is named site by site and not estimated** — the two columns add to exactly the
+> 25 the headline moved, and to exactly the 1 the real-code count moved. *A number that grows
+> without a per-site account is a number nobody can check a second time.*
+>
+> Found by counting the ASSUMPTION TIER, not by reading the function: `beispiele/02-geraet.gab`
+> carries three `transition … requires`, and `gabbro zeremonie --je-stelle` listed **none** of
+> them. **The direction of that error is the dangerous one** — ceremony undercounted reads as
+> ceremony not incurred, and this counter is the only number goal 3 has.
+>
+> *It is `T3` and not a new rule.* `T3` reads *"`requires` / `ensures` that no other clause
+> repeats"*, the `reg` half has stood under it since the function existed, and a rule of its
+> own would have been the second register over one matter.
 
 > **~~1028~~ 1050 in der Nacht auf den 2026-09-01, und der NENNER ist zurückgekommen.**
 > `messung/fragmente/F06.gab` war die fünfte abgelehnte Datei: `N043` wies

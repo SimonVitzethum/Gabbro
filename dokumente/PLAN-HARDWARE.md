@@ -2434,7 +2434,7 @@ Ziel.*
 | # | | warum hier |
 |---|---|---|
 | **1** | **B1 Eintritt** | blockiert jeden Lernbarkeitstest und `K100` |
-| **2** | **Die 65 Formen gegen CompCert** | entscheidet, ob Punkt 4 aus §48 ein Posten ist. *Stunden, kein Projekt* |
+| ~~**2**~~ | ~~**Die 65 Formen gegen CompCert**~~ | **AUS DEM BETA-PFAD GENOMMEN, Ordner, 2026-09-02.** Der Posten bleibt richtig und bleibt stehen — er gehört nur nicht vor `0.1.0`. *Eine Beta braucht einen Prüfer, der nicht lügt, keinen verifizierten Übersetzer;* der Satz stand schon in §50s eigener Schlussbemerkung und wurde von der Reihenfolge darüber nicht eingelöst. **−4 bis −6 h vom Restweg** |
 | **3** | **Der ungesehene Port** | die einzige Messung, die die Liste umschreiben kann — **und die einzige, die schlecht ausgehen kann** |
 | **4** | B2 Zeichenketten | mit der Ratschenrechnung davor |
 | **5** | B3 Auffahrtsweg | erst sinnvoll, wenn B1 und B2 stehen |

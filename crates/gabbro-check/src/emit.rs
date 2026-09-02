@@ -1331,6 +1331,22 @@ pub fn emittiere_mit(
             a.art,
             kommentartext(&wie)
         ));
+            // **The side condition of an `axiom` -- the COUNT, because this channel has no
+            // source** (2026-09-02). `emittiere_mit` is handed a tree and nothing else, so
+            // `voraussetzung_text` is `None` here by construction and `manifest.rs` keeps
+            // the two fields apart for exactly this caller: *a missing wording must not
+            // read as a missing clause.*
+            //
+            // Printing the number is the honest half. `A1` was `rdtscp` UNDER a machine
+            // feature and the header said `rdtscp` -- **and this header is what a C reader
+            // gets**, the outermost surface the promise travels on. The wording stands one
+            // command over, in `gabbro certificate`, which does have the source.
+            if a.voraussetzungen > 0 {
+                aus.push_str(&format!(
+                    " *     under {} side condition(s) -- `gabbro certificate` prints them\n",
+                    a.voraussetzungen
+                ));
+            }
         }
         aus.push_str(" */\n");
     }
@@ -3184,7 +3200,23 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
     let wort = format!("(*(volatile {breite} *)(d->basis + {versatz}))");
     aus.push_str(&format!("\n/* transition {} */\n", x.name.text));
     if let Some(p) = &x.requires {
-        // Sichtbar, aber nicht ausgefuehrt -- siehe oben.
+        // **The clause is READ here and its content thrown away**, and that is measured, not
+        // suspected (2026-09-02): `requires GSTS.RTPS == 1` and `requires 1 == 2` produce
+        // BYTE-IDENTICAL C. *A comment that does not say WHAT is owed tells its reader
+        // nothing he can act on* -- and the `reg` half of the same construct has carried its
+        // predicate into the artefact since «B26» (`fehlbare_lesung` writes `if (!(t <= 8))`).
+        //
+        // **It stays a comment and not an assertion, and that half is right**: the register
+        // is volatile and a hostile device may report what it likes («B33»), so a generated
+        // check would be a fact where an assumption belongs.
+        //
+        // > **Saying the clause was TRIED here and taken out again.** `pred_c` renders
+        // > `GSTS.RTPS == 1` as `GSTS->RTPS == 1` -- and `GSTS` is no name this artefact
+        // > has; the register is `(*(volatile uint32_t *)(d->basis + 28))`. *A comment that
+        // > points at a name the file does not carry is worse than one that points at
+        // > nothing.* Saying it in GABBRO notation needs a `Pred` -> source-text renderer
+        // > that does not exist -- every other caller slices the SOURCE, and the emitter is
+        // > handed a tree and nothing else. Booked in `TODO.md`, not bodged here.
         let _ = p;
         aus.push_str("/* requires: a caller obligation, not a generated assertion */\n");
     }

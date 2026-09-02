@@ -212,7 +212,18 @@ impl Art {
             Art::Fremdpflicht => "Foreign duty",
             Art::Vorbedingung => "Precondition at the call site (undercounts: see `vorbedingungen`)",
             Art::Verfeinerung => "Refinement of a specification",
-            Art::Geraetezusage => "Device promise at a register",
+            // **The heading named the wrong construct, and the register itself said so**
+            // (2026-09-02). `pflichten.rs` has booked BOTH device clauses since 2026-08-26
+            // -- `reg … requires` and `transition … requires` -- and printed all of them
+            // under *"Device promise at a register"*. Measured over the corpus that day:
+            // **15 entries, of which 13 are `transition`s.** Every line under the heading
+            // spelled `transition <name> requires` while the heading said `reg`.
+            //
+            // *A label that names a construct the entries are not is the `W16` shape at the
+            // report layer:* a reader who counted registers from this heading counted
+            // thirteen that are not there. The one word that covers both is the one the
+            // clause is called by everywhere else in this file.
+            Art::Geraetezusage => "Device promise (`reg` or `transition`)",
             Art::Schleifeninvariante => "Invariant across the passes of a loop",
             Art::Walkinvariante => "Invariant of a `walk` -- carried by no pass and no template",
         }

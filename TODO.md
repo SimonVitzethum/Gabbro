@@ -1187,12 +1187,60 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       | `table … invariant : forall o … : … == gibt_es_nicht(o)` | **0 Fehler, 0 Hinweise** |
       | `spec fn … = … == gibt_es_nicht(i);` | **0 Fehler, 0 Hinweise** |
       | `requires gibt_es_nicht(i) == 0` an einer `impl fn` | `E009` — und der kommt aus dem AUFRUFGRAPHEN, nicht aus einer Namensregel |
+      | `requires GIBTESNICHT == 1` an derselben `impl fn` — **a bare NAME, not a call** | **0 errors, 0 hints — and it REACHES LEAN verbatim** |
       **Nur wo die Wirkungshülle hinsieht, fällt etwas.** Ein Prädikat, das eine Funktion
       nennt, die es nicht gibt, behauptet nichts und sieht aus wie eine Behauptung — *dieselbe
       Klasse wie `M133`, `N033`, `S007`, `N020` und `D013` (2026-08-28), eine Fläche weiter.*
       Woran es hängt: die Namensauflösung über `pred` gibt es nicht; `maintains` hat sie seit
       `M131` für den KOPF, nicht für den Rumpf. *Probe und Zahlen:
       [`messung/AGGREGATION.md`](messung/AGGREGATION.md) §1.*
+
+      > **The fourth row is the 2026-09-02 addition, and it is strictly worse than the
+      > third.** A bare name never touches the call graph, so `E009` — the one thing that
+      > spoke here — does not fire; and unlike the call form, which the Lean channel drops
+      > by name, the name form is one this channel CAN say. Measured on
+      > `beispiele/01-tabelle.gab`:90, both edits on the same line of the same file:
+      >
+      > ```text
+      > requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
+      > requires GIBTESNICHT == 1        ->  0 errors, 0 hints          Lean: exported
+      >     def aushaengen_pre (s : State) : Prop :=
+      >       isInt (s.local' "s")
+      >       ∧ eval s (.bin .eq (.global "GIBTESNICHT") (.lit (.int 1))) = some (.bool true)
+      > ```
+      >
+      > **`.global "GIBTESNICHT"` is a global nothing in the program declares, handed to a
+      > prover as something the caller GRANTS.** That is `M141`'s sentence one shape over —
+      > *a premise over a place that does not exist is a premise nothing can establish* —
+      > and `M141` compares only a NUMBER LITERAL against a declared length, by its own
+      > stated limit. A name is not an index and falls through.
+      >
+      > *Denominator, so the row is not a scare:* over the clean corpus (`beispiele/`,
+      > `messung/`, minus `gift/`) `gabbro lean` exports **8** premises in total and names
+      > **27** more as dropped. Eight is the whole surface this hole can be on — small, and
+      > the reason the repair is worth costing out rather than fearing.
+
+- [ ] **A `transition … requires` reaches the artefact as a CONTENT-FREE comment — measured
+      2026-09-02.** `emit.rs::uebergang` reads the clause (`if let Some(p) = &x.requires`),
+      discards it (`let _ = p;`) and writes one fixed sentence:
+      ```c
+      /* requires: a caller obligation, not a generated assertion */
+      ```
+      **`requires GSTS.RTPS == 1` and `requires 1 == 2` produce BYTE-IDENTICAL C.** The
+      comment half is right and stays — the register is volatile and a hostile device may
+      report what it likes («B33»), so a generated check would be a fact where an assumption
+      belongs. What is missing is WHAT is owed, and the `reg` half of the same construct has
+      carried its predicate into the artefact since «B26» (`if (!(t <= 8))`).
+      *One construct, two halves, and only one of them says what it means.*
+
+      **Woran es hängt, and it was tried and taken out again:** `pred_c` renders it as
+      `GSTS->RTPS == 1`, and `GSTS` is no name the artefact has — the register is
+      `(*(volatile uint32_t *)(d->basis + 28))`. A comment pointing at a name the file does
+      not carry is worse than one pointing at nothing. Saying it in Gabbro notation needs a
+      **`Pred` → source-text renderer, which does not exist**: `zeremonie.rs`, `manifest.rs`
+      and `pflichten.rs` all slice the SOURCE (`schnitt(quelle, span)`), and `emittiere_mit`
+      is handed a tree and nothing else. Two ways out, both a decision and neither a bodge —
+      thread the source through the emitter, or write the renderer once and share it.
 
 - [ ] **Mutation probe on the ANNOTATION EMISSION**, not only on the code emission. The coherently
       weakened case (code **and** contract) is caught by **no** proof — only by the
@@ -3664,7 +3712,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7887 von 21538 Kommentarzeilen** im Pruefer sind deutsch
+**7886 von 21538 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
