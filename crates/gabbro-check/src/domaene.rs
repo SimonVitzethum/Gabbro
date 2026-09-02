@@ -279,6 +279,14 @@ enum Stellung {
     Invariante,
     Spezifikation,
     Durchlauf,
+    /// **Four positions this walk did not reach until 2026-09-02**, and each was measured
+    /// silent in all twenty name kinds before it was hooked up
+    /// (`messung/PREDICATE-NAMES.md`): the `floor` of a `check`, the `down` and `leaf` of a
+    /// `walk`, the `when` of a compare-exchange, and the `requires` of an `axiom` -- which
+    /// takes `Vorbedingung`, because it is one.
+    Untergrenze,
+    Walkschritt,
+    Tausch,
 }
 
 impl Stellung {
@@ -289,6 +297,9 @@ impl Stellung {
             Stellung::Invariante => "an `invariant`",
             Stellung::Spezifikation => "the body of a `spec fn`",
             Stellung::Durchlauf => "a `traverse`",
+            Stellung::Untergrenze => "a `floor`",
+            Stellung::Walkschritt => "the step of a `walk`",
+            Stellung::Tausch => "the `when` of an exchange",
         }
     }
 }
@@ -346,6 +357,45 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             for i in &w.invarianten {
                 aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen);
             }
+            // **`down … when` and `leaf` are predicates, and until 2026-09-02 no pass of
+            // this file came here.** All twenty name kinds were accepted in both.
+            //
+            // `it` is the ELEMENT of the node array; the declaration binds it and no other
+            // line does. It goes on `geb` and not into the map, the same treatment a
+            // quantifier variable gets: the pass knows the name is bound and nothing about
+            // its type, and guessing one would be `D018` speaking about a guess.
+            geb.push("it".to_string());
+            aus_pred(&w.ab_wenn, &s, Stellung::Walkschritt, &mut geb, absagen);
+            aus_pred(&w.blatt, &s, Stellung::Walkschritt, &mut geb, absagen);
+            geb.pop();
+        }
+        // **The assumption tier, and it is the position with the most weight.** A
+        // `requires` at an `axiom` is what the whole relative claim rests on -- *"proved
+        // under A1…An"* -- and it was read here by nobody: twenty of twenty name kinds
+        // accepted. Its parameters are its local view, exactly as at a function.
+        ItemArt::Axiom(a) => {
+            let mut lokal: HashMap<String, Typ> = HashMap::new();
+            for p in &a.parameter {
+                lokal.insert(p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ));
+            }
+            let s = Sicht { u, modul, lokal: &lokal };
+            let mut geb = Vec::new();
+            for p in &a.requires {
+                aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen);
+            }
+        }
+        // **A `check … floor` names quantities, and nothing said they exist.** `N022` asks
+        // whether the floor covers what `measures` names one-sidedly; put a phantom name
+        // beside a legitimate conjunct and it goes silent, which is what made it look like
+        // a reader and what it is not. The `can_fail` block is an ordinary body.
+        ItemArt::Check(c) => {
+            let lokal: HashMap<String, Typ> = HashMap::new();
+            let s = Sicht { u, modul, lokal: &lokal };
+            let mut geb = Vec::new();
+            for p in &c.floor {
+                aus_pred(p, &s, Stellung::Untergrenze, &mut geb, absagen);
+            }
+            aus_block(&c.can_fail, &s, &mut geb, absagen);
         }
         // A group invariant names its carriers by name; there is no `Self`, because a group
         // has SEVERAL carriers and the word would not know which one it means.
@@ -463,6 +513,16 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
                         aus_pred(p, s, Stellung::Invariante, geb, absagen);
                     }
                 }
+            }
+        }
+        // **The `when` of a compare-exchange, and it RUNS.** `lib.rs::eigene_praedikate`
+        // says so in its own head since 2026-09-02; this file did not read it either, and
+        // sixteen of twenty name kinds went through. The binder of the exchange is declared
+        // by the statement and is not in scope in its own condition -- `binde` puts it into
+        // the map below, after the check, the same order a `let` gets.
+        if let StmtArt::Exchange(x) = &st.art {
+            if let gabbro_syntax::ast::XForm::Vergleich { bedingung, .. } = &x.form {
+                aus_pred(bedingung, s, Stellung::Tausch, geb, absagen);
             }
         }
         // **A `match` is walked HERE and not through `unterbloecke`**, because each arm
@@ -651,6 +711,25 @@ fn grundname_im_praedikat(
         || s.u.nennt_tabelle(s.modul, &n.text).is_some()
         || s.u.nennt_walk(s.modul, &n.text)
         || s.u.nennt_kopf(s.modul, &n.text)
+    {
+        return;
+    }
+    // **A REGISTER of a device, and this one is measured rather than guessed.**
+    // `messung/fragmente/F09.gab`:72 writes `down : roh when EINTRAG.PS == 0`, and
+    // `EINTRAG` is a `reg` of `device Seitentabelle` in the same unit -- declared, and
+    // named by none of the four maps above, which carry device HEADS and not their
+    // registers. *A refusal about a name the program declares is a refusal about the pass*,
+    // the sentence this file already writes one rule up.
+    //
+    // Whether a walk step may reach for a device register at all is a different question
+    // and belongs to whoever owns the walk lowering; **this rule asks only whether the name
+    // exists**, and it does. The lookup is over every device of the unit and not over the
+    // one in scope, which is coarse in the quiet direction.
+    if s
+        .u
+        .geraete
+        .values()
+        .any(|register| register.iter().any(|(r, _)| *r == n.text))
     {
         return;
     }

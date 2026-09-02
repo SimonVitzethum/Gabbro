@@ -1,0 +1,30 @@
+-- erwartet: D021
+-- **The one predicate position on this list that RUNS, and the name in it was unread.**
+--
+-- `gift/636` established on 2026-09-02 that the `when` of a compare-exchange is evaluated:
+-- the emitter writes `uint32_t _cx1 = (uint32_t)(…);` and hands it to
+-- `atomic_compare_exchange_strong_explicit`. `lib.rs::eigene_praedikate` learned to yield
+-- it that day so the effect hull, the cost and the phase step would see it.
+--
+-- **The name resolver did not.** `domaene.rs::aus_block` walked loops and sub-blocks and
+-- never the exchange, and sixteen of twenty name kinds went through here silently.
+--
+-- The difference to every other position on the list is that this predicate is not ghost:
+-- a phantom name here is not only a premise nobody can establish, it is an expression the
+-- generator has to lower. *The two halves of one construct answered differently again --
+-- word for word the asymmetry `N053` was built against, and `gift/636` before it.*
+
+module gift::tauschbedingung_ueber_ein_phantom {
+
+atomic BESITZER : u32 acquire;
+
+impl fn nehmen() -> bool
+    effects { writes BESITZER, publishes BESITZER }
+    costs   <= 16 ops
+{
+    let genommen = BESITZER exchange 1 when old(GIBTESNICHT) == 0 returns erfolg
+        publishes nothing;
+    return genommen;
+}
+
+}

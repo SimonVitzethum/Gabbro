@@ -1,0 +1,43 @@
+-- erwartet: D021
+-- **The finding one level below the assumption tier, and it is the worse of two.**
+--
+-- Measured on `beispiele/01-tabelle.gab`:90 on 2026-09-02, the same line twice:
+--
+--     requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
+--     requires GIBTESNICHT == 1        ->  0 errors, 0 hints          Lean: EXPORTED
+--
+-- The CALL form falls -- as a hint, but it falls, and `gabbro lean` names the conjunct as
+-- dropped. **The bare NAME form did neither.** It misses the call graph entirely, and
+-- unlike the call form the Lean channel can SAY it:
+--
+--     ∧ eval s (.bin .eq (.global "GIBTESNICHT") (.lit (.int 1))) = some (.bool true)
+--
+-- goes into `<fn>_pre`, *"what the caller grants"*. `Gabbro.Body` carries the world as a
+-- TOTAL map, so the premise is not vacuous but satisfiable -- a grant about a state no
+-- Gabbro program can be in. **That is not a missing finding but a WRONG PROOF OBJECT**, and
+-- it is visible in no channel: a dropped conjunct at least shows up as dropped.
+--
+-- `M141` next door compares a number literal against a declared length, by its own stated
+-- limit, and `M109` asks this question of an `ensures` and of nothing else.
+
+module gift::vorbedingung_ueber_einen_namen_den_niemand_erklaert {
+
+const GRENZE : u32 = 8;
+
+table Platten count GRENZE {
+    slot {
+        benutzt : bool,
+        wert    : u32,
+    }
+}
+
+impl fn belegen(t : ptr<normal, rw> Platten, s : index into Platten)
+    requires  GIBTESNICHT == 1
+    ensures   t.slots[s].benutzt
+    effects   { writes t.slots }
+    costs     <= 10 ops
+{
+    t.slots[s].benutzt = true;
+}
+
+}
