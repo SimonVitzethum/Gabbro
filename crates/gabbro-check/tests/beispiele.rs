@@ -850,3 +850,84 @@ fn abi_union(libraries: &[&str], caller: &str) -> (String, Vec<&'static str>) {
         .collect();
     (ganz, codes)
 }
+
+// ==========================================================================================
+// The ASSUMPTION TIER -- `reg … requires`, `transition … requires`, `axiom … requires`
+//
+// Three clauses that state something about a machine Gabbro never sees. None of them can be
+// PROVED here and none of these probes tries: they hold the channels that COUNT and CARRY
+// them, because each was silently short by one construct until 2026-09-02. *A clause nobody
+// counts is indistinguishable from a clause nobody wrote.*
+// ==========================================================================================
+
+/// **The ceremony register counts a `transition … requires`, and until today it did not.**
+///
+/// `zeremonie.rs::geraet()` stopped at the top level of a `device`: it read
+/// `RegDecl::requires` and walked past `Uebergang::requires` and past every register inside
+/// a `bank`. The report's own header says *"Every clause and annotation"*.
+///
+/// `beispiele/02-geraet.gab` is the measuring stick because it carries all three shapes at
+/// once -- three transition promises, a `bank` with two registers, and an `impl fn` whose
+/// `requires`/`ensures` were the only two `T3` the tool used to print.
+///
+/// > **The counter-direction is in the same probe on purpose.** Without the `fn` line the
+/// > assertion would pass over a register that had lost the clause it always had.
+#[test]
+fn eine_geraetezusage_am_uebergang_steht_im_zeremonieregister() {
+    let p = wurzel().join("02-geraet.gab");
+    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, _) = gabbro_syntax::lies("02-geraet.gab", &q);
+    let stellen = gabbro_check::zeremonie::sammle(&baum, &q);
+    let zeile = stellen
+        .iter()
+        .map(|s| format!("[{}] {} :: {}", s.regel, s.ort, s.was))
+        .collect::<Vec<_>>()
+        .join("\n");
+    for stueck in [
+        "[T3] device Vtd :: transition uebersetzung_an requires GSTS.RTPS == 1",
+        "[T3] device Vtd :: transition uebersetzung_aus requires GSTS.TES == 1",
+        "[T3] device Vtd :: transition irq_umlenken requires GSTS.RTPS == 1",
+        // A register inside a `bank` is a register: these were missing entirely.
+        "[T10] device Vtd :: reg FR_LO class rw",
+        "[T10] device Vtd :: reg FR_HI class rw",
+        // And one that always stood there -- the counter-direction.
+        "[T3] fn scharfschalten :: aligned(wurzel, 4096)",
+    ] {
+        assert!(zeile.contains(stueck), "fehlt: {stueck}\n{zeile}");
+    }
+}
+
+/// **The `requires` of an `axiom` reaches the CERTIFICATE, and until today it did not.**
+///
+/// `gabbro certificate` opens with *"It lists what the translation RESTS ON"* and printed
+/// `A1  rdtscp  UNCOVERED` -- not one word about `Has(RDTSCP)`. The translation rests on
+/// `rdtscp` UNDER a machine feature, and a reader who went and checked `A1` checked a
+/// stronger statement than the program made.
+///
+/// The argument is `manifest::Eintrag::voraussetzungen`'s, settled the same day for
+/// `gabbro annahmen` and settled one channel short: **an assumption under a condition is a
+/// different assumption from the same one without.**
+#[test]
+fn die_voraussetzung_eines_axioms_steht_im_zeugnis() {
+    let z = zeugnis_von("11-grammatikbefunde.gab");
+    assert!(
+        z.contains("under: Has(RDTSCP)"),
+        "the side condition of `axiom rdtscp` is missing from the certificate:\n{z}"
+    );
+}
+
+/// **And the counter-direction, without which the probe above measures nothing** (R14/W17).
+///
+/// `beispiele/02-geraet.gab` declares five assumptions and NOT ONE carries a side condition.
+/// A certificate that printed an `under:` line there would be printing a clause nobody wrote
+/// -- *the same error as the omission, mirrored, and the more expensive one: an invented
+/// premise reads as a narrower promise than the program made.*
+#[test]
+fn ohne_voraussetzung_steht_keine_zeile_im_zeugnis() {
+    let z = zeugnis_von("02-geraet.gab");
+    assert!(z.contains("A1  dma_kohaerent"), "die Annahmen fehlen ganz:\n{z}");
+    assert!(
+        !z.contains("under:"),
+        "an `under:` line stands over five assumptions that carry no clause:\n{z}"
+    );
+}

@@ -901,7 +901,10 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
     );
 
     // -- A: die Annahmen ---------------------------------------------------------------
-    let (annahmen, streit) = crate::manifest::vereinige(crate::manifest::sammle(baum));
+    // **`sammle_mit_quelle` and not `sammle`, since 2026-09-02** -- the certificate has the
+    // source in its hand and threw it away here. See the side condition printed below.
+    let (annahmen, streit) =
+        crate::manifest::vereinige(crate::manifest::sammle_mit_quelle(baum, quelle));
     aus.push_str("A  THE ASSUMPTIONS -- what the MACHINE has to deliver\n");
     if annahmen.is_empty() {
         aus.push_str("     none. This unit assumes nothing about the machine.\n");
@@ -926,6 +929,37 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
             }
         };
         aus.push_str(&format!("     A{}  {:<24} {}\n", n + 1, a.name, wie));
+        // **The side condition of an `axiom`, and until 2026-09-02 it stood in no
+        // certificate at all.**
+        //
+        // ```gabbro
+        // axiom rdtscp() -> u64 requires Has(RDTSCP) effects { reads uhr } falsifier sonde;
+        // ```
+        //
+        // printed `A1  rdtscp  UNCOVERED -- no program for this probe` and not one word
+        // about `Has(RDTSCP)`. **This file's first line says it lists what the translation
+        // RESTS ON** -- and the translation rests on `rdtscp` UNDER a machine feature, not
+        // on `rdtscp`. *A reader who went and checked A1 checked a stronger statement than
+        // the program made.*
+        //
+        // The argument is `manifest::Eintrag::voraussetzungen`'s, settled that same day for
+        // `gabbro annahmen`: **an assumption under a condition is a different assumption
+        // from the same one without.** It was settled one channel short -- and this is the
+        // channel that travels, the artefact by which Gabbro carries its promise outward.
+        //
+        // `--`/`?` are not repeated here: no clause prints no line, and a count without
+        // wording says so in as many words rather than reading as a missing clause.
+        match (a.voraussetzungen, &a.voraussetzung_text) {
+            (0, _) => {}
+            (_, Some(t)) => {
+                aus.push_str(&format!("         under: {t}\n"));
+            }
+            (n, None) => {
+                aus.push_str(&format!(
+                    "         under: {n} side condition(s) -- wording not in this run\n"
+                ));
+            }
+        }
     }
     for s in &streit {
         aus.push_str(&format!("     WIDERSPRUCH: {s}\n"));

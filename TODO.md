@@ -1187,12 +1187,38 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       | `table … invariant : forall o … : … == gibt_es_nicht(o)` | **0 Fehler, 0 Hinweise** |
       | `spec fn … = … == gibt_es_nicht(i);` | **0 Fehler, 0 Hinweise** |
       | `requires gibt_es_nicht(i) == 0` an einer `impl fn` | `E009` — und der kommt aus dem AUFRUFGRAPHEN, nicht aus einer Namensregel |
+      | `requires GIBTESNICHT == 1` an derselben `impl fn` — **a bare NAME, not a call** | **0 errors, 0 hints — and it REACHES LEAN verbatim** |
       **Nur wo die Wirkungshülle hinsieht, fällt etwas.** Ein Prädikat, das eine Funktion
       nennt, die es nicht gibt, behauptet nichts und sieht aus wie eine Behauptung — *dieselbe
       Klasse wie `M133`, `N033`, `S007`, `N020` und `D013` (2026-08-28), eine Fläche weiter.*
       Woran es hängt: die Namensauflösung über `pred` gibt es nicht; `maintains` hat sie seit
       `M131` für den KOPF, nicht für den Rumpf. *Probe und Zahlen:
       [`messung/AGGREGATION.md`](messung/AGGREGATION.md) §1.*
+
+      > **The fourth row is the 2026-09-02 addition, and it is strictly worse than the
+      > third.** A bare name never touches the call graph, so `E009` — the one thing that
+      > spoke here — does not fire; and unlike the call form, which the Lean channel drops
+      > by name, the name form is one this channel CAN say. Measured on
+      > `beispiele/01-tabelle.gab`:90, both edits on the same line of the same file:
+      >
+      > ```text
+      > requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
+      > requires GIBTESNICHT == 1        ->  0 errors, 0 hints          Lean: exported
+      >     def aushaengen_pre (s : State) : Prop :=
+      >       isInt (s.local' "s")
+      >       ∧ eval s (.bin .eq (.global "GIBTESNICHT") (.lit (.int 1))) = some (.bool true)
+      > ```
+      >
+      > **`.global "GIBTESNICHT"` is a global nothing in the program declares, handed to a
+      > prover as something the caller GRANTS.** That is `M141`'s sentence one shape over —
+      > *a premise over a place that does not exist is a premise nothing can establish* —
+      > and `M141` compares only a NUMBER LITERAL against a declared length, by its own
+      > stated limit. A name is not an index and falls through.
+      >
+      > *Denominator, so the row is not a scare:* over the clean corpus (`beispiele/`,
+      > `messung/`, minus `gift/`) `gabbro lean` exports **8** premises in total and names
+      > **27** more as dropped. Eight is the whole surface this hole can be on — small, and
+      > the reason the repair is worth costing out rather than fearing.
 
 - [ ] **Mutation probe on the ANNOTATION EMISSION**, not only on the code emission. The coherently
       weakened case (code **and** contract) is caught by **no** proof — only by the

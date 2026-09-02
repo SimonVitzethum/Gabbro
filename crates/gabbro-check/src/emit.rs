@@ -1331,6 +1331,22 @@ pub fn emittiere_mit(
             a.art,
             kommentartext(&wie)
         ));
+            // **The side condition of an `axiom` -- the COUNT, because this channel has no
+            // source** (2026-09-02). `emittiere_mit` is handed a tree and nothing else, so
+            // `voraussetzung_text` is `None` here by construction and `manifest.rs` keeps
+            // the two fields apart for exactly this caller: *a missing wording must not
+            // read as a missing clause.*
+            //
+            // Printing the number is the honest half. `A1` was `rdtscp` UNDER a machine
+            // feature and the header said `rdtscp` -- **and this header is what a C reader
+            // gets**, the outermost surface the promise travels on. The wording stands one
+            // command over, in `gabbro certificate`, which does have the source.
+            if a.voraussetzungen > 0 {
+                aus.push_str(&format!(
+                    " *     under {} side condition(s) -- `gabbro certificate` prints them\n",
+                    a.voraussetzungen
+                ));
+            }
         }
         aus.push_str(" */\n");
     }
