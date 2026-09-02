@@ -177,6 +177,18 @@ def main() -> int:
     dateien = sorted(glob.glob(str(W / "beispiele" / "*.gab"))) + sorted(
         glob.glob(str(W / "messung" / "*" / "*.gab"))
     )
+    # **Two globs choose the whole subject, and nothing asked whether they chose anything**
+    # (2026-09-02). With an empty selection every counter below stays at its start value and
+    # the closing line reads `0 obligations, 0 goals, 0 refused` -- shaped exactly like a
+    # tree where the emitter refused nothing. *Zero findings over zero files is a report
+    # about the glob, never about the emitter.*
+    #
+    # `pruefe-lean-beweis.sh` walks THIS SAME corpus and already refuses on zero goals. The
+    # guard was never missing from the pair; it was missing from one half of it.
+    if not dateien:
+        print("ABBRUCH: kein `.gab` in `beispiele/` oder `messung/*/` -- es wurde NICHTS "
+              "gemessen.", file=sys.stderr)
+        return 2
     gesamt = ziele = abgesagt = 0
     ohne_register = 0
     je_grund: collections.Counter = collections.Counter()
