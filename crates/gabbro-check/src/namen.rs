@@ -29,6 +29,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     pro_kern_und_gegenprobe(baum, absagen);
     dispatch_loest_auf(baum, absagen);
     maschineneigenschaft(baum, absagen);
+    geraetezusage_nennt_ihre_stelle(baum, absagen);
     verbund_ohne_groesse(baum, absagen);
     check_traegt_seine_pflicht(baum, absagen);
     spiegel_und_sonde(baum, absagen);
@@ -804,6 +805,188 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
         for k in crate::unterbloecke(s) {
             sammle_rufe(k, aus);
         }
+    }
+}
+
+/// **`N053` -- a device promise may name a place, and until today it could name one that is
+/// not there** (2026-09-02).
+///
+/// `reg … requires` and `transition … requires` are the two clauses of the ASSUMPTION TIER
+/// that no pass read at all. Measured over the whole tree the day this was written:
+/// **4 `reg` sites and 13 `transition` sites**, and eight hand-made counter-forms -- an
+/// unknown field, an unknown register, `1 == 2`, a value that does not fit the bit --
+/// **all eight `0 errors, 0 hints`**, under `gabbro pruefe` AND under `gabbro emit`.
+///
+/// ```gabbro
+/// device Vtd(basis : Pa) at mmio {
+///     reg GSTS : u32 @0x1c class r fields { TES @31, RTPS @30, }
+///     transition uebersetzung_an { GCMD.TE: 0 -> 1 }
+///         requires GSTS.NICHTDA == 1          -- 15 items, 0 errors, 0 hints
+///         effects  { writes GCMD }
+/// }
+/// ```
+///
+/// **The asymmetry is the argument.** The STEP of the same `transition` is caught in the
+/// emitter: `GCMD.NICHTDA: 0 -> 1` gets `C001` *"`transition` on an unknown register
+/// field"* out of `emit.rs`. The premise beside it, one line down, is read by nobody.
+/// *One construct, two halves, and only one of them had to name something that exists.*
+///
+/// ## What this rule decides and what it deliberately leaves alone
+///
+/// It does **not** decide whether the premise HOLDS. `GSTS.RTPS == 1` is a statement about
+/// hardware; the program cannot establish it and no pass should pretend to. It stays an
+/// assumption, and `gabbro pflichten` counts it as one (`D`, device promise).
+///
+/// What is decidable without knowing a thing about the machine has the same shape as the
+/// question `M141` decides one construct over, in `domaene.rs`: **a premise over a place
+/// that does not exist is a premise nothing can establish.** A field the register does not
+/// declare, a register the device does not declare, a bare name nothing in the unit
+/// explains.
+///
+/// > **It found one in the tree it was written against.** `messung/fragmente/F04.gab`:73
+/// > writes `requires QUEUE_SIZE <= QMAX`, and `QMAX` stands nowhere. The file says so in
+/// > its own header -- *"NICHT ergaenzt und darum weiter offen … weil kein Pass
+/// > `RegDecl::requires` liest"* -- and had said so since 2026-08-20.
+///
+/// **Its error goes in the same direction, and in the same class, as `N033` next door and
+/// as `S003`, `S007` and `H016` in `schleifen.rs` and `geteilt.rs`:** the known set is what
+/// THIS unit declares, plus the last segment of every `use`. A name imported and not
+/// re-declared reads as unknown. That is the standing house answer at a unit boundary, and
+/// it is the safe direction: an excerpt that names something outside the cut is refused,
+/// never silently believed.
+///
+/// A `Has(…)` argument is a MACHINE FEATURE and not a place -- `N016` reads those and this
+/// rule must not, or every feature name would be a finding. Quantifier variables are bound
+/// by the quantifier and are known for the same reason.
+fn geraetezusage_nennt_ihre_stelle(baum: &Programm, absagen: &mut Absagen) {
+    let mut bekannt: HashSet<String> = HashSet::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let Some(n) = i.art.name() {
+            bekannt.insert(n.text.clone());
+        }
+        // A `use` brings the name in without declaring it here -- see the doc comment.
+        if let ItemArt::Use(u) = &i.art {
+            if let Some(n) = u.pfad.teile.last() {
+                bekannt.insert(n.text.clone());
+            }
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Device(d) = &i.art else { return };
+        let mut felder: HashMap<String, HashSet<String>> = HashMap::new();
+        let merke = |r: &RegDecl, felder: &mut HashMap<String, HashSet<String>>| {
+            felder.insert(
+                r.name.text.clone(),
+                r.felder.iter().map(|(n, _, _)| n.text.clone()).collect(),
+            );
+        };
+        for r in &d.register {
+            merke(r, &mut felder);
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                merke(r, &mut felder);
+            }
+        }
+        // The device's own parameters and its bank names stand inside it and nowhere else.
+        let mut hier = bekannt.clone();
+        for p in &d.parameter {
+            hier.insert(p.name.text.clone());
+        }
+        for b in &d.baenke {
+            hier.insert(b.name.text.clone());
+        }
+        for r in &d.register {
+            if let Some(p) = &r.requires {
+                zusagenstelle(p, &felder, &hier, &d.name.text, absagen);
+            }
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                if let Some(p) = &r.requires {
+                    zusagenstelle(p, &felder, &hier, &d.name.text, absagen);
+                }
+            }
+        }
+        for u in &d.uebergaenge {
+            if let Some(p) = &u.requires {
+                zusagenstelle(p, &felder, &hier, &d.name.text, absagen);
+            }
+        }
+    });
+}
+
+/// The places one device promise names, held against what the device and the unit declare.
+fn zusagenstelle(
+    p: &Pred,
+    felder: &HashMap<String, HashSet<String>>,
+    bekannt: &HashSet<String>,
+    geraet: &str,
+    absagen: &mut Absagen,
+) {
+    let mut frei: HashSet<String> = HashSet::new();
+    let mut merkmale = Vec::new();
+    has_aus_pred(p, &mut merkmale);
+    frei.extend(merkmale);
+    binder_im_praedikat(p, &mut frei);
+    for e in crate::ausdruecke_im_praedikat(p) {
+        for o in crate::alle_orte(e) {
+            let basis = &o.basis.text;
+            if frei.contains(basis) {
+                continue;
+            }
+            let fehlt = match felder.get(basis) {
+                // A register of this device. Then a `.field` suffix has to be one of ITS
+                // fields -- a register without a `fields` list has none at all.
+                Some(fs) => match o.suffixe.first() {
+                    Some(OrtSuffix::Feld(f)) => !fs.contains(&f.text),
+                    _ => false,
+                },
+                None => !bekannt.contains(basis),
+            };
+            if !fehlt {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "N053",
+                    o.span,
+                    format!(
+                        "`{}` in a device promise names nothing `device {geraet}` has",
+                        o.text()
+                    ),
+                )
+                .mit_notiz(
+                    "a `requires` at a `reg` or a `transition` is an ASSUMPTION about the \
+                     machine and stays one -- but a premise over a place that does not exist \
+                     is a premise nothing can establish, and that half is decidable here",
+                )
+                .mit_notiz(
+                    "the same shape as `M141` one construct over; the STEP of the same \
+                     `transition` has been held to the device's own registers by `C001` \
+                     since it existed",
+                ),
+            );
+        }
+    }
+}
+
+/// The variables a quantifier binds inside this predicate -- they name no declaration.
+fn binder_im_praedikat(p: &Pred, aus: &mut HashSet<String>) {
+    match &p.art {
+        PredArt::Quantor(q) => {
+            aus.insert(q.variable.text.clone());
+            binder_im_praedikat(&q.rumpf, aus);
+        }
+        PredArt::Klammer(x) | PredArt::Nicht(x) => binder_im_praedikat(x, aus),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            binder_im_praedikat(a, aus);
+            binder_im_praedikat(b, aus);
+        }
+        PredArt::Vergleich(_)
+        | PredArt::Element(_, _)
+        | PredArt::Erreicht { .. }
+        | PredArt::Held { .. } => {}
     }
 }
 

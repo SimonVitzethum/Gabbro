@@ -44,7 +44,7 @@ use crate::pflichten::{CallerParam, Material, Pflicht};
 use gabbro_syntax::ast::*;
 
 /// **Why an obligation carries no goal.** Exhaustive, and every arm names a different thing
-/// that is missing -- a single "not supported" would hide that the five reasons have five
+/// that is missing -- a single "not supported" would hide that the six reasons have six
 /// different prices.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Reason {
@@ -56,6 +56,20 @@ pub enum Reason {
     /// emitting it as an Isabelle axiom would be the worst weakening available, because an
     /// axiom about foreign code proves everything downstream of it.
     ForeignBody,
+    /// **A promise at hardware Gabbro does not see** -- `reg … requires` and
+    /// `transition … requires`, the two clauses `pflichten` books as `Art::Geraetezusage`.
+    ///
+    /// **It stood under [`Reason::ForeignBody`] until 2026-09-02, and that sentence was
+    /// wrong twice over the same duty:** it says *"an `ensures`"* where the clause is a
+    /// `requires`, and *"a body"* where there is no body at all. The Lean channel had
+    /// carried its own `DevicePromise` since it was built; this one dispatched on
+    /// `Material` alone, and a device promise carries `Material::Foreign` for the unrelated
+    /// reason that Gabbro never sees the device either.
+    ///
+    /// > *Two channels over ONE register gave the same three duties two different reasons,
+    /// > and only one of them was about the thing in front of it.* The register itself was
+    /// > right both times -- what differed was the sentence a reader takes away.
+    DevicePromise,
     /// The obligation speaks about the world AFTER a body ran, and this folder has **no
     /// Isabelle semantics of a Gabbro body**. `Table_Absenkung.thy` stops at exactly this
     /// line and hands the rest to "the language definition of C and no assumption of this
@@ -75,6 +89,7 @@ impl Reason {
         match self {
             Reason::LockWitness => "lock-witness",
             Reason::ForeignBody => "foreign-body",
+            Reason::DevicePromise => "device-promise",
             Reason::BodyEffect => "body-effect",
             Reason::NoTerm => "no-term",
             Reason::ArgumentNotStable => "argument-not-stable",
@@ -87,6 +102,9 @@ impl Reason {
             }
             Reason::ForeignBody => {
                 "an `ensures` at a body Gabbro never sees: an ASSUMPTION, not a goal"
+            }
+            Reason::DevicePromise => {
+                "a promise at hardware Gabbro does not see: an ASSUMPTION, not a goal"
             }
             Reason::BodyEffect => {
                 concat!(
@@ -101,9 +119,10 @@ impl Reason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [Reason; 5] = [
+    pub const ALL: [Reason; 6] = [
         Reason::LockWitness,
         Reason::ForeignBody,
+        Reason::DevicePromise,
         Reason::BodyEffect,
         Reason::NoTerm,
         Reason::ArgumentNotStable,
@@ -142,6 +161,14 @@ pub fn verdicts(baum: &Programm) -> Vec<(Pflicht, Verdict)> {
 }
 
 fn verdict(p: &Pflicht, number: usize) -> Verdict {
+    // **The KIND decides before the material does, for the device promise.** It carries
+    // `Material::Foreign` because Gabbro never sees the device -- the same field an
+    // `ensures` at a foreign body carries for a different reason -- and dispatching on the
+    // material alone therefore printed the foreign-body sentence over a `requires` at a
+    // register. See [`Reason::DevicePromise`].
+    if p.art == crate::pflichten::Art::Geraetezusage {
+        return Verdict::Refused(Reason::DevicePromise);
+    }
     match &p.material {
         // **E and N.** Both need the effect of a body, and neither is closer than the other:
         // `maintains I` needs `I` before and after, `ensures P` needs `P` after.

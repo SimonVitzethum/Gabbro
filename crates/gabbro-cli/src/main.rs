@@ -1756,7 +1756,9 @@ fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
             print!("{}", absagen.zeige(&quelle));
             return std::process::ExitCode::from(1);
         }
-        alle.extend(manifest::sammle(&baum));
+        // **With the source**, so an `axiom`'s `requires` reaches the manifest as WORDING
+        // and not only as a count -- see `manifest::Eintrag::voraussetzungen`.
+        alle.extend(manifest::sammle_mit_quelle(&baum, &quelle));
     }
     // **Menge, nicht Liste** (`SYNTAX.md` §12). Zwei Dateien duerfen dieselbe Annahme
     // erklaeren -- aber sie zaehlt einmal. Erklaeren sie sie VERSCHIEDEN, ist das ein

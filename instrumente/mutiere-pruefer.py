@@ -1482,14 +1482,19 @@ MUTATIONEN = [
     Mutation(
         "widerspruch-schweigt",
         "manifest.rs",
-        "                if vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage {",
-        "                if false && (vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage) {",
+        # **Re-aimed 2026-09-02.** The condition grew two more disjuncts
+        # (`voraussetzungen`, `voraussetzung_text`) and wrapped across five lines, so the
+        # one-line anchor matched nothing: `--anker` reported two missing of 379.
+        # *An anchor that no longer matches is a rule without mutation coverage.*
+        "                if vorher.art != e.art",
+        "                if false && vorher.art != e.art",
         "SYNTAX.md §12 -- derselbe Name mit anderem Inhalt gilt als Duplikat statt als Widerspruch",
     ),
     Mutation(
         "annahme-im-modul-verloren",
         "manifest.rs",
-        "            ItemArt::Modul(m) => sammle_items(&m.items, out),",
+        # Re-aimed 2026-09-02: `sammle_items` took on a `quelle` parameter.
+        "            ItemArt::Modul(m) => sammle_items(&m.items, quelle, out),",
         "            ItemArt::Modul(m) => { let _ = m; }",
         "SYNTAX.md §12 -- eine Annahme in einem verschachtelten Modul faellt aus dem Manifest",
     ),

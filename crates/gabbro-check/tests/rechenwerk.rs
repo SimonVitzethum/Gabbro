@@ -4222,6 +4222,43 @@ extern fn fremd() -> u32 ensures result <= 100 effects { pure } costs <= 1 ops;
     );
 }
 
+/// **A device promise is not a foreign `ensures`, and until 2026-09-02 this channel said it
+/// was.**
+///
+/// `reg … requires` and `transition … requires` carry `Material::Foreign` -- Gabbro never
+/// sees the device -- and `verdict` dispatched on the material alone. The sentence a reader
+/// got was therefore *"an `ensures` at a body Gabbro never sees"*, over a clause that is a
+/// `requires` and has no body at all. **The Lean channel had carried its own
+/// `device-promise` since it was built**, so one register was described two ways by two
+/// tools, and only one of them was about the thing in front of it.
+#[test]
+fn a_device_promise_gets_its_own_reason_in_both_channels() {
+    let q = "module t {
+device Vtd(basis : u64) at mmio {
+reg GCMD : u32 @0x18 class w fields { TE @31, }
+reg GSTS : u32 @0x1c class r fields { RTPS @30, }
+transition an { GCMD.TE: 0 -> 1 } requires GSTS.RTPS == 1 effects { writes GCMD }
+}
+}";
+    let (b, _a) = gabbro_syntax::lies("p6.gab", q);
+    let isa = gabbro_check::refinement::theory(&b, "p6.gab");
+    assert_eq!(p6_balance(&isa), (1, 0, 1), "one duty, refused:\n{isa}");
+    assert!(
+        isa.contains("device-promise (1)"),
+        "the Isabelle channel names the DEVICE, not a foreign body:\n{isa}"
+    );
+    assert!(
+        !isa.contains("foreign-body"),
+        "and it no longer says `ensures` about a `requires`:\n{isa}"
+    );
+    // **The two channels agree, and that is the point of the repair.**
+    let lean = gabbro_check::lean::module(&b, "p6.gab");
+    assert!(
+        lean.contains("device-promise (1)"),
+        "the Lean channel said this all along:\n{lean}"
+    );
+}
+
 /// **The balance adds up, and it adds up over THE SAME register `gabbro pflichten` counts.**
 ///
 /// *An output that forgets one kind looks complete* (`messung/ABI.md`, the `lock` line that

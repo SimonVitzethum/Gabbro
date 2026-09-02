@@ -280,7 +280,11 @@ impl Stelle {
 }
 
 /// Der Wortlaut einer Stelle, aus der Quelle geschnitten und auf eine Zeile gebracht.
-fn schnitt(quelle: &str, span: gabbro_syntax::span::Span) -> String {
+///
+/// **One site, one cut.** `manifest.rs` needs the same wording for the precondition of an
+/// `axiom`, and a second cut with a different truncation limit would be the same sentence
+/// in two versions.
+pub(crate) fn schnitt(quelle: &str, span: gabbro_syntax::span::Span) -> String {
     let (a, b) = (span.von as usize, span.bis as usize);
     if a > b || b > quelle.len() {
         return String::new();

@@ -43,6 +43,11 @@ FRIST = 120
 REASONS = [
     ("lock-witness", "`Held(…)` -- the lock passes carry it, no prover does"),
     ("foreign-body", "an `ensures` at a foreign body -- an ASSUMPTION, not a goal"),
+    # **Split off from `foreign-body` on 2026-09-02.** A `reg`/`transition … requires`
+    # carries `Material::Foreign` because Gabbro never sees the device, and the Isabelle
+    # channel therefore printed the foreign-body sentence -- *"an `ensures` at a body"* --
+    # over a `requires` at a register. The Lean channel had said `device-promise` all along.
+    ("device-promise", "a promise at hardware Gabbro does not see -- an ASSUMPTION, not a goal"),
     ("body-effect", "speaks about the world AFTER a body ran -- there is no body semantics"),
     ("no-term", "a form the emitter has no Isabelle term for"),
     ("argument-not-stable", "the argument is neither a literal nor an untouched parameter"),
