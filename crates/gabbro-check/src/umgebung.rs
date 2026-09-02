@@ -289,11 +289,26 @@ impl Umgebung {
                     self.sammle_kapazitaeten(&m.items, &innen);
                 }
                 ItemArt::Tabelle(t) => {
+                    // **`count 0` goes in as ZERO, and until 2026-09-02 it went in not at
+                    // all.** The `.filter(|n| *n > 0)` that stood here read an empty domain
+                    // as an UNKNOWN one, and `feld_von` then handed `M103` a `laenge: None`.
+                    // Measured: `T.slots[0].a` on a `table T count 0` gave `0 errors,
+                    // 0 hints` and the emitter wrote `T_speicher.slots[0].a` against a
+                    // `T_slot slots[0]` -- an out-of-bounds read in the artefact.
+                    //
+                    // > **The same index at the same zero falls everywhere else**: on a
+                    // > `static [u64; 0]` and on a `bank … count 0` `M103` says *"the index
+                    // > has `u8 in 0 .. 0`, the array has 0 elements"*. The table was the one
+                    // > carrier whose zero was thrown away.
+                    //
+                    // *A zero dropped is a zero unchecked* -- the same shape as
+                    // `konst_zahl`'s `as i128`, one map further out. Found by
+                    // `instrumente/fuzze-erzeuger.py`; probe `beispiele/gift/647`.
                     if let Some(n) = t
                         .kapazitaet
                         .as_ref()
                         .and_then(|e| self.konst_wert(pfad, e))
-                        .filter(|n| *n > 0)
+                        .filter(|n| *n >= 0)
                     {
                         self.kapazitaeten
                             .insert(qualifiziere(pfad, &t.name.text), n as u128);
@@ -581,11 +596,15 @@ impl Umgebung {
                                 .collect::<Vec<_>>()
                         })
                         .unwrap_or_default();
+                    // The second of the two sites -- see `sammle_kapazitaeten` above for
+                    // the measurement. **Both had to move**: this one fills the same map from
+                    // the typing pass, and a repair at one of two writers is a repair that
+                    // holds until the other one runs.
                     if let Some(n) = t
                         .kapazitaet
                         .as_ref()
                         .and_then(|e| self.konst_wert(pfad, e))
-                        .filter(|n| *n > 0)
+                        .filter(|n| *n >= 0)
                     {
                         self.kapazitaeten.insert(q(&t.name.text), n as u128);
                     }

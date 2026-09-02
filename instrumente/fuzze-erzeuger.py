@@ -371,13 +371,24 @@ GEBUCHT = {
     #
     # ---- BESIDE THE PROPERTY ---------------------------------------------------------
     #
-    # **`D8` -- a zero-size array.** GCC takes it as an extension, ISO C forbids it.
-    # `messung/AUDIT-2026-09-02.md` 7.7 item 4 books `table count 0` as *refused at emit*;
-    # **it is not refused** -- it lowers to `T_slot slots[0]`, and that is the half this
-    # instrument corrects. (`[u64; 0]` IS refused, and `aligned(p, 0)` is refused too,
-    # so both keep the property -- the sweep sees them as `REFUSE C001`.)
-    ("NOT-ISO", "table-count"): (3, "D8 -- `T_slot slots[0]`, and AUDIT 7.7 item 4 books it wrongly"),
-    ("NOT-ISO", "const-als-schranke"): (4, "D8 -- the same array through a `const` bound"),
+    # **`D8` -- a zero-size array. FOUND HERE, AND CLOSED THE SAME DAY.**
+    #
+    # `table count 0` lowered to `T_slot slots[0]`, which ISO C forbids and GCC takes as an
+    # extension -- so only `-Wpedantic` saw it, three rungs at `table-count` and four more
+    # through a `const` bound at `const-als-schranke`. **Asking what a `count 0` table does at
+    # a USE turned it into something much larger:** `umgebung.rs` had dropped the zero out of
+    # the capacity map (`.filter(|n| *n > 0)`), so `M103` had no bound and `T.slots[0].a` gave
+    # `0 errors` -- an out-of-bounds read in the artefact.
+    #
+    # Both halves repaired 2026-09-02, no new code: the capacity is recorded as ZERO, and the
+    # emitter refuses the declaration by name like every sibling zero-length array already
+    # was. Probe `beispiele/gift/647`, speech test
+    # `rechenwerk.rs::die_leere_tabelle_hat_eine_schranke_und_kein_erzeugnis`.
+    #
+    # **The two lines that stood here are deliberately gone rather than set to 0.** A booking
+    # is a claim about the tree; when the tree changes the line goes, and the run that finds
+    # it still there says `BOOKED AND GONE`. *That is how this ratchet reported its own
+    # repair, and it is the only reason the removal is not on trust.*
     #
     # **`D9` -- a `reason` code past `INT_MAX`.** ISO C restricts an enumerator to the range
     # of `int` before C2X; GCC widens it silently.
