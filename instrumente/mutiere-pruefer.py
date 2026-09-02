@@ -4026,26 +4026,97 @@ def hash_von(p):
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
+# **THE ONE CHANNEL A SEPARATE BUILD DOES NOT SEE: doc tests** (measured 2026-09-02).
+#
+# `cargo build --tests` compiles lib, bins and integration tests. It does NOT compile doc
+# tests -- `rustdoc` does that during `cargo test`, and when one of them fails to compile
+# neither marker of the old rule appears. Measured, literally, on `ki-pc-fisch-101`:
+#
+#     error: expected item, found keyword `let`
+#     error: aborting due to 1 previous error
+#     Couldn't compile the test.
+#     error: doctest failed, to rerun pass `-p gabbro-check --doc`
+#
+# No `error[E`, no `could not compile` -- so the old rule read `compiled`, `cargo` returned
+# 101, and `fahre()` booked a BUILD BREAK as `gefangen`. *Coverage counted out of a mutant
+# that never ran a single probe.*
+#
+# > `Couldn't compile the test.` is `rustdoc`'s own word for it, and it is the precise one.
+# > `doctest failed` is NOT usable here: a doc test that compiles and then PANICS prints that
+# > too, and that is a legitimately caught mutation.
+DOKTEST_BAUT_NICHT = "Couldn't compile the test."
+
+
+def uebersetzungsurteil(bau_ruecklauf, testtext):
+    """**Hat der Mutant UEBERSETZT?** Am Ruecklaufwert gelesen, nicht an einer Teilzeichenkette.
+
+    Until 2026-09-02 this stood as one line inside `proben_laufen()`::
+
+        uebersetzt = "error[E" not in text and "could not compile" not in text
+
+    and it asked the wrong question in the wrong place. A build break and a caught mutation
+    look identical to `cargo test`: both leave with a non-zero code. The tool separated them
+    by SNIFFING the merged output for two literals -- so every failure `cargo` words
+    differently walked straight past and was booked as coverage.
+
+    **Its two neighbours already do it right** and have since before this file was written:
+    `pruefe-luecken.py:98` and `erzeuge-mutationen.py:83` run a `cargo build --tests` of
+    their own first and read its RETURN CODE. *A second register over one thing is kept in
+    the weaker one* (W7) -- here the weaker one sat inside the number this workshop quotes
+    everywhere.
+    """
+    if bau_ruecklauf != 0:
+        return False
+    return DOKTEST_BAUT_NICHT not in testtext
+
+
 def proben_laufen():
-    """`cargo test` -- gibt (uebersetzt, alle_gruen)."""
+    """`cargo build --tests` und dann `cargo test` -- gibt (uebersetzt, alle_gruen).
+
+    `alle_gruen` ist `None`, wenn gar nicht uebersetzt wurde: es gibt dann keine Probe, ueber
+    die etwas auszusagen waere.
+    """
+    bau = subprocess.run(
+        ["cargo", "build", "--tests", "--quiet"],
+        cwd=WURZEL,
+        capture_output=True,
+        text=True, timeout=FRIST)
+    if bau.returncode != 0:
+        return False, None
     r = subprocess.run(
         ["cargo", "test", "--quiet"],
         cwd=WURZEL,
         capture_output=True,
         text=True, timeout=FRIST)
-    text = r.stdout + r.stderr
-    uebersetzt = "error[E" not in text and "could not compile" not in text
-    return uebersetzt, r.returncode == 0
+    if not uebersetzungsurteil(0, r.stdout + r.stderr):
+        return False, None
+    return True, r.returncode == 0
+
+
+def ankerstand(text, alt):
+    """**Greift der Anker GENAU EINMAL?** `None` heisst ja; sonst steht hier der Grund.
+
+    **EIN Register fuer die Ankerregel** (W7), und bis zum 2026-09-02 gab es zwei. Das zweite
+    stand in `pruefe-luecken.py:95` und war das SCHWAECHERE: `if alt not in t` fragt nur, ob
+    der Anker ueberhaupt dasteht, und `str.replace(alt, neu, 1)` verdreht danach stumm die
+    ERSTE von mehreren Stellen. Der Kopf jener Datei protokolliert den Tag, an dem genau das
+    passierte -- *dieselbe Zeile stand in `teile` und in `rest`* --, und die damals gewaehlte
+    Heilung war, zwei Anker zu verbreitern, nicht die Zaehlung nachzutragen.
+
+    > *Eine Regel, die an zwei Stellen wohnt, gilt in der schwaecheren.*
+    """
+    n = text.count(alt)
+    if n == 1:
+        return None
+    return "FEHLT" if n == 0 else f"MEHRDEUTIG ({n}x)"
 
 
 def fahre(m):
     """Eine Mutation anwenden, pruefen, byteweise zuruecknehmen."""
     urtext = m.pfad.read_text()
     urhash = hashlib.sha256(urtext.encode()).hexdigest()
-    if m.alt not in urtext:
-        return "ANKER FEHLT", None
-    if urtext.count(m.alt) != 1:
-        return "ANKER MEHRDEUTIG", None
+    if (warum := ankerstand(urtext, m.alt)) is not None:
+        return f"ANKER {warum}", None
     try:
         m.pfad.write_text(urtext.replace(m.alt, m.neu, 1))
         uebersetzt, gruen = proben_laufen()
@@ -4073,9 +4144,8 @@ def anker_stand():
     """
     tot = []
     for m in MUTATIONEN:
-        n = m.pfad.read_text().count(m.alt)
-        if n != 1:
-            tot.append((m, "FEHLT" if n == 0 else f"MEHRDEUTIG ({n}x)"))
+        if (warum := ankerstand(m.pfad.read_text(), m.alt)) is not None:
+            tot.append((m, warum))
     return tot
 
 
@@ -4161,7 +4231,55 @@ def anker_sprechprobe():
     n = gift.pfad.read_text().count(gift.alt)
     print("  toter Anker faellt auf:  ", "ok" if n != 1 else "GESCHEITERT")
     print(f"  lebender Katalog still:  {'ok' if not echt else 'GESCHEITERT'}")
-    return n != 1
+    # **A MEHRDEUTIG anchor has to fall too, and it never had a probe.** The catalogue is
+    # today clean in both directions, so `echt` above proves only the FEHLT half.
+    doppelt = ankerstand("x = 1;\nx = 1;\n", "x = 1;")
+    einmal = ankerstand("x = 1;\ny = 2;\n", "x = 1;")
+    print(f"  mehrdeutiger Anker faellt auf: "
+          f"{'ok (' + doppelt + ')' if doppelt == 'MEHRDEUTIG (2x)' else 'GESCHEITERT'}")
+    print(f"  eindeutiger Anker still: {'ok' if einmal is None else 'GESCHEITERT'}")
+    return n != 1 and doppelt == "MEHRDEUTIG (2x)" and einmal is None
+
+
+# **The literal `cargo` said on 2026-09-02, kept as the subject of the probe below.** A doc
+# test that does not parse: `rustdoc` says it could not compile it, and `cargo` words the
+# failure `doctest failed` -- neither of the two literals the old rule looked for.
+DOKTEST_ABBRUCH = (
+    "error: expected item, found keyword `let`\n"
+    " --> crates/gabbro-check/src/typen.rs:1:1\n"
+    "error: aborting due to 1 previous error\n"
+    "Couldn't compile the test.\n"
+    "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out\n"
+    "error: doctest failed, to rerun pass `-p gabbro-check --doc`\n")
+GRUENER_LAUF = ("test result: ok. 399 passed; 0 failed; 0 ignored; 0 measured; "
+                "0 filtered out; finished in 0.31s\n")
+
+
+def urteil_sprechprobe():
+    """**Faellt das Uebersetzungsurteil ueber einen Bauabbruch, den `cargo` ANDERS benennt?**
+
+    Free -- pure text, no build. Both directions, and the first one is the one that matters:
+    the shape below was booked `gefangen` until today, which is a build break counted as
+    coverage inside the figure this workshop quotes everywhere.
+
+    The old rule is carried along as a THIRD line, so the probe shows the difference rather
+    than asserting it. *A repair whose subject nobody can see is a claim.*
+    """
+    def alt_regel(text):
+        return "error[E" not in text and "could not compile" not in text
+    faelle = [
+        ("ein Doktest, der nicht uebersetzt", DOKTEST_ABBRUCH, 0, False),
+        ("ein Bau, der mit != 0 endet", "", 101, False),
+        ("ein gruener Lauf", GRUENER_LAUF, 0, True),
+    ]
+    ok = True
+    for was, text, rc, soll in faelle:
+        ist = uebersetzungsurteil(rc, text)
+        ok = ok and ist is soll
+        alt = alt_regel(text) if rc == 0 else "n/a"
+        print(f"  Urteil: {was:<34} uebersetzt={str(ist):<5} "
+              f"(erwartet {soll}; die alte Regel sagte {alt})")
+    return ok
 
 
 
@@ -4309,6 +4427,13 @@ def main():
         print("== Sprechprobe des Ankerpruefers ==")
         if not anker_sprechprobe():
             return 2
+        # **R14 for the compilation verdict -- and it costs nothing, so it runs in the free
+        # mode.** The direction it measures was open until 2026-09-02: a build break that
+        # `cargo` words differently was booked `gefangen`.
+        if not urteil_sprechprobe():
+            print("  SPRECHPROBE GESCHEITERT: das Uebersetzungsurteil trennt einen "
+                  "Bauabbruch nicht von einer gefangenen Mutation")
+            return 2
         # **R14 fuer den Flaechenpruefer**: er muss eine erfundene Flaeche sehen.
         gift = Mutation("SPRECHPROBE", "typen.rs", "x", "y", "z", "keine-flaeche")
         if gift.flaeche in FLAECHEN:
@@ -4419,6 +4544,25 @@ def main():
     print(f"  Giftmutation: {zustand}")
     if zustand != "gefangen":
         print("  GESCHEITERT: das Geruest faengt nicht einmal eine tote Bereichspruefung.")
+        return 1
+    # **THE THIRD DIRECTION, AND IT WAS MISSING** (2026-09-02). The two above ask whether the
+    # scaffold can tell a harmless change from a damaging one. Neither asks whether it can
+    # tell a damaging change from one that does not BUILD -- and that is where the quota
+    # leaked: `ungueltig` and `gefangen` both leave `cargo` with a non-zero code, and until
+    # today only a substring told them apart.
+    #
+    # *`urteil_sprechprobe()` measures the judgement on recorded text; this one measures the
+    # whole path, `cargo` included.*
+    print("  Bauabbruch:   ", end="")
+    zustand, _ = fahre(Mutation(
+        "SPRECHPROBE-BAUT-NICHT", "typen.rs",
+        "        self.min >= ziel.min && self.max <= ziel.max",
+        "        self.min >= ziel.min && ;",
+        ""))
+    print(zustand)
+    if zustand != "ungueltig":
+        print("  GESCHEITERT: eine Mutation, die NICHT UEBERSETZT, wird als Messung gebucht.")
+        print("  Ein Bauabbruch ist keine Deckung -- er ist eine Probe, die nie lief.")
         return 1
     if "--schnell" in sys.argv:
         abschnitt.fertig()   # `--schnell` measures the scaffold, and it measured it.
