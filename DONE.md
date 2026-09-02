@@ -57,6 +57,43 @@ not exist today.*
 
 ---
 
+## A CAS that proposed a value nobody wrote *(2026-09-02)*
+
+**An `exchange update` body that answers on one path only handed the compare-exchange an
+indeterminate value — and four of five instruments said nothing.** The lowering declares the
+new value and lets the body assign it; a path that reaches no `return` reaches
+`atomic_compare_exchange_weak_explicit` with it still unwritten. On a live atomic.
+
+| | |
+|---|---|
+| `gabbro pruefe` | `7 items, 0 errors, 0 hints` |
+| `gabbro emit` | exit `0`, the unit written |
+| `cc -std=c11 -Wall -Wextra` | **silent at `-O0`, `-O1` AND `-O2`** (gcc 13.3.0) — the whole of what `pruefe-emission.sh` asks |
+| `clang` | `variable '_cn1' is used uninitialized whenever 'if' condition is false [-Wsometimes-uninitialized]` |
+| `zaehle-c-formen.py --uebersetzer` | blind: the unit compiles, so no measuring switch fires |
+
+**A gate one compiler passes is not a gate.** The repair is the promise that stands in front
+of it: `C001`, *the emitter refuses by name instead of emitting something plausible*.
+
+One line settles it, and the body's own grammar is why. It admits `return <expr>` and
+`if <expr> { … }` with **no `else`**, so an `if` never closes a path — its false side always
+falls through to what follows. A block answers on every path exactly when one of its OWN
+statements is a `return`; a nested one never repairs that. All six `update` bodies in the
+corpus end in a bare `return v;`, and `beispiele/05`, `41` and `42` lower byte-identically.
+
+Probe: [`beispiele/gift/658-an-update-body-that-falls-through.gab`](beispiele/gift/658-an-update-body-that-falls-through.gab),
+`-- erwartet: C001` · `crates/gabbro-check/src/emit.rs` · `cargo test --offline
+--no-fail-fast` 399 of 399.
+
+> **Found while pulling a ratchet, which is the part worth keeping.** The C-form census
+> (`instrumente/zaehle-c-formen.py`) rose to 67/32; the rise itself was a shadow of `D1` and
+> booked as such. What it cost to *measure* the rise was a walk through the emitted `goto`,
+> and that walk answered a question the allow list had been getting wrong: of the 27 jumps,
+> **12 are not loop exits at all** but the join of exactly this `update` body. *The census
+> did not find the defect. Reading what the census counts did.*
+
+---
+
 ## The pattern, with its third data point *(2026-08-20)*
 
 > **The corpus is written from the language outward; the faults sit at the combinations.**
@@ -1001,7 +1038,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**64 clean examples, 423 poison probes, 399 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.
+**64 clean examples, 424 poison probes, 399 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.
 >
 > | | booked | measured | by what |
 > |---|---:|---:|---|
