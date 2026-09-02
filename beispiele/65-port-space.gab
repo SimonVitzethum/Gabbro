@@ -1,0 +1,121 @@
+-- 65 -- **The sixth address space, lowered: `device … at port` becomes `in`/`out`.**
+--
+-- Until 2026-09-02 this file could not exist. `emit.rs` refused every `device … at port` and
+-- gave Rule A with a number as the reason: *"zero `device … at port` in 426 files -- building
+-- `in`/`out` instead would be a construct without a measured need."* **The number was the
+-- whole argument, and `messung/proben/probe-port-nachfrage.gab` took it away.**
+--
+-- *Rule A has two halves and the second is quoted less often:* no construct without measured
+-- demand -- **and no refusal without a measured defect.**
+--
+-- WHAT MAKES THE PORT SPACE ITS OWN SPACE
+-- ---------------------------------------
+-- Everything in this file has an `mmio` twin that looks identical in Gabbro. Four things are
+-- different one layer down, and each of them is why `port` is a word:
+--
+-- 1. **The handle carries a NUMBER, not a pointer.** `in`/`out` take a 16-bit port number,
+--    in `dx` or as an 8-bit immediate; `basis + offset` on a pointer is arithmetic on an
+--    address. The C is `typedef struct { uint16_t basis; } Com1;`.
+-- 2. **The width picks the INSTRUCTION.** `inb`/`inw`/`inl`, and that list stops at 32 bits.
+--    A `u64` register here has no lowering and is refused by name
+--    (`gift/653`); at `at mmio` the same declaration is unremarkable.
+-- 3. **The access is not a place.** A register is a FUNCTION PAIR -- `Com1_LSR_in(c)` and
+--    `Com1_THR_out(c, b)` -- because `in` and `out` are two instructions with nothing between
+--    them that a C lvalue could be. So `+=` no longer carries itself and is refused
+--    (`gift/654`), while every other access form below lowers.
+-- 4. **The instruction is x86 and nothing else.** `SPRACHE.md` makes a port device
+--    *"declarable only under `arch x86_64`"*, and the emitter demands the word instead of
+--    guessing it: the unit must NAME the machine, at an `entry`, a `boot`, an `entrust`, a
+--    function or -- as here -- an `assume`.
+--
+-- **The `asm` body was the exit all along, and this is its wiring.** `beispiele/36-asm.gab`
+-- writes `outb` by hand through `asm { … in { … } clobbers { memory } }` with an effect list,
+-- a cost bound and an `arch` guard. Everything below lowers to exactly that shape -- *only
+-- the register table, the widths and the masks come out of the declaration instead of out of
+-- a person.* `36` stays right; it is what you write when there is no declaration to read.
+--
+-- > **`memory` in the clobber list is the default and not the exception** (`N026`). A port
+-- > write is how a driver orders a device about, and the compiler may not float a memory
+-- > access across it. `__volatile__` alone only says the block may not be deleted.
+
+module beispiel::portraum {
+
+-- The port space and its instructions are a statement about ONE machine, and «B40» is why an
+-- assumption can say which. It is also what satisfies the `arch` demand at the device below.
+assume portraum_ist_x86 arch x86_64
+    "The port space is reached by `in`/`out`, and those instructions exist on x86 only."
+    falsifier sonde_portraum;
+
+assume uart_leert_sich arch x86_64
+    "A 16550 raises THRE as soon as the holding register has been emptied."
+    falsifier sonde_uart_leert_sich;
+
+extern fn uart_haengt() -> never effects { diverges } costs <= 1 ops;
+
+-- **A 16550 at COM1 -- the canonical port device.** The base is `u16` because a port number
+-- is: a wider base would let the handle drop bits without a word, and that is refused
+-- (`gift/656`).
+device Com1(basis : u16) at port {
+    reg THR : u8 @0x00 class w
+    reg IER : u8 @0x01 class rw fields { ERBFI @0, ETBEI @1, }
+    reg LSR : u8 @0x05 class r  fields { THRE @5, DR @0, }
+
+    -- A `transition` in the port space is one `out`, and it is the same declaration it would
+    -- be at `at mmio`: these bits, to these values, in ONE move.
+    transition sende_frei { IER.ETBEI: 0 -> 1 }
+        effects { writes IER }
+}
+
+-- **A field read.** `c.LSR.THRE` is one `in` and a shift-and-mask; the word arrives once, and
+-- a second read would be a second value («B33»).
+impl fn bereit(c : ptr<port, rw> Com1) -> bool
+    effects { reads c.LSR }
+    costs   <= 2 ops
+{
+    return c.LSR.THRE == 1;
+}
+
+-- **A whole-register read.**
+impl fn leitungsstand(c : ptr<port, rw> Com1) -> u8
+    effects { reads c.LSR }
+    costs   <= 2 ops
+{
+    return c.LSR;
+}
+
+-- **A whole-register write, and it is also the shape of an acknowledgement.** One `out` and
+-- no read at all -- nothing is fetched that could be written back, which is exactly what a
+-- `w1c` word needs («R012», `beispiele/45`).
+impl fn maske_setzen(c : ptr<port, rw> Com1, m : u8)
+    effects { writes c.IER }
+    costs   <= 2 ops
+{
+    c.IER = m;
+}
+
+-- **A bit-field write** -- a read-modify-write, and it needs a readable register. `class rw`
+-- gives one; `class w` does not, and that refusal is trap 4 and unchanged from `at mmio`.
+impl fn empfang_freigeben(c : ptr<port, rw> Com1)
+    effects { reads c.IER, writes c.IER }
+    costs   <= 4 ops
+{
+    c.IER.ERBFI = 1;
+}
+
+-- **And the loop the device makes necessary.** The watchdog is the ordinary one: a bound in
+-- operations, a declared progress assumption with a falsifier, and a named exit when the
+-- bound is spent. *Nothing about it is special to the port space -- which is the point.*
+impl fn sende(c : ptr<port, rw> Com1, b : u8)
+    effects { reads c.LSR, writes c.THR }
+    costs   <= 1026 ops
+{
+    retry warten until c.LSR.THRE == 1
+        bounded 1024 ops
+        progress uart_leert_sich
+        on_exceeded uart_haengt
+        effects { reads c.LSR }
+    { }
+    c.THR = b;
+}
+
+}

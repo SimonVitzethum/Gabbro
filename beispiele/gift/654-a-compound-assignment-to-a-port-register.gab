@@ -1,0 +1,48 @@
+-- erwartet: C001
+-- 654 -- **`p.CFG += 1` at a port register -- and the `+=` that used to carry itself does
+-- not.**
+--
+-- The paragraph over `emit.rs::geraet` states the mmio decision and its reason in one line:
+--
+--     the access lowers as a PLACE and not as a function pair -- that way `+=` carries itself
+--
+-- and that is right in the memory space, where `*(volatile uint32_t *)(basis + 8)` is one
+-- C lvalue that reads on the right and writes on the left.
+--
+-- **`in` and `out` ARE a function pair, and there is no place between them.** The compound
+-- assignment would have to become an `in`, an arithmetic step and an `out` -- **two accesses
+-- to a register the device also writes**, with the device's own value falling between them.
+-- Which of the two sees it is not a question with an answer.
+--
+-- *The same refusal already stands twice in this emitter* -- at a bank register and at a
+-- register bit field -- and both give the same reason word for word. This is the third
+-- surface of one rule and not a fourth rule.
+--
+-- > **The simple assignment is fine and lowers**: `p.CFG = 1;` becomes `Pit_CFG_out(p, 1)`,
+-- > one instruction and no read. It is the *compound* form that has no meaning here, and the
+-- > repair is to write the read out: bind it, compute, assign.
+--
+-- **`wrapping` at the register is load-bearing in THIS probe and says nothing about the
+-- rule.** Without it `M104` catches `+= 1` first -- *"leaves the range: `u32` against `u8` in
+-- 1 .. 1"* -- and then the checker refuses before the emitter is asked, and the probe would
+-- measure `M104` while claiming to measure `C001`. *A defect that a refusal in front of it
+-- hides is the shape this folder has paid for more than once.*
+
+module gift::verbundzuweisung_am_port {
+
+assume portraum_ist_x86 arch x86_64
+    "The port space and its `in`/`out` instructions exist on x86 and nowhere else."
+    falsifier sonde_portraum;
+
+device Pit(basis : u16) at port {
+    reg CFG : u32 wrapping @0x08 class rw
+}
+
+impl fn hochzaehlen(p : ptr<port, rw> Pit)
+    effects { reads p.CFG, writes p.CFG }
+    costs   <= 4 ops
+{
+    p.CFG += 1;
+}
+
+}

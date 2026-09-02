@@ -57,6 +57,18 @@ struct Namen {
     /// model, and rather than guessing it the generator DEMANDS that the unit name it.
     /// *A wall becomes a door: the refusal says which assumption is missing.*
     annahmen: BTreeSet<String>,
+    /// **The machines this unit NAMES** (2026-09-02) -- every `arch` word that stands
+    /// anywhere in it: at an `entry`, an `entrust`, a `boot`, a function, an `assume`.
+    ///
+    /// `at port` reads it. A port access lowers to an `in`/`out` instruction, and those exist
+    /// on x86 and nowhere else -- so a unit that emits one must SAY it is x86. Same move as
+    /// `ANNAHME_DMA` a few hundred lines down: not guessed, demanded by name.
+    ///
+    /// > *Wider than `namen.rs::annahme_arch`'s own set, and deliberately.* That pass asks
+    /// > "can this assumption ever be in force here", and an `assume … arch` is the thing it
+    /// > judges, so it may not count itself. **The question here is the other one** -- does
+    /// > this unit say which machine it is for -- and an `assume … arch x86_64` says it.
+    architekturen: BTreeSet<String>,
     geraete: HashMap<String, Geraet>,
     /// Name -> Geraetetyp, **global und konservativ**: wird derselbe Name irgendwo mit einem
     /// anderen Typ erklaert, faellt er heraus. Dieselbe Bauart wie `vorzeichenlos` -- Unwissen
@@ -445,10 +457,26 @@ struct Signatur {
 /// Ein Geraet, so wie der Erzeuger es braucht.
 #[derive(Clone)]
 struct Geraet {
-    /// Registername -> (Versatz, C-Wortbreite). **Der Raum steht nicht hier** -- `geraet`
-    /// liest ihn direkt aus dem Baum, und ein zweites Feld daneben waere das zweite Register
-    /// ueber derselben Sache (W7).
+    /// Registername -> (Versatz, C-Wortbreite).
     reg: HashMap<String, (i128, String)>,
+    /// **The declared space -- and until 2026-09-02 it stood here NOT, with a reason that
+    /// has since expired.**
+    ///
+    /// The line that stood above `reg` said: *"the space is not here -- `geraet` reads it
+    /// straight from the tree, and a second field beside it would be the second register
+    /// over one thing (W7)."* That was true while every space this emitter lowered used the
+    /// SAME access form: a `volatile` load at `basis + offset`. Then only the item walk
+    /// needed the word, and the item walk holds the `Device` node.
+    ///
+    /// **`at port` breaks that.** The access form now differs by space, and the sites that
+    /// decide it -- `ort`, the assignment branch, `uebergang` -- are handed a NAME and this
+    /// map, never the node. Reading the tree again from there would mean resolving the
+    /// device declaration a second time at every access site.
+    ///
+    /// > *It is still one register, not two.* The map is filled from `Device::raum` in
+    /// > `sammle` and from nowhere else; `geraet` keeps reading the node because it has it.
+    /// > W7 is about two SOURCES for one fact, and there is one.
+    raum: Raum,
     /// **Registername -> der erklaerte Umlauf** («B32»). Ein `reg X : u16 wrapping` traegt
     /// dieselbe Aussage wie ein umlaufender Slot, und dieselbe Falle: `X = X * X` hebt beide
     /// Seiten auf `int` und laeuft dort UNDEFINIERT ueber.
@@ -675,6 +703,7 @@ pub fn emittiere_mit(
                 d.name.text.clone(),
                 Geraet {
                             reg: HashMap::new(),
+                            raum: d.raum.clone(),
                             felder: HashMap::new(),
                             umlaeufer: HashMap::new(),
                             klassen: HashMap::new(),
@@ -1311,6 +1340,30 @@ pub fn emittiere_mit(
     }
     let annahmen = crate::manifest::sammle(baum);
     namen.annahmen = annahmen.iter().map(|a| a.name.clone()).collect();
+    // **Every `arch` word this unit carries, from every clause that can carry one.**
+    // `at port` demands `x86_64` among them -- see `geraet`.
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Entry(e) => {
+            namen.architekturen.insert(e.arch.text.clone());
+        }
+        ItemArt::Entrust(e) => {
+            namen.architekturen.insert(e.arch.text.clone());
+        }
+        ItemArt::Boot(b) => {
+            namen.architekturen.insert(b.arch.text.clone());
+        }
+        ItemArt::Funktion(f) => {
+            if let Some(a) = &f.arch {
+                namen.architekturen.insert(a.text.clone());
+            }
+        }
+        ItemArt::Assume(a) => {
+            if let Some(x) = &a.arch {
+                namen.architekturen.insert(x.text.clone());
+            }
+        }
+        _ => {}
+    });
     if !annahmen.is_empty() {
         let (menge, _) = crate::manifest::vereinige(annahmen);
         aus.push_str("\n/* Proved under the following assumptions (SYNTAX.md 12).\n");
@@ -2848,37 +2901,180 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         );
         return;
     }
-    // **`at port` is refused, and it is the THIRD refusal here for a third reason**
-    // (2026-08-31, `messung/ADRESSRAEUME.md` §4).
+    // **`at port` LOWERS since 2026-09-02, and the refusal that stood here is withdrawn.**
     //
-    // `at normal` above asks whether it is a device access at all. `at dma` below asks which
-    // barrier. This one asks nothing: **the lowering that stood here was wrong, and under a
-    // written promise.** `SPRACHE.md` § *the sixth address space*: *"`at port` lowers
-    // accesses to `in`/`out` instead of to volatile loads/stores"*. Measured, `device
-    // SerialCom1 at port { reg LSR : u8 @0x3FD … }` checked with 0 errors and emitted
+    // From 2026-08-31 to today this was the third refusal in this function and the third for
+    // a reason of its own: `at normal` above asks whether it is a device access at all, `at
+    // dma` below asks which barrier, and this one asked nothing -- **it took back a wrong
+    // lowering.** `device SerialCom1 at port { reg LSR : u8 @0x3FD … }` checked with 0 errors
+    // and emitted `(((*(volatile uint8_t *)(d->basis + 1021)) >> 5) & 1u)`; `1021` is
+    // `0x3FD`, the PORT NUMBER, handed out as an offset onto a memory pointer.
     //
-    //     (((*(volatile uint8_t *)(d->basis + 1021)) >> 5) & 1u)
+    // The refusal named Rule A as its reason and put a number on it: *"zero `device … at
+    // port` in 426 files"*. **`messung/proben/probe-port-nachfrage.gab` is the one that
+    // number was waiting for** -- a 16550 at COM1, the very device the paragraph above names
+    // as its example, checking with 0 errors and 0 hints.
     //
-    // -- `1021` is `0x3FD`, the PORT NUMBER, handed out as an offset onto a memory pointer.
-    // The generated C reads RAM. *Not a missing instruction: a different instruction on a
-    // different thing.*
+    // > *Rule A has two halves and the second is quoted less often:* no construct without
+    // > measured demand -- **and no refusal without a measured defect.** Once the demand is
+    // > written, "nobody asks" is no longer a reason.
     //
-    // **And the second half of the same promise did not stand either:** `SPRACHE.md` requires
-    // `arch x86_64` at a `port` device, and the probe carried none and was accepted.
+    // WHAT `in`/`out` DEMANDS THAT A VOLATILE LOAD DOES NOT
+    // -----------------------------------------------------
+    // Five things, and each one is a refusal below or a line in `portzugriff`:
     //
-    // **What it costs: nothing.** Zero `device … at port` in 426 files (34 `mmio`, 5 `dma`).
-    // Building `in`/`out` instead would be a construct without a measured need -- Rule A --
-    // and the refusal is what keeps the promise until such a device is written.
+    // 1. **A port NUMBER, not an address.** `in`/`out` take a 16-bit unsigned port number,
+    //    in `dx` or as an 8-bit immediate -- the constraint `"Nd"` is exactly that pair. So
+    //    the handle carries a `uint16_t`, not a `volatile uint8_t *`, and the constructor
+    //    casts to the number and not to a pointer.
+    // 2. **The width picks the INSTRUCTION.** `inb`/`inw`/`inl` and `outb`/`outw`/`outl`, and
+    //    that list ends at 32 bits. **There is no 64-bit port access on x86** -- a `reg X :
+    //    u64` at a port device is refused by name below, where `at mmio` lowers it.
+    // 3. **The access is not an lvalue.** The paragraph over this function states the mmio
+    //    decision: *"the access lowers as a PLACE and not as a function pair. That way `+=`
+    //    carries itself."* `in` and `out` ARE a function pair with no place between them, so
+    //    every form that needed the place twice needs the pair written out -- and a compound
+    //    assignment, which had carried itself, is refused by name.
+    // 4. **The number must FIT.** The port space is 16 bits wide and ends there; a register
+    //    offset past `0xffff` and a base parameter wider than `u16` are both refused, because
+    //    the alternative is a silent truncation into a port that answers.
+    // 5. **The instruction is x86 and nothing else.** Hence the `arch` demand right below.
+    //
+    // **The way out already existed and this is a wiring job.** `beispiele/36-asm.gab`:18
+    // writes `outb` today through an `asm` body with `effects`, `costs`, `clobbers` and
+    // `arch x86_64`, and this emitter lowers it to `__asm__ __volatile__` with operand lists.
+    // Both constructs stood in the tree, both correct, and *that one could lower to the other
+    // belonged to neither* -- `OA4` in pure form.
     if matches!(d.raum, Raum::Port) {
-        weigere(
-            absagen,
-            d.span,
-            "`device … at port` -- the port space is reached by `in`/`out`, and this \
-             generator writes a volatile load at `basis + offset`, i.e. the PORT NUMBER as a \
-             memory offset. SPRACHE.md promises `in`/`out` here; until a program asks for one \
-             the promise is kept by refusing, not by a load that looks like an access",
-        );
-        return;
+        // **`arch x86_64` at a port device -- the second half of the same promise**, and it
+        // did not stand either. `SPRACHE.md` § *the sixth address space*: a `port` device is
+        // *"declarable only under `arch x86_64`"*, and the probe carried none and was taken.
+        //
+        // The demand is `ANNAHME_DMA`'s move one item over: the emitter does not guess which
+        // machine this is, it **demands that the unit say so**. Any clause that carries an
+        // `arch` word answers -- an `entry`, an `entrust`, a `boot`, a function, an `assume`.
+        //
+        // > *Why the demand sits at the DEVICE and not at the function that reads it.* The
+        // > `in` instruction lives in exactly one place per register: the accessor this
+        // > block emits. A body that calls `Com1_LSR_in(c)` contains portable C and nothing
+        // > else, so an `arch` word there would guard a line that needs no guarding. **The
+        // > accessor is emitted whether or not any function calls it**, which is the other
+        // > half of the same argument.
+        if !u.architekturen.contains("x86_64") {
+            let genannt: Vec<&str> = u.architekturen.iter().map(|s| s.as_str()).collect();
+            let wo = if genannt.is_empty() {
+                "this unit names no architecture at all".to_string()
+            } else {
+                format!("this unit names only `{}`", genannt.join("`, `"))
+            };
+            weigere(
+                absagen,
+                d.span,
+                &format!(
+                    "`device … at port` in a unit that does not declare `arch x86_64` -- \
+                     {wo}. A port access lowers to an `in`/`out` instruction, and that \
+                     instruction exists on x86 and nowhere else; SPRACHE.md makes a port \
+                     device declarable only under `arch x86_64`. Say the machine at an \
+                     `entry`, a `boot`, an `entrust`, a function or an `assume` -- the \
+                     emitter demands the word, it does not guess it"
+                ),
+            );
+            return;
+        }
+        // **A bank in the port space is refused, and it is a refusal BY FORM.**
+        //
+        // `bank FRR at CAP.FRO * 16 stride 16 count 256` puts its base in a register the
+        // driver reads at run time. In the memory space that is address arithmetic and the
+        // accessor carries it. In the port space the sum `base + i * stride + offset` must
+        // land inside 16 bits, and **no clause in the declaration bounds it there** -- `count`
+        // bounds the index, nothing bounds the base. Emitting the `in` anyway would truncate
+        // into a port that answers.
+        //
+        // *Rule A points the same way:* zero banks at a port device in the corpus, and the
+        // hardware the space is made of (`0x3f8`, `0xcf8`/`0xcfc`, PIC, PIT) is fixed ports,
+        // not a strided array.
+        if !d.baenke.is_empty() {
+            weigere(
+                absagen,
+                d.baenke[0].span,
+                "`bank` in a `device … at port` -- a bank base is a value read at run time, \
+                 and the port space is 16 bits wide with no clause in the declaration that \
+                 bounds `base + i * stride + offset` inside it. In the memory space that sum \
+                 is address arithmetic; here it would be a silent truncation into a port \
+                 that answers",
+            );
+            return;
+        }
+        // **The base is a port number and must fit in one.** `device Com1(basis : u64)`
+        // would hand `(uint16_t)basis` to the instruction and drop everything above bit 15
+        // without a word -- the same class of defect as the offset that stood here before,
+        // one level up.
+        if let Some(p) = d.parameter.first() {
+            match ctyp(&p.typ, u).as_deref() {
+                Some("uint8_t") | Some("uint16_t") => {}
+                Some(c) => {
+                    weigere(
+                        absagen,
+                        p.name.span,
+                        &format!(
+                            "the base of a `device … at port` is declared `{c}`, and a port \
+                             number is 16 bits -- the handle would truncate it silently. \
+                             Declare the base at `u8` or `u16`, or at a named type over one"
+                        ),
+                    );
+                    return;
+                }
+                None => {
+                    weigere(
+                        absagen,
+                        p.name.span,
+                        "the base of a `device … at port` has a type this emitter cannot \
+                         lower, and a port number is 16 bits -- the width is the question",
+                    );
+                    return;
+                }
+            }
+        }
+        for r in &d.register {
+            // **32 bits is where `in`/`out` stop.** `inb`/`inw`/`inl` is the whole list, and
+            // there is no `inq`: the port space was never widened past a doubleword. `at
+            // mmio` lowers a `u64` register to one `volatile` access; here the instruction
+            // does not exist, and two halves at two ports would be a device this declaration
+            // did not describe.
+            let breite = breite_oder_absage(&r.typ, absagen) * 8;
+            if breite > 32 {
+                weigere(
+                    absagen,
+                    r.name.span,
+                    &format!(
+                        "a {breite}-bit register at a `device … at port` -- `in`/`out` come \
+                         in `b`, `w` and `l` and stop at 32 bits; there is no 64-bit port \
+                         access on x86. Splitting it over two ports would be a device this \
+                         declaration does not describe"
+                    ),
+                );
+                return;
+            }
+            // The port number is `basis + offset` and the whole space is 16 bits, so an
+            // offset past `0xffff` cannot name a port on its own account.
+            //
+            // *Read from the collected map and not from the tree*, because the map is what
+            // `portzugriff` writes into the instruction -- checking one number and emitting
+            // another is the shape this whole refusal was written against.
+            if let Some((v, _)) = u.geraete.get(&d.name.text).and_then(|g| g.reg.get(&r.name.text)) {
+                if !(0..=0xffff).contains(v) {
+                    weigere(
+                        absagen,
+                        r.name.span,
+                        &format!(
+                            "port number {v} at a `device … at port` -- the port space runs \
+                             from 0 to 0xffff, and a number outside it names no port"
+                        ),
+                    );
+                    return;
+                }
+            }
+        }
     }
     if matches!(d.raum, Raum::Dma) && !u.annahmen.contains(ANNAHME_DMA) {
         weigere(
@@ -2928,15 +3124,169 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 .collect::<String>()
         })
         .unwrap_or_default();
+    // **A port handle carries a NUMBER, and a memory handle carries a pointer.** That is the
+    // first of the five demands over this function: `in`/`out` take a 16-bit port number, and
+    // `basis + offset` on a `volatile uint8_t *` is arithmetic on an address. *The handle is
+    // where the difference has to start, because everything below reads it.*
+    let basisfeld = if matches!(d.raum, Raum::Port) {
+        "uint16_t basis;"
+    } else {
+        "volatile uint8_t *basis;"
+    };
     aus.push_str(&format!(
-        "\ntypedef struct {{ volatile uint8_t *basis;{felder} }} {};\n",
+        "\ntypedef struct {{ {basisfeld}{felder} }} {};\n",
         d.name.text
     ));
+    if matches!(d.raum, Raum::Port) {
+        for r in &d.register {
+            portzugriff(d, r, aus, u);
+        }
+    }
     for b in &d.baenke {
         bank(d, b, aus, u, absagen);
     }
     for u2 in &d.uebergaenge {
         uebergang(d, u2, aus, u, absagen);
+    }
+}
+
+/// **The instruction letter and the operand letter for a port access of `bits` width.**
+///
+/// `inb`/`inw`/`inl` is the whole list, and the operand modifier that names the matching
+/// half of the accumulator is `b`/`w`/`k`. **Both come from the same width and they are not
+/// the same letter** -- 32 bits is `l` in the mnemonic and `k` in the operand -- so they are
+/// returned together and never spelled apart.
+///
+/// *There is no fourth row.* A wider register is refused in `geraet`, by name and with the
+/// reason: the port space stops at a doubleword.
+fn portbuchstaben(bits: u32) -> (&'static str, &'static str) {
+    match bits {
+        8 => ("b", "b"),
+        16 => ("w", "w"),
+        _ => ("l", "k"),
+    }
+}
+
+/// **`reg LSR : u8 @0x3fd` at a port device -- one reader, one writer, and the INSTRUCTION
+/// inside them** (2026-09-02).
+///
+/// ```c
+/// static inline __attribute__((unused)) uint8_t Com1_LSR_in(const Com1 *d) {
+///     uint8_t _w;
+///     __asm__ __volatile__("inb %w[tor], %b[wert]\n"
+///         : [wert] "=a" (_w)
+///         : [tor] "Nd" ((uint16_t)(d->basis + 1021u))
+///         : "memory");
+///     return _w;
+/// }
+/// ```
+///
+/// **Why a function pair and not a place.** The paragraph over `geraet` states the mmio
+/// decision and its reason: *the access lowers as a PLACE, so `+=` carries itself.* `in` and
+/// `out` are two instructions with nothing between them that a C lvalue could be, so the
+/// pair is the only shape -- and the forms that leaned on the place are refused by name at
+/// the assignment branch.
+///
+/// **Why the operands are constrained the way they are, and not more loosely.**
+///
+/// | operand | constraint | what it says |
+/// |---|---|---|
+/// | the port | `"Nd"` | an 8-bit unsigned immediate **or** `dx` -- and that pair IS the addressing mode `in`/`out` have. `0x3f8` does not fit the immediate, so the compiler picks `dx`; `0x21` fits and becomes `in $0x21, %al` |
+/// | the datum | `"a"` / `"=a"` | `in` and `out` read and write the accumulator and no other register. The constraint does not prefer it, it is the instruction |
+///
+/// **`memory` in the clobber list is the default and not the exception** (`N026`, and
+/// `beispiele/36-asm.gab` says the sentence). A port write is how a driver orders a device
+/// about; the compiler may not float a memory access across it, and `__volatile__` alone
+/// only says the block may not be deleted.
+///
+/// > **Both are emitted for every register, whatever its `class`.** `R002`/`R003` refuse a
+/// > write to a `class r` register and a read of a `class w` one, and *what the checker
+/// > decided the machine does not decide again* (W6) -- the sentence stands over `geraet`
+/// > for the mmio place and it holds here word for word. An accessor nobody calls costs an
+/// > `__attribute__((unused))` and no line of object code.
+fn portzugriff(d: &Device, r: &RegDecl, aus: &mut String, u: &Namen) {
+    let Some(g) = u.geraete.get(&d.name.text) else {
+        return;
+    };
+    let Some((versatz, breite)) = g.reg.get(&r.name.text) else {
+        return;
+    };
+    // **The fourth row does not exist, and it is REFUSED and not defaulted.** `geraet` returns
+    // before this function is reached for any register wider than 32 bits, by name and with
+    // the reason -- so the arm below covers `uint32_t` and nothing else. *A catch-all that
+    // quietly picks a width would be the shape this whole refusal was written against.*
+    let bits: u32 = match breite.as_str() {
+        "uint8_t" => 8,
+        "uint16_t" => 16,
+        "uint32_t" => 32,
+        _ => return,
+    };
+    let (befehl, op) = portbuchstaben(bits);
+    let (dev, reg) = (&d.name.text, &r.name.text);
+    let tor = format!("(uint16_t)(d->basis + {versatz}u)");
+    aus.push_str(&format!(
+        "\nstatic inline __attribute__((unused)) {breite} {dev}_{reg}_in(const {dev} *d) {{\n\
+         \x20   {breite} _w;\n\
+         \x20   __asm__ __volatile__(\n\
+         \x20       \"in{befehl} %w[tor], %{op}[wert]\\n\"\n\
+         \x20       : [wert] \"=a\" (_w)\n\
+         \x20       : [tor] \"Nd\" ({tor})\n\
+         \x20       : \"memory\");\n\
+         \x20   return _w;\n}}\n"
+    ));
+    aus.push_str(&format!(
+        "\nstatic inline __attribute__((unused)) void {dev}_{reg}_out({dev} *d, {breite} _w) {{\n\
+         \x20   __asm__ __volatile__(\n\
+         \x20       \"out{befehl} %{op}[wert], %w[tor]\\n\"\n\
+         \x20       :\n\
+         \x20       : [wert] \"a\" (_w), [tor] \"Nd\" ({tor})\n\
+         \x20       : \"memory\");\n}}\n"
+    ));
+}
+
+/// **The reading half of a device register access -- a place for `mmio`, a CALL for `port`.**
+///
+/// One function, because the two sites that need it (`ort` for an access in an expression,
+/// `uebergang` for the mirror read) would otherwise each decide the space for themselves,
+/// and a `transition` that reads through a load while `ort` reads through `in` is exactly the
+/// mixture `C001` exists to prevent.
+///
+/// `name` is the handle's C name and `pfeil` is `->` for a pointer or `.` for a value -- the
+/// same pair `ort` already carries, and the same one the bank accessor turns into an address.
+fn geraetelesung(
+    g: &Geraet,
+    name: &str,
+    pfeil: &str,
+    versatz: i128,
+    breite: &str,
+    dev: &str,
+    reg: &str,
+) -> String {
+    if matches!(g.raum, Raum::Port) {
+        format!("{dev}_{reg}_in({})", handgriff(name, pfeil))
+    } else {
+        format!("(*(volatile {breite} *)({name}{pfeil}basis + {versatz}))")
+    }
+}
+
+/// **Does this pointer target name a `device … at port` of this unit?**
+///
+/// The one question the narrowed `ptr<port, …>` refusal asks. A path is taken by its LAST
+/// segment, the way every other lookup in this emitter takes one.
+fn ist_portgeraet(ziel: &TypExpr, u: &Namen) -> bool {
+    let TypExpr::Pfad(p) = ziel else { return false };
+    p.teile
+        .last()
+        .and_then(|i| u.geraete.get(&i.text))
+        .is_some_and(|g| matches!(g.raum, Raum::Port))
+}
+
+/// The handle as a POINTER, whichever way the name holds it. `q` stays `q`, `v` becomes `&v`.
+fn handgriff(name: &str, pfeil: &str) -> String {
+    if pfeil == "->" {
+        name.to_string()
+    } else {
+        format!("&{name}")
     }
 }
 
@@ -3221,7 +3571,20 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
     }
     let _ = s;
 
-    let wort = format!("(*(volatile {breite} *)(d->basis + {versatz}))");
+    // **A `transition` in the port space writes through `out`, and reads its mirror through
+    // `in`.** The transition itself is unchanged -- it is still "these bits to these values,
+    // in ONE move" -- and only its two ends move. *`geraetelesung` is the one line that
+    // decides the read end, here and in `ort`, because a `transition` that read through a
+    // load while `ort` read through `in` would be exactly the mixture `C001` exists against.*
+    let ist_port = matches!(g.raum, Raum::Port);
+    let wort = geraetelesung(g, "d", "->", *versatz, breite, &d.name.text, &reg);
+    let schreib = |w: String| {
+        if ist_port {
+            format!("    {}_{reg}_out(d, {w});\n", d.name.text)
+        } else {
+            format!("    {wort} = {w};\n")
+        }
+    };
     aus.push_str(&format!("\n/* transition {} */\n", x.name.text));
     if let Some(p) = &x.requires {
         // **The clause is READ here and its content thrown away**, and that is measured, not
@@ -3255,12 +3618,13 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
                 weigere(absagen, m.span, "`mirrors` from a register this device does not declare");
                 return;
             };
-            aus.push_str(&format!(
-                "    {breite} _s = (*(volatile {qb} *)(d->basis + {qv}));\n\
-                 \x20   {wort} = ({breite})((_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u);\n"
-            ));
+            let spiegel = geraetelesung(g, "d", "->", *qv, qb, &d.name.text, &quelle);
+            aus.push_str(&format!("    {breite} _s = {spiegel};\n"));
+            aus.push_str(&schreib(format!(
+                "({breite})((_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u)"
+            )));
         }
-        _ => aus.push_str(&format!("    {wort} = ({breite}){neu}u;\n")),
+        _ => aus.push_str(&schreib(format!("({breite}){neu}u"))),
     }
     aus.push_str("}\n");
 }
@@ -4768,25 +5132,50 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
     }
     // **Und die `let`-gebundenen Geraetegriffe** -- `let v = Vtd(basis);`. Sie sind WERTE,
     // und der Ruf eines `transition` darauf nimmt ihre Adresse.
+    //
+    // > **And the name has to LEAVE `geraetezeiger`, which it did not until 2026-09-02.**
+    // > That map is global and conservative by TYPE: it drops a name only when two functions
+    // > declare it at two DIFFERENT device types. So a unit with
+    // >
+    // >     impl fn stand(c : ptr<mmio, rw> Com1) -> u8 { … }
+    // >     impl fn baut()  { let c = Com1(0x3f8); c.THR = b; }
+    // >
+    // > left `c -> Com1` standing in `geraetezeiger`, and `ort` asks that map FIRST -- so the
+    // > value `c` lowered to `c->basis` and `cc` said *`invalid type argument of '->'`*.
+    // > Checker silent, emitter exit 0, and the C does not build. **Measured at `178e260` on
+    // > an `at mmio` device**, so it is not new and it is not about the port space; the port
+    // > lowering only makes it louder, because there the same name goes into an accessor call
+    // > where `&c` was owed.
+    // >
+    // > *The parameter loop above already had the rule and says it in one line -- delete
+    // > first, insert second -- and this loop only did the second half.* The removal is
+    // > held back for a name this function also DECLARES as a parameter: two bindings under
+    // > one name are two questions, and this map answers one (the sentence the ghost fixpoint
+    // > above uses for the same case).
     if let FnRumpf::Block(b) = &f.rumpf {
-        fn im_block(b: &Block, u: &Namen, lokal: &mut Namen) {
+        fn im_block(b: &Block, u: &Namen, lokal: &mut Namen, parameter: &BTreeSet<String>) {
             for s in &b.anweisungen {
                 if let StmtArt::Let(l) = &s.art {
                     if let ExprArt::Ruf(r) = &l.wert.art {
                         let Some(n) = r.path().map(|p| p.text()) else { continue };
                         if u.geraete.contains_key(&n) {
+                            if !parameter.contains(&l.name.text) {
+                                lokal.geraetezeiger.remove(&l.name.text);
+                            }
                             lokal.geraetewerte.insert(l.name.text.clone(), n);
                             lokal.werte.insert(l.name.text.clone());
                         }
                     }
                 }
                 for k in crate::unterbloecke(s) {
-                    im_block(k, u, lokal);
+                    im_block(k, u, lokal, parameter);
                 }
             }
         }
+        let eigene: BTreeSet<String> =
+            f.parameter.iter().map(|p| p.name.text.clone()).collect();
         let mut gefunden = lokal.clone();
-        im_block(b, u, &mut gefunden);
+        im_block(b, u, &mut gefunden, &eigene);
         lokal = gefunden;
         lokale_lets(b, &mut lokal);
     }
@@ -5131,20 +5520,28 @@ fn funktion(
     // coarse in the safe direction; over the corpus the two sites both dereference, and a
     // rule that walked the body would need the pointer's space at every access site, which
     // the expression lowering does not carry.
+    //
+    // > **NARROWED 2026-09-02, and by exactly the sentence that set it.** The refusal named
+    // > its own condition -- *"until a `device … at port` exists to lower"* -- and one now
+    // > does. A port pointer AT a port device is the form that carries a port number: the
+    // > device declaration says which, and `portzugriff` writes the instruction. Everything
+    // > else keeps the refusal word for word, because for it nothing has changed: a plain
+    // > record field at an offset behind a port pointer is still not a port number, and
+    // > **there is still no lowering being withheld -- there is none.**
     if matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_)) {
         for p in &f.parameter {
             if let TypExpr::Zeiger(z) = &p.typ {
-                if z.raum == Raum::Port {
+                if z.raum == Raum::Port && !ist_portgeraet(&z.ziel, u) {
                     weigere(
                         absagen,
                         p.name.span,
-                        "a body that carries a `ptr<port, …>` -- the port space is reached by \
-                         `in`/`out` and not by a load, and this generator writes a load. \
-                         There is no lowering to write either: `in`/`out` take a PORT NUMBER, \
-                         and a struct field at an offset behind a pointer is not one. \
-                         SPRACHE.md promises `in`/`out` here (§ *the sixth address space*); \
-                         until a `device … at port` exists to lower, the promise is kept by \
-                         refusing and not by a load that looks like one",
+                        "a body that carries a `ptr<port, …>` at something that is not a \
+                         `device … at port` -- the port space is reached by `in`/`out` and \
+                         not by a load, and this generator writes a load. There is no \
+                         lowering to write either: `in`/`out` take a PORT NUMBER, and a \
+                         struct field at an offset behind a pointer is not one. A `device … \
+                         at port` names the port number and lowers; nothing else in the \
+                         language does",
                     );
                     return;
                 }
@@ -5869,7 +6266,9 @@ fn anweisung(
                         let lage = dev.and_then(|d| d.reg.get(&r.text));
                         let bits = dev.and_then(|d| d.felder.get(&r.text)).and_then(|m| m.get(&f.text));
                         let klasse = dev.and_then(|d| d.klassen.get(&r.text)).copied();
-                        if let (Some((versatz, breite)), Some((hi, lo, _))) = (lage, bits) {
+                        if let (Some(dv), Some((versatz, breite)), Some((hi, lo, _))) =
+                            (dev, lage, bits)
+                        {
                             if !matches!(klasse, Some(RegKlasse::LesenSchreiben)) {
                                 weigere(
                                     absagen,
@@ -5892,12 +6291,78 @@ fn anweisung(
                             }
                             let n = (hi - lo + 1) as u32;
                             let maske: u128 = if n >= 128 { u128::MAX } else { ((1u128 << n) - 1) << lo };
-                            let wort =
-                                format!("(*(volatile {breite} *)({}{pfeil}basis + {versatz}))", z.ziel.basis.text);
+                            // **The read-modify-write is the same move in both spaces, and
+                            // only its two ends differ.** `mmio` reads and writes ONE place;
+                            // `port` reads through `in` and writes through `out`, and there
+                            // is no place between them. *The word arithmetic in the middle
+                            // does not know the difference and must not learn it.*
+                            let neu = format!(
+                                "({breite})((_v & ({breite})~({breite}){maske}u) \
+                                 | (({breite})({wert}) << {lo}u & ({breite}){maske}u))"
+                            );
+                            let lesen = geraetelesung(
+                                dv,
+                                &z.ziel.basis.text,
+                                pfeil,
+                                *versatz,
+                                breite,
+                                g,
+                                &r.text,
+                            );
+                            let schreiben = if matches!(dv.raum, Raum::Port) {
+                                format!(
+                                    "{g}_{}_out({}, {neu});",
+                                    r.text,
+                                    handgriff(&z.ziel.basis.text, pfeil)
+                                )
+                            } else {
+                                format!("{lesen} = {neu};")
+                            };
                             aus.push_str(&format!(
-                                "{e}{{\n{e}    {breite} _v = {wort};\n\
-                                 {e}    {wort} = ({breite})((_v & ({breite})~({breite}){maske}u) \
-                                 | (({breite})({wert}) << {lo}u & ({breite}){maske}u));\n{e}}}\n"
+                                "{e}{{\n{e}    {breite} _v = {lesen};\n\
+                                 {e}    {schreiben}\n{e}}}\n"
+                            ));
+                            return;
+                        }
+                    }
+                }
+                // **A WHOLE port register is written through `out`, and a compound
+                // assignment to one is refused by name** (2026-09-02).
+                //
+                // This is demand 3 over `geraet` at the place where it costs something. The
+                // `mmio` lowering falls through to the generic tail below and writes
+                // `<place> op= <value>;` -- the paragraph over `geraet` says why that is
+                // right there: *the access lowers as a PLACE, so `+=` carries itself.*
+                //
+                // **In the port space there is no place**, so the generic tail would write
+                // `Com1_THR_in(c) = b;` -- a CALL on the left of an assignment, and the only
+                // reader would be `cc`. *That is the same shape as the register bit field on
+                // the left of an assignment above, and it was found the same way.* So the
+                // simple assignment becomes the `out` call, and `+=` is refused: it would be
+                // an `in` and an `out` on a register the device also writes, and which of the
+                // two sees the device's own value is not a question with an answer.
+                if z.ziel.suffixe.len() == 1 {
+                    if let Some(OrtSuffix::Feld(r)) = z.ziel.suffixe.first() {
+                        let dev = u.geraete.get(g);
+                        if matches!(dev.map(|d| &d.raum), Some(Raum::Port))
+                            && dev.is_some_and(|d| d.reg.contains_key(&r.text))
+                        {
+                            if !matches!(z.op, ZuwOp::Setzt) {
+                                weigere(
+                                    absagen,
+                                    s.span,
+                                    "a compound assignment to a port register -- `in` and \
+                                     `out` are two instructions with no place between them, \
+                                     so this would be a read and a write to a register the \
+                                     device also writes, and which of the two sees the \
+                                     device's own value is not a question with an answer",
+                                );
+                                return;
+                            }
+                            aus.push_str(&format!(
+                                "{e}{g}_{}_out({}, {wert});\n",
+                                r.text,
+                                handgriff(&z.ziel.basis.text, pfeil)
                             ));
                             return;
                         }
@@ -8277,6 +8742,18 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
             .zip(r.argumente.iter().skip(1))
             .map(|((n, _), a)| format!(", .{n} = {}", ausdruck(a, u, absagen)))
             .collect();
+        // **In the port space the base is a NUMBER and this line makes no pointer.** The
+        // sentence above -- *"the one place where the emitter turns an address into a
+        // pointer, and it stands here because the declaration says so (`at mmio`)"* -- is a
+        // statement about `at mmio` and it reads the space to say it. `at port` says
+        // something else, and the width the number must fit is refused at the declaration
+        // (`geraet`), so the cast here narrows nothing the emitter has not already judged.
+        if matches!(u.geraete.get(&name).map(|g| &g.raum), Some(Raum::Port)) {
+            return format!(
+                "({name}){{ .basis = (uint16_t)({}){rest} }}",
+                ausdruck(&r.argumente[0], u, absagen)
+            );
+        }
         return format!(
             "({name}){{ .basis = (volatile uint8_t *)(uintptr_t){}{rest} }}",
             ausdruck(&r.argumente[0], u, absagen)
@@ -8422,11 +8899,13 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
                 }
             }
         }
-        if let Some((versatz, breite)) = dev.and_then(|d| d.reg.get(&f.text)) {
-            let wort = format!(
-                "(*(volatile {breite} *)({}{pfeil}basis + {versatz}))",
-                o.basis.text
-            );
+        if let (Some(dv), Some((versatz, breite))) = (dev, dev.and_then(|d| d.reg.get(&f.text))) {
+            // **A `port` register reads through its `in` accessor, an `mmio` one through a
+            // volatile place** -- and the ONE line that decides it is `geraetelesung`, which
+            // `uebergang` reads too. The bit-field mask below is the same arithmetic either
+            // way: a field is shifted out of a word, and how the word arrived is a question
+            // that has already been answered by the time this line runs.
+            let wort = geraetelesung(dv, &o.basis.text, pfeil, *versatz, breite, g, &f.text);
             if o.suffixe.len() == 1 {
                 return wort;
             }

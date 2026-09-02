@@ -1,0 +1,40 @@
+-- erwartet: C001
+-- 656 -- **A `u64` base at a `device … at port` -- and the handle would drop 48 bits without
+-- a word.**
+--
+-- At `at mmio` the base is a physical address and `u64` is right: the handle turns it into a
+-- `volatile uint8_t *` and every bit of it survives. **At `at port` the base is a port
+-- NUMBER**, the handle carries a `uint16_t`, and the instruction takes nothing wider.
+--
+-- So `Com1(0x1_0000_03f8)` would reach `in`/`out` as `0x03f8` -- a different port, on the
+-- same run, with no diagnostic anywhere. *That is the same class as the defect this whole
+-- lowering was built to take back*: `device SerialCom1 at port` used to emit `basis + 1021`
+-- as a memory offset, and the C read RAM. **Not a missing instruction: a different
+-- instruction on a different thing** -- and here, one level up, a different port.
+--
+-- **The refusal is at the DECLARATION and not at the call.** A `narrow` at every construction
+-- site would be a run-time check for something the declaration can say once; and `u16` is not
+-- a restriction the language has to invent -- it is what the port space is.
+--
+-- > *A named type over a narrow word is accepted.* `opaque type Tor = u16;` and `basis : Tor`
+-- > lower, because `ctyp` resolves a named type to its carrier. It is the WIDTH that is
+-- > judged, not the spelling.
+
+module gift::portbasis_zu_breit {
+
+assume portraum_ist_x86 arch x86_64
+    "The port space and its `in`/`out` instructions exist on x86 and nowhere else."
+    falsifier sonde_portraum;
+
+device Com1(basis : u64) at port {
+    reg THR : u8 @0x00 class w
+}
+
+impl fn sende(c : ptr<port, rw> Com1, b : u8)
+    effects { writes c.THR }
+    costs   <= 2 ops
+{
+    c.THR = b;
+}
+
+}

@@ -2222,7 +2222,16 @@ device PciConfig at port {
 
 `at port` lowers accesses to `in`/`out` instead of to volatile loads/stores; `class`, `fields`,
 `transition`, `keeping` hold unchanged. On architectures without a port space a `port` device is
-declarable only under `arch x86_64` (D2: no silent catch-all). With that the largest site items of
+declarable only under `arch x86_64` (D2: no silent catch-all).
+
+> **Both halves of that sentence are BUILT since 2026-09-02**, and both were broken until
+> then: the emitter wrote a volatile load at `basis + offset` — the port number as a memory
+> offset — and it took a port device with no `arch` at all. The lowering, what `in`/`out`
+> demands that a load does not, and the forms that are refused by name instead are in
+> `messung/ADRESSRAEUME.md` §10; `beispiele/65-port-space.gab` is the worked example.
+> **A `bank` inside a port device is refused** — its base is read at run time and no clause
+> bounds it inside sixteen bits — and that is the one part of *"hold unchanged"* above that
+> does not. With that the largest site items of
 the count (`outb`/`inb`) are **device language instead of axioms** — the axiom layer shrinks where
 a construct carries, and that is exactly the direction the ratchet is supposed to run.
 

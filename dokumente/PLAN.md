@@ -1344,7 +1344,7 @@ führen, und genau das ist die Vertrauensform, die der Auftrag gewährt.
 > Schreiben dieses Absatzes bei ~~**14**~~; nach K100 muss dort **19** stehen, und die fünf
 > neuen müssen ihre Sonde nennen oder ihren Grund, warum es keine gibt.
 >
-> **Heute steht dort 42** *(2026-08-30, `cargo run -q --bin gabbro -- annahmen beispiele/*.gab`;
+> **Heute steht dort 44** *(2026-09-02, `cargo run -q --bin gabbro -- annahmen beispiele/*.gab`;
 > die Statustafel unten führt die Zahl mit Befehl)* — das Tor ist also nicht knapp erreicht,
 > sondern weit überschritten, und *das ist keine gute Nachricht, sondern eine Frage:* die
 > Zielzahl 19 war die Ausgangslage plus die fünf Umbuchungen. Was die übrigen siebzehn sind,
@@ -1509,7 +1509,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 |---|---|---|---|
 | `H` | 0 | **4** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ **0 verankert + 4 Absenkungen** (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
 | `L` | ≤ 4 | **2** | getragen und unbewiesen; daneben aber **6 Prämissen ohne Pass**. *Der Anstieg 1 → 2 am 2026-08-28 ist der PREIS von Zuschnitt (c):* `table.ops.erhaltung` ging von ENTWORFEN auf GETRAGEN, weil `emit.rs::ops` `insert`/`remove` jetzt ausliefert und `relabel` mit `umhaengen_faellt` absagt. **Genau diese Bewegung soll die Zahl sichtbar machen** — eine Klempnereipflicht wurde nicht erledigt, sondern in die Erzeugerfläche verschoben |
-| `A` | 19 | **42** | jede mit Sonde oder mit ausgeschriebenem Grund |
+| `A` | 19 | **44** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
 
 **`H = 0` über diesem Korpus ist nicht erreichbar, und der Grund ist kein Arbeitsrest.**

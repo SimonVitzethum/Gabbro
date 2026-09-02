@@ -1,0 +1,34 @@
+-- erwartet: C001
+-- 657 -- **`@0x10000` at a `device … at port` -- one past the end of the whole space.**
+--
+-- The port space runs from `0` to `0xffff` and there is nothing after it: the address is an
+-- operand of `in`/`out`, not a pointer, and the instruction takes sixteen bits. A register
+-- declared at `0x10000` names no port -- **it names a number that would arrive as `0x0000`**,
+-- which is a port, and which answers.
+--
+-- At `at mmio` the same offset is unremarkable: `basis + 0x10000` is 64 KiB into a mapping,
+-- and mappings that size are ordinary. *The declaration is identical; only the space word is
+-- different, and the space word is the whole difference.*
+--
+-- > **This is the one refusal of the five that `at mmio` could never have.** The other four
+-- > -- the 64-bit register, the compound assignment, the bank, the wide base -- all say
+-- > "there is no instruction for this". This one says the number is outside the alphabet.
+
+module gift::portnummer_jenseits {
+
+assume portraum_ist_x86 arch x86_64
+    "The port space and its `in`/`out` instructions exist on x86 and nowhere else."
+    falsifier sonde_portraum;
+
+device Weit(basis : u16) at port {
+    reg JENSEITS : u8 @0x10000 class rw
+}
+
+impl fn lies(w : ptr<port, rw> Weit) -> u8
+    effects { reads w.JENSEITS }
+    costs   <= 2 ops
+{
+    return w.JENSEITS;
+}
+
+}

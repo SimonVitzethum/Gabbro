@@ -1,0 +1,38 @@
+-- erwartet: C001
+-- 653 -- **A 64-bit register at a `device … at port`, and the instruction does not exist.**
+--
+-- The first of the four demands `in`/`out` makes that a volatile load does not, and the one
+-- that costs a form: **the width picks the INSTRUCTION.** `inb`, `inw`, `inl` -- and the list
+-- ends there. The port space was never widened past a doubleword, there is no `inq`, and no
+-- prefix makes one.
+--
+-- At `at mmio` this same declaration lowers without a word: `*(volatile uint64_t *)(basis +
+-- 0x10)` is one access at one address, and the width is just a type. **Here the width is a
+-- mnemonic**, and there is no mnemonic to write.
+--
+-- *Splitting it over two ports would be a device this declaration does not describe.* Which
+-- half is at which port, and in which order they must be issued, are statements about the
+-- hardware -- and a generator that invents them undoes every pass in front of it.
+--
+-- > **The refusal is by FORM and not by file.** A port device with only narrow registers in
+-- > the same unit lowers; this one register is what falls, and the message names it.
+
+module gift::vierundsechzig_bit_am_port {
+
+assume portraum_ist_x86 arch x86_64
+    "The port space and its `in`/`out` instructions exist on x86 and nowhere else."
+    falsifier sonde_portraum;
+
+device Weit(basis : u16) at port {
+    reg SCHMAL : u8  @0x00 class rw
+    reg BREIT  : u64 @0x08 class rw
+}
+
+impl fn lies_breit(w : ptr<port, rw> Weit) -> u64
+    effects { reads w.BREIT }
+    costs   <= 2 ops
+{
+    return w.BREIT;
+}
+
+}

@@ -22,9 +22,37 @@
 --
 -- *Diese Datei ist kein Beispiel und keine Giftprobe. Sie ist der Nachweis, dass die
 -- Bedingung erfuellt ist, unter der der Erzeuger seine eigene Absage aufheben darf.*
+--
+-- 2026-09-02: THE CONDITION WAS ACCEPTED, AND THE REFUSAL IS WITHDRAWN
+-- -------------------------------------------------------------------
+-- *(This addendum is in English -- the working language of 2026-09-01. The German above is
+-- the file as it was written, and it is left standing: it is the argument, not a label.)*
+--
+-- The two lines quoted above are gone. This unit now lowers, and every access in it becomes
+-- an `in`/`out` instruction:
+--
+--     c.LSR.THRE   ->   ((Com1_LSR_in(c) >> 5) & 1u)      inb %w[tor], %b[wert]
+--     c.THR = b    ->   Com1_THR_out(c, b)                outb %b[wert], %w[tor]
+--
+-- **One line of this file had to change, and it is a finding and not a formality**:
+-- `opaque type Tor = u64` became `u16`. A port number is sixteen bits, and a wider base would
+-- let the handle drop the top of it silently -- so the emitter refuses one by name
+-- (`beispiele/gift/656`). *The file asked for a lowering and the lowering asked back.*
+--
+-- WHY IT STAYS HERE AND DOES NOT MOVE TO `beispiele/`
+-- ---------------------------------------------------
+-- Because what it carries is the MEASUREMENT and not the form. Its whole text is the argument
+-- that Rule A's condition was met, and `emit.rs`, `messung/ADRESSRAEUME.md` §10 and
+-- `dokumente/PLAN-HARDWARE.md` all point here for it. Filed under `beispiele/` it would be
+-- read as one more example, and the next person asking *why was the refusal lifted* would
+-- find a UART instead of an answer.
+--
+-- **The form has its own file**: `beispiele/65-port-space.gab` is the clean example, and it
+-- carries what this one does not -- a `transition`, an acknowledgement, a bit-field
+-- read-modify-write, a whole-register read. *One file is why, the other is how.*
 module probe::uart {
 
-opaque type Tor = u64;
+opaque type Tor = u16;
 
 assume uart_leert_sich arch x86_64
     "Ein 16550 setzt THRE, sobald das Halteregister geleert ist."

@@ -2265,11 +2265,17 @@ MUTATIONEN = [
         "code",
     ),
     # -- emit.rs: das Geraet -----------------------------------------------------------
+    # **Repointed 2026-09-02 -- the line moved, the mutation stayed behind.** `at port` got a
+    # lowering, so the read of a device register is no longer written at ONE site: `ort` needs
+    # it and so does `uebergang`, and the two must not decide the space apart. The expression
+    # now lives in `geraetelesung`, and the anchor follows it there. *The mutation is the same
+    # sentence -- a register access may be optimised away -- and it is now the mmio arm of one
+    # function instead of one line in the middle of `ort`.*
     Mutation(
         "register-ohne-volatile",
         "emit.rs",
-        "                \"(*(volatile {breite} *)({}{pfeil}basis + {versatz}))\",",
-        "                \"(*({breite} *)({}{pfeil}basis + {versatz}))\",",
+        "        format!(\"(*(volatile {breite} *)({name}{pfeil}basis + {versatz}))\")",
+        "        format!(\"(*({breite} *)({name}{pfeil}basis + {versatz}))\")",
         "C-Absenkung -- ein Registerzugriff darf wegoptimiert werden",
         "code",
     ),
@@ -2335,11 +2341,18 @@ MUTATIONEN = [
         "code",
     ),
     # -- emit.rs: FALLE 4 -----------------------------------------------------------------
+    # **Repointed 2026-09-02, same cause as the device anchor above** -- and its KEY is not
+    # quoted here, because this file's guardian counts German function words and a mutation
+    # key is spelled out of the same letters as a sentence. *`pruefe-englisch.py` says so
+    # about its own commentary, and it cost that note a rewrite too.* The mirror step
+    # used to be one `push_str` with the whole line in it; a port `transition` writes through
+    # `out` and not into a place, so the word arithmetic was split off from the two ends. The
+    # anchor now sits on the arithmetic alone -- which is where the mutation always aimed.
     Mutation(
         "mirrors-vergisst-den-zustand",
         "emit.rs",
-        "                 \\x20   {wort} = ({breite})((_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u);\\n\"",
-        "                 \\x20   {wort} = ({breite})((0*_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u);\\n\"",
+        "                \"({breite})((_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u)\"",
+        "                \"({breite})((0*_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u)\"",
         "FALLE 4 -- ein nicht mitgeschriebenes Zustandsbit wird geloescht; die Einheit schaltet sich mitten im Betrieb ab",
         "code",
     ),
