@@ -54,9 +54,17 @@ LUECKEN = [
  # darueber ist nie `None`, also ist das `unwrap_or` toter Code. Verdrehen laesst sich nur
  # der Wert, den niemand nimmt.
  # Auch dieser Anker steht zweimal (`multipliziere` und `teile`) -- mit Umgebung eindeutig.
+ #
+ # **The surrounding lines were rewritten on 2026-08-20 and this anchor was not** -- found
+ # 2026-09-02. It quoted `let ecken = [a.min * b.min, ...]`, the line above the one it aims
+ # at; `multipliziere` builds `ecken` in a `checked_mul` loop since then, so `ankerstand`
+ # answered `FEHLT`. The claim itself survived the rewrite untouched -- `ecken` is still
+ # `[0i128; 4]`, so `min()` over it is still never `None` -- only the WORDING around it
+ # moved. The anchor now leans on the loop's closing braces, which is what tells this site
+ # apart from the one in `teile` today.
  (None, "typen.rs",
-  "    let ecken = [a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max];\n    let min = ecken.iter().copied().min().unwrap_or(0);",
-  "    let ecken = [a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max];\n    let min = ecken.iter().copied().min().unwrap_or(1);"),
+  "        }\n    }\n    let min = ecken.iter().copied().min().unwrap_or(0);",
+  "        }\n    }\n    let min = ecken.iter().copied().min().unwrap_or(1);"),
  ("umgebung.rs", "if z.rsplit(\"::\").next() == Some(kurz) {", "if z.rsplit(\"::\").next() != Some(kurz) {"),
  ("umgebung.rs", "BinOp::Und => i128::from(x != 0 && y != 0),", "BinOp::Und => i128::from(x != 0 || y != 0),"),
  ("umgebung.rs", "BinOp::Oder => i128::from(x != 0 || y != 0),", "BinOp::Oder => i128::from(x != 0 && y != 0),"),
@@ -224,6 +232,29 @@ zu, offen, weg, null = 0, [], 0, []
 for eintrag in LUECKEN:
     echt, d, alt, neu = einheitlich(eintrag)
     if not echt:
+        # **A NULL MUTATION WITH A DEAD ANCHOR READS EXACTLY LIKE A LIVE ONE** (2026-09-02).
+        #
+        # This branch used to `continue` above the anchor check below, so the two entries
+        # here were the only ones in the file whose anchor nobody ever asked about. And the
+        # reason it could sit undisturbed is the whole class in one sentence: an anchor that
+        # matches nothing replaces nothing, the build stays green, `cargo test` stays green,
+        # and the entry reports what a working null mutation reports. *The fixture answers
+        # the same whether it is alive or dead.*
+        #
+        # It was NOT hypothetical when this line was written. The second entry quoted a
+        # two-line snippet out of `multipliziere`; that function was rewritten to a
+        # `checked_mul` loop on 2026-08-20, and `ankerstand` answered `FEHLT` for it. Six
+        # weeks of `ALL PASS` over a fixture that had left the tree.
+        #
+        # Same call, same counter, same exit gate as the thirteen below. A null mutation is
+        # a CLAIM about a place -- that twisting it there changes nothing -- and a claim
+        # about a place that no longer exists is not weaker, it is void.
+        t = (C / d).read_text()
+        if (warum := _mp.ankerstand(t, alt)) is not None:
+            weg += 1
+            print(f"  -- ANKER {'WEG' if warum == 'FEHLT' else warum}  {d}: "
+                  f"{alt[:56]}  (NULLMUTATION)")
+            continue
         z, _ = lauf(d, alt, neu)
         null.append((d, alt, z))
         print(f"  ~~ NULLMUTATION {d}: {alt[:52]}  ({z})")

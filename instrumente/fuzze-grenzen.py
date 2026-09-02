@@ -1028,6 +1028,36 @@ def main():
         print(f"   {f:20s} {teile}")
     print()
 
+    # **WHICH STAGE THE BASELINES REACHED, printed every run** (2026-09-02).
+    #
+    # The speech test above is the whole warrant for every number in this run, and it asks
+    # `check` and nothing else -- this file starts one subprocess, `[binaer, "check", …]`.
+    # For the property measured here that is exactly right: agreement between two builds of
+    # the CHECKER needs no emitter. It stops being right the moment somebody reads a
+    # baseline out of this table as a good PROGRAM.
+    #
+    # And somebody did. `D1` (`messung/ERZEUGERSWEEP.md` §3, `beispiele/gift/641`): both
+    # `walk` templates lower to C in which a `walk` descends through a `reserved` field,
+    # which gets no accessor. `gabbro check` says `0 errors`, `cc` says `implicit
+    # declaration of function`. That was two days of green here over cases that do not
+    # compile -- and the fact lived in `fuzze-erzeuger.py`'s ledger, in the neighbour, never
+    # on this page.
+    #
+    # *A baseline is only good against the question it was asked* -- so the run says which
+    # question that was, in its own output, beside the number it warrants. The count is
+    # derived from the ladders and not typed here: a rung added to `LEITERN` moves it.
+    tief = sorted(f for f in formen if f.startswith("walk-"))
+    n_tief = sum(len(LEITERN[LEITER.get(f, "zahl")]) for f in tief)
+    print("-- HOW FAR THE BASELINES WERE VALIDATED --")
+    print("   `gabbro check` only. This file never runs `emit` and never runs `cc`;")
+    print("   the speech test above proves a baseline PARSES, not that it lowers.")
+    if tief:
+        print(f"   {n_tief} of {n} cases stand on a baseline that is known NOT to reach")
+        print(f"   `cc` -- {', '.join(tief)} (`D1`, gift/641). They are sound for the")
+        print("   agreement property and unsound as example programs. `fuzze-erzeuger.py`")
+        print("   is the tool that takes this same table one stage deeper.")
+    print()
+
     schlecht = len(panics) + len(uneinig) + len(sonst)
     if args.keep:
         print(f"   generated files kept in {arb}")
