@@ -173,8 +173,19 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # > `fuzze-erzeuger.py` found it. Two registers over one thing is usually the mistake; here
 # > they arrived from opposite ends -- a sweep over generated programs and a census over
 # > emitted forms -- and that is what makes the agreement worth something.
-MARKE_TABELLE = 67
-MARKE_UNERLAUBT = 32
+# **67 -> 66 and 32 -> 31 on 2026-09-03: the named exit above was taken, and it was taken
+# BY ITSELF.** `D1` was repaired in `emit.rs` -- a `walk` whose `down`/`leaf` names a field
+# that gets no reader is now `C001` instead of a call on an accessor nobody declares -- and
+# nothing in this file moved. The run afterwards reports ZERO hits over all nine measuring
+# switches, where the day before `-Wsign-conversion` reported one.
+#
+# **That is the check the exit was written to be**, and it is worth saying why it is a good
+# one: this counter reaches the defect from the opposite end of the tool that found it. The
+# repair was made at the `walk` lowering; the confirmation is a census over emitted C that
+# knows nothing about `walk`. *Had the mark stayed at 67, the repair would have been a
+# different repair than the one it claimed to be.*
+MARKE_TABELLE = 66
+MARKE_UNERLAUBT = 31
 
 # ---------------------------------------------------------------------------------------
 # **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price

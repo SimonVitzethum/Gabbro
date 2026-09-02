@@ -1,27 +1,54 @@
--- erwartet: cc
--- **646 -- a `section` name goes into C between quotes, and nothing escapes it.**
+-- erwartet: C001
+-- **646 -- a `section` name goes into C between quotes, and nothing escaped it.**
 --
 -- The `static` below declares a linker section whose name ends in a backslash. Gabbro's
 -- `string` rule is *quote { char } quote* with *char = any character except quote and
 -- newline* -- a backslash is an ordinary character there and means nothing. In C it means
--- the opposite, and the emitter copies the text through unchanged:
+-- the opposite, and the emitter copied the text through unchanged:
 --
 --     static uint64_t x __attribute__((section("a\"))) __attribute__((unused)) = 0;
 --
--- The backslash escapes the closing quote, the string runs on, and `cc` says *missing
--- terminating " character*. The checker said `2 items, 0 errors, 0 hints`.
+-- The backslash escaped the closing quote, the string ran on, and `cc` said *missing
+-- terminating quote character*. The checker said `2 items, 0 errors, 0 hints`.
 --
 -- **The same slot has three further shapes, all measured on 2026-09-02 and all past the
 -- checker**: an empty name and a blank one reach the ASSEMBLER, which answers *missing
 -- name*; Gabbro's own doubling form for an embedded quote lands as *junk at end of line*;
--- and a section name holding a NUL draws *null character(s) preserved in literal*. **Two of
+-- and a section name holding a NUL draws *null characters preserved in literal*. **Two of
 -- the four are found by the compiler and two only by the assembler**, which is why this file
--- carries a compiler-visible one: `tests/beispiele.rs` compiles a `-- erwartet: cc` probe
--- with `-fsyntax-only` and never assembles it.
+-- carries a compiler-visible one: `tests/beispiele.rs` compiles a poison probe with
+-- `-fsyntax-only` and never assembles it.
 --
 -- > *That asymmetry is itself the finding one level up.* A gate that stops at
 -- > `-fsyntax-only` cannot see half of what the emitter can write into a section name, and
 -- > `instrumente/fuzze-erzeuger.py` compiles with `-c` for exactly this reason.
+--
+-- THE REPAIR, 2026-09-03 -- refused, and NOT escaped, and the asymmetry above is why
+-- ---------------------------------------------------------------------------------
+-- **Escaping was the smaller change and it is the wrong one.** Doubling the backslash makes
+-- the C legal and hands the assembler a section whose name ends in one; GCC writes that
+-- name into a `.section` directive **unquoted**, so the failure simply moves from `cc` to
+-- `as`. *One tool further out is one tool fewer instruments look at* -- and the four shapes
+-- above already show that half of this slot's damage lands there, invisible to the gate
+-- this corpus actually runs.
+--
+-- So a `section` name is held to what a section name can BE: at least one character, each
+-- of them a letter, a digit, or one of `. _ - $`. That is the set the linker's own sections
+-- live in (`.text`, `.data.rel.ro`, `.init_array.65535`), and it is the set the corpus
+-- uses -- **two `section` declarations in 612 files, both `.rodata`**. All four shapes fall
+-- at `C001` now, including the two that only the assembler used to catch, and each refusal
+-- names the character it stopped at:
+--
+--     section ""        it is empty
+--     section " "       ` ` is not a name character
+--     section "a""b"    ` ` -- adjacent string literals JOIN WITH A SPACE (`erwarte_text`),
+--                       so the doubling form is not an embedded quote at all
+--     section "a<NUL>b" `\0` is not a name character
+--
+-- > **The note beside `kommentartext` had ruled this channel closed, in writing**: a Gabbro
+-- > string cannot contain a quote, so nothing can escape out of a `section` attribute. It
+-- > was open by one character nobody had thought of. *A closed channel is a claim about
+-- > every character, and it was checked against one.*
 
 module gift::section_name_that_closes_the_c_string {
 

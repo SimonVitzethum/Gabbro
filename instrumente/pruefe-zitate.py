@@ -262,7 +262,17 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # restoring `emit.rs` alone from `178e260` and re-running: **339 without it, 342 with it,
 # nothing else moved.** *Five citation sites, three candidates -- the tool counts what it
 # counts, and the difference is its own paragraph rule, not a miscount.*
-MARKE = 342
+# **342 -> 343 on 2026-09-03, and the one that came in is the same kind again.** `D6` gave
+# `section` names a rule at the emitter, and the note beside it cites the LEXER rule that
+# makes the defect possible -- the string form has no escapes, so a backslash in a section
+# name is an ordinary character in Gabbro and the opposite in C. That citation is a claim
+# about a rule issued in `lex.rs`, made in `emit.rs`, which is exactly the shape this list
+# collects. Measured by removing the one comment and re-running: **342 without it, 343 with
+# it, nothing else moved.**
+#
+# > *It is a cross-reference and not a claim in dispute*, which is the judgement this tool
+# > leaves to the reader by design -- so it is BOOKED and not argued away.
+MARKE = 343
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on

@@ -1,8 +1,8 @@
--- erwartet: cc
+-- erwartet: C001
 -- **645 -- a `static` array whose length no C object can have.**
 --
--- `[u64; 2^63 - 1]` is accepted -- the length is a `u64` and fits. The emitter writes it out
--- as the array bound and `cc` answers
+-- `[u64; 2^63 - 1]` is accepted -- the length is a `u64` and fits. The emitter wrote it out
+-- as the array bound and `cc` answered
 --
 --     size of array `A` exceeds maximum object size `9223372036854775807`
 --
@@ -15,6 +15,28 @@
 -- Found by `instrumente/fuzze-erzeuger.py`: the `array-laenge` form gave 12 non-compiling
 -- cases at the top of the ladder, and this is the lowest of them -- the last value that is
 -- still an honest `u64`.
+--
+-- THE REPAIR, 2026-09-03 -- and the number in the refusal is C's, not a choice
+-- ---------------------------------------------------------------------------
+-- A refusal, because C has no such object and there is nothing to lower to. **What the
+-- refusal has to get right is WHICH limit**, and it is not the element count: C requires
+-- the difference of two pointers into one object to be representable as a `ptrdiff_t`, so
+-- the bound is on BYTES. `9223372036854775807` is `PTRDIFF_MAX`, and it is the number GCC
+-- prints in its own message -- read off that message rather than assumed.
+--
+-- So the emitter multiplies the length by the width of the element type and compares. An
+-- element whose width it cannot name counts as **one byte**, the smallest any C object
+-- has: the rule then under-refuses rather than over-refuses, and what it lets through `cc`
+-- still catches. *The safe direction is the one where the second reader is still there.*
+--
+-- > **A neighbour this repair did NOT close, and it is worse than what it did close.**
+-- > `static mut A : [u64; 100000000] = 7;` -- a hundred million, well inside `PTRDIFF_MAX`
+-- > -- makes `gabbro emit` run without end: a non-zero initialiser is written out element
+-- > by element, on purpose (`= {5}` in C means *first five, rest zero*, which is not what
+-- > Gabbro's `= 5` means). Measured 2026-09-03: killed at 25 s with an empty output file.
+-- > **That is the emitter's third answer -- neither a lowering nor a refusal -- and the
+-- > sweep that found the six counted zero of those.** It is left open here rather than
+-- > fenced with an invented number.
 
 module gift::array_longer_than_c_can_object_to {
 

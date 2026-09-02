@@ -1,15 +1,15 @@
--- erwartet: cc
+-- erwartet: C001
 -- **641 -- a `walk` descends through a `reserved` field, and `reserved` fields get no
 -- reader.**
 --
 -- `emit.rs` writes one accessor per `format` field, and it writes NONE for a field marked
--- `reserved` -- that is what the word is for. The descent function of a `walk` lowers
+-- `reserved` -- that is what the word is for. The descent function of a `walk` lowered
 -- `down : <field> when …` into a call on exactly that accessor:
 --
 --     if (!knoten_zu(Pte_rest(it), &k)) return false;
 --
--- Nothing joins the two facts. `gabbro pruefe` says `3 items, 0 errors, 0 hints`,
--- `gabbro emit` writes the unit without a single `C001`, and `cc` says
+-- **Nothing joined the two facts until 2026-09-03.** `gabbro pruefe` said `3 items,
+-- 0 errors, 0 hints`, `gabbro emit` wrote the unit without a single `C001`, and `cc` said
 --
 --     implicit declaration of function `Pte_rest`; did you mean `Pte_praesent`?
 --
@@ -20,10 +20,27 @@
 -- does not compile for two days, under a green run. *A baseline is only good against the
 -- question it was asked.*
 --
--- > The neighbouring defect is the reason this is a probe and not a repair in passing: the
--- > right answer is not obvious. Either `reserved` grows a reader for internal use, or the
--- > CHECKER refuses a `down`/`leaf` over a field that has none. The second is the smaller
--- > claim and it belongs to whoever owns the descent rules.
+-- THE REPAIR, 2026-09-03 -- a refusal and not a reader
+-- ---------------------------------------------------
+-- Two answers were on the table: grow a reader for `reserved` fields, or refuse a
+-- `down`/`leaf` over a field that has none. **The second one landed, and the reason is
+-- that the first contradicts the word.** `reserved` is the one way a format says *these
+-- bits exist and nobody reads them*; writing a reader for them makes the declaration mean
+-- nothing, and `emit.rs` already refuses `in a .. b` at a `reserved` field for exactly
+-- this reason -- *"a reserved field has no reader, so there is no place at which the bound
+-- could be established"*. A repair that made `reserved` readable would have had to undo
+-- that rule too.
+--
+-- So `Namen` now carries `formatfelder`: per format, the fields that GET a reader, built
+-- by the same `!reserviert` condition `format_` lowers by. `walk_` looks the descent field
+-- up instead of spelling its C name, and `ausdruck_eintrag` does the same for every
+-- `it.<field>` of `down … when` and `leaf`. **A misspelt field lands in the same refusal**,
+-- and it was reaching `cc` the same way.
+--
+-- > The second reader of this defect was `instrumente/zaehle-c-formen.py`, whose 67th C
+-- > form -- `implizite umwandlung` -- was its SHADOW: C assumes `int` for an undeclared
+-- > callee, and `int -> uint64_t` is the conversion. That mark stood at 67/32 with a named
+-- > exit back to 66/31 on the day this was fixed.
 
 module gift::descent_over_a_field_with_no_reader {
 

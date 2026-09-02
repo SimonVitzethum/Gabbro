@@ -1,0 +1,50 @@
+-- **`u64::MAX` in a `return`, and the `u` the emitter now writes onto it.**
+--
+-- This file was `beispiele/gift/643-an-unsuffixed-literal-past-the-signed-end.gab` and it
+-- was a poison probe under `-- erwartet: cc`. **It is not poison any more**: the program
+-- was always correct Gabbro, the emitter was writing C that no compiler would take, and on
+-- 2026-09-03 it stopped. So the file moved here and became the regression probe for the
+-- repair -- `pruefe-emission.sh` stage 9 compiles it under `-Werror` at every run.
+--
+-- WHAT IT WAS
+-- -----------
+-- The emitter suffixes in many places -- `#define K 7u`, `i * 8u`, `& 1099511627775u` --
+-- and in the ordinary expression path it did not. A bare decimal constant in C takes the
+-- first of `int`, `long`, `long long` that can hold it; `2^64 - 1` fits none of them, so
+-- GCC gives it `unsigned long` and says so:
+--
+--     integer constant is so large that it is unsigned [-Werror]
+--
+-- The value is legal Gabbro (`u64` reaches exactly this far) and it is legal C -- with the
+-- suffix. Without one, the tree's own compile gate refused the unit.
+--
+-- **This was the widest of the six emitter findings of 2026-09-02**: 54 cases over NINE
+-- forms, every one of them a place where a literal reaches C through the same door --
+-- `return`, `if`, `let`, `static … =`, an assignment, a `bank at`, a `reason` code, an
+-- array length, a `walk` node count. *One missing character, nine slots.*
+--
+-- WHY THE SUFFIX IS ADDED ONLY WHERE IT IS NEEDED
+-- ----------------------------------------------
+-- The finding named the risk itself: `-Wconversion` and `-Wsign-conversion` read the same
+-- literals -- `zaehle-c-formen.py` runs both over the whole corpus -- *so a suffix added
+-- without measuring the whole corpus trades this error for a different one.*
+--
+-- So `czahl` writes the `u` **only past `2^63 - 1`**, where C needs one and where no
+-- corpus literal stood. Measured rather than argued: the emitted C of all 612 versioned
+-- `.gab` files was dumped before and after, and exactly four files differ -- this one and
+-- the three probes of the neighbouring repairs. **Below the boundary the C is byte
+-- identical.**
+--
+-- > *Past `2^64 - 1` there is no suffix to write either*, and `czahl` says so with a
+-- > refusal instead of a spelling. That is the door `beispiele/gift/644` stands at.
+
+module probe::unsuffixed_literal_past_the_signed_end {
+
+impl fn g() -> u64
+    effects { pure }
+    costs   <= 2 ops
+{
+    return 18446744073709551615;
+}
+
+}

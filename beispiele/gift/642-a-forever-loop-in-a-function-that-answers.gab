@@ -1,9 +1,9 @@
--- erwartet: cc
+-- erwartet: C001
 -- **642 -- a `forever` loop is the whole body of a function that returns a value.**
 --
 -- The loop never leaves, so Gabbro needs no `return` after it, and the checker is right to
--- say so: `5 items, 0 errors, 0 hints`. The emitter lowers it to `for (;;) { … }` and stops
--- there, which is the shape a C programmer would write by hand -- and
+-- say so: `5 items, 0 errors, 0 hints`. The emitter lowered it to `for (;;) { … }` and
+-- stopped there, which is the shape a C programmer would write by hand -- and
 -- `cc -std=c11 -Wall -Wextra -Werror` answers
 --
 --     no return statement in function returning non-void [-Werror=return-type]
@@ -11,8 +11,7 @@
 -- **GCC's `-Wreturn-type` is syntactic at the front end**, measured on the plain C beside
 -- the generated file: `static uint64_t g(void) { for (;;) { x = 1; } }` draws the same
 -- error with no Gabbro anywhere near it. So this is not a quirk of what the emitter wrote
--- around the loop; it is the gate this folder compiles every unit under, and the emitter
--- does not clear it.
+-- around the loop; it is the gate this folder compiles every unit under.
 --
 -- **The corpus never showed it, and the reason is measurable**: `pruefe-emission.sh`
 -- reports 117 of 117 units compiling, and not one of them puts a `forever` in a function
@@ -24,9 +23,30 @@
 -- > exactly the class a form-wise sweep is good at showing: one answer at every rung means
 -- > the finding sits in the FORM.
 --
--- The lowering that would clear it is a one-liner (`__builtin_unreachable();` after the
--- loop, in the same family as the `__attribute__((unused))` the emitter already writes),
--- and the day it lands this file goes red and asks to be re-classified.
+-- THE REPAIR, 2026-09-03 -- a refusal that names a word the language already has
+-- -----------------------------------------------------------------------------
+-- `__builtin_unreachable();` after the loop was the candidate the finding named, and it
+-- lowers a declaration that is not true. **`-> u64` says this function hands back a `u64`,
+-- and nothing here ever does.** `never` is in the vocabulary, `M2` reads it, and
+-- `prototyp_kern` has lowered it to `_Noreturn void` since the day `exit()` got one. The
+-- same file with `-> never` and `diverges` in its effects was written out and run before
+-- the rule was built: checker silent, emitter exit `0`, `cc` silent. *So this is the one
+-- case where refusing beats lowering -- the refusal points at a form the author can write.*
+--
+-- **And the rule is GCC's own, on purpose: a body that holds no `return` ANYWHERE.** Not a
+-- reachability analysis and not pretending to be one. That makes it exact in both
+-- directions at once:
+--
+--     for (;;) { x = 1; }        no `return` in the body   -- both refuse
+--     for (;;) { return 1; }     a `return` in the body    -- both accept
+--
+-- A `forever` with a `return` inside it answers, and nothing here touches it.
+--
+-- > **The defect turned out to be wider than the loop that carries it**, measured the same
+-- > day: `impl fn g() -> u64 { erledigt = 1; }` -- no loop anywhere -- reached `cc` with the
+-- > same error under `0 errors` and exit `0`. One rule covers both, because it is one rule.
+-- > Over the 612 `.gab` files of the tree the new refusal changes the answer for exactly
+-- > this one.
 
 module gift::forever_in_a_function_that_answers {
 

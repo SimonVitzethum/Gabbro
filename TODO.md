@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 179 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 181 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *178 → 179 on 2026-09-02: `messung/LEAN-REICHWEITE.md` joined — how far the Lean channel
       reaches over an ARBITRARY program (10 of 44 `body-effect` obligations). **The same lane
       that wrote the document was the one the mark moved for**, and the cause was measured the
@@ -561,8 +561,7 @@ darunter.
       the file came back. Worth booking beside it: the first check of this guardian in that
       lane read `$?` after a pipe into `tail` and so measured `tail` — **the guardian had been
       red for twenty minutes behind a green-looking number.** `${PIPESTATUS[0]}` is the reading,
-      and `abnahme.py` is the tool that does not have this hole.*
-      *176 → 177 on 2026-09-02: `messung/BERICHT-UEBERSETZERFAMILIE.md` joined — the report on
+      and `abnahme.py` is the tool that does not have this hole.*      *176 → 177 on 2026-09-02: `messung/BERICHT-UEBERSETZERFAMILIE.md` joined — the report on
       why the two-family probe saw nothing. **The guardian named the carry before a reader did**
       (`pruefe-zahlen.py`, `176` against a run of `177`), and the cause was measured the way
       this file asks for: the new document was removed, the run went green, the document came
@@ -785,7 +784,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3163 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3178 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
       2134, als `manifest.rs` mit zwei Fortsetzungen weniger auskam.* **Die Zahl bewegt sich
