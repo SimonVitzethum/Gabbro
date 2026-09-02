@@ -2128,6 +2128,44 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       > etwas, das keine Bahn schließt. *Eine Zahl, deren Kategorien man nicht kennt, ist
       > `W25` mit einem Prozentzeichen.*
 
+      ---
+
+      **GEMESSEN am 2026-09-02, und die Zerlegung verschiebt die Grenze — zu Gabbros
+      Gunsten.** Gegenstand: `messung/treiber/virtio-net.gab` (157 Zeilen ohne Kommentar)
+      gegen `../caprock-messbasis/crates/caprock-virtio` (`net.rs` 155, `lib.rs` 347,
+      `owned.rs` 122 Zeilen ohne Kommentar). *Gezählt werden FÄHIGKEITEN, nicht Zeilen — ein
+      Zeilenverhältnis zwischen zwei Sprachen misst Wortreichtum.*
+
+      **Kategorie B ist kleiner, als der Posten annahm, und zwei Fälle fallen heraus:**
+
+      | | angenommen | gemessen |
+      |---|---|---|
+      | Speicherordnung (`fence()` vor dem Index) | hängt am C-Ziel | **nein** — `publishes … release` senkt zu `atomic_store_explicit(&AVAIL_IDX, …, memory_order_release)` ab |
+      | PCI-Konfigurationsraum (`probe_ecam`) | Port-I/O, hängt am C-Ziel | **nein** — ECAM ist speichereingeblendet, also `at mmio` mit berechneter Basis. Nur ungeschrieben |
+      | Legacy-PCI (`0xCF8`/`0xCFC`), `invlpg`/`TLBI`, Shootdown | hängt am C-Ziel | **ja** — und dafür steht `asm` bereit, unverdrahtet (`B5`) |
+
+      > **Die Barriere war der teuerste Posten in B, und sie ist keiner.** C11 drückt
+      > Erwerben und Freigeben vollständig aus; über den ganzen sauberen Korpus schreibt der
+      > Erzeuger **74 Ordnungsprimitive** (23 `release`, 15 `acquire`, 36 `relaxed`). *Was C
+      > nicht kann, ist eine BEFEHLSebene — nicht ein Speichermodell.*
+
+      **Und eine Fehlmessung von mir gehört mit hierher:** mein erster Griff suchte
+      `fence|barrier|mfence|sfence|__sync` im erzeugten C, fand null und hätte *„der Treiber
+      emittiert keine Barriere"* gebucht. Der Erzeuger schreibt sie als C11-Atomar, und mein
+      Muster kannte die Schreibweise nicht. **`W16`, im Zerlegungswerkzeug selbst** — und der
+      Grund, dass es auffiel, war, den Rumpf zu LESEN statt die Zahl zu glauben.
+
+      **Was in Kategorie C bleibt, ist nach dieser Messung genau ein Posten:** die
+      Eigentumsübergabe. Caprock schreibt `reclaim(buf : Owned<Device>) -> Owned<Driver>`,
+      also einen Zustandsübergang eines Besitzrechts. Gabbro hat `own[@marke]` und lineare
+      Werte — **aber ob Eigentum ÜBERGEBEN werden darf, fragt bis heute niemand**
+      (`R004`/`R007`, und `R013` hat es am 2026-09-02 ausdrücklich stehen lassen).
+
+      *Nicht gemessen:* ob die übrigen Transportfähigkeiten (`poll_used`, `reclaim`, `kick`
+      an berechnetem Versatz) in Gabbro schreibbar sind — sie stehen nur nicht in der Datei,
+      und **ungeschrieben ist nicht unausdrückbar.** Diese Trennung braucht einen zweiten
+      Durchgang, und ohne sie ist die Zahl 75 % weiter ein Quotient ohne Kategorien.
+
 ### Punkt 4 fällt — sobald jemand die Teilmenge prüft
 
 **CompCert schließt genau diese Lücke**, und das ist die realistische Antwort. Die Bedingung
