@@ -539,7 +539,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 173 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 174 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *168 → 169 am 2026-09-01: `messung/PHASENKONSTRUKT.md` kam dazu — die Nachrechnung von
       `§42`, die selbst zwei Widerrufe buchte (die Tafel über dem Giftkorpus, und `§43`s
       „trivial"). **Ein Dokument, das Widerrufe schreibt, hebt den Nenner, gegen den sie
@@ -758,7 +758,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3059 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
+      Heute **3060 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
       das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
@@ -1179,6 +1179,47 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       im Register und wird bei jedem Lauf neu abgeleitet.*
 
 ### Checker and generator
+
+- [ ] **SECHS Erzeugerfehler stehen offen, gemessen 2026-09-02 von
+      [`instrumente/fuzze-erzeuger.py`](instrumente/fuzze-erzeuger.py), Zahlen und Reproduktion
+      in [`messung/ERZEUGERSWEEP.md`](messung/ERZEUGERSWEEP.md).** Von 3517 angenommenen
+      Faellen brechen **342** die Zusage `C001` (*„der Erzeuger sagt ab, statt zu raten"*):
+      273 senken zu C ab, das unter `cc -std=c11 -O0 -Wall -Wextra -Werror -c` nicht
+      uebersetzt, und 69 tragen eine andere Zahl als die Quelle nannte.
+      | | Fehler | Probe | Faelle |
+      |---|---|---|---:|
+      | **D1** | ein `walk` steigt durch ein `reserved`-Feld ab, das keinen Leser bekommt | `gift/641` | 130 |
+      | **D2** | eine `forever`-Schleife ist der ganze Rumpf einer antwortenden Funktion | `gift/642` | 65 |
+      | **D3** | ein Ganzzahlliteral ohne `u`-Suffix, an NEUN Stellen | `gift/643` | 54 |
+      | **D4** | ein Literal breiter als jeder C-Ganzzahltyp erreicht das C | `gift/644` | 30 |
+      | **D5** | eine Feldlaenge jenseits von C's groesstem Objekt | `gift/645` | 4 |
+      | **D6** | ein `section`-Name, den nichts maskiert (vier Gestalten) | `gift/646` | 6 |
+      **Jede traegt `-- erwartet: cc`, also beide Richtungen**: der Pruefer muss schweigen und
+      `cc` muss abweisen. Der Tag, an dem eine geheilt wird, macht ihre Probe rot und verlangt
+      die Umbuchung. *`D1` ist der teuerste, und zwar wegen seines Ortes: die zwei
+      `walk`-Schablonen von `fuzze-grenzen.py` tragen ihn an ihrem eigenen BEKANNT-GUTEN
+      Grundwert, und jener Lauf prueft seine Grundlinie nur gegen den Pruefer.*
+
+- [ ] **Die `C001`-Meldung zu `aligned` ist ueber SICH SELBST falsch, gemessen 2026-09-02.**
+      Sie lautet *„`sizeof` / `aligned` outside a `format` predicate -- inside one they lower
+      against the buffer (`v->len`)"*. **Innerhalb eines `format`-Praedikats senkt `aligned`
+      nicht ab -- es faellt dort mit derselben Absage.** Gemessen an
+      `format F { adr : u64 @[63:0] where aligned(adr, 0), }`: `2 items, 0 errors, 0 hints`
+      beim Pruefer, `C001` beim Erzeuger, mit genau diesem Text. `ausdruck_format` schickt
+      jedes `Eingebaut` ausser `lenof` an `ausdruck`, und der sagt ab.
+      *Eine Absage, die eine Stelle nennt, an der es angeblich ginge, schickt den Leser
+      dorthin -- und dort geht es auch nicht.* **Die billige Haelfte ist der Satz; die teure
+      ist die Frage, ob `aligned` dort absenken SOLL** (dann ist die Meldung eine
+      Bauanleitung) oder nicht (dann gehoert der Halbsatz weg).
+
+- [ ] **`aligned(p, 0)` und `aligned(p, 3)` -- die Absage steht, der GRUND nicht** (aus
+      [`messung/AUDIT-2026-09-02.md`](messung/AUDIT-2026-09-02.md) 7.7 Punkt 2, am 2026-09-02
+      gemessen statt vermutet). Der Erzeuger sagt beide beim Namen ab, 94 von 94 angenommenen
+      Sprossen -- aber mit *„`aligned` ausserhalb eines `format`-Praedikats"*. **Die Zusage
+      haelt aus einem Grund, der mit der Ausrichtung nichts zu tun hat**, und sie faellt in
+      dem Augenblick weg, in dem `aligned` dort absenkt. *Der „Modulo durch null", den das
+      Audit nennt, EXISTIERT heute nicht* -- er ist eine Aussage ueber eine Absenkung, die
+      niemand geschrieben hat.
 
 - [ ] **Ein Ruf ins Leere in einem PRÄDIKAT ist still — gemessen 2026-08-28 bei «B13».**
       Dieselbe erfundene Funktion an drei Stellen, eine Probe durch den unveränderten Prüfer:

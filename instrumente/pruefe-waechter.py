@@ -115,6 +115,18 @@ SCHWER = {
     "zaehle-probenzweige.py":
         "faehrt 43 Instrumente unter `sys.settrace` -- darunter diese Abnahme, die ihn "
         "wieder faehrt; 2 min 11 s ohne sie (2026-09-01)",
+    # **Not expensive -- 10,2 s wall over 5889 cases on `fisch` -- but it needs THREE things
+    # the machine may not have**: a debug binary, a RELEASE binary, and `cc`. Missing any of
+    # them it leaves with 2 and has measured nothing, and the quick run above would book that
+    # `RUECKLAUFWERT-2` as a finding about the tree. *The same case as `zaehle-c-formen.py`
+    # and `pruefe-umwandlungen.py`: "ran" and "measured" come apart at a precondition.*
+    #
+    # > `fuzze-grenzen.py` carries the same precondition (two profiles) and is NOT booked
+    # > here. That is left as it stands rather than corrected in passing -- it is another
+    # > lane's line, and a booking added from the side is a booking nobody measured.
+    "fuzze-erzeuger.py":
+        "braucht BEIDE Bauprofile und `cc`, sonst Ruecklaufwert 2 und NICHTS gemessen; "
+        "5889 Faelle, 10,2 s Wanduhr / 85 s CPU auf `fisch` (2026-09-02)",
 }
 # **WHAT AN OMITTED GUARDIAN TAKES WITH IT -- in its OWN unit** (2026-08-31).
 #

@@ -8156,3 +8156,151 @@ fn der_erzeuger_liest_kein_literal_falsch() {
     );
     assert!(c.contains("vector 128"), "the ordinary vector must survive:\n{c}");
 }
+
+/// **`table count 0` -- both halves of one zero, and both directions of each.**
+///
+/// The class: every position where a Gabbro literal becomes a size, a count, a stride, a
+/// scale or a divisor, and zero is meaningless rather than merely small. It already had four
+/// members before anyone saw it was a class -- `N010` (`stride 0`), `N014` (`per cpu 0`),
+/// `M102` (a zero divisor) and `C001` (`[T; 0]` at a `static`, at a slot field, at a `walk`
+/// node, and `walk levels 0`). **Eight positions were measured on 2026-09-02 and exactly two
+/// escaped**; this is the one that reached the artefact as an out-of-bounds read.
+///
+/// It escaped through a FILTER and not through a missing rule: `umgebung.rs` recorded a
+/// table's capacity with `.filter(|n| *n > 0)`, so `count 0` went into the map not as zero
+/// but not at all -- and `M103` reads a `laenge: None` as *no bound*, not as *empty*.
+///
+/// > *A zero dropped is a zero unchecked.* The same shape as `konst_zahl`'s `as i128`, one
+/// > map further out: a conversion that turns a KNOWN fact into a MISSING one.
+///
+/// Measured before the repair: `gabbro pruefe` gave `3 items, 0 errors, 0 hints` and the
+/// emitter wrote `T_speicher.slots[0].a` against a `T_slot slots[0]`. The same index at the
+/// same zero fell on a `static [u64; 0]` and on a `bank ... count 0` the whole time.
+///
+/// Poison probe `beispiele/gift/647`; found by `instrumente/fuzze-erzeuger.py`.
+#[test]
+fn die_leere_tabelle_hat_eine_schranke_und_kein_erzeugnis() {
+    let pruefen = |q: &str| {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        gabbro_check::pruefe(&b, &mut a);
+        let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+        codes.join(",")
+    };
+    let emittieren = |q: &str| {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let c = gabbro_check::emit::emittiere(&b, &mut a);
+        let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+        (c, codes.join(","))
+    };
+
+    // 1. THE CHECKER. An index into an empty table has a bound now, and it is zero.
+    let leer = "module p {\n\
+                table T count 0 { slot { a : u32, } }\n\
+                impl fn g() -> u32\n    effects { reads T.slots }\n    costs   <= 2 ops\n{\n\
+                \x20   return T.slots[0].a;\n}\n}";
+    assert!(
+        pruefen(leer).contains("M103"),
+        "an index into a `count 0` table must fall -- the array has no element 0: {}",
+        pruefen(leer)
+    );
+
+    // The counter-direction, and it is the one a careless repair breaks: a table with slots
+    // must still accept an index inside it, and must still refuse one outside.
+    let voll = |i: &str| {
+        format!(
+            "module p {{\n\
+             table T count 8 {{ slot {{ a : u32, }} }}\n\
+             impl fn g() -> u32\n    effects {{ reads T.slots }}\n    costs   <= 2 ops\n{{\n\
+             \x20   return T.slots[{i}].a;\n}}\n}}"
+        )
+    };
+    assert!(
+        !pruefen(&voll("7")).contains("M103"),
+        "index 7 of a `count 8` table is inside it: {}",
+        pruefen(&voll("7"))
+    );
+    assert!(
+        pruefen(&voll("8")).contains("M103"),
+        "index 8 of a `count 8` table is outside it: {}",
+        pruefen(&voll("8"))
+    );
+
+    // 2. THE EMITTER. The declaration alone -- no index anywhere -- must not become a
+    //    zero-size array. ISO C forbids one; GCC takes it as an extension and says nothing
+    //    under `-Wall -Wextra -Werror`, so `cc` is not the reader here.
+    let (c, codes) = emittieren("module p { table T count 0 { slot { a : u32, } } }");
+    assert!(
+        codes.contains("C001") && !c.contains("slots[0]"),
+        "`table count 0` must be refused by name, not lowered to `slots[0]`: {codes} / {c}"
+    );
+
+    // The same zero through a `const`, which is the path `N010` does NOT cover for `stride`.
+    let (c, codes) =
+        emittieren("module p { const K : u32 = 0; table T count K { slot { a : u32, } } }");
+    assert!(
+        codes.contains("C001") && !c.contains("slots[K]"),
+        "a `count` naming a zero `const` is the same zero: {codes} / {c}"
+    );
+
+    // And the counter-direction: a table with slots still lowers, with its length in it.
+    let (c, codes) = emittieren("module p { table T count 8 { slot { a : u32, } } }");
+    assert!(
+        !codes.contains("C001") && c.contains("slots[8]"),
+        "a `count 8` table must still lower: {codes} / {c}"
+    );
+}
+
+/// **`embeds ... scale 0` -- MEASURED and NOT repaired, and this test is the booking.**
+///
+/// The other zero that escaped on 2026-09-02, and it is deliberately a different rule from
+/// the one above. An empty table is an empty DOMAIN: every statement over it holds vacuously,
+/// which is `N010`'s argument. A scale is not a domain -- the statements about the field are
+/// not vacuous, they are WRONG. *One code over both would make every probe on it
+/// retroactively ambiguous, so this one keeps its own sentence and waits for a decision.*
+///
+/// What escapes: the extraction is performed and thrown away, so every record yields address
+/// zero. The checker says nothing at the declaration or at a use, the emitter writes no
+/// `C001`, and `cc -std=c11 -Wall -Wextra -Werror` is silent -- multiplying by a literal zero
+/// is legal C. **No reader exists for it, which is why this characterisation test does.**
+///
+/// It pins TODAY's behaviour, so it goes red the day someone refuses the scale, and asks to
+/// be rewritten into a code assertion then. Found by `instrumente/fuzze-erzeuger.py`, net 7;
+/// recorded in `messung/AUDIT-2026-09-02.md` 7.7 item 4 and `messung/ERZEUGERSWEEP.md` 9.
+#[test]
+fn ein_massstab_von_null_liest_nichts_und_niemand_sagt_es() {
+    let c_von = |scale: &str| {
+        let q = format!(
+            "module p {{\n\
+             format F endian little {{\n\
+             \x20   lo     : u64 @[11:0] reserved,\n\
+             \x20   rahmen : u64 embeds [51:12] scale {scale},\n\
+             \x20   hi     : u64 @[63:52] reserved,\n\
+             }}\n}}"
+        );
+        let (b, mut a) = gabbro_syntax::lies("p.gab", &q);
+        gabbro_check::pruefe(&b, &mut a);
+        let c = gabbro_check::emit::emittiere(&b, &mut a);
+        let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+        (c, codes.join(","))
+    };
+
+    let (c, codes) = c_von("0");
+    assert!(
+        codes.is_empty(),
+        "BOOKING EXPIRED -- something now refuses `scale 0` ({codes}). That is the repair \
+         this test was waiting for: rewrite it to assert the code, take the line out of \
+         `GEBUCHT` in `instrumente/fuzze-erzeuger.py`, and correct \
+         `messung/ERZEUGERSWEEP.md`."
+    );
+    assert!(
+        c.contains("* 0u"),
+        "the booked defect is that the reader multiplies by zero; it no longer does:\n{c}"
+    );
+
+    // The counter-direction: an ordinary scale reaches the reader as itself.
+    let (c, codes) = c_von("4096");
+    assert!(
+        codes.is_empty() && c.contains("* 4096u"),
+        "an ordinary scale must survive as itself: {codes}\n{c}"
+    );
+}

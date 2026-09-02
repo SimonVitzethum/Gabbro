@@ -2381,6 +2381,30 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         weigere(absagen, t.span, "table without `count` -- the array would have no size");
         return;
     };
+    // **`count 0` -- and this arm exists because every SIBLING zero already had one.**
+    //
+    // The emitter refuses a `static` array of length zero, a slot field of length zero, a
+    // `walk` node array of length zero and `walk levels 0`. It wrote `T_slot slots[0];` for a
+    // table, which ISO C forbids and GCC takes as an extension -- so `cc -Wall -Wextra
+    // -Werror` said nothing and `-Wpedantic` said *ISO C forbids zero-size array*.
+    //
+    // > *The table was the one zero-length array with no arm, not the one with a reason.*
+    //
+    // Measured 2026-09-02 by `instrumente/fuzze-erzeuger.py`; the poison probe is
+    // `beispiele/gift/647`. **The other half of the same zero is in `umgebung.rs`**, where a
+    // `count 0` was FILTERED OUT of the capacity map -- so `M103` had no bound to read and
+    // `T.slots[0]` on an empty table gave `0 errors`. *A zero dropped is a zero unchecked.*
+    if konst_zahl(n) == Some(0)
+        || matches!(&n.art, ExprArt::Ort(o) if u.konstwert.get(&o.text()) == Some(&0))
+    {
+        weigere(
+            absagen,
+            t.name.span,
+            "`table` with `count 0` -- C has no zero-size array, and every statement over an \
+             empty table holds vacuously",
+        );
+        return;
+    }
     aus.push_str(&format!("\ntypedef struct {{\n"));
     if let Some(slot) = &t.slot {
         for f in &slot.felder {

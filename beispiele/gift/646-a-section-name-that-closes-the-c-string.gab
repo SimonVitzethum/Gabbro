@@ -1,0 +1,30 @@
+-- erwartet: cc
+-- **646 -- a `section` name goes into C between quotes, and nothing escapes it.**
+--
+-- The `static` below declares a linker section whose name ends in a backslash. Gabbro's
+-- `string` rule is *quote { char } quote* with *char = any character except quote and
+-- newline* -- a backslash is an ordinary character there and means nothing. In C it means
+-- the opposite, and the emitter copies the text through unchanged:
+--
+--     static uint64_t x __attribute__((section("a\"))) __attribute__((unused)) = 0;
+--
+-- The backslash escapes the closing quote, the string runs on, and `cc` says *missing
+-- terminating " character*. The checker said `2 items, 0 errors, 0 hints`.
+--
+-- **The same slot has three further shapes, all measured on 2026-09-02 and all past the
+-- checker**: an empty name and a blank one reach the ASSEMBLER, which answers *missing
+-- name*; Gabbro's own doubling form for an embedded quote lands as *junk at end of line*;
+-- and a section name holding a NUL draws *null character(s) preserved in literal*. **Two of
+-- the four are found by the compiler and two only by the assembler**, which is why this file
+-- carries a compiler-visible one: `tests/beispiele.rs` compiles a `-- erwartet: cc` probe
+-- with `-fsyntax-only` and never assembles it.
+--
+-- > *That asymmetry is itself the finding one level up.* A gate that stops at
+-- > `-fsyntax-only` cannot see half of what the emitter can write into a section name, and
+-- > `instrumente/fuzze-erzeuger.py` compiles with `-c` for exactly this reason.
+
+module gift::section_name_that_closes_the_c_string {
+
+static mut x : u64 = 0 section "a\";
+
+}

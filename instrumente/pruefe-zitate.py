@@ -246,7 +246,15 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # base; the merged tree measures 337. *Fourth time this week that a mark moved by two lanes is
 # neither lane's number* -- the citation sets do not overlap, so neither picking nor adding
 # lands on it. Measuring the MERGED tree is the only thing that does.
-MARKE = 337
+#
+# **337 -> 339 on 2026-09-02, and the CAUSE was measured before the number was written here.**
+# The zero-class repair (`table count 0`) put two comments beside foreign rules: `emit.rs`'s
+# new `count 0` arm cites `M103` and `umgebung.rs`, and `umgebung.rs`'s capacity map cites
+# `M103` again. Measured by restoring exactly those two files from the commit before and
+# re-running: **337 without them, 339 with them, nothing else moved.** *Two citations, and
+# both are the kind this tool exists to make visible -- a comment in the EMITTER claiming what
+# a CHECKER rule does.*
+MARKE = 339
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries 340 mutations, and every one of them holds a

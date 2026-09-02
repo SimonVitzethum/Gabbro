@@ -1,0 +1,32 @@
+-- erwartet: cc
+-- **644 -- `embeds … scale N` with an `N` that is wider than every C integer type.**
+--
+-- An embedded pointer field is a bit range and a multiplier, and the emitter writes the
+-- multiplier into the reader as a literal:
+--
+--     static inline uint64_t F_rahmen(const F *v) {
+--         return (uint64_t)((((uint64_t)gabbro_le64(v->bytes + 0) >> 12) & 1099511627775u)
+--                           * 18446744073709551616u); }
+--
+-- `2^64` has no C type. `cc` says *integer constant is too large for its type*, and the
+-- checker said `2 items, 0 errors, 0 hints` about the same file.
+--
+-- **This is the `konst_zahl` family with the cast repaired and the QUESTION still open.**
+-- On 2026-09-02 `emit.rs::konst_zahl` was changed from `Some(*n as i128)` to
+-- `i128::try_from(*n).ok()`, which stopped the emitter writing `-1` for `2^128 - 1`. It did
+-- not stop it writing `2^64`: that value fits `i128` perfectly well, so `konst_zahl` hands
+-- it over, and the next 64 bits of the journey have no owner. *A repair at the reader is not
+-- a repair at the writer.*
+--
+-- The honest answer is a named refusal -- the emitter cannot write this number, and `C001`
+-- is the sentence for exactly that.
+
+module gift::scale_wider_than_any_c_integer {
+
+format F endian little {
+    lo     : u64 @[11:0] reserved,
+    rahmen : u64 embeds [51:12] scale 18446744073709551616,
+    hi     : u64 @[63:52] reserved,
+}
+
+}

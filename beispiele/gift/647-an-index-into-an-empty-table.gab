@@ -1,0 +1,52 @@
+-- erwartet: M103
+-- **647 -- a zero DROPPED is a zero unchecked, and `M103` was silent for exactly one
+-- carrier.**
+--
+-- `umgebung.rs::sammle_kapazitaeten` recorded a table's `count N` in the capacity map with
+-- `.filter(|n| *n > 0)`. **Zero was therefore not recorded as ZERO -- it was recorded as
+-- NOTHING**, and `feld_von` then handed the index rule a `laenge: None`. A rule with no bound
+-- does not refuse; it says nothing.
+--
+-- Measured before the repair, on this very file:
+--
+--     gabbro pruefe   3 items, 0 errors, 0 hints
+--     gabbro emit     T_slot slots[0];  …  return T_speicher.slots[0].a;
+--     cc -Wall -Wextra -Werror   (silent -- a zero-size array is a GCC extension)
+--
+-- **An out-of-bounds read of a zero-length array, in the artefact, with nothing between the
+-- source and the C.**
+--
+-- > **And the same index at the same zero fell everywhere else.** On `static A : [u64; 0]`
+-- > and on a `bank … count 0`, `M103` says *"the index has `u8 in 0 .. 0`, the array has 0
+-- > elements"*. The table was the ONE carrier whose zero was thrown away -- *not the one with
+-- > a reason, the one with a filter.*
+--
+-- Found 2026-09-02 by `instrumente/fuzze-erzeuger.py`, which saw the emitter's half first
+-- (`-Wpedantic`: *ISO C forbids zero-size array `slots`*) and the checker's half only when
+-- somebody asked what a `count 0` table does at a USE.
+--
+-- **This is one instance of a class, and the class is named**: every position where a Gabbro
+-- literal becomes a size, a count, a stride, a scale or a divisor, and zero is meaningless
+-- rather than merely small. `N010` refuses `stride 0`, `N014` refuses `per cpu 0`, `M102`
+-- refuses a zero divisor, and `C001` refuses `[T; 0]` at a `static`, at a slot field, at a
+-- `walk` node and at `walk levels`. **Eight positions measured, and only two escaped** -- this
+-- one, and `embeds … scale 0` (`beispiele/gift/648`), which is a different argument.
+-- `messung/ERZEUGERSWEEP.md` §9 carries the table.
+--
+-- *The declaration alone is refused by the emitter now as well (`C001`) -- so this file keeps
+-- the CHECKER's half honest, and `648` keeps the other zero's.*
+
+module gift::index_into_an_empty_table {
+
+table T count 0 {
+    slot { a : u32, }
+}
+
+impl fn g() -> u32
+    effects { reads T.slots }
+    costs   <= 2 ops
+{
+    return T.slots[0].a;
+}
+
+}
