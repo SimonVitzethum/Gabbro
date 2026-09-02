@@ -2122,18 +2122,6 @@ echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die 
 echo "  ($n_emit_b beispiele/, $n_emit_g beispiele/gift/, $n_emit_m messung/*/,"
 echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECHS Marken)"
 
-# **The SECOND family, and its number stands BESIDE the first one and not instead of it.**
-if [ "$HAT_CLANG" = "1" ]; then
-    echo "  $n_clang_ok von $n_ok, die cc annimmt, nimmt auch \`clang\` an"
-    echo "  ($(clang --version 2>/dev/null | head -1) gegen $(cc --version 2>/dev/null | head -1))"
-else
-    # W1, the same reading the head of this file gives a missing `cc`.
-    echo "  ZWEITE FAMILIE: \`clang\` gibt es auf dieser Maschine nicht -- die $n_ok gruenen"
-    echo "                  Zeilen darueber sind eine Aussage ueber GCC und ueber sonst nichts."
-    echo "                  Ein fehlendes Werkzeug ist kein bestandener Test (W1)."
-    schlecht=1
-fi
-
 # **Mark: reverse probes that bite under `cc` ALONE.** They are DEBT, not an achievement --
 # pulled onto the measured stand, and the number may only fall.
 #
@@ -2147,6 +2135,23 @@ fi
 # The repair belongs to the probe and not to this guardian: either it carries a reason both
 # families read, or its own first line says which family it means.
 MARKE_UMG_NUR_CC=1
+
+# **The SECOND family, and its number stands BESIDE the first one and not instead of it.**
+if [ "$HAT_CLANG" = "1" ]; then
+    echo "  $n_clang_ok von $n_ok, die cc annimmt, nimmt auch \`clang\` an"
+    echo "  ($(clang --version 2>/dev/null | head -1) gegen $(cc --version 2>/dev/null | head -1))"
+    # **The number stands there EVERY run and not only when it misses the mark.** A ratchet
+    # that says nothing while it holds leaves the reader guessing whether it measured.
+    echo "  $n_umg_nur_cc von $n_umg umgekehrten Proben beissen nur unter \`cc\`"
+    echo "  (Marke $MARKE_UMG_NUR_CC -- SCHULD, gezogen und nicht geheilt)"
+else
+    # W1, the same reading the head of this file gives a missing `cc`.
+    echo "  ZWEITE FAMILIE: \`clang\` gibt es auf dieser Maschine nicht -- die $n_ok gruenen"
+    echo "                  Zeilen darueber sind eine Aussage ueber GCC und ueber sonst nichts."
+    echo "                  Ein fehlendes Werkzeug ist kein bestandener Test (W1)."
+    schlecht=1
+fi
+
 if [ "$HAT_CLANG" = "1" ] && [ "$n_umg_nur_cc" -ne "$MARKE_UMG_NUR_CC" ]; then
     if [ "$n_umg_nur_cc" -gt "$MARKE_UMG_NUR_CC" ]; then
         echo "  RATSCHE GEBROCHEN: $n_umg_nur_cc umgekehrte Proben beissen nur unter \`cc\`,"
