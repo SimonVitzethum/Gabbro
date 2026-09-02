@@ -199,3 +199,122 @@ The net's own speech test runs in both directions before the sweep, over `sleep`
 that outlives its deadline must come back `TIMEOUT`, one that finishes at once must not.
 `lauf` swallows every exception by contract, so a broken deadline would come back as a clean
 answer and every hang would count as a halt. **Speech test 11 probes -> 13.**
+
+## 6. THE FENCE, AND THE ARGUMENT FOR ITS NUMBER
+
+`emit.rs::feldstatisch`, in front of the loop and not around it:
+
+```rust
+let text = w.to_string();
+let bytes = (n as u128).saturating_mul(text.len() as u128 + 2);
+if bytes > C_INITIALISIERER_MAX { weigere(absagen, st.name.span, &format!(...)); return; }
+```
+
+`C_INITIALISIERER_MAX = 1 << 20` -- **one mebibyte of initialiser text**, named at module
+level beside `C_OBJEKT_MAX` and read at exactly one site.
+
+### Why bytes and not an element count
+
+The mandate offered three fences. Two were checked and fall away:
+
+* **A repeat form.** `{ [0 ... 9] = 7 }` is a GNU extension. Measured with the tree's own
+  gate: silent under `-std=c11 -O0 -Wall -Wextra -Werror`, and under one switch more
+  `error: ISO C forbids specifying range of elements to initialize [-Werror=pedantic]`.
+  That switch is **net 5 of this very tool**, so the road trades a hang for a finding in the
+  same instrument. *Checked before promising, as the mandate required.*
+* **A loop at run time.** A `static` initialiser has to be a constant expression. Filling the
+  array from an init function moves the work to a moment this language does not have -- and
+  it changes what `= 7` MEANS, which is the one thing the function's own header was written
+  to keep straight.
+
+So it is the third: refuse above a stated output size. **And the size is on BYTES, because
+bytes are what does not halt.** A count cannot say it: one element of `7` costs three
+characters and one of `-2^127` costs forty-two, a factor of fourteen at the same length. The
+speech test holds exactly that -- `[u64; 100000]` passes at `7` and is refused at
+`18446744073709551615`, same length, different cost.
+
+`+ 2` is the `, ` between two elements; the last carries none, so the count is two bytes
+high and the refusal fires two bytes early rather than two bytes late.
+
+### THE HEADROOM, measured over the corpus and not estimated
+
+612 versioned `.gab`/`.gabi`. **Ten declare an array `static`, and nine of the ten are
+`= 0`** -- the tenth is poison probe `662` itself, written today.
+
+| where | declaration | initialiser |
+|---|---|---|
+| `beispiele/08-bereiche.gab:135` | `static mut kernlast : [Zaehler; 64]` | `= 0` |
+| `beispiele/64-writes-a-whole-buffer.gab:66` | `pub static mut PUFFER : [u8; KAP]`, `KAP = 64` | `= 0` |
+| `beispiele/gift/03`, `/18`, `/20` | `[u32; 64]` | `= 0` |
+| `beispiele/gift/605:36` | `[u8; KAP]`, `KAP = 8` | `= 0` |
+| `beispiele/gift/633:22` | `[u8; KAP]`, `KAP = 64` | `= 0` |
+| `beispiele/gift/602:46` | `[u64; 2^128 - 1]` | `= 0`, already refused |
+| `beispiele/gift/645:43` | `[u64; PTRDIFF_MAX]` | `= 0`, already refused by `D5` |
+
+**The largest array `static` in a clean program is 64 elements.** Every literal array length
+anywhere in the tree, of any kind: `8` (x4), `10`, `32`, `64` (x4), `256`, `512` (x8) -- the
+largest is `[Pte; 512]`, a page table's node, and it is not a `static`.
+
+What one mebibyte leaves:
+
+| value written | bytes/element | elements allowed | x the largest array `static` (64) | x the largest array of any kind (512) |
+|---|---|---|---|---|
+| `7` | 3 | **349 525** | 5 461 | 683 |
+| `2^64 - 1` (20 chars) | 22 | 47 662 | 745 | 93 |
+| the widest literal Gabbro has (40 chars) | 42 | 24 966 | 390 | 49 |
+
+A full budget costs about **30 ms** at the rate measured in section 3. *A limit a real
+program hits is worse than the defect; the nearest real declaration in this tree is between
+two and four decimal orders below it -- and it would not reach the branch at all, because it
+is `= 0`, which lowers to `{0}` at any length.*
+
+## 7. THE SWEEP IS SILENT AGAIN -- and nothing else moved
+
+Same tool, same 16 threads, same machine, before and after the fence:
+
+```
+                                          before      after
+-- 1. A THIRD ANSWER                           0          0
+-- 8. THE EMITTER DID NOT HALT                 2          0
+   NOT BOOKED                                  1          0
+accepted cases that kept the promise    3423/3514  3423/3514
+shapes 1-4                                    91         91
+```
+
+The **whole** diff between the pre-repair sweep at `26620f1` and the post-repair sweep is
+the new net's own lines -- the speech-test count, the five generated cases, net 8's heading,
+and the coverage line. **Not one of the 3514 accepted cases changed its answer.**
+
+```
+< -- 8. ... : 2        array-nichtnull  `100000000`            no answer within the deadline
+<                      array-nichtnull  `1152921504606846975`  PANICKED: capacity overflow
+> -- 8. ... : 0
+```
+
+And the net's denominator is not five: **2380 checker-refused cases were driven through the
+emitter under the 3 s deadline, and every one of them halted.**
+
+## 8. WHAT IS LEFT, AND WHAT IS NOT MINE
+
+* **`zaehle-gifttreffer.py` stays RED, on purpose.** Probe `662` cannot be written without
+  `M140` falling beside `C001` -- measured, section 2 -- so it is the eighth untrennable
+  pair and it is written into `messung/GIFT-GEGEN-ZUSAGE.md` §10 with its reason. The mark
+  went `7 -> 8`, **by exactly one**. Measured with the probe removed, the count is 8 and not
+  7: probe `411` (`N046@17 · M134@24`) was over the mark before this lane began and is not
+  in §10. *Raising to 9 would have swallowed it -- a mark lifted past somebody else's
+  finding does not record a repair, it deletes a report.*
+* **The emitter runs before the verdict is read** (`command_emit`, section 3). The fence
+  makes that harmless for this slot, but the ordering itself is untouched: it is another
+  file, another lane's territory, and the note above it says the ordering is deliberate.
+  **Net 8 now watches it** -- 2380 cases a run.
+* **11 stale bookings in `fuzze-erzeuger.py`** (`BOOKED AND GONE`), all from the `D1`-`D6`
+  repairs in `26620f1`. They were standing before this lane and are untouched; the sweep
+  exits 1 because of them, at the baseline and after.
+* **The merge against `master` `4e53df3` is CLEAN, and that is measured and not hoped.**
+  `git merge-tree --write-tree HEAD master` exits 0 with a tree and no conflict block. The
+  two change sets do not overlap at all: `master` moved `TODO.md`,
+  `dokumente/GABBROV.md`, `messung/GABBROV-V1.md` and `programmlogik/gabbrov/V1.lean`; this
+  lane moved `emit.rs`, `tests/rechenwerk.rs`, two instruments, the probe and three
+  documents. **No region of `emit.rs` needs hand-merging** -- the `D1`-`D6` repairs that
+  touched it heavily are `599ca75`/`26620f1`, which is this lane's BASE and not something
+  it has to catch up with.
