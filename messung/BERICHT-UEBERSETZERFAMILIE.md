@@ -53,8 +53,19 @@ clang -std=c11 -Wall -Wextra -Werror     exit 1
          [-Werror,-Wsometimes-uninitialized]
 ```
 
-`-Wsometimes-uninitialized` sits **inside clang's `-Wall`**. The tool's flag set was already
-sufficient. Had the file been in its population, it would have gone red on the first run.
+`-Wsometimes-uninitialized` sits **inside clang's `-Wall`** — and that is a claim, so it is
+measured too, by switching the one warning off and nothing else:
+
+```
+clang -std=c11 -Wall -Werror                                 exit 1   <- -Wall ALONE rejects
+clang -std=c11 -Wall -Wno-sometimes-uninitialized -Werror    exit 0   <- and it is the ONLY
+                                                                         reason it did
+```
+
+The tool's flag set was already sufficient. Had the file been in its population, it would have
+gone red on the first run. **This is also the whole of §4 in two lines:** the switch that
+catches the defect is not a switch anyone has to add — it is already spoken, by the compiler
+nobody was asking.
 
 ### 1.2 No committed unit ever triggered it
 
