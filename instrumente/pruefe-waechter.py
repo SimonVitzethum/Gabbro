@@ -129,27 +129,6 @@ SCHWER = {
         "braucht BEIDE Bauprofile und `cc`, sonst Ruecklaufwert 2 und NICHTS gemessen; "
         "5889 Faelle, 10,2 s Wanduhr / 85 s CPU auf `fisch` (2026-09-02)",
 }
-# **WHAT AN OMITTED GUARDIAN TAKES WITH IT -- in its OWN unit** (2026-08-31).
-#
-# `SCHWER` above says why a guardian is expensive. It does not say what stays UNMEASURED when
-# the quick run leaves it out, and for two weeks the collective run's closing line therefore
-# reported 45 guardians out of 49 over a tree of which it had seen less than half. *A count of
-# guardians is not a count of the object* -- `pruefe-emission.sh` is one line in that
-# denominator and 101 translation units behind it.
-#
-# > **W25: a number vouches for its DENOMINATOR, not for its label.** Here the denominator was
-# > the wrong one, and it read like a verdict on the tree.
-#
-# Measured 2026-08-31 from the guardians' own sources and their last logged full run, with no
-# build: `beweise/ROOT` (15 theories), `mutiere-pruefer.MUTATIONEN` (372), `pruefe-luecken
-# .LUECKEN` (15 twists, 13 of them with a build of their own), and stage 9 of the last green
-# `pruefe-emission.sh` run (101 out of 101, behind ten stages and 25 through-cuts).
-#
-# **The sum of these is NOT printed as a fraction.** 101 units, 372 mutations, 15 twists and
-# 15 theories add up to 503 items only if one ignores that they are four different things,
-# and there is no counted total for the other 45 guardians to divide it by. The number that
-# HAS a denominator is the other one -- the dangerous places, counted by `teilmessungen()`
-# over every guardian alike. This register exists to be NAMED beside it, never summed into it.
 def mutationskatalog(wurzel=None):
     """**How many mutations does the catalogue carry TODAY?** Read, never remembered (W7).
 
@@ -193,6 +172,33 @@ def sprechprobe_katalog():
     ]
 
 
+# **WHAT AN OMITTED GUARDIAN TAKES WITH IT -- in its OWN unit** (2026-08-31).
+#
+# `SCHWER` above says why a guardian is expensive. It does not say what stays UNMEASURED when
+# the quick run leaves it out, and for two weeks the collective run's closing line therefore
+# reported 45 guardians out of 49 over a tree of which it had seen less than half. *A count of
+# guardians is not a count of the object* -- `pruefe-emission.sh` is one line in that
+# denominator and 101 translation units behind it.
+#
+# > **W25: a number vouches for its DENOMINATOR, not for its label.** Here the denominator was
+# > the wrong one, and it read like a verdict on the tree.
+#
+# Measured 2026-08-31 from the guardians' own sources and their last logged full run, with no
+# build: `beweise/ROOT` (15 theories), `mutiere-pruefer.MUTATIONEN` (372), `pruefe-luecken
+# .LUECKEN` (15 twists, 13 of them with a build of their own), and stage 9 of the last green
+# `pruefe-emission.sh` run (101 out of 101, behind ten stages and 25 through-cuts).
+#
+# **The sum of these is NOT printed as a fraction.** 101 units, 372 mutations, 15 twists and
+# 15 theories add up to 503 items only if one ignores that they are four different things,
+# and there is no counted total for the other 45 guardians to divide it by. The number that
+# HAS a denominator is the other one -- the dangerous places, counted by `teilmessungen()`
+# over every guardian alike. This register exists to be NAMED beside it, never summed into it.
+#
+# **The 372 in the paragraph above is that day's figure and stays one; the ROW below no
+# longer holds a figure at all.** It asks `mutationskatalog()`, which read **383** on
+# 2026-09-02 -- eleven more than the number that had stood in the row since 2026-08-31,
+# reading like a measurement the whole time. *A dated sentence ages honestly; a live
+# register beside a growing catalogue does not.*
 GEGENSTAND = {
     "mutiere-pruefer.py":
         f"{mutationskatalog()} Mutationen, je ein `cargo build` und ein `cargo test`",

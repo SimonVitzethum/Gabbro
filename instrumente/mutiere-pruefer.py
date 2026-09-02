@@ -4087,7 +4087,7 @@ def proben_laufen():
         cwd=WURZEL,
         capture_output=True,
         text=True, timeout=FRIST)
-    if not uebersetzungsurteil(0, r.stdout + r.stderr):
+    if not uebersetzungsurteil(bau.returncode, r.stdout + r.stderr):
         return False, None
     return True, r.returncode == 0
 
