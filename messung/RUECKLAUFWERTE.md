@@ -230,7 +230,7 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
   **51 von 57** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ ~~288~~ **290 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~281~~ ~~288~~ ~~290~~ **292 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
@@ -253,6 +253,14 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Lauf grün aussehen könnte, ohne den Erzeuger je aufgerufen zu haben.** Die Ursache wurde
   gemessen und nicht vermutet: mit den drei neuen Dateien beiseitegelegt meldet
   `pruefe-zahlen.py` null Befunde, mit ihnen sechs.*
+  *290 → 292 am 2026-09-02, und beide aus EINER Stelle: der Sprechprobe 9b in
+  `instrumente/pruefe-emission.sh`. Stufe 9 fragt seit heute eine ZWEITE
+  Übersetzerfamilie, und die Probe darüber hat zwei Hälften, die einzeln absagen: `cc`
+  muss die CAS-Gestalt ANNEHMEN (sonst ist die zweite Familie ein zweites Register über
+  einer Sache) und `clang` muss sie ABLEHNEN (sonst ist die Zahl daneben eine Zahl ohne
+  Aussage). **Beide sagen, dass die Stufe nichts mehr misst, statt grün zu bleiben.**
+  Die Ursache ist gemessen und nicht vermutet: mit der Fassung von `8a33ca0` an dieser
+  Stelle meldet `pruefe-zahlen.py` null Befunde, mit meiner einen.*
   *288 → 290 am 2026-09-02, und beide aus EINER Datei: `instrumente/mutiere-pruefer.py`
   (12 → 14 Ausgänge, per Datei nachgerechnet gegen `178e260`). Es sind die zwei neuen
   Absagen der Reparatur am Übersetzungsurteil: eine gefallene Sprechprobe über dem Urteil

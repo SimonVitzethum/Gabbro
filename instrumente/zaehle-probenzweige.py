@@ -411,7 +411,26 @@ MARKE = 14
 # lane had invalidated by writing two files). Repaired, it reaches its own green ending -- and
 # that ending is one more line only the probe gets to. *A guardian that goes green ADDS to
 # this count, and a mark read without that sentence looks like a regression.*
-MARKE_ZEILEN = 189
+#
+# **189 -> 195 on 2026-09-02, and it is TWO steps with two different owners.** The mark was
+# read once against a pristine `8a33ca0` (extracted with `git archive` into an empty
+# directory, so nothing of the lane could reach it) and once against the lane's tree; the
+# tool gives byte-identical output on a repeated run of either, so the two numbers are a
+# difference and not a wobble.
+#
+#   189 -> 192   ALREADY STANDING at `8a33ca0`, before this lane touched anything. Not
+#                measured to a cause here -- named so the next reader does not charge it to
+#                the three below.
+#   192 -> 195   this lane, and every one of the three is the sentence directly above:
+#                `abnahme.py` goes from 16 to 19, because TWO guardians it drives stopped
+#                being red. `pruefe-emission.sh` could not be PARSED at `8a33ca0` (a merge
+#                had glued a mark line to its comment), and `pruefe-zahlen.py` was red on a
+#                number this lane then pulled. With both green the acceptance no longer walks
+#                its own abort arms, so those lines are reached by the speech test alone.
+#
+# *A count that rises because two guardians were repaired is the good case, and it is still a
+# finding* -- which is why it stands here with its cause and not as a quiet larger number.
+MARKE_ZEILEN = 195
 
 # **Booked instead of healed -- empty, and that is a measurement.**
 # *An empty booking is the only honest starting state -- what goes in has to be argued for.*

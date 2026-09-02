@@ -237,3 +237,141 @@ Warnung sein, die `gcc` nicht kennt, und genau das ist sie hier. **Ob `-Wunused-
 Messung sagt nur, dass die Zusage bisher an einer Familie hing. Und gemessen sind **zwei**
 Familien, nicht alle: eine dritte kann eine dritte Antwort geben. *Sie verpflichtet, sie
 spricht nicht frei* (W10).
+
+---
+
+## 8. And the family was still not at the GATE — measured 2026-09-02
+
+*§7 named the boundary and healed the eighteen. It did not move the guardian that reads
+`cc`.* On 2026-09-02 a generator defect reached the tree at `0e328c7` that **only the second
+family sees**, and the instrument built in §7 stayed green over it — truthfully.
+
+### 8.1 The defect, and who was silent
+
+The `update` body of an `exchange` answers on one path and hands the compare-exchange a
+value the emitter never wrote:
+
+```c
+uint32_t _cn1;
+{
+    const uint32_t v = _cx1;
+    if (v < GRENZE) { _cn1 = v + 1; goto _cn1_fertig; }
+    _cn1_fertig: ;
+}
+if (atomic_compare_exchange_weak_explicit(&ZAEHLER, &_cx1, _cn1, …)) break;
+```
+
+At `v == GRENZE` the branch is skipped, `_cn1` is never assigned, and its indeterminate value
+goes into a live atomic as the PROPOSED new one. The type is `u32 in 0 .. GRENZE`, so the
+skipped path is not a corner — it is the saturating case the body was written for.
+
+| instrument | answer |
+|---|---|
+| `gabbro pruefe` | `7 items, 0 errors, 0 hints` |
+| `gabbro emit` | exit `0`, unit written |
+| `cc -std=c11 -Wall -Wextra` at `-O0`, `-O1`, `-O2` | silent — **the whole of what stage 9 asked** |
+| `zaehle-c-formen.py` | blind (the unit compiles) |
+| `clang`, same flag word | `variable '_cn1' is used uninitialized whenever 'if' condition is false [-Wsometimes-uninitialized]` |
+
+### 8.2 Why `pruefe-uebersetzerfamilie.py` booked `0 differences`
+
+**Its zero is TRUE.** Three reasons, and the third settles it:
+
+1. **Its flags were never the problem.** `FLAGGEN` is stage 9's flag word, and
+   `-Wsometimes-uninitialized` rides in on `-Wall`: the shape above falls at plain
+   `clang -std=c11 -Wall -Wextra -Werror` under **both** installed versions (22.1.8 here,
+   18.1.3 on `ki-pc-fisch-101`), while `cc` accepts it under `-Werror` at every `-O` level.
+2. **Its population never held the defect.** Its denominator is *`.gab` files in the tree
+   that emit today*. The defect lived in `emit.rs`; all six `update` bodies of the corpus end
+   in a bare `return v;`, so no committed unit triggered it.
+3. **And the population cannot hold it.** The one file that carries the shape —
+   `beispiele/gift/658-an-update-body-that-falls-through.gab`, written by the same commit —
+   is `-- erwartet: C001`. The emitter refuses it, so it never emits and drops out of that
+   denominator. ***The probe that documents the defect is invisible to the instrument that
+   would have named it.***
+
+> *A corpus differ can only find a generator defect that some committed file happens to
+> trigger.* It is a census over what is already in the tree and it runs after the fact; a
+> gate runs at the moment a unit arrives. **Two questions, and the second was not asked.**
+
+### 8.3 The census, with its denominator and its three-way split
+
+**120 emitting units** — the stage-9 `find`, minus the 10 `-- erwartet: cc` reverse probes;
+130 of 609 `.gab` in the tree emit at all. Run on **both** machines, and the numbers are
+identical across four major clang versions:
+
+```
+clang -std=c11 -Wall -Wextra            0 diagnostics   120 of 120 units clean
+  -Wsometimes-uninitialized             0     — and it is INSIDE -Wall already
+  -Wconditional-uninitialized           0
+  -Wshadow                              0
+  -Wtautological-compare  + six more    0
+  -Wcast-align                        100     15 units
+  -Wunreachable-code-aggressive        37      8 units
+```
+
+| class | count | reading |
+|---|---|---|
+| a real defect | **0** | the CAS body is repaired; nothing else answers |
+| known and booked | **100** in 15 units | `-Wcast-align`, provably aligned since `N047`–`N049` — **and gcc's `-Wcast-align=strict` names the IDENTICAL 15 units with identical per-unit counts.** Not a family difference at all |
+| pure style | **37** in 8 units | `-Wunreachable-code-aggressive`: every hit the emitter's deliberate terminator after a block that already answers (`'break' will never be executed`, `'return' will never be executed`). **A gate red on 8 of 120 units on its first day is not a gate.** |
+
+*A count without that split would be `137 warnings` and no information.*
+
+**One hit in the style class is not the terminator idiom and deserves the emitter owner's
+eye:** `beispiele/39-auftragsdienst.gab` lowers `buendel_von` to
+`for (v = …; v != 64u; v = …) { return v; }` — clang says *loop will run at most once (loop
+increment never executed)*, and the comment above it speaks of a chain of ancestors. The C is
+not wrong; the loop is a disguised `if`. It colours nothing here.
+
+### 8.4 The minimal set is EMPTY, and that is the whole answer
+
+*One switch that catches a wrong value going into a CAS is worth more than twenty that catch
+braces* — and here **the one switch is not a switch, it is the second compiler.** The house
+standard `-Wall -Wextra -Werror` is exactly what names the defect; every candidate beyond it
+yields either nothing (0 hits over 120 units) or a class gcc already sees, or a class that
+would redden the gate on day one with nothing wrong.
+
+### 8.5 Where it was wired, and why there
+
+**Stage 9 of `pruefe-emission.sh`**, per unit, only where `cc` accepted and the file is no
+reverse probe:
+
+```
+clang -std=c11 -Wall -Wextra -Werror -c        # the SAME flag word `cc` gets
+```
+
+Not a third place, and not `pruefe-uebersetzerfamilie.py`: §8.2 shows that tool asks a
+question the defect could never reach. Stage 9 is where a unit is asked at the moment it
+arrives, and it already owns the reverse-probe machinery and the marks.
+
+* **`clang` exists on both machines** (22.1.8 / 18.1.3) and the census is identical on them,
+  so the gate runs where this tree is measured. **A missing `clang` colours the stage red** —
+  W1, the same reading the head of that file gives a missing `cc`.
+* **Speech test 9b has two halves**, over the CAS shape itself: `cc` must ACCEPT it (else the
+  second family is a second register over one thing, `W7`) and `clang` must REJECT it (else
+  the number is a number without a statement, `R11`).
+* **`MARKE_UMG_NUR_CC = 1`** is DEBT, pulled and not healed:
+  `beispiele/gift/642-a-forever-loop-in-a-function-that-answers.gab` is rejected by `cc`
+  (`no return statement in function returning non-void`, `-Werror=return-type`) and
+  **accepted by clang**, which sees that the `for (;;)` never falls out. *A poison probe
+  whose bite depends on the compiler family measures the family.* The other nine are rejected
+  by both. The repair belongs to the probe.
+
+All three new branches were seen to fall, each for a different reason (PATH shims on
+`ki-pc-fisch-101`): no `clang` → red at W1; a `clang` that rejects everything → `NUR CLANG
+LEHNT AB` 120×; a `clang` that accepts everything → the ratchet breaks at 10.
+
+### 8.6 And a finding that came out of the run rather than the question
+
+**`instrumente/pruefe-emission.sh` could not be parsed at `8a33ca0`.** `bash -n` on that
+commit is a hard syntax error: a merge glued `MARKE_EMIT_M=53` to the comment line below it
+and lost the newline, so `(2026-08-31)` was read as shell. Both merge parents parse. `bash`
+reads a script command by command, so the run started, walked nine stages and died there —
+and the `trap` then printed `ABGESCHNITTEN in: Stufe 9`, which reads like a stage verdict.
+*The newline is restored; `py_compile` over every `.py` and `bash -n` over every `.sh` of
+`instrumente/` finds no second instance.*
+
+> **And the guardian that reads language never looks here.** `pruefe-englisch.py` reads
+> `crates/*/src/*.rs`, `crates/*/tests/*.rs` and `instrumente/*.py` — **not
+> `instrumente/*.sh`**, and that is the largest instrument in the tree at 2500 lines.
