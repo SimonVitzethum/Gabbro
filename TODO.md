@@ -82,30 +82,44 @@ man sich schützt, und er ist der Grund, warum die Regel oben eine Regel ist und
 
 # STUFE 0 — DIE MESSSCHICHT  ⟨Q⟩
 
-- [ ] **18 von 99 emittierenden Dateien übersetzen mit `gcc`, aber NICHT mit `clang`**
-      *(gemessen 2026-08-31, [`messung/UEBERSETZUNGSREICHWEITE.md`](messung/UEBERSETZUNGSREICHWEITE.md)
-      §7; abzulesen mit `./instrumente/pruefe-uebersetzerfamilie.py`)*. Stufe 9 und die
-      Grammatiktafel fordern beide *„jede emittierende Datei muss `cc -Werror` bestehen"* —
-      und `cc` ist auf **beiden** Rechnern ein `gcc` (13.3.0 dort, 16.2.1 hier). *Zwei
-      Übersetzer derselben Familie sind ein Übersetzer mit zwei Versionsnummern.*
+- [ ] **A poison probe whose bite depends on the compiler FAMILY measures the family**
+      *(measured 2026-09-02, [`messung/UEBERSETZUNGSREICHWEITE.md`](messung/UEBERSETZUNGSREICHWEITE.md)
+      §8; read off with `./instrumente/pruefe-emission.sh`, stage 9)*.
+      `beispiele/gift/642-a-forever-loop-in-a-function-that-answers.gab` carries
+      `-- erwartet: cc`: its C is SUPPOSED to fall. `cc` rejects it, **`clang` accepts it** —
+      it sees that the `for (;;)` never falls out, so the missing `return` is unreachable.
 
       ```
-      error: unused function 'Vtd_FRR_FR_LO' [-Werror,-Wunused-function]
+      cc:    error: no return statement in function returning non-void [-Werror=return-type]
+      clang: (silent)
       ```
 
-      **Alle 18 sind dieselbe Klasse.** Der Erzeuger schreibt zu jedem Feld eines Bitformats
-      einen `static inline`-Zugriff; `gcc` warnt in C nicht über eine ungenutzte
-      `static inline`, `clang` schon. **Stufe 9s Grün hieß nie „das erzeugte C übersetzt" —
-      es hieß „es übersetzt mit gcc".**
+      **The repair belongs to the probe, not to the guardian**: either it carries a reason
+      both families read, or its own first line says which family it means. Booked as
+      `MARKE_UMG_NUR_CC = 1` in stage 9 — **pulled, not healed**, and it may only fall. The
+      other nine reverse probes are rejected by both, measured under clang 18.1.3 and 22.1.8.
 
-      **Die Heilung gehört dem Erzeuger** (`crates/gabbro-check/src/emit.rs`): die Zugriffe
-      entfallen, wenn niemand sie ruft, oder sie tragen eine Form, die beide Familien
-      schweigen lässt. `MARKE_FAMILIENUNTERSCHIED = 18` steht auf dem gemessenen Stand —
-      **gezogen, nicht geheilt**, und darf nur fallen. *Sie sind Schuld, kein Erfolg.*
+      > **The eighteen of §7 are HEALED and this entry replaces them**: the emitter carries
+      > `__attribute__((unused))` on the emitted accessors since 2026-08-31, and
+      > `MARKE_FAMILIENUNTERSCHIED` stands at `0`. And since 2026-09-02 stage 9 asks `clang`
+      > **per unit** with the same flag word it gives `cc`, so a nineteenth cannot arrive
+      > unseen — the census behind that decision is §8.3, and its minimal switch set is
+      > EMPTY: the whole yield is the second compiler, not a flag.
 
-      > **Und was das NICHT sagt** (W10): dass `-Wunused-function` über einer emittierten
-      > Kopfzeile eine sinnvolle Forderung ist — das entscheidet der Ordner. Gemessen sind
-      > **zwei** Familien, nicht alle; eine dritte kann eine dritte Antwort geben.
+- [ ] **One emitted loop is a disguised `if`, and only the second family says so**
+      *(measured 2026-09-02, [`messung/UEBERSETZUNGSREICHWEITE.md`](messung/UEBERSETZUNGSREICHWEITE.md)
+      §8.3)*. `beispiele/39-auftragsdienst.gab` lowers `buendel_von` to
+
+      ```c
+      for (uint32_t v = q->slots[i].buendel; v != 64u; v = q->slots[v].buendel) { return v; }
+      ```
+
+      and `clang -Wunreachable-code-aggressive` says *loop will run at most once (loop
+      increment never executed)*, while the comment above it speaks of a chain of ancestors.
+      **The C is not wrong** — it returns the parent or `NONE` — but the loop shape says
+      something the loop does not do. *It colours nothing: the switch is not in the gate,
+      because its other 36 hits over 8 units are the emitter's deliberate terminator idiom.*
+      The question belongs to the emitter (`crates/gabbro-check/src/emit.rs`).
 
 - [ ] **Der Prüfer hatte keinen Zweitlauf — und war nicht deterministisch** *(gefunden
       2026-08-24, [`messung/DETERMINISMUS.md`](messung/DETERMINISMUS.md))*. Derselbe

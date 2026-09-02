@@ -1970,7 +1970,73 @@ ausnahme_grund() {
 # ploetzlich uebersetzt, ist ein Rot** -- entweder ist der Erzeugerfehler geheilt (dann gehoert
 # die Probe fort) oder sie trifft nicht mehr. *Eine Probe, die nicht mehr beissen kann, liest
 # sich wie eine, die es nie konnte.*
+#
+# =======================================================================================
+# **AND THE RULE ASKS A SECOND COMPILER FAMILY SINCE 2026-09-02.**
+#
+# `cc` is a symlink on `gcc` on both machines this tree is measured on -- gcc 16.2.1 here and
+# gcc 13.3.0 on `ki-pc-fisch-101`. Every green line of this stage until today therefore said
+# *"it compiles with gcc"*, and nothing said so.
+#
+# The occasion is a generator defect that reached the tree at `0e328c7`: an `exchange update`
+# body answering on one path only handed the compare-exchange a value the emitter never wrote.
+# `gabbro pruefe` said `0 errors`, `gabbro emit` left with `0`, and `cc -Wall -Wextra` was
+# silent at `-O0`, `-O1` AND `-O2` -- *the whole of what this stage asked.* The second family
+# names it in one line, and with the SAME flag word this stage already uses:
+#
+#     error: variable '_cn1' is used uninitialized whenever 'if' condition is false
+#            [-Werror,-Wsometimes-uninitialized]
+#
+# **The added flag set is EMPTY, and that is the whole finding of the census behind this
+# block** (2026-09-02, 120 emitting units, both machines, clang 18.1.3 and clang 22.1.8):
+#
+#     clang -std=c11 -Wall -Wextra              0 diagnostics over 120 of 120 units
+#     + -Wsometimes-uninitialized               0 -- and it is INSIDE `-Wall` already
+#     + -Wconditional-uninitialized             0
+#     + -Wshadow                                0
+#     + seven -Wtautological-*                  0
+#     + -Wcast-align                          100 over 15 units -- and gcc's
+#                                               `-Wcast-align=strict` names the IDENTICAL
+#                                               15 units with identical per-unit counts,
+#                                               so it is not a family difference at all
+#     + -Wunreachable-code-aggressive          37 over 8 units -- every one the emitter's
+#                                               deliberate terminator after a block that
+#                                               already answers. A gate red on 8 of 120
+#                                               units on its first day is not a gate.
+#
+# *One switch that catches a wrong value going into a CAS is worth more than twenty that
+# catch braces* -- and here the one switch is not a switch, it is the second compiler.
+# `-Wsometimes-uninitialized` rides in on `-Wall`; naming it would add a word and nothing else.
+#
+# **Why HERE and not in `pruefe-uebersetzerfamilie.py`, which already runs both families.**
+# That tool books `0 differences` and its zero is TRUE. Three measured reasons, and the third
+# is the one that settles it:
+#
+#   1. Its flags were never the problem -- they are this stage's flags, and they name the
+#      defect verbatim on both machines.
+#   2. Its population is *`.gab` files in the tree that emit today*. The defect lived in
+#      `emit.rs`; no committed unit triggered it, so the corpus never held it.
+#   3. And the corpus never CAN hold it. The one file that carries the shape --
+#      `beispiele/gift/658-an-update-body-that-falls-through.gab`, written by the same
+#      commit -- is `-- erwartet: C001`: the emitter refuses it, so it never emits and falls
+#      out of that tool's denominator. **The probe that documents the defect is invisible to
+#      the instrument that would have named it.**
+#
+# > *A corpus differ can only find a generator defect that some committed file happens to
+# > trigger.* It is a census over what is already in the tree, and it runs after the fact.
+# > A gate runs at the moment a unit arrives. They are two questions, and this is the one
+# > that was not being asked.
+#
+# `clang` exists on both machines and the census is identical across four major versions
+# (18.1.3 against 22.1.8, same 137 hits, same units, same counts), so a gate that leans on it
+# runs where this tree is measured. **A missing `clang` colours this stage red** -- W1, the
+# same reading the head of this file gives a missing `cc`: an absent tool is not a passed
+# test, and 120 green lines would then be a statement about gcc and about nothing else.
 n_emit=0; n_ok=0; n_aus=0; n_umg=0; schlecht=0
+n_clang_ok=0; n_umg_nur_cc=0; umg_nur_cc=""
+# `set -e` reads an `a && b` whose `a` fails as a failed command, so this is an `if`.
+HAT_CLANG=0
+if command -v clang > /dev/null; then HAT_CLANG=1; fi
 n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_x=0; rest_x=""
 # **Der `find` bildet die Reichweite der Tafel NACH, und zwar ueber Namen statt ueber Pfade.**
 # `-name` sieht nur den letzten Bestandteil; ein Muster auf den ganzen Pfad haette denselben
@@ -2004,6 +2070,23 @@ while IFS= read -r q; do
             schlecht=1
         else
             n_ok=$((n_ok + 1))
+            # **The second family, and the SAME flag word.** A different flag set here would
+            # measure the flags and not the family (the census above says the extra switches
+            # yield nothing a reader would act on).
+            if [ "$HAT_CLANG" = "1" ]; then
+                if clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" \
+                        2> "$ARB/clangerr"; then
+                    n_clang_ok=$((n_clang_ok + 1))
+                else
+                    echo "  NUR CLANG LEHNT AB: $d -- cc nimmt dasselbe C an."
+                    echo "        Das ist kein Stilbefund: die Familien lesen denselben Text, und"
+                    echo "        eine Meldung, die nur eine von beiden kennt, hat der Erzeuger"
+                    echo "        trotzdem verdient. Nachsehen mit:"
+                    echo "        ./target/debug/gabbro emit $d | clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null -"
+                    head -3 "$ARB/clangerr" | sed 's/^/      /'
+                    schlecht=1
+                fi
+            fi
             if grund="$(ausnahme_grund "$d")"; then
                 echo "  ABGELAUFENE AUSNAHME: $d uebersetzt jetzt -- der Eintrag gehoert geloescht"
                 echo "                        (stand da als: $grund)"
@@ -2014,6 +2097,14 @@ while IFS= read -r q; do
         n_umg=$((n_umg + 1))
         echo "  umgekehrte Probe  $d -- \`-- erwartet: cc\`, und cc lehnt ab. Sie beisst:"
         head -1 "$ARB/regelerr" | sed 's/^/      /'
+        # **A poison probe whose bite depends on the compiler family measures the family.**
+        # The marker says `cc` and this branch keeps its verdict, so clang does not colour
+        # the single file -- the COUNT does, one mark below, and it is debt.
+        if [ "$HAT_CLANG" = "1" ] \
+           && clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2>/dev/null
+        then
+            n_umg_nur_cc=$((n_umg_nur_cc + 1)); umg_nur_cc="$umg_nur_cc $d"
+        fi
     elif grund="$(ausnahme_grund "$d")"; then
         n_aus=$((n_aus + 1))
         echo "  ausgenommen  $d -- $grund"
@@ -2030,6 +2121,49 @@ echo "  $n_ok von $n_nenner emittierenden Dateien uebersetzen; $n_aus benannte A
 echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die emittieren"
 echo "  ($n_emit_b beispiele/, $n_emit_g beispiele/gift/, $n_emit_m messung/*/,"
 echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECHS Marken)"
+
+# **Mark: reverse probes that bite under `cc` ALONE.** They are DEBT, not an achievement --
+# pulled onto the measured stand, and the number may only fall.
+#
+# **Booked at 1 on 2026-09-02**: `beispiele/gift/642-a-forever-loop-in-a-function-that-
+# answers.gab`. `cc` rejects it with `no return statement in function returning non-void`
+# (`-Werror=return-type`); `clang` stays silent because it sees that the `for (;;)` never
+# falls out. *The probe therefore says something about gcc and not about the artefact.* The
+# nine others are rejected by both and are untouched by this -- measured under clang 18.1.3
+# and 22.1.8 with the same result.
+#
+# The repair belongs to the probe and not to this guardian: either it carries a reason both
+# families read, or its own first line says which family it means.
+MARKE_UMG_NUR_CC=1
+
+# **The SECOND family, and its number stands BESIDE the first one and not instead of it.**
+if [ "$HAT_CLANG" = "1" ]; then
+    echo "  $n_clang_ok von $n_ok, die cc annimmt, nimmt auch \`clang\` an"
+    echo "  ($(clang --version 2>/dev/null | head -1) gegen $(cc --version 2>/dev/null | head -1))"
+    # **The number stands there EVERY run and not only when it misses the mark.** A ratchet
+    # that says nothing while it holds leaves the reader guessing whether it measured.
+    echo "  $n_umg_nur_cc von $n_umg umgekehrten Proben beissen nur unter \`cc\`"
+    echo "  (Marke $MARKE_UMG_NUR_CC -- SCHULD, gezogen und nicht geheilt)"
+else
+    # W1, the same reading the head of this file gives a missing `cc`.
+    echo "  ZWEITE FAMILIE: \`clang\` gibt es auf dieser Maschine nicht -- die $n_ok gruenen"
+    echo "                  Zeilen darueber sind eine Aussage ueber GCC und ueber sonst nichts."
+    echo "                  Ein fehlendes Werkzeug ist kein bestandener Test (W1)."
+    schlecht=1
+fi
+
+if [ "$HAT_CLANG" = "1" ] && [ "$n_umg_nur_cc" -ne "$MARKE_UMG_NUR_CC" ]; then
+    if [ "$n_umg_nur_cc" -gt "$MARKE_UMG_NUR_CC" ]; then
+        echo "  RATSCHE GEBROCHEN: $n_umg_nur_cc umgekehrte Proben beissen nur unter \`cc\`,"
+        echo "                     gebucht ist $MARKE_UMG_NUR_CC. Eine Probe, die nur unter EINER"
+        echo "                     Familie beisst, misst die Familie:$umg_nur_cc"
+    else
+        echo "  FUND: nur noch $n_umg_nur_cc statt $MARKE_UMG_NUR_CC umgekehrte Proben beissen"
+        echo "        allein unter \`cc\` -- die Marke gehoert nachgezogen (der gute Fall, und"
+        echo "        trotzdem ein Befund)."
+    fi
+    schlecht=1
+fi
 
 # **Die Zahl `n_emit` ist SELBSTGEWAEHLT, und das ist eine Luecke gewesen** (2026-08-28).
 #
@@ -2204,7 +2338,8 @@ MARKE_EMIT=65
 # `geraetewerte` and the artefact wrote `c->basis` about a value. Checker silent, emitter
 # exit 0, `cc` refusing: the one reader was the C compiler, and this stage is where it now
 # reads at every run.
-MARKE_EMIT_M=53# **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
+MARKE_EMIT_M=53
+# **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
 MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt ab
@@ -2353,6 +2488,56 @@ if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9.c" 2>/dev/nul
     exit 1
 fi
 echo "  Sprechprobe:  ok (ein fehlender Prototyp faellt an cc -Werror)"
+
+# **The speech test of the SECOND family, and it has TWO halves** (2026-09-02).
+#
+# The piece below is the shape for whose sake this question exists at all: the `update` body
+# of an `exchange` that answers on one path and pushes a never-written value into a
+# compare-exchange on the other (`0e328c7`). Both halves must hold, and the FIRST one is what
+# separates this stage from a decoration:
+#
+#   (a) `cc -Wall -Wextra -Werror` ACCEPTS it. If it falls here, the second family only sees
+#       what the first would long since have reported -- the extension would be a second
+#       register over one thing (W7) and not the question it stands for.
+#   (b) `clang` with the same flag word REJECTS it. If that stops holding, the new branch
+#       measures nothing and the $n_clang_ok above is a number without a statement (R11).
+if [ "$HAT_CLANG" = "1" ]; then
+    cat > "$ARB/sprech9b.c" <<'PROBE_CAS'
+#include <stdatomic.h>
+#include <stdint.h>
+#define GRENZE 100u
+static _Atomic uint32_t ZAEHLER;
+uint32_t schritt(void);
+uint32_t schritt(void) {
+    uint32_t _cx1 = atomic_load_explicit(&ZAEHLER, memory_order_relaxed);
+    for (;;) {
+        uint32_t _cn1;
+        {
+            const uint32_t v = _cx1;
+            if (v < GRENZE) { _cn1 = v + 1; goto _cn1_fertig; }
+            _cn1_fertig: ;
+        }
+        if (atomic_compare_exchange_weak_explicit(&ZAEHLER, &_cx1, _cn1,
+                memory_order_seq_cst, memory_order_seq_cst)) break;
+    }
+    return _cx1;
+}
+PROBE_CAS
+    if ! cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9b.c" 2>/dev/null; then
+        echo "== EMISSION: Sprechprobe 9b, Haelfte (a) haelt nicht -- cc faengt die CAS-Gestalt =="
+        echo "   Dann sagt die zweite Familie nichts, was die erste nicht schon saegt, und der"
+        echo "   Grund dieser Erweiterung steht nicht mehr. Der Kasten an Stufe 9 gehoert"
+        echo "   nachgemessen -- ein Waechter, dessen Anlass entfallen ist, ist ein Befund."
+        exit 1
+    fi
+    if clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9b.c" 2>/dev/null; then
+        echo "== EMISSION: Sprechprobe 9b, Haelfte (b) haelt nicht -- clang laesst die CAS-Gestalt durch =="
+        echo "   Der neue Zweig kann dann nicht mehr beissen, und \`$n_clang_ok von $n_ok\` ist"
+        echo "   eine Zahl ohne Aussage. Diese Fassung von clang taugt fuer diese Frage nicht."
+        exit 1
+    fi
+    echo "  Sprechprobe 9b: ok (cc nimmt die CAS-Gestalt an, clang lehnt sie ab)"
+fi
 
 # =======================================================================================
 # **Stufe 10: die BIBLIOTHEKSKETTE, und sie ist die einzige Stufe mit einem BINDER.**
