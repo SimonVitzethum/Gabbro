@@ -538,7 +538,7 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         // one grows that changes this pass should fail to compile rather than overlook it
         // -- the lesson of the 78 holes behind `lib.rs::unterbloecke`.
         //
-        // They carry PLACES, though, and `M140` reads the literal index of each.
+        // They carry PLACES, though, and `M141` reads the literal index of each.
         PredArt::Vergleich(e) => {
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
@@ -567,7 +567,7 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
     }
 }
 
-/// **`M140` -- a LITERAL index in a PREDICATE, held against the declaration of the carrier.**
+/// **`M141` -- a LITERAL index in a PREDICATE, held against the declaration of the carrier.**
 ///
 /// `m1.rs` says of itself, in its own head -- the German original is at the top of that
 /// file: *it checks bodies and not predicates; `requires`, `ensures` and `invariant` are
@@ -626,7 +626,7 @@ fn indexschranke_pruefen(o: &Ort, s: &Sicht, st: Stellung, absagen: &mut Absagen
                     if *v >= *n {
                         absagen.schiebe(
                             Absage::fehler(
-                                "M140",
+                                "M141",
                                 e.span,
                                 format!(
                                     "in {}: the index is {v}, and `{}` has {n} elements",

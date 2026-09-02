@@ -123,6 +123,14 @@ const BENANNT: &[&str] = &[
     // in this checker: a compare-exchange bound to the atomic's type instead of to `bool`,
     // and an `exchange update` body read against the enclosing function's result.
     "M135",
+    // 2026-09-02, the SAME silent `else`, two doors further out. `M135` closed the
+    // `bool`/number crossing; `M140` closes every crossing where NEITHER side has a range --
+    // a pointer, a record, an array, a function pointer. Measured: 18 parameter kinds x 18
+    // argument kinds, the wrong thing passed at a call, and **283 of 306 off-diagonal cells
+    // went through with `0 errors` and `100 % coverage`**. `cc` caught 165 of them and the
+    // emitter refused 96 -- which is the `N041` shape, a trust base holding one stage too
+    // late -- and 22 reached green C.
+    "M140",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.
@@ -328,14 +336,19 @@ const BENANNT: &[&str] = &[
     // neighbouring value, `2^127 - 1`, fell at `M103` the whole time. Found by
     // `instrumente/fuzze-grenzen.py`, in the sweep over every rule with a literal slot.
     "M139",
-    // **`M140`, 2026-09-02: the same index bound, in a PREDICATE.** `m1.rs` says in its own
+    // **`M141`, 2026-09-02: the same index bound, in a PREDICATE.** `m1.rs` says in its own
     // head that it checks bodies and not predicates, *"they belong to the prover, not to
     // M1"* -- and the prover ASSUMES them: `gabbro lean` writes a `requires` as `<fn>_pre`,
     // "what the caller grants". `requires T.slots[9].x == 0` on a `table T count 8` gave
     // `0 errors` and left this compiler as a premise nothing can establish. It stands in
     // `domaene.rs` because the exhaustive walk over the predicate POSITIONS is already
     // there; only a LITERAL index is compared, so a quantifier variable stays silent.
-    "M140",
+    //
+    // **It is `M141` and not `M140`, and that is the THIRD collision of one day.** The
+    // shape-mismatch rule two lanes above already carries the note: two lanes picked the
+    // same free number on 2026-09-02, and this one made three. *A free number is only
+    // free against the tree one has, and three lanes each had a different tree.*
+    "M141",
 ];
 
 #[test]

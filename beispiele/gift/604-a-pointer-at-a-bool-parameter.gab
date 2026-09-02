@@ -1,0 +1,47 @@
+-- erwartet: M140 allein
+-- **Die Zelle, in der KEINE zweite Stufe etwas sagt -- ein Zeiger an einem `bool`.**
+--
+-- `603` faellt am Ende doch, weil `cc` es faengt. Diese hier faellt nirgends sonst: C wandelt
+-- einen Zeiger stillschweigend in `_Bool` um, das ist wohldefiniert (C11 6.3.1.2, *„null oder
+-- nicht"*), und `cc -std=c11 -Wall -Wextra -Werror` druckt kein Wort. **Darum traegt die
+-- Datei `allein`:** der Pruefer muss abweisen UND das erzeugte C muss uebersetzen -- die
+-- zweite Haelfte ist die, die die Behauptung traegt.
+--
+-- Gemessen am 2026-09-02 ueber alle 18 x 18 Parameter-/Argumentarten: von 306 Zellen gingen
+-- **283 mit `0 errors` durch**, `cc` fing 165 davon, der Erzeuger wies 96 ab (`C001`, ein
+-- Feld hat keine Absenkung als Parameter) -- und **22 kamen bis zu gruenem C**. ZWOELF
+-- dieser 22 trugen einen Wert, nach dem kein Uebersetzer je gefragt haette -- vier `bool`
+-- gegen einen Zeiger und acht Ganzzahl gegen Gleitkomma --, und die vier sind genau diese
+-- Form. Die uebrigen zehn sind richtige Rufe oder gehoeren `D004`, das im erklaerenden
+-- Modul schweigt.
+--
+-- ## Warum `M135` sie nicht faengt
+--
+-- `M135` haelt die Grenze `bool` gegen ZAHL, und ein Zeiger ist keine. Die Regel steht
+-- absichtlich so eng -- *„nur die `bool`/Zahl-Grenze, weil das die falsifizierte war"* --,
+-- und diese Zelle ist der Beleg dafuer, dass das Absteckung und nicht Vollstaendigkeit war.
+--
+-- > `M140` laesst die `bool`/Zahl-Kreuzung liegen, samt der `0 .. 1`-Ausnahme, die ein
+-- > Geraetebit braucht (`beispiele/gift/416`). Zwei Absagen an einer Stelle saehen aus wie
+-- > zwei Regeln, und die Giftprobe der aelteren fiele gruen, waehrend sie ausgebaut ist.
+
+module gift {
+
+type Puls = { flanken : u32 in 0 .. 9, };
+
+impl fn schalte(an : bool) -> u32 in 0 .. 9
+    effects { pure }
+    costs   <= 4 ops
+{
+    if an { return 1; }
+    return 0;
+}
+
+impl fn ruft(p : ptr<normal, r> Puls) -> u32 in 0 .. 9
+    effects { pure }
+    costs   <= 8 ops
+{
+    return schalte(p);
+}
+
+}

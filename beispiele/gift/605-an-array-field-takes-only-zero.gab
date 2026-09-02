@@ -1,0 +1,45 @@
+-- erwartet: C001
+-- **Ein Reihungsfeld nimmt nur die Null, und der Erzeuger sagt es jetzt statt zu raten.**
+--
+-- **C hat keine Zuweisung eines Feldes an ein anderes.** `.bytes = ANDERS` ist keine
+-- Absenkung, und `{ANDERS}` waere auch keine: geschweifte Klammern um einen Feldnamen setzen
+-- das ERSTE Element und nullen den Rest, also etwas anderes als das, was hier geschrieben
+-- steht. Deshalb steht hier eine Weigerung -- *ein Erzeuger, der raet, macht jeden Pass vor
+-- ihm zunichte.*
+--
+-- ## Die Haelfte daneben ist geheilt, und darum steht sie nicht hier
+--
+-- Bis zum 2026-09-02 schrieb derselbe Ort `{ .bytes = 0, .len = 0 }` fuer die NULL. Der
+-- Pruefer meldete `5 items, 0 errors, 0 hints`, und `cc -std=c11 -O0 -Wall -Wextra -Werror`
+-- antwortete *`error: missing braces around initializer`*. **Pruefer sauber, Erzeugnis
+-- unuebersetzbar** -- das eine, was dieser Erzeuger verspricht nicht zu tun. Dort fehlten
+-- zwei Klammern, und sie stehen jetzt da (`emit::feldsetzer`, beide Bestimmerstellen: der
+-- `static` auf Dateiebene und das zusammengesetzte Literal). Die Behauptung darueber steht
+-- in `crates/gabbro-check/tests/gestalt.rs`, weil ein geheilter Fehler keine Giftprobe mehr
+-- traegt.
+--
+-- ## Und warum die NULL und nicht ein Wert
+--
+-- `= 0` ist der Nullsetzer eines Aggregats -- `beispiele/08` und `beispiele/64` schreiben
+-- ihn, und `M139` laesst ihn deshalb an einem Reihungsfeld ausdruecklich durch. *Was hier
+-- faellt, ist der Fall, den keine Klammer rettet*: eine zweite Reihung derselben Gestalt.
+-- Gegen sie schweigt der Pruefer mit Recht -- zwei `[u8; 8]` sind dieselbe Gestalt und
+-- tragen keinen Namen, den man vergleichen koennte --, und die Grenze ist die des
+-- ERZEUGNISSES und nicht die des Typs.
+
+module gift {
+
+const KAP : u32 = 8;
+
+pub type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+
+pub static mut ANDERS : [u8; KAP] = 0;
+
+pub fn baue() -> Text
+    effects { reads ANDERS }
+    costs   <= 4 ops
+{
+    return Text(bytes: ANDERS, len: 0);
+}
+
+}

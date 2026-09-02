@@ -1259,7 +1259,7 @@ fn das_when_eines_tauschs_traegt_die_wirkung() {
     faellt_nicht(&quelle("writes AT, writes G, publishes AT", "schreibt()"));
 }
 
-/// **`M140` -- the index bound in a PREDICATE** (`beispiele/gift/637`, measured 2026-09-02).
+/// **`M141` -- the index bound in a PREDICATE** (`beispiele/gift/637`, measured 2026-09-02).
 ///
 /// `requires T.slots[9].x == 0` on a `table T count 8` gave `0 errors`, and `gabbro lean`
 /// wrote it into `<fn>_pre` -- *"what the caller grants"*, an ASSUMPTION over a cell no
@@ -1276,14 +1276,14 @@ fn ein_literalindex_im_praedikat_faellt() {
         )
     };
     // The four fn-level positions, and the same literal in each.
-    faellt_mit(&fnform("requires T.slots[9].x == 0"), "M140");
+    faellt_mit(&fnform("requires T.slots[9].x == 0"), "M141");
     faellt_mit(
         &fnform("ensures result == true && (T.slots[9].x == 0)"),
-        "M140",
+        "M141",
     );
     faellt_mit(
         &format!("module p {{\n{tabelle}spec fn g() -> bool = T.slots[9].x == 0;\n}}"),
-        "M140",
+        "M141",
     );
     // A table invariant -- and it is the one position where the SAME statement with a
     // quantifier variable is the ordinary corpus form, tested below.
@@ -1292,7 +1292,7 @@ fn ein_literalindex_im_praedikat_faellt() {
             "module p {{\ntable U count 8 {{ slot {{ y : u32, }}\n\
              invariant i cost O(1) runs offline : U.slots[9].y == 0; }}\n}}"
         ),
-        "M140",
+        "M141",
     );
     // A loop invariant and an `until`, inside a body -- the clause order is the grammar's.
     let schleife = |bis: &str, inv: &str| {
@@ -1304,8 +1304,8 @@ fn ein_literalindex_im_praedikat_faellt() {
              return 0;\n}}\n}}"
         )
     };
-    faellt_mit(&schleife("T.slots[9].x == 0", ""), "M140");
-    faellt_mit(&schleife("true", "invariant T.slots[9].x == 0"), "M140");
+    faellt_mit(&schleife("T.slots[9].x == 0", ""), "M141");
+    faellt_mit(&schleife("true", "invariant T.slots[9].x == 0"), "M141");
 
     // **The counter-direction, and it carries the claim.** A predicate says things a body
     // cannot, and a rule that started refusing those would break correct programs.

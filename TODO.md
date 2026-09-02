@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~88~~ 89 Sätze über 12 von 12 Pässen (75, 79 und 80 am 2026-08-31, 88 am 2026-09-02 früh) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~89~~ 90 Sätze über 12 von 12 Pässen (75, 79 und 80 am 2026-08-31, 88 und 89 am 2026-09-02) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -656,7 +656,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **97 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 116 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 117 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -759,8 +759,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2903 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
-      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
+      Heute **2952 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
       das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
@@ -3821,7 +3820,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      64 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 400
+      64 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 404
       Giftproben)
       ```
 
@@ -3887,8 +3886,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 89 Sätze über 268 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
-**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 90 Sätze über 269 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*
 
@@ -5036,34 +5034,36 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
 *Drei Befunde, die beim Schreiben des zweiten druckenden Beispiels abfielen. **Keiner davon
 ist `B2`**, und alle drei sind grösser als der Posten, der sie gefunden hat.*
 
-- [ ] **An einem Zeigerparameter prüft M1 das Argument GAR NICHT.** Gemessen am 2026-09-02
-      gegen `impl fn nimmt(p : ptr<normal, r> Text)` — vier Rufe, und der Typ des Arguments
-      spielt in keinem eine Rolle:
-
-      ```text
-      nimmt(KAP)      ein u32     0 Typfehler   (nur E008, weil `pure` nicht stimmte)
-      nimmt(PUFFER)   ein static  0 Fehler
-      nimmt(q)        ptr<normal, r> Andr -- der FALSCHE Verbund   0 Fehler
-      nimmt(true)     ein bool    0 Typfehler
-      ```
-
-      Der dritte ist der teuerste: **ein Zeiger auf den falschen Verbund geht durch**, und der
-      Erzeuger schreibt `const Andr *` in ein `const Text *`. *`N030` hält fest, dass
-      `opaque`, `linear`, `ghost` und `tagged` NOMINAL sind — an dieser Stelle wird die
-      Nominalität nicht gelesen.* Der Pass fehlt, nicht die Regel.
+*Zwei der drei sind am 2026-09-02 geschlossen (`M139`, und die Klammern im Erzeuger) und
+stehen in `DONE.md`. Was hier bleibt, ist der Rest, den die Messung DANEBEN aufgedeckt hat.*
 
 - [ ] **Gabbro kann auf seinen eigenen Speicher keinen Zeiger bilden.** `&PUFFER` sagt `M127`
       ab (*„`&` macht eine FUNKTION zu einem Wert; es gibt kein Adress-von für eine Variable
-      oder einen Typ"*), und ein `static`-Verbund, der an einem Zeigerparameter steht, geht als
-      WERT hinüber — was `cc` zurückweist (*„Inkompatibler Typ für Argument 2"*). **Eine
-      Reihung ist die eine Adresse, die C von selbst hergibt**, und darum trägt
-      `beispiele/64-writes-a-whole-buffer.gab` eine nackte `[u8; KAP]` mit der Länge daneben
-      statt einen Verbund aus beidem. *Das ist eine gemessene Grenze und keine Form des
-      Beispiels.* Sie hängt am Punkt darüber: dass der Ruf durchgeht, ist dieselbe Blindheit.
+      oder einen Typ"*). **Eine Reihung ist die eine Adresse, die C von selbst hergibt**, und
+      darum trägt `beispiele/64-writes-a-whole-buffer.gab` eine nackte `[u8; KAP]` mit der
+      Länge daneben statt einen Verbund aus beidem. *Das ist eine gemessene Grenze und keine
+      Form des Beispiels.*
 
-- [ ] **Ein `static`-Verbund mit einem Reihungsfeld senkt zu `{ .bytes = 0 }` ab.** `cc`
-      weist das unter `-Wall -Wextra -Werror` zurück (*„geschweifte Klammern fehlen um
-      Initialisierung", `-Werror=missing-braces`*). `verbundmarken` in `emit.rs` schreibt den
-      Skalar durch, ohne den erklärten Feldtyp anzusehen; gebraucht wird `{0}`, wo das Feld
-      eine Reihung ist. **Der Prüfer sagt 0 Fehler und der Erzeuger schreibt C, das nicht
-      übersetzt** — dieselbe Form wie `N041` und `N046`, nur im Erzeuger statt an der Grenze.
+      **Die zweite Hälfte dieses Punktes ist erledigt:** ein `static`-Verbund an einem
+      Zeigerparameter ging als WERT hinüber und wurde erst von `cc` zurückgewiesen; seit
+      `M139` sagt der Prüfer *„a record does not answer for a pointer"*. Damit ist die Grenze
+      benannt statt still — was bleibt, ist die Entscheidung, ob die Sprache ein Adress-von
+      für Speicher bekommt. *Sie ist eine Sprachfrage und gehört dem Ordner.*
+
+- [ ] **`M128` vergleicht an einem `fn(…)`-Slot weder die PARAMETERTYPEN noch das ERGEBNIS.**
+      Gemessen am 2026-09-02 im selben Lauf, der `M139` hervorbrachte: `fn(u8)` passt still in
+      einen Slot `fn(u32) -> u32`, weil `fnptr_passt` nur Stelligkeit, Wirkungen und Kosten
+      hält — *drei Lesarten einer Zusage, und die vierte, welche Werte durch den Zeiger
+      gehen, steht nicht da.* `cc` weist es zurück (*incompatible pointer type*), also ist es
+      dieselbe `N041`-Form eine Stufe zu spät. **Der Gegenstand ist derselbe wie bei `M139`
+      und die Regel ist eine andere** — deshalb hier und nicht dort: `M128` hat eigene
+      Giftproben (`gift/241`), und wer die Regel erweitert, zieht ihre Aussage mit.
+
+- [ ] **Die RECHTE eines Zeigers werden am Ruf nicht gehalten.** `R008` vergleicht je
+      Zeigerparameter den ADRESSRAUM und sagt es selbst; die Rechte danebendran vergleicht
+      niemand. Gemessen am 2026-09-02: ein `ptr<normal, r> Text` an einem
+      `ptr<normal, rw> Text`-Parameter geht mit **0 Fehlern** durch, der Erzeuger schreibt
+      einen `const Text *` in ein `Text *`, und `cc` verwirft die Qualifizierung.
+      **`M139` lässt es liegen**, weil `Typ::Zeiger` weder Raum noch Rechte trägt — die
+      Auskunft steht am `TypExpr`, wo `R008` schon liest. *Ein Pass, zwei Hälften einer
+      Zeigerdeklaration, und nur eine wird gelesen.*

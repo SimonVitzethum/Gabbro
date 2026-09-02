@@ -331,6 +331,102 @@ pass reads at all.
 
 ---
 
+## Moved out of TODO.md on 2026-09-02 — `passt` ended in a silent `else`, and 283 of 306 cells walked through it
+
+**The reproduction was one file, and the number beside it was the wrong kind of reassuring.**
+
+```gabbro
+impl fn nimmt(q : ptr<normal, r> Text) -> u32 in 0 .. KAP …
+impl fn ruft(a : ptr<normal, r> Andr) -> u32 in 0 .. KAP … { return nimmt(a); }
+```
+
+```text
+gabbro pruefe:  6 items, 0 errors, 0 hints
+                M1 saw 4 expressions, 0 of them without a type (100 % coverage)
+```
+
+**What `100 % coverage` counts is expressions that RECEIVED a type, never checks performed**
+— `buche()` is called from `ausdruck`, and every one of those four got a `Typ`. The line is
+true and it answers a question nobody was asking. *It is a `W25` inside the type checker: a
+number that reads as a guarantee and measures the denominator of a different one.*
+
+### The extent, measured before anything was repaired
+
+18 parameter kinds × 18 argument kinds, the wrong thing passed at a call, one file per cell,
+`gabbro pruefe` then `gabbro emit` then `cc -std=c11 -O0 -Wall -Wextra -Werror`:
+
+| | off-diagonal cells | share |
+|---|---:|---:|
+| checker said `0 errors` | **283 of 306** | 92 % |
+| … of those, `cc` refused | 165 | 54 % |
+| … of those, the emitter refused (`C001`, an array has no lowering as a parameter) | 96 | 31 % |
+| … of those, **green C** | **22** | 7 % |
+
+**The denominator is the point.** A hole in one cell reads differently from a hole in a row,
+and this was neither: it was the whole table minus the diagonal. Of the 22 that reached green
+C, ten were correct calls or another rule's business (rights narrowing, a range alias at
+its carrier, an `opaque type` inside its home module where `D004` is silent by design); the
+other **twelve** were `bool` ← pointer (four) and the integer/float crossing (eight), and
+**no later stage says a word about either.**
+
+### The cause, and it was one line
+
+`m1.rs::passt` ended in
+
+```rust
+let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else { return; };
+```
+
+and `typen::bereich` answers `Some` for `Ganzzahl`, `Umlaufend` and `Register` and `None` for
+everything else. **A pointer has no range, a record has none, an array has none.** This is the
+same silent `else` `M135` closed for `bool` on 2026-08-31 — two doors further out, and the
+`M135` doc comment named the float half of it as still open.
+
+### `M139`, and what it deliberately does not take
+
+The shape first, then — behind a pointer — the shape of the pointee, then the NAME over an
+aggregate. Two records are two declarations even where their fields line up; that is `N030`'s
+sentence one position further in. It leaves a range alias transparent (taking a scalar alias
+nominally would be a language change), leaves `Unbekannt` and `never` silent (W10), and hands
+four crossings back to the rules that own them: `bool`/number to `M135` **with** its `0 .. 1`
+exception, a reason value to `M124`, the literal zero to the null pointer and the aggregate
+zero-initialiser, and an array at a pointer to its element to C's decay.
+
+> **Every one of those four exemptions was measured, not designed.** The first cut of the rule
+> refused all of them, and the corpus said so within one run: `beispiele/08`, `38` and `64`
+> went red, and three poison probes changed their code out from under their own first line.
+
+**After the repair: 22 of 306 cells silent, and 20 of them are correct calls or another
+rule's.** The whole corpus of 495 files is byte-identical before and after — that is the
+counter-direction, and `crates/gabbro-check/tests/gestalt.rs` names it case by case: 9 correct
+calls that must stay silent, 4 zero/decay forms the clean corpus writes, 7 wrong ones that
+must fall. Poison: `beispiele/gift/603`, `604` (`M139 allein` — the cell where the checker is
+the ONLY line), `605`, `606`.
+
+### And the emitter wrote C that does not build
+
+Found in the same hour and closed with it: a `static` record with an array field lowered to
+`{ .bytes = 0, .len = 0 }`, and `cc -Wall -Wextra -Werror` answers
+`error: missing braces around initializer`. **The checker reported clean and the generator
+wrote C that does not compile** — the one thing this emitter promises not to do. Both
+designator sites had it (the file-scope `static` and the compound literal); both now go
+through `emit::feldsetzer`, which braces the zero and **refuses anything else by name**,
+because C has no assignment of one array to another and `{7}` would set the first element and
+zero the rest. Poison `beispiele/gift/605`; the emitted text is pinned in
+`tests/gestalt.rs::ein_feldfeld_bekommt_seine_klammern`, and `pruefe-emission.sh` stays at
+118 of 118.
+
+### What was named and left
+
+Two residues, both in TODO.md with their measurement: **`M128` compares neither the parameter
+types nor the result at a `fn(…)` slot** (so `fn(u8)` still fits `fn(u32) -> u32`, with `cc`
+as the only reader), and **pointer RIGHTS are not held at a call** — `R008` compares the
+address space alone, so a `ptr<normal, r>` argument reaches a `ptr<normal, rw>` parameter and
+`cc` discards the qualifier. *Both are the `N041` shape again, and naming them is cheaper than
+a wide claim.*
+
+---
+
 ## Moved out of TODO.md on 2026-08-31 — the reach counter counted per VALUE, not per CELL
 
 `pruefe-zahlen.py` asked whether a bold table cell is guarded by looking up its NUMBER in a
@@ -858,8 +954,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**64 clean examples, 403 poison probes, 376 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`
-
+**64 clean examples, 407 poison probes, 381 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`
 > **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean
 > examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not
 > been touched while the corpus grew to four times its size.

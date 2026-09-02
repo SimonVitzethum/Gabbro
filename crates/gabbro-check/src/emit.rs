@@ -388,7 +388,7 @@ fn verbundmarken(e: &Expr, verbund: &str, u: &Namen, absagen: &mut Absagen) -> O
                 .marken
                 .iter()
                 .zip(r.argumente.iter())
-                .map(|(m, a)| format!(".{} = {}", m.text, ausdruck(a, u, absagen)))
+                .map(|(m, a)| feldsetzer(verbund, m, a, u, absagen))
                 .collect();
             Some(format!("{{ {} }}", felder.join(", ")))
         }
@@ -2114,6 +2114,48 @@ fn sammle_retry(baum: &Programm, modul: &str, b: &Block, aus: &mut HashMap<u32, 
 fn nichts_tun(_a: &mut Absagen, _s: gabbro_syntax::span::Span, _w: &str) {}
 
 /// **C001 -- the emitter refuses instead of guessing.**
+/// **`.bytes = 0` is not C, and until today both designator sites wrote it** (2026-09-02).
+///
+/// Measured over an unchanged tree:
+///
+/// ```gabbro
+/// pub type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+/// pub static mut T : Text = Text(bytes: 0, len: 0);
+/// ```
+///
+/// `gabbro pruefe` said `5 items, 0 errors, 0 hints`, `gabbro emit` wrote
+/// `static Text T = { .bytes = 0, .len = 0 };`, and `cc -std=c11 -O0 -Wall -Wextra -Werror`
+/// answered **`error: missing braces around initializer [-Werror=missing-braces]`**. The
+/// compound-literal site had it too: `return (Text){ .bytes = 0, .len = 0 };`. *The checker
+/// reported clean over C that does not build* -- the one thing this emitter promises not to
+/// do, and it is not a refusal it was missing but a pair of braces.
+///
+/// **The zero is the whole set of values an array field can carry here.** `= 0` is the
+/// aggregate zero-initialiser; C has no assignment of one array to another, so any other
+/// value at this position has no lowering. It is REFUSED by name rather than braced and
+/// hoped for -- *a generator that guesses undoes every pass in front of it.*
+fn feldsetzer(
+    verbund: &str,
+    marke: &gabbro_syntax::ast::Ident,
+    a: &Expr,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> String {
+    let feldtyp = u.verbundfeld.get(&(verbund.to_string(), marke.text.clone()));
+    if matches!(feldtyp, Some(TypExpr::Feld(_))) {
+        if konst_zahl(a) != Some(0) {
+            weigere(
+                absagen,
+                a.span,
+                "an array field initialised with anything but `0` -- C has no assignment \
+                 of one array to another, and `{0}` is the whole set this form carries",
+            );
+        }
+        return format!(".{} = {{0}}", marke.text);
+    }
+    format!(".{} = {}", marke.text, ausdruck(a, u, absagen))
+}
+
 fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
     absagen.schiebe(
         Absage::fehler("C001", span, format!("no lowering: {was}")).mit_notiz(
@@ -8144,7 +8186,7 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
             .marken
             .iter()
             .zip(r.argumente.iter())
-            .map(|(m, a)| format!(".{} = {}", m.text, ausdruck(a, u, absagen)))
+            .map(|(m, a)| feldsetzer(&name, m, a, u, absagen))
             .collect();
         if !u.verbunde.contains(&name) {
             weigere(absagen, r.span, "labelled call to something this unit does not declare as a record");

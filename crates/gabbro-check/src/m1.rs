@@ -3047,6 +3047,31 @@ impl<'a> Pruefer<'a> {
 
     // -- Absagen ------------------------------------------------------------------------
 
+    /// **What `100 % coverage` counts, and what it does not** (written down 2026-09-02).
+    ///
+    /// It counts expressions that RECEIVED a type -- one tick per `ausdruck` that did not
+    /// answer `Unbekannt`. **It says nothing about how many CHECKS ran on them.** The line
+    /// `gabbro pruefe` prints reads as a guarantee and measures the denominator of a
+    /// different question, and that is a `W25` inside the type checker.
+    ///
+    /// > Measured that day: a pointer to the WRONG record at a call gave
+    /// > `6 items, 0 errors, 0 hints` **and** `M1 saw 4 expressions, 0 of them without a
+    /// > type (100 % coverage)`. All four expressions had a type. Nothing compared two of
+    /// > them. *The number was true.*
+    ///
+    /// The folder has said the same thing twice from the other side -- `M119`
+    /// (`tests/rechenwerk.rs`: *"M1 skips silently what it cannot type -- and printed
+    /// `100 % coverage` for it, because it never saw the expression"*) and
+    /// `messung/ZWEI-BLINDSTELLEN.md` (*"a coverage figure is not a refusal"*). Both are
+    /// about the UNTYPED side; this note is about the typed one, and it is the side that
+    /// reads as reassurance.
+    ///
+    /// **The wording is deliberately NOT changed.** Ten transcripts quote the line verbatim
+    /// -- `messung/FNPTR.md`, `ERZEUGER.md`, `OPS-RELABEL.md`, `C-NAMEN.md`,
+    /// `UEBERSETZUNGSREICHWEITE.md`, `TUTORIAL.md`, two probe headers under
+    /// `messung/proben/` and two poison probes -- and each of them is a MEASUREMENT of a
+    /// past run. *Renaming the field would falsify a record instead of correcting a
+    /// statement.* What was missing was the statement, and it stands here.
     fn buche(&mut self, t: &Typ) {
         if t.ist_unbekannt() {
             self.zaehlung.unbekannt += 1;
@@ -3243,6 +3268,13 @@ impl<'a> Pruefer<'a> {
     /// A float against an integer crosses the same silent `else` in `passt` and is named
     /// in `messung/proben/probe-rueckgabetyp.gab`, not refused here -- *Regel A: the
     /// measurement decides the reach of the rule, not the symmetry of the code.*
+    ///
+    /// > **The float sentence above is a statement about THIS rule and, since 2026-09-02, no
+    /// > longer one about the checker.** `M139` closed the silent `else` itself, and the
+    /// > integer/float crossing falls there. What stays here is the split: `M139` hands the
+    /// > `bool`/number pair BACK to this rule, because only this one carries the `0 .. 1`
+    /// > exception a device flag needs -- *two refusals at one site look like two rules, and
+    /// > `beispiele/gift/430` would fall green while this one is out.*
     fn wahrheit_ist_keine_zahl(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
         fn ist_zahl(t: &Typ) -> bool {
             matches!(
@@ -3284,7 +3316,114 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **`M139` -- the two types are not of the same SHAPE, and `passt` had no word for it.**
+    ///
+    /// Everything else in `passt` compares a RANGE: `M101` the interval, `M104` the width,
+    /// `F001`/`F002` the two float bits, `M128` the contract at a function pointer. The
+    /// function ends in
+    ///
+    /// ```text
+    /// let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else { return; };
+    /// ```
+    ///
+    /// and `typen::bereich` answers `Some` for `Ganzzahl`, `Umlaufend` and `Register` and
+    /// `None` for everything else. **A pointer has no range, a record has none, an array has
+    /// none** -- so at every one of those the comparison ended in a silent `else`.
+    ///
+    /// ## What that cost, measured 2026-09-02
+    ///
+    /// Eighteen parameter kinds against eighteen argument kinds, one file per cell, the
+    /// wrong thing passed at a call: **283 of 306 off-diagonal cells went through with
+    /// `0 errors`, and the run said `100 % coverage` at each.** The sharpest one is a
+    /// pointer to the wrong record:
+    ///
+    /// ```gabbro
+    /// impl fn nimmt(q : ptr<normal, r> Text) -> u32 in 0 .. KAP …
+    /// impl fn ruft(a : ptr<normal, r> Andr) -> u32 in 0 .. KAP … { return nimmt(a); }
+    /// ```
+    ///
+    /// `gabbro pruefe` said `6 items, 0 errors`, `gabbro emit` wrote `nimmt(a)` with a
+    /// `const Andr *`, and **`cc` answered** -- *"passing argument 1 of 'nimmt' from
+    /// incompatible pointer type"*. That is the `N041` shape: the trust base holds, in the
+    /// wrong place. Of the 283 silent cells `cc` caught 165 and the emitter refused 96
+    /// (`C001`, an array has no lowering as a parameter) -- **22 reached green C**, and TWELVE
+    /// of those carried a value no C compiler was ever going to question: four
+    /// `bool` <- pointer and eight integer/float. The other ten are correct calls or
+    /// `D004`'s, which is silent inside the module that declares the `opaque type`.
+    ///
+    /// ## What it compares, and what it deliberately leaves
+    ///
+    /// **The coarse shape**, and where two shapes agree and both sides carry a NAME over an
+    /// aggregate, the name. Two records are two declarations even when their fields line up
+    /// -- `N030` says the same for `opaque`, `linear`, `ghost` and `tagged`, and this is the
+    /// half of that sentence which lives behind a `ptr`.
+    ///
+    /// It leaves what other rules own: `D004` the opaque conversion, `M135` the
+    /// `bool`/number crossing where a range of `0 .. 1` makes it not one, `M101` the
+    /// interval, `R008` the address space. **And it leaves a range alias alone** -- `type
+    /// Zaehler = u32 in 0 .. 65535` lowers to its carrier and is transparent by
+    /// construction, so `gestalt` looks THROUGH `Benannt` and the nominal half only bites
+    /// over an aggregate. *Taking a scalar alias nominally would be a language change, not
+    /// a hole being closed* (`N030`, 2026-08-20).
+    ///
+    /// > **`Unbekannt` and `never` stay silent, both of them.** `W10: not refused is not
+    /// > confirmed` -- and `Unbekannt` is precisely what the coverage number counts, so a
+    /// > refusal built on it would turn the honest exit into a false red.
+    fn gestalt_passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) -> bool {
+        // **One rule, one refusal site** -- same reason as `fnptr_passt`: the three ways a
+        // shape can miss (the kind, the pointee's kind, the name over an aggregate) are
+        // three readings of one sentence, and three `Absage`s would look like three rules
+        // to `instrumente/pruefe-vergabe.py`.
+        let Some(grund) = gestalt_grund(quelle, ziel) else { return false };
+        // **`M140` and not `M139`, and the split was forced by a measurement.** Two lanes
+        // picked the same free number on 2026-09-02 -- one for a literal wider than `i128`,
+        // this one for an argument whose SHAPE does not match its parameter. They are two
+        // rules, and `pruefe-vergabe.py` said so at the merge: candidates 20 -> 21.
+        // *A code carrying two rules makes every probe on it ambiguous, retroactively.*
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M140",
+                span,
+                format!(
+                    "{was} requires `{}`, the value has `{}` -- {grund}",
+                    ziel.text(),
+                    quelle.text()
+                ),
+            )
+            .mit_notiz(
+                "this pass compares RANGES, and neither of these two has one -- until \
+                 today the comparison ended here without a word",
+            )
+            // **The load-bearing reason, and it is not the representation.** Written after
+            // `pruefe-gruende.py` filed this rule under `unklar` (2026-09-02): the first
+            // note says what the checker DID, which is a statement about the pass and not
+            // about the program. *A refusal that cannot say why it exists teaches the
+            // reader to route around it.*
+            .mit_notiz(
+                "what a slot DECLARES is the promise every pass behind it computes with: \
+                 the effect hull reads what the caller may touch through this parameter, \
+                 `K001` reads the cost it was given, and the range facts held after the \
+                 call are the callee's -- a value of another shape arriving here makes \
+                 each of them a statement about something that is not there",
+            )
+            .mit_notiz(
+                "the next stage is not the answer: `cc` catches most of these, and a \
+                 checker that reports a clean file over C that will not compile has put \
+                 its trust base one stage too late",
+            ),
+        );
+        true
+    }
+
     fn passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        // **The SHAPE runs before everything else, and it is the one question `passt` never
+        // asked** (`M139`, 2026-09-02). Everything below this line compares ranges, widths
+        // and contracts; where a shape has none, the comparison used to end in
+        // `let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else { return; }` --
+        // *a silent `else`, and a pointer has no range.*
+        if self.gestalt_passt(quelle, ziel, span, was) {
+            return;
+        }
         // **The function pointer comparison runs FIRST and returns** -- the rules below are
         // about ranges and widths, and a function pointer has neither.
         if let (Typ::FnPtr(q), Typ::FnPtr(z)) = (quelle.durchgreifen(), ziel.durchgreifen()) {
@@ -4309,6 +4448,121 @@ fn option_nutzlast(t: &Typ) -> Option<Typ> {
         undurchsichtig: *undurchsichtig,
         unter: Box::new(Typ::Ganzzahl(eng)),
     })
+}
+
+/// **The coarse shape of a type -- the question `passt` could not ask** (`M139`).
+///
+/// `None` is the honest exit and it is deliberate: `Unbekannt` is what the coverage number
+/// counts, and `never` inhabits nothing. *Building a refusal on either would turn the exit
+/// into a false red.*
+///
+/// **A `Benannt` is looked THROUGH.** A range alias lowers to its carrier and is transparent
+/// by construction (`N030`, 2026-08-20) -- the name is asked for again in `gestalt_grund`,
+/// and only where the shape is an aggregate.
+fn gestalt(t: &Typ) -> Option<&'static str> {
+    match t {
+        // A device register is a number whose bits have names -- at a slot it is a number.
+        Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Register { .. } => Some("a number"),
+        Typ::Gleitkomma(_) => Some("a floating-point number"),
+        Typ::Wahrheit => Some("a truth value"),
+        Typ::Zeiger(_) => Some("a pointer"),
+        Typ::Verbund(_) | Typ::Verbundname(_) => Some("a record"),
+        Typ::Feld { .. } => Some("an array"),
+        Typ::FnPtr(_) => Some("a function pointer"),
+        Typ::Summe { .. } => Some("a sum type"),
+        Typ::Tabelle(_) => Some("a table"),
+        Typ::Grund(_) => Some("a reason"),
+        Typ::Benannt { unter, .. } => gestalt(unter),
+        Typ::Nie | Typ::Unbekannt => None,
+    }
+}
+
+/// The name a type CARRIES -- `None` where there is none to compare.
+fn nominal(t: &Typ) -> Option<&str> {
+    match t {
+        Typ::Benannt { name, .. } | Typ::Summe { name, .. } => Some(name),
+        Typ::Verbundname(n) | Typ::Tabelle(n) | Typ::Grund(n) => Some(n),
+        _ => None,
+    }
+}
+
+/// Strips the NAME and nothing else -- `durchgreifen` also strips the pointer, and here the
+/// pointer is the thing being asked about.
+fn ohne_namen(t: &Typ) -> &Typ {
+    match t {
+        Typ::Benannt { unter, .. } => ohne_namen(unter),
+        anderer => anderer,
+    }
+}
+
+/// **The LITERAL ZERO** -- a number whose whole range is `0 .. 0`.
+///
+/// It is the null pointer (`beispiele/38`: `static tz : ptr<normal, rw> Platz = 0;`) and the
+/// zero-initialiser of an aggregate (`beispiele/08`, `beispiele/64`:
+/// `static mut PUFFER : [u8; KAP] = 0;`). **Both forms stand in the CLEAN corpus** -- the
+/// first cut of this rule refused them, and that was a language change and not a hole.
+fn ist_null(t: &Typ) -> bool {
+    t.bereich().is_some_and(|b| b.min == 0 && b.max == 0)
+}
+
+/// **An array decaying to a pointer to its element** -- C's array-to-pointer decay, and
+/// `beispiele/64` rests on it: `write(1, PUFFER, LAENGE)` at
+/// `extern fn write(…, p : ptr<normal, r> u8, …)`.
+fn zerfaellt_zu(quelle: &Typ, ziel: &Typ) -> bool {
+    let (Typ::Feld { element, .. }, Typ::Zeiger(z)) = (ohne_namen(quelle), ohne_namen(ziel))
+    else {
+        return false;
+    };
+    gestalt_grund(element, z).is_none()
+}
+
+/// **Why the two cannot stand at the same place -- `None` where nothing here says so.**
+///
+/// Three readings of one question, and the ORDER is the rule: first the shape, then -- behind
+/// a pointer -- the shape of the pointee, then the NAME over an aggregate.
+///
+/// **And two crossings belong to OTHER rules**, measured against the corpus and not designed:
+/// `bool` against a number is `M135` together with its `0 .. 1` exception
+/// (`beispiele/gift/416` reads a device bit into a `bool` and MUST stay clean), and a
+/// `reason` at a value position is `M124` -- structural, four doors, and
+/// `beispiele/gift/293` falls there. *Two refusals at one site look like two rules, and the
+/// older one's poison probe would fall green while that rule is out.*
+fn gestalt_grund(quelle: &Typ, ziel: &Typ) -> Option<String> {
+    let (q, z) = (gestalt(quelle)?, gestalt(ziel)?);
+    if q == z {
+        // **A pointer is compared at what it points AT.** `Typ::Zeiger` carries no space and
+        // no rights -- those are `M3`'s (`R008`), measured and separate -- so what is left
+        // here is the pointee, and that is exactly the half `cc` was answering for.
+        if let (Typ::Zeiger(a), Typ::Zeiger(b)) = (ohne_namen(quelle), ohne_namen(ziel)) {
+            return gestalt_grund(a, b);
+        }
+        // **An aggregate is NOMINAL, a scalar alias is not.** Two records are two
+        // declarations even where their fields line up; `type Zaehler = u32 in 0 .. 65535`
+        // is its carrier.
+        let (Some(qn), Some(zn)) = (nominal(quelle), nominal(ziel)) else {
+            return None;
+        };
+        if qn != zn && matches!(q, "a record" | "an array" | "a sum type" | "a table") {
+            return Some(format!("`{qn}` and `{zn}` are two declarations, not one"));
+        }
+        return None;
+    }
+    let zahl = |g: &str| g == "a number" || g == "a floating-point number";
+    // `M135` owns this crossing, WITH the `0 .. 1` exception a device flag needs.
+    if (q == "a truth value" && zahl(z)) || (zahl(q) && z == "a truth value") {
+        return None;
+    }
+    // `M124` owns the position of a reason value, structurally and at four doors.
+    if q == "a reason" || z == "a reason" {
+        return None;
+    }
+    if ist_null(quelle) && matches!(z, "a pointer" | "a record" | "an array") {
+        return None;
+    }
+    if zerfaellt_zu(quelle, ziel) {
+        return None;
+    }
+    Some(format!("{q} does not answer for {z}"))
 }
 
 /// Nennt der Fakt diesen Namen -- als Grundname oder in einem Index?
