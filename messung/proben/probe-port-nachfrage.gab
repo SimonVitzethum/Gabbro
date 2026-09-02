@@ -24,7 +24,7 @@
 -- Bedingung erfuellt ist, unter der der Erzeuger seine eigene Absage aufheben darf.*
 module probe::uart {
 
-opaque type Tor = u64;
+opaque type Tor = u16;
 
 assume uart_leert_sich arch x86_64
     "Ein 16550 setzt THRE, sobald das Halteregister geleert ist."
