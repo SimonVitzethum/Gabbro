@@ -2143,7 +2143,15 @@ echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECH
 #
 # The repair belongs to the probe and not to this guardian: either it carries a reason both
 # families read, or its own first line says which family it means.
-MARKE_UMG_NUR_CC=1
+#
+# **1 -> 0 on 2026-09-03, and it took neither of the two repairs the note offered.** `642`
+# stopped being a reverse probe altogether: the emitter now refuses the shape by name
+# (`D2`), the file is headed `-- erwartet: C001`, and no compiler is asked about it any
+# more. *The debt is discharged at its source rather than papered over at the measurement* --
+# and the disagreement between the families is settled the honest way, because the one
+# family that was silent was silent for a REASON: clang sees the `for (;;)` never falls out.
+# **So did the emitter, and it wrote the declaration anyway.**
+MARKE_UMG_NUR_CC=0
 
 # **The SECOND family, and its number stands BESIDE the first one and not instead of it.**
 if [ "$HAT_CLANG" = "1" ]; then
@@ -2390,7 +2398,12 @@ MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten dar
 # > durchrutscht.** Das ist genau der Fall, fuer den die Meldung *„Nachsehen mit: head -1 auf
 # > die neue Datei -- steht dort `-- erwartet: cc`, gehoert die Marke mit Grund nachgezogen"*
 # > geschrieben wurde. Bei allen sechs steht es dort.
-MARKE_EMIT_G=8      # `gift/286` (uebersetzt), `gift/414` und `641`-`646` (`-- erwartet: cc`)
+#
+# **8 -> 6 on 2026-09-03, and the direction is the good one.** `641` and `642` no longer
+# reach the emitter's output: both now fall AT the emitter with `C001` and are headed
+# `-- erwartet: C001`. That is the cap moving the way its own message says it should --
+# *the checker (here: the emitter's own refusal) catches a probe before it emits.*
+MARKE_EMIT_G=6      # `gift/286` (uebersetzt), `gift/414` und `643`-`646` (`-- erwartet: cc`)
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
@@ -2419,7 +2432,11 @@ MARKE_EMIT_G=8      # `gift/286` (uebersetzt), `gift/414` und `641`-`646` (`-- e
 # Giftproben ueberhaupt bis zum Erzeuger kommen, hier, wie viele davon dem `cc`-Zweig einen
 # Gegenstand geben. *Ein Zweig, den nichts betritt, ist gruen, ohne etwas zu sagen* -- mit
 # zehn Dateien betritt ihn jetzt das Zweieinhalbfache.
-MARKE_UMGEKEHRT=10
+# **10 -> 8 on 2026-09-03.** `641` (`D1`) and `642` (`D2`) were repaired; each now falls at
+# `C001` and is re-headed `-- erwartet: C001`, so neither gives the `-- erwartet: cc` branch
+# an object any more. **The number falling IS the evidence the repair landed** -- and eight
+# files still enter the branch, so it keeps saying something.
+MARKE_UMGEKEHRT=8
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

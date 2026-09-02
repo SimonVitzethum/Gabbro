@@ -48,6 +48,19 @@ struct Namen {
     tabellen: Vec<String>,
     /// Die `format`-Namen. Ein Pfad, der eines nennt, IST der Zugriffsverbund.
     formate: BTreeSet<String>,
+    /// **Format name -> the fields that GET A READER** (`D1`, 2026-09-03).
+    ///
+    /// `format_` writes one `{Format}_{field}` accessor per field and writes NONE for a
+    /// field marked `reserved` -- that is what the word is for. Nothing else in this file
+    /// knew it. A `walk`'s descent lowers `down : rest when …` into a call on exactly that
+    /// accessor, so `beispiele/gift/641` reached `cc` as an implicit declaration of
+    /// `Pte_rest` while the checker said `0 errors`.
+    ///
+    /// > *The set says READER, not FIELD, and the difference is the whole point.* A
+    /// > `reserved` field is declared and has no reader; a misspelt one is neither. Both
+    /// > lower to the same missing call, so both belong on the same side of this map, and
+    /// > the refusal at the `walk` distinguishes them in its text.
+    formatfelder: HashMap<String, BTreeSet<String>>,
     /// Je Geraet: der Raum und seine Register. **Ein Registerzugriff ist KEIN Feldzugriff**
     /// -- siehe `geraet`.
     /// **The assumption names this unit DECLARES** (2026-08-26).
@@ -697,6 +710,18 @@ pub fn emittiere_mit(
         }
         ItemArt::Format(f) => {
             namen.formate.insert(f.name.text.clone());
+            // **The reader set, and it is built by the SAME condition `format_` lowers by.**
+            // One rule, read twice: a field gets `{Format}_{field}` exactly when it is not
+            // `reserved`. Any other spelling here would be a second opinion about the
+            // emitter's own output.
+            namen.formatfelder.insert(
+                f.name.text.clone(),
+                f.felder
+                    .iter()
+                    .filter(|g| !g.reserviert)
+                    .map(|g| g.name.text.clone())
+                    .collect(),
+            );
         }
         ItemArt::Device(d) => {
             namen.geraete.insert(
@@ -5685,6 +5710,53 @@ fn funktion(
         return;
     }
     let FnRumpf::Block(b) = &f.rumpf else { return };
+    // **A body with no `return` in it never answers, and the declaration says it does**
+    // (`D2`, 2026-09-03).
+    //
+    // `beispiele/gift/642` is the shape the sweep found: a `forever` loop as the whole body
+    // of an `impl fn g() -> u64`. The checker is right to want no `return` after the loop --
+    // control never gets there -- and the emitter wrote `for (;;) { … }` and stopped, which
+    // is what a C programmer would write by hand. Then `cc -std=c11 -Wall -Wextra -Werror`
+    // answers *no return statement in function returning non-void*.
+    //
+    // **The rule is GCC's own, deliberately**: that diagnostic is syntactic at the front
+    // end -- the body holds no `return` ANYWHERE. Measured beside the generated file:
+    // `static uint64_t g(void) { for (;;) { x = 1; } }` draws it, and
+    // `static uint64_t g(void) { for (;;) { return 1; } }` does not. So a `forever` with a
+    // `return` inside it is untouched here, and it should be: that function answers.
+    //
+    // **And the defect is wider than the `forever` the probe carries.** `impl fn g() -> u64
+    // { erledigt = 1; }` -- no loop anywhere -- reaches `cc` with the same error, measured
+    // the same day. *One rule covers both, because it is the same rule GCC applies.*
+    //
+    // > **`__builtin_unreachable()` after the loop was the other candidate, and it lowers a
+    // > declaration that is not true.** `-> u64` says this function hands back a `u64`;
+    // > nothing here ever does. `never` is already in the language, `M2` reads it, and
+    // > `prototyp_kern` lowers it to `_Noreturn void` -- measured end to end on the day this
+    // > was written: checker silent, emitter exit 0, `cc` silent. *The refusal points at a
+    // > word the language already has, which is the one case where refusing beats lowering.*
+    if rueck != "void" && rueck != "_Noreturn void" && !rumpf_antwortet(b) {
+        let schleife = matches!(
+            b.anweisungen.last().map(|s| &s.art),
+            Some(StmtArt::Schleife(l)) if matches!(**l, Schleife::Forever(_))
+        );
+        weigere(
+            absagen,
+            f.name.span,
+            &format!(
+                "a body that holds no `return` at all under a declaration that promises a \
+                 result -- nothing in it ever answers{}. A function that is MEANT never to \
+                 answer says so in its own declaration: `-> never` lowers to `_Noreturn \
+                 void`, and the callers already read it",
+                if schleife {
+                    ", and the `forever` loop that ends it is exactly that case"
+                } else {
+                    ""
+                }
+            ),
+        );
+        return;
+    }
     let aus = rumpf_aus;
     aus.push_str(&format!("\n{intern}{rueck} {}({liste}) {{\n", f.name.text));
     // **`(void)k;` fuer jeden Parameter, den der Rumpf nicht liest -- und das ist ein Befund,
@@ -8616,6 +8688,21 @@ fn option_wert(e: &Expr, tab: &str, u: &Namen, absagen: &mut Absagen) -> Option<
 /// neben einem `*_grund = …` ist kein Fehler, aber eine Behauptung, die nicht mehr stimmt.
 ///
 /// *Dieselbe Frage stellt `N034` im Pruefer, und dort ist sie eine Absage.*
+/// **Does this body hold a `return` at all?** -- the syntactic half of `D2`.
+///
+/// Deliberately the same question GCC's `-Wreturn-type` asks in its first, front-end form:
+/// *no return statement in function returning non-void*. It is not a reachability analysis
+/// and does not pretend to be one -- `return` under an `if` that never runs still counts
+/// here, and still counts for GCC. **A body with none is the one case where both tools agree
+/// with no analysis at all**, and that agreement is what makes the refusal safe to hold at
+/// the emitter rather than at a pass.
+fn rumpf_antwortet(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| {
+        matches!(&s.art, StmtArt::Return(_))
+            || crate::unterbloecke(s).into_iter().any(rumpf_antwortet)
+    })
+}
+
 fn rumpf_scheitert(b: &Block) -> bool {
     b.anweisungen.iter().any(|s| {
         if let StmtArt::Return(Some(e)) = &s.art {
@@ -9490,6 +9577,49 @@ fn pred_c_eintrag(p: &Pred, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Opti
     })
 }
 
+/// **`{Format}_{field}(it)` -- but only where that accessor EXISTS** (`D1`, 2026-09-03).
+///
+/// The name is built by the emitter and never looked up, which is how
+/// `beispiele/gift/641` reached `cc` as *implicit declaration of function `Pte_rest`*
+/// under a checker saying `3 items, 0 errors, 0 hints`. C then assumes `int` for the
+/// undeclared callee, and the `int -> uint64_t` that follows is a second complaint from
+/// the same one cause -- `instrumente/zaehle-c-formen.py` books it as its 67th form.
+///
+/// **Two spellings reach here and they get different sentences**, because they are
+/// different mistakes: a `reserved` field is one the format DECLARES and deliberately
+/// gives no reader, and any other name is one the format does not have at all. *A refusal
+/// that says which of the two it is turns a compile error two tools away into a sentence
+/// about the declaration in front of the reader.*
+fn leser_oder_absage(
+    fmt: &str,
+    feld: &Ident,
+    wie: &str,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Option<String> {
+    match u.formatfelder.get(fmt) {
+        // No entry at all means the type is not a `format` of this unit, and the caller
+        // that got here already established that it is. Staying silent would be a guess.
+        None => return None,
+        Some(leser) if leser.contains(&feld.text) => {}
+        Some(_) => {
+            weigere(
+                absagen,
+                feld.span,
+                &format!(
+                    "`{wie}` over `format {fmt}`, which hands out no reader for `{f}` -- \
+                     a `reserved` field is declared and deliberately has none, and a field \
+                     that is not declared has nothing to read; either way this would call \
+                     `{fmt}_{f}`, which no accessor of this unit defines",
+                    f = feld.text
+                ),
+            );
+            return None;
+        }
+    }
+    Some(format!("{fmt}_{}(it)", feld.text))
+}
+
 /// `it.feld` wird `Format_feld(it)`. **Ein anderer Grundname als `it` ist keine Absenkung,
 /// sondern ein Missverstaendnis** -- der Knoteneintrag ist das einzige, worueber `down when`
 /// und `leaf` reden, und wer etwas anderes nennt, bekommt eine Absage statt einer Vermutung.
@@ -9497,7 +9627,7 @@ fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Op
     Some(match &e.art {
         ExprArt::Ort(o) if o.basis.text == "it" && o.suffixe.len() == 1 => {
             let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
-            format!("{fmt}_{}(it)", f.text)
+            leser_oder_absage(fmt, f, &format!("it.{}", f.text), u, absagen)?
         }
         ExprArt::Klammer(x) => format!("({})", ausdruck_eintrag(x, fmt, u, absagen)?),
         ExprArt::Unaer(UnOp::Nicht, x) => {
@@ -9586,12 +9716,31 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         );
         return;
     }
+    // **`down : rest` is a READ, and until 2026-09-03 nothing checked it was one.**
+    //
+    // The descent's last line is `knoten_zu({elem}_{ab}(it), &k)`, a call on the accessor
+    // `format_` writes per field -- and `format_` writes NONE for a `reserved` field.
+    // `beispiele/gift/641` joined the two: `down : rest` over `rest : u64 @[63:1] reserved`
+    // checked clean, emitted clean, and fell at `cc`. *The emitter built a C name instead of
+    // looking one up, which is the same move `opsnamen` exists to prevent at a call site.*
+    if leser_oder_absage(&elem, &w.ab, &format!("down : {}", w.ab.text), u, absagen).is_none() {
+        return;
+    }
+    // **One cause, one sentence.** `pred_c_eintrag` refuses precisely where it can; the
+    // generic form refusal underneath it is for the shapes it cannot name, and printing both
+    // would make one defect look like two.
+    let vorher = absagen.absagen.len();
     let Some(ab_wenn) = pred_c_eintrag(&w.ab_wenn, &elem, u, absagen) else {
-        weigere(absagen, w.span, "`walk … down … when` predicate form");
+        if absagen.absagen.len() == vorher {
+            weigere(absagen, w.span, "`walk … down … when` predicate form");
+        }
         return;
     };
+    let vorher = absagen.absagen.len();
     let Some(blatt) = pred_c_eintrag(&w.blatt, &elem, u, absagen) else {
-        weigere(absagen, w.span, "`walk … leaf` predicate form");
+        if absagen.absagen.len() == vorher {
+            weigere(absagen, w.span, "`walk … leaf` predicate form");
+        }
         return;
     };
 
