@@ -1000,7 +1000,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**64 clean examples, 418 poison probes, 390 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean
+**64 clean examples, 419 poison probes, 392 tests · 53 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean
 > examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not
 > been touched while the corpus grew to four times its size.
 >

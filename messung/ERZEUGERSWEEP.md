@@ -197,7 +197,7 @@ this instrument, and the honest answer is not the same for all four.
 
 | | what the audit said | what the sweep says |
 |---|---|---|
-| `table count 0` | *"refused at emit"* | **WRONG, and this is a correction.** It lowers to `T_slot slots[0]`. Found by net 5: *ISO C forbids zero-size array*. GCC takes it as an extension and says nothing under the plain gate. |
+| `table count 0` | *"refused at emit"* | **WRONG, and the correction turned out to be much larger than the booking.** It lowered to `T_slot slots[0]`, found by net 5 — and asking what a `count 0` table does at a USE found an out-of-bounds read in the artefact. **Repaired the same day, both halves, no new code.** §9. |
 | `[u64; 0]` | *"refused at emit"* | **right** — `C001`, *"`static` array of length zero — C has no such object"*. The property is kept; the sweep sees it as `REFUSE C001`. |
 | `embeds … scale 0` | *"lowers, and the frame number is multiplied by zero"* | **found**, by net 7, 3 rungs (`0`, `0x0`, `0b0`) writing the same `* 0u`. |
 | 65 536-character identifier | *"accepted and written into C"* | **found**, by net 6: 58 cases over 6 slots, up to 65 536 characters. |
@@ -265,3 +265,106 @@ kind.**
 * **`-Wconversion`, `-fanalyzer`, `clang -Weverything`.** `zaehle-c-formen.py` owns those over
   the corpus; running them over 3 046 generated units is a further instrument and not this
   one.
+
+---
+
+## 9. The class behind the zeros — eight positions measured, two escaped
+
+The four self-check cases were four instances of one shape, and the question that matters is
+not *how do I repair four things* but *what is the class, and does one rule cover it*.
+
+**The class:** every position where a Gabbro literal becomes a **size, a count, a stride, a
+scale or a divisor**, and zero is *meaningless* rather than merely small.
+
+It already had four members, written before anyone saw it was a class. `N010` is the
+first — and its sentence is the argument for the whole class:
+
+> `bank … stride 0` — every cell is empty. *`Device_Konstruktor.thy` then proves non-overlap
+> VACUOUSLY: empty sets do not intersect.* **Right and useless is not a passed check.**
+
+### The measurement
+
+Every position, run through checker, emitter and `cc`:
+
+| position | zero means | who says it | escapes? |
+|---|---|---|---|
+| `bank … stride 0` | every cell empty | **`N010`** at the declaration | no |
+| `accumulates … per cpu 0` | no cells | **`N014`** | no |
+| `a / 0`, `a % 0` — literal **and** through a `const` | undefined behaviour | **`M102`** | no |
+| `static A : [u64; 0]` | no elements | `C001` | no |
+| `slot { a : [u64; 0] }` | no elements | `C001` | no |
+| `walk node : [Pte; 0]` | no elements | `C001` | no |
+| `walk T levels 0` | no descent | `C001` | no |
+| `bank … count 0` | no cells | **`M103` at every use** | no |
+| `aligned(p, 0)`, `aligned(p, 3)` | *would be* a modulo by zero | `C001` **everywhere** | no |
+| **`table T count 0`** | no slots | **nothing** | **YES — an out-of-bounds read** |
+| **`embeds … scale 0`** | every address zero | **nothing** | **YES — a reader that answers 0** |
+| `costs <= 0 ops`, `lock … held <= 0 ops`, `in 0 .. 0`, `reg @0x0` | legitimate | — | counter-direction |
+
+**`aligned(p, 0)` does not escape, and that is measured rather than assumed.** It is refused
+by `C001` in an `impl fn` body **and inside a `format` `where` clause** — the one place the
+refusal's own text claims it lowers (*"inside one they lower against the buffer (`v->len`)"*).
+**`aligned` lowers nowhere at all**, so the modulo by zero does not exist in any artefact
+today. *The diagnostic is wrong about itself, and that is a separate item.*
+
+### `table count 0` — not a missing rule, a FILTER
+
+```rust
+// umgebung.rs::sammle_kapazitaeten, until 2026-09-02
+if let Some(n) = t.kapazitaet.as_ref()
+        .and_then(|e| self.konst_wert(pfad, e))
+        .filter(|n| *n > 0)          //  <-- here
+```
+
+A zero went into the capacity map **not as zero but not at all**, and `feld_von` then handed
+`M103` a `laenge: None`. *A rule with no bound does not refuse; it says nothing.*
+
+```
+table T count 0 { slot { a : u32, } }   …   return T.slots[0].a;
+
+gabbro pruefe   3 items, 0 errors, 0 hints
+gabbro emit     T_slot slots[0];  …  return T_speicher.slots[0].a;
+cc -Wall -Wextra -Werror   silent
+```
+
+**The same index at the same zero fell everywhere else.** On a `static [u64; 0]` and on a
+`bank … count 0`, `M103` says *"the index has `u8 in 0 .. 0`, the array has 0 elements"*. The
+table was the one carrier whose zero was thrown away — *not the one with a reason, the one
+with a filter.*
+
+> **A zero dropped is a zero unchecked** — the same shape as `konst_zahl`'s `as i128`, one
+> map further out: a conversion that turns a KNOWN fact into a MISSING one.
+
+**Repaired in both halves, and with no new code:**
+
+* `umgebung.rs` records the capacity as **zero** (both writers — a repair at one of two
+  writers holds until the other one runs), so `M103` refuses every index into an empty table;
+* `emit.rs` refuses the declaration by name, as every sibling zero-length array already was.
+
+Probe `beispiele/gift/647`. Speech test
+`rechenwerk.rs::die_leere_tabelle_hat_eine_schranke_und_kein_erzeugnis`, four directions:
+the index into the empty table falls, index 7 of 8 does **not**, index 8 of 8 does, and a
+`count 8` table still lowers with `slots[8]` in it.
+
+*The ratchet reported its own repair* — the next run said `BOOKED AND GONE` for both booked
+lines, and the removal is therefore measured rather than trusted.
+
+### `embeds … scale 0` — a different argument, and it keeps its own sentence
+
+An empty table is an empty **domain**: every statement over it holds vacuously, which is
+`N010`'s argument exactly. A scale is not a domain — the statements about the field are not
+vacuous, they are **wrong**: the extraction is performed and multiplied away, so every record
+yields address zero.
+
+**One code over both would make every probe on it retroactively ambiguous**, so this one is
+booked and not closed: characterisation test
+`rechenwerk.rs::ein_massstab_von_null_liest_nichts_und_niemand_sagt_es`, which pins today's
+`* 0u`, carries `* 4096u` as its counter-direction, and goes red the day someone refuses the
+scale — with the instruction in its own assertion message.
+
+### What the class costs to state
+
+**Two of eleven positions escaped, and neither needed a new refusal code.** One was a filter
+that read an empty domain as an unknown one; the other has no reader yet and is booked with
+its measurement. *Four repairs would have been four codes; the class was one filter, one
+missing emitter arm, and one open decision.*
