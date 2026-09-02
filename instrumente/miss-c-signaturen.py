@@ -405,7 +405,18 @@ def messen() -> tuple[dict[str, tuple[str, str, str]], Counter, dict[str, str]]:
 
 
 def aequivalenzen_pruefen() -> list[str]:
-    """`int == int32_t`? Not assumed -- `_Static_assert` says so."""
+    """`int == int32_t`? Not assumed -- `_Static_assert` says so.
+
+    **And since 2026-09-02 that covers `GLEICH_POSIX` too.** It did not. The two POSIX
+    spellings carried a comment saying they are *measured under `<unistd.h>` and not here*,
+    and `absenkbar()` reads them at `:217` with exactly the trust it gives the asserted
+    table -- both feed the same `BINDBAR` verdict. So the module docstring's *"The
+    equivalences are measured, not assumed"* held for one of two tables, and the printed
+    count `len(GLEICH) - 1` excluded the other by construction.
+
+    They need a header `KOPF` does not carry, which is the whole reason they sat outside;
+    that is one extra `#include` on the fragment, not a reason.
+    """
     kaputt = []
     for c, s in sorted(GLEICH.items()):
         if s == "void":
@@ -413,6 +424,11 @@ def aequivalenzen_pruefen() -> list[str]:
         r = _cc(f"_Static_assert(__builtin_types_compatible_p({c}, {s}), \"x\");\n")
         if r.returncode != 0:
             kaputt.append(f"{c} != {s}")
+    for c, s in sorted(GLEICH_POSIX.items()):
+        r = _cc("#include <unistd.h>\n#include <sys/types.h>\n"
+                f"_Static_assert(__builtin_types_compatible_p({c}, {s}), \"x\");\n")
+        if r.returncode != 0:
+            kaputt.append(f"{c} != {s}  (POSIX, LP64)")
     return kaputt
 
 
@@ -661,7 +677,10 @@ def main() -> int:
     print(f"  Zeilen in SIGNATUR (C's Deklaration lesbar): {len(tafel)}")
     print(f"  davon BINDBAR (Signatur bekannt): {bindbar}")
     print(f"  nicht bindbar (Absage mit Grund): {gesamt - bindbar}")
-    print(f"\n  Aequivalenzen geprueft: {len(GLEICH) - 1}, davon kaputt: {len(kaputt)}")
+    # The denominator names BOTH tables, because both are now driven through `cc`. It used
+    # to read `len(GLEICH) - 1` while `absenkbar()` consumed a second table nothing asserted.
+    print(f"\n  Aequivalenzen geprueft: {len(GLEICH) - 1 + len(GLEICH_POSIX)} "
+          f"({len(GLEICH) - 1} + {len(GLEICH_POSIX)} POSIX), davon kaputt: {len(kaputt)}")
     for k in kaputt:
         print(f"    KAPUTT: {k}")
 

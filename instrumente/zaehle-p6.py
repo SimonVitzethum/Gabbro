@@ -101,6 +101,18 @@ def main() -> int:
     files = sorted(glob.glob(str(W / "beispiele" / "*.gab"))) + sorted(
         glob.glob(str(W / "messung" / "*" / "*.gab"))
     )
+    # **The two balance checks below are VACUOUS over an empty selection** (2026-09-02).
+    # `sum_reasons != refused` compares `0` against `0`, `unknown` stays empty, and the run
+    # walks past both into `return 0` -- having printed `0 Dateien angesehen` as a clean
+    # pass. The register that a reason is checked against reddens on a name it does not
+    # know; the population it draws from was checked against nothing at all.
+    #
+    # Same guard, same wording, same return code as `pruefe-p6-beweis.sh`, which refuses on
+    # zero goals over exactly this corpus.
+    if not files:
+        print("ABBRUCH: kein `.gab` in `beispiele/` oder `messung/*/` -- es wurde NICHTS "
+              "gemessen.", file=sys.stderr)
+        return 2
     total = goals = refused = 0
     no_register = 0
     per_reason: collections.Counter = collections.Counter()

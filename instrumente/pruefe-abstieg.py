@@ -54,6 +54,43 @@ def mit_block():
 PAESSE = ["m1", "m2", "m3", "kosten", "wirkungen", "geteilt", "phasen", "paarung",
           "schleifen", "gruppe", "aufrufgraph", "zeugnis", "namen", "kbedingung", "emit"]
 
+# **THE LIST ABOVE IS A FIXTURE, AND UNTIL TODAY NOTHING COMPARED IT TO THE TREE**
+# (2026-09-02). It is hand-written, and the closing line of this run quantifies over EVERY
+# pass -- a claim about a population this file never counted.
+#
+# Measured: 19 files under `crates/gabbro-check/src` carry a `StmtArt::` arm for a
+# block-bearing kind. Fifteen names stand above. **The claim covered part of what descends,
+# and read as if it covered all of it.**
+#
+# What goes in here is a CENSUS and a booking, not a wider sweep: whether one of these is a
+# pass over statements, or a register that happens to look at one, is a decision about the
+# architecture, and this guardian does not get to make it by widening a list. What it does
+# get to do is refuse to keep quiet -- the names print every run, and a name that is not
+# booked here turns the run red, exactly as an unbooked descent gap does.
+#
+# *The reasons below say what each file IS. None of them says the file is excused.*
+AUSSERHALB_GEBUCHT = {
+    "lib": "the shared walker itself -- `unterbloecke` is READ from here, so it is the "
+           "subject of the rule rather than a pass under it",
+    "alias": "the alias surface, counted and deliberately not analysed (its own head line)",
+    "blindstellen": "a register over forms the corpus does not reach",
+    "domaene": "the domain bound, one site and two readers",
+    "lean": "the body channel, a Gabbro body as a Lean term",
+    "opsruf": "the call form of a generated operation",
+    "pflichten": "the obligation register, P6",
+    "zeremonie": "the ceremony register, stage 2",
+}
+
+
+def absteigende_dateien(arten):
+    """Every file under the checker that carries an arm for a block-bearing kind.
+
+    The population `PAESSE` claims to be. Derived from the tree and from `lib.rs`'s own
+    list -- neither half is written twice (W7).
+    """
+    muster = re.compile(r"StmtArt::(?:%s)\b" % "|".join(re.escape(a) for a in arten))
+    return sorted(p.stem for p in QUELLE.glob("*.rs") if muster.search(p.read_text()))
+
 
 def funktionen(s):
     """Zerlegt eine Rust-Datei in Funktionen -- ueber Klammerzaehlung, nicht ueber Regex."""
@@ -454,7 +491,33 @@ fn endet(b: &Block) -> bool {
 
     # **A double descent is never booked.** It is not a hole in the coverage but a run
     # time of 2^depth.
+    # **The census of what descends, beside the census of what was looked at.**
+    draussen = [d for d in absteigende_dateien(arten) if d not in PAESSE]
+    neu_draussen = [d for d in draussen if d not in AUSSERHALB_GEBUCHT]
+    tote_buchung = [d for d in AUSSERHALB_GEBUCHT if d not in draussen]
+    print(f"\n== Besetzung: {len(PAESSE)} Paesse angesehen, "
+          f"{len(draussen)} weitere Dateien steigen ebenfalls ab ==")
+    for d in draussen:
+        print(f"   {d + '.rs':18s} {AUSSERHALB_GEBUCHT.get(d, '**NICHT GEBUCHT**')}")
+    print("   Die Zeile darunter sagt `jeder Pass`, und das ist eine Aussage ueber die")
+    print("   Liste oben -- nicht ueber diese hier. Sie stehen da, damit jemand sie")
+    print("   verschieben KANN; sie freizusprechen ist etwas anderes (W10).")
+
     abschnitt.fertig()
+    if neu_draussen:
+        print(f"== ABSTIEG: {len(neu_draussen)} NEUE Datei(en) ausserhalb der Besetzung ==")
+        print("   " + ", ".join(neu_draussen))
+        print("   Sie steigen ueber Anweisungen ab und stehen weder in `PAESSE` noch in")
+        print("   `AUSSERHALB_GEBUCHT`. Eines von beidem gehoert entschieden -- und die")
+        print("   Entscheidung gehoert nicht diesem Waechter, das Aufschreiben schon.")
+        return 1
+    if tote_buchung:
+        print(f"== ABSTIEG: {len(tote_buchung)} BUCHUNG(EN) OHNE GEGENSTAND ==")
+        print("   " + ", ".join(tote_buchung))
+        print("   Diese Dateien stehen in `AUSSERHALB_GEBUCHT` und steigen nicht mehr ab")
+        print("   (oder heissen jetzt anders). *Eine Buchung, die niemand zurueckzieht,")
+        print("   waechst zur Erlaubnis.*")
+        return 1
     if doppelte_gesamt:
         print(f"== ABSTIEG: {len(doppelte_gesamt)} DOPPELTE ABSTIEGE ==")
         print("   " + ", ".join(doppelte_gesamt))

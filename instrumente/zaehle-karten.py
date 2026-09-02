@@ -145,6 +145,26 @@ def main():
         return 2
 
     alle, oeffentlich, dateien, stellen = messe()
+
+    # **The speech test above proves the regex on an INVENTED line, not on the subject**
+    # (2026-09-02). That is the right shape -- a counter that reads only its own files
+    # measures how well they suit it -- but it leaves one end open: the pattern can be
+    # perfect and still match nothing here, because the subject moved out from under it.
+    #
+    # The verdict below is a RATCHET, and a ratchet compares upward. Zero cards found means
+    # zero sites found, zero is under every mark, and the run reports a record best at the
+    # exact moment it stopped seeing its subject. *An empty population is worth nothing to
+    # a ratchet, and looks like the best result it ever had.*
+    #
+    # A floor, therefore, on the real harvest and not on the invented one. `2`, because
+    # this says the SETUP has to change, exactly as tooth 0 above does.
+    if not alle or not oeffentlich or not dateien:
+        print("ABBRUCH: %d Karten, %d oeffentlich, %d Passdateien -- es wurde NICHTS "
+              "gemessen." % (len(alle), len(oeffentlich), dateien), file=sys.stderr)
+        print("   Die Sprechprobe oben faehrt an einer ERFUNDENEN Zeile und bleibt davon "
+              "gruen.", file=sys.stderr)
+        return 2
+
     unqual = [s for s in stellen if not s[4]]
     print()
     print("== %d Karten in `umgebung.rs`, %d davon oeffentlich, %d Passdateien gelesen =="

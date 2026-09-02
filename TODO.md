@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 177 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 178 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *176 → 177 on 2026-09-02: `messung/BERICHT-UEBERSETZERFAMILIE.md` joined — the report on
       why the two-family probe saw nothing. **The guardian named the carry before a reader did**
       (`pruefe-zahlen.py`, `176` against a run of `177`), and the cause was measured the way

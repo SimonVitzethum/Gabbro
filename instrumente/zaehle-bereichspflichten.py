@@ -154,6 +154,19 @@ def main():
     if sauber == ganz:
         print("  ACHTUNG: das Tor faellt NICHT -- ohne `narrow` uebersetzt alles.")
         print("  Dann misst dieser Lauf nichts (Vorab-Protokoll: ungueltig).")
+        # **The two lines above were a PRINT and the run went on to `return 0`**
+        # (2026-09-02). A tool that says in its own words that it measured nothing, and then
+        # hands back the code for a clean pass, has written its finding where only a reader
+        # can act on it -- and every caller of this file reads the number, not the text.
+        #
+        # `messe()` says the same thing further up, about its own subject: over a checker
+        # that never answered, what comes back is no result AT ALL, never a result of zero
+        # obligations. This branch is that sentence one level higher, and it lacked the exit
+        # the other one has.
+        #
+        # `2`, like tooth 0 above: the SETUP has to change, not the tree.
+        print("  ABBRUCH: die Zahl darunter waere keine Messung.", file=sys.stderr)
+        return 2
     print(f"\n== N = {len(stellen)} Fundstellen ==")
     for e, z in sorted(stellen, key=lambda x: (int(x[0]), int(x[1]))):
         print(f"     Einheit ab {e}, Zeile {z}")

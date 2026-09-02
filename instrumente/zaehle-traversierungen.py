@@ -363,6 +363,21 @@ def main():
               file=sys.stderr)
         return 2
 
+    # **The SECOND corpus needs the same guard, for the same reason** (2026-09-02).
+    #
+    # The line above was written once, for one of the two populations, and the other one
+    # went without it for as long as both have stood here. The headline below adds the two
+    # together and is read as a statement about real code; with an empty second population
+    # it reports zero bodies, zero duplicated, and reads as *no duplication found* rather
+    # than as *no real code was seen*. Three directory names carry that population, and a
+    # rename of any one costs the whole half in silence.
+    #
+    # *A guard this folder already owns, missing from half the places that need it.*
+    if not ECHTKORPUS:
+        print("ABBRUCH: der echte Korpus fehlt -- es wird NICHT null gemessen.",
+              file=sys.stderr)
+        return 2
+
     ausfuehrlich = "--ruempfe" in sys.argv
     l = bericht("Lehrkorpus (beispiele/ + messung/fragmente/)", LEHRKORPUS, ausfuehrlich)
     e = bericht("Echter Code (messung/treiber, caprock, netz -- Regel B)",
