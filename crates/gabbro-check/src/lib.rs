@@ -693,11 +693,44 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
 /// Prüfung, sondern durch eine OPTIMIERUNG*: `pruefe-emission.sh` sah unter `-O1`, wie der
 /// C-Übersetzer 65 Rufe strich, die ein falsches `__attribute__((pure))` für wirkungslos
 /// erklärt hatte.
+///
+/// ## The `when` of a compare-exchange is the SAME position, measured 2026-09-02
+///
+/// `AT exchange 1 when old(AT) == f() returns r` evaluates `f()` at run time -- the emitter
+/// writes `uint32_t _cx1 = (uint32_t)(f());` and hands `&_cx1` to
+/// `atomic_compare_exchange_strong_explicit`. **The arm below returned `Vec::new()` for
+/// every `Exchange`**, so no reader of this function ever saw that predicate:
+///
+/// ```gabbro
+/// impl fn nimmt() -> bool effects { writes AT, publishes AT } costs <= 4 ops {
+///     let genommen = AT exchange 1 when old(AT) == schreibt() returns erfolg
+///         publishes nothing;                    -- `schreibt` writes G. 0 errors.
+/// }
+/// ```
+///
+/// *Word for word the `retry … until` finding above, one construct further* -- the effect
+/// hull, the cost of the call and the phase step all stopped at the statement.
+///
+/// **Only the `Vergleich` form, and the argument comes from `emit.rs`.** It refuses every
+/// `when` that is not `old(X) == <expr>` (`C001`: *"a compare-exchange swaps on EQUALITY
+/// with one expected value"*), so what stands here is one evaluated expression and not a
+/// proof obligation. `XForm::Update` carries a BLOCK and no predicate; `unterbloecke` has it.
+///
+/// **And the loop invariants stay out.** `traverse`/`retry`/`forever … invariant P` is a
+/// GHOST predicate -- `pflichten.rs` books it as an `S` obligation and no line of it is
+/// lowered. A pass that began refusing a call there would be judging a specification by the
+/// rules of a body, and that is a decision, not a repair.
 pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
     match &s.art {
         StmtArt::Schleife(sch) => match sch.as_ref() {
             Schleife::Retry(r) => r.bis.iter().collect(),
             Schleife::Traverse(_) | Schleife::Forever(_) => Vec::new(),
+        },
+        // **The expected value of a compare-exchange RUNS** -- see the head of this
+        // function. `Update` carries a block, not a predicate.
+        StmtArt::Exchange(e) => match &e.form {
+            XForm::Vergleich { bedingung, .. } => vec![bedingung],
+            XForm::Update { .. } => Vec::new(),
         },
         // Die Formen ohne eigenes Prädikat — **einzeln**, damit eine neue Art hier auffällt.
         StmtArt::Let(_)
@@ -707,7 +740,6 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         | StmtArt::Publish(_)
         | StmtArt::Wenn(_)
         | StmtArt::Match(_)
-        | StmtArt::Exchange(_)
         | StmtArt::Ruf(_)
         | StmtArt::Bricht(_)
         | StmtArt::Narrow(_)

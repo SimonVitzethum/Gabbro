@@ -707,13 +707,15 @@ pub const D1D2: &[Satz] = &[
     Satz {
         name: "d.domaenenort",
         kennungen: &["D017", "D018"],
-        aussage: "The PLACE a quantifier domain runs over is held twice: its base name \
+        aussage: "The PLACE a domain runs over is held twice: its base name \
                   resolves (`D017`), and it is of the kind the domain needs (`D018`) -- a \
                   table for `slots of`, a record for `queue`, an array field for `elems \
                   of`, a `walk` for `mappings of`, and a slot for the three that walk the \
                   tree. **`D017` is `M109`'s question in the four positions `M109` does not \
                   read**: `requires`, an `invariant` of a `table`, of a `walk` or of a \
-                  `group`, and the body of a `spec fn`.",
+                  `group`, and the body of a `spec fn`. **And it holds BOTH producers of a \
+                  domain**: the grammar makes one at a `quant` and one at a `member` \
+                  (`expr in domain`), and until 2026-09-02 only the first was walked.",
         vorbehalt: "**`D017` is silent in `ensures` and at a `traverse`, and both are \
                     measured decisions.** `M109` reads every name of a postcondition, so a \
                     second refusal there would be a second refusal for one fault; a domain \
@@ -735,7 +737,12 @@ pub const D1D2: &[Satz] = &[
                       of` over a record), 427 (`D018`, `queue` over a table -- the shape \
                       the corpus itself carried). The counter-direction is the whole \
                       corpus: 462 files, and the only place either code falls is the one \
-                      the measurement found. messung/DOMAENENSTELLUNGEN.md.",
+                      the measurement found. messung/DOMAENENSTELLUNGEN.md. **The `member` \
+                      half was measured 2026-09-02**: `requires i in slots of GIBTSNICHT` \
+                      gave `0 errors` while the same words under a `forall` fell at \
+                      `D017`. Poison is beispiele/gift/638; on this corpus the widening \
+                      has ZERO bite -- no `member` predicate in it names a place that does \
+                      not resolve, and no file changed.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; messung/DOMAENENSTELLUNGEN.md; \
                      messung/DOMAENENNAMEN.md",
     },
@@ -794,6 +801,41 @@ pub const M1: &[Satz] = &[
                       `M102`, single probes on 9 further codes, one on `M139` \
                       (`gift/601`). **`M106`, `M107`, `M110` and `M114` have NO probe.**",
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
+    },
+    Satz {
+        name: "m1.praedikatsindex",
+        kennungen: &["M140"],
+        aussage: "No LITERAL index in a predicate lies outside the length the declaration of \
+                  its carrier writes down. It holds at every predicate position this pass \
+                  walks: `requires`, `ensures`, the body of a `spec fn`, the invariants of a \
+                  `table`, a `walk` and a `group`, and the `invariant` and `until` of all \
+                  three loop forms.",
+        vorbehalt: "**Only a NUMBER LITERAL, and only against a length the declaration \
+                    names.** A computed index stays silent -- `W10`, a lower bound neither \
+                    refuses nor confirms -- and so does a quantifier variable, which is the \
+                    form the corpus actually writes (`forall s in slots of Self : \
+                    Self.slots[s].a == 0`). The same limit `N009` draws at a register \
+                    offset, one construct further. **And it says nothing about whether the \
+                    predicate is TRUE**: the sentence is about the existence of the cell, \
+                    not about its value. The positions it does NOT reach are the ones this \
+                    walk does not visit at all -- `axiom … requires`, `reg … requires`, \
+                    `transition … requires`, `walk … down/leaf`, `check … floor` and the \
+                    `when` of a compare-exchange.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-02 against the UNCHANGED checker: `impl fn f() -> \
+                      bool requires T.slots[9].x == 0` on a `table T count 8` gave `4 items, \
+                      0 errors, 0 hints`, and `gabbro lean` over the same file wrote it into \
+                      `f_pre`, *\"what the caller grants\"* -- an ASSUMPTION over a cell that \
+                      does not exist. `Gabbro.Body`'s world is a total map over `slot \
+                      (carrier) (index : Int) (field)` and `wellFormed` quantifies over \
+                      every `k`, so the premise is satisfiable rather than vacuous: the \
+                      sixth class in pure form. Poison is \
+                      beispiele/gift/637-an-assumption-over-a-slot-that-is-not-there.gab, \
+                      whose counter-probes (a quantifier variable and an in-range literal) \
+                      stay silent in the same run. Over all corpus files the rule falls in \
+                      ZERO.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; crates/gabbro-check/src/lean.rs; \
+                     dokumente/PLAN.md (die sechste Klasse)",
     },
     Satz {
         name: "m1.vorrang",

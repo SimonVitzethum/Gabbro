@@ -577,7 +577,18 @@ impl<'a> Rechner<'a> {
             // `narrow` senkt sich auf eine Bereichspruefung ab -- eine Rechenoperation.
             StmtArt::Exchange(e) => match &e.form {
                 XForm::Update { rumpf, .. } => Kosten::Zahl(1).plus(self.block(rumpf, lokal)),
-                XForm::Vergleich { wert, .. } => Kosten::Zahl(1).plus(self.ausdruck(wert, lokal)),
+                // **A compare-exchange is the swap PLUS the expected value** (2026-09-02).
+                //
+                // Only `wert` -- the value written on success -- was counted, and the
+                // EXPECTED value was not: the emitter computes it into `_cx1` before the
+                // `atomic_compare_exchange_strong_explicit`, so a call there is paid for at
+                // every attempt. *Word for word the sentence forty lines up about a
+                // `retry`'s `until`: only counting the body means missing the most
+                // expensive part.* Measured: `when old(AT) == teuer()` with a callee of 900
+                // ops behind an envelope of 8 gave `0 errors`.
+                XForm::Vergleich { wert, bedingung, .. } => Kosten::Zahl(1)
+                    .plus(self.ausdruck(wert, lokal))
+                    .plus(pred_kosten(self, bedingung, lokal)),
             },
             StmtArt::LetSonst(l) => {
                 // **Ein `place` auszupacken kostet EINE Operation** -- die Ablesung. Ein

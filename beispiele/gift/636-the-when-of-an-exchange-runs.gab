@@ -1,0 +1,58 @@
+-- erwartet: E008
+-- **Das `when` eines compare-exchange LAEUFT -- und kein Leser einer Anweisung sah es.**
+--
+-- `lib.rs::eigene_praedikate` antwortete `Vec::new()` fuer JEDE `StmtArt::Exchange`. Damit
+-- endete die Wirkungshuelle, die Kostenrechnung und der Phasenschritt an der Anweisung --
+-- waehrend der Erzeuger dasselbe Praedikat nach C schreibt:
+--
+--   uint32_t _cx1 = (uint32_t)(schreibt());
+--   genommen = atomic_compare_exchange_strong_explicit(&AT, &_cx1, (uint32_t)(1), …);
+--
+-- **Woertlich der `retry … until`-Befund vom 2026-08-19, ein Konstrukt weiter.** Dort stand
+-- der Ruf in der Schleifenbedingung und `eigene_ausdruecke` gab `Schleife => Vec::new()`
+-- zurueck; `pruefe-emission.sh` sah unter `-O1`, wie der C-Uebersetzer 65 Rufe strich, die
+-- ein falsches `__attribute__((pure))` fuer wirkungslos erklaert hatte.
+--
+-- ## Warum genau diese Stelle und keine daneben
+--
+-- Der Erzeuger weist JEDES `when` ab, das nicht `old(X) == <ausdruck>` ist:
+--
+--   [C001] no lowering: `when` comparison that is not `old(X) == <expr>` -- a
+--          compare-exchange swaps on EQUALITY with one expected value
+--
+-- Die Flaeche ist damit **ein ausgewerteter Ausdruck** und keine Beweispflicht. *Das
+-- Argument kommt aus der Absage des Erzeugers und nicht aus dem Geschmack.*
+--
+-- > **Und die Schleifeninvarianten bleiben draussen.** `traverse`/`retry`/`forever …
+-- > invariant P` ist ein GEISTERpraedikat -- `pflichten.rs` bucht es als `S`-Pflicht, und
+-- > keine Zeile davon wird abgesenkt. Ein Pass, der dort einen Ruf abweist, beurteilt eine
+-- > Spezifikation nach den Regeln eines Rumpfes. *Das waere eine Entscheidung, keine
+-- > Berichtigung.*
+--
+-- Gemessen am 2026-09-02: diese Datei gab **0 Fehler**, und `gabbro emit` schrieb den Ruf.
+
+module gift {
+
+static mut G : u32 = 0;
+
+atomic AT : u32 release;
+
+impl fn schreibt() -> u32
+    effects { writes G }
+    costs   <= 2 ops
+{
+    G = 1;
+    return 1;
+}
+
+-- Die Rahmenzusage nennt `AT` und nicht `G`. Der Ruf im `when` schreibt `G`.
+impl fn nimmt() -> bool
+    effects { writes AT, publishes AT }
+    costs   <= 8 ops
+{
+    let genommen = AT exchange 1 when old(AT) == schreibt() returns erfolg
+        publishes nothing;
+    return genommen;
+}
+
+}

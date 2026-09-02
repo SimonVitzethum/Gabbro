@@ -537,10 +537,119 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         // **No `_` arm.** The remaining predicate kinds carry no quantifier, and when
         // one grows that changes this pass should fail to compile rather than overlook it
         // -- the lesson of the 78 holes behind `lib.rs::unterbloecke`.
-        PredArt::Vergleich(_)
-        | PredArt::Element(_, _)
-        | PredArt::Erreicht { .. }
-        | PredArt::Held { .. } => {}
+        //
+        // They carry PLACES, though, and `M140` reads the literal index of each.
+        PredArt::Vergleich(e) => {
+            for o in crate::alle_orte(e) {
+                indexschranke_pruefen(o, s, st, absagen);
+            }
+        }
+        // **`expr in domain` produces a DOMAIN too, and this arm did not read it**
+        // (measured 2026-09-02). The grammar has exactly two producers of `domain` --
+        // `quant` above and `member` here -- and the rule was built for one of them:
+        // `requires i in slots of GIBTSNICHT` gave `0 errors`, while the same words under
+        // a `forall` fall at `D017`. *A form without a reader is not neutral; it is a
+        // hole* -- the sentence `ast.rs` writes over `FnZeiger`.
+        //
+        // It binds no variable, so `geb` travels unchanged.
+        PredArt::Element(e, d) => {
+            domaene_pruefen(d, s, st, geb, absagen);
+            for o in crate::alle_orte(e) {
+                indexschranke_pruefen(o, s, st, absagen);
+            }
+        }
+        PredArt::Erreicht { von, nach, .. } => {
+            indexschranke_pruefen(von, s, st, absagen);
+            indexschranke_pruefen(nach, s, st, absagen);
+        }
+        // `Held(L)` and `Held(L, shared)` name a LOCK and nothing else.
+        PredArt::Held { .. } => {}
+    }
+}
+
+/// **`M140` -- a LITERAL index in a PREDICATE, held against the declaration of the carrier.**
+///
+/// `m1.rs` says of itself, in its own head -- the German original is at the top of that
+/// file: *it checks bodies and not predicates; `requires`, `ensures` and `invariant` are
+/// ghost expressions with no run-time effect, and they belong to the PROVER, not to M1.*
+/// **The second half of that sentence is what this rule
+/// is about**, and it was measured on 2026-09-02 rather than assumed:
+///
+/// ```text
+/// impl fn f() -> bool requires T.slots[9].x == 0 …    -- `table T count 8`.  0 errors.
+/// ```
+///
+/// and `gabbro lean` over the same file writes
+///
+/// ```lean
+/// /-- `f` -- what the caller grants: the declared parameter shapes and the
+///     `requires` this channel can say. -/
+/// def f_pre (s : State) : Prop :=
+///   eval s (.bin .eq (.place "T" (.lit (.int 9)) "x") (.lit (.int 0))) = some (.bool true)
+/// ```
+///
+/// `Gabbro.Body`'s world is a TOTAL map over `slot (carrier) (index : Int) (field)`, and
+/// `wellFormed` quantifies over every `k` -- so `f_pre` is not vacuous but *satisfiable*, a
+/// premise about a cell no Gabbro program can address. **The prover does not check what the
+/// checker declined to look at; it assumes it.** That is the sixth class in pure form
+/// (`PLAN.md`): *a sentence is proved, and nothing establishes its premise.*
+///
+/// ## The limit is in the code, not in a footnote
+///
+/// **Only a NUMBER LITERAL is compared, and only against a length the declaration writes
+/// down.** A computed index stays silent -- `W10`, a lower bound neither refuses nor
+/// confirms -- and so does a quantifier variable, which is exactly the form the corpus
+/// writes (`forall s in slots of Self : Self.slots[s].a == 0`). *A rule that started
+/// refusing those would break correct programs, and the counter-direction of its test says
+/// so.* The same limit `namen.rs` draws at `N009` for a register offset, one construct
+/// further.
+///
+/// ## Why it stands HERE and not in `m1.rs`
+///
+/// This file already carries the exhaustive walk over the predicate POSITIONS -- `requires`,
+/// `ensures`, a `spec fn` body, the invariants of a `table`, a `walk`, a `group` and all
+/// three loops -- and `m1.rs` calls it (`domaenen`, one line into pass 3). **Copying that
+/// walk into `m1.rs` would be the second register over one matter**, the class this folder's
+/// own head paragraph writes against. What is shared is the walk; the rule is new.
+fn indexschranke_pruefen(o: &Ort, s: &Sicht, st: Stellung, absagen: &mut Absagen) {
+    let mut praefix = Ort {
+        basis: o.basis.clone(),
+        suffixe: Vec::new(),
+        span: o.span,
+    };
+    for suffix in &o.suffixe {
+        if let OrtSuffix::Index(e) = suffix {
+            if let gabbro_syntax::ast::ExprArt::Zahl(v) = &crate::ohne_klammern(e).art {
+                if let Typ::Feld { laenge: Some(n), .. } =
+                    s.u.typ_von_ort(s.modul, &praefix, s.lokal).durchgreifen()
+                {
+                    if *v >= *n {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "M140",
+                                e.span,
+                                format!(
+                                    "in {}: the index is {v}, and `{}` has {n} elements",
+                                    st.wort(),
+                                    praefix.text(),
+                                ),
+                            )
+                            .mit_notiz(
+                                "M4: no unchecked indexing -- the bound comes from the \
+                                 declaration of the carrier, and a predicate is not exempt",
+                            )
+                            .mit_notiz(
+                                "a `requires` leaves this compiler as an ASSUMPTION (`gabbro \
+                                 lean` writes it as `<fn>_pre`, \"what the caller grants\") -- \
+                                 a grant over a slot that does not exist is a premise \
+                                 nothing can establish",
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+        praefix.suffixe.push(suffix.clone());
     }
 }
 
@@ -872,9 +981,10 @@ fn grundname_pruefen(
             ),
         )
         .mit_notiz(
-            "a quantifier whose place does not resolve quantifies over nothing -- it stands \
-             in the certificate and in the library ABI and says nothing. `M109` says the \
-             same sentence in `ensures`",
+            "a domain whose place does not resolve ranges over nothing -- a `forall` over it \
+             holds vacuously and an `x in` it is never true. It stands in the certificate \
+             and in the library ABI and says nothing. `M109` says the same sentence in \
+             `ensures`",
         ),
     );
 }
