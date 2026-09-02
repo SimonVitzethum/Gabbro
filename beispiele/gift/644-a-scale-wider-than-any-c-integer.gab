@@ -1,25 +1,40 @@
--- erwartet: cc
+-- erwartet: C001
 -- **644 -- `embeds … scale N` with an `N` that is wider than every C integer type.**
 --
--- An embedded pointer field is a bit range and a multiplier, and the emitter writes the
+-- An embedded pointer field is a bit range and a multiplier, and the emitter wrote the
 -- multiplier into the reader as a literal:
 --
 --     static inline uint64_t F_rahmen(const F *v) {
 --         return (uint64_t)((((uint64_t)gabbro_le64(v->bytes + 0) >> 12) & 1099511627775u)
 --                           * 18446744073709551616u); }
 --
--- `2^64` has no C type. `cc` says *integer constant is too large for its type*, and the
+-- `2^64` has no C type. `cc` said *integer constant is too large for its type*, and the
 -- checker said `2 items, 0 errors, 0 hints` about the same file.
 --
--- **This is the `konst_zahl` family with the cast repaired and the QUESTION still open.**
+-- **This was the `konst_zahl` family with the cast repaired and the QUESTION still open.**
 -- On 2026-09-02 `emit.rs::konst_zahl` was changed from `Some(*n as i128)` to
 -- `i128::try_from(*n).ok()`, which stopped the emitter writing `-1` for `2^128 - 1`. It did
 -- not stop it writing `2^64`: that value fits `i128` perfectly well, so `konst_zahl` hands
--- it over, and the next 64 bits of the journey have no owner. *A repair at the reader is not
+-- it over, and the next 64 bits of the journey had no owner. *A repair at the reader is not
 -- a repair at the writer.*
 --
--- The honest answer is a named refusal -- the emitter cannot write this number, and `C001`
--- is the sentence for exactly that.
+-- THE REPAIR, 2026-09-03 -- the fence stands where the C types end
+-- ---------------------------------------------------------------
+-- **The honest answer is a named refusal -- the emitter cannot write this number, and
+-- `C001` is the sentence for exactly that.** There is nothing being withheld: `unsigned
+-- long long` is at least 64 bits wide and C promises no more, so `2^64` has no spelling in
+-- any base with any suffix.
+--
+-- The fence is `u64::try_from` at the point where the multiplier becomes C text, and not
+-- one door earlier. *That is the lesson the `i128` cast taught from the other side:* a
+-- reader that widens is not a writer that checks, and the only place that can know whether
+-- a number fits is the place that writes it down.
+--
+-- > The same day, the general door got the same fence: `czahl` refuses any literal past
+-- > `2^64 - 1` wherever one reaches C, and writes the `u` suffix between `2^63` and
+-- > `2^64 - 1` where C needs one (`messung/proben/probe-literal-past-the-signed-end.gab`).
+-- > **`scale` needs its own because its number never passes through that door** -- it comes
+-- > out of `konst_zahl` as an `i128` and is formatted straight into the reader.
 
 module gift::scale_wider_than_any_c_integer {
 

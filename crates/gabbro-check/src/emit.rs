@@ -421,15 +421,77 @@ fn verbundmarken(e: &Expr, verbund: &str, u: &Namen, absagen: &mut Absagen) -> O
     }
 }
 
+/// **A `section` name goes into C between quotes, and Gabbro escapes nothing** (`D6`,
+/// 2026-09-03).
+///
+/// The lexer's `string` rule is *quote { char } quote* with *char = any character except
+/// quote and newline* (`L006`), so a backslash inside one is an ordinary character and means
+/// nothing. **In C it means the opposite.** A name ending in a backslash, copied through
+/// unchanged, became
+///
+/// ```text
+/// static uint64_t x __attribute__((section("a\"))) __attribute__((unused)) = 0;
+/// ```
+///
+/// -- the backslash escapes the closing quote, the string runs on, and `cc` says *missing
+/// terminating quote character*. That is `beispiele/gift/646`, and the note beside
+/// `kommentartext` a few hundred lines down had said in so many words that this channel was
+/// never open, because a Gabbro string cannot hold a quote. **It was open by one character
+/// nobody had thought of.**
+///
+/// ESCAPING WAS THE SMALLER CHANGE AND IT IS NOT THE ANSWER
+/// -------------------------------------------------------
+/// Doubling the backslash makes the C legal and hands the ASSEMBLER a section whose name
+/// ends in one. GCC emits that name into a `.section` directive **unquoted**, so a
+/// backslash, a comma, a quote or a space in it breaks that line instead -- measured on the
+/// same day as three further shapes of this one slot: an empty name and a blank one reach
+/// the assembler, which answers *missing name*; Gabbro's own doubling form for an embedded
+/// quote lands as *junk at end of line*; a NUL draws *null characters preserved in
+/// literal*. **Escaping moves the failure one tool further out, to the tool fewer
+/// instruments look at** -- `tests/beispiele.rs` stops at `-fsyntax-only` and would never
+/// see it again.
+///
+/// So the name is held to what a section name can BE: at least one character, and each of
+/// them a letter, a digit, or one of `. _ - $`. That is the set the linker's own sections
+/// live in (`.text`, `.data.rel.ro`, `.init_array.65535`, `.gnu.linkonce.t.foo`), and it is
+/// the set the corpus uses -- **two `section` declarations in 612 files, both `.rodata`**.
+///
+/// > *A wider set could be argued for and none of it is asked for.* Rule A: the narrow one
+/// > is what has a witness, and the refusal says exactly which character it stopped at, so
+/// > widening it later is a one-line change with a reason attached.
+fn abschnitt_attribut(st: &StatischDecl, absagen: &mut Absagen) -> String {
+    let Some(t) = &st.section else { return String::new() };
+    let schlecht = t
+        .text
+        .chars()
+        .find(|c| !(c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | '$')));
+    match schlecht {
+        None if !t.text.is_empty() => format!(" __attribute__((section(\"{}\")))", t.text),
+        _ => {
+            weigere(
+                absagen,
+                t.span,
+                &format!(
+                    "a `section` name that cannot be one -- {}. The name is copied into a C \
+                     string literal and from there into an unquoted assembler directive; \
+                     letters, digits and `. _ - $` are what survives both",
+                    match schlecht {
+                        Some(c) => format!("`{}` is not a name character", c.escape_debug()),
+                        None => "it is empty".to_string(),
+                    }
+                ),
+            );
+            String::new()
+        }
+    }
+}
+
 /// The `const` prefix and the `section` attribute of a `static` -- **the record case only**,
 /// where the C type can never end in `*` and the pointer/target distinction below does not
 /// arise.
-fn statischer_kopf(st: &StatischDecl) -> (&'static str, String) {
+fn statischer_kopf(st: &StatischDecl, absagen: &mut Absagen) -> (&'static str, String) {
     let konst = if st.veraenderlich { "" } else { "const " };
-    let abschnitt = match &st.section {
-        Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
-        None => String::new(),
-    };
+    let abschnitt = abschnitt_attribut(st, absagen);
     (konst, abschnitt)
 }
 
@@ -1696,7 +1758,7 @@ pub fn emittiere_mit(
                         // scope the same designators go in braces, and `cc -Werror` is the
                         // second reader of the completeness (`-Wmissing-field-initializers`).
                         if let Some(felder) = verbundmarken(&st.wert, &n.text, &namen, absagen) {
-                            let (konst, abschnitt) = statischer_kopf(st);
+                            let (konst, abschnitt) = statischer_kopf(st, absagen);
                             aus.push_str(&format!(
                                 "\nstatic {konst}{} {}{abschnitt} __attribute__((unused)) = {felder};\n",
                                 n.text, st.name.text
@@ -1776,10 +1838,7 @@ pub fn emittiere_mit(
                 (false, false) => ("const ", ""),
                 (false, true) => ("", "const "),
             };
-            let abschnitt = match &st.section {
-                Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
-                None => String::new(),
-            };
+            let abschnitt = abschnitt_attribut(st, absagen);
             // **`unused` -- und das ist derselbe Befund wie beim `(void)k;` oben**
             // (2026-08-20).
             //
@@ -2295,6 +2354,83 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
     }
 }
 
+/// **A literal as C writes it -- with the `u` where C needs one, and `None` where C has no
+/// type at all** (`D3`/`D4`, 2026-09-03).
+///
+/// A bare decimal constant in C takes the first of `int`, `long`, `long long` that holds it.
+/// Past `2^63 - 1` none of them does, so GCC gives it `unsigned long` and says so:
+/// *integer constant is so large that it is unsigned*. The value is legal Gabbro -- `u64`
+/// reaches exactly that far -- and legal C **with the suffix**. Without one the tree's own
+/// compile gate refuses the unit, which is what `beispiele/gift/643` measured.
+///
+/// **The suffix is added exactly where it is NEEDED and nowhere else**, and that boundary was
+/// chosen against a named risk rather than for tidiness. The probe's own header names it:
+/// `-Wconversion` and `-Wsign-conversion` read these same literals -- `zaehle-c-formen.py`
+/// runs both over the whole corpus -- so *a suffix added everywhere would trade this error
+/// for a different one*. Below `2^63` the emitted text is unchanged, byte for byte, and the
+/// corpus was measured to confirm it: the C of all 612 versioned `.gab` before and after.
+///
+/// **Past `2^64 - 1` there is no C integer type**, and then the honest answer is not a
+/// spelling but a refusal. `unsigned long long` is at least 64 bits and C promises no more;
+/// `2^64` itself draws *integer constant is too large for its type* however it is written.
+/// That is `beispiele/gift/644`, one door further in.
+///
+/// > *`i128` is not the fence here, and that is the lesson `konst_zahl` learned one door
+/// > up.* Its `try_from` stopped the emitter writing `-1` for `2^128 - 1`; it did not stop
+/// > `2^64`, which fits `i128` perfectly well. **A repair at the reader is not a repair at
+/// > the writer** -- so the fence stands where the C types end.
+/// **C's largest object, in bytes** -- `PTRDIFF_MAX` on every target this back end writes.
+///
+/// C requires the difference of two pointers into one object to be representable as a
+/// `ptrdiff_t`, so an object wider than `PTRDIFF_MAX` bytes cannot exist. GCC names exactly
+/// this number in its own refusal (*size of array `A` exceeds maximum object size
+/// 9223372036854775807*), which is where the value is read from rather than assumed.
+const C_OBJEKT_MAX: u128 = i64::MAX as u128;
+
+/// The width in bytes of an emitted C type name -- `None` where this emitter cannot say.
+///
+/// **Only the fixed-width names get an answer, and that is the whole of the claim.**
+/// `uint32_t` is four bytes wherever it exists; a `struct` from this unit is not something
+/// a name lookup can size. Callers treat `None` as one byte, which is the smallest any C
+/// object has -- an under-estimate, and therefore a refusal that fires too seldom rather
+/// than too often.
+fn cbreite(c: &str) -> Option<u128> {
+    Some(match c {
+        "uint8_t" | "int8_t" | "bool" | "char" => 1,
+        "uint16_t" | "int16_t" => 2,
+        "uint32_t" | "int32_t" | "float" => 4,
+        "uint64_t" | "int64_t" | "double" => 8,
+        _ => return None,
+    })
+}
+
+fn czahl(n: u128) -> Option<String> {
+    if n <= i64::MAX as u128 {
+        Some(n.to_string())
+    } else if n <= u64::MAX as u128 {
+        Some(format!("{n}u"))
+    } else {
+        None
+    }
+}
+
+/// `czahl` with the refusal already written -- for the sinks that have a span to hang it on.
+fn czahl_oder_absage(n: u128, span: gabbro_syntax::span::Span, absagen: &mut Absagen) -> String {
+    match czahl(n) {
+        Some(t) => t,
+        None => {
+            weigere(
+                absagen,
+                span,
+                "an integer literal past `2^64 - 1` -- no C integer type holds it, with or \
+                 without a suffix, and `cc` says `integer constant is too large for its \
+                 type`. There is no spelling to write here",
+            );
+            String::new()
+        }
+    }
+}
+
 /// Ein Typausdruck als Text -- **nur zum VERGLEICHEN zweier Deklarationen**, nicht zum
 /// Absenken. `TypExpr` traegt Spannen und ist darum nicht vergleichbar.
 ///
@@ -2385,7 +2521,7 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// Kopf des Erzeugnisses steht). **Alles andere ist keine Laenge, die dieser Erzeuger kennt.**
 fn feldlaenge(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
-        ExprArt::Zahl(n) => Some(n.to_string()),
+        ExprArt::Zahl(n) => czahl(*n),
         ExprArt::Ort(o) if o.suffixe.is_empty() && u.konstanten.contains(&o.basis.text) => {
             Some(o.basis.text.clone())
         }
@@ -3388,7 +3524,7 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
 /// damit eine neue Ausdrucksform nicht dieselbe Reise noch einmal macht.
 fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Option<String> {
     Some(match &e.art {
-        ExprArt::Zahl(n) => n.to_string(),
+        ExprArt::Zahl(n) => czahl(*n)?,
         ExprArt::Klammer(x) => format!("({})", ausdruck_geraet(x, d, u, absagen)?),
         ExprArt::Binaer(op, a, b) => format!(
             "{} {} {}",
@@ -4072,7 +4208,26 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                     ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
                     _ => None,
                 }) {
-                    Some(k) => format!(" * {k}u"),
+                    // **`D4`: the scale reaches C as a literal, and `2^64` is not one.**
+                    // `konst_zahl` hands over anything that fits `i128`, and the next 64
+                    // bits of the journey had no owner: `beispiele/gift/644` emitted
+                    // `* 18446744073709551616u` and `cc` answered *integer constant is too
+                    // large for its type*. `u64::try_from` is the fence at the place where
+                    // the number becomes C, which is where it belongs.
+                    Some(k) => match u64::try_from(k).ok().map(|v| format!(" * {v}u")) {
+                        Some(t) => t,
+                        None => {
+                            weigere(
+                                absagen,
+                                g.span,
+                                "`scale` past `2^64 - 1` -- the reader multiplies the raw \
+                                 bits by this number and the multiplier goes into the C as a \
+                                 literal. No C integer type holds it, so there is no reader \
+                                 to write",
+                            );
+                            return;
+                        }
+                    },
                     None => {
                         weigere(absagen, g.span, "`scale` that is not a constant");
                         return;
@@ -4524,7 +4679,7 @@ fn intty_oder_absage(i: &IntTy, absagen: &mut Absagen) -> String {
 /// reason as above, and here it decides how much memory the struct has.
 fn zahltext(e: &Expr, absagen: &mut Absagen) -> String {
     match &e.art {
-        ExprArt::Zahl(n) => n.to_string(),
+        ExprArt::Zahl(n) => czahl_oder_absage(*n, e.span, absagen),
         ExprArt::Ort(o) => o.text(),
         _ => {
             weigere(absagen, e.span, "table length");
@@ -7223,6 +7378,36 @@ fn feldstatisch(
         weigere(absagen, st.name.span, "`static` array of length zero -- C has no such object");
         return;
     }
+    // **`D5`: a length C can read exactly, in a declaration C cannot hold** (2026-09-03).
+    //
+    // `[u64; 2^63 - 1]` is accepted by every pass -- the length is a `u64` and fits -- and
+    // the emitter wrote it out as the array bound. `cc` answered *size of array `A` exceeds
+    // maximum object size 9223372036854775807*, and that number is `PTRDIFF_MAX`: C requires
+    // the difference of two pointers into one object to be representable, so an object may
+    // not be larger than `ptrdiff_t` can span. **The bound is on BYTES and not on elements**,
+    // which is why the width is read here rather than the count compared directly.
+    //
+    // > *`gift/602` is the neighbour, and the pair is the point.* That one carried a length
+    // > the emitter READ WRONG (`2^128 - 1` came back as `-1`); this one carries a length it
+    // > reads exactly right and writes into a C declaration that cannot exist. **A lossy
+    // > conversion and a missing bound, out of the same slot of the same grammar rule.**
+    //
+    // An unknown element width counts as ONE byte -- the smallest any C object has -- so the
+    // rule under-refuses rather than over-refuses where it cannot see the size. *That is the
+    // safe direction here: what it lets through, `cc` still catches.*
+    let elembreite = cbreite(&elem).unwrap_or(1);
+    if (n as u128).saturating_mul(elembreite) > C_OBJEKT_MAX {
+        weigere(
+            absagen,
+            st.name.span,
+            &format!(
+                "`static` array of {n} x {elembreite} bytes -- C's largest object spans \
+                 `PTRDIFF_MAX` = {C_OBJEKT_MAX} bytes, because the difference of two pointers \
+                 into one object has to be representable. There is no C declaration for this"
+            ),
+        );
+        return;
+    }
     let Some(w) = konst_zahl(&st.wert) else {
         weigere(absagen, st.name.span, "`static` array with a non-constant initialiser");
         return;
@@ -7236,10 +7421,7 @@ fn feldstatisch(
         )
     };
     let konst = if st.veraenderlich { "" } else { "const " };
-    let abschnitt = match &st.section {
-        Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
-        None => String::new(),
-    };
+    let abschnitt = abschnitt_attribut(st, absagen);
     aus.push_str(&format!(
         "\nstatic {konst}{elem} {}[{n}]{abschnitt} __attribute__((unused)) = {anfang};\n",
         st.name.text
@@ -9184,7 +9366,10 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
 /// own type, and a literal inside one has a different neighbour.
 fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> String {
     match &e.art {
-        ExprArt::Zahl(n) => n.to_string(),
+        // **The one door nine slots share** -- `return`, `if`, `let`, `static … =`, an
+        // assignment. `czahl_oder_absage` writes the `u` C needs and refuses what C cannot
+        // hold; see its own note for why the boundary sits where it does.
+        ExprArt::Zahl(n) => czahl_oder_absage(*n, e.span, absagen),
         ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits, schmal),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),

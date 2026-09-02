@@ -205,3 +205,249 @@ more, and the disagreement between the families is settled at its source. Mark p
 **`pruefe-emission.sh`: `ALL PASS` — 120 of 120 emitting files compile, 8 reverse probes.**
 
 ---
+
+## 3. D3 — an unsuffixed literal past the signed end
+
+**The decision: a lowering. The suffix belongs there.**
+
+A bare decimal constant in C takes the first of `int`, `long`, `long long` that holds it.
+Past `2^63 - 1` none of them does, so GCC gives it `unsigned long` and says so. The value is
+legal Gabbro — `u64` reaches exactly that far — and legal C **with the suffix**. Nothing is
+being withheld and nothing has to be decided: there is a correct spelling, and the emitter
+was not writing it.
+
+### What the emitter already got right, checked first
+
+The brief asked what happens at `i64::MAX`, since some literals must already be right.
+Measured: **the emitter suffixes at five kinds of site and not in the ordinary expression
+path** — `#define K 7u`, `i * 8u`, `& 1099511627775u`, `{n}_EBENEN {ebenen}u`, and `* {k}u`
+at a `scale`. Those are all places where the emitter writes the `u` itself into a format
+string. `ExprArt::Zahl(n) => n.to_string()` is the door that carries the user's own number,
+and it had none.
+
+### The boundary is where C needs it, and that is the whole care
+
+The probe named the risk itself: `-Wconversion` and `-Wsign-conversion` read the same
+literals, and `zaehle-c-formen.py` runs both over the whole corpus — *a suffix added without
+measuring trades this error for a different one.*
+
+So `czahl` writes the `u` **only above `2^63 - 1`**:
+
+| range | spelling | why |
+|---|---|---|
+| `n <= 2^63 - 1` | `n` | C's own rule already gives it a signed type that holds it; **unchanged, byte for byte** |
+| `2^63 <= n <= 2^64 - 1` | `n` + `u` | no signed type holds it; the `u` picks the first unsigned one that does |
+| `n > 2^64 - 1` | *refused* | `unsigned long long` is at least 64 bits and C promises no more — there is no spelling |
+
+**Measured rather than argued:** the emitted C of all 612 versioned `.gab` was dumped before
+and after and compared file by file. Four files differ — this one and the three probes of
+D4, D5, D6 — plus one extra diagnostic (below). *Below the boundary nothing moved.*
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `2 items, 0 errors, 0 hints` | unchanged |
+| `emit` | `return 18446744073709551615;` | `return 18446744073709551615u;` |
+| `cc` | *integer constant is so large that it is unsigned* | accepted, also under `-Wconversion -Wsign-conversion` |
+
+**Probe state: it stopped being poison.** The program was always correct Gabbro; the *C* was
+wrong. So `beispiele/gift/643` moved to
+`messung/proben/probe-literal-past-the-signed-end.gab`, where `pruefe-emission.sh` stage 9
+compiles it under `-Werror` at every run. **A file that stops being poison does not stop
+being a probe.**
+
+### A seventh site the same door fenced
+
+`beispiele/gift/601-an-index-too-wide-to-have-a-type.gab` (a `-- erwartet: M139` probe) now
+draws an additional `C001` at `T.slots[170141183460469231731687303715884105728]` — a `2^127`
+index the emitter had been writing into C. It falls at the checker first, so nothing changes
+for the corpus; it is named here because it is the one other place the dump moved.
+
+---
+
+## 4. D4 — a scale wider than any C integer
+
+**The decision: refuse by name.** C has no such number, and this is `C001`'s sentence
+exactly.
+
+`konst_zahl` was changed on 2026-09-02 from `Some(*n as i128)` to `i128::try_from(*n).ok()`,
+which stopped the emitter writing `-1` for `2^128 - 1`. It did not stop it writing `2^64`:
+that value fits `i128` perfectly well. **A repair at the reader is not a repair at the
+writer**, and the fence now stands at `u64::try_from`, where the multiplier becomes C text.
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `2 items, 0 errors, 0 hints` | unchanged |
+| `emit` | exit `0`, `… & 1099511627775u) * 18446744073709551616u)` | exit `1`, `C001` at the field |
+| `cc` | *integer constant is too large for its type* | never reached |
+
+    error: [C001] …:28:5: no lowering: `scale` past `2^64 - 1` -- the reader multiplies the
+    raw bits by this number and the multiplier goes into the C as a literal. No C integer
+    type holds it, so there is no reader to write
+
+**Probe state:** `beispiele/gift/644` re-headed `-- erwartet: cc` → `-- erwartet: C001`.
+
+> `scale` needs its own fence because its number never passes through `czahl`'s door: it
+> comes out of `konst_zahl` as an `i128` and is formatted straight into the reader.
+
+---
+
+## 5. D5 — an array longer than C can object to
+
+**The decision: refuse by name, and the number in the refusal is C's own.**
+
+What the refusal has to get right is **which** limit. It is not the element count: C requires
+the difference of two pointers into one object to be representable as a `ptrdiff_t`, so the
+bound is on **bytes**. `9223372036854775807` is `PTRDIFF_MAX` — and it is the number GCC
+prints in its own message, read off that message rather than assumed.
+
+The emitter multiplies the declared length by the width of the element type. An element whose
+width it cannot name counts as **one byte**, the smallest any C object has, so the rule
+under-refuses rather than over-refuses where it cannot see. *That is the safe direction: what
+it lets through, `cc` still catches.*
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `2 items, 0 errors, 0 hints` | unchanged |
+| `emit` | `static uint64_t A[9223372036854775807] … = {0};` | exit `1`, `C001` at `A` |
+| `cc` | *size of array `A` exceeds maximum object size 9223372036854775807* | never reached |
+
+    error: [C001] …:21:12: no lowering: `static` array of 9223372036854775807 x 8 bytes --
+    C's largest object spans `PTRDIFF_MAX` = 9223372036854775807 bytes, because the
+    difference of two pointers into one object has to be representable. There is no C
+    declaration for this
+
+**Probe state:** `beispiele/gift/645` re-headed `-- erwartet: cc` → `-- erwartet: C001`.
+
+### A neighbour found here and NOT closed, and it is worse than what was closed
+
+    static mut A : [u64; 100000000] = 7;
+
+A hundred million — well inside `PTRDIFF_MAX`, so D5's rule does not fire. **`gabbro emit`
+never returns.** A non-zero initialiser is written out element by element, deliberately
+(`= {5}` in C means *first five, rest zero*, which is not what Gabbro's `= 5` means), and the
+emitter builds that text one element at a time. Measured 2026-09-03: killed at 25 s, exit
+`124`, output file empty.
+
+**That is the emitter's third answer — neither a lowering nor a refusal — and
+`messung/ERZEUGERSWEEP.md` counts zero of those** (*"a third answer — panic, timeout, unnamed
+exit, `C001` with no note: 0"*). The sweep never reached it because its `array-laenge` ladder
+sweeps the length over a ZERO initialiser, which short-circuits to `{0}`.
+
+**Left open on purpose.** Fencing it needs a bound on how much C text the emitter may write,
+and no such number is derivable from C — the standard's own translation limit (65535 bytes in
+one object) sits far below what this corpus's tables need. *Inventing one is the guess `C001`
+exists to prevent*, so it is booked here for the owner instead.
+
+---
+
+## 6. D6 — a section name that closes the C string
+
+**The decision: refuse by name. Escaping was the smaller change and it is the wrong one.**
+
+Doubling the backslash makes the C legal and hands the **assembler** a section whose name
+ends in one. GCC writes that name into a `.section` directive *unquoted*, so the failure
+simply moves from `cc` to `as`. The probe's own header already measured why that matters: of
+this slot's four shapes, **two are caught by the compiler and two only by the assembler**,
+and `tests/beispiele.rs` stops at `-fsyntax-only`. *Escaping moves the failure one tool
+further out — to the tool fewer instruments look at.*
+
+So a `section` name is held to what a section name can be: at least one character, each a
+letter, a digit, or one of `. _ - $`. That is the set the linker's own sections live in
+(`.text`, `.data.rel.ro`, `.init_array.65535`) and the set the corpus uses — **two `section`
+declarations in 612 files, both `.rodata`**, and both still emit byte-identically.
+
+All four shapes now fall, each naming the character it stopped at:
+
+| written | refusal says |
+|---|---|
+| a name ending in a backslash | a backslash is not a name character |
+| an empty name | it is empty |
+| a blank name | a space is not a name character |
+| the doubling form | a space — **and that is a finding of its own** |
+| a name holding a NUL | `\0` is not a name character |
+
+**The doubling form is not an embedded quote at all.** `parse.rs::erwarte_text` joins
+adjacent string literals **with a space**, so two literals side by side make one name with a
+space in it. The probe's header had recorded the assembler's answer (*junk at end of line*)
+without the cause; the refusal names it now.
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `2 items, 0 errors, 0 hints` | unchanged |
+| `emit` | the attribute copied the text through unchanged | exit `1`, `C001` at the name |
+| `cc` | *missing terminating quote character* | never reached |
+
+**Probe state:** `beispiele/gift/646` re-headed `-- erwartet: cc` → `-- erwartet: C001`.
+
+> **A written claim this refutes.** The note beside `emit.rs::kommentartext` had ruled this
+> channel closed, in so many words: a Gabbro string cannot contain a quote, so nothing can
+> escape out of a `section` attribute. *It was open by one character nobody had thought of.*
+> A closed channel is a claim about every character, and it had been checked against one.
+
+---
+
+## Marks after all six
+
+| mark | file | at `a053d3a` | now | why |
+|---|---|---|---|---|
+| `MARKE_UMGEKEHRT` | `pruefe-emission.sh` | 10 | **4** | all six left the reverse-probe set |
+| `MARKE_EMIT_G` | `pruefe-emission.sh` | 8 | **2** | five refuse at the emitter, one moved out |
+| `MARKE_EMIT_M` | `pruefe-emission.sh` | 53 | **54** | D3's probe arrived in `messung/proben/` |
+| `MARKE_UMG_NUR_CC` | `pruefe-emission.sh` | 1 | **0** | its one entry was D2's probe |
+| `MARKE_TABELLE` | `zaehle-c-formen.py` | 67 | **66** | D1's shadow form is gone |
+| `MARKE_UNERLAUBT` | `zaehle-c-formen.py` | 32 | **31** | the same one form |
+| `MARKE` | `pruefe-zitate.py` | 342 | **343** | D6's note cites `L006`, issued in `lex.rs` |
+| vocabulary | `zaehle-wortschatz.py` | 221/208/333 | **unchanged** | no repair wanted a word |
+| German comment lines | `pruefe-englisch.py` | 7883/1069 | **unchanged** | |
+| poison corpus | `README.md`, `DONE.md` | 432 | **431** | D3's probe is no longer poison |
+
+**`cargo test --offline --no-fail-fast`: 399 passed, 0 failed.**
+**`pruefe-emission.sh`: `ALL PASS` — 121 of 121 emitting files compile, 4 reverse probes, and
+121 of 121 are accepted by `clang` as well.**
+
+### The acceptance run, both ends, and it is the same three
+
+`./instrumente/abnahme.py` was run on `ki-pc-fisch-101` twice: once over this tree, and once
+over a clean checkout of `a053d3a` built beside it. **Both report `ABNAHME ROT: 3 von 49`,
+and it is the same three guardians with the same lines:**
+
+    pruefe-grammatiktafel.py   red by owner decision (`state`)
+    zaehle-gifttreffer.py      the covered-probe cap
+    zaehle-karten.py           45 direct card lookups against a mark of 40 / 36
+
+*The comparison is the point.* A lane that only ran the acceptance over its own tree could
+say `three red` and would not know whether it had made any of them so.
+
+### And the two that are not the owner's known one
+
+`zaehle-karten.py` reads the public `HashMap` fields of `umgebung.rs` and looks for direct
+`.get(` / `.contains_key(` on them. Its listing carries **zero entries from `emit.rs`**, its
+numbers are identical with and without this lane's changes, and identical again in the clean
+`a053d3a` checkout: 45 / 40 in all three.
+
+`zaehle-gifttreffer.py` names eight covered probes — `155`, `188`, `300`, `411`, `56`, `63`,
+`87`, `92`. None is this lane's, none expects `C001`, and the tool runs `emit` only for
+`C001` probes, so for these eight it never reaches the emitter at all; its own printed chains
+carry checker codes only. `git diff a053d3a -- beispiele/gift/` touches exactly `641`-`646`.
+
+`zaehle-gifttreffer.py` reports its covered-probe cap at 8 where 7 is booked. **Measured, not
+assumed:** it reports 8 at the D1/D2 commit as well, and the eight files it names — `155`,
+`188`, `300`, `411`, `56`, `63`, `87`, `92` — are none of this lane's, expect no `C001`, and
+are therefore files for which the tool never runs the emitter at all (it runs `emit` only for
+`C001` probes, and its own printed chains for all eight carry checker codes only).
+`git diff a053d3a -- beispiele/gift/` touches exactly `641`–`646`. *The mark was already
+broken at `a053d3a`.*
+
+---
+
+## What this lane could not close
+
+1. **The non-terminating emitter at a large non-zero array initialiser** (§5). Reproduced and
+   measured; left open because fencing it means inventing a number C does not give. It is the
+   emitter's THIRD answer, which the sweep of 2026-09-02 counted at zero.
+2. **Two guardians that were already red at `a053d3a`** -- `zaehle-gifttreffer.py`'s
+   covered-probe cap and `zaehle-karten.py`'s lookup ratchet. Both were measured at both
+   ends and neither was moved by this lane; neither was repaired by it either.
+3. **Three of D6's four shapes fall at the emitter and only one carries a probe.** The poison
+   corpus has `646` for the backslash; the empty name, the blank name and the NUL are measured
+   in this document and in the refusal's own text, not in a file that runs every day.

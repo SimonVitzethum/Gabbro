@@ -2355,7 +2355,12 @@ MARKE_EMIT=65
 # `geraetewerte` and the artefact wrote `c->basis` about a value. Checker silent, emitter
 # exit 0, `cc` refusing: the one reader was the C compiler, and this stage is where it now
 # reads at every run.
-MARKE_EMIT_M=53
+# **53 -> 54 on 2026-09-03**: `messung/proben/probe-literal-past-the-signed-end.gab`, which
+# arrived from `beispiele/gift/643`. Its program was always correct Gabbro; what was wrong
+# was the C, which carried `18446744073709551615` with no `u` on it. **A file that stops
+# being poison does not stop being a probe** -- here it holds the emitter to writing the
+# suffix, under `-Werror`, at every run of stage 9.
+MARKE_EMIT_M=54
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -2399,11 +2404,16 @@ MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten dar
 # > die neue Datei -- steht dort `-- erwartet: cc`, gehoert die Marke mit Grund nachgezogen"*
 # > geschrieben wurde. Bei allen sechs steht es dort.
 #
-# **8 -> 6 on 2026-09-03, and the direction is the good one.** `641` and `642` no longer
-# reach the emitter's output: both now fall AT the emitter with `C001` and are headed
-# `-- erwartet: C001`. That is the cap moving the way its own message says it should --
-# *the checker (here: the emitter's own refusal) catches a probe before it emits.*
-MARKE_EMIT_G=6      # `gift/286` (uebersetzt), `gift/414` und `643`-`646` (`-- erwartet: cc`)
+# **8 -> 2 on 2026-09-03, and the direction is the good one all six times.** All six emitter
+# defects of 2026-09-02 were repaired in one run. `641`, `642`, `644`, `645` and `646` no
+# longer reach the emitter's output -- each falls AT the emitter with `C001` and is headed
+# `-- erwartet: C001`. `643` went the other way: its program was always correct Gabbro and
+# the LOWERING was wrong, so it emits, compiles, and left the poison corpus altogether for
+# `messung/proben/probe-literal-past-the-signed-end.gab`.
+#
+# That is the cap moving the way its own message says it should -- *a probe caught before it
+# emits* -- and it is now back where it stood before 2026-09-02.
+MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
@@ -2432,11 +2442,13 @@ MARKE_EMIT_G=6      # `gift/286` (uebersetzt), `gift/414` und `643`-`646` (`-- e
 # Giftproben ueberhaupt bis zum Erzeuger kommen, hier, wie viele davon dem `cc`-Zweig einen
 # Gegenstand geben. *Ein Zweig, den nichts betritt, ist gruen, ohne etwas zu sagen* -- mit
 # zehn Dateien betritt ihn jetzt das Zweieinhalbfache.
-# **10 -> 8 on 2026-09-03.** `641` (`D1`) and `642` (`D2`) were repaired; each now falls at
-# `C001` and is re-headed `-- erwartet: C001`, so neither gives the `-- erwartet: cc` branch
-# an object any more. **The number falling IS the evidence the repair landed** -- and eight
-# files still enter the branch, so it keeps saying something.
-MARKE_UMGEKEHRT=8
+# **10 -> 4 on 2026-09-03.** All six emitter defects of 2026-09-02 were repaired: `641`,
+# `642`, `644`, `645` and `646` now fall at `C001` and are re-headed `-- erwartet: C001`;
+# `643` lowers correctly and moved out of the poison corpus. None of the six gives the
+# `-- erwartet: cc` branch an object any more. **The number falling IS the evidence the
+# repairs landed** -- and four files still enter the branch, so it keeps saying something:
+# `gift/414` and the three `B001` entry probes.
+MARKE_UMGEKEHRT=4
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then
