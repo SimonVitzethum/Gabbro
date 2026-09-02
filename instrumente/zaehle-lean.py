@@ -110,6 +110,18 @@ ARTEN = [
     ("F", "a foreign duty -- there is no body"),
     ("E", "preservation of a table invariant"),
     ("S", "an invariant across the passes of a loop"),
+    # **`W` was missing, and the table under the number did not add up** (2026-09-02).
+    # `Art` has EIGHT letters (`pflichten.rs:198`); this list had seven, so the five
+    # `Walkinvariante` obligations were counted into the `nach_art` total -- printed as
+    # `70 of 90` -- and appeared in NO row: the rows came to 65. *A column short by five
+    # looks exactly like a channel that refuses five fewer*, which is the very sentence this
+    # tool writes over its own `sum(je_art) != abgesagt` check. That check only compares the
+    # SUM, and the sum was right; what was wrong was the printing.
+    #
+    # > **This is the FOURTH list over one set, and the comment at `walk-invariant` above
+    # > names only three.** `Art`, `LeanReason::ALL`, `GRUENDE` -- and this one. The repair on
+    # > 2026-09-01 reached the third and stopped one short.
+    ("W", "an invariant of a `walk`"),
     ("N", "a POSTCONDITION"),
     ("R", "a REFINEMENT of a specification"),
 ]
