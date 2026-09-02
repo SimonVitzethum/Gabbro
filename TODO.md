@@ -1180,6 +1180,35 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 ### Checker and generator
 
+- [ ] **SECHS Erzeugerfehler stehen offen, gemessen 2026-09-02 von
+      [`instrumente/fuzze-erzeuger.py`](instrumente/fuzze-erzeuger.py), Zahlen und Reproduktion
+      in [`messung/ERZEUGERSWEEP.md`](messung/ERZEUGERSWEEP.md).** Von 3517 angenommenen
+      Faellen brechen **342** die Zusage `C001` (*„der Erzeuger sagt ab, statt zu raten"*):
+      273 senken zu C ab, das unter `cc -std=c11 -O0 -Wall -Wextra -Werror -c` nicht
+      uebersetzt, und 69 tragen eine andere Zahl als die Quelle nannte.
+      | | Fehler | Probe | Faelle |
+      |---|---|---|---:|
+      | **D1** | ein `walk` steigt durch ein `reserved`-Feld ab, das keinen Leser bekommt | `gift/641` | 130 |
+      | **D2** | eine `forever`-Schleife ist der ganze Rumpf einer antwortenden Funktion | `gift/642` | 65 |
+      | **D3** | ein Ganzzahlliteral ohne `u`-Suffix, an NEUN Stellen | `gift/643` | 54 |
+      | **D4** | ein Literal breiter als jeder C-Ganzzahltyp erreicht das C | `gift/644` | 30 |
+      | **D5** | eine Feldlaenge jenseits von C's groesstem Objekt | `gift/645` | 4 |
+      | **D6** | ein `section`-Name, den nichts maskiert (vier Gestalten) | `gift/646` | 6 |
+      **Jede traegt `-- erwartet: cc`, also beide Richtungen**: der Pruefer muss schweigen und
+      `cc` muss abweisen. Der Tag, an dem eine geheilt wird, macht ihre Probe rot und verlangt
+      die Umbuchung. *`D1` ist der teuerste, und zwar wegen seines Ortes: die zwei
+      `walk`-Schablonen von `fuzze-grenzen.py` tragen ihn an ihrem eigenen BEKANNT-GUTEN
+      Grundwert, und jener Lauf prueft seine Grundlinie nur gegen den Pruefer.*
+
+- [ ] **`aligned(p, 0)` und `aligned(p, 3)` -- die Absage steht, der GRUND nicht** (aus
+      [`messung/AUDIT-2026-09-02.md`](messung/AUDIT-2026-09-02.md) 7.7 Punkt 2, am 2026-09-02
+      gemessen statt vermutet). Der Erzeuger sagt beide beim Namen ab, 94 von 94 angenommenen
+      Sprossen -- aber mit *„`aligned` ausserhalb eines `format`-Praedikats"*. **Die Zusage
+      haelt aus einem Grund, der mit der Ausrichtung nichts zu tun hat**, und sie faellt in
+      dem Augenblick weg, in dem `aligned` dort absenkt. *Der „Modulo durch null", den das
+      Audit nennt, EXISTIERT heute nicht* -- er ist eine Aussage ueber eine Absenkung, die
+      niemand geschrieben hat.
+
 - [ ] **Ein Ruf ins Leere in einem PRÄDIKAT ist still — gemessen 2026-08-28 bei «B13».**
       Dieselbe erfundene Funktion an drei Stellen, eine Probe durch den unveränderten Prüfer:
       | Stelle | gemessen |
