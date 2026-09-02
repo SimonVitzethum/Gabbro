@@ -13,11 +13,11 @@
 //! haengte).
 
 use gabbro_syntax::ast::{
-    Block, Domaene, FnRumpf, Ident, Item, ItemArt, Ort, OrtSuffix, Pred, PredArt, Programm,
-    Schleife, StmtArt,
+    Block, Domaene, Expr, ExprArt, FnRumpf, Ident, Item, ItemArt, Ort, OrtSuffix, Pred, PredArt,
+    Programm, Schleife, StmtArt,
 };
 use gabbro_syntax::diag::{Absage, Absagen};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::typen::Typ;
 use crate::umgebung::{Feldurteil, Umgebung};
@@ -540,8 +540,10 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         //
         // They carry PLACES, though, and `M141` reads the literal index of each.
         PredArt::Vergleich(e) => {
+            let frei = merkmalsnamen(e);
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
+                grundname_im_praedikat(o, s, st, geb, &frei, absagen);
             }
         }
         // **`expr in domain` produces a DOMAIN too, and this arm did not read it**
@@ -554,17 +556,147 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         // It binds no variable, so `geb` travels unchanged.
         PredArt::Element(e, d) => {
             domaene_pruefen(d, s, st, geb, absagen);
+            let frei = merkmalsnamen(e);
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
+                grundname_im_praedikat(o, s, st, geb, &frei, absagen);
             }
         }
         PredArt::Erreicht { von, nach, .. } => {
+            let frei = HashSet::new();
             indexschranke_pruefen(von, s, st, absagen);
             indexschranke_pruefen(nach, s, st, absagen);
+            grundname_im_praedikat(von, s, st, geb, &frei, absagen);
+            grundname_im_praedikat(nach, s, st, geb, &frei, absagen);
         }
         // `Held(L)` and `Held(L, shared)` name a LOCK and nothing else.
         PredArt::Held { .. } => {}
     }
+}
+
+/// **`D021` -- the base name of a place in a PREDICATE resolves.**
+///
+/// `M109` in `m1.rs` asks this of an `ensures` and of nothing else; `N053` in `namen.rs`
+/// asks it of a device promise; `N032` asks it of a `format … where`. **Sixteen of the
+/// nineteen predicate positions the grammar has asked it of nobody**, and that was measured
+/// position by position before this rule was written (`messung/PREDICATE-NAMES.md`):
+///
+/// ```text
+/// requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
+/// requires GIBTESNICHT == 1        ->  0 errors, 0 hints          Lean: EXPORTED
+/// ```
+///
+/// The two lines are the same fault and the second is the worse one. **A dropped conjunct is
+/// visible; an exported one over a name that exists nowhere is not.** `gabbro lean` writes
+///
+/// ```lean
+/// ∧ eval s (.bin .eq (.global "GIBTESNICHT") (.lit (.int 1))) = some (.bool true)
+/// ```
+///
+/// into `<fn>_pre`, *"what the caller grants"*, and `Gabbro.Body` reads `.global` out of a
+/// TOTAL store -- so the premise is not vacuous, it is satisfiable, and a proof that leans
+/// on it has proved something about a state no program can be in. **That is not a missing
+/// finding but a wrong proof object**, and it is the sixth class of `PLAN.md` in pure form:
+/// a sentence is proved and nothing establishes its premise.
+///
+/// ## What it does NOT do, and why each exemption is there
+///
+/// A predicate legitimately names things a body cannot, and a resolver that started
+/// refusing those would break correct programs. Each of these is forced by a corpus file:
+///
+/// * **`result` and a reason case are not places at all** -- `ExprArt::Ergebnis` and
+///   `ExprArt::Grund` are their own variants, and `alle_orte` does not yield them.
+/// * **`old(x)`** IS a place (`ExprArt::Alt`) and its name has to exist: a postcondition
+///   about the old value of nothing is none. `M109` says the same in `ensures`.
+/// * **A quantifier variable, a `traverse` variable and a `match` binder** stand in `geb`,
+///   which `aus_pred` and `aus_block` maintain for `D017` already.
+/// * **`Self`** belongs to `M120`, which names the place the line belongs to instead of
+///   sending the reader off to declare a word the language does not let him declare.
+/// * **`ensures`** belongs to `M109`, and a second refusal for one fault is worse than one.
+/// * **The argument of `Has(…)` and of `Held(…)`** is not a place. A machine feature is not
+///   a program name and a lock is not a value; both are spelled as a call, and both would
+///   otherwise be read as one. `beispiele/01-tabelle.gab` writes `Held(KAPPEN)` at every
+///   `impl fn` in the file, and `beispiele/11-grammatikbefunde.gab` writes `Has(RDTSCP)`.
+///
+/// > **The exemption is by NAME and not by site**, exactly as `namen.rs::zusagenstelle`
+/// > does it: a predicate that writes `Has(F)` and `F.x == 1` in one breath exempts `F` in
+/// > both. That is coarse, and it is coarse in the quiet direction.
+///
+/// The resolution itself is `D017`'s, word for word -- parameter or local, global, a
+/// resolvable type or constant, a `table`, a `walk`, a `format`/`device` head. *A wider
+/// resolution can only make this rule quieter, and quiet is the safe direction.*
+fn grundname_im_praedikat(
+    o: &Ort,
+    s: &Sicht,
+    st: Stellung,
+    geb: &[String],
+    frei: &HashSet<String>,
+    absagen: &mut Absagen,
+) {
+    // `ensures` has a reader -- `M109` resolves EVERY name of a postcondition.
+    if st == Stellung::Nachbedingung {
+        return;
+    }
+    let n = &o.basis;
+    if n.text == "Self" || frei.contains(&n.text) {
+        return;
+    }
+    if geb.contains(&n.text) || s.lokal.contains_key(&n.text) {
+        return;
+    }
+    if s.u.suche_global(s.modul, &n.text).is_some() {
+        return;
+    }
+    if s.u.nennt_typ_oder_konstante(s.modul, &n.text)
+        || s.u.nennt_tabelle(s.modul, &n.text).is_some()
+        || s.u.nennt_walk(s.modul, &n.text)
+        || s.u.nennt_kopf(s.modul, &n.text)
+    {
+        return;
+    }
+    absagen.schiebe(
+        Absage::fehler(
+            "D021",
+            n.span,
+            format!("`{}` in {} is not declared here", n.text, st.wort()),
+        )
+        .mit_notiz(
+            "this compiler hands a predicate on as an ASSUMPTION -- `gabbro lean` writes a \
+             `requires` into `<fn>_pre`, \"what the caller grants\". A conjunct over a name \
+             nothing declares is not a missing check but a WRONG PROOF OBJECT: the prover \
+             carries a premise whose referent exists nowhere, and unlike a dropped conjunct \
+             that is visible in no channel",
+        )
+        .mit_notiz(
+            "`M109` says the same sentence in `ensures`, `N053` at a device promise and \
+             `N032` in a `format … where` -- this is the same question in the sixteen \
+             positions that had no reader",
+        ),
+    );
+}
+
+/// The names a predicate expression spells as a CALL but does not mean as a place:
+/// `Has(F)` names a machine feature, `Held(L)` and `Held(L, shared)` name a lock.
+///
+/// **Both are pseudo-calls in the grammar of an expression**, so `alle_orte` yields their
+/// arguments like any other place. `Held` additionally becomes an ordinary call the moment
+/// brackets stand around it (`(Held(L))` parses as `PredArt::Klammer` over a comparison, not
+/// as `PredArt::Held`) -- measured 2026-09-02, and the reason this collector reads the
+/// expression form rather than trusting the predicate form.
+fn merkmalsnamen(e: &Expr) -> HashSet<String> {
+    let mut aus = HashSet::new();
+    for x in crate::alle_ausdruecke(e) {
+        let ExprArt::Ruf(r) = &x.art else { continue };
+        if !r.heisst("Has") && !r.heisst("Held") {
+            continue;
+        }
+        for a in &r.argumente {
+            if let ExprArt::Ort(o) = &crate::ohne_klammern(a).art {
+                aus.insert(o.basis.text.clone());
+            }
+        }
+    }
+    aus
 }
 
 /// **`M141` -- a LITERAL index in a PREDICATE, held against the declaration of the carrier.**

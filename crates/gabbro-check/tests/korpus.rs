@@ -379,6 +379,24 @@ const BENANNT: &[&str] = &[
     // > wrote `requires QUEUE_SIZE <= QMAX` and `QMAX` stood nowhere -- booked as open in
     // > that file's own head since 2026-08-20, *"because no pass reads `RegDecl::requires`"*.
     "N053",
+    // **`D021` -- the base name of a place in a PREDICATE resolves** (2026-09-02).
+    //
+    // `M109` asked this of an `ensures` and of nothing else, `N053` of a device promise,
+    // `N032` of a `format ... where`. Measured position by position against the unchanged
+    // checker (`messung/PREDICATE-NAMES.md`): a name nothing declares was accepted in **266
+    // of 380** position x name-kind cells, and the sixteen positions without a reader
+    // include every `requires`, every `invariant` and the body of every `spec fn`.
+    //
+    // The severity is not "a check is missing". `gabbro lean` writes a `requires` into
+    // `<fn>_pre`, *"what the caller grants"*, so a conjunct over a phantom name is a premise
+    // the prover CARRIES -- and unlike the call form, which the Lean channel names as
+    // DROPPED, it is visible in no channel at all. **A wrong proof object, not a missing
+    // finding.**
+    //
+    // > It found one in the tree it was written against: `messung/fragmente/F01.gab`:189
+    // > wrote `c.slots[s] reaches WURZEL via parent` -- byte for byte the excerpt's own line
+    // > -- and no unit of that file declared `WURZEL`.
+    "D021",
 ];
 
 #[test]

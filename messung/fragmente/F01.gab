@@ -142,6 +142,17 @@ table CapObjects count NOBJECTS {
 }
 
 table CapSpace count NSLOTS {
+    -- **ADDED 2026-09-02: the root slot, and `D021` found that it was missing.** Line 189
+    -- of this file -- byte for byte the excerpt's own line, `FRAGMENTE.md`:190 -- writes
+    -- `c.slots[s] reaches WURZEL via parent`, and **nothing in this unit declared
+    -- `WURZEL`.** `beispiele/01-tabelle.gab` carries the same predicate and declares the
+    -- constant inside its own `table`; the excerpt kept the use and lost the declaration.
+    --
+    -- *No reader saw it until the day the base name of a place in a predicate got one*: the
+    -- name sat in a `spec fn` body, and `M109` reads only an `ensures`. One ADDED line, the
+    -- same treatment the `tree` edge below and the `reason` above already had.
+    const WURZEL : u32 = 0;
+
     -- **ERGAENZT 2026-08-26: die Baumkanten.** `revoke` schreibt `traverse victim over
     -- descendants of c.slots[s]`, und «B41b» sagt: die Kante steht an der TABELLE, nicht am
     -- Durchlauf -- *der Erzeuger raet nicht, welches Feld der Elter ist.* Die drei Felder

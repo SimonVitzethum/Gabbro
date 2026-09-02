@@ -211,15 +211,19 @@ fn der_sperrring_ueber_bibliotheken_wird_erst_als_einheit_sichtbar() {
 
 /// **The counter-sample, and the price named as a number.**
 ///
-/// The same two files, one flag apart: seven refusals without it, none with it.
+/// The same two files, one flag apart: nine refusals without it, none with it.
 #[test]
 fn emit_als_einheit_uebersetzt_was_einzeln_faellt() {
     let (_, fehler, code) = lauf(&["emit", LAGER, BETRIEB]);
     assert_eq!(code, 1, "file by file the second one falls:\n{fehler}");
+    // **Seven until 2026-09-02, nine since**, and the two are `D021`: the base name of a
+    // place in a `requires` got a reader that day, and `Faecher` stands in the other file.
+    // `M109` had said the same sentence about the same name in the `ensures` one line down
+    // since it existed -- *the count moved because the two clauses now answer alike.*
     assert_eq!(
         fehler.matches("error: [").count(),
-        7,
-        "and it falls seven times, at names the other file declares:\n{fehler}"
+        9,
+        "and it falls nine times, at names the other file declares:\n{fehler}"
     );
 
     let (aus, fehler, code) = lauf(&["emit", "--unit", LAGER, BETRIEB]);
