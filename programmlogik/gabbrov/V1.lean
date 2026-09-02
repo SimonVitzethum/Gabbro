@@ -415,8 +415,25 @@ def L41 (w : World) (d : Domain) : Prop :=
     that already has a falsification discipline against real hardware
     (`falsifiziert(probe_…)`). It is booked in the manifest as `obligation`, and the fragment
     is the wrong instrument for it. *That is a finding about the manifest's classification,
-    not about the cut* -- and it is the cheapest of the seven to act on: it moves a row, it
-    does not build anything.
+    not about the cut* -- and it is the cheapest of the ten to act on: it moves a row, it does
+    not build anything.
+
+    **And that is not my classification -- it is the grammar's.** `SYNTAX.md`:1074, at the
+    `forever` form: ***"`progress` names WHO ends it -- an assumption about the environment,
+    with a falsifier. The watchdog IS the falsifier."***
+
+    The ten fragments carry **exactly three** `progress` clauses -- `FRAGMENTE.md`@708beed:887
+    (this row), :981 (L46) and :1656 (L66) -- and `PFLICHTEN.md` books **all three as logic
+    obligations `L`.** So the misfiling is wider than the two rows that fail to be sayable:
+    *the construct that produces all three is documented as an assumption, and the manifest
+    books all three as obligations.*
+
+    What separates L66 from these two is not the construct but **the referent of the named
+    predicate**: `token_verbraucht` is about the program's own state, `device_completes_or_faults`
+    and `client_calls_or_endpoint_revoked` are about the world. `PFLICHTEN.md` draws exactly
+    that line in L66's own row -- *"the ALGORITHM's progress measure, not the machine's
+    finiteness"* -- and it is the line that decides sayability. **The classification question
+    and the sayability question have different answers, and three rows sit where they differ.**
 -/
 def L42 : Prop := notSayable
 
@@ -607,7 +624,11 @@ def L65 (w : World) (magie : Int) : Prop := w (.field "kopf" "magie") = .int mag
     `PFLICHTEN.md` names the difference in the row itself: *"the ALGORITHM's progress measure,
     not the machine's finiteness"*. The measure is a place in the program's own state, so it
     is a decreasing integer and the fragment holds it. **L42 and L46 differ from this row in
-    exactly one respect, and it is the respect that decides: their measure is outside.** -/
+    exactly one respect, and it is the respect that decides: their measure is outside.**
+
+    **But the CONSTRUCT is the same one at all three sites**, and `SYNTAX.md`:1074 calls that
+    construct an assumption about the environment. *So this row is sayable AND arguably
+    misfiled, which is why the two questions are kept apart at L42.* -/
 def L66 (s s' : State) : Prop :=
   ∀ n m : Int, s.world (.global "tokens_left") = .int n →
                s'.world (.global "tokens_left") = .int m → m < n

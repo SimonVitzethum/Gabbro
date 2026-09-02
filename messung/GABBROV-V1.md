@@ -188,6 +188,28 @@ and it is the cheapest of the ten to act on: it moves a row, it builds nothing.*
 > measure is a place in the program's own state. **L42 and L46 differ from L66 in exactly one
 > respect, and it is the respect that decides.**
 
+**And the classification finding is wider than those two rows — the grammar says so itself.**
+`SYNTAX.md`:1074, at the `forever` form:
+
+> ***"`progress` names WHO ends it — an assumption about the environment, with a falsifier.
+> The watchdog IS the falsifier."***
+
+The ten fragments carry **exactly three** `progress` clauses — `FRAGMENTE.md`@708beed:887,
+:981 and :1656 — and they are precisely L42, L46 and L66. **`PFLICHTEN.md` books all three as
+logic obligations.** So the misfiling is not "two rows in the wrong column": *the construct
+that produces all three is documented as an assumption, and the manifest books all three as
+obligations.*
+
+> **What separates L66 is not the construct but the referent of the named predicate** —
+> `token_verbraucht` is about the program, `device_completes_or_faults` about the world — and
+> that is the line `PFLICHTEN.md` draws in L66's own row. **The classification question and
+> the sayability question have different answers, and these three rows sit exactly where they
+> differ.**
+>
+> *This paragraph corrects an earlier draft of this file, which said "two rows are misfiled"
+> and had not yet counted the third. The count came from `grep -n progress` over the frozen
+> fragment text — three hits, all three booked `L`.*
+
 **L57 — a statement about a second program.** `counterprobe "Fuellung ausgehaengt" expects
 erschoepft_waechst` — the speech test as a language construct. Every other of the 66 is about
 one program's states; this one says that under a named mutation the check fails. The fragment
@@ -329,3 +351,113 @@ point it at different tables.
 > names are two different objects"* — has to be read in the other direction, where it is false.
 > *A hypothesis that is safe per theorem is not safe across theorems, and nothing in the tree
 > currently says which of the two it is being used as.*
+
+---
+
+## 6. What V2 would cost — argued, and NOT built
+
+V1 passed, so §10's next gate is V2: *"assumption check: satisfiability, vacuity"*, gated on
+*"the assumption set of the ten fragments has a model."* **The set was measured, not
+estimated.**
+
+```
+./target/debug/gabbro annahmen messung/fragmente/F02.gab   # 3
+./target/debug/gabbro annahmen messung/fragmente/F04.gab   # 3
+./target/debug/gabbro annahmen messung/fragmente/F05.gab   # 1
+./target/debug/gabbro annahmen messung/fragmente/F10.gab   # 1
+```
+
+**The whole assumption set of the ten fragments is EIGHT.** F1, F3, F6, F7, F8, F9 declare
+none. Seven of the eight carry a `falsifier` name; one (`gcmd_kein_rmw`) is expressly
+`nicht-falsifizierbar` with its reason written out — *a probe would have to clear TE briefly,
+opening exactly the window the mechanism is built against.*
+
+### The finding that decides the cost
+
+**Every one of the eight is a PROSE SENTENCE, not a formula.**
+
+```
+A1  device_completes_or_faults  assume  --  ungedeckt  --  --
+    Ein Geraet, das einen Deskriptor genommen hat, meldet ihn innerhalb der
+    zugesagten Leseoperationen zurueck oder faultet.
+```
+
+> **So `G5` cannot fire today, and it cannot be cleared today either.** "The assumption set
+> has a model" is a question about formulas. Asking it of eight German sentences is not a hard
+> problem — it is not yet a question. *A gate that cannot be evaluated is not a gate that
+> passes.*
+
+**Hence the cost of V2 is not a solver call.** Eight assumptions is nothing for Z3 — if they
+were formulas. **The cost is the formalisation**, and it is the same work V0 and V1 just did
+for the obligations, on a set that today has no formal content at all.
+
+### And it is HARDER than V1's, for a reason V1 measured
+
+The obligations speak about the program's state, and the fragment of §7 holds 56 of 66 of
+them. **The assumptions speak about the world**: a device that will report back, a client that
+will call, an ordering two accesses become visible in. *"Reports it back within the promised
+read operations"* quantifies over time and over an external agent — **the same means the four
+ordering rows lack, plus a temporal one on top.**
+
+> So V2 inherits V1's one genuine gap and adds to it. **A fragment that cannot say "the flush
+> completed before the reply" cannot say "the device reports back within N reads" either.**
+
+### The half that IS cheap, and it is the half worth building
+
+§5 names two things and they have opposite costs:
+
+| | what it needs | cost |
+|---|---|---|
+| **contradiction** — does the assumption set have a model? | the eight assumptions as formulas | **the whole formalisation, and a vocabulary V1 measured as absent** |
+| **vacuity** — is a precondition unsatisfiable? | the preconditions, which V1 showed ARE sayable | **small, and available now** |
+
+**Vacuity needs no assumption formalisation at all.** It asks whether a `requires` is
+satisfiable, and `requires` conjuncts are obligation-side objects — the fragment holds them.
+That half could be built against today's manifest.
+
+> *§5 says both are "cheap and only buildable early". The measurement splits them: one is
+> cheap, the other is a second V0.*
+
+### Three rows that are booked twice, and it costs nothing to fix
+
+The strongest V2-adjacent finding is not about cost at all. **The three `progress` names of
+the ten fragments are already `assume` declarations in the fragment source** — and
+`PFLICHTEN.md` books each of them a second time as a logic obligation:
+
+| the `assume` in the source | the same name as `progress` | booked in `PFLICHTEN.md` as |
+|---|---|---|
+| `F04.gab`:33 `assume device_completes_or_faults` | `FRAGMENTE.md`:887 | **L42, logic obligation** |
+| `F05.gab`:87 `assume client_calls_or_endpoint_revoked` | `FRAGMENTE.md`:981 | **L46, logic obligation** |
+| `F10.gab`:62 `assume token_verbraucht` | `FRAGMENTE.md`:1656 | **L66, logic obligation** |
+
+And `F10.gab`:60 states the rule in its own words, as the reason the `assume` is there at all:
+
+> ***"`progress` nennt eine Annahme mit Falsifikator; ohne `assume` steht der Name in keinem
+> Manifest."***
+
+**So these three sit in the assumption manifest and in the obligation column at once.** Two of
+them (L42, L46) are among the ten V1 could not say — *and the reason they cannot be said as
+obligations is precisely that they are not obligations.* **Moving them is a correction to the
+manifest, not a construction**, and it would take the "not sayable" count from ten to eight
+without touching the fragment.
+
+> **What it would NOT do is make the cut look better than it is.** The four ordering rows stay
+> exactly where they are, and they are the finding.
+
+---
+
+## 7. What this lane did not measure, named rather than left out
+
+* **Whether any of the 56 is PROVABLE.** V1 asks whether the obligations can be SAID. Every
+  `Prop` in `V1.lean` is a definition; not one is a theorem, and the file says so. *`Body.lean`'s
+  `Outcome` has no arm for a `leave`, `call-not-compositional` is unbuilt, and both bite at
+  proof time and not at statement time.*
+* **Whether the 66 are the right 66.** The `K`/`L` column is a human judgement;
+  `zaehle-pflichten.py` counts it and does not make it, and its own output says so.
+* **The Isabelle side of §8's question.** Open question 3 stays open: this run measured the
+  Lean channel against itself. `messung/LEAN-REICHWEITE.md` records that the two exporters'
+  goal sets are disjoint — *no obligation in this tree has ever been stated by two provers* —
+  and nothing here changes that.
+* **The second corpus.** The 66 are the ten fragments, chosen for difficulty. A fragment set
+  chosen for difficulty is the wrong denominator for "how often does this happen", and the
+  right one for "can it be said at all", which is the question V1 asks.
