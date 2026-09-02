@@ -2217,7 +2217,15 @@ zum ersten Mal ein Beta-Plan schreibbar, der nicht `N041` misst.*
 einen handgeschriebenen C-Treiber braucht, um zu laufen, ist die Klempnereifrage `K100` für
 den gehosteten Fall mit *nein* beantwortet.
 
-- [ ] Ein Eintritt in der Sprache, oder eine benannte Absage mit Grund. **Gegen die Ratsche.**
+- [x] ~~Ein Eintritt in der Sprache, oder eine benannte Absage mit Grund.~~ **GESCHLOSSEN,
+      und am 2026-09-02 von Hand nachgefahren:**
+
+          gabbro new hallo  ->  gabbro build hallo.bau  ->  ./target/hallo/hallo
+          Hi                rc=0        im erzeugten C:  int32_t main(void)
+
+      *Kein handgeschriebener C-Treiber.* Damit ist `K100` fuer den gehosteten Fall mit JA
+      beantwortet, und der Posten, der alles darunter blockierte, ist weg — **wodurch der
+      ungesehene Port zum ersten Mal ueberhaupt moeglich wird.**
 
 ### B2 — Zeichenketten · ~~**gemessen unmöglich**~~ **BERICHTIGT: sie gehen HEUTE**
 
@@ -2319,7 +2327,11 @@ braucht keine Pflicht. *Drei Sorten, ein Test.*
 **Acht Anläufe für „addiere zwei Zahlen"**, von jemandem mit vollem Zugang. Fünf der sieben
 Absagen waren Syntaxpapierschnitte.
 
-- [ ] `gabbro new` · ein Tutorial · fünf „meintest du"-Hinweise auf genau diese fünf.
+- [x] ~~`gabbro new` · ein Tutorial · fünf „meintest du"-Hinweise auf genau diese fünf.~~
+      **Alle drei stehen** (`12d91a9`). Und die Zahl, gegen die sie gebaut wurden, ist
+      gemessen gefallen: **acht Anläufe für „addiere zwei Zahlen" sind EINER** — bei einem
+      zweiten Leser, der `midpoint(lo, hi)` über zwei UNbeschränkten `u32` schrieb, was nicht
+      im Tutorial steht. *0 Fehler, 0 Hinweise, `slack 0`.*
 - [ ] **Und der Test danach ist nicht meiner:** ein zweiter Mensch, oder der ungesehene Port.
 
 ### B4 — Die Fläche, die schon steht
