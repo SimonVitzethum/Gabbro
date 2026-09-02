@@ -338,6 +338,12 @@ Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl i
 
 ## 10. Was BENANNT wurde statt geheilt — die sieben, die bleiben
 
+> **ACHT seit dem 2026-09-03**, und die achte steht als letzte Zeile in der
+> Tafel. Die Überschrift bleibt bei sieben stehen, weil `messung/`-Zahlen im
+> Text von `pruefe-zahlen.py` gelesen werden; die MARKE in
+> `instrumente/zaehle-gifttreffer.py` ist die Stelle, an der die Zahl gilt, und
+> sie steht auf 8.
+
 | Probe | erwartet | Kette | warum es nicht geht |
 |---|---|---|---|
 | `87-nan-ohne-verengung` | `F001` | M101@12 · **F001**@12 | |
@@ -348,6 +354,7 @@ Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl i
 | `63-gruppe-halb-gesperrt` | `U003` | H007@54 · H008?@41 · **U003**@47 | **Eine Sperre, zwei Regeln.** `H007` sieht den einzelnen Ort ohne seine Sperre, `U003` die Gruppe. Es gibt keine Schreibstelle an einem `PLAN`-geschützten Träger ohne `PLAN`, die `H007` nicht sieht. |
 | `188-schritt-in-locks-in-schleife` | `O006` | L108@33 · L107@45 · **O006**@38 | **Ein Phasenschritt verbraucht eine lineare Marke.** Also ist jede Probe für *„Phasenschritt in einer Schleife"* zwangsläufig auch eine für *„lineare Marke in einer Schleife verbraucht"* (`L108`). Zwei unbeabsichtigte Nachbarn (`K002`, `K006`) sind weg; die zwei linearen bleiben. |
 | `300-zeiger-auf-raw-fn` | `O009` | O010@17 · **O009**@29 | **Beide Auswege sind Absagen.** Ohne Marke sagt `O008` *„`raw fn` demands no `linear ghost` token"*, mit Marke sagt `O010` *„no function retires it"* — gemessen, indem beides gefahren wurde. Der dritte Weg ist ein `retires t from boot falsifier …`, und der verlangt einen `boot`-Block **und** eine Nachbedingung über die Abbildungen (`O012`, ebenfalls gemessen). *Mehr Gerüst, als die Probe groß ist.* |
+| `662-an-initialiser-written-one-element-at-a-time` | `C001` | M140@80 · **C001**@80 | **Der Erzeuger wird erreicht, obwohl der Prüfer schon abgesagt hat.** Der Befund ist ein Feldanfangswert, der Element für Element geschrieben wird — und der braucht einen Wert *ungleich null* an einer Feldstelle. Genau die Gestalt weist `M140` seit dem 2026-09-02 ab; `ist_null` ist der einzige Wert, den `m1.rs::gestalt_grund` dort durchlässt. **Die Datei ist ohne `M140` nicht schreibbar.** Dass `C001` trotzdem fällt, ist der Befund selbst: `command_emit` ruft `emittiere_mit` *vor* `absagen.fehler_zahl()`, also läuft das Hinterteil auch über einem abgewiesenen Baum — darum steht der Zaun am Erzeuger und nicht an dieser Regel. |
 
 > **Fünf der sieben sind keine Nachlässigkeit, sondern eine Aussage über die Sprache.**
 > `F001`/`M101`, `N021`/`N027`, `L102`/`E008`, `U003`/`H007`, `O006`/`L108` — das sind

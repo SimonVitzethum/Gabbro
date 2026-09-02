@@ -1,0 +1,82 @@
+-- erwartet: C001
+-- **662 -- a `static` array whose initialiser is longer than any patience.**
+--
+-- `[u64; 100000000] = 7` is far inside `PTRDIFF_MAX`, so `gift/645`'s `D5` says nothing --
+-- and `emit.rs::feldstatisch` writes a hundred million elements one at a time. It does that
+-- on purpose: `= {0}` means *every slot zero* in C and in Gabbro alike, while `= {5}` means
+-- *the first five, the rest zero* in C and *every slot five* in Gabbro. **The two readings
+-- part company at every value but zero**, so the zero short-circuits and every other value
+-- is written OUT.
+--
+-- Measured on this tree, debug binary, wall clock: 0.091 s at 10^6 elements, 0.868 s at
+-- 10^7, **8.51 s at 10^8** -- linear, about 85 ns and 190 bytes of resident memory per
+-- element. At the largest length `D5` still allows for a `u64` that is roughly three
+-- thousand years. **The emitter's promise has two answers -- lower it, or refuse it by name
+-- -- and this was a third.**
+--
+-- > *And the same slot has a second face.* Past `isize::MAX / size_of::<String>()` the
+-- > `collect::<Vec<_>>()` reserves its slots up front and `raw_vec` answers *capacity
+-- > overflow*: a panic instead of a hang, two milliseconds instead of an age. One hole,
+-- > two third answers, one fence.
+--
+-- THE NUMBER, AND WHY IT IS THIS EMITTER'S AND NOT C'S
+-- ----------------------------------------------------
+-- `gift/645` could read its bound off the standard: C requires the difference of two
+-- pointers into one object to be representable, so an object may not exceed `PTRDIFF_MAX`
+-- bytes, and GCC prints that very number. **There is no such number here.** ISO C sets no
+-- limit on how many elements an initialiser may hold; C11 5.2.4.1's translation limits
+-- speak of nesting depth and of identifiers, not of this. The bound in practice is patience
+-- and memory, and neither is in the standard.
+--
+-- So the fence is on **BYTES OF OUTPUT**, computed exactly before anything is built, and
+-- the budget is **one mebibyte per initialiser** (`C_INITIALISIERER_MAX`). Bytes and not a
+-- count, because bytes are what does not halt: one element of `7` costs three characters
+-- and one of `-2^127` costs forty-two, a factor of fourteen at the same length.
+--
+-- **The other two ways out were checked before this one was chosen.**
+--
+-- * A repeat form. `{ [0 ... 9] = 7 }` is a GNU extension: silent under the tree's own gate
+--   `-std=c11 -O0 -Wall -Wextra -Werror`, and under one switch more, *ISO C forbids
+--   specifying range of elements to initialize* `[-Werror=pedantic]`. That switch is net 5
+--   of `instrumente/fuzze-erzeuger.py`, so this road trades a hang for a finding in the
+--   same tool.
+-- * A loop at run time. A `static` initialiser has to be a constant expression; filling the
+--   array from an init function moves the work to a moment this language does not have --
+--   *a change to what `= 7` MEANS*, which is the one thing the emitter refuses to guess at.
+--
+-- THE HEADROOM, MEASURED OVER THE CORPUS
+-- --------------------------------------
+-- 612 versioned `.gab`/`.gabi`. Eleven declare an array `static`; the lengths of every
+-- array of any kind in the tree are 8, 10, 32, 64, 256 and 512. The largest array `static`
+-- is `[Zaehler; 64]` (`beispiele/08`) and `[u8; KAP]` with `KAP = 64` (`beispiele/64`).
+-- **Every one of them is `= 0`, so not one of them reaches this branch at any length.**
+--
+-- One mebibyte leaves 349 525 elements at a one-digit value and 24 966 at the widest
+-- literal Gabbro has: **5 461 times and 390 times the largest array `static` in the
+-- corpus.** A limit a real program hits is worse than the defect; this one is not within
+-- three decimal orders of any program in this tree.
+--
+-- WHY THE LENGTH BELOW IS 349526 AND NOT 100000000
+-- ------------------------------------------------
+-- **Because neither reader of this file carries a deadline, and one of them runs the
+-- emitter in-process.** `tests/beispiele.rs` calls `emittiere` directly for every probe
+-- whose first line says `C001`; `pruefe-emission.sh` shells out but puts no `timeout` on
+-- its `emit`. *A probe at 10^8 would hold `cargo test` for eight seconds today and forever
+-- the day the fence is taken out.*
+--
+-- 349526 is one element past the budget at a one-digit value (349526 x 3 = 1048578 bytes,
+-- and the budget is 1048576). It pins the number exactly -- raise the budget and this probe
+-- lowers and goes red -- and it costs about 30 ms even with the fence removed. **The rungs
+-- that genuinely do not halt live in net 8 of `instrumente/fuzze-erzeuger.py`, which is the
+-- one instrument here that has a deadline.**
+--
+-- `M140` falls beside `C001` and that is not slack: since 2026-09-02 the checker refuses
+-- every non-zero value at an array slot, so this text cannot be written without it.
+-- **The emitter is reached anyway** -- `command_emit` runs the back end before it reads the
+-- verdict -- which is exactly why the fence belongs at the emitter and not at that rule.
+
+module gift::an_initialiser_written_one_element_at_a_time {
+
+static mut A : [u64; 349526] = 7;
+
+}

@@ -8304,3 +8304,100 @@ fn ein_massstab_von_null_liest_nichts_und_niemand_sagt_es() {
         "an ordinary scale must survive as itself: {codes}\n{c}"
     );
 }
+
+/// **`D12` -- an initialiser written one element at a time, and BOTH directions of the fence.**
+///
+/// `static mut A : [u64; 100000000] = 7;` is far inside `PTRDIFF_MAX`, so `gift/645`'s bound
+/// says nothing -- and `feldstatisch` wrote a hundred million elements one by one. Measured
+/// before the repair: 0.091 s at 10^6, 0.868 s at 10^7, **8.51 s at 10^8**, linear, about
+/// 85 ns and 190 bytes of resident memory per element. At the largest length that bound
+/// still allows for a `u64`, roughly three thousand years. *The emitter's promise has two
+/// answers, and this was a third.*
+///
+/// > **Two faces of one hole.** Past `isize::MAX / size_of::<String>()` the `collect`
+/// > reserves its slots up front and `raw_vec` answers *capacity overflow* -- a panic in two
+/// > milliseconds instead of a hang. One fence closes both.
+///
+/// **The number is this emitter's, because C has none to lend.** ISO C sets no limit on how
+/// many elements an initialiser may hold. The fence is therefore on BYTES OF OUTPUT, and it
+/// is `C_INITIALISIERER_MAX` -- one mebibyte -- computed exactly before anything is built.
+///
+/// **The counter-direction is the whole point of this test**, and it has three parts: the
+/// zero must still lower at ANY length (it is `{0}`, and that is what every array `static`
+/// in the corpus writes), an ordinary non-zero array must still be written out element by
+/// element, and the last length INSIDE the budget must still lower. *A fence that refuses
+/// one element too early is a language change wearing a repair's clothes.*
+///
+/// Poison probe `beispiele/gift/662`; found by the mandate that `instrumente/fuzze-erzeuger.py`
+/// counted at zero, and now measured by its net 8.
+#[test]
+fn ein_feldanfangswert_wird_nicht_element_fuer_element_ohne_ende_geschrieben() {
+    let emittieren = |q: &str| {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let c = gabbro_check::emit::emittiere(&b, &mut a);
+        let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+        (c, codes.join(","))
+    };
+    let feld = |n: &str, w: &str| format!("module p {{ static mut A : [u64; {n}] = {w}; }}");
+
+    // 1. THE FENCE SPEAKS. One element past the budget at a one-digit value: 349526 x 3 is
+    //    1048578 bytes and the budget is 1048576.
+    let (c, codes) = emittieren(&feld("349526", "7"));
+    assert!(
+        codes.contains("C001") && !c.contains("A[349526]"),
+        "an initialiser past the byte budget must be refused by name, not written out: \
+         {codes}\n{}",
+        &c[..c.len().min(400)]
+    );
+    // And the refusal has to name the budget, or the reader is left with a wall.
+    assert!(
+        c.is_empty() || !c.contains("7, 7, 7"),
+        "nothing of the run-away initialiser may reach the output:\n{}",
+        &c[..c.len().min(400)]
+    );
+
+    // 2. THE COUNTER-DIRECTION, and a careless fence breaks each of these three.
+    //
+    // 2a. The last length INSIDE the budget still lowers, element by element.
+    let (c, codes) = emittieren(&feld("349525", "7"));
+    assert!(
+        !codes.contains("C001") && c.contains("A[349525]") && c.contains("7, 7, 7"),
+        "the last length inside the budget must still be written out: {codes}"
+    );
+
+    // 2b. An ordinary small array is untouched -- this is the shape `beispiele/08` and
+    //     `beispiele/64` carry, one of them through a `const` length.
+    let (c, codes) = emittieren(&feld("64", "7"));
+    assert!(
+        !codes.contains("C001") && c.contains("A[64]") && c.contains("7, 7, 7"),
+        "an ordinary array must still be written out element by element: {codes}\n{c}"
+    );
+
+    // 2c. **The zero costs nothing at ANY length, and every array `static` in the corpus is
+    //     one.** A fence that read the LENGTH instead of the bytes would refuse this.
+    let (c, codes) = emittieren(&feld("100000000", "0"));
+    assert!(
+        !codes.contains("C001") && c.contains("A[100000000]") && c.contains("= {0}"),
+        "a zero initialiser lowers to `{{0}}` at any length: {codes}\n{c}"
+    );
+
+    // 3. THE WIDTH OF THE VALUE IS PART OF THE COST, which is why the fence counts bytes
+    //    and not elements. `18446744073709551615` is twenty characters, so the same length
+    //    that passes at `7` must fall here.
+    let (_, codes_schmal) = emittieren(&feld("100000", "7"));
+    let (_, codes_breit) = emittieren(&feld("100000", "18446744073709551615"));
+    assert!(
+        !codes_schmal.contains("C001") && codes_breit.contains("C001"),
+        "the same LENGTH at a wider value must cross the budget -- otherwise the fence is \
+         counting elements: narrow={codes_schmal} wide={codes_breit}"
+    );
+
+    // 4. THE SECOND FACE. Past `isize::MAX / size_of::<String>()` the reservation itself
+    //    used to panic; the fence stands in front of it, so this is an ordinary refusal now.
+    let (_, codes) = emittieren(&feld("1152921504606846975", "7"));
+    assert!(
+        codes.contains("C001"),
+        "the largest length the object bound still allows must be refused by name, not \
+         panic in the allocator: {codes}"
+    );
+}
