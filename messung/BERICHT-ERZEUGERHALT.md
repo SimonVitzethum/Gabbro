@@ -318,3 +318,30 @@ emitter under the 3 s deadline, and every one of them halted.**
   documents. **No region of `emit.rs` needs hand-merging** -- the `D1`-`D6` repairs that
   touched it heavily are `599ca75`/`26620f1`, which is this lane's BASE and not something
   it has to catch up with.
+
+## 9. THE MERGE -- and one number that was right on both sides and wrong in the middle
+
+`master` moved to `4e53df3` (GabbroV `V1`) while this lane ran. **The source change sets do
+not overlap at all**, and the merge was taken here rather than left for the integrator:
+`master` is now an ancestor of this branch, so integration is a fast-forward.
+
+**One conflict, and it is worth more than the merge.** `pruefe-widerruf.py` reads a set of
+documents and its size is a metric in `TODO.md`. This lane moved it `181 -> 182` for its one
+new document; `master` moved it `181 -> 182` for its two. **Git saw the same number twice
+and merged it conflict-free into one** -- the textual conflict beside it was only the extra
+paragraph `master` wrote.
+
+Both sides were green alone. The merged tree is not: the guardian says **183**.
+
+```
+this lane alone   pruefe-zahlen.py  exit 0   TODO says 182
+master alone      pruefe-zahlen.py  exit 0   TODO says 182
+merged            pruefe-zahlen.py  exit 1   the run says 183
+```
+
+*A merge that ADDS numbers has no text conflict.* Same class as `W16`, one storey up:
+between two branches instead of inside one tool. Corrected to 183, and the sentence now
+stands beside the number so the next lane does not have to find it again.
+
+Over the merged tree: `cargo test --offline --no-fail-fast` **400 probes, 0 red**, and
+`pruefe-zahlen`, `-todo`, `-widerruf`, `-englisch`, `-kennungen` all exit 0.
