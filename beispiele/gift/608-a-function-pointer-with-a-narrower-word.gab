@@ -1,0 +1,57 @@
+-- erwartet: M141
+-- **Poison 608 -- what TRAVELS through a function pointer, which `M128` never compared.**
+--
+-- `M128` holds three things at a `fn(...)` slot: arity, the effect set and the cost bound.
+-- *Three readings of one sentence -- the pointer promises no less than the slot.* **The
+-- fourth question, which values go through the pointer, is not in that sentence and was
+-- asked by nobody.**
+--
+-- Measured 2026-09-02 against the unchanged checker: **0 errors, and `100 % coverage`
+-- printed underneath.** The emitter is faithful --
+--
+--     typedef struct { uint32_t (*f)(uint32_t); } Tafel;
+--     static uint8_t eng(uint8_t b);
+--     static Tafel baue(void) { return (Tafel){ .f = &eng }; }
+--
+-- -- and `cc -Werror` refuses it: *initialization of `uint32_t (*)(uint32_t)` from
+-- incompatible pointer type `uint8_t (*)(uint8_t)`*. The `N041` shape again.
+--
+-- ## Why this is `M141` and not a fourth `M128`
+--
+-- `M128`'s own note says **may promise LESS than its slot, never more** -- a subsumption,
+-- and the direction is its whole content. **A signature is an EQUALITY.** Nothing converts
+-- at an indirect call: the caller pushes what the slot's type says and the callee reads what
+-- its own declaration says, so `fn(u32)` at a `fn(u8)` slot is exactly as wrong as this
+-- file. *Putting an equality under an identifier whose sentence is a subsumption would make
+-- `gift/241` green while this half is out -- and then neither probe could say which rule it
+-- caught.*
+--
+-- What `M141` does NOT compare is named in its refusal: `effects` and `costs` stay `M128`'s,
+-- and the declared RANGE of a number is held by nobody at a `fn(...)` slot -- `u32 in 0 .. 9`
+-- and `u32` are one C type and one ABI, so a function accepting less than the slot promises
+-- still passes here. *That is a contravariance rule with its own direction, and it is booked
+-- in `TODO.md` rather than smuggled in here.*
+
+module gift::a_function_pointer_with_a_narrower_word {
+
+type Tafel = {
+    f : fn(u32) -> u32
+        effects { pure }
+        costs   <= 4 ops,
+};
+
+impl fn eng(b : u8) -> u8
+    effects { pure }
+    costs   <= 3 ops
+{
+    return b;
+}
+
+impl fn baue() -> Tafel
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Tafel(f: &eng);
+}
+
+}

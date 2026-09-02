@@ -3220,6 +3220,96 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **`M141` -- the SIGNATURE at a `fn(…)` slot, which `M128` never compared.**
+    ///
+    /// Measured 2026-09-02 against the unchanged checker: `&eng` with `eng(b : u8) -> u8`
+    /// went into a `fn(u32) -> u32` slot with **`0 errors` and `100 % coverage`**, the
+    /// emitter wrote `.f = &eng`, and `cc` refused it -- *initialization of
+    /// `uint32_t (*)(uint32_t)` from incompatible pointer type*. **The `N041` shape: the
+    /// checker confirms and the foreign compiler holds the line.**
+    ///
+    /// ## Why this is a rule of its own and not a fourth reading of `M128`
+    ///
+    /// `M128`'s sentence is *a function pointer promises no LESS than the slot*, and its own
+    /// note says so: **may promise less, never more.** That sentence is FALSE here.
+    /// `fn(u32)` at a `fn(u8)` slot is just as wrong as the other way round, because nothing
+    /// converts at an indirect call -- the caller pushes the slot's word and the callee reads
+    /// its own. *A subsumption and an equality under one identifier would make `gift/241`
+    /// green while this half is out, and its poison probe could no longer say which of them
+    /// it caught.*
+    ///
+    /// ## What is compared, per component -- and what is not
+    ///
+    /// | component | held here | by whom otherwise |
+    /// |---|---|---|
+    /// | arity | **no** -- and it is the precondition, not an omission | `M128`, which returns first |
+    /// | parameter types | **yes**, positionally, as a machine word | -- |
+    /// | result present / absent | **yes** | -- |
+    /// | result type | **yes**, the same way | -- |
+    /// | `effects` | **no** | `M128` |
+    /// | `costs` | **no** | `M128` |
+    /// | parameter NAMES | **no**, deliberately | nobody: a name at a pointer type binds nothing unless an effect line reads it (`ast::FnZeigerParam`) |
+    /// | the declared RANGE | **no**, deliberately -- see below | nobody, and it is named in `TODO.md` |
+    ///
+    /// **The range is the half `cc` cannot see, and it is left open on purpose.** `u32 in
+    /// 0 .. 9` and `u32` are one C type and one ABI, so `darstellung_grund` passes them --
+    /// but a function declaring the narrower one accepts LESS than the slot promises, and a
+    /// caller through the slot may hand it 1000. *That is a contravariance rule with its own
+    /// direction and its own measurement, and writing it into this one would make a rule
+    /// about representation quietly also a rule about values.* The refusal says which half
+    /// it is.
+    fn fnptr_signatur_passt(
+        &mut self,
+        q: &crate::typen::FnPtrContract,
+        z: &crate::typen::FnPtrContract,
+        span: Span,
+    ) {
+        // **Arity is `M128`'s and it reports first.** Position `i` cannot be compared where
+        // there is no position `i`, so this is a precondition and not a second opinion.
+        if q.parameters.len() != z.parameters.len() {
+            return;
+        }
+        // **One rule, one refusal site** -- the same reason `fnptr_passt` gives one door
+        // above. A parameter and the result are two positions of one signature.
+        let grund = q
+            .parameters
+            .iter()
+            .zip(z.parameters.iter())
+            .enumerate()
+            .find_map(|(i, ((_, a), (_, b)))| {
+                darstellung_grund(a, b).map(|g| format!("at parameter {}, {g}", i + 1))
+            })
+            .or_else(|| match (&q.result, &z.result) {
+                (Some(a), Some(b)) => darstellung_grund(a, b).map(|g| format!("in the result, {g}")),
+                (None, Some(b)) => Some(format!(
+                    "it returns nothing, the slot promises `{}`",
+                    b.text()
+                )),
+                (Some(a), None) => Some(format!(
+                    "it returns `{}`, the slot takes no result",
+                    a.text()
+                )),
+                (None, None) => None,
+            });
+        let Some(grund) = grund else { return };
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M141",
+                span,
+                format!("`{}` does not fit `{}`: {grund}", q.shape(), z.shape()),
+            )
+            .mit_notiz(
+                "nothing converts at an indirect call: the caller pushes what the SLOT's type \
+                 says and the callee reads what its own declaration says, so the two must be \
+                 the same machine value",
+            )
+            .mit_notiz(
+                "this compares the SIGNATURE only -- `effects` and `costs` are `M128`'s, and \
+                 the declared RANGE of a number is held by nobody at a `fn(...)` slot",
+            ),
+        );
+    }
+
     /// **`M135` -- `bool` is not a number, and the comparison below cannot say so.**
     ///
     /// `passt` ends in a comparison of RANGES, and `Typ::Wahrheit` has none
@@ -3429,6 +3519,9 @@ impl<'a> Pruefer<'a> {
         if let (Typ::FnPtr(q), Typ::FnPtr(z)) = (quelle.durchgreifen(), ziel.durchgreifen()) {
             let (q, z) = (q.clone(), z.clone());
             self.fnptr_passt(&q, &z, span);
+            // **`M141` runs BESIDE `M128` and not instead of it** -- the contract and the
+            // signature are two independent ways to be wrong, and a pointer can be both.
+            self.fnptr_signatur_passt(&q, &z, span);
             return;
         }
         self.undurchsichtigkeit_pruefen(quelle, ziel, span, was);
@@ -4563,6 +4656,69 @@ fn gestalt_grund(quelle: &Typ, ziel: &Typ) -> Option<String> {
         return None;
     }
     Some(format!("{q} does not answer for {z}"))
+}
+
+/// **Why these two cannot be the SAME machine value -- `M141`'s per-component question.**
+///
+/// `gestalt_grund` above asks whether two types can stand at the same place, and at an
+/// ordinary slot that is the right question: C converts, `M101`/`M104` hold the range, and
+/// `u8` at a `u32` parameter is a widening nobody needs to be told about.
+///
+/// **Through a function pointer nothing converts.** The caller pushes what the SLOT's type
+/// says and the callee reads what its OWN declaration says; there is no site in between for
+/// a conversion to live. So here -- and only here -- the question is sharper: *do the two
+/// lower to the same C type?* `cc` asks exactly this and answers
+/// *incompatible pointer type*.
+///
+/// Three readings, in order: the shape (`gestalt_grund`, one home and not a second), then
+/// the pointee behind a pointer and the element behind an array, then the machine word --
+/// width and signedness for an integer, width for a float.
+///
+/// **`None` stays the honest exit.** `Unbekannt` and `never` have no shape, and neither has
+/// a range -- so both loops below simply do not run. *W10: not refused is not confirmed.*
+fn darstellung_grund(quelle: &Typ, ziel: &Typ) -> Option<String> {
+    if let Some(g) = gestalt_grund(quelle, ziel) {
+        return Some(g);
+    }
+    match (ohne_namen(quelle), ohne_namen(ziel)) {
+        // A pointer's own lowering is the same word everywhere; what differs is the pointee.
+        (Typ::Zeiger(a), Typ::Zeiger(b)) => return darstellung_grund(a, b),
+        // **An array cannot be a parameter at all** (`C001`, the emitter), so this arm is
+        // reached only through a pointer to one. The length is part of the C type.
+        (Typ::Feld { element: a, laenge: la }, Typ::Feld { element: b, laenge: lb }) => {
+            if la != lb {
+                return Some(format!(
+                    "`{}` and `{}` are arrays of different length",
+                    quelle.text(),
+                    ziel.text()
+                ));
+            }
+            return darstellung_grund(a, b);
+        }
+        _ => {}
+    }
+    // **The machine word.** `type Zaehler = u32 in 0 .. 9` and `u32` are ONE C type and one
+    // ABI -- `bereich()` looks through the name by construction (`N030`), and the declared
+    // range is deliberately not compared here; see the note at `fnptr_signatur_passt`.
+    if let (Some(a), Some(b)) = (quelle.bereich(), ziel.bereich()) {
+        if a.breite != b.breite || a.vorzeichen != b.vorzeichen {
+            return Some(format!(
+                "`{}` and `{}` are different machine words",
+                quelle.text(),
+                ziel.text()
+            ));
+        }
+    }
+    if let (Typ::Gleitkomma(a), Typ::Gleitkomma(b)) = (ohne_namen(quelle), ohne_namen(ziel)) {
+        if a.breite != b.breite {
+            return Some(format!(
+                "`{}` and `{}` are different machine words",
+                quelle.text(),
+                ziel.text()
+            ));
+        }
+    }
+    None
 }
 
 /// Nennt der Fakt diesen Namen -- als Grundname oder in einem Index?

@@ -257,10 +257,16 @@ zur Laufzeit gewählt wird. **Caprocks vier indirekte Rufstellen nehmen keine Sp
   jedes `let` mit Typangabe ohne Rücksicht auf Verschattung; zwei Bindungen eines Namens in
   zwei Zweigen fallen zu einer zusammen. Ein `let` **ohne** Typangabe wird gar nicht gesehen —
   dort gibt es dann keinen Vertrag, und das heisst `E009`, nicht Schweigen.
-* **`M128` prüft Stelligkeit, Wirkungsmenge und Kostenzahl — nicht die Parametertypen.** Zwei
-  Zeigertypen gleicher Stelligkeit mit verträglichen Verträgen, aber verschiedenen
+* ~~**`M128` prüft Stelligkeit, Wirkungsmenge und Kostenzahl — nicht die Parametertypen.**
+  Zwei Zeigertypen gleicher Stelligkeit mit verträglichen Verträgen, aber verschiedenen
   Parametertypen sind hier austauschbar; der Fehler taucht erst am Ruf auf (`M104`) — oder
-  gar nicht, wenn niemand durch den Slot ruft.
+  gar nicht, wenn niemand durch den Slot ruft.~~ — **CLOSED 2026-09-02 by `M141`**, and the
+  second half of that sentence was the sharper half: *the mismatch surfaces at `M104`* was
+  only ever true for two pointer TYPES. Through a producer (`&f`) it surfaced nowhere at
+  all — an indirect call type-checks against the SLOT, so nothing downstream ever learned
+  what the real function takes. Measured: `0 errors`, `100 % coverage`, and `cc` refusing
+  the emitted `.f = &eng`. **What is still not compared is the declared RANGE** — a
+  contravariance rule with its own direction, booked in `TODO.md`.
 * **`ensures` am Funktionszeigertyp wird von niemandem gelesen.** Die Klausel ist geparst und
   gespeichert; ein Rufer durch den Zeiger lernt nichts daraus. *Sie steht damit heute genau in
   der Klasse, gegen die dieser Posten gebaut wurde* — und wenn sie bis zum nächsten Lauf
@@ -308,6 +314,7 @@ zur Laufzeit gewählt wird. **Caprocks vier indirekte Rufstellen nehmen keine Sp
 | `N037` | ein `requires` am Zeigertyp | `gift/247` |
 | `M127` | `&x`, wo `x` keine Funktion ist | `gift/244` |
 | `M128` | der Erzeuger verspricht MEHR als sein Slot | `gift/241` |
+| `M141` | die UNTERSCHRIFT passt nicht — Parameter oder Ergebnis *(2026-09-02)* | `gift/608`, `gift/609` |
 | `M129` | Ruf über einen Ort ohne `fn(…)`-Typ | `gift/245` |
 | (`E008`) | die Hülle überquert den indirekten Ruf | `gift/242` |
 | (`K001`) | die Kostenschranke des Typs wird addiert | `gift/246` |

@@ -1,0 +1,51 @@
+-- erwartet: R013
+-- **Poison 607 -- the RIGHTS half of a pointer declaration, which nothing read.**
+--
+-- `R008` was built on 2026-08-24 out of the pass register's finding that the address space
+-- was checked nowhere. It reads `TypExpr::Zeiger(z).raum` and stops there. **`z.rechte` sits
+-- in the same struct, two fields down, and no line compared it at a call.**
+--
+-- Measured 2026-09-02 against the unchanged checker: this file gave **0 errors, 0 hints**.
+-- The emitter is faithful and writes what the declaration says --
+--
+--     static void schreibt(Text *restrict p);
+--     static void ruft(const Text *restrict q) { schreibt(q); }
+--
+-- -- and `cc -Werror` refuses it: *passing argument 1 of 'schreibt' discards 'const'
+-- qualifier from pointer target type*. **The `N041` shape: the checker confirms and the
+-- foreign compiler is what holds the line.**
+--
+-- ## And the direction is the whole rule
+--
+-- Unlike the address space, rights are NOT symmetric. `R008` asks `ist != soll` and is right
+-- to -- there is no lattice over `mmio` and `normal`, they are simply different memories.
+-- Rights have one:
+--
+--   * `rw` at an `r` parameter is NARROWING and legitimate. The callee promises to do less
+--     than it could. `crates/gabbro-check/tests/gestalt.rs` already pinned that row before
+--     this rule existed (*a wider right at a narrower slot*), and it must stay silent.
+--   * `r` at an `rw` parameter -- this file -- is the unsound one.
+--
+-- **The counter-direction cannot live in this directory** -- a file here must fall -- so it
+-- stands as a speech test: `tests/rechte.rs::ein_engerer_slot_bleibt_still`, and
+-- `tests/gestalt.rs` had the row before this rule existed.
+
+module gift::pointer_rights_widen_at_a_call {
+
+type Text = { n : u32, };
+
+impl fn schreibt(p : ptr<normal, rw> Text)
+    effects { writes p }
+    costs   <= 4 ops
+{
+    p.n = 1;
+}
+
+impl fn ruft(q : ptr<normal, r> Text)
+    effects { writes q }
+    costs   <= 8 ops
+{
+    schreibt(q);
+}
+
+}

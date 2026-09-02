@@ -63,6 +63,97 @@ fn raumname(r: &Raum) -> String {
     }
 }
 
+/// **What a pointer declaration lets its holder DO** -- the three access atoms, `R013`.
+///
+/// `Vec<Recht>` is a spelling, not a set: `rw` is ONE variant and `r + w` is two, and they
+/// mean the same thing. Comparing spellings would make `ptr<normal, rw>` and
+/// `ptr<normal, r + w>` two different pointers, which they are not.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Zugriff {
+    lesen: bool,
+    schreiben: bool,
+    ausfuehren: bool,
+}
+
+/// **`own` counts as READ and WRITE, and that is the emitter's answer, not a new one.**
+///
+/// `emit::zeiger_schreibend` -- the one home of the `const` decision -- puts `Recht::Eigen`
+/// with `w` and `rw`, so a bare `own` parameter lowers to a non-`const` `T *`: a C pointer
+/// that may be read and written. *Crediting it less here would refuse calls `cc` accepts,
+/// and the corpus writes `own` bare at four sites.*
+///
+/// **`own` ITSELF is not an atom here.** Ownership is a linearity question and it belongs to
+/// `R004`/`R007`; what this function answers is what the holder may DO with the memory.
+fn zugriff(rechte: &[Recht]) -> Zugriff {
+    let mut z = Zugriff {
+        lesen: false,
+        schreiben: false,
+        ausfuehren: false,
+    };
+    for r in rechte {
+        match r {
+            Recht::Lesen => z.lesen = true,
+            Recht::Schreiben => z.schreiben = true,
+            Recht::LesenSchreiben => {
+                z.lesen = true;
+                z.schreiben = true;
+            }
+            Recht::Ausfuehren => z.ausfuehren = true,
+            Recht::Eigen(_) => {
+                z.lesen = true;
+                z.schreiben = true;
+            }
+        }
+    }
+    z
+}
+
+impl Zugriff {
+    /// The atoms this one has and `andere` does not -- **the direction of `R013` in one
+    /// line**, and it is asked as *what the PARAMETER demands and the ARGUMENT lacks*.
+    fn fehlt_gegenueber(&self, andere: &Zugriff) -> Vec<&'static str> {
+        let mut f = Vec::new();
+        if self.lesen && !andere.lesen {
+            f.push("r");
+        }
+        if self.schreiben && !andere.schreiben {
+            f.push("w");
+        }
+        if self.ausfuehren && !andere.ausfuehren {
+            f.push("x");
+        }
+        f
+    }
+
+    /// The atoms as they would be WRITTEN, for a refusal text. `rw` and not `r + w`: that is
+    /// how the corpus spells it, 195 sites to none.
+    fn text(&self) -> String {
+        match (self.lesen, self.schreiben, self.ausfuehren) {
+            (true, true, false) => "rw".into(),
+            (true, false, false) => "r".into(),
+            (false, true, false) => "w".into(),
+            (false, false, true) => "x".into(),
+            _ => {
+                let mut t: Vec<&str> = Vec::new();
+                if self.lesen {
+                    t.push("r");
+                }
+                if self.schreiben {
+                    t.push("w");
+                }
+                if self.ausfuehren {
+                    t.push("x");
+                }
+                if t.is_empty() {
+                    "no access right".into()
+                } else {
+                    t.join(" + ")
+                }
+            }
+        }
+    }
+}
+
 /// **`R004` — zweimal `own` auf denselben Gegenstand.**
 ///
 /// `own` war bis 2026-08-19 ein Synonym für `rw`: drei Lesestellen, alle drei behandeln
@@ -90,6 +181,8 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
     // pass refused it. *A measurement without a rule is the state a rule grows out of.*
     let mut schreibend: BTreeMap<String, Vec<bool>> = BTreeMap::new();
     let mut raeume: BTreeMap<String, Vec<Option<Raum>>> = BTreeMap::new();
+    // **`R013`** -- the access atoms per pointer parameter, in the same shape as `raeume`.
+    let mut zugriffe: BTreeMap<String, Vec<Option<Zugriff>>> = BTreeMap::new();
     let mut parameternamen: BTreeMap<String, Vec<String>> = BTreeMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
@@ -118,6 +211,22 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
                     .iter()
                     .map(|p| match &p.typ {
                         TypExpr::Zeiger(z) => Some(z.raum.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+            );
+            // **`R013`, 2026-09-02 -- the RIGHTS beside the space, and the direction is
+            // the whole difference.**
+            //
+            // `R008` reads `z.raum` two lines up and stops there; `z.rechte` sits in the
+            // same struct and no line read it. *One pass, two halves of one pointer
+            // declaration, and only one of them was compared.*
+            zugriffe.insert(
+                voll.clone(),
+                f.parameter
+                    .iter()
+                    .map(|p| match &p.typ {
+                        TypExpr::Zeiger(z) => Some(zugriff(&z.rechte)),
                         _ => None,
                     })
                     .collect(),
@@ -205,6 +314,73 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
                             ),
                         );
                     }
+                }
+            }
+            // **`R013` -- the RIGHTS, and unlike the space they are NOT symmetric.**
+            //
+            // `R008` two blocks up compares the two spaces for EQUALITY, and it is right to:
+            // there is no lattice over address spaces, so `mmio` and `normal` are simply
+            // different memories. **Rights have a lattice, and the direction is the whole
+            // rule.**
+            //
+            // * `rw` at an `r` parameter is NARROWING and legitimate -- the callee promises
+            //   to do less than it could, `D004` rests on exactly that reading, and
+            //   `tests/gestalt.rs` pins the row (*a wider right at a narrower slot*).
+            // * `r` at an `rw` parameter is the unsound one: the callee writes through a
+            //   pointer whose holder never had the right. The emitter writes
+            //   `const Text *` into a `Text *` and `cc` says *discards `const`
+            //   qualifier* -- **the `N041` shape, one stage too late.**
+            //
+            // Asked as *what the PARAMETER demands and the ARGUMENT lacks*, so a call that
+            // narrows never enters the branch at all.
+            if let (Some(zzugriffe), Some(eigene_zugriffe), Some(eigene_namen)) = (
+                zugriffe.get(ziel),
+                zugriffe.get(&eigene),
+                parameternamen.get(&eigene),
+            ) {
+                for (i, a) in args.iter().enumerate() {
+                    let (Some(ort), Some(Some(soll))) = (a, zzugriffe.get(i)) else {
+                        continue;
+                    };
+                    let Some(j) = eigene_namen.iter().position(|n| n == ort) else {
+                        continue;
+                    };
+                    let Some(Some(ist)) = eigene_zugriffe.get(j) else {
+                        continue;
+                    };
+                    let fehlend = soll.fehlt_gegenueber(ist);
+                    if fehlend.is_empty() {
+                        continue;
+                    }
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "R013",
+                            f.name.span,
+                            format!(
+                                "`{}` passes `{ort}` with rights `{}` to a parameter of `{}` \
+                                 declared `{}` -- `{}` is missing",
+                                f.name.text,
+                                ist.text(),
+                                crate::umgebung::kurzname(ziel),
+                                soll.text(),
+                                fehlend.join("`, `")
+                            ),
+                        )
+                        .mit_notiz(
+                            "rights NARROW at a call and never widen: a `rw` argument fits an \
+                             `r` parameter, an `r` argument does not fit a `rw` one",
+                        )
+                        .mit_notiz(
+                            "`own` is read as read AND write here, the way the emitter lowers \
+                             it -- whether ownership itself may be handed over is `R004`'s \
+                             and `R007`'s question, not this one's",
+                        )
+                        .mit_notiz(
+                            "only a bare parameter name is compared, the same \
+                             under-approximation `R008` states: a field, a local or a return \
+                             value carries no declared right this pass can read",
+                        ),
+                    );
                 }
             }
             // **`R007` -- two WRITABLE pointer arguments at the same place.**
