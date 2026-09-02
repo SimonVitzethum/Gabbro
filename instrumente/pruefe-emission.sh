@@ -1999,10 +1999,19 @@ ausnahme_grund() {
 #                                               `-Wcast-align=strict` names the IDENTICAL
 #                                               15 units with identical per-unit counts,
 #                                               so it is not a family difference at all
-#     + -Wunreachable-code-aggressive          37 over 8 units -- every one the emitter's
+#     + -Wunreachable-code-aggressive          37 over 10 units -- every one the emitter's
 #                                               deliberate terminator after a block that
-#                                               already answers. A gate red on 8 of 120
+#                                               already answers. A gate red on 10 of 120
 #                                               units on its first day is not a gate.
+#
+# **`8` stood there until 2026-09-02 and the unit count was wrong; the hit count was not.**
+# Re-measured on both machines, clang 18.1.3 and clang 22.1.8, same cache of emitted C:
+# 37 hits over **10** units -- `beispiele/08`, `13`, `31`, `34`, `39`, `40`, `41`, `42`, `48`
+# and `messung/fragmente/F08`, split over four sub-tags (`-break` 24/6, plain 7/5,
+# `-return` 5/3, `-loop-increment` 1/1). *Four tag-wise unit counts are not one unit count:
+# they sum to 15, their union is 10, and 8 is neither.* The conclusion above is untouched
+# by the correction, and it is worth saying that it is untouched rather than quietly fixing
+# the digit: a number that changes without moving its argument was carrying no weight.
 #
 # *One switch that catches a wrong value going into a CAS is worth more than twenty that
 # catch braces* -- and here the one switch is not a switch, it is the second compiler.
