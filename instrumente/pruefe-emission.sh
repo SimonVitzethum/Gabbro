@@ -2172,7 +2172,22 @@ MARKE_EMIT=64
 # `-zwei` -- carry `-- erwartet: cc` and stand in this denominator exactly the way
 # `gift/414` does: they emit, and their C MUST fall. *The object grew by five, and the
 # ratchet counts emitting files, not passing ones.*
-MARKE_EMIT_M=52
+# **52 -> 51 on 2026-09-02, and it is the ONE case a falling floor is allowed: the checker
+# got RIGHTER.** `messung/tor-proben/t12-floor-nennt-nichts.gab` lowered to C until `D021`
+# arrived. It now falls with *"`gibt_es_nicht` in a `floor` is not declared here"* -- which
+# is the probe's own subject, spelled out in its file name. **The probe did not lose its
+# meaning; it gained a reader.**
+#
+# *Measured and not deduced*, because a floor that falls is exactly where a guess is
+# expensive: the tree of `f3d78fe` (where the 52 was booked) and the tree of `7fcdbb0` were
+# both built into scratch directories, and the emitting sets of `messung/*/*.gab` were
+# diffed. **One file lost, none gained**, and the one is named above. The three `messung`
+# files edited in between (`F01`, `F04`, `probe-c-namen-frei`) were put back one at a time
+# and moved nothing.
+#
+# The gate had been red on `master` since that merge, and the red was not a finding: the
+# object shrank by one and the mark stood still.
+MARKE_EMIT_M=51
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
