@@ -1162,3 +1162,54 @@ fn ein_traeger_in_aligned_verbindet_die_gruppe() {
     // carrier -- even through `aligned` -- must still fall, or the fix has blinded `U007`.
     faellt_mit(&quelle("aligned(A.slots[e].wartet, 4)"), "U007");
 }
+
+/// **`M139` -- a literal so wide that the TYPE falls away, and every rule with it.**
+///
+/// `IntBereich` is `i128`; Gabbro's literals are `u128`. Until 2026-09-02 the values in
+/// between answered `Typ::Unbekannt`, and *`Unbekannt` is not a refusal -- it is an
+/// acquittal that reads like caution.* Each rule below asks for the type first and had
+/// nothing to ask.
+///
+/// **The first two assertions carry the claim, and they are neighbours**: `i128::MAX` fell
+/// with `M103` before this rule existed and must keep doing so; `i128::MAX + 1` was
+/// accepted, and emitted as an out-of-bounds C subscript over `T_slot slots[8];`.
+///
+/// Found by `instrumente/fuzze-grenzen.py`; the poison probe is
+/// `beispiele/gift/601-an-index-too-wide-to-have-a-type.gab`.
+#[test]
+fn ein_literal_breiter_als_i128_faellt() {
+    let index = |wert: &str| {
+        format!(
+            "module p {{\ntable T count 8 {{ slot {{ a : u32, }} }}\n\
+             impl fn g() -> u32\n    effects {{ reads T.slots }}\n    costs   <= 4 ops\n{{\n\
+             return T.slots[{wert}].a;\n}}\n}}"
+        )
+    };
+    // The boundary, from both sides. `i128::MAX` keeps its type and keeps falling at the
+    // bound; one above it has no type at all and falls at `M139`.
+    faellt_mit(&index("170141183460469231731687303715884105727"), "M103");
+    faellt_mit(&index("170141183460469231731687303715884105728"), "M139");
+    faellt_mit(&index("340282366920938463463374607431768211455"), "M139");
+
+    // The same silence, in the three other places a literal is read. Each of these was
+    // `0 errors` on 2026-09-02.
+    let k = |wert: &str| format!("module p {{ const K : u64 = {wert}; }}");
+    faellt_mit(&k("170141183460469231731687303715884105728"), "M139");
+    faellt_mit(&k("340282366920938463463374607431768211455"), "M139");
+    // `2^127 - 1` still has a type, so the WIDTH rule is the one that speaks -- and it must
+    // keep speaking, or `M139` has swallowed a case that was already covered.
+    faellt_mit(&k("170141183460469231731687303715884105727"), "M101");
+
+    faellt_mit(
+        &format!("module p {{ static mut x : u64 = {}; }}", 1u128 << 127),
+        "M139",
+    );
+
+    // **The counter-direction.** Everything at or below `i128::MAX` keeps its type, and the
+    // ordinary values keep going through -- a rule that refuses one literal too many turns
+    // a language into a smaller one.
+    faellt_nicht(&index("0"));
+    faellt_nicht(&index("7"));
+    faellt_nicht("module p { const K : u64 = 18446744073709551615; }");
+    faellt_nicht("module p { const K : u64 = 0xFFFF_FFFF_FFFF_FFFF; }");
+}

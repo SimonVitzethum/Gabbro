@@ -314,6 +314,14 @@ const BENANNT: &[&str] = &[
     // asks about alignment and `2^68` is a multiple of 8. Found by
     // `instrumente/fuzze-grenzen.py` in the sweep that also found `N049`'s own overflow.
     "N051",
+    // **`M139` -- a literal wider than `i128`, which until 2026-09-02 answered
+    // `Typ::Unbekannt`.** *That is not a refusal; it is an acquittal that reads like
+    // caution.* Every rule downstream asks for the type first, so ONE lossy conversion in
+    // `m1.rs` silenced `M101`, `M103`, `M104` and `M117` at once -- `T.slots[2^127]` on a
+    // `count 8` table was accepted and emitted as an out-of-bounds C subscript. The
+    // neighbouring value, `2^127 - 1`, fell at `M103` the whole time. Found by
+    // `instrumente/fuzze-grenzen.py`, in the sweep over every rule with a literal slot.
+    "M139",
 ];
 
 #[test]

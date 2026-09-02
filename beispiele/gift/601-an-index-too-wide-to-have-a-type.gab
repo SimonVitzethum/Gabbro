@@ -1,0 +1,55 @@
+-- erwartet: M139
+-- **The literal that lost its type -- and took the index bound with it.**
+--
+-- Gabbro's integer literals are `u128`. `IntBereich`, the shape every rule reads a value's
+-- range out of, is `i128` -- it has to hold a signed and an unsigned 64-bit range at once.
+-- The conversion between the two is exact up to `i128::MAX` and impossible above it, and
+-- until 2026-09-02 the impossible case answered `Typ::Unbekannt`.
+--
+-- *`Unbekannt` is not a refusal. It is an acquittal that reads like caution.* Every rule
+-- downstream asks for the type first and says nothing when there is none, so ONE lossy
+-- conversion in `m1.rs` silenced the whole ladder at once.
+--
+-- THE LADDER, MEASURED ON THIS EXACT TABLE
+-- -----------------------------------------
+--
+--     T.slots[9]                                     -> M103, the array has 8 elements
+--     T.slots[2^63]                                  -> M103
+--     T.slots[2^100]                                 -> M103
+--     T.slots[170141183460469231731687303715884105727]  -- i128::MAX
+--                                                    -> M103
+--     T.slots[170141183460469231731687303715884105728]  -- i128::MAX + 1
+--                                                    -> 3 items, 0 errors, 0 hints
+--
+-- **The bound holds for every index up to `2^127 - 1` and then stops holding.** And it does
+-- not merely pass the checker: `gabbro emit` writes it out as
+--
+--     T_slot slots[8];
+--     ...
+--     return T_speicher.slots[340282366920938463463374607431768211455].a;
+--
+-- an out-of-bounds subscript in the C, over the one promise this language makes loudest.
+-- `M101` (width), `M104` (range) and `M117` go quiet in the same step and for the same
+-- reason -- `const K : u64 = 2^127` was accepted too.
+--
+-- THE FENCE, AND NOT THE WIDENING
+-- --------------------------------
+-- The fork is the one `N050` already stood at. Making `IntBereich` wider moves the hole from
+-- `2^127` to wherever the next type ends and buys nothing: **the widest integer type Gabbro
+-- HAS is 64 bits**, so a literal above `i128::MAX` is not a value any expression can take.
+-- There is nothing here to compute more carefully -- there is a number to refuse.
+--
+-- Found by `instrumente/fuzze-grenzen.py`, in the sweep that took the boundary ladder from
+-- fifteen declaration forms to every rule of the grammar with a literal slot in it.
+module gift601 {
+
+table T count 8 { slot { a : u32, } }
+
+impl fn g() -> u32
+    effects { reads T.slots }
+    costs   <= 4 ops
+{
+    return T.slots[170141183460469231731687303715884105728].a;
+}
+
+}

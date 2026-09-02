@@ -642,7 +642,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **97 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **98 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
@@ -655,6 +655,12 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       *104 → 105 → 108 tragende am selben Tag: `N043` nennt die Absenkungseigenschaft in seinem
       eigenen Text (`the report line`), also wächst die TRAGENDE Spalte und nicht die
       unklare.*
+      *97 → 98 am 2026-09-02: `M139` kam dazu, und es steht in der VERDÄCHTIGEN Spalte — sein
+      Text sagt `wider than i128`, also eine Eigenschaft der Darstellung. **Und die Frage, die
+      dieser Wächter damit stellt, ist berechtigt und am Ort beantwortet:** der tragende Grund
+      ist nicht die Breite, sondern dass ein Wert ohne Typ von KEINER Regel beurteilt wird —
+      `M103` schwieg über `T.slots[2^127]` und sprach über den Nachbarn `2^127-1`. Der Grund
+      steht als zweite Notiz an der Absage; die Zählung liest nur die erste Zeile (W10).*
       **Die Zahl sprang am 2026-08-30 von 57 auf 85, und der Sprung ist kein Rückschritt am
       Prüfer — er ist eine Reparatur am WÄCHTER.** Sein Lesefenster war 4000 Zeichen lang
       und endete an keiner Regelgrenze; wo zwei Absagen näher beieinander standen, las die
@@ -743,7 +749,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2797 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
+      Heute **2806 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
+      *2797 → 2806 am 2026-09-02: die Absagetexte von `M139` und die zwei neuen Sprechproben
+      zu `M139`/`konst_zahl` bringen neun Fortsetzungen mit; die Klebeprobe bleibt bei null in
+      beide Richtungen.*
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -3872,7 +3881,11 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 265 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 87 Sätze über 266 Codes, 50 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).
+**Und der zweite Zahn hat am 2026-09-02 wieder gegriffen:** `M139` kam mit seinem Platz in
+`m1.bereich` im selben Commit — 265 → 266 Codes, 87 Sätze unverändert, und die 50 blieben
+stehen. *Der Satz musste dafür stärker werden, nicht länger: das Wort `every` in `m1.bereich`
+trug vorher nicht, weil ein Literal über `i128::MAX` gar kein Intervall bekam.*
 **Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*

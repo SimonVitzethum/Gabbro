@@ -8036,3 +8036,86 @@ impl fn f(t : ptr<normal, r> Werte) -> u32
         "`slots of t` over the LOOP variable has no bound -- it is an index: {codes:?}"
     );
 }
+
+/// **The emitter's `as` cast, in both directions** -- `emit.rs::konst_zahl`.
+///
+/// Gabbro's literals are `u128`, the emitter reads them into `i128`, and `as` is silent
+/// where the two disagree: `u128::MAX as i128` is `-1`. Until 2026-09-02 that number went
+/// into the generated file and into the diagnostics ABOUT the generated file.
+///
+/// **The claim is carried by what must NOT appear**: a `-1` anywhere near the vector, and
+/// the words "length zero" about an array of length `2^128 - 1`. Both were there.
+///
+/// Found by `instrumente/fuzze-grenzen.py`; the poison probe is
+/// `beispiele/gift/602-an-array-length-the-emitter-read-as-minus-one.gab`.
+#[test]
+fn der_erzeuger_liest_kein_literal_falsch() {
+    let c_und_absagen = |q: &str| {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&b, &mut a);
+        let texte: Vec<String> = a.absagen.iter().map(|x| x.text.clone()).collect();
+        (c, texte)
+    };
+
+    // 1. The entry vector. `u128::MAX` is not a vector, and the file said it was `-1`.
+    let (c, _) = c_und_absagen(
+        "module p {\n\
+         entry e vector 340282366920938463463374607431768211455 arch x86_64 {\n\
+         regs in  { nr : rax, }\n\
+         regs out { ret : rax, }\n\
+         preserves { rbx }\n\
+         clobbers  { rcx }\n\
+         stack kernstapel per cpu nested never\n\
+         dispatch p::g;\n\
+         }\n\
+         impl fn g()\n    effects { pure }\n    costs   <= 2 ops\n{\n    return;\n}\n}",
+    );
+    assert!(
+        !c.contains("vector -1"),
+        "the emitter read `u128::MAX` as `-1` and wrote it into the file:\n{c}"
+    );
+
+    // 2. The array length, where the WRONG NUMBER reached the diagnostic. The refusal is
+    //    right either way; what was wrong is what it said about the length.
+    let (_, texte) = c_und_absagen(
+        "module p { static mut A : [u64; 340282366920938463463374607431768211455] = 0; }",
+    );
+    assert!(
+        !texte.iter().any(|t| t.contains("length zero")),
+        "an array of length 2^128-1 was refused as one of `length zero`: {texte:?}"
+    );
+
+    // **The counter-direction, and the first case is the boundary itself.** `i128::MAX` is
+    // the last literal the cast read correctly, and it must still be read -- a fence that
+    // moved inward would take working programs with it.
+    let (c, _) = c_und_absagen(
+        "module p {\n\
+         entry e vector 170141183460469231731687303715884105727 arch x86_64 {\n\
+         regs in  { nr : rax, }\n\
+         regs out { ret : rax, }\n\
+         preserves { rbx }\n\
+         clobbers  { rcx }\n\
+         stack kernstapel per cpu nested never\n\
+         dispatch p::g;\n\
+         }\n\
+         impl fn g()\n    effects { pure }\n    costs   <= 2 ops\n{\n    return;\n}\n}",
+    );
+    assert!(
+        c.contains("vector 170141183460469231731687303715884105727"),
+        "`i128::MAX` still fits and must still be written:\n{c}"
+    );
+    let (c, _) = c_und_absagen(
+        "module p {\n\
+         entry e vector 0x80 arch x86_64 {\n\
+         regs in  { nr : rax, }\n\
+         regs out { ret : rax, }\n\
+         preserves { rbx }\n\
+         clobbers  { rcx }\n\
+         stack kernstapel per cpu nested never\n\
+         dispatch p::g;\n\
+         }\n\
+         impl fn g()\n    effects { pure }\n    costs   <= 2 ops\n{\n    return;\n}\n}",
+    );
+    assert!(c.contains("vector 128"), "the ordinary vector must survive:\n{c}");
+}

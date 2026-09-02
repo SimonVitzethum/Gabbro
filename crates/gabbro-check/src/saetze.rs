@@ -768,7 +768,7 @@ pub const M1: &[Satz] = &[
         name: "m1.bereich",
         kennungen: &[
             "M101", "M102", "M103", "M104", "M105", "M106", "M107", "M110", "M111", "M112",
-            "M113", "M114", "M115", "M116", "M117", "M118", "M119",
+            "M113", "M114", "M115", "M116", "M117", "M118", "M119", "M139",
         ],
         aussage: "For every arithmetic operation, assignment, argument, return and index in \
                   the tree the checker has computed an interval for the value, and that \
@@ -782,11 +782,17 @@ pub const M1: &[Satz] = &[
                     declares. **And a disequality at the range boundary does not narrow**: \
                     `if n == 0 { return 0; }` followed by `n - 1` still reports `M104`, \
                     because `n != 0` is not turned into `n >= 1` although `0` is the \
-                    declared lower bound.",
+                    declared lower bound. **The word `every` above rests on `M139`**: \
+                    literals are `u128` and the interval is `i128`, and until 2026-09-02 the \
+                    values in between answered `Typ::Unbekannt` -- no interval, and therefore \
+                    no rule at all. `T.slots[2^127]` on a `count 8` table passed with `0 \
+                    errors` while its neighbour `T.slots[2^127 - 1]` fell at `M103`. *A pass \
+                    that steps aside where the type is missing needs a rule that the type is \
+                    never missing.*",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 15 probes on `M104`, 12 on `M101`, 8 on `M103`, 3 on \
-                      `M102`, single probes on 9 further codes. **`M106`, `M107`, `M110` and \
-                      `M114` have NO probe.**",
+                      `M102`, single probes on 9 further codes, one on `M139` \
+                      (`gift/601`). **`M106`, `M107`, `M110` and `M114` have NO probe.**",
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
     },
     Satz {

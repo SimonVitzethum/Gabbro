@@ -1529,9 +1529,62 @@ impl<'a> Pruefer<'a> {
                     has_costs: sig.cost_bound.is_some(),
                 }))
             }
+            // **`M139` -- a literal so wide that the TYPE falls away, and with it every rule
+            // that would have judged it.**
+            //
+            // Gabbro's literals are `u128`; `IntBereich` is `i128`, because it has to hold a
+            // signed and an unsigned 64-bit range in one shape. The conversion between the
+            // two is exact up to `i128::MAX` and impossible above it -- and until 2026-09-02
+            // the impossible case answered `Typ::Unbekannt`.
+            //
+            // *`Unbekannt` is not a refusal. It is an acquittal that reads like caution.*
+            // Every downstream rule asks the type first and says nothing when there is none,
+            // so ONE lossy conversion silenced the whole ladder at once. Measured, on a
+            // `table T count 8`:
+            //
+            // ```text
+            // T.slots[170141183460469231731687303715884105727]   -- i128::MAX
+            //   -> error: [M103] the index has `i64 in ... `, the array has 8 elements
+            // T.slots[170141183460469231731687303715884105728]   -- i128::MAX + 1
+            //   -> 3 items, 0 errors, 0 hints
+            //   -> emitted as `T_speicher.slots[3402823669...455].a` over `T_slot slots[8];`
+            // ```
+            //
+            // **The bound holds for every index up to `2^127 - 1` and then stops holding**,
+            // and the C that comes out reads out of bounds. `M101` (width), `M104` (range)
+            // and `M117` go quiet in the same step and for the same reason.
+            //
+            // > **The fence, and not the widening** -- the fork `N050` already stood at.
+            // > Making `IntBereich` wider moves the hole from `2^127` to wherever the next
+            // > type ends and buys nothing: **the widest integer type Gabbro HAS is 64 bits**,
+            // > so a literal above `i128::MAX` is not a value any expression can take. There
+            // > is nothing here to compute more carefully -- there is a number to refuse.
+            //
+            // Found by `instrumente/fuzze-grenzen.py`, in the sweep that took the ladder to
+            // every rule of the grammar that has a literal slot.
             ExprArt::Zahl(v) => match i128::try_from(*v) {
                 Ok(w) => Typ::Ganzzahl(IntBereich::konstante(w)),
-                Err(_) => Typ::Unbekannt,
+                Err(_) => {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M139",
+                            e.span,
+                            format!(
+                                "the literal {v} is wider than `i128`, so it has no type -- \
+                                 and a value without a type is judged by no rule"
+                            ),
+                        )
+                        .mit_notiz(
+                            "the widest integer type Gabbro has is 64 bits; this literal is \
+                             above `i128::MAX` and can be the value of no expression",
+                        )
+                        .mit_notiz(
+                            "without this refusal the index bound `M103` goes silent on it, \
+                             and the emitter writes the number into C as an array subscript",
+                        ),
+                    );
+                    Typ::Unbekannt
+                }
             },
             // **«F»: ein Literal ist bekannt ENDLICH und nicht NaN.** Das ist der
             // Unterschied zu einem deklarierten Wert, und er ist der Grund, warum `narrow …

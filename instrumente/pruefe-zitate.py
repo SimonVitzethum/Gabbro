@@ -211,7 +211,18 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # `m1` cites `M109` for `&f`; `emit` cites `E008`; `kosten` and `namen` cite the emitter's own
 # `C001`/`D004` for the counter-direction. Cross-references and quoted refusals -- evidence,
 # not coverage claims. *Same category as the 306 -> 308 booking, eight arms further.*
-MARKE = 316
+# **316 -> 318 on 2026-09-02, and the cause is MEASURED and not assumed.** The two new blocks
+# of the boundary sweep's findings carry one foreign citation each. Measured by putting both
+# files back to `2f71491` and re-running: **316 exactly, the booked mark** -- so the delta is
+# these two and nothing else drifted underneath them.
+#   * `m1.rs`, at the `M139` fence: cites `M103`, the index bound that went silent when the
+#     literal lost its type. The comment quotes the two neighbouring measurements.
+#   * `emit.rs`, at `konst_zahl`: cites `N047` for *"a rule that is right because two errors
+#     cancel is not a rule that holds"* -- the sentence written on 2026-09-01 about a
+#     DIFFERENT rule, quoted here because the same cast was still standing in the back end.
+# Both are cross-references to a quoted measurement, not claims about coverage. *Same
+# category as every booking above; the issued-identifier count moved 257 -> 258 with `M139`.*
+MARKE = 318
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

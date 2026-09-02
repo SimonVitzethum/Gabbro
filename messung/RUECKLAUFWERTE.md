@@ -229,8 +229,8 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~
-  **50 von 55** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~
-  **275 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  **50 von 55** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
+  **281 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
@@ -238,6 +238,12 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   *266 → 269 am 2026-09-01, zweite Runde: `N047`, `N048` und `N049` aus dem
   Registerlagen-Audit, drei neue `absagen.schiebe` in `namen.rs`. Und ein Wächter mehr
   (53 → 54) aus der Waechterspur.*
+  *275 → 281 am 2026-09-02: sechs aus der Erweiterung des Grenzfuzzers. Fünf davon sind
+  Ausgänge, die `fuzze-grenzen.py` dazubekommen hat — der Verschluss der Formentafel (eine
+  Form in `FORMEN` und nicht in `GUT`/`REGEL` liefe sonst still leer), der Deckungsbericht
+  `--deckung`, und ein `--nur`, das keine Form trifft. **Alle drei melden, dass sie NICHTS
+  gemessen haben, statt es wie einen Befund aussehen zu lassen** — genau der Fall, für den
+  dieses Register steht. Die sechste ist `M139` in `m1.rs`.*
   *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
   `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
   eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und
