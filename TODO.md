@@ -553,7 +553,15 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 178 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 179 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *178 → 179 on 2026-09-02: `messung/LEAN-REICHWEITE.md` joined — how far the Lean channel
+      reaches over an ARBITRARY program (10 of 44 `body-effect` obligations). **The same lane
+      that wrote the document was the one the mark moved for**, and the cause was measured the
+      way this entry asks: the file was moved away, `pruefe-zahlen.py` went green with exit 0,
+      the file came back. Worth booking beside it: the first check of this guardian in that
+      lane read `$?` after a pipe into `tail` and so measured `tail` — **the guardian had been
+      red for twenty minutes behind a green-looking number.** `${PIPESTATUS[0]}` is the reading,
+      and `abnahme.py` is the tool that does not have this hole.*
       *176 → 177 on 2026-09-02: `messung/BERICHT-UEBERSETZERFAMILIE.md` joined — the report on
       why the two-family probe saw nothing. **The guardian named the carry before a reader did**
       (`pruefe-zahlen.py`, `176` against a run of `177`), and the cause was measured the way

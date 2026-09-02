@@ -137,7 +137,7 @@ Why an OBLIGATION is refused by `pflichten --lean` (90): `call-site` 24, `device
   refused here; it is assumed elsewhere, by name, where a reader can see it.*
 * **The remaining five have live construction sites and no corpus site reaches them.**
   `+=` is in 18 files and is carried where the target is a local or a shaped field
-  (`lean.rs:995`); `CompoundAssign` guards only `&=`/`|=` with no shape, and a `static`
+  (`lean.rs:997`); `CompoundAssign` guards only `&=`/`|=` with no shape, and a `static`
   target. That is coverage, not death.
 
 *The distinction matters for the owner's question: a reason that never fires because the
@@ -187,7 +187,7 @@ them:
 
 * `places`, `fields` and `wellFormed` come from `dictionary(&tab)` — the **table names**:
   `("Kappenraum", "benutzt", "isBool")`.
-* a body's place comes from `field_shape`, which returns `base.to_string()` (`lean.rs:600`)
+* a body's place comes from `field_shape`, which returns `base.to_string()` (`lean.rs:587`)
   — the **source name of the base**, so a routine reaching its table through a pointer
   parameter `c` emits `(.place "c" (.name "s") "benutzt")`.
 
@@ -219,8 +219,10 @@ body and every `_pre`/`_post` conjunct addresses `c`.
 > `beispiele/16-by-ops-am-feld.gab` — the very file the Lean demonstration below runs on —
 > has exactly such a body. **The gap was caught by this tool's own speech test**, added
 > afterwards because `pruefe-waechter.py` flagged all three new tools as carrying none.
-> *The tool measuring the first-failure defect had a first-version defect of the same
-> family: it looked at one half of a pair and reported the half as the whole.*
+> *This run's subject is a channel that stops at the first failure and reports the first as
+> the whole; its own instrument looked at one half of a pair and did the same. The family is
+> the one `CLAUDE.md` books at the top: a measurement that sees part of its subject looks
+> exactly like one that sees all of it.*
 
 **Measured in Lean, three ways, over `beispiele/16-by-ops-am-feld.gab`** — whose export is two
 routines, both carried, dictionary `Objekte`, body carrier `o`:
@@ -257,7 +259,7 @@ would merge two pointer parameters aimed at one table into a single carrier — 
 precisely what the export's own header refuses (*"two different carrier names are two
 different objects"*). The honest direction is the other one: build `wellFormed` from the
 carriers the bodies actually address, per routine, the way `lean::module` already does from
-`c.seen` (`lean.rs:1470`) — which is why the OBLIGATION channel has no such gap and its ten
+`c.seen` (`lean.rs:1473`) — which is why the OBLIGATION channel has no such gap and its ten
 theorems go through.
 
 ## 3. What green means at `pruefe-lean-beweis.sh`
