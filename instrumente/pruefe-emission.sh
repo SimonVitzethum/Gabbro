@@ -2202,7 +2202,20 @@ MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten dar
 # wofuer die Population da ist. Wer hier dieselbe Ratsche wie nebenan haengt, meldet die gute
 # Arbeit als Bruch. Beide Seiten sind trotzdem ein Befund: ein Anstieg heisst, dass eine Probe
 # durchrutscht, ein Abstieg, dass die Marke nachzuziehen ist.
-MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
+# **2 -> 8 am 2026-09-02, und alle sechs neuen sind `-- erwartet: cc`.** Der Erzeugerfuzzer
+# (`instrumente/fuzze-erzeuger.py`) hat ueber 5889 Faellen 273 gefunden, die zu C absenken, das
+# unter `cc -std=c11 -O0 -Wall -Wextra -Werror -c` nicht uebersetzt; zurueckgefuehrt sind sie
+# auf sechs Erzeugerfehler, und jeder hat seither eine Probe: `641` (ein `walk` steigt durch
+# ein `reserved`-Feld ab), `642` (`forever` als ganzer Rumpf einer antwortenden Funktion),
+# `643` (ein Literal ohne `u`-Suffix), `644` (ein Massstab breiter als jeder C-Typ), `645`
+# (eine Feldlaenge jenseits von C's groesstem Objekt), `646` (ein `section`-Name, den nichts
+# maskiert).
+#
+# > **Die Decke steigt hier, weil die MESSFLAECHE gewachsen ist, und nicht, weil eine Probe
+# > durchrutscht.** Das ist genau der Fall, fuer den die Meldung *„Nachsehen mit: head -1 auf
+# > die neue Datei -- steht dort `-- erwartet: cc`, gehoert die Marke mit Grund nachgezogen"*
+# > geschrieben wurde. Bei allen sechs steht es dort.
+MARKE_EMIT_G=8      # `gift/286` (uebersetzt), `gift/414` und `641`-`646` (`-- erwartet: cc`)
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
@@ -2225,7 +2238,13 @@ MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 # direction bites too: if any of the three ever compiles, `B001` has stopped covering a
 # shape a foreign tool used to catch. **A probe that cannot bite reads like one that never
 # could.**
-MARKE_UMGEKEHRT=4
+#
+# **4 -> 10 am 2026-09-02.** Dieselben sechs Proben wie an `MARKE_EMIT_G` darueber, und die
+# Zahl steht hier ein zweites Mal, weil sie zwei verschiedene Dinge misst: dort, wie viele
+# Giftproben ueberhaupt bis zum Erzeuger kommen, hier, wie viele davon dem `cc`-Zweig einen
+# Gegenstand geben. *Ein Zweig, den nichts betritt, ist gruen, ohne etwas zu sagen* -- mit
+# zehn Dateien betritt ihn jetzt das Zweieinhalbfache.
+MARKE_UMGEKEHRT=10
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then
