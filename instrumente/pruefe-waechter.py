@@ -559,8 +559,9 @@ KOMMENTARZEILE = re.compile(r"(?m)^\s*#.*$")
 HAT_GEBIETSSCHEMA = re.compile(r"\bLC_ALL\b")
 
 
-def waechter():
+def waechter(wurzel=None):
     aus = []
+    w = wurzel or W
     # **`abnahme.py` joined on 2026-08-30, and it very nearly did not.** The collective run is
     # not called `pruefe-*` and would have slipped through every mesh above -- a tool that
     # establishes the reach of acceptance while standing outside acceptance itself. *Exactly
@@ -573,12 +574,82 @@ def waechter():
     # verb invents a new prefix**, and each one silently leaves this net. The glob is widened
     # rather than the file renamed, so the next `fuzze-*` is inside it on the day it is
     # written.
-    for p in sorted(W.glob("instrumente/pruefe-*.py")) + sorted(W.glob("instrumente/pruefe-*.sh")) \
-            + sorted(W.glob("instrumente/zaehle-*.py")) + sorted(W.glob("instrumente/zaehle-*.sh")) \
-            + sorted(W.glob("instrumente/fuzze-*.py")) \
-            + sorted(W.glob("instrumente/mutiere-*.py")) + sorted(W.glob("instrumente/abnahme.py")):
+    for p in sorted(w.glob("instrumente/pruefe-*.py")) + sorted(w.glob("instrumente/pruefe-*.sh")) \
+            + sorted(w.glob("instrumente/zaehle-*.py")) + sorted(w.glob("instrumente/zaehle-*.sh")) \
+            + sorted(w.glob("instrumente/fuzze-*.py")) \
+            + sorted(w.glob("instrumente/mutiere-*.py")) + sorted(w.glob("instrumente/abnahme.py")):
         aus.append(p)
     return aus
+
+
+# **DIE BESETZUNG IST EIN NAMENSMUSTER, UND JEDES NEUE VERB VERLAESST SIE STILL**
+# --------------------------------------------------------------------------------
+# (2026-09-02, und der Befund ist gemessen und nicht vermutet.)
+#
+# `waechter()` darueber sagt es selbst -- *„every new verb invents a new prefix, and each one
+# silently leaves this net"* -- und heilt es durch Weiten. Am 2026-09-02 standen sechs
+# Werkzeuge in `instrumente/` ausserhalb, und das Verhaeltnis war:
+#
+#     INNERHALB   0 von 57 tragen eine Verletzung
+#     AUSSERHALB  3 von  6:  vergleiche-binaerprogramme.py  SPRECHPROBE
+#                            miss-c-signaturen.py           FRIST, SPRECHPROBE
+#                            abschnitt.sh                   SPRECHPROBE
+#
+# > **Der Waechter war gruen ueber 57 Werkzeugen, weil die drei, die ihn haetten roetten
+# > koennen, ausserhalb seines Globs hiessen.** Genau die Klasse, gegen die er gebaut ist,
+# > eine Ebene ueber seinem Urteil: *ein Werkzeug, das keine Liste erreicht, ist von einem
+# > fehlerfreien nicht zu unterscheiden -- es fehlt einfach.*
+#
+# Der Glob wird hier NICHT geweitet. Das Weiten hat den Fehler dreimal nicht verhindert, und
+# es zieht `--lauf` mit: eine Bibliothek und ein Werkzeug mit 1200 `cc`-Rufen zu FAHREN ist
+# eine Entscheidung ueber den Sammellauf. Stattdessen wird die Luecke GEZAEHLT und benannt --
+# und sie ist ROT, sobald ein Werkzeug ausserhalb eine Verletzung traegt und keinen Grund.
+# *Ein Loch mit einem Namen ist kein Haken und kein Kreuz.*
+AUSSERHALB_GEBUCHT = {
+    "abschnitt.sh":
+        "eine EINGEBUNDENE Schalenbibliothek, kein Waechter -- sie hat kein eigenes `main`, "
+        "und ihre Sprechprobe wird in DIESER Datei gefahren (`sprechprobe_schale()`), "
+        "in beide Richtungen, bei jedem Lauf",
+}
+
+
+def ausserhalb_der_besetzung(wurzel=None):
+    """Jedes Werkzeug in `instrumente/`, das `waechter()` NICHT erreicht."""
+    w = wurzel or W
+    drin = {p.name for p in waechter(w)}
+    return sorted(p for p in w.glob("instrumente/*")
+                  if p.suffix in (".py", ".sh") and p.name not in drin)
+
+
+def sprechprobe_besetzung():
+    """`[(was, ok)]` -- **wird ein Werkzeug ausserhalb des Musters wirklich GESEHEN?**
+
+    In beide Richtungen, an einem Gegenstand, den dieser Lauf mitbringt: ein `instrumente/`
+    mit drei Dateien, deren Namen die Besetzung verschieden trifft. *Eine Zaehlung, die den
+    Ausserhalbstehenden nicht findet, meldet null und liest sich wie null.*
+    """
+    ganz = ("import subprocess\n"
+            "# Sprechprobe: eine kaputte Eingabe MUSS fallen\n"
+            "subprocess.run(['x'], timeout=5)\n"
+            "raise SystemExit(2)\n")
+    nackt = "print('nichts')\n"
+    with tempfile.TemporaryDirectory() as d:
+        ort = pathlib.Path(d)
+        (ort / "instrumente").mkdir()
+        (ort / "instrumente" / "vergleiche-heil.py").write_text(ganz, encoding="utf-8")
+        (ort / "instrumente" / "schnuppere-kaputt.py").write_text(nackt, encoding="utf-8")
+        (ort / "instrumente" / "pruefe-drin.py").write_text(ganz, encoding="utf-8")
+        namen = [q.name for q in ausserhalb_der_besetzung(ort)]
+        kaputt = statisch(ort / "instrumente" / "schnuppere-kaputt.py")
+        heil = statisch(ort / "instrumente" / "vergleiche-heil.py")
+    return [
+        ("ein Werkzeug mit unbekanntem Verb steht AUSSERHALB",
+         namen == ["schnuppere-kaputt.py", "vergleiche-heil.py"]),
+        ("und eines mit bekanntem Verb NICHT", "pruefe-drin.py" not in namen),
+        (f"das nackte faellt dort auf: {', '.join(kaputt) or 'NICHTS'}",
+         set(kaputt) == {"SPRECHPROBE", "ROT-BEI-ABBRUCH"}),
+        ("das vollstaendige bleibt still", heil == []),
+    ]
 
 
 def statisch(p):
@@ -1265,6 +1336,12 @@ def main():
     for was, kat_ok in sprechprobe_katalog():
         print(f"  Katalog:        {'ok' if kat_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and kat_ok
+    # **R14 fuer die Zaehlung der Ausserhalbstehenden** (2026-09-02). Sie ist die einzige
+    # Stelle, an der dieser Waechter ueber seine EIGENE Besetzung urteilt -- und eine
+    # Zaehlung, die niemanden findet, sieht aus wie eine, bei der es niemanden gibt.
+    for was, bs_ok in sprechprobe_besetzung():
+        print(f"  Besetzung:      {'ok' if bs_ok else 'GESCHEITERT'} -- {was}")
+        ok = ok and bs_ok
     if not ok:
         # **2, not 1 -- and in this file the sentence carries twice.** The guardian over the
         # guardians demands a working speech test from all of them; one that fails its own
@@ -1327,6 +1404,35 @@ def main():
         print(f"   Und {len(ABBRUCH_GEBUCHT)} GEBUCHT, mit Grund:")
         for name, grund in sorted(ABBRUCH_GEBUCHT.items()):
             print(f"     {name}: {grund}")
+
+    # **UND WEN DAS MUSTER NICHT ERREICHT -- gezaehlt, nicht erraten** (2026-09-02).
+    draussen = ausserhalb_der_besetzung()
+    print()
+    print(f"== Ausserhalb der Besetzung: {len(draussen)} von "
+          f"{len(alle) + len(draussen)} Werkzeugen in `instrumente/` ==")
+    print("   Die Besetzung oben ist ein NAMENSMUSTER, und jedes neue Verb erfindet ein")
+    print("   neues Vorsilbenwort. Diese Zeile nennt, wen es kostet -- gemessen am")
+    print("   2026-09-02: 0 von 57 INNERHALB trugen eine Verletzung, 3 von 6 ausserhalb.")
+    offen_draussen = []
+    for q in draussen:
+        fehlt = statisch(q)
+        grund = AUSSERHALB_GEBUCHT.get(q.name)
+        if fehlt and not grund:
+            offen_draussen.append((q.name, fehlt))
+            print(f"     !! {q.name:<30} {', '.join(fehlt)}")
+        elif fehlt:
+            print(f"        {q.name:<30} {', '.join(fehlt)} -- GEBUCHT: {grund}")
+        else:
+            print(f"        {q.name:<30} traegt die vier ohnehin")
+    if offen_draussen:
+        befunde.append(("ausserhalb der Besetzung", offen_draussen))
+        print("   Ein Werkzeug, das keine Liste erreicht, ist von einem fehlerfreien nicht")
+        print("   zu unterscheiden -- es fehlt einfach. *Dieselbe Klasse wie ein toter")
+        print("   Anker, eine Ebene ueber dem Urteil.*")
+    print("   **`abnahme.py:besetzung()` traegt DIESELBE Form** -- auch dort ist die")
+    print("   Besetzung ein Glob ueber `pruefe-*`, `mutiere-*`, `zaehle-*`. Hier steht sie")
+    print("   nur benannt; sie zu weiten heisst, diese Werkzeuge auch zu FAHREN, und das")
+    print("   ist eine Entscheidung ueber den Sammellauf und nicht ueber diesen Waechter.")
 
     # **The cut in the middle of the run -- the item the empty tree leaves open.**
     geschnitten = []
