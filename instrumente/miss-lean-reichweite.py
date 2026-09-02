@@ -47,7 +47,47 @@ def lauf(argv):
     )
 
 
+def sprechprobe():
+    """**In both directions: a lying header must fall, an honest one must not.**
+
+    The whole verdict of this tool rests on one arithmetic check and three patterns, and
+    *a check nobody has seen fail is a decoration* (R11).
+    """
+    gut = "        @program 1  units 1  routines 4  bodies 2  refused 2  places 9"
+    gift = "        @program 1  units 1  routines 4  bodies 2  refused 1  places 9"
+    stumm = "        nothing here about itself"
+
+    def bilanz(z):
+        m = KOPF.search(z)
+        if m is None:
+            return None
+        _, r, b, a, _ = (int(x) for x in m.groups())
+        return b + a == r
+
+    ok_gut = bilanz(gut) is True
+    ok_gift = bilanz(gift) is False
+    ok_stumm = bilanz(stumm) is None
+    ok_ref = REFUSED.match(
+        "-- REFUSED  blatt_loeschen  (no-shape-for-field): the declared type"
+    )
+    ok_ref = bool(ok_ref) and ok_ref.group(2) == "no-shape-for-field"
+    ok_kein_ref = not REFUSED.match("-- a comment that merely says REFUSED somewhere")
+    tags = TAG.findall("requires #1 (lock-witness), requires #2 (call-in-expression)")
+    ok_tag = tags == [("requires", "1", "lock-witness"), ("requires", "2", "call-in-expression")]
+    print("== Speech test ==")
+    print("  an honest balance passes:      %s" % ("yes" if ok_gut else "NO"))
+    print("  a lying balance falls:         %s" % ("yes" if ok_gift else "NO"))
+    print("  a missing header falls:        %s" % ("yes" if ok_stumm else "NO"))
+    print("  a REFUSED line names its tag:  %s" % ("yes" if ok_ref else "NO"))
+    print("  a line that only LOOKS like one does not: %s" % ("yes" if ok_kein_ref else "NO"))
+    print("  two dropped tags on one line are two:     %s" % ("yes" if ok_tag else "NO"))
+    return ok_gut and ok_gift and ok_stumm and ok_ref and ok_kein_ref and ok_tag
+
+
 def main() -> int:
+    if not sprechprobe():
+        print("== LEAN REACH: this tool measures nothing ==")
+        return 2
     if not GABBRO.exists():
         print(f"ABORT: {GABBRO} is missing -- it is built on ki-pc-fisch-101 (CLAUDE.md).")
         return 2

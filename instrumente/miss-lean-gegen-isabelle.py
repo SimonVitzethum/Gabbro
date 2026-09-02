@@ -66,7 +66,40 @@ def urteile(rel, flag):
     return out
 
 
+def sprechprobe():
+    """**In both directions: a goal must read as a goal and a refusal as a refusal.**
+
+    The cross table below is worth exactly as much as the reading of two different output
+    formats, and *a reader nobody has seen misread is a decoration* (R11). The poison
+    direction here is the dangerous one: a refusal line this tool failed to match would fall
+    out of the table silently and shrink the `neither` cell -- which is the cell that carries
+    the finding.
+    """
+    kopf = KOPF.match("  lock-witness (2): `Held(…)` -- carried by the lock passes")
+    ok_kopf = bool(kopf) and kopf.group(1) == "lock-witness" and kopf.group(2) == "2"
+    z = ZEILE.match("    duty_9  V  einsammeln :: blatt_loeschen requires #1")
+    ok_zeile = bool(z) and z.group(1) == "duty_9" and z.group(2) == "V"
+    g1 = GOAL.match("theorem duty_3 (s : State)")
+    g2 = GOAL.match("lemma duty_1:")
+    ok_goal = bool(g1) and g1.group(1) == "duty_3" and bool(g2) and g2.group(1) == "duty_1"
+    # A refusal HEADING is not a goal, and a goal is not a heading. Confusing the two would
+    # move an obligation from one cell of the table to the other.
+    ok_getrennt = not GOAL.match("  lock-witness (2): x") and not KOPF.match("theorem duty_3")
+    # Prose that merely mentions a duty must not be read as an entry.
+    ok_prosa = not ZEILE.match("  duty_9 is discussed in the paragraph above")
+    print("== Speech test ==")
+    print("  a reason heading yields tag and count: %s" % ("yes" if ok_kopf else "NO"))
+    print("  a detail line yields duty and kind:    %s" % ("yes" if ok_zeile else "NO"))
+    print("  `theorem` and `lemma` both read as a goal: %s" % ("yes" if ok_goal else "NO"))
+    print("  a heading is not a goal, nor the reverse:  %s" % ("yes" if ok_getrennt else "NO"))
+    print("  prose naming a duty is not an entry:      %s" % ("yes" if ok_prosa else "NO"))
+    return all([ok_kopf, ok_zeile, ok_goal, ok_getrennt, ok_prosa])
+
+
 def main() -> int:
+    if not sprechprobe():
+        print("== SEAM: this tool measures nothing ==")
+        return 2
     if not GABBRO.exists():
         print(f"ABORT: {GABBRO} is missing -- it is built on ki-pc-fisch-101 (CLAUDE.md).")
         return 2

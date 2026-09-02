@@ -33,11 +33,59 @@ FRIST = 120
 
 PLACE_DEF = re.compile(r"^def (places|fields) .*:=$")
 DICT_ROW = re.compile(r'\("([^"]+)", "([^"]+)", "[^"]+"\)')
-BODY_SLOT = re.compile(r'\(\.place "([^"]+)" ')
-BODY_FIELD = re.compile(r'\(\.fieldOf "([^"]+)" ')
+# **Four constructors carry a carrier, and the first version of this tool knew two.**
+# `Body.lean` §: `place` and `fieldOf` READ one (`:181`, `:190`), `assign` and `assignField`
+# WRITE one (`:376`, `:378`). A tool that counted only the reads would report a body that
+# purely writes as having no place at all -- and `beispiele/16-by-ops-am-feld.gab`, the file
+# this tool's finding is demonstrated on, has exactly such a body (`belegen`). *The gap was
+# found by the speech test below, which is the whole reason it stands there.*
+# `assignGlobal` carries a global's NAME, not a carrier, and is deliberately not here.
+BODY_SLOT = re.compile(r'\(\.(?:place|assign) "([^"]+)" ')
+BODY_FIELD = re.compile(r'\(\.(?:fieldOf|assignField) "([^"]+)" ')
+
+
+def sprechprobe():
+    """**In both directions: a carrier that IS declared must not be reported, and one that
+    is not must be.** A tool that only ever says "all clean" has measured nothing (R11).
+
+    The poison direction is the one that matters here: the whole finding of this tool is a
+    NEGATIVE -- a carrier missing from a list -- and a comparison that silently matched
+    everything would print exactly the same shape of report.
+    """
+    zeile_dict = '  [ ("Objekte", "benutzt", "isBool")'
+    m = DICT_ROW.search(zeile_dict)
+    ok_dict = bool(m) and m.group(1) == "Objekte"
+    ok_kein_dict = not DICT_ROW.search('  (.place "o" (.name "i") "benutzt")')
+    # **A WRITE carries a carrier just as a read does**, and this line is the one that
+    # caught the first version of this tool counting only the reads.
+    ok_slot = BODY_SLOT.findall(
+        '[(.assign "o" (.name "i") "benutzt" (.lit (.bool true)))]'
+    ) == ["o"]
+    ok_slot2 = BODY_SLOT.findall('(.place "o" (.name "i") "zaehler")') == ["o"]
+    ok_feld = BODY_FIELD.findall('(.fieldOf "puffer" "len")') == ["puffer"]
+    ok_feld2 = BODY_FIELD.findall('(.assignField "puffer" "len" (.lit (.int 0)))') == ["puffer"]
+    # A GLOBAL is not a carrier, and a tool that read it as one would invent a finding.
+    ok_global = BODY_SLOT.findall('(.assignGlobal "farbbericht" (.name "wert"))') == []
+    ok_feld = ok_feld and ok_feld2 and ok_global
+    # The comparison itself, both ways.
+    traeger = {"Objekte"}
+    ok_sauber = not {t: 1 for t in ["Objekte"] if t not in traeger}
+    ok_fremd = {t: 1 for t in ["o"] if t not in traeger} == {"o": 1}
+    print("== Speech test ==")
+    print("  a dictionary row yields its carrier:      %s" % ("yes" if ok_dict else "NO"))
+    print("  a body line is not read as one:           %s" % ("yes" if ok_kein_dict else "NO"))
+    print("  a READ and a WRITE both yield the carrier: %s"
+          % ("yes" if ok_slot and ok_slot2 else "NO"))
+    print("  a record read/write does too, a global not: %s" % ("yes" if ok_feld else "NO"))
+    print("  a DECLARED carrier is not reported:       %s" % ("yes" if ok_sauber else "NO"))
+    print("  an UNDECLARED one IS reported:            %s" % ("yes" if ok_fremd else "NO"))
+    return all([ok_dict, ok_kein_dict, ok_slot, ok_slot2, ok_feld, ok_sauber, ok_fremd])
 
 
 def main() -> int:
+    if not sprechprobe():
+        print("== CARRIERS: this tool measures nothing ==")
+        return 2
     if not GABBRO.exists():
         print(f"ABORT: {GABBRO} is missing -- it is built on ki-pc-fisch-101 (CLAUDE.md).")
         return 2

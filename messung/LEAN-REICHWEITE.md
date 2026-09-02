@@ -17,7 +17,7 @@ emits **no theorem at all**: it carries 155 of the corpus's 296 routines that ha
 those 155 bodies promise literally `True`. For the most program-like file in the tree,
 `messung/treiber/virtio-net.gab`, the numbers are 2 bodies of 6, **0 goals of 1 obligation**,
 and not one clause conjunct. And a finding that was not in any register before this run:
-**56 of the 61 places those exported bodies touch name a carrier that is absent from the
+**101 of the 119 places those exported bodies touch name a carrier that is absent from the
 export's own place dictionary** — so `wellFormed`, the typing hypothesis, and any
 specification a person writes from `places` speak about a region the program never writes.
 That is shown three ways in Lean below, not argued.
@@ -201,16 +201,26 @@ ssh ki-pc-fisch-101 'cd gabbro-le && ./instrumente/miss-lean-traeger.py'
 | | |
 |---|---:|
 | files with an export | 124 |
-| of those, with at least one place in a body or clause | 31 |
-| every carrier IS in that export's own dictionary | **5** |
-| at least one carrier is NOT | **26** |
-| place mentions in bodies and clauses | 61 |
-| of those, carrier NOT declared | **56** |
+| of those, with at least one place in a body or clause | 42 |
+| every carrier IS in that export's own dictionary | **10** |
+| at least one carrier is NOT | **32** |
+| place mentions in bodies and clauses | 119 |
+| of those, carrier NOT declared | **101** |
 
-The undeclared carriers are exactly what one would expect of parameter names: `c` 16, `f` 8,
-`e` 6, `k` 4, `v` 4, `r` 3, `s` 3, `p` 3, `puffer` 2, `h` 2, and six more. In
-`beispiele/01-tabelle.gab` the dictionary reads `Kappenraum, Objekte` and every body and
-every `_pre`/`_post` conjunct addresses `c`.
+The undeclared carriers are exactly what one would expect of parameter names: `c` 27, `f` 12,
+`e` 10, `r` 8, `a` 8, `k` 5, `p` 5, `h` 4, `v` 4, `d` 4, `s` 3, `puffer` 2, `o` 2, `b` 2, and
+five more. In `beispiele/01-tabelle.gab` the dictionary reads `Kappenraum, Objekte` and every
+body and every `_pre`/`_post` conjunct addresses `c`.
+
+> **The first version of this tool said `56 of 61`, and it was wrong in the direction that
+> flatters.** It matched `.place` and `.fieldOf` — the two constructors that READ a place —
+> and not `.assign` and `.assignField`, which WRITE one (`Body.lean:376`, `:378`). A body
+> that only writes therefore counted as having no place at all, and
+> `beispiele/16-by-ops-am-feld.gab` — the very file the Lean demonstration below runs on —
+> has exactly such a body. **The gap was caught by this tool's own speech test**, added
+> afterwards because `pruefe-waechter.py` flagged all three new tools as carrying none.
+> *The tool measuring the first-failure defect had a first-version defect of the same
+> family: it looked at one half of a pair and reported the half as the whole.*
 
 **Measured in Lean, three ways, over `beispiele/16-by-ops-am-feld.gab`** — whose export is two
 routines, both carried, dictionary `Objekte`, body carrier `o`:
@@ -234,7 +244,7 @@ specification written from `places` fails, and a specification written against `
 `wellFormed` hypothesis and so has a harder goal. Both are the safe side. **But it is exactly
 the hazard the export's own comment names** — *"a typo in that string is a specification about
 a place that does not exist — vacuous rather than false, and vacuous reads like proved"* —
-and here it is produced by construction rather than by a typo, for 56 of 61 places.
+and here it is produced by construction rather than by a typo, for 101 of 119 places.
 
 **And the guardian cannot see it.** `pruefe-lean-programm.sh` holds a *specification's*
 places against the dictionary; nothing holds a *body's* against it. Its worked example,
@@ -287,7 +297,7 @@ body to carry. Below it, ranked by how surely a real systems program contains th
 | rank | form | reason | in the corpus | can a driver avoid it? |
 |---|---|---|---:|---|
 | 1 | a LOOP — `traverse`, `retry`, `forever` | `loop` | 30 routines, 7 obligations | no |
-| 2 | a place through a POINTER PARAMETER | *see §2* | 56 of 61 places | no |
+| 2 | a place through a POINTER PARAMETER | *see §2* | 101 of 119 places | no |
 | 3 | a CALL, taken over the contract | `call-not-compositional`, `call-in-expression` | 7 + 1 | no |
 | 4 | a `transition` of a `device` — a register write | `device-transition` | 4 | not in a driver |
 | 5 | a QUANTIFIER, `reaches`, a membership | `quantified` | 10 + 10 + 10 | rarely |
@@ -403,7 +413,11 @@ Three tools, all of them measuring, none of them changing the product:
   the `CallSite` claim held against the channel it names.
 
 Each aborts rather than reports a partial number when its balance does not add up, and each
-refuses with exit 2 (the setup is wrong, nothing was measured) rather than exit 1.
+refuses with exit 2 (the setup is wrong, nothing was measured) rather than exit 1. **Each
+carries a two-way speech test**, added after `pruefe-waechter.py` listed all three under
+`!! SPRECHPROBE` — and the second of them earned its place immediately by catching the
+`.assign` gap recorded in §2. *A measuring lane that ships three tools nobody has seen fall
+has added three ornaments.*
 
 **One instrument WAS repaired, because a number this file quotes came out of it.**
 `instrumente/zaehle-lean.py`'s kind table listed seven of `Art`'s eight letters — `W`,
