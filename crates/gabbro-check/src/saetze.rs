@@ -576,10 +576,12 @@ pub const D1D2: &[Satz] = &[
                     field admits both truth values and nothing else, and \
                     beispiele/gift/416 reads one into a `bool`. The line is the RANGE and \
                     not the width: `return 1` has `u8 in 1 .. 1` and falls. And it holds \
-                    ONLY this boundary: a float against an integer crosses the same silent \
-                    `else` and is named in messung/proben/probe-rueckgabetyp.gab, not \
-                    refused -- the measurement decides the reach of the rule, not the \
-                    symmetry of the code.",
+                    ONLY this boundary. **The float half of this caveat is WITHDRAWN on \
+                    2026-09-02**: it read *a float against an integer crosses the same \
+                    silent `else` and is not refused*, and that was true until `M140` \
+                    closed the `else` itself (satz m1.gestalt). The sentence stands as a \
+                    statement about THIS rule's reach and no longer as a statement about \
+                    the checker's.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker: \
                       messung/proben/probe-rueckgabetyp.gab falsifies four returns in one \
@@ -768,7 +770,7 @@ pub const M1: &[Satz] = &[
         name: "m1.bereich",
         kennungen: &[
             "M101", "M102", "M103", "M104", "M105", "M106", "M107", "M110", "M111", "M112",
-            "M113", "M114", "M115", "M116", "M117", "M118", "M119", "M139",
+            "M113", "M114", "M115", "M116", "M117", "M118", "M119", "M139", "M140",
         ],
         aussage: "For every arithmetic operation, assignment, argument, return and index in \
                   the tree the checker has computed an interval for the value, and that \
@@ -782,7 +784,7 @@ pub const M1: &[Satz] = &[
                     declares. **And a disequality at the range boundary does not narrow**: \
                     `if n == 0 { return 0; }` followed by `n - 1` still reports `M104`, \
                     because `n != 0` is not turned into `n >= 1` although `0` is the \
-                    declared lower bound. **The word `every` above rests on `M139`**: \
+                    declared lower bound. **The word `every` above rests on `M140`**: \
                     literals are `u128` and the interval is `i128`, and until 2026-09-02 the \
                     values in between answered `Typ::Unbekannt` -- no interval, and therefore \
                     no rule at all. `T.slots[2^127]` on a `count 8` table passed with `0 \
@@ -849,6 +851,54 @@ pub const M1: &[Satz] = &[
                       NOTHING until `hohes_nibble` was added.",
         fundstelle: "crates/gabbro-check/src/m1.rs; crates/gabbro-check/src/emit.rs; \
                      dokumente/SYNTAX.md \u{a7}4",
+    },
+    Satz {
+        name: "m1.gestalt",
+        kennungen: &["M139"],
+        aussage: "Two types that meet at a slot -- an argument, a `return`, an assignment, a \
+                  `let` with a written type, a `const` or `static` initialiser -- have the \
+                  same SHAPE, and where that shape is an aggregate they have the same NAME. \
+                  `m1.rs::passt` ends in a comparison of RANGES, and a pointer has none, a \
+                  record has none, an array has none -- so at every one of those the \
+                  comparison ended in a silent `else`. This is the same `else` `M135` closed \
+                  for `bool`, two doors further out.",
+        vorbehalt: "**It is the SHAPE and not the type.** Two integers of different width \
+                    are one shape (`M101` and `M104` own the range), a range alias is its \
+                    carrier (`N030`: taking a scalar alias nominally would be a language \
+                    change), and `Unbekannt` and `never` stay silent -- W10, and `Unbekannt` \
+                    is what the coverage number counts. Four crossings belong to other \
+                    rules and are left to them: `bool` against a number is `M135` with its \
+                    `0 .. 1` exception, a reason value is `M124`, the literal zero is the \
+                    null pointer and the aggregate zero-initialiser, and an array at a \
+                    pointer to its element is C's decay. **And it does NOT compare a \
+                    function pointer's parameter or result types** -- `M128` holds arity, \
+                    effects and cost at a `fn(...)` slot and nothing else, so `fn(u8)` still \
+                    fits a `fn(u32) -> u32` slot with `cc` as the only reader. Nor does it \
+                    hold pointer RIGHTS at a call: a `ptr<normal, r>` argument at a \
+                    `ptr<normal, rw>` parameter passes here and at `R008`, which compares \
+                    the address space alone. Both are named in TODO.md and measured, not \
+                    closed.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-02 against the UNCHANGED checker: 18 parameter kinds \
+                      x 18 argument kinds, the wrong thing passed at a call, one file per \
+                      cell. **283 of 306 off-diagonal cells went through with `0 errors`, \
+                      and the run printed `100 % coverage` at each.** `cc` caught 165, the \
+                      emitter refused 96 (`C001`, an array has no lowering as a parameter), \
+                      and 22 reached green C -- TWELVE of those carried a value no C \
+                      compiler was going to question (four `bool` against a pointer, \
+                      eight integer against float); the other ten are correct calls or \
+                      `D004`'s, silent inside the declaring module. After the rule: 22 cells silent, and 20 of \
+                      them are correct calls or another rule's. **The whole corpus of 495 \
+                      files is byte-identical before and after**, which is the \
+                      counter-direction. `beispiele/gift`: 603 (the wrong record behind a \
+                      pointer), 604 (`M139 allein` -- a pointer at a `bool`, where no later \
+                      stage says a word), 605 (`C001`, an array field takes only the zero), \
+                      606 (two records with the same field list are two declarations). \
+                      `crates/gabbro-check/tests/gestalt.rs` pins both directions -- 9 \
+                      correct calls that must stay silent, 4 zero/decay forms the clean \
+                      corpus writes, and 7 wrong ones that must fall.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (gestalt_passt, gestalt_grund); \
+                     crates/gabbro-check/tests/gestalt.rs",
     },
     Satz {
         name: "m3.lese_aendere_schreibe",

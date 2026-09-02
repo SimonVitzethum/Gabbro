@@ -123,6 +123,14 @@ const BENANNT: &[&str] = &[
     // in this checker: a compare-exchange bound to the atomic's type instead of to `bool`,
     // and an `exchange update` body read against the enclosing function's result.
     "M135",
+    // 2026-09-02, the SAME silent `else`, two doors further out. `M135` closed the
+    // `bool`/number crossing; `M140` closes every crossing where NEITHER side has a range --
+    // a pointer, a record, an array, a function pointer. Measured: 18 parameter kinds x 18
+    // argument kinds, the wrong thing passed at a call, and **283 of 306 off-diagonal cells
+    // went through with `0 errors` and `100 % coverage`**. `cc` caught 165 of them and the
+    // emitter refused 96 -- which is the `N041` shape, a trust base holding one stage too
+    // late -- and 22 reached green C.
+    "M140",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.

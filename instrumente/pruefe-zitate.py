@@ -225,8 +225,12 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # both from 316. **Neither number is the union** -- the merged tree measures 325, because the
 # two sets of new comments overlap in none of their citations. *Picking a side or adding the
 # deltas would both have been wrong, and the tool says which by refusing to agree with either.*
-MARKE = 325
-
+# **325 -> 332 at the merge on 2026-09-02, measured on the MERGED tree.** The pointer-typing
+# lane booked 330 on its own base; the merged tree measures 332. *Third time in two days that
+# a mark moved by two lanes is neither lane's number* -- the citations do not overlap, so
+# neither picking a side nor adding the deltas lands on it. All seven of the lane's own are in
+# `m1.rs` at the one new rule, each naming a boundary of it.
+MARKE = 332
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries 340 mutations, and every one of them holds a
