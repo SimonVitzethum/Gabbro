@@ -1,0 +1,57 @@
+-- erwartet: M139
+-- **Der Ruf, an dem `M1` die Frage gar nicht stellte -- ein Zeiger auf den FALSCHEN
+-- Verbund.**
+--
+-- Gemessen am 2026-09-02 gegen den unveraenderten Pruefer, und die Ausgabe stand so da:
+--
+--     $ gabbro pruefe …
+--     …: 6 items, 0 errors, 0 hints
+--       M1 saw 4 expressions, 0 of them without a type (100 % coverage)
+--
+-- **Hundert Prozent, und die eine Frage, um die es ging, war nicht gestellt.** Danach schrieb
+-- `gabbro emit` `nimmt(a)` mit einem `const Andr *`, und `cc` antwortete:
+-- *`error: passing argument 1 of 'nimmt' from incompatible pointer type`*.
+--
+-- ## Warum das schlimmer ist als eine fehlende Regel
+--
+-- Es faellt ja. Nur faellt es **eine Stufe zu spaet**, und genau diese Form traegt `N041` in
+-- ihrem eigenen Kopf: *„gabbro pruefe sagte 0 Fehler, gabbro emit schrieb die Einheit, und
+-- `cc` antwortete."* Die Vertrauensbasis haelt -- an der falschen Stelle. Wer den Erzeuger
+-- gegen einen anderen tauscht, oder die Warnung abschaltet, oder das C von Hand nachbessert,
+-- hat nichts mehr, das die Frage stellt.
+--
+-- ## Die Ursache stand seit jeher im Quelltext
+--
+-- `m1.rs::passt` endete in
+--
+--     let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else { return; };
+--
+-- und **ein Zeiger hat keinen Bereich**. Dasselbe stille `else`, an dem `M135` am
+-- 2026-08-31 die `bool`-Grenze fand -- zwei Tueren weiter aussen.
+--
+-- > Die Gegenrichtung steht in `crates/gabbro-check/tests/gestalt.rs`: derselbe Ruf mit dem
+-- > RICHTIGEN Verbund muss schweigen, und ein Feld, das zu einem Zeiger auf sein Element
+-- > zerfaellt, ebenso.
+
+module gift {
+
+const KAP : u32 = 8;
+
+type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+type Andr = { zahl : u32 in 0 .. 9, };
+
+impl fn nimmt(q : ptr<normal, r> Text) -> u32 in 0 .. KAP
+    effects { reads q }
+    costs   <= 4 ops
+{
+    return q.len;
+}
+
+impl fn ruft(a : ptr<normal, r> Andr) -> u32 in 0 .. KAP
+    effects { reads a }
+    costs   <= 8 ops
+{
+    return nimmt(a);
+}
+
+}

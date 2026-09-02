@@ -220,7 +220,17 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # where `zeiger_schreibend` and `aus_ctafel` got their second reader; `saetze.rs` cites
 # `P034`/`P041` for why a second code -- not a wider `N041` -- was the right shape.
 # *Cross-references and quoted refusals. What each one asserts is about the CITED rule.*
-MARKE = 323
+# **323 -> 330 on 2026-09-02, and all seven stand in `m1.rs` at ONE new rule.** `M139` closes
+# the silent `else` at the end of `passt`, and every one of its seven citations names a
+# BOUNDARY of the new rule rather than a coverage claim: `N041` (1) is the shape of the
+# defect -- *the checker reports clean, the emitter writes the unit, and `cc` answers*;
+# `C001` (1) is what the emitter says at the 96 array cells the measurement could not reach;
+# `N030` (3) is the sentence the nominal half implements one position further in, and the
+# reason a range alias is NOT taken nominally; `R008` (2) says which half of a pointer
+# comparison belongs to `M3` -- the address space -- so that this rule takes the pointee and
+# leaves the space. *Each is a statement about the cited rule, and each marks a place where
+# `M139` deliberately stops.*
+MARKE = 330
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

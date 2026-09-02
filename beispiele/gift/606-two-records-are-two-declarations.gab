@@ -1,0 +1,48 @@
+-- erwartet: M139
+-- **Zwei Verbunde mit derselben Feldliste sind trotzdem zwei -- der NOMINALE Teil von
+-- `M139`.**
+--
+-- `603` misst die Gestalt: ein Zeiger gegen etwas, das keiner ist. Diese Datei misst die
+-- Haelfte darunter, und sie ist die schwerere: **die Gestalt stimmt.** `Zaehlwerk` und
+-- `Messwerk` sind beide ein Verbund, beide tragen genau ein `u32 in 0 .. 9`, und der Name
+-- des Feldes ist derselbe. In `typen.rs` sind sie `Typ::Benannt` ueber demselben
+-- `Typ::Verbund` -- *strukturell nicht zu unterscheiden.*
+--
+-- Der Unterschied ist der NAME, und `N030` hat den Satz am 2026-08-20 schon geschrieben:
+-- *„am Ruf wird der BEREICH gehalten und der NAME nicht."* Dort galt er fuer `opaque`,
+-- `linear`, `ghost` und `tagged` -- die vier, bei denen die Nichtaustauschbarkeit der ganze
+-- Zweck ist -- und er wurde an blanken `TypExpr::Pfad`-Parametern geprueft. **Hinter einem
+-- `ptr` und an einem gewoehnlichen Verbund stand er nicht.** Das ist diese Haelfte.
+--
+-- ## Und wo die Regel NICHT nominal ist
+--
+-- Ein Bereichsalias bleibt durchsichtig: `type Zaehler = u32 in 0 .. 65535` senkt zu seinem
+-- Traeger ab, und ihn nominal zu nehmen waere eine Sprachaenderung. `gestalt` sieht deshalb
+-- DURCH ein `Benannt` hindurch, und die Namensfrage wird nur ueber einem Aggregat gestellt.
+-- *Aus der strengen Lesart kann man lockern, nie umgekehrt* -- hier steht die engere Fassung
+-- derjenigen Menge, fuer die die Sprache die Unterscheidung behauptet.
+--
+-- > Die Gegenprobe steht in `crates/gabbro-check/tests/gestalt.rs`: derselbe Verbund an
+-- > seinem eigenen Typ, ein Alias an seinem Traeger und ein `opaque type` im erklaerenden
+-- > Modul muessen schweigen.
+
+module gift {
+
+type Zaehlwerk = { stand : u32 in 0 .. 9, };
+type Messwerk  = { stand : u32 in 0 .. 9, };
+
+impl fn liest(z : Zaehlwerk) -> u32 in 0 .. 9
+    effects { pure }
+    costs   <= 4 ops
+{
+    return z.stand;
+}
+
+impl fn ruft(m : Messwerk) -> u32 in 0 .. 9
+    effects { pure }
+    costs   <= 8 ops
+{
+    return liest(m);
+}
+
+}
