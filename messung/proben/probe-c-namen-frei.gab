@@ -18,31 +18,50 @@
 -- Deklaration widersprechen koennte. **Nicht vergeben und frei sind zwei verschiedene
 -- Sachen**, und diese Datei hat elf Tage lang die eine fuer die andere genommen.
 --
--- Seit dem 2026-09-02 steht `<unistd.h>` gemessen in `cnamen.rs::POSIX`. Drei der fuenf Zeilen
--- fielen sofort an `N046` (`beispiele/gift/634`). Was hier steht, ist die Datei danach, und
--- sie traegt jetzt DREI Aussagen statt einer.
+-- ## Und was am selben Tag noch daneben stand, war die KANTE
+--
+-- Am Vormittag las die Tafel einen Kopf, `<unistd.h>`. `open` und `signal` blieben stehen --
+-- *„kein Gruen, sondern eine Kante mit einem Namen darauf"*, und genau so stand es hier.
+-- **Am Nachmittag las sie vier**, und die Kante ist umgezogen:
+--
+--     <unistd.h> 47   <sys/socket.h> 17   <fcntl.h> 3   <signal.h> 2   =  69 Zeilen
+--
+-- Die vier sind nicht gewaehlt, sondern GEMESSEN: es sind die Koepfe, nach denen der Korpus
+-- greift. Ueber alle 266 `extern fn` in `beispiele/`, `messung/` und `dokumente/FRAGMENTE.md`
+-- nannten **genau drei** einen Namen, den ein Systemkopf deklariert und `libc` ausliefert --
+-- `open`, `signal`, `recv`. *Drei Namen sind kein Mechanismus wert; sie sind drei Zeilen in
+-- einer Messung wert.*
+--
+-- Diese Datei traegt jetzt DREI Aussagen, und die dritte ist die, die nie leer wird.
 --
 -- ## 1. Ein Name, den wirklich niemand vergeben hat
 --
--- `plattenschritt` und `nimm_wache` stehen in keiner der beiden Tafeln und in keinem Header.
--- *Das ist der Fall, fuer den diese Datei da ist.*
+-- `plattenschritt` und `nimm_wache` stehen in keiner der beiden Tafeln und in keinem Kopf.
+-- *Das ist der Fall, fuer den diese Datei da ist* -- und es ist der HAeUFIGE Fall: 141 der
+-- 144 ungedeckten Korpusnamen sind von dieser Sorte. Ein Pruefer, der jeden unbekannten
+-- Namen abwiese, verboete jeden handgeschriebenen Treiber.
 --
--- ## 2. Ein POSIX-Name mit der RICHTIGEN Signatur
+-- ## 2. Ein gemessener Name mit der RICHTIGEN Signatur -- einer je Kopf
 --
--- `close` ist gemessen (`int close(int)`), und die passende Zeile geht durch. **Eine Tafel,
--- die nur abweist, waere eine Wand; diese hier gibt dreizehn `<unistd.h>`-Namen frei**, und
--- `close` ist der Beleg. Die unpassende Zeile daneben faellt an `N046`, nicht an `cc`.
+-- `close` (`int close(int)`), `raise` (`int raise(int)`) und `shutdown` (`int shutdown(int,
+-- int)`) gehen durch, weil ihre Zeile passt. **Eine Tafel, die nur abweist, waere eine Wand;
+-- diese hier gibt neunzehn Namen frei.** Die unpassende Zeile daneben faellt an `N046`,
+-- nicht an `cc` -- `beispiele/gift/634` und `beispiele/gift/660` sind die Gegenrichtung.
+--
+-- *`<fcntl.h>` steht mit drei Zeilen und ohne eine bindbare in der Tafel*: `open` und `creat`
+-- lesen ihr Ende aus den Daten, `fcntl` ist variadisch. **Ein Kopf, der nichts freigibt,
+-- gehoert trotzdem hinein** -- er weist ab, und Abweisen ist die Haelfte, die zaehlt.
 --
 -- ## 3. Zwei Namen, die durchgehen, weil NIEMAND sie gemessen hat
 --
--- `open` steht in `<fcntl.h>`, `signal` in `<signal.h>` -- und die Messung liest nur
--- `<unistd.h>`. **Diese beiden Zeilen sind kein Gruen, sondern eine Kante mit einem Namen
--- darauf.** `int open(const char *, int, ...)` und `void (*signal(int, void (*)(int)))(int)`
--- sind die echten Deklarationen, und keine der beiden hat mit dem zu tun, was hier steht.
+-- `mmap` steht in `<sys/mman.h>`, `pthread_self` in `<pthread.h>`, und die Messung liest
+-- keinen von beiden. **Diese zwei Zeilen sind kein Gruen, sondern die Kante an ihrem neuen
+-- Ort.** Sie sind hier, weil eine Tafel, die eine Vollstaendigkeit behauptet, die sie nicht
+-- hat, schlimmer ist als eine, die ihre Kante nennt.
 --
--- *Eine Tafel, die eine Vollstaendigkeit behauptet, die sie nicht hat, ist schlimmer als
--- eine, die ihre Kante nennt.* Darum stehen die zwei Zeilen weiter da -- als Messpunkt fuer
--- den Tag, an dem die Tafel breiter wird.
+-- *Der Unterschied zum Vormittag:* damals war die Kante eine Stelle, nach der der Korpus
+-- GREIFT. Jetzt ist sie eine, nach der er nicht greift -- und `miss-c-signaturen.py` sagt
+-- das je Lauf mit einer Zahl statt mit einem Satz.
 --
 -- Diese Datei ist eine MESSUNG und kein Beispiel: sie muss 0 Fehler geben.
 
@@ -52,22 +71,26 @@ module probe::c_namen_frei {
 extern fn plattenschritt(fd : u64) -> u64 effects { reads fd } costs <= 4 ops;
 extern fn nimm_wache(a : u64, w : u64) effects { writes a } costs <= 4 ops;
 
--- 2. POSIX, gemessen, und mit der Zeile, die passt
+-- 2. gemessen, und mit der Zeile, die passt -- `<unistd.h>`, `<signal.h>`, `<sys/socket.h>`
 extern fn close(a : i32) -> i32 effects { writes ausgabe } costs <= 4 ops;
+extern fn raise(a : i32) -> i32 effects { writes ausgabe } costs <= 4 ops;
+extern fn shutdown(a : i32, b : i32) -> i32 effects { writes ausgabe } costs <= 4 ops;
 
--- 3. POSIX, NICHT gemessen -- `<fcntl.h>` und `<signal.h>` liest niemand
-extern fn open(a : u64) -> u64 effects { reads a } costs <= 4 ops;
-extern fn signal(n : u64, w : u64) effects { writes n } costs <= 4 ops;
+-- 3. NICHT gemessen -- `<sys/mman.h>` und `<pthread.h>` liest niemand
+extern fn mmap(a : u64) -> u64 effects { reads a } costs <= 4 ops;
+extern fn pthread_self() -> u64 effects { pure } costs <= 4 ops;
 
 impl fn haupt(fd : u64) -> u64
     effects { reads fd, writes fd, writes ausgabe }
-    costs <= 32 ops
+    costs <= 64 ops
 {
     let a = plattenschritt(fd);
     nimm_wache(fd, a);
-    signal(fd, a);
     let s = close(1);
-    return open(a);
+    let r = raise(2);
+    let t = shutdown(3, 0);
+    let p = pthread_self();
+    return mmap(a);
 }
 
 }

@@ -285,33 +285,41 @@ def endet_in_den_daten(name: str, sig: tuple[str, list[str]]) -> bool:
     return hat_zeichenzeiger and not hat_laenge
 
 
-# **The header the POSIX measurement reads -- and the whole of the guard's POSIX edge.**
+# **The headers this measurement reads -- and the whole of the guard's second edge.**
 #
 # `<unistd.h>` is where the finding came from: `write` is not a C11 name, so the 558-name
 # table never sees it, and a generated unit that declares `int64_t write(int32_t, const Text
 # *, uint64_t)` compiles clean, links to the real symbol and disagrees with it.
 #
-# *Anything this header does not declare is OUTSIDE the guard, and `cnamen.rs` says so in as
-# many words.* One header measured is a boundary; "POSIX" as a word would be a claim.
-POSIX_KOPF = "unistd.h"
+# **The other three are here because the CORPUS reaches them, and for no other reason.**
+# Measured 2026-09-02 over every `extern fn` in `beispiele/`, `messung/` and
+# `dokumente/FRAGMENTE.md`: 266 sites, 157 distinct names, and exactly THREE of them name a
+# symbol that a system header declares and libc exports -- `open` (`<fcntl.h>`), `signal`
+# (`<signal.h>`) and `recv` (`<sys/socket.h>`). Those three headers, and not a fourth.
+#
+# *Anything these headers do not declare is OUTSIDE the guard, and `cnamen.rs` and the report
+# below both say so in as many words.* Headers measured are a boundary; "POSIX" as a word
+# would be a claim.
+POSIX_KOEPFE = ("unistd.h", "fcntl.h", "signal.h", "sys/socket.h")
 
 
-def posix_signaturen() -> dict[str, tuple[str, list[str]]]:
-    """Every function `<unistd.h>` itself declares -- `cc -aux-info`, same as the C11 half.
+def kopf_signaturen(kopf: str) -> dict[str, tuple[str, list[str]]]:
+    """Every function this header ITSELF declares -- `cc -aux-info`, same as the C11 half.
 
     **Only the declarations whose site IS the header.** `-aux-info` reports everything the
     preprocessor pulled in, and `<unistd.h>` pulls in `<stddef.h>` and the glibc internals
     with it; a table that keeps those measures glibc and calls it POSIX.
     """
-    c, info = f"{_TMP}/posix.c", f"{_TMP}/posix.info"
+    marke = re.sub(r"\W", "_", kopf)
+    c, info = f"{_TMP}/posix-{marke}.c", f"{_TMP}/posix-{marke}.info"
     with open(c, "w", encoding="utf-8") as f:
-        f.write(f"#include <{POSIX_KOPF}>\n")
+        f.write(f"#include <{kopf}>\n")
     subprocess.run(["cc", "-std=c11", "-aux-info", info, "-fsyntax-only", c],
                    capture_output=True, text=True, env=UMGEBUNG, cwd=_TMP, timeout=FRIST)
     aus: dict[str, tuple[str, list[str]]] = {}
     for zeile in open(info, encoding="utf-8"):
         m = re.match(r"^/\*\s*(\S+):\d+:\w+\s*\*/\s*extern\s+(.*?)\s*;\s*$", zeile.strip())
-        if not m or not m.group(1).endswith(f"/{POSIX_KOPF}"):
+        if not m or not m.group(1).endswith(f"/{kopf}"):
             continue
         m2 = re.match(r"^(.*?)\b([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)$", m.group(2))
         if not m2:
@@ -320,6 +328,21 @@ def posix_signaturen() -> dict[str, tuple[str, list[str]]]:
         if n.startswith("__"):
             continue
         aus[n] = (r, [] if a in ("void", "") else [x.strip() for x in a.split(",")])
+    return aus
+
+
+def posix_signaturen() -> dict[str, tuple[str, tuple[str, list[str]]]]:
+    """All four headers, name -> (header, signature). **The FIRST header that declares a
+    name owns it**, and the order is the order of `POSIX_KOEPFE`.
+
+    A name two headers declare is one name with one declaration; a table that carried it
+    twice would answer a lookup by whichever row the binary search happened to land on.
+    *`W7`, the same reason `POSIX` is not folded into `vergeben`.*
+    """
+    aus: dict[str, tuple[str, tuple[str, list[str]]]] = {}
+    for kopf in POSIX_KOEPFE:
+        for n, sig in kopf_signaturen(kopf).items():
+            aus.setdefault(n, (kopf, sig))
     return aus
 
 
@@ -401,7 +424,8 @@ def tafel_gegen_cc(tafel: dict[str, tuple[str, str]]) -> list[str]:
     *What passes here passes in the generated C.*
     """
     kaputt = []
-    for n, (_c, sig, _g) in sorted(tafel.items()):
+    for n, spalten in sorted(tafel.items()):
+        sig = spalten[1]
         if not sig:
             continue
         m = re.match(r"^(\w+)\((.*)\)$", sig)
@@ -415,10 +439,15 @@ def tafel_gegen_cc(tafel: dict[str, tuple[str, str]]) -> list[str]:
     return kaputt
 
 
-def rust_tafel(tafel: dict[str, tuple[str, str]], name: str = "SIGNATUR") -> str:
-    zeilen = [f'    ("{n}", "{c}", "{s}", "{g}"),'
-              for n, (c, s, g) in sorted(tafel.items())]
-    return (f"static {name}: [(&str, &str, &str, &str); {len(tafel)}] = [\n"
+def rust_tafel(tafel: dict[str, tuple[str, ...]], name: str = "SIGNATUR") -> str:
+    """**The column count comes from the rows, not from a literal.** `SIGNATUR` carries
+    three columns per name, `POSIX` carries four -- the header is the fourth, because a
+    refusal over four headers has to name which one."""
+    breite = len(next(iter(tafel.values()))) if tafel else 3
+    zeilen = [f'    ({", ".join(chr(34) + s + chr(34) for s in (n, *spalten))}),'
+              for n, spalten in sorted(tafel.items())]
+    typ = ", ".join(["&str"] * (breite + 1))
+    return (f"static {name}: [({typ}); {len(tafel)}] = [\n"
             + "\n".join(zeilen) + "\n];\n")
 
 
@@ -428,12 +457,16 @@ def rust_abschluss(namen: list[str]) -> str:
             + "\n".join(zeilen) + "\n];\n")
 
 
-def eingebaute_tafel(name: str = "SIGNATUR") -> dict[str, tuple[str, str, str]]:
+def eingebaute_tafel(name: str = "SIGNATUR") -> dict[str, tuple[str, ...]]:
+    """The built-in table, read with as many columns as it has -- see `rust_tafel`."""
     q = open(CNAMEN, encoding="utf-8").read()
     i = q.index(f"static {name}")
     b = q[i:q.index("];", i)]
-    return {n: (c, s, g) for n, c, s, g in
-            re.findall(r'\("([^"]*)",\s*"([^"]*)",\s*"([^"]*)",\s*"([^"]*)"\)', b)}
+    aus: dict[str, tuple[str, ...]] = {}
+    for zeile in re.findall(r'\(("(?:[^"]*"(?:,\s*)?)+)\)', b):
+        felder = re.findall(r'"([^"]*)"', zeile)
+        aus[felder[0]] = tuple(felder[1:])
+    return aus
 
 
 def eingebauter_abschluss() -> list[str]:
@@ -442,13 +475,18 @@ def eingebauter_abschluss() -> list[str]:
     return re.findall(r'"([^"]+)"', q[i:q.index("];", i)])
 
 
-def posix_messen() -> tuple[dict[str, tuple[str, str, str]], dict[str, str]]:
-    """The `<unistd.h>` half -- the same three columns, and the same reason per refusal."""
+def posix_messen() -> tuple[dict[str, tuple[str, str, str, str]], dict[str, str]]:
+    """The four-header half -- the same three columns, plus the header that declared it.
+
+    **The header is a column and not a constant**, because the guard's refusal names the
+    finding site and four headers have four of those. Before 2026-09-02 it was one `&str`
+    beside the table, and a second header would have made every refusal name the first.
+    """
     c11, hdr, ein = tafel_lesen()
     schon = set(c11) | {n for n, _ in hdr} | set(ein)
-    tafel: dict[str, tuple[str, str, str]] = {}
+    tafel: dict[str, tuple[str, str, str, str]] = {}
     grund: dict[str, str] = {}
-    for n, sig in sorted(posix_signaturen().items()):
+    for n, (kopf, sig) in sorted(posix_signaturen().items()):
         # **A name C11 already took is C11's**, and `N041` reaches it through the other
         # table. Two homes for one name is the register `W7` warns about.
         if n in schon:
@@ -456,13 +494,18 @@ def posix_messen() -> tuple[dict[str, tuple[str, str, str]], dict[str, str]]:
         s, warum = absenkbar(sig)
         if s is None:
             grund[n] = warum
-            tafel[n] = (c_wort(sig), "", "")
+            tafel[n] = (c_wort(sig), "", "", kopf)
         else:
-            tafel[n] = (c_wort(sig), s, gabbro_form(n, s))
+            tafel[n] = (c_wort(sig), s, gabbro_form(n, s), kopf)
     return tafel, grund
 
 
-def abschluss_messen(tafeln: list[dict[str, tuple[str, str, str]]],
+def rohe_posix_signaturen() -> dict[str, tuple[str, list[str]]]:
+    """`posix_signaturen` without the header column -- what `abschluss_messen` reads."""
+    return {n: sig for n, (_kopf, sig) in posix_signaturen().items()}
+
+
+def abschluss_messen(tafeln: list[dict[str, tuple[str, ...]]],
                      rohe: list[dict[str, tuple[str, list[str]]]]) -> list[str]:
     """**The names whose end is in the DATA** -- over both tables, one test."""
     namen = []
@@ -471,6 +514,95 @@ def abschluss_messen(tafeln: list[dict[str, tuple[str, str, str]]],
             if n in roh and endet_in_den_daten(n, roh[n]):
                 namen.append(n)
     return sorted(set(namen))
+
+
+# **Headers this guard does NOT read.** They are here to be COUNTED against, never to be
+# folded in: `kante` includes them so the blind spot is a number per run and not a sentence.
+# *`fuzze-erzeuger.py` prints its own blind spot and `miss-erschoepfung.py` prints
+# "NOT measured:" -- this is the same form, one tool over.*
+WEITERE_KOEPFE = (
+    "pthread.h", "sys/mman.h", "sys/stat.h", "sys/wait.h", "dirent.h", "poll.h",
+    "sys/select.h", "netdb.h", "arpa/inet.h", "sched.h", "semaphore.h", "termios.h",
+    "sys/uio.h", "sys/time.h", "grp.h", "pwd.h", "sys/ioctl.h", "sys/resource.h",
+    "sys/utsname.h", "utime.h", "glob.h", "regex.h", "syslog.h", "dlfcn.h",
+)
+
+
+def korpus_extern_fn() -> dict[str, list[str]]:
+    """Every `extern fn` name the corpus writes, and where. **This is the DENOMINATOR.**
+
+    The guard's edge is worth a number only against the population it is an edge of: a
+    header set that reaches nothing is as wide as one that reaches everything.
+    """
+    muster = re.compile(r"^\s*(?:pub\s+)?extern\s+fn\s+([A-Za-z_][A-Za-z0-9_]*)")
+    aus: dict[str, list[str]] = {}
+    wurzeln = [f"{WURZEL}/beispiele", f"{WURZEL}/messung"]
+    dateien = []
+    for w in wurzeln:
+        for pfad, _verz, namen in os.walk(w):
+            dateien += [f"{pfad}/{n}" for n in namen if n.endswith(".gab")]
+    dateien.append(f"{WURZEL}/dokumente/FRAGMENTE.md")
+    for d in sorted(dateien):
+        try:
+            zeilen = open(d, encoding="utf-8", errors="replace").read().splitlines()
+        except OSError:
+            continue
+        for i, z in enumerate(zeilen, 1):
+            m = muster.match(z)
+            if m:
+                aus.setdefault(m.group(1), []).append(
+                    f"{os.path.relpath(d, WURZEL)}:{i}")
+    return aus
+
+
+def kante(tafel: dict[str, tuple[str, ...]], ptafel: dict[str, tuple[str, ...]]) -> None:
+    """**What this guard does NOT cover -- printed every run, with a number beside it.**
+
+    A table that implies completeness is worth less than one that names its edge. The list
+    of headers left out is prose and would age silently; the corpus count beside it cannot,
+    because it is measured against the tree on every run.
+    """
+    print("\n== The edge, named per run ==")
+    print("   MEASURED: " + " ".join(f"<{h}>" for h in POSIX_KOEPFE)
+          + f"  ({len(ptafel)} rows)")
+    print("   NOT measured, and each of these is a name an `extern fn` binds unchecked:")
+    print(f"     * {len(WEITERE_KOEPFE)} further POSIX headers this run knows the names of "
+          f"({', '.join('<' + h + '>' for h in WEITERE_KOEPFE[:4])}, ...) "
+          "-- and every one it does not")
+    print("     * every GNU extension, every other library, every symbol the writer links")
+    print("     * the glibc spellings `__pid_t`, `__uid_t`, `__gid_t`, `__off_t`: a table")
+    print("       that resolved them would measure glibc and call it POSIX")
+    print("     * this is a measurement of THIS toolchain, LP64")
+
+    erreicht = korpus_extern_fn()
+    gedeckt = set(tafel) | set(ptafel)
+    c11, hdr, ein = tafel_lesen()
+    gedeckt |= set(c11) | {n for n, _ in hdr} | set(ein)
+    offen = {n: s for n, s in erreicht.items() if n not in gedeckt}
+    stellen = sum(len(s) for s in erreicht.values())
+    offene_stellen = sum(len(s) for s in offen.values())
+    print(f"\n   The corpus writes {stellen} `extern fn` at {len(erreicht)} distinct names;"
+          f" {offene_stellen} sites / {len(offen)} names reach no table.")
+    print("   **Most of those are the program's OWN C, and refusing them would forbid every")
+    print("   hand-written driver.** The ones that are not are the hole -- so they get named:")
+
+    fremd: dict[str, str] = {}
+    for h in WEITERE_KOEPFE:
+        try:
+            for n in kopf_signaturen(h):
+                if n in offen:
+                    fremd.setdefault(n, h)
+        except (OSError, subprocess.SubprocessError):
+            continue
+    if fremd:
+        for n, h in sorted(fremd.items()):
+            print(f"     UNCHECKED  {n}  <{h}>  {', '.join(offen[n])}")
+        print(f"   {len(fremd)} of {len(offen)} -- an `extern fn` on a name a header this")
+        print("   guard does not read declares. THAT IS A HOLE WITH A NAME ON IT.")
+    else:
+        print(f"     none of the {len(offen)} is declared by any of the "
+              f"{len(WEITERE_KOEPFE)} headers this run looked at.")
+        print("   *That is not a proof of zero* -- it is a statement about those headers.")
 
 
 def main() -> int:
@@ -512,7 +644,7 @@ def main() -> int:
                 if s:
                     roh_c11[n] = s
         print(rust_abschluss(abschluss_messen([tafel, ptafel],
-                                              [roh_c11, posix_signaturen()])))
+                                              [roh_c11, rohe_posix_signaturen()])))
         return 0
 
     kaputt = aequivalenzen_pruefen()
@@ -539,13 +671,19 @@ def main() -> int:
     for k in cc_kaputt[:10]:
         print(f"    KAPUTT: {k}")
 
-    p_bindbar = sum(1 for _c, s, _g in ptafel.values() if s)
+    p_bindbar = sum(1 for spalten in ptafel.values() if spalten[1])
     p_cc_kaputt = tafel_gegen_cc(ptafel)
-    print(f"\n`<{POSIX_KOPF}>`, ohne die Namen, die C11 schon haelt: {len(ptafel)} Zeilen")
+    koepfe = ", ".join(f"`<{h}>`" for h in POSIX_KOEPFE)
+    print(f"\n{koepfe}, ohne die Namen, die C11 schon haelt: {len(ptafel)} Zeilen")
+    for h in POSIX_KOEPFE:
+        z = [n for n, s in ptafel.items() if s[3] == h]
+        print(f"    <{h}>: {len(z)} Zeilen, "
+              f"{sum(1 for n in z if ptafel[n][1])} bindbar")
     print(f"  davon BINDBAR: {p_bindbar}, durch `cc`: "
           f"{p_bindbar - len(p_cc_kaputt)}/{p_bindbar} gruen")
     for k in p_cc_kaputt[:10]:
         print(f"    KAPUTT: {k}")
+    kante(tafel, ptafel)
 
     if "--pruefe" in sys.argv:
         schief: list[str] = []
@@ -567,7 +705,7 @@ def main() -> int:
                 s = signatur_des_eingebauten(n)
                 if s:
                     roh_c11[n] = s
-        a_gemessen = abschluss_messen([tafel, ptafel], [roh_c11, posix_signaturen()])
+        a_gemessen = abschluss_messen([tafel, ptafel], [roh_c11, rohe_posix_signaturen()])
         a_eingebaut = eingebauter_abschluss()
         a_schief = sorted(set(a_gemessen) ^ set(a_eingebaut))
         print(f"\n`cnamen.rs::ABSCHLUSS`: {len(a_eingebaut)} Namen, gemessen "

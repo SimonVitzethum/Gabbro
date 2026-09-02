@@ -1,0 +1,37 @@
+-- erwartet: N041
+-- **`signal` ist C11s eigener Name -- und faellt trotzdem durch die C11-Tafel.**
+--
+-- Die 558-Namen-Tafel liest die VIER Koepfe, die jede erzeugte Einheit einbindet:
+-- `<stdint.h>`, `<stdbool.h>`, `<stdatomic.h>`, `<math.h>`. `<signal.h>` ist keiner davon,
+-- also stand `signal` bis zum 2026-09-02 in keiner Tafel -- obwohl C11 §7.14 ihn vergibt.
+--
+--     extern fn signal(n : u64, w : u64)   ->  void signal(uint64_t n, uint64_t w);
+--     gabbro pruefe: 0 errors
+--     cc ohne Header:             uebersetzt, bindet, und findet das ECHTE `signal`
+--     cc mit <signal.h> daneben:  „abweichende Typen fuer »signal«"
+--
+-- **Genau darum heisst die Klasse nicht „was POSIX dazugelegt hat".** Gefaehrlich ist der
+-- Name, weil `emit.rs` kein `#include <signal.h>` schreibt -- welcher Standard ihn vergeben
+-- hat, aendert daran nichts. Drei der vier gemessenen Koepfe sind POSIXens, dieser ist C11s.
+--
+-- *Und `signal` ist nicht bindbar, auch mit der richtigen Zeile nicht:* C deklariert
+-- `__sighandler_t signal(int, __sighandler_t)`, und `__sighandler_t` ist glibcs Schreibweise
+-- fuer einen Funktionszeiger. Eine Tafel, die den aufloest, misst glibc und nennt es POSIX --
+-- dieselbe Entscheidung, die schon fuer die 883 Unterstrich-Makros und fuer `__pid_t` fiel.
+-- **Die Absage nennt den Typ, den sie nicht lesen konnte**, und nicht bloss „der Name ist
+-- vergeben".
+--
+-- Diese Zeile stand bis zum 2026-09-02 in `messung/proben/probe-c-namen-frei.gab` als
+-- Messpunkt fuer den Tag, an dem die Tafel breiter wird. Das ist heute.
+
+module gift {
+
+extern fn signal(n : u64, w : u64) effects { writes n } costs <= 4 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

@@ -35,9 +35,13 @@ pub enum Klasse {
     Header(&'static str),
     /// A built-in function of the C implementation -- known without any `#include`.
     Eingebaut,
-    /// **Declared by a POSIX header the generated unit does NOT include.** The dangerous
-    /// class: nothing in the translation unit contradicts a wrong declaration, so `cc` has
-    /// no conflict to report and the link succeeds against a signature nobody checked.
+    /// **Declared by a header the generated unit does NOT include.** The dangerous class:
+    /// nothing in the translation unit contradicts a wrong declaration, so `cc` has no
+    /// conflict to report and the link succeeds against a signature nobody checked.
+    ///
+    /// *Three of the four measured headers are POSIX's; `<signal.h>` is C11's own.* The
+    /// name of this variant keeps the older half of the truth -- what makes all four
+    /// dangerous is the second half of the sentence above, not which standard added them.
     Posix(&'static str),
 }
 
@@ -303,12 +307,16 @@ pub fn signatur(name: &str) -> Option<Signatur> {
         return Some(Signatur { c, absenkung, form });
     }
     let i = POSIX.binary_search_by_key(&name, |(n, ..)| n).ok()?;
-    let (_, c, absenkung, form) = POSIX[i];
+    let (_, c, absenkung, form, _kopf) = POSIX[i];
     Some(Signatur { c, absenkung, form })
 }
 
-/// **Does a POSIX header declare this name?** `Some(header)` -- and the header is the whole
-/// answer to *how far the guard reaches*; see `POSIX`.
+/// **Does one of the measured headers declare this name?** `Some(header)` -- and the header
+/// comes out of the ROW, not out of a constant beside the table.
+///
+/// *Until 2026-09-02 it came out of a constant*, because the table read one header. With four
+/// in it, a refusal built that way would have named `<unistd.h>` at every `recv` -- a finding
+/// site that is wrong is worse than none, because a writer goes and reads it.
 ///
 /// **Read at an `extern fn` and NOWHERE else, and that is the edge, not an oversight.** An
 /// `extern fn` ASKS for the C side's symbol: it says *"the thing behind this name already
@@ -323,7 +331,7 @@ pub fn posix(name: &str) -> Option<&'static str> {
     POSIX
         .binary_search_by_key(&name, |(n, ..)| n)
         .ok()
-        .map(|_| POSIX_KOPF)
+        .map(|i| POSIX[i].4)
 }
 
 /// **Does this function find the end of its data IN the data?** -- the rule of `N052`.
@@ -338,9 +346,19 @@ pub fn endet_in_den_daten(name: &str) -> bool {
 pub fn posixumfang() -> (usize, usize, usize) {
     (
         POSIX.len(),
-        POSIX.iter().filter(|(_, _, a, _)| !a.is_empty()).count(),
+        POSIX.iter().filter(|(_, _, a, ..)| !a.is_empty()).count(),
         ABSCHLUSS.len(),
     )
+}
+
+/// **How many rows each measured header contributes** -- and the header list itself.
+///
+/// The number lives here and not in a comment, because a table that grows by demand grows
+/// its counts with it. *`W28`: a number that carries a rule belongs beside its handle.*
+pub fn kopfumfang() -> impl Iterator<Item = (&'static str, usize)> {
+    POSIX_KOEPFE
+        .iter()
+        .map(|k| (*k, POSIX.iter().filter(|(.., h)| h == k).count()))
 }
 
 /// How many rows the signature table carries, and how many of them are bindable.
@@ -762,10 +780,11 @@ static SIGNATUR: [(&str, &str, &str, &str); 325] = [
 /// and `strftime` carry a count that bounds the OUTPUT while the format string is still
 /// scanned, and `strncat` carries one that bounds the READ while the write starts at the
 /// destination's own NUL. *A derivation with four named exceptions is a measurement.*
-static ABSCHLUSS: [&str; 44] = [
+static ABSCHLUSS: [&str; 46] = [
     "access",
     "chdir",
     "chown",
+    "creat",
     "execl",
     "execle",
     "execlp",
@@ -779,6 +798,7 @@ static ABSCHLUSS: [&str; 44] = [
     "nan",
     "nanf",
     "nanl",
+    "open",
     "pathconf",
     "printf",
     "puts",
@@ -809,10 +829,13 @@ static ABSCHLUSS: [&str; 44] = [
     "vsscanf",
 ];
 
-/// **The header this measurement reads -- and the whole of the guard's POSIX edge.**
-pub const POSIX_KOPF: &str = "unistd.h";
+/// **The headers this measurement reads -- and the whole of the guard's second edge.**
+///
+/// **The order is the ownership order**: the first header that declares a name owns the row,
+/// and no name stands twice. See `posix_signaturen` in `./instrumente/miss-c-signaturen.py`.
+pub const POSIX_KOEPFE: [&str; 4] = ["unistd.h", "fcntl.h", "signal.h", "sys/socket.h"];
 
-/// **The names `<unistd.h>` declares, and the hole they were found in.**
+/// **The names those four headers declare, and the hole they were found in.**
 ///
 /// `N041` guards the names *C11* took. **POSIX falls straight through that net**, and the
 /// shape is the one `N041` itself was built against, one namespace over:
@@ -831,15 +854,45 @@ pub const POSIX_KOPF: &str = "unistd.h";
 /// checker has to hold it, and why `messung/proben/probe-c-namen-frei.gab` was wrong to hold
 /// these five names up as *free*: they are not taken by C11 and they are not free either.
 ///
-/// > **How far it reaches, exactly.** One header, measured with `cc -aux-info`, and only the
-/// > declarations whose site IS `<unistd.h>` -- 47 names after the C11 table's are subtracted,
-/// > **13 of them bindable** and all 13 through `cc -Wall -Wextra -Werror`.
+/// # What the boundary is a statement ABOUT -- decided 2026-09-02, and it is not "POSIX"
+///
+/// Three answers were on the table, and they are not the same table:
+///
+/// | answer | what it costs |
+/// |---|---|
+/// | every header a freestanding kernel MIGHT use | no stopping rule -- the completeness claim gets weaker with each addition, and none of them was asked for |
+/// | **the headers the CORPUS reaches for** | one measurement per header, and the edge moves only when a program demands it |
+/// | a mechanism: the writer names the header, the tool reads the signature | a signature read at build time from the local libc is not the guarantee a frozen one is, and it needs a place in the language to name the header |
+///
+/// **The second, and the population is why.** Measured over every `extern fn` in
+/// `beispiele/`, `messung/` and `dokumente/FRAGMENTE.md`: **266 sites at 157 distinct names.
+/// 245 sites / 144 names reach neither table -- and exactly THREE of those 144 name a symbol
+/// that a system header declares and libc exports**: `open` (`<fcntl.h>`), `signal`
+/// (`<signal.h>`), `recv` (`<sys/socket.h>`). The other 141 are the program's own C.
+///
+/// *A mechanism for three callers would be the construct-without-demand Rule A exists to
+/// prevent* -- and the third answer's real cost is the one that settles it: the tree already
+/// refused twice to let the local libc speak for the standard (the 883 underscore macros,
+/// and `__pid_t` below). **A table checked in is reviewable; a header read at build time is
+/// a statement about the machine that ran the build.**
+///
+/// > **`<signal.h>` is C11's own header, and `raise` and `signal` are C11's own names.** They
+/// > land in THIS table anyway, and that is the point rather than a slip: what makes a name
+/// > dangerous here is not that POSIX added it, it is that **`emit.rs` writes no `#include`
+/// > for it** -- so `cc` gets no second declaration to disagree with. *The class is "a header
+/// > the generated unit does not include", and three of the four happen to be POSIX's.*
+///
+/// > **How far it reaches, exactly.** Four headers, measured with `cc -aux-info`, and only
+/// > the declarations whose site IS the header -- **69 names** after the C11 table's are
+/// > subtracted (`<unistd.h>` 47, `<sys/socket.h>` 17, `<fcntl.h>` 3, `<signal.h>` 2),
+/// > **19 of them bindable** and all 19 through `cc -Wall -Wextra -Werror`.
 /// >
 /// > **What is OUTSIDE, and named rather than implied:**
 /// >
-/// > * every other POSIX header -- `<signal.h>`, `<sys/socket.h>`, `<fcntl.h>`, `<pthread.h>`.
-/// >   *The corpus reaches two of them today:* `signal` and `recv` in `messung/fragmente/F05.gab`
-/// >   bind unchecked, and that is a hole with a name on it, not a green.
+/// > * every other POSIX header -- `<pthread.h>`, `<sys/mman.h>`, `<dirent.h>`, and the rest.
+/// >   *The corpus reaches none of them today*, and `./instrumente/miss-c-signaturen.py`
+/// >   prints that as a number over 24 further headers on every run rather than leaving it
+/// >   here as a sentence that ages.
 /// > * every GNU extension, every other library, and every symbol the writer links themself.
 /// > * the glibc spellings `__pid_t`, `__uid_t`, `__gid_t`, `__off_t`: a table that resolved
 /// >   them would measure glibc and call it POSIX -- the same decision the 558-name table
@@ -847,54 +900,83 @@ pub const POSIX_KOPF: &str = "unistd.h";
 /// >   refusal names the type it could not read.*
 /// > * this is a measurement of THIS toolchain, LP64, and it says so the way the C11 half does.
 ///
+/// **And the counter-direction is load-bearing.** A name in none of the tables still binds:
+/// Gabbro programs bind to their OWN C, and 141 of the corpus's 144 uncovered names are
+/// exactly that. The rule separates *"a symbol the C library owns and whose signature is
+/// fixed"* from *"a symbol this program defines itself"*, and it separates them by the only
+/// thing that can tell them apart without asking the writer -- **whether a measured header
+/// declares the name.** `messung/proben/probe-c-namen-frei.gab` is that direction's probe.
+///
 /// **Read at an `extern fn` and nowhere else** -- see `posix` for why that boundary is the
 /// right one and not a shortcut.
-static POSIX: [(&str, &str, &str, &str); 47] = [
-    ("_exit", "void(int)", "void(int32_t)", "extern fn _exit(a : i32)"),
-    ("access", "int(const char *, int)", "", ""),
-    ("alarm", "unsigned int(unsigned int)", "uint32_t(uint32_t)", "extern fn alarm(a : u32) -> u32"),
-    ("chdir", "int(const char *)", "", ""),
-    ("chown", "int(const char *, __uid_t, __gid_t)", "", ""),
-    ("close", "int(int)", "int32_t(int32_t)", "extern fn close(a : i32) -> i32"),
-    ("dup", "int(int)", "int32_t(int32_t)", "extern fn dup(a : i32) -> i32"),
-    ("dup2", "int(int, int)", "int32_t(int32_t,int32_t)", "extern fn dup2(a : i32, b : i32) -> i32"),
-    ("execl", "int(const char *, const char *, ...)", "", ""),
-    ("execle", "int(const char *, const char *, ...)", "", ""),
-    ("execlp", "int(const char *, const char *, ...)", "", ""),
-    ("execv", "int(const char *, char *const *)", "", ""),
-    ("execve", "int(const char *, char *const *, char *const *)", "", ""),
-    ("execvp", "int(const char *, char *const *)", "", ""),
-    ("fork", "__pid_t(void)", "", ""),
-    ("fpathconf", "long int(int, int)", "int64_t(int32_t,int32_t)", "extern fn fpathconf(a : i32, b : i32) -> i64"),
-    ("fsync", "int(int)", "int32_t(int32_t)", "extern fn fsync(a : i32) -> i32"),
-    ("getcwd", "char *(char *, size_t)", "", ""),
-    ("getegid", "__gid_t(void)", "", ""),
-    ("geteuid", "__uid_t(void)", "", ""),
-    ("getgid", "__gid_t(void)", "", ""),
-    ("getgroups", "int(int, __gid_t *)", "", ""),
-    ("getlogin", "char *(void)", "", ""),
-    ("getpgrp", "__pid_t(void)", "", ""),
-    ("getpid", "__pid_t(void)", "", ""),
-    ("getppid", "__pid_t(void)", "", ""),
-    ("getuid", "__uid_t(void)", "", ""),
-    ("isatty", "int(int)", "int32_t(int32_t)", "extern fn isatty(a : i32) -> i32"),
-    ("link", "int(const char *, const char *)", "", ""),
-    ("lseek", "__off_t(int, __off_t, int)", "", ""),
-    ("pathconf", "long int(const char *, int)", "", ""),
-    ("pause", "int(void)", "int32_t(void)", "extern fn pause() -> i32"),
-    ("pipe", "int(int *)", "", ""),
-    ("read", "ssize_t(int, void *, size_t)", "int64_t(int32_t,void *,uint64_t)", "extern fn read(a : i32, b : ptr<normal, rw> T, c : u64) -> i64"),
-    ("rmdir", "int(const char *)", "", ""),
-    ("setgid", "int(__gid_t)", "", ""),
-    ("setpgid", "int(__pid_t, __pid_t)", "", ""),
-    ("setsid", "__pid_t(void)", "", ""),
-    ("setuid", "int(__uid_t)", "", ""),
-    ("sleep", "unsigned int(unsigned int)", "uint32_t(uint32_t)", "extern fn sleep(a : u32) -> u32"),
-    ("sysconf", "long int(int)", "int64_t(int32_t)", "extern fn sysconf(a : i32) -> i64"),
-    ("tcgetpgrp", "__pid_t(int)", "", ""),
-    ("tcsetpgrp", "int(int, __pid_t)", "", ""),
-    ("ttyname", "char *(int)", "", ""),
-    ("ttyname_r", "int(int, char *, size_t)", "", ""),
-    ("unlink", "int(const char *)", "", ""),
-    ("write", "ssize_t(int, const void *, size_t)", "int64_t(int32_t,const void *,uint64_t)", "extern fn write(a : i32, b : ptr<normal, r> T, c : u64) -> i64"),
+static POSIX: [(&str, &str, &str, &str, &str); 69] = [
+    ("_exit", "void(int)", "void(int32_t)", "extern fn _exit(a : i32)", "unistd.h"),
+    ("accept", "int(int, struct sockaddr *, socklen_t *)", "", "", "sys/socket.h"),
+    ("access", "int(const char *, int)", "", "", "unistd.h"),
+    ("alarm", "unsigned int(unsigned int)", "uint32_t(uint32_t)", "extern fn alarm(a : u32) -> u32", "unistd.h"),
+    ("bind", "int(int, const struct sockaddr *, socklen_t)", "", "", "sys/socket.h"),
+    ("chdir", "int(const char *)", "", "", "unistd.h"),
+    ("chown", "int(const char *, __uid_t, __gid_t)", "", "", "unistd.h"),
+    ("close", "int(int)", "int32_t(int32_t)", "extern fn close(a : i32) -> i32", "unistd.h"),
+    ("connect", "int(int, const struct sockaddr *, socklen_t)", "", "", "sys/socket.h"),
+    ("creat", "int(const char *, mode_t)", "", "", "fcntl.h"),
+    ("dup", "int(int)", "int32_t(int32_t)", "extern fn dup(a : i32) -> i32", "unistd.h"),
+    ("dup2", "int(int, int)", "int32_t(int32_t,int32_t)", "extern fn dup2(a : i32, b : i32) -> i32", "unistd.h"),
+    ("execl", "int(const char *, const char *, ...)", "", "", "unistd.h"),
+    ("execle", "int(const char *, const char *, ...)", "", "", "unistd.h"),
+    ("execlp", "int(const char *, const char *, ...)", "", "", "unistd.h"),
+    ("execv", "int(const char *, char *const *)", "", "", "unistd.h"),
+    ("execve", "int(const char *, char *const *, char *const *)", "", "", "unistd.h"),
+    ("execvp", "int(const char *, char *const *)", "", "", "unistd.h"),
+    ("fcntl", "int(int, int, ...)", "", "", "fcntl.h"),
+    ("fork", "__pid_t(void)", "", "", "unistd.h"),
+    ("fpathconf", "long int(int, int)", "int64_t(int32_t,int32_t)", "extern fn fpathconf(a : i32, b : i32) -> i64", "unistd.h"),
+    ("fsync", "int(int)", "int32_t(int32_t)", "extern fn fsync(a : i32) -> i32", "unistd.h"),
+    ("getcwd", "char *(char *, size_t)", "", "", "unistd.h"),
+    ("getegid", "__gid_t(void)", "", "", "unistd.h"),
+    ("geteuid", "__uid_t(void)", "", "", "unistd.h"),
+    ("getgid", "__gid_t(void)", "", "", "unistd.h"),
+    ("getgroups", "int(int, __gid_t *)", "", "", "unistd.h"),
+    ("getlogin", "char *(void)", "", "", "unistd.h"),
+    ("getpeername", "int(int, struct sockaddr *, socklen_t *)", "", "", "sys/socket.h"),
+    ("getpgrp", "__pid_t(void)", "", "", "unistd.h"),
+    ("getpid", "__pid_t(void)", "", "", "unistd.h"),
+    ("getppid", "__pid_t(void)", "", "", "unistd.h"),
+    ("getsockname", "int(int, struct sockaddr *, socklen_t *)", "", "", "sys/socket.h"),
+    ("getsockopt", "int(int, int, int, void *, socklen_t *)", "", "", "sys/socket.h"),
+    ("getuid", "__uid_t(void)", "", "", "unistd.h"),
+    ("isatty", "int(int)", "int32_t(int32_t)", "extern fn isatty(a : i32) -> i32", "unistd.h"),
+    ("link", "int(const char *, const char *)", "", "", "unistd.h"),
+    ("listen", "int(int, int)", "int32_t(int32_t,int32_t)", "extern fn listen(a : i32, b : i32) -> i32", "sys/socket.h"),
+    ("lseek", "__off_t(int, __off_t, int)", "", "", "unistd.h"),
+    ("open", "int(const char *, int, ...)", "", "", "fcntl.h"),
+    ("pathconf", "long int(const char *, int)", "", "", "unistd.h"),
+    ("pause", "int(void)", "int32_t(void)", "extern fn pause() -> i32", "unistd.h"),
+    ("pipe", "int(int *)", "", "", "unistd.h"),
+    ("raise", "int(int)", "int32_t(int32_t)", "extern fn raise(a : i32) -> i32", "signal.h"),
+    ("read", "ssize_t(int, void *, size_t)", "int64_t(int32_t,void *,uint64_t)", "extern fn read(a : i32, b : ptr<normal, rw> T, c : u64) -> i64", "unistd.h"),
+    ("recv", "ssize_t(int, void *, size_t, int)", "int64_t(int32_t,void *,uint64_t,int32_t)", "extern fn recv(a : i32, b : ptr<normal, rw> T, c : u64, d : i32) -> i64", "sys/socket.h"),
+    ("recvfrom", "ssize_t(int, void *, size_t, int, struct sockaddr *, socklen_t *)", "", "", "sys/socket.h"),
+    ("recvmsg", "ssize_t(int, struct msghdr *, int)", "", "", "sys/socket.h"),
+    ("rmdir", "int(const char *)", "", "", "unistd.h"),
+    ("send", "ssize_t(int, const void *, size_t, int)", "int64_t(int32_t,const void *,uint64_t,int32_t)", "extern fn send(a : i32, b : ptr<normal, r> T, c : u64, d : i32) -> i64", "sys/socket.h"),
+    ("sendmsg", "ssize_t(int, const struct msghdr *, int)", "", "", "sys/socket.h"),
+    ("sendto", "ssize_t(int, const void *, size_t, int, const struct sockaddr *, socklen_t)", "", "", "sys/socket.h"),
+    ("setgid", "int(__gid_t)", "", "", "unistd.h"),
+    ("setpgid", "int(__pid_t, __pid_t)", "", "", "unistd.h"),
+    ("setsid", "__pid_t(void)", "", "", "unistd.h"),
+    ("setsockopt", "int(int, int, int, const void *, socklen_t)", "", "", "sys/socket.h"),
+    ("setuid", "int(__uid_t)", "", "", "unistd.h"),
+    ("shutdown", "int(int, int)", "int32_t(int32_t,int32_t)", "extern fn shutdown(a : i32, b : i32) -> i32", "sys/socket.h"),
+    ("signal", "__sighandler_t(int, __sighandler_t)", "", "", "signal.h"),
+    ("sleep", "unsigned int(unsigned int)", "uint32_t(uint32_t)", "extern fn sleep(a : u32) -> u32", "unistd.h"),
+    ("socket", "int(int, int, int)", "int32_t(int32_t,int32_t,int32_t)", "extern fn socket(a : i32, b : i32, c : i32) -> i32", "sys/socket.h"),
+    ("socketpair", "int(int, int, int, int *)", "", "", "sys/socket.h"),
+    ("sysconf", "long int(int)", "int64_t(int32_t)", "extern fn sysconf(a : i32) -> i64", "unistd.h"),
+    ("tcgetpgrp", "__pid_t(int)", "", "", "unistd.h"),
+    ("tcsetpgrp", "int(int, __pid_t)", "", "", "unistd.h"),
+    ("ttyname", "char *(int)", "", "", "unistd.h"),
+    ("ttyname_r", "int(int, char *, size_t)", "", "", "unistd.h"),
+    ("unlink", "int(const char *)", "", "", "unistd.h"),
+    ("write", "ssize_t(int, const void *, size_t)", "int64_t(int32_t,const void *,uint64_t)", "extern fn write(a : i32, b : ptr<normal, r> T, c : u64) -> i64", "unistd.h"),
 ];
