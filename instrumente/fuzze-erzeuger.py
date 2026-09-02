@@ -88,6 +88,7 @@ WHAT THIS TOOL DOES NOT MEASURE
 import argparse
 import concurrent.futures
 import importlib.util
+import os
 import pathlib
 import re
 import subprocess
@@ -176,10 +177,24 @@ EIGENE_LEITER = {"aligned-im-rumpf": "zahl"}
 # READING THE ANSWER
 # ==========================================================================================
 
+# **`LC_ALL=C`, and it is not a nicety.** This tool READS what `cc` says: shape 2 keeps the
+# complaint, and section 2a groups 273 cases by it. Under a German locale GCC translates
+# *integer constant is too large for its type* word for word, and every pattern here would
+# then be grouping the user's language rather than the compiler's verdict. Measured in this
+# folder on 2026-08-25 at the linker, where `pruefe-emission.sh` searched for the English
+# words, did not find them and reported an error that did not exist. *Same class as `W16`:
+# a tool that measures its own locale.*
+#
+# (The German wording is deliberately NOT quoted here. `pruefe-englisch.py` counts German
+# function words inside English comments, and a quoted foreign message would raise a ratchet
+# that has nothing to do with the language this file is written in.)
+UMGEBUNG = dict(os.environ, LC_ALL="C")
+
+
 def lauf(argv, timeout=FRIST):
     """One subprocess. Returns (exit, panicked, stdout, stderr). NEVER raises."""
     try:
-        p = subprocess.run(argv, capture_output=True, text=True,
+        p = subprocess.run(argv, capture_output=True, text=True, env=UMGEBUNG,
                            timeout=timeout, errors="replace")
     except subprocess.TimeoutExpired:
         return (None, False, "", "<TIMEOUT>")
@@ -763,10 +778,10 @@ def bericht(ergebnisse, formen, n, arb, args):
         for e, _ in liste:
             gefunden[(kennung, e["form"])] = gefunden.get((kennung, e["form"]), 0) + 1
 
-    # **A run over ONE form cannot judge the bookings of the other sixty-two.** Under `--nur`
-    # every booking outside the chosen form would read as *booked and gone*, which is the
-    # loudest of the four verdicts and here would be an artefact of the switch. The findings
-    # are still printed; only the ledger is held back, and the line below says so.
+    # **A run over ONE form cannot judge the bookings of the other sixty-three.** With a
+    # single form selected, every booking outside it would read as *booked and gone*, which
+    # is the loudest of the four verdicts and here would be an artefact of the switch. The
+    # findings are still printed; the ledger alone is held back, and the line below says so.
     teillauf = bool(args.nur)
     gebucht = {k: v for k, v in GEBUCHT.items() if not teillauf or k[1] == args.nur}
     neu = sorted(k for k in gefunden if k not in gebucht)

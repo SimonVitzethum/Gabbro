@@ -228,9 +228,9 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
 * ~~**Der leere Baum ist die billigste Absage, nicht die einzige.** Ein Wächter, dessen
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
-  *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~
-  **50 von 55** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  **281 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
+  **51 von 57** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
+  ~~281~~ **288 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
@@ -244,6 +244,15 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   `--deckung`, und ein `--nur`, das keine Form trifft. **Alle drei melden, dass sie NICHTS
   gemessen haben, statt es wie einen Befund aussehen zu lassen** — genau der Fall, für den
   dieses Register steht. Die sechste ist `M139` in `m1.rs`.*
+  *281 → 288 am 2026-09-02, und alle sieben aus EINER Datei: `instrumente/fuzze-erzeuger.py`,
+  der Erzeugerfuzzer. Sie sind der ganze Vorlauf dieses Werkzeugs, und jeder einzelne sagt,
+  dass NICHTS gemessen wurde: die Formentafel lässt sich nicht laden, ein Bauprofil fehlt,
+  ein genannter Pfad ist keine Datei, `cc` läuft nicht, die Sprechprobe fällt, `--nur` trifft
+  keine Form, eine Grundlinie wird nicht angenommen. **Sieben Vorbedingungen vor einer
+  Messung sind kein Zeichen von Umständlichkeit, sondern die Zahl der Arten, auf die dieser
+  Lauf grün aussehen könnte, ohne den Erzeuger je aufgerufen zu haben.** Die Ursache wurde
+  gemessen und nicht vermutet: mit den drei neuen Dateien beiseitegelegt meldet
+  `pruefe-zahlen.py` null Befunde, mit ihnen sechs.*
   *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
   `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
   eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und
