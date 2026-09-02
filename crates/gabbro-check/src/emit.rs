@@ -5147,8 +5147,8 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
     // > lowering only makes it louder, because there the same name goes into an accessor call
     // > where `&c` was owed.
     // >
-    // > *The parameter loop above already had the rule and says it in one line -- „erst
-    // > loeschen, dann eintragen" -- and this loop only did the second half.* The removal is
+    // > *The parameter loop above already had the rule and says it in one line -- delete
+    // > first, insert second -- and this loop only did the second half.* The removal is
     // > held back for a name this function also DECLARES as a parameter: two bindings under
     // > one name are two questions, and this map answers one (the sentence the ghost fixpoint
     // > above uses for the same case).

@@ -2197,7 +2197,14 @@ MARKE_EMIT=65
 # > *A number that is right again for a reason it was not booked for is exactly the case
 # > this file's own ratchet message warns about,* so it is written out rather than left to
 # > look like nothing happened.
-MARKE_EMIT_M=52
+#
+# **-> 53 the same day, and the third file is a REGRESSION probe.**
+# `messung/proben/probe-griffname-doppelt.gab` holds a device handle bound by `let` under a
+# name another function takes as a pointer -- the shape in which `geraetezeiger` beat
+# `geraetewerte` and the artefact wrote `c->basis` about a value. Checker silent, emitter
+# exit 0, `cc` refusing: the one reader was the C compiler, and this stage is where it now
+# reads at every run.
+MARKE_EMIT_M=53
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
