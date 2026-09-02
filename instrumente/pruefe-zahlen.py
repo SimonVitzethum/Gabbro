@@ -492,15 +492,14 @@ EINTRAEGE = [
         r"== (\d+) von \d+ Ankern greifen",
         "Mutationsanker, die im Pruefer wirklich sitzen",
     ),
-    # **Die VORDERSEITE stand ungebunden daneben, und darum war sie am weitesten weg**
-    # (2026-09-02). `README.md` sagte *„340 mutations, 372 anchors"* -- zwei Zahlen, die
-    # einander schon widersprachen, denn ein Anker gehoert genau einer Mutation. Der Katalog
-    # stand bei **383**. Die Zeile darueber bindet dieselbe Zahl in `TODO.md` seit Wochen;
-    # dass die README-Zeile daneben stehen blieb, ist keine zweite Zahl, sondern eine
-    # ungebundene Kopie derselben.
+    # **THE FRONT PAGE STOOD UNBOUND, WHICH IS WHY IT HAD DRIFTED FURTHEST** (2026-09-02).
+    # `README.md` said *"340 mutations, 372 anchors"* -- two figures already contradicting
+    # each other, because every anchor belongs to exactly one mutation. The catalogue held
+    # **383**. The entry above binds that same figure in `TODO.md`, week after week; the
+    # README line beside it was never a second figure, only an unbound copy.
     #
-    # > *Ein Register, das kein Waechter liest, altert genau so schnell wie eins, das es nicht
-    # > gibt* -- nur sieht es dabei wie eine Messung aus.
+    # > *A register no guardian reads ages exactly as fast as one that does not exist* --
+    # > it merely looks like a measurement while doing so.
     (
         "README.md",
         r"damage one rule at a time: (\d+) mutations",

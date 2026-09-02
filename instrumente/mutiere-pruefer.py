@@ -4048,7 +4048,7 @@ DOKTEST_BAUT_NICHT = "Couldn't compile the test."
 
 
 def uebersetzungsurteil(bau_ruecklauf, testtext):
-    """**Hat der Mutant UEBERSETZT?** Am Ruecklaufwert gelesen, nicht an einer Teilzeichenkette.
+    """**Did the mutant COMPILE?** Read off a return code, never off a substring.
 
     Until 2026-09-02 this stood as one line inside `proben_laufen()`::
 
@@ -4071,10 +4071,9 @@ def uebersetzungsurteil(bau_ruecklauf, testtext):
 
 
 def proben_laufen():
-    """`cargo build --tests` und dann `cargo test` -- gibt (uebersetzt, alle_gruen).
+    """`cargo build --tests`, then `cargo test` -- returns (compiled, all_green).
 
-    `alle_gruen` ist `None`, wenn gar nicht uebersetzt wurde: es gibt dann keine Probe, ueber
-    die etwas auszusagen waere.
+    `all_green` is `None` when nothing compiled: there is then no probe to say anything about.
     """
     bau = subprocess.run(
         ["cargo", "build", "--tests", "--quiet"],
@@ -4094,16 +4093,16 @@ def proben_laufen():
 
 
 def ankerstand(text, alt):
-    """**Greift der Anker GENAU EINMAL?** `None` heisst ja; sonst steht hier der Grund.
+    """**Does the anchor match EXACTLY ONCE?** `None` means yes; otherwise the reason.
 
-    **EIN Register fuer die Ankerregel** (W7), und bis zum 2026-09-02 gab es zwei. Das zweite
-    stand in `pruefe-luecken.py:95` und war das SCHWAECHERE: `if alt not in t` fragt nur, ob
-    der Anker ueberhaupt dasteht, und `str.replace(alt, neu, 1)` verdreht danach stumm die
-    ERSTE von mehreren Stellen. Der Kopf jener Datei protokolliert den Tag, an dem genau das
-    passierte -- *dieselbe Zeile stand in `teile` und in `rest`* --, und die damals gewaehlte
-    Heilung war, zwei Anker zu verbreitern, nicht die Zaehlung nachzutragen.
+    **ONE register for the anchor rule** (W7), and until 2026-09-02 there were two. The second
+    lived in `pruefe-luecken.py:95` and was the WEAKER one: `if alt not in t` asks only whether
+    the anchor is present at all, after which `str.replace(alt, neu, 1)` silently twists the
+    FIRST of several matching sites. The head of that file logs the day this happened -- one
+    source line standing in two functions -- and the remedy chosen back then was to widen two
+    anchors, never to add the count.
 
-    > *Eine Regel, die an zwei Stellen wohnt, gilt in der schwaecheren.*
+    > *A rule living in two places holds in the weaker one.*
     """
     n = text.count(alt)
     if n == 1:

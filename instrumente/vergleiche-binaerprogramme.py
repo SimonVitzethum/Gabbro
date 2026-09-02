@@ -64,7 +64,7 @@ def lauf(binaer, unterbefehl, datei, wurzel):
 
 
 def sprechprobe(binaer, datei, wurzel):
-    """**Antwortet dieses Programm ueberhaupt auf sein Argument?**
+    """**Does this program answer its argument at all?**
 
     The comparison below is a tuple comparison of `(code, stdout, stderr)`. A program that
     IGNORES its arguments returns the same tuple for every input, so it compares equal to
@@ -94,10 +94,10 @@ def main():
             print(f"ABBRUCH: {b} ist kein ausfuehrbares Programm -- das ist KEIN gruener Lauf.",
                   file=sys.stderr)
             return 2
-    # **ZWEI NAMEN FUER EIN PROGRAMM SIND KEIN VORHER UND KEIN NACHHER.** `resolve()` above
+    # **TWO NAMES FOR ONE PROGRAM ARE NEITHER A BEFORE NOR AN AFTER.** `resolve()` above
     # makes `./target/debug/gabbro` and an absolute path the same object, and the bytes settle
-    # the rest: a copy is not a second measurement either. *What cannot move must not be
-    # asked whether it moved* -- the answer is `0` and it is worth nothing.
+    # the rest: a copy is no second measurement either. *What cannot move must never be
+    # asked whether it moved* -- the answer is `0`, worth nothing.
     if alt == neu:
         print(f"ABBRUCH: beide Argumente nennen DASSELBE Programm ({alt}) -- ein Lauf gegen",
               file=sys.stderr)
@@ -117,9 +117,9 @@ def main():
         print("ABBRUCH: kein `.gab` gefunden -- das ist KEIN gruener Lauf.", file=sys.stderr)
         return 2
 
-    # **Die Sprechprobe, in beide Richtungen, an einer einzigen Datei -- vier Prozesse.**
-    # Sie steht VOR dem Korpuslauf: was hier faellt, macht die 2404 Prozesse darunter zu
-    # einer Messung ueber die falsche Frage.
+    # **The speech test, both ways, over a single file -- four processes.** It runs BEFORE
+    # the corpus walk: whatever fails here turns the 2404 processes below into a measurement
+    # of the wrong question.
     print("== Sprechprobe ==")
     probe = dateien[0].relative_to(wurzel)
     schlecht = []

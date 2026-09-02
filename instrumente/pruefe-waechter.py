@@ -151,17 +151,17 @@ SCHWER = {
 # HAS a denominator is the other one -- the dangerous places, counted by `teilmessungen()`
 # over every guardian alike. This register exists to be NAMED beside it, never summed into it.
 def mutationskatalog(wurzel=None):
-    """**Wie viele Mutationen traegt der Katalog HEUTE?** Gelesen, nicht erinnert (W7).
+    """**How many mutations does the catalogue carry TODAY?** Read, never remembered (W7).
 
-    Bis zum 2026-09-02 stand hier `372`, gemessen am 2026-08-31 und danach nie wieder. Der
-    Katalog stand an dem Tag bei **383** -- elf mehr, und der Eintrag daneben las sich
-    unveraendert wie eine Messung. *Eine Zahl, die neben einem wachsenden Katalog steht,
-    liest sich nicht als veraltet, sondern als Stand* -- genau der Satz, mit dem
-    `mutiere-pruefer.py:FLAECHEN` seine eigene `code`-Zeile zum Leser gemacht hat.
+    Until 2026-09-02 this said `372`, measured on 2026-08-31 and never again. On that later
+    day the catalogue held **383** -- eleven more, while the entry beside it went on reading
+    like a measurement. *A figure standing next to a growing catalogue does not read as
+    stale; it reads as the state of things* -- which is the very sentence that turned the
+    `code` row of `mutiere-pruefer.py:FLAECHEN` into a reader.
 
-    `-1`, wenn der Katalog nicht lesbar ist. **Eine Null waere hier falsch**: sie ist ein
-    gueltiger Stand ("kein Gegenstand mehr"), und die Unterscheidung zwischen *leer* und
-    *ungemessen* ist die, um die es in diesem ganzen Register geht.
+    `-1` when the catalogue cannot be read. **A zero would be wrong here**: zero is a valid
+    state ("no subject left"), and telling *empty* apart from *unmeasured* is what this whole
+    register exists for.
     """
     try:
         spec = importlib.util.spec_from_file_location(
@@ -174,11 +174,11 @@ def mutationskatalog(wurzel=None):
 
 
 def sprechprobe_katalog():
-    """`[(what, ok)]` -- **liest der Leser, oder erinnert er sich?**
+    """`[(what, ok)]` -- **does the reader read, or does it remember?**
 
-    Die zweite Richtung ist die, die eine feste Zahl nicht bestehen kann: ueber einem
-    UNTERGESCHOBENEN Katalog mit drei Eintraegen muss `3` herauskommen. Ein Waechter, der
-    seine Zahl behaelt, wenn der Gegenstand sich bewegt, misst sich selbst.
+    The second direction is the one a hardcoded figure cannot pass: over a PLANTED catalogue
+    of three entries the answer has to be `3`. A guardian that keeps its number while its
+    subject moves is measuring itself.
     """
     echt = mutationskatalog()
     with tempfile.TemporaryDirectory() as d:
@@ -582,29 +582,29 @@ def waechter(wurzel=None):
     return aus
 
 
-# **DIE BESETZUNG IST EIN NAMENSMUSTER, UND JEDES NEUE VERB VERLAESST SIE STILL**
+# **THE CAST IS A NAME PATTERN, AND EVERY NEW VERB LEAVES IT IN SILENCE**
 # --------------------------------------------------------------------------------
-# (2026-09-02, und der Befund ist gemessen und nicht vermutet.)
+# (2026-09-02, measured rather than supposed.)
 #
-# `waechter()` darueber sagt es selbst -- *„every new verb invents a new prefix, and each one
-# silently leaves this net"* -- und heilt es durch Weiten. Am 2026-09-02 standen sechs
-# Werkzeuge in `instrumente/` ausserhalb, und das Verhaeltnis war:
+# `waechter()` above says so itself -- *"every new verb invents a new prefix, and each one
+# silently leaves this net"* -- then heals it by widening. On 2026-09-02 six tools in
+# `instrumente/` stood outside, in this proportion:
 #
-#     INNERHALB   0 von 57 tragen eine Verletzung
-#     AUSSERHALB  3 von  6:  vergleiche-binaerprogramme.py  SPRECHPROBE
-#                            miss-c-signaturen.py           FRIST, SPRECHPROBE
-#                            abschnitt.sh                   SPRECHPROBE
+#     INSIDE    0 out of 57 carry a violation
+#     OUTSIDE   3 out of  6:  vergleiche-binaerprogramme.py  SPRECHPROBE
+#                             miss-c-signaturen.py           FRIST, SPRECHPROBE
+#                             abschnitt.sh                   SPRECHPROBE
 #
-# > **Der Waechter war gruen ueber 57 Werkzeugen, weil die drei, die ihn haetten roetten
-# > koennen, ausserhalb seines Globs hiessen.** Genau die Klasse, gegen die er gebaut ist,
-# > eine Ebene ueber seinem Urteil: *ein Werkzeug, das keine Liste erreicht, ist von einem
-# > fehlerfreien nicht zu unterscheiden -- es fehlt einfach.*
+# > **This guardian was green over 57 tools because the three able to redden it were named
+# > outside its glob.** Exactly the class it was built against, one level above its own
+# > verdict: *a tool no list reaches cannot be told apart from a flawless one -- it is simply
+# > absent.*
 #
-# Der Glob wird hier NICHT geweitet. Das Weiten hat den Fehler dreimal nicht verhindert, und
-# es zieht `--lauf` mit: eine Bibliothek und ein Werkzeug mit 1200 `cc`-Rufen zu FAHREN ist
-# eine Entscheidung ueber den Sammellauf. Stattdessen wird die Luecke GEZAEHLT und benannt --
-# und sie ist ROT, sobald ein Werkzeug ausserhalb eine Verletzung traegt und keinen Grund.
-# *Ein Loch mit einem Namen ist kein Haken und kein Kreuz.*
+# The glob stays as it is. Widening has failed to prevent the next case three times over,
+# and it drags `--lauf` along: to RUN a sourced library, or a tool making 1200 `cc` calls,
+# is a decision about the collective run. What happens instead: the hole gets COUNTED and
+# named -- and it turns RED as soon as a tool outside carries a violation without a reason.
+# *A hole with a name is no tick, and no cross either.*
 AUSSERHALB_GEBUCHT = {
     "abschnitt.sh":
         "eine EINGEBUNDENE Schalenbibliothek, kein Waechter -- sie hat kein eigenes `main`, "
@@ -614,7 +614,7 @@ AUSSERHALB_GEBUCHT = {
 
 
 def ausserhalb_der_besetzung(wurzel=None):
-    """Jedes Werkzeug in `instrumente/`, das `waechter()` NICHT erreicht."""
+    """Every tool in `instrumente/` that `waechter()` does NOT reach."""
     w = wurzel or W
     drin = {p.name for p in waechter(w)}
     return sorted(p for p in w.glob("instrumente/*")
@@ -622,11 +622,11 @@ def ausserhalb_der_besetzung(wurzel=None):
 
 
 def sprechprobe_besetzung():
-    """`[(was, ok)]` -- **wird ein Werkzeug ausserhalb des Musters wirklich GESEHEN?**
+    """`[(what, ok)]` -- **is a tool outside the pattern really SEEN?**
 
-    In beide Richtungen, an einem Gegenstand, den dieser Lauf mitbringt: ein `instrumente/`
-    mit drei Dateien, deren Namen die Besetzung verschieden trifft. *Eine Zaehlung, die den
-    Ausserhalbstehenden nicht findet, meldet null und liest sich wie null.*
+    Both ways, on a subject this run brings along: an `instrumente/` holding three files whose
+    names the cast matches differently. *A count that fails to find whoever stands outside
+    reports zero, and reads like zero.*
     """
     ganz = ("import subprocess\n"
             "# Sprechprobe: eine kaputte Eingabe MUSS fallen\n"
@@ -1330,15 +1330,15 @@ def main():
     for was, sch_ok in sprechprobe_schale():
         print(f"  Abschnitt (sh): {'ok' if sch_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and sch_ok
-    # **R14 fuer die EINZIGE Zeile in `GEGENSTAND`, die eine Zahl liest** (2026-09-02). Bis
-    # heute stand die Zahl fest da, und der Katalog war um elf gewachsen. *Ein Leser ohne
-    # Probe ist von einer festen Zahl nicht zu unterscheiden.*
+    # **R14 for the ONE row in `GEGENSTAND` that reads a number** (2026-09-02). Until today
+    # the figure stood there fixed while the catalogue had grown by eleven. *A reader with no
+    # probe cannot be told apart from a hardcoded constant.*
     for was, kat_ok in sprechprobe_katalog():
         print(f"  Katalog:        {'ok' if kat_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and kat_ok
-    # **R14 fuer die Zaehlung der Ausserhalbstehenden** (2026-09-02). Sie ist die einzige
-    # Stelle, an der dieser Waechter ueber seine EIGENE Besetzung urteilt -- und eine
-    # Zaehlung, die niemanden findet, sieht aus wie eine, bei der es niemanden gibt.
+    # **R14 for the count of what stands outside** (2026-09-02). It is the single place
+    # where this guardian judges its OWN cast -- and a count finding nobody looks exactly
+    # like a count where there is nobody to find.
     for was, bs_ok in sprechprobe_besetzung():
         print(f"  Besetzung:      {'ok' if bs_ok else 'GESCHEITERT'} -- {was}")
         ok = ok and bs_ok
@@ -1405,7 +1405,7 @@ def main():
         for name, grund in sorted(ABBRUCH_GEBUCHT.items()):
             print(f"     {name}: {grund}")
 
-    # **UND WEN DAS MUSTER NICHT ERREICHT -- gezaehlt, nicht erraten** (2026-09-02).
+    # **AND WHOM THE PATTERN FAILS TO REACH -- counted, never guessed** (2026-09-02).
     draussen = ausserhalb_der_besetzung()
     print()
     print(f"== Ausserhalb der Besetzung: {len(draussen)} von "
