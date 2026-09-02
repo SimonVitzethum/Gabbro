@@ -41,10 +41,41 @@ WURZEL = pathlib.Path(__file__).resolve().parent.parent
 CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 
 # Die Paesse in der Reihenfolge, in der `lib.rs::pruefe` sie faehrt.
-PAESSE = [
-    "namen", "kbedingung", "m1", "schleifen", "wirkungen", "geteilt",
-    "m3", "m2", "phasen", "paarung", "gruppe", "kosten",
-]
+#
+# **AND THAT SENTENCE IS NOW TRUE BECAUSE THE LIST IS READ THERE** (2026-09-02). It used to
+# be a hand-written transcription that said it mirrored `lib.rs::pruefe` while nothing
+# compared the two. Measured on `a2cd217`: `pruefe` really calls fifteen passes and twelve
+# names stood here -- **`bindung`, `gatter` and `kontexte` were missing.**
+#
+# The verdict below is `UNGELESEN  \`X\` -- KEIN Pass nennt es`, and `KEIN` was quantifying
+# over a list, not over the checker. Three passes could have named an item kind and the
+# table would still have called it unread. *A blind spot reported as a measurement of blind
+# spots.*
+#
+# `pruefe-abstieg.py:mit_block()` already reads its list out of `lib.rs` for this reason
+# (W7: the rule is READ, never written twice). This does the same thing to the other half.
+def paesse_aus_lib():
+    """The passes `lib.rs::pruefe` really runs, in call order, deduplicated."""
+    s = (CHECK / "lib.rs").read_text(encoding="utf-8")
+    m = re.search(r"pub fn pruefe\(.*?\n\}\n", s, re.S)
+    if not m:
+        print("ABBRUCH: `lib.rs::pruefe` nicht gefunden -- die Besetzung dieses Waechters",
+              file=sys.stderr)
+        print("         waere dann eine leere Liste, und jede Zelle darunter UNGELESEN.",
+              file=sys.stderr)
+        sys.exit(2)
+    aus = []
+    for n in re.findall(r"\b([a-z_0-9]+)::pass\(", m.group(0)):
+        if n not in aus:
+            aus.append(n)
+    if not aus:
+        print("ABBRUCH: `lib.rs::pruefe` nennt keinen einzigen `::pass(` -- es wurde NICHTS "
+              "gemessen.", file=sys.stderr)
+        sys.exit(2)
+    return aus
+
+
+PAESSE = paesse_aus_lib()
 
 # **Item-Arten, die einen RUMPF tragen** -- also etwas, das gelesen werden MUSS.
 # Was keinen Rumpf hat (`assume`, `use`, `lock`), steht hier nicht: dort gibt es nichts zu
