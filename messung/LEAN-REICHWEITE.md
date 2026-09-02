@@ -289,7 +289,7 @@ real; only the second is a proof about a program.
 5 poisoned ones falling, and the undeclared place `Faecher.gewicht` correctly named. **That
 guardian measures the PROGRAM export, and it is the only place in the tree where a
 hand-written Lean specification is ever held against a Gabbro program.** Its subject is a
-14-line and a 45-line file written for it.
+18-line and a 54-line file written for it, and a 93-line hand-written `Spec.lean`.
 
 ## 4. The gap to "arbitrary", ranked by whether a real program has it
 
@@ -300,7 +300,7 @@ body to carry. Below it, ranked by how surely a real systems program contains th
 |---|---|---|---:|---|
 | 1 | a LOOP — `traverse`, `retry`, `forever` | `loop` | 30 routines, 7 obligations | no |
 | 2 | a place through a POINTER PARAMETER | *see §2* | 101 of 119 places | no |
-| 3 | a CALL, taken over the contract | `call-not-compositional`, `call-in-expression` | 7 + 1 | no |
+| 3 | a CALL, taken over the contract | `call-not-compositional`, `call-in-expression` | 7 routines, 1 obligation, 1 `requires` | no |
 | 4 | a `transition` of a `device` — a register write | `device-transition` | 4 | not in a driver |
 | 5 | a QUANTIFIER, `reaches`, a membership | `quantified` | 10 + 10 + 10 | rarely |
 | 6 | a generated table operation | `generated-op` | 9 | avoidable |
