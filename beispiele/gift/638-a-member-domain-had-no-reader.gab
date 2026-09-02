@@ -1,0 +1,44 @@
+-- erwartet: D017
+-- **Die Grammatik erzeugt eine `domain` an ZWEI Stellen, und der Pass las eine.**
+--
+--   quant  = ( "forall" | "exists" ) ident "in" domain ":" pred ;
+--   member = expr "in" domain ;
+--
+-- `domaene.rs::aus_pred` stieg in den Quantor ab und liess `PredArt::Element` leer. Gemessen
+-- am 2026-09-02, mit denselben Woertern in beiden Formen:
+--
+--   requires forall i in slots of GIBTSNICHT : i == i      -->  [D017]
+--   requires i in slots of GIBTSNICHT                      -->  0 Fehler
+--
+-- **Es ist keine zweite Regel und keine neue Kennung** -- es ist dieselbe Frage an derselben
+-- Nichtterminale. *Ein Form ohne Leser ist nicht neutral, sondern ein Loch* -- der Satz, den
+-- `ast.rs` ueber `FnZeiger` schreibt, und dieselbe Bauart wie die vier blinden Walker.
+--
+-- ## Was der Fund an diesem Korpus kostet: NICHTS
+--
+-- Keine `member`-Stelle des Korpus nennt einen Ort, der nicht aufloest -- die Ratsche der
+-- Giftproben bleibt bei null Aenderungen. **Das ist kein Argument gegen die Regel, sondern
+-- ihre Buchung**: sie gilt dem NAECHSTEN Programm, und ohne sie kaeme es still an.
+--
+-- > Und der Preis der Absage ist gestiegen, seit `D017` beide Formen deckt: ihre Notiz sagt
+-- > jetzt *„a `forall` over it holds vacuously and an `x in` it is never true"*, statt nur
+-- > vom Quantor zu sprechen. Eine Absage, die eine Form nennt, die sie inzwischen nicht mehr
+-- > allein trifft, schickt den Leser an die falsche Zeile.
+
+module gift {
+
+table T count 8 {
+    slot {
+        x : u32,
+    }
+}
+
+impl fn f(i : u32 in 0 .. 7) -> bool
+    requires i in slots of GIBTSNICHT
+    effects  { reads T, reads T.slots }
+    costs    <= 8 ops
+{
+    return true;
+}
+
+}

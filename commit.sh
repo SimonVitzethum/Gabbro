@@ -84,8 +84,17 @@ fi
 #
 # Der Riegel prueft das EINZIGE Merkmal, das beide Faelle teilen und das kein normaler
 # Commit hat: eine Nachricht, die mit `merge:` beginnt, ohne dass ein Merge laeuft.
-if head -1 "$MSG" | grep -q '^merge:' && [ ! -f "$W/.git/MERGE_HEAD" ]; then
-    echo "ABBRUCH: die Nachricht beginnt mit \`merge:\`, aber \`.git/MERGE_HEAD\` fehlt."
+#
+# **And the path is ASKED for, not assembled** (2026-09-02). It read `$W/.git/MERGE_HEAD`,
+# and in a LINKED WORKTREE `.git` is a FILE (`gitdir: …/.git/worktrees/<name>`), so that
+# path never exists -- the bar fired on every `merge:` message an agent ever wrote and
+# refused a merge that was open and correct. *It erred in the safe direction, which is
+# exactly why it could stand there unnoticed:* a guard that always says no looks like a
+# guard that works. CLAUDE.md puts every agent in a worktree, so this was the ordinary case
+# and not the exotic one.
+GITDIR="$(git -C "$W" rev-parse --git-dir)"
+if head -1 "$MSG" | grep -q '^merge:' && [ ! -f "$GITDIR/MERGE_HEAD" ]; then
+    echo "ABBRUCH: die Nachricht beginnt mit \`merge:\`, aber \`MERGE_HEAD\` fehlt."
     echo "  Dieser Commit haette EINEN Elternteil -- der Zweig waere nicht zusammengefuehrt,"
     echo "  sondern seine Aenderungen als eigene Arbeit eingetragen."
     echo "  Ursache in beiden bisherigen Faellen: \`git stash\` im offenen Merge."

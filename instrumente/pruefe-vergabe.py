@@ -198,7 +198,14 @@ MARKE = 20
 # more probe points at an old one. *The object grew, not the damage* -- and the sharp guard
 # for `598` is the unit test `ein_fnwert_in_ensures_nennt_einen_namen`, which names the
 # program, not the code.
-MARKE_PROBEN = 63
+# **63 -> 64 on 2026-09-02, and the CANDIDATES stand unmoved at 20.** The predicate-position
+# sweep laid three poison probes (`636`-`638`); `636` points at `E008`, which carries a
+# candidate ALREADY and already had thirteen probes on it. The other two point at `M140`
+# (one issuance site, brand new) and `D017` (not on the candidate list). No identifier
+# became newly ambiguous; one more probe points at an old one. *The object grew, not the
+# damage* -- and the sharp guard for `636` is the unit test
+# `das_when_eines_tauschs_traegt_die_wirkung`, which names the program and both directions.
+MARKE_PROBEN = 64
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

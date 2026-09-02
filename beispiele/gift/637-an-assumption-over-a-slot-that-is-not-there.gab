@@ -1,0 +1,57 @@
+-- erwartet: M141
+-- **`M103` laeuft in KEINER Praedikatsstellung -- und die Stelle, an der das teuer ist, ist
+-- die Vorbedingung.**
+--
+-- `m1.rs` sagt es in seinem eigenen Kopf, und es ist keine Ausrede, sondern eine
+-- Entscheidung:
+--
+--   „Er prueft Ruempfe, keine Praedikate. `requires`, `ensures` und `invariant` sind
+--    Geisterausdruecke ohne Laufzeitwirkung; sie gehoeren dem BEWEISER, nicht M1."
+--
+-- **Die zweite Haelfte des Satzes ist gemessen worden, am 2026-09-02, und sie stimmt nicht.**
+-- Der Beweiser prueft sie nicht -- er NIMMT SIE AN. `gabbro lean` ueber genau diese Datei
+-- schrieb vor der Berichtigung:
+--
+--   /-- `nimmt` -- what the caller grants: the declared parameter shapes and the
+--       `requires` this channel can say. -/
+--   def nimmt_pre (s : State) : Prop :=
+--     eval s (.bin .eq (.place "T" (.lit (.int 9)) "x") (.lit (.int 0))) = some (.bool true)
+--
+-- Und `programmlogik/Gabbro/Body.lean` fuehrt die Welt als TOTALE Abbildung ueber
+-- `slot (carrier) (index : Int) (field)`; `wellFormed` quantifiziert ueber JEDES `k`. Damit
+-- ist `nimmt_pre` nicht leer, sondern **erfuellbar** -- eine Praemisse ueber eine Zelle, die
+-- kein Gabbro-Programm adressieren kann.
+--
+-- > **Das ist die sechste Klasse in Reinform** (`PLAN.md`): *ein Satz ist bewiesen, und seine
+-- > Praemisse stellt niemand her.* Die fuenfte Klasse hiesse hier „die Klausel steht da, kein
+-- > Pass liest sie" -- und waere billiger, denn dann wuesste niemand etwas.
+--
+-- ## Die Grenze steht im Code und nicht in einer Fussnote
+--
+-- Verglichen wird nur, was als **ZAHLLITERAL** dasteht, und nur gegen eine Laenge, die die
+-- Deklaration nennt. Ein berechneter Index bleibt stumm (W10), und eine Quantorvariable
+-- ebenso -- *das ist die Form, die der Korpus tatsaechlich schreibt*:
+--
+--   invariant … : forall s in slots of Self : Self.slots[s].a == 0;
+--
+-- Dieselbe Grenze, die `N009` an einem Registerversatz zieht, ein Konstrukt weiter. Die
+-- Gegenproben stehen in `crates/gabbro-check/tests/paesse.rs`.
+
+module gift {
+
+table T count 8 {
+    slot {
+        x : u32,
+    }
+}
+
+-- Die Vorbedingung nennt Platz 9 einer Tabelle mit acht Plaetzen.
+impl fn nimmt() -> bool
+    requires T.slots[9].x == 0
+    effects  { reads T.slots }
+    costs    <= 4 ops
+{
+    return true;
+}
+
+}

@@ -1213,3 +1213,159 @@ fn ein_literal_breiter_als_i128_faellt() {
     faellt_nicht("module p { const K : u64 = 18446744073709551615; }");
     faellt_nicht("module p { const K : u64 = 0xFFFF_FFFF_FFFF_FFFF; }");
 }
+
+/// **The `when` of a compare-exchange RUNS, and no reader of a statement saw it**
+/// (`beispiele/gift/636`, measured 2026-09-02).
+///
+/// `lib.rs::eigene_praedikate` answered `Vec::new()` for every `StmtArt::Exchange`, so the
+/// effect hull, the cost of a call and the phase step all stopped at the statement -- while
+/// the emitter writes that same predicate into C:
+///
+/// ```text
+/// uint32_t _cx1 = (uint32_t)(schreibt());
+/// genommen = atomic_compare_exchange_strong_explicit(&AT, &_cx1, …);
+/// ```
+///
+/// *Word for word the `retry … until` finding of 2026-08-19, one construct further.* It was
+/// the last EXECUTABLE predicate position with no reader: the emitter refuses every `when`
+/// that is not `old(X) == <expr>` (`C001`), so the surface is one evaluated expression.
+#[test]
+fn das_when_eines_tauschs_traegt_die_wirkung() {
+    let quelle = |wirkungen: &str, bedingung: &str| {
+        format!(
+            "module p {{\nstatic mut G : u32 = 0;\natomic AT : u32 release;\n\
+             impl fn schreibt() -> u32 effects {{ writes G }} costs <= 2 ops \
+             {{ G = 1; return 1; }}\n\
+             impl fn teuer() -> u32 effects {{ pure }} costs <= 900 ops {{ return 1; }}\n\
+             impl fn frei() -> u32 effects {{ pure }} costs <= 1 ops {{ return 0; }}\n\
+             impl fn nimmt() -> bool effects {{ {wirkungen} }} costs <= 8 ops {{\n\
+             let genommen = AT exchange 1 when old(AT) == {bedingung} returns erfolg \
+             publishes nothing;\nreturn genommen;\n}}\n}}"
+        )
+    };
+    // The effect hull: the callee writes `G`, and the caller's frame does not name it.
+    faellt_mit(&quelle("writes AT, publishes AT", "schreibt()"), "E008");
+    // The cost of that same call -- 900 ops behind an envelope of 8.
+    faellt_mit(&quelle("writes AT, publishes AT", "teuer()"), "K001");
+
+    // **The counter-direction, and it is the whole reason this arm is narrow.** A
+    // compare-exchange whose expected value is an ordinary expression must stay silent --
+    // the literal form the corpus writes (`beispiele/35-tausch.gab`), and a call that keeps
+    // its promise.
+    faellt_nicht(&quelle("writes AT, publishes AT", "0"));
+    faellt_nicht(&quelle("writes AT, publishes AT", "frei()"));
+    // And a DECLARED hull is enough: the rule asks for the frame, not for the absence of
+    // calls. Without this line the repair could be "refuse every call in a `when`".
+    faellt_nicht(&quelle("writes AT, writes G, publishes AT", "schreibt()"));
+}
+
+/// **`M141` -- the index bound in a PREDICATE** (`beispiele/gift/637`, measured 2026-09-02).
+///
+/// `requires T.slots[9].x == 0` on a `table T count 8` gave `0 errors`, and `gabbro lean`
+/// wrote it into `<fn>_pre` -- *"what the caller grants"*, an ASSUMPTION over a cell no
+/// program can address. The counter-direction is the load-bearing half: **a predicate says
+/// things a body cannot**, and every one of those forms must stay silent.
+#[test]
+fn ein_literalindex_im_praedikat_faellt() {
+    let tabelle = "table T count 8 { slot { x : u32, } }\n";
+    let fnform = |klausel: &str| {
+        format!(
+            "module p {{\n{tabelle}\
+             impl fn f() -> bool {klausel} effects {{ reads T, reads T.slots }} \
+             costs <= 8 ops {{ return true; }}\n}}"
+        )
+    };
+    // The four fn-level positions, and the same literal in each.
+    faellt_mit(&fnform("requires T.slots[9].x == 0"), "M141");
+    faellt_mit(
+        &fnform("ensures result == true && (T.slots[9].x == 0)"),
+        "M141",
+    );
+    faellt_mit(
+        &format!("module p {{\n{tabelle}spec fn g() -> bool = T.slots[9].x == 0;\n}}"),
+        "M141",
+    );
+    // A table invariant -- and it is the one position where the SAME statement with a
+    // quantifier variable is the ordinary corpus form, tested below.
+    faellt_mit(
+        &format!(
+            "module p {{\ntable U count 8 {{ slot {{ y : u32, }}\n\
+             invariant i cost O(1) runs offline : U.slots[9].y == 0; }}\n}}"
+        ),
+        "M141",
+    );
+    // A loop invariant and an `until`, inside a body -- the clause order is the grammar's.
+    let schleife = |bis: &str, inv: &str| {
+        format!(
+            "module p {{\n{tabelle}extern fn zuviel() -> never effects {{ diverges }};\n\
+             impl fn f() -> u32 effects {{ reads T, reads T.slots }} costs <= 200 ops {{\n\
+             retry until {bis} bounded 8 ops on_exceeded zuviel {inv} \
+             {{ let a : u32 = 1; }}\n\
+             return 0;\n}}\n}}"
+        )
+    };
+    faellt_mit(&schleife("T.slots[9].x == 0", ""), "M141");
+    faellt_mit(&schleife("true", "invariant T.slots[9].x == 0"), "M141");
+
+    // **The counter-direction, and it carries the claim.** A predicate says things a body
+    // cannot, and a rule that started refusing those would break correct programs.
+    //
+    // (1) an index INSIDE the declared length;
+    faellt_nicht(&fnform("requires T.slots[7].x == 0"));
+    // (2) a QUANTIFIER VARIABLE -- the form the corpus writes at every table invariant;
+    faellt_nicht(&format!(
+        "module p {{\ntable U count 8 {{ slot {{ y : u32, }}\n\
+         invariant i cost O(1) runs offline : forall s in slots of Self : \
+         Self.slots[s].y == 0; }}\n}}"
+    ));
+    // (3) `old(…)` and `result`, which no body may write;
+    faellt_nicht(&format!(
+        "module p {{\n{tabelle}static mut g : u32 = 0;\n\
+         impl fn f() -> u32 ensures result == old(g) && T.slots[7].x == 0 \
+         effects {{ reads T, reads T.slots, writes g }} costs <= 8 ops \
+         {{ g = 1; return 1; }}\n}}"
+    ));
+    // (4) a COMPUTED index -- `W10`, a lower bound refuses nothing it cannot decide;
+    faellt_nicht(&format!(
+        "module p {{\n{tabelle}const K : u32 = 3;\n\
+         impl fn f() -> bool requires T.slots[K].x == 0 \
+         effects {{ reads T, reads T.slots }} costs <= 8 ops {{ return true; }}\n}}"
+    ));
+    // (5) and the whole clean corpus example that carries a `slots of Self` invariant.
+    faellt_nicht(&format!(
+        "module p {{\ntable U count 8 {{ slot {{ y : u32, }} }}\n\
+         spec fn alle_null() -> bool = forall s in slots of U : U.slots[s].y == 0;\n}}"
+    ));
+}
+
+/// **The grammar makes a `domain` at TWO productions, and the pass read one**
+/// (`beispiele/gift/638`, measured 2026-09-02).
+///
+/// ```text
+/// requires forall i in slots of GIBTSNICHT : i == i   ->  D017
+/// requires i in slots of GIBTSNICHT                   ->  0 errors
+/// ```
+///
+/// *Not a second rule and not a new code* -- the same question at the same nonterminal.
+/// `quant` was walked and `member` was not.
+#[test]
+fn ein_member_traegt_dieselbe_domaenenfrage() {
+    let quelle = |pred: &str| {
+        format!(
+            "module p {{\ntable T count 8 {{ slot {{ x : u32, }} }}\n\
+             const K : u32 = 3;\n\
+             impl fn f(i : u32 in 0 .. 7) -> bool requires {pred} \
+             effects {{ reads T, reads T.slots }} costs <= 8 ops {{ return true; }}\n}}"
+        )
+    };
+    // The base name (`D017`) and the KIND of the place (`D018`) -- both halves.
+    faellt_mit(&quelle("i in slots of GIBTSNICHT"), "D017");
+    faellt_mit(&quelle("i in slots of K"), "D018");
+    // The control that made the hole visible: the SAME words under a quantifier always fell.
+    faellt_mit(&quelle("forall q in slots of GIBTSNICHT : q == q"), "D017");
+
+    // **The counter-direction.** A `member` over a place that does resolve, and is of the
+    // kind the domain needs, stays silent -- in both forms.
+    faellt_nicht(&quelle("i in slots of T"));
+    faellt_nicht(&quelle("forall q in slots of T : T.slots[q].x == 0"));
+}
