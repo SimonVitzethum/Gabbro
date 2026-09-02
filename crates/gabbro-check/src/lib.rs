@@ -751,6 +751,169 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
     }
 }
 
+/// **`Has(F)` and `Held(L)` are spelled as a CALL and are not one.**
+///
+/// The grammar has a `PredArt::Held`, so the bare form is its own predicate -- but the
+/// moment brackets stand around it (`(Held(L))`) the parser reads `PredArt::Klammer` over a
+/// comparison, and the comparison holds an ordinary `ExprArt::Ruf`. **`Has` has no
+/// `PredArt` at all** and is always a call in the tree; every reader of it matches on the
+/// callee name.
+///
+/// Measured 2026-09-02, and it is a false diagnostic on a CORRECT program:
+///
+/// ```text
+/// impl fn jetzt() -> u64 requires Has(RDTSCP) effects { reads uhr } costs <= 40 ops
+///   -> hint: [E009] the call effects of `jetzt` are undecidable: `Has` is unknown to the graph
+/// ```
+///
+/// `requires Has(X)` at a function is exactly the form `N016` was built to propagate
+/// (`namen.rs`, 2026-08-19) -- and the effect hull reads the same words as a call to a
+/// function nobody declared, then declares itself a LOWER BOUND for the whole function.
+/// *One construct, two readers, and the second says the writer mistyped a name.*
+///
+/// **The list is closed and it is these two.** Neither is a function, neither has a body,
+/// and neither can be an edge in a call graph; `Some`/`None` and a record value are already
+/// filtered one layer down, and this is the same kind of filter for the same reason.
+pub fn ist_praedikatswort(r: &Ruf) -> bool {
+    r.heisst("Has") || r.heisst("Held")
+}
+
+/// **EVERY predicate this item carries -- exhaustive over `ItemArt`, no `_` arm.**
+///
+/// `eigene_praedikate` answers the same question one statement at a time, and every caller
+/// of it walks a BODY. **A predicate does not need a body**: eighteen of the nineteen places
+/// the grammar puts one are contract or declaration positions, and until 2026-09-02 no
+/// walker reached them together. Measured that day, position by position, against the
+/// unchanged checker (`messung/PREDICATE-NAMES.md`): a name that nothing declares was
+/// accepted in **266 of 380** position x name-kind cells.
+///
+/// The order is the order of `ItemArt`, and the arms that carry nothing are written out
+/// rather than swept into a catch-all -- **the lesson of the 78 holes behind
+/// `unterbloecke`**: a `_` arm is not a reservation, it is a silent promise that nobody
+/// re-reads when the enum grows.
+///
+/// A function body is walked too, because a loop `invariant`, a `retry … until` and the
+/// `when` of a compare-exchange are predicate positions like any other.
+pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
+    let mut aus = Vec::new();
+    praedikate_im_typ(&i.art, &mut aus);
+    match &i.art {
+        ItemArt::Funktion(f) => {
+            aus.extend(f.requires.iter());
+            aus.extend(f.ensures.iter());
+            match &f.rumpf {
+                FnRumpf::Pred(p) => aus.push(p),
+                FnRumpf::Block(b) => praedikate_im_block(b, &mut aus),
+                FnRumpf::Asm(_) | FnRumpf::Keiner => {}
+            }
+        }
+        ItemArt::Format(f) => {
+            for feld in &f.felder {
+                aus.extend(feld.bedingung.as_ref());
+            }
+        }
+        ItemArt::Tabelle(t) => aus.extend(t.invarianten.iter().map(|x| &x.pred)),
+        ItemArt::Walk(w) => {
+            aus.push(&w.ab_wenn);
+            aus.push(&w.blatt);
+            aus.extend(w.invarianten.iter().map(|x| &x.pred));
+        }
+        ItemArt::Gruppe(g) => aus.extend(g.invarianten.iter().map(|x| &x.pred)),
+        ItemArt::Device(d) => {
+            for r in &d.register {
+                aus.extend(r.requires.as_ref());
+            }
+            for b in &d.baenke {
+                for r in &b.register {
+                    aus.extend(r.requires.as_ref());
+                }
+            }
+            for u in &d.uebergaenge {
+                aus.extend(u.requires.as_ref());
+            }
+        }
+        ItemArt::Axiom(a) => aus.extend(a.requires.iter()),
+        ItemArt::Check(c) => {
+            aus.extend(c.floor.iter());
+            praedikate_im_block(&c.can_fail, &mut aus);
+        }
+        // A `type` may hold a function POINTER, and that carries a contract -- the two
+        // clauses `N037` in `namen.rs` refuses. `praedikate_im_typ` above has already
+        // collected them:
+        // a rule that reads a predicate must be able to speak about a form that ALSO falls
+        // for being one, rather than seeing nothing there.
+        ItemArt::Typ(_) => {}
+        // **These carry no predicate of their own**, and each stands here by name so that a
+        // clause added to one of them breaks the build instead of disappearing.
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Konst(_)
+        | ItemArt::Statisch(_)
+        | ItemArt::Reason(_)
+        | ItemArt::State(_)
+        | ItemArt::Assume(_)
+        | ItemArt::Atomic(_)
+        | ItemArt::Lock(_)
+        | ItemArt::Rcu(_)
+        | ItemArt::Accumulates(_)
+        | ItemArt::Entry(_)
+        | ItemArt::Entrust(_)
+        | ItemArt::Boot(_) => {}
+    }
+    aus
+}
+
+/// The contract at a function POINTER type -- `type R = fn(u32) -> u32 requires …`.
+fn praedikate_im_typ<'a>(art: &'a ItemArt, aus: &mut Vec<&'a Pred>) {
+    fn aus_typ<'a>(t: &'a TypExpr, aus: &mut Vec<&'a Pred>) {
+        match t {
+            TypExpr::FnZeiger(f) => {
+                aus.extend(f.requires.iter());
+                aus.extend(f.ensures.iter());
+            }
+            TypExpr::Feld(a) => aus_typ(&a.element, aus),
+            TypExpr::Zeiger(p) => aus_typ(&p.ziel, aus),
+            TypExpr::Verbund(felder, _) => {
+                for f in felder {
+                    aus.extend(f.bedingung.as_ref());
+                    aus_typ(&f.typ.typ, aus);
+                }
+            }
+            TypExpr::Int(_)
+            | TypExpr::Float(_)
+            | TypExpr::Bool(_)
+            | TypExpr::Never(_)
+            | TypExpr::Pfad(_)
+            | TypExpr::Varianten(_, _)
+            | TypExpr::Index { .. } => {}
+        }
+    }
+    if let ItemArt::Typ(t) = art {
+        if let Some(r) = &t.rumpf {
+            aus_typ(r, aus);
+        }
+    }
+}
+
+/// The predicates a BLOCK carries -- what each statement evaluates, plus the loop
+/// invariants, which `eigene_praedikate` deliberately leaves out (they are ghost, and no
+/// reader of the effect hull may see them).
+fn praedikate_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Pred>) {
+    for s in &b.anweisungen {
+        aus.extend(eigene_praedikate(s));
+        if let StmtArt::Schleife(sch) = &s.art {
+            match sch.as_ref() {
+                Schleife::Traverse(t) => aus.extend(t.invariante.as_ref()),
+                Schleife::Retry(r) => aus.extend(r.invariante.as_ref()),
+                Schleife::Forever(f) => aus.extend(f.invariante.as_ref()),
+            }
+        }
+        for k in unterbloecke(s) {
+            praedikate_im_block(k, aus);
+        }
+    }
+}
+
 /// Die Ausdrücke in einem Prädikat — ein `until` liest ebenso wie ein Rumpf.
 pub fn ausdruecke_im_praedikat(p: &Pred) -> Vec<&Expr> {
     let mut aus = Vec::new();

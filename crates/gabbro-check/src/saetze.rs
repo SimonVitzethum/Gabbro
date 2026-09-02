@@ -749,6 +749,84 @@ pub const D1D2: &[Satz] = &[
                      messung/DOMAENENNAMEN.md",
     },
     Satz {
+        name: "d.praedikatsname",
+        kennungen: &["D021"],
+        aussage: "The base name of a PLACE in a predicate resolves -- in every position this \
+                  pass walks, and not only where a domain stands. `M109` asks it of an \
+                  `ensures`, `N053` of a device promise, `N032` of a `format … where`; \
+                  `D021` asks it of a `requires`, of the body of a `spec fn`, of the \
+                  `invariant` of a `table`, a `walk` or a `group`, of all three loop \
+                  invariants and the `until` of a `retry`, of the `down` and `leaf` of a \
+                  `walk`, of the `requires` of an `axiom`, of the `floor` of a `check` and \
+                  of the `when` of a compare-exchange. **A conjunct over a name nothing \
+                  declares is not a missing finding but a WRONG PROOF OBJECT**: `gabbro \
+                  lean` writes a `requires` into `<fn>_pre`, \"what the caller grants\", and \
+                  `Gabbro.Body` reads `.global` out of a TOTAL store -- so the premise is \
+                  satisfiable, and unlike a dropped conjunct it is visible in no channel.",
+        vorbehalt: "**Silent in `ensures`, on `Self`, and on the argument of `Has(…)` and \
+                    `Held(…)` -- each of the three for a different reason and each forced \
+                    by a file of the corpus.** `ensures` has `M109`, and a second refusal \
+                    for one fault is worse than one; `Self` is the carrier question and \
+                    belongs to `M120`; a machine feature is not a program name and a lock \
+                    is not a value, and both are spelled as a call, so both would otherwise \
+                    be read as places (`beispiele/01-tabelle.gab` writes `Held(KAPPEN)` at \
+                    every `impl fn`, `beispiele/11` writes `Has(RDTSCP)`). The exemption of \
+                    the two pseudo-calls is by NAME and not by site, the way \
+                    `namen.rs::zusagenstelle` does it -- coarse, and coarse in the quiet \
+                    direction. **And it reads the BASE name only**: a field of a resolving \
+                    carrier is `D019`'s question at a domain and nobody's in a comparison, \
+                    which the measurement says out loud rather than hiding.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-02 against the UNCHANGED checker, 19 predicate \
+                      positions x 20 name kinds, the phantom name set BESIDE a legitimate \
+                      conjunct so that a rule which only fires over an otherwise empty \
+                      clause cannot count as a reader: **266 of 380 cells silent**, and \
+                      three positions of nineteen resolved a name at all. After the build \
+                      125 are silent and the remainder is named per kind. \
+                      messung/PREDICATE-NAMES.md. It found one in the tree it was written \
+                      against: messung/fragmente/F01.gab:189 wrote `c.slots[s] reaches \
+                      WURZEL via parent` -- byte for byte the excerpt's own line -- and no \
+                      unit of that file declared `WURZEL`. Poison: beispiele/gift/647 \
+                      (`fn … requires`), 648 (`axiom … requires`, the assumption tier), 649 \
+                      (the `when` of an exchange, the one position that RUNS). The \
+                      counter-direction is the whole corpus: 108 clean files and 415 poison \
+                      probes, and after the F01 line the rule falls in ZERO of them.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; messung/PREDICATE-NAMES.md; \
+                     messung/fragmente/F01.gab",
+    },
+    Satz {
+        name: "n.merkmalsform",
+        kennungen: &["N054"],
+        aussage: "A machine feature demand names ONE feature, and a feature is a bare name. \
+                  `Has()` demands nothing, `Has(7)` demands a number, `Has(a.b)` demands a \
+                  place, and `Has(RDTSCP, XSAVE)` reads as a demand for two features and is \
+                  one for the first -- every reader of the form takes `argumente.first()`.",
+        vorbehalt: "**It does NOT decide whether the name is a feature of the machine, and \
+                    that half is not decidable in this tree.** `SPRACHE.md` puts the only \
+                    generator of `Has(F)` at the CPUID probe (A14); that probe does not \
+                    exist, no `mints Has(F)` form exists, and nothing in the language \
+                    declares a feature name. A resolver would need a declared list, and who \
+                    declares it is an owner's decision with two shapes -- a house table \
+                    under `arch`, the way `cnamen.rs::SIGNATUR` carries what C has taken \
+                    (no new word), or a language form that mints the witness (a new word, \
+                    and the vocabulary ratchet stands at 221/208/333). **Named, not built.** \
+                    `N016` carries the demand through the call graph and stops where \
+                    somebody DECLARES it; that a `check` or an `assume` could ESTABLISH it \
+                    is a form that does not exist.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-02 against the UNCHANGED checker, eleven written \
+                      forms across six predicate positions: **64 of 66 accepted**, \
+                      including `Has()`, `Has(7)`, `Has(GRENZE + 1)`, `Has(T.slots)` and \
+                      `Has(RDTSCP, XSAVE)`. The two that fell did so at `N053` and about \
+                      the SECOND argument, not about the form. Poison: \
+                      beispiele/gift/650. The counter-direction is in the speech test and \
+                      it is the larger half -- four bare names go through, whatever they \
+                      are, because that is the question a declared list would answer. Over \
+                      108 clean files and 415 poison probes the rule falls in ZERO.",
+        fundstelle: "crates/gabbro-check/src/namen.rs; messung/PREDICATE-NAMES.md §5; \
+                     dokumente/SPRACHE.md (x86_64 assumption catalogue, A14)",
+    },
+    Satz {
         name: "d.undurchsichtig",
         kennungen: &["D003", "D004"],
         aussage: "Outside the declaring module an `opaque type` has neither the arithmetic \

@@ -156,8 +156,15 @@ ERWARTET = {
     # `crates/`.*
     "ist":          ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "ab":           ("TOT", "`walk` ist gelesen und sonst nichts: kein Pass, kein Erzeuger kennt `WalkDecl`."),
-    "ab_wenn":      ("TOT", "siehe `ab` -- `WalkDecl`."),
-    "blatt":        ("TOT", "siehe `ab` -- `WalkDecl`."),
+    # **`ab_wenn` and `blatt` ROSE on 2026-09-02 and are therefore deleted here.** Both
+    # carried the sentence *see `ab` -- `WalkDecl`*, and that held as long as the two clauses
+    # were predicates nobody walked: measured that day, position by position, `walk … down`
+    # and `walk … leaf` accepted a name nothing declares in **all twenty** name kinds
+    # (`messung/PREDICATE-NAMES.md`). `D021` reads them now, and `D017`-`D020` with it --
+    # the walk's own binder `it` is the only name they introduce.
+    #
+    # *This guard said so on its own, before anyone thought of updating the table -- which
+    # is the direction it was built for.*
     # **`kosten` LOOKED risen on 2026-08-28 and was not** -- see `HOMONYME`.
     "kosten":       ("TOT", "Feld der `invariant`; ungelesen. (Nicht zu verwechseln mit `opsruf::Kopf.kosten` -- siehe HOMONYME.)"),
     "laeuft":       ("TOT", "Feld der `invariant`; ungelesen."),

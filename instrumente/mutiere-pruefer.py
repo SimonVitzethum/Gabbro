@@ -874,6 +874,44 @@ MUTATIONEN = [
         "D018 -- the domain no longer decides what its place must be: `slots of` over a "
         "record and `queue` over a table pass again",
     ),
+    # **`D021`, three mutations** (2026-09-02). The rule holds the base name of a place in
+    # a PREDICATE, in the sixteen positions that had no reader; `messung/PREDICATE-NAMES.md`
+    # measured 266 of 380 position x name-kind cells accepting a name nothing declares. Each
+    # mutation below is the state the checker was in the day before.
+    Mutation(
+        "praedikatsname-jeder-name-geht",
+        "domaene.rs",
+        "    let gebunden = geb.contains(&n.text) || s.lokal.contains_key(&n.text);",
+        "    let gebunden = true;",
+        "D021 -- every name in a predicate counts as bound, so a `requires GIBTESNICHT == 1` "
+        "leaves the compiler as a premise again",
+    ),
+    Mutation(
+        "praedikatsname-nur-in-nachbedingungen",
+        "domaene.rs",
+        "    if matches!(st, Stellung::Nachbedingung) {",
+        "    if !matches!(st, Stellung::Nachbedingung) {",
+        "D021 -- the name is resolved only in `ensures`, where `M109` already resolves it, "
+        "so every other predicate position goes silent again",
+    ),
+    Mutation(
+        "praedikatsname-nur-am-vergleich",
+        "domaene.rs",
+        "            grundname_im_praedikat(von, s, st, geb, &frei, absagen);",
+        "            let _ = &frei;",
+        "D021 -- a `reaches … via` predicate stops naming its endpoints, and that is the "
+        "form `messung/fragmente/F01.gab` carried with an undeclared `WURZEL`",
+    ),
+    # **`N054`, one mutation.** The shape half of the feature demand -- the half that needs
+    # no declared list. `Has(RDTSCP, XSAVE)` reads as a demand for two features and is one.
+    Mutation(
+        "merkmalsform-beliebig",
+        "namen.rs",
+        "                    let gestalt = match r.argumente.len() {",
+        "                    let gestalt = match 1 {",
+        "N054 -- `Has()` and `Has(a, b)` pass again, and the second feature name goes on "
+        "being read by nobody",
+    ),
     # **The counter-direction as a mutation**, and it is the one that would break the
     # corpus: a slot is written `<x>.slots[i]` and its TYPE is a plain record, so without
     # the shape question `descendants of c.slots[s]` would be refused in every clean file.

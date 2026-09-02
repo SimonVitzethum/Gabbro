@@ -244,6 +244,13 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             for e in crate::ausdruecke_im_praedikat(p) {
                 for x in crate::alle_ausdruecke(e) {
                     if let ExprArt::Ruf(r) = &x.art {
+                        // **`Has(F)` and `Held(L)` are not calls** -- see
+                        // `lib.rs::ist_praedikatswort`. Until 2026-09-02 a correct
+                        // `requires Has(RDTSCP)` made the effect hull of its own function a
+                        // LOWER BOUND and said `Has` is unknown to the graph.
+                        if crate::ist_praedikatswort(r) {
+                            continue;
+                        }
                         nimm(r, &mut k.ruft);
                         // **A contract may not call through a place** (2026-08-21). The
                         // resolver here says "no contract" for every place, so an indirect
@@ -775,6 +782,11 @@ fn sammle_kanten(
     ) {
         for x in crate::alle_ausdruecke(e) {
             if let ExprArt::Ruf(r) = &x.art {
+                // `Has(F)` / `Held(L)` -- a predicate word, not an edge. The `until` of a
+                // `retry` and the `when` of an exchange reach this collector as predicates.
+                if crate::ist_praedikatswort(r) {
+                    continue;
+                }
                 nimm_ruf(r, aus, indirect, vertrag);
             }
         }
@@ -883,6 +895,13 @@ fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>) {
 }
 
 fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
+    // **`Has(F)` and `Held(L)` are predicate words and not calls** -- `lib.rs::
+    // ist_praedikatswort` says why they nevertheless arrive here as an `ExprArt::Ruf`. An
+    // entry here would be an edge onto a name with no function behind it, which is exactly
+    // the case the paragraph below describes: `E009` over a CORRECT program.
+    if crate::ist_praedikatswort(r) {
+        return;
+    }
     // **Ein Konstruktor ruft nichts.** Dieselbe Aussage wie bei «B14b» und dieselbe wie
     // bei `Some`/`None` -- und sie ist hier die wichtigste von allen: eine Kante auf einen
     // Namen, hinter dem keine Funktion steht, macht den Gerufenen UNBEKANNT, und ueber

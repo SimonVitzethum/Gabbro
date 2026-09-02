@@ -13,11 +13,11 @@
 //! haengte).
 
 use gabbro_syntax::ast::{
-    Block, Domaene, FnRumpf, Ident, Item, ItemArt, Ort, OrtSuffix, Pred, PredArt, Programm,
-    Schleife, StmtArt,
+    Block, Domaene, Expr, ExprArt, FnRumpf, Ident, Item, ItemArt, Ort, OrtSuffix, Pred, PredArt,
+    Programm, Schleife, StmtArt,
 };
 use gabbro_syntax::diag::{Absage, Absagen};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::typen::Typ;
 use crate::umgebung::{Feldurteil, Umgebung};
@@ -279,6 +279,14 @@ enum Stellung {
     Invariante,
     Spezifikation,
     Durchlauf,
+    /// **Four positions this walk did not reach until 2026-09-02**, and each was measured
+    /// silent in all twenty name kinds before it was hooked up
+    /// (`messung/PREDICATE-NAMES.md`): the `floor` of a `check`, the `down` and `leaf` of a
+    /// `walk`, the `when` of a compare-exchange, and the `requires` of an `axiom` -- which
+    /// takes `Vorbedingung`, because it is one.
+    Untergrenze,
+    Walkschritt,
+    Tausch,
 }
 
 impl Stellung {
@@ -289,6 +297,9 @@ impl Stellung {
             Stellung::Invariante => "an `invariant`",
             Stellung::Spezifikation => "the body of a `spec fn`",
             Stellung::Durchlauf => "a `traverse`",
+            Stellung::Untergrenze => "a `floor`",
+            Stellung::Walkschritt => "the step of a `walk`",
+            Stellung::Tausch => "the `when` of an exchange",
         }
     }
 }
@@ -346,6 +357,46 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             for i in &w.invarianten {
                 aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen);
             }
+            // **`down … when` and `leaf` are predicates, and until 2026-09-02 no pass of
+            // this file came here.** All twenty name kinds were accepted in both.
+            //
+            // `it` is the ELEMENT of the node array; the declaration binds it and no other
+            // line does. It goes on `geb` and not into the map, the same treatment a
+            // quantifier variable gets: the pass knows the name is bound and nothing about
+            // its type, and guessing one would be `D018` speaking about a guess.
+            geb.push("it".to_string());
+            aus_pred(&w.ab_wenn, &s, Stellung::Walkschritt, &mut geb, absagen);
+            aus_pred(&w.blatt, &s, Stellung::Walkschritt, &mut geb, absagen);
+            geb.pop();
+        }
+        // **The assumption tier, and it is the position with the most weight.** A
+        // `requires` at an `axiom` is what the whole relative claim rests on -- *"proved
+        // under A1…An"* -- and it was read here by nobody: twenty of twenty name kinds
+        // accepted. Its parameters are its local view, exactly as at a function.
+        ItemArt::Axiom(a) => {
+            let mut lokal: HashMap<String, Typ> = HashMap::new();
+            for p in &a.parameter {
+                lokal.insert(p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ));
+            }
+            let s = Sicht { u, modul, lokal: &lokal };
+            let mut geb = Vec::new();
+            for p in &a.requires {
+                aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen);
+            }
+        }
+        // **A `check … floor` names quantities, and nothing said they exist.** `N022` in
+        // `namen.rs` asks
+        // whether the floor covers what `measures` names one-sidedly; put a phantom name
+        // beside a legitimate conjunct and it goes silent, which is what made it look like
+        // a reader and what it is not. The `can_fail` block is an ordinary body.
+        ItemArt::Check(c) => {
+            let lokal: HashMap<String, Typ> = HashMap::new();
+            let s = Sicht { u, modul, lokal: &lokal };
+            let mut geb = Vec::new();
+            for p in &c.floor {
+                aus_pred(p, &s, Stellung::Untergrenze, &mut geb, absagen);
+            }
+            aus_block(&c.can_fail, &s, &mut geb, absagen);
         }
         // A group invariant names its carriers by name; there is no `Self`, because a group
         // has SEVERAL carriers and the word would not know which one it means.
@@ -465,6 +516,16 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
                 }
             }
         }
+        // **The `when` of a compare-exchange, and it RUNS.** `lib.rs::eigene_praedikate`
+        // says so in its own head since 2026-09-02; this file did not read it either, and
+        // sixteen of twenty name kinds went through. The binder of the exchange is declared
+        // by the statement and is not in scope in its own condition -- `binde` puts it into
+        // the map below, after the check, the same order a `let` gets.
+        if let StmtArt::Exchange(x) = &st.art {
+            if let gabbro_syntax::ast::XForm::Vergleich { bedingung, .. } = &x.form {
+                aus_pred(bedingung, s, Stellung::Tausch, geb, absagen);
+            }
+        }
         // **A `match` is walked HERE and not through `unterbloecke`**, because each arm
         // carries its OWN binder and a shared walk cannot tell them apart. `Nichts` binds
         // nothing, `Knoten(k)` binds `k`, and neither name reaches the other arm.
@@ -540,8 +601,10 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         //
         // They carry PLACES, though, and `M141` reads the literal index of each.
         PredArt::Vergleich(e) => {
+            let frei = merkmalsnamen(e);
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
+                grundname_im_praedikat(o, s, st, geb, &frei, absagen);
             }
         }
         // **`expr in domain` produces a DOMAIN too, and this arm did not read it**
@@ -554,17 +617,170 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         // It binds no variable, so `geb` travels unchanged.
         PredArt::Element(e, d) => {
             domaene_pruefen(d, s, st, geb, absagen);
+            let frei = merkmalsnamen(e);
             for o in crate::alle_orte(e) {
                 indexschranke_pruefen(o, s, st, absagen);
+                grundname_im_praedikat(o, s, st, geb, &frei, absagen);
             }
         }
         PredArt::Erreicht { von, nach, .. } => {
+            let frei = HashSet::new();
             indexschranke_pruefen(von, s, st, absagen);
             indexschranke_pruefen(nach, s, st, absagen);
+            grundname_im_praedikat(von, s, st, geb, &frei, absagen);
+            grundname_im_praedikat(nach, s, st, geb, &frei, absagen);
         }
         // `Held(L)` and `Held(L, shared)` name a LOCK and nothing else.
         PredArt::Held { .. } => {}
     }
+}
+
+/// **`D021` -- the base name of a place in a PREDICATE resolves.**
+///
+/// `M109` in `m1.rs` asks this of an `ensures` and of nothing else; `N053` in `namen.rs`
+/// asks it of a device promise; `N032` asks it of a `format … where`. **Sixteen of the
+/// nineteen predicate positions the grammar has asked it of nobody**, and that was measured
+/// position by position before this rule was written (`messung/PREDICATE-NAMES.md`):
+///
+/// ```text
+/// requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
+/// requires GIBTESNICHT == 1        ->  0 errors, 0 hints          Lean: EXPORTED
+/// ```
+///
+/// The two lines are the same fault and the second is the worse one. **A dropped conjunct is
+/// visible; an exported one over a name that exists nowhere is not.** `gabbro lean` writes
+///
+/// ```lean
+/// ∧ eval s (.bin .eq (.global "GIBTESNICHT") (.lit (.int 1))) = some (.bool true)
+/// ```
+///
+/// into `<fn>_pre`, *"what the caller grants"*, and `Gabbro.Body` reads `.global` out of a
+/// TOTAL store -- so the premise is not vacuous, it is satisfiable, and a proof that leans
+/// on it has proved something about a state no program can be in. **That is not a missing
+/// finding but a wrong proof object**, and it is the sixth class of `PLAN.md` in pure form:
+/// a sentence is proved and nothing establishes its premise.
+///
+/// ## What it does NOT do, and why each exemption is there
+///
+/// A predicate legitimately names things a body cannot, and a resolver that started
+/// refusing those would break correct programs. Each of these is forced by a corpus file:
+///
+/// * **`result` and a reason case are not places at all** -- `ExprArt::Ergebnis` and
+///   `ExprArt::Grund` are their own variants, and `alle_orte` does not yield them.
+/// * **`old(x)`** IS a place (`ExprArt::Alt`) and its name has to exist: a postcondition
+///   about the old value of nothing is none. `M109` says the same in `ensures`.
+/// * **A quantifier variable, a `traverse` variable and a `match` binder** stand in `geb`,
+///   which `aus_pred` and `aus_block` maintain for `D017` already.
+/// * **`Self`** belongs to `M120`, which names the place the line belongs to instead of
+///   sending the reader off to declare a word the language does not let him declare.
+/// * **`ensures`** belongs to `M109`, and a second refusal for one fault is worse than one.
+/// * **The argument of `Has(…)` and of `Held(…)`** is not a place. A machine feature is not
+///   a program name and a lock is not a value; both are spelled as a call, and both would
+///   otherwise be read as one. `beispiele/01-tabelle.gab` writes `Held(KAPPEN)` at every
+///   `impl fn` in the file, and `beispiele/11-grammatikbefunde.gab` writes `Has(RDTSCP)`.
+///
+/// > **The exemption is by NAME and not by site**, exactly as `namen.rs::zusagenstelle`
+/// > does it: a predicate that writes `Has(F)` and `F.x == 1` in one breath exempts `F` in
+/// > both. That is coarse, and it is coarse in the quiet direction.
+///
+/// The resolution itself is `D017`'s, word for word -- parameter or local, global, a
+/// resolvable type or constant, a `table`, a `walk`, a `format`/`device` head. *A wider
+/// resolution can only make this rule quieter, and quiet is the safe direction.*
+fn grundname_im_praedikat(
+    o: &Ort,
+    s: &Sicht,
+    st: Stellung,
+    geb: &[String],
+    frei: &HashSet<String>,
+    absagen: &mut Absagen,
+) {
+    // **The three lines below are spelled differently from `grundname_pruefen`'s on
+    // purpose.** Two mutations of `mutiere-pruefer.py` anchor on that function's literal
+    // source, and a second byte-identical copy makes each anchor AMBIGUOUS -- `--anker`
+    // reported exactly that on the day this rule was written, and an ambiguous anchor
+    // measures nothing. *Two rules that ask the same question are still two rules.*
+    //
+    // `ensures` has a reader -- `M109` in `m1.rs` resolves EVERY name of a postcondition.
+    if matches!(st, Stellung::Nachbedingung) {
+        return;
+    }
+    let n = &o.basis;
+    if n.text == "Self" || frei.contains(&n.text) {
+        return;
+    }
+    let gebunden = geb.contains(&n.text) || s.lokal.contains_key(&n.text);
+    if gebunden || s.u.suche_global(s.modul, &n.text).is_some() {
+        return;
+    }
+    if s.u.nennt_typ_oder_konstante(s.modul, &n.text)
+        || s.u.nennt_tabelle(s.modul, &n.text).is_some()
+        || s.u.nennt_walk(s.modul, &n.text)
+        || s.u.nennt_kopf(s.modul, &n.text)
+    {
+        return;
+    }
+    // **A REGISTER of a device, and this one is measured rather than guessed.**
+    // `messung/fragmente/F09.gab`:72 writes `down : roh when EINTRAG.PS == 0`, and
+    // `EINTRAG` is a `reg` of `device Seitentabelle` in the same unit -- declared, and
+    // named by none of the four maps above, which carry device HEADS and not their
+    // registers. *A refusal about a name the program declares is a refusal about the pass*,
+    // the sentence this file already writes one rule up.
+    //
+    // Whether a walk step may reach for a device register at all is a different question
+    // and belongs to whoever owns the walk lowering; **this rule asks only whether the name
+    // exists**, and it does. The lookup is over every device of the unit and not over the
+    // one in scope, which is coarse in the quiet direction.
+    if s
+        .u
+        .geraete
+        .values()
+        .any(|register| register.iter().any(|(r, _)| *r == n.text))
+    {
+        return;
+    }
+    absagen.schiebe(
+        Absage::fehler(
+            "D021",
+            n.span,
+            format!("`{}` in {} is not declared here", n.text, st.wort()),
+        )
+        .mit_notiz(
+            "this compiler hands a predicate on as an ASSUMPTION -- `gabbro lean` writes a \
+             `requires` into `<fn>_pre`, \"what the caller grants\". A conjunct over a name \
+             nothing declares is not a missing check but a WRONG PROOF OBJECT: the prover \
+             carries a premise whose referent exists nowhere, and unlike a dropped conjunct \
+             that is visible in no channel",
+        )
+        .mit_notiz(
+            "`M109` says the same sentence in `ensures`, `N053` at a device promise and \
+             `N032` in a `format … where` -- this is the same question in the sixteen \
+             positions that had no reader",
+        ),
+    );
+}
+
+/// The names a predicate expression spells as a CALL but does not mean as a place:
+/// `Has(F)` names a machine feature, `Held(L)` and `Held(L, shared)` name a lock.
+///
+/// **Both are pseudo-calls in the grammar of an expression**, so `alle_orte` yields their
+/// arguments like any other place. `Held` additionally becomes an ordinary call the moment
+/// brackets stand around it (`(Held(L))` parses as `PredArt::Klammer` over a comparison, not
+/// as `PredArt::Held`) -- measured 2026-09-02, and the reason this collector reads the
+/// expression form rather than trusting the predicate form.
+fn merkmalsnamen(e: &Expr) -> HashSet<String> {
+    let mut aus = HashSet::new();
+    for x in crate::alle_ausdruecke(e) {
+        let ExprArt::Ruf(r) = &x.art else { continue };
+        if !r.heisst("Has") && !r.heisst("Held") {
+            continue;
+        }
+        for a in &r.argumente {
+            if let ExprArt::Ort(o) = &crate::ohne_klammern(a).art {
+                aus.insert(o.basis.text.clone());
+            }
+        }
+    }
+    aus
 }
 
 /// **`M141` -- a LITERAL index in a PREDICATE, held against the declaration of the carrier.**

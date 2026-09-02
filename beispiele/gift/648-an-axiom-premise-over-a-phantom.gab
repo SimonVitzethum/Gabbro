@@ -1,0 +1,46 @@
+-- erwartet: D021
+-- **The assumption tier is where the relative claim rests, and its premise had no reader.**
+--
+-- `SPRACHE.md` says what an axiom is for: *"proved under A1…An"*, and an axiom's `requires`
+-- is the `An`. Measured 2026-09-02, position by position: at an `axiom … requires` **all
+-- twenty name kinds were accepted** -- a bare name, an unknown carrier, `old(x)`, `sizeof`,
+-- `lenof`, `aligned`, a quantifier variable nothing binds. Twenty of twenty, silent.
+--
+-- The reason was reach and not judgement: `domaene.rs` carried the exhaustive walk over
+-- predicate POSITIONS and an `axiom` was not among them. Its parameters are its local view,
+-- exactly as at a function -- one arm, and the position joins the other eleven.
+--
+-- **`Has(F)` stays exempt and must**, `beispiele/11-grammatikbefunde.gab` writes
+-- `requires Has(RDTSCP)` and `RDTSCP` is a machine feature, not a program name. The shape
+-- of that argument is `N054`'s question, not this one's.
+
+module gift::axiompraemisse_ueber_ein_phantom {
+
+static mut ZAEHLER : u32 = 0;
+
+axiom zeitgeber() -> u64
+    requires GIBTESNICHT == 1
+    effects  { pure }
+    falsifier sonde_zeitgeber;
+
+check sonde_zeitgeber {
+    claim    "the timer runs"
+    measures ZAEHLER
+    gates    zaehlen
+    can_fail {
+        if ZAEHLER >= 1 {
+            return false;
+        }
+        return true;
+    }
+    floor ZAEHLER >= 0
+}
+
+impl fn zaehlen()
+    effects { writes ZAEHLER }
+    costs   <= 10 ops
+{
+    ZAEHLER = 1;
+}
+
+}

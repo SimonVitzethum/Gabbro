@@ -1423,3 +1423,305 @@ fn ein_member_traegt_dieselbe_domaenenfrage() {
     faellt_nicht(&quelle("i in slots of T"));
     faellt_nicht(&quelle("forall q in slots of T : T.slots[q].x == 0"));
 }
+
+/// **`D021` -- the base name of a place in a PREDICATE resolves, in all twelve positions
+/// the walk reaches** (2026-09-02).
+///
+/// `M109` asked this of an `ensures` and of nothing else, `N053` of a device promise, `N032`
+/// of a `format … where`. Measured before the rule was written, 19 positions x 20 name kinds
+/// with the phantom name BESIDE a legitimate conjunct: **266 of 380 cells silent**
+/// (`messung/PREDICATE-NAMES.md`).
+///
+/// The severity is the reason the rule is an error and not a hint:
+///
+/// ```text
+/// requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
+/// requires GIBTESNICHT == 1        ->  0 errors, 0 hints          Lean: EXPORTED
+/// ```
+///
+/// *A dropped conjunct is visible; an exported one over a name that exists nowhere is not.*
+#[test]
+fn ein_praedikatsname_ohne_deklaration_faellt() {
+    // One preamble, several clauses -- the position is the variable and nothing else.
+    let mit = |klausel: &str| {
+        format!(
+            "module p {{\n\
+             const GRENZE : u32 = 8;\n\
+             static mut Z : u32 = 0;\n\
+             table T count GRENZE {{ slot {{ b : bool, w : u32, }} }}\n\
+             {klausel}\n}}"
+        )
+    };
+    let vertrag = |req: &str| {
+        mit(&format!(
+            "impl fn f(t : ptr<normal, rw> T, s : index into T)\n\
+             requires {req}\n    ensures t.slots[s].b\n\
+             effects {{ writes t.slots }}\n    costs <= 10 ops\n{{ t.slots[s].b = true; }}"
+        ))
+    };
+    faellt_mit(&vertrag("GIBTESNICHT == 1"), "D021");
+    faellt_nicht(&vertrag("GRENZE == 8"));
+    faellt_nicht(&vertrag("Z == 0"));
+    // A parameter, an `old(…)` over a global, and a quantifier variable -- all three legal.
+    faellt_nicht(&vertrag("t.slots[s].w == 0"));
+    faellt_nicht(&vertrag("old(Z) == 0"));
+    faellt_nicht(&vertrag("forall q in slots of t : t.slots[q].w == 0"));
+
+    // The body of a `spec fn`.
+    let spez = |rumpf: &str| {
+        mit(&format!(
+            "spec fn g(t : ptr<normal, r> T) -> bool effects {{ pure }} = {rumpf};"
+        ))
+    };
+    faellt_mit(&spez("GIBTESNICHT == 1"), "D021");
+    faellt_nicht(&spez("GRENZE == 8"));
+
+    // A table `invariant` -- and `Self` must stay silent, it is `M120`'s word.
+    let inv = |pred: &str| {
+        format!(
+            "module p {{\nconst GRENZE : u32 = 8;\n\
+             table T count GRENZE {{ slot {{ b : bool, w : u32, }}\n\
+             invariant i cost O(n) runs offline : {pred};\n}}\n}}"
+        )
+    };
+    faellt_mit(&inv("GIBTESNICHT == 1"), "D021");
+    faellt_nicht(&inv("forall q in slots of Self : Self.slots[q].w == 0"));
+
+    // The three loop clauses, and the `until` of a `retry` among them.
+    let schleife = |klausel: &str| {
+        mit(&format!(
+            "extern fn ende() -> never effects {{ diverges }};\n\
+             impl fn h(t : ptr<normal, r> T) -> u32\n\
+             effects {{ reads t.slots }}\n    costs <= 400 ops\n{{\n\
+             retry warten until t.slots[0].b\n    bounded 10 ops on_exceeded ende\n\
+             {klausel}\n    {{ let a = t.slots[0].w; }}\n    return 0;\n}}"
+        ))
+    };
+    faellt_mit(&schleife("invariant GIBTESNICHT == 1"), "D021");
+    faellt_nicht(&schleife("invariant GRENZE == 8"));
+
+    // The assumption tier -- twenty of twenty name kinds went through here.
+    let axiom = |req: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             axiom zg() -> u64 requires {req} effects {{ pure }} falsifier s1;\n\
+             check s1 {{ claim \"c\" measures Z gates zaehlen \
+             can_fail {{ if Z >= 1 {{ return false; }} return true; }} floor Z >= 0 }}\n\
+             impl fn zaehlen() effects {{ writes Z }} costs <= 4 ops {{ Z = 1; }}\n}}"
+        )
+    };
+    faellt_mit(&axiom("GIBTESNICHT == 1"), "D021");
+    faellt_nicht(&axiom("Z == 0"));
+    // **`Has(F)` is a machine feature and not a place** -- `beispiele/11` writes exactly
+    // this line, and a resolver that read it would refuse the corpus.
+    faellt_nicht(&axiom("Has(RDTSCP)"));
+
+    // The `when` of a compare-exchange -- the one position on the list that RUNS.
+    let tausch = |bed: &str| {
+        format!(
+            "module p {{\natomic A : u32 acquire;\n\
+             impl fn n() -> bool effects {{ writes A, publishes A }} costs <= 16 ops \
+             {{ let g = A exchange 1 when {bed} returns e publishes nothing; return g; }}\n}}"
+        )
+    };
+    faellt_mit(&tausch("old(GIBTESNICHT) == 0"), "D021");
+    faellt_nicht(&tausch("old(A) == 0"));
+}
+
+/// **The exemptions of `D021`, each forced by a file of the corpus.**
+///
+/// A predicate legitimately names things a body cannot, and a resolver that started refusing
+/// those would break correct programs. *This test is the counter-direction of the one above
+/// and it is the larger half:* the rule was measured against 108 clean files and 412 poison
+/// probes, and every line here stands for one of them.
+#[test]
+fn ein_praedikat_darf_nennen_was_ein_rumpf_nicht_kann() {
+    // `Held(L)` at every `impl fn` of `beispiele/01-tabelle.gab`, and in brackets too --
+    // between brackets the form is an ordinary CALL in the tree, and the argument would
+    // otherwise be read as a place.
+    let sperre = |req: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             lock L protects {{ Z }} rank 0 held <= 100 ops masks irqs;\n\
+             impl fn f() requires {req} effects {{ writes Z, locks L }} costs <= 40 ops \
+             {{ locks L {{ Z = 1; }} }}\n}}"
+        )
+    };
+    faellt_nicht(&sperre("Held(L)"));
+    faellt_nicht(&sperre("(Held(L))"));
+    faellt_nicht(&sperre("Held(L, shared)"));
+
+    // A `walk` step binds `it`, and nothing else does. `beispiele/07-seitentabelle.gab`.
+    let walk = |ab: &str, blatt: &str| {
+        format!(
+            "module p {{\n\
+             format Pte endian little {{ p : bool @0, g : bool @1, r : u62 @[63:2], }}\n\
+             walk W levels 2 {{ node : [Pte; 4],\n  down : r when {ab},\n  leaf : {blatt},\n}}\n}}"
+        )
+    };
+    faellt_nicht(&walk("it.p && !it.g", "it.p && it.g"));
+    faellt_mit(&walk("GIBTESNICHT == 1", "it.p && it.g"), "D021");
+    faellt_mit(&walk("it.p && !it.g", "GIBTESNICHT == 1"), "D021");
+
+    // A `traverse` variable is declared by its own line -- the false refusals of 2026-08-31
+    // that `aus_block` was built against, one rule further.
+    let rumpf = |inv: &str| {
+        format!(
+            "module p {{\nconst G : u32 = 4;\n\
+             table T count G {{ slot {{ w : u32, }} }}\n\
+             impl fn f(t : ptr<normal, r> T) -> u32 effects {{ reads t.slots }} \
+             costs <= 200 ops {{\n\
+             traverse i of t over slots of t by unvisited touches reads t.slots\n\
+             invariant {inv}\n  {{ let a = t.slots[i].w; }}\n  return 0;\n}}\n}}"
+        )
+    };
+    faellt_nicht(&rumpf("t.slots[i].w == 0"));
+    faellt_mit(&rumpf("t.slots[GIBTESNICHT].w == 0"), "D021");
+
+    // A REGISTER of a device -- `messung/fragmente/F09.gab`:72 names one in a walk step,
+    // and the four declaration maps carry device HEADS and not their registers.
+    let geraet = |ab: &str| {
+        format!(
+            "module p {{\nopaque type Pa = u64;\n\
+             format Pte endian little {{ p : bool @0, r : u63 @[63:1], }}\n\
+             device D(basis : Pa) at mmio {{ reg E : u64 @0x0 class rw fields {{ PS @7, }} }}\n\
+             walk W levels 2 {{ node : [Pte; 4],\n  down : r when {ab},\n  leaf : it.p,\n}}\n}}"
+        )
+    };
+    faellt_nicht(&geraet("E.PS == 0"));
+    faellt_mit(&geraet("F.PS == 0"), "D021");
+
+    // `ensures` keeps its own reader. A second refusal for one fault is worse than one, so
+    // the phantom there must still come back as `M109` and not as `D021`.
+    let nach = |ens: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             impl fn f() -> u32 in 0 .. 8 ensures {ens} effects {{ writes Z }} \
+             costs <= 10 ops {{ Z = 1; return 0; }}\n}}"
+        )
+    };
+    faellt_mit(&nach("result == GIBTESNICHT"), "M109");
+    assert!(
+        !codes(&nach("result == GIBTESNICHT"))
+            .iter()
+            .any(|(k, _)| *k == "D021"),
+        "`ensures` has a reader, and two refusals for one fault is worse than one"
+    );
+}
+
+/// **`N054` -- a feature name is ONE bare name, and until 2026-09-02 nothing said so.**
+///
+/// The measurement first, because the rule is a decision about where a line runs: eleven
+/// written forms across six predicate positions, **64 of 66 accepted**
+/// (`messung/PREDICATE-NAMES.md` §5).
+///
+/// **What stays undecided, deliberately:** whether the name IS a feature of the machine.
+/// `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID probe (A14); that probe
+/// does not exist, no `mints Has(F)` form exists, and nothing in the language declares a
+/// feature name. *A resolver would need a declared list, and there is none to hold it
+/// against* -- so the five bare-name forms below stay silent on purpose, and the test says
+/// so rather than leaving the reader to notice.
+#[test]
+fn eine_merkmalsforderung_ist_ein_name() {
+    let axiom = |req: &str| {
+        format!(
+            "module p {{\nconst G : u32 = 8;\nstatic mut Z : u32 = 0;\n\
+             lock L protects {{ Z }} rank 0 held <= 40 ops masks irqs;\n\
+             table T count G {{ slot {{ w : u32, }} }}\n\
+             axiom zg() -> u64 requires {req} effects {{ pure }} unfalsifiable \"probe\";\n}}"
+        )
+    };
+    // The shape, in all five ways it can be wrong.
+    faellt_mit(&axiom("Has()"), "N054");
+    faellt_mit(&axiom("Has(7)"), "N054");
+    faellt_mit(&axiom("Has(G + 1)"), "N054");
+    faellt_mit(&axiom("Has(T.slots)"), "N054");
+    // **The sharpest of the five**: every reader takes the first argument, so this reads as
+    // a demand for two features and is one for the first.
+    faellt_mit(&axiom("Has(RDTSCP, XSAVE)"), "N054");
+
+    // **The counter-direction, and the larger half.** A bare name goes through, whatever it
+    // is -- that is the question a declared list would answer and this compiler has none.
+    faellt_nicht(&axiom("Has(RDTSCP)"));
+    faellt_nicht(&axiom("Has(GIBTESNICHTAUFDERWELT)"));
+    faellt_nicht(&axiom("Has(L)"));
+    faellt_nicht(&axiom("Has(G)"));
+
+    // The form is writable in every predicate position, so the rule reads every one of
+    // them: a `requires` at a function, a device promise, a table `invariant`.
+    let fn_req = |req: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             impl fn f() requires {req} effects {{ writes Z }} costs <= 4 ops {{ Z = 1; }}\n}}"
+        )
+    };
+    faellt_mit(&fn_req("Has(7)"), "N054");
+    faellt_nicht(&fn_req("Has(RDTSCP)"));
+
+    let zusage = |req: &str| {
+        format!(
+            "module p {{\nopaque type Pa = u64;\n\
+             device D(basis : Pa) at mmio {{\n\
+             reg S : u32 @0x0 class r fields {{ A @31, }} requires {req}\n}}\n}}"
+        )
+    };
+    faellt_mit(&zusage("Has(RDTSCP, XSAVE)"), "N054");
+    faellt_nicht(&zusage("Has(RDTSCP)"));
+
+    let inv = |pred: &str| {
+        format!(
+            "module p {{\nconst G : u32 = 8;\n\
+             table T count G {{ slot {{ w : u32, }}\n\
+             invariant i cost O(n) runs offline : {pred};\n}}\n}}"
+        )
+    };
+    faellt_mit(&inv("Has(1) && forall q in slots of Self : Self.slots[q].w == 0"), "N054");
+    faellt_nicht(&inv("Has(RDTSCP) && forall q in slots of Self : Self.slots[q].w == 0"));
+}
+
+/// **`Has(F)` is not a call, and reading it as one put `E009` over a CORRECT program.**
+///
+/// `requires Has(X)` at a function is the very form `N016` was built to propagate
+/// (2026-08-19) -- and the call-graph collector read the same words as an edge to a function
+/// nobody declared, then declared the effect hull of that function a LOWER BOUND:
+///
+/// ```text
+/// impl fn jetzt() -> u64 requires Has(RDTSCP) effects { reads uhr } costs <= 40 ops
+///   -> hint: [E009] the call effects of `jetzt` are undecidable: `Has` is unknown to the graph
+/// ```
+///
+/// *One construct, two readers, and the second says the writer mistyped a name.* `Held(L)`
+/// has the same shape the moment brackets stand around it, because `(Held(L))` parses as a
+/// bracketed COMPARISON and not as `PredArt::Held`.
+#[test]
+fn ein_praedikatswort_ist_keine_rufkante() {
+    let quelle = |req: &str| {
+        format!(
+            "module p {{\nstatic mut Z : u32 = 0;\n\
+             lock L protects {{ Z }} rank 0 held <= 100 ops masks irqs;\n\
+             impl fn f() requires {req} effects {{ writes Z, locks L }} costs <= 40 ops \
+             {{ locks L {{ Z = 1; }} }}\n}}"
+        )
+    };
+    let ohne_e009 = |req: &str| {
+        let c = codes(&quelle(req));
+        assert!(
+            !c.iter().any(|(k, _)| *k == "E009"),
+            "`{req}` is a predicate word and not a call edge, but the hull says {c:?}"
+        );
+    };
+    ohne_e009("Has(RDTSCP)");
+    ohne_e009("Held(L)");
+    ohne_e009("(Held(L))");
+    ohne_e009("Z == 0 && Has(RDTSCP)");
+    ohne_e009("(Z == 0) && (Held(L))");
+
+    // **The counter-direction: a real unknown callee in a contract still says so.** A rule
+    // that filtered by "looks like a pseudo-call" rather than by the two names would have
+    // taken this hint with it.
+    let c = codes(&quelle("gibtesnicht() == 1"));
+    assert!(
+        c.iter().any(|(k, _)| *k == "E009"),
+        "an unknown callee in a `requires` must still make the hull a lower bound: {c:?}"
+    );
+}
