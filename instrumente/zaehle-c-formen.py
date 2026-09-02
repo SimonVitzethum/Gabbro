@@ -133,8 +133,38 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # form bigger** -- and that is the same movement as a growing axiom layer, which is why this
 # mark exists. *The form was already in the emitted C for `reg` read-modify-write; what is
 # new is that a SOURCE line can now produce it.*
-MARKE_TABELLE = 65
-MARKE_UNERLAUBT = 30
+# **65 -> 66 and 30 -> 31 on 2026-09-02, and the new form is MEASURED, not guessed.** The old
+# counter was rebuilt from `ff9d29a` into a scratch tree and run beside the new one; the two
+# form lists differ by exactly one entry and nothing was lost:
+#
+#     alt: 61 forms   neu: 62 forms   NEW: `void*`   GONE: --
+#
+# It comes from the `B2` binding rule. `void *` is now writable in a PARAMETER (and not in a
+# result), which is what makes `fwrite`, `memcmp`, `write` and `read` bindable -- and the
+# emitter writes C's own declaration for a bound name, so `const void *` reaches the artefact.
+# **The C semantics Gabbro must one day formalise got one form bigger**, and that is the
+# movement this mark exists to make visible.
+MARKE_TABELLE = 66
+MARKE_UNERLAUBT = 31
+
+# ---------------------------------------------------------------------------------------
+# **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price
+# nobody books.** (Owner, 2026-09-02.)
+#
+# Set A carries `goto` at 27 uses and `sprungmarke` at 16, permitted as *"ONLY as a generated
+# loop exit"*. The permission is right -- the emitter needs one exit form, and `39-auftrags-
+# dienst.c:147` shows it doing exactly that, with the jumped-over variable dead at the label.
+#
+# **What is not written anywhere is what it costs the OTHER side.** CompCert accepts `goto`;
+# the expense is not acceptance. It is that a lowering theorem over STRUCTURED forms becomes a
+# theorem over a control-flow graph: structural induction over the statement tree stops being
+# available, and every invariant that today rides on `while`/`if` nesting has to be re-stated
+# per program point. *That is the single most expensive construct on this list for `§50` #2,
+# and it sits in the ALLOWED set with no cost note beside it.*
+#
+# `§50` #2 came out of the Beta path on 2026-09-02 and the posten stands. **When it is picked
+# up, this line is where its price starts.**
+# ---------------------------------------------------------------------------------------
 
 # **The same sieve `zaehle-absagen.korpuslauf` uses, and for its reason** (W7). `rglob` from
 # the repo root walks into every agent worktree; the exclusion is RELATIVE to the root,

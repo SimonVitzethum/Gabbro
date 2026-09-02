@@ -2435,7 +2435,7 @@ Ziel.*
 |---|---|---|
 | **1** | **B1 Eintritt** | blockiert jeden Lernbarkeitstest und `K100` |
 | ~~**2**~~ | ~~**Die 65 Formen gegen CompCert**~~ | **AUS DEM BETA-PFAD GENOMMEN, Ordner, 2026-09-02.** Der Posten bleibt richtig und bleibt stehen — er gehört nur nicht vor `0.1.0`. *Eine Beta braucht einen Prüfer, der nicht lügt, keinen verifizierten Übersetzer;* der Satz stand schon in §50s eigener Schlussbemerkung und wurde von der Reihenfolge darüber nicht eingelöst. **−4 bis −6 h vom Restweg** |
-| **3** | **Der ungesehene Port** | die einzige Messung, die die Liste umschreiben kann — **und die einzige, die schlecht ausgehen kann** |
+| **3** | **Der ungesehene Port** | ~~die einzige Messung, die die Liste umschreiben kann~~ **— und die Begründung gehört schärfer, Ordner 2026-09-02:** *er ist nicht nur die einzige Messung, die schlecht ausgehen kann; er ist die einzige, deren Ausgang **die Beta-Liste selbst neu bewertet.*** Scheitert ein fremder Schreiber an Formen, die dieser Korpus nie gebraucht hat, dann sind Stunden dieser Liste **an der falschen Stelle investiert**. Daraus folgt die Reihenfolge: eine halbtägige Aufräumrunde davor ist richtig — *sie räumt, ohne Annahmen zu zementieren* — und **alles Größere danach ist falsch, bis das Ergebnis da ist** |
 | **4** | B2 Zeichenketten | mit der Ratschenrechnung davor |
 | **5** | B3 Auffahrtsweg | erst sinnvoll, wenn B1 und B2 stehen |
 | **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — heute 75 % bei einem Treiber |

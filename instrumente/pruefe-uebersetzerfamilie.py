@@ -89,7 +89,15 @@ MARKE_FAMILIENUNTERSCHIED = 0
 # the point of the probe, not a generator defect.*
 #
 # **The mark is PULLED, not healed** -- and it may only fall from here.
-MARKE_BEIDE_ROT = 3
+# **3 -> 0 on 2026-09-02, and the ceiling fell because the CLASSIFICATION got right, not
+# because the generator improved.** The three entry probes were re-identified as reverse
+# probes on 2026-09-01 (`-- erwartet: cc` in their own first line, added by the guardian lane
+# after `pruefe-emission.sh` named them), so they left this population and joined `umgekehrt`,
+# where their C is SUPPOSED to fall. The emitter is byte-identical on them.
+#
+# *A ceiling that falls for a reason other than the one it measures is worth saying so at the
+# mark* -- otherwise the next reader reads a generator that got better, and it did not.
+MARKE_BEIDE_ROT = 0
 
 
 def fassung(werkzeug):
