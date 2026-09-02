@@ -1,0 +1,37 @@
+-- erwartet: N052
+-- **Ein Pfad endet in den Daten, und keine Klausel bindet ihn.**
+--
+-- `open` ist der dritte der drei Namen, die der Korpus schrieb und keine Tafel las. Er faellt
+-- nicht an der SCHREIBWEISE, sondern an der DARSTELLUNG -- und das ist der Unterschied, den
+-- `N052` von `N041` trennt:
+--
+--     int open(const char *, int, ...)
+--
+-- Drei Gruende stehen darin, und nur einer ueberlebt eine Aenderung an Gabbro. Der Name ist
+-- vergeben (`N041`), die Zeile ist variadisch (`N041`), **und der Pfad traegt sein Ende in
+-- sich** (`N052`). *Am Tag, an dem Gabbro ein `char` bekaeme, verschwaenden die ersten
+-- beiden Gruende nicht -- aber der dritte bliebe auch dann stehen*, und darum steht er
+-- ZUERST: ein `[u8; N]` sagt, wo es endet, und sagt nichts ueber ein Byte darin. Wer es
+-- hierher gibt, verspricht einen Abschluss, den der Typ nicht verlangt.
+--
+-- Was gebunden werden KANN, ist, was eine Zahl nimmt: `write(fd, p, n)` schreibt das Ende in
+-- die Signatur, und `requires n <= N` loest `M115` an jeder Rufstelle ein. **Fuer einen
+-- Abschluss-Suchlauf gibt es keine solche Klausel** -- die Schranke ist ein Byte irgendwo in
+-- den Daten.
+--
+-- *Gemessen 2026-09-02:* `<fcntl.h>` traegt drei Zeilen in die Tafel und keine bindbare --
+-- `open` und `creat` lesen ihr Ende aus den Daten, `fcntl` ist variadisch. **Ein Kopf, der
+-- nichts freigibt, gehoert trotzdem hinein:** er weist ab, und Abweisen ist die Haelfte, die
+-- zaehlt.
+
+module gift {
+
+extern fn open(a : u64) -> u64 effects { reads a } costs <= 4 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}

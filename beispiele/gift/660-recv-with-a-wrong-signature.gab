@@ -1,0 +1,39 @@
+-- erwartet: N046
+-- **`recv` ist bindbar -- mit EINER Zeile, und das ist nicht diese.**
+--
+-- Bis zum 2026-09-02 lag `<sys/socket.h>` ausserhalb der Messung, und genau diese Zeile
+-- stand in `messung/fragmente/F05.gab`:93 und in `beispiele/gift/411`:17 und band ungeprueft:
+--
+--     extern fn recv(ep : u64) -> u64   ->  uint64_t recv(uint64_t ep);
+--     gabbro pruefe: 0 errors
+--     cc ohne Header:                   uebersetzt, bindet, und findet das ECHTE `recv`
+--     cc mit <sys/socket.h> daneben:    „abweichende Typen fuer »recv«"
+--
+-- Ein Argument statt vier, und ein `u64` dort, wo ein Deskriptor steht. **Der Ruf gibt vier
+-- Register weiter, die die Zeile nie gefuellt hat.**
+--
+-- *Die Zeile, die passt, steht in der Absage:*
+--
+--     extern fn recv(a : i32, b : ptr<normal, rw> T, c : u64, d : i32) -> i64
+--
+-- `ssize_t recv(int, void *, size_t, int)` -- gemessen mit `cc -aux-info` aus
+-- `<sys/socket.h>` und in `cnamen.rs::POSIX` eingetragen. **Sie ist bindbar aus demselben
+-- Grund wie `write`**: der Puffer traegt seine Laenge NEBEN sich, in `c`, und `requires
+-- c <= N` ist eine Pflicht, die `M115` an jeder Rufstelle einloest. Ein Ende, das in den
+-- DATEN steht, koennte keine Klausel binden -- das ist `N052` und ein anderer Mangel.
+--
+-- > **Die Gegenrichtung steht in `messung/proben/probe-c-namen-frei.gab`**: `close`, `raise`
+-- > und `shutdown` gehen mit ihrer richtigen Zeile durch, und `plattenschritt` geht durch,
+-- > weil ihn niemand vergeben hat. *Eine Tafel, die nur abweist, waere eine Wand.*
+
+module gift {
+
+extern fn recv(ep : u64) -> u64 effects { reads ep } costs <= 4 ops;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return 7;
+}
+
+}
