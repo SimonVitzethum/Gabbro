@@ -87,8 +87,8 @@ This is the question that outranks the rest, so it was measured exhaustively rat
 along `git log -- <path>` (which simplifies history and can drop a change that arrived
 through a merge).
 
-**Method.** `git rev-list --all` → **1091 commits** (the merged tree), each diffed against **every** parent,
-every `.gab` on both sides parsed into per-function ordered conjunct lists, and consecutive
+**Method.** `git rev-list --all` → **1091 commits** (the merged tree), each diffed against
+**every** parent, every `.gab` on both sides parsed into per-function ordered conjunct lists, and consecutive
 lists compared. Classification: `PERMUTATION` (same multiset, different order), `SHIFT` (an
 ordinal that exists on both sides carries different text, both texts present on both sides),
 `EDIT` (anything else).
@@ -397,3 +397,24 @@ kinds this report is about (`maintains`, `refines`, `ensures`, `requires` at a c
 `pruefe-grammatiktafel.py` is red on `state` in `master` and stays that way; it is not this
 lane's, and this lane's five touched files are `TODO.md`, `dokumente/GABBROV.md`,
 `dokumente/OFFEN.md`, this report and `messung/gabbrov/ratschenschluessel.py`.
+
+### The acceptance run on the merged tree
+
+```
+! ABNAHME ROT: 3 von 53 messenden Waechtern melden einen Befund.
+   pruefe-grammatiktafel.py   [1]  state …
+   pruefe-manifest.py         [1]  its subject, and not before.
+   zaehle-karten.py           [1]  … die Gestalt des Lochs in `M103` …
+```
+
+**Three of 53, and not one of them is this lane's.** `pruefe-grammatiktafel.py` is red on
+`state` — the locked zone, another instance's work. `pruefe-manifest.py` is E1's own gate,
+red until the manifest carries its subject. `zaehle-karten.py` stands on a broken ratchet
+from `master`. *The denominator moved 51 → 53 under this lane; the guardians that raised it
+came in with `master`, this lane added none.*
+
+`pruefe-zahlen.py` was red for one run and is green again — the `TODO.md` file count, §5
+above. Beside it, re-measured on the merged tree: `cargo test --offline --no-fail-fast`
+**402 passed, 0 failed**; the English ratchet **7 883 / 1 069**, unmoved; the vocabulary
+ratchet **221 / 208 / 333**, unmoved; `pruefe-waechter.py` **59 of 59**, unmoved — the
+consequence of putting the new instrument in `messung/gabbrov/` rather than `instrumente/`.
