@@ -210,3 +210,289 @@ worked around it the same way.*
 find exactly this found three of five drawn blind, and two independent hands confirm two of
 them. *The Gate 2 number is not void; it is better witnessed than when it was reported.*
 
+---
+
+## 2. Question 2 — does design C hold as mathematics?
+
+**It holds as an argument and it is not yet a thing.** Two of its three load-bearing steps
+have no implementation at all, the one that does is better than the document claims, and the
+wall the document treats as physics is an artefact that this run removed.
+
+### 2.1 Trust-base points 5 and 6, measured in lines
+
+§9 lists them as *"small, reviewable"*. Measured:
+
+| # | element | §9's word | lines today |
+|---|---|---|---:|
+| 5 | meaning of the obligation texts in the manifest | *"small, reviewable, unprovable"* | **not code** |
+| 6 | translation Lean fragment → SMT | *"keep it small; rejection instead of approximation"* | **0** |
+
+```
+grep -rniE '\bsmt\b|smtlib|\bz3\b' crates/ instrumente/ --include=*.rs --include=*.py --include=*.sh -l
+crates/gabbro-check/src/emit.rs          -- unrelated
+crates/gabbro-check/src/refinement.rs    -- ONE comment, about a format not chosen
+instrumente/zaehle-theorien.py           -- Isabelle's `smt` TACTIC
+instrumente/pruefe-zahlen.py             -- the same tactic
+```
+
+**There is no Lean-to-SMT translator in this tree.** Point 6 cannot be "kept small" because
+it does not exist; §9 describes a component in the present tense that has never been written.
+What stands in its place is `messung/gabbrov/*.smt2` — **393 lines of hand-written SMT-LIB
+covering five obligations** (`wc -l messung/gabbrov/*.smt2`), plus the 21 files this run's
+second hands added.
+
+*And point 5 is worse placed than point 6, because point 6 at least has a shape.* Today the
+manifest carries `aushaengen :: ensures #1`, so "the meaning of the obligation text" is: read
+the source, find the function, count conjuncts. §3 of this report measures what that costs.
+
+### 2.2 The translation that DOES exist is total, and the compiler enforces it
+
+§7's demand — *"a specification outside the fragment is rejected, not approximated"* — is met,
+mechanically, by the channel that exists. **This is the one place the document undersells
+itself.**
+
+```
+crates/gabbro-check/src/lean.rs                      2 200 lines
+programmlogik/Gabbro/Body.lean                         663 lines   (the meaning, hand-written once)
+```
+
+Every translation function returns `Result<String, LeanReason>`:
+
+```
+fn place_term(o: &Ort, c: &mut Ctx)   -> Result<String, LeanReason>      :605
+fn expr_term (e: &Expr, c: &mut Ctx)  -> Result<String, LeanReason>      :643
+fn pred_term (p: &Pred, c: &mut Ctx)  -> Result<String, LeanReason>      :739
+fn block_term(b: &Block, c: &mut Ctx) -> Result<String, LeanReason>      :884
+fn stmt_term (s: &Stmt, c: &mut Ctx)  -> Result<String, LeanReason>      :896
+```
+
+and `LeanReason` carries **33 named arms**, one per missing thing — the enum's own doc line
+says why a single "not supported" would have been wrong: *"each arm names a different missing
+thing -- a single 'not supported' would hide that they have different prices."*
+
+**Totality is not a promise here, it is a type.** `expr_term` matches `ExprArt` with **no
+wildcard arm** — the last arm is `ExprArt::FnWert(_) | ExprArt::Grund { .. }` — so `rustc`
+refuses the file if a new expression form is added and left unhandled. `pred_term` likewise
+ends at `PredArt::Quantor(_) | PredArt::Element(_, _) | PredArt::Erreicht { .. }`. Every
+wildcard that does occur on a translation path resolves to a named refusal:
+
+```
+:709  _ => Err(LeanReason::CallInExpression)
+:998  _ => return Err(LeanReason::CompoundAssign)
+:1093 _ => return Err(LeanReason::MatchNotOption)
+:1100 _ => Err(LeanReason::MatchNotOption)
+:785  _ => false      -- `is_option_value`, a predicate, not a translation
+:833  _ => {}         -- an item-collection loop
+:946  _ => None       -- a local closure whose `None` becomes :998's Err
+:1333 _ => {}         -- an item-collection loop
+```
+
+**So: it does not silently drop what it does not understand.** The document's fear is
+well-founded and the code already answers it — *for the Gabbro-to-Lean direction.*
+
+**And that is the sting.** The channel this measures is not point 6. Point 6 is
+Lean → SMT; `lean.rs` is Gabbro → Lean. **§7's property is proved for the channel that
+exists and unproved for the channel §9 names**, and the two are easy to confuse because the
+document discusses them in one breath. *The `.smt2` files of this run and the last one ARE
+the point-6 channel, and their refusal discipline is a person being careful.*
+
+### 2.3 The round trip is not closed — and Gate 2 exercised the direction design C does not need
+
+Design C: *"the solver delivers a certificate, Lean's kernel recomputes it."* Two measurements.
+
+**First: Z3 does emit certificates for the two rows that came back `unsat`.**
+
+```
+sed 's/(set-option :produce-models true)/&\n(set-option :produce-proofs true)/;
+     s/^(get-model)/(get-proof)/' messung/gabbrov/L23.smt2 > L23-proof.smt2
+/opt/verus/z3 L23-proof.smt2
+```
+
+| row | verdict | certificate | distinct proof rules |
+|---|---|---|---:|
+| `L23` | unsat | **167 lines, 8 631 bytes** for a 39-line problem | **20** |
+| `L39` | unsat | 23 lines, 1 273 bytes | 8 |
+
+`L23`'s rule histogram: `unit-resolution` 16, **`rewrite` 16**, `mp` 15, `monotonicity` 8,
+`def-axiom` 8, `proof-bind` 5, `hypothesis` 5, `trans` 4, `symm` 4, `quant-intro` 4,
+`lemma` 3, `refl` 2, `not-or-elim` 2, `mp~` 2, `iff-true` 2, `iff-false` 2, `asserted` 2,
+`and-elim` 2, `sk` 1, `nnf-pos` 1.
+
+*`rewrite` is the joint most frequent rule and it is the one with no fixed inventory* — it
+stands for a simplifier step, so a checker for it is a checker for the simplifier. **There is
+no Lean checker for any of these twenty rules in this tree**, and `programmlogik` has no
+mathlib by policy (`lakefile.toml` says why). So `G2` — *"certificate coverage stays low"* —
+is not answered by "Z3 produces a proof": the proof exists and nothing can read it.
+
+**Second, and it outranks the first: Gate 2 produced no `passed` that a certificate would have
+protected.** Of the five rows, two came back `unsat` and three came back `sat`.
+
+> **A `sat` is a MODEL, and a model needs no certificate and no kernel.** It is re-checked by
+> substitution, which is decidable and cheap. Z3 sitting in the trust base does not matter for
+> a refutation at all.
+
+So the three refutations — the entire content of the Gate 2 finding — are **sound whatever one
+thinks of design C**, and the two `unsat`s, the only place design C bites, were never
+certificate-checked. *Gate 2 measured the direction in which the trust question is empty.*
+That is not a criticism of the run; it is what a first sample of five is likely to produce.
+But it means **`G2` is completely open after Gate 2**, not partly answered by it.
+
+**The chain today, counted in mechanised steps:**
+
+```
+Gabbro source  --human-->  PFLICHTEN.md row  --human-->  V1.lean Prop  --human-->  .smt2  --> z3
+```
+
+Three human steps, zero mechanised. `GABBROV.md` §2's sentence — *"GabbroV does not read the
+Gabbro program. It reads the manifest"* — describes none of them. §3 measures how far that is
+from today.
+
+### 2.4 The wall is an ARTEFACT, and this run removed it
+
+**This is the finding of question 2**, and the mandate names the consequence itself: *"a fixed
+encoding that makes 20 answer would change the whole project's outlook."*
+
+First, reproduced exactly (`./messung/gabbrov/lauf-L05.sh 16 19 20 21 22`; `free -g`: 31 total,
+19 available):
+
+```
+  bound=16    bytes=11393     answer=sat      time=  0.11s
+  bound=19    bytes=15125     answer=sat      time=  0.35s
+  bound=20    bytes=16497     answer=unknown  time= 60.05s
+  bound=21    bytes=17933     answer=sat      time=  0.25s
+  bound=22    bytes=19433     answer=unknown  time= 60.10s
+```
+
+**Then the same files, with nothing changed but the solver's random seed:**
+
+```
+./messung/gabbrov/ohne-schranke/lauf.sh          # PART 1
+  bound=20  seed=0   answer=unknown   time= 60.08s     <- the default; what §2.5 measured
+  bound=20  seed=1   answer=sat       time=  0.09s
+  bound=20  seed=2   answer=sat       time=  0.20s
+  bound=20  seed=7   answer=sat       time=  0.40s
+  bound=22  seed=0   answer=unknown   time= 60.07s
+  bound=22  seed=1   answer=sat       time=  0.14s
+  bound=22  seed=2   answer=sat       time=  0.25s
+  bound=22  seed=7   answer=sat       time=  1.13s
+```
+
+**Six of six non-default seeds answer, in 0.09 to 1.13 seconds.** The bound is not the
+variable; the seed is. *A wall that moves when you change the random seed is not a wall — and
+"non-monotone in the bound" was the visible half of "not a function of the bound at all".*
+
+**And the second half removes the bound instead of the seed.** `cdt_wohlgeformt` is *"every
+slot reaches WURZEL via parent"*, and `V1.lean` renders it as `reachesIn`, an `ite` chain
+unrolled to the table's `count`. That unrolling is the only reason a bound appears in the file
+at all. The same predicate has a bound-free characterisation as a **rank**:
+
+> `rank(WURZEL) = 0`, and for `x != WURZEL`: `parent(x) = some p`, `rank(x) = rank(p) + 1`,
+> `1 <= rank(x) < N`.
+
+A rank witnesses reachability, so a model of the rank form is a model of the reaches form and
+**a refutation transfers**. The negated goal needs no depth either: `unlink` sets
+`parent[s] := None`, so for `s != WURZEL` the unrolling falls to its `| _ => false` arm at the
+first level, at every depth. `messung/gabbrov/ohne-schranke/gen-rank.py` carries the argument
+in its own docstring.
+
+```
+./messung/gabbrov/ohne-schranke/lauf.sh          # PART 2
+  N=20       bytes=1365   answer=sat      time= 0.029s
+  N=22       bytes=1365   answer=sat      time= 0.027s
+  N=64       bytes=1365   answer=sat      time= 0.031s
+  N=4096     bytes=1369   answer=sat      time= 0.037s
+  N=80256    bytes=1371   answer=sat      time= 0.030s
+```
+
+**The corpus's own number — `F01.gab`:56, `const NSLOTS : u32 = 80256` — answers in 0.030 s,
+and the file does not grow.** 1 371 bytes against 140 KB at bound 64 and 16 497 bytes at the
+bound that timed out. *The four orders of magnitude §2.5 reports between where the solver
+stops and where the obligation lives are four orders of magnitude of unrolling, not of
+difficulty.*
+
+Both controls hold, and without them the paragraph above would be worthless:
+
+```
+CONTROL A -- the same file with s = WURZEL. It MUST say `unsat`.
+  N=20       answer=unsat    time= 0.016s
+  N=80256    answer=unsat    time= 0.016s
+CONTROL B -- is the PREMISE alone satisfiable? An `unsat` premise passes everything.
+  N=20       answer=sat      time= 0.028s
+  N=80256    answer=sat      time= 0.029s
+```
+
+**Independent corroboration, and it arrived without being asked for.** The blind second
+encoder of `L01` — which had never heard of §2.5 — hit `unknown` at the 60 s cap on two of its
+own quantified files, named the quantification as the cause, and settled both by grounding at
+`N = 3`, where they answer in 0.021 s. *Two hands, two encodings, the same wall and the same
+door out of it.*
+
+**What this does and does not settle.** It settles that DEMAND 3 is not blocked by
+tractability: `L05` is decidable at the corpus's own size, today, on this hardware. It does
+**not** settle that every reachability obligation has a usable rank characterisation — a rank
+is a *witness* for reachability, and the direction needing care is the one where reachability
+must be **proved** rather than refuted, i.e. an `unsat`. *Four of the five reachability rows
+(`L04`, `L09`, `L15`, `L16`) were not drawn and were not measured.* The Gate 2 closing note
+asks whether these rows need "an axiomatised transitive closure instead of an unrolling"; for
+the refutation direction the answer is **yes, and it costs 1 371 bytes.**
+
+### 2.5 §6's missing sentence — WRITTEN, and its second half is the finding
+
+The mandate permits this exception if the lemma is genuinely one theorem. **It is, and it is
+one line.** `programmlogik/gabbrov/V2.lean` §1.1; `lean` accepts the file with exit 0 and
+`grep -c sorry` is 0:
+
+```lean
+abbrev Assumptions := World → Prop
+
+theorem vacuous_under_assumptions
+    (pre : Pre) (h : vacuous pre = true) (A : Assumptions) :
+    ∀ w : World, A w → holds w pre = false :=
+  fun w _ => vacuous_sound pre h w
+```
+
+`A` is universally quantified over every assumption set there could ever be, so the theorem
+needs none of the eight German sentences — **it does not touch §9's stop-list**, and it is a
+stronger statement than one about the eight would have been. The axiom footprint matches the
+existing `vacuous_sound`:
+
+```
+#print axioms GabbroV.V2.vacuous_under_assumptions   -- [propext, Quot.sound]
+#print axioms GabbroV.V2.detection_is_incomplete     -- [propext]
+```
+
+**And the second half of §6's sentence is where the value is.** §6 also says the check is
+*"sound in the detection direction and INCOMPLETE"*, and incompleteness is the claim that the
+implication runs one way — a counterexample, not a caveat. It is now exhibited:
+
+```lean
+def preOpen : Pre := [.eq (.global "x") (.int 1)]     -- has a model; the check stays silent
+def APins : Assumptions := fun w => w (.global "x") = .int 0
+
+theorem detection_is_incomplete :
+    ∃ (pre : Pre) (A : Assumptions),
+      vacuous pre = false ∧ (∀ w : World, A w → holds w pre = false) := ...
+```
+
+> **The licence protects `vacuous` verdicts. V2a produced none.**
+>
+> ```
+> LEAN_PATH=.lake/build/lib/lean lean programmlogik/gabbrov/V2.lean
+> "register entries (L10 and L60 each contribute two arms): 30"
+> "  vacuous:      0"
+> "  not vacuous:  30"
+> "  undecided:    0"
+> ```
+>
+> All thirty verdicts are `notVacuous`, and `notVacuous` is exactly the side
+> `vacuous_under_assumptions` does **not** carry. Every one of them can flip once the eight
+> assumptions are formalised, and the run had no way to see it coming — the assumptions were
+> not among its inputs.
+
+*So `GABBROV.md` §10's V2a row — "of the 55 sayable obligations, 31 carry a precondition and
+NONE is vacuous" — is true and provisional in a way the row does not say.* The theorem that
+licenses running the check early is also the theorem that dates its result. **That is a
+correction to the reading of a green run, not to the run**, and it is why the sentence
+belonged in the file rather than in a report: a reader of `V2.lean` now meets it beside the
+count it qualifies.
+
