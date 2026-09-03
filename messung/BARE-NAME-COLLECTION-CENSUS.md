@@ -39,19 +39,19 @@ denominator below.
 | | count |
 |---|---:|
 | **raw `.insert(...)` call sites (declaration-name-shaped key)** | 186 |
-| **distinct tables these sites populate** | 72 |
-| — bare-keyed AND built by walking across `module` blocks (`fuer_jedes_item`/`fuer_jedes_item_im_modul`) | **50** |
-| — of those, deliberately and narrowly protected (documented, see `bindung.rs` below) | 1 |
-| — of those, closed today by a named refusal at the collection site (`emit::Namen::geraete`) | 1 |
-| — **collision-capable and open** (`J`) | **48** |
+| — of those, into a table rebuilt fresh per item/function body and discarded after it (a `let`-binding map, a per-function type environment, a per-device register scratch map) — cannot span modules regardless of key form, and not counted below | most of the 186 |
+| **`N` — distinct WHOLE-UNIT tables identified by rolling the remainder up per struct field / named local** | **70** |
+| — bare-keyed (`K`) | **48** |
+| — of `K`, deliberately and narrowly protected (documented, see `bindung.rs` below) | 1 |
+| — of `K`, closed today by a named refusal at the collection site (`emit::Namen::geraete`) | 1 |
+| — of `K`, **collision-capable and open** (`J`) | **46** |
 | — qualified by module at the point of insertion (`qualifiziere`/`q(...)`/`schluessel(modul,…)`) | 22 |
-| — per-item/per-function-local (fresh per declaration, discarded after; cannot span modules) | ~50 raw sites, rolled into the 72 as scratch state, not separately tabled here |
 
-**`N = 72` distinct tables, of which `K = 50` are bare-keyed across module boundaries, of
-which `J = 48` are open and collision-capable.** That is not a small tail: it is the
-majority of the whole-unit collectors in this crate. Confidence is not uniform across the
-row — the sixteen tables marked "verified" below were read in full, including their reader,
-before being counted; the rest were classified by the same structural test (`fuer_jedes_item`
+**`N = 70` whole-unit tables, of which `K = 48` are bare-keyed across module boundaries, of
+which `J = 46` are open and collision-capable.** That is not a small tail: it is nearly
+two-thirds of the whole-unit collectors in this crate. Confidence is not uniform across the
+list — the 23 tables marked "read" below were read in full, including their reader, before
+being counted; the other 23 were classified by the same structural test (`fuer_jedes_item`
 family + a bare `name.text.clone()` key, no subsequent duplicate check) applied consistently,
 without independently deriving a poison example for each one.
 
@@ -100,7 +100,7 @@ it only ever matches a name that happens to already be fully qualified? Read at
 This document's population is upstream of that one and does not overlap with it. A bare
 *read* against `Umgebung` is recoverable by fixing the read alone, because the *write* side
 already qualified the data — the module information survived construction and was merely
-looked up wrong. **None of the 48 tables below have that safety net.** Their bare `.insert`
+looked up wrong. **None of the 46 tables below have that safety net.** Their bare `.insert`
 is the *first and only* place the module is ever known; by the time anything reads the
 table, the fact that two declarations came from different modules has already been thrown
 away, and no read-side fix — however module-aware — can put it back. `zaehle-karten.py`'s
@@ -110,7 +110,7 @@ table*, which is exactly the shape of the fix `emit::Namen::geraete` got today
 
 ## The reference pattern already in the tree
 
-Twenty-two of the 72 tables already do this correctly, and they show the fix is not exotic
+Twenty-two of the 70 tables already do this correctly, and they show the fix is not exotic
 — `umgebung.rs` alone carries a dozen of them, ALL through one two-character habit:
 
 ```rust
@@ -136,7 +136,7 @@ register-class checker each grew their own copy of the device table instead of r
 fix for the two device-info collectors below, once someone chooses to make it — but making
 it is not this document's job.
 
-## The 48 open, collision-capable tables
+## The 46 open, collision-capable tables
 
 Grouped by file. `depth` marks how the entry was established: **read** — the collection
 site, its scope, and at least one reader were read in full; **pattern** — classified by the
@@ -146,7 +146,7 @@ the file's own style, without separately tracing every reader.
 | File : site | Table (what it maps) | Feeds | depth |
 |---|---|---|---|
 | `emit.rs`:937 (`traegertyp` reads it) | `Namen::typen` — type name → declared type expr | casts/returns/`let` narrowing against a `type` decl | read — **named OPEN DEBT today at `5165cd8`, identical shape to the closed `geraete`** |
-| `emit.rs` (`emittiere_mit`, ~770–1280) | `Namen::{formatfelder, uebergaenge, atomics, markierte, ergebnistyp, funktionen, kapazitaet, konstwert, statiken, verbundfeld, tabellen/tabellenglobal/benutzt}` | C emission: field readers, transition dispatch, atomic memory order, tagged-variant sets, result types, ghost-erasure signatures, table storage decision | pattern (16 sibling fields of the same struct, same collection routine, same missing guard) |
+| `emit.rs` (`emittiere_mit`, ~770–1280) | `Namen::{formatfelder, uebergaenge, atomics, markierte, ergebnistyp, funktionen, kapazitaet, konstwert, statiken, verbundfeld, tabellen/tabellenglobal/benutzt}` | C emission: field readers, transition dispatch, atomic memory order, tagged-variant sets, result types, ghost-erasure signatures, table storage decision | pattern (13 sibling fields of the same struct, same collection routine, same missing guard) |
 | `m3.rs`:518 `geraetetabelle` | device name → per-register class/fields/phase/fallibility | `m3::registerklassen` (`R002`/`R003`), `m1.rs::Pruefer.geraete` (`«B26»` fallible-read binding), `phasen.rs::Regumfeld.geraete` (`«B18»` per-phase class) | read — **structurally identical to `emit::Namen::geraete`; not yet named anywhere** |
 | `m1.rs`:180 `sammle_spec_fns` | spec-fn name → arity | `refines` (`M131`/`M132`) — and even a *qualified* `refines mod::name` is truncated to the bare last segment before this lookup (`m1.rs`:3943) | read |
 | `m1.rs`:192 `sammle_spezifikationen` | spec-fn/table-invariant/walk-invariant/group-invariant name → arity | `maintains` (`M112`) | read |
@@ -174,9 +174,10 @@ the file's own style, without separately tracing every reader.
 | `lean.rs` `static_carriers`, `verdicts::fns` | static/function name → table it points at / (module, decl) | same channel | pattern |
 | `blindstellen.rs` `typklassen`, `tafel_orte::art` | type/format/table/device/static/atomic/accumulates name → coarse class label | `gabbro blindstellen` coverage measurement ONLY — not part of `pruefe`/`emit` | read — lowest severity: a coarse, usually-identical label distorts a coverage statistic, nothing a program depends on |
 
-That is 27 rows; several stand for more than one sibling field populated by the same
-collection routine under the same missing guard (`emit.rs`'s 16, `geteilt.rs`'s and
-`paarung.rs`'s and `lean.rs`'s groups), which is where the 48 comes from. The severity
+That is 28 rows; several stand for more than one sibling table populated by the same
+collection routine under the same missing guard (`emit.rs`'s 13, plus two-table pairs in
+`namen.rs`, `geteilt.rs`, `lean.rs` and `blindstellen.rs`), which is where the 46 comes
+from — counted precisely, not estimated: 28 rows, 46 tables, 23 read + 23 pattern. The severity
 spans a wide range on purpose — from `m3::geraetetabelle` and `geteilt.rs::sperren` (both
 structurally identical to the headline defect: the WRONG module's per-declaration fact gets
 used, silently, for something safety-relevant) down to `blindstellen.rs` (a coverage count
@@ -207,7 +208,7 @@ guarantee.
 
 ## Verdict
 
-**`J = 48` is not zero, and it is not close to zero.** The two `emit::Namen` fields that
+**`J = 46` is not zero, and it is not close to zero.** The two `emit::Namen` fields that
 opened this investigation are not an isolated pair — they are two instances of a shape that
 recurs, largely unremarked, in the checker's oldest and newest passes alike: `m1.rs`'s
 `refines`/`maintains` machinery, the entire lock-ordering family in `geteilt.rs` and
