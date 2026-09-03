@@ -259,3 +259,60 @@ fault this week already produced six times.
 
     ssh ki-pc-fisch-101 'cd gabbro-b10 && ./target/debug/gabbro pruefe messung/fragmente/F09.gab'
     ssh ki-pc-fisch-101 'cd gabbro-b10 && ./target/debug/gabbro emit  beispiele/gift/571-walk-ebenen-laufen-um.gab'
+
+---
+
+## 7. The design, written out — because it is cheap and it is NOT this item
+
+If the resolver clause is ever built, it should be built for its own reason and under its
+own name. Here is the whole of it, and every part is already in the language:
+
+```gabbro
+walk Seitenabstieg levels 4 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent,
+    leaf : it.gross,
+    via  knoten_zu,                              -- the one new position
+}
+
+impl fn knoten_zu(rahmen : u64) -> ptr<normal, ro> Seitenabstieg or nicht_abgebildet
+    effects { reads frames }
+    costs   <= 3 ops
+{ … }
+```
+
+| part | already there | evidence |
+|---|---|---|
+| `via` | word, two positions | `crates/gabbro-syntax/src/kw.rs`:321; `SYNTAX.md`:250, :717 |
+| `or <reason>` on a `fn` head | the failure convention | `SYNTAX.md`:758 — `"fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]` |
+| the walk name as a pointee type | in use | `beispiele/gift/571`:48 — `impl fn zaehle(p : ptr<normal, rw> T)` |
+| the descent itself | emitted for eleven declarations | `emit.rs`:10342 |
+
+**Word count 221 → 221. Positions 333 → 334. No new pass. `exec` untouched.**
+
+And the descent already says of itself what makes this the cheap half:
+
+> `emit.rs`:10320 — *"This descent walks ONE path and claims nothing about the domain"*
+
+**`levels` steps, not `node_length ^ levels`.** A named resolver makes `W_absteigen`
+callable from Gabbro and keeps the cost promise intact. The construct the decision named —
+`traverse … over mappings of` — is the other half, the one that costs `68719476736` and has
+no caller. *They were booked as one thing, and they are two: one cheap and unwanted, one
+wanted by nobody and not cheap.*
+
+---
+
+## Summary
+
+| question | answer | measured by |
+|---|---|---|
+| sites wanting `traverse … over mappings of` | **0 live of 57** (the 1 is a poison probe) | corpus grep + `gabbro emit` sweep over every `.gab` |
+| sites wanting the named resolver | **1**, and it is a test driver | `grep -rn 'absteigen'` |
+| criterion 1, no new source word | **holds** — `via` exists, «B13» shape | `zaehle-wortschatz.py` → 221 / 208 / 333 |
+| criterion 2, one pass slot | **falls** — `K001` computes `68719476736` | `gabbro pruefe` on a `levels 4` walk |
+| criterion 3, Isabelle builds | baseline **green**, nothing proposed | `isabelle build -D .` → `EXIT=0`, 6 s |
+| criterion 4, `exec` untouched | **holds** | `AUFTRAG-GABBROV.md` §9 |
+| tree unbroken | `cargo test` **402 / 0** | `--offline --no-fail-fast`, 31 lines summed |
+
+**Verdict: do not build «B10». The demand is zero, criterion 2 falls, and the owner said in
+advance that this is the answer and not a failure.**
