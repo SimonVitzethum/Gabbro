@@ -2446,7 +2446,7 @@ Ziel.*
       | | Prüferstand heute | der Erzeuger sagt zusätzlich |
       |---|---|---|
       | ~~**F09**~~ **ERLEDIGT 2026-09-03** | ~~1 Fehler — `K001`~~ **0** | ~~`device … at normal`~~ — **und es waren DREI Absagen und nicht eine:** `device … at normal`, `walk … levels` über einem `const`-Namen, `mappings of`. *Die Zeile hier hat die erste gelesen und die zwei dahinter nicht* |
-      | **F01** | 3 — 2× `M140`, `N029` | — |
+      | ~~**F01**~~ **ERLEDIGT 2026-09-03** | ~~3 — 2× `M140`, `N029`~~ **0** | — *(und die Zeile stimmte: der Erzeuger hatte gegen F1 nichts. Was fehlte, waren drei Prüferabsagen, und alle drei hatten recht)* |
       | **F05** | 4 — 2× `N046`, `M134`, `N041` | `match` über einen undeklarierten Ruf |
       | **F03** | **27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009` | `queue` — **«B10»: `traverse` liefert keinen Wert** |
 
@@ -2482,6 +2482,38 @@ Ziel.*
       > braucht einen benannten Auflöser von Rahmen zu lesbarem Knoten — im erzeugten C ist
       > er der Parameter `knoten_zu`, und in Gabbro gibt es keine Klausel, in der er stünde.
       > *Das ist «B10»-förmig und gehört dem Ordner.*
+
+      > **F01 steht seit demselben Tag, und `H` ist 2** (*8 von 10 sind DURCHGESTOCHEN*).
+      > **Hier waren ALLE DREI Absagen richtig und der Ausschnitt falsch**, und die erste
+      > Hälfte ist ein Widerspruch, den `FRAGMENTE.md` mit sich selbst hat: vierzig Zeilen
+      > über dem Dateiende steht `tagged type ObjectKind = { Memory(Region), … Reply(ReplyRef),
+      > … Dma(DmaRef) }`, und am Dateiende — *nachgetragen 2026-08-15* — stehen drei
+      > `extern fn`, die `MemObj`, `DmaObj`, `ReplyObj` und `Allok` nennen. Vier Namen, die
+      > der Ausschnitt nirgends deklariert; die Vervollständigung hat sie als `= u64`
+      > erfunden, weil ein unerklärter Griff nichts anderes sein kann. **`M140` sieht zwei der
+      > drei Verwechslungen; die dritte (`Memory(Region)` an `MemObj`) bleibt still**, weil
+      > beide Seiten skalare Namen über `u64` sind — und die Regel sagt diese Grenze selbst
+      > aus. Die zweite Hälfte ist `N029`: `delete_leaf` kann scheitern, und der einzige Rufer
+      > sah nicht hin. *Bezahlt, mit einer Kostenschranke, die von 16 452 480 auf 16 612 992
+      > steigt — abgeschrieben und nicht geschätzt.*
+      >
+      > **Und dahinter lagen ZWEI Erzeugerlöcher, die vorher niemand sehen konnte.** Der
+      > ganze Korpus führte `or R` bis dahin nur an `extern fn`; eine `impl fn` mit
+      > Fehlerkanal und OHNE Ergebnis hatte deshalb gar kein C. Der Ruf wurde abgewiesen
+      > (*„`let … else` whose call has no resolvable type"* — die Deklarationsseite wusste es
+      > längst besser), und die Erfolgsrückgabe `return true;` schrieb niemand: der Rumpf lief
+      > aus einer `bool`-Funktion heraus, und `cc -Wall -Wextra -Werror` sagte dazu bei `-O0`
+      > wie bei `-O2` nichts. ***Das erste Loch verdeckte das zweite***, und das zweite hat
+      > als einzigen Zeugen den LAUF — genau der Grund, aus dem `H` Durchstiche zählt und
+      > nicht Übersetzungen.
+      >
+      > **Was hier NICHT bezahlt wird:** `cdt_wohlgeformt` quantifiziert über die ganze
+      > Tabelle und verbietet damit einen freien Platz, während `release_slot` genau einen
+      > zurücklässt — und `unlink`s `ensures … parent == None` widerspricht seinem eigenen
+      > `maintains cdt_wohlgeformt` vier Zeilen weiter. Kein Pass sieht das; ein Löser fand es
+      > in 20 ms (`OFFEN.md` O4). *Ein Durchstich misst, was das C rechnet, nicht was die
+      > Zusage behauptet* — und die zwei Sätze stehen nebeneinander, damit niemand den ersten
+      > für den zweiten hält.
 - [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
       rote Wächter seit drei Tagen.**
 

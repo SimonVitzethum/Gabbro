@@ -30,6 +30,10 @@
 > Zahlen, `-O0`/`-O2`/UBSan/ASan) — und die Einloesung war zur Haelfte eine Erzeugerreparatur
 > und zur Haelfte eine am Korpus. *Beide stehen im Kopf von `messung/fragmente/F09.gab`, und
 > keine von beiden macht die Datei gruen, indem sie eine Zusage abschwaecht.*
+>
+> **Und noch am selben Tag `H = 2`.** F1 ist durchgestochen (`lauf "fragment1"`, fuenfzehn
+> Zahlen, davon zwei auf dem FEHLERWEG) -- und dort waren alle drei Absagen richtig und der
+> Ausschnitt falsch. *`GEMESSEN` sind damit F1, F2, F4, F6, F7, F8, F9, F10.*
 
 ```bash
 ./instrumente/zaehle-pflichten.py --haengend

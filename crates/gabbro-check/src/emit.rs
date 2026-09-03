@@ -5972,6 +5972,33 @@ fn funktion(
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
     }
+    // **The SUCCESS return of an `or R` body, and until 2026-09-03 it was not written at
+    // all.**
+    //
+    // A Gabbro function without a result carries no closing `return` -- C's `void` return is
+    // implicit and nobody misses it. **An `or R` function is `bool` in C**, and there the
+    // same body runs off the end of a non-void function: the caller reads an indeterminate
+    // value out of `if (!f(...))` and takes a branch on it. *Undefined behaviour, and `cc
+    // -Wall -Wextra -Werror` compiled it at `-O0` and at `-O2` -- `-Wreturn-type` does not
+    // reach a `static` function nothing has called yet.*
+    //
+    // It survived because **nothing ever emitted such a body.** The corpus carried `or R`
+    // exclusively at `extern fn` until `messung/netz/udp-echo.gab`, and that one returns a
+    // VALUE on every path, so the explicit `return <x>;` arm two hundred lines up wrote the
+    // `return true;` for it. A body with an error channel and no result had no lowering to
+    // fall out of -- `let … else` refused every call to it, one door earlier.
+    //
+    // > *Two holes in one form, and the first one hid the second:* repairing the call side
+    // > is what made this reachable, and the repair had to be measured at the RUN and not at
+    // > `cc`, which had nothing to say.
+    //
+    // The line is written unconditionally. Where the body already returns on every path it
+    // is dead code, and C says nothing about that -- `-Wunreachable-code` has been a no-op
+    // in GCC for years, and the whole corpus is measured against `-Werror` at both levels.
+    // *An extra statement that cannot run is the cheap side; a missing one is the run.*
+    if f.fehler.is_some() {
+        aus.push_str("    return true;\n");
+    }
     aus.push_str("}\n");
 }
 
@@ -7185,7 +7212,32 @@ fn anweisung(
                 .map(|(_, a)| ausdruck(a, u, absagen))
                 .collect();
             let mut ruf_args = args;
-            let hat_wert = !sig.geist_rueck;
+            // **A callee with `or R` and NO result type binds nothing -- and until 2026-09-03
+            // that made it UNCALLABLE.**
+            //
+            // The declaration side has always written the result out separately: `funktion`
+            // gives every `or R` function `bool` and pushes a `*_wert` parameter **only when
+            // `f.ergebnis` is there** -- the error channel takes the return slot, and the
+            // result leaves through `_wert`. The call side did not mirror it: it pushed
+            // `&{binding}` for every
+            // callee that does not return a GHOST, then asked `wert_ctyp` for a type that a
+            // result-less declaration does not have, and refused with *"`let … else` whose
+            // call has no resolvable type"*.
+            //
+            // Measured on a five-item file with no fragment in it: `pruefe` says
+            // `0 errors, 0 hints`, `emit` refuses. **`or R` without a result was declarable,
+            // checkable, and lowered at its declaration -- and no CALL to it lowered**, while
+            // `let … else` is the one form of error propagation this language has
+            // (`SPRACHE.md` §8.1). *The same shape as «B9» at `fnptr`: a form one can declare
+            // and not use.* `messung/fragmente/F01.gab`'s `delete_leaf` is one, and
+            // `beispiele/gift/668` is the fence.
+            //
+            // The answer stands two fields up in `Signatur` and needed no new rule: *"Does it
+            // return a ghost? Then `let x = f(…)` loses its binding, **not its call**."* A
+            // missing result is the same case -- there is nothing to bind and the call is
+            // unaffected. `rueck` is the declared return type, read from the same signature
+            // the error channel comes from.
+            let hat_wert = !sig.geist_rueck && sig.rueck.is_some();
             if hat_wert {
                 ruf_args.push(format!("&{}", l.name.text));
             }

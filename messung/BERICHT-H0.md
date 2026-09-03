@@ -193,4 +193,154 @@ command, none carried forward.*
 
 ---
 
-*(F01 and F05 follow; the run stops after F05 by instruction)*
+## F01 — the capability space
+
+### All three refusals were right, and the excerpt contradicts itself
+
+`gabbro emit messung/fragmente/F01.gab` printed **no `C001` at all** at `3b17d9a` — the
+emitter had nothing against this file, which is more than the plan's row says. What stood
+between F01 and its C were three checker errors, and each one is the fragment's.
+
+#### 1 + 2. Two `M140` — a record handed to a parameter that declares a number
+
+    :307:50  argument `d` requires `…::DmaObj`,   the value has `…::DmaRef`
+    :308:52  argument `r` requires `…::ReplyObj`, the value has `…::ReplyRef`
+
+**Both sides stand in the FROZEN excerpt, forty lines apart, and disagree.** At its head:
+
+    tagged type ObjectKind = { Memory(Region), … Reply(ReplyRef), … Dma(DmaRef), … };
+
+and at its foot, *nachgetragen 2026-08-15* — an amendment, not the 2026-08-14 core:
+
+    extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) …;
+    extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) …;
+    extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) …;
+
+`Allok`, `MemObj`, `DmaObj` and `ReplyObj` are **declared nowhere in the excerpt**. The
+completion invented all four as `opaque type … = u64`, because an unexplained handle cannot
+plausibly be anything else. *The completion is not what is wrong; the amended line is.*
+
+**And the finding is bigger than the two errors, because `M140` sees only two of three.**
+The same confusion sits at `Memory(m) => { free_region(a, m); }` — `m : Region` at a
+parameter declared `MemObj` — and **the rule is silent there**, because both are scalar names
+over `u64` and `gestalt` looks through a scalar alias by construction. The rule says that
+boundary out loud (*"taking a scalar alias nominally would be a language change, not a hole
+being closed"*), so this is a booked blind spot and not a bug. It is still worth writing
+down: *the visible half of a defect was two thirds of it.*
+
+Repair: three words in the frozen lines (`Region`, `DmaRef`, `ReplyRef`, plus
+`PhysAllocator` for `Allok`), which makes the excerpt agree **with itself** rather than
+adding anything to it. The four invented handles are retracted with it — *four dead handles
+beside the four real ones are exactly the confusion that produced the defect.*
+
+#### 3. `N029` — an unpaid bill
+
+`delete_leaf` declares `or Fehler` and its body can `return Fehler::Buchfuehrung;`. Its one
+caller, inside `traverse … by consuming`, called it as a bare statement and dropped the
+reason on the floor. The repair is the form the language has and only that form:
+
+    let ok = delete_leaf(c, o, a, rf, victim) else (e) { return e; }
+
+plus `or Fehler` on `revoke` — an ADDED line, no excerpt line touched. The cost bound then
+rises from `16452480` to **`16612992`**: the cost pass computes it, the line copies it.
+
+> **F01's own header refused this in advance**, and correctly: it costs frozen lines. What
+> changed is not the arithmetic but the decision — the owner booked `H = 0`, and F09 had
+> already set the shape for paying it: *every changed or missing line is booked, one by one,
+> with its reason.* Five lines, five reasons, in the file's head and in the guard.
+
+### And behind the paid bill lay TWO emitter holes nobody could see
+
+Both were then measured on a **five-item file with no fragment in it**
+(`messung/proben/probe-fehlerkanal-ohne-ergebnis.gab`), which `gabbro pruefe` accepts with
+`0 errors, 0 hints`:
+
+1. **The call had no lowering.** `let … else` pushed `&<binding>` for every callee that does
+   not return a *ghost*, then asked `wert_ctyp` for the type of a result the declaration does
+   not have, and refused: *"`let … else` whose call has no resolvable type"*. **The
+   declaration side had always known better** — an `or R` function is `bool` in C and gets a
+   `*_wert` parameter only when it has a result. *The two halves of one lowering disagreed
+   about the same signature.* The answer stood two fields up in `Signatur` and needed no new
+   rule: *"Does it return a ghost? Then `let x = f(…)` loses its binding, **not its call**."*
+   A missing result is the same case.
+
+2. **The success return was never written.** A Gabbro function without a result carries no
+   closing `return`; C's `void` return is implicit. An `or R` function is `bool`, and there
+   the same body **ran off the end of a non-void function** — the caller reads an
+   indeterminate value out of `if (!f(...))` and branches on it. `cc -Wall -Wextra -Werror`
+   compiled it at `-O0` **and** at `-O2`: `-Wreturn-type` does not reach a `static` function
+   nothing has called yet.
+
+**Why nobody had seen either:** the corpus carried `or R` *exclusively at `extern fn`* —
+foreign bodies this emitter never sees — until `messung/netz/udp-echo.gab`, and that one
+returns a value on every path, so the explicit `return <x>;` arm wrote the `return true;` for
+it. A function with an error channel and no result had no lowering to fall out of, because
+hole 1 refused every call to it one door earlier. ***A defect behind a refusal is invisible
+for exactly as long as the refusal stands.***
+
+> **And hole 2 has no reader at `cc` at all.** Its only witness is a RUN — which is the
+> sharpest argument for the metric this whole lane serves: `H` counts Durchstiche and not
+> compilations, and this is what the difference buys.
+
+The probe for it is a **clean** file and not a poison, deliberately. Both refusals *were* the
+bug; the counter-direction that remains (`let … else` over a callee with no `or <reason>`)
+belongs to `N028`, and the checker says it before the emitter is reached — a poison on it
+would land in the ten already booked as *verdeckt* and raise a mark that is meant to fall.
+Stage 9 of `pruefe-emission.sh` is the reader instead: it emits the probe and hands its C to
+`cc -Werror` at every run, and `MARKE_EMIT_M` falls if the refusal comes back.
+
+### The Durchstich
+
+`lauf "fragment1"`. Four slots, one tree, `revoke` from the root:
+
+    0 (root) -> 1 -> 3        post-order: 3, 1, 2
+             -> 2
+
+| | |
+|---|---|
+| **expected** | `1 1 0 0 0 1 0 0 1 1 0 65536 4096 0 1` |
+| `1` | `revoke` reports success |
+| `1` | slot 0 is STILL used — the root is walked *through*, never visited |
+| `0 0 0` | slots 1, 2, 3 are released |
+| `1` | object 12 stood at 2 and stands at 1: no finaliser |
+| `0 0` | objects 10 and 11 stood at 1 and are released |
+| `1 1 0` | `push_dma` once, `push_reply` once, `free_region` **not** — object 12 never reached zero |
+| `65536 4096` | the fields of the `DmaRef` that travelled through the `match`. **This is the number the `M140` repair hangs on**: with `DmaObj` there was a `u64` here and the record would not have arrived |
+| `0 1` | the second call fails and `Fehler::Buchfuehrung` (= 1) arrives — the reason crosses two levels |
+| **poison** | `s/o->slots\[obj\].refcount >= 1/o->slots[obj].refcount >= 0/` — it opens the bookkeeping bound downwards. Measured: `… 1 0` |
+| **certificate** | `0 assumptions …, 4 templates (1 of them UNPROVED), 13 direct forms, 5 foreign bodies …` |
+
+**The poison is surgical, and that is the point.** The first call is unchanged by it — all
+three refcounts are above zero — so only the second differs. It therefore hits exactly the
+chain this fragment rebuilt: `narrow … else` → error channel → `let … else` → propagation to
+the caller. *Without it the fifteen numbers would only prove the program is not constant;
+with it, the last two prove the reason travelled.*
+
+### What is NOT repaired, and it was found by a solver rather than by a pass
+
+`cdt_wohlgeformt` quantifies over `slots of c` — **the whole table, not the used slots** — so
+one free slot falsifies it, and `release_slot` leaves exactly one behind. Sharper still:
+`unlink`'s `ensures c.slots[s].parent == None` contradicts its own
+`maintains cdt_wohlgeformt` **four lines away in one signature**. A blind second encoding
+confirmed both and measured the obvious repair: a `used` guard makes the invariant
+satisfiable and **leaves `L05` refuted**, because `unlink` requires `used` and does not clear
+it. Booked as `dokumente/OFFEN.md` O4.
+
+> **No Gabbro pass sees any of it, and the Durchstich does not either.** A Durchstich measures
+> what the C computes, not what the promise claims. *The two sentences stand side by side so
+> that nobody reads the first as the second.*
+
+### H before and after
+
+    before   7 von 10 sind DURCHGESTOCHEN                                       H = 3
+    after    8 von 10 sind DURCHGESTOCHEN -- F01 F02 F04 F06 F07 F08 F09 F10    H = 2
+
+`cargo test --offline --no-fail-fast`: **400 passed, 0 failed**. `pruefe-emission.sh`:
+**ALL PASS — 27 durchgestochen, 124 von 124 uebersetzen**. `zaehle-wortschatz.py`:
+**221 / 208 / 333**, unchanged. `zaehle-gifttreffer.py`: back at its master value of **9**
+*verdeckt* — a first draft of the probe as a poison would have made it 10, and that mark is
+meant to fall.
+
+---
+
+*(F05 follows; the run stops after it by instruction)*

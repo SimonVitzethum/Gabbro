@@ -1,0 +1,73 @@
+-- **An `or R` at an `impl fn` WITHOUT a result -- and it had no C at all until 2026-09-03.**
+--
+-- Two holes in one form, and the first hid the second. Both were measured on this file,
+-- which `gabbro pruefe` has always accepted with `0 errors, 0 hints`:
+--
+--   1. **The CALL had no lowering.** `let … else` is the one form of error propagation this
+--      language has (`SPRACHE.md` §8.1), and it pushed `&<binding>` for every callee that
+--      does not return a GHOST -- then asked for the type of a result the declaration does
+--      not have, and refused: *"`let … else` whose call has no resolvable type"*. The
+--      declaration side had always known better: an `or R` function is `bool` in C and gets
+--      a `*_wert` parameter **only when it has a result**. *The two halves of one lowering
+--      disagreed about the same signature.*
+--
+--   2. **The SUCCESS return was never written.** A Gabbro function without a result carries
+--      no closing `return`; C's `void` return is implicit. An `or R` function is `bool`, and
+--      there the same body ran off the end of a non-void function -- the caller reads an
+--      indeterminate value out of `if (!f(...))` and branches on it.
+--
+-- WHY NOBODY HAD SEEN IT
+-- ----------------------
+-- The corpus carried `or R` **exclusively at `extern fn`** -- foreign bodies this emitter
+-- never sees -- until `messung/netz/udp-echo.gab`, and that one returns a VALUE on every
+-- path, so the explicit `return <x>;` arm wrote the `return true;` for it. **A function with
+-- an error channel and no result had no lowering to fall out of**, because hole 1 refused
+-- every call to it one door earlier. *A defect behind a refusal is invisible for exactly as
+-- long as the refusal stands.*
+--
+-- WHY THIS IS A CLEAN PROBE AND NOT A POISON
+-- ------------------------------------------
+-- A poison file needs a REFUSAL, and both refusals here were the bug. The counter-direction
+-- that remains -- `let … else` over a callee that declares no `or <reason>` at all -- is
+-- `N028`'s, and the checker says it BEFORE the emitter gets there; a poison on it would join
+-- the ten already booked as *verdeckt* in `zaehle-gifttreffer.py` and raise a mark that is
+-- meant to fall.
+--
+-- So the guard is the other one: **stage 9 of `pruefe-emission.sh` emits this file and hands
+-- its C to `cc -Werror` at every run.** If hole 1 comes back, the file stops emitting and
+-- `MARKE_EMIT_M` falls -- and that mark is read, not eyeballed.
+--
+-- > **And hole 2 has no reader at `cc` at all**, which is the sharper half of the finding:
+-- > `-Wreturn-type` does not reach a `static` function nothing has called yet, so the missing
+-- > `return true;` compiled clean at `-O0` and at `-O2`. **The only instrument that sees it
+-- > is a RUN** -- `lauf "fragment1"` over `messung/fragmente/F01.gab`, whose first and
+-- > last-but-one printed values are exactly the two success verdicts of an `or R` body.
+-- > *A defect whose only witness is the execution is the reason `H` counts Durchstiche and
+-- > not compilations.*
+
+module proben::fehlerkanal_ohne_ergebnis {
+
+reason R { Boese = 1 "der Zaehlerstand liegt ausserhalb 0 .. 100" exhaustive }
+
+type Zelle = { n : u32, };
+
+-- Ein Fehlerkanal OHNE Ergebnis: `bool tut_was(Zelle *, R *_grund)` -- kein `*_wert`.
+impl fn tut_was(z : ptr<normal, rw> Zelle)
+    or R
+    effects { writes z }
+    costs <= 8 ops
+{
+    narrow z.n to 0 .. 100 else { return R::Boese; }
+    z.n += 1;
+}
+
+-- Der Ruf, und er ist die Form, die es bis zum 2026-09-03 nicht gab.
+impl fn rufer(z : ptr<normal, rw> Zelle)
+    or R
+    effects { writes z }
+    costs <= 20 ops
+{
+    let ok = tut_was(z) else (e) { return e; }
+}
+
+}

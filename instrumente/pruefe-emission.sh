@@ -1139,31 +1139,40 @@ impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
     }
     return false;
 F9_WEG
-# **Die geschweifte Klammer und die Leerzeile tragen keine Aussage** -- das `format` ist
-# gewachsen, also verschiebt sich sein Ende. Alles andere wird verglichen.
-unerlaubt_f9() {   # $1 Ausschnitt  $2 Arbeitsfassung -- druckt, was FEHLT und nicht gebucht ist
+# **Die geschweifte Klammer und die Leerzeile tragen keine Aussage** -- ein `format` oder eine
+# Typliste kann wachsen, also verschiebt sich ihr Ende. Alles andere wird verglichen.
+#
+# **EIN Vergleicher fuer alle Fragmente, die etwas streichen** (W7). F9 war der erste, F1 der
+# zweite, und eine zweite Abschrift derselben Schleife waere das zweite Register ueber
+# derselben Sache.
+ungebuchte_streichung() {   # $1 Ausschnitt  $2 Arbeitsfassung  $3 Buchungsliste
     diff "$1" "$2" | sed -n 's/^< //p' | while IFS= read -r z; do
         case "$z" in ""|"}"|"    }") continue ;; esac
         # **`--` vor dem Muster, und das ist kein Schoenheitsfehler:** jede zweite
         # gebuchte Zeile faengt mit `--` an (Gabbros Kommentarzeichen), und `grep`
         # las sie als Option. *Ein Waechter, der an seinem eigenen Gegenstand
         # scheitert, meldet jede Zeile als ungebucht.*
-        grep -Fxq -- "$z" "$ARB/f9-gestrichen" || printf '%s\n' "$z"
+        grep -Fxq -- "$z" "$3" || printf '%s\n' "$z"
     done
 }
-if [ -n "$(unerlaubt_f9 "$ARB/f9.gab" "$W/messung/fragmente/F09.gab")" ]; then
-    echo "== EMISSION: F09.gab hat eine UNGEBUCHTE Zeile des Ausschnitts verloren =="
-    unerlaubt_f9 "$ARB/f9.gab" "$W/messung/fragmente/F09.gab" | head -10
-    exit 1
-fi
-grep -v "^const EINTRAEGE: u32 = 512;" "$W/messung/fragmente/F09.gab" > "$ARB/f9-kurz.gab"
-if [ -z "$(unerlaubt_f9 "$ARB/f9.gab" "$ARB/f9-kurz.gab")" ]; then
-    echo "== EMISSION: Sprechprobe F9 haelt nicht -- eine entfernte, NICHT gebuchte"
-    echo "             Ausschnittzeile faellt nicht auf. Dieser Vergleich misst NICHTS. =="
-    exit 2
-fi
-echo "  (F9: was dem Ausschnitt fehlt, ist genau das Gebuchte -- und eine ungebuchte"
-echo "       fehlende Zeile faellt auf, Sprechprobe ok)"
+# $1 Kurzname  $2 Ausschnitt  $3 Arbeitsfassung  $4 Buchungsliste  $5 Sprechprobenmuster
+buchung_pruefen() {
+    if [ -n "$(ungebuchte_streichung "$2" "$3" "$4")" ]; then
+        echo "== EMISSION: $1 hat eine UNGEBUCHTE Zeile des Ausschnitts verloren =="
+        ungebuchte_streichung "$2" "$3" "$4" | head -10
+        exit 1
+    fi
+    grep -v "$5" "$3" > "$ARB/$1-kurz.gab"
+    if [ -z "$(ungebuchte_streichung "$2" "$ARB/$1-kurz.gab" "$4")" ]; then
+        echo "== EMISSION: Sprechprobe $1 haelt nicht -- eine entfernte, NICHT gebuchte"
+        echo "             Ausschnittzeile faellt nicht auf. Dieser Vergleich misst NICHTS. =="
+        exit 2
+    fi
+    echo "  ($1: was dem Ausschnitt fehlt, ist genau das Gebuchte -- und eine ungebuchte"
+    echo "       fehlende Zeile faellt auf, Sprechprobe ok)"
+}
+buchung_pruefen "F09" "$ARB/f9.gab" "$W/messung/fragmente/F09.gab" "$ARB/f9-gestrichen" \
+                "^const EINTRAEGE: u32 = 512;"
 #
 # **Was dieser Durchstich misst: den Abstieg, und zwar an der Stelle, an der die Deklaration
 # ihn begrenzt.** `walk … levels EBENEN` erzeugt `Seitenabstieg_absteigen` -- eine Schleife
@@ -1232,6 +1241,123 @@ lauf "fragment9" "$W/messung/fragmente/F09.gab" "$TREIBER9" \
      "1 2236416 0 1 0 0" \
      's/return (bool)(Pte_PS(it));/return (bool)(!Pte_PS(it));/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 4f. Das Fragment F1: der Kapazitaetsbaum, und der Fehler laeuft bis nach oben --------
+#
+# **F1 stand an drei Absagen, und keine davon gehoerte Gabbro** (2026-09-03). Zwei `M140`
+# meldeten einen Verbund an einem Platz, der eine Zahl erklaert -- `Dma(DmaRef)` an
+# `d : DmaObj`, `Reply(ReplyRef)` an `r : ReplyObj`. Beide Seiten stehen im EINGEFRORENEN
+# Ausschnitt, vierzig Zeilen auseinander, und widersprechen einander; die dritte Verwechslung
+# derselben Sorte (`Memory(Region)` an `MemObj`) bleibt still, weil beide Seiten skalare
+# Namen ueber `u64` sind. Die dritte Absage, `N029`, war eine unbezahlte Rechnung:
+# `delete_leaf` kann scheitern, und der einzige Rufer sah nicht hin.
+#
+# **Und hinter der bezahlten Rechnung lagen ZWEI Erzeugerloecher, die vorher niemand sehen
+# konnte** -- der Korpus fuehrte `or R` bis dahin nur an `extern fn`. Eine `impl fn` mit
+# Fehlerkanal und OHNE Ergebnis hatte gar kein C: der Ruf wurde abgewiesen, und die
+# Erfolgsrueckgabe `return true;` schrieb niemand. *Das erste Loch verdeckte das zweite*, und
+# `cc -Werror` sagte zu keinem von beiden etwas.
+schneide "$W/dokumente/FRAGMENTE.md" "module caprock::cap::space" > "$ARB/f1.gab"
+if ! grep -q "spec fn cdt_wohlgeformt" "$ARB/f1.gab"; then
+    echo "== EMISSION: F1 NICHT GESCHNITTEN -- der Waechter misst seine eigene Ablage =="
+    exit 1
+fi
+# Die benannten Streichungen, eine je Zeile -- jede mit ihrem Grund im Kopf von F01.gab.
+cat > "$ARB/f1-gestrichen" <<'F1_WEG'
+    costs     <= 16452480 ops
+        delete_leaf(c, o, a, rf, victim);
+extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) effects { writes a } costs <= 32 ops;
+extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) effects { writes rf } costs <= 8 ops;
+extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { writes rf } costs <= 8 ops;
+F1_WEG
+buchung_pruefen "F01" "$ARB/f1.gab" "$W/messung/fragmente/F01.gab" "$ARB/f1-gestrichen" \
+                "^const NOBJECTS : u32 = 4096;"
+#
+# **Was dieser Durchstich misst.** Vier Slots, ein Baum, ein `revoke` von der Wurzel aus:
+#
+#     0 (Wurzel)  ->  1  ->  3          Nachordnung: 3, 1, 2
+#                 ->  2
+#
+# Die Nachordnung ist das eine, was der erzeugte Lauf ueber sich selbst behauptet: Blaetter
+# zuerst, ohne Stapel, ueber `first_child`/`next_sibling`/`parent`. Der ZWEITE Ruf faehrt den
+# Fehlerweg -- ein Objekt mit `refcount == 0` faellt am `narrow … to 1 .. 80255`, und der
+# Grund muss durch `delete_leaf` und `revoke` bis in den Treiber laufen.
+#
+#    Erwartet:  1        -- `revoke` meldet Erfolg
+#               1        -- Slot 0 ist NOCH BELEGT: die Wurzel wird durchlaufen, nicht besucht
+#           0 0 0        -- Slot 1, 2, 3 sind freigegeben
+#               1        -- Objekt 12 stand auf 2 und steht auf 1: kein Finalisierer
+#             0 0        -- Objekt 10 und 11 standen auf 1 und sind freigegeben
+#               1        -- `push_dma` genau einmal
+#               1        -- `push_reply` genau einmal
+#               0        -- `free_region` NICHT: Objekt 12 hat den Nullstand nicht erreicht
+#     65536 4096        -- die Felder des `DmaRef`, das durch den `match` gereist ist. **Das
+#                          ist die Zahl, an der die `M140`-Reparatur haengt**: bis heute
+#                          stand hier ein `u64`, und der Verbund waere nicht angekommen
+#             0 1        -- der zweite Ruf scheitert, und `Fehler::Buchfuehrung` (= 1) kommt an
+TREIBER1='#include <stdio.h>
+#include "@ERZEUGT@"
+static int n_free, n_dma, n_reply;
+static uint64_t dma_phys, dma_len;
+void free_region(uint64_t *a, uint64_t m) { (void)a; (void)m; n_free++; }
+void push_dma(uint64_t *rf, DmaRef d)     { (void)rf; n_dma++; dma_phys = d.phys; dma_len = d.len; }
+void push_reply(uint64_t *rf, ReplyRef r) { (void)rf; (void)r; n_reply++; }
+static CapSpace c;
+static CapObjects o;
+static uint64_t allok, fertig;
+static void slot(uint32_t s, uint32_t obj, uint32_t parent, uint32_t kind, uint32_t sib) {
+    c.slots[s].used = true;
+    c.slots[s].object = obj;
+    c.slots[s].parent = parent;
+    c.slots[s].first_child = kind;
+    c.slots[s].next_sibling = sib;
+    c.slots[s].prev_sibling = CapSpace_NONE;
+}
+int main(void) {
+    for (uint32_t i = 0; i < 8; i++) {
+        c.slots[i].parent = c.slots[i].first_child = CapSpace_NONE;
+        c.slots[i].next_sibling = c.slots[i].prev_sibling = CapSpace_NONE;
+    }
+    slot(0, 9, CapSpace_NONE, 1, CapSpace_NONE);
+    slot(1, 10, 0, 3, 2);
+    slot(2, 11, 0, CapSpace_NONE, CapSpace_NONE);
+    slot(3, 12, 1, CapSpace_NONE, CapSpace_NONE);
+    o.slots[10].used = true; o.slots[10].refcount = 1;
+    o.slots[10].kind.marke = ObjectKind_Dma;
+    o.slots[10].kind.last.Dma.phys = 65536; o.slots[10].kind.last.Dma.len = 4096;
+    o.slots[11].used = true; o.slots[11].refcount = 1;
+    o.slots[11].kind.marke = ObjectKind_Reply;
+    o.slots[12].used = true; o.slots[12].refcount = 2;
+    o.slots[12].kind.marke = ObjectKind_Memory;
+
+    Fehler e = (Fehler)0;
+    int ok = revoke(&c, &o, &allok, &fertig, 0, &e);
+    printf("%d %d %d %d %d", ok, (int)c.slots[0].used, (int)c.slots[1].used,
+           (int)c.slots[2].used, (int)c.slots[3].used);
+    printf(" %u %d %d", o.slots[12].refcount, (int)o.slots[10].used, (int)o.slots[11].used);
+    printf(" %d %d %d", n_dma, n_reply, n_free);
+    printf(" %llu %llu", (unsigned long long)dma_phys, (unsigned long long)dma_len);
+
+    /* Der Fehlerweg. Ein einzelnes Kind mit `refcount == 0` -- der `narrow` faellt, und der
+     * Grund muss durch zwei Ebenen bis hierher laufen. */
+    slot(0, 9, CapSpace_NONE, 4, CapSpace_NONE);
+    slot(4, 13, 0, CapSpace_NONE, CapSpace_NONE);
+    o.slots[13].used = true; o.slots[13].refcount = 0;
+    Fehler e2 = (Fehler)0;
+    int ok2 = revoke(&c, &o, &allok, &fertig, 0, &e2);
+    printf(" %d %d\n", ok2, (int)e2);
+    return 0;
+}
+'
+# **Das Gift oeffnet die Buchfuehrungsschranke nach unten** -- `>= 1` wird `>= 0`. Der ERSTE
+# Ruf aendert sich dadurch nicht (alle drei Zaehlerstaende liegen ueber null); der zweite
+# laeuft durch, der Zaehler laeuft unter null um, und `revoke` meldet Erfolg. *Die Gegenprobe
+# trifft damit genau die Kette, die dieses Fragment neu gebaut hat: `narrow … else` ->
+# Fehlerkanal -> `let … else` -> Weitergabe an den Rufer.*
+lauf "fragment1" "$W/messung/fragmente/F01.gab" "$TREIBER1" \
+     "1 1 0 0 0 1 0 0 1 1 0 65536 4096 0 1" \
+     's/o->slots\[obj\].refcount >= 1/o->slots[obj].refcount >= 0/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 4 templates (1 of them UNPROVED), 13 direct forms, 5 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
@@ -2500,7 +2626,24 @@ MARKE_EMIT=65
 # was the C, which carried `18446744073709551615` with no `u` on it. **A file that stops
 # being poison does not stop being a probe** -- here it holds the emitter to writing the
 # suffix, under `-Werror`, at every run of stage 9.
-MARKE_EMIT_M=54
+# **54 -> 56 on 2026-09-03, and BOTH are fragments that Gabbro used to refuse.**
+# `messung/fragmente/F09.gab` and `messung/fragmente/F01.gab` emit since the `H = 0` work:
+# F9 after `walk … levels` learned to read a `const` name and its `device … at normal` was
+# replaced by the `format` that word belongs in, F1 after three `extern fn` lines were made
+# to agree with the `tagged type` forty lines above them and `N029` was paid. *A mark that
+# rises because a REFUSAL was right and the corpus was wrong* -- and stage 9 now holds the
+# C of both against `-Werror` at every run.
+#
+# **56 -> 57 the same day, and the third one is a REGRESSION probe.**
+# `messung/proben/probe-fehlerkanal-ohne-ergebnis.gab` holds an `or R` at an `impl fn`
+# WITHOUT a result -- the shape that had no C at all until 2026-09-03, because the call
+# side of `let … else` asked for the type of a result the declaration does not have.
+# *It is a clean probe and not a poison on purpose:* the counter-direction that remains
+# is `N028`'s, and the checker says it before the emitter gets there, so a poison on it
+# would only raise the `verdeckt` mark of `zaehle-gifttreffer.py`. **This stage is the
+# reader instead** -- if the refusal comes back, the file stops emitting and this mark
+# falls.
+MARKE_EMIT_M=57
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
