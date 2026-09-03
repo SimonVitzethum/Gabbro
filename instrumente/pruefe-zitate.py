@@ -272,7 +272,18 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 #
 # > *It is a cross-reference and not a claim in dispute*, which is the judgement this tool
 # > leaves to the reader by design -- so it is BOOKED and not argued away.
-MARKE = 343
+# **343 -> 345 on 2026-09-03, and the cause was measured the way the lines above demand.**
+# `N030` learned to read a nominal type at a FIELD, and the head of `namenstypen` names the
+# family it belongs to in one sentence: *"the same move `R013` made for pointer rights, which
+# `R008` had compared at the space and not in the struct."* Both live in `m3.rs`, the comment
+# is in `namen.rs`, so both are candidates. Measured by deleting exactly that sentence and
+# re-running: **343 without it, 345 with it, nothing else moved.**
+#
+# > **It could have been made to disappear by naming the register instead of the codes, and
+# > that was rejected.** The sentence IS a claim about two rules that live elsewhere; writing
+# > it so the guard cannot see it would leave the claim and remove the record of it. *A
+# > ratchet one may dodge by rephrasing measures spelling, not debt.*
+MARKE = 345
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on

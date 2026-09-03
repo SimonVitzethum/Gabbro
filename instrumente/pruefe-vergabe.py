@@ -205,7 +205,22 @@ MARKE = 20
 # became newly ambiguous; one more probe points at an old one. *The object grew, not the
 # damage* -- and the sharp guard for `636` is the unit test
 # `das_when_eines_tauschs_traegt_die_wirkung`, which names the program and both directions.
-MARKE_PROBEN = 64
+# **64 -> 66 on 2026-09-03, and the CANDIDATES stand unmoved at 20.** `N030` learned to read a
+# nominal type at a FIELD and at an assignment into one, and the two poison probes for it
+# (`669`, `670`) point at `N030` -- which carries a candidate ALREADY (`TODO.md` group A,
+# *"two probes cover each other"*, since 2026-08-21) and had three probes on it before. **The
+# repair added no issuance site**: the assignment reuses the existing `melde`, so nothing
+# became newly ambiguous. *The object grew, not the damage* -- and the sharp guard for both is
+# that the field walk and the assignment position each carry their OWN mutation in
+# `mutiere-pruefer.py`, so a probe falling green under a broken rule is caught where the
+# identifier alone cannot distinguish it.
+#
+# > **The two keys are deliberately NOT quoted here**, and that is this guardian's neighbour
+# > speaking: a mutation key is spelled out of the same letters as a sentence, so quoting a
+# > German one inside an English note makes the line count as German prose. `pruefe-englisch.py`
+# > logs the same rewrite happening to its own commentary. *A name is not prose, and no tool
+# > here can tell the two apart.*
+MARKE_PROBEN = 66
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

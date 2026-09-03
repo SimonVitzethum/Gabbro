@@ -237,21 +237,24 @@ pub const NAMEN: &[Satz] = &[
         aussage: "Every clause that names something -- `entrust`, `offset_into`, `per cpu`, \
                   `requires Has`, `dispatch`, `gates`, `measures`, `mirrors`, a probe \
                   obligation, `observed by`, a `format` `where`, `step`, a nominal type at a \
-                  `let`/`return`/comparison/argument -- names something this unit declares, \
-                  and names it in the form the clause requires.",
+                  `let`/`return`/comparison/argument/assignment -- names something this unit \
+                  declares, and names it in the form the clause requires.",
         vorbehalt: "**`N028`/`N029` carry a KEY ASYMMETRY that is a plain bug** (found \
                     2026-08-21 while writing this sentence): the map is filled under the \
                     SHORT name and calls are looked up under the FULL path, so `m::f()` \
                     never matches -- `N029` stays silent and `N028` fires FALSELY although \
-                    `f` declares its `or R`. `N030` is silent for anything but a bare \
-                    unsuffixed name and says so itself (W10). `N022` sees comparisons only \
+                    `f` declares its `or R`. **`N030` was silent for anything but a bare \
+                    unsuffixed name until 2026-09-03**, which is the one position a record \
+                    holding two axes never has; it now walks `.f`/`->f` from the binding's \
+                    declared record and gives up at an `[i]` (W10). `N022` sees comparisons only \
                     directly under binary operators -- a parenthesis hides one completely. \
                     `N026` is a HINT, not a refusal. And `N015` deliberately does not exist: \
                     where `counterprobe … expects <ident>` declares its ident is not written \
                     down anywhere, and that is a finding about the SPECIFICATION.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 3 probes on `N030`, 2 each on `N027` and `N031`, and \
-                      single probes on 12 further codes of this group.",
+        gemessen_an: "beispiele/gift: 5 probes on `N030` (`669`/`670` hold the FIELD, read \
+                      and written), 2 each on `N027` and `N031`, and single probes on 12 \
+                      further codes of this group.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md, SPRACHE.md §15",
     },
     Satz {

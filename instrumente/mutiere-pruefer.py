@@ -2069,6 +2069,28 @@ MUTATIONEN = [
         "                        if true || hat == erwartet {",
         "N030 -- ein `linear ghost`-Zeuge passt wieder an jede Stelle; der Wecker nimmt einen fremden Grund, und `Lost wakeup` ist zurueck",
     ),
+    # **The field is where the two axes live** (2026-09-03). Restoring the pre-2026-09-03
+    # reading is one word: a place with suffixes falls back to `lokal`, which never holds a
+    # suffixed name, so `p.cpu` at a `Geraetesicht` slot goes silent again.
+    Mutation(
+        "ein-feld-traegt-keinen-namen",
+        "namen.rs",
+        "    if o.suffixe.is_empty() {\n        return lokal.get(&o.basis.text).cloned();\n    }",
+        "    if true {\n        return lokal.get(&o.basis.text).cloned();\n    }",
+        "N030 -- `p.cpu` passt wieder an eine `Geraetesicht`; die zwei Achsen eines DMA-Puffers "
+        "fallen an der Stelle zusammen, an der sie wirklich stehen (`beispiele/gift/669`)",
+    ),
+    Mutation(
+        "in-ein-feld-darf-jede-sicht",
+        "namen.rs",
+        '                        if hat != erwartet {\n'
+        '                            melde(absagen, "the assignment", &hat, &erwartet, wert.span);',
+        '                        if false && hat != erwartet {\n'
+        '                            melde(absagen, "the assignment", &hat, &erwartet, wert.span);',
+        "N030 -- `p.dev = cpusicht` geht wieder durch; das Lesen bleibt bewacht und das "
+        "SCHREIBEN nicht, und ein verdorbener Verbund macht jedes spaetere Lesen falsch "
+        "(`beispiele/gift/670`)",
+    ),
     Mutation(
         "beobachter-braucht-keine-sonde",
         "namen.rs",

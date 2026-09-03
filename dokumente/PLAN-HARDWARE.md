@@ -2111,21 +2111,27 @@ Vertrag STIMMT.** Und er wird nicht kleiner, weil jemand einen Beweiser baut. *E
 kleiner, indem mehr in Gabbro geschrieben wird.*
 
 - [ ] **Die fünfte Marke, die niemand führt: wie viel Prozent eines echten Kerns steht am
-      Ende in Gabbro statt daneben?** Bei `virtio-net` sind es ~~**75 %**~~ **87 %, und sie
-      tragen seit dem 2026-09-03 ihre Kategorien** ([`messung/FUENFTE-MARKE.md`](../messung/FUENFTE-MARKE.md)):
+      Ende in Gabbro statt daneben?** Bei `virtio-net` sind es ~~**75 %**~~ ~~**87 %**~~
+      **90 %, und sie tragen seit dem 2026-09-03 ihre Kategorien**
+      ([`messung/FUENFTE-MARKE.md`](../messung/FUENFTE-MARKE.md)):
 
       ```
                                               Faehigkeiten   von 30
         in Gabbro heute                             6         20 %
-        ungeschrieben, gemessen schreibbar         20         67 %
+        ungeschrieben, gemessen schreibbar         21         70 %
         ----------------------------------------------------------
-        IN GABBRO                                  26         87 %
+        IN GABBRO                                  27         90 %
 
-        daneben                                     4         13 %
+        daneben                                     3         10 %
             A  Klempnerei (B1/B2)                   0          0 %
             B  Hardwarebefehle (B5)                 0          0 %
-            C  was Gabbro nicht traegt              4         13 %
+            C  was Gabbro nicht traegt              3         10 %
       ```
+
+      > **26 / 87 % / 4 stand hier bis zum Nachmittag desselben Tages.** `C2` war eine
+      > Passluecke, der Pass ist erweitert, und Faehigkeit #24 ist damit von *nicht getragen*
+      > nach *ungeschrieben und schreibbar* gewandert. **Die Marke steigt, weil ein Pruefer
+      > eine Stelle mehr liest — nicht, weil die Sprache besser wurde.**
 
       **A ist null, weil `B1` am 2026-09-02 geschlossen hat** und dieser Treiber keine
       Zeichenketten ausgibt. **B ist null, und zwar am GEGENSTAND gemessen und nicht
@@ -2191,8 +2197,8 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
 
       ---
 
-      **DER ZWEITE DURCHGANG, 2026-09-03 — und die Antwort ist NEIN: der dritte Eimer ist
-      keiner mit einem Posten.** ~~*Nicht gemessen:* ob die übrigen Transportfähigkeiten
+      **DER ZWEITE DURCHGANG, 2026-09-03 — die Antwort war NEIN, und am selben Abend wieder
+      JA: der zweite Posten wurde bepreist und bezahlt, nicht wegdefiniert.** ~~*Nicht gemessen:* ob die übrigen Transportfähigkeiten
       (`poll_used`, `reclaim`, `kick` an berechnetem Versatz) in Gabbro schreibbar sind.~~
       Gemessen, jede einzeln, **geschrieben und durch den unveränderten Prüfer UND Erzeuger
       gefahren** — und wo es absenkte, das C durch `cc -std=c11 -Wall`.
@@ -2228,13 +2234,13 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       > *Ein „ausdrückbar", das am Prüfer haltmacht, ist dieselbe Klasse wie das Muster, das
       > die Barriere nicht fand.*
 
-      **DER DRITTE EIMER: ZWEI Posten über vier Fähigkeiten, und der zweite hatte keinen
-      Namen.**
+      **DER DRITTE EIMER: ~~ZWEI Posten über vier Fähigkeiten~~ EINER über drei — und der
+      zweite hatte keinen Namen, bis er einen bekam und daran geschlossen wurde.**
 
       | | was es ist | wo es gebucht ist |
       |---|---|---|
-      | **C1** | die Eigentumsübergabe (`reclaim`, `reclaim_unproven`, der Typestate) | `R004`/`R007` — **eine Nachbarbahn, seit dem 2026-09-03** |
-      | **C2** | **die zwei Achsen eines DMA-Puffers bleiben getrennt** | **neu** — `N030` liest einen PARAMETER und kein FELD |
+      | **C1** | die Eigentumsübergabe (`reclaim`, `reclaim_unproven`, der Typestate) | `R004`/`R007` — **eine Nachbarbahn, seit dem 2026-09-03; offen** |
+      | ~~**C2**~~ | ~~die zwei Achsen eines DMA-Puffers bleiben getrennt~~ | **geschlossen 2026-09-03** — `N030` liest das Feld und das Schreiben hinein (`FUENFTE-MARKE.md` §3, `OFFEN.md` `O7`) |
 
       **C2 ist der Fund.** Caprock hält beide Adressen eines Puffers in `Owned`
       (`owned.rs`:62–77) und kauft die Zusage mit FELDPRIVATHEIT: `cpu` ist von aussen nicht
@@ -2261,8 +2267,17 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       > `S2` und nicht umsonst**, und genau der Grund, warum dieser Durchgang den Posten
       > nicht schliesst.
 
+      **Und dann hat ihn derselbe Tag doch geschlossen** — als Passaenderung, ohne ein neues
+      Wort. Fuenf Stellen einzeln nachgemessen (jede in einer EIGENEN Datei, weil *ein Fehler
+      in einem Lauf, der nicht abbrach* die Gestalt einer verdeckten Messung ist), dann
+      `N030` an `.f`/`->f` entlang und an die Zuweisung INS Feld gefuehrt. **Ueber alle 635
+      `.gab` weist er NICHTS neu ab**; die einzige Datei, deren Urteil sich bewegt, ist die
+      Probe selbst (1 Fehler auf 4). Proben: `beispiele/gift/669`, `beispiele/gift/670`.
+      *Offen bleibt die andere Haelfte — ein `opaque` Verbund schliesst seine Felder nicht —,
+      und die ist ein Konstrukt und geht durch §7.*
+
       **Die zwei Zahlen sind nicht vergleichbar, und das steht hier statt es zu verschweigen:**
-      75 % und 87 % ruhen auf verschiedenen Aufzählungen. Der Durchgang vom 2026-09-02 hat
+      75 % und 90 % ruhen auf verschiedenen Aufzählungen. Der Durchgang vom 2026-09-02 hat
       seinen Nenner nicht aufgeschrieben; dieser tut es, Zeile für Zeile mit `file:line`.
       *Der ehrliche Satz ist nicht „die Marke stieg um zwölf Punkte", sondern „die Marke hat
       jetzt einen Nenner, dem man widersprechen kann."*
@@ -2680,7 +2695,7 @@ Ziel.*
 | **3** | **Der ungesehene Port** | ~~die einzige Messung, die die Liste umschreiben kann~~ **— und die Begründung gehört schärfer, Ordner 2026-09-02:** *er ist nicht nur die einzige Messung, die schlecht ausgehen kann; er ist die einzige, deren Ausgang **die Beta-Liste selbst neu bewertet.*** Scheitert ein fremder Schreiber an Formen, die dieser Korpus nie gebraucht hat, dann sind Stunden dieser Liste **an der falschen Stelle investiert**. Daraus folgt die Reihenfolge: eine halbtägige Aufräumrunde davor ist richtig — *sie räumt, ohne Annahmen zu zementieren* — und **alles Größere danach ist falsch, bis das Ergebnis da ist** |
 | **4** | B2 Zeichenketten | mit der Ratschenrechnung davor |
 | **5** | B3 Auffahrtsweg | erst sinnvoll, wenn B1 und B2 stehen |
-| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — **87 % bei einem Treiber, mit Kategorien** (2026-09-03); was daneben bleibt, sind ZWEI Posten, nicht einer |
+| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — ~~87 %~~ **90 % bei einem Treiber, mit Kategorien** (2026-09-03); was daneben bleibt, ist EIN Posten über drei Fähigkeiten — die Eigentumsübergabe |
 
 **Und was NICHT auf dieser Liste steht, gehört ausgesprochen:** die Beweisseite. `145 von 381
 Rümpfen`, `1 Absenkungssatz von 65`, die Naht zwischen zwei Beweisern, die in keiner Logik
