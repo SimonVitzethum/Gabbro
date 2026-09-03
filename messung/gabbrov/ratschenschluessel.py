@@ -28,6 +28,12 @@ Return codes follow the sixth requirement, as `zaehle-p6.py` states it: **`1` me
 TREE has to change, `2` means the SETUP does.** A key collision in the corpus, or a probe
 whose answer contradicts the decision, is a `1`; a missing binary or an empty corpus is a
 `2`, and every one of those says NOTHING WAS MEASURED.
+
+**The prose is English and four words are not**, and that is deliberate rather than
+sloppy: `ABBRUCH`, `SPRECHPROBE`, `NICHTS wurde gemessen` and `GEFALLEN` are the
+protocol words `abnahme.py` and `pruefe-waechter.py` MATCH ON. Translating them here
+would make the promotion to `instrumente/pruefe-*` a rewrite instead of a `git mv` --
+and a marker a guardian greps for is an interface, not prose.
 """
 import pathlib
 import re
@@ -257,8 +263,8 @@ impl fn zweimal()
 def sprechprobe():
     """**Three directions, because this tool has three ways to be wrong quietly.**"""
     if not GABBRO.exists():
-        print(f"ABBRUCH: {GABBRO} fehlt -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md).")
-        print("  NICHTS wurde gemessen; das ist kein Bericht ueber einen sauberen Baum.")
+        print(f"ABBRUCH: {GABBRO} is missing -- the build belongs on ki-pc-fisch-101 (CLAUDE.md).")
+        print("  NICHTS wurde gemessen -- this is not a report about a clean tree.")
         return 2
     erg = 0
     with tempfile.TemporaryDirectory() as td:
@@ -270,20 +276,20 @@ def sprechprobe():
         ziel.write_text(DOPPELRUF, encoding="utf-8")
         z = register(ziel)
         if z is None:
-            print("SPRECHPROBE GESCHEITERT: die Doppelrufprobe checkt nicht.", file=sys.stderr)
+            print("SPRECHPROBE GESCHEITERT: the double-call probe does not check.", file=sys.stderr)
             return 2
         dreier = {(x[0], x[1], x[4]) for x in z}
         if len(z) != 2 or len(dreier) != 1:
-            print(f"SPRECHPROBE GESCHEITERT: zwei Rufe ergeben {len(z)} Zeilen und "
-                  f"{len(dreier)} Tripel -- erwartet 2 und 1.", file=sys.stderr)
+            print(f"SPRECHPROBE GESCHEITERT: two calls give {len(z)} line(s) and "
+                  f"{len(dreier)} triple(s) -- expected 2 and 1.", file=sys.stderr)
             erg = 2
         elif z[0][2] == z[1][2]:
-            print("SPRECHPROBE GESCHEITERT: die beiden Zeilen teilen sogar den Anker; "
-                  "dann trennt sie NICHTS.", file=sys.stderr)
+            print("SPRECHPROBE GESCHEITERT: the two lines even share the anchor; "
+                  "then NOTHING tells them apart.", file=sys.stderr)
             erg = 2
         else:
-            print("  Doppelruf: ok (zwei Zeilen, EIN Tripel, zwei Anker -- die Entartung "
-                  "ist erreichbar)")
+            print("  double call: ok (two lines, ONE triple, two anchors -- the degenerate "
+                  "case is reachable)")
 
         # TWO -- the key MOVES on the swap. Without this direction the whole recommendation
         # would rest on a field nobody watched change.
@@ -293,8 +299,8 @@ def sprechprobe():
                "              c.slots[s].vorheriges == None,\n"
                "              c.slots[s].naechstes == None")
         if alt not in roh:
-            print("SPRECHPROBE GESCHEITERT: die Klausel, an der geschnitten wird, steht "
-                  "nicht mehr so in `beispiele/01-tabelle.gab`.", file=sys.stderr)
+            print("SPRECHPROBE GESCHEITERT: the clause this probe cuts at no longer stands "
+                  "that way in `beispiele/01-tabelle.gab`.", file=sys.stderr)
             return 2
         ziel = tmp / "tausch.gab"
         ziel.write_text(roh.replace(
@@ -310,16 +316,16 @@ def sprechprobe():
         namen_gleich = [kern(x) for x in vor] == [kern(y) for y in nach]
         text_anders = sum(1 for x, y in zip(vor, nach) if x[4] != y[4])
         if not namen_gleich:
-            print("SPRECHPROBE GESCHEITERT: der Tausch bewegt schon Name/Klasse/Anker -- "
-                  "dann misst diese Probe nicht, was `O3` beschreibt.", file=sys.stderr)
+            print("SPRECHPROBE GESCHEITERT: the swap already moves name/class/anchor -- "
+                  "then this probe does not measure what `O3` describes.", file=sys.stderr)
             erg = 2
         elif text_anders != 2:
-            print(f"SPRECHPROBE GESCHEITERT: der Tausch bewegt {text_anders} Texte, "
-                  "erwartet 2.", file=sys.stderr)
+            print(f"SPRECHPROBE GESCHEITERT: the swap moves {text_anders} text(s), "
+                  "expected 2.", file=sys.stderr)
             erg = 2
         else:
-            print("  Tausch:    ok (Name, Klasse, Anker und Zustand unveraendert; "
-                  "GENAU zwei Texte anders)")
+            print("  swap:        ok (name, class, anchor and state unchanged; "
+                  "EXACTLY two texts differ)")
 
         # THREE -- and it does NOT move on a reformat. A key that moves on everything is a
         # ratchet that punishes editing, and that is the objection option (a) has to answer.
@@ -330,11 +336,11 @@ def sprechprobe():
                  "        c.slots[s].naechstes == None"), encoding="utf-8")
         nach = register(ziel)
         if {(x[0], x[1], x[4]) for x in vor} != {(y[0], y[1], y[4]) for y in nach}:
-            print("SPRECHPROBE GESCHEITERT: eine blosse Umformatierung bewegt den "
-                  "Schluessel -- dann ist der Preis nicht der gemessene.", file=sys.stderr)
+            print("SPRECHPROBE GESCHEITERT: a mere reformat moves the key -- then the "
+                  "price is not the measured one.", file=sys.stderr)
             erg = 2
         else:
-            print("  Umbruch:   ok (eine Umformatierung laesst jeden Schluessel stehen)")
+            print("  reformat:    ok (a reformat leaves every key standing)")
 
     # FOUR -- and the JUDGEMENT falls when the tree is wrong. The three above drive the
     # binary; this one drives the two counting functions, because a verdict that has never
@@ -352,30 +358,30 @@ def sprechprobe():
         gut = schluessel(sauber)
         _, vertauschbar, _ = reichweite(sauber)
     if schlecht != (1, 1):
-        print(f"SPRECHPROBE GESCHEITERT: ein doppeltes Tripel und eine Zeile ohne Text "
-              f"ergeben {schlecht}, erwartet (1, 1).", file=sys.stderr)
+        print(f"SPRECHPROBE GESCHEITERT: a duplicate triple and a line without a text "
+              f"give {schlecht}, expected (1, 1).", file=sys.stderr)
         erg = 2
     elif gut != (0, 0):
-        print(f"SPRECHPROBE GESCHEITERT: ein sauberes Register meldet {gut}.", file=sys.stderr)
+        print(f"SPRECHPROBE GESCHEITERT: a clean register reports {gut}.", file=sys.stderr)
         erg = 2
     elif len(vertauschbar) != 2:
-        print(f"SPRECHPROBE GESCHEITERT: zwei Geschwister ergeben {len(vertauschbar)} "
-              "vertauschbare Zeilen, erwartet 2.", file=sys.stderr)
+        print(f"SPRECHPROBE GESCHEITERT: two siblings give {len(vertauschbar)} "
+              "permutable line(s), expected 2.", file=sys.stderr)
         erg = 2
     else:
-        print("  Urteil:    ok (ein doppeltes Tripel und eine Zeile ohne Text FALLEN, "
-              "ein sauberes Register nicht)")
+        print("  judgement:   ok (a duplicate triple and a line without a text FALL, "
+              "a clean register does not)")
     return erg
 
 
 def lauf():
     if not GABBRO.exists():
-        print(f"ABBRUCH: {GABBRO} fehlt -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md).")
+        print(f"ABBRUCH: {GABBRO} is missing -- the build belongs on ki-pc-fisch-101 (CLAUDE.md).")
         print("  NICHTS wurde gemessen.")
         return 2
     dateien = korpus()
     if not dateien:
-        print("ABBRUCH: kein `.gab` ausserhalb der Giftproben. NICHTS wurde gemessen.")
+        print("ABBRUCH: no `.gab` outside the poison probes. NICHTS wurde gemessen.")
         return 2
     lagen = []
     ohne = 0
@@ -392,7 +398,7 @@ def lauf():
     print(f"  of these carrying at least one obligation line        {len(lagen):>4}")
     print()
     if not lagen:
-        print("ABBRUCH: keine einzige Pflichtzeile. Ohne Zaehler ist das keine Messung.")
+        print("ABBRUCH: not one obligation line. Without a numerator this is no measurement.")
         return 2
     reichweite(lagen)
     stoss, leer = schluessel(lagen)
@@ -401,17 +407,17 @@ def lauf():
         a = anker(pathlib.Path(td))
     print()
     if stoss or leer:
-        print(f"RATSCHENSCHLUESSEL GEFALLEN: {stoss} Tripel doppelt, {leer} ohne Text.")
-        print("  Dann ist (Name, Klasse, Text) kein Schluessel mehr, und die Empfehlung")
-        print("  von `OFFEN.md` `O3` braucht ihren letzten Ausweg: den Anker.")
+        print(f"RATSCHENSCHLUESSEL GEFALLEN: {stoss} duplicate triple(s), {leer} without a text.")
+        print("  Then (name, class, text) is no longer a key, and the recommendation in")
+        print("  `OFFEN.md` `O3` needs its last resort: the anchor.")
         return 1
     if p or a:
-        print(f"RATSCHENSCHLUESSEL GEFALLEN: {p} Preisfall(e) und {a} Ankerfall gegen die")
-        print("  Vorhersage. Eine Entscheidung, deren Messung anders ausfaellt als sie,")
-        print("  ist eine Meinung.")
+        print(f"RATSCHENSCHLUESSEL GEFALLEN: {p} price case(s) and {a} anchor case against")
+        print("  the prediction. A decision whose measurement comes out other than it does")
+        print("  is an opinion.")
         return 1
-    print("== RATSCHENSCHLUESSEL: ALL PASS -- (Name, Klasse, Text) traegt ueber der")
-    print("   ganzen Grundgesamtheit, und der Preis ist der gemessene ==")
+    print("== RATSCHENSCHLUESSEL: ALL PASS -- (name, class, text) carries over the whole")
+    print("   population, and the price is the measured one ==")
     return 0
 
 
