@@ -556,7 +556,8 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 201 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 202 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *201 → 202 am 2026-09-03 durch `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` — gemessen, indem die Datei entfernt und wieder hingelegt wurde, nicht addiert.*
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -3874,10 +3875,18 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7879 von 24500 Kommentarzeilen** im Pruefer sind deutsch
- 1072 von  1515 in den Instrumenten
-  286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
+**7875 von 24591 Kommentarzeilen** im Pruefer sind deutsch
+ 1069 von  6496 in den Instrumenten
+  415 von  1448 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
+
+*7879 → 7875 am 2026-09-03, und die vier sind GEBUCHT und nicht wegübersetzt:* der
+Docstring von `pflichten.rs::rufe_im_block` stand deutsch da und wurde englisch neu
+geschrieben, weil dieselbe Änderung ihn ohnehin anfassen musste (der `let … else`-Ruf, der
+dort fehlte). **Die Ratsche darf fallen und nie steigen** — hier fällt sie um vier. *Die
+zwei Nachbarzahlen desselben Blocks standen an diesem Tag ebenfalls falsch da (`1072 von
+1515`, `286 von 914`) und sind gegen denselben Lauf richtiggestellt: sie sind AUSGABE eines
+Kommandos, und eine Ausgabe, die nie lief, ist schlechter als keine.*
 
 *Am 2026-08-31 fiel die erste Zahl von 7900 auf 7891 und die zweite von 16456 auf 16451, und
 zwar OHNE dass ein Kommentar angefasst wurde:* die Zählung nimmt jede Zeile, die mit `//` oder

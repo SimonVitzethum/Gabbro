@@ -255,6 +255,28 @@ MUTATIONEN = [
         "`E1` -- eine Pflichtart steht in der Kopfzahl und in keiner Zeile; das Manifest "
         "meldet sich vollstaendig und ist es nicht",
     ),
+    # -- pflichten.rs: the `let … else` call site (2026-09-03) -----------------------------
+    #
+    # **A walker that enters a body and not one of its arms** -- the fifth instance this
+    # folder records, and the first at the obligation register. `eigene_ausdruecke` answers
+    # `Vec::new()` for a `LetSonst` and says why in its own comment, so every `requires` of a
+    # callee reached through `let x = f(…) else (e) { … }` produced no `V` line at all.
+    #
+    # *The loss was silent and not small:* 101 -> 107 obligation lines over the corpus, four
+    # of them at `messung/fragmente/F01.gab`:426 where `revoke` calls `delete_leaf`. Two of
+    # those close `PFLICHTEN.md` F1 rows `236` and `337` -- the second is what that file calls
+    # **the load-bearing statement of `revoke`**.
+    #
+    # Without an anchor the arm could be dropped again in silence, and the register would
+    # simply be shorter -- which is exactly how it stood until it was measured.
+    Mutation(
+        "let-else-ruf-schuldet-keine-vorbedingung",
+        "gabbro-check/src/pflichten.rs",
+        "            if let Some(r) = l.als_ruf() {",
+        "            if let Some(r) = l.als_ruf().filter(|_| false) {",
+        "eine Rufstelle in einem `let … else` traegt wieder keine Vorbedingung; das "
+        "Register wird still kuerzer",
+    ),
     # -- kosten.rs: the branch prefix (2026-08-24) ---------------------------------------
     #
     # **Found while WRITING the soundness argument, not by a tool** (`messung/K001.md`).

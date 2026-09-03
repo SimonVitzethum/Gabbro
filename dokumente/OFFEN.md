@@ -463,3 +463,37 @@ construction, no way of saying *"and the thing it should forbid is still forbidd
 | **how big it is** | 24 rows, of which 8 have a probe recorded in `FUENFTE-MARKE.md` §2 and none has a negative one. Row #27 is additionally not separately measured at all and says so in its own footnote |
 | **why it is not repaired here** | it is 23 poison files against a document that will be re-derived when the driver is actually assembled. *The finding is worth more than the backlog*: it is a rule about how a capability gets booked, and it belongs at the next booking rather than retroactively |
 | **the general form** | **the test is not "does it check", it is "does the thing it forbids still get forbidden".** The same shape as `W16` one level up: an apparatus that measures something adjacent to the question and looks plausible doing it |
+
+---
+
+## O11 — A `table`/`group` invariant that no function `maintains` is booked by NOTHING
+
+**Found 2026-09-03 while re-deriving the manifest split, and it contradicts a sentence the
+checker's own source carries.** `Art::Walkinvariante`'s docstring weighs a refusal and drops
+it with the words *"`runs online` at a `table … ops` IS carried (by `table.ops.erhaltung`),
+and at a `table` without `ops` it becomes an `E` per `maintains`."* **The second half does not
+hold.** An `E` arises only where some function names the invariant in `maintains`; where none
+does, the invariant is declared, read by the name pass, and owed by nobody.
+
+Measured over the clean corpus — `invariant <name>` at a `table`/`group`, held against every
+`maintains` of the same unit:
+
+```
+named `table`/`group` invariants                 19
+  a function `maintains` it   -> booked as `E`    2
+  under a `table … ops`       -> carried by U-3    2
+  NOTHING maintains it        -> booked NOWHERE   15
+(`walk` invariants, booked as `W` since 2026-08-31: 4)
+```
+
+The fifteen sites are listed in `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` §7. One of them,
+`messung/fragmente/F01.gab`:236 `wurzel_ohne_vorgaenger`, is a row of GabbroV's obligation
+population (`PFLICHTEN.md` F1 `167–169`), which is how it was found at all.
+
+| | |
+|---|---|
+| **why it is an obligation** | the argument the `W` kind was built on, one construct over: *"an `E` is owed by a FUNCTION that names the invariant in `maintains`. A walk invariant is owed by no function at all."* A table invariant that no function names is owed by no function either — and unlike `W`, nothing else books it |
+| **what it is NOT** | a refusal. The same answer `D` and `W` got applies: do not refuse it, do not pretend to check it — **count it**. *A price that stands nowhere looks like zero* |
+| **what would close it** | a ninth `Art`, a collection site at `ItemArt::Tabelle` and `ItemArt::Gruppe`, and the condition *no `maintains` names it and no `ops` carries it* |
+| **why it is not built here** | **a ninth kind moves the header line, and that is a FORMAT change.** `AUFTRAG-GABBROV.md` §4 puts one in three steps and this is the third of them: today's readers know versions `1` and `2`, so a `3` and both silent readers (`pruefe-zahlen.py`, `manifest-lage.sh`) come first. *A reader taught the new format after the writer moved reports a number out of a format it cannot read* |
+| **how it was found** | not by a check — by asking, obligation by obligation, whether a tool reading only the manifest could reconstruct each row of `PFLICHTEN.md`. **Row 1 of 63 was the first one asked** |

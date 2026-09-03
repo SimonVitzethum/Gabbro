@@ -218,6 +218,22 @@ pub enum Art {
     /// `table` without `ops` it becomes an `E` per `maintains` -- *a rule over the word
     /// `online` would hit two registers that work in order to reach the one that does not.*
     ///
+    /// > **BERICHTIGT 2026-09-03: the second half of that sentence is measurably false, and
+    /// > the gap it hides is the LARGER one.** A `table`/`group` invariant becomes an `E`
+    /// > only if some function names it in `maintains` -- and over the clean corpus,
+    /// > measured with `invariant <name>` against every `maintains` of the same unit:
+    /// > **19 named `table`/`group` invariants, 2 of them maintained, 2 under a `table …
+    /// > ops`, and 15 booked by NOTHING.** Among the 15 is
+    /// > `messung/fragmente/F01.gab`:236 `wurzel_ohne_vorgaenger`, which
+    /// > `PFLICHTEN.md` books as F1 `167-169`.
+    /// >
+    /// > *So the exact argument made here for `W` holds one construct over, at fifteen
+    /// > times the surface.* **Not built in this lane, and named rather than left silent:**
+    /// > a ninth `Art` moves the header line, and `AUFTRAG-GABBROV.md` §4 puts a format
+    /// > change in three steps of which this would be the third. The measurement, the price
+    /// > and the refusal stand in `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` §6 and in
+    /// > `OFFEN.md`.
+    ///
     /// *It stands beside `E` and not inside it:* an `E` is owed by a FUNCTION that names the
     /// invariant in `maintains`. A walk invariant is owed by no function at all -- it is a
     /// statement about the whole mapping domain, and there is no `maintains` for it.
@@ -496,15 +512,42 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
     }
 }
 
-/// Jeder Ruf eines Blocks, samt Unterbloecken und Unterausdruecken.
+/// Every call of a block, sub-blocks and sub-expressions included.
 ///
-/// *Ohne `unterbloecke` faende die Zaehlung nur die oberste Ebene* -- und ein Ruf unter einer
-/// Sperre oder in einem `observes`-Block ist derselbe Ruf. **Dieselbe Lehre wie `pruefe-
-/// abstieg.py`, nur an einer Zaehlung statt an einem Pass.**
+/// *Without `unterbloecke` the count would find only the top level* -- and a call under a
+/// lock or in an `observes` block is the same call. **The same lesson as `pruefe-abstieg.py`,
+/// at a count instead of at a pass.**
+///
+/// ## `let x = f(…) else (e) { … }` was NOT among them, and that is measured (2026-09-03)
+///
+/// `eigene_ausdruecke` returns `Vec::new()` for a `LetSonst` and says why in its own comment:
+/// *"`let x = f() else …` carries its call in the source, not in an `Expr`."* **So this walk
+/// entered the body and missed one of its arms** -- the fifth time this folder records that
+/// shape, and the first at the obligation register.
+///
+/// The consequence is not a smaller number, it is a SILENT one: every `requires` of a callee
+/// reached through `let … else` produced no `V` line at all. Measured at
+/// `messung/fragmente/F01.gab`:426 -- `revoke` calls `delete_leaf` that way, and
+/// `delete_leaf` carries four `requires`; `PFLICHTEN.md` books two of them as LOGIC
+/// obligations (`236` *the cap has no children*, `337` *every `victim` is a leaf when
+/// `delete_leaf` sees it* -- *"the load-bearing statement of `revoke`"*). **Both were absent
+/// from the manifest and nothing said so.**
+///
+/// `LetSonst::als_ruf()` exists for exactly this -- *"the passes that only care about calls
+/// ask this way, instead of each of them having to know the new form"*. Nine passes ask;
+/// this one did not.
 fn rufe_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
     for s in &b.anweisungen {
         if let StmtArt::Ruf(r) = &s.art {
             aus.push(r);
+        }
+        // **The `let … else` call, and it is a call like any other.** `als_ruf()` answers
+        // `None` for the `place` form («B14b»), which unpacks an atomic and calls nothing --
+        // so this arm adds no edge where there is none.
+        if let StmtArt::LetSonst(l) = &s.art {
+            if let Some(r) = l.als_ruf() {
+                aus.push(r);
+            }
         }
         for e in crate::eigene_ausdruecke(s) {
             for x in crate::alle_ausdruecke(e) {
