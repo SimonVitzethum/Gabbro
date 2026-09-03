@@ -549,6 +549,32 @@ fn ein_requires_am_register_wird_gezaehlt() {
     );
 }
 
+/// **E1 over a unit with FOUR kinds at once, and that is the point of the file choice.**
+///
+/// `AUFTRAG-GABBROV.md` §5: *"E1 is wired into the tool, not hung beside it… A tool that does
+/// not check its own completeness has none."* The check inside `zeige` compares the records it
+/// wrote against the obligations `sammle` counted, and it exists for one shape: the print loop
+/// walks a **fixed list of eight kinds**, so a ninth added to `Art` and forgotten there is
+/// counted in the header line and printed in no line.
+///
+/// The sibling test above runs on `F04.gab`, which carries `D` obligations and nothing else --
+/// dropping any other kind from the list would pass there. `01-tabelle.gab` carries `E`, `N`,
+/// `V` and `S`, so this test bites wherever the omission is. *A completeness check tested over
+/// a unit with one kind is a completeness check tested over nothing.*
+#[test]
+fn e1_haelt_ueber_einer_datei_mit_vier_arten() {
+    let p = wurzel().join("01-tabelle.gab");
+    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, _) = gabbro_syntax::lies("01-tabelle.gab", &q);
+    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "01-tabelle.gab", &q);
+    assert!(vollstaendig, "E1 gefallen:\n{bericht}");
+    let zeilen = bericht.lines().filter(|z| z.starts_with("obligation\t")).count();
+    assert_eq!(zeilen, 13, "13 obligations, {zeilen} lines:\n{bericht}");
+    for marke in ["\tE\t", "\tN\t", "\tV\t", "\tS\t"] {
+        assert!(bericht.contains(marke), "kind {marke} missing:\n{bericht}");
+    }
+}
+
 /// **The version field, and it stands on LINE ONE** (2026-09-03).
 ///
 /// `AUFTRAG-GABBROV.md` §4 puts the order of a format change in three steps, and the first is

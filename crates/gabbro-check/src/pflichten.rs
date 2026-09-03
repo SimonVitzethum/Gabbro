@@ -848,6 +848,11 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     }
     let mut geschrieben = 0usize;
     let mut ohne_text = 0usize;
+    // **The reasons come out of the DATA, not out of a sentence written here.** A closing
+    // note that states the reason itself is a second register over the same thing: it stays
+    // right while `Pflicht::kein_text` changes underneath it, and then the manifest explains
+    // an emptiness by a cause that is no longer the cause.
+    let mut gruende: Vec<&'static str> = Vec::new();
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
                Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante,
                Art::Walkinvariante] {
@@ -869,6 +874,11 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
             };
             if text == "--" {
                 ohne_text += 1;
+                if let Some(g) = x.kein_text {
+                    if !gruende.contains(&g) {
+                        gruende.push(g);
+                    }
+                }
             }
             s.push_str(&format!(
                 "obligation\t{} :: {}\t{}\t{}\t{}\t{}\n",
@@ -941,12 +951,15 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
         );
     } else if ohne_text > 0 {
         s.push_str(&format!(
-            "   {ohne_text} line(s) carry `--` as their text: the clause names a statement\n   \
-             (`maintains I`, `refines g`) that is no `spec fn` with a predicate body and\n   \
-             no `table`/`group` invariant in this unit. *The name is in the second column;\n   \
-             the wording is nowhere this run can see, and it is left empty rather than\n   \
-             filled with the name again.*\n"
+            "   {ohne_text} line(s) carry `--` as their text, and the reason is named:\n"
         ));
+        for g in &gruende {
+            s.push_str(&format!("     * {g}\n"));
+        }
+        s.push_str(
+            "   *The name is in the second column; the wording is nowhere this run can see,\n   \
+             and the field is left empty rather than filled with the name a second time.*\n",
+        );
     }
     // **E1, INSIDE the tool** (`AUFTRAG-GABBROV.md` §5: *"wired in, not hung beside it. A tool
     // that does not check its own completeness has none."*).

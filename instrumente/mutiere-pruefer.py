@@ -236,6 +236,25 @@ MUTATIONEN = [
         "«B26» -- ein `requires` am Register verschwindet wieder still; die Klausel parst "
         "und niemand zaehlt sie",
     ),
+    # -- pflichten.rs: a kind counted and not printed (2026-09-03) -------------------------
+    #
+    # **The shape `E1` inside `zeige` exists for.** The print loop walks a FIXED list of eight
+    # kinds while the closing line counts all of them, so a kind missing from the list is
+    # counted in the header and written in no line -- *the silent loss `SPRACHE.md` §15
+    # promises against, inside the artefact that carries the promise.* The balance
+    # `debug_assert` a few lines below does not see it: the header still adds up, the body is
+    # short.
+    #
+    # Without an anchor here the completeness check could be removed again in silence, which
+    # is the same argument the device promise above carries.
+    Mutation(
+        "eine-art-wird-gezaehlt-und-nicht-gedruckt",
+        "gabbro-check/src/pflichten.rs",
+        "    for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,",
+        "    for art in [Art::Verfeinerung, Art::Erhaltung, Art::Fremdpflicht,",
+        "`E1` -- eine Pflichtart steht in der Kopfzahl und in keiner Zeile; das Manifest "
+        "meldet sich vollstaendig und ist es nicht",
+    ),
     # -- kosten.rs: the branch prefix (2026-08-24) ---------------------------------------
     #
     # **Found while WRITING the soundness argument, not by a tool** (`messung/K001.md`).

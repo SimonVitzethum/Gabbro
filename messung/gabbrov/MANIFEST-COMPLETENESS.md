@@ -375,3 +375,33 @@ what the field promises is that the *statement* is there, not that the vocabular
 | **state** | never | one value today, `open`, and the register's own second line has said so since the day it existed. It is written out because the reader on the other side writes `passed`/`refuted`/`open` back, and a field that appears only once something is written into it cannot be read before then |
 | **the anchor of the call site**, for the 7 kinds that are not `V` | always | those seven arise AT their clause, so there is nothing else to point at |
 | **the `L`/`K` class of `PFLICHTEN.md`** | every line | deliberate, and it stays. The register's own closing lines say why: *the K/A/W classification is a JUDGEMENT*, and a tool that guessed would be the silent answer this folder writes against |
+
+---
+
+## 8. The runs
+
+| | |
+|---|---|
+| `cargo test --offline --no-fail-fast` | **402 passed, 0 failed** (400 at `94c9ac5`, plus two new probes) |
+| `./instrumente/abnahme.py` (full, `ki-pc-fisch-101`) | **ROT: 3 of 51 measuring guards report a finding** — `pruefe-grammatiktafel.py` and `zaehle-karten.py`, both already red at `master` and neither this lane's, **plus `pruefe-manifest.py`, which is red by construction until the manifest carries its subject** |
+| `./instrumente/pruefe-manifest.py` | exit `1`, three speech probes green, `53 of 63 obligations reach no manifest line` |
+| `./instrumente/mutiere-pruefer.py --anker` | **384 of 384** |
+| `pruefe-zahlen.py` · `-todo` · `-englisch` · `-waechter` · `-widerruf` · `-kennungen` · `-zitate` | green |
+
+**Two mutations touch this work, and one of them is new:**
+
+* `eine-art-wird-gezaehlt-und-nicht-gedruckt` — drops `Art::Nachbedingung` from `zeige`'s
+  print list. **Exactly the shape the inner `E1` exists for**, and the balance
+  `debug_assert` beside it does not see it, because the header still adds up while the body
+  is short. Measured: it compiles and it is caught.
+* `geraetezusage-wird-nicht-gezaehlt` — carried over, because the line it pinned now needs
+  the clause's span. **`--anker` reported it the same day and by name**, which is what that
+  mode is for: a mutation whose anchor has moved measures nothing and reads like coverage.
+
+**Numbers carried, every one by removing the cause and putting it back**, never by adding:
+`pruefe-widerruf.py` 190 → 191 files · guards that can abort mid-run 53 → 54 · exits behind
+the first 312 → 320 · instruments carrying all five requirements 58 → 59 · `README.md`
+guardians 30 → 31 · mutation catalogue 383 → 384 · line continuations 3191 → 3203.
+
+*If a second lane moves any of these for a different file today, the merged truth is one
+higher and is to be re-measured there — not added and not chosen.*
