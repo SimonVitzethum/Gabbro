@@ -2423,18 +2423,31 @@ braucht keine Pflicht. *Drei Sorten, ein Test.*
 - [x] **Das zweite Beispiel steht:** `beispiele/64-writes-a-whole-buffer.gab` schreibt einen
       ganzen Puffer mit EINEM `write(fd, p, n)`, gebaut aus einem Manifest, übersetzt unter
       `-Wall -Wextra -Werror`, **gelaufen** — Ausgabe `Puffer\n`, sieben Bytes.
-- [ ] **Die Kante der Tafel ist genannt und nicht geschlossen:** `<signal.h>`,
+- [x] ~~**Die Kante der Tafel ist genannt und nicht geschlossen:** `<signal.h>`,
       `<sys/socket.h>` und `<fcntl.h>` liegen außerhalb, und `signal` und `recv` in
       `messung/fragmente/F05.gab` binden bis heute ungeprüft. *Ein Loch mit einem Namen darauf
-      ist kein Grün.*
-- [ ] **DREI Befunde daneben, und keiner davon ist `B2`** (2026-09-02, gemessen):
+      ist kein Grün.*~~ **GEHEILT am 2026-09-03: die vier Koepfe stehen gemessen in
+      `cnamen.rs::POSIX` (69 Zeilen: `<unistd.h>` 47, `<sys/socket.h>` 17, `<fcntl.h>` 3,
+      `<signal.h>` 2; 19 bindbar, alle 19 durch `cc`), und `miss-c-signaturen.py` druckt die
+      Kante je Lauf.** `signal` faellt an `N041` (keine Gabbro-Form fuer `__sighandler_t`),
+      `recv` bindet mit genau einer Zeile (`N046`, Gift `660`), `open` an `N052` (Ende in
+      den Daten, Gift `661`). F05 selbst ist bereinigt (`dienst_abbruch`,
+      `benachrichtige`, `empfange`) und prueft mit 0 Fehlern.
+- [x] ~~**DREI Befunde daneben, und keiner davon ist `B2`** (2026-09-02, gemessen):
       **(1)** an einem Zeigerparameter prüft M1 das Argument GAR NICHT — ein `u32`, ein `bool`
-      und ein Zeiger auf den falschen Verbund gehen alle drei mit 0 Fehlern durch;
-      **(2)** Gabbro kann auf seinen eigenen Speicher keinen Zeiger bilden (`&x` sagt `M127`
-      ab), und ein `static`-Verbund an einem Zeigerparameter geht als WERT hinüber, was `cc`
-      zurückweist — *darum trägt `beispiele/64` eine nackte Reihung und die Länge daneben*;
-      **(3)** ein `static`-Verbund mit einem Reihungsfeld senkt zu `{ .bytes = 0 }` ab und
-      fällt an `-Wmissing-braces`.
+      und ein Zeiger auf den falschen Verbund gehen alle drei mit 0 Fehlern durch;~~
+      **GEHEILT am 2026-09-02 durch `M140`** (Merge `26afe80`: 18x18-Tafel, 283 von 306
+      still): Zahl, `bool` und falscher Verbund am Zeigerparameter fallen seither
+      (`beispiele/gift/603`, `604`), nachgemessen am 2026-09-03.
+- [ ] **EIN Befund daneben, und keiner davon ist `B2`** (nachgemessen 2026-09-03):
+      **(2)** Gabbro hat keinen Adressoperator (`&x` sagt `M127` ab, Gift `244`), und ein
+      Verbund-WERT an einem Zeigerparameter faellt an `M140` (Merge `26afe80`) — *darum
+      trägt `beispiele/64` eine nackte Reihung und die Länge daneben*: eine Reihung
+      zerfaellt (`zerfaellt_zu`, `m1.rs`), ein Verbund nicht. Per Wert geht er schon
+      heute (`nimmt_t(t)` prueft, senkt, uebersetzt — nachgemessen 2026-09-03); der
+      Zeiger auf eigenen Speicher bleibt eine Sprachentscheidung (H2b: kein `cast`,
+      kein Adressoperator), kein Defekt. Was von (3) BLEIBT, ist nichts: `feldsetzer`
+      schreibt `{0}` seit 2026-09-02 (Gift `605`).
 
 **Und der Zustand vorher war schlechter als „ungeprüft", gemessen am 2026-09-02:**
 
