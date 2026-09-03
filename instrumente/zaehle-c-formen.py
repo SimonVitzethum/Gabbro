@@ -216,8 +216,19 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # `pruefe-emission.sh` compiles with `-Wall -Wextra -Werror`, and `-Wconversion` is in
 # neither. **This counter is stricter than the gate on purpose** -- it is the mechanical
 # check `BEWEIS.md` §2 line 7 asks for, and it just earned its keep a second time.
-MARKE_TABELLE = 67
-MARKE_UNERLAUBT = 32
+#
+# **67 -> 66 and 32 -> 31 on 2026-09-03, and the named exit above was taken, by this lane.**
+# `O9` is closed (`messung/ERZEUGERREST.md` `D20`): `verenge` now re-derives a structural
+# bound for a mask and a literal right shift (`ausdruck_obergrenze`), and a register WRITE
+# target now resolves its own width (`register_ctyp`, which the read side already used and
+# the write side did not) -- so a proved narrowing gets the explicit cast M1 already
+# justified, on all three measured forms (the mask, the shift, and the shift through a typed
+# local). Re-run over the whole corpus: `--uebersetzer` reports **zero** hits of
+# `-Wconversion`/`-Wsign-conversion` over 140 translated units, where the count was one
+# before the repair. *Whoever finds it red again should fix the emitter, not the number* --
+# unchanged, because the sentence does not expire when the number does.
+MARKE_TABELLE = 66
+MARKE_UNERLAUBT = 31
 
 # ---------------------------------------------------------------------------------------
 # **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price

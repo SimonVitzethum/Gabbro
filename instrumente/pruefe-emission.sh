@@ -2776,7 +2776,20 @@ MARKE_EMIT=65
 # denselben Dateivergleich, den diese Stufe selbst als FUND meldet -- keine der beiden
 # gehoert `D19`s eigenen vier Formularen oder dem `bankfelder`-Repair.
 # *Stufe 9 blieb dabei 128 von 128, und `clang` nimmt dieselben 128.*
-MARKE_EMIT_M=61
+# **61 -> 71 on 2026-09-03, and only ONE of the ten is this lane's.** Measured on a clean
+# rebuild of `master` at `af483c3` (this lane's own branch point, `../gabbro-emit3-base` on
+# `ki-pc-fisch-101`) BEFORE any of its three repairs: `n_emit_m` already read **70**, nine
+# past the mark this comment carried. *That drift predates this lane and was not audited
+# here* -- the corpus under `messung/*/` grows with every merge into `master`, and no run of
+# this stage stood between the last correction and this one to catch it earlier.
+#
+# **The tenth is `D21`** (`messung/ERZEUGERREST.md`): `messung/proben/probe-marke-an-retry-
+# und-traverse.gab`'s `an_retry` hit `C001` on `next lauf;` before the repair -- a nonzero
+# exit from `gabbro emit` on the WHOLE file, so this stage's loop `continue`d past it and
+# counted nothing. After `retry`'s own lowering learned to push its label the way `forever`'s
+# already did, the file emits end to end and joins the count. *One file, one cause, named --
+# the other nine are not, and saying so is more honest than folding them into this one.*
+MARKE_EMIT_M=71
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

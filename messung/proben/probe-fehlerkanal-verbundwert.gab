@@ -1,21 +1,28 @@
--- erwartet: cc
 -- MINIMISED, from the `queue_setup` attempt (`caprock-virtio/src/lib.rs:486`).
 --
 -- `let x = f() else (e) { … }` where `f` returns a RECORD through the error channel:
--- the CHECKER takes it (0 errors), and the EMITTER writes `x->feld` for a value that it
--- itself declared as `W x;` -- not a pointer. `cc` refuses:
+-- the CHECKER takes it (0 errors), and until 2026-09-03 the EMITTER wrote `x->feld` for a
+-- value that it itself declared as `W x;` -- not a pointer. `cc` refused:
 --
 --     error: invalid type argument of '->' (have 'W')
 --
--- Found by READING the emitted body, not by grepping it. The checker is silent because the
--- fault is not in the source -- it is in the lowering of a binding the checker got right.
+-- Found by READING the emitted body, not by grepping it. The checker was silent because the
+-- fault was not in the source -- it was in the lowering of a binding the checker got right.
 --
--- **`-- erwartet: cc` stands in the first line, and it is not a way of hiding the red.** It
--- is this tree's word for "the C of this file is SUPPOSED to fall": four probes carry it
--- already. Without it the file is an unbooked ceiling breach in
--- `pruefe-uebersetzerfamilie.py` -- a second register over one thing (W7). With it the
--- refusal is the file's DECLARED purpose, and it stays visible instead of being averaged
--- away. It comes out the day the emitter stops writing `x->field` over a value.
+-- **Repaired 2026-09-03, `D22` (`messung/ERZEUGERREST.md`).** `verbundlokale`
+-- (`emit.rs`) registered every plain `let`-bound record, but skipped a `let … else`-bound
+-- one on the stated belief that "whether `x` ends up a value or a pointer is decided at the
+-- lowering of the statement" -- true of the DECLARATION (always a plain value, whatever `T`
+-- is) and simply unread by this collector. Registering the same call's declared return type
+-- the way `verbundwert` already does for a plain `let` closed it: `w.a`, not `w->a`.
+--
+-- **This probe carried `-- erwartet: cc` until the repair landed -- it stood in the first
+-- line, and it was not a way of hiding the red.** That was this tree's word for "the C of
+-- this file is SUPPOSED to fall": four other probes carry it still. With it, the refusal
+-- was the file's DECLARED purpose, so it stayed visible instead of being averaged away.
+-- **It came out the day the emitter stopped writing `x->field` over a value** -- today --
+-- and the probe itself is the regression lock now: it must keep lowering and keep
+-- compiling, or `pruefe-emission.sh` Stufe 9 says so by name.
 
 module probe::fehlerkanal_verbundwert {
 
