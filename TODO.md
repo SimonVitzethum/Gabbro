@@ -554,6 +554,13 @@ darunter.
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
       heute **12 Widerrufe** über 183 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *182 → 183 on 2026-09-03: `messung/GABBROV-V2.md` joined — the V2 lane's report (the three
+      `progress` rebookings verified, and the vacuity check built: 0 of 31 preconditions
+      vacuous). **The cause was measured the way this entry asks**: the file was moved away,
+      `pruefe-zahlen.py` went green with exit 0, the file came back. *And it widens the reach
+      note two entries below:* that one records the guardian reach of a new `dokumente/*.md`,
+      and `pruefe-widerruf.py` globs **`messung/*.md` as well** (`:263`, beside `:243`) — so a
+      new measurement report moves this number just as a new design document does.*
       *179 → 181 on 2026-09-02: `dokumente/GABBROV.md` and `messung/GABBROV-V1.md` joined —
       the GabbroV design and V1's measurement over it (56 of 66 L obligations sayable in the
       Lean fragment, `G1` does not fire). **The cause was measured the way the entry below
