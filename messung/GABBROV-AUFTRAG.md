@@ -362,3 +362,61 @@ guardian-of-guardians is the cheapest possible instance of the class it was buil
 
 *Also green after the work: `pruefe-todo.py`, `pruefe-widerruf.py`, `pruefe-englisch.py`,
 `pruefe-waechter.py`.*
+
+---
+
+## 2. §3 — the day's experiment
+
+**This section is written in two commits on purpose.** The draw below was recorded and
+committed **before** any of the five rows was looked at; the results follow in the next
+commit. §3 says the five are drawn *before looking*, and *"if one of them fits suspiciously
+well, that is a reason NOT to take it"* — a rule that can only be honoured if the drawing and
+the judging are separated in the record, not merely in intention.
+
+### 2.1 The draw
+
+Population: the sayable rows of `programmlogik/gabbrov/V1.lean` — the 66 minus the ten that
+carry `notSayable`, minus `L66`, which left for the assumption layer on 2026-09-03.
+**55 rows.**
+
+```
+seed  b15ef79        the commit this lane produced at Gate 1
+order sha256(seed + ":" + row), ascending
+```
+
+The seed is the Gate 1 commit. It existed before any row's difficulty was inspected, and it
+cannot be tuned afterwards without the draw visibly changing.
+
+```
+population 55   not sayable 10   L66 rebooked
+two-state in the population: 19
+table identity              : L04 L05 L09 L15 L16
+
+hash order, first five      : L01 L40 L39 L23 L62
+  constraint table identity   NOT met -- L05 replaces L62
+  constraint two-state        already met
+
+THE FIVE: L01  L05  L23  L39  L40
+  L01  domain
+  L05  table identity, two-state, domain
+  L23  single state
+  L39  two-state
+  L40  two-state
+```
+
+**§3 asks for two properties in the sample, and only one had to be forced.** Three of the
+blind five are two-state relations already; none was from the table-identity class, so `L05`
+— the first member of that class in the same hash order — **replaces the last blind pick**
+rather than being added. *The correction is one element and it is visible; the draw stays a
+draw.*
+
+| | |
+|---|---|
+| `L01` | `cdt_wohlgeformt`'s sibling half — a predicate over a table domain, one state |
+| `L05` | table identity **and** two-state: a `cdtWf` preservation over a bounded reachability |
+| `L23` | `caller` and `reply_owner` are set together or not at all — one state, and the pre/post half of `L24`, which is row 1 of `AUSNAHMEN.md` |
+| `L39` | two-state |
+| `L40` | two-state, and `PFLICHTEN.md` marks it with a gap of its own («B26», no placeholder for the pre-state) |
+
+*Recorded here before the rows were read. What they say, whether a solver touches them, and
+what that means for the scope of the whole project is the next commit.*
