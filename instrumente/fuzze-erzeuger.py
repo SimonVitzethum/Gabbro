@@ -934,6 +934,31 @@ def main():
           f"{gesenkt_basis} of them lower to C, "
           f"{sum(1 for e in basis.values() if str(e.get('debug')).startswith('REFUSE'))} "
           f"are refused by name at the baseline itself")
+
+    # **AND THE BASELINE IS HELD TO THE GATE THIS SWEEP ENDS AT, NOT ONE RUNG ABOVE IT.**
+    # ----------------------------------------------------------------------------------
+    # `D1` was found this way round: a baseline validated at `gabbro pruefe` was READ OUT of
+    # a sweep whose property stops there, and reused here by a property that stops at `cc`.
+    # The header two blocks up already promised "through checker AND emitter"; the refusal
+    # under it only ever weighed the checker, and the compile gate -- the deepest stage of
+    # this tool's own property -- was measured per case and never once for the baseline.
+    #
+    # **It is a REPORT, and going red here would be the worse instrument.** A baseline whose
+    # C the compiler rejects is either a bad fixture or a live emitter defect, and no test
+    # inside this file can tell those apart. A sweep that refused to run over the second
+    # kind would stop measuring its object exactly when the object is broken -- so the
+    # ledger below judges the count, and this line only makes it visible.
+    kaputte_basis = [(f, e) for f, e in sorted(basis.items())
+                     if e.get("debug") in ("LOWER", "LOWER-EMPTY")
+                     and not e.get("uebersetzt")]
+    print(f"   {gesenkt_basis - len(kaputte_basis)} of those {gesenkt_basis} COMPILE under "
+          f"the gate -- {len(kaputte_basis)} do not, and each one is a FORM-LEVEL defect:")
+    if not kaputte_basis:
+        print("      none. Every lowered baseline compiles, so every shape-2 finding below")
+        print("      is the swept VALUE's own doing.")
+    for f, e in kaputte_basis:
+        m = re.search(r"(?:error|Error): (.*)", e.get("cc_text") or "")
+        print(f"      {f:22s} baseline `{e['wert']}`  {(m.group(1) if m else '?')[:60]}")
     basis_zahlen, basis_namen = {}, {}
     for f, e in basis.items():
         cpfad = pathlib.Path(e["pfad"]).with_suffix(".c")
@@ -983,10 +1008,10 @@ def main():
         print(f"   {halt_n} more for net 8, ONE at a time, deadline {FRIST_HALT} s")
         for auftrag in halt_auftraege:
             ergebnisse.append(eine_probe(auftrag))
-    return bericht(ergebnisse, formen, n, halt_n, arb, args)
+    return bericht(ergebnisse, formen, n, halt_n, arb, args, kaputte_basis)
 
 
-def bericht(ergebnisse, formen, n, halt_n, arb, args):
+def bericht(ergebnisse, formen, n, halt_n, arb, args, kaputte_basis):
     angenommen = [e for e in ergebnisse if e["angenommen"]]
     for e in angenommen:
         e["_gesenkt"] = e["debug"] in ("LOWER", "LOWER-EMPTY")
@@ -1153,6 +1178,20 @@ def bericht(ergebnisse, formen, n, halt_n, arb, args):
             wo = sorted({x["form"] for x in ee})
             print(f"   {len(ee):4d}  {s[:88]}")
             print(f"         over {len(wo)} forms: {' '.join(wo)}")
+
+        # **AND THE BASELINE SPLITS THIS COUNT IN TWO, WHICH THE GROUPING ABOVE CANNOT.**
+        # A form whose own baseline already fails the gate fails at every rung it lowers,
+        # and the swept slot has nothing to do with it: that is one defect counted N times,
+        # `W17` one stage deeper than the acceptance sweep applies it. The complement is the
+        # interesting half -- a form whose baseline compiles and whose C stops compiling at
+        # some rung has a defect the swept VALUE reaches, and that is a boundary finding.
+        formkrank = {f for f, _ in kaputte_basis}
+        auf_form = [x for x in nichtueb if x[0]["form"] in formkrank]
+        print(f"   {len(auf_form):4d}  of the {len(nichtueb)} sit in a form whose BASELINE "
+              f"already fails the gate")
+        print(f"         {len(formkrank)} such forms: {' '.join(sorted(formkrank))}")
+        print(f"   {len(nichtueb) - len(auf_form):4d}  are reached by the swept VALUE -- the "
+              f"baseline of their form compiles")
     zeige("1. A THIRD ANSWER -- neither lowered nor refused by name", dritte,
           "a panic, a timeout, an unnamed exit, or a `C001` with no note")
     zeige("2. THE C DOES NOT COMPILE -- cc " + " ".join(TOR), nichtueb,
