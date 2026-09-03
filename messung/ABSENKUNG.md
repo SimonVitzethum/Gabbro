@@ -25,6 +25,11 @@
 > ist, ist ausschließlich die Absenkung.* **F6 ist seit dem 2026-08-31 durchgestochen**
 > (`lauf "fragment6"` in `pruefe-emission.sh`, achtzehn Zahlen, `-O0`/`-O2`/UBSan), und
 > `GEMESSEN` sind damit F2, F4, **F6**, F7, F8, F10.
+>
+> **Fortgeschrieben 2026-09-03: `H = 3`.** F9 ist durchgestochen (`lauf "fragment9"`, sechs
+> Zahlen, `-O0`/`-O2`/UBSan/ASan) — und die Einloesung war zur Haelfte eine Erzeugerreparatur
+> und zur Haelfte eine am Korpus. *Beide stehen im Kopf von `messung/fragmente/F09.gab`, und
+> keine von beiden macht die Datei gruen, indem sie eine Zusage abschwaecht.*
 
 ```bash
 ./instrumente/zaehle-pflichten.py --haengend

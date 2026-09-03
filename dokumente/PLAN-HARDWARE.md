@@ -2445,7 +2445,7 @@ Ziel.*
 
       | | Prüferstand heute | der Erzeuger sagt zusätzlich |
       |---|---|---|
-      | **F09** | 1 Fehler — `K001` | `device … at normal` |
+      | ~~**F09**~~ **ERLEDIGT 2026-09-03** | ~~1 Fehler — `K001`~~ **0** | ~~`device … at normal`~~ — **und es waren DREI Absagen und nicht eine:** `device … at normal`, `walk … levels` über einem `const`-Namen, `mappings of`. *Die Zeile hier hat die erste gelesen und die zwei dahinter nicht* |
       | **F01** | 3 — 2× `M140`, `N029` | — |
       | **F05** | 4 — 2× `N046`, `M134`, `N041` | `match` über einen undeklarierten Ruf |
       | **F03** | **27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009` | `queue` — **«B10»: `traverse` liefert keinen Wert** |
@@ -2464,6 +2464,24 @@ Ziel.*
       *Die Entscheidung nimmt das in Kauf* — und die Reihenfolge folgt den Kosten:
       **F09 → F01 → F05 → F03**, mit einem Halt nach F05, weil dann die Frage steht, ob
       «B10» das Geld wert ist.
+
+      > **F09 steht seit dem 2026-09-03, und `H` ist 3** (`zaehle-fragmente.py`: *7 von 10
+      > sind DURCHGESTOCHEN*). Zur Hälfte war es eine **Erzeugerreparatur**: `walk_` las
+      > `levels EBENEN` nicht, weil es den schwächeren von zwei Konstantenauswertern hielt
+      > (W7, dritte Fundstelle derselben benannten Klasse) — Gegenprobe
+      > `beispiele/gift/667`. Zur anderen Hälfte eine **Korpusreparatur**: das
+      > `device … at normal` war die falsche Form für die Bits eines gewöhnlichen Wortes,
+      > und `costs <= 4096 ops` über `traverse … over mappings of` eine Zusage, die
+      > `SPRACHE.md` §5.4 seit Stufe 3 ausdrücklich für untragbar erklärt.
+      >
+      > **Und F09 ist der erste Durchstich, dessen Arbeitsfassung dem eingefrorenen
+      > Ausschnitt Zeilen WEGNIMMT.** Der Wächter prüft darum nicht mehr *„nichts fehlt"*,
+      > sondern das Schärfere: *jede fehlende Zeile muss eine der benannten sein.*
+      >
+      > **Was offen BLEIBT:** `traverse … over mappings of` hat weiter keine Absenkung. Sie
+      > braucht einen benannten Auflöser von Rahmen zu lesbarem Knoten — im erzeugten C ist
+      > er der Parameter `knoten_zu`, und in Gabbro gibt es keine Klausel, in der er stünde.
+      > *Das ist «B10»-förmig und gehört dem Ordner.*
 - [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
       rote Wächter seit drei Tagen.**
 

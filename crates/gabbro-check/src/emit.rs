@@ -7377,13 +7377,8 @@ fn feldstatisch(
         weigere(absagen, st.name.span, "`static` array over an unresolvable element type");
         return;
     };
-    let Some(n) = konst_zahl(&a.laenge).or_else(|| {
-        // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
-        match &a.laenge.art {
-            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
-            _ => None,
-        }
-    }) else {
+    // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
+    let Some(n) = konst_oder_name(&a.laenge, u) else {
         weigere(absagen, st.name.span, "`static` array whose length is not constant");
         return;
     };
@@ -8615,12 +8610,7 @@ fn feldlaenge_von(t: &TypExpr, u: &Namen) -> Option<u128> {
     // `konst_zahl` knows only literals -- *the same trap `scale` hit, and it is resolved the
     // same way: `umgebung.rs` has already folded the constant, and this reads its answer
     // instead of computing a second one* (W7).
-    konst_zahl(&a.laenge)
-        .or_else(|| match &a.laenge.art {
-            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
-            _ => None,
-        })
-        .and_then(|n| u128::try_from(n).ok())
+    konst_oder_name(&a.laenge, u).and_then(|n| u128::try_from(n).ok())
 }
 
 fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
@@ -9914,6 +9904,30 @@ fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Op
     })
 }
 
+/// **A `const` NAME is a constant too** -- the third site of one named defect (2026-09-03).
+///
+/// `konst_zahl` reads a digit string and nothing else. `umgebung.rs` folded every `const` of
+/// the unit long before the emitter runs, and `Namen::konstwert` carries the answer; the
+/// `static` array length and `feldlaenge_von` already read it. **`walk_` did not**, so
+///
+/// ```gabbro
+/// const EBENEN : u32 = 4;
+/// walk Seitenabstieg levels EBENEN { node : [Pte; EINTRAEGE], ... }
+/// ```
+///
+/// drew *"`walk ... levels` that is not a number"* over a declaration that says `4`. The
+/// refusal's own reason -- *the step count cannot be guessed* -- did not apply: nothing is
+/// guessed when the value is READ out of the same table `count N` is read from.
+///
+/// *Two registers over one thing, and the weaker one decided* (W7) -- the sentence stands
+/// verbatim over `Namen::konstwert` since the day that field was built.
+fn konst_oder_name(e: &Expr, u: &Namen) -> Option<i128> {
+    konst_zahl(e).or_else(|| match &e.art {
+        ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
+        _ => None,
+    })
+}
+
 /// **`walk` -- ein Knotentyp, zwei Praedikate und EIN Abstieg, dessen Schrittzahl aus
 /// `levels` kommt.**
 ///
@@ -9943,16 +9957,17 @@ fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Op
 /// er schuldet.
 fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     let n = &w.name.text;
-    let Some(ebenen) = konst_zahl(&w.ebenen) else {
+    let Some(ebenen) = konst_oder_name(&w.ebenen, u) else {
         weigere(
             absagen,
             w.span,
-            "`walk … levels` that is not a number -- the descent's step count IS the \
-             declaration's one statement about the run, and it cannot be guessed",
+            "`walk … levels` that is neither a number nor a `const` of this unit -- the \
+             descent's step count IS the declaration's one statement about the run, and it \
+             cannot be guessed",
         );
         return;
     };
-    let Some(weite) = konst_zahl(&w.knoten.laenge) else {
+    let Some(weite) = konst_oder_name(&w.knoten.laenge, u) else {
         weigere(
             absagen,
             w.span,

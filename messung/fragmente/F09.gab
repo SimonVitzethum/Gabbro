@@ -1,39 +1,76 @@
 -- =======================================================================================
 -- F9 -- die MMU-Seitentabellen, VERVOLLSTAENDIGT
 --
--- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:1503-1550, byteidentisch, plus genau die
--- Zeilen, die ihn zu einem PROGRAMM machen.**
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:1503-1550, plus genau die Zeilen, die ihn
+-- zu einem PROGRAMM machen -- und seit dem 2026-09-03 MINUS drei, die ihn daran hinderten.**
 --
--- **ERGAENZT, und nichts sonst:** zwei `reserved`-Felder in `Pte` (11:0 und 63:52). Ein
--- `format` sagt, welche Bits EXISTIEREN; ein Ausschnitt nennt die, um die es geht.
+-- **ERGAENZT:** die Merkmalsbits stehen als Felder des `format Pte` da statt als Register
+-- eines `device`, `down`/`leaf` lesen sie ueber `it.<Feld>`, und `rechte_pruefen` prueft
+-- EINEN Eintrag statt der Blattmenge. Jede der drei Aenderungen hat ihren Grund darunter,
+-- und keine davon macht die Datei gruen, indem sie eine Zusage abschwaecht.
 --
--- **UND HIER BLEIBT ETWAS OFFEN, DAS GABBRO GEHOERT -- drei Absagen, und sie sind der
--- eigentliche Ertrag dieser Datei:**
+-- 1. DAS `device … at normal` IST DIE FALSCHE FORM, UND DER ERZEUGER HAT DAS GESAGT
+-- ---------------------------------------------------------------------------------
+-- Der Ausschnitt nannte die neun Bits in einem
 --
---   1. `device … at normal` -- welche Barriere ein Zugriff verlangt, ist eine Aussage ueber
---      das SPEICHERMODELL. Sie gehoert in die Axiomschicht, nicht in einen Pass.
---   2. `walk … levels EBENEN` -- die Stufenzahl ist ein KONSTANTENNAME, keine Zahl, und der
---      Erzeuger loest ihn nicht auf. *Der Wert steht drei Zeilen weiter oben.*
---   3. ~~`mappings of` -- `SPRACHE.md`:786 sagt, es quantifiziert ueber ALLE erreichbaren
---      Blaetter; der Kostenpass schrankt bei `levels x Knotenlaenge`. Sieben
---      Groessenordnungen.~~ **ENTSCHIEDEN am 2026-08-20 (Stufe 3): es ist die BLATTMENGE.**
+--     device Seitentabelle(basis : Pa) at normal { reg EINTRAG : u64 @0x0 … }
 --
---      *Und diese Datei bezahlt die Entscheidung sofort.* Die Zeile darunter sagt
---      `costs <= 4096 ops` und nennt als Begruendung `levels` mal Knotenlaenge -- also
---      genau die kleinere Lesart. Der Kostenpass rechnet seither die Blaetter, und
---      `rechte_pruefen` faellt mit
+-- und der Erzeuger sagte dazu: *„an access into the ordinary space is not a device access,
+-- and what a `device` block would mean there is not decided."* **Die Absage hat recht.** Ein
+-- Seiteneintrag liegt im gewoehnlichen Speicher; `format` ist die Form, die Bits eines
+-- gewoehnlichen Wortes benennt, und dieselbe Datei fuehrte fuer dasselbe Wort schon ein
+-- `format Pte`. *Zwei Register ueber derselben Sache* (W7) -- und das schwaechere war das,
+-- das keine Absenkung hat.
 --
---          [K001] promises <= 4096 ops, the body costs 137438953472
+-- Dazu kam eine zweite Absage hinter derselben Zeile: `down : roh when EINTRAG.PS == 0`
+-- nennt ein Geraeteregister, und `walk` liest seine Praedikate ueber `it.<Feld>` des
+-- Knoten-`format`. **Diese Form haette nie absenken koennen**, auch mit einem `device` im
+-- `mmio`-Raum nicht. Die Bits stehen jetzt dort, wo sie gelesen werden.
 --
---      **Der Fehler stand seit dem Schnitt in dieser Datei und war nicht sichtbar, solange
---      der Pass dieselbe falsche Lesart trug wie der Mensch, der die Zeile schrieb.** Zwei
---      Register ueber derselben Sache, und beide falsch (W7). *Der Wortlaut des Ausschnitts
---      bleibt stehen; was hier faellt, ist eine echte Zusage, die niemand haelt.*
+-- `A` und `D` bleiben `reserved` -- der Ausschnitt sagt warum: *„`A` und `D` schreibt die
+-- Hardware -- ein Schreiben von uns waere ein Fehler."* Ein `reserved`-Feld bekommt keinen
+-- Leser und keinen Schreiber, und das ist genau die Aussage.
 --
---      Damit prueft F9 nicht mehr sauber -- **6 von 10 statt 7**, und das ist der Preis
---      einer entschiedenen Lesart. Eine Laufzeit-Traversierung ueber die Blattmenge kann
---      keine Kostenzusage tragen; die Form, die eine tragen kann, ist ein Abstieg entlang
---      EINES Pfades, und die hat noch keinen Namen (Stufe 4).
+-- 2. `levels EBENEN` WAR EIN ERZEUGERFEHLER UND IST GEHEILT
+-- ---------------------------------------------------------
+-- Bis zum 2026-09-03 sagte der Erzeuger *„`walk … levels` that is not a number"* ueber eine
+-- Deklaration, die `4` sagt. `umgebung.rs` faltet jedes `const` der Einheit, `Namen::
+-- konstwert` traegt die Antwort, und die Feldlaenge las sie seit Tagen. **`walk_` hielt das
+-- schwaechere von zwei Registern** (W7). Die Gegenprobe steht als
+-- `beispiele/gift/667-walk-levels-is-an-expression.gab`.
+--
+-- 3. `traverse … over mappings of` KANN DIE ZUSAGE NICHT TRAGEN, UND DAS IST ENTSCHIEDEN
+-- --------------------------------------------------------------------------------------
+-- Der Ausschnitt schrieb
+--
+--     costs <= 4096 ops
+--     traverse abbildung over mappings of w by unvisited { … }
+--
+-- und begruendete die 4096 mit `levels` mal Knotenlaenge. **Seit Stufe 3 (2026-08-20) ist
+-- die Lesart die BLATTMENGE**, weil W^X eine Aussage ueber die Menge ist und ueber einen
+-- Pfad sinnlos. `SPRACHE.md` §5.4 zieht die Folge ausdruecklich: *„a RUN-TIME traversal over
+-- `mappings of` can therefore hold no cost promise. That is true, and the other reading
+-- would have been a promise nobody keeps."*
+--
+-- Der Pruefer sagte es an dieser Datei mit
+--
+--     [K001] promises <= 4096 ops, the body costs 137438953472
+--
+-- -- sieben Groessenordnungen, und die Zusage war eine echte, die niemand haelt. **Die
+-- Reparatur schreibt nicht die groessere Zahl hin.** Sie stellt jede der beiden Aussagen
+-- dorthin, wo sie hingehoert:
+--
+--   * die Aussage ueber die MENGE steht als `walk`-Invariante ueber `mappings of Self` --
+--     die Stellung, fuer die die achte Domaene gebaut wurde, und die einzige, in der sie
+--     absenkt (sie steht als `W`-Pflicht in `gabbro pflichten`, nicht als Laufzeitrechnung);
+--   * die Aussage ueber EINEN Eintrag steht in `rechte_pruefen`, mit einer Schranke, die der
+--     Kostenpass ausrechnet und die Zeile abschreibt.
+--
+-- **Was offen BLEIBT und hier nicht weggeschrieben wird:** eine Laufzeit-Traversierung ueber
+-- `mappings of` hat weiter keine Absenkung. Sie braucht einen erzeugten rekursiven Abstieg
+-- **und einen benannten Aufloeser von Rahmen zu lesbarem Knoten** -- `walk_` nimmt ihn im
+-- erzeugten C als Parameter `knoten_zu` entgegen, und in Gabbro gibt es keine Klausel, in der
+-- er stuende. *Das ist eine Konstruktfrage und gehoert dem Ordner, nicht diesem Korpus.*
 --
 -- *Das ist der Sinn dieses Korpus:* nach der Vervollstaendigung steht da, was GABBRO fehlt,
 -- und nicht mehr, was dem Ausschnitt fehlt.
@@ -50,42 +87,50 @@ type Ebene = u32 in 0 ..< EBENEN;
 
 -- **Der Eintrag ist EIN Wort mit zwei Lesarten**, und `embeds` sagt welche. Ohne die
 -- Zeile stünde die Adresse als blanke Zahl da, und `& MASK` wäre Konvention.
+--
+-- Die neun Bits stehen daneben, einzeln benannt -- **im selben `format`, weil sie im selben
+-- Wort stehen.** `A` und `D` schreibt die Hardware; sie stehen als `reserved`, weil ein
+-- Schreiben von uns ein Fehler wäre, und ein `reserved`-Feld bekommt keinen Schreiber.
 format Pte @version 1 endian little {
-    unten : u64 @[11:0] reserved,          -- ERGAENZT: die Merkmalsbits, hier nicht gelesen
-    roh : u64 embeds [51:12] scale 4096,   -- der Rahmen: Bits 51..12, mal 4096
-    oben  : u64 @[63:52] reserved,         -- ERGAENZT: NX und die reservierten Hochbits
-}
-
--- Die neun Bits, einzeln benannt. `A` und `D` schreibt die Hardware -- sie stehen als
--- `reserved`, weil ein Schreiben von uns ein Fehler wäre.
-device Seitentabelle(basis : Pa) at normal {
-    reg EINTRAG : u64 @0x0 class rw fields {
-        P @0, RW @1, US @2, PWT @3, PCD @4, A @5, D @6, PS @7, NX @63,
-    }
+    P    : bool @0,
+    RW   : bool @1,
+    US   : bool @2,
+    PWT  : bool @3,
+    PCD  : bool @4,
+    A    : bool @5 reserved,               -- ERGAENZT: die Hardware schreibt es
+    D    : bool @6 reserved,               -- ERGAENZT: die Hardware schreibt es
+    PS   : bool @7,
+    frei : u64  @[11:8] reserved,          -- ERGAENZT: die uebrigen Merkmalsbits
+    roh  : u64  embeds [51:12] scale 4096, -- der Rahmen: Bits 51..12, mal 4096
+    hoch : u64  @[62:52] reserved,         -- ERGAENZT: die reservierten Hochbits
+    NX   : bool @63,
 }
 
 -- `walk` erzeugt die Domäne `mappings of`: je Abbildung stehen `va`, `level` und
 -- `index[level]` bereit. **Die vierstufige Kette wird damit EINE Traversierung**, und ihre
 -- Schranke fällt aus der Deklaration statt aus einer Zählung im Rumpf.
+--
+-- **W^X steht hier und nicht im Rumpf**, und das ist die Stellung, für die die achte Domäne
+-- gebaut wurde: eine Aussage über die BLATTMENGE. Sie wird BENANNT und nicht zur Laufzeit
+-- nachgerechnet (W6) -- `gabbro pflichten` führt sie als offene `W`-Pflicht.
 walk Seitenabstieg levels EBENEN {
     node : [Pte; EINTRAEGE],
-    down : roh when EINTRAG.PS == 0,
-    leaf : EINTRAG.PS == 1,
+    down : roh when !it.PS,
+    leaf : it.PS,
+
+    -- ERGAENZT: die Zusage, die der Ausschnitt als `traverse` schrieb -- an der Stelle, an
+    -- der `mappings of` sie tragen kann.
+    invariant wx_getrennt cost O(n) runs online :
+        forall m in mappings of Self : !(m.RW && !m.NX);
 }
 
--- Die Schranke faellt aus `levels` mal `node`-Laenge: 4 Ebenen zu 512 Eintraegen.
-impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
-    effects { reads w }
-    costs   <= 4096 ops
+-- **Die Schranke steht nicht mehr für die Menge, sondern für den Eintrag** -- und sie ist
+-- abgeschrieben und nicht geschätzt: `gabbro costs` rechnet 5, die Zeile sagt 5.
+impl fn rechte_pruefen(e : ptr<normal, r> Pte) -> bool
+    effects { reads e }
+    costs   <= 5 ops
 {
-    traverse abbildung over mappings of w by unvisited
-        touches reads w
-    {
-        if abbildung.level == 3 {
-            return true;
-        }
-    }
-    return false;
+    return !(e.RW && !e.NX);
 }
 
 }

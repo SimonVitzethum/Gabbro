@@ -1093,6 +1093,146 @@ lauf "fragment6" "$W/messung/fragmente/F06.gab" "$TREIBER6" \
      's/    muster_schreiben(f);/    \/* geloescht *\//' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 13 direct forms, 6 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 4e. Das Fragment F9: der Abstieg, und die Schranke steht in der DEKLARATION ---------
+#
+# **F9 ist der erste Durchstich, dessen Arbeitsfassung dem eingefrorenen Ausschnitt Zeilen
+# WEGNIMMT, und das wird hier gesagt statt umgangen** (2026-09-03).
+#
+# Die anderen Fragmentlaeufe pruefen mit `verlorene_zeilen`, dass keine Ausschnittzeile
+# fehlt -- *ergaenzen erlaubt, weglassen nicht.* F9 kann das nicht: der Ausschnitt schreibt
+# die neun Merkmalsbits in ein `device … at normal`, und der Erzeuger sagt dazu, dass ein
+# Zugriff in den gewoehnlichen Raum kein Geraetezugriff ist. **Die Absage hat recht**, also
+# ist der Ausschnitt die falsche Form und nicht der Erzeuger. Dasselbe gilt fuer
+# `costs <= 4096 ops` ueber `traverse … over mappings of`: `SPRACHE.md` §5.4 sagt seit
+# Stufe 3, dass eine Laufzeit-Traversierung ueber diese Domaene **keine Kostenzusage tragen
+# kann** -- der Pruefer rechnete 137 438 953 472 gegen zugesagte 4 096.
+#
+# Statt „nichts fehlt" prueft dieser Lauf darum das SCHAERFERE: **jede fehlende Zeile muss
+# eine der benannten sein.** Eine Zeile, die niemand aufgeschrieben hat, faellt genauso auf
+# wie bei den anderen -- und wer eine der benannten wieder aufnimmt, muss sie hier streichen.
+schneide "$W/dokumente/FRAGMENTE.md" "module caprock::mmu" > "$ARB/f9.gab"
+if ! grep -q "walk Seitenabstieg levels EBENEN" "$ARB/f9.gab"; then
+    echo "== EMISSION: F9 NICHT GESCHNITTEN -- der Waechter misst seine eigene Ablage =="
+    exit 1
+fi
+# Die benannten Streichungen, eine je Zeile -- und jede mit ihrem Grund im Kopf von F09.gab.
+cat > "$ARB/f9-gestrichen" <<'F9_WEG'
+    roh : u64 embeds [51:12] scale 4096,   -- der Rahmen: Bits 51..12, mal 4096
+-- Die neun Bits, einzeln benannt. `A` und `D` schreibt die Hardware -- sie stehen als
+-- `reserved`, weil ein Schreiben von uns ein Fehler wäre.
+device Seitentabelle(basis : Pa) at normal {
+    reg EINTRAG : u64 @0x0 class rw fields {
+        P @0, RW @1, US @2, PWT @3, PCD @4, A @5, D @6, PS @7, NX @63,
+    }
+    down : roh when EINTRAG.PS == 0,
+    leaf : EINTRAG.PS == 1,
+-- Die Schranke faellt aus `levels` mal `node`-Laenge: 4 Ebenen zu 512 Eintraegen.
+impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
+    effects { reads w }
+    costs   <= 4096 ops
+    traverse abbildung over mappings of w by unvisited
+        touches reads w
+    {
+        if abbildung.level == 3 {
+            return true;
+        }
+    }
+    return false;
+F9_WEG
+# **Die geschweifte Klammer und die Leerzeile tragen keine Aussage** -- das `format` ist
+# gewachsen, also verschiebt sich sein Ende. Alles andere wird verglichen.
+unerlaubt_f9() {   # $1 Ausschnitt  $2 Arbeitsfassung -- druckt, was FEHLT und nicht gebucht ist
+    diff "$1" "$2" | sed -n 's/^< //p' | while IFS= read -r z; do
+        case "$z" in ""|"}"|"    }") continue ;; esac
+        # **`--` vor dem Muster, und das ist kein Schoenheitsfehler:** jede zweite
+        # gebuchte Zeile faengt mit `--` an (Gabbros Kommentarzeichen), und `grep`
+        # las sie als Option. *Ein Waechter, der an seinem eigenen Gegenstand
+        # scheitert, meldet jede Zeile als ungebucht.*
+        grep -Fxq -- "$z" "$ARB/f9-gestrichen" || printf '%s\n' "$z"
+    done
+}
+if [ -n "$(unerlaubt_f9 "$ARB/f9.gab" "$W/messung/fragmente/F09.gab")" ]; then
+    echo "== EMISSION: F09.gab hat eine UNGEBUCHTE Zeile des Ausschnitts verloren =="
+    unerlaubt_f9 "$ARB/f9.gab" "$W/messung/fragmente/F09.gab" | head -10
+    exit 1
+fi
+grep -v "^const EINTRAEGE: u32 = 512;" "$W/messung/fragmente/F09.gab" > "$ARB/f9-kurz.gab"
+if [ -z "$(unerlaubt_f9 "$ARB/f9.gab" "$ARB/f9-kurz.gab")" ]; then
+    echo "== EMISSION: Sprechprobe F9 haelt nicht -- eine entfernte, NICHT gebuchte"
+    echo "             Ausschnittzeile faellt nicht auf. Dieser Vergleich misst NICHTS. =="
+    exit 2
+fi
+echo "  (F9: was dem Ausschnitt fehlt, ist genau das Gebuchte -- und eine ungebuchte"
+echo "       fehlende Zeile faellt auf, Sprechprobe ok)"
+#
+# **Was dieser Durchstich misst: den Abstieg, und zwar an der Stelle, an der die Deklaration
+# ihn begrenzt.** `walk … levels EBENEN` erzeugt `Seitenabstieg_absteigen` -- eine Schleife
+# ueber `levels` Schritte, die je Schritt den Index gegen `node`-Laenge prueft, am Blatt
+# haelt und sonst den naechsten Knoten ueber den `embeds`-Rahmen holt.
+#
+# **Der Aufloeser von Rahmen zu lesbarem Knoten steht im TREIBER**, und das ist keine
+# Bequemlichkeit: `walk` sagt, DASS abgestiegen wird, und keine Klausel sagt, wie aus einem
+# physischen Rahmen ein lesbarer Knoten wird. Der Erzeuger nimmt ihn darum als Parameter
+# entgegen statt ihn zu erfinden. *Genau daran haengt auch die offene Absage von
+# `traverse … over mappings of`: eine Laufzeit-Traversierung braucht denselben Aufloeser,
+# und in Gabbro gibt es keine Stelle, an der er stuende.*
+#
+#    Erwartet:  1        -- der Abstieg findet das Blatt: Wurzel[7] steigt ab, Kind[9] ist Blatt
+#         2236416        -- `Pte_roh` des Blattes: 0x222 mal 4096, die `embeds … scale`-Rechnung
+#               0        -- `rechte_pruefen` auf einem Blatt mit `RW` und ohne `NX`: W^X verletzt
+#               1        -- dasselbe auf dem Nachbarblatt mit `NX`: W^X gehalten
+#               0        -- der Aufloeser kennt den Rahmen von Wurzel[8] nicht: kein Abstieg
+#               0        -- Index 512 an einer Knotenlaenge von 512: die Schranke haelt
+TREIBER9='#include <stdio.h>
+#include "@ERZEUGT@"
+static uint8_t wort[2][512][8];
+static Seitenabstieg_knoten knoten[2];
+/* Der Aufloeser, den `Seitenabstieg_absteigen` als Parameter verlangt. Er steht von HAND
+ * da, weil keine Gabbro-Klausel ihn nennt -- und das ist der Punkt. */
+#define KIND_RAHMEN ((uint64_t)0x111u * 4096u)
+static bool knoten_zu(uint64_t rahmen, const Seitenabstieg_knoten **k) {
+    if (rahmen != KIND_RAHMEN) return false;
+    *k = &knoten[1];
+    return true;
+}
+static void setz(int n, int i, uint64_t w) { gabbro_setz_le64(wort[n][i], w); }
+int main(void) {
+    for (int n = 0; n < 2; n++)
+        for (int i = 0; i < 512; i++) {
+            knoten[n].eintraege[i].bytes = wort[n][i];
+            knoten[n].eintraege[i].len = 8;
+        }
+    setz(0, 7, ((uint64_t)0x111 << 12) | 1u);                                  /* P, PS = 0 */
+    setz(0, 8, ((uint64_t)0x222 << 12) | 1u);                                  /* fremder Rahmen */
+    setz(1, 9, ((uint64_t)0x222 << 12) | (1u << 7) | (1u << 1) | 1u);          /* Blatt, RW */
+    setz(1, 10, ((uint64_t)0x333 << 12) | (1u << 7) | (1u << 1) | 1u
+                | ((uint64_t)1 << 63));                                        /* Blatt, RW+NX */
+    const Pte *blatt = 0;
+    uint32_t pfad[4] = { 7, 9, 0, 0 };
+    int ok = Seitenabstieg_absteigen(&knoten[0], pfad, knoten_zu, &blatt);
+    printf("%d %llu %d", ok, (unsigned long long)Pte_roh(blatt), (int)rechte_pruefen(blatt));
+    const Pte *b2 = 0;
+    uint32_t pfad2[4] = { 7, 10, 0, 0 };
+    Seitenabstieg_absteigen(&knoten[0], pfad2, knoten_zu, &b2);
+    printf(" %d", (int)rechte_pruefen(b2));
+    const Pte *b3 = 0;
+    uint32_t pfad3[4] = { 8, 9, 0, 0 };
+    printf(" %d", (int)Seitenabstieg_absteigen(&knoten[0], pfad3, knoten_zu, &b3));
+    const Pte *b4 = 0;
+    uint32_t pfad4[4] = { 512, 0, 0, 0 };
+    printf(" %d\n", (int)Seitenabstieg_absteigen(&knoten[0], pfad4, knoten_zu, &b4));
+    return 0;
+}
+'
+# **Das Gift dreht `leaf` um.** Danach ist Wurzel[7] (`PS == 0`) das Blatt, der Abstieg
+# haelt auf der ersten Ebene, und `Pte_roh` liefert 1118208 statt 2236416. *Ohne diese
+# Gegenprobe wuerde die erwartete Zahl nur belegen, dass das Programm nicht konstant ist* --
+# sie belegt jetzt, dass die Zahl AUS DEM ABSTIEG kommt und nicht aus dem ersten Eintrag.
+lauf "fragment9" "$W/messung/fragmente/F09.gab" "$TREIBER9" \
+     "1 2236416 0 1 0 0" \
+     's/return (bool)(Pte_PS(it));/return (bool)(!Pte_PS(it));/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
 # **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**
