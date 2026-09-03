@@ -1,0 +1,55 @@
+-- erwartet: M143
+-- **A duty two passes each believed the other held -- and neither did.**
+--
+-- The line that stood at `m1.rs`'s argument loop, since the pass was written, assigned the
+-- arity to the NAME PASS and left the loop only the range. **The name pass has no such
+-- rule.** Measured 2026-09-03 against the unchanged checker, one file per direction:
+--
+--     extern fn zwei(a : u32, b : u32) -> u32 …;   return zwei(x);      -> 0 errors
+--     extern fn eins(a : u32)          -> u32 …;   return eins(x, x);   -> 0 errors
+--
+-- and both went on through the emitter:
+--
+--     gabbro emit  ->  exit 0, and the unit carries
+--                      uint32_t zwei(uint32_t a, uint32_t b);
+--                      return zwei(x);
+--     cc           ->  error: too few arguments to function 'zwei'
+--
+-- **`cc` catches it, and that is the sentence this checker does not accept as an answer.**
+-- `M140`'s own note says why, in the tree's words: *"a checker that reports a clean file over
+-- C that will not compile has put its trust base one stage too late."*
+--
+-- WHY IT SURVIVED THIS LONG
+-- --------------------------
+-- The comparison below the missing check is
+--
+--     argtypen.iter().zip(sig.parameter.iter())
+--
+-- and a `zip` stops at the SHORTER list. So a missing argument is a parameter nobody
+-- compares and a surplus one is a value nobody reads -- *a truncating zip is a silent `else`
+-- with a different spelling*, the same shape `M139` was built against one line further up.
+--
+-- And arity was held in three OTHER places, which is what made the gap look covered:
+-- `M128` at a function POINTER, `M132` at `refines`, `M106` at a record constructor. **The
+-- commonest call in the language had the check the three rarer ones carry.**
+--
+-- WHAT IT COST IN THE FROZEN CORPUS
+-- ----------------------------------
+-- `messung/fragmente/F03.gab`:210 writes `owner_core(picked)` against
+-- `extern fn owner_core(d : ptr<normal, r> SchedOps, t : u32)` -- **one argument, two
+-- parameters**, on a line of the frozen excerpt. It surfaced as `M140` about parameter `d`,
+-- a statement about the wrong thing: had both parameters been `u32`, the call would have
+-- been silent. *A fragment measured at 27 errors was carrying a 28th that no rule could
+-- name.*
+module gift676 {
+
+extern fn zwei(a : u32, b : u32) -> u32 effects { pure } costs <= 1 ops;
+
+impl fn ruf(x : u32) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return zwei(x);
+}
+
+}

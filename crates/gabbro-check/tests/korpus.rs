@@ -139,6 +139,23 @@ const BENANNT: &[&str] = &[
     // *promise no LESS than the slot*, and a signature is an EQUALITY -- nothing converts at
     // an indirect call, so `fn(u32)` at a `fn(u8)` slot is just as wrong as the reverse.
     "M142",
+    // 2026-09-03, the third door in that same wall, and this one was never a range question
+    // at all: the COUNT. `m1.rs` bound arguments to parameters with
+    // `argtypen.iter().zip(sig.parameter.iter())` under a line that assigned the arity to
+    // the NAME PASS -- and the name pass has no such rule. A `zip` stops at the
+    // shorter list, so `zwei(x)` against `fn(u32, u32)` and `eins(x, x)` against `fn(u32)`
+    // BOTH gave `0 errors` at `100 % coverage`, the emitter wrote the call out, and `cc`
+    // answered *too few arguments to function 'zwei'*. **Arity was already held at a
+    // function POINTER (`M128`), at `refines` (`M132`) and at a record constructor
+    // (`M106`)** -- the commonest call in the language had the check the three rarer ones
+    // carry.
+    //
+    // > **Its corpus site is F3, and it is a frozen excerpt line.** `FRAGMENTE.md`:692
+    // > writes `owner_core(picked)` against `extern fn owner_core(d : ptr<normal, r>
+    // > SchedOps, t : u32)` -- one argument, two parameters. Until today it surfaced as an
+    // > `M140` about parameter `d`, a statement about the wrong thing: had both parameters
+    // > been `u32`, the call would have been silent.
+    "M143",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.
