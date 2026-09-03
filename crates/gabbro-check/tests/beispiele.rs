@@ -542,6 +542,34 @@ fn ein_requires_am_register_wird_gezaehlt() {
     }
 }
 
+/// **The version field, and it stands on LINE ONE** (2026-09-03).
+///
+/// `AUFTRAG-GABBROV.md` §4 puts the order of a format change in three steps, and the first is
+/// this one: *"every reader refuses an unknown version instead of misreading it. Without this,
+/// every format change is a silent break."* `CLAUDE.md` holds the measured instance -- seven
+/// guards read a document, four went **silently blind** when it moved.
+///
+/// This test is the first of the three readers. The other two are
+/// `instrumente/pruefe-zahlen.py` (the corpus sum) and `messung/gabbrov/manifest-lage.sh`
+/// (the completeness measurement); both gained the same gate on the same day.
+///
+/// **It pins the LINE and not only the presence.** A version field a reader has to search for
+/// is one a reader can fail to find in a format it does not know -- and then it is back to
+/// guessing.
+#[test]
+fn das_register_traegt_seine_fassung_auf_zeile_eins() {
+    let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
+    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
+    let bericht = gabbro_check::pflichten::zeige(&baum, "F04.gab");
+    let erste = bericht.lines().next().unwrap_or("");
+    assert_eq!(
+        erste,
+        format!("-- manifest-version {}", gabbro_check::pflichten::MANIFESTFASSUNG),
+        "the version field is not the first line:\n{bericht}"
+    );
+}
+
 #[test]
 fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
     let z = zeugnis_von("39-auftragsdienst.gab");

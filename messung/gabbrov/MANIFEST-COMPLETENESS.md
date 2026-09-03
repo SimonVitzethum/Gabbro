@@ -130,3 +130,54 @@ the `D` count means.
 
 *The distinction is why this section stands here rather than a single number: fifteen reads
 as fifteen repairable drops, and at most five are.*
+
+---
+
+## 5. The reader census — taken before the writer moved
+
+`AUFTRAG-GABBROV.md` §4 puts the order of a format change in three steps and calls it *half
+the rule*. Step zero is counting the readers, because the failure `CLAUDE.md` records is not
+a loud one: **seven guards read a document, four went silently blind when it moved.**
+
+**Three readers parse the plain register text.** Counted by sweeping the tree for every
+distinctive string the emitter writes (`Obligation register`, `What a HUMAN still owes`,
+`no generated proof obligation`, `obligations:`, each of the eight kind headings, the ` :: `
+entry form, `has errors -- no register`):
+
+| reader | what it reads | what a silent format change would do |
+|---|---|---|
+| `crates/gabbro-check/tests/beispiele.rs`:535 | three substrings of the F04 register | red, loudly — a test |
+| `instrumente/pruefe-zahlen.py`:71 (`PFLICHTEN_SUMME`) | the `== N obligations: …` header, summed over `beispiele/*.gab` | **silent**: the pattern stops matching, the sum becomes `0`, and `0` travels to a green report |
+| `messung/gabbrov/manifest-lage.sh`:39,44 | `no register` and `^== N obligations` | **silent**: every fragment reads as `0 obligations` — the very number this script exists to report |
+
+**Two of the three go silently wrong**, and both in the direction that makes the manifest
+look *emptier* than it is.
+
+**Six tools and one test module read the SAME register through a different serialisation**
+and are untouched by a change to `pflichten::zeige` — `refinement::verdicts` (`--isabelle`)
+and `lean::verdicts` (`--lean`) both walk `pflichten::sammle`:
+
+`instrumente/zaehle-p6.py` · `instrumente/pruefe-p6-beweis.sh` · `instrumente/zaehle-lean.py`
+· `instrumente/pruefe-lean-beweis.sh` · `instrumente/miss-lean-gegen-isabelle.py` ·
+`instrumente/miss-lean-reichweite.py` · `crates/gabbro-check/tests/rechenwerk.rs`
+
+**Two registries know the subcommand and its flags** without reading the format:
+`crates/gabbro-cli/tests/fahnen.rs`, `crates/gabbro-cli/tests/erstnamen.rs`.
+
+*So: **3** readers to prepare, **7** siblings that share the register but not the text, **2**
+registries. The number that mattered was three, and it was small enough that the ordering
+rule cost almost nothing — which is the argument for keeping it, not against it.*
+
+### Step 1 — the version field, and both silent readers now refuse
+
+`pflichten::MANIFESTFASSUNG` writes `-- manifest-version 1` as **line one**, before the file
+name. All three readers gained a gate on the same day, and the two silent ones were
+speech-tested against a fabricated `-- manifest-version 99`:
+
+```
+GABBRO=/tmp/fakegabbro ./messung/gabbrov/manifest-lage.sh      -> exit 2, "NOTHING was measured"
+<the awk of PFLICHTEN_SUMME over the same input>               -> exit 3, "nothing summed"
+```
+
+`cargo test --offline --no-fail-fast`: **401 passed, 0 failed** (400 at `94c9ac5`, plus the
+new `das_register_traegt_seine_fassung_auf_zeile_eins`). `pruefe-zahlen.py` green.

@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 190 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 191 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -572,6 +572,12 @@ darunter.
       `D`-Spur über das, was der Erzeugersweep nach `D1`–`D12` noch findet. Ursache gemessen
       wie der Eintrag es verlangt: Datei weggenommen, `pruefe-widerruf.py` sagt 189, Datei
       zurück, 190.*
+      *190 → 191 am 2026-09-03: `messung/gabbrov/MANIFEST-COMPLETENESS.md` kam dazu — der
+      laufende Bericht der Manifestbahn, die Aufteilung der 63 in 43 fremd blockierte, 15
+      fallengelassene und 5 getroffene. Ursache gemessen wie der Eintrag es verlangt: Datei
+      weggenommen, `pruefe-widerruf.py` sagt 190, Datei zurück, 191. **Die Zahl steht hier
+      aus dem Lauf und nicht aus einer Addition** — wenn eine zweite Bahn heute ebenfalls
+      eine Datei bringt, ist die Wahrheit im Merge 192 und wird dort neu gemessen.*
       *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
       über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
       dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei

@@ -639,9 +639,31 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
     }
 }
 
+/// **The FORMAT of the emitted register, and it stands on line one.**
+///
+/// `CLAUDE.md` holds what happens when a document moves ahead of its readers: seven read
+/// along and four go silently blind. A manifest has the same shape and a worse consequence
+/// -- `SPRACHE.md` §15 calls it the artefact by which Gabbro carries its promise OUTWARD,
+/// and `GABBROV.md` §2 rests a whole tool on it: *"GabbroV does not read the Gabbro program.
+/// It reads the manifest."*
+///
+/// **So the order is: version field, then every reader on both versions, then the format.**
+/// Without the field a reader that meets a newer manifest does not fail -- it MISREADS, and
+/// a wrong number is worse than an absent one. *A field that costs one line buys every later
+/// format change the right to be noticed.*
+///
+/// The three readers of this text, counted on 2026-09-03 before the field was written:
+/// `crates/gabbro-check/tests/beispiele.rs`, `instrumente/pruefe-zahlen.py` and
+/// `messung/gabbrov/manifest-lage.sh`. The `--isabelle` and `--lean` channels serialise the
+/// SAME register ([`sammle`]) and are untouched by a change here.
+pub const MANIFESTFASSUNG: u32 = 1;
+
 pub fn zeige(baum: &Programm, datei: &str) -> String {
     let p = sammle(baum);
     let mut s = String::new();
+    // **Line one, before the file name.** A reader that cannot place the version has to be
+    // able to stop at the FIRST line, not after parsing a header it may already misread.
+    s.push_str(&format!("-- manifest-version {MANIFESTFASSUNG}\n"));
     s.push_str(&format!("-- Obligation register: {datei}\n"));
     s.push_str("-- What a HUMAN still owes here. Counted, not discharged.\n\n");
     if p.is_empty() {
