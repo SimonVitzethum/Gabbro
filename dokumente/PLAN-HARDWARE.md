@@ -2445,9 +2445,9 @@ Ziel.*
 
       | | Prüferstand heute | der Erzeuger sagt zusätzlich |
       |---|---|---|
-      | **F09** | 1 Fehler — `K001` | `device … at normal` |
-      | **F01** | 3 — 2× `M140`, `N029` | — |
-      | **F05** | 4 — 2× `N046`, `M134`, `N041` | `match` über einen undeklarierten Ruf |
+      | ~~**F09**~~ **ERLEDIGT 2026-09-03** | ~~1 Fehler — `K001`~~ **0** | ~~`device … at normal`~~ — **und es waren DREI Absagen und nicht eine:** `device … at normal`, `walk … levels` über einem `const`-Namen, `mappings of`. *Die Zeile hier hat die erste gelesen und die zwei dahinter nicht* |
+      | ~~**F01**~~ **ERLEDIGT 2026-09-03** | ~~3 — 2× `M140`, `N029`~~ **0** | — *(und die Zeile stimmte: der Erzeuger hatte gegen F1 nichts. Was fehlte, waren drei Prüferabsagen, und alle drei hatten recht)* |
+      | ~~**F05**~~ **ERLEDIGT 2026-09-03** | ~~4 — 2× `N046`, `M134`, `N041`~~ **0** | ~~`match` über einen undeklarierten Ruf~~ — *und der undeklarierte Ruf war einer von FÜNF; die anderen vier rief der Rumpf ins Leere, ohne dass ein Pass etwas sagte* |
       | **F03** | **27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009` | `queue` — **«B10»: `traverse` liefert keinen Wert** |
 
       **`H = 0` ist damit keine Prüfarbeit, sondern Sprach- und Korpusarbeit:** vier
@@ -2464,6 +2464,84 @@ Ziel.*
       *Die Entscheidung nimmt das in Kauf* — und die Reihenfolge folgt den Kosten:
       **F09 → F01 → F05 → F03**, mit einem Halt nach F05, weil dann die Frage steht, ob
       «B10» das Geld wert ist.
+
+      > **F09 steht seit dem 2026-09-03, und `H` ist 3** (`zaehle-fragmente.py`: *7 von 10
+      > sind DURCHGESTOCHEN*). Zur Hälfte war es eine **Erzeugerreparatur**: `walk_` las
+      > `levels EBENEN` nicht, weil es den schwächeren von zwei Konstantenauswertern hielt
+      > (W7, dritte Fundstelle derselben benannten Klasse) — Gegenprobe
+      > `beispiele/gift/667`. Zur anderen Hälfte eine **Korpusreparatur**: das
+      > `device … at normal` war die falsche Form für die Bits eines gewöhnlichen Wortes,
+      > und `costs <= 4096 ops` über `traverse … over mappings of` eine Zusage, die
+      > `SPRACHE.md` §5.4 seit Stufe 3 ausdrücklich für untragbar erklärt.
+      >
+      > **Und F09 ist der erste Durchstich, dessen Arbeitsfassung dem eingefrorenen
+      > Ausschnitt Zeilen WEGNIMMT.** Der Wächter prüft darum nicht mehr *„nichts fehlt"*,
+      > sondern das Schärfere: *jede fehlende Zeile muss eine der benannten sein.*
+      >
+      > **Was offen BLEIBT:** `traverse … over mappings of` hat weiter keine Absenkung. Sie
+      > braucht einen benannten Auflöser von Rahmen zu lesbarem Knoten — im erzeugten C ist
+      > er der Parameter `knoten_zu`, und in Gabbro gibt es keine Klausel, in der er stünde.
+      > *Das ist «B10»-förmig und gehört dem Ordner.*
+
+      > **F01 steht seit demselben Tag, und `H` ist 2** (*8 von 10 sind DURCHGESTOCHEN*).
+      > **Hier waren ALLE DREI Absagen richtig und der Ausschnitt falsch**, und die erste
+      > Hälfte ist ein Widerspruch, den `FRAGMENTE.md` mit sich selbst hat: vierzig Zeilen
+      > über dem Dateiende steht `tagged type ObjectKind = { Memory(Region), … Reply(ReplyRef),
+      > … Dma(DmaRef) }`, und am Dateiende — *nachgetragen 2026-08-15* — stehen drei
+      > `extern fn`, die `MemObj`, `DmaObj`, `ReplyObj` und `Allok` nennen. Vier Namen, die
+      > der Ausschnitt nirgends deklariert; die Vervollständigung hat sie als `= u64`
+      > erfunden, weil ein unerklärter Griff nichts anderes sein kann. **`M140` sieht zwei der
+      > drei Verwechslungen; die dritte (`Memory(Region)` an `MemObj`) bleibt still**, weil
+      > beide Seiten skalare Namen über `u64` sind — und die Regel sagt diese Grenze selbst
+      > aus. Die zweite Hälfte ist `N029`: `delete_leaf` kann scheitern, und der einzige Rufer
+      > sah nicht hin. *Bezahlt, mit einer Kostenschranke, die von 16 452 480 auf 16 612 992
+      > steigt — abgeschrieben und nicht geschätzt.*
+      >
+      > **Und dahinter lagen ZWEI Erzeugerlöcher, die vorher niemand sehen konnte.** Der
+      > ganze Korpus führte `or R` bis dahin nur an `extern fn`; eine `impl fn` mit
+      > Fehlerkanal und OHNE Ergebnis hatte deshalb gar kein C. Der Ruf wurde abgewiesen
+      > (*„`let … else` whose call has no resolvable type"* — die Deklarationsseite wusste es
+      > längst besser), und die Erfolgsrückgabe `return true;` schrieb niemand: der Rumpf lief
+      > aus einer `bool`-Funktion heraus, und `cc -Wall -Wextra -Werror` sagte dazu bei `-O0`
+      > wie bei `-O2` nichts. ***Das erste Loch verdeckte das zweite***, und das zweite hat
+      > als einzigen Zeugen den LAUF — genau der Grund, aus dem `H` Durchstiche zählt und
+      > nicht Übersetzungen.
+      >
+      > **Was hier NICHT bezahlt wird:** `cdt_wohlgeformt` quantifiziert über die ganze
+      > Tabelle und verbietet damit einen freien Platz, während `release_slot` genau einen
+      > zurücklässt — und `unlink`s `ensures … parent == None` widerspricht seinem eigenen
+      > `maintains cdt_wohlgeformt` vier Zeilen weiter. Kein Pass sieht das; ein Löser fand es
+      > in 20 ms (`OFFEN.md` O4). *Ein Durchstich misst, was das C rechnet, nicht was die
+      > Zusage behauptet* — und die zwei Sätze stehen nebeneinander, damit niemand den ersten
+      > für den zweiten hält.
+
+      > **F05 steht seit demselben Tag, und `H` ist 1** (*9 von 10 sind DURCHGESTOCHEN*;
+      > offen ist nur noch F03). **Auch hier hatten alle Absagen recht.** Drei Namen des
+      > eingefrorenen Ausschnitts gehören C — `exit` (`void(int)` gegen `exit() -> never` an
+      > acht argumentlosen Rufstellen), `signal` (`__sighandler_t(int, __sighandler_t)`, ein
+      > Typ, den Gabbro nicht schreiben kann) und `recv` (`ssize_t(int, void *, size_t,
+      > int)`) —, und ***keiner der drei ist an `cc` zu bemerken***: die erzeugte Einheit
+      > bindet keinen dieser Köpfe ein, also hat der fremde Übersetzer keinen Konflikt zu
+      > melden, und der Binder findet das echte Symbol hinter dem, was diese Einheit
+      > deklariert hat. *Die Absage, die vom fremden Übersetzer kommen sollte, kann von ihm
+      > gar nicht kommen* — genau darum hält der Prüfer sie. Umbenannt, zwölf gebuchte
+      > Zeilen.
+      >
+      > **Und der Kopf der Datei war an drei Stellen falsch.** Er behauptete *„ERGÄNZT, und
+      > nichts sonst"*, während **fünf** Namen fehlten, die der eingefrorene Dienstrumpf
+      > ruft: `decode_op`, `request_flush`, `serve_rw`, `serve_scan`, `bump_served`. Der
+      > Erzeuger sagte es an **einer** der fünf — an `match decode_op(m.op)`, weil dort ein
+      > Typ gebraucht wird. *Die anderen vier ruft der Rumpf ins Leere, und kein Pass sagt
+      > etwas dazu.* **Vier Prüfersätze waren nie die ganze Fehlerfläche dieser Datei.**
+      >
+      > **Der Ertrag ist ein PRÜFERBEFUND und keine Korpusarbeit:** `N046` vergleicht die
+      > Absenkung einer `extern fn`-Signatur mit der gemessenen Tafel und las dafür
+      > `ergebnis` und `parameter` — **nie `fehler`**. Ein `or R` ändert aber die
+      > C-Signatur. Nachgemessen am unveränderten Prüfer:
+      > `extern fn abs(a : i32) -> i32 or R` prüft mit **0 Fehlern** (denn `int32_t(int32_t)`
+      > *ist* die Zeile der Tafel für `abs`), und die erzeugte Einheit trägt
+      > `int32_t abs(int32_t a);` neben `abs(x, &w, &e)` — **einen Prototyp mit einem
+      > Parameter, gerufen mit dreien.** Geheilt am selben Tag.
 - [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
       rote Wächter seit drei Tagen.**
 

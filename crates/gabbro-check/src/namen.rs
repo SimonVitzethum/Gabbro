@@ -480,7 +480,7 @@ fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
         // See `sperrwort` and `ZEIGER` in `./instrumente/miss-c-signaturen.py`.
         Some(t) => crate::emit::ctyp_primitiv(t)?,
     };
-    let mut teile = Vec::with_capacity(f.parameter.len());
+    let mut teile: Vec<String> = Vec::with_capacity(f.parameter.len() + 2);
     for p in &f.parameter {
         // **A pointer PARAMETER is `void *`, and it needs no unit context to say so.**
         //
@@ -488,14 +488,54 @@ fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
         // comparison does not have to resolve it to know that C's word is `void *`. *That is
         // the one reason a pointer can be compared here at all while a `table` cannot.*
         if let TypExpr::Zeiger(z) = &p.typ {
-            teile.push(if crate::emit::zeiger_schreibend(z) {
-                "void *"
-            } else {
-                "const void *"
-            });
+            teile.push(
+                if crate::emit::zeiger_schreibend(z) { "void *" } else { "const void *" }
+                    .to_string(),
+            );
             continue;
         }
-        teile.push(crate::emit::ctyp_primitiv(&p.typ)?);
+        teile.push(crate::emit::ctyp_primitiv(&p.typ)?.to_string());
+    }
+    // **`or R` CHANGES THE C SIGNATURE, and this function did not look** (2026-09-03).
+    //
+    // An error channel is not decoration on the return type: `emit.rs` gives the function
+    // `bool`, moves the result into a `*_wert` out-parameter and appends a `*_grund`. The
+    // comparison read `f.ergebnis` and `f.parameter` and **never `f.fehler`**, so it measured
+    // a lowering the emitter does not write.
+    //
+    // Measured through the unchanged checker on a four-item file:
+    //
+    // ```gabbro
+    // extern fn abs(a : i32) -> i32 or R effects { pure } costs <= 1 ops;
+    // ```
+    //
+    //     gabbro pruefe  ->  4 items, 0 errors, 0 hints
+    //     gabbro emit    ->  exit 0, and it writes
+    //                        int32_t abs(int32_t a);          /* ONE parameter */
+    //                        if (!abs(x, &w, &e)) { … }       /* THREE arguments */
+    //
+    // `int32_t(int32_t)` is exactly the row the table holds for `abs`, so `N046` passed --
+    // **and the unit it passed carries a prototype called with the wrong arity.** `cc`
+    // catches that one, and that is precisely what this rule exists to stop: *"at a name C
+    // already owns the answer has to be exact, so an undecided comparison refuses"* -- here
+    // it was not undecided, it was wrong.
+    //
+    // The spelling is BUILT and not refused, because it can be: the result pointer is the
+    // same `ctyp_primitiv` above, and a `reason` lowers to a C enum under its own name. A
+    // declaration that says `or R` at a name C owns then reads its own mismatch --
+    // `bool(uint64_t,uint64_t *,Aufbau *)` against `ssize_t(int, void *, size_t, int)` --
+    // instead of a sentence about a lowering nobody writes.
+    //
+    // > *And it refuses the whole family, which is the right answer and not a side effect:*
+    // > an error channel rewrites the ABI, so no C library function is reachable through
+    // > one. The way to a fallible C function stays a plain binding plus a Gabbro wrapper.
+    if let Some(r) = &f.fehler {
+        // The result leaves through `*_wert` -- and only where there is one to leave.
+        if matches!(&f.ergebnis, Some(t) if !matches!(t, TypExpr::Never(_))) {
+            teile.push(format!("{ergebnis} *"));
+        }
+        teile.push(format!("{} *", r.text));
+        return Some(format!("bool({})", teile.join(",")));
     }
     let args = if teile.is_empty() {
         "void".to_string()

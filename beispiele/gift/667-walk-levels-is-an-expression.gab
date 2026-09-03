@@ -1,0 +1,50 @@
+-- erwartet: C001
+-- **667 -- `walk … levels` over a COMPOUND constant expression, and the fence stays here.**
+--
+-- On 2026-09-03 `walk_` learned to read a `const` NAME: `levels EBENEN` with
+-- `const EBENEN : u32 = 4` had drawn *"`walk … levels` that is not a number"* over a
+-- declaration that says `4`. The value was never guessed and never computed twice -- it
+-- stands in `Namen::konstwert`, folded by `umgebung.rs` before the emitter starts, and the
+-- `static` array length plus `feldlaenge_von` had been reading it for days. **`walk_` held
+-- the weaker of two registers over one thing** (W7), and `messung/fragmente/F09.gab` paid
+-- for it with an emitter refusal.
+--
+-- WHY THIS FILE, AND WHY IT IS NOT THE SAME REPAIR ONE DOOR FURTHER
+-- ----------------------------------------------------------------
+-- A repair that reads a NAME does not read `EBENEN + 1`, and the difference is not a
+-- rounding error in the implementation -- it is where the read stops being a read. The
+-- constant table holds one entry per `const` ITEM; a compound expression at the use site is
+-- a second evaluator wherever it is folded, and building one inside the emitter is exactly
+-- the move the W7 note above forbids.
+--
+-- So the fence stands at the bare name, and this file is the fence-post. **The checker says
+-- nothing** -- `4 items, 0 errors, 0 hints` -- and the emitter refuses BY NAME, which is the
+-- one behaviour a generator owes at a form it cannot lower: *it refuses instead of emitting
+-- something plausible.*
+--
+-- > **And it falls in the useful direction.** The day `umgebung.rs` folds use-site
+-- > expressions and the emitter reads THAT answer, this probe goes red and asks to be
+-- > withdrawn -- the same shape `beispiele/gift/653`-`657` took when `at port` learned to
+-- > lower. *A refusal without a measured defect is not a rule* (Rule A, second half).
+--
+-- The control is `messung/fragmente/F09.gab` itself: `levels EBENEN` and
+-- `node : [Pte; EINTRAEGE]` lower since the same day, and `beispiele/07-eintritt-und-boot.gab`
+-- keeps the literal form green.
+
+module gift::walklevels {
+
+const EBENEN : u32 = 4;
+
+format Pte endian little {
+    praesent : bool @0,
+    rahmen   : u64 embeds [63:1] scale 2,
+}
+
+-- `EBENEN` alone lowers. `EBENEN + 1` is one step past the constant table.
+walk T levels EBENEN + 1 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent,
+    leaf : it.praesent,
+}
+
+}

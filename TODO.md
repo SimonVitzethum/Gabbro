@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 190 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 191 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -834,7 +834,8 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3191 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3192 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
       2134, als `manifest.rs` mit zwei Fortsetzungen weniger auskam.* **Die Zahl bewegt sich
@@ -3473,7 +3474,7 @@ braucht jede Tabelle ihr eigenes `traverse`.
       of Faden` mit; der Nenner wächst, die Duplikatzahl bleibt null.*
 
       ```
-      23 Traversierungsruempfe stehen heute im Korpus
+      22 Traversierungsruempfe stehen heute im Korpus
       23 blieben nach Monomorphisierung
        0 duplizierte Ruempfe  — streng UND unter der weitesten Lesart, die zu verteidigen ist
       ```

@@ -6146,6 +6146,36 @@ fn funktion(
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
     }
+    // **The SUCCESS return of an `or R` body, and until 2026-09-03 it was not written at
+    // all.**
+    //
+    // A Gabbro function without a result carries no closing `return` -- C's `void` return is
+    // implicit and nobody misses it. **An `or R` function is `bool` in C**, and there the
+    // same body runs off the end of a non-void function: the caller reads an indeterminate
+    // value out of `if (!f(...))` and takes a branch on it. *Undefined behaviour, and `cc
+    // -Wall -Wextra -Werror` compiled it at `-O0` and at `-O2` -- `-Wreturn-type` does not
+    // reach a `static` function nothing has called yet.*
+    //
+    // It survived because **nothing ever emitted such a body.** The corpus carried `or R`
+    // exclusively at `extern fn` until `messung/netz/udp-echo.gab`, and that one returns a
+    // VALUE on every path, so the explicit `return <x>;` arm two hundred lines up wrote the
+    // `return true;` for it. A body with an error channel and no result had no lowering to
+    // fall out of -- `let … else` refused every call to it, one door earlier.
+    //
+    // > *Two holes in one form, and the first one hid the second:* repairing the call side
+    // > is what made this reachable, and the repair had to be measured at the RUN and not at
+    // > `cc`, which had nothing to say.
+    //
+    // **The one case that is left out is the one the reader would trip over:** a body whose
+    // LAST statement is already a `return`. There the success return is written by the arm
+    // two hundred lines up, and a second one under it would stand in the C twice --
+    // `messung/netz/udp-echo.gab` and every `-> T or R` body show that shape. *C says nothing
+    // about unreachable code, so this is legibility and not correctness* -- and everything
+    // that falls off the end, which is what the whole paragraph is about, still gets it.
+    if f.fehler.is_some() && !matches!(b.anweisungen.last().map(|s| &s.art), Some(StmtArt::Return(_)))
+    {
+        aus.push_str("    return true;\n");
+    }
     aus.push_str("}\n");
 }
 
@@ -7359,7 +7389,32 @@ fn anweisung(
                 .map(|(_, a)| ausdruck(a, u, absagen))
                 .collect();
             let mut ruf_args = args;
-            let hat_wert = !sig.geist_rueck;
+            // **A callee with `or R` and NO result type binds nothing -- and until 2026-09-03
+            // that made it UNCALLABLE.**
+            //
+            // The declaration side has always written the result out separately: `funktion`
+            // gives every `or R` function `bool` and pushes a `*_wert` parameter **only when
+            // `f.ergebnis` is there** -- the error channel takes the return slot, and the
+            // result leaves through `_wert`. The call side did not mirror it: it pushed
+            // `&{binding}` for every
+            // callee that does not return a GHOST, then asked `wert_ctyp` for a type that a
+            // result-less declaration does not have, and refused with *"`let … else` whose
+            // call has no resolvable type"*.
+            //
+            // Measured on a five-item file with no fragment in it: `pruefe` says
+            // `0 errors, 0 hints`, `emit` refuses. **`or R` without a result was declarable,
+            // checkable, and lowered at its declaration -- and no CALL to it lowered**, while
+            // `let … else` is the one form of error propagation this language has
+            // (`SPRACHE.md` §8.1). *The same shape as «B9» at `fnptr`: a form one can declare
+            // and not use.* `messung/fragmente/F01.gab`'s `delete_leaf` is one, and
+            // `beispiele/gift/668` is the fence.
+            //
+            // The answer stands two fields up in `Signatur` and needed no new rule: *"Does it
+            // return a ghost? Then `let x = f(…)` loses its binding, **not its call**."* A
+            // missing result is the same case -- there is nothing to bind and the call is
+            // unaffected. `rueck` is the declared return type, read from the same signature
+            // the error channel comes from.
+            let hat_wert = !sig.geist_rueck && sig.rueck.is_some();
             if hat_wert {
                 ruf_args.push(format!("&{}", l.name.text));
             }
@@ -7551,13 +7606,8 @@ fn feldstatisch(
         weigere(absagen, st.name.span, "`static` array over an unresolvable element type");
         return;
     };
-    let Some(n) = konst_zahl(&a.laenge).or_else(|| {
-        // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
-        match &a.laenge.art {
-            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
-            _ => None,
-        }
-    }) else {
+    // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
+    let Some(n) = konst_oder_name(&a.laenge, u) else {
         weigere(absagen, st.name.span, "`static` array whose length is not constant");
         return;
     };
@@ -8789,12 +8839,7 @@ fn feldlaenge_von(t: &TypExpr, u: &Namen) -> Option<u128> {
     // `konst_zahl` knows only literals -- *the same trap `scale` hit, and it is resolved the
     // same way: `umgebung.rs` has already folded the constant, and this reads its answer
     // instead of computing a second one* (W7).
-    konst_zahl(&a.laenge)
-        .or_else(|| match &a.laenge.art {
-            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
-            _ => None,
-        })
-        .and_then(|n| u128::try_from(n).ok())
+    konst_oder_name(&a.laenge, u).and_then(|n| u128::try_from(n).ok())
 }
 
 fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
@@ -10120,6 +10165,30 @@ fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Op
     })
 }
 
+/// **A `const` NAME is a constant too** -- the third site of one named defect (2026-09-03).
+///
+/// `konst_zahl` reads a digit string and nothing else. `umgebung.rs` folded every `const` of
+/// the unit long before the emitter runs, and `Namen::konstwert` carries the answer; the
+/// `static` array length and `feldlaenge_von` already read it. **`walk_` did not**, so
+///
+/// ```gabbro
+/// const EBENEN : u32 = 4;
+/// walk Seitenabstieg levels EBENEN { node : [Pte; EINTRAEGE], ... }
+/// ```
+///
+/// drew *"`walk ... levels` that is not a number"* over a declaration that says `4`. The
+/// refusal's own reason -- *the step count cannot be guessed* -- did not apply: nothing is
+/// guessed when the value is READ out of the same table `count N` is read from.
+///
+/// *Two registers over one thing, and the weaker one decided* (W7) -- the sentence stands
+/// verbatim over `Namen::konstwert` since the day that field was built.
+fn konst_oder_name(e: &Expr, u: &Namen) -> Option<i128> {
+    konst_zahl(e).or_else(|| match &e.art {
+        ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
+        _ => None,
+    })
+}
+
 /// **`walk` -- ein Knotentyp, zwei Praedikate und EIN Abstieg, dessen Schrittzahl aus
 /// `levels` kommt.**
 ///
@@ -10149,16 +10218,17 @@ fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Op
 /// er schuldet.
 fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     let n = &w.name.text;
-    let Some(ebenen) = konst_zahl(&w.ebenen) else {
+    let Some(ebenen) = konst_oder_name(&w.ebenen, u) else {
         weigere(
             absagen,
             w.span,
-            "`walk … levels` that is not a number -- the descent's step count IS the \
-             declaration's one statement about the run, and it cannot be guessed",
+            "`walk … levels` that is neither a number nor a `const` of this unit -- the \
+             descent's step count IS the declaration's one statement about the run, and it \
+             cannot be guessed",
         );
         return;
     };
-    let Some(weite) = konst_zahl(&w.knoten.laenge) else {
+    let Some(weite) = konst_oder_name(&w.knoten.laenge, u) else {
         weigere(
             absagen,
             w.span,

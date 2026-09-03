@@ -45,6 +45,63 @@
 -- `let … else` zu drehen hiesse, den Ausschnitt umzuschreiben, und der naechste Zweig traefe
 -- `revoke` genauso. *Die Zeile ist darum NICHT ergaenzt worden: eine Deklaration mehr, ein
 -- Fehler an derselben Stelle, und ein Ausschnitt weniger.*
+--
+-- ***UND GENAU DAS IST AM 2026-09-03 GESCHEHEN, WEIL DER ORDNER `H = 0` ENTSCHIEDEN HAT.***
+--
+-- Der Absatz darueber bleibt stehen: er beschreibt richtig, was es KOSTET. Es kostet fuenf
+-- eingefrorene Zeilen, und jede einzelne steht hier gebucht, mit ihrem Grund. **Keine davon
+-- macht die Datei gruen, indem sie eine Zusage abschwaecht** -- drei berichtigen einen
+-- Widerspruch, den der Ausschnitt MIT SICH SELBST hat, eine zahlt eine Rechnung, und die
+-- fuenfte schreibt eine Zahl ab, die der Kostenpass rechnet.
+--
+-- 1. DIE DREI `extern fn`-ZEILEN NENNEN TYPEN, DIE DER AUSSCHNITT SELBST WIDERLEGT
+-- --------------------------------------------------------------------------------
+-- `FRAGMENTE.md` fuehrt vierzig Zeilen ueber dem Dateiende
+--
+--     tagged type ObjectKind = { Memory(Region), … Reply(ReplyRef), … Dma(DmaRef), … };
+--
+-- und am Dateiende, *nachgetragen 2026-08-15*,
+--
+--     extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) …;
+--     extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) …;
+--     extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) …;
+--
+-- Der Rumpf bindet `Dma(d) => { push_dma(rf, d); }`, also `d : DmaRef` -- **ein Verbund aus
+-- vier Feldern an einem Platz, der eine Zahl erklaert.** `M140` sagt es seit dem 2026-09-02
+-- an zwei der drei Stellen (`Dma`, `Reply`); die dritte (`Memory(Region)` an `MemObj`) ist
+-- dieselbe Verwechslung und **bleibt still**, weil beide Seiten skalare Namen ueber `u64`
+-- sind und `gestalt` durch sie hindurchsieht. *Die Regel sagt diese Grenze selbst aus.*
+--
+-- `Allok`, `MemObj`, `DmaObj` und `ReplyObj` deklariert der Ausschnitt nirgends; die
+-- Vervollstaendigung hat sie als `= u64` erfunden, weil ein unerklaerter Griff nichts anderes
+-- sein kann. **Nicht die Vervollstaendigung ist falsch, sondern die nachgetragene Zeile** --
+-- und die drei berichtigten Woerter (`Region`, `DmaRef`, `ReplyRef`, plus `PhysAllocator`
+-- statt `Allok`) machen den Ausschnitt mit sich selbst einig, statt ihm etwas hinzuzufuegen.
+--
+-- 2. `N029` WAR EINE UNBEZAHLTE RECHNUNG, UND SIE IST BEZAHLT
+-- -----------------------------------------------------------
+-- `delete_leaf` kann `Fehler::Buchfuehrung` liefern, und der einzige Rufer sah nicht hin.
+-- Die Zeile steht jetzt als `let ok = delete_leaf(…) else (e) { return e; }`, und `revoke`
+-- traegt denselben Kanal (`or Fehler`, eine ZUSAETZLICHE Zeile). Dadurch waechst die
+-- Kostenschranke von 16 452 480 auf **16 612 992** -- *abgeschrieben, nicht geschaetzt: der
+-- Pass nennt die Zahl, und die Zeile kopiert sie.*
+--
+-- > **Und dahinter lagen ZWEI Erzeugerloecher, die vorher niemand sehen konnte.** Der ganze
+-- > Korpus fuehrte `or R` bis heute nur an `extern fn` -- an Ruempfen, die dieser Erzeuger
+-- > nie sieht -- und `messung/netz/udp-echo.gab` liefert auf jedem Pfad einen WERT.
+-- > Deshalb hatte eine `impl fn` mit Fehlerkanal UND OHNE Ergebnis noch nie ein C:
+-- > `let … else` wies jeden Ruf darauf ab (*„whose call has no resolvable type"*), und die
+-- > Erfolgsrueckgabe `return true;` schrieb niemand -- der Rumpf lief aus einer
+-- > `bool`-Funktion heraus. **Beides geheilt am 2026-09-03**, Gegenprobe
+-- > `beispiele/gift/668`. *Das erste Loch verdeckte das zweite.*
+--
+-- **Was hier NICHT bezahlt wird und weiter offensteht:** `cdt_wohlgeformt` quantifiziert
+-- ueber die GANZE Tabelle und verbietet damit einen freien Platz, waehrend `release_slot`
+-- genau einen zuruecklaesst -- und `unlink`s `ensures … parent == None` widerspricht seinem
+-- eigenen `maintains cdt_wohlgeformt` vier Zeilen weiter. **Kein Pass sieht das**; ein Loeser
+-- hat es in 20 ms gefunden (`dokumente/OFFEN.md` O4, `messung/GABBROV-AUDIT.md` §1.3), und
+-- die naheliegende `used`-Wache repariert es nachgemessen NICHT. *Der Durchstich sagt ueber
+-- diese Zusage nichts -- er misst, was das C rechnet, nicht was die Zusage behauptet.*
 -- =======================================================================================
 
 module caprock::cap::space {
@@ -73,19 +130,21 @@ opaque type ByteLen = u64;
 -- BESTAETIGTE `ptr<normal, rw+own> PhysAllocator`, und der Fehler starb erst am fremden
 -- Uebersetzer.
 --
--- `opaque` ist die ehrliche Form: was ein `MemObj` ist, entscheidet der Gerufene, und dessen
+-- `opaque` ist die ehrliche Form: was ein `Region` ist, entscheidet der Gerufene, und dessen
 -- Rumpf sieht Gabbro nie. *Der Zeiger traegt den Raum und das Recht; mehr sagt diese
 -- Deklaration nicht, und mehr weiss sie auch nicht.*
+--
+-- **ZURUECKGENOMMEN 2026-09-03: `MemObj`, `DmaObj`, `ReplyObj` und `Allok`.** Sie standen
+-- hier NUR, weil die drei `extern fn`-Zeilen am Dateiende sie nannten -- und die nannten die
+-- falschen Typen (siehe Kopf, Punkt 1). Mit den berichtigten Signaturen nennt sie niemand
+-- mehr. *Vier tote Handles neben den vier echten sind genau die Verwechslung, die den Fehler
+-- erzeugt hat; sie stehen zu lassen hiesse, die Falle wieder aufzustellen.*
 opaque type ThreadId      = u32;
 opaque type DmaDir        = u8;
 opaque type DmaCoherence  = u8;
 opaque type Region        = u64;
-opaque type MemObj        = u64;
-opaque type DmaObj        = u64;
-opaque type ReplyObj      = u64;
 opaque type PhysAllocator = u64;
 opaque type Finalized     = u64;
-opaque type Allok         = u64;
 -- `Rights` steht als FELDTYP und faellt darum nicht unter `N040` -- die Regel sieht
 -- Parameter, Ergebnisse und `static`, nicht die Felder eines Verbunds. *Sie sagt diese
 -- Grenze selbst aus, statt vollstaendig auszusehen* -- hier ist der Beleg dafuer.
@@ -327,6 +386,7 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
                a  : ptr<normal, rw+own> PhysAllocator,
                rf : ptr<normal, rw+own> Finalized,
                s  : SlotIdx)
+    or Fehler
     requires  Held(CAPS), Held(MEM), cdt_wohlgeformt(c)
     maintains cdt_wohlgeformt
     effects   { consumes c.slots, writes o.slots, writes rf, allocs a, locks CAPS }
@@ -354,7 +414,7 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
     -- **Gabbros Schranke ist die schaerfere.** Es fehlt kein Konstrukt -- die 200 waren
     -- schlicht der typische Fall statt der Schranke, und genau dagegen ist der Kostenpass
     -- gebaut (`memos/M-kostenmass.md`).
-    costs     <= 16452480 ops
+    costs     <= 16612992 ops
 {
     -- «B10» `traverse` liefert KEINEN Wert (:337-341) und es gibt kein `break`. Der
     -- Hoechststand `peak_revoke_ops` — im Rust-Original der Beleg dafuer, dass die Schranke
@@ -363,16 +423,16 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
     traverse victim over descendants of c.slots[s] by consuming
         touches consumes c.slots, writes o.slots, writes rf
     {
-        delete_leaf(c, o, a, rf, victim);
+        let ok = delete_leaf(c, o, a, rf, victim) else (e) { return e; }
     }
 }
 
 -- Nachgetragen 2026-08-15: drei Gerufene wurden benutzt und nie erklaert. Ohne `costs` am
 -- Gerufenen kann der Kostenpass die Zusage des Rufers nicht nachrechnen -- und er SAGT das
 -- (`K003`), statt stillschweigend zu schaetzen. Genau dafuer ist die Absage da.
-extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) effects { writes a } costs <= 32 ops;
-extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) effects { writes rf } costs <= 8 ops;
-extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { writes rf } costs <= 8 ops;
+extern fn free_region(a : ptr<normal, rw> PhysAllocator, m : Region) effects { writes a } costs <= 32 ops;
+extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaRef) effects { writes rf } costs <= 8 ops;
+extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyRef) effects { writes rf } costs <= 8 ops;
 
 
 }

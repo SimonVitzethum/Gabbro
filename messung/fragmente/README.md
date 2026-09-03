@@ -37,13 +37,14 @@ Added are **only** declarations that the excerpt calls and does not name. Nothin
 
 ```
 $ ./instrumente/zaehle-fragmente.py
-6 von 10 prüfen sauber        (über den Ausschnitten: 5; am 2026-08-20 kurz 7;
+9 von 10 prüfen sauber        (über den Ausschnitten: 5; am 2026-08-20 kurz 7;
                                ~~7~~ **6 seit dem 2026-08-31: `N041` nimmt `F05` heraus**,
                                und die 7 war ein falsches Grün — die Datei prüfte sauber,
                                emittierte 199 Zeilen C und wurde von `cc` zurückgewiesen)
-6 von 10 senken ab            (über den Ausschnitten: 3)
-6 von 10 sind DURCHGESTOCHEN  — F02, F04, F06, F07, F08, F10   (F6 am 2026-08-31,
-                                am selben Tag an `N043` gefallen und geheilt)
+9 von 10 senken ab            (über den Ausschnitten: 3)
+9 von 10 sind DURCHGESTOCHEN  — F01, F02, F04, F05, F06, F07, F08, F09, F10
+                               (F6 am 2026-08-31, am selben Tag an `N043` gefallen
+                                und geheilt; F9, F1 und F5 am 2026-09-03)
 ```
 
 **The fourth figure came in on 2026-08-25, and it is the one K100's first gate stands on.**
