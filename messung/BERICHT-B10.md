@@ -354,4 +354,10 @@ command, not by adding one.
 
     ssh ki-pc-fisch-101 'cd gabbro-b10 && python3 instrumente/abnahme.py'
     # before the correction: ! ABNAHME ROT: 4 von 51 -- grammatiktafel, manifest, zahlen, karten
-    # after:                   pruefe-zahlen.py EXIT=0, 83 von 83 Eintraegen nachgerechnet
+    # after (re-run, full):  ! ABNAHME ROT: 3 von 51 -- grammatiktafel, manifest, karten
+
+**Three red of 51, and none of the three is this lane's.** `pruefe-grammatiktafel.py` waits
+on an owner decision about `state`, `pruefe-manifest.py` is red by construction until the
+manifest carries its subject, `zaehle-karten.py` on a broken ratchet that arrived at
+`master`. The measurement was run twice on purpose: once to find the fourth, once to show
+it was gone.
