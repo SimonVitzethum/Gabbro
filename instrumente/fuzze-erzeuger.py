@@ -595,6 +595,27 @@ def entartet(c):
     return aus
 
 
+def kaputte_basislinien(basis):
+    """Every baseline that LOWERS but does not reach `cc` -- a FORM-LEVEL defect.
+
+    **Pulled out of `main()` on 2026-09-04** (`messung/BASELINE-GEGENPROBE.md`) so the
+    speech test below can hold this exact question against an INVENTED population instead
+    of the real sweep. `messung/RESCUED-BASELINE-DEPTH.md` rescued the split this function
+    makes -- a baseline that never varies, held to the SAME `cc` gate its swept descendants
+    face -- and that change ran here for the first time and reported "0 broken baselines".
+    *A null result on a first run is not yet a measurement*: every other net in this file
+    carries a counter-direction for exactly that reason, and until now this one did not.
+
+    Only `LOWER`/`LOWER-EMPTY` count: a baseline the CHECKER refused is `kaputt`'s business
+    two screens up (`THE GENERATOR IS BROKEN`), not a form-level compile defect -- the two
+    buckets answer different questions, and folding one into the other would make the
+    ratchet fire on a case that already has its own, louder abort.
+    """
+    return [(f, e) for f, e in sorted(basis.items())
+            if e.get("debug") in ("LOWER", "LOWER-EMPTY")
+            and not e.get("uebersetzt")]
+
+
 # ==========================================================================================
 # BOOKED FINDINGS -- what was standing when this tool was written
 # ==========================================================================================
@@ -824,7 +845,7 @@ def uebersetze(cc, schalter, c, pfad):
 # THE SPEECH TEST -- in both directions, and it runs BEFORE the sweep
 # ==========================================================================================
 #
-# *A guardian nobody has seen fall is an ornament* (R11). Five probes, each with the
+# *A guardian nobody has seen fall is an ornament* (R11). Six probes, each with the
 # counter-direction beside it: what must fall, falls; what must not, does not.
 
 SP_SAUBER = "int gabbro_probe(void) { return 0; }\n"
@@ -905,6 +926,28 @@ def sprechprobe(cc, arb):
     if lauf(["sleep", "0"], timeout=10)[0] != 0:
         tot.append("the deadline fires on a process that finishes at once -- net 8 would "
                    "report a hang that is not there")
+
+    # **The baseline gate, both directions, over an INVENTED population**
+    # (`messung/BASELINE-GEGENPROBE.md`, 2026-09-04). `kaputte_basislinien` is the ledger
+    # `messung/RESCUED-BASELINE-DEPTH.md` rescued, and it had run exactly once here before
+    # this probe existed -- a "0" with no counter-direction beside it, indistinguishable
+    # from a ledger that cannot fire at all.
+    _bg_gut = {"f": {"debug": "LOWER", "uebersetzt": True}}
+    _bg_leer = {"f": {"debug": "LOWER-EMPTY", "uebersetzt": True}}
+    _bg_kaputt = {"f": {"debug": "LOWER", "uebersetzt": False}}
+    _bg_refuse = {"f": {"debug": "REFUSE C001", "uebersetzt": False}}
+    if kaputte_basislinien(_bg_gut) or kaputte_basislinien(_bg_leer):
+        tot.append("the baseline gate fires on a baseline that COMPILES -- every clean run "
+                   "would report a FORM-LEVEL defect that is not there")
+    if not kaputte_basislinien(_bg_kaputt):
+        tot.append("the baseline gate is SILENT on a baseline that LOWERS and does not "
+                   "compile -- the one shape `messung/RESCUED-BASELINE-DEPTH.md` exists to "
+                   "catch, and the shape a first \"0\" run cannot tell apart from a ledger "
+                   "that never fires")
+    if kaputte_basislinien(_bg_refuse):
+        tot.append("the baseline gate fires on a baseline the CHECKER refused -- that is "
+                   "`kaputt`'s bucket (`THE GENERATOR IS BROKEN`), not a form-level compile "
+                   "defect, and folding the two together hides which one needs fixing")
     return tot
 
 
@@ -957,10 +1000,11 @@ def main():
             print(f"   {z}")
         print("   A net that cannot speak measures nothing (R11). NOTHING below was measured.")
         return 2
-    print("   17 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
+    print("   20 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
     print("   decimal / hex / signed literals, the COLLISION oracle in all four of its")
-    print("   directions, net 6, net 7, and net 8's DEADLINE over a process that outlives")
-    print("   it and one that does not. All spoke.")
+    print("   directions, net 6, net 7, net 8's DEADLINE over a process that outlives it and")
+    print("   one that does not, and the BASELINE GATE below over an invented population.")
+    print("   All spoke.")
 
     alle_formen = dict(g.FORMEN)
     alle_formen.update(EIGENE_FORMEN)
@@ -1032,9 +1076,7 @@ def main():
     # inside this file can tell those apart. A sweep that refused to run over the second
     # kind would stop measuring its object exactly when the object is broken -- so the
     # ledger below judges the count, and this line only makes it visible.
-    kaputte_basis = [(f, e) for f, e in sorted(basis.items())
-                     if e.get("debug") in ("LOWER", "LOWER-EMPTY")
-                     and not e.get("uebersetzt")]
+    kaputte_basis = kaputte_basislinien(basis)
     print(f"   {gesenkt_basis - len(kaputte_basis)} of those {gesenkt_basis} COMPILE under "
           f"the gate -- {len(kaputte_basis)} do not, and each one is a FORM-LEVEL defect:")
     if not kaputte_basis:
