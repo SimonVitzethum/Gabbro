@@ -62,6 +62,14 @@ not move to another file; it dissolved.**
 
 **Live demand: 0 of 57.**
 
+And the same figure taken over the fragment corpus, which is where a page table would live
+if anywhere:
+
+    ls messung/fragmente/*.gab | wc -l          # 10
+    grep -ln '^\s*walk ' messung/fragmente/*.gab   # messung/fragmente/F09.gab -- and only it
+
+**One fragment of ten has a `walk` at all, and zero of ten want the traversal over it.**
+
 ---
 
 ## 2. The demand for the named resolver — ONE site, a test driver
