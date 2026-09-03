@@ -45,10 +45,11 @@ counts what could never have been measured is `W25`.*
 
     ./instrumente/fuzze-erzeuger.py --debug target/debug/gabbro --release target/release/gabbro
 
-BEYOND THE PROPERTY -- three nets, each named, each with its reason
+BEYOND THE PROPERTY -- four nets, each named, each with its reason
 -------------------------------------------------------------------
-The bare property misses defects that are visible in the emitted C, so three further nets
-run beside it and are reported in their own section:
+The bare property misses defects that are visible in the emitted C -- and one that is
+visible in no C at all, because there is none -- so four further nets run beside it and are
+reported in their own section:
 
   5. NOT ISO C -- the same compile again with `-Wpedantic`. GCC accepts a zero-length array
      as an extension and says nothing under `-Wall -Wextra -Werror`; ISO C forbids it.
@@ -59,8 +60,15 @@ run beside it and are reported in their own section:
      computes the same value for every input, so the field it claims to read is not read.
      (`% 0` and `/ 0` need no rule here: `-Wdiv-by-zero` is on by default and shape 2 has
      them.)
+  8. THE EMITTER DID NOT HALT -- added 2026-09-03. Shape 1 already names a timeout, and it
+     can only see one on an input the CHECKER ACCEPTED. `command_emit` runs the whole back
+     end BEFORE it reads the verdict, so a refused input drives the emitter just as far;
+     `static mut A : [u64; 10^8] = 7;` is refused by `M140` and still costs 8.51 s and
+     18.9 GB. **Halting is a property of the RUN and not of the C**, so no gate that reads
+     the emitted text can see it -- only a deadline can. See `HALT_FORMEN` for why this
+     case cannot live inside the property at all.
 
-*These three are defects, not style.* They are separated from shapes 1-4 because the mandate
+*These four are defects, not style.* They are separated from shapes 1-4 because the mandate
 this tool answers names four, and a report that quietly widens its own property is not a
 measurement of the one that was asked for.
 
@@ -171,6 +179,89 @@ impl fn g(a : u64) -> u64
 }
 EIGENE_GUT = {"aligned-im-rumpf": "4"}
 EIGENE_LEITER = {"aligned-im-rumpf": "zahl"}
+
+
+# ==========================================================================================
+# NET 8 -- THE EMITTER HALTS, and it needs a table of its own for a measured reason
+# ==========================================================================================
+#
+# **The property above cannot hold this case, and that is a measurement and not a design.**
+# `array-laenge` sweeps `static mut A : [u64; {V}] = 0;`, and the initialiser is a literal
+# ZERO on both sides of every rung. Zero is the one value the emitter short-circuits:
+#
+#     let anfang = if w == 0 { "{0}".to_string() } else { ...one element at a time... };
+#
+# `= {0}` means *every slot zero* in C and in Gabbro alike. `= {5}` means *the first five,
+# the rest zero* in C and *every slot five* in Gabbro, so the two readings part company at
+# every value but zero -- and `emit.rs::feldstatisch` therefore writes the other values OUT,
+# one element per element, on purpose. *A ladder whose initialiser never leaves zero measures
+# one branch of two.*
+#
+# **So why not simply add the non-zero rung to the shared table?** Because the checker refuses
+# it at EVERY rung, the known-good baseline included. `M140` (2026-09-02) reads the shape of
+# a value against the shape of its slot:
+#
+#     [M140] static value requires `[u64; 8]`, the value has `u8 in 7 .. 7`
+#            -- a number does not answer for an array
+#
+# and `m1.rs::gestalt_grund` lets the literal zero through and nothing else. A form whose
+# baseline the checker refuses stops the whole run with *THE GENERATOR IS BROKEN* -- and
+# rightly, because the property's population is what the checker ACCEPTS. **This case has an
+# empty population under that property and always will.**
+#
+# **And the defect is live anyway, which is the whole reason this net exists.**
+# `gabbro-cli/src/main.rs::command_emit` runs the back end and reads the verdict afterwards:
+#
+#     gabbro_check::pruefe(&baum, &mut absagen);
+#     let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);   // runs anyway
+#     if absagen.fehler_zahl() > 0 { ... "has errors -- no C written" }
+#
+# So `M140` never stands between the user and the loop; it only throws away what the loop
+# produced. Measured on `ki-pc-fisch-101`, debug binary, wall clock: 0.091 s at 10^6 elements,
+# 0.868 s at 10^7, **8.51 s at 10^8** -- linear, about 85 ns per element, and 18.9 GB of
+# resident memory after 8 seconds. `D5` fences only past `PTRDIFF_MAX` BYTES, so
+# `[u64; PTRDIFF_MAX/8]` is let through: about three thousand years, if the allocator could
+# hold it.
+#
+# > **Halting is not a property of the emitted C**, so no gate that reads the C can see this.
+# > It is a property of the RUN, and the only instrument that catches it is a deadline. That
+# > is why this is a NET beside the property rather than a fifth shape inside it -- the same
+# > separation nets 5 to 7 already carry, and for the same stated reason.
+#
+# The rungs, and each one is here because it was measured rather than guessed:
+HALT_FORMEN = {
+    # The non-zero initialiser, which is the branch `array-laenge` cannot reach.
+    "array-nichtnull": """module f {{
+static mut A : [u64; {V}] = 7;
+}}""",
+}
+HALT_LEITER = [
+    # ---- the counter-direction: three sizes that MUST come back, and do -----------------
+    "8",           # the shared table's own known-good length
+    "4096",        # a page of `u64` -- eight times the corpus's largest array of any kind
+    "1000000",     # a million elements: 0.091 s, and the net must stay silent on it
+    # ---- the two faces of the defect ---------------------------------------------------
+    "100000000",   # 8.51 s: past the deadline below, and the mandate's own reproducer
+    # `PTRDIFF_MAX / 8` -- the largest `[u64; n]` that `D5` still lets through. This one does
+    # not hang, it PANICS: `collect::<Vec<_>>()` reserves `n` slots up front and
+    # `raw_vec` answers *capacity overflow* in two milliseconds. **Two faces, one fence.**
+    #
+    # > **`(1 << 63) // 8` was written here first, and it is a different rung.** That is
+    # > `PTRDIFF_MAX + 1` over eight, so `D5` refuses it by name and the net came back
+    # > silent about a form whose defect was two lines away. *An off-by-one in a boundary
+    # > rung does not look like a bug; it looks like a repair.*
+    str(((1 << 63) - 1) // 8),
+]
+
+# **A deadline that is also a MEMORY budget**, and it is declared for that reason.
+#
+# The ordinary case of this net returns in under 50 ms; the rung that must fire needs 8.5 s.
+# Three seconds sits sixty times above the first and three times below the second. It is not
+# only time: the emitter takes resident memory at about 2.25 GB per second on this rung
+# (18.9 GB measured at 8.4 s), so **the deadline is what bounds the cost of running this
+# tool at all** -- and after the fence is in, the rung is refused in microseconds and the
+# budget is never spent.
+FRIST_HALT = 3
 
 
 # ==========================================================================================
@@ -421,7 +512,8 @@ GEBUCHT = {
 
 def eine_probe(auftrag):
     """Everything measured about one generated file. A pure worker -- no shared state."""
-    (form, wert, quelle, pfad, dbg, rel, cc, basis_zahlen, basis_namen) = auftrag
+    (form, wert, quelle, pfad, dbg, rel, cc, basis_zahlen, basis_namen,
+     frist_halt) = auftrag
     pfad.write_text(quelle, encoding="utf-8")
     e = {"form": form, "wert": wert, "pfad": str(pfad)}
 
@@ -432,6 +524,24 @@ def eine_probe(auftrag):
     e["angenommen"] = (pe == 0 and not pp)
     if not e["angenommen"]:
         e["pruefer"] = "PANIC" if pp else ("TIMEOUT" if pe is None else ",".join(kodes(pf)))
+        # **NET 8, and this is the only line at which it can be measured.** See the table
+        # above: `command_emit` runs the whole back end BEFORE it reads the verdict, so a
+        # case the checker refused still drives the emitter. Until today this `return`
+        # stood two lines up and the emitter was never started on these at all.
+        he, hp, _, hf = lauf([dbg, "emit", str(pfad)], timeout=frist_halt)
+        e["haelt"] = he is not None
+        e["halt_wie"] = ("TIMEOUT" if he is None else
+                         ("PANIC" if hp else f"exit {he}"))
+        # **The panic's own words and not the whole stream.** A refused case carries the
+        # checker's diagnostic on the same stderr, and that is what the case is ABOUT --
+        # printing it here would name `M140` where the finding is a back end that ran past
+        # it. So the two lines Rust writes for a panic are lifted out by name.
+        zeilen = hf.splitlines()
+        e["halt_text"] = ""
+        for i, z in enumerate(zeilen):
+            if "panicked at" in z:
+                e["halt_text"] = " / ".join(x.strip() for x in zeilen[i:i + 2])[:160]
+                break
         return e
 
     de, dp, da, df = lauf([dbg, "emit", str(pfad)])
@@ -543,6 +653,17 @@ def sprechprobe(cc, arb):
         tot.append("net 7 does not see a multiplication by zero")
     if entartet("return x * 4096u;") or entartet("return x * 0x10u;"):
         tot.append("net 7 fires on an ordinary multiplication")
+
+    # **Net 8's reader is the DEADLINE, and a deadline that never expires is an ornament.**
+    # Both directions over `sleep`, which is the one process whose running time this tool can
+    # state rather than measure. `lauf` swallows every exception by contract, so a broken
+    # timeout would come back as a clean answer and every hang would count as a halt.
+    if lauf(["sleep", "10"], timeout=1)[0] is not None:
+        tot.append("the deadline does not expire on a process that outlives it -- net 8 "
+                   "would count every hang as a halt")
+    if lauf(["sleep", "0"], timeout=10)[0] != 0:
+        tot.append("the deadline fires on a process that finishes at once -- net 8 would "
+                   "report a hang that is not there")
     return tot
 
 
@@ -595,8 +716,9 @@ def main():
             print(f"   {z}")
         print("   A net that cannot speak measures nothing (R11). NOTHING below was measured.")
         return 2
-    print("   11 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
-    print("   decimal / hex / signed literals, net 6 and net 7. All spoke.")
+    print("   13 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
+    print("   decimal / hex / signed literals, net 6, net 7, and net 8's DEADLINE over a")
+    print("   process that outlives it and one that does not. All spoke.")
 
     alle_formen = dict(g.FORMEN)
     alle_formen.update(EIGENE_FORMEN)
@@ -605,7 +727,20 @@ def main():
     leiter_von = dict(g.LEITER)
     leiter_von.update(EIGENE_LEITER)
     formen = {k: v for k, v in alle_formen.items() if not args.nur or k == args.nur}
-    if not formen:
+    # **The single-form switch reaches net 8's own table too.** Its forms are deliberately
+    # outside the property's population (see `HALT_FORMEN`), so they are not in
+    # `alle_formen` -- and a switch that named one used to come back *names no form*, which
+    # is a different sentence from *found nothing* and would have been read as the second.
+    #
+    # (The switch is spelled out nowhere in this comment on purpose: `pruefe-englisch.py`
+    # carries a closed list of German function words, one of them is a homograph of that
+    # flag's name, and a ratchet raised by quoting a flag measures nothing about language.)
+    if not formen and args.nur in HALT_FORMEN:
+        print()
+        print(f"== `--nur {args.nur}` is a NET 8 form -- the property's own sweep is empty ==")
+        print("   That is not a defect of the switch: this form has no accepted population")
+        print("   by construction. Only net 8 below can say anything about it.")
+    elif not formen:
         print()
         print(f"== `--nur {args.nur}` names no form, so NOTHING was measured ==")
         return 2
@@ -624,7 +759,7 @@ def main():
             p = arb / f"basis-{form}.gab"
             auftraege.append((form, gut[form],
                               formen[form].format(V=gut[form]) + "\n", p,
-                              args.debug, args.release, cc, set(), set()))
+                              args.debug, args.release, cc, set(), set(), FRIST))
         for e in pool.map(eine_probe, auftraege):
             if not e["angenommen"]:
                 kaputt.append((e["form"], e["wert"], "checker: " + str(e.get("pruefer"))))
@@ -660,17 +795,40 @@ def main():
             p = arb / f"{form}--{n:05d}.gab"
             auftraege.append((form, wert, formen[form].format(V=wert) + "\n", p,
                               args.debug, args.release, cc,
-                              basis_zahlen.get(form, set()), basis_namen.get(form, set())))
+                              basis_zahlen.get(form, set()), basis_namen.get(form, set()),
+                              FRIST))
     print(f"   {n} cases over {len(formen)} forms, {args.faeden} at a time")
 
     ergebnisse = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.faeden) as pool:
         for e in pool.map(eine_probe, auftraege):
             ergebnisse.append(e)
-    return bericht(ergebnisse, formen, n, arb, args)
+
+    # ---------------------------------------------------------------------------------
+    # NET 8. **ONE at a time, and that is not a preference.** The rung that must fire takes
+    # resident memory at about 2.25 GB per second until its deadline; sixteen of those at
+    # once is not a measurement, it is an out-of-memory kill wearing the same exit code.
+    # ---------------------------------------------------------------------------------
+    halt_n = 0
+    if not args.nur or args.nur in HALT_FORMEN:
+        halt_formen = {k: v for k, v in HALT_FORMEN.items()
+                       if not args.nur or k == args.nur}
+        halt_auftraege = []
+        for form in sorted(halt_formen):
+            for wert in HALT_LEITER:
+                halt_n += 1
+                p = arb / f"halt-{form}--{halt_n:05d}.gab"
+                halt_auftraege.append((form, wert,
+                                       halt_formen[form].format(V=wert) + "\n", p,
+                                       args.debug, args.release, cc, set(), set(),
+                                       FRIST_HALT))
+        print(f"   {halt_n} more for net 8, ONE at a time, deadline {FRIST_HALT} s")
+        for auftrag in halt_auftraege:
+            ergebnisse.append(eine_probe(auftrag))
+    return bericht(ergebnisse, formen, n, halt_n, arb, args)
 
 
-def bericht(ergebnisse, formen, n, arb, args):
+def bericht(ergebnisse, formen, n, halt_n, arb, args):
     angenommen = [e for e in ergebnisse if e["angenommen"]]
     for e in angenommen:
         e["_gesenkt"] = e["debug"] in ("LOWER", "LOWER-EMPTY")
@@ -723,6 +881,24 @@ def bericht(ergebnisse, formen, n, arb, args):
                                 f"internal / {C11_AUSSEN} external"))
         for zeile, text in e.get("entartet") or []:
             entart.append((e, f"line {zeile}: {text[:110]}"))
+
+    # ---- net 8: over the cases the checker REFUSED, which is where it can be seen -----
+    #
+    # A case the checker ACCEPTED and that then hung is already shape 1 (`TIMEOUT`), and
+    # counting it twice would make one event look like two. So this net's population is the
+    # complement: every generated case the checker refused, on which `command_emit` runs the
+    # back end anyway.
+    nicht_gehalten = []
+    halt_gemessen = [e for e in ergebnisse if not e["angenommen"] and "haelt" in e]
+    for e in halt_gemessen:
+        if not e["haelt"]:
+            nicht_gehalten.append(
+                (e, f"the checker refused it, and `gabbro emit` still ran the back end "
+                    f"-- no answer within the deadline"))
+        elif e.get("halt_wie") == "PANIC":
+            nicht_gehalten.append(
+                (e, f"the back end PANICKED on an input the checker had refused: "
+                    f"{e.get('halt_text', '')}"))
 
     def zeige(titel, liste, erklaerung):
         print()
@@ -779,13 +955,16 @@ def bericht(ergebnisse, formen, n, arb, args):
           "C11 5.2.4.1: a conforming compiler may fold everything past 63 / 31 characters")
     zeige("7. DEGENERATE CONSTANT ARITHMETIC", entart,
           "a generated expression multiplied by a literal zero cannot read its input")
+    zeige("8. THE EMITTER DID NOT HALT -- a deadline is the only reader of this", nicht_gehalten,
+          "the back end runs BEFORE `command_emit` reads the verdict, so a refused input "
+          "still drives it")
 
     # ---- the booking -----------------------------------------------------------------
     gefunden = {}
     for kennung, liste in (("DRITTE", dritte), ("NICHT-UEBERSETZBAR", nichtueb),
                            ("ORAKEL", orakel), ("UNEINIG", uneinig),
                            ("NOT-ISO", nicht_iso), ("NAME-LEN", namelang),
-                           ("ENTARTET", entart)):
+                           ("ENTARTET", entart), ("NICHT-GEHALTEN", nicht_gehalten)):
         for e, _ in liste:
             gefunden[(kennung, e["form"])] = gefunden.get((kennung, e["form"]), 0) + 1
 
@@ -817,9 +996,13 @@ def bericht(ergebnisse, formen, n, arb, args):
     print()
     print("== COVERAGE, AND WHAT IT IS A FRACTION OF ==")
     print(f"   {n:5d}  cases generated over {len(formen)} forms")
+    print(f"   {halt_n:5d}  more generated for net 8 over {len(HALT_FORMEN)} forms the "
+          f"property cannot hold")
     print(f"   {len(angenommen):5d}  accepted by the checker -- the POPULATION of this "
           f"property")
-    print(f"   {n - len(angenommen):5d}  refused by the checker; the emitter never sees them")
+    print(f"   {n + halt_n - len(angenommen):5d}  refused by the checker -- and "
+          f"{len(halt_gemessen)} of those were still run through the emitter under a "
+          f"{FRIST_HALT} s deadline (net 8)")
     print(f"   {len(gesenkt):5d}  lowered by the emitter "
           f"({sum(1 for e in gesenkt if e['debug'] == 'LOWER-EMPTY')} of them to a preamble "
           f"with no declaration in it)")
@@ -879,8 +1062,8 @@ def bericht(ergebnisse, formen, n, arb, args):
     print()
     print(f"== {len(angenommen) - summe} of {len(angenommen)} accepted cases kept the "
           f"emitter's promise ==")
-    print(f"   shapes 1-4: {summe}   nets 5-7: "
-          f"{len(nicht_iso) + len(namelang) + len(entart)}   "
+    print(f"   shapes 1-4: {summe}   nets 5-8: "
+          f"{len(nicht_iso) + len(namelang) + len(entart) + len(nicht_gehalten)}   "
           f"unbooked: {len(neu)}   stale bookings: {len(verschwunden)}")
     return 1 if schlecht else 0
 

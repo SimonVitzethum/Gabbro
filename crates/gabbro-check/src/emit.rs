@@ -2387,6 +2387,19 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 /// 9223372036854775807*), which is where the value is read from rather than assumed.
 const C_OBJEKT_MAX: u128 = i64::MAX as u128;
 
+/// **The bytes this emitter will write into ONE initialiser** -- and the number is its own,
+/// because C has none to lend (`D12`, 2026-09-03).
+///
+/// `C_OBJEKT_MAX` above is read off the standard and off GCC's own message. There is no such
+/// number here: ISO C sets no limit on how many elements an initialiser may hold, and
+/// C11 5.2.4.1's translation limits speak of nesting and of identifiers, not of this. **The
+/// bound in practice is patience and memory**, so a number that fences it is a statement
+/// about this back end and belongs beside the back end with its cost written out.
+///
+/// One mebibyte, and the reasoning is at the single site that reads it -- including the
+/// corpus measurement that says what headroom it leaves.
+const C_INITIALISIERER_MAX: u128 = 1 << 20;
+
 /// The width in bytes of an emitted C type name -- `None` where this emitter cannot say.
 ///
 /// **Only the fixed-width names get an answer, and that is the whole of the claim.**
@@ -7415,9 +7428,81 @@ fn feldstatisch(
     let anfang = if w == 0 {
         "{0}".to_string()
     } else {
+        // **`D12`: the emitter's THIRD answer, and it was a length that halts nothing**
+        // (2026-09-03). `beispiele/gift/662`.
+        //
+        // `[u64; 10^8] = 7` is far inside `PTRDIFF_MAX`, so `D5` above says nothing -- and
+        // the line below writes a hundred million elements one at a time. **Measured on
+        // this tree: 0.091 s at 10^6, 0.868 s at 10^7, 8.51 s at 10^8** -- linear, about
+        // 85 ns and 190 bytes of resident memory per element. At the largest length `D5`
+        // still allows for a `u64` that is about three thousand years.
+        //
+        // > *And the same slot has a second face.* Past
+        // > `isize::MAX / size_of::<String>()` the `collect` reserves its slots up front
+        // > and `raw_vec` answers *capacity overflow* -- a panic instead of a hang, two
+        // > milliseconds instead of an age. **One hole, two third answers, one fence.**
+        //
+        // **The fence is on BYTES OF OUTPUT and not on a count, because bytes are what
+        // does not halt.** The count alone cannot say it: one element of `7` costs three
+        // characters and one of `-2^127` costs forty-two, a factor of fourteen at the same
+        // length. The size is computed exactly here, before anything is built.
+        //
+        // WHY A NUMBER AT ALL, AND WHY THIS ONE
+        // -------------------------------------
+        // **C gives no limit to borrow.** A translation unit may hold as many initialiser
+        // elements as the implementation can stand; the bound is patience and memory, and
+        // neither is in the standard. So the number is this emitter's and is written here
+        // with what it costs.
+        //
+        // **And the other two ways out were checked before this one was chosen.**
+        //
+        // * *A repeat form.* `{ [0 ... 9] = 7 }` is a GNU extension. Measured with the
+        //   tree's own compile gate: silent under `-std=c11 -Wall -Wextra -Werror`, and
+        //   under one switch more -- *ISO C forbids specifying range of elements to
+        //   initialize* `[-Werror=pedantic]`. That switch is net 5 of
+        //   `instrumente/fuzze-erzeuger.py`, so taking this road would trade a hang for a
+        //   finding in the same tool.
+        // * *A loop at run time.* A `static` initialiser has to be a constant expression;
+        //   filling the array from an init function moves the work to a moment this
+        //   language does not have. **That is a change to what `= 7` MEANS**, and the
+        //   comment above this function was written precisely to keep the two readings of
+        //   `= 5` apart.
+        //
+        // **The headroom, measured over the whole corpus and not estimated.** 612 versioned
+        // `.gab`/`.gabi`; eleven declare an array `static`, and the lengths of every array
+        // of any kind in the tree are 8, 10, 32, 64, 256 and 512. The largest array
+        // `static` is `[Zaehler; 64]` (`beispiele/08`) and `[u8; KAP]` with `KAP = 64`
+        // (`beispiele/64`). **Every one of them is `= 0`, so not one reaches this branch at
+        // any length.**
+        //
+        // One mebibyte therefore leaves 349 525 elements at a one-digit value and 24 966 at
+        // the widest literal Gabbro has -- **5 461 times and 390 times the largest array
+        // `static` in the corpus**, and 682 times / 48 times the largest array of any kind.
+        // A megabyte of initialiser text costs about 30 ms at the rate measured above.
+        // *A limit a real program hits is worse than the defect; this one is not within
+        // three decimal orders of any program in this tree.*
+        let text = w.to_string();
+        // `+ 2` for the `, ` between two elements. The last element carries none, so this
+        // over-counts by exactly two bytes -- the refusal fires two bytes early rather than
+        // two bytes late, which is the direction with the second reader still behind it.
+        let bytes = (n as u128).saturating_mul(text.len() as u128 + 2);
+        if bytes > C_INITIALISIERER_MAX {
+            weigere(
+                absagen,
+                st.name.span,
+                &format!(
+                    "`static` array of {n} elements initialised to {w} -- C has no repeat \
+                     form for an initialiser that ISO C also has, so this emitter writes \
+                     one element per element and that text would be {bytes} bytes. This \
+                     emitter's budget for one initialiser is {C_INITIALISIERER_MAX}. \
+                     `= 0` carries no such cost at any length: it lowers to `{{0}}`"
+                ),
+            );
+            return;
+        }
         format!(
             "{{{}}}",
-            std::iter::repeat(w.to_string()).take(n as usize).collect::<Vec<_>>().join(", ")
+            std::iter::repeat(text).take(n as usize).collect::<Vec<_>>().join(", ")
         )
     };
     let konst = if st.veraenderlich { "" } else { "const " };
