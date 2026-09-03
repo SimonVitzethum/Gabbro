@@ -223,8 +223,12 @@ does not touch the cost promise, because a descent along ONE path is `levels` st
 name rather than under «B10».*
 
 **And the thing «B10» actually is** — the value-yielding, exitable search loop — has real
-measured demand: `F03`:174, `F01`:423, five search loops in `messung/SCHLEIFENZUSAGEN.md`,
-two probe sites. The template is already designed and named: `ops.suche` /
+measured demand, named site by site: `messung/fragmente/F03.gab`:174 (the IPC fastpath),
+`messung/fragmente/F01.gab`:423 (`revoke`, where the missing value also costs the peak
+measurement), and **five search loops** listed in `messung/SCHLEIFENZUSAGEN.md`:91 —
+`18 :: liegt_unter`, `39 :: erster_dringender`, `39 :: buendel_von`,
+`netz/udp-echo :: arp_suchen`, `F04 :: poll_used`. **Seven sites against zero.** The
+template is already designed and named: `ops.suche` /
 `ops finde …`, `crates/gabbro-check/src/schablonen.rs`:711, `Stand::Entworfen`, with its
 obligation written out. *If a construct is to be decided today, that is the one with the
 denominator — and it is not the one the decision named.*
@@ -275,7 +279,7 @@ walk Seitenabstieg levels 4 {
     via  knoten_zu,                              -- the one new position
 }
 
-impl fn knoten_zu(rahmen : u64) -> ptr<normal, ro> Seitenabstieg or nicht_abgebildet
+impl fn knoten_zu(rahmen : u64) -> ptr<normal, ro> Seitenabstieg or unmapped
     effects { reads frames }
     costs   <= 3 ops
 { … }
