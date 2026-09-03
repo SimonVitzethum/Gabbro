@@ -1,0 +1,54 @@
+-- erwartet: D020
+-- 668 -- **The `D020` poison from `gift/570`, one enclosing module away from its `format`.**
+--
+-- `gift/570` proved that `!m.gibtsnicht` falls at `D020` when the node `format` and the
+-- `walk` share ONE module. Here they do not: `Pte` is declared in `aussen`, and
+-- `Seitentabelle` one level in, at `aussen::innen`. `node : [aussen::Pte; 512]` names it by a
+-- qualified path -- Gabbro's own `use`-free cross-module reference, exactly what `suche`'s
+-- candidate list is for.
+--
+-- MEASURED 2026-09-03 against the checker BEFORE this file's own fix: the exact symptom
+-- `walkknoten`'s own doc comment already quotes about the tree before `D020` existed came
+-- back verbatim --
+--
+--     …: 4 items, 0 errors, 0 hints
+--
+-- **`Pte` has no field of that name and no pass said so, again** -- not because `D020` was
+-- undone, but because `abbildungsfelder_pruefen` (`domaene.rs`) read `walkknoten`'s value
+-- with a plain `formate.get(&knoten)`, and that value was qualified against the `walk`'s OWN
+-- module unconditionally. One module out, the key it built named no entry, and the early
+-- return this file's own doc calls *"no refusal"* fired for a carrier that DID resolve.
+--
+-- The fix must not turn an enclosing lookup into a false refusal either: the same tree with
+-- `gift/570`'s two counter-probes substituted for the poison below, `Pte` still one module
+-- out, checks clean under `gabbro check` (`0 errors, 0 hints`) -- checked by hand and not
+-- shipped a second time here, since this corpus file already carries its one `erwartet:`.
+
+module aussen {
+
+format Pte endian little {
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    nutzer     : bool @2,
+    pte_frei   : u64 @[11:3] reserved,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    pte_hoch   : u64 @[62:52] reserved,
+    nx         : bool @63,
+}
+
+module innen {
+
+walk Seitentabelle levels 4 {
+    node : [aussen::Pte; 512],
+    down : rahmen when it.praesent,
+    leaf : !it.praesent,
+
+    -- THE POISON: `gibtsnicht` is neither in the `format` nor among the three position
+    -- fields, exactly as in `gift/570` -- only the module distance is new.
+    invariant erfundenes_feld cost O(n) runs online :
+        forall m in mappings of Self : !m.gibtsnicht;
+}
+
+}
+
+}
