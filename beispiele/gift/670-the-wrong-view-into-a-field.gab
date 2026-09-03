@@ -1,0 +1,42 @@
+-- erwartet: N030
+-- **670 -- the same mistake at the WRITE end, which is where `retarget` lives.**
+--
+-- `beispiele/gift/669` is the read: the wrong view taken OUT of a record. This is the write:
+-- the wrong view put IN. It is not a symmetric afterthought -- caprock has a function that
+-- does exactly this and nothing else, `retarget_device_view`
+-- (`caprock-virtio/src/owned.rs`:127), whose whole point is that it moves ONE of the two
+-- axes and leaves the other where it was.
+--
+-- *A rule that catches the read and not the write catches half of a two-sided mistake* --
+-- and the half it would leave standing is the one that corrupts the record itself, so every
+-- later read is wrong for free.
+--
+-- Both directions stand here, because "the device field took a CPU view" and "the CPU field
+-- took a device view" are two different programmes with the same repair.
+
+module gift {
+
+opaque type Cpusicht     = u64;
+opaque type Geraetesicht = u64;
+
+type Zweiachser = {
+    cpu    : Cpusicht,
+    dev    : Geraetesicht,
+    laenge : u32,
+};
+
+impl fn geraetefeld_nimmt_cpusicht(p : ptr<normal, rw> Zweiachser, neu : Cpusicht)
+    effects { writes p.dev }
+    costs   <= 16 ops
+{
+    p.dev = neu;
+}
+
+impl fn cpufeld_nimmt_geraetesicht(p : ptr<normal, rw> Zweiachser, neu : Geraetesicht)
+    effects { writes p.cpu }
+    costs   <= 16 ops
+{
+    p.cpu = neu;
+}
+
+}

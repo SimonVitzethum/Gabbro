@@ -12,8 +12,14 @@
 -- Gabbro has no field privacy, but it has `opaque`, and `opaque` is the stronger instrument
 -- -- it makes the mixing a TYPE error rather than a convention about which getter to call.
 --
--- It does, at a parameter. It does not, at a field -- and a field is where the two axes
+-- It did, at a parameter. It did NOT, at a field -- and a field is where the two axes
 -- actually live. Four sites, each on its own, so no refusal masks another.
+--
+-- **CLOSED 2026-09-03.** Verified first: each of the five sites was also run ALONE, in its
+-- own file, and sites 3, 4 and 5 were silent there too -- so the four missing refusals were
+-- the rule not reaching the position, and NOT one refusal masking another. `N030` now walks
+-- `.f`/`->f` from the binding's declared record, and reads the write end as well. This file
+-- reports **4 errors** and site 1 stays silent.
 
 module probe::opak_am_feld {
 
@@ -48,7 +54,7 @@ impl fn falsch_am_parameter(c : Cpusicht, laenge : u32)
     deskriptor_stellen(c, laenge);
 }
 
--- 3. THE SAME MISTAKE THROUGH A POINTER FIELD -- 0 errors, 0 hints.
+-- 3. THE SAME MISTAKE THROUGH A POINTER FIELD -- was 0 errors, 0 hints; now falls.
 impl fn falsch_am_zeigerfeld(p : ptr<normal, r> Zweiachser)
     effects { reads p }
     costs   <= 16 ops
@@ -56,7 +62,8 @@ impl fn falsch_am_zeigerfeld(p : ptr<normal, r> Zweiachser)
     deskriptor_stellen(p.cpu, p.laenge);
 }
 
--- 4. And through a local binding taken from that field -- 0 errors, 0 hints.
+-- 4. And through a local binding taken from that field -- was 0 errors, 0 hints; now falls.
+--    The `let` carries the FIELD's declared type, so one extra line no longer loses it.
 impl fn falsch_ueber_bindung(p : ptr<normal, r> Zweiachser)
     effects { reads p }
     costs   <= 16 ops
@@ -70,7 +77,10 @@ impl fn falsch_ueber_bindung(p : ptr<normal, r> Zweiachser)
 --    view at PARAMETER position, which is where `N030` does bite. So the guarantee would be
 --    bought back.
 --
---    It is not: `opaque` on a record does not close its fields. 0 errors, 0 hints.
+--    It is not: `opaque` on a record STILL does not close its fields -- that half is a
+--    construct question and stands open. But the guarantee no longer has to be bought that
+--    way: `N030` bites at the field itself, so the accessor is not needed to get the check.
+--    Was 0 errors, 0 hints; now falls.
 opaque type OpakerZweiachser = {
     cpu    : Cpusicht,
     dev    : Geraetesicht,

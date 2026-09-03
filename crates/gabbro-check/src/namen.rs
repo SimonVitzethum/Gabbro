@@ -3824,11 +3824,31 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
 /// keine Luecke. *Aus der strengen Lesart kann man lockern, nie umgekehrt* -- hier steht die
 /// engere Fassung derjenigen Menge, fuer die die Sprache die Unterscheidung behauptet.
 ///
-/// ## Und die Regel schweigt, wo sie nichts weiss
+/// ## And at a FIELD, not only at a parameter (2026-09-03)
 ///
-/// Verglichen wird nur, wenn **beide** Seiten einen nominalen Namen tragen. Eine Zahl, eine
-/// Rechnung, ein Feldzugriff liefern keinen -- und **W10: nicht abgewiesen ist nicht
-/// bestaetigt.**
+/// **A field is where two axes actually live.** Caprock keeps the CPU view and the device
+/// view of one DMA buffer in ONE record (`caprock-virtio/src/owned.rs`:70-77) and says why
+/// in its own note: with an IOMMU window != 0 the two numbers differ, and a driver that
+/// mixes them programmes the device an address it cannot resolve. It buys the guarantee
+/// with FIELD PRIVACY. Gabbro has none and does not need it -- `opaque` makes the mixing a
+/// TYPE error rather than a convention about which getter to call.
+///
+/// Until this date the rule read one position and that shape never has it: measured on
+/// `messung/proben/probe-opak-am-feld.gab`, four wrong sites and **one** refusal, each site
+/// also run ALONE so that no refusal could be masking another. The walk now starts at the
+/// binding's declared record and follows `.f` and `->f` through the field declarations --
+/// `p.cpu` where a `Geraetesicht` is wanted is the same mistake as `c` at a parameter, one
+/// position further in.
+///
+/// *The same move `R013` made for pointer rights, which `R008` had compared at the space and
+/// not in the struct.*
+///
+/// ## And the rule stays silent where it knows nothing
+///
+/// A comparison happens only where BOTH sides carry a nominal name. A number and a
+/// computation carry none; a field access carries one only where the field declaration names
+/// one and the whole way there is fields -- an `[i]` on the way gives up. **W10: not refused
+/// is not confirmed.**
 fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
     use std::collections::BTreeMap;
     // Welche Namen sind NOMINAL? Siehe oben.
@@ -3843,6 +3863,21 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
     if nominal.is_empty() {
         return;
     }
+    // **Which record declares which field, and what does that field stand on?** The value is
+    // the bare carrier name, nominal or not -- a field may name another record, and the walk
+    // in `ort_nominal` has to be able to step through it. Nominality is asked at the END.
+    let mut felder: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Typ(t) = &item.art else { return };
+        let Some(TypExpr::Verbund(fs, _)) = &t.rumpf else { return };
+        let mut m: BTreeMap<String, String> = BTreeMap::new();
+        for f in fs {
+            if let Some(n) = traegername(&f.typ.typ) {
+                m.insert(f.name.text.clone(), n);
+            }
+        }
+        felder.insert(t.name.text.clone(), m);
+    });
     let nam = |t: &TypExpr| -> Option<String> {
         match t {
             TypExpr::Pfad(p) => p
@@ -3871,51 +3906,77 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else { return };
         // Die nominalen Bindungen DIESER Funktion -- Parameter und `let`.
         let mut lokal: BTreeMap<String, String> = BTreeMap::new();
+        // And the CARRIER of every binding, nominal or not: `p : ptr<normal, r> Zweiachser`
+        // is what makes `p.dev` readable at all.
+        let mut traeger: BTreeMap<String, String> = BTreeMap::new();
         for p in &f.parameter {
             if let Some(n) = nam(&p.typ) {
                 lokal.insert(p.name.text.clone(), n);
             }
+            if let Some(n) = traegername(&p.typ) {
+                traeger.insert(p.name.text.clone(), n);
+            }
         }
+        #[allow(clippy::too_many_arguments)]
         fn sammle_lets(
             b: &Block,
             lokal: &mut BTreeMap<String, String>,
+            traeger: &mut BTreeMap<String, String>,
+            felder: &BTreeMap<String, BTreeMap<String, String>>,
+            nominal: &std::collections::BTreeSet<String>,
             sig: &BTreeMap<String, (Vec<Option<String>>, Option<String>)>,
             nam: &dyn Fn(&TypExpr) -> Option<String>,
         ) {
             for s in &b.anweisungen {
                 if let StmtArt::Let(l) = &s.art {
-                    let n = l.typ.as_ref().and_then(|t| nam(t)).or_else(|| {
-                        let ExprArt::Ruf(r) = &l.wert.art else { return None };
-                        r.path().and_then(|p| sig.get(&p.text())).and_then(|(_, e)| e.clone())
-                    });
+                    if let Some(t) = l.typ.as_ref().and_then(traegername) {
+                        traeger.insert(l.name.text.clone(), t);
+                    }
+                    let n = match l.typ.as_ref().and_then(|t| nam(t)) {
+                        Some(n) => Some(n),
+                        // **`let c = p.cpu;`** -- the binding carries the FIELD's declared
+                        // type. Without this line the mistake merely takes one more line to
+                        // write, and the rule reads the line that no longer has it.
+                        None => match &l.wert.art {
+                            ExprArt::Ort(o) if !o.suffixe.is_empty() => {
+                                ort_nominal(o, lokal, traeger, felder, nominal)
+                            }
+                            ExprArt::Ruf(r) => r
+                                .path()
+                                .and_then(|p| sig.get(&p.text()))
+                                .and_then(|(_, e)| e.clone()),
+                            _ => None,
+                        },
+                    };
                     if let Some(n) = n {
                         lokal.insert(l.name.text.clone(), n);
                     }
                 }
                 for k in crate::unterbloecke(s) {
-                    sammle_lets(k, lokal, sig, nam);
+                    sammle_lets(k, lokal, traeger, felder, nominal, sig, nam);
                 }
             }
         }
-        sammle_lets(b, &mut lokal, &sig, &nam);
+        sammle_lets(b, &mut lokal, &mut traeger, &felder, &nominal, &sig, &nam);
 
+        #[allow(clippy::too_many_arguments)]
         fn im_block(
             b: &Block,
             lokal: &BTreeMap<String, String>,
+            traeger: &BTreeMap<String, String>,
+            felder: &BTreeMap<String, BTreeMap<String, String>>,
+            nominal: &std::collections::BTreeSet<String>,
             sig: &BTreeMap<String, (Vec<Option<String>>, Option<String>)>,
             nam: &dyn Fn(&TypExpr) -> Option<String>,
             rueck: &Option<String>,
             absagen: &mut Absagen,
         ) {
-            // Der nominale Name eines Ausdrucks -- **nur ein blanker Name**, und sonst
-            // nichts. Eine Rechnung, eine Zahl, ein Feldzugriff liefern keinen, und dann
-            // schweigt die Regel (W10).
+            // The nominal name of an expression -- a bare name, or a field that carries one
+            // out of a declared record. A computation and a number carry none, and the rule
+            // then stays silent (W10).
             let von = |e: &Expr| -> Option<String> {
                 let ExprArt::Ort(o) = &e.art else { return None };
-                if !o.suffixe.is_empty() {
-                    return None;
-                }
-                lokal.get(&o.basis.text).cloned()
+                ort_nominal(o, lokal, traeger, felder, nominal)
             };
             let melde = |absagen: &mut Absagen, was: &str, hat: &str, erwartet: &str, span| {
                 absagen.schiebe(
@@ -3939,6 +4000,29 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                     {
                         if hat != erwartet {
                             melde(absagen, "the binding", &hat, &erwartet, l.wert.span);
+                        }
+                    }
+                }
+                // **`p.dev = c;`** -- the assignment INTO a field, the other end of the
+                // same question. `retarget_device_view` (`owned.rs`:127) is exactly that: a
+                // write of the device view and nothing else. *A rule that catches the read
+                // and not the write catches half.*
+                //
+                // **Both statement forms go through ONE arm on purpose.** `place = expr
+                // publishes …` is the same assignment with a payload, and writing it as a
+                // second `if` would have made a second rule position that no probe and no
+                // mutation reaches -- *a correct line nothing measures is debt, not cover.*
+                let zuweisung: Option<(&Ort, &Expr)> = match &s.art {
+                    StmtArt::Zuweisung(z) => Some((&z.ziel, &z.wert)),
+                    StmtArt::Publish(p) => Some((&p.ziel, &p.wert)),
+                    _ => None,
+                };
+                if let Some((ziel, wert)) = zuweisung {
+                    if let (Some(erwartet), Some(hat)) =
+                        (ort_nominal(ziel, lokal, traeger, felder, nominal), von(wert))
+                    {
+                        if hat != erwartet {
+                            melde(absagen, "the assignment", &hat, &erwartet, wert.span);
                         }
                     }
                 }
@@ -3983,10 +4067,10 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                     for (i, a) in r.argumente.iter().enumerate() {
                         let Some(Some(erwartet)) = ps.get(i) else { continue };
                         let ExprArt::Ort(o) = &a.art else { continue };
-                        if !o.suffixe.is_empty() {
+                        let Some(hat) = ort_nominal(o, lokal, traeger, felder, nominal) else {
                             continue;
-                        }
-                        let Some(hat) = lokal.get(&o.basis.text) else { continue };
+                        };
+                        let hat = &hat;
                         if hat == erwartet {
                             continue;
                         }
@@ -3996,7 +4080,7 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                                 a.span,
                                 format!(
                                     "`{}` is a `{hat}`, and `{}` takes a `{erwartet}` there",
-                                    o.basis.text,
+                                    o.text(),
                                     r.target_text()
                                 ),
                             )
@@ -4009,13 +4093,54 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
                 for k in crate::unterbloecke(s) {
-                    im_block(k, lokal, sig, nam, rueck, absagen);
+                    im_block(k, lokal, traeger, felder, nominal, sig, nam, rueck, absagen);
                 }
             }
         }
         let rueck = f.ergebnis.as_ref().and_then(&nam);
-        im_block(b, &lokal, &sig, &nam, &rueck, absagen);
+        im_block(b, &lokal, &traeger, &felder, &nominal, &sig, &nam, &rueck, absagen);
     });
+}
+
+/// The bare NAME a type expression stands on -- through a pointer, and through nothing else.
+///
+/// `ptr<normal, r> Zweiachser` and `Zweiachser` are the same carrier for this question: `p.dev`
+/// reads the same field either way. An array, a function pointer and a variant list give no
+/// name, and the rule then stays silent (W10).
+fn traegername(t: &TypExpr) -> Option<String> {
+    match t {
+        TypExpr::Pfad(p) => p.teile.last().map(|i| i.text.clone()),
+        TypExpr::Zeiger(z) => traegername(&z.ziel),
+        _ => None,
+    }
+}
+
+/// The nominal name of a PLACE -- a bare binding, or a field read out of one (`N030`).
+///
+/// A place with no suffix is answered from `lokal`, exactly as it was before 2026-09-03. With
+/// suffixes the walk starts at the binding's declared carrier and follows each `.f` / `->f`
+/// through the field declarations; an `[i]` on the way gives up, and so does any step whose
+/// record or field is not declared. Only a name one of the four words made NOMINAL comes back.
+fn ort_nominal(
+    o: &Ort,
+    lokal: &std::collections::BTreeMap<String, String>,
+    traeger: &std::collections::BTreeMap<String, String>,
+    felder: &std::collections::BTreeMap<String, std::collections::BTreeMap<String, String>>,
+    nominal: &std::collections::BTreeSet<String>,
+) -> Option<String> {
+    if o.suffixe.is_empty() {
+        return lokal.get(&o.basis.text).cloned();
+    }
+    let mut jetzt = traeger.get(&o.basis.text)?.clone();
+    for s in &o.suffixe {
+        let feld = match s {
+            OrtSuffix::Feld(i) | OrtSuffix::Ueber(i) => &i.text,
+            // An index says which ELEMENT, and the rule has nothing to say about that.
+            OrtSuffix::Index(_) => return None,
+        };
+        jetzt = felder.get(&jetzt)?.get(feld.as_str())?.clone();
+    }
+    nominal.contains(&jetzt).then_some(jetzt)
 }
 
 /// **`N031` -- `observed by` ist kein Freibrief, sondern eine EINTRAGUNG.**

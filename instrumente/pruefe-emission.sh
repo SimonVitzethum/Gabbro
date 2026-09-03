@@ -2607,11 +2607,11 @@ fi
 # acknowledgement, a bit-field read-modify-write, a `transition` -- where the emitter used to
 # answer `C001` for all of them at once. *Rule A's second half: no refusal without a measured
 # defect, and the defect under this one had been repaired.*
-# **65 -> 67 am 2026-09-03, und der Gegenstand ist gewachsen.** Eine fremde Instanz legte
-# zwei saubere Beispiele ab: `66-transport-rueckgabe.gab` (die Eigentumsuebergabe, `C1` der
-# fuenften Marke -- 11 items, 0 errors) und `67-befehlsebene.gab` (`B5`s andere Haelfte,
-# 6 items, 0 errors). Beide emittieren und uebersetzen. *Der gute Fall, und die Begruendung
-# steht hier an der Marke statt in einer Notiz daneben.*
+# **65 -> 67 on 2026-09-03, and the object grew.** A parallel instance added two clean
+# examples: `66-transport-rueckgabe.gab` (the ownership handover, `C1` of the fifth mark --
+# 11 items, 0 errors) and `67-befehlsebene.gab` (`B5`'s other half, 6 items, 0 errors).
+# Both emit and compile. *The good case, and the reason stands here AT the mark instead of
+# in a note beside it.*
 MARKE_EMIT=67
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
@@ -2795,11 +2795,11 @@ MARKE_EMIT=67
 # already did, the file emits end to end and joins the count. *One file, one cause, named --
 # the other nine are not, and saying so is more honest than folding them into this one.*
 #
-# **Und WARUM die neun so lange unbemerkt liefen, ist der eigentliche Befund:**
-# `pruefe-emission.sh` laeuft auf dem Server und steht NICHT in `abnahme.py`.
-# Der Merge, der die elf Proben brachte, kam gruen zurueck, und die Marke blieb
-# trotzdem alt. *Ein Waechter, den der Sammellauf nicht ruft, meldet seinen Befund
-# erst, wenn ihn jemand einzeln fragt.*
+# **And WHY the nine ran unnoticed for so long is the real finding:**
+# `pruefe-emission.sh` runs on the server and is NOT part of `abnahme.py`.
+# The merge that brought the eleven probes came back green while the mark stayed
+# stale. *A guardian the collecting run never calls reports its finding only when
+# someone asks it separately.*
 MARKE_EMIT_M=71
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
@@ -2888,17 +2888,16 @@ MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 # `-- erwartet: cc` branch an object any more. **The number falling IS the evidence the
 # repairs landed** -- and four files still enter the branch, so it keeps saying something:
 # `gift/414` and the three `B001` entry probes.
-# **4 -> 5 am 2026-09-03.** `messung/proben/probe-fehlerkanal-verbundwert.gab` kam mit der
-# Fuenfte-Marke-Bahn dazu: `let x = f() else (e)` mit einem VERBUND senkt zu `x->feld` ueber
-# einen Wert ab, den der Erzeuger selbst als Wert deklariert hat, und `cc` weist es zurueck.
-# Sie traegt `-- erwartet: cc` mit Absicht -- der Defekt liegt in `emit.rs` und wird von einer
-# anderen Bahn gefuehrt. *Eine umgekehrte Probe ist eine SCHULD mit einem Namen darauf, keine
-# bestandene Pruefung*, und darum steht die Marke `0 von 5 beissen nur unter cc` daneben.
-# **Und am selben Tag 5 -> 4 zurueck, was der einzige Weg ist, auf dem diese Marke sich
-# ueberhaupt bewegen SOLL.** `D22` hat den Defekt behoben: `let x = f() else (e)` mit einem
-# Verbund senkt nicht mehr zu `x->feld` ab, also beisst die Probe nicht mehr und hat ihren
-# `-- erwartet: cc`-Kopf verloren. *Die Schuld wurde nicht umgebucht, sie wurde bezahlt* --
-# und zwar von einer anderen Bahn am selben Tag, an dem sie eingetragen wurde.
+# **4 -> 5 on 2026-09-03.** `messung/proben/probe-fehlerkanal-verbundwert.gab` arrived with
+# the fifth-mark lane: `let x = f() else (e)` binding a RECORD lowered to `x->field` over a
+# value the emitter itself had declared as a value, and `cc` rejected it. It carries
+# `-- erwartet: cc` on purpose -- the defect sits in `emit.rs` and another lane holds it.
+# *A reverse probe is a DEBT with a name on it, not a passed test*, which is why the line
+# `0 of 5 bite only under cc` stands beside the mark.
+# **And back 5 -> 4 the same day, which is the only way this mark should ever move.**
+# `D22` repaired the defect: `let x = f() else (e)` binding a record no longer lowers to
+# `x->field`, so the probe stops biting and has lost its `-- erwartet: cc` header. *The debt
+# was not rebooked, it was paid* -- and by a different lane on the same day it was entered.
 MARKE_UMGEKEHRT=4
 ratsche() {
     local ist="$1" marke="$2" wo="$3"

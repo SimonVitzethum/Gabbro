@@ -277,7 +277,23 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # citing `M101` -- the checker rule (`m1.rs`) that already refuses a narrowing which does
 # not fit, which is exactly why this emitter re-derives the bound instead of trusting it.
 # Measured by removing the one citation and re-running: 343 without it, 344 with it.
-MARKE = 344
+# **343 -> 345 on 2026-09-03, and the cause was measured the way the lines above demand.**
+# `N030` learned to read a nominal type at a FIELD, and the head of `namenstypen` names the
+# family it belongs to in one sentence: *"the same move `R013` made for pointer rights, which
+# `R008` had compared at the space and not in the struct."* Both live in `m3.rs`, the comment
+# is in `namen.rs`, so both are candidates. Measured by deleting exactly that sentence and
+# re-running: **343 without it, 345 with it, nothing else moved.**
+#
+# > **It could have been made to disappear by naming the register instead of the codes, and
+# > that was rejected.** The sentence IS a claim about two rules that live elsewhere; writing
+# > it so the guard cannot see it would leave the claim and remove the record of it. *A
+# > ratchet one may dodge by rephrasing measures spelling, not debt.*
+# **And in the MERGE it is 346, neither 344 nor 345.** The two blocks above were each right
+# on their own: `D20` brought ONE citation, `N030`'s field reading TWO. Neither lane could
+# see the other, and `git` saw the same line twice. Measured in the merged tree: **343
+# without both, 346 with both.** *The twelfth instance of this class today, and again
+# neither side was wrong.*
+MARKE = 346
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on

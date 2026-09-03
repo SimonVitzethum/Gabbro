@@ -187,6 +187,29 @@ more than its code redeems** — five times, in five files, twice simply out of 
 > had to write the sentence down and look up for it what the pass really does.
 > *That is the achievement of this exercise, and it is greater than the list itself.*
 
+### The `R008`/`R013` family got a third member on 2026-09-03, and it is NOT in the table
+
+**Not in it because it was not found the same way** — the table is the record of one exercise,
+and its closing sentence counts its own rows. This one a probe found.
+
+`R008` read a pointer's SPACE and stopped at the rights; `R013` read the rights sitting in the
+same struct; **`N030` read a bare binding and stopped at the FIELD** — which is the one
+position a record holding two axes has. Caprock keeps the CPU view and the device view of one
+DMA buffer in one record (`caprock-virtio/src/owned.rs`:70–77) and buys the guarantee with
+field privacy; `opaque` is the stronger instrument and the pass did not reach it.
+
+> **The shape of the family is worth naming:** in all three, the property was stated
+> correctly and a pass read one position short of where it stood. *That is the cheapest class
+> of defect this tree has* — no new word, no new identifier, and here **nothing newly refused
+> over all 635 `.gab` files.** `N030` now walks `.f`/`->f` from the binding's declared record
+> and reads the write into a field as well (`p.dev = c` is `retarget_device_view`'s own shape,
+> `owned.rs`:127).
+
+*Verified before it was repaired:* each of the five sites of `messung/proben/probe-opak-am-feld.gab`
+was run in its OWN file, and the three that were silent were silent alone too — so it was the
+rule's reach and not one refusal masking another. Booked at `dokumente/OFFEN.md` `O7` and
+`messung/FUENFTE-MARKE.md` §3; probes `beispiele/gift/669` and `670`.
+
 ## The second tooth, and how it measures
 
 ```bash

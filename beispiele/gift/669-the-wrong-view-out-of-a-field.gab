@@ -1,0 +1,53 @@
+-- erwartet: N030
+-- **669 -- the two axes of a DMA buffer, mixed AT A FIELD.**
+--
+-- `N030` has held nominal types since 2026-08-20, and `beispiele/gift/200` says why it had
+-- to grow past the call: *"the class right and then one instance repaired."* It grew to the
+-- binding, the return and the comparison, and it stopped at a BARE name.
+--
+-- **A field is where two axes actually live**, and that is not a guess about hypothetical
+-- programs. Caprock keeps the CPU view and the device view of one DMA buffer in ONE record
+-- (`caprock-virtio/src/owned.rs`:70-77) and names the bug in its own note: with an IOMMU
+-- window != 0 the two numbers differ, and a driver that mixes them programmes the device an
+-- address it cannot resolve. Caprock buys the guarantee with FIELD PRIVACY. Gabbro has none
+-- and does not need it -- `opaque` makes the mixing a TYPE error rather than a convention
+-- about which getter to call.
+--
+-- > **The bundling cannot simply be dropped.** Passing the two views as separate parameters
+-- > is where `N030` already bit, and it gives up the thing the record exists for: that these
+-- > two numbers are the two views of the SAME buffer.
+--
+-- Two sites, and the second one is the interesting half: a `let` that takes the field first
+-- makes the mistake one line longer, and until 2026-09-03 that was enough to lose it.
+
+module gift {
+
+opaque type Cpusicht     = u64;
+opaque type Geraetesicht = u64;
+
+type Zweiachser = {
+    cpu    : Cpusicht,
+    dev    : Geraetesicht,
+    laenge : u32,
+};
+
+extern fn deskriptor_stellen(adresse : Geraetesicht, laenge : u32)
+    effects { pure }
+    costs   <= 8 ops;
+
+impl fn am_feld(p : ptr<normal, r> Zweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    deskriptor_stellen(p.cpu, p.laenge);
+}
+
+impl fn ueber_eine_bindung(p : ptr<normal, r> Zweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    let c = p.cpu;
+    deskriptor_stellen(c, p.laenge);
+}
+
+}

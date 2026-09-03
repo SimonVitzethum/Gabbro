@@ -201,7 +201,39 @@ And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096*
 
 ---
 
-## O7 — `N030` compares opaque types at a PARAMETER and not at a FIELD
+## O7 — ~~`N030` compares opaque types at a PARAMETER and not at a FIELD~~ — **it reads the field since 2026-09-03; the half that stays open is a different one**
+
+> **Closed as a pass change, and the claim was re-measured before anything was built.**
+> Each of the five sites of `probe-opak-am-feld.gab` was also run **alone, in its own
+> file** — because *one error in a run that did not stop* is the shape of a masked
+> measurement, and this tree has that class booked. Sites 3, 4 and 5 were silent alone
+> too, so the four missing refusals were the rule not reaching the position, not one
+> refusal hiding another. A three-mistake file reports **three** `N030`s, so the run
+> does not stop either.
+>
+> `N030` now walks `.f`/`->f` from the binding's declared record and reads the WRITE
+> end as well — `p.dev = c` is `retarget_device_view`'s own shape
+> (`caprock-virtio/src/owned.rs`:127), and a rule that guards the read and not the
+> write leaves the half that corrupts the record for every later read.
+>
+> **Over all 635 `.gab` files it newly refuses NOTHING** — the only file whose verdict
+> moves is the probe itself, 1 error to 4. *And the denominator is said with it:* three
+> files in the corpus hold a nominal type in a record field at all, and one of them
+> (`probe-region-schnitt-und-nullen.gab`, six such reads) is a working programme that
+> stays green. **A rule that refuses nothing because nothing exercises it is a
+> different result from one that refuses nothing because every site is right**, and
+> here it is a little of both.
+>
+> Probes: `beispiele/gift/669` (read) and `beispiele/gift/670` (write). Mutations:
+> `ein-feld-traegt-keinen-namen`, `in-ein-feld-darf-jede-sicht`.
+
+**What stays open is the OTHER half, and it is a construct and not a pass:** an
+`opaque` record does not close its fields, so accessors cannot be forced. It is no
+longer needed to catch the mixing — `N030` bites at the field itself — but `opaque` on
+a record still promises a privacy it does not have. **That is `S2`-shaped and goes
+through §7's cost gate; it is not repaired here.**
+
+**The original entry, kept because it is what was measured:**
 
 *Measured 2026-09-03, out of `PLAN-HARDWARE.md` §50 #6, the second pass at the fifth mark.*
 
@@ -229,9 +261,10 @@ does not reach the position where the two axes actually sit.
 
 | | |
 |---|---|
-| **what would close it** | `N030` reading the declared type of a field access, not only of a parameter — the same move `R013` made for pointer rights, one position further |
-| **what it is NOT** | `S2`. The language states this correctly; a pass does not read it. Same family as `R008`/`R013` in `messung/PASSREGISTER.md` |
-| **measured at** | `messung/FUENFTE-MARKE.md` §3, `messung/proben/probe-opak-am-feld.gab` |
+| **what would close it** | ~~`N030` reading the declared type of a field access, not only of a parameter — the same move `R013` made for pointer rights, one position further~~ — **done 2026-09-03, and the write position with it** |
+| **what it is NOT** | `S2`. The language states this correctly; a pass did not read it. Same family as `R008`/`R013` in `messung/PASSREGISTER.md` — *and it closed the same way they did* |
+| **what stays open** | an `opaque` record does not close its fields. A construct question, priced and not built |
+| **measured at** | `messung/FUENFTE-MARKE.md` §3, `messung/proben/probe-opak-am-feld.gab`, `beispiele/gift/669`, `beispiele/gift/670` |
 
 ---
 

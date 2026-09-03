@@ -61,7 +61,7 @@ verbosity, and the previous pass says so in its own text.
 | 21 | typed access into a buffer | `owned.rs`:133–155 | **yes** — `format`/`table` fields | — |
 | 22 | device address and length of a buffer | `owned.rs`:91, 95 | **yes** — record fields | — |
 | 23 | `retarget_device_view` — move only the device view | `owned.rs`:127 | no | **unwritten** |
-| 24 | **the two axes stay apart — nobody may pick the wrong view** | `owned.rs`:62–77 | no | **carried at a PARAMETER, not at a FIELD — §3** |
+| 24 | **the two axes stay apart — nobody may pick the wrong view** | `owned.rs`:62–77 | no | ~~carried at a PARAMETER, not at a FIELD~~ **carried — §3, closed 2026-09-03** |
 | 25 | `Owned<Driver>` / `Owned<Device>` typestate | `owned.rs`:55, 60 | no | **category C — parallel lane** |
 | 26 | the completion as a value: id and length, separately | `owned.rs`:218 | no | **unwritten** |
 | 27 | the whole ARP exchange, rx armed BEFORE tx | `net.rs`:135 | no | **unwritten** ¹ |
@@ -76,9 +76,9 @@ written here so the row can be argued with.*
 
 ```
 30 capabilities      6 already in the file
-                    20 unwritten and measured writable
+                    21 unwritten and measured writable
                      3 ownership handover — parallel lane
-                     1 not carried (§3)
+                     0 not carried            <- was 1 until §3 was repaired
 ```
 
 ---
@@ -208,7 +208,11 @@ error: [K006] …:106:5: one pass of this loop costs 105 ops, the loop promises 
 
 ---
 
-## 3. The one that is NOT carried — and it is a SECOND item, not the first
+## 3. ~~The one that is NOT carried — and it is a SECOND item, not the first~~ — **it is carried since the same afternoon**
+
+> **Read this section as the working that produced a repair, not as a standing gap.**
+> Everything below was measured against the unchanged checker; the paragraph at the
+> end of the section says what happened next and what it cost.
 
 **Capability #24: the two axes of a DMA buffer stay apart.**
 
@@ -260,6 +264,70 @@ pair in a record is not the guarantee.*
 `opaque` says the thing. A pass reads one position and not another. *That is the shape of
 `R008` and `R013` in `messung/PASSREGISTER.md`*, where the space was compared and the rights
 in the same struct were not, and it is attributable there rather than to the language.
+
+### And it was closed the same day, after the claim was re-measured — 2026-09-03
+
+**The claim above was verified before anything was built on it.** *One error in a run that
+did not stop* is the shape of a masked measurement, and this tree has that class booked in
+its own instructions. So each of the five sites was cut out into its **own file** and run
+alone:
+
+| site | alone | what it should say |
+|---|---|---|
+| 1 `richtig` — `p.dev` at a `Geraetesicht` | `6 items, 0 errors, 0 hints` | nothing — and it says nothing |
+| 2 bare parameter `c` | `6 items, 1 errors` `[N030]` | the refusal — and it fires |
+| 3 `p.cpu` at a pointer field | `6 items, 0 errors, 0 hints` | a refusal — **silent** |
+| 4 `let c = p.cpu` then the call | `6 items, 0 errors, 0 hints` | a refusal — **silent** |
+| 5 `p.cpu` out of an `opaque` record | `7 items, 0 errors, 0 hints` | a refusal — **silent** |
+
+**Silent alone, so nothing was masking anything.** And the run does not stop either: a file
+with three bare-parameter mistakes reports `7 items, 3 errors` — three `N030`s, not one.
+*The two failure modes were separated by measurement and not by reading the code.*
+
+**What the rule's subject actually was:** a **bare, unsuffixed binding** — a parameter, or a
+`let` with a written type or a call whose declared return type is nominal — compared at four
+positions (`let` initialiser, `return`, `==`/`!=`, call argument). `namen.rs` said so twice
+in one function, `if !o.suffixe.is_empty() { continue; }`, and a field access has suffixes.
+
+**The repair walks `.f`/`->f` from the binding's declared record**, gives up at an `[i]`
+(W10), and reads the **write** end too — `p.dev = c` is `retarget_device_view`'s own shape
+(`owned.rs`:127), and a rule that guards the read and not the write leaves standing the half
+that corrupts the record for every later read.
+
+```
+error: [N030] …:54:24: `c` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there
+error: [N030] …:62:24: `p.cpu` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there
+error: [N030] …:72:24: `c` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there
+error: [N030] …:94:24: `p.cpu` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there
+messung/proben/probe-opak-am-feld.gab: 11 items, 4 errors, 0 hints
+```
+
+*The line numbers moved against the block at the top of this section because the probe's own
+header grew by six lines when it was marked closed; site 2 is `:48` there and `:54` here, and
+it is the same call.*
+
+**What it newly refuses over the whole corpus: nothing.** All 635 `.gab` files were run
+before and after, file by file, and compared on exit code, error count and identifier list —
+`0 newly refused`, `0 newly accepted`, and the single file whose verdict moves is the probe
+itself (1 error to 4). The 438 poison files of that baseline are unchanged as a block;
+the two written for this repair (`669`, `670`) came after it and take the corpus to 440.
+
+> **And the denominator is said with the numerator, because it is small.** Three of 635 files
+> hold a nominal type in a record field at all: `F01.gab` (four such records, no read),
+> `probe-opak-am-feld.gab`, and `probe-region-schnitt-und-nullen.gab` — the last of which
+> makes **six** such reads and one such write, is a working programme, and stays green under
+> the extended rule. *A rule that refuses nothing because nothing exercises it is a different
+> result from one that refuses nothing because every site is right.* Here it is a little of
+> both, and saying only the first number would be the flattering half.
+
+**The other half of the finding is NOT repaired, and it is not a pass.** An `opaque` record
+still does not close its fields. It is no longer needed to catch the mixing — the check bites
+at the field itself — but `opaque` on a record promises a privacy it does not have, and that
+is a construct through §7's cost gate. It stays in `dokumente/OFFEN.md` under `O7`.
+
+Probes: `beispiele/gift/669-the-wrong-view-out-of-a-field.gab` (read),
+`beispiele/gift/670-the-wrong-view-into-a-field.gab` (write). Mutations:
+`ein-feld-traegt-keinen-namen`, `in-ein-feld-darf-jede-sicht`.
 
 ---
 
@@ -350,7 +418,7 @@ The mark was raised to 67/32 with a named exit written at the mark, the way the 
 own precedent for `D1` did it, and booked as `O9`. **The repair is in `emit.rs` and belongs
 to another lane.**
 
-**5. `N030` at a field** — §3 above. It is the one of the five that touches the mark.
+**5. `N030` at a field** — §3 above. It is the one of the five that touches the mark, and **the only one of the five that was closed on the day it was found**: a pass change, no new word, nothing newly refused over the corpus.
 
 ---
 
@@ -359,17 +427,22 @@ to another lane.**
 ```
                                         capabilities   of 30
   in Gabbro today                             6         20 %
-  unwritten, measured writable               20         67 %
+  unwritten, measured writable               21         70 %
   ------------------------------------------------------------
-  IN GABBRO                                  26         87 %
+  IN GABBRO                                  27         90 %
 
-  beside it                                   4         13 %
+  beside it                                   3         10 %
       A  plumbing (B1/B2)                     0          0 %
       B  hardware instructions (B5)           0          0 %
-      C  what Gabbro does not carry           4         13 %
+      C  what Gabbro does not carry           3         10 %
              ownership handover (3) — parallel lane
-             the two axes      (1) — N030 at a field
 ```
+
+> **This block read 26 / 87 % / 4 until the afternoon of the same day.** `C2` was a pass gap
+> and the pass was extended, so capability #24 moved from *not carried* to *unwritten and
+> measured writable* — it is right in the language, and it still does not stand in
+> `virtio-net.gab`. **The mark moves because a checker learned to read one more position, and
+> the honest sentence is that and not "the language got better".**
 
 **A is zero because `B1` closed on 2026-09-02** and virtio-net wants no string output.
 
@@ -402,17 +475,36 @@ someone can argue with."*
 
 > *Is the third bucket a bucket of one?*
 
-**No. It is a bucket of two items over four capabilities**, and the second one had no name
-before this run:
+**It was a bucket of two for about an hour, and then it was a bucket of one again — because
+the second item was priced and paid, not because the question was re-asked.**
 
 | | what it is | where it is booked |
 |---|---|---|
-| **C1** | ownership handover | `R004`/`R007`; a parallel lane, 2026-09-03 |
-| **C2** | the two axes of a DMA buffer stay apart | **new** — `N030` reads a parameter and not a field |
+| **C1** | ownership handover | `R004`/`R007`; a parallel lane, 2026-09-03 — **still open, still not this lane's** |
+| ~~**C2**~~ | ~~the two axes of a DMA buffer stay apart~~ | **closed 2026-09-03** — `N030` reads the field, and the write into it (§3) |
 
-**And C2 is not `S2`.** `S2` is the item no verification heals — a property the language
-cannot *state*. `opaque` states this one correctly; a pass does not read it at the position
-that matters. That makes C2 a checker gap of the `R008`/`R013` family, **cheaper than `S2`
-and not free** — and it is the reason this run does not retire the item.
+**The intermediate answer was right when it was given, and saying so is the point.** `C2`
+had no name before that run; naming it is what made it cheap enough to price. **And C2 was
+never `S2`:** `S2` is the item no verification heals — a property the language cannot
+*state*. `opaque` states this one correctly and a pass did not read it, which put it in the
+`R008`/`R013` family, and that family is repaired by extending a pass. *It was, on the same
+day, for zero new words and zero newly refused programs.*
 
-*A bucket of one that turns out to be a bucket of two is the finding.*
+### So what is the third bucket, stated plainly
+
+**One item, three capabilities, and it belongs to another instance.** Everything else in the
+enumeration is either in the file or measured writable. The sentence the fifth mark can now
+carry is:
+
+> *Of thirty capabilities of a real virtio-net driver, **27 are in Gabbro** — six written and
+> twenty-one measured writable against the unchanged checker and emitter. The three that are
+> not are one question — the ownership handover — and it is open, not answered.*
+
+**Two cautions travel with that sentence and are not decoration.** *Measured writable* is a
+claim about probes that check and lower, not about an assembled driver; row #27, the
+orchestration, is the one row not separately measured and says so. And 90 % is not comparable
+with the 75 % of 2026-09-02, for the reason given two headings up: that quotient had no
+written denominator.
+
+*A bucket of one that turned out to be a bucket of two, and was a bucket of one again by
+evening, is the finding — and the middle step is the part that made the last one possible.*
