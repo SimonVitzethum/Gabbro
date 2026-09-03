@@ -1,0 +1,36 @@
+-- ATTEMPT: `kick` from `caprock-virtio/src/lib.rs:540` written in Gabbro.
+--
+-- Caprock:
+--     let addr = self.notify_base + (notify_off as u64) * (self.notify_mul as u64);
+--     wr16(addr, queue);
+--     (self.fence)();
+--
+-- This is the capability the whole two-queue driver exists for: `queue_notify_off` differs
+-- PER QUEUE, so the notify address is not a constant offset in a register map -- it is
+-- computed at run time from two numbers the DEVICE reported (`notify_off` from
+-- `queue_setup`, `notify_mul` from the PCI capability).
+--
+-- A `device … at mmio` block carries CONSTANT offsets. The question is whether the runtime
+-- half can go into the device BASE instead.
+
+module probe::kick {
+
+opaque type Pa = u64;
+
+-- The notify window as a device whose BASE is computed. `@0x00` is then the only offset
+-- there is, and the whole arithmetic sits in the constructor argument.
+device Weckfenster(basis : Pa) at mmio {
+    reg WECK : u16 @0x00 class rw
+}
+
+-- ATTEMPT 1: compute the base, build the device handle, write through it.
+impl fn kick(notify_basis : u64, notify_versatz : u16, notify_faktor : u32, warteschlange : u16)
+    effects { writes Weckfenster.WECK }
+    costs   <= 32 ops
+{
+    let adresse : u64 = notify_basis + notify_versatz * notify_faktor;
+    let f = Weckfenster(adresse);
+    f.WECK = warteschlange;
+}
+
+}

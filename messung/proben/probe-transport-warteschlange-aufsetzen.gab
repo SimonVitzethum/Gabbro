@@ -1,0 +1,147 @@
+-- ATTEMPT: `queue_setup` from `caprock-virtio/src/lib.rs:486` written in Gabbro.
+--
+-- Caprock: `pub unsafe fn queue_setup(&self, idx, cpu_base, dev_base, want_size)
+--           -> Option<(Queue, u16)>`
+--
+-- Six things in one: select the queue, read the size the device offers, CLAMP the wish to
+-- it, zero BOTH ring halves (the used half too -- caprock pays for that lesson in a comment
+-- twenty lines long), write three 64-bit device addresses, read `queue_notify_off`, enable.
+-- `None` says "this queue does not exist", which is a different finding from "it does not
+-- answer".
+--
+-- Two shapes are under test that the driver file does not contain: an OPTION-of-a-PAIR
+-- return, and a clamp against a device-reported bound.
+
+module probe::warteschlange_aufsetzen {
+
+opaque type Pa = u64;
+
+const QGROESSE : u16 = 8;
+
+device Gemein(basis : Pa) at mmio {
+    reg Q_WAHL        : u16 @0x16 class rw
+    reg Q_GROESSE     : u16 @0x18 class rw
+    reg Q_AN          : u16 @0x1c class rw
+    reg Q_WECKVERSATZ : u16 @0x1e class r
+    reg Q_DESK        : u64 @0x20 class rw
+    reg Q_TREIBER     : u64 @0x28 class rw
+    reg Q_GERAET      : u64 @0x30 class rw
+}
+
+-- The driver half of a split virtqueue, as it lies in DMA memory.
+type AvailKopf = {
+    merkmale : u16,
+    kopf     : u16,
+};
+
+type UsedKopf = {
+    merkmale : u16,
+    kopf     : u16,
+};
+
+-- What `queue_setup` hands back: the queue AND its own notify offset. Two queues of one
+-- card have DIFFERENT ones -- that is the whole reason this driver exists.
+type Warteschlange = {
+    cpu_basis   : u64,
+    groesse     : u16,
+    weckversatz : u16,
+};
+
+-- ATTEMPT 1 was `tagged type Aufsatz = { Keine, Da(Warteschlange) };` -- the direct
+-- transliteration of `Option<(Queue, u16)>`. It FALLS, and not at this line: a `tagged`
+-- value has no constructor anywhere in the language (`probe-tagged-wird-gebaut.gab`).
+--
+-- ATTEMPT 2 is Gabbro's OWN form for the same job: the error channel. `-> T or R` at the
+-- head, `Grund::Name` as the producer, `let … else (e) { … }` at the caller. It says MORE
+-- than `Option` does -- the absence carries a NAME instead of being one shape of nothing.
+reason Aufsatzfehler {
+    GibtEsNicht = 1 "the device reports queue size 0 -- this queue does not exist"
+    exhaustive
+}
+
+impl fn warteschlange_aufsetzen(g : ptr<mmio, rw> Gemein,
+                                a : ptr<dma, rw> AvailKopf,
+                                u : ptr<dma, rw> UsedKopf,
+                                nummer : u16,
+                                cpu_basis : u64,
+                                dev_basis : u64 in 0 .. 281474976710656,
+                                wunschgroesse : u16) -> Warteschlange or Aufsatzfehler
+    effects { writes g.Q_WAHL, reads g.Q_GROESSE, writes g.Q_GROESSE,
+              writes g.Q_DESK, writes g.Q_TREIBER, writes g.Q_GERAET,
+              reads g.Q_WECKVERSATZ, writes g.Q_AN,
+              writes a, writes u }
+    costs   <= 256 ops
+{
+    g.Q_WAHL = nummer;
+    let qmax = g.Q_GROESSE;
+    if qmax == 0 {
+        -- "this queue does not exist" -- and that is NOT "it does not answer".
+        return Aufsatzfehler::GibtEsNicht;
+    }
+    let mut groesse : u16 = wunschgroesse;
+    if qmax < wunschgroesse {
+        groesse = qmax;
+    }
+    g.Q_GROESSE = groesse;
+    -- BOTH halves get zeroed, the device's too: a reused region carries the previous
+    -- driver's used index, and the new one would wait for progress that already happened.
+    a.merkmale = 0;
+    a.kopf     = 0;
+    u.merkmale = 0;
+    u.kopf     = 0;
+    -- `dev_basis + 256` fell at `M104`: `u64 + u16` leaves the width of the result type,
+    -- and Gabbro will not wrap silently where Rust does. The range goes on the DECLARATION.
+    g.Q_DESK    = dev_basis;
+    g.Q_TREIBER = dev_basis + 256;
+    g.Q_GERAET  = dev_basis + 512;
+    let versatz = g.Q_WECKVERSATZ;
+    g.Q_AN = 1;
+    return Warteschlange(cpu_basis: cpu_basis, groesse: groesse, weckversatz: versatz);
+}
+
+-- The caller side: the `else` branch must diverge or return, so "the queue does not exist"
+-- cannot be forgotten -- the same guarantee the exhaustive `match` would have given.
+impl fn beide_warteschlangen(g : ptr<mmio, rw> Gemein,
+                             a : ptr<dma, rw> AvailKopf,
+                             u : ptr<dma, rw> UsedKopf,
+                             cpu_basis : u64,
+                             dev_basis : u64 in 0 .. 281474976710656) -> u16
+    effects { writes g.Q_WAHL, reads g.Q_GROESSE, writes g.Q_GROESSE,
+              writes g.Q_DESK, writes g.Q_TREIBER, writes g.Q_GERAET,
+              reads g.Q_WECKVERSATZ, writes g.Q_AN,
+              writes a, writes u }
+    costs   <= 1024 ops
+{
+    let rx = warteschlange_aufsetzen(g, a, u, 0, cpu_basis, dev_basis, QGROESSE) else (e) {
+        return 0;
+    }
+    let tx = warteschlange_aufsetzen(g, a, u, 1, cpu_basis, dev_basis, QGROESSE) else (e) {
+        return 0;
+    }
+    -- THE point of a two-queue card: the two notify offsets are DIFFERENT numbers.
+    --
+    -- The comparison is handed to a helper INSTEAD of being written here, and the reason is
+    -- a measured emitter defect, not taste: a field read off a `let … else (e)` binding of a
+    -- RECORD lowers to `tx->weckversatz` over a value the emitter itself declared as
+    -- `Warteschlange tx;`, and `cc` refuses -- *invalid type argument of '->'*
+    -- (`probe-fehlerkanal-verbundwert.gab`). At a plain parameter the same read lowers
+    -- correctly. **The capability is writable; the emitter has a hole one step to the side.**
+    return weckversaetze_verschieden(tx, rx);
+}
+
+-- A plain subtraction would fall at `M104` (`u16 - u16` may go negative). The comparison
+-- that makes it safe has to STAND here, and that is the language working.
+impl fn weckversaetze_verschieden(a : Warteschlange, b : Warteschlange) -> u16
+    effects { pure }
+    costs   <= 16 ops
+{
+    if a.weckversatz > b.weckversatz {
+        return 1;
+    }
+    if b.weckversatz > a.weckversatz {
+        return 1;
+    }
+    return 0;
+}
+
+}

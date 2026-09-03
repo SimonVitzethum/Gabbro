@@ -1,0 +1,127 @@
+-- ATTEMPT: `build_arp_request` (`caprock-virtio/src/net.rs:273`), `NetResult`
+-- (`caprock-virtio/src/net.rs:66`) and `cfg8` (`caprock-virtio/src/lib.rs:550`) in Gabbro.
+--
+-- `messung/treiber/virtio-net.gab` has `arp_stellen`, and it writes FOUR fields of the
+-- frame: `ethertyp`, `opcode`, `absender_ip`, `ziel_ip`. Caprock writes the whole 42 bytes
+-- -- broadcast destination, both MACs, htype/ptype/hlen/plen, and it leaves the target
+-- hardware address at zero ON PURPOSE, because that is the question being asked.
+--
+-- The three shapes under test:
+--   1. the WHOLE frame, through the `format` rather than through byte pokes;
+--   2. a result record whose fields are separately checkable -- caprock's own note says
+--      "gesendet, aber nichts empfangen" and "gar nicht erst gesendet" are different
+--      findings, and a collecting `bool` loses that;
+--   3. the device-specific config space, guarded against "there is none".
+
+module probe::netz_rahmen {
+
+opaque type Pa = u64;
+
+const KOPFLAENGE : u64 = 12;
+
+-- The frame. Big-endian, because virtio is little and the network is big -- two `format`s
+-- with different `endian` in one program, and no hand-written byte swap.
+--
+-- A MAC is 48 bits and there is no 48-bit integer, so it stands as hi/lo. That is a
+-- consequence of the WIDTH LADDER, not of the `format` -- and it costs one assignment.
+format EthArp endian big {
+    ziel_mac_hi   : u32,
+    ziel_mac_lo   : u16,
+    quell_mac_hi  : u32,
+    quell_mac_lo  : u16,
+    ethertyp      : u16 in 2054 .. 2054,
+    hardwaretyp   : u16 in 1 .. 1,
+    protokolltyp  : u16 in 2048 .. 2048,
+    hw_laenge     : u8 in 6 .. 6,
+    pr_laenge     : u8 in 4 .. 4,
+    opcode        : u16 in 1 .. 2,
+    absender_mac_hi : u32,
+    absender_mac_lo : u16,
+    absender_ip   : u32,
+    ziel2_mac_hi  : u32,
+    ziel2_mac_lo  : u16,
+    ziel_ip       : u32,
+}
+
+-- `NetResult`: every field separately checkable. `tx_used` says the device HANDLED the
+-- buffer; `arp_reply` says the answer is the one we asked for. Two statements, two fields.
+type Netzergebnis = {
+    merkmale_ok : bool,
+    mac_hi      : u32,
+    mac_lo      : u16,
+    tx_benutzt  : bool,
+    rx_benutzt  : bool,
+    rx_laenge   : u32,
+    arp_antwort : bool,
+    absender_ip : u32,
+};
+
+-- `cfg8`/`cfg64`: the device-specific config space, at a base the device reported.
+device GeraeteKonfig(basis : Pa) at mmio {
+    reg MAC_HI : u32 @0x00 class r
+    reg MAC_LO : u16 @0x04 class r
+}
+
+-- The WHOLE frame, all sixteen fields. Caprock pokes 42 bytes at hand-counted offsets and
+-- carries a comment per line saying which field it is; here the field IS the name, and the
+-- ranged types make `ethertyp = 0x0800` a compile error rather than a wrong packet.
+impl fn arp_anfrage_stellen(r : ptr<dma, rw> EthArp,
+                            mac_hi : u32, mac_lo : u16,
+                            meine_ip : u32, ziel_ip : u32)
+    effects { writes r }
+    costs   <= 128 ops
+{
+    -- Ethernet destination: broadcast.
+    r.ziel_mac_hi   = 4294967295;
+    r.ziel_mac_lo   = 65535;
+    -- Ethernet source, and the ARP sender hardware address: our own MAC, twice.
+    r.quell_mac_hi  = mac_hi;
+    r.quell_mac_lo  = mac_lo;
+    r.absender_mac_hi = mac_hi;
+    r.absender_mac_lo = mac_lo;
+    r.ethertyp      = 2054;
+    r.hardwaretyp   = 1;
+    r.protokolltyp  = 2048;
+    r.hw_laenge     = 6;
+    r.pr_laenge     = 4;
+    r.opcode        = 1;
+    r.absender_ip   = meine_ip;
+    -- The target hardware address stays zero -- THAT IS THE QUESTION being asked.
+    r.ziel2_mac_hi  = 0;
+    r.ziel2_mac_lo  = 0;
+    r.ziel_ip       = ziel_ip;
+}
+
+-- Reading the answer back and judging it: length, ethertype, opcode AND the sender address.
+-- A buffer that merely filled would be no evidence -- it could be leftover memory.
+impl fn antwort_pruefen(r : ptr<dma, r> EthArp, laenge : u32, gefragte_ip : u32) -> bool
+    effects { reads r }
+    costs   <= 64 ops
+{
+    if laenge < 54 {
+        return false;
+    }
+    if r.opcode != 2 {
+        return false;
+    }
+    return r.absender_ip == gefragte_ip;
+}
+
+-- The MAC out of the device config space. Caprock returns 0 when there is no config space;
+-- the driver then sends with 00:00:00:00:00:00 and the missing answer points at the wrong
+-- party. The absence is therefore a FIELD of the result, not a zero.
+impl fn mac_lesen(k : ptr<mmio, r> GeraeteKonfig, hat_konfig : bool) -> Netzergebnis
+    effects { reads k.MAC_HI, reads k.MAC_LO }
+    costs   <= 64 ops
+{
+    if !hat_konfig {
+        return Netzergebnis(merkmale_ok: false, mac_hi: 0, mac_lo: 0,
+                            tx_benutzt: false, rx_benutzt: false, rx_laenge: 0,
+                            arp_antwort: false, absender_ip: 0);
+    }
+    return Netzergebnis(merkmale_ok: true, mac_hi: k.MAC_HI, mac_lo: k.MAC_LO,
+                        tx_benutzt: false, rx_benutzt: false, rx_laenge: 0,
+                        arp_antwort: false, absender_ip: 0);
+}
+
+}

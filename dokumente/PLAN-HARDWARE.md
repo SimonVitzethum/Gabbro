@@ -2111,7 +2111,29 @@ Vertrag STIMMT.** Und er wird nicht kleiner, weil jemand einen Beweiser baut. *E
 kleiner, indem mehr in Gabbro geschrieben wird.*
 
 - [ ] **Die fünfte Marke, die niemand führt: wie viel Prozent eines echten Kerns steht am
-      Ende in Gabbro statt daneben?** Bei `virtio-net` sind es heute **75 %.**
+      Ende in Gabbro statt daneben?** Bei `virtio-net` sind es ~~**75 %**~~ **87 %, und sie
+      tragen seit dem 2026-09-03 ihre Kategorien** ([`messung/FUENFTE-MARKE.md`](../messung/FUENFTE-MARKE.md)):
+
+      ```
+                                              Faehigkeiten   von 30
+        in Gabbro heute                             6         20 %
+        ungeschrieben, gemessen schreibbar         20         67 %
+        ----------------------------------------------------------
+        IN GABBRO                                  26         87 %
+
+        daneben                                     4         13 %
+            A  Klempnerei (B1/B2)                   0          0 %
+            B  Hardwarebefehle (B5)                 0          0 %
+            C  was Gabbro nicht traegt              4         13 %
+      ```
+
+      **A ist null, weil `B1` am 2026-09-02 geschlossen hat** und dieser Treiber keine
+      Zeichenketten ausgibt. **B ist null, und zwar am GEGENSTAND gemessen und nicht
+      angenommen:** `caprock-virtio` enthaelt kein `asm!`, kein `in`/`out`, keine Port-I/O --
+      seine `fence` ist ein hereingereichter Funktionszeiger, und dass `publishes`/`awaits`
+      ihn zu C11-Erwerben/Freigeben absenkt, stand schon in der Messung darunter. *Die
+      `B5`-Posten sind echt und stehen woanders in Caprock; in DIESEM Treiber stehen sie
+      nicht.*
 
       > **Die Zerlegung gehört DAVOR, und sie ist billiger als die Marke selbst**
       > (Ordner, 2026-09-02). Die 25 % daneben haben drei verschieden teure Gründe:
@@ -2155,16 +2177,118 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       Muster kannte die Schreibweise nicht. **`W16`, im Zerlegungswerkzeug selbst** — und der
       Grund, dass es auffiel, war, den Rumpf zu LESEN statt die Zahl zu glauben.
 
-      **Was in Kategorie C bleibt, ist nach dieser Messung genau ein Posten:** die
-      Eigentumsübergabe. Caprock schreibt `reclaim(buf : Owned<Device>) -> Owned<Driver>`,
-      also einen Zustandsübergang eines Besitzrechts. Gabbro hat `own[@marke]` und lineare
-      Werte — **aber ob Eigentum ÜBERGEBEN werden darf, fragt bis heute niemand**
-      (`R004`/`R007`, und `R013` hat es am 2026-09-02 ausdrücklich stehen lassen).
+      ~~**Was in Kategorie C bleibt, ist nach dieser Messung genau ein Posten:** die
+      Eigentumsübergabe.~~ **BERICHTIGT am 2026-09-03: es sind ZWEI** — der zweite steht
+      unten, und er hatte keinen Namen. Der erste bleibt richtig: Caprock schreibt
+      `reclaim(buf : Owned<Device>) -> Owned<Driver>`, also einen Zustandsübergang eines
+      Besitzrechts. Gabbro hat `own[@marke]` und lineare Werte — **aber ob Eigentum
+      ÜBERGEBEN werden darf, fragt bis heute niemand** (`R004`/`R007`, und `R013` hat es am
+      2026-09-02 ausdrücklich stehen lassen).
 
-      *Nicht gemessen:* ob die übrigen Transportfähigkeiten (`poll_used`, `reclaim`, `kick`
-      an berechnetem Versatz) in Gabbro schreibbar sind — sie stehen nur nicht in der Datei,
-      und **ungeschrieben ist nicht unausdrückbar.** Diese Trennung braucht einen zweiten
-      Durchgang, und ohne sie ist die Zahl 75 % weiter ein Quotient ohne Kategorien.
+      > *„Genau ein Posten" war keine Messung, sondern der Rest nach einer Aufzählung, die
+      > ihren eigenen Nenner nicht aufgeschrieben hat.* Der zweite Durchgang schreibt ihn
+      > auf, und dabei fällt der zweite Posten heraus.
+
+      ---
+
+      **DER ZWEITE DURCHGANG, 2026-09-03 — und die Antwort ist NEIN: der dritte Eimer ist
+      keiner mit einem Posten.** ~~*Nicht gemessen:* ob die übrigen Transportfähigkeiten
+      (`poll_used`, `reclaim`, `kick` an berechnetem Versatz) in Gabbro schreibbar sind.~~
+      Gemessen, jede einzeln, **geschrieben und durch den unveränderten Prüfer UND Erzeuger
+      gefahren** — und wo es absenkte, das C durch `cc -std=c11 -Wall`.
+
+      | Fähigkeit | caprock | Urteil |
+      |---|---|---|
+      | `poll_used` | `lib.rs`:363 | **ungeschrieben** — `10 items, 0 errors, 0 hints`, senkt ab, `cc` nimmt an |
+      | `kick` an berechnetem Versatz | `lib.rs`:540 | **ungeschrieben** — die Laufzeithälfte geht in die Geräte-BASIS |
+      | ECAM-Durchlauf + BAR-Zusammenbau | `lib.rs`:173, 217 | **ungeschrieben** — `17 items, 0 errors, 0 hints` |
+      | `queue_setup`, `offered`, `negotiate`, `reset`, `cfg8` | `lib.rs`:486, 453, 468, 437, 550 | **ungeschrieben**, alle fünf |
+      | zwei Warteschlangen mit VERSCHIEDENEN Weckversätzen | `net.rs`:170 | **ungeschrieben** — der Weg dorthin lief durch einen Erzeugerfehler, der die Fähigkeit nicht anficht (siehe `FUENFTE-MARKE.md` §4) |
+      | `Region::carve`, Nullen über LAUFZEIT-Länge | `owned.rs`:200, 164 | **ungeschrieben** |
+      | der ganze ARP-Rahmen und `NetResult` | `net.rs`:273, 66 | **ungeschrieben** |
+
+      **`reclaim` steht NICHT in dieser Tafel**, und das ist kein Versehen: die
+      Eigentumsübergabe ist am 2026-09-03 an eine Nachbarbahn gegangen. Sie ist hier
+      **benannt und nicht gemessen** — eine Fähigkeit zweimal zu messen ist schlechter, als
+      sie einmal an der richtigen Stelle zu messen. *`R013`s Satz steht dabei unverändert
+      da* (`messung/PASSREGISTER.md`:178): **„whether OWNERSHIP may be handed over is still
+      asked by nobody"** — nachgelesen an diesem Stand, nicht aus der Erinnerung.
+
+      **Zwanzig von dreissig Fähigkeiten sind ungeschrieben und schreibbar.** Und drei
+      Weigerungen dieses Laufs waren der Prüfer bei der Arbeit, keine Grenze: `M101` gegen
+      `want as u32` (eine *stille* Abschneidung in Rust), `M104` gegen `dev_base + 256`, und
+      `M136` gegen `x & y != z` — das in Gabbro `(x & y) != z` gruppiert und in C
+      `x & (y != z)`.
+
+      > **Und der Prüfer allein hätte hier falsch geurteilt.** `kick` stand mit
+      > `4 items, 0 errors, 0 hints` da, und der Erzeuger sagte ab:
+      >
+      >     error: [C001] no lowering: `let` without a resolvable type
+      >
+      > *Ein „ausdrückbar", das am Prüfer haltmacht, ist dieselbe Klasse wie das Muster, das
+      > die Barriere nicht fand.*
+
+      **DER DRITTE EIMER: ZWEI Posten über vier Fähigkeiten, und der zweite hatte keinen
+      Namen.**
+
+      | | was es ist | wo es gebucht ist |
+      |---|---|---|
+      | **C1** | die Eigentumsübergabe (`reclaim`, `reclaim_unproven`, der Typestate) | `R004`/`R007` — **eine Nachbarbahn, seit dem 2026-09-03** |
+      | **C2** | **die zwei Achsen eines DMA-Puffers bleiben getrennt** | **neu** — `N030` liest einen PARAMETER und kein FELD |
+
+      **C2 ist der Fund.** Caprock hält beide Adressen eines Puffers in `Owned`
+      (`owned.rs`:62–77) und kauft die Zusage mit FELDPRIVATHEIT: `cpu` ist von aussen nicht
+      lesbar. Gabbro hat keine Feldprivatheit — es hat `opaque`, und das ist an dieser Stelle
+      das STÄRKERE Werkzeug: die Verwechslung wird ein Typfehler statt einer Abmachung. Nur
+      greift sie nicht, wo die zwei Achsen wirklich liegen
+      (`messung/proben/probe-opak-am-feld.gab`, **ein** Fehler bei **vier** falschen Stellen):
+
+      ```
+      error: [N030] …:48:24: `c` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there
+      messung/proben/probe-opak-am-feld.gab: 11 items, 1 errors, 0 hints
+      ```
+
+      Am blossen Parameter fällt es. Am **Zeigerfeld** (`deskriptor_stellen(p.cpu, …)`) und
+      an einer Bindung daraus: je `0 errors, 0 hints`, im selben Lauf — also *welche* feuern
+      und nicht *ob eine*. **Und der naheliegende Ausweg ist auch zu:** ein `opaque` VERBUND
+      schliesst seine Felder nicht, also lassen sich Zugriffsfunktionen — die den Wert an der
+      Parameterstelle nähmen, wo `N030` sehr wohl greift — nicht erzwingen.
+
+      > **Und C2 ist NICHT `S2`.** `S2` ist der Posten, den keine Verifikation heilt — eine
+      > Eigenschaft, die die Sprache nicht AUSSPRECHEN kann. `opaque` spricht diese hier
+      > richtig aus; ein Pass liest sie an der Stelle nicht, an der sie steht. Damit gehört
+      > C2 in die Familie von `R008`/`R013` (`messung/PASSREGISTER.md`) — **billiger als
+      > `S2` und nicht umsonst**, und genau der Grund, warum dieser Durchgang den Posten
+      > nicht schliesst.
+
+      **Die zwei Zahlen sind nicht vergleichbar, und das steht hier statt es zu verschweigen:**
+      75 % und 87 % ruhen auf verschiedenen Aufzählungen. Der Durchgang vom 2026-09-02 hat
+      seinen Nenner nicht aufgeschrieben; dieser tut es, Zeile für Zeile mit `file:line`.
+      *Der ehrliche Satz ist nicht „die Marke stieg um zwölf Punkte", sondern „die Marke hat
+      jetzt einen Nenner, dem man widersprechen kann."*
+
+      **VIER BEFUNDE NEBENHER, und keiner hat eine Fähigkeit blockiert** — die Rechnung
+      steht in [`messung/FUENFTE-MARKE.md`](../messung/FUENFTE-MARKE.md) §4:
+
+      * ein `tagged type`-Wert hat **keinen Erzeuger** — fünfzehn Deklarationen in neun
+        Korpusdateien, alle nur zerlegt, keine gebaut, weil es keine Schreibung gibt.
+        «B9» ein drittes Mal; gebucht als `OFFEN.md` `O8`;
+      * `leave`/`next` an einer `retry`-Marke **prüft und senkt nicht ab**
+        (der einzige `schleifen.push` der Datei steht im `forever`-Schreiber; Zeile 7821 am 2026-09-03 -- die ZAHL ist das Haltbare, nicht die Zeile);
+      * `let x = f() else (e)` mit einem VERBUND senkt zu `x->feld` über einen Wert ab, den
+        der Erzeuger selbst als Wert deklariert hat — `cc` weist es zurück;
+      * **eine Verengung, die `M1` BEWIESEN hat, kommt in C als implizite Umwandlung an.**
+        `BEWEIS.md` §2 Zeile 7 sagt dazu *„none, but to be checked mechanically"*, und
+        `zaehle-c-formen.py --uebersetzer` ist diese Prüfung — bis zu diesem Lauf **null
+        Treffer über den ganzen Korpus**. `w >> 32` auf einem `u64` passt beweisbar in 32
+        Bit, `M101` nimmt es deshalb an, und `gcc` kann den Beweis nicht nachvollziehen. Es
+        gibt **keine** Gabbro-Schreibung, die stattdessen einen Cast erzeugt (drei gemessen).
+        *Der Korpus enthielt schlicht nie ein Programm, das über einen bewiesenen Bereich
+        verengt* — ein 64-Bit-Merkmalswort durch ein 32-Bit-Register ist das erste. Gebucht
+        als `OFFEN.md` `O9`, die Marke steht mit benanntem Ausstieg auf 67/32.
+
+      *Die letzten drei liegen in `emit.rs`, das eine andere Bahn führt: **gemeldet, nicht
+      repariert**.*
 
 ### Punkt 4 fällt — sobald jemand die Teilmenge prüft
 
@@ -2556,7 +2680,7 @@ Ziel.*
 | **3** | **Der ungesehene Port** | ~~die einzige Messung, die die Liste umschreiben kann~~ **— und die Begründung gehört schärfer, Ordner 2026-09-02:** *er ist nicht nur die einzige Messung, die schlecht ausgehen kann; er ist die einzige, deren Ausgang **die Beta-Liste selbst neu bewertet.*** Scheitert ein fremder Schreiber an Formen, die dieser Korpus nie gebraucht hat, dann sind Stunden dieser Liste **an der falschen Stelle investiert**. Daraus folgt die Reihenfolge: eine halbtägige Aufräumrunde davor ist richtig — *sie räumt, ohne Annahmen zu zementieren* — und **alles Größere danach ist falsch, bis das Ergebnis da ist** |
 | **4** | B2 Zeichenketten | mit der Ratschenrechnung davor |
 | **5** | B3 Auffahrtsweg | erst sinnvoll, wenn B1 und B2 stehen |
-| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — heute 75 % bei einem Treiber |
+| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — **87 % bei einem Treiber, mit Kategorien** (2026-09-03); was daneben bleibt, sind ZWEI Posten, nicht einer |
 
 **Und was NICHT auf dieser Liste steht, gehört ausgesprochen:** die Beweisseite. `145 von 381
 Rümpfen`, `1 Absenkungssatz von 65`, die Naht zwischen zwei Beweisern, die in keiner Logik

@@ -1,0 +1,173 @@
+-- ATTEMPT: `probe_ecam` (`caprock-virtio/src/lib.rs:173`) and `bar_addr`
+-- (`caprock-virtio/src/lib.rs:217`) written in Gabbro.
+--
+-- The measurement of 2026-09-02 said of ECAM: *"memory-mapped, so `at mmio` with a computed
+-- base. Only unwritten."* This file is that claim under test, and the hard half is not the
+-- space -- it is the WALK: a linked list in the device's own config space, whose `next`
+-- pointer the DEVICE writes. A broken or malicious card can lay it in a circle.
+--
+-- Caprock bounds it with `guard < 48` and says why in a comment. In Gabbro the bound is not
+-- a comment: `retry … bounded 48 ops on_exceeded …` is the only loop form that reads a
+-- device-written cursor, and the overrun carries a name.
+--
+-- `bar_addr` is the second half: a BAR is read at `CFG_BAR0 + i*4`, its low bits say whether
+-- it is I/O or memory and whether it is 64 bit wide, and a 64-bit one is assembled from TWO
+-- registers. Bit tests and a computed register index, both at run time.
+
+module probe::ecam {
+
+opaque type Pa = u64;
+
+const CFG_CAP_PTR : u64 = 0x34;
+const CFG_BAR0    : u64 = 0x10;
+const CAP_ID_VNDR : u8  = 9;
+
+const KAP_GEMEIN : u8 = 1;
+const KAP_WECKEN : u8 = 2;
+const KAP_GERAET : u8 = 4;
+
+-- A window over the config space whose BASE moves: the cursor `cap` walks the list, and
+-- every read is at `cfg + cap + <constant>`. The runtime half goes into the base.
+device KapFenster(basis : Pa) at mmio {
+    reg ID      : u8  @0x00 class r
+    reg NAECHST : u8  @0x01 class r
+    reg TYP     : u8  @0x03 class r
+    reg BAR     : u8  @0x04 class r
+    reg VERSATZ : u32 @0x08 class r
+    reg FAKTOR  : u32 @0x10 class r
+}
+
+device BarFenster(basis : Pa) at mmio {
+    reg WORT : u32 @0x00 class r
+}
+
+device KopfFenster(basis : Pa) at mmio {
+    reg KAPZEIGER : u8 @0x34 class r
+}
+
+type Transport = {
+    gemein  : u64,
+    weckbasis : u64,
+    weckfaktor : u32,
+    geraetekonfig : u64,
+};
+
+reason Ecamfehler {
+    KeinGemein = 1 "no common_cfg capability -- this is not a modern virtio device"
+    KeinWecken = 2 "no notify capability -- the device could never be kicked"
+    ListeLaeuft = 3 "the capability list did not end within 48 steps"
+    exhaustive
+}
+
+assume kapliste_endet
+    "A conforming PCI capability list terminates within 48 entries -- PCI Local Bus 3.0, 6.7."
+    falsifier sonde_kapliste_im_kreis;
+
+extern fn kapliste_laeuft_im_kreis() -> never effects { diverges } costs <= 1 ops;
+
+-- `bar_addr`: the BAR at index `i`, 64-bit ones assembled from two registers.
+-- Caprock's `if i >= 6 { return 0 }` becomes the TYPE of the parameter: the bound is at the
+-- declaration, and every caller has to establish it before the call rather than trust it.
+impl fn bar_adresse(cfg : u64 in 0 .. 281474976710656, i : u64 in 0 .. 5) -> u64
+    effects { reads BarFenster.WORT }
+    costs   <= 64 ops
+{
+    let f = BarFenster(cfg + CFG_BAR0 + i * 4);
+    let nieder : u64 = f.WORT;
+    if (nieder & 1) != 0 {
+        -- an I/O BAR: this driver uses memory BARs only.
+        return 0;
+    }
+    let mut adresse : u64 = nieder & 18446744073709551600;
+    if ((nieder >> 1) & 3) == 2 {
+        if i < 5 {
+            let h = BarFenster(cfg + CFG_BAR0 + (i + 1) * 4);
+            let hoch : u64 = h.WORT;
+            adresse = adresse | (hoch << 32);
+        }
+    }
+    return adresse;
+}
+
+-- `probe_ecam`: walk the capability list, pick up the three virtio windows.
+impl fn ecam_absuchen(cfg : u64 in 0 .. 281474976710656) -> Transport or Ecamfehler
+    effects { reads KopfFenster.KAPZEIGER, reads KapFenster.ID, reads KapFenster.NAECHST,
+              reads KapFenster.TYP, reads KapFenster.BAR, reads KapFenster.VERSATZ,
+              reads KapFenster.FAKTOR, reads BarFenster.WORT }
+    costs   <= 6000 ops
+{
+    let k = KopfFenster(cfg);
+    let mut zeiger : u64 in 0 .. 255 = k.KAPZEIGER;
+    let mut gemein : u64 = 0;
+    let mut weckbasis : u64 = 0;
+    let mut weckfaktor : u32 = 0;
+    let mut geraetekonfig : u64 = 0;
+
+    -- The bound is not a comment here. A device that lays its list in a circle hits
+    -- `on_exceeded`, and that function has `-> never`.
+    retry lauf until zeiger == 0
+        -- **`bounded N ops` counts OPS, not passes.** Caprock's `guard < 48` counts
+        -- ITERATIONS; the Gabbro bound is a total budget, and `K006` says so with the
+        -- per-pass figure in hand: `one pass of this loop costs 105 ops`. 48 passes are
+        -- therefore `48 * 105`, and writing 48 here buys a loop that ends after one.
+        bounded 5040 ops
+        progress kapliste_endet
+        on_exceeded kapliste_laeuft_im_kreis
+        effects { reads KapFenster.ID, reads KapFenster.NAECHST, reads KapFenster.TYP,
+                  reads KapFenster.BAR, reads KapFenster.VERSATZ, reads KapFenster.FAKTOR,
+                  reads BarFenster.WORT }
+    {
+        -- `cfg + zeiger` left the width of `u64` (`M104`) until the cursor carried a range.
+        let e = KapFenster(cfg + zeiger);
+        let kennung = e.ID;
+        let naechst : u64 = e.NAECHST;
+        if kennung == CAP_ID_VNDR {
+            let typ = e.TYP;
+            let bar : u64 = e.BAR;
+            let versatz : u64 in 0 .. 4294967295 = e.VERSATZ;
+            -- A device-reported BAR index is a number between 0 and 255; the parameter
+            -- wants 0..5. `narrow … else` is where that gap is CLOSED instead of assumed.
+            --
+            -- TWO detours were needed here, and BOTH are around the emitter, not the
+            -- language:
+            --
+            --   1. the `else` of a `narrow` would like to say `next lauf` -- a `leave`/`next`
+            --      at a `retry` label CHECKS and does not LOWER
+            --      (`probe-marke-an-retry-und-traverse.gab`, `C001` at `emit.rs`:7289);
+            --   2. and `M105` will not let that `else` fall through either.
+            --
+            -- So the bound is established by a PLAIN COMPARISON and V1/V2 carry it into the
+            -- branch. That is the form the language offers, and it is the better one here:
+            -- the check stands in the control flow where the reader sees it.
+            let mut barbasis : u64 = 0;
+            if bar <= 5 {
+                barbasis = bar_adresse(cfg, bar);
+            }
+            if barbasis != 0 && barbasis <= 281474976710656 {
+                let adresse : u64 = barbasis + versatz;
+                if typ == KAP_GEMEIN {
+                    gemein = adresse;
+                }
+                if typ == KAP_WECKEN {
+                    weckbasis = adresse;
+                    weckfaktor = e.FAKTOR;
+                }
+                if typ == KAP_GERAET {
+                    geraetekonfig = adresse;
+                }
+            }
+        }
+        zeiger = naechst;
+    }
+
+    if gemein == 0 {
+        return Ecamfehler::KeinGemein;
+    }
+    if weckbasis == 0 {
+        return Ecamfehler::KeinWecken;
+    }
+    return Transport(gemein: gemein, weckbasis: weckbasis,
+                     weckfaktor: weckfaktor, geraetekonfig: geraetekonfig);
+}
+
+}

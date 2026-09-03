@@ -1,0 +1,28 @@
+-- ATTEMPT, isolated: can a `tagged type` value be BUILT?
+--
+-- It fell out of the `queue_setup` attempt (`caprock-virtio/src/lib.rs:486`), whose return
+-- type is `Option<(Queue, u16)>`. The Gabbro counterpart of an `Option` is a `tagged type`,
+-- and the corpus has nine of them -- `beispiele/34`, `01`, `09`, `39`, `41`, `42`. Every one
+-- of them is taken APART by `match`. **Not one is put TOGETHER anywhere.**
+--
+-- That is the measurement this file makes: four spellings of the constructor, each on its
+-- own, so that no refusal masks another.
+
+module probe::tagged_gebaut {
+
+type Nutzlast = {
+    a : u32,
+    b : u32,
+};
+
+tagged type Aufsatz = { Keine, Da(Nutzlast) };
+
+-- SPELLING 1: the bare variant name, like the `match` arm spells it.
+impl fn baut_bar() -> Aufsatz
+    effects { pure }
+    costs   <= 4 ops
+{
+    return Keine;
+}
+
+}

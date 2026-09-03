@@ -1,0 +1,87 @@
+-- MINIMISED, from the two-view attempt (`caprock-virtio/src/owned.rs:70`, `:127`).
+--
+-- **`N030` compares opaque types at a PARAMETER and not at a FIELD.**
+--
+-- Caprock's `Owned<S>` holds both addresses of one buffer -- the driver's view and the
+-- device's -- and its module note names the bug it exists against: *"beide Adressen in
+-- einer Struktur zu halten, aus der man sich je nach Zweck die passende greift, ist der Weg,
+-- auf dem aus zwei Achsen eine wird."* With an IOMMU window != 0 the two numbers differ, and
+-- a driver that mixes them programmes the device an address it cannot resolve.
+--
+-- Caprock buys the guarantee with FIELD PRIVACY: `cpu` is unreadable from outside the crate.
+-- Gabbro has no field privacy, but it has `opaque`, and `opaque` is the stronger instrument
+-- -- it makes the mixing a TYPE error rather than a convention about which getter to call.
+--
+-- It does, at a parameter. It does not, at a field -- and a field is where the two axes
+-- actually live. Four sites, each on its own, so no refusal masks another.
+
+module probe::opak_am_feld {
+
+opaque type Cpusicht     = u64;
+opaque type Geraetesicht = u64;
+
+type Zweiachser = {
+    cpu    : Cpusicht,
+    dev    : Geraetesicht,
+    laenge : u32,
+};
+
+-- What goes into a descriptor is the DEVICE view, and nothing else may.
+extern fn deskriptor_stellen(adresse : Geraetesicht, laenge : u32)
+    effects { pure }
+    costs   <= 8 ops;
+
+-- 1. THE RIGHT ONE -- and it must stay silent.
+impl fn richtig(p : ptr<normal, r> Zweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    deskriptor_stellen(p.dev, p.laenge);
+}
+
+-- 2. A BARE PARAMETER of the wrong view. **This one falls**, and the diagnostic is exact:
+--    `N030`: `c` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there.
+impl fn falsch_am_parameter(c : Cpusicht, laenge : u32)
+    effects { pure }
+    costs   <= 16 ops
+{
+    deskriptor_stellen(c, laenge);
+}
+
+-- 3. THE SAME MISTAKE THROUGH A POINTER FIELD -- 0 errors, 0 hints.
+impl fn falsch_am_zeigerfeld(p : ptr<normal, r> Zweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    deskriptor_stellen(p.cpu, p.laenge);
+}
+
+-- 4. And through a local binding taken from that field -- 0 errors, 0 hints.
+impl fn falsch_ueber_bindung(p : ptr<normal, r> Zweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    let c = p.cpu;
+    deskriptor_stellen(c, p.laenge);
+}
+
+-- 5. AND THE OBVIOUS WAY OUT DOES NOT EXIST EITHER. If the RECORD were `opaque`, field
+--    access from outside would have to go through accessors -- and an accessor takes the
+--    view at PARAMETER position, which is where `N030` does bite. So the guarantee would be
+--    bought back.
+--
+--    It is not: `opaque` on a record does not close its fields. 0 errors, 0 hints.
+opaque type OpakerZweiachser = {
+    cpu    : Cpusicht,
+    dev    : Geraetesicht,
+    laenge : u32,
+};
+
+impl fn falsch_am_opaken_verbund(p : ptr<normal, r> OpakerZweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    deskriptor_stellen(p.cpu, p.laenge);
+}
+
+}
