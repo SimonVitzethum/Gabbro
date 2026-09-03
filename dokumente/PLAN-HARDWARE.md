@@ -2748,8 +2748,15 @@ Ziel.*
       > *ist* die Zeile der Tafel für `abs`), und die erzeugte Einheit trägt
       > `int32_t abs(int32_t a);` neben `abs(x, &w, &e)` — **einen Prototyp mit einem
       > Parameter, gerufen mit dreien.** Geheilt am selben Tag.
-- [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
-      rote Wächter seit drei Tagen.**
+- [x] ~~**`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
+      rote Wächter seit drei Tagen.**~~ **ERLEDIGT am 2026-09-03, und zwar wörtlich so.**
+      `N055` baut `state` nicht, sondern ergänzt die Absage um **genau die zwei Zeilen**, die
+      der Erzeuger selbst verlangt hatte: welcher Träger den Zustand hält, und ob ein Übergang
+      PRÜFT (`requires`) oder SCHREIBT (ein Ort, den ein deklarierter Träger hält). Giftprobe
+      `beispiele/gift/668-state-without-a-carrier.gab`, ein Passtest, eine Mutation.
+      **`pruefe-grammatiktafel.py` ist damit grün — 0 von 218 Terminalen `UNGEDECKT`** —, weil
+      das Wort `state` nun in einem Prüferfehlertext steht. *Der Wächter, der drei Tage rot
+      stand, war der Kasten selbst.*
 
 ---
 
