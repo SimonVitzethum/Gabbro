@@ -228,3 +228,34 @@ two probe sites. The template is already designed and named: `ops.suche` /
 `ops finde …`, `crates/gabbro-check/src/schablonen.rs`:711, `Stand::Entworfen`, with its
 obligation written out. *If a construct is to be decided today, that is the one with the
 denominator — and it is not the one the decision named.*
+
+---
+
+## 6. The corpus-wide sweep, and a stale register line it turned up
+
+The grep in §1 counts source text. This counts **verdicts**, over every `.gab` in the tree:
+
+    for f in $(find beispiele messung sonden netz passlogik programmlogik -name '*.gab' | sort); do
+        ./target/debug/gabbro emit "$f" 2>&1 | grep -q 'no lowering: `mappings of`' && echo "$f"
+    done
+    # beispiele/gift/571-walk-ebenen-laufen-um.gab      <- and nothing else
+
+**One file in the whole tree reaches the refusal, and it is the poison probe.** That is the
+demand figure taken from the checker rather than from the text, and it agrees.
+
+While measuring it, two lines in `messung/ABSAGEFORMEN.md` turned out to be **stale**, and
+they are stale in the direction that hides the finding:
+
+| line | says | measured today |
+|---|---|---|
+| 231 | `mappings of` … `messung/fragmente/F09.gab` `K001` — **ungeklärt** | `gabbro pruefe messung/fragmente/F09.gab` → **9 items, 0 errors**; `gabbro emit` → 0 errors |
+| 401 | refusal `6532` … `mit Fehler` … `messung/fragmente/F09.gab` `K001` | the covering site is now `beispiele/gift/571`, not F09 |
+
+The `H = 0` lane removed F09's `traverse`; the register was not re-read. **A register that
+names a site which no longer exercises it reports coverage it does not have** — the same
+class as a guard that measures a mixture. Left for the owner to place rather than edited
+here: `ABSAGEFORMEN.md` belongs to another lane, and two lanes moving one line is the merge
+fault this week already produced six times.
+
+    ssh ki-pc-fisch-101 'cd gabbro-b10 && ./target/debug/gabbro pruefe messung/fragmente/F09.gab'
+    ssh ki-pc-fisch-101 'cd gabbro-b10 && ./target/debug/gabbro emit  beispiele/gift/571-walk-ebenen-laufen-um.gab'
