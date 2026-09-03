@@ -1,0 +1,45 @@
+-- UNSEEN PORT, attempt 3: corrected shapes, first contact continued.
+-- Fixes from the checker messages (each message taught the shape):
+--  * `let ... else (e) { ... }` -- error propagation needs the channel name.
+--  * `spc - 1` underflow: operands need ranges at declaration.
+
+module unseen::fat_leser2 {
+
+-- Power-of-two test with ranged operands (checker-taught shape).
+impl fn spc_ok(spc : u8 in 1 .. 128) -> bool
+    effects { pure }
+    costs   <= 11 ops
+{
+    narrow spc to 1 .. 128 else { return false; }
+    return (spc & (spc - 1)) == 0;
+}
+
+-- Cluster window 4085..=65524 over a computed value.
+-- Guessed shape: `narrow ... else { return <reason-value>; }`.
+-- QUESTION to the language: where does the `reason` go on a computed
+-- refusal? `beispiele/03` puts `where` on FIELDS; here the value has
+-- no field. `N028`/`N029` hold `let ... else` in both directions --
+-- but the port author has not read them (unseen means unseen).
+impl fn cluster_ok(cluster : u32) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    narrow cluster to 4085 .. 65524 else { return false; }
+    return true;
+}
+
+-- The checked-add question: `fat_lba + nfat * fat_sec` must not wrap.
+-- In Rust: `.checked_add(...).ok_or(TooBig)?`. In Gabbro the operands
+-- are `u32` fields -- the SUM needs a wider type or a pre-check.
+-- Attempt: bind wider first (checker-suggested: `let w : u64 = x;`).
+impl fn end_lba(fat_lba : u32, nfat : u32 in 1 .. 4, fat_sec : u32) -> u64
+    effects { pure }
+    costs   <= 11 ops
+{
+    let a : u64 = fat_lba;
+    let b : u64 = nfat;
+    let c : u64 = fat_sec;
+    return a + b * c;
+}
+
+}

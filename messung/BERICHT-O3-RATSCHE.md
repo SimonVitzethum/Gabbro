@@ -1,7 +1,9 @@
 # O3 — must the obligation NAME bind the obligation's CONTENT?
 
 Running report. Lane: the subject of §15's ratchet (`SPRACHE.md` §15, `OFFEN.md` `O3`).
-Worktree `.claude/worktrees/agent-adca48c751da1d8d3`, from `master` at `1cb66b0`.
+Worktree `.claude/worktrees/agent-adca48c751da1d8d3`. Started from `master` at `1cb66b0`;
+**re-measured after merging `master` at `10856d8`** (the «B10» merge `e293a6c` plus the
+unseen-port lane) — every figure below is from the MERGED tree, none carried across.
 Built on `ki-pc-fisch-101:gabbro-nb` (`cargo build --offline`, 5.23 s); the sweeps run the
 finished binary locally, `free -g` reading 31 GB total and 20 GB available.
 
@@ -14,8 +16,9 @@ finished binary locally, `free -g` reading 31 GB total and 20 GB available.
 
 ## 1. Reachability — **28 of 113 for a swap, 79 of 113 for an insertion, 113 of 113 for an edit**
 
-Measured 2026-09-03 at `1cb66b0` over **every `.gab` in the tree bar `beispiele/gift/`**:
-183 units, 134 of them emitting a register, **38 carrying at least one obligation line**,
+Measured 2026-09-03 at the merged `10856d8` over **every `.gab` in the tree bar
+`beispiele/gift/`**: 184 units, 135 of them emitting a register, **38 carrying at least one
+obligation line**,
 **113 obligation lines** total.
 
 > **The neighbouring 110 does not reconcile against the commit printed beside it, and that
@@ -27,8 +30,10 @@ Measured 2026-09-03 at `1cb66b0` over **every `.gab` in the tree bar `beispiele/
 > `messung/fragmente/F01.gab` (+12) and `F09.gab` (+1), the `H = 0` lane's repair. *No
 > other unit moved by a single line.* So the 110 was taken somewhere between the two,
 > at a commit the document does not name — its header names the day's starting point, not
-> each table's own stand. **This report's 113 is at `1cb66b0`, and its search path is
-> printed above it.**
+> each table's own stand. **This report's 113 is at the merged `10856d8`, and its
+> search path is printed above it. *`master`'s one new `.gab` since `1cb66b0`,
+> `messung/proben/unseen-fat-reader2.gab`, checks clean and carries no obligation — so the
+> 113 is unchanged by the merge and the unit count moved 183 → 184.*
 
 The name is built in `crates/gabbro-check/src/pflichten.rs`, and only three of the eight
 kinds put an **ordinal** in it:
@@ -81,7 +86,7 @@ This is the question that outranks the rest, so it was measured exhaustively rat
 along `git log -- <path>` (which simplifies history and can drop a change that arrived
 through a merge).
 
-**Method.** `git rev-list --all` → **1079 commits**, each diffed against **every** parent,
+**Method.** `git rev-list --all` → **1091 commits** (the merged tree), each diffed against **every** parent,
 every `.gab` on both sides parsed into per-function ordered conjunct lists, and consecutive
 lists compared. Classification: `PERMUTATION` (same multiset, different order), `SHIFT` (an
 ordinal that exists on both sides carries different text, both texts present on both sides),
@@ -312,7 +317,7 @@ written and leave a measurement that recomputes the argument instead of a paragr
 remembers it.
 
 * `messung/gabbrov/ratschenschluessel.py` — REACH, KEY, PRICE and ANCHOR in one second over
-  183 units, with four speech tests ahead of the verdict: the degenerate double call must
+  184 units, with four speech tests ahead of the verdict: the degenerate double call must
   produce one triple over two anchors, the swap must move the text and **nothing else**, a
   reformat must move nothing, and the judgement itself must fall on a planted collision.
   Return `1` means the tree has to change, `2` that nothing was measured.
@@ -329,3 +334,56 @@ README's `59 of 59 instruments`, the acceptance station count, and the guardian 
 this week six lanes collided on exactly that kind of number with git reporting no conflict.
 Promoting it is one `git mv` plus those three cells, and that price belongs to whoever decides
 to pay it, not to a lane that was asked a question about a key.
+
+---
+
+## 5. Re-measured on the merge, and one shared figure moved
+
+`master` had gone from `1cb66b0` to `10856d8` under this lane (the «B10» merge `e293a6c`
+plus the unseen-port lane). Merged in, and **every number above recomputed rather than
+carried across** — the rule this tree has booked six times.
+
+| | at `1cb66b0` | merged at `10856d8` |
+|---|---|---|
+| units swept (`*.gab`, no `gift/`) | 183 | **184** |
+| obligation lines | 113 | **113** |
+| swap / insertion / edit | 28 / 79 / 113 | **28 / 79 / 113** |
+| key collisions, lines without a text | 0 / 0 | **0 / 0** |
+| commits walked for the history scan | 1079 | **1091** |
+| modified `.gab` pairs · clause lists compared · changes | 459 · 398 · **0** | 459 · 398 · **0** |
+| contract lines ever removed from a `.gab` | 0 of 282 | **0 of 282** |
+
+`master`'s one new unit, `messung/proben/unseen-fat-reader2.gab`, checks clean and carries
+no obligation, so the population is unmoved.
+
+### The one figure this lane did move — and the announced number was already stale
+
+Adding a `.md` moves `pruefe-widerruf.py`'s file count, which `TODO.md` carries and
+`pruefe-zahlen.py` guards. **This is the seventh booking of the merge-addition class in this
+tree, and it has a new half:**
+
+* on `1cb66b0` this lane measured **193 → 194** for its own one file, correctly;
+* the coordination announced **194** for the merged `master`, correctly at the time;
+* **both were wrong in the merged tree**, because `master` had meanwhile brought
+  `messung/BERICHT-B10.md` and `messung/UNSEEN-PORT-FAT.md`.
+
+Measured the way the entry demands — own file away, guard run, file back:
+
+```
+without messung/BERICHT-O3-RATSCHE.md   ==  13 Widerrufe, 195 Dateien
+with it                                 ==  13 Widerrufe, 196 Dateien
+```
+
+**196 is the guard's own number in the merged tree**, and that is what `TODO.md` now says.
+Not added, not chosen, and not taken from the instruction either. `pruefe-zahlen.py` is
+green again (return code 0, 83 of 83 recomputed) — it had been this lane's one red.
+
+### Out of bounds and left alone
+
+`state` belongs to another instance this session. Nothing here touches the `state`
+production in `SYNTAX.md`, `instrumente/pruefe-grammatiktafel.py`, or the `state` lines of
+`SPRACHE.md`. **No obligation in the population runs over a `state` clause** — the eight
+kinds are `maintains`, `refines`, `ensures`, `requires` at a call, `reg`/`transition
+requires`, loop and `walk` invariants — so this lane's question never reached that
+production. `pruefe-grammatiktafel.py` is red on `state` in `master` and stays that way; it
+is not this lane's.
