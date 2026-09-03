@@ -228,7 +228,7 @@ Zelle `vom Pruefer`; wo nicht, ist sie ungeklärt und keine der beiden.**
 | `descendants of` braucht alle drei Kanten | `196-descendants-nur-mit-elter` `S008` | **ungeklärt** |
 | `device … at dma` ohne `assume` | `401/402-registerklasse-…` `R006` | **ungeklärt** |
 | `device … at normal` | `messung/fragmente/F09.gab` `K001` | **ungeklärt** — `K001` ist die Kostenexplosion |
-| `mappings of` | `messung/fragmente/F09.gab` `K001` | **ungeklärt** |
+| `mappings of` | `beispiele/gift/571-walk-ebenen-laufen-um.gab`:52 `K003` (Prüfer), `C001` (Erzeuger) | **ungeklärt** — *hier stand `messung/fragmente/F09.gab` `K001`, und F09 übt die Regel seit der `H = 0`-Bahn nicht mehr aus: `gabbro pruefe messung/fragmente/F09.gab` → **9 items, 0 errors**, `gabbro emit` schreibt C. Nachgemessen 2026-09-03 über alle 621 `.gab` des Baumes: **genau eine** Datei erreicht die `mappings of`-Weigerung, und keine der fünfzehn `K001`-Dateien ist F09.* |
 | `walk … levels` keine Zahl | `messung/fragmente/F09.gab` `K001` | **ungeklärt** |
 | `queue` | `messung/fragmente/F03.gab` `H011,M101,M124,N035,N040` | **ungeklärt** |
 | unäres Minus | `219-unaeres-minus` `M101` | **ungeklärt** — `M101` ist die Bereichsregel |
@@ -398,7 +398,7 @@ Was an `F05` übrig bleibt, hat seit heute seinen eigenen Satz und ist U10.
 | `6371` | `by consuming` -- the run form is the same walk PLUS the removal, and the removal is a generated `ops` operation this emitter does not have | ungemessen |  |
 | `6437` | `elems of … by consuming` -- an array element is not removed; consumption needs a carrier with generated `ops` | ungemessen |  |
 | `6506` | `queue` -- «B10»: `traverse` yields no value and knows no `break`, so `by consuming` drains the WHOLE queue; that is a different program | UNGEDECKT | messung/proben/probe-vier-zellen.gab |
-| `6532` | `mappings of` -- the reading is DECIDED (the leaf SET, because W^X is a statement about the set), and the cost bound now says so. What is missing i… | mit Fehler | messung/fragmente/F09.gab `K001` |
+| `6532` | `mappings of` -- the reading is DECIDED (the leaf SET, because W^X is a statement about the set), and the cost bound now says so. What is missing i… | mit Fehler | beispiele/gift/571-walk-ebenen-laufen-um.gab `K003` (checker) · `C001` (emitter). *F09 stood here and reaches no refusal at all any more -- `pruefe` says 9 items, 0 errors and `emit` writes C. Re-measured 2026-09-03 over all 621 `.gab`: exactly ONE file reaches this refusal, and none of the fifteen `K001` files is F09. **Rows `2487` and `7886` still cite F09 `K001` and are stale the same way** -- left standing rather than edited, because two lanes moving one line is the merge fault this week already produced six times.* |
 | `6537` | `chain in` -- the sibling chain needs its own bound | UNGEDECKT | messung/proben/probe-vier-zellen.gab |
 | `6538` | `fields of` -- a register field list is not a runtime domain | ungemessen |  |
 | `6539` | `threads` -- the thread set is not declared in a translation unit | UNGEDECKT | messung/proben/probe-vier-zellen.gab |

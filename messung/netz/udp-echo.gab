@@ -164,19 +164,34 @@ impl fn kopf_gueltig(k : ptr<normal, r> IpKopf, w : ptr<normal, r> Kopfworte) ->
 
 -- **Der Zwischenspeicher wird durchsucht, nicht gehasht.** Sechzehn Plaetze, und die
 -- Schranke faellt aus der Tabellendeklaration statt aus einer Zaehlung im Rumpf.
+--
+-- **Berichtigt am 2026-09-03: diese Funktion lieferte den LETZTEN Treffer.** Hier stand ein
+-- Sonderwert-Sammler (`let mut treffer = 0;`, im Rumpf ueberschrieben), und ohne Ausstieg
+-- gewinnt der hoechste Platzindex -- nicht der erste Treffer und nicht der frischeste
+-- (`alter` sieht die Schleife gar nicht). Gemessen und nicht gelesen: uebersetzt, gegen eine
+-- Tabelle mit ZWEI Eintraegen derselben IP (Platz 3 und Platz 9) gefahren, `0xBBBB2222`
+-- statt `0xAAAA1111`. **Der Pruefer sagte dazu nichts -- 25 items, 0 errors, 0 hints**, und
+-- keine Annotation dieser Sprache faengt es.
+--
+-- **Die Behebung braucht kein Konstrukt.** `return` im Schleifenrumpf ist die Form, die
+-- `beispiele/39-auftragsdienst.gab`:76 (`erster_dringender`) und `beispiele/18-vorfahren`:52
+-- schon benutzen, und sie ist kuerzer als der Sammler, der hier stand. **«B10» hat die
+-- falsche Form nur PLAUSIBEL gemacht, nicht erzwungen** -- der richtige Weg lag daneben und
+-- wurde viermal im selben Korpus gegangen. *Die Kostenzusage bleibt bei 256: der
+-- schlechteste Fall einer Schleife, die frueh aussteigen darf, ist die Schleife, die es
+-- nicht tut.*
 impl fn arp_suchen(a : ptr<normal, r> ArpTabelle, ip : u32) -> u32
     effects  { reads a }
     costs    <= 256 ops
 {
-    let mut treffer : u32 = 0;
     traverse s over slots of a by unvisited
         touches reads a
     {
         if a.slots[s].belegt && a.slots[s].ip == ip {
-            treffer = a.slots[s].mac_hi;
+            return a.slots[s].mac_hi;
         }
     }
-    return treffer;
+    return 0;
 }
 
 -- **RFC 826, der Lernschritt:** wer eine ARP-Nachricht sieht, traegt den Absender ein --
