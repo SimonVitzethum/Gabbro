@@ -293,7 +293,19 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # see the other, and `git` saw the same line twice. Measured in the merged tree: **343
 # without both, 346 with both.** *The twelfth instance of this class today, and again
 # neither side was wrong.*
-MARKE = 346
+# **346 -> 347 on 2026-09-03, and it is the same kind a fifth time.** `M143` -- the arity of
+# a direct call -- needed to know which signatures carry a REAL parameter list, and a
+# `transition` does not: it enters `funktionen` with an empty one because the grammar gives
+# it no list at all. The new map that records this lives in `umgebung.rs`, and its head
+# comment names the rule that reads it, in `m1.rs`. Measured the way the blocks above
+# demand, by rewriting that one sentence to avoid the code and re-running: **346 without the
+# citation, 347 with it, nothing else moved.**
+#
+# > **Rephrasing it away was measured and then rejected**, on the sentence four blocks up:
+# > *"a ratchet one may dodge by rephrasing measures spelling, not debt."* The comment says
+# > WHY the map exists, and the reason is a rule in another file. Writing it so the guard
+# > cannot see it would keep the claim and delete the record of it.
+MARKE = 347
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on

@@ -170,6 +170,30 @@ pub struct Umgebung {
     pub walkknoten: HashMap<String, String>,
     /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
     pub uebergangskosten: HashMap<String, i128>,
+    /// **The transition names -- the signatures whose parameter list is a PLACEHOLDER**
+    /// (2026-09-03).
+    ///
+    /// > **The name avoids `uebergaenge`, and that is not taste.** `emit.rs`:233 already
+    /// > carries an unrelated `uebergaenge` map on `Namen` and reads it with a direct
+    /// > `.get(` at :9580. `instrumente/zaehle-karten.py` resolves a map by FIELD NAME
+    /// > across every pass file, so a second field under that name makes the emitter's look
+    /// > count against this one -- *the ratchet rises by a direct look nobody wrote.*
+    ///
+    /// A `transition` enters `funktionen` with `parameter: Vec::new()`, and that empty list
+    /// is not a statement: the grammar gives a transition no parameter list at all, while
+    /// the call `wurzel_setzen(v)` passes the carrier. **`M143` compares the two lists and
+    /// would read the placeholder as `declares 0`** -- it did, over `beispiele/02-geraet.gab`,
+    /// twice, before this set existed.
+    ///
+    /// `uebergangskosten` is not the discriminator, though it looks like one: a `device`
+    /// constructor is entered there too (`insert(q(&d.name.text), 0)`) and its parameter
+    /// list IS its declaration's. *A key that holds two kinds cannot tell them apart.*
+    ///
+    /// > **A map and not a set, so that `suche` can read it.** The keys are qualified, and
+    /// > `globale`, `funktionen` and `formate` have each cost this tree a hole by being
+    /// > queried with `.get(...)` from inside a `module` block, where the short name never
+    /// > hits. *The module-aware lookup is the point; the value carries nothing.*
+    pub uebergangsnamen: HashMap<String, ()>,
     pub formate: HashMap<String, Vec<(String, Typ)>>,
     pub geraete: HashMap<String, Vec<(String, Typ)>>,
     /// `static`, `atomic`, `accumulates` -- alles, was ohne Deklaration im Rumpf sichtbar ist.
@@ -470,6 +494,12 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
+    /// **Does this path name a `transition`?** Its `Signatur` carries an empty parameter
+    /// list that is a placeholder, not a declaration -- see `Umgebung::uebergangsnamen`.
+    pub fn ist_uebergang(&self, von: &str, pfad: &Pfad) -> bool {
+        self.suche(&self.uebergangsnamen, von, &pfad.text()).is_some()
+    }
+
     /// **Known world state** -- `static`, `atomic`, `table`, `device`, `state`.
     ///
     /// The same drawn line as `E010`, and **module-aware**: the keys are qualified, so a
@@ -711,6 +741,9 @@ impl Umgebung {
                     for t in &d.uebergaenge {
                         self.uebergangskosten
                             .insert(q(&t.name.text), t.schritte.len() as i128 + 1);
+                        // The empty `parameter` two lines down is a placeholder, and this
+                        // records that it is one. See `Umgebung::uebergangsnamen`.
+                        self.uebergangsnamen.insert(q(&t.name.text), ());
                         self.funktionen.insert(
                             q(&t.name.text),
                             Signatur {

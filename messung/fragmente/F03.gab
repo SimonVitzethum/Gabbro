@@ -60,6 +60,17 @@ const EP_BADGE     : u32 = 1;
 const KEIN_SERVER  : u32 = 0xffff_ffff;
 const KEIN_FRAME   : u32 = 0xffff_ffff;
 
+-- ERGAENZT (2026-09-03): `Frame` and `RegNr` -- the last two names the excerpt CALLS and
+-- never declares. They carry `N040` nine times over six signatures (:130 x2, :150 x2, :208
+-- x2, :217, :220, :225). Nothing about them is chosen: `msg` is the only field the excerpt
+-- ever reads (`msg_kopiert`, :132, over `elems of dst.msg`), its width is the excerpt's own
+-- `MSG_WORDS`, and `RegNr` is the slot `set_reg` takes `SYSNO_RESULT`/`EP_BADGE` in -- both
+-- declared `u32` above.
+type Frame = {
+    msg : [u64; MSG_WORDS],
+};
+type RegNr = u32;
+
 reason IpcResult {
     Ok           = 0 "Rendezvous vollzogen"
     ErrBadCap    = 2 "Endpoint nicht belegt"

@@ -889,6 +889,40 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
     },
     Satz {
+        name: "m1.stelligkeit",
+        kennungen: &["M143"],
+        aussage: "A direct call passes exactly as many arguments as the callee declares \
+                  parameters. Every parameter therefore has a value the caller wrote, and \
+                  every value the caller wrote has a slot that reads it -- which is the \
+                  precondition of every rule behind this one: the effect hull reads what the \
+                  caller may touch through each parameter, `K001` reads the cost the \
+                  signature was given, and the range facts that hold after the call are the \
+                  callee's.",
+        vorbehalt: "**A `transition` is exempt, and it is the only exemption.** Its \
+                    `Signatur` is entered with an empty parameter list because the grammar \
+                    gives a transition no parameter list at all, while the call \
+                    `wurzel_setzen(v)` passes the carrier -- so the count there would be read \
+                    off a placeholder. *What the arity of a transition call ought to be is a \
+                    question this rule does not answer, and no rule does* (`W10`). The check \
+                    also REPORTS and does not return: the overlap still gets its \
+                    per-position comparison, because two of three arguments can still be the \
+                    wrong shape.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/676. **Reproduced 2026-09-03 against the UNCHANGED \
+                      checker, both directions**: `zwei(x)` against `fn(u32, u32)` and \
+                      `eins(x, x)` against `fn(u32)` each gave `3 items, 0 errors, 0 hints` \
+                      at `100 % coverage`, `gabbro emit` wrote the call out, and `cc` \
+                      answered -- *too few arguments to function 'zwei'*. Corpus cost, all \
+                      512 files: TWO sites, both in `beispiele/02-geraet.gab` and both \
+                      `transition` calls, which is what the reservation above is made of. \
+                      The live site outside the corpus is `messung/fragmente/F03.gab`:210, \
+                      `owner_core(picked)` against a two-parameter declaration, on a frozen \
+                      excerpt line -- it had been surfacing as an `M140` about the wrong \
+                      parameter.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (ruf_roh); \
+                     crates/gabbro-check/src/umgebung.rs (uebergangsnamen, ist_uebergang)",
+    },
+    Satz {
         name: "m1.praedikatsindex",
         kennungen: &["M141"],
         aussage: "No LITERAL index in a predicate lies outside the length the declaration of \

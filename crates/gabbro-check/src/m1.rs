@@ -2244,7 +2244,69 @@ impl<'a> Pruefer<'a> {
         let Some(sig) = signatur else {
             return Typ::Unbekannt;
         };
-        // Die Stelligkeit gehoert dem Namenspass; hier faellt nur der Bereich.
+        // **`M143` -- the arity of a DIRECT call, which every pass believed another one held.**
+        //
+        // The line that stood here assigned the arity to the NAME PASS and left this one
+        // only the range. (It said so in German; the original is in the commit that removes
+        // it, where the history belongs.) **The name pass does not hold it.** Measured
+        // 2026-09-03 against the unchanged checker, one file per direction:
+        //
+        // ```gabbro
+        // extern fn zwei(a : u32, b : u32) -> u32 effects { pure } costs <= 1 ops;
+        // impl fn ruf(x : u32) -> u32 … { return zwei(x); }        /* ONE argument */
+        // ```
+        //
+        //     gabbro pruefe  ->  3 items, 0 errors, 0 hints      (and the same for zwei too MANY)
+        //     gabbro emit    ->  exit 0, and the unit carries
+        //                        uint32_t zwei(uint32_t a, uint32_t b);
+        //                        return zwei(x);
+        //     cc             ->  error: too few arguments to function 'zwei'
+        //
+        // This is the `zip` below saying it: `argtypen.iter().zip(sig.parameter.iter())`
+        // stops at the SHORTER list, so a missing argument is a parameter nobody compares
+        // and a surplus one is a value nobody reads. *A truncating zip is a silent `else`
+        // with a different spelling* -- the same shape as `M139`'s, one line further up.
+        //
+        // > **Arity was already held in three places, and a direct call was none of them:**
+        // > `M128` at a function POINTER, `M132` at `refines`, `M106` at a record
+        // > constructor. The commonest call in the language had the check that the three
+        // > rarer ones carry.
+        //
+        // **It reports and does not return.** The overlap still gets its per-position
+        // comparison: where a call passes two of three arguments, the two it does pass can
+        // still be the wrong shape, and refusing to say so would trade one silence for
+        // another. *`cc` catches this one -- and that is exactly the sentence `M140`'s own
+        // note refuses to accept as an answer.*
+        // **A `transition` is exempt, and it is the one exemption.** Its `Signatur` is
+        // entered with `parameter: Vec::new()` because the grammar gives a transition no
+        // parameter list at all, while `wurzel_setzen(v)` passes the carrier -- so the empty
+        // list is a PLACEHOLDER and comparing against it reads `declares 0`. It did, over
+        // `beispiele/02-geraet.gab`:64 and :71, at the first corpus run of this rule.
+        // *What the arity of a transition call ought to be is a question this rule does not
+        // answer* -- see the register's reservation.
+        let uebergang = r.path().is_some_and(|p| self.u.ist_uebergang(&self.modul, p));
+        if !uebergang && argtypen.len() != sig.parameter.len() {
+            let name = r.target_text();
+            let (n, m) = (sig.parameter.len(), argtypen.len());
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M143",
+                    r.span,
+                    format!("`{name}` declares {n} parameter(s), this call passes {m}"),
+                )
+                .mit_notiz(
+                    "a parameter with no argument is a slot every pass behind this one still \
+                     computes with -- the effect hull reads what the caller may touch through \
+                     it and the range facts after the call are the callee's, and neither is a \
+                     statement about anything the caller wrote",
+                )
+                .mit_notiz(
+                    "the comparison below runs on the OVERLAP and stops at the shorter list, \
+                     so without this line a missing argument is a parameter nobody checks",
+                ),
+            );
+        }
+        // Only the range falls here; the shape is `M139`/`M140`'s and the count is `M143`'s.
         for ((t, span), (pname, pt)) in argtypen.iter().zip(sig.parameter.iter()) {
             self.passt(t, pt, *span, &format!("argument `{pname}`"));
         }
@@ -2534,8 +2596,40 @@ impl<'a> Pruefer<'a> {
     /// Nur Gleitkomma kann es. Ein Ganzzahlausdruck gibt `false`, und damit bleibt die
     /// Verengungsmaschinerie fuer den ganzen bisherigen Bestand unveraendert -- *die
     /// Erweiterung darf den gemessenen Pfad nicht anfassen* (Tor P-F1).
+    /// **A QUESTION asked with the answering walk -- and it printed the answer twice**
+    /// (measured 2026-09-03).
+    ///
+    /// `ausdruck` is the REFUSING walk: it types an expression and files every refusal that
+    /// expression carries, and it books each sub-expression into the coverage count. This
+    /// function wants one bit out of it -- *can this operand be NaN* -- and paid for it with
+    /// a second copy of everything the operand had to say.
+    ///
+    /// ```gabbro
+    /// let a = nimmt(x);          -- M140 once
+    /// if nimmt(x) == 0 { … }     -- M140 TWICE, byte-identical
+    /// ```
+    ///
+    /// Both halves are needed to reproduce it, and that is why it went unseen: an `if` over a
+    /// bare call gives one (`fakten_aus` reaches no comparison arm), and a comparison outside
+    /// an `if` gives one (nobody asks the negated question). *An `if` whose condition is a
+    /// comparison and whose branch always leaves* is the cell where the `Wenn` arm walks the
+    /// condition at `self.ausdruck(bedingung, lage)` and then walks it again from
+    /// `fakten_aus(bedingung, true, …)`, through here.
+    ///
+    /// **Nothing is lost by staying quiet.** All three callers of `fakten_aus` hand it the
+    /// same `bedingung` the arm typed one line earlier, so every refusal reachable from here
+    /// has already been filed by that walk -- what this one adds is only the duplicate.
+    ///
+    /// > **The count is the other half, and it is the worse one.** `buche` runs on every
+    /// > sub-expression of the second walk too, so `M1 saw N expressions, k of them without a
+    /// > type` counted a stretch of the file twice -- *a coverage figure inflated by the
+    /// > checker's own second look.* Both are restored here, and for the same reason.
     fn nan_moeglich(&mut self, e: &Expr, lage: &Lage) -> bool {
-        match self.ausdruck(e, lage) {
+        let (gefuehrt, gezaehlt) = (self.absagen.absagen.len(), self.zaehlung);
+        let t = self.ausdruck(e, lage);
+        self.absagen.absagen.truncate(gefuehrt);
+        self.zaehlung = gezaehlt;
+        match t {
             Typ::Gleitkomma(f) => f.kann_nan,
             _ => false,
         }
