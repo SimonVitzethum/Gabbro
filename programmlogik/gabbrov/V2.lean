@@ -136,6 +136,85 @@ theorem vacuous_sound (pre : Pre) (h : vacuous pre = true) (w : World) : holds w
   | false => rfl
   | true  => exact (vacuous_no_model pre w h hh).elim
 
+/-! ## 1.1 The licence to run vacuity BEFORE the assumptions exist -- §6's sentence, proved
+
+    `dokumente/AUFTRAG-GABBROV.md` §6 states the argument in one sentence and asks for it in
+    the report rather than in the file. **It belongs in the file**, because one half of it is
+    a theorem and the other half is a counterexample, and neither survives being paraphrased:
+
+    > *Assumptions shrink the model set. If a precondition is unsatisfiable WITHOUT them, it
+    > is unsatisfiable WITH them a fortiori. The check is sound in the detection direction
+    > and INCOMPLETE.*
+
+    Both halves stand below. **The second half is the one that decides what this file's
+    output is worth**, and §7's census is where that lands: the run produced thirty
+    `notVacuous` verdicts and zero `vacuous` ones, so every verdict it produced falls on the
+    side the licence does NOT carry.
+-/
+
+/-- An assumption set is any predicate over worlds.
+
+    **Formalising the eight German sentences of the ten fragments is on §9's stop-list, and
+    the theorem below does not need them.** What the argument uses is not their content but
+    one structural fact: an assumption CONSTRAINS the same worlds an obligation speaks about.
+    `A` is therefore universally quantified over every assumption set there could ever be --
+    which is a stronger statement than one about the eight, and a cheaper one. -/
+abbrev Assumptions := World → Prop
+
+/-- **THE LICENCE, and it is one line.** A precondition the check condemns has no model at
+    all, so it has none among the models an assumption set admits: those are a subset.
+
+    This is what makes V2a's `vacuous` verdicts permanent. A row condemned today stays
+    condemned when the eight assumptions are formalised, whatever they turn out to say. -/
+theorem vacuous_under_assumptions
+    (pre : Pre) (h : vacuous pre = true) (A : Assumptions) :
+    ∀ w : World, A w → holds w pre = false :=
+  fun w _ => vacuous_sound pre h w
+
+/-! ### And the converse FAILS -- exhibited, not asserted
+
+    The sentence says the check is *incomplete*, and incompleteness is exactly the claim that
+    the implication runs one way. A reader who takes "no vacuity found" for "no vacuity
+    present" has read the licence in the direction it does not hold, and §6 names that as the
+    same class as a measurement run that stops at the first hit.
+
+    So the failure is a witness and not a caveat: one precondition, satisfiable on its own,
+    that NO world meets once an assumption is added.
+-/
+
+/-- A precondition with a model, and the check does not condemn it. -/
+def preOpen : Pre := [.eq (.global "x") (.int 1)]
+
+/-- A world meeting it. -/
+def wOpen : World := fun p => if p = .global "x" then .int 1 else .absent
+
+/-- The check stays silent on it -- this is a `notVacuous` row, the shape all thirty of §3
+    turned out to be. -/
+theorem preOpen_not_condemned : vacuous preOpen = false := by decide
+
+/-- And it really does have a model, so the silence is right. -/
+theorem preOpen_has_model : holds wOpen preOpen = true := by decide
+
+/-- One assumption, and it is the cheapest one that could exist: it pins the same place. -/
+def APins : Assumptions := fun w => w (.global "x") = .int 0
+
+/-- **Yet under that assumption NO world meets it.** The row that was `notVacuous` without
+    assumptions is vacuous with them, and the check had no way to see it coming -- the
+    assumption was not among its inputs. -/
+theorem preOpen_vacuous_under_APins : ∀ w : World, APins w → holds w preOpen = false := by
+  intro w hA
+  simp [holds, Atom.sat, preOpen, APins] at *
+  rw [hA]
+  decide
+
+/-- **The two together are the incompleteness**, and stating it as one proposition keeps a
+    later reader from carrying only the half above. There is a precondition the check calls
+    not-vacuous which some assumption set makes vacuous. -/
+theorem detection_is_incomplete :
+    ∃ (pre : Pre) (A : Assumptions),
+      vacuous pre = false ∧ (∀ w : World, A w → holds w pre = false) :=
+  ⟨preOpen, APins, preOpen_not_condemned, preOpen_vacuous_under_APins⟩
+
 /-! ## 2. The witness side -- and it is a CONSTRUCTION, not a search
 
     The other direction needs a world, and for this atom fragment the world can be BUILT from

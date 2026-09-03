@@ -553,7 +553,12 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 188 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 189 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *188 → 189 am 2026-09-03: `messung/GABBROV-AUDIT.md` kam dazu — der Bericht über die
+      Prüfung von Tor 2, von Entwurf C und des Manifests. **Nachgemessen, nicht fortgeschrieben:**
+      Datei weggenommen, `pruefe-zahlen.py` grün mit Rücklaufwert 0, Datei zurück, Zahl aus dem
+      Lauf gesetzt. Das ist die Form, die `CLAUDE.md` verlangt, weil zwei Bahnen viermal in zwei
+      Tagen dieselbe Zahl für verschiedene Dateien bewegt haben und `git` keinen Konflikt sah.*
       *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
       über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
       dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei
