@@ -230,10 +230,20 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
   ~~52 von 55~~ **54 von 56** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ **325 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ ~~325~~ **331 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
 ~~52 von 55~~ ~~53 von 58~~ **54 von 59** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
   ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ **320 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
+  *325 → 331 am 2026-09-04: sechs aus der Teilung der Absenkungsspalte (`K100.1`s
+  Methode, eine Ebene höher). Drei in `zaehle-pflichten.py` — die Sprechprobe des
+  neuen Einordners bricht ab, wenn eine sauber prüfende Datei NICHT in der Klempnerei
+  landet, wenn eine abgewiesene NICHT in der Notation landet, und wenn schon die alte,
+  ungeteilte Regel den Probefall gar nicht sieht. Drei in `pruefe-notation.py` — der
+  Erzeugerlauf bricht bei einem Bauabbruch ab, bei einem Lauf ohne Lebenszeichen, und
+  die Tafel meldet `1`, wenn der Prüfer eine Absenkungsprobe selbst abweist. **Jeder
+  dieser sechs ist ein Ausgang, an dem NICHTS gemessen wurde** — und genau das ist die
+  Klasse, für die dieses Register steht: ein Wächter, der still weiterläuft, nachdem
+  seine Vorbedingung weg ist, meldet grün über einen Lauf, den es nicht gab.*
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
   entstand — grün davor, rot danach, beides gemessen. **Genau dafür steht das Register.***

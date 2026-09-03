@@ -1507,12 +1507,12 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 | | Ziel | heute | |
 |---|---|---|---|
-| `H` | 0 | **1** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 4 Absenkungen~~ ~~0 verankert + 3 Absenkungen~~ ~~0 verankert + 2 Absenkungen~~ **0 verankert + 1 Absenkung** (2026-09-03: F9, F1 und F5 durchgestochen) (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
+| `H` | 0 | **0** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 4 Absenkungen~~ ~~0 verankert + 3 Absenkungen~~ ~~0 verankert + 2 Absenkungen~~ **0 verankert + 1 Absenkung** (2026-09-03: F9, F1 und F5 durchgestochen) (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen*. **Und der Schritt von 1 auf 0 am 2026-09-04 ist wieder eine BERICHTIGUNG und keine Arbeit** — `K100.1`s Methode, auf die Absenkungsspalte angewandt, so wie diese Datei es selbst verlangt (*„Die Absenkungsspalte zählt bis heute «Gabbro kann das nicht» und «dieser Text ist kein Programm» in einer Zahl."*). Das Kriterium steht **vor** der Anwendung in `zaehle-pflichten.py::absenkungsklasse` und ist mechanisch: eine Absenkungspflicht ist Klempnerei genau dann, wenn `gabbro pruefe` die Datei **annimmt** und nur der Erzeuger fehlt — dann schliesst ein Erzeugerzweig sie, und genau so sind F1, F5 und F9 am 2026-09-03 geschlossen worden. `F03` nimmt der Prüfer **nicht** an: 18 Fehler, und **19 von 19 Riegeln sitzen auf einer Zeile, die byteidentisch im eingefrorenen Ausschnitt steht** (`FRAGMENTE.md`:568-718, textuell nachgezählt). Kein Erzeugerzweig erreicht die Datei, also löst keine Absenkung die Pflicht ein — es ist eine **Notationslücke**, «B10», und sie steht GEZÄHLT in derselben Ausgabe. *Die Sprechprobe fährt bei jedem Lauf eine sauber prüfende, nicht abgesenkte Datei durch den Einordner und verlangt, dass sie `H` HEBT* — ein Maßstab, der nur subtrahieren kann, ist keiner |
 | `L` | ≤ 4 | **2** | getragen und unbewiesen; daneben aber **6 Prämissen ohne Pass**. *Der Anstieg 1 → 2 am 2026-08-28 ist der PREIS von Zuschnitt (c):* `table.ops.erhaltung` ging von ENTWORFEN auf GETRAGEN, weil `emit.rs::ops` `insert`/`remove` jetzt ausliefert und `relabel` mit `umhaengen_faellt` absagt. **Genau diese Bewegung soll die Zahl sichtbar machen** — eine Klempnereipflicht wurde nicht erledigt, sondern in die Erzeugerfläche verschoben |
 | `A` | 19 | **44** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
 
-**`H = 0` über diesem Korpus ist nicht erreichbar, und der Grund ist kein Arbeitsrest.**
+**`H = 0` über diesem Korpus ist nicht erreichbar, und der Grund ist kein Arbeitsrest.** *(BERICHTIGT 2026-09-04 — der Satz stimmt für die UNGETEILTE Absenkungsspalte und ist unter der geschärften falsch: `H = 0` steht seit heute, weil die Spalte geteilt ist. Was unverändert gilt, ist die Begründung darunter — sie ist der Grund, warum die Trennung nötig war, siehe den Kasten am Ende dieses Abschnitts.)*
 Die Absenkungspflicht lautet *„das erzeugte C rechnet, was das Fragment sagt"* — **an der
 Ausführung gemessen**. F5 ruft `map_window`, `pool_new`, `probe_ecam` und deklariert keins
 davon; F2 und F9 lassen Bitlagen unbenannt. **Das sind keine Lücken in Gabbro, das sind die
@@ -1526,6 +1526,41 @@ Merkmale eines AUSSCHNITTS** — und `FRAGMENTE.md` trägt seinen Einfriersatz.
 Jene Phase trennte unter drei handgeschriebenen `narrow` die Prüfung vom Ritus. Die
 Absenkungsspalte zählt bis heute *„Gabbro kann das nicht"* und *„dieser Text ist kein
 Programm"* in einer Zahl.
+
+> **AUSGEFÜHRT 2026-09-04, und zwar dort, wo `K100.1` seine Trennung hingelegt hat: im
+> Werkzeug.** `zaehle-pflichten.py::absenkungsklasse` teilt die Absenkungsspalte in die zwei
+> Register, die dieser Absatz benennt, und das Kriterium steht **vor** seiner Anwendung:
+>
+> > *Eine Klempnereipflicht ist eine, die Gabbros eigene Maschinerie einlösen kann, ohne zu
+> > ändern, was das Programm SAGT* — ein Eingriff unter `crates/` allein, kein neues
+> > Quellwort, keine neue Produktion, keine eingefrorene Zeile.
+>
+> Für eine ABSENKUNGSpflicht ist das mechanisch entscheidbar: nimmt `gabbro pruefe` die
+> Datei an, fehlt nur der Erzeuger, und ein Erzeugerzweig löst sie ein — **Klempnerei**.
+> Weist der Prüfer sie ab, erreicht kein Erzeugerzweig sie je, und es gibt keinen Zweig zu
+> schreiben, weil es keine angenommene Eingabe zu senken gibt — **Notation**.
+>
+> **Geeicht an den neun Durchstichen, nicht am Ergebnis:** F1, F5 und F9 prüften sauber und
+> senkten nicht ab; alle drei sind am 2026-09-03 durch Erzeugercode geschlossen worden
+> (`D19`–`D22`). Die Regel hätte alle drei Klempnerei genannt, und alle drei waren es.
+>
+> **Und die Falle steht im Werkzeug, nicht daneben.** Dieser Zug kann dazu entarten, eine
+> Schuld wegzudefinieren; `K100.1` tat es nicht, weil sein Test anders hätte ausgehen können.
+> Deshalb fährt die Sprechprobe bei **jedem** Lauf eine sauber prüfende, nicht abgesenkte
+> Datei durch den Einordner und verlangt, dass sie `H` **hebt** — und eine abgewiesene, für
+> die sie zeigt, dass die ALTE, ungeteilte Regel sie sehr wohl gezählt hätte. *Ein
+> Gleichstand unter einer Regel, die den Fall gar nicht erreicht, belegt nichts.*
+>
+> **Das Ergebnis für `F03`: nicht Klempnerei.** `gabbro pruefe messung/fragmente/F03.gab`
+> meldet **18 Fehler**, `gabbro emit` **19** (der neunzehnte ist `C001` an der `queue`-Zeile)
+> — und **19 von 19 sitzen auf einer Zeile, die byteidentisch im eingefrorenen Ausschnitt
+> steht** (`FRAGMENTE.md`:568-718, textuell nachgezählt, nicht geschätzt). `H = 1 → 0`, ohne
+> eine Zeile Erzeugercode und ohne eine eingefrorene Zeile anzufassen.
+>
+> **Was das NICHT heißt.** Die Pflicht ist nicht erledigt, nicht entschuldigt und nicht
+> kleiner. Sie steht gezählt in der Notationsspalte desselben Befehls, unter «B10» — und
+> «B10» hat sieben gemessene Bedarfsstellen und eine entworfene Schablone
+> (`messung/BERICHT-B10.md` §5, `schablonen.rs`:711). *Sie ist umgebucht, nicht getilgt.*
 
 > **Und die Aufteilung ist nicht fünf zu zwei — sie ist sieben zu allen.** Der Satz oben
 > stand eine Stunde lang als *„fünf der sieben gehören Gabbro, zwei dem Korpus, der Boden
@@ -3386,8 +3421,14 @@ der zweite Korpus.
 ## Wo wir stehen, gemessen und nicht behauptet
 
 ```
-H = 1        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
+H = 0        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
              -- 2026-08-31 von 5 auf 4: F6 ist durchgestochen
+             -- 2026-09-04 von 1 auf 0: KEINE Arbeit, sondern K100.1s Methode auf
+                die Absenkungsspalte angewandt. F3s Absenkung ist keine
+                Klempnereipflicht, weil keine Absenkung sie einloesen kann: der
+                Pruefer weist den Text VOR dem Erzeuger ab (18 Fehler, 19 von 19
+                Riegel auf einer eingefrorenen Zeile). Sie steht jetzt in der
+                Notationsspalte desselben Werkzeugs, «B10», und zwar GEZAEHLT
 ```
 
 **Und `H` beantwortet die Frage nicht.** Es misst die *Fragmente*, nicht die *Sprache*. Was der
@@ -3403,7 +3444,7 @@ irgendwann, eine fehlende nie.
 | **Fremdpflichten** | **11** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
 | **Vorbedingungen am Rufort** | **16** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **6** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
-| **Absenkungspflichten** | **1** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
+| **Absenkungspflichten** | **0** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten. *1 → 0 am 2026-09-04, und es ist keine Einlösung:* F3s Absenkung ist in die **Notationsspalte** desselben Befehls gewandert, die dort seither daneben steht. Der Grund ist mechanisch — `gabbro pruefe messung/fragmente/F03.gab` meldet **18 Fehler**, also erreicht kein Erzeugerzweig die Datei, also löst keine Absenkung die Pflicht ein |
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
 > fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt
