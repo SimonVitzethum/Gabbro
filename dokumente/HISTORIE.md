@@ -10,6 +10,39 @@ up looking as if it had been right from the start.
 
 ---
 
+## A falsifier without a threshold, cleared by a judgement *(2026-09-03)*
+
+**`G1` of `GABBROV.md` §11 never had a number, and on 2026-09-02 it was reported as not
+firing.** The condition reads *"a **noteworthy** part of the 66 L obligations is not sayable in
+the fragment"*. 56 of 66 stood as a `Prop`, and three documents wrote down ~~*"`G1` does not
+fire"*~~ — `GABBROV.md` in three places, `messung/GABBROV-V1.md` in its own answer-up-front,
+and `TODO.md` in a parenthesis.
+
+**No count can clear a gate that has no number, and none can trip it either.** What was
+written was a judgement, and it was written in the tone reserved here for measurements — in a
+report whose entire subject is that difference. *The count itself was right and is untouched;
+only the verdict over it is gone.*
+
+**The repair that was NOT made is the point of the entry.** The obvious fix is to supply the
+missing threshold. It was refused, and for a reason that has a name in this folder: a
+threshold chosen while 56 of 66 is already on the table is chosen to clear it — `R2`, a rule
+pulled to fit a result. *A gate set after the run is not a gate, it is a caption.*
+
+So the withdrawal stands without a replacement number, and the criteria that take over —
+`E1` (every obligation gets a verdict; a line count against a line count) and `E2` (decided
+against undecided, against a **named** exception list in `dokumente/AUSNAHMEN.md`) — get their
+force from something a threshold cannot supply: **they were written down before the runs they
+judge.**
+
+> **The class, and it is older than this entry.** `G5` sits in the same table and cannot fire
+> either — *"the assumption set has no model"* is a question about formulas, and the eight
+> assumptions of the ten fragments are German prose sentences (`messung/GABBROV-V1.md` §6).
+> **Two of five falsifiers cannot be evaluated, and both looked evaluable from the outside.**
+> *A falsifier list is a promise that something could go red; a row that cannot go red is an
+> ornament in the exact sense of `R11`.*
+
+---
+
 ## The most expensive faults sit in what nobody read *(2026-08-20)*
 
 > **The most expensive faults of this project do not sit in what was thought wrongly, but in

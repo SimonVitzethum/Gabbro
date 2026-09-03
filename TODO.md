@@ -565,7 +565,8 @@ darunter.
       Zusammenführung, die Zahlen ADDIERT, hat keinen Textkonflikt.*
       *179 → 181 on 2026-09-02: `dokumente/GABBROV.md` and `messung/GABBROV-V1.md` joined —
       the GabbroV design and V1's measurement over it (56 of 66 L obligations sayable in the
-      Lean fragment, `G1` does not fire). **The cause was measured the way the entry below
+      Lean fragment; ~~`G1` does not fire~~ — withdrawn 2026-09-03, `G1` has no threshold and
+      cannot be evaluated either way). **The cause was measured the way the entry below
       asks and in the same lane:** the two files were removed, `pruefe-zahlen.py` went green
       with exit 0, they came back. And the guardian reach of a NEW `dokumente/*.md` was
       measured with them — of the four guardians that go silently blind, exactly one reads such
