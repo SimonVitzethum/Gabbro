@@ -496,3 +496,269 @@ correction to the reading of a green run, not to the run**, and it is why the se
 belonged in the file rather than in a report: a reader of `V2.lean` now meets it beside the
 count it qualifies.
 
+---
+
+## 3. Question 3 — what is the manifest missing?
+
+**More than the text.** The ordinal defect reproduces exactly as reported; the text and the
+anchor would repair it; and neither touches the larger thing the sweep below found. *Nothing
+here builds the new format — §4 owns that, and its first step is a version field.*
+
+### 3.1 The ordinal defect, reproduced
+
+```
+./target/debug/gabbro pflichten beispiele/01-tabelle.gab                 > m-orig.txt
+# the same file, `ensures` conjuncts 1 and 3 exchanged
+./target/debug/gabbro pflichten <swapped>                                > m-swap.txt
+diff m-orig.txt m-swap.txt
+1c1
+< -- Obligation register: beispiele/01-tabelle.gab
+---
+> -- Obligation register: …/swap.gab
+```
+
+**Byte-identical apart from the path in the header.** Three obligations were permuted and the
+register did not move. `ensures #1` of `aushaengen` is `c.slots[s].elter == None` before the
+swap and `c.slots[s].naechstes == None` after it, and the name the §15 ratchet runs over is
+the same in both. *The identity is positional and the position is free to move.*
+
+### 3.2 The same binary, the same run, ALREADY emits the disambiguating text
+
+This is new, and it changes what §4 costs.
+
+```
+./target/debug/gabbro pflichten --lean beispiele/01-tabelle.gab          > lean-orig.txt
+./target/debug/gabbro pflichten --lean <swapped>                         > lean-swap.txt
+diff lean-orig.txt lean-swap.txt        # 10 differing lines, of which two are the point:
+60c60
+<   (.bin .eq (.place "c" (.name "s") "elter")     (.lit .absent))
+>   (.bin .eq (.place "c" (.name "s") "naechstes") (.lit .absent))
+112c112
+<   (.bin .eq (.place "c" (.name "s") "naechstes") (.lit .absent))
+>   (.bin .eq (.place "c" (.name "s") "elter")     (.lit .absent))
+```
+
+**The `--lean` channel of the same binary distinguishes the two files where the manifest
+cannot.** `post_duty_2 : Expr` carries the obligation as a term, and under the swap the terms
+exchange places exactly as the source did.
+
+> So §4 is **not a new computation.** The text exists, in the same pass, in the same process,
+> printed by the same subcommand under a different flag. The manifest's ordinal is a
+> projection that drops a field the emitter is already holding.
+
+*And the nuance that matters for §4's design:* the `--lean` channel carries the ambiguous name
+**on top of** the disambiguating term —
+
+```
+/-- Postcondition -- `aushaengen` :: `ensures #1` -/
+def post_duty_2 : Expr := (.bin .eq (.place "c" (.name "s") "elter") (.lit .absent))
+```
+
+— so a reader who matches on the doc comment inherits the same defect. **Carrying the text is
+not enough if the NAME stays positional**, because the ratchet §15 describes runs over names.
+That is an argument for §4's five fields being five fields and not four.
+
+**Neither channel emits an anchor.** The manifest names the file in its header and the `--lean`
+datum names it in `@duty 1 <file> total 13 goals 3 refused 10`; no per-obligation line number
+appears in either. *The `Datei:Zeile` half of §4's target is the half that has no source yet.*
+
+### 3.3 The sweep — and it is a bigger hole than the ordinal
+
+`GABBROV.md` §2: *"GabbroV does not read the Gabbro program. It reads the manifest."* So the
+question is what the manifest holds for the ten fragments the 66 were counted from.
+
+```
+for f in messung/fragmente/F*.gab; do ./target/debug/gabbro pflichten "$f"; done
+```
+
+| fragment | manifest | |
+|---|---|---:|
+| F01 | **NO REGISTER** | 3 checker errors |
+| F02 | register | 5 obligations |
+| F03 | **NO REGISTER** | 27 checker errors |
+| F04 | register | 1 obligation |
+| F05 | **NO REGISTER** | 4 checker errors |
+| F06 | register | 1 |
+| F07 | register | 0 |
+| F08 | register | 1 |
+| F09 | **NO REGISTER** | 1 checker error |
+| F10 | register | 2 |
+| | | **10 total** |
+
+**Four of the ten fragments emit no manifest at all**, and across all ten the emitted
+manifest carries **10 obligation lines** against a GabbroV population of **63**
+(`./instrumente/zaehle-pflichten.py --gabbrov`).
+
+**And not one of the five Gate 2 rows has a manifest line.**
+
+| row | fragment | its manifest |
+|---|---|---|
+| `L01`, `L05` | F1 | **no register** |
+| `L23` | F3 | **no register** |
+| `L39`, `L40` | F4 | one line, and it is `VirtioPci :: reg QUEUE_SIZE requires` |
+
+*This is not a defect nobody chose.* `messung/fragmente/README.md` says it deliberately:
+*"Where an error remains standing after completion, it belongs to Gabbro — and that is
+precisely the yield."* The standing errors are the corpus's product. **What no document
+connects is the consequence for GabbroV: a fragment with a standing checker error emits no
+manifest, so the obligations inside it are unreachable by the tool §2 describes.** The corpus's
+yield and GabbroV's premise are in tension, and the tension is not written down anywhere.
+
+### 3.4 What the text and anchor WOULD fix, and what they would not
+
+**Fixed.**
+
+* **The identity defect, which is §15's own promise.** With the text in the line, the swap
+  produces a different manifest and the ratchet sees it. The measurement in §3.1 becomes the
+  speech test for §4: *after the change, that `diff` must be non-empty.*
+* **The "count the conjuncts" step of trust-base point 5.** Recovering `ensures #1` today means
+  opening the source, finding the function, and counting. That step disappears — and it is the
+  step `GABBROV.md` §2 promises the tool need not take.
+* **One concrete Gate 2 hazard, and only one.** The second `L05` encoder found the defect *in
+  the signature*: `ensures c.slots[s].parent == None` against `maintains cdt_wohlgeformt`, four
+  lines apart. A manifest carrying both clause texts puts that contradiction in one artefact
+  where a tool can see it. Today the two live in different sections of the source.
+
+**Not fixed — and these are the ones that decide the build.**
+
+* **Point 5 shrinks; it does not vanish.** The text in the manifest would be Gabbro surface
+  syntax (`c.slots[s].elter == None`). *What that sentence MEANS as a mathematical statement is
+  still a human's reading* — which state it speaks about, whether `==` on an option is
+  structural, what the carrier `c` denotes. §9 calls point 5 "unprovable" and it stays so. The
+  text removes a clerical step, not a semantic one.
+* **The population gap.** Adding a text field to ten lines yields ten texts. **The other 53
+  obligations are missing for a different reason** — four fragments do not pass the checker,
+  and the emitter books most human-identified obligations nowhere. *A richer format over an
+  empty register is a better-labelled emptiness.*
+* **None of the three Gate 2 defects.** This is the mandate's specific question, and the
+  answer is no:
+
+  | | what decided it | would a text-carrying manifest have changed it? |
+  |---|---|---|
+  | `L01` | a `pred` production that does not exist («B14») | **no** — the missing premise is a statement the language cannot write, in any format |
+  | `L40` | «B26» — the transition table has no edge to `0` | **no** — the four transitions are in the source and would be in the manifest; the fifth is in neither |
+  | `L05` | an invariant no non-full table satisfies | **partly** — see the signature point above; the invariant's *quantifier domain* is the defect, and that is in the `spec fn`, not in the obligation line |
+
+  *The ordinal ambiguity explains no part of the Gate 2 result, and the reason is structural:*
+  **Gate 2 never went through the manifest.** Its chain was source → `PFLICHTEN.md` row →
+  `V1.lean` `Prop` → hand-written SMT (§2.3). A defect in a format nobody read cannot have
+  produced the finding.
+
+> **So the honest ordering.** §4's repair is real, cheap — the emitter already holds the text —
+> and it fixes the identity defect that §15 promises and does not deliver. It is **not** on the
+> critical path to the Gate 2 findings, and it is **not** the manifest's largest defect. *The
+> largest is that for four of ten fragments there is no manifest at all, and nobody has written
+> that down beside the sentence "GabbroV reads the manifest".*
+
+---
+
+## 4. What this run changed in the tree, and what it deliberately did not
+
+**The mandate says "do not build" with two exceptions. Both were taken, and they are named
+here rather than left to a reader of the diff.**
+
+| | what | why it is one of the two exceptions |
+|---|---|---|
+| **§6's lemma** | `programmlogik/gabbrov/V2.lean` §1.1 — `Assumptions`, `vacuous_under_assumptions`, `detection_is_incomplete` and three supporting lines | the mandate's own second exception, *"§6's missing lemma if it is genuinely one theorem"*. It is one theorem and one witness; the theorem's proof term is `fun w _ => vacuous_sound pre h w` |
+| **four measuring instruments** | `messung/gabbrov/ohne-schranke/{gen-rank.py,gen-probe.py,lauf.sh}`, `messung/gabbrov/manifest-lage.sh` | the first exception, *"an instrument whose brokenness would make your numbers wrong"*. Every number in §2.4 and §3.3 comes out of one of them, and W7 asks for a derivation command beside each |
+| **21 `.smt2` files** | `messung/gabbrov/zweite-hand/` | evidence, not build — the second hands' encodings, put in the tree for the same reason the first lane put its own there: *so the judgement can be read and disagreed with, rather than only the verdict* |
+
+**Not built, and each was tempting:** the version field of §4 (it belongs to whoever executes
+§4, and its order is half the rule); any repair to `cdt_wohlgeformt` (a corpus repair changes
+an obligation's meaning — the same shape as the `L44`/`L53` tautology finding); any threshold
+for `G1` or `G5`; any entry in `AUSNAHMEN.md`. *`dokumente/AUSNAHMEN.md` is untouched at four
+rows.*
+
+### 4.1 The guardians after the work
+
+```
+cargo test --offline --no-fail-fast   400 passed, 0 failed   (on ki-pc-fisch-101, gabbro-vm)
+lake build Gabbro                     exit 0
+lean programmlogik/gabbrov/V2.lean    exit 0, grep -c sorry = 0
+pruefe-zahlen        exit 0      pruefe-widerruf   exit 0      pruefe-ausnahmen  exit 0
+pruefe-todo          exit 0      pruefe-waechter   exit 0      pruefe-kennungen  exit 0
+pruefe-englisch      exit 0
+zaehle-wortschatz    221 / 208 / 333 -- UNCHANGED
+```
+
+**One guardian is red and it is not this run's:** `pruefe-grammatiktafel.py` reports
+*"1 von 218 Terminalen sind UNGEDECKT"* for the terminal `state`. It reads
+`dokumente/SYNTAX.md`, `crates/gabbro-check/src` and `crates/gabbro-syntax/src/kw.rs`, none of
+which this run touched — verified by taking every file this run added out of the tree and
+re-running, where it stays red. *Reported rather than passed over: a red a lane inherits is
+still a red, and a lane that lists only its own greens has told half the story.*
+
+### 4.2 The merge hazard fired again, and was caught by re-measuring
+
+Adding `messung/GABBROV-AUDIT.md` moved `pruefe-widerruf.py`'s file count **188 → 189**, and
+`TODO.md`:556 guards that figure. `pruefe-zahlen.py` went red.
+
+**Re-measured, not incremented**, which is the rule `CLAUDE.md` puts on exactly this:
+
+```
+mv messung/GABBROV-AUDIT.md <aside>   &&  ./instrumente/pruefe-zahlen.py   # exit 0
+mv <aside> messung/GABBROV-AUDIT.md   &&  ./instrumente/pruefe-widerruf.py
+                                          == Widerrufene Saetze: 13 Eintraege, 189 Dateien ==
+```
+
+*That is the fifth time in three days, and the shape has not changed: a counter over "how many
+files exist" moves for anyone who writes a document, and two lanes writing one document each
+both compute the same +1.*
+
+---
+
+## 5. Self-corrections
+
+`AUFTRAG-GABBROV.md` §10: *"Self-corrections belong in the report, not silently corrected."*
+Five.
+
+1. **I could not write a blind second encoding, and said so instead of writing one.** By the
+   time the mandate's sentence became actionable I had read `L01.smt2`, `L40.smt2` and
+   `L05c.smt2`. A second encoding from my hand would have carried their modelling decisions
+   and their verdict, and calling it independent would have made the strongest claim in this
+   report the weakest evidence in it. The work went to three agents that carry none of this
+   conversation. *The disclosure is the finding's foundation, not an apology attached to it.*
+
+2. **The mandate's `z3` premise is backwards and I checked before relying on it.** It says z3
+   is not on this workstation and to look on `ki-pc-fisch-101`. It is here (`/opt/verus/z3`,
+   4.16.0) and not there. Had I taken the sentence on trust I would have reported "no solver
+   available" over a solver that answered 40-odd queries in this run.
+
+3. **My worktree was three commits behind `master` and none of the five files the mandate
+   names existed in it.** `git merge --ff-only master` before the first measurement.
+   *A `wc -l` over a file that is not there returns a clean, meaningless zero, and the
+   guardians would all have been green.*
+
+4. **My own report file turned `pruefe-zahlen.py` red**, and the first thing I did was assume
+   it was pre-existing. It was not. The second guardian that was red *was* pre-existing, and
+   the two looked identical from the outside — both `exit=1` on a tree I had just changed.
+   *The only thing that separated them was taking the file away and running again*, which is
+   the same instrument in both directions and cost two minutes.
+
+5. **A typo went into a commit subject** (`der SAME` for `die SAAT`) and was amended through
+   `arbeitsprotokoll/.commitmsg` with `--cleanup=verbatim`, which is R19's mechanism rather
+   than an inline message. *Recorded because the alternative — leaving it — puts a garbled
+   sentence in the one place this folder treats as a protocol.*
+
+---
+
+## 6. What outranks what, if only three sentences are read
+
+1. **The corpus is wrong three times over, and that is the good outcome.** Three of five rows
+   drawn blind are refuted; all three refutations were re-derived by hands that had not seen
+   the first encoding; every second encoding carries a control that comes back with the
+   opposite verdict, which the first encodings did not have. *`L05`'s defect is visible in a
+   signature four lines apart and nobody had seen it.*
+
+2. **The reachability wall is an artefact and it is gone.** The same file answers in 0.09 s
+   under a different random seed, and a rank encoding answers the corpus's own
+   `NSLOTS = 80256` in **0.030 s at 1 371 bytes**. `GABBROV.md` §7's DEMAND 3 is not blocked by
+   tractability in the refutation direction. *This is the one result in the report that
+   changes what is worth building.*
+
+3. **Design C is an argument about components that do not exist.** Trust-base point 6 has zero
+   lines; point 5 is not code at all; and Gate 2's five rows exercised the direction where the
+   certificate question is empty — three `sat`s need no kernel, and the two `unsat`s were never
+   certificate-checked. **`G2` is fully open.** *And the manifest, on which §2 rests the whole
+   design, does not exist for four of the ten fragments and carries no line for any of the five
+   rows Gate 2 measured.*
