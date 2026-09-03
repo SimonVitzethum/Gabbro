@@ -20,7 +20,7 @@ use gabbro_syntax::diag::{Absage, Absagen};
 use std::collections::{HashMap, HashSet};
 
 use crate::typen::Typ;
-use crate::umgebung::{Feldurteil, Umgebung};
+use crate::umgebung::{modul_von, Feldurteil, Umgebung};
 
 pub struct Sicht<'a> {
     pub u: &'a Umgebung,
@@ -905,6 +905,14 @@ fn indexschranke_pruefen(o: &Ort, s: &Sicht, st: Stellung, absagen: &mut Absagen
 ///
 /// Same discipline as `D019`: no `walk` name, no node `format`, no field list -- no refusal.
 /// A rule that says nothing about an unknown carrier says nothing at all.
+///
+/// **And that is a different sentence from "no field list because the lookup was not
+/// module-aware"** (2026-09-03, `zaehle-karten.py`). `walkknoten` carries the node type's RAW
+/// name; resolving it against `formate` goes through `suche_formate`, from the `walk`'s OWN
+/// module outward -- the same candidate order `suche_global` and `funktion` already use. A
+/// direct `.get(&knoten)` here only ever hit a `format` declared in the exact same module as
+/// the `walk`; one enclosing module apart and `D020`'s own poison (`!m.gibtsnicht`) passed
+/// with `0 errors, 0 hints` again -- word for word the finding this map was BUILT to close.
 fn abbildungsfelder_pruefen(q: &gabbro_syntax::ast::Quantor, s: &Sicht, absagen: &mut Absagen) {
     let Domaene::AbbildungenVon(o) = &q.domaene else { return };
     let (name, kurz) = s.walkname(o);
@@ -917,7 +925,9 @@ fn abbildungsfelder_pruefen(q: &gabbro_syntax::ast::Quantor, s: &Sicht, absagen:
     else {
         return;
     };
-    let Some(felder) = s.u.formate.get(&knoten) else { return };
+    let Some(felder) = s.u.suche_formate(modul_von(&name), &knoten) else {
+        return;
+    };
     let v = &q.variable.text;
     let mut orte = Vec::new();
     pred_orte(&q.rumpf, v, &mut orte);

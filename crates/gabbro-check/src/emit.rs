@@ -822,6 +822,35 @@ pub fn emittiere_mit(
             );
         }
         ItemArt::Device(d) => {
+            // **Collected by the BARE name, with no module qualifier anywhere in this
+            // struct** (2026-09-03, `zaehle-karten.py`). Two `device` declarations that
+            // share a short name in two different `module` blocks check CLEAN --
+            // `Umgebung::geraete` keys them apart, `q(&d.name.text)` -- but this map does
+            // not, and the second one collected silently overwrote the first's entry.
+            //
+            // *Measured, not guessed:* two modules, each a `device Foo(basis: u16) at
+            // port { reg R: u8 @… }` at a DIFFERENT offset, checked with `0 errors` and
+            // then emitted `Foo_R_in`/`Foo_R_out` TWICE, both copies at the SECOND
+            // device's offset -- the first device's own accessor read and wrote the
+            // WRONG port, silently, with the checker having said nothing was wrong.
+            //
+            // A full fix threads a module path through every reader of this struct, not
+            // only `geraete`; short of that rewrite, a named refusal is the one thing
+            // this file never trades away for a guess (see `weigere`, above).
+            if namen.geraete.contains_key(&d.name.text) {
+                weigere(
+                    absagen,
+                    d.name.span,
+                    &format!(
+                        "two `device` declarations named `{}` in this unit -- the C name \
+                         `{}` has room for one, and the emitter's device table is keyed by \
+                         this bare name with no module qualifier. Picking one silently would \
+                         make every register and port access against the OTHER a silent \
+                         misread instead of the compile error two same-named devices need",
+                        d.name.text, d.name.text
+                    ),
+                );
+            }
             namen.geraete.insert(
                 d.name.text.clone(),
                 Geraet {

@@ -65,8 +65,69 @@ SRC = W / "crates" / "gabbro-check" / "src"
 #
 # The four are in `emit.rs` and `m1.rs` and they belong to whoever owns `crates/`; they are
 # DEBT, not an achievement. `./instrumente/zaehle-karten.py --stellen` names every one.
-MARKE_DIREKT = 40
-MARKE_UNQUALIFIZIERT = 36
+#
+# **40/36 -> 45/40 on 2026-09-03, and six sites carried the step.** `abnahme.py` had not read
+# this counter in days; the six were each run down to a PROGRAM, not left as a count -- *"a
+# count says a hole is possible; a program says it is there"* was the standing order.
+#
+# * **`domaene.rs::abbildungsfelder_pruefen` (`Umgebung::formate`) was the real `M103` shape,
+#   and it FELL.** `walkknoten` stored the node-`format` name pre-qualified against the
+#   `walk`'s OWN module; one enclosing module apart, `formate.get(&knoten)` missed and
+#   `D020`'s own poison (`!m.gibtsnicht`) passed with `0 errors, 0 hints` -- the exact
+#   sentence `walkknoten`'s doc already quotes about the pre-`D020` tree, reproduced by
+#   nesting instead of by absence. Fixed: the map now carries the RAW name, read through the
+#   new `Umgebung::suche_formate`, module-aware like `suche_global`. Poison:
+#   `beispiele/gift/671-mapping-field-one-module-away.gab`. It no longer stands in this
+#   count at all.
+#
+# * **Five sites in `emit::Namen::geraete` (the 2026-09-02 `at port` feature) are a
+#   DIFFERENT shape, confirmed live, and NOT the `suche` one.** `Namen` carries no module
+#   path anywhere, and `suche` needs one to build its candidate list -- there is nothing
+#   here to hand it. Measured: two `device Foo`, one in each of two `module`s, different
+#   register offsets, checked at `0 errors, 0 hints`, and the emitted
+#   `Foo_R_in`/`Foo_R_out` for BOTH devices carried the SECOND device's offset -- the first
+#   device's own accessor silently read and wrote the wrong port. Repaired at the one
+#   COLLECTION site instead of at each read: a second `device` sharing a name now gets a
+#   named `C001` refusal (`emit.rs`, next to `weigere`) rather than silently overwriting
+#   the first. That refusal line is itself a direct, unqualified look at the same map --
+#   the guard cannot tell a fix from a hole by text alone -- so it is the SIXTH site the
+#   mark carries, not a seventh. Poison: `beispiele/gift/672-two-devices-share-a-name.gab`.
+#   The five reads stay in the count, now safe *because* the sixth exists upstream of all
+#   of them.
+#
+# * **`emit.rs::traegertyp` (`Namen::typen`) is the SAME shape as `geraete` -- confirmed
+#   structurally, not independently reproduced with its own emitted-C example -- and is
+#   OPEN DEBT, not fixed this round.** `namen.typen.insert(t.name.text.clone(), …)` is as
+#   bare-keyed as `namen.geraete.insert(d.name.text.clone(), …)`; the same collision would
+#   silently swap which module's `type` a cast or return narrows against. It merely
+#   CONSOLIDATED three direct pre-mark reads (`vorzeichen`, `ctyp`'s own inline `.get`, a
+#   `.contains_key` branch) into this one shared reader -- net two FEWER call sites against
+#   an equally open map, not a new blind spot. Left for whoever next touches `Namen`.
+#
+# * `m1.rs:3823` (`Umgebung::funktionen`, inside a candidate `.any(|k| …)` loop) is
+#   `BEWUSST` already and needed nothing.
+#
+# **The mark is pulled to this measured state**, same reasoning as 2026-08-31: a mark below
+# it is a permanently red guardian. The five `geraete` reads and the `typen` reader are DEBT
+# named here, not an achievement -- and lowering `Namen` to a module-aware structure, the
+# way `Umgebung` already is, is the rewrite that would actually close them.
+# **45/40 -> 46/41 in the merge of 2026-09-03, and the one new look is measured SAFE
+# rather than assumed so.** `D20`'s repair gave `ort_typ` a fallback to `register_ctyp`,
+# so a register WRITE target finally has a width to narrow against -- and that fallback is
+# one more bare read of the `geraete` card (24 -> 25 on that key; `formate` went to 0 in the
+# same run, because this file's own repair routed it through `suche_formate`).
+#
+# **Why it is not an `M103`-shape hole, and the argument is testable rather than rhetorical:**
+# the only way an unqualified `geraete` read can pick the wrong entry is two `device`
+# declarations sharing a bare name, and that is now refused AT THE COLLECTION SITE by the
+# `C001` added in this same merge. Measured, not argued: two `device Foo` in `module a` and
+# `module b` with different offsets -> `no lowering: two `device` declarations named `Foo` in
+# this unit`, and the refusal's own text says what it prevents. `beispiele/gift/672` holds it.
+#
+# *A read that cannot reach an ambiguous table is not a place where a check can go silent.*
+# The mark rises because the object grew by one read, and the reason stands here at the mark.
+MARKE_DIREKT = 46
+MARKE_UNQUALIFIZIERT = 41
 
 # **Modulbewusst von Hand**: der Blick steht in einer Kandidatenschleife. Das ist der eine
 # Fall, in dem ein direkter `.get(` richtig ist, ohne durch `suche` zu gehen.

@@ -953,6 +953,27 @@ def main():
         print("   A template whose baseline does not parse has an EMPTY population (W17).")
         return 1
 
+    # **AND THE STAGE THAT SPEECH TEST REACHED IS PRINTED, BECAUSE THE TABLE TRAVELS.**
+    # ----------------------------------------------------------------------------------
+    # The loop above ran every baseline through `gabbro pruefe` and nothing further. For
+    # THIS tool that is the whole property and no shortfall at all -- acceptance is what it
+    # measures. But `FORMEN`, `GUT` and `LEITER` are loaded out of this file by
+    # `fuzze-erzeuger.py` (one table, not two, `W7`), and that sweep's property ends at
+    # `cc`. A fixture carries its validation stage with it, and a reader who sees the words
+    # "known-good baseline" reads a promise nobody made.
+    #
+    # *Measured 2026-09-02:* the two `walk` templates below lower to C that `cc` rejects
+    # (`D1`, `beispiele/gift/641` -- a descent through a `reserved` field gets no reader),
+    # and 130 cases of THIS sweep had been doing so for two days under an exit of zero.
+    # This tool was not wrong; it was read for more than it said. So it says it.
+    print(f"== BASELINES: {len(formen)} of {len(formen)} accepted at `gabbro pruefe` ==")
+    print("   NOT measured: whether a baseline LOWERS (`gabbro emit`), nor whether its C")
+    print("   COMPILES (`cc`). This table is read by `fuzze-erzeuger.py`, whose property")
+    print("   ends at the compile gate -- that sweep validates these baselines to its own")
+    print("   depth and names the ones that fail. *A baseline is only good against the")
+    print("   question it was asked.*")
+    print()
+
     panics, uneinig, sonst = [], [], []
     verteilung = {}
     n = 0

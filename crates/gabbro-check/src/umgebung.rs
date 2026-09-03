@@ -156,6 +156,17 @@ pub struct Umgebung {
     /// **Two field families, and only one of them comes from here.** The node `format` gives
     /// the ENTRY's fields; `va`, `level` and `index` are SYNTHESISED from the position
     /// (`SPRACHE.md`:930, *"including virtual address and level"*). `D020` holds both.
+    ///
+    /// **The value is the RAW node-type name, not a qualified one** (2026-09-03). Until then
+    /// it was `qualifiziere(pfad, letztes)` -- qualified against the `walk`'s OWN module,
+    /// unconditionally. That is wrong exactly when the node `format` lives in an ENCLOSING
+    /// module: `abbildungsfelder_pruefen` then queried `formate` directly with a key that
+    /// named no entry, took the early return the doc above calls *"no refusal"*, and the
+    /// poison `D020` was built against -- `!m.gibtsnicht`, over `Pte` one module up from its
+    /// `walk` -- passed with `0 errors, 0 hints` again, the SAME sentence this comment already
+    /// quotes about the pre-`D020` tree. *A raw name plus `suche_formate` at the read site
+    /// resolves it from the walk's own module outward, the same candidate order every other
+    /// qualified card uses.*
     pub walkknoten: HashMap<String, String>,
     /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
     pub uebergangskosten: HashMap<String, i128>,
@@ -482,6 +493,17 @@ impl Umgebung {
     /// `globale.get("Kappenraum")` nie, und die Indexschranke sagte nichts.
     pub fn suche_global(&self, von: &str, name: &str) -> Option<&Typ> {
         self.suche(&self.globale, von, name)
+    }
+
+    /// **The field list of a named `format`, module-aware.**
+    ///
+    /// Added 2026-09-03 for `domaene.rs::abbildungsfelder_pruefen`: it held a RAW node-type
+    /// name (see `walkknoten`) and queried `formate` with `.get(...)` directly, which only
+    /// ever hits a fully qualified key -- the `M103` shape, one module-nesting level away
+    /// from the entry the `walk` itself names. *Same trap as `globale` and `funktionen`,
+    /// found on the same map `D020` was written to read.*
+    pub fn suche_formate(&self, von: &str, name: &str) -> Option<&Vec<(String, Typ)>> {
+        self.suche(&self.formate, von, name)
     }
 
     pub fn verbundfelder(&self, von: &str, pfad: &Pfad) -> Option<&Vec<String>> {
@@ -847,10 +869,16 @@ impl Umgebung {
                     // already refuses a `node` element that is not a named `format`
                     // (`emit.rs::walk_`); the name is kept here so that `D020` can read the
                     // entry's fields without walking the tree a second time.
+                    //
+                    // **RAW, not qualified** (2026-09-03) -- `letztes.text` is what the
+                    // declaration wrote, one segment. Qualifying it here against `pfad`
+                    // (the `walk`'s OWN module) was wrong whenever the `format` lives in an
+                    // ENCLOSING module instead: the reader at `domaene.rs::abbildungsfelder_pruefen`
+                    // now resolves it candidate-by-candidate, from that same module outward.
                     if let TypExpr::Pfad(p) = &w.knoten.element {
                         if let Some(letztes) = p.teile.last() {
                             self.walkknoten
-                                .insert(q(&w.name.text), q(&letztes.text));
+                                .insert(q(&w.name.text), letztes.text.clone());
                         }
                     }
                     let ebenen = self.konst_wert(pfad, &w.ebenen);

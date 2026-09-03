@@ -1,0 +1,58 @@
+-- erwartet: C001
+-- 669 -- **Two `device` declarations, one short name, two different `module`s.**
+--
+-- `Umgebung::geraete` keys a device by its QUALIFIED name (`q(&d.name.text)`), so the
+-- checker sees `eins::Foo` and `zwei::Foo` as two distinct devices and takes both with `0
+-- errors`. `emit::Namen::geraete` -- the emitter's OWN device table, built by
+-- `emittiere_mit`'s item walk -- keys the very same devices by the BARE name alone, with no
+-- module qualifier anywhere in the struct.
+--
+-- MEASURED 2026-09-03 against the emitter BEFORE this file's own fix, with the two devices
+-- below at DIFFERENT register offsets (`@0x00` and `@0x10`): the checker gave `0 errors, 0
+-- hints`, and the emitted C carried `Foo_R_in`/`Foo_R_out` TWICE -- once for each `impl fn`
+-- -- and BOTH copies read and wrote offset `0x10`. `eins::Foo`'s own register, declared at
+-- `0x00`, never appears anywhere in the generated C; its accessor silently speaks for
+-- `zwei::Foo` instead, and nothing said so.
+--
+-- That is not the `M103` shape this counter's other new sites carry -- there is no
+-- `suche` here to route through, because `Namen` tracks no module at all -- but it is the
+-- same FAMILY of finding this run went looking for: a check (here, the whole port/register
+-- lowering) that reaches a `module`-scoped program and says something WRONG instead of
+-- nothing. A named refusal at the collision is the repair; qualifying the whole struct is
+-- the larger rewrite this probe does not ask for.
+
+module eins {
+
+assume eins_x86 arch x86_64
+    "probe" falsifier sonde_eins;
+
+device Foo(basis : u16) at port {
+    reg R : u8 @0x00 class rw
+}
+
+impl fn lies_eins(c : ptr<port, rw> Foo) -> u8
+    effects { reads c.R }
+    costs   <= 2 ops
+{
+    return c.R;
+}
+
+}
+
+module zwei {
+
+assume zwei_x86 arch x86_64
+    "probe" falsifier sonde_zwei;
+
+device Foo(basis : u16) at port {
+    reg R : u8 @0x10 class rw
+}
+
+impl fn lies_zwei(c : ptr<port, rw> Foo) -> u8
+    effects { reads c.R }
+    costs   <= 2 ops
+{
+    return c.R;
+}
+
+}
