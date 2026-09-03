@@ -285,6 +285,26 @@ impl Stelle {
 /// `axiom`, and a second cut with a different truncation limit would be the same sentence
 /// in two versions.
 pub(crate) fn schnitt(quelle: &str, span: gabbro_syntax::span::Span) -> String {
+    schnitt_bis(quelle, span, 72)
+}
+
+/// **The same cut, with the limit NAMED at the call site** (2026-09-03).
+///
+/// One cut, two limits -- and that is not the thing the sentence above forbids. What it
+/// forbids is two ROUTINES: the same clause whitespace-folded here and differently there,
+/// so that one manifest says `a==b` and the other `a == b`. The folding stays in one place;
+/// what varies is where the line has to stop.
+///
+/// **It has to vary, because the two lines are for different readers.** The certificate's
+/// column sits in a table a human scans, and 72 characters is a column. The obligation
+/// manifest's text field IS the obligation -- `AUFTRAG-GABBROV.md` §4 asks that it be
+/// understandable *"without looking at the source"*, and a `...` at character 69 is exactly
+/// the thing that sends the reader back to the source.
+///
+/// *Measured over the corpus on 2026-09-03:* at 72 characters **six of 110** obligation
+/// texts were cut off mid-clause -- among them two `forall x in chain(…)` postconditions and
+/// a `!exists m in mappings of …`, i.e. the ones that say the most.
+pub(crate) fn schnitt_bis(quelle: &str, span: gabbro_syntax::span::Span, grenze: usize) -> String {
     let (a, b) = (span.von as usize, span.bis as usize);
     if a > b || b > quelle.len() {
         return String::new();
@@ -303,8 +323,8 @@ pub(crate) fn schnitt(quelle: &str, span: gabbro_syntax::span::Span) -> String {
         luecke = false;
         s.push(c);
     }
-    if s.chars().count() > 72 {
-        s = s.chars().take(69).collect::<String>() + "...";
+    if s.chars().count() > grenze {
+        s = s.chars().take(grenze.saturating_sub(3)).collect::<String>() + "...";
     }
     s
 }

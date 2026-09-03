@@ -47,6 +47,38 @@ pub struct Pflicht {
     /// register counts, so the two numbers cannot drift. *Two walks over the same thing are
     /// two registers, and that is the class this folder writes against.*
     pub material: Material,
+    /// **Where the obligation ARISES** -- the anchor of `AUFTRAG-GABBROV.md` §4, and the same
+    /// notion `PFLICHTEN.md` puts in its `Line` column.
+    ///
+    /// For seven of the eight kinds this is the clause itself. **For `V` it is the CALL
+    /// SITE**, and that is not a slip: a body with two calls to the same callee produces two
+    /// obligations whose names are byte-identical (`caller :: callee requires #1` twice), and
+    /// then the anchor is the only field that tells them apart. *Measured over the whole
+    /// corpus on 2026-09-03: no unit has such a pair today -- so this is a latent duplicate,
+    /// not a live one, and the field closes it before it is written.*
+    pub span: gabbro_syntax::span::Span,
+    /// **The clause whose WORDING the manifest prints** -- `None` where there is none.
+    ///
+    /// It is a second field and not the same one because for `V` the two differ: the
+    /// obligation arises at the call site, and what it SAYS is the callee's `requires`.
+    /// *One field with two meanings would make the manifest unable to say which it meant* --
+    /// the same argument `manifest.rs` makes for `voraussetzungen` beside
+    /// `voraussetzung_text`.
+    ///
+    /// For `maintains I` and `refines g` the wording is not at the clause at all: the clause
+    /// carries a NAME, and the statement is the body of the `spec fn` it names. That body is
+    /// looked up in the same unit ([`spezpraedikate`]) -- a lookup, not a computation. Where
+    /// the name resolves to no `spec fn` with a predicate body, this is `None` and
+    /// [`kein_text`] says so.
+    ///
+    /// [`kein_text`]: Pflicht::kein_text
+    pub textspan: Option<gabbro_syntax::span::Span>,
+    /// **Why there is no wording -- named, never silent.**
+    ///
+    /// `AUFTRAG-GABBROV.md` §4 and the mandate behind it: *an anchor that points at the wrong
+    /// line is worse than none.* The same holds one field over. An empty cell with a reason
+    /// beside it is a statement; an empty cell alone is a guess waiting to be made.
+    pub kein_text: Option<&'static str>,
 }
 
 /// **What each kind of obligation offers a prover -- exhaustively, no catch-all.**
@@ -231,10 +263,52 @@ impl Art {
 }
 
 pub fn sammle(baum: &Programm) -> Vec<Pflicht> {
+    let spez = spezpraedikate(baum);
     let mut aus = Vec::new();
-    lauf(&baum.items, &mut aus);
+    lauf(&baum.items, &spez, &mut aus);
     vorbedingungen(baum, &mut aus);
     aus
+}
+
+/// **Every `spec fn` of the unit with a predicate body, by name.**
+///
+/// `maintains baum_wohlgeformt` and `refines g` name a statement instead of making one, and
+/// the statement is the body of the `spec fn` they name. **A manifest line that prints the
+/// name has printed a pointer, not an obligation** -- which is the same complaint
+/// `OFFEN.md` `O3` makes about the ordinal, one clause over.
+///
+/// *This is a LOOKUP and not a computation.* It resolves nothing the source does not already
+/// say in one place, it crosses no unit boundary, and where the name resolves to nothing the
+/// manifest says so instead of inventing a wording.
+///
+/// **THREE producers, and the first cut had only one** (measured 2026-09-03). With `spec fn`
+/// alone, four `maintains` lines of the corpus came out with `--` as their text --
+/// `antwortpflicht_paarig` (twice), `kind_zeigt_zurueck`, `belegt_hat_adresse`. None of them
+/// is a missing statement: all four are `invariant <name> cost … runs … : <pred>` at a
+/// `table` or a `group`, and the wording sat two constructs away. *An empty field with a
+/// reason is honest; an empty field whose reason is that the lookup was too narrow is a
+/// hole wearing a reason's clothes.*
+fn spezpraedikate(baum: &Programm) -> std::collections::HashMap<String, gabbro_syntax::span::Span> {
+    let mut m = std::collections::HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Funktion(f) if f.klasse == Some(FnKlasse::Spec) => {
+            if let FnRumpf::Pred(p) = &f.rumpf {
+                m.insert(f.name.text.clone(), p.span);
+            }
+        }
+        ItemArt::Tabelle(t) => {
+            for inv in &t.invarianten {
+                m.insert(inv.name.text.clone(), inv.pred.span);
+            }
+        }
+        ItemArt::Gruppe(g) => {
+            for inv in &g.invarianten {
+                m.insert(inv.name.text.clone(), inv.pred.span);
+            }
+        }
+        _ => {}
+    });
+    m
 }
 
 /// **Jede Rufstelle einer Funktion mit `requires` -- gezaehlt, nicht entschieden.**
@@ -282,6 +356,11 @@ fn vorbedingungen(baum: &Programm, aus: &mut Vec<Pflicht>) {
                     art: Art::Vorbedingung,
                     funktion: f.name.text.clone(),
                     gegenstand: format!("{} requires #{}", r.target_text(), n + 1),
+                    // **The anchor is the CALL, the wording is the CALLEE's clause.** The
+                    // only kind where the two part company -- see `Pflicht::span`.
+                    span: r.span,
+                    textspan: Some(bed.span),
+                    kein_text: None,
                     rumpf_da: sig.rumpf_da,
                     material: Material::Call(Box::new(CallSite {
                         callee: r.target_text(),
@@ -450,12 +529,15 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
                     Schleife::Retry(x) => (&x.invariante, &x.rumpf),
                     Schleife::Forever(x) => (&x.invariante, &x.rumpf),
                 };
-                if inv.is_some() {
+                if let Some(p) = inv {
                     *n += 1;
                     aus.push(Pflicht {
                         art: Art::Schleifeninvariante,
                         funktion: funktion.to_string(),
                         gegenstand: format!("loop invariant #{n}"),
+                        span: p.span,
+                        textspan: Some(p.span),
+                        kein_text: None,
                         rumpf_da: true,
                         material: Material::Body,
                     });
@@ -496,10 +578,30 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
     }
 }
 
-fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
+type Spez = std::collections::HashMap<String, gabbro_syntax::span::Span>;
+
+/// **The wording of a NAMED statement, or the reason there is none.**
+///
+/// `maintains I` and `refines g` carry a name; the statement is the `spec fn` body it names.
+/// Two ways this comes back empty, and both are said out loud rather than papered over with
+/// the name itself.
+fn benannte_aussage(spez: &Spez, name: &str) -> (Option<gabbro_syntax::span::Span>, Option<&'static str>) {
+    match spez.get(name) {
+        Some(s) => (Some(*s), None),
+        None => (
+            None,
+            Some(
+                "the named statement is no `spec fn` with a predicate body, and no \
+                 `table` or `group` invariant, in this unit",
+            ),
+        ),
+    }
+}
+
+fn lauf(items: &[Item], spez: &Spez, aus: &mut Vec<Pflicht>) {
     for item in items {
         match &item.art {
-            ItemArt::Modul(m) => lauf(&m.items, aus),
+            ItemArt::Modul(m) => lauf(&m.items, spez, aus),
             ItemArt::Funktion(f) => {
                 // Eine `spec fn` schuldet nichts -- sie IST die Aussage (`M113`).
                 if f.klasse == Some(FnKlasse::Spec) {
@@ -507,10 +609,14 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                 }
                 let rumpf_da = matches!(f.rumpf, FnRumpf::Block(_));
                 for i in &f.maintains {
+                    let (textspan, kein_text) = benannte_aussage(spez, &i.text);
                     aus.push(Pflicht {
                         art: Art::Erhaltung,
                         funktion: f.name.text.clone(),
                         gegenstand: i.text.clone(),
+                        span: i.span,
+                        textspan,
+                        kein_text,
                         rumpf_da,
                         material: Material::Body,
                     });
@@ -521,13 +627,15 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                 // would be an assumption and not an obligation, and `M130` lets it stand at
                 // an `impl fn` only anyway.
                 if let Some(g) = &f.verfeinert {
+                    let ziel = g.teile.last().map(|i| i.text.as_str()).unwrap_or("?");
+                    let (textspan, kein_text) = benannte_aussage(spez, ziel);
                     aus.push(Pflicht {
                         art: Art::Verfeinerung,
                         funktion: f.name.text.clone(),
-                        gegenstand: format!(
-                            "refines {}",
-                            g.teile.last().map(|i| i.text.as_str()).unwrap_or("?")
-                        ),
+                        gegenstand: format!("refines {ziel}"),
+                        span: g.span,
+                        textspan,
+                        kein_text,
                         rumpf_da,
                         material: if rumpf_da { Material::Body } else { Material::Foreign },
                     });
@@ -539,11 +647,19 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                     let mut n = 0usize;
                     schleifeninvarianten(b, &mut n, &f.name.text, aus);
                 }
-                for (n, _) in f.ensures.iter().enumerate() {
+                for (n, e) in f.ensures.iter().enumerate() {
                     aus.push(Pflicht {
                         art: if rumpf_da { Art::Nachbedingung } else { Art::Fremdpflicht },
                         funktion: f.name.text.clone(),
                         gegenstand: format!("ensures #{}", n + 1),
+                        // **The ordinal's cure, and it was a DROPPED FIELD** (`OFFEN.md`
+                        // `O3`, 2026-09-03). Swap two `ensures` conjuncts and the register
+                        // was byte-identical apart from the file name; the same binary in
+                        // the same run already prints the terms apart under `--lean`. Here
+                        // the wording comes out of the SOURCE, where the reader can check it.
+                        span: e.span,
+                        textspan: Some(e.span),
+                        kein_text: None,
                         rumpf_da,
                         // **An `ensures` at a body Gabbro never sees is not a goal**, and an
                         // `ensures` at one it does see needs that body's effect. The two sit
@@ -562,11 +678,14 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
             // a counted foreign duty, this one becomes a counted device promise.
             ItemArt::Device(d) => {
                 let nimm = |r: &RegDecl, aus: &mut Vec<Pflicht>| {
-                    if r.requires.is_some() {
+                    if let Some(p) = &r.requires {
                         aus.push(Pflicht {
                             art: Art::Geraetezusage,
                             funktion: d.name.text.clone(),
                             gegenstand: format!("reg {} requires", r.name.text),
+                            span: p.span,
+                            textspan: Some(p.span),
+                            kein_text: None,
                             // Gabbro never sees the device -- as with a foreign body.
                             rumpf_da: false,
                             material: Material::Foreign,
@@ -598,11 +717,14 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                 // > the register clause does: **Gabbro never sees the device.** Booking is
                 // > not discharging -- it is giving the duty a name and a number (W10).
                 for ue in &d.uebergaenge {
-                    if ue.requires.is_some() {
+                    if let Some(p) = &ue.requires {
                         aus.push(Pflicht {
                             art: Art::Geraetezusage,
                             funktion: d.name.text.clone(),
                             gegenstand: format!("transition {} requires", ue.name.text),
+                            span: p.span,
+                            textspan: Some(p.span),
+                            kein_text: None,
                             rumpf_da: false,
                             material: Material::Foreign,
                         });
@@ -629,6 +751,11 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                         art: Art::Walkinvariante,
                         funktion: w.name.text.clone(),
                         gegenstand: format!("invariant {}", i.name.text),
+                        // The `Invariante` carries its predicate, so the wording is HERE and
+                        // not behind a name -- unlike `maintains`.
+                        span: i.span,
+                        textspan: Some(i.pred.span),
+                        kein_text: None,
                         rumpf_da: false,
                         material: Material::Foreign,
                     });
@@ -656,19 +783,71 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
 /// `crates/gabbro-check/tests/beispiele.rs`, `instrumente/pruefe-zahlen.py` and
 /// `messung/gabbrov/manifest-lage.sh`. The `--isabelle` and `--lean` channels serialise the
 /// SAME register ([`sammle`]) and are untouched by a change here.
-pub const MANIFESTFASSUNG: u32 = 1;
+/// **Fassung 2 -- the line carries what §15 promised it would** (2026-09-03).
+///
+/// `AUFTRAG-GABBROV.md` §4 names the target per line: **name · obligation text · anchor
+/// (`file:line`) · class · state**, and `SPRACHE.md` §15 sketched exactly that shape:
+///
+/// ```text
+/// obligation revoke.functional  "ensures !exists k in descendants of s: k.used"  offen
+/// ```
+///
+/// Fassung 1 carried the name alone, and `OFFEN.md` `O3` measured what that is worth: swap
+/// the first and third `ensures` conjunct of `beispiele/01-tabelle.gab` and the two registers
+/// are byte-identical apart from the file name in the header. **`ensures #1` named one thing
+/// before the swap and another after, and nothing reported the change.**
+///
+/// *It was a DROPPED FIELD, not a missing computation* -- the same binary in the same run
+/// already prints the terms apart under `--lean` (`post_duty_2` … `post_duty_4`).
+pub const MANIFESTFASSUNG: u32 = 2;
 
-pub fn zeige(baum: &Programm, datei: &str) -> String {
+/// **The state of every obligation in this register, and there is exactly one.**
+///
+/// The register's second line has said it since the day it existed: *"What a HUMAN still owes
+/// here. Counted, not discharged."* A field that can only take one value looks like waste --
+/// but the reader on the other side is `GABBROV.md`'s tool, which writes `passed`/`refuted`/
+/// `open` BACK, and a field that appears only once something is written into it cannot be
+/// read before then.
+const ZUSTAND: &str = "open";
+
+/// **Where the text field stops -- and the number is measured, not chosen.**
+///
+/// The longest obligation text in the tree on 2026-09-03 is **106 characters**
+/// (`einreihen :: ensures #2`, the queue's pairwise-distinct clause), so nothing is truncated
+/// today and the limit is a bolt against a pathological clause rather than a working cut.
+/// *It stands at nearly four times the longest one on purpose:* a limit set flush against
+/// today's maximum starts cutting on the next clause somebody writes, and does it silently.
+///
+/// **Why not the certificate's 72:** measured, six of 110 texts were cut mid-clause there,
+/// and `AUFTRAG-GABBROV.md` §4 wants the line readable without the source.
+const TEXTGRENZE: usize = 400;
+
+pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     let p = sammle(baum);
+    let index = gabbro_syntax::span::Zeilenindex::neu(quelle);
+    // **`quelle` is not always there**, and the two cases must not read alike: a run without
+    // the source has no wording and no line to give, and says so once instead of printing an
+    // empty cell per line. *An anchor that points at the wrong line is worse than none* --
+    // and so is a wording invented to fill a column.
+    let ohne_quelle = quelle.is_empty();
     let mut s = String::new();
     // **Line one, before the file name.** A reader that cannot place the version has to be
     // able to stop at the FIRST line, not after parsing a header it may already misread.
     s.push_str(&format!("-- manifest-version {MANIFESTFASSUNG}\n"));
     s.push_str(&format!("-- Obligation register: {datei}\n"));
-    s.push_str("-- What a HUMAN still owes here. Counted, not discharged.\n\n");
+    s.push_str("-- What a HUMAN still owes here. Counted, not discharged.\n");
+    s.push_str("-- obligation<TAB>name<TAB>class<TAB>anchor<TAB>state<TAB>obligation text\n");
+    s.push_str(
+        "--   anchor: where the obligation ARISES. For `V` that is the CALL SITE, and the \
+         text is\n--   the callee's clause -- the one kind where the two differ. \
+         `--` in a field: this run\n--   does not have it, and the reason stands beside \
+         the closing count.\n\n",
+    );
     if p.is_empty() {
         s.push_str("   no generated proof obligation in this unit\n\n");
     }
+    let mut geschrieben = 0usize;
+    let mut ohne_text = 0usize;
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
                Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante,
                Art::Walkinvariante] {
@@ -678,7 +857,29 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         }
         s.push_str(&format!("{}  {} ({})\n", art.marke(), art.name(), eigene.len()));
         for x in &eigene {
-            s.push_str(&format!("     {} :: {}\n", x.funktion, x.gegenstand));
+            let anker = if ohne_quelle {
+                "--".to_string()
+            } else {
+                format!("{datei}:{}", index.stelle(quelle, x.span.von).zeile)
+            };
+            let text = match (ohne_quelle, x.textspan) {
+                (true, _) => "--".to_string(),
+                (false, Some(sp)) => crate::zeremonie::schnitt_bis(quelle, sp, TEXTGRENZE),
+                (false, None) => "--".to_string(),
+            };
+            if text == "--" {
+                ohne_text += 1;
+            }
+            s.push_str(&format!(
+                "obligation\t{} :: {}\t{}\t{}\t{}\t{}\n",
+                x.funktion,
+                x.gegenstand,
+                art.marke(),
+                anker,
+                ZUSTAND,
+                text
+            ));
+            geschrieben += 1;
         }
         s.push('\n');
     }
@@ -730,7 +931,45 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
                 counted, not settled.\n"
         ));
     }
-    s
+    // **The empty fields, counted and given their reason -- never left to be guessed.**
+    if ohne_quelle && !p.is_empty() {
+        s.push_str(
+            "   ANCHOR AND TEXT ARE `--` FOR EVERY LINE: this run was given no source.\n   \
+             The obligations are the same ones; what is missing is the wording and the\n   \
+             line, and a manifest that invented either would be worse than one that says\n   \
+             it has neither.\n",
+        );
+    } else if ohne_text > 0 {
+        s.push_str(&format!(
+            "   {ohne_text} line(s) carry `--` as their text: the clause names a statement\n   \
+             (`maintains I`, `refines g`) that is no `spec fn` with a predicate body and\n   \
+             no `table`/`group` invariant in this unit. *The name is in the second column;\n   \
+             the wording is nowhere this run can see, and it is left empty rather than\n   \
+             filled with the name again.*\n"
+        ));
+    }
+    // **E1, INSIDE the tool** (`AUFTRAG-GABBROV.md` §5: *"wired in, not hung beside it. A tool
+    // that does not check its own completeness has none."*).
+    //
+    // The loop above prints by KIND, out of a fixed list of eight. A ninth kind added to
+    // `Art` and forgotten there would be counted by the header line and printed nowhere --
+    // **the silent loss `SPRACHE.md` §15 promises against, inside the artefact that carries
+    // the promise.** The `debug_assert` above catches an unbalanced header; it does not catch
+    // a balanced header over a short body, and that is a different hole.
+    //
+    // *It is a hard check and not a `debug_assert`,* because a release build that loses a
+    // kind loses it in the artefact a stranger reads.
+    let vollstaendig = geschrieben == p.len();
+    if !vollstaendig {
+        s.push_str(&format!(
+            "== E1 FAILED: {geschrieben} obligation line(s) written, {} counted ==\n   \
+             A kind is counted in the header and printed in no line. Nothing here may be\n   \
+             read as a complete register -- the missing lines are not visible from the\n   \
+             outside, which is exactly why this comparison stands inside the run.\n",
+            p.len()
+        ));
+    }
+    (s, vollstaendig)
 }
 
 /// **Wie viele Rufe ruhen auf einem fremden Vertrag? -- Punkt 4, 2026-08-19.**

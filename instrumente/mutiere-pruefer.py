@@ -222,11 +222,17 @@ MUTATIONEN = [
     # **A clause that parses and is dropped is the folder's most-paid-for shape.** Until today
     # `RegDecl::requires` was read by no pass at all. Counting it is the whole fix -- and
     # without an anchor the counting could be removed again in silence.
+    #
+    # *Anchor carried over 2026-09-03, when the manifest grew its text field:* the test
+    # `if r.requires.is_some()` became `if let Some(p) = &r.requires`, because the line now
+    # needs the clause's span and not only its presence. **`--anker` reported it the same
+    # day and by name** -- which is what the mode is for; a mutation whose anchor has moved
+    # measures nothing and reads like coverage.
     Mutation(
         "geraetezusage-wird-nicht-gezaehlt",
         "gabbro-check/src/pflichten.rs",
-        "                    if r.requires.is_some() {",
-        "                    if false {",
+        "                    if let Some(p) = &r.requires {",
+        "                    if let Some(p) = None::<&Pred> {",
         "«B26» -- ein `requires` am Register verschwindet wieder still; die Klausel parst "
         "und niemand zaehlt sie",
     ),

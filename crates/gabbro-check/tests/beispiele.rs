@@ -536,10 +536,17 @@ fn ein_requires_am_register_wird_gezaehlt() {
     let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
     let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
     let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
-    let bericht = gabbro_check::pflichten::zeige(&baum, "F04.gab");
+    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
+    assert!(vollstaendig, "E1 gefallen:\n{bericht}");
     for stueck in ["Device promise (`reg` or `transition`)", "reg QUEUE_SIZE requires", "1 device"] {
         assert!(bericht.contains(stueck), "fehlt: {stueck}\n{bericht}");
     }
+    // **The three fields Fassung 2 added, on the one line this file already had.** The
+    // wording comes out of the source and the anchor points at the line it was cut from.
+    assert!(
+        bericht.contains("\tD\tF04.gab:82\topen\tQUEUE_SIZE <= QMAX\n"),
+        "class, anchor, state and text are not all there:\n{bericht}"
+    );
 }
 
 /// **The version field, and it stands on LINE ONE** (2026-09-03).
@@ -561,7 +568,7 @@ fn das_register_traegt_seine_fassung_auf_zeile_eins() {
     let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
     let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
     let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
-    let bericht = gabbro_check::pflichten::zeige(&baum, "F04.gab");
+    let (bericht, _) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
     let erste = bericht.lines().next().unwrap_or("");
     assert_eq!(
         erste,

@@ -241,3 +241,137 @@ rather than inventing a number it cannot derive.
 not chosen: `pruefe-widerruf.py` 190 → 191 files, `pruefe-waechter.py` 53 → 54 guards that
 can abort mid-run, 312 → 320 exits behind the first, 58 → 59 instruments carrying all five
 requirements, 30 → 31 guardians in `README.md`.
+
+### Step 3 — the format, and `O3` closed at the line
+
+`MANIFESTFASSUNG = 2`. Each obligation is now the record `SPRACHE.md` §15 sketched, tab
+separated after the keyword:
+
+```
+obligation<TAB>name<TAB>class<TAB>anchor<TAB>state<TAB>obligation text
+```
+
+The kind headings stay above the records, so the three readers that grep them keep working.
+
+**The counter-check `OFFEN.md` `O3` asks for.** Swap the first and third `ensures` conjunct
+of `beispiele/01-tabelle.gab`, normalise the file name away, and diff:
+
+```
+15c15
+< obligation  aushaengen :: ensures #1  N  SRC:91  open  c.slots[s].elter == None
+> obligation  aushaengen :: ensures #1  N  SRC:91  open  c.slots[s].naechstes == None
+17c17
+< obligation  aushaengen :: ensures #3  N  SRC:93  open  c.slots[s].naechstes == None
+> obligation  aushaengen :: ensures #3  N  SRC:93  open  c.slots[s].elter == None
+```
+
+Two lines differ where none did before. **And note what does NOT differ: the name and the
+anchor.** `ensures #1` still names one thing before the swap and another after, and
+`SRC:91` still points at the first conjunct's line, whichever conjunct that is.
+
+> **So §15's sentence needs its own correction, and this is the measured form of it.**
+> *"The ratchet runs over names; exchange is visible."* — the second half does not follow
+> from the first. A ratchet over the NAME still cannot see this swap; a ratchet over the
+> **line** can, and only because the text field is in it. **The name is not an identifier
+> and the text is not decoration** — whoever wires the ratchet takes the line.
+
+*The prior lane's warning was exactly right and is now demonstrated rather than argued:*
+`--lean` carries the disambiguating term under an ambiguous name, and copying that shape
+would have inherited the defect.
+
+### What the fields cost, measured over the whole corpus
+
+110 obligation lines over `beispiele/`, `messung/fragmente/`, `messung/*/` and
+`programmlogik/*/`:
+
+| | |
+|---|---|
+| lines with an anchor | **110 of 110** |
+| lines with a text | **110 of 110** |
+| texts truncated | **0** (longest 106 characters; the limit is 400) |
+| duplicate names within one unit | **0** |
+| duplicate whole lines within one unit | **0** |
+
+**Two of these were not free, and both were found by measuring rather than by design.**
+
+* **Six of 110 texts were cut mid-clause** at the certificate's 72-character limit —
+  including two `forall x in chain(…)` postconditions and a `!exists m in mappings of …`,
+  the ones that say the most. `zeremonie::schnitt` now names its limit at the call site
+  (`schnitt_bis`); the folding stays in one place, only the stopping point varies. *One
+  routine, two limits is not the thing "one site, one cut" forbids — two routines is.*
+* **Four `maintains` lines came out with `--` as their text**, and the reason was a lookup
+  that was too narrow: `antwortpflicht_paarig` (twice), `kind_zeigt_zurueck` and
+  `belegt_hat_adresse` are `invariant <name> … : <pred>` at a `table` or a `group`, not
+  `spec fn`s. *An empty field with a reason is honest; an empty field whose reason is that
+  the lookup was too narrow is a hole wearing a reason's clothes.* Three producers now, and
+  the corpus has no `--` left.
+
+### The duplicate name is latent, not absent
+
+A body with two calls to the same callee produces two obligations whose names are
+byte-identical (`caller :: callee requires #1`, twice). **No unit in the tree has such a pair
+today** — measured per file, not over the concatenation, which is why the anchor for a `V`
+obligation is the **call site** and not the callee's clause. *The field closes the duplicate
+before it is written rather than after somebody meets it.*
+
+### `E1` inside the tool
+
+`zeige` now counts the records it wrote and compares them against `sammle`'s length. It
+catches what the balance `debug_assert` cannot: the print loop walks a fixed list of eight
+kinds, so a ninth added to `Art` and forgotten there would be **counted in the header and
+printed in no line**. On divergence the register says `E1 FAILED` and
+`gabbro pflichten` exits non-zero — a hard check and not a `debug_assert`, because a release
+build that loses a kind loses it in the artefact a stranger reads.
+
+---
+
+## 6. The counter-check — five real rows, read without the source
+
+`AUFTRAG-GABBROV.md` §4: *"Counter-check on five real lines from `PFLICHTEN.md`, one of them
+from F1 with table identity: the text must be understandable without looking at the source."*
+Drawn across four fragments and both classes, and the F1 row is the one that decides the
+question.
+
+| # | `PFLICHTEN.md` row | the manifest line, verbatim from the run |
+|---|---|---|
+| 1 | **F2 454–455** `setze_rtp` — TE off or RTPS already set (L) | `Vtd :: transition setze_rtp requires` · `D` · `F02.gab:79` · `open` · **`GSTS.TES == 0 \|\| GSTS.RTPS == 1`** |
+| 2 | **F2 463–464** `scharf_ire` — IRTPS set and CFIS clear (L) | `Vtd :: transition scharf_ire requires` · `D` · `F02.gab:88` · `open` · **`GSTS.IRTPS == 1 && GSTS.CFIS == 0`** |
+| 3 | **F4 764** the device's `QUEUE_SIZE` lies below QMAX (K) | `VirtioPci :: reg QUEUE_SIZE requires` · `D` · `F04.gab:82` · `open` · **`QUEUE_SIZE <= QMAX`** |
+| 4 | **F6 1084–1085** the returned depth does not exceed the stack (K) | `unberuehrt :: ensures #1` · `N` · `F06.gab:191` · `open` · **`result <= s.len`** |
+| 5 | **F1 188–190** `cdt_wohlgeformt` — every slot reaches the root via `parent` (**L, table identity**) | `aushaengen :: baum_wohlgeformt` · `E` · `01-tabelle.gab:94` · `open` · **`forall s in slots of c : c.slots[s] reaches WURZEL via elter`** |
+
+**Rows 1–4 read without the source, and rows 1 and 2 are the sharpest case:** before this
+change both were the string `Vtd :: transition <name> requires` and nothing else — a reader
+could not tell *"TE off or RTPS already set"* from *"IRTPS set and CFIS clear"* without
+opening the file. Now the two conditions stand side by side in the artefact.
+
+**Row 5 needs its caveat said out loud, twice over.**
+
+1. **F1 emits no register at all** — three standing checker errors, and another lane is
+   repairing them. So the line above is measured at F1's clean sibling in the corpus,
+   `beispiele/01-tabelle.gab`, which carries the same statement under German names
+   (`baum_wohlgeformt` / `elter` for `cdt_wohlgeformt` / `parent`). *The construct, the
+   lookup and the field are the same; the fragment is not.*
+2. **This row is the one the text field could NOT have carried by cutting its own clause.**
+   The clause is `maintains baum_wohlgeformt` — a NAME. Cutting it would have printed the
+   name a second time, and the reader would still be in the dark. The wording comes from
+   the `spec fn` the name refers to, resolved inside the unit. *That is why the lookup
+   exists, and row 5 is the reason it had to.*
+
+**And the honest limit of row 5**: `forall s in slots of c : c.slots[s] reaches WURZEL via
+elter` is understandable, but `WURZEL` is a constant and `slots of c` a domain — both
+declared in the same unit, neither in the line. **The text is self-contained down to the
+identifiers, not below them.** Resolving those too would inline the unit into every line;
+what the field promises is that the *statement* is there, not that the vocabulary is.
+
+## 7. What is still empty, and why
+
+| field | empty where | reason |
+|---|---|---|
+| **anchor** | nowhere in the corpus (0 of 110) | — |
+| **anchor** | every line, when the run has no source | `gabbro pflichten` always has one; the API caller may not, and then the register says so once instead of printing an empty cell per line |
+| **text** | nowhere in the corpus (0 of 110) | — |
+| **text** | a `maintains I` / `refines g` whose name is no `spec fn` with a predicate body and no `table`/`group` invariant in the unit | the wording is not in this unit. **The name is not printed a second time to fill the column** — an anchor that points at the wrong line is worse than none, and so is a text that repeats the name |
+| **state** | never | one value today, `open`, and the register's own second line has said so since the day it existed. It is written out because the reader on the other side writes `passed`/`refuted`/`open` back, and a field that appears only once something is written into it cannot be read before then |
+| **the anchor of the call site**, for the 7 kinds that are not `V` | always | those seven arise AT their clause, so there is nothing else to point at |
+| **the `L`/`K` class of `PFLICHTEN.md`** | every line | deliberate, and it stays. The register's own closing lines say why: *the K/A/W classification is a JUDGEMENT*, and a tool that guessed would be the silent answer this folder writes against |
