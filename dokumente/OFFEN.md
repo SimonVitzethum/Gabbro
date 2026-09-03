@@ -201,7 +201,7 @@ And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096*
 
 ---
 
-## O7 — ~~`N030` compares opaque types at a PARAMETER and not at a FIELD~~ — **it reads the field since 2026-09-03; the half that stays open is a different one**
+## O7 — ~~`N030` compares opaque types at a PARAMETER and not at a FIELD~~ — ~~**it reads the field since 2026-09-03; the half that stays open is a different one**~~ — **CLOSED 2026-09-03: the pass half was built, the construct half fell at Rule A**
 
 > **Closed as a pass change, and the claim was re-measured before anything was built.**
 > Each of the five sites of `probe-opak-am-feld.gab` was also run **alone, in its own
@@ -227,11 +227,67 @@ And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096*
 > Probes: `beispiele/gift/669` (read) and `beispiele/gift/670` (write). Mutations:
 > `ein-feld-traegt-keinen-namen`, `in-ein-feld-darf-jede-sicht`.
 
-**What stays open is the OTHER half, and it is a construct and not a pass:** an
-`opaque` record does not close its fields, so accessors cannot be forced. It is no
-longer needed to catch the mixing — `N030` bites at the field itself — but `opaque` on
-a record still promises a privacy it does not have. **That is `S2`-shaped and goes
-through §7's cost gate; it is not repaired here.**
+**What stayed open is the OTHER half:** an `opaque` record does not close its fields,
+so accessors cannot be forced. It is no longer needed to catch the mixing — `N030`
+bites at the field itself — but `opaque` on a record still promises a privacy it does
+not have.
+
+### It went to §7's cost gate on 2026-09-03 and **fell at Rule A, before criterion 1**
+
+*Rule A: no construct without measured demand. The bar to argue against is
+`beispiele/18-vorfahren.gab`:3–11, where `ancestors of` was admitted on **584
+non-traversable kernel lines, 226 of them in DMAR/PCIe** — a measurement, not a design.*
+
+**Denominator: 639 `.gab` files in the tree at `9b5c067`**
+(`find . -name '*.gab' -not -path './.git/*' | wc -l`). *Taken at the branch point and not
+after* — the four files this commit adds were written to answer `C1`, not because a programme
+wanted them, and counting them as demand would be the measurement financing itself.
+
+| what was counted | command | result at `9b5c067` |
+|---|---|---|
+| `opaque type X = { … }` — an opaque RECORD, which is what this item is about | `grep -rn 'opaque type [A-Za-z_0-9]* *= *{' . --include=*.gab` | **1 of 639**, and it is `messung/proben/probe-opak-am-feld.gab`:84 — *the probe written for this very question* |
+| `opaque type` declarations of every shape | `grep -rhE '^ *(pub )?opaque type ' . --include=*.gab \| wc -l`, and `-rlE … \| wc -l` for the files | **75** in **50** files — 74 over a scalar carrier (`u64` 56×, `u32` 9×, `u8` 4×, `u16` 2×), one record |
+| files with more than one `module` block — **the only door `opaque` privacy has** | `grep -c '^ *\(pub \)\?module '` per file, count those `> 1` | **13 of 639**, and **8 of those are poison** under `beispiele/gift/` |
+| an opaque record used across a module boundary — the intersection, and the thing actually at issue | the two rows above | **0 of 639** |
+
+*After this commit the first three read 1 of 643, 77 in 52, and 15 of 643 — the two new
+`opaque` declarations are scalars (`Beleg`), so **the last row is still 0**, and the verdict
+does not depend on which of the two states it is read in.*
+
+**Zero programmes want it, and the one declaration in the tree is the measurement's own
+apparatus.** That is two orders of magnitude below `beispiele/18`'s bar and below it in
+kind as well: 584 lines that a real kernel already contains, against one line written
+this afternoon to ask a question.
+
+**And the door matters more than the count.** Privacy is a statement about a boundary,
+and the sentence register says which boundary `opaque` uses: *"Inside the declaring
+module the representation is known — the door is the MODULE BOUNDARY"*
+(`d.undurchsichtig`, `D003`/`D004`, `saetze.rs`:838). Field privacy would be a claim
+about the same door. **Thirteen files in 639 have a second module at all**, and none of
+them declares a record.
+
+> **What the construct would have bought is already bought.** The five files that hold a
+> nominal type at a record field are all covered by `N030` since `4326830`, measured the
+> same day: the mixing is a type error at the field, in both the read and the write
+> direction. *Caprock needs field privacy because `cpu` and `dev` are both bare `u64`
+> there (`owned.rs`:72, 74) and only visibility can tell them apart. Gabbro tells them
+> apart by type, so the thing privacy was for does not arise.*
+
+**The gate's four criteria were not run, and that is the correct outcome rather than an
+omission.** Rule A stands before them; a construct that reaches criterion 1 without
+demand has had its cheapest refusal skipped. *Two constructs went through this gate on
+the same day and both fell at criterion 2 — this one does not get that far.*
+
+**Booked, not built.** If a second programme ever declares an opaque record across a
+module boundary, the denominator changes and the item comes back with a number. Until
+then the honest entry is a refusal with its apparatus beside it.
+
+> **One reconciliation, because both sides were right.** The lane that closed the pass
+> half reported *"3 of 635 `.gab` files hold a nominal type in a record field"*. Re-derived
+> over the merged tree the figure is **5 of 639** — the same three plus `beispiele/gift/669`
+> and `670`, which that lane wrote *after* its own baseline run, and plus `beispiele/66`
+> and `67` in the denominator from the lane beside it. **Neither number is wrong about its
+> own tree, and the merged truth is a third one.**
 
 **The original entry, kept because it is what was measured:**
 
@@ -263,7 +319,7 @@ does not reach the position where the two axes actually sit.
 |---|---|
 | **what would close it** | ~~`N030` reading the declared type of a field access, not only of a parameter — the same move `R013` made for pointer rights, one position further~~ — **done 2026-09-03, and the write position with it** |
 | **what it is NOT** | `S2`. The language states this correctly; a pass did not read it. Same family as `R008`/`R013` in `messung/PASSREGISTER.md` — *and it closed the same way they did* |
-| **what stays open** | an `opaque` record does not close its fields. A construct question, priced and not built |
+| ~~**what stays open**~~ | ~~an `opaque` record does not close its fields. A construct question, priced and not built~~ — **priced on 2026-09-03 and REFUSED: 1 opaque record in 639 `.gab` files, and it is the probe itself; 0 across a module boundary, which is the only door `opaque` privacy has.** Rule A, before criterion 1 |
 | **measured at** | `messung/FUENFTE-MARKE.md` §3, `messung/proben/probe-opak-am-feld.gab`, `beispiele/gift/669`, `beispiele/gift/670` |
 
 ---
@@ -370,3 +426,40 @@ the question. *A guard is only as strong as the programs it has been shown.*
 | **why it is not repaired here** | ~~`emit.rs` belongs to another lane. The measurement is this lane's; the repair is not~~ — **repaired 2026-09-03, this lane owned `emit.rs` for this round** |
 | **measured at** | `messung/FUENFTE-MARKE.md` §4, `messung/proben/probe-transport-merkmale-aushandeln.gab` — repair booked at `messung/ERZEUGERREST.md` `D20` |
 
+
+---
+
+## O10 — *"measured writable"* is a weaker claim than the fifth mark spends it as
+
+*Measured 2026-09-03, out of `PLAN-HARDWARE.md` §50 #6, attacking the empty third bucket.*
+
+`messung/FUENFTE-MARKE.md` books **24 of 30** driver capabilities as *unwritten and measured
+writable*. Every one of those rows was established the same way: a probe was written, the
+unchanged checker accepted it, the unchanged emitter lowered it, and `cc` took the result.
+**That procedure answers "is this shape admissible?" and the question underneath it is "does
+the admissible shape carry what the original carried?"**
+
+**The two came apart on a measured case, which is why this is an entry and not a worry.**
+`C1`, the ownership handover, closed on `beispiele/66-transport-rueckgabe.gab`:
+`11 items, 0 errors, 0 hints`, emits, compiles at `-O0` and `-O2`. Re-measured, that probe
+keeps caprock's **order** — `L104`, `L107`, `O003` each fire, each measured in its own file —
+and loses caprock's **exclusion**: the linear thing is a ghost token, the buffer rides beside
+it as an ordinary `ptr<normal, rw>`, and writing into a buffer the device owns is
+`8 items, 0 errors, 0 hints`. That is the one bug `caprock-virtio/src/owned.rs` exists
+against, and its own note says so at the type (`owned.rs`:60).
+
+**The capability survived; the artifact did not.** Two `linear type`s with the write path
+declared over the driver side alone give all three lost halves back, with no new word and no
+pass change — `messung/proben/probe-besitz-zwei-typen.gab`, with `beispiele/gift/671`, `672`
+and `673` as the refusals. So `C1` stays closed and the bucket stays empty.
+
+**What stays open is the METHOD.** The checker cannot report a dropped guarantee, because the
+dropped guarantee was never written down for it to check; a probe that goes green has, by
+construction, no way of saying *"and the thing it should forbid is still forbidden."*
+
+| | |
+|---|---|
+| **what would close it** | for each *measured writable* row, a **negative** probe beside the positive one — the poison file that fails if the property is gone. `671`/`672`/`673` are that pair for row #25; the other twenty-three rows have positive probes only |
+| **how big it is** | 24 rows, of which 8 have a probe recorded in `FUENFTE-MARKE.md` §2 and none has a negative one. Row #27 is additionally not separately measured at all and says so in its own footnote |
+| **why it is not repaired here** | it is 23 poison files against a document that will be re-derived when the driver is actually assembled. *The finding is worth more than the backlog*: it is a rule about how a capability gets booked, and it belongs at the next booking rather than retroactively |
+| **the general form** | **the test is not "does it check", it is "does the thing it forbids still get forbidden".** The same shape as `W16` one level up: an apparatus that measures something adjacent to the question and looks plausible doing it |

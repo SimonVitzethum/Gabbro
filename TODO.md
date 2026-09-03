@@ -4054,9 +4054,17 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      66 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 437
+      68 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 440
       Giftproben)
       ```
+
+      **66 von 437 → 68 von 440 am 2026-09-03**, aus der `C1`-Nachmessung: `gift/671` und
+      `gift/672` zeigen auf `N030`, das einen Kandidaten SCHON trug; `gift/673` zeigt auf
+      `D004`, das gar nicht auf der Liste steht und darum nichts kostet. *Gemessen und nicht
+      geschlossen:* mit den drei Dateien beiseite liest der Wächter `66 von 437`, mit ihnen
+      `68 von 440`. **Keine Kennung wurde neu mehrdeutig, keine Vergabestelle kam dazu** —
+      die Proben liefen gegen den UNVERÄNDERTEN Prüfer. Der Grund steht an der Marke in
+      `instrumente/pruefe-vergabe.py`.
 
       **Bei `P034` steht der Fall konkret:** `gift/05-auffangzweig` prüft die eine Regel,
       `gift/45-pub-wo-es-nicht-steht` die andere — *jede der beiden bliebe grün, wenn die

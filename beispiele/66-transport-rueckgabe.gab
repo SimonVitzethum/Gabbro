@@ -23,9 +23,23 @@
 --    (`M104` at u64: no wider type to bind into). Declared bounds, 15 ops.
 --
 -- What does NOT go (named, not built -- Rule A, one port):
---  * `Owned<Fahrer>` -> `Owned<Geraet>` as TWO NOMINAL types with a value
+--  * ~~`Owned<Fahrer>` -> `Owned<Geraet>` as TWO NOMINAL types with a value
 --    moving between them: `N030` (nominal) refuses `let g: GeraetBesitz = b`.
---    The ghost-advances form says the same thing with one type and two stages.
+--    The ghost-advances form says the same thing with one type and two stages.~~
+--    **WRONG, and re-measured on 2026-09-03 -- the two-type form GOES, and the
+--    ghost form does NOT say the same thing.** The line above tested the
+--    ASSIGNMENT spelling, which caprock never uses: `owned.rs` moves between the
+--    two states with a FUNCTION (`transition()`, `owned.rs`:102), and a function
+--    that consumes one linear type and returns the other checks with
+--    `0 errors, 0 hints` and emits. Both spellings measured, each in its own file:
+--
+--        let g : GeraetPuffer = b;   ->  N030 (and L101, b consumed on no path)
+--        let g = arm(b);             ->  6 items, 0 errors, 0 hints
+--
+--    What the ghost form loses by not being the two-type form is the EXCLUSION,
+--    and that is caprock's whole assurance rather than a detail -- see the block
+--    at the bottom of this file. `messung/proben/probe-besitz-zwei-typen.gab`
+--    carries the capability in the form that keeps it.
 --  * `advances geraet -> fahrer` (the way BACK as a forward step): `O002`
 --    refuses -- order is order. The return trip is a second function on the
 --    same mark, the way `stufe_*` chains one step per function.
@@ -102,3 +116,62 @@ impl fn tritt(basis : u64 in 0 .. 1099511627776, versatz : u16, faktor : u32 in 
 }
 
 }
+
+-- ## Re-measured 2026-09-03: this file keeps the ORDER and loses the EXCLUSION
+--
+-- **The verdict above reproduces exactly** -- `11 items, 0 errors, 0 hints`, emits,
+-- `cc -std=c11 -Wall -Wextra` silent at `-O0` and `-O2`. What was not asked when it
+-- was taken is whether *writable in a probe* means *carries what caprock carries*.
+--
+-- **What this form really keeps**, each measured in its own file so nothing masks
+-- anything:
+--
+--     b1 used twice          ->  L104  "`b1` is consumed a second time"
+--     b1 never consumed      ->  L107  "created here and consumed on no path"
+--     arm on an armed token  ->  O003  "`arm` presupposes `fahrer`, `b1` stands at `geraet`"
+--
+-- That is a real typestate, and it is the ORDER.
+--
+-- **What it does not keep is the EXCLUSION**, which is what `owned.rs` is for.
+-- `arm(h, i, b)` consumes the ghost `b`; the buffer `h : ptr<normal, rw> Puffer`
+-- goes in beside it, unconsumed and still writable. Nothing ties the two together,
+-- so this sequence is `0 errors, 0 hints`:
+--
+--     let b1 = arm(h, i, b);
+--     h.slots[i].belegt = false;   -- the device owns it, and the driver writes
+--     let b2 = hole(h, i, b1);
+--
+-- Caprock refuses it twice over: `arm` takes the buffer BY VALUE and `Owned` is not
+-- `Copy`, so the name is gone; and `Owned<Device>` has no access method at all --
+-- `owned.rs`:60 says *"Dieser Typ hat keine Zugriffsmethode. Das ist die ganze
+-- Zusicherung."* Two further losses, same cause:
+--
+--   * `hole` carries no `advances`, so it has no stage precondition: reclaiming a
+--     token still at `fahrer` is `0 errors`. `reclaim(buf : Owned<Device>, ...)`
+--     cannot be called on an `Owned<Driver>` -- the precondition is the type.
+--   * `requires geraet_fertig()` is read by no pass at a call site. Measured:
+--     `requires 1 == 0` at a call site is `0 errors, 0 hints`; `M115` bites only on
+--     RANGE statements about arguments (`requires x > 10` with `0` does fall).
+--     Caprock's receipt is a VALUE whose constructor is `pub(crate)` with one
+--     production site, `used_entry` -- provenance the type system carries.
+--
+-- And `hole` and `hole_unbelegt` emit BYTE-IDENTICAL C, which is honest: this file
+-- says the unproven path rides its NAME, and it does. Caprock additionally marks
+-- `reclaim_unproven` `unsafe`, so its call site carries a block; here both are
+-- ordinary calls.
+--
+-- **The gate that would rescue the ghost form does not exist.** A buffer write
+-- happens AT `fahrer` without advancing anything, and there is no way to say that:
+--
+--     advances fahrer -> fahrer   ->  O002  "that is not a step forward"
+--     requires fahrer             ->  D021  "`fahrer` in `requires` is not declared here"
+--     requires b == fahrer        ->  D021  same
+--
+-- **The language is not what is missing -- this file's choice of form is.**
+-- Two `linear type`s with the write path declared over the driver side alone give
+-- all three back, with no new word and no pass change:
+-- `messung/proben/probe-besitz-zwei-typen.gab` (green, emits, compiles),
+-- `beispiele/gift/671` (the write while armed), `beispiele/gift/672` (the reclaim
+-- without an arm) and `beispiele/gift/673` (the receipt invented outside the
+-- declaring module, which is `pub(crate)` said with a module boundary).
+-- *`C1` stays closed; the artifact behind it changed.*

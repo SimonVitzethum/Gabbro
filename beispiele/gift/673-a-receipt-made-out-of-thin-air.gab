@@ -1,0 +1,62 @@
+-- erwartet: D004
+-- **673 -- a completion receipt fabricated by the driver.**
+--
+-- `caprock-virtio/src/lib.rs`:311 takes the receipt as a VALUE:
+-- `pub fn reclaim(&self, buf : Owned<Device>, _done : &Completion) -> Owned<Driver>`, and
+-- the value cannot be made where it is used. `Completion::new` is `pub(crate)`
+-- (`owned.rs`:224) and has exactly one production site outside the crate's own tests:
+-- `lib.rs`:356, inside `used_entry`. **A receipt therefore comes from the used ring or it
+-- does not exist** -- which is what makes it evidence rather than an argument.
+--
+-- **Measured 2026-09-03: `beispiele/66-transport-rueckgabe.gab` spells the receipt as
+-- `requires geraet_fertig()`, and NO pass reads that at a call site.** Three files, each
+-- run alone:
+--
+--     requires 1 == 0,  called anyway   ->  4 items, 0 errors, 0 hints
+--     requires x > 10,  called with 0   ->  M115  "the argument lies in 0 .. 0"
+--     requires x > 10,  called with 99  ->  4 items, 0 errors, 0 hints
+--
+-- `M115` reads RANGE statements about arguments and nothing else, and the sentence register
+-- says the same of `D012` in its own reservation: *"It does not PROVE a premise, and it
+-- cannot."* A `requires` naming a predicate function is an obligation with no reader.
+--
+-- **`pub(crate)` has a spelling in Gabbro, and it is the module boundary.** An `opaque type`
+-- whose one producer stands inside the declaring module cannot be built from its carrier
+-- anywhere else -- that is `D004`, and `beispiele/29-undurchsichtig.gab` is the door it uses.
+-- This file is the driver reaching past it.
+--
+-- The working version is `messung/proben/probe-besitz-zwei-typen.gab`, which puts the
+-- transport and the driver in two modules for exactly this reason. Its companions are
+-- `beispiele/gift/671` (writing while the device owns the buffer) and `beispiele/gift/672`
+-- (reclaiming a buffer that was never armed).
+
+module gift::beleg_transport {
+
+-- `Completion` -- `Copy` in caprock, so not linear here either.
+pub opaque type Beleg = u64;
+
+-- The one producer, and it stands where `used_entry` stands: at the used ring.
+pub impl fn used_eintrag(roh : u64) -> Beleg
+    effects { pure }
+    costs   <= 2 ops
+{
+    return roh;
+}
+
+}
+
+module gift::beleg_treiber {
+
+use gift::beleg_transport::Beleg;
+
+-- **Here.** The driver has no used ring in reach and invents the receipt from a bare
+-- number. Inside the declaring module this conversion is the legitimate one; here the
+-- representation is not known, and the wall stands.
+pub impl fn erfinde(roh : u64) -> Beleg
+    effects { pure }
+    costs   <= 2 ops
+{
+    return roh;
+}
+
+}

@@ -2800,7 +2800,17 @@ MARKE_EMIT=67
 # The merge that brought the eleven probes came back green while the mark stayed
 # stale. *A guardian the collecting run never calls reports its finding only when
 # someone asks it separately.*
-MARKE_EMIT_M=71
+# **71 -> 72 on 2026-09-03**, and this one is a single named file:
+# `messung/proben/probe-besitz-zwei-typen.gab`. It carries the `C1` ownership handover in
+# the form that keeps caprock's EXCLUSION and not only its order -- two `linear type`s with
+# the write path declared over the driver side alone, across a module boundary so the receipt
+# is `opaque` behind `D004`. `beispiele/66-transport-rueckgabe.gab` closed `C1` with a linear
+# GHOST token beside the buffer; re-measured, that form lets the driver write into a buffer
+# the device owns with `0 errors, 0 hints`. *The capability stayed closed and the artifact
+# behind it changed* -- see the block at the foot of `beispiele/66` and `FUENFTE-MARKE.md` §6.
+# The two refusals are `beispiele/gift/671` and `672`, and NEITHER emits, so `MARKE_EMIT_G`
+# does not move.
+MARKE_EMIT_M=72
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

@@ -1,0 +1,48 @@
+-- erwartet: N030
+-- **672 -- a buffer taken BACK that was never handed over.**
+--
+-- `caprock-virtio/src/lib.rs`:311 reads
+-- `pub fn reclaim(&self, buf : Owned<Device>, _done : &Completion) -> Owned<Driver>`.
+-- The precondition *"this buffer is currently the device's"* is not a comment and not a
+-- runtime check -- it is the parameter type, and an `Owned<Driver>` cannot be passed there.
+--
+-- **This is the second thing the ghost-token form loses**, measured 2026-09-03.
+-- `beispiele/66-transport-rueckgabe.gab`'s `hole` carries no `advances` clause -- deliberately,
+-- and its own header says why: `advances geraet -> fahrer` falls at `O002`, because the way
+-- back is not a step forward. But a function with no `advances` clause has no stage
+-- precondition either, so a token still standing at `fahrer` may be reclaimed. Written in
+-- that form, the reclaim-without-arm below passes with `0 errors, 0 hints`.
+--
+-- `O003` guards the FORWARD step and there is nothing to guard the standing one; the two
+-- halves are not the same rule, and only one of them exists.
+--
+-- With two `linear type`s the precondition is back where caprock has it -- in the parameter
+-- type -- and it costs no new word. `messung/proben/probe-besitz-zwei-typen.gab` carries the
+-- working version; `beispiele/gift/671` is the other refusal, the write while armed.
+
+module gift::zurueck_ohne_hingabe {
+
+pub linear type FahrerPuffer;
+pub linear type GeraetPuffer;
+
+extern fn arm(b : FahrerPuffer) -> GeraetPuffer
+    effects { consumes b } costs <= 8 ops;
+
+-- Only a buffer the DEVICE holds can be reclaimed -- `lib.rs`:311.
+extern fn hole_unbelegt(b : GeraetPuffer) -> FahrerPuffer
+    effects { consumes b } costs <= 8 ops;
+
+extern fn fertig(b : GeraetPuffer)
+    effects { consumes b } costs <= 1 ops;
+
+impl fn runde(b : FahrerPuffer)
+    effects { consumes b }
+    costs   <= 64 ops
+{
+    -- **Here.** Nothing was ever armed, and the buffer is taken back anyway.
+    let b1 = hole_unbelegt(b);
+    let b2 = arm(b1);
+    fertig(b2);
+}
+
+}

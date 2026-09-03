@@ -2112,21 +2112,29 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
 
 - [ ] **Die fünfte Marke, die niemand führt: wie viel Prozent eines echten Kerns steht am
       Ende in Gabbro statt daneben?** Bei `virtio-net` sind es ~~**75 %**~~ ~~**87 %**~~
-      **90 %, und sie tragen seit dem 2026-09-03 ihre Kategorien**
+      ~~**90 %**~~ **30 von 30, und sie tragen seit dem 2026-09-03 ihre Kategorien**
       ([`messung/FUENFTE-MARKE.md`](../messung/FUENFTE-MARKE.md)):
 
       ```
                                               Faehigkeiten   von 30
         in Gabbro heute                             6         20 %
-        ungeschrieben, gemessen schreibbar         21         70 %
+        ungeschrieben, gemessen schreibbar         24         80 %
         ----------------------------------------------------------
-        IN GABBRO                                  27         90 %
+        IN GABBRO                                  30        100 %
 
-        daneben                                     3         10 %
+        daneben                                     0          0 %
             A  Klempnerei (B1/B2)                   0          0 %
             B  Hardwarebefehle (B5)                 0          0 %
-            C  was Gabbro nicht traegt              3         10 %
+            C  was Gabbro nicht traegt              0          0 %
       ```
+
+      **Und drei Vorbehalte reisen mit, keiner davon Zierrat.** *Gemessen schreibbar* ist
+      eine Aussage über Proben, die prüfen und absenken, **nicht über einen
+      zusammengesetzten Treiber**; Zeile #27, die Orchestrierung, ist die eine Zeile, die
+      nicht einzeln gemessen wurde, und sagt das selbst. **100 % ist mit den 75 % vom
+      2026-09-02 nicht vergleichbar** — jener Quotient hatte keinen aufgeschriebenen Nenner.
+      Und der Satz gilt **diesem Treiber**: dreissig Fähigkeiten von `caprock-virtio` sind
+      nicht der Kern. *Ein leerer Eimer über EINER Aufzählung ist kein leerer Eimer.*
 
       > **26 / 87 % / 4 stand hier bis zum Nachmittag desselben Tages.** `C2` war eine
       > Passluecke, der Pass ist erweitert, und Faehigkeit #24 ist damit von *nicht getragen*
@@ -2234,13 +2242,33 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       > *Ein „ausdrückbar", das am Prüfer haltmacht, ist dieselbe Klasse wie das Muster, das
       > die Barriere nicht fand.*
 
-      **DER DRITTE EIMER: ~~ZWEI Posten über vier Fähigkeiten~~ EINER über drei — und der
-      zweite hatte keinen Namen, bis er einen bekam und daran geschlossen wurde.**
+      **DER DRITTE EIMER: ~~ZWEI Posten über vier Fähigkeiten~~ ~~EINER über drei~~ —
+      **KEINER. Der Eimer ist LEER**, und keiner der drei Schritte dorthin war Rechnen.**
 
       | | was es ist | wo es gebucht ist |
       |---|---|---|
-      | **C1** | die Eigentumsübergabe (`reclaim`, `reclaim_unproven`, der Typestate) | `R004`/`R007` — **eine Nachbarbahn, seit dem 2026-09-03; offen** |
+      | ~~**C1**~~ | ~~die Eigentumsübergabe (`reclaim`, `reclaim_unproven`, der Typestate)~~ | **geschlossen 2026-09-03** bei `7455b0f`, `beispiele/66-transport-rueckgabe.gab` — und **nachgemessen** in `FUENFTE-MARKE.md` §6, wo die Fähigkeit steht und das Belegstück ausgetauscht wird |
       | ~~**C2**~~ | ~~die zwei Achsen eines DMA-Puffers bleiben getrennt~~ | **geschlossen 2026-09-03** — `N030` liest das Feld und das Schreiben hinein (`FUENFTE-MARKE.md` §3, `OFFEN.md` `O7`) |
+
+      > **Und `C1` hat den Nachlauf nur zur Hälfte überstanden — die Fähigkeit ja, die Probe
+      > nicht.** `beispiele/66` trägt die Übergabe als linearen GEISTERmarker neben dem
+      > Puffer. Das hält Caprocks **Reihenfolge** (`L104`, `L107`, `O003`, jeder in einer
+      > eigenen Datei gemessen) und verliert Caprocks **Ausschluss**: in den Puffer schreiben,
+      > während das Gerät ihn besitzt, geht mit `0 errors, 0 hints` durch — der eine Fehler,
+      > gegen den `owned.rs` steht (`owned.rs`:60, *„Dieser Typ hat keine Zugriffsmethode.
+      > Das ist die ganze Zusicherung."*). Zwei weitere Verluste aus derselben Ursache:
+      > `hole` trägt kein `advances`, also hat es keine Stufenvorbedingung; und
+      > `requires geraet_fertig()` liest an der Rufstelle **kein Pass** — `requires 1 == 0`
+      > geht durch, `requires x > 10` mit `0` fällt an `M115`, weil `M115` BEREICHSaussagen
+      > über Argumente liest und sonst nichts.
+      >
+      > **Die Sprache kann es, diese Probe konnte es nicht.** Zwei `linear type` mit dem
+      > Schreibweg allein über der Treiberseite geben alles drei zurück, **ohne ein neues
+      > Wort und ohne Passänderung**: `messung/proben/probe-besitz-zwei-typen.gab`,
+      > `beispiele/gift/671`, `672`, `673`. Der Kopf von `beispiele/66` hatte den Zwei-Typen-
+      > Weg an `let g : GeraetBesitz = b` ausgeschlossen — eine Zuweisung, die Caprock nie
+      > benutzt: `owned.rs`:102 wechselt mit einer FUNKTION. *`C1` bleibt geschlossen; das
+      > Belegstück darunter ist ausgetauscht.*
 
       **C2 ist der Fund.** Caprock hält beide Adressen eines Puffers in `Owned`
       (`owned.rs`:62–77) und kauft die Zusage mit FELDPRIVATHEIT: `cpu` ist von aussen nicht
@@ -2734,7 +2762,31 @@ Ziel.*
 | **3** | **Der ungesehene Port** | ~~die einzige Messung, die die Liste umschreiben kann~~ **— und die Begründung gehört schärfer, Ordner 2026-09-02:** *er ist nicht nur die einzige Messung, die schlecht ausgehen kann; er ist die einzige, deren Ausgang **die Beta-Liste selbst neu bewertet.*** Scheitert ein fremder Schreiber an Formen, die dieser Korpus nie gebraucht hat, dann sind Stunden dieser Liste **an der falschen Stelle investiert**. Daraus folgt die Reihenfolge: eine halbtägige Aufräumrunde davor ist richtig — *sie räumt, ohne Annahmen zu zementieren* — und **alles Größere danach ist falsch, bis das Ergebnis da ist** |
 | **4** | B2 Zeichenketten | mit der Ratschenrechnung davor |
 | **5** | B3 Auffahrtsweg | erst sinnvoll, wenn B1 und B2 stehen |
-| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — ~~87 %~~ **90 % bei einem Treiber, mit Kategorien** (2026-09-03); was daneben bleibt, ist EIN Posten über drei Fähigkeiten — die Eigentumsübergabe |
+| **6** | Die fünfte Marke (§48) | *wie viel Prozent stehen in Gabbro* — ~~87 %~~ ~~90 %~~ **30 von 30 bei EINEM Treiber, mit Kategorien** (2026-09-03); **der dritte Eimer ist LEER.** Sechs stehen in der Datei, vierundzwanzig sind als schreibbar gemessen, null bleiben daneben. `C2` fiel am Nachmittag (`N030` liest das FELD), `C1` am Abend (`7455b0f`, die Eigentumsübergabe) — **drei Bahnen an einem Tag, und keine sah die andere.** Nachgerechnet in `messung/FUENFTE-MARKE.md` §6: alle dreißig `file:line`-Belege gegen `caprock-messbasis` bei `a1bf707` geöffnet, jeder trifft, was seine Zeile behauptet |
+
+> **Ein leerer dritter Eimer ist die stärkste Behauptung dieser Zeile, und sie wurde
+> angegriffen, bevor sie hier stand.** Beide Urteile liefen unverändert nach: `C1`
+> `11 items, 0 errors, 0 hints`, emittiert, `cc` schweigt bei `-O0` und `-O2`; `C2` vier
+> `N030` in `probe-opak-am-feld.gab`. **Was der Nachlauf gefunden hat, betrifft nicht die
+> Zeile, sondern EINE Probe darunter:** `beispiele/66-transport-rueckgabe.gab` trägt die
+> Eigentumsübergabe als linearen Geistermarker NEBEN dem Puffer. Das hält Caprocks
+> **Reihenfolge** (`L104`, `L107`, `O003` — jeder in einer eigenen Datei gemessen) und
+> verliert Caprocks **Ausschluss**: der Marker ist linear, der Puffer ist ein gewöhnlicher
+> `ptr<normal, rw>` daneben, und *in den Puffer schreiben, während das Gerät ihn besitzt* —
+> genau der Fehler, gegen den `owned.rs` steht — geht mit `0 errors, 0 hints` durch.
+>
+> **Die Sprache kann es, die Probe konnte es nicht.** Zwei `linear type` mit dem Schreibweg
+> allein über der Treiberseite geben alle drei verlorenen Hälften zurück, **ohne ein neues
+> Wort und ohne eine Passänderung**: `messung/proben/probe-besitz-zwei-typen.gab` (grün,
+> emittiert, übersetzt), `beispiele/gift/671`, `672`, `673`. *Die Fähigkeit bleibt
+> geschlossen; das Belegstück darunter ist ausgetauscht.*
+>
+> **Und die allgemeine Form wiegt mehr als dieser Fall.** Eine Probe, die grün prüft, hat
+> gezeigt, dass eine GESTALT zulässig ist — nicht, dass die Gestalt trägt, was das Original
+> trug. *Der Prüfer kann den Unterschied nicht sehen, weil die fallengelassene Eigenschaft
+> nie aufgeschrieben wurde.* **Die Probe lautet nicht „prüft es grün", sondern „wird das,
+> was es verbieten soll, noch verboten".** Alle vierundzwanzig als *schreibbar gemessen*
+> gebuchten Zeilen ruhen auf der schwächeren Frage.
 
 **Und was NICHT auf dieser Liste steht, gehört ausgesprochen:** die Beweisseite. `145 von 381
 Rümpfen`, `1 Absenkungssatz von 65`, die Naht zwischen zwei Beweisern, die in keiner Logik
