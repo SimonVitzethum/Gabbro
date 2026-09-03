@@ -307,6 +307,107 @@ def abgesenkt():
     return absenkung()[0]
 
 
+# **The lowering column is TWO registers, and until 2026-09-04 it was one** (`K100.1`).
+# ------------------------------------------------------------------------------------
+# `PLAN.md` says it of itself, in the very paragraph that names this phase: *"Die
+# lowering column counts «Gabbro cannot do that» and «this text is not a program»
+# in one number."* `K100.1` did the same separation one level down -- three
+# hand-written `narrow`s, of which only ONE was plumbing -- and it is the precedent
+# this follows, down to the shape of its gate: *a yardstick that does not tell a
+# check from a rite measures the wrong thing.*
+#
+# THE CRITERION, and it is stated so that it CAN come out the other way
+# ---------------------------------------------------------------------
+# **A plumbing obligation is one that Gabbro's own machinery can discharge without changing
+# what the program says** -- it falls to a change under `crates/` alone: no new source word,
+# no new grammar production, no edit to the frozen excerpt.
+#
+# For a LOWERING obligation that question has a mechanical answer, and this is it:
+#
+#     `gabbro pruefe F` == 0 errors  ->  the language ACCEPTS the text and only the
+#                                        generator is missing. Write the emitter arm and
+#                                        the obligation is discharged. **PLUMBING.**
+#     `gabbro pruefe F`  > 0 errors  ->  the checker refuses the text before the emitter is
+#                                        ever reached. There is no arm to write, because
+#                                        there is no accepted input to lower. **NOTATION.**
+#
+# **Calibration -- it reproduces the nine piercings and does not invent a tenth.** F1, F5
+# and F9 checked clean and did not lower; all three were discharged on 2026-09-03 by emitter
+# code (`D19`-`D22`), which is what "plumbing" has to mean if the word means anything. This
+# rule would have called all three plumbing, and all three were.
+#
+# **What would refute it, named in advance:** a fragment that checks clean while its
+# differential test does not hold lands in `klempnerei` and RAISES `H`. That is not
+# hypothetical -- it is the state F1, F5 and F9 were in on 2026-09-02, and it is the state
+# `F03` returns to the moment someone repairs its eighteen refusals. *A criterion that can
+# only subtract is not a criterion*, and the speaking probe below drives exactly that case
+# through the classifier, in both directions.
+#
+# **What this does NOT say.** A notation-blocked lowering is not discharged, not excused and
+# not smaller. It is booked where `K100.3` books its kind -- in the «B» register -- and it
+# leaves `H` because `H` counts *Klempnerei*, and a gap that costs a source word is not
+# plumbing under the definition `K100` itself runs on.
+FRIST_PRUEFE = 120  # seconds per fragment. Same reason as `FRIST_ABSENKUNG`.
+_BEFUND = re.compile(r":\s*\d+ items?, (\d+) errors?, \d+ hints?\s*$", re.M)
+
+
+def _pruefe_fehler(quelle):
+    """The error count `gabbro pruefe` reports over ONE file -- run, not read.
+
+    Refuses with `2` if the checker cannot be run or prints no verdict at all: an unmeasured
+    file must not pass for a clean one, which is the direction this classification would
+    fail in silently.
+    """
+    import subprocess
+    w = Path(__file__).resolve().parent.parent
+    try:
+        r = subprocess.run(
+            ["cargo", "run", "-q", "--manifest-path", str(w / "Cargo.toml"),
+             "--bin", "gabbro", "--", "pruefe", str(quelle)],
+            cwd=w, capture_output=True, text=True, timeout=FRIST_PRUEFE)
+    except subprocess.TimeoutExpired:
+        _absage(f"ABBRUCH: `gabbro pruefe {quelle.name}` ueberschreitet die Frist "
+                f"({FRIST_PRUEFE} s) -- ein Haenger sieht aus wie „laeuft noch“.")
+    except OSError as e:
+        _absage(f"ABBRUCH: `gabbro pruefe` laesst sich nicht starten ({e}) -- es wurde "
+                f"NICHTS gemessen.")
+    m = _BEFUND.search(r.stdout + r.stderr)
+    if m is None:
+        _absage(f"ABBRUCH: `gabbro pruefe {quelle.name}` nennt keinen Befund "
+                f"(`N items, M errors, K hints`). **Dann waere die Einordnung der "
+                f"Absenkungsspalte geraten und nicht gemessen.**",
+                *(r.stdout.splitlines()[-6:] + r.stderr.splitlines()[-6:]))
+    return int(m.group(1))
+
+
+def absenkungsklasse(sonde=None, locker=False):
+    """**The open lowering obligations, split into the two registers.**
+
+    Returns `(klempnerei, notation, fehlerzahl)`: the fragments whose lowering a generator
+    can discharge, those the checker refuses before the generator is reached, and the error
+    count per open fragment.
+
+    `sonde` is the speaking probe's handle -- `(name, pfad)` is treated as an eleventh
+    fragment with no holding differential test, so a case can be driven through the
+    classifier without touching the tree. `locker` is the OLD, undivided rule and survives
+    only so the probe can show that the division does any work at all.
+    """
+    wurzel = Path(__file__).resolve().parent.parent / "messung" / "fragmente"
+    offen = [(f, wurzel / f"F{int(f[1:]):02d}.gab")
+             for f in [f"F{i}" for i in range(1, 11)] if f not in abgesenkt()]
+    if sonde is not None:
+        offen.append(sonde)
+    klempnerei, notation, fehlerzahl = [], [], {}
+    for name, quelle in offen:
+        n = _pruefe_fehler(quelle)
+        fehlerzahl[name] = n
+        if n == 0 or locker:
+            klempnerei.append(name)
+        else:
+            notation.append(name)
+    return klempnerei, notation, fehlerzahl
+
+
 # **The K/L split, DERIVED instead of carried forward** (2026-08-30).
 #
 # `PFLICHTEN.md` closes with two summary tables, and on 2026-08-30 both were wrong about the
@@ -474,13 +575,16 @@ def haengend(probe=None, still=False, locker=False):
     # ableitbar, und die Tabelle drueben braucht sie nicht mehr von Hand.
     ABSENKUNG_OFFEN = [f for f in [f"F{i}" for i in range(1, 11)]
                        if f not in abgesenkt()]
+    # **And the open ones are SPLIT since 2026-09-04** -- see `absenkungsklasse` above for
+    # the criterion and for what would have refuted it. Only the plumbing half counts in `H`.
+    klempnerei, notation, fehlerzahl = absenkungsklasse()
     print("\n  je Fragment (verankert + Absenkung):")
     for f in [f"F{i}" for i in range(1, 11)]:
         v = len(offen.get(f, []))
-        a = 1 if f in ABSENKUNG_OFFEN else 0
+        a = 1 if f in klempnerei else 0
         if v or a:
             print(f"    {f:<4} {v} + {a} = {v + a}")
-    a = len(ABSENKUNG_OFFEN)
+    a = len(klempnerei)
     haelt, faellt, _ = absenkung()
     def _liste(s):
         return ", ".join(sorted(s, key=lambda x: int(x[1:]))) or "keines"
@@ -498,6 +602,19 @@ def haengend(probe=None, still=False, locker=False):
     print(f"                        OHNE Differenztest: {_liste(ohne_lauf)}")
     print(f"  ---------------------")
     print(f"  H               {n + a:>3}")
+    # **The other half of the split, and it is PRINTED and not subtracted** (2026-09-04).
+    #
+    # A lowering the checker refuses before the emitter is reached is not discharged -- it is
+    # booked in the other register. *A number that shrinks without the second one appearing
+    # beside it is the move `K100.1` warns against*, so the two stand together or neither
+    # does.
+    print(f"  Notation        {len(notation):>3}   {_liste(notation)} -- refused by the "
+          f"CHECKER, so no")
+    for f in notation:
+        print(f"                        emitter arm reaches them: {f} carries "
+              f"{fehlerzahl[f]} errors.")
+    print(f"                        They belong in the «B» register (`K100.3`'s kind),")
+    print(f"                        not in `H`. See `absenkungsklasse` for the criterion.")
     print()
     print("**Und was diese Zahl NICHT ist:** eine Aussage ueber Gabbro. Die zehn Fragmente")
     print("sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen bliebe Falle 80,")
@@ -771,6 +888,64 @@ if __name__ == "__main__":
             sys.exit(2)
         print(f"== Sprechprobe: ok (der Waechter laesst einen vertauschten Durchstich "
               f"FALLEN und {len(haelt)} heile HALTEN) ==")
+        # **The SPLIT of that half, and it is probed in both directions** (2026-09-04).
+        #
+        # The classification `absenkungsklasse` makes is the one move `K100.1` warns about in
+        # its own text: it can degenerate into defining a debt out of existence. **`K100.1`
+        # did not, because its test could have gone the other way** -- an `else` branch a
+        # hostile input CAN take is logic, one that cannot be taken is a hole. So this test
+        # has to be able to come out "yes, it is plumbing", and the two probes below are that
+        # demonstration, run on every invocation and not asserted in prose.
+        #
+        #   * FORWARD -- a synthetic fragment that CHECKS CLEAN and has no differential test
+        #     must land in `klempnerei` and RAISE `H`. That is the case the criterion is
+        #     accused of being unable to produce, so it is produced.
+        #   * BACKWARD -- one the checker REFUSES must land in `notation` and NOT raise `H`,
+        #     **and under the old, undivided rule it must have counted.** Without that second
+        #     half a tie proves nothing: a probe the classifier never reaches is also quiet.
+        import tempfile
+        SAUBER = """module sonde::sauber {
+impl fn zwei() -> u32 effects { pure } costs <= 2 ops { return 2; }
+}
+"""
+        KAPUTT = """module sonde::kaputt {
+impl fn zwei() -> u32 effects { pure } costs <= 2 ops { return nirgends_erklaert; }
+}
+"""
+        k0, n0, _ = absenkungsklasse()
+        with tempfile.TemporaryDirectory() as d:
+            for was, text, erwartet in (("sauber", SAUBER, "klempnerei"),
+                                        ("kaputt", KAPUTT, "notation")):
+                p = Path(d) / f"sonde-{was}.gab"
+                p.write_text(text, encoding="utf-8")
+                k1, n1, fz = absenkungsklasse(sonde=("F99", p))
+                if erwartet == "klempnerei":
+                    if "F99" not in k1 or len(k1) != len(k0) + 1:
+                        print(f"SPRECHPROBE GESCHEITERT: eine SAUBER pruefende Datei ohne "
+                              f"Durchstich landet nicht in der Klempnerei ({len(k0)} -> "
+                              f"{len(k1)}). **Dann kann dieses Mass nur subtrahieren, und "
+                              f"dann ist es kein Mass.**", file=sys.stderr)
+                        sys.exit(2)
+                    print(f"== Sprechprobe: ok (eine sauber pruefende, nicht abgesenkte "
+                          f"Datei hebt H von {vorher + len(k0)} auf "
+                          f"{vorher + len(k1)}) ==")
+                else:
+                    if "F99" not in n1 or len(k1) != len(k0):
+                        print(f"SPRECHPROBE GESCHEITERT: eine vom Pruefer ABGEWIESENE Datei "
+                              f"landet nicht in der Notation ({len(k0)} -> {len(k1)}).",
+                              file=sys.stderr)
+                        sys.exit(2)
+                    weit, _, _ = absenkungsklasse(sonde=("F99", p), locker=True)
+                    if len(weit) != len(k0) + len(n0) + 1:
+                        print(f"RUECKWAERTSPROBE UNTAUGLICH: schon die ALTE, ungeteilte "
+                              f"Regel sieht die erfundene Datei nicht ({len(weit)}). "
+                              f"**Dann belegt ein Gleichstand unter der neuen nichts.**",
+                              file=sys.stderr)
+                        sys.exit(2)
+                    print(f"== Rueckwaertsprobe: ok (eine abgewiesene Datei zaehlt unter der "
+                          f"ALTEN Regel mit -- {len(weit)} -- und unter der neuen NICHT: H "
+                          f"bleibt {vorher + len(k1)}, sie steht mit {fz['F99']} Fehlern in "
+                          f"der Notation) ==")
         if faellt:
             gefallen = ", ".join(sorted(faellt, key=lambda x: int(x[1:])))
             print(f"== Gemessen: {gefallen} traegt eine `lauf`-Zeile und der Durchstich "
