@@ -92,6 +92,23 @@ ratchet runs over does not identify the obligation it names**, and nothing repor
 | **material already present** | `gabbro pflichten --lean` carries the text as a datum (`post_duty_2 : Expr`) — *and it was measured to be a dropped field, not a missing computation, before anything was designed* |
 | **what stays open** | the ratchet's subject. It runs over the NAME, and the name is unchanged by the exchange; a ratchet over the manifest LINE sees it. **Not repaired here, because it is a decision about §15's own sentence and not a defect of the emitter** |
 
+### The subject is decided, and the entry stays open — measured 2026-09-03
+
+**The key is `(name, class, text)`, and the anchor is only a last resort.** The four
+alternatives were priced rather than argued; the working, the probes and every denominator
+stand in `messung/BERICHT-O3-RATSCHE.md`, and
+**`./messung/gabbrov/ratschenschluessel.py`** re-measures all of it in one second.
+
+| | |
+|---|---|
+| **how far the hazard reaches** | **28 of 113** lines a SWAP can move (11 sibling groups over 6 files) · **79 of 113** an INSERTION can (every line whose name carries an ordinal, the lone `#1`s included) · **113 of 113** an EDIT of the text can, the four NAMED kinds too. *Three severities, and they must not be added up.* |
+| **has it happened** | **No.** All 1091 commits of the merged tree against every parent: 459 modified `.gab` pairs, 398 clause lists compared, **0 changes** — no swap, no shift, not one edit. Independently: of 282 lines ever removed from a `.gab`, **not one** is a contract line. *So no mark stands on the wrong obligation — and none could, because `ZUSTAND` is the constant `"open"` and V4 is not built* |
+| **why not a content hash in the name** | it breaks on exactly the same edits as the text does, and it additionally destroys a name that **twelve documents and three instruments** already key on, the two proof channels' `duty_2 … :: ensures #1` among them. **Strictly dominated** |
+| **why not an identity written in the source** | §7's gate — and it is *not sufficient anyway*: a hand-given label stays put while the predicate under it is rewritten, which is this very transfer one edit further out. It would buy stability under a swap and nothing under an edit |
+| **the price of the decided key** | measured over five edits that mean the same thing: re-indenting, wrapping a conjunct across lines and a trailing comment leave every key standing (`schnitt_bis` collapses whitespace runs); redundant parentheses and any rewording move it. **A moved key loses `closed`, which is the safe direction** (W10: it may oblige, it may not acquit) |
+| **why the anchor stays out** | one added comment line at the top of `beispiele/01-tabelle.gab` moves **13 of 13 anchors and 0 of 13 texts.** The anchor is the least stable field of the record. It is kept for reading — and as the tie-break where two lines of one unit agree in name, class and text, which **17 lines of Gabbro reach**: two calls to one callee with one `requires` (`ratschenschluessel.py::DOPPELRUF`). Today the triple is a key over the whole population, **0 collisions of 113** |
+| **why the entry stays open** | nothing keys on anything yet. §15 still says *"the ratchet runs over names"*, and the sentence is **false as the emitter writes names** — its own example (`revoke.functional`) is an authored name, not an ordinal. What is written down here is the key V4 must use; **the entry closes when V4 uses it**, not when it is written |
+
 ---
 
 ## O4 — `cdt_wohlgeformt` cannot hold over a table with a free slot

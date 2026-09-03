@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 194 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 196 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -578,6 +578,17 @@ darunter.
       weggenommen, `pruefe-widerruf.py` sagt 190, Datei zurück, 191. **Die Zahl steht hier
       aus dem Lauf und nicht aus einer Addition** — wenn eine zweite Bahn heute ebenfalls
       eine Datei bringt, ist die Wahrheit im Merge 192 und wird dort neu gemessen.*
+      *__ZUM SIEBTEN MAL, UND DIESMAL WAR DIE ZAHL SCHON IM AUFTRAG FALSCH.__ Am
+      2026-09-03 stand die Ratschenschluessel-Bahn (`messung/BERICHT-O3-RATSCHE.md`) auf
+      `1cb66b0` und mass 193 → 194 fuer IHRE eine Datei; die Koordination nannte ihr fuer
+      den gemergten `master` **194**. Beide Zahlen waren einzeln richtig und beide im
+      zusammengefuehrten Baum falsch: `master` war unterdessen ueber `e293a6c` auf
+      `10856d8` gelaufen und hatte `messung/BERICHT-B10.md` und `messung/UNSEEN-PORT-FAT.md`
+      mitgebracht. **Die gemessene Wahrheit nach dem Merge ist 196.** Ursache gemessen wie
+      der Eintrag es verlangt: eigene Datei weggenommen, `pruefe-widerruf.py` sagt 195,
+      Datei zurueck, 196 -- *nicht addiert, nicht gewaehlt, und auch nicht aus dem Auftrag
+      uebernommen.* Bemerkenswert ist die neue Halbheit: hier hat nicht eine zweite Bahn
+      die Zahl still mitbewegt, sondern **die Ansage selbst war beim Ankommen veraltet.*
       *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
       über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
       dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei
