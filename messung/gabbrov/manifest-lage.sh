@@ -36,7 +36,12 @@ fi
 # does not look at it does not fail on a newer format; it MISREADS one, and here that would
 # look like a manifest that simply holds fewer lines. *That is the finding this script exists
 # to report, so it is exactly the value it must not be able to fake.*
-FASSUNGEN_BEKANNT="1"
+#
+# **Widened to `1 2` BEFORE the emitter wrote a 2**, and that order is the rule itself
+# (`AUFTRAG-GABBROV.md` §4). What this script reads -- `no register` and the
+# `== N obligations` header -- is unchanged across the two formats, so both parse to the same
+# figure here; the gate is for the change after this one.
+FASSUNGEN_BEKANNT="1 2"
 
 echo "== \`gabbro pflichten\` over the ten fragments =="
 tot=0

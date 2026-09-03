@@ -181,3 +181,63 @@ GABBRO=/tmp/fakegabbro ./messung/gabbrov/manifest-lage.sh      -> exit 2, "NOTHI
 
 `cargo test --offline --no-fail-fast`: **401 passed, 0 failed** (400 at `94c9ac5`, plus the
 new `das_register_traegt_seine_fassung_auf_zeile_eins`). `pruefe-zahlen.py` green.
+
+### Step 2 — every reader on both formats, before either moved
+
+Widened to `{1, 2}` **while the emitter still writes 1**. That order is the rule: a reader
+taught the new format *after* the writer moved has a window in between in which it reports a
+number out of a format it cannot read.
+
+* `instrumente/pruefe-zahlen.py` — `FASSUNGEN_BEKANNT = "1, 2"`
+* `messung/gabbrov/manifest-lage.sh` — `FASSUNGEN_BEKANNT="1 2"`
+* `crates/gabbro-check/tests/beispiele.rs` — reads through the Rust API, where a format
+  change is a **compile error** and not a silent one. The ordering rule exists against
+  silence, so the compiler is its gate here and the version test pins the line.
+
+Both text readers sum the `== N obligations:` header, and that header is unchanged across
+the two formats — so both parse to the same figure today. *The gate is for the change after
+this one, and that is exactly when a version field is worth having.*
+
+### `E1`, wired in — `instrumente/pruefe-manifest.py`
+
+`AUFTRAG-GABBROV.md` §5: *"E1 is WIRED INTO the tool, not hung beside it: the run ends with
+a comparison of the two line counts and aborts on a divergence. A tool that does not check
+its own completeness has none."* There are **two** comparisons and they live in two places,
+because one of them needs a document the compiler has never heard of:
+
+| | where | what it holds |
+|---|---|---|
+| **inner** | `pflichten.rs::zeige` itself, plus a read-back in the guard | what the emitter **wrote** against what it **counted** — the check against a new obligation kind quietly missing from the print loop while the header already counts it |
+| **outer** | the guard | what the manifest **carries** against the **population** it is about — `dokumente/PFLICHTEN.md`, which `gabbro` neither reads nor should |
+
+The guard carries three speech probes, and they run before it measures anything:
+
+```
+beide Fassungen:      ok (v1 und v2 ergeben dieselben zwei Zeilen)
+unbekannte Fassung:   ok (v99 und eine fehlende Zeile fallen beide)
+unterschlagene Zeile: ok (Kopfzahl und Zeilenzahl laufen auseinander)
+```
+
+**And it is red on today's tree, which is the point:**
+
+```
+GabbroV's obligation population                        63
+obligation lines the manifest carries                  10
+NOT carried                                            53
+   of which: fragments with NO register at all         4 of 10
+
+E1 GEFALLEN: 53 of 63 obligations reach no manifest line.        exit 1
+```
+
+Return code `1` and not `2`: everything was measured and something is open — the tree has to
+change, not the setup (`zaehle-p6.py`'s sixth requirement). It joins the two guards already
+red at `master`, and it goes green when the manifest carries its subject.
+
+*The guard never prints the bare 53.* The split between blocked and dropped is a judgement
+over `PFLICHTEN.md` and not a measurement, so the tool points at §2 of this file for it
+rather than inventing a number it cannot derive.
+
+**Carried numbers, all measured by removing the file and putting it back** — not added and
+not chosen: `pruefe-widerruf.py` 190 → 191 files, `pruefe-waechter.py` 53 → 54 guards that
+can abort mid-run, 312 → 320 exits behind the first, 58 → 59 instruments carrying all five
+requirements, 30 → 31 guardians in `README.md`.

@@ -78,7 +78,13 @@ FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger 
 # The gate replaces the old `grep -oE | awk` pair with ONE awk, because the version line and
 # the header line have to be read by the same pass -- a `grep` in front throws the version
 # away before anything can look at it.
-FASSUNGEN_BEKANNT = "1"
+#
+# **Widened to `1, 2` on 2026-09-03 -- and BEFORE the emitter wrote a 2.** That order is the
+# whole rule (`AUFTRAG-GABBROV.md` §4): a reader taught the new format after the writer moved
+# has a window in between in which it reports a number out of a format it cannot read. *What
+# this reader sums -- the `== N obligations:` header -- is unchanged across the two, so both
+# parse here to the same figure; the version gate exists for the change AFTER this one.*
+FASSUNGEN_BEKANNT = "1, 2"
 PFLICHTEN_SUMME = (
     # **Carried over 2026-08-24**: since `refines` the header line carries a fifth column
     # (`R`, refinement). The old pattern no longer matched it and reported that the search
@@ -86,7 +92,7 @@ PFLICHTEN_SUMME = (
     "cargo run -q --bin gabbro -- pflichten beispiele/*.gab 2>/dev/null | "
     "awk '"
     "/^-- manifest-version /"
-    "  { if ($3 != " + FASSUNGEN_BEKANNT + ") { schlecht = $3; exit 3 } next } "
+    "  { if ($3 != 1 && $3 != 2) { schlecht = $3; exit 3 } next } "
     "/^== [0-9]+ obligations: [0-9]+ refinement, [0-9]+ preservation, "
     "[0-9]+ postcondition, [0-9]+ foreign, [0-9]+ precondition/ "
     "  {o+=$2; r+=$4; p+=$6; q+=$8; f+=$10; v+=$12} "
