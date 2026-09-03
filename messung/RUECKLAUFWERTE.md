@@ -230,7 +230,7 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
   ~~52 von 55~~ **53 von 58** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ **316 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ ~~312~~ ~~315~~ ~~316~~ **317 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er

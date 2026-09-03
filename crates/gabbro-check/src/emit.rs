@@ -5992,11 +5992,14 @@ fn funktion(
     // > is what made this reachable, and the repair had to be measured at the RUN and not at
     // > `cc`, which had nothing to say.
     //
-    // The line is written unconditionally. Where the body already returns on every path it
-    // is dead code, and C says nothing about that -- `-Wunreachable-code` has been a no-op
-    // in GCC for years, and the whole corpus is measured against `-Werror` at both levels.
-    // *An extra statement that cannot run is the cheap side; a missing one is the run.*
-    if f.fehler.is_some() {
+    // **The one case that is left out is the one the reader would trip over:** a body whose
+    // LAST statement is already a `return`. There the success return is written by the arm
+    // two hundred lines up, and a second one under it would stand in the C twice --
+    // `messung/netz/udp-echo.gab` and every `-> T or R` body show that shape. *C says nothing
+    // about unreachable code, so this is legibility and not correctness* -- and everything
+    // that falls off the end, which is what the whole paragraph is about, still gets it.
+    if f.fehler.is_some() && !matches!(b.anweisungen.last().map(|s| &s.art), Some(StmtArt::Return(_)))
+    {
         aus.push_str("    return true;\n");
     }
     aus.push_str("}\n");

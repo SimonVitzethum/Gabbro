@@ -343,4 +343,133 @@ meant to fall.
 
 ---
 
-*(F05 follows; the run stops after it by instruction)*
+## F05 — the virtio-blk service
+
+### Three of the excerpt's names belong to C, and none of them is visible at `cc`
+
+| name | what C says | what the excerpt means |
+|---|---|---|
+| `exit` | `void(int)` | *this function never returns* — and all eight call sites pass no argument |
+| `signal` | `__sighandler_t(int, __sighandler_t)` | a capability notification. **C's type has no Gabbro form at all**, so no signature could rescue it |
+| `recv` | `ssize_t(int, void *, size_t, int)` | an seL4-style receive at an endpoint |
+
+**All three refusals are right, and the decisive half is why the checker has to hold them:**
+
+> The generated unit includes no POSIX header, so `cc` never sees C's declaration and has
+> nothing to complain about. **The refusal that should come from the foreign compiler cannot
+> come from it at all** — and the linker then finds the real symbol behind whatever this unit
+> declared.
+
+That is a *silent* wrong binding, not a compile error. Repair: rename, which is exactly what
+`N046`'s own note asks for — *"rename it, and reach the C function through one that CAN be
+written"*. `exit` → `dienst_abbruch`, `signal` → `benachrichtige`, `recv` → `empfange`.
+Twelve frozen lines move, each booked in the guard.
+
+`M134` (`m.op` on a `u64`) falls out of the same repair: `recv` had been *completed* as
+`-> u64`, and the excerpt reads a field on it. `empfange` now returns a record `Nachricht`
+carrying **one** field, because the excerpt reads one and otherwise only passes `m` on.
+
+### The header claimed the completion was finished, and it was five names short
+
+`decode_op`, `request_flush`, `serve_rw`, `serve_scan`, `bump_served` — all called by the
+frozen service body, all declared nowhere in the tree. **The emitter said so at exactly one
+of the five**, at `match decode_op(m.op)`, because a `match` needs the scrutinee's type. *The
+other four the body called into nothing, and no pass said a word*; `E009` only reports that
+`run`'s effect hull is therefore a LOWER bound.
+
+> **Four checker errors were never this file's whole error surface.** That is worth keeping
+> as a sentence about the metric and not only about the file: an undeclared callee is caught
+> by the emitter, and only where the emitter happens to need its type.
+
+### The checker finding, and it outranks the Durchstich
+
+`N046` compares an `extern fn`'s lowered signature against the measured table, and
+`absenkung_der_signatur` read `f.ergebnis` and `f.parameter` — **never `f.fehler`**. An
+`or R` changes the C signature: the function becomes `bool`, the result leaves through
+`*_wert`, the reason through `*_grund`.
+
+Measured through the **unchanged** checker on a four-item file with no fragment in it:
+
+    extern fn abs(a : i32) -> i32 or R effects { pure } costs <= 1 ops;
+
+    gabbro pruefe  ->  4 items, 0 errors, 0 hints
+    gabbro emit    ->  exit 0, and the unit carries
+                       int32_t abs(int32_t a);        /* ONE parameter */
+                       if (!abs(x, &w, &e)) { … }     /* THREE arguments */
+
+`int32_t(int32_t)` is exactly the row the table holds for `abs`, **so `N046` passed** — and
+the unit it passed carries a prototype called with the wrong arity. `cc` catches that one,
+which is precisely what the rule exists to prevent: its own doc says *"at a name C already
+owns the answer has to be exact, so an undecided comparison refuses"*. **Here it was not
+undecided; it was wrong.**
+
+The repair builds the spelling rather than refusing, because it can: the result pointer is
+the same `ctyp_primitiv`, and a `reason` lowers to a C enum under its own name. `recv`'s note
+now reads `bool(uint64_t,uint64_t *,Aufbau *)` against `ssize_t(int, void *, size_t, int)` —
+true, where before it named a lowering nobody writes. *And it refuses the whole family, which
+is the right answer and not a side effect: an error channel rewrites the ABI, so no C library
+function is reachable through one.*
+
+### The Durchstich
+
+`lauf "fragment5"`. The driver pushes six messages — `Info Read Write Flush Scan Stop` — and
+every foreign body appends a letter to a trace, so the expected value is a **fingerprint of
+the whole dispatch** rather than a tally:
+
+    q  request_flush    p  reply4    1/2  serve_rw with `m.op`    B  bump_served    S  serve_scan
+
+| | |
+|---|---|
+| **expected** | `qp12qBpSp 1 0 3 2 2 1 1 4711 31 512 77 0` |
+| `qp12qBpSp` | Info(q,p) · Read(1) · Write(2) · Flush(q,B,p) · Scan(S) · Stop(p) |
+| `1 0` | `benachrichtige` exactly once, with `0` — no setup step failed |
+| `3 2 2 1 1` | reply4, request_flush, serve_rw, serve_scan, bump_served |
+| `4711` | the capacity `serve_rw` sees — carried over from the `Info` pass |
+| `31` | the pool `bump_served` receives: `pool_new(map_window(DMA))` |
+| `512 77 0` | the last argument of the three replies. **`77` is `bump_served`'s return value arriving inside `reply4`** |
+| **poison** | `s/reply4(EP, Status_Ok, 0, 0, bump_served(pool));/reply4(EP, Status_Ok, 0, 0, 0);/` — the C still compiles and the loop still runs to `Stop`; only the value flow is gone. Measured: `qp12qpSp 1 0 3 2 2 1 0 4711 0 512 0 0` |
+| **certificate** | `1 assumptions (0 NOT FALSIFIABLE, 1 UNCOVERED), 1 templates (0 UNPROVED), 10 direct forms, 15 foreign bodies …` |
+
+**`1` and `2` are `m.op`** — the number the `M134` repair hangs on. With `recv` completed as
+`-> u64` a one-field record could not have travelled at all.
+
+### H before and after
+
+    before   8 von 10 sind DURCHGESTOCHEN                                          H = 2
+    after    9 von 10 -- F01 F02 F04 F05 F06 F07 F08 F09 F10                       H = 1
+
+`cargo test --offline --no-fail-fast`: **400 passed, 0 failed**. `pruefe-emission.sh`:
+**ALL PASS — 28 durchgestochen, 125 von 125 uebersetzen**. `zaehle-wortschatz.py`:
+**221 / 208 / 333**, unchanged across all three fragments.
+
+---
+
+# The stop after F05
+
+**Instructed, and it is where the question stands.** Only `F03` is left, and its 27 errors
+over seven codes are not the reason to stop — *«B10» is*: `traverse` yields no value and
+knows no `break`, so `by consuming` over a `queue` drains the whole queue, which is a
+different program. Nine `N040` on top of that means nine names stand nowhere.
+
+**What this lane can say about the price, having now paid three of the four:**
+
+* Each of `F09`, `F01` and `F05` cost roughly what the plan booked, and in each one the
+  *repair* was the smaller half. The larger half was finding out **which side was wrong** —
+  and in all three cases it was the fragment, never the refusal.
+* **Every one of the three carried at least one checker or emitter defect behind the
+  fragment's own error**, and none of those would have been found by looking at the checker:
+  `walk … levels` over a `const` name, `let … else` over a result-less `or R` plus its
+  missing success return, and `N046` reading a signature without its error channel. *A
+  fragment that Gabbro refuses is a place where two things are wrong at once, and the second
+  one is only reachable after the first is fixed.*
+* `F03` is different in kind. The three above needed **no new word**; the vocabulary ratchet
+  did not move once. «B10» is a construct question, and the owner's own booking says two
+  thirds of the 30–60 h sit there.
+
+**And the tool's caveat stands, unchanged and unpaid:**
+
+> *The ten fragments are chosen for their DIFFICULTY; `H = 0` over them stays trap 80 as long
+> as no corpus stands beside them that nobody looked at while building.*
+
+`H = 1` improves the tree. It is not a statement about the language — and nothing in these
+three days made it one.

@@ -2447,7 +2447,7 @@ Ziel.*
       |---|---|---|
       | ~~**F09**~~ **ERLEDIGT 2026-09-03** | ~~1 Fehler — `K001`~~ **0** | ~~`device … at normal`~~ — **und es waren DREI Absagen und nicht eine:** `device … at normal`, `walk … levels` über einem `const`-Namen, `mappings of`. *Die Zeile hier hat die erste gelesen und die zwei dahinter nicht* |
       | ~~**F01**~~ **ERLEDIGT 2026-09-03** | ~~3 — 2× `M140`, `N029`~~ **0** | — *(und die Zeile stimmte: der Erzeuger hatte gegen F1 nichts. Was fehlte, waren drei Prüferabsagen, und alle drei hatten recht)* |
-      | **F05** | 4 — 2× `N046`, `M134`, `N041` | `match` über einen undeklarierten Ruf |
+      | ~~**F05**~~ **ERLEDIGT 2026-09-03** | ~~4 — 2× `N046`, `M134`, `N041`~~ **0** | ~~`match` über einen undeklarierten Ruf~~ — *und der undeklarierte Ruf war einer von FÜNF; die anderen vier rief der Rumpf ins Leere, ohne dass ein Pass etwas sagte* |
       | **F03** | **27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009` | `queue` — **«B10»: `traverse` liefert keinen Wert** |
 
       **`H = 0` ist damit keine Prüfarbeit, sondern Sprach- und Korpusarbeit:** vier
@@ -2514,6 +2514,34 @@ Ziel.*
       > in 20 ms (`OFFEN.md` O4). *Ein Durchstich misst, was das C rechnet, nicht was die
       > Zusage behauptet* — und die zwei Sätze stehen nebeneinander, damit niemand den ersten
       > für den zweiten hält.
+
+      > **F05 steht seit demselben Tag, und `H` ist 1** (*9 von 10 sind DURCHGESTOCHEN*;
+      > offen ist nur noch F03). **Auch hier hatten alle Absagen recht.** Drei Namen des
+      > eingefrorenen Ausschnitts gehören C — `exit` (`void(int)` gegen `exit() -> never` an
+      > acht argumentlosen Rufstellen), `signal` (`__sighandler_t(int, __sighandler_t)`, ein
+      > Typ, den Gabbro nicht schreiben kann) und `recv` (`ssize_t(int, void *, size_t,
+      > int)`) —, und ***keiner der drei ist an `cc` zu bemerken***: die erzeugte Einheit
+      > bindet keinen dieser Köpfe ein, also hat der fremde Übersetzer keinen Konflikt zu
+      > melden, und der Binder findet das echte Symbol hinter dem, was diese Einheit
+      > deklariert hat. *Die Absage, die vom fremden Übersetzer kommen sollte, kann von ihm
+      > gar nicht kommen* — genau darum hält der Prüfer sie. Umbenannt, zwölf gebuchte
+      > Zeilen.
+      >
+      > **Und der Kopf der Datei war an drei Stellen falsch.** Er behauptete *„ERGÄNZT, und
+      > nichts sonst"*, während **fünf** Namen fehlten, die der eingefrorene Dienstrumpf
+      > ruft: `decode_op`, `request_flush`, `serve_rw`, `serve_scan`, `bump_served`. Der
+      > Erzeuger sagte es an **einer** der fünf — an `match decode_op(m.op)`, weil dort ein
+      > Typ gebraucht wird. *Die anderen vier ruft der Rumpf ins Leere, und kein Pass sagt
+      > etwas dazu.* **Vier Prüfersätze waren nie die ganze Fehlerfläche dieser Datei.**
+      >
+      > **Der Ertrag ist ein PRÜFERBEFUND und keine Korpusarbeit:** `N046` vergleicht die
+      > Absenkung einer `extern fn`-Signatur mit der gemessenen Tafel und las dafür
+      > `ergebnis` und `parameter` — **nie `fehler`**. Ein `or R` ändert aber die
+      > C-Signatur. Nachgemessen am unveränderten Prüfer:
+      > `extern fn abs(a : i32) -> i32 or R` prüft mit **0 Fehlern** (denn `int32_t(int32_t)`
+      > *ist* die Zeile der Tafel für `abs`), und die erzeugte Einheit trägt
+      > `int32_t abs(int32_t a);` neben `abs(x, &w, &e)` — **einen Prototyp mit einem
+      > Parameter, gerufen mit dreien.** Geheilt am selben Tag.
 - [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
       rote Wächter seit drei Tagen.**
 

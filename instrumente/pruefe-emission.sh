@@ -1359,6 +1359,113 @@ lauf "fragment1" "$W/messung/fragmente/F01.gab" "$TREIBER1" \
      's/o->slots\[obj\].refcount >= 1/o->slots[obj].refcount >= 0/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 4 templates (1 of them UNPROVED), 13 direct forms, 5 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 4g. Das Fragment F5: der Dienst, und DREI seiner Namen gehoeren C --------------------
+#
+# **Die drei Absagen an F5 sind nicht an `cc` zu bemerken, und genau darum haelt sie der
+# Pruefer** (2026-09-03). `exit`, `signal` und `recv` stehen alle drei im eingefrorenen
+# Ausschnitt und bedeuten dort etwas anderes als in C -- `exit() -> never` gegen `void(int)`,
+# eine Kapazitaetsbenachrichtigung gegen `__sighandler_t(int, __sighandler_t)`, ein
+# seL4-artiger Empfang gegen `ssize_t(int, void *, size_t, int)`. **Die erzeugte Einheit
+# bindet keinen dieser Koepfe ein**, also hat der fremde Uebersetzer keinen Konflikt zu
+# melden, und der Binder findet das echte Symbol hinter dem, was diese Einheit deklariert
+# hat. *Die Absage, die vom fremden Uebersetzer kommen sollte, kann von ihm gar nicht
+# kommen.*
+#
+# Dazu kam, was der Kopf der Datei bestritt: **fuenf Namen, die der Dienstrumpf RUFT, standen
+# nirgends** -- und nur einer davon (`decode_op`, am `match`) hatte eine Absage. Die anderen
+# vier rief der Rumpf ins Leere, ohne dass ein Pass etwas sagte.
+schneide "$W/dokumente/FRAGMENTE.md" "module programs::virtio_blk" > "$ARB/f5.gab"
+if ! grep -q "forever dienst" "$ARB/f5.gab"; then
+    echo "== EMISSION: F5 NICHT GESCHNITTEN -- der Waechter misst seine eigene Ablage =="
+    exit 1
+fi
+# Die benannten Streichungen, eine je Zeile -- jede mit ihrem Grund im Kopf von F05.gab.
+cat > "$ARB/f5-gestrichen" <<'F5_WEG'
+    let cfg    = map_window(CFG)    else (e1) { signal(NTFN, 0xD1A6_0001); exit(); }
+    let bar    = map_window(BAR)    else (e2) { signal(NTFN, 0xD1A6_0002); exit(); }
+    let dmafenster    = map_window(DMA)    else (e3) { signal(NTFN, 0xD1A6_0003); exit(); }
+    let teilfenster = map_window(SHARED) else (e4) { signal(NTFN, 0xD1A6_0004); exit(); }
+    let pool      = pool_new(dmafenster)    else (e5) { signal(NTFN, 0xD1A6_0000); exit(); }
+    let transport = probe_ecam(cfg)  else (e6) { signal(NTFN, 0xD1A6_00FF); exit(); }
+    signal(NTFN, 0);
+        let m = recv(EP) else (e7) { exit(); }
+                -- «B11» hier stuende `leave Stopped;`. Ohne Ausgang bleibt nur `exit()` —
+                exit();
+extern fn exit() -> never effects { diverges };
+extern fn signal(n : u64, w : u64) effects { writes NTFN };
+F5_WEG
+buchung_pruefen "F05" "$ARB/f5.gab" "$W/messung/fragmente/F05.gab" "$ARB/f5-gestrichen" \
+                "^    let mut capacity : u32 = 0;$"
+#
+# **Was dieser Durchstich misst: die Dienstschleife, einmal ganz herum.** Der Treiber
+# schiebt sechs Nachrichten nach -- `Info Read Write Flush Scan Stop` -- und jeder fremde
+# Rumpf haengt einen Buchstaben an eine Spur. Die Spur ist damit ein Fingerabdruck der
+# ganzen Verteilung, nicht bloss ein Zaehlerstand:
+#
+#     q  request_flush   p  reply4   1/2  serve_rw mit `m.op`   B  bump_served   S  serve_scan
+#
+#    Erwartet:  qp12qBpSp -- Info(q,p) Read(1) Write(2) Flush(q,B,p) Scan(S) Stop(p)
+#               1 0       -- `benachrichtige` GENAU EINMAL, mit 0: kein Aufbauschritt fiel
+#               3 2 2 1 1 -- reply4, request_flush, serve_rw, serve_scan, bump_served
+#               4711      -- die Kapazitaet, die `serve_rw` sieht: aus `Info` uebernommen
+#               31        -- der Pool, den `bump_served` bekommt: `pool_new(map_window(DMA))`
+#               512 77 0  -- das letzte Argument der drei Antworten. **77 ist der
+#                            Rueckgabewert von `bump_served`, der in `reply4` einlaeuft**
+#
+# `1` und `2` sind `m.op` -- **die Zahl, an der die `M134`-Reparatur haengt**: bis heute war
+# `recv` als `-> u64` ergaenzt, und ein Verbund mit einem Feld haette nicht reisen koennen.
+TREIBER5='#include <stdio.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+static char spur[32];
+static int sp, n_ntfn, n_reply, n_flush, n_rw, n_scan, n_bump;
+static uint64_t letztes_ntfn, letztes_pool, antwort_c[4];
+static uint32_t letzte_kap;
+static int naechste;
+static void merke(char z) { if (sp < 30) spur[sp++] = z; }
+bool map_window(uint64_t cap, uint64_t *w, Aufbau *g) { (void)g; *w = cap * 10; return true; }
+bool pool_new(uint64_t f, uint64_t *w, Aufbau *g)     { (void)g; *w = f + 1;  return true; }
+bool probe_ecam(uint64_t c, uint64_t *w, Aufbau *g)   { (void)g; *w = c + 2;  return true; }
+bool empfange(uint64_t ep, Nachricht *m, Aufbau *g) {
+    (void)ep; (void)g;
+    m->op = (uint64_t)naechste++;
+    return true;
+}
+void reply4(uint64_t ep, Status st, uint64_t a, uint64_t b, uint64_t c) {
+    (void)ep; (void)st; (void)a; (void)b;
+    if (n_reply < 4) antwort_c[n_reply] = c;
+    n_reply++; merke((char)112);
+}
+void benachrichtige(uint64_t n, uint64_t w) { (void)n; n_ntfn++; letztes_ntfn = w; }
+Op decode_op(uint64_t w) { Op o; o.marke = (Op_marke)w; return o; }
+uint32_t request_flush(uint64_t t, uint64_t pool) { (void)t; (void)pool; n_flush++; merke((char)113); return 4711; }
+void serve_rw(uint64_t ep, uint64_t t, uint64_t pool, uint64_t f, Nachricht m, uint32_t kap) {
+    (void)ep; (void)t; (void)pool; (void)f;
+    n_rw++; letzte_kap = kap; merke((char)(48 + (int)m.op));
+}
+void serve_scan(uint64_t ep, uint64_t t, uint64_t pool) { (void)ep; (void)t; (void)pool; n_scan++; merke((char)83); }
+uint64_t bump_served(uint64_t pool) { n_bump++; letztes_pool = pool; merke((char)66); return 77; }
+_Noreturn void watchdog_schlug_an(void) { printf("WACHHUND\n"); exit(2); }
+_Noreturn void dienst_abbruch(void) {
+    spur[sp] = 0;
+    printf("%s %d %llu %d %d %d %d %d %u %llu %llu %llu %llu\n",
+           spur, n_ntfn, (unsigned long long)letztes_ntfn, n_reply, n_flush, n_rw,
+           n_scan, n_bump, letzte_kap, (unsigned long long)letztes_pool,
+           (unsigned long long)antwort_c[0], (unsigned long long)antwort_c[1],
+           (unsigned long long)antwort_c[2]);
+    exit(0);
+}
+int main(void) { run(0); }
+'
+# **Das Gift nimmt dem `Flush`-Zweig seinen Ruf von `bump_served`.** Das C uebersetzt, die
+# Schleife laeuft genauso weit, und nur der Wert, der in die Antwort einlaeuft, ist weg:
+# aus `qp12qBpSp … 1 … 31 … 77` wird `qp12qpSp … 0 … 0 … 0`. *Ohne diese Gegenprobe belegten
+# dreizehn Zahlen nur, dass das Programm nicht konstant ist.*
+lauf "fragment5" "$W/messung/fragmente/F05.gab" "$TREIBER5" \
+     "qp12qBpSp 1 0 3 2 2 1 1 4711 31 512 77 0" \
+     's/reply4(EP, Status_Ok, 0, 0, bump_served(pool));/reply4(EP, Status_Ok, 0, 0, 0);/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 1 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 10 direct forms, 15 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
 # **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**
@@ -2643,7 +2750,13 @@ MARKE_EMIT=65
 # would only raise the `verdeckt` mark of `zaehle-gifttreffer.py`. **This stage is the
 # reader instead** -- if the refusal comes back, the file stops emitting and this mark
 # falls.
-MARKE_EMIT_M=57
+#
+# **57 -> 58, und die dritte Fragmentdatei desselben Tages.**
+# `messung/fragmente/F05.gab` emittiert, seit drei Namen umbenannt sind, die C schon
+# vergeben hat (`exit`, `signal`, `recv`) und fuenf gerufene Ruempfe deklariert sind,
+# die der eingefrorene Dienstrumpf nie nannte. *Keine dieser Absagen war an `cc` zu
+# bemerken* -- die erzeugte Einheit bindet keinen der drei Koepfe ein.
+MARKE_EMIT_M=58
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

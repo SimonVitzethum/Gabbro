@@ -1507,7 +1507,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 | | Ziel | heute | |
 |---|---|---|---|
-| `H` | 0 | **2** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 4 Absenkungen~~ ~~0 verankert + 3 Absenkungen~~ **0 verankert + 2 Absenkungen** (2026-09-03: F9 und F1 durchgestochen) (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
+| `H` | 0 | **1** | ~~4 verankert + 6 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 5 Absenkungen~~ ~~0 verankert + 4 Absenkungen~~ ~~0 verankert + 3 Absenkungen~~ ~~0 verankert + 2 Absenkungen~~ **0 verankert + 1 Absenkung** (2026-09-03: F9, F1 und F5 durchgestochen) (2026-08-31: F6 durchgestochen, am selben Tag an `N043` gefallen und am selben Tag geheilt; **BERICHTIGT 2026-08-31, und zwar von der Messung und nicht von einem Leser:** `zaehle-pflichten.py` las die Absenkungsspalte am QUELLTEXT von `pruefe-emission.sh` ab — an der blossen Anwesenheit einer `lauf`-Zeile, nicht daran, ob der Lauf haelt. `F06` steht seit `N043` (`measures eich`, ein Traeger, den es nicht gibt) und emittiert nicht mehr; der Waechter war deswegen zu Recht ROT, und `H` sagte weiter 4. *Dieselbe Familie wie `W25`, eine Stufe weiter: dort trug eine richtige Zahl eine ungemessene BESCHRIFTUNG, hier trug eine Zahl eine ungemessene VORAUSSETZUNG.* **`H` ist keine Ratsche, sondern eine Messung** — sie steigt, weil eine Einloesung weggefallen ist.); Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
 | `L` | ≤ 4 | **2** | getragen und unbewiesen; daneben aber **6 Prämissen ohne Pass**. *Der Anstieg 1 → 2 am 2026-08-28 ist der PREIS von Zuschnitt (c):* `table.ops.erhaltung` ging von ENTWORFEN auf GETRAGEN, weil `emit.rs::ops` `insert`/`remove` jetzt ausliefert und `relabel` mit `umhaengen_faellt` absagt. **Genau diese Bewegung soll die Zahl sichtbar machen** — eine Klempnereipflicht wurde nicht erledigt, sondern in die Erzeugerfläche verschoben |
 | `A` | 19 | **44** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
@@ -3386,7 +3386,7 @@ der zweite Korpus.
 ## Wo wir stehen, gemessen und nicht behauptet
 
 ```
-H = 2        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
+H = 1        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
              -- 2026-08-31 von 5 auf 4: F6 ist durchgestochen
 ```
 
@@ -3403,7 +3403,7 @@ irgendwann, eine fehlende nie.
 | **Fremdpflichten** | **11** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
 | **Vorbedingungen am Rufort** | **16** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **6** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
-| **Absenkungspflichten** | **2** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
+| **Absenkungspflichten** | **1** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
 > fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt

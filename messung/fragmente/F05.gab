@@ -47,6 +47,61 @@
 -- > Rust-Original legt den Statuscode als Zahl in die Antwort; `Status` traegt seine Zahlen
 -- > in der Deklaration und hat keine Form, sie zu lesen. Hier faellt sie nicht auf, weil
 -- > `reply4` ein `extern fn` ist -- der Uebergang zur Zahl liegt jenseits der Grenze.
+-- ***DURCHGESTOCHEN 2026-09-03, UND DER KOPF DARUEBER WAR AN DREI STELLEN FALSCH.***
+--
+-- 1. **„ERGAENZT, und nichts sonst" stimmte nicht.** Fuenf Namen, die der eingefrorene
+--    Dienstrumpf RUFT, standen nirgends: `decode_op`, `request_flush`, `serve_rw`,
+--    `serve_scan`, `bump_served`. Der Erzeuger sagte es an EINER der fuenf Stellen -- an
+--    `match decode_op(m.op)`, weil dort ein Typ gebraucht wird. **Die anderen vier ruft der
+--    Rumpf ins Leere, und kein Pass sagt etwas dazu**; `E009` meldet nur, dass die
+--    Wirkungshuelle von `run` dadurch eine UNTERE Schranke ist. *Vier Pruefersaetze waren
+--    nie die ganze Fehlerflaeche dieser Datei.*
+--
+-- 2. **`32 Fehler auf 3` war seit Wochen ueberholt** -- es waren vier, und keiner davon der
+--    beschriebene `Status::Ok`/`M124`-Befund. Der ganze Absatz darunter beschreibt eine
+--    Absage, die es nicht mehr gibt.
+--
+-- 3. **DREI NAMEN GEHOEREN C, und alle drei stehen im eingefrorenen Ausschnitt.**
+--
+--        exit    C sagt `void(int)`; hier steht `exit() -> never`, und alle acht Rufstellen
+--                geben KEIN Argument. Der Ausschnitt meint „diese Funktion kehrt nie
+--                zurueck", nicht „beende den Prozess mit diesem Status".
+--        signal  C sagt `__sighandler_t(int, __sighandler_t)` -- ein Typ, den Gabbro nicht
+--                schreiben kann. Der Ausschnitt meint eine Kapazitaetsbenachrichtigung.
+--        recv    C sagt `ssize_t(int, void *, size_t, int)`. Der Ausschnitt meint einen
+--                seL4-artigen Empfang am Endpunkt.
+--
+--    Keiner der drei ist an `cc` zu bemerken: **die erzeugte Einheit bindet keinen dieser
+--    Koepfe ein**, also hat der fremde Uebersetzer keinen Konflikt zu melden, und der Binder
+--    findet das echte Symbol hinter dem, was diese Einheit deklariert hat. *Die Absage, die
+--    vom fremden Uebersetzer kommen sollte, kann von ihm gar nicht kommen* -- genau darum
+--    haelt der Pruefer sie.
+--
+--    **Die Absagen haben also recht, und der Ausschnitt ist falsch.** Umbenannt sind
+--    `exit` -> `dienst_abbruch`, `signal` -> `benachrichtige`, `recv` -> `empfange`, und die
+--    Absage von `N046` sagt genau das: *„rename it, and reach the C function through one
+--    that CAN be written."* Zwoelf eingefrorene Zeilen bewegen sich dafuer, und jede steht
+--    in `pruefe-emission.sh` gebucht.
+--
+-- 4. **`m.op` folgt daraus.** `recv` war als `-> u64` ergaenzt, der Ausschnitt liest `m.op`,
+--    und `M134` sagte es: *„`.op` reads a field on something that has none."* `empfange`
+--    liefert jetzt einen Verbund `Nachricht`, und der traegt GENAU EIN Feld -- der Ausschnitt
+--    liest eines und reicht `m` sonst nur weiter.
+--
+-- > **UND DER ERTRAG IST EIN PRUEFERBEFUND, KEINE KORPUSARBEIT.** `N046` vergleicht die
+-- > Absenkung der Signatur mit der Tafel und las dafuer `ergebnis` und `parameter` -- **nie
+-- > `fehler`**. Ein `or R` aendert aber die C-Signatur: die Funktion wird `bool`, das
+-- > Ergebnis geht durch `*_wert`, der Grund durch `*_grund`. Nachgemessen am unveraenderten
+-- > Pruefer an einer Datei mit vier Items:
+-- >
+-- >     extern fn abs(a : i32) -> i32 or R effects { pure } costs <= 1 ops;
+-- >     gabbro pruefe  ->  0 errors, 0 hints        (denn `int32_t(int32_t)` IST die Zeile
+-- >     gabbro emit    ->  Ruecklauf 0                der Tafel fuer `abs`)
+-- >
+-- > und die erzeugte Einheit traegt `int32_t abs(int32_t a);` neben `abs(x, &w, &e)` --
+-- > **einen Prototyp mit einem Parameter, gerufen mit dreien.** `cc` faengt DIESEN; die
+-- > Regel steht aber genau dafuer da, dass er es nicht muss. *Geheilt am 2026-09-03, und die
+-- > Notiz an `recv` sagt seither die Wahrheit statt einer Absenkung, die niemand schreibt.*
 -- =======================================================================================
 
 module programs::virtio_blk {
@@ -87,12 +142,32 @@ reason Aufbau { Fehlt = 1 "das Fenster oder der Pool liess sich nicht herstellen
 assume client_calls_or_endpoint_revoked
     "Ein Dienst am Endpunkt bekommt in endlicher Zeit einen Ruf, oder der Endpunkt wird entzogen."
     falsifier sonde_endpunkt_meldet_sich;
+-- ERGAENZT 2026-09-03: der Verbund, den `m.op` liest. Der Ausschnitt liest GENAU EIN Feld
+-- an `m` und reicht `m` sonst nur weiter; mehr steht hier deshalb nicht.
+type Nachricht = { op : u64, };
+
 extern fn map_window(cap : u64) -> u64 or Aufbau effects { reads cap } costs <= 64 ops;
 extern fn pool_new(fenster : u64) -> u64 or Aufbau effects { reads fenster } costs <= 64 ops;
 extern fn probe_ecam(cfg : u64) -> u64 or Aufbau effects { reads cfg } costs <= 64 ops;
-extern fn recv(ep : u64) -> u64 or Aufbau effects { reads ep } costs <= 64 ops;
+extern fn empfange(ep : u64) -> Nachricht or Aufbau effects { reads ep } costs <= 64 ops;
 extern fn reply4(ep : u64, st : Status, a : u64, b : u64, c : u64)
     effects { writes ep } costs <= 8 ops;
+
+-- **ERGAENZT 2026-09-03: die fuenf Ruempfe, die der eingefrorene Dienstrumpf ruft und nicht
+-- nennt.** Der Kopf dieser Datei behauptete seit dem 2026-08-20, die Vervollstaendigung sei
+-- fertig; sie war es nicht, und der Erzeuger sagte es an EINER der fuenf Stellen -- an
+-- `match decode_op(m.op)`, weil dort ein Typ gebraucht wird. *Die anderen vier ruft der Rumpf
+-- ins Leere, und kein Pass sagt etwas dazu:* `E009` meldet nur, dass die Wirkungshuelle von
+-- `run` damit eine UNTERE Schranke ist. **Vier undeklarierte Gerufene, null Absagen** -- die
+-- vier Pruefersaetze dieser Datei waren nie ihre ganze Fehlerflaeche.
+extern fn decode_op(w : u64) -> Op effects { pure } costs <= 8 ops;
+extern fn request_flush(t : u64, pool : u64) -> u32
+    effects { reads t, writes pool } costs <= 64 ops;
+extern fn serve_rw(ep : u64, t : u64, pool : u64, fenster : u64, m : Nachricht, kap : u32)
+    effects { reads t, writes pool, writes ep } costs <= 256 ops;
+extern fn serve_scan(ep : u64, t : u64, pool : u64)
+    effects { reads t, writes pool, writes ep } costs <= 256 ops;
+extern fn bump_served(pool : u64) -> u64 effects { writes pool } costs <= 8 ops;
 
 -- «B27» Der Syscall-Einstieg: `arch ident` gibt es (:273), die REGISTERBELEGUNG nicht.
 -- Die Vorlage schrieb dafuer einen `abi { in rax = nr, …, trap 0x80 }`-Block; `fndecl`
@@ -120,15 +195,15 @@ prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag 
 divergent fn run(startwert : u64) -> never
     effects { diverges, writes DMA, writes SHARED, reads EP }
 {
-    let cfg    = map_window(CFG)    else (e1) { signal(NTFN, 0xD1A6_0001); exit(); }
-    let bar    = map_window(BAR)    else (e2) { signal(NTFN, 0xD1A6_0002); exit(); }
-    let dmafenster    = map_window(DMA)    else (e3) { signal(NTFN, 0xD1A6_0003); exit(); }
-    let teilfenster = map_window(SHARED) else (e4) { signal(NTFN, 0xD1A6_0004); exit(); }
+    let cfg    = map_window(CFG)    else (e1) { benachrichtige(NTFN, 0xD1A6_0001); dienst_abbruch(); }
+    let bar    = map_window(BAR)    else (e2) { benachrichtige(NTFN, 0xD1A6_0002); dienst_abbruch(); }
+    let dmafenster    = map_window(DMA)    else (e3) { benachrichtige(NTFN, 0xD1A6_0003); dienst_abbruch(); }
+    let teilfenster = map_window(SHARED) else (e4) { benachrichtige(NTFN, 0xD1A6_0004); dienst_abbruch(); }
 
-    let pool      = pool_new(dmafenster)    else (e5) { signal(NTFN, 0xD1A6_0000); exit(); }
-    let transport = probe_ecam(cfg)  else (e6) { signal(NTFN, 0xD1A6_00FF); exit(); }
+    let pool      = pool_new(dmafenster)    else (e5) { benachrichtige(NTFN, 0xD1A6_0000); dienst_abbruch(); }
+    let transport = probe_ecam(cfg)  else (e6) { benachrichtige(NTFN, 0xD1A6_00FF); dienst_abbruch(); }
 
-    signal(NTFN, 0);
+    benachrichtige(NTFN, 0);
 
     -- «B14» `let mut capacity : option Sectors = none;` ist nicht schreibbar: `option` steht
     -- nur in `slottype` (:387), nicht in `typeexpr` (:137). Der Fall „noch nie gelesen" wird
@@ -169,7 +244,7 @@ divergent fn run(startwert : u64) -> never
         effects  { reads EP, writes SHARED, writes pool }
         progress    client_calls_or_endpoint_revoked
     {
-        let m = recv(EP) else (e7) { exit(); }
+        let m = empfange(EP) else (e7) { dienst_abbruch(); }
         match decode_op(m.op) {
             Info => {
                 let r = request_flush(transport, pool);
@@ -193,7 +268,7 @@ divergent fn run(startwert : u64) -> never
                 -- also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
                 -- Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
                 -- bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.
-                exit();
+                dienst_abbruch();
             }
         }
     }
@@ -202,8 +277,8 @@ divergent fn run(startwert : u64) -> never
 -- Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
 -- Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
 -- durchfallen -- sechs `S002` kamen allein daher.
-extern fn exit() -> never effects { diverges };
-extern fn signal(n : u64, w : u64) effects { writes NTFN };
+extern fn dienst_abbruch() -> never effects { diverges };
+extern fn benachrichtige(n : u64, w : u64) effects { writes NTFN };
 extern fn watchdog_schlug_an() -> never effects { diverges };
 
 }

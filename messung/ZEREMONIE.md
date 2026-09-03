@@ -5,11 +5,11 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-73 Dateien gemessen, 2 abgelehnt
-  ableitbar       85        A1  4 · A4 81
+74 Dateien gemessen, 1 abgelehnt
+  ableitbar       86        A1  4 · A4 82
   redundant        0
-  tragend       1174
-85 von 1259 Stellen dürfen sinken
+  tragend       1215
+86 von 1301 Stellen dürfen sinken
 
 > **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
 > zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.
