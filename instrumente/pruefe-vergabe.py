@@ -220,7 +220,22 @@ MARKE = 20
 # > German one inside an English note makes the line count as German prose. `pruefe-englisch.py`
 # > logs the same rewrite happening to its own commentary. *A name is not prose, and no tool
 # > here can tell the two apart.*
-MARKE_PROBEN = 66
+# **66 -> 68 on 2026-09-03, and the CANDIDATES stand unmoved at 20.** The re-measurement of
+# `C1` -- whether the ownership handover carries caprock's EXCLUSION or only its shape -- laid
+# three poison probes. `671` (writing into a buffer the device owns) and `672` (reclaiming one
+# that was never armed) both point at `N030`, which carries a candidate ALREADY and had five
+# probes on it before; `673` points at `D004`, which is NOT on the candidate list and therefore
+# costs nothing. **Measured, not reasoned:** with the three files moved aside the guard reads
+# `66 of 437`, with them `68 of 440`, so the movement is exactly those two files. No identifier
+# became newly ambiguous and no issuance site was added -- the probes were written against the
+# UNCHANGED checker. *The object grew, not the damage.*
+#
+# > **And the sharp guard for these two is not a mutation on `N030`.** It is the working
+# > programme beside them: `messung/proben/probe-besitz-zwei-typen.gab` checks green, emits and
+# > compiles, and every one of the three refusals is the same rule biting on the same pair of
+# > types one step away from it. A probe that fell green under a broken `N030` would take the
+# > working file with it in the other direction, which the identifier alone cannot do.
+MARKE_PROBEN = 68
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

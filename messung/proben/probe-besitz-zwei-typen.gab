@@ -1,0 +1,138 @@
+-- **The ownership handover with the EXCLUSION, not only the order.**
+--
+-- `beispiele/66-transport-rueckgabe.gab` closed `C1` with a linear ghost token
+-- (`Besitz order { fahrer, geraet }`) carried BESIDE the buffer. Re-measured on
+-- 2026-09-03 that form keeps caprock's ORDER and loses caprock's EXCLUSION: the
+-- token is linear, the buffer is not, and nothing ties them together. Writing
+-- through the buffer while the device owns it passes with `0 errors, 0 hints` --
+-- and that is the one bug `owned.rs` exists against.
+--
+-- This file carries the same capability in the OTHER form the language already
+-- has, and the exclusion comes back. Nothing new was added for it.
+--
+-- ## What caprock guarantees, clause by clause
+--
+-- `../caprock-messbasis/crates/caprock-virtio` at `a1bf707`, branch `arch/x86_64`:
+--
+--   * `owned.rs`:55,60 -- `Owned<Driver>` and `Owned<Device>` are TWO types, and
+--     `pub enum Device {}` carries the note *"Dieser Typ hat keine Zugriffsmethode.
+--     Das ist die ganze Zusicherung."*
+--   * `owned.rs`:133-155 -- `wr8`/`wr32`/`wr64` sit on `impl Owned<Driver>` alone.
+--   * `lib.rs`:295 -- `arm` takes `buf` BY VALUE, and `Owned` is deliberately not
+--     `Copy`; after the call the name is gone.
+--   * `lib.rs`:311 -- `reclaim(buf : Owned<Device>, _done : &Completion)`. The
+--     receipt is a VALUE, and `Completion::new` is `pub(crate)` with exactly one
+--     production site outside the tests: `lib.rs`:356, inside `used_entry`. A
+--     receipt cannot be made anywhere but at the used ring.
+--   * `lib.rs`:326 -- `reclaim_unproven` is the named way back without one.
+--
+-- ## How each clause is spelt here
+--
+--   * two `linear type`s instead of two type parameters. `N030` compares nominal
+--     types, so a `GeraetPuffer` where a `FahrerPuffer` is wanted is a type error.
+--   * the write path is declared over `FahrerPuffer` ONLY -- that is the missing
+--     access method, said as a signature rather than as an absent `impl` block.
+--   * `consumes` plus `L104`/`L107` give the by-value move: a linear value goes
+--     exactly once, on every path.
+--   * the receipt is `opaque` and its one producer sits in the declaring module.
+--     Outside it, `D004` refuses the conversion from the carrier, so a driver
+--     cannot fabricate a `Beleg` out of a `u64`. That is `pub(crate)` said with a
+--     module boundary -- `beispiele/29-undurchsichtig.gab` is the same door.
+--   * `hole_unbelegt` is named and not forbidden, the way `reclaim_unproven` is.
+--
+-- ## What this file does NOT claim
+--
+-- The receipt is not tied to THIS buffer -- caprock's is not either (`_done` is
+-- unused there, and its own note says the receipt means "the device is finished"
+-- and nothing more). And the exclusion is a statement about the handle, not about
+-- a raw pointer someone kept beside it; caprock is in the same position.
+--
+-- The refusals are `beispiele/gift/671` (write while the device owns it),
+-- `beispiele/gift/672` (reclaim a buffer that was never armed) and
+-- `beispiele/gift/673` (a receipt invented outside the declaring module, `D004`).
+
+module c1v::transport {
+
+-- `Owned<Driver>`: the buffer while the driver has it. Every write path is
+-- declared over this type and no other.
+pub linear type FahrerPuffer;
+
+-- `Owned<Device>`: the buffer while the device has it. There is no function
+-- in this module that writes through one -- the absence IS the assurance.
+pub linear type GeraetPuffer;
+
+-- `Completion`: `Copy` in caprock, so not linear here. Opaque, so that outside
+-- this module it cannot be made from the carrier (`D004`).
+pub opaque type Beleg = u64;
+
+-- The one producer, and it stands where `used_entry` stands: at the used ring.
+pub impl fn used_eintrag(roh : u64) -> Beleg
+    effects { pure }
+    costs   <= 2 ops
+{
+    return roh;
+}
+
+pub extern fn schreibe(b : FahrerPuffer, v : u8) -> FahrerPuffer
+    effects { consumes b } costs <= 4 ops;
+
+pub extern fn arm(b : FahrerPuffer) -> GeraetPuffer
+    effects { consumes b } costs <= 8 ops;
+
+pub extern fn hole(b : GeraetPuffer, q : Beleg) -> FahrerPuffer
+    effects { consumes b } costs <= 8 ops;
+
+pub extern fn hole_unbelegt(b : GeraetPuffer) -> FahrerPuffer
+    effects { consumes b } costs <= 8 ops;
+
+pub extern fn fertig(b : FahrerPuffer)
+    effects { consumes b } costs <= 1 ops;
+
+}
+
+module c1v::treiber {
+
+use c1v::transport::FahrerPuffer;
+use c1v::transport::GeraetPuffer;
+use c1v::transport::Beleg;
+
+extern fn schreibe(b : FahrerPuffer, v : u8) -> FahrerPuffer
+    effects { consumes b } costs <= 4 ops;
+extern fn arm(b : FahrerPuffer) -> GeraetPuffer
+    effects { consumes b } costs <= 8 ops;
+extern fn hole(b : GeraetPuffer, q : Beleg) -> FahrerPuffer
+    effects { consumes b } costs <= 8 ops;
+extern fn hole_unbelegt(b : GeraetPuffer) -> FahrerPuffer
+    effects { consumes b } costs <= 8 ops;
+extern fn fertig(b : FahrerPuffer)
+    effects { consumes b } costs <= 1 ops;
+extern fn used_eintrag(roh : u64) -> Beleg
+    effects { pure } costs <= 2 ops;
+
+-- The whole round trip: fill, hand over, wait, take back against the receipt,
+-- fill again. This is `net.rs`'s arm/publish/poll/reclaim shape with the ring
+-- left out -- the ring is measured in `probe-transport-poll-used.gab`.
+pub impl fn runde(b : FahrerPuffer, roh : u64)
+    effects { consumes b }
+    costs   <= 64 ops
+{
+    let b1 = schreibe(b, 7);
+    let b2 = arm(b1);
+    let q  = used_eintrag(roh);
+    let b3 = hole(b2, q);
+    let b4 = schreibe(b3, 9);
+    fertig(b4);
+}
+
+-- The named way back without a receipt -- `reclaim_unproven`'s own shape. It is
+-- writable, and the name is what stands at the call site.
+pub impl fn runde_unbelegt(b : FahrerPuffer)
+    effects { consumes b }
+    costs   <= 64 ops
+{
+    let b1 = arm(b);
+    let b2 = hole_unbelegt(b1);
+    fertig(b2);
+}
+
+}

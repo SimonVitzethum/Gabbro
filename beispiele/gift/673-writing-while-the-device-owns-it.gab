@@ -1,0 +1,66 @@
+-- erwartet: N030
+-- **671 -- the buffer written WHILE the device owns it.**
+--
+-- This is the bug `caprock-virtio/src/owned.rs` exists against, and its own note says so at
+-- the type: `pub enum Device {}` carries *"Dieser Typ hat keine Zugriffsmethode. Das ist die
+-- ganze Zusicherung."* (`owned.rs`:60). The write methods `wr8`/`wr32`/`wr64` sit on
+-- `impl Owned<Driver>` and nowhere else (`owned.rs`:133-155), `arm` takes the buffer by
+-- value (`lib.rs`:295), and `Owned` is deliberately not `Copy` -- the crate measured that
+-- last point against a mutation and wrote the result down: with a hand-written
+-- `impl<S> Copy for Owned<S>`, *"armiert und trotzdem weiter beschrieben"* compiles again.
+--
+-- **Measured 2026-09-03, and this file is the second half of a correction.**
+-- `beispiele/66-transport-rueckgabe.gab` closed `C1` with a linear GHOST token carried
+-- beside the buffer (`Besitz order { fahrer, geraet }`). That form keeps the ORDER --
+-- `L104` refuses a second consumption, `L107` refuses a dropped token, `O003` refuses
+-- `arm` on a token already at `geraet` -- and it loses the EXCLUSION, because the token is
+-- linear and the buffer is an ordinary `ptr<normal, rw>` beside it. The exact sequence
+-- below, written in that form, passes with `0 errors, 0 hints`.
+--
+-- **And the gate that would have caught it in that form does not exist.** A write happens
+-- AT the `fahrer` stage without advancing anything, and three spellings of that precondition
+-- were measured, each alone:
+--
+--     advances fahrer -> fahrer   ->  O002  "that is not a step forward"
+--     requires fahrer             ->  D021  "`fahrer` in `requires` is not declared here"
+--     requires b == fahrer        ->  D021  same
+--
+-- `order`/`advances` gates a function that MOVES the stage, and only that.
+--
+-- The form below is the one that carries the guarantee, and it needs no new word: two
+-- `linear type`s, with the write path declared over the driver-side one alone.
+-- `messung/proben/probe-besitz-zwei-typen.gab` is the same shape, green and emitting.
+--
+-- The companion is `beispiele/gift/672`: reclaiming a buffer that was never armed.
+
+module gift::armiert_und_beschrieben {
+
+pub linear type FahrerPuffer;
+pub linear type GeraetPuffer;
+
+-- The write path exists over the DRIVER side only. That absence is the assurance.
+extern fn schreibe(b : FahrerPuffer, v : u8) -> FahrerPuffer
+    effects { consumes b } costs <= 4 ops;
+
+extern fn arm(b : FahrerPuffer) -> GeraetPuffer
+    effects { consumes b } costs <= 8 ops;
+
+extern fn hole_unbelegt(b : GeraetPuffer) -> FahrerPuffer
+    effects { consumes b } costs <= 8 ops;
+
+extern fn fertig(b : FahrerPuffer)
+    effects { consumes b } costs <= 1 ops;
+
+impl fn runde(b : FahrerPuffer)
+    effects { consumes b }
+    costs   <= 64 ops
+{
+    let b1 = arm(b);
+    -- **Here, and this is the file's only mistake.** The device owns the buffer,
+    -- and the driver writes into it. `schreibe` hands back a `FahrerPuffer`, so
+    -- `fertig` below is well typed and no second refusal piles onto the first.
+    let b2 = schreibe(b1, 7);
+    fertig(b2);
+}
+
+}

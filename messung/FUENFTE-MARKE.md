@@ -15,13 +15,18 @@ reason it was caught was reading a body instead of believing a number.
 
 ---
 
-## 0. What is NOT measured here, and by whom
+## 0. ~~What is NOT measured here, and by whom~~ — **it was measured the same evening, and §6 re-measures it**
 
-**The ownership handover is a parallel lane's, taken 2026-09-03.** That is
+> **This section was true when it was written and is not the standing state.** The parallel
+> lane closed `C1` at `7455b0f`, two commits before the merge that carries this document, so
+> the two lanes could not see each other. §6 takes the handover up, reproduces both verdicts,
+> and attacks the empty bucket the arithmetic produces.
+
+**The ownership handover was a parallel lane's, taken 2026-09-03.** That is
 `reclaim(buf : Owned<Device>) -> Owned<Driver>` (`lib.rs`:311), `reclaim_unproven`
 (`lib.rs`:326) and the `Owned<Driver>`/`Owned<Device>` typestate itself (`owned.rs`:55, 60) —
-three capabilities, one question, and `R004`/`R007` under it. They appear in the enumeration
-below **named and unmeasured**, and nothing in this document decides them.
+three capabilities, one question, and `R004`/`R007` under it. They appeared in the enumeration
+below **named and unmeasured**, and nothing in *this* pass decided them.
 
 *Naming a capability without measuring it is correct here; measuring it twice is not.*
 
@@ -54,15 +59,15 @@ verbosity, and the previous pass says so in its own text.
 | 14 | read the used index | `lib.rs`:346 | half (`USED_IDX` is declared and never read) | **unwritten** |
 | 15 | the used entry at `slot % size`, as a completion | `lib.rs`:354 | no | **unwritten** |
 | 16 | **`poll_used`** — bounded wait, then the completion | `lib.rs`:363 | no | **unwritten** |
-| 17 | **`reclaim`** — the buffer back against the device's receipt | `lib.rs`:311 | no | **category C — parallel lane** |
-| 18 | `reclaim_unproven` — the named way back without one | `lib.rs`:326 | no | **category C — parallel lane** |
+| 17 | **`reclaim`** — the buffer back against the device's receipt | `lib.rs`:311 | no | ~~category C~~ **unwritten — §6, closed 2026-09-03** |
+| 18 | `reclaim_unproven` — the named way back without one | `lib.rs`:326 | no | ~~category C~~ **unwritten — §6, closed 2026-09-03** |
 | 19 | `Region::carve` — monotone, fail-closed | `owned.rs`:200 | no | **unwritten** |
 | 20 | zero a RUN-TIME byte range | `owned.rs`:164 | no | **unwritten** |
 | 21 | typed access into a buffer | `owned.rs`:133–155 | **yes** — `format`/`table` fields | — |
 | 22 | device address and length of a buffer | `owned.rs`:91, 95 | **yes** — record fields | — |
 | 23 | `retarget_device_view` — move only the device view | `owned.rs`:127 | no | **unwritten** |
 | 24 | **the two axes stay apart — nobody may pick the wrong view** | `owned.rs`:62–77 | no | ~~carried at a PARAMETER, not at a FIELD~~ **carried — §3, closed 2026-09-03** |
-| 25 | `Owned<Driver>` / `Owned<Device>` typestate | `owned.rs`:55, 60 | no | **category C — parallel lane** |
+| 25 | `Owned<Driver>` / `Owned<Device>` typestate | `owned.rs`:55, 60 | no | ~~category C~~ **unwritten — §6, closed 2026-09-03** ³ |
 | 26 | the completion as a value: id and length, separately | `owned.rs`:218 | no | **unwritten** |
 | 27 | the whole ARP exchange, rx armed BEFORE tx | `net.rs`:135 | no | **unwritten** ¹ |
 | 28 | the whole ARP frame, all sixteen fields | `net.rs`:273 | quarter (4 of 16) | **unwritten** |
@@ -74,12 +79,25 @@ below it is; the orchestration was not assembled as one function. It is marked *
 because each part checks and emits, and that is a weaker claim than a measurement — *it is
 written here so the row can be argued with.*
 
+³ **#25 is the row the whole third bucket rested on, and §6 re-measures the artifact behind
+it.** The capability goes; the probe `C1` closed it with keeps caprock's *order* and not its
+*exclusion*, and a second probe was written for the difference. The row is *unwritten and
+measured writable* either way — but by the second probe, not the first.
+
 ```
 30 capabilities      6 already in the file
-                    21 unwritten and measured writable
-                     3 ownership handover — parallel lane
+                    24 unwritten and measured writable
+                     0 ownership handover     <- was 3 until `7455b0f`, re-measured in §6
                      0 not carried            <- was 1 until §3 was repaired
 ```
+
+**Re-derived here rather than inherited, 2026-09-03.** All thirty `file:line` citations above
+were opened in `../caprock-messbasis` at `a1bf707` and each points at what its row claims —
+`#17` at `pub fn reclaim(&self, buf: Owned<Device>, _done: &Completion)`, `#25` at
+`pub enum Driver {}` / `pub enum Device {}`, and so on for the other twenty-eight. The six
+*yes* rows were checked against the object: `stufe_laeuft`, `publishes`/`awaits`, `armieren`,
+`AVAIL_IDX` all stand in `messung/treiber/virtio-net.gab`, and `USED_IDX` stands there **once**,
+at line 212, declared and never read — which is exactly what row #14's *half* says.
 
 ---
 
@@ -427,22 +445,26 @@ to another lane.**
 ```
                                         capabilities   of 30
   in Gabbro today                             6         20 %
-  unwritten, measured writable               21         70 %
+  unwritten, measured writable               24         80 %
   ------------------------------------------------------------
-  IN GABBRO                                  27         90 %
+  IN GABBRO                                  30        100 %
 
-  beside it                                   3         10 %
+  beside it                                   0          0 %
       A  plumbing (B1/B2)                     0          0 %
       B  hardware instructions (B5)           0          0 %
-      C  what Gabbro does not carry           3         10 %
-             ownership handover (3) — parallel lane
+      C  what Gabbro does not carry           0          0 %
 ```
 
-> **This block read 26 / 87 % / 4 until the afternoon of the same day.** `C2` was a pass gap
-> and the pass was extended, so capability #24 moved from *not carried* to *unwritten and
-> measured writable* — it is right in the language, and it still does not stand in
-> `virtio-net.gab`. **The mark moves because a checker learned to read one more position, and
-> the honest sentence is that and not "the language got better".**
+> **This block read 26 / 87 % / 4, then 27 / 90 % / 3, and now 30 / 100 % / 0 — all on one
+> day, in three lanes that could not see one another.** `C2` was a pass gap and the pass was
+> extended (#24). `C1` was measured and closed at `7455b0f` (#17, #18, #25), two commits
+> before the merge that carries this document, which is why §0 still called it unmeasured.
+> **The mark moves because a checker learned to read one more position and because a question
+> nobody had asked got asked — the honest sentence is that, and not "the language got
+> better".**
+>
+> **100 % is a strong claim and §6 attacks it rather than banking it.** The attack does not
+> overturn the number; it overturns one of the artifacts underneath it.
 
 **A is zero because `B1` closed on 2026-09-02** and virtio-net wants no string output.
 
@@ -475,36 +497,214 @@ someone can argue with."*
 
 > *Is the third bucket a bucket of one?*
 
-**It was a bucket of two for about an hour, and then it was a bucket of one again — because
-the second item was priced and paid, not because the question was re-asked.**
+**It was a bucket of two for about an hour, then a bucket of one, and by the end of the same
+day a bucket of none.** Each step was priced and paid; the question was never re-asked, and
+no step was arithmetic.
 
 | | what it is | where it is booked |
 |---|---|---|
-| **C1** | ownership handover | `R004`/`R007`; a parallel lane, 2026-09-03 — **still open, still not this lane's** |
+| ~~**C1**~~ | ~~ownership handover~~ | **closed 2026-09-03** at `7455b0f`, `beispiele/66-transport-rueckgabe.gab` — and **re-measured in §6**, where the capability holds and the artifact is replaced |
 | ~~**C2**~~ | ~~the two axes of a DMA buffer stay apart~~ | **closed 2026-09-03** — `N030` reads the field, and the write into it (§3) |
 
-**The intermediate answer was right when it was given, and saying so is the point.** `C2`
-had no name before that run; naming it is what made it cheap enough to price. **And C2 was
-never `S2`:** `S2` is the item no verification heals — a property the language cannot
-*state*. `opaque` states this one correctly and a pass did not read it, which put it in the
-`R008`/`R013` family, and that family is repaired by extending a pass. *It was, on the same
-day, for zero new words and zero newly refused programs.*
+**The intermediate answers were right when they were given, and saying so is the point.** `C2`
+had no name before that run; naming it is what made it cheap enough to price. **And neither
+was ever `S2`:** `S2` is the item no verification heals — a property the language cannot
+*state*. `opaque` states `C2` correctly and a pass did not read it, which put it in the
+`R008`/`R013` family, repaired by extending a pass. `C1` the language states in two different
+ways, and §6 shows that the two are not equally strong — *which is a statement about the
+probe, not about the vocabulary.*
 
 ### So what is the third bucket, stated plainly
 
-**One item, three capabilities, and it belongs to another instance.** Everything else in the
-enumeration is either in the file or measured writable. The sentence the fifth mark can now
-carry is:
+**It is empty.** Everything in the enumeration is either in the file or measured writable.
+The sentence the fifth mark can now carry is:
 
-> *Of thirty capabilities of a real virtio-net driver, **27 are in Gabbro** — six written and
-> twenty-one measured writable against the unchanged checker and emitter. The three that are
-> not are one question — the ownership handover — and it is open, not answered.*
+> *Of thirty capabilities of a real virtio-net driver, **all thirty are in Gabbro** — six
+> written and twenty-four measured writable against the unchanged checker and emitter. There
+> is no capability of this driver that the language cannot express.*
 
-**Two cautions travel with that sentence and are not decoration.** *Measured writable* is a
-claim about probes that check and lower, not about an assembled driver; row #27, the
-orchestration, is the one row not separately measured and says so. And 90 % is not comparable
-with the 75 % of 2026-09-02, for the reason given two headings up: that quotient had no
-written denominator.
+**Three cautions travel with that sentence and none of them is decoration.**
 
-*A bucket of one that turned out to be a bucket of two, and was a bucket of one again by
-evening, is the finding — and the middle step is the part that made the last one possible.*
+1. *Measured writable* is a claim about probes that check and lower, **not about an assembled
+   driver**. Row #27, the orchestration, is the one row not separately measured and says so.
+2. **100 % is not comparable with the 75 % of 2026-09-02**, for the reason given two headings
+   up: that quotient had no written denominator. It is not comparable with 87 % or 90 % either
+   — those are this same denominator at three times of day.
+3. **And the sentence is about *this driver*.** Thirty capabilities of `caprock-virtio` are
+   not the kernel; `B5`'s legacy port I/O and TLB shootdown are real and are simply not in
+   this object. *An empty bucket over one enumeration is not an empty bucket.*
+
+*A bucket of one that turned out to be a bucket of two, was a bucket of one again by evening
+and empty by night, is the finding — and every middle step is the part that made the next one
+possible.*
+
+---
+
+## 6. The empty bucket, attacked — and one probe did not survive it
+
+*Measured 2026-09-03 against the merged tree at `9b5c067`, binary built on `ki-pc-fisch-101`.*
+
+An empty third bucket is the strongest claim this document makes, and it rests on two
+verdicts taken in lanes that could not see each other. Both were re-run here, unchanged, and
+then the question behind them was asked once more: **does *writable in a probe* mean the same
+thing as *expressible*?**
+
+### Both verdicts reproduce exactly
+
+| | command | result |
+|---|---|---|
+| `C1` | `./target/debug/gabbro pruefe beispiele/66-transport-rueckgabe.gab` | `11 items, 0 errors, 0 hints` |
+| `C1` | `./target/debug/gabbro emit …` then `cc -std=c11 -Wall -Wextra -c` and `-O2 -c` | emits; `rc=0` at both |
+| `C2` | `./target/debug/gabbro pruefe messung/proben/probe-opak-am-feld.gab` | `11 items, 4 errors, 0 hints`, four `N030` at `:54`, `:62`, `:72`, `:94` |
+
+**Nothing in §3 or in `7455b0f` is withdrawn.** What follows is a second question about the
+`C1` artifact, and the answer moves the artifact rather than the row.
+
+### `beispiele/66` keeps the ORDER — and that part is real
+
+Three attacks, each in its **own file**, because one error in a run that did not stop is the
+shape of a masked measurement:
+
+```
+b1 consumed twice        ->  error: [L104] `b1` is consumed a second time
+b1 consumed on no path   ->  error: [L107] `b2` is created here and consumed on no path
+arm on an armed token    ->  error: [O003] `arm` presupposes `fahrer`, `b1` stands at `geraet`
+```
+
+That is a genuine linear typestate with an order on it, and it is what caprock's `Owned`
+buys with move semantics and `transition`.
+
+### It does not keep the EXCLUSION, and that is what `owned.rs` is for
+
+`owned.rs`:60 states the guarantee in one line at the type: `pub enum Device {}` carries
+*"Dieser Typ hat **keine** Zugriffsmethode. Das ist die ganze Zusicherung."* The write methods
+sit on `impl Owned<Driver>` alone (`owned.rs`:133–155), `arm` takes the buffer **by value**
+(`lib.rs`:295), and `Owned` is deliberately not `Copy` — a point caprock measured against a
+mutation and wrote down: with a hand-written `impl<S> Copy for Owned<S>`, *"armiert und
+trotzdem weiter beschrieben"* compiles again.
+
+In `beispiele/66` the linear thing is the **ghost token**; the buffer goes in beside it as
+`h : ptr<normal, rw> Puffer`, unconsumed. Nothing ties the two together:
+
+```gabbro
+let b1 = arm(h, i, b);
+h.slots[i].belegt = false;   -- the device owns it, and the driver writes
+let b2 = hole(h, i, b1);
+```
+
+```
+8 items, 0 errors, 0 hints
+```
+
+**Two further losses, one cause.**
+
+* **`hole` has no stage precondition.** It carries no `advances` — deliberately; `advances
+  geraet -> fahrer` falls at `O002`, and the file's own header says so. But a function with
+  no `advances` has nothing to presuppose either, so reclaiming a token still at `fahrer` is
+  `8 items, 0 errors, 0 hints`. Caprock's `reclaim(buf : Owned<Device>, …)` cannot be handed
+  an `Owned<Driver>`: **the precondition is the parameter type.**
+* **The receipt is read by no pass.** `requires geraet_fertig()` is an obligation nothing
+  checks at a call site. Measured on three files: `requires 1 == 0` at a call site is
+  `4 items, 0 errors, 0 hints`, while `requires x > 10` called with `0` **does** fall —
+  `error: [M115] … the argument lies in 0 .. 0`. **`M115` reads range statements about
+  arguments and nothing else**, and the register says as much of `D012` in its own
+  reservation: *"It does not PROVE a premise, and it cannot."* Caprock's receipt is a
+  **value** whose constructor is `pub(crate)` with exactly one production site outside the
+  tests — `lib.rs`:356, inside `used_entry`. A `Completion` cannot be made anywhere but at
+  the used ring.
+
+And `hole` and `hole_unbelegt` emit **byte-identical C** — three functions, one body each,
+`h->slots[i].belegt = false;`. That much is honest: the file says the unproven path rides its
+NAME, and it does. Caprock additionally marks `reclaim_unproven` `unsafe`, so a block stands
+at its call site; here both are ordinary calls.
+
+### The gate that would rescue the ghost form does not exist
+
+A buffer write happens **at** `fahrer` without advancing anything. Three spellings of that
+precondition, each measured alone:
+
+```
+advances fahrer -> fahrer  ->  error: [O002] `schreibe` goes from `fahrer` to `fahrer` -- that is not a step forward
+requires fahrer            ->  error: [D021] `fahrer` in `requires` is not declared here
+requires b == fahrer       ->  error: [D021] `fahrer` in `requires` is not declared here
+```
+
+**`order`/`advances` gates a function that MOVES the stage, and only that.** The standing
+precondition has no spelling.
+
+### But the LANGUAGE keeps the guarantee — the probe chose the weaker of two forms
+
+`beispiele/66`'s header named the two-type route and ruled it out:
+
+> *"`Owned<Fahrer>` -> `Owned<Geraet>` as TWO NOMINAL types with a value moving between them:
+> `N030` (nominal) refuses `let g: GeraetBesitz = b`."*
+
+**That tested the ASSIGNMENT spelling, and caprock never uses it.** `owned.rs`:102 moves
+between the two states with a **function** — `pub(crate) fn transition<T>(self) -> Owned<T>`.
+Both spellings, each in its own file:
+
+```
+let g : GeraetPuffer = b;   ->  [N030] the binding: a `FahrerPuffer` where a `GeraetPuffer` is required
+                                [L101] `b` is listed under `consumes` but is consumed on no path
+let g = arm(b);             ->  6 items, 0 errors, 0 hints
+```
+
+With two `linear type`s and the write path declared over the driver side alone, all three
+losses come back — **with no new word, no pass change and no rule change**:
+
+| | file | result |
+|---|---|---|
+| the round trip | `messung/proben/probe-besitz-zwei-typen.gab` | `22 items, 0 errors, 0 hints`; emits; `cc -Wall -Wextra` silent at `-O0` and `-O2` |
+| write while armed | `beispiele/gift/673-writing-while-the-device-owns-it.gab` | `8 items, 1 errors` — `[N030] b1 is a GeraetPuffer, and schreibe takes a FahrerPuffer there` |
+| reclaim without arm | `beispiele/gift/674-reclaiming-a-buffer-that-was-never-armed.gab` | `7 items, 1 errors` — `[N030] b is a FahrerPuffer, and hole_unbelegt takes a GeraetPuffer there` |
+| receipt from thin air | `beispiele/gift/675-a-receipt-made-out-of-thin-air.gab` | `6 items, 1 errors` — `[D004] the return value silently converts gift::beleg_transport::Beleg` |
+
+**The receipt comes back too, and it needs a door that was already built and never used.**
+`pub(crate)` has a spelling in Gabbro: an `opaque type` whose one producer stands inside the
+declaring module cannot be built from its carrier anywhere else. So the probe puts the
+transport and the driver in **two modules**, and a driver that invents a `Beleg` out of a
+`u64` falls at `D004` — measured above, not assumed.
+
+> **And that measurement moves a line in the sentence register.** `d.undurchsichtig`
+> (`D003`/`D004`, `saetze.rs`:843) carries the reservation *"On today's corpus this sentence
+> has ZERO bite: all twelve opaque declarations declare and use in the same module"* and
+> its `gemessen_an` reads *"NO corpus site exercises it."* Both halves are now stale. Counted
+> at the branch point `9b5c067`: **75 `opaque type` declarations in 50 of 639 `.gab` files**,
+> not twelve (`grep -rhE '^ *(pub )?opaque type ' . --include=*.gab | wc -l`); and
+> `probe-besitz-zwei-typen.gab` declares one in `c1v::transport` and uses it in `c1v::treiber`,
+> so the boundary is crossed by a working programme for the first time — 77 in 52 of 643 with
+> this commit's own two.
+> *The register is not edited here — it belongs to the pass that owns it, and a stale
+> reservation is a finding to hand over, not a number to overwrite in passing.*
+
+The two `linear type`s reach C as two distinct structs, so even the emitted code separates
+them:
+
+```c
+typedef struct { uint8_t nichts; } FahrerPuffer;
+typedef struct { uint8_t nichts; } GeraetPuffer;
+```
+
+### What this changes, and what it does not
+
+**Row #25 stays closed and the bucket stays empty** — the capability *is* expressible, and it
+is expressible in the standing vocabulary. What changes is which artifact is entitled to say
+so. *`beispiele/66` answered "can this be written?" and the question underneath was "does the
+written thing carry what the original carried?"* Those came apart here, and only writing the
+second probe separated them.
+
+> **The general form is worth more than this instance.** A probe that checks green has
+> demonstrated that a shape is admissible. It has not demonstrated that the shape carries the
+> property the original was carrying — and *the checker cannot tell the difference*, because
+> the dropped property was never written down for it to check. **The test is not "does it
+> check", it is "does the thing it forbids still get forbidden".** Every one of the twenty-four
+> *measured writable* rows above rests on the weaker question, and this document should be
+> read with that in mind. **Booked as `O10` in `dokumente/OFFEN.md`**, with the size of the
+> backlog counted: 24 rows, 8 with a positive probe recorded in §2, **none with a negative
+> one** until `671`/`672`/`673` were written for row #25.
+
+*And the finding is not that a lane was careless.* `beispiele/66` names its own refusals under
+Rule A rather than papering over them; the note that ruled out the two-type route is a
+measurement, taken on a spelling that turned out to be the wrong one. **A wrong answer with
+its apparatus written down beside it is repairable in an hour. That is the whole reason the
+apparatus is written down.**
