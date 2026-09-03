@@ -17,9 +17,8 @@ finished binary locally, `free -g` reading 31 GB total and 20 GB available.
 ## 1. Reachability — **28 of 113 for a swap, 79 of 113 for an insertion, 113 of 113 for an edit**
 
 Measured 2026-09-03 at the merged `10856d8` over **every `.gab` in the tree bar
-`beispiele/gift/`**: 184 units, 135 of them emitting a register, **38 carrying at least one
-obligation line**,
-**113 obligation lines** total.
+`beispiele/gift/`**: **184 units**, 135 of them emitting a register, **38 carrying at least
+one obligation line**, and **113 obligation lines** in total.
 
 > **The neighbouring 110 does not reconcile against the commit printed beside it, and that
 > is worth saying rather than smoothing.** `messung/gabbrov/MANIFEST-COMPLETENESS.md` heads
@@ -31,9 +30,11 @@ obligation line**,
 > other unit moved by a single line.* So the 110 was taken somewhere between the two,
 > at a commit the document does not name — its header names the day's starting point, not
 > each table's own stand. **This report's 113 is at the merged `10856d8`, and its
-> search path is printed above it. *`master`'s one new `.gab` since `1cb66b0`,
-> `messung/proben/unseen-fat-reader2.gab`, checks clean and carries no obligation — so the
-> 113 is unchanged by the merge and the unit count moved 183 → 184.*
+> search path is printed above it.**
+>
+> *`master`'s one new `.gab` since `1cb66b0`, `messung/proben/unseen-fat-reader2.gab`,
+> checks clean and carries no obligation — so the 113 is unchanged by the merge, and only
+> the unit count moved, 183 → 184.*
 
 The name is built in `crates/gabbro-check/src/pflichten.rs`, and only three of the eight
 kinds put an **ordinal** in it:
@@ -330,8 +331,10 @@ remembers it.
 **What was deliberately NOT built, with its price:** the tool sits in `messung/gabbrov/` beside
 `manifest-lage.sh` and not in `instrumente/` as a `pruefe-*`. A new guardian is auto-discovered
 by `abnahme.py` and `pruefe-waechter.py` and would move **three shared figures at once** — the
-README's `59 of 59 instruments`, the acceptance station count, and the guardian register — and
-this week six lanes collided on exactly that kind of number with git reporting no conflict.
+README's `59 of 59 instruments`, the acceptance station count, and the guardian register. The
+merge-addition class is booked **seven** times in this tree now, §5 below being the seventh,
+and every one of them is a lane moving a shared figure by one while git reports no conflict.
+*One figure was unavoidable here; three more, chosen, would have been careless.*
 Promoting it is one `git mv` plus those three cells, and that price belongs to whoever decides
 to pay it, not to a lane that was asked a question about a key.
 
@@ -382,8 +385,15 @@ green again (return code 0, 83 of 83 recomputed) — it had been this lane's one
 
 `state` belongs to another instance this session. Nothing here touches the `state`
 production in `SYNTAX.md`, `instrumente/pruefe-grammatiktafel.py`, or the `state` lines of
-`SPRACHE.md`. **No obligation in the population runs over a `state` clause** — the eight
-kinds are `maintains`, `refines`, `ensures`, `requires` at a call, `reg`/`transition
-requires`, loop and `walk` invariants — so this lane's question never reached that
-production. `pruefe-grammatiktafel.py` is red on `state` in `master` and stays that way; it
-is not this lane's.
+`SPRACHE.md`.
+
+**And no obligation of the population can run over a `state` clause — read off the code, not
+assumed.** `pflichten.rs::lauf` matches `ItemArt::Modul`, `Funktion`, `Device` and `Walk`,
+and everything else falls through its `_ => {}`. `ItemArt::State` is one of the
+*everything else*: a `state` declaration produces **no register line at all**, so the eight
+kinds this report is about (`maintains`, `refines`, `ensures`, `requires` at a call,
+`reg`/`transition requires` — the `transition` there is a **`device`** transition, from
+`d.uebergaenge` — plus the loop and `walk` invariants) never reach that production.
+`pruefe-grammatiktafel.py` is red on `state` in `master` and stays that way; it is not this
+lane's, and this lane's five touched files are `TODO.md`, `dokumente/GABBROV.md`,
+`dokumente/OFFEN.md`, this report and `messung/gabbrov/ratschenschluessel.py`.
