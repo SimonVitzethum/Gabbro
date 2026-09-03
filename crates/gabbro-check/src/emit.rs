@@ -595,6 +595,19 @@ struct Geraet {
     /// > generated interface that only a hand-written caller uses is not measured by its
     /// > own corpus.**
     baenke: HashMap<String, BTreeSet<String>>,
+    /// **Bank name -> register name -> field name -> (highest bit, lowest bit, register
+    /// width in bits)** -- `D19`, found 2026-09-03 by the SAME shape as the comment above,
+    /// one suffix longer.
+    ///
+    /// `felder` above is filled from `d.register` only -- a bank's OWN `RegDecl` list
+    /// (`Bank::register`) was never walked for its bit ranges, so `d.F[i].X.A` had nowhere
+    /// to look up `A`. `ort` fell through past the `suffixe.len() == 3` branch (one suffix
+    /// too many) to the generic struct-field lowering, and wrote `d->F[i].X.A` -- a field
+    /// access into a `typedef struct { volatile uint8_t *basis; } D;`, which has neither
+    /// `F`, `X` nor `A`. **`pruefe` 0 errors, `emit` 0 refusals, `cc` says `'D' has no
+    /// member named 'F'`.** *The exact fault line `baenke`'s own comment already named, one
+    /// level down.*
+    bankfelder: HashMap<String, HashMap<String, HashMap<String, (u32, u32, u32)>>>,
 }
 
 /// **Is this type a ghost — i.e. does it vanish in the C?**
@@ -822,6 +835,43 @@ pub fn emittiere_mit(
                                     (
                                         b.name.text.clone(),
                                         b.register.iter().map(|r| r.name.text.clone()).collect(),
+                                    )
+                                })
+                                .collect(),
+                            // **`D19`.** The same walk as `felder` below, over `Bank::register`
+                            // instead of `Device::register` -- a register this unit cannot
+                            // lower (`breite_von` fails) is skipped, the same silence the
+                            // top-level walk already keeps, and `ort`'s new branch below
+                            // refuses by name when a lookup here comes back empty.
+                            bankfelder: d
+                                .baenke
+                                .iter()
+                                .map(|b| {
+                                    (
+                                        b.name.text.clone(),
+                                        b.register
+                                            .iter()
+                                            .filter_map(|r| {
+                                                let breite = breite_von(&r.typ)? * 8;
+                                                let mut f = HashMap::new();
+                                                // `u32::try_from` and not `as` -- a bit
+                                                // position past `u32::MAX` saturates to
+                                                // `u32::MAX` here rather than wrapping
+                                                // silently, and `D15`'s `u128` mask
+                                                // arithmetic downstream is already fenced
+                                                // against exactly that value.
+                                                for (name, lage, _) in &r.felder {
+                                                    let tou32 =
+                                                        |v: &u128| u32::try_from(*v).unwrap_or(u32::MAX);
+                                                    let (hi, lo) = match lage {
+                                                        BitPos::Bit(bp) => (tou32(bp), tou32(bp)),
+                                                        BitPos::Bereich(h, l) => (tou32(h), tou32(l)),
+                                                    };
+                                                    f.insert(name.text.clone(), (hi, lo, breite));
+                                                }
+                                                Some((r.name.text.clone(), f))
+                                            })
+                                            .collect(),
                                     )
                                 })
                                 .collect(),
@@ -9501,6 +9551,59 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
                         r.text,
                         ausdruck(i, u, absagen)
                     );
+                }
+            }
+        }
+        // **`D19`, found 2026-09-03: a bit field on a BANK register, one suffix past the
+        // branch above.** `d.F[i].X.A` -- bank, index, register, field -- fell through this
+        // whole function exactly like `d.F[i].X` did before 2026-08-26: `felder` above is
+        // filled from `Device::register` only, `Bank::register`'s own bit ranges were never
+        // collected (`Geraet::bankfelder` did not exist), and the generic struct-field walk
+        // at the bottom of `ort` wrote `d->F[i].X.A` into a `D` that has none of the three
+        // names. **`pruefe` said `0 errors`, `emit` said `0` refusals, and `cc` said `'D'
+        // has no member named 'F'`.** *The exact fault line `baenke`'s own comment already
+        // named, one suffix further down, and the fix is the same shape: a lookup, and a
+        // named refusal where the lookup comes back empty rather than a silent fallthrough.*
+        if o.suffixe.len() == 4 {
+            if let (Some(OrtSuffix::Index(i)), Some(OrtSuffix::Feld(r)), Some(OrtSuffix::Feld(feld))) =
+                (o.suffixe.get(1), o.suffixe.get(2), o.suffixe.get(3))
+            {
+                if dev
+                    .and_then(|d| d.baenke.get(&f.text))
+                    .is_some_and(|s| s.contains(&r.text))
+                {
+                    let Some((hi, lo, breite_bit)) = dev
+                        .and_then(|d| d.bankfelder.get(&f.text))
+                        .and_then(|m| m.get(&r.text))
+                        .and_then(|m2| m2.get(&feld.text))
+                    else {
+                        weigere(
+                            absagen,
+                            feld.span,
+                            "no lowering: a field on a bank register whose bit range this \
+                             unit cannot resolve -- either the register's own width could \
+                             not be lowered, or no field of this name is declared on it",
+                        );
+                        return String::new();
+                    };
+                    // Same overflow-safe `u128` arithmetic as the top-level field mask
+                    // below (`D15`) -- a bank register's bit positions are read from the
+                    // same AST shape (`RegDecl::felder`) and deserve the same fence.
+                    let spanne = u128::from(*hi).saturating_sub(u128::from(*lo)).saturating_add(1);
+                    let breite = u128::from(*breite_bit).clamp(1, 128);
+                    let maske: u128 = if spanne >= breite {
+                        u128::MAX >> (128 - breite)
+                    } else {
+                        (1u128 << spanne) - 1
+                    };
+                    let adr = if pfeil == "->" { o.basis.text.clone() } else { format!("&{}", o.basis.text) };
+                    let wort = format!(
+                        "{g}_{}_{}({adr}, {})",
+                        f.text,
+                        r.text,
+                        ausdruck(i, u, absagen)
+                    );
+                    return format!("(({wort} >> {lo}) & {maske}u)");
                 }
             }
         }

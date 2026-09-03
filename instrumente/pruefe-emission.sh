@@ -2768,12 +2768,13 @@ MARKE_EMIT=65
 # jede Seite fuer sich gruen, keine Textkollision, weil beide dieselbe Zeile schreiben und
 # git zweimal dieselbe Ziffer sieht. **Der Lauf sagt 59.** *Sechster Fall dieser Klasse in
 # drei Tagen, und der einzige Griff, der greift, ist der Lauf im zusammengefuehrten Baum.*
-#
-# **59 -> 61 am 2026-09-03, und diesmal ist es kein Merge-Fall.** Zwei Bahnen legten je eine
-# emittierende Probe unter `messung/` ab: `proben/probe-suchschleife-passfach.gab` (das
-# Passfach-Vorlauf der Suchschleife) und `proben/unseen-fat-reader2.gab` (der ungesehene
-# Port). Der Waechter nennt das selbst *den guten Fall* -- der Gegenstand ist gewachsen,
-# also steigt die Marke, und die Begruendung steht hier an ihr statt in einer Notiz daneben.
+# **59 -> 61, und wieder zwei Ursachen statt einer, gemessen und nicht geraten.** `59 -> 60`
+# stand schon auf `c7cbe07`, bevor diese Spur (`D19`) den ersten Buchstaben schrieb --
+# `messung/proben/unseen-fat-reader2.gab` (`10856d8`, der FAT16/CRC32-Fund) emittiert und
+# war nie nachgezogen. `60 -> 61` kam mit `master`s eigenem `arp_suchen`-Fund dazu:
+# `messung/proben/probe-suchschleife-passfach.gab` (`40c9390`). Beide identifiziert durch
+# denselben Dateivergleich, den diese Stufe selbst als FUND meldet -- keine der beiden
+# gehoert `D19`s eigenen vier Formularen oder dem `bankfelder`-Repair.
 # *Stufe 9 blieb dabei 128 von 128, und `clang` nimmt dieselben 128.*
 MARKE_EMIT_M=61
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).

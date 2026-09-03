@@ -706,3 +706,305 @@ adding.
 `master`'s changes touch `messung/gabbrov/`, `programmlogik/gabbrov/`, `dokumente/PLAN-HARDWARE.md`
 and `TODO.md`; **nothing under `crates/`, `instrumente/` or `beispiele/`**, so no repair, no
 probe and no booking of this lane had a second author.
+
+---
+
+## 13. The 27-form work order, taken up: four forms, one new defect (`D19`)
+
+Opened on the tree at `c7cbe07`, branch `agent-erzeugerrest-forms`, following §6's own
+closing line: *"the list is the work order: about 40 lines per form, and the first two
+returned four defects."*
+
+### Ground truth, re-measured before anything moved
+
+    ssh ki-pc-fisch-101 'cd gabbro-fuzz && ... && cargo build && cargo build --release'
+    python3 instrumente/fuzze-erzeuger.py --debug target/debug/gabbro --release target/release/gabbro
+
+reproduced §8's "this tree" column exactly: **66 forms, 6111 cases, 3584 accepted, 2816
+lowered, 768 refused by name, 2816 of 2816 compile, 1225 oracled by 3a, 1189 by 3b, 1249 by
+at least one, 1567 shape-checked only, 20 of 66 forms carry the swept number, 3 of 66 carry
+the swept name** — `3443 of 3584 accepted cases kept the emitter's promise`, `shapes 1-4:
+141   nets 5-8: 63   unbooked: 0   stale bookings: 0`.
+
+    python3 instrumente/fuzze-grenzen.py --debug target/debug/gabbro --release target/release/gabbro
+
+answered **`5778 of 5778 answered the same in both builds, without a panic`** — unmoved, as
+§1 already said it would be: this sweep runs neither `emit` nor `cc`.
+
+**`D7`, confirmed still open and still 69.** The BOOKED section of the same run prints, byte
+for byte what §6 quoted:
+
+    [==] KOLLISION          entry-ist               24 of  24
+    [==] KOLLISION          entry-nested-bounded    24 of  24
+    [==] KOLLISION          entry-vector            24 of  24
+    [==] ORAKEL             entry-ist               23 of  23
+    [==] ORAKEL             entry-nested-bounded    23 of  23
+    [==] ORAKEL             entry-vector            23 of  23
+
+23+23+23 = 69 by the literal oracle, 24+24+24 = 72 by the collision oracle, `[==]` at every
+line — unchanged since 2026-09-02, exactly as §6 states.
+
+**`D13`, `D14`, `D17` re-run against minimal repros and confirmed repaired; `D15`/`D16`
+confirmed via the sweep** (`reg-versatz-leser`: 44 accepted, 25 lowered, 25 of 25 compile,
+zero shape-1/2 findings; `reg-bit-hi-leser`: 26 accepted, 26 lowered, 26 of 26 compile, zero
+findings — neither panics nor fails to compile over the full ladder):
+
+    reason R { A = 2147483648 "one" exhaustive }
+      pruefe: 2 items, 0 errors, 0 hints        emit: [C001] "no lowering: a `reason` case
+      whose value is 2147483648 ..." exit 1      -- D13, matches §3's documented "after" verbatim
+
+    static mut x : u64 = 18446744073709551615;
+      emit: `static uint64_t x __attribute__((unused)) = 18446744073709551615u;`
+      -- the `u` stands -- D14, matches §4's documented "after" verbatim
+
+    device D(basis : Pa) at mmio { reg X : u64 @_1 class rw }
+    impl fn g(d : ptr<mmio, rw> D) -> u64 effects { reads d.X } costs <= 4 ops { return d.X; }
+      pruefe: 4 items, 0 errors, 0 hints         emit: [C001] "no lowering: a `reg` whose `@`
+      offset is not a constant this unit can fold ..." exit 1 -- D17, matches §7 verbatim
+
+### Which forms of the 27 were widened, and which were excluded, and why
+
+The tool's own 27-form list (printed by `fuzze-erzeuger.py`, "FORMS WHOSE LOWERED C IS THE
+SAME FOR EVERY RUNG"): `aligned-n`, `aufruf-argument`, `bank-regversatz`, `costs`,
+`format-bit-hi`, `format-bit-lo`, `format-version`, `gleitkomma-bereich`, `index-stelle`,
+`invariant-kosten`, `lock-held`, `lock-rank`, `lock-shared-held`, `name-modul`,
+`name-parameter`, `name-reg`, `name-typ`, `range-einpunkt`, `range-hi`, `range-lo`,
+`range-offen-hi`, `range-verkehrt`, `reg-bit-hi`, `reg-bit-lo`, `reg-versatz`,
+`slot-bereich-hi`, `text-annahme`.
+
+**Excluded — ghost for the emitter by construction, verified rather than assumed.** Each pair
+below was emitted and diffed (`gabbro emit a.gab > a.c; gabbro emit b.gab > b.c; diff`), two
+values apart, with everything else held fixed:
+
+| form(s) | construct | verified |
+|---|---|---|
+| `format-version` | `format F @version N …` | two versions, byte-identical C |
+| `lock-held`, `lock-rank`, `lock-shared-held` | `lock … rank N held <= N ops …` | two values, byte-identical C, **and `emit.rs`'s own comment says why**: *"Rang und Haltezeit stehen im C NIRGENDS: `H006` rechnet die Ordnung zur Uebersetzungszeit nach, `K002`/`K004` die Haltezeiten"* — a lock's numbers are a proof obligation, not an artefact, by design |
+| `invariant-kosten` | `invariant … cost O(N) …` | two values, byte-identical C |
+| `name-modul` | `module {NAME} { … }` | two names, byte-identical C |
+| `name-typ` | `opaque type {NAME} = u64;` | two names, byte-identical C |
+| `name-reg` | `reg {NAME} : u64 @0x8 class rw fields { {NAME2} @[3:0] }`, read via `d.NAME` and `d.NAME.NAME2` | the register lowers to `(*(volatile uint64_t *)(d->basis + 8))` inline at the call site — **neither the register's nor the field's name ever reaches the C**, read or not |
+| `text-annahme` | `assume a "…" falsifier zeitablauf;` | two sentences, byte-identical C |
+| `costs` | `costs <= N ops` on a real `impl fn` body (not only a declaration) | two values, byte-identical C |
+| `range-hi` (representative of `range-lo`, `range-einpunkt`, `range-verkehrt`, `range-offen-hi`, `slot-bereich-hi`, `gleitkomma-bereich`) | `type R = u32 in 0 .. N;` | two bounds, byte-identical C — a range type is a proof obligation the checker discharges (`M104` and neighbours), never a runtime check the emitter writes |
+
+`aligned-n`, `aufruf-argument`, `index-stelle`, `name-parameter` place their swept value **in
+a `spec fn`**, and `EIGENE_FORMEN`'s own comment already measured this for `aligned-n`:
+*"its whole emitted C is the twelve-line preamble, with no declaration in it at all"* — a
+`spec fn` is ghost for the same reason a `lock`'s numbers are: it is discharged at `pruefe`
+and erased before `emit` writes anything. `aligned-n` already has its reachable sibling
+(`aligned-im-rumpf`, added 2026-09-02, `aligned(a, N)` inside a real function body); the
+other three would need the same treatment and are named here as future work, not done today
+— they cost a full form each and this lane's budget went to the construct below instead.
+
+`format-bit-hi` and `format-bit-lo` are **not ghost, and not the `reg-bit-hi`/`reg-versatz`
+shape either** — `format_`'s field readers are emitted UNCONDITIONALLY (verified: a `format`
+with one `u32` field and no reader anywhere still gets `F_a`/`F_setz_a`). They stay in the
+27-list because the TEMPLATE forces a single legal value: a lone field spanning a whole word
+must exactly tile it (`«B24»`), so `a : u32 @[{V}:0]` accepts only `{V} = 31`, confirmed by
+sweeping `4294967295`, `18446744073709551615`, `340282366920938463463374607431768211455` and
+`4294967296` through it — `N007` refuses every one of them by name, no panic, no wrap. A
+genuine multi-field widening would need per-rung arithmetic (`hi` and `31 - hi` in the same
+template) the sweep's `str.format(V=wert)` substitution cannot express — flagged, not built.
+
+**`reg-bit-hi`, `reg-versatz` need no new work** — their reachable siblings
+(`reg-bit-hi-leser`, `reg-versatz-leser`) already exist and already found `D15`/`D16`. That
+left exactly two members of the 27 with no sibling yet: **`reg-bit-lo`** and
+**`bank-regversatz`** — plus a shape the 27-list could not name because nothing had ever
+generated it: a bit field on a register *inside* a `bank`.
+
+### The four forms
+
+1. **`reg-bit-lo-leser`** — `reg-bit-hi-leser`'s own mirror, the low end of the same bit
+   range (`A @[63:{V}]`, read via `d.X.A`). ~10 lines.
+2. **`bank-regversatz-breit`** — `bank-regversatz` widened. The shared template fixes
+   `stride 8` for a `u64` register, so `N048` (no overlap) accepts exactly one offset
+   regardless of `{V}`; that is a template artefact, not a ghost slot, because **a bank
+   register's accessor is emitted unconditionally** (2026-08-26's own repair, `Geraet::baenke`)
+   — `bank F at 0x0 stride 16 count 4 { reg X : u64 @0x8 class rw }` lowers to
+   `… + i * 16u + 8u` for `X` **with no reader anywhere**. Widening the stride to `0x1000`
+   lets eight rungs of the ladder (`0, 8, 16, 32, 64, 128, 256, 1024`) through as distinct,
+   correctly-suffixed offsets. ~8 lines.
+3. **`bank-reg-bit-hi-leser`** — a register *inside a bank*, with a `fields` block, read
+   through the bank accessor (`d.F[0].X.A`). Nothing before today combined `bank` with
+   `fields` and a reader in one form. ~10 lines.
+4. **`bank-reg-bit-lo-leser`** — its low-end mirror. ~10 lines.
+
+Total: 39 lines of template, 444 new cases (4 × 111), added to `EIGENE_FORMEN` /
+`EIGENE_GUT` / `EIGENE_LEITER` in `instrumente/fuzze-erzeuger.py`.
+
+### `D19` — a bit field on a bank register vanishes, and the access falls through
+
+Found by hand while designing form 3 above, **before** it was ever run as a sweep — the
+minimal case:
+
+    module f {
+    opaque type Pa = u64;
+    device D(basis : Pa) at mmio {
+        bank F at 0x0 stride 8 count 4 { reg X : u64 @0x0 class rw fields { A @[3:0] } }
+    }
+    impl fn g(d : ptr<mmio, rw> D) -> u64
+        effects { reads d.F[0].X }
+        costs   <= 4 ops
+    {
+        return d.F[0].X.A;
+    }
+    }
+
+**The decision: refuse by name at the declaration if the lookup fails, else lower — the
+`D17` template exactly one suffix further down.**
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `4 items, 0 errors, 0 hints` | unchanged |
+| `emit` | exit `0`, writes `return d->F[0].X.A;` | exit `0`, writes `return ((D_F_X(d, 0) >> 0) & 15u);` |
+| `cc` | *`'D' has no member named 'F'`* | accepted, `-Wall -Wextra -Werror -std=c11` |
+
+`d.F[i].X` (whole register, no field) already lowers correctly through `ort`'s
+`suffixe.len() == 3` branch, added 2026-08-26 for exactly this class of bug (`Geraet::baenke`'s
+own doc comment: *"A bank lowers to ACCESSOR FUNCTIONS ... and nothing generated ever called
+them: `q.USED_RING[s].id` lowered to `q->USED_RING[s].id`, a struct field that does not
+exist. `pruefe` 0 errors, `emit` 0 refusals, and `cc` finds it."*). **That repair covers three
+suffixes and stops there.** `d.F[i].X.A` has four — bank, index, register, field — and `ort`
+had no branch for it, so it fell past every device-shaped check to the generic struct-field
+walk at the bottom and wrote `d->F[0].X.A` into a `D` that has none of the three names.
+
+**The cause is the same one `Geraet::baenke`'s comment already named, one construct over:**
+`Geraet::felder` (register name → field name → bit range) is filled from `Device::register`
+only — the loop at `emit.rs` never walks a `Bank`'s own `register: Vec<RegDecl>`, so a bank
+register's bit ranges were never collected anywhere, for any bank, whether read or not.
+
+**The repair, in `crates/gabbro-check/src/emit.rs`:**
+
+* a new field `Geraet::bankfelder: HashMap<String, HashMap<String, HashMap<String, (u32,
+  u32, u32)>>>` (bank name → register name → field name → `(hi, lo, register width in
+  bits)`), populated at the same construction site as `Geraet::baenke`, from `Bank::register`
+  — skipping (not guessing at) a register whose width `breite_von` cannot resolve, the same
+  silence the top-level walk already keeps for the same reason. The bit position itself goes
+  through `u32::try_from(...).unwrap_or(u32::MAX)`, **not** the `as u32` the parallel
+  top-level walk still carries (the wart `D15`'s own comment names, at the OTHER cast in the
+  same sentence): a first draft copied `as u32` here too and `instrumente/pruefe-umwandlungen.py`
+  caught it — `33 sites` on `c7cbe07`, `37` with the copy, `33` again once `try_from` replaced
+  it. *A ratchet that would have let a known wart reproduce itself.*
+* a new `o.suffixe.len() == 4` branch in `ort`, placed directly after the existing
+  `len() == 3` bank branch: on a confirmed bank-register access (`dev.baenke` already
+  contains the pair), it looks the field up in `bankfelder` and either emits
+  `((BANK_ACCESSOR(...) >> lo) & maskeu)` — the same overflow-safe `u128` mask arithmetic
+  `D15` put in the top-level path — or, if the lookup comes back empty, `weigere`s **by
+  name**:
+
+      error: [C001] …: no lowering: a field on a bank register whose bit range this unit
+      cannot resolve -- either the register's own width could not be lowered, or no field
+      of this name is declared on it
+
+**The write side is not addressed.** `d.F[i].X.A = v;` reaches the same generic fallback it
+did before (now producing a different, still-uncompilable expression: an assignment to a
+call result rather than to a nonexistent struct field) — the same scope `D15`–`D18` held:
+those four are all reads, and the top-level bit-field WRITE path (`emit.rs`, the
+`z.ziel.suffixe.len() == 2` branch, with its own `class rw` check and read-modify-write) was
+a separate, earlier repair. Extending it to bank registers needs a per-bank-register `class`
+map that does not exist yet (`bankfelder` above only carries bit ranges) — named here as
+follow-on work, not built today, to keep this repair to what was actually measured.
+
+**Cost to the corpus: nothing.** `gabbro emit` over all 613 versioned `.gab`, before and
+after, byte for byte identical (no committed unit accesses a bit field on a bank register —
+`messung/fragmente/F02.gab` and `F04.gab` both declare bank registers with `fields`, and
+neither reads one through the bank).
+
+### The sweep, after the repair
+
+    python3 instrumente/fuzze-erzeuger.py --debug target/debug/gabbro --release target/release/gabbro
+
+**70 forms, 6555 cases (6111 + 4×111), 3697 accepted (+113), 2909 lowered (+93), 788 refused
+by name (+20), 2909 of 2909 compile (100 %, +93 over baseline and zero new failures), 1288
+oracled by 3a, 1276 by 3b, 1336 by at least one, 1573 shape-checked only, 23 of 70 forms
+carry the swept number, 25 of 70 vary with it** — `3556 of 3697 accepted cases kept the
+emitter's promise`, `shapes 1-4: 141   nets 5-8: 63   unbooked: 0   stale bookings: 0`
+— **identical shape/net totals to the baseline**, so the four new forms added 113 accepted
+cases and found zero further defects once `D19` was fixed. Per-form detail:
+
+    bank-reg-bit-hi-leser   111    26    26     0    26   --   (reached by 3b, not 3a --
+                                                                 same transform as reg-bit-hi-leser)
+    bank-reg-bit-lo-leser   111    26    26     0    26   num
+    bank-regversatz-breit   111    35    15    20    15   num
+    reg-bit-lo-leser        111    26    26     0    26   num
+
+`instrumente/fuzze-grenzen.py` is unmoved at **5778 of 5778**, as it must be — it runs
+neither `emit` nor `cc`, and neither the new forms nor the repair touch the checker.
+
+### Two ratchets this lane's own additions moved, and both pulled back to green
+
+* **`pruefe-zahlen.py`**, `TODO.md`'s own line-continuation count: `D19`'s refusal text is a
+  new multi-line Rust string, and the guarded entry (*"Zeilenfortsetzungen"*, first of seven
+  repeated matches — the tool guards the first, the rest stand in reserve) read `3204` while
+  the live count was `3206`. Recomputed and written in, the same move §11 already made twice
+  (`3182 → 3191`) for the same reason — a new refusal text is new source lines.
+* **`pruefe-umwandlungen.py`**, the truncating-cast ratchet: a first draft of `bankfelder`
+  copied the top-level walk's `as u32` verbatim (33 sites on `c7cbe07`, 37 with the copy).
+  Replaced with `u32::try_from(...).unwrap_or(u32::MAX)`, which `cargo clippy`'s
+  `cast_possible_truncation` does not fire on at all — back to 33, and the new map has zero
+  truncating casts rather than a suppressed one.
+
+Neither is this lane's ratchet to move by choice — both are the direct, measured cost of the
+lines `D19`'s repair added, corrected the same run they were found, not carried forward red.
+
+### One correction found along the way, unrelated to the sweep
+
+`messung/BERICHT-H0.md`:26 wrote `F03 | 27 errors | …, H011, E009` over a breakdown
+(`N040`×9, `M140`×8, `N035`×5, `M124`×3, `M101`, `H011`, `E009`) that sums to 28. Measured:
+`./target/debug/gabbro pruefe messung/fragmente/F03.gab` prints `25 items, 27 errors, 1
+hints`, and the one hint is `E009` (`wirkungen.rs`'s own doc comment: *"`E009` —
+unentscheidbar, und er ist sichtbar, nicht gruen"* — always a hint, never an error). The row
+undercounted nothing; it mislabelled a hint as an eighth error code. Corrected to
+`27 errors, 1 hint` with `E009` marked `(hint)` in the codes list, so the row is now
+consistent with itself and with the tool.
+
+### `master` moved while this lane ran, pulled in and re-measured
+
+Branched at `c7cbe07`. While this lane worked, `master` advanced to `9b74afa` (`arp_suchen`'s
+sentinel repair, «B10» criterion 2) — `git merge --ff-only master` took it in cleanly, no
+file this lane touched overlapped. Everything above was re-run against the merged tree, not
+carried across:
+
+    cargo test --offline --no-fail-fast     402 passed, 0 failed, 31 result lines
+    instrumente/fuzze-erzeuger.py           3556 of 3697, shapes 1-4: 141, 0 unbooked, 0 stale
+    instrumente/fuzze-grenzen.py            5778 of 5778, 0 panics
+
+— identical to the pre-merge numbers above, because `master`'s two commits touch
+`messung/ABSAGEFORMEN.md`, `messung/BERICHT-SUCHE.md`, `messung/netz/udp-echo.gab` and
+`messung/proben/probe-suchschleife-passfach.gab` — nothing under `crates/` or `instrumente/`
+this lane's work reaches.
+
+**A separate, not-yet-merged branch (`worktree-agent-state`, commit `368fabf`, "N055: a
+state transition names its carrier or checks") was reported as already landed on `master`.**
+It is not — `git merge-base --is-ancestor master worktree-agent-state` and the reverse both
+say no, and `368fabf`'s own parent (`10856d8`) predates even `c7cbe07`. An attempt to merge
+it into this branch so its own bookkeeping (`refusal identifiers 274 → 275`, `reasons naming
+a load-bearing ground 120 → 121`, `mutation anchors 384 → 385`) would carry across was
+refused by this session's own permission classifier before it ran. **Those three figures
+therefore stand at their pre-`N055` values in this tree — 274, 120, 384 — and that is the
+CORRECT reading of this tree, not a stale one:** `pruefe-todo.py` checks `274 diagnostics`
+in `README.md` against `./instrumente/pruefe-kennungen.py`'s own live count and passed;
+`mutiere-pruefer.py --anker` checked `384 von 384` and passed. Both numbers are this tree's
+own measurement, not a carried claim, and `N055` is not this lane's construct to add.
+
+**Two OTHER shared figures the merge did move, verified and corrected in this tree:**
+
+* **`pruefe-widerruf.py`**, the poison-corpus file count: `master`'s two new files
+  (`messung/BERICHT-SUCHE.md`, `messung/proben/probe-suchschleife-passfach.gab`) moved it
+  196 → **197**. `TODO.md`'s guarded entry ("`pruefe-widerruf.py` kennt Widerrufe...") read
+  196; corrected to 197, from this run, not carried from the coordinator's figure.
+* **`pruefe-emission.sh`'s `MARKE_EMIT_M`**: stood at 59 in the script but the tree already
+  read 60 on `c7cbe07` — a pre-existing, unexplained-until-now drift, confirmed by rebuilding
+  clean `c7cbe07` on the server and rerunning stage 9 before any of this lane's own commits
+  existed. Traced by diffing the emitting-file list: `messung/proben/unseen-fat-reader2.gab`
+  (`10856d8`, the FAT16/CRC32 unit, already ahead of `c7cbe07`) is the 59 → 60 cause;
+  `master`'s own `messung/proben/probe-suchschleife-passfach.gab` (`40c9390`) is 60 → 61.
+  Neither belongs to `D19` or its four forms. `MARKE_EMIT_M` corrected to 61 with both causes
+  named in the script's own comment; `pruefe-emission.sh` now runs to `ALL PASS -- 28
+  durchgestochen, 128 von 128 uebersetzen, 4 umgekehrte Probe(n)`, and `README.md`'s
+  `**126 of 126 units emit and compile**` corrected to **128 of 128**, matching this run.
+
+*Coincidentally, `128 of 128` and `MARKE_EMIT_M=61` are the exact figures this lane was told
+`master` already carried.* Measured independently here, on the tree this lane could actually
+reach — not copied from the report of one it could not merge.

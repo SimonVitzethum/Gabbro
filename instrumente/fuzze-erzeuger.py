@@ -245,16 +245,100 @@ impl fn g(d : ptr<mmio, rw> D) -> u64
     return d.X.A;
 }}
 }}""",
+    # **`reg-bit-hi-leser`'s own mirror, the LOW end of the same bit range.** `27-form list`,
+    # 2026-09-03: `reg-bit-lo` stands beside `reg-bit-hi` in that list for the same reason --
+    # a declaration nothing reads lowers to nothing that moves. `reg-bit-hi-leser` already
+    # exists; this is the other end of the range, not a new construct.
+    "reg-bit-lo-leser": """module f {{
+opaque type Pa = u64;
+device D(basis : Pa) at mmio {{ reg X : u64 @0x0 class rw fields {{ A @[63:{V}] }} }}
+impl fn g(d : ptr<mmio, rw> D) -> u64
+    effects {{ reads d.X }}
+    costs   <= 4 ops
+{{
+    return d.X.A;
+}}
+}}""",
+    # ---- A BANK REGISTER'S BIT FIELD -- one suffix past `reg-bit-hi-leser`, and it was
+    # never tested there -----------------------------------------------------------------
+    #
+    # **Found 2026-09-03, `D19`.** `reg-bit-hi-leser` reads a bit field on a TOP-LEVEL
+    # register (`d.X.A`, two suffixes past the base); a register inside a `bank` reads the
+    # same field through ONE MORE suffix (`d.F[i].X.A`, the bank name, the index, the
+    # register, the field). Nothing in the 64+2 forms before today combined a `bank` with a
+    # `fields` block AND a reader, so this shape had never been generated:
+    #
+    #     pruefe:  4 items, 0 errors, 0 hints
+    #     emit:    exit 0, writes `return d->F[0].X.A;`
+    #     cc:      error: 'D' has no member named 'F'
+    #
+    # `Geraet::felder` is filled from `Device::register` only (`emit.rs`, the walk beside
+    # `Geraet::bankfelder`'s own doc comment) -- a bank's OWN `RegDecl::felder` was never
+    # collected, so `ort`'s bank branch (`suffixe.len() == 3`, the WHOLE register) had
+    # nothing to hand a fourth suffix and fell through to the generic struct-field walk.
+    # *The exact fault line `Geraet::baenke`'s comment already named, one suffix further
+    # down.* Repaired: a new `Geraet::bankfelder` map and a `suffixe.len() == 4` branch in
+    # `ort`, refusing by name where the lookup comes back empty rather than falling through.
+    "bank-reg-bit-hi-leser": """module f {{
+opaque type Pa = u64;
+device D(basis : Pa) at mmio {{
+    bank F at 0x0 stride 8 count 4 {{ reg X : u64 @0x0 class rw fields {{ A @[{V}:0] }} }}
+}}
+impl fn g(d : ptr<mmio, rw> D) -> u64
+    effects {{ reads d.F[0].X }}
+    costs   <= 4 ops
+{{
+    return d.F[0].X.A;
+}}
+}}""",
+    # The low end of the same bank-register bit range -- `bank-reg-bit-hi-leser`'s mirror,
+    # the same way `reg-bit-lo-leser` mirrors `reg-bit-hi-leser`.
+    "bank-reg-bit-lo-leser": """module f {{
+opaque type Pa = u64;
+device D(basis : Pa) at mmio {{
+    bank F at 0x0 stride 8 count 4 {{ reg X : u64 @0x0 class rw fields {{ A @[63:{V}] }} }}
+}}
+impl fn g(d : ptr<mmio, rw> D) -> u64
+    effects {{ reads d.F[0].X }}
+    costs   <= 4 ops
+{{
+    return d.F[0].X.A;
+}}
+}}""",
+    # ---- `bank-regversatz` WIDENED -- the shared template's OWN stride blocks variance ---
+    #
+    # `bank-regversatz` (shared table) sweeps `bank F at 0x0 stride 8 count 4 { reg X : u64
+    # @{V} class rw }` -- a `u64` register in an 8-byte stride, so the non-overlap check
+    # (`N048`) accepts exactly ONE offset, zero, regardless of what `{V}` says. That is not
+    # a ghost slot; a bank register's accessor is emitted UNCONDITIONALLY (2026-08-26's own
+    # repair, `Geraet::baenke`), so the offset DOES land in the C -- `+ {V}u` -- whenever the
+    # template lets more than one value through. Measured: `bank F at 0x0 stride 8 count 4
+    # { reg X : u64 @0x8 class rw }` lowers to `... + i * 8u + 8u` for `X`, so widening the
+    # stride is the whole fix, and it costs nothing else.
+    "bank-regversatz-breit": """module f {{
+opaque type Pa = u64;
+device D(basis : Pa) at mmio {{
+    bank F at 0x0 stride 0x1000 count 1 {{ reg X : u64 @{V} class rw }}
+}}
+}}""",
 }
 EIGENE_GUT = {
     "aligned-im-rumpf": "4",
     "reg-versatz-leser": "0x8",
     "reg-bit-hi-leser": "3",
+    "reg-bit-lo-leser": "0",
+    "bank-reg-bit-hi-leser": "3",
+    "bank-reg-bit-lo-leser": "0",
+    "bank-regversatz-breit": "0x8",
 }
 EIGENE_LEITER = {
     "aligned-im-rumpf": "zahl",
     "reg-versatz-leser": "zahl",
     "reg-bit-hi-leser": "zahl",
+    "reg-bit-lo-leser": "zahl",
+    "bank-reg-bit-hi-leser": "zahl",
+    "bank-reg-bit-lo-leser": "zahl",
+    "bank-regversatz-breit": "zahl",
 }
 
 

@@ -589,6 +589,12 @@ darunter.
       Datei zurueck, 196 -- *nicht addiert, nicht gewaehlt, und auch nicht aus dem Auftrag
       uebernommen.* Bemerkenswert ist die neue Halbheit: hier hat nicht eine zweite Bahn
       die Zahl still mitbewegt, sondern **die Ansage selbst war beim Ankommen veraltet.*
+      *__DER NEUNTE FALL, UND ER HAT KEINE NEUE GESTALT -- darum eine Zeile statt einer
+      Buchung.__ Am 2026-09-03 sagte die `N055`-Spur 3211 und die `D19`-Spur 3206, jede
+      richtig fuer IHREN Baum; der Lauf im zusammengefuehrten sagt **3213**. Dieselbe
+      Halbheit wie beim achten Fall -- keine Seite war veraltet, beide waren einfach ueber
+      verschiedenen Mengen richtig. **Eine Klasse, die sich wiederholt, braucht keine neunte
+      Erzaehlung, sondern einen Griff, und der Griff ist derselbe: der Lauf im Merge.***
       *__ZUM ACHTEN MAL, AM SELBEN TAG WIE DAS SIEBTE, UND DIE HALBHEIT IST WIEDER EINE
       ANDERE.__ Am 2026-09-03 zweigte die Suchschleifen-Bahn (`messung/BERICHT-SUCHE.md`)
       von `10856d8` ab und mass dort **196** -- richtig fuer ihren Baum. Zwischenzeitlich
@@ -862,7 +868,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3211 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3213 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das

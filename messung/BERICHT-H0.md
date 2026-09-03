@@ -23,7 +23,7 @@ At `3b17d9a`, with the binary built on `ki-pc-fisch-101` (`gabbro-h0`) and fetch
 |---|---|---|---|
 | F01 | 3 errors | refuses | `M140` ×2, `N029` |
 | F02 | 0 | ok | — |
-| F03 | 27 errors | refuses | `N040` ×9, `M140` ×8, `N035` ×5, `M124` ×3, `M101`, `H011`, `E009` |
+| F03 | 27 errors, 1 hint | refuses | `N040` ×9, `M140` ×8, `N035` ×5, `M124` ×3, `M101`, `H011`, `E009` (hint) |
 | F04 | 0 | ok | — |
 | F05 | 4 errors | refuses | `N046` ×2, `M134`, `N041` |
 | F06 | 0 | ok | — |
