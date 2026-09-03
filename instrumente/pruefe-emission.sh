@@ -2607,7 +2607,12 @@ fi
 # acknowledgement, a bit-field read-modify-write, a `transition` -- where the emitter used to
 # answer `C001` for all of them at once. *Rule A's second half: no refusal without a measured
 # defect, and the defect under this one had been repaired.*
-MARKE_EMIT=65
+# **65 -> 67 am 2026-09-03, und der Gegenstand ist gewachsen.** Eine fremde Instanz legte
+# zwei saubere Beispiele ab: `66-transport-rueckgabe.gab` (die Eigentumsuebergabe, `C1` der
+# fuenften Marke -- 11 items, 0 errors) und `67-befehlsebene.gab` (`B5`s andere Haelfte,
+# 6 items, 0 errors). Beide emittieren und uebersetzen. *Der gute Fall, und die Begruendung
+# steht hier an der Marke statt in einer Notiz daneben.*
+MARKE_EMIT=67
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -2776,7 +2781,14 @@ MARKE_EMIT=65
 # denselben Dateivergleich, den diese Stufe selbst als FUND meldet -- keine der beiden
 # gehoert `D19`s eigenen vier Formularen oder dem `bankfelder`-Repair.
 # *Stufe 9 blieb dabei 128 von 128, und `clang` nimmt dieselben 128.*
-MARKE_EMIT_M=61
+# **61 -> 70 am 2026-09-03, und diese neun standen schon da, bevor jemand sie zaehlte.**
+# Die Fuenfte-Marke-Bahn legte elf Proben unter `messung/proben/` ab, um `unwritten` gegen
+# `inexpressible` zu trennen -- und neun davon senken ab und uebersetzen, weil genau das
+# ihr Beweis war. **Die Marke wurde beim Zusammenfuehren nicht mitgezogen**, weil
+# `pruefe-emission.sh` serverseitig laeuft und nicht in `abnahme.py` steht: der Merge war
+# gruen und die Marke trotzdem alt. *Ein Waechter, den der Sammellauf nicht ruft, meldet
+# seinen Befund erst, wenn ihn jemand einzeln fragt.*
+MARKE_EMIT_M=70
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -2864,7 +2876,13 @@ MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 # `-- erwartet: cc` branch an object any more. **The number falling IS the evidence the
 # repairs landed** -- and four files still enter the branch, so it keeps saying something:
 # `gift/414` and the three `B001` entry probes.
-MARKE_UMGEKEHRT=4
+# **4 -> 5 am 2026-09-03.** `messung/proben/probe-fehlerkanal-verbundwert.gab` kam mit der
+# Fuenfte-Marke-Bahn dazu: `let x = f() else (e)` mit einem VERBUND senkt zu `x->feld` ueber
+# einen Wert ab, den der Erzeuger selbst als Wert deklariert hat, und `cc` weist es zurueck.
+# Sie traegt `-- erwartet: cc` mit Absicht -- der Defekt liegt in `emit.rs` und wird von einer
+# anderen Bahn gefuehrt. *Eine umgekehrte Probe ist eine SCHULD mit einem Namen darauf, keine
+# bestandene Pruefung*, und darum steht die Marke `0 von 5 beissen nur unter cc` daneben.
+MARKE_UMGEKEHRT=5
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

@@ -1,0 +1,104 @@
+-- C1 -- Ownership transfer across the virtio transport: arm, reclaim,
+-- reclaim_unproven, poll_used, kick at a computed offset.
+--
+-- Measured against `caprock-virtio` (`owned.rs`, `lib.rs` `Queue::arm`,
+-- `reclaim`, `reclaim_unproven`, `poll_used`, `Transport::kick`) on 2026-09-03.
+-- The question from PLAN-HARDWARE §48: is `reclaim(buf: Owned<Device>) ->
+-- Owned<Driver>` writable in Gabbro, and are `poll_used`, `reclaim`, `kick`
+-- at a computed offset?
+--
+-- Answer: YES, all four, with the vocabulary that stands. No new word, no
+-- new rule. The ownership rides a LINEAR GHOST typestate (`Besitz`, order
+-- fahrer->geraet), the receipt rides `requires` (NOT linear -- Caprock's
+-- `Completion` is `Copy`, `Owned` is not). The unproven path rides its NAME
+-- (`hole_unbelegt`), the way `owned.rs` names `reclaim_unproven` instead of
+-- forbidding it.
+--
+-- What each form costs (measured, not asserted):
+--  * `arm` + `hole`/`hole_unbelegt`: linear ghost + consumes + return. 0 errors.
+--  * `poll_used` loop: `retry ... bounded 64 ops ... on_exceeded <never>`
+--    costs 65 (the bound is the body: 64 + 1). The 8-op promise was MY number,
+--    the checker computed 65 -- `gabbro costs` is the measurement, not the guess.
+--  * `kick` address: `basis + versatz * faktor` needs RANGED operands
+--    (`M104` at u64: no wider type to bind into). Declared bounds, 15 ops.
+--
+-- What does NOT go (named, not built -- Rule A, one port):
+--  * `Owned<Fahrer>` -> `Owned<Geraet>` as TWO NOMINAL types with a value
+--    moving between them: `N030` (nominal) refuses `let g: GeraetBesitz = b`.
+--    The ghost-advances form says the same thing with one type and two stages.
+--  * `advances geraet -> fahrer` (the way BACK as a forward step): `O002`
+--    refuses -- order is order. The return trip is a second function on the
+--    same mark, the way `stufe_*` chains one step per function.
+--  * A linear RECEIPT (`consumes n` + branch on it): `L103` -- exactly-once
+--    across branches. The receipt is read (`requires`), not consumed.
+
+module c1::transport {
+
+table Puffer count 8 {
+    slot { belegt : bool, }
+}
+
+linear ghost type Besitz order { fahrer, geraet };
+
+extern fn erzeuge_besitz() -> Besitz effects { pure } costs <= 1 ops;
+extern fn gib_auf() -> never effects { diverges } costs <= 1 ops;
+extern fn geraet_fertig() -> bool effects { pure } costs <= 1 ops;
+
+-- poll_used: bounded wait, receipt as bool back.
+impl fn warte_auf_fertig(bereit : bool) -> bool
+    effects { pure }
+    costs   <= 70 ops
+{
+    retry warten until bereit
+        bounded 64 ops
+        on_exceeded gib_auf
+        effects { pure }
+    {
+    }
+    return bereit;
+}
+
+-- arm: driver hands over, device receives. Linear ghost + consumes + return.
+impl fn arm(h : ptr<normal, rw> Puffer, i : index into Puffer, b : Besitz) -> Besitz
+    advances fahrer -> geraet
+    effects { writes h.slots, consumes b }
+    costs   <= 8 ops
+{
+    h.slots[i].belegt = true;
+    return b;
+}
+
+-- reclaim WITH receipt: the normal return path.
+impl fn hole(h : ptr<normal, rw> Puffer, i : index into Puffer, b : Besitz) -> Besitz
+    requires geraet_fertig()
+    effects { writes h.slots, consumes b }
+    costs   <= 8 ops
+{
+    h.slots[i].belegt = false;
+    return b;
+}
+
+-- reclaim WITHOUT receipt: named, not forbidden -- the name stands in the
+-- signature (`hole_unbelegt`), the way `reclaim_unproven` stands at its call site.
+impl fn hole_unbelegt(h : ptr<normal, rw> Puffer, i : index into Puffer, b : Besitz) -> Besitz
+    effects { writes h.slots, consumes b }
+    costs   <= 8 ops
+{
+    h.slots[i].belegt = false;
+    return b;
+}
+
+-- kick at a computed offset: notify_base + off * mul + queue.
+-- Ranged operands so the sum types (M104 at u64 has no wider bed).
+impl fn tritt(basis : u64 in 0 .. 1099511627776, versatz : u16, faktor : u32 in 0 .. 65536, warteschlange : u16) -> u64
+    effects { pure }
+    costs   <= 15 ops
+{
+    let a : u64 = basis;
+    let o : u64 = versatz;
+    let f : u64 = faktor;
+    let addr = a + o * f;
+    return addr + warteschlange;
+}
+
+}

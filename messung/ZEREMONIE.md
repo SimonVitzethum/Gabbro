@@ -9,7 +9,7 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       86        A1  4 · A4 82
   redundant        0
   tragend       1215
-86 von 1301 Stellen dürfen sinken
+86 von 1337 Stellen dürfen sinken
 
 > **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
 > zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.

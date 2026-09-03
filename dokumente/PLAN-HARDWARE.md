@@ -2290,6 +2290,24 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       *Die letzten drei liegen in `emit.rs`, das eine andere Bahn führt: **gemeldet, nicht
       repariert**.*
 
+      ---
+
+      **UND `C1` IST SEIT DEMSELBEN TAG GEMESSEN - die Eigentumsuebergabe GEHT.**
+      *Der zweite Durchgang oben trug sie als benannt und nicht gemessen; hier steht
+      die Antwort, und sie faellt zu Gabbros Gunsten aus.*
+
+      **GEMESSEN am 2026-09-03, zweiter Durchgang (`beispiele/66`): alle vier gehen,
+      ohne ein neues Wort.** `arm`/`hole` als linearer Geist-Typzustand (`Besitz`,
+      `fahrer->geraet`, `consumes` + `return`); der Beleg als `requires`
+      (`geraet_fertig()` — Caprocks `Completion` ist `Copy`, `Owned` nicht, und
+      genau so trennt es Gabbro auch); der beleglose Weg benannt
+      (`hole_unbelegt`, wie `reclaim_unproven`); `poll_used` als `retry`-Warte
+      (65 ops, die Schranke ist der Rumpf); `kick` als begrenzte u64-Rechnung
+      (15 ops, `M104` verlangt die Schranken an der Deklaration). 11 items,
+      0 errors, emit + `cc -O0/-O2` gruen.
+      Was NICHT geht (benannt, Regel A): zwei nominale Typen mit Werttransfer
+      (`N030`), `advances` rueckwaerts (`O002`), linearer Beleg (`L103).
+
 ### Punkt 4 fällt — sobald jemand die Teilmenge prüft
 
 **CompCert schließt genau diese Lücke**, und das ist die realistische Antwort. Die Bedingung
@@ -2556,11 +2574,19 @@ Kommentar in `emit.rs` selbst als Beispiel nannte.
       `beispiele/65-port-space.gab`, `beispiele/gift/653`–`657`,
       `messung/ADRESSRAEUME.md` §10. **Die Grenze steht daneben: übersetzt und zerlegt, nicht
       ausgeführt** — Port-I/O läuft im Nutzerraum nicht.
-- [ ] **Was von `B5` bleibt, ist die ANDERE Hälfte des Postens** — `invlpg`, `TLBI`,
+- [x] ~~**Was von `B5` bleibt, ist die ANDERE Hälfte des Postens** — `invlpg`, `TLBI`,
       `DSB`/`sfence`, der Shootdown. Sie hängen an derselben Ausdrucksdecke von C11, und der
       Ausstieg ist derselbe (`asm`, benannt und gezählt). *Der Port war der Teil, an dem eine
       DEKLARATION die Zahl liefert, die der Befehl braucht; bei einer Barriere liefert keine
-      Deklaration etwas — dort bleibt der `asm`-Rumpf die Form.*
+      Deklaration etwas — dort bleibt der `asm`-Rumpf die Form.*~~ **GEHEILT am 2026-09-03
+      durch `beispiele/67` (kein neues Wort, keine neue Regel):** `invlpg`, `sfence`,
+      `mfence` und der Shootdown-foermige Port-Schreibzug stehen als benannte
+      `asm`-Rumpfe (effects, costs, arch, clobbers), 6 items, 0 errors, emit +
+      `cc -O2` gruen, 4 `__asm__`-Stellen im Erzeugnis. TLBI/DSB sind dasselbe
+      Fenster mit anderem Mnemonic (aarch64-Probe: der `arch`-Riegel haelt, das
+      Mnemonic gehoert dem Schreiber, `cc -c` liest zweitens). Was BLEIBT, ist
+      nichts Sprachliches: die BYTES, die das Geraet sieht, sind Annahme, und
+      `zeugnis` zaehlt die Zeilen — diese Zahl IST die Aussage.
 
 *Nebenbei ist das die ehrlichste Antwort auf „Gabbro ohne `unsafe`": es stimmt in der
 Sprache, und die Stelle, an der es nicht mehr stimmt, ist nicht Gabbros Entwurf, sondern das

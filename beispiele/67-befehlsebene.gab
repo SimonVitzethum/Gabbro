@@ -1,0 +1,74 @@
+-- B5 other half -- invlpg, sfence/mfence and the shootdown-shaped
+-- port write, all through the NAMED asm window (no new word, no new rule).
+--
+-- Measured 2026-09-03. Each form checks with 0 errors, emits, and the C
+-- compiles under `cc -std=c11 -O2 -Wall -Wextra -Werror`. What the checker
+-- holds (arch, effects, costs, clobbers, operand-is-a-parameter) is the
+-- whole contract; the BYTES the device sees are assumption (`zeugnis`
+-- counts the asm lines -- that number IS the statement).
+--
+-- What each form costs to learn (first contact, each a refusal):
+--  * an asm body with `-> T` and no `out { result }` falls at `C001`
+--    (the value would come from nowhere -- the refusal names the line).
+--  * an operand naming a non-parameter falls at `A004`.
+--  * `dsb sy` under `arch x86_64` compiles the UNIT but the assembler
+--    refuses it (rightly -- it is aarch64). The arch gate is the checker's;
+--    the mnemonic is the writer's, and `cc -c` is the second reader.
+--    Kept x86_64-only here; the aarch64 shape is beispiele/36's business.
+--
+-- The shootdown is a port write (`outb`), the same exit the port half took:
+-- the instruction is not C, the window around it is Gabbro (effects, costs,
+-- arch, clobbers). TLBI/DSB are the same window with another mnemonic --
+-- no second mechanism was needed, which is the finding.
+
+module b5::befehlsebene {
+
+static mut TLB_FLUSH : u64 = 0;
+
+-- invlpg: drop one page from the TLB (x86_64).
+impl fn seite_vergessen(adr : u64)
+    effects { writes TLB_FLUSH }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "invlpg (%[adr])"
+        in { adr : "r" }
+        clobbers { memory }
+    };
+
+-- sfence: store barrier (x86_64). No operand, only order.
+impl fn schreib_schranke()
+    effects { writes TLB_FLUSH }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "sfence"
+        in { }
+        clobbers { memory }
+    };
+
+-- mfence: full barrier (x86_64). Same window, other mnemonic.
+impl fn speicher_schranke()
+    effects { writes TLB_FLUSH }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "mfence"
+        in { }
+        clobbers { memory }
+    };
+
+-- Shootdown-shaped port write at a named port: wake the other core.
+-- `beispiele/36` writes `outb` by hand; `beispiele/65` wires the port
+-- number through a `device`. This one names both at the call.
+impl fn ferne_kern_wecken(tor : u16, hinweis : u8)
+    effects { writes TLB_FLUSH }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "outb %[hinweis], %[tor]"
+        in { hinweis : "a", tor : "d" }
+        clobbers { memory }
+    };
+
+}

@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 198 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 200 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -3151,7 +3151,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**107 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**114 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
