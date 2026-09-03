@@ -16,9 +16,19 @@ finished binary locally, `free -g` reading 31 GB total and 20 GB available.
 
 Measured 2026-09-03 at `1cb66b0` over **every `.gab` in the tree bar `beispiele/gift/`**:
 183 units, 134 of them emitting a register, **38 carrying at least one obligation line**,
-**113 obligation lines** total. (`messung/gabbrov/MANIFEST-COMPLETENESS.md` says 110 at
-`94c9ac5`; the three extra are `F01`, which got a register on 2026-09-03 with `501b758`.
-Two numbers, one reconciled cause — not two measurements.)
+**113 obligation lines** total.
+
+> **The neighbouring 110 does not reconcile against the commit printed beside it, and that
+> is worth saying rather than smoothing.** `messung/gabbrov/MANIFEST-COMPLETENESS.md` heads
+> itself *"Measured on `master` @ `94c9ac5`"* and its field table says **110 of 110**. But
+> `94c9ac5` is a **format-1** binary — built and swept for this report, it emits no
+> `obligation` line at all, and its population is **100 lines over 36 units**. The
+> difference from 100 to today's 113 is **exactly two files that gained a register**:
+> `messung/fragmente/F01.gab` (+12) and `F09.gab` (+1), the `H = 0` lane's repair. *No
+> other unit moved by a single line.* So the 110 was taken somewhere between the two,
+> at a commit the document does not name — its header names the day's starting point, not
+> each table's own stand. **This report's 113 is at `1cb66b0`, and its search path is
+> printed above it.**
 
 The name is built in `crates/gabbro-check/src/pflichten.rs`, and only three of the eight
 kinds put an **ordinal** in it:
@@ -150,6 +160,40 @@ Expr` is the term itself), so nothing there can go stale. It matters because it 
 human reading a report picks up a name and writes it into a document that is **not**
 regenerated. `messung/GABBROV-V1.md` is that document.
 
+**How far that reaches, measured:** add ONE conjunct to `aushaengen` in
+`beispiele/01-tabelle.gab` and **9 of 13 `duty_N` names denote a different obligation** —
+across three functions and four kinds:
+
+```
+duty_5 : einsammeln :: baum_wohlgeformt          ->  aushaengen :: ensures #4
+duty_6 : einsammeln :: loop invariant #1         ->  einsammeln :: baum_wohlgeformt
+duty_7 : blatt_loeschen :: baum_wohlgeformt      ->  einsammeln :: loop invariant #1
+duty_8 : blatt_loeschen :: ensures #1            ->  blatt_loeschen :: baum_wohlgeformt
+duty_9 : einsammeln :: blatt_loeschen requires #1->  blatt_loeschen :: ensures #1
+   … and duty_10 through duty_13 likewise
+```
+
+*The `#n` inside a name is the small ordinal; `duty_N` is the large one.* Both are
+regenerated, so neither can go stale on its own — but a `duty_N` copied into prose ages the
+moment anybody writes a clause above it.
+
+### How much prose keys on a manifest name — 19 of 101, and 10 of those carry an ordinal
+
+The 113 lines carry **101 distinct names**. Of those, **19 are quoted verbatim in
+hand-written `.md` documents** — the ones nothing regenerates. **10 of the 19 carry an
+ordinal, and 2 sit in a permutable sibling group.**
+
+| | quoted in |
+|---|---|
+| **`aushaengen :: ensures #1`** — permutable, group of 3 | `AUFTRAG-GABBROV.md`, `GABBROV.md`, `OFFEN.md`, `GABBROV-AUDIT.md`, `GABBROV-AUFTRAG.md`, `GABBROV-V1.md` — **six documents** |
+| **`einsammeln :: blatt_loeschen requires #1`** — permutable, group of 3 | `GABBROV-V1.md` |
+| eight more with an ordinal, all `#1` in a group of one | `GABBROV-V1.md`, `GABBROV-V2.md`, `LEAN-REICHWEITE.md`, `RUMPFKANAL-ABSAGEN.md`, `MANIFEST-COMPLETENESS.md` |
+| nine that carry a NAME and no ordinal | unaffected by a swap; affected by an edit of what the name points at |
+
+*The two permutable ones are `O3`'s own examples, and one of them is written down in six
+places.* That is not a live defect — no document claims a verdict a swap would falsify
+today — but it is the surface a name-keyed ratchet would automate.
+
 ### And the neighbouring lane already measured the sharper half
 
 `messung/gabbrov/MANIFEST-COMPLETENESS.md` §3: `toeten :: aufloesen requires #1` anchors at
@@ -202,6 +246,18 @@ sentence *"the ratchet runs over names; exchange is visible"* reads as true: wit
 names an exchange really would be visible, because the two names travel with their statements.
 **The emitter does not write authored names**, it writes ordinals, and the sentence became
 false without anyone editing it. So (c) is not a wrong idea — it is what §15 assumed all along.
+
+**And §15's own example line already carries the text beside the name:**
+
+```
+obligation revoke.functional  "ensures !exists k in descendants of s: k.used"  offen
+closed     consuming.schablone  "Ordnungserhaltung descendants, Erzeuger-Schablone"  Fundstelle
+```
+
+So the FORMAT §15 sketched has been (b)-shaped from the start; it is only the sentence
+underneath it that says *names*. Version 2 of the manifest brought the format up to the
+sketch on 2026-09-03. **What is left is one sentence, and correcting it against its own
+example costs nothing.**
 
 It is still not the answer, and for a reason that has nothing to do with cost: **(c) binds the
 name to the SITE, not to the CONTENT.** Write `ensures unlinked: c.slots[s].elter == None`,
