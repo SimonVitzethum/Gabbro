@@ -45,6 +45,27 @@ $ ./instrumente/zaehle-fragmente.py
 9 von 10 sind DURCHGESTOCHEN  — F01, F02, F04, F05, F06, F07, F08, F09, F10
                                (F6 am 2026-08-31, am selben Tag an `N043` gefallen
                                 und geheilt; F9, F1 und F5 am 2026-09-03)
+
+**Und `F3` bleibt die eine, und zwar aus einem ENTSCHIEDENEN Grund** (Ordner, 2026-09-03).
+Ein Durchstich fuer `F03` lag am 2026-09-03 vor -- emittiert, uebersetzt, GELAUFEN, gegen
+eine Handschrift verglichen. **Er ist nicht angenommen worden, weil er die tragende
+Anweisung des eingefrorenen Ausschnitts ausgetauscht hatte**: aus
+`traverse cand over queue … by consuming` wurde `traverse i over elems of ….buf by
+unvisited`, aus einem lokalen Sammler ein `static mut`, und **die Warteschlange wird nicht
+mehr entleert** -- caprock entnimmt den gefundenen Empfaenger, diese Fassung laesst ihn
+darin.
+
+*Der Kern ist nicht die Ordnerregel, sondern was `H` misst.* `H` zaehlt Fragmente, die
+Gabbro absetzen kann. Wird ein Fragment umgeschrieben, damit es absetzbar wird, zaehlt `H`,
+was Gabbro **und der Umschreiber zusammen** koennen -- und der Umschreiber erreicht jede
+Zahl. **`H = 1` mit benanntem Grund ist mehr wert als `H = 0` ueber einem zurechtgelegten
+Gegenstand.**
+
+Die Neufassung steht vollstaendig unter
+[`../proben/probe-ipc-fastpath-durchgestochen.gab`](../proben/probe-ipc-fastpath-durchgestochen.gab),
+mit der Gegenueberstellung in ihrem Kopf. Der Ertrag daraus ist unberuehrt: der Durchstich,
+das Treiberprotokoll und der Erzeugerbefund unterwegs (`narrow` schrieb `>= 0` ueber ein
+`u32`, was `-Werror=type-limits` abweist -- in `emit.rs` repariert).
 ```
 
 **The fourth figure came in on 2026-08-25, and it is the one K100's first gate stands on.**

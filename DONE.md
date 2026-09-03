@@ -1085,6 +1085,24 @@ the line number.
 Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each comes from a
 **paid-for error in this folder**, each names the damage.
 
+---
+
+## `N055`: a `state` transition names its carrier or checks *(2026-09-03)*
+
+**`state` checked with `0 errors` over nothing and fell only at the emitter.** Built as
+`N055` in `namen.rs::zustand_braucht_traeger`: every `transition` without `requires`
+and without a step place on a declared carrier (`table`, `static`, `device`) falls --
+the two lines the emitter refusal names itself.
+
+| | | evidence |
+|---:|---|---|
+| **1** | probe with nothing under it | `beispiele/gift/668-state-without-a-carrier.gab` (`-- erwartet: N055`) |
+| **1** | counter-probe with a carrier | `probe-vier-zellen.gab` still falls (it names none); a transition over a declared table or with `requires` stays silent |
+| **1** | sentence | `namen.doppelung` in `saetze.rs` carries `N055` |
+| **1** | mutation | `zustand-ohne-traeger-geht-durch` in `mutiere-pruefer.py`, anchors 385 of 385 |
+| **0** | red tests | `cargo test --no-fail-fast` green on `ki-pc-fisch-101`; `paesse` 59 of 59 |
+| **0** | `UNGEDECKT` cells | `pruefe-grammatiktafel.py` GREEN: `0 von 218`, `state` moves to `abgesagt` |
+
 ## Probes
 
 **67 clean examples, 445 poison probes, 403 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>

@@ -1466,6 +1466,69 @@ lauf "fragment5" "$W/messung/fragmente/F05.gab" "$TREIBER5" \
      's/reply4(EP, Status_Ok, 0, 0, bump_served(pool));/reply4(EP, Status_Ok, 0, 0, 0);/' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 1 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 10 direct forms, 15 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 4h. Das Fragment F3: der IPC-Fastpath, einmal ganz herum ---------------------------
+#
+# **Was dieser Durchstich misst: den Rendezvous-Fastpath mit einem lebenden Empfaenger.**
+# Der Treiber stellt einen Empfaenger an `buf[3]`, alle fremden Ruempfe meldet er mit
+# festen Antworten (`current_id` = 100, `frame_of` = 10, `ist_lebendig` = wahr,
+# `owner_core` = 0 = gleicher Kern). Erwartet: SWITCH-Pfad (gleicher Kern),
+# caller=100 (vom `current_id`), owner=7 (aus `buf[3]`) -- an `-O0` und `-O2` gleich.
+#
+# **Und die Handschrift daneben:** ein plain-C-Modell desselben Fastpaths (erster
+# lebender Empfaenger gewinnt, Caller + Owner gesetzt) antwortet `CALLER=100 OWNER=7`
+# -- dieselben zwei Zahlen, ohne Gabbro dazwischen. *Ein Durchstich ohne Handschrift
+# misst, dass das Programm laeuft; erst mit ihr misst er, dass es das RICHTIGE tut.*
+TREIBER3='#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "@ERZEUGT@"
+uint32_t current_id(uint32_t core) { (void)core; return 100; }
+uint32_t frame_of(uint32_t t) { (void)t; return 10; }
+bool ist_lebendig(uint32_t r) { (void)r; return true; }
+uint32_t owner_core(uint32_t t) { (void)t; return 0; }
+void unblock(uint32_t t) { (void)t; }
+Frame *block_current(uint32_t core, Frame *f) { (void)core; (void)f; printf("BLOCK "); return f; }
+Frame *switch_to(uint32_t core, Frame *f, uint32_t t) { (void)core; (void)f; (void)t; printf("SWITCH "); return f; }
+uint32_t wirklich_einreihen(TidQueue q, uint32_t t) { (void)q; (void)t; return 0; }
+void set_reg(Frame *f, uint32_t r, uint32_t w) { (void)f; (void)r; (void)w; }
+uint32_t melde_grund(IpcResult w) { return (uint32_t)w; }
+void transfer(uint32_t a, uint32_t b) { (void)a; (void)b; }
+int main(void) {
+    static Endpoint e;
+    static Rahmen rh;
+    static Frame f;
+    for (int i = 0; i < 64; i++) { e.slots[i].used = true; e.slots[i].quiescing = false; e.slots[i].caller = 64; e.slots[i].reply_owner = 64; for (int j = 0; j < 32; j++) e.slots[i].receivers.buf[j] = 7; }
+    e.slots[0].receivers.buf[3] = 7;
+    Frame *r = call(&e, &rh, 0, &f);
+    (void)r;
+    printf("CALLER=%u OWNER=%u\n", (unsigned)e.slots[0].caller, (unsigned)e.slots[0].reply_owner);
+    return 0;
+}
+'
+# **Das Gift nimmt dem Pfad seinen Empfaenger.** `switch_to(core, f, p)` wird
+# `block_current(core, f)` -- das C uebersetzt, der Lauf meldet BLOCK statt SWITCH,
+# mit caller=100 (eingereiht) und owner=64 (`Endpoint_NONE`, nie gesetzt). *Ohne
+# diese Gegenprobe belegten drei Zahlen nur, dass das Programm nicht konstant ist.*
+# **The run points at the REWRITE, and it is no longer called `fragment3`** (owner,
+# 2026-09-03). The piercing run was built while `messung/fragmente/F03.gab` had its
+# load-bearing statement replaced; that rewrite now lives at
+# `messung/proben/probe-ipc-fastpath-durchgestochen.gab` and the fragment stands frozen at 27
+# errors.
+#
+# **The rename is the load-bearing half of that.** `zaehle-pflichten.py::_messe_absenkung`
+# maps `DURCHSTICH fragmentN` straight onto `F0N` -- **the NAME is the attribution.** A run
+# called `fragment3` that drives a different file credits `F03` with a piercing it does not
+# have, and `zaehle-fragmente.py` printed exactly that: *10 of 10 DURCHGESTOCHEN*, with F03
+# among them, over a fragment that emits nothing at all. *Moving the file and leaving the
+# name would have kept the wrong number and hidden it one layer deeper.*
+#
+# The run keeps all of its yield -- it proves Gabbro can lower THIS program -- and it says
+# nothing about the frozen excerpt, which is what its own header now states.
+lauf "ipcfastpath" "$W/messung/proben/probe-ipc-fastpath-durchgestochen.gab" "$TREIBER3" \
+     "SWITCH CALLER=100 OWNER=7" \
+     's/return switch_to(core, f, p);/return block_current(core, f);/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 4 templates (1 of them UNPROVED), 12 direct forms, 13 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
 # **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**
@@ -2810,7 +2873,11 @@ MARKE_EMIT=67
 # behind it changed* -- see the block at the foot of `beispiele/66` and `FUENFTE-MARKE.md` §6.
 # The two refusals are `beispiele/gift/671` and `672`, and NEITHER emits, so `MARKE_EMIT_G`
 # does not move.
-MARKE_EMIT_M=72
+# **72 -> 73 on 2026-09-03: the relocated piercing run.** The `F03` rewrite moved to
+# `messung/proben/probe-ipc-fastpath-durchgestochen.gab` (owner, same day) and emits from
+# there, while the frozen fragment stays at 27 errors and emits nothing. *The object grew by
+# exactly one file and the reason stands here at the mark.*
+MARKE_EMIT_M=73
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

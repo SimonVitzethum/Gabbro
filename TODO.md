@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~92~~ 94 Sätze über 12 von 12 Pässen (75, 79 und 80 am 2026-08-31, 88 bis 94 am 2026-09-02 — die letzten zwei sind `d.praedikatsname` für `D021` und `n.merkmalsform` für `N054`) (von 52 am 2026-08-21), keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 75 over 12 passes -- 68 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal`, und seit demselben Tag `N043`, `namen.berichtszeile` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~92~~ 94 Sätze über 12 von 12 Pässen (von 52 am 2026-08-21), keiner bewiesen** *(gemessen 2026-09-03 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 94 over 12 passes -- 87 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, 228 Codes beansprucht, 275 vergeben; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
 steht nach dem, was die Ziele einlöst. Der alte Pfad ist damit nicht widerlegt: seine offenen
@@ -165,7 +165,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 | | |
 |---|---|
 | **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ **83 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
-| **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
+| **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **59 von 59 Instrumenten** tragen die vier statischen (von 68 Werkzeugen). `--lauf` führt die leichten wirklich aus, mit Frist; sechs stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus *(gemessen 2026-09-03)* |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
 | **`./instrumente/zaehle-zeremonie.py`** | neu — das Nutzbarkeitsmaß von Stufe 2, mit seiner Kalibriertafel |
@@ -1143,25 +1143,6 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       unterscheidet einen neuen Befund nicht von dem alten* — er braucht entweder eine Marke
       wie die anderen Ratschen oder einen zweiten Ausgangswert.
 
-- [ ] **`state` ist ein Konstrukt der Grammatik, das NICHTS erzeugt — und das ist gebucht,
-      nicht offen** *(entschieden 2026-08-31)*. Gemessen: `state Ident { transition … }` prüft
-      mit **0 Fehlern** und fällt am Erzeuger mit einem `C001`, das seine eigene
-      Vervollständigung nennt — *„the transitions are a proof device over a carrier that is
-      declared ELSEWHERE; **which C object holds the state, and whether a transition is a
-      check or an assignment, the declaration does not say**"*.
-      **Nicht gebaut, und der Grund ist Regel A: null gemessener Bedarf**, kein Programm im
-      Baum schreibt `state`. Was es brächte, steht daneben: `state` ist dieselbe Konstruktion
-      wie `device`s `transition`, **eine Ebene höher** — die untere ist gebaut und läuft.
-      > **Und damit steht `state` in derselben Lage wie `relabel` und `ensures` am
-      > Zeigertyp: ein Wort der Grammatik ohne Erzeugnis.** Bei jenen beiden lautete die
-      > Konsequenz *„Rumpf bauen oder aus der Wortmenge nehmen"*. **Hier ist die dritte
-      > Möglichkeit legitim** — die Absage ist benannt, trägt ihren Grund und steht im
-      > Zeugnis. *Aber sie ist ausdrücklich SO gebucht, sonst ist sie beim nächsten Durchgang
-      > wieder ein Fund.*
-      Offen bleibt allein: die Absage um die zwei Zeilen ergänzen, die sie selbst nennt
-      (benannter Träger, und je Transition *prüft* oder *schreibt*), **damit der nächste, der
-      `state` braucht, die Analyse nicht wiederholt.**
-
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
       fällt. Mutationskatalog: **387 von 387 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
@@ -1441,7 +1422,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
 
 - [ ] **~~Every falsifier needs its own speech test:~~ *can it fail at all?* — GEBAUT
       2026-08-20.** Das ist wörtlich die zweite Forderung von `./instrumente/pruefe-waechter.py`, und sie
-      wird an **29 von 29** Instrumenten geprüft: eine saubere und eine kaputte Quelle, beide
+      wird an **59 von 59** Instrumenten geprüft *(gemessen 2026-09-03)*: eine saubere und eine kaputte Quelle, beide
       erfunden, und der Wächter muss die eine melden und die andere durchlassen.
       **Was der Punkt meinte und was gemessen wird, ist nicht dasselbe, und der Unterschied
       gehört hierher:** geprüft wird, ob der Wächter *überhaupt* rot werden kann — nicht, ob er
@@ -5203,29 +5184,6 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       über die **Zugriffsform**. **Was die Wegnahme kostete:** drei Giftproben verlören ihren
       Eingang (`259`, `58`, `415`), über dem sauberen Korpus null. Mit hängt daran, ob `code`
       und `boot` bleiben — zusammen **drei** Zeigerstellen, null `device`-Stellen.
-
-- [ ] **ONE terminal is `UNGEDECKT`, and it is `state`.** `pruefe-grammatiktafel.py` reports
-      it red, with an address. **This entry read `chain`, `queue`, `state`, `threads` until
-      `4673a07`**, which closed three of them -- not with programs written against this list
-      (trap 80), but with three that NEED a chain, a queue and a thread domain
-      (`beispiele/55`-`57`); `messung/proben/probe-neun-domaenen.gab` then gave each a second
-      carrier. *Re-measured 2026-09-01 at `12d91a9`: `1 von 218 Terminalen UNGEDECKT`, and the
-      tool names `state` alone. The DENOMINATOR moved too -- `decreasing` left the language
-      (`56455f9`), so 219 became 218.*
-
-      **Why `state` is the one that stays, measured and not inferred from the silence of the
-      texts:** in a `divergent fn` it checks with **0 errors** and falls at a `C001`
-      (`messung/proben/probe-vier-zellen.gab`, 2026-08-31); with a cost promise `K003` caught
-      two of the original four, and **`K003` is the only rule between the emitter's refusals
-      and the checker -- it hangs on a promise a `divergent fn` does not make.** The reason
-      the cell is `UNGEDECKT` rather than `abgesagt` is one line further in: `gruppe.rs`:123
-      writes `state` into a **`.mit_notiz`** hung on `Absage::fehler("U001", …)`, and this
-      table reads the `Absage::fehler` TEXT. *Over all of `gabbro-check/src` except `emit.rs`,
-      the count of checker-error texts naming `state` is **0** (re-measured 2026-09-01).* A
-      note is not a refusal, and the table is right not to read it as one.
-      The exit stands in the plan (§49 B6): *refuse it in the CHECKER, then the cell moves to
-      `vom Pruefer`* -- extend the refusal by exactly two lines, do not build the form. **That
-      is a decision about the LANGUAGE** and belongs to the lane working on the checker.
 
 - [ ] **Der Sauberkeitsschutz des Mutationslaufs war auf dem SERVER wirkungslos, und die
       Ursache ist eine leere Ausgabe.** Auf einer per `rsync` übertragenen Kopie zeigt

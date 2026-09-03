@@ -1,0 +1,425 @@
+-- =======================================================================================
+-- **DIES IST NICHT `F03`. Es ist ein ANDERES PROTOKOLL in Gabbro.**
+--
+-- Entstanden am 2026-09-03 aus dem Versuch, `F03` durchzustechen. Der Durchstich gelang --
+-- emittiert, uebersetzt, GELAUFEN, `SWITCH CALLER=100 OWNER=7` gegen eine Handschrift --,
+-- **aber nur, nachdem die tragende Anweisung des eingefrorenen Ausschnitts ausgetauscht
+-- war.** Darum steht die Datei hier und nicht in `messung/fragmente/`, und `F03` steht dort
+-- unveraendert bei 27 Fehlern.
+--
+-- **Die Gegenueberstellung, festgeschrieben -- damit das hier in vier Wochen niemand als
+-- „F03 in Gabbro" liest:**
+--
+--   |                       | Ausschnitt / caprock                  | diese Datei          |
+--   |-----------------------|---------------------------------------|----------------------|
+--   | Schleife              | `traverse cand over queue … by consuming` | `traverse i over elems of ….buf by unvisited` |
+--   | Sammler               | lokales `picked : u32`                | `static mut picked : option index into Threads` |
+--   | Warteschlange danach  | **entnommen** -- `dequeue()`, Tote verworfen, Rueckkehr beim ERSTEN Lebenden | **unveraendert** -- es wird nichts entnommen |
+--
+-- Die dritte Zeile ist die, auf die es ankommt. `caprock-ipc/src/lib.rs`:625 nimmt den
+-- gefundenen Empfaenger AUS der Schlange; hier bleibt er darin und wuerde beim naechsten
+-- Ruf wieder gefunden. **Das ist ein anderes Protokoll, nicht dieselbe Sache anders
+-- geschrieben** -- und der Durchstich beweist, dass Gabbro DIESES Programm absetzen kann.
+-- Ueber das eingefrorene sagt er nichts.
+--
+-- **Warum das den Maszstab betrifft und nicht nur die Ordnerregel:** `H` zaehlt Fragmente,
+-- die Gabbro absetzen kann. Wird ein Fragment umgeschrieben, damit es absetzbar wird, zaehlt
+-- `H`, was Gabbro UND DER UMSCHREIBER ZUSAMMEN koennen -- und der Umschreiber erreicht jede
+-- Zahl. *`H = 1` mit benanntem Grund ist mehr wert als `H = 0` ueber einem zurechtgelegten
+-- Gegenstand.*
+--
+-- **Und eine zweite Folge, die nicht in einer Zahl steht:** das Kostentor gegen die
+-- Suchschleife (2026-09-03) stuetzte sich darauf, dass der Bedarf auf GENAU EINE Stelle
+-- zusammenfiel -- `F03`:174. Verschwaende diese Stelle durch Umschreiben, waere das
+-- Beweismaterial fuer die Entscheidung mitverschwunden, und die Entscheidung saehe besser
+-- begruendet aus, als sie ist. **«B10» bleibt offen**, samt dem `traverse … over mappings
+-- of`-Aufloeser als Sprachfrage durchs Kostentor.
+--
+-- **Was hier ECHTER Ertrag ist und bleibt:** der Durchstich selbst, das Treiberprotokoll,
+-- und der Erzeugerbefund unterwegs -- `narrow` schrieb `>= 0` ueber ein `u32`, was
+-- `-Werror=type-limits` abweist. Der ist in `emit.rs` repariert und gehoert nicht hierher.
+--
+-- *Nichts hieran war verschleiert: jede Aenderung trug im Rumpf ein
+-- `ERGAENZT (2026-09-03, Durchstich)`. Die Grenzueberschreitung war sichtbar, und deshalb
+-- war sie in einem Blick zu finden statt in vier Wochen aus einer widerspruechlichen Zahl.*
+-- =======================================================================================
+
+-- =======================================================================================
+-- F3 -- der IPC-Fastpath, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:554-704, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:**
+--   * vier Konstanten -- `SYSNO_RESULT`, `EP_BADGE`, `KEIN_SERVER`, `KEIN_FRAME`;
+--   * `reason EpVoll` und `-> u32 or EpVoll` an `enqueue`. Der Ausschnitt schreibt
+--     `enqueue(…) else (fehler) { … }` und nannte den Ausgang nur im Kommentar.
+--
+-- **15 Fehler auf 5. Die fuenf sind GABBROS**, und drei davon sind ein einziger Befund:
+--
+-- > **`A::B` parst und wird nie aufgeloest.** `path = ident { "::" ident }` steht in der
+-- > Grammatik; der Namenspass liest die ERSTE Silbe und schlaegt sie als Wert nach.
+-- > `IpcResult::Ok` faellt damit als `M119`, gleichgueltig ob `IpcResult` ein `module`, ein
+-- > `reason` oder ein Variantentyp ist -- alle drei geprueft am 2026-08-20.
+--
+-- Gemessen: **null Korpusstellen benutzen einen qualifizierten Namen als WERT** -- die
+-- `::`-Treffer im Korpus sind samt und sonders `module a::b`-Koepfe. *Die Form ist
+-- schreibbar und hat keinen Leser* -- dieselbe Gestalt wie `ensures` am rumpflosen
+-- `extern fn` und wie `RegDecl::requires`.
+--
+-- Die zwei uebrigen, ebenfalls Gabbros: `M101` -- `Some(caller)` in einen Slot, dessen
+-- Sonderwert der Erzeuger kennt und M1 nicht; `H011` -- `call` erklaert `locks SCHEDS` und
+-- nimmt die Sperre nie. *Der zweite ist ein echter Befund AM AUSSCHNITT und bleibt darum
+-- stehen: die Wirkungsklausel verspricht mehr, als der Rumpf tut.*
+--
+-- **NACHGEMESSEN 2026-08-25: es sind 10, nicht 5 -- und die Bewegung geht in beide
+-- Richtungen.**
+--
+--   * **Drei sind gewandert, nicht verschwunden.** `IpcResult::Ok` faellt nicht mehr als
+--     `M119` (*„der Name ist nirgends deklariert"*), sondern als **`M124`** (*„a reason value
+--     cannot stand here"*). Seit Stufe 7 (2026-08-21) darf ein Grundwert an GENAU DREI
+--     Stellungen stehen -- `return R::F;`, der Gegenstand eines `match`, und `==`/`!=`. Ein
+--     ARGUMENT ist keine davon. *Der Befund von damals -- „kein Erzeuger" -- ist ueberholt;
+--     was heute fehlt, ist die Zahlprojektion eines Grundes.*
+--   * **Fuenf sind DAZUGEKOMMEN, und «B9» darunter ist ueberholt.** `N035` (2026-08-21)
+--     verlangt `effects` UND `costs` an jedem `fn(…)`-Typ -- der Kommentar bei `type SchedOps`
+--     sagt noch, `fnptr` trage KEINEN Vertrag. Er traegt seit dem 21. genau zwei Drittel
+--     davon; `requires`/`ensures` sind mit einer GEMESSENEN Begruendung abgewiesen (`N037`:
+--     null der vier indirekten Rufstellen in `caprock-messbasis` nimmt eine Sperre). *Die
+--     fuenf Zeilen von `type SchedOps` stehen im Ausschnitt und sind hier NICHT ergaenzt
+--     worden: der Vertrag muss VOR das Komma, also in die Zeile selbst -- das waere ein
+--     Umschreiben und keine Ergaenzung, und `M124`/`M101`/`H011` blieben ohnehin stehen.*
+--   * **Einer ist geschlossen:** `H016`, siehe die `lock SCHEDS`-Zeile unten.
+-- =======================================================================================
+
+module caprock::ipc {
+
+const QUEUE_CAP : u32 = 32;
+const NCORES    : u32 = 64;   -- nachgetragen 2026-08-15
+const MSG_WORDS : u32 = 6;
+
+-- ERGAENZT: vier Namen, die der Ausschnitt ruft und nirgends deklariert.
+-- `SYSNO_RESULT`/`EP_BADGE` sind Registernummern des Rahmens, `KEIN_SERVER`/`KEIN_FRAME`
+-- die Sonderwerte, gegen die der Fastpath vergleicht.
+const SYSNO_RESULT : u32 = 0;
+const EP_BADGE     : u32 = 1;
+-- ERGAENZT (2026-09-03, Durchstich): `KEIN_SERVER` als `Niemand`-Form -- der Startwert
+-- von `picked` ist KEIN `u32`, sondern das Fehlen eines Empfaengers. Caprock schreibt
+-- `while let Some(server)` (Abwesenheit als `None`). `0xffff_ffff` als `u32` ist eine
+-- Zahl, und `picked == KEIN_SERVER` wird nach der ersten Zuweisung falsch, auch wenn
+-- sie `0` schrieb -- gemessen im Treiber-Protokoll (`picked=0` nach `buf[0]=0`).
+-- Die Heilung: `picked` ist ein `static` vom Typ `option index into Threads`
+-- (`beispiele/27`: `static mut frei`, `match` + Zuweisung), `None` statt Zahl.
+-- ERGAENZT (2026-09-03, Durchstich): `Threads` zuerst -- der Erzeuger schreibt
+-- `#define Threads_NONE` vor `static picked`, und davor braucht er die Tabelle.
+-- Reihenfolge ist Absenkung, kein Stil.
+table Threads count 1024 {
+    slot { da : bool, }
+}
+
+const KEIN_SERVER  : u32 = 0xffff_ffff;
+const KEIN_FRAME   : u32 = 0xffff_ffff;
+static mut picked : option index into Threads = None;
+-- ERGAENZT (2026-09-03, Durchstich): `gesehen` haelt den gelesenen `Some`-Binder --
+-- ein Binder ohne Leser ist `unused-variable` im C, und `narrow`/`let` tragen ihn
+-- nicht (`option index`, keine Zahl; kein Typ fuern Erzeuger).
+static mut gesehen : u32 = 0;
+
+reason IpcResult {
+    Ok           = 0 "Rendezvous vollzogen"
+    ErrBadCap    = 2 "Endpoint nicht belegt"
+    ErrQuiescing = 8 "Endpoint stillgelegt, keine neue Transaktion"
+    ErrEpFull    = 9 "Warteschlange voll, D11: benannt statt still"
+    exhaustive
+}
+
+-- ERGAENZT (2026-09-03, H=0-Durchstich): `Frame` und `RegNr` nannte der Ausschnitt,
+-- deklarierte er nirgends -- `N040` an neun Stellen. Der Widerspruch liegt IM Ausschnitt:
+-- `FRAGMENTE.md` fuehrt `tagged type ObjectKind` mit `Dma(DmaRef)` und traegt am Dateiende
+-- `extern fn` mit `MemObj`/`DmaObj`/`ReplyObj`/`Allok` nach, vier Namen ohne Deklaration.
+-- `Frame` ist der Trapframe (Nachricht + Register), `RegNr` sein Index. `msg` traegt die
+-- sechs Datenwoerter (`MSG_WORDS`), `regs` die acht Register (darunter `SYSNO_RESULT`
+-- und `EP_BADGE`).
+type Frame = {
+    msg  : [u32; 6],
+    regs : [u64; 8],
+};
+type RegNr = u32;
+
+-- ERGAENZT (2026-09-03): `Threads` nannte der Ausschnitt (`option index into Threads`)
+-- und deklarierte ihn nirgends. 1024 Plaetze -- dieselbe Groesse, die `current_id`
+-- zurueckgibt (s.u.), damit `Some(caller)` typisiert. (Die Deklaration steht oben
+-- vor `picked`: der Erzeuger schreibt `#define Threads_NONE` vor dem `static`.)
+
+-- ERGAENZT (2026-08-25): `SCHEDS` wird in der Wirkungsliste von `call` (:124) genannt und
+-- nirgends erklaert -- `H016`. **Ohne Deklaration gibt es keinen `rank`, und ohne `rank`
+-- rechnen die Ordnungsregeln nichts**; die Absage sagt es woertlich.
+--
+-- **Die Zahlen sind ZITIERT, nicht gewaehlt.** Dieselbe Sperre steht im eingefrorenen
+-- Korpus selbst, in F8 (`FRAGMENTE.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
+-- Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/AN-CAPROCK.md`:31 zitiert
+-- den Kernel: *CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM*.
+--
+-- Was NICHT zitiert ist: `protects { sched }`. F8 schuetzt `{ belegt, kern, prio }` -- Orte
+-- seiner eigenen Tabelle, die es hier nicht gibt. `sched` ist der Name, den DIESER
+-- Ausschnitt fuer denselben Gegenstand fuehrt (`touches … reads sched`, :140).
+--
+-- **`H011` ist geheilt (2026-09-03), und die Heilung ist eine Streichung, kein Block:**
+-- der Rumpf nimmt die Sperre nie, also verspricht die Liste sie nicht. Was BLEIBT, ist
+-- der Hinweis `H008` (`SCHEDS` wird nirgends genommen) -- die Sperre steht, weil `F8`
+-- sie zitiert und die Ordnung (`AN-CAPROCK.md`:31) sie braucht; ein Hinweis ist kein
+-- Fehler, und ein Durchstich zaehlt Fehler, keine Hinweise.
+lock SCHEDS protects { sched } rank 2 held <= 300 ops;
+
+-- «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
+-- (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
+type TidQueue = {
+    buf   : [u32; 32],
+    head  : u32 in 0 ..< 32,
+    tail  : u32 in 0 ..< 32,
+    count : u32 in 0 .. 32,
+};
+
+table Endpoint count NCORES {
+    slot {
+        used        : bool,
+        quiescing   : bool,
+        senders     : TidQueue,
+        receivers   : TidQueue,
+        caller      : option index into Threads,
+        reply_owner : option index into Threads,
+    }
+
+    invariant antwortpflicht_paarig cost O(1) runs online :
+        forall e in slots of Self :
+            (Self.slots[e].caller == None) == (Self.slots[e].reply_owner == None);
+}
+
+-- «B17» HIER BRICHT DAS FRAGMENT. `transition` (:434) schreibt GENAU EIN `place`:
+--     transition = "transition" ident "{" place ":" expr "->" expr "}" …
+-- Die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` NIE HALB
+-- gesetzt werden — zwei Orte in EINEM Zug. In Caprock steht das als Kommentar
+-- ("stets gemeinsam gesetzt/geloescht"); Gabbro sollte es zur Ableitung machen und kann es
+-- nicht. Zweitens nennt `state` (:414) den Typ nicht, ueber dem es steht.
+-- Drittens bindet `Some(cl)` im Zielausdruck einen frischen Namen — dafuer gibt es keine
+-- Produktion. Die drei Zeilen unten sind AUSKOMMENTIERT, weil sie nicht schreibbar sind:
+--     state Rendezvous over Endpoint {
+--         transition open  { caller : None -> Some(cl), reply_owner : None -> Some(sv) }
+--         transition close { caller : Some(c) -> None,  reply_owner : Some(s) -> None }
+--     }
+
+-- «B12» `forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen (:238-244)
+-- enthalten keinen Zahlenbereich. Ersatz ueber `elems of` — und damit steht die zweite
+-- Frage im Raum: bindet `elems of` ein ELEMENT und `slots of` einen INDEX? SYNTAX.md
+-- benutzt beide Lesarten und legt keine fest.
+spec fn msg_kopiert(dst : ptr<normal, r> Frame, src : ptr<normal, r> Frame) -> bool
+    effects { pure }
+    = forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i]);
+
+-- «B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` mit Vertrag seit 2026-08-21
+-- (`N035`/`N036`/`N037`). `N037` weist `requires`/`ensures` mit gemessener Begruendung
+-- ab (null der vier indirekten Rufstellen nimmt eine Sperre); `effects` + `costs`
+-- stehen am Typ, weil die Rufstelle nichts anderes kennt. `frame_of` gibt den
+-- Rahmen als `Option` zurueck (Caprock: `Option<usize>`, `None` = toter Empfaenger)
+-- als `option index into Rahmen` -- der Zeiger haengt am INDEX, nicht am Rahmen:
+-- `Rahmen` ist die Tabelle, `r` ihr Index, und `sframe` liest `Rahmen.slots[r]`.
+-- `block_current`/`switch_to` nehmen den Rahmen-Index und geben ihn zurueck.
+type SchedOps = {
+    current_id    : fn(u32) -> u32 effects { pure } costs <= 2 ops,
+    frame_of      : fn(u32) -> option index into Rahmen effects { pure } costs <= 2 ops,
+    block_current : fn(u32, u32) -> u32 effects { pure } costs <= 8 ops,
+    switch_to     : fn(u32, u32, u32) -> u32 effects { pure } costs <= 12 ops,
+    unblock       : fn(u32) -> u32 effects { pure } costs <= 4 ops,
+};
+
+-- ERGAENZT (2026-09-03): die Rahmentabelle -- Caprock haelt den Rahmen im TCB
+-- (`tcbs[s].sp`), Gabbro in einer Tabelle. `frame_of` nennt den Index, der Rumpf
+-- liest den Slot. Sechs Woerter als sechs Felder -- ein Reihungsfeld senkt im
+-- Slot nicht ab (`C001 field type`), sechs `u32` schon.
+table Rahmen count 1024 {
+    slot { m0 : u32, m1 : u32, m2 : u32, m3 : u32, m4 : u32, m5 : u32, }
+}
+
+-- ERGAENZT (2026-09-03): `SchedOps` ist der Verbund, den der Fastpath durchreicht;
+-- `Held(EPS)` nannte eine Sperre, die kein Korpus kennt. `EPS` ist die Sperre, die
+-- die Endpunkttabelle schuetzt -- dieselbe Rolle, die `SCHEDS` zwei Zeilen weiter
+-- unten fuer `sched` traegt.
+lock EPS protects { e_schutz } rank 1 held <= 100 ops;
+static mut e_schutz : u32 = 0;
+
+impl fn call(e    : ptr<normal, rw> Endpoint,
+             rh   : ptr<normal, rw> Rahmen,
+             core : index into Endpoint,
+             f    : ptr<normal, rw+own> Frame) -> ptr<normal, rw+own> Frame
+    -- «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
+    -- bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
+    requires  Held(EPS), e.slots[core].used
+    maintains antwortpflicht_paarig
+    -- `reads rh` steht hier, weil `Rahmen_schreiben` ihn nennt: seit 2026-08-15
+    -- schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
+    -- unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
+    -- erst kompositional macht.
+    effects   { writes e.slots, writes frames, consumes e.slots,
+                reads rh, writes rh, reads picked, writes picked, reads gesehen, writes gesehen }
+    costs     <= 2000 ops
+{
+    if e.slots[core].quiescing {
+        set_reg(f, SYSNO_RESULT, melde_grund(IpcResult::ErrQuiescing));
+        return f;
+    }
+    let caller = current_id(core);
+
+    -- «B10» GEHEILT (2026-09-03), und die Heilung ist ein Wortwechsel, kein Konstrukt:
+    -- `by consuming` leert die Schlange (Aderlass), `by unvisited` besucht sie
+    -- (Rendezvous). Caprock nimmt mit `dequeue` ohnehin EINEN heraus und laesst den
+    -- Rest stehen -- `while let Some(server)` bricht beim ersten LEBENDEN ab, tote
+    -- Eintraege werden verworfen (`continue`). `elems of ... buf` laeuft ueber das
+    -- Feldarray; `frame_of` meldet den toten als `None` (`Option`, kein `KEIN_FRAME`),
+    -- und `picked` traegt den ersten Lebenden -- genau wie dort.
+    -- ERGAENZT (2026-09-03, Durchstich): `picked` als `static`-`Option` -- `None`
+    -- statt `KEIN_SERVER`-Zahl. Der `u32`-Vergleich wurde nach der ersten Zuweisung
+    -- falsch (`picked=0` nach `buf[0]=0`, gemessen); `match` ueber `None`/`Some`
+    -- fragt die Abwesenheit, nicht die Zahl. `q` liest den gebundenen Index --
+    -- sonst stuende `r` leer und `cc` sagte `unused-variable` (der Erzeuger schreibt
+    -- `(void)` nur fuer `let`, nicht fuers `match`-Bindung).
+    picked = None;
+    traverse i over elems of e.slots[core].receivers.buf by unvisited
+        touches reads e.slots, reads picked, writes picked, reads gesehen, writes gesehen
+    {
+        match picked {
+            None => {
+                match frame_of(e.slots[core].receivers.buf[i]) {
+                    None => { }
+                    Some(r) => {
+                        if ist_lebendig(r) {
+                            -- ERGAENZT (2026-09-03, Durchstich): gebunden, dann verengt --
+                            -- `narrow` ueber `buf[i]` schreibt `>= 0` ueber ein `u32`
+                            -- (`-Werror=type-limits`); ueber `w : u32` schreibt es nur
+                            -- `< 1024`. Der Typ steht an der Bindung, nicht an der Stelle.
+                            let w : u32 = e.slots[core].receivers.buf[i];
+                            narrow w to 0 ..< 1024 else { return f; }
+                            picked = Some(w);
+                        }
+                    }
+                }
+            }
+            Some(q) => {
+                -- ERGAENZT (2026-09-03, Durchstich): `q` wird gelesen -- `gesehen = q`
+                -- statt leerem Arm. Ein Binder ohne Leser ist `unused-variable` im C.
+                gesehen = q;
+            }
+        }
+    }
+    match picked {
+        None => {
+            let q = enqueue(e.slots[core].senders, caller) else (fehler) {
+                -- D11 woertlich: der Ueberlaeufer wird NICHT blockiert, sondern benannt
+                -- abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
+                set_reg(f, SYSNO_RESULT, melde_grund(IpcResult::ErrEpFull));
+                return f;
+            }
+            return block_current(core, f);
+        }
+        Some(p) => {
+            -- ERGAENZT (2026-09-03, Durchstich): `p` kommt aus `Some(p)` ueber `picked` --
+            -- `option index into Threads`, kein `u32`. `narrow p` schriebe `>= 0` ueber
+            -- einen Index (`-Werror=type-limits`); der Binder traegt die Schranke schon
+            -- (`count 1024`, `Option_Sonderwert.thy`). Was BLEIBT, ist nichts -- der Arm
+            -- liest `p`, und das ist die Pruefung.
+            match frame_of(p) {
+                None => {
+                    return block_current(core, f);
+                }
+                Some(s) => {
+                    transfer(0, s);
+                    Rahmen_schreiben(rh, s, melde_grund(IpcResult::Ok), 0);
+                    e.slots[core].caller      = Some(caller);
+                    e.slots[core].reply_owner = Some(p);
+                    if owner_core(p) == core {
+                        return switch_to(core, f, p);
+                    }
+                    unblock(p);
+                    return block_current(core, f);
+                }
+            }
+        }
+    }
+
+    -- ERGAENZT (2026-09-03): beide Rahmen sind Namen, keine Ausdruecke --
+    -- `frame_of(picked)` als Argument ist ein Wert, kein Ort, und `writes g` laesst sich
+    -- beim Rufer auf nichts abbilden (`E009`). Gebunden, dann gereicht.
+    -- UEBERHOLT (2026-09-03, Durchstich): der Block oben traegt den Pfad -- `match picked`
+    -- bindet `p`, `frame_of(p)` den Rahmen, und der Pfad schreibt Ergebnis + Badge,
+    -- Caller + Owner, und waehlt `switch_to`/`block_current`. Was hier stand (zweiter
+    -- `frame_of`-Ruf, zweite `narrow`-Zeile, `picked` als `u32`), ist dort eine Zeile.
+    -- Der Block bleibt als Protokoll der Sackgasse, nicht als Pfad.
+}
+-- ERGAENZT (2026-09-03): `w` traegt den Grund als Zahl -- `set_reg(f, SYSNO_RESULT,
+-- IpcResult::ErrQuiescing)` schreibt die Ziffer, die der Bericht nennt. Die vierte Tuer
+-- (`f(x : R)` an `f(st : R)`) verlangt den Grund als TYP; hier steht `u64`, weil das
+-- Register Zahlen haelt, keine Gruende. `M124` hat darum recht, und die Zeile gehoert
+-- dem Rumpf, nicht der Signatur: der Grund wird an der Rufstelle in seine Zahl
+-- verwandelt, statt als Wert durchgereicht.
+extern fn set_reg(f : ptr<normal, rw> Frame, r : RegNr, wz : u32) effects { writes f } costs <= 2 ops;
+extern fn melde_grund(wz : IpcResult) -> u32 effects { pure } costs <= 1 ops;
+-- ERGAENZT (2026-09-03, H=0-Durchstich): `enqueue` ist KEIN fremder Rumpf, sondern
+-- eine Gabbro-Funktion ueber der Warteschlange -- Caprock: `TidQueue::enqueue` ist eine
+-- Methode auf `&mut self`, kein Trap. Der Verbund geht per Wert (wie `nimmt_t(t)`),
+-- nicht per Zeiger: `M140` sagt es an der `extern`-Zeile, und die Zeile gehoerte nie
+-- dem Ausschnitt (nachgetragen 2026-08-15, nie erklaert). `voll` liest die Fuellzahl,
+-- `wirklich_einreihen` ist der fremde Rest (ein Ring, der nie voll ist, braucht keinen
+-- Kanal -- `or EpVoll` faellt dann nie, und die Zeile luege nicht).
+reason EpVoll { Voll = 1 "die Warteschlange des Endpunkts ist voll" exhaustive }
+impl fn voll(q : TidQueue) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return q.count >= 32;
+}
+extern fn wirklich_einreihen(q : TidQueue, t : u32) -> u32
+    effects { pure } costs <= 4 ops;
+impl fn enqueue(q : TidQueue, t : u32) -> u32 or EpVoll
+    effects { pure }
+    costs   <= 12 ops
+{
+    if voll(q) {
+        return EpVoll::Voll;
+    }
+    return wirklich_einreihen(q, t);
+}
+-- `block_current`/`switch_to` nehmen den Rahmen und geben ihn zurueck -- Caprock:
+-- `frame: usize`, ein Ort, keine Zahl. `u32` waere eine Zahl, kein Ort (`M140`).
+-- `transfer` schreibt Nachricht + Badge in den Empfaengerrahmen; `owner_core` fragt
+-- das Thread-Verzeichnis (Caprock: `Option<usize>`, `None` = migriert -- hier 1024
+-- als `KEIN_SERVER`-Form, wie der Fastpath selbst).
+extern fn block_current(core : index into Endpoint,
+                        f : ptr<normal, rw> Frame) -> ptr<normal, rw> Frame
+    effects { writes f } costs <= 8 ops;
+extern fn switch_to(core : index into Endpoint,
+                    f : ptr<normal, rw> Frame, t : u32) -> ptr<normal, rw> Frame
+    effects { writes f } costs <= 12 ops;
+extern fn unblock(t : u32) effects { pure } costs <= 4 ops;
+extern fn owner_core(t : u32) -> u32
+    effects { pure } costs <= 2 ops;
+-- ERGAENZT (2026-09-03): `transfer` kopiert Nachricht + Tag vom Rufrahmen in den
+-- Empfaengerrahmen (Caprock: `transfer(src, dst)`, sechs Datenwoerter + TAG).
+-- Zwei Rahmen-Indizes, keine Zahlen, keine Zeiger: der Rumpf liest beide Slots.
+extern fn transfer(a : u32, b : u32) effects { pure } costs <= 6 ops;
+
+-- ERGAENZT (2026-09-03): der Rahmen-Schreiber -- Caprock `frame_set_reg`. Schreibt
+-- Ergebnis + Badge in den Empfaenger-Slot; `rh` ist der Bestand als Parameter.
+impl fn Rahmen_schreiben(rh : ptr<normal, rw> Rahmen, s : u32, a : u32, b : u32) -> u32
+    effects { writes rh.slots }
+    costs   <= 12 ops
+{
+    narrow s to 0 ..< 1024 else { return 999; }
+    rh.slots[s].m0 = a;
+    rh.slots[s].m1 = b;
+    return 0;
+}
+extern fn ist_lebendig(r : u32) -> bool effects { pure } costs <= 2 ops;
+extern fn current_id(core : index into Endpoint) -> index into Threads
+    effects { pure } costs <= 2 ops;
+extern fn frame_of(t : u32) -> option index into Rahmen
+    effects { pure } costs <= 2 ops;
+}

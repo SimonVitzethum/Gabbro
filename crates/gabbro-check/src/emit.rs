@@ -1112,11 +1112,23 @@ pub fn emittiere_mit(
         let mut erklaert: Vec<(&str, Option<&TypExpr>)> =
             f.parameter.iter().map(|p| (p.name.text.as_str(), Some(&p.typ))).collect();
         if let FnRumpf::Block(b) = &f.rumpf {
-            for s in &b.anweisungen {
-                if let StmtArt::Let(l) = &s.art {
-                    erklaert.push((l.name.text.as_str(), l.typ.as_ref()));
+            // **The collector descends -- a `let` inside `traverse`/`match`/`if` counts.**
+            // Measured 2026-09-03 on the IPC fastpath: `let w : u32` in a `traverse` body
+            // fell out of the map, and `narrow w` then wrote `>= 0` over a `u32`, which
+            // `-Werror=type-limits` rejects. Outside any loop the same line came out right
+            // (`w < 1024`). *A collector that sees only the top level returns a SUBSET and
+            // looks like a set* -- the same build as `sammle_lets` beside it.
+            fn sammle<'a>(b: &'a Block, aus: &mut Vec<(&'a str, Option<&'a TypExpr>)>) {
+                for s in &b.anweisungen {
+                    if let StmtArt::Let(l) = &s.art {
+                        aus.push((l.name.text.as_str(), l.typ.as_ref()));
+                    }
+                    for k in crate::unterbloecke(s) {
+                        sammle(k, aus);
+                    }
                 }
             }
+            sammle(b, &mut erklaert);
         }
         for (name, ty) in erklaert {
             match ty.and_then(|x| vorzeichen(x, &namen)) {
