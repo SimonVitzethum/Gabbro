@@ -331,7 +331,8 @@ the assumption that it is right.
 | **V2a** | **vacuity — BUILT 2026-09-03** | `programmlogik/gabbrov/V2.lean`, `lean` exit 0, no `sorry`. **Of the 55 sayable obligations, 31 carry a precondition and NONE is vacuous.** The check is not a search: `vacuous_sound` proves that a condemned precondition has no model at all. **And it fires** — driven against a deliberately vacuous `requires`, where an obligation whose postcondition is `False` passes. `messung/GABBROV-V2.md` §2 |
 | **V2b** | **satisfiability — NOT started, and deliberately** | the eight assumptions are still eight German sentences. *A second V0, and the harder one.* |
 | V3 | certificate checking in Lean | share with a recomputed certificate measured |
-| V4 | write-back into the manifest, ratchet over names | one real `obligation` from `open` to `passed` |
+| V4 | write-back into the manifest, ratchet over ~~names~~ **the LINE** | one real `obligation` from `open` to `passed` |
+| | *the key decided 2026-09-03, and it is NOT the name* | **`(name, class, text)`, the anchor only as a last resort.** A name is `aushaengen :: ensures #1` — an ordinal, and 79 of 113 lines carry one; swap two conjuncts and name, class, anchor and state are all unchanged. **A ratchet over names would carry `passed` from the old obligation onto the new one without a word.** The three reachability figures, the price of the key in edits, and why the anchor is out: `messung/BERICHT-O3-RATSCHE.md`, re-runnable with `./messung/gabbrov/ratschenschluessel.py` |
 
 V1 before everything else, because it is the one stage that can fail without any tool being
 built: if the existing 66 logic obligations cannot be said in the fragment, the cut is wrong,
