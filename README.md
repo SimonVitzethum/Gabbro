@@ -9,6 +9,17 @@ assembly** — **67 clean examples, of which 52 emit C, and every emitted unit c
 > emitter and it stays the point. But *a claim without its number is a claim about a fragment*,
 > and [`TODO.md`](TODO.md) said so about itself before anyone else did.
 
+> **And the emitter is the trust base, with a failure record of two — both silent.**
+> Every safeguard in this tree is a pass, and a pass is code by the same author as the
+> translation. Twice now the translation has been wrong below every pass, where no Gabbro
+> program can defend itself: `breite_von` wrote a device access of the **wrong width** and
+> fired 146 times over 499 files (2026-08-31); the device name table, keyed by a bare name
+> with no module qualifier, gave two same-named `device`s in different modules **the same
+> wrong port offset**, with `0 errors` at the checker and a clean `cc -Werror`
+> (2026-09-03). Both are closed and both carry a poison probe. *A sovereignty claim that
+> names the emitter as its trust point owes the reader its failure record, not only its
+> architecture* — [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) carries both in full.
+
 The purpose is not to have another language. It is to **write a kernel in it and then verify
 that kernel cheaply** — Caprock in full, with a green acceptance run.
 

@@ -1522,6 +1522,66 @@ It fired **146 times** over 499 corpus files, and the previous count had booked 
 *silent*. It is now a table with eight entries, a `C001` for anything else, and four tests
 that hold the table against `kw::ALLE` and `ist_intty`.
 
+## And a SECOND one, 2026-09-03 — the wrong address instead of the wrong width
+
+*This is not the emitter's first documented silent failure. It is its second, and the two
+together say more than either alone.*
+
+`emit::Namen::geraete` keyed its device table by the **bare** declared name, with no module
+qualifier. Two `device Foo`, one per `module`, with different register offsets:
+
+| stage | verdict |
+|---|---|
+| `gabbro pruefe` | `0 errors, 0 hints` |
+| `gabbro emit` | exit `0` |
+| `cc -Wall -Wextra -Werror` | clean |
+| the running program | **both devices' accessors carry the SECOND device's offset** |
+
+The access against the first device reads and writes **the wrong port**. On real hardware
+that presents as a hardware fault, a timing problem, or a broken device — *it is not
+debuggable from the program*, because the program is correct and the translation is not.
+
+**The two failures are the same class and different mechanisms, and that distinction is
+what an outside auditor should take from here.** `breite_von` was a **guess**: a fallback
+arm that answered a question it could not answer, and the cure was to make the table total
+and refuse everything outside it. The device table did not guess at all — it was a **lookup
+that could not represent the question asked of it**. A key with no namespace cannot
+distinguish two things that differ only by namespace, and so it answers confidently and
+wrongly. *A rule with no value does not refuse; it says nothing* — the same sentence `D17`
+carries, one construct over.
+
+So the emitter's failure mode is not "arithmetic that is wrong". It is **a table whose key
+is narrower than the distinction it is keyed on**, and that is a shape one can go looking
+for without reading every line. The count exists: `instrumente/zaehle-karten.py` holds the
+READ side at 46 direct lookups, 41 of them unqualified, as a ratchet with its reason at the
+mark — *every unqualified look is a place where a check inside a `module` block can go
+silent*, which is the shape of the `M103` hole of 2026-08-17.
+
+**How it was found is part of the finding.** `zaehle-karten.py` had been red for days and
+the acceptance run had listed it every time. Nobody had opened it. Its own text named the
+consequence in advance and was right twice: a second hole of the same shape sat in
+`domaene.rs`, where a `walk`'s `format` name was pre-qualified against its own module and a
+poison probe one module away passed with `0 errors`. *A guardian that states its consequence
+and is left red is a finding already made and not yet read.*
+
+The cure here is a refusal at the collection site, and its text says what it prevents:
+
+    error: [C001] …: no lowering: two `device` declarations named `Foo` in this unit -- the
+    C name `Foo` has room for one, and the emitter's device table is keyed by this bare name
+    with no module qualifier. Picking one silently would make every register and port access
+    against the OTHER a silent misread instead of the compile error two same-named devices
+    need
+
+`beispiele/gift/672-two-devices-share-a-name.gab`, and `671-mapping-field-one-module-away.gab`
+for the other.
+
+> **What this does to the sentence at the head of this section.** *"Gabbro's trust base is
+> the emitter"* was an argument on 2026-08-31 with one instance behind it. It now has two,
+> both silent, both below every pass, and neither reachable by any Gabbro program's own
+> defences. **A sovereignty claim that names the emitter as its trust point owes the reader
+> its failure record, not only its architecture** — that is why this stands here and not
+> only in the history.
+
 ## Why the CERTIFICATE is the structurally different answer
 
 Every other safeguard in this folder is a pass, and a pass is code by the same author as the
