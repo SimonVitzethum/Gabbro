@@ -53,9 +53,16 @@ GRUENDE = [
     #
     # > **Three lists over one set: `Art`, `LeanReason::ALL`, and this table. A new duty kind
     # > has to be written into all three, and nothing holds them together.**
-    ("walk-invariant", "an invariant of a `walk` -- quantified over `mappings of`, whose "
-                       "bound is `node length ^ levels`; owed by NOBODY, unlike a table "
-                       "invariant, which a `maintains` names"),
+    # **BERICHTIGT 2026-09-04: the second half of this line was made false by the repair
+    # it predicted.** `Art::Walkinvariante` now books three constructs, not one -- a `walk`
+    # invariant, a `walk`'s `down`/`leaf`, and a `table`/`group` invariant that no
+    # `maintains` names -- so *"unlike a table invariant, which a `maintains` names"* is now
+    # the case this reason covers rather than the one it excludes. **The FOURTH list over one
+    # set, updated in the same commit as the first**, which is the order the comment below
+    # says was missed last time.
+    ("walk-invariant", "an invariant owed by NO function -- a `walk`'s (quantified over "
+                       "`mappings of`, bound `node length ^ levels`), a `walk`'s "
+                       "`down`/`leaf`, or a `table`/`group` one that no `maintains` names"),
     ("table-invariant", "`maintains` names a table invariant: quantified over every slot"),
     ("call-site", "a precondition at a call site -- the Isabelle channel carries those"),
     ("device-promise", "a promise at hardware Gabbro does not see"),
@@ -121,7 +128,7 @@ ARTEN = [
     # > **This is the FOURTH list over one set, and the comment at `walk-invariant` above
     # > names only three.** `Art`, `LeanReason::ALL`, `GRUENDE` -- and this one. The repair on
     # > 2026-09-01 reached the third and stopped one short.
-    ("W", "an invariant of a `walk`"),
+    ("W", "an invariant owed by no function -- a `walk`, or an unmaintained `table`/`group`"),
     ("N", "a POSTCONDITION"),
     ("R", "a REFINEMENT of a specification"),
 ]

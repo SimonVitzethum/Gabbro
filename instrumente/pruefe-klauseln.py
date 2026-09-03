@@ -155,7 +155,18 @@ ERWARTET = {
     # *The entry falls here with nothing in its place; the change that lifted it is in
     # `crates/`.*
     "ist":          ("TOT", "siehe `regs_in` -- `EntryDecl`."),
-    "ab":           ("TOT", "`walk` ist gelesen und sonst nichts: kein Pass, kein Erzeuger kennt `WalkDecl`."),
+    # **`ab` ROSE on 2026-09-04, and this guard said so before anyone thought of the table
+    # -- for the third time at this one construct.** `pflichten.rs` books a `walk`'s `down`
+    # clause as an obligation and takes the NODE TYPE with it: the wording of the manifest
+    # line runs from `w.ab` to the end of `w.ab_wenn`, because *which* level a non-leaf entry
+    # points at is half the statement and a text carrying only the guard would drop it.
+    #
+    # > The entry claimed that `walk` itself is read and nothing under it -- no pass and no
+    # > generator knows `WalkDecl`. **Both halves are now false:** `emit.rs` compiles
+    # > `ab_wenn` into a classifier and `pflichten.rs` books all three clauses.
+    #
+    # *The entry falls here with nothing in its place; the change that lifted it is in
+    # `crates/`.*
     # **`ab_wenn` and `blatt` ROSE on 2026-09-02 and are therefore deleted here.** Both
     # carried the sentence *see `ab` -- `WalkDecl`*, and that held as long as the two clauses
     # were predicates nobody walked: measured that day, position by position, `walk … down`

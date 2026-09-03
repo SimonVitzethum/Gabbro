@@ -475,25 +475,60 @@ and at a `table` without `ops` it becomes an `E` per `maintains`."* **The second
 hold.** An `E` arises only where some function names the invariant in `maintains`; where none
 does, the invariant is declared, read by the name pass, and owed by nobody.
 
-Measured over the clean corpus — `invariant <name>` at a `table`/`group`, held against every
-`maintains` of the same unit:
+**GESCHLOSSEN 2026-09-04 — and the census that found it was itself wrong in every number.**
+
+The docstring is corrected, `pflichten::lauf` has an `ItemArt::Tabelle` and an
+`ItemArt::Gruppe` arm, and the fourteen sites are booked as `W`. **No ninth `Art` was built**,
+and that is the point of the entry: the refusal below rested on the premise that a ninth kind
+was needed, and *the argument in the row above it says the opposite* — if the statement IS
+`W`'s, it needs no new kind to be booked under. A ninth `Art` buys a separate LETTER, not a
+separate duty.
+
+### The census, re-measured
+
+The first cut said *"over the clean corpus"* without naming one. Re-measured over the
+**145 of 196** `.gab` files under `beispiele/` and `messung/` that emit a register at all —
+which is the only denominator on which "booked nowhere" means anything, because a file with
+checker errors books nothing anywhere:
 
 ```
-named `table`/`group` invariants                 19
-  a function `maintains` it   -> booked as `E`    2
-  under a `table … ops`       -> carried by U-3    2
-  NOTHING maintains it        -> booked NOWHERE   15
-(`walk` invariants, booked as `W` since 2026-08-31: 4)
+                                                 2026-09-04   was
+named `table`/`group` invariants                     22        19
+  a function `maintains` it   -> booked as `E`        4         2
+  under a `table … ops`       -> carried by U-3       4         2
+  NOTHING maintains it        -> booked NOWHERE      14        15
+(`walk` invariants, booked as `W` since 2026-08-31:   6         4)
 ```
 
-The fifteen sites are listed in `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` §7. One of them,
-`messung/fragmente/F01.gab`:236 `wurzel_ohne_vorgaenger`, is a row of GabbroV's obligation
-population (`PFLICHTEN.md` F1 `167–169`), which is how it was found at all.
+**Every one of the five numbers had moved, and the fifteen were not a subset of the
+fourteen.** Three of yesterday's fifteen have a `maintains` naming them —
+`beispiele/53-zwei-orte.gab`:47, `beispiele/55-kindkette.gab`:72 and
+`messung/netz/udp-echo.gab`:135 — all three already present at `340ef3c`, the commit that
+wrote the census, so no tree moved underneath it. Two sites were missing:
+`messung/caprock/kapraum.gab`:72 and :76.
+
+> **And the contradiction was one file away.** `pflichten.rs::spezpraedikate`, a hundred lines
+> below the docstring, names `antwortpflicht_paarig` (twice), `kind_zeigt_zurueck` and
+> `belegt_hat_adresse` as **the four `maintains` lines whose wording sat at a `table`/`group`
+> invariant** — the same three files, written the same day, in the same source file, saying
+> they ARE maintained. *Two registers over one set is the `W7` shape, and here both were
+> inside one module.*
+
+The fourteen are re-measured twice on the same day and agree: once from the SOURCE
+(`invariant <name>` against every `maintains` of the unit) and once from the ARTEFACT (the `W`
+lines of `gabbro pflichten` that are not a `walk`'s). The anchors are listed in
+`messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` §7.
 
 | | |
 |---|---|
-| **why it is an obligation** | the argument the `W` kind was built on, one construct over: *"an `E` is owed by a FUNCTION that names the invariant in `maintains`. A walk invariant is owed by no function at all."* A table invariant that no function names is owed by no function either — and unlike `W`, nothing else books it |
+| **why it is an obligation** | the argument the `W` kind was built on, one construct over: *"an `E` is owed by a FUNCTION that names the invariant in `maintains`. A walk invariant is owed by no function at all."* A table invariant that no function names is owed by no function either |
 | **what it is NOT** | a refusal. The same answer `D` and `W` got applies: do not refuse it, do not pretend to check it — **count it**. *A price that stands nowhere looks like zero* |
-| **what would close it** | a ninth `Art`, a collection site at `ItemArt::Tabelle` and `ItemArt::Gruppe`, and the condition *no `maintains` names it and no `ops` carries it* |
-| **why it is not built here** | **a ninth kind moves the header line, and that is a FORMAT change.** `AUFTRAG-GABBROV.md` §4 puts one in three steps and this is the third of them: today's readers know versions `1` and `2`, so a `3` and both silent readers (`pruefe-zahlen.py`, `manifest-lage.sh`) come first. *A reader taught the new format after the writer moved reports a number out of a format it cannot read* |
+| **what closed it** | a collection site at `ItemArt::Tabelle` and `ItemArt::Gruppe` under the condition *no `maintains` names it and no `ops` carries it*, booked as `W`, plus the heading correction `Art::name()` needed to stop naming one of the three constructs it covers |
+| **why it needed no format step** | **the closing line's last word is read by nobody.** `pruefe-manifest.py` matches `^== (\d+) obligations: `, `manifest-lage.sh` matches `^== [0-9]+ obligations`, and `pruefe-zahlen.py`'s awk pattern is a prefix ending at `precondition` whose sum takes fields 2–12. `MANIFESTFASSUNG` stays at `2`. *`AUFTRAG-GABBROV.md` §4's three steps are for a change a reader can misread* |
 | **how it was found** | not by a check — by asking, obligation by obligation, whether a tool reading only the manifest could reconstruct each row of `PFLICHTEN.md`. **Row 1 of 63 was the first one asked** |
+
+**What is still open under this heading is the two conditions, not the booking.** An invariant
+under a `table … ops` is treated as discharged by `table.ops.erhaltung`
+(`beweise/Table_Ops_Erhaltung.thy`), which covers the GENERATED mutations; whether a
+hand-written body that touches the same slots can break it is a question this entry did not
+ask and does not answer.

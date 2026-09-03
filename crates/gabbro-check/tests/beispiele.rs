@@ -538,9 +538,25 @@ fn ein_requires_am_register_wird_gezaehlt() {
     let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
     let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
     assert!(vollstaendig, "E1 gefallen:\n{bericht}");
-    for stueck in ["Device promise (`reg` or `transition`)", "reg QUEUE_SIZE requires", "1 device"] {
+    // **`1 device` became `5 device` on 2026-09-04**, and the four new ones are the STEPS
+    // of `ack`, `drv`, `featok` and `drvok` -- transitions without a `requires`, which
+    // until then reached the register through nothing. *The from-state is never read:*
+    // `VirtioPci_ack` lowers to one unconditional store, so `DEVICE_STATUS: 0 -> ACK` is a
+    // promise at hardware Gabbro never sees and not a step it checks.
+    for stueck in [
+        "Device promise (`reg` or `transition`)",
+        "reg QUEUE_SIZE requires",
+        "5 device",
+        "VirtioPci :: transition ack",
+    ] {
         assert!(bericht.contains(stueck), "fehlt: {stueck}\n{bericht}");
     }
+    // The step's text is the `transset` and not the whole item -- the `effects` say
+    // something else and would make the line unreadable as the statement it is.
+    assert!(
+        bericht.contains("\tD\tF04.gab:91\topen\tDEVICE_STATUS: 0 -> ACK\n"),
+        "the step's own line is not there as written:\n{bericht}"
+    );
     // **The three fields Fassung 2 added, on the one line this file already had.** The
     // wording comes out of the source and the anchor points at the line it was cut from.
     assert!(
@@ -568,9 +584,14 @@ fn e1_haelt_ueber_einer_datei_mit_vier_arten() {
     let (baum, _) = gabbro_syntax::lies("01-tabelle.gab", &q);
     let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "01-tabelle.gab", &q);
     assert!(vollstaendig, "E1 gefallen:\n{bericht}");
+    // **13 -> 15 on 2026-09-04**, and the two are `Kappenraum`'s own invariants
+    // (`wurzel_ohne_vorgaenger`:69 and `baum_bleibt_baum`:76). No function of this unit
+    // names either in `maintains` and the table carries no `ops`, so until that day they
+    // were declared, name-checked, and owed by nobody. **The file now carries FIVE kinds**,
+    // which makes it a better test of the print loop than it was, not a worse one.
     let zeilen = bericht.lines().filter(|z| z.starts_with("obligation\t")).count();
-    assert_eq!(zeilen, 13, "13 obligations, {zeilen} lines:\n{bericht}");
-    for marke in ["\tE\t", "\tN\t", "\tV\t", "\tS\t"] {
+    assert_eq!(zeilen, 15, "15 obligations, {zeilen} lines:\n{bericht}");
+    for marke in ["\tE\t", "\tN\t", "\tV\t", "\tS\t", "\tW\t"] {
         assert!(bericht.contains(marke), "kind {marke} missing:\n{bericht}");
     }
 }

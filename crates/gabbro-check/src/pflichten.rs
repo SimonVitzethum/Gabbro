@@ -220,23 +220,54 @@ pub enum Art {
     ///
     /// > **BERICHTIGT 2026-09-03: the second half of that sentence is measurably false, and
     /// > the gap it hides is the LARGER one.** A `table`/`group` invariant becomes an `E`
-    /// > only if some function names it in `maintains` -- and over the clean corpus,
-    /// > measured with `invariant <name>` against every `maintains` of the same unit:
-    /// > **19 named `table`/`group` invariants, 2 of them maintained, 2 under a `table …
-    /// > ops`, and 15 booked by NOTHING.** Among the 15 is
-    /// > `messung/fragmente/F01.gab`:236 `wurzel_ohne_vorgaenger`, which
-    /// > `PFLICHTEN.md` books as F1 `167-169`.
+    /// > only if some function names it in `maintains`, and a `table … ops` carries its own
+    /// > under `table.ops.erhaltung`. One that has neither is booked by NOTHING.
     /// >
-    /// > *So the exact argument made here for `W` holds one construct over, at fifteen
-    /// > times the surface.* **Not built in this lane, and named rather than left silent:**
-    /// > a ninth `Art` moves the header line, and `AUFTRAG-GABBROV.md` §4 puts a format
-    /// > change in three steps of which this would be the third. The measurement, the price
-    /// > and the refusal stand in `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` §6 and in
-    /// > `OFFEN.md`.
+    /// > **GEBAUT 2026-09-04, and the refusal that stood here was wrong on its own terms.**
+    /// > Yesterday this block named the gap and refused the repair with one sentence -- *"a
+    /// > ninth `Art` moves the header line"*. **The premise does not hold.** The paragraph
+    /// > below says the case IS this kind's argument, *"one construct over"* -- and a
+    /// > statement that is this obligation needs no new kind to be booked under. What a
+    /// > ninth `Art` would have bought is a separate LETTER, not a separate duty.
+    /// >
+    /// > So `lauf` grew an `ItemArt::Tabelle` and an `ItemArt::Gruppe` arm, and the repair is
+    /// > the one `D` got two days earlier: **the kind stayed, the HEADING was corrected to
+    /// > name what stands under it** (see `Art::name`). *Checked before the word moved, not
+    /// > after:* the three readers of the closing line -- `pruefe-manifest.py`,
+    /// > `manifest-lage.sh`, `pruefe-zahlen.py` -- match `== N obligations:` and, in the last
+    /// > case, a prefix ending at `precondition`. **None reads the last word.**
+    /// > `MANIFESTFASSUNG` stays at 2.
+    ///
+    /// **The census, re-measured 2026-09-04 over the 145 of 196 `.gab` under `beispiele/`
+    /// and `messung/` that emit a register**, and every one of yesterday's five numbers had
+    /// moved:
+    ///
+    /// ```text
+    ///   named `table`/`group` invariants                 22   (was 19)
+    ///     a function `maintains` it   -> `E`              4   (was  2)
+    ///     under a `table … ops`       -> U-3              4   (was  2)
+    ///     NOTHING maintains it        -> booked here     14   (was 15)
+    ///   (`walk` invariants:                               6   (was  4))
+    /// ```
+    ///
+    /// *Three of yesterday's fifteen were MAINTAINED* -- `53-zwei-orte.gab`:47,
+    /// `55-kindkette.gab`:72 and `messung/netz/udp-echo.gab`:135, all three already at the
+    /// commit that wrote the census -- **and `spezpraedikate` a hundred lines below named
+    /// exactly those three (plus F03's) the same day, as the `maintains` lines whose wording
+    /// sat at a `table`/`group` invariant.** Two registers over one set, written together,
+    /// disagreeing. The measurement stands in `PFLICHTEN-KORRESPONDENZ.md` §7, taken twice --
+    /// once from the source and once from the artefact -- and both say 14.
     ///
     /// *It stands beside `E` and not inside it:* an `E` is owed by a FUNCTION that names the
-    /// invariant in `maintains`. A walk invariant is owed by no function at all -- it is a
-    /// statement about the whole mapping domain, and there is no `maintains` for it.
+    /// invariant in `maintains`. A `walk` invariant is owed by no function at all -- it is a
+    /// statement about the whole mapping domain, and there is no `maintains` for it. **The
+    /// same holds one construct over**, and that is why both stand here: a `table`/`group`
+    /// invariant nobody maintains is owed by no function either.
+    ///
+    /// **And `down`/`leaf` stand here for the third time of the same reason.**
+    /// `down : roh when !it.PS` is compiled into a CLASSIFIER (`emit.rs`, `_steigt_ab`) and
+    /// decided by nothing: that an entry with `!PS` really points at a next level of that
+    /// node type is a statement about the hardware table, owed by no function.
     Walkinvariante,
 }
 
@@ -273,17 +304,57 @@ impl Art {
             // clause is called by everywhere else in this file.
             Art::Geraetezusage => "Device promise (`reg` or `transition`)",
             Art::Schleifeninvariante => "Invariant across the passes of a loop",
-            Art::Walkinvariante => "Invariant of a `walk` -- carried by no pass and no template",
+            // **The heading named ONE construct and the kind covers three**
+            // (2026-09-04) -- the same repair `D` got on 2026-09-02, and for the same
+            // reason. `W` is not *"the invariant of a `walk`"*; it is **the invariant
+            // NO FUNCTION OWES**, which is exactly the sentence the variant's own
+            // docstring gives as its reason for standing beside `E`. A `walk`
+            // invariant is one such; a `table`/`group` invariant that no `maintains`
+            // names is another, and the corpus carries fifteen of the second against
+            // six of the first.
+            //
+            // *The variant keeps its identifier on purpose:* renaming it would move
+            // `LeanReason::WalkInvariant` and `zaehle-lean.py`'s reason table with it
+            // -- three lists over one set, as `zaehle-lean.py` says in its own words --
+            // and none of that is visible in the artefact a stranger reads. **What IS
+            // visible is this line**, and it now says what the entries under it are.
+            Art::Walkinvariante => "Invariant owed by NO function -- a `walk`, \
+                                    or a `table`/`group` that no `maintains` names",
         }
     }
 }
 
 pub fn sammle(baum: &Programm) -> Vec<Pflicht> {
     let spez = spezpraedikate(baum);
+    let gehalten = erhaltene(baum);
     let mut aus = Vec::new();
-    lauf(&baum.items, &spez, &mut aus);
+    lauf(&baum.items, &spez, &gehalten, &mut aus);
     vorbedingungen(baum, &mut aus);
     aus
+}
+
+/// **Every invariant name some function of the unit names in `maintains`.**
+///
+/// The set that decides whether a `table`/`group` invariant is already OWED. One that a
+/// `maintains` names is an `E` at that function and must not be booked a second time here;
+/// one that no `maintains` names is owed by nobody, and that is the case `W` exists for.
+///
+/// *The lookup is per UNIT, exactly like [`spezpraedikate`].* A `maintains` in another
+/// translation unit is not visible here, and this register does not pretend otherwise --
+/// it books what the unit in front of it says.
+fn erhaltene(baum: &Programm) -> std::collections::BTreeSet<String> {
+    let mut m = std::collections::BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Funktion(f) = &i.art {
+            if f.klasse == Some(FnKlasse::Spec) {
+                return;
+            }
+            for inv in &f.maintains {
+                m.insert(inv.text.clone());
+            }
+        }
+    });
+    m
 }
 
 /// **Every `spec fn` of the unit with a predicate body, by name.**
@@ -641,10 +712,15 @@ fn benannte_aussage(spez: &Spez, name: &str) -> (Option<gabbro_syntax::span::Spa
     }
 }
 
-fn lauf(items: &[Item], spez: &Spez, aus: &mut Vec<Pflicht>) {
+fn lauf(
+    items: &[Item],
+    spez: &Spez,
+    gehalten: &std::collections::BTreeSet<String>,
+    aus: &mut Vec<Pflicht>,
+) {
     for item in items {
         match &item.art {
-            ItemArt::Modul(m) => lauf(&m.items, spez, aus),
+            ItemArt::Modul(m) => lauf(&m.items, spez, gehalten, aus),
             ItemArt::Funktion(f) => {
                 // Eine `spec fn` schuldet nichts -- sie IST die Aussage (`M113`).
                 if f.klasse == Some(FnKlasse::Spec) {
@@ -772,6 +848,44 @@ fn lauf(items: &[Item], spez: &Spez, aus: &mut Vec<Pflicht>) {
                             material: Material::Foreign,
                         });
                     }
+                    // **And the STEP itself is a promise, `requires` or not** (2026-09-04).
+                    //
+                    // Until today a `transition` reached the register only through its
+                    // `requires`, so the four `transition`s of `messung/fragmente/F04.gab`
+                    // -- which carry none -- stood in no line at all
+                    // (`PFLICHTEN-KORRESPONDENZ.md` rows 36-39, `DROPPED`).
+                    //
+                    // **The pre-state is ASSUMED, and that is measured, not argued.**
+                    // `transition ack { DEVICE_STATUS: 0 -> ACK }` lowers to
+                    //
+                    // ```c
+                    // static inline void VirtioPci_ack(VirtioPci *d) {
+                    //     (*(volatile uint8_t *)(d->basis + 20)) = (uint8_t)1u;
+                    // }
+                    // ```
+                    //
+                    // -- the `0` on the left of the arrow is never read and never checked.
+                    // *That the register WAS in the from-state, and that writing the word
+                    // puts the device in the to-state, is a promise at hardware Gabbro
+                    // never sees* -- which is this kind's defining property and not a
+                    // widening of it. The `requires` is the GUARD; the step is the MOVE,
+                    // and the two are different statements, so they get different lines.
+                    if let (Some(erster), Some(letzter)) =
+                        (ue.schritte.first(), ue.schritte.last())
+                    {
+                        aus.push(Pflicht {
+                            art: Art::Geraetezusage,
+                            funktion: d.name.text.clone(),
+                            gegenstand: format!("transition {}", ue.name.text),
+                            span: ue.span,
+                            // The wording is the `transset` -- `DEVICE_STATUS: 0 -> ACK` --
+                            // and not the whole item, whose `effects` say something else.
+                            textspan: Some(erster.span.bis_zu(letzter.span)),
+                            kein_text: None,
+                            rumpf_da: false,
+                            material: Material::Foreign,
+                        });
+                    }
                 }
             }
             // **`walk … invariant` -- and until 2026-08-31 it stood in a C COMMENT.**
@@ -789,6 +903,44 @@ fn lauf(items: &[Item], spez: &Spez, aus: &mut Vec<Pflicht>) {
             // `rumpf_da: false` because there is no body at all: the statement is about the
             // mapping domain of the structure, not about what some function leaves behind.
             ItemArt::Walk(w) => {
+                // **`down` and `leaf` -- the two predicates the descent RESTS on**
+                // (2026-09-04, `PFLICHTEN-KORRESPONDENZ.md` rows 59 and 60).
+                //
+                // `down : roh when !it.PS` and `leaf : it.PS` are not checked anywhere.
+                // The emitter compiles them into CLASSIFIERS --
+                // `static inline bool <n>_steigt_ab(const <elem> *it) { return !it->PS; }`
+                // (`emit.rs`) -- so the generated walk USES them and nothing decides
+                // whether they describe the format correctly. *That an entry with `!PS`
+                // really points at a next level of that node type is a statement about the
+                // hardware table, owed by no function and settled by no pass* -- the same
+                // standing as the `invariant` two lines below, and the reason `W` exists.
+                //
+                // The two are separate lines because they are separate statements: one
+                // says what a NON-leaf is, the other what a leaf is, and a register that
+                // merged them could not say which of the two a prover had taken up.
+                aus.push(Pflicht {
+                    art: Art::Walkinvariante,
+                    funktion: w.name.text.clone(),
+                    gegenstand: "down".to_string(),
+                    span: w.ab.span,
+                    // From the node type to the end of the guard: `roh when !it.PS`. The
+                    // type is half the statement -- *which* level the entry points at --
+                    // and a text that carried only the guard would drop it.
+                    textspan: Some(w.ab.span.bis_zu(w.ab_wenn.span)),
+                    kein_text: None,
+                    rumpf_da: false,
+                    material: Material::Foreign,
+                });
+                aus.push(Pflicht {
+                    art: Art::Walkinvariante,
+                    funktion: w.name.text.clone(),
+                    gegenstand: "leaf".to_string(),
+                    span: w.blatt.span,
+                    textspan: Some(w.blatt.span),
+                    kein_text: None,
+                    rumpf_da: false,
+                    material: Material::Foreign,
+                });
                 for i in &w.invarianten {
                     aus.push(Pflicht {
                         art: Art::Walkinvariante,
@@ -796,6 +948,66 @@ fn lauf(items: &[Item], spez: &Spez, aus: &mut Vec<Pflicht>) {
                         gegenstand: format!("invariant {}", i.name.text),
                         // The `Invariante` carries its predicate, so the wording is HERE and
                         // not behind a name -- unlike `maintains`.
+                        span: i.span,
+                        textspan: Some(i.pred.span),
+                        kein_text: None,
+                        rumpf_da: false,
+                        material: Material::Foreign,
+                    });
+                }
+            }
+            // **A `table` invariant that NO function maintains -- and it was the larger
+            // hole of the two** (2026-09-04).
+            //
+            // The `W` docstring below carried the measurement since 2026-09-03 and refused
+            // the repair for one reason: *"a ninth `Art` moves the header line."* **That
+            // premise does not hold, and the refusal's own argument is why.** It says the
+            // case is `W`'s argument *"one construct over"* -- and a statement that IS this
+            // kind needs no new kind to be booked under it. What the ninth `Art` would have
+            // bought is a separate LETTER, not a separate obligation.
+            //
+            // The rule has two conditions and each is the discharge it stands for:
+            //
+            //   * **no `maintains` names it** -- else the invariant is already an `E` at
+            //     that function, and booking it here would be the same debt twice;
+            //   * **the table carries no `ops`** -- else the generated mutations preserve
+            //     it under the machine-checked template `table.ops.erhaltung`
+            //     (`beweise/Table_Ops_Erhaltung.thy`), and a discharged duty is not open.
+            //
+            // *Neither condition is a filter over a hole; both name where the duty went.*
+            ItemArt::Tabelle(t) => {
+                if !t.ops.is_empty() {
+                    continue;
+                }
+                for i in &t.invarianten {
+                    if gehalten.contains(&i.name.text) {
+                        continue;
+                    }
+                    aus.push(Pflicht {
+                        art: Art::Walkinvariante,
+                        funktion: t.name.text.clone(),
+                        gegenstand: format!("invariant {}", i.name.text),
+                        span: i.span,
+                        textspan: Some(i.pred.span),
+                        kein_text: None,
+                        rumpf_da: false,
+                        material: Material::Foreign,
+                    });
+                }
+            }
+            // **And a `group` invariant, for which there is no `ops` at all.** A group is
+            // the construct for a statement that quantifies over SEVERAL carriers, so no
+            // single `table … ops` could ever carry it -- the `maintains` test is the whole
+            // rule here.
+            ItemArt::Gruppe(g) => {
+                for i in &g.invarianten {
+                    if gehalten.contains(&i.name.text) {
+                        continue;
+                    }
+                    aus.push(Pflicht {
+                        art: Art::Walkinvariante,
+                        funktion: g.name.text.clone(),
+                        gegenstand: format!("invariant {}", i.name.text),
                         span: i.span,
                         textspan: Some(i.pred.span),
                         kein_text: None,
@@ -960,10 +1172,17 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
         p.len(),
         "the obligation balance does not add up"
     );
+    // **`unowned invariant` and not `walk invariant` since 2026-09-04.** The kind covers
+    // three constructs (see `Art::name`), and a label that names one of them is the shape
+    // this file already repaired at the `D` heading. *Measured before the word moved:* the
+    // three readers of this line -- `pruefe-manifest.py`, `manifest-lage.sh` and
+    // `pruefe-zahlen.py` -- match `^== N obligations:` and, in the last case, a prefix that
+    // stops at `precondition`. **None of them reads this word**, so the change is a
+    // correction to the artefact and not a format change; `MANIFESTFASSUNG` stays at 2.
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
          {f} foreign, {v} precondition, {dz} device, {si} loop invariant, \
-         {wi} walk invariant ==\n",
+         {wi} unowned invariant ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");

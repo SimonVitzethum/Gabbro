@@ -481,3 +481,58 @@ direction, plus one for an unknown state word.
 
 *The gate is unchanged in meaning and stands at `13 of 63`. It got redder, not greener:
 `36 → 50` missing, and the reachable half is now priced.*
+
+---
+
+## 10. 2026-09-04 — seven of the twelve `DROPPED` rows were bought, and the five left are the expensive half
+
+**Measured with `./instrumente/pruefe-manifest.py` in this lane's own run;** the population
+comes from `./instrumente/zaehle-pflichten.py --gabbrov` → `GabbroV obligation population 63`.
+
+```
+                     2026-09-03   today   what moved it
+carried                   13        20    three collection sites in `pflichten.rs`
+blocked upstream          13        13    F03 alone; the guard's own run reads 18 checker
+                                          errors today where §9 and the table said 27
+dropped                   12         5    rows 1, 36-39, 59, 60 are now CARRIED
+no clause                 25        25    unchanged -- a language change, and not this lane's
+manifest lines            27        39    +5 F02 transition steps, +4 F04, +2 F09, +1 F01
+```
+
+**The gate: `50 → 43 of 63` missing.** The three sites are named in
+[`PFLICHTEN-KORRESPONDENZ.md`](PFLICHTEN-KORRESPONDENZ.md) §4, argued in its §7 and §8, and
+re-priced in its §6.
+
+### 10.1 The ninth `Art` that §7 demanded was not needed
+
+Row 1's refusal — *"a ninth `Art` moves the header line"* — rested on a premise that the same
+section contradicts two paragraphs earlier: it calls the case `W`'s own argument *"one
+construct over"*. **A statement that IS this obligation needs no new kind to be booked under.**
+The repair is the one `D` got on 2026-09-02: the kind stayed, and the HEADING was corrected to
+name what stands under it. `MANIFESTFASSUNG` stays at `2`, because none of the three readers of
+the closing line reads its last word — checked before the word moved, not after.
+
+### 10.2 Two of the five that stayed are DEARER than §6 priced them, and one must never be bought
+
+* **Row 15** (a function's own `requires`, no caller) needs a fourth `Material`, not a
+  collection site — `V`'s anchor IS the call site and `Material::Call` carries the arguments a
+  prover substitutes.
+* **Rows 53–55** (`claim` / `counterprobe`) fit none of the eight kinds. *And a `claim` with a
+  `can_fail` block is the shape `zaehle-pflichten.py --gabbrov` books OUT of the 63* — an
+  assumption with a falsifier.
+* **Row 63** (`format … where`) is DISCHARGED: `emit.rs`:4331 lowers it into the decoder, and
+  `gabbro emit` writes `if (!(DtbKopf_magie(v) == MAGIE)) return false;`. **A discharged duty
+  booked `open` is a false line.**
+
+*So the honest ceiling is `24 of 63`, one below the `25` the guard prints* — the guard computes
+`CARRIED + DROPPED` over four states that have no word for *discharged*, and **a fifth state is
+a change to what the guard measures.** The difference is written down rather than legislated
+into the gate.
+
+### 10.3 Two guards said it before anyone thought of the table
+
+`pruefe-klauseln.py` reported **`ab` ROSE** — `pflichten.rs` reads a `walk`'s node type for the
+wording of the `down` line — the third clause of `walk` to rise this way. And
+`pruefe-englisch.py` reported **`RATSCHE GEBROCHEN: 1070, gebucht 1069`** over a single German
+line, which was a verbatim quote of the German table entry just deleted. *Translated back, not
+booked.*

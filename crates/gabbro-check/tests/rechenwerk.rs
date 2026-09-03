@@ -4271,11 +4271,16 @@ reg GSTS : u32 @0x1c class r fields { RTPS @30, }
 transition an { GCMD.TE: 0 -> 1 } requires GSTS.RTPS == 1 effects { writes GCMD }
 }
 }";
+    // **TWO duties since 2026-09-04, and both are this device's.** The `requires` is the
+    // GUARD and the `transset` is the MOVE; until that day only the guard reached the
+    // register, so a `transition` without a `requires` reached it not at all. Both are
+    // refused for the same named reason -- Gabbro never sees the device -- and the pair is
+    // what makes the reason visible as a property of the CONSTRUCT and not of the clause.
     let (b, _a) = gabbro_syntax::lies("p6.gab", q);
     let isa = gabbro_check::refinement::theory(&b, "p6.gab");
-    assert_eq!(p6_balance(&isa), (1, 0, 1), "one duty, refused:\n{isa}");
+    assert_eq!(p6_balance(&isa), (2, 0, 2), "two duties, both refused:\n{isa}");
     assert!(
-        isa.contains("device-promise (1)"),
+        isa.contains("device-promise (2)"),
         "the Isabelle channel names the DEVICE, not a foreign body:\n{isa}"
     );
     assert!(
@@ -4285,7 +4290,7 @@ transition an { GCMD.TE: 0 -> 1 } requires GSTS.RTPS == 1 effects { writes GCMD 
     // **The two channels agree, and that is the point of the repair.**
     let lean = gabbro_check::lean::module(&b, "p6.gab");
     assert!(
-        lean.contains("device-promise (1)"),
+        lean.contains("device-promise (2)"),
         "the Lean channel said this all along:\n{lean}"
     );
 }
