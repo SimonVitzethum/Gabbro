@@ -60,9 +60,11 @@ schon gebautes Binärprogramm, ein `cc` auf einer Datei, und die Textwächter
 die Gewohnheit.*
 
 **Der Mutationslauf misst sich selbst**: `./instrumente/mutiere-pruefer.py` über alle
-~~159~~ ~~340~~ **377** Mutationen braucht ~~2 min 20 s~~ ~~10 min 25 s~~ **13 min 20 s**
+~~159~~ ~~340~~ ~~377~~ **385** Mutationen braucht ~~2 min 20 s~~ ~~10 min 25 s~~ **13 min 20 s**
 lokal (nachgemessen 2026-09-01). *Ein Katalog, der wächst, macht jede Zahl daneben zu einer
-Jahreszahl* — und diese hier war es nach zwei Tagen wieder.
+Jahreszahl* — und diese hier war es nach zwei Tagen wieder. **Am 2026-09-03 stand sie bei 385**
+(`--anker`, 385 von 385 greifen); *die Zeit daneben ist die von 377 und wurde NICHT
+nachgemessen* — eine Zahl, die ihre Nachbarin veralten lässt, ist die halbe Buchung.
 
 > **Und der Lauf fängt 375 von 376 gültigen Mutationen (99 %).** Die eine Überlebende,
 > `ungelesene-bindung-bekommt-kein-void` in `emit.rs`, ist **nachgemessen und nicht

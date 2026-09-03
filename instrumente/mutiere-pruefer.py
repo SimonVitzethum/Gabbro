@@ -937,6 +937,17 @@ MUTATIONEN = [
         "N054 -- `Has()` and `Has(a, b)` pass again, and the second feature name goes on "
         "being read by nobody",
     ),
+    # **`N055`, one mutation.** The carrier half of the `state` refusal -- the half the
+    # grammar table reads. Without it probe 668 passes again and the cell falls back
+    # to `UNGEDECKT`.
+    Mutation(
+        "zustand-ohne-traeger-geht-durch",
+        "namen.rs",
+        "        if u.requires.is_none() && !genannt {",
+        "        if false && u.requires.is_none() && !genannt {",
+        "N055 -- a `state` transition over nothing passes again, and the grammar-table "
+        "cell falls back to `UNGEDECKT`. Probe 668 is the witness.",
+    ),
     # **The counter-direction as a mutation**, and it is the one that would break the
     # corpus: a slot is written `<x>.slots[i]` and its TYPE is a plain record, so without
     # the shape question `descendants of c.slots[s]` would be refused in every clean file.

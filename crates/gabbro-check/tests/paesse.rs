@@ -1725,3 +1725,32 @@ fn ein_praedikatswort_ist_keine_rufkante() {
         "an unknown callee in a `requires` must still make the hull a lower bound: {c:?}"
     );
 }
+
+/// **`N055` -- a `state` needs a named carrier, and each transition says whether it
+/// checks or writes.**
+///
+/// The emitter's own refusal names both lines (`emit.rs`, the `state` arm); until this
+/// rule the checker waved both through. The first half is probe 668 (one transition
+/// over nothing); the counter-direction is a transition over a declared table and one
+/// carrying `requires` -- both stay silent.
+#[test]
+fn ein_zustand_braucht_einen_traeger() {
+    faellt_mit("module p { state S { transition a { x : 0 -> 1 } } }", "N055");
+    faellt_nicht(
+        "module p { table K count 8 { slot { stufe : u32, } } \
+         state S { transition a { K : 0 -> 1 } } }",
+    );
+    faellt_nicht(
+        "module p { state S { transition a { x : 0 -> 1 } requires x == 0 } }",
+    );
+    // The twin stays where it was: two transitions under one name are `N001` (135),
+    // and with a carrier NEITHER fires.
+    faellt_mit(
+        "module p { state S { transition a { x : 0 -> 1 } transition a { x : 1 -> 0 } } }",
+        "N001",
+    );
+    faellt_nicht(
+        "module p { table K count 8 { slot { stufe : u32, } } \
+         state S { transition a { K : 0 -> 1 } transition b { K : 1 -> 0 } } }",
+    );
+}

@@ -145,12 +145,14 @@ pub struct Satz {
 pub const NAMEN: &[Satz] = &[
     Satz {
         name: "namen.doppelung",
-        kennungen: &["N001", "N002", "N003", "N009", "N010", "N017"],
+        kennungen: &["N001", "N002", "N003", "N009", "N010", "N017", "N055"],
         aussage: "Within one scope no name is declared twice -- items, the fixed set of \
                   construct bodies, AND the scopes of a function: its parameter list and \
                   every block of its body. No two `reason` cases carry the same number, no \
                   two register fields sit on the same bits, no two `reg` overlap in offset, \
-                  and no register stands in `preserves` and `clobbers` at once. The pass \
+                  and no register stands in `preserves` and `clobbers` at once. A `state`
+                  transition names its carrier or checks: without a `requires` and
+                  without a place a declared carrier holds it falls at `N055`. The pass \
                   checks DUPLICATION, not resolution.",
         vorbehalt: "**Two holes; the third fell on 2026-08-31.** (1) A `when` item switches \
                     the duplicate check off entirely -- two identically named items with \
@@ -168,7 +170,8 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 5 probes on `N001` (`432` covers a parameter in the \
                       body's own scope -- the form `cc` refuses), probes on `N002`-`N003` \
-                      and `N009`-`N010`. Counter-direction 2026-08-31: 480 `.gab` files, \
+                      and `N009`-`N010`, probe `668` on `N055` (a `state` transition over \
+                      nothing). Counter-direction 2026-08-31: 480 `.gab` files, \
                       118 error-free before and 118 after.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md part III E5",
     },

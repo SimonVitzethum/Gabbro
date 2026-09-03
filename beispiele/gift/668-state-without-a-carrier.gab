@@ -1,0 +1,15 @@
+-- erwartet: N055
+-- **`state` is a proof device over a carrier declared ELSEWHERE -- and the checker
+-- waved it through.** `state Stufe { transition an { s : 0 -> 1 } }` checks with
+-- 0 errors: no pass asks which C object holds `s`, and none asks whether `an`
+-- CHECKS or WRITES. The emitter's own refusal names both lines
+-- (`emit.rs`, the `state` arm); this rule asks the same question one pass earlier.
+-- The twin (duplicate transitions) already falls at `N001` (`135`); this probe
+-- carries exactly one transition so that only `N055` can fire.
+module gift::state_ohne_traeger {
+
+state Stufe {
+    transition an { s : 0 -> 1 }
+}
+
+}

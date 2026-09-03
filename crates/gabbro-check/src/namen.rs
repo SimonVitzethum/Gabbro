@@ -1644,6 +1644,7 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
                 for u in &s.uebergaenge {
                     doppelt(&mut gesehen, &u.name.text, u.name.span, "Uebergang", absagen);
                 }
+                zustand_braucht_traeger(s, items, absagen);
             }
             ItemArt::Walk(w) => {
                 let mut gesehen = HashMap::new();
@@ -1849,6 +1850,75 @@ fn tabelle(t: &Tabelle, absagen: &mut Absagen) {
             "Invariante",
             absagen,
         );
+    }
+}
+
+/// **`N055` -- a `state` needs a named carrier, and each transition says whether it
+/// checks or writes.**
+///
+/// The emitter's own refusal names both lines (`emit.rs`: the `state` arm): which C
+/// object holds the state, and whether a transition is a check or an assignment, the
+/// declaration does not say. Until this rule the checker waved both through -- a `state`
+/// over nothing checked with `0 errors`, and no pass asked what a transition DOES.
+/// That is the named completion the refusal asks for, and it is also what moves the
+/// grammar-table cell from `UNGEDECKT` into the checker column: the word `state` then
+/// stands in a checker-error text.
+///
+/// What it takes, and deliberately nothing more: the carrier is a DECLARED name -- a
+/// `table`, a `static` holding the state word, or a device register the transitions
+/// name -- so the next reader of `state` repeats no analysis. Whether the carrier FITS
+/// (width, field, phase) is some other rule's business; this one says the line exists.
+/// And a transition either CHECKS (it carries `requires`) or WRITES (its steps name
+/// places the carrier holds) -- the two readings the declaration leaves open, named
+/// per transition instead of guessed per construct.
+///
+/// Measured before the build: `state` over no carrier checks with `0 errors`
+/// (`probe-vier-zellen.gab`, the `UNGEDECKT` cell itself); the `135` twin (duplicate
+/// transitions) already falls at `N001`, so the second line needs a probe of its own.
+fn zustand_braucht_traeger(s: &StateDecl, items: &[Item], absagen: &mut Absagen) {
+    fn traeger_namen(items: &[Item], aus: &mut Vec<String>) {
+        for i in items {
+            match &i.art {
+                ItemArt::Modul(m) => traeger_namen(&m.items, aus),
+                ItemArt::Tabelle(t) => aus.push(t.name.text.clone()),
+                ItemArt::Statisch(st) => aus.push(st.name.text.clone()),
+                ItemArt::Device(d) => aus.push(d.name.text.clone()),
+                _ => {}
+            }
+        }
+    }
+    let mut traeger = Vec::new();
+    traeger_namen(items, &mut traeger);
+    for u in &s.uebergaenge {
+        let mut orte: Vec<String> = Vec::new();
+        for schritt in &u.schritte {
+            let b = schritt.ort.basis.text.clone();
+            if !orte.contains(&b) {
+                orte.push(b);
+            }
+        }
+        let genannt = orte.iter().any(|o| traeger.iter().any(|t| t == o));
+        if u.requires.is_none() && !genannt {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N055",
+                    u.span,
+                    format!(
+                        "`state` `transition {}` names no carrier -- neither a `requires` \
+                         that checks nor a place a declared carrier holds. A transition \
+                         over no object promises nothing: there is no place for the check \
+                         to read and none for the write to reach",
+                        u.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "a `state` is a proof device over a carrier declared ELSEWHERE -- name \
+                     the carrier or carry a `requires`; the emitter's refusal says which \
+                     C object holds the state, and this rule asks the same question one \
+                     pass earlier",
+                ),
+            );
+        }
     }
 }
 

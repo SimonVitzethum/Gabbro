@@ -2768,7 +2768,14 @@ MARKE_EMIT=65
 # jede Seite fuer sich gruen, keine Textkollision, weil beide dieselbe Zeile schreiben und
 # git zweimal dieselbe Ziffer sieht. **Der Lauf sagt 59.** *Sechster Fall dieser Klasse in
 # drei Tagen, und der einzige Griff, der greift, ist der Lauf im zusammengefuehrten Baum.*
-MARKE_EMIT_M=59
+#
+# **59 -> 61 am 2026-09-03, und diesmal ist es kein Merge-Fall.** Zwei Bahnen legten je eine
+# emittierende Probe unter `messung/` ab: `proben/probe-suchschleife-passfach.gab` (das
+# Passfach-Vorlauf der Suchschleife) und `proben/unseen-fat-reader2.gab` (der ungesehene
+# Port). Der Waechter nennt das selbst *den guten Fall* -- der Gegenstand ist gewachsen,
+# also steigt die Marke, und die Begruendung steht hier an ihr statt in einer Notiz daneben.
+# *Stufe 9 blieb dabei 128 von 128, und `clang` nimmt dieselben 128.*
+MARKE_EMIT_M=61
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
