@@ -768,6 +768,48 @@ EINTRAEGE = [
         r"SENTENCES: \d+ over (\d+) passes",
         "Paesse, ueber denen die Saetze stehen",
     ),
+
+    # ---- GabbroV's obligation population -------------------------------------------------
+    #
+    # **The denominator got a command on 2026-09-03**, and `AUFTRAG-GABBROV.md` §2.2 says why
+    # it had to: on 2026-08-20 three numbers stood over one thing and the one WITH the search
+    # path was the wrong one. `63` was reached by subtracting `3` from `66` in prose, in three
+    # cells of two documents. *A subtraction is not a measurement, and three copies of one are
+    # three chances to drift.*
+    #
+    # `zaehle-pflichten.py --gabbrov` derives it from BOTH sides -- the `progress` clauses of
+    # `messung/fragmente/F*.gab` and the `L` rows of `PFLICHTEN.md` that name them -- and
+    # refuses when the two disagree. **Four cells, four entries**, by the same rule the six
+    # `PFLICHTEN.md` summary cells follow: while more than one table says a thing, each cell
+    # is recomputed on its own.
+    (
+        "messung/GABBROV-V2.md",
+        r"\| GabbroV's obligation population \| 66 \| \*\*(\d+)\*\* \|",
+        ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
+        r"^  GabbroV obligation population\s+(\d+)",
+        "GabbroV-Bevoelkerung -- die Tafel `The answer, up front`",
+    ),
+    (
+        "messung/GABBROV-V2.md",
+        r"\| \*\*GabbroV's obligation population\*\* \| \*\*(\d+)\*\* \|",
+        ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
+        r"^  GabbroV obligation population\s+(\d+)",
+        "GabbroV-Bevoelkerung -- die Ableitungstafel in §1.7",
+    ),
+    (
+        "dokumente/GABBROV.md",
+        r"GabbroV's population is \*\*(\d+)\*\*",
+        ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
+        r"^  GabbroV obligation population\s+(\d+)",
+        "GabbroV-Bevoelkerung -- §11 der Falsifikatorentafel",
+    ),
+    (
+        "messung/GABBROV-V2.md",
+        r"\| of these, discharged by the assumption layer \| (\d+) \|",
+        ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
+        r"^  of these discharged by the assumption layer\s+(\d+)",
+        "die drei umgebuchten `progress`-Zeilen",
+    ),
 ]
 
 # **THE REGISTER OF REASONS -- for the numbers that CANNOT get a command** (2026-08-30).

@@ -172,3 +172,193 @@ still booked twice, and that double booking is then a known and unaddressed one.
 this week and the merge could not tell them apart; the rule that came out of it is
 re-measure, never pick. The measurement is above; the choice is a classification judgement
 and belongs to whoever owns §2.2.
+
+> **ANSWERED, and by neither of the two rows above — see §1.2.** The lane that owned §2.2
+> re-measured and found that **the `L` column does not move at all**: `PFLICHTEN.md`'s third
+> column asks *machine or subject*, and a device, a client and a token are subjects.
+> `239 = 173 K + 66 L` stands. What moves is a different population — **GabbroV's**: 63, of
+> which 8 not sayable and 55 sayable. *Both readings above shared one wrong premise, that the
+> `L` column was the object of the question.* **The dilemma was real and the answer was
+> outside it**, which is the argument for reporting rather than picking better than any
+> argument I made for it.
+
+---
+
+## 1. §2 — the books, and Gate 1
+
+*§2.2 and §6 were delivered by a parallel lane and merged as `97f5b21`. This lane verified
+them against the mandate's own wording rather than starting over; §1.2 says where the
+document is sharper than that lane's mandate was, and what was built as a result.*
+
+### 1.1 §2.1 — `G1` had no threshold, and none was supplied
+
+`G1`'s condition is *"a **noteworthy** part of the 66 L obligations is not sayable in the
+fragment"*. **No count clears a gate with no number, and none trips it.** The sentence
+*"`G1` does not fire"* stood in four places; all four are struck through now, and none is
+deleted:
+
+```
+dokumente/GABBROV.md      head, §10, §11
+messung/GABBROV-V1.md     the answer up front -- this lane's own report, corrected by it
+TODO.md                   the parenthesis in the 179 -> 181 note
+```
+
+**The repair that was refused is the entry.** Supplying the threshold now would supply one
+chosen while `56 of 66` is on the table — `R2`, a rule pulled to fit a result. What takes over
+are `E1` and `E2` of §1, and their force is not that they are stricter but that they were
+written down **before** the runs they judge. `dokumente/HISTORIE.md` carries it.
+
+**And the class is wider than the one row.** `G5` sits in the same table and cannot fire
+either: *"the assumption set has no model"* is a question about formulas, and the eight
+assumptions of the ten fragments are German prose sentences. **Two of five falsifiers cannot
+be evaluated, and both looked evaluable from the outside** — `R11` one level up from where
+this folder usually books it. Recorded as `O2` in the new `dokumente/OFFEN.md`.
+
+**Mechanised, not only written.** `pruefe-widerruf.py` gained `WG1`, and it is the first entry
+in that register whose revoked sentence was **not** refuted by a measurement — every earlier
+one was overtaken by a build or a count. This one was withdrawn because nothing can confirm or
+refute it. *A sentence that cannot be checked is worse placed in a report than a wrong one: a
+wrong one has a next reader who can catch it.* The pattern is pinned to `G1` rather than to the
+phrase, because the tree carries four legitimate `does not fire` sentences about other
+subjects — a guardian that catches a true sentence teaches its next reader to disable it.
+
+### 1.2 §2.2 — verified, and then the one thing the document asks for that was missing
+
+The merged lane's argument is **right and better witnessed than the document's**: the document
+argues from `SYNTAX.md`:1074 (prose), while `schleifen.rs`:221 raises `S003` when a `progress`
+name resolves to no declared assumption and `S004` when it is unfalsifiable — *so a legal
+`progress` name is a declared assumption by construction.* Its correction of `GABBROV.md` §5
+also stands: the **emitted** manifest never double-booked; `gabbro pflichten` emits no
+obligation from any `progress` clause.
+
+**And its re-measurement of the counts is right where my §0.5 could only report a conflict.**
+The `L` column does not move — `PFLICHTEN.md`'s third column asks *machine or subject*, and the
+device, the client and the token are subjects. **239 = 173 K + 66 L stands.** What moves is
+GabbroV's own population. *Neither of the two readings in §0.5 was the right one, and the
+reason is that both assumed the `L` column was the object.*
+
+**What was still missing is the half of §2.2 this lane was told wins if they differ:** *the
+change belongs in `zaehle-pflichten.py`, not in the table.* The lane put the rebooking in
+`PFLICHTEN.md`'s fourth column — correctly, as prose about three rows — and then reached `63`
+by **subtracting `3` from `66` in prose, in four cells across two documents.**
+
+> That is the 2026-08-20 shape exactly: several numbers over one thing, and the derivation
+> living nowhere.
+
+```
+./instrumente/zaehle-pflichten.py --gabbrov
+```
+
+Built 2026-09-03. It derives the denominator from **two sides that have to meet**:
+
+| side | what it reads |
+|---|---|
+| source | the real `progress <name>` clauses of `messung/fragmente/F*.gab` — the executable fragments, not the frozen prose of `FRAGMENTE.md`, whose anchors are from revision `708beed` and no longer point where they say |
+| table | the `L` rows of `PFLICHTEN.md` whose fourth column names one of those names |
+
+**It refuses rather than subtracting when the two disagree.** A `progress` clause with no
+rebooked row means a row was missed; a rebooked row with no clause means a name was invented.
+Three speech tests, all two-directional: every `progress` name is a declared `assume` (which
+`S003` should guarantee and the mode asserts anyway); an invented clause with no table row is
+*reported*, not absorbed; removing one rebooking raises the population 63 → 64 **and names the
+row that went missing**.
+
+```
+== GabbroV's obligation population -- the two sides, and they have to meet ==
+  `L` rows in `PFLICHTEN.md`                     66
+  of these discharged by the assumption layer     3
+  GabbroV obligation population                  63
+```
+
+`pruefe-zahlen.py` now holds all four cells against that command: **83 of 83 entries
+recomputed, exit 0.**
+
+*The mode prints its own limit: the three leave GabbroV's population because they are not
+obligations, **not** because they are settled. A falsifier is a promise that someone could
+refute an assumption, not a record that anyone has.*
+
+### 1.3 §2.3 — the big step is its own entry, and it is not a leftover
+
+`dokumente/AUSNAHMEN.md` is new and carries `L24`, `L34`, `L50`, `L52` as its first four rows
+with name, reason and date. `dokumente/OFFEN.md` is new and carries the same finding as `O1`.
+`dokumente/HISTORIE.md` carries it as a dated correction.
+
+**One missing means seen four times, not four gaps.** L24 needs to say no state exists between
+the pre and the post; L34 needs to say one does and what fails in it; L50 and L52 order two
+effects of one big step. `Body.lean`'s `exec` hands out a start state and an end state.
+
+**And the sharpening the mandate asks for is the part that must not be softened by counting.**
+`GABBROV.md` §3 picks out one site as the place GabbroV would earn its keep beyond convenience
+— §8.3.1's finding that `D013` checks only that the invariant `I` *exists*, expressly not that
+the block restores it, so *"a `breaking` on the wrong-but-existing invariant still passes."*
+**The statement that site needs is `L34`, and `L34` is row 2 of the exception list.**
+
+> *An exception list whose members are the most valuable rows is a finding, not an appendix.*
+
+### 1.4 The guardian over the exception list
+
+```
+./instrumente/pruefe-ausnahmen.py        # 4 rows, exit 0
+```
+
+`E2` without it is a declaration of intent, and the mandate says so. It holds **two** things,
+because either alone is satisfiable by accident:
+
+1. **The count against a booked mark (4).** Raising it means editing the guardian, which is a
+   diff. §9 puts every addition beyond the four big-step rows on the stop-list; the mark is
+   where that stop is mechanised.
+2. **Every row's obligation name against `HISTORIE.md`.** A row whose reason is not written up
+   there falls **at the same row count** — so an exception cannot be created by editing a
+   table alone.
+
+Four speech tests, and the third is the one that matters: **the empty list is a refusal, not a
+pass.** Over zero rows both checks hold and the run is the greenest it could ever be — `W17`,
+a positive verdict about nothing. The fourth is the control, without which the other three
+would also pass over a guardian that always says no.
+
+*What it does not do is judge whether a reason is really structural. That sentence is in the
+fourth column and no script decides it.*
+
+### 1.5 The merge hazard fired again, on this lane, and was caught
+
+The coordinator's warning was not hypothetical. This lane added `messung/GABBROV-AUFTRAG.md`
+and moved `pruefe-widerruf.py`'s file count 184 → 185; the other lane added
+`messung/GABBROV-V2.md` and moved it 184 → 185. **Git saw two identical `185`s and merged them
+without a conflict. The merged tree measured 186.**
+
+Re-measured after the merge and set to 186, then to 188 when `AUSNAHMEN.md` and `OFFEN.md`
+joined. *Three times in two days now, and the shape is always the same: a merge that would
+have to ADD has no text conflict.*
+
+### 1.6 The other numbers this work moved, all re-measured rather than reasoned
+
+Adding one guardian and one counter mode moves five guarded figures. Each was found by
+`pruefe-zahlen.py` / `pruefe-todo.py` going red, not by being anticipated:
+
+| figure | | |
+|---|---|---|
+| exit sites behind the first (`RUECKLAUFWERTE.md`) | 304 → 309 → **312** | the five refusals of `--gabbrov`, then the new guardian's |
+| guardians that can abort mid-run | 52 of 55 → **53 of 58** | |
+| instruments carrying all five requirements (`README.md`) | 57 → **58** | |
+| guardians (`README.md`) | 29 → **30** | |
+| figures with a command (`TODO.md`, two cells) | 79 → **83** | |
+| files the revocation guardian reads (`TODO.md`) | 184 → **188** | 12 → **13** revocations |
+
+**One of them was a real finding about my own work.** `pruefe-waechter.py` refused
+`pruefe-ausnahmen.py` at first: its `return 1` was a *partial measurement that looks like a
+whole one* — output before it, nothing after, and a return code reading as *finding* rather
+than *cut short*. Repaired by wrapping `main` in `abschnitt.fahre`, the tree's shared form,
+rather than by booking an exemption. *A new guardian that does not itself satisfy the
+guardian-of-guardians is the cheapest possible instance of the class it was built to catch.*
+
+### Gate 1 — met
+
+| | |
+|---|---|
+| `pruefe-zahlen.py` green | **yes** — 83 of 83, exit 0 |
+| new denominator out of the command | **yes** — `zaehle-pflichten.py --gabbrov`, 63, three speech tests |
+| `AUSNAHMEN.md` with guardian | **yes** — 4 rows, `pruefe-ausnahmen.py`, four speech tests |
+| entries written | **yes** — `HISTORIE.md` ×2, `OFFEN.md` (O1–O3), `AUSNAHMEN.md` ×4 |
+
+*Also green after the work: `pruefe-todo.py`, `pruefe-widerruf.py`, `pruefe-englisch.py`,
+`pruefe-waechter.py`.*

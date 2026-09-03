@@ -229,8 +229,8 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   Vorbedingung erst MITTEN im Lauf wegbricht, ist hier weiter nicht erfasst.~~
   **GEMESSEN am 2026-08-31, und zwar an einem Fall mit Datum.** Siehe den eigenen Abschnitt
   *Der Schnitt mitten im Lauf* darunter: ~~47 von 52~~ ~~49 von 54~~ ~~50 von 55~~
-  **52 von 55** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
-  ~~281~~ ~~288~~ ~~290~~ **304 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
+  ~~52 von 55~~ **53 von 58** Wächtern können mitten im Lauf abbrechen, ~~258~~ ~~263~~ ~~273~~ ~~275~~
+  ~~281~~ ~~288~~ ~~290~~ ~~304~~ ~~309~~ **312 Ausgangsstellen** liegen hinter dem jeweils ersten. Abgelesen mit
   `./instrumente/pruefe-waechter.py`, nachgerechnet von `pruefe-zahlen.py`.
   *Nachgezogen am 2026-09-01: `instrumente/zaehle-wortschatz.py` ist der dreiundfünfzigste
   Wächter, und `pruefe-zahlen.py` hat die vier Buchungen am selben Abend gemeldet, an dem er
@@ -268,6 +268,15 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   ÜBERSETZT, als Messung gebucht würde (Rücklaufwert 1). **Beide sagen, dass nichts
   gemessen wurde, statt es wie Deckung aussehen zu lassen** — was genau der Fehler war,
   den sie schließen: ein Bauabbruch, gebucht als `gefangen`.*
+  *304 → 309 am 2026-09-03, und alle fünf aus EINEM Modus: `--gabbrov` in
+  `instrumente/zaehle-pflichten.py`, der GabbroVs Nenner aus einem Befehl herleitet statt
+  aus einer Subtraktion in Prosa. Zwei davon sind Sprechproben (R14), drei sind die
+  Absagen des Modus selbst — und **alle drei sagen dieselbe Sache aus drei Richtungen:
+  die zwei Seiten des Suchwegs treffen sich nicht.** Ein `progress` ohne umgebuchte Zeile,
+  ein Name in mehr als einer Zeile, ein `progress` ohne `assume`. *Der Modus könnte in
+  jedem dieser Fälle einfach subtrahieren und dabei völlig grün aussehen* — das ist die
+  Form, gegen die dieses Register steht. Die Ursache ist gemessen und nicht vermutet: mit
+  dem Modus beiseitegelegt meldet `pruefe-zahlen.py` an dieser Zeile null Befunde.*
   *263 → 266 am 2026-09-01: drei neue Absagen aus der zweisprachigen Runde —
   `pruefe-widerruf.py` weist einen Eintrag ohne zwei Probesätze ab, `pruefe-wortschatz.py`
   eine Grammatik, die mit englischen Zeilenetiketten anders gemessen wird, und

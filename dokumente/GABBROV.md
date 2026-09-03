@@ -45,9 +45,16 @@ by the checker, not searched for by a solver.
 
 **So GabbroV's cut is narrow and clear: logic and assumptions only.**
 
-Order of magnitude, measured against `PFLICHTEN.md` over the ten fragments: **164 K against
-66 L.** About a quarter of the obligations reach GabbroV at all. The number holds for this
-corpus, not in general.
+Order of magnitude, measured against `PFLICHTEN.md` over the ten fragments: ~~**164 K against
+66 L**~~ **173 K against 66 L** (163 K anchored at a line + 10 lowering rows). About a quarter
+of the obligations reach GabbroV at all. The number holds for this corpus, not in general.
+
+> **BERICHTIGT 2026-09-03, and the old figure was never a measurement of this tree.**
+> `./instrumente/zaehle-pflichten.py --spalten` reports `229 = 163 K + 66 L` anchored and
+> `239 = 173 K + 66 L` in total. **`164` is neither** — and it is exactly what the counter's
+> own speech probe produces when a row with an escaped pipe is miscounted
+> (`Sprechprobe: … K 163 -> 164`). *A number reached by arithmetic instead of by the tool
+> that owns it.* `messung/GABBROV-V2.md` §1.5
 
 ---
 
@@ -173,6 +180,22 @@ aborting measurement run: a tool that looks plausible and measures nothing.
 > correction to the manifest, not a construction. *What separates L66, which the fragment does
 > hold, is not the construct but the referent of the named predicate: `token_verbraucht` is
 > about the program, the other two are about the world.*
+>
+> **DONE 2026-09-03 — and the paragraph above was right about the fact and wrong about the
+> place.** All three rows now carry the rebooking in `PFLICHTEN.md`'s fourth column
+> (`S003`/`S004` + the declared `assume` and its `falsifier`). The verification found a
+> stronger witness than the source reading: ***the emitted manifest never double-booked
+> them.*** `gabbro annahmen` lists all three; `gabbro pflichten` emits **no** obligation from
+> any `progress` clause — F04 emits one obligation and it is `reg QUEUE_SIZE requires`, F10
+> emits two and neither is the loop. **So "here and under `obligation`" names one real place
+> and one that does not exist**: the double booking was `PFLICHTEN.md`'s `L` column against the
+> assumption manifest, and nothing GabbroV reads was ever wrong.
+>
+> **What the counts did — measured, not subtracted.** `PFLICHTEN.md` stays at
+> `239 = 173 K + 66 L`, because its third column is machine-vs-subject and the tree's own rule
+> is that *a discharged obligation still counts*. What moves is **GabbroV's** population:
+> 66 − 3 = **63**, of which **8** are not sayable and **55** are. §11's `G1` note is updated at
+> its own place. `messung/GABBROV-V2.md` §1
 
 ---
 
@@ -304,7 +327,9 @@ the assumption that it is right.
 | V0 | fix the meaning of the obligation texts for a handful of manifest lines | in writing, against real lines from `PFLICHTEN.md` |
 | V1 | Lean fragment, translation, rejection outside it | the 66 L obligations of the ten fragments expressible — or named which are not |
 | V2 | assumption check: satisfiability, vacuity | the assumption set of the ten fragments has a model |
-| | *costed 2026-09-02, not built* | **the set is 8, and every one is a PROSE SENTENCE** — so `G5` can neither fire nor be cleared. The cost is not a solver call but the formalisation, and it is harder than V1's because the assumptions speak about the world. **Vacuity is the cheap half and needs no assumption formalisation at all.** `messung/GABBROV-V1.md` §6 |
+| | *costed 2026-09-02; **the halves SPLIT 2026-09-03***| **the set is 8, and every one is a PROSE SENTENCE** — so `G5` can neither fire nor be cleared. The cost is not a solver call but the formalisation, and it is harder than V1's because the assumptions speak about the world. `messung/GABBROV-V1.md` §6 |
+| **V2a** | **vacuity — BUILT 2026-09-03** | `programmlogik/gabbrov/V2.lean`, `lean` exit 0, no `sorry`. **Of the 55 sayable obligations, 31 carry a precondition and NONE is vacuous.** The check is not a search: `vacuous_sound` proves that a condemned precondition has no model at all. **And it fires** — driven against a deliberately vacuous `requires`, where an obligation whose postcondition is `False` passes. `messung/GABBROV-V2.md` §2 |
+| **V2b** | **satisfiability — NOT started, and deliberately** | the eight assumptions are still eight German sentences. *A second V0, and the harder one.* |
 | V3 | certificate checking in Lean | share with a recomputed certificate measured |
 | V4 | write-back into the manifest, ratchet over names | one real `obligation` from `open` to `passed` |
 
@@ -352,6 +377,13 @@ and as `W16`. It needs samples against real behaviour, not against the tool.
 > program. The genuine gap is four rows wide and is one missing means: ordering and atomicity.
 > *That sentence needs no threshold, which is exactly why it survives the withdrawal.*
 >
+> **And since the rebooking of the same day the numbers are smaller and the gap is the same
+> width.** GabbroV's population is **63**, of which **8** are not sayable: three that need a
+> record payload in `Value`, one that quantifies over programs, and **the four ordering rows,
+> untouched.** ~~`G1` fires less than before~~ — that phrasing is the withdrawn one in its
+> smaller clothes; what is true without a threshold is the part after it: *the correction
+> removed rows, not a gap.*
+>
 > **What replaces `G1` are `E1` and `E2` of `AUFTRAG-GABBROV.md` §1**, and the property that
 > matters about them is not that they are stricter but that they were **written down before
 > the runs they judge**. `E1` is a comparison of two line counts and admits no exception; `E2`
@@ -363,7 +395,9 @@ and as `W16`. It needs samples against real behaviour, not against the tool.
 ## 12. Open questions
 
 1. ~~How many of the 66 L obligations are sayable in the fragment?~~ **Answered 2026-09-02:
-   56, and the ten that are not are named one by one** (`messung/GABBROV-V1.md`). *The
+   56, and the ten that are not are named one by one** (`messung/GABBROV-V1.md`). *Restated
+   2026-09-03 after the rebooking: **55 of 63**, because three of the 66 were never
+   obligations* (§5). *The
    sentence that stood here — "that is the first measurement and it needs no tool, the
    obligation texts stand in `PFLICHTEN.md`, one can write them down in Lean one by one and
    count how far one gets" — was right about the method and wrong about the tool.* Writing

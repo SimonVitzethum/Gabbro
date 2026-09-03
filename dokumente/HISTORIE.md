@@ -10,6 +10,41 @@ up looking as if it had been right from the start.
 
 ---
 
+## The big step — four obligations the shared semantics cannot state *(2026-09-03)*
+
+**`L24`, `L34`, `L50` and `L52` are the first four rows of `AUSNAHMEN.md`**, and the entry
+stands here because burying them under *"ten rows are not sayable"* was the mistake.
+
+They are one missing means seen four times. `L24` says two places are never half set — *no
+third state exists between the pre and the post*. `L34` says the opposite about the same
+object — *one does exist, and the invariant fails in it*. `L50` and `L52` order two effects of
+one step: the flush before the reply, the reply before the service ends.
+`programmlogik/Gabbro/Body.lean`'s `exec` is **big-step**. It hands out a start state and an
+end state, and nothing in between.
+
+**Why this is not a gap in the specification fragment**, which is the reading that would send
+the repair to the one place it cannot be made: a fragment is a language of predicates over the
+objects the semantics provides. A new construct in §7 would have nothing to range over. It
+would denote nothing — or, worse and far more likely, denote something weaker while wearing the
+obligation's name: `flush ∧ reply` type-checks and reads right. *The corpus already splits the
+sayable half off; `L23` is L24's pre/post half and stands as a `Prop`. The residue is exactly
+what no predicate over a state pair can hold.*
+
+**And the sharp end.** `GABBROV.md` §3 names one site as the place GabbroV would earn its
+keep beyond convenience — §8.3.1's finding that `D013` checks that the invariant `I` *exists*
+and expressly not that the block restores it, so *"a `breaking` on the wrong-but-existing
+invariant still passes."* The statement that site needs **is `L34`**.
+
+> So the four are not four leftovers at the edge of a good count. **They are the centre of the
+> case for building the tool**, and they are the part of it today's semantics cannot express.
+> *An exception list whose members are the most valuable rows is a finding, not an appendix.*
+
+The repair is not a wider fragment but a small-step or trace semantics, and that sits on
+`AUFTRAG-GABBROV.md` §9's stop-list **because the Isabelle proofs rest on `exec` as it is**.
+Booked, not attempted.
+
+---
+
 ## A falsifier without a threshold, cleared by a judgement *(2026-09-03)*
 
 **`G1` of `GABBROV.md` §11 never had a number, and on 2026-09-02 it was reported as not

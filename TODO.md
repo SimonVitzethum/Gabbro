@@ -164,7 +164,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ **79 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ **83 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -302,7 +302,7 @@ darunter.
       ergaben 238 — *eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.* Eine
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
-      **`pruefe-zahlen.py` führt heute 79 Kennzahlen mit Befehl** und zählt daneben
+      **`pruefe-zahlen.py` führt heute 83 Kennzahlen mit Befehl** und zählt daneben
       **180 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -553,16 +553,30 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 185 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 188 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
       über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
       dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei
       weggenommen, `pruefe-zahlen.py` grün mit Rücklaufwert 0, Datei zurück.*
+      *__ZUM DRITTEN MAL, UND JETZT IST ES EINE KLASSE UND KEIN VORFALL.__ Am 2026-09-03
+      zogen die Erzeugerhalt-Spur und `master` beide 181 → 182 fuer verschiedene Dateien; am
+      selben Tag zogen die V2-Spur und `master` beide 182 → 183, ebenfalls fuer verschiedene.
+      Die gemessene Wahrheit nach dem zweiten Merge ist **185**, nicht 183 und nicht 184.
+      **Ein Merge, der Zahlen ADDIEREN muesste, hat keinen Textkonflikt** -- git sieht zweimal
+      dieselbe Ziffer und ist zufrieden. Der einzige Griff, der greift, ist die Neumessung im
+      zusammengefuehrten Baum; jede Seite fuer sich bleibt gruen.*
       *__DIE ZAHL WAR AUF BEIDEN SEITEN EINZELN RICHTIG UND IM MERGE FALSCH.__ Diese Spur
       zog 181 → 182 für ihr eines Dokument, `master` zog 181 → 182 für seine zwei; git
       führte zwei gleiche Zahlen konfliktfrei zu EINER zusammen, und der Waechter sagte
       erst nach dem Merge 183. Beide Seiten waren grün, das Ergebnis nicht — eine
       Zusammenführung, die Zahlen ADDIERT, hat keinen Textkonflikt.*
+      *182 → 183 on 2026-09-03: `messung/GABBROV-V2.md` joined — the V2 lane's report (the three
+      `progress` rebookings verified, and the vacuity check built: 0 of 31 preconditions
+      vacuous). **The cause was measured the way this entry asks**: the file was moved away,
+      `pruefe-zahlen.py` went green with exit 0, the file came back. *And it widens the reach
+      note two entries below:* that one records the guardian reach of a new `dokumente/*.md`,
+      and `pruefe-widerruf.py` globs **`messung/*.md` as well** (`:263`, beside `:243`) — so a
+      new measurement report moves this number just as a new design document does.*
       *179 → 181 on 2026-09-02: `dokumente/GABBROV.md` and `messung/GABBROV-V1.md` joined —
       the GabbroV design and V1's measurement over it (56 of 66 L obligations sayable in the
       Lean fragment; ~~`G1` does not fire~~ — withdrawn 2026-09-03, `G1` has no threshold and

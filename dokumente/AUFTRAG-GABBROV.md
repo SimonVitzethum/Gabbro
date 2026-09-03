@@ -74,10 +74,15 @@ geschrieben wird. Ein Wächter hält die beiden Listen gegeneinander.
 
 Kein Code. Bringt die Zahlen in Ordnung, bevor neue dazukommen.
 
+<!-- widerruf:aus -->
 **2.1 G1 hatte nie eine Schwelle.** Der alte Auftrag schrieb „ein nennenswerter Teil", also
 keine Zahl. „G1 feuert nicht" bei 56 von 66 ist ein Urteil, keine Messung. So nach
 `HISTORIE.md`. **Setze keine Schwelle nachträglich** — das ist die eine Änderung, die alle
 Zahlen gleichzeitig verbessert. E1 und E2 sind ab jetzt die Kriterien, und sie stehen vorher.
+<!-- widerruf:an -->
+
+*Ausgeführt am 2026-09-03; der ausgenommene Block darüber zitiert den widerrufenen Satz und
+ist darum von `WG1` in `pruefe-widerruf.py` ausgenommen — die Anweisung, nicht der Befund.*
 
 **2.2 Die Umbuchung bewegt den Nenner.** Drei `progress`-Klauseln sind in der Quelle bereits
 `assume` und werden ein zweites Mal als Logikpflicht gebucht. Ergebnis heißt damit **56 von
