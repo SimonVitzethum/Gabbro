@@ -1809,7 +1809,36 @@ pub fn emittiere_mit(
                     }
                     _ => None,
                 }) {
-                    Some(n) => n.to_string(),
+                    // **`D14`: this sink was one of the nine `D3` named, and `D3` did not
+                    // reach it** (2026-09-03).
+                    //
+                    // `czahl` grew on 2026-09-03 so that a literal past `2^63 - 1` carries
+                    // the `u` C needs. It sits in the EXPRESSION path, and a `static`
+                    // initialiser does not travel that path: the value arrives here as an
+                    // `i128` out of `konst_zahl` or out of `namen.konstwert`, and was
+                    // written with `to_string()`.
+                    //
+                    //     static mut x : u64 = 18446744073709551615;
+                    //     ->  static uint64_t x __attribute__((unused)) = 18446744073709551615;
+                    //     cc: integer constant is so large that it is unsigned [-Werror]
+                    //
+                    // **The `#define` of a `const` two branches up already writes a suffix**,
+                    // and has since it was built. *Two spellings for one thing, and the
+                    // weaker one decided here* -- `W7`, the same shape `konst_wert` had.
+                    //
+                    // > It takes `czahl`'s boundary and not the `#define`'s. That branch
+                    // > suffixes every non-negative value; `czahl` suffixes only above
+                    // > `2^63 - 1`, and its own note says why -- `-Wconversion` and
+                    // > `-Wsign-conversion` read these same literals, so a suffix added where
+                    // > C does not need one trades this error for a different one.
+                    //
+                    // A negative value keeps `to_string()`: `-5u` is not a smaller spelling
+                    // of `-5`, it is another number. The same sentence stands at the
+                    // `#define`.
+                    Some(n) => match u128::try_from(n) {
+                        Ok(u) => czahl_oder_absage(u, st.name.span, absagen),
+                        Err(_) => n.to_string(),
+                    },
                     None => {
                         weigere(
                             absagen,
@@ -2107,6 +2136,55 @@ pub fn emittiere_mit(
         // > Erzeuger auseinandergehen, gewinnt der Mensch und der Erzeuger sagt `C001`.*
         // > Dieselbe Absage steht seit jeher am `on_exceeded` eines `retry`.
         ItemArt::Reason(r) => {
+            // **`D13`: an enumerator is the one C object whose width the emitter does not
+            // choose** (2026-09-03).
+            //
+            // The lowering above is an `enum`, and C11 6.7.2.2p2 is a CONSTRAINT on it:
+            // *"the expression that defines the value of an enumeration constant shall be an
+            // integer constant expression that has a value representable as an `int`"*. A
+            // value past `INT_MAX` therefore makes this translation unit ill-formed, and the
+            // emitter was writing one.
+            //
+            // **Three complaints over one cause, and the sweep saw all three:**
+            //
+            //     A = 2147483648            cc -Wpedantic: ISO C restricts enumerator values
+            //                               to range of `int`          (13 cases, net 5)
+            //     A = 18446744073709551615  cc -Werror: integer constant is so large that it
+            //                               is unsigned                 (6 cases, shape 2)
+            //     A = 2^127                 cc -Werror: integer constant is too large for
+            //                               its type                   (10 cases, shape 2)
+            //
+            // *One fence closes all three*, because the first one is the real rule and the
+            // other two are what is left when a value sails past it.
+            //
+            // **A suffix would have been the smaller change and it is the wrong one.**
+            // `A = 18446744073709551615u` silences `-Werror` and leaves the constraint
+            // violation exactly where it was -- the failure moves to `-Wpedantic`, which is a
+            // gate fewer readers run. *That is `D6`'s argument, one file over: a repair that
+            // moves the complaint to a quieter tool is not a repair.*
+            //
+            // > **`int` is taken as 32 bits, and that is an assumption, so it is written
+            // > down.** C promises only 16, and a narrower `int` would make this fence
+            // > UNDER-refuse. Every target this back end writes has a 32-bit `int`, and the
+            // > number in the refusal is GCC's own -- read off the message above rather than
+            // > assumed. The safe direction is the one taken: what slips through, `cc` still
+            // > catches.
+            for f in &r.faelle {
+                if f.wert > C_ENUM_MAX {
+                    weigere(
+                        absagen,
+                        f.span,
+                        &format!(
+                            "a `reason` case whose value is {} -- a `reason` lowers to a C \
+                             `enum`, and C11 6.7.2.2 requires every enumerator to be \
+                             representable as an `int`. The largest one is {C_ENUM_MAX}, and \
+                             there is no wider enumerator to write",
+                            f.wert
+                        ),
+                    );
+                    return;
+                }
+            }
             aus.push_str(&format!("\n/* reason {} */\ntypedef enum {{\n", r.name.text));
             for f in &r.faelle {
                 aus.push_str(&format!(
@@ -2386,6 +2464,19 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 /// this number in its own refusal (*size of array `A` exceeds maximum object size
 /// 9223372036854775807*), which is where the value is read from rather than assumed.
 const C_OBJEKT_MAX: u128 = i64::MAX as u128;
+
+/// **The largest value C lets an ENUMERATOR carry** -- and a `reason` lowers to an `enum`
+/// (`D13`, 2026-09-03).
+///
+/// C11 6.7.2.2p2 is a constraint and not a recommendation: an enumeration constant *"shall
+/// be an integer constant expression that has a value representable as an `int`"*. GCC takes
+/// a wider one as an extension under `-Wall -Wextra -Werror` and names the rule the moment
+/// `-Wpedantic` is added, which is where this number was read off rather than assumed.
+///
+/// **`int` is taken as 32 bits.** C promises only 16, so on a narrower target this fence
+/// under-refuses -- the same safe direction `cbreite` takes, and for the same reason: what
+/// slips through, `cc` still refuses. Every target this back end writes has a 32-bit `int`.
+const C_ENUM_MAX: u128 = i32::MAX as u128;
 
 /// **The bytes this emitter will write into ONE initialiser** -- and the number is its own,
 /// because C has none to lend (`D12`, 2026-09-03).

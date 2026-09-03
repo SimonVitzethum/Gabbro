@@ -412,43 +412,30 @@ def entartet(c):
 #
 # *Each of these was found by this tool on its first full run, not entered from a list.*
 GEBUCHT = {
-    # ---- SIX EMITTER DEFECTS, and the count beside each is per FORM -------------------
+    # ---- SHAPE 2 IS EMPTY, AND THIRTEEN BOOKINGS CAME OUT TO MAKE IT SO ---------------
     #
-    # **`D1` -- a `walk` descends through a `reserved` field, which gets no reader.**
-    # `beispiele/gift/641`. The two `walk` templates of `fuzze-grenzen.py` carry this at
-    # their own known-good baseline, so 130 of that sweep's cases had been lowering to C
-    # that does not compile since 2026-09-02, under a green run.
-    ("NICHT-UEBERSETZBAR", "walk-knoten"): (65, "D1 -- gift/641, `Pte_rest` implicitly declared"),
-    ("NICHT-UEBERSETZBAR", "walk-levels"): (65, "D1 -- gift/641, the same at the other slot"),
+    # **On 2026-09-03 this section held thirteen shape-2 lines and today it holds none.** They were `D1`-`D6`, plus `D13` and `D14`, and the tool reported their
+    # removal itself: eleven came back `BOOKED AND GONE` on the first run after the six
+    # repairs, and three more after `messung/ERZEUGERREST.md` closed the two sinks `D3` had
+    # named and missed. *The removal is therefore measured and not trusted* -- the run
+    # before each deletion printed `booked N, found 0` for exactly the line deleted.
     #
-    # **`D2` -- a `forever` loop is the whole body of a function that returns a value.**
-    # `beispiele/gift/642`. Every accepted rung fails, at every bound: the swept slot has
-    # nothing to do with it, and the finding sits in the FORM.
-    ("NICHT-UEBERSETZBAR", "forever-schranke"):
-        (65, "D2 -- gift/642, `no return statement in function returning non-void`"),
+    # | booking | was | who took it |
+    # |---|---:|---|
+    # | `walk-knoten`, `walk-levels`       | 65, 65 | `D1` -- the descent looks its field up |
+    # | `forever-schranke`                 | 65     | `D2` -- a body with no `return` |
+    # | `ausdruck`, `if-bedingung`, `let-wert`, `zuweisung`, `bank-at` | 6, 10, 6, 6, 6 | `D3` -- `czahl` writes the `u` |
+    # | `embeds-scale`                     | 4      | `D4` -- `u64::try_from` at the multiplier |
+    # | `array-laenge`                     | 12     | `D5` -- the `PTRDIFF_MAX` fence |
+    # | `text-abschnitt`                   | 6      | `D6` -- a `section` name is a name |
+    # | `reason-code`                      | 16     | `D13` -- an enumerator holds an `int` |
+    # | `static-wert`                      | 6      | `D14` -- the eighth sink of `D3` |
     #
-    # **`D3` -- an integer literal written into C with no `u` suffix.** `beispiele/gift/643`.
-    # The widest of the six: nine slots, one missing character.
-    ("NICHT-UEBERSETZBAR", "ausdruck"): (6, "D3 -- gift/643, `return <2^64-1>;`"),
-    ("NICHT-UEBERSETZBAR", "if-bedingung"): (10, "D3 -- gift/643, and D4 at the top rungs"),
-    ("NICHT-UEBERSETZBAR", "let-wert"): (6, "D3 -- gift/643"),
-    ("NICHT-UEBERSETZBAR", "static-wert"): (6, "D3 -- gift/643"),
-    ("NICHT-UEBERSETZBAR", "zuweisung"): (6, "D3 -- gift/643"),
-    ("NICHT-UEBERSETZBAR", "bank-at"): (6, "D3 -- gift/643, inside the bank accessor"),
-    ("NICHT-UEBERSETZBAR", "reason-code"): (16, "D3 -- gift/643, and D4 at the top rungs"),
-    #
-    # **`D4` -- a literal wider than every C integer type reaches the C anyway.**
-    # `beispiele/gift/644`. The 2026-09-02 repair of `konst_zahl` stopped `2^128 - 1` coming
-    # out as `-1`; `2^64` fits `i128` perfectly well, so it is handed over and written.
-    ("NICHT-UEBERSETZBAR", "embeds-scale"): (4, "D4 -- gift/644, `* <2^64>u`"),
-    #
-    # **`D5` -- an array length past C's maximum object size.** `beispiele/gift/645`.
-    ("NICHT-UEBERSETZBAR", "array-laenge"): (12, "D5 -- gift/645, and D3/D4 at the top rungs"),
-    #
-    # **`D6` -- a `section` name copied into a C string with nothing escaped.**
-    # `beispiele/gift/646`. Four shapes, two seen by the compiler and two only by the
-    # assembler -- which is why this tool compiles with `-c` and not `-fsyntax-only`.
-    ("NICHT-UEBERSETZBAR", "text-abschnitt"): (6, "D6 -- gift/646"),
+    # > **The stale bookings were themselves a finding, and the tool made it.** `D1`-`D6`
+    # > landed on 2026-09-03 and their eleven lines stayed; this run therefore returned 1 at
+    # > `master` with nothing wrong in the tree. *A ratchet whose green depends on somebody
+    # > tidying up is a ratchet that will be read as noise* -- which is exactly how a real
+    # > finding at the same place would then be read.
     #
     # ---- THE ORACLE ------------------------------------------------------------------
     #
@@ -481,10 +468,32 @@ GEBUCHT = {
     # it still there says `BOOKED AND GONE`. *That is how this ratchet reported its own
     # repair, and it is the only reason the removal is not on trust.*
     #
-    # **`D9` -- a `reason` code past `INT_MAX`.** ISO C restricts an enumerator to the range
-    # of `int` before C2X; GCC widens it silently.
-    ("NOT-ISO", "reason-code"): (13, "D9 -- `ISO C restricts enumerator values to range of int`"),
-    ("NOT-ISO", "text-abschnitt"): (3, "D6 again, seen a second time by -Wpedantic"),
+    # **`D9` -- a `reason` code past `INT_MAX`. GONE on 2026-09-03, and it took `D13` with
+    # it, because they were one defect read by two gates.**
+    #
+    # The line stood at 13 and read *ISO C restricts an enumerator to the range of `int`
+    # before C2X; GCC widens it silently.* `-Wpedantic` was the only reader, so it was
+    # booked here, beside the property rather than inside it -- and 16 further cases at the
+    # same slot were booked under shape 2 as `D3`, a missing `u`.
+    #
+    # **They are one cause.** C11 6.7.2.2p2 is a CONSTRAINT: an enumerator shall have a value
+    # representable as an `int`. Everything past that is ill-formed, and which of the three
+    # complaints `cc` prints depends only on how far past. *A suffix would have silenced the
+    # loud two and left the quiet one*, which is the repair `D6` refused for the same reason.
+    # `emit.rs::C_ENUM_MAX` now refuses at `INT_MAX`, and both bookings went to zero in the
+    # same run. Probe `beispiele/gift/666`.
+    #
+    # > **The lesson is about the BOOKS and not about C.** Two lines, two shapes, two
+    # > sections, one defect -- and the split made it look like a style note beside a
+    # > compile error. *A finding filed under the gate that happened to see it is filed
+    # > under the wrong heading.*
+    #
+    # **`D6` again, seen a second time by `-Wpedantic`.** 3 -> 2 on 2026-09-03: the third was
+    # the trailing backslash, which the `section`-name rule stops before any C is written.
+    # The two that stand are `-Woverlength-strings` -- a string past the 4095 characters
+    # ISO C99 compilers are required to support -- and that is a different complaint about
+    # the same slot, not a leftover of the same one.
+    ("NOT-ISO", "text-abschnitt"): (2, "D6's neighbour -- `-Woverlength-strings`, not the name rule"),
     #
     # **`D10` -- an identifier past C11 5.2.4.1 significance.**
     # `messung/AUDIT-2026-09-02.md` 7.7 item 5. Four of the eight name positions reach C

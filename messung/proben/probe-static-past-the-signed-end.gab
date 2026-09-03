@@ -1,0 +1,49 @@
+-- **`u64::MAX` in a `static` initialiser -- the eighth of `D3`'s nine slots.**
+--
+-- `messung/proben/probe-literal-past-the-signed-end.gab` is the regression probe for `D3`,
+-- and its own header enumerates the slots the finding covered: *"`return`, `if`, `let`,
+-- `static … =`, an assignment, a `bank at`, a `reason` code, an array length, a `walk` node
+-- count. One missing character, nine slots."*
+--
+-- **Seven of those nine were closed on 2026-09-03; this was one of the two that were not.**
+-- `instrumente/fuzze-erzeuger.py` printed it at every run afterwards and nobody read the
+-- line:
+--
+--     [==] NICHT-UEBERSETZBAR static-wert              6 of   6
+--
+-- WHY THE REPAIR DID NOT REACH HERE
+-- ---------------------------------
+-- `czahl` grew the suffix in the EXPRESSION path -- `ExprArt::Zahl(n)`, the door the user's
+-- own number travels through in a `return` or a `let`. A `static` initialiser does not
+-- travel that path. The value arrives as an `i128`, out of `konst_zahl` or out of
+-- `namen.konstwert`, and was written with `to_string()`:
+--
+--     static mut x : u64 = 18446744073709551615;
+--     ->  static uint64_t x __attribute__((unused)) = 18446744073709551615;
+--     cc: integer constant is so large that it is unsigned [-Werror]
+--
+-- *The `#define` a `const` lowers to had carried a suffix since it was built*, two branches
+-- up in the same function. **Two spellings for one thing, and the weaker one decided here**
+-- -- `W7`, the shape `konst_wert` had before it.
+--
+-- WHAT THE FENCE IS, AND WHAT IT IS NOT
+-- -------------------------------------
+-- It takes `czahl`'s boundary and not the `#define`'s. That branch suffixes every
+-- non-negative value; `czahl` suffixes only past `2^63 - 1`, for the reason its own note
+-- gives: `-Wconversion` and `-Wsign-conversion` read these same literals, so a suffix added
+-- where C does not need one trades this error for a different one.
+--
+-- **Measured rather than argued**: the emitted C of all 613 versioned `.gab` files was
+-- dumped before and after, and not one byte moved -- no corpus `static` stands past
+-- `2^63 - 1`. A negative value keeps its plain spelling, because `-5u` is not a smaller
+-- spelling of `-5` but another number.
+--
+-- > *Past `2^64 - 1` there is no spelling at all*, and this sink now says so through
+-- > `czahl_oder_absage` -- where it used to say *"`static` with a non-constant
+-- > initialiser"* about a number that is as constant as a number gets.
+
+module probe::static_past_the_signed_end {
+
+static mut x : u64 = 18446744073709551615;
+
+}

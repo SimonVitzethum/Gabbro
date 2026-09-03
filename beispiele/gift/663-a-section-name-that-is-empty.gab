@@ -1,0 +1,29 @@
+-- erwartet: C001
+-- **663 -- a `section` name with no characters in it.**
+--
+-- `gift/646` carries the one shape of `D6` a COMPILER can see: a name ending in a backslash
+-- closes the C string, and `cc` says *missing terminating quote character*. The other three
+-- shapes reach the **assembler**, and `crates/gabbro-check/tests/beispiele.rs` compiles a
+-- `-- erwartet: cc` probe with `-fsyntax-only` and never assembles one. **Half of `D6` was
+-- therefore invisible to the gate this corpus actually runs**, and that asymmetry was
+-- written down on 2026-09-02 without a probe under it.
+--
+-- Measured 2026-09-02, before the repair:
+--
+--     static uint64_t x __attribute__((section(""))) … = 0;
+--     as: Error: missing name
+--
+-- Since 2026-09-03 a `section` name is held to what a section name can BE -- at least one
+-- character, each a letter, a digit, or one of `. _ - $` -- and this one has none at all.
+--
+-- > **Three shapes of one defect fell at the emitter on the day it was repaired, and one of
+-- > them got a file.** `messung/ERZEUGERDEFEKTE.md` §6 measured all four in prose; prose is
+-- > not a probe. *A refusal that runs once, on the day it is written, is a claim; a refusal
+-- > with a file under it is a measurement that repeats.* This file, `664` and `665` are the
+-- > other three.
+
+module gift::section_name_that_is_empty {
+
+static mut x : u64 = 0 section "";
+
+}
