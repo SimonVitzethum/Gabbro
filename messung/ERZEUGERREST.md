@@ -1008,3 +1008,234 @@ own measurement, not a carried claim, and `N055` is not this lane's construct to
 *Coincidentally, `128 of 128` and `MARKE_EMIT_M=61` are the exact figures this lane was told
 `master` already carried.* Measured independently here, on the tree this lane could actually
 reach — not copied from the report of one it could not merge.
+
+---
+
+## 14. Three defects two other lanes found, reported, and did not fix (`D20`–`D22`)
+
+Opened on `emit3-defects`, branched at `af483c3`. All three were already measured and
+written up before this lane started — `dokumente/OFFEN.md` `O9` and `messung/FUENFTE-MARKE.md`
+§4, findings 2 and 3 — with the repair explicitly left to whichever lane next owned
+`emit.rs`. This lane owned it this round; all three are closed.
+
+### `D20` — a narrowing `M1` has PROVED reaches C as an implicit conversion
+
+**First question, answered by a run and not an argument: soundness gap, or cosmetic?**
+`verenge` only ever narrows into an UNSIGNED C target — `c_obergrenze` returns `None` for
+anything else, so a signed target never reaches this code at all. For an unsigned target,
+C's assignment conversion and an explicit cast invoke the *identical* rule (6.3.1.3p2)
+whether or not the value is in range; a cast changes nothing about the value produced, cast
+or not, in or out of range. Measured directly rather than trusted: four functions, the mask
+and the shift each written both with and without the cast, compiled at `-O0` and at `-O2`
+(`gcc`, Ubuntu 13.3.0):
+
+```c
+uint32_t f_implicit(uint64_t w) { uint32_t x; x = w >> 32; return x; }
+uint32_t f_explicit(uint64_t w) { uint32_t x; x = (uint32_t)(w >> 32); return x; }
+uint32_t g_implicit(uint64_t w) { uint32_t x; x = w & 4294967295u; return x; }
+uint32_t g_explicit(uint64_t w) { uint32_t x; x = (uint32_t)(w & 4294967295u); return x; }
+```
+
+The instruction sequences are **byte-identical** at both optimisation levels — only
+compiler-generated `.L`-labels differ. **This is cosmetic, not soundness**, confirmed by a
+run: the cast changes what a human reader and `-Wconversion` see, never what the machine
+does, for every case this emitter can ever write one in.
+
+**Second question: what does `-Wconversion` find over the corpus?** `zaehle-c-formen.py
+--uebersetzer` — the mechanical check `BEWEIS.md` §2 line 7 asks for, already run by the
+lane that found this — reported one hit, on the probe below, and nowhere else:
+
+    (*(volatile uint32_t *)(g->basis + 12)) = wunsch >> 32;
+    warning: conversion from 'uint64_t' to 'uint32_t' may change value [-Wconversion]
+
+The mask on the line above it (`wunsch & 4294967295`) provably fits too but drew no warning
+— gcc's own constant-range analysis proves that one and stays silent; it does not reason
+about a right shift's bound the same way.
+
+**Minimal repro** (the corpus probe, `messung/proben/probe-transport-merkmale-aushandeln.gab`,
+already in the tree — no new file needed):
+
+    g.TREIBERMERKMAL = wunsch & 4294967295;
+    g.TREIBERMERKMAL = wunsch >> 32;
+
+with `wunsch : u64` and `TREIBERMERKMAL : u32`, `M101` accepting both because the range fits.
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `8 items, 0 errors, 0 hints` | unchanged |
+| `emit` | `… = wunsch & 4294967295;` / `… = wunsch >> 32;` | `… = (uint32_t)(wunsch & 4294967295);` / `… = (uint32_t)(wunsch >> 32);` |
+| `cc -Wall -Wextra -Werror` | accepted (the tree's own gate does not carry `-Wconversion`) | unchanged |
+| `cc -Wconversion` | 1 warning (the shift) | **0 warnings** |
+
+A third form, also measured and also missing its cast before the repair: `let h : u32 = w
+>> 32; g.R = h;` lowered to `uint32_t h = w >> 32;` — the assignment `g.R = h;` needs no cast
+(`h` is already `u32`), but the **initialiser** did, and nothing called `verenge` there at
+all.
+
+**The decision: lower — write the cast, since it is cosmetic and the corpus's own mechanical
+check (`BEWEIS.md` §2 line 7) demands it stop reading a false "none".**
+
+**The repair, in `crates/gabbro-check/src/emit.rs`, three parts:**
+
+1. `ausdruck_obergrenze` — a new, structural bound derivation, independent of `m1.rs` the
+   same way `indexschranke` (right beside it) already is. Two operators, exactly the ones
+   measured: `x & MASKE` is bounded by the literal mask regardless of `x`; `x >> N` for a
+   literal `N` is bounded by `x`'s own bound shifted the same amount. Tried in `verenge`
+   after `indexschranke`, before falling through to "nothing is written."
+2. **A second, more foundational gap found while fixing the first**: `ort_typ` never
+   resolves a device register at all (it answers for a table slot field, a `static`/
+   parameter, and a record field — never `g.REG`). The assignment-target `ziel` in
+   `StmtArt::Zuweisung` therefore fell back to `None` for *every* register write, so
+   `verenge` never had a target width to narrow against, independent of what the bound side
+   could prove. The read side already falls back to `register_ctyp` (`wert_ctyp`'s `Ort`
+   arm); the write side did not. Mirrored, the same way `wert_ctyp` already does it.
+3. A `verenge` call added at the `StmtArt::Let` initialiser site, which had none before —
+   closing the third measured form.
+
+**Cost to the corpus, measured and not assumed**: `zaehle-c-formen.py --uebersetzer` over
+all 140 translating units — zero hits of `-Wconversion`/`-Wsign-conversion`, where the count
+was one before the repair. `MARKE_TABELLE` 67 → 66, `MARKE_UNERLAUBT` 32 → 31 — the exit the
+mark was already carrying, taken by this lane and not re-booked for the same cause.
+`dokumente/OFFEN.md` `O9` closed in place, original entry kept.
+
+### `D21` — `leave`/`next` at a `retry` label CHECKS and did not LOWER
+
+**Two independent lanes hit this** — `messung/FUENFTE-MARKE.md` §4 finding 2, and this
+round's own task brief, both citing the same probe. `schleifen.rs::mit_marke` registers a
+`retry`'s label for `S001` beside a `forever`'s — its own comment already said *"`retry`/
+`forever` take one"* — so the checker accepts `leave`/`next` naming a `retry` with **zero
+errors**. The emitter's `retry()` (`emit.rs`) never pushed that label onto
+`austritt.schleifen` and never emitted the `_weiter`/`_ende` labels `forever()` writes for
+exactly the same case.
+
+**Minimal repro** (the corpus probe, `messung/proben/probe-marke-an-retry-und-traverse.gab`,
+already in the tree):
+
+    retry lauf until zaehler == 3 bounded 64 ops progress geht_weiter on_exceeded haengt
+        effects { writes zaehler, reads zaehler }
+    {
+        if zaehler == 0 { next lauf; }
+        zaehler = 3;
+    }
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `6 items, 0 errors, 0 hints` | unchanged |
+| `emit` | exit `1`, `[C001] …: no lowering: 'leave'/'next' naming no enclosing loop` | exit `0`, full C |
+| `cc -Wall -Wextra -Werror` | never reached | accepted |
+
+**The decision, made before building anything: lower, not refuse.** The grammar already
+gives `retry` a label — `SYNTAX.md`:1000 and :1008 grant one to both loop forms — and
+`forever` already carries the exact mechanism `retry` needs (compute a label, push it with
+the lock-release depth at entry, emit `_weiter`/`_ende` only when `sprungziele` says they are
+actually jumped to). Refusing by name here would mean the CHECKER inventing a new
+restriction against a construct the grammar already fully admits — the wrong direction for a
+gap that costs no new source word and no new grammar production.
+
+**The repair**: `retry()` now computes its label the same way `forever()` does (the written
+one, or a fallback keyed on the loop's own span so it cannot collide with the per-depth
+counter variable `_r{tiefe}`), calls the existing `sprungziele` helper (already loop-form-
+agnostic — it already matched `Schleife::Retry` for the shadowing question, one line over
+from where the bug was), pushes the label, and writes the `_weiter` label just inside the
+closing brace of the `while` and the `_ende` label just after the whole bounded-loop block.
+
+**`messung/ABSAGEFORMEN.md`:373 books `leave`/`next` naming no enclosing loop as `mit
+Fehler`, covered by `beispiele/gift/210-marke-ausserhalb-jeder-schleife.gab` (`S001`).**
+That row's claim — *"`C001` is UNREACHABLE for an accepted program"* — was false while this
+defect stood: the `retry` path reached the same `C001` text through a program the checker
+accepted outright. With the repair, no accepted program reaches it through `retry` any more,
+so the row's existing witness is a true one again and needs no second entry.
+
+**Cost to the corpus**: `pruefe-emission.sh`'s `n_emit_m` (files under `messung/*/` that
+emit) rose by exactly one — `probe-marke-an-retry-und-traverse.gab` used to leave `gabbro
+emit` with a nonzero exit (a `C001` anywhere in a unit fails the whole run), so this stage's
+loop skipped it entirely; it now emits end to end. `MARKE_EMIT_M` corrected accordingly (§15
+below names both causes of that mark's full drift, only one of which is this lane's).
+
+### `D22` — `let … else (e)` binding a RECORD lowers to `x->field`
+
+Third finding from the same sweep (`messung/FUENFTE-MARKE.md` §4 finding 3), and the
+corpus already carried a poison probe for it: `messung/proben/probe-fehlerkanal-
+verbundwert.gab`, headed `-- erwartet: cc` — this tree's word for *"the C of this file is
+SUPPOSED to fall"*, checked by `pruefe-emission.sh` Stufe 9.
+
+**Cause, read rather than guessed**: `verbundlokale` (`emit.rs`) walks a body collecting
+every name bound to a record VALUE, so `ort()` knows to lower a field access as `.` and not
+`->`. Until this repair it explicitly skipped `StmtArt::LetSonst`, on a stated belief: *"the
+callee returns the ERROR in C and hands `T` back through `*_wert`, so whether `x` ends up a
+value or a pointer is decided at the lowering of the statement and not here."* That belief
+does not match what the lowering (further down the same file) actually does: it **always**
+writes a plain `{T} {name};` declaration — never a pointer — whatever `T` is. The fact was
+KNOWN (the callee's declared return type, sitting in the same signature `wert_ctyp` already
+reads at the lowering site) and the collector simply never read it, defaulting the name to
+`zeiger = true` in `ort()` — the same shape as `D17`: a fact the emitter has is treated as
+one it does not.
+
+**Minimal repro** (the corpus probe, unmodified module structure):
+
+    type W = { a : u16 };
+    reason Fehlt { Keins = 1 "nothing there" exhaustive }
+    impl fn liefert(da : bool) -> W or Fehlt … { … }
+    impl fn liest() -> u16 … {
+        let w = liefert(true) else (e) { return 0; }
+        return w.a;
+    }
+
+| stage | before | after |
+|---|---|---|
+| `pruefe` | `5 items, 0 errors, 0 hints` | unchanged |
+| `emit` | exit `0`, `W w; … return w->a;` | exit `0`, `W w; … return w.a;` |
+| `cc -Wall -Wextra -Werror` | *error: invalid type argument of '->' (have 'W')* | accepted |
+
+**This is the checker-accepts / emitter-miscompiles shape, not the checker-refuses shape**
+— `pruefe` says `0 errors` on a program whose emitted C never had a chance of compiling, the
+worse of the two orderings in the task's own second rule (`command_emit` runs the whole
+back end before it reads the verdict; here nothing in the back end refused either).
+
+**The decision: lower.** The fact needed to decide `.` vs `->` was always fully recoverable
+from the callee's own declaration — no invention, no new proof obligation, the same source
+`verbundwert` already reads for a plain `let`. Refusing by name would have manufactured a
+gap where none was needed.
+
+**The repair**: `verbundlokale`'s `StmtArt::LetSonst` arm now reads the call's callee
+signature (`u.funktionen.get(name).rueck`) through the same `ist_verbund` closure the plain
+`Let` arm already uses, and registers the binding exactly when a plain `let` of the same
+call's result would have been registered — W7, one source for one fact.
+
+**Cost to the corpus**: the poison probe no longer bites (`pruefe-emission.sh`: *"PROBE
+BEISST NICHT MEHR … der Erzeugerfehler ist geheilt"*) — its own header said this in advance:
+*"It comes out the day the emitter stops writing `x->field` over a value."* Per the script's
+and `beispiele.rs`'s own rule for a poison that stops biting, the `-- erwartet: cc` line is
+removed and the probe becomes the regression lock instead (it is not scanned by any `cargo
+test`, only by `pruefe-emission.sh` Stufe 9 — confirmed: `cargo test` was 403/0/31 before and
+after, unmoved). `messung/proben/README.md`'s two rows for both probes are updated in place,
+past tense, with the `D`-numbers; the probe files themselves keep their history and gain a
+dated note rather than being rewritten.
+
+### The pre-existing drift these repairs surfaced, and what is and is not this lane's
+
+**`MARKE_EMIT_M` stood at 61; a clean rebuild of `master` at `af483c3` (this lane's own
+branch point, before any of its three repairs) already measured 70** — nine past the mark,
+from `messung/*/` corpus growth across merges this lane did not audit. `D21`'s own repair
+adds the tenth, verified: `messung/proben/probe-marke-an-retry-und-traverse.gab` joins
+`n_emit_m` because it now emits end to end. Corrected to **71**, with the one attributable
+cause named in the script's own comment and the other nine named as unaudited, not folded
+into a false single explanation.
+
+**`MARKE_UMGEKEHRT` stood at 4; the same clean baseline already measured 5`** — the
+`probe-fehlerkanal-verbundwert.gab` poison probe biting correctly, pre-`D22`. Removing its
+`-- erwartet: cc` header on repair brings the live count back to 4 with no separate
+correction needed — the two moves cancel exactly, and both are named above rather than left
+to arithmetic.
+
+### The runs, at the end
+
+    cargo test --no-fail-fast                 403 passed, 0 failed, 31 result lines
+    instrumente/mutiere-pruefer.py --anker     385 of 385 anchors hold
+    instrumente/zaehle-c-formen.py --uebersetzer   MARKE_TABELLE 66 = 66, MARKE_UNERLAUBT 31 = 31
+    instrumente/pruefe-emission.sh             ALL PASS -- 28 durchgestochen, 138 von 138 uebersetzen, 4 umgekehrte Probe(n)
+
+All four run on `ki-pc-fisch-101`, in this lane's own `gabbro-emit3`, against the branch
+`emit3-defects` at its final commit. `README.md`'s `**128 of 128 units emit and compile**`
+corrected to **138 of 138**, matching this run — the same move, and the same reason, as §13's
+correction of the same line to 128.

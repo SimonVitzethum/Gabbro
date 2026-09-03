@@ -1,20 +1,26 @@
 -- MINIMISED, from the `probe_ecam` attempt (`caprock-virtio/src/lib.rs:173`).
 --
--- **`leave`/`next` naming a `retry` CHECKS and does NOT LOWER.**
+-- **`leave`/`next` naming a `retry` CHECKED and until 2026-09-03 did NOT LOWER.**
 --
 -- `retry [ident] …` (`SYNTAX.md`:1000) and `forever [ident] …` (:1008) both carry a label;
 -- `traverse ident` does not -- there the `ident` is the loop VARIABLE, and `next i` falls at
--- `S001`, correctly. So the question is about two forms, not three.
+-- `S001`, correctly. So the question was about two forms, not three.
 --
 -- The checker resolves both labels: `S001` is its refusal for a label that names no
--- enclosing loop, and it stays silent at the `retry`. The EMITTER registers exactly ONE.
--- **`emit.rs`'s `forever` writer holds the only `schleifen.push` in the whole file** -- line
--- 7821 on 2026-09-03, and the COUNT is the durable half of that, not the line.
+-- enclosing loop, and it stayed silent at the `retry`. The EMITTER registered exactly ONE.
+-- **`emit.rs`'s `forever` writer held the only `schleifen.push` in the whole file** -- line
+-- 7821 on 2026-09-03, and the COUNT was the durable half of that, not the line.
 --
--- The corpus hides it by construction: every `leave`/`next` in `beispiele/41` names `runde`,
+-- The corpus hid it by construction: every `leave`/`next` in `beispiele/41` names `runde`,
 -- `bootlauf` or `leerlauf`, and all three are `forever` labels.
 --
 -- Two functions, one loop form each, so that no refusal masks the other.
+--
+-- **Repaired 2026-09-03, `D21` (`messung/ERZEUGERREST.md`).** `retry`'s own lowering
+-- (`emit.rs::retry`) now does what `forever`'s already did: compute the label (the written
+-- one, or a fallback from the loop's span), push it onto `austritt.schleifen`, and emit the
+-- `_weiter`/`_ende` labels a `next`/`leave` needs. Both functions below now check AND lower;
+-- this file is the regression lock for that.
 
 module probe::marke_an_schleifen {
 

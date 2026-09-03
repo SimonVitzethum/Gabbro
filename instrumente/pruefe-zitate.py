@@ -272,7 +272,12 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 #
 # > *It is a cross-reference and not a claim in dispute*, which is the judgement this tool
 # > leaves to the reader by design -- so it is BOOKED and not argued away.
-MARKE = 343
+# **343 -> 344 on 2026-09-03, and it is the same kind again, a third time.** `D20`
+# (`messung/ERZEUGERREST.md`) added a doc comment on `ausdruck_obergrenze` in `emit.rs`
+# citing `M101` -- the checker rule (`m1.rs`) that already refuses a narrowing which does
+# not fit, which is exactly why this emitter re-derives the bound instead of trusting it.
+# Measured by removing the one citation and re-running: 343 without it, 344 with it.
+MARKE = 344
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on

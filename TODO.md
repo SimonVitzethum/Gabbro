@@ -446,8 +446,11 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **45 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
-      Kandidatenschleife und **40 davon unqualifiziert**.
+      **46 direkte Blicke** auf die Karten aus 27 Passdateien, davon fünf in einer
+      Kandidatenschleife und **41 davon unqualifiziert**.
+      *45 → 46 und 40 → 41 am 2026-09-03: der `D22`-Fund (`messung/ERZEUGERREST.md`) liest
+      die Signatur des Gerufenen an einem `let … else`, ein `u.funktionen.get(` mehr, an
+      keiner vorher gelesenen Stelle.*
       *40 → 38 am 2026-08-31: `emit.rs` las dieselbe Karte an vier Stellen selbst
       (`vorzeichen`, `ctyp` zweimal, die neue Rücksetzableitung); jetzt liest sie
       `traegertyp` einmal. **Ein Leser ist eine Stelle, die man heilen kann; vier sind vier,
@@ -3890,7 +3893,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7883 von 21538 Kommentarzeilen** im Pruefer sind deutsch
+**7884 von 24451 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -3901,6 +3904,13 @@ mit `*` beginnt — **und eine fortgesetzte Zeichenkette, deren nächste Zeile m
 anfängt, sieht genau so aus.** Das Schablonenregister wurde übersetzt, die Umbrüche fielen
 anders, und neun solcher Zeilen verschwanden. *Die Vergröberung steht im Wächter und geht in
 die sichere Richtung* (W10) — hier kostet sie neun Zeilen in der falschen Grundgesamtheit.
+
+*7883 → 7884 und 21538 → 24451 am 2026-09-03, gemessen gegen einen frischen Bau von `master`
+(`af483c3`) und nicht geschätzt: der SAUBERE Ausgangsbaum stand bereits bei 7883 von 24382 —
+die zweite Zahl war schon vorher um 2844 Zeilen veraltet, aus keiner Ursache, die diese Spur
+untersucht hat. Die `D20`–`D22`-Reparatur (`messung/ERZEUGERREST.md`) fügte 69
+Kommentarzeilen hinzu, eine davon deutsch genug, um zu zählen — **die einzige Bewegung, die
+dieser Lauf sich selbst zuschreibt.***
 
 *Der Block stand am 2026-08-25 auf `7904 / 12359 / 1043 / 1280 / 273 / 845` und ist gegen den
 Lauf nachgezogen — **die Abweichung war nicht die deutsche Hälfte, sondern die

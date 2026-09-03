@@ -268,7 +268,33 @@ variant type"* — is still standing. The `reason` half was closed by adding a p
 
 ---
 
-## O9 — a narrowing M1 has PROVED reaches C as an implicit conversion
+## O9 — ~~a narrowing M1 has PROVED reaches C as an implicit conversion~~ — **closed 2026-09-03, in `emit.rs`**
+
+> **Repaired the same day it was measured** (`messung/ERZEUGERREST.md` `D20`). The question
+> the entry below poses — *soundness gap, or cosmetic?* — was answered by a run, not an
+> argument, before anything was changed: `f_implicit`/`f_explicit` and `g_implicit`/
+> `g_explicit` (the mask and the shift, each written both ways) compile to **byte-identical
+> instruction sequences at `-O0` and at `-O2`** — only compiler-generated labels differ. That
+> is not a coincidence of this one case: `verenge` only ever narrows into an UNSIGNED C
+> target (`c_obergrenze` returns `None` for anything else), and for an unsigned target C's
+> assignment conversion and an explicit cast invoke the *same* rule (6.3.1.3p2) whether or
+> not the value is in range. **`M1` proving the value in range makes the two forms identical
+> in every case this emitter ever writes — cosmetic, not soundness, confirmed by a run.**
+>
+> The repair reads two independent things `verenge` did not read before:
+>
+> * `ausdruck_obergrenze` — a structural bound for a mask (`x & MASKE`, bounded by the
+>   literal) and a literal right shift (`x >> N`, bounded by the operand's own bound shifted
+>   the same amount), tried after `indexschranke` and before falling through.
+> * the register-WRITE target type, via `register_ctyp` — `ort_typ` alone never resolved a
+>   register at all, so `verenge` had no target width to narrow against on a `g.REG = …;`
+>   assignment regardless of what the bound side could prove. The read side already fell
+>   back to it (`wert_ctyp`'s `Ort` arm); the write side did not.
+>
+> `zaehle-c-formen.py --uebersetzer` over the probe named below: `-Wconversion` and
+> `-Wsign-conversion` both report **zero** hits, where before the repair the shift alone
+> reported one. `MARKE_TABELLE`/`MARKE_UNERLAUBT` fall back with the named exit the mark
+> already carried. The original entry stands below, unedited, as what was measured.
 
 *Measured 2026-09-03, out of `PLAN-HARDWARE.md` §50 #6, the second pass at the fifth mark.*
 
@@ -306,8 +332,8 @@ the question. *A guard is only as strong as the programs it has been shown.*
 
 | | |
 |---|---|
-| **what would close it** | the emitter writing the cast M1 has already justified — the same repair shape as `D1`, at a different site |
-| **the mark it is on loan from** | `MARKE_TABELLE` 66 → 67, `MARKE_UNERLAUBT` 31 → 32, with the named exit written at the mark in `zaehle-c-formen.py`. *Whoever finds it red again should fix the emitter, not the number* |
-| **why it is not repaired here** | `emit.rs` belongs to another lane. The measurement is this lane's; the repair is not |
-| **measured at** | `messung/FUENFTE-MARKE.md` §4, `messung/proben/probe-transport-merkmale-aushandeln.gab` |
+| **what would close it** | ~~the emitter writing the cast M1 has already justified — the same repair shape as `D1`, at a different site~~ — **done 2026-09-03, `D20`** |
+| **the mark it is on loan from** | ~~`MARKE_TABELLE` 66 → 67, `MARKE_UNERLAUBT` 31 → 32, with the named exit written at the mark in `zaehle-c-formen.py`~~ — **the named exit was taken; the marks fall back with it** |
+| **why it is not repaired here** | ~~`emit.rs` belongs to another lane. The measurement is this lane's; the repair is not~~ — **repaired 2026-09-03, this lane owned `emit.rs` for this round** |
+| **measured at** | `messung/FUENFTE-MARKE.md` §4, `messung/proben/probe-transport-merkmale-aushandeln.gab` — repair booked at `messung/ERZEUGERREST.md` `D20` |
 

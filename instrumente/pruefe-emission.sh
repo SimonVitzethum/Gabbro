@@ -2781,14 +2781,26 @@ MARKE_EMIT=67
 # denselben Dateivergleich, den diese Stufe selbst als FUND meldet -- keine der beiden
 # gehoert `D19`s eigenen vier Formularen oder dem `bankfelder`-Repair.
 # *Stufe 9 blieb dabei 128 von 128, und `clang` nimmt dieselben 128.*
-# **61 -> 70 am 2026-09-03, und diese neun standen schon da, bevor jemand sie zaehlte.**
-# Die Fuenfte-Marke-Bahn legte elf Proben unter `messung/proben/` ab, um `unwritten` gegen
-# `inexpressible` zu trennen -- und neun davon senken ab und uebersetzen, weil genau das
-# ihr Beweis war. **Die Marke wurde beim Zusammenfuehren nicht mitgezogen**, weil
-# `pruefe-emission.sh` serverseitig laeuft und nicht in `abnahme.py` steht: der Merge war
-# gruen und die Marke trotzdem alt. *Ein Waechter, den der Sammellauf nicht ruft, meldet
-# seinen Befund erst, wenn ihn jemand einzeln fragt.*
-MARKE_EMIT_M=70
+# **61 -> 71 on 2026-09-03, and only ONE of the ten is this lane's.** Measured on a clean
+# rebuild of `master` at `af483c3` (this lane's own branch point, `../gabbro-emit3-base` on
+# `ki-pc-fisch-101`) BEFORE any of its three repairs: `n_emit_m` already read **70**, nine
+# past the mark this comment carried. *That drift predates this lane and was not audited
+# here* -- the corpus under `messung/*/` grows with every merge into `master`, and no run of
+# this stage stood between the last correction and this one to catch it earlier.
+#
+# **The tenth is `D21`** (`messung/ERZEUGERREST.md`): `messung/proben/probe-marke-an-retry-
+# und-traverse.gab`'s `an_retry` hit `C001` on `next lauf;` before the repair -- a nonzero
+# exit from `gabbro emit` on the WHOLE file, so this stage's loop `continue`d past it and
+# counted nothing. After `retry`'s own lowering learned to push its label the way `forever`'s
+# already did, the file emits end to end and joins the count. *One file, one cause, named --
+# the other nine are not, and saying so is more honest than folding them into this one.*
+#
+# **Und WARUM die neun so lange unbemerkt liefen, ist der eigentliche Befund:**
+# `pruefe-emission.sh` laeuft auf dem Server und steht NICHT in `abnahme.py`.
+# Der Merge, der die elf Proben brachte, kam gruen zurueck, und die Marke blieb
+# trotzdem alt. *Ein Waechter, den der Sammellauf nicht ruft, meldet seinen Befund
+# erst, wenn ihn jemand einzeln fragt.*
+MARKE_EMIT_M=71
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -2882,7 +2894,12 @@ MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 # Sie traegt `-- erwartet: cc` mit Absicht -- der Defekt liegt in `emit.rs` und wird von einer
 # anderen Bahn gefuehrt. *Eine umgekehrte Probe ist eine SCHULD mit einem Namen darauf, keine
 # bestandene Pruefung*, und darum steht die Marke `0 von 5 beissen nur unter cc` daneben.
-MARKE_UMGEKEHRT=5
+# **Und am selben Tag 5 -> 4 zurueck, was der einzige Weg ist, auf dem diese Marke sich
+# ueberhaupt bewegen SOLL.** `D22` hat den Defekt behoben: `let x = f() else (e)` mit einem
+# Verbund senkt nicht mehr zu `x->feld` ab, also beisst die Probe nicht mehr und hat ihren
+# `-- erwartet: cc`-Kopf verloren. *Die Schuld wurde nicht umgebucht, sie wurde bezahlt* --
+# und zwar von einer anderen Bahn am selben Tag, an dem sie eingetragen wurde.
+MARKE_UMGEKEHRT=4
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

@@ -322,13 +322,36 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
                     aus.push(l.name.text.clone())
                 }
             }
-            // **`let x = call else (e) { … }` binds a name too, and this collector does not
-            // register it.** The reason is the error channel, not an oversight: a callee
-            // declared `-> T or R` returns the ERROR in C and hands `T` back through
-            // `*_wert`, so whether `x` ends up a value or a pointer is decided at the
-            // lowering of the statement and not here. **Left open on purpose** -- and now it
-            // is written down instead of falling into a catch-all.
-            StmtArt::LetSonst(_) => {}
+            // **`D22`, corrected 2026-09-03: `let x = call else (e) { … }` binds a RECORD
+            // too, and this collector's old answer ("decided at the lowering of the
+            // statement, not here") did not match what that lowering actually does.**
+            //
+            // `StmtArt::LetSonst` below always writes a plain `{T} {name};` declaration --
+            // never a pointer -- whatever `T` is, so whether `x` ends up a value was already
+            // decided, uniformly, and this collector simply had not read it. A name this
+            // collector does not register defaults to `zeiger = true` in `ort` (`werte` is
+            // the only source `!u.werte.contains(...)` reads), so a record-valued binding
+            // lowered its own field access as `c->len` on a plain `Completion c;`:
+            //
+            //     pruefe: 0 errors, 0 hints    emit: exit 0, `return c->len;`
+            //     cc: error: invalid type argument of '->' (have 'Completion')
+            //
+            // The repair reads the same declaration `wert_ctyp` already reads at the
+            // lowering site (the callee's `-> T or R` signature) rather than inventing a
+            // second source -- W7. See `messung/ERZEUGERREST.md` D22.
+            StmtArt::LetSonst(l) => {
+                if let Some(r) = l.als_ruf() {
+                    let ist = r
+                        .path()
+                        .and_then(|p| p.teile.last())
+                        .and_then(|n| u.funktionen.get(&n.text))
+                        .and_then(|sig| sig.rueck.as_ref())
+                        .is_some_and(ist_verbund);
+                    if ist {
+                        aus.push(l.name.text.clone());
+                    }
+                }
+            }
             // `let x = place awaits { … }` unwraps an ATOMIC. An atomic carries a scalar
             // payload -- never a record -- so there is nothing to register.
             StmtArt::AwaitLoad(_) => {}
@@ -6643,8 +6666,19 @@ fn anweisung(
                 // **The declared width of the PLACE decides whether a conversion is
                 // written** -- see `verenge`. `a.slots[i].kopf = i;` with an index into a
                 // `count 8` table and a `u16` field narrowed silently until 2026-08-31.
+                //
+                // **`O9`, found while repairing D20: `ort_typ` alone never resolves a
+                // register.** It answers for a table slot field, a `static`/parameter, and a
+                // record field -- never for `g.REG`, so `ziel` was `None` for every register
+                // WRITE and `verenge` bailed out before it ever looked at a bound. The READ
+                // side already falls back to `register_ctyp` (`wert_ctyp`'s `Ort` arm); the
+                // write side did not, so `g.TREIBERMERKMAL = wunsch >> 32;` carried no
+                // target width to narrow AGAINST, regardless of what `verenge` could prove.
+                // Mirrored here, the same way `wert_ctyp` already does it -- W7.
                 None => {
-                    let ziel = ort_typ(&z.ziel, u).and_then(|t| ctyp(&t, u));
+                    let ziel = ort_typ(&z.ziel, u)
+                        .and_then(|t| ctyp(&t, u))
+                        .or_else(|| register_ctyp(&z.ziel, u));
                     verenge(ausdruck(&z.wert, u, absagen), &z.wert, ziel.as_deref(), u)
                 }
             };
@@ -6947,11 +6981,14 @@ fn anweisung(
             };
             match typ {
                 Some(c) => {
-                    aus.push_str(&format!(
-                        "{e}{c} {} = {};\n",
-                        l.name.text,
-                        ausdruck(&l.wert, u, absagen)
-                    ));
+                    // **`O9`: the same narrowing the assignment target already gets**
+                    // (`verenge`, `messung/ERZEUGERREST.md` D20). `let h : u32 = w >> 32;`
+                    // is the third measured form -- an initialiser whose declared type is
+                    // narrower than the right-hand side's -- and until now this site called
+                    // no `verenge` at all, so it wrote the bare, uncast narrowing straight
+                    // into the declaration.
+                    let wert = verenge(ausdruck(&l.wert, u, absagen), &l.wert, Some(c.as_str()), u);
+                    aus.push_str(&format!("{e}{c} {} = {};\n", l.name.text, wert));
                     // **`(void)r2;` for a binding this body never reads back** -- the same
                     // answer the unread parameter gets, from the same walker. See
                     // `Namen::ungelesene_lets` for why it is a lowering and not a refusal.
@@ -7618,14 +7655,39 @@ fn retry(
         return;
     }
     let z = format!("_r{tiefe}");
+    // **`leave`/`next` at a `retry` label -- the same shape `forever` already carries, and
+    // for the same reason** (`messung/ERZEUGERREST.md` D21, found 2026-09-03).
+    //
+    // `schleifen.rs::mit_marke` registers a `retry`'s label for `S001` right beside a
+    // `forever`'s -- its own comment says *"`retry`/`forever` take one"* -- so the checker
+    // accepts `leave`/`next` naming a `retry` with zero errors. Until this fix, this
+    // function never pushed that label into `austritt.schleifen` and never emitted the
+    // `_weiter`/`_ende` labels `forever` writes below -- so a checker-clean program fell at
+    // `C001: no lowering: 'leave'/'next' naming no enclosing loop`, the emitter's own
+    // internal contradiction: the checker's word and the emitter's registration disagreed
+    // about a form the grammar gives both loop kinds. See
+    // `messung/proben/probe-marke-an-retry-und-traverse.gab`.
+    let marke = match &r.marke {
+        Some(m) => m.text.clone(),
+        None => format!("_r{}", r.span.von),
+    };
+    let (hat_leave, hat_next) = sprungziele(&r.rumpf, &marke);
+    let mut innen = austritt.clone();
+    innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
     aus.push_str(&format!(
         "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    while (!({bedingung})) {{\n\
          {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z}++;\n"
     ));
     for k in &r.rumpf.anweisungen {
-        anweisung(k, aus, u, absagen, tiefe + 2, austritt);
+        anweisung(k, aus, u, absagen, tiefe + 2, &innen);
+    }
+    if hat_next {
+        aus.push_str(&format!("{e}    {marke}_weiter: ;\n"));
     }
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+    if hat_leave {
+        aus.push_str(&format!("{e}{marke}_ende: ;\n"));
+    }
 }
 
 /// **Ein `static` ueber einem Feld: `static mut kernlast : [Zaehler; 64] = 0;`**
@@ -9013,6 +9075,56 @@ fn indexschranke(e: &Expr, u: &Namen) -> Option<i128> {
     }
 }
 
+/// **`O9`, measured 2026-09-03: a structural upper bound, re-derived independently of
+/// `m1.rs`.** Same stance as `indexschranke` right above -- the checker has already refused
+/// any program whose value does not fit (`M101`), so this is a second, independent opinion
+/// and not a new proof obligation this emitter is taking on.
+///
+/// `indexschranke` only ever answers for a bare `Ort` (a place with a declared `index into
+/// T`). Everything else -- a mask, a shift, a typed local read back -- fell through to
+/// `_ => text` in `verenge`, and `wunsch >> 32`/`wunsch & 4294967295` on a `u64` register
+/// wrote a bare, uncast narrowing assignment into a `u32` register even though `M101`
+/// proves both fit: `messung/proben/probe-transport-merkmale-aushandeln.gab`,
+/// `messung/ERZEUGERREST.md` D20. `zaehle-c-formen.py --uebersetzer` -- the mechanical check
+/// `BEWEIS.md` §2 line 7 asks for -- reported one `-Wconversion` hit over the whole corpus
+/// where the never-list promises "none, but to be checked mechanically."
+///
+/// The two operators covered are exactly the ones the measurement needed:
+///
+/// * `x & MASKE` can only turn bits off, so the result never exceeds the literal mask,
+///   whatever `x` is -- `wunsch & 4294967295` is bounded by `4294967295` regardless of
+///   `wunsch`'s own width.
+/// * `x >> N` for a literal `N` never exceeds `x`'s own bound shifted the same amount --
+///   a `u64` shifted right by 32 is bounded by `u64::MAX >> 32`, which is exactly
+///   `u32::MAX`.
+///
+/// **This is a second opinion and not a promise borrowed from `m1.rs`.** Nothing here reads
+/// M1's facts; it re-derives the bound from the operator and the literal alone, the same way
+/// `indexschranke` re-derives an index bound from `count` rather than trusting the checker's
+/// word for it.
+fn ausdruck_obergrenze(e: &Expr, u: &Namen) -> Option<i128> {
+    match &e.art {
+        ExprArt::Klammer(x) => ausdruck_obergrenze(x, u),
+        ExprArt::Zahl(n) => i128::try_from(*n).ok(),
+        ExprArt::Ort(_) => indexschranke(e, u),
+        ExprArt::Binaer(BinOp::BitUnd, a, b) => match (&a.art, &b.art) {
+            (_, ExprArt::Zahl(n)) | (ExprArt::Zahl(n), _) => i128::try_from(*n).ok(),
+            _ => None,
+        },
+        ExprArt::Binaer(BinOp::SchiebRechts, a, b) => {
+            let ExprArt::Zahl(n) = &b.art else { return None };
+            let basis = ausdruck_obergrenze(a, u)
+                .or_else(|| wert_ctyp(a, u).as_deref().and_then(c_obergrenze))?;
+            if *n >= 128 {
+                Some(0)
+            } else {
+                Some(basis >> n)
+            }
+        }
+        _ => None,
+    }
+}
+
 /// **The width the checker knows, WRITTEN DOWN where C cannot see it** (2026-08-31).
 ///
 /// `messung/treiber/virtio-net.gab`:236 writes `a.slots[i].kopf = i;` with
@@ -9053,7 +9165,11 @@ fn verenge(text: String, e: &Expr, ziel: Option<&str>, u: &Namen) -> String {
     if qmax <= zmax {
         return text;
     }
-    match indexschranke(e, u) {
+    // **`O9`: `indexschranke` first, `ausdruck_obergrenze` second.** The first answers for a
+    // bare `index into T` place; the second re-derives a bound structurally for a mask or a
+    // literal shift (`messung/ERZEUGERREST.md` D20). Neither trusts M1's own word for it --
+    // both re-derive the bound from what the emitter can see on its own.
+    match indexschranke(e, u).or_else(|| ausdruck_obergrenze(e, u)) {
         // It fits, and the declaration says so. Write it down.
         Some(h) if h <= zmax => format!("({ziel})({text})"),
         // It does NOT fit, or nothing here bounds it. **Then nothing is written** -- a cast
