@@ -2,10 +2,33 @@
 
 *Started 2026-09-03 from tree `393d866`. This file is the report, written as the run
 proceeds and committed with each finding. Every count names the command that produced it.
-This lane BUILDS nothing except where it says so at the site.*
+This lane BUILDS nothing except where it says so at the site (§4).*
 
-**Machine note.** `free -g` beside every local run. Solver directory on the server would be
-`gabbro-vm`, but see §0 — the solver is not there.
+**Machine note.** `free -g` beside every local run. Server directory `gabbro-vm`, both
+transfers in the prescribed order — but see §0: the solver is not on the server.
+
+---
+
+## The three answers, up front
+
+| the question | the answer |
+|---|---|
+| **1 — what is wrong with GabbroV?** | **The corpus, three times over — and that is the good outcome.** All three refutations were re-derived by hands that had not seen the first encoding, and all three hold. Not the encoding, not the specifications. §1 |
+| **2 — does design C hold as mathematics?** | **As an argument, about components that do not exist.** Trust-base point 6 has **zero lines**; point 5 is not code. The channel that *does* exist is total and `rustc` enforces it — but it is a different channel. And **the reachability wall is an artefact this run removed**: `NSLOTS = 80256` answers in **0.030 s**. §2 |
+| **3 — what is the manifest missing?** | **More than the text.** The ordinal defect reproduces, and the same binary already prints the disambiguating term on its `--lean` flag. But **four of the ten fragments emit no manifest at all**, and **not one of the five Gate 2 rows has a manifest line.** §3 |
+
+**Three things that outrank the rest**, and §6 says them at length:
+
+1. `L05`'s defect is visible in a **signature four lines apart** — `ensures c.slots[s].parent
+   == None` against `maintains cdt_wohlgeformt` — and nobody had seen it. A blind second hand
+   found it and also measured that the repair Gate 2 proposed **fails**.
+2. **The wall was a random seed.** Bound 20 times out at 60 s with the default seed and answers
+   in **0.09 s** with seed 1; six of six non-default seeds answer. A bound-free rank encoding
+   then removes the bound entirely, at constant file size.
+3. **Gate 2 measured the direction where design C is empty.** Three of its five results are
+   `sat`, and a model needs no certificate and no kernel. The two `unsat`s — the only place Z3's
+   trust position bites — were never certificate-checked. **`G2` is fully open after Gate 2**,
+   not partly answered by it.
 
 ---
 
