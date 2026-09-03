@@ -1,0 +1,29 @@
+-- erwartet: C001
+-- **664 -- a `section` name that is one blank.**
+--
+-- The second of `D6`'s assembler-only shapes, and the one that shows why the character set
+-- and not the emptiness is the rule. A single space is not an empty name: the C string
+-- literal is well formed, `-fsyntax-only` is silent, and the whole of the damage happens
+-- when GCC copies the text into a `.section` directive **unquoted**.
+--
+-- Measured 2026-09-02, before the repair:
+--
+--     static uint64_t x __attribute__((section(" "))) … = 0;
+--     as: Error: missing name
+--
+-- *The assembler answers the same as it does for the empty name*, which is the giveaway:
+-- what it reads is not a name of length one but a directive with nothing on it. Since
+-- 2026-09-03 the emitter refuses, and it names the character rather than the length --
+-- `` ` ` is not a name character``.
+--
+-- > **Escaping would not have reached this shape at all.** The candidate repair on the table
+-- > for `D6` was to double the backslash, which is a rule about ONE character; a blank has
+-- > nothing to escape. *A repair aimed at the shape that was found does not cover the class
+-- > it belongs to* -- which is why the refusal is stated as a character set and not as a
+-- > list of forbidden characters.
+
+module gift::section_name_that_is_a_space {
+
+static mut x : u64 = 0 section " ";
+
+}

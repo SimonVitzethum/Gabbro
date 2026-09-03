@@ -11,16 +11,28 @@
 -- > Deckungszahl ist keine Absage.*
 --
 -- Dies ist die zweite von `F05`s drei `cc`-Absagen, und sie trifft nicht nur `F05`.
+--
+-- > **The callee was named `recv` until 2026-09-03, and a rule younger than this probe made
+-- > that a SECOND subject.** `N046` -- an `extern fn` binds a name C has, so the signature
+-- > has to agree -- landed on 2026-09-01 and reads `recv` as POSIX's
+-- > `ssize_t recv(int, void *, size_t, int)`. It fires at line 17, ahead of the `M134` this
+-- > file is about, and `zaehle-gifttreffer.py` counted the probe COVERED from that day on.
+-- >
+-- > *The name was never the subject.* This probe asks what a field access on a scalar does;
+-- > the callee only had to hand back a `u64`, and `F05`, where it was cut from, calls its
+-- > own IPC primitive `recv` for reasons of its own. Renamed to a word C does not carry, so
+-- > the probe measures one rule again. **The finding is not deleted -- it is written here,
+-- > which is where a probe records what once fell over it.**
 
 module gift {
 
-extern fn recv(ep : u64) -> u64 effects { reads ep } costs <= 4 ops;
+extern fn empfange(ep : u64) -> u64 effects { reads ep } costs <= 4 ops;
 
 impl fn dienst(ep : u64) -> u64
     effects { reads ep }
     costs <= 16 ops
 {
-    let m = recv(ep);
+    let m = empfange(ep);
     return m.op;
 }
 

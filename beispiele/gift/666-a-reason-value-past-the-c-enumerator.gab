@@ -1,0 +1,43 @@
+-- erwartet: C001
+-- **666 -- a `reason` value no C enumerator can carry.**
+--
+-- A `reason` lowers to `typedef enum { … } R;` -- *"eine benannte Zahlenmenge, und die
+-- Zahlen STEHEN DA"*, `emit.rs` «C3a». C11 6.7.2.2p2 is a CONSTRAINT on what may stand
+-- there: an enumeration constant *shall be an integer constant expression that has a value
+-- representable as an `int`*. The emitter wrote whatever the source named.
+--
+-- Three complaints over one cause, all found by `instrumente/fuzze-erzeuger.py` on
+-- 2026-09-02 and all still standing on 2026-09-03:
+--
+--     A = 2147483648            cc -Wpedantic: ISO C restricts enumerator values to range
+--                               of `int`                            13 cases, net 5
+--     A = 18446744073709551615  cc -Werror: integer constant is so large that it is
+--                               unsigned                             6 cases, shape 2
+--     A = 2^127                 cc -Werror: integer constant is too large for its type
+--                                                                   10 cases, shape 2
+--
+-- **The value below is the first one C cannot carry** -- `INT_MAX + 1`, and nothing more.
+-- It is deliberately not the largest: the largest one draws `-Werror` from the plain gate,
+-- and a probe that falls at the LOUDEST reader does not measure the quiet one. This value
+-- passes `cc -std=c11 -Wall -Wextra -Werror` in silence and is refused only by `-Wpedantic`
+-- -- which is the gate `tests/beispiele.rs` does not run.
+--
+-- THE DECISION, 2026-09-03 -- refused, and NOT suffixed
+-- ----------------------------------------------------
+-- `A = 18446744073709551615u` silences `-Werror` and leaves the constraint violation exactly
+-- where it stood; the failure merely moves to `-Wpedantic`. **That is `D6`'s argument one
+-- file over: a repair that moves the complaint to a quieter tool is not a repair.** So the
+-- fence stands where C's own rule stands, and the number in the refusal is GCC's.
+--
+-- > *`D3` named nine slots and repaired seven.* `reason` was one of the two it missed, and
+-- > the missing suffix was never the whole of what was wrong here: an enumerator is the one
+-- > C object whose width the emitter does not choose. `messung/ERZEUGERREST.md` §3.
+
+module gift::reason_value_past_the_c_enumerator {
+
+reason Ausfall {
+    ZuGross = 2147483648 "the first value C cannot put in an enumerator"
+    exhaustive
+}
+
+}

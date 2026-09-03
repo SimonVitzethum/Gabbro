@@ -2360,7 +2360,13 @@ MARKE_EMIT=65
 # was the C, which carried `18446744073709551615` with no `u` on it. **A file that stops
 # being poison does not stop being a probe** -- here it holds the emitter to writing the
 # suffix, under `-Werror`, at every run of stage 9.
-MARKE_EMIT_M=54
+# **54 -> 55 on 2026-09-03**: `messung/proben/probe-static-past-the-signed-end.gab`, and it
+# is the SAME repair one slot further along. `D3` named nine sinks and closed seven; the
+# `static` initialiser was one of the two it missed, because the suffix grew in the
+# expression path and a `static` value never travels it. *A repair reported by the slot it
+# was found at, rather than by the slots its own count names, leaves a residue* --
+# `messung/ERZEUGERREST.md` §4. This file holds the eighth sink under `-Werror` at every run.
+MARKE_EMIT_M=55
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

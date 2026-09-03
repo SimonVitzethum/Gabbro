@@ -1,0 +1,29 @@
+-- erwartet: C001
+-- **665 -- the form that was written to EMBED a quote, and it embeds a space.**
+--
+-- The third of `D6`'s assembler-only shapes, and the one that carries a finding of its own.
+-- Two string literals side by side were read as Gabbro's doubling form for a quote inside a
+-- name -- the shape a C or Rust programmer reaches for. **It is not that.**
+-- `parse.rs::erwarte_text` joins adjacent literals **with a space**, so `"a""b"` is one name
+-- reading `a b`, and no quote is embedded anywhere.
+--
+-- Measured 2026-09-02, before the repair:
+--
+--     static uint64_t x __attribute__((section("a b"))) … = 0;
+--     as: Error: junk at end of line, first unrecognized character is `b`
+--
+-- The assembler's complaint says it exactly: it read `.section a`, then found a second word.
+-- `messung/ERZEUGERDEFEKTE.md` §6 had recorded the assembler's answer without the cause; the
+-- refusal names it now, and it names the space.
+--
+-- > **The written claim this refutes.** The note beside `emit.rs::kommentartext` had ruled
+-- > this channel closed in so many words: a Gabbro string cannot contain a quote, so nothing
+-- > can escape out of a `section` attribute. That is true of the QUOTE and says nothing about
+-- > the character the join puts there instead. *A closed channel is a claim about every
+-- > character, and it had been checked against one.*
+
+module gift::two_string_literals_join_with_a_space {
+
+static mut x : u64 = 0 section "a""b";
+
+}

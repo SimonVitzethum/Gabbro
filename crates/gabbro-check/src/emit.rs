@@ -1809,7 +1809,36 @@ pub fn emittiere_mit(
                     }
                     _ => None,
                 }) {
-                    Some(n) => n.to_string(),
+                    // **`D14`: this sink was one of the nine `D3` named, and `D3` did not
+                    // reach it** (2026-09-03).
+                    //
+                    // `czahl` grew on 2026-09-03 so that a literal past `2^63 - 1` carries
+                    // the `u` C needs. It sits in the EXPRESSION path, and a `static`
+                    // initialiser does not travel that path: the value arrives here as an
+                    // `i128` out of `konst_zahl` or out of `namen.konstwert`, and was
+                    // written with `to_string()`.
+                    //
+                    //     static mut x : u64 = 18446744073709551615;
+                    //     ->  static uint64_t x __attribute__((unused)) = 18446744073709551615;
+                    //     cc: integer constant is so large that it is unsigned [-Werror]
+                    //
+                    // **The `#define` of a `const` two branches up already writes a suffix**,
+                    // and has since it was built. *Two spellings for one thing, and the
+                    // weaker one decided here* -- `W7`, the same shape `konst_wert` had.
+                    //
+                    // > It takes `czahl`'s boundary and not the `#define`'s. That branch
+                    // > suffixes every non-negative value; `czahl` suffixes only above
+                    // > `2^63 - 1`, and its own note says why -- `-Wconversion` and
+                    // > `-Wsign-conversion` read these same literals, so a suffix added where
+                    // > C does not need one trades this error for a different one.
+                    //
+                    // A negative value keeps `to_string()`: `-5u` is not a smaller spelling
+                    // of `-5`, it is another number. The same sentence stands at the
+                    // `#define`.
+                    Some(n) => match u128::try_from(n) {
+                        Ok(u) => czahl_oder_absage(u, st.name.span, absagen),
+                        Err(_) => n.to_string(),
+                    },
                     None => {
                         weigere(
                             absagen,
@@ -2107,6 +2136,55 @@ pub fn emittiere_mit(
         // > Erzeuger auseinandergehen, gewinnt der Mensch und der Erzeuger sagt `C001`.*
         // > Dieselbe Absage steht seit jeher am `on_exceeded` eines `retry`.
         ItemArt::Reason(r) => {
+            // **`D13`: an enumerator is the one C object whose width the emitter does not
+            // choose** (2026-09-03).
+            //
+            // The lowering above is an `enum`, and C11 6.7.2.2p2 is a CONSTRAINT on it:
+            // *"the expression that defines the value of an enumeration constant shall be an
+            // integer constant expression that has a value representable as an `int`"*. A
+            // value past `INT_MAX` therefore makes this translation unit ill-formed, and the
+            // emitter was writing one.
+            //
+            // **Three complaints over one cause, and the sweep saw all three:**
+            //
+            //     A = 2147483648            cc -Wpedantic: ISO C restricts enumerator values
+            //                               to range of `int`          (13 cases, net 5)
+            //     A = 18446744073709551615  cc -Werror: integer constant is so large that it
+            //                               is unsigned                 (6 cases, shape 2)
+            //     A = 2^127                 cc -Werror: integer constant is too large for
+            //                               its type                   (10 cases, shape 2)
+            //
+            // *One fence closes all three*, because the first one is the real rule and the
+            // other two are what is left when a value sails past it.
+            //
+            // **A suffix would have been the smaller change and it is the wrong one.**
+            // `A = 18446744073709551615u` silences `-Werror` and leaves the constraint
+            // violation exactly where it was -- the failure moves to `-Wpedantic`, which is a
+            // gate fewer readers run. *That is `D6`'s argument, one file over: a repair that
+            // moves the complaint to a quieter tool is not a repair.*
+            //
+            // > **`int` is taken as 32 bits, and that is an assumption, so it is written
+            // > down.** C promises only 16, and a narrower `int` would make this fence
+            // > UNDER-refuse. Every target this back end writes has a 32-bit `int`, and the
+            // > number in the refusal is GCC's own -- read off the message above rather than
+            // > assumed. The safe direction is the one taken: what slips through, `cc` still
+            // > catches.
+            for f in &r.faelle {
+                if f.wert > C_ENUM_MAX {
+                    weigere(
+                        absagen,
+                        f.span,
+                        &format!(
+                            "a `reason` case whose value is {} -- a `reason` lowers to a C \
+                             `enum`, and C11 6.7.2.2 requires every enumerator to be \
+                             representable as an `int`. The largest one is {C_ENUM_MAX}, and \
+                             there is no wider enumerator to write",
+                            f.wert
+                        ),
+                    );
+                    return;
+                }
+            }
             aus.push_str(&format!("\n/* reason {} */\ntypedef enum {{\n", r.name.text));
             for f in &r.faelle {
                 aus.push_str(&format!(
@@ -2386,6 +2464,19 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
 /// this number in its own refusal (*size of array `A` exceeds maximum object size
 /// 9223372036854775807*), which is where the value is read from rather than assumed.
 const C_OBJEKT_MAX: u128 = i64::MAX as u128;
+
+/// **The largest value C lets an ENUMERATOR carry** -- and a `reason` lowers to an `enum`
+/// (`D13`, 2026-09-03).
+///
+/// C11 6.7.2.2p2 is a constraint and not a recommendation: an enumeration constant *"shall
+/// be an integer constant expression that has a value representable as an `int`"*. GCC takes
+/// a wider one as an extension under `-Wall -Wextra -Werror` and names the rule the moment
+/// `-Wpedantic` is added, which is where this number was read off rather than assumed.
+///
+/// **`int` is taken as 32 bits.** C promises only 16, so on a narrower target this fence
+/// under-refuses -- the same safe direction `cbreite` takes, and for the same reason: what
+/// slips through, `cc` still refuses. Every target this back end writes has a 32-bit `int`.
+const C_ENUM_MAX: u128 = i32::MAX as u128;
 
 /// **The bytes this emitter will write into ONE initialiser** -- and the number is its own,
 /// because C has none to lend (`D12`, 2026-09-03).
@@ -3267,7 +3358,79 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     // Registerbreite liegen. Der Befund des Ordners redet ueber Lagen jenseits von 64 in
     // einem `format`; hier ist die Breite erklaert, also ist die Frage entscheidbar -- und
     // eine Lage, die herausragt, ist ein Fehler, kein offener Punkt.
+    // **`D16`/`D17`: a register offset the emitter cannot WRITE, and a register offset it
+    // cannot READ, and until today neither said a word** (2026-09-03).
+    //
+    // The offset becomes C text in `geraetelesung`: `(*(volatile uint64_t *)(d->basis +
+    // <offset>))`. Two things could go wrong there and both did.
+    //
+    // **`D16` -- it could not be written.** The number went in through `{versatz}` with no
+    // spelling rule at all, so `@0x8000000000000000` emitted `d->basis + 9223372036854775808`
+    // and `cc` answered *integer constant is so large that it is unsigned*. **This is the
+    // NINTH sink of `D3`** -- the eight others are named in
+    // `messung/proben/probe-literal-past-the-signed-end.gab`, and this one is not among them
+    // because nothing had ever emitted it: the shared sweep template declares a register that
+    // nothing reads, and a register nobody reads gets no accessor.
+    //
+    // **`D17` -- it could not be read, and the register VANISHED.** `Namen`'s builder records
+    // a register only `if let Some(v) = umg.konst_wert(...)`. An offset that is not a
+    // constant this unit can fold drops the whole entry, `ort` then finds no register of that
+    // name, and the access falls through to the generic suffix walk:
+    //
+    //     device D(basis : Pa) at mmio {{ reg X : u64 @_1 class rw }}   ->   return d->X;
+    //     gabbro pruefe   4 items, 0 errors, 0 hints
+    //     cc              error: `D` has no member named `X`
+    //
+    // *A filter that turns a KNOWN fact into a MISSING one* -- word for word the class
+    // `messung/ERZEUGERSWEEP.md` §9 named for `table count 0`, one construct over. **A rule
+    // with no value does not refuse; it says nothing**, and what it says nothing about here
+    // is a struct member that was never declared.
+    //
+    // > **Both are refused HERE and not at the four reading sites.** `geraetelesung` has no
+    // > span to hang a refusal on and is called from four places; the declaration has one
+    // > span, one refusal per register, and it points at the line the author wrote. *The
+    // > comment beside the width filter in `Namen` already promised this shape of answer --
+    // > "`geraet` refuses it by name a few hundred lines further down" -- and the offset was
+    // > the half of that sentence nobody had written.*
+    //
+    // **ONE lookup for both questions in this function**, hoisted rather than repeated --
+    // the same sentence `ort` carries over its own three: *asking it three times in one
+    // block is three chances to ask it differently.* The parameter list a hundred lines down
+    // reads the same entry.
+    let hier = u
+        .geraete
+        .get(&d.name.text);
     for r in &d.register {
+        if intty(&r.typ).is_some() && breite_von(&r.typ).is_some() {
+            match hier.and_then(|g| g.reg.get(&r.name.text)) {
+                None => {
+                    weigere(
+                        absagen,
+                        r.name.span,
+                        "a `reg` whose `@` offset is not a constant this unit can fold -- \
+                         the offset is the whole of the access (`basis + offset`), and \
+                         without it there is no accessor to write. The access would fall \
+                         through to a plain struct member that no declaration ever made",
+                    );
+                    return;
+                }
+                Some((v, _)) => {
+                    if u128::try_from(*v).ok().and_then(czahl).is_none() {
+                        weigere(
+                            absagen,
+                            r.name.span,
+                            &format!(
+                                "a `reg` at offset {v} -- the offset goes into the C as a \
+                                 literal (`basis + {v}`), and no C integer type holds it. A \
+                                 negative offset has no reading here at all: the base is the \
+                                 device, and there is nothing below it"
+                            ),
+                        );
+                        return;
+                    }
+                }
+            }
+        }
         let breite = breite_oder_absage(&r.typ, absagen) * 8;
         for (name, lage, _) in &r.felder {
             let hi = match lage {
@@ -3288,9 +3451,7 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     // **The declared parameters travel IN the handle** (2026-08-25). `device Virtq(base :
     // Iova, n : u16 in 1 .. QMAX)` says the ring carries its length; without it `q.n` had no
     // lowering and no type. *The declaration named it, the emitter dropped it.*
-    let felder: String = u
-        .geraete
-        .get(&d.name.text)
+    let felder: String = hier
         .map(|g| {
             g.parameter
                 .iter()
@@ -3439,7 +3600,20 @@ fn geraetelesung(
     if matches!(g.raum, Raum::Port) {
         format!("{dev}_{reg}_in({})", handgriff(name, pfeil))
     } else {
-        format!("(*(volatile {breite} *)({name}{pfeil}basis + {versatz}))")
+        // **`D16`: the offset is a LITERAL in the emitted C, so it obeys `czahl`** -- the
+        // same boundary every other literal sink took on 2026-09-03, and the ninth of the
+        // nine `D3` named. Below `2^63` the text is unchanged, byte for byte.
+        //
+        // *The refusal lives at the declaration and not here*, because this function has no
+        // span and four callers; `geraet` refuses a `reg` whose offset has no C spelling
+        // before any of them runs. The fallback below is therefore unreachable, and it is
+        // spelt out rather than unwrapped: a back end that panics on its own invariant has
+        // replaced a wrong number with a worse answer.
+        let stelle = u128::try_from(versatz)
+            .ok()
+            .and_then(czahl)
+            .unwrap_or_else(|| versatz.to_string());
+        format!("(*(volatile {breite} *)({name}{pfeil}basis + {stelle}))")
     }
 }
 
@@ -9309,10 +9483,42 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
                     if let Some((hi, lo, breite_bit)) =
                         dev.and_then(|d| d.felder.get(&f.text)).and_then(|m| m.get(&feld.text))
                     {
-                        let maske: u128 = if *hi - *lo + 1 >= *breite_bit {
-                            u128::MAX >> (128 - breite_bit)
+                        // **`D15`: the mask was computed in `u32`, and `u32::MAX - 0 + 1` is
+                        // not a number** (2026-09-03).
+                        //
+                        // `hi`, `lo` and the width are all `u32` (`Geraet::felder`), so the
+                        // span `hi - lo + 1` was a `u32` add that overflows at the top of
+                        // the range -- and a `+ 1` that overflows is a PANIC in the debug
+                        // build and a wrap in the shipped one. Measured over
+                        // `reg X : u64 @0x0 fields { A @[4294967295:0] }`:
+                        //
+                        //     thread 'main' panicked at emit.rs:9403: attempt to add with
+                        //     overflow
+                        //
+                        // The bit position `4294967295` is itself a truncation -- `*b as
+                        // u32` up in `Namen`, the `konst_zahl` cast one construct over -- and
+                        // the range refusal a few hundred lines up refuses it BY NAME. **The
+                        // panic still happened**, because `command_emit` runs the whole back
+                        // end before it reads the verdict, and this expression is reached
+                        // from a function body while the refusal sits at the declaration.
+                        //
+                        // > *Found by `fuzze-erzeuger.py` net 8*, on 13 rungs of a form this
+                        // > sweep owns -- `reg-bit-hi-leser`, added the same day because
+                        // > the shared template declares a register nothing reads and lowers
+                        // > to a struct with one field.
+                        //
+                        // The arithmetic is `u128` now and the width is clamped into the one
+                        // range a shift is defined over. *Neither is a decision about bit
+                        // positions; both are about a machine word.* The refusal that owns
+                        // the decision is unchanged.
+                        let spanne = u128::from(*hi)
+                            .saturating_sub(u128::from(*lo))
+                            .saturating_add(1);
+                        let breite = u128::from(*breite_bit).clamp(1, 128);
+                        let maske: u128 = if spanne >= breite {
+                            u128::MAX >> (128 - breite)
                         } else {
-                            (1u128 << (*hi - *lo + 1)) - 1
+                            (1u128 << spanne) - 1
                         };
                         return format!("(({wort} >> {lo}) & {maske}u)");
                     }

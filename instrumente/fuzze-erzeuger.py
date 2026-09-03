@@ -43,6 +43,28 @@ the swept value -- a `costs` clause, a bare range type, a ghost `spec fn` -- is 
 the numerator AND from the denominator, and both numbers are printed. *A denominator that
 counts what could never have been measured is `W25`.*
 
+SHAPE 3b -- THE SECOND ORACLE, AND IT NEEDS NO KNOWLEDGE OF THE TRANSFORM
+--------------------------------------------------------------------------
+The oracle above asks whether the source's number is IN the C, and that is the only question
+a literal search can ask. **It is silent wherever the number reaches the artefact
+TRANSFORMED** -- a bit range becomes a mask, an offset becomes an address, a stride becomes a
+multiplier -- and on 2026-09-03 that silence covered 1 584 of 2 784 lowered cases, the larger
+half. *Widening it per form would mean writing down what each form's C ought to look like,
+which is a second emitter beside the emitter* (`W7`).
+
+There is one question about a transformed value that needs no knowledge of the transform:
+
+    TWO SOURCE PROGRAMS THAT NAME DIFFERENT NUMBERS MUST NOT PRODUCE ONE ARTEFACT.
+
+A transform may be anything; it may not be constant. Where it is, the emitter has thrown the
+value away. **It calibrates itself the same way**: a form whose C does not vary with the value
+at all has one fingerprint over every rung and is out of both numbers. And cases are grouped
+by their NUMBER and never by their text, so `16`, `0x10` and `0b10000` agreeing is silence.
+
+*It rediscovers `D7` from a standing start* -- every `entry ... vector` value `konst_zahl`
+cannot read collapses to the same comment -- which is the calibration that matters: an oracle
+that finds nothing at all on a tree with a known live defect is measuring nothing.
+
     ./instrumente/fuzze-erzeuger.py --debug target/debug/gabbro --release target/release/gabbro
 
 BEYOND THE PROPERTY -- four nets, each named, each with its reason
@@ -95,6 +117,7 @@ WHAT THIS TOOL DOES NOT MEASURE
 
 import argparse
 import concurrent.futures
+import hashlib
 import importlib.util
 import os
 import pathlib
@@ -176,9 +199,63 @@ impl fn g(a : u64) -> u64
     return 0;
 }}
 }}""",
+    # ---- A DECLARATION NOTHING USES LOWERS TO NOTHING, and `aligned` was not alone -----
+    #
+    # **Measured 2026-09-03, and the measurement is the tool's own**: 27 of the 64 forms
+    # produce ONE artefact over every rung they lower -- 1 495 cases whose emitted text does
+    # not move when the swept number does. Some of those are compile-time slots and have no
+    # C to move (`costs`, a range type, an `invariant cost`); the rest are this shape.
+    #
+    #     device D(basis : Pa) at mmio {{ reg X : u64 @0x8 class rw }}
+    #     ->  typedef struct {{ volatile uint8_t *basis; }} D;      -- and nothing else
+    #
+    # Forty-four distinct offsets, one artefact. **The emitter writes an accessor for a
+    # register that is READ**, and the shared template reads none -- so `@0x8` and `@0x40`
+    # emit byte-identical C, and no oracle over that text can say a word.
+    #
+    # > *Exactly `aligned-n`'s finding, and it was never only about `aligned`.* The shared
+    # > table is written for the CHECKER, where a bare declaration asks the whole question.
+    # > For the EMITTER a declaration is a promise and the USE is the artefact.
+    #
+    # With a reader the offset lands in the C as itself:
+    #
+    #     return (*(volatile uint64_t *)(d->basis + 8));
+    "reg-versatz-leser": """module f {{
+opaque type Pa = u64;
+device D(basis : Pa) at mmio {{ reg X : u64 @{V} class rw }}
+impl fn g(d : ptr<mmio, rw> D) -> u64
+    effects {{ reads d.X }}
+    costs   <= 4 ops
+{{
+    return d.X;
+}}
+}}""",
+    # **And the bit range lands there TRANSFORMED, which is why this one is worth its own
+    # form and not only its own reader.** `@[3:0]` becomes `& 15u` and `@[15:0]` becomes
+    # `& 65535u` -- the swept number is nowhere in the text, and the literal oracle is blind
+    # to it by construction. *Shape 3b needs no knowledge of the transform*, so this is the
+    # first form where the two oracles do not reach the same cases.
+    "reg-bit-hi-leser": """module f {{
+opaque type Pa = u64;
+device D(basis : Pa) at mmio {{ reg X : u64 @0x0 class rw fields {{ A @[{V}:0] }} }}
+impl fn g(d : ptr<mmio, rw> D) -> u64
+    effects {{ reads d.X }}
+    costs   <= 4 ops
+{{
+    return d.X.A;
+}}
+}}""",
 }
-EIGENE_GUT = {"aligned-im-rumpf": "4"}
-EIGENE_LEITER = {"aligned-im-rumpf": "zahl"}
+EIGENE_GUT = {
+    "aligned-im-rumpf": "4",
+    "reg-versatz-leser": "0x8",
+    "reg-bit-hi-leser": "3",
+}
+EIGENE_LEITER = {
+    "aligned-im-rumpf": "zahl",
+    "reg-versatz-leser": "zahl",
+    "reg-bit-hi-leser": "zahl",
+}
 
 
 # ==========================================================================================
@@ -350,6 +427,38 @@ def ganzzahlen(text):
     return aus
 
 
+def kollisionen(gesenkt, formen):
+    """Shape 3b: within one form, cases whose C is identical while their VALUE is not.
+
+    Returns the same `(case, why)` pairs every other shape carries, one per colliding case,
+    so that its count is comparable with shape 3a's -- both count cases and not classes.
+
+    **The self-calibration is the third line of the loop**, and it is what keeps a
+    compile-time slot out of the denominator: a form whose C never varies with the number
+    has ONE fingerprint over all its rungs and is skipped whole.
+    """
+    aus = []
+    for form in sorted(formen):
+        je = [e for e in gesenkt
+              if e["form"] == form and e.get("wert_zahl") is not None and e.get("c_abdruck")]
+        if len({e["c_abdruck"] for e in je}) < 2:
+            continue
+        nach_abdruck = {}
+        for e in je:
+            nach_abdruck.setdefault(e["c_abdruck"], []).append(e)
+        for abdruck, gruppe in sorted(nach_abdruck.items()):
+            werte = sorted({e["wert_zahl"] for e in gruppe})
+            if len(werte) < 2:
+                continue
+            erst = next(x for x in gruppe if x["wert_zahl"] == werte[0])
+            for e in gruppe:
+                if e["wert_zahl"] == werte[0]:
+                    continue
+                aus.append((e, f"the same C as `{erst['wert']}` -- {len(werte)} distinct "
+                               f"values share one artefact ({abdruck})"))
+    return aus
+
+
 BEZEICHNER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
@@ -412,43 +521,30 @@ def entartet(c):
 #
 # *Each of these was found by this tool on its first full run, not entered from a list.*
 GEBUCHT = {
-    # ---- SIX EMITTER DEFECTS, and the count beside each is per FORM -------------------
+    # ---- SHAPE 2 IS EMPTY, AND THIRTEEN BOOKINGS CAME OUT TO MAKE IT SO ---------------
     #
-    # **`D1` -- a `walk` descends through a `reserved` field, which gets no reader.**
-    # `beispiele/gift/641`. The two `walk` templates of `fuzze-grenzen.py` carry this at
-    # their own known-good baseline, so 130 of that sweep's cases had been lowering to C
-    # that does not compile since 2026-09-02, under a green run.
-    ("NICHT-UEBERSETZBAR", "walk-knoten"): (65, "D1 -- gift/641, `Pte_rest` implicitly declared"),
-    ("NICHT-UEBERSETZBAR", "walk-levels"): (65, "D1 -- gift/641, the same at the other slot"),
+    # **On 2026-09-03 this section held thirteen shape-2 lines and today it holds none.** They were `D1`-`D6`, plus `D13` and `D14`, and the tool reported their
+    # removal itself: eleven came back `BOOKED AND GONE` on the first run after the six
+    # repairs, and three more after `messung/ERZEUGERREST.md` closed the two sinks `D3` had
+    # named and missed. *The removal is therefore measured and not trusted* -- the run
+    # before each deletion printed `booked N, found 0` for exactly the line deleted.
     #
-    # **`D2` -- a `forever` loop is the whole body of a function that returns a value.**
-    # `beispiele/gift/642`. Every accepted rung fails, at every bound: the swept slot has
-    # nothing to do with it, and the finding sits in the FORM.
-    ("NICHT-UEBERSETZBAR", "forever-schranke"):
-        (65, "D2 -- gift/642, `no return statement in function returning non-void`"),
+    # | booking | was | who took it |
+    # |---|---:|---|
+    # | `walk-knoten`, `walk-levels`       | 65, 65 | `D1` -- the descent looks its field up |
+    # | `forever-schranke`                 | 65     | `D2` -- a body with no `return` |
+    # | `ausdruck`, `if-bedingung`, `let-wert`, `zuweisung`, `bank-at` | 6, 10, 6, 6, 6 | `D3` -- `czahl` writes the `u` |
+    # | `embeds-scale`                     | 4      | `D4` -- `u64::try_from` at the multiplier |
+    # | `array-laenge`                     | 12     | `D5` -- the `PTRDIFF_MAX` fence |
+    # | `text-abschnitt`                   | 6      | `D6` -- a `section` name is a name |
+    # | `reason-code`                      | 16     | `D13` -- an enumerator holds an `int` |
+    # | `static-wert`                      | 6      | `D14` -- the eighth sink of `D3` |
     #
-    # **`D3` -- an integer literal written into C with no `u` suffix.** `beispiele/gift/643`.
-    # The widest of the six: nine slots, one missing character.
-    ("NICHT-UEBERSETZBAR", "ausdruck"): (6, "D3 -- gift/643, `return <2^64-1>;`"),
-    ("NICHT-UEBERSETZBAR", "if-bedingung"): (10, "D3 -- gift/643, and D4 at the top rungs"),
-    ("NICHT-UEBERSETZBAR", "let-wert"): (6, "D3 -- gift/643"),
-    ("NICHT-UEBERSETZBAR", "static-wert"): (6, "D3 -- gift/643"),
-    ("NICHT-UEBERSETZBAR", "zuweisung"): (6, "D3 -- gift/643"),
-    ("NICHT-UEBERSETZBAR", "bank-at"): (6, "D3 -- gift/643, inside the bank accessor"),
-    ("NICHT-UEBERSETZBAR", "reason-code"): (16, "D3 -- gift/643, and D4 at the top rungs"),
-    #
-    # **`D4` -- a literal wider than every C integer type reaches the C anyway.**
-    # `beispiele/gift/644`. The 2026-09-02 repair of `konst_zahl` stopped `2^128 - 1` coming
-    # out as `-1`; `2^64` fits `i128` perfectly well, so it is handed over and written.
-    ("NICHT-UEBERSETZBAR", "embeds-scale"): (4, "D4 -- gift/644, `* <2^64>u`"),
-    #
-    # **`D5` -- an array length past C's maximum object size.** `beispiele/gift/645`.
-    ("NICHT-UEBERSETZBAR", "array-laenge"): (12, "D5 -- gift/645, and D3/D4 at the top rungs"),
-    #
-    # **`D6` -- a `section` name copied into a C string with nothing escaped.**
-    # `beispiele/gift/646`. Four shapes, two seen by the compiler and two only by the
-    # assembler -- which is why this tool compiles with `-c` and not `-fsyntax-only`.
-    ("NICHT-UEBERSETZBAR", "text-abschnitt"): (6, "D6 -- gift/646"),
+    # > **The stale bookings were themselves a finding, and the tool made it.** `D1`-`D6`
+    # > landed on 2026-09-03 and their eleven lines stayed; this run therefore returned 1 at
+    # > `master` with nothing wrong in the tree. *A ratchet whose green depends on somebody
+    # > tidying up is a ratchet that will be read as noise* -- which is exactly how a real
+    # > finding at the same place would then be read.
     #
     # ---- THE ORACLE ------------------------------------------------------------------
     #
@@ -459,6 +555,22 @@ GEBUCHT = {
     ("ORAKEL", "entry-vector"): (23, "D7 -- AUDIT-2026-09-02 7.7 item 3"),
     ("ORAKEL", "entry-ist"): (23, "D7 -- the same, at the stack-table index"),
     ("ORAKEL", "entry-nested-bounded"): (23, "D7 -- the same, at the nesting bound"),
+    #
+    # **The SAME `D7`, seen by shape 3b, and the count is 24 and not 23.** The collision
+    # oracle was built on 2026-09-03 and found `D7` from a standing start -- it knows nothing
+    # about `entry`, nothing about `konst_zahl`, and it asks only whether two source numbers
+    # can share one artefact. *That it landed on the one defect the literal oracle already
+    # had is the calibration that matters*: an oracle that finds nothing on a tree with a
+    # known live defect is measuring nothing.
+    #
+    # **The extra case per form is a NEGATIVE rung**, and it is a real widening rather than
+    # a rounding. `-340282366920938463463374607431768211455` is a number the C carries no
+    # trace of, but 3a cannot say so: its question is *does the literal appear*, and for a
+    # negative value the answer is `False` for an honest lowering too. 3b compares two cases
+    # against each other and needs no such assumption.
+    ("KOLLISION", "entry-vector"): (24, "D7 seen a second way -- 22 values, one artefact"),
+    ("KOLLISION", "entry-ist"): (24, "D7 -- the same, at the stack-table index"),
+    ("KOLLISION", "entry-nested-bounded"): (24, "D7 -- the same, at the nesting bound"),
     #
     # ---- BESIDE THE PROPERTY ---------------------------------------------------------
     #
@@ -481,10 +593,32 @@ GEBUCHT = {
     # it still there says `BOOKED AND GONE`. *That is how this ratchet reported its own
     # repair, and it is the only reason the removal is not on trust.*
     #
-    # **`D9` -- a `reason` code past `INT_MAX`.** ISO C restricts an enumerator to the range
-    # of `int` before C2X; GCC widens it silently.
-    ("NOT-ISO", "reason-code"): (13, "D9 -- `ISO C restricts enumerator values to range of int`"),
-    ("NOT-ISO", "text-abschnitt"): (3, "D6 again, seen a second time by -Wpedantic"),
+    # **`D9` -- a `reason` code past `INT_MAX`. GONE on 2026-09-03, and it took `D13` with
+    # it, because they were one defect read by two gates.**
+    #
+    # The line stood at 13 and read *ISO C restricts an enumerator to the range of `int`
+    # before C2X; GCC widens it silently.* `-Wpedantic` was the only reader, so it was
+    # booked here, beside the property rather than inside it -- and 16 further cases at the
+    # same slot were booked under shape 2 as `D3`, a missing `u`.
+    #
+    # **They are one cause.** C11 6.7.2.2p2 is a CONSTRAINT: an enumerator shall have a value
+    # representable as an `int`. Everything past that is ill-formed, and which of the three
+    # complaints `cc` prints depends only on how far past. *A suffix would have silenced the
+    # loud two and left the quiet one*, which is the repair `D6` refused for the same reason.
+    # `emit.rs::C_ENUM_MAX` now refuses at `INT_MAX`, and both bookings went to zero in the
+    # same run. Probe `beispiele/gift/666`.
+    #
+    # > **The lesson is about the BOOKS and not about C.** Two lines, two shapes, two
+    # > sections, one defect -- and the split made it look like a style note beside a
+    # > compile error. *A finding filed under the gate that happened to see it is filed
+    # > under the wrong heading.*
+    #
+    # **`D6` again, seen a second time by `-Wpedantic`.** 3 -> 2 on 2026-09-03: the third was
+    # the trailing backslash, which the `section`-name rule stops before any C is written.
+    # The two that stand are `-Woverlength-strings` -- a string past the 4095 characters
+    # ISO C99 compilers are required to support -- and that is a different complaint about
+    # the same slot, not a leftover of the same one.
+    ("NOT-ISO", "text-abschnitt"): (2, "D6's neighbour -- `-Woverlength-strings`, not the name rule"),
     #
     # **`D10` -- an identifier past C11 5.2.4.1 significance.**
     # `messung/AUDIT-2026-09-02.md` 7.7 item 5. Four of the eight name positions reach C
@@ -563,6 +697,9 @@ def eine_probe(auftrag):
 
     c = da
     e["c_laenge"] = len(c)
+    # Shape 3b -- the collision oracle. The whole text is kept as a digest and never as
+    # text: 2 784 lowered units are about 3 MB, and none of them is ever read back.
+    e["c_abdruck"] = hashlib.sha256(c.encode("utf-8", "replace")).hexdigest()[:16]
 
     # Shape 2 and net 5 -- the same text, two gates.
     e["uebersetzt"], e["cc_text"] = uebersetze(cc, TOR, c, pfad)
@@ -644,6 +781,26 @@ def sprechprobe(cc, arb):
     if quellwert("0xFF") != 255 or quellwert("-2") != -2 or quellwert("0xG") is not None:
         tot.append("`quellwert` does not read the ladder's own rungs")
 
+    # **Shape 3b, all four directions, over cases this test builds by hand.** The oracle is
+    # a grouping and not a comparison, so a wrong `<` or a wrong key would still return a
+    # list -- and an empty list reads exactly like a clean tree.
+    def _f(w, ab):
+        return {"form": "f", "wert": str(w), "wert_zahl": w, "c_abdruck": ab}
+    # It FIRES: two values, one artefact, and a third rung proving the form is not ghost.
+    if len(kollisionen([_f(1, "a"), _f(2, "a"), _f(3, "b")], ["f"])) != 1:
+        tot.append("the collision oracle does not see two values sharing one artefact")
+    # It is SILENT on a ghost form -- one fingerprint over every rung is a compile-time slot.
+    if kollisionen([_f(1, "a"), _f(2, "a"), _f(3, "a")], ["f"]):
+        tot.append("the collision oracle fires on a form whose C never varies -- every "
+                   "`costs` clause and every range type would be a finding")
+    # It is SILENT on three spellings of ONE number, which MUST give one C.
+    if kollisionen([_f(16, "a"), _f(16, "a"), _f(17, "b")], ["f"]):
+        tot.append("the collision oracle fires on one value written twice -- it is grouping "
+                   "by the TEXT and not by the number")
+    # It is SILENT where every value has its own artefact.
+    if kollisionen([_f(1, "a"), _f(2, "b"), _f(3, "c")], ["f"]):
+        tot.append("the collision oracle fires where every value has its own C")
+
     # Net 6 and net 7, both directions.
     if max((len(n) for n in bezeichner("a" * 64 + " b;")), default=0) <= C11_INNEN:
         tot.append("net 6 does not see a 64-character identifier")
@@ -716,9 +873,10 @@ def main():
             print(f"   {z}")
         print("   A net that cannot speak measures nothing (R11). NOTHING below was measured.")
         return 2
-    print("   13 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
-    print("   decimal / hex / signed literals, net 6, net 7, and net 8's DEADLINE over a")
-    print("   process that outlives it and one that does not. All spoke.")
+    print("   17 probes, both directions: the compile gate, `-Wpedantic`, the oracle over")
+    print("   decimal / hex / signed literals, the COLLISION oracle in all four of its")
+    print("   directions, net 6, net 7, and net 8's DEADLINE over a process that outlives")
+    print("   it and one that does not. All spoke.")
 
     alle_formen = dict(g.FORMEN)
     alle_formen.update(EIGENE_FORMEN)
@@ -871,6 +1029,63 @@ def bericht(ergebnisse, formen, n, halt_n, arb, args):
             if not e["traegt_namen"]:
                 orakel.append((e, "the name does not appear in the C at all"))
 
+    # ---- SHAPE 3b -- THE COLLISION ORACLE ---------------------------------------------
+    #
+    # **The oracle above asks whether the source's number is IN the C, and that is the only
+    # question it can ask.** It is silent wherever the number reaches the artefact
+    # TRANSFORMED -- a bit range becomes a mask, an offset becomes an address, a stride
+    # becomes a multiplier -- and on 2026-09-03 that silence covered **1 584 of 2 784**
+    # lowered cases, the larger half. *Widening it per form would mean writing down what each
+    # form's C ought to look like, which is a second emitter beside the emitter* (`W7`), and
+    # a second emitter is exactly the thing that cannot be trusted to disagree.
+    #
+    # There is one question about a transformed value that needs no knowledge of the
+    # transform at all, and it is the one the `konst_zahl` class fails:
+    #
+    #     TWO SOURCE PROGRAMS THAT NAME DIFFERENT NUMBERS MUST NOT PRODUCE ONE ARTEFACT.
+    #
+    # A transform may be anything; it may not be constant. Where it is, the emitter has
+    # thrown the value away -- and the user's number is then in no C, transformed or
+    # otherwise. **`entry ... vector` is the standing instance**: every value `konst_zahl`
+    # cannot read collapses to the same comment, *"vector: not a constant in this unit"*, and
+    # the units are byte-identical.
+    #
+    # **It calibrates itself the same way the literal oracle does, and for the same reason.**
+    # A form whose C does not depend on the swept value AT ALL -- a `costs` clause, a range
+    # type, a ghost `spec fn` -- is not a defect, it is a form whose value is compile-time.
+    # Such a form has NO pair of rungs with different C, so it is out of the numerator and
+    # out of the denominator both (`W25`). A form counts here only where some pair of
+    # accepted rungs demonstrably differs.
+    #
+    # > **Spelling is not value.** The ladders sweep `16`, `0x10` and `0b10000`, which are
+    # > one number in three dresses and MUST give one C. Cases are grouped by `quellwert`
+    # > and never by the text, so the three agreeing is silence and not a finding.
+    kollision = kollisionen(gesenkt, formen)
+    # **The denominator of 3b, and it is a different one from 3a's.** A form is reachable by
+    # the collision oracle where its C demonstrably varies with the number -- the same
+    # self-calibration `kollisionen` applies, computed once here so the coverage block can
+    # print what the fraction is OF. *The two oracles overlap and do not partition*, so the
+    # union is printed as well: adding them would count a case twice.
+    kollisionsfaehig = set()
+    for f in formen:
+        je = [e for e in gesenkt
+              if e["form"] == f and e.get("wert_zahl") is not None and e.get("c_abdruck")]
+        if len({e["c_abdruck"] for e in je}) >= 2:
+            kollisionsfaehig.add(f)
+    kollisionsfaehig_n = sum(1 for e in gesenkt if e["form"] in kollisionsfaehig
+                             and e.get("wert_zahl") is not None and e.get("c_abdruck"))
+
+    def _von_3a(e):
+        return ((e["form"] in orakelbar and e.get("wert_zahl") is not None)
+                or (e["form"] in namen_orakelbar and "traegt_namen" in e))
+
+    def _von_3b(e):
+        return (e["form"] in kollisionsfaehig and e.get("wert_zahl") is not None
+                and e.get("c_abdruck"))
+
+    beide_n = sum(1 for e in gesenkt if _von_3a(e) and _von_3b(e))
+    keins_n = sum(1 for e in gesenkt if not _von_3a(e) and not _von_3b(e))
+
     # ---- the three nets beside the property ------------------------------------------
     nicht_iso, namelang, entart = [], [], []
     for e in gesenkt:
@@ -942,8 +1157,11 @@ def bericht(ergebnisse, formen, n, halt_n, arb, args):
           "a panic, a timeout, an unnamed exit, or a `C001` with no note")
     zeige("2. THE C DOES NOT COMPILE -- cc " + " ".join(TOR), nichtueb,
           "the emitter wrote something plausible, and the compiler is the only reader")
-    zeige("3. THE NUMBER DID NOT SURVIVE -- the oracle", orakel,
+    zeige("3a. THE NUMBER DID NOT SURVIVE -- the literal oracle", orakel,
           "the C compiles and carries a different value than the source named")
+    zeige("3b. TWO SOURCE NUMBERS, ONE ARTEFACT -- the collision oracle", kollision,
+          "the C compiles and does not depend on a number the source named -- and this one "
+          "needs no knowledge of the transform")
     zeige("4. DEBUG AND RELEASE DISAGREE", uneinig,
           "release is what `cargo install` produces; the honest answer is the one nobody ships")
 
@@ -962,7 +1180,8 @@ def bericht(ergebnisse, formen, n, halt_n, arb, args):
     # ---- the booking -----------------------------------------------------------------
     gefunden = {}
     for kennung, liste in (("DRITTE", dritte), ("NICHT-UEBERSETZBAR", nichtueb),
-                           ("ORAKEL", orakel), ("UNEINIG", uneinig),
+                           ("ORAKEL", orakel), ("KOLLISION", kollision),
+                           ("UNEINIG", uneinig),
                            ("NOT-ISO", nicht_iso), ("NAME-LEN", namelang),
                            ("ENTARTET", entart), ("NICHT-GEHALTEN", nicht_gehalten)):
         for e, _ in liste:
@@ -1009,15 +1228,57 @@ def bericht(ergebnisse, formen, n, halt_n, arb, args):
     print(f"   {len(abgelehnt):5d}  refused BY NAME at the emitter")
     ueb = sum(1 for e in gesenkt if e.get("uebersetzt"))
     print(f"   {ueb:5d}  of {len(gesenkt)} lowered cases compile under the gate")
-    print(f"   {orakel_n:5d}  could be ORACLED -- the value is findable in the C at all")
-    print(f"   {len(gesenkt) - orakel_n:5d}  lowered, compiled, and only SHAPE-checked "
-          f"(1, 2, 4) -- no oracle exists for them")
+    print(f"   {orakel_n:5d}  could be ORACLED by 3a -- the value is findable in the C at all")
+    print(f"   {kollisionsfaehig_n:5d}  could be ORACLED by 3b -- the form's C demonstrably "
+          f"varies with the number")
+    print(f"   {beide_n:5d}  by BOTH -- the two oracles overlap, they do not partition")
+    print(f"   {len(gesenkt) - keins_n:5d}  reached by at least one oracle")
+    print(f"   {keins_n:5d}  lowered, compiled, and only SHAPE-checked (1, 2, 4) -- no "
+          f"oracle reaches them")
     print()
     print(f"   forms whose C carries the swept NUMBER: {len(orakelbar)} of {len(formen)}")
     print(f"   forms whose C carries the swept NAME:   {len(namen_orakelbar)} of {len(formen)}")
+    print(f"   forms whose C VARIES with the number:   {len(kollisionsfaehig)} of {len(formen)}")
     print("   the rest are ghost declarations, compile-time clauses, and bare types -- a")
     print("   form whose C never carried the value is out of BOTH numbers, not counted as")
     print("   a clean one (W25).")
+    # **Does 3b reach anything 3a does not? The answer is printed and not assumed.** A
+    # widening that adds no case to the denominator is still a widening -- it asks a
+    # different question about the same cases -- but saying so needs the set difference and
+    # not the two sizes.
+    nur_3b = sorted(kollisionsfaehig - orakelbar - namen_orakelbar)
+    nur_3a = sorted((orakelbar | namen_orakelbar) - kollisionsfaehig)
+    print(f"   reached by 3b and NOT by 3a: {' '.join(nur_3b) if nur_3b else '(none)'}")
+    print(f"   reached by 3a and NOT by 3b: {' '.join(nur_3a) if nur_3a else '(none)'}")
+
+    # ---- WHERE THE UNORACLED HALF ACTUALLY LIVES -------------------------------------
+    #
+    # **The two causes are different and only one of them is a limit of this tool.** A form
+    # whose C never varies with the number is either (a) a compile-time slot -- a `costs`
+    # clause, a range type, an `invariant cost` -- where there is nothing in ANY C to check,
+    # or (b) a DECLARATION NOTHING USES, where the emitter writes no accessor and the value
+    # would have reached the C in a template that read it.
+    #
+    # *(b) is a limit of the TEMPLATE and not of the emitter*, and it is the same finding
+    # `ERZEUGERSWEEP.md` §6 made once for `aligned-n`: the shared table is written for the
+    # CHECKER, where a bare declaration is enough to ask the question. **Naming the forms is
+    # what turns that anecdote into a work list.**
+    # **The question is asked of the C and not of the value**, so a form that sweeps NAMES
+    # is judged the same way as one that sweeps numbers: does its emitted text move at all?
+    stumm = []
+    for f in sorted(formen):
+        je = [e for e in gesenkt if e["form"] == f and e.get("c_abdruck")]
+        if len(je) >= 2 and len({e["c_abdruck"] for e in je}) == 1:
+            stumm.append((f, len(je), len({e["wert"] for e in je})))
+    if stumm:
+        print()
+        print(f"-- FORMS WHOSE LOWERED C IS THE SAME FOR EVERY RUNG: {len(stumm)} --")
+        print("   no oracle over the emitted text can say one word about these, because the")
+        print("   text does not move. Either the slot is compile-time, or the template")
+        print("   declares something nothing USES -- and only the second one is repairable.")
+        for f, wieviel, verschieden in stumm:
+            print(f"   {f:22s} {wieviel:4d} lowered, {verschieden:3d} distinct spellings, "
+                  f"ONE artefact")
 
     print()
     print("-- PER FORM: cases / accepted / lowered / refused C001 / compile / oracled --")
@@ -1058,7 +1319,7 @@ def bericht(ergebnisse, formen, n, halt_n, arb, args):
 
     if args.keep:
         print(f"   generated files kept in {arb}")
-    summe = len(dritte) + len(nichtueb) + len(orakel) + len(uneinig)
+    summe = len(dritte) + len(nichtueb) + len(orakel) + len(kollision) + len(uneinig)
     print()
     print(f"== {len(angenommen) - summe} of {len(angenommen)} accepted cases kept the "
           f"emitter's promise ==")
