@@ -553,7 +553,11 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 188 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 189 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *188 → 189 am 2026-09-03: `messung/ERZEUGERREST.md` kam dazu — der Bericht der
+      `D`-Spur über das, was der Erzeugersweep nach `D1`–`D12` noch findet. Ursache gemessen
+      wie der Eintrag es verlangt: Datei weggenommen, `pruefe-widerruf.py` sagt 188, Datei
+      zurück, 189.*
       *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
       über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
       dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei
@@ -816,7 +820,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3182 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3191 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
       2134, als `manifest.rs` mit zwei Fortsetzungen weniger auskam.* **Die Zahl bewegt sich
@@ -1095,7 +1099,12 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **383 von 383 Ankern** greifen (`--anker`, 2026-09-02 —
+      fällt. Mutationskatalog: **383 von 383 Ankern** greifen (`--anker`, 2026-09-03 —
+      **einer wurde am 2026-09-03 nachgezogen und nicht neu**: `register-ohne-volatile` hing
+      an der Zeile, die `D16` umgeschrieben hat, und `--anker` meldete `382 von 383`. *Der
+      fehlende Anker WAR der Bericht* — eine Mutation, deren Anker nicht mehr im Baum sitzt,
+      misst nichts, und ihre Quote läuft dann über einer schrumpfenden Bezugsgröße —
+      2026-09-02 —
       **362 → 363** durch `measures-darf-nennen-was-es-will` zu `N043`; der ganze Lauf
       fängt 362 von 363, und die eine Überlebende ist die alte
       (`ungelesene-bindung-bekommt-kein-void`) —

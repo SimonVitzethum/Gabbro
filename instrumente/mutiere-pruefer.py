@@ -2274,8 +2274,18 @@ MUTATIONEN = [
     Mutation(
         "register-ohne-volatile",
         "emit.rs",
-        "        format!(\"(*(volatile {breite} *)({name}{pfeil}basis + {versatz}))\")",
-        "        format!(\"(*({breite} *)({name}{pfeil}basis + {versatz}))\")",
+        # **`{versatz}` -> `{stelle}` on 2026-09-03, and the anchor is why anyone noticed.**
+        # `D16` put the offset through `czahl` here -- it went into the C with no `u` and no
+        # fence, the ninth sink of `D3` -- and the local it now reads is spelt differently.
+        # The mutation is unchanged in what it DOES: it strikes the `volatile`, and a register
+        # access that may be optimised away is the defect it measures.
+        #
+        # > *The anchor going missing was the report.* `--anker` came back one short the run
+        # > after the repair, and the entry it named was this one. **A mutation whose anchor
+        # > no longer sits in the tree measures nothing, and its quota then runs over a
+        # > shrinking denominator and reads like coverage.**
+        "        format!(\"(*(volatile {breite} *)({name}{pfeil}basis + {stelle}))\")",
+        "        format!(\"(*({breite} *)({name}{pfeil}basis + {stelle}))\")",
         "C-Absenkung -- ein Registerzugriff darf wegoptimiert werden",
         "code",
     ),
