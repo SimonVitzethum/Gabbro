@@ -3765,6 +3765,37 @@ fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
         1,
         "ein Ruf unter einer Sperre faellt aus der Zaehlung"
     );
+
+    // **And the trap sprang a second time, at `let … else`** (2026-09-03). `rufe_im_block`
+    // walked bodies through `eigene_ausdruecke`, which answers `Vec::new()` for a `LetSonst`
+    // and says why in its own comment: *"`let x = f() else …` carries its call in the source,
+    // not in an `Expr`."* So this count entered the body and missed one of its arms -- and
+    // the loss was SILENT, not small: no `V` line at all for the callee's `requires`.
+    //
+    // Measured over the corpus that day: **101 -> 107 obligation lines**, four of them at
+    // `messung/fragmente/F01.gab`:426, where `revoke` calls `delete_leaf` this way. Two of
+    // those four close `PFLICHTEN.md` F1 rows `236` and `337`, and `337` is the one that file
+    // calls *"the load-bearing statement of `revoke`"*.
+    assert_eq!(
+        v("module t { extern fn nimm(x : u32 in 0 .. 9) -> u32 or Fehler requires x < 9, x > 0 \
+           effects { pure } costs <= 1 ops; \
+           type Fehler = enum { Weg, }; \
+           impl fn ruft(y : u32 in 0 .. 9) -> u32 or Fehler effects { pure } costs <= 8 ops \
+           { let r = nimm(y) else (e) { return e; } return r; } }"),
+        2,
+        "ein Ruf in einem `let … else` ist derselbe Ruf -- und war bis 2026-09-03 unsichtbar"
+    );
+
+    // **The silent half of the same arm:** `let x = <place> else …` unpacks an atomic and
+    // calls NOTHING («B14b»). `als_ruf()` answers `None` there, so this must stay at zero --
+    // otherwise the fix above would have bought its lines by inventing a call.
+    assert_eq!(
+        v("module t { atomic g : u32 publishes nothing relaxed; \
+           impl fn f() -> bool effects { reads g } costs <= 4 ops \
+           { let x = g else (e) { return false; } return true; } }"),
+        0,
+        "ein ausgepackter Ort ruft nichts, also schuldet er am Rufort auch nichts"
+    );
 }
 
 // --- Stufe 6, Teil E ---

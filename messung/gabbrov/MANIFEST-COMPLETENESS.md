@@ -23,6 +23,17 @@ A number that mixes the two is worth nothing. So: the split, with its denominato
 
 ## 2. The split — 63 = 43 + 15 + 5
 
+> **SUPERSEDED on 2026-09-03, and by its own subject rather than by a rewrite.** Every one of
+> the three numbers below was measured against a tree in which F01, F03, F05 and F09 emitted
+> no register. **Three of those four were repaired the same day** and the split did not move,
+> because nothing derived it. The re-derivation, obligation by obligation and held against a
+> live run by `pruefe-manifest.py`, is
+> **[`PFLICHTEN-KORRESPONDENZ.md`](PFLICHTEN-KORRESPONDENZ.md)**: `13 carried, 13 blocked,
+> 12 dropped, 25 no clause`. *This section stays as it stood* — it is the run of the day it
+> was taken, and a running report that edits its own past measurements is not one. §9 below
+> says what moved and why.
+
+
 Search path, three commands, all re-runnable:
 
 ```
@@ -107,6 +118,11 @@ one and in no row of the other.**
 name which side it counts — and why the guard prints both sides rather than a ratio.
 
 ## 4. Which fifteen are dropped, and why the emitter cannot see ten of them
+
+> **SUPERSEDED 2026-09-03** — same reason as §2, and the table below is now a subset of a
+> larger question: with F01, F05 and F09 unblocked the base is 50 open rows, not 15.
+> [`PFLICHTEN-KORRESPONDENZ.md`](PFLICHTEN-KORRESPONDENZ.md) §3 carries all of them.
+
 
 | fragment | dropped rows | the clause | why no line |
 |---|---|---|---|
@@ -407,3 +423,61 @@ guardians 30 → 31 · mutation catalogue 383 → 384 · line continuations 3191
 
 *If a second lane moves any of these for a different file today, the merged truth is one
 higher and is to be re-measured there — not added and not chosen.*
+
+---
+
+## 9. The re-derivation of 2026-09-03 — what moved, and what moved it
+
+**Measured with `./instrumente/pruefe-manifest.py` against a build of this branch on
+`ki-pc-fisch-101:gabbro-manifest` (`cargo build --offline`).**
+
+```
+                     §2 (94c9ac5)   today   what moved it
+blocked upstream          43          13    F01, F05, F09 repaired by other lanes; only F03
+                                            still carries checker errors (27, frozen)
+carried                    5          13    F01 emits a register at all (+5); a `let … else`
+                                            call site became visible (+2); F09's walk
+                                            invariant emits (+1)
+dropped                   15          12    re-derived against the new base, not carried over
+no clause                  —          25    §2 did not separate this term at all
+```
+
+**Three self-corrections came out of the re-derivation, and all three are worth more than the
+numbers.**
+
+### 9.1 `pflichten::rufe_im_block` did not see a `let … else` call
+
+`eigene_ausdruecke` answers `Vec::new()` for a `LetSonst` and says why in its own comment —
+*"`let x = f() else …` carries its call in the source, not in an `Expr`"*. The obligation
+register walked bodies through that function alone, so **every `requires` of a callee reached
+through `let … else` produced no `V` line at all.** `LetSonst::als_ruf()` exists precisely for
+this; nine passes ask it and this one did not. *The fifth instance of that shape this folder
+records, and the first at the register.*
+
+Measured over the corpus: **101 → 107 obligation lines**, four of them at
+`messung/fragmente/F01.gab`:426 (`revoke` calls `delete_leaf`, which carries four `requires`)
+and two at `beispiele/48-grund-mit-erzeuger.gab`. Two of the four close population rows `236`
+and `337` — *"every `victim` is a leaf when `delete_leaf` sees it"*, which `PFLICHTEN.md` calls
+**the load-bearing statement of `revoke`**. It had been absent from the manifest and nothing
+said so.
+
+Booked, not translated away: `dokumente/PLAN.md` *Vorbedingungen am Rufort* **16 → 18**, and
+`TODO.md`'s translation ratchet **7879 → 7875** (the same change rewrote a German docstring).
+
+### 9.2 The guard's outer comparison was a category error
+
+`bev - <manifest lines>` held GabbroV's population — the `L` rows of `PFLICHTEN.md` alone —
+against every line the register emits, `K` and `L` together. **16 of the 27 lines carry a `K`
+row or no row at all**, so the subtraction counted sixteen lines as if each had closed a logic
+obligation. *It reported 36 missing where the mapping says 50.* The guard now derives the
+figure from the mapping and prints the 16 beside it instead of spending it.
+
+### 9.3 A hardcoded split cannot be speech-tested
+
+`43 / 15 / 5` was a `print` statement. The guard now reads the mapping and holds each row
+against the run — **a `BLOCKED` row whose fragment emits a register turns it red**, which is
+exactly the check the stale 43 needed and did not have. Three new speech probes fire in that
+direction, plus one for an unknown state word.
+
+*The gate is unchanged in meaning and stands at `13 of 63`. It got redder, not greener:
+`36 → 50` missing, and the reachable half is now priced.*

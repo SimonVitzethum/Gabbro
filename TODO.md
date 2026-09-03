@@ -556,7 +556,8 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 204 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 205 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *201 → 202 → 205 am 2026-09-03 durch `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` — gemessen, indem die Datei entfernt und wieder hingelegt wurde, nicht addiert.*
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -1145,7 +1146,11 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **387 von 387 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
+      fällt. Mutationskatalog: **388 von 388 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
+      **387 → 388** durch `let-else-ruf-schuldet-keine-vorbedingung`: `pflichten::rufe_im_block`
+      sah einen Ruf in einem `let … else` nicht an, und jede Vorbedingung des Gerufenen fiel
+      damit STILL aus dem Register. Nachgemessen auf dem Server: die Mutation übersetzt und
+      wird von `eine_vorbedingung_am_rufort_wird_gezaehlt` gefangen (139 passed, 1 failed). —
       **383 → 384** durch `eine-art-wird-gezaehlt-und-nicht-gedruckt`: die Druckschleife von
       `pflichten::zeige` läuft über eine FESTE Liste von acht Pflichtarten, während die
       Kopfzeile alle zählt — eine Art, die dort fehlt, steht in der Zahl und in keiner Zeile.
@@ -3874,10 +3879,18 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7879 von 24500 Kommentarzeilen** im Pruefer sind deutsch
- 1072 von  1515 in den Instrumenten
-  286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
+**7875 von 24591 Kommentarzeilen** im Pruefer sind deutsch
+ 1069 von  6496 in den Instrumenten
+  415 von  1448 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
+
+*7879 → 7875 am 2026-09-03, und die vier sind GEBUCHT und nicht wegübersetzt:* der
+Docstring von `pflichten.rs::rufe_im_block` stand deutsch da und wurde englisch neu
+geschrieben, weil dieselbe Änderung ihn ohnehin anfassen musste (der `let … else`-Ruf, der
+dort fehlte). **Die Ratsche darf fallen und nie steigen** — hier fällt sie um vier. *Die
+zwei Nachbarzahlen desselben Blocks standen an diesem Tag ebenfalls falsch da (`1072 von
+1515`, `286 von 914`) und sind gegen denselben Lauf richtiggestellt: sie sind AUSGABE eines
+Kommandos, und eine Ausgabe, die nie lief, ist schlechter als keine.*
 
 *Am 2026-08-31 fiel die erste Zahl von 7900 auf 7891 und die zweite von 16456 auf 16451, und
 zwar OHNE dass ein Kommentar angefasst wurde:* die Zählung nimmt jede Zeile, die mit `//` oder
