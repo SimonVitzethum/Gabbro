@@ -673,3 +673,36 @@ block is three chances to ask it differently.*
 > — which is what `rustfmt` produces for a long chain, and what stood in `geraet` already —
 > escapes it entirely. *Its 45 is a lower bound and reads like a count.* Not moved by this
 > lane; booked here.
+
+---
+
+## 12. The merge, and the collision the mandate predicted happened
+
+**`master` moved from `393d866` to `3b17d9a` while this lane ran, and the two lanes moved the
+SAME number by one, for DIFFERENT files.**
+
+    this lane   188 -> 189   `messung/ERZEUGERREST.md`      -- measured, file out and back
+    master      188 -> 189   `messung/GABBROV-AUDIT.md`     -- measured, file out and back
+
+Each side was correct alone. **The merged tree has 190.** Resolved by re-measuring in the
+merged tree — `pruefe-widerruf.py` says `190 Dateien` — and not by picking a side and not by
+adding.
+
+> **What is different about this one is only luck.** `TODO.md`'s own entry records three
+> earlier instances *"und `git` sah keinen Konflikt"*: two lanes writing the same digit in
+> different places merge silently, both green, and the result is wrong. This time both lanes
+> wrote into the same line, so git reported a text conflict and the number could not be
+> missed. *That is a property of where the prose happened to sit, not of the guard* — and the
+> three that came before show what it looks like when the prose sits elsewhere.
+
+**Everything else was re-measured in the merged tree rather than carried across:**
+
+    cargo test --offline --no-fail-fast   400 passed, 0 failed
+    instrumente/fuzze-erzeuger.py         exit 0 -- 0 unbooked, 0 stale bookings
+    instrumente/zaehle-gifttreffer.py     ALL PASS -- 368 of 436, 8 covered against a mark of 8
+    instrumente/pruefe-zahlen.py          exit 0 -- 83 of 83 entries recomputed
+    instrumente/pruefe-todo.py            ALL PASS
+
+`master`'s changes touch `messung/gabbrov/`, `programmlogik/gabbrov/`, `dokumente/PLAN-HARDWARE.md`
+and `TODO.md`; **nothing under `crates/`, `instrumente/` or `beispiele/`**, so no repair, no
+probe and no booking of this lane had a second author.

@@ -2431,8 +2431,39 @@ Ziel.*
 
 ### B6 — Und die zwei Entscheidungen beim Ordner
 
-- [ ] **`H = 4`** — alle vier hängen an Programmen, die Gabbro nicht annimmt, jede Absage
-      nachgemessen. *Sieben von zehn buchen, oder den vier eine eigene Spalte.*
+- [x] ~~**`H = 4`** — alle vier hängen an Programmen, die Gabbro nicht annimmt, jede Absage
+      nachgemessen. *Sieben von zehn buchen, oder den vier eine eigene Spalte.*~~
+      **ENTSCHIEDEN am 2026-09-03: KEINE der beiden Buchungen. `H = 0`, und es steht VOR der
+      Beta.**
+
+      > Der Ordner hat die dritte Antwort gewählt, die ich nicht angeboten hatte: *nicht
+      > buchen, sondern schließen.*
+
+      **Was das heißt, gemessen.** `H` zählt keine Pflichten, sondern **Fragmente ohne
+      Durchstich** — ohne den Weg emittieren → übersetzen → LAUFEN → gegen einen von Hand
+      geschriebenen Wert vergleichen. Sechs gehen ihn (`F2 F4 F6 F7 F8 F10`), vier nicht:
+
+      | | Prüferstand heute | der Erzeuger sagt zusätzlich |
+      |---|---|---|
+      | **F09** | 1 Fehler — `K001` | `device … at normal` |
+      | **F01** | 3 — 2× `M140`, `N029` | — |
+      | **F05** | 4 — 2× `N046`, `M134`, `N041` | `match` über einen undeklarierten Ruf |
+      | **F03** | **27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009` | `queue` — **«B10»: `traverse` liefert keinen Wert** |
+
+      **`H = 0` ist damit keine Prüfarbeit, sondern Sprach- und Korpusarbeit:** vier
+      Programme, die Gabbro ablehnt, in Programme verwandeln, die Gabbro annimmt.
+      Aufwand **30–60 h**, davon zwei Drittel `F03` — und `«B10»` kann dort eine
+      Konstruktentscheidung erzwingen.
+
+      **Und der Einwand des Werkzeugs bleibt stehen, weil er richtig ist:**
+
+      > *Und was diese Zahl NICHT ist: eine Aussage über Gabbro. Die zehn Fragmente sind nach
+      > ihrer SCHWIERIGKEIT gewählt; `H = 0` über ihnen bliebe **Falle 80**, solange kein
+      > Korpus daneben steht, den beim Bauen niemand angesehen hat.*
+
+      *Die Entscheidung nimmt das in Kauf* — und die Reihenfolge folgt den Kosten:
+      **F09 → F01 → F05 → F03**, mit einem Halt nach F05, weil dann die Frage steht, ob
+      «B10» das Geld wert ist.
 - [ ] **`state`** — nicht bauen, aber die Absage um genau zwei Zeilen ergänzen. **Der einzige
       rote Wächter seit drei Tagen.**
 
