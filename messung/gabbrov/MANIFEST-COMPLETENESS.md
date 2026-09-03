@@ -179,8 +179,10 @@ GABBRO=/tmp/fakegabbro ./messung/gabbrov/manifest-lage.sh      -> exit 2, "NOTHI
 <the awk of PFLICHTEN_SUMME over the same input>               -> exit 3, "nothing summed"
 ```
 
-`cargo test --offline --no-fail-fast`: **401 passed, 0 failed** (400 at `94c9ac5`, plus the
-new `das_register_traegt_seine_fassung_auf_zeile_eins`). `pruefe-zahlen.py` green.
+`cargo test --offline --no-fail-fast` **at this step**: **401 passed, 0 failed** (400 at
+`94c9ac5`, plus the new `das_register_traegt_seine_fassung_auf_zeile_eins`);
+`pruefe-zahlen.py` green. *This is a running report, so each step states the run it was
+measured at — §8 carries the figure for the finished tree.*
 
 ### Step 2 — every reader on both formats, before either moved
 
