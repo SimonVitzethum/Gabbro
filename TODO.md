@@ -1146,7 +1146,11 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **387 von 387 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
+      fällt. Mutationskatalog: **388 von 388 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
+      **387 → 388** durch `let-else-ruf-schuldet-keine-vorbedingung`: `pflichten::rufe_im_block`
+      sah einen Ruf in einem `let … else` nicht an, und jede Vorbedingung des Gerufenen fiel
+      damit STILL aus dem Register. Nachgemessen auf dem Server: die Mutation übersetzt und
+      wird von `eine_vorbedingung_am_rufort_wird_gezaehlt` gefangen (139 passed, 1 failed). —
       **383 → 384** durch `eine-art-wird-gezaehlt-und-nicht-gedruckt`: die Druckschleife von
       `pflichten::zeige` läuft über eine FESTE Liste von acht Pflichtarten, während die
       Kopfzeile alle zählt — eine Art, die dort fehlt, steht in der Zahl und in keiner Zeile.
