@@ -536,10 +536,71 @@ fn ein_requires_am_register_wird_gezaehlt() {
     let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
     let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
     let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
-    let bericht = gabbro_check::pflichten::zeige(&baum, "F04.gab");
+    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
+    assert!(vollstaendig, "E1 gefallen:\n{bericht}");
     for stueck in ["Device promise (`reg` or `transition`)", "reg QUEUE_SIZE requires", "1 device"] {
         assert!(bericht.contains(stueck), "fehlt: {stueck}\n{bericht}");
     }
+    // **The three fields Fassung 2 added, on the one line this file already had.** The
+    // wording comes out of the source and the anchor points at the line it was cut from.
+    assert!(
+        bericht.contains("\tD\tF04.gab:82\topen\tQUEUE_SIZE <= QMAX\n"),
+        "class, anchor, state and text are not all there:\n{bericht}"
+    );
+}
+
+/// **E1 over a unit with FOUR kinds at once, and that is the point of the file choice.**
+///
+/// `AUFTRAG-GABBROV.md` §5: *"E1 is wired into the tool, not hung beside it… A tool that does
+/// not check its own completeness has none."* The check inside `zeige` compares the records it
+/// wrote against the obligations `sammle` counted, and it exists for one shape: the print loop
+/// walks a **fixed list of eight kinds**, so a ninth added to `Art` and forgotten there is
+/// counted in the header line and printed in no line.
+///
+/// The sibling test above runs on `F04.gab`, which carries `D` obligations and nothing else --
+/// dropping any other kind from the list would pass there. `01-tabelle.gab` carries `E`, `N`,
+/// `V` and `S`, so this test bites wherever the omission is. *A completeness check tested over
+/// a unit with one kind is a completeness check tested over nothing.*
+#[test]
+fn e1_haelt_ueber_einer_datei_mit_vier_arten() {
+    let p = wurzel().join("01-tabelle.gab");
+    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, _) = gabbro_syntax::lies("01-tabelle.gab", &q);
+    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "01-tabelle.gab", &q);
+    assert!(vollstaendig, "E1 gefallen:\n{bericht}");
+    let zeilen = bericht.lines().filter(|z| z.starts_with("obligation\t")).count();
+    assert_eq!(zeilen, 13, "13 obligations, {zeilen} lines:\n{bericht}");
+    for marke in ["\tE\t", "\tN\t", "\tV\t", "\tS\t"] {
+        assert!(bericht.contains(marke), "kind {marke} missing:\n{bericht}");
+    }
+}
+
+/// **The version field, and it stands on LINE ONE** (2026-09-03).
+///
+/// `AUFTRAG-GABBROV.md` §4 puts the order of a format change in three steps, and the first is
+/// this one: *"every reader refuses an unknown version instead of misreading it. Without this,
+/// every format change is a silent break."* `CLAUDE.md` holds the measured instance -- seven
+/// guards read a document, four went **silently blind** when it moved.
+///
+/// This test is the first of the three readers. The other two are
+/// `instrumente/pruefe-zahlen.py` (the corpus sum) and `messung/gabbrov/manifest-lage.sh`
+/// (the completeness measurement); both gained the same gate on the same day.
+///
+/// **It pins the LINE and not only the presence.** A version field a reader has to search for
+/// is one a reader can fail to find in a format it does not know -- and then it is back to
+/// guessing.
+#[test]
+fn das_register_traegt_seine_fassung_auf_zeile_eins() {
+    let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
+    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
+    let (bericht, _) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
+    let erste = bericht.lines().next().unwrap_or("");
+    assert_eq!(
+        erste,
+        format!("-- manifest-version {}", gabbro_check::pflichten::MANIFESTFASSUNG),
+        "the version field is not the first line:\n{bericht}"
+    );
 }
 
 #[test]

@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 191 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 193 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -572,6 +572,12 @@ darunter.
       `D`-Spur über das, was der Erzeugersweep nach `D1`–`D12` noch findet. Ursache gemessen
       wie der Eintrag es verlangt: Datei weggenommen, `pruefe-widerruf.py` sagt 189, Datei
       zurück, 190.*
+      *190 → 191 am 2026-09-03: `messung/gabbrov/MANIFEST-COMPLETENESS.md` kam dazu — der
+      laufende Bericht der Manifestbahn, die Aufteilung der 63 in 43 fremd blockierte, 15
+      fallengelassene und 5 getroffene. Ursache gemessen wie der Eintrag es verlangt: Datei
+      weggenommen, `pruefe-widerruf.py` sagt 190, Datei zurück, 191. **Die Zahl steht hier
+      aus dem Lauf und nicht aus einer Addition** — wenn eine zweite Bahn heute ebenfalls
+      eine Datei bringt, ist die Wahrheit im Merge 192 und wird dort neu gemessen.*
       *182 → 183 am 2026-09-03: `messung/BERICHT-ERZEUGERHALT.md` kam dazu — der Bericht
       über die Stellen, an denen die Ausgabe des Erzeugers mit einem WERT wächst statt mit
       dem Programmtext (eine von 54). Ursache gemessen wie der Eintrag es verlangt: Datei
@@ -834,8 +840,9 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **3192 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute **3204 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
       Zeugnisregister nachzog und drei weitere überlange Zeilen umbrachen, und wieder auf
       2134, als `manifest.rs` mit zwei Fortsetzungen weniger auskam.* **Die Zahl bewegt sich
@@ -1114,7 +1121,16 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **383 von 383 Ankern** greifen (`--anker`, 2026-09-03 —
+      fällt. Mutationskatalog: **384 von 384 Ankern** greifen (`--anker`, 2026-09-03 —
+      **383 → 384** durch `eine-art-wird-gezaehlt-und-nicht-gedruckt`: die Druckschleife von
+      `pflichten::zeige` läuft über eine FESTE Liste von acht Pflichtarten, während die
+      Kopfzeile alle zählt — eine Art, die dort fehlt, steht in der Zahl und in keiner Zeile.
+      *Genau die Gestalt, für die `E1` im Werkzeug steht;* die Bilanz-`debug_assert` daneben
+      sieht sie nicht, weil die Kopfzeile weiter aufgeht. Nachgemessen: die Mutation übersetzt
+      und wird gefangen. — **und ein zweiter wurde am 2026-09-03 nachgezogen**:
+      `geraetezusage-wird-nicht-gezaehlt` pinnte `if r.requires.is_some()`, und die Zeile
+      braucht seit Fassung 2 des Manifests die Spanne der Klausel; `--anker` meldete
+      `382 von 383` am selben Tag und mit Namen —
       **einer wurde am 2026-09-03 nachgezogen und nicht neu**: `register-ohne-volatile` hing
       an der Zeile, die `D16` umgeschrieben hat, und `--anker` meldete `382 von 383`. *Der
       fehlende Anker WAR der Bericht* — eine Mutation, deren Anker nicht mehr im Baum sitzt,

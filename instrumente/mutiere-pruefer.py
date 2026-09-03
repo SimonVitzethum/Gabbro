@@ -222,13 +222,38 @@ MUTATIONEN = [
     # **A clause that parses and is dropped is the folder's most-paid-for shape.** Until today
     # `RegDecl::requires` was read by no pass at all. Counting it is the whole fix -- and
     # without an anchor the counting could be removed again in silence.
+    #
+    # *Anchor carried over 2026-09-03, when the manifest grew its text field:* the test
+    # `if r.requires.is_some()` became `if let Some(p) = &r.requires`, because the line now
+    # needs the clause's span and not only its presence. **`--anker` reported it the same
+    # day and by name** -- which is what the mode is for; a mutation whose anchor has moved
+    # measures nothing and reads like coverage.
     Mutation(
         "geraetezusage-wird-nicht-gezaehlt",
         "gabbro-check/src/pflichten.rs",
-        "                    if r.requires.is_some() {",
-        "                    if false {",
+        "                    if let Some(p) = &r.requires {",
+        "                    if let Some(p) = None::<&Pred> {",
         "«B26» -- ein `requires` am Register verschwindet wieder still; die Klausel parst "
         "und niemand zaehlt sie",
+    ),
+    # -- pflichten.rs: a kind counted and not printed (2026-09-03) -------------------------
+    #
+    # **The shape `E1` inside `zeige` exists for.** The print loop walks a FIXED list of eight
+    # kinds while the closing line counts all of them, so a kind missing from the list is
+    # counted in the header and written in no line -- *the silent loss `SPRACHE.md` §15
+    # promises against, inside the artefact that carries the promise.* The balance
+    # `debug_assert` a few lines below does not see it: the header still adds up, the body is
+    # short.
+    #
+    # Without an anchor here the completeness check could be removed again in silence, which
+    # is the same argument the device promise above carries.
+    Mutation(
+        "eine-art-wird-gezaehlt-und-nicht-gedruckt",
+        "gabbro-check/src/pflichten.rs",
+        "    for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,",
+        "    for art in [Art::Verfeinerung, Art::Erhaltung, Art::Fremdpflicht,",
+        "`E1` -- eine Pflichtart steht in der Kopfzahl und in keiner Zeile; das Manifest "
+        "meldet sich vollstaendig und ist es nicht",
     ),
     # -- kosten.rs: the branch prefix (2026-08-24) ---------------------------------------
     #

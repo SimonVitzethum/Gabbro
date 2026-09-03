@@ -343,7 +343,20 @@ fn main() -> std::process::ExitCode {
                 } else if lean {
                     print!("{}", gabbro_check::lean::module(&baum, datei));
                 } else {
-                    print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
+                    // **E1 is wired into the run**, `AUFTRAG-GABBROV.md` §5: the emitter
+                    // ends by comparing the lines it wrote against the obligations it
+                    // counted, and a divergence is a FAILURE of the run and not a note in
+                    // it. *A tool that does not check its own completeness has none.*
+                    let (text, vollstaendig) =
+                        gabbro_check::pflichten::zeige(&baum, datei, &quelle);
+                    print!("{text}");
+                    if !vollstaendig {
+                        eprintln!(
+                            "gabbro pflichten: {datei} -- E1 failed, the register is short of \
+                             its own count"
+                        );
+                        schlecht = true;
+                    }
                 }
             }
             if schlecht {

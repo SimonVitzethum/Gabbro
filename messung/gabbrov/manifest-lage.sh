@@ -30,12 +30,32 @@ if [ ! -e "${FRAGMENTS[0]}" ]; then
     exit 2
 fi
 
+# **The version gate -- and it stands BEFORE anything is counted** (2026-09-03).
+#
+# `pflichten.rs::MANIFESTFASSUNG` writes `-- manifest-version N` on line one. A reader that
+# does not look at it does not fail on a newer format; it MISREADS one, and here that would
+# look like a manifest that simply holds fewer lines. *That is the finding this script exists
+# to report, so it is exactly the value it must not be able to fake.*
+#
+# **Widened to `1 2` BEFORE the emitter wrote a 2**, and that order is the rule itself
+# (`AUFTRAG-GABBROV.md` §4). What this script reads -- `no register` and the
+# `== N obligations` header -- is unchanged across the two formats, so both parse to the same
+# figure here; the gate is for the change after this one.
+FASSUNGEN_BEKANNT="1 2"
+
 echo "== \`gabbro pflichten\` over the ten fragments =="
 tot=0
 ohne=0
 for f in "${FRAGMENTS[@]}"; do
     n=$(basename "$f")
     out=$("$G" pflichten "$f" 2>&1)
+    fassung=$(echo "$out" | sed -n 's/^-- manifest-version \([0-9][0-9]*\)$/\1/p' | head -1)
+    if [ -n "$fassung" ] && ! echo " $FASSUNGEN_BEKANNT " | grep -q " $fassung "; then
+        echo "ABBRUCH: \`$n\` carries manifest version $fassung; this reader knows"
+        echo "  $FASSUNGEN_BEKANNT. NOTHING was measured -- a reader that guesses at an unknown"
+        echo "  format reports a number, and a number from a misread format is worse than none."
+        exit 2
+    fi
     if echo "$out" | grep -q 'no register'; then
         errs=$(echo "$out" | grep -c '^error:')
         ohne=$((ohne + 1))

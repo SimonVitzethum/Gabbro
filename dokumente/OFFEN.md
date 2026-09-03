@@ -57,7 +57,24 @@ evaluable from the outside.**
 
 ---
 
-## O3 — The manifest does not carry the obligation text
+## O3 — ~~The manifest does not carry the obligation text~~ — **it does since 2026-09-03, and the half that stays open is a different one**
+
+> **Carried out, and the counter-check moved the entry rather than closing it.**
+> `MANIFESTFASSUNG = 2` writes `obligation <name> <class> <anchor> <state> <text>` per line,
+> in the order `AUFTRAG-GABBROV.md` §4 demands: version field, then all three readers on
+> both formats, then the format. Over the whole corpus **110 of 110 lines carry a text and
+> an anchor**, none truncated, none empty.
+>
+> **What the counter-check found is that closing it does not close the ratchet.** Swap the
+> two conjuncts and the two manifests now differ — *in the text column only*. The name
+> `aushaengen :: ensures #1` and the anchor `:91` are unchanged, so **a ratchet over NAMES
+> still cannot see the exchange.** §15's sentence *"the ratchet runs over names; exchange is
+> visible"* has a second half that does not follow from its first: what is visible is the
+> LINE. Whoever wires the ratchet takes the line, or the name has to become derived.
+>
+> Working, numbers and the five counter-checked rows: `messung/gabbrov/MANIFEST-COMPLETENESS.md`.
+
+**The original entry, kept because it is what was measured:**
 
 `SPRACHE.md` §15 promises *"Nothing is silently lost"* and lets the ratchet run over **names**.
 The emitted manifest carries `aushaengen :: ensures #1` — a function name, a clause kind and an
@@ -71,8 +88,9 @@ ratchet runs over does not identify the obligation it names**, and nothing repor
 
 | | |
 |---|---|
-| **what would close it** | `AUFTRAG-GABBROV.md` §4 — version field first, all readers on both formats, then the format |
-| **material already present** | `gabbro pflichten --lean` carries the text as a datum (`post_duty_2 : Expr`) |
+| **what would close it** | ~~`AUFTRAG-GABBROV.md` §4 — version field first, all readers on both formats, then the format~~ — **done 2026-09-03, in that order** |
+| **material already present** | `gabbro pflichten --lean` carries the text as a datum (`post_duty_2 : Expr`) — *and it was measured to be a dropped field, not a missing computation, before anything was designed* |
+| **what stays open** | the ratchet's subject. It runs over the NAME, and the name is unchanged by the exchange; a ratchet over the manifest LINE sees it. **Not repaired here, because it is a decision about §15's own sentence and not a defect of the emitter** |
 
 ---
 
