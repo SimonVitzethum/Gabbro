@@ -316,3 +316,30 @@ wanted by nobody and not cheap.*
 
 **Verdict: do not build «B10». The demand is zero, criterion 2 falls, and the owner said in
 advance that this is the answer and not a failure.**
+
+---
+
+## 8. One number moved, and it is this report's own file
+
+The full `abnahme.py` came back **4 red of 51**, not 3. The fourth was
+`pruefe-zahlen.py`, and the cause was **this document**:
+
+    python3 instrumente/pruefe-widerruf.py | grep 'Widerrufene Saetze'
+    # with    messung/BERICHT-B10.md:  13 Eintraege, 194 Dateien
+    # without messung/BERICHT-B10.md:  13 Eintraege, 193 Dateien
+
+`TODO.md`:556 carried `**13 Widerrufe** über 193 Dateien`. Raised to **194** from the
+command, not by adding one.
+
+> **And the line that had to change is the line that documents this exact fault.** Three
+> lines below it stands *"ZUM VIERTEN UND FUENFTEN MAL … am 2026-09-03 zogen die
+> GabbroV-Spur and the Erzeugerrest-Spur beide 188 → 189, jede fuer IHRE eine Datei, jede
+> einzeln gruen. Die gemessene Wahrheit im zusammengefuehrten Baum ist 190."*
+>
+> **So: at merge, re-run `pruefe-widerruf.py` and take ITS figure.** If another lane also
+> added a file, the merged truth is 195 and neither lane's 194 is right. *Do not pick, do
+> not add.*
+
+    ssh ki-pc-fisch-101 'cd gabbro-b10 && python3 instrumente/abnahme.py'
+    # before the correction: ! ABNAHME ROT: 4 von 51 -- grammatiktafel, manifest, zahlen, karten
+    # after:                   pruefe-zahlen.py EXIT=0, 83 von 83 Eintraegen nachgerechnet
