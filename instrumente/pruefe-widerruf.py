@@ -236,6 +236,41 @@ WIDERRUFE = [
                 "abgewiesen sind nur `requires`/`ensures`, und das begruendet `N037`",
          probe=("Er traegt kein `requires`, kein `ensures`, kein `effects`.",
                 "It carries no `requires`, no `ensures`, no `effects`.")),
+    # **WG1, entered 2026-09-03 -- and it is the first entry here whose revoked sentence was
+    # never refuted by a MEASUREMENT.**
+    #
+    # Every other entry above was overtaken by a build or a count: `opaque` bites now, `fnptr`
+    # is built, P6 measured the blocker. `G1 does not fire` was withdrawn for the opposite
+    # reason -- **nothing can confirm or refute it, because the gate it clears has no number.**
+    # `GABBROV.md` §11 states the condition as *"a NOTEWORTHY part of the 66 L obligations"*.
+    #
+    # > *A sentence that cannot be checked is worse placed in a report than a wrong one: a
+    # > wrong one has a next reader who can catch it.*
+    #
+    # **And no threshold was supplied afterwards.** One chosen with `56 of 66` already on the
+    # table is chosen to clear it (`R2`). What replaces the gate are `E1` and `E2` of
+    # `AUFTRAG-GABBROV.md` §1, and their whole force is that they stand BEFORE their runs.
+    #
+    # The pattern is pinned to `G1` and not to the phrase, because the tree carries four other
+    # legitimate `does not fire` sentences (`BEWEIS.md`:107 about an assumption, `D5`'s refusal
+    # in two reports, and a `TODO.md` line about the Lean channel). *A pattern that catches a
+    # true sentence teaches the next reader to disable it.*
+    dict(kennung="WG1",
+         # Three word orders, because German can put the negation after the subject while
+         # English cannot: name-then-verb, verb-then-name-then-negation, and verb-then-name.
+         muster=r"`?G1`?(?![0-9])[^\n]{0,45}(?:feuert (?:also |damit )?nicht|feuert NICHT"
+                r"|does not fire|is not tripped|feuert weniger|fires less)"
+                r"|feuert\s+`?G1`?(?![0-9])[^\n]{0,12}nicht"
+                r"|(?:feuert (?:also )?nicht|does not fire)[^\n]{0,20}`?G1`?(?![0-9])",
+         datum="2026-09-03",
+         grund="`G1`s Bedingung ist *\"a NOTEWORTHY part of the 66\"* -- keine Zahl, "
+               "also kann keine Zaehlung sie freisprechen und keine sie ausloesen; "
+               "`dokumente/HISTORIE.md`, Eintrag vom 2026-09-03",
+         ersatz="56 von 66 (nach der Umbuchung 55 von 63) stehen als `Prop` da -- das ist "
+                "die Messung; ein Urteil ueber `G1` ist daraus nicht ableitbar, und die "
+                "Kriterien sind ab jetzt `E1` und `E2` aus `AUFTRAG-GABBROV.md` §1",
+         probe=("Damit feuert `G1` nicht.",
+                "So `G1` does not fire.")),
 ]
 
 # Welche Dateien der Waechter liest. TODO.md und DONE.md stehen mit drin: ein widerrufener

@@ -18,7 +18,17 @@ L total                    66
 demands on the fragment    3, over 8 rows (and §7 records ONE of the three)
 ```
 
-**`G1` does not fire** — but the ten are not ten accidents. They are four classes, and two
+> **CORRECTED 2026-09-03, and the correction is to this file's own sentence.** The line here
+> read ~~**`G1` does not fire**~~. It should not have: `G1`'s condition is *"a noteworthy part
+> of the 66"*, which is not a number, so **no count can clear it and none can trip it**. That
+> was a judgement in a measurement's clothes, in a file whose whole subject is the difference.
+> **No threshold is being supplied after the fact** — one chosen with 56 of 66 already on the
+> table would be chosen to clear it (`R2`). `dokumente/GABBROV.md` §11 carries the withdrawal;
+> `AUFTRAG-GABBROV.md` §1 carries the two criteria that replace it, and they were written down
+> before the runs they judge. *The count below is untouched by this; only the verdict over it
+> is gone.*
+
+The ten are not ten accidents. They are four classes, and two
 of the four are not an expressiveness gap at all:
 
 | | rows | | what it is |

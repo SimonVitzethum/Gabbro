@@ -504,8 +504,156 @@ def haengend(probe=None, still=False, locker=False):
     print("solange kein Korpus daneben steht, den beim Bauen niemand angesehen hat.")
 
 
+# **GabbroV's obligation population -- the DENOMINATOR, out of a command** (2026-09-03).
+#
+# `AUFTRAG-GABBROV.md` §2.2 asks for the rebooking of the three `progress` rows to land
+# **here and not in the table**, and it gives the reason from 2026-08-20: three numbers stood
+# over one thing and the one WITH the search path was the wrong one. The remedy is not to
+# distrust search paths but to make sure exactly one place defines the population.
+#
+# **`L` does NOT move, and that is measured elsewhere.** `PFLICHTEN.md`'s third column asks
+# *who* the statement is about -- machine or subject -- and these three are about the device,
+# the client and the token. They stay `L`. What moves is a different population: the rows
+# GabbroV is supposed to CHECK, which is the `L` rows minus the rows that are not obligations
+# at all. `messung/GABBROV-V2.md` §1.6 carries that argument; this function carries the count.
+#
+# THE SEARCH PATH, and it has TWO SIDES that have to meet
+# -------------------------------------------------------
+#   source side  `messung/fragmente/F*.gab` -- every real `progress <name>` clause. These are
+#                the executable fragments the checker reads, not the frozen prose of
+#                `FRAGMENTE.md`, whose line anchors are from revision `708beed` and no longer
+#                point where they say.
+#   table side   `dokumente/PFLICHTEN.md` -- every `L` row whose fourth column names one of
+#                those names.
+#
+# **If the two sides disagree the mode REFUSES.** A `progress` clause with no rebooked row
+# means a row was missed; a rebooked row with no clause means a name was invented. *Either way
+# the number would be a subtraction rather than a measurement, and the mandate asked for the
+# second.*
+#
+# The rule the source side rests on is not prose but a pass: `schleifen.rs`:221 raises `S003`
+# when a `progress` name resolves to no declared assumption and `S004` when that assumption is
+# unfalsifiable. **So a legal `progress` name is a declared assumption by construction** -- the
+# mode asserts it anyway, because an assertion that never fires costs nothing and an
+# unchecked one costs a wrong number.
+PROGRESS_KLAUSEL = re.compile(r"^\s*progress\s+([a-z_][a-z_0-9]*)\s*$")
+ASSUME_ZEILE = re.compile(r"^\s*assume\s+([a-z_][a-z_0-9]*)\b")
+
+
+def _progressnamen(zusatz=None):
+    """The `progress` names of the ten fragments, with the file they stand in.
+
+    `zusatz` is the speech test's handle: `(dateiname, text)` is treated as an eleventh
+    fragment source, so an invented clause can be pushed in without touching the tree.
+    """
+    wurzel = Path(__file__).resolve().parent.parent / "messung" / "fragmente"
+    quellen = [(q.name, q.read_text(encoding="utf-8")) for q in sorted(wurzel.glob("F*.gab"))]
+    if zusatz is not None:
+        quellen.append(zusatz)
+    namen, angenommen = {}, set()
+    for name, text in quellen:
+        for z in text.splitlines():
+            m = PROGRESS_KLAUSEL.match(z)
+            if m:
+                namen[m.group(1)] = name
+            a = ASSUME_ZEILE.match(z)
+            if a:
+                angenommen.add(a.group(1))
+    return namen, angenommen
+
+
+def gabbrov(zusatz=None, tafelprobe=None, still=False):
+    """**GabbroV's obligation population, from both sides at once.**
+
+    Returns `(l, ausgebucht, bevoelkerung, namen, fehlend, ueberzaehlig)`.
+    """
+    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.md"
+    text = quelle.read_text(encoding="utf-8")
+    if tafelprobe is not None:
+        text = text.replace(tafelprobe[0], tafelprobe[1], 1)
+    namen, angenommen = _progressnamen(zusatz)
+    # The table side. Same row parser as `spalten` -- one splitter, one notion of a row.
+    frag, l, getroffen = None, 0, {}
+    for z in text.splitlines():
+        if z.startswith("# "):
+            m = re.match(r"^# (F\d+)", z)
+            frag = m.group(1) if m else None
+        if frag is None or not z.startswith("|"):
+            continue
+        c = _zellen(z.strip())
+        if len(c) != 6 or c[0] != "" or c[-1] != "":
+            continue
+        if not re.sub(r"[^A-Za-z]", "", c[3]).startswith("L"):
+            continue
+        l += 1
+        for n in namen:
+            if n in c[4]:
+                getroffen.setdefault(n, []).append(c[1])
+    fehlend = sorted(n for n in namen if n not in getroffen)
+    ueberzaehlig = sorted(n for n, wo in getroffen.items() if len(wo) > 1)
+    ausgebucht = sum(len(wo) for wo in getroffen.values())
+    if not still:
+        print("== GabbroV's obligation population -- the two sides, and they have to meet ==")
+        print(f"  `L` rows in `PFLICHTEN.md`                    {l:>3}")
+        print(f"  of these discharged by the assumption layer   {ausgebucht:>3}")
+        print(f"  ------------------------------------------------")
+        print(f"  GabbroV obligation population                 {l - ausgebucht:>3}")
+        print()
+        print(f"  `progress` clauses in `messung/fragmente/`    {len(namen):>3}")
+        for n in sorted(namen):
+            wo = ", ".join(getroffen.get(n, []))
+            print(f"     {n:<34} {namen[n]:<9} anchor {wo or 'NO ROW'}")
+        print()
+        print("**And what this number is NOT:** a statement that the three are discharged.")
+        print("They are assumptions with a falsifier, and a falsifier is a promise that")
+        print("someone COULD refute them -- not that anyone has. *They leave GabbroV's")
+        print("population because they are not obligations, not because they are settled.*")
+    return l, ausgebucht, l - ausgebucht, namen, fehlend, ueberzaehlig
+
+
 if __name__ == "__main__":
-    if "--spalten" in sys.argv:
+    if "--gabbrov" in sys.argv:
+        # **The speech test, and it runs in THREE directions** (R14), because this mode has
+        # two sides and a mismatch between them is the thing it exists to catch.
+        l0, a0, b0, n0, fehlend, ueberzaehlig = gabbrov(still=True)
+        if fehlend:
+            print(f"ABBRUCH: `progress` ohne umgebuchte Zeile: {', '.join(fehlend)}.\n"
+                  f"  Die Quellseite kennt einen Namen, den die Tafel nicht nennt -- die\n"
+                  f"  Bevoelkerung waere zu GROSS, und zwar still.", file=sys.stderr)
+            sys.exit(2)
+        if ueberzaehlig:
+            print(f"ABBRUCH: ein Name steht in mehr als einer `L`-Zeile: "
+                  f"{', '.join(ueberzaehlig)}.", file=sys.stderr)
+            sys.exit(2)
+        namen, angenommen = _progressnamen()
+        nicht_erklaert = sorted(n for n in namen if n not in angenommen)
+        if nicht_erklaert:
+            print(f"ABBRUCH: `progress` ohne `assume`: {', '.join(nicht_erklaert)}.\n"
+                  f"  `S003` sollte das im Pruefer abweisen -- entweder hat sich die Regel\n"
+                  f"  bewegt oder dieser Suchweg liest die falschen Dateien.", file=sys.stderr)
+            sys.exit(2)
+        print(f"== Sprechprobe: ok (jeder der {len(n0)} `progress`-Namen ist ein erklaertes "
+              f"`assume`) ==")
+        # ONE -- an invented `progress` clause with no row must REFUSE, not shrink the number.
+        erfunden = ("F99-sprechprobe.gab",
+                    "assume sprechprobe_erfunden\n        progress sprechprobe_erfunden\n")
+        _, _, _, n1, f1, _ = gabbrov(zusatz=erfunden, still=True)
+        if len(n1) != len(n0) + 1 or f1 != ["sprechprobe_erfunden"]:
+            print("SPRECHPROBE GESCHEITERT: eine erfundene `progress`-Klausel ohne Zeile "
+                  "wird NICHT bemerkt.", file=sys.stderr)
+            sys.exit(2)
+        print("== Sprechprobe: ok (eine erfundene `progress`-Klausel ohne Tafelzeile faellt) ==")
+        # TWO -- taking one rebooking out of the table must lower the count by exactly one.
+        eines = sorted(n0)[0]
+        _, a2, b2, _, f2, _ = gabbrov(tafelprobe=(eines, "SPRECHPROBE_ENTFERNT"), still=True)
+        if (a2, b2, f2) != (a0 - 1, b0 + 1, [eines]):
+            print(f"SPRECHPROBE GESCHEITERT: eine entfernte Umbuchung bewegt die Zahl nicht "
+                  f"({a0}/{b0} -> {a2}/{b2}).", file=sys.stderr)
+            sys.exit(2)
+        print(f"== Sprechprobe: ok (eine entfernte Umbuchung hebt die Bevoelkerung "
+              f"{b0} -> {b2} und wird als fehlend GEMELDET) ==\n")
+        gabbrov()
+    elif "--spalten" in sys.argv:
         # **The speaking probe, both ways.** An invented `L` row must raise `L` by one and
         # leave `K` alone -- otherwise the split answers something other than the rows.
         k0, l0 = spalten(still=True)

@@ -5,8 +5,14 @@ is a proposal.
 
 > **V1 is no longer a proposal.** The first measurement this document asks for has been made
 > — `messung/GABBROV-V1.md` and `programmlogik/gabbrov/V1.lean`, 2026-09-02. **56 of the 66
-> stand as a Lean `Prop` and `lean` accepted them**; `G1` does not fire. §7 and §12 carry the
-> result at their own place, and the two sections it corrects say so in their own words.
+> stand as a Lean `Prop` and `lean` accepted them.** §7 and §12 carry the result at their own
+> place, and the two sections it corrects say so in their own words.
+>
+> **What that run may NOT be quoted as is a verdict on `G1`, and the correction is dated
+> 2026-09-03.** ~~`G1` does not fire.~~ `G1`'s condition is *"a noteworthy part"* — no number
+> — so no count can clear it and no count can trip it. §11 carries the withdrawal; the two
+> criteria that replace it stand in `AUFTRAG-GABBROV.md` §1, and they stand **before** the
+> measurements they judge.
 
 > **A note on language.** `CLAUDE.md` has set English for every `.md` document in the Gabbro
 > tree since 2026-09-01. This document was German while it was conversation. It was translated
@@ -331,12 +337,14 @@ V1 before everything else, because it is the one stage that can fail without any
 built: if the existing 66 logic obligations cannot be said in the fragment, the cut is wrong,
 and that before a line of code exists.
 
-> **V1 is measured, 2026-09-02: 56 of 66 stand as a `Prop`, `G1` does not fire.**
+> **V1 is measured, 2026-09-02: 56 of 66 stand as a `Prop`.** ~~`G1` does not fire.~~
 > `programmlogik/gabbrov/V1.lean` is the measurement — `lean` accepts it with exit 0, no
 > `sorry` and no `native_decide`, and the count is read off the file rather than written
-> beside it. **The gate is passed, and the two sections the run corrects (§2, §7) say so at
-> their own place.** *What §12.1 said — "that is the first measurement and it needs no tool" —
-> was half right: it needs no tool to be BUILT, and it needs one to be BELIEVED.*
+> beside it. **The stage's own gate is met** — the ten that do not stand are named one by one,
+> which is what the gate column asks — **and the falsifier `G1` is a separate question this
+> run cannot answer**; §11 says why. *What §12.1 said — "that is the first measurement and it
+> needs no tool" — was half right: it needs no tool to be BUILT, and it needs one to be
+> BELIEVED.*
 
 ---
 
@@ -344,7 +352,7 @@ and that before a line of code exists.
 
 | ID | condition | consequence |
 |---|---|---|
-| G1 | A noteworthy part of the 66 L obligations is not sayable in the fragment | cut wrong; fragment or expectation anew |
+| G1 | A noteworthy part of the 66 L obligations is not sayable in the fragment | cut wrong; fragment or expectation anew — **but see below: "a noteworthy part" is no threshold, so this row cannot be evaluated in either direction** |
 | G2 | Certificate coverage stays low | §6C does not carry; choice between Z3 in the base and weak automation |
 | G3 | The share of *undecided* stays high | not a push-button tool but a pre-sorter |
 | G4 | A passed obligation turns out to be false | soundness broken: obligation meaning, translation or M1–M4 |
@@ -353,16 +361,34 @@ and that before a line of code exists.
 G4 is the one that does not show up by itself — the same class as the aborting measurement run
 and as `W16`. It needs samples against real behaviour, not against the tool.
 
-> **G1, measured: it does not fire.** Ten of the 66 do not stand as a `Prop`, and they fall
-> into four classes of which **two are not an expressiveness gap at all** — two rows are
+> **`G1` HAS NO THRESHOLD, and that is the finding — 2026-09-03.**
+>
+> ~~G1, measured: it does not fire.~~ The condition in the row above reads *"a noteworthy
+> part"*. That is not a number, so **no count clears it and no count trips it**, and the
+> sentence this paragraph used to carry was a judgement wearing a measurement's clothes.
+>
+> **The threshold is not being supplied now.** One chosen after 56 of 66 is on the table would
+> be chosen to clear it — a rule pulled to fit a result, which the folder books as `R2`. The
+> honest move is the cheaper one: *say what was counted, and drop the verdict.*
+>
+> **What was counted, and it is unaffected:** ten of the 66 do not stand as a `Prop`, and they
+> fall into four classes of which **two are not an expressiveness gap at all** — two rows are
 > assumptions booked as obligations (§5), and one is a statement about a second, mutated
 > program. The genuine gap is four rows wide and is one missing means: ordering and atomicity.
+> *That sentence needs no threshold, which is exactly why it survives the withdrawal.*
 >
-> **And since the rebooking of 2026-09-03 the numbers are smaller and the gap is the same
+> **And since the rebooking of the same day the numbers are smaller and the gap is the same
 > width.** GabbroV's population is **63**, of which **8** are not sayable: three that need a
 > record payload in `Value`, one that quantifies over programs, and **the four ordering rows,
-> untouched.** *`G1` fires less than before and on exactly the same finding — which is what it
-> looks like when a correction removes rows rather than a gap.*
+> untouched.** ~~`G1` fires less than before~~ — that phrasing is the withdrawn one in its
+> smaller clothes; what is true without a threshold is the part after it: *the correction
+> removed rows, not a gap.*
+>
+> **What replaces `G1` are `E1` and `E2` of `AUFTRAG-GABBROV.md` §1**, and the property that
+> matters about them is not that they are stricter but that they were **written down before
+> the runs they judge**. `E1` is a comparison of two line counts and admits no exception; `E2`
+> counts decided against undecided against a **named** exception list in
+> `dokumente/AUSNAHMEN.md`, so the list cannot grow quietly the way a percentage can.
 
 ---
 

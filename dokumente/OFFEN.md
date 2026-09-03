@@ -1,0 +1,165 @@
+# Open — what is known to be missing, by name
+
+**This file is a ledger, not a work list.** `TODO.md` says what should be done; this says what
+is *known to be absent*, so that an absence cannot be mistaken for an oversight later. Every
+entry names the thing, why it is open, and what would close it.
+
+*Started 2026-09-03, out of `AUFTRAG-GABBROV.md` §2.3, §7 and §10. §10 asks that a blocked
+gate land here rather than in a head; §7 asks that every yellow row of the correspondence
+table stand here by name.*
+
+---
+
+## O1 — The big step: four obligations the semantics cannot state
+
+**`L24`, `L34`, `L50`, `L52`.** `programmlogik/Gabbro/Body.lean`'s `exec` is big-step: it maps
+a state and a statement list to an `Outcome` and produces no intermediate state. All four rows
+are statements about what holds *between* the pre and the post — that no third state exists
+(L24), that one does and the invariant fails in it (L34), that one effect precedes another
+(L50, L52).
+
+**It is not a gap in the specification fragment.** A fragment is a language of predicates over
+the objects the shared semantics provides; a new construct in §7 would have nothing to range
+over, and the plausible-looking substitute (`flush ∧ reply`) is strictly weaker while carrying
+the obligation's name.
+
+**And it is the class where GabbroV was supposed to be worth most**: `GABBROV.md` §3 picks out
+§8.3.1's finding — `D013` checks that the invariant exists, expressly not that the block
+restores it, so *"a `breaking` on the wrong-but-existing invariant still passes"* — as the one
+place the tool would create value beyond convenience. The statement that site needs is `L34`.
+
+| | |
+|---|---|
+| **what would close it** | a small-step or trace semantics for `exec` |
+| **why it is not being attempted** | `AUFTRAG-GABBROV.md` §9 stop-list — `exec`'s big-step character carries the Isabelle proofs |
+| **also recorded at** | `dokumente/AUSNAHMEN.md` rows 1–4, `dokumente/HISTORIE.md` (2026-09-03) |
+
+---
+
+## O2 — `G1` and `G5` are falsifiers that cannot be evaluated
+
+`GABBROV.md` §11 lists five falsifiers. **Two of them cannot go red, and both looked
+evaluable from the outside.**
+
+* **`G1`** — *"a **noteworthy** part of the 66 L obligations is not sayable"*. No number, so no
+  count clears it and no count trips it. Withdrawn 2026-09-03 rather than given a threshold
+  after the fact (`R2`); `E1` and `E2` of `AUFTRAG-GABBROV.md` §1 take over, and they stand
+  before the runs they judge.
+* **`G5`** — *"the assumption set has no model"*. A question about formulas, asked of eight
+  German prose sentences (`messung/GABBROV-V2.md`, `messung/GABBROV-V1.md` §6). It can neither
+  fire nor be cleared until the assumptions are formalised, and that is itself on the
+  stop-list.
+
+| | |
+|---|---|
+| **what would close `G1`** | nothing, deliberately — a threshold set now would be set to be met |
+| **what would close `G5`** | formalising the eight assumptions — the expensive half of V2, `AUFTRAG-GABBROV.md` §9 |
+
+---
+
+## O3 — The manifest does not carry the obligation text
+
+`SPRACHE.md` §15 promises *"Nothing is silently lost"* and lets the ratchet run over **names**.
+The emitted manifest carries `aushaengen :: ensures #1` — a function name, a clause kind and an
+**ordinal**.
+
+**Measured 2026-09-03, and the failure is stronger than "the text is missing":** exchange the
+first and third `ensures` conjunct in `beispiele/01-tabelle.gab` and the two manifests are
+byte-identical apart from the file name in their header. `ensures #1` means
+`c.slots[s].elter == None` before and `c.slots[s].naechstes == None` after. **The name the
+ratchet runs over does not identify the obligation it names**, and nothing reports the change.
+
+| | |
+|---|---|
+| **what would close it** | `AUFTRAG-GABBROV.md` §4 — version field first, all readers on both formats, then the format |
+| **material already present** | `gabbro pflichten --lean` carries the text as a datum (`post_duty_2 : Expr`) |
+
+---
+
+## O4 — `cdt_wohlgeformt` cannot hold over a table with a free slot
+
+**Found 2026-09-03 by a solver run, not by reading.** `messung/fragmente/F01.gab`:199-200:
+
+```gabbro
+spec fn cdt_wohlgeformt(c : ptr<normal, r> CapSpace) -> bool
+    = forall s in slots of c : c.slots[s] reaches WURZEL via parent;
+```
+
+It quantifies over `slots of c` — the whole table — and a slot that is not in the tree has
+`parent == None` and is not `WURZEL`. `reachesIn` returns `false` on `.absent`.
+
+```
+messung/gabbrov/L05c.smt2      unsat, 0.02 s
+   the invariant AND one detached slot have no model
+```
+
+`release_slot` (`F01.gab`:233) leaves exactly such a slot behind, so **no removal path in F1
+can restore the invariant**, and the invariant cannot hold over any table that is not full.
+`unlink` declares `maintains cdt_wohlgeformt` and does not maintain it: it sets
+`parent[s] := None`, and unless `s` is `WURZEL` slot `s` then reaches nothing
+(`messung/gabbrov/L05.smt2` — `sat`, with `s = 1`).
+
+| | |
+|---|---|
+| **what would close it** | `forall s in used slots of c`, or a different home for the invariant |
+| **why it is not being done here** | rewording an obligation decides what the fragment meant — the same shape as the `L44`/`L53` tautology finding of `messung/GABBROV-V2.md` |
+| **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
+
+---
+
+## O5 — «B14» may be a fourth demand on the specification fragment, and it is not on the list
+
+`messung/GABBROV-V1.md` records **three** demands on §7's fragment: aggregation, folds that are
+not `count`, and bounded reachability. **A fourth candidate turned up in §3's run**, and it is
+the difference between *refuted* and *passed* on a real row.
+
+`L01` — *"a root has no predecessor"* — is refuted under the premises `F01.gab` declares, and
+proved the moment `L02` is added:
+
+```
+messung/gabbrov/L01.smt2    sat    0.021 s   the declared premises only
+messung/gabbrov/L01b.smt2   unsat  0.019 s   with L02 added
+messung/gabbrov/L01c.smt2   sat    0.021 s   with cdt_wohlgeformt added instead
+```
+
+`L02` is the mutual sibling chain, `slots[s.next].prev == s`. `F01.gab`:181-183 says why it is
+not declared: **«B14» — a `pred` cannot resolve an `option index into`.**
+
+**The distinction that keeps this from being just another gap:** the other three demands are
+about what the LEAN side must carry. This one is about what the GABBRO side must be able to
+declare, so that a checker has the premise at all. *A demand on the specification language and
+a demand on the predicate language are different work, and §7 does not currently distinguish
+them.*
+
+| | |
+|---|---|
+| **the question for the owner** | is «B14» a fourth demand, or a fourth *kind* of demand? |
+| **measured at** | `messung/GABBROV-AUFTRAG.md` §2.4 |
+
+---
+
+## O6 — DEMAND 3 may not be buildable in the shape V1 assumes
+
+`V1.lean` says of bounded reachability that the bound *"is what makes the helper total and the
+unrolling finite, and it is the whole reason the row reads DEMAND and not NOT."* **Finite is
+right and it is not the same as tractable.**
+
+```
+./messung/gabbrov/lauf-L05.sh 16 17 18 19 20 21 22 24 32 48 64
+  bounds 2-19, 21, 24, 32, 48   sat       <= 0.4 s  (17 takes 6.6 s)
+  bounds 20, 22, 64             unknown   60 s timeout, reproduced
+```
+
+**The failure is not monotone in the bound.** 20 and 22 time out while 21 and 24 answer in
+under a third of a second. *A solver that answers at 21 and not at 20 gives no bound to plan
+with* — a tool built on "unroll to the table's `count`" would be fast, fast, fast and then
+silent, with nothing about the input predicting which.
+
+And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096** in
+`beispiele/01-tabelle.gab`. Five of the 63 rows hang on this means — `L04`, `L05`, `L09`,
+`L15`, `L16`.
+
+| | |
+|---|---|
+| **what would close it** | an axiomatised transitive closure instead of an unrolling — different work from the other two demands |
+| **measured at** | `messung/GABBROV-AUFTRAG.md` §2.5 |

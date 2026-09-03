@@ -214,10 +214,26 @@ obligation population**, which is the `L` rows minus the rows that are not oblig
 | | | source |
 |---|---:|---|
 | `L` rows of the ten fragments | 66 | `zaehle-pflichten.py --spalten` |
-| of these, discharged by the assumption layer | 3 | L42, L46, L66 — §1.2 |
-| **GabbroV's obligation population** | **63** | |
+| of these, discharged by the assumption layer | 3 | `zaehle-pflichten.py --gabbrov` |
+| **GabbroV's obligation population** | **63** | `zaehle-pflichten.py --gabbrov` |
 | of the 63, not sayable in the fragment | **8** | L11 L12 L13 · L24 L34 L50 L52 · L57 |
 | of the 63, sayable | **55** | |
+
+> **The command in the third column is newer than this table — added 2026-09-03.** When the
+> table was written, `63` and `3` were reached by subtracting in prose, and the same
+> subtraction stood in three cells across two documents. `AUFTRAG-GABBROV.md` §2.2 asks for
+> the rebooking to live *in the counter and not in the table*, for a reason dated 2026-08-20:
+> **three numbers stood over one thing and the one with the search path was the wrong one.**
+>
+> `--gabbrov` derives the number from **two sides that have to meet** — the real `progress`
+> clauses of `messung/fragmente/F*.gab` and the `L` rows of `PFLICHTEN.md` that name them —
+> and **refuses** rather than subtracting when they disagree. Three speech tests, all
+> two-directional: every `progress` name is a declared `assume` (which `S003` should
+> guarantee and this asserts anyway); an invented clause with no table row is *reported*, not
+> silently absorbed; and removing one rebooking raises the population 63 → 64 and names the
+> row that went missing.
+>
+> *`pruefe-zahlen.py` now holds all four cells against that command.*
 
 Read off `programmlogik/gabbrov/V1.lean`'s own census block rather than subtracted:
 `nichtSagbar` lists ten in four classes; the class *"environment liveness — an `assumption`
