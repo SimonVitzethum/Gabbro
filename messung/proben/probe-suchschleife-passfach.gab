@@ -1,0 +1,165 @@
+-- **How many pass slots does a value-yielding, breakable search loop open?**
+--
+-- «B10» asks for a loop that finds a thing and stops. `K001` killed the previous attempt at
+-- a construct because it needed more than one pass slot, so the question is measured BEFORE
+-- anything is built. This file is a MEASUREMENT and not an example; it runs against the
+-- UNCHANGED checker.
+--
+-- Six questions, one function each. What the checker says about each is recorded under
+-- `1. AGAINST THE UNCHANGED CHECKER` below -- literally, before anything was repaired.
+--
+--   (a) a binding without an initialiser -- the shape a not-found path would create
+--   (b) the sentinel workaround, written correctly (this is the whole corpus today)
+--   (c) the same, with the guard MISSING -- `messung/netz/udp-echo.gab`:167 shipped this
+--   (d) does the cost pass charge the body once per domain element?
+--   (e) may the loop WRITE the element it finds? (caprock `heap.rs`:112 does)
+--   (f) `by consuming` -- the F03 shape: the walk empties the whole queue
+--
+-- 1. AGAINST THE UNCHANGED CHECKER, 2026-09-03
+-- ---------------------------------------------
+--
+--     $ gabbro pruefe messung/proben/probe-suchschleife-passfach.gab
+--
+-- (a) is a PARSE refusal and not a pass refusal:
+--
+--     error: [P001] …:NN:26: `=` expected, `;` found
+--
+-- **That is the finding.** `letstmt` (`SYNTAX.md`:961) has no form without `=`, so an
+-- uninitialised binding does not exist in this language -- not as an error, as an
+-- unwritable shape. There is therefore **no definite-assignment pass today, because there
+-- is nothing for one to do.** A construct that yields a value out of a loop would create
+-- the first binding in the language whose value depends on a path -- and that is the pass
+-- slot, spelled out.
+--
+-- (b) through (e): 0 errors.
+--
+-- (d) was measured by tightening the promise until `K001` fires, at two domain sizes:
+--
+--     NSLOTS=16   costs <= 48 -> refused   costs <= 64 -> accepted
+--     NSLOTS=32   costs <= 96 -> refused   costs <= 128 -> accepted
+--
+-- **Four ops per element, and it doubles with the domain.** The cost pass charges the body
+-- once per domain element, so **an early exit costs the cost pass nothing**: the worst case
+-- of a loop that may stop early is the loop that does not, and that is the promise already
+-- written. The rest of the record stands in `messung/BERICHT-SUCHE.md`.
+--
+-- 2. WHAT THE CORPUS DOES INSTEAD -- measured, not assumed
+-- ---------------------------------------------------------
+-- 57 loops in the 179 corpus files: 33 `traverse`, 13 `retry`, 11 `forever`.
+-- **`leave` already works on 24 of them** (every `retry` and `forever` carries a label, 15
+-- exit statements use it). The gap is `traverse` alone: it carries no label, so 10 of its
+-- 33 sites carry the value out by hand -- 8 with a `return` out of the whole function, 2
+-- with a sentinel accumulator. **One of those two is wrong** -- see (c).
+
+module probe::suchschleifepassfach {
+
+const NSLOTS : u32 = 16;
+
+table Tafel count NSLOTS {
+    slot {
+        belegt : bool,
+        schluessel : u32,
+        wert : u32,
+    }
+}
+
+-- (a) **A binding without an initialiser** -- the shape the not-found path of a yielding
+--     loop would have to create. Refused by the PARSER, so no pass ever sees it.
+--     *Uncomment to reproduce the `P001` above; it is left commented so that the rest of
+--     this file measures.*
+--
+--     impl fn ohne_vorbelegung(a : ptr<normal, r> Tafel) -> u32
+--         effects { reads a.slots }
+--         costs   <= 512 ops
+--     {
+--         let mut treffer : u32;
+--         traverse s over slots of a by unvisited touches reads a.slots {
+--             if a.slots[s].belegt { treffer = a.slots[s].wert; }
+--         }
+--         return treffer;
+--     }
+
+-- (b) **The sentinel workaround, written correctly.** This is what every yielding site in
+--     the corpus does today. The guard `treffer == 0 &&` is the hand-built `break`: it does
+--     not stop the walk, it stops the ASSIGNMENT, and the walk pays for the whole domain
+--     either way.
+impl fn erster_treffer(a : ptr<normal, r> Tafel, schluessel : u32) -> u32
+    effects { reads a.slots }
+    costs   <= 512 ops
+{
+    let mut treffer : u32 = 0;
+    traverse s over slots of a by unvisited
+        touches reads a.slots
+    {
+        if treffer == 0 && a.slots[s].belegt && a.slots[s].schluessel == schluessel {
+            treffer = a.slots[s].wert;
+        }
+    }
+    return treffer;
+}
+
+-- (c) **The same function with the guard MISSING.** It returns the LAST match, not the
+--     first. `gabbro pruefe` says nothing about it -- no error, no hint -- and neither does
+--     any annotation this language can write. **`messung/netz/udp-echo.gab`:167 carried
+--     exactly this until 2026-09-03**, under the name `arp_suchen` and documented as a
+--     search. It was repaired the same day -- with `return` in the body, which needs no
+--     construct and is what four other corpus sites already do.
+impl fn letzter_treffer(a : ptr<normal, r> Tafel, schluessel : u32) -> u32
+    effects { reads a.slots }
+    costs   <= 512 ops
+{
+    let mut treffer : u32 = 0;
+    traverse s over slots of a by unvisited
+        touches reads a.slots
+    {
+        if a.slots[s].belegt && a.slots[s].schluessel == schluessel {
+            treffer = a.slots[s].wert;
+        }
+    }
+    return treffer;
+}
+
+-- (d) **Does the cost pass charge the body once per domain element?** The promise here is
+--     the smallest one that still passes; one step lower and `K001` refuses. That number is
+--     the answer, and it is why an early exit costs the cost pass NOTHING: the worst case of
+--     a loop that may stop early is the loop that does not, and that is the promise already
+--     written.
+impl fn kostenprobe(a : ptr<normal, r> Tafel) -> u32
+    effects { reads a.slots }
+    costs   <= 64 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    traverse s over slots of a by unvisited
+        touches reads a.slots
+        invariant summe <= 65535
+    {
+        if a.slots[s].belegt {
+            summe += 1;
+        }
+    }
+    return summe;
+}
+
+-- (e) **May the loop WRITE the element it finds?** It may -- today, without any construct.
+--     `../caprock-messbasis/crates/caprock-region/src/heap.rs`:112 sets `slot.bump` before
+--     returning the slot's address, and `caprock-hal/src/x86_64/pcie.rs`:169 writes the
+--     bus-master bit before returning the device. **A construct that yields the hit but
+--     forbids the write does not serve those sites** -- and this function is the proof that
+--     the write itself is not the missing part.
+impl fn treffer_aendern(a : ptr<normal, rw> Tafel, schluessel : u32) -> u32
+    effects { reads a.slots, writes a.slots }
+    costs   <= 512 ops
+{
+    let mut treffer : u32 = 0;
+    traverse s over slots of a by unvisited
+        touches reads a.slots, writes a.slots
+    {
+        if treffer == 0 && a.slots[s].belegt && a.slots[s].schluessel == schluessel {
+            a.slots[s].belegt = false;
+            treffer = a.slots[s].wert;
+        }
+    }
+    return treffer;
+}
+
+}
