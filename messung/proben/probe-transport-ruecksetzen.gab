@@ -1,0 +1,48 @@
+-- ATTEMPT: `reset` from `caprock-virtio/src/lib.rs:437` written in Gabbro.
+--
+-- Caprock:
+--     self.status(0);
+--     for _ in 0..100_000 { if self.get_status() == 0 { break; } spin_loop(); }
+--     self.status(STATUS_ACK);
+--     self.status(STATUS_ACK | STATUS_DRIVER);
+--
+-- `messung/treiber/virtio-net.gab` has ACK and DRIVER as `transition`s. What it does NOT
+-- have is the RESET itself and the bounded wait for the device to acknowledge it -- and
+-- the wait is the part with the shape: a spin with a count, whose overrun in Rust is
+-- silently "carry on anyway" and in Gabbro must be NAMED.
+
+module probe::ruecksetzen {
+
+opaque type Pa = u64;
+
+device Gemein(basis : Pa) at mmio {
+    reg STATUS : u8 @0x14 class rw
+        fields { ANERKANNT @0, TREIBER @1, TREIBER_OK @2, MERKMALE_OK @3, GESCHEITERT @7, }
+}
+-- A SECOND name for 0x14 falls at `N009` (`STATUSWORT at 0x14..0x15 overlaps STATUS`), and
+-- rightly: one register, one name. The whole-byte write goes through the same `reg`.
+
+assume geraet_setzt_zurueck
+    "A virtio device clears its status register within a bounded number of reads after a 0 is written to it -- virtio 1.1, 2.1."
+    falsifier sonde_ruecksetzung_haengt;
+
+extern fn ruecksetzung_haengt() -> never effects { diverges } costs <= 1 ops;
+
+impl fn ruecksetzen(g : ptr<mmio, rw> Gemein)
+    effects { writes g.STATUS, reads g.STATUS }
+    costs   <= 200000 ops
+{
+    g.STATUS = 0;
+    -- Caprock spins 100 000 times and then CARRIES ON regardless. Gabbro will not let the
+    -- overrun be silent: `on_exceeded` names a function, and that function diverges.
+    retry warten until g.STATUS == 0
+        bounded 100000 ops
+        progress geraet_setzt_zurueck
+        on_exceeded ruecksetzung_haengt
+        effects { reads g.STATUS }
+    { }
+    g.STATUS.ANERKANNT = 1;
+    g.STATUS.TREIBER   = 1;
+}
+
+}

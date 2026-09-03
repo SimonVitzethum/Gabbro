@@ -1,0 +1,62 @@
+-- ATTEMPT: `poll_used` from `caprock-virtio/src/lib.rs:363` written in Gabbro.
+--
+-- Caprock: `pub unsafe fn poll_used(&self, from: u16, max_poll: u64) -> Option<Completion>`
+-- -- spin at most `max_poll` times until the used index moves past `from`, then read the
+-- used entry at `from % size` and hand it back as a `Completion`.
+--
+-- The question this file asks is NOT "is this a good driver" but "does the checker take
+-- the SHAPE": a bounded wait on a device-written index, followed by a read of the entry
+-- the wait proved to be there.
+
+module probe::poll_used {
+
+const QGROESSE : u32 = 8;
+
+table UsedRing count QGROESSE {
+    slot {
+        kopf   : u32,
+        laenge : u32,
+    }
+}
+
+assume karte_schreibt_vor_dem_index
+    "The card writes the used entry before it raises the used index -- virtio 1.1, 2.6.8."
+    falsifier sonde_used_zu_frueh;
+
+assume karte_antwortet
+    "A working virtio device completes an armed descriptor within a bounded number of polls."
+    falsifier sonde_karte_stumm;
+
+static mut usedring_gesehen : u32 = 0;
+
+atomic USED_IDX : u16 acquire observed by karte_schreibt_vor_dem_index;
+
+extern fn geraet_antwortet_nicht() -> never effects { diverges } costs <= 1 ops;
+
+-- The completion, as a value: id and length, separately readable.
+type Abschluss = {
+    kopf   : u32,
+    laenge : u32,
+};
+
+impl fn poll_used(u : ptr<dma, r> UsedRing, i : index into UsedRing, von : u16) -> Abschluss
+    effects { reads u.slots, reads USED_IDX }
+    costs   <= 4096 ops
+{
+    retry warten until USED_IDX != von
+        bounded 2048 ops
+        progress karte_antwortet
+        on_exceeded geraet_antwortet_nicht
+        effects { reads USED_IDX }
+    { }
+    -- The acquire load is what makes the entry below READABLE -- it is the other half of
+    -- `karte_schreibt_vor_dem_index`. Its value is used, and not only its ordering: an
+    -- index that did not move after all yields an empty completion rather than a stale one.
+    let stand = USED_IDX awaits { usedring_gesehen };
+    if stand == von {
+        return Abschluss(kopf: 0, laenge: 0);
+    }
+    return Abschluss(kopf: u.slots[i].kopf, laenge: u.slots[i].laenge);
+}
+
+}

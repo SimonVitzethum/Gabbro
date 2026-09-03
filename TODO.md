@@ -553,7 +553,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 197 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 198 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
       (`messung/ERZEUGERREST.md`) beide 188 → 189, jede fuer IHRE eine Datei, jede einzeln
@@ -589,6 +589,18 @@ darunter.
       Datei zurueck, 196 -- *nicht addiert, nicht gewaehlt, und auch nicht aus dem Auftrag
       uebernommen.* Bemerkenswert ist die neue Halbheit: hier hat nicht eine zweite Bahn
       die Zahl still mitbewegt, sondern **die Ansage selbst war beim Ankommen veraltet.*
+      *__UND EINE DRITTE RICHTUNG AM SELBEN TAG: DIE ZAHL WAR SCHON BEIM ANKOMMEN ZWEI ZU KLEIN.__ Am
+      2026-09-03 stand die Fuenfte-Marke-Bahn (`messung/FUENFTE-MARKE.md`) auf `9b74afa`.
+      `TODO.md` trug hier **196**, der Auftrag nannte **197**, und der Lauf sagte **198**.
+      Alle drei waren zu verschiedenen Zeitpunkten richtig. Ursache gemessen wie der Eintrag
+      es verlangt: eigene Datei weggenommen, `pruefe-widerruf.py` sagt **197**, Datei zurueck,
+      **198** -- *nicht addiert, nicht gewaehlt, und nicht aus dem Auftrag uebernommen.*
+      **Die 197 im Auftrag war richtig und die 196 hier war es nicht mehr**: `master` hatte
+      die Zahl schon bewegt, bevor diese Bahn ihre erste Zeile schrieb. Neu daran ist nichts
+      ausser der Richtung, aus der die Veraltung kam -- *nicht die Nachbarbahn und nicht die
+      Ansage, sondern das Dokument selbst.*
+      Und der Waechter, der es meldet, ist `pruefe-zahlen.py`, nicht `pruefe-widerruf.py`:
+      **dieser Lauf war schon vor dieser Bahn rot**, mit 196 gegen 197.*
       *__DER NEUNTE FALL, UND ER HAT KEINE NEUE GESTALT -- darum eine Zeile statt einer
       Buchung.__ Am 2026-09-03 sagte die `N055`-Spur 3211 und die `D19`-Spur 3206, jede
       richtig fuer IHREN Baum; der Lauf im zusammengefuehrten sagt **3213**. Dieselbe

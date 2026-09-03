@@ -184,8 +184,40 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # repair was made at the `walk` lowering; the confirmation is a census over emitted C that
 # knows nothing about `walk`. *Had the mark stayed at 67, the repair would have been a
 # different repair than the one it claimed to be.*
-MARKE_TABELLE = 66
-MARKE_UNERLAUBT = 31
+# **66 -> 67 and 31 -> 32 on 2026-09-03, and it is the SAME FORM as above with a DIFFERENT
+# cause.** `implicit conversion`, one hit, in
+# `messung/proben/probe-transport-merkmale-aushandeln.gab`:
+#
+#     (*(volatile uint32_t *)(g->basis + 12)) = wunsch >> 32;
+#     warning: conversion from 'uint64_t' to 'uint32_t' may change value [-Wconversion]
+#
+# **This is not `D1` coming back.** `D1` was a `walk` lowering; this is the emitter writing
+# NO CAST where M1's range analysis licensed a narrowing. `wunsch >> 32` on a `u64` provably
+# fits in 32 bits and `M101` accepts it for exactly that reason -- gcc cannot reproduce that
+# reasoning, so what M1 proved arrives in C as an implicit conversion.
+#
+# **Measured, and there is no way to write it otherwise today**: the mask straight into the
+# register, the shift straight into the register, and the shift through a typed local
+# (`let h : u32 = w >> 32;`) all emit the same bare assignment. *No Gabbro form produces an
+# explicit cast for a proved narrowing.*
+#
+# Why it appears only now: the corpus had **no program that narrows through a proved range**
+# until a virtio feature word -- 64 bits reached through a 32-bit register -- was written.
+# The property "zero implicit conversions" was true, and it was true of a corpus that never
+# asked the question.
+#
+# **The exit is named, and it is the same shape as `D1`'s:** the mark falls back to 66/31 the
+# day the emitter writes the cast that M1 has already justified. Until then this number is on
+# loan from an open defect (`dokumente/OFFEN.md` `O9`). *Whoever finds it red again should fix
+# the emitter, not the number.* It stands here and not in the probe because `emit.rs` belongs
+# to another lane -- the measurement is this lane's, the repair is not.
+#
+# Note what does NOT change: the emitted C still passes the tree's own gate. Stage 9 of
+# `pruefe-emission.sh` compiles with `-Wall -Wextra -Werror`, and `-Wconversion` is in
+# neither. **This counter is stricter than the gate on purpose** -- it is the mechanical
+# check `BEWEIS.md` §2 line 7 asks for, and it just earned its keep a second time.
+MARKE_TABELLE = 67
+MARKE_UNERLAUBT = 32
 
 # ---------------------------------------------------------------------------------------
 # **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price

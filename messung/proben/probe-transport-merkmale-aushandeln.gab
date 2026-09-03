@@ -1,0 +1,57 @@
+-- ATTEMPT: `offered` (`caprock-virtio/src/lib.rs:453`) and `negotiate`
+-- (`caprock-virtio/src/lib.rs:468`) written in Gabbro.
+--
+-- Both are the SAME shape: a 64-bit feature word reached through a 32-bit window with a
+-- selector register beside it. Write the selector, read/write the half, shift, combine.
+-- `negotiate` additionally READS BACK `FEATURES_OK` -- the device may refuse the choice,
+-- and a driver that only writes then runs on an assumption the device never confirmed.
+--
+-- `messung/treiber/virtio-net.gab` has the register map and the `MERKMALE_OK` read-back
+-- (`stufe_merkmale`) but neither of the two halves-through-a-window functions.
+
+module probe::merkmale {
+
+opaque type Pa = u64;
+
+const F_VERSION_1       : u64 = 4294967296;
+const F_ACCESS_PLATFORM : u64 = 8589934592;
+const F_MAC             : u64 = 32;
+
+device Gemein(basis : Pa) at mmio {
+    reg GERAETEMERKMAL_WAHL : u32 @0x00 class rw
+    reg GERAETEMERKMAL      : u32 @0x04 class r
+    reg TREIBERMERKMAL_WAHL : u32 @0x08 class rw
+    reg TREIBERMERKMAL      : u32 @0x0c class rw
+    reg STATUS              : u8  @0x14 class rw
+        fields { ANERKANNT @0, TREIBER @1, TREIBER_OK @2, MERKMALE_OK @3, GESCHEITERT @7, }
+}
+
+-- `offered()`: both halves of the feature word.
+impl fn angeboten(g : ptr<mmio, rw> Gemein) -> u64
+    effects { writes g.GERAETEMERKMAL_WAHL, reads g.GERAETEMERKMAL }
+    costs   <= 64 ops
+{
+    g.GERAETEMERKMAL_WAHL = 0;
+    let nieder : u64 = g.GERAETEMERKMAL;
+    g.GERAETEMERKMAL_WAHL = 1;
+    let hoch : u64 = g.GERAETEMERKMAL;
+    return nieder | (hoch << 32);
+}
+
+-- `negotiate(want)`: both halves out, then the read-back that is the whole point.
+impl fn aushandeln(g : ptr<mmio, rw> Gemein, wunsch : u64) -> bool
+    effects { writes g.TREIBERMERKMAL_WAHL, writes g.TREIBERMERKMAL,
+              writes g.STATUS, reads g.STATUS }
+    costs   <= 64 ops
+{
+    -- `want as u32` in Rust is a SILENT truncation. Gabbro refuses it (`M101`) and the
+    -- mask is the form that carries the proof -- measured, not assumed.
+    g.TREIBERMERKMAL_WAHL = 0;
+    g.TREIBERMERKMAL = wunsch & 4294967295;
+    g.TREIBERMERKMAL_WAHL = 1;
+    g.TREIBERMERKMAL = wunsch >> 32;
+    g.STATUS.MERKMALE_OK = 1;
+    return g.STATUS.MERKMALE_OK == 1;
+}
+
+}

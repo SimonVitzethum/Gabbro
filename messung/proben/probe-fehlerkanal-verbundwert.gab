@@ -1,0 +1,51 @@
+-- erwartet: cc
+-- MINIMISED, from the `queue_setup` attempt (`caprock-virtio/src/lib.rs:486`).
+--
+-- `let x = f() else (e) { … }` where `f` returns a RECORD through the error channel:
+-- the CHECKER takes it (0 errors), and the EMITTER writes `x->feld` for a value that it
+-- itself declared as `W x;` -- not a pointer. `cc` refuses:
+--
+--     error: invalid type argument of '->' (have 'W')
+--
+-- Found by READING the emitted body, not by grepping it. The checker is silent because the
+-- fault is not in the source -- it is in the lowering of a binding the checker got right.
+--
+-- **`-- erwartet: cc` stands in the first line, and it is not a way of hiding the red.** It
+-- is this tree's word for "the C of this file is SUPPOSED to fall": four probes carry it
+-- already. Without it the file is an unbooked ceiling breach in
+-- `pruefe-uebersetzerfamilie.py` -- a second register over one thing (W7). With it the
+-- refusal is the file's DECLARED purpose, and it stays visible instead of being averaged
+-- away. It comes out the day the emitter stops writing `x->field` over a value.
+
+module probe::fehlerkanal_verbundwert {
+
+type W = {
+    a : u16,
+};
+
+reason Fehlt {
+    Keins = 1 "nothing there"
+    exhaustive
+}
+
+impl fn liefert(da : bool) -> W or Fehlt
+    effects { pure }
+    costs   <= 8 ops
+{
+    if !da {
+        return Fehlt::Keins;
+    }
+    return W(a: 7);
+}
+
+impl fn liest() -> u16
+    effects { pure }
+    costs   <= 16 ops
+{
+    let w = liefert(true) else (e) {
+        return 0;
+    }
+    return w.a;
+}
+
+}

@@ -198,3 +198,116 @@ And the bound the corpus asks for is `NSLOTS`: **80 256** in `F01.gab`, **4 096*
 |---|---|
 | **what would close it** | an axiomatised transitive closure instead of an unrolling — different work from the other two demands |
 | **measured at** | `messung/GABBROV-AUFTRAG.md` §2.5 |
+
+---
+
+## O7 — `N030` compares opaque types at a PARAMETER and not at a FIELD
+
+*Measured 2026-09-03, out of `PLAN-HARDWARE.md` §50 #6, the second pass at the fifth mark.*
+
+Two `opaque type`s over `u64` are two types, and handing one where the other is wanted is a
+compile error. **At a bare parameter.** Read the same wrong value out of a struct field, or
+out of a binding taken from that field, and nothing fires:
+
+```
+messung/proben/probe-opak-am-feld.gab: 11 items, 1 errors, 0 hints
+error: [N030] …:48:24: `c` is a `Cpusicht`, and `deskriptor_stellen` takes a `Geraetesicht` there
+```
+
+Five sites in that file, four of them wrong, **one error** — and the run did not stop, so
+this is *which* fire rather than *whether any*. **The obvious way out is closed too:** an
+`opaque` record does not close its fields, so accessors — which would take the view at the
+parameter position where `N030` does bite — cannot be forced.
+
+**Why it is not cosmetic.** The shape it misses is the shape the case exists for. Caprock's
+`Owned` (`../../caprock-messbasis/crates/caprock-virtio/src/owned.rs`:62–77) holds the CPU
+view and the device view of one DMA buffer in **one record**, and its own note names the bug:
+with an IOMMU window ≠ 0 the two numbers differ, and a driver that mixes them programmes the
+device an address it cannot resolve. Caprock buys the guarantee with field privacy. Gabbro has
+no field privacy and does not need it — `opaque` is the stronger instrument — but the check
+does not reach the position where the two axes actually sit.
+
+| | |
+|---|---|
+| **what would close it** | `N030` reading the declared type of a field access, not only of a parameter — the same move `R013` made for pointer rights, one position further |
+| **what it is NOT** | `S2`. The language states this correctly; a pass does not read it. Same family as `R008`/`R013` in `messung/PASSREGISTER.md` |
+| **measured at** | `messung/FUENFTE-MARKE.md` §3, `messung/proben/probe-opak-am-feld.gab` |
+
+---
+
+## O8 — A `tagged type` value has no constructor
+
+*Measured 2026-09-03, same run.*
+
+**Fifteen `tagged type` declarations stand across nine corpus files**, every one taken apart
+by `match`. **Not one is put together anywhere** — and that is not a habit: no spelling
+exists. Four of them, each measured on its own:
+
+```
+Keine                        error: [M119] `Keine` is declared nowhere
+Aufsatz::Keine               error: [M126] `Aufsatz` is not a declared `reason`
+Keine()                      error: [K003] `f` promises costs, but `Keine` is not declared here
+let x : Aufsatz = Keine;     error: [M119] `Keine` is declared nowhere
+```
+
+**This is the «B9» shape a third time** — *a form that exists at the declaration and has no
+way to be written.* Its second instance is `dokumente/PFLICHTEN.md`:483, whose finding 1 —
+*"`A::B` parses and never resolves … whether `IpcResult` is a `module`, a `reason` or a
+variant type"* — is still standing. The `reason` half was closed by adding a producer
+(`reasonval`, `SYNTAX.md`:591); **the variant half never was.**
+
+> **It blocked no capability in the run that found it.** Three caprock functions return an
+> `Option`, and Gabbro's error channel does the same job and says more — the absence carries
+> a name. *That is why this is a ledger entry and not a hole in the fifth mark.*
+
+| | |
+|---|---|
+| **what would close it** | a producer production for a variant, the same move `reasonval` was for `reason` |
+| **what it costs today** | a `tagged` value can be a slot field, a parameter and a `match` subject, and can come out of a call — but no body can build one |
+| **measured at** | `messung/FUENFTE-MARKE.md` §4, `messung/proben/probe-tagged-wird-gebaut.gab` |
+
+---
+
+## O9 — a narrowing M1 has PROVED reaches C as an implicit conversion
+
+*Measured 2026-09-03, out of `PLAN-HARDWARE.md` §50 #6, the second pass at the fifth mark.*
+
+`BEWEIS.md` §2 line 7 says of implicit conversion in the emitted C: *"none, but to be checked
+mechanically."* `instrumente/zaehle-c-formen.py --uebersetzer` is that mechanical check, and
+until this run it reported **zero hits over the whole corpus**. It now reports one:
+
+```
+(*(volatile uint32_t *)(g->basis + 12)) = wunsch >> 32;
+warning: conversion from 'uint64_t' to 'uint32_t' may change value [-Wconversion]
+```
+
+`wunsch >> 32` on a `u64` provably fits in 32 bits; **`M101` accepts the assignment for
+exactly that reason.** gcc cannot reproduce M1's reasoning, so what the checker proved
+arrives in C as a bare narrowing assignment with no cast.
+
+**And there is no way to write it otherwise today.** Measured, three forms, same emission:
+
+| written | emitted |
+|---|---|
+| `g.R = w & 4294967295;` | `… = w & 4294967295;` |
+| `g.R = w >> 32;` | `… = w >> 32;` |
+| `let h : u32 = w >> 32; g.R = h;` | `uint32_t h = w >> 32; … = h;` |
+
+*No Gabbro form produces an explicit cast for a proved narrowing.*
+
+**Why it appears only now, and why that is the interesting half.** The corpus had no program
+that narrows through a proved range until a virtio feature word — 64 bits reached through a
+32-bit register — was written. The property held, and it held of a corpus that never asked
+the question. *A guard is only as strong as the programs it has been shown.*
+
+> **The tree's own gate does not see it.** Stage 9 of `pruefe-emission.sh` compiles with
+> `-Wall -Wextra -Werror`, and `-Wconversion` is in neither. `zaehle-c-formen.py` is stricter
+> than the gate on purpose.
+
+| | |
+|---|---|
+| **what would close it** | the emitter writing the cast M1 has already justified — the same repair shape as `D1`, at a different site |
+| **the mark it is on loan from** | `MARKE_TABELLE` 66 → 67, `MARKE_UNERLAUBT` 31 → 32, with the named exit written at the mark in `zaehle-c-formen.py`. *Whoever finds it red again should fix the emitter, not the number* |
+| **why it is not repaired here** | `emit.rs` belongs to another lane. The measurement is this lane's; the repair is not |
+| **measured at** | `messung/FUENFTE-MARKE.md` §4, `messung/proben/probe-transport-merkmale-aushandeln.gab` |
+

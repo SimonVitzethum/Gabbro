@@ -1,0 +1,151 @@
+-- ATTEMPT: `Region::carve` (`caprock-virtio/src/owned.rs:200`) and `Owned::zero`
+-- (`caprock-virtio/src/owned.rs:164`) written in Gabbro.
+--
+-- `carve` is the only unsuspicious source of an `Owned<Driver>`: it cuts MONOTONICALLY, so
+-- two buffers of one region cannot overlap and "exactly one owner" does not hang on care at
+-- the call site. It refuses on overflow and on a reach back behind the cut.
+--
+-- `zero` is the other half of the same lesson: caprock zeroed EIGHT bytes of the receive
+-- buffer, the second probe read the first probe's answer, and a blocked DMA write reported
+-- `arp_reply = true`. Zeroing a computed byte RANGE is the capability.
+
+module probe::region_schnitt {
+
+const REGIONSBYTES : u64 = 8192;
+const PUFFERBYTES  : u32 = 2048;
+
+-- The region's book-keeping. `schnitt` is the end of the last buffer handed out.
+-- The two base addresses carry a RANGE, because `b.cpu + versatz` otherwise leaves the
+-- width of `u64` (`M104`). Rust wraps there without a word; Gabbro asks where the bound is.
+type Bereich = {
+    cpu     : u64 in 0 .. 281474976710656,
+    dev     : u64 in 0 .. 281474976710656,
+    laenge  : u64,
+    schnitt : u64,
+};
+
+-- A buffer with BOTH views, and an owner named in the pointer right.
+type Puffer = {
+    cpu    : u64,
+    dev    : u64,
+    laenge : u32,
+};
+
+reason Schnittfehler {
+    HinterDasEnde  = 1 "the buffer would reach past the end of the region"
+    HinterDenSchnitt = 2 "the buffer would reach back behind the last cut -- it would overlap"
+    exhaustive
+}
+
+-- `carve`: monotone, fail-closed, and the two refusals are DIFFERENT findings.
+impl fn schneiden(b : ptr<normal, rw> Bereich,
+                  versatz : u64 in 0 .. 4294967296,
+                  laenge : u32) -> Puffer or Schnittfehler
+    effects { reads b, writes b.schnitt }
+    costs   <= 64 ops
+{
+    let ende : u64 = versatz + laenge;
+    if versatz < b.schnitt {
+        return Schnittfehler::HinterDenSchnitt;
+    }
+    if ende > b.laenge {
+        return Schnittfehler::HinterDasEnde;
+    }
+    b.schnitt = ende;
+    return Puffer(cpu: b.cpu + versatz, dev: b.dev + versatz, laenge: laenge);
+}
+
+-- `zero(off, n)`: n bytes from off. The count is a RUN-TIME number, so the loop needs a
+-- bound the checker can see -- `traverse` over a table gives one by construction.
+table Bytes count PUFFERBYTES {
+    slot {
+        b : u8,
+    }
+}
+
+impl fn nullen_ganz(p : ptr<dma, rw> Bytes)
+    effects { writes p.slots }
+    costs   <= 8192 ops
+{
+    traverse i over slots of p by unvisited touches writes p.slots {
+        p.slots[i].b = 0;
+    }
+}
+
+-- And the RUN-TIME length, which is what caprock's signature actually takes: `n` is a
+-- number the caller computes (`HDR_LEN + FRAME_LEN as u64`), not a constant. `traverse`
+-- walks the whole domain, so the bounded form is `retry` with the counter in the body --
+-- and the counter's own type is what keeps the index inside the table.
+extern fn zu_lang() -> never effects { diverges } costs <= 1 ops;
+
+assume zaehler_erreicht_n
+    "A counter incremented by one on every pass reaches any n within the table's size."
+    falsifier sonde_zaehler_bleibt_stehen;
+
+impl fn nullen(p : ptr<dma, rw> Bytes, n : u32 in 0 .. 2048)
+    effects { writes p.slots }
+    costs   <= 20000 ops
+{
+    let mut i : u32 in 0 ..< 2048 = 0;
+    retry lauf until i == n
+        bounded 16384 ops
+        progress zaehler_erreicht_n
+        on_exceeded zu_lang
+        effects { writes p.slots }
+    {
+        p.slots[i].b = 0;
+        -- `i = i + 1` alone falls at `M101` (`0..2047` cannot take `1..2048`); the guard
+        -- that makes the increment safe has to STAND in the body, and that is the point.
+        if i < 2047 {
+            i = i + 1;
+        }
+    }
+}
+
+-- ---------------------------------------------------------------------------------------
+-- `retarget_device_view` (`caprock-virtio/src/owned.rs:127`) and THE TWO AXES.
+--
+-- Caprock's guarantee is not the setter -- that is one line. It is that **nobody chooses**:
+-- `cpu` is not readable from outside and `dev` goes only into the descriptor, so there is
+-- no getter that hands out the one where the other was meant. Its own module note says the
+-- confusion of the two axes is the bug that a shared struct invites.
+--
+-- Gabbro has no field privacy. What it has is `opaque`, and it is STRONGER at exactly this
+-- point: the two views become two TYPES, and mixing them is a compile error rather than a
+-- convention about which getter to call.
+-- ---------------------------------------------------------------------------------------
+
+opaque type Cpusicht     = u64;
+opaque type Geraetesicht = u64;
+
+type Zweiachser = {
+    cpu    : Cpusicht,
+    dev    : Geraetesicht,
+    laenge : u32,
+};
+
+-- Only the DEVICE view moves. The driver goes on reading its own buffer.
+impl fn geraetesicht_umhaengen(p : ptr<normal, rw> Zweiachser, neu : Geraetesicht)
+    effects { writes p.dev }
+    costs   <= 4 ops
+{
+    p.dev = neu;
+}
+
+-- What goes into the descriptor is the DEVICE view, and nothing else may.
+extern fn deskriptor_stellen(adresse : Geraetesicht, laenge : u32)
+    effects { pure }
+    costs   <= 8 ops;
+
+impl fn richtig_armieren(p : ptr<normal, r> Zweiachser)
+    effects { reads p }
+    costs   <= 16 ops
+{
+    deskriptor_stellen(p.dev, p.laenge);
+}
+
+-- The mixing of the two views has its OWN probe -- `probe-opak-am-feld.gab` -- because the
+-- answer there is a finding and not a capability: `N030` bites at a bare parameter and stays
+-- silent at a field, which is the position a record with both views actually uses.
+
+}
