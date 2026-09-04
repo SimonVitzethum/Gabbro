@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 215 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 218 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *214 → 215 on 2026-09-04: `messung/K100-TWO-QUESTIONS-2026-09-04.md` joined — `K100`
       asked as two questions, the 37 «K3» walls sorted into three registers (25 refused by a
       written decision, 6 undecided, 6 that a probe dissolves) and the obligation ratio
@@ -812,7 +812,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **101 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 122 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 124 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -915,7 +915,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute ~~3299~~ **3303 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**. *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute ~~3299~~ ~~3303~~ **3324 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**. *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
@@ -1177,7 +1177,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **392 von 392 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
+      fällt. Mutationskatalog: **395 von 395 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
       **387 → 388** durch `let-else-ruf-schuldet-keine-vorbedingung`: `pflichten::rufe_im_block`
       sah einen Ruf in einem `let … else` nicht an, und jede Vorbedingung des Gerufenen fiel
       damit STILL aus dem Register. Nachgemessen auf dem Server: die Mutation übersetzt und
@@ -3206,7 +3206,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**114 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**115 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
@@ -4192,7 +4192,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 96 Sätze über 278 Codes, 51 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 96 Sätze über 280 Codes, 51 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*

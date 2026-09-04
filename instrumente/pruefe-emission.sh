@@ -2705,7 +2705,14 @@ fi
 # 11 items, 0 errors) and `67-befehlsebene.gab` (`B5`'s other half, 6 items, 0 errors).
 # Both emit and compile. *The good case, and the reason stands here AT the mark instead of
 # in a note beside it.*
-MARKE_EMIT=67
+# **67 -> 69 on 2026-09-04, and both came from a defect an UNSEEN corpus found.**
+# `beispiele/68-named-space-matches-itself.gab` and `69-integer-conversion.gab` are the two
+# passing witnesses for the repairs «K3» forced: a named address space that compared unequal
+# to itself (`Raum::Benannt` derived `PartialEq` over `{text, span}`), and the integer
+# conversion `SYNTAX.md` had promised since it dropped the `cast` production and nobody had
+# built. *Both emit and compile.* The object grew because a corpus nobody had looked at
+# reached parts of the language our own never touched.
+MARKE_EMIT=69
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

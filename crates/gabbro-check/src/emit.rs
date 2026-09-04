@@ -9532,6 +9532,21 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         weigere(absagen, r.span, "`option` constructor -- `option` has no representation yet");
         return String::new();
     }
+    // **G9, 2026-09-04 -- `u64(a)` lowers to the C cast it already reads as.** `m1.rs`'s
+    // `umwandlung_ruf` is the checker half of this repair and refuses anything but exactly
+    // one integer argument before this ever runs; `ganzzahlwort` is the SAME table
+    // `intty`/`breite_von` use for a declared type, so a conversion's target and a
+    // declaration's type can never disagree on the C spelling.
+    if let Some((ctyp, _)) = gabbro_syntax::kw::Kw::suche(&name)
+        .filter(|k| k.ist_intty())
+        .and_then(ganzzahlwort)
+    {
+        let Some(arg) = r.argumente.first() else {
+            weigere(absagen, r.span, "an integer conversion takes exactly one argument");
+            return String::new();
+        };
+        return format!("({ctyp})({})", ausdruck(arg, u, absagen));
+    }
     // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
     // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
     //

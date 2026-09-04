@@ -1656,7 +1656,26 @@ impl<'a> Parser<'a> {
                     art: ExprArt::Ort(ort),
                 })
             }
-            Art::Wort(k) if k.ist_intty() && self.blick_n(1).art == Art::Zeichen(Z::Kolon2) => {
+            // `u64::max` needs the path branch below it for the SAME reason `u64(a)` does:
+            // both put a `(` or a `::` right after a vocabulary word that names a type, and
+            // `erwarte_ident` below refuses every vocabulary word on principle (`P002`).
+            //
+            // **G9, repaired 2026-09-04**: `SYNTAX.md`:588 dropped the `cast` production on
+            // the grounds that *"a call whose path names a type IS the conversion"* --
+            // `call = (path | place) "(" [arglist] ")"` already covers it, nothing new was
+            // added to the grammar. What was missing is this one guard: before today it
+            // fired only when the token after the type word was `::` (so `u64::max` parsed
+            // but `u64(a)` fell through to `erwarte_ident` and died at `P002`, reproduced by
+            // `messung/K3-BEFUND.md` §4.1 against the unchanged checker). `ruf_ab` below
+            // already builds the call when it sees `(` -- that arm was dead code for a
+            // single-segment integer path until this line let it be reached.
+            Art::Wort(k)
+                if k.ist_intty()
+                    && matches!(
+                        self.blick_n(1).art,
+                        Art::Zeichen(Z::Kolon2) | Art::Zeichen(Z::RundAuf)
+                    ) =>
+            {
                 self.pos += 1;
                 let mut teile = vec![Ident {
                     text: k.text().to_string(),

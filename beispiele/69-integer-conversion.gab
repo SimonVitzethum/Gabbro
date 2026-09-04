@@ -1,0 +1,33 @@
+-- 69 -- **`u64(a)` -- the integer conversion `SYNTAX.md` always promised and the reader never
+-- let through.** The pass test for the «K3» §4.1 repair.
+--
+-- `dokumente/SYNTAX.md`:588 marks `primary` "G9: kein `cast`" and :656-659 gives the reason:
+-- "a call whose path names a type IS the conversion -- the distinction is a name resolution,
+-- not a syntax question." Until 2026-09-04 the reader refused the token before that rule
+-- could ever apply (`P002`, reproduced against the unchanged checker in
+-- `messung/K3-BEFUND.md` §4.1); no corpus site had ever needed one, which is exactly why a
+-- form that was documented and unreachable could stand this long.
+--
+-- «K3»'s `test_func` needed two, on its two most ordinary lines: `(u64) ktime_us_delta(...)`
+-- and `(u64) test_repeat_count`. This file builds the same shape from a `u32` counter, since
+-- that is the width the reader actually widens.
+
+module beispiel::umwandlung {
+
+-- **A widening conversion, used exactly the way «K3» needed one.** `M1` gives the result the
+-- FULL range of the target type rather than carrying the narrower source range through --
+-- the same conservative answer this checker already gives float arithmetic that mixes
+-- widths and an `opaque` carrier's hidden representation: a silent guess would be a promise.
+--
+-- The two conversions are combined with `|`, not `+`: the SUM of two full-range `u64`
+-- values leaves the width (`M104`, correctly -- the checker cannot know the two halves stay
+-- small), and this file is meant to check clean, not to re-demonstrate M1's own overflow
+-- rule on a value this pass deliberately widened to its full range.
+impl fn kombiniert(a : u32, b : u32) -> u64
+    effects { pure }
+    costs   <= 5 ops
+{
+    return u64(a) | u64(b);
+}
+
+}

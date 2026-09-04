@@ -1,0 +1,30 @@
+-- 68 -- **A named address space equals itself.** The pass test for the «K3» §4.2 repair.
+--
+-- Until 2026-09-04 this file could not check clean: `Raum::Benannt(Ident)` derived
+-- `PartialEq` over `{ text, span }`, and two DECLARATIONS of `ptr<user, r> u8` never share a
+-- span. `R008` compared the caller's declared space against the callee's and found them
+-- "different" even though both read `user` -- the same word, refused against itself.
+--
+-- `messung/K3-BEFUND.md` §4.2 found this from a foreign fragment that never even reached it
+-- (`copy_from_user_iter`'s `void __user *` stands behind a `P002`, beispiele 68 and 69 cover
+-- the two repairs it asked for, apart). `__user` as a TYPE rather than a `sparse` annotation
+-- is the single place this language was ahead of the kernel it was measured against, and this
+-- file is that fit, working: the address space stands in the type, where the checker reads
+-- it, not in a comment a tool has to be told to trust.
+
+module beispiel::adressraum {
+
+extern fn liest(p : ptr<user, r> u8) -> u8 effects { pure } costs <= 1 ops;
+
+-- A `user`-space pointer, passed to a parameter declared the SAME named space. Before the
+-- repair this raised `R008` with the same word on both sides of the message; the mutation
+-- `benannter-raum-vergleicht-sich-nie` (`instrumente/mutiere-pruefer.py`) puts that defect
+-- back and this file is what catches it.
+impl fn weiterreichen(q : ptr<user, r> u8) -> u8
+    effects { pure }
+    costs   <= 2 ops
+{
+    return liest(q);
+}
+
+}

@@ -47,7 +47,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > says 87, `Codes` at 243 where it says 274, `claimed` at 198 where it says 223. They are
 > recomputed here rather than incremented, because incrementing a forgotten figure carries
 > the forgetting forward.
-| **Codes without a sentence — the ratchet** | **51** | `./instrumente/pruefe-saetze.py` |
+| **Codes without a sentence — the ratchet** | **53** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not
 diligence but a measurement: several passes hold **two claims of different strength**,

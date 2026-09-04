@@ -292,6 +292,36 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
         }
         g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
+    // **G9, 2026-09-04 -- the eight integer conversions are CALLEES with declared
+    // effects, exactly the gap the three comments above already name.** Without a node
+    // here, `u64(a)` inside a `pure` function made that function's OWN effect hull
+    // undecidable -- the diagnostic three comments up, *"the call effects of `f` are
+    // undecidable: `u64` is unknown to the graph"* -- a hole in the GRAPH, not in the
+    // program (`messung/K3-BEFUND.md` §4.1 asked for the conversion; this is what wiring
+    // it in without this node broke).
+    //
+    // A conversion reads its one argument and writes nothing -- `pure` is not a guess,
+    // it is what `emit.rs::ruf` lowers it to, an ordinary C cast. Inserted once, at the
+    // ROOT: no module qualifies a vocabulary word, and `aufloesen` below finds a root key
+    // through the same candidate search every other name already uses.
+    for wort in ["u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"] {
+        let mut eigen = BTreeSet::new();
+        eigen.insert("pure".to_string());
+        g.knoten.insert(
+            wort.to_string(),
+            Knoten {
+                eigen,
+                ruft: BTreeSet::new(),
+                verlangt: Vec::new(),
+                hat_effects: true,
+                parameter: Vec::new(),
+                rufe: Vec::new(),
+                indirect: Vec::new(),
+                modul: String::new(),
+                span: gabbro_syntax::span::Span::neu(0, 0),
+            },
+        );
+    }
     // **Dritte Phase: die Kanten aufloesen.** Erst jetzt stehen alle Schluessel fest. Ein
     // Pfad wird relativ zum Modul des RUFERS gesucht, mit derselben Ordnung, die M1 seit
     // dem 2026-08-14 benutzt (eigenes Modul, umgebende, Wurzel, `use`-Zeile). Was sich nicht

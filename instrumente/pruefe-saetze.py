@@ -93,7 +93,17 @@ import korpus  # noqa: E402
 #
 # *The mark rises because the object grew, and it falls the day that sentence is written.*
 # `M142` came WITH its sentence (`m1.signatur`), which is why the rise is one and not two.
-MARKE = 51
+# **51 -> 53 on 2026-09-04, and the two new codes are `M144` and `M145`.** «K3»'s §4.1
+# found that `u64(a)` -- a call whose path names a type -- was refused before `M1` ever
+# ran (`P002`, at the reader); repairing it needed a shape check beside the typing rule,
+# and these two codes are that check: `M144` is the conversion's arity (exactly one
+# value), `M145` is that the one value must itself be an integer. Neither is a theorem
+# in `beweise/` -- an arity check and a type-tag check are not the kind of claim a range
+# proof makes a premise of, the way `N047`-`N049` establish `Device_Konstruktor.thy`'s.
+# They stand without a sentence because nobody has yet written what `m1.umwandlung` (the
+# rule this repair adds) promises as a whole, of which the arity and the tag are two
+# ordinary preconditions.
+MARKE = 53
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

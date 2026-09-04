@@ -300,7 +300,7 @@ pub struct PtrTy {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Raum {
     Normal,
     Mmio,
@@ -310,6 +310,34 @@ pub enum Raum {
     Port,
     Benannt(Ident),
 }
+
+/// **A named space is equal to itself by NAME, not by the span of the token that spelled
+/// it** -- found by «K3» (`messung/K3-BEFUND.md` §4.2) and reproduced independently before
+/// this fix: `Ident` derives `PartialEq` over `{ text, span }`, so a `#[derive(PartialEq)]`
+/// here compared two occurrences of `Benannt(Ident)` at their SITES, and two declaration
+/// sites never share a span. `ptr<user, r> u8` passed to a parameter declared the identical
+/// `ptr<user, r> u8` raised the checker's address-space refusal -- *"passes `q` in space
+/// `user` to a parameter ... declared `user`"*, the same word twice.
+///
+/// The six built-in spaces are fieldless and the derive compared them fine; only the one
+/// case that carries an `Ident` was broken. This impl keeps every fieldless comparison
+/// exactly as the derive gave it and narrows only `Benannt` to its `text`.
+impl PartialEq for Raum {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Raum::Normal, Raum::Normal)
+            | (Raum::Mmio, Raum::Mmio)
+            | (Raum::Dma, Raum::Dma)
+            | (Raum::Code, Raum::Code)
+            | (Raum::Boot, Raum::Boot)
+            | (Raum::Port, Raum::Port) => true,
+            (Raum::Benannt(a), Raum::Benannt(b)) => a.text == b.text,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Raum {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Recht {
