@@ -34,6 +34,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import korpus  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 300
 # The same flags stage 9 uses -- a different flag set would measure the flags, not the
@@ -173,8 +176,13 @@ def familie(text):
 
 
 def quellen():
+    # **An UNTRACKED `.gab` used to run through both compiler families too** (`K100` walk
+    # audit, 2026-09-04) -- the exclusion set below names places, not authorship, and a
+    # scratch file outside all four is exactly as real a source here as anywhere else this
+    # walk was found.
     return sorted(p for p in W.rglob("*.gab")
-                  if not (AUS & set(p.relative_to(W).parts)))
+                  if not (AUS & set(p.relative_to(W).parts))
+                  and korpus.verfolgt(p, W))
 
 
 def emittiert(q, ziel):

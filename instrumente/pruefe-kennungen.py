@@ -24,15 +24,27 @@ import re
 import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import korpus  # noqa: E402
+
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 
 
 def erhebe(zusatz=None):
-    """Kennung -> Menge der Dateien, die sie vergeben."""
+    """Kennung -> Menge der Dateien, die sie vergeben.
+
+    **An UNTRACKED `.rs` scratch file under `crates/` used to count too** (found by the
+    `K100` walk audit, 2026-09-04: dropping one that reuses `"N001"` flips this guardian
+    from `ALL PASS` to a false double-issue). `korpus.verfolgt()` keeps the population to
+    what `git` actually knows about.
+    """
     karte = collections.defaultdict(set)
     for q in sorted((WURZEL / "crates").rglob("*.rs")):
         if "/tests/" in str(q):
             continue          # Tests NENNEN Kennungen, sie vergeben keine
+        if not korpus.verfolgt(q, WURZEL):
+            continue
         # **Dasselbe fuer das Passregister** (seit 2026-08-21): `saetze.rs` fuehrt je Satz
         # die Kennungen auf, mit denen er absagt -- es NENNT sie, es vergibt sie nicht.
         # *Ohne diese Zeile meldete dieser Waechter 146 Doppelbelegungen, und keine davon

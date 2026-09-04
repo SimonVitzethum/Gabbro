@@ -100,6 +100,9 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import abschnitt  # noqa: E402
+# **Aliased**: this file already defines its OWN `korpus()` function below (the emitted-C
+# population for the `%`/goto/... census), which would shadow the module at module scope.
+import korpus as _korpus  # noqa: E402
 
 W = pathlib.Path(__file__).resolve().parent.parent
 
@@ -1035,6 +1038,11 @@ def korpus(wurzel=None, gabbro=None):
     for d in sorted(pathlib.Path(wurzel).rglob("*.gab")):
         rel = d.relative_to(wurzel)
         if any(teil in AUS_BAU for teil in rel.parts[:-1]):
+            continue
+        # **The docstring above already promised "every VERSIONED `.gab`" -- the code did
+        # not check that until now** (`K100` walk audit, 2026-09-04): an untracked scratch
+        # file moved `gesamt`, the stated denominator of every number this function returns.
+        if not _korpus.verfolgt(d, wurzel):
             continue
         gesamt.append(str(rel))
         try:

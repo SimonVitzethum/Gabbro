@@ -58,6 +58,9 @@ import subprocess
 import sys
 
 W = pathlib.Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import korpus  # noqa: E402
 EMIT = W / "crates" / "gabbro-check" / "src" / "emit.rs"
 ZEICHEN = re.compile(r"'(?:\\.|[^\\'])'")
 KOPF = re.compile(r"^(Fehler|Warnung|error|warning):\s*\[([A-Z][0-9]{3})\]\s*(\S+?):(\d+):(\d+):\s*(.*)$")
@@ -420,6 +423,11 @@ def korpuslauf(wurzel=None, gabbro=None):
     aus_bau = ("target", ".claude", ".lake")
     for d in sorted(pathlib.Path(wurzel).rglob("*.gab")):
         if any(teil in aus_bau for teil in d.relative_to(wurzel).parts[:-1]):
+            continue
+        # **An UNTRACKED `.gab` counted here too** (`K100` walk audit, 2026-09-04) -- this
+        # walk has no `arbeitsprotokoll` exclusion at all, so a scratch file dropped there
+        # moved the emitted/`UNGEDECKT` table exactly as it moved `pruefe-sondendeckung.py`.
+        if not korpus.verfolgt(d, wurzel):
             continue
         try:
             r = subprocess.run(befehl + ["emit", str(d)], cwd=wurzel,

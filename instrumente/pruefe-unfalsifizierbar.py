@@ -55,6 +55,7 @@ from pathlib import Path
 # **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import abschnitt  # noqa: E402
+import korpus  # noqa: E402
 
 W = Path(__file__).resolve().parent.parent
 DOC = W / "dokumente" / "UNFALSIFIZIERBAR.md"
@@ -104,13 +105,16 @@ def corpus_files():
     # `…/Gabbro/.claude/worktrees/<id>/`, so an absolute path carries `.claude` in every one of
     # its `parts` and an absolute filter would exclude the whole corpus. *A guardian that
     # measures nothing prints the same `ALL PASS` as one that measures everything.*
+    # **The directory blacklist below fixed ONE incident, not the class** (2026-09-04,
+    # `messung/K100-VERDICT-2026-09-04.md` §2): `arbeitsprotokoll` was added the same day as
+    # the sibling guard's fix, but any OTHER untracked `.gab` -- anywhere the blacklist does
+    # not name -- still moves this guardian's population, demonstrated by dropping one at
+    # the repository root with an `unfalsifiable` clause and watching the run abort.
+    # `korpus.verfolgt()` closes the class instead of the instance.
     return sorted(p for p in W.rglob("*.gab")
                   if not {"gift", ".claude", "target",
-                          # **Added 2026-09-04**: the sibling guard read
-                          # UNTRACKED scratch files here and its denominator
-                          # depended on what lay about the machine. This one
-                          # never got that repair -- found by the `K100` audit.
-                          "arbeitsprotokoll"} & set(p.relative_to(W).parts))
+                          "arbeitsprotokoll"} & set(p.relative_to(W).parts)
+                  and korpus.verfolgt(p, W))
 
 
 def clauses_in(text, wo):

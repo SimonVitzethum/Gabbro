@@ -42,6 +42,9 @@ W = pathlib.Path(__file__).resolve().parent.parent
 BIN = W / "target" / "debug" / "gabbro"
 FRIST = 60
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import korpus  # noqa: E402
+
 # **Die gebuchte Marke.** Eine Ratsche, keine Zielzahl: sie darf fallen, nicht steigen.
 #
 # 2026-08-21, beim Anlegen des Registers: **45**. Das sind genau die Kennungen, die zu keinem
@@ -97,12 +100,21 @@ CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")
 
 
 def erhebe_kennungen(wurzel=None):
-    """Kennung -> Menge der Dateien, die sie vergeben. Wie `pruefe-kennungen.py`."""
+    """Kennung -> Menge der Dateien, die sie vergeben. Wie `pruefe-kennungen.py`.
+
+    **Shares that guard's hole, closed the same way** (`K100` walk audit, 2026-09-04): an
+    UNTRACKED `.rs` scratch file under `crates/` used to join `vorhanden` here exactly as it
+    did there, and a code it happens to invent would fall out as `N ohne Satz` for a reason
+    that has nothing to do with any real sentence. `korpus.verfolgt()` keeps this to what
+    `git` actually tracks.
+    """
     wurzel = wurzel or W
     karte = collections.defaultdict(set)
     for q in sorted((wurzel / "crates").rglob("*.rs")):
         if "/tests/" in str(q):
             continue          # Tests NENNEN Kennungen, sie vergeben keine
+        if not korpus.verfolgt(q, wurzel):
+            continue
         # **`saetze.rs` NENNT jede Kennung, es vergibt keine** -- dieselbe Klasse wie
         # `tests/`, und ohne diese Zeile misst der Waechter sich selbst: eine erfundene
         # Kennung in einem Satz faende sich in `saetze.rs` wieder und gaelte als vorhanden.
