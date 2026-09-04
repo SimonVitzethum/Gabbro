@@ -40,6 +40,9 @@ import subprocess
 import sys
 import pathlib
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import korpus as _korpus  # noqa: E402
+
 FRIST = 60
 
 
@@ -47,9 +50,16 @@ def korpus(wurzel):
     """Every `.gab` file of the tree, in a stable order.
 
     Sorted, because an unordered walk makes two runs of THIS tool incomparable -- and a
-    measuring tool that cannot be compared with itself measures nothing.
+    measuring tool that cannot be compared with itself measures nothing. **The same demand
+    forces the corpus itself off the raw working tree** (`K100` walk audit, 2026-09-04): an
+    UNTRACKED `.gab` lying around makes two runs on the same two binaries disagree with each
+    other depending on what happens to sit beside them, which is the reproducibility failure
+    this function's own docstring is written against. Poison stays IN on purpose -- this
+    tool wants the whole corpus, including `gift` -- only `.git` and anything nobody
+    `git add`ed are not the corpus.
     """
-    return sorted(p for p in wurzel.rglob("*.gab") if ".git" not in p.parts)
+    return sorted(p for p in wurzel.rglob("*.gab")
+                  if ".git" not in p.parts and _korpus.verfolgt(p, wurzel))
 
 
 def lauf(binaer, unterbefehl, datei, wurzel):

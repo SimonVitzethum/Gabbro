@@ -24,6 +24,9 @@ import pathlib
 import sys
 import json
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import korpus  # noqa: E402
+
 
 # ---------------------------------------------------------------- Bereinigung
 
@@ -358,7 +361,10 @@ def lauf(wurzel, unterbaeume):
             if '/.git' in dp:
                 continue
             for f in fn:
-                if f.endswith('.rs'):
+                # Same class as the `.gab` walks in the `K100` walk audit, 2026-09-04: an
+                # untracked `.rs` scratch file counted here too. `korpus.verfolgt()` fails
+                # open if `wurzel` is not itself a git checkout.
+                if f.endswith('.rs') and korpus.verfolgt(os.path.join(dp, f), wurzel):
                     dateien.append(os.path.join(dp, f))
     dateien.sort()
 
@@ -563,7 +569,8 @@ def lauf(wurzel, unterbaeume):
             if '/.git' in dp:
                 continue
             for f in sorted(fn):
-                if f.endswith('.rs'):
+                # Same class as the `.gab` walks in the `K100` walk audit, 2026-09-04.
+                if f.endswith('.rs') and korpus.verfolgt(os.path.join(dp, f), wurzel):
                     dateien.append(os.path.join(dp, f))
     dateien.sort()
     ergebnis, abbrueche = [], []
@@ -713,7 +720,8 @@ def lauf(wurzel, unterbaeume=('kernel', 'crates')):
             if '/.git' in dp:
                 continue
             for f in sorted(fn):
-                if f.endswith('.rs'):
+                # Same class as the `.gab` walks in the `K100` walk audit, 2026-09-04.
+                if f.endswith('.rs') and korpus.verfolgt(os.path.join(dp, f), wurzel):
                     dat.append(os.path.join(dp, f))
     dat.sort()
     erg, ab = [], []

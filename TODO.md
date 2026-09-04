@@ -3904,7 +3904,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7875 von 24591 Kommentarzeilen** im Pruefer sind deutsch
+**7874 von 24591 Kommentarzeilen** im Pruefer sind deutsch
  1069 von  6496 in den Instrumenten
   415 von  1448 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -3916,6 +3916,10 @@ dort fehlte). **Die Ratsche darf fallen und nie steigen** — hier fällt sie um
 zwei Nachbarzahlen desselben Blocks standen an diesem Tag ebenfalls falsch da (`1072 von
 1515`, `286 von 914`) und sind gegen denselben Lauf richtiggestellt: sie sind AUSGABE eines
 Kommandos, und eine Ausgabe, die nie lief, ist schlechter als keine.*
+
+**7875 → 7874 am 2026-09-04, im K100 walk audit:** the `gruppe.sperrabdruck` correction in
+`schablonen.rs` replaced a stale German reason with an English one, and the new comments the
+audit itself needed were written in English throughout — net fall of one.
 
 *Am 2026-08-31 fiel die erste Zahl von 7900 auf 7891 und die zweite von 16456 auf 16451, und
 zwar OHNE dass ein Kommentar angefasst wurde:* die Zählung nimmt jede Zeile, die mit `//` oder

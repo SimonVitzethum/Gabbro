@@ -60,6 +60,7 @@ from pathlib import Path
 # **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import abschnitt  # noqa: E402
+import korpus  # noqa: E402
 
 W = Path(__file__).resolve().parent.parent
 DOC = W / "dokumente" / "SONDENDECKUNG.md"
@@ -154,19 +155,17 @@ def korpus_dateien(unterordner):
     wurzel = W / unterordner if unterordner else W
     if not wurzel.is_dir():
         return []
+    # **The directory blacklist below fixed ONE incident, not the class** (2026-09-04,
+    # `messung/K100-VERDICT-2026-09-04.md` §2): `arbeitsprotokoll/` was added after two
+    # UNTRACKED scratch files there moved this guardian's population. Any OTHER untracked
+    # `.gab`, anywhere the blacklist does not name, still would -- demonstrated by dropping
+    # one at the repository root and watching this guardian abort with `ABGESCHNITTEN`
+    # instead of its expected single finding. `korpus.verfolgt()` closes the class: a file
+    # nobody `git add`ed is never part of the corpus, wherever it sits.
     return sorted(p for p in wurzel.rglob("*.gab")
                   if not {"gift", ".claude", "target",
-                          # **`arbeitsprotokoll/` is scratch, and leaving it in made this
-                          # guardian's POPULATION depend on what happened to be lying about.**
-                          # Found 2026-09-04 on the first merge: `term-1-retry-rumpf.gab` and
-                          # `term-2-forever-durchgang.gab` are UNTRACKED files in one working
-                          # tree, carrying `sonde_g` and `sonde_t`, and they pushed `aussen`
-                          # from 13 to 15 -- so the speech test could not produce its expected
-                          # single finding and the guardian aborted. *A denominator that
-                          # depends on the machine it runs on is not a denominator*, and the
-                          # lane that built this could not have seen it: its worktree had no
-                          # such files.
-                          "arbeitsprotokoll"} & set(p.relative_to(W).parts))
+                          "arbeitsprotokoll"} & set(p.relative_to(W).parts)
+                  and korpus.verfolgt(p, W))
 
 
 def klauseln_in(text):

@@ -26,6 +26,7 @@ from collections import Counter, defaultdict
 # `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import abschnitt  # noqa: E402
+import korpus  # noqa: E402
 
 # --- Die drei Sprechproben aus dem Protokoll. Findet der Zaehler sie nicht, ist die Zahl
 # --- ungueltig -- nicht ungenau, ungueltig.
@@ -561,6 +562,13 @@ def lauf(baum, zeige_n=False):
         for pfad in sorted(wurzel.rglob("*.rs")):
             teile = set(pfad.parts)
             if "target" in teile or ".claude" in teile:
+                continue
+            # **Same class as the `.gab` walks named in the `K100` walk audit, 2026-09-04**
+            # -- an untracked `.rs` scratch file used to count in `dateien`/`zaehlung` here
+            # too, whichever tree `baum` names (this tool's own default is a FOREIGN one,
+            # `pruefe-waechter.py`'s `FREMDER_KORPUS`). `korpus.verfolgt()` fails open (see
+            # its own module docstring) if `baum` is not a git checkout at all.
+            if not korpus.verfolgt(pfad, baum):
                 continue
             dateien += 1
             roh = pfad.read_text(errors="replace")

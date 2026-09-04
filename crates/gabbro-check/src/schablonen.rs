@@ -871,8 +871,19 @@ pub const SCHABLONEN: &[Schablone] = &[
         // zwischen den beiden Nahmen NICHT, und dann laesst sich das Locale nicht erfuellen
         // -- nicht weil der Beweis schwerer waere, sondern weil die Voraussetzung falsch ist.
         //
-        // Stand bleibt ENTWORFEN: es gibt keine Gruppen-`ops`.
-        stand: Stand::Entworfen,
+        // **CORRECTED 2026-09-04** (K100 audit, `messung/K100-VERDICT-2026-09-04.md` §2,
+        // `messung/AUDIT-K100-2026-09-04.md` §2.2). The previous line's reason for staying
+        // at the "designed" state was copied from the neighbouring `gruppe.ops` entry, whose
+        // reason genuinely applies there (no `group`-with-`ops` construct exists) but not
+        // here: this entry's construct is the `locks` STATEMENT inside an ordinary function,
+        // not a `group` declaration's `ops`. That statement is generated code today:
+        // `emit.rs::StmtArt::Sperrt` lowers it to the take/release pair on every path
+        // (nested, for several locks in one function), `geteilt.rs`'s `H006` recomputes the
+        // rank order at compile time, and `zeugnis.rs:271-275` books it under the enum
+        // variant for constructs the GENERATOR produces -- by that variant's own doc comment
+        // (`zeugnis.rs:63-65`), a template so booked cannot also be at the "designed, no
+        // generator code" state; "carried" is what the code already does.
+        stand: Stand::Getragen,
         voraussetzungen: &[
             Voraussetzung { was: "every participant takes in ascending `rank` order -- otherwise the wait graph is not in `less_than`", durch: Some("U003/U005 in the group pass, and H006 at the lock order"), braeuchte: None },
             Voraussetzung { was: "no intermediate exit leaves the move in the intermediate state", durch: Some("U006 -- the move has no intermediate exit"), braeuchte: None },
@@ -1030,11 +1041,42 @@ pub fn ohne_fundstelle() -> Vec<&'static str> {
 /// > waehrend `ungedeckt()` sich um eins bewegte.
 ///
 /// *Wer die Kennzahl liest, liest bisher die harmlosere Haelfte.*
+///
+/// Takes the list as an argument, for the same reason as `marke_gerissen_in` and
+/// `ohne_fundstelle_in`: the counter should be testable independently of today's data.
+pub fn lebend_ungedeckt_in(liste: &[Schablone]) -> usize {
+    liste.iter().filter(|s| s.stand == Stand::Getragen).count()
+}
+
 pub fn lebend_ungedeckt() -> usize {
-    SCHABLONEN
-        .iter()
-        .filter(|s| s.stand == Stand::Getragen)
-        .count()
+    lebend_ungedeckt_in(SCHABLONEN)
+}
+
+/// **THE CEILING ON `L` -- K100's SECOND GATE, written as code instead of as a comment.**
+///
+/// `L <= 4` had stood as a comment in `paesse.rs` and as a table cell in `PLAN.md` since
+/// 2026-08-17, and nothing evaluated it: the only check was
+/// `assert_eq!(lebend_ungedeckt(), 2)`, an equality pinned to that day's value, not a bound
+/// -- a hand edit to the literal `2` would have passed any number through unexamined. An
+/// audit (`messung/AUDIT-K100-2026-09-04.md` §2.3) found that `L` reached 4 for a single
+/// 5.5-hour window on 2026-08-17, the window in which the bound was written, and has been 1
+/// or 2 in the 42 commits that touch this register since -- the ceiling was written AT the
+/// number it was meant to guard, and a decorative bound that a `grep` for `<= 4` never finds
+/// in the tree is not a gate.
+///
+/// The ceiling itself is unchanged: four is the budget K100 already argued for and every
+/// document already states. What changes is that `l_gerissen_in` below now EVALUATES it.
+pub const L_GRENZE: usize = 4;
+
+/// Is the live, unproved surface over its ceiling? **A fallen gate, not a hint** -- the same
+/// shape as `marke_gerissen_in`, and it takes the list as an argument for the same reason:
+/// a gate that only ever runs on healthy data has never been red.
+pub fn l_gerissen_in(liste: &[Schablone]) -> bool {
+    lebend_ungedeckt_in(liste) > L_GRENZE
+}
+
+pub fn l_gerissen() -> bool {
+    l_gerissen_in(SCHABLONEN)
 }
 
 /// **ZAHN 3 -- die RUECKRICHTUNG, seit 2026-08-18.**

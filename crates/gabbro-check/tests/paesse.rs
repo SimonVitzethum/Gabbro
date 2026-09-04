@@ -498,10 +498,18 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // `table.ops.erhaltung` ist von ENTWORFEN auf GETRAGEN gegangen, weil `emit.rs::ops` die
     // Operationen jetzt ausliefert. *Genau diese Bewegung soll diese Zahl sichtbar machen:*
     // eine Klempnereipflicht wurde geschlossen, und sie wurde nicht erledigt, sondern in die
-    // Erzeugerflaeche verschoben. K100s zweites Tor (`L <= 4`) haelt weiter.
+    // Erzeugerflaeche verschoben. K100s zweites Tor (`L <= 4`) haelt weiter, and it is now an
+    // ACTUAL gate (`l_gerissen`, below) and not only a comment.
+    //
+    // **2 -> 3 am 2026-09-04, and this one is a CORRECTION, not new work.**
+    // `gruppe.sperrabdruck` was booked `Entworfen` with a comment copied from the neighbouring
+    // `gruppe.ops` entry; the code it actually names (`emit.rs::StmtArt::Sperrt`, checked by
+    // `geteilt.rs::H006`) has been generated all along, and `zeugnis.rs` has said so since
+    // long before this fix. See `messung/K100-VERDICT-2026-09-04.md` §2 and `schablonen.rs`
+    // at the entry.
     assert_eq!(
         lebend_ungedeckt(),
-        2,
+        3,
         "getragen und unbewiesen: wer eine Schablone in den Erzeuger einbaut, vergroessert \
          die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in BEWEIS.md"
     );
@@ -516,6 +524,67 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
         entworfen + lebend_ungedeckt() + bewiesen(),
         SCHABLONEN.len(),
         "entworfen + getragen + bewiesen muss die ganze Liste sein"
+    );
+}
+
+/// **K100's SECOND GATE, actually evaluated.**
+///
+/// Until 2026-09-04 the only check on `L` was the equality above: a pin on today's value,
+/// which passes ANY number through unexamined the moment somebody edits the literal. An
+/// audit (`messung/AUDIT-K100-2026-09-04.md`, `messung/K100-VERDICT-2026-09-04.md`) found
+/// that no `<= 4` existed anywhere the tree could evaluate. This test is the bound itself.
+#[test]
+fn das_zweite_tor_haelt_l_unter_seiner_schranke() {
+    use gabbro_check::schablonen::{l_gerissen, lebend_ungedeckt, L_GRENZE};
+    assert!(
+        !l_gerissen(),
+        "L = {} against a ceiling of {} -- K100's second gate. **A fallen gate, not a \
+         hint**: the way down is not to raise the ceiling, it is to prove the next carried \
+         template.",
+        lebend_ungedeckt(),
+        L_GRENZE
+    );
+}
+
+/// **The sprechprobe for the gate above**, in the same shape as `der_zweite_zahn_spricht`:
+/// today's data is healthy and says nothing about whether the mechanism fires. This feeds
+/// it a deliberately broken register instead.
+#[test]
+fn das_zweite_tor_spricht() {
+    use gabbro_check::schablonen::{l_gerissen_in, L_GRENZE};
+
+    // Exactly at the ceiling: holds. Names repeat -- `l_gerissen_in` counts by `stand`,
+    // not by name, and uniqueness is a different test's job (`schablonen_abhaengigkeiten_…`).
+    let am_rand: Vec<_> = (0..L_GRENZE)
+        .map(|_| probe("x", "MESSUNGEN.md", Stand::Getragen))
+        .collect();
+    assert!(!l_gerissen_in(&am_rand), "die Schranke selbst darf halten");
+
+    // One more carried-and-unproved entry: falls.
+    let mut zu_viel = am_rand.clone();
+    zu_viel.push(probe("einer-zuviel", "MESSUNGEN.md", Stand::Getragen));
+    assert!(
+        l_gerissen_in(&zu_viel),
+        "**das zweite Tor greift nicht.** L ist ueber der Schranke, und nichts hat es \
+         gemeldet"
+    );
+
+    // Proved entries never count toward L, however many stack up beside it.
+    let mut viel_bewiesen = zu_viel.clone();
+    viel_bewiesen.push(probe("bewiesen-daneben", "MESSUNGEN.md", Stand::Bewiesen));
+    assert!(
+        l_gerissen_in(&viel_bewiesen),
+        "ein BEWIESENER Eintrag kauft hier keinen Platz -- das ist die dritte Ratsche \
+         (Zahn 2), nicht diese"
+    );
+
+    // And a proof of the offending entry buys the room back, same as tooth 2.
+    let mut bewiesen_statt = zu_viel.clone();
+    let letzter = bewiesen_statt.len() - 1;
+    bewiesen_statt[letzter] = probe("einer-zuviel", "MESSUNGEN.md", Stand::Bewiesen);
+    assert!(
+        !l_gerissen_in(&bewiesen_statt),
+        "ein Beweis muss den Platz zurueckkaufen -- sonst waere das Tor ein Anschlag"
     );
 }
 

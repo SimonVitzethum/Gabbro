@@ -33,6 +33,9 @@ import re
 import subprocess
 import sys
 import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import korpus  # noqa: E402
 from collections import Counter
 
 WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -549,6 +552,11 @@ def korpus_extern_fn() -> dict[str, list[str]]:
 
     The guard's edge is worth a number only against the population it is an edge of: a
     header set that reaches nothing is as wide as one that reaches everything.
+
+    **An UNTRACKED `.gab` scratch file used to be part of that population too** (`K100`
+    walk audit, 2026-09-04: dropping one under `beispiele/` moved this function's own
+    stated denominator, "the corpus writes N `extern fn` at M distinct names", by exactly
+    one). `korpus.verfolgt()` keeps it to what `git` tracks.
     """
     muster = re.compile(r"^\s*(?:pub\s+)?extern\s+fn\s+([A-Za-z_][A-Za-z0-9_]*)")
     aus: dict[str, list[str]] = {}
@@ -556,7 +564,8 @@ def korpus_extern_fn() -> dict[str, list[str]]:
     dateien = []
     for w in wurzeln:
         for pfad, _verz, namen in os.walk(w):
-            dateien += [f"{pfad}/{n}" for n in namen if n.endswith(".gab")]
+            dateien += [f"{pfad}/{n}" for n in namen if n.endswith(".gab")
+                        and korpus.verfolgt(f"{pfad}/{n}", WURZEL)]
     dateien.append(f"{WURZEL}/dokumente/FRAGMENTE.md")
     for d in sorted(dateien):
         try:

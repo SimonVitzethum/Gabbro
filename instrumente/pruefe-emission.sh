@@ -2488,6 +2488,38 @@ n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_x=0; rest_x="
 # Fehler gemacht wie der erste Auszaehler der Tafel, deren Wurzel selbst
 # `…/.claude/worktrees/agent-X` heisst -- *dort passte der absolute Pfad auf jede Datei, und
 # der Korpus ging auf null.*
+#
+# **The directory prune below excludes PLACES, and an untracked file just needs a different
+# one** (`K100` walk audit, 2026-09-04 -- the same class fixed in `pruefe-sondendeckung.py`,
+# `pruefe-unfalsifizierbar.py`, `pruefe-kennungen.py` and others under `instrumente/*.py`,
+# all through the shared `korpus.verfolgt()`). This stage cannot import that Python module,
+# so the same property -- "did somebody `git add` this file" -- is intersected in here
+# directly: `comm -12` keeps only the paths on BOTH the `find` walk and `git ls-files`, so a
+# scratch `.gab` dropped anywhere outside the pruned directories cannot move this stage's
+# denominator.
+#
+# **And it FAILS OPEN if `git` itself cannot answer.** A `git` WORKTREE rsynced to a server
+# directory under `CLAUDE.md`'s own transfer recipe carries a `.git` FILE whose `gitdir:`
+# line is an absolute path on the machine the worktree was created on -- on a host where
+# that path does not exist, every `git` call fails with "fatal: not a git repository", and
+# reading that failure as "nothing is tracked" would silence this whole stage (measured:
+# `0 von 0 emittierenden Dateien`, every one of the ratchets below firing as "0 statt N"
+# instead of the finding they exist to report). So when `git ls-files` fails, this falls
+# back to the plain `find` list -- the pre-existing behaviour, directory blacklist only --
+# and says so on stderr instead of failing silently.
+GAB_GEFUNDEN="$(find "$W" \( -name target -o -name .claude -o -name .lake \
+                          -o -name arbeitsprotokoll \) -prune \
+                    -o -name '*.gab' -print | sort)"
+if GAB_VERFOLGT="$(git -C "$W" ls-files -z -- '*.gab' 2>/dev/null \
+                        | tr '\0' '\n' | sed "s#^#$W/#" | sort)" \
+        && [ -n "$GAB_VERFOLGT" ]; then
+    GAB_STUFE9_LISTE="$(comm -12 <(printf '%s\n' "$GAB_GEFUNDEN") \
+                                 <(printf '%s\n' "$GAB_VERFOLGT"))"
+else
+    echo "pruefe-emission.sh: \`git ls-files\` failed under $W -- falling back to the" >&2
+    echo "  directory blacklist alone, untracked .gab files included" >&2
+    GAB_STUFE9_LISTE="$GAB_GEFUNDEN"
+fi
 while IFS= read -r q; do
     d="${q#"$W"/}"
     if ! cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$q" \
@@ -2558,9 +2590,7 @@ while IFS= read -r q; do
         head -3 "$ARB/regelerr" | sed 's/^/      /'
         schlecht=1
     fi
-done < <(find "$W" \( -name target -o -name .claude -o -name .lake \
-                    -o -name arbeitsprotokoll \) -prune \
-              -o -name '*.gab' -print | sort)
+done < <([ -z "$GAB_STUFE9_LISTE" ] || printf '%s\n' "$GAB_STUFE9_LISTE")
 n_nenner=$((n_emit - n_umg))
 echo "  $n_ok von $n_nenner emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen,"
 echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die emittieren"
