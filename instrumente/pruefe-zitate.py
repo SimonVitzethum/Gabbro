@@ -305,7 +305,20 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # > *"a ratchet one may dodge by rephrasing measures spelling, not debt."* The comment says
 # > WHY the map exists, and the reason is a rule in another file. Writing it so the guard
 # > cannot see it would keep the claim and delete the record of it.
-MARKE = 347
+# **347 -> 350 on 2026-09-04, three at once and all from ONE sentence.** `O013` -- a
+# `retires` may not rest on an unfalsifiable assumption -- is the fourth site of a latch whose
+# other three are `S004` (`schleifen.rs`), `N005` and `N031` (both `namen.rs`). The rule lives
+# in `phasen.rs`, and its head names the three, because *why this refusal is not a new idea*
+# is the first thing a reader of it has to know. Measured the way the blocks above demand, by
+# rewriting that one sentence to name no code and re-running: **347 without the citation, 350
+# with it, nothing else moved** (`phasen.rs`:854-855, `--liste`).
+#
+# > **A generalisation cites its instances -- that is what makes it one.** Rephrasing the
+# > sentence to say "the register of the other three stands below" was measured above and
+# > rejected on the rule four blocks up: *a ratchet one may dodge by rephrasing measures
+# > spelling, not debt.* The claim is that these four are ONE rule at four constructs, and a
+# > claim about rules in two other files is exactly what this list is for.
+MARKE = 350
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on

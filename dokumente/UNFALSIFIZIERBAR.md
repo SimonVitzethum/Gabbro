@@ -149,33 +149,113 @@ assumption; it is **empty**, and it belongs in *not an assumption of the axiom l
 > shown to carry no trust — and a row that carries no trust is not an exception to `A`, it is
 > a subtraction from it.
 
+#### `R4` is a HEURISTIC, and its exception has a name in this very file
+
+**Tested on 2026-09-04, in the direction it had never been pushed.** *A rule that has only
+ever been applied one way has not been tested* — so: construct an assumption that **nothing
+can refute** and that something **genuinely rests on**. If it exists, `R4` is not sound.
+
+**It exists, and it is row 1 of the register below.**
+
+The slip is not in `R4`'s inference — that one is valid as written. *If* no observation
+whatever distinguishes A from ¬A, then no program can behave differently under the two, and
+nothing rests on it. **The slip is in applying it to a row because the row is
+`unfalsifiable`.** This document says twice, in its own words, why that step does not carry:
+
+> *„Der Satz ist wahr, und er ist ein Argument über die GRÜNE Richtung. Falsifizierbarkeit
+> ist die rote."*
+
+`unfalsifiable` quantifies over **refuting** observations. `R4`'s antecedent quantifies over
+**all** of them. **The antecedent is strictly stronger than membership in the category it
+polices**, so no row can be moved under `R4` merely for being in the category — it needs the
+extra premise that nothing observes it in either direction, and that premise has to be argued
+separately.
+
+**And `U2` is exactly the class where the extra premise is FALSE.** Take `ipi_kommt_an` —
+*„Ein gesendetes IPI erreicht den Zielkern in endlicher Zeit."* No bounded run refutes it;
+*never* and *not yet* are the same picture. But every arrival **confirms** it, and a program
+that waits on the acknowledgement **terminates if and only if the assumption holds**.
+*Terminating versus hanging forever is as load-bearing as a program behaviour gets.* So: an
+assumption nothing can refute, which something genuinely rests on. `R4` does not reach it,
+and the register admits it under `U2` — correctly, and for a reason `R4` would have denied.
+
+**Can it be built in Gabbro TODAY?** Yes, and the search for it is what turned up `O013`:
+
+| construction | state |
+|---|---|
+| `retires t from boot unfalsifiable "…"` — layer S3 of the boot theorem rests on it | **was writable.** `beispiele/07` with the tail swapped checked `41 items, 0 errors, 0 hints`, exit=0. **Closed the same day by `O013`** |
+| `assume ein_kern … unfalsifiable "…"` — buys every `H013` exemption | **writable.** `geteilt.rs`:532 asks `contains_key` and never the class |
+| `assume gnadenfrist… unfalsifiable "…"` — carries the whole grace period of an `rcu … reclaims` | **writable.** `H015` collects `ItemArt::Assume` and never reads `a.klasse` |
+| a wait loop with **no `progress` clause at all** | **writable, and no latch can ever close it.** `progress` is optional (`SYNTAX.md`:1002, 1012: `[ "progress" ident ]`), and one of the 19 loops in the clean corpus carries none — `beispiele/66-transport-rueckgabe.gab`:66 |
+
+**So the honest statement, and it is worth more than the rule was.** Where the checker can
+SEE that a construct rests on an assumption, `"unfalsifiable ⇒ carries nothing"` is true —
+**and it is true by REFUSAL, not by inference.** `S004`, `N005`, `N031` and `O013` make the
+counterexample unwritable at those four sites, which is why the bin came out nearly empty.
+Everywhere else — at the two `geteilt.rs` sites, and at every dependency the text does not
+name — the inference is simply invalid, and `U2` is the standing counterexample.
+
+*`R4` should therefore be read as a consequence of the latches rather than as a piece of
+reasoning: it names the shape the language enforces, and it does not license moving a row on
+its own.* **Row 4 of the register (`mmu_schreibt_nur_a_und_d`) survives that correction** —
+its argument is that a snapshot-compare settles the question, i.e. that the sentence is
+observable in **both** directions, which is `R4`'s real antecedent and not the weak one.
+
 ---
 
 ## The category already has a PRICE, and it is not this document's invention
 
-**`unfalsifiable` is not free in the checker either.** Two passes refuse a construct that
-rests on one, and both refusals are errors:
+**`unfalsifiable` is not free in the checker either.** This section said *"two passes"* when
+it was written on 2026-09-04. **It was FOUR by the end of the same day, and the fourth was
+built because the enumeration was done properly:** every site in the grammar and in the
+passes that lets a construct rest on an assumption, not the two that came to mind.
 
 | code | site | what it says |
 |---|---|---|
 | `S004` | `progress <name>` | *"`progress …` rests on an unfalsifiable assumption"* — `crates/gabbro-check/src/schleifen.rs`:239. *„Eine unfalsifizierbare Fortschrittsannahme nimmt dem Wachhund seinen Gegenstand."* |
 | `N005` | `entrust … assume <name>` | *"`entrust …` rests on an unfalsifiable assumption"* — `namen.rs`, with the note *"an assumption about foreign code that no probe can ever refute belongs in the certificate, not in a pass"* |
+| `N031` | `atomic … observed by <name>` | *"`observed by …` names an assumption without a falsifier"* — `namen.rs`:4374. **This one was already there and this document did not know it**, which is why its population figure was one too low |
+| `O013` | `retires <tok> from <space>` | *"… retires `t`, and the retirement rests on an unfalsifiable assumption"* — `phasen.rs`, built 2026-09-04. The clause declares its assumption INLINE instead of naming one, and until that day nothing read its class |
 
-**Measured over the 44:** eleven are named by a `progress` or an `entrust`.
+**Measured over the 44:** **twelve** are named by a `progress`, an `entrust` or an
+`observed by`. *The eleven this section first claimed was the same measurement with `N031`
+left out of the union.*
 
 ```bash
 ssh … './target/release/gabbro annahmen beispiele/*.gab' | grep -E "^A[0-9]+" | cut -f2 | sort > /tmp/n44
-{ grep -rhoI "progress [a-zA-Z_0-9]*" beispiele/*.gab | sed 's/progress //'
-  grep -rhoI "^\s*assume [a-zA-Z_0-9]*;" beispiele/*.gab | sed 's/[^a-z_]*assume //;s/;//'; } | sort -u > /tmp/p
+{ grep -rhoE "progress [a-zA-Z_0-9]+"    beispiele/*.gab | sed 's/progress //'
+  grep -rhoE "^[[:space:]]*assume [a-zA-Z_0-9]+;" beispiele/*.gab | sed 's/[^a-z_]*assume //;s/;//'
+  grep -rhoE "observed by [a-zA-Z_0-9]+" beispiele/*.gab | sed 's/observed by //'; } | sort -u > /tmp/p
 comm -12 /tmp/n44 /tmp/p | wc -l
-# 11
+# 12   -- the twelfth is `karte_liest_nach_dem_index`, beispiele/41-handschlag.gab:49
 ```
 
-> **A quarter of the population cannot be binned at all**, and the refusal is older than this
-> bar. *That is worth saying because it bounds what this document can be blamed for and what
-> it can take credit for:* the language already priced the word at the two sites where an
-> assumption CARRIES something. What it never priced is the word standing alone — and 33 of
+`O013` adds none of the 44: the assumption a `retires` carries is GENERATED out of the
+clause (`stilllegung_<fn>_ist_unerreichbar`) and appears in `gabbro annahmen` per file, not
+in the corpus-wide set this table counts. **Its price is paid all the same** — measured over
+the whole tree, 648 `.gab`: four `retires` clauses, all four `falsifier`, so the rule refuses
+nothing that stands today.
+
+> **More than a quarter of the population cannot be binned at all**, and the refusal is older
+> than this bar. *That is worth saying because it bounds what this document can be blamed for
+> and what it can take credit for:* the language already priced the word at the sites where an
+> assumption CARRIES something. What it never priced is the word standing alone — and 32 of
 > the 44 stand alone.
+
+### And the enumeration found two sites where the price is NOT charged
+
+**Both are in `geteilt.rs`, both read an assumption and neither reads its class.** They are
+named here rather than fixed because that file is another lane's; the repair is one line each.
+
+| site | what it buys | what it asks | what it does not ask |
+|---|---|---|---|
+| `geteilt.rs`:532 | every `H013` exemption in the context matrix («K5.3») | `crate::annahmen(baum).contains_key("ein_kern")` | whether `ein_kern` is falsifiable. *The comment three lines above asserts it is:* „Die Annahme steht damit im Zeugnis und **hat einen Falsifikator**" |
+| `geteilt.rs`:309–319 (`H015`) | the whole grace period of an `rcu … reclaims` | that SOME `assume` names the domain | `a.klasse`. **And its own note cites the model it is missing half of:** *"the assumption names WHO GUARANTEES it, **the way `progress` names who ends the loop**"* |
+
+*Measured, so that the repair is known to be free:* one `ein_kern` in 648 `.gab`
+(`beispiele/gift/231`, `falsifier sonde_zweiter_kern`) and three grace-period assumptions
+(`beispiele/31`, `/42`, `gift/272`, all `falsifier sonde_leser_noch_drin`). **Neither repair
+refuses a single file that stands today.**
 
 ---
 

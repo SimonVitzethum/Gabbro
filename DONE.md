@@ -10,6 +10,69 @@
 
 ---
 
+## The latch generalises: `O013`, and `R4` turns out to be a heuristic *(2026-09-04)*
+
+**`S004` and `N005` were reported as two.** *„Eleven of the 44 cannot be binned at all — and
+nobody built that as a protection."* Both halves needed measuring, and both moved.
+
+**The population is 12, not 11.** The union was taken over `progress` and `entrust` and left
+out **`N031`** (`atomic … observed by <name>`, `namen.rs`:4374) — a third site of the same
+latch, built 2026-08-31, which the report did not know about. The twelfth name is
+`karte_liest_nach_dem_index` at `beispiele/41-handschlag.gab`:49.
+
+```bash
+ssh … './target/release/gabbro annahmen beispiele/*.gab' | grep -cE "^A[0-9]+"        # 44
+comm -12 /tmp/n44 /tmp/p | wc -l   # 11 over two sites, 12 with `observed by`
+```
+
+**The enumeration, done from the grammar and the passes rather than from memory:** exactly
+**six** sites let a construct rest on an assumption. Three carried the latch, three did not.
+
+| site | rests on | latch |
+|---|---|---|
+| `progress <name>` | who ends the loop | `S004` |
+| `entrust … assume <name>` | the guest keeps its contract | `N005` |
+| `atomic … observed by <name>` | the counterparty is in silicon | `N031` |
+| **`retires <tok> from <space>`** | *no mapping ⟹ unreachable*, layer S3 | **`O013`, built today** |
+| `ein_kern` (`geteilt.rs`:532) | every `H013` exemption | **none** — `contains_key`, never the class |
+| the grace period (`H015`, `geteilt.rs`:309) | that no reader is left in an `observes` | **none** — `ItemArt::Assume` collected, `a.klasse` never read |
+
+The last two are in another lane's file and are booked, not built; each repair is one line and
+**neither refuses a file that stands today** (one `ein_kern`, three grace-period assumptions,
+all four `falsifier`).
+
+| | | evidence |
+|---:|---|---|
+| **1** | pre-run (`W24`) | `beispiele/07` with `falsifier` swapped for `unfalsifiable "…"`: **`41 items, 0 errors, 0 hints`, exit=0** against the unchanged checker, and `gabbro annahmen` printed `stilllegung_boot_ende_ist_unerreichbar` in the class with a reason and no probe |
+| **1** | probe | `beispiele/gift/678-a-retirement-that-no-probe-can-end.gab` (`-- erwartet: O013`), **fires alone** (`7 items, 1 errors, 0 hints`) |
+| **3** | counter-probes | the same clause with `falsifier`; an `assume` with the identical tail; an `axiom` with it — all silent (`paesse.rs`) |
+| **1** | sentence | `bootsatz.stilllegung` in `saetze.rs` carries `O010`–`O013` |
+| **1** | mutation | `stilllegung-nimmt-einen-wunsch-an` in `mutiere-pruefer.py`; applied, built, **2 probes fall**, source restored byte-identically against SHA-256. Anchors **392 of 392** |
+| **0** | corpus files broken | `gabbro pruefe` swept over every `.gab` before and after: 648 → 649 files, **190 exit-0 both times, 0 exit codes changed** |
+| **0** | red tests | `cargo test --no-fail-fast` on `ki-pc-fisch-101`: **405 passed, 0 failed** |
+| **0** | ratchet risen | German comment lines **7875**, unchanged (`./instrumente/pruefe-englisch.py`) — one new comment line carried a German word and was rewritten before it was booked |
+
+**And the counter-question, which is worth more than the rule.** `R4` reads *"nothing can
+observe it, therefore nothing rests on it"*. **It is a heuristic, not a theorem**, and the
+break is in this file's own words: `unfalsifiable` quantifies over **refuting** observations,
+`R4`'s antecedent over **all** of them. A `U2` row — *„Ein gesendetes IPI erreicht den
+Zielkern in endlicher Zeit"* — cannot be refuted by any bounded run and is confirmed by every
+arrival; a program waiting on the acknowledgement terminates **iff** it holds. *An assumption
+nothing can refute that something genuinely rests on* — and it is row 1 of the register,
+ADMITTED.
+
+> **Where the checker can SEE the dependency, `R4`'s conclusion holds — by REFUSAL, not by
+> inference.** Four latches make the counterexample unwritable, which is why the bin came out
+> nearly empty. Where it cannot see it, the inference is invalid: the two `geteilt.rs` sites,
+> and **every dependency the text does not name** — `progress` is optional
+> (`SYNTAX.md`:1002, 1012), and 1 of the 19 loops in the clean corpus carries none
+> (`beispiele/66-transport-rueckgabe.gab`:66). *That last one no latch can ever close.*
+
+**What was NOT built, and why it is a stop and not an omission.** The grace period is the
+assumption `SYNTAX.md`:1466 says *„gehoert damit dorthin, wo `progress` steht"* — but no
+clause NAMES it; `H015` finds it by scanning `assume` texts for a domain name. Giving it a
+clause is a new grammar production and goes through §7's cost gate.
+
 ## `unfalsifiable` gets a bar — written BEFORE anything was classified, and five of six rows fall *(2026-09-04)*
 
 **The grammar forces `falsifier <probe>` or `unfalsifiable "<reason>"` and reads neither.**
@@ -1220,7 +1283,7 @@ with no site is the thing this folder hunts, not the thing it adds.*
 
 ## Probes
 
-**67 clean examples, 447 poison probes, 404 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
+**67 clean examples, 448 poison probes, 405 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
 > | | booked | measured | by what |
 > |---|---:|---:|---|
 > | clean examples | 25 | **54** | `ls beispiele/*.gab` |

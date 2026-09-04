@@ -1804,3 +1804,60 @@ fn ein_falsifikator_muss_rot_werden_koennen() {
              effects { reads k, writes k } progress a { k = 1; } } }",
     );
 }
+
+// -- Pass 11: Phasen -- the boot theorem's third layer -------------------------------------
+
+/// **`O013` -- a `retires` may not rest on an unfalsifiable assumption** (2026-09-04).
+///
+/// The fourth site of one latch: `S004` refuses a `progress` on an unfalsifiable
+/// assumption, `N005` an `entrust`, `N031` an `observed by`, and this one a `retires`.
+///
+/// **The counter-direction is what makes it a rule about THIS clause and not about the
+/// word.** `assume` and `axiom` carry the very same tail and stay green with it -- 33 of
+/// the corpus's 44 assumptions stand alone and carry nothing, which is why the class
+/// exists. A `retires` never stands alone: `O010` demands that a token a `raw fn`
+/// requires be retired by somebody, so the clause is load-bearing by construction and
+/// `manifest.rs::stilllegungsannahmen` books layer S3's machine half out of it.
+#[test]
+fn eine_stilllegung_ruht_auf_keiner_unfalsifizierbaren_annahme() {
+    // The whole clause is right except the tail: the token is a `linear ghost` parameter,
+    // the `effects` consume the SAME token, and a postcondition says what is gone.
+    const RUMPF: &str = "module p { \
+         type Pa = u64; \
+         linear ghost type BootPhase; \
+         walk Seitentabelle levels 4 { \
+           node : [Pte; 512], \
+           down : rahmen when it.praesent && !it.gross, \
+           leaf : it.praesent && it.gross, \
+         } \
+         format Pte endian little { \
+           praesent : bool @0, \
+           gross : bool @1, \
+           pte_frei : u64 @[11:2] reserved, \
+           rahmen : u64 embeds [51:12] scale 4096, \
+           pte_hoch : u64 @[63:52] reserved, \
+         } \
+         raw fn ps(p : Pa, w : u64) requires BootPhase effects { writes phys }; \
+         fn boot_ende(t : BootPhase, wurzel : Seitentabelle) \
+           ensures !exists m in mappings of wurzel : m.rahmen == 1 \
+           retires t from boot TAIL \
+           effects { consumes t, writes wurzel }; \
+         }";
+    faellt_mit(
+        &RUMPF.replace("TAIL", "unfalsifiable \"a probe would have to stop the MMU\""),
+        "O013",
+    );
+
+    // -- the counter-direction ----------------------------------------------------------
+    // The SAME clause with a named probe is silent -- so the rule reads the class and not
+    // the presence of the clause.
+    faellt_nicht(&RUMPF.replace("TAIL", "falsifier sonde_boot_unerreichbar"));
+    // **And the same tail at an `assume` stays admissible.** That is the whole distinction:
+    // a sentence standing alone may be unrefutable; one a construct rests on may not.
+    faellt_nicht("module p { assume a \"the MMU writes only A and D\" unfalsifiable \"a probe would have to stop the MMU\"; }");
+    // An `axiom` likewise -- it is the other item that carries this tail.
+    faellt_nicht(
+        "module p { axiom wbinvd() effects { writes cache } \
+         unfalsifiable \"the effect is not observable on this machine\"; }",
+    );
+}

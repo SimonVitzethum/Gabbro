@@ -1,0 +1,53 @@
+-- erwartet: O013
+-- **The boot space is retired -- and the sentence that carries the retirement is one no
+-- probe can ever end.** Measured against the unchanged checker on 2026-09-04: swapping
+-- `falsifier sonde_boot_unerreichbar` for `unfalsifiable "…"` in `beispiele/07` checked
+-- with `41 items, 0 errors, 0 hints`, exit=0, and `gabbro annahmen` printed the generated
+-- entry `stilllegung_boot_ende_ist_unerreichbar` as `nicht-falsifizierbar`.
+--
+-- **This file does everything the other three rules ask.** The clause names a parameter of
+-- a `linear ghost type` and the `effects` consume the SAME token (`O011`); a postcondition
+-- over `mappings of` says, negatively, what is gone (`O012`); the token a `raw fn` demands
+-- is retired by somebody (`O010`). *Only the tail is a wish.*
+--
+-- **Why the same tail is admissible at `assume` and refused here.** An `assume` line may
+-- stand alone -- 33 of the corpus's 44 assumptions do, and they carry nothing, which is
+-- precisely why `unfalsifiable` exists as a class at all. A `retires` never stands alone:
+-- `O010` demands that a token a `raw fn` requires be retired by SOMEBODY, so the clause is
+-- load-bearing by construction, and `manifest.rs::stilllegungsannahmen` books the machine
+-- half of layer S3 -- *an address without a mapping is no longer reachable* -- out of this
+-- very clause. With `unfalsifiable` there, layer S3 has a name and no falsifier.
+--
+-- *The fourth site of one latch:* `S004` at `progress`, `N005` at `entrust`, `N031` at
+-- `observed by`, `O013` here. **A construct that makes a promise may not rest on a
+-- sentence nothing can refute.**
+module gift::stilllegung_ohne_falsifikator {
+
+type Pa = u64;
+
+linear ghost type BootPhase;
+
+walk Seitentabelle levels 4 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent && !it.gross,
+    leaf : it.praesent && it.gross,
+}
+
+format Pte endian little {
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    gross      : bool @2,
+    pte_frei   : u64 @[11:3]  reserved,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    pte_hoch   : u64 @[62:52] reserved,
+    nx         : bool @63,
+}
+
+raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
+
+fn boot_ende(t : BootPhase, kern_wurzel : Seitentabelle)
+    ensures !exists m in mappings of kern_wurzel : m.rahmen == 1
+    retires t from boot unfalsifiable "a probe would have to stop the MMU"
+    effects { consumes t, writes kern_wurzel };
+
+}

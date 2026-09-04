@@ -4142,6 +4142,17 @@ MUTATIONEN = [
         "des getippten -- ein Lauf unter dem einen Namen meldet den anderen. **EINE Probe "
         "faellt** (`erstnamen.rs`)",
     ),
+    # **`O013`, one mutation, and it is the whole rule** (2026-09-04). The refusal reads the
+    # CLASS of the `retires` tail and nothing else, so there is exactly one place to damage:
+    # let the unfalsifiable arm read as if it were falsifiable. Probe 678 is the witness.
+    Mutation(
+        "stilllegung-nimmt-einen-wunsch-an",
+        "phasen.rs",
+        "            AnnahmeKlasse::NichtFalsifizierbar(g) => Some(g.text.as_str()),",
+        "            AnnahmeKlasse::NichtFalsifizierbar(g) => { let _ = g; None }",
+        "O013 -- `retires t from boot unfalsifiable \"…\"` passes again, so layer S3 of the "
+        "boot theorem carries a name and no falsifier. Probe 678 is the witness.",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
