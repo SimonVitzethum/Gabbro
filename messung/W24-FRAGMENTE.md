@@ -57,6 +57,8 @@ eine Messung.* **Gebaut, siehe §5:** die Zeile liest ihre Zahl jetzt aus
 | **F09** | 1 Fehler | keine C-Datei | — | `[K001]` :79 — ``rechte_pruefen` promises <= 4096 ops, the body costs 137438953472`; dahinter `[C001]`×3 |
 | **F10** | sauber | 66 Zeilen C | übersetzt / übersetzt | — *läuft in `pruefe-emission.sh`* |
 
+> **BERICHTIGT 2026-09-04:** die `F03`-Zeile ist der Stand vom 2026-08-30. `Frame`/`RegNr` wurden 2026-09-03 deklariert und schliessen alle neun `[N040]`; `pruefe` liest heute **18**, nicht 19. Das `dahinter [C001]×2` von damals ist heute **[C001]×1**, bei `F03.gab:185` -- und genau DAS ist die Zeile, die diese Tabelle schon am 2026-08-30 richtig von der Pruefer-Spalte trennte: ein `emit`-Befund, den `pruefe` nicht zeigt und den `instrumente/zaehle-pflichten.py` bis heute nicht liest (es ruft nur `pruefe`). Volle Klassifikation: `messung/KLASSEN-F03-2026-09-04.md`.
+
 **Sechs von zehn emittieren heute** — nicht eins. Fünf davon übersetzen unter `-Werror` bei
 `-O0` und `-O2`; das sechste ist F06.
 

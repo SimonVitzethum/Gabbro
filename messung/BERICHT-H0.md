@@ -451,6 +451,15 @@ over seven codes are not the reason to stop — *«B10» is*: `traverse` yields 
 knows no `break`, so `by consuming` over a `queue` drains the whole queue, which is a
 different program. Nine `N040` on top of that means nine names stand nowhere.
 
+> **BERICHTIGT 2026-09-04:** the `27 errors` above is `3b17d9a`'s baseline, dated and left as
+> measured. `F03` moved since -- `Frame`/`RegNr` were declared 2026-09-03, closing all nine
+> `N040`s -- and `gabbro pruefe` reads **18** today. `gabbro emit` reads **19**: the same 18
+> plus this section's own `[C001]` at `:185` (the queue traverse), which `pruefe` never
+> showed even at `3b17d9a` -- the table above's `emit: refuses` for `F03` was always doing
+> more work than its `pruefe` column, and neither column said how much. Full classification
+> of the current 18 in `messung/KLASSEN-F03-2026-09-04.md`; the pruefe/emit gap itself in
+> `messung/GEGENPROBE-F03.md`.
+
 **What this lane can say about the price, having now paid three of the four:**
 
 * Each of `F09`, `F01` and `F05` cost roughly what the plan booked, and in each one the

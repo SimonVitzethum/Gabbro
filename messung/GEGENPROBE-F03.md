@@ -260,12 +260,33 @@ count, sourced from `gabbro pruefe`). But:
     ./target/debug/gabbro emit   messung/fragmente/F03.gab   ->  19 errors (same 18 + C001 at :185)
 
 Reproduced on my own build, independent of the lane's. **`zaehle-pflichten.py::_pruefe_fehler`
-runs `pruefe`, never `emit`** -- so `H`'s ledger structurally cannot see the 19th. Anyone who
-reads "F03: 18 errors" (as at least six documents in this tree now do -- `AUDIT-K100`,
-`BERICHT-H0.md`, `PLAN-HARDWARE.md`, `PLAN-VOLLSTAENDIGKEIT.md`, `W24-FRAGMENTE.md`,
-`ERZEUGERREST.md`) and stops there has a number that is true of one command and false of the
-pipeline `H` is supposed to be a proxy for (does the generated C exist and compute what the
-fragment says). **The gap is not a rounding error -- it is a whole refusal class (emitter
+runs `pruefe`, never `emit`** -- so `H`'s ledger structurally cannot see the 19th.
+
+**Self-correction, checked before acting on it.** I first wrote that six documents quote
+"18 errors" for `F03` (`AUDIT-K100`, `BERICHT-H0.md`, `PLAN-HARDWARE.md`,
+`PLAN-VOLLSTAENDIGKEIT.md`, `W24-FRAGMENTE.md`, `ERZEUGERREST.md`) -- that was imprecise, and
+I checked each rather than repeat it. Only `AUDIT-K100-2026-09-04.md` literally says `18
+errors` (it is dated today and the number is live). `BERICHT-H0.md` (27, at commit `3b17d9a`),
+`PLAN-HARDWARE.md` (27, in a table with sibling rows already struck through and corrected),
+`PLAN-VOLLSTAENDIGKEIT.md` (19) and `W24-FRAGMENTE.md` (19, measured 2026-08-30, and already
+distinguishing `pruefe`/`emit`/`cc` in its own columns) each carry an OLDER, dated count from
+before `Frame`/`RegNr` were declared on 2026-09-03 and closed the nine `N040`s that separated
+27/19 from today's 18. `ERZEUGERREST.md` does not assert a current count at all -- it only
+flags that `BERICHT-H0.md`'s `27` mislabeled a hint as an eighth error code, a point that
+stands regardless of today's number. **Corrected all five live documents that misstate or
+understate today's state** (`AUDIT-K100`, `BERICHT-H0.md`, `PLAN-HARDWARE.md`,
+`PLAN-VOLLSTAENDIGKEIT.md`, `W24-FRAGMENTE.md`) with a dated annotation each giving today's
+pair (`pruefe` 18 / `emit` 19) and the command that produced it, using each document's own
+existing correction convention (strikethrough + **BERICHTIGT**, or a blockquote note) rather
+than silently overwriting a historical measurement -- none of the old numbers were erased.
+Also added a documentation-only note (comments, no logic touched) at
+`instrumente/zaehle-pflichten.py`, immediately above `_pruefe_fehler`, naming the structural
+fact where the measure is defined rather than only where the number is quoted: this function
+runs `pruefe` and never `emit`, so an emitter-only refusal is invisible to `H` by
+construction. **Not repaired** -- the classifier itself is untouched, per instruction; this
+names the blind spot, it does not patch it.
+
+**The gap is not a rounding error -- it is a whole refusal class (emitter
 lowering) that the checker-only number is blind to by construction**, and it would stay blind
 even if all 18 checker errors vanished tomorrow.
 
