@@ -1,0 +1,162 @@
+-- «K3» fragment 2 of 8 -- candidate index 213 of 1709
+--
+--   source   linux/lib/debugobjects.c:198-222   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function pool_pop_batch
+--   picked   by the rule in `messung/K3-AUSWAHL.md`
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+--  198  static bool pool_pop_batch(struct hlist_head *head, struct obj_pool *src)
+--  199  {
+--  200  	struct hlist_node *last, *next;
+--  201  	struct debug_obj *obj;
+--  202
+--  203  	if (!src->cnt)
+--  204  		return false;
+--  205
+--  206  	/* Move the complete list to the head */
+--  207  	hlist_move_list(&src->objects, head);
+--  208
+--  209  	obj = hlist_entry(head->first, typeof(*obj), node);
+--  210  	last = obj->batch_last;
+--  211  	next = last->next;
+--  212  	/* Disconnect the batch from the list */
+--  213  	last->next = NULL;
+--  214
+--  215  	/* Move the node after last back to the source pool. */
+--  216  	src->objects.first = next;
+--  217  	if (next)
+--  218  		next->pprev = &src->objects.first;
+--  219
+--  220  	WRITE_ONCE(src->cnt, src->cnt - ODEBUG_BATCH_SIZE);
+--  221  	return true;
+--  222  }
+--
+-- ## What this fragment cost
+--
+--   WALL   7     the union-as-reinterpretation, `&src->objects`, `hlist_entry`
+--                (`container_of`), `NULL`, the null test, `&src->objects.first`,
+--                `WRITE_ONCE` on a FIELD
+--   FORM   1     `if (!src->cnt)`
+--   INVENT 2     `effects`, `costs`
+--
+-- **This is the intrusive-list class, and Gabbro has no answer to any of it.** An
+-- intrusive list is built out of exactly the three things the language refuses on purpose:
+-- the address of a field, arithmetic backwards from a member to its container, and a null
+-- terminator. *Nine of the twenty body lines are one of those three.*
+--
+-- > **And WALL 7 is a gap this project already knows under another name.** `WRITE_ONCE` on
+-- > `src->cnt` is a relaxed store to a STRUCT FIELD; Gabbro's `atomic` is an ITEM
+-- > (`atomicdecl` stands under `item`, SYNTAX.md 1), never a field of a record. That is
+-- > `messung/RACE.md` A4 verbatim -- *"`atomic` ist ein Item, kein Slotfeld"* -- found there
+-- > at `K2-F2` and found here again, in a subsystem nobody looked at.
+
+module k3::debugobjects {
+
+-- ADDED: `struct hlist_node` (include/linux/types.h). `**pprev` is a pointer to a
+-- pointer, and Gabbro can SAY that: `ptrty` nests. What it cannot do is produce one --
+-- see WALL 5 and WALL 6.
+type HlistNode = {
+    next  : ptr<normal, rw> HlistNode,
+    pprev : ptr<normal, rw> ptr<normal, rw> HlistNode,
+};
+
+type HlistHead = {
+    first : ptr<normal, rw> HlistNode,
+};
+
+-- ADDED: `enum debug_obj_state`.
+type DebugObjState = { NotAvailable, None, Init, Inactive, Active, Destroyed };
+
+-- [WALL 1] `struct debug_obj` (include/linux/debugobjects.h:29-38) carries
+--
+--       union {
+--               void                    *object;
+--               struct hlist_node       *batch_last;
+--       };
+--
+--   an anonymous union used as a REINTERPRETATION of the same bytes -- one of the named
+--   non-existent things (SYNTAX.md, "What deliberately does not exist": *`union` as
+--   reinterpretation*, *`void*`*). The record below therefore carries `batch_last` ALONE,
+--   and that is not `struct debug_obj`: it is the half the excerpt happens to read. The
+--   second view on the same bytes is exactly the edge SYNTAX.md §3 says is not built.
+type DebugObj = {
+    node       : HlistNode,
+    state      : DebugObjState,
+    astate     : u32,
+    batch_last : ptr<normal, rw> HlistNode,
+};
+
+opaque type PoolStats = u64;
+
+type ObjPool = {
+    objects : HlistHead,
+    cnt     : u32,
+    min_cnt : u32,
+    max_cnt : u32,
+    stats   : PoolStats,
+};
+
+-- lib/debugobjects.c:26
+const ODEBUG_BATCH_SIZE : u32 = 16;
+
+-- ADDED callee. [INVENT] `effects` and `costs` are ours; C declares neither.
+extern fn hlist_move_list(old : ptr<normal, rw> HlistHead, new : ptr<normal, rw> HlistHead)
+    effects { reads old, writes old, writes new } costs <= 8 ops;
+
+impl fn pool_pop_batch(head : ptr<normal, rw> HlistHead, src : ptr<normal, rw> ObjPool) -> bool
+    effects { reads head, writes head, reads src, writes src }
+    costs   <= 64 ops
+{
+    -- [FORM 1] lines 203-204: `if (!src->cnt) return false;`
+    --   C tests an unsigned int for truth. Gabbro converts nothing implicitly (E3), so the
+    --   comparison is written out. Same statement, no bending.
+    if src->cnt == 0 {
+        return false;
+    }
+
+    -- [WALL 2] line 207: `hlist_move_list(&src->objects, head);`
+    --   `&src->objects` is the address of a field. Gabbro's `&` makes a FUNCTION a value
+    --   and nothing else. NOTHING is put in its place.
+
+    -- [WALL 3] line 209: `obj = hlist_entry(head->first, typeof(*obj), node);`
+    --   `hlist_entry` is `container_of`: subtract `offsetof(struct debug_obj, node)` from a
+    --   pointer to the member and call the result a pointer to the container. Gabbro has
+    --   neither `offsetof` nor pointer arithmetic without a basis nor `typeof`.
+    --   NOTHING is put in its place -- so `obj` is unbound, and lines 210 and 211 fall with
+    --   it, not on their own account.
+
+    -- line 210: `last = obj->batch_last;`  -- writable in itself; `obj` is WALL 3.
+    let last = obj->batch_last;
+
+    -- line 211: `next = last->next;`
+    let next = last->next;
+
+    -- [WALL 4] line 213: `last->next = NULL;`
+    --   There is no null pointer in Gabbro. The list terminator has no spelling.
+    --   NOTHING is put in its place -- and with it goes the whole point of the line, which
+    --   is DISCONNECTING the batch.
+
+    -- line 216: `src->objects.first = next;`
+    src->objects.first = next;
+
+    -- [WALL 5] line 217: `if (next)`
+    --   A pointer tested for null. Gabbro has no null, so it has no test for one either.
+
+    -- [WALL 6] line 218: `next->pprev = &src->objects.first;`
+    --   The address of a field again, and this time it is the whole content of the
+    --   statement: an hlist stores the address of the pointer that points at it.
+    --   NOTHING is put in its place.
+
+    -- [WALL 7] line 220: `WRITE_ONCE(src->cnt, src->cnt - ODEBUG_BATCH_SIZE);`
+    --   A relaxed store to a struct FIELD. `atomic` in Gabbro is an item, never a field
+    --   (`atomicdecl` under `item`, SYNTAX.md 1), so the ordering half of this line has no
+    --   site. Writing `src->cnt = src->cnt - ODEBUG_BATCH_SIZE;` would drop the ONE thing
+    --   the macro is there for. NOTHING is put in its place.
+
+    return true;
+}
+
+}

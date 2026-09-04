@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 212 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 214 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *208 → 209 on 2026-09-04: `messung/KLASSEN-F03-2026-09-04.md` joined — `F03`'s eighteen
       refusals classified by the pass that raises each (0 of 18 plumbing). **The guardian named
       the carry before a reader did** — `pruefe-zahlen.py` said `208` against a run of `209` —
@@ -1518,6 +1518,41 @@ Die stehen in Stufe 3 und 4.*
       Fragmente sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen ist keine Aussage
       ueber Gabbro. **Ohne einen Korpus, den beim Bauen niemand angesehen hat, ist K100 Falle 80
       in Reinform.**
+      **Der Korpus steht seit dem 2026-09-04, und der Posten bleibt offen, weil er mehr
+      verlangt als seine Existenz.** «K3» ist geschnitten, eingefroren und gemessen -- der
+      Schnitt in `61a1b35`, die Messung im Commit danach, und die Reihenfolge steht im
+      Commitgraphen statt in einem Satz ([`messung/K3-AUSWAHL.md`](messung/K3-AUSWAHL.md),
+      [`messung/K3-BEFUND.md`](messung/K3-BEFUND.md)). Acht Funktionen aus `linux/lib/*.c`,
+      nach einer vor dem Schnitt ausgesprochenen Regel gewaehlt: **null von acht** lassen sich
+      ohne eine Stelle transkribieren, an der Gabbro keine Form hat, gegen neun von zehn ueber
+      dem Korpus, den wir selbst gewaehlt haben. *Was jetzt fehlt, ist nicht ein zweiter
+      Korpus, sondern ein Tor, das ihn LIEST* -- keine Kennzahl von K100 haengt heute an ihm.
+
+- [ ] **`u64(x)` ist eine dokumentierte Form, die der Leser nicht liest** *(gefunden 2026-09-04
+      an «K3», `messung/K3-BEFUND.md` §4.1)*. `SYNTAX.md`:656-659 hat die `cast`-Produktion mit der
+      Begruendung gestrichen, *„ein `call`, dessen `path` einen Typ nennt, IST die
+      Umwandlung"* -- und `gabbro pruefe` sagt an derselben Stelle `P002` ab:
+      *„`u64` is a word of the vocabulary, not an identifier"*. `pathseg` wurde fuer
+      `u64::max` um die Integerwoerter erweitert, der Rufkopf nicht.
+      **Damit hat Gabbro heute gar keine Integerumwandlung**, und es ist niemandem
+      aufgefallen, weil der ganze Korpus keine einzige braucht
+      (`grep -n 'u64(\|u32(\|i32(\|u8(' beispiele/*.gab messung/fragmente/*.gab` findet
+      nichts). *Eine Form, die die Grammatik erklaert und der Leser verweigert, ist dieselbe
+      Klasse wie ein Tafelwort in keiner Produktion.* Nicht repariert: die Messung von «K3»
+      darf den Pruefer nicht bewegen, das ist ihre ganze Verfassung.
+
+- [ ] **Ein benannter Adressraum ist sich selbst ungleich -- `R008` vergleicht eine `Span`**
+      *(gefunden 2026-09-04 an «K3», `messung/K3-BEFUND.md` §4.2)*. `ptr<user, r> u8` an einen
+      Parameter `ptr<user, r> u8` uebergeben gibt
+      *„passes `q` in space `user` to a parameter of `g` declared `user`"* -- **zweimal
+      dasselbe Wort in einer Absage.** Mit `normal` statt `user` sind es null Fehler.
+      Die Ursache ist drei Zeilen breit: `Raum::Benannt(Ident)` (`ast.rs`:311), und `Ident`
+      leitet `PartialEq` ueber `{ text, span }` ab (`ast.rs`:12-16) -- `R008` vergleicht
+      `ist != soll` (`m3.rs`:288), also sind zwei Fundstellen EINES Raumnamens nie gleich.
+      Die sechs eingebauten Raeume sind feldlose Varianten und vergleichen richtig; **jeder
+      benannte ist kaputt**, und `saetze.rs`:1383 sagt, dass `R013` dieselbe Gestalt erbt.
+      *Es kostet genau die eine Stelle, an der Gabbro dem Kernel voraus waere:* `__user` ist
+      dort eine `sparse`-Annotation und hier ein Typ.
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 

@@ -1,0 +1,175 @@
+-- «K3» fragment 1 of 8 -- candidate index 0 of 1709
+--
+--   source   linux/lib/alloc_tag.c:61-76   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function allocinfo_start
+--   picked   by the rule in `messung/K3-AUSWAHL.md` -- every 213th of the size-windowed
+--            candidates over `lib/*.c`, index 0
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.** Nothing below has been through `gabbro`.
+--
+-- ## The excerpt, verbatim
+--
+--   55  struct allocinfo_private {
+--   56  	struct codetag_iterator iter;
+--   57  	struct codetag_iterator reported_iter;
+--   58  	bool print_header;
+--   59  };
+--   60
+--   61  static void *allocinfo_start(struct seq_file *m, loff_t *pos)
+--   62  {
+--   63  	struct allocinfo_private *priv;
+--   64  	loff_t node = *pos;
+--   65
+--   66  	priv = (struct allocinfo_private *)m->private;
+--   67  	codetag_lock_module_list(alloc_tag_cttype);
+--   68  	if (node == 0) {
+--   69  		priv->print_header = true;
+--   70  		priv->iter = codetag_get_ct_iter(alloc_tag_cttype);
+--   71  	} else {
+--   72  		priv->iter = priv->reported_iter;
+--   73  	}
+--   74  	codetag_next_ct(&priv->iter);
+--   75  	return priv->iter.ct ? priv : NULL;
+--   76  }
+--
+-- ## Markers used in this corpus
+--
+--   [WALL  n]  Gabbro has NO form for this. Nothing is put in its place.
+--   [FORM  n]  the C form does not exist, and Gabbro's own form for the same statement
+--              does. It is used, and the C line stands beside it.
+--   [INVENT n] Gabbro DEMANDS a clause the C does not have. It is written, and it is
+--              nobody's transcription.
+--
+-- ## What this fragment cost, counted in its head
+--
+--   WALL   5     the return type, the `void *` cast, the address-of, the asymmetric
+--                lock, the null return
+--   FORM   1     the ternary
+--   INVENT 2     `effects`, `costs`
+--
+-- **The first executable statement of the function is a wall**, and the binding it would
+-- have made (`priv`) is therefore never made. Every line below that names `priv` inherits
+-- that ONE wall -- whatever the checker counts, it is not five independent findings.
+
+module k3::alloc_tag {
+
+-- ADDED: `struct codetag` (include/linux/codetag.h:27-33). The three `const char *`
+-- fields are C strings; `ptr<normal, r> u8` is the nearest thing Gabbro has, and it is not
+-- the same thing -- a `const char *` carries its end in the DATA, an array carries a
+-- length. That difference is `beispiele/64`'s whole subject; here it is only stored.
+type Codetag = {
+    flags    : u32,
+    lineno   : u32,
+    modname  : ptr<normal, r> u8,
+    function : ptr<normal, r> u8,
+    filename : ptr<normal, r> u8,
+};
+
+-- ADDED: `struct codetag_type` and `struct codetag_module` are opaque to this excerpt --
+-- it never looks inside either.
+opaque type CodetagType   = u64;
+opaque type CodetagModule = u64;
+
+-- ADDED: `struct codetag_iterator` (include/linux/codetag.h:55-61).
+type CodetagIterator = {
+    cttype  : ptr<normal, rw> CodetagType,
+    cmod    : ptr<normal, rw> CodetagModule,
+    mod_id  : u64,
+    ct      : ptr<normal, rw> Codetag,
+    mod_seq : u64,
+};
+
+-- The excerpt's own record, transcribed from lines 55-59.
+type AllocinfoPrivate = {
+    iter          : CodetagIterator,
+    reported_iter : CodetagIterator,
+    print_header  : bool,
+};
+
+-- [WALL 1] `struct seq_file *m`, and `m->private` is a `void *`.
+--   Gabbro has no `void *` ("What deliberately does not exist", SYNTAX.md), so the field
+--   `private` cannot be declared, so `SeqFile` cannot be declared as a record at all.
+--   Declaring it as `ptr<normal, rw> AllocinfoPrivate` would DELETE the cast on line 66 --
+--   the exact thing the language claims is not writable -- and would therefore measure the
+--   bending. It stays opaque.
+opaque type SeqFile = u64;
+
+-- ADDED: `loff_t` is `long long` -- signed 64-bit.
+type Loff = i64;
+
+-- ADDED: the module-list lock of the code-tagging subsystem. `codetag_lock_module_list`
+-- TAKES it and does not give it back; see WALL 3.
+lock CODETAG_MODULES protects { codetag_module_list } rank 1;
+
+-- ADDED: the file-scope object the excerpt reads (`alloc_tag.c:47`).
+static mut alloc_tag_cttype : ptr<normal, rw> CodetagType = 0;
+
+-- ADDED: the place the lock protects, so that the declaration above names something.
+static mut codetag_module_list : u64 = 0;
+
+-- ADDED callees. [INVENT 1] and [INVENT 2] at every one of them: C declares neither
+-- `effects` nor `costs`, and Gabbro refuses a function without both. The numbers below are
+-- OURS. They are not in the kernel and no kernel header implies them.
+extern fn codetag_get_ct_iter(cttype : ptr<normal, rw> CodetagType) -> CodetagIterator
+    effects { reads cttype } costs <= 64 ops;
+
+-- [WALL 2] `void codetag_lock_module_list(struct codetag_type *cttype);`
+--   The excerpt TAKES a lock on line 67 and never releases it -- the release stands in
+--   `allocinfo_stop`, a different function. Gabbro's only lock form is the BLOCK
+--   `locks L { ... }`, which releases at the end of the block (SYNTAX.md 11). An
+--   asymmetric acquire is not writable, and the declaration below therefore cannot carry
+--   `locks CODETAG_MODULES` in its `effects` -- an effect it would never give back.
+extern fn codetag_lock_module_list(cttype : ptr<normal, rw> CodetagType)
+    effects { writes codetag_module_list } costs <= 32 ops;
+
+-- `codetag_next_ct` takes a POINTER TO the iterator and advances it in place.
+extern fn codetag_next_ct(iter : ptr<normal, rw> CodetagIterator) -> ptr<normal, rw> Codetag
+    effects { reads iter, writes iter } costs <= 128 ops;
+
+-- [WALL 3] the return type. C: `static void *allocinfo_start(...)`.
+--   The function returns either `priv` or `NULL`. Gabbro has neither `void *` nor a null
+--   pointer, and `option` exists only as `option index into <table>` -- an index into a
+--   declared table, which `priv` is not. **There is no return type to write**, so the head
+--   below carries none, and the two `return` statements of line 75 are gone with it.
+--   What stands here is therefore NOT `allocinfo_start`; it is what remained of it.
+impl fn allocinfo_start(m : ptr<normal, rw> SeqFile, pos : ptr<normal, rw> Loff)
+    effects { reads m, reads pos, writes codetag_module_list }
+    costs   <= 256 ops
+{
+    -- line 64: `loff_t node = *pos;`
+    -- Gabbro has no unary `*`. `pos[0]` is C's own spelling of the same access
+    -- (C11 6.5.2.1p2: `E1[E2]` is `(*((E1)+(E2)))`), so this is transcription and not
+    -- approximation.
+    let node = pos[0];
+
+    -- [WALL 4] line 66: `priv = (struct allocinfo_private *)m->private;`
+    --   `m->private` is `void *`; there is no `void *` in Gabbro and no pointer cast.
+    --   NOTHING is put in its place. `priv` is unbound from here on, and every line below
+    --   that names it inherits THIS wall.
+
+    -- line 67: `codetag_lock_module_list(alloc_tag_cttype);` -- see WALL 2. The call is
+    -- writable; what is not writable is that it leaves the lock held, so nothing in this
+    -- unit says the lock is held afterwards.
+    codetag_lock_module_list(alloc_tag_cttype);
+
+    -- lines 68-73.
+    if node == 0 {
+        priv->print_header = true;
+        priv->iter = codetag_get_ct_iter(alloc_tag_cttype);
+    } else {
+        priv->iter = priv->reported_iter;
+    }
+
+    -- [WALL 5] line 74: `codetag_next_ct(&priv->iter);`
+    --   `&priv->iter` is the address of a DATA place. Gabbro's `&` produces a function
+    --   value and nothing else (`fnvalue = "&" path`, SYNTAX.md 4; `M127`). There is no
+    --   expression in the language that yields the address of a field.
+    --   NOTHING is put in its place.
+
+    -- [FORM 1] line 75: `return priv->iter.ct ? priv : NULL;`
+    --   Gabbro has no conditional expression; the `if` statement is its form, and that
+    --   half is a fair rendering. The other half is not: `NULL` has no spelling, and the
+    --   return type is WALL 3. So the statement is gone, not rendered.
+}
+
+}

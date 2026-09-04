@@ -1,0 +1,200 @@
+-- «K3» fragment 4 of 8 -- candidate index 639 of 1709
+--
+--   source   linux/lib/lru_cache.c:299-309   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function lc_del
+--   picked   by the rule in `messung/K3-AUSWAHL.md`
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+--  299  void lc_del(struct lru_cache *lc, struct lc_element *e)
+--  300  {
+--  301  	PARANOIA_ENTRY();
+--  302  	PARANOIA_LC_ELEMENT(lc, e);
+--  303  	BUG_ON(e->refcnt);
+--  304
+--  305  	e->lc_number = e->lc_new_number = LC_FREE;
+--  306  	hlist_del_init(&e->collision);
+--  307  	list_move(&e->list, &lc->free);
+--  308  	RETURN();
+--  309  }
+--
+-- and the three macros it is made of (lib/lru_cache.c:28-43):
+--
+--   28  #define PARANOIA_ENTRY() do {		\
+--   29  	BUG_ON(!lc);			\
+--   30  	BUG_ON(!lc->nr_elements);	\
+--   31  	BUG_ON(test_and_set_bit(__LC_PARANOIA, &lc->flags)); \
+--   32  } while (0)
+--   33
+--   34  #define RETURN(x...)     do { \
+--   35  	clear_bit_unlock(__LC_PARANOIA, &lc->flags); \
+--   36  	return x ; } while (0)
+--   37
+--   38  /* BUG() if e is not one of the elements tracked by lc */
+--   39  #define PARANOIA_LC_ELEMENT(lc, e) do {	\
+--   40  	struct lru_cache *lc_ = (lc);	\
+--   41  	struct lc_element *e_ = (e);	\
+--   42  	unsigned i = e_->lc_index;	\
+--   43  	BUG_ON(i >= lc_->nr_elements);	\
+--   44  	BUG_ON(lc_->lc_element[i] != e_); } while (0)
+--
+-- ## What this fragment cost
+--
+--   WALL   4     the per-object bit lock (`PARANOIA_ENTRY` / `RETURN`), `&e->collision`,
+--                `&e->list` + `&lc->free`, `~0U` in a constant
+--   FORM   4     `BUG_ON(e->refcnt)` -> `requires`; `BUG_ON(i >= nr_elements)` -> a range
+--                type; `BUG_ON(!lc)` -> a pointer that cannot be null; the chained
+--                assignment on 305
+--   INVENT 2     `effects`, `costs`
+--
+-- ## The interesting half: FOUR of the six `BUG_ON`s are exactly what Gabbro replaces
+--
+-- «K2»'s count over `kernel/`+`mm/` put `BUG_ON`/`WARN_ON` at **2034** and called it *"the
+-- class Gabbro REPLACES by M1 facts, not one it checks"*. This is the first time in this
+-- tree that the claim meets a foreign `BUG_ON` that nobody selected for it, and it holds
+-- for four of the six:
+--
+--   `BUG_ON(!lc)`                    a `ptr<normal, rw>` has no null value at all
+--   `BUG_ON(!lc->nr_elements)`       `u32 in 1 .. LC_MAX_ACTIVE` in the field's type
+--   `BUG_ON(i >= lc_->nr_elements)`  `index into` a table, or a range type
+--   `BUG_ON(e->refcnt)`              `requires e->refcnt == 0` in the signature
+--
+-- **And the fifth one is not an assertion at all, and that is the finding.**
+-- `BUG_ON(test_and_set_bit(__LC_PARANOIA, &lc->flags))` TAKES A LOCK -- a bit-lock living
+-- in the object, released by `RETURN()` at the end of the same function. It is perfectly
+-- symmetric, which is exactly the shape `locks L { ... }` was built for, and it is still
+-- not writable: **a Gabbro `lock` is a declared ITEM, one per program, and this one is a
+-- FIELD, one per `lru_cache`.** Same wall as `atomic` at `K02`, one construct over.
+
+module k3::lru_cache {
+
+type HlistNode = {
+    next  : ptr<normal, rw> HlistNode,
+    pprev : ptr<normal, rw> ptr<normal, rw> HlistNode,
+};
+
+type HlistHead = { first : ptr<normal, rw> HlistNode, };
+
+type ListHead = {
+    next : ptr<normal, rw> ListHead,
+    prev : ptr<normal, rw> ListHead,
+};
+
+opaque type KmemCache = u64;
+
+-- include/linux/lru_cache.h:233 and :211-214
+const LC_MAX_ACTIVE  : u32 = 16777216;    -- (1<<24)
+const LC_PARANOIA_BIT : u32 = 0;          -- `__LC_PARANOIA`, the first enumerator
+
+-- [WALL 1] `#define LC_FREE (~0U)` (include/linux/lru_cache.h:158)
+--   Gabbro has had `~` since 2026-09-01, and `M137` refuses it on a LITERAL: *"Der Operand
+--   ist VORZEICHENLOS und traegt eine erklaerte Breite; ein Literal und ein `i32` werden mit
+--   `M137` abgesagt"* (SYNTAX.md 4). `~0U` in C is the idiom for "every bit of an unsigned
+--   int", and the width comes from the suffix. The line stands here AS THE C WROTE IT, and
+--   what falls on it is the measurement -- writing `0xFFFF_FFFF` instead would be the same
+--   value and a different program text, and would hide the question.
+const LC_FREE : u32 = ~0;
+
+-- ADDED: `struct lc_element` (include/linux/lru_cache.h:147-162), transcribed whole.
+type LcElement = {
+    collision     : HlistNode,
+    list          : ListHead,
+    refcnt        : u32,
+    lc_index      : u32,
+    lc_number     : u32,
+    lc_new_number : u32,
+};
+
+-- ADDED: `struct lru_cache` (include/linux/lru_cache.h:164-207), transcribed whole.
+-- `nr_elements` carries the range the macro asserts -- see FORM 2 below.
+type LruCache = {
+    lru                 : ListHead,
+    free                : ListHead,
+    in_use              : ListHead,
+    to_be_changed       : ListHead,
+    lc_cache            : ptr<normal, rw> KmemCache,
+    element_size        : u64,
+    element_off         : u64,
+    nr_elements         : u32 in 1 .. LC_MAX_ACTIVE,
+    max_pending_changes : u32,
+    pending_changes     : u32,
+    used                : u32,
+    hits                : u64,
+    misses              : u64,
+    starving            : u64,
+    locked              : u64,
+    changed             : u64,
+    flags               : u64,
+    name                : ptr<normal, r> u8,
+    lc_slot             : ptr<normal, rw> HlistHead,
+    lc_element          : ptr<normal, rw> ptr<normal, rw> LcElement,
+};
+
+-- [WALL 2] the per-object bit lock.
+--
+--   `PARANOIA_ENTRY()` takes it:   BUG_ON(test_and_set_bit(__LC_PARANOIA, &lc->flags));
+--   `RETURN()`         gives it back: clear_bit_unlock(__LC_PARANOIA, &lc->flags);
+--
+--   The pair is symmetric across the whole body -- the shape `locks L { ... }` exists for.
+--   It is still not writable, for two reasons and both are structural:
+--
+--     * a Gabbro `lock` is an ITEM (`lockdecl` under `item`, SYNTAX.md 1). There is one
+--       per program. This one is a BIT IN A FIELD, one per `lru_cache` object, and the
+--       language has no way to say "the lock that belongs to this instance";
+--     * `&lc->flags` is the address of a field, which does not exist either.
+--
+--   NOTHING is put in its place. The transcription below has no mutual exclusion in it at
+--   all, and nothing in the artefact would say so.
+
+-- ADDED callees. [INVENT] `effects` and `costs` are ours.
+extern fn hlist_del_init(n : ptr<normal, rw> HlistNode)
+    effects { reads n, writes n } costs <= 8 ops;
+
+extern fn list_move(item : ptr<normal, rw> ListHead, head : ptr<normal, rw> ListHead)
+    effects { reads item, writes item, writes head } costs <= 8 ops;
+
+-- [FORM 1] `BUG_ON(e->refcnt)` becomes `requires e->refcnt == 0`.
+--   That is this project's own precedent: «K2»'s F5 rendered `BUG_ON(addr >= end)` the same
+--   way and said so -- *"die Zusicherung wird nicht geprueft, sie wird VERLANGT"*
+--   (`dokumente/FRAGMENTE.md`:2034). It is not a free move: the C traps at run time and
+--   this does not; the obligation moves to every call site instead.
+-- [FORM 2] `BUG_ON(i >= lc_->nr_elements)` and `BUG_ON(!lc->nr_elements)` are discharged
+--   by the field's own range type `u32 in 1 .. LC_MAX_ACTIVE` above, plus the index rule.
+-- [FORM 3] `BUG_ON(!lc)` is discharged by `ptr<normal, rw>` having no null value.
+impl fn lc_del(lc : ptr<normal, rw> LruCache, e : ptr<normal, rw> LcElement)
+    requires e->refcnt == 0
+    effects  { reads lc, writes lc, reads e, writes e }
+    costs    <= 64 ops
+{
+    -- line 301: `PARANOIA_ENTRY();` -- see WALL 2, and FORM 2/FORM 3 for its two
+    -- assertions. NOTHING is put in its place.
+
+    -- line 302: `PARANOIA_LC_ELEMENT(lc, e);`
+    -- Its two assertions: the first is FORM 2; the second is a pointer comparison, and
+    -- that one IS writable. It stands here because it is the half that survives.
+    let i = e->lc_index;
+    if lc->lc_element[i] != e {
+        return;
+    }
+
+    -- [FORM 4] line 305: `e->lc_number = e->lc_new_number = LC_FREE;`
+    --   A chained assignment. Gabbro decided assignment is not an expression (E2), so the
+    --   C form has no spelling; two statements are the same computation in the same order.
+    e->lc_new_number = LC_FREE;
+    e->lc_number     = LC_FREE;
+
+    -- [WALL 3] line 306: `hlist_del_init(&e->collision);`
+    --   `&e->collision` -- the address of a field. NOTHING is put in its place.
+
+    -- [WALL 4] line 307: `list_move(&e->list, &lc->free);`
+    --   Two addresses of fields, and this is the whole content of the line: an intrusive
+    --   list moves an element by the address of the link inside it. NOTHING is put in its
+    --   place -- so the element is not moved to the free list, and the function below does
+    --   not do what `lc_del` does.
+
+    -- line 308: `RETURN();` -- see WALL 2.
+}
+
+}

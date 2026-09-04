@@ -1,0 +1,227 @@
+-- «K3» fragment 5 of 8 -- candidate index 852 of 1709
+--
+--   source   linux/lib/percpu-refcount.c:63-105   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function percpu_ref_init
+--   picked   by the rule in `messung/K3-AUSWAHL.md`
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+--   63  int percpu_ref_init(struct percpu_ref *ref, percpu_ref_func_t *release,
+--   64  		    unsigned int flags, gfp_t gfp)
+--   65  {
+--   66  	size_t align = max_t(size_t, 1 << __PERCPU_REF_FLAG_BITS,
+--   67  			     __alignof__(unsigned long));
+--   68  	unsigned long start_count = 0;
+--   69  	struct percpu_ref_data *data;
+--   70
+--   71  	ref->percpu_count_ptr = (unsigned long)
+--   72  		__alloc_percpu_gfp(sizeof(unsigned long), align, gfp);
+--   73  	if (!ref->percpu_count_ptr)
+--   74  		return -ENOMEM;
+--   75
+--   76  	data = kzalloc_obj(*ref->data, gfp);
+--   77  	if (!data) {
+--   78  		free_percpu((void __percpu *)ref->percpu_count_ptr);
+--   79  		ref->percpu_count_ptr = 0;
+--   80  		return -ENOMEM;
+--   81  	}
+--   82
+--   83  	data->force_atomic = flags & PERCPU_REF_INIT_ATOMIC;
+--   84  	data->allow_reinit = flags & PERCPU_REF_ALLOW_REINIT;
+--   85
+--   86  	if (flags & (PERCPU_REF_INIT_ATOMIC | PERCPU_REF_INIT_DEAD)) {
+--   87  		ref->percpu_count_ptr |= __PERCPU_REF_ATOMIC;
+--   88  		data->allow_reinit = true;
+--   89  	} else {
+--   90  		start_count += PERCPU_COUNT_BIAS;
+--   91  	}
+--   92
+--   93  	if (flags & PERCPU_REF_INIT_DEAD)
+--   94  		ref->percpu_count_ptr |= __PERCPU_REF_DEAD;
+--   95  	else
+--   96  		start_count++;
+--   97
+--   98  	atomic_long_set(&data->count, start_count);
+--   99
+--  100  	data->release = release;
+--  101  	data->confirm_switch = NULL;
+--  102  	data->ref = ref;
+--  103  	ref->data = data;
+--  104  	return 0;
+--  105  }
+--
+-- ## What this fragment cost
+--
+--   WALL   5     `__alignof__`, the pointer-to-integer cast on 71-72, the
+--                integer-to-pointer cast on 78, `atomic_long_set(&data->count, ...)`,
+--                `NULL` as a function-pointer value
+--   FORM   5     the fallible allocation on 76-81 -> `let ... else`; `if (flags & X)` ->
+--                `!= 0`; `start_count++` -> `+= 1`; the int-to-bool assignments on 83/84;
+--                the bitfield `bool :1` -> `@ bitpos`
+--   INVENT 3     `effects`, `costs`, and a CONTRACT on the function-pointer type
+--
+-- ## The whole subject of this function is a tagged pointer, and that is the wall
+--
+-- `percpu_count_ptr` is *"the low bit of the pointer indicates whether the ref is in
+-- percpu mode"* (include/linux/percpu-refcount.h:106-109). The field is an
+-- `unsigned long` that HOLDS a pointer with two flag bits stuffed into its low end; lines
+-- 71, 78, 87 and 94 are the four halves of that idea. Gabbro's `ptr` carries a space and
+-- rights and **has no integer reading at all** -- `opaque type Pa = u64` exists precisely
+-- because a physical address is a NUMBER and not a pointer, and there is no conversion in
+-- either direction. *The one thing the excerpt is about has no form.*
+--
+-- ## And one thing went well, and it is the language's own construct
+--
+-- Lines 76-81 -- a fallible allocation with a cleanup path -- are `let x = f() else (e)
+-- { ... }` with `-> T or R` on the callee, and that is not a rendering but the same
+-- statement. `«C3a»` was built for exactly this shape.
+
+module k3::percpu_refcount {
+
+opaque type RcuHead = u64;
+type Gfp = u32;
+
+-- include/linux/percpu-refcount.h:64-68 and :80-92
+const PERCPU_REF_ATOMIC       : u64 = 1;    -- __PERCPU_REF_ATOMIC
+const PERCPU_REF_DEAD         : u64 = 2;    -- __PERCPU_REF_DEAD
+const PERCPU_REF_FLAG_BITS    : u32 = 2;    -- __PERCPU_REF_FLAG_BITS
+const PERCPU_REF_INIT_ATOMIC  : u32 = 1;
+const PERCPU_REF_INIT_DEAD    : u32 = 2;
+const PERCPU_REF_ALLOW_REINIT : u32 = 4;
+
+-- lib/percpu-refcount.c:37 -- `(1LU << (BITS_PER_LONG - 1))`
+const PERCPU_COUNT_BIAS : u64 = 9223372036854775808;
+
+-- include/uapi/asm-generic/errno-base.h
+const ENOMEM : i32 = 12;
+
+-- [INVENT 3] `percpu_ref_func_t` is `void (*)(struct percpu_ref *)` -- a bare function
+--   pointer with no contract of any kind. `N035` refuses an `fn(...)` type that declares
+--   neither `effects` nor `costs` (SYNTAX.md 2, «B8»), so BOTH lines below are ours. There
+--   is nothing in the kernel that implies either of them, and a reader of the artefact
+--   cannot tell that from looking at it.
+--   The header's one real statement about it -- *"@release must not sleep"* -- is the one
+--   thing neither clause can say.
+type PercpuRefFunc = fn(ptr<normal, rw> PercpuRef) effects { writes refcount } costs <= 4096 ops;
+
+type PercpuRefData = {
+    count           : i64,
+    release         : PercpuRefFunc,
+    confirm_switch  : PercpuRefFunc,
+    -- C: `bool force_atomic:1;` and `bool allow_reinit:1;` -- two one-bit fields packed
+    -- into one storage unit. `field ... "@" bitpos` is Gabbro's spelling of that.
+    force_atomic    : bool @0,
+    allow_reinit    : bool @1,
+    rcu             : RcuHead,
+    ref             : ptr<normal, rw> PercpuRef,
+};
+
+type PercpuRef = {
+    -- [WALL 1] `unsigned long percpu_count_ptr;`
+    --   The field is an integer that HOLDS a pointer with two flag bits in its low end.
+    --   Transcribed as the `u64` the C declares -- which is right, and which is also the
+    --   whole problem: every line that puts a pointer INTO it or takes one OUT of it has
+    --   no form. See WALL 2 and WALL 3.
+    percpu_count_ptr : u64,
+    data             : ptr<normal, rw> PercpuRefData,
+};
+
+-- ADDED: the failure channel of the allocator. C reports it as a null return; `«C3a»` is
+-- Gabbro's form, and it is a real one.
+reason AllocError {
+    NoMemory = 1 "the allocator returned nothing"
+}
+
+-- `void *kzalloc_obj(obj, gfp)` -- allocates `sizeof(typeof(obj))`, zeroed. The type comes
+-- out of `typeof`, which Gabbro does not have; a declared return type does the same work.
+-- [INVENT] `effects` and `costs` are ours.
+extern fn kzalloc_percpu_ref_data(gfp : Gfp) -> ptr<normal, rw> PercpuRefData or AllocError
+    effects { allocs heap } costs <= 4096 ops;
+
+impl fn percpu_ref_init(ref : ptr<normal, rw> PercpuRef, release : PercpuRefFunc,
+                        flags : u32, gfp : Gfp) -> i32
+    effects { reads ref, writes ref, allocs heap }
+    costs   <= 8192 ops
+{
+    -- [WALL 2] lines 66-67:
+    --     size_t align = max_t(size_t, 1 << __PERCPU_REF_FLAG_BITS,
+    --                          __alignof__(unsigned long));
+    --   `__alignof__` has no Gabbro form. The built-ins are `sizeof`, `lenof` and
+    --   `aligned(expr, constexpr)` (SYNTAX.md 4) -- the last one ASKS whether a value is
+    --   aligned; none of them YIELDS the alignment of a type. `max_t` is a macro over a
+    --   type, which is the same missing `typeof`.
+    --   NOTHING is put in its place, so `align` is unbound.
+
+    -- line 68
+    let mut start_count : u64 = 0;
+
+    -- [WALL 3] lines 71-72:
+    --     ref->percpu_count_ptr = (unsigned long)
+    --             __alloc_percpu_gfp(sizeof(unsigned long), align, gfp);
+    --   A pointer-to-integer cast. Gabbro has no cast between `ptr` and an integer type in
+    --   either direction, and that is deliberate: `opaque type Pa = u64` exists because an
+    --   address that is a NUMBER is a different thing from a pointer. There is no
+    --   expression here. NOTHING is put in its place -- so lines 73-74 test a field nothing
+    --   has written.
+
+    -- lines 73-74
+    if ref->percpu_count_ptr == 0 {
+        return -ENOMEM;
+    }
+
+    -- [FORM 1] lines 76-81. The C reports failure by returning null and testing it; Gabbro
+    --   reports it in the signature (`or AllocError`) and binds it at the call
+    --   (`let ... else (e) { ... }`). **Same statement, and the language was built for it.**
+    let data = kzalloc_percpu_ref_data(gfp) else (e) {
+        -- [WALL 4] line 78: `free_percpu((void __percpu *)ref->percpu_count_ptr);`
+        --   An integer-to-pointer cast -- WALL 3 in the other direction. NOTHING is put in
+        --   its place, so the per-cpu allocation of line 72 leaks on this path and nothing
+        --   in the unit says so.
+        ref->percpu_count_ptr = 0;
+        return -ENOMEM;
+    };
+
+    -- [FORM 2] lines 83-84. C assigns an `unsigned int` to a `bool:1` and lets the
+    --   implicit conversion make it 0 or 1. Gabbro converts nothing (E3), so the
+    --   conversion C performs silently is written out. It is the same value.
+    data->force_atomic = (flags & PERCPU_REF_INIT_ATOMIC) != 0;
+    data->allow_reinit = (flags & PERCPU_REF_ALLOW_REINIT) != 0;
+
+    -- [FORM 3] lines 86-91: `if (flags & (A | B))`.
+    if (flags & (PERCPU_REF_INIT_ATOMIC | PERCPU_REF_INIT_DEAD)) != 0 {
+        ref->percpu_count_ptr |= PERCPU_REF_ATOMIC;
+        data->allow_reinit = true;
+    } else {
+        start_count += PERCPU_COUNT_BIAS;
+    }
+
+    -- [FORM 4] lines 93-96: `start_count++` has no spelling; `+= 1` is the same statement.
+    if (flags & PERCPU_REF_INIT_DEAD) != 0 {
+        ref->percpu_count_ptr |= PERCPU_REF_DEAD;
+    } else {
+        start_count += 1;
+    }
+
+    -- [WALL 5] line 98: `atomic_long_set(&data->count, start_count);`
+    --   The address of a field, and an ATOMIC field at that. `atomic` in Gabbro is an item,
+    --   never a field of a record -- the same wall as `WRITE_ONCE(src->cnt, ...)` at `K02`
+    --   and the bit lock at `K04`, met for the third time in eight fragments.
+    --   NOTHING is put in its place, so the count is never initialised.
+
+    -- line 100
+    data->release = release;
+
+    -- [WALL 6] line 101: `data->confirm_switch = NULL;`
+    --   A null function pointer. Gabbro's only producer of a function value is `&path`
+    --   (`fnvalue`, SYNTAX.md 4); there is no absent one, and no `option` over it.
+    --   NOTHING is put in its place.
+
+    -- lines 102-103
+    data->ref = ref;
+    ref->data = data;
+    return 0;
+}
+
+}

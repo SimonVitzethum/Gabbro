@@ -1,0 +1,121 @@
+-- «K3» fragment 7 of 8 -- candidate index 1278 of 1709
+--
+--   source   linux/lib/test_firmware.c:1555-1566   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function test_firmware_exit
+--   picked   by the rule in `messung/K3-AUSWAHL.md`
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+-- 1555  static void __exit test_firmware_exit(void)
+-- 1556  {
+-- 1557  	mutex_lock(&test_fw_mutex);
+-- 1558  	release_firmware(test_firmware);
+-- 1559  	misc_deregister(&test_fw_misc_device);
+-- 1560  	upload_release_all();
+-- 1561  	__test_firmware_config_free();
+-- 1562  	kfree(test_fw_config);
+-- 1563  	mutex_unlock(&test_fw_mutex);
+-- 1564
+-- 1565  	pr_warn("removed interface\n");
+-- 1566  }
+--
+-- ## What this fragment cost
+--
+--   WALL   2     `&test_fw_misc_device`, `pr_warn("removed interface\n")`
+--   FORM   1     `mutex_lock` / `mutex_unlock` -> `locks TEST_FW { ... }`
+--   INVENT 2     `effects`, `costs`
+--
+-- ## This is the closest of the eight, and the two walls are worth naming exactly
+--
+-- **The lock goes through, and it goes through well.** `mutex_lock` at 1557 and
+-- `mutex_unlock` at 1563 are one block in Gabbro, released on every path by construction --
+-- the language's own claim, met at a foreign lock that nobody chose for it. Five of the
+-- seven statements are the block's body, and all five are ordinary calls.
+--
+-- **Wall 1 is the address of a global.** `misc_deregister(&test_fw_misc_device)` passes the
+-- address of a statically declared record. Gabbro's `&` produces a function value and
+-- nothing else (`fnvalue = "&" path`, `M127`), so the address of a `static` has no
+-- spelling. There is exactly one way around it in this language -- declare the global as an
+-- ARRAY, because *"an array is the one address C gives up by itself"*
+-- (`beispiele/64-writes-a-whole-buffer.gab`) -- and that is a change to the DECLARATION,
+-- not a transcription of the call.
+--
+-- **Wall 2 is a log line, and that is the uncomfortable one.** `pr_warn("removed
+-- interface\n")` is the most ordinary statement in the kernel. Gabbro allows a string
+-- literal in exactly four places -- *"Strings only in `claim`, `reason`, `assume` and
+-- `section`"* (SYNTAX.md, Lexis) -- and a call argument is none of them. There is no
+-- variadic call form either. **A language with no way to print a message is not blocked on
+-- a construct; it is blocked on a decision nobody has written down.** `format` is a
+-- byte-layout declaration and answers a different question.
+
+module k3::test_firmware {
+
+opaque type Firmware   = u64;
+opaque type Miscdevice = u64;
+opaque type TestConfig = u64;
+
+-- [FORM 1] `static DEFINE_MUTEX(test_fw_mutex);` (test_firmware.c:39).
+--   `lock ... protects { ... } rank N` is Gabbro's declaration of the same thing; the
+--   `protects` list is what the C mutex documents nowhere, so it is OURS -- read off the
+--   three globals the block below touches, which is what the mutex in fact guards.
+lock TEST_FW protects { test_firmware, test_fw_config } rank 1;
+
+-- test_firmware.c:40 -- `static const struct firmware *test_firmware;`
+static mut test_firmware : ptr<normal, r> Firmware = 0;
+
+-- test_firmware.c:138 -- `static struct test_config *test_fw_config;`
+static mut test_fw_config : ptr<normal, rw> TestConfig = 0;
+
+-- [WALL 1] `static struct miscdevice test_fw_misc_device = { ... };`
+--   (test_firmware.c:1518-1523). The declaration itself is writable as a record; what is
+--   not writable is line 1559, which passes its ADDRESS. Declaring it here and then having
+--   no way to name its address would put a name in the unit that no statement can use, so
+--   it is left out and the wall is stated once, at the call.
+
+-- ADDED callees, with their C signatures. [INVENT] every `effects` and `costs` is ours.
+--   `void release_firmware(const struct firmware *fw)`
+extern fn release_firmware(fw : ptr<normal, r> Firmware)
+    effects { reads fw, writes firmware_cache } costs <= 1024 ops;
+
+--   `void upload_release_all(void)`
+extern fn upload_release_all()
+    effects { writes upload_list } costs <= 4096 ops;
+
+--   `void __test_firmware_config_free(void)`
+extern fn __test_firmware_config_free()
+    effects { writes test_fw_config } costs <= 1024 ops;
+
+--   `void kfree(const void *objp)` -- the parameter is `const void *`, so the declaration
+--   below CHOOSES an element type the C does not. It is the only choice this excerpt makes
+--   for it, and it is marked because it is one.
+extern fn kfree(p : ptr<normal, rw> TestConfig)
+    effects { allocs heap } costs <= 512 ops;
+
+impl fn test_firmware_exit()
+    effects { locks TEST_FW, reads test_firmware, writes test_fw_config,
+              writes firmware_cache, writes upload_list, allocs heap }
+    costs   <= 8192 ops
+{
+    -- [FORM 1] lines 1557-1563. `mutex_lock` ... `mutex_unlock` becomes ONE block, and the
+    --   release is by construction rather than by the writer remembering it.
+    locks TEST_FW {
+        release_firmware(test_firmware);
+
+        -- [WALL 1] line 1559: `misc_deregister(&test_fw_misc_device);`
+        --   The address of a `static` record. NOTHING is put in its place, so the
+        --   misc device is never unregistered and the module would leave a live
+        --   `/dev` node behind.
+
+        upload_release_all();
+        __test_firmware_config_free();
+        kfree(test_fw_config);
+    }
+
+    -- [WALL 2] line 1565: `pr_warn("removed interface\n");`
+    --   A string literal as a call argument. Gabbro permits a string in `claim`, `reason`,
+    --   `assume` and `section` only, and has no variadic call. NOTHING is put in its place.
+}
+
+}
