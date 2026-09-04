@@ -1,0 +1,19 @@
+-- erwartet: M145
+-- **Only integer-to-integer conversion is built.** `SYNTAX.md` G9 reads "a call whose path
+-- names a type IS the conversion" for any type, but this repair answers the ONE case «K3»
+-- needed -- a `bool`, a pointer or a float argument is a DIFFERENT conversion C's `(T)`
+-- spells the same way, and this file's own argument has no integer form to widen or narrow.
+--
+-- Mutation anchor: `umwandlung-nimmt-jede-zahl-an` (`instrumente/mutiere-pruefer.py`)
+-- disables exactly this line and this file is what catches it.
+
+module beispiel::umwandlung_typ {
+
+impl fn f(a : bool) -> u64
+    effects { pure }
+    costs   <= 4 ops
+{
+    return u64(a);
+}
+
+}

@@ -193,6 +193,45 @@ MUTATIONEN = [
         "`R008` -- der Adressraum darf wieder wechseln; ein `normal`-Zeiger geht an einen "
         "`mmio`-Parameter, und der Erzeuger senkt beide verschieden ab",
     ),
+    # -- ast.rs: a named space unequal to itself (2026-09-04, «K3» §4.2) -------------------
+    #
+    # Found by an unseen corpus, not by us: `Raum::Benannt(Ident)` derived `PartialEq` over
+    # `{ text, span }`, so two DECLARATIONS of `ptr<user, r> u8` -- necessarily two different
+    # spans -- never compared equal, and `m3.rs`'s `R008` fired on every call through a
+    # user-named space, including the identical one on both sides. This mutation reverts the
+    # repair (`ast.rs::impl PartialEq for Raum`) without touching the comparison site the
+    # OTHER `adressraum`-mutation above already covers -- a different line, a different
+    # rule half: that one deletes the CHECK, this one breaks what it checks WITH.
+    Mutation(
+        "benannter-raum-vergleicht-sich-nie",
+        "gabbro-syntax/src/ast.rs",
+        "            (Raum::Benannt(a), Raum::Benannt(b)) => a.text == b.text,",
+        "            (Raum::Benannt(a), Raum::Benannt(b)) => false,",
+        "`R008` -- ein benannter Adressraum ist wieder mit sich selbst uneins; `ptr<user, r>` "
+        "ruft `ptr<user, r>` und der Pruefer sagt die Absage mit demselben Wort auf beiden "
+        "Seiten",
+    ),
+    # -- m1.rs: the integer conversion `u64(a)` (2026-09-04, «K3» §4.1) --------------------
+    #
+    # `SYNTAX.md` dropped `cast` on the reading that a call naming a type IS the conversion,
+    # and until today the reader refused the token before this typing rule ever ran. Two
+    # mutations, one per refusal `umwandlung_ruf` adds.
+    Mutation(
+        "umwandlung-nimmt-jede-zahl-an",
+        "gabbro-check/src/m1.rs",
+        "        if !matches!(quelltyp.durchgreifen(), Typ::Ganzzahl(_) | Typ::Unbekannt) {",
+        "        if false {",
+        "`M145` -- die Umwandlung nimmt wieder jeden Typ als Argument an; `u64(wahr)` "
+        "wandelt einen `bool` um, ohne dass eine Regel es sagt",
+    ),
+    Mutation(
+        "umwandlung-zaehlt-ihr-argument-nicht",
+        "gabbro-check/src/m1.rs",
+        "        if argtypen.len() != 1 {",
+        "        if false {",
+        "`M144` -- die Umwandlung nimmt wieder beliebig viele Argumente; `u64(a, b)` faellt "
+        "an keiner Stelle mehr",
+    ),
     # -- phasen.rs: the step in a `return` (2026-08-24) -----------------------------------
     #
     # `fluss` handled `let` and the bare call and stopped there. The SAME lie written two ways

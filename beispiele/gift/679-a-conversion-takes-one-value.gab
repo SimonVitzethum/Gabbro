@@ -1,0 +1,19 @@
+-- erwartet: M144
+-- **A call whose path names a type IS the conversion (`SYNTAX.md` G9), and the conversion
+-- form is UNARY -- the same shape as C's `(u64) x`.** `u64(a, b)` names two values where the
+-- built-in form takes exactly one; nothing declares `u64` as a function whose arity a
+-- generic rule could read, so this repair carries its own arity check.
+--
+-- Mutation anchor: `umwandlung-zaehlt-ihr-argument-nicht` (`instrumente/mutiere-pruefer.py`)
+-- disables exactly this line and this file is what catches it.
+
+module beispiel::umwandlung_arity {
+
+impl fn f(a : u32, b : u32) -> u64
+    effects { pure }
+    costs   <= 4 ops
+{
+    return u64(a, b);
+}
+
+}

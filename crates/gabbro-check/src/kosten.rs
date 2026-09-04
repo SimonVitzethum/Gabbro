@@ -861,6 +861,18 @@ impl<'a> Rechner<'a> {
         if name == "None" {
             return Kosten::Zahl(0);
         }
+        // **G9, 2026-09-04 -- a conversion is a language primitive, not a callee, and its
+        // cost is fixed the same way `Some`'s three lines up is.** There is no declaration
+        // to carry a `costs` clause, so without this branch every `u64(a)` fell into
+        // `K003`: *"`u64` is not declared here"* -- true and unhelpful, since `u64` is a
+        // vocabulary word and will never BE declared. One primitive op, `SPRACHE.md` §7's
+        // unit -- the emitted form is a single C cast (`emit.rs::ruf`).
+        if gabbro_syntax::kw::Kw::suche(&name).is_some_and(|k| k.ist_intty()) {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
+        }
         // **«B7»: ein Verbundwert ist ein Konstruktor, und seine Kosten stehen fest.**
         //
         // Die bewiesene Schablone sagt, WAS er tut: *setzt jedes Feld genau einmal und laesst

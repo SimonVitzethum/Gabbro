@@ -2166,6 +2166,27 @@ impl<'a> Pruefer<'a> {
     }
 
     fn ruf_roh(&mut self, r: &Ruf, lage: &Lage) -> Typ {
+        // **G9, repaired 2026-09-04 -- a call whose path names an integer type IS the
+        // conversion.** `SYNTAX.md`:588 marks `primary` *"G9: kein `cast`"* and :656-659
+        // gives the reason in full: *"a call whose path names a type IS the conversion --
+        // the distinction is a name resolution, not a syntax question."* Until today the
+        // reader refused the token before this pass ever ran (`P002`, `parse.rs`); the parser
+        // repair lets `u64(a)` reach here as an ordinary `Ruf` over the one-segment path
+        // `u64`, and this is where it is typed rather than looked up as a function.
+        //
+        // Found by «K3» (`messung/K3-BEFUND.md` §4.1): `test_func`'s two most ordinary lines
+        // -- `(u64) ktime_us_delta(...)`, `(u64) test_repeat_count` -- have no Gabbro form,
+        // and `grep` over the whole corpus at the time found zero sites that would have
+        // exercised the gap.
+        if let Some(pfad) = r.path() {
+            if let Some(ziel) = pfad
+                .einfach()
+                .and_then(|i| gabbro_syntax::kw::Kw::suche(&i.text))
+                .filter(|k| k.ist_intty())
+            {
+                return self.umwandlung_ruf(r, ziel, lage);
+            }
+        }
         // **An indirect call is typed from the CONTRACT at the place's type** («B8»,
         // 2026-08-21) -- the result type and the parameter types both.
         //
@@ -2339,6 +2360,95 @@ impl<'a> Pruefer<'a> {
             }
         }
         v.typ
+    }
+
+    /// **`u64(a)` and its seven siblings -- an integer conversion, typed.**
+    ///
+    /// **What a conversion does to a proved range, decided before this was wired in:** the
+    /// argument keeps whatever `M1` proved about it, but the conversion may narrow OR widen
+    /// the representation, and a narrowing conversion can throw bits away the source range
+    /// says nothing about losing. Carrying the source range through would be a GUESS dressed
+    /// as a proof -- the same shape `M1` already refuses for float arithmetic that mixes
+    /// widths (`F005`, above) and for an `opaque` carrier's hidden representation (`D003`).
+    /// The only sound answer is the FULL declared range of the TARGET type. A later
+    /// `requires`/`ensures` on the surrounding call may narrow it back down, exactly as an
+    /// ordinary function result does; nothing here forecloses that.
+    ///
+    /// `marken_pruefen` still runs: a labelled conversion (`u64(a: 1)`) is not a struct and
+    /// `M107` already says so correctly, without a second rule that repeats it.
+    fn umwandlung_ruf(&mut self, r: &Ruf, ziel: gabbro_syntax::kw::Kw, lage: &Lage) -> Typ {
+        self.marken_pruefen(r);
+        let mut argtypen = Vec::new();
+        for a in &r.argumente {
+            argtypen.push((self.ausdruck(a, lage), a.span));
+        }
+        // **`M144` -- a conversion takes exactly one value.** Framed like `M143`'s arity
+        // message on purpose: both answer "how many did the declaration want, how many did
+        // the call pass", and a conversion's "declaration" is the built-in unary form
+        // `SYNTAX.md` describes.
+        if argtypen.len() != 1 {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M144",
+                    r.span,
+                    format!(
+                        "`{}` converts one value, this call passes {}",
+                        ziel.text(),
+                        argtypen.len()
+                    ),
+                )
+                .mit_notiz(
+                    "a call whose path names a type IS the conversion (`SYNTAX.md` G9) -- \
+                     the same shape as `(u64) x` in C, and C's cast is unary too",
+                ),
+            );
+            return Typ::Unbekannt;
+        }
+        let (quelltyp, span) = &argtypen[0];
+        // **`M145` -- the argument must itself be an integer.** A conversion between integer
+        // widths is the one form «K3» needed and the one this repair builds; a pointer, a
+        // float or a `bool` argument is a DIFFERENT conversion that C's `(T)` spells the same
+        // way and this language does not build here, so the refusal names the gap instead of
+        // guessing a lowering for it.
+        if !matches!(quelltyp.durchgreifen(), Typ::Ganzzahl(_) | Typ::Unbekannt) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M145",
+                    *span,
+                    format!(
+                        "`{}(...)` converts an integer, and the argument has type `{}`",
+                        ziel.text(),
+                        quelltyp.text()
+                    ),
+                )
+                .mit_notiz(
+                    "only integer-to-integer conversion is built -- a pointer, a float or a \
+                     `bool` argument needs a form this language does not have yet",
+                ),
+            );
+            return Typ::Unbekannt;
+        }
+        let (breite, vorzeichen) = crate::umgebung::breite_von(ziel)
+            .expect("ziel came from Kw::ist_intty(), and breite_von covers exactly that set");
+        // **A conversion that cannot lose information keeps the PROVED range instead of
+        // widening it to the full type.** «K3»'s own `test_repeat_count : u32 in 1 ..
+        // 4294967295` divides a `u64` on the line right after `u64(test_repeat_count)`
+        // (`K08-test-func.gab`) -- measured against a throwaway copy with the vocabulary
+        // collision on `index` renamed out of the way: answering with the full `u64` range
+        // here throws the declared lower bound away and `M102` fires on a denominator that
+        // provably excludes zero. *A WIDENING (or same-width, same-sign) conversion drops no
+        // value the source range did not already promise, so narrowing to it is not a guess
+        // -- it is the same value, in a wider type.* A conversion that could lose bits still
+        // gets the conservative answer, unchanged: the same one `F005`'s float mixing and
+        // `D003`'s opaque carrier already give, and for the same reason.
+        let (ziel_min, ziel_max) = typen::grenzen(breite, vorzeichen);
+        let bereich = match quelltyp.durchgreifen() {
+            Typ::Ganzzahl(q) if q.min >= ziel_min && q.max <= ziel_max => {
+                IntBereich::genau(breite, vorzeichen, q.min, q.max)
+            }
+            _ => IntBereich::voll(breite, vorzeichen),
+        };
+        Typ::Ganzzahl(bereich)
     }
 
     /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**

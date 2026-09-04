@@ -1,0 +1,21 @@
+-- erwartet: R008
+-- **The repair narrows `Raum::Benannt` equality to the NAME, and only to the name.**
+-- `beispiele/68-named-space-matches-itself.gab` is the pass side -- `ptr<user, r>` calling
+-- `ptr<user, r>` checks clean; this is the poison side, over the same repaired code path:
+-- `user` and `kernel` are two DIFFERENT named spaces, and `R008` must still refuse a call
+-- that launders one into the other. A fix that made every `Raum::Benannt` equal to every
+-- other one would pass `beispiele/68` and let this file through too -- this is what stands
+-- against exactly that failure mode.
+
+module beispiel::adressraum_verschieden {
+
+extern fn liest(p : ptr<kernel, r> u8) -> u8 effects { pure } costs <= 1 ops;
+
+impl fn weiterreichen(q : ptr<user, r> u8) -> u8
+    effects { pure }
+    costs   <= 2 ops
+{
+    return liest(q);
+}
+
+}
