@@ -99,8 +99,17 @@ ABSAGEN = [
 # **«B10» is exactly that, and it was invisible here.** Measured:
 #
 #     gabbro pruefe p-queue.gab   ->  5 items, 0 errors, 0 hints
-#     gabbro emit   p-queue.gab   ->  [C001] no lowering: `queue` -- «B10»: `traverse`
-#                                     yields no value and knows no `break` …
+#     gabbro emit   p-queue.gab   ->  [C001] no lowering: `queue` -- the domain names no
+#                                     ELEMENT SET …
+#
+# *The second line is quoted as of 2026-09-04.* It read ~~`queue` -- «B10»: `traverse`
+# yields no value and knows no `break`~~ until that day, and that sentence named a clause
+# the probe below need not even write: the emitter refuses `Domaene::Schlange`
+# unconditionally, so `by unvisited` reached the same text. **The anchor at the bottom of
+# the entry is `no lowering: queue` and NOT the whole sentence, which is why this
+# guard stayed green across the correction** -- a text this tool pinned word for word would
+# have had to move in the same second as the emitter, and the tree has paid for that order
+# before.
 #
 # A register that only asks the checker reports such a gap as CLOSED. *That is the same
 # class as the finding this file was built for* -- a measurement that reads the wrong
@@ -120,8 +129,13 @@ ABSAGEN = [
 #
 # Per entry: (mark, the form, the program, the text the refusal MUST carry)
 ABSENKUNGSLUECKEN = [
-    ("B10", "the value-yielding, leavable search loop -- `traverse … over queue … "
-            "by consuming` drains the WHOLE queue",
+    # **This is NOT the value-yielding, leavable search loop**, which is what stood here
+    # until 2026-09-04 and is the OTHER half of «B10» -- that one went through §7's cost
+    # gate on 2026-09-03 and fell at criterion 2 (`messung/BERICHT-SUCHE.md`). The probe
+    # below drains the whole queue, yields nothing and leaves nowhere; it is refused for the
+    # domain, not for the run form, and swapping `by consuming` for `by unvisited` changes
+    # not one character of the refusal.
+    ("B10", "`traverse … over queue` -- the domain names no element set, in every run form",
      "module t {\n"
      "type Ring = { buf : [u32; 32], kopf : u32, zahl : u32, };\n"
      "impl fn leeren(r : ptr<normal, rw> Ring) effects { reads r, writes r, consumes r } "

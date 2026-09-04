@@ -8636,9 +8636,40 @@ fn traverse(
             vorfahren(x, o, s, aus, u, absagen, tiefe, austritt);
             return;
         }
+        // **THE RUN FORM IS NOT THE REASON, AND UNTIL 2026-09-04 THIS LINE SAID IT WAS.**
+        //
+        // What stood here was *"`traverse` yields no value and knows no `break`, so `by
+        // consuming` drains the WHOLE queue; that is a different program"*. Every word of
+        // that is true about the IPC fastpath (`messung/fragmente/F03.gab`:185), which is a
+        // SEARCH loop wanting a value and an exit. **It is not what fires this arm.** The
+        // arm refuses `Domaene::Schlange` unconditionally, so a file writing `by unvisited`
+        // got the identical text -- a refusal quoting a clause the file does not write.
+        // Measured, both files `0 errors` at `pruefe` and both landing here at `emit`:
+        //
+        //     traverse j over queue r by consuming touches consumes r, reads r, writes r
+        //     traverse j over queue r by unvisited touches reads r, writes r
+        //
+        // **What is actually missing is an ELEMENT SET**, and that stands measured at
+        // `beispiele/56-auftragsring.gab`:22-27 and in `domaene.rs`:154-169. A queue here is
+        // an ordinary record with exactly one array field; `arraylaenge_im_verbund` -- the
+        // only machinery anywhere that reads a queue-shaped record -- takes that array's
+        // LENGTH and nothing else, and head, tail and count are never identified. So
+        // `queue r` denotes the whole backing buffer, dead cells included.
+        //
+        // *And that is why an arm would discharge nothing.* Measured 2026-09-04: `traverse j
+        // over elems of r.buf by unvisited` lowers TODAY, to
+        // `for (uint64_t j = 0; j < sizeof(r->buf)/sizeof(r->buf[0]); j++)`, and an arm here
+        // could emit nothing else -- **a second spelling of a loop that already lowers**,
+        // and the wrong loop for every program that means the live entries. Naming those
+        // needs a declaration form that binds head/tail/count: a grammar question («B10»),
+        // not an emitter arm.
         Domaene::Schlange(_) => {
-            "`queue` -- «B10»: `traverse` yields no value and knows no `break`, so \
-             `by consuming` drains the WHOLE queue; that is a different program"
+            "`queue` -- the domain names no ELEMENT SET: a queue is an ordinary record with \
+             exactly one array field, and nothing declares head, tail or count. `queue r` is \
+             therefore the whole backing BUFFER, dead cells included, and an arm could emit \
+             only what `elems of r.<that array>` already emits -- a second spelling, not a \
+             lowering. THE RUN FORM IS NOT THE REASON: `by unvisited` reaches this line too. \
+             Naming the live cells is «B10», and it is a grammar question"
         }
 
         // **DIE LESART IST SEIT STUFE 3 ENTSCHIEDEN, DIE ABSENKUNG NICHT** (2026-08-20).

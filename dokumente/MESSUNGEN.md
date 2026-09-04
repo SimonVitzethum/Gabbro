@@ -5986,7 +5986,7 @@ That is the actual yield of this stretch: one vague `loop form` became seven nam
 | Domain | why it is not lowered |
 |---|---|
 | `descendants of` | a tree walk whose **order is a template obligation** (`consuming.ordnung`, machine-proved), not a loop form |
-| `queue` | **«B10»**: `traverse` yields no value and knows no `break`, so `by consuming` drains the whole queue — *a different program* |
+| `queue` | ~~**«B10»**: `traverse` yields no value and knows no `break`, so `by consuming` drains the whole queue — *a different program*~~ **CORRECTED 2026-09-04: the domain names no ELEMENT SET.** The struck text is true about the IPC fastpath and was never true about this refusal — the emitter refuses `Domaene::Schlange` unconditionally, so a file writing `by unvisited` got it word for word. What is missing: a queue is an ordinary record with exactly one array field, nothing declares head, tail or count, so `queue r` is the whole backing buffer. **An arm could emit only what `elems of r.<that array>` emits today** (measured) — a second spelling. *«B10» is what remains, and it is a grammar question* |
 | `elems of` | **«B12» is open**: whether it binds an ELEMENT or an INDEX is used both ways in the specification and fixed nowhere |
 | `mappings of` | comes from a `walk`, which has no lowering |
 | `ancestors of` · `chain in` | each needs its own bound |

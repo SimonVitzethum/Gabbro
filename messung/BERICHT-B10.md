@@ -361,3 +361,172 @@ on an owner decision about `state`, `pruefe-manifest.py` is red by construction 
 manifest carries its subject, `zaehle-karten.py` on a broken ratchet that arrived at
 `master`. The measurement was run twice on purpose: once to find the fourth, once to show
 it was gone.
+
+---
+
+# The `queue` half, 2026-09-04 — the refusal was wrong about itself, and the arm discharges nothing
+
+A second lane, started at `3a52bbc`. §0 above kept the two gaps apart by their two texts;
+this section is about the first of them, and the first thing measured was that **the text
+§0 quotes is not true of the line that carries it.**
+
+## 9. `W24` pre-run — the refusal named a clause the file need not write
+
+`emit.rs` refuses `Domaene::Schlange(_)` **unconditionally**: no arm is withheld on a run
+form. So the `by consuming` sentence had to be checked against a file that writes something
+else. Two files, identical but for the run form and the `consumes` effect:
+
+    ssh ki-pc-fisch-101 'cd gabbro-luecke && ./target/debug/gabbro pruefe /tmp/p-consuming.gab'
+    # 3 items, 0 errors, 0 hints          exit=0
+    ssh ki-pc-fisch-101 'cd gabbro-luecke && ./target/debug/gabbro pruefe /tmp/p-unvisited.gab'
+    # 3 items, 0 errors, 0 hints          exit=0
+
+and through the emitter, **the literal text of 2026-09-04 before the change, both files
+byte for byte the same:**
+
+    error: [C001] …:4:3: no lowering: `queue` -- «B10»: `traverse` yields no value and
+    knows no `break`, so `by consuming` drains the WHOLE queue; that is a different program
+
+    4 |   traverse j over queue r by unvisited touches reads r, writes r { r.buf[j] = 0; }
+
+*A refusal that quotes a clause the file does not write is wrong about itself* — and the
+sentence it quoted is true, only about the IPC fastpath (`messung/fragmente/F03.gab`:185),
+which is the OTHER half of «B10» and fell at criterion 2 on 2026-09-03.
+
+**The corrected text names the domain and says so about the run form:**
+
+    `queue` -- the domain names no ELEMENT SET: a queue is an ordinary record with exactly
+    one array field, and nothing declares head, tail or count. `queue r` is therefore the
+    whole backing BUFFER, dead cells included, and an arm could emit only what
+    `elems of r.<that array>` already emits -- a second spelling, not a lowering. THE RUN
+    FORM IS NOT THE REASON: `by unvisited` reaches this line too. Naming the live cells is
+    «B10», and it is a grammar question
+
+### The readers moved, and the two machine ones needed nothing
+
+**The order that keeps every reader green turned out to be free, and that is worth the
+line.** Both guards that read this refusal are keyed on the STABLE PREFIX, not the
+sentence:
+
+| reader | what it pins | across the rewrite |
+|---|---|---|
+| `pruefe-notation.py` | the anchor `` no lowering: `queue` `` | **green before and after** |
+| `pruefe-grammatiktafel.py` | `_form()` — the LEADING backtick group, `queue` | **green before and after** |
+
+*A guard keyed on the whole sentence would have had to move in the same second as the
+emitter.* `W25`'s leading-group rule bought that, and it was not built for this.
+
+The prose readers were moved in the same commit: `dokumente/MESSUNGEN.md`:5989 (the
+per-domain table — struck and replaced), `messung/ABSAGEFORMEN.md` row `6506`,
+`messung/W24-FRAGMENTE.md`:81 (a transcript — annotated, not edited), and the two guards'
+own comments. **Left standing on purpose:** `PFLICHTEN.md`:185, `SYNTAX.md`:1054,
+`PLAN-AUTONOM.md`:371 and `AUSSETZUNG.md`:63-73 all say the `by consuming` sentence *about
+the fastpath*, where it is true. `dokumente/FRAGMENTE.md`:1270 belongs to another lane.
+
+## 10. Route 1 — can an arm discharge anything? **No, and now it is measured twice**
+
+The prior claim was that the arm could be written and would discharge nothing. It holds,
+and the second measurement is new and stronger.
+
+**(a) For `by unvisited`, the arm can only re-spell a loop that already lowers.**
+`domaene.rs`:154-169 (`arraylaenge_im_verbund`) is the only machinery anywhere that reads a
+queue-shaped record; it takes the single array field's LENGTH and returns `None` on two
+arrays. Head, tail and count are never identified. So the one thing an arm could emit is
+the `elems of` loop over that array — **and that lowers today**:
+
+    ssh ki-pc-fisch-101 'cd gabbro-luecke && ./target/debug/gabbro emit /tmp/p-elems.gab'
+    static void leeren(Ring *restrict r) {
+        for (uint64_t j = 0; j < (uint64_t)(sizeof(r->buf) / sizeof(r->buf[0])); j++) {
+            r->buf[j] = 0;
+        }
+    }
+
+**(b) And for `by consuming` — which is what the guard's own witness writes — the arm would
+not even close the entry. It would move it to a different `C001`:**
+
+    ssh ki-pc-fisch-101 'cd gabbro-luecke && ./target/debug/gabbro emit /tmp/p-elems-cons.gab'
+    error: [C001] …:4:3: no lowering: `elems of … by consuming` -- an array element is not
+    removed; consumption needs a carrier with generated `ops`
+
+*That refusal is independent of this one and stands in `ABSAGEFORMEN.md` as row `6437`.* So
+the witness has TWO refusals in front of it, and the queue arm only reaches the first.
+
+**Verdict on route 1: an arm buys a synonym for `by unvisited` and nothing at all for `by
+consuming`.** `queue` already means the whole buffer everywhere else in the tree — the cost
+pass computes it that way, and `beispiele/56-auftragsring.gab`:29-33 measured that
+`forall j in queue r` and `forall j in elems of r.plaetze` produce the same C. Building the
+arm makes `pruefe-notation.py` read 0 without the language gaining a program it could not
+write, and it leaves `queue` as the misleading spelling: a reader writes it meaning the live
+entries and gets the dead cells too.
+
+## 11. Route 2 — the declaration form binding head/tail/count. **Rule A stops it first**
+
+### The demand, and its denominator
+
+A record `type X = { … }` in a `.gab` with EXACTLY ONE array field, counted over the whole
+tree with a script (comment lines stripped first):
+
+    # 20 such records; 15 also carry a head/tail/count-shaped field
+
+Twenty is the wrong denominator, though — most are poison probes (`beispiele/gift/`, 4) or
+measuring apparatus (`messung/proben/`, 9, several of them written to prove this very
+refusal fires). **Real programs carrying a queue-shaped record: 5 files, 6 records, 4 of
+them with a head/tail/count field.** Taken one by one, would each USE a bound live window?
+
+| record | how it says the live extent today | would use it |
+|---|---|---|
+| `beispiele/56-auftragsring.gab` `Ring{plaetze, kopf, zahl}` | a `LEER` sentinel, and four `forall j in queue r` that mean *all slots*; the file says so at :22-27 | **yes** |
+| `messung/fragmente/F03.gab` `TidQueue{buf, head, tail, count}` | `traverse cand over queue … by consuming` at :185 | **yes — but not closed by it**: that site also needs a VALUE and an EXIT, and that half fell at criterion 2 on 2026-09-03 |
+| `beispiele/32-zeichenkette.gab` `Text{bytes, len}` | pointwise `requires i < s.len`; **zero quantifiers in the file** (`grep -c 'forall\|exists'` → 0) | no |
+| `messung/fragmente/F06.gab` `Stack{worte, len}` | `traverse w of s over elems of s.worte` **deliberately over the WHOLE array** — `unberuehrt` counts untouched words | no |
+
+**Effective demand: ONE site, and it is the example file written to document the gap.**
+That is the shape §3 above named — *a construct for one caller* — and Rule A is the rule
+that exists for it.
+
+### The gate anyway, criterion by criterion
+
+    ./instrumente/zaehle-wortschatz.py     # 221 words / 208 without a reason / 333 positions
+
+**Criterion 1 — no new source word: FALLS for the obvious form, holds only positionally.**
+Counting each candidate in `crates/gabbro-syntax/src/kw.rs`:
+
+    head 0 · tail 0 · count 1 (kw.rs:214) · buffer 0 · queue 1 (kw.rs:373)
+
+`head` and `tail` are **not** words. A clause naming them by keyword costs two, and the
+vocabulary is a closed ratchet. The escape is the «B13»/`via` shape §4 identified: a new
+POSITION of the existing word `queue`, positionally — `queue <buf> <head> <count>` after the
+record body, 221 words unchanged, positions 333 → 334. *And that price is paid in exactly
+the coin «B12» was decided against on 2026-08-20: a form whose meaning rides on order rather
+than on a name.*
+
+**Criterion 2 — one pass slot: holds for the binding, and there is a consequence that is
+not a failure.** Name resolution (`D017`-shaped), a type check and a domain change all sit
+in passes that exist. But head/tail/count are RUN TIME values, so the COST bound cannot
+follow them: `costs <= N ops` needs a static `N`, and it stays the array length. **The
+construct would change which cells the loop visits, not how many at most** — which is right,
+and worth writing down so nobody later reads a tighter promise into it.
+
+**Criterion 3 — Isabelle counterpart: not decidable, nothing proposed.** Baseline green
+(§4). A theorem about a construct with one caller is a theorem about one program.
+
+**Criterion 4 — `exec` untouched: holds.** A declaration-level field binding; the big-step
+semantics does not see it.
+
+## 12. Verdict — the gap stays open at `1 von 1`, and it costs one grammar production
+
+**It does not close without a language change**, and the language change is not worth its
+demand:
+
+1. **The arm is not the answer**, and that is now measured rather than argued: a synonym for
+   `by unvisited`, and for `by consuming` it does not even close the entry (§10b).
+2. **The declaration form is the answer**, and it is **one grammar production** — a new
+   position of `queue`, no new word, one pass slot, `exec` untouched.
+3. **Its measured demand is one site**, and that site is the file that documents the gap.
+   Rule A refuses it. *The tree has now had three constructs fall in one week — two at
+   criterion 2, this one at Rule A — and each time the cheap measurement was the one nobody
+   had made.*
+
+**`pruefe-notation.py` therefore still reports `Absenkungsluecken: 1 von 1`, and it should.**
+The entry was corrected, not removed: it read *"the value-yielding, leavable search loop"*,
+which is the other half of «B10» and was never what its own probe writes.
