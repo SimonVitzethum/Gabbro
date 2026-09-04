@@ -394,3 +394,62 @@ redefined.**
 
 _(polling `git log --oneline master..worktree-agent-a7460ff215795e662` directly now, per
 coordinator instruction, in addition to the background monitor)_
+
+---
+
+## Lane commit `108f186` -- `messung/KLASSEN-F03-2026-09-04.md`, the full row-by-row table
+
+**`git diff master -- messung/fragmente/F03.gab`: still EMPTY.** Read the whole new document
+and independently re-checked every load-bearing citation and measurement in it, not just the
+headline count.
+
+**The row-by-row table's verdicts, independent of mine:** N035x5 -> 2, M124x3 -> 2, M140#7
+(:194) -> **2 (grammar production)**, M140 the other six + M143 + M101 + H011 -> 3, plus the
+C001 at :185 -> **2 (grammar production)**. **9 rule-decision, 9 program-is-wrong, 0
+plumbing among the 18 -- and the lane independently reaches the SAME split I derived before
+reading this file** (my own tally: N035x5 + M124x3 + M140#7 = 9 rule-decision; the rest = 9
+program-is-wrong). **Two independent derivations, same numbers, same two odd-ones-out
+(M140#7 and the C001) reclassified out of their naive buckets into "grammar production" for
+the same underlying reason -- convergence worth noting, not just agreement to wave through.**
+
+Checked every citation and measurement, not sampled:
+
+- **`crates/gabbro-syntax/src/parse.rs`:1477-1489 (M140 #7).** Read it myself: `&` is handled
+  in `unary()`, takes only a `pfad` (path), yields `ExprArt::FnWert` -- with the comment,
+  quoted verbatim by the lane and confirmed byte-for-byte: *"There is no address-of an
+  expression in Gabbro, and that there is none is the reason `ptr` carries a provenance at
+  all."* **This independently confirms the same grammar gap I had already found from the
+  lexer side** (`grep '"&"' lex.rs` finding only bitwise-AND) before this commit landed --
+  now confirmed from the parser side too, and it is the SAME underlying fact, not two
+  different pieces of evidence dressed up as two.
+- **The `cc` compilation claims for the M140/M143 cluster.** Reproduced independently, own
+  scratch files, own `cc` invocation (`cc -std=c11 -Wall -Wextra -Werror`): `m140.c`
+  (`Frame *call(...) { return block_current(...); }` with `block_current` declared `->
+  uint32_t`) fails with `-Wint-conversion` exactly as quoted; `m143.c`
+  (`owner_core(picked)` against a two-parameter declaration) fails with BOTH
+  `-Wint-conversion` AND "too few arguments ... expected 2, have 1" exactly as quoted. **Both
+  reproduce, independent build, independent files.**
+- **Commit `918cca0`, cited three times, read in full.** Confirms all three uses: (a) the
+  `N035` no-default-is-sound argument (a slot promising `writes summe`/100 ops called from a
+  body promising `pure`/4 ops trips both `E008` and `K001` -- a concrete constructed case,
+  not an assertion); (b) `table Threads` measured to make `M101` WORSE (18 -> 19, both
+  assignments fail instead of one) -- an experiment that came out against the fix, reported
+  anyway; (c) the `beispiele/gift/293` claim for `M124`.
+- **`beispiele/gift/293-grund-an-fremdem-parameter.gab`**, read in full: `extern fn nimm(x :
+  u32) ...; nimm(Status::Ok);` -- **byte-for-byte the shape** `F03` writes
+  (`set_reg(f, SYSNO_RESULT, IpcResult::ErrQuiescing)`, a reason value at a `u32`
+  parameter). Confirmed: this is a genuine, pre-existing poison probe for exactly this
+  rule, not a shape invented for this argument.
+- **Function names in the citation table**, spot-checked against not just line numbers but
+  actual identifiers: `grundstellung` at `m1.rs`:573 (confirmed), `ruf_roh` at `m1.rs`:2168
+  (confirmed), `pass_mit` at `geteilt.rs`:202 (confirmed), `fnptr_traegt_seinen_vertrag` at
+  `namen.rs`:588 (confirmed, checked in an earlier round), `gestalt_passt`/`passt` at
+  `m1.rs`:3563/3609 (confirmed, checked in an earlier round). **Every function name in the
+  table is real and at the cited line -- these are not decorative citations.**
+
+**Everything in `108f186` holds up under independent re-derivation.** No caprock-fidelity
+argument reappears, no guardian is touched, `F03.gab` stays byte-identical, and the two
+"grammar production" reclassifications (M140 #7, the queue `C001`) are the same conclusion I
+reached independently through a different route (the cost-pass's own "assumed
+correspondence" admission in `K001-DOMAENENSCHRANKE.md` for the queue case, the lexer's
+missing `&` token for the address-of case) before reading this commit.
