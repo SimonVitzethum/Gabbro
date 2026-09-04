@@ -1181,9 +1181,46 @@ the two lines the emitter refusal names itself.
 | **0** | red tests | `cargo test --no-fail-fast` green on `ki-pc-fisch-101`; `paesse` 59 of 59 |
 | **0** | `UNGEDECKT` cells | `pruefe-grammatiktafel.py` GREEN: `0 von 218`, `state` moves to `abgesagt` |
 
+## `N056`: a `falsifier` that resolves must be able to go red *(2026-09-04)*
+
+**A probe must FALL when the assumption is violated -- and nothing asked whether it
+could.** Built as `N056` in `namen.rs::sonde_kann_fallen`: where the `falsifier` name
+resolves to a function declared in this unit, that function answers `-> bool`, or it is
+the `-> never` watchdog standing at an `on_exceeded` (SYNTAX.md §8.3). A value, a missing
+result, or a diverging function that guards no loop are refused -- none has a channel a
+refutation could arrive on.
+
+**The rule that was NOT built is the load-bearing half.** `falsifier` does not have to
+resolve at all: a probe is a C program in `sonden/`, decided 2026-08-19 (`namen.rs`,
+`sonden/README.md`). Of **98** `falsifier` clauses in 647 `.gab` — 94 at `assume`/`axiom`,
+4 at `retires` — **89 resolve to nothing** and are correct; a rule demanding resolution
+would have refused the whole hardware corpus. Coverage for those is `manifest::gedeckt`, which strikes a name whose
+probe stands as no program.
+
+| | | evidence |
+|---:|---|---|
+| **1** | pre-run (`W24`) | `gabbro pruefe` on `assume a "…" falsifier gibt_es_nicht;` gave `0 errors, 0 hints`, exit=0 against the unchanged checker |
+| **1** | probe, value arm | `beispiele/gift/677-a-falsifier-that-cannot-go-red.gab` (`-- erwartet: N056`), fires alone |
+| **3** | counter-probes | `-> bool`, a name resolving to nothing, and a watchdog that DOES guard -- all stay silent (`paesse.rs`) |
+| **1** | sentence | `namen.sondenausgang` in `saetze.rs` carries `N056` |
+| **3** | mutations | one per arm plus the counter-direction, in `mutiere-pruefer.py`; anchors **391 of 391** |
+| **0** | corpus files broken | `gabbro pruefe` swept over 642 files before and after: **456 red both times, 0 exit codes changed** |
+| **0** | red tests | `cargo test --no-fail-fast` on `ki-pc-fisch-101`: **404 passed, 0 failed** |
+
+**What is NOT decidable here, named rather than left silent:** that a `-> bool` probe ever
+returns `false`. The body is outside Gabbro by construction. What stands in its place is
+`instrumente/pruefe-sonden.sh`, which runs the program against the `0/1/77` contract and
+carries its own probe in all three directions. *A declaration that CAN fall is not one
+that DOES.*
+
+**And the check this did NOT buy, with the measurement that killed it:** an assumption
+about `writes tlb` whose probe declares `effects { pure }` cannot observe it -- decidable,
+and **empty**. Of **14** `axiom … falsifier` clauses, **0** have a declared probe. *A rule
+with no site is the thing this folder hunts, not the thing it adds.*
+
 ## Probes
 
-**67 clean examples, 446 poison probes, 403 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
+**67 clean examples, 447 poison probes, 404 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
 > | | booked | measured | by what |
 > |---|---:|---:|---|
 > | clean examples | 25 | **54** | `ls beispiele/*.gab` |

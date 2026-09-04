@@ -1,0 +1,23 @@
+-- erwartet: N056
+-- **A `falsifier` that resolves to something which cannot refute -- and the checker
+-- waved it through.** Measured against the unchanged checker on 2026-09-04:
+-- `assume a "…" falsifier zaehler;` beside `extern fn zaehler() -> u64` checked with
+-- `3 items, 0 errors, 0 hints`, exit=0. A `u64` is a value, not a verdict: nothing in
+-- that function can ever say "refuted", so the assumption carries a probe that cannot
+-- go red -- an assurance about the ABSENCE of a refutation (R14, R15, W10).
+--
+-- **The pass does NOT demand that the name resolve at all.** A probe is a C program in
+-- `sonden/`, not a declaration (`namen.rs`, decided 2026-08-19; `sonden/README.md`
+-- carries the same point under a heading of its own). 89 of the corpus's 98 `falsifier`
+-- clauses resolve to nothing and stay green. This one resolves -- and that is what makes
+-- it checkable.
+--
+-- The `-> never` twin (a watchdog that guards no loop) is the second arm of the same
+-- rule; this probe carries the value arm alone so that only one message can fire.
+module gift::falsifier_ohne_ausgang {
+
+extern fn zaehler() -> u64 effects { pure } costs <= 1 ops;
+
+assume a "The timer ticks." falsifier zaehler;
+
+}

@@ -274,6 +274,51 @@ pub const NAMEN: &[Satz] = &[
                       by a line nothing measures.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12",
     },
+    // --- 2026-09-04: a falsifier that resolves must be able to go red ---------------------
+    //
+    // **The rule that was NOT built is the load-bearing half of this sentence.** `falsifier`
+    // deliberately does not have to resolve: a probe is a C program in `sonden/`, decided
+    // 2026-08-19 and repeated in `sonden/README.md`. What IS decidable is the case where the
+    // name resolves anyway -- and then to something that has no way to say "refuted".
+    Satz {
+        name: "namen.sondenausgang",
+        kennungen: &["N056"],
+        aussage: "A `falsifier` (or `retires … falsifier`) whose name RESOLVES to a \
+                  function declared in this unit names one that can go red: either it \
+                  answers `-> bool`, or it is a `-> never` watchdog standing at the \
+                  `on_exceeded` of a loop (SYNTAX.md §8.3). A function returning a value, \
+                  a function returning nothing, and a diverging function that guards no \
+                  loop are all refused -- none of them has a channel on which a refutation \
+                  could arrive.",
+        vorbehalt: "**The rule does NOT require the name to resolve at all, and that is a \
+                    decision and not a gap** -- a probe does not stand in Gabbro because \
+                    it RUNS (decided 2026-08-19). 89 of the corpus's 98 `falsifier` \
+                    clauses resolve to nothing and are correct; a rule demanding \
+                    resolution would refuse the whole hardware corpus. Coverage for those \
+                    lives one layer out, at `manifest::gedeckt`, which strikes a name \
+                    whose probe stands as no program. **And that a `-> bool` probe ever \
+                    returns `false` is NOT decidable here** -- the body is outside the \
+                    language. `instrumente/pruefe-sonden.sh` measures that, by running the \
+                    program against the `0/1/77` contract; this pass only guarantees the \
+                    verdict has somewhere to come from. *A declaration that CAN fall is \
+                    not one that DOES.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured before the build (2026-09-04, 647 `.gab`): **98 `falsifier` \
+                      clauses (94 at `assume`/`axiom`, 4 at `retires`), 59 distinct probe \
+                      names, 89 resolving to nothing, 4 \
+                      resolving in-file -- and all 4 already satisfy the rule**, so the \
+                      corpus sweep before and after is byte-identical in every exit code \
+                      (642 files, 456 red, 0 changed). The pre-run is recorded: `assume a \
+                      \"…\" falsifier gibt_es_nicht;` gave `0 errors, 0 hints`, exit=0. \
+                      Probe `beispiele/gift/677` is the value arm; the `-> never` arm and \
+                      all three counter-directions stand in `paesse.rs` \
+                      (`ein_falsifikator_muss_rot_werden_koennen`). **3 mutations, one per \
+                      arm plus the counter-direction**, all caught. *The effects check -- \
+                      an assumption about `writes tlb` whose probe declares `pure` -- is \
+                      decidable and was NOT built: of 14 `axiom … falsifier` clauses, 0 \
+                      have a declared probe, so its population is EMPTY.*",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; sonden/README.md",
+    },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
     // **What bought the clause was a CONJUNCTION, not a missing keyword.** `dma_kohaerent`

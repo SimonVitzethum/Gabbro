@@ -34,6 +34,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     verbund_ohne_groesse(baum, absagen);
     check_traegt_seine_pflicht(baum, absagen);
     spiegel_und_sonde(baum, absagen);
+    sonde_kann_fallen(baum, absagen);
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
@@ -3247,6 +3248,220 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
     }
 }
 
+/// **`N056` -- a `falsifier` that RESOLVES must be able to refute** (2026-09-04).
+///
+/// ## What this pass deliberately does NOT check
+///
+/// **It does not require the probe name to resolve at all.** That question was decided on
+/// 2026-08-19 and the decision stands two doors down, in [`spiegel_und_sonde`]'s own note:
+/// *"`expects` names an EXTERNAL probe, like `assume … falsifier`: it does not stand in
+/// Gabbro because it RUNS."* `sonden/README.md` carries the same point under a heading of
+/// its own -- why a probe does not stand in Gabbro -- and the enforcement for a name whose
+/// probe does not exist lives where the probe lives: [`crate::manifest::gedeckt`] strikes the
+/// name out of the manifest as `ungedeckt` and prints how many were struck, and
+/// `instrumente/pruefe-sonden.sh` runs the programs that remain.
+///
+/// *Measured before this pass was written* (2026-09-04, whole tree, 647 `.gab`): **98
+/// `falsifier` clauses -- 94 at `assume`/`axiom` and 4 at `retires` -- over 59 distinct probe
+/// names, and 89 of the 98 resolve to no declaration anywhere.** A rule that demanded
+/// resolution would refuse the entire hardware corpus, and would be demanding a declaration
+/// for something that is a C program in `sonden/`. *That is not the hole.*
+///
+/// ## The hole: a name that DOES resolve, to something that cannot fall
+///
+/// > **A probe must FALL when the assumption is violated.** A falsifier that cannot go red
+/// > is an assurance about the ABSENCE of a refutation -- the same class as `R15` and `W10`,
+/// > and the same requirement `pruefe-sonden.sh` puts on its own three-state speaking test
+/// > (*a probe that cannot go red measures nothing*, `R14`).
+///
+/// When the name resolves in this unit, that much IS decidable, and exactly two shapes can
+/// refute anything:
+///
+/// ```text
+/// -> bool               the probe ANSWERS  -- the `sonden/<name>.c` shape, exit 0/1/77
+/// -> never + diverges   the WATCHDOG fires -- SYNTAX.md §8.3: "the watchdog IS the
+///                       falsifier", and then it must be named at an `on_exceeded`
+/// ```
+///
+/// Anything else -- a function returning a value, one returning nothing, or a `never` that
+/// answers no `on_exceeded` in this unit -- **has no way to say "refuted"**. A `-> never`
+/// nobody calls cannot fire; a `-> u64` has no verdict channel. The clause then reads as
+/// coverage and is none.
+///
+/// ## What is NOT decidable here, and what stands in its place
+///
+/// **That a `-> bool` probe ever returns `false` is not decidable at the declaration** -- an
+/// `extern fn` body is outside Gabbro by construction, which is the whole point of the
+/// 2026-08-19 decision. What stands in its place is not silence but two runnable things:
+/// `sonden/README.md`'s sensitivity requirement (*a probe that finds nothing has two possible
+/// reasons: nothing was there, or it cannot see*) and `pruefe-sonden.sh`, which demands the
+/// `0/1/77` contract and carries its own probe in all three directions.
+///
+/// **The effects check is decidable and has an EMPTY population**, measured rather than
+/// assumed: an assumption about `writes tlb` whose probe declares `effects { pure }` cannot
+/// observe it -- but of **14** `axiom … falsifier` clauses in the corpus, **0** have a
+/// declared probe, so the rule would have no site to fire on. *A rule with no value is the
+/// thing this tree hunts, not the thing it adds.* It is written down here so the next lane
+/// measures the population instead of rediscovering the idea.
+fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
+    // The watchdogs this unit names at an `on_exceeded`, at any depth.
+    let mut waechter: HashSet<String> = HashSet::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        bloecke_nach_waechtern(b, &mut waechter);
+    });
+
+    // Every function this unit declares, by name -> what its result can SAY. Owned and not
+    // a borrow: the walker hands out `&Item` for the length of the call and no longer.
+    let mut deklariert: HashMap<String, Antwort> = HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Funktion(f) = &i.art {
+            deklariert.insert(f.name.text.clone(), Antwort::von(f.ergebnis.as_ref()));
+        }
+    });
+
+    let mut pruefe = |sonde: &Ident, wo: &str| {
+        // **A name that resolves to nothing is NOT this pass's business** -- see the head
+        // note. The probe is a program next to the tree, not a declaration in it.
+        let Some(antwort) = deklariert.get(&sonde.text) else {
+            return;
+        };
+        match antwort {
+            // The probe answers. Whether it ever answers `false` is outside Gabbro.
+            Antwort::Wahrheitswert => {}
+            // The watchdog IS the falsifier -- but only where it actually stands guard.
+            Antwort::Niemals => {
+                if !waechter.contains(&sonde.text) {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N056",
+                            sonde.span,
+                            // **Both arms say the same sentence** -- they are ONE rule, and
+                            // `pruefe-vergabe.py` reads two dissimilar texts under one code
+                            // as two rules sharing a name. The difference belongs after the
+                            // dash, not in the sentence.
+                            format!(
+                                "`{wo} {}` names a function that cannot refute anything \
+                                 -- it diverges and guards no loop",
+                                sonde.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "SYNTAX.md §8.3: the watchdog IS the falsifier -- so it has to \
+                             be the `on_exceeded` of a loop, otherwise nothing ever calls \
+                             it and it can never fire",
+                        )
+                        .mit_notiz(
+                            "a falsifier that cannot go red is an assurance about the \
+                             ABSENCE of a refutation, not a probe (R14, R15, W10)",
+                        ),
+                    );
+                }
+            }
+            // Everything else: no verdict channel at all.
+            // Named without printing the type: the two states a reader must tell apart are
+            // "answers something that is not a verdict" and "answers nothing".
+            Antwort::AndererWert | Antwort::Keine => {
+                let hat = match antwort {
+                    Antwort::Keine => "it returns nothing",
+                    _ => "its result is not `bool`",
+                };
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N056",
+                        sonde.span,
+                        format!(
+                            "`{wo} {}` names a function that cannot refute anything \
+                             -- {hat}",
+                            sonde.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "a probe that resolves in this unit answers `-> bool`, or it is the \
+                         `-> never` watchdog of a loop (SYNTAX.md §8.3)",
+                    )
+                    .mit_notiz(
+                        "a falsifier that cannot go red is an assurance about the ABSENCE \
+                         of a refutation, not a probe (R14, R15, W10)",
+                    ),
+                );
+            }
+        }
+    };
+
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Assume(a) => {
+            if let AnnahmeKlasse::Falsifizierbar(n) = &a.klasse {
+                pruefe(n, "falsifier");
+            }
+        }
+        ItemArt::Axiom(a) => {
+            if let AnnahmeKlasse::Falsifizierbar(n) = &a.klasse {
+                pruefe(n, "falsifier");
+            }
+        }
+        // `retires t from boot falsifier <probe>` carries the same tail deliberately, so it
+        // gets the same reading -- a third spelling would be a second register over one thing.
+        ItemArt::Funktion(f) => {
+            if let Some(st) = &f.retires {
+                if let AnnahmeKlasse::Falsifizierbar(n) = &st.klasse {
+                    pruefe(n, "falsifier");
+                }
+            }
+        }
+        _ => {}
+    });
+}
+
+/// **What a declared function's result can SAY** -- the four states `N056` tells apart.
+///
+/// The variants stand singly and there is no catch-all: a new result shape has to be
+/// classified here rather than sliding into whichever arm happens to be last.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Antwort {
+    /// `-> bool` -- the probe answers, and the answer is a verdict.
+    Wahrheitswert,
+    /// `-> never` -- it does not answer, it FIRES. Only a watchdog can refute this way.
+    Niemals,
+    /// `-> u64`, `-> Pa`, … -- a value, and a value is not a verdict.
+    AndererWert,
+    /// No result clause at all.
+    Keine,
+}
+
+impl Antwort {
+    fn von(t: Option<&TypExpr>) -> Self {
+        match t {
+            None => Antwort::Keine,
+            Some(TypExpr::Bool(_)) => Antwort::Wahrheitswert,
+            Some(TypExpr::Never(_)) => Antwort::Niemals,
+            Some(_) => Antwort::AndererWert,
+        }
+    }
+}
+
+/// The `on_exceeded` names of every loop in a block, at any depth. Uses
+/// [`crate::unterbloecke`] rather than its own statement match, so a new statement kind
+/// cannot quietly hide a loop from this pass.
+fn bloecke_nach_waechtern(b: &Block, out: &mut HashSet<String>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Schleife(sch) = &s.art {
+            match sch.as_ref() {
+                Schleife::Retry(r) => {
+                    out.insert(r.bei_ueberschreitung.text.clone());
+                }
+                Schleife::Forever(f) => {
+                    out.insert(f.bei_ueberschreitung.text.clone());
+                }
+                Schleife::Traverse(_) => {}
+            }
+        }
+        for u in crate::unterbloecke(s) {
+            bloecke_nach_waechtern(u, out);
+        }
+    }
+}
 
 /// **`N025` — `pub` war Zierde.**
 ///
