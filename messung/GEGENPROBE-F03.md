@@ -474,3 +474,95 @@ argument reappears, no guardian is touched, `F03.gab` stays byte-identical, and 
 reached independently through a different route (the cost-pass's own "assumed
 correspondence" admission in `K001-DOMAENENSCHRANKE.md` for the queue case, the lexer's
 missing `&` token for the address-of case) before reading this commit.
+
+---
+
+## Attacking my own conclusion: was plumbing EVER reachable for a `pruefe`-time error?
+
+The coordinator's challenge, stated precisely: agreement between two independently-derived
+conclusions is weaker evidence than it feels, and my claim (*"plumbing was never structurally
+reachable for a `pruefe`-time error"*) is the stronger of the two and the one to break. Test:
+go through every documented `D`-numbered emitter repair (`D1`-`D6`, `D19`-`D22`, plus `D15`-`D18`
+which sit in the same catalog and are the same shape of evidence) and ask, for each, whether
+`pruefe` was already refusing BEFORE the repair. **One counterexample -- a repair that
+discharged an obligation over a file `pruefe` was refusing -- breaks the claim.**
+
+Catalog: `messung/ERZEUGERDEFEKTE.md` (`D1`-`D6`) and `messung/ERZEUGERREST.md` (`D15`-`D22`),
+both dated, both carrying `before`/`after` stage tables. Read every one, not sampled:
+
+| defect | `pruefe` BEFORE the repair | source |
+|---|---|---|
+| `D1` | `3 items, 0 errors, 0 hints` | `ERZEUGERDEFEKTE.md`:21 |
+| `D2` | `5 items, 0 errors, 0 hints` | `ERZEUGERDEFEKTE.md`:22 |
+| `D3` | `2 items, 0 errors, 0 hints` | `ERZEUGERDEFEKTE.md`:23 |
+| `D4` | `2 items, 0 errors, 0 hints` | `ERZEUGERDEFEKTE.md`:24 |
+| `D5` | `2 items, 0 errors, 0 hints` | `ERZEUGERDEFEKTE.md`:25 |
+| `D6` | `2 items, 0 errors, 0 hints` | `ERZEUGERDEFEKTE.md`:26 |
+| `D16` | `4 items, 0 errors, 0 hints` | `ERZEUGERREST.md`:380 |
+| `D17` | `4 items, 0 errors, 0 hints` | `ERZEUGERREST.md`:397 |
+| `D19` | `4 items, 0 errors, 0 hints` | `ERZEUGERREST.md`:857 |
+| `D20` | narrowing already `M1`-proved, no refusal at all | `ERZEUGERREST.md`:1021-1040 |
+| `D21` | *"the checker accepts ... with zero errors"* | `ERZEUGERREST.md`:1101-1105 |
+| `D22` | `5 items, 0 errors, 0 hints` | `ERZEUGERREST.md`:1184-1186 |
+| **`D15`** | **refuses (`N007` -- a bit past the width)** | `ERZEUGERREST.md`:362 |
+
+**Nine (D16/17/19/20/21/22) plus the six of D1-D6: fifteen of sixteen checked entries had
+`pruefe` already at 0 errors.** `D15` is the one that does not, and I read it in full,
+including the load-bearing comment IN THE SOURCE (`crates/gabbro-check/src/emit.rs:9391-9403`,
+still there, verbatim, dated 2026-09-03) rather than trusting the document's paraphrase.
+
+### `D15`, in full: a real complication, not a full counterexample
+
+`reg X : u64 @0x0 fields { A @[4294967295:0] }` -- `pruefe` refuses this **by name**, at the
+declaration, citing `N007` (a bit position past the width -- confirmed a real checker rule,
+`crates/gabbro-check/src/bitlage.rs:93/102`). **And the emitter's own arithmetic panicked
+anyway**: `hi - lo + 1` computed in `u32` (`Geraet::felder` stores the span as `u32`), so
+`4294967295 - 0 + 1` overflows and the debug build panics -- *`attempt to add with overflow`,
+`emit.rs:9403`* -- reproduced verbatim from the current source's own comment, not just the
+document. **The repair widened the arithmetic to `u128`** -- confirmed live in the current
+tree, `emit.rs:3856/4443/4496` all now compute `(1u128 << (hi - lo + 1)) - 1` rather than the
+old `u32` form.
+
+**What this proves, and what it does not.** It proves the emitter's machinery is NOT gated
+behind "only runs if `pruefe` accepted" -- the source comment says it outright: *"the panic
+still happened, because `command_emit` runs the whole back end before it reads the verdict,
+and this expression is reached from a function body while the refusal sits at the
+declaration."* This is a genuine, measured correction to something I asserted earlier in this
+document (*"the emitter's job starts from an ALREADY-VALIDATED program ... it has no
+machinery to invent a missing proof"*) -- that phrasing implied the emitter's code path is
+simply not reached for refused input, and `D15` shows plainly that it is: the whole backend
+runs regardless, and only the FINAL reported verdict depends on whether the checker already
+found an error.
+
+**But it does not prove a lowering obligation was ever discharged over refused input.**
+Before the repair: `pruefe` refuses, `emit` panics, no C exists. After the repair: `pruefe`
+STILL refuses (the stage table says so explicitly -- "unchanged"), `emit` produces "the
+refusal, and no panic" -- still no C exists, still no obligation discharged. **The fix
+replaced a crash with a correct, graceful refusal of a file whose refusal was already right**
+(`N007` is a true fact about the program -- a bit position that does not exist). Nothing
+about `F03`'s situation resembles this: none of `F03`'s 18 involve the emitter crashing, and
+none would be "fixed" by hardening a panic into a clean error, because they are already
+clean, reported refusals.
+
+### The claim, restated more carefully
+
+**Not "the emitter never runs over refused input" -- `D15` shows it does.** The defensible
+claim is narrower and survives the test: *of sixteen documented emitter repairs, in the
+one case where `pruefe` was already refusing, the repair did not and could not make the file
+lower -- it made the tool fail more honestly at exactly the same refusal.* **Zero of sixteen
+historical repairs ever turned a `pruefe`-refused file into a successfully-lowering one.**
+That is the actual load-bearing fact behind "plumbing was never reachable for a `pruefe`-time
+error," and it is now checked against real history rather than argued from the definition of
+"checker error" alone. The single partial exception (`D15`) sharpens the claim rather than
+breaking it: it shows precisely which part of my earlier reasoning was too strong (emitter
+reachability) while leaving the part that matters for `H` (obligation dischargeability)
+intact.
+
+_(One more note on method, since the coordinator flagged it: `instrumente/fuzze-erzeuger.py`
+itself defines its fuzzed population as `angenommen = (pruefe errors == 0 and not panic)`
+(`:763`) and explicitly separates out "refused by the checker" cases from the population it
+studies for emitter defects (`:1385-1387`). So the sixteen-case catalog is not an unbiased
+sample of "all emitter repairs ever" -- its own search tool is built to look at `pruefe`-clean
+input first. `D15` is the one entry that escaped that filter, found by hand rather than by the
+sweep, which is itself worth noting: the one counterexample-shaped case in the whole catalog
+came from outside the methodology that produced the other fifteen.)*
