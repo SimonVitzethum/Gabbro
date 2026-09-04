@@ -273,8 +273,14 @@ def _form(text):
     **This is the whole of `W25`, in one function.** `absageworte()` returns every word
     inside every backtick of every refusal text, and that set answers a different question:
     *which words does the emitter MENTION.* The refusal
-    `` `queue` -- «B10»: `traverse` yields no value … `` mentions `traverse`, `break` and
-    `consuming`; it is about `queue`, and `queue` stands first.
+    `` `queue` -- the domain names no ELEMENT SET … `` mentions `elems of` and `by
+    unvisited`; it is about `queue`, and `queue` stands first.
+
+    *And the leading-group rule is what carried this file through 2026-09-04 unchanged.* On
+    that day the `queue` refusal was rewritten end to end -- it had named `by consuming` as
+    its reason, which was wrong about itself, since the emitter refuses the domain in every
+    run form. **The head word did not move, so neither did this table.** A guard keyed on
+    the whole sentence would have gone red on a correction; one keyed on the FORM cannot.
     """
     m = re.match(r"\s*`([^`]+)`", text)
     return m.group(1) if m else ""

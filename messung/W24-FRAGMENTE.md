@@ -80,6 +80,11 @@ kein Sammelurteil:
 ```
 F03 :174  `queue` -- «B10»: `traverse` yields no value and knows no `break`, so `by
           consuming` drains the WHOLE queue; that is a different program
+          ^^ the transcript of THAT day. The sentence was corrected on 2026-09-04 and now
+             reads `queue` -- the domain names no ELEMENT SET …; the old one named `by
+             consuming` as the reason, and the emitter refuses the domain in every run
+             form. The six-reasons finding below is unaffected -- it is about the six
+             being DIFFERENT, not about their wording.
 F03 :208  parameter type                       (der Typ heisst `RegNr`, den niemand deklariert)
 F05 :173  `match` over something other than an `option index into T`
 F09 :61   `device … at normal` -- an access into the ordinary space is not a device access,
