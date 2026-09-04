@@ -164,7 +164,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ **83 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ ~~83~~ **85 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **59 von 59 Instrumenten** tragen die vier statischen (von 68 Werkzeugen). `--lauf` führt die leichten wirklich aus, mit Frist; sechs stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus *(gemessen 2026-09-03)* |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -284,6 +284,26 @@ darunter.
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
+- [ ] **Drei Entscheidungen, die der `unfalsifiable`-Maßstab AUFGEDECKT und nicht getroffen
+      hat** *(2026-09-04, [`dokumente/UNFALSIFIZIERBAR.md`](dokumente/UNFALSIFIZIERBAR.md))*.
+      Der Maßstab stand vor der Einordnung; diese drei Zeilen sind sein Ergebnis, und keine
+      davon gehörte demselben Lauf.
+      1. **`quelle_endet` trägt einen `falsifier` und ist unter `U2` unfalsifizierbar.**
+         *„Die Quelle liefert endlich viele Puffer"* hat keinen endlichen Zeugen, und anders
+         als bei einem Zeitgeber oder einem Statusregister ist keine Schranke wählbar. **Die
+         Änderung ist bewusst NICHT gemacht** — sie würde die Ratsche an dem Tag heben, an dem
+         die Ratsche geschrieben wurde, und *eine Marke, die ihr eigener Autor hebt, ist
+         keine.* Wer sie macht, hebt `MARK_POPULATION` und `MARK_ADMITTED` mit ihrem Grund.
+      2. **`eingabe_endet` ist unter `R3` gar keine Annahme dieser Schicht.** Die Schranke
+         steht IM Programm (`lenof` nennt sie). Dieselbe Umbuchung wie die drei
+         `progress`-Klauseln, die `zaehle-pflichten.py --gabbrov` aus den 63 nimmt.
+      3. **`sonde_release_sichtbarkeit` existiert als Programm und wird von keiner
+         `falsifier`-Zeile genannt** — seit dem 2026-08-21, und `sonden/README.md` sagt es
+         selbst. Unter `R1` ist `release_stellt_sichtbarkeit_her` falsifizierbar, und **die
+         Sonde dafür liegt gebaut daneben.** *Eine Sonde ohne Verpflichtung und eine
+         Verpflichtung ohne Sonde, und sie gehören zueinander.* Die Zeile in `beispiele/`
+         gehört dem `falsifier`-Riegel des Nachbarlaufs, nicht diesem.
+
 - [ ] **Die Zahlen der Kennzahlentafel, die kein Befehl ableitet** *(nachgezogen 2026-08-20,
       zweimal)*. ~~Die Spalte „of which K" summiert sich zu 33, die Summenzeile sagt 18~~
       *(2026-08-20)*. **Beide Spalten sind gestrichen** — sie waren ein drittes Register neben
@@ -302,7 +322,7 @@ darunter.
       ergaben 238 — *eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.* Eine
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
-      **`pruefe-zahlen.py` führt heute 83 Kennzahlen mit Befehl** und zählt daneben
+      **`pruefe-zahlen.py` führt heute 85 Kennzahlen mit Befehl** und zählt daneben
       **180 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -556,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 205 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 206 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *201 → 202 → 205 am 2026-09-03 durch `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` — gemessen, indem die Datei entfernt und wieder hingelegt wurde, nicht addiert.*
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
