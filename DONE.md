@@ -10,6 +10,70 @@
 
 ---
 
+## The floor `A_p ≥ 1/8` was priced at four probes, and the four were written *(2026-09-04)*
+
+**The section below this one set the floor where the tree failed it, on purpose, and named
+its price in four userland C programs.** This entry is the payment. `A_p` moved from
+**1 of 38 = 0.0263** to **5 of 38 = 0.1316**, and `./instrumente/pruefe-sondendeckung.py` —
+red by construction since it was written — closes with `ALL PASS`.
+
+| probe | assumption, and where it is declared | negative run | **positive control, and what it took** | code |
+|---|---|---|---|---:|
+| `sonde_mxcsr_rne` | `gleitkomma_rundungsmodus_ist_rne`, GENERATED at `crates/gabbro-check/src/manifest.rs`:107 — it stands in **no `.gab` at all** | MXCSR `0x1fa0` RC 0, x87 CW `0x037f` RC 0, 200 000 tie pairs all round-to-nearest-even | the three violating modes set with `ldmxcsr`, caught **600 000 of 600 000**; and from OUTSIDE, an `LD_PRELOAD` constructor set each of them — the probe exited **1** three times, with 200 000 detections in each of three detectors | **0** |
+| `sonde_keine_ueberbreite` | `gleitkomma_x86_rechnet_mit_sse2`, GENERATED at `manifest.rs`:121 — likewise no `.gab` | `FLT_EVAL_METHOD 0`; `(1 + 2^-53) + 2^-53` came out `1` in 200 000 of 200 000 rounds | the same sum forced onto the x87 stack differed **200 000 of 200 000**; from OUTSIDE, the identical source built `-mfpmath=387` gave `FLT_EVAL_METHOD 2` and exited **1** with 200 000 over-wide results; and with the x87 PC field narrowed to 53 bits by preload the probe called ITSELF blind and exited **1** | **0** |
+| `sonde_tsc` | `rdtsc`, `beispiele/06-annahmen.gab`:82 — `axiom rdtsc() effects { reads zeitzaehler } falsifier sonde_tsc;` | held on one core, 200 000 rounds, standstill 0 and backwards 0, worst wait 1 read; 2802.873 MHz against `CLOCK_MONOTONIC`, reported and not judged | a frozen source caught **200 000 of 200 000** and a backward source **200 000 of 200 000** through the identical detector; from OUTSIDE, `prctl(PR_SET_TSC, PR_TSC_SIGSEGV)` drove it to **77**, and a build with the frozen source in arm 3 to **1** with 200 000 standstills | **0** |
+| `sonde_rdtscp` | `rdtscp`, `beispiele/11-grammatikbefunde.gab`:17 — `axiom rdtscp() -> u64 requires Has(RDTSCP) effects { reads uhr } falsifier sonde_rdtscp;` | CPUID `0x80000001` EDX `0x2c100800`, bit 27 = 1; 200 000 rounds advancing, and 0 of 200 000 outside the `rdtsc` bracket | three sources violating by construction — frozen **200 000**, backward **200 000**, outside the bracket **200 000**; from OUTSIDE, `PR_SET_TSC` gave **77**, a cleared feature bit gave **77**, and a foreign clock in arm 4b gave **1** with 200 000 violations | **0** |
+
+**All four are class `P4`, and the classification held.** Not one needed ring 0, a device or a
+mechanism the generator does not emit: MXCSR and the x87 control word are userland registers,
+`RDTSC`/`RDTSCP` are userland instructions unless `CR4.TSD` says otherwise, and the double
+rounding is an arithmetic fact. *Had one of them turned out to need privilege, the floor would
+have moved rather than the work* — it did not.
+
+> **The requirement that makes a probe worth writing is the RED direction, and every one of
+> these was driven into it.** A probe that is always green is not a falsifier even if it
+> carries the right name; `sonden/README.md` says *„Wer keine Empfindlichkeitsprobe hat, hat
+> keine Sonde"*, and this entry answers it with the count each control fell.
+
+**What the payment costs elsewhere, and it is not free.** Class `P4` is now **empty of open
+work** — `pruefe-sondendeckung.py`'s tooth 8 reports `the reachable share is 5 of 38`, which
+is the floor itself. *The floor can no longer be reached by writing another userland probe.*
+Three more falsifiable assumptions without a probe break it, and the answer will be a bench
+with ring 0, a device, or `unfalsifiable` under a written criterion — a decision about
+apparatus, not a smaller number.
+
+**Two figures moved in the checker as well.** `manifest::SONDEN_MIT_PROGRAMM` grew from 2 to 6
+names, which is the only route by which a probe name reaches the manifest — without it the
+manifest keeps striking the name and the coverage claim is a lie in the other direction. And
+tooth 10 holds that constant against `sonden/*.c`, so the string cannot be added without the
+program.
+
+**One test in the guardian had to flip direction, and that is the tooth working.** Speech test
+seven read *„the floor is missed today and MET with the four probes written"*. That sentence
+went silent the moment the floor was paid — it asserts a red tree. It now reads *„the floor is
+met today and MISSED without the four probes"*, and the run's control was strengthened to
+include the floor, which it had excluded on purpose while the floor was the one thing red.
+*A speech test that only knows how to see a debt stops measuring on the day it is paid.*
+
+```
+./instrumente/pruefe-sondendeckung.py
+#   19 of 19 speech tests: yes
+#   5 of 38 falsifiable assumptions carry a probe that stands as a program
+#   A_p = 0.1316    booked 5/38 = 0.1316    floor 1/8 = 0.1250
+#   5 of 38 rows are class `P4`, 0 of them without a program -- the reachable share is 5 of 38
+#   6 program(s) under `sonden/`, 1 of them named by no `falsifier` -- booked is 1
+#   == PROBE COVERAGE: ALL PASS -- 5 of 38, floor 1/8 ==                       exit 0
+```
+
+**And one TODO item closes with it.** *„Die zwei Gleitkommasonden gibt es als NAMEN, nicht
+als Programm"* (2026-08-18) stood open under `H2`; both are written, so it left `TODO.md` —
+275 open points before, **274** after (`./instrumente/pruefe-todo.py`).
+
+**The orphan is untouched and stays at 1.** `sonde_release_sichtbarkeit` is still named by no
+`falsifier`; rebooking `release_stellt_sichtbarkeit_her` would move `A_p` to 6 of 39 and close
+it, and it was never the price. *It is one line in `beispiele/06-annahmen.gab` and it belongs
+to whoever owns that file.*
+
 ## The latch generalises: `O013`, and `R4` turns out to be a heuristic *(2026-09-04)*
 
 **`S004` and `N005` were reported as two.** *„Eleven of the 44 cannot be binned at all — and

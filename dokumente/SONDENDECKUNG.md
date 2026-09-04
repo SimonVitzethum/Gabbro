@@ -1,8 +1,24 @@
-# `A_p` — the probe quota, and the floor it does not reach
+# `A_p` — the probe quota, and the floor that was paid on 2026-09-04
 
 **This file retires `K100`'s gate `A = 19`.** It says what replaces it, what the replacement
-measures, what the tree measures against it **today** — and it is RED, on purpose, because a
-bound the tree already meets is a decoration and not a gate.
+measures, and what the tree measures against it **today**.
+
+**It was written RED on purpose** — *a bound the tree already meets is a decoration and not a
+gate* — and it names its price in four programs. **The four were written on 2026-09-04 and
+the floor is met with nothing to spare: `5 of 38 = 0.1316` against `1/8 = 0.125`.** Every one
+of them carries a positive control that was made to fall, because *a probe whose control
+cannot be made to fall is not finished*:
+
+| probe | control | what made it fall | it fell |
+|---|---|---|---:|
+| `sonde_mxcsr_rne` | three violating rounding modes, set in MXCSR | `ldmxcsr` inside, and an `LD_PRELOAD` constructor outside | **600 000** of 600 000 |
+| `sonde_keine_ueberbreite` | the same expression forced onto the x87 stack | `fldl`/`faddp`/`fstpl`, and a build with `-mfpmath=387` outside | **200 000** of 200 000 |
+| `sonde_tsc` | a frozen source and a backward one through the same detector | the counter is read through a function pointer | **400 000** of 400 000 |
+| `sonde_rdtscp` | frozen, backward, and one outside the `rdtsc` bracket | the same, plus `prctl(PR_SET_TSC)` outside for the **77** arm | **600 000** of 600 000 |
+
+**The floor no longer forbids nothing, it forbids the next assumption arriving without its
+probe** — and there is no `P4` row left to write, so the next one that does has to move the
+apparatus and not this number.
 
     ./instrumente/pruefe-sondendeckung.py
 
@@ -38,13 +54,13 @@ An assumption is in exactly one of three states:
 | state | today | who watches it |
 |---|---:|---|
 | **unfalsifiable**, under a criterion | 6 clauses / 1 admitted | `pruefe-unfalsifizierbar.py` — a ratchet DOWN |
-| **falsifiable, probe stands as a program** | **1 of 38** | this file — a ratchet UP |
-| **falsifiable, probe MISSING** | **37 of 38** | *nobody, until this file* |
+| **falsifiable, probe stands as a program** | **5 of 38** | this file — a ratchet UP |
+| **falsifiable, probe MISSING** | **33 of 38** | *nobody, until this file* |
 
 **The third row is the whole reason this document is not two ratchets.** A ratchet on the
 unfalsifiable count does not fall when nobody writes a probe; a ratchet on the probe count
 only rises when somebody does. **The state the tree is actually in is the one neither of them
-can see** — and it is 37 of 38.
+can see** — and it was 37 of 38 when this file was written. It is 33 of 38 today.
 
 *A count cannot watch it either*, and for exactly the reason `A = 19` failed: a count grows
 with the corpus, so writing one more example program makes the number worse without making the
@@ -76,7 +92,7 @@ Both halves come out of the same scan, and both are named here rather than left 
 
 ```bash
 ./instrumente/pruefe-sondendeckung.py
-# ==   1 of 38 falsifiable assumptions carry a probe that stands as a program
+# ==   5 of 38 falsifiable assumptions carry a probe that stands as a program
 ```
 
 **And the denominator is not free either.** Three ways exist to keep `A_p` from falling when
@@ -95,13 +111,20 @@ an assumption is added, and only one of them is work:
 ## The floor — and it is the whole point
 
 **A proportion-ratchet alone forbids regression and demands nothing.** At 1 of 38 a ratchet
-booked at today's level passes forever while nothing is written. So `A_p` carries a **floor**
-as well as a ratchet, and the floor is chosen so the tree **fails it today**.
+booked at that level would have passed forever while nothing was written. So `A_p` carries a
+**floor** as well as a ratchet, and the floor was chosen so the tree **failed it on the day it
+was written**.
 
 > ### `A_p ≥ 1/8`
 >
-> **Today `A_p = 1 / 38 = 0.026`. The floor is 0.125. The tree misses it by a factor of
-> 4.75, and `pruefe-sondendeckung.py` is RED for exactly that reason.**
+> **When this was written `A_p = 1 / 38 = 0.026` and the tree missed the floor of 0.125 by a
+> factor of 4.75. The price was four programs; they were written on 2026-09-04, and
+> `A_p = 5 / 38 = 0.1316` MEETS the floor with 0.0066 to spare.**
+>
+> *The slack is the smallest a unit fraction leaves, and that is the point:* one more
+> falsifiable assumption without a probe puts `A_p` at `5 / 39 = 0.1282`, still above; two put
+> it at `5 / 40 = 0.125`, exactly on; **three break it.** The floor stopped being a debt and
+> became a brake, and the ratchet at `5/38` bites one assumption earlier than that.
 
 ### Where `1/8` comes from — it is not a round number
 
@@ -121,44 +144,58 @@ about its own table, and that caveat travels with these rows.* What is not an es
 consequence:
 
 > **`P4` is the work that needs no device, no privilege and no decision by the owner.** Five
-> rows stand in it, **one of them has a program**, and the other four are the entire set of
-> probes this folder could write today with a C compiler.
+> rows stand in it, **all five have a program since 2026-09-04**, and there is nothing left in
+> the class to write.
 >
 > `1 + 4 = 5` of 38 is **0.1316**. The largest unit fraction below it is **`1/8` = 0.125**;
 > `1/7` = 0.143 is already out of reach. **So `1/8` is the tightest simple bound that the work
-> which is actually possible reaches — and the tree is nowhere near it.**
+> which is actually possible reaches — and the tree reaches it exactly.**
+>
+> *What that costs to say again:* the class is now EMPTY of open work, so the floor can no
+> longer be met by writing another userland probe. **The next assumption that arrives without
+> one is answered by `unfalsifiable` under a written criterion, by a bench with ring 0 or a
+> device — or not at all.** Tooth 8 says so in a number rather than in this sentence.
 
-### What reaching the floor costs
+### What reaching the floor cost — and it was paid on 2026-09-04
 
 **Four probes.** Each is a userland C program under `sonden/`, each needs a sensitivity arm
-(`sonden/README.md`: *„Wer keine Empfindlichkeitsprobe hat, hat keine Sonde"*), and each has
+(`sonden/README.md`: *„Wer keine Empfindlichkeitsprobe hat, hat keine Sonde"*), and each had
 to be entered in `manifest::SONDEN_MIT_PROGRAMM` or the checker keeps striking its name:
 
-| probe | assumption | what it does |
-|---|---|---|
-| `sonde_mxcsr_rne` | `gleitkomma_rundungsmodus_ist_rne` | read MXCSR, fall if the rounding mode is not round-to-nearest-even |
-| `sonde_keine_ueberbreite` | `gleitkomma_x86_rechnet_mit_sse2` | evaluate an expression whose result differs between 64 and 80 bits |
-| `sonde_tsc` | `rdtsc` | read the counter twice and fall if it does not advance; **77** if `CR4.TSD` forbids it |
-| `sonde_rdtscp` | `rdtscp` | `CPUID` leaf `0x8000'0001`, then the instruction; **77** where the feature is absent |
+| probe | assumption | what it does | control, and what it took to make it fall |
+|---|---|---|---|
+| `sonde_mxcsr_rne` | `gleitkomma_rundungsmodus_ist_rne` | read MXCSR **and** the x87 control word, and round two ties that separate all four IEEE modes | the three violating modes are set with `ldmxcsr` and must be caught in every round; from outside, an `LD_PRELOAD` constructor set each of them and the probe exited **1** three times |
+| `sonde_keine_ueberbreite` | `gleitkomma_x86_rechnet_mit_sse2` | `(1 + 2^-53) + 2^-53`, which is `1` in 64 bits and `1 + 2^-52` in 80 | the same sum forced onto the x87 stack with `fldl`/`faddp`/`fstpl` must differ every round; from outside, the identical source built with `-mfpmath=387` exited **1** |
+| `sonde_tsc` | `rdtsc` | hold one core, then read the counter through a function pointer and fall on a standstill **or** a step back; **77** if `CR4.TSD` forbids it | a frozen source and a backward one run through the same detector and must both be caught; from outside, `prctl(PR_SET_TSC, PR_TSC_SIGSEGV)` drove it to **77** and a build with the frozen source in arm 3 to **1** |
+| `sonde_rdtscp` | `rdtscp` | `CPUID` leaf `0x8000'0001` for the `requires`, then the instruction bracketed between two `rdtsc` reads; **77** where the feature is absent | three sources violate by construction — frozen, backward, outside the bracket; from outside, `PR_SET_TSC` gave **77**, a cleared feature bit gave **77**, and a foreign clock in arm 4b gave **1** |
 
-With all four: **5 of 38 = 0.132 ≥ 0.125.** The floor is met and not exceeded — *by design,
+**Measured: 5 of 38 = 0.1316 ≥ 0.125.** The floor is met and not exceeded — *by design,
 because a floor with slack in it is a floor nobody has to think about again.*
+
+> **Not one of the four is an analogy** (`sonden/README.md` forbids those). Each forces the
+> condition the assumption denies: a real rounding mode in a real register, a real x87
+> stack, a real counter that a real `prctl` takes away. **The one thing no userland probe
+> can force is a hardware counter that genuinely stops** — so `sonde_tsc` and `sonde_rdtscp`
+> force it at the source they read through, which is the same move `sonde_release_sichtbarkeit`
+> makes in its arm 3 and `sonde_boot_unerreichbar` in its arm 1. *That limit is written into
+> both programs rather than left for a reader to notice.*
 
 **And one line is free but does not help.** `release_stellt_sichtbarkeit_her` is booked
 `unfalsifiable` under a reason `dokumente/UNFALSIFIZIERBAR.md` REFUSES (`R1`), and the program
 that would refute it already stands in `sonden/`. Rebooking it to
 `falsifier sonde_release_sichtbarkeit` costs no probe, closes the orphan below, and moves
-`A_p` to **2 of 39 = 0.051** — still less than half the floor. *It is the right change and it
-is not the price.*
+`A_p` to **6 of 39 = 0.1538**. *It was the right change when the floor was missed by 4.75x and
+it is still the right change; it was never the price.*
 
 ### What this floor is NOT
 
-**It is not a target, and it is not enough.** It is the first bound the tree fails, and it is
-derived from the only work that requires no new hardware, no kernel and no decision. The 29
+**It is not a target, and it is not enough.** It was the first bound the tree failed, and it
+is derived from the only work that requires no new hardware, no kernel and no decision. The 29
 rows in `P1` and `P2` stay exactly where they are: a probe for `write_cr3` needs ring 0, and
 whether this project ever gets a bench with ring 0 is a question about apparatus that no
-guardian can force. **`1/8` says what can be demanded today. It says nothing about what would
-be enough.**
+guardian can force. **`1/8` said what could be demanded then. It says nothing about what would
+be enough** — and paying it changed the accounting by 4 rows out of 38, which leaves **33
+assumptions whose probe is still only a name.**
 
 *The floor may be RAISED and may not be lowered.* A run that fails
 [`the reachability tooth`](#the-teeth) — the floor no longer reachable even with every `P4`
@@ -174,7 +211,7 @@ program, just reversed.** Both are a connection with one end missing, and both a
 here.
 
 ```bash
-ls sonden/*.c | wc -l                                                # 2
+ls sonden/*.c | wc -l                                                # 6
 for f in sonden/*.c; do n=$(basename "$f" .c)
   grep -rqI "falsifier $n" --include=*.gab . || echo "$n"; done   # 1
 # sonde_release_sichtbarkeit
@@ -221,8 +258,8 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 7 | **geraet_antwortet** | `sonde_geraet_antwortet` | `P2` | -- |
 | 8 | **geraet_quittiert** | `sonde_vtd_srtp` | `P2` | -- |
 | 9 | **geraeteregister_veroeffentlicht_wie_ein_atomic** | `sonde_virtio_avail` | `P2` | -- |
-| 10 | **gleitkomma_rundungsmodus_ist_rne** | `sonde_mxcsr_rne` | `P4` | -- |
-| 11 | **gleitkomma_x86_rechnet_mit_sse2** | `sonde_keine_ueberbreite` | `P4` | -- |
+| 10 | **gleitkomma_rundungsmodus_ist_rne** | `sonde_mxcsr_rne` | `P4` | **PROGRAM** |
+| 11 | **gleitkomma_x86_rechnet_mit_sse2** | `sonde_keine_ueberbreite` | `P4` | **PROGRAM** |
 | 12 | **gnadenfrist_ist_abgelaufen** | `sonde_leser_noch_drin` | `P3` | -- |
 | 13 | **invlpg** | `sonde_invlpg` | `P1` | -- |
 | 14 | **karte_antwortet** | `sonde_karte_antwortet` | `P2` | -- |
@@ -234,8 +271,8 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 20 | **neuer_eintrag_verdraengt_nichts** | `sonde_praesent_ohne_invalidierung` | `P1` | -- |
 | 21 | **portraum_ist_x86** | `sonde_portraum` | `P1` | -- |
 | 22 | **quelle_endet** | `sonde_quelle_endet` | `P3` | -- |
-| 23 | **rdtsc** | `sonde_tsc` | `P4` | -- |
-| 24 | **rdtscp** | `sonde_rdtscp` | `P4` | -- |
+| 23 | **rdtsc** | `sonde_tsc` | `P4` | **PROGRAM** |
+| 24 | **rdtscp** | `sonde_rdtscp` | `P4` | **PROGRAM** |
 | 25 | **stilllegung_boot_ende_ist_unerreichbar** | `sonde_boot_unerreichbar` | `P4` | **PROGRAM** |
 | 26 | **tlb_ist_nach_cr3_leer** | `sonde_tlb_nach_cr3` | `P1` | -- |
 | 27 | **uart_leert_sich** | `sonde_uart_leert_sich` | `P2` | -- |
@@ -251,7 +288,7 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 37 | **zeitgeber_meldet_sich** | `sonde_zeitgeber_meldet_sich` | `P2` | -- |
 | 38 | **zeitgeber_tickt** | `sonde_zeitgeber_tickt` | `P2` | -- |
 
-**38 rows, 1 of them with a PROGRAM, 5 of them `P4`** — and one probe name carries two rows
+**38 rows, 5 of them with a PROGRAM, 5 of them `P4`** — and one probe name carries two rows
 (`sonde_vtd_srtp`, rows 8 and 29), which is why 38 assumptions stand under 37 names.
 
 ---
@@ -292,7 +329,7 @@ eighteen from passing over a guardian that always says no.
 | 4 | every row's class is defined here | a class invented at the moment of classification |
 | 5 | the program column agrees with `sonden/` | a row that claims a program that is not there, or hides one that is |
 | 6 | **`A_p` ratchet** | the quota falling — *an assumption added without its probe* |
-| 7 | **`A_p` floor `≥ 1/8`** | **fails today.** A quota that is allowed to stay where it is |
+| 7 | **`A_p` floor `≥ 1/8`** | a quota that is allowed to stay where it is. **It failed until 2026-09-04 and is MET since**, by 0.0066 |
 | 8 | the floor stays reachable | a corpus that grows past what a bench without ring 0 can ever cover |
 | 9 | orphan programs `≤ 1` | a second program bound to no obligation |
 | 10 | `SONDEN_MIT_PROGRAMM` == `sonden/*.c` | **coverage claimed in the checker with no program behind it** |

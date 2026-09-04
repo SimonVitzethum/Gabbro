@@ -362,7 +362,14 @@ fn klasse(k: &AnnahmeKlasse) -> Klasse {
 /// `instrumente/pruefe-sonden.sh` runs exactly these.
 ///
 /// *This list is the only route by which a probe name reaches the manifest.*
-pub const SONDEN_MIT_PROGRAMM: &[&str] = &["sonde_boot_unerreichbar", "sonde_release_sichtbarkeit"];
+pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
+    "sonde_boot_unerreichbar",
+    "sonde_keine_ueberbreite",
+    "sonde_mxcsr_rne",
+    "sonde_rdtscp",
+    "sonde_release_sichtbarkeit",
+    "sonde_tsc",
+];
 
 /// **A name without a program is STRUCK -- 2026-08-30.**
 ///
