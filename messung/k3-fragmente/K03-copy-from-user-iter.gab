@@ -1,0 +1,160 @@
+-- «K3» fragment 3 of 8 -- candidate index 426 of 1709
+--
+--   source   linux/lib/iov_iter.c:44-71   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function copy_from_user_iter
+--   picked   by the rule in `messung/K3-AUSWAHL.md`
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+--   44  static __always_inline
+--   45  size_t copy_from_user_iter(void __user *iter_from, size_t progress,
+--   46  			   size_t len, void *to, void *priv2)
+--   47  {
+--   48  	size_t res = len;
+--   49
+--   50  	if (should_fail_usercopy())
+--   51  		return len;
+--   52  	if (can_do_masked_user_access()) {
+--   53  		iter_from = mask_user_address(iter_from);
+--   54  	} else {
+--   55  		if (!access_ok(iter_from, len))
+--   56  			return res;
+--   57
+--   58  		/*
+--   59  		 * Ensure that bad access_ok() speculation will not
+--   60  		 * lead to nasty side effects *after* the copy is
+--   61  		 * finished:
+--   62  		 */
+--   63  		barrier_nospec();
+--   64  	}
+--   65  	to += progress;
+--   66  	instrument_copy_from_user_before(to, iter_from, len);
+--   67  	res = raw_copy_from_user(to, iter_from, len);
+--   68  	instrument_copy_from_user_after(to, iter_from, len, res);
+--   69
+--   70  	return res;
+--   71  }
+--
+-- ## Markers: as in `K01`, plus one this fragment forced
+--
+--   [SILENT n] the line IS writable, and Gabbro says NOTHING about what it does. That is
+--              worse than a wall, because it looks discharged.
+--
+-- ## What this fragment cost
+--
+--   WALL   2     `void *to` / `void *priv2` (and the three callees that take `to`),
+--                the pointer arithmetic on them
+--   SILENT 1     `barrier_nospec()`
+--   FORM   1     `if (!access_ok(...))`
+--   INVENT 2     `effects`, `costs`
+--   OPEN   1     assignment to a parameter (line 53) -- the grammar permits it, and no
+--                document in this tree says whether the checker does
+--
+-- ## The one thing that WENT WELL, and it is worth as much as the walls
+--
+-- **`void __user *` is writable, and it is writable exactly.** `space` in a pointer type
+-- takes a free identifier (`space = "normal" | "mmio" | "dma" | "code" | "boot" | "port" |
+-- ident`, SYNTAX.md 3), so `ptr<user, r> u8` says precisely what the sparse annotation
+-- `__user` says -- and says it in the TYPE, where the checker reads it, rather than in an
+-- annotation a separate tool has to be run to see. *The kernel needs `sparse` for this;
+-- Gabbro needs nothing.*
+
+module k3::iov_iter {
+
+-- ADDED: the user address space. Nothing is declared for it -- naming it in the pointer
+-- type IS the declaration.
+
+-- ADDED callees, with their C signatures beside them.
+-- [INVENT] every `effects` and `costs` below is ours.
+
+-- `bool should_fail_usercopy(void)`  (include/linux/fault-inject-usercopy.h)
+extern fn should_fail_usercopy() -> bool
+    effects { reads fault_inject } costs <= 8 ops;
+
+-- `can_do_masked_user_access()` -- an arch macro, `0` where it is not implemented.
+extern fn can_do_masked_user_access() -> bool
+    effects { pure } costs <= 1 ops;
+
+-- `void __user *mask_user_address(const void __user *ptr)`
+-- The C is `void __user *`; the excerpt only ever passes it on, so the element type is
+-- unconstrained. `u8` is written here and it is a CHOICE, not the C.
+extern fn mask_user_address(p : ptr<user, r> u8) -> ptr<user, r> u8
+    effects { pure } costs <= 4 ops;
+
+-- `access_ok(addr, size)` -- a macro that yields an int.
+extern fn access_ok(p : ptr<user, r> u8, len : u64) -> bool
+    effects { pure } costs <= 8 ops;
+
+-- [SILENT 1] `barrier_nospec()`
+--   The call is writable. What it MEANS is not: it is a speculation barrier, and Gabbro's
+--   whole effect vocabulary -- `reads writes locks masks allocs consumes publishes diverges
+--   pure` -- has no word for ordering against speculative execution. `publishes`/`awaits`
+--   pair two program-visible accesses; this fence orders something no program can observe.
+--   So the line goes into the artefact as an ordinary call with an invented cost, and the
+--   artefact says nothing at all about the reason it exists. *The declaration below looks
+--   complete and is empty.*
+extern fn barrier_nospec()
+    effects { writes cpu_speculation } costs <= 1 ops;
+
+-- [WALL 1] the three callees that take `void *to`:
+--
+--       unsigned long raw_copy_from_user(void *to, const void __user *from, unsigned long n)
+--       void instrument_copy_from_user_before(void *to, const void __user *from, unsigned long n)
+--       void instrument_copy_from_user_after (void *to, const void __user *from,
+--                                             unsigned long n, unsigned long left)
+--
+--   `void *` is one of the named non-existent things. Declaring `to` as
+--   `ptr<normal, rw> u8` would be a CHOICE of element type that the C deliberately does not
+--   make -- this is the generic copy engine, and its destination is whatever the caller
+--   had. NOTHING is put in their place, so the three declarations are absent and lines 66,
+--   67 and 68 have no callee.
+
+impl fn copy_from_user_iter(iter_from : ptr<user, r> u8, progress : u64, len : u64) -> u64
+    -- [WALL 1, continued] `void *to` and `void *priv2` are two of the five parameters and
+    -- they are NOT in the head above. What stands here has three parameters where the C has
+    -- five; it is not `copy_from_user_iter`.
+    effects { reads iter_from, writes fault_inject, writes cpu_speculation }
+    costs   <= 256 ops
+{
+    -- line 48
+    let mut res = len;
+
+    -- lines 50-51
+    if should_fail_usercopy() {
+        return len;
+    }
+
+    -- lines 52-64
+    if can_do_masked_user_access() {
+        -- [OPEN 1] line 53: `iter_from = mask_user_address(iter_from);`
+        --   An assignment to a PARAMETER. `params = ident ":" typeexpr` carries no `mut`
+        --   (SYNTAX.md 2), and `assign = place ...` does not say a parameter is excluded.
+        --   The grammar permits the statement; whether the checker does is not written down
+        --   anywhere in this tree, so it stands here as the C wrote it and the answer is
+        --   part of the measurement rather than a guess before it.
+        iter_from = mask_user_address(iter_from);
+    } else {
+        -- [FORM 1] lines 55-56. C tests an int for truth; Gabbro converts nothing.
+        if !access_ok(iter_from, len) {
+            return res;
+        }
+        -- line 63 -- see SILENT 1.
+        barrier_nospec();
+    }
+
+    -- [WALL 2] line 65: `to += progress;`
+    --   Pointer arithmetic on a `void *`, which C only allows as a GNU extension (byte
+    --   arithmetic on a pointer to an incomplete type). Gabbro has neither `void *` nor
+    --   pointer arithmetic without a basis. NOTHING is put in its place.
+
+    -- lines 66-68: the three calls whose callee is WALL 1 and whose first argument is
+    --   WALL 2. NOTHING is put in their place -- so `res` keeps the value of line 48, and
+    --   the function below returns `len` on every path. **What remains is not the
+    --   function; it is its control flow with the copy taken out.**
+
+    return res;
+}
+
+}

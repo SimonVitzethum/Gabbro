@@ -1,0 +1,198 @@
+-- «K3» fragment 6 of 8 -- candidate index 1065 of 1709
+--
+--   source   linux/lib/stackdepot.c:361-393   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function depot_pop_free_pool
+--   picked   by the rule in `messung/K3-AUSWAHL.md`
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+--  361  static struct stack_record *depot_pop_free_pool(void **prealloc, size_t size)
+--  362  	__must_hold(&pool_lock)
+--  363  {
+--  364  	struct stack_record *stack;
+--  365  	void *current_pool;
+--  366  	u32 pool_index;
+--  367
+--  368  	lockdep_assert_held(&pool_lock);
+--  369
+--  370  	if (pool_offset + size > DEPOT_POOL_SIZE) {
+--  371  		if (!depot_init_pool(prealloc))
+--  372  			return NULL;
+--  373  	}
+--  374
+--  375  	if (WARN_ON_ONCE(pools_num < 1))
+--  376  		return NULL;
+--  377  	pool_index = pools_num - 1;
+--  378  	current_pool = stack_pools[pool_index];
+--  379  	if (WARN_ON_ONCE(!current_pool))
+--  380  		return NULL;
+--  381
+--  382  	stack = current_pool + pool_offset;
+--  383
+--  384  	/* Pre-initialize handle once. */
+--  385  	stack->handle.pool_index_plus_1 = pool_index + 1;
+--  386  	stack->handle.offset = pool_offset >> DEPOT_STACK_ALIGN;
+--  387  	stack->handle.extra = 0;
+--  388  	INIT_LIST_HEAD(&stack->hash_list);
+--  389
+--  390  	pool_offset += size;
+--  391
+--  392  	return stack;
+--  393  }
+--
+-- ## What this fragment cost
+--
+--   WALL   6     `void **prealloc`, `static void **stack_pools`, `void *current_pool`,
+--                the pointer arithmetic on 382, `NULL` (three returns), the union
+--                `handle_parts`, `&stack->hash_list`
+--   FORM   3     `__must_hold` / `lockdep_assert_held` -> `requires Held(...)`;
+--                `__guarded_by` -> `lock ... protects`; `WARN_ON_ONCE(c)` -> the bare
+--                condition, minus the warning
+--   INVENT 2     `effects`, `costs`
+--
+-- ## The two clauses that landed exactly, and they are the ones the kernel needs a
+-- ## SEPARATE ANNOTATION LANGUAGE for
+--
+--   C                                        Gabbro
+--   `__must_hold(&pool_lock)`                `requires Held(POOL_LOCK)`
+--   `static size_t pool_offset               `lock POOL_LOCK protects { pool_offset }`
+--        __guarded_by(&pool_lock)`
+--
+-- `__must_hold` and `__guarded_by` are `sparse`/Clang thread-safety annotations: they are
+-- not C, no compiler in the normal build reads them, and they say precisely what
+-- `requires Held(L)` and `lock L protects { ... }` say. **The kernel needed a second
+-- language for this and Gabbro needs none** -- and `H007` reads the second one, so the
+-- guarantee is not merely writable but held.
+--
+-- *That is two of thirty-three lines. What the other thirty-one cost is above.*
+
+module k3::stackdepot {
+
+type ListHead = {
+    next : ptr<normal, rw> ListHead,
+    prev : ptr<normal, rw> ListHead,
+};
+
+-- include/linux/stackdepot.h:31-40, evaluated for x86_64 (PAGE_SHIFT = 12):
+--   DEPOT_POOL_ORDER 2 · DEPOT_POOL_SIZE (1 << 14) · DEPOT_STACK_ALIGN 4
+--   DEPOT_HANDLE_BITS 32 · DEPOT_OFFSET_BITS 10 · STACK_DEPOT_EXTRA_BITS 5
+--   DEPOT_POOL_INDEX_BITS 17
+const DEPOT_POOL_SIZE   : u64 = 16384;
+const DEPOT_STACK_ALIGN : u32 = 4;
+
+-- [WALL 1] `union handle_parts` (include/linux/stackdepot.h:44-51):
+--
+--       union handle_parts {
+--               depot_stack_handle_t handle;
+--               struct {
+--                       u32 pool_index_plus_1 : DEPOT_POOL_INDEX_BITS;
+--                       u32 offset            : DEPOT_OFFSET_BITS;
+--                       u32 extra             : STACK_DEPOT_EXTRA_BITS;
+--               };
+--       };
+--
+--   A union used as a REINTERPRETATION -- one word, two views. Gabbro refuses that by
+--   name, and SYNTAX.md §3 says what would be needed first: *"one view is writable, all
+--   others are read-only, and the change of view is an EVENT."* Not built.
+--   What stands below is the SECOND view alone. **This excerpt never reads the first**, so
+--   nothing here falls on it -- but `stack_depot_fetch` does, and the type as transcribed
+--   cannot serve it.
+type HandleParts = {
+    pool_index_plus_1 : u32 @[16:0],
+    offset            : u32 @[26:17],
+    extra             : u32 @[31:27],
+};
+
+-- ADDED: `struct stack_record` (include/linux/stackdepot.h:53-76). Its trailing union --
+--   `entries[]` against `{ free_list, rcu_state }` -- is the same WALL 1 a second time; the
+--   half this excerpt touches is neither, so only `hash_list` and `handle` matter here.
+type StackRecord = {
+    hash_list : ListHead,
+    hash      : u32,
+    size      : u32,
+    handle    : HandleParts,
+    count     : i32,
+};
+
+-- [FORM 2] `static size_t pool_offset __guarded_by(&pool_lock) = DEPOT_POOL_SIZE;`
+--   (lib/stackdepot.c:73). `__guarded_by` is a Clang thread-safety annotation; `lock L
+--   protects { ... }` is Gabbro's own, and `H007` reads it.
+static mut pool_offset : u64 = 16384;
+static mut pools_num   : i32 = 0;
+
+lock POOL_LOCK protects { pool_offset, pools_num } rank 1;
+
+-- [WALL 2] `static void **stack_pools __pt_guarded_by(&pool_lock);` (lib/stackdepot.c:67)
+--   An array of `void *`. Neither the element type nor the pointer-to-pointer-to-void has
+--   a Gabbro form, and giving the elements a concrete type would be inventing a decision
+--   the C deliberately leaves open. NOTHING is declared in its place, so line 378 has
+--   nothing to index.
+
+-- [WALL 3] `static bool depot_init_pool(void **prealloc);`
+--   `void **` again. NOTHING is declared in its place, so line 371 has no callee.
+
+-- [FORM 1] and [INVENT] The head below carries `requires Held(POOL_LOCK)` -- the exact
+--   content of `__must_hold(&pool_lock)` on line 362 AND of `lockdep_assert_held(&pool_lock)`
+--   on line 368, which in C are two different mechanisms (a static annotation and a runtime
+--   check) saying one thing. `effects` and `costs` are ours.
+--
+-- [WALL 4] the return type. C: `static struct stack_record *`, and it returns `NULL` on
+--   three of five paths. Gabbro has no null pointer and `option` only over a table index,
+--   which a `stack_record *` is not. The head below therefore carries NO return type, the
+--   three `return NULL` on lines 372, 376 and 380 are gone with it, and line 392 with them.
+--   **What stands here is the control flow with every one of its exits removed.**
+impl fn depot_pop_free_pool(size : u64)
+    requires Held(POOL_LOCK)
+    effects  { reads pool_offset, writes pool_offset, reads pools_num }
+    costs    <= 128 ops
+{
+    -- lines 370-373. The condition is writable; its body is WALL 3 and WALL 4.
+    if pool_offset + size > DEPOT_POOL_SIZE {
+        -- `if (!depot_init_pool(prealloc)) return NULL;` -- WALL 3 (no callee, the
+        -- argument is `void **`) and WALL 4 (no `NULL`). NOTHING is put in its place.
+    }
+
+    -- [FORM 3] lines 375-376: `if (WARN_ON_ONCE(pools_num < 1)) return NULL;`
+    --   The CONDITION is writable and stands here. The macro's other half -- warn, once,
+    --   with a backtrace -- has no form: Gabbro's `check`/`claim` construct is a
+    --   measurement obligation gated out of the shipping build, not a runtime diagnostic.
+    --   *So the transcription tests the same thing and reports nothing, and the artefact
+    --   does not say a report was lost.*
+    if pools_num < 1 {
+        -- `return NULL;` -- WALL 4.
+    }
+
+    -- line 377
+    let pool_index = pools_num - 1;
+
+    -- [WALL 2, continued] line 378: `current_pool = stack_pools[pool_index];`
+    --   `stack_pools` is not declared (WALL 2) and `current_pool` is a `void *` besides.
+    --   NOTHING is put in its place, so lines 379-380 and 382 have no operand.
+
+    -- lines 379-380: `if (WARN_ON_ONCE(!current_pool)) return NULL;`
+    --   A null test on a `void *` -- WALL 2 and WALL 4 together.
+
+    -- [WALL 5] line 382: `stack = current_pool + pool_offset;`
+    --   Byte arithmetic on a `void *`, then read as a `struct stack_record *`. Gabbro has
+    --   no pointer arithmetic without a basis and no cast between pointer types.
+    --   NOTHING is put in its place -- so `stack` is unbound, and lines 385-388 and 392
+    --   inherit this one wall.
+
+    -- lines 385-387: the three bitfield writes. Writable in themselves against
+    -- `HandleParts` above; their subject `stack` is WALL 5.
+    stack->handle.pool_index_plus_1 = pool_index + 1;
+    stack->handle.offset            = pool_offset >> DEPOT_STACK_ALIGN;
+    stack->handle.extra             = 0;
+
+    -- [WALL 6] line 388: `INIT_LIST_HEAD(&stack->hash_list);`
+    --   The address of a field. NOTHING is put in its place.
+
+    -- line 390
+    pool_offset += size;
+
+    -- line 392: `return stack;` -- WALL 4 (no return type) and WALL 5 (no `stack`).
+}
+
+}
