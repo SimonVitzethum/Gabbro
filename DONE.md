@@ -65,6 +65,19 @@ include the floor, which it had excluded on purpose while the floor was the one 
 #   == PROBE COVERAGE: ALL PASS -- 5 of 38, floor 1/8 ==                       exit 0
 ```
 
+**A written probe reaches into the EMITTED ARTEFACT, and that was not predicted.**
+`instrumente/pruefe-emission.sh` books the certificate of every unit it drives, and
+`beispiel26` (`beispiele/26-gleitkomma.gab`) carried *„2 assumptions (0 of them NOT
+FALSIFIABLE, **2 UNCOVERED** — named a probe that does not exist as a program)"*. Both of
+those are the generated float assumptions; writing their probes moved the emitted C from
+2 UNCOVERED to **0**, and stage 7 said `ANDERS ALS GEBUCHT` and cut the run.
+
+> **The guardian was right and the booking was stale**, which is the good direction: the
+> certificate Gabbro carries OUTWARD names its own uncovered probes, so a probe written in
+> `sonden/` is visible in generated code. *`A_p` is not a documentation figure — it changes
+> what an emitted program says about itself.* One booking updated; the run then closes
+> `ALL PASS — 29 pierced, 142 of 142, 4 reverse probes` (exit 0), unchanged from master.
+
 **And one TODO item closes with it.** *„Die zwei Gleitkommasonden gibt es als NAMEN, nicht
 als Programm"* (2026-08-18) stood open under `H2`; both are written, so it left `TODO.md` —
 275 open points before, **274** after (`./instrumente/pruefe-todo.py`).
