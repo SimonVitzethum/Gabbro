@@ -187,6 +187,14 @@ and the register admits it under `U2` — correctly, and for a reason `R4` would
 | `assume ein_kern … unfalsifiable "…"` — buys every `H013` exemption | **writable.** `geteilt.rs`:532 asks `contains_key` and never the class |
 | `assume gnadenfrist… unfalsifiable "…"` — carries the whole grace period of an `rcu … reclaims` | **writable.** `H015` collects `ItemArt::Assume` and never reads `a.klasse` |
 | a wait loop with **no `progress` clause at all** | **writable, and no latch can ever close it.** `progress` is optional (`SYNTAX.md`:1002, 1012: `[ "progress" ident ]`), and one of the 19 loops in the clean corpus carries none — `beispiele/66-transport-rueckgabe.gab`:66 |
+| **a CALL to an `unfalsifiable` `axiom`** | **writable, and it is the sharpest of the four.** `spec fn leeren() effects { writes cache } { wbinvd(); }` beside `axiom wbinvd() effects { writes cache } unfalsifiable "…"` checks **`3 items, 0 errors`**. Whether the cache is flushed is a difference a program can depend on, and the assumption's own reason says nothing can see it |
+
+**And the last row is why `R4` cannot be made a theorem by latching harder.** An `axiom` does
+not *rest on* an assumption — **it IS one**, and it is the one kind of assumption that is
+CALLABLE. Refusing `unfalsifiable` there would take the word away from one of the only two
+sites the grammar gives it, and the class would have nowhere left to stand. *The corpus is
+clear of this today by accident and not by rule:* `wbinvd` is declared in
+`beispiele/06-annahmen.gab`:83 and **called by nobody**.
 
 **So the honest statement, and it is worth more than the rule was.** Where the checker can
 SEE that a construct rests on an assumption, `"unfalsifiable ⇒ carries nothing"` is true —

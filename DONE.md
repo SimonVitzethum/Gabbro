@@ -25,8 +25,9 @@ ssh … './target/release/gabbro annahmen beispiele/*.gab' | grep -cE "^A[0-9]+"
 comm -12 /tmp/n44 /tmp/p | wc -l   # 11 over two sites, 12 with `observed by`
 ```
 
-**The enumeration, done from the grammar and the passes rather than from memory:** exactly
-**six** sites let a construct rest on an assumption. Three carried the latch, three did not.
+**The enumeration, done from the grammar and the passes rather than from memory:** **six**
+sites let a construct rest on an assumption, and a seventh gets a verdict of *no latch, ever*.
+Three carried it, three did not.
 
 | site | rests on | latch |
 |---|---|---|
@@ -40,6 +41,14 @@ comm -12 /tmp/n44 /tmp/p | wc -l   # 11 over two sites, 12 with `observed by`
 The last two are in another lane's file and are booked, not built; each repair is one line and
 **neither refuses a file that stands today** (one `ein_kern`, three grace-period assumptions,
 all four `falsifier`).
+
+**The seventh is a CALL to an `unfalsifiable` `axiom`, and it must stay open.** An `axiom`
+does not rest on an assumption, it **is** one — the only callable kind. `spec fn leeren()
+effects { writes cache } { wbinvd(); }` beside `axiom wbinvd() … unfalsifiable "the effect is
+not observable on this machine"` checks **`3 items, 0 errors`** today, and a program's
+behaviour depends on whether the cache is flushed. Latching it would take `unfalsifiable`
+away from one of the only two sites the grammar gives it. *The corpus is clear of this by
+accident:* `wbinvd` stands in `beispiele/06`:83 and nothing calls it.
 
 | | | evidence |
 |---:|---|---|
