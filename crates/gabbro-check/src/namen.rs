@@ -3261,11 +3261,11 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
 /// name out of the manifest as `ungedeckt` and prints how many were struck, and
 /// `instrumente/pruefe-sonden.sh` runs the programs that remain.
 ///
-/// *Measured before this pass was written* (2026-09-04, whole tree, 647 `.gab`): **94
-/// `falsifier` clauses, 59 distinct probe names, and 85 of the 94 resolve to no declaration
-/// anywhere.** A rule that demanded resolution would refuse the entire hardware corpus and
-/// would be demanding a declaration for something that is a C program in `sonden/`. *That is
-/// not the hole.*
+/// *Measured before this pass was written* (2026-09-04, whole tree, 647 `.gab`): **98
+/// `falsifier` clauses -- 94 at `assume`/`axiom` and 4 at `retires` -- over 59 distinct probe
+/// names, and 89 of the 98 resolve to no declaration anywhere.** A rule that demanded
+/// resolution would refuse the entire hardware corpus, and would be demanding a declaration
+/// for something that is a C program in `sonden/`. *That is not the hole.*
 ///
 /// ## The hole: a name that DOES resolve, to something that cannot fall
 ///
@@ -3303,33 +3303,6 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
 /// declared probe, so the rule would have no site to fire on. *A rule with no value is the
 /// thing this tree hunts, not the thing it adds.* It is written down here so the next lane
 /// measures the population instead of rediscovering the idea.
-/// **What a declared function's result can SAY** -- the four states `N056` tells apart.
-///
-/// The variants stand singly and there is no catch-all: a new result shape has to be
-/// classified here rather than sliding into whichever arm happens to be last.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Antwort {
-    /// `-> bool` -- the probe answers, and the answer is a verdict.
-    Wahrheitswert,
-    /// `-> never` -- it does not answer, it FIRES. Only a watchdog can refute this way.
-    Niemals,
-    /// `-> u64`, `-> Pa`, … -- a value, and a value is not a verdict.
-    AndererWert,
-    /// No result clause at all.
-    Keine,
-}
-
-impl Antwort {
-    fn von(t: Option<&TypExpr>) -> Self {
-        match t {
-            None => Antwort::Keine,
-            Some(TypExpr::Bool(_)) => Antwort::Wahrheitswert,
-            Some(TypExpr::Never(_)) => Antwort::Niemals,
-            Some(_) => Antwort::AndererWert,
-        }
-    }
-}
-
 fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
     // The watchdogs this unit names at an `on_exceeded`, at any depth.
     let mut waechter: HashSet<String> = HashSet::new();
@@ -3364,8 +3337,13 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
                         Absage::fehler(
                             "N056",
                             sonde.span,
+                            // **Both arms say the same sentence** -- they are ONE rule, and
+                            // `pruefe-vergabe.py` reads two dissimilar texts under one code
+                            // as two rules sharing a name. The difference belongs after the
+                            // dash, not in the sentence.
                             format!(
-                                "`{wo} {}` names a diverging function that guards no loop",
+                                "`{wo} {}` names a function that cannot refute anything \
+                                 -- it diverges and guards no loop",
                                 sonde.text
                             ),
                         )
@@ -3386,15 +3364,16 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
             // "answers something that is not a verdict" and "answers nothing".
             Antwort::AndererWert | Antwort::Keine => {
                 let hat = match antwort {
-                    Antwort::Keine => "that returns nothing",
-                    _ => "whose result is not `bool`",
+                    Antwort::Keine => "it returns nothing",
+                    _ => "its result is not `bool`",
                 };
                 absagen.schiebe(
                     Absage::fehler(
                         "N056",
                         sonde.span,
                         format!(
-                            "`{wo} {}` names a function {hat} -- it cannot refute anything",
+                            "`{wo} {}` names a function that cannot refute anything \
+                             -- {hat}",
                             sonde.text
                         ),
                     )
@@ -3433,6 +3412,33 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
         }
         _ => {}
     });
+}
+
+/// **What a declared function's result can SAY** -- the four states `N056` tells apart.
+///
+/// The variants stand singly and there is no catch-all: a new result shape has to be
+/// classified here rather than sliding into whichever arm happens to be last.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Antwort {
+    /// `-> bool` -- the probe answers, and the answer is a verdict.
+    Wahrheitswert,
+    /// `-> never` -- it does not answer, it FIRES. Only a watchdog can refute this way.
+    Niemals,
+    /// `-> u64`, `-> Pa`, … -- a value, and a value is not a verdict.
+    AndererWert,
+    /// No result clause at all.
+    Keine,
+}
+
+impl Antwort {
+    fn von(t: Option<&TypExpr>) -> Self {
+        match t {
+            None => Antwort::Keine,
+            Some(TypExpr::Bool(_)) => Antwort::Wahrheitswert,
+            Some(TypExpr::Never(_)) => Antwort::Niemals,
+            Some(_) => Antwort::AndererWert,
+        }
+    }
 }
 
 /// The `on_exceeded` names of every loop in a block, at any depth. Uses

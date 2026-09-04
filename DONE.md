@@ -1114,9 +1114,9 @@ refutation could arrive on.
 
 **The rule that was NOT built is the load-bearing half.** `falsifier` does not have to
 resolve at all: a probe is a C program in `sonden/`, decided 2026-08-19 (`namen.rs`,
-`sonden/README.md`). Of **94** `falsifier` clauses in 647 `.gab`, **85 resolve to
-nothing** and are correct; a rule demanding resolution would have refused the whole
-hardware corpus. Coverage for those is `manifest::gedeckt`, which strikes a name whose
+`sonden/README.md`). Of **98** `falsifier` clauses in 647 `.gab` — 94 at `assume`/`axiom`,
+4 at `retires` — **89 resolve to nothing** and are correct; a rule demanding resolution
+would have refused the whole hardware corpus. Coverage for those is `manifest::gedeckt`, which strikes a name whose
 probe stands as no program.
 
 | | | evidence |

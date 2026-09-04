@@ -8,7 +8,7 @@
 --
 -- **The pass does NOT demand that the name resolve at all.** A probe is a C program in
 -- `sonden/`, not a declaration (`namen.rs`, decided 2026-08-19; `sonden/README.md`
--- carries the same point under a heading of its own). 85 of the corpus's 94 `falsifier`
+-- carries the same point under a heading of its own). 89 of the corpus's 98 `falsifier`
 -- clauses resolve to nothing and stay green. This one resolves -- and that is what makes
 -- it checkable.
 --

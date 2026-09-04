@@ -292,7 +292,7 @@ pub const NAMEN: &[Satz] = &[
                   could arrive.",
         vorbehalt: "**The rule does NOT require the name to resolve at all, and that is a \
                     decision and not a gap** -- a probe does not stand in Gabbro because \
-                    it RUNS (decided 2026-08-19). 85 of the corpus's 94 `falsifier` \
+                    it RUNS (decided 2026-08-19). 89 of the corpus's 98 `falsifier` \
                     clauses resolve to nothing and are correct; a rule demanding \
                     resolution would refuse the whole hardware corpus. Coverage for those \
                     lives one layer out, at `manifest::gedeckt`, which strikes a name \
@@ -303,8 +303,9 @@ pub const NAMEN: &[Satz] = &[
                     verdict has somewhere to come from. *A declaration that CAN fall is \
                     not one that DOES.*",
         stand: Satzstand::Gemessen,
-        gemessen_an: "Measured before the build (2026-09-04, 647 `.gab`): **94 `falsifier` \
-                      clauses, 59 distinct probe names, 85 resolving to nothing, 4 \
+        gemessen_an: "Measured before the build (2026-09-04, 647 `.gab`): **98 `falsifier` \
+                      clauses (94 at `assume`/`axiom`, 4 at `retires`), 59 distinct probe \
+                      names, 89 resolving to nothing, 4 \
                       resolving in-file -- and all 4 already satisfy the rule**, so the \
                       corpus sweep before and after is byte-identical in every exit code \
                       (642 files, 456 red, 0 changed). The pre-run is recorded: `assume a \
