@@ -576,7 +576,13 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 214 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 215 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *214 → 215 on 2026-09-04: `messung/K100-TWO-QUESTIONS-2026-09-04.md` joined — `K100`
+      asked as two questions, the 37 «K3» walls sorted into three registers (25 refused by a
+      written decision, 6 undecided, 6 that a probe dissolves) and the obligation ratio
+      measured as not derivable. **Measured the way this entry asks:** the file was moved
+      aside and `pruefe-zahlen.py` came back green at 214, moved back and red at 215 —
+      `./instrumente/pruefe-widerruf.py` each time. Not added.*
       *208 → 209 on 2026-09-04: `messung/KLASSEN-F03-2026-09-04.md` joined — `F03`'s eighteen
       refusals classified by the pass that raises each (0 of 18 plumbing). **The guardian named
       the carry before a reader did** — `pruefe-zahlen.py` said `208` against a run of `209` —
