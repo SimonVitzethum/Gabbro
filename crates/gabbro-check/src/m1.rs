@@ -2365,14 +2365,16 @@ impl<'a> Pruefer<'a> {
     /// **`u64(a)` and its seven siblings -- an integer conversion, typed.**
     ///
     /// **What a conversion does to a proved range, decided before this was wired in:** the
-    /// argument keeps whatever `M1` proved about it, but the conversion may narrow OR widen
-    /// the representation, and a narrowing conversion can throw bits away the source range
-    /// says nothing about losing. Carrying the source range through would be a GUESS dressed
-    /// as a proof -- the same shape `M1` already refuses for float arithmetic that mixes
-    /// widths (`F005`, above) and for an `opaque` carrier's hidden representation (`D003`).
-    /// The only sound answer is the FULL declared range of the TARGET type. A later
-    /// `requires`/`ensures` on the surrounding call may narrow it back down, exactly as an
-    /// ordinary function result does; nothing here forecloses that.
+    /// conversion may narrow OR widen the representation, and a narrowing conversion can
+    /// throw bits away the source range says nothing about losing -- carrying the source
+    /// range through UNCONDITIONALLY would be a GUESS dressed as a proof, the same shape
+    /// `M1` already refuses for float arithmetic that mixes widths (`F005`, above) and for
+    /// an `opaque` carrier's hidden representation (`D003`). Where the source range does NOT
+    /// provably fit the target, the answer is the FULL declared range of the target type --
+    /// the tail of this function draws the line and says why the other branch (source fits,
+    /// so keep it exactly) is not the same guess. A later `requires`/`ensures` on the
+    /// surrounding call may narrow either answer further, exactly as an ordinary function
+    /// result does; nothing here forecloses that.
     ///
     /// `marken_pruefen` still runs: a labelled conversion (`u64(a: 1)`) is not a struct and
     /// `M107` already says so correctly, without a second rule that repeats it.
