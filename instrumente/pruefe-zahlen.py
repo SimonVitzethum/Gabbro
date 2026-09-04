@@ -342,6 +342,25 @@ EINTRAEGE = [
         r"^-- (\d+) Annahmen",
         "A -- Annahmen mit Sonde oder Grund",
     ),
+    # **The `unfalsifiable` category, and both of its ratchets.** `A = 19` against 44 can be
+    # reached by writing `unfalsifiable` twenty-five times, and then the gate was emptied
+    # rather than passed -- so the two numbers that say how far that has gone stand here with
+    # the command that recomputes them. *The second is the sharp one: it counts the rows a
+    # CRITERION admits, not the rows somebody wrote the word on.*
+    (
+        "dokumente/UNFALSIFIZIERBAR.md",
+        r"\*\*(\d+) rows of \d+ clauses in the tree",
+        ["./instrumente/pruefe-unfalsifizierbar.py"],
+        r"^\s+\d+ clauses, (\d+) rows, \d+ ADMITTED",
+        "unfalsifiable -- rows in the register",
+    ),
+    (
+        "dokumente/UNFALSIFIZIERBAR.md",
+        r"rows of \d+ clauses in the tree, (\d+) of them ADMITTED",
+        ["./instrumente/pruefe-unfalsifizierbar.py"],
+        r"^\s+\d+ clauses, \d+ rows, (\d+) ADMITTED",
+        "unfalsifiable -- ADMITTED under a criterion",
+    ),
     (
         "dokumente/PLAN.md",
         r"\| `L` \| ≤ 4 \| \*\*(\d+)\*\*",
