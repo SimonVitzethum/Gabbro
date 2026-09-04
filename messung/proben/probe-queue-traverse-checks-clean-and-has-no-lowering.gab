@@ -1,0 +1,72 @@
+-- =======================================================================================
+-- **ZERO checker errors, and the emitter refuses it by name.**
+--
+-- This probe exists to drive one case through `instrumente/zaehle-pflichten.py`'s lowering
+-- classifier, and the case is the one the classifier's own criterion says cannot happen.
+--
+-- The criterion is two lines of prose above `_pruefe_fehler` (`zaehle-pflichten.py`:326-330):
+--
+--     `gabbro pruefe F` == 0 errors  ->  the language ACCEPTS the text and only the
+--                                        generator is missing. Write the emitter arm and
+--                                        the obligation is discharged. **PLUMBING.**
+--
+-- **Measured 2026-09-04, on this file:**
+--
+--     ./target/debug/gabbro pruefe  <this file>   ->  5 items, 0 errors, 0 hints
+--     ./target/debug/gabbro emit    <this file>   ->  exit 1, and:
+--       error: [C001] :65:5: no lowering: `queue` -- «B10»: `traverse` yields no value and
+--       knows no `break`, so `by consuming` drains the WHOLE queue; that is a different
+--       program
+--
+-- and through the classifier itself, as its own `sonde` (the probe handle it carries so a
+-- case can be driven through without touching the tree):
+--
+--     zp.absenkungsklasse(sonde=("QSONDE", Path("q-sonde.gab")), locker=False)
+--     ->  klempnerei (PLUMBING): ['QSONDE']      notation: ['F3']
+--
+-- **The classifier books it as PLUMBING.** It is not plumbing. `emit.rs`:8639 refuses
+-- `Domaene::Schlange(_)` in an UNCONDITIONAL match arm, and the refusal text is the reason:
+-- lowering it without an early exit computes something else. There is no arm being withheld.
+--
+-- > **This is the other half of `messung/AUDIT-K100-2026-09-04.md`.** That audit refuted the
+-- > `> 0 errors` branch -- it reads a COUNT and never a REASON. This refutes the `== 0`
+-- > branch, and by the same measure: *zero errors does not entail that only the generator is
+-- > missing.* A criterion wrong in both directions is not a threshold that needs moving.
+--
+-- **Nothing here is chosen to provoke.** The construct is `F03`:185 in isolation --
+-- `traverse … over queue … by consuming` -- and the surrounding declarations are the
+-- smallest that let it parse and check. No name, no number and no clause is taken from
+-- `messung/fragmente/F03.gab`; the point is that the construct ALONE carries the refusal,
+-- so `F03`'s eighteen checker errors are not what stands between it and a Durchstich.
+-- =======================================================================================
+
+module probe::q {
+
+const KAP : u32 = 32;
+
+type TidQueue = {
+    buf   : [u32; 32],
+    head  : u32 in 0 ..< 32,
+    tail  : u32 in 0 ..< 32,
+    count : u32 in 0 .. 32,
+};
+
+table Halter count 4 {
+    slot {
+        wartende : TidQueue,
+    }
+}
+
+impl fn leeren(e : ptr<normal, rw> Halter, k : index into Halter) -> u32
+    effects { writes e.slots, consumes e.slots }
+    costs   <= 100 ops
+{
+    let mut n : u32 = 0;
+    traverse cand over queue e.slots[k].wartende by consuming
+        touches consumes e.slots
+    {
+        n = cand;
+    }
+    return n;
+}
+}
