@@ -70,16 +70,23 @@ SONDEN = W / "sonden"
 # The check is `covered * 38 >= falsifiable * 1`, so it is a comparison of shares and not of
 # counts: adding an assumption WITH its probe passes, adding one without does not.
 #
-# *Raising this is the diff a written probe earns.* 1 of 38 on 2026-09-04.
-MARK_QUOTE = (1, 38)
+# *Raising this is the diff a written probe earns.* 1 of 38 on 2026-09-04, and **5 of 38 the
+# same day**: `sonde_mxcsr_rne`, `sonde_keine_ueberbreite`, `sonde_tsc` and `sonde_rdtscp` were
+# written, so the whole of class `P4` now stands as a program. *The raise is not a decision,
+# it is the diff four programs earned* -- and it is the one move this mark exists to record.
+MARK_QUOTE = (5, 38)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
-# of the 38 rows are class `P4` (the probe needs nothing but a userland C program), one of the
-# five has a program, so the work that is actually possible today reaches 5 of 38 = 0.1316.
+# of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
+# work that is actually possible reaches 5 of 38 = 0.1316. **All five have a program since
+# 2026-09-04, so the class is empty of open work and that ceiling is now also the state.**
 # `1/8` = 0.125 is the largest unit fraction under that; `1/7` = 0.143 is already out of reach.
 #
-# **The tree stands at 1 of 38 = 0.026 and misses it by a factor of 4.75.** That is deliberate:
-# a floor the tree already meets forbids nothing.
+# **The tree stood at 1 of 38 = 0.026 and missed it by a factor of 4.75.** That was deliberate:
+# a floor the tree already meets forbids nothing. **Since 2026-09-04 it stands at 5 of 38 =
+# 0.1316 and MEETS the floor by 0.0066** -- three more falsifiable assumptions without a probe
+# break it, and the ratchet above bites one earlier than that. *The floor may be RAISED and may
+# not be lowered*, and there is no `P4` row left with which to reach a higher one.
 BODEN = (1, 8)
 
 # **The class whose probe needs NOTHING but a C compiler**, and the word the document has to
@@ -366,15 +373,18 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     r = lauf(a=dict(mehr, noch_eine="sonde_boot_unerreichbar"))
     proben.append(("one assumption more WITH a probe does not", not r[5]))
 
-    # SEVEN -- the FLOOR, and it has to be able to come out BOTH ways. It is missed today;
-    # over a tree with the four `P4` probes written it must be met.
+    # SEVEN -- the FLOOR, and it has to be able to come out BOTH ways. **The direction it is
+    # asked in FLIPPED on 2026-09-04**, and that is the whole point of a floor that was set
+    # where the tree failed: it is MET today, and over the tree as it stood before the four
+    # `P4` probes were written it must come out missed. *A test that only knew how to see the
+    # floor missed would have gone silent the moment it was paid.*
     r = lauf()
     boden_heute = r[6]
-    vier = sorted(progs + ["sonde_mxcsr_rne", "sonde_keine_ueberbreite",
-                           "sonde_tsc", "sonde_rdtscp"])
-    r = lauf(p=vier)
-    proben.append(("the floor is missed today and MET with the four probes written",
-                   boden_heute and not r[6]))
+    vier = ("sonde_mxcsr_rne", "sonde_keine_ueberbreite", "sonde_tsc", "sonde_rdtscp")
+    ohne_vier = [x for x in progs if x not in vier]
+    r = lauf(p=ohne_vier)
+    proben.append(("the floor is met today and MISSED without the four probes",
+                   not boden_heute and r[6]))
 
     # EIGHT -- reachability. A corpus that grows without new `P4` rows eventually puts the
     # floor out of reach, and that is a different finding from missing it.
@@ -401,8 +411,10 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     r = lauf(li=sorted(liste + ["sonde_erfunden"]))
     proben.append(("coverage claimed in the checker with no program falls",
                    r[10] == ["sonde_erfunden"]))
+    # **`len(progs)` and not a literal.** The tree had two programs when this was written and
+    # has six since; a number here would have turned a written probe into a red guardian.
     r = lauf(li=[])
-    proben.append(("a program the checker does not list falls", len(r[11]) == 2))
+    proben.append(("a program the checker does not list falls", len(r[11]) == len(progs)))
 
     # TWELVE -- one row written twice. Set equality does not see it, and it would buy
     # reachability nobody can write.
@@ -420,12 +432,14 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     proben.append(("a probe name more outside the register is named", r[13] == 1))
 
     # FOURTEEN -- the control. Everything above also passes over a guardian that always says
-    # no; this is the one that does not. **The floor is EXCLUDED from it on purpose** -- it is
-    # missed today, and the run is red for that and for nothing else.
+    # no; this is the one that does not. **The floor was EXCLUDED from it until 2026-09-04**,
+    # because it was missed and the run was red for that and for nothing else. *It is included
+    # since the four probes were written* -- leaving it out now would be a control that steps
+    # around the one figure this file exists for.
     r = lauf()
-    proben.append(("the register itself is clear, and only the floor is missed",
+    proben.append(("the register is clear and every tooth including the floor holds",
                    not r[0] and not r[1] and not r[2] and not r[3] and not r[4]
-                   and not r[5] and not r[7] and not r[8] and not r[9]
+                   and not r[5] and not r[6] and not r[7] and not r[8] and not r[9]
                    and not r[10] and not r[11] and not r[12] and not r[13]
                    and not r[14]))
 

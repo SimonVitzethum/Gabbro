@@ -4771,12 +4771,6 @@ Die Kette beginnt, wenn **beide** gelten:
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 
-- [ ] **Die zwei Gleitkommasonden gibt es als NAMEN, nicht als Programm**
-      *(2026-08-18)*. `sonde_mxcsr_rne` und `sonde_keine_ueberbreite` stehen im Manifest, und
-      damit ist die Annahme falsifizierbar ERKLAERT. **Geschrieben ist keine von beiden.**
-      *Das Manifest sagt selbst, dass es nur die Sonde nennt und nicht ihren Lauf* -- aber ein
-      Name ohne Programm ist die schwaechste Form von falsifizierbar, die es gibt.
-
 - [ ] **`F003` (Rundungsmodus im Typ) ist heute UNERREICHBAR, und das ist die Antwort**
       *(2026-08-18)*. Die Absage soll einen anderen Modus als RNE treffen -- **es gibt keine
       Form, einen zu schreiben.** Sie jetzt zu bauen hiesse, drei oder vier Woerter in den

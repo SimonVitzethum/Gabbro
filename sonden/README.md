@@ -20,8 +20,15 @@ Der Abschnitt endete mit einem Satz, der kein Werkzeug hatte: *„es gibt im gan
 keinen Ort, an dem eine Sonde stünde, kein Verzeichnis, keinen Läufer, keine Buchung über
 ihren Lauf."*
 
-**Dies ist der Ort. Er hat heute genau EINE Sonde**, und das ist Absicht: *eine Sonde, die
-läuft, ist mehr wert als siebenundzwanzig, die benannt sind.*
+**Dies ist der Ort.** Er hatte am 2026-08-21 genau EINE Sonde, und das war Absicht: *eine
+Sonde, die läuft, ist mehr wert als siebenundzwanzig, die benannt sind.*
+
+**Seit dem 2026-09-04 stehen SECHS Programme hier**, und die vier neuen sind der Preis, den
+[`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md) für den Boden `A_p ≥ 1/8`
+ausgeschrieben hatte: `sonde_mxcsr_rne`, `sonde_keine_ueberbreite`, `sonde_tsc`,
+`sonde_rdtscp`. *Damit ist die Klasse „läuft im Userland" leer* — jede weitere Sonde in
+diesem Ordner braucht Ring 0, ein Gerät oder einen Mechanismus, den der Erzeuger nicht
+erzeugt.
 
 ## Warum eine Sonde nicht in Gabbro steht
 
@@ -113,12 +120,17 @@ Die Einzelaufstellung steht in [`messung/RACE.md`](../messung/RACE.md) §5; sie 
 | **Ring 0** | **9** | `sonde_cr0`, `sonde_cr3`, `sonde_cr4`, `sonde_efer`, `sonde_invlpg`, `sonde_tlb_nach_cr3`, `sonde_pf_bei_p0`, `sonde_gastausbruch`, `sonde_irq_maskiert` |
 | **ein GERÄT** | **9** | `sonde_vtd_srtp`, `sonde_vtd_te`, `sonde_virtio_avail`, `sonde_deskriptor_zu_frueh`, `sonde_dma_ohne_barriere`, `sonde_geraet_antwortet`, `sonde_karte_antwortet`, `sonde_zaehlwerk_antwortet`, `sonde_zeitgeber_tickt` |
 | **einen Mechanismus, den der Erzeuger nicht erzeugt** | **4** | `sonde_leser_holt_ab`, `sonde_quelle_endet`, `sonde_eingabe_endet`, `sonde_leser_noch_drin` |
-| **nichts — läuft im Userland** | **4** | `sonde_mxcsr_rne`, `sonde_keine_ueberbreite`, `sonde_tsc`, `sonde_rdtscp` |
+| **nichts — läuft im Userland** | **4** | `sonde_mxcsr_rne`, `sonde_keine_ueberbreite`, `sonde_tsc`, `sonde_rdtscp` — **alle vier seit dem 2026-09-04 gebaut** |
 
 > **Vier von 26 könnten hier heute laufen, und gebaut ist KEINE von ihnen.** Die eine Sonde,
 > die dasteht, gehört zu **keinem** der 26 Namen — sie gehört zu einer Annahme, die der
 > Ordner als *nicht falsifizierbar* führt. **Der Zähler `0 von 27` aus `AXIOMSCHICHT.md` §3
 > steht damit unverändert.**
+>
+> **Das galt bis zum 2026-09-04, und an dem Tag wurden die vier geschrieben.** Alle vier
+> tragen eine Empfindlichkeitsprobe, die zum Fallen GEBRACHT wurde und nicht bloss vorhanden
+> ist — die Zahlen daneben stehen in `dokumente/SONDENDECKUNG.md`. *Der Zähler steht jetzt
+> bei `A_p = 5 von 38`*, und die Zeile darüber ist die Buchung, die sie ablöst.
 
 *Das ist kein Versehen, sondern die Wahl.* `sonde_mxcsr_rne` wäre billiger gewesen und hätte
 den Zähler auf `1 von 27` gebracht — und nichts über Rennen gesagt. Die gebaute Sonde steht

@@ -466,7 +466,7 @@ true.** What has happened since is that its measurand grew:
 | | today | direction |
 |---|---:|---|
 | `A_u` — assumptions no probe can ever refute, under `U1`/`U2` | 2 of 44 | **ratchet down**: it may fall, never rise, and a rise carries its reason at the mark (`pruefe-unfalsifizierbar.py`) |
-| `A_p` — assumptions whose probe EXISTS as a program | ~~2 of 44~~ **1 of 38** | **a SHARE and not a count since 2026-09-04**, with a ratchet that may not fall and a **floor of `1/8` the tree fails today** — [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md), `./instrumente/pruefe-sondendeckung.py`. *The denominator is the falsifiable half, 38 of the 44; the six unfalsifiable ones are `A_u`'s population and not this one's.* |
+| `A_p` — assumptions whose probe EXISTS as a program | ~~2 of 44~~ ~~1 of 38~~ **5 of 38** | **a SHARE and not a count since 2026-09-04**, with a ratchet that may not fall and a **floor of `1/8` the tree failed that morning and MET the same day** (the four `P4` probes were written) — [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md), `./instrumente/pruefe-sondendeckung.py`. *The denominator is the falsifiable half, 38 of the 44; the six unfalsifiable ones are `A_u`'s population and not this one's.* |
 
 *`A` itself stays as a census and stops being a gate.* It is a useful number — it says how much
 machine the corpus talks about — and it is not a measure of anything that can be earned.
@@ -475,8 +475,8 @@ and `dokumente/SONDENDECKUNG.md` carries `A_p` with its register, its floor and 
 of the broken connection.
 
 > **And the two ratchets above were NOT enough, which is the correction this section needed.**
-> They leave a third state unwatched — *falsifiable, probe missing* — and that is **37 of 38**
-> today. `A_u` does not fall when nobody writes a probe, and `A_p` as a bare count only rises
+> They leave a third state unwatched — *falsifiable, probe missing* — and that was **37 of 38**
+> when this was written; it is **33 of 38** since the four `P4` probes were built. `A_u` does not fall when nobody writes a probe, and `A_p` as a bare count only rises
 > when somebody does. **The state the tree is actually in had no guardian**, and a share is what
 > watches it: whoever adds an assumption writes its probe or lowers the proportion visibly.
 
