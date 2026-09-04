@@ -246,4 +246,151 @@ extends the AUDIT-K100 reason-not-count argument rather than reintroducing a cou
 one).** Watching for whether the lane goes on to classify the actual 18, and for whether this
 19th fact (`C001`) gets conflated with the 18 rather than kept as separate context.
 
-_(polling continues via background monitor -- next commits will be appended below)_
+---
+
+## FINDING, in its own right: `F03` is quoted as "18 errors" and that number depends on
+## which command you run
+
+This is not a footnote to verifying the lane's commit -- it is mine, independently
+reproduced, and it matters beyond this pairing. **The tree has been quoting `18 errors` as
+`F03`'s state for two days** (`AUDIT-K100-2026-09-04.md` heads its own §1.5 with exactly that
+count, sourced from `gabbro pruefe`). But:
+
+    ./target/debug/gabbro pruefe messung/fragmente/F03.gab   ->  18 errors
+    ./target/debug/gabbro emit   messung/fragmente/F03.gab   ->  19 errors (same 18 + C001 at :185)
+
+Reproduced on my own build, independent of the lane's. **`zaehle-pflichten.py::_pruefe_fehler`
+runs `pruefe`, never `emit`** -- so `H`'s ledger structurally cannot see the 19th. Anyone who
+reads "F03: 18 errors" (as at least six documents in this tree now do -- `AUDIT-K100`,
+`BERICHT-H0.md`, `PLAN-HARDWARE.md`, `PLAN-VOLLSTAENDIGKEIT.md`, `W24-FRAGMENTE.md`,
+`ERZEUGERREST.md`) and stops there has a number that is true of one command and false of the
+pipeline `H` is supposed to be a proxy for (does the generated C exist and compute what the
+fragment says). **The gap is not a rounding error -- it is a whole refusal class (emitter
+lowering) that the checker-only number is blind to by construction**, and it would stay blind
+even if all 18 checker errors vanished tomorrow.
+
+## The concrete shape of a "plumbing" checker error -- and whether one exists among the 18
+
+The coordinator asked me to say what a checker error would have to look like to earn a
+**plumbing** verdict, not just assert the count. Here it is, stated so it can be checked
+against and not just believed:
+
+**A checker-reported (`gabbro pruefe`) error can never be plumbing, structurally, and here is
+why rather than by definition-quoting.** `gabbro pruefe` accepting a file (`0 errors`) IS the
+statement "every fact this program makes about itself has been proven or is not required
+here" -- effects, costs, ranges, arities, reason-doors, lock redemptions, all of it. An error
+from `pruefe` means the checker found a fact the program NEEDS and does not have (or a fact
+it has that is false). At that point there is nothing "merely missing" for an emitter arm to
+supply -- the emitter's job starts from an ALREADY-VALIDATED program and turns validated facts
+into C; it has no machinery to invent a missing proof. So plumbing requires the OPPOSITE
+starting condition: `gabbro pruefe` returns `0 errors` and `gabbro emit` STILL refuses, over a
+construct whose meaning is already fully and unambiguously pinned down by something the type
+system tracks formally (not assumed, not guessed) -- an unwritten arm over an
+already-decided case. `D21` (`messung/ERZEUGERREST.md:1101`, cited by the lane) is exactly
+this shape: `forever()` already pushes the retry label `emit.rs::retry` needs; `leave`/`next`
+needed the identical push and nobody had wired it. Nothing to decide, nothing assumed --
+purely unwritten.
+
+**None of `F03`'s 18 have this shape, and it is not a coincidence -- it follows from what
+`gabbro pruefe` returning an ERROR means.** All 18 are `pruefe`-time refusals. **Plumbing was
+never reachable for any of the 18, by the structure of the question itself, not by how the
+cases happened to fall.** This sharpens "0 of 18" from a count into a statement about the
+category: it could not have been anything else once every one of the 18 is confirmed to come
+from `gabbro pruefe`, not from a downstream generator gap.
+
+**Which moves the real test to the 19th error -- the one genuinely on the emitter side.**
+`emit.rs:8639`, `Domaene::Schlange(_)`, the `queue ... by consuming` refusal. This is the one
+place in the whole file where "is an arm merely missing" is even a coherent question, because
+it is the one error `pruefe` does not raise -- `gabbro pruefe` accepts the construct as
+well-typed; only `emit` refuses it.
+
+### Is `Domaene::Schlange`'s `C001` plumbing? Checked against the pass, not taken on the lane's word.
+
+The lane's own commits assert this is «B10» and open, but do not show the mechanism -- so I
+read it myself. `crates/gabbro-check/src/domaene.rs:85-101` (the cost pass's domain-bound
+function):
+
+```rust
+// **`queue place` -- die Schranke steht im Verbund, nicht in einer Tabelle.**
+// Eine Warteschlange ist in Gabbro ein gewoehnlicher Verbund mit **genau einem
+// Feldarray** (`TidQueue = { buf : [u32; 32], head, tail, count }`). Damit ist
+// ihre Schranke die Laenge dieses Arrays, und zwar eindeutig...
+Domaene::Schlange(o) => return self.arraylaenge_im_verbund(o),
+```
+
+This is the ONLY machinery anywhere in `crates/` that interprets a "queue"-shaped record, and
+it exists purely to produce a cost UPPER BOUND. It does **not** identify `head`/`tail`/`count`
+as anything at all -- it finds "the one array field" and stops. This is not my inference --
+it is already measured and written down, independent of this lane, in
+`messung/K001-DOMAENENSCHRANKE.md` §8.1 (2026-08-31), the `queue p` row:
+
+> *"abgeleitet als OBERE Schranke, mit einer ANGENOMMENEN Zuordnung -- dass das einzige Array
+> der Puffer der Warteschlange IST, prueft nichts... Die Warteschlange haelt zur Laufzeit
+> hoechstens n, nicht notwendig n."*
+> (derived as an UPPER bound, with an ASSUMED correspondence -- that the one array actually
+> IS the queue's buffer is checked by nothing... the queue holds AT MOST n at runtime, not
+> necessarily n.)
+
+**This is the load-bearing fact, and I verified it against the source rather than the
+document alone.** Consequence: to write a plumbing emitter arm for `queue ... by consuming`,
+the generator would need to know which of the array's `n` cells are actually LIVE (occupied)
+right now, to visit only those -- and nothing in the type system says which OTHER fields (if
+any) are the head/tail/count bookkeeping for that array. The only two ways to proceed from
+here are:
+
+1. **Iterate the raw backing array unconditionally** (treat `queue` as `elems of buf`). This
+   is mechanically simple and needs no new grammar -- but it is not a faithful lowering of
+   "queue": a `TidQueue` with `count < 32` has stale/garbage entries outside its logical
+   window, and visiting all 32 slots regardless of occupancy computes something the source
+   program did not ask for. Confirmed the same way the lane confirmed the M140 cast
+   objection: this would COMPILE and RUN and produce a wrong answer silently -- exactly the
+   failure mode `emit.rs:2506`'s own comment refuses ("a generator that guesses undoes every
+   pass in front of it"), and I checked this exact line and text myself, independent of the
+   lane's citation of it for a different error.
+2. **Recognize `head`/`tail`/`count` by field-name convention.** Also guessing -- nothing
+   declares that fields with those names play those roles, and a differently-shaped queue
+   record would silently do the wrong thing or fail to match at all.
+
+**Neither route is plumbing.** The genuinely non-guessing fix is a NEW declaration form that
+formally binds an array field to explicit head/tail/count roles (something closer to how
+`table` formally structures `count N` and slots) -- which is a language change, i.e. bucket
+2 (a rule decision), not bucket 1. **Verdict, independently derived: `Domaene::Schlange`'s
+`C001` is not plumbing either.** So the answer to "is plumbing reachable anywhere in `F03`,
+checker side or emitter side" is **no, on both sides, for two different and independently
+checkable reasons**: the 18 are refused before the emitter is ever reached (structural), and
+the 19th is refused because the one fact the emitter would need is explicitly assumed, not
+derived, by the tree's own prior measurement (substantive). **`H`'s question, for `F03`, does
+not turn on a missing generator arm anywhere in the file.**
+
+---
+
+## Lane commit `aa119ff` -- "Three holes in yesterday's classification closed"
+
+**`git diff master -- messung/fragmente/F03.gab`: still EMPTY.** Confirmed before reading
+anything else. All three claims checked and reproduced independently, all hold:
+
+1. **The cast objection** (could a cast make `M140`/`M143` plumbing?). Cited `emit.rs:2506` --
+   read it myself: it is the `weigere()` helper EVERY `C001` (and, per its placement, the
+   shared refusal philosophy) routes through, carrying exactly the quoted note verbatim
+   ("the emitter refuses by name instead of emitting something plausible -- a generator that
+   guesses undoes every pass in front of it"). The argument -- a `(Frame *)` cast over a
+   truncated `u32` on a 64-bit target fabricates a bad address, and `M143`'s missing argument
+   has nothing to cast -- is sound and matches my own reasoning about the M140/M143 cluster
+   from the previous commit.
+2. **`N035` reachability.** Reproduced verbatim: `grep -n "dienste\." messung/fragmente/F03.gab`
+   -> no output (exit 1) on my own checkout. Confirms nowhere in the file does `call`'s body
+   invoke a `SchedOps` field as an indirect call (`dienste.current_id(...)` etc.) -- every
+   call is to a top-level `extern fn` instead. This independently confirms what I had
+   separately derived (F03.gab's own header, «B8»): the five `fn(...)` fields of `type
+   SchedOps` are dead in this fragment, so satisfying `N035` on them changes nothing about
+   the emitted C.
+3. **The `fragment3` attribution.** Reproduced: `grep -n 'lauf "fragment[0-9]'
+   instrumente/pruefe-emission.sh` -> nine runs (`fragment1,2,4,5,6,7,8,9,10`), no
+   `fragment3`. Matches `645ddca`'s own account (renamed to `ipcfastpath` for the rejected
+   rewrite) and `AUDIT-K100`'s "nine, not ten" denominator.
+
+**All three hold. No F03.gab edit, no count-based reasoning reintroduced, no guardian
+redefined.**
+
+_(polling `git log --oneline master..worktree-agent-a7460ff215795e662` directly now, per
+coordinator instruction, in addition to the background monitor)_
