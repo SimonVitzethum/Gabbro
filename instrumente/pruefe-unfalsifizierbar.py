@@ -105,7 +105,12 @@ def corpus_files():
     # its `parts` and an absolute filter would exclude the whole corpus. *A guardian that
     # measures nothing prints the same `ALL PASS` as one that measures everything.*
     return sorted(p for p in W.rglob("*.gab")
-                  if not {"gift", ".claude", "target"} & set(p.relative_to(W).parts))
+                  if not {"gift", ".claude", "target",
+                          # **Added 2026-09-04**: the sibling guard read
+                          # UNTRACKED scratch files here and its denominator
+                          # depended on what lay about the machine. This one
+                          # never got that repair -- found by the `K100` audit.
+                          "arbeitsprotokoll"} & set(p.relative_to(W).parts))
 
 
 def clauses_in(text, wo):

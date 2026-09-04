@@ -380,8 +380,41 @@ def _pruefe_fehler(quelle):
     return int(m.group(1))
 
 
-def absenkungsklasse(sonde=None, locker=False):
-    """**The open lowering obligations, split into the two registers.**
+def absenkungsklasse(sonde=None, locker=True):
+    """**The open lowering obligations -- the SPLIT IS WITHDRAWN, see below.**
+
+    **REFUTED 2026-09-04 by an adversarial audit** (`messung/AUDIT-K100-2026-09-04.md`), and
+    `locker` therefore defaults to the OLD, undivided rule again. `H` reads 1.
+
+    The split asked *does `gabbro pruefe` accept the file* and answered it with **the total
+    error count over the whole file** -- `if n == 0 or locker`. It never asks WHY the checker
+    refuses, so it cannot tell a missing language construct from a mis-transcribed fragment,
+    nor a file that changed from a checker that changed. Three consequences, each measured:
+
+    * **The calibration that justified it is false.** Rebuilt at `3b17d9a`, the state where
+      the tree published `H = 4`: F01 3 errors, F03 27, F05 4, F09 1 -- and those four WERE
+      the open lowering obligations. Today's criterion over that tree yields `klempnerei =
+      {}` and `H = 0`, on the very day three of the four were discharged as plumbing. The
+      refuting table already stood in `messung/BERICHT-H0.md`:22-33, two commits BEFORE the
+      paragraph claiming F1, F5 and F9 had checked clean.
+    * **A new refusal lowers `H`.** At `da18f16` (2026-08-31) `gabbro pruefe F06.gab` gave
+      4 errors from a rule added that same day; under this criterion F06 books as notation
+      and `H` does not rise. *A measure that rewards refusing over lowering is pointed the
+      wrong way.*
+    * **The narrowing is a pure subtraction** -- `a = len(ABSENKUNG_OFFEN)` became
+      `a = len(klempnerei)`, its `n == 0` subset -- so it cannot raise `H` on any input, and
+      the two speech probes only ever answered *is the branch reachable*.
+
+    A sound criterion has to read the REASON for the refusal, not its count. Until one is
+    built, the undivided rule stands and the debt stays visible.
+
+    Returns `(klempnerei, notation, fehlerzahl)`: the fragments whose lowering a generator
+    can discharge, those the checker refuses before the generator is reached, and the error
+    count per open fragment.
+
+    `sonde` is the speaking probe's handle -- `(name, pfad)` is treated as an eleventh
+    fragment with no holding differential test, so a case can be driven through the
+    classifier without touching the tree. `locker` is the OLD, undivided rule and survives
 
     Returns `(klempnerei, notation, fehlerzahl)`: the fragments whose lowering a generator
     can discharge, those the checker refuses before the generator is reached, and the error
@@ -912,40 +945,49 @@ impl fn zwei() -> u32 effects { pure } costs <= 2 ops { return 2; }
 impl fn zwei() -> u32 effects { pure } costs <= 2 ops { return nirgends_erklaert; }
 }
 """
-        k0, n0, _ = absenkungsklasse()
-        with tempfile.TemporaryDirectory() as d:
-            for was, text, erwartet in (("sauber", SAUBER, "klempnerei"),
-                                        ("kaputt", KAPUTT, "notation")):
-                p = Path(d) / f"sonde-{was}.gab"
-                p.write_text(text, encoding="utf-8")
-                k1, n1, fz = absenkungsklasse(sonde=("F99", p))
-                if erwartet == "klempnerei":
-                    if "F99" not in k1 or len(k1) != len(k0) + 1:
-                        print(f"SPRECHPROBE GESCHEITERT: eine SAUBER pruefende Datei ohne "
-                              f"Durchstich landet nicht in der Klempnerei ({len(k0)} -> "
-                              f"{len(k1)}). **Dann kann dieses Mass nur subtrahieren, und "
-                              f"dann ist es kein Mass.**", file=sys.stderr)
-                        sys.exit(2)
-                    print(f"== Sprechprobe: ok (eine sauber pruefende, nicht abgesenkte "
-                          f"Datei hebt H von {vorher + len(k0)} auf "
-                          f"{vorher + len(k1)}) ==")
-                else:
-                    if "F99" not in n1 or len(k1) != len(k0):
-                        print(f"SPRECHPROBE GESCHEITERT: eine vom Pruefer ABGEWIESENE Datei "
-                              f"landet nicht in der Notation ({len(k0)} -> {len(k1)}).",
-                              file=sys.stderr)
-                        sys.exit(2)
-                    weit, _, _ = absenkungsklasse(sonde=("F99", p), locker=True)
-                    if len(weit) != len(k0) + len(n0) + 1:
-                        print(f"RUECKWAERTSPROBE UNTAUGLICH: schon die ALTE, ungeteilte "
-                              f"Regel sieht die erfundene Datei nicht ({len(weit)}). "
-                              f"**Dann belegt ein Gleichstand unter der neuen nichts.**",
-                              file=sys.stderr)
-                        sys.exit(2)
-                    print(f"== Rueckwaertsprobe: ok (eine abgewiesene Datei zaehlt unter der "
-                          f"ALTEN Regel mit -- {len(weit)} -- und unter der neuen NICHT: H "
-                          f"bleibt {vorher + len(k1)}, sie steht mit {fz['F99']} Fehlern in "
-                          f"der Notation) ==")
+        # **WITHDRAWN 2026-09-04.** These two probes tested the SPLIT, and the split was
+        # refuted by an adversarial audit (`messung/AUDIT-K100-2026-09-04.md`): the criterion
+        # read the total error count and never the REASON for the refusal. They are kept
+        # here, unrun, because they are the right SHAPE for a sound criterion -- forward and
+        # backward, each able to come out wrong -- and because deleting them would hide what
+        # was tried. *What they could never show is the thing the audit found: that the
+        # narrowing is a pure subtraction, so no input raises `H` and the probes' own
+        # synthetic files are untouched by any new rule.*
+        if False:
+            k0, n0, _ = absenkungsklasse(locker=False)
+            with tempfile.TemporaryDirectory() as d:
+                for was, text, erwartet in (("sauber", SAUBER, "klempnerei"),
+                                            ("kaputt", KAPUTT, "notation")):
+                    p = Path(d) / f"sonde-{was}.gab"
+                    p.write_text(text, encoding="utf-8")
+                    k1, n1, fz = absenkungsklasse(sonde=("F99", p))
+                    if erwartet == "klempnerei":
+                        if "F99" not in k1 or len(k1) != len(k0) + 1:
+                            print(f"SPRECHPROBE GESCHEITERT: eine SAUBER pruefende Datei ohne "
+                                  f"Durchstich landet nicht in der Klempnerei ({len(k0)} -> "
+                                  f"{len(k1)}). **Dann kann dieses Mass nur subtrahieren, und "
+                                  f"dann ist es kein Mass.**", file=sys.stderr)
+                            sys.exit(2)
+                        print(f"== Sprechprobe: ok (eine sauber pruefende, nicht abgesenkte "
+                              f"Datei hebt H von {vorher + len(k0)} auf "
+                              f"{vorher + len(k1)}) ==")
+                    else:
+                        if "F99" not in n1 or len(k1) != len(k0):
+                            print(f"SPRECHPROBE GESCHEITERT: eine vom Pruefer ABGEWIESENE Datei "
+                                  f"landet nicht in der Notation ({len(k0)} -> {len(k1)}).",
+                                  file=sys.stderr)
+                            sys.exit(2)
+                        weit, _, _ = absenkungsklasse(sonde=("F99", p), locker=True)
+                        if len(weit) != len(k0) + len(n0) + 1:
+                            print(f"RUECKWAERTSPROBE UNTAUGLICH: schon die ALTE, ungeteilte "
+                                  f"Regel sieht die erfundene Datei nicht ({len(weit)}). "
+                                  f"**Dann belegt ein Gleichstand unter der neuen nichts.**",
+                                  file=sys.stderr)
+                            sys.exit(2)
+                        print(f"== Rueckwaertsprobe: ok (eine abgewiesene Datei zaehlt unter der "
+                              f"ALTEN Regel mit -- {len(weit)} -- und unter der neuen NICHT: H "
+                              f"bleibt {vorher + len(k1)}, sie steht mit {fz['F99']} Fehlern in "
+                              f"der Notation) ==")
         if faellt:
             gefallen = ", ".join(sorted(faellt, key=lambda x: int(x[1:])))
             print(f"== Gemessen: {gefallen} traegt eine `lauf`-Zeile und der Durchstich "
