@@ -2659,7 +2659,7 @@ Ziel.*
       | ~~**F09**~~ **ERLEDIGT 2026-09-03** | ~~1 Fehler — `K001`~~ **0** | ~~`device … at normal`~~ — **und es waren DREI Absagen und nicht eine:** `device … at normal`, `walk … levels` über einem `const`-Namen, `mappings of`. *Die Zeile hier hat die erste gelesen und die zwei dahinter nicht* |
       | ~~**F01**~~ **ERLEDIGT 2026-09-03** | ~~3 — 2× `M140`, `N029`~~ **0** | — *(und die Zeile stimmte: der Erzeuger hatte gegen F1 nichts. Was fehlte, waren drei Prüferabsagen, und alle drei hatten recht)* |
       | ~~**F05**~~ **ERLEDIGT 2026-09-03** | ~~4 — 2× `N046`, `M134`, `N041`~~ **0** | ~~`match` über einen undeklarierten Ruf~~ — *und der undeklarierte Ruf war einer von FÜNF; die anderen vier rief der Rumpf ins Leere, ohne dass ein Pass etwas sagte* |
-      | **F03** | **27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009` | `queue` — **«B10»: `traverse` liefert keinen Wert** |
+      | **F03** | ~~**27 über sieben Kennungen** — 9× `N040`, 8× `M140`, 5× `N035`, 3× `M124`, `M101`, `H011`, `E009`~~ **BERICHTIGT 2026-09-04: `pruefe` 18 (die neun `N040` sind seit 2026-09-03 geschlossen, `Frame`/`RegNr` deklariert), `gabbro emit` 19 — dieselben 18 plus genau das `C001` in der Nachbarspalte, das `pruefe` nie zeigt. Volle Klassifikation: `messung/KLASSEN-F03-2026-09-04.md`.** | `queue` — **«B10»: `traverse` liefert keinen Wert** |
 
       **`H = 0` ist damit keine Prüfarbeit, sondern Sprach- und Korpusarbeit:** vier
       Programme, die Gabbro ablehnt, in Programme verwandeln, die Gabbro annimmt.

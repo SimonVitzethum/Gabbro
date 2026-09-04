@@ -63,6 +63,8 @@ Absenkungspflicht.
 > | **P2** | `N035` „Stufe 7" · `M124` „ein echtes Loch" | `N035` ist seit dem 2026-08-21 **gebaut, gelesen und bewacht** (drei Giftproben, drei Mutationen; der Zeigertyp gibt `K001` seine Zahl und `E008` seine Wirkung). `M124` ist **kein Loch, sondern eine richtige Absage:** die Vorlage in `caprock-messbasis` führt dort `pub const … : u64`, **null Projektionen im ganzen Baum** — und die zwei Zahlenräume weichen heute schon ab (`ErrBadCap = 2` gegen `ERR_BADCAP = 1`). |
 > | **P3** | *„der Kostenkalkül explodiert"* | die Zahl ist **richtig und scharf** (`Rumpf × Knotenlänge^Ebenen`, `512⁴ = 2³⁶` = die Seiten eines 256-TiB-Adressraums). Falsch ist die ZUSAGE — sie wurde mit der zurückgezogenen Lesart gerechnet. **Und `F09` blockiert nicht der Prüfer, sondern dreimal der ERZEUGER**; keine der drei `C001` hängt an `K001`. |
 >
+> | **P2, BERICHTIGT 2026-09-04** | „`F03`: 19 Fehler" | `Frame`/`RegNr` sind seit 2026-09-03 deklariert, die neun `N040` sind zu; `gabbro pruefe` liest heute **18**. **Und `pruefe` ist nicht der ganze Weg:** `gabbro emit` liest **19** — dieselben 18 plus ein `[C001]` bei `F03.gab:185` (die `queue`-Traversierung), das `pruefe` an keiner Stelle zeigt. Volle Klassifikation nach der auslösenden PASS: `../messung/KLASSEN-F03-2026-09-04.md`. |
+>
 > **Damit gehört von den drei „echten Programmen, die schon der PRÜFER abweist" keines mehr
 > in diese Liste** — `F09` in die Erzeugerliste, `F01` und `F03` zu den Befunden IM Bericht.
 > *Die Menge, die dieser Plan sucht, war an dieser Stelle um drei zu groß.*

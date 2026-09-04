@@ -351,6 +351,32 @@ FRIST_PRUEFE = 120  # seconds per fragment. Same reason as `FRIST_ABSENKUNG`.
 _BEFUND = re.compile(r":\s*\d+ items?, (\d+) errors?, \d+ hints?\s*$", re.M)
 
 
+# **NAMED 2026-09-04, NOT REPAIRED: this measure sees only `pruefe`, never `emit`.**
+# ----------------------------------------------------------------------------------
+# `_pruefe_fehler` below runs `gabbro pruefe`, and every branch above it (`PLUMBING` /
+# `NOTATION`) is decided from that one command's output. **The obligation this file counts --
+# "the generated C computes what the fragment says" -- is a claim about `gabbro emit`, and
+# this measure never runs it.** An emitter-only refusal (`C001`, raised after the checker has
+# already accepted the file) is invisible here BY CONSTRUCTION, not by oversight in a single
+# case.
+#
+# Measured, not hypothesized: `messung/fragmente/F03.gab` -- `gabbro pruefe` reports 18
+# errors (the number this file would read), `gabbro emit` reports **19** -- the same 18 plus
+# `[C001]` at `F03.gab:185` (the `queue … by consuming` traversal, `emit.rs`:8639), which
+# `pruefe` does not raise at any error level. Full classification of the 18, per the pass
+# that raises each, in `messung/KLASSEN-F03-2026-09-04.md`; the `pruefe`/`emit` gap itself,
+# checked independently, in `messung/GEGENPROBE-F03.md`.
+#
+# **This is not fixed here.** The lowering classifier above is contested ground -- refuted and
+# rewritten once already this week (`messung/AUDIT-K100-2026-09-04.md`) -- and a second
+# rewrite of what it reads, on the same day, on the strength of one more finding, is exactly
+# the move that document warns against. *Naming a blind spot and patching it in the same
+# breath is how a measure ends up calibrated on its own last correction.* Whoever repairs
+# this should also decide what running `emit` for every fragment costs `FRIST_PRUEFE` and
+# whether a `C001` that fires WITH zero `pruefe` errors (a real "arm is missing" case, see
+# `D21`/`D22`) needs a fourth bucket rather than folding into `NOTATION`.
+
+
 def _pruefe_fehler(quelle):
     """The error count `gabbro pruefe` reports over ONE file -- run, not read.
 
