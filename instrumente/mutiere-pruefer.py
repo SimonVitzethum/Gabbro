@@ -970,6 +970,35 @@ MUTATIONEN = [
         "N055 -- a `state` transition over nothing passes again, and the grammar-table "
         "cell falls back to `UNGEDECKT`. Probe 668 is the witness.",
     ),
+    # **`N056`, two mutations -- one per ARM**, because the rule refuses two different
+    # shapes and a single mutation would leave the other arm unmeasured.
+    Mutation(
+        "falsifikator-wert-ist-ein-urteil",
+        "namen.rs",
+        "            Some(_) => Antwort::AndererWert,",
+        "            Some(_) => Antwort::Wahrheitswert,",
+        "N056 -- a `falsifier` naming a function that returns a VALUE passes again: a "
+        "`u64` reads as a verdict. Probe 677 is the witness.",
+    ),
+    Mutation(
+        "falsifikator-wachhund-braucht-keine-schleife",
+        "namen.rs",
+        "                if !waechter.contains(&sonde.text) {",
+        "                if false && !waechter.contains(&sonde.text) {",
+        "N056 -- a `-> never` falsifier that guards no `on_exceeded` passes again, so a "
+        "watchdog nobody calls counts as a probe that can fire",
+    ),
+    # **The counter-direction of `N056`**, and it is the one that would break the corpus:
+    # 85 of the 94 `falsifier` clauses name a probe that stands in `sonden/` and NOT in
+    # Gabbro (decided 2026-08-19). Without the early return the rule fires on all of them.
+    Mutation(
+        "falsifikator-muss-aufloesen",
+        "namen.rs",
+        "        let Some(antwort) = deklariert.get(&sonde.text) else {",
+        "        let antwort = deklariert.get(&sonde.text).unwrap_or(&Antwort::Keine); if false {",
+        "N056 -- a probe name that resolves to nothing is refused, so the whole hardware "
+        "corpus falls on a rule that was decided AGAINST on 2026-08-19",
+    ),
     # **The counter-direction as a mutation**, and it is the one that would break the
     # corpus: a slot is written `<x>.slots[i]` and its TYPE is a plain record, so without
     # the shape question `descendants of c.slots[s]` would be refused in every clean file.

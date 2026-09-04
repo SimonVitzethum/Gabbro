@@ -1754,3 +1754,53 @@ fn ein_zustand_braucht_einen_traeger() {
          state S { transition a { K : 0 -> 1 } transition b { K : 1 -> 0 } } }",
     );
 }
+
+/// **`N056` -- a `falsifier` that RESOLVES must be able to refute.**
+///
+/// The rule fires on exactly two shapes and is silent on everything else. **The
+/// counter-direction is the load-bearing half here**: a probe name that resolves to
+/// nothing must stay green, because a probe is a C program in `sonden/` and not a
+/// declaration (decided 2026-08-19). 85 of the corpus's 94 `falsifier` clauses are that
+/// case, and a rule that refused them would refuse the whole hardware corpus.
+#[test]
+fn ein_falsifikator_muss_rot_werden_koennen() {
+    // A value is not a verdict.
+    faellt_mit(
+        "module p { extern fn z() -> u64 effects { pure } costs <= 1 ops; \
+         assume a \"t\" falsifier z; }",
+        "N056",
+    );
+    // A function with no result at all cannot answer either.
+    faellt_mit(
+        "module p { extern fn z() effects { pure } costs <= 1 ops; \
+         assume a \"t\" falsifier z; }",
+        "N056",
+    );
+    // A `-> never` that guards no loop is never called, so it can never fire.
+    faellt_mit(
+        "module p { extern fn w() -> never effects { diverges }; \
+         assume a \"t\" falsifier w; }",
+        "N056",
+    );
+
+    // -- the counter-direction ----------------------------------------------------------
+    // The probe answers `-> bool`. Whether it ever answers `false` is outside Gabbro.
+    faellt_nicht(
+        "module p { extern fn s() -> bool effects { pure } costs <= 1 ops; \
+         assume a \"t\" falsifier s; }",
+    );
+    // **The name resolves to NOTHING -- and that is the ordinary, correct case.**
+    faellt_nicht("module p { assume a \"t\" falsifier sonde_gibt_es_nicht; }");
+    // The watchdog IS the falsifier where it actually stands guard (SYNTAX.md §8.3).
+    // **The label is `runde` and not `r`**: `r` is a context word of the vocabulary
+    // (`kw.rs`), and a body that never parsed declares no names -- the refusal would then
+    // be a consequence of the parse and not a finding about this rule.
+    faellt_nicht(
+        "module p { static mut k : u32 = 0; \
+         extern fn w() -> never effects { diverges }; \
+         assume a \"t\" falsifier w; \
+         impl fn f() effects { reads k, writes k } { \
+           forever runde per_pass bounded 4 ops on_exceeded w \
+             effects { reads k, writes k } progress a { k = 1; } } }",
+    );
+}
