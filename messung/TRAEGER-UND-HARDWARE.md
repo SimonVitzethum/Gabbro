@@ -225,7 +225,7 @@ $ ssh ki-pc-fisch-101 'cd gabbro-e && python3 mutiere-pruefer.py'
 
 | Frage | Zahl | Befehl / Fundstelle |
 |---|---:|---|
-| `walk`-Deklarationen im ganzen Korpus | **12** *(9 bis 2026-09-02; `gift/641` ist die zehnte, `gift/667` seit dem 2026-09-03 die elfte, `gift/671` die zwoelfte -- ein `walk` samt `format` EIN Modul entfernt, die Probe zum modulbewussten Formatnachschlag)* | `grep -rn "^walk \|^ *walk " --include=*.gab .` |
+| `walk`-Deklarationen im ganzen Korpus | **13** *(9 bis 2026-09-02; `gift/641` ist die zehnte, `gift/667` seit dem 2026-09-03 die elfte, `gift/671` die zwoelfte -- ein `walk` samt `format` EIN Modul entfernt, die Probe zum modulbewussten Formatnachschlag; `gift/678` die dreizehnte, die Sonde auf `O013`)* | `grep -rn "^walk \|^ *walk " --include=*.gab .` |
 | `group`-Deklarationen | **12** | `grep -rn "^group \|^ *group " --include=*.gab .` |
 | `group`, die einen `walk`-Träger nennt | **0** | alle sechs sind `over { Endpunkte, Faeden }` |
 | `ops`-Klausel an einer `group` **in der Grammatik** | **gibt es nicht** | `SYNTAX.md`:1055 `gruppedecl` |

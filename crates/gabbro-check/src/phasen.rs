@@ -843,11 +843,66 @@ fn schicht_s3(baum: &Programm, marken: &BTreeSet<String>, absagen: &mut Absagen)
         }
     });
 
-    // **`O011` and `O012` -- at the clause itself.**
+    // **`O011`, `O012` and `O013` -- at the clause itself.**
     crate::fuer_jedes_item(baum, &mut |i| {
         let ItemArt::Funktion(f) = &i.art else { return };
         let Some(st) = &f.retires else { return };
         let name = &st.marke.text;
+
+        // **`O013` -- the retirement may not rest on an unfalsifiable assumption** (2026-09-04).
+        //
+        // The latch is not new; this is its fourth site. `S004` refuses a `progress` on one,
+        // `N005` an `entrust`, `N031` an `observed by` -- and each time for the same reason:
+        // **a construct that makes a PROMISE may not rest on a sentence no probe can end.**
+        //
+        // *Why the same tail is read differently here than at `assume` and `axiom`.* The tail
+        // IS deliberately the same one (`ast.rs::Stilllegung`), and an `assume` line may
+        // perfectly well be unfalsifiable -- 33 of the corpus's 44 assumptions stand alone and
+        // carry nothing, which is exactly why `unfalsifiable` is admissible at all. **A
+        // `retires` never stands alone.** `O010` demands that a token a `raw fn` requires be
+        // retired by somebody, so the clause is load-bearing by construction, and its
+        // assumption is the machine half of layer S3: *an address without a mapping is no
+        // longer reachable.* `manifest.rs::stilllegungsannahmen` books that half out of this
+        // very clause as `stilllegung_<fn>_ist_unerreichbar`.
+        //
+        // > **Measured before the rule was built** (2026-09-04, whole tree, 648 `.gab`): four
+        // > `retires` clauses, all four `falsifier`. The rule refuses **no** existing file --
+        // > and `gabbro pruefe` on `beispiele/07` with the tail swapped for `unfalsifiable`
+        // > gave *0 errors, 0 hints, exit=0* against the checker of the hour before, with the
+        // > generated entry standing in `gabbro annahmen` in the class that names a reason
+        // > instead of a probe.
+        //
+        // *`unfalsifiable` and `load-bearing` pull against each other* -- and where the
+        // language can see that a sentence carries something, it says so.
+        let wunsch: Option<&str> = match &st.klasse {
+            AnnahmeKlasse::NichtFalsifizierbar(g) => Some(g.text.as_str()),
+            AnnahmeKlasse::Falsifizierbar(_) => None,
+        };
+        if let Some(grund) = wunsch {
+            absagen.schiebe(
+                Absage::fehler(
+                    "O013",
+                    st.span,
+                    format!(
+                        "`{}` retires `{name}`, and the retirement rests on an unfalsifiable \
+                         assumption",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "layer S3's machine half -- an address without a mapping is no longer \
+                     reachable -- is booked out of THIS clause as an assumption \
+                     (`stilllegung_… _ist_unerreichbar`), and the probe the clause names is \
+                     the only thing that can ever end it",
+                )
+                .mit_notiz(format!(
+                    "the reason given is \"{grund}\" -- but a reason belongs at an `assume` \
+                     that stands ALONE; a clause `O010` demands somebody write carries \
+                     something, and what carries something must be refutable (same rule as \
+                     `S004` at `progress`, `N005` at `entrust`, `N031` at `observed by`)"
+                )),
+            );
+        }
 
         // The clause names a parameter of a declared `linear ghost type` ...
         if markentyp(f, name, marken).is_none() {

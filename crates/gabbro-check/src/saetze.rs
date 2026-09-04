@@ -2139,12 +2139,14 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "bootsatz.stilllegung",
-        kennungen: &["O010", "O011", "O012"],
+        kennungen: &["O010", "O011", "O012", "O013"],
         aussage: "The boot theorem's third layer as ONE event. A token a `raw fn` demands is \
                   retired by some function (`O010`); the retiring clause and the `effects` \
-                  block name the SAME token (`O011`); and a postcondition over `mappings of` \
-                  says, negatively, what is gone (`O012`). Consuming the token and unmapping \
-                  the space are therefore not two promises one can keep separately.",
+                  block name the SAME token (`O011`); a postcondition over `mappings of` \
+                  says, negatively, what is gone (`O012`); and the clause's own assumption \
+                  tail is FALSIFIABLE (`O013`). Consuming the token and unmapping \
+                  the space are therefore not two promises one can keep separately, and the \
+                  half that leaves the checker leaves it with a probe on it.",
         vorbehalt: "**The larger half of layer S3 is NOT proved here and is not provable \
                     here.** `O012` demands a NEGATIVE quantification over `mappings of` and \
                     reads the domain and the negation -- it does not read whether the \
@@ -2161,9 +2163,12 @@ pub const PHASEN: &[Satz] = &[
                     whose boot end lives in another module raises a false alarm when checked \
                     alone (`beispiele/gift/300` falls with two codes for that reason). Same \
                     class as `O009`, which also sees only names it can resolve in the same \
-                    program.",
+                    program. **`O013` reads the CLASS of the tail and nothing else**: that \
+                    the named probe exists as a program is `manifest::gedeckt`'s question, \
+                    that it can go red is `N056`'s, and that its reason is a good one is no \
+                    pass's -- `dokumente/UNFALSIFIZIERBAR.md` carries that bar for a reader.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes on `O010`, `O011` and `O012`; \
+        gemessen_an: "beispiele/gift: probes on `O010`, `O011`, `O012` and `O013`; \
                       messung/BOOT-S3.md.",
         fundstelle: "crates/gabbro-check/src/phasen.rs; crates/gabbro-check/src/manifest.rs; \
                      SPRACHE.md §12",
