@@ -229,11 +229,27 @@ def sondennamen(dateien, rs_text):
     two files that are never compiled together may declare one name with two different probes;
     the map then keeps one and the other name disappears from the count. **A figure that
     exists to say what was left out must not lose a row to a collision.**
+
+    **And it reads CODE, not prose** (2026-09-04). Until this date it ran the regex over the
+    whole file text while `klauseln_in` three functions up skipped comment lines -- *two
+    readings of one word inside one guardian*, and only the stricter one was written down.
+    The looser one counts the English sentence *"an assumption with a falsifier and not a
+    check"* as a probe named `and`: found by `messung/k3-fragmente/K08-test-func.gab`:211,
+    where ONE word of a comment pushed `aussen` from 13 to 14 and broke the mark.
+    **A ratchet a sentence can move is not a ratchet** -- and the whole tree carries exactly
+    one such match, so the repair moves no figure: 13 before, 13 after.
+
+    Only a WHOLE-LINE comment is skipped, which is the same test `klauseln_in` makes. A
+    trailing `--` is deliberately not cut: a `falsifier` clause can stand behind a string,
+    and splitting on `--` would drop a real one to hide a false one.
     """
     namen = set()
     for p in dateien:
-        for m in FALS.finditer(p.read_text(encoding="utf-8")):
-            namen.add(m.group(1))
+        for z in p.read_text(encoding="utf-8").splitlines():
+            if z.lstrip().startswith("--"):
+                continue
+            for m in FALS.finditer(z):
+                namen.add(m.group(1))
     return namen | {s for _n, s in erzeugt(rs_text)}
 
 
