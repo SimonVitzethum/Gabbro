@@ -1353,8 +1353,8 @@ pub const M3: &[Satz] = &[
                     two halves of one pointer declaration are held by two rules pointing \
                     different ways. **`R001` remains the only other space test** (`raum == \
                     Dma` at an `ops` carrier); `code`, `boot` and `port` are still checked by \
-                    nothing at all.
-
+                    nothing at all. \
+                    \
                     **And from 2026-08-24 to 2026-09-04 this rule fired on every NAMED space \
                     against ITSELF.** `Raum::Benannt(Ident)` derived `PartialEq` over \
                     `{ text, span }` (`ast.rs`), so two DECLARATIONS of `ptr<user, r> u8` -- \
@@ -1367,8 +1367,7 @@ pub const M3: &[Satz] = &[
                     Repaired by giving `Raum` a manual `PartialEq` that reads `Benannt` by \
                     `text` alone; probe `beispiele/68-named-space-matches-itself.gab` (pass) \
                     and `beispiele/gift/681-two-different-named-spaces-still-clash.gab` \
-                    (still refuses two DIFFERENT names), anchor \
-                    `benannter-raum-vergleicht-sich-nie`. A sweep of the whole tracked corpus \
+                    (still refuses two DIFFERENT names). A sweep of the whole tracked corpus \
                     before and after the repair changed the verdict of zero existing files.",
         stand: Satzstand::Gemessen,
         gemessen_an: "**Built 2026-08-24 from the pass register's own finding** -- *the address \
