@@ -576,7 +576,12 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 208 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 209 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *208 → 209 on 2026-09-04: `messung/KLASSEN-F03-2026-09-04.md` joined — `F03`'s eighteen
+      refusals classified by the pass that raises each (0 of 18 plumbing). **The guardian named
+      the carry before a reader did** — `pruefe-zahlen.py` said `208` against a run of `209` —
+      and the cause was measured the way this entry asks, not added: file away 209 → 208, file
+      back 208 → 209, `./instrumente/pruefe-widerruf.py` each time.*
       *201 → 202 → 205 am 2026-09-03 durch `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` — gemessen, indem die Datei entfernt und wieder hingelegt wurde, nicht addiert.*
       *__ZUM VIERTEN UND FUENFTEN MAL, UND DIESMAL HAT GIT ES GESEHEN.__ Am 2026-09-03
       zogen die GabbroV-Spur (`messung/GABBROV-AUDIT.md`) und die Erzeugerrest-Spur
