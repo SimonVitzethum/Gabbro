@@ -188,5 +188,62 @@ pass's behavior.**
 
 ## Per-finding verdicts (lane's own commits, checked against the above)
 
-_(none yet -- branch `worktree-agent-a7460ff215795e662` has produced no commits beyond
-`master` as of this writing; `git diff master -- messung/fragmente/F03.gab` confirmed EMPTY)_
+### Lane commit `8be0e40` -- "A file with ZERO checker errors that the emitter refuses BY
+### NAME -- H's criterion is wrong in the other direction too"
+
+**`git diff master -- messung/fragmente/F03.gab`: still EMPTY.** `git show --stat 8be0e40`
+touches only the new file `messung/proben/probe-queue-traverse-checks-clean-and-has-no-lowering.gab`
+(72 insertions) -- **F03.gab is not in the diff.** Protocol holds.
+
+This commit does not yet classify any of the 18 individually -- it establishes a 19th,
+separate fact: `gabbro pruefe` never shows a `C001` that `gabbro emit` does. Checked every
+claim in it independently, all hold:
+
+- **The probe file itself.** Copied it to `gabbro-gegen` on the server and ran it myself:
+  `./target/debug/gabbro pruefe qprobe.gab` -> `5 items, 0 errors, 0 hints`.
+  `./target/debug/gabbro emit qprobe.gab` -> `exit 1`,
+  `error: [C001] qprobe.gab:65:5: no lowering: \`queue\` -- «B10»: ...` -- **matches the
+  commit message verbatim.**
+- **`F03.gab` under `emit`, not just `pruefe`.** `./target/debug/gabbro emit
+  messung/fragmente/F03.gab 2>&1 | grep -c "^error:"` -> **19**, and the 19th line is
+  `error: [C001] messung/fragmente/F03.gab:185:5: no lowering: \`queue\` -- «B10»: ...` --
+  **matches exactly.** `gabbro pruefe` on the same file still reports only 18 -- confirmed,
+  `C001` is genuinely invisible to the checker run the whole task is built on.
+- **`crates/gabbro-check/src/emit.rs:8639`.** Read the whole `traverse` emit function
+  (`emit.rs:8453-8674`). `Domaene::Schlange(_) => { "..." }` is one match arm among several;
+  the arms above it (`SlotsVon`, `NachfahrenVon`, `VorfahrenVon`) contain real lowering code
+  and an early `return`, while `Schlange`, `AbbildungenVon`, `KetteIn`, `FelderVon`, `Threads`
+  all just produce a message string that falls through to one shared `weigere(absagen,
+  s.span, grund);` after the `match`. **Confirmed unconditional**: there is no branch inside
+  the `Schlange` arm on `by consuming` vs. anything else -- the commit's characterization
+  ("no arm is being withheld") is accurate.
+- **`instrumente/zaehle-pflichten.py`:326-330.** The two-line criterion is real, quoted
+  correctly (off by ~3 lines -- the `PLUMBING.`/`NOTATION.` lines are at 329/332, the
+  preceding "THE CRITERION" header a few lines above 326 -- immaterial). **Important context
+  the commit message does not spell out but I checked**: `absenkungsklasse`'s docstring
+  (`:373-393`) says this exact split was **already refuted same-day** by
+  `AUDIT-K100-2026-09-04.md` and `locker` now **defaults to `True`** (the old, undivided
+  rule) -- so today's actual `H` does NOT run through the `n == 0` branch by default. The
+  lane's probe deliberately calls `absenkungsklasse(..., locker=False)` to exercise the
+  **non-default, already-discredited** strict mode and show it is ALSO wrong, symmetrically
+  to the `AUDIT-K100` finding about the `> 0` branch. This is an honest, clearly-scoped
+  methodological point ("this is the other half of the audit"), not a claim that current `H`
+  is live-miscounting via this path -- read carefully to be sure of the distinction, and it
+  holds up.
+- **Commit `645ddca` reference.** Read it in full: 2026-09-03, a parallel lane pierced F03 by
+  REWRITING the queue-traverse loop (`by consuming` -> `by unvisited` over `elems of`, with a
+  `static mut` accumulator) to get it to emit -- rejected because the rewrite silently changed
+  the protocol (caprock's `call` drains the found receiver out of the queue at
+  `caprock-ipc/src/lib.rs:625`; the rewrite left the queue untouched). This matches what I
+  independently verified against caprock directly in my (superseded) first pass. The lane
+  cites this correctly as PRECEDENT for why `C001` at `F03.gab:185` stays open rather than
+  getting "fixed" by a rewrite -- it does not propose touching the loop itself. **No violation
+  of the untouchable-protocol concern; the citation is accurate and the file is untouched.**
+
+**Verdict on this commit: holds up under independent re-derivation, no caprock-fidelity
+argument smuggled in, F03.gab untouched, count-vs-reason distinction respected (it explicitly
+extends the AUDIT-K100 reason-not-count argument rather than reintroducing a count-based
+one).** Watching for whether the lane goes on to classify the actual 18, and for whether this
+19th fact (`C001`) gets conflated with the 18 rather than kept as separate context.
+
+_(polling continues via background monitor -- next commits will be appended below)_
