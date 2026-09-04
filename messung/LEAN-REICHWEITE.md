@@ -110,6 +110,13 @@ Why an OBLIGATION is refused by `pflichten --lean` (90): `call-site` 24, `device
 `foreign-body` 12, `quantified` 10, `table-invariant` 9, `loop` 7, `walk-invariant` 5,
 `carrier-not-a-table` 5, `no-shape-for-field` 2, `call-not-compositional` 1.
 
+> **Overtaken 2026-09-04, and the cause is upstream of this channel.** `pflichten.rs` grew
+> three collection sites -- a `transition`'s STEP, a `walk`'s `down`/`leaf`, and a
+> `table`/`group` invariant no `maintains` names -- so the register these refusals are taken
+> over is a larger one. `./instrumente/zaehle-lean.py` now reads **155** refusals of 168
+> obligations, with `device-promise` **38** and `walk-invariant` **30**. *The figures above
+> are left as the run that produced them; a measurement is dated or it is nothing.*
+
 **The eight silent reasons, and they are not one thing:**
 
 `await`, `compound-assignment`, `concurrent-statement`, `non-local-exit`, `old-state`,

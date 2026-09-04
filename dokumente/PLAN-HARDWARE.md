@@ -335,6 +335,11 @@ messung/proben/probe-stellungen.gab   s9_mappings                               
 
 `instrumente/zaehle-lean.py` books the same five under `walk-invariant`: *"owed by NOBODY."*
 
+> **The reason kept its name and widened on 2026-09-04.** It now covers three constructs --
+> a `walk` invariant, a `walk`'s `down`/`leaf`, and a `table`/`group` invariant that no
+> `maintains` names -- and reads **30** where it read 5. *The five `walk` declarations below
+> are unchanged;* what moved is how much else shares their standing.
+
 ### `W29` first: count the uses BEFORE the rule, and ask whether they go wrong the same way
 
 **The five `walk` declarations are not five page tables.**
