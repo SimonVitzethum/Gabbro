@@ -503,7 +503,7 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     //
     // **2 -> 3 am 2026-09-04, and this one is a CORRECTION, not new work.**
     // `gruppe.sperrabdruck` was booked `Entworfen` with a comment copied from the neighbouring
-    // `gruppe.ops` entry; the code it actually names (`emit.rs::StmtArt::Sperrt`, checked by
+    // `gruppe.ops` entry; the code it actually names (`emit.rs`'s `Sperrt` handler, checked by
     // `geteilt.rs::H006`) has been generated all along, and `zeugnis.rs` has said so since
     // long before this fix. See `messung/K100-VERDICT-2026-09-04.md` §2 and `schablonen.rs`
     // at the entry.

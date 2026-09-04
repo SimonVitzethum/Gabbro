@@ -877,12 +877,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         // reason genuinely applies there (no `group`-with-`ops` construct exists) but not
         // here: this entry's construct is the `locks` STATEMENT inside an ordinary function,
         // not a `group` declaration's `ops`. That statement is generated code today:
-        // `emit.rs::StmtArt::Sperrt` lowers it to the take/release pair on every path
-        // (nested, for several locks in one function), `geteilt.rs`'s `H006` recomputes the
-        // rank order at compile time, and `zeugnis.rs:271-275` books it under the enum
-        // variant for constructs the GENERATOR produces -- by that variant's own doc comment
-        // (`zeugnis.rs:63-65`), a template so booked cannot also be at the "designed, no
-        // generator code" state; "carried" is what the code already does.
+        // `emit.rs`'s handler for the `locks` statement (the `Sperrt` arm) lowers it
+        // to the take/release pair on every path (nested, for several locks in one
+        // function), `geteilt.rs`'s `H006` recomputes the rank order at compile time, and
+        // `zeugnis.rs:271-275` books it under the enum variant for constructs the
+        // GENERATOR produces -- by that variant's own doc comment (`zeugnis.rs:63-65`), a
+        // template so booked cannot also be at the "designed, no generator code" state;
+        // "carried" is what the code already does.
         stand: Stand::Getragen,
         voraussetzungen: &[
             Voraussetzung { was: "every participant takes in ascending `rank` order -- otherwise the wait graph is not in `less_than`", durch: Some("U003/U005 in the group pass, and H006 at the lock order"), braeuchte: None },
