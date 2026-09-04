@@ -390,7 +390,7 @@ EINTRAEGE = [
     ),
     (
         "dokumente/SONDENDECKUNG.md",
-        r"The other \*\*(\d+)\*\* stand in `messung/fragmente/`",
+        r"\*\*The other (\d+)\*\* stand in `messung/fragmente/`",
         ["./instrumente/pruefe-sondendeckung.py"],
         r"^\s+(\d+) probe name\(s\) outside this register",
         "Sondennamen ausserhalb des Registers",

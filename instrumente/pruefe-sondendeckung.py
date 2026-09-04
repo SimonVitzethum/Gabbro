@@ -277,7 +277,7 @@ def pruefe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, aussen):
     bn, bd = BODEN
     boden_verfehlt = n_ged * bd < n_ann * bn
 
-    # **Tooth 7: is the floor still REACHABLE?** Every row of the free class that has no
+    # **Tooth 8: is the floor still REACHABLE?** Every row of the free class that has no
     # program yet, plus what is already covered. If even that misses the floor, the corpus has
     # grown past what a bench without ring 0 and without a device can ever cover -- and the
     # answer to that is a decision about apparatus, not a smaller number here.
@@ -286,7 +286,7 @@ def pruefe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, aussen):
     unerreichbar = erreichbar * bd < n_ann * bn
     frei_falsch = FREI in bekannt and FREI_WORT not in bekannt[FREI].lower()
 
-    # **Tooth 9.** `manifest::gedeckt` decides from a CONSTANT LIST whether a probe name
+    # **Tooth 10.** `manifest::gedeckt` decides from a CONSTANT LIST whether a probe name
     # stands or is struck. A string added there raises the quota with no program written.
     liste_zuviel = sorted(set(liste) - set(progs))
     liste_zuwenig = sorted(set(progs) - set(liste))
