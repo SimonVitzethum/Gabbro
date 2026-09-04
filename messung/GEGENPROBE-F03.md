@@ -1,137 +1,192 @@
 # Gegenprobe zu F03 -- standing adversary of `worktree-agent-a7460ff215795e662`
 
-Counter-check of the lane running on branch `worktree-agent-a7460ff215795e662`. Its task:
-classify each of the 18 checker errors in `messung/fragmente/F03.gab` as **transcription
-error** (caprock says something different -- correctable) or **language gap** (the excerpt
-is faithful and Gabbro refuses -- stays). Written and committed live, one section per
-finding, as the lane's commits land.
+## REFRAME (mid-task correction from the coordinator) -- everything below the line was
+## superseded before the lane produced a single commit
 
-Ground truth: `../caprock-messbasis/crates/caprock-ipc/src/lib.rs` (867 lines, read in
-full). Baseline re-run by me, independent of the lane's tree:
+My first pass at this brief checked whether `F03.gab`'s 18 refusals were faithful
+transcriptions of `../caprock-messbasis`. **That is the wrong question and always was.**
+Fidelity to caprock is the fifth mark's question and it is already answered; `H` counts
+*hanging plumbing obligations*, and whether Gabbro's own machinery (`crates/`) can lower
+`F03` **unchanged** has nothing to do with whether the excerpt matches caprock. Correcting
+`F03.gab` would be the third instance of the SAME mistake this tree has already made twice
+(2026-09-03 rewrite; 2026-09-04's `zaehle-pflichten.py` reclassification, refuted same-day in
+`messung/AUDIT-K100-2026-09-04.md`) -- *changing the object being measured*. **The lane is
+now forbidden to touch `messung/fragmente/F03.gab` at all**, and my job is:
+
+1. `git diff master -- messung/fragmente/F03.gab` is **EMPTY at every commit** -- checked
+   first, every time.
+2. Re-derive each of the lane's verdicts from the actual pass code in `crates/` -- not from
+   caprock.
+3. Three verdicts only: **plumbing** (pass/generator repair, no new grammar, no rule
+   weakened) / **a rule decision** (Gabbro would have to stop refusing -- a previous lane may
+   already have measured that refusal as RIGHT) / **the program is wrong** (a self-contained
+   type error in `F03.gab`, not fixable by any amount of Gabbro-side work without touching the
+   frozen file).
+4. Running count of **plumbing** verdicts -- flag loudly and early if it is zero.
+5. Watch for the refuted move returning: a verdict that rests on the total ERROR COUNT rather
+   than the REASON each one fires is the same defect `AUDIT-K100-2026-09-04.md` found in
+   `zaehle-pflichten.py`.
+6. No guardian (`zaehle-pflichten.py`'s classifier especially) may be made green by changing
+   what it measures.
+
+Ground truth is now `crates/gabbro-check/src/*.rs` (the passes) and
+`messung/AUDIT-K100-2026-09-04.md` + `messung/DREI-FRAGMENTABSAGEN.md` (prior measurements on
+these exact rules) -- **not** `../caprock-messbasis`, which no longer matters for this
+question.
+
+---
+
+## Baseline (still valid): the 18, unchanged
 
 ```
 ssh ki-pc-fisch-101 'cd gabbro-gegen && export PATH=$HOME/.cargo/bin:$PATH && ./target/debug/gabbro pruefe messung/fragmente/F03.gab'
 ```
-(own server directory `gabbro-gegen`, built from `master` at `4e08b94`)
+27 items, **18 errors**, 1 hint (the `E009` hint at 158:9 is not one of the 18).
 
-Result: **27 items, 18 errors, 1 hint** -- confirmed, matches the task's premise. Full list
-of the 18, by line:
+| # | code | line:col |
+|---|---|---|
+| 1-5 | N035 | 151:21, 152:21, 153:21, 154:21, 155:21 |
+| 6 | M124 | 175:34 |
+| 7 | M140 | 194:25 (`q` arg, `TidQueue` value vs `ptr<...>TidQueue`) |
+| 8 | M124 | 197:38 |
+| 9 | M140 | 200:16 (return, `u32` vs `ptr<...>Frame`) |
+| 10 | M124 | 204:54 |
+| 11 | M140 | 204:13 (`f` arg) |
+| 12 | M140 | 205:13 (`f` arg) |
+| 13 | M101 | 208:33 (missing narrow) |
+| 14 | M143 | 210:8 (`owner_core` arity) |
+| 15 | M140 | 210:19 (`d` arg, `SchedOps`) |
+| 16 | M140 | 211:16 (return) |
+| 17 | M140 | 214:12 (return) |
+| 18 | H011 | 170:33 |
 
-| # | code | line:col | message |
-|---|---|---|---|
-| 1 | N035 | 151:21 | `fn(#1) -> ...` declares no `effects` and no `costs` |
-| 2 | N035 | 152:21 | `fn(#1) -> ...` declares no `effects` and no `costs` |
-| 3 | N035 | 153:21 | `fn(#1,#2) -> ...` declares no `effects` and no `costs` |
-| 4 | N035 | 154:21 | `fn(#1,#2,#3) -> ...` declares no `effects` and no `costs` |
-| 5 | N035 | 155:21 | `fn(#1) -> ...` declares no `effects` and no `costs` |
-| 6 | M124 | 175:34 | a reason value cannot stand here (`IpcResult::ErrQuiescing` as arg) |
-| 7 | M140 | 194:25 | argument `q` requires `ptr<...> TidQueue`, value has `TidQueue` |
-| 8 | M124 | 197:38 | a reason value cannot stand here (`IpcResult::ErrEpFull` as arg) |
-| 9 | M140 | 200:16 | return requires `ptr<...> Frame`, value has `u32` |
-| 10 | M124 | 204:54 | a reason value cannot stand here (`IpcResult::Ok` as arg) |
-| 11 | M140 | 204:13 | argument `f` requires `ptr<...> Frame`, value has `u32` |
-| 12 | M140 | 205:13 | argument `f` requires `ptr<...> Frame`, value has `u32` |
-| 13 | M101 | 208:33 | assignment requires `u32 in 0..4294967294`, value has `u32` |
-| 14 | M143 | 210:8 | `owner_core` declares 2 params, call passes 1 |
-| 15 | M140 | 210:19 | argument `d` requires `ptr<...> SchedOps`, value has `u32 in 0..4294967294` |
-| 16 | M140 | 211:16 | return requires `ptr<...> Frame`, value has `u32` |
-| 17 | M140 | 214:12 | return requires `ptr<...> Frame`, value has `u32` |
-| 18 | H011 | 170:33 | `call` declares `locks SCHEDS` but never takes it |
+## My own independent re-derivation, done BEFORE any lane commit exists to check
 
-(The `E009` at 158:9 is a **hint**, not one of the 18 errors, and is excluded.)
+Read directly, pass by pass, in `crates/gabbro-check/src/`:
 
-## Untouchable protocol -- read and confirmed BEFORE any lane commit
+### N035 x5 (#1-5) -- **rule decision, and it is already measured RIGHT**
 
-`../caprock-messbasis/crates/caprock-ipc/src/lib.rs:625-643`:
+`crates/gabbro-check/src/namen.rs:574-619` (`fnptr_traegt_seinen_vertrag`): a `fn(...)` type
+with no `effects`/`costs` is refused because `E008` needs the effect hull to be compositional
+across indirect calls and `K001` needs a cost bound for one. This is a hard requirement with a
+real soundness purpose, not a gap in coverage.
 
-```rust
-while let Some(server) = self.receivers.dequeue() {
-    let Some(sframe) = ops.frame_of(server) else {
-        continue; // toter Empfänger -> Eintrag verwerfen, nächsten versuchen
-    };
-    transfer(frame, sframe);
-    frame_set_reg(sframe, reg::SYSNO_RESULT, result::OK);
-    frame_set_reg(sframe, reg::EP_BADGE, 0);
-    self.caller = Some(caller);
-    self.reply_owner = Some(server); // dieser Server schuldet die Antwort
-    return if caprock_sched::owner_core(server) == Some(core) {
-        ops.switch_to(core, frame, server) // intra-Kern: direkt zum Server
-    } else {
-        ops.unblock(server); // anderer Kern: Server dort wecken (+IPI)
-        ops.block_current(core, frame) // Aufrufer blockiert, nächster lokaler Thread
-    };
-}
-```
+**Already measured**, not just theorized: `messung/DREI-FRAGMENTABSAGEN.md`, section "P-b --
+`N035`: der Vertrag ist Pflicht, und er wird GELESEN" (2026-08-31) ran six probes showing both
+halves (`effects`, `costs`) are read by real consumers (`K001`, `E008`), backed by three poison
+probes and three mutations in the catalogue since 2026-08-21. Verdict there: *"nichts an
+N035"* -- nothing to build, the rule stands. The fix for `F03.gab` would be adding the
+contract to the five `fn(...)` field lines themselves (`type SchedOps`, :150-156) -- a
+**rewrite** of a frozen line, forbidden regardless of the `H`/plumbing question.
+**No plumbing route exists** (the checker REFUSES, it does not merely lack an emitter arm --
+plumbing requires the checker to already accept the file, per `zaehle-pflichten.py`'s own
+docstring and `AUDIT-K100-2026-09-04.md` §1.1's own table). Weakening N035 was measured and
+explicitly rejected. **Verdict: rule decision, stands as correct, does not lower.**
 
-Confirmed: `call` drains DEAD entries (the `let-else continue`) but **returns at the first
-LIVE receiver** -- it does not drain the whole queue. Any correction that makes `call`
-(or the excerpt's `traverse ... by consuming` loop at F03.gab:185-191) behave differently
-from this is commit `645ddca` repeated, and I will stop and report immediately if I see it.
+### M124 x3 (#6, #8, #10) -- **rule decision, and it is already measured RIGHT**
 
-Note for context (not yet a finding, just read): `dokumente/FRAGMENTE.md`:673-676 (source of
-the excerpt, "«B10»") already documents that the draft's `traverse ... by consuming` form
-drains the WHOLE queue because `traverse` has no `break` -- i.e. F03.gab's own loop is
-already known, on record, to diverge from caprock's early-return here. That divergence is
-pre-existing in the frozen excerpt and is not itself one of the 18 checker errors (the
-checker does not flag it) -- but it means F03.gab is already NOT 100% behaviourally
-faithful to caprock at this one point, independent of anything the lane does. Flagged here
-so I do not mistake a correction of THIS specific gap (turning `by consuming` into an
-early-exit form) for scope creep -- it would in fact be restoring fidelity, not breaking
-the protocol, PROVIDED it still returns at the first live receiver and does not change
-`call`'s signature/effects in a way that contradicts the lock reality below.
+`crates/gabbro-check/src/m1.rs:678-699`: a `reason` value may only appear at one of four
+doors (return, match subject, same-reason comparison, argument at a parameter DECLARED as
+that reason). `set_reg`'s third parameter is declared `w: u64`, not `IpcResult`, so
+`IpcResult::ErrQuiescing`/`ErrEpFull`/`Ok` as arguments there fail all four doors.
+
+**Already measured**: `messung/DREI-FRAGMENTABSAGEN.md`, section "P-c -- `M124`" (2026-08-31).
+The candidate fix (a "number projection" letting a `reason` decay to its literal number at a
+value position) was explicitly evaluated and rejected on two independent grounds: (a) zero
+sites in the entire corpus project a reason enum onto a raw number where the corresponding
+real declaration is a plain scalar (Regel B), and (b) the frozen `reason IpcResult`'s numbers
+have ALREADY drifted from the live encoding it would be projected onto (`ErrBadCap = 2` vs
+measured `1` elsewhere) -- building the projection would silently carry a wrong number.
+Verdict there: *"M124 ist eine richtige Absage"* (a correct refusal). **No plumbing route**
+(checker refuses, not merely missing an emitter arm); the language feature that would lower
+it was deliberately not built, for a measured reason. **Verdict: rule decision, stands as
+correct, does not lower.**
+
+### M140 x7 (#7, #9, #11, #12, #15, #16, #17) -- **the program is wrong**
+
+`crates/gabbro-check/src/m1.rs:3563-3607` (`gestalt_passt`): compares the callee's DECLARED
+slot type against the value's actual type; on a shape mismatch it refuses with the message
+seen in all 7. This is a pure type-shape comparison against what the SAME FILE itself
+declares -- not an external fact.
+
+Checked each of the 7 individually, since the AUDIT-K100 report's own summary table
+(*"`frame_of` is declared `-> u32` ... used where `ptr<...>Frame` is required"*) covers only
+5 of the 7 precisely:
+- #9, #11, #12, #16, #17 (200:16, 204:13, 205:13, 211:16, 214:12): all Frame-shaped, exactly
+  as the audit describes -- `block_current`/`switch_to`/`frame_of` (extern decls, :227-241)
+  return `u32`, while `call`'s own return type (:161) and the `f` parameter type (:161, :219)
+  are `ptr<...>Frame`. Self-inconsistent within the file: the file both asserts frames are a
+  `ptr<...>Frame` (input positions) and a bare `u32` (output/return positions) for the same
+  underlying handle.
+- #7 (194:25): a DIFFERENT root cause -- `enqueue`'s extern decl (:225) takes
+  `q: ptr<...>TidQueue`, and the call site (:194) passes `e.slots[core].senders`, a bare
+  `TidQueue` value (a field read through a pointer, not itself a pointer). Gabbro's lexer has
+  no address-of operator at all (`grep -n '"&"' crates/gabbro-syntax/src/lex.rs` finds only
+  bitwise-AND) -- there is no construct ANYWHERE in the grammar to form a `ptr<...>T` from an
+  inner place of an already-pointed-to record. This makes #7 arguably closer to needing a NEW
+  grammar production than to a same-file type inconsistency -- but since "new grammar
+  production" is explicitly excluded from plumbing too, the practical verdict (does not lower
+  without either touching the file or a language change) is unaffected either way. Flagging
+  the audit's table as imprecise here, not wrong in effect.
+- #15 (210:19): also different -- this is `owner_core`'s FABRICATED first parameter
+  (`d: ptr<...>SchedOps`, extern decl :234-235) that the call site `owner_core(picked)` (:210,
+  one argument) never supplies; positional matching puts `picked` (a `u32`) into slot `d`.
+  Root cause is shared with M143 below, not with the Frame cluster.
+
+**All 7 are self-contained type errors provable from `F03.gab`'s own text against its own
+declarations** -- no fact from outside the file is needed to see the mismatch, and no pass
+change can reconcile two declarations the SAME file gives for the same handle without
+weakening `M140` (which is exactly the boundary check `m1.rs:3600-3604`'s own comment names as
+load-bearing against emitting C that will not compile). **Verdict: the program is wrong.**
+
+### M143 x1 (#14) -- **the program is wrong**
+
+`crates/gabbro-check/src/m1.rs:2287-2308`: arity is compared against `sig.parameter.len()`,
+the callee's OWN declared signature. `owner_core` is declared with 2 parameters at
+`F03.gab:234-235` and called with 1 argument at `F03.gab:210`, in the SAME FILE. This is a
+direct, provable self-contradiction -- exactly the coordinator's own worked example.
+**Verdict: the program is wrong.**
+
+### M101 x1 (#13) -- **the program is wrong**
+
+`crates/gabbro-check/src/m1.rs:3713-3727`: `q.passt_in(&z)` fails when the source range does
+not fit inside the target's. `caller` (from `current_id`, plain `u32`, full range) is assigned
+into `e.slots[core].caller`, an `option index into Threads` whose underlying range excludes
+the reserved sentinel (`0 .. 4294967294`, i.e. `u32::MAX` reserved for `None`). No `narrow`
+proves `caller != 0xffff_ffff` first. `M101`'s own stated purpose (`m1.rs:3728-3729`, "every
+operation must stay inside the range of its result type") is a core soundness rule, not a
+coverage gap -- weakening it would let a genuinely unproven range claim through.
+**Verdict: the program is wrong** (a missing `narrow`, and adding one would mean editing the
+frozen file).
+
+### H011 x1 (#18) -- **the program is wrong**
+
+`crates/gabbro-check/src/geteilt.rs:411-467`: `locks SCHEDS` in `call`'s effects list is
+redeemed only by (a) a `locks` block in the body, (b) `requires Held(SCHEDS)`, or (c) a
+callee whose own hull carries `locks SCHEDS`. None of the three holds -- `call`'s body never
+locks, declares no `Held`, and every extern callee (`set_reg`, `enqueue`, etc.) declares only
+`reads`/`writes`. **`F03.gab`'s own header (lines 82-97, already in the tree before this
+lane) agrees**: *"H011 bleibt danach stehen, und das ist der Ertrag"* (H011 remains standing,
+and that is the yield) -- the effects clause over-promises what the body does.
+**Verdict: the program is wrong**, and the file already says so about itself.
 
 ## Running count
 
-**Language gap: 0 of 18 checked so far. Transcription error: 0 of 18 checked so far.**
-(Lane has not yet landed a commit on `worktree-agent-a7460ff215795e662` as of this writing --
-branch tip is still `4e08b94`, identical to `master`. Polling continues.)
+**Plumbing: 0 of 18, by my own independent re-derivation, before any lane commit exists.**
+**Saying this loudly and early, per instruction: every one of the 18 is either a rule already
+measured RIGHT (N035, M124 -- 8 of 18) or a self-contained type error in the frozen file
+(M140, M143, M101, H011 -- 10 of 18). None requires only "a generator or pass repair" with no
+new grammar and no rule change.** This is not a surprising result by itself -- `F03` is
+refused by the CHECKER on all 18, and plumbing (by the tree's own established definition,
+`AUDIT-K100-2026-09-04.md` §1.1's table) requires the checker to already ACCEPT the file. A
+file refused 18 ways cannot have a nonzero plumbing count under that definition unless the
+lane finds a genuine checker BUG (a pass computing something wrong about what the file itself
+says, independent of caprock or of any rule's correctness) -- which I have not found in any of
+the 6 passes read above. **Watching hard for the lane to manufacture a "plumbing" verdict by
+either (a) treating an already-decided rule (N035/M124) as open again, or (b) mis-citing a
+pass's behavior.**
 
-## Preliminary independent read (mine, before seeing any lane claim)
-
-Not a verdict -- a hypothesis to test the lane's claims against:
-
-- **#1-5 (N035, SchedOps fn-pointer fields)**: `type SchedOps` mirrors a Rust `&mut dyn
-  SchedOps` trait object; Rust method signatures carry no `effects`/`costs` clause at all --
-  there is no caprock line that could settle this by disagreeing with the excerpt. Expect
-  **language gap** unless the lane finds an actual line-level mismatch (e.g. wrong arity/types
-  against the real `SchedOps` trait, which lives in `caprock-sched`, not `caprock-ipc`).
-- **#6, #8, #10 (M124, reason-as-argument)**: caprock passes `result::OK` / `result::ERR_EP_FULL`
-  etc. as plain `u64` constants into `frame_set_reg(frame, reg, value)` -- Rust has no
-  restricted-use enum matching Gabbro's `reason` doors (return/match/==). This looks
-  structural to Gabbro's type system, not a copying mistake. Expect **language gap**.
-- **#18 (H011, `locks SCHEDS` never taken)**: caprock's own module comment (lib.rs:15-16)
-  states plainly: "Die Methoden hier operieren jeweils auf einem Objekt (`&mut self`) ohne
-  eigenes Locking; das Locking + die Sperrordnung besorgt der Kernel/Dispatch." `call` itself
-  never takes a lock in caprock -- confirming the excerpt's effects clause (`locks SCHEDS`)
-  was added by whoever drafted the Gabbro version, not lifted from caprock. This is the one
-  most likely to be an honest reclassification-worthy transcription add-on -- but F03.gab's
-  own header (lines 82-97) already argues this is a real finding ABOUT the excerpt (the
-  effects clause over-promises), which is its own third thing, not cleanly either box. Watching
-  for how the lane handles this one specifically.
-- **#7, #9, #11, #12, #15, #16, #17 (M140, record/pointer and Frame/u32 mismatches)**: these
-  look like consequences of `Frame`/`RegNr` being ADDED types (F03.gab:63-72, marked
-  "ERGAENZT (2026-09-03)") that the excerpt's calls were never adjusted to match syntactically
-  (pointer vs value passing). This is not "caprock says something different" in the sense of
-  disagreeing content -- it is an internal consistency question inside the Gabbro excerpt.
-  Watching closely for whether the lane manufactures a caprock citation here that doesn't
-  actually settle anything.
-- **#13 (M101, `Some(caller)` range)**: F03.gab's own header (lines 24-27, dated before
-  2026-08-25) already calls this a "Gabbro" (i.e. language-gap-shaped) finding: the assignment
-  target's range excludes `0xffff_ffff` (`KEIN_SERVER`'s sentinel), which the *producer*
-  (`current_id`) knows nothing about narrowing away. Expect **language gap**.
-- **#14 (M143, `owner_core` arity)**: F03.gab declares `owner_core(d, t)` (2 params, line 234)
-  but calls it as `owner_core(picked)` (1 arg, line 210) -- matches the ORIGINAL excerpt in
-  `dokumente/FRAGMENTE.md`:695 verbatim (`if owner_core(picked) == core`), which is itself
-  copying caprock's `caprock_sched::owner_core(server) == Some(core)` (lib.rs:637) -- a
-  **free function taking one argument** in caprock. The extern declaration in F03.gab added a
-  `d: ptr<...> SchedOps` first parameter that has no counterpart in the real signature. This
-  smells like a genuine candidate for **transcription error**: the excerpt's own extern
-  signature (not caprock, not the call site) is what is wrong, and correcting the SIGNATURE
-  (drop the `d` parameter, since `owner_core` in caprock is a bare free function, not a method
-  on `SchedOps`) would fix it without touching the faithfully-copied call site. Priority check
-  once the lane addresses this one.
-
-## Per-finding verdicts (filled in as the lane's commits land)
+## Per-finding verdicts (lane's own commits, checked against the above)
 
 _(none yet -- branch `worktree-agent-a7460ff215795e662` has produced no commits beyond
-`master` as of this writing)_
+`master` as of this writing; `git diff master -- messung/fragmente/F03.gab` confirmed EMPTY)_
