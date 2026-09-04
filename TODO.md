@@ -164,7 +164,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ ~~83~~ **85 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ ~~76~~ ~~78~~ ~~79~~ ~~83~~ ~~85~~ **91 Kennzahlen mit Befehl** *(Stand 2026-09-02: die neunundsiebzigste bindet die Mutationszahl auf der VORDERSEITE, `README.md`, die als `340 mutations, 372 anchors` ungebunden neben dem gebundenen `TODO.md`-Eintrag stand; 78 am 2026-08-31, 76 am 2026-08-30, 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **59 von 59 Instrumenten** tragen die vier statischen (von 68 Werkzeugen). `--lauf` führt die leichten wirklich aus, mit Frist; sechs stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus *(gemessen 2026-09-03)* |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -322,7 +322,7 @@ darunter.
       ergaben 238 — *eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.* Eine
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
-      **`pruefe-zahlen.py` führt heute 85 Kennzahlen mit Befehl** und zählt daneben
+      **`pruefe-zahlen.py` führt heute 91 Kennzahlen mit Befehl** und zählt daneben
       **180 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*

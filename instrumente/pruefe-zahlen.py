@@ -335,12 +335,65 @@ EINTRAEGE = [
         r"^\s+H\s+(\d+)\s*$",
         "H in der K100-Statustafel",
     ),
+    # **`A` is a CENSUS since 2026-09-04 and no longer a gate**, so the target cell reads
+    # `~~19~~ **retired**` -- and the pattern had to move with it. *A pattern that pins a
+    # retired target keeps watching a number nobody stands behind*, and this entry would have
+    # gone silent instead of red the moment the cell changed.
     (
         "dokumente/PLAN.md",
-        r"\| `A` \| 19 \| \*\*(\d+)\*\*",
+        r"\| `A` \| ~~19~~ \*\*retired\*\* \| \*\*(\d+)\*\*",
         ["sh", "-c", "cargo run -q --bin gabbro -- annahmen beispiele/*.gab"],
         r"^-- (\d+) Annahmen",
         "A -- Annahmen mit Sonde oder Grund",
+    ),
+    # **`A_p`, the share that replaced the gate.** The figure stands twice -- in the status
+    # table and in the document that derives it -- and both are read from the same run, so a
+    # repaired probe cannot move one and leave the other.
+    (
+        "dokumente/PLAN.md",
+        r"`A_p` = \*\*(\d+)\*\* of \d+ \(falsifiable assumptions whose probe",
+        ["./instrumente/pruefe-sondendeckung.py"],
+        r"^\s+(\d+) of \d+ falsifiable assumptions carry a probe",
+        "A_p -- Annahmen mit einer Sonde als PROGRAMM",
+    ),
+    (
+        "dokumente/SONDENDECKUNG.md",
+        r"probe stands as a program\*\* \| \*\*(\d+) of \d+\*\*",
+        ["./instrumente/pruefe-sondendeckung.py"],
+        r"^\s+(\d+) of \d+ falsifiable assumptions carry a probe",
+        "A_p -- der Zaehler",
+    ),
+    # **The DENOMINATOR gets its own entry, and that is not pedantry** -- a share vouches for
+    # its denominator, not for its caption (W25). Without this line `1 of 12` would pass.
+    (
+        "dokumente/SONDENDECKUNG.md",
+        r"probe stands as a program\*\* \| \*\*\d+ of (\d+)\*\*",
+        ["./instrumente/pruefe-sondendeckung.py"],
+        r"^\s+\d+ of (\d+) falsifiable assumptions carry a probe",
+        "A_p -- der Nenner, die falsifizierbaren Annahmen",
+    ),
+    # **The class the FLOOR was derived from.** If this count moves, `1/8` is standing over a
+    # different derivation than the one written beneath it.
+    (
+        "dokumente/SONDENDECKUNG.md",
+        r"already has\*\* \| \*\*(\d+)\*\* \|",
+        ["./instrumente/pruefe-sondendeckung.py"],
+        r"^\s+(\d+) of \d+ rows are class",
+        "P4 -- die Sonden, die nur einen Uebersetzer brauchen",
+    ),
+    (
+        "dokumente/SONDENDECKUNG.md",
+        r"\*\*(\d+) orphan program is booked",
+        ["./instrumente/pruefe-sondendeckung.py"],
+        r"^\s+\d+ program\(s\) under `sonden/`, (\d+) of them named by no",
+        "Programme, die kein `falsifier` nennt",
+    ),
+    (
+        "dokumente/SONDENDECKUNG.md",
+        r"The other \*\*(\d+)\*\* stand in `messung/fragmente/`",
+        ["./instrumente/pruefe-sondendeckung.py"],
+        r"^\s+(\d+) probe name\(s\) outside this register",
+        "Sondennamen ausserhalb des Registers",
     ),
     # **The `unfalsifiable` category, and both of its ratchets.** `A = 19` against 44 can be
     # reached by writing `unfalsifiable` twenty-five times, and then the gate was emptied

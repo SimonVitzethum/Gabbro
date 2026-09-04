@@ -351,7 +351,7 @@ ssh ki-pc-fisch-101 'cd gabbro-axiom && export PATH=$HOME/.cargo/bin:$PATH && \
 
 | bucket | of 44 | what it is |
 |---|---:|---|
-| **falsifiable, probe EXISTS as a program** | **2 of 44** | `stilllegung_boot_ende_ist_unerreichbar` (`sonden/sonde_boot_unerreichbar.c`) and `release_stellt_sichtbarkeit_her` (`sonden/sonde_release_sichtbarkeit.c`). **The tool reports ONE**, and it is right to: the second assumption declares no `falsifier` at all, so no line in any `.gab` connects it to the program that would refute it. *The bar counts what a probe can do; `gabbro annahmen` counts what the source says.* |
+| **falsifiable, probe EXISTS as a program** | ~~2 of 44~~ **1 of 44** | **CORRECTED 2026-09-04, and the two was a sum over two halves that do not overlap.** `stilllegung_boot_ende_ist_unerreichbar` names `sonden/sonde_boot_unerreichbar.c` — *that is the one connection.* `sonden/sonde_release_sichtbarkeit.c` exists as a program and **no `falsifier` line anywhere names it**, so adding it made a bigger number out of a name without a program and a program without a name. **Both are the same broken connection, one end missing on either side, and both are held since today in [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md).** *The bar counts what a probe can do; `gabbro annahmen` counts what the source says — and it reports ONE.* |
 | **falsifiable, probe MISSING** | **39 of 44** | the real work — and 37 of them carry a STRUCK name today |
 | **unfalsifiable under a criterion** | **2 of 44** | `ipi_kommt_an` and `quelle_endet`, both under `U2` |
 | **not an assumption of this layer** | **1 of 44** | `eingabe_endet`, under `R3` |
@@ -466,10 +466,19 @@ true.** What has happened since is that its measurand grew:
 | | today | direction |
 |---|---:|---|
 | `A_u` — assumptions no probe can ever refute, under `U1`/`U2` | 2 of 44 | **ratchet down**: it may fall, never rise, and a rise carries its reason at the mark (`pruefe-unfalsifizierbar.py`) |
-| `A_p` — assumptions whose probe EXISTS as a program | 2 of 44 | **ratchet up**: `messung/AXIOMSCHICHT.md` §3 has it at 1 of 27 since 2026-08-21 |
+| `A_p` — assumptions whose probe EXISTS as a program | ~~2 of 44~~ **1 of 38** | **a SHARE and not a count since 2026-09-04**, with a ratchet that may not fall and a **floor of `1/8` the tree fails today** — [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md), `./instrumente/pruefe-sondendeckung.py`. *The denominator is the falsifiable half, 38 of the 44; the six unfalsifiable ones are `A_u`'s population and not this one's.* |
 
 *`A` itself stays as a census and stops being a gate.* It is a useful number — it says how much
 machine the corpus talks about — and it is not a measure of anything that can be earned.
+**Executed 2026-09-04:** `dokumente/PLAN.md` carries `~~19~~ **retired**` in the target column,
+and `dokumente/SONDENDECKUNG.md` carries `A_p` with its register, its floor and both directions
+of the broken connection.
+
+> **And the two ratchets above were NOT enough, which is the correction this section needed.**
+> They leave a third state unwatched — *falsifiable, probe missing* — and that is **37 of 38**
+> today. `A_u` does not fall when nobody writes a probe, and `A_p` as a bare count only rises
+> when somebody does. **The state the tree is actually in had no guardian**, and a share is what
+> watches it: whoever adds an assumption writes its probe or lowers the proportion visibly.
 
 **And the honest half of that:** `A_u = 2` is small because the bar is strict, not because the
 tree is clean. The 39 in bucket two are the same debt `A = 44` was pointing at; they have only
