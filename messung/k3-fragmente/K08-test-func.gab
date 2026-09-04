@@ -1,0 +1,315 @@
+-- «K3» fragment 8 of 8 -- candidate index 1491 of 1709
+--
+--   source   linux/lib/test_vmalloc.c:536-594   (Linux 7.2.0-rc7, db2ddb87143519e2)
+--   function test_func
+--   picked   by the rule in `messung/K3-AUSWAHL.md` -- the largest of the eight, 56 body
+--            lines, one line under the window's upper bound
+--
+-- **NOT MEASURED AT THE TIME OF THIS COMMIT.**
+--
+-- ## The excerpt, verbatim
+--
+--  536  static int test_func(void *private)
+--  537  {
+--  538  	struct test_driver *t = private;
+--  539  	int random_array[ARRAY_SIZE(test_case_array)];
+--  540  	int index, i, j, ret;
+--  541  	ktime_t kt;
+--  542  	u64 delta;
+--  543
+--  544  	for (i = 0; i < ARRAY_SIZE(test_case_array); i++)
+--  545  		random_array[i] = i;
+--  546
+--  547  	if (!sequential_test_order)
+--  548  		shuffle_array(random_array, ARRAY_SIZE(test_case_array));
+--  549
+--  550  	/*
+--  551  	 * Block until initialization is done.
+--  552  	 */
+--  553  	synchronize_srcu(&prepare_for_test_srcu);
+--  554
+--  555  	t->start = get_cycles();
+--  556  	for (i = 0; i < ARRAY_SIZE(test_case_array); i++) {
+--  557  		index = random_array[i];
+--  558
+--  559  		/*
+--  560  		 * Skip tests if run_test_mask has been specified.
+--  561  		 */
+--  562  		if (!((run_test_mask & (1 << index)) >> index))
+--  563  			continue;
+--  564  		kt = ktime_get();
+--  565  		for (j = 0; j < test_repeat_count; j++) {
+--  566  			ret = test_case_array[index].test_func();
+--  567
+--  568  			if (!ret)
+--  569  				t->data[index].test_passed++;
+--  570  			else if (ret && test_case_array[index].xfail)
+--  571  				t->data[index].test_xfailed++;
+--  572  			else
+--  573  				t->data[index].test_failed++;
+--  574  		}
+--  575
+--  576  		/*
+--  577  		 * Take an average time that test took.
+--  578  		 */
+--  579  		delta = (u64) ktime_us_delta(ktime_get(), kt);
+--  580  		do_div(delta, (u32) test_repeat_count);
+--  581
+--  582  		t->data[index].time = delta;
+--  583  	}
+--  584  	t->stop = get_cycles();
+--  585  	test_report_one_done();
+--  586
+--  587  	/*
+--  588  	 * Wait for the kthread_stop() call.
+--  589  	 */
+--  590  	while (!kthread_should_stop())
+--  591  		msleep(10);
+--  592
+--  593  	return 0;
+--  594  }
+--
+-- ## What this fragment cost
+--
+--   WALL   4     `void *private` and the implicit conversion on 538, the uninitialised
+--                local array on 539, `&prepare_for_test_srcu` on 553, `continue` on 563
+--   FORM   8     `ARRAY_SIZE` -> `lenof`; the two counted `for` loops; `continue`'s
+--                surroundings; `++` -> `+= 1`; `if (!ret)` -> `== 0`; the two integer
+--                casts on 579-580; `do_div` -> `/`; the `while` -> `forever` + `leave`
+--   INVENT 4     `effects`, `costs`, the `fnptr` contract, and the `bounded ... ops` /
+--                `on_exceeded` of two loops
+--
+-- ## The finding this fragment is worth keeping: `continue` inside a `traverse`
+--
+-- Gabbro has the word. `nextstmt = "next" ident ";"` (SYNTAX.md 7) -- and it takes a
+-- LABEL. `retry` and `forever` carry an optional label (`retry [ident]`,
+-- `forever [ident]`); **`traverse` carries none**, and SYNTAX.md 8 says why in another
+-- context: *"`traverse` yields no value and carries no label, so it cannot be left."*
+-- Line 563 is a `continue` in the middle of the array walk on 556, and there is nothing to
+-- name. The loop can be written; skipping a pass of it cannot.
+--
+-- *That is the same shape as the four walls above and unlike them in one way: nothing is
+-- missing from the language, only a position in one production.*
+--
+-- ## And two things landed
+--
+--   `ARRAY_SIZE(test_case_array)`  ->  `lenof(test_case_array)`, a built-in
+--   `(u64) x` / `(u32) x`          ->  `u64(x)` / `u32(x)`, because a `call` whose `path`
+--                                      names a type IS the conversion (G9)
+
+module k3::test_vmalloc {
+
+opaque type TaskStruct = u64;
+
+-- ADDED: `struct test_case_desc` (test_vmalloc.c:485-489). [INVENT 3] the `fn()` type
+--   carries a contract the C does not have and `N035` demands; both numbers are ours, and
+--   they are pure guesses -- the callees are vmalloc stress tests whose cost is the thing
+--   the harness exists to measure.
+type TestCaseDesc = {
+    test_name : ptr<normal, r> u8,
+    test_func : fn() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops,
+    xfail     : bool,
+};
+
+type TestCaseData = {
+    test_failed  : i32,
+    test_xfailed : i32,
+    test_passed  : i32,
+    time         : u64,
+};
+
+const NCASES : u32 = 13;
+
+-- test_vmalloc.c:491-506 -- thirteen entries. The initialiser names thirteen `static`
+-- functions of the same file; `&f` is Gabbro's producer of a function value, and the
+-- thirteen bodies are outside the excerpt, so they stand as `extern fn` below.
+extern fn fix_size_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn full_fit_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn long_busy_list_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn random_size_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn fix_align_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn random_size_align_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn align_shift_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn pcpu_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn kvfree_rcu_1_arg_vmalloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn kvfree_rcu_2_arg_vmalloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn vm_map_ram_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn no_block_alloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+extern fn vrealloc_test() -> i32 effects { writes vmalloc_arena } costs <= 4294967295 ops;
+
+-- ADDED: `static struct test_driver { ... } *tdriver;` (test_vmalloc.c:515-521).
+type TestDriver = {
+    task  : ptr<normal, rw> TaskStruct,
+    data  : [TestCaseData; NCASES],
+    start : u64,
+    stop  : u64,
+};
+
+-- module parameters (test_vmalloc.c). `test_repeat_count` is a DIVISOR on line 580, and
+-- M1 refuses a denominator whose range includes zero, so the range below is not just a
+-- transcription: it is what Gabbro demands before the division is writable. The C permits
+-- 0 here and divides by it.
+static mut sequential_test_order : i32 = 0;
+static mut run_test_mask         : u32 = 4294967295;
+static mut test_repeat_count     : u32 in 1 .. 4294967295 = 1;
+
+-- ADDED callees. [INVENT] every `effects` and `costs` is ours.
+extern fn shuffle_array(arr : ptr<normal, rw> i32, n : u64)
+    effects { reads arr, writes arr } costs <= 4096 ops;
+extern fn get_cycles() -> u64 effects { reads tsc } costs <= 32 ops;
+extern fn ktime_get() -> i64 effects { reads clock } costs <= 64 ops;
+extern fn ktime_us_delta(a : i64, b : i64) -> i64 effects { pure } costs <= 8 ops;
+extern fn test_report_one_done() effects { writes test_report } costs <= 64 ops;
+extern fn kthread_should_stop() -> bool effects { reads kthread_flags } costs <= 16 ops;
+extern fn msleep(ms : u32) effects { writes scheduler } costs <= 64 ops;
+
+-- ADDED: the `on_exceeded` targets. Gabbro demands a NAME for the overrun of every bounded
+-- loop; the C has no such thing, so both are ours. See INVENT 4.
+extern fn test_run_overran() effects { writes test_report } costs <= 32 ops;
+
+-- [WALL 1] the parameter. C: `static int test_func(void *private)`, and line 538 is
+--   `struct test_driver *t = private;` -- an implicit `void *` conversion, which C performs
+--   silently and Gabbro has no type for at all. What stands below takes the driver
+--   DIRECTLY, and that is not the C signature: this function is a kthread entry point, and
+--   `void *` is exactly how the kernel's thread API hands over its argument.
+--   *The wall is not `void *` here, it is the whole calling convention of `kthread_run`.*
+impl fn test_func(t : ptr<normal, rw> TestDriver) -> i32
+    effects { reads t, writes t, reads run_test_mask, reads test_repeat_count,
+              reads sequential_test_order, writes vmalloc_arena, writes test_report,
+              reads tsc, reads clock, reads kthread_flags, writes scheduler }
+    costs   <= 4294967295 ops
+{
+    -- [WALL 2] line 539: `int random_array[ARRAY_SIZE(test_case_array)];`
+    --   An uninitialised local array. `letstmt` is `"let" [mut] ident [":" typeexpr] "="
+    --   expr ";"` -- an initialiser is compulsory -- and the grammar has no array literal
+    --   at any expression position (`primary`, SYNTAX.md 4). There is no expression of
+    --   type `[i32; 13]` to write. NOTHING is put in its place, so lines 544-545, 548 and
+    --   557 have no array.
+    --
+    --   *This is not the same class as the other walls.* The other three are things the
+    --   language refuses on purpose; this one is a form nothing in the design forbids and
+    --   nothing in the grammar provides.
+
+    -- [FORM 1] lines 544-545. The C is a counted `for`; Gabbro's form over an array is a
+    --   `traverse` over `elems of`, which binds the INDEX (decided 2026-08-20). Same walk.
+    --   `ARRAY_SIZE(...)` is `lenof(...)`, a built-in.
+    --   Its subject is WALL 2.
+
+    -- [FORM 2] lines 547-548: `if (!sequential_test_order)`.
+    if sequential_test_order == 0 {
+        -- `shuffle_array(random_array, ARRAY_SIZE(test_case_array));` -- WALL 2.
+    }
+
+    -- [WALL 3] line 553: `synchronize_srcu(&prepare_for_test_srcu);`
+    --   The address of a `static`. Gabbro's `&` makes a function a value and nothing else.
+    --   NOTHING is put in its place -- and what is lost is the barrier this function opens
+    --   with: it blocks until the harness is initialised.
+    --
+    --   *Gabbro has `rcu D protects { ... }` and `observes D { ... }`, built out of «K2»'s
+    --   own RCU finding. Neither is this: `synchronize_srcu` is the WRITER side waiting out
+    --   a grace period, and SYNTAX.md 11 says of the grace period that it is an ASSUMPTION
+    --   with a falsifier and not a check. There is no statement form for it.*
+
+    -- line 555
+    t->start = get_cycles();
+
+    -- [FORM 3] lines 556-583. The array walk. Its subject `random_array` is WALL 2, so
+    --   what stands here walks the CASE TABLE instead, which is the same length and the
+    --   same thirteen indices in a different order -- **and that is a change to what the
+    --   program does, not a rendering of it.** It is written out rather than dropped
+    --   because everything inside the body is measurable and none of it depends on the
+    --   order.
+    traverse i over elems of test_case_array by unvisited {
+        -- line 557: `index = random_array[i];` -- WALL 2. Here `i` stands in for it.
+        let index = i;
+
+        -- [WALL 4] lines 562-563:
+        --     if (!((run_test_mask & (1 << index)) >> index))
+        --             continue;
+        --   The CONDITION is writable and stands below. `continue` is not: Gabbro's word
+        --   for it is `next <label>` and `traverse` carries no label
+        --   (`traverse = "traverse" ident [ "of" expr ] "over" domain "by" ...` --
+        --   there is no position for one). NOTHING is put in its place, so the body below
+        --   is nested inside the condition instead of guarded by it -- **the same
+        --   computation, and a different program text.**
+        if ((run_test_mask & (1 << index)) >> index) != 0 {
+            -- line 564
+            let kt = ktime_get();
+
+            -- [FORM 4] lines 565-574. A counted `for` with a RUN-TIME bound and no domain
+            --   to walk. Gabbro's three loop forms are `traverse` (over a domain), `retry`
+            --   (until a predicate, bounded) and `forever`; a plain counted loop is none of
+            --   them, and `retry ... until` is the nearest.
+            --   [INVENT 4] `bounded 4294967295 ops` is a COST bound, not an iteration
+            --   count -- two different quantities -- and `on_exceeded` names a function the
+            --   C does not have. Both numbers and the name are ours.
+            let mut j : u32 = 0;
+            retry repeat_pass until j >= test_repeat_count
+                bounded 4294967295 ops
+                on_exceeded test_run_overran
+            {
+                -- line 566: a call through a function-pointer field. `call` takes a
+                -- `place`, so this is writable as written («B8», 2026-08-21).
+                let ret = test_case_array[index].test_func();
+
+                -- [FORM 5] lines 568-573. `if (!ret)`, `ret &&` -- C's integer truth,
+                --   written out; `++` -> `+= 1`.
+                if ret == 0 {
+                    t->data[index].test_passed += 1;
+                } else if ret != 0 && test_case_array[index].xfail {
+                    t->data[index].test_xfailed += 1;
+                } else {
+                    t->data[index].test_failed += 1;
+                }
+
+                j += 1;
+            }
+
+            -- [FORM 6] line 579: `(u64) ktime_us_delta(ktime_get(), kt)`.
+            --   A `call` whose `path` names a type IS the conversion (G9), so C's cast
+            --   syntax has a Gabbro spelling and it is this one.
+            let mut delta = u64(ktime_us_delta(ktime_get(), kt));
+
+            -- [FORM 7] line 580: `do_div(delta, (u32) test_repeat_count);`
+            --   `do_div` assigns the quotient to its first argument in place and evaluates
+            --   to the remainder; the remainder is discarded here, so the statement IS a
+            --   division and an assignment. What Gabbro adds is the demand that the
+            --   denominator's range exclude zero -- see the declaration of
+            --   `test_repeat_count` above.
+            delta = delta / u64(test_repeat_count);
+
+            -- line 582
+            t->data[index].time = delta;
+        }
+    }
+
+    -- lines 584-585
+    t->stop = get_cycles();
+    test_report_one_done();
+
+    -- [FORM 8] lines 590-591: `while (!kthread_should_stop()) msleep(10);`
+    --   Gabbro has no `while`. `forever` is its form for a loop that is meant to run until
+    --   something outside ends it, and `leave <mark>` is its exit -- the correction of
+    --   «B11», 2026-08-20.
+    --   [INVENT 4, continued] `per_pass bounded` and `on_exceeded` are compulsory and the
+    --   C has neither.
+    --   **`progress` is deliberately NOT written.** It is the clause that would name WHO
+    --   ends this loop -- `kthread_stop()` from another thread -- and it demands an
+    --   assumption with a falsifier, i.e. a probe program. That is beyond a transcription
+    --   of these two lines, and inventing one would put a claim into the artefact that
+    --   nobody measured.
+    forever waiting
+        per_pass bounded 4096 ops
+        on_exceeded test_run_overran
+        effects { reads kthread_flags, writes scheduler }
+    {
+        if kthread_should_stop() {
+            leave waiting;
+        }
+        msleep(10);
+    }
+
+    return 0;
+}
+
+}
