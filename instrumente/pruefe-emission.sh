@@ -2712,7 +2712,13 @@ fi
 # conversion `SYNTAX.md` had promised since it dropped the `cast` production and nobody had
 # built. *Both emit and compile.* The object grew because a corpus nobody had looked at
 # reached parts of the language our own never touched.
-MARKE_EMIT=69
+# **69 -> 70 on 2026-09-05, and the object grew by the file that shows the collision gone.**
+# `beispiele/70-kernel-namen.gab` writes the eight identifiers «K3» found the kernel using --
+# `node`, `old`, `next`, `progress`, `release`, `stack`, `index`, `to` -- plus the nine
+# heaviest colliding words of the whole foreign measurement, as parameters, locals, a record's
+# field names, a named type, an assignment target and a loop label. Until 2026-09-05 not one
+# line of it was writable. *It emits and compiles.*
+MARKE_EMIT=70
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

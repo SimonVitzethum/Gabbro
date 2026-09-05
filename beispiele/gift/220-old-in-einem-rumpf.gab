@@ -1,14 +1,25 @@
--- erwartet: C001
--- **`old(place)` gehoert in ein `ensures` -- und kein Pass haelt die Zeile.**
+-- erwartet: K003
+-- **`old(place)` gehoert in ein `ensures`, und seit dem 2026-09-05 haelt der PRUEFER die
+-- Zeile.**
 --
--- `SPRACHE.md` §6 sagt es ausdruecklich: *„`old(place)` only in `ensures`."* Ein Rumpf darf
--- es trotzdem schreiben, `gabbro pruefe` meldet **0 Fehler und 0 Hinweise**, und erst der
--- Erzeuger faellt.
+-- Bis dahin stand hier `-- erwartet: C001` und darunter dieser Satz: *„`SPRACHE.md` §6 sagt
+-- es ausdruecklich: `old(place)` only in `ensures`. Ein Rumpf darf es trotzdem schreiben,
+-- `gabbro pruefe` meldet 0 Fehler und 0 Hinweise, und erst der Erzeuger faellt. Dieselbe
+-- Klasse wie das `!` vor dem 2026-08-20 -- der Unterschied ist, dass beim `!` die Sprache
+-- recht hatte und der Erzeuger fehlte; hier hat der Erzeuger recht und der Pruefer fehlt."*
 --
--- **Dieselbe Klasse wie das `!` vor dem 2026-08-20:** eine Regel, die nur auf der
--- Erzeugerflaeche steht -- und die beruehren die meisten Programme nie. *Der Unterschied ist,
--- dass beim `!` die Sprache recht hatte und der Erzeuger fehlte; hier hat der Erzeuger recht
--- und der Pruefer fehlt.*
+-- **Der Pruefer fehlt nicht mehr, und zwar als NEBENWIRKUNG einer Aenderung, die etwas
+-- anderes wollte.** `old` ist ein Wort nur noch dort, wo ein Vertrag gelesen wird
+-- (`parse.rs::im_vertrag`) -- weil `old` in `lib/`+`kernel/`+`mm/`+Caprock an **118 Stellen**
+-- ein Name ist, den ein Programmierer gewaehlt hat, und «K3» ihn in `K02` als
+-- `hlist_move_list(struct hlist_head *old, …)` mitgebracht hat. In einem RUMPF ist `old`
+-- damit ein gewoehnlicher Bezeichner, `old(...)` ein Ruf an einen Namen, den niemand
+-- deklariert hat -- und **das** sagen `K003` und `E009`, drei Paesse vor dem Erzeuger.
+--
+-- *Die Luecke, die diese Probe gebucht hat, ist geschlossen; die Probe bleibt und prueft
+-- jetzt die Absage, die an ihre Stelle getreten ist.* Der Erzeugerzweig fuer `old(place)`
+-- ausserhalb eines `exchange` steht weiter in `emit.rs` -- was ihn erreicht, sagt
+-- `messung/WORTSTELLUNG.md` §6.
 --
 -- Gefunden 2026-08-20 beim Nachziehen einer Testzusicherung, die vorher am `!` hing.
 

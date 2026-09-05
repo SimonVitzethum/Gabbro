@@ -112,6 +112,53 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
 **Everything else is an identifier.** A new word is a language change and needs an
 entry here.
 
+### And a word of the table is a keyword only where the grammar EXPECTS one
+
+**Set 2026-09-05, `messung/WORTSTELLUNG.md`.** Until then the sentence above had a second
+half — *a word of the table is an identifier nowhere* — and «K3» measured what that costs
+against code nobody wrote for Gabbro: over 585 foreign files (Linux `lib/`, `kernel/`+`mm/`,
+Caprock) **105 of these 221 words are somewhere a name a programmer chose**, and `P002` fired
+in six of the eight «K3» excerpts, every time on an identifier the kernel itself wrote
+(`node`, `old`, `next`, `progress`, `release`, `stack`, `index`). A reader refusal stops the
+body from parsing, so the collision did not cost seven diagnostics — it hid every later one
+in six files.
+
+> **At every position where the grammar writes `ident`, every word of this table is a name.**
+
+Three positions in the grammar admit both a keyword production and a name, and each is
+decided by the grammar and not by a list:
+
+1. **the head of a `stmt`** — the thirteen forms below open with a word, and a place may
+   stand there too. One token separates them: a word followed by `=` `+=` `-=` `&=` `|=` `.`
+   `->` `[` `::` is a **place**, because no keyword statement may continue that way. `(` is
+   deliberately not in that set — `if (x) { … }`, `match (x) { … }` and `return (a);` are
+   written that way, so a bare CALL through a function named like a statement head is the one
+   form this costs;
+2. **`old` and `result`** — they name something only a promise has, so they are words inside
+   a contract clause (`requires`, `ensures`, a `spec fn` body, a loop `invariant`, a `table`
+   `invariant`, the `when` of an `exchange`, an `axiom`'s precondition, a `check`'s `floor`)
+   and names everywhere else;
+3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm, so
+   `option`, `ptr` and `mmio` are still not the NAME of a type or of an address space. They
+   stay ordinary variable names.
+
+**Seventeen of the 221 are still not names, on two measured grounds**, and every one of them
+has **zero** declarator sites in those 585 foreign files:
+
+```
+  Ausdruck   sizeof lenof aligned forall exists true false Self Some None
+  C-Name     const static extern if else return bool
+```
+
+The first ten head a primary expression or a predicate atom unconditionally, so a variable of
+that name could be bound and never read back. The second seven break the **emitted C** as an
+ordinary local — measured with `cc -std=c11 -Wall -Wextra -Werror` over one file per
+candidate, and they are exactly the seven `crates/gabbro-check/src/cnamen.rs` leaves out of
+its own tables on the grounds that this table refuses them.
+
+*`crates/gabbro-syntax/tests/wortschatz.rs` binds all 221 as a parameter and as a local and
+requires clean exactly for the 204 — the list above is a measurement, not a claim.*
+
 ---
 
 ## Lexis

@@ -323,7 +323,7 @@ darunter.
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
       **`pruefe-zahlen.py` führt heute 91 Kennzahlen mit Befehl** und zählt daneben
-      **180 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
+      **181 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
       **Die Zahl ist von ~~145~~ auf 180 GESTIEGEN, und beide Schritte sind Korrekturen und
@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 218 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 221 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *214 → 215 on 2026-09-04: `messung/K100-TWO-QUESTIONS-2026-09-04.md` joined — `K100`
       asked as two questions, the 37 «K3» walls sorted into three registers (25 refused by a
       written decision, 6 undecided, 6 that a probe dissolves) and the obligation ratio
@@ -915,7 +915,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute ~~3299~~ ~~3303~~ **3324 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**. *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute ~~3299~~ ~~3303~~ ~~3324~~ **3328 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**. *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
@@ -1336,6 +1336,24 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       im Register und wird bei jedem Lauf neu abgeleitet.*
 
 ### Checker and generator
+
+- [ ] **`N041` fragt `cnamen.rs` nur nach ITEM-Namen — ein lokaler Name wird nie gefragt, und
+      `let int = 1;` erzeugt C, das `cc` nicht uebersetzt** (gemessen 2026-09-05, gefunden
+      beim Wortstellungswechsel und AELTER als er). `gabbro pruefe` meldet dazu **0 Fehler**,
+      und der Erzeuger schreibt `uint32_t int = 1;` heraus.
+      Gemessen mit derselben Methode wie `messung/C-NAMEN.md` — eine Datei je Kandidat, die
+      vier Kopfdateien jeder erzeugten Einheit, `uint32_t <name> = 1; return <name>;` durch
+      `cc -std=c11 -O0 -Wall -Wextra -Werror`:
+      | Tabelle | Namen | zerbrechen als LOKALE |
+      |---|---:|---:|
+      | `C11_WORT` | 37 | **37** |
+      | `HEADER` | 366 | **77** (jeder davon ein objektartiges Makro) |
+      | `EINGEBAUT` | 155 | **0** — eine Funktion zu verdecken uebersetzt |
+      **114 Namen, und keiner davon ist ein Wort des Wortschatzes** — der Wortstellungswechsel
+      hat das Loch also weder gemacht noch vergroessert: die sieben Woerter, die es getroffen
+      haette (`const static extern if else return bool`), bleiben genau deshalb reserviert
+      (`messung/WORTSTELLUNG.md` §5). *Was fehlt, ist die Frage an der Bindungsstelle, und die
+      Klasse ist nicht `Klasse::Wort` allein: `bool` und `NAN` stehen in der Kopftabelle.*
 
 - [ ] **SECHS Erzeugerfehler stehen offen, gemessen 2026-09-02 von
       [`instrumente/fuzze-erzeuger.py`](instrumente/fuzze-erzeuger.py), Zahlen und Reproduktion
@@ -3206,7 +3224,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**115 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**116 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den

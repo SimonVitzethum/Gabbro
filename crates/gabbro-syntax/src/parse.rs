@@ -5,15 +5,41 @@
 //! the grammar leaves it optional, it leaves the field empty and hands the obligation to the
 //! pass that knows it. It invents no default -- E3: nothing is implicit.
 //!
-//! **Two places where a word of the vocabulary may be a name after all**, both unambiguous
-//! from the grammar:
+//! **A word of the vocabulary is a keyword only where the grammar EXPECTS one** (2026-09-05,
+//! `messung/WORTSTELLUNG.md`). Where the grammar expects a NAME, every word of the table is
+//! a name -- `let node = …`, `fn f(index : u32)`, `next = 0;` all read.
 //!
-//! 1. **after `.` and `->`** (`placesuffix = "." ident`): no keyword can stand there, so none
-//!    can be confused -- `c.slots[s]` is written that way in `FRAGMENTE.md`;
-//! 2. **as a declared field name** in `field`/`slotdecl`, where the name is followed by `:`.
+//! Until 2026-09-05 the rule was the opposite one: a word of the table was an identifier
+//! nowhere, with two exceptions (after `.`/`->`, and as a declared field name). **«K3»
+//! measured what that costs against code nobody wrote for Gabbro**: `P002` fired in six of
+//! eight excerpts transcribed from Linux `lib/*.c`, every time on an identifier the kernel
+//! itself wrote (`node`, `old`, `next`, `progress`, `release`, `stack`, `index`), and the
+//! refusal stopped the body from parsing, so everything behind it was invisible.
 //!
-//! Everywhere else the closed vocabulary holds: `let slot = …` is not an identifier, and the
-//! refusal says so with the word and the site.
+//! **The change is small because the parser was already written keyword-first.** At every
+//! decision point the keyword arms are tried before the identifier path, so admitting a word
+//! at an identifier position cannot steal an existing production -- it can only turn a
+//! refusal into a parse. Three places needed real work, and they are the three where a
+//! keyword production and a name genuinely compete:
+//!
+//! 1. **the head of a statement** -- `next` opens `next <label>;` and is also an ordinary
+//!    place. One token decides: a word followed by `=`, `+=`, `-=`, `&=`, `|=`, `.`, `->`,
+//!    `[` or `::` is a place, because no keyword form of any statement may continue that
+//!    way (`ist_ortfortsetzung`);
+//! 2. **`old` and `result`** -- they name something only a contract has, so they are words
+//!    inside a contract clause and names everywhere else (`im_vertrag`);
+//! 3. **a named type and a named address space** -- there the keyword arms stand above the
+//!    name arm, so `option`, `ptr` and `mmio` are still not the NAME of a type or a space.
+//!    They remain ordinary variable names.
+//!
+//! What is left reserved is **seventeen words of 221**, on two measured grounds: ten head a
+//! primary expression or a predicate unconditionally (`Some`, `None`, `true`, `false`,
+//! `Self`, `sizeof`, `lenof`, `aligned`, `forall`, `exists`), and seven break the emitted C
+//! as an ordinary local (`const`, `static`, `extern`, `if`, `else`, `return`, `bool`). Every
+//! one of the seventeen has **zero** declarator sites over the 585 foreign files, so the
+//! residue costs the collision nothing. `tests/wortschatz.rs` holds that set against the
+//! parser word by word, so the `res` column of `kw.rs` cannot drift away from what the
+//! reader does.
 
 use crate::ast::*;
 use crate::diag::{Absage, Absagen};
@@ -42,6 +68,21 @@ pub struct Parser<'a> {
     /// place suffix -- the place before it may carry one. Without this rule `FRAGMENTE.md`'s
     /// `transition drv { DEVICE_STATUS: ACK -> ACK | DRIVER }` is unreadable.
     pfeil_ist_suffix: bool,
+    /// **Inside a contract clause -- the region in which `old` and `result` are words.**
+    ///
+    /// Both name something that exists only in a promise: `result` is the return value of
+    /// the surrounding function, `old(p)` the value a place had at entry. In a BODY neither
+    /// has a referent, and the emitter refuses one by name -- *"a contract is checked at
+    /// compile time (W6). There is no run time object for it"*. Before 2026-09-05 the
+    /// reader took both words everywhere, so `int old` and `int result` -- the fourth and
+    /// eleventh most frequent colliding names in `lib/` + `kernel/` + `mm/`, 118 and 81
+    /// declarator sites -- were unwritable, and `let result = a; return result;` parsed into
+    /// a function returning ITSELF with `0 errors` from `gabbro pruefe`.
+    ///
+    /// *A silently accepted program is worse than a refused one*, and both defects have the
+    /// same cure: the two words are words where a contract is being read and names
+    /// everywhere else. `messung/WORTSTELLUNG.md` §4.
+    im_vertrag: bool,
     /// **Die Schachtelungstiefe — seit 2026-08-19, weil der Parser sonst STIRBT.**
     ///
     /// Gemessen: `return ((((…1…))));` mit **5000** Klammern ergab
@@ -94,6 +135,7 @@ pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
         absagen,
         stumm: 0,
         pfeil_ist_suffix: true,
+        im_vertrag: false,
         tiefe: 0,
     };
     p.programm()
@@ -224,6 +266,42 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// **The one token that tells a keyword statement from a place named like one.**
+    ///
+    /// `next = 0;` and `next runde;` both begin with `next`, and `next` is the seventh most
+    /// frequent colliding name in the foreign corpora (246 declarator sites over
+    /// `lib/`+`kernel/`+`mm/`+Caprock). The two are told apart without any lookahead beyond
+    /// the token after the word, because **no keyword statement may continue with one of
+    /// these**: every one of the thirteen is followed by a name, a word, `{`, `(`, a number
+    /// or `;`. A place, by contrast, continues with exactly this set.
+    ///
+    /// `(` is deliberately NOT in it -- `if (x) { … }`, `match (x) { … }` and `return (a);`
+    /// are written that way, so a bare CALL through a function named like a statement head
+    /// (`next(x);`) stays unwritable. *That is the whole residue of this rule, and it is one
+    /// form of one word, not a class.*
+    fn ist_ortfortsetzung(z: Z) -> bool {
+        matches!(
+            z,
+            Z::Gleich
+                | Z::PlusGleich
+                | Z::MinusGleich
+                | Z::UndGleich
+                | Z::StrichGleich
+                | Z::Punkt
+                | Z::Pfeil
+                | Z::EckAuf
+                | Z::Kolon2
+        )
+    }
+
+    /// Does the word at the cursor open its keyword statement, or is it a place?
+    fn wort_ist_anweisungskopf(&self) -> bool {
+        match self.blick_n(1).art {
+            Art::Zeichen(z) => !Self::ist_ortfortsetzung(z),
+            _ => true,
+        }
+    }
+
     fn erwarte_kw(&mut self, k: Kw) -> Erg<Span> {
         if self.ist_kw(k) {
             Ok(self.vor().span)
@@ -239,7 +317,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// A free identifier. A word of the vocabulary is **not** a name here.
+    /// A free identifier. **Every word of the vocabulary is one**, except the handful that
+    /// `kw.rs` still marks `res` -- see the head of this file.
     fn erwarte_ident(&mut self) -> Erg<Ident> {
         let t = self.blick();
         if t.art == Art::Ident && t.text(self.quelle) == "_" {
@@ -261,7 +340,7 @@ impl<'a> Parser<'a> {
                     span: t.span,
                 })
             }
-            // Single-letter words (`r`, `w`, `x`) are contextual -- see kw.rs.
+            // A contextual word IS a name here -- see kw.rs.
             Art::Wort(k) if !k.reserviert() => {
                 self.pos += 1;
                 Ok(Ident {
@@ -269,22 +348,36 @@ impl<'a> Parser<'a> {
                     span: t.span,
                 })
             }
+            // **The seventeen that are still not names, and the refusal says WHICH reason
+            // this one has.** Every other word of the table takes the arm above. See
+            // `kw.rs`: ten head an expression or a predicate unconditionally, seven break
+            // the emitted C as an ordinary local -- and every one of the seventeen is
+            // measured at zero declarator sites over 585 foreign files.
             Art::Wort(k) => {
-                let mut a = Absage::fehler(
-                    "P002",
-                    t.span,
-                    format!("`{}` is a word of the vocabulary, not an identifier", k),
-                )
-                .mit_notiz(
-                    "SYNTAX.md: the vocabulary is a closed table -- \
-                     everything else is an identifier",
+                let grund = if matches!(
+                    k,
+                    Kw::Const | Kw::Static | Kw::Extern | Kw::If | Kw::Else | Kw::Return | Kw::Bool
+                ) {
+                    "C has this name too, and the lowering writes a name unchanged: \
+                     `uint32_t <name> = …;` does not compile with it"
+                } else {
+                    "it BEGINS an expression or a predicate, so a variable of this name \
+                     could be bound and never read back"
+                };
+                self.absage(
+                    Absage::fehler(
+                        "P002",
+                        t.span,
+                        format!("`{k}` is a word of the vocabulary, not an identifier"),
+                    )
+                    .mit_notiz(grund)
+                    .mit_notiz(
+                        "seventeen words of the 221 are not names, and only these: \
+                         `sizeof` `lenof` `aligned` `forall` `exists` `true` `false` \
+                         `Self` `Some` `None` `const` `static` `extern` `if` `else` \
+                         `return` `bool` -- every other word of the table is an ordinary name",
+                    ),
                 );
-                // **M-woerter:** the decision was "rename rather than soften". So the burden
-                // does not land on the writer, the compiler names the replacement.
-                if let Some(v) = crate::kw::ersatzvorschlag(k) {
-                    a = a.mit_notiz(format!("stattdessen: `{v}`"));
-                }
-                self.absage(a);
                 Err(Abbruch)
             }
             _ => {
@@ -853,7 +946,13 @@ impl<'a> Parser<'a> {
                     optional,
                 })
             }
-            Art::Ident => Ok(TypExpr::Pfad(self.pfad()?)),
+            // **A named type may be spelled with a word of the table.** Every arm that heads
+            // a type stands above this one, so `ptr`, `option` and `u32` are still not the
+            // NAME of a type -- and `type count = u32;` and `x : count` now say the same
+            // thing, which before 2026-09-05 they could not: the declaration went through
+            // `erwarte_ident` and the use through this arm, and only one of the two saw a
+            // word. *A name that can be declared and not used is the worse of the two holes.*
+            Art::Ident | Art::Wort(_) => Ok(TypExpr::Pfad(self.pfad()?)),
             _ => {
                 let gefunden = t.benennung(self.quelle);
                 self.absage(Absage::fehler(
@@ -941,7 +1040,13 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Code) => Raum::Code,
             Art::Wort(Kw::Boot) => Raum::Boot,
             Art::Wort(Kw::Port) => Raum::Port,
-            Art::Ident => return Ok(Raum::Benannt(self.erwarte_ident()?)),
+            // **A named space may be spelled with a word of the table.** The six arms above
+            // stand in front of this one, so `mmio` is still not the NAME of a space -- but
+            // `ptr<user, r> u8` and `ptr<count, r> u8` both read, and a name has to be
+            // usable wherever the grammar asks for one. Without this line the reader would
+            // accept `type count = u32;` at the declaration and refuse `x : count` at the
+            // use, which is worse than refusing both.
+            Art::Ident | Art::Wort(_) => return Ok(Raum::Benannt(self.erwarte_ident()?)),
             _ => {
                 let gefunden = t.benennung(self.quelle);
                 self.absage(
@@ -1032,12 +1137,12 @@ impl<'a> Parser<'a> {
             None
         };
         let requires = if self.friss_kw(Kw::Requires) {
-            self.predlist()?
+            self.vertrag(|s| s.predlist())?
         } else {
             Vec::new()
         };
         let ensures = if self.friss_kw(Kw::Ensures) {
-            self.predlist()?
+            self.vertrag(|s| s.predlist())?
         } else {
             Vec::new()
         };
@@ -1251,7 +1356,10 @@ impl<'a> Parser<'a> {
     fn fnptr_params(&mut self) -> Erg<Vec<FnZeigerParam>> {
         let mut liste = Vec::new();
         loop {
-            let benannt = self.blick().art == Art::Ident
+            // The `:` decides, and a word of the table is a name here like any other: the
+            // named form is `<name> ":" typeexpr`, the unnamed one a bare `typeexpr`, and a
+            // `typeexpr` never carries a `:` at its second token.
+            let benannt = matches!(self.blick().art, Art::Ident | Art::Wort(_))
                 && self.blick_n(1).art == Art::Zeichen(Z::Kolon);
             let name = if benannt {
                 let n = self.erwarte_ident()?;
@@ -1589,14 +1697,18 @@ impl<'a> Parser<'a> {
                     span: t.span,
                 })
             }
-            Art::Wort(Kw::Result) => {
+            // **`result` and `old` are words INSIDE a contract and names outside one.** See
+            // `Parser::im_vertrag`. Outside, both fall through to the identifier arm at the
+            // bottom, so `let result = a; return result;` returns the local -- which before
+            // 2026-09-05 returned the FUNCTION'S OWN return value, with `0 errors`.
+            Art::Wort(Kw::Result) if self.im_vertrag => {
                 self.pos += 1;
                 Ok(Expr {
                     art: ExprArt::Ergebnis,
                     span: t.span,
                 })
             }
-            Art::Wort(Kw::Old) => {
+            Art::Wort(Kw::Old) if self.im_vertrag => {
                 self.pos += 1;
                 self.erwarte_z(Z::RundAuf)?;
                 let ort = self.place()?;
@@ -2046,6 +2158,19 @@ impl<'a> Parser<'a> {
         self.tiefer(|p| p.orpred())
     }
 
+    /// Read `f` as a CONTRACT: inside it `old` and `result` are words, outside they are
+    /// names. The seven callers are every place the grammar puts a promise -- the `requires`
+    /// / `ensures` of a `fn` and of an `fn` pointer, the body of a `spec fn`, a loop
+    /// invariant, a `table` invariant, the `when` of an `exchange`, an `axiom`'s
+    /// precondition and a `check`'s `floor`.
+    fn vertrag<T>(&mut self, f: impl FnOnce(&mut Self) -> Erg<T>) -> Erg<T> {
+        let alt = self.im_vertrag;
+        self.im_vertrag = true;
+        let r = f(self);
+        self.im_vertrag = alt;
+        r
+    }
+
     fn orpred(&mut self) -> Erg<Pred> {
         let mut links = self.andpred()?;
         while self.friss_z(Z::StrichStrich) {
@@ -2330,12 +2455,12 @@ impl<'a> Parser<'a> {
         // E4: the clauses stand in a FIXED order -- a tool that has to sort cannot say
         // "`effects` is missing here".
         let requires = if self.friss_kw(Kw::Requires) {
-            self.predlist()?
+            self.vertrag(|s| s.predlist())?
         } else {
             Vec::new()
         };
         let ensures = if self.friss_kw(Kw::Ensures) {
-            self.predlist()?
+            self.vertrag(|s| s.predlist())?
         } else {
             Vec::new()
         };
@@ -2431,7 +2556,7 @@ impl<'a> Parser<'a> {
                 self.erwarte_z(Z::Semi)?;
                 FnRumpf::Asm(a)
             } else {
-                let p = self.pred()?;
+                let p = self.vertrag(|s| s.pred())?;
                 self.erwarte_z(Z::Semi)?;
                 FnRumpf::Pred(p)
             }
@@ -2681,7 +2806,16 @@ impl<'a> Parser<'a> {
                 return Err(Abbruch);
             }
         }
-        let art = match self.blick().art {
+        // **The thirteen statement heads are words HERE and places one token later.** See
+        // `ist_ortfortsetzung`: `match = 1;` assigns to a variable called `match`, and
+        // `match s { … }` is the form. Without this line every one of the thirteen would be
+        // a name a user has to avoid, and `next` alone carries 246 foreign declarator sites.
+        let kopf = if self.wort_ist_anweisungskopf() {
+            self.blick().art
+        } else {
+            Art::Ident
+        };
+        let art = match kopf {
             Art::Wort(Kw::Let) => self.letform()?,
             Art::Wort(Kw::If) => StmtArt::Wenn(self.ifstmt()?),
             Art::Wort(Kw::Match) => StmtArt::Match(self.matchstmt()?),
@@ -2901,7 +3035,7 @@ impl<'a> Parser<'a> {
         } else {
             let wert = self.expr()?;
             self.erwarte_kw(Kw::When)?;
-            let bedingung = self.pred()?;
+            let bedingung = self.vertrag(|s| s.pred())?;
             self.erwarte_kw(Kw::Returns)?;
             let ergebnis = self.erwarte_ident()?;
             Ok(XForm::Vergleich {
@@ -3148,7 +3282,7 @@ impl<'a> Parser<'a> {
     /// passes.
     fn schleifeninvariante(&mut self) -> Erg<Option<Pred>> {
         if self.friss_kw(Kw::Invariant) {
-            Ok(Some(self.pred()?))
+            Ok(Some(self.vertrag(|s| s.pred())?))
         } else {
             Ok(None)
         }
@@ -3478,7 +3612,7 @@ impl<'a> Parser<'a> {
             Vec::new()
         };
         self.erwarte_z(Z::Kolon)?;
-        let pred = self.pred()?;
+        let pred = self.vertrag(|s| s.pred())?;
         self.erwarte_z(Z::Semi)?;
         Ok(Invariante {
             name,
@@ -4198,7 +4332,7 @@ impl<'a> Parser<'a> {
         };
         let mut requires = Vec::new();
         while self.friss_kw(Kw::Requires) {
-            requires.push(self.pred()?);
+            requires.push(self.vertrag(|s| s.pred())?);
         }
         let effects = self.effects_block()?;
         let klasse = self.annahmeklasse()?;
@@ -4229,7 +4363,7 @@ impl<'a> Parser<'a> {
         self.erwarte_kw(Kw::CanFail)?;
         let can_fail = self.block()?;
         let floor = if self.friss_kw(Kw::Floor) {
-            self.predlist()?
+            self.vertrag(|s| s.predlist())?
         } else {
             Vec::new()
         };

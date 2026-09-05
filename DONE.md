@@ -10,6 +10,121 @@
 
 ---
 
+## A user does not have to rename their variables any more — 212 reserved words became 17 *(2026-09-05)*
+
+**«K3» produced 0 of 8, and `P002` fired in six of the eight excerpts on identifiers the Linux
+kernel itself wrote** — `node`, `old`, `next`, `progress`, `release`, `stack`, `index`
+([`messung/K3-BEFUND.md`](messung/K3-BEFUND.md) §3). A reader refusal stops the body parsing,
+so the collision did not cost seven diagnostics: it hid every later one in six files. Two real
+defects were repaired on 2026-09-04 and the number did not move, *because the fragments that
+would have shown them were gated by this third one.*
+
+**The collision measured against foreign code, in both directions, before anything moved**
+([`messung/WORTSTELLUNG.md`](messung/WORTSTELLUNG.md) §1). 585 files — Linux `lib/*.c` (212),
+`kernel/`+`mm/` (234), Caprock (139) — and a declarator counts, not a use:
+
+| | |
+|---|---:|
+| words that are somewhere a name a programmer chose | **105 of 221** |
+| words that are never anyone's name | **116**, of which **99** are Gabbro's own vocabulary and 17 are C's or Rust's keywords |
+| declarator sites over the 105 | **5564**, and the top 20 words carry 76 % of them |
+| functions in `lib/*.c` binding at least one | **1035 of 3324 — 31.1 %** |
+| in the 8..60-line window «K3» drew from | **646 of 1709 — 37.8 %** |
+
+*«K3»'s 6 of 8 was a high draw of a real rate, not a freak.* And the two sets — the words a
+systems programmer collides with, and the words Gabbro invented — are almost **disjoint**: the
+collision lives entirely in the *library* half of the table (`node` `count` `entry` `index`
+`stack` `state` `table` `slot` `walk` `lock`), which is the half that names things a program
+also names.
+
+**The rule that replaced it:** *a word of the closed vocabulary is a keyword only at a position
+where the grammar expects one; at every position where the grammar writes `ident`, every word
+of the table is a name.* **The parser was already written keyword-first**, so the change is a
+conservative extension — no program that parsed before parses differently. Three places
+needed real work, and each is decided by the grammar rather than by a list: the head of a
+statement (one token of lookahead — `parse.rs::ist_ortfortsetzung`), `old`/`result` (words
+inside a contract clause only — `parse.rs::im_vertrag`), and a named type or address space
+(the name arm widened below the keyword arms).
+
+| | before | after |
+|---|---:|---:|
+| words that are not an ordinary name | **212 of 221** | **17 of 221** |
+| colliding words still reserved | 105 | **1** (`aligned`, two sites in one Caprock file) |
+| foreign declarator sites freed | — | **5562 of 5564 (99.96 %)** |
+| `lib/*.c` functions binding a reserved word | 1035 of 3324 | **0 of 3324** |
+| `P002` sites over the eight «K3» fragments | 14 | **1** (`None`, an abbreviation the transcriber chose) |
+
+**The seventeen are reserved on two measured grounds, and every one has ZERO foreign
+declarator sites.** Ten head a primary expression or a predicate atom unconditionally
+(`sizeof` `lenof` `aligned` `forall` `exists` `true` `false` `Self` `Some` `None`), so a
+variable of that name could be bound and never read back. Seven break the **emitted C** as an
+ordinary local (`const` `static` `extern` `if` `else` `return` `bool`) — measured with
+`cc -std=c11 -Wall -Wextra -Werror`, one file per candidate — and they are exactly the seven
+`cnamen.rs` leaves out of its own tables on the grounds that this vocabulary refuses them, so
+that file needs no change and its sentences stay true.
+
+**The corpus-wide sweep, before and after the same build**: of 663 tracked `.gab` files,
+**655 do not move**, six are «K3» fragments, and **two poison probes had to move their expected
+code** — both stated, both with a reason:
+
+* `beispiele/gift/11-wortschatz.gab` asserted `P002` on `let slot = 1;`. **That is the rule
+  this lane repeals.** It asserts `P002` on `let Some = 1;` now, and
+  `beispiele/70-kernel-namen.gab` holds the other half — the eight «K3» words and the nine
+  heaviest colliding words as parameters, locals, field names, a type name, an assignment
+  target and a loop label, `0 errors`, emitting and compiling.
+* `beispiele/gift/220-old-in-einem-rumpf.gab` booked a KNOWN GAP: *"`old(place)` belongs in an
+  `ensures` and no pass holds the line … the generator is right and the CHECKER is missing."*
+  Since `old` is a word only inside a contract, `old(...)` in a body is a call to a name nobody
+  declared, and `K003`/`E009` say so **three passes before the emitter**. `C001` → `K003`, and
+  **the gap is closed as a side effect of a change that was after something else.**
+
+**Three exemptions the change turned into holes, all three closed here** and all three found by
+probing rather than reading: `M119` exempted the name `result` (so `return result;` in a body
+gave `0 errors` and emitted `return result;` into C) and the width words through `breite_wort`
+(so `return u32;` did the same); both are deleted, `beispiele/gift/684` holds the first. The
+third is the C-keyword class above. *An exemption whose premise is taken away somewhere else
+does not announce itself.*
+
+**What guards the gain** — because a later lane could re-reserve word by word and leave every
+existing mark standing: `crates/gabbro-syntax/tests/wortschatz.rs` binds all 221 as a parameter
+and as a local, reads each back, and requires clean **exactly** for the 204; it also pins the
+reserved list in order. And `instrumente/zaehle-wortschatz.py` gains a **third mark**,
+`MARKE_RESERVIERT = 17`, a ratchet downwards — *the only one of the three that measures what a
+user pays.*
+
+**The vocabulary ratchet did NOT move.** 221 words, 208 without a reason, 333 positions, all
+three unchanged: with contextual keywords not one word had to fall. *Shrinking the vocabulary
+was checked first because it is the direction that costs nothing, and it cannot reach — the ten
+heaviest colliding words are all load-bearing, and a vocabulary trimmed word by word as each
+collision is reported is a blacklist of names somebody has already been bitten by.*
+
+**And the third reading of «K3»**
+([`messung/K3-DRITTE-LESUNG-2026-09-05.md`](messung/K3-DRITTE-LESUNG-2026-09-05.md)) —
+`K3-BEFUND.md` stays untouched, 0 of 8 remains the honest first reading:
+
+| | first | third |
+|---|---|---|
+| parse with no reader refusal | 2 of 8 | **7 of 8** |
+| check with 0 errors | 0 of 8 | **0 of 8** |
+| lower | 0 of 8 | **0 of 8** |
+| diagnostics over the eight | 24 errors, 1 hint | **35 errors, 2 hints** |
+
+**The number does not move and the error count rises by eleven — that is the yield.** Twenty-
+five diagnostics appeared where thirteen `P002` vanished: ten on arithmetic M1 refuses by
+design (`K3-BEFUND.md` §7 predicted all eight of its sites from renamed copies, and **all eight
+are now in the frozen run**), nine in the effect family (six of them a wall named at its site),
+three more walls, two the transcriber's own, and one — `R002` on `K03` — a true statement
+about the excerpt that the fragment's own header had booked as OPEN. *What a fourth reading
+would need is not another reader change: the walls are the whole of the 0, and they are
+`void *`, the address of a data place, `NULL`, `container_of`, a `union`, an array literal.*
+
+`crates/gabbro-syntax/{kw.rs,parse.rs}` · `crates/gabbro-check/src/m1.rs` ·
+`crates/gabbro-syntax/tests/wortschatz.rs` · `beispiele/70-kernel-namen.gab` ·
+`beispiele/gift/{11,220,682,683,684}` · `dokumente/SYNTAX.md` ·
+`instrumente/zaehle-wortschatz.py`
+
+---
+
 ## The floor `A_p ≥ 1/8` was priced at four probes, and the four were written *(2026-09-04)*
 
 **The section below this one set the floor where the tree failed it, on purpose, and named
@@ -1444,7 +1559,7 @@ with no site is the thing this folder hunts, not the thing it adds.*
 
 ## Probes
 
-**69 clean examples, 451 poison probes, 405 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
+**70 clean examples, 454 poison probes, 411 tests · 54 translation units** —`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not> been touched while the corpus grew to four times its size.>
 > | | booked | measured | by what |
 > |---|---:|---:|---|
 > | clean examples | 25 | **54** | `ls beispiele/*.gab` |

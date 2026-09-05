@@ -1,0 +1,121 @@
+-- 70 -- **The names Linux wrote, spelled in Gabbro.** The pass test for the «K3» §3 repair.
+--
+-- `messung/K3-BEFUND.md` §3 measured the one thing an unseen corpus was there to measure and
+-- nobody had predicted: **`P002` fired in six of the eight excerpts, every time on an
+-- identifier the kernel itself wrote.** Seven distinct words --
+--
+--     K01  node       loff_t node = *pos;                     alloc_tag.c:64
+--     K02  old        hlist_move_list(struct hlist_head *old, ...)
+--     K02  next       struct hlist_node *last, *next;         debugobjects.c:200
+--     K03  progress   size_t progress                         iov_iter.c:45
+--     K05  release    percpu_ref_func_t *release              percpu-refcount.c:63
+--     K06  stack      struct stack_record *stack;             stackdepot.c:364
+--     K08  index      int index, i, j, ret;                   test_vmalloc.c:540
+--
+-- -- and an eighth, `to`, that never even reached the transcription: `copy_from_user_iter`'s
+-- own `void *to` stands behind a wall in `K03`.
+--
+-- **A reader refusal stops the body from parsing, and a body that never parsed declares no
+-- names.** So the collision did not cost seven diagnostics; it hid every later one in six
+-- files. That is why it was repaired before anything behind it could be read
+-- (`messung/WORTSTELLUNG.md`).
+--
+-- This file writes all eight, plus the nine most frequent colliding words the same
+-- measurement found over Linux `lib/`, `kernel/`+`mm/` and Caprock, as ordinary names -- as
+-- parameters, as locals, as a field, as a named type, as an assignment target and as a
+-- loop label. **None of them is spelled differently from the way the kernel spells it.**
+
+module beispiel::kernelnamen {
+
+-- **A record whose field names are all words of the vocabulary.** Field names could already
+-- be words before this change (`erwarte_feldname`, since 2026-08-15); the type NAME could
+-- not, and that is new: `type count = …` and `x : count` used to disagree, because the
+-- declaration went through the identifier path and the use through the type path.
+type entry = {
+    node    : u32,
+    next    : u32,
+    index   : u32,
+    state   : u32,
+    stack   : u32,
+};
+
+-- The eight «K3» words, all eight at once, in the position «K3» found seven of them in.
+impl fn k3_namen(node : u32 in 0 .. 10, old : u32 in 0 .. 10, next : u32 in 0 .. 10,
+                 progress : u32 in 0 .. 10, release : u32 in 0 .. 10, stack : u32 in 0 .. 10,
+                 index : u32 in 0 .. 10, to : u32 in 0 .. 10)
+    -> u32 in 0 .. 80
+    effects { pure }
+    costs   <= 16 ops
+{
+    return node + old + next + progress + release + stack + index + to;
+}
+
+-- The nine most frequent colliding words of the whole measurement, as locals -- `node` 462
+-- declarator sites, `count` 397, `entry` 397, `cpu` 375, `order` 363, `index` 275, `next`
+-- 246, `type` 243, `ptr` 199. Six of the nine are not «K3» words at all; they are simply the
+-- names systems code uses.
+impl fn haeufigste(a : u32 in 0 .. 10) -> u32 in 0 .. 10
+    effects { pure }
+    costs   <= 32 ops
+{
+    let count = a;
+    let cpu   = count;
+    let order = cpu;
+    let type  = order;
+    let ptr   = type;
+    let table = ptr;
+    let lock  = table;
+    let class = lock;
+    let walk  = class;
+    return walk;
+}
+
+-- The exit the loop below names. `on_exceeded` wants a declared name, not a word.
+extern fn ueberschritten() -> never effects { diverges };
+
+-- **`next` is the one that needed a rule of its own**, because it is also the head of a
+-- statement: `next runde;` continues a loop and `next = a;` writes a variable. One token
+-- decides -- `parse.rs::ist_ortfortsetzung` -- and both stand here, in one function.
+divergent fn beides(a : u32 in 0 .. 10)
+    effects { diverges }
+{
+    let mut next = a;
+    forever runde
+        per_pass bounded 8 ops
+        on_exceeded ueberschritten
+        effects { pure }
+    {
+        next = a;
+        next += 0;
+        if next == 0 {
+            leave runde;
+        }
+        next runde;
+    }
+}
+
+-- **`old` and `result` are words in a contract and names in a body.** Both spellings stand
+-- here at once: the `ensures` names the return value and the pre-state, and the body names
+-- two ordinary locals that happen to be spelled the same way.
+--
+-- Before 2026-09-05 the body's `let result = a;` bound a local that could never be read: the
+-- reader turned every later `result` into the CONTRACT word, so `return result;` returned the
+-- function's own return value and `gabbro pruefe` said `0 errors`. *A silently accepted
+-- program is worse than a refused one.*
+--
+-- *The postcondition is the one the body actually establishes, and it is deliberately that:*
+-- `./instrumente/pruefe-lean-beweis.sh` turns every `ensures` of a straight-line body into a
+-- Lean goal, and a goal that does not go through turns it red. **A file whose point is a
+-- NAME must not smuggle in an open obligation** — `ensures result <= 10` was the first
+-- writing here, and it fell on the declared range of `a` not reaching the hypothesis.
+impl fn vertragswoerter(a : u32 in 0 .. 10) -> u32 in 0 .. 10
+    ensures result == a
+    effects { pure }
+    costs   <= 8 ops
+{
+    let old    = a;
+    let result = old;
+    return result;
+}
+
+}

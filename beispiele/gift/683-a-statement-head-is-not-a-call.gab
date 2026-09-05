@@ -1,0 +1,26 @@
+-- erwartet: P003
+-- **Der eine Rest der Anweisungskopfregel, und er ist EINE Form eines Wortes.**
+--
+-- `parse.rs::ist_ortfortsetzung` trennt `next runde;` von `next = 0;` an einem einzigen
+-- Token: `=` `+=` `-=` `&=` `|=` `.` `->` `[` `::` macht aus dem Wort einen Ort, alles andere
+-- laesst es den Kopf seiner Anweisung sein. **`(` steht bewusst NICHT in der Menge** -- `if
+-- (x) { … }`, `match (x) { … }` und `return (a);` werden so geschrieben, und eine Regel, die
+-- `(` mitnimmt, macht aus jedem davon einen Ruf.
+--
+-- Der Preis ist diese Datei: ein RUF an eine Funktion, die wie ein Anweisungskopf heisst,
+-- als eigenstaendige Anweisung. `next(a);` liest der Parser als `next <marke>;` und findet
+-- statt der Marke eine Klammer.
+--
+-- *Zuweisen und lesen geht -- `let mut next = a; next = a; return next;` steht in
+-- `beispiele/70` und ist sauber.* Was hier faellt, ist die Rufform, und sie faellt fuer
+-- dreizehn Woerter: `let if match traverse retry forever breaking narrow observes locks
+-- leave next return`.
+module gift {
+
+extern fn next(a : u32) -> u32 effects { pure };
+
+impl fn nehmen(a : u32) effects { pure } costs <= 4 ops {
+    next(a);
+}
+
+}
