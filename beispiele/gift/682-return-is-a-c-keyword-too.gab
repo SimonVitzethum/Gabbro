@@ -1,0 +1,25 @@
+-- erwartet: P002
+-- **Sieben Woerter bleiben Nicht-Namen, weil das ERZEUGTE C sie schon vergeben hat.**
+--
+-- `const` `static` `extern` `if` `else` `return` `bool` -- und das ist gemessen, nicht
+-- vermutet: eine Datei je Kandidat, die vier Kopfdateien, die jede erzeugte Einheit
+-- einbindet, und `uint32_t <wort> = 1; return <wort>;` durch
+-- `cc -std=c11 -Wall -Wextra -Werror`. Sechs sind C11-Schluesselwoerter, `bool` ist das
+-- Makro aus `<stdbool.h>`.
+--
+-- **Es sind genau die sieben, die `cnamen.rs` aus seinen eigenen Tabellen HERAUSLAESST** --
+-- mit der Begruendung, dass der Wortschatz sie ohnehin ablehnt. Beide Saetze bleiben damit
+-- zusammen wahr; faellt einer von ihnen aus dieser Liste, wird `C11_WORT` unvollstaendig und
+-- `N041` schweigt zu einem Namen, den `cc` nicht uebersetzen kann.
+--
+-- *Und die Reservierung kostet die Kollisionsmessung nichts:* alle sieben sind C oder Rust
+-- selbst Schluesselwort, also steht keines von ihnen in den 585 fremden Dateien als
+-- Bezeichner -- null Deklarationsstellen, gegen 462 fuer `node` und 397 fuer `count`.
+module gift {
+
+impl fn nehmen(a : u32) -> u32 effects { pure } costs <= 4 ops {
+    let return = a;
+    return return;
+}
+
+}

@@ -145,3 +145,94 @@ fn jedes_ebnf_terminal_ist_ein_wort() {
         "Terminale der EBNF, die der Lexer nicht kennt: {fehlend:?}"
     );
 }
+
+// -- The `res` column against the READER, word by word -------------------------------------
+//
+// **A column that only a comment explains is a second register beside the truth** -- trap 80,
+// and this file's own head says so about the word LIST. Until 2026-09-05 the class column had
+// no such guard, and it drifted: six words (`tree`, `parent`, `child`, `sibling`, `observed`,
+// `occupied`) had to be prised loose one at a time, each by a separate measurement, because
+// nothing said what `res` was supposed to mean or checked that it still meant it.
+//
+// It now means one thing the reader can be asked: **can a user call a variable this?** The
+// two probes below are the two ways a user does -- a parameter and a local -- and each word
+// is required to be clean exactly when its column says `ctx`.
+
+/// The program a user writes when a name of his collides: bind it, assign it, read it back.
+fn probe_lokal(w: &str) -> String {
+    format!(
+        "module p {{ impl fn f(a : u32 in 0 .. 10) -> u32 in 0 .. 10 \
+         effects {{ pure }} costs <= 8 ops {{ let mut {w} = a; {w} = a; return {w}; }} }}"
+    )
+}
+
+/// The same question at a parameter -- `messung/K3-BEFUND.md` §3 found seven of its eight
+/// there, not at a `let`.
+fn probe_parameter(w: &str) -> String {
+    format!(
+        "module p {{ impl fn f({w} : u32 in 0 .. 10) -> u32 in 0 .. 10 \
+         effects {{ pure }} costs <= 4 ops {{ return {w}; }} }}"
+    )
+}
+
+fn liest_sauber(quelle: &str) -> bool {
+    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    !absagen
+        .absagen
+        .iter()
+        .any(|a| a.stufe == gabbro_syntax::diag::Stufe::Fehler)
+}
+
+#[test]
+fn jedes_wort_ist_ein_name_ausser_den_gebuchten() {
+    let mut falsch_res: Vec<&str> = Vec::new();
+    let mut falsch_ctx: Vec<&str> = Vec::new();
+    for k in ALLE {
+        let w = k.text();
+        let geht = liest_sauber(&probe_lokal(w)) && liest_sauber(&probe_parameter(w));
+        if k.reserviert() && geht {
+            falsch_res.push(w);
+        }
+        if !k.reserviert() && !geht {
+            falsch_ctx.push(w);
+        }
+    }
+    assert!(
+        falsch_ctx.is_empty(),
+        "the column says these are names and the reader refuses them ({}): {:?}\n\
+         -- either the reader lost a position or the column is stale",
+        falsch_ctx.len(),
+        falsch_ctx
+    );
+    assert!(
+        falsch_res.is_empty(),
+        "the column says these are NOT names and the reader takes them ({}): {:?}\n\
+         -- a word that reads as a name belongs in the `ctx` column",
+        falsch_res.len(),
+        falsch_res
+    );
+}
+
+/// **The count itself, so a silent re-reservation cannot pass as a repair.**
+///
+/// 17 of 221 on 2026-09-05, down from 212. The list stands in `kw.rs`'s head with the reason
+/// for each half; whoever moves this number writes the ledger line beside it, the same rule
+/// `instrumente/zaehle-wortschatz.py` puts over the word count.
+#[test]
+fn nur_siebzehn_woerter_sind_keine_namen() {
+    let res: Vec<&str> = ALLE
+        .iter()
+        .filter(|k| k.reserviert())
+        .map(|k| k.text())
+        .collect();
+    assert_eq!(
+        res,
+        vec![
+            "const", "static", "extern", "if", "else", "return", "bool", "sizeof", "lenof",
+            "aligned", "forall", "exists", "true", "false", "Self", "Some", "None",
+        ],
+        "the reserved residue moved -- {} of {}",
+        res.len(),
+        ALLE.len()
+    );
+}

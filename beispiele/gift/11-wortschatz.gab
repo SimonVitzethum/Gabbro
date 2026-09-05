@@ -1,11 +1,25 @@
 -- erwartet: P002
--- Der Wortschatz ist eine geschlossene Tabelle; `slot` steht darin. Alles andere ist ein
--- Bezeichner -- dieses hier nicht.
+-- **Der Wortschatz ist eine geschlossene Tabelle -- und seit dem 2026-09-05 sind 204 seiner
+-- 221 Woerter trotzdem gewoehnliche Namen.**
+--
+-- Hier stand bis dahin `let slot = 1;` mit derselben Erwartung, und genau diese Probe war
+-- die Regel, die «K3» gemessen hat: `P002` auf `node`, `old`, `next`, `progress`, `release`,
+-- `stack` und `index` -- in sechs von acht Auszuegen aus Linux `lib/*.c`, jedes Mal auf einem
+-- Bezeichner, den der Kern selbst geschrieben hat. **`let slot = 1;` ist heute sauber**, und
+-- `beispiele/70` haelt das fest.
+--
+-- Was BLEIBT, sind siebzehn Woerter, und sie stehen aus zwei verschiedenen Gruenden da:
+-- zehn beginnen einen Ausdruck oder ein Praedikat, also koennte man sie binden und nie
+-- wieder lesen; sieben zerbrechen das erzeugte C als gewoehnliche lokale Variable. `Some`
+-- ist eines der ersten zehn, `return` eines der zweiten sieben.
+--
+-- *Eine Giftprobe, deren Regel faellt, faellt nicht mit ihr -- sie prueft die Regel, die an
+-- ihre Stelle tritt.*
 module gift {
 
 impl fn nehmen() -> u32 effects { pure } {
-    let slot = 1;
-    return slot;
+    let Some = 1;
+    return Some;
 }
 
 }

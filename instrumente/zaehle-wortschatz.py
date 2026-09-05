@@ -101,6 +101,27 @@ MARKE_WOERTER = 221
 # travels down with the measurement, in the same run that measured it.
 MARKE_OHNE_GRUND = 208
 
+# **THE THIRD MARK -- words that are not a NAME.** A ratchet downwards, set 2026-09-05.
+#
+# The first two marks are about how many words there are and whether each was argued for.
+# **Neither of them can see the size that a user actually pays**, and «K3» measured it: over
+# 585 foreign files (Linux `lib/`, `kernel/`+`mm/`, Caprock) **105 of the 221 words are
+# somewhere a name a programmer chose**, `node` at 462 declarator sites, `count` at 397,
+# `entry` at 397. While the reader refused every word at every name position, that was 105
+# words a user had to rename, and «K3» found the cost: `P002` in six of eight excerpts, on
+# identifiers the kernel itself wrote, each one hiding every later diagnostic in its file.
+#
+# 212 of 221 became **17** on 2026-09-05 (`messung/WORTSTELLUNG.md`), on two grounds:
+# ten head an expression or a predicate unconditionally, seven break the emitted C as an
+# ordinary local. *Every one of the seventeen is measured at ZERO foreign declarator sites,
+# so the residue costs the collision nothing.*
+#
+# **Why this is a ratchet and the other two are not the same one:** a later lane can undo the
+# whole gain word by word without moving either of them -- the vocabulary would keep its 221
+# and its 208, and a user would be back to renaming. `crates/gabbro-syntax/tests/wortschatz.rs`
+# holds the LIST against the reader; this mark holds the SIZE against the tree.
+MARKE_RESERVIERT = 17
+
 # **The single lowering theorem, booked with its address.** `beweise/Absenkung_Parametrisch.thy`
 # holds `ops relabel` against the emitted C -- and its result is that the sentence *"the
 # emitted thing computes the model function"* is FALSE at the free slot. It is the only
@@ -268,6 +289,11 @@ def main():
     print("   %d reserviert · %d kontextuell" % (res, ctx))
     print("   Marke %d -- eine Ratsche, keine Zielzahl: sie darf fallen, nicht steigen."
           % MARKE_WOERTER)
+    print("   Marke %d reserviert -- die DRITTE Ratsche, und die einzige, die misst, was ein"
+          % MARKE_RESERVIERT)
+    print("   Benutzer bezahlt: ein reserviertes Wort ist ein Name, den er nicht vergeben")
+    print("   darf. Auch sie laeuft nach unten; wer sie hebt, schreibt daneben, WELCHE")
+    print("   Stellung das Wort greift und warum die Grammatik dort nicht entscheiden kann.")
     print()
 
     print("== Der Grund am Eintrag: %d von %d ==" % (len(mit_grund), n))
@@ -410,12 +436,25 @@ def main():
         print("  ueber dem Eintrag. Er steht dort und nicht in der Commit-Nachricht, weil")
         print("  er mit dem Wort wandert.")
         befunde = 1
-    if n < MARKE_WOERTER or len(ohne_grund) < MARKE_OHNE_GRUND:
+    if res > MARKE_RESERVIERT:
         print()
-        print("  Die Marken sind GEFALLEN: %d/%d Woerter, %d/%d ohne Grund. Sie gehoeren"
-              % (n, MARKE_WOERTER, len(ohne_grund), MARKE_OHNE_GRUND))
-        print("  in diesem Lauf nachgezogen -- eine Ratsche, die nur beim Steigen angefasst")
-        print("  wird, ist eine Marke und keine Ratsche.")
+        print("  RATSCHE GEBROCHEN: %d reservierte Woerter, gebucht sind %d."
+              % (res, MARKE_RESERVIERT))
+        print("  Ein reserviertes Wort ist ein Name, den ein Benutzer nicht vergeben darf --")
+        print("  und `messung/K3-BEFUND.md` §3 hat gemessen, was das kostet: `P002` in sechs")
+        print("  von acht fremden Auszuegen, jedes Mal auf einem Bezeichner, den der Kern")
+        print("  selbst geschrieben hat, und jeder davon verdeckte alles dahinter.")
+        print("  **Wer diese Marke hebt, nennt die STELLUNG, an der das Wort greift, und")
+        print("  warum die Grammatik dort nicht entscheiden kann.** Die Liste selbst haelt")
+        print("  `crates/gabbro-syntax/tests/wortschatz.rs` gegen den Leser.")
+        befunde = 1
+    if (n < MARKE_WOERTER or len(ohne_grund) < MARKE_OHNE_GRUND
+            or res < MARKE_RESERVIERT):
+        print()
+        print("  Die Marken sind GEFALLEN: %d/%d Woerter, %d/%d ohne Grund, %d/%d reserviert."
+              % (n, MARKE_WOERTER, len(ohne_grund), MARKE_OHNE_GRUND, res, MARKE_RESERVIERT))
+        print("  Sie gehoeren in diesem Lauf nachgezogen -- eine Ratsche, die nur beim")
+        print("  Steigen angefasst wird, ist eine Marke und keine Ratsche.")
         befunde = 1
     return befunde
 

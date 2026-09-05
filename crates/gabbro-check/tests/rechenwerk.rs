@@ -376,10 +376,18 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
     // bleibt trotzdem geprueft, jetzt an `old(place)` in einem RUMPF: `SPRACHE.md` §6 sagt
     // *„`old(place)` only in `ensures`"*, **und kein Pass haelt die Zeile** -- nur der
     // Erzeuger faellt. Dieselbe Klasse wie das `!` davor.
+    //
+    // **The form changed on 2026-09-05, the collecting branch did not.** It was
+    // `old(t.slots[i].benutzt)` in a BODY -- and `old` is a name there since the word
+    // position rule, so `K003`/`E009` catch the line three passes earlier and the generator
+    // never sees it. *That is exactly what `beispiele/gift/220` had booked as a GAP: "the
+    // generator is right and the checker is missing" -- the checker is not missing any
+    // more.* Checked now at `sizeof` outside a `format` predicate, the second of the three
+    // forms of the same branch.
     let unbekannt = absagen_von(
-        "module t { table T count 8 { slot { benutzt : bool, } }\n \
-         impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
-         effects { reads t.slots } costs <= 4 ops { return old(t.slots[i].benutzt); } }",
+        "module t { type K = { a : u64, };\n \
+         impl fn f(k : ptr<normal, r> K) -> u64 \
+         effects { reads k } costs <= 4 ops { return sizeof(K); } }",
     );
     // **Und seit dem 2026-08-21 wird die Absage SCHAERFER geprueft.** Hier stand
     // `contains("expression form")` -- der Text des Sammelzweiges, der alle drei
@@ -388,7 +396,7 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
     // Der Sammelzweig ist ausgeschrieben, und die Probe verlangt jetzt, dass die Absage die
     // Form beim Namen nennt.
     assert!(
-        unbekannt.iter().any(|s| s.contains("`old(place)`")),
+        unbekannt.iter().any(|s| s.contains("`sizeof`")),
         "eine unbekannte Ausdrucksform muss beim NAMEN abgelehnt werden: {unbekannt:?}"
     );
 
@@ -5518,7 +5526,16 @@ fn lean_ergebnis_verlangt_dass_ein_wert_entstand() {
 /// silently acquire the stronger goal shape.
 #[test]
 fn lean_ergebnis_bleibt_im_rumpf_abgesagt() {
-    // A body that WRITES `result` is refused by name, and no goal comes out of it.
+    // A body that names `result` where it names nothing is refused by name, and no goal
+    // comes out of it.
+    //
+    // **The site moved on 2026-09-05 and the case did not.** Here stood `let x = result;`,
+    // and since the word is a word only inside a contract that line binds an ordinary local
+    // now -- `M119` catches it three passes earlier, at the checker, which is where an
+    // undeclared name belongs. What is left of the case is the place where `result` is still
+    // the CONTRACT word and still names nothing: a **loop invariant**, which is a promise
+    // inside a body, with no return value in scope. *The refusal was right about the word
+    // and wrong about only the address.*
     let im_rumpf = lean_modul(
         "module t {
 type Kopf = { eintritt : u64, };
@@ -5527,7 +5544,12 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u64
     effects  { reads k }
     costs    <= 8 ops
 {
-    let x = result;
+    retry warten until k->eintritt == 1
+        bounded 4 ops
+        on_exceeded zeitablauf
+        effects { reads k }
+        invariant result == 0
+    { }
     return k.eintritt;
 }
 }",
@@ -5552,8 +5574,11 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u64
         !im_rumpf.contains("theorem duty_1"),
         "and no goal is written over it:\n{im_rumpf}"
     );
+    // *Two refusals, not one, since the site moved into a loop: the loop's own invariant is
+    // the second, refused for its own reason. The half this probe is about is `refused` and
+    // not `goals` -- nothing is proved over either.*
     assert!(
-        im_rumpf.contains("goals 0  refused 1"),
+        im_rumpf.contains("goals 0  refused 2"),
         "the balance line says the same thing:\n{im_rumpf}"
     );
 

@@ -17,11 +17,52 @@
 //! directly above the entry** -- it stands there and not in the commit message, because it
 //! travels with the word. *Whoever raises a mark writes the ledger line beside it.*
 //!
-//! **Reserved versus contextual.** A word of the table is not an identifier. Exempt are the
-//! **single-letter** words `r`, `w`, `x`: `pruefe-wortschatz.py` itself excludes them from the
-//! coverage check (*"single-character terminals come from character ranges and are not
-//! words"*), and `FRAGMENTE.md` binds `Reply(r)`. At their sites -- `rights`, `class` -- they
-//! are recognised by text and are identifiers everywhere else.
+//! **Reserved versus contextual -- and since 2026-09-05 nearly the whole table is
+//! contextual.** `messung/WORTSTELLUNG.md` holds the measurement and the decision.
+//!
+//! The rule used to be *"a word of the table is not an identifier"*, with three
+//! single-letter exemptions and six words that a later measurement had to prise loose one at
+//! a time (`tree`, `parent`, `child`, `sibling`, `observed`, `occupied`). **«K3» measured
+//! what that costs against code written by somebody who has never heard of Gabbro**: over
+//! 585 foreign files -- Linux `lib/`, `kernel/`+`mm/`, and Caprock -- **105 of the 221 words
+//! are somewhere a name a programmer chose**, and 646 of the 1709 functions «K3» drew from
+//! (37.8 %) bind at least one. Seven of the eight «K3» fragments carried one, and the
+//! reader's refusal stopped the body from parsing, so everything behind it was invisible.
+//!
+//! **The rule is now the other one: a word is a keyword only where the grammar EXPECTS one.**
+//! At a position where the grammar expects a NAME, every word of the table is a name.
+//!
+//! **`res` is down to SEVENTEEN of the 221, and every one of them is measured at ZERO
+//! foreign declarator sites.** Two reasons, and they are different kinds of reason:
+//!
+//! * **ten head a primary expression or a predicate atom unconditionally**, so a variable of
+//!   that name could be bound and never read back -- `sizeof` `lenof` `aligned` `forall`
+//!   `exists` `true` `false` `Self` `Some` `None`. A name that can be written and not read is
+//!   worse than one that is refused;
+//! * **seven break the EMITTED C as an ordinary local** -- `const` `static` `extern` `if`
+//!   `else` `return` `bool`. Measured, not assumed: one file per candidate with the four
+//!   headers every generated unit includes and `uint32_t <w> = 1; return <w>;` through
+//!   `cc -std=c11 -Wall -Wextra -Werror`. Six are C11 keywords, `bool` is `<stdbool.h>`'s
+//!   macro. *They are exactly the seven `cnamen.rs` leaves out of its own tables on the
+//!   grounds that this file refuses them, so the two statements stay true together.*
+//!
+//! **The two reasons meet on the same words for the same underlying fact:** a word no
+//! programmer ever binds is a word whose reservation costs nothing. `true`, `false`, `if`,
+//! `else`, `const`, `static`, `extern`, `return` and `sizeof` are C's own keywords and
+//! `Some`/`None` are Rust's, so no C or Rust file can contain one as a name -- and in 585
+//! foreign files none does.
+//!
+//! > **What this does NOT close** and what a later lane owes: `let int = 1;` emits
+//! > `uint32_t int = 1;` and `cc` refuses it, with `gabbro pruefe` reporting `0 errors`.
+//! > `N041` asks `cnamen.rs` about ITEM names only. Measured 2026-09-05 by the same method:
+//! > **all 37 C11 keywords and 77 of the 366 header names break as a local**, none of the 155
+//! > built-ins does. That hole is older than this change and none of the seven above is in it
+//! > any more -- but `int`, `while` and `NAN` still are.
+//!
+//! **`tests/wortschatz.rs` holds this column against the parser word by word** -- it binds
+//! every one of the 221 as a parameter and as a local, reads it back, and requires clean iff
+//! the column says `ctx`. Without that the column would be a second register beside the
+//! truth (trap 80), which is exactly what it was for the six words above.
 
 macro_rules! wortschatz {
     ( $( $variant:ident => $text:literal , $klasse:ident ; )* ) => {
@@ -40,7 +81,7 @@ macro_rules! wortschatz {
                 match s { $( $text => Some(Kw::$variant), )* _ => None }
             }
 
-            /// Reserved: an identifier nowhere.
+            /// Reserved: not an ordinary name. Seventeen of 221 -- see the head of the file.
             pub const fn reserviert(self) -> bool {
                 match self { $( Kw::$variant => wortschatz!(@klasse $klasse) ),* }
             }
@@ -55,78 +96,78 @@ macro_rules! wortschatz {
 
 wortschatz! {
     // -- Structure -------------------------------------------------------------------------
-    Module        => "module",        res;
-    Pub           => "pub",           res;
-    Use           => "use",           res;
-    Type          => "type",          res;
-    Opaque        => "opaque",        res;
-    Linear        => "linear",        res;
-    Ghost         => "ghost",         res;
-    Tagged        => "tagged",        res;
+    Module        => "module",        ctx;
+    Pub           => "pub",           ctx;
+    Use           => "use",           ctx;
+    Type          => "type",          ctx;
+    Opaque        => "opaque",        ctx;
+    Linear        => "linear",        ctx;
+    Ghost         => "ghost",         ctx;
+    Tagged        => "tagged",        ctx;
     Const         => "const",         res;
     Static        => "static",        res;
-    Fn            => "fn",            res;
-    Spec          => "spec",          res;
-    Impl          => "impl",          res;
-    Raw           => "raw",           res;
-    Divergent     => "divergent",     res;
-    Prim          => "prim",          res;
+    Fn            => "fn",            ctx;
+    Spec          => "spec",          ctx;
+    Impl          => "impl",          ctx;
+    Raw           => "raw",           ctx;
+    Divergent     => "divergent",     ctx;
+    Prim          => "prim",          ctx;
     Extern        => "extern",        res;
-    Section       => "section",       res;
-    Arch          => "arch",          res;
-    When          => "when",          res;
+    Section       => "section",       ctx;
+    Arch          => "arch",          ctx;
+    When          => "when",          ctx;
 
     // -- Contracts ------------------------------------------------------------------------
-    Requires      => "requires",      res;
-    Ensures       => "ensures",       res;
-    Maintains     => "maintains",     res;
+    Requires      => "requires",      ctx;
+    Ensures       => "ensures",       ctx;
+    Maintains     => "maintains",     ctx;
     // **`refines <path>` -- the head form of P6** (2026-08-24, `messung/VERFEINERUNG.md`).
     // A NEW word, deliberately: a refinement obligation is the strongest statement this
     // language makes about a body, and it must not arise from two names coinciding
     // (pairing by name) nor from a word doing double duty (`spec` as a clause).
     // *One word, one job -- and the closed vocabulary makes the change countable.*
-    Refines       => "refines",       res;
-    Breaking      => "breaking",      res;
-    Effects       => "effects",       res;
-    Costs         => "costs",         res;
-    Decreases     => "decreases",     res;
-    Where         => "where",         res;
-    In            => "in",            res;
-    Exhaustive    => "exhaustive",    res;
-    Old           => "old",           res;
-    Narrow        => "narrow",        res;
-    To            => "to",            res;
-    Induction     => "induction",     res;
+    Refines       => "refines",       ctx;
+    Breaking      => "breaking",      ctx;
+    Effects       => "effects",       ctx;
+    Costs         => "costs",         ctx;
+    Decreases     => "decreases",     ctx;
+    Where         => "where",         ctx;
+    In            => "in",            ctx;
+    Exhaustive    => "exhaustive",    ctx;
+    Old           => "old",           ctx;
+    Narrow        => "narrow",        ctx;
+    To            => "to",            ctx;
+    Induction     => "induction",     ctx;
 
     // -- Effects ------------------------------------------------------------------------
-    Reads         => "reads",         res;
-    Writes        => "writes",        res;
-    Locks         => "locks",         res;
-    Masks         => "masks",         res;
-    Allocs        => "allocs",        res;
-    Consumes      => "consumes",      res;
-    Publishes     => "publishes",     res;
-    Diverges      => "diverges",      res;
-    Pure          => "pure",          res;
+    Reads         => "reads",         ctx;
+    Writes        => "writes",        ctx;
+    Locks         => "locks",         ctx;
+    Masks         => "masks",         ctx;
+    Allocs        => "allocs",        ctx;
+    Consumes      => "consumes",      ctx;
+    Publishes     => "publishes",     ctx;
+    Diverges      => "diverges",      ctx;
+    Pure          => "pure",          ctx;
 
     // -- Control flow ---------------------------------------------------------------------------
     If            => "if",            res;
     Else          => "else",          res;
-    Match         => "match",         res;
-    Traverse      => "traverse",      res;
-    Over          => "over",          res;
-    By            => "by",            res;
-    Touches       => "touches",       res;
-    Retry         => "retry",         res;
-    Forever       => "forever",       res;
-    Until         => "until",         res;
-    Bounded       => "bounded",       res;
-    Progress      => "progress",      res;
-    OnExceeded    => "on_exceeded",   res;
-    PerPass       => "per_pass",      res;
+    Match         => "match",         ctx;
+    Traverse      => "traverse",      ctx;
+    Over          => "over",          ctx;
+    By            => "by",            ctx;
+    Touches       => "touches",       ctx;
+    Retry         => "retry",         ctx;
+    Forever       => "forever",       ctx;
+    Until         => "until",         ctx;
+    Bounded       => "bounded",       ctx;
+    Progress      => "progress",      ctx;
+    OnExceeded    => "on_exceeded",   ctx;
+    PerPass       => "per_pass",      ctx;
     Return        => "return",        res;
-    Let           => "let",           res;
-    Mut           => "mut",           res;
+    Let           => "let",           ctx;
+    Mut           => "mut",           ctx;
     // **`decreasing` FELL here on 2026-09-01 -- 222 words, now 221.**
     //
     // It stood as a third run form beside these two, and the emitter had written down since
@@ -145,12 +186,12 @@ wortschatz! {
     // exclusive, so `by consuming decreases e` was unwritable; it is writable now.
     // `instrumente/zaehle-wortschatz.py` prints both numbers, and they moved in opposite
     // directions -- which is the only shape in which such a trade is one.
-    Unvisited     => "unvisited",     res;
-    Consuming     => "consuming",     res;
-    Leave         => "leave",         res;
-    Leaves        => "leaves",        res;
-    Next          => "next",          res;
-    Ops           => "ops",           res;
+    Unvisited     => "unvisited",     ctx;
+    Consuming     => "consuming",     ctx;
+    Leave         => "leave",         ctx;
+    Leaves        => "leaves",        ctx;
+    Next          => "next",          ctx;
+    Ops           => "ops",           ctx;
     // **«NL.1», 2026-08-19: die geschlossene Operationsmenge.** `opdecl` nahm bis dahin
     // beliebige Bezeichner, und damit war `table.ops.erhaltung` unbeweisbar in dem einen
     // Sinn, auf den es ankommt: aus einem NAMEN faellt keine Wirkung.
@@ -158,38 +199,38 @@ wortschatz! {
     // Gemessen am zweiten Korpus (`kernel/` + `mm/`, 659 Dateien) vor der Entscheidung:
     // remove 479 · insert 448 · relabel 127 · replace 11. *`init` ist bewusst KEIN Wort --
     // `table … count N` konstruiert, und `table.absenkung` beweist es.*
-    Insert        => "insert",        res;
-    Remove        => "remove",        res;
-    Relabel       => "relabel",       res;
-    Result        => "result",        res;
-    Exchange      => "exchange",      res;
-    Update        => "update",        res;
-    Returns       => "returns",       res;
+    Insert        => "insert",        ctx;
+    Remove        => "remove",        ctx;
+    Relabel       => "relabel",       ctx;
+    Result        => "result",        ctx;
+    Exchange      => "exchange",      ctx;
+    Update        => "update",        ctx;
+    Returns       => "returns",       ctx;
 
     // -- Pointers ---------------------------------------------------------------------------
-    Ptr           => "ptr",           res;
-    Normal        => "normal",        res;
-    Mmio          => "mmio",          res;
-    Dma           => "dma",           res;
-    Code          => "code",          res;
-    Boot          => "boot",          res;
+    Ptr           => "ptr",           ctx;
+    Normal        => "normal",        ctx;
+    Mmio          => "mmio",          ctx;
+    Dma           => "dma",           ctx;
+    Code          => "code",          ctx;
+    Boot          => "boot",          ctx;
     R             => "r",             ctx;
     W             => "w",             ctx;
-    Rw            => "rw",            res;
+    Rw            => "rw",            ctx;
     X             => "x",             ctx;
-    Own           => "own",           res;
+    Own           => "own",           ctx;
 
     // -- Library -----------------------------------------------------------------------
-    Format        => "format",        res;
-    Table         => "table",         res;
-    Slot          => "slot",          res;
-    Invariant     => "invariant",     res;
-    Reason        => "reason",        res;
-    State         => "state",         res;
-    Transition    => "transition",    res;
-    Device        => "device",        res;
-    Reg           => "reg",           res;
-    Class         => "class",         res;
+    Format        => "format",        ctx;
+    Table         => "table",         ctx;
+    Slot          => "slot",          ctx;
+    Invariant     => "invariant",     ctx;
+    Reason        => "reason",        ctx;
+    State         => "state",         ctx;
+    Transition    => "transition",    ctx;
+    Device        => "device",        ctx;
+    Reg           => "reg",           ctx;
+    Class         => "class",         ctx;
     // **`w1c` and `rc` stand HERE and not among the types** (2026-09-01, `OB4`).
     //
     // They stood in the `-- Types --` block beside `u8` and `bool` until today, and that
@@ -205,26 +246,26 @@ wortschatz! {
     //
     // The refusal is `R012` in `m3.rs`; the word list is the place where it stops looking
     // like a type.
-    W1c           => "w1c",           res;
-    Rc            => "rc",            res;
-    Fields        => "fields",        res;
-    Bank          => "bank",          res;
-    At            => "at",            res;
-    Stride        => "stride",        res;
-    Count         => "count",         res;
+    W1c           => "w1c",           ctx;
+    Rc            => "rc",            ctx;
+    Fields        => "fields",        ctx;
+    Bank          => "bank",          ctx;
+    At            => "at",            ctx;
+    Stride        => "stride",        ctx;
+    Count         => "count",         ctx;
     // **Punkt 1: `count` ist ADRESSRAUM, `backed` ist SPEICHER.**
     //
     // Bis 2026-08-18 fiel beides zusammen, und damit war „30 GiB deklarieren, 100 MiB
     // hinterlegen" keine Aussage der Sprache, sondern eine Hoffnung an den Seitenfehlerpfad.
     // *Der Indextyp sagte `i < N`; gebraucht wird `i ist HINTERLEGT`.*
-    Backed        => "backed",        res;
-    Mirrors       => "mirrors",       res;
-    From          => "from",          res;
-    Assume        => "assume",        res;
-    Falsifier     => "falsifier",     res;
-    Unfalsifiable => "unfalsifiable", res;
-    Axiom         => "axiom",         res;
-    Lock          => "lock",          res;
+    Backed        => "backed",        ctx;
+    Mirrors       => "mirrors",       ctx;
+    From          => "from",          ctx;
+    Assume        => "assume",        ctx;
+    Falsifier     => "falsifier",     ctx;
+    Unfalsifiable => "unfalsifiable", ctx;
+    Axiom         => "axiom",         ctx;
+    Lock          => "lock",          ctx;
     // **RCU -- und es ist KEINE Sperre.**
     //
     // Der zweite Korpus hat die Klasse gezeigt, die der erste nie zeigte (578 Leseseiten in
@@ -233,98 +274,98 @@ wortschatz! {
     // gegenseitigen Ausschluss; hier gibt es keinen.
     //
     // *Zwei Woerter, und die Maschinerie darunter ist die vorhandene.*
-    Rcu           => "rcu",           res;
-    Observes      => "observes",      res;
+    Rcu           => "rcu",           ctx;
+    Observes      => "observes",      ctx;
     // **Die Rueckgewinnung -- der Ort, an dem die Gnadenfrist etwas zu tun bekommt.**
-    Reclaims      => "reclaims",      res;
-    Group         => "group",         res;
-    Protects      => "protects",      res;
-    Rank          => "rank",          res;
+    Reclaims      => "reclaims",      ctx;
+    Group         => "group",         ctx;
+    Protects      => "protects",      ctx;
+    Rank          => "rank",          ctx;
     // «B37»: die ORDNUNG auf einer linearen Geistmarke. Zwei Woerter -- und zwar
     // ZWEI, nicht zwei je Bootschritt: die Stufen sind Bezeichner in EINER Deklaration.
-    Order         => "order",         res;
-    Advances      => "advances",      res;
+    Order         => "order",         ctx;
+    Advances      => "advances",      ctx;
     // **Layer S3 of the boot theorem -- the ONE event.** `advances` moves the token on,
     // `retires` ends it -- and names, in the same clause, the address space that goes with
     // it and the probe that could refute that. *Three parts, one clause: two promises one
     // can keep separately are not one.*
-    Retires       => "retires",       res;
-    Check         => "check",         res;
-    Claim         => "claim",         res;
-    Measures      => "measures",      res;
-    Gates         => "gates",         res;
-    CanFail       => "can_fail",      res;
-    Floor         => "floor",         res;
-    Counterprobe  => "counterprobe",  res;
-    Expects       => "expects",       res;
-    Endian        => "endian",        res;
-    Little        => "little",        res;
-    Big           => "big",           res;
-    Reserved      => "reserved",      res;
-    Cost          => "cost",          res;
-    Runs          => "runs",          res;
-    Online        => "online",        res;
-    Offline       => "offline",       res;
-    OffsetInto    => "offset_into",   res;
-    Index         => "index",         res;
-    Into          => "into",          res;
-    Option        => "option",        res;
-    Chain         => "chain",         res;
-    Wrapping      => "wrapping",      res;
-    Atomic        => "atomic",        res;
-    Acquire       => "acquire",       res;
-    Release       => "release",       res;
-    Seq           => "seq",           res;
-    Relaxed       => "relaxed",       res;
-    Nothing       => "nothing",       res;
-    Accumulates   => "accumulates",   res;
-    Merge         => "merge",         res;
-    Max           => "max",           res;
-    Min           => "min",           res;
-    Add           => "add",           res;
-    Or            => "or",            res;
-    And           => "and",           res;
-    Held          => "held",          res;
-    Shared        => "shared",        res;
-    Embeds        => "embeds",        res;
-    Scale         => "scale",         res;
-    Walk          => "walk",          res;
-    Levels        => "levels",        res;
-    Node          => "node",          res;
-    Down          => "down",          res;
-    Leaf          => "leaf",          res;
-    Mappings      => "mappings",      res;
-    Entry         => "entry",         res;
+    Retires       => "retires",       ctx;
+    Check         => "check",         ctx;
+    Claim         => "claim",         ctx;
+    Measures      => "measures",      ctx;
+    Gates         => "gates",         ctx;
+    CanFail       => "can_fail",      ctx;
+    Floor         => "floor",         ctx;
+    Counterprobe  => "counterprobe",  ctx;
+    Expects       => "expects",       ctx;
+    Endian        => "endian",        ctx;
+    Little        => "little",        ctx;
+    Big           => "big",           ctx;
+    Reserved      => "reserved",      ctx;
+    Cost          => "cost",          ctx;
+    Runs          => "runs",          ctx;
+    Online        => "online",        ctx;
+    Offline       => "offline",       ctx;
+    OffsetInto    => "offset_into",   ctx;
+    Index         => "index",         ctx;
+    Into          => "into",          ctx;
+    Option        => "option",        ctx;
+    Chain         => "chain",         ctx;
+    Wrapping      => "wrapping",      ctx;
+    Atomic        => "atomic",        ctx;
+    Acquire       => "acquire",       ctx;
+    Release       => "release",       ctx;
+    Seq           => "seq",           ctx;
+    Relaxed       => "relaxed",       ctx;
+    Nothing       => "nothing",       ctx;
+    Accumulates   => "accumulates",   ctx;
+    Merge         => "merge",         ctx;
+    Max           => "max",           ctx;
+    Min           => "min",           ctx;
+    Add           => "add",           ctx;
+    Or            => "or",            ctx;
+    And           => "and",           ctx;
+    Held          => "held",          ctx;
+    Shared        => "shared",        ctx;
+    Embeds        => "embeds",        ctx;
+    Scale         => "scale",         ctx;
+    Walk          => "walk",          ctx;
+    Levels        => "levels",        ctx;
+    Node          => "node",          ctx;
+    Down          => "down",          ctx;
+    Leaf          => "leaf",          ctx;
+    Mappings      => "mappings",      ctx;
+    Entry         => "entry",         ctx;
     // **«entrust» -- ein `code`-Raum, dessen INHALT Gabbro nicht kennt.**
     //
     // Das eine Wort, das JIT, JVM und jedes Gastmodul oeffnet. Es erbt den Eintrittsvertrag
     // von `entry` -- und der war bis 2026-08-18 gemessen LEER: zwoelf Felder, und keine
     // Datei ausserhalb des Lesers nannte `EntryDecl`. *Wer `entrust` baut, baut ihn zum
     // ersten Mal.*
-    Entrust       => "entrust",       res;
-    Vector        => "vector",        res;
-    Regs          => "regs",          res;
-    Out           => "out",           res;
-    Preserves     => "preserves",     res;
-    Clobbers      => "clobbers",      res;
-    Asm           => "asm",           res;
-    Stack         => "stack",         res;
-    Dispatch      => "dispatch",      res;
-    Per           => "per",           res;
-    Cpu           => "cpu",           res;
-    Ist           => "ist",           res;
-    Nested        => "nested",        res;
-    Masked        => "masked",        res;
-    Awaits        => "awaits",        res;
-    Port          => "port",          res;
-    Step          => "step",          res;
-    Via           => "via",           res;
+    Entrust       => "entrust",       ctx;
+    Vector        => "vector",        ctx;
+    Regs          => "regs",          ctx;
+    Out           => "out",           ctx;
+    Preserves     => "preserves",     ctx;
+    Clobbers      => "clobbers",      ctx;
+    Asm           => "asm",           ctx;
+    Stack         => "stack",         ctx;
+    Dispatch      => "dispatch",      ctx;
+    Per           => "per",           ctx;
+    Cpu           => "cpu",           ctx;
+    Ist           => "ist",           ctx;
+    Nested        => "nested",        ctx;
+    Masked        => "masked",        ctx;
+    Awaits        => "awaits",        ctx;
+    Port          => "port",          ctx;
+    Step          => "step",          ctx;
+    Via           => "via",           ctx;
 
     // -- Domains -------------------------------------------------------------------------
-    Slots         => "slots",         res;
-    Of            => "of",            res;
-    Descendants   => "descendants",   res;
-    Ancestors     => "ancestors"  ,   res;
+    Slots         => "slots",         ctx;
+    Of            => "of",            ctx;
+    Descendants   => "descendants",   ctx;
+    Ancestors     => "ancestors"  ,   ctx;
     // **«B41b»: die KANTE, an der `descendants of` und `ancestors of` laufen** (2026-08-20).
     //
     // Der Erzeuger hat den Befund selbst gestellt und beim Absenken abgelehnt: *„the domain
@@ -370,33 +411,33 @@ wortschatz! {
     // CONTEXTUAL like `tree`: everywhere else, a slot field name included, it stays an
     // identifier. The decision, both sides per form: `messung/OPS-ERZEUGER.md`.
     Occupied      => "occupied",      ctx;
-    Queue         => "queue",         res;
-    Elems         => "elems",         res;
-    Threads       => "threads",       res;
-    Reaches       => "reaches",       res;
+    Queue         => "queue",         ctx;
+    Elems         => "elems",         ctx;
+    Threads       => "threads",       ctx;
+    Reaches       => "reaches",       ctx;
 
     // -- Types ----------------------------------------------------------------------------
-    U8            => "u8",            res;
-    U16           => "u16",           res;
-    U32           => "u32",           res;
-    U64           => "u64",           res;
-    I8            => "i8",            res;
-    I16           => "i16",           res;
-    I32           => "i32",           res;
-    I64           => "i64",           res;
+    U8            => "u8",            ctx;
+    U16           => "u16",           ctx;
+    U32           => "u32",           ctx;
+    U64           => "u64",           ctx;
+    I8            => "i8",            ctx;
+    I16           => "i16",           ctx;
+    I32           => "i32",           ctx;
+    I64           => "i64",           ctx;
     // -- «F»: f32 und f64. Der Wortschatz waechst um DREI Woerter, nicht um zwei --------
     //
     // `rounded` kam aus dem Korpus (F0): an 340 Literalen eines echten Renderers gemessen
     // waeren 53 abgelehnt worden, darunter ln 2 und 2 pi. Verboten ist nicht das Inexakte,
     // sondern das STILLSCHWEIGEND Inexakte -- und `wrapping` sagt dieselbe Sorte Satz ueber
     // den Ueberlauf. *Dieselbe Form, dieselbe Begruendung, kein neues Muster.*
-    F32           => "f32",           res;
-    F64           => "f64",           res;
-    Rounded       => "rounded",       res;
+    F32           => "f32",           ctx;
+    F64           => "f64",           ctx;
+    Rounded       => "rounded",       ctx;
     // Die Verengung, die Nicht-NaN-Sein herstellt: `narrow x to finite else { … }`.
-    Finite        => "finite",        res;
+    Finite        => "finite",        ctx;
     Bool          => "bool",          res;
-    Never         => "never",         res;
+    Never         => "never",         ctx;
 
     // -- Built-in ------------------------------------------------------------------------
     Sizeof        => "sizeof",        res;
@@ -414,38 +455,22 @@ wortschatz! {
     None          => "None",          res;
 }
 
-/// **The renaming table (`M-woerter`, provisionally applied 2026-08-15).**
-///
-/// The closed vocabulary collides with ordinary naming at seven measured sites of the fragment
-/// corpus. Of the three ways out -- contextual words, a position rule, renaming -- only the
-/// last carries the promise further: **a softening for seven sites is a softening without
-/// measured need** (`WERKZEUGKASTEN.md` W3).
-///
-/// So that the decision is not pushed onto the writer ("keep the list in your head"), **the
-/// compiler names the replacement itself.** That is the entire price difference between
-/// "renaming" and "renaming with a tool".
-///
-/// **Rollback path:** this table and the seven corpus sites are one commit; `git revert`
-/// restores the state. The decision stays with the folder (`memos/M-woerter.md`).
-pub fn ersatzvorschlag(k: Kw) -> Option<&'static str> {
-    Some(match k {
-        Kw::Slots => "plaetze",
-        Kw::Slot => "platz",
-        Kw::Ops => "dienste",
-        Kw::Next => "naechst",
-        Kw::From => "von",
-        Kw::Boot => "startwert",
-        Kw::Stack => "stapel",
-        Kw::Check => "pruefung",
-        Kw::State => "zustand",
-        Kw::Node => "knoten",
-        Kw::Step => "schritt",
-        Kw::Port => "tor",
-        Kw::Out => "aus",
-        Kw::Count => "anzahl",
-        _ => return None,
-    })
-}
+// **The renaming table (`M-woerter`) stood here and is GONE** (2026-09-05).
+//
+// It named a German replacement for fourteen words -- `platz` for `slot`, `knoten` for
+// `node`, `anzahl` for `count` -- and the reader printed it as a note under every refusal at
+// a name position. Its own docstring stated the choice it was making: *"Of the three ways
+// out -- contextual words, a position rule, renaming -- only the last carries the promise
+// further: a softening for seven sites is a softening without measured need."*
+//
+// **The measured need arrived.** Seven sites in a corpus this project wrote itself became
+// 105 words over 585 foreign files, and «K3» showed the refusal masking every later
+// diagnostic in six of eight excerpts. The way out chosen then is the way the eight failed,
+// and the table goes with it: there is nothing left to rename, because there is nothing left
+// to refuse. *A note telling a user to rename his kernel's `node` WAS the plumbing.*
+//
+// The decision it recorded stays readable in the commit graph, which is what a rollback path
+// is; `messung/WORTSTELLUNG.md` carries the measurement that replaced it.
 
 impl Kw {
     /// The integer type words -- `intty` in the grammar.

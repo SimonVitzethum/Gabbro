@@ -109,9 +109,46 @@ module caprock::probe {
 // -- Regel fuer Regel -------------------------------------------------------------------
 
 #[test]
-fn wortschatzwort_ist_kein_bezeichner() {
+fn wortschatzwort_ist_ein_bezeichner() {
     faellt_nicht("impl fn f(zahl : u32) effects { pure } { }");
-    faellt_mit("impl fn f(slot : u32) effects { pure } { }", "P002");
+    // **Turned around on 2026-09-05.** Here stood `faellt_mit(… slot …, "P002")`, and the
+    // rule it guarded is the one «K3» measured: `P002` on `node`, `old`, `next`, `progress`,
+    // `release`, `stack` and `index` in six of eight excerpts transcribed from Linux
+    // `lib/*.c`, every one of them a name the kernel itself wrote. A word of the table is a
+    // keyword only where the grammar expects one; at a parameter it is a name.
+    faellt_nicht("impl fn f(slot : u32) effects { pure } { }");
+    faellt_nicht("impl fn f(node : u32, index : u32, next : u32) effects { pure } { }");
+    // Seventeen of the 221 are still not names -- `tests/wortschatz.rs` holds the whole
+    // column against the reader; one of each half stands here so this file can say why.
+    faellt_mit("impl fn f(Some : u32) effects { pure } { }", "P002");
+    faellt_mit("impl fn f(return : u32) effects { pure } { }", "P002");
+}
+
+/// **The one token that separates `next runde;` from `next = 0;`** -- see
+/// `parse.rs::ist_ortfortsetzung`. Both halves stand here: the keyword form must survive the
+/// rule that makes the place form readable.
+#[test]
+fn anweisungskopf_ist_auch_ein_ort() {
+    faellt_nicht(
+        "impl fn f(a : u32) effects { pure } \
+         { let mut next = a; next = a; next += a; }",
+    );
+    faellt_nicht(
+        "divergent fn g() effects { diverges } \
+         { forever runde per_pass bounded 4 ops on_exceeded w effects { pure } \
+           { if true { leave runde; } next runde; } }",
+    );
+}
+
+/// **`old` and `result` are words in a contract and names in a body** -- see
+/// `parse.rs::im_vertrag`. Before 2026-09-05 the body form parsed into the CONTRACT meaning
+/// and `gabbro pruefe` said `0 errors` over a function returning its own return value.
+#[test]
+fn vertragswoerter_sind_im_rumpf_namen() {
+    faellt_nicht(
+        "impl fn f(a : u32) -> u32 ensures result == 1 effects { pure } costs <= 8 ops \
+         { let result = a; let old = a; return result; }",
+    );
 }
 
 #[test]
@@ -189,7 +226,9 @@ fn zahl_passt_in_keinen_typ() {
 #[test]
 fn erholung_zeigt_mehr_als_einen_befund() {
     // Ein Lauf, der beim ersten Befund aufhoert, misst nicht -- er meldet.
-    let quelle = "impl fn f() effects { pure } { let slot = 1; let dma = 2; }";
+    // *The two words here were `slot` and `dma` and have been names since 2026-09-05; the
+    // probe needs two out of the seventeen that are not.*
+    let quelle = "impl fn f() effects { pure } { let Some = 1; let None = 2; }";
     let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
     let fehler = absagen
         .absagen

@@ -1,0 +1,27 @@
+-- erwartet: M119
+-- **`result` im Rumpf ist ein NAME, und ein Name, den niemand deklariert hat, ist `M119`.**
+--
+-- Bis zum 2026-09-05 war diese Datei sauber -- **`0 errors, 0 hints`** -- und das war der
+-- Befund und nicht die Zusage: der Leser machte aus jedem `result` das Vertragswort, also
+-- las `return result;` den Rueckgabewert der Funktion selbst. Eine Funktion, die sich selbst
+-- zurueckgibt, mit einem gruenen `gabbro pruefe` daneben; erst `gabbro emit` fiel, mit
+-- `C001` und dem richtigen Satz: *„it names the return value of the surrounding function
+-- inside an `ensures`, and a contract is checked at compile time (W6). There is no run time
+-- object for it."*
+--
+-- Seither ist `result` ein Wort nur dort, wo ein Vertrag gelesen wird
+-- (`parse.rs::im_vertrag`) -- `requires`, `ensures`, ein `spec fn`-Rumpf, eine
+-- Schleifeninvariante, das `when` eines `exchange`, die Vorbedingung eines `axiom`, der
+-- `floor` eines `check`. Der Grund ist gemessen: `result` steht in
+-- `lib/`+`kernel/`+`mm/`+Caprock an **81 Stellen** als Name, den ein Programmierer gewaehlt
+-- hat, `old` an 118.
+--
+-- *Diese Datei bindet nichts und nennt trotzdem `result` -- also faellt sie an dem Pass, der
+-- fuer unbekannte Namen zustaendig ist, und nicht mehr drei Werkzeuge spaeter.*
+module gift {
+
+impl fn nehmen(a : u32) -> u32 effects { pure } costs <= 4 ops {
+    return result;
+}
+
+}

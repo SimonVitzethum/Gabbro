@@ -4431,7 +4431,15 @@ impl<'a> Pruefer<'a> {
         // `u64::max` ist ein Ort, dessen Basis das TYPWORT `u64` ist -- gefunden sofort an
         // `beispiele/11-grammatikbefunde.gab`. *Ein Namensauflöser, der Typwörter für
         // Variablen hält, ist schlimmer als keiner.*
-        if o.text().contains("::") || breite_wort(n) {
+        //
+        // **`|| breite_wort(n)` stood beside it and fell on 2026-09-05.** It covered the
+        // UNqualified case as well -- a bare `u32` as a place -- and that was harmless for as
+        // long as the reader let no vocabulary word through at any name position: the case
+        // could not arise. Since `u8 … i64`, `f32` and `f64` are ordinary names it can, and
+        // then the exemption was a silent pass: `return u32;` with `u32` undeclared gave
+        // **0 errors** and the generator wrote `return u32;` into the C. *An exemption whose
+        // premise is taken away somewhere else does not announce itself.*
+        if o.text().contains("::") {
             return;
         }
         // Zweimal derselbe Ort waere zweimal dieselbe Meldung: `index_pruefen` wertet einen
@@ -4442,8 +4450,14 @@ impl<'a> Pruefer<'a> {
         let bekannt = lage.lokal.contains_key(n)
             || self.u.suche_global(&self.modul, n).is_some()
             || self.u.funktionen.contains_key(n)
-            || self.u.tabellen.keys().any(|k| k == n || k.rsplit("::").next() == Some(n.as_str()))
-            || n == "result";
+            || self.u.tabellen.keys().any(|k| k == n || k.rsplit("::").next() == Some(n.as_str()));
+        // **`|| n == "result"` stood here and fell on 2026-09-05, for the same reason as
+        // `breite_wort` above.** The return value used to be a NODE of its own
+        // (`ExprArt::Ergebnis`) that no place could ever be, so a place literally named
+        // `result` was unreachable and the exemption cost nothing. It is reachable now --
+        // `result` is a word only inside a contract -- and the exemption made
+        // `return result;` in a body **0 errors** with `return result;` emitted into C.
+        // `beispiele/gift/684` holds the line.
         if !bekannt {
             self.absagen.schiebe(
                 Absage::fehler("M119", o.basis.span, format!("`{n}` is declared nowhere"))
@@ -5264,13 +5278,6 @@ fn erstes_feld(k: &str) -> (&str, Option<&str>) {
 }
 
 /// Ist dieses Wort ein Typwort der Sprache? `u64::max` traegt es als Basis eines Ortes.
-fn breite_wort(n: &str) -> bool {
-    matches!(
-        n,
-        "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "bool" | "f32" | "f64"
-    )
-}
-
 /// The `reason` an expression NAMES -- written as `R::F`, or as a binding that points at a
 /// reason. **Both shapes, because `let … else` binds the second one.**
 fn grundname_von(e: &Expr, lage: &Lage) -> Option<String> {
