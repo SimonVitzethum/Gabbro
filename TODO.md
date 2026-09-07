@@ -576,7 +576,16 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 223 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 224 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *223 → 224 on 2026-09-07: `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md`
+      joined — the census of what is open at the checker and at the grammar, whose one
+      finding is a CLASS: three sites where `pruefe` reports zero errors, `emit` returns 0,
+      and the C is wrong (a quantifier domain with no effect, a fractional bound on an
+      integer type, a `never` that returns). **Measured the way this entry asks:** the file
+      was moved aside and `./instrumente/pruefe-widerruf.py` came back at 223, moved back
+      and 224. Not added. *And the carry was found the way the entry warns about* — the
+      document was committed BEFORE `pruefe-zahlen.py` was asked, and it was the guardian
+      that named the number, not a reader.*
       *214 → 215 on 2026-09-04: `messung/K100-TWO-QUESTIONS-2026-09-04.md` joined — `K100`
       asked as two questions, the 37 «K3» walls sorted into three registers (25 refused by a
       written decision, 6 undecided, 6 that a probe dissolves) and the obligation ratio
