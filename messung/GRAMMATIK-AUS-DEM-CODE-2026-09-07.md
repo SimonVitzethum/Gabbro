@@ -410,91 +410,166 @@ The word register behind `GUARDS` is **read and not copied** (`W7`): `prueferwor
 `pruefe-grammatiktafel.py`, which already computes *"which words does a checker error name"*
 for its own `vom Pruefer` state.
 
+Three cells say **that the probe failed, not that the language did**, and they stay in the
+denominator (*a denominator that drops what could not be measured is `W25`*):
+
+| | |
+|---|---|
+| **NICHT-GEPROBT** | no minimal host in this file isolates the form |
+| **BASIS-C001** | the BASE is already refused by the emitter, so the difference has no direction |
+| **NICHT-C** | it lowers, and `cc -Werror` refuses the result — neither side of the question |
+
+**`BASIS-C001` was added after a false reading, and the reading is worth the line.** Before
+it, `stmt.traverse` read as *"the emitter refuses `traverse` by name"*. It does not: the
+refusal was the `static mut g : T` standing beside the loop, and the base carried it too.
+*A differential whose base is already at the floor has no direction.*
+
 ### 3.3 The result
 
 ```
-   BASIS-ROT       6     1.9 %      the base program itself does not check
-   NICHT-GEPROBT 102    32.1 %      no minimal host in this file isolates the form
-   NICHT-C         2     0.6 %      it emits, and `cc -Werror` refuses the result
-   REFUSES        49    15.4 %
-   UNCOVERED      33    10.4 %
-   GUARDS         30     9.4 %
-   DEMANDS         4     1.3 %
-   CARRIES        92    28.9 %
+   CARRIES       124    39.0 %
+   GUARDS         41    12.9 %
+   UNCOVERED      55    17.3 %
+   REFUSES        45    14.2 %
+   DEMANDS         6     1.9 %
+   BASIS-C001     32    10.1 %      the base is already refused by the emitter
+   NICHT-GEPROBT  11     3.5 %      no minimal host isolates the form
+   NICHT-C         4     1.3 %      it emits, and `cc -Werror` refuses the result
 
-== of 318 derived forms, 210 were measured and 108 could not be ==
-   the LANGUAGE carries   122  (58.1 % of the 210 measured, 38.4 % of all 318)
-   the USER carries        86  (41.0 % of the 210 measured)
+== of 318 derived forms, 275 were measured and 43 could not be ==
+   the LANGUAGE carries   165  (60.0 % of the 275 measured, 51.9 % of all 318)
+   the USER carries       106  (38.5 % of the 275 measured)
 ```
 
 **The headline, with its denominator (`W25`):**
 
-> **Over the derived grammar, the language carries 122 of the 210 forms this run could
-> measure — 58.1 %. The user carries 86 — 41.0 %. The denominator is 210, not 320: 108 forms
-> have no probe in this file yet and 2 more emit C that `cc -Werror` refuses.** Against the
-> full derived population of 320 the carried share is **38.4 %**, and the gap between the two
-> numbers is this instrument's own incompleteness, not the language's.
+> **Over the derived grammar, the language carries 165 of the 275 forms this run could
+> measure — 60.0 %. The user carries 106 — 38.5 %.** The denominator is 275, not 318: 32
+> forms have a base the emitter already refuses, 11 have no minimal host, and 4 emit C that
+> `cc -Werror` rejects. Against the full derived population of 318 the carried share is
+> **51.9 %**, and the gap between the two numbers is this instrument's incompleteness, not
+> the language's.
 
-`NICHT-GEPROBT` stays in the denominator on purpose. *A denominator that drops what could not
-be measured is `W25`.*
+`BASIS-ROT` is **0**: every base program in the table checks clean. It was 25 in the first
+full run, and the twenty-five hosts were rewritten out of programs the corpus already carries
+(`beispiele/04`, `06`, `67`, `messung/proben/probe-neun-domaenen.gab`) rather than invented.
 
-The probe population reconciles against the derived one:
+The probe population reconciles against the derived one: **318 probes against 320 forms**;
+three forms have no probe (`matchstmt.Some`, `matchstmt.None`, `typeexpr_innen.index` — the
+last is probed under a different id), and no probe names a non-form.
 
-```bash
-# 320 derived forms, 318 probe entries; 3 forms have no probe, 0 probes name a non-form
-# (matchstmt.Some, matchstmt.None, typeexpr_innen.index)
+### 3.4 `UNCOVERED` — 55 forms nothing in the tree has an answer for
+
+```
+andpred.&&  atompred.(  atompred.exists  atompred.forall  axiom.->  device.(  device.mirrors
+device.reg  domain.ancestors  domain.chain  domain.descendants  domain.elems  domain.fields
+domain.mappings  domain.queue  domain.slots  domain.threads  eff.allocs  eff.diverges
+eff.writes  fndecl.section  fnptr.->  intty.in  invariant.online  item.opaque  item.tagged
+item.use  letform.:  notpred.!  notpred.=>  orexpr.||  orpred.||  primary.old  range...<
+regdecl.fields  regdecl.in  regklasse.rc  regklasse.rw  regklasse.w1c  right.@  space.boot
+space.code  space.mmio  space.normal  table.backed  table.const  treedecl.child
+treedecl.parent  treedecl.sibling  typedecl.(  typedecl.=  typedecl.opaque  typedecl.tagged
+typeexpr_innen.in  verbund_oder_varianten.(
 ```
 
-### 3.4 `UNCOVERED` — 33 forms nothing in the tree has an answer for
+**This cell is a QUESTION LIST and not yet a defect list**, and saying so is the honest half.
+Three kinds sit in it and this run does not separate them:
 
-```
-andpred.&&  atompred.(  atompred.exists  atompred.forall  axiom.->  eff.allocs  eff.diverges
-eff.writes  fndecl.section  intty.in  invariant.online  item.opaque  item.tagged  item.use
-letform.:  notpred.!  notpred.=>  orexpr.||  orpred.||  primary.old  range...<  regdecl.fields
-right.@  space.boot  space.code  space.mmio  table.backed  table.const  typedecl.=
-typedecl.opaque  typedecl.tagged  typeexpr_innen.in  verbund_oder_varianten.(
-```
-
-**This cell is a QUESTION LIST and not yet a defect list**, and the distinction is the honest
-half of it. Three kinds sit in it and the run does not separate them:
-
-1. **forms whose work is genuinely elsewhere and my probe's single file cannot see it** —
-   `primary.old` and `axiom.->` book their obligation at a call site, `space.mmio` is checked
-   against a `device` this probe has none of;
+1. **forms whose work is genuinely elsewhere and a single-file probe cannot see it** —
+   `primary.old` and `axiom.->` book their obligation at a call site;
 2. **forms whose word is spelled differently in the refusal than in the grammar**, so
-   `prueferworte()` misses the link — `range...<`, `verbund_oder_varianten.(`;
-3. **forms that really are read by nobody.** `intty.in` and `typeexpr_innen.in` — the range
-   on an integer type — sit here, and `table.backed` sits here, and those three deserve a
-   probe each before anyone calls them either way.
+   `prueferworte()` misses the link — `range...<`, `verbund_oder_varianten.(`, `notpred.=>`;
+3. **forms that really are read by nobody.**
 
-*Naming which of the three each one is takes one program per form and is the next step, not
-this one.*
+**All nine quantifier domains are in it**, and that is the most interesting row in the table:
+a `forall i in slots of k` and a `forall i in threads` produce byte-identical C, book no
+obligation, and no checker error text names the domain word. *The domain of a quantifier is
+the one thing about a quantifier that decides what it says* — and by this measurement nothing
+distinguishes nine of them. `messung/DOMAENENNAMEN.md` carries a 32-falsification series over
+exactly these nine; **holding that series against this cell is the next step and is NOT done
+here.**
 
-### 3.5 `C001` — 16 forms the checker accepts and the emitter refuses BY NAME
+`table.backed`, `intty.in` and `typeexpr_innen.in` — the backing count and the range on an
+integer type — sit here too, and each deserves a probe of its own before anyone calls it
+either way.
 
-This is the blind spot the brief names, and the run finds sixteen instances:
+### 3.5 `C001` — 12 forms the checker accepts and the emitter refuses BY NAME
 
-```
-bitpos.[  field_innen.@  field_innen.reserved  field_innen.where  fieldty.embeds  fieldty.scale
-format.@  item.format  item.walk  primary.lenof  primary.rounded  primary.sizeof  space.port
-typ_oder_ort.intty  typeexpr_innen.never  walkdecl.invariant
-```
-
-**`gabbro pruefe` reports zero errors on every one of them and `gabbro emit` refuses by
-name.** Two of them are whole item kinds — `format` and `walk`. That `S11 walk.mappings` is a
-known half-truth (`emit.rs:2365` generates `walk`, `emit.rs:8666` refuses `mappings of`) is
-one instance of a shape this run finds sixteen of.
-
-### 3.6 `DEMANDS` — 4
+This is the blind spot the brief names — *a file with zero checker errors can still be refused
+by name by the emitter* — and the run finds twelve where the base emits and the variant does
+not:
 
 ```
-device.transition   fndecl.ensures   table.invariant   transition.requires
+item.format  item.group  item.walk  opnamen.relabel  primary.lenof  primary.sizeof
+space.port  stmt.retry  typ_oder_ort.intty  typeexpr_innen.[  typeexpr_innen.never
+typeexpr_innen.{
 ```
 
-Four forms that put a new line in `gabbro pflichten` from a single file. It is a low number
-and it is a statement about the probe, not about the language: the 84 obligations
-`gabbro pflichten` books over the 70 tracked examples arise overwhelmingly **at call sites**,
-and a one-file probe has none. **This is the weakest column of the run and is named as such.**
+**Three of them are core forms and are worth naming one by one:**
+
+* **`typeexpr_innen.[` — an ARRAY as a parameter type.** `fn f(x : [u32; 4])` gives
+  `0 errors` from `gabbro pruefe` and `C001` from `gabbro emit`, while `fn f(x : u32)`
+  lowers.
+* **`typeexpr_innen.{` — a RECORD as a parameter type.** The same pair.
+* **`item.format` and `item.walk` — whole item kinds.** A `format` or a `walk` alone in a
+  module checks clean and does not lower.
+
+That `S11 walk.mappings` is a known half-truth — `emit.rs:2365` generates `walk`,
+`emit.rs:8666` refuses `mappings of` — is one instance of a shape this run finds twelve of,
+plus 32 more where the host itself is at the floor (`BASIS-C001`).
+
+### 3.6 `NICHT-C` — 4 forms that emit, and whose C is not C
+
+**The sharpest single finding of Part 3, and it is a defect in the checker:**
+
+```gabbro
+module p {
+    divergent fn q() -> never effects { diverges } costs <= 1 ops { return; }
+}
+```
+
+```
+gabbro pruefe  ->  2 items, 0 errors, 0 hints          exit 0
+gabbro emit    ->  static _Noreturn void q(void) { return; }     exit 0
+cc -std=c11 -Wall -Wextra -Werror -O0
+   error: function declared 'noreturn' has a 'return' statement [-Werror]
+   error: 'noreturn' function does return [-Werror]
+```
+
+A `divergent fn` returning `never` may contain `return;`. The checker says nothing, the
+emitter writes `_Noreturn` over a body that returns, and **the artefact is not C.** It fires
+at both `item.divergent` and `fndecl.divergent` — the same body reached two ways.
+
+The other two (`asmrumpf.out`, `asmrumpf.clobbers`) are the same shape at an `asm` body with
+an empty operand list. **Reported, not repaired.**
+
+*This is exactly the class the grammar table corrected itself for on 2026-08-31* — for
+seventeen days a word counted as `gesenkt` because its file emitted, and nobody asked whether
+the emitted text was C. The correction reached WORDS. It did not reach this form, because
+this form has no word of its own that is not covered elsewhere.
+
+### 3.7 `DEMANDS` — 6
+
+```
+device.transition   fndecl.ensures   fndecl.refines   regdecl.requires   table.invariant
+transition.requires
+```
+
+Six forms that put a new line in `gabbro pflichten` from a single file. It is a low number and
+it is a statement about the probe, not about the language: the obligations `gabbro pflichten`
+books over the tracked examples arise overwhelmingly **at call sites**, and a one-file probe
+has none. **This is the weakest column of the run and is named as such.**
+
+### 3.8 A defect in this instrument, caught and booked
+
+Between the second and third run the probe table grew by ninety entries and the numbers **did
+not move** — 101 `NICHT-GEPROBT` before and after. The cause was in this file: `if __name__ ==
+"__main__": sys.exit(main())` stood in the MIDDLE, so `main()` ran before the added probes
+were registered and reported the old table's numbers over the new file.
+
+*A run that measures the first half of its own instrument and prints a total is the `W16`
+shape one turn inward*, and the only reason it was caught is that a number which should have
+moved did not. The entry point now stands last, with the reason written beside it.
 
 ---
 
@@ -504,7 +579,7 @@ and a one-file probe has none. **This is the weakest column of the run and is na
   meaning — the grammar table carries the same caveat, in the same words, for the same reason.
 * **`CARRIES` means the artefact moved**, not that it moved rightly.
 * **`UNCOVERED` is a question, not a verdict** — §3.4.
-* **The 108 unmeasured forms are the instrument's debt**, not the language's credit.
+* **The 43 unmeasured forms are the instrument's debt**, not the language's credit.
 * **Nothing here lowers the grammar table's green.** It answers a different question over a
   different population, and both answers stand.
 
@@ -516,12 +591,13 @@ and a one-file probe has none. **This is the weakest column of the run and is na
 |---|---|---|
 | `cargo build` | `ki-pc-fisch-101:gabbro-grammatik` | exit 0 |
 | `pruefe-grammatiktafel.py` | server | **GRUEN, 0 von 218 UNGEDECKT**, exit 0 |
-| `leite-grammatik.py --zahl` | local (`free -g`: 15 GB available) | 105 rules, 320 forms |
-| `leite-grammatik.py --formen` | local | the population, joined against the probe table |
-| 32 divergence probes (§2.2, §2.3) | local, one `gabbro pruefe` each | output quoted literally above |
+| `pruefe-todo.py` · `pruefe-kennungen.py` | local (`free -g` beside each) | ALL PASS, exit 0 |
+| `leite-grammatik.py --zahl` / `--formen` | local | 105 rules, 320 forms |
+| 32 divergence probes (§2.2, §2.3) | local, one `gabbro pruefe` each | quoted literally above |
 | the `group` recovery triple (§2.6) | local | 2 items against 3 and 3 |
 | the `retry`/`forever` label quadruple (§2.4) | local | control green, three `P001` |
-| `miss-grammatikdeckung.py` | server, 318 probes × 2 programs × 5 runs | the table of §3.3 |
+| `miss-grammatikdeckung.py` | server, 318 probes × 2 programs × 5 runs | §3.3 |
+| `gabbro emit` + `cc` on the `divergent` probe (§3.6) | local | two `-Werror` errors, quoted |
 
 **NOT run, and each is a real gap:**
 
@@ -530,11 +606,13 @@ and a one-file probe has none. **This is the weakest column of the run and is na
 * **`abnahme.py`**, in any form. The two new instruments are not in `pruefe-waechter.py` and
   no acceptance run has ever seen them.
 * **`pruefe-emission.sh`**, `mutiere-pruefer.py`, `isabelle build`. Untouched, unmeasured.
+* **`pruefe-englisch.py`** aborts tree-wide at a pre-existing count (7874 of 25460 German
+  comment lines in the checker) and was not made to run over these files alone.
 * **The derived form list against `fuzze-grenzen.py:FORMEN`.** §1 names this as the obvious
-  next comparison — a hand-written 63-form dict against a derived 320-form population — and it
-  is **not** done here.
-* **Probes for the 108 unmeasured forms**, and the three-way split of the 33 `UNCOVERED`
-  (§3.4). Both are the next day's work.
-* **Any repair.** Five defects are named in §2.4, §2.5 and §2.6 and **not one line of
-  `crates/` or of an existing instrument was changed.** This is a measuring lane; the repairs
-  are described where they are found and left there.
+  next comparison — a hand-written 63-form dict against a derived 320-form population.
+* **The nine-domain `UNCOVERED` row against `messung/DOMAENENNAMEN.md`'s 32 falsifications**
+  (§3.4). The two ought to meet and have not.
+* **Probes for the 43 unmeasured forms**, and the three-way split of the 55 `UNCOVERED`.
+* **Any repair.** Seven defects are named in §2.4, §2.5, §2.6, §3.5 and §3.6 and **not one
+  line of `crates/` or of an existing instrument was changed.** This is a measuring lane; the
+  repairs are described where they were found and left there.

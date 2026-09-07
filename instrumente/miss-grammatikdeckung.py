@@ -178,6 +178,45 @@ HOST = {
     "statisch": "module p {{\n    static K : u32 = 4 {X};\n}}\n",
     # A whole item at module level -- for item heads.
     "item": "module p {{\n{X}\n}}\n",
+    # A loop body -- the retry/forever host, with a bound the `progress` witness can move.
+    "schleife": ("module p {{\n"
+                 "    fn f(a : u32 in 0 .. 100) -> u32 in 0 .. 100\n"
+                 "        effects {{ pure }} costs <= 40 ops {{\n"
+                 "        let mut r : u32 in 0 .. 100 = a;\n"
+                 "        retry m {X} bounded 4 ops on_exceeded g {{ r = 0; }}\n"
+                 "        return r;\n"
+                 "    }}\n}}\n"),
+    # A `traverse` clause -- `{X}` sits between `by unvisited` and the block.
+    "traverse": ("module p {{\n"
+                 "    table T count 8 {{ slot {{ wert : u32, }} }}\n"
+                 "    static mut g : T = T;\n"
+                 "    fn f() effects {{ reads g }} costs <= 80 ops {{\n"
+                 "        traverse i over slots of g by unvisited {X} {{ }}\n"
+                 "    }}\n}}\n"),
+    # An `entry` clause -- `{X}` sits after `stack s`.
+    "eintritt": ("module p {{\n"
+                 "    fn h() effects {{ pure }} costs <= 1 ops {{ return; }}\n"
+                 "    entry e arch x86_64 {{ regs in {{ }} regs out {{ }} preserves {{ }} "
+                 "clobbers {{ }} stack s {X} dispatch p::h; }}\n}}\n"),
+    # An `asm` body -- `{X}` sits after the instruction text.
+    "asm": ("module p {{\n"
+            "    raw fn g() effects {{ pure }} costs <= 1 ops arch x86_64 = "
+            "asm {{ \"nop\" {X} }};\n}}\n"),
+    # A `boot` step -- `{X}` is one whole step line.
+    "boot": ("module p {{\n"
+             "    static mut z : u32 = 0;\n"
+             "    fn h() effects {{ pure }} costs <= 1 ops {{ return; }}\n"
+             "    boot b arch x86_64 {{ {X} dispatch p::h; }}\n}}\n"),
+    # A `check` clause -- `{X}` sits after `can_fail { }`.
+    "check": ("module p {{\n"
+              "    static mut Z : u32 = 0;\n"
+              "    fn g() effects {{ pure }} costs <= 1 ops {{ return; }}\n"
+              "    check c {{ claim \"the claim\" measures Z gates g can_fail {{ }} {X} }}\n"
+              "}}\n"),
+    # A function-POINTER type -- `{X}` sits inside the `fn(...)` type's contract.
+    "fnptr": ("module p {{\n"
+              "    type F = fn(x : u32) {X} effects {{ pure }} costs <= 1 ops;\n"
+              "    fn f(k : F) effects {{ pure }} costs <= 1 ops {{ return; }}\n}}\n"),
 }
 
 # ---------------------------------------------------------------------------------------
@@ -728,6 +767,13 @@ def main():
         b, v = messe(bt), messe(vt)
         if not b["angenommen"]:
             u, grund = "BASIS-ROT", "the base program itself does not check: " + ",".join(b["codes"])
+        # **A base the emitter already refuses measures nothing.** With `C001` on both sides
+        # the difference is zero for the HOST's reason, and reporting `REFUSES` would put the
+        # host's refusal on the form's name. Measured 2026-09-07: `stmt.traverse` read as
+        # *"the emitter refuses `traverse`"* when the refusal was the `static mut g : T`
+        # beside it. *A differential whose base is already at the floor has no direction.*
+        elif b["c001"]:
+            u, grund = "BASIS-C001", "the base program is already refused by the emitter"
         else:
             u, grund = urteil(b, v, k.split(".", 1)[-1])
         zaehler[u] = zaehler.get(u, 0) + 1
@@ -751,7 +797,8 @@ def main():
     # forms the language does not have.
     traegt = zaehler.get("CARRIES", 0) + zaehler.get("GUARDS", 0)
     nutzer = zaehler.get("DEMANDS", 0) + zaehler.get("REFUSES", 0) + zaehler.get("UNCOVERED", 0)
-    gemessen = ganz - zaehler.get("NICHT-GEPROBT", 0) - zaehler.get("BASIS-ROT", 0)
+    gemessen = (ganz - zaehler.get("NICHT-GEPROBT", 0) - zaehler.get("BASIS-ROT", 0)
+                - zaehler.get("BASIS-C001", 0))
     print(f"\n== of {ganz} derived forms, {gemessen} were measured and "
           f"{ganz - gemessen} could not be ==")
     print(f"   the LANGUAGE carries  {traegt:>4}  ({100.0 * traegt / gemessen:.1f} % of the "
@@ -765,6 +812,606 @@ def main():
             "".join(f"{k}\t{u}\t{g}\n" for k, u, g in zeilen))
     return 0
 
+
+
+# ============ probes added 2026-09-07 to close the `NICHT-GEPROBT` column =============
+# Every one of these replaces an entry that had no minimal host. The originals stay above
+# and are overwritten here, so the diff shows what was closed and when.
+
+# -- the retry host: the base overflowed (`M101`) and had no progress witness (`S007`) --
+probe("retry.until", "schleife", "", "until true")
+probe("retry.progress", "schleife", "", "progress r")
+probe("retry.effects", "schleife", "", "effects { pure }")
+probe("schleifeninvariante.invariant", "schleife", "", "invariant true")
+probe("stmt.retry", "rumpf", "",
+      "        retry m bounded 4 ops on_exceeded g { r = 0; }")
+
+# -- `traverse` and its clauses --------------------------------------------------------
+probe("stmt.traverse", "modul",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops { return; }",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops {\n"
+      "        traverse i over slots of g by unvisited { }\n    }")
+probe("traverse.unvisited", "traverse", "", "")
+probe("traverse.consuming", "modul",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops {\n"
+      "        traverse i over slots of g by unvisited { }\n    }",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops {\n"
+      "        traverse i over slots of g by consuming { }\n    }")
+probe("traverse.decreases", "traverse", "", "decreases 1")
+probe("traverse.touches", "traverse", "", "touches reads g")
+probe("traverse.of", "modul",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops {\n"
+      "        traverse i over slots of g by unvisited { }\n    }",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops {\n"
+      "        traverse i of g over slots of g by unvisited { }\n    }")
+
+# -- the nine quantifier domains -------------------------------------------------------
+_DOM = {
+    "slots": "slots of g", "chain": "chain(naechst, naechst) in g",
+    "descendants": "descendants of g", "ancestors": "ancestors of g",
+    "queue": "queue g", "fields": "fields of T", "elems": "elems of g",
+    "threads": "threads", "mappings": "mappings of g",
+}
+for _k, _d in _DOM.items():
+    probe(f"domain.{_k}", "domaene", "threads", _d)
+
+# -- the five register classes ---------------------------------------------------------
+for _k in ("r", "w", "rw", "w1c", "rc"):
+    probe(f"regklasse.{_k}", "geraet", "        reg X : u32 @0x8 class rw",
+          f"        reg X : u32 @0x8 class {_k}")
+probe("right.r", "typ", "ptr<normal, w> u32", "ptr<normal, r> u32")
+probe("space.normal", "typ", "ptr<mmio, r> u32", "ptr<normal, r> u32")
+
+# -- the type forms --------------------------------------------------------------------
+probe("typeexpr_innen.[", "typ", "u32", "[u32; 4]")
+probe("typeexpr_innen.{", "typ", "u32", "{ g : u32, }")
+probe("typeexpr_innen.option", "modul",
+      "    table T count 4 { slot { wert : u32, } }\n"
+      "    fn f(x : index into T) effects { pure } costs <= 1 ops { return; }",
+      "    table T count 4 { slot { wert : u32, } }\n"
+      "    fn f(x : option index into T) effects { pure } costs <= 1 ops { return; }")
+probe("typeexpr_innen.index", "modul",
+      "    table T count 4 { slot { wert : u32, } }\n"
+      "    fn f(x : u32) effects { pure } costs <= 1 ops { return; }",
+      "    table T count 4 { slot { wert : u32, } }\n"
+      "    fn f(x : index into T) effects { pure } costs <= 1 ops { return; }")
+probe("typeexpr_innen.fn", "modul",
+      "    type F = u32;",
+      "    type F = fn(x : u32) effects { pure } costs <= 1 ops;")
+probe("typeexpr_innen.Self", "modul",
+      "    type S = { g : u32, };", "    type S = { g : ptr<normal, r> Self, };")
+probe("typedecl.(", "modul", "    type Q = u32;", "    type Q(u32) = u32;")
+probe("slottype.wrapping", "tabelle", "", NICHT)
+probe("slottype.intty", "modul",
+      "    table T count 4 { slot { wert : bool, } }",
+      "    table T count 4 { slot { wert : u32, } }")
+probe("intty.u32", "typ", "u64", "u32")
+probe("cmpexpr.==", "rumpf", "        if a < b { r = 1; }", "        if a == b { r = 1; }")
+
+# -- statements ------------------------------------------------------------------------
+probe("stmt.match", "modul",
+      "    tagged type K = { A, B };\n"
+      "    fn f(k : K) effects { pure } costs <= 4 ops { return; }",
+      "    tagged type K = { A, B };\n"
+      "    fn f(k : K) effects { pure } costs <= 4 ops {\n"
+      "        match k { A => { return; } B => { return; } }\n    }")
+probe("matchstmt.(", "modul",
+      "    tagged type K = { A(u32), B };\n"
+      "    fn f(k : K) effects { pure } costs <= 4 ops {\n"
+      "        match k { A => { return; } B => { return; } }\n    }",
+      "    tagged type K = { A(u32), B };\n"
+      "    fn f(k : K) effects { pure } costs <= 4 ops {\n"
+      "        match k { A(v) => { return; } B => { return; } }\n    }")
+probe("stmt.locks", "modul",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;\n"
+      "    fn f() effects { pure } costs <= 8 ops { return; }",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;\n"
+      "    fn f() effects { locks L, writes Z } costs <= 8 ops {\n"
+      "        locks L { Z = 1; }\n    }")
+probe("stmt.shared", "modul",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;\n"
+      "    fn f() effects { locks L, reads Z } costs <= 8 ops {\n"
+      "        locks L { let q : u32 = Z; }\n    }",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;\n"
+      "    fn f() effects { locks shared L, reads Z } costs <= 8 ops {\n"
+      "        locks shared L { let q : u32 = Z; }\n    }")
+probe("stmt.finite", "modul",
+      "    fn f(x : f64) effects { pure } costs <= 8 ops { return; }",
+      "    fn f(x : f64) effects { pure } costs <= 8 ops {\n"
+      "        narrow x to finite else { return; }\n    }")
+probe("stmt.forever", "modul",
+      "    fn f() -> never effects { diverges } costs <= 8 ops { return; }",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } { }\n    }")
+probe("stmt.leave", "modul",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } { }\n    }",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } "
+      "{ leave m; }\n    }")
+probe("stmt.next", "modul",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } { }\n    }",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } "
+      "{ next m; }\n    }")
+probe("forever.progress", "modul",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } { }\n    }",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } "
+      "progress q { }\n    }")
+probe("forever.leaves", "modul",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } { }\n    }",
+      "    fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded g effects { pure } "
+      "leaves inv { }\n    }")
+probe("stmt.breaking", "modul",
+      "    table T count 4 { slot { wert : u32, } invariant inv cost O(1) runs offline : true; }\n"
+      "    static mut g : T = T;\n"
+      "    fn f() effects { writes g } costs <= 8 ops { return; }",
+      "    table T count 4 { slot { wert : u32, } invariant inv cost O(1) runs offline : true; }\n"
+      "    static mut g : T = T;\n"
+      "    fn f() effects { writes g } costs <= 8 ops { breaking inv { } }")
+probe("stmt.observes", "modul",
+      "    rcu R protects { };\n"
+      "    fn f() effects { pure } costs <= 8 ops { return; }",
+      "    rcu R protects { };\n"
+      "    fn f() effects { pure } costs <= 8 ops { observes R { } }")
+
+# -- `let` in its four shapes ----------------------------------------------------------
+probe("letform.else", "modul",
+      "    reason R { Leer = 1 \"empty\" }\n"
+      "    prim fn q() -> u32 or R effects { pure } costs <= 1 ops;\n"
+      "    fn f() effects { pure } costs <= 8 ops { return; }",
+      "    reason R { Leer = 1 \"empty\" }\n"
+      "    prim fn q() -> u32 or R effects { pure } costs <= 1 ops;\n"
+      "    fn f() effects { pure } costs <= 8 ops {\n"
+      "        let x = q() else (e) { return; }\n        return;\n    }")
+probe("letform.awaits", "modul",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { reads A } costs <= 8 ops { return; }",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { reads A } costs <= 8 ops {\n"
+      "        let x : u32 = A awaits { Z };\n        return;\n    }")
+probe("letform.exchange", "modul",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { reads A } costs <= 8 ops { return; }",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 8 ops {\n"
+      "        let x : u32 = A exchange 1 when true returns r;\n        return;\n    }")
+probe("letform.publishes", "modul",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { writes A } costs <= 8 ops {\n"
+      "        let x : u32 = A exchange 1 when true returns r;\n        return;\n    }",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { writes A, publishes Z } costs <= 8 ops {\n"
+      "        let x : u32 = A exchange 1 when true returns r publishes { Z };\n"
+      "        return;\n    }")
+probe("zuweisung_oder_ruf.publishes", "modul",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { writes A } costs <= 8 ops { A = 1; }",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { writes A, publishes Z } costs <= 8 ops "
+      "{ A = 1 publishes { Z }; }")
+probe("nutzlast.nothing", "modul",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;",
+      "    atomic A : u32 publishes nothing release;\n    static mut Z : u32 = 0;")
+probe("xform.update", "modul",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 8 ops {\n"
+      "        let x : u32 = A exchange 1 when true returns r;\n        return;\n    }",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let x : u32 = A exchange update(v) { v = 1; }\n        return;\n    }")
+probe("xform.bounded", "modul",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let x : u32 = A exchange update(v) { v = 1; }\n        return;\n    }",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let x : u32 = A exchange update(v) bounded 4 ops { v = 1; }\n"
+      "        return;\n    }")
+probe("xform.on_exceeded", "modul",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let x : u32 = A exchange update(v) bounded 4 ops { v = 1; }\n"
+      "        return;\n    }",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let x : u32 = A exchange update(v) bounded 4 ops on_exceeded g "
+      "{ v = 1; }\n        return;\n    }")
+
+# -- device / table / atomic / fn clauses ------------------------------------------------
+probe("device.reg", "modul",
+      "    opaque type Pa = u64;\n    device D(basis : Pa) at mmio { }",
+      "    opaque type Pa = u64;\n"
+      "    device D(basis : Pa) at mmio { reg CTRL : u32 @0x0 class rw }")
+probe("device.(", "modul",
+      "    device D at mmio { reg CTRL : u32 @0x0 class rw }",
+      "    opaque type Pa = u64;\n"
+      "    device D(basis : Pa) at mmio { reg CTRL : u32 @0x0 class rw }")
+probe("device.mirrors", "geraet", "        reg SHADOW : u32 @0x8 class w",
+      "        reg SHADOW : u32 @0x8 class w\n        mirrors SHADOW from CTRL;")
+probe("regdecl.in", "modul",
+      "    opaque type Pa = u64;\n    linear ghost type St order { setup, live };\n"
+      "    device D(basis : Pa) at mmio { reg X : u32 @0x0 class rw }",
+      "    opaque type Pa = u64;\n    linear ghost type St order { setup, live };\n"
+      "    device D(basis : Pa) at mmio { reg X : u32 @0x0 class rw in setup, r in live }")
+probe("regdecl.requires", "geraet", "        reg X : u32 @0x8 class rw",
+      "        reg X : u32 @0x8 class rw requires true")
+probe("regdecl.else", "modul",
+      "    opaque type Pa = u64;\n    reason R { Leer = 1 \"empty\" }\n"
+      "    device D(basis : Pa) at mmio { reg X : u32 @0x0 class rw requires true }",
+      "    opaque type Pa = u64;\n    reason R { Leer = 1 \"empty\" }\n"
+      "    device D(basis : Pa) at mmio "
+      "{ reg X : u32 @0x0 class rw requires true else R::Leer }")
+probe("table.slot", "modul", "    table T count 4 { }",
+      "    table T count 4 { slot { wert : u32, } }")
+probe("slotdecl.by", "modul",
+      "    table T count 4 { slot { wert : u32, } ops insert; occupied wert; }",
+      "    table T count 4 { slot { wert : u32 by ops, } ops insert; occupied wert; }")
+probe("atomicdecl.seq", "atomic", "", "seq")
+probe("atomicdecl.observed", "modul",
+      "    atomic A : u32 seq;\n"
+      "    assume S \"the device reads it\" unfalsifiable \"no probe can refute it\";",
+      "    atomic A : u32 seq observed by S;\n"
+      "    assume S \"the device reads it\" unfalsifiable \"no probe can refute it\";")
+probe("annahmeklasse.unfalsifiable", "modul",
+      "    fn pr() -> bool effects { pure } costs <= 1 ops { return true; }\n"
+      "    assume A \"a claim\" falsifier pr;",
+      "    assume A \"a claim\" unfalsifiable \"no probe can refute it\";")
+probe("accdecl.max", "modul", "    accumulates Q : u32 merge min per cpu 4;",
+      "    accumulates Q : u32 merge max per cpu 4;")
+probe("fndecl.maintains", "modul",
+      "    table T count 4 { slot { wert : u32, } "
+      "invariant inv cost O(1) runs offline : true; }\n"
+      "    static mut g : T = T;\n"
+      "    fn f() effects { writes g } costs <= 4 ops { return; }",
+      "    table T count 4 { slot { wert : u32, } "
+      "invariant inv cost O(1) runs offline : true; }\n"
+      "    static mut g : T = T;\n"
+      "    fn f() maintains inv effects { writes g } costs <= 4 ops { return; }")
+probe("fndecl.or", "modul",
+      "    reason R { Leer = 1 \"empty\" }\n"
+      "    prim fn f() -> u32 effects { pure } costs <= 1 ops;",
+      "    reason R { Leer = 1 \"empty\" }\n"
+      "    prim fn f() -> u32 or R effects { pure } costs <= 1 ops;")
+probe("fndecl.refines", "modul",
+      "    spec fn s() -> bool = true;\n"
+      "    impl fn f() effects { pure } costs <= 1 ops { return; }",
+      "    spec fn s() -> bool = true;\n"
+      "    impl fn f() refines p::s effects { pure } costs <= 1 ops { return; }")
+probe("fndecl.advances", "modul",
+      "    linear ghost type St order { roh, mmu };\n"
+      "    fn f() effects { pure } costs <= 1 ops { return; }",
+      "    linear ghost type St order { roh, mmu };\n"
+      "    fn f() advances roh -> mmu effects { pure } costs <= 1 ops { return; }")
+probe("fndecl.retires", "modul",
+      "    linear ghost type St order { roh, mmu };\n"
+      "    fn f() effects { pure } costs <= 1 ops { return; }",
+      "    linear ghost type St order { roh, mmu };\n"
+      "    fn f() retires t from boot unfalsifiable \"no probe can refute it\" "
+      "effects { pure } costs <= 1 ops { return; }")
+probe("fndecl.effects", "modul",
+      "    prim fn f() effects { pure } costs <= 1 ops;",
+      "    prim fn f() effects { diverges } costs <= 1 ops;")
+probe("field_innen.offset_into", "modul",
+      "    format F { a : u32, }",
+      "    format F { a : u32 offset_into Self, }")
+probe("typname_als_ident.Self", "modul",
+      "    format F { a : u32, }", "    format F { a : u32 offset_into Self, }")
+probe("gruppedecl.{", "modul",
+      "    table A count 4 { slot { w : u32, } }\n    table B count 4 { slot { w : u32, } }\n"
+      "    static mut x : A = A;\n    static mut y : B = B;\n"
+      "    group N over { x, y };",
+      "    table A count 4 { slot { w : u32, } }\n    table B count 4 { slot { w : u32, } }\n"
+      "    static mut x : A = A;\n    static mut y : B = B;\n"
+      "    group N over { x, y } { invariant i cost O(1) runs offline : true; }")
+
+# -- the function-POINTER contract -------------------------------------------------------
+probe("fnptr.->", "modul",
+      "    type F = fn(x : u32) effects { pure } costs <= 1 ops;",
+      "    type F = fn(x : u32) -> u32 effects { pure } costs <= 1 ops;")
+probe("fnptr.requires", "fnptr", "", "requires x == x")
+probe("fnptr.ensures", "fnptr", "", "ensures true")
+probe("fnptr.effects", "modul",
+      "    type F = fn(x : u32) effects { pure } costs <= 1 ops;", NICHT)
+probe("fnptr.costs", "modul",
+      "    type F = fn(x : u32) effects { pure } costs <= 1 ops;", NICHT)
+
+# -- asm, boot, entry, check ---------------------------------------------------------------
+probe("asmrumpf.in", "asm", "", "in { }")
+probe("asmrumpf.out", "asm", "", "out { }")
+probe("asmrumpf.clobbers", "asm", "", "clobbers { }")
+probe("asmops.result", "asm", "out { }", "out { result : \"=a\" }")
+probe("bootdecl.step", "boot", "", "step z = 1;")
+probe("bootdecl.(", "boot", "step z = 1;", "step h();")
+probe("bootdecl.::", "boot", "step z = 1;", "step p::h();")
+for _k, _c in (("vector", "vector 0x20"), ("via", "via gate"), ("per", "per cpu"),
+               ("ist", "ist 1"), ("nested", "nested never"), ("never", "nested never"),
+               ("masked", "nested masked"), ("bounded", "nested bounded 2")):
+    probe(f"entrydecl.{_k}", "eintritt", "", _c)
+probe("check.floor", "check", "", "floor true")
+probe("check.counterprobe", "check", "", "counterprobe \"the probe text\" expects g")
+
+# -- the last four pairs that were not pairs ---------------------------------------------
+probe("domain.threads", "domaene", "slots of g", "threads")
+probe("regklasse.rw", "geraet", "        reg X : u32 @0x8 class r",
+      "        reg X : u32 @0x8 class rw")
+probe("traverse.unvisited", "modul",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops { return; }",
+      "    table T count 8 { slot { wert : u32, } }\n    static mut g : T = T;\n"
+      "    fn f() effects { reads g } costs <= 80 ops {\n"
+      "        traverse i over slots of g by unvisited { }\n    }")
+probe("eff.pure", "modul",
+      "    static mut Z : u32 = 0;\n"
+      "    fn f() effects { reads Z } costs <= 2 ops { let q : u32 = Z; return; }",
+      "    static mut Z : u32 = 0;\n"
+      "    fn f() effects { pure } costs <= 2 ops { return; }")
+
+# ============ round two: the base programs that did not check ==========================
+# **A `BASIS-ROT` row measures the probe, not the language.** Twenty-five of them fell in
+# the first full run; the hosts below are taken from programs the corpus already carries
+# (`beispiele/04`, `beispiele/06`, `beispiele/67`, `messung/proben/probe-neun-domaenen.gab`)
+# rather than invented, so that the base is a program somebody has already run.
+
+# -- the nine domains, on the structure `probe-neun-domaenen.gab` uses for them ----------
+HOST["domaene"] = (
+    "module p {{\n"
+    "    const N : u32 = 64;\n"
+    "    const NR : u64 = 32;\n"
+    "    type RingNr = u32 in 0 ..< 32;\n"
+    "    table Knoten count N {{\n"
+    "        tree {{ parent elter, child kind, sibling gesch }}\n"
+    "        slot {{ belegt : bool, marke : u32,\n"
+    "                elter : option index into Knoten,\n"
+    "                kind  : option index into Knoten,\n"
+    "                gesch : option index into Knoten, }}\n"
+    "    }}\n"
+    "    type Ring = {{ plaetze : [RingNr; NR], kopf : u32, zahl : u32, }};\n"
+    "    format Wort endian little {{\n"
+    "        gueltigkeit : bool @0,\n"
+    "        schreibbar  : bool @1,\n"
+    "        frei        : u64 @[11:2]  reserved,\n"
+    "        rahmen      : u64 embeds [51:12] scale 4096,\n"
+    "        hoch        : u64 @[63:52] reserved,\n"
+    "    }}\n"
+    "    walk Baum levels 2 {{\n"
+    "        node : [Wort; 512],\n"
+    "        down : rahmen when it.gueltigkeit && !it.schreibbar,\n"
+    "        leaf : it.gueltigkeit && it.schreibbar,\n"
+    "    }}\n"
+    "    impl fn d(k : ptr<normal, rw> Knoten, r : ptr<normal, rw> Ring,\n"
+    "              w : ptr<normal, rw> Baum, s : index into Knoten)\n"
+    "        ensures forall i in {X} : k.slots[0].marke == 0\n"
+    "        effects {{ reads k.slots, writes k.slots }}\n"
+    "        costs   <= 4 ops\n"
+    "    {{\n"
+    "    }}\n}}\n")
+_DOM2 = {
+    "slots": "slots of k", "chain": "chain(kind, gesch) in k.slots[s]",
+    "descendants": "descendants of k.slots[s]", "ancestors": "ancestors of k.slots[s]",
+    "queue": "queue r", "fields": "fields of Wort", "elems": "elems of r.plaetze",
+    "threads": "threads", "mappings": "mappings of w",
+}
+for _k, _d in _DOM2.items():
+    probe(f"domain.{_k}", "domaene", "threads" if _k != "threads" else "slots of k", _d)
+
+# -- `asm`, in the shape `beispiele/67` writes it ----------------------------------------
+HOST["asm"] = ("module p {{\n"
+               "    static mut TLB : u32 = 0;\n"
+               "    impl fn g(adr : u64)\n"
+               "        effects {{ writes TLB }}\n"
+               "        costs   <= 1 ops\n"
+               "        arch    x86_64\n"
+               "        = asm {{ \"nop\" {X} }};\n}}\n")
+probe("asmrumpf.in", "asm", "", 'in { adr : "r" }')
+probe("asmrumpf.out", "asm", "", 'out { }')
+probe("asmrumpf.clobbers", "asm", "", "clobbers { memory }")
+probe("asmops.result", "asm", 'in { adr : "r" }', 'out { result : "=a" }')
+
+# -- `forever`, with the two names it must be able to reach ------------------------------
+_FOREVER_K = ('    extern fn wd() -> never effects {{ diverges }};\n'
+              '    assume tick "the timer ticks" unfalsifiable "no probe can refute it";\n'
+              '    table T count 4 {{ slot {{ w : u32, }} '
+              'invariant inv cost O(1) runs offline : true; }}\n'
+              '    static mut g : T = T;\n'
+              '    divergent fn f() -> never effects {{ diverges }} costs <= 8 ops {{\n'
+              '        forever m per_pass bounded 4 ops on_exceeded wd '
+              'effects {{ pure }} {X} {{ {Y} }}\n    }}\n')
+HOST["forever"] = "module p {{\n" + _FOREVER_K + "}}\n"
+probe("stmt.forever", "modul",
+      "    extern fn wd() -> never effects { diverges };\n"
+      "    divergent fn f() -> never effects { diverges } costs <= 8 ops { return; }",
+      "    extern fn wd() -> never effects { diverges };\n"
+      "    divergent fn f() -> never effects { diverges } costs <= 8 ops {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded wd effects { pure } { }\n    }")
+probe("forever.progress", "forever", "", "progress tick", Y="")
+probe("forever.leaves", "forever", "", "leaves inv", Y="")
+probe("stmt.leave", "forever", "", "", Y="leave m;")
+probe("stmt.next", "forever", "", "", Y="next m;")
+# `stmt.leave`/`stmt.next` differ in `{Y}`, so the pair is built from the SAME `{X}`.
+PROBEN["stmt.leave"] = ("forever", "", "", {"Y": "leave m;"})
+PROBEN["stmt.next"] = ("forever", "", "", {"Y": "next m;"})
+
+# -- `check`, in the shape `beispiele/06` writes it ---------------------------------------
+HOST["check"] = ("module p {{\n"
+                 "    static mut Z : u32 = 0;\n"
+                 "    fn abnahme() effects {{ pure }} costs <= 1 ops {{ return; }}\n"
+                 "    fn sonde() effects {{ pure }} costs <= 1 ops {{ return; }}\n"
+                 "    check c {{\n"
+                 "        claim    \"the claim this check makes about the machine\"\n"
+                 "        measures Z\n"
+                 "        gates    abnahme\n"
+                 "        can_fail {{ return true; }}\n"
+                 "        {X}\n    }}\n}}\n")
+probe("check.floor", "check", "", "floor Z >= 0")
+probe("check.counterprobe", "check", "",
+      'counterprobe "a probe that must make the duty fall" expects sonde')
+probe("item.check", "item", "",
+      "    static mut Z : u32 = 0;\n"
+      "    fn abnahme() effects { pure } costs <= 1 ops { return; }\n"
+      "    check c { claim \"the claim this check makes about the machine\"\n"
+      "        measures Z gates abnahme can_fail { return true; } }")
+
+# -- `exchange update`, in the shape `beispiele/05` writes it ------------------------------
+_X = ("module p {{\n"
+      "    extern fn wd() -> never effects {{ diverges }};\n"
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects {{ writes A }} costs <= 40 ops {{\n"
+      "        let alt = A exchange update(v) {X} {{ v = 1; }}\n"
+      "        return;\n    }}\n}}\n")
+HOST["xform"] = _X
+probe("xform.update", "modul",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let alt = A exchange 1 when true returns r;\n        return;\n    }",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let alt = A exchange update(v) { v = 1; }\n        return;\n    }")
+probe("xform.bounded", "xform", "", "bounded 4 ops")
+probe("xform.on_exceeded", "xform", "bounded 4 ops", "bounded 4 ops on_exceeded wd")
+
+# -- the rest --------------------------------------------------------------------------
+probe("gruppedecl.{", "modul",
+      "    table A count 4 { slot { w : u32, } }\n    table B count 4 { slot { w : u32, } }\n"
+      "    static mut x : A = A;\n    static mut y : B = B;\n"
+      "    group N over { x, y };",
+      "    table A count 4 { slot { w : u32, } }\n    table B count 4 { slot { w : u32, } }\n"
+      "    static mut x : A = A;\n    static mut y : B = B;\n"
+      "    group N over { x, y } { invariant i cost O(1) runs offline : "
+      "x.slots[0].w == y.slots[0].w; }")
+probe("item.group", "item", "",
+      "    table A count 4 { slot { w : u32, } }\n    table B count 4 { slot { w : u32, } }\n"
+      "    static mut x : A = A;\n    static mut y : B = B;\n"
+      "    group N over { x, y };")
+probe("slotdecl.by", "modul",
+      "    table T count 4 { slot { wert : u32, belegt : option index into T, }\n"
+      "        ops insert; occupied belegt; }",
+      "    table T count 4 { slot { wert : u32 by ops, belegt : option index into T, }\n"
+      "        ops insert; occupied belegt; }")
+probe("letform.publishes", "modul",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { writes A } costs <= 40 ops {\n"
+      "        let alt = A exchange update(v) { v = 1; }\n        return;\n    }",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { writes A, publishes Z } costs <= 40 ops {\n"
+      "        let alt = A exchange update(v) { v = 1; } publishes { Z };\n"
+      "        return;\n    }")
+
+# ============ round three ==============================================================
+# `forever`: a `divergent fn` may not promise `costs` -- `K003`: *"a `forever` loop has no
+# total cost -- its promise is `per_pass`"*. And `leaves` names a BINDING of the function,
+# so the host carries a linear ghost parameter for it.
+HOST["forever"] = (
+    "module p {{\n"
+    "    extern fn wd() -> never effects {{ diverges }};\n"
+    "    fn probe() -> bool effects {{ pure }} costs <= 1 ops {{ return true; }}\n"
+    "    assume tick \"the timer ticks on every core\" falsifier probe;\n"
+    "    linear ghost type Marke;\n"
+    "    divergent fn f(inv : Marke) -> never effects {{ diverges }} {{\n"
+    "        forever m per_pass bounded 4 ops on_exceeded wd effects {{ pure }} {X} "
+    "{{ {Y} }}\n    }}\n}}\n")
+for _k in ("forever.progress", "forever.leaves", "stmt.leave", "stmt.next"):
+    PROBEN.pop(_k, None)
+probe("forever.progress", "forever", "", "progress tick", Y="")
+probe("forever.leaves", "forever", "", "leaves inv", Y="")
+PROBEN["stmt.leave"] = ("forever", "", "", {"Y": "leave m;"})
+PROBEN["stmt.next"] = ("forever", "", "", {"Y": "next m;"})
+probe("stmt.forever", "modul",
+      "    extern fn wd() -> never effects { diverges };\n"
+      "    divergent fn f() -> never effects { diverges } { return; }",
+      "    extern fn wd() -> never effects { diverges };\n"
+      "    divergent fn f() -> never effects { diverges } {\n"
+      "        forever m per_pass bounded 4 ops on_exceeded wd effects { pure } { }\n    }")
+
+# `exchange update(v) { … }` ends with a `;` like every `let`, and the function reads `A`.
+HOST["xform"] = ("module p {{\n"
+                 "    extern fn wd() -> never effects {{ diverges }};\n"
+                 "    atomic A : u32 seq;\n"
+                 "    fn f() effects {{ reads A, writes A }} costs <= 40 ops {{\n"
+                 "        let alt = A exchange update(v) {X} {{ v = 1; }};\n"
+                 "        return;\n    }}\n}}\n")
+probe("xform.bounded", "xform", "", "bounded 4 ops")
+probe("xform.on_exceeded", "xform", "bounded 4 ops", "bounded 4 ops on_exceeded wd")
+probe("xform.update", "modul",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { reads A, writes A } costs <= 40 ops {\n"
+      "        let alt = A exchange 1 when true returns r;\n        return;\n    }",
+      "    atomic A : u32 seq;\n"
+      "    fn f() effects { reads A, writes A } costs <= 40 ops {\n"
+      "        let alt = A exchange update(v) { v = 1; };\n        return;\n    }")
+probe("letform.publishes", "modul",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { reads A, writes A } costs <= 40 ops {\n"
+      "        let alt = A exchange update(v) { v = 1; };\n        return;\n    }",
+      "    atomic A : u32 publishes { Z } release;\n    static mut Z : u32 = 0;\n"
+      "    fn f() effects { reads A, writes A, publishes Z } costs <= 40 ops {\n"
+      "        let alt = A exchange update(v) { v = 1; } publishes { Z };\n"
+      "        return;\n    }")
+
+# `U002`: a carrier of a `group` sits under a lock.
+_GRP = ("    table A count 4 {{ slot {{ w : u32, }} }}\n"
+        "    table B count 4 {{ slot {{ w : u32, }} }}\n"
+        "    static mut x : A = A;\n    static mut y : B = B;\n"
+        "    lock L protects {{ x, y }} rank 0;\n"
+        "    group N over {{ x, y }}{X}\n")
+HOST["gruppe"] = "module p {{\n" + _GRP + "}}\n"
+probe("gruppedecl.{", "gruppe", ";",
+      " { invariant i cost O(1) runs offline : x.slots[0].w == y.slots[0].w; }")
+probe("item.group", "item", "",
+      "    table A count 4 { slot { w : u32, } }\n    table B count 4 { slot { w : u32, } }\n"
+      "    static mut x : A = A;\n    static mut y : B = B;\n"
+      "    lock L protects { x, y } rank 0;\n    group N over { x, y };")
+
+# `D010`: `occupied` names a `bool` field.
+probe("slotdecl.by", "modul",
+      "    table T count 4 { slot { wert : u32, belegt : bool, }\n"
+      "        ops insert; occupied belegt; }",
+      "    table T count 4 { slot { wert : u32 by ops, belegt : bool, }\n"
+      "        ops insert; occupied belegt; }")
+probe("table.occupied", "modul",
+      "    table T count 4 { slot { wert : u32, belegt : bool, } }",
+      "    table T count 4 { slot { wert : u32, belegt : bool, } occupied belegt; }")
+probe("table.ops", "modul",
+      "    table T count 4 { slot { wert : u32, belegt : bool, } occupied belegt; }",
+      "    table T count 4 { slot { wert : u32, belegt : bool, } occupied belegt;\n"
+      "        ops insert; }")
+for _w in ("insert", "remove", "relabel"):
+    probe(f"opnamen.{_w}", "modul",
+          "    table T count 4 { slot { wert : u32, belegt : bool, } occupied belegt; }",
+          "    table T count 4 { slot { wert : u32, belegt : bool, } occupied belegt;\n"
+          f"        ops {_w}; }}")
+
+# `A004`: a function naming `result` in an `asm` out block returns something.
+HOST["asmres"] = ("module p {{\n"
+                  "    static mut TLB : u32 = 0;\n"
+                  "    impl fn g(adr : u64) -> u64\n"
+                  "        effects {{ writes TLB }}\n"
+                  "        costs   <= 1 ops\n"
+                  "        arch    x86_64\n"
+                  "        = asm {{ \"nop\" {X} }};\n}}\n")
+probe("asmops.result", "asmres", 'in { adr : "r" }', 'out { result : "=a" }')
+
+# `D007`: a `tree` edge is an `option index into` field of the same table.
+probe("table.tree", "modul",
+      "    table T count 4 { slot { wert : u32, elter : option index into T, } }",
+      "    table T count 4 { slot { wert : u32, elter : option index into T, }\n"
+      "        tree { parent elter } }")
+for _k, _e in (("parent", "parent"), ("child", "child"), ("sibling", "sibling")):
+    probe(f"treedecl.{_k}", "modul",
+          "    table T count 4 { slot { wert : u32, elter : option index into T, } }",
+          "    table T count 4 { slot { wert : u32, elter : option index into T, }\n"
+          f"        tree {{ {_e} elter }} }}")
 
 if __name__ == "__main__":
     sys.exit(main())

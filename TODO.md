@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 222 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 223 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *214 → 215 on 2026-09-04: `messung/K100-TWO-QUESTIONS-2026-09-04.md` joined — `K100`
       asked as two questions, the 37 «K3» walls sorted into three registers (25 refused by a
       written decision, 6 undecided, 6 that a probe dissolves) and the obligation ratio
