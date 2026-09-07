@@ -328,3 +328,149 @@ reads only `gabbro pruefe`'s exit code reports 40 escapes and is wrong 40 times 
 (`mutiere-pruefer.py --anker`, 395 of 395). The catalogue grew; the mark follows the object
 and the reason stands here. *`README.md` and `CLAUDE.md` disagreeing about this number is the
 `W7` this folder has already paid for once.*
+
+---
+
+# Addendum — the `ops` question, settled: they CANNOT, 50 of 55
+
+*Asked by the coordinator after the census above was written, and it is the question that
+sizes the whole job.* `gabbro k-bedingung` over the same 70 files says **43 carriers, K
+holds 2, falls 41**, with **55 hand-written write sites over 29 carriers**. `k_haelt()`
+(`kbedingung.rs:45-47`) is `hat_ops && handschrift.is_empty() && breaking.is_empty()`, and
+all 41 fall at the first conjunct. **Why do 41 carriers declare no `ops`?** Two answers with
+completely different price tags: they *could* and don't (uptake, hours), or they *cannot*
+(`ops` is too weak, language work).
+
+**Reconciliation first (W7).** All three of the coordinator's figures reproduce exactly on
+`a1564f6`, which is *after* this document's own change:
+
+```bash
+./target/release/gabbro pflichten    $(git ls-files 'beispiele/*.gab' | grep -v '/gift/')
+./target/release/gabbro k-bedingung  $(git ls-files 'beispiele/*.gab' | grep -v '/gift/')
+```
+
+```
+84 obligations: 1 refinement, 6 preservation, 17 postcondition, 11 foreign,
+                18 precondition, 18 device, 3 loop invariant, 10 unowned invariant
+43 carriers: K holds 2, falls 41.   55 hand-written sites, 29 carriers.
+```
+
+> **The two 84s are not the same 84 and are never to be added.** *This* 84 is `gabbro
+> pflichten`'s obligation count. §3's 84 is M1's untyped expressions out of 1278. Different
+> instruments, different denominators, and the coincidence is a coincidence.
+
+## A.1 What `ops` can express — read off the generated C, not off the grammar
+
+```bash
+./target/release/gabbro emit beispiele/47-ops-wortmenge.gab
+```
+
+```c
+static void Verzeichnis_insert(Verzeichnis *t, uint32_t n) { t->slots[n].benutzt = 1; }
+static void Verzeichnis_remove(Verzeichnis *t, uint32_t s) { t->slots[s].benutzt = 0;
+                                                             t->slots[s].marke   = 0; }
+```
+
+**Three words, and that is the whole vocabulary** (`opsruf.rs:272-345`): `insert` writes the
+occupancy flag and nothing else (plus the parent edge where the table has `tree`); `remove`
+writes **every** field to zero; `relabel` writes the parent edge alone. And with `ops`
+declared, **any** remaining hand write is `D001`. *So a carrier qualifies only if every one
+of its sites maps to one of the three.*
+
+## A.2 The walk — 55 sites, each judged, and every "yes" verified by rewriting it
+
+**My enumeration of the sites is cross-checked against the checker's own count: 55 = 55.**
+
+| | carriers | sites | verdict |
+|---|---:|---:|---|
+| **CAN be `ops` today** | **3** | **5** | rewritten, `pruefe` 0 errors, `emit` exit 0, `k-bedingung` says `haelt` |
+| cannot — **`M140`**, the table is a global | 9 | 12 | the operation takes `ptr<normal, rw> T`, and Gabbro has no address-of |
+| cannot — **`D010`**, no `bool` field at all | 5 | 6 | `occupied` demands a `bool`; these tables hold values, not occupancy |
+| cannot — **`D001`**, the write is a payload | 12 | 32 | no word writes a payload field |
+| | **29** | **55** | |
+
+**The three that CAN, each rewritten and run rather than judged by reading:**
+
+| carrier | cost of the conversion |
+|---|---|
+| `66-transport-rueckgabe.gab` `Puffer` (3 sites) | one `requires !h.slots[i].belegt`, plus `reads h.slots` |
+| `15-own-traegt-beide-rechte.gab` `Region` (1) | one `requires`, and **`costs <= 4` → `<= 5`** — `K001` fired |
+| `16-by-ops-am-feld.gab` `Objekte` (1) | one `requires`, `costs <= 2` → `<= 4` |
+
+```
+$ ./target/release/gabbro k-bedingung probe/p66.gab
+Puffer  ja  0  0  haelt
+```
+
+**And the "cannot" verdicts were probed too, not imagined** — the trap named in the request.
+The best possible rewrite of `40-werte-und-griffe.gab`, with `insert` doing all it can:
+
+```gabbro
+Puffer::insert(p, i);
+p.slots[i].lage   = s;      -- error: [D001] `vergeben` writes `Puffer` by hand
+```
+
+There is no second call that could replace that line. Likewise `occupied` on a value table:
+
+```gabbro
+table Takte count 8 { slot { stand : u32 in 0 .. 3, } ops insert, remove; occupied stand; }
+-- error: [D010] `occupied stand` is not a `bool` field of `Takte`'s slot
+```
+
+## A.3 The answer, and the one carrier that a single repair would convert
+
+**They CANNOT — 50 of 55 sites (91 %), 26 of 29 carriers.** The uptake half is real and
+small: **5 sites, 3 carriers.** `ops` is not under-adopted, it is **under-powered**: it
+models exactly one data structure — a slot allocator with a `bool` occupancy flag, reached
+through a pointer, whose payload is never written — and 26 of 29 carriers in this corpus are
+not that.
+
+> **`50-verfeinerung.gab`'s `Buch` is the sharpest single data point.** Its two write sites
+> are `belegt = false; wert = 0;` over a two-field slot — that is `remove`, *exactly*, and it
+> has the `bool`. Its only wall is that `Buch` is a **global**, so `Buch::remove(Buch, p)`
+> gives `M140: a table does not answer for a pointer`. **One repair — a way to name a global
+> table as a carrier — converts this carrier outright**, and it is the only one of the 29
+> where a single wall stands alone.
+
+## A.4 And the conversion MOVES an obligation rather than removing one
+
+Every `ops` call charges its caller the premise the theorem discharged: `D012` — *"the
+premise comes from `beweise/Table_Ops_Erhaltung.thy` — the generator discharges the
+preservation proof ONCE per operation, and this is the half the caller owes in exchange."*
+That half lands as a `V` at the **call site**, measured:
+
+```
+V  Precondition at the call site (1)
+obligation  zwei :: nehmen requires #1  V  …:11  open  !r.slots[i].belegt
+```
+
+*It does not show in a file with no callers* — both rewritten examples still report `0
+obligations`, because `V`'s anchor is the call and neither has one. **So "K holds" is not
+free, and a K-count read without the `V` column beside it reads better than the program is.**
+
+## A.5 The obligation register, sorted as far as it is settled
+
+**29 of 84 are `R` by construction, and the tool says so itself for eleven of them:**
+
+* **`device` 18** — `GCMD.SRTP: 0 -> 1`, `GSTS.RTPS == 1`. These are what the chip does when
+  a register is written. The evidence is a datasheet, not the program; no procedure over the
+  source discharges them. **`R`.**
+* **`foreign` 11** — `ensures` on bodies Gabbro never sees. `gabbro pflichten` prints the
+  verdict in its own closing text: *"they are ASSUMPTIONS about foreign code and do not
+  dissolve even under 'all of Gabbro verified'."* **`R`.**
+
+**The remaining 55 are NOT sorted here, and that is stated rather than glossed.** The `W`
+(unowned invariant, 10) looked like it would be gated on the same `ops` wall as §A.2, and it
+is **not established**: `Art::Walkinvariante` covers three constructs (`pflichten.rs:1175`),
+not only table invariants, and one sentence of reasoning per obligation is what the tool's
+own header demands. *A sort I cannot defend per obligation is worth less than saying it is
+not done.*
+
+## A.6 What this addendum did NOT run
+
+| not run | what it would have said |
+|---|---|
+| `gabbro schablonen` | the 21 templates / 8 `designed`. Deliberately not inherited: `Stand::Entworfen` was flagged as carrying two opposite answers at S11 (`emit.rs:2365` generates `walk`, `:8666` refuses `mappings of`), and a field that means two things is not a measurement I will quote |
+| a rewrite of the 26 "cannot" carriers | each would need a language change first; the three walls are named with codes instead |
+| `abnahme.py --voll` | the full acceptance over both changes |
+| the `V` count after converting all three | `V` needs call sites, and adding them would be a corpus I wrote while looking at it (trap 80) |
