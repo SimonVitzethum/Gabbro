@@ -100,7 +100,7 @@ highest-value item on that list, and not started.
 | 2.1 | **Templates named in the spec with NO generator code** (`Stand::Entworfen`, `schablonen.rs:44-45`) | **8 of 21** | `[self]` `gabbro schablonen` |
 | 2.2 | Forms the checker accepts and the emitter refuses by `C001` — incl. **an array and a record as a parameter type**, and the item kinds `format` and `walk` | **12** | `[lane]` |
 | 2.3 | `B10` — `traverse … over queue`: the checker accepts, the emitter refuses by name | 1 | `[self]` `pruefe-notation.py` |
-| 2.4 | `B22` — a multi-line `claim` cannot be written | 1 | `[self]` same |
+| 2.4 | ~~`B22` — a multi-line `claim` cannot be written~~ **REFUTED, see §8.2** — it has been writable since 2026-08-17 | **0** | `[self]` |
 | 2.5 | **`ops` is not under-adopted, it is under-powered** — 50 of 55 hand-written write sites cannot be converted, 26 of 29 carriers. Walls: `M140` (9 carriers), `D010` (5), `D001` (12) | **91 %** | `[lane]`, verified by rewriting carriers |
 
 On 2.5, one consequence is booked and easy to miss: **converting to `ops` MOVES an
@@ -142,7 +142,8 @@ as grammar or language gaps:
 * **`consuming.leermenge`** — *"empty WHEN? … would need **a grammar line**: `by consuming`
   names no point in time."*
 * **`accumulates.monoid`** — the quiescent point — *"would need the EXECUTION CONTEXTS —
-  without them Gabbro does not say who runs concurrently."*
+  without them Gabbro does not say who runs concurrently."* **The conclusion holds and
+  the REASON is refuted — §8.1.**
 * **`consuming.ordnung`** (two premises) — no generator for `by consuming`, none for the
   witness order.
 * **`table.induktion`** — the generator writes two edge premises per chaining field, not one.
@@ -248,3 +249,90 @@ toward every shape nobody thought to write.**
 their own runs in the lanes' own reports (`messung/KLEMPNEREI-2026-09-07.md`,
 `messung/UNOWNED-EDGES-2026-09-07.md`, `messung/GRAMMATIK-AUS-DEM-CODE-2026-09-07.md`) and
 were **not** re-run here.
+
+
+---
+
+## 8. Verified after this document was written — and two of its own rows fall
+
+A lane took the four grammar/proof claims of §3 to the checker's code with the mandate to
+**refute** them. Result: **one confirmed and understated, three narrower than stated.**
+Recorded here rather than silently edited above, because a claim that moved and a claim that
+was always right are not the same thing.
+
+### 8.1 The `accumulates` premise — right conclusion, WRONG reason, and the tree had already said so
+
+*"Without EXECUTION CONTEXTS Gabbro does not say who runs concurrently"* is **false**:
+`crates/gabbro-check/src/kontexte.rs` has existed since 2026-08-19 and `gabbro kontexte`
+prints a context count. **The tree booked that retraction on 2026-08-18** — `MESSUNGEN.md`
+:9310, and `geteilt.rs:470` says of the identical sentence *"Der Satz war ueberholt und
+niemand hat es gemerkt."* The premise line carrying it was **re-written on 2026-08-31**,
+twelve days after its own retraction was on record.
+
+> **The same binary prints the sentence and its retraction.** `gabbro paesse` says it "was
+> overtaken by its own `entry` construct"; `gabbro schablonen --gate` still prints it.
+
+The conclusion survives, with a different cause: `geteilt.rs:507` puts `accumulates` on
+`H013`'s exemption list, and `H013` filters on `writes ` only (`:552`) — so a fold **reading**
+while other cores write is structurally invisible. `gift/146` gives `[H013]`; the same shape
+with `accumulates` gives **0 errors**.
+
+### 8.2 `B22` is REFUTED, and its guard has reported it open for three weeks `[self]`
+
+```bash
+# pruefe-notation.py's own B22 probe:
+./target/debug/gabbro pruefe <probe>
+#   error: [N043] `measures n` names nothing declared
+#   error: [D021] `n` in a `floor` is not declared here
+```
+
+**The probe fails on an undeclared `n`, not on the multi-line `claim`.** The decisive test is
+a real file split across lines:
+
+```bash
+# 52-baugatter.gab, its one `claim` split over three lines:
+./target/debug/gabbro pruefe   # 14 items, 0 errors, 0 hints -- identical to baseline
+./target/debug/gabbro emit     # exit 0
+```
+
+`parse.rs:442`: *"«B22» geschlossen 2026-08-17: benachbarte Zeichenketten werden EINE."*
+**`pruefe-notation.py` has counted a closed gap as open ever since**, because a probe that
+errors for ANY reason reads as a gap. Same class as §4.1: a guard right about its number and
+wrong about its sentence. **This lowers §2's grammar-gap count from 2 to 1 — `B10` alone.**
+
+### 8.3 Invariant ownership is literal STRING EQUALITY `[self]`
+
+`pflichten.rs:345-357` matches a `maintains` against an invariant by name text. So:
+
+```bash
+sed 's/maintains baum_wohlgeformt/maintains baum_bleibt_baum/' beispiele/01-tabelle.gab
+./target/debug/gabbro pflichten   # 15 obligations -> 14
+./target/debug/gabbro pruefe      # 0 errors
+```
+
+**An obligation disappears on a rename, silently.** And one statement ends up booked
+simultaneously as owed and as unowned. The `84 / 10 / 70` figures of §3.2 are exact; the
+class LABEL's stated cause is right for **7 of the 10**, not all ten.
+
+### 8.4 Claim 4 was UNDERSTATED — `S005` does not check a neighbouring statement, it checks nothing
+
+`decreases` is optional (`parse.rs:3244`) and `S005` returns before running when it is absent
+(`schleifen.rs:326`). **The corpus's only clean `by consuming` site — `01-tabelle.gab:136` —
+has no `decreases`.** So there, `S005` is not measuring the wrong thing; it is not measuring.
+With `decreases opfer` added it stays silent and `ist_blatt(c,s)` remains open; with
+`decreases NSLOTS` it fires. Minimality is untouched in all three.
+
+**And a fifth thing nobody was looking for:** the certificate is blind to the entire
+`consuming` family — `zeugnis.rs:845` keys on the domain and never on `t.abstieg`.
+`01-tabelle.gab` uses `by consuming` three times and its certificate names **zero** of the
+three templates behind it.
+
+### 8.5 What this does to §6
+
+Nothing. The three silent-emit sites of §1 stand, all three re-measured. But §8.1 and §8.2 add
+a second shape beside them, and it is the older one in this tree:
+
+> **A sentence that was retracted and kept being printed.** `B22` closed on 2026-08-17 and its
+> guard has said "open" since. The `accumulates` reason was retracted on 2026-08-18 and was
+> re-typed into the register on 2026-08-31. *Neither is a missing objection — both are an
+> objection nobody withdrew.*
