@@ -214,13 +214,13 @@ The unperturbed run is silent, so each ceremony class was removed from all 70 fi
 corpus re-checked. **No `set -e`, no first-hit stop: every file runs, every code is counted.**
 
 ```bash
-python3 differential.py {narrow|ranges|effects|costs}
+./instrumente/miss-zeremoniedifferenz.py alle          # or one of narrow|ranges|effects|costs
 ```
 
 | removed | sites | what the checker then says |
 |---|---:|---|
 | `narrow … else` | 17 | `M101` 6, `M108` 3, `M103` 1, `M104` 1, `F001` 1 — **12 total** |
-| declared integer ranges | 81 | `M103` 15, `M104` 10, `M101` 5, `M119` 4, `E009` 3, `D021` 1, `E005` 1 — **39**, plus 4 `P001` |
+| declared integer ranges | 81 | `M103` 15, `M104` 10, `M101` 5, `E009` 3 — **33**, no `P001` |
 | `effects { … }` | 315 | `E001` **265**, `M111` 22, `A002` 7, `M114` 6, `V003` 6 … — **327**, plus 19 `P001` |
 | `costs <= N ops` | 238 | `A003` **7**, `E009` 3, `N035` 2 — **12 total** |
 
@@ -228,7 +228,7 @@ python3 differential.py {narrow|ranges|effects|costs}
 
 *First, the `ranges` column is a dependency census and NOT a plumbing census.* Strike the
 declared range off a counter and the counter genuinely can overflow — `M104` is then
-**right**, and the site is `L`. The 39 diagnostics measure how much of the corpus rests on
+**right**, and the site is `L`. The 33 diagnostics measure how much of the corpus rests on
 written ranges, not how much of it the compiler could have proved. **The anchor case says the
 same thing:** `let mut b = a; b += 1;` on a full-range `u32` is refused by `M104`, and it is
 refused correctly — `b` can be `u32::MAX`. Where the range IS declared and a check narrows
@@ -253,10 +253,28 @@ produces **12** diagnostics, **7** of them `A003` on `asm` bodies, which are a d
 > reconciliation belongs at that sentence, and it is left un-made here on purpose — `K3-AUSWAHL.md`
 > is frozen.
 
-*Contamination is named, not hidden:* the `ranges` stripper ate the `=` of four `type X = T
-in a .. b` declarations (4 `P001`), and the `effects` stripper hits four positions where the
-grammar **requires** the word (19 `P001`, all `progress`/`falsifier`). Those files' other
-diagnostics are suspect and are not load-bearing for either reading above.
+### The `ranges` figure was WRONG when first written, and its own speech test said so
+
+**It stood at 39 for several hours of this session.** `pruefe-waechter.py` refused the
+instrument for having no speech test (`!! miss-zeremoniedifferenz.py  SPRECHPROBE`); the
+test written to satisfy it failed on its first run, on a case three lines long:
+
+```
+`ranges` weitet statt zu loeschen: let a : u32;   --  GESCHEITERT
+```
+
+`let a : u32 in 0 .. 100 = 1;` was becoming `let a : u32;` — **the stripper was eating the
+initializer**, because `=` was missing from its stop set. That is precisely where the four
+`P001` came from (*"`=` expected, `;` found"*), and the six diagnostics those four damaged
+files then produced were counted as demands. **With `=` in the stop set: 33 diagnostics and
+zero `P001`.**
+
+> *The wound had already been NAMED in the first write-up as "contamination, 4 `P001`" — and
+> naming it is not the same as removing it.* A guard this session did not want, applied to an
+> instrument this session had just written, moved one of its numbers by 6. **The `effects`
+> column's 19 `P001` are a different thing and they stay**: there the grammar REQUIRES the
+> word (`progress`, `falsifier`), so removing it is a parse error and not a demand, and no
+> stop set fixes that. They are counted apart and never folded into the 327.
 
 ---
 
@@ -296,6 +314,30 @@ reads only `gabbro pruefe`'s exit code reports 40 escapes and is wrong 40 times 
 
 ---
 
+## 9a. What was NOT closed, and why — 26 of the 50 `P` sites are still open
+
+**One category was closed (§5). Four were not, and none of them is blocked by doubt about
+whether it is plumbing** — every one has a nameable procedure. They are ordered by what they
+would cost.
+
+| left | n | the procedure that would close it | why not today |
+|---|---:|---|---|
+| bare `None` | 19 | propagate the **expected type** into a tagged literal: a `return` in a function with a declared result, an assignment to a declared slot. One-directional, no inference | **this is the next one to do.** It is not a local repair like §5's one line — it needs an expected type threaded through `ausdruck`, which today takes none. That is a signature change across `m1.rs`, and starting it late beside an unfinished mutation run is how a green run gets reported over a half-built pass |
+| `lenof(m)` in a cost bound | 3 | give `lenof` the integer type its argument's length has | the three sites are one expression and its two sub-expressions, inside `per_pass bounded 64 + 12 * lenof(m) ops`. **A cost expression, not a value expression** — closing it touches the cost pass's reading of the bound, and I did not measure what else reads it |
+| a `match` pattern binder | 1 | the tagged type declares its payload type; bind it | one site. Real, and too small to justify a second pass over `m1.rs` in the same commit as §5 |
+| a mixed-width addition | 1 | `u64 + u16` should widen, not go silent | **this one is a silent acquittal and not only a coverage hole** (§6), so it is a defect report more than a plumbing item. Cause located, repair not attempted |
+
+**And the largest class of all was deliberately not "closed", because closing it would be
+wrong.** The 33 void calls (§4) are not obligations; the repair there is to stop `Typ::Unbekannt`
+naming two states — *"there is no type"* and *"I could not find the type"* — which would
+**remove 33 from the denominator and add four refusals**, not carry any plumbing. It is the
+single highest-value item this census found, and it is a different job from this brief's.
+
+> **`L` is still empty after the change.** Of the 57 that remain, 33 are non-obligations and
+> 24 have a named procedure. *Not one site in this corpus is a place where the user knows
+> something the compiler could not.* That is the census's strongest single claim, and it is
+> the one most worth trying to break.
+
 ## 10. What was measured and what was not
 
 | ran | result |
@@ -313,7 +355,7 @@ reads only `gabbro pruefe`'s exit code reports 40 escapes and is wrong 40 times 
 
 | not run | what it would have said |
 |---|---|
-| `mutiere-pruefer.py` **full** (~13 min, ~395 mutations) | whether the test suite kills a mutation of the code touched here. Only the **anchor** half ran — it is text counting and proves the catalogue is wired, not that the suite bites |
+| ~~`mutiere-pruefer.py` **full**~~ | **RAN after the change** — 392 of 396, both new mutations killed. See the delta. It was not run at `241d20d`, so the *baseline* survivor count is not this document's; the one survivor in a touched file was checked against `241d20d` individually instead |
 | `instrumente/pruefe-beweise.sh` / `isabelle build` | nothing in the census touches `beweise/`; both rsyncs were done so the run is available |
 | `instrumente/abnahme.py --voll` | the full acceptance. Deferred until after the change, where its verdict means something |
 | the second corpus («K2»/«K3» fragments) | plumbing coverage on code this folder did not write. **Deliberately out of scope** — the question is `K100`, not portability |
@@ -330,6 +372,142 @@ and the reason stands here. *`README.md` and `CLAUDE.md` disagreeing about this 
 `W7` this folder has already paid for once.*
 
 ---
+
+---
+
+# The delta — same commands, same form, after `a1564f6`
+
+**What changed:** one line in `m1.rs`. The `traverse` binder is no longer bound to
+`Typ::Unbekannt`; it carries the `index into T` its domain proves. Everything below is the
+same command as above, run again.
+
+## The two coverage figures
+
+```bash
+for f in $(git ls-files 'beispiele/*.gab' | grep -v '/gift/'); do
+  ./target/release/gabbro pruefe "$f"; ./target/release/gabbro kosten "$f"; done
+```
+
+| | before | after |
+|---|---:|---:|
+| files checking `0 errors` | 70 of 70 | **70 of 70** |
+| M1 expressions seen | 1278 | 1278 |
+| **without a type** | **84** | **57** |
+| **M1 coverage** | **93.43 %** | **95.54 %** |
+| `kosten` computed / open | 179 / 9 | 179 / 9 |
+| `kosten` coverage | 95.21 % | 95.21 % |
+
+**The 27 that closed, by class, and the delta is fully accounted for:**
+
+| class | before | after |
+|---|---:|---:|
+| the `traverse` binder | 24 | **0** |
+| `Some(x)` — closed as a cascade, its payload is now typed | 3 | **0** |
+| a call to something that returns nothing | 33 | 33 |
+| bare `None` | 19 | 19 |
+| `lenof(m)` in a cost bound | 3 | 3 |
+| a `match` pattern binder | 1 | 1 |
+| a mixed-width addition | 1 | 1 |
+| | 84 | 57 |
+
+*24 + 3 = 27. No class moved that was not meant to.*
+
+> **Read the 95.54 % against the 93.43 % with care (W25).** Both count the same thing over
+> the same denominator, so the comparison is honest — but **neither is a plumbing figure**,
+> because 33 of the remaining 57 are void calls that were never obligations (§4). Against the
+> honest denominator of 1278 − 33 = 1245 expressions that *can* have a type, coverage is
+> **98.07 %**, and the 24 remaining holes are `None` (19), `lenof` (3), a match binder (1) and
+> a mixed add (1). That third number is stated here once and is **not** booked anywhere: it
+> has no instrument behind it, and a figure without a command is not a measurement.
+
+## The guards, both directions
+
+| | before | after |
+|---|---|---|
+| poison corpus, per-file exit code **and** code set | 454 files | **`diff` empty — byte-identical** |
+| poison refused by the checker | 414 | 414 |
+| poison refused by the emitter (`C001`) | 38 | 38 |
+| poison correct by its own header (`M114` hint, `cc`) | 2 | 2 |
+| `cargo test --no-fail-fast` (server) | 411 passed, 0 failed | **411 passed, 0 failed** |
+| `pruefe-emission.sh` (server) | ALL PASS, 29 pierced, 145 of 145 | **ALL PASS, 29 pierced, 145 of 145** |
+| `mutiere-pruefer.py --anker` | 395 of 395 | **397 of 397** |
+
+**The clean corpus staying green is the load-bearing half.** 24 legitimate traversal sites
+across eleven tracked examples still check — so the rule learned the bound rather than
+starting to refuse traversals. *A tightening that also refused the good cases would look
+identical in the coverage column and be worthless.*
+
+## The new refusals, pinned by name
+
+```bash
+./target/release/gabbro pruefe beispiele/gift/685-a-traversal-counter-past-the-table.gab
+./target/release/gabbro pruefe beispiele/gift/686-a-counter-from-one-table-indexes-another.gab
+```
+
+```
+error: [M103] 685…:54:17: the index has `u32 in 1000000 .. 1000007`, the array has 8 elements
+error: [M103] 686…:45:17: the index has `u32 in 0 .. 63`, the array has 4 elements
+```
+
+**One error each, and it is the expected code alone** — neither probe is *accompanied* or
+*covered* in `zaehle-gifttreffer.py`'s sense.
+
+## The full mutation run — 392 of 396, and both new mutations are killed
+
+```bash
+ssh ki-pc-fisch-101 'cd gabbro-klempner && export PATH=$HOME/.cargo/bin:$PATH \
+  && python3 instrumente/mutiere-pruefer.py'          # 15 min, contended
+```
+
+```
+== 392 von 396 gueltigen Mutationen gefangen (98 %) ==
+     gefangen   binder-ohne-typ          M103 -- ein `traverse`-Zaehler traegt die Schranke
+                                                 seiner Tabelle nicht mehr
+     gefangen   binder-domaene-schweigt  M103 -- keine Domaene nennt mehr die Tabelle ihres
+                                                 Zaehlers
+```
+
+**`--anker` proves the catalogue is wired; only the full run proves the suite BITES.** Both
+mutations of the new rule are killed, so §5's repair is not an undamageable surface.
+
+**Four survive, and one of them lives in a file this change touched** (`domaene.rs`). *That
+is not a thing to assert past — it is a thing to measure*, so the single mutation was applied
+to the **pre-change** tree at `241d20d` in a worktree and run there:
+
+```bash
+# 241d20d + praedikatsname-nur-am-vergleich, in gabbro-klempner-basis
+cargo test --offline --no-fail-fast          # 411 passed, 0 failed
+```
+
+**It survives at `241d20d` too.** Pre-existing, and the other three are in `manifest.rs` and
+`emit.rs`, which this change does not touch. *`ungelesene-bindung-bekommt-kein-void` is the
+one `CLAUDE.md` already books: it falls at `pruefe-emission.sh` stage 9, not at `cargo test`,
+so `392 of 396` is a statement about the test suite and not about the tree.*
+
+## The mutation catalogue caught the refactor, which is what it is for
+
+Factoring `indextyp` out of `TypExpr::Index` moved the source text two anchors quote
+verbatim. `--anker` went **395 of 395 → 393 of 395** and named both
+(`index-erbt-nicht`, `option-ohne-sonderwert`). Both were repointed at the factored function
+— same semantics, new location — and **two new mutations were added so the new rule is not an
+undamageable surface**: `binder-ohne-typ` restores exactly the old `Typ::Unbekannt`, and
+`binder-domaene-schweigt` silences the domain half. **397 of 397, ALL PASS.**
+
+## Marks that moved, each because the OBJECT grew
+
+| mark | from | to | where |
+|---|---:|---:|---|
+| poison probes | 454 | 456 | `README.md`, `DONE.md` |
+| mutation catalogue | 395 | 397 | `README.md`, `TODO.md` |
+| files the repeal guard reads | 221 | 222 | `TODO.md` |
+
+**And one mark was BROKEN and repaired the other way round.** `pruefe-englisch.py`'s
+instrument ratchet went **1069 → 1076** because the two new mutations carried German comments
+into `instrumente/`. *The ratchet may fall, never rise* — so the comments were translated and
+the mark was left alone. Back to 1069, exit 0.
+
+---
+
 
 # Addendum — the `ops` question, settled: they CANNOT, 50 of 55
 
