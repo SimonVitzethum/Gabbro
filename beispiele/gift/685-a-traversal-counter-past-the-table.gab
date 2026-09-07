@@ -1,0 +1,58 @@
+-- erwartet: M103
+-- 685 -- **The `traverse` binder walks in bounds; ARITHMETIC on it does not.**
+--
+-- Until 2026-09-07 `m1.rs` bound every traversal counter to `Typ::Unbekannt`:
+--
+--     Schleife::Traverse(t) => {
+--         innen.lokal.insert(t.variable.text.clone(), Typ::Unbekannt);
+--
+-- `M103` asks the index for its type and says nothing when there is none, so the whole
+-- inside of every traversal body was outside the index rule. **MEASURED against that
+-- binary, with the body below unchanged:** `gabbro pruefe` gave `6 items, 0 errors,
+-- 0 hints`, `gabbro emit` returned **0**, and the C it wrote was
+--
+--     Q_slot slots[8];
+--     for (uint32_t i = 0; i < (uint32_t)(sizeof(w->slots)/sizeof(w->slots[0])); i++) {
+--         w->slots[i + 1000000].aktiv = true;
+--
+-- An index a million past the end of an eight-element array, through the checker AND
+-- through the emitter. *Both nets, not one* -- and `C001` did not catch it either, because
+-- there is nothing unlowerable about the form: it is an ordinary index expression whose
+-- range nobody knew.
+--
+-- The binder now carries the type a human would have written for it -- `index into Q`,
+-- built by `Umgebung::indextyp` out of the same `count 8`, through the same code as the
+-- written form. **The counter is in bounds; `i + 1` is not**, and that is the whole
+-- content of this probe: the loop's own guarantee does not survive an addition, and the
+-- rule that says so has to be able to see a type.
+--
+-- > **The counter-evidence is the clean corpus and not a neighbouring probe.** The same
+-- > traversal WITHOUT the arithmetic stands at 24 sites in eleven tracked examples --
+-- > `04`, `09`, `18`, `19`, `39`, `41`, `42`, `43`, `46`, `57` and `01` -- and all seventy
+-- > files still check `0 errors` with the binder typed. *A rule that refused both would not
+-- > have learned the bound, it would merely have started refusing traversals*, and those
+-- > eleven files are what says it did not.
+--
+-- `messung/KLEMPNEREI-2026-09-07.md` §5.
+
+module gift::traversal_counter_past_the_table {
+
+table Q count 8 {
+    slot {
+        aktiv : bool,
+    }
+}
+
+impl fn alle_setzen(w : ptr<normal, rw> Q)
+    effects { writes w.slots }
+    costs   <= 200 ops
+{
+    traverse i over slots of w by unvisited
+        touches writes w.slots
+    {
+        -- `i` runs 0 ..< 8. `i + 1000000` does not, and the array has eight slots.
+        w.slots[i + 1000000].aktiv = true;
+    }
+}
+
+}

@@ -1284,9 +1284,8 @@ impl<'a> Pruefer<'a> {
                 };
                 let rumpf = match sch.as_ref() {
                     Schleife::Traverse(t) => {
-                        innen
-                            .lokal
-                            .insert(t.variable.text.clone(), Typ::Unbekannt);
+                        let binder = self.binder_typ(t, lage);
+                        innen.lokal.insert(t.variable.text.clone(), binder);
                         if let Some(g) = &t.gegenstand {
                             let _ = self.ausdruck(g, lage);
                         }
@@ -4312,6 +4311,53 @@ impl<'a> Pruefer<'a> {
             }
             lage.fakten.push(Fakt::Beziehung { links, op, rechts, indizes });
         }
+    }
+
+    /// **The traversal counter gets the type it provably has** (2026-09-07).
+    ///
+    /// Until today this line read `insert(t.variable.text.clone(), Typ::Unbekannt)`, and it
+    /// was the largest single source of untyped expressions in the clean corpus: **24 of
+    /// 84** (`messung/KLEMPNEREI-2026-09-07.md` §5). *A user who writes `index into T` on a
+    /// parameter gets the bound; the binder that has the same bound by construction got
+    /// nothing.*
+    ///
+    /// **And `Unbekannt` was not silence, it was an acquittal.** Measured on
+    /// `table Q count 8`:
+    ///
+    /// ```gabbro
+    /// traverse i over slots of w by unvisited touches writes w.slots {
+    ///     w.slots[i + 1000000].aktiv = true;      -- 0 errors, and the C is WRITTEN
+    /// }
+    /// ```
+    ///
+    /// `gabbro pruefe` said `0 errors, 0 hints`; `gabbro emit` returned 0 and wrote
+    /// `w->slots[i + 1000000].aktiv = true;` over a `Q_slot slots[8]`. **Both nets passed an
+    /// out-of-bounds write**, because `M103` asks the index for its type first and says
+    /// nothing when there is none -- the shape `m1::name_aufloesen` already had written down
+    /// for an undeclared name: *"every range rule silently steps aside where the type is
+    /// missing -- including the index bound."*
+    ///
+    /// ## The procedure, and why it is not a guess
+    ///
+    /// `binder_tabelle` names the table for the three domains whose counter is a slot index;
+    /// `Umgebung::indextyp` builds **the same type `index into T` a human would have
+    /// written**, from the same `count N`, through the same code. Two readers of one
+    /// declaration is what this folder pays for; there is one.
+    ///
+    /// **Where it cannot prove, it says nothing and the old `Unbekannt` stands** -- six of
+    /// the nine domains, and a table without a `count`. *W10: a bound that is not proved is
+    /// not narrowed, and the loss is a refusal that does not fall, never an acceptance that
+    /// does not hold.*
+    fn binder_typ(&mut self, t: &Traverse, lage: &Lage) -> Typ {
+        let Some(tabelle) = (crate::domaene::Sicht {
+            u: self.u,
+            modul: &self.modul,
+            lokal: &lage.lokal,
+        })
+        .binder_tabelle(&t.domaene) else {
+            return Typ::Unbekannt;
+        };
+        self.u.indextyp(&self.modul, &tabelle, false)
     }
 
     /// **«H2.1» -- ein Traversierungszaehler erbt die Schranke seiner Domaene (2026-08-19).**

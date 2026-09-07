@@ -49,6 +49,42 @@ impl<'a> Sicht<'a> {
         (name, kurz)
     }
 
+    /// **Which table does this domain's BINDER index? -- `None` where it cannot be proved.**
+    ///
+    /// Three of the nine domains run a counter over the slots of a named table, and for
+    /// those three the binder is an `index into T` by the same argument that bounds the
+    /// written form: `slots of` walks them, `descendants of` and `ancestors of` walk the
+    /// same edge in the two directions, and an acyclic chain cannot leave the table it
+    /// starts in.
+    ///
+    /// **The other six answer `None`, and that is a refusal to guess and not an oversight:**
+    ///
+    /// * `queue` and `elems of` bind an ELEMENT, not an index -- a different type entirely;
+    /// * `fields of`, `threads`, `chain(a,b) in` and `mappings of` bind something whose
+    ///   shape is not a slot index of one table.
+    ///
+    /// > *`domaenenschranke` answers a NEIGHBOURING question and must not be used here.*
+    /// > It returns how many STEPS a traversal can take -- for `mappings of` that is a leaf
+    /// > count of `Knotenlaenge ^ levels`, and for `queue` an array length. **A step count
+    /// > is not an index range**, and the two coincide only for `slots of`. Reading one as
+    /// > the other would narrow a binder to a bound nobody proved: `W16` with the sign that
+    /// > makes a checker accept, which is the expensive direction.
+    pub fn binder_tabelle(&self, d: &Domaene) -> Option<String> {
+        let o = match d {
+            Domaene::SlotsVon(o) | Domaene::NachfahrenVon(o) | Domaene::VorfahrenVon(o) => o,
+            _ => return None,
+        };
+        // `descendants of c.slots[s]` points INTO the table -- the binder indexes the
+        // table, not the slot. Same fallback the bound uses.
+        self.tabellenname(o).or_else(|| {
+            self.tabellenname(&Ort {
+                basis: o.basis.clone(),
+                suffixe: Vec::new(),
+                span: o.span,
+            })
+        })
+    }
+
     /// Die Schranke einer Domaene, soweit die Deklaration sie nennt.
     pub fn domaenenschranke(&self, d: &Domaene) -> Option<i128> {
         // **`elems of <Feld>` -- die Laenge steht im Typ, und niemand las sie.**
@@ -169,7 +205,7 @@ impl<'a> Sicht<'a> {
     }
 
     /// Auf welche Tabelle zeigt dieser Ort?
-    fn tabellenname(&self, o: &Ort) -> Option<String> {
+    pub fn tabellenname(&self, o: &Ort) -> Option<String> {
         let t = self.u.typ_von_ort(self.modul, o, &*self.lokal);
         match t {
             // **Ein `index into T` benennt seine Tabelle, und das war eine Luecke.**

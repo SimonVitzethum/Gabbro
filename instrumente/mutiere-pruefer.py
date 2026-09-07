@@ -1049,13 +1049,43 @@ MUTATIONEN = [
         "D018 -- a slot no longer counts as a place for `descendants of`/`ancestors of`/"
         "`chain in`, so the rule fires on the clean corpus instead of on the fault",
     ),
+    # **The traversal counter, 2026-09-07.** With no type the whole body of a traversal
+    # stands outside the index rule: `w.slots[i + 1000000]` passed the CHECKER and the
+    # EMITTER (`beispiele/gift/685`, `686`). This mutation restores exactly that state --
+    # if it does not fall, nothing measures the repair.
+    Mutation(
+        "binder-ohne-typ",
+        "m1.rs",
+        "        .binder_tabelle(&t.domaene) else {\n"
+        "            return Typ::Unbekannt;\n"
+        "        };\n"
+        "        self.u.indextyp(&self.modul, &tabelle, false)",
+        "        .binder_tabelle(&t.domaene) else {\n"
+        "            return Typ::Unbekannt;\n"
+        "        };\n"
+        "        let _ = tabelle;\n"
+        "        Typ::Unbekannt",
+        "M103 -- ein `traverse`-Zaehler traegt die Schranke seiner Tabelle nicht mehr",
+    ),
+    # **And the domain half, separately.** If `binder_tabelle` names no table, the type
+    # falls back to `Unbekannt` in silence -- the same hole, one function earlier.
+    Mutation(
+        "binder-domaene-schweigt",
+        "domaene.rs",
+        "            Domaene::SlotsVon(o) | Domaene::NachfahrenVon(o) | Domaene::VorfahrenVon(o) => o,\n"
+        "            _ => return None,",
+        "            _ => return None,\n"
+        "            #[allow(unreachable_patterns)]\n"
+        "            Domaene::SlotsVon(o) => o,",
+        "M103 -- keine Domaene nennt mehr die Tabelle ihres Zaehlers",
+    ),
     Mutation(
         "index-erbt-nicht",
         "umgebung.rs",
-        "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
-        "                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))",
-        "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
-        "                    .map(|_| IntBereich::voll(32, false))",
+        "            .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
+        "            .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))",
+        "            .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
+        "            .map(|_| IntBereich::voll(32, false))",
         "A3 -- `index into T` erbt die Schranke aus `count` nicht",
     ),
     # **«C1», 2026-08-19.** `option index into T` reicht bis `N`, `index into T` bis `N-1` --
@@ -1064,8 +1094,8 @@ MUTATIONEN = [
     Mutation(
         "option-ohne-sonderwert",
         "umgebung.rs",
-        "                let sonderwert = i128::from(*optional);",
-        "                let sonderwert = 0;",
+        "        let sonderwert = i128::from(optional);",
+        "        let sonderwert = 0;",
         "der Bereich eines `option index into T` enthaelt den Sonderwert nicht mehr",
     ),
     Mutation(

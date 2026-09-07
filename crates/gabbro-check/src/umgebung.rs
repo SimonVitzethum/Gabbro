@@ -1345,20 +1345,7 @@ impl Umgebung {
             // **Die Absenkung haengt daran**: seit «C1» steht `T_NONE` wirklich im erzeugten
             // C. Solange der Erzeuger sich weigerte, war die Luecke folgenlos; heute nicht.
             TypExpr::Index { tabelle, optional, .. } => {
-                let sonderwert = i128::from(*optional);
-                let bereich = self
-                    .kandidaten(von, &tabelle.text)
-                    .into_iter()
-                    .find_map(|k| self.kapazitaeten.get(&k).copied())
-                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))
-                    .unwrap_or_else(|| IntBereich::voll(32, false));
-                let vorsatz = if *optional { "option " } else { "" };
-                Typ::Benannt {
-                    name: format!("{vorsatz}index into {}", tabelle.text),
-                    heimat: String::new(),
-                    undurchsichtig: false,
-                    unter: Box::new(Typ::Ganzzahl(bereich)),
-                }
+                self.indextyp(von, &tabelle.text, *optional)
             }
             TypExpr::Varianten(v, _) => Typ::Summe {
                 name: String::new(),
@@ -1372,6 +1359,41 @@ impl Umgebung {
                     })
                     .collect(),
             },
+        }
+    }
+
+    /// **The type `index into T` -- and it is built HERE and nowhere else.**
+    ///
+    /// `TypExpr::Index` reaches it when a human writes the words down. **M1 reaches it for a
+    /// `traverse` binder, which provably has the same range and was written by nobody**
+    /// (2026-09-07) -- the loop runs over the slots of `T`, so its counter is an index into
+    /// `T` by the same argument that gives the written form its bound.
+    ///
+    /// > *Two readers of one declaration is the shape this folder has paid for repeatedly.*
+    /// > If the range of `index into T` ever changes, it changes for the binder in the same
+    /// > commit, because there is only one place to change it.
+    ///
+    /// `optional` is the `option index into T` case and is **a different type, not this one
+    /// with a flag**: its special value is `N` itself, so its range reaches one further
+    /// (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). A binder is never
+    /// optional -- a traversal visits slots, not the absence of one.
+    ///
+    /// Without a `count` on the table the range stays open, and that is then a statement of
+    /// the declaration rather than a convention.
+    pub fn indextyp(&self, von: &str, tabelle: &str, optional: bool) -> Typ {
+        let sonderwert = i128::from(optional);
+        let bereich = self
+            .kandidaten(von, tabelle)
+            .into_iter()
+            .find_map(|k| self.kapazitaeten.get(&k).copied())
+            .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))
+            .unwrap_or_else(|| IntBereich::voll(32, false));
+        let vorsatz = if optional { "option " } else { "" };
+        Typ::Benannt {
+            name: format!("{vorsatz}index into {tabelle}"),
+            heimat: String::new(),
+            undurchsichtig: false,
+            unter: Box::new(Typ::Ganzzahl(bereich)),
         }
     }
 

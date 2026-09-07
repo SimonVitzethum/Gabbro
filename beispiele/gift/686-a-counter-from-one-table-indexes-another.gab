@@ -1,0 +1,49 @@
+-- erwartet: M103
+-- 686 -- **A traversal counter from a 64-slot table, used to index a 4-slot one.**
+--
+-- The sibling of `685`, and the more ordinary bug of the two. `685` needs someone to write
+-- arithmetic on the counter; this one needs nobody to write anything unusual at all. Two
+-- tables, one loop, and the index is simply the wrong counter -- the shape a rename or a
+-- copied loop body produces on a Tuesday.
+--
+-- **MEASURED against the binary before 2026-09-07:** `gabbro pruefe` gave `0 errors`, and
+-- the emitter wrote `s->slots[i].b = 1;` over an `S_slot slots[4];` inside a loop running
+-- `i` to 63. The traversal's own bound is real and it is the bound of `Q`, not of `S`; with
+-- the counter untyped there was nothing for `M103` to compare against, so it compared
+-- nothing and said nothing.
+--
+-- > **This is the case that shows the repair is about the TYPE and not about the loop.**
+-- > A rule that only knew "a traversal counter is safe inside its own traversal" would pass
+-- > this file -- the index IS a traversal counter, and it IS inside its traversal. What
+-- > refuses it is that `index into Q` and `index into S` are different types with different
+-- > bounds, which is exactly what a human writing the two declarations would have gotten.
+--
+-- `messung/KLEMPNEREI-2026-09-07.md` §5.
+
+module gift::counter_from_one_table_indexes_another {
+
+table Q count 64 {
+    slot {
+        a : u32 in 0 .. 10,
+    }
+}
+
+table S count 4 {
+    slot {
+        b : u8,
+    }
+}
+
+impl fn uebertragen(w : ptr<normal, r> Q, s : ptr<normal, rw> S)
+    effects { reads w.slots, writes s.slots }
+    costs   <= 900 ops
+{
+    traverse i over slots of w by unvisited
+        touches reads w.slots, writes s.slots
+    {
+        -- `i` is an `index into Q` -- 0 ..< 64. `S` has four slots.
+        s.slots[i].b = 1;
+    }
+}
+
+}

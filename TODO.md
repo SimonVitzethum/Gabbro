@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 221 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 222 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *214 → 215 on 2026-09-04: `messung/K100-TWO-QUESTIONS-2026-09-04.md` joined — `K100`
       asked as two questions, the 37 «K3» walls sorted into three registers (25 refused by a
       written decision, 6 undecided, 6 that a probe dissolves) and the obligation ratio
@@ -1177,7 +1177,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **395 von 395 Ankern** greifen (`--anker`, 2026-09-03; die Zahl stand am selben Tag noch bei 385 —
+      fällt. Mutationskatalog: **397 von 397 Ankern** greifen (`--anker`, 2026-09-07; die Zahl stand am selben Tag noch bei 385 —
       **387 → 388** durch `let-else-ruf-schuldet-keine-vorbedingung`: `pflichten::rufe_im_block`
       sah einen Ruf in einem `let … else` nicht an, und jede Vorbedingung des Gerufenen fiel
       damit STILL aus dem Register. Nachgemessen auf dem Server: die Mutation übersetzt und
