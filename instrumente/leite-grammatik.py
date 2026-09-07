@@ -41,9 +41,24 @@ looks at token 2; `fnptr_params` at the `:`; `letform` at the word after the fir
 expression) is one form to this tool and several to a user. Those are printed under
 `ZWEIDEUTIG` and are named, not counted away.
 
+THE SPEECH TEST, AND IT RUNS IN BOTH DIRECTIONS
+------------------------------------------------
+A derivation that reads a source file can go silent the way `pruefe-grammatiktafel.py:253`
+did -- a regex that stops matching drops a word and says nothing. So the run holds itself
+against a DOCTORED copy of `parse.rs`:
+
+    a new decision point put in     -> the population must GROW by exactly one
+    an existing one taken out       -> it must SHRINK by exactly one
+    an `erwarte_kw` put in          -> it must NOT move (a demand is not a form)
+    a decision point inside a `//`  -> it must NOT move (prose is not code)
+
+*A tool that only ever reads the real file cannot tell "no forms here" from "I stopped
+looking".* The fourth direction is the one that would have caught the whitespace bug.
+
     ./instrumente/leite-grammatik.py            the derived grammar, rule by rule
     ./instrumente/leite-grammatik.py --formen   one line per form -- the population
     ./instrumente/leite-grammatik.py --zahl     only the counts
+    ./instrumente/leite-grammatik.py --probe    only the speech test
 """
 import pathlib
 import re
@@ -118,8 +133,12 @@ def formen_der_regel(name, rumpf):
         for gruppe in m.groups():
             for w in re.findall(r"Kw::(\w+)", gruppe or ""):
                 aus.append(("WAHL", w, name))
-    # `if let Art::Wort(k @ (Kw::Some | Kw::None)) = …` -- an arm without a `=>`.
-    for m in re.finditer(r"if let Art::Wort\(\s*\w+\s*@\s*\(([^)]*)\)\s*\)", code):
+    # `if let Art::Wort(…) = …` -- an arm without a `=>`, in both spellings. **The bare
+    # `Kw::X` form was invisible until the speech test asked for it** (2026-09-07): only the
+    # `k @ ( … )` shape was handled, so a decision written the other way fell out of the
+    # population without a word. *A tool that reads a source file must be asked what it
+    # cannot see, or it answers about the half it can.*
+    for m in re.finditer(r"if let Art::Wort\(\s*(?:\w+\s*@\s*\()?([^)]*)\)?\s*\)", code):
         for w in re.findall(r"Kw::(\w+)", m.group(1)):
             aus.append(("WAHL", w, name))
     # **A guard on a PREDICATE, not on a word.** `Art::Wort(k) if k.ist_intty()` is one arm
@@ -186,7 +205,73 @@ def zeichentext():
     return dict(re.findall(r"Z::(\w+) => \"([^\"]+)\"", LEX.read_text()))
 
 
+def zaehle(text):
+    """The size of the population over an ARBITRARY parser text -- the speech test's handle."""
+    alle = regelbloecke(text)
+    regeln = {n: r for n, r in alle.items() if n not in KEINE_REGEL}
+    gesehen = set()
+    for name in regeln:
+        for art, term, regel in formen_der_regel(name, regeln[name]):
+            gesehen.add(f"{regel}.{term}")
+    return len(gesehen)
+
+
+def sprechprobe():
+    """Four doctored parsers, four required reactions. Returns the number of failures."""
+    echt = PARSE.read_text()
+    grund = zaehle(echt)
+    anker = "    fn intty(&mut self) -> Erg<IntTy> {\n"
+    if anker not in echt:
+        print("  ABBRUCH: the speech test's anchor is gone from `parse.rs` -- "
+              "NOTHING was measured by it, neither yes nor no")
+        return -1          # not a BEFUND -- an ABBRUCH, and `main` turns it into exit 2
+    faelle = [
+        ("a new WAHL arm grows the population by one",
+         echt.replace(anker, anker + "        if let Art::Wort(Kw::Retry) = self.blick().art "
+                      "{ let _zz = 1; }\n", 1),
+         grund + 1),
+        ("a new OPTION grows it by one",
+         echt.replace(anker, anker + "        let _zz = self.friss_kw(Kw::Retry);\n", 1),
+         grund + 1),
+        ("a new `erwarte_kw` does NOT move it -- a demand is not a form",
+         echt.replace(anker, anker + "        let _zz = self.erwarte_kw(Kw::Retry);\n", 1),
+         grund),
+        ("a decision point inside a COMMENT does NOT move it",
+         echt.replace(anker, anker + "        // self.friss_kw(Kw::Retry)\n", 1),
+         grund),
+        ("an existing WAHL arm taken out SHRINKS it by one",
+         echt.replace("            Art::Wort(Kw::Threads) => {\n                self.pos += 1;\n"
+                      "                Ok(Domaene::Threads)\n            }\n", "", 1),
+         grund - 1),
+    ]
+    schlecht = 0
+    print(f"== Sprechprobe -- the real parser gives {grund} forms ==")
+    for satz, doktoriert, soll in faelle:
+        if doktoriert == echt:
+            print(f"  GESCHEITERT   {satz} -- the doctoring changed NOTHING, so the case is empty")
+            schlecht += 1
+            continue
+        ist = zaehle(doktoriert)
+        ok = ist == soll
+        schlecht += not ok
+        print(f"  {'ok         ' if ok else 'GESCHEITERT'}   {satz} ({ist}, expected {soll})")
+    return schlecht
+
+
 def main():
+    if not PARSE.exists() or not KW.exists() or not LEX.exists():
+        print("ABBRUCH: `crates/gabbro-syntax/src/` is not there -- this tool derives the "
+              "grammar FROM the parser, and without it NOTHING was measured.")
+        return 2
+    if "--probe" in sys.argv:
+        schlecht = sprechprobe()
+        if schlecht < 0:
+            return 2
+        if schlecht:
+            print(f"== BEFUND: {schlecht} Richtung(en) der Sprechprobe halten NICHT ==")
+            return 1
+        print("== SPRECHPROBE: alle Richtungen halten ==")
+        return 0
     text = PARSE.read_text()
     alle = regelbloecke(text)
     regeln = {n: r for n, r in alle.items() if n not in KEINE_REGEL}
@@ -243,6 +328,14 @@ def main():
           "they are one form here and several to a user")
     res = sorted(t for t, k in worte.items() if k == "res")
     print(f"   vocabulary: {len(worte)} words, {len(res)} reserved -- {' '.join(res)}")
+    print()
+    schlecht = sprechprobe()
+    if schlecht < 0:
+        return 2
+    if schlecht:
+        print(f"== BEFUND: {schlecht} Richtung(en) der Sprechprobe halten NICHT -- "
+              "die Zahl darueber ist damit UNGEDECKT ==")
+        return 1
     return 0
 
 

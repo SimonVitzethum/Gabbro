@@ -571,6 +571,50 @@ were registered and reported the old table's numbers over the new file.
 shape one turn inward*, and the only reason it was caught is that a number which should have
 moved did not. The entry point now stands last, with the reason written beside it.
 
+### 3.9 Both instruments carry a speech test, and one of them failed its own
+
+`pruefe-waechter.py` listed both new tools with `!! SPRECHPROBE`. They have one now, and it
+runs at the foot of every ordinary run — *a measurement whose instrument was not asked
+whether it can still see is a measurement of one thing.*
+
+**`leite-grammatik.py --probe`** holds the derivation against five DOCTORED copies of
+`parse.rs`:
+
+```
+== Sprechprobe -- the real parser gives 320 forms ==
+  ok   a new WAHL arm grows the population by one                 (321)
+  ok   a new OPTION grows it by one                               (321)
+  ok   a new `erwarte_kw` does NOT move it -- a demand is not a form  (320)
+  ok   a decision point inside a COMMENT does NOT move it         (320)
+  ok   an existing WAHL arm taken out SHRINKS it by one           (319)
+```
+
+**The first direction failed on its first run, and the failure was a real hole.** A decision
+written as a plain `if let Art::Wort(Kw::X) = …` was invisible: only the `k @ ( … )` spelling
+was handled. `parse.rs` has none of the plain form today, so the fix costs nothing and closes
+a hole tomorrow. *A tool that reads a source file must be asked what it cannot see, or it
+answers about the half it can* — which is the `ancestors` bug of §2.5 in this lane's own
+mirror.
+
+**`miss-grammatikdeckung.py --probe`** drives one artificial pair per verdict:
+
+```
+  ok   a statement that reaches the artefact is CARRIES
+  ok   a COMMENT must NOT reach the artefact -- else the C carries the source
+  ok   a variant the checker refuses is REFUSES
+  ok   a clause that books an obligation is DEMANDS
+  ok   a base the emitter already refuses is BASIS-C001, not REFUSES
+```
+
+The second is the direction that matters most and is the cheapest to forget. The whole
+verdict rests on a byte comparison of two emitted C files, and that comparison fails silently
+in exactly one direction: **if the emitter stopped producing C at all, every pair would be
+identical and every form would read `UNCOVERED`.** A run in which everything is uncovered
+looks like a finding and is a broken pipe.
+
+Both tools also separate a `2` from a `1` now: a missing `crates/gabbro-syntax/` or an unbuilt
+binary is an **ABBRUCH** and not a finding.
+
 ---
 
 ## 4. What this document does NOT say

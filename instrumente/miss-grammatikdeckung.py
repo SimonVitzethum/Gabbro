@@ -53,6 +53,7 @@ WHAT THIS CANNOT SAY, AND SAYS SO
 * A form this file has no minimal host for is `NICHT GEPROBT` and is counted in the
   denominator all the same. *A denominator that drops what could not be measured is `W25`.*
 
+    ./instrumente/miss-grammatikdeckung.py --probe    only the speech test
     ./instrumente/miss-grammatikdeckung.py             the table and the counts
     ./instrumente/miss-grammatikdeckung.py --nur ID    one form, with every command printed
     ./instrumente/miss-grammatikdeckung.py --liste     the probe table, no runs
@@ -730,6 +731,7 @@ def baue(kennung):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--probe", action="store_true")
     ap.add_argument("--nur")
     ap.add_argument("--liste", action="store_true")
     ap.add_argument("--tsv")
@@ -744,8 +746,19 @@ def main():
             print(f"=== {k}\n--- base\n{bt}--- variant\n{vt}")
         return 0
 
+    if not GABBRO.exists():
+        print(f"ABBRUCH: `{GABBRO}` is not built -- NOTHING was measured, "
+              "neither yes nor no. `cargo build` first.")
+        return 2
     global PRUEFERWORTE
     PRUEFERWORTE = prueferworte()
+    if args.probe:
+        schlecht = sprechprobe()
+        if schlecht:
+            print(f"== BEFUND: {schlecht} Richtung(en) der Sprechprobe halten NICHT ==")
+            return 1
+        print("== SPRECHPROBE: alle fuenf Richtungen halten ==")
+        return 0
     kennungen = [args.nur] if args.nur else sorted(PROBEN)
     if args.nur and args.nur not in PROBEN:
         print(f"ABBRUCH: `{args.nur}` is not in the probe table -- nothing was measured.")
@@ -810,6 +823,12 @@ def main():
     if args.tsv:
         pathlib.Path(args.tsv).write_text(
             "".join(f"{k}\t{u}\t{g}\n" for k, u, g in zeilen))
+    print()
+    schlecht = sprechprobe()
+    if schlecht:
+        print(f"== BEFUND: {schlecht} Richtung(en) der Sprechprobe halten NICHT -- "
+              "die Tafel darueber ist damit UNGEDECKT ==")
+        return 1
     return 0
 
 
@@ -1412,6 +1431,70 @@ for _k, _e in (("parent", "parent"), ("child", "child"), ("sibling", "sibling"))
           "    table T count 4 { slot { wert : u32, elter : option index into T, } }",
           "    table T count 4 { slot { wert : u32, elter : option index into T, }\n"
           f"        tree {{ {_e} elter }} }}")
+
+
+# =======================================================================================
+# THE SPEECH TEST -- five directions, and each one is a way this instrument could go quiet
+# =======================================================================================
+#
+# The whole verdict rests on a BYTE COMPARISON of two emitted C files. That comparison can
+# fail silently in exactly one direction -- if the emitter stopped producing C at all, every
+# pair would come out identical and every form would read `UNCOVERED`. **A run in which
+# everything is uncovered looks like a finding and is a broken pipe.** So the test drives one
+# artificial pair per verdict and requires the verdict back.
+#
+# The fifth direction is the one that matters most and is the cheapest to forget: a variant
+# that adds only a COMMENT must come out `UNCOVERED`. If it comes out `CARRIES`, the C
+# carries the source text and the comparison is measuring the input.
+
+SPRECHPROBEN = {
+    "a statement that reaches the artefact is CARRIES": (
+        "module p {\n    fn f(a : u32 in 0 .. 100) -> u32 in 0 .. 100\n"
+        "        effects { pure } costs <= 8 ops { return a; }\n}\n",
+        "module p {\n    fn f(a : u32 in 0 .. 100) -> u32 in 0 .. 100\n"
+        "        effects { pure } costs <= 8 ops { let r : u32 in 0 .. 100 = a; return r; }\n}\n",
+        "CARRIES"),
+    "a COMMENT must NOT reach the artefact -- else the C carries the source": (
+        "module p {\n    fn f(a : u32) -> u32 effects { pure } costs <= 4 ops { return a; }\n}\n",
+        "module p {\n    -- a comment, and nothing else\n"
+        "    fn f(a : u32) -> u32 effects { pure } costs <= 4 ops { return a; }\n}\n",
+        "UNCOVERED"),
+    "a variant the checker refuses is REFUSES": (
+        "module p {\n    fn f(a : u32) -> u32 effects { pure } costs <= 4 ops { return a; }\n}\n",
+        "module p {\n    fn f(a : u32) -> u32 effects { pure } costs <= 4 ops { return zz; }\n}\n",
+        "REFUSES"),
+    "a clause that books an obligation is DEMANDS": (
+        "module p {\n    fn f(a : u32) -> u32 effects { pure } costs <= 4 ops { return a; }\n}\n",
+        "module p {\n    fn f(a : u32) -> u32 ensures result == a\n"
+        "        effects { pure } costs <= 4 ops { return a; }\n}\n",
+        "DEMANDS"),
+    "a base the emitter already refuses is BASIS-C001, not REFUSES": (
+        "module p {\n    table T count 4 { slot { w : u32, } }\n    static mut g : T = T;\n}\n",
+        "module p {\n    table T count 4 { slot { w : u32, } }\n    static mut g : T = T;\n"
+        "    fn f() effects { reads g } costs <= 4 ops { return; }\n}\n",
+        "BASIS-C001"),
+}
+
+
+def sprechprobe():
+    """Returns the number of directions that do NOT hold."""
+    global PRUEFERWORTE
+    if PRUEFERWORTE is None:
+        PRUEFERWORTE = prueferworte()
+    schlecht = 0
+    print("== Sprechprobe -- fuenf Richtungen ==")
+    for satz, (bt, vt, soll) in SPRECHPROBEN.items():
+        b, v = messe(bt), messe(vt)
+        if not b["angenommen"]:
+            ist = "BASIS-ROT"
+        elif b["c001"]:
+            ist = "BASIS-C001"
+        else:
+            ist = urteil(b, v, "")[0]
+        ok = ist == soll
+        schlecht += not ok
+        print(f"  {'ok         ' if ok else 'GESCHEITERT'}   {satz} ({ist})")
+    return schlecht
 
 if __name__ == "__main__":
     sys.exit(main())
