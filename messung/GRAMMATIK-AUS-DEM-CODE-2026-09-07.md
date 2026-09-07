@@ -415,7 +415,7 @@ denominator (*a denominator that drops what could not be measured is `W25`*):
 
 | | |
 |---|---|
-| **NICHT-GEPROBT** | no minimal host in this file isolates the form |
+| **NOT-PROBED** | no minimal host in this file isolates the form |
 | **BASIS-C001** | the BASE is already refused by the emitter, so the difference has no direction |
 | **NICHT-C** | it lowers, and `cc -Werror` refuses the result — neither side of the question |
 
@@ -433,7 +433,7 @@ refusal was the `static mut g : T` standing beside the loop, and the base carrie
    REFUSES        45    14.2 %
    DEMANDS         6     1.9 %
    BASIS-C001     32    10.1 %      the base is already refused by the emitter
-   NICHT-GEPROBT  11     3.5 %      no minimal host isolates the form
+   NOT-PROBED  11     3.5 %      no minimal host isolates the form
    NICHT-C         4     1.3 %      it emits, and `cc -Werror` refuses the result
 
 == of 318 derived forms, 275 were measured and 43 could not be ==
@@ -450,7 +450,7 @@ refusal was the `static mut g : T` standing beside the loop, and the base carrie
 > **51.9 %**, and the gap between the two numbers is this instrument's incompleteness, not
 > the language's.
 
-`BASIS-ROT` is **0**: every base program in the table checks clean. It was 25 in the first
+`BASE-RED` is **0**: every base program in the table checks clean. It was 25 in the first
 full run, and the twenty-five hosts were rewritten out of programs the corpus already carries
 (`beispiele/04`, `06`, `67`, `messung/proben/probe-neun-domaenen.gab`) rather than invented.
 
@@ -563,7 +563,7 @@ has none. **This is the weakest column of the run and is named as such.**
 ### 3.8 A defect in this instrument, caught and booked
 
 Between the second and third run the probe table grew by ninety entries and the numbers **did
-not move** — 101 `NICHT-GEPROBT` before and after. The cause was in this file: `if __name__ ==
+not move** — 101 `NOT-PROBED` before and after. The cause was in this file: `if __name__ ==
 "__main__": sys.exit(main())` stood in the MIDDLE, so `main()` ran before the added probes
 were registered and reported the old table's numbers over the new file.
 

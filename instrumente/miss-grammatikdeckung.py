@@ -773,13 +773,13 @@ def main():
         # in the denominator all the same: *a denominator that drops what could not be
         # measured is `W25`.*
         if bt is None or bt == vt:
-            zaehler["NICHT-GEPROBT"] = zaehler.get("NICHT-GEPROBT", 0) + 1
-            zeilen.append((k, "NICHT-GEPROBT", "no minimal host isolates this form"))
-            print(f"{k:<44} {'NICHT-GEPROBT':<10} no minimal host isolates this form")
+            zaehler["NOT-PROBED"] = zaehler.get("NOT-PROBED", 0) + 1
+            zeilen.append((k, "NOT-PROBED", "no minimal host isolates this form"))
+            print(f"{k:<44} {'NOT-PROBED':<10} no minimal host isolates this form")
             continue
         b, v = messe(bt), messe(vt)
         if not b["angenommen"]:
-            u, grund = "BASIS-ROT", "the base program itself does not check: " + ",".join(b["codes"])
+            u, grund = "BASE-RED", "the base program itself does not check: " + ",".join(b["codes"])
         # **A base the emitter already refuses measures nothing.** With `C001` on both sides
         # the difference is zero for the HOST's reason, and reporting `REFUSES` would put the
         # host's refusal on the form's name. Measured 2026-09-07: `stmt.traverse` read as
@@ -805,12 +805,12 @@ def main():
     ganz = len(kennungen)
     for u in sorted(zaehler):
         print(f"   {u:<12} {zaehler[u]:>4}   {100.0 * zaehler[u] / ganz:5.1f} % of {ganz}")
-    # **The headline, and its denominator is stated with it** (`W25`). `NICHT-GEPROBT` and
-    # `BASIS-ROT` stay in the denominator: they are forms this file could not measure, not
+    # **The headline, and its denominator is stated with it** (`W25`). `NOT-PROBED` and
+    # `BASE-RED` stay in the denominator: they are forms this file could not measure, not
     # forms the language does not have.
     traegt = zaehler.get("CARRIES", 0) + zaehler.get("GUARDS", 0)
     nutzer = zaehler.get("DEMANDS", 0) + zaehler.get("REFUSES", 0) + zaehler.get("UNCOVERED", 0)
-    gemessen = (ganz - zaehler.get("NICHT-GEPROBT", 0) - zaehler.get("BASIS-ROT", 0)
+    gemessen = (ganz - zaehler.get("NOT-PROBED", 0) - zaehler.get("BASE-RED", 0)
                 - zaehler.get("BASIS-C001", 0))
     print(f"\n== of {ganz} derived forms, {gemessen} were measured and "
           f"{ganz - gemessen} could not be ==")
@@ -833,7 +833,7 @@ def main():
 
 
 
-# ============ probes added 2026-09-07 to close the `NICHT-GEPROBT` column =============
+# ============ probes added 2026-09-07 to close the `NOT-PROBED` column =============
 # Every one of these replaces an entry that had no minimal host. The originals stay above
 # and are overwritten here, so the diff shows what was closed and when.
 
@@ -1178,7 +1178,7 @@ probe("eff.pure", "modul",
       "    fn f() effects { pure } costs <= 2 ops { return; }")
 
 # ============ round two: the base programs that did not check ==========================
-# **A `BASIS-ROT` row measures the probe, not the language.** Twenty-five of them fell in
+# **A `BASE-RED` row measures the probe, not the language.** Twenty-five of them fell in
 # the first full run; the hosts below are taken from programs the corpus already carries
 # (`beispiele/04`, `beispiele/06`, `beispiele/67`, `messung/proben/probe-neun-domaenen.gab`)
 # rather than invented, so that the base is a program somebody has already run.
@@ -1486,7 +1486,7 @@ def sprechprobe():
     for satz, (bt, vt, soll) in SPRECHPROBEN.items():
         b, v = messe(bt), messe(vt)
         if not b["angenommen"]:
-            ist = "BASIS-ROT"
+            ist = "BASE-RED"
         elif b["c001"]:
             ist = "BASIS-C001"
         else:
