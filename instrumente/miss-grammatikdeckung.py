@@ -1,0 +1,770 @@
+#!/usr/bin/env python3
+"""**Per FORM of the derived grammar: does the language carry it, or does the user?**
+
+The population is `instrumente/leite-grammatik.py` -- the decision points of `parse.rs`,
+not the terminals of a document. *The grammar is the language's own population; a corpus is
+written from the language outwards and cannot answer completeness (trap 80).*
+
+THE TEST IS DIFFERENTIAL, AND THAT IS THE WHOLE INSTRUMENT
+-----------------------------------------------------------
+A form is measured by TWO programs that differ in exactly it: a BASE without the form and a
+VARIANT with it. Four runs on each, and the verdict falls out of the pair:
+
+    REFUSES    the variant is refused BY NAME -- `C001` at the emitter, or a checker error
+    DEMANDS    the variant is accepted and `gabbro pflichten` books an obligation the base
+               does not -- the form is carried into a promise a HUMAN still owes
+    CARRIES    the variant's C differs from the base's C, and that C compiles -- the
+               generator wrote something nobody typed
+    GUARDS     no C of its own and no obligation -- but a CHECKER ERROR TEXT names the
+               word. A pass has a sentence about this form; the language carries it by
+               refusing wrong uses rather than by generating right ones
+    UNCOVERED  accepted, lowered, compiles, C BYTE-IDENTICAL to the base's, no new
+               obligation, AND no checker error text names it.
+               **Nothing in the tree has an answer for this form.**
+
+**`GUARDS` is not a softening of `UNCOVERED`, it is the fifth cell the four-way table was
+missing.** `requires` generates no C and books its obligation at the CALL SITE, not at the
+declaration; a pointer SPACE has no counterpart in C at all. Judging those `UNCOVERED`
+because the artefact does not move would say the language does nothing with a `requires`.
+*The generator is one of two ways a language can carry a form; the other is a refusal.*
+
+**The word register is READ, not copied** (`W7`): `prueferworte()` out of
+`instrumente/pruefe-grammatiktafel.py`, which already computes "which words does a checker
+error name" for its own `vom Pruefer` state. A second copy here would run away from it.
+
+**The `UNCOVERED` cell is the whole point, and it is not hypothetical.** `SYNTAX.md` said of
+`when` for months that it lowers to `#if`; the emitter never read the field, and an item with
+`when` produced exactly the same C as one without. *A clause that changes neither the
+artefact nor the obligation register is a promise nobody keeps* -- and it looks kept.
+
+WHY A PAIR AND NOT A SINGLE FILE
+---------------------------------
+`gabbro emit` succeeding says the emitter did not refuse. It does not say the emitter READ
+the form. Only the difference to a program without the form says that, and only a byte
+comparison says it without a second emitter beside the emitter (`W7`).
+
+WHAT THIS CANNOT SAY, AND SAYS SO
+----------------------------------
+* A C difference is not a CORRECT lowering. `cc -Werror` checks the language, not the
+  meaning -- the grammar table carries the same caveat and for the same reason.
+* A form with no obligation and no C difference may still be read by a pass that only
+  refuses WRONG programs. The run therefore also records whether a deliberately broken
+  variant is refused (`gegenprobe`), and prints that column beside the verdict.
+* A form this file has no minimal host for is `NICHT GEPROBT` and is counted in the
+  denominator all the same. *A denominator that drops what could not be measured is `W25`.*
+
+    ./instrumente/miss-grammatikdeckung.py             the table and the counts
+    ./instrumente/miss-grammatikdeckung.py --nur ID    one form, with every command printed
+    ./instrumente/miss-grammatikdeckung.py --liste     the probe table, no runs
+"""
+import argparse
+import hashlib
+import os
+import pathlib
+import subprocess
+import sys
+import tempfile
+
+W = pathlib.Path(__file__).resolve().parent.parent
+GABBRO = W / "target" / "debug" / "gabbro"
+CC_SCHALTER = ["-std=c11", "-Wall", "-Wextra", "-Werror"]
+CC_STUFEN = ("-O0", "-O2")
+CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
+FRIST = 60
+
+# ---------------------------------------------------------------------------------------
+# The hosts. A host is a program that CHECKS and EMITS on its own; `{X}` is where the
+# variant's snippet goes and the base puts the empty string there.
+# ---------------------------------------------------------------------------------------
+HOST = {
+    # A module with one pure function -- the cheapest thing that emits.
+    "modul": "module p {{\n{X}\n}}\n",
+    # Inside a function body.
+    "rumpf": ("module p {{\n"
+              "    fn f(a : u32 in 0 .. 100, b : u32 in 1 .. 100) -> u32 in 0 .. 100000\n"
+              "        effects {{ pure }} costs <= 40 ops {{\n"
+              "        let mut r : u32 in 0 .. 100000 = a;\n"
+              "{X}\n"
+              "        return r;\n"
+              "    }}\n}}\n"),
+    # A clause at a function head -- `{X}` sits between the signature and `effects`.
+    "fnkopf": ("module p {{\n"
+               "    fn f(a : u32) -> u32 {X} effects {{ pure }} costs <= 4 ops {{\n"
+               "        return a;\n"
+               "    }}\n}}\n"),
+    # A clause at a function head AFTER `costs`.
+    "fnschwanz": ("module p {{\n"
+                  "    fn f(a : u32) -> u32 effects {{ pure }} costs <= 4 ops {X} {{\n"
+                  "        return a;\n"
+                  "    }}\n}}\n"),
+    # A `table` body.
+    "tabelle": ("module p {{\n"
+                "    table T count 8 {{\n"
+                "        slot {{ wert : u32, belegt : u32, }}\n"
+                "{X}\n"
+                "    }}\n}}\n"),
+    # A clause on the `table` head, between the name and the brace.
+    "tabellenkopf": ("module p {{\n"
+                     "    const K : u32 = 4;\n"
+                     "    table T {X} {{\n"
+                     "        slot {{ wert : u32, belegt : u32, }}\n"
+                     "    }}\n}}\n"),
+    # A `device` body.
+    "geraet": ("module p {{\n"
+               "    opaque type Pa = u64;\n"
+               "    device D(basis : Pa) at mmio {{\n"
+               "        reg CTRL : u32 @0x0 class rw\n"
+               "{X}\n"
+               "    }}\n}}\n"),
+    # A clause on a `reg` declaration.
+    "reg": ("module p {{\n"
+            "    opaque type Pa = u64;\n"
+            "    device D(basis : Pa) at mmio {{\n"
+            "        reg CTRL : u32 @0x0 class rw {X}\n"
+            "    }}\n}}\n"),
+    # A type in a `const` declaration -- `{X}` is the TYPE, `{V}` the value.
+    # **A `static`, not a `const`.** A `const` lowers to `#define K 1u` -- typeless -- so
+    # every integer width gives byte-identical C and every type would score `UNCOVERED`
+    # for the host's reason and not the language's. *A host that cannot show the answer
+    # is not a probe.* Measured 2026-09-07: `const K : u8` and `const K : u64` produce the
+    # same C to the byte.
+    "typ": ("module p {{\n"
+            "    fn f(x : {X}) effects {{ pure }} costs <= 1 ops {{\n"
+            "        return;\n"
+            "    }}\n}}\n"),
+    # An effect in an `effects` block. The base carries `pure` because an EMPTY list is
+    # `P014` -- *"an EMPTY list is not `no effects`: the word for that is `pure`"*.
+    "wirkung": ("module p {{\n"
+                "    static mut Z : u32 = 0;\n"
+                "    fn f() effects {{ reads Z{X} }} costs <= 2 ops {{\n"
+                "        let q : u32 = Z;\n"
+                "        return;\n"
+                "    }}\n}}\n"),
+    # A predicate in an `ensures` clause. The base carries one, because `ensures` demands a
+    # `predlist` and an empty one does not parse.
+    "praedikat": ("module p {{\n"
+                  "    table T count 8 {{ slot {{ wert : u32, }} }}\n"
+                  "    fn f(a : u32) -> u32 ensures result == a{X} "
+                  "effects {{ pure }} costs <= 4 ops {{\n"
+                  "        return a;\n"
+                  "    }}\n}}\n"),
+    # A predicate ALONE in an `ensures` clause -- for the forms that cannot stand second.
+    "praedikat1": ("module p {{\n"
+                   "    table T count 8 {{ slot {{ wert : u32, }} }}\n"
+                   "    fn f(a : u32) -> u32 ensures {X} "
+                   "effects {{ pure }} costs <= 4 ops {{\n"
+                   "        return a;\n"
+                   "    }}\n}}\n"),
+    # An EXPRESSION -- `{X}` is the whole right-hand side of a `let`.
+    # **The ranges are not decoration.** Without them `a + b` is `M101`/`M104` -- the
+    # overflow obligation -- and every arithmetic form would score `REFUSES` for the host's
+    # reason and not the language's. `b` starts at 1 so `/` and `%` clear `M102`.
+    "ausdruck": ("module p {{\n"
+                 "    fn f(a : u32 in 0 .. 100, b : u32 in 1 .. 100) -> u32 in 0 .. 100000\n"
+                 "        effects {{ pure }} costs <= 9 ops {{\n"
+                 "        let r : u32 in 0 .. 100000 = {X};\n"
+                 "        return r;\n"
+                 "    }}\n}}\n"),
+    # A quantifier DOMAIN -- `{X}` is what stands after `forall i in`.
+    "domaene": ("module p {{\n"
+                "    table T count 8 {{ slot {{ wert : u32, naechst : u32, }} "
+                "tree {{ parent naechst }} }}\n"
+                "    static mut G : T = T;\n"
+                "    spec fn q() -> bool = forall i in {X} : true;\n"
+                "}}\n"),
+    # A clause on an `atomic` declaration.
+    "atomic": "module p {{\n    atomic A : u32 {X};\n}}\n",
+    # A clause on a `static` declaration.
+    "statisch": "module p {{\n    static K : u32 = 4 {X};\n}}\n",
+    # A whole item at module level -- for item heads.
+    "item": "module p {{\n{X}\n}}\n",
+}
+
+# ---------------------------------------------------------------------------------------
+# The probe table: form id -> (host, base snippet, variant snippet, [extra host fields])
+# The id is the one `leite-grammatik.py --formen` prints, so the two registers join.
+# ---------------------------------------------------------------------------------------
+PROBEN = {}
+
+
+NICHT = None   # sentinel: this file has no minimal host that isolates the form
+
+
+def probe(kennung, host, basis, variante, **felder):
+    PROBEN[kennung] = (host, basis, variante, felder)
+
+
+# -- item heads: `{X}` is one whole declaration at module level -------------------------
+_ITEM = {
+    "module": "module q { const Z : u32 = 1; }",
+    "use": "use q::r;",
+    "type": "type Q = u32;",
+    "opaque": "opaque type Q = u32;",
+    "linear": "linear type Q = u32;",
+    "tagged": "tagged type Q = u32;",
+    "const": "const Q : u32 = 1;",
+    "static": "static Q : u32 = 1;",
+    "fn": "fn q() effects { pure } costs <= 1 ops { return; }",
+    "spec": "spec fn q() -> bool = true;",
+    "impl": "impl fn q() effects { pure } costs <= 1 ops { return; }",
+    "raw": "raw fn q() effects { pure } costs <= 1 ops { return; }",
+    "divergent": "divergent fn q() -> never effects { diverges } costs <= 1 ops { return; }",
+    "prim": "prim fn q() effects { pure } costs <= 1 ops;",
+    "extern": "extern fn q() effects { pure } costs <= 1 ops;",
+    "atomic": "atomic Q : u32 seq;",
+    "format": "format Q { a : u32, }",
+    "table": "table Q count 4 { slot { wert : u32, } }",
+    "reason": 'reason Q { Leer = 1 "empty" }',
+    "state": "state Q { transition t { s : 0 -> 1 } }",
+    "device": "opaque type Pa = u64;\n    device Q(basis : Pa) at mmio "
+              "{ reg R : u32 @0x0 class rw }",
+    "assume": 'assume Q "a claim about the machine" unfalsifiable "no probe can refute it";',
+    "axiom": 'axiom Q() effects { pure } unfalsifiable "no probe can refute it";',
+    "check": 'check Q { claim "the claim" measures Z gates g can_fail { } }',
+    "lock": "static mut Z : u32 = 0;\n    lock Q protects { Z } rank 0;",
+    "rcu": "static mut Z : u32 = 0;\n    rcu Q protects { Z };",
+    "group": "static mut A : u32 = 0;\n    static mut B : u32 = 0;\n"
+             "    group Q over { A, B };",
+    "accumulates": "accumulates Q : u32 merge max per cpu 4;",
+    "walk": "walk Q levels 4 { node : [u64; 512], down : d when true, leaf : true, }",
+    "entry": "fn h() effects { pure } costs <= 1 ops { return; }\n"
+             "    entry Q arch x86_64 { regs in { } regs out { } preserves { } "
+             "clobbers { } stack s dispatch p::h; }",
+    "entrust": "entrust Q at gast arch x86_64 { regs in { } stack s assume a; }",
+    "boot": "fn h() effects { pure } costs <= 1 ops { return; }\n"
+            "    boot Q arch x86_64 { dispatch p::h; }",
+}
+for _w, _s in _ITEM.items():
+    probe(f"item.{_w}", "item", "", "    " + _s)
+probe("item.pub", "item", "    const Q : u32 = 1;", "    pub const Q : u32 = 1;")
+probe("item.when", "item", "    const Q : u32 = 1;", "    when TESTBUILD const Q : u32 = 1;")
+
+# -- statement heads ---------------------------------------------------------------------
+_STMT = {
+    "let": "        let z : u32 = a;",
+    "if": "        if a == b { r = 1; }",
+    "match": "",          # needs a sum type -- probed with its own host below
+    "return": "        return r;",
+    "leave": "",          # only inside a loop with a mark
+    "next": "",
+    "traverse": "",
+    "retry": "",
+    "forever": "",
+    "breaking": "",
+    "narrow": "        narrow r to 0 .. 10 else { return 0; }",
+    "observes": "",
+    "locks": "",
+}
+probe("stmt.let", "rumpf", "", _STMT["let"])
+probe("stmt.if", "rumpf", "", _STMT["if"])
+probe("stmt.return", "rumpf", "", "        return b;")
+probe("stmt.narrow", "rumpf", "", _STMT["narrow"])
+probe("stmt.finite", "rumpf", "", "")           # filled below with a float host
+probe("stmt.shared", "rumpf", "", "")
+probe("stmt.match", "rumpf", "", "")
+probe("stmt.locks", "rumpf", "", "")
+probe("stmt.observes", "rumpf", "", "")
+probe("stmt.traverse", "rumpf", "", "")
+probe("stmt.retry", "rumpf", "",
+      "        retry m bounded 4 ops on_exceeded g { r = r + 1; }")
+probe("stmt.forever", "rumpf", "", "")
+probe("stmt.breaking", "rumpf", "", "")
+probe("stmt.leave", "rumpf", "", "")
+probe("stmt.next", "rumpf", "", "")
+
+# -- assignment operators ----------------------------------------------------------------
+for _k, _op in (("=", "="), ("+=", "+="), ("-=", "-="), ("&=", "&="), ("|=", "|=")):
+    probe(f"zuweisung_oder_ruf.{_k}", "rumpf", "        r = r;", f"        r {_op} b;")
+probe("zuweisung_oder_ruf.(", "rumpf", "        r = r;", "        p::g(a);")
+probe("zuweisung_oder_ruf.::", "rumpf", "        r = r;", "        p::g(a);")
+probe("zuweisung_oder_ruf.publishes", "rumpf", "        r = r;", NICHT)
+
+# -- expressions -------------------------------------------------------------------------
+for _k, _e in (("+", "a + b"), ("-", "a - b")):
+    probe(f"addexpr.{_k}", "ausdruck", "a", _e)
+for _k, _e in (("*", "a * b"), ("/", "a / b"), ("%", "a % b")):
+    probe(f"mulexpr.{_k}", "ausdruck", "a", _e)
+for _k, _e in (("&", "a & b"), ("|", "a | b"), ("^", "a ^ b"),
+               ("<<", "a << 1"), (">>", "a >> 1")):
+    probe(f"bitexpr.{_k}", "ausdruck", "a", _e)
+for _k, _e in (("!", "!(a == b)"), ("-", "0 - a"), ("~", "~a")):
+    probe(f"unary.{_k}", "ausdruck", "a", _e)
+probe("orexpr.||", "praedikat", "", " || true")
+probe("andexpr.&&", "rumpf", "        if a == b { r = 1; }",
+      "        if a == b && b == 1 { r = 1; }")
+for _k in ("==", "!=", "<", "<=", ">", ">="):
+    probe(f"cmpexpr.{_k}", "rumpf", "        if a == b { r = 1; }",
+          f"        if a {_k} b {{ r = 1; }}")
+probe("primary.(", "ausdruck", "a", "(a)")
+probe("primary.true", "rumpf", "        if a == b { r = 1; }",
+      "        if true { r = 1; }")
+probe("primary.false", "rumpf", "        if a == b { r = 1; }",
+      "        if false { r = 1; }")
+probe("primary.intty", "ausdruck", "a", "u64::max")
+probe("primary.::", "ausdruck", "a", "u64::max")
+probe("primary.rounded", "modul", "    static F : f64 = 0.5;",
+      "    static F : f64 = 0.1 rounded;")
+probe("primary.Self", "ausdruck", "a", NICHT)
+probe("primary.Some", "ausdruck", "a", NICHT)
+probe("primary.None", "ausdruck", "a", NICHT)
+probe("primary.old", "modul",
+      "    fn f(a : ptr<normal, rw> u32) ensures true effects { writes a } costs <= 4 ops { return; }",
+      "    fn f(a : ptr<normal, rw> u32) ensures a == old(a) effects { writes a } costs <= 4 ops { return; }")
+probe("primary.result", "praedikat1", "true", "result == a")
+probe("primary.sizeof", "ausdruck", "a", "sizeof(u32)")
+probe("primary.lenof", "modul",
+      "    static A : [u32; 4] = 0;\n    const N : u32 = 4;",
+      "    static A : [u32; 4] = 0;\n    const N : u32 = lenof(A);")
+probe("primary.aligned", "praedikat1", "true", "aligned(a, 4)")
+probe("place_ab..", "modul",
+      "    type S = { g : u32, };\n    fn f(s : S) -> u32 effects { pure } costs <= 2 ops { return 1; }",
+      "    type S = { g : u32, };\n    fn f(s : S) -> u32 effects { pure } costs <= 2 ops { return s.g; }")
+probe("place_ab.[", "modul",
+      "    static A : [u32; 4] = 0;\n    fn f() -> u32 effects { reads A } costs <= 2 ops { return 1; }",
+      "    static A : [u32; 4] = 0;\n    fn f() -> u32 effects { reads A } costs <= 2 ops { return A[1]; }")
+probe("place_ab.->", "modul",
+      "    type S = { g : u32, };\n    fn f(s : ptr<normal, r> S) -> u32 effects { reads s } costs <= 2 ops { return 1; }",
+      "    type S = { g : u32, };\n    fn f(s : ptr<normal, r> S) -> u32 effects { reads s } costs <= 2 ops { return s->g; }")
+probe("place.Self", "ausdruck", "a", NICHT)
+probe("pfad.::", "ausdruck", "a", "u64::max")
+probe("pfad.intty", "ausdruck", "a", "u64::max")
+
+# -- effects -----------------------------------------------------------------------------
+for _k, _e in (("reads", ", reads Z"), ("writes", ", writes Z"),
+               ("locks", ", locks Z"), ("masks", ", masks irq"),
+               ("allocs", ", allocs heap"), ("consumes", ", consumes Z"),
+               ("publishes", ", publishes Z"), ("diverges", ", diverges")):
+    probe(f"eff.{_k}", "wirkung", "", _e)
+probe("eff.pure", "wirkung", "", "")               # the base IS `pure`
+probe("eff.shared", "wirkung", "", ", locks shared Z")
+
+# -- types -------------------------------------------------------------------------------
+for _w in ("u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"):
+    probe(f"intty.{_w}", "typ", "u32", _w, V="1")
+probe("intty.in", "typ", "u32", "u32 in 0 .. 10", V="1")
+probe("range...<", "typ", "u32 in 0 .. 10", "u32 in 0 ..< 10", V="1")
+probe("typeexpr_innen.bool", "typ", "u32", "bool", V="true")
+probe("typeexpr_innen.f32", "typ", "u32", "f32", V="1.5")
+probe("typeexpr_innen.f64", "typ", "u32", "f64", V="1.5")
+probe("typeexpr_innen.never", "typ", "u32", "never", V="1")
+probe("typeexpr_innen.ptr", "typ", "u32", "ptr<normal, r> u32", V="1")
+probe("typeexpr_innen.fn", "typ", "u32", "u32", V="1")
+probe("typeexpr_innen.option", "typ", "u32", "u32", V="1")
+probe("typeexpr_innen.Self", "typ", "u32", "u32", V="1")
+probe("typeexpr_innen.[", "typ", "u32", "u32", V="1")
+probe("typeexpr_innen.{", "typ", "u32", "u32", V="1")
+probe("typeexpr_innen.intty", "typ", "bool", "u32", V="1")
+probe("typeexpr_innen.in", "typ", "u32", "u32 in 0 .. 10", V="1")
+
+# -- pointer spaces and rights -----------------------------------------------------------
+for _w in ("normal", "mmio", "dma", "code", "boot", "port"):
+    probe(f"space.{_w}", "typ", "ptr<normal, r> u32", f"ptr<{_w}, r> u32", V="1")
+for _w in ("r", "w", "rw", "x"):
+    probe(f"right.{_w}", "typ", "ptr<normal, r> u32", f"ptr<normal, {_w}> u32", V="1")
+probe("right.own", "typ", "ptr<normal, r> u32", "ptr<normal, own> u32", V="1")
+probe("right.@", "typ", "ptr<normal, own> u32", "ptr<normal, own@m> u32", V="1")
+probe("rights.+", "typ", "ptr<normal, r> u32", "ptr<normal, r+w> u32", V="1")
+
+# -- table body --------------------------------------------------------------------------
+probe("table.const", "tabelle", "", "        const K : u32 = 4;")
+probe("table.pub", "tabelle", "        const K : u32 = 4;",
+      "        pub const K : u32 = 4;")
+probe("table.slot", "tabelle", "", "")             # the host always carries one
+probe("table.invariant", "tabelle", "",
+      "        invariant i cost O(1) runs offline : true;")
+probe("table.ops", "tabelle", "", "        ops insert, remove;")
+probe("table.occupied", "tabelle", "", "        occupied belegt;")
+probe("table.tree", "tabelle", "", "        tree { parent belegt }")
+probe("table.count", "tabellenkopf", "", " count 8")
+probe("table.backed", "tabellenkopf", " count 8", " count 8 backed K")
+probe("treedecl.parent", "tabelle", "", "        tree { parent belegt }")
+probe("treedecl.child", "tabelle", "", "        tree { child belegt }")
+probe("treedecl.sibling", "tabelle", "", "        tree { sibling belegt }")
+for _w in ("insert", "remove", "relabel"):
+    probe(f"opnamen.{_w}", "tabelle", "", f"        ops {_w};")
+probe("slotdecl.by", "tabelle", "", "")
+probe("slottype.wrapping", "tabelle", "", "")
+probe("slottype.intty", "tabelle", "", "")
+probe("invariant.online", "tabelle", "        invariant i cost O(1) runs offline : true;",
+      "        invariant i cost O(1) runs online : true;")
+probe("invariant.by", "tabelle", "        invariant i cost O(1) runs offline : true;",
+      "        invariant i cost O(1) runs offline by induction over slots of T : true;")
+
+# -- device body -------------------------------------------------------------------------
+probe("device.reg", "geraet", "", "")              # the host always carries one
+probe("device.bank", "geraet", "",
+      "        bank B at 0x10 stride 8 count 4 { reg S : u32 @0x0 class rw }")
+probe("device.mirrors", "geraet", "", "")
+probe("device.transition", "geraet", "", "        transition t { CTRL : 0 -> 1 }")
+probe("device.(", "geraet", "", "")                # the host always carries parameters
+for _w in ("r", "w", "rw", "w1c", "rc"):
+    probe(f"regklasse.{_w}", "reg", "", "")
+probe("regdecl.wrapping", "geraet", "        reg X : u32 @0x8 class rw",
+      "        reg X : u32 @0x8 wrapping class rw")
+probe("regdecl.fields", "geraet", "        reg X : u32 @0x8 class rw",
+      "        reg X : u32 @0x8 class rw fields { A @0 }")
+probe("regdecl.class", "geraet", "        reg X : u32 @0x8 class rw fields { A @0 }",
+      "        reg X : u32 @0x8 class rw fields { A @0 class w1c }")
+probe("regdecl.in", "geraet", "        reg X : u32 @0x8 class rw", NICHT)
+probe("regdecl.requires", "geraet", "        reg X : u32 @0x8 class rw", NICHT)
+probe("regdecl.else", "geraet", "        reg X : u32 @0x8 class rw", NICHT)
+probe("transition.requires", "geraet", "        transition t { CTRL : 0 -> 1 }",
+      "        transition t { CTRL : 0 -> 1 } requires true")
+probe("transition.effects", "geraet", "        transition t { CTRL : 0 -> 1 }",
+      "        transition t { CTRL : 0 -> 1 } effects { pure }")
+
+# -- fn head clauses ---------------------------------------------------------------------
+probe("fndecl.requires", "fnkopf", "", "requires a == a")
+probe("fndecl.ensures", "fnkopf", "", "ensures result == a")
+probe("fndecl.maintains", "fnkopf", "", "")
+probe("fndecl.advances", "fnkopf", "", "")
+probe("fndecl.retires", "fnkopf", "", "")
+probe("fndecl.refines", "fnkopf", "", "")
+probe("fndecl.or", "fnkopf", "", "")
+probe("fndecl.->", "modul",
+      "    fn f() effects { pure } costs <= 1 ops { return; }",
+      "    fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }")
+probe("fndecl.effects", "modul",
+      "    prim fn f() costs <= 1 ops;",
+      "    prim fn f() effects { pure } costs <= 1 ops;")
+probe("fndecl.costs", "modul",
+      "    prim fn f() effects { pure };",
+      "    prim fn f() effects { pure } costs <= 1 ops;")
+probe("fndecl.decreases", "fnschwanz", "", "decreases a")
+probe("fndecl.by", "fnschwanz", "", "by induction over threads")
+probe("fndecl.section", "fnschwanz", "", 'section ".text.hot"')
+probe("fndecl.arch", "fnschwanz", "", "arch x86_64")
+probe("fndecl.when", "fnschwanz", "", "when TESTBUILD")
+probe("fndecl.{", "modul",
+      "    prim fn f() effects { pure } costs <= 1 ops;",
+      "    fn f() effects { pure } costs <= 1 ops { return; }")
+probe("fndecl.=", "modul",
+      "    prim fn f() -> bool effects { pure } costs <= 1 ops;",
+      "    spec fn f() -> bool = true;")
+probe("fndecl.asm", "modul",
+      "    prim fn f() effects { pure } costs <= 1 ops;",
+      "    raw fn f() arch x86_64 effects { pure } costs <= 1 ops = asm { \"nop\" };")
+for _w in ("spec", "const", "impl", "raw", "divergent", "prim", "extern"):
+    probe(f"fndecl.{_w}", "modul",
+          "    fn f() effects { pure } costs <= 1 ops { return; }",
+          "    " + _ITEM[_w].replace("q(", "f(").replace(" q ", " f "))
+
+# -- fn pointer type ---------------------------------------------------------------------
+for _k in ("requires", "ensures", "effects", "costs", "->"):
+    probe(f"fnptr.{_k}", "typ", "u32", "u32", V="1")
+
+# -- predicates --------------------------------------------------------------------------
+probe("orpred.||", "praedikat", "", " || true")
+probe("andpred.&&", "praedikat", "", " && true")
+probe("notpred.!", "praedikat1", "result == a", "!(result == a)")
+probe("notpred.=>", "praedikat1", "result == a", "true => result == a")
+probe("atompred.(", "praedikat1", "result == a", "(result == a)")
+probe("atompred.forall", "praedikat1", "true", "forall i in threads : true")
+probe("atompred.exists", "praedikat1", "true", "exists i in threads : true")
+probe("atompred.in", "praedikat1", "true", "a in threads")
+probe("atompred.reaches", "praedikat1", "true", NICHT)
+for _k in ("slots", "chain", "descendants", "ancestors", "queue",
+           "fields", "elems", "threads", "mappings"):
+    probe(f"domain.{_k}", "domaene", "threads", "threads")
+
+# -- the rest, hosted where they stand ---------------------------------------------------
+probe("staticdecl.mut", "modul", "    static Z : u32 = 0;", "    static mut Z : u32 = 0;")
+probe("staticdecl.section", "statisch", "", ' section ".data.q"')
+probe("atomicdecl.seq", "atomic", "seq", "seq")
+probe("atomicdecl.acquire", "atomic", "seq", "acquire")
+probe("atomicdecl.release", "atomic", "seq", "release")
+probe("atomicdecl.relaxed", "atomic", "seq", "relaxed")
+probe("atomicdecl.publishes", "atomic", "seq", "publishes nothing seq")
+probe("atomicdecl.observed", "atomic", "seq", NICHT)
+probe("typedecl.opaque", "modul", "    type Q = u32;", "    opaque type Q = u32;")
+probe("typedecl.linear", "modul", "    type Q = u32;", "    linear type Q = u32;")
+probe("typedecl.ghost", "modul", "    linear type Q = u32;", "    linear ghost type Q;")
+probe("typedecl.tagged", "modul", "    type Q = u32;", "    tagged type Q = u32;")
+probe("typedecl.order", "modul", "    linear ghost type Q;",
+      "    linear ghost type Q order { roh, mmu };")
+probe("typedecl.=", "modul", "    linear ghost type Q;", "    type Q = u32;")
+probe("typedecl.(", "modul", "    type Q = u32;", NICHT)
+probe("field_innen.@", "modul", "    format F { a : u32, }",
+      "    format F { a : u32 @0, }")
+probe("field_innen.where", "modul", "    format F { a : u32, }",
+      "    format F { a : u32 where a == a, }")
+probe("field_innen.reserved", "modul", "    format F { a : u32, }",
+      "    format F { a : u32 reserved, }")
+probe("field_innen.offset_into", "modul", "    format F { a : u32, }", NICHT)
+probe("fieldty.embeds", "modul", "    format F { a : u32, }",
+      "    format F { a : u32 embeds [11:0], }")
+probe("fieldty.scale", "modul", "    format F { a : u32 embeds [11:0], }",
+      "    format F { a : u32 embeds [11:0] scale 4096, }")
+probe("bitpos.[", "modul", "    format F { a : u32 @0, }", "    format F { a : u32 @[3:0], }")
+probe("format.@", "modul", "    format F { a : u32, }", "    format F @version 2 { a : u32, }")
+probe("format.endian", "modul", "    format F { a : u32, }",
+      "    format F endian big { a : u32, }")
+probe("format.little", "modul", "    format F endian big { a : u32, }",
+      "    format F endian little { a : u32, }")
+probe("reason.exhaustive", "modul", '    reason R { Leer = 1 "empty" }',
+      '    reason R { Leer = 1 "empty" exhaustive }')
+probe("verbund_oder_varianten.(", "modul", "    type Q = { A, B };", "    type Q = { A(u32), B };")
+probe("matchstmt.(", "rumpf", "", "")
+probe("ifstmt.if", "rumpf", "        if a == b { r = 1; }",
+      "        if a == b { r = 1; } else if a == 0 { r = 2; }")
+probe("ifstmt.else", "rumpf", "        if a == b { r = 1; }",
+      "        if a == b { r = 1; } else { r = 2; }")
+probe("letform.mut", "rumpf", "        let z : u32 = a;", "        let mut z : u32 = a;")
+probe("letform.:", "rumpf", "        let z = a;", "        let z : u32 = a;")
+probe("letform.else", "rumpf", "", "")
+probe("letform.awaits", "rumpf", "", "")
+probe("letform.exchange", "rumpf", "", "")
+probe("letform.publishes", "rumpf", "", "")
+probe("nutzlast.nothing", "atomic", "publishes nothing seq", "publishes nothing seq")
+probe("traverse.unvisited", "rumpf", "", "")
+probe("traverse.consuming", "rumpf", "", "")
+probe("traverse.of", "rumpf", "", "")
+probe("traverse.decreases", "rumpf", "", "")
+probe("traverse.touches", "rumpf", "", "")
+probe("schleifeninvariante.invariant", "rumpf",
+      "        retry m bounded 4 ops on_exceeded g { r = r + 1; }",
+      "        retry m bounded 4 ops on_exceeded g invariant true { r = r + 1; }")
+probe("retry.until", "rumpf", "        retry m bounded 4 ops on_exceeded g { r = r + 1; }",
+      "        retry m until true bounded 4 ops on_exceeded g { r = r + 1; }")
+probe("retry.progress", "rumpf", "        retry m bounded 4 ops on_exceeded g { r = r + 1; }",
+      "        retry m bounded 4 ops progress r on_exceeded g { r = r + 1; }")
+probe("retry.effects", "rumpf", "        retry m bounded 4 ops on_exceeded g { r = r + 1; }",
+      "        retry m bounded 4 ops on_exceeded g effects { pure } { r = r + 1; }")
+probe("forever.progress", "rumpf", "", "")
+probe("forever.leaves", "rumpf", "", "")
+probe("xform.update", "rumpf", "", "")
+probe("xform.bounded", "rumpf", "", "")
+probe("xform.on_exceeded", "rumpf", "", "")
+probe("lockdecl.held", "modul", "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0 held <= 8 ops;")
+probe("lockdecl.shared", "modul", "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0 shared held <= 8 ops;")
+probe("lockdecl.masks", "modul", "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0;",
+      "    static mut Z : u32 = 0;\n    lock L protects { Z } rank 0 masks irq;")
+probe("rcudecl.reclaims", "modul", "    static mut Z : u32 = 0;\n    rcu C protects { Z };",
+      "    static mut Z : u32 = 0;\n    rcu C protects { Z } reclaims Z;")
+probe("gruppedecl.{", "modul",
+      "    static mut A : u32 = 0;\n    static mut B : u32 = 0;\n    group N over { A, B };",
+      "    static mut A : u32 = 0;\n    static mut B : u32 = 0;\n"
+      "    group N over { A, B } { invariant i cost O(1) runs offline : true; }")
+for _w in ("max", "min", "add", "or", "and"):
+    probe(f"accdecl.{_w}", "modul", "    accumulates Q : u32 merge max per cpu 4;",
+          f"    accumulates Q : u32 merge {_w} per cpu 4;")
+probe("accdecl.per", "modul", "    accumulates Q : u32 merge max;",
+      "    accumulates Q : u32 merge max per cpu 4;")
+probe("annahmeklasse.falsifier", "modul",
+      '    assume A "a claim" unfalsifiable "no probe";',
+      '    fn pr() -> bool effects { pure } costs <= 1 ops { return true; }\n'
+      '    assume A "a claim" falsifier pr;')
+probe("annahmeklasse.unfalsifiable", "modul",
+      '    assume A "a claim" unfalsifiable "no probe";',
+      '    assume A "a claim" unfalsifiable "no probe";')
+probe("assume.arch", "modul", '    assume A "a claim" unfalsifiable "no probe";',
+      '    assume A arch x86_64 "a claim" unfalsifiable "no probe";')
+probe("axiom.->", "modul", '    axiom X() effects { pure } unfalsifiable "no probe";',
+      '    axiom X() -> u32 effects { pure } unfalsifiable "no probe";')
+probe("axiom.requires", "modul", '    axiom X() effects { pure } unfalsifiable "no probe";',
+      '    axiom X(a : u32) requires a == a effects { pure } unfalsifiable "no probe";')
+probe("check.floor", "modul", "", "")
+probe("check.counterprobe", "modul", "", "")
+probe("walkdecl.invariant", "modul",
+      "    walk Q levels 4 { node : [u64; 512], down : d when true, leaf : true, }",
+      "    walk Q levels 4 { node : [u64; 512], down : d when true, leaf : true, "
+      "invariant i cost O(1) runs offline : true; }")
+probe("entrydecl.vector", "modul", "", "")
+probe("entrydecl.via", "modul", "", "")
+probe("entrydecl.per", "modul", "", "")
+probe("entrydecl.ist", "modul", "", "")
+probe("entrydecl.nested", "modul", "", "")
+probe("entrydecl.never", "modul", "", "")
+probe("entrydecl.masked", "modul", "", "")
+probe("entrydecl.bounded", "modul", "", "")
+probe("bootdecl.step", "modul", "", "")
+probe("bootdecl.(", "modul", "", "")
+probe("bootdecl.::", "modul", "", "")
+probe("asmrumpf.in", "modul", "", "")
+probe("asmrumpf.out", "modul", "", "")
+probe("asmrumpf.clobbers", "modul", "", "")
+probe("asmops.result", "modul", "", "")
+probe("typname_als_ident.Self", "modul", "    format F { a : u32, }", NICHT)
+probe("typ_oder_ort.{", "ausdruck", "a", NICHT)
+probe("typ_oder_ort.intty", "ausdruck", "a", "sizeof(u32)")
+
+
+def lauf(argv, eingabe=None):
+    try:
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=FRIST,
+                           input=eingabe, env=CC_UMGEBUNG, cwd=W)
+        return p.returncode, p.stdout, p.stderr
+    except subprocess.TimeoutExpired:
+        return 124, "", "TIMEOUT"
+
+
+def uebersetzt(c):
+    """Does this C pass `cc -Werror` at BOTH levels? -> (ok, first message)."""
+    for stufe in CC_STUFEN:
+        rc, _, err = lauf(["cc", *CC_SCHALTER, stufe, "-c", "-x", "c", "-", "-o", "/dev/null"], c)
+        if rc != 0:
+            return False, f"{stufe} {err.strip().splitlines()[0] if err.strip() else '?'}"
+    return True, ""
+
+
+def messe(text):
+    """One program -> everything the four runs say about it."""
+    with tempfile.NamedTemporaryFile("w", suffix=".gab", dir="/tmp", delete=False) as f:
+        f.write(text)
+        pfad = f.name
+    try:
+        rc_p, aus_p, err_p = lauf([str(GABBRO), "pruefe", pfad])
+        angenommen = rc_p == 0
+        rc_e, c, err_e = lauf([str(GABBRO), "emit", pfad])
+        c001 = "C001" in (c + err_e)
+        gesenkt = rc_e == 0 and not c001
+        cc_ok, cc_msg = uebersetzt(c) if gesenkt and c.strip() else (False, "no C")
+        rc_o, aus_o, _ = lauf([str(GABBRO), "pflichten", pfad])
+        pflichten = sum(1 for z in aus_o.splitlines() if z.startswith("obligation\t"))
+        codes = sorted({z.split("[")[1].split("]")[0]
+                        for z in (aus_p + err_p).splitlines()
+                        if z.startswith("error: [") or z.startswith("hint: [")})
+        return {
+            "angenommen": angenommen, "codes": codes,
+            "gesenkt": gesenkt, "c001": c001,
+            "c": c, "c_hash": hashlib.sha256(c.encode()).hexdigest()[:12],
+            "cc": cc_ok, "cc_msg": cc_msg,
+            "pflichten": pflichten,
+            "emit_meldung": (err_e + c).strip().splitlines()[:1],
+        }
+    finally:
+        os.unlink(pfad)
+
+
+def prueferworte():
+    """The words a CHECKER ERROR names -- READ out of the grammar table, not copied."""
+    import contextlib
+    import importlib.util
+    import io
+    spec = importlib.util.spec_from_file_location(
+        "tafel", W / "instrumente" / "pruefe-grammatiktafel.py")
+    mod = importlib.util.module_from_spec(spec)
+    alt = sys.argv
+    sys.argv = ["x", "--probe"]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            spec.loader.exec_module(mod)
+    except SystemExit:
+        pass
+    finally:
+        sys.argv = alt
+    return mod.prueferworte()[0]
+
+
+PRUEFERWORTE = None
+
+
+def urteil(b, v, term=""):
+    """The verdict, and the reason beside it."""
+    if not v["angenommen"]:
+        return "REFUSES", "checker: " + ",".join(v["codes"])
+    if v["c001"]:
+        return "REFUSES", "emitter: C001"
+    if not v["gesenkt"]:
+        return "REFUSES", "emit failed without C001"
+    if not v["cc"]:
+        return "NICHT-C", v["cc_msg"]
+    if v["pflichten"] > b["pflichten"]:
+        return "DEMANDS", f"pflichten {b['pflichten']} -> {v['pflichten']}"
+    if v["c_hash"] != b["c_hash"]:
+        return "CARRIES", f"C differs ({b['c_hash']} -> {v['c_hash']})"
+    if term and term in PRUEFERWORTE:
+        return "GUARDS", "no C of its own -- but a checker error text names the word"
+    return "UNCOVERED", "C byte-identical, no obligation, no checker error names it"
+
+
+def baue(kennung):
+    host, basis, variante, felder = PROBEN[kennung]
+    if variante is NICHT:
+        return None, None
+    vorlage = HOST[host]
+    f = dict(felder)
+    return vorlage.format(X=basis, **f), vorlage.format(X=variante, **f)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--nur")
+    ap.add_argument("--liste", action="store_true")
+    ap.add_argument("--tsv")
+    args = ap.parse_args()
+
+    if args.liste:
+        for k in sorted(PROBEN):
+            bt, vt = baue(k)
+            if bt is None:
+                print(f"=== {k}\n--- NO HOST\n")
+                continue
+            print(f"=== {k}\n--- base\n{bt}--- variant\n{vt}")
+        return 0
+
+    global PRUEFERWORTE
+    PRUEFERWORTE = prueferworte()
+    kennungen = [args.nur] if args.nur else sorted(PROBEN)
+    if args.nur and args.nur not in PROBEN:
+        print(f"ABBRUCH: `{args.nur}` is not in the probe table -- nothing was measured.")
+        return 2
+
+    zeilen, zaehler = [], {}
+    for k in kennungen:
+        bt, vt = baue(k)
+        # **A pair that is not a pair measures nothing, and says so.** Where this file has
+        # no minimal host that isolates the form, base and variant come out identical --
+        # and an identical pair would score `UNCOVERED` for the wrong reason. It is counted
+        # in the denominator all the same: *a denominator that drops what could not be
+        # measured is `W25`.*
+        if bt is None or bt == vt:
+            zaehler["NICHT-GEPROBT"] = zaehler.get("NICHT-GEPROBT", 0) + 1
+            zeilen.append((k, "NICHT-GEPROBT", "no minimal host isolates this form"))
+            print(f"{k:<44} {'NICHT-GEPROBT':<10} no minimal host isolates this form")
+            continue
+        b, v = messe(bt), messe(vt)
+        if not b["angenommen"]:
+            u, grund = "BASIS-ROT", "the base program itself does not check: " + ",".join(b["codes"])
+        else:
+            u, grund = urteil(b, v, k.split(".", 1)[-1])
+        zaehler[u] = zaehler.get(u, 0) + 1
+        zeilen.append((k, u, grund))
+        if args.nur:
+            print(f"--- base\n{bt}--- variant\n{vt}")
+            for name, m in (("base", b), ("variant", v)):
+                print(f"{name}: accepted={m['angenommen']} codes={m['codes']} "
+                      f"lowered={m['gesenkt']} C001={m['c001']} cc={m['cc']} "
+                      f"obligations={m['pflichten']} C={m['c_hash']}")
+                if m["cc_msg"]:
+                    print(f"      cc: {m['cc_msg']}")
+        print(f"{k:<44} {u:<10} {grund}")
+
+    print()
+    ganz = len(kennungen)
+    for u in sorted(zaehler):
+        print(f"   {u:<12} {zaehler[u]:>4}   {100.0 * zaehler[u] / ganz:5.1f} % of {ganz}")
+    # **The headline, and its denominator is stated with it** (`W25`). `NICHT-GEPROBT` and
+    # `BASIS-ROT` stay in the denominator: they are forms this file could not measure, not
+    # forms the language does not have.
+    traegt = zaehler.get("CARRIES", 0) + zaehler.get("GUARDS", 0)
+    nutzer = zaehler.get("DEMANDS", 0) + zaehler.get("REFUSES", 0) + zaehler.get("UNCOVERED", 0)
+    gemessen = ganz - zaehler.get("NICHT-GEPROBT", 0) - zaehler.get("BASIS-ROT", 0)
+    print(f"\n== of {ganz} derived forms, {gemessen} were measured and "
+          f"{ganz - gemessen} could not be ==")
+    print(f"   the LANGUAGE carries  {traegt:>4}  ({100.0 * traegt / gemessen:.1f} % of the "
+          f"{gemessen} measured, {100.0 * traegt / ganz:.1f} % of all {ganz})")
+    print(f"   the USER carries      {nutzer:>4}  ({100.0 * nutzer / gemessen:.1f} % of the "
+          f"{gemessen} measured)")
+    print("   -- CARRIES + GUARDS against DEMANDS + REFUSES + UNCOVERED; `NICHT-C` is "
+          "neither and is printed above")
+    if args.tsv:
+        pathlib.Path(args.tsv).write_text(
+            "".join(f"{k}\t{u}\t{g}\n" for k, u, g in zeilen))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
