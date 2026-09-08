@@ -383,9 +383,17 @@ impl LeanReason {
             _ => Kind::NoTerm,
         }
     }
-    /// **All of them, so a report cannot omit one by forgetting to ask.** The speech test
-    /// holds the length against the enum.
-    pub const ALL: [LeanReason; 41] = [
+    /// **All of them, so a report cannot omit one by forgetting to ask.**
+    ///
+    /// **`PassCounter` was declared on 2026-09-08 and left out of here** -- the third time
+    /// this list has been one step behind the enum beside it (`WalkInvariant`, 2026-09-01,
+    /// is the same entry in `zaehle-lean.py`'s own comment). A reason missing here is
+    /// refused by the emitter, printed by nobody, and the module's balance line counts it
+    /// among the refusals it does not name -- *smaller, which is the direction that
+    /// flatters.* The speech test now reads the enum out of THIS FILE and holds every
+    /// variant against this array, instead of only checking that what is here is not mute.
+    pub const ALL: [LeanReason; 42] = [
+        LeanReason::PassCounter,
         LeanReason::QuantifiedThreads,
         LeanReason::QuantifiedMappings,
         LeanReason::BufferLength,

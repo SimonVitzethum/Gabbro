@@ -81,6 +81,23 @@ GRUENDE = [
     ("float", "a floating-point value -- this model has no float"),
     ("old-state", "`old(x)` -- a predicate over TWO states"),
     ("quantified", "a quantifier, `reaches` or a membership -- where a `spec fn` runs out"),
+    # **The six reasons of 2026-09-08** (`programmlogik/PLAN.md` §9.1, §10.2). Five of them
+    # were cut out of `quantified`, `carrier-not-a-table` and `builtin`: one tag stood over
+    # forms whose GROUNDS and whose WAYS OUT differ, so the register told a reader neither.
+    # *A number that says "thirteen refused" and cannot say what would lift one is a count,
+    # not a measurement.* The sixth (`pass-counter`) is new with the pass counter itself.
+    ("quantified-threads", "a quantifier over `threads` -- it hangs on no declaration, so "
+                           "there is no index domain to cut. A LANGUAGE change, not a model one"),
+    ("quantified-mappings", "a quantifier over `mappings of <walk>` -- hardware, the same "
+                            "object a `walk` invariant speaks about, and those are ASSUMED"),
+    ("record-value", "a field of a record VALUE (`let c = f(); c.len`) -- the places of this "
+                     "model are named by a record TYPE, and a binding has none"),
+    ("slot-record-array", "an array inside a record held in a SLOT -- refused for SOUNDNESS: "
+                          "a record type is ONE object here, so two slots' queues would be one place"),
+    ("layout-buffer-length", "`lenof` of a buffer whose length nothing declares (over a "
+                             "fixed-length array it is CARRIED -- the length stands in the declaration)"),
+    ("pass-counter", "`passes` where the loop cannot count -- without a `count` behind the "
+                     "domain the name would go out as a place of the world, which is `D021`"),
     ("call-in-expression", "a call inside an expression -- same gate as a call"),
     ("builtin", "a built-in about the LAYOUT, and this model has none"),
     ("lock-witness", "`Held(…)` -- carried by the lock passes, not by a prover"),

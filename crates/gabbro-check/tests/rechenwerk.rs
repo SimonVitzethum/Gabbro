@@ -4925,6 +4925,53 @@ fn lean_absagegruende_sind_vollzaehlig() {
     for r in LeanReason::ALL {
         assert!(!r.tag().is_empty() && !r.sentence().is_empty(), "{r:?} is mute");
     }
+
+    // **And `ALL` is held against the ENUM, not against itself.** The old form of this test
+    // asserted that what stands in `ALL` has a tag and a sentence -- true of a list that is
+    // missing a variant, which is exactly what happened on 2026-09-08: `PassCounter` was
+    // declared, tagged, refused by the emitter, and named by nothing, because it was not in
+    // `ALL`. *A test over a register cannot take that register as its population.*
+    //
+    // Rust has no way to walk the variants of an enum, so the population comes from the
+    // SOURCE -- the same move `wortschatz.rs` makes with `SPRACHE.md`.
+    let quelle = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lean.rs"))
+        .expect("`src/lean.rs` stands beside this test");
+    let rumpf = quelle
+        .split_once("pub enum LeanReason {")
+        .expect("the enum is declared")
+        .1;
+    let rumpf = rumpf.split_once("\n}").expect("and it ends").0;
+    let varianten: Vec<&str> = rumpf
+        .lines()
+        .map(str::trim)
+        .filter(|z| z.ends_with(','))
+        .map(|z| z.trim_end_matches(','))
+        .filter(|z| {
+            let mut c = z.chars();
+            c.next().is_some_and(|a| a.is_ascii_uppercase()) && c.all(|a| a.is_ascii_alphanumeric())
+        })
+        .collect();
+    assert!(varianten.len() >= 40, "the enum was not read: {varianten:?}");
+    let liste = quelle
+        .split_once("pub const ALL: [LeanReason;")
+        .expect("`ALL` stands there")
+        .1;
+    let liste = liste.split_once("];").expect("and it ends").0;
+    for v in &varianten {
+        assert!(
+            liste.contains(&format!("LeanReason::{v},")),
+            "`LeanReason::{v}` is declared and NOT in `ALL` -- it would be refused by the \
+             emitter and named by no report; the balance line would count it among refusals \
+             it cannot name"
+        );
+    }
+    assert_eq!(
+        varianten.len(),
+        LeanReason::ALL.len(),
+        "the enum has {} variants and `ALL` names {}",
+        varianten.len(),
+        LeanReason::ALL.len()
+    );
 }
 
 // ===========================================================================================
