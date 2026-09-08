@@ -634,3 +634,167 @@ and names it.
 **Five tags, five sentences, one guard** — and the five other tags of §9.1 were missing
 from `GRUENDE` too, where the tool would at least have said `UNKNOWN refusal reason` out
 loud.
+
+---
+
+## 12. Hole goals, pipeline speed, and two more loop shapes (agent b, 2026-09-08)
+
+`PLAN.md` §5.2 item 4, §9.5 and the rest of §9.3 — the three things run 25 worked and could
+not measure, because the Lean machine went away in the middle of it. **Every number below is
+`_pruefung/lauf.sh` over the corpus regenerated from the emitter of this change**, run
+locally with `P=4`.
+
+*Where it was run, and why:* `ki-pc-fisch-101` is unreachable (`ssh -o BatchMode=yes -o
+ConnectTimeout=8 ki-pc-fisch-101 hostname` → *"Connection timed out during banner exchange"*
+— the jump host, not the target). `free -g` beside every run: **31 GB total, 15–17 GB
+available, 20 cores.** `CLAUDE.md` asks for that measurement next to a local run, and this is
+it.
+
+| | baseline (`ec71432`) | + hole phase | + two loop shapes | + `simp_all` memo | **+ the fourth `simp_all` dropped** |
+|---|---|---|---|---|---|
+| modules | 190 | 190 | 192 | 192 | **192** |
+| Lean errors | 0 | 0 | 0 | 0 | **0** |
+| `sorry` | 24 | 24 | 24 | 24 | **24** |
+| seconds (Σ per module) | 455 | 459 | 422 | 417 | **396** |
+
+*The last column was run twice on the same tree — **402** and **396** — and the pair is the
+error bar: single-second differences between neighbouring columns are noise, and only the
+190→192 column and the last one are outside it.*
+
+The baseline is §11's merged tree measured again in a fresh worktree: **190 / 0 / 24**, the
+same three numbers, at 455 s where `ki-pc-fisch-101` needed 343 s at `P=6`. The two new
+modules are the two new probes; **the `sorry` count does not move anywhere in the table**,
+and neither does the set of files it sits on — the same nine of §11, with the same counts.
+
+### 12.1 `gabbro_calls` and hole goals (§5.2 item 4) — the order, and a closer that dropped its own success
+
+The patch §9.5 says stands beside the model was not in the tree; it was written again from
+the shape §9.5 gives, and the minimal example with it (`_pruefung/Thole.lean` — scratch, as
+the rest of `_pruefung/` is).
+
+**The shape.** A hole a round opens is a metavariable whose context is fixed at that moment;
+the `have`s the round's LATER instances add go to the main goal and never reach it. Two calls
+at the *same* state have the same `approxDepth`, so innermost-first does not order them —
+and the second's precondition can be exactly what the first's contract says about that state.
+The hole then stands for no reason but the order. So: **once every instance of the round is
+in, the round's calls are instantiated a second time inside each hole** — the round's calls,
+not the hole's own, because the precondition names the state and not the call that decides
+it, and `collectCalls` over the hole finds nothing. An instance whose premises do not *all*
+close at once is rolled back, so a hole never spawns a hole.
+
+**Measured.** `Thole.lean` holds the same two contracts twice, once with the calls in each
+order in the goal. With the hole phase disabled, one of the two leaves
+`t.local' "n" = Value.int 1` — the fact the other call's contract states — and the other
+closes; with the phase in, both close. *Which of the two orders is the bad one is decided by
+`qsort` on equal depths, and that is the point: at the same state there is no order to be
+right about.*
+
+**And the hole closer was dropping its own successes.** Its first alternative reads
+`simp only [...]; (try apply And.intro) <;> …`, and **where `simp only` closes the
+precondition whole, `<;>` runs on no goals and errors** — so the alternative that had just
+succeeded failed, and a precondition the model decides by itself fell through to the person.
+`(fun _ => True) t` is the smallest instance, and it stood open in the minimal example
+before anything else was changed. `(simp only [...]; done)` now stands first in both closers.
+
+**Over the corpus: nothing.** 190 / 0 / 24 before and after. §5.2 called this shape *"rare,
+not impossible"*, and the corpus is where it is rare — **the minimal example is the evidence
+that it is possible**, and it is now green.
+
+### 12.2 Pipeline speed (§9.5) — the numbers that were never taken
+
+`_pruefung/zeit.sh` (and `zeitmulti.sh`, which does several modules and never stops at the
+first) over a spread. Milliseconds, summed over a module's theorems:
+
+| step | | `01-tabelle` | `F01` | `09-ohne-zeiger` | `kapraum` | `08-bereiche` | `33-rekursion` |
+|---|---|---|---|---|---|---|---|
+| s33 | `simp_all` | 7 054 | **43 805** | 9 100 | **13 107** | 25 | 6 |
+| s37 | `simp_all` | **24 427** | 9 196 | **10 279** | 2 594 | 0 | 0 |
+| s40 | `simp_all` | 6 528 | 9 003 | 3 526 | 1 884 | 0 | 0 |
+| s45 | `simp_all` | **22 590** | 9 400 | 3 083 | 1 779 | 0 | 0 |
+| | **the four together** | **60 599** | **71 404** | **25 988** | **19 364** | 25 | 6 |
+| | whole pipeline | 86 060 | 122 208 | 37 810 | 58 370 | 11 198 | 2 288 |
+| | **share** | **70 %** | **58 %** | **69 %** | **33 %** | 0 % | 0 % |
+
+**The four `simp_all` steps are the pipeline**, on every module that costs anything; the next
+largest step anywhere is `gabbro_calls` at 6.6 s (`kapraum`, s02), and on the cheap modules
+(`08-bereiche`, `33-rekursion`) the four cost nothing at all because the pipeline closes long
+before them. *No other step was cut, because no other step had a number.*
+
+**Cut 1 — `simp_all` runs at most once per goal** (`gabbro_simp_all_once`). A tactic that
+changes a goal makes a NEW metavariable; one that fails under `try` leaves the old one. So
+"this goal has not moved" is exact, and it is the memo's key. A step the heartbeat budget cut
+off records nothing — `gabbro_try` shares one budget over `all_goals`, so a goal left
+untouched for want of budget must be reached again by the next step.
+
+| step | `01-tabelle` | `F01` | `09-ohne-zeiger` | `kapraum` |
+|---|---|---|---|---|
+| s37 | 24 427 → 23 099 | 9 196 → **2 337** | 10 279 → 10 114 | 2 594 → **614** |
+| s40 | 6 528 → **431** | 9 003 → **1 391** | 3 526 → **82** | 1 884 → **0** |
+| s45 | 22 590 → 22 770 | 9 400 → **1 428** | 3 083 → **82** | 1 779 → **2** |
+| whole pipeline | 86 060 → 76 850 | 122 208 → 113 112 | 37 810 → 32 646 | 58 370 → 55 827 |
+
+**Cut 2 — the fourth `simp_all` is gone.** On `01-tabelle` the memo did NOT make it free:
+its goals really had moved under steps 41-44, and it still cost 22.8 s. So whether it closes
+anything was measured, not argued — the corpus was run without it: **192 / 0 / 24, and the
+`sorry`s on the same nine files with the same counts**, 417 s → 402 s (396 s on the repeat),
+`01-tabelle` 39 s → 27 s. *That is a statement about this corpus.* A step that closes nothing over 192 units is
+not thereby a step that closes nothing; putting it back is one line, and a unit that needs it
+says so with a `sorry` and not silently. `gabbro_pipeline_b` keeps the gap in its step names
+rather than renumbering — **a measuring copy that renumbers measures a different pipeline
+than the one it is a copy of.**
+
+**What did not move: the floor.** §9.5's 0.88 s per module for `import Gabbro.Body` alone is
+untouched, and at 192 modules it is ~169 s of the 396 — **43 % of the corpus is now startup**,
+and the next speed step is that, not the pipeline.
+
+### 12.3 Recursion inside a loop — two more shapes wired, one still refused (§9.3)
+
+§9.3 named three refused shapes. **Two of the three were refused on grounds that do not
+hold**, and the third holds:
+
+* **Several loops, the call in one of them — WIRED.** *"the induction is written for a
+  routine with exactly one"* was an over-refusal: a loop that does not hold the call needs
+  nothing the induction has. **But refusing it hid a real obligation**, and the probe
+  `messung/proben/probe-rekursion-zwei-schleifen.gab` found it on the first run: one goal
+  stood in the routine's duty, `x = w_n` — the value of `n` after the FIRST loop against its
+  value at the routine's entry. *A `LoopRule` says nothing about the locals*, so as far as
+  the model knew, a loop in front of the recursive one could have moved the measure. It
+  cannot, and each loop proves that of its own body: **every loop of the routine carries the
+  measure now**, the innocent ones as `lp_<loop> : ∀ s0, LoopRule ρ id (fun u => wellFormed u
+  ∧ eval u e = eval s0 e) inv`, built beside the contract and instantiated at the routine's
+  entry state inside the induction. Probe: **0 errors, 0 `sorry`.**
+* **A `retry`/`forever` pass — WIRED.** *"no index range to induct over"* — and **the
+  induction is over the `decreases`, never over the index.** What a range buys is
+  `lo ≤ k < hi` inside the pass, an assumption the pass RECEIVES; `looprule_of_body` builds
+  the rule of a rangeless loop without one. The model needed one theorem,
+  `contract_of_duty_rec_loop`, which differs from `contract_of_duty_rec_loop_in` in exactly
+  which builder stands inside the induction. Probe:
+  `messung/proben/probe-rekursion-in-retry.gab`, **0 errors, 0 `sorry`.**
+* **A stack of loops — still REFUSED, and the ground is the real one.** Every loop on the way
+  from the routine's body to the call would have to carry the measure, and their rules would
+  have to be composed inside one another: the inner loop's rule is a hypothesis of the outer
+  loop's pass, and the outer pass would have to hand the inner one a rule stated against the
+  ROUTINE's entry state. **What the model would need:** a `contract_of_duty_rec_loop_in₂`
+  that takes both passes and threads `s0` through both loop-rule builders — or, better, one
+  theorem over a LIST of nested passes, which is the shape `contracts_of_duties_rec` already
+  has for a cycle. The tag now says *"a loop of the routine holds another loop … the
+  composition is written for a flat routine, not for a stack of rules"*, and a loop that
+  counts its passes has its own tag beside it (its rule is a `LoopRuleP`, and the composition
+  takes a `LoopRule`).
+
+Both probes are in `korpus.txt`; the corpus is **192** modules. `cargo test --no-fail-fast`
+carries all three shapes: the two wired ones assert the composition and — for the
+several-loops one — that **every** loop of the routine owes the measure equation, and the
+stack asserts the refusal by name.
+
+### 12.4 Two measurement collisions, and both were the apparatus
+
+* **`cargo test` and `lauf.sh` in one tree.** A corpus run reported **52 Lean errors**, all of
+  them `object file '.lake/build/lib/lean/Gabbro/Body.olean' … does not exist`. `cargo test`
+  runs `gabbro prove`, which builds the model with `lake` — and `lake` replaces the very
+  `.olean` the running `lean` processes read. *Not a finding, a collision*, and the same class
+  as `CLAUDE.md`'s `rsync` into a directory a mutation run is working in. The rule that
+  follows: **`cargo test` and `_pruefung/lauf.sh` do not run in one tree at one time.**
+* **A guardian run beside a corpus run.** `pruefe-zahlen.py` reported six findings of the form
+  *"`H` steht als 1, der Lauf sagt 10"*; run again on the quiet machine, none of them is
+  there. A guardian that shells out to a tool measures the machine as well as the tree.

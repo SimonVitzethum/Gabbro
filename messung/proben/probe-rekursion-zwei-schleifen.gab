@@ -1,0 +1,46 @@
+-- **A recursive call inside ONE loop of a routine that has TWO** -- the second of the three
+-- shapes `contract_of_duty_rec_loop_in` refused (`programmlogik/PLAN.md` §9.3).
+--
+-- The refusal read *"the recursive call stands inside one of SEVERAL loops; the induction is
+-- written for a routine with exactly one"*, and it was an OVER-refusal: the second loop here
+-- has nothing to do with the recursion. Its rule is built before the contract, exactly as any
+-- loop's is, and handed to the routine's duty beside the one the induction builds. Only the
+-- loop that HOLDS the call needs what the induction hands down.
+--
+-- Read the file as the difference to `probe-rekursion-in-schleife.gab`: one clearing pass in
+-- front, and nothing else.
+
+module probe::rekursion_zwei_schleifen {
+
+const TIEFE  : u32 = 8;
+const NSLOTS : u32 = 4;
+
+table Zelle count NSLOTS {
+    slot { marke : u32 in 0 .. TIEFE, }
+}
+
+impl fn faerben(z : ptr<normal, rw> Zelle, n : u32 in 0 .. TIEFE)
+    ensures  forall s in slots of z : z.slots[s].marke <= TIEFE
+    effects  { reads z.slots, writes z.slots }
+    costs    <= 131072 ops
+    decreases n
+{
+    -- The innocent loop: it calls nobody, so its rule is built the ordinary way.
+    traverse j over slots of z by unvisited
+        touches reads z.slots, writes z.slots
+        invariant n <= TIEFE
+    {
+        z.slots[j].marke = 0;
+    }
+    -- The loop that holds the call: its pass gets the bounded self-contract at the ROUTINE's
+    -- entry state, and owes back that the measure has not moved.
+    traverse i over slots of z by unvisited
+        touches reads z.slots, writes z.slots
+        invariant n <= TIEFE
+    {
+        z.slots[i].marke = n;
+        if n > 0 { faerben(z, n - 1); }
+    }
+}
+
+}

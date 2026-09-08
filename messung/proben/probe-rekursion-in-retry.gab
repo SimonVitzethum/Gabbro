@@ -1,0 +1,46 @@
+-- **A recursive call inside a `retry` loop** -- the third of the shapes
+-- `contract_of_duty_rec_loop_in` refused (`programmlogik/PLAN.md` §9.3).
+--
+-- The refusal read *"the recursive call stands inside a `retry`/`forever` loop, which has no
+-- index range to induct over; a `traverse` has one"*, and **the ground was wrong**: the
+-- induction is over the `decreases`, never over the loop index. What a range buys is
+-- `lo <= k < hi` inside the pass -- an assumption the pass RECEIVES, not a premise of the
+-- composition -- and `looprule_of_body` builds the rule of a rangeless loop without one. So
+-- the model needed one more theorem (`contract_of_duty_rec_loop`) that differs from the
+-- ranged one in exactly which loop-rule builder stands inside the induction.
+--
+-- The `until` is a plain condition over a global, not a device register: the point of the
+-- probe is the loop's SHAPE, and a device promise would add an assumption that has nothing
+-- to do with it.
+
+module probe::rekursion_in_retry {
+
+const TIEFE : u32 = 8;
+
+static mut stand : u32 in 0 .. 255 = 0;
+
+extern fn zeitablauf() -> never effects { diverges } costs <= 1 ops;
+
+assume jemand_zaehlt_hoch
+    "Somebody raises `stand` within the promised number of read operations."
+    falsifier sonde_jemand_zaehlt_hoch;
+
+impl fn absteigen(n : u32 in 0 .. TIEFE)
+    ensures  stand <= 255
+    effects  { reads stand, writes stand }
+    costs    <= 65536 ops
+    decreases n
+{
+    retry runde until stand >= 1
+        bounded 1024 ops
+        progress jemand_zaehlt_hoch
+        on_exceeded zeitablauf
+        effects   { reads stand, writes stand }
+        invariant n <= TIEFE
+    {
+        stand = 1;
+        if n > 0 { absteigen(n - 1); }
+    }
+}
+
+}

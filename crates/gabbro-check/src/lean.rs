@@ -3357,24 +3357,58 @@ fn self_recursive(g: &RoutineGoal) -> bool {
     g.callees.contains(&g.name) && !g.loops.iter().any(|l| l.callees.contains(&g.name))
 }
 
-/// **Does the routine call itself from INSIDE one of its loops?** (2026-09-08.)
+/// **Which loop does the routine call itself from -- if exactly one does?** (2026-09-08.)
 ///
-/// The composition is `contract_of_duty_rec_loop_in` in the model: the induction over the
-/// `decreases` runs OUTSIDE the loop rule, so the pass may assume the bounded self-contract
-/// at the ROUTINE's entry state -- and owes in return that the measure is still the one the
-/// routine entered with. Without that second half the bound would be vacuous: a pass that
-/// lowered the measure could call itself "below" a bound that no longer holds.
+/// The composition is `contract_of_duty_rec_loop_in` in the model (`contract_of_duty_rec_loop`
+/// where the loop has no index range): the induction over the `decreases` runs OUTSIDE the
+/// loop rule, so the pass may assume the bounded self-contract at the ROUTINE's entry state
+/// -- and owes in return that the measure is still the one the routine entered with. Without
+/// that second half the bound would be vacuous: a pass that lowered the measure could call
+/// itself "below" a bound that no longer holds.
 ///
-/// The wiring is written for **one ranged loop with no loop nested in it**. A `retry`/
-/// `forever` pass has no index range to induct over, and two loops would need the rule of
-/// each inside the same induction; both stay unwired, by their own name.
+/// **What has to hold, and what does NOT.**
+///
+/// * Exactly ONE loop of the routine may hold the recursive call. Two would need the rule of
+///   each inside the same induction, and the model composes one.
+/// * That loop carries no loop inside it and stands inside no loop of the routine: every loop
+///   on the way to the call would have to carry the measure too, and the composition is
+///   written once, not for a stack (`nested`).
+/// * That loop does not count its passes: its rule would be a `LoopRuleP`, and the
+///   composition takes a `LoopRule`.
+/// * **The routine's OTHER loops are none of this step's business** (2026-09-08). Their rules
+///   are built before the contract, exactly as any loop's is, and handed to the routine's
+///   duty beside the one the induction builds. Refusing them was an over-refusal: the earlier
+///   `g.loops.len() == 1` refused a routine for a second loop that has nothing to do with the
+///   recursion.
+/// * **An index range is NOT required** (2026-09-08). The induction is over the `decreases`,
+///   never over the index; the range is an assumption the pass gets, not a premise of the
+///   composition. `looprule_of_body` builds the rule of a `retry`/`forever` loop without one.
+fn rec_loop_of(g: &RoutineGoal) -> Option<usize> {
+    if !g.callees.contains(&g.name) || g.decreases.is_none() {
+        return None;
+    }
+    let mut found = None;
+    for (i, l) in g.loops.iter().enumerate() {
+        if l.callees.contains(&g.name) {
+            if found.is_some() {
+                return None; // several loops hold the call
+            }
+            found = Some(i);
+        }
+    }
+    let i = found?;
+    // Every loop of the routine carries the measure now, so every one of them has to be a
+    // loop this step can build: flat (no stack of rules to compose) and not counting passes
+    // (a `LoopRuleP` is not what the composition takes).
+    if g.loops.iter().any(|l| !l.nested.is_empty() || l.passes.is_some()) {
+        return None;
+    }
+    Some(i)
+}
+
+/// `rec_loop_of`, as a yes/no.
 fn rec_in_loop(g: &RoutineGoal) -> bool {
-    g.callees.contains(&g.name)
-        && g.decreases.is_some()
-        && g.loops.len() == 1
-        && g.loops[0].range.is_some()
-        && g.loops[0].nested.is_empty()
-        && g.loops[0].callees.contains(&g.name)
+    rec_loop_of(g).is_some()
 }
 
 /// **The whole unit, judged.** Every routine with a body, in declaration order.
@@ -3959,24 +3993,33 @@ fn wiring_order(goals: &[RoutineGoal], all_routines: &BTreeSet<String>) -> (Vec<
                 if self_recursive(g) && g.decreases.is_some() {
                     continue;
                 }
-                // **A recursive call inside ONE ranged loop is wired since 2026-09-08**
-                // (`contract_of_duty_rec_loop_in`): the induction over the `decreases` runs
-                // outside the loop rule, and the pass carries the measure across.
+                // **A recursive call inside ONE loop of a flat routine is wired since
+                // 2026-09-08** (`contract_of_duty_rec_loop_in`, `contract_of_duty_rec_loop`
+                // where the loop has no index range): the induction over the `decreases` runs
+                // outside the loop rule, and EVERY loop of the routine carries the measure.
                 if rec_in_loop(g) {
                     continue;
                 }
+                let held: Vec<&LoopInfo> = g.loops.iter().filter(|l| l.callees.contains(&g.name)).collect();
                 let why = if g.decreases.is_none() {
                     "recursion -- its `decreases` has no term; add one, and the induction \
                      over it is written for you"
-                } else if g.loops.len() != 1 {
-                    "recursion -- the recursive call stands inside one of SEVERAL loops; the \
-                     induction is written for a routine with exactly one"
-                } else if g.loops[0].range.is_none() {
-                    "recursion -- the recursive call stands inside a `retry`/`forever` loop, \
-                     which has no index range to induct over; a `traverse` has one"
+                // **Nesting is asked FIRST, and the order is the diagnosis** (2026-09-08): a
+                // loop's callee set includes the callees of the loops inside it, so a call in
+                // an inner loop makes BOTH loops hold it -- and "several loops" would then be
+                // the true sentence that sends a reader to the wrong place.
+                } else if g.loops.iter().any(|l| !l.nested.is_empty()) {
+                    "recursion -- a loop of the routine holds another loop, and the recursive \
+                     call needs the measure carried across EVERY loop; the composition is \
+                     written for a flat routine, not for a stack of rules"
+                } else if held.len() > 1 {
+                    "recursion -- the recursive call stands in SEVERAL loops of the routine; \
+                     the induction composes the rule of one loop, not of two"
+                } else if g.loops.iter().any(|l| l.passes.is_some()) {
+                    "recursion -- a loop of the routine counts its passes, and its rule is a \
+                     `LoopRuleP`; the composition takes a `LoopRule`"
                 } else {
-                    "recursion -- the recursive call stands inside a NESTED loop; the \
-                     induction is written for one loop, not for a stack of them"
+                    "recursion -- the recursive call stands in no loop this step can name"
                 };
                 unwired.insert(g.name.clone(), why.into());
             } else if !names.contains(c) {
@@ -4442,7 +4485,14 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                 ));
             }
             hyps.push(("hwf".into(), "wellFormed t".into(), "the well-formed world".into()));
-            let ril_here = ril && l.callees.contains(&g.name);
+            // **EVERY loop of the routine carries the measure, not only the one that holds
+            // the call** (2026-09-08). Measured on `probe-rekursion-zwei-schleifen`: with the
+            // measure carried only by the recursive loop, one goal stood in `faerben_meets`
+            // -- `x = w_n`, the value of `n` AFTER the first loop against its value at entry.
+            // A `LoopRule` says nothing about the locals, so as far as the model knew, a loop
+            // in front of the recursive one could have moved the measure. It cannot: its
+            // body does not touch `n`, and that is a fact its own pass proves.
+            let ril_here = ril;
             if ril_here {
                 hyps.push((
                     "s0".into(),
@@ -4603,7 +4653,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             // **The loop of a routine that recurses inside it carries the measure** -- its
             // rule holds for states that agree with `s` in the `decreases`, and that is what
             // lets the pass use the bounded self-contract at `s` (`rec_in_loop`).
-            let wf = if ril && l.callees.contains(&g.name) {
+            let wf = if ril {
                 format!("(fun u => wellFormed u ∧ eval u {n}_decreases = eval s {n}_decreases)", n = g.name)
             } else {
                 "wellFormed".to_string()
@@ -4709,8 +4759,10 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         s.push_str("    Each line above names the construct and the way out. What IS wired: a\n");
         s.push_str("    self-recursion, by induction over its `decreases` (`contract_of_duty_rec`);\n");
         s.push_str("    a cycle of routines, over their shared measure (`contracts_of_duties_rec`);\n");
-        s.push_str("    a recursive call inside ONE ranged loop, by the induction outside the loop\n");
-        s.push_str("    rule (`contract_of_duty_rec_loop_in`, 2026-09-08). A caller of a REFUSED\n");
+        s.push_str("    a recursive call inside ONE loop of a flat routine, by the induction\n");
+        s.push_str("    outside the loop rule, with the measure carried across every loop\n");
+        s.push_str("    (`contract_of_duty_rec_loop_in`, `contract_of_duty_rec_loop` for a loop\n");
+        s.push_str("    with no index range, 2026-09-08). A caller of a REFUSED\n");
         s.push_str("    callee has no contract to compose with: the callee's refusal above is the\n");
         s.push_str("    line to read, and fixing it wires the caller too. -/\n\n");
     }
@@ -4753,10 +4805,11 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             // already innermost-first for nesting.
             for l in &g.loops {
                 if ril {
-                    // **The rule of THIS loop cannot be built before the contract**: its pass
-                    // needs the bounded self-contract, which only the induction hands down.
-                    // It is built below, twice -- once inside the induction (bounded by the
-                    // routine's entry state), once after it from the finished contract.
+                    // **No rule of THIS routine can be built before the contract.** The loop
+                    // that holds the recursive call needs the bounded self-contract, which
+                    // only the induction hands down; and every other loop of the routine now
+                    // carries the measure against the routine's ENTRY state, which is not in
+                    // scope here either. Both are built below.
                     continue;
                 }
                 let lid = lean_ident(&l.id);
@@ -4868,62 +4921,111 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                 // OUTSIDE the loop rule, hands the pass the bounded self-contract at the
                 // routine's entry state, and takes back from it that the measure did not
                 // move. Afterwards the loop's own rule follows from the finished contract.
-                let l = &g.loops[0];
-                let lid = lean_ident(&l.id);
-                let (lo, hi) = l.range.unwrap();
+                let li = rec_loop_of(g).expect("`ril` is `rec_loop_of(..).is_some()`");
                 let n = &g.name;
-                // the arguments of the routine's duty: the self-contract is `hrec`, the loop
-                // rule is `hlr`, everything else is a hypothesis of `unit_closed`.
+                // **A `retry`/`forever` loop takes the same composition without the range**
+                // (2026-09-08): `contract_of_duty_rec_loop` and `looprule_of_body`. The
+                // induction is over the `decreases`, never over the index -- the range is an
+                // assumption the pass RECEIVES, not a premise of the composition. The earlier
+                // refusal named the range as the obstacle, and the range was never it.
+                let shape = |l: &LoopInfo| -> (&'static str, &'static str, String, &'static str) {
+                    match l.range {
+                        Some((lo, hi)) => (
+                            "contract_of_duty_rec_loop_in",
+                            "looprule_of_body_in",
+                            format!(" {} {}", int_lit(lo), int_lit(hi)),
+                            " hlo hhi",
+                        ),
+                        None => ("contract_of_duty_rec_loop", "looprule_of_body", String::new(), ""),
+                    }
+                };
+                // the arguments of a pass's duty, in the order its statement declares them
+                let pass_args = |l: &LoopInfo, below: bool, at: &str| -> String {
+                    let mut a = Vec::new();
+                    for c in &l.callees {
+                        let cid = callee_id(c);
+                        a.push(if c != n {
+                            format!("c_{cid}")
+                        } else if below {
+                            format!("(contractBelow_of_contract ρ {} {n}_decreases {at} {n}_requires {n}_post c_{n})", quoted(n))
+                        } else {
+                            "hrec".to_string()
+                        });
+                        a.push(format!("fr_{cid}"));
+                    }
+                    a.iter().map(|x| format!(" {x}")).collect()
+                };
+
+                // **Every loop of the routine BUT the recursive one, as a rule that carries
+                // the measure against an arbitrary entry state** -- the form the routine's
+                // duty asks for once `ril` is on. It is built here because its pass needs
+                // nothing the induction has; it is quantified over `s0` because the routine's
+                // entry state is only named inside the induction.
+                for (j, l) in g.loops.iter().enumerate() {
+                    if j == li {
+                        continue;
+                    }
+                    let lid = lean_ident(&l.id);
+                    let (_, builder, bounds, hbnd) = shape(l);
+                    let wfp = format!("(fun u => wellFormed u ∧ eval u {n}_decreases = eval s0 {n}_decreases)");
+                    s.push_str(&format!(
+                        "  have lp_{lid} : ∀ (s0 : State), LoopRule ρ {qid} {wfp} {lid}_inv :=\n    \
+                         fun s0 => {builder} ρ {qid} {wfp} {lid}_inv {lid}_body {qv}{bounds} rl_{lid}\n      \
+                         (fun t k{hbnd} hu hin => d_{lid} ρ t k{hbnd} hu.1 s0 hu.2 hin{la})\n",
+                        qid = quoted(&l.id),
+                        qv = quoted(&l.var),
+                        la = pass_args(l, false, "t"),
+                    ));
+                }
+
+                let l = &g.loops[li];
+                let lid = lean_ident(&l.id);
+                let (thm, _, bounds, hbnd) = shape(l);
+                // the arguments of the routine's duty: the self-contract is `hrec`, the rule
+                // of the loop that HOLDS the call is `hlr`, and every other loop hands in the
+                // measure-carrying rule at the routine's entry state `t`.
                 let mut margs = Vec::new();
                 for c in &g.callees {
                     let cid = callee_id(c);
                     margs.push(if c == n { "hrec".to_string() } else { format!("c_{cid}") });
                     margs.push(format!("fr_{cid}"));
                 }
-                margs.push("hlr".to_string());
-                // the arguments of the pass's duty, in the order its statement declares them
-                let mut largs = Vec::new();
-                for c in &l.callees {
-                    let cid = callee_id(c);
-                    largs.push(if c == n { "hrec".to_string() } else { format!("c_{cid}") });
-                    largs.push(format!("fr_{cid}"));
-                }
-                let mut largs2 = Vec::new();
-                for c in &l.callees {
-                    let cid = callee_id(c);
-                    largs2.push(if c == n {
-                        format!("(contractBelow_of_contract ρ {} {n}_decreases t {n}_requires {n}_post c_{n})", quoted(n))
+                for (j, l2) in g.loops.iter().enumerate() {
+                    margs.push(if j == li {
+                        "hlr".to_string()
                     } else {
-                        format!("c_{cid}")
+                        format!("(lp_{} t)", lean_ident(&l2.id))
                     });
-                    largs2.push(format!("fr_{cid}"));
                 }
                 s.push_str(&format!(
                     "  have c_{n} : Contract ρ {q} {n}_requires {n}_post :=\n    \
-                     contract_of_duty_rec_loop_in ρ {q} {n}_body {n}_requires {n}_post {n}_decreases wellFormed\n      \
-                     {qid} {lid}_body {qv} {lo} {hi} {lid}_inv r_{n} rl_{lid}\n      \
-                     (fun s0 _h0 hrec t k hlo hhi hw hm hin => d_{lid} ρ t k hlo hhi hw s0 hm hin{la})\n      \
+                     {thm} ρ {q} {n}_body {n}_requires {n}_post {n}_decreases wellFormed\n      \
+                     {qid} {lid}_body {qv}{bounds} {lid}_inv r_{n} rl_{lid}\n      \
+                     (fun s0 _h0 hrec t k{hbnd} hw hm hin => d_{lid} ρ t k{hbnd} hw s0 hm hin{la})\n      \
                      (fun t ht hrec hlr => d_{n} ρ t ht.1 ht.2{ma})\n",
                     q = quoted(n),
                     qid = quoted(&l.id),
                     qv = quoted(&l.var),
-                    lo = int_lit(lo),
-                    hi = int_lit(hi),
-                    la = largs.iter().map(|a| format!(" {a}")).collect::<String>(),
+                    la = pass_args(l, false, "t"),
                     ma = margs.iter().map(|a| format!(" {a}")).collect::<String>(),
                 ));
-                s.push_str(&format!(
-                    "  have l_{lid} : LoopRule ρ {qid} wellFormed {lid}_inv :=\n    \
-                     looprule_of_body_in ρ {qid} wellFormed {lid}_inv {lid}_body {qv} {lo} {hi} rl_{lid}\n      \
-                     (by intro t k hlo hhi hw hin\n          \
-                     obtain ⟨t', h1, ⟨h2, _⟩, h3⟩ := d_{lid} ρ t k hlo hhi hw t rfl hin{la2}\n          \
-                     exact ⟨t', h1, h2, h3⟩)\n",
-                    qid = quoted(&l.id),
-                    qv = quoted(&l.var),
-                    lo = int_lit(lo),
-                    hi = int_lit(hi),
-                    la2 = largs2.iter().map(|a| format!(" {a}")).collect::<String>(),
-                ));
+                // **And every loop's own rule, under the plain well-typed world** -- what
+                // `unit_closed` hands out. The measure equation is `rfl` here: the pass is
+                // read at the state it starts from.
+                for (j, l) in g.loops.iter().enumerate() {
+                    let lid = lean_ident(&l.id);
+                    let (_, builder, bounds, hbnd) = shape(l);
+                    s.push_str(&format!(
+                        "  have l_{lid} : LoopRule ρ {qid} wellFormed {lid}_inv :=\n    \
+                         {builder} ρ {qid} wellFormed {lid}_inv {lid}_body {qv}{bounds} rl_{lid}\n      \
+                         (by intro t k{hbnd} hw hin\n          \
+                         obtain ⟨t', h1, ⟨h2, _⟩, h3⟩ := d_{lid} ρ t k{hbnd} hw t rfl hin{la}\n          \
+                         exact ⟨t', h1, h2, h3⟩)\n",
+                        qid = quoted(&l.id),
+                        qv = quoted(&l.var),
+                        la = pass_args(l, j == li, "t"),
+                    ));
+                }
             } else if recursive {
                 s.push_str(&format!(
                     "  have c_{n} : Contract ρ {} {n}_requires {n}_post :=\n    contract_of_duty_rec ρ {} {n}_body {n}_requires {n}_post {n}_decreases r_{n}\n      (fun t ht hrec => d_{n} ρ t ht.1 ht.2{})\n",

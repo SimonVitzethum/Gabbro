@@ -8745,19 +8745,30 @@ fn lean_rekursion_in_der_schleife_wird_verdrahtet() {
     );
 }
 
-/// **A loop shape the induction is NOT written for keeps its refusal, and names which
-/// shape.** The step is written for exactly one ranged loop; two loops would need the rule
-/// of each inside the same induction, and the message says that instead of `recursion`.
+/// **A routine with TWO loops, the call in one of them, is wired** (agent b, 2026-09-08).
+///
+/// The earlier refusal (*"one of SEVERAL loops"*) was an OVER-refusal: the second loop has
+/// nothing to do with the recursion. What it DID hide is a real obligation, and the probe
+/// `messung/proben/probe-rekursion-zwei-schleifen.gab` found it: a `LoopRule` says nothing
+/// about the locals, so a loop in front of the recursive one could, as far as the model
+/// knows, have moved the measure. **Every loop of the routine carries the measure now**, and
+/// each proves it of its own body.
 #[test]
-fn lean_rekursion_in_zwei_schleifen_bleibt_unverdrahtet_mit_grund() {
+fn lean_rekursion_in_einer_von_zwei_schleifen_wird_verdrahtet() {
     let q = "module t {
         const T : u32 = 8;
         table Z count 4 { slot { marke : u32 in 0 .. T, } }
         impl fn f(z : ptr<normal, rw> Z, n : u32 in 0 .. T)
             effects { reads z.slots, writes z.slots }
-            costs   <= 65536 ops
+            costs   <= 131072 ops
             decreases n
         {
+            traverse j over slots of z by unvisited
+                touches writes z.slots
+                invariant n <= T
+            {
+                z.slots[j].marke = 0;
+            }
             traverse i over slots of z by unvisited
                 touches reads z.slots, writes z.slots
                 invariant n <= T
@@ -8765,18 +8776,103 @@ fn lean_rekursion_in_zwei_schleifen_bleibt_unverdrahtet_mit_grund() {
                 z.slots[i].marke = n;
                 if n > 0 { f(z, n - 1); }
             }
-            traverse j over slots of z by unvisited
-                touches writes z.slots
+        }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        !t.contains("NOT WIRED"),
+        "a second loop beside the recursion is no reason to refuse:\n{t}"
+    );
+    assert!(
+        t.contains("contract_of_duty_rec_loop_in ρ \"f\""),
+        "the composition is the model's, as with one loop:\n{t}"
+    );
+    assert!(
+        t.contains("have lp_f_loop_1"),
+        "the innocent loop's rule is built beside it, quantified over the entry state:\n{t}"
+    );
+    assert!(
+        t.matches("eval t' f_decreases = eval s0 f_decreases").count() >= 2,
+        "and EVERY loop of the routine owes that the measure has not moved:\n{t}"
+    );
+}
+
+/// **A `retry` loop takes the same composition, without a range** (agent b, 2026-09-08).
+///
+/// The refusal read *"no index range to induct over"* and the ground was wrong: the
+/// induction is over the `decreases`, never over the index. `looprule_of_body` builds the
+/// rule of a rangeless loop, and `contract_of_duty_rec_loop` composes it.
+#[test]
+fn lean_rekursion_in_retry_schleife_wird_verdrahtet() {
+    let q = "module t {
+        const T : u32 = 8;
+        static mut stand : u32 in 0 .. 255 = 0;
+        extern fn ende() -> never effects { diverges } costs <= 1 ops;
+        assume jemand_zaehlt \"Somebody raises it.\" falsifier sonde_jemand_zaehlt;
+        impl fn f(n : u32 in 0 .. T)
+            effects { reads stand, writes stand }
+            costs   <= 65536 ops
+            decreases n
+        {
+            retry runde until stand >= 1
+                bounded 1024 ops
+                progress jemand_zaehlt
+                on_exceeded ende
+                effects { reads stand, writes stand }
                 invariant n <= T
             {
-                z.slots[j].marke = 0;
+                stand = 1;
+                if n > 0 { f(n - 1); }
             }
         }
     }";
     let t = lean_modul(q);
     assert!(
-        t.contains("NOT WIRED") && t.contains("one of SEVERAL loops"),
-        "an unwired shape names the construct and why:\n{t}"
+        !t.contains("NOT WIRED"),
+        "a loop without an index range is no reason to refuse:\n{t}"
+    );
+    assert!(
+        t.contains("contract_of_duty_rec_loop ρ \"f\""),
+        "the rangeless composition is the one used:\n{t}"
+    );
+    assert!(
+        t.contains("looprule_of_body ρ \"f#1\""),
+        "and the rangeless loop-rule builder with it:\n{t}"
+    );
+}
+
+/// **A STACK of loops keeps its refusal, and names which shape.** Every loop on the way to
+/// the recursive call would have to carry the measure, and the composition composes one
+/// rule, not a stack of them.
+#[test]
+fn lean_rekursion_in_geschachtelter_schleife_bleibt_unverdrahtet_mit_grund() {
+    let q = "module t {
+        const T : u32 = 8;
+        table Z count 4 { slot { marke : u32 in 0 .. T, } }
+        impl fn f(z : ptr<normal, rw> Z, n : u32 in 0 .. T)
+            effects { reads z.slots, writes z.slots }
+            costs   <= 131072 ops
+            decreases n
+        {
+            traverse i over slots of z by unvisited
+                touches reads z.slots, writes z.slots
+                invariant n <= T
+            {
+                traverse j over slots of z by unvisited
+                    touches reads z.slots, writes z.slots
+                    invariant n <= T
+                {
+                    z.slots[j].marke = n;
+                    if n > 0 { f(z, n - 1); }
+                }
+            }
+        }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        t.contains("NOT WIRED") && t.contains("holds another loop") && t.contains("stack of rules"),
+        "an unwired shape names the construct and why -- and NOT `SEVERAL loops`, which a \
+         nested call makes true and which would send a reader to the wrong place:\n{t}"
     );
 }
 // ===========================================================================================
