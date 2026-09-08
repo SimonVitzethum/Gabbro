@@ -191,7 +191,13 @@ ERWARTET = {
     #   (*„der `switch` hat kein `default`, ein neuer Wert bricht die Uebersetzung"*), und
     #   keine Zeile tat es. `M125` und der `default`-lose `switch` sind zusammen sein
     #   erster Leser.
-    "rueckgabe":    ("TOT", "Der Ergebnistyp eines `axiom` (G2); ungelesen."),
+    # **`rueckgabe` ROSE on 2026-09-08 and is therefore deleted here** -- and once again
+    # this guard said so before anyone thought of it. The reader is `M146`
+    # (`m1.rs::bereichsgrenzen`): the result type of an `axiom` is one of the nineteen
+    # positions at which a range may stand, and `axiom ax() -> u32 in 0.5 .. 1.5` went
+    # through with `0 errors, 0 hints` until then. *The line stood here because
+    # `jeder_typausdruck_im_item` does not visit an `axiom` at all -- which is exactly why
+    # the rule walks the item kinds that walk cannot reach on its own.*
     # **`scale` ROSE on 2026-08-31, and again this guard said so before anyone thought of
     # it.** The reader is `erzeugernamen.rs`: whether the generator forms a writer
     # `{F}_setz_{f}` for a `format` field hangs on exactly this clause (`emit.rs`:3342 --

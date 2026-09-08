@@ -1423,6 +1423,49 @@ pub const M1: &[Satz] = &[
                       `F005`.",
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md «F»",
     },
+    Satz {
+        name: "m1.bereichsgrenzen",
+        kennungen: &["M146"],
+        aussage: "The ENDS of a declared integer range are integers. `type T = u32 in 0.5 \
+                  .. 1.5;` checked with `0 errors, 0 hints` until 2026-09-08 and the bound \
+                  reached nothing: `umgebung::intbereich` evaluates each end with \
+                  `auswerten`, a float literal gives `None`, and the arm for an end that \
+                  does not stand fast is `IntBereich::voll` -- the range does not get \
+                  NARROWER, it is DROPPED, so the declaration lowers to the full width of \
+                  the word and the model is handed `Shape.intIn 0 4294967295`. It walks \
+                  every position a range can stand in: a type alias, a record field, a slot \
+                  field, a `const`, a `static`, an `atomic`, a parameter, an answer, a \
+                  local, an array element, a pointer target, a variant payload, a function \
+                  pointer's parameter and result, an `accumulates`, an `axiom` parameter and \
+                  answer, a `format` field, a table constant, and a `narrow` -- NINETEEN, \
+                  and all nineteen were silent.",
+        vorbehalt: "**A FLOAT LITERAL and not `an end that does not evaluate`**, and the \
+                    narrower rule is the whole reservation: `u32 in 0 .. N` with an `N` this \
+                    file cannot resolve -- an excerpt, a constant from another unit -- is \
+                    exactly as silently widened and is NOT refused, because refusing it \
+                    would be W10 in the expensive direction, a refusal with the sign that \
+                    rejects a correct program. *An unresolvable end is a second finding with \
+                    a second measurement.* **`floatty` is not touched**: `f64 in 0.5 .. 1.5` \
+                    is the form the range was written for and `umgebung::gleitwert` reads \
+                    it. **And at a `narrow` the PLACE decides**, because `narrowstmt` hangs \
+                    a range on a place and not on a type: where the place does not resolve \
+                    to an integer -- for any reason -- nothing is said.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-08 against the UNCHANGED checker, one probe per \
+                      position, NINETEEN of nineteen `0 errors, 0 hints`; after the build \
+                      nineteen of nineteen refuse and the `f64` row is still silent. The \
+                      differential that says what the silence cost: `type T = <ty>` with a \
+                      body `return 9;` gives 0 errors for `u32`, 1 error for `u32 in 0 .. \
+                      1` and **0 errors for `u32 in 0.5 .. 1.5`** -- the fractional bound is \
+                      the plain word. Poison: beispiele/gift/690. Over all 686 `.gab` files \
+                      of the tree it falls in ZERO -- and it fell in ONE before the place \
+                      was read at a `narrow`: beispiele/26-gleitkomma.gab:42, `narrow x to \
+                      0.0 .. 1.0` at an `f64` parameter, which is the CORRECT spelling. *The \
+                      corpus sweep found the over-reach, the design did not.*",
+        fundstelle: "crates/gabbro-check/src/m1.rs; \
+                     messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md §1.2; \
+                     crates/gabbro-check/src/umgebung.rs::intbereich",
+    },
 ];
 
 // ===================================================================================
@@ -1739,6 +1782,45 @@ pub const SCHLEIFEN: &[Satz] = &[
                       `S007` is a hint and has none.",
         fundstelle: "crates/gabbro-check/src/schleifen.rs; SYNTAX.md §8; schablonen.rs \
                      `consuming.ordnung`",
+    },
+    Satz {
+        name: "schleifen.nierueckkehr",
+        kennungen: &["S009"],
+        aussage: "A routine declared `-> never` does not come back, and its BODY says so: \
+                  no `return` stands anywhere in it, and it does not fall off its end. \
+                  `S006` two entries above asks the same question of a WATCHDOG and answers \
+                  it from the callee's DECLARATION -- this is the half that was missing, \
+                  because a declaration nobody holds against its body is a promise and not a \
+                  fact. The cost of the silence is not a wrong answer but an unprovable one: \
+                  `PLAN.md` §3.1 writes `False` into the `_post` of a `-> never` routine, so \
+                  a body that returns hands the person a goal that is false because of a \
+                  form the checker admitted.",
+        vorbehalt: "**`extern` and `prim` declarations are not touched** -- there is no \
+                    block to read, and the declaration is an assumption about foreign code, \
+                    the sentence `E008` writes about extern effect lists. **The \
+                    fall-off-the-end arm is `crate::endet_immer`'s answer and inherits its \
+                    reservations**: divergence is decided from the LAST statement only, and \
+                    a call counts as diverging only if its short name is in this unit's `-> \
+                    never` list -- so a body ending in a call to a divergent routine of \
+                    ANOTHER unit is refused, and that refusal is W10 in the expensive \
+                    direction. *It is the same list `S002` has used since 2026-08-15 and the \
+                    same reservation.* It says nothing about whether the routine actually \
+                    diverges; that is `S003`/`S004`'s half and it is an assumption with a \
+                    falsifier, not a proof.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-08 against the UNCHANGED checker, five bodies under \
+                      `divergent fn q() -> never effects { diverges }`: `{ return; }`, `{ \
+                      return 1; }`, `{ }`, `{ if b { return; } forever … }` and `{ forever … \
+                      }` -- **all five `0 errors, 0 hints`**, and only the last is correct. \
+                      After the build the first four refuse and the fifth passes. The C \
+                      compiler was the only channel speaking: `cc -std=c11 -Wall -Wextra \
+                      -Werror` on the emitted `_Noreturn void q(void) { return; }` answers \
+                      *function declared 'noreturn' has a 'return' statement* and *'noreturn' \
+                      function does return*. Poison: beispiele/gift/691. Over all 686 `.gab` \
+                      files of the tree it falls in ZERO.",
+        fundstelle: "crates/gabbro-check/src/schleifen.rs; \
+                     messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md §1.3; \
+                     programmlogik/PLAN.md §3.1",
     },
 ];
 

@@ -1,0 +1,45 @@
+-- erwartet: S009
+-- **A routine declared not to answer, and a body that answers.**
+--
+-- `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.3 booked this as `2 items, 0 errors,
+-- 1 hints` -- and the hint is `E003` about the missing `diverges`, not about the `return`.
+--
+-- **Why it is worse than a wrong answer.** `PLAN.md` §3.1 writes the result clause of every
+-- `_post`, and for `-> never` it is **`False`**. A body that returns therefore hands the
+-- person a goal that is *false because of a form the checker admitted* -- not hard, not
+-- open: unprovable, and unprovable for a reason no line of their program states. **That is
+-- the exact opposite of the sentence at the head of `PLAN.md`.**
+--
+-- And the C says it too. `emit.rs` writes `_Noreturn void q(void)`, and
+-- `cc -std=c11 -Wall -Wextra -Werror` answers
+--
+--     error: function declared 'noreturn' has a 'return' statement
+--     error: 'noreturn' function does return
+--
+-- **Three channels disagreed with the source and only the C compiler was speaking** --
+-- the `N041` shape, a trust base holding one stage too late.
+--
+-- Measured against the UNCHANGED checker, five bodies under the same declaration:
+--
+--     body                           | pruefe
+--     -------------------------------|-------------------------------------
+--     { return; }                    | 0 errors, 0 hints
+--     { return 1; }                  | 0 errors, 0 hints   -- `never` has no value
+--     { }                            | 0 errors, 0 hints   -- falls off its end
+--     { if b { return; } forever … } | 0 errors, 0 hints
+--     { forever … }                  | 0 errors, 0 hints   -- the one that is correct
+--
+-- `S006` one function above asks the same question of a WATCHDOG (*"`on_exceeded x` names
+-- a function that returns"*) and answers it from the callee's DECLARATION. **This is the
+-- half that was missing: a declaration nobody holds against its body is a promise, not a
+-- fact.**
+module gift::nie_kehrt_zurueck {
+
+-- The head of §1.3, byte for byte.
+divergent fn q() -> never
+ effects { pure }
+{
+ return;
+}
+
+}

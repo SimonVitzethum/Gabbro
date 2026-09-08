@@ -41,6 +41,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     };
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Funktion(f) => {
+            // **`S009` -- a `-> never` routine does not come back.** It stands beside the
+            // loop walk and not inside it: the question is about the ROUTINE's declaration
+            // against its body, and `divergierende` -- the list `S002` needs anyway -- is
+            // exactly what answers the second half of it.
+            nie_rueckkehr(f, &lg, absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 block(b, &mut Vec::new(), &lg, absagen);
             }
@@ -485,4 +490,111 @@ fn ausgang_pruefen(a: &Ident, lg: &Lage, absagen: &mut Absagen) {
              error-return convention, and that is not decided",
         ),
     );
+}
+
+/// **`S009` -- a `-> never` routine does not come back, and until 2026-09-08 nothing said so.**
+///
+/// `S006` one function above asks the same question of a WATCHDOG: *"`on_exceeded x` names a
+/// function that returns"*. This asks it of the declaration itself, and it is the half that
+/// was missing: `S006` reads the callee's declaration and believes it. **A declaration
+/// nobody holds against its body is a promise, not a fact.**
+///
+/// Measured against the UNCHANGED checker, `divergent fn q() -> never effects { diverges }`
+/// with five bodies:
+///
+/// ```text
+/// body                          | pruefe
+/// ------------------------------|-------------------------------------
+/// { return; }                   | 0 errors, 0 hints
+/// { return 1; }                 | 0 errors, 0 hints   -- and `never` has no value
+/// { }                           | 0 errors, 0 hints   -- falls off its end
+/// { if b { return; } forever … }| 0 errors, 0 hints
+/// { forever … }                 | 0 errors, 0 hints   -- the one that is correct
+/// ```
+///
+/// ## Why it is worse than a wrong answer
+///
+/// `PLAN.md` §3.1 writes the result clause of every `_post`, and for `-> never` it is
+/// **`False`**. So a body that returns hands the person a goal that is *false because of a
+/// form the checker admitted* -- not hard, not open: unprovable, and unprovable for a
+/// reason no line of their program states. **That is the exact opposite of "a person proves
+/// only their own logic".**
+///
+/// And the emitted C says it too: `emit.rs` writes `_Noreturn void q(void)`, and
+/// `cc -std=c11 -Wall -Wextra -Werror` answers *"function declared 'noreturn' has a 'return'
+/// statement"* plus *"'noreturn' function does return"*. **Three channels disagreed with the
+/// source and only the C compiler was speaking.**
+///
+/// ## The two shapes, and both are refused
+///
+/// * **a `return` anywhere in the body** -- refused at the `return`, because that is the
+///   line the reader has to delete;
+/// * **a body that falls off its end** -- refused at the name, because there is no line.
+///   [`crate::endet_immer`] answers this, with the divergent-name list this pass already
+///   built for `S002`: a body ending in a call to another `-> never` routine, or in a
+///   `forever` with no `leave`, ends and is not refused.
+///
+/// **`extern` and `prim` bodies are not touched**, and that is the discipline: there is no
+/// block to read, the declaration is an assumption about foreign code, and `E008`'s sentence
+/// about extern effect lists applies word for word here.
+fn nie_rueckkehr(f: &FnDecl, lg: &Lage, absagen: &mut Absagen) {
+    if !matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
+        return;
+    }
+    let FnRumpf::Block(b) = &f.rumpf else { return };
+    let mut stellen = Vec::new();
+    rueckkehrstellen(b, &mut stellen);
+    for span in &stellen {
+        absagen.schiebe(
+            Absage::fehler(
+                "S009",
+                *span,
+                format!("`{}` is declared `-> never` and this body returns", f.name.text),
+            )
+            .mit_notiz(
+                "`-> never` says the routine does not answer -- `emit.rs` writes \
+                 `_Noreturn void` for it, and `cc -Werror` refuses the `return` outright",
+            )
+            .mit_notiz(
+                "and the proof channel writes `False` into the `_post` of a `-> never` \
+                 routine (`PLAN.md` §3.1): a body that returns hands the person a goal \
+                 that is false because of a form the checker admitted",
+            ),
+        );
+    }
+    if stellen.is_empty() && !crate::endet_immer(b, lg.div) {
+        absagen.schiebe(
+            Absage::fehler(
+                "S009",
+                f.name.span,
+                format!(
+                    "`{}` is declared `-> never` and this body falls off its end",
+                    f.name.text
+                ),
+            )
+            .mit_notiz(
+                "a `forever` with no `leave`, or a call to another `-> never` routine, is \
+                 how a body ends without answering -- a `traverse` and a `retry` both fall \
+                 through",
+            )
+            .mit_notiz(
+                "and the proof channel writes `False` into the `_post` of a `-> never` \
+                 routine (`PLAN.md` §3.1): reaching the end of the body is reaching that goal",
+            ),
+        );
+    }
+}
+
+/// Every `return` in a block, at any depth -- through [`crate::unterbloecke`], so that a new
+/// statement kind cannot quietly hide one. *The house record on hand-written descents is the
+/// reason: 78 holes of one build, each pass forgetting a different arm.*
+fn rueckkehrstellen(b: &Block, out: &mut Vec<gabbro_syntax::span::Span>) {
+    for s in &b.anweisungen {
+        if matches!(&s.art, StmtArt::Return(_)) {
+            out.push(s.span);
+        }
+        for k in crate::unterbloecke(s) {
+            rueckkehrstellen(k, out);
+        }
+    }
 }
