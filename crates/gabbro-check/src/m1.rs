@@ -136,6 +136,11 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
     // falsified each of the 53 corpus sites outside `ensures` one by one and got 51 silent
     // runs, so the position is where the gap was, not the domain.
     crate::domaene::domaenen(baum, &umgebung, absagen);
+    // **`M146` -- the ends of a declared range.** It hangs here for the same reason
+    // `domaenen` does: this is the pass that owns what a range MEANS, and a range
+    // whose ends are not integers is a declaration M1 silently widened to the whole
+    // word. *It needs no environment -- a float literal is decidable from the source.*
+    bereichsgrenzen(baum, &umgebung, absagen);
     let mut spezifikationen = std::collections::HashMap::new();
     sammle_spezifikationen(&baum.items, &mut spezifikationen);
     let mut spec_fns = std::collections::HashMap::new();
@@ -4344,20 +4349,50 @@ impl<'a> Pruefer<'a> {
     /// written**, from the same `count N`, through the same code. Two readers of one
     /// declaration is what this folder pays for; there is one.
     ///
-    /// **Where it cannot prove, it says nothing and the old `Unbekannt` stands** -- six of
-    /// the nine domains, and a table without a `count`. *W10: a bound that is not proved is
-    /// not narrowed, and the loss is a refusal that does not fall, never an acceptance that
-    /// does not hold.*
+    /// **Where it cannot prove, it says nothing and the old `Unbekannt` stands** -- and a
+    /// table without a `count`. *W10: a bound that is not proved is not narrowed, and the
+    /// loss is a refusal that does not fall, never an acceptance that does not hold.*
+    ///
+    /// ## `elems of` -- the fourth traversal domain, closed 2026-09-08
+    ///
+    /// `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.4 booked the binder without a type
+    /// at four domains; 2026-09-07 closed three of them through `binder_tabelle`, and
+    /// **`elems of` stayed open because `binder_tabelle` returns `None` for it** -- it
+    /// resolves a TABLE, and an array field is not one.
+    ///
+    /// > **And the folder's own prose said the binder was an element.** `binder_tabelle`'s
+    /// > doc reads *"`queue` and `elems of` bind an ELEMENT, not an index -- a different
+    /// > type entirely"*. **Three channels say otherwise, and they are the ones that run:**
+    /// > `domaene::Binderart` books it as `Feldindex` (*"an index into the array field it
+    /// > runs over"*), `emit.rs` writes `for (uint64_t i = 0; i < sizeof(f)/sizeof(f[0]);
+    /// > i++)`, and `lean.rs::domain_of` calls it *"the index domain of the array's
+    /// > pseudo-table … the binder is the index, as every use in the corpus reads it"*.
+    /// > *A comment that contradicts the emitter is the `W16` shape in prose: it reads like
+    /// > a decision and it is a stale one.* The bound built here follows the emitter.
+    ///
+    /// The length is not computed a second time either: `Sicht::domaenenschranke` has read
+    /// `Typ::Feld { laenge }` for this domain since 2026-08-19 -- **for the COST pass**, and
+    /// nobody ever turned it into a type. *One declaration, one reader, as at `indextyp`.*
+    ///
+    /// The type is a plain `u64 in 0 ..= n-1` and not an `index into T`: there is no table
+    /// to name, and a name that resolves to nothing would be worse than none.
     fn binder_typ(&mut self, t: &Traverse, lage: &Lage) -> Typ {
-        let Some(tabelle) = (crate::domaene::Sicht {
+        let sicht = crate::domaene::Sicht {
             u: self.u,
             modul: &self.modul,
             lokal: &lage.lokal,
-        })
-        .binder_tabelle(&t.domaene) else {
-            return Typ::Unbekannt;
         };
-        self.u.indextyp(&self.modul, &tabelle, false)
+        if let Some(tabelle) = sicht.binder_tabelle(&t.domaene) {
+            return self.u.indextyp(&self.modul, &tabelle, false);
+        }
+        if matches!(t.domaene, Domaene::ElementeVon(_)) {
+            if let Some(n) = sicht.domaenenschranke(&t.domaene) {
+                if n > 0 {
+                    return Typ::Ganzzahl(IntBereich::genau(64, false, 0, n - 1));
+                }
+            }
+        }
+        Typ::Unbekannt
     }
 
     /// **«H2.1» -- ein Traversierungszaehler erbt die Schranke seiner Domaene (2026-08-19).**
@@ -5363,6 +5398,180 @@ fn wege_aus_der_breite(a: &IntBereich, b: &IntBereich) -> String {
              (`let w : {art}64 = x;`), and then the sum has room"
         )
     }
+}
+
+/// **`M146` -- the ENDS of a declared range are integers.**
+///
+/// `type T = u32 in 0.5 .. 1.5;` checked with `0 errors, 0 hints` until 2026-09-08, and
+/// the bound the person wrote reached nothing: `umgebung::Umgebung::intbereich`
+/// evaluates each end with `auswerten`, a float literal gives `None`, and the arm for
+/// "an end that does not stand fast" is `IntBereich::voll` -- *the range does not get
+/// NARROWER*. So the declaration lowers to the full width of the word.
+///
+/// **Measured against the UNCHANGED checker**, one file per row, `type T = <ty>` and a
+/// body `return 9;`:
+///
+/// ```text
+/// declaration            | pruefe
+/// -----------------------|--------------------------
+/// u32                    | 0 errors      (9 fits u32)
+/// u32 in 0 .. 1          | 1 errors      (9 leaves the range)
+/// u32 in 0.5 .. 1.5      | 0 errors      <- the written bound bought NOTHING
+/// ```
+///
+/// The third row is the finding: the person wrote a bound, the checker kept none, and the
+/// proof channel is handed `Shape.intIn 0 4294967295` -- a shape whose meaning nobody
+/// stated (`PLAN.md` §3.1, `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.2).
+///
+/// ## Where it looks, and it is NINETEEN positions and not one
+///
+/// A range stands at three places in the grammar (`SYNTAX.md`: `intty`, `floatty`,
+/// `narrowstmt`), and an `intty` stands wherever a `typeexpr` may. The sweep of 2026-09-08
+/// wrote one probe per position and got **0 errors, 0 hints in all nineteen** -- so the
+/// rule walks all of them rather than the one the census happened to write down. *A
+/// measurement that stops at the first position that already objects answers "does one
+/// position object", and the question was "which".*
+///
+/// ## Why a FLOAT LITERAL and not "an end that does not evaluate"
+///
+/// The wider rule would refuse `u32 in 0 .. N` wherever `N` is a name this file cannot
+/// resolve -- an excerpt, a constant from another unit -- and that is *W10 in the expensive
+/// direction*: a refusal with the sign that rejects a correct program. A float literal in
+/// an integer range is decidable from the source alone and needs no environment. **What is
+/// NOT refused here stays silent on purpose**: an unresolvable end is a second finding with
+/// a second measurement, and it is not this one.
+///
+/// **And `floatty` is not touched.** `f64 in 0.5 .. 1.5` is the form the range was written
+/// for; `umgebung::gleitwert` reads it, and it means what it says.
+fn bereichsgrenzen(baum: &Programm, u: &Umgebung, absagen: &mut Absagen) {
+    fn bruchstelle(e: &Expr) -> Option<Span> {
+        crate::alle_ausdruecke(e)
+            .into_iter()
+            .find(|x| matches!(x.art, ExprArt::Gleitkomma { .. }))
+            .map(|x| x.span)
+    }
+    fn range(b: &Bereich, wo: &str, absagen: &mut Absagen) {
+        for (e, seite) in [(&b.von, "lower"), (&b.bis, "upper")] {
+            let Some(span) = bruchstelle(e) else { continue };
+            absagen.schiebe(
+                Absage::fehler(
+                    "M146",
+                    span,
+                    format!("the {seite} end of this range is not an integer"),
+                )
+                .mit_notiz(format!(
+                    "in {wo}: an integer range is bounded by integers -- \
+                     `Shape.intIn lo hi` in the model carries exactly this declaration"
+                ))
+                .mit_notiz(
+                    "the end is DROPPED, it does not round: an end that does not stand \
+                     fast widens the range to the whole word, so the written bound buys \
+                     nothing and the model is handed the full range",
+                ),
+            );
+        }
+    }
+    fn im_typ(t: &TypExpr, wo: &str, absagen: &mut Absagen) {
+        // **Only `intty`.** `floatty` carries the same shape of clause and means it --
+        // `umgebung::gleitwert` reads a fraction there and keeps it.
+        if let TypExpr::Int(i) = t {
+            if let Some(b) = &i.bereich {
+                range(b, wo, absagen);
+            }
+        }
+    }
+    // **The statement half, and it is its own walk on purpose.**
+    //
+    // `crate::jeder_typausdruck_im_item` visits DECLARED types of an item and says so; a
+    // `let`'s type and a `narrow`'s range stand in a BODY, and no item-level walk reaches
+    // them. *Three of the nineteen positions of the sweep are here.*
+    //
+    // **`narrow` is the one position that needs the ENVIRONMENT**, and the corpus said so
+    // before any reasoning did: `narrowstmt = "narrow" place "to" (range | "finite")` hangs
+    // a range on a PLACE and not on a type, so `narrow x to 0.0 .. 1.0` is the correct
+    // spelling at an `f64` and the fault at a `u32`. The first build of this rule read the
+    // range alone and refused `beispiele/26-gleitkomma.gab`:42 -- *`impl fn klemmen(x :
+    // f64)`, the file that exists to show `narrow … else` as the NaN path.* **A refusal with
+    // the sign that rejects a correct program, W10, caught by the corpus sweep and not by
+    // the design.** So the place is resolved, and where it does not resolve to an integer --
+    // for any reason, a float, a name this walk cannot see -- nothing is said.
+    fn im_block(
+        b: &Block,
+        wo: &str,
+        modul: &str,
+        u: &Umgebung,
+        lokal: &mut HashMap<String, Typ>,
+        absagen: &mut Absagen,
+    ) {
+        for s in &b.anweisungen {
+            match &s.art {
+                StmtArt::Let(l) => {
+                    if let Some(t) = &l.typ {
+                        im_typ(t, wo, absagen);
+                        lokal.insert(l.name.text.clone(), u.typ_von_ausdruck_decl(modul, t));
+                    }
+                }
+                // **`let … else` carries no type annotation** (`ast::LetSonst` has
+                // `quelle` and no `typ`), so it is not a position a range can stand in --
+                // named here rather than left to the `_` below, because the reader's
+                // question is "which of the nineteen" and the answer for this one is
+                // "the grammar has no slot".
+                StmtArt::Narrow(n) => {
+                    if let NarrowZiel::Bereich(r) = &n.ziel {
+                        if matches!(
+                            u.typ_von_ort(modul, &n.ort, lokal).durchgreifen(),
+                            Typ::Ganzzahl(_) | Typ::Umlaufend(_)
+                        ) {
+                            range(r, wo, absagen);
+                        }
+                    }
+                }
+                _ => {}
+            }
+            for k in crate::unterbloecke(s) {
+                im_block(k, wo, modul, u, &mut lokal.clone(), absagen);
+            }
+        }
+    }
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let wo = item.art.benennung();
+        crate::jeder_typausdruck_im_item(item, &mut |t| im_typ(t, wo, absagen));
+        // **The item kinds `jeder_typausdruck_im_item` does not reach**, written out
+        // here rather than added there: that walk feeds `bindung.rs` and `namen.rs`, and
+        // widening it is a change to THEIR population and belongs to a measurement of its
+        // own. *Named, not swept under a `_`.*
+        match &item.art {
+            ItemArt::Axiom(a) => {
+                for p in &a.parameter {
+                    im_typ(&p.typ, wo, absagen);
+                }
+                if let Some(t) = &a.rueckgabe {
+                    im_typ(t, wo, absagen);
+                }
+            }
+            ItemArt::Accumulates(a) => im_typ(&a.typ, wo, absagen),
+            ItemArt::Funktion(f) => {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    // The parameters are the scope a body starts in; without them a
+                    // `narrow` on a parameter resolves to nothing and stays silent, which
+                    // is the quiet direction and the wrong one for a rule that is supposed
+                    // to reach all nineteen positions.
+                    let mut lokal: HashMap<String, Typ> = f
+                        .parameter
+                        .iter()
+                        .map(|p| {
+                            (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ))
+                        })
+                        .collect();
+                    im_block(b, wo, modul, u, &mut lokal, absagen);
+                }
+            }
+            ItemArt::Check(c) => {
+                im_block(&c.can_fail, wo, modul, u, &mut HashMap::new(), absagen)
+            }
+            _ => {}
+        }
+    });
 }
 
 /// **The third operator table against the second** -- see `opsruf::operatortafeln` for why

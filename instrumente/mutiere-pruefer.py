@@ -1053,19 +1053,33 @@ MUTATIONEN = [
     # stands outside the index rule: `w.slots[i + 1000000]` passed the CHECKER and the
     # EMITTER (`beispiele/gift/685`, `686`). This mutation restores exactly that state --
     # if it does not fall, nothing measures the repair.
+    #
+    # **The anchor MOVED WITH THE CODE on 2026-09-08**, because `binder_typ` grew its fourth
+    # domain (`elems of`) and the old text -- a `let … else` -- is no longer there. *An
+    # anchor that loses its site reports FEHLT and measures nothing; that is what `--anker`
+    # says, and it is what it stands there for.*
     Mutation(
         "binder-ohne-typ",
         "m1.rs",
-        "        .binder_tabelle(&t.domaene) else {\n"
+        "        if let Some(tabelle) = sicht.binder_tabelle(&t.domaene) {\n"
+        "            return self.u.indextyp(&self.modul, &tabelle, false);\n"
+        "        }",
+        "        if let Some(tabelle) = sicht.binder_tabelle(&t.domaene) {\n"
+        "            let _ = tabelle;\n"
         "            return Typ::Unbekannt;\n"
-        "        };\n"
-        "        self.u.indextyp(&self.modul, &tabelle, false)",
-        "        .binder_tabelle(&t.domaene) else {\n"
-        "            return Typ::Unbekannt;\n"
-        "        };\n"
-        "        let _ = tabelle;\n"
-        "        Typ::Unbekannt",
+        "        }",
         "M103 -- ein `traverse`-Zaehler traegt die Schranke seiner Tabelle nicht mehr",
+    ),
+    # **And the fourth domain, separately** (2026-09-08). `elems of` got its bound out of
+    # `Typ::Feld { laenge }`; without it the whole body of the traversal stands outside the
+    # index rule again -- `r.buf[i + 1000000]` passed the CHECKER and the EMITTER, over a
+    # `uint32_t buf[8]`.
+    Mutation(
+        "elems-binder-ohne-schranke",
+        "m1.rs",
+        "        if matches!(t.domaene, Domaene::ElementeVon(_)) {",
+        "        if false && matches!(t.domaene, Domaene::ElementeVon(_)) {",
+        "M103 -- ein `elems of`-Zaehler traegt die Laenge seines Feldes nicht mehr",
     ),
     # **And the domain half, separately.** If `binder_tabelle` names no table, the type
     # falls back to `Unbekannt` in silence -- the same hole, one function earlier.

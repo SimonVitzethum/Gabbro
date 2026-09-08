@@ -2083,3 +2083,206 @@ fn ein_quantor_der_seinen_binder_nie_nennt() {
         codes(&verschachtelt)
     );
 }
+
+/// **`M146` -- a fractional bound on an integer type, at every position a range can stand**
+/// (2026-09-08).
+///
+/// `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.2 wrote the finding at ONE position
+/// (a `type` alias) and said nothing about the rest. The sweep of the same day wrote one
+/// probe per position and got **`0 errors, 0 hints` in nineteen of nineteen** -- so there
+/// is one arm per position here, and not one arm for the head of the census. *A test that
+/// stops at the first position that objects measures the same wrong question the
+/// measurement would.*
+#[test]
+fn eine_bruchschranke_an_einem_ganzzahltyp() {
+    let m = |inhalt: &str| format!("module p::r {{\n{inhalt}\n}}");
+    let f = |koerper: &str| {
+        m(&format!(
+            "fn q()\n effects {{ pure }}\n costs <= 4 ops\n{{\n{koerper}\n return;\n}}"
+        ))
+    };
+
+    //  1. a type alias -- the head of the census, byte for byte
+    faellt_mit(&m("type T = u32 in 0.5 .. 1.5;"), "M146");
+    //  2. a record field
+    faellt_mit(&m("type R = { a : u32 in 0.5 .. 1.5, };"), "M146");
+    //  3. a slot field
+    faellt_mit(
+        &m("const N : u32 = 8;\ntable Tab count N {\n slot { a : u32 in 0.5 .. 1.5, }\n}"),
+        "M146",
+    );
+    //  4. a `const`
+    faellt_mit(&m("const C : u32 in 0.5 .. 1.5 = 1;"), "M146");
+    //  5. a `static`
+    faellt_mit(&m("static mut G : u32 in 0.5 .. 1.5 = 1;"), "M146");
+    //  6. an `atomic`
+    faellt_mit(&m("atomic A : u32 in 0.5 .. 1.5 relaxed;"), "M146");
+    //  7. a parameter
+    faellt_mit(
+        &m("fn q(x : u32 in 0.5 .. 1.5)\n effects { pure }\n costs <= 1 ops\n{ return; }"),
+        "M146",
+    );
+    //  8. an answer
+    faellt_mit(
+        &m("fn q() -> u32 in 0.5 .. 1.5\n effects { pure }\n costs <= 1 ops\n{ return 1; }"),
+        "M146",
+    );
+    //  9. a local
+    faellt_mit(&f(" let x : u32 in 0.5 .. 1.5 = 1;"), "M146");
+    // 10. an array element
+    faellt_mit(&m("static mut G : [u32 in 0.5 .. 1.5; 4] = 0;"), "M146");
+    // 11. a pointer target
+    faellt_mit(
+        &m("fn q(p : ptr<normal, r> u32 in 0.5 .. 1.5)\n effects { pure }\n costs <= 1 ops\n\
+            { return; }"),
+        "M146",
+    );
+    // 12. a variant payload
+    faellt_mit(
+        &m("tagged type V = { A(u32 in 0.5 .. 1.5), B(bool) };"),
+        "M146",
+    );
+    // 13. a function pointer's parameter AND result
+    faellt_mit(
+        &m("type F = fn(x : u32 in 0.5 .. 1.5) -> u32 in 0.5 .. 1.5 \
+            effects { pure } costs <= 1 ops;"),
+        "M146",
+    );
+    // 14. an `accumulates`
+    faellt_mit(
+        &m("const NK : u32 = 4;\naccumulates z : u32 in 0.5 .. 1.5 merge add per cpu NK;"),
+        "M146",
+    );
+    // 15. an `axiom` parameter
+    faellt_mit(
+        &m("axiom ax(x : u32 in 0.5 .. 1.5) effects { pure } falsifier sonde_ax;"),
+        "M146",
+    );
+    // 16. an `axiom` answer
+    faellt_mit(
+        &m("axiom ax() -> u32 in 0.5 .. 1.5 effects { pure } falsifier sonde_ax;"),
+        "M146",
+    );
+    // 17. a `format` field
+    faellt_mit(&m("format F {\n a : u32 in 0.5 .. 1.5 @0,\n}"), "M146");
+    // 18. a `narrow` on an INTEGER place
+    faellt_mit(
+        &m("fn q(x : u32)\n effects { pure }\n costs <= 4 ops\n\
+            { narrow x to 0.5 .. 1.5 else { return; } return; }"),
+        "M146",
+    );
+    // 19. a table constant
+    faellt_mit(
+        &m("const N : u32 = 8;\ntable Tab count N {\n const K : u32 in 0.5 .. 1.5 = 1;\n\
+            slot { a : bool, }\n}"),
+        "M146",
+    );
+
+    // -- The counter-direction, and it is THREE separate statements --------------------
+    //
+    // (a) the same range with integer ends is silent;
+    faellt_nicht(&m("type T = u32 in 0 .. 1;"));
+    // (b) a FLOAT type carries a fractional range and means it -- this is the form the
+    //     clause was written for, and refusing it would take `f64 in 0.0 .. 1.0` with it;
+    faellt_nicht(&m("type T = f64 in 0.5 .. 1.5;"));
+    // (c) **a `narrow` at a FLOAT place**, and this one is not decoration: the first build
+    //     of this rule read the range without its place and refused
+    //     `beispiele/26-gleitkomma.gab`:42 -- the file that exists to show `narrow … else`
+    //     as the NaN path. *W10 in the expensive direction, found by the corpus sweep and
+    //     not by the design.*
+    faellt_nicht(&m(
+        "type A = f64 in 0.0 .. 1.0;\nconst HALB : f64 = 0.5;\n\
+         impl fn klemmen(x : f64) -> A\n effects { pure }\n costs <= 8 ops\n\
+         { narrow x to 0.0 .. 1.0 else { return HALB; } return x; }",
+    ));
+    assert!(
+        !codes(&m("type T = f64 in 0.5 .. 1.5;"))
+            .iter()
+            .any(|(k, _)| *k == "M146")
+    );
+}
+
+/// **`S009` -- a `-> never` routine that comes back** (2026-09-08).
+///
+/// Five bodies under one declaration, measured before the rule was written and all five
+/// `0 errors, 0 hints`; only the last is correct. The cost of the silence is in the proof
+/// channel and not in the checker: `PLAN.md` §3.1 writes `False` into the `_post` of a
+/// `-> never` routine, so a body that returns hands the person an unprovable goal.
+#[test]
+fn eine_nie_antwortende_routine_die_zurueckkehrt() {
+    let m = |inhalt: &str| format!("module p::d {{\n{inhalt}\n}}");
+    let wach = "extern fn watchdog() -> never effects { diverges };\n";
+    let ewig = "forever s\n per_pass bounded 4 ops\n on_exceeded watchdog\n \
+                effects { pure }\n{ }";
+
+    // (1) a plain `return`
+    faellt_mit(
+        &m("divergent fn q() -> never effects { diverges } { return; }"),
+        "S009",
+    );
+    // (2) a `return` WITH a value -- and `never` has no value to return
+    faellt_mit(
+        &m("divergent fn q() -> never effects { diverges } { return 1; }"),
+        "S009",
+    );
+    // (3) an empty body -- it falls off its end, and there is no line to point at
+    faellt_mit(
+        &m("divergent fn q() -> never effects { diverges } { }"),
+        "S009",
+    );
+    // (4) a `return` on ONE branch, with a diverging tail behind it. The body ENDS; it is
+    //     the branch that answers, and a rule reading only the last statement misses it.
+    faellt_mit(
+        &m(&format!(
+            "{wach}divergent fn q(b : bool) -> never\n effects {{ diverges }}\n\
+             {{\n if b {{ return; }}\n {ewig}\n}}"
+        )),
+        "S009",
+    );
+    // (5) `-> never` without `divergent` -- the class is the RESULT, not the keyword
+    faellt_mit(
+        &m("fn q() -> never effects { diverges } costs <= 1 ops { return; }"),
+        "S009",
+    );
+
+    // -- The counter-direction ---------------------------------------------------------
+    //
+    // (a) the body that does not come back is silent -- and if it were not, the word would
+    //     be unwritable;
+    faellt_nicht(&m(&format!(
+        "{wach}divergent fn q() -> never\n effects {{ diverges }}\n{{\n {ewig}\n}}"
+    )));
+    // (b) an `extern` declaration has no body to read: the sentence `E008` writes about
+    //     extern effect lists applies word for word;
+    faellt_nicht(&m("extern fn q() -> never effects { diverges };"));
+    // (c) and a routine that ANSWERS may return, which is the whole point of the result
+    //     clause.
+    faellt_nicht(&m(
+        "fn q() -> u32 effects { pure } costs <= 1 ops { return 1; }",
+    ));
+}
+
+/// **The `elems of` binder carries the bound of the array it runs over** -- §2.4's fourth
+/// domain, closed 2026-09-08.
+///
+/// 2026-09-07 gave the binder `index into T` for the three domains whose counter is a slot
+/// index; `elems of` stayed `Typ::Unbekannt`, and `Unbekannt` is not silence but an
+/// acquittal -- `M103` asks the index for its type first and says nothing when there is
+/// none.
+#[test]
+fn ein_elems_binder_traegt_seine_schranke() {
+    let m = |koerper: &str| {
+        format!(
+            "module p::e {{\n\
+             type R = {{ buf : [u32; 8], n : u32, }};\n\
+             fn q(r : ptr<normal, rw> R)\n effects {{ writes r.buf }}\n costs <= 64 ops\n\
+             {{\n traverse i over elems of r.buf by unvisited touches writes r.buf {{\n\
+             {koerper}\n }}\n return;\n}}\n}}"
+        )
+    };
+    // The loop that is right passes -- the bound must not make the word unwritable.
+    faellt_nicht(&m("  r.buf[i] = 1;"));
+    // And the index deliberately past the array falls, where before it was written out:
+    // `0 errors` from `pruefe` AND C from `emit`, over a `uint32_t buf[8]`.
+    faellt_mit(&m("  r.buf[i + 1000000] = 1;"), "M103");
+}

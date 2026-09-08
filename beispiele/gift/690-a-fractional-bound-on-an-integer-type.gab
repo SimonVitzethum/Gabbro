@@ -1,0 +1,41 @@
+-- erwartet: M146
+-- **A bound the person wrote, and the checker kept none of it.**
+--
+-- `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.2 booked
+-- `type T = u32 in 0.5 .. 1.5;` as a form that MEANS NOTHING: `2 items, 0 errors,
+-- 0 hints`, and `Shape.intIn lo hi` in the model is the carrier for exactly this
+-- declaration (`PLAN.md` §3.1).
+--
+-- **The mechanism, and it is not a rounding.** `umgebung::intbereich` evaluates each end
+-- with `auswerten`; a float literal gives `None`; and the arm for an end that does not
+-- stand fast is `IntBereich::voll` -- *the range does not get NARROWER*. So the declaration
+-- lowers to the full width of the word, and the model is handed `Shape.intIn 0
+-- 4294967295`.
+--
+-- Measured against the UNCHANGED checker on three files, `type T = <ty>` and `return 9;`:
+--
+--     declaration            | pruefe
+--     -----------------------|--------------------------
+--     u32                    | 0 errors      (9 fits u32)
+--     u32 in 0 .. 1          | 1 errors      (9 leaves the range)
+--     u32 in 0.5 .. 1.5      | 0 errors      <- the written bound bought NOTHING
+--
+-- **And the sweep is nineteen positions and not one.** A range stands at `intty`,
+-- `floatty` and `narrowstmt`, and an `intty` stands wherever a `typeexpr` may: a type
+-- alias, a record field, a slot field, a `const`, a `static`, an `atomic`, a parameter, an
+-- answer, a local, an array element, a pointer target, a variant payload, a function
+-- pointer's parameter and result, an `accumulates`, an `axiom` parameter and answer, a
+-- `format` field, a table constant, and a `narrow`. **All nineteen gave `0 errors,
+-- 0 hints`.** *A measurement that stops at the first position that already objects answers
+-- "does one object", and the question was "which".*
+--
+-- The counter-direction stands in `beispiele/26-gleitkomma.gab`: `narrow x to 0.0 .. 1.0`
+-- at an `f64` place is the CORRECT spelling and stays silent -- the first build of this
+-- rule read the range without its place and refused it, W10 in the expensive direction,
+-- caught by the corpus sweep.
+module gift::bruchschranke {
+
+-- The head of §1.2, byte for byte.
+type T = u32 in 0.5 .. 1.5;
+
+}

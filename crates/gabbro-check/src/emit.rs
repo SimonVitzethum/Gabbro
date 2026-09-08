@@ -5285,7 +5285,29 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
         return "";
     };
     // Eine Funktion ohne Ergebnis hat nichts, was sich zusammenfassen liesse.
-    if f.ergebnis.is_none() {
+    //
+    // **And `-> never` is such a function, which this line did not say until 2026-09-08.**
+    // The guard read the WRITTEN result and `never` is one; the C it lowers to is
+    // `_Noreturn void` (`ctyp_ergebnis`, `Some(TypExpr::Never(_)) => "_Noreturn void"`), and
+    // GCC refuses `const`/`pure` on a function returning `void` outright:
+    //
+    // ```text
+    // divergent fn q() -> never effects { pure }      -> __attribute__((const)) on void
+    // divergent fn q() -> never effects { reads G }   -> __attribute__((pure))  on void
+    //     cc -std=c11 -Wall -Wextra -Werror
+    //     error: 'const' attribute on function returning 'void' [-Werror=attributes]
+    // ```
+    //
+    // The control in the same run: a plain `fn q() effects { pure }` -- no result clause at
+    // all -- got no attribute and compiled, which is this line working as written. *The
+    // fault was a guard that asked the SOURCE a question about the C.*
+    //
+    // **Measured separately from `S009` on purpose.** It fires whether or not the body
+    // returns (measured at a body whose only statement is a `forever` with no `leave`), so
+    // it is a second finding and not a symptom of the first --
+    // `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.3 booked the two together and said
+    // it had not separated them.
+    if f.ergebnis.is_none() || matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
         return "";
     }
     let mut nur_lesend = true;
