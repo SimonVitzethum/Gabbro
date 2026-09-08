@@ -12,6 +12,25 @@
 -- The `until` is a plain condition over a global, not a device register: the point of the
 -- probe is the loop's SHAPE, and a device promise would add an assumption that has nothing
 -- to do with it.
+--
+-- **And there is no `progress` here, for the same reason and one more** (2026-09-08). The
+-- clause is optional, and what ends this loop is its own body: `stand = 1` is the first
+-- statement of the pass, so `until stand >= 1` holds after one pass and nobody outside the
+-- program has to promise anything.
+--
+-- The first version of this file did carry one -- `progress jemand_zaehlt_hoch`, with an
+-- `assume` behind it and `falsifier sonde_jemand_zaehlt_hoch` behind that. **There is no
+-- program of that name**, and a `falsifier` naming a probe that does not exist is an
+-- unfalsifiable assumption wearing a falsifiable one's clothes (`dokumente/UNFALSIFIZIERBAR.md`).
+-- `instrumente/pruefe-sondendeckung.py` said so at once and in the right way: the name pushed
+-- its `aussen` count from 13 to 14, its own speech test then failed, and the run ABORTED
+-- before printing the six numbers `pruefe-zahlen.py` reads -- so `pruefe-zahlen.py` went from
+-- 5 findings to 11, and **all six of the new ones** read *"der Befehl druckt die Zahl nicht
+-- mehr ... der Suchweg ist ab"*. The instrument's header describes the same accident from an
+-- earlier day, one word of a comment wide.
+--
+-- *The way out was not a probe program and not a raised mark.* An assumption this file does
+-- not need is an assumption this file does not state.
 
 module probe::rekursion_in_retry {
 
@@ -21,10 +40,6 @@ static mut stand : u32 in 0 .. 255 = 0;
 
 extern fn zeitablauf() -> never effects { diverges } costs <= 1 ops;
 
-assume jemand_zaehlt_hoch
-    "Somebody raises `stand` within the promised number of read operations."
-    falsifier sonde_jemand_zaehlt_hoch;
-
 impl fn absteigen(n : u32 in 0 .. TIEFE)
     ensures  stand <= 255
     effects  { reads stand, writes stand }
@@ -33,7 +48,6 @@ impl fn absteigen(n : u32 in 0 .. TIEFE)
 {
     retry runde until stand >= 1
         bounded 1024 ops
-        progress jemand_zaehlt_hoch
         on_exceeded zeitablauf
         effects   { reads stand, writes stand }
         invariant n <= TIEFE

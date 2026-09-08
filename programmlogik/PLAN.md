@@ -798,6 +798,49 @@ stack asserts the refusal by name.
 * **A guardian run beside a corpus run.** `pruefe-zahlen.py` reported six findings of the form
   *"`H` steht als 1, der Lauf sagt 10"*; run again on the quiet machine, none of them is
   there. A guardian that shells out to a tool measures the machine as well as the tree.
+### 12.5 The `retry` probe carried an unfalsifiable assumption, and an instrument said so
+
+*Found in the merge, 2026-09-08.* The first version of
+`messung/proben/probe-rekursion-in-retry.gab` gave its `retry` a `progress
+jemand_zaehlt_hoch`, declared the assumption behind it, and wrote `falsifier
+sonde_jemand_zaehlt_hoch` behind that. **There is no program of that name in the tree.** A
+`falsifier` naming a probe that does not exist is an unfalsifiable assumption wearing a
+falsifiable one's clothes — the class `dokumente/UNFALSIFIZIERBAR.md` is written for, and the
+shape `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md` §1.5 states: *an unfalsifiable
+assumption covers exactly as much as one carrying a probe.*
+
+**`instrumente/pruefe-sondendeckung.py` caught it, and the way it failed is worth reading.**
+The name pushed its count of probe names outside the register from 13 to `MARK_AUSSEN + 1`;
+its own speech test then expected one finding and got two, said NO, and the run **aborted
+before printing the six numbers `pruefe-zahlen.py` reads**. So the visible symptom was five
+findings one register over, all of the form *"der Befehl druckt die Zahl nicht mehr … der
+Suchweg ist ab"* — `pruefe-zahlen.py` went from **5 findings to 11**, and the six new ones
+were all of that shape. *(The `6` some counts report is `grep -c BEFUND`, which also matches
+the filename `messung/ORDNUNGSSTICHPROBE-BEFUND.md`; the delta of six is the same either
+way, and it is the delta that is the finding.)* *The instrument's own header
+describes the same accident from an earlier day, one word of a comment wide.* **A guardian
+that aborts is a guardian whose silence reads like consent** — `CLAUDE.md`'s rule about a
+measurement that stops at the first hit, in its third instance this week.
+
+**The way out was neither a probe program nor a raised mark.** `MARK_AUSSEN` is the ratchet;
+raising it to quiet the guard is the one move that destroys what the instrument is for. And
+writing `sonde_jemand_zaehlt_hoch` would have been inventing a falsifier for a promise
+**nothing in the file needs**: the `progress` clause is optional, and what ends this loop is
+its own body — `stand = 1` is the first statement of the pass, so `until stand >= 1` holds
+after one pass and nobody outside the program promises anything. *An assumption a file does
+not need is an assumption a file does not state.* The clause and the `assume` are gone; the
+loop's SHAPE, which is the whole point of the probe, is untouched, and the module is still
+0 errors / 0 `sorry` under `contract_of_duty_rec_loop`.
+
+Measured after the fix: `aussen` back to **13** against a `MARK_AUSSEN` of 13 (no instrument
+file touched), `pruefe-sondendeckung.py` exit **0** with its numbers printed (`A_p = 0.1316`,
+booked 5/38, floor 1/8), and `pruefe-zahlen.py` back to its **five** standing findings — and that
+those five are the merge's and not this channel's was measured, not argued: this commit's
+diff was stashed and the guard run on the pure merge state, where the same five stand beside
+the six-strong cascade. *`probe-rekursion-zwei-schleifen.gab` was checked and not assumed: it
+states no `assume`, no `falsifier` and no `progress`, and neither does
+`probe-rekursion-in-schleife.gab`.*
+
 ## 13. Run 26 — the coverage theorem: "everything except own logic" as a proposition (2026-09-08)
 
 *Numbered 13 and not 12 on purpose: §12 is held for the run worked beside this one, and a
@@ -939,3 +982,31 @@ and re-dating that file's measurement is not this run's.
 * **Points 1 and 3 of `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §0.** This file
   answers point 2 — the proof channel answers for every form — and says nothing about a
   form that MEANS NOTHING, nor about an obligation that vanishes on a rename.
+
+---
+
+## 14. The tree that carries runs 26–28, measured (agent b, 2026-09-08)
+
+§11's rule again: **neither of the numbers of runs 26, 27 and 28 is the number of the tree
+that carries all of them**, so it was taken. `_pruefung/erzeuge-all.sh` regenerated all 192
+modules from the merged emitter (0 refused by the checker), `_pruefung/lauf.sh` ran them at
+`P=4` locally — `ki-pc-fisch-101` still unreachable, `free -g`: 31 GB total, 18 GB available,
+20 cores.
+
+| | §12 alone | **merged** |
+|---|---|---|
+| modules | 192 | **192** |
+| Lean errors | 0 | **0** |
+| `sorry` | 24 | **25** |
+| seconds (Σ per module) | 396 | **399** |
+
+**25 = 24 + `beispiele/57-faedenhalt`**, and it is the one difference in the whole per-module
+table — every other module's count is identical. It is the quantifier-domain run's, booked in
+its own words: *"the quantifier domain meant nothing in all nine, and one corpus program was
+leaning on it."* **The same shape as run 16 and as §9.4**: an obligation the channel did not
+state before is stated first, and the count says so. *A `sorry` that appears because a
+statement got stronger is not a regression, and the only way to tell the two apart is to name
+the file.*
+
+The three recursion probes of §12.3 are **0 errors, 0 `sorry`** in the merged tree, so the
+composition survives the merge with the emitter changes of runs 26–28 in it.
