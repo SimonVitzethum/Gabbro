@@ -2293,6 +2293,56 @@ partial def GabbroMeta.collectCalls (e : Lean.Expr) : MetaM (Array (Lean.Expr ×
 
 
 open Lean Elab Tactic Meta in
+/-- **Has an earlier pass already instantiated `key = ρ f t` on THIS goal?** The mark
+    `gabbro_seen : key = key` says so -- per goal, and not per invocation: a sibling goal an
+    opening left has no instance yet and gets its own. -/
+def GabbroMeta.seenKey (key : Lean.Expr) : TacticM Bool := do
+  (← getMainGoal).withContext do
+    let lctx ← getLCtx
+    lctx.anyM fun d => do
+      if d.isImplementationDetail then return false
+      let ty ← instantiateMVars d.type
+      if ty.isAppOfArity ``Eq 3 && d.userName.toString.startsWith "gabbro_seen" then
+        isDefEq ty.getAppArgs[1]! key
+      else
+        return false
+
+open Lean Elab Tactic Meta in
+/-- **Every hypothesis of the main goal that carries a contract of `ρ f`**, with the number of
+    holes its instantiation at a state opens: a plain `Contract` one (the precondition), a
+    `LoopRule`, `ContractBelow` or `ContractBelowM` two, a `LoopRuleP` three (the counter at
+    zero). -/
+def GabbroMeta.contractDecls (ρ f : Lean.Expr) : TacticM (Array (Lean.LocalDecl × Nat)) := do
+  (← getMainGoal).withContext do
+    let lctx ← getLCtx
+    let mut out : Array (Lean.LocalDecl × Nat) := #[]
+    for d in lctx do
+      if d.isImplementationDetail then continue
+      let ty ← instantiateMVars d.type
+      if ty.isAppOfArity ``Gabbro.Body.Contract 4 then
+        let a := ty.getAppArgs
+        if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 1)
+      else if ty.isAppOfArity ``Gabbro.Body.LoopRule 4 then
+        let a := ty.getAppArgs
+        if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 2)
+      -- **the rule of a loop that counts its passes** (agent b, 2026-09-08): a third
+      -- premise, that the counter stands at zero -- the `bindName` right before the loop
+      else if ty.isAppOfArity ``Gabbro.Body.LoopRuleP 5 then
+        let a := ty.getAppArgs
+        if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 3)
+      -- the bounded self-contract: two holes as well -- the precondition and `Below`
+      else if ty.isAppOfArity ``Gabbro.Body.ContractBelow 6 then
+        let a := ty.getAppArgs
+        if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 2)
+      -- the bounded contract of a cycle member: the member is a literal, its name first
+      else if ty.isAppOfArity ``Gabbro.Body.ContractBelowM 4 then
+        let a := ty.getAppArgs
+        let m := a[1]!
+        if m.isAppOfArity ``Gabbro.Body.Member.mk 5 then
+          if (← isDefEq a[0]! ρ) && (← isDefEq m.getAppArgs[0]! f) then out := out.push (d, 2)
+    pure out
+
+open Lean Elab Tactic Meta in
 /-- **`gabbro_calls Γ [lemmas]` -- the composition, applied.** For every `ρ f t` the goal
     mentions and every hypothesis `Contract ρ f pre post` or `LoopRule ρ f wf inv`, the
     instance at `t` is added as a hypothesis; its precondition is tried (the well-typed
@@ -2311,6 +2361,8 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
     -- not see a hypothesis added later
     let calls := calls.qsort (fun a b => a.2.2.approxDepth < b.2.2.approxDepth)
     let mut progress := false
+    -- the holes this round leaves open, for the second pass over them below
+    let mut roundHoles : Array MVarId := #[]
     for (ρ, f, t) in calls do
       if (← getGoals).isEmpty then return
       let key := mkApp2 ρ f t
@@ -2319,44 +2371,8 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
       -- so that a second pass does not instantiate (and open, and split) it again
       -- (per GOAL, by the mark, and not per invocation: a sibling goal an opening left
       -- has no instance yet, and gets its own)
-      let already ← (← getMainGoal).withContext do
-        let lctx ← getLCtx
-        lctx.anyM fun d => do
-          if d.isImplementationDetail then return false
-          let ty ← instantiateMVars d.type
-          if ty.isAppOfArity ``Eq 3 && d.userName.toString.startsWith "gabbro_seen" then
-            isDefEq ty.getAppArgs[1]! key
-          else
-            return false
-      if already then continue
-      let decls ← (← getMainGoal).withContext do
-        let lctx ← getLCtx
-        let mut out : Array (LocalDecl × Nat) := #[]
-        for d in lctx do
-          if d.isImplementationDetail then continue
-          let ty ← instantiateMVars d.type
-          if ty.isAppOfArity ``Gabbro.Body.Contract 4 then
-            let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 1)
-          else if ty.isAppOfArity ``Gabbro.Body.LoopRule 4 then
-            let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 2)
-          -- **the rule of a loop that counts its passes** (agent b, 2026-09-08): a third
-          -- premise, that the counter stands at zero -- the `bindName` right before the loop
-          else if ty.isAppOfArity ``Gabbro.Body.LoopRuleP 5 then
-            let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 3)
-          -- the bounded self-contract: two holes as well -- the precondition and `Below`
-          else if ty.isAppOfArity ``Gabbro.Body.ContractBelow 6 then
-            let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 2)
-          -- the bounded contract of a cycle member: the member is a literal, its name first
-          else if ty.isAppOfArity ``Gabbro.Body.ContractBelowM 4 then
-            let a := ty.getAppArgs
-            let m := a[1]!
-            if m.isAppOfArity ``Gabbro.Body.Member.mk 5 then
-              if (← isDefEq a[0]! ρ) && (← isDefEq m.getAppArgs[0]! f) then out := out.push (d, 2)
-        pure out
+      if ← GabbroMeta.seenKey key then continue
+      let decls ← GabbroMeta.contractDecls ρ f
       for (d, nholes) in decls do
         -- one instance that cannot be built is skipped, not the whole composition
         let saved ← saveState
@@ -2388,13 +2404,21 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
             setGoals [h]
             -- closed whole where it can be; `Below` by computation and arithmetic; else
             -- reduced as far as the simp set goes, and left
+            -- **`(simp only …; done)` FIRST, and it is not decoration** (measured
+            -- 2026-09-08): where the simp set closes the precondition WHOLE, the goal list
+            -- is empty when `<;>` reaches it, and `<;>` on no goals is an error -- so the
+            -- alternative that had just succeeded FAILED, and a precondition the model
+            -- decides by itself fell through to the person. `(fun _ => True) t` is the
+            -- smallest instance and it stood in `_pruefung/Thole.lean`.
             evalTactic (← `(tactic| try (first
+              | (simp only [$ts,*]; done)
               | (simp only [$ts,*]; (try apply And.intro) <;> first | gabbro_wf $Γ | (gabbro_simp_hyps [$ts,*]; done))
               | (gabbro_simp_hyps [$ts,*]; done)
               | (gabbro_simp_hyps [$ts,*]; omega)
               | (simp only [$ts,*]; (try apply And.intro) <;> first | gabbro_wf $Γ | (gabbro_simp_hyps [$ts,*]; done) | skip))))
             -- what a hole leaves is kept -- every hole's, not only the last one's
             rest := rest ++ (← getGoals)
+          roundHoles := roundHoles ++ rest.toArray
           setGoals ([main] ++ rest ++ (after.filter (fun m => m != main && before.contains m)))
           -- the instance, simplified into rewrites
           evalTactic (← `(tactic| try simp only [$ts,*, Gabbro.Body.Contract, Gabbro.Body.LoopRule, Gabbro.Body.LoopRuleP, Gabbro.Body.ContractBelow, Gabbro.Body.ContractBelowM] at $hn:ident))
@@ -2427,6 +2451,82 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
         catch ex =>
           saved.restore
           logInfo m!"gabbro_calls: skipped an instance: {ex.toMessageData}"
+    -- **The hole phase** (`PLAN.md` §5.2 item 4). A hole opened for one instance is a
+    -- METAVARIABLE, and its context was fixed when it was opened: it never receives the
+    -- `have`s the later instances of the same round add to the MAIN goal. Two calls at the
+    -- SAME state have the same `approxDepth`, so innermost-first does not order them, and
+    -- the second's precondition can be exactly what the first's contract says -- the hole
+    -- then stands for no reason but the order.
+    --
+    -- The hole does hold the theorem's own contract binders, so the fact is derivable
+    -- THERE. So once every instance of the round is in, **the round's calls are
+    -- instantiated a second time inside each hole** -- the round's, not the hole's own: the
+    -- precondition mentions the state, not the call that decides it, and `collectCalls`
+    -- over the hole would find nothing.
+    --
+    -- **An instance whose own premises do not ALL close at once is rolled back.** That is
+    -- what keeps a hole from spawning a hole -- the phase either finishes an instance or
+    -- leaves the hole exactly as it was.
+    if !roundHoles.isEmpty then
+      let gs ← getGoals
+      let mut out : List MVarId := []
+      for g in gs do
+        if roundHoles.contains g && !(← g.isAssigned) then
+          setGoals [g]
+          for (ρ, f, t) in calls do
+            if (← getGoals).isEmpty then break
+            let key := mkApp2 ρ f t
+            if ← GabbroMeta.seenKey key then continue
+            let decls ← GabbroMeta.contractDecls ρ f
+            for (d, nholes) in decls do
+              if (← getGoals).isEmpty then break
+              let saved ← saveState
+              try
+                let c ← (← getMainGoal).withContext do Term.exprToSyntax d.toExpr
+                let tt ← (← getMainGoal).withContext do Term.exprToSyntax t
+                let hn := mkIdent (← mkFreshUserName `hc)
+                let before ← getGoals
+                if nholes == 3 then
+                  evalTactic (← `(tactic| have $hn := $c $tt ?_ ?_ ?_))
+                else if nholes == 2 then
+                  evalTactic (← `(tactic| have $hn := $c $tt ?_ ?_))
+                else
+                  evalTactic (← `(tactic| have $hn := $c $tt ?_))
+                let after ← getGoals
+                let main := after[0]!
+                let subs := after.filter (fun m => m != main && !(before.contains m))
+                let mut closed := true
+                for s in subs do
+                  setGoals [s]
+                  evalTactic (← `(tactic| try (first
+                    | (simp only [$ts,*]; done)
+                    | (simp only [$ts,*]; (try apply And.intro) <;> first | gabbro_wf $Γ | (gabbro_simp_hyps [$ts,*]; done))
+                    | (gabbro_simp_hyps [$ts,*]; done)
+                    | (gabbro_simp_hyps [$ts,*]; omega))))
+                  unless (← getGoals).isEmpty do closed := false
+                if !closed then
+                  saved.restore
+                else
+                  setGoals [main]
+                  let ks ← main.withContext do Term.exprToSyntax key
+                  let mark := mkIdent (← mkFreshUserName `gabbro_seen)
+                  evalTactic (← `(tactic| have $mark : $ks = $ks := rfl))
+                  evalTactic (← `(tactic| try simp only [$ts,*, Gabbro.Body.Contract, Gabbro.Body.LoopRule, Gabbro.Body.LoopRuleP, Gabbro.Body.ContractBelow, Gabbro.Body.ContractBelowM] at $hn:ident))
+                  evalTactic (← `(tactic| try simp [$ts,*, ↓Gabbro.Body.eval_and_true_iff, ↓Gabbro.Body.eval_hasShape_true_iff, Gabbro.Body.orBool_true_iff,
+                    Gabbro.Body.eval, Gabbro.Body.binop, Gabbro.Body.unop, Gabbro.Body.bindLocal, Gabbro.Body.bindAll] at $hn:ident))
+                  evalTactic (← `(tactic| try gabbro_open $hn:ident))
+                  -- the hole closes here or it does not; either way it keeps the fact
+                  evalTactic (← `(tactic| all_goals (try (first
+                    | assumption
+                    | (gabbro_simp_hyps [$ts,*]; done)
+                    | (simp_all; done)))))
+                  progress := true
+              catch _ =>
+                saved.restore
+          out := out ++ (← getGoals)
+        else
+          out := out ++ [g]
+      setGoals out
     if !progress then break
 
 open Lean.Parser.Tactic in
@@ -2642,6 +2742,71 @@ elab "gabbro_try " n:num tac:tactic : tactic => do
       Core.withCurrHeartbeats <| evalTactic tac)
     (fun _ => s.restore)
 
+/-! ### `simp_all`, run at most once per goal (agent b, 2026-09-08)
+
+    **The pipeline runs `simp_all` FOUR times** (steps 33, 37, 40, 45 of `gabbro_pipeline_b`),
+    and `_pruefung/zeit.sh` says what that costs. Measured 2026-09-08, per module, summed over
+    its theorems:
+
+    | module | s33 | s37 | s40 | s45 | whole pipeline |
+    |---|---|---|---|---|---|
+    | `beispiele/01-tabelle`   |  7.0 s | 24.4 s |  6.5 s | 22.6 s |  86.1 s |
+    | `messung/fragmente/F01`  | 43.8 s |  9.2 s |  9.0 s |  9.4 s | 122.2 s |
+    | `beispiele/09-ohne-zeiger` |  9.1 s | 10.3 s |  3.5 s |  3.1 s |  37.8 s |
+    | `messung/caprock/kapraum` | 13.1 s |  2.6 s |  0.3 s |  0.2 s |  58.4 s |
+
+    **Between 27 % and 70 % of the pipeline is these four steps**, and no other step comes
+    near (the next largest anywhere is `gabbro_calls` at 6.6 s). The steps BETWEEN them are
+    cheap -- `gabbro_shape`, `gabbro_wf`, `gabbro_split`, `gabbro_instantiate` together cost
+    0.75 s on `01-tabelle` between step 40 and step 45 -- so where they change nothing, step 45
+    re-derives step 40's answer from step 40's goal.
+
+    **A goal that has not moved does not need the tactic again**, and "has not moved" is not a
+    guess here: a tactic that changes a goal produces a NEW metavariable, and one that fails
+    under `try` leaves the old one. So the memo is by `MVarId`, and it is exact.
+
+    **What is NOT memoised: a step the heartbeat budget cut off.** `gabbro_try` shares one
+    budget over `all_goals`, so a goal late in the list can be left untouched for want of
+    budget and be reached with plenty at the next step. Recording that goal would lose the
+    closure the later step would have made -- so a runtime cut-off records nothing.
+
+    **And the FOURTH `simp_all` (old step 45) is gone entirely.** With the memo in, it still
+    cost 22.8 s on `01-tabelle` -- its goals really had moved under steps 41-44 -- so whether
+    it closes anything was measured and not argued: the pipeline was run over the whole
+    corpus without it. **192 modules, 0 Lean errors, 24 `sorry`, and the `sorry`s stand on
+    exactly the same nine files with exactly the same counts**; the corpus fell from 417 s to
+    402 s and `01-tabelle` from 39 s to 27 s. *That is a statement about THIS corpus:* a step
+    that closes nothing over 192 units and 500-odd theorems is not thereby a step that closes
+    nothing. Putting it back is one line, and a unit that needs it will say so with a `sorry`,
+    not silently. -/
+initialize gabbroSimpAllFixed : IO.Ref (Array Lean.MVarId) ← IO.mkRef #[]
+
+open Lean Elab Tactic in
+/-- Forget every goal the memo holds -- at the head of the pipeline, so that one theorem's
+    metavariable numbers can never answer for another's. -/
+elab "gabbro_simp_all_reset" : tactic => do
+  gabbroSimpAllFixed.set #[]
+
+open Lean Elab Tactic in
+/-- `simp_all` on this goal, unless it has already been run on exactly this goal. Never
+    throws: the pipeline reads it as `try simp_all` did. -/
+elab "gabbro_simp_all_once" : tactic => do
+  if (← getGoals).isEmpty then return
+  let g ← getMainGoal
+  if (← gabbroSimpAllFixed.get).contains g then return
+  let saved ← saveState
+  let decided ← tryCatchRuntimeEx
+    (do
+      try
+        evalTactic (← `(tactic| simp_all))
+      catch _ =>
+        saved.restore
+      pure true)
+    (fun _ => do saved.restore; pure false)
+  if decided then
+    let gs ← getGoals
+    gabbroSimpAllFixed.modify fun a => gs.foldl (fun a m => if a.contains m then a else a.push m) a
+
 /-- Every `a.tdiv b` / `a.tmod b` (closed) in `e` -- `true` for a division. -/
 partial def GabbroMeta.collectDivMod (e : Lean.Expr) (acc : Array (Bool × Lean.Expr × Lean.Expr)) :
     Array (Bool × Lean.Expr × Lean.Expr) :=
@@ -2785,7 +2950,8 @@ open Lean.Parser.Tactic in
     the split on undecided reads, `simp_all`, and the arithmetic. Every step runs under its
     own budget (`gabbro_try`), so that no step can take the theorem down with it. -/
 macro "gabbro_pipeline" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
-  `(tactic| (gabbro_try 300 (gabbro_simp [$ts,*]);
+  `(tactic| (gabbro_simp_all_reset;
+             gabbro_try 300 (gabbro_simp [$ts,*]);
              gabbro_try 300 (all_goals (try gabbro_cases 4 [$ts,*]));
              gabbro_try 600 (all_goals (try gabbro_calls $t [$ts,*]));
              gabbro_try 100 (all_goals (try gabbro_open_hyps));
@@ -2825,7 +2991,7 @@ macro "gabbro_pipeline" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              gabbro_try 50 (all_goals (try subst_vars));
              -- from here on WITHOUT the caller's list: `simp_all` clears a hypothesis it
              -- has used up (`hall`), and a name in the list that is gone fails the step
-             gabbro_try 600 (all_goals (try simp_all));
+             gabbro_try 600 (all_goals (try gabbro_simp_all_once));
              -- what `simp_all` exposed: reads at the indices in play, stores at them,
              -- instances one binder further in -- twice, because each round opens the next
              gabbro_try 50 (all_goals (try gabbro_shape $t));
@@ -2834,15 +3000,14 @@ macro "gabbro_pipeline" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              -- a condition a late witness made decidable (`narrow i to 0 ..< hinterlegt`
              -- reads a global whose witness came with `gabbro_shape`) is split here again
              gabbro_try 200 (all_goals (try gabbro_cases 3 []));
-             gabbro_try 300 (all_goals (try simp_all));
+             gabbro_try 300 (all_goals (try gabbro_simp_all_once));
              gabbro_try 200 (all_goals (try (gabbro_split <;> (try intros))));
              gabbro_try 100 (all_goals (try gabbro_instantiate));
-             gabbro_try 300 (all_goals (try simp_all));
+             gabbro_try 300 (all_goals (try gabbro_simp_all_once));
              gabbro_try 50 (all_goals (try gabbro_shape $t));
              gabbro_try 100 (all_goals (try gabbro_wf $t));
              gabbro_try 200 (all_goals (try (gabbro_split <;> (try intros))));
              gabbro_try 100 (all_goals (try gabbro_instantiate));
-             gabbro_try 300 (all_goals (try simp_all));
              gabbro_try 100 (all_goals (try gabbro_wf $t));
              -- the bounds of a division or remainder by a variable, then the arithmetic
              gabbro_try 100 (all_goals (try gabbro_divmod));
@@ -2867,7 +3032,8 @@ elab "gabbro_timed" nm:str tac:tactic : tactic => do
 
 open Lean.Parser.Tactic in
 macro "gabbro_pipeline_b" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
-  `(tactic| (gabbro_timed "s00" (gabbro_try 300 (gabbro_simp [$ts,*]));
+  `(tactic| (gabbro_simp_all_reset;
+             gabbro_timed "s00" (gabbro_try 300 (gabbro_simp [$ts,*]));
              gabbro_timed "s01" (gabbro_try 300 (all_goals (try gabbro_cases 4 [$ts,*])));
              gabbro_timed "s02" (gabbro_try 600 (all_goals (try gabbro_calls $t [$ts,*])));
              gabbro_timed "s03" (gabbro_try 100 (all_goals (try gabbro_open_hyps)));
@@ -2907,7 +3073,7 @@ macro "gabbro_pipeline_b" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              gabbro_timed "s32" (gabbro_try 50 (all_goals (try subst_vars)));
              -- from here on WITHOUT the caller's list: `simp_all` clears a hypothesis it
              -- has used up (`hall`), and a name in the list that is gone fails the step
-             gabbro_timed "s33" (gabbro_try 600 (all_goals (try simp_all)));
+             gabbro_timed "s33" (gabbro_try 600 (all_goals (try gabbro_simp_all_once)));
              -- what `simp_all` exposed: reads at the indices in play, stores at them,
              -- instances one binder further in -- twice, because each round opens the next
              gabbro_timed "s34" (gabbro_try 50 (all_goals (try gabbro_shape $t)));
@@ -2916,15 +3082,18 @@ macro "gabbro_pipeline_b" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              -- a condition a late witness made decidable (`narrow i to 0 ..< hinterlegt`
              -- reads a global whose witness came with `gabbro_shape`) is split here again
              gabbro_timed "s36" (gabbro_try 200 (all_goals (try gabbro_cases 3 [])));
-             gabbro_timed "s37" (gabbro_try 300 (all_goals (try simp_all)));
+             gabbro_timed "s37" (gabbro_try 300 (all_goals (try gabbro_simp_all_once)));
              gabbro_timed "s38" (gabbro_try 200 (all_goals (try (gabbro_split <;> (try intros)))));
              gabbro_timed "s39" (gabbro_try 100 (all_goals (try gabbro_instantiate)));
-             gabbro_timed "s40" (gabbro_try 300 (all_goals (try simp_all)));
+             gabbro_timed "s40" (gabbro_try 300 (all_goals (try gabbro_simp_all_once)));
              gabbro_timed "s41" (gabbro_try 50 (all_goals (try gabbro_shape $t)));
              gabbro_timed "s42" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
              gabbro_timed "s43" (gabbro_try 200 (all_goals (try (gabbro_split <;> (try intros)))));
              gabbro_timed "s44" (gabbro_try 100 (all_goals (try gabbro_instantiate)));
-             gabbro_timed "s45" (gabbro_try 300 (all_goals (try simp_all)));
+             -- **s45 is gone, and the gap in the numbers is deliberate** (agent b,
+             -- 2026-09-08): the step names have to keep meaning what the measurements of
+             -- this file mean by them. A measuring copy that renumbers measures a different
+             -- pipeline than the one it is a copy of.
              gabbro_timed "s46" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
              -- the bounds of a division or remainder by a variable, then the arithmetic
              gabbro_timed "s47" (gabbro_try 100 (all_goals (try gabbro_divmod)));
@@ -2965,6 +3134,25 @@ namespace Gabbro.Body
     then call the routine "below" a bound that no longer holds -- the assumption would be
     about a state the loop has left. With it, the bound the induction proved is the bound
     every pass still stands on.
+
+    **And EVERY loop of the routine carries it, not only the one that holds the call**
+    (agent b, 2026-09-08). Measured on `messung/proben/probe-rekursion-zwei-schleifen.gab`:
+    with the measure carried by the recursive loop alone, one goal stood in the routine's
+    duty -- `x = w_n`, the value of `n` after the FIRST loop against its value at entry. A
+    `LoopRule` says nothing about the locals, so as far as the model knew a loop in front of
+    the recursive one could have moved the measure. It cannot, and each loop proves that of
+    its own body; the emitter states it for all of them and instantiates the innocent ones at
+    the routine's entry state.
+
+    **A `retry`/`forever` loop needs the same composition without the range**
+    (`contract_of_duty_rec_loop`, below). The refusal it replaces named the missing index
+    range as the ground, and the ground was wrong: the induction is over the `decreases`,
+    never over the index.
+
+    **What is still refused: a STACK of loops.** Every loop on the way from the routine's
+    body to the recursive call would have to carry the measure, and their rules would have to
+    be composed inside one another inside the induction -- the inner loop's rule is a
+    hypothesis of the outer loop's pass. The composition here composes ONE rule.
 -/
 
 /-- **A contract holds below every state.** The one direction that is free: what holds for
@@ -2998,6 +3186,36 @@ theorem contract_of_duty_rec_loop_in
     hd t ht hcb
       (looprule_of_body_in ρ id (fun u => wf u ∧ eval u e = eval t e) inv lbody v lo hi hl
         (fun u k hlo hhi hu hiv => hb t ht hcb u k hlo hhi hu.1 hu.2 hiv)))
+
+/-- **The same, for a loop with NO index range** -- a `retry`/`forever` pass (agent b,
+    2026-09-08).
+
+    The refusal this replaces read *"no index range to induct over"*, and the ground was
+    wrong: **the induction is over the `decreases`, never over the index.** What the range
+    buys is `lo ≤ k < hi` in the pass -- an assumption about the pass, not a premise of the
+    composition -- and `looprule_of_body` builds a `LoopRule` without it. So the only
+    difference to `contract_of_duty_rec_loop_in` is which loop-rule builder stands inside
+    the induction; the measure is carried across the passes exactly as there. -/
+theorem contract_of_duty_rec_loop
+    (ρ : Env) (f : String) (body : List Stmt) (pre : State → Prop)
+    (post : State → State → Option Value → Prop) (e : Expr) (wf : State → Prop)
+    (id : String) (lbody : List Stmt) (v : String) (inv : Expr)
+    (hr : Runs ρ f body)
+    (hl : RunsLoop ρ id lbody v)
+    (hb : ∀ (s0 : State), pre s0 → ContractBelow ρ f e s0 pre post →
+      ∀ (t : State) (k : Int), wf t → eval t e = eval s0 e →
+        eval t inv = some (.bool true) →
+        ∃ t', finalState (exec ρ lbody { t with local' := bindLocal t.local' v (.int k) })
+                = some t'
+              ∧ (wf t' ∧ eval t' e = eval s0 e) ∧ eval t' inv = some (.bool true))
+    (hd : ∀ t, pre t → ContractBelow ρ f e t pre post →
+        LoopRule ρ id (fun u => wf u ∧ eval u e = eval t e) inv →
+      ∃ s', finalState (exec ρ body t) = some s' ∧ post t s' (finalValue (exec ρ body t))) :
+    Contract ρ f pre post :=
+  contract_of_duty_rec ρ f body pre post e hr (fun t ht hcb =>
+    hd t ht hcb
+      (looprule_of_body ρ id (fun u => wf u ∧ eval u e = eval t e) inv lbody v hl
+        (fun u k hu hiv => hb t ht hcb u k hu.1 hu.2 hiv)))
 
 
 end Gabbro.Body
