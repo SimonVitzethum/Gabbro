@@ -798,3 +798,144 @@ stack asserts the refusal by name.
 * **A guardian run beside a corpus run.** `pruefe-zahlen.py` reported six findings of the form
   *"`H` steht als 1, der Lauf sagt 10"*; run again on the quiet machine, none of them is
   there. A guardian that shells out to a tool measures the machine as well as the tree.
+## 13. Run 26 — the coverage theorem: "everything except own logic" as a proposition (2026-09-08)
+
+*Numbered 13 and not 12 on purpose: §12 is held for the run worked beside this one, and a
+number that two trees claim is a merge conflict in a document that is supposed to be a
+record.*
+
+The sentence at the head of this file was, until today, a **slogan**: a claim about the
+channel that nothing in the tree could contradict. It is now a theorem in
+`programmlogik/Gabbro/Coverage.lean`, imported by `Gabbro.lean` beside `Body.lean`,
+**built with no `sorry` and no axiom beyond `propext`/`Classical.choice`/`Quot.sound`**.
+
+### 13.1 What is a theorem here, and what could never be
+
+**"The tactic closes it" is not a theorem.** Tactic success is a property of a RUN, and a
+file that stated otherwise would be the worst thing this tree can produce. So the verdict
+type carries `carriedByTactic` for exactly the forms whose only evidence is the corpus, and
+`Discharges` is `False` for them — *the classification tells the truth about what was
+proved, or the top theorem breaks.*
+
+What IS a theorem: **§1's plumbing table, turned into general lemmas.** Every proposition of
+`Coverage.lean` §5 quantifies over an arbitrary `Env`, an arbitrary `Typing` and an
+arbitrary program of the shape in question. None of them is about a unit of the corpus.
+
+### 13.2 The enumeration and the verdicts
+
+`Form` has **45 constructors**, one of which carries the 42 variants of `LeanReason` —
+**86 forms expanded**. `classify : Form → Verdict` is total by construction, and the count
+is: **32 carried** (a general lemma), **2 carried by the automation**
+(`arithmeticBounds`, `budget`), **6 assumed by name**, **4 own logic**, and the 42 refusal
+reasons under their own tags (39 refused, 3 assumed — `foreign-body`, `device-promise`,
+`walk-invariant`, the three `LeanReason::kind` calls `Assumption`).
+
+### 13.3 The top theorems, and why the last one is not a tautology
+
+```
+carried_discharges  : ∀ f : Form, classify f = .carried → Discharges f
+classify_total      : ∀ f : Form, classify f ≠ .unhandled
+ownLogic_is_the_persons : ∀ f : Form, classify f = .ownLogic → IsOwnLogic f
+nothing_of_the_language_is_left_to_the_person :
+                      ∀ f : Form, origin f = .language → classify f ≠ .ownLogic
+the_sentence        : ∀ f : Form, ¬ IsOwnLogic f →
+                        classify f = .carried ∨ classify f = .carriedByTactic ∨
+                        (∃ n, classify f = .assumed n) ∨ (∃ t, classify f = .refused t)
+```
+
+`IsOwnLogic` is a **definition written without mentioning `classify`**: the obligation's
+text comes from a clause the person wrote (`origin f = .person`) and that clause is one of
+`ensures`, `invariant`, `requires`, `reaches`. So `ownLogic_is_the_persons` is two
+independent case analyses agreeing, and `nothing_of_the_language_is_left_to_the_person` is
+the half a coverage claim usually skips: *no form whose statement the grammar fixes is
+handed over.* Beside them: `every_refusal_has_an_emitter_tag` (a refusal names a tag
+`LeanReason::tag` actually prints, and no tag is empty) and `every_assumption_has_a_name`.
+
+### 13.4 What had to become a PREMISE, and the two theorems that say why
+
+Two of the general lemmas are **false without a side condition**, and the side condition is
+therefore a premise — which is a statement about the emitter and not a convenience of the
+proof. Both negations are proved:
+
+* `store_without_the_shape_can_break_WF` — `∀ Γ σ p v, WF Γ σ → WF Γ (store σ p v)` is
+  FALSE. So `StoreCarried`'s premise (the stored value has the declared shape) is exactly
+  the goal `gabbro_wf` is pointed at, and the emitter's side condition does real work.
+* `a_contract_says_nothing_where_its_precondition_fails` — a `Contract` gives nothing at a
+  state where its `pre` fails. So the `V` duty at a call site cannot be dropped, and the
+  model is right to get STUCK at a call whose precondition does not hold.
+
+**Three further premises were needed and are named where they stand:**
+
+| lemma | premise | what it says about the emitter |
+|---|---|---|
+| `CallCarried`, `CallResultCarried` | `WF Γ s.world` at the call site | the caller carries the well-typed world; the callee's *precondition* is NOT a premise — `step` is stuck without it, so getting past the call establishes it |
+| `CallChainCarried` | the inner callee's post carries `WF` back | every `_post` the emitter writes has that conjunct; without it the outer contract has nothing to stand on |
+| `StoreBesideChainCarried` | the place written is not a link of this chain | a syntactic side condition the emitter decides — and a store INTO the chain is a relink, which is the person's own logic (§5.1) |
+
+### 13.5 The two demotions, with their ground
+
+* **`arithmeticBounds`** — `x & 251 ≤ 255`, `a*b ≤ A*B`, `0 ≤ a/b ≤ a`. What the model
+  carries is the arithmetic's MEANING (`arithmeticSemantics`: C's truncation, the sign of
+  `%`, a zero denominator, a negative operand, a mask, a shift — six theorems of
+  `Body.lean` §3.2, re-exported). The BOUNDS depend on the person's declared ranges, and
+  there is no theorem "every bound the checker decided follows"; `gabbro_bits`/`gabbro_mul`/
+  `gabbro_divmod`/`omega` close them on the corpus and that is all the evidence there is.
+* **`budget`** — the heartbeat budget (`gabbro_try`). A step that runs away takes the
+  theorem down; that is an operational property of a run.
+
+### 13.6 The guard, and what it does NOT cover
+
+`Form` and `Reason` are hand-written mirrors of `lean.rs`. A mirror that drifts still
+typechecks, and the theorem is then green and about a language that is not Gabbro — the
+`W7`/`W16` class, and §11.1 is its most recent instance. `instrumente/pruefe-deckung.py`
+holds them together: the **population** both ways, the **order** of `Reason` against
+`LeanReason::ALL`, every **tag**, every **kind**, that every `Form` has an arm in `classify`
+and `classify` no catch-all, and that every carried form has an explicit arm in
+`Discharges`. Ten speech tests, both directions; an unreadable subject is an ABORT (`2`),
+a divergence a finding (`1`).
+
+**What it does not cover, and this half is the honest one:** *that `Form` is the whole
+grammar.* The refusal half is mechanical because `lean.rs` names its refusals in one enum.
+**The CARRIED half has no such enum** — the emitter decides to carry a form by writing a
+term, at some fifty places, and there is no list to compare against. A form the grammar
+admits, the emitter carries, and `Form` never names would pass every check. *Closing that
+is a change to `lean.rs`, not to the guard.*
+
+### 13.7 Measured
+
+Local, `free -g` beside it (31 GB total, 15–17 GB available, 20 cores; `ki-pc-fisch-101`
+unreachable at the session's start — the jump host).
+
+| | before | after |
+|---|---|---|
+| modules | 190 | **190** |
+| Lean errors | 0 | **0** |
+| `sorry` | 24 | **24** |
+| seconds (P=4, sum over files) | 424 | **427** (118 s wall, warm cache) |
+| `cargo test --no-fail-fast` | 31 collections, 422 tests, 0 failed | **unchanged** |
+| `lake build` | green | **green, `Coverage.lean` with no `sorry`** |
+
+**The corpus does not move, and that is the point**: `Coverage.lean` adds a module beside
+`Body.lean` and changes nothing the emitter writes. The generated modules import
+`Gabbro.Body`, not `Gabbro`.
+
+Guardians before/after: `pruefe-kennungen.py`, `-syntax.sh`, `-grammatiktafel.py` green
+before and after; `pruefe-englisch.py` red before and after with the same finding count
+(its instrument word total moved by the new file, which is a total and not a finding);
+**`pruefe-todo.py` went from red to GREEN and `pruefe-zahlen.py` lost one finding** — both
+because `README.md`'s guardian and instrument counters were **already one step behind**
+(33 booked against 34 measured, `61 of 61` against `61 of 62`) and booking the new
+instrument corrected them to 35 and `62 of 63`. Two of `pruefe-zahlen.py`'s remaining
+findings moved their measured value (`messung/RUECKLAUFWERTE.md`, 57 → 58 and 349 → 352):
+those are counts over `instrumente/` that any new instrument shifts, they were red before,
+and re-dating that file's measurement is not this run's.
+
+### 13.8 What this run did NOT measure
+
+* **That the emitter writes the statements these lemmas assume.** Every proposition of
+  `Coverage.lean` is about the MODEL. That an `_pre`/`_post`/`_inv` says what the `.gab`
+  file says is the emitter's correctness, and §1 puts it out of scope by name
+  (`Form.checkerAndEmitterTrusted`).
+* **Points 1 and 3 of `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §0.** This file
+  answers point 2 — the proof channel answers for every form — and says nothing about a
+  form that MEANS NOTHING, nor about an obligation that vanishes on a rename.
