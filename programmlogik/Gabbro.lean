@@ -12,5 +12,9 @@
   | File        | Subject                                                        |
   |-------------|----------------------------------------------------------------|
   | `Body.lean` | the statement descent -- what a body does, statement by statement |
+  | `Coverage.lean` | WHO ANSWERS for each form -- the plumbing as general lemmas, and the
+    proposition that everything except the person's own logic is carried, assumed by name,
+    or refused with a tag |
 -/
 import Gabbro.Body
+import Gabbro.Coverage
