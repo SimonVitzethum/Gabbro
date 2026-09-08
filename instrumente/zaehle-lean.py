@@ -90,8 +90,12 @@ GRUENDE = [
                            "there is no index domain to cut. A LANGUAGE change, not a model one"),
     ("quantified-mappings", "a quantifier over `mappings of <walk>` -- hardware, the same "
                             "object a `walk` invariant speaks about, and those are ASSUMED"),
-    ("record-value", "a field of a record VALUE (`let c = f(); c.len`) -- the places of this "
-                     "model are named by a record TYPE, and a binding has none"),
+    # **CARRIED 2026-09-08 where the record type is READABLE**: a `let` that binds a record
+    # gets a ghost carrier for its fields (`lean.rs::Ctx::record_value`), so `let c = f(x);
+    # c.len` is a goal. What still falls here is a binding whose record type no declaration
+    # gives -- a FOREIGN callee's answer, or a pointer binding.
+    ("record-value", "a field of a record value whose RECORD TYPE no declaration here gives "
+                     "-- a `let` from a foreign callee, or a pointer binding"),
     ("slot-record-array", "an array inside a record held in a SLOT -- refused for SOUNDNESS: "
                           "a record type is ONE object here, so two slots' queues would be one place"),
     ("layout-buffer-length", "`lenof` of a buffer whose length nothing declares (over a "
