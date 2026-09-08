@@ -750,6 +750,41 @@ theorem chase_succ (σ : World) (c via : String) (to k : Int) (n : Nat) :
   | zero => rw [chase_zero]; simp
   | succ n => rw [chase_succ]; simp
 
+/-- **A chain does not see a store beside it.** A store into another field, another
+    carrier, a global or a record field leaves every `via`-chain as it was -- the frame of
+    `reaches`, so that an invariant over a chain survives the stores a body makes next to
+    it without the person walking the chain (2026-09-08, `55-kindkette`). -/
+theorem chase_store_ne (σ : World) (c via : String) (to : Int) (p : Place) (v : Value)
+    (h : ∀ m, p ≠ .slot c m via) (k : Int) (n : Nat) :
+    chase (store σ p v) c via to k n = chase σ c via to k n := by
+  induction n generalizing k with
+  | zero => rw [chase_zero, chase_zero]
+  | succ n ih =>
+    rw [chase_succ, chase_succ]
+    by_cases hk : k = to
+    · simp [hk]
+    · simp only [hk, if_false]
+      rw [store_elsewhere _ _ _ _ (fun e => h k e.symm)]
+      cases σ (.slot c k via) <;> simp [ih]
+
+@[simp] theorem chase_store_field (σ : World) (c c' via f' : String) (k' : Int) (v : Value)
+    (h : f' ≠ via) (to' k : Int) (n : Nat) :
+    chase (store σ (.slot c' k' f') v) c via to' k n = chase σ c via to' k n :=
+  chase_store_ne σ c via to' _ v (fun _ e => by cases e; exact h rfl) k n
+
+@[simp] theorem chase_store_carrier (σ : World) (c c' via f' : String) (k' : Int) (v : Value)
+    (h : c' ≠ c) (to' k : Int) (n : Nat) :
+    chase (store σ (.slot c' k' f') v) c via to' k n = chase σ c via to' k n :=
+  chase_store_ne σ c via to' _ v (fun _ e => by cases e; exact h rfl) k n
+
+@[simp] theorem chase_store_global (σ : World) (c via g : String) (v : Value) (to' k : Int) (n : Nat) :
+    chase (store σ (.global g) v) c via to' k n = chase σ c via to' k n :=
+  chase_store_ne σ c via to' _ v (fun _ e => by cases e) k n
+
+@[simp] theorem chase_store_fieldPlace (σ : World) (c via r f : String) (v : Value) (to' k : Int) (n : Nat) :
+    chase (store σ (.field r f) v) c via to' k n = chase σ c via to' k n :=
+  chase_store_ne σ c via to' _ v (fun _ e => by cases e) k n
+
 theorem allBelow_true_iff (f : Nat → Option Value) (n : Nat) :
     allBelow f n = some (.bool true) ↔ ∀ k, k < n → f k = some (.bool true) := by
   induction n with
@@ -1982,6 +2017,62 @@ elab_rules : tactic
       catch _ =>
         saved.restore
 
+/-- Every closed `a &&& b`, `a ^^^ b`, `a ||| b` over `Nat` in `e` -- `0`, `1`, `2` for the
+    operator. -/
+partial def GabbroMeta.collectAnd (e : Lean.Expr) (acc : Array (Nat × Lean.Expr × Lean.Expr)) :
+    Array (Nat × Lean.Expr × Lean.Expr) :=
+  match e with
+  | .app .. =>
+    let fn := e.getAppFn
+    let args := e.getAppArgs
+    let acc := args.foldl (fun a x => GabbroMeta.collectAnd x a) (GabbroMeta.collectAnd fn acc)
+    if args.size == 6 && args[0]!.isConstOf ``Nat && !args[4]!.hasLooseBVars && !args[5]!.hasLooseBVars then
+      if fn.isConstOf ``HAnd.hAnd then acc.push (0, args[4]!, args[5]!)
+      else if fn.isConstOf ``HXor.hXor then acc.push (1, args[4]!, args[5]!)
+      else if fn.isConstOf ``HOr.hOr then acc.push (2, args[4]!, args[5]!)
+      else acc
+    else acc
+  | .lam _ _ b _ | .forallE _ _ b _ => GabbroMeta.collectAnd b acc
+  | .letE _ _ v b _ => GabbroMeta.collectAnd b (GabbroMeta.collectAnd v acc)
+  | .mdata _ b => GabbroMeta.collectAnd b acc
+  | .proj _ _ b => GabbroMeta.collectAnd b acc
+  | _ => acc
+
+open Lean Elab Tactic Meta in
+/-- **`gabbro_bits` -- the bounds of every bitwise `and` in the goal.** `x & 251` on a `u8`
+    field is `↑(x.toNat &&& 251)` in the model, and `omega` cannot read `&&&`; the bounds
+    `n &&& m ≤ m` and `n &&& m ≤ n` (`Nat.and_le_right/left`) are what the store into a
+    ranged place needs, and the person never wrote them (2026-09-08, `planer`). -/
+elab "gabbro_bits" : tactic => do
+  let g ← getMainGoal
+  let ands ← g.withContext do
+    let mut acc := GabbroMeta.collectAnd (← instantiateMVars (← g.getType)) #[]
+    for d in ← getLCtx do
+      if d.isImplementationDetail then continue
+      acc := GabbroMeta.collectAnd (← instantiateMVars d.type) acc
+    pure acc
+  let ands := ands.foldl (fun acc t => if acc.any (fun u => u.1 == t.1 && u.2.1 == t.2.1 && u.2.2 == t.2.2) then acc else acc.push t) #[]
+  let close ← `(tactic| first | assumption | omega)
+  for (op, a, b) in ands do
+    let as ← (← getMainGoal).withContext do Term.exprToSyntax a
+    let bs ← (← getMainGoal).withContext do Term.exprToSyntax b
+    if op == 0 then
+      evalTactic (← `(tactic| try have := @Nat.and_le_right $as $bs))
+      evalTactic (← `(tactic| try have := @Nat.and_le_left $as $bs))
+    else
+      -- `x ^^^ y < 2^n` and `x ||| y < 2^n` where both operands are below `2^n`: the
+      -- width is tried from the narrowest up, and the first the context bounds is kept
+      for w in [8, 16, 32, 64] do
+        let ws := Syntax.mkNumLit (toString w)
+        let saved ← saveState
+        try
+          if op == 1 then
+            GabbroMeta.haveClosed (← `(tactic| have := @Nat.xor_lt_two_pow $as $bs $ws ?_ ?_)) close
+          else
+            GabbroMeta.haveClosed (← `(tactic| have := @Nat.or_lt_two_pow $as $bs $ws ?_ ?_)) close
+          break
+        catch _ => saved.restore
+
 /-- **`gabbro_wf Γ` closes `WF Γ (store … (store σ p v) …)` from `WF Γ σ`**: every store
     is peeled with `WF_store`, and the side condition -- the stored value has the declared
     shape -- is decided by unfolding the typing, or read off a well-typed world where the
@@ -2002,11 +2093,11 @@ macro_rules
                    first
                      | (simp [Gabbro.Body.Value.hasShape]; done)
                      -- a ranged place: the bounds, by the arithmetic the context carries
-                     | (simp [Gabbro.Body.Value.hasShape]; omega)
+                     | (simp [Gabbro.Body.Value.hasShape]; gabbro_bits; omega)
                      | (apply Gabbro.Body.WF_read <;> first | assumption | gabbro_assumption | rfl)
                      -- a value read from another ranged place: its witness, then the bounds
-                     | (simp [Gabbro.Body.Value.hasShape, *]; omega)
-                     | (simp_all [Gabbro.Body.Value.hasShape]; omega)
+                     | (simp [Gabbro.Body.Value.hasShape, *]; gabbro_bits; omega)
+                     | (simp_all [Gabbro.Body.Value.hasShape]; gabbro_bits; omega)
                      -- and what none of these closes is left reduced, for the person
                      | simp [Gabbro.Body.Value.hasShape]))))
 
@@ -2484,9 +2575,16 @@ open Lean Elab Tactic Meta in
     whose premise is not is left out, not left open. -/
 elab "gabbro_divmod" : tactic => do
   let g ← getMainGoal
+  -- in the goal and in the hypotheses: a split condition (`hcase`) carries the term too
   let terms ← g.withContext do
-    pure (GabbroMeta.collectDivMod (← instantiateMVars (← g.getType)) #[])
+    let mut acc := GabbroMeta.collectDivMod (← instantiateMVars (← g.getType)) #[]
+    for d in ← getLCtx do
+      if d.isImplementationDetail then continue
+      acc := GabbroMeta.collectDivMod (← instantiateMVars d.type) acc
+    pure acc
   let close ← `(tactic| first | assumption | omega)
+  -- each term once: the same quotient stands in the goal and in three hypotheses
+  let terms := terms.foldl (fun acc t => if acc.any (fun u => u.1 == t.1 && u.2.1 == t.2.1 && u.2.2 == t.2.2) then acc else acc.push t) #[]
   for (isDiv, a, b) in terms do
     let as ← (← getMainGoal).withContext do Term.exprToSyntax a
     let bs ← (← getMainGoal).withContext do Term.exprToSyntax b
@@ -2533,7 +2631,11 @@ open Lean Elab Tactic Meta in
 elab "gabbro_mul" : tactic => do
   let g ← getMainGoal
   let prods ← g.withContext do
-    pure (GabbroMeta.collectMul (← instantiateMVars (← g.getType)) #[])
+    let mut acc := GabbroMeta.collectMul (← instantiateMVars (← g.getType)) #[]
+    for d in ← getLCtx do
+      if d.isImplementationDetail then continue
+      acc := GabbroMeta.collectMul (← instantiateMVars d.type) acc
+    pure acc
   let close ← `(tactic| first | assumption | omega)
   -- the literal upper bound of `x` the context holds, if any: a hypothesis `x ≤ A`
   let upper (x : Lean.Expr) : TacticM (Option (TSyntax `term)) := do
@@ -2547,6 +2649,7 @@ elab "gabbro_mul" : tactic => do
           if (← isDefEq a x) && b.isAppOfArity ``OfNat.ofNat 3 then
             return some (← Term.exprToSyntax d.toExpr)
       return none
+  let prods := prods.foldl (fun acc t => if acc.any (fun u => u.1 == t.1 && u.2 == t.2) then acc else acc.push t) #[]
   for (a, b) in prods do
     let as ← (← getMainGoal).withContext do Term.exprToSyntax a
     let bs ← (← getMainGoal).withContext do Term.exprToSyntax b
@@ -2559,6 +2662,26 @@ elab "gabbro_mul" : tactic => do
       try
         GabbroMeta.haveClosed (← `(tactic| have := Int.mul_le_mul $ha $hb ?_ ?_)) close
       catch _ => saved.restore
+
+open Lean Elab Tactic Meta in
+/-- **`gabbro_values` -- a callee's answer of a shape the model does not carry, by cases.**
+    A `let x = f(a) else (e) { … }` reads the answer as `match some v with | reason e => …
+    | v => …`, and where `f`'s answer has no shape (a record value, a token) the promise
+    only says `∃ v, r = some v`: the `match` stands on a variable. It is split by its
+    constructors here -- each arm is one program path, and the other steps close them. -/
+elab "gabbro_values" : tactic => do
+  let g ← getMainGoal
+  let vs ← g.withContext do
+    let e ← instantiateMVars (← g.getType)
+    let mut out : Array Lean.FVarId := #[]
+    for d in ← getLCtx do
+      if d.isImplementationDetail then continue
+      if d.type.isConstOf ``Gabbro.Body.Value && e.containsFVar d.fvarId then
+        out := out.push d.fvarId
+    pure out
+  for v in vs.toList.take 2 do
+    let vs ← (← getMainGoal).withContext do Term.exprToSyntax (mkFVar v)
+    evalTactic (← `(tactic| all_goals (try cases $vs:term)))
 
 open Lean.Parser.Tactic in
 /-- **The pipeline** -- what `gabbro_auto` runs before it gives up on a goal: the model's
@@ -2584,6 +2707,13 @@ macro "gabbro_pipeline" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*]));
              gabbro_try 200 (all_goals (try gabbro_cases 3 [$ts,*]));
              gabbro_try 200 (all_goals (try gabbro_calls $t [$ts,*]));
+             -- an answer without a shape, by its constructors -- and the call after it
+             gabbro_try 100 (all_goals (try gabbro_values));
+             gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*]));
+             gabbro_try 300 (all_goals (try gabbro_calls $t [$ts,*]));
+             gabbro_try 100 (all_goals (try gabbro_values));
+             gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*]));
+             gabbro_try 300 (all_goals (try gabbro_calls $t [$ts,*]));
              gabbro_try 200 (all_goals (try gabbro_forall [$ts,*]));
              gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*]));
              gabbro_try 50 (all_goals (try (repeat' apply And.intro)));
@@ -2621,6 +2751,7 @@ macro "gabbro_pipeline" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              -- the bounds of a division or remainder by a variable, then the arithmetic
              gabbro_try 100 (all_goals (try gabbro_divmod));
              gabbro_try 100 (all_goals (try gabbro_mul));
+             gabbro_try 100 (all_goals (try gabbro_bits));
              gabbro_try 100 (all_goals (try omega))))
 
 open Lean.Parser.Tactic in

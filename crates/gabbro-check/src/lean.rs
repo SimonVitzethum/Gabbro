@@ -3783,7 +3783,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
     // person's goal is even visible. Each step of the pipeline runs under its own budget
     // (`gabbro_try`, in the model), and the declaration's budget here is the sum of them --
     // a step that runs out leaves its goal, and the theorem does not go red.
-    s.push_str("set_option autoImplicit false\nset_option maxHeartbeats 9600000\n\nopen Gabbro.Body\n\n");
+    s.push_str("set_option autoImplicit false\nset_option maxHeartbeats 11300000\n\nopen Gabbro.Body\n\n");
     s.push_str(&format!("namespace GabbroDuty.{name}\n\n"));
 
     // ---- what is not here ---------------------------------------------------------------
