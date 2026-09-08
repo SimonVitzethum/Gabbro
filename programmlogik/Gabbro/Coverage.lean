@@ -232,6 +232,38 @@ inductive Form where
   | quantChain
   /-- `forall f in fields of F : ...` where the body does not read the binder. -/
   | quantFields
+  /-- `forall x in descendants of T.slots[p] : ...`, `... in ancestors of ...` -- the index
+      domain CUT by a reach along the table's `tree` edge. -/
+  | quantReach
+  -- ### the seven statements the emitter carried and this enumeration did not name
+  --     (2026-09-08, agent h). Found by the register `LeanCarried` of `lean.rs`: each of
+  --     these is a form the grammar admits, the emitter writes a term for, and `Form` was
+  --     silent about. Six of the seven are the CARRIED half of a form whose REFUSED half
+  --     was named all along -- `let ... else` at a place is refused and at a call carried,
+  --     `publishes`/`awaits` at a suffix refused and bare carried, `locks` refused only as
+  --     a fallback, `narrow` refused off a range and carried on one. *The refusal was in
+  --     the register because refusals have an enum; the carry was not because carries had
+  --     none.*
+  /-- `match e { Case => ... }` over a REASON -- the third `match`, beside the tagged one
+      and the option one. `M123` closes the enumeration, so an arm-less reason is stuck. -/
+  | reasonMatch
+  /-- `return f(a);` -- a call whose answer is returned straight on (`Stmt.retCall`). -/
+  | callResultReturned
+  /-- `let n = f(a) else (e) { ... };` -- the error propagation. The `place` shape of the
+      same syntax is refused (`let-else`); THIS shape is carried. -/
+  | callWithErrorExit
+  /-- `breaking I { ... }` -- the suspension of a table invariant. Its meaning is the
+      body's, and the duty stands beside it. -/
+  | invariantSuspension
+  /-- `publishes a = e;` at a bare atomic -- a store into the world at a `.global` place.
+      At a place with a suffix it is refused (`publish`). -/
+  | publishAtomic
+  /-- `awaits n = a;` at a bare atomic -- a read of the world into a binding. At a place
+      with a suffix it is refused (`await`). -/
+  | awaitAtomic
+  /-- `locks S { ... }` -- the critical section. Its meaning is the body's, and what makes
+      the sequential reading sound is that the lock is held (`H005`/`H006`). -/
+  | criticalSection
   -- ### the named assumptions (`PLAN.md` section 6)
   /-- The initial state: a well-typed world in which every invariant holds. -/
   | initialState
@@ -286,7 +318,9 @@ def classify : Form → Verdict
   | .answerWithShape | .answerWithoutShape | .controlFlow | .localBinding | .sequencing
   | .loopExit | .storeBesideRead | .storeBesideChain | .arithmeticSemantics
   | .quantifiedPremise | .quantSlots | .quantElems | .quantQueue | .quantChain
-  | .quantFields => .carried
+  | .quantFields | .quantReach
+  | .reasonMatch | .callResultReturned | .callWithErrorExit | .invariantSuspension
+  | .publishAtomic | .awaitAtomic | .criticalSection => .carried
   | .arithmeticBounds => .carriedByTactic
   | .budget => .carriedByTactic
   | .initialState => .assumed "Initially s0"
@@ -964,6 +998,178 @@ theorem recursion_in_loop_carried : RecursionInLoopCarried :=
   fun ρ f body pre post e wf id lbody v lo hi inv hr hl hb hd =>
     contract_of_duty_rec_loop_in ρ f body pre post e wf id lbody v lo hi inv hr hl hb hd
 
+/-! ### 5.8b The seven statements the register found (2026-09-08, agent h)
+
+    Every proposition here answers for a form the emitter has carried since the day it was
+    written and this enumeration did not name. They are not new behaviour of the emitter;
+    they are the half of it that had no register. -/
+
+/-- **A quantifier over a reach domain** -- `descendants of`, `ancestors of`. The domain is
+    the table's index range CUT by a chain along the `tree` edge, so the discharge is both
+    halves at once: the index range as `allBelow`, and the chain the model follows with fuel
+    against the chain as a relation. -/
+def ReachDomainCarried : Prop := IndexDomainCarried ∧ ChainDomainCarried
+
+theorem reach_domain_carried : ReachDomainCarried :=
+  ⟨index_domain_carried, chain_domain_carried⟩
+
+/-- **A `match` over a reason.** Where some arm carries the case's name the model runs that
+    arm; where the subject is not a reason at all it is STUCK, which is the honest outcome
+    and not a silent fall-through. -/
+def ReasonMatchCarried : Prop :=
+  (∀ (ρ : Env) (arms : List (String × List Stmt)) (g : Expr) (s : State) (x : String),
+     eval s g = some (.reason x) → (∃ a ∈ arms, a.1 = x) →
+     ∃ b : List Stmt, step ρ (.onReason g arms) s = exec ρ b s) ∧
+  (∀ (ρ : Env) (arms : List (String × List Stmt)) (g : Expr) (s : State),
+     (∀ x, eval s g ≠ some (.reason x)) → step ρ (.onReason g arms) s = .stuck)
+
+theorem reason_match_carried : ReasonMatchCarried := by
+  constructor
+  · intro ρ arms g s x hg ⟨a, ha, hax⟩
+    simp only [step, hg]
+    clear hg
+    induction arms with
+    | nil => exact absurd ha (by simp)
+    | cons b rest ih =>
+      obtain ⟨bn, bb⟩ := b
+      simp only [pickArm]
+      by_cases hb : bn = x
+      · simp only [if_pos hb]
+        exact ⟨bb, rfl⟩
+      · simp only [if_neg hb]
+        rcases List.mem_cons.mp ha with h | h
+        · subst h; exact absurd hax hb
+        · exact ih h
+  · intro ρ arms g s hno
+    cases hg : eval s g with
+    | none => simp [step, hg]
+    | some v =>
+      cases v with
+      | reason x => exact absurd hg (hno x)
+      | int _ => simp [step, hg]
+      | bool _ => simp [step, hg]
+      | absent => simp [step, hg]
+      | present _ => simp [step, hg]
+      | tagged _ _ => simp [step, hg]
+
+/-- **`return f(a);`** -- the callee's contract fires, the answer returned is the callee's,
+    the world is the one the callee left and the caller's locals are untouched. Same
+    premises as every other call: the world is well typed, and the precondition is not a
+    premise because `step` is stuck without it. -/
+def CallResultReturnedCarried : Prop :=
+  ∀ (ρ : Env) (Γ : Typing) (f : String) (ps : List String) (as : List Expr) (pre : Expr)
+    (Q : State → State → Option Value → Prop) (s s' : State) (r : Option Value),
+    Contract ρ f (fun t => WF Γ t.world ∧ eval t pre = some (.bool true)) Q →
+    WF Γ s.world →
+    step ρ (.retCall f ps as pre) s = .returned s' r →
+    ∃ vs, evalAll s as = some vs ∧
+      Q ⟨s.world, bindAll ps vs (fun _ => .absent)⟩
+        (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).1
+        (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).2 ∧
+      r = (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).2 ∧
+      s'.world = (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).1.world ∧
+      s'.local' = s.local'
+
+theorem call_result_returned_carried : CallResultReturnedCarried := by
+  intro ρ Γ f ps as pre Q s s' r hc hwf hstep
+  simp only [step] at hstep
+  split at hstep
+  · rename_i vs hvs
+    split at hstep
+    · rename_i hpre
+      refine ⟨vs, hvs, hc _ ⟨hwf, hpre⟩, ?_, ?_, ?_⟩
+      · cases hstep; rfl
+      · cases hstep; rfl
+      · cases hstep; rfl
+    · exact absurd hstep (by simp)
+  · exact absurd hstep (by simp)
+
+/-- **`let n = f(a) else (e) { ... };`** -- the one error propagation. The callee's contract
+    fires exactly as at any other call; what the answer IS then decides the continuation: a
+    `reason` runs the `else` block with the reason bound, any other value fills the binding
+    and the body goes on. *Two exits out of one call, and both of them named.* -/
+def CallWithErrorExitCarried : Prop :=
+  ∀ (ρ : Env) (Γ : Typing) (f n : String) (ps : List String) (as : List Expr) (pre : Expr)
+    (err : String) (onErr : List Stmt)
+    (Q : State → State → Option Value → Prop) (s : State) (vs : List Value),
+    Contract ρ f (fun t => WF Γ t.world ∧ eval t pre = some (.bool true)) Q →
+    WF Γ s.world →
+    evalAll s as = some vs →
+    eval ⟨s.world, bindAll ps vs (fun _ => .absent)⟩ pre = some (.bool true) →
+    Q ⟨s.world, bindAll ps vs (fun _ => .absent)⟩
+      (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).1
+      (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).2 ∧
+    (∀ x, (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).2 = some (.reason x) →
+      step ρ (.bindCallElse n f ps as pre err onErr) s =
+        exec ρ onErr ⟨(ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).1.world,
+                     bindLocal s.local' err (.reason x)⟩) ∧
+    (∀ v, (ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).2 = some v →
+      (∀ x, v ≠ .reason x) →
+      step ρ (.bindCallElse n f ps as pre err onErr) s =
+        .running ⟨(ρ f ⟨s.world, bindAll ps vs (fun _ => .absent)⟩).1.world,
+                  bindLocal s.local' n v⟩)
+
+theorem call_with_error_exit_carried : CallWithErrorExitCarried := by
+  intro ρ Γ f n ps as pre err onErr Q s vs hc hwf hvs hpre
+  refine ⟨hc _ ⟨hwf, hpre⟩, ?_, ?_⟩
+  · intro x hx
+    simp only [step, hvs, hpre, hx]
+  · intro v hv hnr
+    cases v with
+    | reason x => exact absurd rfl (hnr x)
+    | int _ => simp only [step, hvs, hpre, hv]
+    | bool _ => simp only [step, hvs, hpre, hv]
+    | absent => simp only [step, hvs, hpre, hv]
+    | present _ => simp only [step, hvs, hpre, hv]
+    | tagged _ _ => simp only [step, hvs, hpre, hv]
+
+/-- **`breaking I { ... }` and `locks S { ... }` change no state of their own.** Both are
+    the body's meaning, and both are read as such for a REASON that stands elsewhere: at a
+    `breaking` the duty to restore `I` stands beside the block, at a `locks` the sequential
+    reading is what the lock passes buy. *A model that added state here would be a second
+    register over a statement a pass already decides.* -/
+def InvariantSuspensionCarried : Prop :=
+  ∀ (ρ : Env) (invs : List String) (b : List Stmt) (s : State),
+    step ρ (.breaking invs b) s = exec ρ b s
+
+theorem invariant_suspension_carried : InvariantSuspensionCarried := fun _ _ _ _ => rfl
+
+def CriticalSectionCarried : Prop :=
+  ∀ (ρ : Env) (l : String) (b : List Stmt) (s : State),
+    step ρ (.locked l b) s = exec ρ b s
+
+theorem critical_section_carried : CriticalSectionCarried := fun _ _ _ _ => rfl
+
+/-- **`publishes a = e;`** -- a store into the world at a `.global` place, and nothing else
+    moves. The payload list is what the pass checked; the datum carries the bare atomic. -/
+def PublishAtomicCarried : Prop :=
+  ∀ (ρ : Env) (a : String) (e : Expr) (pl : List String) (s s' : State),
+    step ρ (.publish a e pl) s = .running s' →
+    ∃ v, eval s e = some v ∧ s'.world = store s.world (.global a) v ∧ s'.local' = s.local'
+
+theorem publish_atomic_carried : PublishAtomicCarried := by
+  intro ρ a e pl s s' hstep
+  simp only [step] at hstep
+  split at hstep
+  · rename_i v hv
+    cases hstep
+    exact ⟨v, hv, rfl, rfl⟩
+  · exact absurd hstep (by simp)
+
+/-- **`awaits n = a;`** -- a read of the world into a binding; the world is untouched and no
+    other name moves. -/
+def AwaitAtomicCarried : Prop :=
+  ∀ (ρ : Env) (n a : String) (pl : List String) (s s' : State),
+    step ρ (.awaitLoad n a pl) s = .running s' →
+    s'.local' n = s.world (.global a) ∧ s'.world = s.world ∧
+      ∀ m, m ≠ n → s'.local' m = s.local' m
+
+theorem await_atomic_carried : AwaitAtomicCarried := by
+  intro ρ n a pl s s' hstep
+  simp only [step] at hstep
+  cases hstep
+  exact ⟨by simp [bindLocal], rfl, fun m hm => by simp [bindLocal, hm]⟩
+
 /-! ### 5.9 The premises are not decoration -- two theorems that say so
 
     Both statements below are the general lemmas of section 5 with a premise REMOVED, and
@@ -1033,6 +1239,14 @@ def Discharges : Form → Prop
   | .quantQueue => IndexDomainCarried
   | .quantChain => ChainDomainCarried
   | .quantFields => FieldsDomainCarried
+  | .quantReach => ReachDomainCarried
+  | .reasonMatch => ReasonMatchCarried
+  | .callResultReturned => CallResultReturnedCarried
+  | .callWithErrorExit => CallWithErrorExitCarried
+  | .invariantSuspension => InvariantSuspensionCarried
+  | .publishAtomic => PublishAtomicCarried
+  | .awaitAtomic => AwaitAtomicCarried
+  | .criticalSection => CriticalSectionCarried
   | _ => False
 
 /-- **Every form the classifier calls `carried` has a general lemma that discharges it.**
@@ -1071,6 +1285,14 @@ theorem carried_discharges : ∀ f : Form, classify f = .carried → Discharges 
       | exact index_domain_carried
       | exact chain_domain_carried
       | exact fields_domain_carried
+      | exact reach_domain_carried
+      | exact reason_match_carried
+      | exact call_result_returned_carried
+      | exact call_with_error_exit_carried
+      | exact invariant_suspension_carried
+      | exact publish_atomic_carried
+      | exact await_atomic_carried
+      | exact critical_section_carried
       | (rename_i r; cases r <;> simp [Reason.kind] at h)
       | exact absurd h (by simp)
 

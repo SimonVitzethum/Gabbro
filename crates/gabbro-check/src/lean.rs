@@ -967,11 +967,11 @@ fn place_carrier(base: &str, tab: &str) -> String {
 
 /// A place, as a `Gabbro.Body.Expr`. **Three forms and nothing else:** a bare name,
 /// `carrier.slots[i].field`, and `carrier.field`.
-fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
+fn place_term(o: &Ort, c: &mut Ctx) -> Result<Carried, LeanReason> {
     if o.suffixe.is_empty() {
         let n = &o.basis.text;
         if c.is_local(n) {
-            return Ok(format!("(.name {})", quoted(n)));
+            return Ok(LeanCarried::PlaceLocal.term(format!("(.name {})", quoted(n))));
         }
         // **`passes` in a loop invariant is the pass counter** (agent b, 2026-09-08): the
         // ghost local the emitter binds to 0 before the loop and the pass increases by one.
@@ -979,7 +979,8 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
         // decided that no declared name of that spelling is in the way.
         if n == crate::PASSZAEHLER && passes_is_free(c) {
             return if c.is_local(crate::PASSZAEHLER_LEAN) {
-                Ok(format!("(.name {})", quoted(crate::PASSZAEHLER_LEAN)))
+                Ok(LeanCarried::PlacePassCounter
+                    .term(format!("(.name {})", quoted(crate::PASSZAEHLER_LEAN))))
             } else {
                 Err(LeanReason::PassCounter)
             };
@@ -988,14 +989,15 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
         // called "WURZEL" would be a place nothing declares. Table constants are looked up
         // under the tables in scope as well.
         if let Some(v) = const_value(n, c) {
-            return Ok(format!("(.lit (.int {}))", int_lit(v)));
+            return Ok(LeanCarried::PlaceConstant.term(format!("(.lit (.int {}))", int_lit(v))));
         }
-        return Ok(format!("(.global {})", quoted(n)));
+        return Ok(LeanCarried::PlaceGlobal.term(format!("(.global {})", quoted(n))));
     }
     if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
         let (base, shape) = record_field(&o.basis.text, &f.text, c)?;
         c.note_record(&base, &f.text, shape);
-        return Ok(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text)));
+        return Ok(LeanCarried::PlaceRecordField
+            .term(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text))));
     }
     // **A register of a device is the device's promise** -- `v.GSTS.TES` reads what the
     // hardware answers, and a clause over it is an assumption by name, not a refusal.
@@ -1009,7 +1011,8 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
         let idx = expr_term(i, c)?;
         c.note(&tab, "elem", shape, &format!("element of `{tab}`"));
         c.note_option(&tab, "elem", shape, i);
-        return Ok(format!("(.place {} {} \"elem\")", quoted(&tab), idx));
+        return Ok(LeanCarried::PlaceArrayElement
+            .term(format!("(.place {} {} \"elem\")", quoted(&tab), idx)));
     }
     // **`T.slots[i].f.g[j]` -- an array inside a record held in a SLOT** (2026-09-08). The
     // place exists in the program and the C emitter writes it; this model cannot, and the
@@ -1033,12 +1036,12 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
     let carrier = place_carrier(&base, &tab);
     c.note(&carrier, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
     c.note_option(&carrier, &f.text, shape, i);
-    Ok(format!(
+    Ok(LeanCarried::PlaceSlotField.term(format!(
         "(.place {} {} {})",
         quoted(&carrier),
         idx,
         quoted(&f.text)
-    ))
+    )))
 }
 
 /// **The pseudo-table and the index of an array place** -- `r.f[i]` at a record carrier
@@ -1091,7 +1094,7 @@ fn const_value(n: &str, c: &Ctx) -> Option<i128> {
 /// an index too -- `WURZEL`, a constant -- and then the table is the other operand's.
 fn slot_index(o: &Ort, c: &mut Ctx) -> Result<(Option<String>, String), LeanReason> {
     if o.suffixe.is_empty() {
-        return Ok((None, place_term(o, c)?));
+        return Ok((None, place_term(o, c)?.into_term()));
     }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(i)] = &o.suffixe[..] else {
         return Err(LeanReason::Quantified);
@@ -1100,22 +1103,26 @@ fn slot_index(o: &Ort, c: &mut Ctx) -> Result<(Option<String>, String), LeanReas
         return Err(LeanReason::Quantified);
     }
     let tab = c.table_of(&o.basis.text).ok_or(LeanReason::Carrier)?.clone();
-    Ok((Some(tab), expr_term(i, c)?))
+    Ok((Some(tab), expr_term(i, c)?.into_term()))
 }
 
 /// An expression as a `Gabbro.Body.Expr`.
 ///
 /// **The `match` has no catch-all**, and that is deliberate even though every unlisted arm
 /// would refuse: a new expression form must be DECIDED here, not defaulted.
-fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
+fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
     match &e.art {
-        ExprArt::Zahl(n) => Ok(format!("(.lit (.int {n}))")),
-        ExprArt::Wahr => Ok("(.lit (.bool true))".into()),
-        ExprArt::Falsch => Ok("(.lit (.bool false))".into()),
+        ExprArt::Zahl(n) => Ok(LeanCarried::ExprLiteral.term(format!("(.lit (.int {n}))"))),
+        ExprArt::Wahr => Ok(LeanCarried::ExprLiteral.term("(.lit (.bool true))")),
+        ExprArt::Falsch => Ok(LeanCarried::ExprLiteral.term("(.lit (.bool false))")),
         ExprArt::Klammer(x) => expr_term(x, c),
         ExprArt::Ort(o) => place_term(o, c),
-        ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("(.un .not {})", expr_term(x, c)?)),
-        ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(.un .neg {})", expr_term(x, c)?)),
+        ExprArt::Unaer(UnOp::Nicht, x) => {
+            Ok(LeanCarried::ExprUnary.term(format!("(.un .not {})", expr_term(x, c)?)))
+        }
+        ExprArt::Unaer(UnOp::Negativ, x) => {
+            Ok(LeanCarried::ExprUnary.term(format!("(.un .neg {})", expr_term(x, c)?)))
+        }
         // **`~` has no term here, and the reason is the model and not the operator.** A
         // complement is `2^n - 1 - x`, and the `n` is nowhere in this channel.
         ExprArt::Unaer(UnOp::BitNicht, _) => Err(LeanReason::Expression),
@@ -1143,29 +1150,34 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                 BinOp::SchiebLinks => "shl",
                 BinOp::SchiebRechts => "shr",
             };
-            Ok(format!(
+            Ok(LeanCarried::ExprBinary.term(format!(
                 "(.bin .{z} {} {})",
                 expr_term(a, c)?,
                 expr_term(b, c)?
-            ))
+            )))
         }
         ExprArt::Ruf(r) if c.hoisted.contains_key(&(r as *const Ruf as usize)) => {
-            Ok(format!("(.name {})", quoted(&c.hoisted[&(r as *const Ruf as usize)])))
+            Ok(LeanCarried::ExprHoistedCall
+                .term(format!("(.name {})", quoted(&c.hoisted[&(r as *const Ruf as usize)]))))
         }
         ExprArt::Ruf(r) => match r.path().and_then(|p| p.teile.last()).map(|i| &i.text) {
-            Some(n) if n == "None" && r.argumente.is_empty() => Ok("(.lit .absent)".into()),
+            Some(n) if n == "None" && r.argumente.is_empty() => {
+                Ok(LeanCarried::ExprOption.term("(.lit .absent)"))
+            }
             Some(n) if n == "Some" && r.argumente.len() == 1 => {
-                Ok(format!("(.someOf {})", expr_term(&r.argumente[0], c)?))
+                Ok(LeanCarried::ExprOption.term(format!("(.someOf {})", expr_term(&r.argumente[0], c)?)))
             }
             // **`Case(e)` of a `tagged type` is a VALUE**, and so is a bare `Case`.
             Some(n) if c.unit.variants.contains_key(n.as_str()) => {
                 match (c.unit.variants[n.as_str()], r.argumente.len()) {
-                    (Some(false), 0) => Ok(format!("(.tagOf {} none)", quoted(n))),
-                    (Some(true), 1) => Ok(format!(
+                    (Some(false), 0) => {
+                        Ok(LeanCarried::ExprTagged.term(format!("(.tagOf {} none)", quoted(n))))
+                    }
+                    (Some(true), 1) => Ok(LeanCarried::ExprTagged.term(format!(
                         "(.tagOf {} (some {}))",
                         quoted(n),
                         expr_term(&r.argumente[0], c)?
-                    )),
+                    ))),
                     _ => Err(LeanReason::ConstructedValue),
                 }
             }
@@ -1202,11 +1214,11 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         // declaration and not of the run. `sizeof` is about the LAYOUT, and `lenof` of a
         // buffer pointer about the run -- this model has neither.
         ExprArt::Eingebaut(b) => match b.as_ref() {
-            Eingebaut::Aligned(x, n) => Ok(format!(
+            Eingebaut::Aligned(x, n) => Ok(LeanCarried::ExprAligned.term(format!(
                 "(.bin .eq (.bin .rem {} {}) (.lit (.int 0)))",
                 expr_term(x, c)?,
                 expr_term(n, c)?
-            )),
+            ))),
             Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
                 let tab = match &o.suffixe[..] {
                     [OrtSuffix::Feld(f)] => c
@@ -1223,7 +1235,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                     .filter(|info| info.fields.len() == 1 && info.fields[0].0 == "elem")
                     .and_then(|info| info.count);
                 match count {
-                    Some(n) => Ok(format!("(.lit (.int {}))", int_lit(n))),
+                    Some(n) => {
+                        Ok(LeanCarried::ExprArrayLength.term(format!("(.lit (.int {}))", int_lit(n))))
+                    }
                     // **A `lenof` whose place is not a fixed-length array** -- a pointer to
                     // a `format`, say. Its own refusal since 2026-09-08: the ground is that
                     // NOTHING DECLARES the length, not that the layout is unknown, and the
@@ -1240,8 +1254,8 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
             ResultSite::Bound => {
                 let inner = place_term(o, c)?;
                 let n = c.olds.len() + 1;
-                c.olds.push(inner);
-                Ok(format!("(.name \"old#{n}\")"))
+                c.olds.push(inner.into_term());
+                Ok(LeanCarried::ExprOldState.term(format!("(.name \"old#{n}\")")))
             }
             ResultSite::Body | ResultSite::Contract | ResultSite::LoopRet => Err(LeanReason::OldState),
         },
@@ -1250,13 +1264,15 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
             ResultSite::Contract => Err(LeanReason::Result),
             ResultSite::Bound => {
                 c.uses_result = true;
-                Ok("(.name \"result\")".into())
+                Ok(LeanCarried::ExprResultName.term("(.name \"result\")"))
             }
-            ResultSite::LoopRet => Ok("(.name \"#ret\")".into()),
+            ResultSite::LoopRet => Ok(LeanCarried::ExprResultName.term("(.name \"#ret\")")),
         },
         // **A reason is a VALUE** (2026-09-07): `Buchfehler::Unbelegt` is `.reason "Unbelegt"`
         // -- the case's name, which is how a `match` arm spells it.
-        ExprArt::Grund { fall, .. } => Ok(format!("(.lit (.reason {}))", quoted(&fall.text))),
+        ExprArt::Grund { fall, .. } => {
+            Ok(LeanCarried::ExprLiteral.term(format!("(.lit (.reason {}))", quoted(&fall.text))))
+        }
         ExprArt::FnWert(_) => Err(LeanReason::OtherValue),
     }
 }
@@ -1300,33 +1316,35 @@ fn passes_is_free(c: &Ctx) -> bool {
 }
 
 /// A predicate as a `Gabbro.Body.Expr` that must evaluate to `true`.
-fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
+fn pred_term(p: &Pred, c: &mut Ctx) -> Result<Carried, LeanReason> {
     match &p.art {
         PredArt::Vergleich(e) => expr_term(e, c),
         PredArt::Klammer(q) => pred_term(q, c),
-        PredArt::Nicht(q) => Ok(format!("(.un .not {})", pred_term(q, c)?)),
-        PredArt::Und(a, b) => Ok(format!(
+        PredArt::Nicht(q) => {
+            Ok(LeanCarried::PredConnective.term(format!("(.un .not {})", pred_term(q, c)?)))
+        }
+        PredArt::Und(a, b) => Ok(LeanCarried::PredConnective.term(format!(
             "(.bin .and {} {})",
             pred_term(a, c)?,
             pred_term(b, c)?
-        )),
-        PredArt::Oder(a, b) => Ok(format!(
+        ))),
+        PredArt::Oder(a, b) => Ok(LeanCarried::PredConnective.term(format!(
             "(.bin .or {} {})",
             pred_term(a, c)?,
             pred_term(b, c)?
-        )),
-        PredArt::Folgt(a, b) => Ok(format!(
+        ))),
+        PredArt::Folgt(a, b) => Ok(LeanCarried::PredConnective.term(format!(
             "(.bin .or (.un .not {}) {})",
             pred_term(a, c)?,
             pred_term(b, c)?
-        )),
+        ))),
         // **`Held(L)` in a contract is `true` here and it is not a weakening**: the lock
         // passes decide it for every call site (`H005`/`H006`/`H012`/`H016`), and a
         // precondition that this channel could not write would refuse the whole callee.
         PredArt::Held { .. } => match c.result_site {
             ResultSite::Body => Err(LeanReason::LockWitness),
             ResultSite::Contract | ResultSite::Bound | ResultSite::LoopRet => {
-                Ok("(.lit (.bool true))".into())
+                Ok(LeanCarried::PredLockHeld.term("(.lit (.bool true))"))
             }
         },
         // **The bounded quantifier over the index domain** -- `forall s in slots of T : P`
@@ -1355,14 +1373,14 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
                 let body = pred_term(&q.rumpf, c);
                 c.locals.truncate(depth);
                 let body = body?;
-                if body.contains(&format!("(.name {})", quoted(&q.variable.text))) {
+                if body.as_str().contains(&format!("(.name {})", quoted(&q.variable.text))) {
                     return Err(LeanReason::Quantified);
                 }
-                return Ok(match (q.art, n) {
+                return Ok(LeanCarried::PredQuantFields.term(match (q.art, n) {
                     (QuantorArt::Alle, 0) => "(.lit (.bool true))".to_string(),
                     (QuantorArt::Existiert, 0) => "(.lit (.bool false))".to_string(),
-                    _ => body,
-                });
+                    _ => body.into_term(),
+                }));
             }
             let (tab, member) = domain_of(&q.domaene, &q.variable.text, c)?;
             let count = c
@@ -1376,23 +1394,27 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
             let body = pred_term(&q.rumpf, c);
             c.locals.truncate(depth);
             let body = body?;
+            let schnitt = member.as_str();
             let (word, cut) = match q.art {
                 QuantorArt::Alle => (
                     "forallSlots",
-                    match &member {
-                        Some(m) => format!("(.bin .or (.un .not {m}) {body})"),
-                        None => body,
+                    if schnitt.is_empty() {
+                        body.into_term()
+                    } else {
+                        format!("(.bin .or (.un .not {schnitt}) {body})")
                     },
                 ),
                 QuantorArt::Existiert => (
                     "existsSlots",
-                    match &member {
-                        Some(m) => format!("(.bin .and {m} {body})"),
-                        None => body,
+                    if schnitt.is_empty() {
+                        body.into_term()
+                    } else {
+                        format!("(.bin .and {schnitt} {body})")
                     },
                 ),
             };
-            Ok(format!("(.{word} {} {count} {cut})", quoted(&q.variable.text)))
+            Ok(LeanCarried::PredQuantIndexDomain
+                .term(format!("(.{word} {} {count} {cut})", quoted(&q.variable.text))))
         }
         // **`a reaches b via f`** -- the chain with the table's count as fuel.
         PredArt::Erreicht { von, nach, via } => {
@@ -1410,11 +1432,11 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
                 .and_then(|t| t.count)
                 .ok_or(LeanReason::Quantified)?;
             c.note(&tab, &via.text, Shape::Opt, &format!("`{}` in `{tab}`", via.text));
-            Ok(format!(
+            Ok(LeanCarried::PredReaches.term(format!(
                 "(.reaches {} {from} {to} {} {count})",
                 quoted(&tab),
                 quoted(&via.text)
-            ))
+            )))
         }
         // `e in D` -- the membership itself, as an expression over the index `e`.
         PredArt::Element(e, d) => {
@@ -1435,10 +1457,12 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
             let in_range = format!(
                 "(.bin .and (.bin .ge {x} (.lit (.int 0))) (.bin .lt {x} (.lit (.int {count}))))"
             );
-            Ok(match member {
-                Some(m) => format!("(.bin .and {in_range} {m})"),
-                None => in_range,
-            })
+            let schnitt = member.as_str();
+            Ok(LeanCarried::PredMembership.term(if schnitt.is_empty() {
+                in_range
+            } else {
+                format!("(.bin .and {in_range} {schnitt})")
+            }))
         }
     }
 }
@@ -1446,7 +1470,7 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
 /// **A domain, as the table it lives in and the membership of the variable `x` in it** --
 /// `None` for the whole index domain. The tree edges are read off the table's `tree`
 /// clause; a domain over a table without one has no term.
-fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String>), LeanReason> {
+fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Carried), LeanReason> {
     let xv = format!("(.name {})", quoted(x));
     match d {
         Domaene::SlotsVon(ort) => {
@@ -1454,7 +1478,7 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
                 return Err(LeanReason::Quantified);
             }
             let tab = c.table_of(&ort.basis.text).ok_or(LeanReason::Carrier)?.clone();
-            Ok((tab, None))
+            Ok((tab, LeanCarried::DomainSlots.term("")))
         }
         Domaene::NachfahrenVon(ort) | Domaene::VorfahrenVon(ort) => {
             let (Some(tab), p) = slot_index(ort, c)? else {
@@ -1473,7 +1497,7 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
             c.note(&tab, &elter, Shape::Opt, &format!("`{elter}` in `{tab}`"));
             Ok((
                 tab.clone(),
-                Some(format!("(.bin .and (.bin .ne {xv} {p}) {reach})")),
+                LeanCarried::DomainReach.term(format!("(.bin .and (.bin .ne {xv} {p}) {reach})")),
             ))
         }
         Domaene::KetteIn { a, b, ort } => {
@@ -1486,7 +1510,7 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
             c.note(&tab, &b.text, Shape::Opt, &format!("`{}` in `{tab}`", b.text));
             Ok((
                 tab.clone(),
-                Some(format!(
+                LeanCarried::DomainChain.term(format!(
                     "(.chainFrom {} {head} {xv} {} {count})",
                     quoted(&tab),
                     quoted(&b.text)
@@ -1513,7 +1537,7 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
                 }
                 _ => return Err(LeanReason::Quantified),
             };
-            Ok((tab, None))
+            Ok((tab, LeanCarried::DomainElems.term("")))
         }
         Domaene::Schlange(ort) => {
             // **`queue T.slots[i].f`** -- the queue in a slot field of record type: its
@@ -1526,7 +1550,7 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
                     if arrays.len() != 1 {
                         return Err(LeanReason::Quantified);
                     }
-                    return Ok((arrays[0].1.clone(), None));
+                    return Ok((arrays[0].1.clone(), LeanCarried::DomainQueue.term("")));
                 }
             }
             if !ort.suffixe.is_empty() {
@@ -1537,7 +1561,7 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
             if arrays.len() != 1 {
                 return Err(LeanReason::Quantified);
             }
-            Ok((arrays[0].1.clone(), None))
+            Ok((arrays[0].1.clone(), LeanCarried::DomainQueue.term("")))
         }
         // **The three domains that are NOT an index range of a table, each by its own
         // name** (2026-09-08). `fields of` is served one level up (`PredArt::Quantor`),
@@ -1676,7 +1700,7 @@ fn hoisted_expr(e: &Expr, c: &mut Ctx) -> Result<(String, String), LeanReason> {
     }
     let t = expr_term(e, c);
     c.hoisted.clear();
-    Ok((prefix, t?))
+    Ok((prefix, t?.into_term()))
 }
 
 /// **A call statement whose arguments may call**: the calls in the arguments are hoisted
@@ -1743,7 +1767,7 @@ fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String, String), 
     }
     let mut args = Vec::new();
     for a in &r.argumente {
-        args.push(expr_term(a, c)?);
+        args.push(expr_term(a, c)?.into_term());
     }
     let _ = name;
     c.callees.insert(key.clone());
@@ -1951,16 +1975,16 @@ fn sum_cases_lean(sh: Shape) -> String {
 }
 
 /// A block as a `Gabbro.Body.Stmt` list term.
-fn block_term(b: &Block, c: &mut Ctx) -> Result<String, LeanReason> {
+fn block_term(b: &Block, c: &mut Ctx) -> Result<Carried, LeanReason> {
     let depth = c.locals.len();
     let mut teile = Vec::new();
     for s in &b.anweisungen {
-        teile.push(stmt_term(s, c)?);
+        teile.push(stmt_term(s, c)?.into_term());
     }
     // A `let` name leaves scope with its block -- the model binds by name, so a name that
     // outlived its block would silently shadow one further out.
     c.locals.truncate(depth);
-    Ok(format!("[{}]", teile.join(", ")))
+    Ok(LeanCarried::StmtSequence.term(format!("[{}]", teile.join(", "))))
 }
 
 /// **Does this block, or one under it, `return`?** A loop body that may leave the ROUTINE is
@@ -2046,7 +2070,7 @@ fn conj(terms: &[String]) -> String {
     }
 }
 
-fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
+fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
     match &s.art {
         StmtArt::Let(l) => {
             // **`let n = f(a);` is a CALL, not an expression.** A callee may write, so an
@@ -2057,17 +2081,21 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     let sh = shape_of_init(l, c);
                     c.push_local(&l.name.text, sh);
                     note_record_binding(l, c);
-                    return Ok(format!(
+                    return Ok(LeanCarried::StmtBindCall.term(format!(
                         "{hoist}(.bindCall {} {n} [{ps}] [{args}] {pre})",
                         quoted(&l.name.text)
-                    ));
+                    )));
                 }
             }
             let (hoist, w) = hoisted_expr(&l.wert, c)?;
             let sh = shape_of_init(l, c);
             c.push_local(&l.name.text, sh);
             note_record_binding(l, c);
-            Ok(format!("{hoist}(.bindName {} {})", quoted(&l.name.text), w))
+            Ok(LeanCarried::StmtBindName.term(format!(
+                "{hoist}(.bindName {} {})",
+                quoted(&l.name.text),
+                w
+            )))
         }
         StmtArt::Zuweisung(z) => {
             let mischung = |op: ZuwOp, shape: Shape| -> Option<&'static str> {
@@ -2088,9 +2116,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 let ziel = quoted(&z.ziel.basis.text);
                 if z.op == ZuwOp::Setzt {
                     return Ok(if ist_lokal {
-                        format!("{hoist}(.bindName {ziel} {w})")
+                        LeanCarried::StmtAssignLocal.term(format!("{hoist}(.bindName {ziel} {w})"))
                     } else {
-                        format!("{hoist}(.assignGlobal {ziel} {w})")
+                        LeanCarried::StmtAssignGlobal
+                            .term(format!("{hoist}(.assignGlobal {ziel} {w})"))
                     });
                 }
                 if !ist_lokal {
@@ -2101,7 +2130,9 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     ZuwOp::Minus => "sub",
                     _ => return Err(LeanReason::CompoundAssign),
                 };
-                return Ok(format!("{hoist}(.bindName {ziel} (.bin .{op} (.name {ziel}) {w}))"));
+                return Ok(LeanCarried::StmtCompoundAssignLocal.term(format!(
+                    "{hoist}(.bindName {ziel} (.bin .{op} (.name {ziel}) {w}))"
+                )));
             }
             // a store into a register is the device's business (see `place_term`)
             if c.device_carrier.contains(&z.ziel.basis.text) {
@@ -2114,21 +2145,21 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     let Some(op) = mischung(z.op, shape) else {
                         return Err(LeanReason::CompoundAssign);
                     };
-                    return Ok(format!(
+                    return Ok(LeanCarried::StmtStoreRecordField.term(format!(
                         "{hoist}(.assignField {} {} (.bin .{op} (.fieldOf {} {}) {}))",
                         quoted(&base),
                         quoted(&f.text),
                         quoted(&base),
                         quoted(&f.text),
                         w
-                    ));
+                    )));
                 }
-                return Ok(format!(
+                return Ok(LeanCarried::StmtStoreRecordField.term(format!(
                     "{hoist}(.assignField {} {} {})",
                     quoted(&base),
                     quoted(&f.text),
                     w
-                ));
+                )));
             }
             if let Some((tab, i)) = array_place(&z.ziel, c) {
                 let shape = array_elem_shape(&tab, c)?;
@@ -2142,7 +2173,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     format!("(.bin .{op} (.place {} {idx} \"elem\") {w})", quoted(&tab))
                 };
                 c.note(&tab, "elem", shape, &format!("element of `{tab}`"));
-                return Ok(format!("{hoist}(.assign {} {idx} \"elem\" {w})", quoted(&tab)));
+                return Ok(LeanCarried::StmtStoreArrayElement.term(format!(
+                    "{hoist}(.assign {} {idx} \"elem\" {w})",
+                    quoted(&tab)
+                )));
             }
             let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] =
                 &z.ziel.suffixe[..]
@@ -2175,17 +2209,17 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 None => w,
             };
             c.note(&carrier, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
-            Ok(format!(
+            Ok(LeanCarried::StmtStoreSlotField.term(format!(
                 "{hoist}(.assign {} {} {} {})",
                 quoted(&carrier),
                 idx,
                 quoted(&f.text),
                 w
-            ))
+            )))
         }
         StmtArt::Wenn(w) => {
             let mut otherwise = match &w.sonst {
-                Some(b) => block_term(b, c)?,
+                Some(b) => block_term(b, c)?.into_term(),
                 None => "[]".to_string(),
             };
             for (bed, blk) in w.zweige.iter().rev() {
@@ -2193,14 +2227,16 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 // `else` of the branch before it, so that it runs exactly when the
                 // condition would have been evaluated
                 let (hoist, b) = hoisted_expr(bed, c)?;
-                let d = block_term(blk, c)?;
+                let d = block_term(blk, c)?.into_term();
                 otherwise = format!("[{hoist}(.ite {b} {d} {otherwise})]");
             }
-            Ok(otherwise
-                .strip_prefix('[')
-                .and_then(|s| s.strip_suffix(']'))
-                .unwrap_or(&otherwise)
-                .to_string())
+            Ok(LeanCarried::StmtConditional.term(
+                otherwise
+                    .strip_prefix('[')
+                    .and_then(|s| s.strip_suffix(']'))
+                    .unwrap_or(&otherwise)
+                    .to_string(),
+            ))
         }
         StmtArt::Match(m) => {
             // **`match f(a) { … }` is a CALL followed by a `match`** -- the result goes into
@@ -2228,14 +2264,16 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     c.locals.truncate(depth);
                     arms.push(format!("({}, {binder}, {})", quoted(&z.variante.text), blk?));
                 }
-                return Ok(format!("{hoist}(.onTag {g} [{}])", arms.join(", ")));
+                return Ok(LeanCarried::StmtTaggedMatch
+                    .term(format!("{hoist}(.onTag {g} [{}])", arms.join(", "))));
             }
             if m.zweige.iter().all(|z| z.binder.is_none() && z.variante.text != "None") {
                 let mut arms = Vec::new();
                 for z in &m.zweige {
                     arms.push(format!("({}, {})", quoted(&z.variante.text), block_term(&z.rumpf, c)?));
                 }
-                return Ok(format!("{hoist}(.onReason {g} [{}])", arms.join(", ")));
+                return Ok(LeanCarried::StmtReasonMatch
+                    .term(format!("{hoist}(.onReason {g} [{}])", arms.join(", "))));
             }
             let mut onp = None;
             let mut ona = None;
@@ -2253,9 +2291,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 }
             }
             match (onp, ona) {
-                (Some((b, present)), Some(absent)) => {
-                    Ok(format!("{hoist}(.onOption {g} {} {present} {absent})", quoted(&b)))
-                }
+                (Some((b, present)), Some(absent)) => Ok(LeanCarried::StmtOptionMatch.term(format!(
+                    "{hoist}(.onOption {g} {} {present} {absent})",
+                    quoted(&b)
+                ))),
                 _ => Err(LeanReason::MatchNotOption),
             }
         }
@@ -2270,9 +2309,11 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 if c.ret_post.is_none() {
                     return Err(LeanReason::ReturnInLoop);
                 }
-                return Ok("(.bindName \"#ret\" (.lit .absent)), (.bindName \"#returned\" (.lit (.bool true))), .leave".into());
+                return Ok(LeanCarried::StmtReturnInLoop.term(
+                    "(.bindName \"#ret\" (.lit .absent)), (.bindName \"#returned\" (.lit (.bool true))), .leave",
+                ));
             }
-            Ok("(.ret none)".into())
+            Ok(LeanCarried::StmtReturnNothing.term("(.ret none)"))
         }
         StmtArt::Return(Some(e)) => {
             if !c.loop_stack.is_empty() {
@@ -2282,28 +2323,29 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 if let ExprArt::Ruf(r) = &crate::ohne_klammern(e).art {
                     if !is_value_constructor(r, c) {
                         let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
-                        return Ok(format!(
+                        return Ok(LeanCarried::StmtReturnInLoop.term(format!(
                             "{hoist}(.bindCall \"#ret\" {n} [{ps}] [{args}] {pre}), (.bindName \"#returned\" (.lit (.bool true))), .leave"
-                        ));
+                        )));
                     }
                 }
                 let (hoist, v) = hoisted_expr(e, c)?;
-                return Ok(format!(
+                return Ok(LeanCarried::StmtReturnInLoop.term(format!(
                     "{hoist}(.bindName \"#ret\" {v}), (.bindName \"#returned\" (.lit (.bool true))), .leave"
-                ));
+                )));
             }
             if let ExprArt::Ruf(r) = &crate::ohne_klammern(e).art {
                 if !is_value_constructor(r, c) {
                     let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
-                    return Ok(format!("{hoist}(.retCall {n} [{ps}] [{args}] {pre})"));
+                    return Ok(LeanCarried::StmtReturnCall
+                        .term(format!("{hoist}(.retCall {n} [{ps}] [{args}] {pre})")));
                 }
             }
             let (hoist, v) = hoisted_expr(e, c)?;
-            Ok(format!("{hoist}(.ret (some {v}))"))
+            Ok(LeanCarried::StmtReturnValue.term(format!("{hoist}(.ret (some {v}))")))
         }
         StmtArt::Ruf(r) => {
             let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
-            Ok(format!("{hoist}(.call {n} [{ps}] [{args}] {pre})"))
+            Ok(LeanCarried::StmtCall.term(format!("{hoist}(.call {n} [{ps}] [{args}] {pre})")))
         }
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it
@@ -2320,11 +2362,11 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             c.locals.truncate(depth);
             let sonst = sonst?;
             c.push_local(&l.name.text, None);
-            Ok(format!(
+            Ok(LeanCarried::StmtCallWithErrorExit.term(format!(
                 "{hoist}(.bindCallElse {} {n} [{ps}] [{args}] {pre} {} {sonst})",
                 quoted(&l.name.text),
                 quoted(&l.fehlername.text)
-            ))
+            )))
         }
         StmtArt::Schleife(sch) => {
             let (inv, rumpf, marke, var) = match sch.as_ref() {
@@ -2415,7 +2457,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // asks for them, and the routine's promise asks for them at the end.
             parts.extend(c.kept.iter().cloned());
             let core = match inv {
-                Some(inv) => Some(pred_term(inv, c)?),
+                Some(inv) => Some(pred_term(inv, c)?.into_term()),
                 None => None,
             };
             // On the flagged path the routine's promise holds instead of the invariant.
@@ -2450,7 +2492,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             c.locals.truncate(depth);
             let inner_callees = std::mem::replace(&mut c.callees, outer_callees);
             let inner_loops = std::mem::replace(&mut c.loop_infos, outer_loops);
-            let body = body?;
+            let body = body?.into_term();
             // **A pass that starts with the return flag set leaves at once** (agent b,
             // 2026-09-08). `return e` inside a loop is `#returned = true; #ret = e; leave`,
             // so in the RUN no pass follows one that returned -- but `LoopRule` quantifies
@@ -2514,7 +2556,8 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             } else {
                 ", (.ite (.name \"#returned\") [(.ret none)] [])".to_string()
             };
-            Ok(format!("{prefix}(.loop {} {inv_term} {body}){after}", quoted(&id)))
+            Ok(LeanCarried::StmtLoop
+                .term(format!("{prefix}(.loop {} {inv_term} {body}){after}", quoted(&id))))
         }
         // **`narrow x to lo .. hi else { … }` is a conditional** (2026-09-07): the value stays
         // what it is, the type of the name gets narrower (`M1`'s business), and the `else`
@@ -2529,17 +2572,17 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             let hi = expr_term(&b.bis, c)?;
             let upper = if b.exklusiv { "lt" } else { "le" };
             let sonst = block_term(&n.sonst, c)?;
-            Ok(format!(
+            Ok(LeanCarried::StmtNarrowRange.term(format!(
                 "(.ite (.bin .and (.bin .ge {x} {lo}) (.bin .{upper} {x} {hi})) [] {sonst})"
-            ))
+            )))
         }
         StmtArt::Bricht(b) => {
             let namen: Vec<String> = b.invarianten.iter().map(|i| quoted(&i.text)).collect();
-            Ok(format!(
+            Ok(LeanCarried::StmtInvariantSuspension.term(format!(
                 "(.breaking [{}] {})",
                 namen.join(", "),
                 block_term(&b.rumpf, c)?
-            ))
+            )))
         }
         // **`leave m;`/`next m;` end the pass of the INNERMOST loop** -- `Stmt.exit`. A mark
         // that names an outer one is refused: it would have to travel through a `.loop`
@@ -2547,8 +2590,8 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         StmtArt::Leave(m) | StmtArt::Next(m) => {
             let word = if matches!(s.art, StmtArt::Leave(_)) { ".leave" } else { ".exit" };
             match c.loop_stack.last() {
-                Some(Some(inner)) if *inner == m.text => Ok(word.into()),
-                Some(None) => Ok(word.into()),
+                Some(Some(inner)) if *inner == m.text => Ok(LeanCarried::StmtLoopExit.term(word)),
+                Some(None) => Ok(LeanCarried::StmtLoopExit.term(word)),
                 _ => Err(LeanReason::NonLocalExit),
             }
         }
@@ -2557,11 +2600,11 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 return Err(LeanReason::Publish);
             }
             let w = expr_term(&pb.wert, c)?;
-            Ok(format!(
+            Ok(LeanCarried::StmtPublish.term(format!(
                 "(.publish {} {w} [{}])",
                 quoted(&pb.ziel.basis.text),
                 nutzlast(&pb.nutzlast)
-            ))
+            )))
         }
         StmtArt::AwaitLoad(a) => {
             if !a.quelle.suffixe.is_empty() {
@@ -2569,20 +2612,20 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             }
             let payload: Vec<String> = a.erwartet.iter().map(|o| quoted(&o.text())).collect();
             c.push_local(&a.name.text, None);
-            Ok(format!(
+            Ok(LeanCarried::StmtAwait.term(format!(
                 "(.awaitLoad {} {} [{}])",
                 quoted(&a.name.text),
                 quoted(&a.quelle.basis.text),
                 payload.join(", ")
-            ))
+            )))
         }
         StmtArt::Exchange(_) => Err(LeanReason::Exchange),
         StmtArt::Observiert(_) => Err(LeanReason::Observe),
-        StmtArt::Sperrt(l) => Ok(format!(
+        StmtArt::Sperrt(l) => Ok(LeanCarried::StmtCriticalSection.term(format!(
             "(.locked {} {})",
             quoted(&l.sperre.basis.text),
             block_term(&l.rumpf, c)?
-        )),
+        ))),
     }
 }
 
@@ -2869,7 +2912,7 @@ fn pre_expr(unit: &Unit, f: &FnDecl, module: &str, params: &[(String, Option<Sha
     let mut c = ctx_for(unit, f, &f.name.text, module, ResultSite::Contract);
     c.allow_calls = false;
     for q in &f.requires {
-        parts.push(pred_term(q, &mut c)?);
+        parts.push(pred_term(q, &mut c)?.into_term());
     }
     // **`maintains I` is an assumption of `I` on entry**, and so is every global invariant
     // of a carrier the routine writes: the invariant stands in the precondition, so a
@@ -2906,7 +2949,7 @@ fn kept_invariant(unit: &Unit, f: &FnDecl, module: &str, name: &str) -> Result<S
     }
     let mut c = ctx_for(unit, f, &f.name.text, module, ResultSite::Contract);
     c.allow_calls = false;
-    pred_term(body, &mut c)
+    pred_term(body, &mut c).map(Carried::into_term)
 }
 
 /// **The root of a table's `reaches`-invariant**, for the `insert` premise of its ops.
@@ -3185,7 +3228,7 @@ impl Unit {
         for (module, tb) in &table_decls {
             for inv in &tb.invarianten {
                 let mut c = ctx_for_invariant(&unit, Some(tb.name.text.clone()), module);
-                let term = pred_term(&inv.pred, &mut c);
+                let term = pred_term(&inv.pred, &mut c).map(Carried::into_term);
                 unit.invariants.push(InvariantInfo {
                     name: inv.name.text.clone(),
                     carriers: vec![tb.name.text.clone()],
@@ -3198,7 +3241,7 @@ impl Unit {
         for (module, g) in &group_decls {
             for inv in &g.invarianten {
                 let mut c = ctx_for_invariant(&unit, None, module);
-                let term = pred_term(&inv.pred, &mut c);
+                let term = pred_term(&inv.pred, &mut c).map(Carried::into_term);
                 unit.invariants.push(InvariantInfo {
                     name: inv.name.text.clone(),
                     carriers: g.traeger.iter().map(|t| t.text.clone()).collect(),
@@ -3316,7 +3359,7 @@ impl Unit {
                     let olds_before = c.olds.len();
                     c.uses_result = false;
                     if let Ok(t) = pred_term(q, &mut c) {
-                        post.push(clause_prop(&t, &c.olds[olds_before..], c.uses_result, "t", "t'", "r"));
+                        post.push(clause_prop(t.as_str(), &c.olds[olds_before..], c.uses_result, "t", "t'", "r"));
                     }
                 }
             }
@@ -3545,7 +3588,7 @@ pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
         c.kept = keeps.iter().map(|(_, t)| t.clone()).collect();
         let body = match unit.pre_of.get(name) {
             Some(Err(e)) => Err(*e),
-            _ => block_term(b, &mut c),
+            _ => block_term(b, &mut c).map(Carried::into_term),
         };
         let (callees, loops) = (std::mem::take(&mut c.callees), std::mem::take(&mut c.loop_infos));
         // The clauses: `ensures`, then `refines`.
@@ -3558,7 +3601,7 @@ pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
             let t = pred_term(q, &mut c);
             post.push((
                 format!("ensures #{}", i + 1),
-                t.map(|t| clause_prop(&t, &c.olds, c.uses_result, "s", "s'", "r")),
+                t.map(|t| clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r")),
             ));
         }
         if let Some(g) = &r.decl.verfeinert {
@@ -3567,7 +3610,8 @@ pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
                 Ok(p) => {
                     c.olds.clear();
                     c.uses_result = false;
-                    pred_term(&p, &mut c).map(|t| clause_prop(&t, &c.olds, c.uses_result, "s", "s'", "r"))
+                    pred_term(&p, &mut c)
+                        .map(|t| clause_prop(t.as_str(), &c.olds, c.uses_result, "s", "s'", "r"))
                 }
                 Err(e) => Err(e),
             };
@@ -3583,7 +3627,7 @@ pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
         let decreases = r.decl.decreases.as_ref().and_then(|m| {
             let mut mc = ctx_for(unit, &r.decl, name, &r.module, ResultSite::Body);
             mc.allow_calls = false;
-            expr_term(m, &mut mc).ok()
+            expr_term(m, &mut mc).ok().map(Carried::into_term)
         });
         out.push(RoutineGoal {
             name: name.clone(),
@@ -3619,12 +3663,12 @@ fn ret_post_of(unit: &Unit, f: &FnDecl, module: &str, maintained: &[String]) -> 
         }
     }
     for q in &f.ensures {
-        parts.push(pred_term(q, &mut c).ok()?);
+        parts.push(pred_term(q, &mut c).ok()?.into_term());
     }
     if let Some(g) = &f.verfeinert {
         let ziel = g.teile.last().map(|i| i.text.clone()).unwrap_or_default();
         let p = specification(f, &ziel, unit).ok()?;
-        parts.push(pred_term(&p, &mut c).ok()?);
+        parts.push(pred_term(&p, &mut c).ok()?.into_term());
     }
     for m in maintained {
         parts.push(kept_invariant(unit, f, module, m).ok()?);
@@ -5260,7 +5304,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
         let mut dropped = Vec::new();
         for (i, q) in f.requires.iter().enumerate() {
             match pred_term(q, &mut c) {
-                Ok(t) => pre.push(t),
+                Ok(t) => pre.push(t.into_term()),
                 Err(r) => dropped.push(format!("requires #{} ({})", i + 1, r.tag())),
             }
         }
@@ -5268,14 +5312,14 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
         let mut post_dropped = Vec::new();
         for (i, q) in f.ensures.iter().enumerate() {
             match pred_term(q, &mut c) {
-                Ok(t) => post.push(t),
+                Ok(t) => post.push(t.into_term()),
                 Err(r) => post_dropped.push(format!("ensures #{} ({})", i + 1, r.tag())),
             }
         }
         match body {
             Ok(t) => out.push(Routine {
                 name: f.name.text.clone(),
-                body: Some(t),
+                body: Some(t.into_term()),
                 refused: None,
                 params,
                 pre,
@@ -5467,4 +5511,729 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     s.push_str("          gabbro_simp [mySpec, hk]\n-/\n\n");
     s.push_str("end GabbroProgram\n");
     s
+}
+
+// ===========================================================================================
+// THE CARRIED HALF -- the register the refusals always had and the carries never did.
+// ===========================================================================================
+
+/// **Where a carried decision stands in `Coverage.lean`'s enumeration.**
+///
+/// A term-writing site either carries a form of the grammar -- and then it names the
+/// `Form` constructors whose discharge lemma covers it -- or it writes a SUB-TERM of the
+/// form around it and carries nothing of its own. *A literal `3` generates no obligation;
+/// the clause it stands in does.*
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CarriedForm {
+    /// The `Form` constructors of `programmlogik/Gabbro/Coverage.lean` that discharge this
+    /// decision, in their spelling there. Never empty.
+    Forms(&'static [&'static str]),
+    /// A sub-term of the surrounding form. It states no obligation; the form around it does.
+    Subterm,
+}
+
+/// **Every place the emitter CARRIES a form by writing a term names itself here.**
+///
+/// `LeanReason` made the refusals enumerable; the carries had no such list, and
+/// `pruefe-deckung.py`'s own header said so: *"a form the grammar admits, the emitter
+/// carries, and `Form` never names would pass every check."* Two registers over one thing
+/// and only one of them read -- the `W7` class.
+///
+/// **A new carrying site cannot bypass this enum**, and that is a fact about the TYPE and
+/// not about anybody's discipline: `place_term`, `expr_term`, `pred_term`, `domain_of`,
+/// `stmt_term` and `block_term` return a `Carried`, `Carried` has a private field in a
+/// module of its own, and the only way to build one is `LeanCarried::term`. *An `Ok(s)`
+/// with a bare `String` does not compile.*
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LeanCarried {
+    // ------------------------------------------------------------------ places
+    /// A bare local name -- `(.name n)`.
+    PlaceLocal,
+    /// The pass counter's ghost local, read in a loop invariant (`passes`).
+    PlacePassCounter,
+    /// A constant folded to its value -- `WURZEL` is `0`, not a place of the world.
+    PlaceConstant,
+    /// A `static` -- `(.global n)`.
+    PlaceGlobal,
+    /// `r.f` at a record or a `format` -- `(.fieldOf ...)`.
+    PlaceRecordField,
+    /// `buf[i]`, `r.f[i]` -- a slot of the array's pseudo-table.
+    PlaceArrayElement,
+    /// `c.slots[i].f` -- the slot field, the commonest place of the corpus.
+    PlaceSlotField,
+    // ------------------------------------------------------------- expressions
+    /// A number, `true`, `false`, a reason case -- a literal.
+    ExprLiteral,
+    /// `not e`, `-e`.
+    ExprUnary,
+    /// The binary operators, arithmetic and bit alike.
+    ExprBinary,
+    /// A call inside an expression, after the emitter has hoisted it into a `let`.
+    ExprHoistedCall,
+    /// `None`, `Some(e)`.
+    ExprOption,
+    /// `Case`, `Case(e)` of a `tagged type`.
+    ExprTagged,
+    /// `aligned(e, n)` -- `e % n == 0`.
+    ExprAligned,
+    /// `lenof a` at a fixed-length array -- the declared count.
+    ExprArrayLength,
+    /// `old(e)` in an `ensures` -- a name bound to the entry state's value.
+    ExprOldState,
+    /// `result` in an `ensures`, `#ret` after a desugared `return` in a loop.
+    ExprResultName,
+    // ------------------------------------------------------------- predicates
+    /// `not P`, `P and Q`, `P or Q`, `P implies Q`.
+    PredConnective,
+    /// `Held(L)` in a contract -- `true`, and the lock passes decide it.
+    PredLockHeld,
+    /// `forall f in fields of F : P` where the body does not read the binder: the
+    /// quantifier collapses over the declared, finite field list.
+    PredQuantFields,
+    /// `forall x in D : P` / `exists x in D : P` over an index domain.
+    PredQuantIndexDomain,
+    /// `a reaches b via f` -- the chain with the table's count as fuel.
+    PredReaches,
+    /// `e in D` -- the membership, as an expression over the index.
+    PredMembership,
+    // ----------------------------------------------------------------- domains
+    /// `slots of T`.
+    DomainSlots,
+    /// `descendants of T.slots[p]`, `ancestors of T.slots[p]` -- the index domain cut by a
+    /// reach along the table's `tree` edge.
+    DomainReach,
+    /// `chain(h, n) in T.slots[p]`.
+    DomainChain,
+    /// `elems of r.f`, `elems of buf`.
+    DomainElems,
+    /// `queue r`, `queue T.slots[i].f`.
+    DomainQueue,
+    // -------------------------------------------------------------- statements
+    /// `let x = f(a);` -- a call whose answer is bound.
+    StmtBindCall,
+    /// `let x = e;` -- a plain binding.
+    StmtBindName,
+    /// `n = e;` at a LOCAL -- a rebinding, not a store into the world.
+    StmtAssignLocal,
+    /// `n += e;` at a local.
+    StmtCompoundAssignLocal,
+    /// `g = e;` at a `static`.
+    StmtAssignGlobal,
+    /// `r.f = e;` at a record or a `format`.
+    StmtStoreRecordField,
+    /// `buf[i] = e;`, `r.f[i] = e;`.
+    StmtStoreArrayElement,
+    /// `c.slots[i].f = e;` -- the commonest store of the corpus.
+    StmtStoreSlotField,
+    /// `if ... { ... } else { ... }`.
+    StmtConditional,
+    /// `match v { Case(p) => ... }` over a `tagged` value.
+    StmtTaggedMatch,
+    /// `match e { Case => ... }` over a REASON -- the closed enumeration of `M123`.
+    StmtReasonMatch,
+    /// `match e { Some(b) => ..., None => ... }`.
+    StmtOptionMatch,
+    /// `return;` / `return e;` inside a loop -- desugared into `#ret`, `#returned` and an
+    /// exit of the pass.
+    StmtReturnInLoop,
+    /// `return;` -- the answerless return.
+    StmtReturnNothing,
+    /// `return e;` -- the value return.
+    StmtReturnValue,
+    /// `return f(a);` -- a call whose answer is returned straight on.
+    StmtReturnCall,
+    /// `f(a);` -- a call taken over the callee's contract.
+    StmtCall,
+    /// `let n = f(a) else (e) { ... };` -- the error propagation, carried since 2026-09-07
+    /// and named by no `Form` until 2026-09-08.
+    StmtCallWithErrorExit,
+    /// `traverse` / `retry` / `forever` -- the loop, with its range and its pass counter
+    /// where the domain gives them.
+    StmtLoop,
+    /// `narrow x to lo .. hi else { ... }` -- a conditional with an empty then-branch.
+    StmtNarrowRange,
+    /// `breaking I { ... }` -- the SUSPENSION of a table invariant.
+    StmtInvariantSuspension,
+    /// `leave m;` / `next m;` at the innermost loop.
+    StmtLoopExit,
+    /// `publishes a = e;` at a bare atomic.
+    StmtPublish,
+    /// `awaits n = a;` at a bare atomic.
+    StmtAwait,
+    /// `locks S { ... }` -- the critical section.
+    StmtCriticalSection,
+    /// Two statements in a row -- the block.
+    StmtSequence,
+}
+
+impl LeanCarried {
+    /// The stable name of the decision, the way `LeanReason::tag` names a refusal.
+    pub fn tag(self) -> &'static str {
+        match self {
+            LeanCarried::PlaceLocal => "place-local",
+            LeanCarried::PlacePassCounter => "place-pass-counter",
+            LeanCarried::PlaceConstant => "place-constant",
+            LeanCarried::PlaceGlobal => "place-global",
+            LeanCarried::PlaceRecordField => "place-record-field",
+            LeanCarried::PlaceArrayElement => "place-array-element",
+            LeanCarried::PlaceSlotField => "place-slot-field",
+            LeanCarried::ExprLiteral => "expr-literal",
+            LeanCarried::ExprUnary => "expr-unary",
+            LeanCarried::ExprBinary => "expr-binary",
+            LeanCarried::ExprHoistedCall => "expr-hoisted-call",
+            LeanCarried::ExprOption => "expr-option",
+            LeanCarried::ExprTagged => "expr-tagged",
+            LeanCarried::ExprAligned => "expr-aligned",
+            LeanCarried::ExprArrayLength => "expr-array-length",
+            LeanCarried::ExprOldState => "expr-old-state",
+            LeanCarried::ExprResultName => "expr-result-name",
+            LeanCarried::PredConnective => "pred-connective",
+            LeanCarried::PredLockHeld => "pred-lock-held",
+            LeanCarried::PredQuantFields => "pred-quant-fields",
+            LeanCarried::PredQuantIndexDomain => "pred-quant-index-domain",
+            LeanCarried::PredReaches => "pred-reaches",
+            LeanCarried::PredMembership => "pred-membership",
+            LeanCarried::DomainSlots => "domain-slots",
+            LeanCarried::DomainReach => "domain-reach",
+            LeanCarried::DomainChain => "domain-chain",
+            LeanCarried::DomainElems => "domain-elems",
+            LeanCarried::DomainQueue => "domain-queue",
+            LeanCarried::StmtBindCall => "stmt-bind-call",
+            LeanCarried::StmtBindName => "stmt-bind-name",
+            LeanCarried::StmtAssignLocal => "stmt-assign-local",
+            LeanCarried::StmtCompoundAssignLocal => "stmt-compound-assign-local",
+            LeanCarried::StmtAssignGlobal => "stmt-assign-global",
+            LeanCarried::StmtStoreRecordField => "stmt-store-record-field",
+            LeanCarried::StmtStoreArrayElement => "stmt-store-array-element",
+            LeanCarried::StmtStoreSlotField => "stmt-store-slot-field",
+            LeanCarried::StmtConditional => "stmt-conditional",
+            LeanCarried::StmtTaggedMatch => "stmt-tagged-match",
+            LeanCarried::StmtReasonMatch => "stmt-reason-match",
+            LeanCarried::StmtOptionMatch => "stmt-option-match",
+            LeanCarried::StmtReturnInLoop => "stmt-return-in-loop",
+            LeanCarried::StmtReturnNothing => "stmt-return-nothing",
+            LeanCarried::StmtReturnValue => "stmt-return-value",
+            LeanCarried::StmtReturnCall => "stmt-return-call",
+            LeanCarried::StmtCall => "stmt-call",
+            LeanCarried::StmtCallWithErrorExit => "stmt-call-with-error-exit",
+            LeanCarried::StmtLoop => "stmt-loop",
+            LeanCarried::StmtNarrowRange => "stmt-narrow-range",
+            LeanCarried::StmtInvariantSuspension => "stmt-invariant-suspension",
+            LeanCarried::StmtLoopExit => "stmt-loop-exit",
+            LeanCarried::StmtPublish => "stmt-publish",
+            LeanCarried::StmtAwait => "stmt-await",
+            LeanCarried::StmtCriticalSection => "stmt-critical-section",
+            LeanCarried::StmtSequence => "stmt-sequence",
+        }
+    }
+
+    /// **What the decision carries, in `Coverage.lean`'s spelling.** The names here are
+    /// checked against the Lean file in both directions -- by `pruefe-deckung.py` and, so
+    /// that a run of the test suite is enough, by `carried_forms_are_named`.
+    pub fn forms(self) -> CarriedForm {
+        match self {
+            LeanCarried::PlaceLocal => CarriedForm::Subterm,
+            LeanCarried::PlacePassCounter => CarriedForm::Forms(&["loopPassCounted"]),
+            LeanCarried::PlaceConstant => CarriedForm::Subterm,
+            LeanCarried::PlaceGlobal => CarriedForm::Forms(&["read"]),
+            LeanCarried::PlaceRecordField => CarriedForm::Forms(&["read"]),
+            LeanCarried::PlaceArrayElement => CarriedForm::Forms(&["read"]),
+            LeanCarried::PlaceSlotField => CarriedForm::Forms(&["read", "storeBesideRead"]),
+            LeanCarried::ExprLiteral => CarriedForm::Subterm,
+            LeanCarried::ExprUnary => CarriedForm::Forms(&["arithmeticSemantics"]),
+            LeanCarried::ExprBinary => CarriedForm::Forms(&["arithmeticSemantics"]),
+            LeanCarried::ExprHoistedCall => CarriedForm::Forms(&["callInExpressionHoisted"]),
+            LeanCarried::ExprOption => CarriedForm::Subterm,
+            LeanCarried::ExprTagged => CarriedForm::Subterm,
+            LeanCarried::ExprAligned => CarriedForm::Subterm,
+            LeanCarried::ExprArrayLength => CarriedForm::Subterm,
+            LeanCarried::ExprOldState => CarriedForm::Subterm,
+            LeanCarried::ExprResultName => CarriedForm::Forms(&["answerWithShape"]),
+            LeanCarried::PredConnective => CarriedForm::Subterm,
+            LeanCarried::PredLockHeld => CarriedForm::Subterm,
+            LeanCarried::PredQuantFields => CarriedForm::Forms(&["quantFields"]),
+            LeanCarried::PredQuantIndexDomain => CarriedForm::Forms(&["quantifiedPremise"]),
+            LeanCarried::PredReaches => CarriedForm::Forms(&["storeBesideChain"]),
+            LeanCarried::PredMembership => CarriedForm::Subterm,
+            LeanCarried::DomainSlots => CarriedForm::Forms(&["quantSlots"]),
+            LeanCarried::DomainReach => CarriedForm::Forms(&["quantReach"]),
+            LeanCarried::DomainChain => CarriedForm::Forms(&["quantChain"]),
+            LeanCarried::DomainElems => CarriedForm::Forms(&["quantElems"]),
+            LeanCarried::DomainQueue => CarriedForm::Forms(&["quantQueue"]),
+            LeanCarried::StmtBindCall => {
+                CarriedForm::Forms(&["callResultBound", "answerWithoutShape"])
+            }
+            LeanCarried::StmtBindName => CarriedForm::Forms(&["localBinding"]),
+            LeanCarried::StmtAssignLocal => CarriedForm::Forms(&["localBinding"]),
+            LeanCarried::StmtCompoundAssignLocal => CarriedForm::Forms(&["localBinding"]),
+            LeanCarried::StmtAssignGlobal => CarriedForm::Forms(&["store"]),
+            LeanCarried::StmtStoreRecordField => CarriedForm::Forms(&["store"]),
+            LeanCarried::StmtStoreArrayElement => CarriedForm::Forms(&["store"]),
+            LeanCarried::StmtStoreSlotField => CarriedForm::Forms(&["store"]),
+            LeanCarried::StmtConditional => CarriedForm::Forms(&["controlFlow"]),
+            LeanCarried::StmtTaggedMatch => CarriedForm::Forms(&["taggedMatch"]),
+            LeanCarried::StmtReasonMatch => CarriedForm::Forms(&["reasonMatch"]),
+            LeanCarried::StmtOptionMatch => CarriedForm::Forms(&["optionMatch"]),
+            LeanCarried::StmtReturnInLoop => CarriedForm::Forms(&["loopExit"]),
+            LeanCarried::StmtReturnNothing => CarriedForm::Forms(&["answerWithoutShape"]),
+            LeanCarried::StmtReturnValue => CarriedForm::Forms(&["answerWithShape"]),
+            LeanCarried::StmtReturnCall => CarriedForm::Forms(&["callResultReturned"]),
+            LeanCarried::StmtCall => CarriedForm::Forms(&["callStatement"]),
+            LeanCarried::StmtCallWithErrorExit => CarriedForm::Forms(&["callWithErrorExit"]),
+            LeanCarried::StmtLoop => {
+                CarriedForm::Forms(&["loopPass", "loopPassInRange", "loopPassCounted"])
+            }
+            LeanCarried::StmtNarrowRange => CarriedForm::Forms(&["controlFlow"]),
+            LeanCarried::StmtInvariantSuspension => CarriedForm::Forms(&["invariantSuspension"]),
+            LeanCarried::StmtLoopExit => CarriedForm::Forms(&["loopExit"]),
+            LeanCarried::StmtPublish => CarriedForm::Forms(&["publishAtomic"]),
+            LeanCarried::StmtAwait => CarriedForm::Forms(&["awaitAtomic"]),
+            LeanCarried::StmtCriticalSection => CarriedForm::Forms(&["criticalSection"]),
+            LeanCarried::StmtSequence => CarriedForm::Forms(&["sequencing"]),
+        }
+    }
+
+    /// The function of this file that decides it -- so a reader can go and look.
+    pub fn site(self) -> &'static str {
+        match self {
+            LeanCarried::PlaceLocal
+            | LeanCarried::PlacePassCounter
+            | LeanCarried::PlaceConstant
+            | LeanCarried::PlaceGlobal
+            | LeanCarried::PlaceRecordField
+            | LeanCarried::PlaceArrayElement
+            | LeanCarried::PlaceSlotField => "place_term",
+            LeanCarried::ExprLiteral
+            | LeanCarried::ExprUnary
+            | LeanCarried::ExprBinary
+            | LeanCarried::ExprHoistedCall
+            | LeanCarried::ExprOption
+            | LeanCarried::ExprTagged
+            | LeanCarried::ExprAligned
+            | LeanCarried::ExprArrayLength
+            | LeanCarried::ExprOldState
+            | LeanCarried::ExprResultName => "expr_term",
+            LeanCarried::PredConnective
+            | LeanCarried::PredLockHeld
+            | LeanCarried::PredQuantFields
+            | LeanCarried::PredQuantIndexDomain
+            | LeanCarried::PredReaches
+            | LeanCarried::PredMembership => "pred_term",
+            LeanCarried::DomainSlots
+            | LeanCarried::DomainReach
+            | LeanCarried::DomainChain
+            | LeanCarried::DomainElems
+            | LeanCarried::DomainQueue => "domain_of",
+            LeanCarried::StmtSequence => "block_term",
+            _ => "stmt_term",
+        }
+    }
+
+    /// The position in `ALL`. **The match is exhaustive on purpose**: a new variant does
+    /// not compile until it has one, and `all_is_the_whole_population` then fails until it
+    /// stands in `ALL` too. *The population cannot be added to in silence.*
+    #[allow(dead_code)]
+    fn index(self) -> usize {
+        match self {
+            LeanCarried::PlaceLocal => 0,
+            LeanCarried::PlacePassCounter => 1,
+            LeanCarried::PlaceConstant => 2,
+            LeanCarried::PlaceGlobal => 3,
+            LeanCarried::PlaceRecordField => 4,
+            LeanCarried::PlaceArrayElement => 5,
+            LeanCarried::PlaceSlotField => 6,
+            LeanCarried::ExprLiteral => 7,
+            LeanCarried::ExprUnary => 8,
+            LeanCarried::ExprBinary => 9,
+            LeanCarried::ExprHoistedCall => 10,
+            LeanCarried::ExprOption => 11,
+            LeanCarried::ExprTagged => 12,
+            LeanCarried::ExprAligned => 13,
+            LeanCarried::ExprArrayLength => 14,
+            LeanCarried::ExprOldState => 15,
+            LeanCarried::ExprResultName => 16,
+            LeanCarried::PredConnective => 17,
+            LeanCarried::PredLockHeld => 18,
+            LeanCarried::PredQuantFields => 19,
+            LeanCarried::PredQuantIndexDomain => 20,
+            LeanCarried::PredReaches => 21,
+            LeanCarried::PredMembership => 22,
+            LeanCarried::DomainSlots => 23,
+            LeanCarried::DomainReach => 24,
+            LeanCarried::DomainChain => 25,
+            LeanCarried::DomainElems => 26,
+            LeanCarried::DomainQueue => 27,
+            LeanCarried::StmtBindCall => 28,
+            LeanCarried::StmtBindName => 29,
+            LeanCarried::StmtAssignLocal => 30,
+            LeanCarried::StmtCompoundAssignLocal => 31,
+            LeanCarried::StmtAssignGlobal => 32,
+            LeanCarried::StmtStoreRecordField => 33,
+            LeanCarried::StmtStoreArrayElement => 34,
+            LeanCarried::StmtStoreSlotField => 35,
+            LeanCarried::StmtConditional => 36,
+            LeanCarried::StmtTaggedMatch => 37,
+            LeanCarried::StmtReasonMatch => 38,
+            LeanCarried::StmtOptionMatch => 39,
+            LeanCarried::StmtReturnInLoop => 40,
+            LeanCarried::StmtReturnNothing => 41,
+            LeanCarried::StmtReturnValue => 42,
+            LeanCarried::StmtReturnCall => 43,
+            LeanCarried::StmtCall => 44,
+            LeanCarried::StmtCallWithErrorExit => 45,
+            LeanCarried::StmtLoop => 46,
+            LeanCarried::StmtNarrowRange => 47,
+            LeanCarried::StmtInvariantSuspension => 48,
+            LeanCarried::StmtLoopExit => 49,
+            LeanCarried::StmtPublish => 50,
+            LeanCarried::StmtAwait => 51,
+            LeanCarried::StmtCriticalSection => 52,
+            LeanCarried::StmtSequence => 53,
+        }
+    }
+
+    /// **The term this decision writes.** The only way to build a `Carried`, and therefore
+    /// the only way for a term-writing function to return one.
+    pub fn term(self, term: impl Into<String>) -> Carried {
+        Carried::neu(self, term.into())
+    }
+
+    /// The whole population, in the order of `index`.
+    pub const ALL: [LeanCarried; 54] = [
+        LeanCarried::PlaceLocal,
+        LeanCarried::PlacePassCounter,
+        LeanCarried::PlaceConstant,
+        LeanCarried::PlaceGlobal,
+        LeanCarried::PlaceRecordField,
+        LeanCarried::PlaceArrayElement,
+        LeanCarried::PlaceSlotField,
+        LeanCarried::ExprLiteral,
+        LeanCarried::ExprUnary,
+        LeanCarried::ExprBinary,
+        LeanCarried::ExprHoistedCall,
+        LeanCarried::ExprOption,
+        LeanCarried::ExprTagged,
+        LeanCarried::ExprAligned,
+        LeanCarried::ExprArrayLength,
+        LeanCarried::ExprOldState,
+        LeanCarried::ExprResultName,
+        LeanCarried::PredConnective,
+        LeanCarried::PredLockHeld,
+        LeanCarried::PredQuantFields,
+        LeanCarried::PredQuantIndexDomain,
+        LeanCarried::PredReaches,
+        LeanCarried::PredMembership,
+        LeanCarried::DomainSlots,
+        LeanCarried::DomainReach,
+        LeanCarried::DomainChain,
+        LeanCarried::DomainElems,
+        LeanCarried::DomainQueue,
+        LeanCarried::StmtBindCall,
+        LeanCarried::StmtBindName,
+        LeanCarried::StmtAssignLocal,
+        LeanCarried::StmtCompoundAssignLocal,
+        LeanCarried::StmtAssignGlobal,
+        LeanCarried::StmtStoreRecordField,
+        LeanCarried::StmtStoreArrayElement,
+        LeanCarried::StmtStoreSlotField,
+        LeanCarried::StmtConditional,
+        LeanCarried::StmtTaggedMatch,
+        LeanCarried::StmtReasonMatch,
+        LeanCarried::StmtOptionMatch,
+        LeanCarried::StmtReturnInLoop,
+        LeanCarried::StmtReturnNothing,
+        LeanCarried::StmtReturnValue,
+        LeanCarried::StmtReturnCall,
+        LeanCarried::StmtCall,
+        LeanCarried::StmtCallWithErrorExit,
+        LeanCarried::StmtLoop,
+        LeanCarried::StmtNarrowRange,
+        LeanCarried::StmtInvariantSuspension,
+        LeanCarried::StmtLoopExit,
+        LeanCarried::StmtPublish,
+        LeanCarried::StmtAwait,
+        LeanCarried::StmtCriticalSection,
+        LeanCarried::StmtSequence,
+    ];
+}
+
+/// **The carried forms that NO term-writing site names, with the reason and the site.**
+///
+/// A form of `Coverage.lean` is carried either because the emitter writes a term for it --
+/// then a `LeanCarried` variant names it -- or because the emitter decides it in the
+/// WIRING: which theorem stands over which body, which hypothesis it takes, which conjunct
+/// a shape contributes. *There is no term for "the callee's contract IS the duty proved
+/// over its body"; there is a wiring order.*
+///
+/// The list is here rather than in the guard because it is a statement about the emitter,
+/// and `carried_forms_are_named` demands that every carried form of the Lean file stand in
+/// exactly one of the two lists. **A new carried form must be classified; it cannot arrive
+/// unnoticed.**
+pub const CARRIED_BY_WIRING: [(&str, &str, &str); 7] = [
+    (
+        "callChain",
+        "wiring_order",
+        "the outer call's contract fires at the state the inner one left -- an ORDER of hypotheses, not a term",
+    ),
+    (
+        "callFrame",
+        "openings",
+        "the callee's `writes` list becomes the frame hypothesis of the caller's theorem",
+    ),
+    (
+        "contractFromDuty",
+        "routine_goals",
+        "a duty proved over a body IS the callee's contract -- the wiring itself",
+    ),
+    (
+        "recursionSelf",
+        "self_recursive",
+        "the induction over `decreases`; the emitter decides it from the call graph",
+    ),
+    (
+        "recursionCycle",
+        "wiring_order",
+        "a CYCLE of the call graph gets one induction over the shared measure",
+    ),
+    (
+        "recursionInLoop",
+        "rec_in_loop",
+        "a recursive call from inside the routine's own ranged loop",
+    ),
+    (
+        "declaredRange",
+        "shape_conjunct",
+        "a declared range becomes a conjunct of the well-typedness, in both directions",
+    ),
+];
+
+/// The `Carried` type and its private field. **A module of its own so that the field is out
+/// of reach of the rest of this file**: inside one module a private field is private to
+/// nobody, and the whole point is that `Carried { term }` cannot be written at a new
+/// carrying site.
+mod getragen {
+    use super::LeanCarried;
+
+    /// **A term the emitter WROTE, and the decision that wrote it.** Built only by
+    /// `LeanCarried::term`.
+    #[derive(Clone, Debug)]
+    pub struct Carried {
+        term: String,
+        site: LeanCarried,
+    }
+
+    impl Carried {
+        pub(super) fn neu(site: LeanCarried, term: String) -> Carried {
+            Carried { term, site }
+        }
+        /// The decision that wrote this term.
+        #[allow(dead_code)]
+        pub fn site(&self) -> LeanCarried {
+            self.site
+        }
+        pub fn as_str(&self) -> &str {
+            &self.term
+        }
+        pub fn into_term(self) -> String {
+            self.term
+        }
+    }
+
+    impl std::fmt::Display for Carried {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str(&self.term)
+        }
+    }
+
+    impl From<Carried> for String {
+        fn from(c: Carried) -> String {
+            c.term
+        }
+    }
+}
+
+pub use getragen::Carried;
+
+// ===========================================================================================
+// THE CORRESPONDENCE, ON THE RUST SIDE -- so a `cargo test` decides it and not a script.
+// ===========================================================================================
+
+/// `Coverage.lean`, read at COMPILE time. A file that moves away takes the build down; a
+/// guard that reads it at run time would report a missing file as a green run.
+#[cfg(test)]
+const COVERAGE_LEAN: &str = include_str!("../../../programmlogik/Gabbro/Coverage.lean");
+
+#[cfg(test)]
+mod deckung_tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    /// The constructors of `Form` that `classify` sends to `.carried`.
+    fn carried_forms() -> BTreeSet<String> {
+        let start = COVERAGE_LEAN
+            .find("def classify : Form -> Verdict")
+            .or_else(|| COVERAGE_LEAN.find("def classify : Form \u{2192} Verdict"))
+            .expect("`classify` not found in Coverage.lean");
+        let rest = &COVERAGE_LEAN[start..];
+        let end = rest.find("\n\n").expect("`classify` has no end");
+        let body = &rest[..end];
+        // Every constructor listed before the arm `=> .carried`.
+        let mut out = BTreeSet::new();
+        let mut pending: Vec<String> = Vec::new();
+        for line in body.lines().skip(1) {
+            let line = line.trim();
+            if !line.starts_with('|') {
+                continue;
+            }
+            for stueck in line.trim_start_matches('|').split('|') {
+                let stueck = stueck.trim();
+                let (namen, arm) = match stueck.split_once("=>") {
+                    Some((n, a)) => (n.trim(), Some(a.trim())),
+                    None => (stueck, None),
+                };
+                if let Some(n) = namen.strip_prefix('.') {
+                    if !n.is_empty() {
+                        pending.push(n.trim().to_string());
+                    }
+                }
+                if let Some(arm) = arm {
+                    if arm == ".carried" {
+                        out.extend(pending.iter().cloned());
+                    }
+                    pending.clear();
+                }
+            }
+        }
+        out
+    }
+
+    /// **`ALL` is the whole population, once each.** `index` is exhaustive, so a new
+    /// variant does not compile without a number; this makes the number decide `ALL`.
+    #[test]
+    fn all_is_the_whole_population() {
+        for (i, c) in LeanCarried::ALL.iter().enumerate() {
+            assert_eq!(c.index(), i, "{:?} stands at the wrong place in ALL", c);
+        }
+        let tags: BTreeSet<&str> = LeanCarried::ALL.iter().map(|c| c.tag()).collect();
+        assert_eq!(tags.len(), LeanCarried::ALL.len(), "two decisions share a tag");
+        for c in LeanCarried::ALL {
+            assert!(!c.tag().is_empty(), "{:?} has an empty tag", c);
+            assert!(!c.site().is_empty(), "{:?} names no site", c);
+            if let CarriedForm::Forms(fs) = c.forms() {
+                assert!(!fs.is_empty(), "{:?} names an EMPTY form list", c);
+            }
+        }
+    }
+
+    /// **The Lean file has carried forms at all** -- the reader must not read nothing and
+    /// call it agreement. `W16`: a guard that measures an empty set is green for free.
+    #[test]
+    fn the_lean_file_is_readable() {
+        let f = carried_forms();
+        assert!(
+            f.len() >= 30,
+            "read only {} carried forms out of Coverage.lean -- the reader broke, \
+             not the correspondence",
+            f.len()
+        );
+        assert!(f.contains("store") && f.contains("read") && f.contains("callStatement"));
+    }
+
+    /// **Forward: every form a carrying site names is a form `classify` calls carried.**
+    /// A name that drifts would make the register point at nothing.
+    #[test]
+    fn every_named_form_is_carried_in_lean() {
+        let carried = carried_forms();
+        let mut fehlend = Vec::new();
+        for c in LeanCarried::ALL {
+            if let CarriedForm::Forms(fs) = c.forms() {
+                for f in fs {
+                    if !carried.contains(*f) {
+                        fehlend.push(format!("{} names `{}`", c.tag(), f));
+                    }
+                }
+            }
+        }
+        assert!(
+            fehlend.is_empty(),
+            "carrying sites name forms that `classify` does not call carried: {:?}",
+            fehlend
+        );
+    }
+
+    /// **Backward: every carried form of the Lean file is named** -- by a carrying site, or
+    /// by `CARRIED_BY_WIRING` with its reason. *This is the half that was blind: a form the
+    /// emitter carries and `Form` never names, and a form `Form` names and nothing carries,
+    /// both slip through a check that runs one way.*
+    #[test]
+    fn carried_forms_are_named() {
+        let carried = carried_forms();
+        let mut benannt: BTreeSet<String> = BTreeSet::new();
+        for c in LeanCarried::ALL {
+            if let CarriedForm::Forms(fs) = c.forms() {
+                benannt.extend(fs.iter().map(|f| f.to_string()));
+            }
+        }
+        let verdrahtet: BTreeSet<String> =
+            CARRIED_BY_WIRING.iter().map(|(f, _, _)| f.to_string()).collect();
+        let ungedeckt: Vec<&String> = carried
+            .iter()
+            .filter(|f| !benannt.contains(*f) && !verdrahtet.contains(*f))
+            .collect();
+        assert!(
+            ungedeckt.is_empty(),
+            "carried forms of Coverage.lean that no carrying site and no wiring entry \
+             names: {:?}",
+            ungedeckt
+        );
+        let doppelt: Vec<&String> = verdrahtet.iter().filter(|f| benannt.contains(*f)).collect();
+        assert!(
+            doppelt.is_empty(),
+            "forms in BOTH lists -- a register with two entries over one thing: {:?}",
+            doppelt
+        );
+        let unbekannt: Vec<&String> =
+            verdrahtet.iter().filter(|f| !carried.contains(*f)).collect();
+        assert!(
+            unbekannt.is_empty(),
+            "wiring entries for forms `classify` does not call carried: {:?}",
+            unbekannt
+        );
+    }
+
+    /// **The refusal half, on the Rust side too.** `pruefe-deckung.py` checks it against the
+    /// text; a test that only a script performs is a check somebody has to remember.
+    #[test]
+    fn every_refusal_has_a_lean_constructor() {
+        let start = COVERAGE_LEAN
+            .find("inductive Reason where")
+            .expect("`Reason` not found");
+        let rest = &COVERAGE_LEAN[start..];
+        let end = rest.find("\n\n").expect("`Reason` has no end");
+        let body = &rest[..end];
+        let namen: BTreeSet<&str> = body
+            .lines()
+            .skip(1)
+            .flat_map(|l| l.split('|'))
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric()))
+            .collect();
+        assert_eq!(
+            namen.len(),
+            LeanReason::ALL.len(),
+            "`Reason` has {} constructors, `LeanReason::ALL` {}",
+            namen.len(),
+            LeanReason::ALL.len()
+        );
+        for r in LeanReason::ALL {
+            let s = format!("{:?}", r);
+            let lean = format!("{}{}", s[..1].to_lowercase(), &s[1..]);
+            assert!(
+                namen.contains(lean.as_str()),
+                "`LeanReason::{}` has no constructor `{}` in Coverage.lean",
+                s,
+                lean
+            );
+        }
+    }
 }
