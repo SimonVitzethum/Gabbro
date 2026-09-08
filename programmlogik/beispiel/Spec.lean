@@ -92,8 +92,9 @@ def raeumen_haelt (ρ : Env) : Prop :=
     nachgehalten hat.* -/
 theorem rufer_erfuellt_aus_dem_vertrag (ρ : Env) (s : State) (f : Int)
     (hf : s.local' "f" = .int f) (hb : s.world (.slot "Faecher" f "belegt") = .bool true)
+    (hlo : 0 ≤ f) (hhi : f ≤ 127)
     (hr : raeumen_haelt ρ) :
     ∃ s', finalState (exec ρ raeumen_und_merken_body s) = some s'
         ∧ s'.world (.slot "Faecher" f "belegt") = .bool false := by
-  gabbro_simp [raeumen_und_merken_body, hf, hb]
+  gabbro_simp [raeumen_und_merken_body, hf, hb, hlo, hhi]
   exact hr s.world f

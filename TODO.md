@@ -1150,6 +1150,23 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
         `ssh` ist `~/.cargo/bin` nicht im `PATH`, und das steht in keinem `FREMDER_KORPUS`.
         *Ein Wächter, dessen Urteil am `PATH` hängt, misst die Anmeldung.*
 
+- [ ] **`pruefe-lean-pflichten.sh` hat in `abnahme.py` KEINEN Gegenstand -- und bricht den
+      ganzen Lauf ab.** Gemessen 2026-09-08 auf `ki-pc-fisch-101`: die Abnahme endet mit
+      *"2 Waechter haben KEIN Urteil geliefert"*, und der erste davon ist dieser, mit `[2]`
+      und seiner eigenen `usage:`-Zeile. Er verlangt Einheiten als Argumente, und
+      `pruefe-waechter.py::ARGUMENTE` fuehrt ihn nicht. **Ein Argument nachzutragen ist
+      nicht die Heilung**, denn sein Gegenstand ist `programmlogik/Proofs/<Unit>.lean` --
+      die Haelfte, die ein MENSCH schreibt --, und im Baum liegt keine einzige: ueber dem
+      ganzen Korpus waere sein ehrliches Urteil *"jede Einheit schuldet"*, also dauerrot,
+      und ueber einer leeren Auswahl waere es gruen, also ein falsches Gruen (W1).
+      *Der Baum hat fuer diesen Waechter noch keinen Gegenstand* -- dieselbe Lage wie
+      `FREMDER_KORPUS`, eine Ebene tiefer, und dort steht sie gebucht statt abzubrechen.
+      **Was fehlt, ist die Buchung, nicht das Argument.**
+      (`pruefe-lean-programm.sh`, der zweite Abbrecher desselben Laufs, ist am 2026-09-08
+      geheilt: sein `Spec.lean` brauchte den Bereich des Parameters, seit das Modell
+      Bereiche traegt -- `rufer_erfuellt_aus_dem_vertrag` nimmt `0 <= f <= 127` an, und der
+      Waechter meldet `LEAN GREEN`, 5 Saetze, 5 von 5 vergifteten fallen.)
+
 - [ ] **`pruefe-lean-beweis.sh` liegt zu dicht an seiner Frist.**
       Gemessen 2026-08-30: **194 s und 205 s** auf leerem `fisch`, **über 300 s** im
       `--voll`-Lauf direkt nach dem Mutationslauf — dort als `HAENGT` gemeldet, obwohl es nur

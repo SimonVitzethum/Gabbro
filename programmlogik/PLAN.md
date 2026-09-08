@@ -226,6 +226,9 @@ clauses, 12 foreign bodies), 13 refused forms (9 quantifiers over `fields of` / 
 *After run 24 the corpus is 190 units and the register 177 duties — 93 carried, 72 assumed,
 **12** refused under six tags instead of one (§9.1).*
 
+**Runs 24 and 25 were worked in two trees and each measured against run 23.** The merged
+tree is measured in §11, and its number is neither of theirs.
+
 `sorry` left to the person, per run (0 Lean errors in every run since the model was
 sealed):
 
@@ -243,6 +246,7 @@ sealed):
 | 23 | 28 | `^^^`/`\|\|\|` bounds in `gabbro_bits` (`udp-echo/falte` closes) |
 | 24 | 29 | the refused forms split into six tags, one of them CARRIED, and recursion inside a loop wired (§9) — the one more `sorry` is a duty that was refused before |
 | 25 | 23 | `passes`, the pass counter (§10) — five counter units close |
+| **merged** | **24** | runs 24 and 25 in ONE tree (§11) — 190 modules, 0 errors, 343 s |
 
 The count went *up* once (16) on purpose: every obligation the model did not carry before
 (a declared range) was added to the statements first, and then carried.
@@ -570,3 +574,63 @@ became unreachable in the middle of the run (`device_bash`: *"Workspace unavaila
   premises do not all close at once is rolled back, so a hole never spawns a hole. The
   minimal example that exhibits the order (two calls at the SAME state, the second's
   precondition being what the first's contract says about it) is written too, and unrun.
+
+---
+
+## 11. The merged tree, measured (2026-09-08)
+
+Runs 24 (§9) and 25 (§10) were worked in two trees, each on top of run 23. **Neither of
+their numbers is the number of the tree that carries both**, so it was taken, and not
+inferred:
+
+| | run 23 | run 24 alone | run 25 alone | **merged** |
+|---|---|---|---|---|
+| modules | 189 | 190 | 189 | **190** |
+| Lean errors | 0 | 0 | 0 | **0** |
+| `sorry` | 28 | 29 | 23 | **24** |
+| seconds (P=6) | 493 | — | 509 | **343** |
+
+`_pruefung/erzeuge-all.sh` regenerated all 190 modules from the merged emitter (0 refused
+by the checker), `_pruefung/lauf.sh` ran them with `P=6` on `ki-pc-fisch-101`. **24 = 23 +
+the one duty run 24 turned from a refusal into a goal** (`probe-neun-domaenen`'s
+`d6_fields`, §9.4) — the arithmetic of the two runs holds across the merge, which is the
+only thing a merged measurement can confirm and the reason it was taken.
+
+Where they stand, all nine files, and every one is §5.1:
+
+```
+beispiele/01-tabelle             4     a reaches-invariant across a relink
+messung/fragmente/F01            4     the same
+messung/caprock/kapraum          3     the same
+beispiele/55-kindkette           1     the same
+beispiele/09-ohne-zeiger         3     an invariant its own routine breaks -- a specification
+messung/proben/probe-neun-domaenen  5  empty bodies with an `ensures` -- the syntax probe's
+beispiele/56-auftragsring        1     distinctness the `requires` does not give -- a specification
+messung/fragmente/F06            2     `w_i * 8 <= s.len` -- the person's (§10.3)
+beispiele/gift/642               1     a poison example; its duty is `False` by construction
+```
+
+**Not one `sorry` in the corpus is plumbing.** §5.2's list is what is missing, and nothing
+on it is a `sorry`.
+
+Beside the corpus, on the same tree: `cargo test --no-fail-fast` 31 collections, 422 tests,
+0 failed; `lake build Gabbro.Body` green, no `sorry`.
+
+### 11.1 A register that was one step behind, found in the merge
+
+`LeanReason::PassCounter` (§10.2) was declared, tagged and returned by the emitter, and
+stood in **neither** `LeanReason::ALL` nor `zaehle-lean.py`'s `GRUENDE`. A refusal under it
+would have been counted in a module's balance line and named in no reason line — *smaller,
+which is the direction that flatters.* `zaehle-lean.py`'s own comment describes the same
+incident from 2026-09-01, one register over: **"the second register, one step behind the
+first."**
+
+The test that was supposed to hold `ALL` against the enum walked `ALL` and checked that
+what stands there is not mute — true of a list that is missing a variant. *A test over a
+register cannot take that register as its population.* It reads the enum out of `lean.rs`
+now and holds every variant against the array; with `PassCounter` cut back out, it fails
+and names it.
+
+**Five tags, five sentences, one guard** — and the five other tags of §9.1 were missing
+from `GRUENDE` too, where the tool would at least have said `UNKNOWN refusal reason` out
+loud.
