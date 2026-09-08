@@ -1,0 +1,31 @@
+-- erwartet: D022
+-- **Two tables have two address spaces, and both are counted from zero.**
+--
+-- The other half of `D022`: the domain DOES name a table, and the binder indexes a
+-- different one. `slots of A` bounds `s` by `A`'s `count`; `B.slots[s]` needs `B`'s. The
+-- two happen to be equal here, which is exactly why the shape is dangerous -- it works
+-- until somebody changes one `count`, and nothing in the source connects them.
+--
+-- *The counter-probe is in the same file:* `forall s in slots of A : A.slots[s].a == 0`
+-- stands one line up and does not fall.
+module gift::binder_falsche_tabelle {
+
+const N : u32 = 8;
+
+table A count N {
+    slot { a : u32 in 0 .. 10, }
+
+    -- The control: the same words over the right table. Does NOT fall.
+    invariant a_klein cost O(n) runs offline :
+        forall s in slots of A : A.slots[s].a <= 10;
+}
+
+table B count N {
+    slot { b : u32 in 0 .. 10, }
+
+    -- The poison: `s` is a slot index of `A` and addresses `B`.
+    invariant b_klein cost O(n) runs offline :
+        forall s in slots of A : B.slots[s].b <= 10;
+}
+
+}

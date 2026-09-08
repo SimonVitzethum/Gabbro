@@ -627,8 +627,18 @@ fn binde(st: &gabbro_syntax::ast::Stmt, karte: &mut HashMap<String, Typ>, u: &Um
 fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &mut Absagen) {
     match &p.art {
         PredArt::Quantor(q) => {
+            // **`D022` only speaks where the DOMAIN stood.** If `D017`/`D018`/`D019`
+            // just refused the place, the binder's kind is read off a declaration the
+            // checker has already called wrong, and a second refusal for one fault is
+            // worse than one -- the sentence `D021`'s own reservation writes about
+            // `ensures` and `M109`. *Measured: `beispiele/gift/427` (`queue` over a
+            // table) fell at `D018` and at `D022`, for the one mistake.*
+            let vorher = absagen.absagen.len();
             domaene_pruefen(&q.domaene, s, st, geb, absagen);
             abbildungsfelder_pruefen(q, s, absagen);
+            if absagen.absagen.len() == vorher {
+                binderverwendung_pruefen(q, s, st, absagen);
+            }
             // The quantifier DECLARES its variable, and an inner domain may run over it --
             // without this the rule would refuse the name the outer line just introduced.
             geb.push(q.variable.text.clone());
@@ -1052,6 +1062,432 @@ fn pred_orte<'p>(p: &'p Pred, v: &str, aus: &mut Vec<&'p Ort>) {
         // kind must fail to compile here rather than slip past.
         PredArt::Held { .. } => {}
     }
+}
+
+// ==========================================================================================
+// `D022` -- the quantifier DOMAIN decides what the binder is, and every use of the binder
+// answers to it. **The domain was decoration until this rule.**
+// ==========================================================================================
+
+/// **What a domain binds -- five answers and a refusal to guess.**
+///
+/// `SPRACHE.md` §6: *"A domain binds the ADDRESS of an entry … `mappings of` is the one
+/// exception"*. That sentence is the whole table below, read once instead of nine times.
+///
+/// The three that are *not* obvious and why each is what it is:
+///
+/// * **`chain(a, b) in <place>` binds a SLOT INDEX of the place's table.** It is not a
+///   guess: `D016` refuses a chain edge that leaves its own table, so a chain that resolves
+///   at all stays in the table it starts in. `beispiele/55-kindkette.gab` writes exactly
+///   that (`forall k in chain(…) in Self.slots[s] : Self.slots[k].elter == Some(s)`).
+/// * **`queue` and `elems of` bind an index into an ARRAY FIELD, not a slot index.** Both
+///   run over a `[T; N]` field of a record; `beispiele/56-auftragsring.gab` writes
+///   `r.plaetze[j]` under both, and neither `j` nor the array is a table.
+/// * **`threads` binds a number that indexes NOTHING DECLARED.** There is no `count` behind
+///   it and no table it addresses -- `PLAN.md` §9.1 books giving it one as *"a language
+///   change, not a model change"*, and until that change is made a thread id is not a slot
+///   index of anything.
+///
+/// > **This is deliberately NOT [`Sicht::binder_tabelle`], and the two must not be merged.**
+/// > That one answers the question a *cost* pass and `M103` ask -- *may I narrow this
+/// > counter's TYPE to `index into T`?* -- and it may only answer where the narrowing is
+/// > proved, because a wrong answer there makes the checker ACCEPT. This one answers *is
+/// > this use of the binder consistent with what bound it?*, where a wrong answer makes the
+/// > checker REFUSE. Same declaration, opposite direction of risk, and the one place they
+/// > agree (`slots of`, `descendants of`, `ancestors of`) is served by calling the other.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Binderart {
+    /// A slot index of the named table -- `slots of`, `descendants of`, `ancestors of`,
+    /// `chain(a, b) in`.
+    Slotindex(String),
+    /// An index into an array FIELD -- `queue`, `elems of`.
+    Feldindex,
+    /// A number that addresses nothing this unit declares -- `threads`.
+    Zahl,
+    /// A RECORD, with the fields of the `walk`'s node `format` -- `mappings of`. **`D020`
+    /// reads those fields**, and this rule leaves them to it.
+    Eintrag,
+    /// A field NAME of a `format` -- `fields of`.
+    Feldname,
+    /// **Not decidable here, and therefore nothing is said.** A `slots of` whose place does
+    /// not name a table lands here, and so does every domain in a position where the local
+    /// view is missing. *W10: a bound that is not proved is not narrowed.*
+    Unbekannt,
+}
+
+impl Binderart {
+    /// The wording that goes into the refusal -- what the reader was promised by writing
+    /// this domain.
+    fn was(&self) -> String {
+        match self {
+            Binderart::Slotindex(t) => format!("a slot index of `{t}`"),
+            Binderart::Feldindex => "an index into the array field it runs over".to_string(),
+            Binderart::Zahl => "a thread id".to_string(),
+            Binderart::Eintrag => "a mapping entry (a RECORD, not a number)".to_string(),
+            Binderart::Feldname => "the name of a `format` field".to_string(),
+            Binderart::Unbekannt => "unknown".to_string(),
+        }
+    }
+}
+
+fn binderart(d: &Domaene, s: &Sicht) -> Binderart {
+    match d {
+        Domaene::SlotsVon(_) | Domaene::NachfahrenVon(_) | Domaene::VorfahrenVon(_) => s
+            .binder_tabelle(d)
+            .map(Binderart::Slotindex)
+            .unwrap_or(Binderart::Unbekannt),
+        // The chain's table, by the same fallback the bound uses and for the reason `D016`
+        // states: an edge that leaves the table is already refused, so a chain that stands
+        // stays where it started.
+        Domaene::KetteIn { ort, .. } => s
+            .tabellenname(ort)
+            .or_else(|| {
+                s.tabellenname(&Ort {
+                    basis: ort.basis.clone(),
+                    suffixe: Vec::new(),
+                    span: ort.span,
+                })
+            })
+            .map(Binderart::Slotindex)
+            .unwrap_or(Binderart::Unbekannt),
+        Domaene::Schlange(_) | Domaene::ElementeVon(_) => Binderart::Feldindex,
+        Domaene::Threads => Binderart::Zahl,
+        Domaene::AbbildungenVon(_) => Binderart::Eintrag,
+        Domaene::FelderVon(_) => Binderart::Feldname,
+    }
+}
+
+/// **`D022` -- the domain a quantifier names MEANS something.**
+///
+/// The fifth question at a quantifier, and the first one that reads the domain and the body
+/// TOGETHER: `D017` reads the place's base name, `D018` its kind, `D019` the field names of
+/// its suffix, `D020` the fields of a bound mapping -- and after all four, the domain itself
+/// was still decoration.
+///
+/// **Measured 2026-09-08 against the UNCHANGED checker**, all nine domains, one probe each,
+/// on `messung/proben/probe-neun-domaenen.gab` -- the domain of one function rewritten and
+/// nothing else:
+///
+/// ```text
+/// domain           | errors | hints | emit md5   | verdict
+/// -----------------|--------|-------|------------|-----------
+/// slots of         | 0      | 0     | dbc3e06b   | DECORATION
+/// chain(..) in     | 0      | 0     | dbc3e06b   | DECORATION
+/// descendants of   | 0      | 0     | dbc3e06b   | DECORATION
+/// ancestors of     | 0      | 0     | dbc3e06b   | DECORATION
+/// queue            | 0      | 0     | dbc3e06b   | DECORATION
+/// fields of        | 0      | 0     | dbc3e06b   | DECORATION
+/// elems of         | 0      | 0     | dbc3e06b   | DECORATION
+/// threads          | 0      | 0     | dbc3e06b   | DECORATION
+/// mappings of      | 0      | 0     | dbc3e06b   | DECORATION
+/// ```
+///
+/// **Nine of nine, and the C is byte-identical in every row.** The census of 2026-09-07 had
+/// the finding at one domain and asserted the other eight; this is the differential it
+/// asserted, run.
+///
+/// ## What the rule says
+///
+/// The binder is what the domain says it is ([`Binderart`]), and a use that contradicts it
+/// is refused:
+///
+/// * a binder used as `T.slots[v]` where the domain bound it to another table, or to no
+///   table at all (`threads`, `queue`, `elems of`, `fields of`, `mappings of`);
+/// * a binder used to index an array field while the domain bound a RECORD or a field NAME;
+/// * a binder with a `.field` suffix while the domain bound a NUMBER.
+///
+/// ## Where it is silent, and that is the discipline and not an omission
+///
+/// * **The place of the domain did not resolve to a table** -- `Binderart::Unbekannt`, and
+///   a rule that says nothing about an unknown carrier says nothing at all. It is `D019`'s
+///   sentence and `D017`'s, one construct further in.
+/// * **An `index into T` used as an ARRAY index** is not refused. A `[T; N]` whose `N` is
+///   the table's `count` is a shape this tree writes, and refusing it would be a bound
+///   nobody proved with the sign that rejects a correct program -- *W10, and in the
+///   expensive direction.*
+/// * **The fields of a `mappings of` binder** belong to `D020`, which reads them against the
+///   `walk`'s node `format`. Two refusals for one fault is worse than one.
+/// * **An inner quantifier that REBINDS the name** stops the walk ([`pred_orte`]).
+fn binderverwendung_pruefen(
+    q: &gabbro_syntax::ast::Quantor,
+    s: &Sicht,
+    st: Stellung,
+    absagen: &mut Absagen,
+) {
+    let art = binderart(&q.domaene, s);
+    if art == Binderart::Unbekannt {
+        return;
+    }
+    let v = &q.variable.text;
+    let dom = q.domaene.benennung();
+    let mut orte = Vec::new();
+    pred_orte(&q.rumpf, v, &mut orte);
+
+    // **`D023` -- the body never mentions the binder.** The purest form of the same fault,
+    // and the one shape in which no USE can contradict the domain, because there is none: a
+    // quantifier whose body does not depend on its variable says the same thing over one
+    // element as over a million, and the domain is decoration by construction. It is the
+    // only row of the nine-domain table that no use-rule can reach -- `fields of` binds the
+    // NAME of a `format` field, and no expression form of this grammar consumes one.
+    //
+    // **A HINT and not a refusal, and the reason is measured and not tidy.** The form is
+    // vacuous, not inconsistent: `forall f in D : P` with `P` free of `f` is `P` weakened by
+    // the emptiness of `D`, which is a true statement and a useless one. And refusing it
+    // would take the last writable form of two domains with it -- after `D022` neither
+    // `fields of` nor `threads` can say anything about a declared carrier at all, so the
+    // vacuous body is all that is left of them. *A refusal that makes a word of the grammar
+    // unwritable is a grammar change wearing a rule's clothes*, and the grammar change is
+    // already booked: `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 for `threads`,
+    // and `fields of` has zero corpus sites and its own emitter refusal. **Until then the
+    // hint stands at every one of those sites and says what they are worth.**
+    if !nennt(&q.rumpf, v) {
+        absagen.schiebe(
+            Absage::hinweis(
+                "D023",
+                q.variable.span,
+                format!("the body of this quantifier never mentions `{v}`"),
+            )
+            .mit_notiz(format!(
+                "in {}: a statement that does not depend on the bound variable says the \
+             same over `{dom}` as over any other domain -- and over the empty one",
+                st.wort()
+            ))
+            .mit_notiz(
+                "a quantifier domain that no use answers to is decoration: the statement \
+             reads as one about the domain and is checked as one about something \
+             else, and the C is the same either way",
+            ),
+        );
+        return;
+    }
+
+    // **The closure BUILDS the refusal and does not push it**, so that the one case that
+    // needs a literal message can build its own and still wear the same notes. *A refusal
+    // whose text is a variable is invisible to `pruefe-grammatiktafel.py`* -- it reads the
+    // FIRST string literal of an `Absage::fehler(`, and that is how a word counts as named
+    // by the checker.
+    let notiz = |a: Absage| {
+        a.mit_notiz(format!(
+            "in {}: `{v}` is bound by `{dom}`, so it is {}",
+            st.wort(),
+            art.was()
+        ))
+        .mit_notiz(
+            "a quantifier domain that no use answers to is decoration: the statement \
+             reads as one about the domain and is checked as one about something \
+             else, and the C is the same either way",
+        )
+    };
+    let sage = |span, satz: String, hinweis: String| {
+        notiz(Absage::fehler("D022", span, satz).mit_notiz(hinweis))
+    };
+
+    for o in orte {
+        // (1) The binder AS A PLACE: `v.field` and `v[i]`. A number carries neither.
+        if &o.basis.text == v {
+            match (&art, o.suffixe.first()) {
+                // `D020` owns the fields of a mapping entry; a mapping is a record and may
+                // be indexed nowhere, but the second half is not this rule's business
+                // either while the first is spoken for.
+                (Binderart::Eintrag, _) | (_, None) => {}
+                (_, Some(OrtSuffix::Feld(f) | OrtSuffix::Ueber(f))) => absagen.schiebe(sage(
+                    f.span,
+                    format!("`{v}.{}` reads a field of something that has none", f.text),
+                    format!("`{dom}` binds {}", art.was()),
+                )),
+                (_, Some(OrtSuffix::Index(e))) => absagen.schiebe(sage(
+                    e.span,
+                    format!("`{v}[…]` indexes something that is not a carrier"),
+                    format!("`{dom}` binds {}", art.was()),
+                )),
+            }
+            continue;
+        }
+        // (2) The binder AS AN INDEX: `X.slots[v]`, `X.feld[v]`.
+        let mut praefix = Ort {
+            basis: o.basis.clone(),
+            suffixe: Vec::new(),
+            span: o.span,
+        };
+        for suffix in &o.suffixe {
+            let OrtSuffix::Index(e) = suffix else {
+                praefix.suffixe.push(suffix.clone());
+                continue;
+            };
+            let ist_binder = matches!(
+                &crate::ohne_klammern(e).art,
+                gabbro_syntax::ast::ExprArt::Ort(i) if &i.basis.text == v && i.suffixe.is_empty()
+            );
+            if !ist_binder {
+                praefix.suffixe.push(suffix.clone());
+                continue;
+            }
+            // What is being indexed? `X.slots` of a table is the one shape this rule
+            // decides; everything else is either an array field or unknown.
+            let grund = Ort {
+                basis: praefix.basis.clone(),
+                suffixe: Vec::new(),
+                span: praefix.span,
+            };
+            let slotsindex = praefix.suffixe.len() == 1
+                && matches!(&praefix.suffixe[0], OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) if f.text == "slots");
+            let tabelle = if slotsindex { s.tabellenname(&grund) } else { None };
+            match (&art, tabelle) {
+                // The one legitimate slot index, and the one mismatch worth a name.
+                (Binderart::Slotindex(t), Some(u)) => {
+                    if kurz(t) != kurz(&u) {
+                        absagen.schiebe(sage(
+                            e.span,
+                            format!(
+                                "`{}` indexes `{}` with a slot index of `{}`",
+                                o.text(),
+                                kurz(&u),
+                                kurz(t)
+                            ),
+                            format!(
+                                "two tables have two address spaces; `{}` and `{}` are not \
+                                 interchangeable because both are counted from zero",
+                                kurz(t),
+                                kurz(&u)
+                            ),
+                        ));
+                    }
+                }
+                // **`threads` gets its own wording, and that is not decoration.** It is
+                // the one domain that names no place at all, so its refusal cannot point at
+                // a declaration that is wrong -- it has to say that there is none. *And it
+                // is the sentence `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 books
+                // as a missing grammar line (`PLAN.md` §9.1, "a language change, not a
+                // model change"): until `threads` names a carrier, no statement over it can
+                // be about one.*
+                (Binderart::Zahl, Some(u)) => absagen.schiebe(sage(
+                    e.span,
+                    format!(
+                        "`{}` indexes the slots of `{}` with a thread id -- `threads` names \
+                         no table, and nothing joins the two",
+                        o.text(),
+                        kurz(&u)
+                    ),
+                    format!(
+                        "every other domain hangs on a declaration -- `slots of` on `count \
+                         N`, `descendants of` on `tree {{ … }}`, `queue` on the one array \
+                         field of a record. `threads` hangs on nothing, so `{v}` is bounded \
+                         by nothing and `{}` is addressed by nothing",
+                        kurz(&u)
+                    ),
+                )),
+                // A binder that is NOT a slot index, used as one.
+                (Binderart::Feldindex | Binderart::Eintrag | Binderart::Feldname, Some(u)) => {
+                    absagen.schiebe(sage(
+                        e.span,
+                        format!("`{}` indexes the slots of `{}`", o.text(), kurz(&u)),
+                        format!(
+                            "nothing bounds `{v}` by the `count` of `{}` -- `{dom}` does not \
+                             run over its slots",
+                            kurz(&u)
+                        ),
+                    ));
+                }
+                // Not a table's slots. **An `index into T` may legitimately address an
+                // array of that length** -- a `[T; N]` whose `N` is the table's `count` is a
+                // shape this tree writes -- so `Slotindex` is silent here, and so is the
+                // array index that is one. `threads` is not: nothing bounds a thread id by
+                // the length of a field either.
+                (Binderart::Eintrag | Binderart::Feldname | Binderart::Zahl, None)
+                    if matches!(
+                        s.u.typ_von_ort(s.modul, &praefix, s.lokal).durchgreifen(),
+                        Typ::Feld { laenge: Some(_), .. }
+                    ) =>
+                {
+                    absagen.schiebe(sage(
+                        e.span,
+                        format!("`{}` is indexed with `{v}`, which no declaration bounds", o.text()),
+                        format!("`{dom}` binds {}", art.was()),
+                    ))
+                }
+                (
+                    Binderart::Slotindex(_)
+                    | Binderart::Feldindex
+                    | Binderart::Zahl
+                    | Binderart::Eintrag
+                    | Binderart::Feldname,
+                    None,
+                ) => {}
+                (Binderart::Unbekannt, _) => {}
+            }
+            praefix.suffixe.push(suffix.clone());
+        }
+    }
+}
+
+/// Does this place mention the name `v` -- as its base, or inside an index?
+///
+/// *`pred_orte` already flattens the index expressions into the list*, so a bare
+/// `X.slots[v]` arrives here twice: once as the whole place and once as the index's own
+/// `Ort`. Asking about the base is therefore enough, and asking about the suffixes as well
+/// costs nothing and survives a change to that walker.
+fn nennt(p: &Pred, v: &str) -> bool {
+    match &p.art {
+        PredArt::Vergleich(e) | PredArt::Element(e, _) => {
+            crate::alle_orte(e).iter().any(|o| erwaehnt(o, v))
+        }
+        PredArt::Erreicht { von, nach, .. } => erwaehnt(von, v) || erwaehnt(nach, v),
+        PredArt::Held { .. } => false,
+        PredArt::Klammer(i) | PredArt::Nicht(i) => nennt(i, v),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            nennt(a, v) || nennt(b, v)
+        }
+        // **The PLACE of an inner domain counts, and leaving it out was a false refusal.**
+        // Measured 2026-09-08 on `messung/proben/probe-stellungen.gab`: `forall s in slots
+        // of Self : forall x in chain(a, b) in Self.slots[s] : …` mentions `s` in the inner
+        // DOMAIN and nowhere else, and the first cut of this rule called it unused in three
+        // invariants of that file. *A walker written for one question (`D020` asks about
+        // the fields of a bound record) answers a neighbouring one wrong* -- the sentence
+        // `binder_tabelle` writes about `domaenenschranke`, one rule further on.
+        PredArt::Quantor(q) => {
+            let d = domaenenort(&q.domaene).is_some_and(|o| erwaehnt(o, v));
+            d || (q.variable.text != v && nennt(&q.rumpf, v))
+        }
+    }
+}
+
+/// **The PLACE a domain names, where it names one** -- seven of the nine do, and the two
+/// that do not are the two that name a TYPE (`fields of`) or nothing at all (`threads`).
+///
+/// *A free function and not a `match` at the one call site*, because the arms of the second
+/// copy sat four spaces deeper and made this file's `VorfahrenVon` mutation anchor
+/// AMBIGUOUS -- the catalogue matches a LITERAL source line, and a more deeply indented
+/// copy of that line contains the shallower one as a substring. **A mutation with two homes
+/// is applied to neither**, and `mutiere-pruefer.py --anker` says so out loud rather than
+/// losing the mutation quietly: 380 of 397 anchors bite with this shape, 379 without it.
+fn domaenenort(d: &Domaene) -> Option<&Ort> {
+    match d {
+        Domaene::SlotsVon(o)
+        | Domaene::NachfahrenVon(o)
+        | Domaene::VorfahrenVon(o)
+        | Domaene::Schlange(o)
+        | Domaene::ElementeVon(o)
+        | Domaene::AbbildungenVon(o)
+        | Domaene::KetteIn { ort: o, .. } => Some(o),
+        Domaene::FelderVon(_) | Domaene::Threads => None,
+    }
+}
+
+fn erwaehnt(o: &Ort, v: &str) -> bool {
+    if o.basis.text == v {
+        return true;
+    }
+    o.suffixe.iter().any(|x| match x {
+        OrtSuffix::Index(e) => crate::alle_orte(e).iter().any(|i| erwaehnt(i, v)),
+        OrtSuffix::Feld(_) | OrtSuffix::Ueber(_) => false,
+    })
+}
+
+/// The last segment of a possibly qualified name. **Two readers of one table write it two
+/// ways** (`Topologie` at the domain, `beispiel::vorfahren::Topologie` out of the type), and
+/// comparing the full strings would refuse a program that is right.
+fn kurz(n: &str) -> &str {
+    n.rsplit("::").next().unwrap_or(n)
 }
 
 fn domaene_pruefen(

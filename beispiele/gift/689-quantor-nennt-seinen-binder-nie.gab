@@ -1,0 +1,26 @@
+-- erwartet: Hinweis D023
+-- **A quantifier whose body does not depend on its variable.**
+--
+-- The purest form of the same fault as `D022`, and the one shape no use-rule can reach --
+-- because there is no use. `forall f in D : P` with `P` free of `f` says the same over one
+-- element as over a million, and the same over `D` as over any other domain.
+--
+-- **A HINT and not a refusal, and the ground is measured.** The form is vacuous, not
+-- inconsistent. And after `D022` neither `fields of` nor `threads` can say anything about a
+-- declared carrier at all, so the vacuous body is the last writable form of two domains of
+-- the nine: refusing it would be a grammar change wearing a rule's clothes, and that
+-- grammar change is booked elsewhere (`messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3,
+-- `PLAN.md` §9.1: *"a language change, not a model change"*).
+module gift::binder_nie_genannt {
+
+const N : u32 = 8;
+
+table T count N {
+    slot { a : u32 in 0 .. 10, }
+
+    -- `s` is bound and never mentioned again.
+    invariant erstes_feld_klein cost O(n) runs offline :
+        forall s in slots of T : T.slots[0].a <= 10;
+}
+
+}

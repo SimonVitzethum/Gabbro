@@ -130,8 +130,13 @@ impl fn d9_mappings(w : ptr<normal, rw> Baum)
 }
 
 -- 8 -- `threads`
+--
+-- **`k.slots[t]` stand hier bis zum 2026-09-08 und faellt seither an `D022`:** `threads`
+-- nennt keine Tabelle, also indiziert ein Faden-Bezeichner keine. Was bleibt, ist ein
+-- Rumpf, der den Binder nicht nennt -- und `D023` sagt genau das daneben, als Hinweis.
+-- *Die Zelle ist damit weiter besetzt und traegt jetzt ihren Preis sichtbar.*
 impl fn d8_threads(k : ptr<normal, rw> Knoten)
-    ensures forall t in threads : k.slots[t].belegt
+    ensures forall t in threads : k.slots[0].belegt
     effects { reads k.slots, writes k.slots }
     costs   <= 4 ops
 {

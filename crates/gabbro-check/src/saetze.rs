@@ -846,6 +846,81 @@ pub const D1D2: &[Satz] = &[
                      messung/fragmente/F01.gab",
     },
     Satz {
+        name: "d.binderverwendung",
+        kennungen: &["D022"],
+        aussage: "The DOMAIN of a quantifier decides what the binder is, and every use of \
+                  the binder answers to it. The fifth question at a quantifier and the first \
+                  that reads the domain and the BODY together: `D017` reads the place's base \
+                  name, `D018` its kind, `D019` the field names of its suffix, `D020` the \
+                  fields of a bound mapping -- and after all four the domain itself was \
+                  still decoration. Four of the nine domains bind a slot index of a named \
+                  table (`slots of`, `descendants of`, `ancestors of`, `chain(a, b) in` -- \
+                  the last by `D016`, which refuses an edge that leaves its table); two bind \
+                  an index into an array field (`queue`, `elems of`); `threads` binds a \
+                  number that addresses nothing this unit declares; `mappings of` binds a \
+                  record; `fields of` binds a field NAME. A use that contradicts what bound \
+                  it is refused.",
+        vorbehalt: "**Silent wherever the domain's place did not resolve to a table**, and \
+                    silent when `D017`/`D018`/`D019` have just refused that place -- two \
+                    refusals for one fault is worse than one, the sentence `D021` writes \
+                    about `ensures` and `M109`. **And it does NOT refuse an `index into T` \
+                    used as an ARRAY index**: a `[T; N]` whose `N` is the table's `count` is \
+                    a shape this tree writes, and refusing it would be a bound nobody proved \
+                    with the sign that rejects a correct program -- *W10, in the expensive \
+                    direction.* The fields of a `mappings of` binder belong to `D020`. It \
+                    says nothing about whether the statement is TRUE, only that the binder \
+                    and the domain are about the same thing.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-08 against the UNCHANGED checker, all NINE domains, \
+                      one probe per domain on messung/proben/probe-neun-domaenen.gab with \
+                      the domain of one function rewritten and nothing else: **9 of 9 gave \
+                      `0 errors, 0 hints` and BYTE-IDENTICAL C** (md5 `dbc3e06b` in every \
+                      row). The census of 2026-09-07 §1.1 had the finding at one domain and \
+                      asserted the other eight; this is that differential, run. Poison is \
+                      beispiele/gift/687 (`threads` indexing a table -- the census's own \
+                      shape) and 688 (a `slots of A` binder indexing `B`). Over all 665 \
+                      `.gab` files of the tree the rule falls in ONE that was clean before: \
+                      beispiele/57-faedenhalt.gab, whose own header had carried the finding \
+                      as prose since 2026-08-31 (*\"`forall t in slots of Faden : …` says \
+                      exactly the same to the checker, only without the claim\"*) -- the \
+                      file now writes what it described.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; \
+                     messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md §1.1; \
+                     messung/proben/probe-neun-domaenen.gab",
+    },
+    Satz {
+        name: "d.binderungenannt",
+        kennungen: &["D023"],
+        aussage: "The body of a quantifier MENTIONS its binder. A `forall v in D : P` whose \
+                  `P` is free of `v` says the same over one element as over a million, and \
+                  the same over `D` as over any other domain -- the domain is decoration by \
+                  construction, and it is the one shape no use-rule can reach because there \
+                  is no use.",
+        vorbehalt: "**A HINT and not a refusal**, and the ground is measured rather than \
+                    tidy: the form is vacuous, not inconsistent (`P` weakened by the \
+                    emptiness of `D` is a true statement and a useless one), and after \
+                    `D022` neither `fields of` nor `threads` can say anything about a \
+                    declared carrier at all -- so the vacuous body is the last writable form \
+                    of two domains of the nine. *A refusal that makes a word of the grammar \
+                    unwritable is a grammar change wearing a rule's clothes*, and that \
+                    change is booked elsewhere (`PLAN.md` §9.1, \"a language change, not a \
+                    model change\"). **The place of an INNER domain counts as a mention** -- \
+                    `forall s in slots of Self : forall x in chain(a, b) in Self.slots[s] : \
+                    …` names `s` there and nowhere else.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-08 over all 665 `.gab` files of the tree: the hint \
+                      stands at SEVEN sites, all of them in the two measurement carriers \
+                      messung/proben/probe-neun-domaenen.gab and probe-stellungen.gab, and \
+                      every one of them is a `fields of` or `threads` cell written \
+                      `k.slots[0]` because the binder had no usable form. Zero in the \
+                      70-file corpus. Poison is beispiele/gift/689. The inner-domain \
+                      exemption was forced by probe-stellungen.gab: the first cut called \
+                      three invariants of that file unused and all three name the binder in \
+                      an inner `chain(…) in` / `descendants of` / `ancestors of` place.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; \
+                     messung/proben/probe-stellungen.gab",
+    },
+    Satz {
         name: "n.merkmalsform",
         kennungen: &["N054"],
         aussage: "A machine feature demand names ONE feature, and a feature is a bare name. \

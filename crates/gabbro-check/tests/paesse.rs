@@ -1930,3 +1930,156 @@ fn eine_stilllegung_ruht_auf_keiner_unfalsifizierbaren_annahme() {
          unfalsifiable \"the effect is not observable on this machine\"; }",
     );
 }
+
+/// **`D022` -- the quantifier DOMAIN decides what the binder is, and it did not** (2026-09-08).
+///
+/// Measured before the rule was written, all NINE domains, one probe each on
+/// `messung/proben/probe-neun-domaenen.gab` with the domain of one function rewritten and
+/// nothing else:
+///
+/// ```text
+/// domain           | errors | hints | emit md5   | verdict
+/// -----------------|--------|-------|------------|-----------
+/// all NINE         | 0      | 0     | dbc3e06b   | DECORATION
+/// ```
+///
+/// **Nine of nine, and the C byte-identical in every row.** One test arm per domain, so
+/// that a rule which closes one and reopens another cannot pass -- *a measurement that
+/// stops at the first hit measures the wrong question*, and so does a test.
+#[test]
+fn ein_quantorbinder_gegen_seine_domaene() {
+    // One preamble carrying all nine domains; the clause is the only variable.
+    let mit = |klausel: &str| {
+        format!(
+            "module p {{\n\
+             const NK : u32 = 64;\n\
+             const NR : u64 = 32;\n\
+             type RingNr = u32 in 0 ..< 32;\n\
+             table Knoten count NK {{\n\
+               tree {{ parent elter, child erstes_kind, sibling naechstes_geschwister }}\n\
+               slot {{ belegt : bool, marke : u32,\n\
+                      elter : option index into Knoten,\n\
+                      erstes_kind : option index into Knoten,\n\
+                      naechstes_geschwister : option index into Knoten, }}\n\
+             }}\n\
+             table Andere count NK {{ slot {{ w : u32, }} }}\n\
+             type Ring = {{ plaetze : [RingNr; NR], kopf : u32, zahl : u32, }};\n\
+             format Wort endian little {{\n\
+               gueltigkeit : bool @0,\n\
+               schreibbar : bool @1,\n\
+               frei : u64 @[11:2] reserved,\n\
+               rahmen : u64 embeds [51:12] scale 4096,\n\
+               hoch : u64 @[63:52] reserved,\n\
+             }}\n\
+             walk Baum levels 2 {{\n\
+               node : [Wort; 512],\n\
+               down : rahmen when it.gueltigkeit && !it.schreibbar,\n\
+               leaf : it.gueltigkeit && it.schreibbar,\n\
+             }}\n\
+             {klausel}\n}}"
+        )
+    };
+    // A routine over `Knoten` and a slot index, the position `M109` reads.
+    let k = |ens: &str| {
+        mit(&format!(
+            "impl fn f(n : ptr<normal, rw> Knoten, s : index into Knoten,\n\
+             a : ptr<normal, rw> Andere, r : ptr<normal, rw> Ring, w : ptr<normal, rw> Baum)\n\
+             ensures {ens}\n\
+             effects {{ reads n.slots, writes n.slots, reads a.slots, writes a.slots,\n\
+                       reads r, writes r, writes w }}\n\
+             costs <= 4 ops\n{{ }}"
+        ))
+    };
+
+    // -- 1. `slots of` ------------------------------------------------------------------
+    faellt_nicht(&k("forall x in slots of n : n.slots[x].belegt"));
+    faellt_mit(&k("forall x in slots of a : n.slots[x].belegt"), "D022");
+    // -- 2. `chain(a, b) in` ------------------------------------------------------------
+    faellt_nicht(&k(
+        "forall x in chain(erstes_kind, naechstes_geschwister) in n.slots[s] : n.slots[x].belegt",
+    ));
+    faellt_mit(
+        &k("forall x in chain(erstes_kind, naechstes_geschwister) in n.slots[s] : a.slots[x].w == 0"),
+        "D022",
+    );
+    // -- 3. `descendants of` ------------------------------------------------------------
+    faellt_nicht(&k("forall x in descendants of n.slots[s] : n.slots[x].belegt"));
+    faellt_mit(&k("forall x in descendants of n.slots[s] : a.slots[x].w == 0"), "D022");
+    // -- 4. `ancestors of` --------------------------------------------------------------
+    faellt_nicht(&k("forall x in ancestors of n.slots[s] : n.slots[x].belegt"));
+    faellt_mit(&k("forall x in ancestors of n.slots[s] : a.slots[x].w == 0"), "D022");
+    // -- 5. `queue` ---------------------------------------------------------------------
+    faellt_nicht(&k("forall j in queue r : r.plaetze[j] != 0"));
+    faellt_mit(&k("forall j in queue r : n.slots[j].belegt"), "D022");
+    // -- 6. `fields of` -----------------------------------------------------------------
+    //
+    // **The one domain whose binder no expression form of this grammar consumes.** There is
+    // no clean arm to write, so the counter-direction is `D023`'s: a body that never
+    // mentions it is a HINT and not a refusal, and it does not fall here.
+    faellt_nicht(&k("forall f in fields of Wort : n.slots[0].belegt"));
+    // -- 7. `elems of` ------------------------------------------------------------------
+    faellt_nicht(&k("forall j in elems of r.plaetze : r.plaetze[j] != 0"));
+    faellt_mit(&k("forall j in elems of r.plaetze : n.slots[j].belegt"), "D022");
+    // -- 8. `threads` -------------------------------------------------------------------
+    //
+    // The census's own shape, and the sharpest of the nine: `threads` names no place at
+    // all, so the refusal cannot point at a declaration that is wrong -- it has to say
+    // there is none.
+    faellt_mit(&k("forall t in threads : n.slots[t].belegt"), "D022");
+    // -- 9. `mappings of` ---------------------------------------------------------------
+    faellt_nicht(&k("!exists m in mappings of w : m.schreibbar && !m.gueltigkeit"));
+    faellt_mit(&k("!exists m in mappings of w : n.slots[m].belegt"), "D022");
+
+    // **The exemption, and it is deliberate.** An `index into T` used as an ARRAY index is
+    // NOT refused: a `[T; N]` whose `N` is the table's `count` is a shape this tree writes,
+    // and refusing it would be a bound nobody proved with the sign that rejects a correct
+    // program -- W10, in the expensive direction.
+    faellt_nicht(&k("forall x in slots of n : r.plaetze[x] != 0"));
+}
+
+/// **`D023` -- the body of a quantifier mentions its binder** (2026-09-08).
+///
+/// A hint and not a refusal: the form is vacuous, not inconsistent, and after `D022` the
+/// vacuous body is the last writable form of `fields of` and `threads`.
+#[test]
+fn ein_quantor_der_seinen_binder_nie_nennt() {
+    let inv = |pred: &str| {
+        format!(
+            "module p {{\nconst N : u32 = 8;\n\
+             table T count N {{\n\
+               tree {{ parent elter, child kind, sibling gesch }}\n\
+               slot {{ b : bool,\n\
+                      elter : option index into T,\n\
+                      kind : option index into T,\n\
+                      gesch : option index into T, }}\n\
+             invariant i cost O(n) runs offline : {pred};\n}}\n}}"
+        )
+    };
+    let hinweis = |quelle: &str, code: &str| {
+        let c = codes(quelle);
+        assert!(
+            c.iter().any(|(k, s)| *k == code && *s == Stufe::Hinweis),
+            "erwartet war Hinweis {code}, gefallen ist {c:?}\n{quelle}"
+        );
+    };
+    hinweis(&inv("forall s in slots of Self : Self.slots[0].b"), "D023");
+    // The counter-direction: a body that uses the binder is silent.
+    faellt_nicht(&inv("forall s in slots of Self : Self.slots[s].b"));
+    assert!(
+        !codes(&inv("forall s in slots of Self : Self.slots[s].b"))
+            .iter()
+            .any(|(k, _)| *k == "D023")
+    );
+    // **The place of an INNER domain counts as a mention**, and leaving it out was a false
+    // refusal on three invariants of `messung/proben/probe-stellungen.gab`: the outer `s`
+    // is named there and nowhere else.
+    let verschachtelt = inv(
+        "forall s in slots of Self : \
+         forall x in chain(kind, gesch) in Self.slots[s] : Self.slots[x].b",
+    );
+    assert!(
+        !codes(&verschachtelt).iter().any(|(k, _)| *k == "D023"),
+        "der innere Domaenenort nennt `s`: {:?}",
+        codes(&verschachtelt)
+    );
+}
