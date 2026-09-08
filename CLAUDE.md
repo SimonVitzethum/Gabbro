@@ -137,6 +137,34 @@ hinterlassen.* Wer den Zustand wissen will, fragt `ps -C python3` oder legt die 
 Datei und liest deren letzte Zeile. **Dieselbe Klasse wie `W16`, diesmal im Wartewerkzeug: ein
 Messgerät, das seinen eigenen Namen mitzählt.**
 
+## Zwei Werkzeuge in einem Baum messen eine Mischung
+
+**`cargo test` und `programmlogik/_pruefung/lauf.sh` duerfen NICHT gleichzeitig in EINEM Baum
+laufen.** `cargo test` ruft `gabbro prove`, das baut das Modell mit `lake` neu und **ersetzt
+die `.olean`, die die laufenden `lean`-Prozesse gerade lesen**. *Am 2026-09-08 hat das 52
+Lean-Fehler gemeldet, alle `Body.olean … does not exist`* -- und ein Waechterlauf neben einem
+Korpuslauf sechs Phantombefunde von `pruefe-zahlen.py`. **Dieselbe Klasse wie das `rsync` in
+ein Verzeichnis, in dem ein Mutationslauf arbeitet:** wer einem laufenden Werkzeug die Datei
+unterschiebt, misst eine Mischung.
+
+**Und jeder Agent bekommt sein eigenes Kratzverzeichnis.** Am selben Tag hat eine Bahn einer
+anderen mitten im Lauf eine Datei ueberschrieben (`waechter.sh`), weil beide dasselbe
+Scratchpad benutzten. *Ein Unterverzeichnis je Agent kostet nichts; es zu vergessen kostet
+den Lauf, der die fremde Datei gelesen hat.*
+
+## Ein Waechter, der ABBRICHT, liest sich wie einer, der durchging
+
+**Dritter Fall in einer Woche, und diesmal im Waechter statt im Pruefer.** Am 2026-09-08 hat
+eine neue Sonde einen `falsifier` genannt, zu dem es **kein Programm gibt**; das schob den
+Zaehler `aussen` von 13 auf 14, `pruefe-sondendeckung.py` brach an seiner **eigenen
+Sprechprobe** ab -- und druckte damit sechs Zahlen nicht mehr, die `pruefe-zahlen.py` liest.
+Ergebnis: **sechs Befunde im falschen Register.** Der Waechter hatte recht, war laut, und
+sein Ausgang kam trotzdem **vor** seinen Zahlen.
+
+*Wer einen Waechter rot findet, sucht die Ursache zuerst in den Zahlen, die er NICHT mehr
+druckt.* Und die Basis gehoert gemessen, nicht geschaetzt: ein Wegwerf-Worktree auf dem Stand
+vor dem Merge nennt die Zahl, die vorher galt.
+
 ## Eine Messung, die beim ersten Treffer abbricht, misst die falsche Frage
 
 **Sie beantwortet „feuert mindestens eine", nicht „welche feuern"** — und die zweite Frage
