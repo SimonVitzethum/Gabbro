@@ -1,0 +1,36 @@
+-- erwartet: D022
+-- **The quantifier domain was decoration, and this is the shape that measured it.**
+--
+-- `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md` §1.1 wrote the finding at ONE domain
+-- and asserted the other eight. On 2026-09-08 the differential was run at all nine, one
+-- probe per domain, on `messung/proben/probe-neun-domaenen.gab`:
+--
+--     domain           | errors | hints | emit md5   | verdict
+--     -----------------|--------|-------|------------|-----------
+--     all NINE         | 0      | 0     | dbc3e06b   | DECORATION
+--
+-- **Nine of nine, and the C byte-identical in every row.** The binder came out of the
+-- domain named and was used against a table the domain never mentioned, and no pass said
+-- so -- not the checker, not the emitter, and not the proof channel, which translates the
+-- BODY and never sees the domain that was supposed to bound the binder.
+--
+-- This file is the sharpest of the nine: `threads` names no place at all, so there is no
+-- declaration for a rule to read and call wrong. The refusal has to say that there is
+-- none.
+module gift::domaene_schmuck {
+
+const NGERAETE : u32 = 64;
+
+table Topologie count NGERAETE {
+    slot {
+        bereich : u8,
+    }
+
+    -- `g` is drawn from the thread set and indexes the slots of a table. Nothing joins the
+    -- two, and until 2026-09-08 nothing said so: `0 errors, 0 hints`, and the same C as
+    -- `forall g in slots of Topologie`.
+    invariant bereich_klein cost O(n) runs offline :
+        forall g in threads : Topologie.slots[g].bereich <= 255;
+}
+
+}

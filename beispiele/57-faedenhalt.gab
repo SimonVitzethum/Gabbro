@@ -31,6 +31,18 @@
 --     der Quantor ganz weggelassen                      unveraendert gruen
 --     der Rumpf schreibt `.kern` statt `.zustand`       unveraendert gruen
 --
+-- **NACHGETRAGEN 2026-09-08: die erste Zeile stimmt noch, die zweite nicht mehr, und die
+-- Zusage dieser Datei ist deshalb umgeschrieben.** `D022` liest seit heute den Binder gegen
+-- seine Domaene, und `forall t in threads : Faden.slots[t]. …` faellt:
+--
+--     error: [D022] 57-faedenhalt.gab:88: `Faden.slots[…].zustand` indexes the slots of
+--            `Faden` with a thread id -- `threads` names no table, and nothing joins the two
+--
+-- *Der Befund unten steht damit nicht mehr als Befund, sondern als Regel* -- und die
+-- Zusage sagt jetzt, was der Pruefer von ihr liest. `Faden.slots[0]` faellt nicht, aber
+-- `D023` sagt daneben, dass der Quantor seinen Binder nie nennt: **die zweite Zeile der
+-- Tafel ist von `unveraendert gruen` auf `gruen mit einem Hinweis` gewandert.**
+--
 -- Und das ist keine Nachlaessigkeit eines Passes, sondern steht dreimal wortgleich im
 -- Prueferquelltext: `wirkungen.rs`, `m1.rs` und `gruppe.rs` fuehren alle den Zweig
 -- `Domaene::Threads => {}`. **Eine Domaene ohne Ort hat keinen Ort, den ein Pass lesen
@@ -62,7 +74,8 @@
 --
 -- *Bis dahin ist `forall t in threads : Faden.slots[t]. …` eine ehrliche Absichtserklaerung
 -- und keine gepruefte Aussage -- und `forall t in slots of Faden : …` sagt dem Pruefer
--- exakt dasselbe, nur ohne die Behauptung.*
+-- exakt dasselbe, nur ohne die Behauptung.* **Seit `D022` ist die erste Form nicht mehr
+-- schreibbar und die zweite steht unten.**
 
 module beispiel::faedenhalt {
 
@@ -85,7 +98,10 @@ impl fn alle_anhalten()
     -- **Die Zusage, um die es geht** -- und der Kopf dieser Datei sagt, wieviel der Pruefer
     -- von ihr liest. `M111` verlangt immerhin, dass sie einen Ort nennt, den diese Funktion
     -- schreibt; ueber `t` verlangt niemand etwas.
-    ensures  forall t in threads : Faden.slots[t].zustand != LAEUFT
+    -- **Seit dem 2026-09-08 `slots of Faden` und nicht `threads`** -- genau der Tausch,
+    -- den der Kopf dieser Datei als *„sagt dem Pruefer exakt dasselbe, nur ohne die
+    -- Behauptung"* beschreibt. `D022` erzwingt ihn jetzt, statt ihn zu empfehlen.
+    ensures  forall t in slots of Faden : Faden.slots[t].zustand != LAEUFT
     effects  { reads Faden, reads Faden.slots, writes Faden.slots, locks FAEDEN }
     costs    <= 600 ops
 {

@@ -1,0 +1,142 @@
+Duty01.lean:104:29: warning: Variable name `t` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _t
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:104:44: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:155:36: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:196:40: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:233:21: warning: Variable name `s` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _s
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:233:36: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:249:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:251:5: warning: Variable name `hpre` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hpre
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:255:8: warning: declaration uses `sorry`
+Duty01.lean:279:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:281:5: warning: Variable name `hpre` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hpre
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:283:5: warning: Variable name `c_aushaengen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_aushaengen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:285:5: warning: Variable name `fr_aushaengen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_aushaengen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:287:5: warning: Variable name `c_speicher_freigeben` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_speicher_freigeben
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:289:5: warning: Variable name `fr_speicher_freigeben` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_speicher_freigeben
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:293:8: warning: declaration uses `sorry`
+Duty01.lean:320:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:321:5: warning: Variable name `hinv` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hinv
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:322:5: warning: Variable name `c_blatt_loeschen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_blatt_loeschen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:323:5: warning: Variable name `fr_blatt_loeschen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_blatt_loeschen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:327:8: warning: declaration uses `sorry`
+Duty01.lean:346:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:348:5: warning: Variable name `hpre` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hpre
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:350:5: warning: Variable name `c_blatt_loeschen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_blatt_loeschen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:352:5: warning: Variable name `fr_blatt_loeschen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_blatt_loeschen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:354:5: warning: Variable name `l_einsammeln_loop_1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _l_einsammeln_loop_1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty01.lean:358:8: warning: declaration uses `sorry`

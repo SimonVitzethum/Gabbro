@@ -1,0 +1,120 @@
+Duty33Rekursion.lean:71:13: warning: Variable name `ρ` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _ρ
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:93:20: warning: Variable name `s` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _s
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:93:35: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:118:17: warning: Variable name `s` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _s
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:118:32: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:138:19: warning: Variable name `s` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _s
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:138:34: warning: Variable name `r` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _r
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:151:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:153:5: warning: Variable name `hpre` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hpre
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:155:5: warning: Variable name `c_absteigen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_absteigen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:157:5: warning: Variable name `fr_absteigen` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_absteigen
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:176:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:178:5: warning: Variable name `hpre` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hpre
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:180:5: warning: Variable name `c_ungerade` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_ungerade
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:182:5: warning: Variable name `fr_ungerade` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_ungerade
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:201:5: warning: Variable name `hwf` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hwf
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:203:5: warning: Variable name `hpre` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hpre
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:205:5: warning: Variable name `c_gerade` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _c_gerade
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:207:5: warning: Variable name `fr_gerade` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _fr_gerade
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+Duty33Rekursion.lean:240:48: warning: Variable name `ha` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _ha
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`

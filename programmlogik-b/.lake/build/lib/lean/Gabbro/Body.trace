@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["c657c2ada47ca6d0.olean"],
+  "m": false,
+  "i": "24ff7f87f437fa88.ilean",
+  "c": "4c7e874409d73c61.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/simon/Dokumente/Gabbro/programmlogik-b/.lake/build/lib/lean /home/simon/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean /home/simon/Dokumente/Gabbro/programmlogik-b/Gabbro/Body.lean -o /home/simon/Dokumente/Gabbro/programmlogik-b/.lake/build/lib/lean/Gabbro/Body.olean -i /home/simon/Dokumente/Gabbro/programmlogik-b/.lake/build/lib/lean/Gabbro/Body.ilean -c /home/simon/Dokumente/Gabbro/programmlogik-b/.lake/build/ir/Gabbro/Body.c --setup /home/simon/Dokumente/Gabbro/programmlogik-b/.lake/build/ir/Gabbro/Body.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["deps",
+   [["programmlogik/Gabbro:extraDep",
+     [["@programmlogik:extraDep", "00000000000006bb"]]],
+    ["imports", "00000000000006bb"]]],
+  ["libs",
+   [["import dynlibs", "00000000000006bb"],
+    ["package external libraries", "00000000000006bb"],
+    ["module dynlibs", "00000000000006bb"],
+    ["module plugins", "00000000000006bb"]]],
+  ["Lean 4.33.1, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6",
+   "0051240b7c23c453"],
+  ["/home/simon/Dokumente/Gabbro/programmlogik-b/Gabbro/Body.lean",
+   "18e97922194cdd8f"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: Gabbro.Body", "8568f7f879ad46be"],
+  ["Package.id?: (some programmlogik)", "56ebe9bc0bb3f7c1"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "9f3af6f06263f9c9"}

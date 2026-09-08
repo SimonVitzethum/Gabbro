@@ -1,0 +1,23 @@
+-- Das Baumanifest fuer das Zweidateienbeispiel.
+--
+-- Was hier NICHT steht -- und der Grund ist W7, nicht Sparsamkeit:
+--   * die Abhaengigkeiten: `betrieb.gab` traegt vier `use lager::...`-Zeilen. Der Bau LIEST
+--     sie und rechnet die Kante; wer sie hier noch einmal schriebe, haette ein zweites
+--     Register ueber derselben Sache -- und das erste Mal, dass eine `use`-Zeile hinzukommt
+--     und die Manifestzeile nicht, baut der Bau aus einer Mischung.
+--   * die Modulnamen: `lager` und `betrieb` stehen in den Dateien. Gemessen ueber 491
+--     Dateien folgt der Modulname dem Dateinamen in 16 Faellen und in 473 nicht -- eine
+--     Konvention gibt es nicht, also nennt das Manifest DATEIEN.
+--   * die Architektur: `arch x86_64` steht an `entry`/`boot`/`entrust`, in der Quelle.
+--   * das Baugatter: `when TESTBUILD` ist ein Sprachkonstrukt, keine Uebersetzerfahne.
+--
+-- Die Rechnung dazu: `dokumente/BAUSYSTEM.md`.
+
+compiler cc -std=c11 -Wall -Wextra -Werror
+out      target/bau-beispiel
+
+-- EINE Einheit aus zwei Dateien. Genau das ist der Linkschritt: die Frage, welche Dateien
+-- eine Uebersetzungseinheit bilden. Einzeln geprueft faellt `betrieb.gab` mit fuenf Absagen.
+unit lager object
+    programmlogik/beispiel/lager.gab
+    programmlogik/beispiel/betrieb.gab

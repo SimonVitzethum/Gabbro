@@ -1,0 +1,10 @@
+name = "programmlogik"
+version = "0.1.0"
+defaultTargets = ["Gabbro"]
+
+# NO mathlib, for the same reason `passlogik` has none: the meaning of a body over a finite
+# record of declared places is finite mathematics. A dependency here would be a dependency in
+# every generated obligation.
+
+[[lean_lib]]
+name = "Gabbro"

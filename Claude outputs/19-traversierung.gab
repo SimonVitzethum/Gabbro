@@ -1,0 +1,84 @@
+-- 19 -- `traverse over slots of`: die Schleife, die KEINEN Laufzeitzaehler braucht.
+--
+-- **Der Unterschied zu `retry` steht in der Absenkung, nicht in der Prosa.** Eine
+-- Traversierung endet, weil ihre Domaene durch Konstruktion endlich ist -- die Schranke faellt
+-- aus `count N`, nicht aus einer Zaehlung im Rumpf. Ein `retry` endet durch eine ZAHL, und
+-- weil seine Bedingung von der Welt abhaengt, verlangt die Grammatik dort ein `on_exceeded`.
+--
+-- Im erzeugten C sieht man beides nebeneinander:
+--
+--     traverse  ->  for (uint32_t i = 0; i < sizeof(...)/sizeof(...[0]); i++)
+--     retry     ->  while (!(...)) { if (n >= SCHRANKE) { ausgang(); } n++; ... }
+--
+-- **Die Laufgrenze steht hier, der Wachhund dort.** Genau das ist die Aussage, die `M4` mit
+-- drei Schleifenformen macht -- und sie ist jetzt an der Maschine gemessen, nicht behauptet.
+
+module beispiel::traversierung {
+
+const NSLOTS : u32 = 16;
+
+type Zaehler = u32 in 0 .. 65535;
+
+table Werte count NSLOTS {
+    slot {
+        aktiv : bool,
+        wert  : Zaehler,
+    }
+}
+
+-- Jeder Slot genau einmal. **`by unvisited` IST die Laufform** -- eine Zeugenordnung, die
+-- nichts verbraucht und nichts umhaengt, braucht zur Laufzeit nichts ausser der Grenze.
+impl fn aktive_loeschen(w : ptr<normal, rw> Werte)
+    effects { writes w.slots }
+    -- NSLOTS Slots x 2 ops je Durchgang. Die Zahl faellt aus dem Rumpf.
+    costs   <= 64 ops
+{
+    traverse i over slots of w by unvisited
+        touches writes w.slots
+    {
+        if w.slots[i].aktiv {
+            w.slots[i].aktiv = false;
+        }
+    }
+}
+
+-- Dieselbe Domaene, lesend: die Schranke ist dieselbe, die Wirkung eine andere.
+impl fn aktive_zaehlen(w : ptr<normal, r> Werte) -> u32
+    effects { reads w.slots }
+    -- **50, und die Zahl ist am 2026-08-19 GEFALLEN.** Sie stand auf 82, weil der
+    -- `narrow`-Zweig mitzaehlte; mit «H2.1» ist er fort, und `gabbro kosten` liest 50.
+    -- *Abgelesen, nicht geschaetzt (W2) -- eine `costs`-Zeile ist eine Messung.*
+    --
+    -- **Und das ist der zweite Ertrag der Regel, der im Plan nicht stand:** eine
+    -- Klempnereizeile, die niemand braucht, kostet auch Laufzeit. Der Pass rechnet nach,
+    -- und eine zu kleine Zusage faellt an `K001`.
+    costs   <= 50 ops
+{
+    let mut n : u32 in 0 .. NSLOTS = 0;
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+        -- **Was ueber der Schleife gilt.** Der Zaehler waechst hoechstens einmal je
+        -- Durchgang, und die Domaene hat NSLOTS Plaetze -- genau die Schranke, die «H2.1»
+        -- am 2026-08-19 von Hand bewiesen hat und die der `let` seither als Typ traegt.
+        -- *Mehr ist heute nicht schreibbar:* `n == count(s in slots of w : w.slots[s].aktiv)`
+        -- waere die Aussage, die man will, und sie ist «B13» (`messung/AGGREGATION.md`).
+        -- **`passes` is the number of passes already done** (2026-09-08). `n <= NSLOTS`
+        -- is true and unprovable: a pass starting at `n == NSLOTS` has to be handled by
+        -- the rule, and cannot be. `n <= passes` is the sentence that survives a pass,
+        -- and it gives `n <= NSLOTS` back, because a traversal runs at most `count`
+        -- passes.
+        invariant n <= passes
+    {
+        if w.slots[i].aktiv {
+            -- **Hier stand ein `narrow n to 0 ..< NSLOTS else { return n; }`, und sein
+            -- else-Zweig konnte nicht genommen werden.** Entfallen am 2026-08-19 mit «H2.1»:
+            -- ein Zaehler, der in einer beschraenkten Traversierung hoechstens einmal je
+            -- Durchgang waechst, erbt die Schranke seiner Domaene -- an der Zuwachsstelle
+            -- `n <= c + (B-1)*k`. *Die letzte handbewiesene Bereichspflicht des Korpus.*
+            n += 1;
+        }
+    }
+    return n;
+}
+
+}
