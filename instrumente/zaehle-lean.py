@@ -66,8 +66,8 @@ GRUENDE = [
     ("table-invariant", "`maintains` names a table invariant: quantified over every slot"),
     ("call-site", "a precondition at a call site -- the Isabelle channel carries those"),
     ("device-promise", "a promise at hardware Gabbro does not see"),
-    ("call-not-compositional", "a call -- compositional over the CONTRACT, gate not built"),
-    ("loop", "a loop -- the measure is carried, the INVARIANT has no word"),
+    ("call-not-compositional", "a call to a routine this unit does not declare (the gate is built since 2026-09-07)"),
+    ("loop", "a loop -- since 2026-09-07 only one whose body this channel cannot translate"),
     ("concurrent-statement", "one state and one transition stop carrying here"),
     ("publish", "`publishes` -- a release store; it takes VISIBILITY"),
     ("await", "`awaits` -- the other half of the pairing"),
@@ -107,6 +107,14 @@ GRUENDE = [
     ("generated-op", "a generated table operation -- its contract is a SCHEMA"),
     ("device-transition", "a `transition` of a `device` -- a register write"),
     ("constructed-value", "a record, a `tagged` or a device handle -- no value form"),
+    # **Three reasons of 2026-09-07**, the day the call gate, the loop rule and the bounded
+    # quantifier were built: what is left to refuse is a callee whose `requires` has no term
+    # (a dropped precondition would make the caller's goal EASIER), a `return` inside a loop
+    # the desugaring cannot reach (an `old` in the promise), and a routine on a cycle of the
+    # call graph, whose wiring needs an induction over `decreases`.
+    ("callee-requires-no-term", "a callee whose `requires` has no term -- the stuck-condition of the call"),
+    ("return-in-loop", "`return` inside a loop -- the loop's environment carries no second exit"),
+    ("recursion", "a routine on a cycle -- the wiring needs an induction over `decreases`"),
 ]
 
 # The kinds, as `pflichten.rs::kurz` writes them. **In FULL, for the same reason `GRUENDE`
@@ -152,7 +160,11 @@ ZEILE = re.compile(r"^  (\S+) \((\d+)\): ")
 DETAIL = re.compile(r"^    duty_\d+\s+([A-Z])\s")
 
 # The kinds this channel ATTEMPTS. Everything else is refused by kind.
-UEBERSETZT = {"N", "R"}
+# **Since 2026-09-07 every kind but the two ASSUMPTIONS is attempted**: `V` is carried by the
+# caller's theorem (the call gets stuck without the precondition), `E` and `W` by the
+# routines that write the carrier, `S` by the loop's own theorem. `D` and `F` are hardware
+# and foreign code, and no body of Gabbro's can discharge them.
+UEBERSETZT = {"N", "R", "V", "E", "S", "W"}
 
 
 def lies_kopf(text):

@@ -28,157 +28,159 @@
 //! 2. **The goal is the STRONG form**: the body runs to an end *and* the postcondition
 //!    holds. `\forall l', end = some l' -> P l'` would be vacuously true for a body that
 //!    gets stuck, and a vacuous theorem reads exactly like a proved one.
+//!
+//! ## What changed on 2026-09-07, and why the register now closes
+//!
+//! Until that day the channel wrote a goal only over a body that CALLED nothing, LOOPED
+//! nowhere and named no quantifier -- 14 of 175 obligations over the corpus. The rest was
+//! refused by name, and every refusal named a piece of plumbing the person had to write in
+//! Lean by hand: the composition over a callee's contract, the loop rule, the bounded
+//! quantifier of a table invariant, the precondition at a call site. **None of that is the
+//! person's logic**, and this module now writes all of it:
+//!
+//! * **A call is taken over the callee's CONTRACT** (`Body.lean` §4.1). The caller's theorem
+//!   carries `Contract ρ g g_pre g_post` and `Frame ρ g g_writes` as hypotheses, read off
+//!   the callee's `requires`/`ensures`/`effects`; the callee's own `requires` is the
+//!   stuck-condition of the call, so the STRONG goal demands it -- that is the `V` duty,
+//!   carried by the caller's theorem instead of by a goal of its own.
+//! * **A loop is an anonymous routine with a rule.** Its body gets a theorem of its own --
+//!   *from a well-formed state satisfying the invariant, one pass leaves one* -- and the
+//!   routine's theorem carries `LoopRule` as a hypothesis. The shapes of the locals in scope
+//!   travel inside the invariant, as `hasShape` conjuncts this file adds.
+//! * **A table invariant is a bounded quantifier** (`Expr.forallSlots`, with the declared
+//!   `count`), and `reaches` is the chain with the count as fuel. Both are expressions, so
+//!   a callee may DEMAND them.
+//! * **The wiring is generated.** `unit_closed` takes the duty statements and `Program ρ`
+//!   (that the environment runs the bodies) and yields every contract and every loop rule
+//!   of the unit, in dependency order -- `contract_of_duty` and `looprule_of_body` do the
+//!   induction once, in the model.
+//!
+//! What a person still writes is the proof of each `_statement` -- and every hypothesis
+//! such a proof can need stands in front of its turnstile. What stays ASSUMED is named in
+//! `Assumed ρ`: the contracts of foreign bodies and the frames of device transitions --
+//! the `F` and `D` duties of the register, which no body of Gabbro's can discharge.
 
 use gabbro_syntax::ast::*;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 /// **Why an obligation carries no Lean goal.** Exhaustive, and each arm names a different
 /// missing thing -- a single "not supported" would hide that they have different prices.
+///
+/// Since 2026-09-07 the arms fall into three kinds, and `kind` says which: an ASSUMPTION
+/// (hardware, foreign code -- no body of Gabbro's can discharge it), a REFUSAL of a form
+/// this channel has no term for, and a REFUSAL of a shape this channel's wiring cannot yet
+/// close. The count line of every emitted file keeps the three apart.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LeanReason {
-    /// An `ensures` at a body Gabbro never sees. **An assumption, not a goal.**
+    /// An `ensures` at a body Gabbro never sees. **An assumption, not a goal** -- it stands
+    /// in `Assumed ρ` as the callee's `Contract`, visibly, and every caller's wiring rests
+    /// on it.
     ForeignBody,
-    /// `maintains I` -- a table invariant, and a table invariant is a QUANTIFIED statement
-    /// over every slot. This channel has no quantifier, and inventing one that ranges over
-    /// `Int` instead of over the declared capacity would prove a different sentence.
+    /// `maintains I` names an invariant this channel could not translate -- a domain other
+    /// than `slots of`, or a form without a term. (A translatable one is carried by the
+    /// routine's theorem since 2026-09-07.)
     Invariant,
-    /// A precondition at a call site. **Not a gap:** the Isabelle channel carries these, and
-    /// twelve of them are discharged by the lock passes before any prover sees them.
+    /// A precondition at a call site whose CALLER's body this channel could not translate;
+    /// where it could, the `V` duty is carried by the caller's theorem (the call gets stuck
+    /// without it -- `Body.lean` `step`).
     CallSite,
-    /// A promise at a device register -- hardware Gabbro does not see.
+    /// A promise at a device register or a `transition` -- hardware Gabbro does not see.
+    /// An assumption; the transition's frame stands in `Assumed ρ`.
     DevicePromise,
-    /// An invariant of a `walk`. **Quantified over `mappings of`, whose bound is `node
-    /// length ^ levels`** -- a set this channel has no quantifier for, exactly as with a
-    /// table invariant. *It is refused here for the same reason and booked separately,
-    /// because the two are owed by different things:* a table invariant by a function that
-    /// names it in `maintains`, a walk invariant by nobody at all.
+    /// An invariant of a `walk`, or its `down`/`leaf` classifier -- a statement about a
+    /// HARDWARE table, owed by no function. An assumption, like the device promise.
     WalkInvariant,
-    /// A CALL. **The biggest single item of the register, and it is not an oversight**: a
-    /// call is to be taken compositionally over the callee's CONTRACT, never over its body.
-    /// Inlining the body would make the goal a statement about a program nobody wrote.
+    /// A call whose callee this unit does not declare and that is not foreign either --
+    /// nothing to take a contract from.
     CallStatement,
-    /// A loop -- `traverse`, `retry`, `forever`. The measure is carried by the language
-    /// (`K008`/`K009`); what is missing is the INVARIANT, and Gabbro has no word for one at
-    /// a loop (`Traverse`/`Retry`/`Forever` have no such field, `Tabelle` does).
+    /// A loop without an `invariant`. The measure is carried by the language (`K008`/`K009`);
+    /// without the clause there is no statement to preserve, and a loop datum with none
+    /// would let a proof conclude from a loop exactly nothing while looking like it did.
     Loop,
-    /// `locks S { … }`. **The one concurrent statement that costs no memory model** -- see
-    /// `LockStatement` for why it is now carried and this arm is only the fallback.
+    /// `locks S { … }` -- carried since 2026-08-28; this arm is only the fallback.
     Concurrent,
-    /// `publishes` -- a release store with a payload. **Here one state stops carrying**: it
-    /// takes VISIBILITY, and that is a memory model.
+    /// `publishes` at a place with a suffix -- the datum carries the bare atomic only.
     Publish,
-    /// `awaits` -- the other half of the pairing.
+    /// `awaits` at a place with a suffix.
     Await,
-    /// `exchange` -- an atomic swap. Visibility plus atomicity as a notion.
+    /// `exchange` -- both of its shapes are conditional, and a plain swap would store
+    /// something the program does not.
     Exchange,
-    /// `observes D { … }` -- the RCU read side: a view that MAY be stale. Semantically the
-    /// dearest of the five; it needs "valid but not current" as a notion.
+    /// `observes D { … }` -- the RCU read side: a view that MAY be stale.
     Observe,
-    /// `let … else` -- the one error propagation, two exits out of a call. It waits on the
-    /// call gate and on nothing else.
+    /// `let … else` -- the one error propagation, two exits out of a call; the model has no
+    /// reason value to carry the second exit on.
     ErrorPropagation,
-    /// `narrow … to … else` -- and the range lattice underneath is already proved
-    /// (`Passlogik.Bereich`, 46 theorems). This one is close.
+    /// `narrow … to … else` -- the range lattice underneath is proved
+    /// (`Passlogik.Bereich`), the model has no ranges to narrow into.
     Narrowing,
-    /// `leave` and `next` -- a non-local exit out of a named loop.
-    ///
-    /// **`breaking` left this arm on 2026-08-28 and it never belonged in it**
-    /// (`messung/AUSSETZUNG.md`): a suspension changes which DUTY holds, not
-    /// which statements run, so it is carried like a `locks`. All four obligations this
-    /// reason held were `breaking`, and the number therefore said the channel was waiting on
-    /// a loop gate that would have taken none of them.
-    ///
-    /// What is left is a real exit, and what it needs is now nameable: **a fourth
-    /// `Outcome`.** `Outcome` has `running`, `returned` and `stuck`; a `leave` leaves a block
-    /// without returning, and no arm of the three says that.
+    /// `leave`/`next` aimed at an OUTER loop. The innermost is carried (`Stmt.exit`); a mark
+    /// further out would have to travel through a `.loop` step that does not run the body.
     NonLocalExit,
-    /// `+=` and its kin. It desugars to `x = x + e` -- **but the two are not the same
-    /// statement in Gabbro's overflow accounting, and this channel does not get to decide
-    /// that.**
+    /// `+=` and its kin at a target whose shape this channel does not know.
     CompoundAssign,
-    /// A `match` over something other than an `option`. A declared sum type would need one
-    /// value constructor per variant.
+    /// A `match` over something other than an `option`.
     MatchNotOption,
-    /// A floating-point value. The model has no float, and one that rounded differently from
-    /// the hardware would prove the wrong thing quietly.
+    /// A floating-point value. The model has no float.
     Float,
-    /// `old(x)` -- a predicate over TWO states. Everything here speaks about one.
+    /// `old(x)` in a BODY or in a `requires` -- there is no earlier state to read there. In
+    /// an `ensures` it is carried: the contract sees the entry state.
     OldState,
-    /// A QUANTIFIER, `reaches`, or a set membership. This is where a `spec fn` runs out and
-    /// a hand-written Lean specification does not -- `gabbro lean` exists for it.
+    /// A quantifier over a domain other than `slots of`, a `chain(…) in`, `mappings of`,
+    /// `queue`, `elems of`, `threads`, `fields of`, or a set membership -- the model has the
+    /// index domain and the parent chain, and nothing else.
     Quantified,
-    /// A call inside an expression: a `spec fn` or a pure function. **It waits on the same
-    /// gate as a call statement** -- over the CONTRACT, never over the body.
+    /// A call inside an expression: a `spec fn` or a pure function used as a value.
     CallInExpression,
     /// A built-in: `lenof`, `sizeof`, `aligned`, `offset_into`. Each names something about
     /// the LAYOUT, and this model has none.
     Builtin,
-    /// `Held(L)`. **Not a gap at all** -- the lock passes discharge it (`H005`, `H006`,
-    /// `H012`, `H016`). Reporting it as "no term" counted a carried obligation as a missing
-    /// translation; the Isabelle channel has said the true thing about it since day one.
+    /// `Held(L)`/`Has(F)` -- **not a gap**: the lock passes discharge it
+    /// (`H005`/`H006`/`H012`/`H016`), and in a contract it is written as `true`.
     LockWitness,
-    /// `result` in a clause of the EXPORT datum. **Not a gap and not a gate**: the datum's
-    /// `post` list is what a CALLER may assume, and a caller reads the callee's result at its
-    /// own call site rather than out of a name this datum binds. *A promise fewer makes a
-    /// caller's goal harder, never wrong.*
-    ///
-    /// **The obligation channel does NOT refuse this** -- it binds `result` and writes the
-    /// goal. Until 2026-08-30 this variant carried the sentence *"one gate away, not far"*
-    /// and BOTH cases below, and the sentence had outlived the gate: the gate is built.
+    /// `result` in a clause of the EXPORT datum -- the datum's `post` list drops it.
     Result,
-    /// `result` in a BODY -- a statement, or the invariant of a loop inside one.
-    ///
-    /// **This is a PROGRAM error and no gate of this channel will ever carry it.** `result`
-    /// names the returned value; inside a body nothing has returned yet, so the word names
-    /// nothing. It is a RESERVED word, so no `let` and no parameter can have bound it either.
-    ///
-    /// *It stands apart from `Result` because the two point opposite ways*: one is a promise
-    /// this channel declines to repeat, the other is a source that says something it cannot
-    /// mean. A reader who finds them under one name looks for a missing gate and reads a
-    /// gap where a refusal stands.
+    /// `result` in a BODY, where it names nothing -- a program error, not a gap.
     ResultInBody,
     /// An error reason value (`R::F`) or a function pointer.
     OtherValue,
-    /// An expression or predicate form with no Lean term here.
+    /// An expression or predicate form with no Lean term here (`~`, and nothing else today).
     Expression,
-    /// A place whose carrier cannot be resolved to a declared `table`. **Without the
-    /// declaration there is no field shape**, and without the field shape the hypothesis
-    /// would have to be guessed -- see gate 1.
+    /// A place whose carrier cannot be resolved to a declared `table`, record or `format`.
     Carrier,
     /// A field whose declared type has no shape in this channel -- `wrapping`, a float, a
     /// record, or an OPAQUE new type whose representation `D1` forbids reading.
-    ///
-    /// **It stands beside `Carrier` and not inside it**, and the split was measured: the
-    /// first run reported `carrier-not-a-table` for `Buch.slots[p].wert`, where `Buch` is a
-    /// table and `wert` is a `Zaehler`. *A refusal filed under the wrong reason names a
-    /// missing declaration where a missing translation stands* -- the same lesson
-    /// `messung/P6.md` §3.2 books for twelve obligations.
     FieldShape,
     /// A `refines` whose named `spec fn` is not a plain expression body.
     SpecShape,
-    /// A call to a GENERATED table operation -- `Verzeichnis::insert(v, i)`.
-    ///
-    /// **It stands apart from `CallStatement`, and the split was measured** (2026-08-28,
-    /// `messung/RUF-TOR.md`): six of the seventeen refusals filed as "a call, and that gate
-    /// is not built" are these, and no gate over a CONTRACT would take one of them. *An
-    /// operation has no `ensures` to carry.* What it has is a SCHEMA -- `opsruf::koepfe`
-    /// cuts the premises, `schablonen.rs` registers them -- and a schema is a different
-    /// thing to assume than a callee's promise.
+    /// A call to a GENERATED table operation whose premises this channel cannot write -- an
+    /// `insert` whose `reaches` premise names a root the table's invariants do not name.
     GeneratedOp,
-    /// A `transition` of a `device` -- `anerkennen(g)`, `wurzel_setzen(v)`.
-    ///
-    /// It looks exactly like a call and is a REGISTER WRITE. Five of the seventeen. It waits
-    /// on hardware this model does not have, which is the same place `DevicePromise` waits
-    /// -- but that arm is about an obligation AT a register, and this one is a statement in
-    /// a body. *Two different things under one name is how seventeen came about.*
+    /// A `transition` of a `device` with a `requires` this channel has no term for.
     Transition,
     /// A constructor whose VALUE this model has no form for -- a record, a `tagged`, or a
-    /// device handle: `Completion(id: k, len: n)`, `Dma(GERAETEBASIS)`.
-    ///
-    /// `Value` is four forms and the list is closed (`Body.lean` §1). A record is not among
-    /// them, and neither is a handle. **The price is a model extension**, and it is a
-    /// different price from a missing gate.
+    /// device handle.
     ConstructedValue,
+    /// A callee whose `requires` this channel cannot write as an expression. **The
+    /// precondition is the stuck-condition of the call**, so dropping a clause of it would
+    /// make the caller's goal EASIER -- the one direction a refusal exists against.
+    CalleeContract,
+    /// `return` inside the body of a loop. The loop's meaning is looked up in `Env` as a
+    /// state transformer; a body that may leave the ROUTINE from inside would need the
+    /// environment to carry a second exit, and it does not.
+    ReturnInLoop,
+    /// The routine stands on a CYCLE of the call graph. Its duty is written and its contract
+    /// is stated, but the wiring from the one to the other needs an induction over the
+    /// declared `decreases`, and `unit_closed` does not write one.
+    Recursion,
+}
+
+/// The three kinds of "no goal" -- see `LeanReason`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Kind {
+    Assumption,
+    NoTerm,
+    NoWiring,
 }
 
 impl LeanReason {
@@ -217,48 +219,50 @@ impl LeanReason {
             LeanReason::GeneratedOp => "generated-op",
             LeanReason::Transition => "device-transition",
             LeanReason::ConstructedValue => "constructed-value",
+            LeanReason::CalleeContract => "callee-requires-no-term",
+            LeanReason::ReturnInLoop => "return-in-loop",
+            LeanReason::Recursion => "recursion",
         }
     }
     pub fn sentence(self) -> &'static str {
         match self {
             LeanReason::ForeignBody => {
-                "an `ensures` at a body Gabbro never sees: an ASSUMPTION, not a goal"
+                "an `ensures` at a body Gabbro never sees: an ASSUMPTION, stated in `Assumed`"
             }
             LeanReason::Invariant => {
-                "`maintains` names a table invariant, and that is quantified over every slot"
+                "`maintains` names an invariant this channel has no term for"
             }
             LeanReason::CallSite => {
-                "a precondition at a call site -- the Isabelle channel carries these"
+                "a precondition at a call site whose caller this channel could not translate"
             }
-            LeanReason::DevicePromise => "a promise at hardware Gabbro does not see",
+            LeanReason::DevicePromise => {
+                "a promise at hardware Gabbro does not see: an ASSUMPTION"
+            }
             LeanReason::WalkInvariant => {
-                "an invariant of a `walk`, quantified over `mappings of` -- and no pass \
-                 decides it either"
+                "an invariant of a `walk` -- a statement about a hardware table: an ASSUMPTION"
             }
-            LeanReason::CallStatement => {
-                "a call -- compositional over the CONTRACT, and that gate is not built"
-            }
-            LeanReason::Loop => "a loop -- the measure is carried, the INVARIANT has no word",
+            LeanReason::CallStatement => "a call to a routine this unit does not declare",
+            LeanReason::Loop => "a loop without an `invariant` -- nothing to preserve",
             LeanReason::Concurrent => {
                 "a concurrent statement -- one state and one transition stop carrying here"
             }
-            LeanReason::Publish => "`publishes` -- a release store; it takes VISIBILITY",
-            LeanReason::Await => "`awaits` -- the other half of the pairing",
-            LeanReason::Exchange => "`exchange` -- visibility plus atomicity as a notion",
+            LeanReason::Publish => "`publishes` at a place with a suffix",
+            LeanReason::Await => "`awaits` at a place with a suffix",
+            LeanReason::Exchange => "`exchange` -- a conditional store, not a swap",
             LeanReason::Observe => "`observes` -- a view that MAY be stale",
             LeanReason::ErrorPropagation => "`let … else` -- two exits out of a call",
-            LeanReason::Narrowing => "`narrow` -- the range lattice under it is proved",
+            LeanReason::Narrowing => "`narrow` -- the model has no range to narrow into",
             LeanReason::NonLocalExit => {
-                "`leave`/`next` -- a real exit, and `Outcome` has no fourth form for one"
+                "`leave`/`next` aimed at an OUTER loop -- the innermost is carried"
             }
-            LeanReason::CompoundAssign => "`+=` and its kin -- a different overflow accounting",
+            LeanReason::CompoundAssign => "`+=` and its kin at a target without a shape",
             LeanReason::MatchNotOption => "a `match` over something other than an `option`",
             LeanReason::Float => "a floating-point value -- this model has no float",
-            LeanReason::OldState => "`old(x)` -- a predicate over TWO states",
+            LeanReason::OldState => "`old(x)` outside an `ensures` -- no earlier state there",
             LeanReason::Quantified => {
-                "a quantifier, `reaches` or a membership -- where a `spec fn` runs out"
+                "a quantifier over a domain other than `slots of`, or a membership"
             }
-            LeanReason::CallInExpression => "a call inside an expression -- same gate as a call",
+            LeanReason::CallInExpression => "a call inside an expression",
             LeanReason::Builtin => "a built-in about the LAYOUT, and this model has none",
             LeanReason::LockWitness => {
                 "`Held(…)` -- carried by the lock passes (H005/H006/H012/H016), not by a prover"
@@ -272,33 +276,44 @@ impl LeanReason {
             LeanReason::OtherValue => "an error reason value or a function pointer",
             LeanReason::Expression => "a form this channel has no Lean term for",
             LeanReason::Carrier => {
-                "the carrier of a place is not a declared `table`, so no field shape is known"
+                "the carrier of a place is not a declared `table`, record or `format`"
             }
             LeanReason::FieldShape => {
                 "the declared type of a slot field has no shape in this channel"
             }
             LeanReason::SpecShape => "the named `spec fn` is not a plain expression body",
             LeanReason::GeneratedOp => {
-                "a generated table operation -- its contract is a SCHEMA, not an `ensures`"
+                "a generated table operation whose premises name a root no invariant names"
             }
-            LeanReason::Transition => "a `transition` of a `device` -- a register write",
+            LeanReason::Transition => "a `transition` whose `requires` has no term here",
             LeanReason::ConstructedValue => {
                 "a record, a `tagged` or a device handle -- this model has no value for one"
             }
+            LeanReason::CalleeContract => {
+                "a callee whose `requires` has no term -- and a dropped precondition would \
+                 make the caller's goal easier"
+            }
+            LeanReason::ReturnInLoop => {
+                "`return` inside a loop body -- the loop's environment carries no second exit"
+            }
+            LeanReason::Recursion => {
+                "a routine on a cycle of the call graph -- the wiring needs an induction \
+                 over `decreases`, and none is written"
+            }
         }
     }
-    /// **All of them, so a report cannot omit one by forgetting to ask.**
-    /// **`WalkInvariant` was declared and NOT listed here** (found 2026-09-01 by
-    /// `zaehle-lean.py`, which aborted with *„the reasons count 1, refused are 3"*). The
-    /// variant went into the enum with `Art::Walkinvariante`, the summary loop runs over
-    /// THIS array, and the two walk invariants of `beispiele/07` were refused **without a
-    /// reason line** — the balance stopped adding up.
-    ///
-    /// *A hand-written list that must be exhaustive, and the compiler does not hold it: the
-    /// same shape as a `_` arm over a language enum, only inverted — there a case is
-    /// silently answered, here it is silently dropped.* The speech test below now holds the
-    /// length against `strum`-free arithmetic instead of a literal nobody re-counts.
-    pub const ALL: [LeanReason; 33] = [
+    pub fn kind(self) -> Kind {
+        match self {
+            LeanReason::ForeignBody
+            | LeanReason::DevicePromise
+            | LeanReason::WalkInvariant => Kind::Assumption,
+            LeanReason::Recursion => Kind::NoWiring,
+            _ => Kind::NoTerm,
+        }
+    }
+    /// **All of them, so a report cannot omit one by forgetting to ask.** The speech test
+    /// holds the length against the enum.
+    pub const ALL: [LeanReason; 36] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -332,57 +347,110 @@ impl LeanReason {
         LeanReason::GeneratedOp,
         LeanReason::Transition,
         LeanReason::ConstructedValue,
+        LeanReason::CalleeContract,
+        LeanReason::ReturnInLoop,
+        LeanReason::Recursion,
     ];
 }
 
-/// One closed Lean goal over a body.
-pub struct LeanGoal {
-    /// `duty_7` -- the position in the register `gabbro pflichten` prints.
-    pub name: String,
-    /// The body, as a `Gabbro.Body.Stmt` list term.
-    pub body: String,
-    /// `(label, term, where it came from)` -- every hypothesis, read from a declaration.
-    pub hypotheses: Vec<(String, String, String)>,
-    /// The postcondition, as a `Gabbro.Body.Expr` that must evaluate to `true`.
-    pub conclusion: String,
-    /// **Whether the postcondition names `result`** -- and with it, whether the goal also
-    /// demands that the body PRODUCED a value. A body that runs off the end has no result,
-    /// and a goal that let such a body pass would prove the promise of a routine that never
-    /// makes one.
-    pub names_result: bool,
-    /// **The `obtain` lines the proof opens with.** A hypothesis `\exists n, l.locals "p" =
-    /// .z n` tells `simp` nothing until the witness is named; without these the goal stalls
-    /// on an unreduced `match` over `l.locals "p"`. *Measured on the first run of this
-    /// emitter, and it is why the tactic is generated rather than fixed.*
-    pub opening: Vec<String>,
-    /// The equation names those `obtain`s bind, for the `simp` set.
-    pub equations: Vec<String>,
-    /// **The `rcases` fragments, and they are kept apart from `opening` because they must
-    /// be CHAINED.** An `rcases` splits the goal, and a plain next line applies only to the
-    /// first half -- measured: the second split reported its own witness as an unknown
-    /// identifier in every branch the first split had left behind.
-    pub splits: Vec<String>,
-}
-
+/// **What became of one obligation of the register.**
 pub enum LeanVerdict {
-    Proved(Box<LeanGoal>),
+    /// Carried by a theorem of the unit -- the routine's, or a loop's. The string names it.
+    /// Several obligations may name the same theorem: every `ensures` of a routine, every
+    /// `V` at its call sites and every invariant it maintains are one theorem over one body.
+    Carried(String),
+    /// Carried by several theorems -- a `table` invariant nobody maintains is preserved by
+    /// EVERY routine that writes the carrier, and each of them owes it.
+    CarriedBy(Vec<String>),
+    /// An assumption: hardware, foreign code. Named, never discharged.
+    Assumed(LeanReason),
+    /// Refused by name.
     Refused(LeanReason),
 }
 
+impl LeanVerdict {
+    pub fn is_goal(&self) -> bool {
+        matches!(self, LeanVerdict::Carried(_) | LeanVerdict::CarriedBy(_))
+    }
+}
+
 /// **What a table declares.** Field name to the shape its declaration gives it.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Shape {
     Int,
+    /// **A number with its declared range** (2026-09-08). A place of type `u8 in 0 .. 15`
+    /// holds a number the checker keeps in range (`M1`), and the well-typed world says so:
+    /// a read from it is `∃ n, σ p = .int n ∧ 0 ≤ n ∧ n ≤ 15`, and a store into it owes the
+    /// range -- the same arithmetic the checker decided, now decided by `omega` over the
+    /// guards the model carries. Without it a routine that returns such a field could not
+    /// promise its own declared range (`13-zeuge-mit-staerke`).
+    IntIn(i128, i128),
     Bool,
     Opt,
+    /// A `tagged` value -- one of the declared cases, with its payload where the case has
+    /// one. The cases are interned (`sum_cases`), so that the shape stays a `Copy` and the
+    /// datum still names every case: `.sum [("Kurz", true), ("Leer", false)]`.
+    Sum(u32),
+}
+
+/// The interned case lists of every `tagged` type this process has read: `(name, has a
+/// payload)` per case. **The model has to know the cases**: a `match` over a `tagged`
+/// value has an arm per case, and a value the type excludes would get the model stuck
+/// where the program cannot go.
+/// **A case's payload, as the model types it**: `None` -- no payload; `Some(None)` -- a
+/// number without a range; `Some(Some((lo, hi)))` -- a number in its declared range. The
+/// range is part of the type, and the checker keeps every payload in it -- so the model
+/// says so, or a `match` arm that reads the payload could not use the range it has.
+type Payload = Option<Option<(i128, i128)>>;
+
+fn sum_cases() -> &'static std::sync::Mutex<Vec<Vec<(String, Payload)>>> {
+    static CASES: std::sync::OnceLock<std::sync::Mutex<Vec<Vec<(String, Payload)>>>> = std::sync::OnceLock::new();
+    CASES.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+fn intern_sum(cases: Vec<(String, Payload)>) -> u32 {
+    let mut all = sum_cases().lock().unwrap();
+    if let Some(i) = all.iter().position(|c| *c == cases) {
+        return i as u32;
+    }
+    all.push(cases);
+    (all.len() - 1) as u32
 }
 
 impl Shape {
+    /// A number, ranged or not.
+    fn is_int(self) -> bool {
+        matches!(self, Shape::Int | Shape::IntIn(..))
+    }
+    /// The declared range, where the shape carries one.
+    fn range(self) -> Option<(i128, i128)> {
+        match self {
+            Shape::IntIn(lo, hi) => Some((lo, hi)),
+            _ => None,
+        }
+    }
     fn predicate(self) -> &'static str {
         match self {
-            Shape::Int => "isInt",
+            Shape::Int | Shape::IntIn(..) => "isInt",
             Shape::Bool => "isBool",
             Shape::Opt => "isOption",
+            Shape::Sum(_) => "isTagged",
+        }
+    }
+    fn lean(self) -> String {
+        match self {
+            Shape::Int => ".int".into(),
+            Shape::IntIn(lo, hi) => format!("(.intIn {} {})", int_lit(lo), int_lit(hi)),
+            Shape::Bool => ".bool".into(),
+            Shape::Opt => ".opt".into(),
+            Shape::Sum(i) => {
+                let all = sum_cases().lock().unwrap();
+                let cases: Vec<String> = all[i as usize]
+                    .iter()
+                    .map(|(n, p)| format!("({}, {})", quoted(n), payload_lean(*p)))
+                    .collect();
+                format!("(.sum [{}])", cases.join(", "))
+            }
         }
     }
 }
@@ -393,9 +461,31 @@ impl Shape {
 /// **The option distinction is read SYNTACTICALLY and the rest through the environment**,
 /// and the split is not tidiness. `option index into T` and `index into T` both resolve to
 /// an integer -- the sentinel lowering is the point of `Option_Sonderwert.thy` -- so a
-/// resolved type cannot tell them apart. *Asking the resolved type here would silently make
-/// every option field a number, and a `match` over it would then be unreachable rather than
-/// refused.*
+/// resolved type cannot tell them apart.
+/// **The declared range of every integer parameter of `f`** -- what the checker holds at
+/// every call site, and what the body may therefore assume. A parameter whose type has
+/// no range (a pointer, a boolean) has no entry.
+fn param_ranges(f: &FnDecl, u: &crate::umgebung::Umgebung, module: &str) -> HashMap<String, (i128, i128)> {
+    let mut out = HashMap::new();
+    for p in &f.parameter {
+        if !shape_of(&p.typ, u, module).is_some_and(Shape::is_int) {
+            continue;
+        }
+        if let Some(b) = u.typ_von_ausdruck_decl(module, &p.typ).bereich() {
+            out.insert(p.name.text.clone(), (b.min, b.max));
+        }
+    }
+    out
+}
+
+/// The declared range of an integer type, where it has one.
+fn result_range_of(t: &TypExpr, u: &crate::umgebung::Umgebung, module: &str) -> Option<(i128, i128)> {
+    if !shape_of(t, u, module).is_some_and(Shape::is_int) {
+        return None;
+    }
+    u.typ_von_ausdruck_decl(module, t).bereich().map(|b| (b.min, b.max))
+}
+
 fn shape_of(t: &TypExpr, u: &crate::umgebung::Umgebung, module: &str) -> Option<Shape> {
     if let TypExpr::Index { optional, .. } = t {
         return Some(if *optional { Shape::Opt } else { Shape::Int });
@@ -406,25 +496,32 @@ fn shape_of(t: &TypExpr, u: &crate::umgebung::Umgebung, module: &str) -> Option<
 fn shape_of_typ(t: &crate::typen::Typ) -> Option<Shape> {
     use crate::typen::Typ;
     match t {
+        // a declared size has a range; a literal's width is borrowed and says nothing
+        Typ::Ganzzahl(b) if !b.literal => Some(Shape::IntIn(b.min, b.max)),
         Typ::Ganzzahl(_) => Some(Shape::Int),
         Typ::Wahrheit => Some(Shape::Bool),
         Typ::Tabelle(_) => Some(Shape::Int),
-        // **An OPAQUE new type stops here and a transparent one does not.** Reading the
-        // representation of an `opaque` is exactly the implicit conversion `D1` forbids;
-        // a transparent one is a range with a name, and a name is not a wall.
-        Typ::Benannt {
-            undurchsichtig: false,
-            unter,
-            ..
-        } => shape_of_typ(unter),
-        // `wrapping` gives no shape: overflow is the POINT of the type, so unbounded `Int`
-        // arithmetic over it would compute something Gabbro does not.
-        Typ::Umlaufend(_)
-        | Typ::Benannt { .. }
-        | Typ::Gleitkomma(_)
+        // **A new type -- opaque or not -- has the shape of what it is over.** Until
+        // 2026-09-07 an `opaque` stopped here: reading its representation is the implicit
+        // conversion `D1` forbids THE PROGRAM. The model is not the program: a slot field
+        // `kind : ObjectKind` over a `u8` holds a number the world has to type, or every
+        // store into the slot is unchecked and every invariant over the field has no term.
+        // `D1` stands where it stood -- in the checker, over the source.
+        Typ::Benannt { unter, .. } => shape_of_typ(unter),
+        // `wrapping` is a NUMBER; what makes it wrap is the store (`Expr.wrapTo`), and the
+        // emitter writes that at every store into a wrapping field (`wrap_of`).
+        Typ::Umlaufend(_) => Some(Shape::Int),
+        // **A `tagged` type is a SUM** -- one of its cases, with a numeric payload where
+        // the case has one (`Value.tagged`).
+        Typ::Summe { varianten, .. } => Some(Shape::Sum(intern_sum(
+            varianten
+                .iter()
+                .map(|(n, p)| (n.clone(), p.as_ref().map(|t| t.bereich().filter(|b| !b.literal).map(|b| (b.min, b.max)))))
+                .collect(),
+        ))),
+        Typ::Gleitkomma(_)
         | Typ::Nie
         | Typ::Zeiger(_)
-        | Typ::Summe { .. }
         | Typ::Verbund(_)
         | Typ::Feld { .. }
         | Typ::Register { .. }
@@ -435,108 +532,187 @@ fn shape_of_typ(t: &crate::typen::Typ) -> Option<Shape> {
     }
 }
 
-/// **Where the thing being translated stands, as far as the word `result` is concerned.**
-///
-/// The three cases are not three degrees of one permission -- they are three different
-/// answers, and two of them are refusals that mean opposite things. Keeping them in one
-/// `bool` made `result-in-ensures` name a body.
+/// **Where the thing being translated stands, as far as the words `result` and `old` are
+/// concerned.**
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ResultSite {
     /// A body: a statement, or the invariant of a loop inside one. `result` names nothing
-    /// here and never will.
+    /// here and never will; `old` has no earlier state.
     Body,
-    /// A `requires` or `ensures` of the EXPORT datum, which does not bind `result` on purpose.
+    /// A `requires` -- of the export datum or of a contract. `result` is not bound and `old`
+    /// has no earlier state.
     Contract,
-    /// The postcondition of an obligation. The goal binds `result` as a local before
-    /// evaluating, exactly as a parameter is read from `local'`.
+    /// An `ensures`. `result` is bound as a local, `old(e)` is bound as a local too --
+    /// `old#1`, `old#2`, … -- and the goal quantifies the values over the ENTRY state.
     Bound,
+    /// An `ensures` as the RETURN PATH of a loop reads it: `result` is the local `#ret`
+    /// the desugared `return` bound, and `old` has no state to read.
+    LoopRet,
+}
+
+/// A table, as this channel reads its declaration.
+#[derive(Clone)]
+pub struct TableInfo {
+    pub fields: Vec<(String, Option<Shape>)>,
+    /// `(field) -> (bits, signed)` for every `wrapping` slot field.
+    pub wraps: HashMap<String, (u8, bool)>,
+    /// `count N` -- the bound of every quantifier over the table and the fuel of every
+    /// `reaches` through it. `None` where the declaration names none.
+    pub count: Option<i128>,
+    /// The occupancy field, where the table has `ops`.
+    pub belegt: Option<String>,
+    /// The parent edge of a `tree` table.
+    pub elter: Option<String>,
+    /// The root a `reaches`-invariant of this table names, if one does.
+    pub root: Option<Expr>,
+}
+
+/// One routine, as this channel reads its declaration.
+#[derive(Clone)]
+struct RoutineInfo {
+    module: String,
+    decl: FnDecl,
+    params: Vec<(String, Option<Shape>)>,
+    /// **The declared range of every integer parameter** -- `n : u32 in 0 .. TIEFE` -- as
+    /// the bounds the checker guarantees at every call site (`M1xx`). They travel in the
+    /// precondition beside the shape, so that a body's arithmetic has what the checker had.
+    ranges: HashMap<String, (i128, i128)>,
+    /// The carriers the declared `effects` list writes -- `writes X` and `consumes X`.
+    writes: Vec<String>,
+    /// The invariants this routine has to preserve: the ones `maintains` names, and every
+    /// `table`/`group` invariant of a carrier it writes that no `maintains` names -- a global
+    /// invariant is preserved by its writers, and that is the whole meaning of "global".
+    maintained: Vec<String>,
 }
 
 /// Everything the translation of one body may look at.
 struct Ctx<'a> {
-    /// Table name to its slot fields, as declared.
-    tables: &'a HashMap<String, Vec<(String, Option<Shape>)>>,
-    /// Record and `format` declarations: name to its fields, with the shape each declares.
-    /// **Beside the tables and not among them** -- a record is ONE object, a table is a row
-    /// of them, and one map would let a slot field alias a record field.
-    records: &'a HashMap<String, Vec<(String, Option<Shape>)>>,
+    unit: &'a Unit,
+    /// Base name to the table it stands for, for this routine.
+    carrier: HashMap<String, String>,
     /// Base name to the record or `format` it stands for.
     record_carrier: HashMap<String, String>,
-    /// The declaring function's parameters: name to the table its type points at, if any.
-    carrier: HashMap<String, String>,
-    /// Parameter and `let` names -- these read from `locals`, not from the world.
-    locals: Vec<String>,
-    /// **Whether a CALL may be translated.** The program export says yes: it writes a datum,
-    /// and a datum of a call is honest -- the callee is named, not inlined. The obligation
-    /// channel says no: it writes a GOAL, and a goal over a body that calls needs the
-    /// callee's contract as a hypothesis. *Emitting the goal without it would state
-    /// something no proof can close, and a red guard is not a measurement.*
+    /// Parameter and `let` names -- these read from `locals`, not from the world -- with the
+    /// shape each has, where it is known. **The shape is what a loop invariant carries
+    /// across the pass** (`Body.lean`, `hasShape`).
+    locals: Vec<(String, Option<Shape>)>,
+    /// The declared ranges of the integer parameters (`RoutineInfo::ranges`).
+    ranges: HashMap<String, (i128, i128)>,
+    /// The parameters that point at a `device` -- a place under one is a register, and
+    /// what a register reads is the device's promise, not the model's computation.
+    device_carrier: BTreeSet<String>,
+    /// `Self` inside a `table`/`group` invariant stands for the carrier.
+    self_carrier: Option<String>,
+    /// The module the routine is declared in -- a declared type resolves there.
+    module: String,
+    /// Whether a CALL may be translated -- the export datum says yes and so does the
+    /// obligation channel since 2026-09-07; `false` only for a contract clause.
     allow_calls: bool,
-    /// Callee name to its parameter names, so a call can bind them.
-    callees: &'a HashMap<String, Vec<String>>,
-    /// **WHERE the thing being translated stands**, which decides both whether `result` may
-    /// be translated and -- when it may not -- which refusal is honest.
-    ///
-    /// It was a `bool` until 2026-08-30, and a `bool` has two states where the channel has
-    /// three: a body, a clause of the export datum, and the postcondition of a goal. *The two
-    /// that refuse refuse for opposite reasons*, and under one flag they had to share one
-    /// name. The field is set at each call site rather than toggled globally, so the site is
-    /// a fact about what is being read and not about how far the run has got.
     result_site: ResultSite,
-    /// Set while translating the conclusion, where `result` really occurred. **The goal
-    /// shape depends on it**: only a postcondition that names the returned value has to
-    /// demand that the body produced one.
     uses_result: bool,
-    /// **What a call path names when it is NOT a routine call.** Empty means "a routine
-    /// call, or nothing this unit declares" -- see `foreign_calls`.
-    foreign: &'a HashMap<String, LeanReason>,
+    /// The `old(e)` sub-expressions met in an `ensures`, in order; `old#i` is bound to the
+    /// value of the i-th one in the entry state.
+    olds: Vec<String>,
     /// Collected while translating: `(carrier, field, form, origin)`, deduplicated.
     seen: Vec<(String, String, Shape, String)>,
     /// `(carrier, field, shape)` for every RECORD field touched.
     seen_records: Vec<(String, String, Shape)>,
-    /// The routine's name and how many loops have been numbered in it. **Every loop needs an
-    /// id of its own** -- two loops under one name would share an environment entry, and a
-    /// hypothesis about the first would silently cover the second.
+    /// How many call results have been hoisted into locals (`#m1`, `#m2`, …).
+    hoists: usize,
+    /// The calls of the statement being translated that ARE hoisted -- by the address of
+    /// the `Ruf` in the tree -- and the local each one's result is bound to.
+    hoisted: HashMap<usize, String>,
+    /// The routine's name and how many loops have been numbered in it.
     routine: String,
     loops: usize,
-    /// **Every `(carrier, field, index-parameter)` read at an option-shaped field.**
-    ///
-    /// `istWahl` is a DISJUNCTION, and `simp` cannot open one: without the case split the
-    /// goal stalls on an unreduced `match` over the field. *Measured on the first corpus
-    /// run of this channel -- `aushaengen` was the one red module of sixty-eight, and the
-    /// reason was this and nothing else.*
-    option_reads: Vec<(String, String, String)>,
+    /// The loops met in this body, innermost first as they close.
+    loop_infos: Vec<LoopInfo>,
+    /// The marks of the loops currently open, innermost last -- `None` for an unmarked one.
+    loop_stack: Vec<Option<String>>,
+    /// Every callee this body calls -- routine names, generated ops and transitions alike.
+    callees: BTreeSet<String>,
+    /// Every slot field read at a BARE LOCAL index -- `(carrier, field, index, shape)` --
+    /// for the witnesses the proof opens with: a read at a witnessed index is a value the
+    /// well-typed world gives a shape to.
+    option_reads: Vec<(String, String, String, Shape)>,
+    /// **What a `return` inside a loop has to establish** -- the routine's `ensures` (with
+    /// `result` read as the local `#ret`) and the invariants it keeps, as one expression.
+    /// `None` where an `ensures` has no such reading (`old`), and then a `return` in a loop
+    /// is refused.
+    ret_post: Option<String>,
+    /// Whether the routine returns a value -- decides the shape of the desugared `return`.
+    has_result: bool,
+    /// **The invariants the routine keeps, as terms** -- every loop's invariant carries them
+    /// across the pass, because a call inside the loop demands them at its entry and the
+    /// routine's promise demands them at its end.
+    kept: Vec<String>,
+}
+
+/// One loop of a routine, with everything its own theorem needs.
+#[derive(Clone)]
+pub struct LoopInfo {
+    /// `f#1` -- the id the environment is looked up under.
+    pub id: String,
+    /// The invariant, strengthened by the shapes of the locals in scope.
+    pub inv: String,
+    /// The loop variable, or a name nothing reads.
+    pub var: String,
+    pub body: String,
+    /// The callees of the loop body and the loop ids nested in it -- the hypotheses its
+    /// theorem carries.
+    pub callees: BTreeSet<String>,
+    pub nested: Vec<String>,
+    /// The locals whose shape the invariant carries, in conjunct order.
+    pub shapes: Vec<(String, Shape)>,
+    /// How many conjuncts the invariant has -- the path to each shape runs through them.
+    pub parts: usize,
+    /// The slot fields the body reads at a bare local index.
+    pub reads: Vec<(String, String, String, Shape)>,
+    /// The declared ranges of the parameters in scope -- the ranged shape conjuncts of the
+    /// invariant open with their bounds.
+    pub ranges: HashMap<String, (i128, i128)>,
+    /// The record fields the routine has read up to and inside this loop.
+    pub records: Vec<(String, String, Shape)>,
+    /// **The index range the loop visits** -- `[lo, hi)` for a `traverse` over a domain
+    /// inside one table (its `count`); `None` for a `retry`/`forever` pass. A pass may
+    /// assume its index is in the range (`RunsLoopIn`, `looprule_of_body_in`).
+    pub range: Option<(i128, i128)>,
 }
 
 impl Ctx<'_> {
-    /// **Which table does this base name stand for?** A bare table name stands for itself;
-    /// a parameter stands for the table its pointer type names.
     fn table_of(&self, base: &str) -> Option<&String> {
+        if base == "Self" {
+            return self.self_carrier.as_ref();
+        }
         self.carrier.get(base)
     }
 
-    /// A place whose index is a bare parameter, at an option-shaped field: the proof will
-    /// have to split on it.
+    fn is_local(&self, n: &str) -> bool {
+        self.locals.iter().any(|(l, _)| l == n)
+    }
+
+    fn push_local(&mut self, n: &str, sh: Option<Shape>) {
+        // a binding of a parameter's name shadows it -- and its declared range with it
+        self.ranges.remove(n);
+        self.locals.push((n.to_string(), sh));
+    }
+
     fn note_option(&mut self, carrier: &str, feld: &str, form: Shape, index: &Expr) {
-        if form != Shape::Opt {
-            return;
-        }
-        let ExprArt::Ort(o) = &index.art else { return };
-        if !o.suffixe.is_empty() {
+        let ExprArt::Ort(o) = &crate::ohne_klammern(index).art else { return };
+        if !o.suffixe.is_empty() || !self.is_local(&o.basis.text) {
             return;
         }
         let p = o.basis.text.clone();
         if !self
             .option_reads
             .iter()
-            .any(|(t, f, i)| t == carrier && f == feld && *i == p)
+            .any(|(t, f, i, _)| t == carrier && f == feld && *i == p)
         {
             self.option_reads
-                .push((carrier.to_string(), feld.to_string(), p));
+                .push((carrier.to_string(), feld.to_string(), p, form));
         }
     }
 
-    /// A record field that was read or written, for the well-formedness hypothesis.
     fn note_record(&mut self, carrier: &str, feld: &str, shape: Shape) {
         if !self
             .seen_records
@@ -571,33 +747,46 @@ fn quoted(s: &str) -> String {
 }
 
 /// **Carrier, field, shape -- and the two refusals are DIFFERENT ones.**
-///
-/// A base that names no table is `Carrier`; a field the table does declare but whose type
-/// this channel has no shape for is `FieldShape`. *The first says a declaration is missing,
-/// the second says a translation is.* Folding them would report `Buch.slots[p].wert` as an
-/// unknown carrier, and `Buch` is right there in the file.
 fn field_shape(base: &str, feld: &str, c: &Ctx) -> Result<(String, Shape, String), LeanReason> {
     let tab = c.table_of(base).ok_or(LeanReason::Carrier)?.clone();
-    let fields = c.tables.get(&tab).ok_or(LeanReason::Carrier)?;
-    let (_, form) = fields
+    let info = c.unit.tables.get(&tab).ok_or(LeanReason::Carrier)?;
+    let (_, form) = info
+        .fields
         .iter()
         .find(|(n, _)| n == feld)
         .ok_or(LeanReason::Carrier)?;
     let form = form.ok_or(LeanReason::FieldShape)?;
-    Ok((base.to_string(), form, tab))
+    let base = if base == "Self" { tab.clone() } else { base.to_string() };
+    Ok((base, form, tab))
 }
 
-/// **Carrier and shape of a RECORD field.** The two refusals stay apart for the same reason
-/// they do at a table: a base that names no declaration is `Carrier`, a field whose declared
-/// type has no shape here is `FieldShape`.
+/// **A record field, as the carrier it is written under and its shape.** The carrier is
+/// the RECORD'S name, not the parameter's -- `s.len` at `s : ptr<…> Text` is the place
+/// `.field "Text" "len"` -- for the reason tables have (`place_carrier`): a callee's
+/// promise about `s.len` has to be readable by a caller writing `t.len`, and `shapeOf`
+/// types the place by the declaration. *What that assumes is written in the module
+/// header: two objects of one record type are one object of the model.* Until
+/// 2026-09-07 the parameter name stood here, and no contract about a record composed
+/// and no read from one had a shape.
 fn record_field(base: &str, field: &str, c: &Ctx) -> Result<(String, Shape), LeanReason> {
     let rec = c.record_carrier.get(base).ok_or(LeanReason::Carrier)?;
-    let fields = c.records.get(rec).ok_or(LeanReason::Carrier)?;
+    let fields = c.unit.records.get(rec).ok_or(LeanReason::Carrier)?;
     let (_, shape) = fields
         .iter()
         .find(|(n, _)| n == field)
         .ok_or(LeanReason::Carrier)?;
-    Ok((base.to_string(), shape.ok_or(LeanReason::FieldShape)?))
+    Ok((rec.clone(), shape.ok_or(LeanReason::FieldShape)?))
+}
+
+/// **The carrier name a place is written under in the datum.** A parameter that points at a
+/// table stands for the table -- `t.slots[i].x` at `t : ptr<…> Buch` is the place
+/// `.slot "Buch" i "x"`, not `.slot "t" …`: two functions naming the same table through
+/// two parameter names name ONE object, and the contract of the one has to be readable by
+/// the other. *Until 2026-09-07 the parameter name stood in the place, and a callee's
+/// `ensures` about `t.slots[…]` said nothing to a caller writing `c.slots[…]`.*
+fn place_carrier(base: &str, tab: &str) -> String {
+    let _ = base;
+    tab.to_string()
 }
 
 /// A place, as a `Gabbro.Body.Expr`. **Three forms and nothing else:** a bare name,
@@ -605,18 +794,35 @@ fn record_field(base: &str, field: &str, c: &Ctx) -> Result<(String, Shape), Lea
 fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
     if o.suffixe.is_empty() {
         let n = &o.basis.text;
-        return Ok(if c.locals.iter().any(|l| l == n) {
-            format!("(.name {})", quoted(n))
-        } else {
-            format!("(.global {})", quoted(n))
-        });
+        if c.is_local(n) {
+            return Ok(format!("(.name {})", quoted(n)));
+        }
+        // **A constant is its VALUE**, not a place: `WURZEL` names `0`, and a world place
+        // called "WURZEL" would be a place nothing declares. Table constants are looked up
+        // under the tables in scope as well.
+        if let Some(v) = const_value(n, c) {
+            return Ok(format!("(.lit (.int {}))", int_lit(v)));
+        }
+        return Ok(format!("(.global {})", quoted(n)));
     }
-    // **One field and no index is a RECORD field.** `s.len`, `header.e_entry` -- one object,
-    // not a row of them.
     if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
         let (base, shape) = record_field(&o.basis.text, &f.text, c)?;
         c.note_record(&base, &f.text, shape);
         return Ok(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text)));
+    }
+    // **A register of a device is the device's promise** -- `v.GSTS.TES` reads what the
+    // hardware answers, and a clause over it is an assumption by name, not a refusal.
+    if c.device_carrier.contains(&o.basis.text) {
+        return Err(LeanReason::DevicePromise);
+    }
+    // **An array element is a slot of the array's pseudo-table**: `r.plaetze[j]` and
+    // `buf[i]` (see `Unit::record_arrays`).
+    if let Some((tab, i)) = array_place(o, c) {
+        let shape = array_elem_shape(&tab, c)?;
+        let idx = expr_term(i, c)?;
+        c.note(&tab, "elem", shape, &format!("element of `{tab}`"));
+        c.note_option(&tab, "elem", shape, i);
+        return Ok(format!("(.place {} {} \"elem\")", quoted(&tab), idx));
     }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] = &o.suffixe[..] else {
         return Err(LeanReason::Carrier);
@@ -626,14 +832,77 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
     }
     let (base, shape, tab) = field_shape(&o.basis.text, &f.text, c)?;
     let idx = expr_term(i, c)?;
-    c.note(&base, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
-    c.note_option(&base, &f.text, shape, i);
+    let carrier = place_carrier(&base, &tab);
+    c.note(&carrier, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
+    c.note_option(&carrier, &f.text, shape, i);
     Ok(format!(
         "(.place {} {} {})",
-        quoted(&base),
+        quoted(&carrier),
         idx,
         quoted(&f.text)
     ))
+}
+
+/// **The pseudo-table and the index of an array place** -- `r.f[i]` at a record carrier
+/// `r` whose `f` is an array, or `buf[i]` at a static array -- and `None` for any other
+/// form.
+fn array_place<'a>(o: &'a Ort, c: &Ctx) -> Option<(String, &'a Expr)> {
+    match &o.suffixe[..] {
+        [OrtSuffix::Feld(f), OrtSuffix::Index(i)] => {
+            let rec = c.record_carrier.get(&o.basis.text)?;
+            let arrays = c.unit.record_arrays.get(rec)?;
+            let (_, tab) = arrays.iter().find(|(n, _)| *n == f.text)?;
+            Some((tab.clone(), i))
+        }
+        [OrtSuffix::Index(i)] => {
+            let tab = c.carrier.get(&o.basis.text)?;
+            let info = c.unit.tables.get(tab)?;
+            if info.fields.len() == 1 && info.fields[0].0 == "elem" {
+                Some((tab.clone(), i))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// The shape of the elements of an array pseudo-table.
+fn array_elem_shape(tab: &str, c: &Ctx) -> Result<Shape, LeanReason> {
+    let info = c.unit.tables.get(tab).ok_or(LeanReason::Carrier)?;
+    info.fields.first().and_then(|(_, s)| *s).ok_or(LeanReason::FieldShape)
+}
+
+/// The value of a constant in scope -- module constants, and the constants of every table
+/// of the unit (`WURZEL` inside `table Kappenraum { const WURZEL … }`).
+fn const_value(n: &str, c: &Ctx) -> Option<i128> {
+    if let Some(v) = c.unit.u.konst_wert_von_namen(&c.module, n) {
+        return Some(v);
+    }
+    let mut names: Vec<&String> = c.unit.tables.keys().collect();
+    names.sort();
+    for t in names {
+        if let Some(v) = c.unit.u.konst_wert_von_namen(&c.module, &format!("{t}::{n}")) {
+            return Some(v);
+        }
+    }
+    None
+}
+
+/// **The index of a slot place `T.slots[i]` -- the operand of `reaches`.** A bare name is
+/// an index too -- `WURZEL`, a constant -- and then the table is the other operand's.
+fn slot_index(o: &Ort, c: &mut Ctx) -> Result<(Option<String>, String), LeanReason> {
+    if o.suffixe.is_empty() {
+        return Ok((None, place_term(o, c)?));
+    }
+    let [OrtSuffix::Feld(slots), OrtSuffix::Index(i)] = &o.suffixe[..] else {
+        return Err(LeanReason::Quantified);
+    };
+    if slots.text != "slots" {
+        return Err(LeanReason::Quantified);
+    }
+    let tab = c.table_of(&o.basis.text).ok_or(LeanReason::Carrier)?.clone();
+    Ok((Some(tab), expr_term(i, c)?))
 }
 
 /// An expression as a `Gabbro.Body.Expr`.
@@ -649,12 +918,8 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         ExprArt::Ort(o) => place_term(o, c),
         ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("(.un .not {})", expr_term(x, c)?)),
         ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(.un .neg {})", expr_term(x, c)?)),
-        // **`~` has no term here, and the reason is the model and not the operator.**
-        //
-        // `Gabbro.Body` carries `.un .not` and `.un .neg`, both of which are width-free over
-        // `Int`. A complement is NOT: `~x` is `2^n - 1 - x`, and the `n` is nowhere in this
-        // channel -- an expression carries no declared type into `expr_term`. *A term that
-        // picked a width would prove a theorem about a program the checker never checked.*
+        // **`~` has no term here, and the reason is the model and not the operator.** A
+        // complement is `2^n - 1 - x`, and the `n` is nowhere in this channel.
         ExprArt::Unaer(UnOp::BitNicht, _) => Err(LeanReason::Expression),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
@@ -669,21 +934,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                 BinOp::GroesserGleich => "ge",
                 BinOp::Und => "and",
                 BinOp::Oder => "or",
-                // **Division and the bit operations, and the honesty is in the MODEL and
-                // not in a refusal here.**
-                //
-                // They stood refused as `division-or-bits` with the sentence *"Lean rounds
-                // down where C truncates"*. That sentence was true and the conclusion was
-                // not: `Gabbro.Body` now takes `Int.tdiv`/`Int.tmod`, which are the C
-                // operators, and §3.2 of the model holds them against Lean's own `/` in a
-                // theorem. **What the sentence really named was a case the model could not
-                // state, and a case is refused by GETTING STUCK, not by refusing the whole
-                // form.** `binop` is `none` at a zero denominator and at a negative operand
-                // of a mask or a shift -- so a proof that goes through one of these has to
-                // establish the premise, and the goal gets harder rather than easier.
-                //
-                // *Refusing the form here would have cost five bodies of the corpus for a
-                // hazard that lives in two of their operands.*
+                // Division and the bit operations: `Gabbro.Body` takes `Int.tdiv`/`Int.tmod`
+                // and gets STUCK at a zero denominator or a negative operand of a mask, so
+                // a proof through one has to establish the premise.
                 BinOp::Geteilt => "div",
                 BinOp::Rest => "rem",
                 BinOp::BitUnd => "band",
@@ -698,40 +951,110 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                 expr_term(b, c)?
             ))
         }
-        // `None` is a value of the option shape and the commonest right-hand side in the
-        // corpus. `Some(e)` is refused: it would need a second value constructor, and no
-        // obligation in today's corpus asks for one.
+        ExprArt::Ruf(r) if c.hoisted.contains_key(&(r as *const Ruf as usize)) => {
+            Ok(format!("(.name {})", quoted(&c.hoisted[&(r as *const Ruf as usize)])))
+        }
         ExprArt::Ruf(r) => match r.path().and_then(|p| p.teile.last()).map(|i| &i.text) {
             Some(n) if n == "None" && r.argumente.is_empty() => Ok("(.lit .absent)".into()),
             Some(n) if n == "Some" && r.argumente.len() == 1 => {
                 Ok(format!("(.someOf {})", expr_term(&r.argumente[0], c)?))
             }
+            // **`Case(e)` of a `tagged type` is a VALUE**, and so is a bare `Case`.
+            Some(n) if c.unit.variants.contains_key(n.as_str()) => {
+                match (c.unit.variants[n.as_str()], r.argumente.len()) {
+                    (Some(false), 0) => Ok(format!("(.tagOf {} none)", quoted(n))),
+                    (Some(true), 1) => Ok(format!(
+                        "(.tagOf {} (some {}))",
+                        quoted(n),
+                        expr_term(&r.argumente[0], c)?
+                    )),
+                    _ => Err(LeanReason::ConstructedValue),
+                }
+            }
+            // **A `spec fn` in a predicate is INLINED.** It is a pure expression over its
+            // parameters (`M113`), so its meaning at a call is its body with the arguments
+            // for the parameters -- and the arguments of the corpus are bare names, which
+            // is the one substitution this channel makes. *Anything else stays a call.*
+            Some(n) if c.unit.specs.contains_key(n.as_str()) => {
+                let spec = c.unit.specs[n.as_str()].clone();
+                let FnRumpf::Pred(body) = &spec.rumpf else {
+                    return Err(LeanReason::SpecShape);
+                };
+                if spec.parameter.len() != r.argumente.len() {
+                    return Err(LeanReason::CallInExpression);
+                }
+                let mut pairs = Vec::new();
+                for (p, a) in spec.parameter.iter().zip(r.argumente.iter()) {
+                    let ExprArt::Ort(o) = &crate::ohne_klammern(a).art else {
+                        return Err(LeanReason::CallInExpression);
+                    };
+                    if !o.suffixe.is_empty() {
+                        return Err(LeanReason::CallInExpression);
+                    }
+                    pairs.push((p.name.text.clone(), o.basis.text.clone()));
+                }
+                let inlined = renamed_pred(body, &pairs);
+                pred_term(&inlined, c)
+            }
             _ => Err(LeanReason::CallInExpression),
         },
         ExprArt::Gleitkomma { .. } => Err(LeanReason::Float),
-        ExprArt::Eingebaut(_) => Err(LeanReason::Builtin),
-        ExprArt::Alt(_) => Err(LeanReason::OldState),
-        // **`result` is a NAME bound to the returned value, and that is the whole gate.**
-        //
-        // The model has carried `finalValue` since its first day -- its own doc line says
-        // *"For an `ensures` that names `result`"* -- and what was missing was not a form
-        // but the binding: a postcondition is evaluated over a `State`, and a result is not
-        // part of one. So the goal binds it as a local before evaluating, exactly as a
-        // parameter is read from `local'`. *No arm of the model changed for this.*
-        //
-        // `result` is a RESERVED word, so no `let` and no parameter can carry the name --
-        // the binding cannot shadow anything a body wrote.
+        // **Two built-ins have a meaning here, and the third has none.** `aligned(e, n)` is
+        // `e % n == 0`; `lenof` of an array is its declared length, a constant of the
+        // declaration and not of the run. `sizeof` is about the LAYOUT, and `lenof` of a
+        // buffer pointer about the run -- this model has neither.
+        ExprArt::Eingebaut(b) => match b.as_ref() {
+            Eingebaut::Aligned(x, n) => Ok(format!(
+                "(.bin .eq (.bin .rem {} {}) (.lit (.int 0)))",
+                expr_term(x, c)?,
+                expr_term(n, c)?
+            )),
+            Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                let tab = match &o.suffixe[..] {
+                    [OrtSuffix::Feld(f)] => c
+                        .record_carrier
+                        .get(&o.basis.text)
+                        .and_then(|rec| c.unit.record_arrays.get(rec))
+                        .and_then(|arrays| arrays.iter().find(|(n, _)| *n == f.text))
+                        .map(|(_, t)| t.clone()),
+                    [] => c.carrier.get(&o.basis.text).cloned(),
+                    _ => None,
+                };
+                let count = tab
+                    .and_then(|t| c.unit.tables.get(&t))
+                    .filter(|info| info.fields.len() == 1 && info.fields[0].0 == "elem")
+                    .and_then(|info| info.count);
+                match count {
+                    Some(n) => Ok(format!("(.lit (.int {}))", int_lit(n))),
+                    None => Err(LeanReason::Builtin),
+                }
+            }
+            _ => Err(LeanReason::Builtin),
+        },
+        // **`old(e)` is a NAME bound to the value of `e` in the entry state.** Only an
+        // `ensures` has an entry state to read; the goal quantifies `old#i` over it.
+        ExprArt::Alt(o) => match c.result_site {
+            ResultSite::Bound => {
+                let inner = place_term(o, c)?;
+                let n = c.olds.len() + 1;
+                c.olds.push(inner);
+                Ok(format!("(.name \"old#{n}\")"))
+            }
+            ResultSite::Body | ResultSite::Contract | ResultSite::LoopRet => Err(LeanReason::OldState),
+        },
         ExprArt::Ergebnis => match c.result_site {
-            // **Inside a body the word names nothing, and nothing will ever make it.**
             ResultSite::Body => Err(LeanReason::ResultInBody),
-            // A clause of the export datum: sayable, deliberately not said.
             ResultSite::Contract => Err(LeanReason::Result),
             ResultSite::Bound => {
                 c.uses_result = true;
                 Ok("(.name \"result\")".into())
             }
+            ResultSite::LoopRet => Ok("(.name \"#ret\")".into()),
         },
-        ExprArt::FnWert(_) | ExprArt::Grund { .. } => Err(LeanReason::OtherValue),
+        // **A reason is a VALUE** (2026-09-07): `Buchfehler::Unbelegt` is `.reason "Unbelegt"`
+        // -- the case's name, which is how a `match` arm spells it.
+        ExprArt::Grund { fall, .. } => Ok(format!("(.lit (.reason {}))", quoted(&fall.text))),
+        ExprArt::FnWert(_) => Err(LeanReason::OtherValue),
     }
 }
 
@@ -751,33 +1074,213 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
             pred_term(a, c)?,
             pred_term(b, c)?
         )),
-        // `a -> b` is `!a || b`. **Not a shortcut:** `Value` has no implication, and adding
-        // one to the model for a form that desugars exactly would be a second way to say
-        // one thing.
         PredArt::Folgt(a, b) => Ok(format!(
             "(.bin .or (.un .not {}) {})",
             pred_term(a, c)?,
             pred_term(b, c)?
         )),
-        PredArt::Held { .. } => Err(LeanReason::LockWitness),
-        PredArt::Quantor(_) | PredArt::Element(_, _) | PredArt::Erreicht { .. } => {
-            Err(LeanReason::Quantified)
+        // **`Held(L)` in a contract is `true` here and it is not a weakening**: the lock
+        // passes decide it for every call site (`H005`/`H006`/`H012`/`H016`), and a
+        // precondition that this channel could not write would refuse the whole callee.
+        PredArt::Held { .. } => match c.result_site {
+            ResultSite::Body => Err(LeanReason::LockWitness),
+            ResultSite::Contract | ResultSite::Bound | ResultSite::LoopRet => {
+                Ok("(.lit (.bool true))".into())
+            }
+        },
+        // **The bounded quantifier over the index domain** -- `forall s in slots of T : P`
+        // is `forallSlots "s" N P`, with `N` the declared `count`. Every other domain is
+        // refused by name.
+        // **The quantifier over a domain.** Every domain this channel has is a SUBSET of
+        // the index domain `0 ..< count` of one table, cut by a membership expression:
+        // `slots of` is the whole of it; `descendants of T.slots[p]` the slots whose parent
+        // chain reaches `p`; `ancestors of` the slots `p`'s chain reaches; `chain(h, n) in
+        // T.slots[p]` the slots the `n`-chain from `p.h` reaches. So `forall x in D : P`
+        // is `forallSlots x count (x ∈ D → P)` and `exists` is `existsSlots x count
+        // (x ∈ D ∧ P)`. The five other domains have no term here.
+        PredArt::Quantor(q) => {
+            let (tab, member) = domain_of(&q.domaene, &q.variable.text, c)?;
+            let count = c
+                .unit
+                .tables
+                .get(&tab)
+                .and_then(|t| t.count)
+                .ok_or(LeanReason::Quantified)?;
+            let depth = c.locals.len();
+            c.push_local(&q.variable.text, Some(Shape::Int));
+            let body = pred_term(&q.rumpf, c);
+            c.locals.truncate(depth);
+            let body = body?;
+            let (word, cut) = match q.art {
+                QuantorArt::Alle => (
+                    "forallSlots",
+                    match &member {
+                        Some(m) => format!("(.bin .or (.un .not {m}) {body})"),
+                        None => body,
+                    },
+                ),
+                QuantorArt::Existiert => (
+                    "existsSlots",
+                    match &member {
+                        Some(m) => format!("(.bin .and {m} {body})"),
+                        None => body,
+                    },
+                ),
+            };
+            Ok(format!("(.{word} {} {count} {cut})", quoted(&q.variable.text)))
+        }
+        // **`a reaches b via f`** -- the chain with the table's count as fuel.
+        PredArt::Erreicht { von, nach, via } => {
+            let (tab, from) = slot_index(von, c)?;
+            let (tab2, to) = slot_index(nach, c)?;
+            let tab = match (tab, tab2) {
+                (Some(a), Some(b)) if a == b => a,
+                (Some(a), None) | (None, Some(a)) => a,
+                _ => return Err(LeanReason::Quantified),
+            };
+            let count = c
+                .unit
+                .tables
+                .get(&tab)
+                .and_then(|t| t.count)
+                .ok_or(LeanReason::Quantified)?;
+            c.note(&tab, &via.text, Shape::Opt, &format!("`{}` in `{tab}`", via.text));
+            Ok(format!(
+                "(.reaches {} {from} {to} {} {count})",
+                quoted(&tab),
+                quoted(&via.text)
+            ))
+        }
+        // `e in D` -- the membership itself, as an expression over the index `e`.
+        PredArt::Element(e, d) => {
+            let ExprArt::Ort(o) = &crate::ohne_klammern(e).art else {
+                return Err(LeanReason::Quantified);
+            };
+            if !o.suffixe.is_empty() {
+                return Err(LeanReason::Quantified);
+            }
+            let (tab, member) = domain_of(d, &o.basis.text, c)?;
+            let count = c
+                .unit
+                .tables
+                .get(&tab)
+                .and_then(|t| t.count)
+                .ok_or(LeanReason::Quantified)?;
+            let x = place_term(o, c)?;
+            let in_range = format!(
+                "(.bin .and (.bin .ge {x} (.lit (.int 0))) (.bin .lt {x} (.lit (.int {count}))))"
+            );
+            Ok(match member {
+                Some(m) => format!("(.bin .and {in_range} {m})"),
+                None => in_range,
+            })
         }
     }
 }
 
+/// **A domain, as the table it lives in and the membership of the variable `x` in it** --
+/// `None` for the whole index domain. The tree edges are read off the table's `tree`
+/// clause; a domain over a table without one has no term.
+fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String>), LeanReason> {
+    let xv = format!("(.name {})", quoted(x));
+    match d {
+        Domaene::SlotsVon(ort) => {
+            if !ort.suffixe.is_empty() {
+                return Err(LeanReason::Quantified);
+            }
+            let tab = c.table_of(&ort.basis.text).ok_or(LeanReason::Carrier)?.clone();
+            Ok((tab, None))
+        }
+        Domaene::NachfahrenVon(ort) | Domaene::VorfahrenVon(ort) => {
+            let (Some(tab), p) = slot_index(ort, c)? else {
+                return Err(LeanReason::Quantified);
+            };
+            let info = c.unit.tables.get(&tab).ok_or(LeanReason::Carrier)?;
+            let count = info.count.ok_or(LeanReason::Quantified)?;
+            let elter = info.elter.clone().ok_or(LeanReason::Quantified)?;
+            // strict: the slot itself is neither its own descendant nor its own ancestor
+            let reach = match d {
+                Domaene::NachfahrenVon(_) => {
+                    format!("(.reaches {} {xv} {p} {} {count})", quoted(&tab), quoted(&elter))
+                }
+                _ => format!("(.reaches {} {p} {xv} {} {count})", quoted(&tab), quoted(&elter)),
+            };
+            c.note(&tab, &elter, Shape::Opt, &format!("`{elter}` in `{tab}`"));
+            Ok((
+                tab.clone(),
+                Some(format!("(.bin .and (.bin .ne {xv} {p}) {reach})")),
+            ))
+        }
+        Domaene::KetteIn { a, b, ort } => {
+            let (Some(tab), p) = slot_index(ort, c)? else {
+                return Err(LeanReason::Quantified);
+            };
+            let count = c.unit.tables.get(&tab).and_then(|t| t.count).ok_or(LeanReason::Quantified)?;
+            let head = format!("(.place {} {p} {})", quoted(&tab), quoted(&a.text));
+            c.note(&tab, &a.text, Shape::Opt, &format!("`{}` in `{tab}`", a.text));
+            c.note(&tab, &b.text, Shape::Opt, &format!("`{}` in `{tab}`", b.text));
+            Ok((
+                tab.clone(),
+                Some(format!(
+                    "(.chainFrom {} {head} {xv} {} {count})",
+                    quoted(&tab),
+                    quoted(&b.text)
+                )),
+            ))
+        }
+        // **`elems of r.f` and `elems of buf` are the index domain of the array's
+        // pseudo-table**; `queue r` is that of the ONE array of the record `r` (`K003`
+        // makes one the rule). The binder is the index, as every use in the corpus reads it.
+        Domaene::ElementeVon(ort) => {
+            let tab = match &ort.suffixe[..] {
+                [OrtSuffix::Feld(f)] => {
+                    let rec = c.record_carrier.get(&ort.basis.text).ok_or(LeanReason::Quantified)?;
+                    let arrays = c.unit.record_arrays.get(rec).ok_or(LeanReason::Quantified)?;
+                    arrays.iter().find(|(n, _)| *n == f.text).map(|(_, t)| t.clone()).ok_or(LeanReason::Quantified)?
+                }
+                [] => {
+                    let tab = c.carrier.get(&ort.basis.text).ok_or(LeanReason::Quantified)?.clone();
+                    let info = c.unit.tables.get(&tab).ok_or(LeanReason::Quantified)?;
+                    if info.fields.len() != 1 || info.fields[0].0 != "elem" {
+                        return Err(LeanReason::Quantified);
+                    }
+                    tab
+                }
+                _ => return Err(LeanReason::Quantified),
+            };
+            Ok((tab, None))
+        }
+        Domaene::Schlange(ort) => {
+            // **`queue T.slots[i].f`** -- the queue in a slot field of record type: its
+            // record's one array is the domain, as for a record carrier (2026-09-08)
+            if let [OrtSuffix::Feld(slots), OrtSuffix::Index(_), OrtSuffix::Feld(f)] = &ort.suffixe[..] {
+                if slots.text == "slots" {
+                    let tab = c.table_of(&ort.basis.text).ok_or(LeanReason::Carrier)?.clone();
+                    let rec = c.unit.field_records.get(&(tab, f.text.clone())).ok_or(LeanReason::Quantified)?;
+                    let arrays = c.unit.record_arrays.get(rec).ok_or(LeanReason::Quantified)?;
+                    if arrays.len() != 1 {
+                        return Err(LeanReason::Quantified);
+                    }
+                    return Ok((arrays[0].1.clone(), None));
+                }
+            }
+            if !ort.suffixe.is_empty() {
+                return Err(LeanReason::Quantified);
+            }
+            let rec = c.record_carrier.get(&ort.basis.text).ok_or(LeanReason::Quantified)?;
+            let arrays = c.unit.record_arrays.get(rec).ok_or(LeanReason::Quantified)?;
+            if arrays.len() != 1 {
+                return Err(LeanReason::Quantified);
+            }
+            Ok((arrays[0].1.clone(), None))
+        }
+        Domaene::FelderVon(_)
+        | Domaene::Threads
+        | Domaene::AbbildungenVon(_) => Err(LeanReason::Quantified),
+    }
+}
+
 /// **`Some(e)` and `None` are VALUES, not calls.**
-///
-/// The model has carried `.someOf` and `.absent` since its first day (`Body.lean` §3), and
-/// `expr_term` translates both. The `let` and `return` arms of `stmt_term` never reached
-/// that arm: they saw an `ExprArt::Ruf` and sent it to `call_parts`, which looked up a
-/// callee named `Some` in a table that has none and refused the WHOLE body as
-/// `call-not-compositional`.
-///
-/// *Measured on 2026-08-28: `beispiele/27-freiliste.gab :: belegen` was refused as a call
-/// although it contains none* (`messung/RUF-TOR.md`). A refusal filed under the wrong reason
-/// names a missing gate where a missing route stands -- the same lesson the `Carrier` /
-/// `FieldShape` split books above.
 fn is_option_value(r: &Ruf) -> bool {
     match r.path().and_then(|p| p.teile.last()).map(|i| i.text.as_str()) {
         Some("None") => r.argumente.is_empty(),
@@ -786,89 +1289,187 @@ fn is_option_value(r: &Ruf) -> bool {
     }
 }
 
-/// **What a call path names when it is not a routine call** -- or `None` where it is one.
-///
-/// Four different things parse as a call in Gabbro, and until 2026-08-28 all four were
-/// refused with the single word `call-not-compositional`. **They have four different
-/// prices**, and one number over all of them said the register was waiting on a gate that
-/// would have taken none of them (`messung/RUF-TOR.md` §1.1).
-fn foreign_kind(r: &Ruf, c: &Ctx) -> Option<LeanReason> {
-    // A record or a `tagged` constructor carries FIELD LABELS, and nothing else does --
-    // `Ruf::marken` is built at one place and checked at one place (`ast.rs`).
-    if r.ist_verbundwert() {
-        return Some(LeanReason::ConstructedValue);
+/// **A value constructor -- `Some`, `None`, or a case of a `tagged type`.** These go to
+/// `expr_term`, never to `call_parts`.
+fn is_value_constructor(r: &Ruf, c: &Ctx) -> bool {
+    if is_option_value(r) {
+        return true;
     }
-    let p = r.path()?;
-    // The written path first (`Verzeichnis::insert`), then the bare name -- an operation is
-    // only ever an operation under its table's name.
-    let full: Vec<String> = p.teile.iter().map(|i| i.text.clone()).collect();
-    if let Some(k) = c.foreign.get(&full.join("::")) {
-        return Some(*k);
-    }
-    c.foreign.get(full.last()?).copied()
+    r.path()
+        .and_then(|p| p.teile.last())
+        .is_some_and(|n| c.unit.variants.contains_key(&n.text))
 }
 
-/// **Every call path of the program that is NOT a routine call, with what it is instead.**
+/// **What a call path names**: a routine of this unit, a generated operation, a device
+/// transition, a foreign routine -- or nothing this channel can call.
+enum Callee<'a> {
+    Routine(&'a RoutineInfo),
+    Op(&'a OpInfo),
+    Transition(&'a TransitionInfo),
+    Foreign(&'a ForeignInfo),
+}
+
+fn resolve_callee<'a>(r: &Ruf, u: &'a Unit) -> Result<Callee<'a>, LeanReason> {
+    if r.ist_verbundwert() {
+        return Err(LeanReason::ConstructedValue);
+    }
+    let p = r.path().ok_or(LeanReason::CallStatement)?;
+    let full: Vec<String> = p.teile.iter().map(|i| i.text.clone()).collect();
+    let joined = full.join("::");
+    let last = full.last().ok_or(LeanReason::CallStatement)?;
+    if let Some(op) = u.ops.get(&joined) {
+        return Ok(Callee::Op(op));
+    }
+    if u.devices.contains(last) {
+        return Err(LeanReason::ConstructedValue);
+    }
+    if let Some(t) = u.transitions.get(last) {
+        return Ok(Callee::Transition(t));
+    }
+    if let Some(f) = u.routines.get(last) {
+        return Ok(Callee::Routine(f));
+    }
+    if let Some(f) = u.foreign.get(last) {
+        return Ok(Callee::Foreign(f));
+    }
+    Err(LeanReason::CallStatement)
+}
+
+/// **Callee, parameter names, argument terms and the PRECONDITION of a call.** One place,
+/// because three statement forms carry a call and each one writing its own lookup is three
+/// chances for them to drift apart.
 ///
-/// Read once per program out of the DECLARATIONS, never out of the use -- gate 1 of this
-/// file. Three sources, and each names a different price:
-///
-/// * `opsruf::koepfe` -- the generated operations, whose contract is a schema;
-/// * a `device`'s name -- the handle constructor, whose value this model has no form for;
-/// * a `device`'s `transition`s -- register writes, which take hardware.
-fn foreign_calls(baum: &Programm) -> HashMap<String, LeanReason> {
-    let mut out = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| match &item.art {
-        ItemArt::Tabelle(t) => {
-            for k in crate::opsruf::koepfe(t) {
-                out.insert(k.pfad(), LeanReason::GeneratedOp);
+/// The precondition is the callee's `requires`, read from its declaration, as ONE
+/// expression -- and it is complete or the call is refused (`CalleeContract`): it is the
+/// stuck-condition of the call, and a dropped clause would make the caller's goal easier.
+/// **Is this `Ruf` a CALL** -- a routine, an op, a transition, a foreign body -- and not a
+/// value (`Some`, `None`, a case of a `tagged` type) or an inlined `spec fn`?
+fn is_real_call(r: &Ruf, c: &Ctx) -> bool {
+    if is_value_constructor(r, c) {
+        return false;
+    }
+    let name = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone());
+    !name.is_some_and(|n| c.unit.specs.contains_key(&n))
+}
+
+/// **The calls inside an expression, in evaluation order** -- left to right, the arguments
+/// of a call before the call, and NOT under `&&`/`||`, because a call the short-circuit
+/// would skip must not be hoisted in front of it.
+fn calls_in<'a>(e: &'a Expr, c: &Ctx, out: &mut Vec<&'a Ruf>) {
+    match &e.art {
+        // the calls in the arguments run before the call itself
+        ExprArt::Ruf(r) if is_real_call(r, c) => {
+            for a in &r.argumente {
+                calls_in(a, c, out);
             }
+            out.push(r);
         }
-        ItemArt::Device(d) => {
-            out.insert(d.name.text.clone(), LeanReason::ConstructedValue);
-            for u in &d.uebergaenge {
-                out.insert(u.name.text.clone(), LeanReason::Transition);
-            }
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => calls_in(x, c, out),
+        ExprArt::Binaer(BinOp::Und, _, _) | ExprArt::Binaer(BinOp::Oder, _, _) => {}
+        ExprArt::Binaer(_, a, b) => {
+            calls_in(a, c, out);
+            calls_in(b, c, out);
         }
         _ => {}
-    });
-    out
+    }
 }
 
-/// **Callee, parameter names and argument terms of a call.** One place, because three
-/// statement forms carry a call and each one writing its own lookup is three chances for
-/// them to drift apart.
-fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String), LeanReason> {
-    // **What this path really names, asked BEFORE the gate.** A `transition` refused as
-    // "the call gate is not built" would go on waiting for a gate that cannot help it.
-    let kind = foreign_kind(r, c);
-    let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
-        return Err(kind.unwrap_or(LeanReason::CallStatement));
-    };
-    if let Some(k) = kind {
-        return Err(k);
+/// **An expression with its calls hoisted in front of it**: every call it contains (see
+/// `calls_in`) becomes a `bindCall` into a local `#m<i>` written BEFORE the statement, and
+/// the expression reads the local. `x = f(a) + 1` is `let #m1 = f(a); x = #m1 + 1` -- what
+/// a person would write, and what the model, in which a call is a statement, can run.
+/// Returns the prefix (statements, each followed by `, `) and the expression's term.
+fn hoisted_expr(e: &Expr, c: &mut Ctx) -> Result<(String, String), LeanReason> {
+    let mut calls = Vec::new();
+    calls_in(e, c, &mut calls);
+    let mut prefix = String::new();
+    for r in calls {
+        let (n, ps, args, pre) = call_parts(r, c)?;
+        let sh = shape_of_call(r, c);
+        c.hoists += 1;
+        let tmp = format!("#m{}", c.hoists);
+        c.push_local(&tmp, sh);
+        prefix.push_str(&format!("(.bindCall {} {n} [{ps}] [{args}] {pre}), ", quoted(&tmp)));
+        c.hoisted.insert(r as *const Ruf as usize, tmp);
     }
+    let t = expr_term(e, c);
+    c.hoisted.clear();
+    Ok((prefix, t?))
+}
+
+/// **A call statement whose arguments may call**: the calls in the arguments are hoisted
+/// in front (`hoisted_expr`), then the call itself is read. Returns the prefix and the
+/// parts of the call.
+fn hoisted_call(r: &Ruf, c: &mut Ctx) -> Result<(String, (String, String, String, String)), LeanReason> {
+    let mut calls = Vec::new();
+    for a in &r.argumente {
+        calls_in(a, c, &mut calls);
+    }
+    let mut prefix = String::new();
+    for x in calls {
+        let (n, ps, args, pre) = call_parts(x, c)?;
+        let sh = shape_of_call(x, c);
+        c.hoists += 1;
+        let tmp = format!("#m{}", c.hoists);
+        c.push_local(&tmp, sh);
+        prefix.push_str(&format!("(.bindCall {} {n} [{ps}] [{args}] {pre}), ", quoted(&tmp)));
+        c.hoisted.insert(x as *const Ruf as usize, tmp);
+    }
+    let parts = call_parts(r, c);
+    c.hoisted.clear();
+    Ok((prefix, parts?))
+}
+
+fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String, String), LeanReason> {
+    let name = r
+        .path()
+        .and_then(|p| p.teile.last())
+        .map(|i| i.text.clone())
+        .ok_or(LeanReason::CallStatement)?;
     if !c.allow_calls {
-        return Err(LeanReason::CallStatement);
+        return Err(LeanReason::CallInExpression);
     }
-    // **The callee has to be DECLARED here.** A call into a unit this run never read would
-    // bind arguments to parameters nobody counted.
-    let Some(ps) = c.callees.get(&name).cloned() else {
-        return Err(LeanReason::CallStatement);
+    let (key, params, pre): (String, Vec<String>, String) = match resolve_callee(r, c.unit)? {
+        Callee::Routine(f) => (
+            f.decl.name.text.clone(),
+            f.params.iter().map(|(n, _)| n.clone()).collect(),
+            match c.unit.pre_of.get(&f.decl.name.text) {
+                Some(Ok(p)) => p.clone(),
+                _ => return Err(LeanReason::CalleeContract),
+            },
+        ),
+        Callee::Foreign(f) => (
+            f.name.clone(),
+            f.params.iter().map(|(n, _)| n.clone()).collect(),
+            f.pre.clone().ok_or(LeanReason::CalleeContract)?,
+        ),
+        Callee::Op(op) => (
+            op.key.clone(),
+            op.params.clone(),
+            op.pre.clone().ok_or(LeanReason::GeneratedOp)?,
+        ),
+        // A transition is called with the device handle -- `anschalten(d)` -- and that one
+        // argument is what its C form takes as well (`VirtioPci_ack(VirtioPci *d)`).
+        Callee::Transition(t) => (
+            t.name.clone(),
+            vec!["d".to_string()],
+            t.pre.clone().ok_or(LeanReason::Transition)?,
+        ),
     };
-    if ps.len() != r.argumente.len() {
+    if params.len() != r.argumente.len() {
         return Err(LeanReason::CallStatement);
     }
     let mut args = Vec::new();
     for a in &r.argumente {
         args.push(expr_term(a, c)?);
     }
-    let names: Vec<String> = ps.iter().map(|n| quoted(n)).collect();
-    Ok((quoted(&name), names.join(", "), args.join(", ")))
+    let _ = name;
+    c.callees.insert(key.clone());
+    let names: Vec<String> = params.iter().map(|n| quoted(n)).collect();
+    Ok((quoted(&key), names.join(", "), args.join(", "), pre))
 }
 
-/// The payload of a `publishes`, as a list of place names. `publishes nothing` is the empty
-/// list -- **a word, not an empty hole**, and the datum keeps the distinction.
+/// The payload of a `publishes`, as a list of place names.
 fn nutzlast(n: &Nutzlast) -> String {
     match n {
         Nutzlast::Orte(os) => os
@@ -877,6 +1478,148 @@ fn nutzlast(n: &Nutzlast) -> String {
             .collect::<Vec<_>>()
             .join(", "),
         Nutzlast::Nichts(_) => String::new(),
+    }
+}
+
+/// **The shape a `let` gives its name** -- from the declared type where there is one, else
+/// from the initialiser, and only where the answer is certain. `None` costs a hypothesis
+/// (the loop invariant will not carry the name), never a false one.
+fn shape_of_init(l: &LetStmt, c: &Ctx) -> Option<Shape> {
+    if let Some(t) = &l.typ {
+        return shape_of(t, &c.unit.u, &c.module);
+    }
+    shape_of_expr(&l.wert, c)
+}
+
+fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
+    match &e.art {
+        ExprArt::Zahl(_) => Some(Shape::Int),
+        ExprArt::Wahr | ExprArt::Falsch => Some(Shape::Bool),
+        ExprArt::Klammer(x) => shape_of_expr(x, c),
+        ExprArt::Unaer(UnOp::Nicht, _) => Some(Shape::Bool),
+        ExprArt::Unaer(UnOp::Negativ, _) => Some(Shape::Int),
+        ExprArt::Unaer(UnOp::BitNicht, _) => None,
+        ExprArt::Binaer(op, _, _) => match op {
+            BinOp::Plus
+            | BinOp::Minus
+            | BinOp::Mal
+            | BinOp::Geteilt
+            | BinOp::Rest
+            | BinOp::BitUnd
+            | BinOp::BitOder
+            | BinOp::BitXor
+            | BinOp::SchiebLinks
+            | BinOp::SchiebRechts => Some(Shape::Int),
+            BinOp::Gleich
+            | BinOp::Ungleich
+            | BinOp::Kleiner
+            | BinOp::KleinerGleich
+            | BinOp::Groesser
+            | BinOp::GroesserGleich
+            | BinOp::Und
+            | BinOp::Oder => Some(Shape::Bool),
+        },
+        ExprArt::Ruf(r) => shape_of_call(r, c),
+        ExprArt::Ort(o) => {
+            if o.suffixe.is_empty() {
+                return c.locals.iter().rev().find(|(n, _)| *n == o.basis.text).and_then(|(_, s)| *s);
+            }
+            if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
+                let rec = c.record_carrier.get(&o.basis.text)?;
+                return c.unit.records.get(rec)?.iter().find(|(n, _)| n == &f.text).and_then(|(_, s)| *s);
+            }
+            if let Some((tab, _)) = array_place(o, c) {
+                return array_elem_shape(&tab, c).ok();
+            }
+            let [OrtSuffix::Feld(_), OrtSuffix::Index(_), OrtSuffix::Feld(f)] = &o.suffixe[..] else {
+                return None;
+            };
+            let tab = c.table_of(&o.basis.text)?;
+            c.unit.tables.get(tab)?.fields.iter().find(|(n, _)| n == &f.text).and_then(|(_, s)| *s)
+        }
+        ExprArt::Alt(_)
+        | ExprArt::Ergebnis
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Eingebaut(_)
+        | ExprArt::FnWert(_)
+        | ExprArt::Grund { .. } => None,
+    }
+}
+
+/// The shape of what a `Ruf` yields -- a value constructor's, or the callee's result.
+fn shape_of_call(r: &Ruf, c: &Ctx) -> Option<Shape> {
+    if is_option_value(r) {
+        return Some(Shape::Opt);
+    }
+    if let Some(n) = r.path().and_then(|p| p.teile.last()) {
+        if let Some(sh) = c.unit.variant_sum.get(&n.text) {
+            return Some(*sh);
+        }
+    }
+    match resolve_callee(r, c.unit).ok()? {
+        Callee::Routine(f) => c.unit.result_shape.get(&f.decl.name.text).copied().flatten(),
+        Callee::Foreign(f) => f.result,
+        Callee::Op(_) | Callee::Transition(_) => None,
+    }
+}
+
+/// **What a routine's answer looks like**, as a clause over `r : Option Value`: a value of
+/// the declared shape -- or, where the signature has an error channel (`-> T or R`), that
+/// or a reason. A routine WITHOUT a result promises nothing about `r`. The clause is what
+/// lets a caller's proof read the answer at all: `let x = f(a)` binds `x` to it.
+fn result_clause(sh: Option<Shape>, range: Option<(i128, i128)>, fehler: bool, answers: bool, r: &str) -> Option<String> {
+    let range = range.or(sh.and_then(Shape::range));
+    let value = match sh {
+        Some(Shape::Int) | Some(Shape::IntIn(..)) => match range {
+            // the declared range of the answer -- what the checker holds at every use
+            Some((lo, hi)) => format!("(∃ x, {r} = some (.int x) ∧ {} ≤ x ∧ x ≤ {})", int_lit(lo), int_lit(hi)),
+            None => format!("(∃ x, {r} = some (.int x))"),
+        },
+        Some(Shape::Bool) => format!("(∃ b, {r} = some (.bool b))"),
+        // one of the declared cases, with its payload
+        Some(sh @ Shape::Sum(_)) => format!("(∃ t p, {r} = some (.tagged t p) ∧ Shape.caseOk {} t p = true)", sum_cases_lean(sh)),
+        Some(Shape::Opt) => format!("({r} = some .absent ∨ ∃ x, {r} = some (.present x))"),
+        // **an answer of a shape the model does not carry** (a token type, an opaque
+        // handle): the routine still ANSWERS, and a caller that binds the answer needs
+        // exactly that -- `let p1 = mmu_an(p)` is a `match` on `some v`, and without this
+        // clause it stays stuck on the callee's word (2026-09-08, `22-bootstrecke`)
+        None if answers => format!("(∃ v, {r} = some v)"),
+        // no answer -- and with an error channel, no answer OR a reason
+        None => {
+            if fehler {
+                return Some(format!("({r} = none ∨ ∃ e, {r} = some (.reason e))"));
+            }
+            return None;
+        }
+    };
+    Some(if fehler {
+        format!("({value} ∨ ∃ e, {r} = some (.reason e))")
+    } else {
+        value
+    })
+}
+
+/// A payload as the model's term: `none`, `(some none)`, `(some (some (lo, hi)))`.
+fn payload_lean(p: Payload) -> String {
+    match p {
+        None => "none".into(),
+        Some(None) => "(some none)".into(),
+        Some(Some((lo, hi))) => format!("(some (some ({}, {})))", int_lit(lo), int_lit(hi)),
+    }
+}
+
+/// The case list of a sum shape, as a Lean list literal.
+fn sum_cases_lean(sh: Shape) -> String {
+    match sh {
+        Shape::Sum(i) => {
+            let all = sum_cases().lock().unwrap();
+            let cases: Vec<String> = all[i as usize]
+                .iter()
+                .map(|(n, p)| format!("({}, {})", quoted(n), payload_lean(*p)))
+                .collect();
+            format!("[{}]", cases.join(", "))
+        }
+        _ => "[]".into(),
     }
 }
 
@@ -893,111 +1636,147 @@ fn block_term(b: &Block, c: &mut Ctx) -> Result<String, LeanReason> {
     Ok(format!("[{}]", teile.join(", ")))
 }
 
+/// **Does this block, or one under it, `return`?** A loop body that may leave the ROUTINE is
+/// refused (`ReturnInLoop`) -- see the reason.
+fn returns(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| {
+        matches!(s.art, StmtArt::Return(_))
+            || crate::unterbloecke(s).into_iter().any(returns)
+    })
+}
+
+/// **The shapes of the locals in scope, as `hasShape` conjuncts.** This is what a loop
+/// invariant is strengthened by: without it a local the body counts in would come out of
+/// the pass unconstrained, and the next statement reading it would be stuck.
+fn shaped_locals(locals: &[(String, Option<Shape>)]) -> Vec<(String, Shape)> {
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    for (n, sh) in locals.iter().rev() {
+        if !seen.insert(n.clone()) {
+            continue;
+        }
+        if let Some(sh) = sh {
+            out.push((n.clone(), *sh));
+        }
+    }
+    out.reverse();
+    out
+}
+
+/// **The shape of one local, as an expression** -- and for an integer with a declared
+/// range, the range with it: `hasShape n int ∧ (lo ≤ n ∧ n ≤ hi)`, one conjunct.
+fn shape_conjunct(n: &str, sh: Shape, ranges: &HashMap<String, (i128, i128)>) -> String {
+    // **A ranged local is typed by `.intIn lo hi`** -- a parameter by the range the
+    // emitter names for it, a `let` by the range of its declared type. The invariant of a
+    // loop then carries the range of every local in scope, and the pass owes it back:
+    // that is the arithmetic the checker decided (`M1`) and the model decides again,
+    // over the ranges of the operands it now has (fields, payloads, answers). Without it
+    // an answer computed in a loop could not meet its own declared range (2026-09-08).
+    let sh = match (sh, ranges.get(n)) {
+        (Shape::Int | Shape::IntIn(..), Some((lo, hi))) => Shape::IntIn(*lo, *hi),
+        _ => sh,
+    };
+    format!("(.hasShape {} {})", quoted(n), sh.lean())
+}
+
+/// An integer literal as a Lean term -- a negative one in parentheses, because `.int -1`
+/// does not parse.
+fn int_lit(v: i128) -> String {
+    if v < 0 {
+        format!("({v})")
+    } else {
+        v.to_string()
+    }
+}
+
+fn shape_conjuncts(locals: &[(String, Option<Shape>)], ranges: &HashMap<String, (i128, i128)>) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    // The LAST binding of a name is the one in scope.
+    for (n, sh) in locals.iter().rev() {
+        if !seen.insert(n.clone()) {
+            continue;
+        }
+        if let Some(sh) = sh {
+            out.push(shape_conjunct(n, *sh, ranges));
+        }
+    }
+    out.reverse();
+    out
+}
+
+fn conj(terms: &[String]) -> String {
+    match terms.len() {
+        0 => "(.lit (.bool true))".to_string(),
+        1 => terms[0].clone(),
+        _ => {
+            let mut acc = terms[terms.len() - 1].clone();
+            for t in terms[..terms.len() - 1].iter().rev() {
+                acc = format!("(.bin .and {t} {acc})");
+            }
+            acc
+        }
+    }
+}
+
 fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
     match &s.art {
         StmtArt::Let(l) => {
             // **`let n = f(a);` is a CALL, not an expression.** A callee may write, so an
-            // expression carrying one would no longer be pure -- and `eval` would have to
-            // take the environment, which would put the whole model one level up.
-            // **`Some(e)` is a VALUE and not a call**, and the test comes first -- see
-            // `is_option_value`.
-            if let ExprArt::Ruf(r) = &l.wert.art {
-                if !is_option_value(r) {
-                    let (n, ps, args) = call_parts(r, c)?;
-                    c.locals.push(l.name.text.clone());
+            // expression carrying one would no longer be pure. `Some(e)` is a VALUE.
+            if let ExprArt::Ruf(r) = &crate::ohne_klammern(&l.wert).art {
+                if !is_value_constructor(r, c) {
+                    let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
+                    let sh = shape_of_init(l, c);
+                    c.push_local(&l.name.text, sh);
                     return Ok(format!(
-                        "(.bindCall {} {n} [{ps}] [{args}])",
+                        "{hoist}(.bindCall {} {n} [{ps}] [{args}] {pre})",
                         quoted(&l.name.text)
                     ));
                 }
             }
-            let w = expr_term(&l.wert, c)?;
-            c.locals.push(l.name.text.clone());
-            Ok(format!("(.bindName {} {})", quoted(&l.name.text), w))
+            let (hoist, w) = hoisted_expr(&l.wert, c)?;
+            let sh = shape_of_init(l, c);
+            c.push_local(&l.name.text, sh);
+            Ok(format!("{hoist}(.bindName {} {})", quoted(&l.name.text), w))
         }
         StmtArt::Zuweisung(z) => {
-            // **`x += e` is `x = x + e`, and my own refusal of it did not hold.**
-            //
-            // It stood here with the reason *"the two are not the same statement in Gabbro's
-            // overflow accounting"*. They are: `M104` says the RESULT fits the declared
-            // range, and both forms have the same result. Plain `+` was already being
-            // translated under exactly that assumption -- so the refusal was inconsistent
-            // with the arm three lines below it. *Four routines of the corpus paid for a
-            // sentence that was never checked.*
-            //
-            // The operator is chosen by the field's declared SHAPE, not guessed: `&=` on a
-            // BOOL field is a truth value and on an INTEGER field a bit mask, and the two
-            // compute different things.
-            //
-            // **The integer arms were missing while the comment claimed they were refused
-            // "for the division reason".** They were not -- they fell out as
-            // `compound-assignment`, a reason that names something else entirely. *A
-            // refusal filed under the wrong reason names a missing form where a missing
-            // translation stands*, the same lesson the `FieldShape` split books. Now that
-            // the model has the masks, the arms say what the comment always said.
             let mischung = |op: ZuwOp, shape: Shape| -> Option<&'static str> {
                 match (op, shape) {
-                    (ZuwOp::Plus, Shape::Int) => Some("add"),
-                    (ZuwOp::Minus, Shape::Int) => Some("sub"),
+                    (ZuwOp::Plus, Shape::Int | Shape::IntIn(..)) => Some("add"),
+                    (ZuwOp::Minus, Shape::Int | Shape::IntIn(..)) => Some("sub"),
                     (ZuwOp::Und, Shape::Bool) => Some("and"),
                     (ZuwOp::Oder, Shape::Bool) => Some("or"),
-                    (ZuwOp::Und, Shape::Int) => Some("band"),
-                    (ZuwOp::Oder, Shape::Int) => Some("bor"),
+                    (ZuwOp::Und, Shape::Int | Shape::IntIn(..)) => Some("band"),
+                    (ZuwOp::Oder, Shape::Int | Shape::IntIn(..)) => Some("bor"),
                     _ => None,
                 }
             };
-            let w = expr_term(&z.wert, c)?;
+            let (hoist, w) = hoisted_expr(&z.wert, c)?;
             if z.ziel.suffixe.is_empty() {
                 // **`n = e;` at a LOCAL rebinds the name; it does not store into the world.**
-                //
-                // Until 2026-08-28 this arm wrote `.assignGlobal` for every suffix-less
-                // target, local or not -- and that is not a refusal but a WRONG PROGRAM.
-                // Measured at `messung/abi-proben/zaehlwerk.gab :: hole_stand`, whose datum
-                // read: bind `s` to 0, store to a world place called "s" that nothing
-                // declares, return the LOCAL `s`. *The datum said the routine always returns
-                // zero, and it returns the slot's value.*
-                //
-                // The export is what a hand-written Lean specification is held against
-                // (`programmlogik/beispiel/`), so a person could have proved a true theorem
-                // about a program nobody wrote. **`place_term` has always made this
-                // distinction when READING a name** -- only the write side did not, which is
-                // why nothing was refused and nothing looked wrong.
-                //
-                // Same class as the `traverse` variable that once fell through to
-                // `.global "opfer"`, and the reason that comment stands three arms below.
-                let ist_lokal = c.locals.iter().any(|l| *l == z.ziel.basis.text);
+                let ist_lokal = c.is_local(&z.ziel.basis.text);
                 let ziel = quoted(&z.ziel.basis.text);
                 if z.op == ZuwOp::Setzt {
                     return Ok(if ist_lokal {
-                        format!("(.bindName {ziel} {w})")
+                        format!("{hoist}(.bindName {ziel} {w})")
                     } else {
-                        format!("(.assignGlobal {ziel} {w})")
+                        format!("{hoist}(.assignGlobal {ziel} {w})")
                     });
                 }
-                // A `static` target carries no shape here, so a compound form has no
-                // operator to choose -- refused rather than guessed.
                 if !ist_lokal {
                     return Err(LeanReason::CompoundAssign);
                 }
-                // **At a LOCAL, `+=` and `-=` name their operation and nothing is guessed.**
-                //
-                // The ambiguity this arm was refusing lives in `&=` and `|=`: on a truth
-                // value they are conjunction and disjunction, on an integer they are bit
-                // masks, and without a declared shape there is no way to choose. `+=` has no
-                // second reading.
-                //
-                // **And the model is safe by construction where a shape would have been
-                // guessed**: `binop .add` is `none` on anything but two integers, so a body
-                // that somehow added to a non-number gets STUCK rather than computing
-                // something the machine does not. *That is why reading the OPERATOR here is
-                // not the quiet weakening gate 1 stands against -- there is no premise being
-                // made easier, only a form being translated.*
                 let op = match z.op {
                     ZuwOp::Plus => "add",
                     ZuwOp::Minus => "sub",
                     _ => return Err(LeanReason::CompoundAssign),
                 };
-                return Ok(format!("(.bindName {ziel} (.bin .{op} (.name {ziel}) {w}))"));
+                return Ok(format!("{hoist}(.bindName {ziel} (.bin .{op} (.name {ziel}) {w}))"));
+            }
+            // a store into a register is the device's business (see `place_term`)
+            if c.device_carrier.contains(&z.ziel.basis.text) {
+                return Err(LeanReason::DevicePromise);
             }
             if let [OrtSuffix::Feld(f)] = &z.ziel.suffixe[..] {
                 let (base, shape) = record_field(&z.ziel.basis.text, &f.text, c)?;
@@ -1007,7 +1786,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                         return Err(LeanReason::CompoundAssign);
                     };
                     return Ok(format!(
-                        "(.assignField {} {} (.bin .{op} (.fieldOf {} {}) {}))",
+                        "{hoist}(.assignField {} {} (.bin .{op} (.fieldOf {} {}) {}))",
                         quoted(&base),
                         quoted(&f.text),
                         quoted(&base),
@@ -1016,11 +1795,25 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     ));
                 }
                 return Ok(format!(
-                    "(.assignField {} {} {})",
+                    "{hoist}(.assignField {} {} {})",
                     quoted(&base),
                     quoted(&f.text),
                     w
                 ));
+            }
+            if let Some((tab, i)) = array_place(&z.ziel, c) {
+                let shape = array_elem_shape(&tab, c)?;
+                let idx = expr_term(i, c)?;
+                let w = if z.op == ZuwOp::Setzt {
+                    w
+                } else {
+                    let Some(op) = mischung(z.op, shape) else {
+                        return Err(LeanReason::CompoundAssign);
+                    };
+                    format!("(.bin .{op} (.place {} {idx} \"elem\") {w})", quoted(&tab))
+                };
+                c.note(&tab, "elem", shape, &format!("element of `{tab}`"));
+                return Ok(format!("{hoist}(.assign {} {idx} \"elem\" {w})", quoted(&tab)));
             }
             let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] =
                 &z.ziel.suffixe[..]
@@ -1031,6 +1824,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 return Err(LeanReason::Carrier);
             }
             let (base, shape, tab) = field_shape(&z.ziel.basis.text, &f.text, c)?;
+            let carrier = place_carrier(&base, &tab);
             let idx = expr_term(i, c)?;
             let w = if z.op == ZuwOp::Setzt {
                 w
@@ -1040,33 +1834,39 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 };
                 format!(
                     "(.bin .{op} (.place {} {} {}) {})",
-                    quoted(&base),
+                    quoted(&carrier),
                     idx,
                     quoted(&f.text),
                     w
                 )
             };
-            c.note(&base, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
+            // **A store into a `wrapping` field is reduced to the field's width.**
+            let w = match c.unit.tables.get(&tab).and_then(|t| t.wraps.get(&f.text)) {
+                Some((bits, signed)) => format!("(.wrapTo {bits} {signed} {w})"),
+                None => w,
+            };
+            c.note(&carrier, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
             Ok(format!(
-                "(.assign {} {} {} {})",
-                quoted(&base),
+                "{hoist}(.assign {} {} {} {})",
+                quoted(&carrier),
                 idx,
                 quoted(&f.text),
                 w
             ))
         }
         StmtArt::Wenn(w) => {
-            // An `else if` chain folds from the back: one conditional statement per branch.
             let mut otherwise = match &w.sonst {
                 Some(b) => block_term(b, c)?,
                 None => "[]".to_string(),
             };
             for (bed, blk) in w.zweige.iter().rev() {
-                let b = expr_term(bed, c)?;
+                // a call in the condition is hoisted in front of ITS `ite` -- inside the
+                // `else` of the branch before it, so that it runs exactly when the
+                // condition would have been evaluated
+                let (hoist, b) = hoisted_expr(bed, c)?;
                 let d = block_term(blk, c)?;
-                otherwise = format!("[(.ite {b} {d} {otherwise})]");
+                otherwise = format!("[{hoist}(.ite {b} {d} {otherwise})]");
             }
-            // The fold produced a one-element list; a statement is wanted, so unwrap it.
             Ok(otherwise
                 .strip_prefix('[')
                 .and_then(|s| s.strip_suffix(']'))
@@ -1074,17 +1874,47 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 .to_string())
         }
         StmtArt::Match(m) => {
-            // **Exactly the option shape, and nothing else.** A `match` over a declared sum
-            // type would need a value constructor per variant; refusing here is a number,
-            // guessing would be a meaning.
-            let g = expr_term(&m.gegenstand, c)?;
+            // **`match f(a) { … }` is a CALL followed by a `match`** -- the result goes into
+            // a local of its own (`#m1`), and the arms read that local. A call is a
+            // statement in the model, never an expression; the hoist is what a person
+            // would write by hand, and it changes nothing the arms can observe.
+            let (hoist, g) = hoisted_expr(&m.gegenstand, c)?;
+            // **A `match` whose arms are bare case names is a `match` over a REASON.** The
+            // enumeration is closed (`M123`), so the datum needs no catch-all: a reason no
+            // arm names gets the model stuck.
+            if m.zweige.iter().all(|z| c.unit.variants.contains_key(&z.variante.text)) {
+                // **A `match` over a `tagged` value**: the arm by the case's name, the
+                // payload bound to the binder where the arm names one.
+                let mut arms = Vec::new();
+                for z in &m.zweige {
+                    let depth = c.locals.len();
+                    let binder = match &z.binder {
+                        Some(b) => {
+                            c.push_local(&b.text, Some(Shape::Int));
+                            format!("some {}", quoted(&b.text))
+                        }
+                        None => "none".to_string(),
+                    };
+                    let blk = block_term(&z.rumpf, c);
+                    c.locals.truncate(depth);
+                    arms.push(format!("({}, {binder}, {})", quoted(&z.variante.text), blk?));
+                }
+                return Ok(format!("{hoist}(.onTag {g} [{}])", arms.join(", ")));
+            }
+            if m.zweige.iter().all(|z| z.binder.is_none() && z.variante.text != "None") {
+                let mut arms = Vec::new();
+                for z in &m.zweige {
+                    arms.push(format!("({}, {})", quoted(&z.variante.text), block_term(&z.rumpf, c)?));
+                }
+                return Ok(format!("{hoist}(.onReason {g} [{}])", arms.join(", ")));
+            }
             let mut onp = None;
             let mut ona = None;
             for z in &m.zweige {
                 match (z.variante.text.as_str(), &z.binder) {
                     ("Some", Some(b)) => {
                         let depth = c.locals.len();
-                        c.locals.push(b.text.clone());
+                        c.push_local(&b.text, Some(Shape::Int));
                         let blk = block_term(&z.rumpf, c)?;
                         c.locals.truncate(depth);
                         onp = Some((b.text.clone(), blk));
@@ -1095,76 +1925,223 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             }
             match (onp, ona) {
                 (Some((b, present)), Some(absent)) => {
-                    Ok(format!("(.onOption {g} {} {present} {absent})", quoted(&b)))
+                    Ok(format!("{hoist}(.onOption {g} {} {present} {absent})", quoted(&b)))
                 }
                 _ => Err(LeanReason::MatchNotOption),
             }
         }
-        StmtArt::Return(None) => Ok("(.ret none)".into()),
+        // **`return` inside a loop is DESUGARED** (2026-09-07): the value goes into the
+        // local `#ret`, the flag `#returned` is raised, and the pass ends (`.exit`). After
+        // the loop the flag is tested and the routine returns -- or, one loop further out,
+        // exits again. The loop's invariant carries the routine's `ensures` on the flagged
+        // path (`ret_post`), so the theorem after the loop has what it needs. *A `return`
+        // the loop's environment cannot carry becomes two locals it can.*
+        StmtArt::Return(None) => {
+            if !c.loop_stack.is_empty() {
+                if c.ret_post.is_none() {
+                    return Err(LeanReason::ReturnInLoop);
+                }
+                return Ok("(.bindName \"#ret\" (.lit .absent)), (.bindName \"#returned\" (.lit (.bool true))), .leave".into());
+            }
+            Ok("(.ret none)".into())
+        }
         StmtArt::Return(Some(e)) => {
-            // **`return Some(i);` is a VALUE and not a call**, and the test comes first --
-            // see `is_option_value`.
-            if let ExprArt::Ruf(r) = &e.art {
-                if !is_option_value(r) {
-                    let (n, ps, args) = call_parts(r, c)?;
-                    return Ok(format!("(.retCall {n} [{ps}] [{args}])"));
+            if !c.loop_stack.is_empty() {
+                if c.ret_post.is_none() {
+                    return Err(LeanReason::ReturnInLoop);
+                }
+                if let ExprArt::Ruf(r) = &crate::ohne_klammern(e).art {
+                    if !is_value_constructor(r, c) {
+                        let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
+                        return Ok(format!(
+                            "{hoist}(.bindCall \"#ret\" {n} [{ps}] [{args}] {pre}), (.bindName \"#returned\" (.lit (.bool true))), .leave"
+                        ));
+                    }
+                }
+                let (hoist, v) = hoisted_expr(e, c)?;
+                return Ok(format!(
+                    "{hoist}(.bindName \"#ret\" {v}), (.bindName \"#returned\" (.lit (.bool true))), .leave"
+                ));
+            }
+            if let ExprArt::Ruf(r) = &crate::ohne_klammern(e).art {
+                if !is_value_constructor(r, c) {
+                    let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
+                    return Ok(format!("{hoist}(.retCall {n} [{ps}] [{args}] {pre})"));
                 }
             }
-            Ok(format!("(.ret (some {}))", expr_term(e, c)?))
+            let (hoist, v) = hoisted_expr(e, c)?;
+            Ok(format!("{hoist}(.ret (some {v}))"))
         }
-        // Everything else is refused BY NAME. `Ruf` and `LetSonst` belong to the sequential
-        // core and are the next two to build: a call is compositional over the CONTRACT of
-        // the callee, never over its body, and that gate is not built.
         StmtArt::Ruf(r) => {
-            let (n, ps, args) = call_parts(r, c)?;
-            Ok(format!("(.call {n} [{ps}] [{args}])"))
+            let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
+            Ok(format!("{hoist}(.call {n} [{ps}] [{args}] {pre})"))
         }
-        StmtArt::LetSonst(_) => Err(LeanReason::ErrorPropagation),
+        // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
+        // callee answers with a reason instead of a value, the `else` block runs with it
+        // bound to `e`, and ends. The `place` form (`let n = A else …`, unpacking an atomic)
+        // stays refused.
+        StmtArt::LetSonst(l) => {
+            let Some(r) = l.als_ruf() else {
+                return Err(LeanReason::ErrorPropagation);
+            };
+            let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
+            let depth = c.locals.len();
+            c.push_local(&l.fehlername.text, None);
+            let sonst = block_term(&l.sonst, c);
+            c.locals.truncate(depth);
+            let sonst = sonst?;
+            c.push_local(&l.name.text, None);
+            Ok(format!(
+                "{hoist}(.bindCallElse {} {n} [{ps}] [{args}] {pre} {} {sonst})",
+                quoted(&l.name.text),
+                quoted(&l.fehlername.text)
+            ))
+        }
         StmtArt::Schleife(sch) => {
-            let (inv, rumpf) = match sch.as_ref() {
-                Schleife::Traverse(x) => (&x.invariante, &x.rumpf),
-                Schleife::Retry(x) => (&x.invariante, &x.rumpf),
-                Schleife::Forever(x) => (&x.invariante, &x.rumpf),
+            let (inv, rumpf, marke, var) = match sch.as_ref() {
+                Schleife::Traverse(x) => {
+                    (&x.invariante, &x.rumpf, None, Some(x.variable.text.clone()))
+                }
+                Schleife::Retry(x) => (&x.invariante, &x.rumpf, x.marke.clone(), None),
+                Schleife::Forever(x) => (&x.invariante, &x.rumpf, x.marke.clone(), None),
             };
-            // **A loop without an `invariant` is refused, and that is the whole point of the
-            // word.** The measure is carried by the language; what is missing without the
-            // clause is the STATEMENT, and a loop datum with no statement about it would let
-            // a proof conclude from a loop exactly nothing while looking like it concluded
-            // something.
-            let Some(inv) = inv else {
-                return Err(LeanReason::Loop);
+            // the range of the index: every domain inside a table visits its slots
+            let range = match sch.as_ref() {
+                Schleife::Traverse(x) => domain_of(&x.domaene, &x.variable.text, c).ok().and_then(|(tab, _)| {
+                    let info = c.unit.tables.get(&tab)?;
+                    let count = info.count?;
+                    // **over an array (`elems of`, `queue`) the binder may be read as the
+                    // element**, and the element's declared range is then its range too:
+                    // the bound that covers both readings (2026-09-08)
+                    let elem = matches!(x.domaene, Domaene::ElementeVon(_) | Domaene::Schlange(_))
+                        .then(|| info.fields.iter().find(|(n, _)| n == "elem").and_then(|(_, sh)| sh.and_then(Shape::range)))
+                        .flatten();
+                    Some(match elem {
+                        Some((lo, hi)) => (lo.min(0), (hi + 1).max(count)),
+                        None => (0i128, count),
+                    })
+                }),
+                _ => None,
             };
-            let p = pred_term(inv, c)?;
+            let may_return = returns(rumpf);
+            if may_return && c.ret_post.is_none() {
+                return Err(LeanReason::ReturnInLoop);
+            }
+            // The flag and the slot for a `return` inside: bound BEFORE the loop, so that
+            // the invariant's shape conjuncts carry them and the test after the loop reads
+            // a bound name.
+            let mut prefix = String::new();
+            if may_return {
+                prefix.push_str("(.bindName \"#returned\" (.lit (.bool false))), (.bindName \"#ret\" (.lit .absent)), ");
+                c.push_local("#returned", Some(Shape::Bool));
+                c.push_local("#ret", None);
+            }
+            // **A loop without an `invariant` has the invariant `true`** (2026-09-07). Until
+            // today it was refused -- *"a loop datum with no statement about it would let a
+            // proof conclude from a loop exactly nothing"* -- and that sentence is right
+            // about what follows the loop and wrong about the refusal: concluding NOTHING
+            // from a loop is the sound reading of a loop nobody wrote a statement for, and
+            // it is what the rest of the body then has to live with. What is still carried
+            // are the shapes of the locals in scope, so the statement after the loop can
+            // read them at all.
+            //
+            // **The invariant is read in the scope OUTSIDE the loop**, and strengthened by
+            // the shapes of every local in that scope: those are the names the body may read
+            // and rebind, and the rule has to carry their shapes across the pass.
+            //
+            // The loop variable shadows a parameter of the same name -- and a parameter's
+            // declared range does not hold of an index the loop binds to that name.
+            if let Some(v) = &var {
+                c.ranges.remove(v);
+            }
+            let shapes = shaped_locals(&c.locals);
+            let mut parts = shape_conjuncts(&c.locals, &c.ranges);
+            // The invariants the routine keeps hold at every pass: a call inside the loop
+            // asks for them, and the routine's promise asks for them at the end.
+            parts.extend(c.kept.iter().cloned());
+            let core = match inv {
+                Some(inv) => Some(pred_term(inv, c)?),
+                None => None,
+            };
+            // On the flagged path the routine's promise holds instead of the invariant.
+            if may_return {
+                let inv_only = core.clone().unwrap_or_else(|| "(.lit (.bool true))".into());
+                let ret_post = c.ret_post.clone().unwrap_or_else(|| "(.lit (.bool true))".into());
+                parts.push(format!(
+                    "(.bin .or (.bin .and (.name \"#returned\") {ret_post}) (.bin .and (.un .not (.name \"#returned\")) {inv_only}))"
+                ));
+            } else if let Some(core) = core {
+                parts.push(core);
+            }
+            let inv_term = conj(&parts);
             c.loops += 1;
             let id = format!("{}#{}", c.routine, c.loops);
-            // **A `traverse` BINDS its variable, and the body reads it as a local.**
-            //
-            // Without this it fell through to `.global "opfer"` -- a bound name read as a
-            // world name. *That is not a refusal but a wrong translation:* the datum would
-            // say the body reads a global nobody declared, and a proof over it would be
-            // about a program that does not exist. Found by reading the first emitted loop.
             let depth = c.locals.len();
-            if let Schleife::Traverse(x) = sch.as_ref() {
-                c.locals.push(x.variable.text.clone());
-            }
-            let body = block_term(rumpf, c)?;
+            let var_name = match &var {
+                Some(v) => {
+                    c.push_local(v, Some(Shape::Int));
+                    v.clone()
+                }
+                None => "#pass".to_string(),
+            };
+            // The body's own callees and nested loops are collected apart from the
+            // routine's, because the loop's theorem carries them as its own hypotheses.
+            let outer_callees = std::mem::take(&mut c.callees);
+            let outer_loops = std::mem::take(&mut c.loop_infos);
+            let reads_before = c.option_reads.len();
+            c.loop_stack.push(marke.map(|m| m.text));
+            let body = block_term(rumpf, c);
+            c.loop_stack.pop();
             c.locals.truncate(depth);
-            Ok(format!("(.loop {} {p} {body})", quoted(&id)))
+            let inner_callees = std::mem::replace(&mut c.callees, outer_callees);
+            let inner_loops = std::mem::replace(&mut c.loop_infos, outer_loops);
+            let body = body?;
+            c.callees.extend(inner_callees.iter().cloned());
+            let nested: Vec<String> = inner_loops.iter().map(|l| l.id.clone()).collect();
+            c.loop_infos.extend(inner_loops);
+            let reads: Vec<(String, String, String, Shape)> = c.option_reads[reads_before..].to_vec();
+            c.loop_infos.push(LoopInfo {
+                id: id.clone(),
+                inv: inv_term.clone(),
+                var: var_name,
+                body: body.clone(),
+                callees: inner_callees,
+                nested,
+                shapes,
+                parts: parts.len(),
+                reads,
+                ranges: c.ranges.clone(),
+                records: c.seen_records.clone(),
+                range,
+            });
+            let after = if !may_return {
+                String::new()
+            } else if !c.loop_stack.is_empty() {
+                ", (.ite (.name \"#returned\") [.leave] [])".to_string()
+            } else if c.has_result {
+                ", (.ite (.name \"#returned\") [(.ret (some (.name \"#ret\")))] [])".to_string()
+            } else {
+                ", (.ite (.name \"#returned\") [(.ret none)] [])".to_string()
+            };
+            Ok(format!("{prefix}(.loop {} {inv_term} {body}){after}", quoted(&id)))
         }
-        StmtArt::Narrow(_) => Err(LeanReason::Narrowing),
-        // **`breaking I { … }` is a SUSPENSION and not an exit**, and it stood in one arm
-        // with `leave` and `next` under the sentence "a non-local exit out of a named loop".
-        // It is neither: what it changes is which DUTY holds inside the block, not which
-        // statements run -- so its meaning is its body's, exactly as at a `locks`.
-        //
-        // *Measured on 2026-08-28: all four obligations behind `non-local-exit` were
-        // `breaking`, and not one was an exit* (`messung/AUSSETZUNG.md`). The
-        // reading holds exactly as far as this channel cannot state a table invariant --
-        // and it cannot; the `maintains` duty stands beside it and is refused by name.
-        //
-        // **The suspended names travel into the datum.** That is the half a later invariant
-        // channel has to read: a record that dropped them would hide where the suspension
-        // lay, the same reason the lock's name stays.
+        // **`narrow x to lo .. hi else { … }` is a conditional** (2026-09-07): the value stays
+        // what it is, the type of the name gets narrower (`M1`'s business), and the `else`
+        // block runs where the value is outside the range -- and ends, because `M1` demands
+        // it. So the datum is an `ite` with an empty then-branch.
+        StmtArt::Narrow(n) => {
+            let NarrowZiel::Bereich(b) = &n.ziel else {
+                return Err(LeanReason::Narrowing);
+            };
+            let x = place_term(&n.ort, c)?;
+            let lo = expr_term(&b.von, c)?;
+            let hi = expr_term(&b.bis, c)?;
+            let upper = if b.exklusiv { "lt" } else { "le" };
+            let sonst = block_term(&n.sonst, c)?;
+            Ok(format!(
+                "(.ite (.bin .and (.bin .ge {x} {lo}) (.bin .{upper} {x} {hi})) [] {sonst})"
+            ))
+        }
         StmtArt::Bricht(b) => {
             let namen: Vec<String> = b.invarianten.iter().map(|i| quoted(&i.text)).collect();
             Ok(format!(
@@ -1173,16 +2150,17 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 block_term(&b.rumpf, c)?
             ))
         }
-        StmtArt::Leave(_) | StmtArt::Next(_) => Err(LeanReason::NonLocalExit),
-        // **The pairing costs no memory model either, and the ground is the same as at a
-        // lock**: `release_stellt_sichtbarkeit_her` is an ASSUMPTION of the axiom layer
-        // (`beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, rebooked
-        // there by `K100.2`) -- not a proof obligation. In a single world the visibility is
-        // automatic; the assumption is what licenses reading it that way.
-        //
-        // The payload travels into the datum: it is the surface that rests on the assumption
-        // rather than on the transition, and a record that dropped it would hide which places
-        // those are.
+        // **`leave m;`/`next m;` end the pass of the INNERMOST loop** -- `Stmt.exit`. A mark
+        // that names an outer one is refused: it would have to travel through a `.loop`
+        // step that does not run the body.
+        StmtArt::Leave(m) | StmtArt::Next(m) => {
+            let word = if matches!(s.art, StmtArt::Leave(_)) { ".leave" } else { ".exit" };
+            match c.loop_stack.last() {
+                Some(Some(inner)) if *inner == m.text => Ok(word.into()),
+                Some(None) => Ok(word.into()),
+                _ => Err(LeanReason::NonLocalExit),
+            }
+        }
         StmtArt::Publish(pb) => {
             if !pb.ziel.suffixe.is_empty() {
                 return Err(LeanReason::Publish);
@@ -1199,7 +2177,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 return Err(LeanReason::Await);
             }
             let payload: Vec<String> = a.erwartet.iter().map(|o| quoted(&o.text())).collect();
-            c.locals.push(a.name.text.clone());
+            c.push_local(&a.name.text, None);
             Ok(format!(
                 "(.awaitLoad {} {} [{}])",
                 quoted(&a.name.text),
@@ -1207,16 +2185,8 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 payload.join(", ")
             ))
         }
-        // **`exchange` stays refused, and the reason is the FORM and not the visibility.**
-        // Both of its shapes are conditional: `update` carries a whole body (a CAS loop) and
-        // `compare` stores only if a predicate holds. *A plain swap would store something the
-        // program does not* -- the same class as taking `&=` for a truth value.
         StmtArt::Exchange(_) => Err(LeanReason::Exchange),
         StmtArt::Observiert(_) => Err(LeanReason::Observe),
-        // **`locks S { … }` -- the one concurrent statement that costs no memory model.**
-        // The plumbing already carries what it says: `Held(S)` inside is what makes the
-        // sequential reading of this whole model sound, and H005/H006/H012/H016 discharge
-        // it. The name travels into the datum so the critical section stays visible.
         StmtArt::Sperrt(l) => Ok(format!(
             "(.locked {} {})",
             quoted(&l.sperre.basis.text),
@@ -1225,63 +2195,148 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
     }
 }
 
-/// **Every table of the unit, with the shape its declaration gives each slot field.**
-///
-/// A field whose type has no shape is kept with `None` and NOT dropped -- a dropped field
-/// looks like an undeclared one, and the refusal would then name the wrong thing.
-fn tables(
-    baum: &Programm,
-    u: &crate::umgebung::Umgebung,
-) -> HashMap<String, Vec<(String, Option<Shape>)>> {
-    let mut out = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
-        let ItemArt::Tabelle(tb) = &item.art else { return };
-        let mut fields = Vec::new();
-        if let Some(s) = &tb.slot {
-            for f in &s.felder {
-                let form = match &f.typ {
-                    SlotTyp::Typ(te) => shape_of(te, u, module),
-                    SlotTyp::Wrapping(_) => None,
-                };
-                fields.push((f.name.text.clone(), form));
+// ===========================================================================================
+// THE UNIT -- everything read from DECLARATIONS, once per program.
+// ===========================================================================================
+
+/// A generated table operation, as a callee.
+#[derive(Clone)]
+pub struct OpInfo {
+    pub key: String,
+    pub table: String,
+    pub params: Vec<String>,
+    /// The premises `opsruf::koepfe` cuts, as one expression -- or `None` where one of them
+    /// names a root the table's invariants do not name.
+    pub pre: Option<String>,
+}
+
+/// A device transition, as a callee: a register write behind a frame.
+#[derive(Clone)]
+pub struct TransitionInfo {
+    pub name: String,
+    pub device: String,
+    /// The `requires` as an expression -- `None` where it has no term (a register name is a
+    /// place this model does not have), and then the call is refused.
+    pub pre: Option<String>,
+}
+
+/// A routine without a body -- `extern fn`, or a declaration whose body is elsewhere.
+#[derive(Clone)]
+pub struct ForeignInfo {
+    pub name: String,
+    pub params: Vec<(String, Option<Shape>)>,
+    pub result: Option<Shape>,
+    /// `-> T or R`: the answer may be a reason.
+    pub fehler: bool,
+    /// The declared range of an integer answer.
+    pub result_range: Option<(i128, i128)>,
+    /// `-> never`: the routine does not return.
+    pub never: bool,
+    /// The routine declares an answer (of whatever shape).
+    pub has_result: bool,
+    pub pre: Option<String>,
+    /// The `ensures` this channel can say, as the `post` of an ASSUMED contract.
+    pub post: Vec<String>,
+    pub writes: Vec<String>,
+}
+
+/// A `table`/`group` invariant, as this channel reads it.
+#[derive(Clone)]
+pub struct InvariantInfo {
+    pub name: String,
+    /// The carriers it speaks about -- one for a table, several for a group.
+    pub carriers: Vec<String>,
+    /// The `Expr` term, or the reason there is none.
+    pub term: Result<String, LeanReason>,
+    /// Whether some `maintains` names it; if not, every writer of a carrier owes it.
+    pub maintained_by_name: bool,
+    /// Whether the carrier is a `table … ops` -- then the template carries it.
+    pub under_ops: bool,
+}
+
+pub struct Unit {
+    pub u: crate::umgebung::Umgebung,
+    pub tables: HashMap<String, TableInfo>,
+    pub records: HashMap<String, Vec<(String, Option<Shape>)>>,
+    /// **An array field is a table of its own** -- `plaetze : [AuftragNr; N]` inside
+    /// `Ring` is the pseudo-table `Ring.plaetze` with the one field `elem` and `count N`,
+    /// so that `r.plaetze[j]` is the place `.slot "Ring.plaetze" j "elem"` and `forall j in
+    /// elems of r.plaetze` a `forallSlots` over it. Record name -> `(field, pseudo-table)`.
+    /// A static array `buf : [u8; N]` is the pseudo-table `buf` the same way.
+    pub record_arrays: HashMap<String, Vec<(String, String)>>,
+    /// `(table, slot field) -> record`: a slot field of a record type -- `wartende :
+    /// TidQueue` -- so that `queue T.slots[i].f` finds the record's array (2026-09-08).
+    pub field_records: HashMap<(String, String), String>,
+    statics_tables: HashMap<String, String>,
+    statics_records: HashMap<String, String>,
+    /// The scalar statics with a shape -- `static mut summe : u32` -- as `Place.global`s
+    /// of `shapeOf`, so that a store into one is checked and a read from one is shaped.
+    statics_scalars: Vec<(String, Shape)>,
+    routines: BTreeMap<String, RoutineInfo>,
+    result_shape: HashMap<String, Option<Shape>>,
+    /// The declared range of an integer answer.
+    result_range: HashMap<String, Option<(i128, i128)>>,
+    /// The precondition expression of every routine of the unit -- shapes, `requires` and
+    /// the invariants it maintains -- or the reason a clause has no term.
+    pre_of: HashMap<String, Result<String, LeanReason>>,
+    /// The layout of each routine's precondition: how many shape conjuncts, how many
+    /// `requires`, how many kept invariants -- in that order.
+    pre_parts: HashMap<String, (usize, usize, usize)>,
+    foreign: BTreeMap<String, ForeignInfo>,
+    ops: BTreeMap<String, OpInfo>,
+    transitions: BTreeMap<String, TransitionInfo>,
+    devices: BTreeSet<String>,
+    invariants: Vec<InvariantInfo>,
+    /// The `spec fn`s with a predicate body, for `refines`.
+    specs: HashMap<String, FnDecl>,
+    /// Every case of every `tagged type`: case name to whether it carries a payload this
+    /// channel can take as a number.
+    variants: HashMap<String, Option<bool>>,
+    /// Case name -> the shape of the `tagged` type it belongs to.
+    variant_sum: HashMap<String, Shape>,
+}
+
+fn carriers_written(
+    w: &Option<Wirkungen>,
+    map: &HashMap<String, String>,
+    record_arrays: &HashMap<String, Vec<(String, String)>>,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(w) = w {
+        for x in &w.liste {
+            match &x.art {
+                WirkungArt::Schreibt(o)
+                | WirkungArt::Verbraucht(o)
+                | WirkungArt::Veroeffentlicht(o) => {
+                    // `writes c.slots` at `c : ptr<…> Kappenraum` writes the TABLE -- the
+                    // parameter name is the routine's, the carrier is the program's.
+                    let name = map.get(&o.basis.text).cloned().unwrap_or_else(|| o.basis.text.clone());
+                    // a record written is its arrays written -- they are tables of their own
+                    if let Some(arrays) = record_arrays.get(&name) {
+                        for (_, tab) in arrays {
+                            if !out.contains(tab) {
+                                out.push(tab.clone());
+                            }
+                        }
+                    }
+                    if !out.contains(&name) {
+                        out.push(name);
+                    }
+                }
+                WirkungArt::Liest(_)
+                | WirkungArt::Sperrt(_)
+                | WirkungArt::SperrtGeteilt(_)
+                | WirkungArt::Maskiert(_)
+                | WirkungArt::Belegt(_)
+                | WirkungArt::Divergiert
+                | WirkungArt::Rein => {}
             }
         }
-        out.insert(tb.name.text.clone(), fields);
-    });
-    out
-}
-
-/// **Which base name stands for which table**, for one function.
-fn carriers_of(
-    f: &FnDecl,
-    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
-    statics: &HashMap<String, String>,
-) -> HashMap<String, String> {
-    let mut out = HashMap::new();
-    // A table name stands for itself.
-    for name in tab.keys() {
-        out.insert(name.clone(), name.clone());
-    }
-    // A `static` that points at a table stands for it, in every function.
-    for (n, table) in statics {
-        out.insert(n.clone(), table.clone());
-    }
-    // A parameter stands for the table its pointer type names.
-    for p in &f.parameter {
-        if let Some(table) = points_at(&p.typ, tab) {
-            out.insert(p.name.text.clone(), table);
-        }
     }
     out
 }
 
-/// Does this declared type point at one of these declarations? **Through a pointer or
-/// directly.** Used for tables and for records alike -- the lookup is the same, the map is
-/// not.
-fn points_at(
-    typ: &TypExpr,
-    decls: &HashMap<String, Vec<(String, Option<Shape>)>>,
-) -> Option<String> {
+fn points_at(typ: &TypExpr, decls: &HashMap<String, TableInfo>) -> Option<String> {
     let target = match typ {
         TypExpr::Zeiger(z) => &z.ziel,
         t => t,
@@ -1291,308 +2346,847 @@ fn points_at(
     decls.contains_key(&last.text).then(|| last.text.clone())
 }
 
-/// **Every record and `format` of the unit, with the shape its declaration gives each
-/// field.** Two declarations carry fields without being a table: `format T { … }` and
-/// `type T = { … }`.
-fn records(
-    baum: &Programm,
-    u: &crate::umgebung::Umgebung,
-) -> HashMap<String, Vec<(String, Option<Shape>)>> {
-    let mut out = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
-        match &item.art {
+fn points_at_record(typ: &TypExpr, decls: &HashMap<String, Vec<(String, Option<Shape>)>>) -> Option<String> {
+    let target = match typ {
+        TypExpr::Zeiger(z) => &z.ziel,
+        t => t,
+    };
+    let TypExpr::Pfad(pf) = target else { return None };
+    let last = pf.teile.last()?;
+    decls.contains_key(&last.text).then(|| last.text.clone())
+}
+
+/// **The translation context of a routine** -- its parameters as locals, its carriers.
+fn ctx_for<'a>(unit: &'a Unit, f: &FnDecl, routine: &str, module: &str, site: ResultSite) -> Ctx<'a> {
+    let mut carrier = HashMap::new();
+    for name in unit.tables.keys() {
+        carrier.insert(name.clone(), name.clone());
+    }
+    for (n, t) in &unit.statics_tables {
+        carrier.insert(n.clone(), t.clone());
+    }
+    let mut record_carrier = HashMap::new();
+    for (n, r) in &unit.statics_records {
+        record_carrier.insert(n.clone(), r.clone());
+    }
+    let mut locals = Vec::new();
+    for p in &f.parameter {
+        if let Some(t) = points_at(&p.typ, &unit.tables) {
+            carrier.insert(p.name.text.clone(), t);
+        }
+        if let Some(r) = points_at_record(&p.typ, &unit.records) {
+            record_carrier.insert(p.name.text.clone(), r);
+        }
+        let sh = unit
+            .routines
+            .get(&f.name.text)
+            .and_then(|r| r.params.iter().find(|(n, _)| n == &p.name.text))
+            .and_then(|(_, s)| *s);
+        locals.push((p.name.text.clone(), sh));
+    }
+    let ranges = unit.routines.get(&f.name.text).map(|r| r.ranges.clone()).unwrap_or_default();
+    let mut device_carrier = BTreeSet::new();
+    for p in &f.parameter {
+        let target = match &p.typ {
+            TypExpr::Zeiger(z) => &z.ziel,
+            t => t,
+        };
+        if let TypExpr::Pfad(pf) = target {
+            if pf.teile.last().is_some_and(|l| unit.devices.contains(&l.text)) {
+                device_carrier.insert(p.name.text.clone());
+            }
+        }
+    }
+    Ctx {
+        unit,
+        carrier,
+        record_carrier,
+        locals,
+        ranges,
+        device_carrier,
+        self_carrier: None,
+        module: module.to_string(),
+        allow_calls: true,
+        result_site: site,
+        uses_result: false,
+        olds: Vec::new(),
+        seen: Vec::new(),
+        seen_records: Vec::new(),
+        routine: routine.to_string(),
+        hoists: 0,
+        hoisted: HashMap::new(),
+        loops: 0,
+        loop_infos: Vec::new(),
+        loop_stack: Vec::new(),
+        callees: BTreeSet::new(),
+        option_reads: Vec::new(),
+        ret_post: None,
+        has_result: f.ergebnis.is_some(),
+        kept: Vec::new(),
+    }
+}
+
+/// The context of a `table`/`group` invariant: no parameters, `Self` is the carrier.
+fn ctx_for_invariant<'a>(unit: &'a Unit, self_carrier: Option<String>, module: &str) -> Ctx<'a> {
+    let mut carrier = HashMap::new();
+    for name in unit.tables.keys() {
+        carrier.insert(name.clone(), name.clone());
+    }
+    for (n, t) in &unit.statics_tables {
+        carrier.insert(n.clone(), t.clone());
+    }
+    Ctx {
+        unit,
+        carrier,
+        record_carrier: unit.statics_records.clone(),
+        locals: Vec::new(),
+        ranges: HashMap::new(),
+        device_carrier: BTreeSet::new(),
+        self_carrier,
+        module: module.to_string(),
+        allow_calls: false,
+        result_site: ResultSite::Contract,
+        uses_result: false,
+        olds: Vec::new(),
+        seen: Vec::new(),
+        seen_records: Vec::new(),
+        routine: String::new(),
+        hoists: 0,
+        hoisted: HashMap::new(),
+        loops: 0,
+        loop_infos: Vec::new(),
+        loop_stack: Vec::new(),
+        callees: BTreeSet::new(),
+        option_reads: Vec::new(),
+        ret_post: None,
+        has_result: false,
+        kept: Vec::new(),
+    }
+}
+
+/// **The precondition of a routine as ONE expression**: the declared shape of every
+/// parameter and every `requires`. `None` where a clause has no term.
+fn pre_expr(unit: &Unit, f: &FnDecl, module: &str, params: &[(String, Option<Shape>)], ranges: &HashMap<String, (i128, i128)>, maintained: &[String]) -> Result<(String, (usize, usize, usize)), LeanReason> {
+    let mut parts: Vec<String> = params
+        .iter()
+        .filter_map(|(n, sh)| sh.map(|sh| shape_conjunct(n, sh, ranges)))
+        .collect();
+    let mut c = ctx_for(unit, f, &f.name.text, module, ResultSite::Contract);
+    c.allow_calls = false;
+    for q in &f.requires {
+        parts.push(pred_term(q, &mut c)?);
+    }
+    // **`maintains I` is an assumption of `I` on entry**, and so is every global invariant
+    // of a carrier the routine writes: the invariant stands in the precondition, so a
+    // caller has to hand it in -- and gets it back from the promise.
+    let shapes = parts.len() - f.requires.len();
+    let mut invs = 0;
+    for m in maintained {
+        if let Ok(t) = kept_invariant(unit, f, module, m) {
+            parts.push(t);
+            invs += 1;
+        } else {
+            kept_invariant(unit, f, module, m)?;
+        }
+    }
+    Ok((conj(&parts), (shapes, f.requires.len(), invs)))
+}
+
+/// **An invariant a routine keeps, as an expression in the routine's own names.** A
+/// `table`/`group` invariant has one term for the unit; a `spec fn` named by `maintains`
+/// is inlined with its parameters mapped onto the routine's parameters OF THE SAME NAME --
+/// `maintains baum_wohlgeformt` at `f(c : ptr<…> Kappenraum, …)` reads `baum_wohlgeformt(c)`.
+fn kept_invariant(unit: &Unit, f: &FnDecl, module: &str, name: &str) -> Result<String, LeanReason> {
+    if let Some(inv) = unit.invariants.iter().find(|i| i.name == name) {
+        return inv.term.clone();
+    }
+    let spec = unit.specs.get(name).ok_or(LeanReason::Invariant)?;
+    let FnRumpf::Pred(body) = &spec.rumpf else {
+        return Err(LeanReason::SpecShape);
+    };
+    for p in &spec.parameter {
+        if !f.parameter.iter().any(|q| q.name.text == p.name.text) {
+            return Err(LeanReason::Invariant);
+        }
+    }
+    let mut c = ctx_for(unit, f, &f.name.text, module, ResultSite::Contract);
+    c.allow_calls = false;
+    pred_term(body, &mut c)
+}
+
+/// **The root of a table's `reaches`-invariant**, for the `insert` premise of its ops.
+fn reaches_root(t: &Tabelle) -> Option<Expr> {
+    fn suche(p: &Pred) -> Option<Expr> {
+        match &p.art {
+            PredArt::Erreicht { nach, .. } => {
+                if let [OrtSuffix::Feld(_), OrtSuffix::Index(i)] = &nach.suffixe[..] {
+                    return Some(i.clone());
+                }
+                None
+            }
+            PredArt::Quantor(q) => suche(&q.rumpf),
+            PredArt::Klammer(x) | PredArt::Nicht(x) => suche(x),
+            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+                suche(a).or_else(|| suche(b))
+            }
+            PredArt::Vergleich(_) | PredArt::Element(_, _) | PredArt::Held { .. } => None,
+        }
+    }
+    t.invarianten.iter().find_map(|i| suche(&i.pred))
+}
+
+impl Unit {
+    pub fn sammle(baum: &Programm) -> Unit {
+        let u = crate::umgebung::Umgebung::sammle(baum);
+        let mut tables = HashMap::new();
+        let mut records = HashMap::new();
+        let mut array_fields: Vec<(String, String, ArrayTy, String)> = Vec::new();
+        let mut static_arrays: Vec<(String, ArrayTy, String)> = Vec::new();
+        let mut devices = BTreeSet::new();
+        let mut table_decls: Vec<(String, Tabelle)> = Vec::new();
+        let mut group_decls: Vec<(String, GruppeDecl)> = Vec::new();
+        let mut specs = HashMap::new();
+        let mut variants: HashMap<String, Option<bool>> = HashMap::new();
+        let mut variant_sum: HashMap<String, Shape> = HashMap::new();
+        let mut fn_decls: Vec<(String, FnDecl)> = Vec::new();
+        let mut transitions_raw: Vec<(String, Uebergang)> = Vec::new();
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, module| match &item.art {
+            ItemArt::Tabelle(tb) => {
+                let mut fields = Vec::new();
+                let mut wraps = HashMap::new();
+                if let Some(s) = &tb.slot {
+                    for f in &s.felder {
+                        let form = match &f.typ {
+                            SlotTyp::Typ(te) => shape_of(te, &u, module),
+                            // **A `wrapping` field is a NUMBER**, and a store into it is
+                            // reduced to its width (`Expr.wrapTo`).
+                            SlotTyp::Wrapping(it) => {
+                                if let crate::typen::Typ::Ganzzahl(b) | crate::typen::Typ::Umlaufend(b) =
+                                    u.typ_von_ausdruck_decl(module, &TypExpr::Int(it.clone()))
+                                {
+                                    wraps.insert(f.name.text.clone(), (b.breite, b.vorzeichen));
+                                }
+                                Some(Shape::Int)
+                            }
+                        };
+                        fields.push((f.name.text.clone(), form));
+                    }
+                }
+                let count = tb
+                    .kapazitaet
+                    .as_ref()
+                    .and_then(|e| u.konst_wert(module, e));
+                tables.insert(
+                    tb.name.text.clone(),
+                    TableInfo {
+                        fields,
+                        wraps,
+                        count,
+                        belegt: tb.belegt.as_ref().map(|b| b.text.clone()),
+                        elter: tb.baum.as_ref().and_then(|b| b.elter.as_ref().map(|e| e.text.clone())),
+                        root: reaches_root(tb),
+                    },
+                );
+                table_decls.push((module.to_string(), tb.clone()));
+            }
+            ItemArt::Gruppe(g) => group_decls.push((module.to_string(), g.clone())),
             ItemArt::Format(fo) => {
                 let fields = fo
                     .felder
                     .iter()
-                    // **A `reserved` field is not readable**, so it gets no shape and any
-                    // place naming it is refused rather than given one.
                     .map(|f| {
                         (
                             f.name.text.clone(),
-                            if f.reserviert { None } else { shape_of(&f.typ.typ, u, module) },
+                            if f.reserviert { None } else { shape_of(&f.typ.typ, &u, module) },
                         )
                     })
                     .collect();
-                out.insert(fo.name.text.clone(), fields);
+                records.insert(fo.name.text.clone(), fields);
             }
             ItemArt::Typ(td) => {
+                // **The cases of a `tagged type`**, with whether the payload is a number
+                // here: an integer, an index, or a named type over one (an opaque handle
+                // taken as its representation -- the model may see what `D1` hides from the
+                // program, because nothing in the model can compute with it).
+                if let Some(TypExpr::Varianten(vs, _)) = &td.rumpf {
+                    for v in vs {
+                        let payload = match &v.nutzlast {
+                            None => Some(false),
+                            Some(t) => {
+                                use crate::typen::Typ;
+                                match u.typ_von_ausdruck_decl(module, t) {
+                                    Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Tabelle(_) | Typ::Benannt { .. } => Some(true),
+                                    _ => match t {
+                                        TypExpr::Index { .. } => Some(true),
+                                        _ => None,
+                                    },
+                                }
+                            }
+                        };
+                        variants.insert(v.name.text.clone(), payload);
+                    }
+                    // the type's shape, for every case name
+                    if let Some(sh) = shape_of_typ(&u.typ_von_ausdruck_decl(module, &TypExpr::Pfad(Pfad {
+                        teile: vec![td.name.clone()],
+                        span: td.name.span,
+                    }))) {
+                        for v in vs {
+                            variant_sum.insert(v.name.text.clone(), sh);
+                        }
+                    }
+                }
                 if let Some(TypExpr::Verbund(fs, _)) = &td.rumpf {
-                    // An `opaque` new type's representation may not be read (`D1`), and a
-                    // record behind one is exactly that.
                     if td.opaque {
                         return;
                     }
                     let fields = fs
                         .iter()
-                        .map(|f| (f.name.text.clone(), shape_of(&f.typ.typ, u, module)))
+                        .map(|f| (f.name.text.clone(), shape_of(&f.typ.typ, &u, module)))
                         .collect();
-                    out.insert(td.name.text.clone(), fields);
-                }
-            }
-            _ => {}
-        }
-    });
-    out
-}
-
-/// Which base name stands for which record: parameters and statics whose type points at one.
-fn record_carriers(
-    f: &FnDecl,
-    recs: &HashMap<String, Vec<(String, Option<Shape>)>>,
-    statics: &HashMap<String, String>,
-) -> HashMap<String, String> {
-    let mut out = HashMap::new();
-    for (n, r) in statics {
-        out.insert(n.clone(), r.clone());
-    }
-    for p in &f.parameter {
-        if let Some(r) = points_at(&p.typ, recs) {
-            out.insert(p.name.text.clone(), r);
-        }
-    }
-    out
-}
-
-/// **Every routine of the program with its parameter NAMES.** A call binds them, so the
-/// datum of a call cannot be written without them.
-fn callee_params(baum: &Programm) -> HashMap<String, Vec<String>> {
-    let mut out = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
-        if let ItemArt::Funktion(f) = &item.art {
-            out.insert(
-                f.name.text.clone(),
-                f.parameter.iter().map(|p| p.name.text.clone()).collect(),
-            );
-        }
-    });
-    out
-}
-
-/// **Every `static` that points at a table.** Read once per program, not per function.
-///
-/// *Measured, and the refusal had been naming the wrong thing:* `beispiele/38` writes
-/// `tz.slots[i].a` where `tz` is a `static ptr<normal, rw> Platz`. `carriers_of` looked only
-/// at parameters, so the place was refused as `carrier-not-a-table` -- and `Platz` is
-/// declared four lines above. **A static is not a parameter, and it is a carrier all the
-/// same.**
-fn static_carriers(
-    baum: &Programm,
-    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
-) -> HashMap<String, String> {
-    let mut out = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
-        let ItemArt::Statisch(st) = &item.art else { return };
-        if let Some(table) = points_at(&st.typ, tab) {
-            out.insert(st.name.text.clone(), table);
-        }
-    });
-    out
-}
-
-/// **The one function this module exists for**: a body obligation as a Lean goal, or a
-/// named refusal.
-fn judge(
-    f: &FnDecl,
-    post: &Pred,
-    u: &crate::umgebung::Umgebung,
-    module: &str,
-    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
-    recs: &HashMap<String, Vec<(String, Option<Shape>)>>,
-    statics: &HashMap<String, String>,
-    callees: &HashMap<String, Vec<String>>,
-    foreign: &HashMap<String, LeanReason>,
-    number: usize,
-) -> LeanVerdict {
-    let FnRumpf::Block(b) = &f.rumpf else {
-        return LeanVerdict::Refused(LeanReason::ForeignBody);
-    };
-    let mut c = Ctx {
-        tables: tab,
-        records: recs,
-        record_carrier: record_carriers(f, recs, &HashMap::new()),
-        carrier: carriers_of(f, tab, statics),
-        // **The obligation channel writes a GOAL, so it may not translate a call**: without
-        // the callee's contract as a hypothesis the goal states something no proof closes.
-        //
-        // *And the gate is `allow_calls` ALONE.* It used to be doubled by an empty callee
-        // table, and a mutation that removed the flag then changed nothing -- two guards
-        // saying one thing, so neither carried. The real table travels here now; the flag is
-        // the only thing that refuses.
-        allow_calls: false,
-        // **The body is translated first, and there `result` names nothing.**
-        result_site: ResultSite::Body,
-        uses_result: false,
-        callees,
-        foreign,
-        locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
-        seen: Vec::new(),
-        seen_records: Vec::new(),
-        option_reads: Vec::new(),
-        routine: f.name.text.clone(),
-        loops: 0,
-    };
-    let body = match block_term(b, &mut c) {
-        Ok(t) => t,
-        Err(r) => return LeanVerdict::Refused(r),
-    };
-    // **The site changes here and nowhere earlier.** The body is translated above; a
-    // `result` inside one is refused as `result-in-body`, because there it names nothing.
-    // What follows is the postcondition, and the goal binds `result` over it.
-    c.result_site = ResultSite::Bound;
-    let conclusion = match pred_term(post, &mut c) {
-        Ok(t) => t,
-        Err(r) => return LeanVerdict::Refused(r),
-    };
-    // **The hypotheses, and every one of them read from a declaration.**
-    let mut hypotheses = Vec::new();
-    let mut opening = Vec::new();
-    let mut splits: Vec<String> = Vec::new();
-    let mut equations = Vec::new();
-    for p in &f.parameter {
-        if let Some(form) = shape_of(&p.typ, u, module) {
-            let n = &p.name.text;
-            hypotheses.push((
-                format!("p_{n}"),
-                format!("{} (s.local' {})", form.predicate(), quoted(n)),
-                format!("the declared type of `{n}`"),
-            ));
-            // `istWahl` is a DISJUNCTION, not an existential -- there is no single witness
-            // to name, so it stays whole and the goal that needs it is refused rather than
-            // half-opened.
-            if form != Shape::Opt {
-                opening.push(format!("  obtain \\<langle>w_{n}, e_{n}\\<rangle> := p_{n}"));
-                equations.push(format!("e_{n}"));
-            }
-        }
-    }
-    for (carrier, feld, form, origin) in &c.seen {
-        hypotheses.push((
-            format!("f_{carrier}_{feld}"),
-            format!(
-                "\\<forall> k, {} (s.world (.slot {} k {}))",
-                form.predicate(),
-                quoted(carrier),
-                quoted(feld)
-            ),
-            origin.clone(),
-        ));
-    }
-    // **The case split, one per option-shaped field read at a parameter index.**
-    //
-    // The split is emitted only where the WITNESS exists -- a parameter whose declared type
-    // gave a shape and was therefore opened above. Without the witness there is no `w_p` to
-    // apply the hypothesis to, and a split written anyway would not elaborate.
-    for (carrier, field, index) in &c.option_reads {
-        if !equations.iter().any(|g| *g == format!("e_{index}")) {
-            continue;
-        }
-        let h = format!("h_{carrier}_{field}_{index}");
-        splits.push(format!(
-            "rcases f_{carrier}_{field} w_{index} with {h} | \\<langle>m_{carrier}_{field}_{index}, {h}\\<rangle>"
-        ));
-        equations.push(h);
-    }
-    LeanVerdict::Proved(Box::new(LeanGoal {
-        name: format!("duty_{number}"),
-        body,
-        hypotheses,
-        conclusion,
-        names_result: c.uses_result,
-        opening,
-        equations,
-        splits,
-    }))
-}
-
-/// **The whole register, judged for the Lean channel.** One entry per obligation of
-/// `pflichten::sammle`, in the same order -- so the two channels can be held against each
-/// other, obligation by obligation.
-pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)> {
-    let u = crate::umgebung::Umgebung::sammle(baum);
-    let tab = tables(baum, &u);
-    let recs = records(baum, &u);
-    let statics = static_carriers(baum, &tab);
-    let callees = callee_params(baum);
-    let foreign = foreign_calls(baum);
-    // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
-    // module-aware, and asking it from the wrong module answers about the wrong type.
-    let mut fns: HashMap<String, (String, FnDecl)> = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
-        if let ItemArt::Funktion(f) = &item.art {
-            fns.insert(f.name.text.clone(), (module.to_string(), f.clone()));
-        }
-    });
-
-    crate::pflichten::sammle(baum)
-        .into_iter()
-        .enumerate()
-        .map(|(i, p)| {
-            let n = i + 1;
-            let v = match p.art {
-                crate::pflichten::Art::Vorbedingung => LeanVerdict::Refused(LeanReason::CallSite),
-                crate::pflichten::Art::Geraetezusage => {
-                    LeanVerdict::Refused(LeanReason::DevicePromise)
-                }
-                crate::pflichten::Art::Fremdpflicht => {
-                    LeanVerdict::Refused(LeanReason::ForeignBody)
-                }
-                crate::pflichten::Art::Erhaltung => LeanVerdict::Refused(LeanReason::Invariant),
-                // **The obligation channel writes a GOAL over a whole body**, and a loop's
-                // goal is the loop RULE -- the body preserves the invariant. That is a
-                // theorem over the loop's own body and not over the routine's, so it does
-                // not fit the shape this channel emits. Refused by name; the export carries
-                // the datum a person needs to state it.
-                crate::pflichten::Art::Schleifeninvariante => {
-                    LeanVerdict::Refused(LeanReason::Loop)
-                }
-                // **The `walk` invariant, and it is refused for the SAME reason as the
-                // table one** -- a quantifier over a domain this channel cannot express.
-                // What is new is that it now HAS a number; until 2026-08-31 it stood in a
-                // C comment and in no register.
-                crate::pflichten::Art::Walkinvariante => {
-                    LeanVerdict::Refused(LeanReason::WalkInvariant)
-                }
-                crate::pflichten::Art::Nachbedingung => match fns.get(&p.funktion) {
-                    Some((module, f)) => {
-                        // `ensures #k` -- the index is in the register's own wording.
-                        let k = p
-                            .gegenstand
-                            .rsplit('#')
-                            .next()
-                            .and_then(|s| s.parse::<usize>().ok())
-                            .unwrap_or(0);
-                        match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => judge(f, q, &u, module, &tab, &recs, &statics, &callees, &foreign, n),
-                            None => LeanVerdict::Refused(LeanReason::Expression),
+                    for f in fs {
+                        if let TypExpr::Feld(arr) = &f.typ.typ {
+                            array_fields.push((td.name.text.clone(), f.name.text.clone(), arr.as_ref().clone(), module.to_string()));
                         }
                     }
-                    None => LeanVerdict::Refused(LeanReason::Expression),
-                },
-                crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
-                    Some((module, f)) => match specification(f, &fns) {
-                        Ok(q) => judge(f, &q, &u, module, &tab, &recs, &statics, &callees, &foreign, n),
-                        Err(r) => LeanVerdict::Refused(r),
+                    records.insert(td.name.text.clone(), fields);
+                }
+            }
+            ItemArt::Device(d) => {
+                devices.insert(d.name.text.clone());
+                for ue in &d.uebergaenge {
+                    transitions_raw.push((d.name.text.clone(), ue.clone()));
+                }
+            }
+            ItemArt::Funktion(f) => {
+                if f.klasse == Some(FnKlasse::Spec) {
+                    if let FnRumpf::Pred(_) = &f.rumpf {
+                        specs.insert(f.name.text.clone(), f.clone());
+                    }
+                    return;
+                }
+                fn_decls.push((module.to_string(), f.clone()));
+            }
+            _ => {}
+        });
+        let mut statics_tables = HashMap::new();
+        let mut statics_records = HashMap::new();
+        let mut statics_scalars = Vec::new();
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
+            // **An `atomic` and an `accumulates` are globals too** -- one place each, of
+            // the declared type; what makes them atomic or per-core is the emitter's, and
+            // the model reads and writes the one place.
+            match &item.art {
+                // **A constant without a value the checker folded** (`~x`, an expression
+                // over another) is read as a place of the constant's shape -- `place_term`
+                // writes `.global` for it, and the world has to type that place.
+                ItemArt::Konst(k) => {
+                    if u.konst_wert_von_namen(module, &k.name.text).is_none() {
+                        if let Some(sh) = shape_of(&k.typ, &u, module) {
+                            statics_scalars.push((k.name.text.clone(), sh));
+                        }
+                    }
+                    return;
+                }
+                ItemArt::Atomic(a) => {
+                    if let Some(sh) = shape_of(&a.typ, &u, module) {
+                        statics_scalars.push((a.name.text.clone(), sh));
+                    }
+                    return;
+                }
+                ItemArt::Accumulates(a) => {
+                    if let Some(sh) = shape_of(&a.typ, &u, module) {
+                        statics_scalars.push((a.name.text.clone(), sh));
+                    }
+                    return;
+                }
+                _ => {}
+            }
+            let ItemArt::Statisch(st) = &item.art else { return };
+            if let TypExpr::Feld(arr) = &st.typ {
+                static_arrays.push((st.name.text.clone(), arr.as_ref().clone(), module.to_string()));
+                return;
+            }
+            if let Some(t) = points_at(&st.typ, &tables) {
+                statics_tables.insert(st.name.text.clone(), t);
+            } else if let Some(r) = points_at_record(&st.typ, &records) {
+                statics_records.insert(st.name.text.clone(), r);
+            } else if let Some(sh) = shape_of(&st.typ, &u, module) {
+                statics_scalars.push((st.name.text.clone(), sh));
+            }
+        });
+        // **The arrays, as pseudo-tables.** One field `elem`, the element's shape; `count`
+        // the declared length where it is a constant. An array whose element has no shape
+        // or whose length is not a constant gets no table -- and its places stay refused.
+        let mut record_arrays: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let pseudo = |arr: &ArrayTy, module: &str| -> Option<TableInfo> {
+            let sh = shape_of(&arr.element, &u, module)?;
+            let count = u.konst_wert(module, &arr.laenge)?;
+            Some(TableInfo {
+                fields: vec![("elem".to_string(), Some(sh))],
+                wraps: HashMap::new(),
+                count: Some(count),
+                belegt: None,
+                elter: None,
+                root: None,
+            })
+        };
+        for (rec, field, arr, module) in &array_fields {
+            if let Some(info) = pseudo(arr, module) {
+                let name = format!("{rec}.{field}");
+                tables.insert(name.clone(), info);
+                record_arrays.entry(rec.clone()).or_default().push((field.clone(), name));
+            }
+        }
+        for (name, arr, module) in &static_arrays {
+            if let Some(info) = pseudo(arr, module) {
+                tables.insert(name.clone(), info);
+                statics_tables.insert(name.clone(), name.clone());
+            }
+        }
+        // Which invariants a `maintains` names, unit-wide.
+        let mut named = BTreeSet::new();
+        for (_, f) in &fn_decls {
+            for i in &f.maintains {
+                named.insert(i.text.clone());
+            }
+        }
+        // the slot fields of record type, by name: `queue T.slots[i].f` reads through them
+        let mut field_records: HashMap<(String, String), String> = HashMap::new();
+        for (_, tb) in &table_decls {
+            if let Some(sl) = &tb.slot {
+                for f in &sl.felder {
+                    if let SlotTyp::Typ(te) = &f.typ {
+                        if let Some(r) = points_at_record(te, &records) {
+                            field_records.insert((tb.name.text.clone(), f.name.text.clone()), r);
+                        }
+                    }
+                }
+            }
+        }
+        let mut unit = Unit {
+            u,
+            tables,
+            records,
+            field_records,
+            statics_tables,
+            statics_records,
+            statics_scalars,
+            record_arrays,
+            routines: BTreeMap::new(),
+            result_shape: HashMap::new(),
+            result_range: HashMap::new(),
+            pre_of: HashMap::new(),
+            pre_parts: HashMap::new(),
+            foreign: BTreeMap::new(),
+            ops: BTreeMap::new(),
+            transitions: BTreeMap::new(),
+            devices,
+            invariants: Vec::new(),
+            specs,
+            variants,
+            variant_sum,
+        };
+        // The invariants first: a routine's `maintained` list reads them.
+        for (module, tb) in &table_decls {
+            for inv in &tb.invarianten {
+                let mut c = ctx_for_invariant(&unit, Some(tb.name.text.clone()), module);
+                let term = pred_term(&inv.pred, &mut c);
+                unit.invariants.push(InvariantInfo {
+                    name: inv.name.text.clone(),
+                    carriers: vec![tb.name.text.clone()],
+                    term,
+                    maintained_by_name: named.contains(&inv.name.text),
+                    under_ops: !tb.ops.is_empty(),
+                });
+            }
+        }
+        for (module, g) in &group_decls {
+            for inv in &g.invarianten {
+                let mut c = ctx_for_invariant(&unit, None, module);
+                let term = pred_term(&inv.pred, &mut c);
+                unit.invariants.push(InvariantInfo {
+                    name: inv.name.text.clone(),
+                    carriers: g.traeger.iter().map(|t| t.text.clone()).collect(),
+                    term,
+                    maintained_by_name: named.contains(&inv.name.text),
+                    under_ops: false,
+                });
+            }
+        }
+        // The routines, with parameters and results shaped from their declarations.
+        for (module, f) in &fn_decls {
+            let params: Vec<(String, Option<Shape>)> = f
+                .parameter
+                .iter()
+                .map(|p| (p.name.text.clone(), shape_of(&p.typ, &unit.u, module)))
+                .collect();
+            let result = f.ergebnis.as_ref().and_then(|t| shape_of(t, &unit.u, module));
+            unit.result_shape.insert(f.name.text.clone(), result);
+            unit.result_range.insert(
+                f.name.text.clone(),
+                f.ergebnis.as_ref().and_then(|t| result_range_of(t, &unit.u, module)),
+            );
+            let mut map = unit.statics_tables.clone();
+            for p in &f.parameter {
+                if let Some(t) = points_at(&p.typ, &unit.tables) {
+                    map.insert(p.name.text.clone(), t);
+                }
+                if let Some(r) = points_at_record(&p.typ, &unit.records) {
+                    map.insert(p.name.text.clone(), r);
+                }
+            }
+            // a static record written writes its arrays too
+            for (n, r) in &unit.statics_records {
+                map.entry(n.clone()).or_insert_with(|| r.clone());
+            }
+            let writes = carriers_written(&f.effects, &map, &unit.record_arrays);
+            if let FnRumpf::Block(_) = &f.rumpf {
+                let mut maintained: Vec<String> = f.maintains.iter().map(|i| i.text.clone()).collect();
+                for inv in &unit.invariants {
+                    if inv.maintained_by_name || inv.under_ops {
+                        continue;
+                    }
+                    if inv.carriers.iter().any(|ca| writes.contains(ca)) && !maintained.contains(&inv.name) {
+                        maintained.push(inv.name.clone());
+                    }
+                }
+                unit.routines.insert(
+                    f.name.text.clone(),
+                    RoutineInfo {
+                        module: module.clone(),
+                        decl: f.clone(),
+                        ranges: param_ranges(f, &unit.u, module),
+                        params,
+                        writes,
+                        maintained,
                     },
-                    None => LeanVerdict::Refused(LeanReason::SpecShape),
-                },
+                );
+            } else {
+                unit.foreign.insert(
+                    f.name.text.clone(),
+                    ForeignInfo {
+                        name: f.name.text.clone(),
+                        params,
+                        result,
+                        result_range: f.ergebnis.as_ref().and_then(|t| result_range_of(t, &unit.u, module)),
+                        fehler: f.fehler.is_some(),
+                        never: matches!(f.ergebnis, Some(TypExpr::Never(_))),
+                        has_result: f.ergebnis.is_some() && !matches!(f.ergebnis, Some(TypExpr::Never(_))),
+                        pre: None,
+                        post: Vec::new(),
+                        writes,
+                    },
+                );
+            }
+        }
+        // **A name declared twice -- `pub impl fn` and `extern fn` in one unit** (`beispiele/29`)
+        // is ONE routine here, and the body wins: a foreign contract beside a body of the
+        // same name would be two declarations of one callee.
+        let doubled: Vec<String> = unit.foreign.keys().filter(|n| unit.routines.contains_key(*n)).cloned().collect();
+        for n in doubled {
+            unit.foreign.remove(&n);
+        }
+        // The preconditions -- after every routine is known, because a `requires` may name a
+        // table through a parameter and the context reads the routine's parameters.
+        let names: Vec<String> = unit.routines.keys().cloned().collect();
+        for n in names {
+            let (decl, module, params, ranges, maintained) = {
+                let r = &unit.routines[&n];
+                (r.decl.clone(), r.module.clone(), r.params.clone(), r.ranges.clone(), r.maintained.clone())
             };
-            (p, v)
-        })
-        .collect()
+            match pre_expr(&unit, &decl, &module, &params, &ranges, &maintained) {
+                Ok((p, k)) => {
+                    unit.pre_of.insert(n.clone(), Ok(p));
+                    unit.pre_parts.insert(n, k);
+                }
+                Err(e) => {
+                    unit.pre_of.insert(n, Err(e));
+                }
+            }
+        }
+        let fnames: Vec<String> = unit.foreign.keys().cloned().collect();
+        for n in fnames {
+            let (decl, params) = {
+                let module_decl = fn_decls.iter().find(|(_, f)| f.name.text == n).cloned();
+                (module_decl, unit.foreign[&n].params.clone())
+            };
+            let Some((module, decl)) = decl else { continue };
+            let ranges = param_ranges(&decl, &unit.u, &module);
+            let pre = pre_expr(&unit, &decl, &module, &params, &ranges, &[]).ok().map(|(p, _)| p);
+            let mut post = Vec::new();
+            {
+                let mut c = ctx_for(&unit, &decl, &n, &module, ResultSite::Bound);
+                c.allow_calls = false;
+                for q in &decl.ensures {
+                    let olds_before = c.olds.len();
+                    c.uses_result = false;
+                    if let Ok(t) = pred_term(q, &mut c) {
+                        post.push(clause_prop(&t, &c.olds[olds_before..], c.uses_result, "t", "t'", "r"));
+                    }
+                }
+            }
+            let f = unit.foreign.get_mut(&n).unwrap();
+            f.pre = pre;
+            f.post = post;
+        }
+        // The generated operations.
+        for (_, tb) in &table_decls {
+            for k in crate::opsruf::koepfe(tb) {
+                let info = &unit.tables[&tb.name.text];
+                let params: Vec<String> = k.parameter.iter().map(|(n, _)| n.clone()).collect();
+                let pre = op_pre(&k, info, &tb.name.text);
+                unit.ops.insert(
+                    k.pfad(),
+                    OpInfo {
+                        key: k.pfad(),
+                        table: tb.name.text.clone(),
+                        params,
+                        pre,
+                    },
+                );
+            }
+        }
+        // The transitions: a `requires` over register names has no place here, so the
+        // precondition is `true` only where there is no clause at all.
+        for (dev, ue) in &transitions_raw {
+            let pre = if ue.requires.is_none() {
+                Some("(.lit (.bool true))".to_string())
+            } else {
+                None
+            };
+            unit.transitions.insert(
+                ue.name.text.clone(),
+                TransitionInfo {
+                    name: ue.name.text.clone(),
+                    device: dev.clone(),
+                    pre,
+                },
+            );
+        }
+        unit
+    }
 }
 
-/// **`refines g` -- the head form.** The obligation is *what this body establishes is what
-/// `g` describes*, so the postcondition IS the `spec fn`'s expression body, with its own
-/// parameter names replaced by the implementation's. `M132` has already checked that both
-/// carry the same number of parameters.
-fn specification(
-    f: &FnDecl,
-    fns: &HashMap<String, (String, FnDecl)>,
-) -> Result<Pred, LeanReason> {
-    let path = f.verfeinert.as_ref().ok_or(LeanReason::SpecShape)?;
-    let name = path.teile.last().ok_or(LeanReason::SpecShape)?;
-    let (_, spec) = fns.get(&name.text).ok_or(LeanReason::SpecShape)?;
+/// **The premises of a generated operation, as one expression over its parameters.**
+fn op_pre(k: &crate::opsruf::Kopf, info: &TableInfo, table: &str) -> Option<String> {
+    use crate::opsruf::Forderung;
+    let count = info.count?;
+    let mut parts = Vec::new();
+    let pname = |i: usize| k.parameter.get(i).map(|(n, _)| format!("(.name {})", quoted(n)));
+    // The index parameters carry a shape; the carrier parameter is the table itself.
+    for (i, (n, _)) in k.parameter.iter().enumerate() {
+        if i > 0 {
+            parts.push(format!("(.hasShape {} .int)", quoted(n)));
+        }
+    }
+    for f in &k.forderungen {
+        match f {
+            Forderung::Frei { index, feld, .. } => {
+                parts.push(format!(
+                    "(.un .not (.place {} {} {}))",
+                    quoted(table),
+                    pname(*index)?,
+                    quoted(feld)
+                ));
+            }
+            Forderung::Erreichbar { index, via, .. } => {
+                let root = info.root.as_ref()?;
+                let root = match &root.art {
+                    ExprArt::Zahl(n) => format!("(.lit (.int {n}))"),
+                    ExprArt::Ort(o) if o.suffixe.is_empty() => format!("(.global {})", quoted(&o.basis.text)),
+                    _ => return None,
+                };
+                parts.push(format!(
+                    "(.reaches {} {} {root} {} {count})",
+                    quoted(table),
+                    pname(*index)?,
+                    quoted(via)
+                ));
+            }
+            Forderung::Blatt { index, via, .. } => {
+                parts.push(format!(
+                    "(.forallSlots \"x\" {count} (.bin .ne (.place {} (.name \"x\") {}) (.someOf {})))",
+                    quoted(table),
+                    quoted(via),
+                    pname(*index)?
+                ));
+            }
+            Forderung::NichtUeber { elter, platz, via, .. } => {
+                parts.push(format!(
+                    "(.un .not (.reaches {} {} {} {} {count}))",
+                    quoted(table),
+                    pname(*elter)?,
+                    pname(*platz)?,
+                    quoted(via)
+                ));
+            }
+        }
+    }
+    Some(conj(&parts))
+}
+
+/// **One clause of a postcondition, as a `Prop` over the entry state, the exit state and
+/// the result.** The locals are the ENTRY's -- a parameter the body rebinds still names its
+/// argument in the contract -- with `old#i` and `result` bound on top.
+fn clause_prop(term: &str, olds: &[String], uses_result: bool, s: &str, s2: &str, r: &str) -> String {
+    let mut out = String::new();
+    let mut binding = format!("{s}.local'");
+    for (i, o) in olds.iter().enumerate() {
+        out.push_str(&format!("∀ o{n}, eval {s} {o} = some o{n} → ", n = i + 1));
+        binding = format!("(bindLocal {binding} \"old#{}\" o{})", i + 1, i + 1);
+    }
+    if uses_result {
+        out.push_str(&format!("∃ v, {r} = some v ∧ "));
+        binding = format!("(bindLocal {binding} \"result\" v)");
+    }
+    out.push_str(&format!(
+        "eval {{ world := {s2}.world, local' := {binding} }} {term} = some (.bool true)"
+    ));
+    format!("({out})")
+}
+
+// ===========================================================================================
+// THE THEOREMS OF A UNIT -- one per routine, one per loop, and the wiring.
+// ===========================================================================================
+
+/// A routine's translation, or the reason there is none.
+pub struct RoutineGoal {
+    pub name: String,
+    pub body: Result<String, LeanReason>,
+    /// The postcondition clauses -- `(origin, prop)` -- and the reason a clause has none.
+    pub post: Vec<(String, Result<String, LeanReason>)>,
+    /// The invariants this routine preserves -- `(name, term)`.
+    pub keeps: Vec<(String, String)>,
+    pub callees: BTreeSet<String>,
+    pub loops: Vec<LoopInfo>,
+    pub seen: Vec<(String, String, Shape, String)>,
+    pub seen_records: Vec<(String, String, Shape)>,
+    pub writes: Vec<String>,
+    /// The parameters with a shape -- the `obtain` lines the proof opens with.
+    pub shaped_params: Vec<(String, Shape)>,
+    pub option_reads: Vec<(String, String, String, Shape)>,
+    /// The declared ranges of the integer parameters (`RoutineInfo::ranges`).
+    pub ranges: HashMap<String, (i128, i128)>,
+    /// The `decreases` measure as a term, where the routine calls ITSELF directly and
+    /// declares one -- the bounded self-contract in its statement, and the induction in
+    /// `unit_closed` (`contract_of_duty_rec`), rest on it.
+    pub decreases: Option<String>,
+}
+
+/// **Does the routine call itself directly -- and only there, not inside one of its loops?**
+/// The direct case is what `contract_of_duty_rec` wires; a recursive call inside a loop
+/// would need the bounded contract in the loop's statement, which is not written.
+fn self_recursive(g: &RoutineGoal) -> bool {
+    g.callees.contains(&g.name) && !g.loops.iter().any(|l| l.callees.contains(&g.name))
+}
+
+/// **The whole unit, judged.** Every routine with a body, in declaration order.
+pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
+    let mut out = Vec::new();
+    for (name, r) in &unit.routines {
+        let FnRumpf::Block(b) = &r.decl.rumpf else { continue };
+        let mut keeps = Vec::new();
+        for m in &r.maintained {
+            if let Ok(t) = kept_invariant(unit, &r.decl, &r.module, m) {
+                keeps.push((m.clone(), t));
+            }
+        }
+        let mut c = ctx_for(unit, &r.decl, name, &r.module, ResultSite::Body);
+        c.ret_post = ret_post_of(unit, &r.decl, &r.module, &r.maintained);
+        c.kept = keeps.iter().map(|(_, t)| t.clone()).collect();
+        let body = match unit.pre_of.get(name) {
+            Some(Err(e)) => Err(*e),
+            _ => block_term(b, &mut c),
+        };
+        let (callees, loops) = (std::mem::take(&mut c.callees), std::mem::take(&mut c.loop_infos));
+        // The clauses: `ensures`, then `refines`.
+        c.result_site = ResultSite::Bound;
+        c.locals = r.decl.parameter.iter().map(|p| (p.name.text.clone(), None)).collect();
+        let mut post = Vec::new();
+        for (i, q) in r.decl.ensures.iter().enumerate() {
+            c.olds.clear();
+            c.uses_result = false;
+            let t = pred_term(q, &mut c);
+            post.push((
+                format!("ensures #{}", i + 1),
+                t.map(|t| clause_prop(&t, &c.olds, c.uses_result, "s", "s'", "r")),
+            ));
+        }
+        if let Some(g) = &r.decl.verfeinert {
+            let ziel = g.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+            let t = match specification(&r.decl, &ziel, unit) {
+                Ok(p) => {
+                    c.olds.clear();
+                    c.uses_result = false;
+                    pred_term(&p, &mut c).map(|t| clause_prop(&t, &c.olds, c.uses_result, "s", "s'", "r"))
+                }
+                Err(e) => Err(e),
+            };
+            post.push((format!("refines {ziel}"), t));
+        }
+        let shaped_params = r
+            .params
+            .iter()
+            .filter_map(|(n, s)| s.map(|s| (n.clone(), s)))
+            .collect();
+        // The measure, wherever the routine declares one -- the self-recursion and the
+        // cycle (`wiring_order`) rest on it; a recursive call inside a loop stays unwired.
+        let decreases = r.decl.decreases.as_ref().and_then(|m| {
+            let mut mc = ctx_for(unit, &r.decl, name, &r.module, ResultSite::Body);
+            mc.allow_calls = false;
+            expr_term(m, &mut mc).ok()
+        });
+        out.push(RoutineGoal {
+            name: name.clone(),
+            body,
+            post,
+            keeps,
+            callees,
+            loops,
+            seen: c.seen.clone(),
+            seen_records: c.seen_records.clone(),
+            writes: r.writes.clone(),
+            shaped_params,
+            option_reads: c.option_reads.clone(),
+            ranges: r.ranges.clone(),
+            decreases,
+        });
+    }
+    out
+}
+
+/// **What a `return` inside a loop has to establish**: every `ensures` with `result` read
+/// as `#ret`, every `refines`, and every invariant the routine keeps -- as one expression.
+/// `None` where a clause has no such reading.
+fn ret_post_of(unit: &Unit, f: &FnDecl, module: &str, maintained: &[String]) -> Option<String> {
+    let mut c = ctx_for(unit, f, &f.name.text, module, ResultSite::LoopRet);
+    c.allow_calls = false;
+    let mut parts = Vec::new();
+    // the answer's shape travels with the flag -- the `return` after the loop hands `#ret`
+    // to the promise, which says the answer has the declared shape (`result_clause`)
+    if f.fehler.is_none() {
+        if let Some(sh) = unit.result_shape.get(&f.name.text).copied().flatten() {
+            parts.push(format!("(.hasShape \"#ret\" {})", sh.lean()));
+        }
+    }
+    for q in &f.ensures {
+        parts.push(pred_term(q, &mut c).ok()?);
+    }
+    if let Some(g) = &f.verfeinert {
+        let ziel = g.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+        let p = specification(f, &ziel, unit).ok()?;
+        parts.push(pred_term(&p, &mut c).ok()?);
+    }
+    for m in maintained {
+        parts.push(kept_invariant(unit, f, module, m).ok()?);
+    }
+    Some(conj(&parts))
+}
+
+/// **`refines g` -- the head form.** The postcondition IS the `spec fn`'s expression body,
+/// with its own parameter names replaced by the implementation's.
+fn specification(f: &FnDecl, name: &str, unit: &Unit) -> Result<Pred, LeanReason> {
+    let spec = unit.specs.get(name).ok_or(LeanReason::SpecShape)?;
     let FnRumpf::Pred(p) = &spec.rumpf else {
         return Err(LeanReason::SpecShape);
     };
@@ -1622,25 +3216,46 @@ fn renamed_pred(p: &Pred, pairs: &[(String, String)]) -> Pred {
             Box::new(renamed_pred(a, pairs)),
             Box::new(renamed_pred(b, pairs)),
         ),
+        PredArt::Quantor(q) => PredArt::Quantor(Box::new(Quantor {
+            art: q.art,
+            variable: q.variable.clone(),
+            domaene: renamed_domain(&q.domaene, pairs),
+            rumpf: renamed_pred(&q.rumpf, pairs),
+        })),
+        PredArt::Erreicht { von, nach, via } => PredArt::Erreicht {
+            von: renamed_ort(von, pairs),
+            nach: renamed_ort(nach, pairs),
+            via: via.clone(),
+        },
         other => other.clone(),
     };
     Pred { art, ..p.clone() }
 }
 
+fn renamed_domain(d: &Domaene, pairs: &[(String, String)]) -> Domaene {
+    match d {
+        Domaene::SlotsVon(o) => Domaene::SlotsVon(renamed_ort(o, pairs)),
+        other => other.clone(),
+    }
+}
+
+fn renamed_ort(o: &Ort, pairs: &[(String, String)]) -> Ort {
+    let mut o = o.clone();
+    if let Some((_, fresh)) = pairs.iter().find(|(old, _)| *old == o.basis.text) {
+        o.basis.text = fresh.clone();
+    }
+    for s in &mut o.suffixe {
+        if let OrtSuffix::Index(i) = s {
+            *i = renamed_expr(i, pairs);
+        }
+    }
+    o
+}
+
 fn renamed_expr(e: &Expr, pairs: &[(String, String)]) -> Expr {
     let art = match &e.art {
-        ExprArt::Ort(o) => {
-            let mut o = o.clone();
-            if let Some((_, fresh)) = pairs.iter().find(|(old, _)| *old == o.basis.text) {
-                o.basis.text = fresh.clone();
-            }
-            for s in &mut o.suffixe {
-                if let OrtSuffix::Index(i) = s {
-                    *i = renamed_expr(i, pairs);
-                }
-            }
-            ExprArt::Ort(o)
-        }
+        ExprArt::Ort(o) => ExprArt::Ort(renamed_ort(o, pairs)),
+        ExprArt::Alt(o) => ExprArt::Alt(renamed_ort(o, pairs)),
         ExprArt::Klammer(x) => ExprArt::Klammer(Box::new(renamed_expr(x, pairs))),
         ExprArt::Unaer(op, x) => ExprArt::Unaer(*op, Box::new(renamed_expr(x, pairs))),
         ExprArt::Binaer(op, a, b) => ExprArt::Binaer(
@@ -1648,9 +3263,281 @@ fn renamed_expr(e: &Expr, pairs: &[(String, String)]) -> Expr {
             Box::new(renamed_expr(a, pairs)),
             Box::new(renamed_expr(b, pairs)),
         ),
+        ExprArt::Ruf(r) => {
+            let mut r = r.clone();
+            for a in &mut r.argumente {
+                *a = renamed_expr(a, pairs);
+            }
+            ExprArt::Ruf(r)
+        }
         other => other.clone(),
     };
     Expr { art, ..e.clone() }
+}
+
+/// **The whole register, judged for the Lean channel.** One entry per obligation of
+/// `pflichten::sammle`, in the same order -- so the two channels can be held against each
+/// other, obligation by obligation.
+pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)> {
+    let unit = Unit::sammle(baum);
+    let goals = routine_goals(&unit);
+    verdicts_over(baum, &unit, &goals)
+}
+
+fn verdicts_over(
+    baum: &Programm,
+    unit: &Unit,
+    goals: &[RoutineGoal],
+) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)> {
+    use crate::pflichten::Art;
+    let by_name: HashMap<&str, &RoutineGoal> = goals.iter().map(|g| (g.name.as_str(), g)).collect();
+    let meets = |f: &str| format!("{f}_meets");
+    crate::pflichten::sammle(baum)
+        .into_iter()
+        .map(|p| {
+            let v = match p.art {
+                Art::Geraetezusage => LeanVerdict::Assumed(LeanReason::DevicePromise),
+                Art::Fremdpflicht => LeanVerdict::Assumed(LeanReason::ForeignBody),
+                Art::Vorbedingung => match by_name.get(p.funktion.as_str()) {
+                    Some(g) => match &g.body {
+                        Ok(_) => LeanVerdict::Carried(meets(&g.name)),
+                        Err(r) => LeanVerdict::Refused(*r),
+                    },
+                    None => LeanVerdict::Refused(LeanReason::CallSite),
+                },
+                Art::Nachbedingung | Art::Verfeinerung => match by_name.get(p.funktion.as_str()) {
+                    Some(g) => match &g.body {
+                        Err(r) => LeanVerdict::Refused(*r),
+                        Ok(_) => {
+                            let key = if p.art == Art::Nachbedingung {
+                                p.gegenstand.clone()
+                            } else {
+                                p.gegenstand.clone()
+                            };
+                            match g.post.iter().find(|(o, _)| *o == key) {
+                                Some((_, Ok(_))) => LeanVerdict::Carried(meets(&g.name)),
+                                Some((_, Err(r))) => LeanVerdict::Refused(*r),
+                                None => LeanVerdict::Refused(LeanReason::Expression),
+                            }
+                        }
+                    },
+                    None => LeanVerdict::Refused(LeanReason::Expression),
+                },
+                Art::Erhaltung => match by_name.get(p.funktion.as_str()) {
+                    Some(g) => match &g.body {
+                        Err(r) => LeanVerdict::Refused(*r),
+                        Ok(_) => {
+                            if g.keeps.iter().any(|(n, _)| *n == p.gegenstand) {
+                                LeanVerdict::Carried(meets(&g.name))
+                            } else {
+                                match unit.invariants.iter().find(|i| i.name == p.gegenstand) {
+                                    Some(inv) => match &inv.term {
+                                        Err(r) => LeanVerdict::Refused(*r),
+                                        Ok(_) => LeanVerdict::Refused(LeanReason::Invariant),
+                                    },
+                                    None => LeanVerdict::Refused(LeanReason::Invariant),
+                                }
+                            }
+                        }
+                    },
+                    None => LeanVerdict::Refused(LeanReason::Invariant),
+                },
+                Art::Schleifeninvariante => match by_name.get(p.funktion.as_str()) {
+                    Some(g) => match &g.body {
+                        Err(r) => LeanVerdict::Refused(*r),
+                        Ok(_) => {
+                            // `loop invariant #n` -- the n-th loop in source order, and the
+                            // loops are numbered in that order.
+                            let n = p
+                                .gegenstand
+                                .rsplit('#')
+                                .next()
+                                .and_then(|s| s.parse::<usize>().ok())
+                                .unwrap_or(0);
+                            let id = format!("{}#{n}", g.name);
+                            if g.loops.iter().any(|l| l.id == id) {
+                                LeanVerdict::Carried(loop_theorem(&id))
+                            } else {
+                                LeanVerdict::Refused(LeanReason::Loop)
+                            }
+                        }
+                    },
+                    None => LeanVerdict::Refused(LeanReason::Loop),
+                },
+                Art::Walkinvariante => {
+                    // A `table`/`group` invariant nobody maintains is owed by its WRITERS; a
+                    // `walk` clause is a statement about hardware.
+                    let name = p.gegenstand.strip_prefix("invariant ").unwrap_or("");
+                    match unit.invariants.iter().find(|i| i.name == name && i.carriers.contains(&p.funktion) || i.name == name && !name.is_empty() && p.gegenstand.starts_with("invariant ")) {
+                        Some(inv) => match &inv.term {
+                            Err(r) => LeanVerdict::Refused(*r),
+                            Ok(_) => {
+                                let writers: Vec<String> = goals
+                                    .iter()
+                                    .filter(|g| g.body.is_ok() && g.keeps.iter().any(|(n, _)| n == name))
+                                    .map(|g| meets(&g.name))
+                                    .collect();
+                                let refused = goals
+                                    .iter()
+                                    .find(|g| g.body.is_err() && g.writes.iter().any(|w| inv.carriers.contains(w)));
+                                match refused {
+                                    Some(g) => LeanVerdict::Refused(*g.body.as_ref().err().unwrap()),
+                                    None => LeanVerdict::CarriedBy(writers),
+                                }
+                            }
+                        },
+                        None => LeanVerdict::Assumed(LeanReason::WalkInvariant),
+                    }
+                }
+            };
+            // **A refusal whose reason is an assumption IS an assumption** -- a promise
+            // over a device register is the device's, whatever duty it stands in.
+            let v = match v {
+                LeanVerdict::Refused(r) if r.kind() == Kind::Assumption => LeanVerdict::Assumed(r),
+                v => v,
+            };
+            (p, v)
+        })
+        .collect()
+}
+
+/// **The path to the i-th of n conjuncts** of a right-nested conjunction, from a hypothesis
+/// `h` that the whole holds.
+fn conj_path(h: &str, i: usize, n: usize) -> String {
+    let mut t = h.to_string();
+    for _ in 0..i {
+        t = format!("(and_right _ _ _ {t})");
+    }
+    if i + 1 < n {
+        t = format!("(and_left _ _ _ {t})");
+    }
+    t
+}
+
+/// **The lines a proof opens with**: a witness for every shaped local (out of the
+/// precondition or the invariant), and a witness for every slot field read at such an index
+/// (out of the well-typed world). Returns the plain `obtain` lines, the `rcases` splits
+/// (chained, because each splits the goal), and the equation names for the simp set.
+fn openings(
+    state: &str,
+    hyp: &str,
+    hyp_def: &str,
+    shapes: &[(String, Shape)],
+    parts: usize,
+    reads: &[(String, String, String, Shape)],
+    extra_index: Option<(&str, &str)>,
+    invariants: &[(usize, String, String)],
+    ranges: &HashMap<String, (i128, i128)>,
+    record_reads: &[(String, String, Shape)],
+) -> (Vec<String>, Vec<String>, Vec<String>) {
+    let mut lines = Vec::new();
+    let mut splits = Vec::new();
+    let mut eqs = Vec::new();
+    // **The invariants in the precondition, opened into rewrites.** They are what the
+    // person's argument about a store at another index rests on -- and what the model
+    // can only use once it is a `∀ k < N, …` and not an `eval`.
+    for (i, name, def) in invariants {
+        let path = conj_path(hyp, *i, parts);
+        lines.push(format!("  have hi_{name} := {path}"));
+        // the hypothesis's own definition is in the set too: where the invariant is the
+        // whole precondition, the path is the hypothesis itself, still under its name
+        lines.push(format!("  gabbro_simp_at hi_{name} [{def}, {hyp_def}]"));
+    }
+    // which locals have a witness, and under which name
+    let mut witness: BTreeMap<String, String> = BTreeMap::new();
+    for (i, (n, sh)) in shapes.iter().enumerate() {
+        let path = conj_path(hyp, i, parts);
+        let q = quoted(n);
+        let id = n.replace('#', "_");
+        match sh {
+            Shape::IntIn(..) => {
+                lines.push(format!("  obtain ⟨w_{id}, e_{id}, lo_{id}, hi_{id}⟩ := shape_intIn {state} {q} _ _ {path}"));
+                witness.insert(n.clone(), format!("w_{id}"));
+                eqs.push(format!("e_{id}"));
+            }
+            Shape::Int if ranges.contains_key(n) => {
+                // the ranged shape: witness, lower and upper bound -- the bounds stay as
+                // hypotheses `lo_x`/`hi_x` for the arithmetic (`omega`)
+                lines.push(format!("  obtain ⟨w_{id}, e_{id}, lo_{id}, hi_{id}⟩ := shape_intIn {state} {q} _ _ {path}"));
+                witness.insert(n.clone(), format!("w_{id}"));
+                eqs.push(format!("e_{id}"));
+            }
+            Shape::Int => {
+                lines.push(format!("  obtain ⟨w_{id}, e_{id}⟩ := shape_int {state} {q} {path}"));
+                witness.insert(n.clone(), format!("w_{id}"));
+                eqs.push(format!("e_{id}"));
+            }
+            Shape::Bool => {
+                lines.push(format!("  obtain ⟨w_{id}, e_{id}⟩ := shape_bool {state} {q} {path}"));
+                eqs.push(format!("e_{id}"));
+            }
+            Shape::Opt => {
+                splits.push(format!("rcases shape_opt {state} {q} {path} with e_{id} | ⟨w_{id}, e_{id}⟩"));
+                eqs.push(format!("e_{id}"));
+            }
+            Shape::Sum(_) => {
+                lines.push(format!("  obtain ⟨w_{id}, p_{id}, e_{id}, c_{id}⟩ := shape_sum {state} {q} _ {path}"));
+                eqs.push(format!("e_{id}"));
+                eqs.push(format!("c_{id}"));
+            }
+        }
+    }
+    if let Some((v, k)) = extra_index {
+        witness.insert(v.to_string(), k.to_string());
+    }
+    for (carrier, field, index, sh) in reads {
+        let Some(w) = witness.get(index) else { continue };
+        let place = format!("(.slot {} {w} {})", quoted(carrier), quoted(field));
+        let id = format!("{carrier}_{field}_{}", index.replace('#', "_"));
+        match sh {
+            Shape::Int => lines.push(format!("  obtain ⟨n_{id}, h_{id}⟩ := WF_int shapeOf {state}.world {place} hwf rfl")),
+            Shape::IntIn(..) => lines.push(format!("  obtain ⟨n_{id}, h_{id}, lo_{id}, hi_{id}⟩ := WF_intIn shapeOf {state}.world {place} _ _ hwf rfl")),
+            Shape::Bool => lines.push(format!("  obtain ⟨n_{id}, h_{id}⟩ := WF_bool shapeOf {state}.world {place} hwf rfl")),
+            Shape::Sum(_) => lines.push(format!("  obtain ⟨n_{id}, q_{id}, h_{id}, c_{id}⟩ := WF_sum shapeOf {state}.world {place} _ hwf rfl")),
+            Shape::Opt => splits.push(format!("rcases WF_opt shapeOf {state}.world {place} hwf rfl with h_{id} | ⟨n_{id}, h_{id}⟩")),
+        }
+        eqs.push(format!("h_{id}"));
+    }
+    // **A record field read has a witness too** -- `.field "Text" "len"` is one place, and
+    // the well-typed world gives it its shape without any index.
+    for (carrier, field, sh) in record_reads {
+        let place = format!("(.field {} {})", quoted(carrier), quoted(field));
+        let id = format!("{}_{field}", carrier.replace(['.', ':'], "_"));
+        match sh {
+            Shape::Int => lines.push(format!("  obtain ⟨n_{id}, h_{id}⟩ := WF_int shapeOf {state}.world {place} hwf rfl")),
+            Shape::IntIn(..) => lines.push(format!("  obtain ⟨n_{id}, h_{id}, lo_{id}, hi_{id}⟩ := WF_intIn shapeOf {state}.world {place} _ _ hwf rfl")),
+            Shape::Bool => lines.push(format!("  obtain ⟨n_{id}, h_{id}⟩ := WF_bool shapeOf {state}.world {place} hwf rfl")),
+            Shape::Sum(_) => lines.push(format!("  obtain ⟨n_{id}, q_{id}, h_{id}, c_{id}⟩ := WF_sum shapeOf {state}.world {place} _ hwf rfl")),
+            Shape::Opt => splits.push(format!("rcases WF_opt shapeOf {state}.world {place} hwf rfl with h_{id} | ⟨n_{id}, h_{id}⟩")),
+        }
+        eqs.push(format!("h_{id}"));
+    }
+    // **The hypothesis itself, as rewrites** -- a copy, so that the paths above (and the
+    // case splits after them) still read the original. What the precondition or the
+    // invariant says beyond the shapes -- the `requires`, the flag of a `return` inside
+    // a loop -- becomes what `simp` and `simp_all` can use, instead of standing folded
+    // under a name.
+    let known: Vec<String> = eqs.iter().filter(|e| e.starts_with("e_") || e.starts_with("h_")).cloned().collect();
+    let line_eqs: Vec<String> = known
+        .iter()
+        .filter(|e| !splits.iter().any(|sp| sp.contains(&format!(" {e} |")) || sp.contains(&format!("⟨n_{}, {e}⟩", &e[2..])) || sp.contains(&format!("⟨w_{}, {e}⟩", &e[2..]))))
+        .cloned()
+        .collect();
+    let mut set = vec![hyp_def.to_string()];
+    set.extend(line_eqs);
+    lines.push(format!("  have hall := {hyp}"));
+    lines.push(format!("  gabbro_simp_at hall [{}]", set.join(", ")));
+    eqs.push("hall".to_string());
+    (lines, splits, eqs)
+}
+
+fn loop_theorem(id: &str) -> String {
+    format!("{}_keeps", lean_ident(id))
+}
+
+/// `f#1` -> `f_loop_1`.
+fn lean_ident(id: &str) -> String {
+    id.replace('#', "_loop_")
 }
 
 /// **The module name of a unit.** Lean demands that it match the file, so the stem is what
@@ -1674,58 +3561,254 @@ pub fn module_name(datei: &str) -> String {
     s
 }
 
+/// **The dependency order of the unit's theorems**: loops before their routine, callees
+/// before callers. Returns the order, the CYCLES (a mutual recursion whose every member
+/// declares a `decreases` and calls the cycle only outside its loops -- wired by one
+/// induction, `contracts_of_duties_rec`), and, for every routine that cannot be wired,
+/// the reason.
+fn wiring_order(goals: &[RoutineGoal], all_routines: &BTreeSet<String>) -> (Vec<String>, Vec<Vec<String>>, BTreeMap<String, String>) {
+    let names: BTreeSet<String> = goals.iter().filter(|g| g.body.is_ok()).map(|g| g.name.clone()).collect();
+    let by_name: HashMap<&str, &RoutineGoal> = goals.iter().map(|g| (g.name.as_str(), g)).collect();
+    // the edges among the routines with a body
+    let edges = |n: &str| -> BTreeSet<String> {
+        let g = by_name[n];
+        g.callees
+            .iter()
+            .chain(g.loops.iter().flat_map(|l| l.callees.iter()))
+            .filter(|c| names.contains(*c))
+            .cloned()
+            .collect()
+    };
+    // reachability, for the strongly connected components (the unit is small)
+    let reach = |n: &str| -> BTreeSet<String> {
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let mut stack: Vec<String> = edges(n).into_iter().collect();
+        while let Some(x) = stack.pop() {
+            if seen.insert(x.clone()) {
+                stack.extend(edges(&x));
+            }
+        }
+        seen
+    };
+    let reaches: HashMap<String, BTreeSet<String>> = names.iter().map(|n| (n.clone(), reach(n))).collect();
+    let mut cycles: Vec<Vec<String>> = Vec::new();
+    let mut in_cycle: HashMap<String, usize> = HashMap::new();
+    for n in &names {
+        if in_cycle.contains_key(n) {
+            continue;
+        }
+        let mut members: Vec<String> = names
+            .iter()
+            .filter(|m| *m != n && reaches[n].contains(*m) && reaches[*m].contains(n))
+            .cloned()
+            .collect();
+        if members.is_empty() {
+            continue;
+        }
+        members.push(n.clone());
+        members.sort();
+        let idx = cycles.len();
+        for m in &members {
+            in_cycle.insert(m.clone(), idx);
+        }
+        cycles.push(members);
+    }
+    let mut unwired: BTreeMap<String, String> = BTreeMap::new();
+    // a cycle is wired only where every member has a measure and calls the cycle outside
+    // its loops
+    let mut wired_cycles: Vec<Vec<String>> = Vec::new();
+    let mut cycle_of: HashMap<String, usize> = HashMap::new();
+    for members in &cycles {
+        let ok = members.iter().all(|m| {
+            let g = by_name[m.as_str()];
+            g.decreases.is_some() && !g.loops.iter().any(|l| l.callees.iter().any(|c| members.contains(c)))
+        });
+        if ok {
+            let idx = wired_cycles.len();
+            for m in members {
+                cycle_of.insert(m.clone(), idx);
+            }
+            wired_cycles.push(members.clone());
+        } else {
+            for m in members {
+                let g = by_name[m.as_str()];
+                let why = if g.decreases.is_none() {
+                    "mutual recursion -- its `decreases` has no term"
+                } else if g.loops.iter().any(|l| l.callees.iter().any(|c| members.contains(c))) {
+                    "mutual recursion -- a call into the cycle stands inside a loop"
+                } else {
+                    "mutual recursion -- another member of the cycle cannot be wired"
+                };
+                unwired.insert(m.clone(), why.into());
+            }
+        }
+    }
+    let mut deps: HashMap<String, BTreeSet<String>> = HashMap::new();
+    for g in goals {
+        if g.body.is_err() {
+            continue;
+        }
+        let mut d: BTreeSet<String> = BTreeSet::new();
+        for c in g.callees.iter().chain(g.loops.iter().flat_map(|l| l.callees.iter())) {
+            if !all_routines.contains(c) {
+                continue;
+            }
+            if *c == g.name {
+                // A direct self-recursion with a `decreases` is wired by induction over the
+                // measure (`contract_of_duty_rec`); without one, or inside a loop, it is not.
+                if cycle_of.contains_key(&g.name) {
+                    continue;
+                }
+                if self_recursive(g) && g.decreases.is_some() {
+                    continue;
+                }
+                let why = if g.decreases.is_none() && self_recursive(g) {
+                    "recursion -- its `decreases` has no term"
+                } else if !self_recursive(g) {
+                    "recursion -- the recursive call stands inside a loop"
+                } else {
+                    "recursion"
+                };
+                unwired.insert(g.name.clone(), why.into());
+            } else if !names.contains(c) {
+                unwired.insert(g.name.clone(), format!("callee `{c}` refused"));
+            } else if cycle_of.get(&g.name).is_some() && cycle_of.get(&g.name) == cycle_of.get(c) {
+                // inside a wired cycle: not a dependency, the induction carries it
+                continue;
+            } else {
+                d.insert(c.clone());
+            }
+        }
+        deps.insert(g.name.clone(), d);
+    }
+    let mut order = Vec::new();
+    let mut done: BTreeSet<String> = BTreeSet::new();
+    loop {
+        let mut progress = false;
+        for n in &names {
+            if done.contains(n) || unwired.contains_key(n) {
+                continue;
+            }
+            // a cycle moves as one: every member's outside dependencies first
+            let group: Vec<String> = match cycle_of.get(n) {
+                Some(i) => wired_cycles[*i].clone(),
+                None => vec![n.clone()],
+            };
+            let all_deps: BTreeSet<String> = group.iter().flat_map(|m| deps[m].iter().cloned()).collect();
+            if all_deps.iter().all(|x| done.contains(x)) {
+                for m in &group {
+                    if !done.contains(m) {
+                        order.push(m.clone());
+                        done.insert(m.clone());
+                    }
+                }
+                progress = true;
+            } else if let Some(x) = all_deps.iter().find(|x| unwired.contains_key(*x)) {
+                for m in &group {
+                    unwired.insert(m.clone(), format!("callee `{x}` not wired"));
+                }
+                progress = true;
+            }
+        }
+        if !progress {
+            break;
+        }
+    }
+    for n in &names {
+        if !done.contains(n) && !unwired.contains_key(n) {
+            unwired.insert(n.clone(), "mutual recursion -- a cycle over more than one name".into());
+        }
+    }
+    (order, wired_cycles, unwired)
+}
+
 /// **The unit's obligation register, as a Lean 4 module.**
 pub fn module(baum: &Programm, datei: &str) -> String {
-    let entries = verdicts(baum);
-    let proved = entries
-        .iter()
-        .filter(|(_, v)| matches!(v, LeanVerdict::Proved(_)))
-        .count();
-    let refused = entries.len() - proved;
+    let unit = Unit::sammle(baum);
+    let goals = routine_goals(&unit);
+    let entries = verdicts_over(baum, &unit, &goals);
+    let carried = entries.iter().filter(|(_, v)| v.is_goal()).count();
+    let assumed = entries.iter().filter(|(_, v)| matches!(v, LeanVerdict::Assumed(_))).count();
+    let refused = entries.len() - carried - assumed;
     let name = module_name(datei);
+    let all_routines: BTreeSet<String> = unit.routines.keys().cloned().collect();
+    let (order, cycles, unwired) = wiring_order(&goals, &all_routines);
+    let cycle_of: HashMap<String, usize> = cycles
+        .iter()
+        .enumerate()
+        .flat_map(|(i, ms)| ms.iter().map(move |m| (m.clone(), i)))
+        .collect();
     let mut s = String::new();
     s.push_str("/-  Written by `gabbro pflichten --lean`. Do not edit -- the source is the\n");
     s.push_str("    `.gab`, and a second register over the same thing is the very class this\n");
     s.push_str("    folder is written against.\n\n");
-    s.push_str("    Every obligation of the register appears below, as a theorem or as a\n");
-    s.push_str("    NAMED refusal. The line that has to add up:\n\n");
+    s.push_str("    Every obligation of the register appears below: CARRIED by a theorem of\n");
+    s.push_str("    this unit, ASSUMED (hardware, foreign code -- named in `Assumed`), or\n");
+    s.push_str("    REFUSED by name. The line that has to add up:\n\n");
+    // **The balance line keeps its shape** -- `goals + refused = total` -- and the assumptions
+    // are counted INSIDE `refused`, then named on the line below: every reader of the header
+    // (`zaehle-lean.py`, `zaehle-p6.py`, the probes) holds that one equation, and a third
+    // column would have moved the equation under them.
     s.push_str(&format!(
-        "        @duty 1  {datei}  total {}  goals {proved}  refused {refused}\n",
-        entries.len()
+        "        @duty 1  {datei}  total {}  goals {carried}  refused {}\n",
+        entries.len(),
+        refused + assumed
+    ));
+    s.push_str(&format!(
+        "        @assumed {assumed}  of the refused are ASSUMPTIONS -- hardware, foreign code -- and {refused} are refused forms\n"
     ));
     s.push_str("\n    The meaning of a body is `Gabbro.Body`, written by hand and read by a\n");
     s.push_str("    person. What stands here is a DATUM of it -- this file defines nothing.\n\n");
+    s.push_str("    WHAT A PERSON OWES: the `_statement` of every `_meets` and every `_keeps`\n");
+    s.push_str("    theorem below. Each is proved by `gabbro_auto`, which closes what the\n");
+    s.push_str("    model closes by computation and leaves a `sorry` on the rest -- and the\n");
+    s.push_str("    rest is, by construction, the program's own logic: every hypothesis the\n");
+    s.push_str("    proof can need stands in front of the turnstile. A person proves the\n");
+    s.push_str("    statement in a file of their own and hands it to `unit_closed`.\n\n");
+    s.push_str("    WHAT THE GENERATOR OWES, AND PAYS: the composition over every call\n");
+    s.push_str("    (`Contract`, `Frame`), the rule of every loop (`LoopRule`), the\n");
+    s.push_str("    precondition at every call site (the call gets stuck without it), and\n");
+    s.push_str("    the wiring from the duties to the contracts (`unit_closed`).\n\n");
     s.push_str("    ASSUMED, and visible because it is written down: two different carrier\n");
-    s.push_str("    names are two different objects. That is the alias statement, and the\n");
-    s.push_str("    alias passes carry it -- no line of this file does.\n-/\n\n");
+    s.push_str("    names are two different objects (the alias passes carry it), and two\n");
+    s.push_str("    objects of one record type are ONE object of the model (a record's\n");
+    s.push_str("    places are named by its type, as a table's are); the\n");
+    s.push_str("    declared `effects` list is complete (`E008`/`E010`, `Frame` in `Program`);\n");
+    s.push_str("    the initial world satisfies every invariant (a statement about `boot`,\n");
+    s.push_str("    booked by no register); and everything `Assumed` names.\n-/\n\n");
     s.push_str("import Gabbro.Body\n\n");
-    // **`autoImplicit` off, and it is a GUARD, not tidiness.** With it on, a name Lean does
-    // not know becomes an implicitly bound variable of unknown type -- measured on the very
-    // first run of this emitter: a hypothesis `istZahl (l.locals "p")` whose predicate was
-    // not in scope elaborated to a BINDER instead of failing. *A misspelt hypothesis that
-    // silently turns into an unconstrained variable is a theorem about nothing, and it
-    // reads exactly like a proved one.*
-    s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body\n\n");
+    // **The heartbeat budget is raised, and the reason is the automation.** `gabbro_auto`
+    // runs a case split per undecided read and a `simp_all` per goal; a routine over a
+    // `count 4096` table with three option reads spends the default budget before the
+    // person's goal is even visible. Each step of the pipeline runs under its own budget
+    // (`gabbro_try`, in the model), and the declaration's budget here is the sum of them --
+    // a step that runs out leaves its goal, and the theorem does not go red.
+    s.push_str("set_option autoImplicit false\nset_option maxHeartbeats 9600000\n\nopen Gabbro.Body\n\n");
     s.push_str(&format!("namespace GabbroDuty.{name}\n\n"));
 
-    s.push_str("/-! ## What is NOT here, and why -/\n\n");
-    if refused == 0 {
-        s.push_str("-- Nothing was refused in this unit.\n\n");
+    // ---- what is not here ---------------------------------------------------------------
+    s.push_str("/-! ## What is NOT carried, and why -/\n\n");
+    if refused == 0 && assumed == 0 {
+        s.push_str("-- Every obligation of this unit is carried by a theorem below.\n\n");
     } else {
-        s.push_str("/-\n  These obligations of the register carry no theorem. A duty that\n");
-        s.push_str("  vanishes is noticed; one that gets weaker is not -- so each stands\n");
-        s.push_str("  here with its reason.\n\n");
+        s.push_str("/-\n  A duty that vanishes is noticed; one that gets weaker is not -- so each\n");
+        s.push_str("  stands here with its reason.\n\n");
         for r in LeanReason::ALL {
             let mine: Vec<(usize, &crate::pflichten::Pflicht)> = entries
                 .iter()
                 .enumerate()
-                .filter(|(_, (_, v))| matches!(v, LeanVerdict::Refused(x) if *x == r))
+                .filter(|(_, (_, v))| matches!(v, LeanVerdict::Refused(x) | LeanVerdict::Assumed(x) if *x == r))
                 .map(|(i, (p, _))| (i, p))
                 .collect();
             if mine.is_empty() {
                 continue;
             }
-            s.push_str(&format!("  {} ({}): {}\n", r.tag(), mine.len(), r.sentence()));
+            let word = match r.kind() {
+                Kind::Assumption => "ASSUMED",
+                Kind::NoTerm => "refused",
+                Kind::NoWiring => "not wired",
+            };
+            s.push_str(&format!("  {} ({}): {word} -- {}\n", r.tag(), mine.len(), r.sentence()));
             for (i, p) in mine {
                 s.push_str(&format!(
                     "    duty_{}  {}  {} :: {}\n",
@@ -1740,96 +3823,590 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         s.push_str("-/\n\n");
     }
 
-    if proved > 0 {
-        s.push_str("/-! ## The obligations that stand closed -/\n\n");
-    }
-    for (p, v) in entries.iter() {
-        let LeanVerdict::Proved(g) = v else { continue };
+    // ---- the register, obligation by obligation ---------------------------------------
+    s.push_str("/-! ## The register, and which theorem carries each line -/\n\n");
+    s.push_str("/-\n");
+    for (i, (p, v)) in entries.iter().enumerate() {
+        let by = match v {
+            LeanVerdict::Carried(t) => format!("carried by `{t}`"),
+            LeanVerdict::CarriedBy(ts) if ts.is_empty() => {
+                "carried by no routine -- nothing in this unit writes the carrier".to_string()
+            }
+            LeanVerdict::CarriedBy(ts) => format!("carried by `{}`", ts.join("`, `")),
+            LeanVerdict::Assumed(r) => format!("ASSUMED ({})", r.tag()),
+            LeanVerdict::Refused(r) => format!("refused ({})", r.tag()),
+        };
         s.push_str(&format!(
-            "/-- {} -- `{}` :: `{}` -/\n",
-            p.art.name(),
+            "  duty_{}  {}  {} :: {}  --  {by}\n",
+            i + 1,
+            p.art.marke(),
             p.funktion,
             p.gegenstand
         ));
-        s.push_str(&format!("def body_{} : List Stmt :=\n  {}\n\n", g.name, g.body));
-        s.push_str(&format!("def post_{} : Expr :=\n  {}\n\n", g.name, g.conclusion));
-        s.push_str(&format!("theorem {} (\\<rho> : Env) (s : State)\n", g.name));
-        for (label, term, origin) in &g.hypotheses {
-            s.push_str(&format!("    -- {origin}\n"));
-            s.push_str(&format!("    ({label} : {term})\n"));
+    }
+    s.push_str("-/\n\n");
+
+    // ---- the declared places ------------------------------------------------------------
+    let mut dict: Vec<(String, String, Shape)> = Vec::new();
+    let mut tnames: Vec<&String> = unit.tables.keys().collect();
+    tnames.sort();
+    for t in tnames {
+        for (f, sh) in &unit.tables[t].fields {
+            if let Some(sh) = sh {
+                dict.push((t.clone(), f.clone(), *sh));
+            }
         }
-        if g.names_result {
-            // **The goal over a postcondition that names `result` demands THREE things**, and
-            // the middle one is the new half: the body ends, it PRODUCED a value, and the
-            // promise holds with that value bound. *A body that runs off the end has no
-            // result, and `finalValue` is `none` there* -- so this form is strictly stronger
-            // than the two-part one, which is the direction a goal may move.
-            s.push_str(&format!(
-                "    : \\<exists> s' v, finalState (exec \\<rho> body_{} s) = some s'\n",
-                g.name
-            ));
-            s.push_str(&format!(
-                "        \\<and> finalValue (exec \\<rho> body_{} s) = some v\n",
-                g.name
-            ));
-            // `result` is bound as a LOCAL, exactly as a parameter is read -- see
-            // `expr_term`. The model needed no arm for it.
-            s.push_str(&format!(
-                "        \\<and> eval {{ s' with local' := bindLocal s'.local' \"result\" v }} \
-                 post_{} = some (.bool true) := by\n",
-                g.name
-            ));
-        } else {
-            s.push_str(&format!(
-                "    : \\<exists> s', finalState (exec \\<rho> body_{} s) = some s'\n",
-                g.name
-            ));
-            s.push_str(&format!(
-                "        \\<and> eval s' post_{} = some (.bool true) := by\n",
-                g.name
-            ));
+    }
+    let mut rdict: Vec<(String, String, Shape)> = Vec::new();
+    let mut rnames: Vec<&String> = unit.records.keys().collect();
+    rnames.sort();
+    for t in rnames {
+        for (f, sh) in &unit.records[t] {
+            if let Some(sh) = sh {
+                rdict.push((t.clone(), f.clone(), *sh));
+            }
         }
-        for z in &g.opening {
+    }
+    s.push_str("/-! ## The well-typed world -- hypothesis `U2`, once for the unit -/\n\n");
+    s.push_str("/-- The shape every declared place carries, read from the declarations. -/\n");
+    s.push_str("def shapeOf : Typing := fun p =>\n  match p with\n");
+    for (t, f, sh) in &dict {
+        s.push_str(&format!("  | .slot {} _ {} => some {}\n", quoted(t), quoted(f), sh.lean()));
+    }
+    for (t, f, sh) in &rdict {
+        s.push_str(&format!("  | .field {} {} => some {}\n", quoted(t), quoted(f), sh.lean()));
+    }
+    for (n, sh) in &unit.statics_scalars {
+        s.push_str(&format!("  | .global {} => some {}\n", quoted(n), sh.lean()));
+    }
+    s.push_str("  | _ => none\n\n");
+    s.push_str("def wellFormed (s : State) : Prop := WF shapeOf s.world\n\n");
+
+    // ---- the invariants ---------------------------------------------------------------
+    let any_inv = unit.invariants.iter().any(|i| i.term.is_ok());
+    if any_inv {
+        s.push_str("/-! ## The invariants of the unit, as expressions -/\n\n");
+        for inv in &unit.invariants {
+            if let Ok(t) = &inv.term {
+                s.push_str(&format!("/-- `{}` over `{}`. -/\n", inv.name, inv.carriers.join("`, `")));
+                s.push_str(&format!("def inv_{} : Expr :=\n  {t}\n\n", inv.name));
+            }
+        }
+    }
+
+    // ---- the foreign contracts --------------------------------------------------------
+    let mut assumed_parts: Vec<String> = Vec::new();
+    let used_foreign: BTreeSet<String> = goals
+        .iter()
+        .flat_map(|g| g.callees.iter().chain(g.loops.iter().flat_map(|l| l.callees.iter())))
+        .filter(|c| unit.foreign.contains_key(*c) || unit.transitions.contains_key(*c) || unit.ops.contains_key(*c))
+        .cloned()
+        .collect();
+    if !used_foreign.is_empty() {
+        s.push_str("/-! ## What is ASSUMED about callees no body of this unit defines -/\n\n");
+        for c in &used_foreign {
+            if let Some(f) = unit.foreign.get(c) {
+                s.push_str(&format!("/-- `{c}` -- a foreign body: its contract is an assumption. -/\n"));
+                s.push_str(&format!("def {c}_pre : Expr :=\n  {}\n\n", f.pre.clone().unwrap_or_else(|| "(.lit (.bool true))".into())));
+                s.push_str(&format!("def {c}_post (t t' : State) (r : Option Value) : Prop :=\n"));
+                // **`-> never` never returns**: what follows a call to it is unreachable,
+                // and the promise says so -- `False`. The model's `ρ f` still answers a
+                // state; the contract makes every statement after the call vacuous.
+                let mut ps = if f.never { vec!["False".to_string()] } else { vec!["wellFormed t'".to_string()] };
+                if let Some(cl) = result_clause(f.result, f.result_range, f.fehler, f.has_result, "r") {
+                    ps.push(cl);
+                }
+                ps.extend(f.post.iter().cloned());
+                s.push_str(&format!("  {}\n\n", ps.join("\n  ∧ ")));
+                s.push_str(&format!("def {c}_writes : List String := [{}]\n\n", f.writes.iter().map(|w| quoted(w)).collect::<Vec<_>>().join(", ")));
+                s.push_str(&format!("def {c}_requires (t : State) : Prop := wellFormed t ∧ eval t {c}_pre = some (.bool true)\n\n"));
+                assumed_parts.push(format!("Contract ρ {} {c}_requires {c}_post", quoted(c)));
+                assumed_parts.push(format!("Frame ρ {} {c}_writes", quoted(c)));
+            } else if let Some(t) = unit.transitions.get(c) {
+                s.push_str(&format!("/-- `{c}` -- a `transition` of `{}`: a register write behind a frame. -/\n", t.device));
+                s.push_str(&format!("def {c}_pre : Expr :=\n  {}\n\n", t.pre.clone().unwrap_or_else(|| "(.lit (.bool true))".into())));
+                s.push_str(&format!("def {c}_post (_t t' : State) (_r : Option Value) : Prop :=\n  wellFormed t'\n\n"));
+                s.push_str(&format!("def {c}_writes : List String := [{}]\n\n", quoted(&t.device)));
+                s.push_str(&format!("def {c}_requires (t : State) : Prop := wellFormed t ∧ eval t {c}_pre = some (.bool true)\n\n"));
+                assumed_parts.push(format!("Contract ρ {} {c}_requires {c}_post", quoted(c)));
+                assumed_parts.push(format!("Frame ρ {} {c}_writes", quoted(c)));
+            } else if let Some(op) = unit.ops.get(c) {
+                let id = c.replace("::", "_");
+                s.push_str(&format!("/-- `{c}` -- a generated operation: its premises are the schema `opsruf` cuts,\n    and that it preserves the table's invariants is `table.ops.erhaltung`. -/\n"));
+                s.push_str(&format!("def {id}_pre : Expr :=\n  {}\n\n", op.pre.clone().unwrap_or_else(|| "(.lit (.bool true))".into())));
+                s.push_str(&format!("def {id}_post (t t' : State) (_r : Option Value) : Prop :=\n"));
+                let mut ps = vec!["wellFormed t'".to_string()];
+                for inv in &unit.invariants {
+                    if inv.term.is_ok() && inv.carriers.contains(&op.table) {
+                        ps.push(format!("(eval t inv_{n} = some (.bool true) → eval t' inv_{n} = some (.bool true))", n = inv.name));
+                    }
+                }
+                s.push_str(&format!("  {}\n\n", ps.join("\n  ∧ ")));
+                s.push_str(&format!("def {id}_writes : List String := [{}]\n\n", quoted(&op.table)));
+                s.push_str(&format!("def {id}_requires (t : State) : Prop := wellFormed t ∧ eval t {id}_pre = some (.bool true)\n\n"));
+                assumed_parts.push(format!("Contract ρ {} {id}_requires {id}_post", quoted(c)));
+                assumed_parts.push(format!("Frame ρ {} {id}_writes", quoted(c)));
+            }
+        }
+    }
+    // **The initial state** -- what `boot` owes and no register books: that the world is
+    // well-typed and every invariant of the unit holds before the first routine runs. It is
+    // stated here as a definition so that a specification can name it, and it stands in the
+    // header as an assumption -- a proof of it is a statement about the initialisers, and
+    // this channel sees none.
+    s.push_str("/-- **The initial state** -- what `boot` owes: a well-typed world in which every\n    invariant of the unit holds. No register books it; it is named here so that it can\n    be assumed BY NAME and not by omission. -/\n");
+    s.push_str("def Initially (s0 : State) : Prop :=\n  wellFormed s0");
+    for inv in &unit.invariants {
+        if inv.term.is_ok() {
+            s.push_str(&format!("\n  ∧ eval s0 inv_{} = some (.bool true)", inv.name));
+        }
+    }
+    s.push_str("\n\n");
+    s.push_str("/-- **What is assumed of the environment beyond the bodies of this unit.** -/\n");
+    s.push_str("def Assumed (ρ : Env) : Prop :=\n");
+    if assumed_parts.is_empty() {
+        s.push_str("  True\n\n");
+    } else {
+        s.push_str(&format!("  {}\n\n", assumed_parts.join("\n  ∧ ")));
+    }
+
+    // ---- the routines -------------------------------------------------------------------
+    let pre_name = |f: &str| format!("{f}_pre");
+    let post_name = |f: &str| format!("{f}_post");
+    let writes_name = |f: &str| format!("{f}_writes");
+    let callee_id = |c: &str| c.replace("::", "_");
+    // **Every contract first, every duty after** -- a caller's statement names its callee's
+    // contract, and a mutual recursion names it in both directions; declaration order
+    // would put one of the two before its definition.
+    s.push_str("/-! ## The routines: body and contract -/\n\n");
+    for g in &goals {
+        s.push_str(&format!("/-! ### `{}` -/\n\n", g.name));
+        let refused = g.body.as_ref().err().copied();
+        if let Some(reason) = refused {
+            s.push_str(&format!("-- REFUSED  {}  ({}): {}\n--   Its contract stands below all the same, so that a caller's theorem can name it;\n--   what is missing is the theorem that discharges it.\n\n", g.name, reason.tag(), reason.sentence()));
+        }
+        if let Ok(body) = &g.body {
+            s.push_str(&format!("def {}_body : List Stmt :=\n  {body}\n\n", g.name));
+        }
+        s.push_str(&format!("/-- The precondition: the declared shapes and the `requires`. -/\n"));
+        s.push_str(&format!(
+            "def {} : Expr :=\n  {}\n\n",
+            pre_name(&g.name),
+            unit.pre_of.get(&g.name).and_then(|p| p.clone().ok()).unwrap_or_else(|| "(.lit (.bool true))".into())
+        ));
+        for (n, t) in &g.keeps {
+            s.push_str(&format!("/-- `{n}`, as `{}` keeps it. -/\ndef {}_inv_{n} : Expr :=\n  {t}\n\n", g.name, g.name));
+        }
+        s.push_str(&format!("def {} : List String := [{}]\n\n", writes_name(&g.name), g.writes.iter().map(|w| quoted(w)).collect::<Vec<_>>().join(", ")));
+        s.push_str(&format!("/-- What a caller of `{}` has to bring: a well-typed world and the precondition. -/\n", g.name));
+        s.push_str(&format!("def {n}_requires (t : State) : Prop := wellFormed t ∧ eval t {n}_pre = some (.bool true)\n\n", n = g.name));
+        s.push_str(&format!("/-- What `{}` PROMISES: the world stays well-typed, every invariant it maintains\n    survives, and its `ensures` hold -- over the entry state (`old`), the exit state\n    and the result. -/\n", g.name));
+        s.push_str(&format!("def {} (s s' : State) (r : Option Value) : Prop :=\n", post_name(&g.name)));
+        let mut ps = vec!["wellFormed s'".to_string()];
+        {
+            let r = &unit.routines[&g.name];
+            if let Some(cl) = result_clause(
+                unit.result_shape.get(&g.name).copied().flatten(),
+                unit.result_range.get(&g.name).copied().flatten(),
+                r.decl.fehler.is_some(),
+                r.decl.ergebnis.is_some() && !matches!(r.decl.ergebnis, Some(TypExpr::Never(_))),
+                "r",
+            ) {
+                ps.push(format!("-- the answer: a value of the declared shape\n  {cl}"));
+            }
+        }
+        for (n, _) in &g.keeps {
+            ps.push(format!("eval s' {}_inv_{n} = some (.bool true)", g.name));
+        }
+        for (origin, p) in &g.post {
+            if let Ok(p) = p {
+                ps.push(format!("-- {origin}\n  {p}"));
+            } else {
+                ps.push(format!("-- {origin}: NOT SAID ({}) -- a promise fewer makes a caller's goal harder, never wrong\n  True", p.as_ref().err().unwrap().tag()));
+            }
+        }
+        s.push_str(&format!("  {}\n\n", ps.join("\n  ∧ ")));
+        if refused.is_some() {
+            continue;
+        }
+        if let Some(m) = &g.decreases {
+            s.push_str(&format!("/-- The measure of `{}` -- what its `decreases` names; a recursive call is\n    below the current state in it. -/\n", g.name));
+            s.push_str(&format!("def {}_decreases : Expr :=\n  {m}\n\n", g.name));
+        }
+    }
+
+    s.push_str("/-! ## The duties: one statement per routine and per loop -/\n\n");
+    for g in &goals {
+        if g.body.is_err() {
+            continue;
+        }
+        s.push_str(&format!("/-! ### `{}` -/\n\n", g.name));
+
+        // The loops, innermost first (they are pushed as they close).
+        for l in &g.loops {
+            let lid = lean_ident(&l.id);
+            s.push_str(&format!("/-- Loop `{}` of `{}`: its body and its invariant (with the shapes of the locals in scope). -/\n", l.id, g.name));
+            s.push_str(&format!("def {lid}_inv : Expr :=\n  {}\n\n", l.inv));
+            s.push_str(&format!("def {lid}_body : List Stmt :=\n  {}\n\n", l.body));
+            // The loop's theorem.
+            let mut hyps: Vec<(String, String, String)> = Vec::new();
+            if let Some((lo, hi)) = l.range {
+                hyps.push(("hlo".into(), format!("{} ≤ k", int_lit(lo)), "the index is in the loop's range".into()));
+                hyps.push(("hhi".into(), format!("k < {}", int_lit(hi)), "the index is in the loop's range".into()));
+            }
+            hyps.push(("hwf".into(), "wellFormed t".into(), "the well-formed world".into()));
+            hyps.push(("hinv".into(), format!("eval t {lid}_inv = some (.bool true)"), "the invariant at the start of the pass".into()));
+            for c in &l.callees {
+                let cid = callee_id(c);
+                hyps.push((format!("c_{cid}"), format!("Contract ρ {} {cid}_requires {cid}_post", quoted(c)), format!("the contract of `{c}`")));
+                hyps.push((format!("fr_{cid}"), format!("Frame ρ {} {cid}_writes", quoted(c)), format!("the frame of `{c}`")));
+            }
+            for n in &l.nested {
+                let nid = lean_ident(n);
+                hyps.push((format!("l_{nid}"), format!("LoopRule ρ {} wellFormed {nid}_inv", quoted(n)), format!("the rule of loop `{n}`")));
+            }
+            let concl = format!(
+                "∃ t', finalState (exec ρ {lid}_body {{ t with local' := bindLocal t.local' {} (.int k) }}) = some t'\n        ∧ wellFormed t' ∧ eval t' {lid}_inv = some (.bool true)",
+                quoted(&l.var)
+            );
+            s.push_str(&format!("/-- **The loop rule of `{}`, as a statement over one pass.** -/\n", l.id));
+            s.push_str(&format!("def {lid}_keeps_statement : Prop :=\n  ∀ (ρ : Env) (t : State) (k : Int)"));
+            for (lbl, term, _) in &hyps {
+                s.push_str(&format!("\n    ({lbl} : {term})"));
+            }
+            s.push_str(&format!(",\n    {concl}\n\n"));
+            s.push_str(&format!("theorem {lid}_keeps : {lid}_keeps_statement := by\n  unfold {lid}_keeps_statement\n  intro ρ t k"));
+            for (lbl, _, _) in &hyps {
+                s.push_str(&format!(" {lbl}"));
+            }
+            s.push_str("\n  simp only [wellFormed] at hwf ⊢\n");
+            let invs: Vec<(usize, String, String)> = g
+                .keeps
+                .iter()
+                .enumerate()
+                .map(|(j, (n, _))| (l.shapes.len() + j, n.clone(), format!("{}_inv_{n}", g.name)))
+                .collect();
+            let (lines, splits, eqs) = openings("t", "hinv", &format!("{lid}_inv"), &l.shapes, l.parts, &l.reads, Some((&l.var, "k")), &invs, &l.ranges, &l.records);
+            for z in &lines {
+                s.push_str(z);
+                s.push('\n');
+            }
+            let mut set = format!("{lid}_body, {lid}_inv, wellFormed");
+            for c in &l.callees {
+                let cid = callee_id(c);
+                set.push_str(&format!(", {cid}_pre, {cid}_requires, {cid}_post, {cid}_writes, Frame_read _ _ _ fr_{cid}"));
+            }
+            for n in &l.nested {
+                let nid = lean_ident(n);
+                set.push_str(&format!(", {nid}_inv"));
+            }
+            for e in &eqs {
+                set.push_str(&format!(", {e}"));
+            }
+            let tactic = format!("gabbro_auto [{set}] using shapeOf");
+            if splits.is_empty() {
+                s.push_str(&format!("  {tactic}\n\n"));
+            } else {
+                s.push_str(&format!("  {}\n    <;> {tactic}\n\n", splits.join(" <;>\n    ")));
+            }
+        }
+
+        // The routine's theorem.
+        let in_cycle = cycle_of.get(&g.name).copied();
+        let rec_measure = if self_recursive(g) && in_cycle.is_none() { g.decreases.as_deref() } else { None };
+        let mut hyps: Vec<(String, String, String)> = Vec::new();
+        hyps.push(("hwf".into(), "wellFormed s".into(), "the well-formed world (`U2`)".into()));
+        hyps.push(("hpre".into(), format!("eval s {} = some (.bool true)", pre_name(&g.name)), "the declared shapes, the `requires`, the invariants it maintains".into()));
+        for c in &g.callees {
+            let cid = callee_id(c);
+            if in_cycle.is_some() && cycle_of.get(c).copied() == in_cycle {
+                // **A member of the same cycle**: its contract, bounded by this routine's
+                // measure -- what the induction over the cycle (`contracts_of_duties_rec`)
+                // hands down.
+                hyps.push((
+                    format!("c_{cid}"),
+                    format!(
+                        "ContractBelowM ρ ⟨{}, {cid}_body, {cid}_requires, {cid}_post, {cid}_decreases⟩ {}_decreases s",
+                        quoted(c),
+                        g.name
+                    ),
+                    format!("the contract of `{c}` (the same cycle), below `s` in this routine's `decreases`"),
+                ));
+            } else if *c == g.name && rec_measure.is_some() {
+                // **The bounded self-contract**: the routine's own contract, for every state
+                // strictly below the current one in the measure. The induction that turns it
+                // into the full contract is `contract_of_duty_rec`, in `unit_closed`.
+                hyps.push((
+                    format!("c_{cid}"),
+                    format!("ContractBelow ρ {} {cid}_decreases s {cid}_requires {cid}_post", quoted(c)),
+                    format!("the contract of `{c}` itself, below `s` in its `decreases`"),
+                ));
+            } else {
+                hyps.push((format!("c_{cid}"), format!("Contract ρ {} {cid}_requires {cid}_post", quoted(c)), format!("the contract of `{c}`")));
+            }
+            hyps.push((format!("fr_{cid}"), format!("Frame ρ {} {cid}_writes", quoted(c)), format!("the frame of `{c}`")));
+        }
+        for l in &g.loops {
+            let lid = lean_ident(&l.id);
+            hyps.push((format!("l_{lid}"), format!("LoopRule ρ {} wellFormed {lid}_inv", quoted(&l.id)), format!("the rule of loop `{}`", l.id)));
+        }
+        let concl = format!(
+            "∃ s', finalState (exec ρ {n}_body s) = some s'\n        ∧ {n}_post s s' (finalValue (exec ρ {n}_body s))",
+            n = g.name
+        );
+        s.push_str(&format!("/-- **The duty of `{}`**: under its precondition, the body runs to an end and\n    keeps its promise. Every `ensures`, every `V` at its call sites and every\n    invariant it maintains is this one theorem. -/\n", g.name));
+        s.push_str(&format!("def {}_meets_statement : Prop :=\n  ∀ (ρ : Env) (s : State)", g.name));
+        for (lbl, term, origin) in &hyps {
+            s.push_str(&format!("\n    -- {origin}\n    ({lbl} : {term})"));
+        }
+        s.push_str(&format!(",\n    {concl}\n\n"));
+        s.push_str(&format!("theorem {n}_meets : {n}_meets_statement := by\n  unfold {n}_meets_statement\n  intro ρ s", n = g.name));
+        for (lbl, _, _) in &hyps {
+            s.push_str(&format!(" {lbl}"));
+        }
+        s.push_str("\n  simp only [wellFormed] at hwf ⊢\n");
+        let (nshapes, nreq, ninv) = unit.pre_parts.get(&g.name).copied().unwrap_or((0, 0, 0));
+        let parts = nshapes + nreq + ninv;
+        let invs: Vec<(usize, String, String)> = g
+            .keeps
+            .iter()
+            .enumerate()
+            .map(|(j, (n, _))| (nshapes + nreq + j, n.clone(), format!("{}_inv_{n}", g.name)))
+            .collect();
+        let (lines, splits, eqs) = openings("s", "hpre", &pre_name(&g.name), &g.shaped_params, parts, &g.option_reads, None, &invs, &g.ranges, &g.seen_records);
+        for z in &lines {
             s.push_str(z);
             s.push('\n');
         }
-        let mut set = vec![
-            format!("body_{}", g.name),
-            format!("post_{}", g.name),
-            "exec".into(),
-            "step".into(),
-            "eval".into(),
-            "unop".into(),
-            "binop".into(),
-            "finalState".into(),
-            "store".into(),
-            "bindLocal".into(),
-        ];
-        // **`finalValue` joins the set only where the goal is about one.** Lean's linter
-        // reports an unused simp argument, and a tactic that carries lemmas it never needs
-        // teaches a reader the wrong thing about what the proof rests on.
-        if g.names_result {
-            set.push("finalValue".into());
+        let mut set = format!("{n}_body, {n}_pre, {n}_post, wellFormed", n = g.name);
+        for (n, _) in &g.keeps {
+            set.push_str(&format!(", {}_inv_{n}", g.name));
         }
-        set.extend(g.equations.iter().cloned());
-        // **Every `rcases` splits the goal, so the whole chain is joined with `<;>`.** A
-        // line standing on its own would serve only the first half -- and the other half,
-        // in a file nobody builds, looks exactly like a proved one.
-        let tactic = format!("simp [{}]", set.join(", "));
-        if g.splits.is_empty() {
+        for c in &g.callees {
+            let cid = callee_id(c);
+            set.push_str(&format!(", {cid}_pre, {cid}_requires, {cid}_post, {cid}_writes, Frame_read _ _ _ fr_{cid}"));
+            if (*c == g.name && rec_measure.is_some()) || (in_cycle.is_some() && cycle_of.get(c).copied() == in_cycle) {
+                set.push_str(&format!(", {cid}_decreases, {}_decreases", g.name));
+            }
+        }
+        for l in &g.loops {
+            set.push_str(&format!(", {}_inv", lean_ident(&l.id)));
+        }
+        for e in &eqs {
+            set.push_str(&format!(", {e}"));
+        }
+        let tactic = format!("gabbro_auto [{set}] using shapeOf");
+        if splits.is_empty() {
             s.push_str(&format!("  {tactic}\n\n"));
         } else {
-            s.push_str(&format!("  {}\n", g.splits.join(" <;>\n    ")));
-            s.push_str(&format!("    <;> {tactic}\n\n"));
+            s.push_str(&format!("  {}\n    <;> {tactic}\n\n", splits.join(" <;>\n    ")));
+        }
+    }
+
+    // ---- the wiring ---------------------------------------------------------------------
+    s.push_str("/-! ## The wiring -- what the generator owes, and pays\n\n");
+    s.push_str("    `Program ρ` says the environment runs the bodies of this unit. From it and\n");
+    s.push_str("    the duty statements, `unit_closed` yields every contract and every loop rule\n");
+    s.push_str("    -- in dependency order, so that no person writes the induction over the\n");
+    s.push_str("    call graph or over the passes of a loop. -/\n\n");
+    let mut prog_parts: Vec<(String, String)> = Vec::new();
+    for g in &goals {
+        if g.body.is_err() {
+            continue;
+        }
+        prog_parts.push((format!("r_{}", g.name), format!("Runs ρ {} {}_body", quoted(&g.name), g.name)));
+        prog_parts.push((format!("fr_{}", g.name), format!("Frame ρ {} {}_writes", quoted(&g.name), g.name)));
+        for l in &g.loops {
+            let lid = lean_ident(&l.id);
+            match l.range {
+                Some((lo, hi)) => prog_parts.push((
+                    format!("rl_{lid}"),
+                    format!("RunsLoopIn ρ {} {lid}_body {} {} {}", quoted(&l.id), quoted(&l.var), int_lit(lo), int_lit(hi)),
+                )),
+                None => prog_parts.push((format!("rl_{lid}"), format!("RunsLoop ρ {} {lid}_body {}", quoted(&l.id), quoted(&l.var)))),
+            }
+        }
+    }
+    s.push_str("def Program (ρ : Env) : Prop :=\n");
+    if prog_parts.is_empty() {
+        s.push_str("  True\n\n");
+    } else {
+        s.push_str(&format!("  {}\n\n", prog_parts.iter().map(|(_, t)| t.clone()).collect::<Vec<_>>().join("\n  ∧ ")));
+    }
+    // The statements the wiring takes, and what it yields.
+    let wired: Vec<&RoutineGoal> = order.iter().filter_map(|n| goals.iter().find(|g| g.name == *n)).collect();
+    if !unwired.is_empty() {
+        s.push_str("/-  NOT WIRED -- the duty is stated above; the step from it to the contract is not:\n");
+        for (n, why) in &unwired {
+            s.push_str(&format!("      {n}: {why}\n"));
+        }
+        s.push_str("    A direct self-recursion is wired by induction over its `decreases`\n");
+        s.push_str("    (`contract_of_duty_rec`); a mutual one, and a recursive call inside a\n");
+        s.push_str("    loop, are not -- the induction over a cycle of names is not written. -/\n\n");
+    }
+    let mut yields: Vec<String> = Vec::new();
+    for g in &wired {
+        for l in &g.loops {
+            let lid = lean_ident(&l.id);
+            yields.push(format!("LoopRule ρ {} wellFormed {lid}_inv", quoted(&l.id)));
+        }
+        yields.push(format!("Contract ρ {} {}_requires {}_post", quoted(&g.name), g.name, g.name));
+    }
+    s.push_str("theorem unit_closed (ρ : Env) (hp : Program ρ) (ha : Assumed ρ)");
+    for g in &wired {
+        for l in &g.loops {
+            let lid = lean_ident(&l.id);
+            s.push_str(&format!("\n    (d_{lid} : {lid}_keeps_statement)"));
+        }
+        s.push_str(&format!("\n    (d_{n} : {n}_meets_statement)", n = g.name));
+    }
+    if yields.is_empty() {
+        s.push_str(" :\n    True := by\n  trivial\n\n");
+    } else {
+        s.push_str(&format!(" :\n    {} := by\n", yields.join("\n    ∧ ")));
+        // open the bundles
+        if !prog_parts.is_empty() {
+            s.push_str(&format!("  obtain ⟨{}⟩ := hp\n", prog_parts.iter().map(|(l, _)| l.clone()).collect::<Vec<_>>().join(", ")));
+        }
+        if !assumed_parts.is_empty() {
+            let labels: Vec<String> = used_foreign
+                .iter()
+                .flat_map(|c| {
+                    let cid = callee_id(c);
+                    vec![format!("c_{cid}"), format!("fr_{cid}")]
+                })
+                .collect();
+            s.push_str(&format!("  obtain ⟨{}⟩ := ha\n", labels.join(", ")));
+        }
+        for g in &wired {
+            // innermost loops first: `loop_infos` is pushed as loops close, so the order is
+            // already innermost-first for nesting.
+            for l in &g.loops {
+                let lid = lean_ident(&l.id);
+                let mut args = Vec::new();
+                for c in &l.callees {
+                    let cid = callee_id(c);
+                    args.push(format!("c_{cid}"));
+                    args.push(format!("fr_{cid}"));
+                }
+                for n in &l.nested {
+                    args.push(format!("l_{}", lean_ident(n)));
+                }
+                match l.range {
+                    Some((lo, hi)) => s.push_str(&format!(
+                        "  have l_{lid} : LoopRule ρ {} wellFormed {lid}_inv :=\n    looprule_of_body_in ρ {} wellFormed {lid}_inv {lid}_body {} {} {} rl_{lid}\n      (fun t k hlo hhi hw hi => d_{lid} ρ t k hlo hhi hw hi{})\n",
+                        quoted(&l.id),
+                        quoted(&l.id),
+                        quoted(&l.var),
+                        int_lit(lo),
+                        int_lit(hi),
+                        args.iter().map(|a| format!(" {a}")).collect::<String>()
+                    )),
+                    None => s.push_str(&format!(
+                        "  have l_{lid} : LoopRule ρ {} wellFormed {lid}_inv :=\n    looprule_of_body ρ {} wellFormed {lid}_inv {lid}_body {} rl_{lid}\n      (fun t k hw hi => d_{lid} ρ t k hw hi{})\n",
+                        quoted(&l.id),
+                        quoted(&l.id),
+                        quoted(&l.var),
+                        args.iter().map(|a| format!(" {a}")).collect::<String>()
+                    )),
+                }
+            }
+            let in_cycle = cycle_of.get(&g.name).copied();
+            let recursive = self_recursive(g) && g.decreases.is_some() && in_cycle.is_none();
+            let member = |m: &str| {
+                format!("⟨{}, {m}_body, {m}_requires, {m}_post, {m}_decreases⟩", quoted(m))
+            };
+            let mut args = Vec::new();
+            for c in &g.callees {
+                let cid = callee_id(c);
+                // the self-contract is what the induction hands down, not a hypothesis --
+                // and so is the contract of a cycle member, from the cycle's induction
+                if in_cycle.is_some() && cycle_of.get(c).copied() == in_cycle {
+                    args.push(format!("(hrec {} (by simp))", member(c)));
+                } else if *c == g.name && recursive {
+                    args.push("hrec".to_string());
+                } else {
+                    args.push(format!("c_{cid}"));
+                }
+                args.push(format!("fr_{cid}"));
+            }
+            for l in &g.loops {
+                args.push(format!("l_{}", lean_ident(&l.id)));
+            }
+            if let Some(ci) = in_cycle {
+                // **The cycle, once**: on its first member the induction over all of them,
+                // and every member's contract is one instance of it.
+                let members = &cycles[ci];
+                if members.first() == Some(&g.name) {
+                    let list: Vec<String> = members.iter().map(|m| member(m)).collect();
+                    s.push_str(&format!("  have cyc_{ci} := contracts_of_duties_rec ρ [{}]\n", list.join(", ")));
+                    s.push_str("    (by intro r hr; simp only [List.mem_cons, List.not_mem_nil, or_false] at hr\n");
+                    let runs: Vec<String> = members.iter().map(|m| format!("r_{m}")).collect();
+                    s.push_str(&format!("        rcases hr with {} <;> assumption)\n", members.iter().map(|_| "rfl").collect::<Vec<_>>().join(" | ")));
+                    let _ = runs;
+                    s.push_str("    (by intro r hr; simp only [List.mem_cons, List.not_mem_nil, or_false] at hr\n");
+                    s.push_str(&format!("        rcases hr with {}\n", members.iter().map(|_| "rfl").collect::<Vec<_>>().join(" | ")));
+                    for m in members {
+                        let gm = goals.iter().find(|x| x.name == *m).unwrap();
+                        let mut margs = Vec::new();
+                        for c in &gm.callees {
+                            let cid = callee_id(c);
+                            if cycle_of.get(c) == Some(&ci) {
+                                margs.push(format!("(hrec {} (by simp))", member(c)));
+                            } else {
+                                margs.push(format!("c_{cid}"));
+                            }
+                            margs.push(format!("fr_{cid}"));
+                        }
+                        for l in &gm.loops {
+                            margs.push(format!("l_{}", lean_ident(&l.id)));
+                        }
+                        s.push_str(&format!(
+                            "        · intro t ht hrec; exact d_{m} ρ t ht.1 ht.2{}\n",
+                            margs.iter().map(|a| format!(" {a}")).collect::<String>()
+                        ));
+                    }
+                    s.push_str("    )\n");
+                }
+                s.push_str(&format!(
+                    "  have c_{n} : Contract ρ {} {n}_requires {n}_post := cyc_{ci} {} (by simp)\n",
+                    quoted(&g.name),
+                    member(&g.name),
+                    n = g.name
+                ));
+            } else if recursive {
+                s.push_str(&format!(
+                    "  have c_{n} : Contract ρ {} {n}_requires {n}_post :=\n    contract_of_duty_rec ρ {} {n}_body {n}_requires {n}_post {n}_decreases r_{n}\n      (fun t ht hrec => d_{n} ρ t ht.1 ht.2{})\n",
+                    quoted(&g.name),
+                    quoted(&g.name),
+                    args.iter().map(|a| format!(" {a}")).collect::<String>(),
+                    n = g.name
+                ));
+            } else {
+                s.push_str(&format!(
+                    "  have c_{n} : Contract ρ {} {n}_requires {n}_post :=\n    contract_of_duty ρ {} {n}_body {n}_requires {n}_post r_{n}\n      (fun t ht => d_{n} ρ t ht.1 ht.2{})\n",
+                    quoted(&g.name),
+                    quoted(&g.name),
+                    args.iter().map(|a| format!(" {a}")).collect::<String>(),
+                    n = g.name
+                ));
+            }
+        }
+        let mut have_names = Vec::new();
+        for g in &wired {
+            for l in &g.loops {
+                have_names.push(format!("l_{}", lean_ident(&l.id)));
+            }
+            have_names.push(format!("c_{}", g.name));
+        }
+        if have_names.len() == 1 {
+            s.push_str(&format!("  exact {}\n\n", have_names[0]));
+        } else {
+            s.push_str(&format!("  exact ⟨{}⟩\n\n", have_names.join(", ")));
         }
     }
     s.push_str(&format!("end GabbroDuty.{name}\n"));
-    s.replace("\\<forall>", "∀")
-        .replace("\\<exists>", "∃")
-        .replace("\\<and>", "∧")
-        .replace("\\<rho>", "ρ")
-        .replace("\\<langle>", "⟨")
-        .replace("\\<rangle>", "⟩")
+    s
 }
 
 // ===========================================================================================
@@ -1841,87 +4418,35 @@ pub fn module(baum: &Programm, datei: &str) -> String {
 // states and writes them as theorems. This one takes NO specification at all: it writes the
 // program -- bodies, contracts, the shape of every declared place -- and stops. *What is to
 // be proved about it is then said in Lean, by a person, in a file this emitter never sees.*
-//
-// ## Why the specification is not in Gabbro
-//
-// A `spec fn` is a Gabbro expression, so it has Gabbro's expressiveness: no quantifier, no
-// recursion, no induction. That is exactly the ceiling `maintains` runs into -- a table
-// invariant is quantified over every slot, and this channel refuses all six of them. **A
-// specification written in Lean has none of those limits.**
-//
-// And it costs no second register, which is the objection that would otherwise stand
-// (`W7`): the program is stated once, here; the specification is stated once, in the user's
-// file. *Nothing is said twice, and that is the whole difference from naming a Lean identifier
-// inside the Gabbro source.*
-//
-// ## The one hazard, and it gets a guard
-//
-// A hand-written specification names places by STRING -- `.slot "Konten" k "offen"`. A typo
-// there is a specification about a place that does not exist, and a theorem about a place
-// that does not exist is vacuous rather than false. **Hence the export carries the place
-// dictionary**, and `instrumente/pruefe-lean-programm.sh` holds every place a specification
-// mentions against it.
 // ===========================================================================================
 
 /// One routine of the program, as a datum -- or a named refusal.
 pub struct Routine {
     pub name: String,
-    /// The body as a `Stmt` list term. `None` where the body is outside the fragment.
     pub body: Option<String>,
     pub refused: Option<LeanReason>,
-    /// `(parameter, shape)` -- the shape is what the declaration gives, `None` where this
-    /// channel has none.
     pub params: Vec<(String, Option<Shape>)>,
-    /// The `requires` this channel can express, as `Expr` terms.
     pub pre: Vec<String>,
-    /// The `requires` it cannot -- **dropped, not refused.**
-    ///
-    /// A precondition is a HYPOTHESIS. Dropping one can only make the theorem harder to
-    /// prove, never wrong -- the same direction `refinement.rs` argues for its caller
-    /// `requires`. *Refusing the whole routine over a `Held(L)` it cannot say would cost a
-    /// body for a clause that carries nothing here.* They are listed by name.
     pub dropped: Vec<String>,
-    /// The `ensures` this channel can express -- what a CALLER may assume.
     pub post: Vec<String>,
-    /// The ones it cannot. **Not said, not refused**: a promise fewer makes a caller's
-    /// goal harder, never wrong -- the same direction as a dropped precondition, mirrored.
     pub post_dropped: Vec<String>,
-}
-
-/// Every place the program declares, with the shape its declaration gives it.
-fn dictionary(tab: &HashMap<String, Vec<(String, Option<Shape>)>>) -> Vec<(String, String, Shape)> {
-    let mut out: Vec<(String, String, Shape)> = Vec::new();
-    let mut names: Vec<&String> = tab.keys().collect();
-    names.sort();
-    for t in names {
-        for (f, shape) in &tab[t] {
-            if let Some(shape) = shape {
-                out.push((t.clone(), f.clone(), *shape));
-            }
-        }
-    }
-    out
 }
 
 /// Every routine of the program, in declaration order.
 pub fn routines(baum: &Programm) -> Vec<Routine> {
-    let u = crate::umgebung::Umgebung::sammle(baum);
-    let tab = tables(baum, &u);
-    let recs = records(baum, &u);
-    let statics = static_carriers(baum, &tab);
-    let callees = callee_params(baum);
-    let foreign = foreign_calls(baum);
+    let unit = Unit::sammle(baum);
     let mut out = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         let ItemArt::Funktion(f) = &item.art else { return };
         if f.klasse == Some(FnKlasse::Spec) {
             return;
         }
-        let params: Vec<(String, Option<Shape>)> = f
-            .parameter
-            .iter()
-            .map(|p| (p.name.text.clone(), shape_of(&p.typ, &u, module)))
-            .collect();
+        let params: Vec<(String, Option<Shape>)> = unit
+            .routines
+            .get(&f.name.text)
+            .map(|r| r.params.clone())
+            .or_else(|| unit.foreign.get(&f.name.text).map(|r| r.params.clone()))
+            .unwrap_or_default();
         let FnRumpf::Block(b) = &f.rumpf else {
             out.push(Routine {
                 name: f.name.text.clone(),
@@ -1935,39 +4460,11 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             });
             return;
         };
-        let mut c = Ctx {
-            tables: &tab,
-            records: &recs,
-            record_carrier: record_carriers(f, &recs, &HashMap::new()),
-            carrier: carriers_of(f, &tab, &statics),
-            // **The export writes a DATUM, so a call is honest here**: the callee is named,
-            // never inlined, and what it does is looked up in an environment the reader's
-            // theorem quantifies over.
-            allow_calls: true,
-            // **The export does NOT say `result`, and that is the conservative direction.**
-            // Its `post` list is what a CALLER may assume, and a caller reads the callee's
-            // result at its own call site -- not out of a name this datum binds. A promise
-            // fewer makes a caller's goal harder, never wrong, and it is listed by name in
-            // `post_dropped`. *The same direction as a dropped precondition, mirrored.*
-            //
-            // **It opens on `Body` and not on `Contract`**: `block_term` runs first here too,
-            // and a `result` in a body is a program error in this channel just as much as in
-            // the other one. The site moves to `Contract` below, where the clauses are read.
-            result_site: ResultSite::Body,
-            uses_result: false,
-            callees: &callees,
-            foreign: &foreign,
-            locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
-            seen: Vec::new(),
-            seen_records: Vec::new(),
-            option_reads: Vec::new(),
-            routine: f.name.text.clone(),
-            loops: 0,
-        };
+        let mut c = ctx_for(&unit, f, &f.name.text, module, ResultSite::Body);
+        let maintained = unit.routines.get(&f.name.text).map(|r| r.maintained.clone()).unwrap_or_default();
+        c.ret_post = ret_post_of(&unit, f, module, &maintained);
+        c.kept = maintained.iter().filter_map(|m| kept_invariant(&unit, f, module, m).ok()).collect();
         let body = block_term(b, &mut c);
-        // **The body is done; what follows are the CLAUSES.** A `result` met from here on is
-        // a promise this datum declines to repeat, not a body saying something it cannot mean
-        // -- and the two are booked under different names.
         c.result_site = ResultSite::Contract;
         let mut pre = Vec::new();
         let mut dropped = Vec::new();
@@ -1977,8 +4474,6 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 Err(r) => dropped.push(format!("requires #{} ({})", i + 1, r.tag())),
             }
         }
-        // **The postcondition, so a CALLER has something to assume.** A call is taken over
-        // the contract; without the contract written down there is no contract to take.
         let mut post = Vec::new();
         let mut post_dropped = Vec::new();
         for (i, q) in f.ensures.iter().enumerate() {
@@ -2015,11 +4510,27 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
 
 /// **The whole program, as a Lean 4 module.**
 pub fn program(baum: &Programm, quellen: &[String]) -> String {
-    let u = crate::umgebung::Umgebung::sammle(baum);
-    let tab = tables(baum, &u);
-    let recs = records(baum, &u);
-    let dict = dictionary(&tab);
-    let rdict = dictionary(&recs);
+    let unit = Unit::sammle(baum);
+    let mut dict: Vec<(String, String, Shape)> = Vec::new();
+    let mut tnames: Vec<&String> = unit.tables.keys().collect();
+    tnames.sort();
+    for t in tnames {
+        for (f, sh) in &unit.tables[t].fields {
+            if let Some(sh) = sh {
+                dict.push((t.clone(), f.clone(), *sh));
+            }
+        }
+    }
+    let mut rdict: Vec<(String, String, Shape)> = Vec::new();
+    let mut rnames: Vec<&String> = unit.records.keys().collect();
+    rnames.sort();
+    for t in rnames {
+        for (f, sh) in &unit.records[t] {
+            if let Some(sh) = sh {
+                rdict.push((t.clone(), f.clone(), *sh));
+            }
+        }
+    }
     let rs = routines(baum);
     let carried = rs.iter().filter(|r| r.body.is_some()).count();
     let refused = rs.len() - carried;
@@ -2050,14 +4561,13 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body\n\n");
     s.push_str("namespace GabbroProgram\n\n");
 
-    // ---- the place dictionary -----------------------------------------------------------
     s.push_str("/-! ## The declared places\n\n");
     s.push_str("    **A specification names a place by STRING, and a typo in that string is a\n");
     s.push_str("    specification about a place that does not exist** -- vacuous rather than\n");
     s.push_str("    false, and vacuous reads like proved. This list is what a specification is\n");
     s.push_str("    held against; `instrumente/pruefe-lean-programm.sh` does the holding.\n-/\n\n");
     s.push_str("/-- `(carrier, field, shape)` for every declared slot field. -/\n");
-    s.push_str("def places : List (String \\<times> String \\<times> String) :=\n");
+    s.push_str("def places : List (String × String × String) :=\n");
     if dict.is_empty() {
         s.push_str("  []\n\n");
     } else {
@@ -2069,10 +4579,8 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         s.push_str(&items.join("\n  , "));
         s.push_str("\n  ]\n\n");
     }
-
-    // ---- the well-formed state ----------------------------------------------------------
     s.push_str("/-- `(carrier, field, shape)` for every declared RECORD or `format` field. -/\n");
-    s.push_str("def fields : List (String \\<times> String \\<times> String) :=\n");
+    s.push_str("def fields : List (String × String × String) :=\n");
     if rdict.is_empty() {
         s.push_str("  []\n\n");
     } else {
@@ -2084,47 +4592,25 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         s.push_str(&items.join("\n  , "));
         s.push_str("\n  ]\n\n");
     }
-
     s.push_str("/-- **The well-formed state** -- that a slot field carries a value of its\n");
     s.push_str("    declared shape. It is a HYPOTHESIS and not a consequence (`Body.lean`, U2);\n");
     s.push_str("    it stands here once for the whole program instead of once per theorem. -/\n");
     s.push_str("def wellFormed (s : State) : Prop :=\n");
     let mut parts: Vec<String> = dict
         .iter()
-        .map(|(t, f, sh)| {
-            format!(
-                "(\\<forall> k, {} (s.world (.slot {} k {})))",
-                sh.predicate(),
-                quoted(t),
-                quoted(f)
-            )
-        })
+        .map(|(t, f, sh)| format!("(∀ k, {} (s.world (.slot {} k {})))", sh.predicate(), quoted(t), quoted(f)))
         .collect();
-    // A record field carries no index: one object, not a row of them.
-    parts.extend(rdict.iter().map(|(t, f, sh)| {
-        format!(
-            "({} (s.world (.field {} {})))",
-            sh.predicate(),
-            quoted(t),
-            quoted(f)
-        )
-    }));
+    parts.extend(rdict.iter().map(|(t, f, sh)| format!("({} (s.world (.field {} {})))", sh.predicate(), quoted(t), quoted(f))));
     if parts.is_empty() {
         s.push_str("  True\n\n");
     } else {
-        s.push_str(&format!("  {}\n\n", parts.join("\n  \\<and> ")));
+        s.push_str(&format!("  {}\n\n", parts.join("\n  ∧ ")));
     }
 
-    // ---- the routines -------------------------------------------------------------------
     s.push_str("/-! ## The routines -/\n\n");
     for r in &rs {
         if let Some(reason) = r.refused {
-            s.push_str(&format!(
-                "-- REFUSED  {}  ({}): {}\n\n",
-                r.name,
-                reason.tag(),
-                reason.sentence()
-            ));
+            s.push_str(&format!("-- REFUSED  {}  ({}): {}\n\n", r.name, reason.tag(), reason.sentence()));
             continue;
         }
         let Some(body) = &r.body else { continue };
@@ -2145,9 +4631,7 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         let mut parts: Vec<String> = r
             .params
             .iter()
-            .filter_map(|(n, sh)| {
-                sh.map(|sh| format!("{} (s.local' {})", sh.predicate(), quoted(n)))
-            })
+            .filter_map(|(n, sh)| sh.map(|sh| format!("{} (s.local' {})", sh.predicate(), quoted(n))))
             .collect();
         for t in &r.pre {
             parts.push(format!("eval s {t} = some (.bool true)"));
@@ -2155,7 +4639,7 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         if parts.is_empty() {
             s.push_str("  True\n\n");
         } else {
-            s.push_str(&format!("  {}\n\n", parts.join("\n  \\<and> ")));
+            s.push_str(&format!("  {}\n\n", parts.join("\n  ∧ ")));
         }
         s.push_str(&format!(
             "/-- `{}` -- what it PROMISES: the `ensures` this channel can say. A caller takes\n    a call over this and never over the body.",
@@ -2177,7 +4661,7 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
                 .iter()
                 .map(|x| format!("eval s {x} = some (.bool true)"))
                 .collect();
-            s.push_str(&format!("  {}\n\n", ps.join("\n  \\<and> ")));
+            s.push_str(&format!("  {}\n\n", ps.join("\n  ∧ ")));
         }
     }
 
@@ -2186,15 +4670,11 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     s.push_str("    body establishes it. The tactic that unfolds the model is `gabbro_simp`,\n");
     s.push_str("    and it lives in `Gabbro.Body` -- not here, so that a change to the model\n");
     s.push_str("    reaches every proof through one place.\n\n");
-    s.push_str("        theorem meets_spec (\\<rho> : Env) (s : State) (k : Int)\n");
-    s.push_str("            (wf : wellFormed s) (hk : s.local\' \"k\" = .int k)\n");
-    s.push_str("            : \\<exists> s\', finalState (exec \\<rho> f_body s) = some s\'\n");
-    s.push_str("                \\<and> mySpec k s\' := by\n");
+    s.push_str("        theorem meets_spec (ρ : Env) (s : State) (k : Int)\n");
+    s.push_str("            (wf : wellFormed s) (hk : s.local' \"k\" = .int k)\n");
+    s.push_str("            : ∃ s', finalState (exec ρ f_body s) = some s'\n");
+    s.push_str("                ∧ mySpec k s' := by\n");
     s.push_str("          gabbro_simp [mySpec, hk]\n-/\n\n");
     s.push_str("end GabbroProgram\n");
-    s.replace("\\<forall>", "∀")
-        .replace("\\<exists>", "∃")
-        .replace("\\<and>", "∧")
-        .replace("\\<times>", "×")
-        .replace("\\<rho>", "ρ")
+    s
 }

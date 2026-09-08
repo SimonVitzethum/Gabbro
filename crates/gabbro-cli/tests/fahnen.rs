@@ -178,6 +178,27 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    // --- the Lean duties, 2026-09-07 ----------------------------------------------------
+    Fahne {
+        erstname: "--template",
+        zweitname: "--vorlage",
+        // the template needs no Lean; without the flag the run wants one
+        lebendig: &["prove", "--template", DATEI],
+    },
+    Fahne {
+        erstname: "--proved",
+        zweitname: "--mit-beweis",
+        // with the flag the gate measures first (and refuses where no Lean is at hand);
+        // without it the C is written
+        lebendig: &["emit", "--proved", DATEI],
+    },
+    Fahne {
+        erstname: "--model",
+        zweitname: "--modell",
+        // a model folder that does not exist is refused by name; without the flag the
+        // folder is looked for above the file
+        lebendig: &["prove", "--model", "/nonexistent-model", DATEI],
+    },
     Fahne {
         // `fn` is the keyword in Gabbro AND in Rust; it is not a word of either natural
         // language, and there is nothing to translate.
@@ -212,6 +233,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["contexts", "kontexte"],
     &["obligations", "pflichten"],
     &["lean"],
+    &["prove", "beweise"],
     &["blindspots", "blindstellen"],
     &["certificate", "zeugnis"],
     &["ceremony", "zeremonie"],

@@ -85,9 +85,15 @@ def raeumen_haelt (ρ : Env) : Prop :=
     (ρ "raeumen" { world := w, local' := bindAll ["f"] [.int k] (fun _ => .absent) }).1.world
       (.slot "Faecher" k "belegt") = .bool false
 
+/-- **Und seit dem 2026-09-07 muss der Rufer die VORBEDINGUNG des Gerufenen herstellen.**
+    `raeumen` verlangt `Faecher.slots[f].belegt`; der Ruf bleibt STECKEN, wenn sie nicht
+    gilt (`Body.lean`, `step`) -- und darum steht `hb` hier. *Bis dahin ging dieser Satz
+    ohne sie durch: ein Rufer, bewiesen ueber einen Vertrag, dessen Praemisse niemand
+    nachgehalten hat.* -/
 theorem rufer_erfuellt_aus_dem_vertrag (ρ : Env) (s : State) (f : Int)
-    (hf : s.local' "f" = .int f) (hr : raeumen_haelt ρ) :
+    (hf : s.local' "f" = .int f) (hb : s.world (.slot "Faecher" f "belegt") = .bool true)
+    (hr : raeumen_haelt ρ) :
     ∃ s', finalState (exec ρ raeumen_und_merken_body s) = some s'
         ∧ s'.world (.slot "Faecher" f "belegt") = .bool false := by
-  gabbro_simp [raeumen_und_merken_body, hf]
+  gabbro_simp [raeumen_und_merken_body, hf, hb]
   exact hr s.world f

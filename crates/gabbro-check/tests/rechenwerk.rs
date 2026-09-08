@@ -4417,9 +4417,11 @@ fn lean_verfeinerung_wird_ein_ziel() {
     let t = lean_modul(LEAN_VERFEINERUNG);
     let (_, goals, _) = p6_balance(&t);
     assert_eq!(goals, 1, "the `refines` is the one goal of this unit:\n{t}");
-    assert!(t.contains("def body_duty_1"), "the body stands as a datum:\n{t}");
+    // **Since 2026-09-07 the goal is the ROUTINE's theorem**, and the `refines` is one clause
+    // of its promise -- so the body and the post stand under the routine's name.
+    assert!(t.contains("_body : List Stmt"), "the body stands as a datum:\n{t}");
     assert!(
-        t.contains("def post_duty_1"),
+        t.contains("_post (s s' : State) (r : Option Value) : Prop"),
         "and the specification as the postcondition:\n{t}"
     );
     // The `spec fn` names `p`; the implementation names `p` too, and the emitter substitutes
@@ -4462,31 +4464,48 @@ fn lean_autoimplicit_bleibt_aus() {
 #[test]
 fn lean_feldform_kommt_aus_der_deklaration() {
     let t = lean_modul(LEAN_VERFEINERUNG);
+    // **Since 2026-09-07 the shapes stand in ONE typing for the unit** (`shapeOf`), and
+    // `wellFormed` is `WF shapeOf` -- one form, read from the declarations.
     assert!(
-        t.contains(r#"isBool (s.world (.slot "B" k "belegt"))"#),
+        t.contains(r#"| .slot "B" _ "belegt" => some .bool"#),
         "a `bool` field carries the truth shape:\n{t}"
     );
+    // **and since 2026-09-08 a ranged integer field carries its RANGE** (`Shape.intIn`):
+    // `Zahl = u32 in 0 .. 99` is not a number, it is a number in `0 .. 99`, and the
+    // well-typed world says so -- a read comes with its bounds, a store owes them
     assert!(
-        t.contains(r#"isInt (s.world (.slot "B" k "wert"))"#),
-        "and an integer field the number shape:\n{t}"
+        t.contains(r#"| .slot "B" _ "wert" => some (.intIn 0 99)"#),
+        "and an integer field the number shape WITH its declared range:\n{t}"
     );
 }
 
-/// **A statement outside the core is REFUSED, not dropped.** A call that vanished from the
-/// datum would leave a body that does less than the real one -- and the goal would then be
-/// about a program nobody wrote.
+/// **A call is taken over the callee's CONTRACT, never over its body** (2026-09-07). Until
+/// that day a body with a call carried no goal at all -- refused as `call-not-compositional`,
+/// *"and that gate is not built"*. The gate is built: the caller's theorem carries
+/// `Contract` and `Frame` of the callee as hypotheses, and the callee's `requires` is the
+/// stuck-condition of the call.
 #[test]
 fn lean_ruf_wird_abgesagt_nicht_verschluckt() {
     let t = lean_modul(LEAN_MIT_RUF);
-    let (_, goals, refused) = p6_balance(&t);
-    assert_eq!(goals, 0, "a body with a call carries no goal here:\n{t}");
-    assert!(refused >= 1, "and the obligation is refused:\n{t}");
-    // **The reason names the CALL, not "a statement kind".** Eight reasons stand where one
-    // stood: the coarse one hid that a call, a loop and a `publishes` cost three different
-    // things, and a work order over a single bucket is not one.
+    let (_, goals, _) = p6_balance(&t);
+    assert!(goals >= 1, "a body with a call carries a goal:\n{t}");
     assert!(
-        t.contains("call-not-compositional"),
-        "BY NAME, and the name is the call:\n{t}"
+        !t.contains("call-not-compositional"),
+        "and nothing is refused for being a call:\n{t}"
+    );
+    assert!(
+        t.contains("Contract ρ "),
+        "the callee's contract is a HYPOTHESIS of the caller's theorem:\n{t}"
+    );
+    assert!(
+        t.contains("Frame ρ "),
+        "and so is its frame:\n{t}"
+    );
+    // **The callee is named in the datum, never inlined.** An inlined body would make the
+    // goal a statement about a program nobody wrote.
+    assert!(
+        t.contains("(.call \"") || t.contains("(.bindCall \"") || t.contains("(.retCall \""),
+        "the call stands as a datum with the callee's name:\n{t}"
     );
 }
 
@@ -4641,18 +4660,21 @@ impl fn ist_offen(s : ptr<normal, r> Text) -> bool
 }
 ";
     let t = lean_programm(q);
+    // **The carrier is the RECORD'S name, not the parameter's** (2026-09-07) -- as a
+    // table's is -- so that a callee's promise about `s.offen` reads at a caller's
+    // `t.offen`, and `shapeOf` types the place by the declaration.
     assert!(
-        t.contains(r#"(.assignField "s" "offen""#),
+        t.contains(r#"(.assignField "Text" "offen""#),
         "the write goes to a FIELD, not to a slot:\n{t}"
     );
     // **The READ path is a separate arm and needs its own probe.** A mutation that turned a
     // record read into a slot at index zero slipped past a test that only ever wrote.
     assert!(
-        t.contains(r#"(.fieldOf "s" "offen")"#),
+        t.contains(r#"(.fieldOf "Text" "offen")"#),
         "and so does the read:\n{t}"
     );
     assert!(
-        !t.contains(r#"(.slot "s" 0"#),
+        !t.contains(r#"(.slot "s" 0"#) && !t.contains(r#"(.slot "Text" 0"#),
         "neither of them becomes a slot at a made-up index:\n{t}"
     );
     assert!(
@@ -4720,12 +4742,14 @@ impl fn reicht_durch(p : index into B) -> bool
 }
 ";
     let t = lean_programm(q);
+    // Since 2026-09-07 every call carries the callee's PRECONDITION as its last operand --
+    // the stuck-condition of the call.
     assert!(
-        t.contains(r#"(.bindCall "w" "frag" ["p"] [(.name "p")])"#),
+        t.contains(r#"(.bindCall "w" "frag" ["p"] [(.name "p")] "#),
         "`let w = frag(p);` binds the RESULT of a call:\n{t}"
     );
     assert!(
-        t.contains(r#"(.retCall "frag" ["p"] [(.name "p")])"#),
+        t.contains(r#"(.retCall "frag" ["p"] [(.name "p")] "#),
         "`return frag(p);` returns it straight on:\n{t}"
     );
     // **Neither becomes a plain binding.** A call folded into `bindName` would lose the
@@ -4763,18 +4787,23 @@ impl fn leeren(h : ptr<normal, rw> B, s : index into B)
 "
         )
     };
+    // **A loop without an `invariant` is carried with the invariant `true`** (2026-09-07):
+    // nothing is known after it but the shapes of the locals, and that is the sound reading
+    // of a loop nobody wrote a statement for.
     let ohne = lean_programm(&mit(""));
     assert!(
-        ohne.contains("(loop)"),
-        "a loop with no `invariant` is refused BY NAME:\n{ohne}"
+        !ohne.contains("(loop)") && ohne.contains(r#"(.loop "leeren#1""#),
+        "a loop with no `invariant` is a datum with the invariant `true`:\n{ohne}"
     );
     let t = lean_programm(&mit("\n        invariant h.slots[s].belegt"));
     assert!(
         t.contains(r#"(.loop "leeren#1""#),
         "one with an invariant becomes a datum, under an id of its own:\n{t}"
     );
+    // The place is written under the TABLE's name -- `h` points at `B`, and a contract
+    // about `B.slots[…]` has to be readable by every routine that names the table.
     assert!(
-        t.contains(r#"(.place "h" (.name "s") "belegt")"#),
+        t.contains(r#"(.place "B" (.name "s") "belegt")"#),
         "and the invariant travels with it -- it is what the loop rule quantifies over:\n{t}"
     );
     // **The loop VARIABLE is a local.** Read as a world name it would make the datum say the
@@ -4975,8 +5004,10 @@ fn lean_programm_bilanz_geht_auf() {
     // `publishes`, and both were carried within the day. *A probe whose negative example
     // keeps being overtaken measures the calendar, not the fragment.* A loop without an
     // invariant is refused BY DESIGN -- that is what the word is for.
-    assert_eq!(bodies, 2, "the leaf and the CALLER are both data:\n{t}");
-    assert_eq!(refused, 1, "the loop without a statement about it is outside:\n{t}");
+    // **Since 2026-09-07 the loop without an `invariant` is a datum too** -- with the
+    // invariant `true`. What is outside the fragment today: nothing in this probe.
+    assert_eq!(bodies, 3, "the leaf, the CALLER and the loop are all data:\n{t}");
+    assert_eq!(refused, 0, "nothing in this probe is outside the fragment:\n{t}");
     assert_eq!(places, 2, "the table declares two fields with a shape:\n{t}");
 }
 
@@ -4985,17 +5016,15 @@ fn lean_programm_bilanz_geht_auf() {
 #[test]
 fn lean_programm_sagt_ab_statt_zu_verschlucken() {
     let t = lean_programm(PROG);
-    assert!(
-        t.contains("-- REFUSED  schleift  (loop)"),
-        "the routine outside the fragment stands with its reason:\n{t}"
-    );
-    assert!(!t.contains("def schleift_body"), "and carries no body:\n{t}");
-    assert!(t.contains("def leeren_body"), "the leaf does:\n{t}");
+    // **Since 2026-09-07 the loop without a statement is carried with `true`**, so the
+    // probe's negative example is gone; what this test still holds is the POSITIVE half.
+    assert!(t.contains("def schleift_body"), "the loop is a datum:\n{t}");
+    assert!(t.contains("def leeren_body"), "and so is the leaf:\n{t}");
     // **A call is a DATUM, never an inlining.** The callee is named and its parameters are
     // bound; what it does is looked up in an environment the reader's theorem quantifies
     // over. *An inlined body would make the goal a statement about a program nobody wrote.*
     assert!(
-        t.contains(r#"(.call "leeren" ["p"] [(.name "p")])"#),
+        t.contains(r#"(.call "leeren" ["p"] [(.name "p")] "#),
         "the call names the callee and binds its parameters:\n{t}"
     );
     assert!(
@@ -5027,17 +5056,17 @@ fn lean_programm_woerterbuch_deckt_wohlgeformtheit() {
 /// it in SILENCE is not*: the trust surface would leave the file without a word.
 #[test]
 fn lean_programm_nennt_die_fallengelassene_vorbedingung() {
+    // **Since 2026-09-07 `Held(L)` in a contract is `true`** -- the lock passes discharge
+    // it (H005/H006/H012/H016), and a precondition this channel could not write would refuse
+    // the whole callee. So nothing is dropped here any more, and the word stays out.
     let t = lean_programm(PROG);
     assert!(
-        t.contains("DROPPED from the precondition"),
-        "a `Held(L)` this channel has no term for is named:\n{t}"
+        !t.contains("DROPPED from the precondition"),
+        "a `Held(L)` costs no clause:\n{t}"
     );
-    // **And the reason is `lock-witness`, not "no term".** `Held(L)` is not a missing
-    // translation -- the lock passes discharge it (H005/H006/H012/H016). Reporting it as a
-    // gap counted a carried obligation as an open one, which is the direction that flatters.
     assert!(
-        t.contains("lock-witness"),
-        "and the reason names what it really is:\n{t}"
+        !t.contains("lock-witness"),
+        "and is not reported as a gap:\n{t}"
     );
 }
 
@@ -5225,9 +5254,10 @@ impl fn hol(v : ptr<normal, rw> V, i : index into V) -> option index into V
 #[test]
 fn lean_ruf_sammeltopf_ist_aufgeteilt() {
     let t = lean_programm(LEAN_VIER_DINGE);
+    // **Since 2026-09-07 a generated operation and a transition are CALLEES** -- their
+    // premises are the stuck-condition, their frame the table or the device -- so only the
+    // two constructed values are still refused, and each under its own name.
     for (routine, grund) in [
-        ("nimm", "generated-op"),
-        ("schalte", "device-transition"),
         ("paare", "constructed-value"),
         ("griff", "constructed-value"),
     ] {
@@ -5329,9 +5359,17 @@ impl fn ruf(p : index into B, w : Zahl)
 }
 }",
     );
+    // **The gate is built** (2026-09-07): the caller's theorem carries the callee's
+    // contract, and the register counts the postcondition as a goal.
+    let (_, goals, _) = p6_balance(&t);
+    assert!(goals >= 1, "a call at a DECLARED routine goes through the gate:\n{t}");
     assert!(
-        t.contains("call-not-compositional"),
-        "a call at a DECLARED routine still has no gate in the goal channel:\n{t}"
+        t.contains(r#"Contract ρ "setz" setz_requires setz_post"#),
+        "over the callee's CONTRACT, never its body:\n{t}"
+    );
+    assert!(
+        !t.contains("call-not-compositional"),
+        "and nothing is refused for being a call:\n{t}"
     );
 }
 
@@ -5394,52 +5432,72 @@ fn lean_aussetzung_traegt_ihren_namen() {
 fn lean_aussetzung_gibt_ein_ziel_und_behaelt_die_invariante() {
     let t = lean_modul(LEAN_AUSSETZUNG);
     assert!(
-        t.contains("theorem duty_"),
+        t.contains("_meets : ") && t.contains("_meets_statement"),
         "the `ensures` over a suspended block becomes a goal:\n{t}"
     );
+    // **Since 2026-09-07 the `maintains` duty is CARRIED too** -- the invariant is a bounded
+    // quantifier over the declared `count`, it stands in the routine's precondition and in
+    // its promise, and the suspension inside changes nothing about the two ends.
     assert!(
-        t.contains("table-invariant"),
-        "and the `maintains` duty is still refused by name, not swallowed:\n{t}"
+        !t.contains("table-invariant"),
+        "and the `maintains` duty is carried, not refused:\n{t}"
+    );
+    assert!(
+        t.contains("_inv_paarig : Expr"),
+        "the invariant stands as an expression under the routine's name:\n{t}"
     );
 }
 
-/// **What is LEFT under `non-local-exit` is a real exit, and it stays refused.**
-///
-/// `Outcome` has `running`, `returned` and `stuck`; a `leave` leaves a block without
-/// returning, and no arm of the three says that. *The refusal now names one thing, and the
-/// thing it names is buildable -- a fourth `Outcome`.*
+/// **A `leave` of the innermost loop is CARRIED** (2026-09-07): `Stmt.leave`, `Outcome.left`
+/// -- the pass ends, the invariant has to hold, and `iterate` stops. What is still refused
+/// under `non-local-exit` is a mark that names an OUTER loop: it would have to travel
+/// through a `.loop` step that does not run the body.
 #[test]
 fn lean_echter_ausgang_bleibt_abgesagt() {
-    let t = lean_programm(
-        "module t {
+    let mit = |innen: &str| {
+        format!(
+            "module t {{
 const N : u32 = 8;
-table B count N { slot { aktiv : bool, fertig : bool, } }
-extern fn watchdog() -> never effects { diverges } costs <= 1 ops;
+table B count N {{ slot {{ aktiv : bool, fertig : bool, }} }}
+extern fn watchdog() -> never effects {{ diverges }} costs <= 1 ops;
 assume tick \"Der Zeitgeber tickt.\" falsifier sonde_tick;
 impl fn dienst(b : ptr<normal, rw> B, i : index into B)
     ensures !b.slots[i].aktiv
-    effects { diverges, writes b.slots, reads b.slots }
-{
+    effects {{ diverges, writes b.slots, reads b.slots }}
+{{
     forever runde
         per_pass bounded 64 ops
         on_exceeded watchdog
-        effects  { writes b.slots, reads b.slots }
+        effects  {{ writes b.slots, reads b.slots }}
         progress tick
         invariant !b.slots[i].aktiv
-    {
+    {{
         b.slots[i].aktiv = false;
-        if b.slots[i].fertig { leave runde; }
-    }
-}
-}",
+        {innen}
+    }}
+}}
+}}"
+        )
+    };
+    let t = lean_programm(&mit("if b.slots[i].fertig { leave runde; }"));
+    assert!(
+        t.contains(".leave"),
+        "a `leave` of the innermost loop is a datum:\n{t}"
     );
-    let z = t
+    assert!(
+        !t.contains("non-local-exit"),
+        "and is not refused:\n{t}"
+    );
+    let aussen = lean_programm(&mit(
+        "forever innen per_pass bounded 8 ops on_exceeded watchdog effects { reads b.slots } progress tick { if b.slots[i].fertig { leave runde; } }",
+    ));
+    let z = aussen
         .lines()
         .find(|z| z.contains("REFUSED") && z.contains("dienst"))
-        .unwrap_or_else(|| panic!("the routine stands in the report:\n{t}"));
+        .unwrap_or_else(|| panic!("the routine stands in the report:\n{aussen}"));
     assert!(
         z.contains("non-local-exit"),
-        "a `leave` is a real exit and still has no form here:\n{z}"
+        "a `leave` aimed at an OUTER loop is refused by name:\n{z}"
     );
 }
 
@@ -5492,15 +5550,21 @@ fn lean_export_sagt_die_zusage_unter_dem_klauselnamen_ab() {
 fn lean_ergebnis_verlangt_dass_ein_wert_entstand() {
     let t = lean_modul(LEAN_ERGEBNIS);
     assert!(
-        t.contains("theorem duty_1"),
+        t.contains("theorem lies_meets"),
         "an `ensures result` becomes a goal:\n{t}"
     );
+    // **The promise takes the result as `r`, and a clause that names it demands one.** The
+    // goal hands `finalValue` in; the clause says `∃ v, r = some v`.
     assert!(
-        t.contains("finalValue (exec ρ body_duty_1 s) = some v"),
-        "and the goal demands that the body PRODUCED a value:\n{t}"
+        t.contains("lies_post s s' (finalValue (exec ρ lies_body s))"),
+        "the goal hands the body's result to the promise:\n{t}"
     );
     assert!(
-        t.contains("bindLocal s'.local' \"result\" v"),
+        t.contains("∃ v, r = some v ∧"),
+        "and the clause demands that the body PRODUCED a value:\n{t}"
+    );
+    assert!(
+        t.contains("bindLocal s.local' \"result\" v"),
         "`result` is bound as a name, exactly as a parameter is read:\n{t}"
     );
     assert!(
@@ -5571,12 +5635,12 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u64
         "the sentence says which of the two it is:\n{im_rumpf}"
     );
     assert!(
-        !im_rumpf.contains("theorem duty_1"),
+        !im_rumpf.contains("theorem lies_meets"),
         "and no goal is written over it:\n{im_rumpf}"
     );
     // *Two refusals, not one, since the site moved into a loop: the loop's own invariant is
-    // the second, refused for its own reason. The half this probe is about is `refused` and
-    // not `goals` -- nothing is proved over either.*
+    // the second, refused for the same reason -- the routine's body has no datum. The half
+    // this probe is about is `refused` and not `goals` -- nothing is proved over either.*
     assert!(
         im_rumpf.contains("goals 0  refused 2"),
         "the balance line says the same thing:\n{im_rumpf}"
@@ -5599,12 +5663,12 @@ impl fn setz(p : index into B, w : Zahl)
 }",
     );
     assert!(
-        t.contains("theorem duty_1"),
+        t.contains("theorem setz_meets"),
         "the plain postcondition still becomes a goal:\n{t}"
     );
     assert!(
-        !t.contains("finalValue"),
-        "and its goal does not demand a value nobody promised:\n{t}"
+        !t.contains("∃ v, r = some v"),
+        "and its promise does not demand a value nobody promised:\n{t}"
     );
 }
 

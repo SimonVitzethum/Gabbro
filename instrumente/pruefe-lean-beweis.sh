@@ -75,7 +75,7 @@ run_lean() {
     local f="$1" rc=0
     LEAN_PATH="$LP" timeout "$DEADLINE" "$LEANBIN" "$f" > "$f.log" 2>&1 || rc=$?
     if [ "$rc" -eq 124 ]; then return 2; fi
-    if grep -q 'error:' "$f.log"; then return 1; fi
+    if grep -qE '(^|: )error(:|\()' "$f.log"; then return 1; fi
     if [ "$rc" -ne 0 ]; then return 1; fi
     return 0
 }
@@ -161,7 +161,10 @@ for e in "$W"/beispiele/*.gab "$W"/messung/*/*.gab; do
         exit 1
     fi
     printf '%s\n' "$out" > "$TMP/$name.lean"
-    GOALS=$((GOALS + $(grep -c '^theorem duty_' "$TMP/$name.lean" || true)))
+    # **Since 2026-09-07 a theorem is a ROUTINE's (`_meets`) or a LOOP's (`_keeps`)**, and
+    # every obligation of the register names the one that carries it; `duty_N` is the
+    # register's line number, not a theorem any more.
+    GOALS=$((GOALS + $(grep -c '^theorem .*_\(meets\|keeps\) ' "$TMP/$name.lean" || true)))
     UNITS=$((UNITS + 1))
     NAMES+=("$name")
 done
@@ -179,9 +182,14 @@ echo
 echo "   $UNITS units -> $UNITS modules, $GOALS theorem(s) ($NO_REGISTER without a register)"
 echo "   \$ LEAN_PATH=$LP lean <module>.lean   (per unit)"
 FRISTFAELLE=0
+OWED=0
 for name in "${NAMES[@]}"; do
     RC=0
     run_lean "$TMP/$name.lean" || RC=$?
+    # **A `sorry` is what the HUMAN owes, and it is counted, not coloured** (2026-09-07).
+    # `gabbro_auto` closes what the model closes by computation and leaves a `sorry` on the
+    # rest; that rest is the program's own logic, and this guardian measures the plumbing.
+    OWED=$((OWED + $(grep -c 'declaration uses `sorry`' "$TMP/$name.lean.log" || true)))
     if [ "$RC" -eq 2 ]; then
         echo "   DEADLINE  $name -- $DEADLINE s exceeded, NOTHING measured"
         # **A deadline is not a red goal.** Counting it with `RED` said "this obligation does
@@ -214,8 +222,11 @@ if [ "$RED" -ne 0 ]; then
 fi
 
 echo
-stufe "LEAN PROOF: $GOALS generated obligation(s) in $UNITS modules, LEAN GREEN"
-echo "   And what that does NOT mean: that the register is covered. It means two things --"
+stufe "LEAN PROOF: $GOALS generated theorem(s) in $UNITS modules, LEAN GREEN -- $OWED left to a person"
+echo "   And what that does NOT mean: that the register is covered. It means three things --"
 echo "   that every generated module IS valid Lean, including the one that consists purely"
-echo "   of named refusals, and that the obligations standing CLOSED hold. How many those"
-echo "   are and how many are not is what \`./instrumente/zaehle-lean.py\` says."
+echo "   of named refusals; that the wiring (\`unit_closed\`) type-checks, so the contracts"
+echo "   and loop rules follow from the duties; and that of the theorems, $((GOALS - OWED))"
+echo "   close by computation and $OWED are the program's own logic, left as \`sorry\` for a"
+echo "   person. How many obligations are carried and how many are not is what"
+echo "   \`./instrumente/zaehle-lean.py\` says."

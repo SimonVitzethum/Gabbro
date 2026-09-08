@@ -39,6 +39,7 @@ const PAARE: &[(&str, &str)] = &[
     ("costs", "kosten"),
     ("contexts", "kontexte"),
     ("obligations", "pflichten"),
+    ("prove", "beweise"),
     ("blindspots", "blindstellen"),
     ("certificate", "zeugnis"),
     ("ceremony", "zeremonie"),

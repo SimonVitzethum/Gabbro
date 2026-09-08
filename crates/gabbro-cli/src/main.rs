@@ -418,6 +418,13 @@ fn main() -> std::process::ExitCode {
             print!("{}", gabbro_check::lean::program(&baum, &quellen));
             std::process::ExitCode::SUCCESS
         }
+        // **`gabbro beweise` -- the person's half, measured.** The Lean duties of every
+        // unit named, compiled against the model; where `gabbro_auto` leaves a `sorry`,
+        // the person's `Proofs/<Unit>.lean` is held against it. `--vorlage` prints the
+        // file a person starts from. Exit codes: 0 green, 1 the TREE has to change, 3 the
+        // SETUP does (no Lean, no model) -- 3 and not the instruments' 2, because at this
+        // command line 2 is the unknown-command exit and a known command never says it.
+        "prove" | "beweise" => befehl_beweise(rest),
         // **Blindstellen: eine Form, die der Korpus nicht ausloest.** Siehe
         // `gabbro_check::blindstellen` -- die Bauart von `mutiere-pruefer.py`, eine Ebene
         // hoeher. *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.*
@@ -645,7 +652,8 @@ fn hilfe() {
   gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus
                                     a missing alias analysis could be about. Two upper
                                     bounds and two lower ones, printed together; no refusal
-  gabbro emit [--with L.gabi]… [--unit] [--testbuild] <file.gab>…
+  gabbro emit [--with L.gabi]… [--unit] [--testbuild] [--proved|--mit-beweis] <file.gab>…
+                                    `--proved`: no C for a unit that still owes a Lean proof
                                     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know. A `.gabi` lowers to a
                                     C HEADER: typedefs and prototypes, no objects.
@@ -654,6 +662,10 @@ fn hilfe() {
                                     as a unit is translated as one.
                                     WITHOUT `--testbuild` this is the SHIPPING build: an
                                     item marked `when TESTBUILD` produces no line of C
+  gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…
+                                    the Lean duties of each unit against `Proofs/<Unit>.lean`:
+                                    GREEN, OWED (what a person still proves), RED, SETUP;
+                                    `--template` prints the file a person starts from
   gabbro lean       <file.gab>…     the whole PROGRAM as a Lean 4 module: every body, every
                                     precondition, and the shape of every declared place --
                                     and NO specification. What is to hold is said in Lean,
@@ -785,6 +797,113 @@ fn read_preamble(befehl: &str, mit: &[String]) -> Result<String, std::process::E
 /// *Measured: a `.gabi` through the generator is exactly a C HEADER* -- `typedef`, `#define`
 /// and prototypes, **not a single object**. So the preamble in the output is what it would be
 /// in C anyway, and two units link without a duplicate symbol.
+/// **The gate `--mit-beweis` holds**: every file's unit has to be GREEN. Returns the exit
+/// code to leave with where it is not -- and prints the measurement, so that the refusal
+/// names what is owed.
+fn beweise_verlangen(getippt: &str, dateien: &[String], modell: Option<&str>) -> Option<std::process::ExitCode> {
+    let mut schlecht = 0u8;
+    for datei in dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei) else {
+            eprintln!("gabbro {getippt}: {datei} not readable");
+            return Some(std::process::ExitCode::from(1));
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        if absagen.fehler_zahl() > 0 {
+            eprint!("{}", absagen.zeige(&quelle));
+            return Some(std::process::ExitCode::from(1));
+        }
+        let Some(m) = gabbro_check::beweis::modell_finden(datei, modell) else {
+            eprintln!("gabbro {getippt} --proved: no model folder (`programmlogik/Gabbro/Body.lean`) above {datei} -- name one with `--model <dir>`");
+            return Some(std::process::ExitCode::from(3));
+        };
+        match gabbro_check::beweis::pruefe(&baum, datei, &m) {
+            Ok(b) => {
+                eprintln!("{}", b.zeile());
+                match b.stand {
+                    gabbro_check::beweis::Stand::Gruen => {}
+                    gabbro_check::beweis::Stand::Aufbau => schlecht = schlecht.max(3),
+                    _ => schlecht = schlecht.max(1),
+                }
+            }
+            Err(e) => {
+                eprintln!("gabbro {getippt} --proved: {e}");
+                return Some(std::process::ExitCode::from(3));
+            }
+        }
+    }
+    if schlecht != 0 {
+        eprintln!("gabbro {getippt} --proved: a unit still owes a proof -- no C is written");
+        return Some(std::process::ExitCode::from(schlecht));
+    }
+    None
+}
+
+/// `gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…`
+fn befehl_beweise(rest: &[String]) -> std::process::ExitCode {
+    let vorlage = rest.iter().any(|a| a == "--template" || a == "--vorlage");
+    let modell = rest.iter().position(|a| a == "--model" || a == "--modell").and_then(|i| rest.get(i + 1).cloned());
+    let mut dateien = Vec::new();
+    let mut skip = false;
+    for a in rest {
+        if skip {
+            skip = false;
+            continue;
+        }
+        match a.as_str() {
+            "--template" | "--vorlage" => {}
+            "--model" | "--modell" => skip = true,
+            _ => dateien.push(a.clone()),
+        }
+    }
+    if dateien.is_empty() {
+        eprintln!("gabbro prove: no file named");
+        return std::process::ExitCode::from(2);
+    }
+    let mut schlecht = 0u8;
+    for datei in &dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei) else {
+            eprintln!("gabbro: {datei} not readable");
+            schlecht = schlecht.max(1);
+            continue;
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        if absagen.fehler_zahl() > 0 {
+            eprint!("{}", absagen.zeige(&quelle));
+            eprintln!("gabbro prove: {datei} has errors -- no duties");
+            schlecht = schlecht.max(1);
+            continue;
+        }
+        if vorlage {
+            print!("{}", gabbro_check::beweis::vorlage(&baum, datei));
+            continue;
+        }
+        let Some(m) = gabbro_check::beweis::modell_finden(datei, modell.as_deref()) else {
+            eprintln!("gabbro prove: no model folder (`programmlogik/Gabbro/Body.lean`) above {datei} -- name one with `--model <dir>`");
+            return std::process::ExitCode::from(3);
+        };
+        match gabbro_check::beweis::pruefe(&baum, datei, &m) {
+            Ok(b) => {
+                println!("{}", b.zeile());
+                match b.stand {
+                    gabbro_check::beweis::Stand::Gruen => {}
+                    gabbro_check::beweis::Stand::Aufbau => schlecht = schlecht.max(3),
+                    _ => schlecht = schlecht.max(1),
+                }
+            }
+            Err(e) => {
+                eprintln!("gabbro prove: {e}");
+                return std::process::ExitCode::from(3);
+            }
+        }
+    }
+    if schlecht != 0 {
+        return std::process::ExitCode::from(schlecht);
+    }
+    std::process::ExitCode::SUCCESS
+}
+
 fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     // **`--testbuild` opens the build gate, and its ABSENCE is the shipping build.**
     //
@@ -803,11 +922,40 @@ fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
     // > line -- *the capability existed and was unreachable*, which is the shape a missing
     // > feature and a hidden one share.
     let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
-    let argumente: Vec<String> = argumente
+    // **`--mit-beweis` (`--proved`) closes the gate on a unit that still owes a proof.**
+    // The Lean duties of every file are measured first (`beweis::pruefe`), and a unit
+    // that is not GREEN gets no C -- the emitter's refusal rests on the checker's
+    // measurement, the same one `gabbro beweise` prints.
+    let mit_beweis = argumente.iter().any(|a| a == "--proved" || a == "--mit-beweis");
+    let modell = argumente
         .iter()
-        .filter(|a| !matches!(a.as_str(), "--testbuild" | "--unit" | "--einheit"))
-        .cloned()
-        .collect();
+        .position(|a| a == "--model" || a == "--modell")
+        .and_then(|i| argumente.get(i + 1).cloned());
+    let argumente: Vec<String> = {
+        let mut out = Vec::new();
+        let mut skip = false;
+        for a in argumente {
+            if skip {
+                skip = false;
+                continue;
+            }
+            match a.as_str() {
+                "--testbuild" | "--unit" | "--einheit" | "--proved" | "--mit-beweis" => {}
+                "--model" | "--modell" => skip = true,
+                _ => out.push(a.clone()),
+            }
+        }
+        out
+    };
+    if mit_beweis {
+        let (dateien, _) = match split_with(getippt, &argumente) {
+            Ok(x) => x,
+            Err(c) => return c,
+        };
+        if let Some(code) = beweise_verlangen(getippt, &dateien, modell.as_deref()) {
+            return code;
+        }
+    }
     let (dateien, mit) = match split_with(getippt, &argumente) {
         Ok(x) => x,
         Err(c) => return c,
