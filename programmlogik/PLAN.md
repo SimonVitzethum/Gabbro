@@ -1223,3 +1223,191 @@ cd programmlogik && lake build              # Build completed successfully
   rule about quantifiers, and a traversal is not one.
 * **The five other `Reason` tags.** Only `quantified-threads` was measured clause by clause;
   the inheritance finding of §15.2 may hold for others and was not checked.
+
+---
+
+## 16. Run 30 — the carried half gets a register, and it names eight forms (agent h, 2026-09-08)
+
+`pruefe-deckung.py` was green, and its own header said what that green was worth:
+
+> **What it does not cover, and this half is the honest one:** *that `Form` is the whole
+> grammar.* The refusal half is mechanical because `lean.rs` names its refusals in one enum.
+> **The CARRIED half has no such enum** — the emitter decides to carry a form by writing a
+> term, at some fifty places, and there is no list to compare against. A form the grammar
+> admits, the emitter carries, and `Form` never names would pass every check.
+
+That is `W7` at its most expensive: **two registers over one thing, and only one of them
+read.** This run built the missing one. *It found eight.*
+
+### 16.1 The register, and why a new site cannot walk past it
+
+`crates/gabbro-check/src/lean.rs` now carries `LeanCarried`: **54 variants, one per place
+the emitter writes a term** — seven kinds of place, ten expression forms, six predicate
+forms, five quantifier domains, twenty-five statement forms, and the block. Beside it
+`CarriedForm`, which says what a decision carries: the `Form` constructors of
+`Coverage.lean` whose lemma discharges it, or `Subterm` — *a literal `3` generates no
+obligation; the clause it stands in does.* Eleven of the 54 are sub-terms and say so.
+
+**The forcing is a fact about the TYPE and not about anybody's discipline.** `place_term`,
+`expr_term`, `pred_term`, `domain_of`, `stmt_term` and `block_term` no longer return
+`Result<String, LeanReason>` but `Result<Carried, LeanReason>`; `Carried` holds its string
+in a private field **in a module of its own** — inside one module a private field is private
+to nobody — and its only constructor is `LeanCarried::term`. *An `Ok(s)` with a bare
+`String` does not compile.* A register a new site can bypass in silence buys nothing, and
+this is the difference between a list and a rule.
+
+The population itself is held by the same trick one level up: `LeanCarried::index` is an
+exhaustive match, so a new variant does not compile without a number, and
+`all_is_the_whole_population` then fails until it stands in `ALL`.
+
+### 16.2 What no term names, and where that is written down
+
+Ten of the forms `classify` calls carried are decided by the emitter **in the wiring** and
+not by a term: there is no term for *"the callee's contract IS the duty proved over its
+body"*, there is a wiring order. Seven such forms stand in `CARRIED_BY_WIRING` — form, the
+emitter function that decides it, and why there is no term:
+
+| form | site | why no term |
+|---|---|---|
+| `callChain` | `wiring_order` | an ORDER of hypotheses |
+| `callFrame` | `openings` | the `writes` list becomes a frame hypothesis |
+| `contractFromDuty` | `routine_goals` | the wiring itself |
+| `recursionSelf` | `self_recursive` | the induction over `decreases` |
+| `recursionCycle` | `wiring_order` | one induction over a shared measure |
+| `recursionInLoop` | `rec_in_loop` | a recursive call in the routine's own ranged loop |
+| `declaredRange` | `shape_conjunct` | a conjunct of the well-typedness, both directions |
+
+The list is in `lean.rs` and not in the guard **because it is a statement about the
+emitter**, and a test demands that every carried form stand in exactly one of the two
+lists: *a new carried form must be classified; it cannot arrive unnoticed.*
+
+### 16.3 The finding: eight forms the emitter carried and `Form` never named
+
+The first run of the correspondence failed, and the failure is the result of the run:
+
+```
+carrying sites name forms that `classify` does not call carried:
+  domain-reach names `quantReach`          stmt-invariant-suspension names `invariantSuspension`
+  stmt-reason-match names `reasonMatch`    stmt-publish names `publishAtomic`
+  stmt-return-call names `callResultReturned`  stmt-await names `awaitAtomic`
+  stmt-call-with-error-exit names `callWithErrorExit`  stmt-critical-section names `criticalSection`
+```
+
+**Six of the eight are the CARRIED half of a form whose REFUSED half was in the register
+all along** — and that is the shape of the blindness, not an accident of eight separate
+oversights:
+
+| form | refused when | carried when | the refusal was named |
+|---|---|---|---|
+| `let … else` | at a place (`let n = A else …`) | at a CALL | `let-else` |
+| `publishes` | at a place with a suffix | at a bare atomic | `publish` |
+| `awaits` | at a place with a suffix | at a bare atomic | `await` |
+| `locks` | the fallback arm only | since 2026-08-28 | `concurrent-statement` |
+| `match` | over anything but an option… | …or a `tagged`, **or a reason** | `match-not-option` |
+| `narrow` | off a range | on a range (an `ite`) | `narrow` |
+
+*The refusal was in the register because refusals have an enum; the carry was not because
+carries had none.* The two that are not of this shape are `return f(a);` — `Stmt.retCall`,
+a call shape whose three siblings were all named — and the `descendants of` / `ancestors of`
+domain, an index range cut by a reach, which stood beside `quantSlots`, `quantElems`,
+`quantQueue` and `quantChain` and was the fifth.
+
+`narrow` is the one that needed no new constructor: the emitter writes an `ite` for it and
+`controlFlow` discharges an `ite`. The register says so, and that is the honest half of the
+mapping — a site names the form whose lemma covers it, not a form of its own.
+
+### 16.4 The eight are now theorems, with no `sorry`
+
+`Form` has **53 constructors** (was 45), **40 carried** (was 32), **40 discharge lemmas**
+(was 32). The seven new statement lemmas stand in `Coverage.lean` §5.8b; `ReachDomainCarried`
+is `IndexDomainCarried ∧ ChainDomainCarried`, which is the whole content of a cut domain.
+
+* `ReasonMatchCarried` — where an arm carries the case's name the model runs it; where the
+  subject is not a reason it is **stuck**, which is the honest outcome and not a silent
+  fall-through.
+* `CallResultReturnedCarried` — the callee's contract fires, the answer returned is the
+  callee's, the caller's locals are untouched. The precondition is not a premise: `step` is
+  stuck without it, as at every other call.
+* `CallWithErrorExitCarried` — **two exits out of one call, and both of them named**: a
+  `reason` answer runs the `else` block with the reason bound, any other value fills the
+  binding.
+* `InvariantSuspensionCarried`, `CriticalSectionCarried` — both are `exec ρ b s`, by `rfl`.
+  *That is not a shortcut, it is the claim*: the duty at a `breaking` stands beside the
+  block, and what makes the sequential reading at a `locks` sound is the lock passes.
+* `PublishAtomicCarried` — a store at a `.global` place and nothing else moves.
+* `AwaitAtomicCarried` — a read of the world into a binding, the world untouched.
+
+### 16.5 The guard, and the register that is STILL read by nobody
+
+`pruefe-deckung.py` gained checks 7–9 (the carried population, and the correspondence both
+ways), six speech tests, and a probe that carries a `LeanCarried` of its own — **a `lean.rs`
+without the carried register is now an ABORT and not a green half.** The same correspondence
+runs as `cargo test -p gabbro-check --lib lean::deckung_tests`, reading `Coverage.lean` with
+`include_str!` at COMPILE time: *a file that moves away takes the build down, where a guard
+that read it at run time would report a missing file as a green run.*
+
+**And the header names what is left, because an uncovered part named is worth more than a
+guard that pretends:**
+
+* **`parse.rs` against `Form` is a third register, and it has no guard.** A form the parser
+  admits, `lean.rs` never writes a term for and `Form` never names would pass everything
+  here. `pruefe-grammatiktafel.py` holds the EBNF against the grammar table; nothing holds
+  either against `Form`.
+* **That the MAPPING is the right one.** A site that named `store` where it should name
+  `read` would pass — both are carried. What is mechanical is that the name exists and that
+  nothing is left unnamed; which lemma actually covers a site is a reader's judgement.
+
+### 16.6 Measured
+
+Local, `free -g` beside it — 31 GB total, 12–17 GB available, 20 cores; `ki-pc-fisch-101`
+unreachable through the jump host, so the memory is measured beside the run and not assumed.
+
+| | before | after |
+|---|---|---|
+| `cargo test --no-fail-fast` | 430 passed, 0 failed | **435 passed, 0 failed** (five correspondence tests) |
+| `lake build` | green | **green** |
+| `sorry` in `Coverage.lean` | 0 | **0** |
+| corpus modules / errors / `sorry` | 192 / 0 / 25 | **192 / 0 / 25** |
+| `pruefe-deckung.py` | exit 0 — 42 reasons, 45 forms, 32 carried, 32 lemmas | **exit 0 — 42 reasons, 53 forms, 40 carried, 40 lemmas, 54 carrying sites (11 sub-term), 7 by wiring** |
+| `mutiere-pruefer.py --anker` | 381 of 398 | **381 of 398** |
+
+**The emitted corpus is BYTE-IDENTICAL.** Measured and not assumed: `all/` was generated
+with the new binary, the change stashed, the binary rebuilt, `all/` generated again, and the
+two directories compared file by file. *The register records what the emitter decides; it
+does not change a decision.*
+
+`#print axioms`, by hand:
+
+```
+'Gabbro.Coverage.the_sentence'             [propext, Classical.choice, Quot.sound]
+'Gabbro.Coverage.carried_discharges'       [propext, Classical.choice, Quot.sound]
+'Gabbro.Coverage.ownLogic_is_the_persons'  [propext, Classical.choice, Quot.sound]
+```
+
+The populations, counted from the source and not from the guard's own line: 54 variants in
+`enum LeanCarried` and 54 entries in `ALL`; 53 constructors of `Form`, of which 40 carried;
+33 distinct forms named by carrying sites plus 7 by wiring is **40, and the difference
+against the carried set is empty**.
+
+Guardians: `pruefe-todo.py` and `pruefe-waechter.py` byte-identical before and after (both
+red before, on `DONE.md`'s poison count — not this run's). `pruefe-zahlen.py` keeps its
+finding count; one already-red counter moved its MEASURED value (`Zeilenfortsetzungen`,
+3538 → 3540), which is a total over the tree that any new line shifts. **Three mutation
+anchors were re-aimed** — `lean-and-becomes-or`, `lean-record-field-becomes-a-slot`,
+`lean-lock-loses-its-name` all quote lines this run rewrote; without that the anchor count
+would have fallen 381 → 378, and *a mutation that measures nothing looks exactly like one
+that passes.*
+
+### 16.7 What this run did NOT measure
+
+* **That the 33 named forms are the RIGHT ones for their sites.** See §16.5: the
+  correspondence is over names, not over meanings.
+* **`parse.rs` against `Form`.** Named in the guard's header and in §16.5, closed by nobody.
+* **The wiring half of the emitter beyond its seven names.** `CARRIED_BY_WIRING` says which
+  function decides a form; nothing checks that the function still does.
+* **Points 1 and 3 of `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §0.** As in §13.8: this
+  file answers point 2 and is silent about a form that MEANS NOTHING and about an obligation
+  that vanishes on a rename.
+* **§13's own numbers were not re-booked.** §13.2 reads 45 constructors and 86 expanded
+  forms; that is the record of run 26 and stays what it was. §11's rule: *neither number is
+  the tree's.*

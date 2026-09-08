@@ -27,21 +27,47 @@ WHAT THIS GUARD CHECKS
    `classify`, and `classify` has no catch-all arm that could swallow a new one.
 6. **Every carried form has a lemma.** A `Form` whose `classify` arm says `.carried` has an
    explicit arm in `Discharges` -- not the `_ => False` fallback.
+7. **The carried population.** Every variant of `LeanCarried` -- the register of the
+   emitter's CARRYING sites, added 2026-09-08 -- stands in `LeanCarried::ALL`, and every
+   entry of `ALL` in the enum. Tags are present and unique.
+8. **The carried correspondence, forward.** Every `Form` constructor a carrying site names
+   in `LeanCarried::forms` exists in `Coverage.lean` and `classify` calls it `.carried`.
+9. **The carried correspondence, backward.** Every form `classify` calls `.carried` is
+   named -- by a carrying site, or by `CARRIED_BY_WIRING` with the emitter function that
+   decides it and why there is no term. *No form may stand in both lists, and no wiring
+   entry may name a form the classifier does not call carried.*
+
+**Until 2026-09-08 checks 7 to 9 did not exist, and this header said why:** the refusal half
+was mechanical because `lean.rs` named its refusals in one enum, and the CARRIED half had no
+such enum -- the emitter carried a form by writing a term, at some fifty places, with no list
+to compare against. *A form the grammar admits, the emitter carries, and `Form` never named
+would pass every check.* It did: `LeanCarried` was written, and the correspondence named
+**eight forms** the emitter had carried all along and `Form` had never mentioned -- the
+reason `match`, `return f(a)`, `let ... else` at a call, `breaking`, `publishes`, `awaits`,
+`locks`, and the `descendants`/`ancestors` domain. Six of the eight are the CARRIED half of
+a form whose REFUSED half was in the register from the start.
+
+**And a new carrying site cannot bypass the register**, which is a fact about the type and
+not about discipline: `place_term`, `expr_term`, `pred_term`, `domain_of`, `stmt_term` and
+`block_term` return a `Carried`, whose only constructor is `LeanCarried::term`. An `Ok(s)`
+with a bare `String` does not compile. The same correspondence runs on the Rust side as
+`cargo test -p gabbro-check --lib lean::deckung_tests`, so it is not only this script.
 
 WHAT THIS GUARD DOES **NOT** CHECK -- and this half is the honest one
 --------------------------------------------------------------------
-* **That `Form` is the whole grammar.** The refusal half (`Reason`) is mechanical because
-  `lean.rs` names its refusals in one enum. The CARRIED half has no such enum: the emitter
-  decides to carry a form by writing a term, at some fifty places in `lean.rs`, and there is
-  no list to compare against. *A form the grammar admits, the emitter carries, and `Form`
-  never names would pass every check above.* Closing that needs the emitter to name its
-  carried decision points the way it names its refusals -- a change to `lean.rs`, not to
-  this guard.
+* **That `parse.rs` admits exactly the forms `Form` names.** *This is the register that is
+  still read by nobody.* The grammar side is checked by `pruefe-grammatiktafel.py` against
+  the EBNF; the emitter's carried decisions are now checked against `Form` by checks 7 to 9;
+  but that the PARSER admits exactly the forms these two lists talk about is a third
+  register, and it has no guard. A form `parse.rs` accepts, `lean.rs` never sees a term for
+  and `Form` never names would pass everything here.
+* **That the MAPPING is the right one.** A carrying site names the `Form` whose lemma
+  discharges it, and that judgement is a reader's. A site that named `store` where it should
+  name `read` would pass: both are carried forms. What is mechanical is that the name exists
+  and that nothing is left unnamed.
 * **That the Lean file PROVES anything.** `lake build` does that; this guard reads text.
 * **That the verdict is the RIGHT one.** It checks that a carried form has a lemma, not
   that the lemma says what the form needs. Only a reader can check that.
-* **That `parse.rs` admits exactly the forms `Form` names.** The grammar side is checked by
-  `pruefe-grammatiktafel.py` against the EBNF, and against `Form` by nobody.
 
     ./instrumente/pruefe-deckung.py           the judgement
     ./instrumente/pruefe-deckung.py --probe   only the speech test
@@ -111,6 +137,66 @@ def rust_arten(text, varianten):
         for v in varianten:
             arten.setdefault(v, art)
     return arten
+
+
+def rust_getragene(text):
+    """The variants of `enum LeanCarried`, in declaration order."""
+    m = re.search(r"pub enum LeanCarried \{(.*?)\n\}", text, re.S)
+    if not m:
+        return None
+    return re.findall(r"^\s{4}([A-Z][A-Za-z0-9]*),\s*$", m.group(1), re.M)
+
+
+def rust_getragene_alle(text):
+    """`LeanCarried::ALL`, with the length the declaration claims."""
+    m = re.search(r"pub const ALL: \[LeanCarried; (\d+)\] = \[(.*?)\n    \];", text, re.S)
+    if not m:
+        return None, None
+    return int(m.group(1)), re.findall(r"LeanCarried::([A-Za-z0-9]+),", m.group(2))
+
+
+def rust_getragene_marken(text):
+    """`LeanCarried::tag()` -- decision to string."""
+    m = re.search(r"pub fn tag\(self\) -> &'static str \{\s*match self \{"
+                  r"(\s*LeanCarried::.*?)\n        \}", text, re.S)
+    if not m:
+        return None
+    return dict(re.findall(r"LeanCarried::([A-Za-z0-9]+) => \"([^\"]*)\"", m.group(1)))
+
+
+def rust_getragene_formen(text):
+    """`LeanCarried::forms()` -- decision to the `Form` constructors it names.
+
+    A `Subterm` arm names none, and that is not the same as naming nothing by accident:
+    the arm says so in the source.
+    """
+    m = re.search(r"pub fn forms\(self\) -> CarriedForm \{\s*match self \{(.*?)\n        \}",
+                  text, re.S)
+    if not m:
+        return None
+    koerper = m.group(1)
+    # An arm may run over several lines; join them by the `LeanCarried::` that starts one.
+    arme = re.split(r"\n(?=\s*LeanCarried::)", koerper)
+    aus = {}
+    for arm in arme:
+        k = re.match(r"\s*LeanCarried::([A-Za-z0-9]+)", arm)
+        if not k:
+            continue
+        if "CarriedForm::Subterm" in arm:
+            aus[k.group(1)] = []
+        else:
+            f = re.search(r"CarriedForm::Forms\(&\[(.*?)\]\)", arm, re.S)
+            aus[k.group(1)] = re.findall(r"\"([A-Za-z0-9]+)\"", f.group(1)) if f else None
+    return aus
+
+
+def rust_verdrahtet(text):
+    """`CARRIED_BY_WIRING` -- the carried forms that no term-writing site names."""
+    m = re.search(r"pub const CARRIED_BY_WIRING: \[\(&str, &str, &str\); (\d+)\] = \[(.*?)\n\];",
+                  text, re.S)
+    if not m:
+        return None, None
+    return int(m.group(1)), re.findall(r"\(\s*\"([A-Za-z0-9]+)\",", m.group(2))
 
 
 # ---------------------------------------------------------------- the Lean side
@@ -281,9 +367,63 @@ def messe(lean_rs_text, coverage_text):
         if urteile.get(f) == ".carried" and f not in entlastungen:
             befunde.append(f"`Form.{f}` is carried and has no arm in `Discharges`")
 
+    # 7. the carried population -- the register of the emitter's CARRYING sites
+    getragene = rust_getragene(lean_rs_text)
+    g_anzahl, g_alle = rust_getragene_alle(lean_rs_text)
+    g_marken = rust_getragene_marken(lean_rs_text)
+    g_formen = rust_getragene_formen(lean_rs_text)
+    v_anzahl, verdrahtet = rust_verdrahtet(lean_rs_text)
+    if not all([getragene, g_alle, g_marken, g_formen, verdrahtet]):
+        return None, None
+    if g_anzahl != len(g_alle):
+        befunde.append(f"`LeanCarried::ALL` says {g_anzahl} and holds {len(g_alle)}")
+    if v_anzahl != len(verdrahtet):
+        befunde.append(f"`CARRIED_BY_WIRING` says {v_anzahl} and holds {len(verdrahtet)}")
+    for c in sorted(set(getragene) - set(g_alle)):
+        befunde.append(f"`LeanCarried::{c}` stands in the enum and not in `ALL`")
+    for c in sorted(set(g_alle) - set(getragene)):
+        befunde.append(f"`LeanCarried::{c}` stands in `ALL` and not in the enum")
+    for c in getragene:
+        if c not in g_marken:
+            befunde.append(f"`LeanCarried::{c}` has no tag")
+        if g_formen.get(c) is None and c in g_formen:
+            befunde.append(f"`LeanCarried::{c}` names neither forms nor `Subterm`")
+        if c not in g_formen:
+            befunde.append(f"`LeanCarried::{c}` has no arm in `forms`")
+    doppelte = [m for m in set(g_marken.values()) if list(g_marken.values()).count(m) > 1]
+    for m in sorted(doppelte):
+        befunde.append(f"two carrying sites share the tag \"{m}\"")
+
+    # 8. the carried correspondence, forward
+    getragene_formen = {f for f in formen if urteile.get(f) == ".carried"}
+    benannt = set()
+    for c in getragene:
+        for f in (g_formen.get(c) or []):
+            benannt.add(f)
+            if f not in formen:
+                befunde.append(f"carrying site {g_marken.get(c, c)} names `{f}`, "
+                               "which is no constructor of `Form`")
+            elif f not in getragene_formen:
+                befunde.append(f"carrying site {g_marken.get(c, c)} names `{f}`, "
+                               f"which `classify` calls {urteile.get(f)} and not `.carried`")
+
+    # 9. the carried correspondence, backward
+    for f in sorted(getragene_formen - benannt - set(verdrahtet)):
+        befunde.append(f"`Form.{f}` is carried and NO carrying site and no wiring entry "
+                       "names it")
+    for f in sorted(set(verdrahtet) & benannt):
+        befunde.append(f"`{f}` stands in `CARRIED_BY_WIRING` and is named by a carrying "
+                       "site as well -- two registers over one thing")
+    for f in sorted(set(verdrahtet) - getragene_formen):
+        befunde.append(f"`CARRIED_BY_WIRING` names `{f}`, which `classify` does not call "
+                       "carried")
+
+    unterterme = sum(1 for c in getragene if g_formen.get(c) == [])
     gezaehlt = [f"{len(alle)} refusal reasons", f"{len(formen)} forms",
-                f"{sum(1 for f in formen if urteile.get(f) == '.carried')} carried",
-                f"{len(entlastungen)} discharge lemmas"]
+                f"{len(getragene_formen)} carried",
+                f"{len(entlastungen)} discharge lemmas",
+                f"{len(getragene)} carrying sites ({unterterme} sub-term)",
+                f"{len(verdrahtet)} carried by wiring"]
     return befunde, gezaehlt
 
 
@@ -314,6 +454,41 @@ impl LeanReason {
             LeanReason::Gamma => "gamma",
         }
     }
+}
+
+pub enum LeanCarried {
+    Eins,
+    Nichts,
+}
+
+impl LeanCarried {
+    pub fn tag(self) -> &'static str {
+        match self {
+            LeanCarried::Eins => "eins",
+            LeanCarried::Nichts => "nichts",
+        }
+    }
+
+    pub fn forms(self) -> CarriedForm {
+        match self {
+            LeanCarried::Eins => CarriedForm::Forms(&["eins"]),
+            LeanCarried::Nichts => CarriedForm::Subterm,
+        }
+    }
+
+    pub const ALL: [LeanCarried; 2] = [
+        LeanCarried::Eins,
+        LeanCarried::Nichts,
+    ];
+}
+
+pub const CARRIED_BY_WIRING: [(&str, &str, &str); 1] = [
+    (
+        "drei",
+        "verdrahtung",
+        "no term, an order",
+    ),
+];
 """
 
 LEAN_PROBE = """
@@ -333,16 +508,19 @@ def Reason.kind : Reason → Kind
 inductive Form where
   | eins
   | zwei
+  | drei
   | refusedOrAssumed (r : Reason)
   deriving DecidableEq, Repr
 
 def classify : Form → Verdict
   | .eins => .carried
+  | .drei => .carried
   | .zwei => .carriedByTactic
   | .refusedOrAssumed r => .refused r.tag
 
 def Discharges : Form → Prop
   | .eins => EinsCarried
+  | .drei => DreiCarried
   | _ => False
 
 """
@@ -401,9 +579,47 @@ def sprechprobe():
                                               "| beta | alpha | gamma"))
     proben.append(("a parted order FALLS", any("the order parts" in x for x in b)))
 
+    # a carrying site that names a form nobody carries
+    b, _ = messe(RS_PROBE.replace('LeanCarried::Eins => CarriedForm::Forms(&["eins"])',
+                                  'LeanCarried::Eins => CarriedForm::Forms(&["vier"])'),
+                 LEAN_PROBE)
+    proben.append(("a carrying site naming an unknown form FALLS",
+                   any("names `vier`" in x for x in b)))
+
+    # a carried form no carrying site and no wiring entry names -- the blind half, closed
+    b, _ = messe(RS_PROBE, LEAN_PROBE.replace("  | .zwei => .carriedByTactic",
+                                              "  | .zwei => .carried")
+                                     .replace("  | .eins => EinsCarried",
+                                              "  | .eins => EinsCarried\n  | .zwei => ZweiCarried"))
+    proben.append(("a carried form nobody names FALLS",
+                   any("`Form.zwei` is carried and NO carrying site" in x for x in b)))
+
+    # a decision that stands in the enum and not in `ALL` -- `PLAN.md` 11.1's shape
+    b, _ = messe(RS_PROBE.replace("    Nichts,\n}", "    Nichts,\n    Vier,\n}")
+                 .replace('LeanCarried::Nichts => "nichts",',
+                          'LeanCarried::Nichts => "nichts",\n'
+                          '            LeanCarried::Vier => "vier",')
+                 .replace("LeanCarried::Nichts => CarriedForm::Subterm,",
+                          "LeanCarried::Nichts => CarriedForm::Subterm,\n"
+                          "            LeanCarried::Vier => CarriedForm::Subterm,"),
+                 LEAN_PROBE)
+    proben.append(("a decision outside `ALL` FALLS",
+                   any("stands in the enum and not in `ALL`" in x for x in b)))
+
+    # a form in BOTH lists
+    b, _ = messe(RS_PROBE.replace('"drei",\n        "verdrahtung",',
+                                  '"eins",\n        "verdrahtung",'), LEAN_PROBE)
+    proben.append(("a form in both lists FALLS",
+                   any("two registers over one thing" in x for x in b)))
+
     # an unreadable subject is an ABORT and not a green
     b, z = messe("nothing here", LEAN_PROBE)
     proben.append(("an unreadable `lean.rs` is an ABORT", b is None and z is None))
+
+    # and a `lean.rs` WITHOUT the carried register is an abort too, not a green half
+    b, z = messe(RS_PROBE[:RS_PROBE.index("pub enum LeanCarried")], LEAN_PROBE)
+    proben.append(("a `lean.rs` without the carried register is an ABORT",
+                   b is None and z is None))
     return proben
 
 
@@ -441,9 +657,9 @@ def main():
         print("   The two registers stand apart -- the theorem then speaks about a "
               "language that is not the one the checker checks.")
         return 1
-    print("   UNCOVERED = 0 -- the two registers cover each other.")
-    print("   NOT checked: that `Form` is the whole grammar. The emitter's CARRIED "
-          "decisions stand in no list; see the header.")
+    print("   UNCOVERED = 0 -- the registers cover each other, refusals and carries.")
+    print("   NOT checked: that `parse.rs` admits exactly the forms these lists name. "
+          "That is the third register, and it has no guard; see the header.")
     return 0
 
 

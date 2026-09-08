@@ -3562,8 +3562,10 @@ MUTATIONEN = [
     Mutation(
         "lean-and-becomes-or",
         "lean.rs",
-        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .and {} {})",',
-        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .or {} {})",',
+        '        PredArt::Und(a, b) => Ok(LeanCarried::PredConnective.term(format!(\n'
+        '            "(.bin .and {} {})",',
+        '        PredArt::Und(a, b) => Ok(LeanCarried::PredConnective.term(format!(\n'
+        '            "(.bin .or {} {})",',
         "The body channel -- the postcondition `a && b` becomes an OR. Both conjuncts are "
         "still there, and the duty is half as strong",
         flaeche="annotation",
@@ -3682,8 +3684,10 @@ MUTATIONEN = [
     Mutation(
         "lean-record-field-becomes-a-slot",
         "lean.rs",
-        'return Ok(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text)));',
-        'return Ok(format!("(.slot {} 0 {})", quoted(&base), quoted(&f.text)));',
+        'return Ok(LeanCarried::PlaceRecordField\n'
+        '            .term(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text))));',
+        'return Ok(LeanCarried::PlaceRecordField\n'
+        '            .term(format!("(.slot {} 0 {})", quoted(&base), quoted(&f.text))));',
         "The body channel -- a RECORD field is read as a slot at index zero. A record is one "
         "object and a table a row of them; as one `Place` a slot could alias a record field",
         flaeche="annotation",
@@ -3759,8 +3763,10 @@ MUTATIONEN = [
     Mutation(
         "lean-lock-loses-its-name",
         "lean.rs",
-        '        StmtArt::Sperrt(l) => Ok(format!(\n            "(.locked {} {})",',
-        '        StmtArt::Sperrt(l) => Ok(format!(\n            "(.locked \\"\\" {}{})",',
+        '        StmtArt::Sperrt(l) => Ok(LeanCarried::StmtCriticalSection.term(format!(\n'
+        '            "(.locked {} {})",',
+        '        StmtArt::Sperrt(l) => Ok(LeanCarried::StmtCriticalSection.term(format!(\n'
+        '            "(.locked \\"\\" {}{})",',
         "The body channel -- a critical section loses its lock name. Its meaning is the "
         "body's, but the record then no longer says WHERE a lock was held, and two different "
         "sections become one",
