@@ -74,6 +74,32 @@ inductive Reason where
   | generatedOp | transition | constructedValue | calleeContract | returnInLoop | recursion
   deriving DecidableEq, Repr
 
+/-! ### `quantifiedThreads` -- a refusal whose ground is measured, not merely stated
+
+    It is the largest single class in the register: **six duties over the corpus** on
+    2026-09-08, and of those six only TWO are clauses -- `probe-neun-domaenen`'s
+    `d8_threads` and `probe-stellungen`'s `s8_threads`. The other four are the INHERITED
+    refusals of section 9.2: one untranslatable invariant on `Knoten` refuses every duty
+    that writes it. *A class counted in duties is four fifths one clause.*
+
+        for f in $(git ls-files 'beispiele/*.gab' 'messung/proben/*.gab' | grep -v gift); do
+          ./target/debug/gabbro pflichten --lean "$f"; done | grep -c 'refused (quantified-threads)'
+
+    **Why it does not become a goal, and why no surface closes it cheaply.** Every other
+    domain hands the model a number: `slots of T` emits `.forallSlots "t" 128 …`, and `128`
+    is `T`'s `count`. A `threads over T` -- or a mark at the table saying "this is the
+    thread set" -- would have to emit that same `.forallSlots "t" 128 …`: the same
+    constructor, the same index set, the same proposition, and byte-identical C. **That is
+    a synonym of `slots of T`**, and a synonym is exactly the "form that means nothing" of
+    `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` section 1.
+
+    The surface that would carry more has to say which slots are LIVE -- a predicate at the
+    declaration, and a second constructor beside `forallSlots`. Gabbro has no such
+    declaration and has never decided what liveness is. **So the refusal stands, with a
+    measured ground rather than an asserted one** (`PLAN.md` section 15), and the checker
+    closed the last form of `threads` that stated nothing (`D024`) instead.
+-/
+
 /-- `LeanReason::tag` -- the string the register prints beside the duty. -/
 def Reason.tag : Reason → String
   | .foreignBody => "foreign-body"
@@ -1152,6 +1178,14 @@ theorem the_sentence : ∀ f : Form, ¬ IsOwnLogic f →
        `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` section 1 measures four forms the
        checker admits and that have no effect. This file answers that document's point 2
        (the proof channel answers for every form) and says nothing about its points 1 and 3.
+
+       *Its section 1.1 -- the quantifier domain as decoration -- has since been closed on
+       the CHECKER's side and not on this one*: `D022` refuses a binder used against its
+       domain, `D023` hints where the body never mentions it, and `D024` refuses the last
+       green form of `threads` (`PLAN.md` section 15). **That is a change to what the
+       grammar admits, and it makes no verdict of this file different** -- a form the
+       checker now rejects raises no obligation, and a refusal that stands cannot become
+       weaker for it.
 -/
 
 end Gabbro.Coverage

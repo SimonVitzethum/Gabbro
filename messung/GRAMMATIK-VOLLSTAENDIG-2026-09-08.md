@@ -102,13 +102,39 @@ the source that names it.
 |---|---|---|---|
 | 2.1 | **`by consuming` names no point in time** | *"would need **a grammar line**"* | `gabbro schablonen --gate`, premise `consuming.leermenge` |
 | 2.2 | a **single-path descent** over `mappings of` (the cost promise `levels × node length` has no name) | *"kostet ein Terminal"* | `TODO.md` Stufe 3 |
-| 2.3 | **`threads` as a quantifier domain** | *"a language change, not a model change"* | `PLAN.md` §9.1 |
+| 2.3 | ~~**`threads` as a quantifier domain**~~ **— designed, measured, NOT built** | *"a language change, not a model change"* → **the change would be a synonym** | `PLAN.md` §9.1, **§15** |
 | 2.4 | **the traversal binder has no TYPE** in `slots of`, `descendants of`, `ancestors of`, `elems of` — so `p[i]` in the loop is not provably in range | *"eine Änderung und nicht vier"* | `TODO.md` Stufe 3 |
 | 2.5 | **`group ops` / `by ops`** | heading reads *"the design, BEFORE the first grammar line"* | `TODO.md` Stufe 5 |
 
 **2.4 is the one that costs the person proof work today** and the only one of the five that
 `PLAN.md`'s corpus can already feel: a binder without a range is a witness the channel cannot
 produce, and the person supplies it by hand.
+
+### 2.3 is closed as a QUESTION and not as a grammar line (2026-09-08, `PLAN.md` §15)
+
+The design was written down before the first grammar line, as this file's own §4 order and
+`TODO.md` Stufe 5 require — and **it measured its way out of being built.**
+
+* **`kontexte.rs` knows only `entry`.** Seven contexts in the whole corpus, in five files
+  (`gabbro kontexte` over the 117 files it accepts). A context is a static entry point; a
+  thread is a runtime object. *The census §8.1 refutation stands, and is narrower than it
+  reads.*
+* **The obvious surface is a synonym.** `slots of Faden` emits `.forallSlots "t" 128 …`, and
+  `Body.lean` declares the constructor as `forallSlots (v) (count : Int) (body)` — **a
+  quantifier domain in this model IS an integer.** A `threads over T`, or a mark at the table,
+  has nowhere to put anything but `T`'s `count`: the same term, the same proposition,
+  byte-identical C. **That is this file's §1 in a new place**, and buying six register duties
+  with it would be buying them with the same silence.
+* **The surface that would mean something needs a semantics Gabbro has not got:** `threads` as
+  the LIVE slots, which takes a liveness predicate at the declaration and a second model
+  constructor. *A decision only the owner can take, and it was not invented.*
+
+**What was built is the checker half.** `D024` refuses the last form of `threads` that the
+checker admitted and that stated nothing — the binder as a plain number
+(`forall t in threads : t < N`, measured **0 errors, 0 hints** against `6c835eb`, and
+`pflichten --lean` `total 0`). It falls in **zero of the 686 `.gab` files** that were clean
+before. **The refusal in `PLAN.md` §9.1 stays, with a measured ground instead of an asserted
+one.**
 
 ---
 

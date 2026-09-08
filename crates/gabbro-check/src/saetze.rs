@@ -921,6 +921,47 @@ pub const D1D2: &[Satz] = &[
                      messung/proben/probe-stellungen.gab",
     },
     Satz {
+        name: "d.threadsohnemenge",
+        kennungen: &["D024"],
+        aussage: "A `threads` quantifier whose body USES its binder states nothing. \
+                  `threads` is the one domain of the nine that hangs on no declaration: \
+                  `slots of` hangs on `count N`, `descendants of` and `ancestors of` on the \
+                  table's `tree { … }`, `mappings of` on `walk … levels`, `queue` on the \
+                  one array field of a record -- and `threads` on nothing. So `forall t in \
+                  threads : P(t)` is true over the empty set, false over the naturals, and \
+                  nothing in the unit says which set it is. `D022` refuses every use of the \
+                  binder as a PLACE or as an INDEX; `D023` hints where the body never \
+                  mentions it; between the two sat the binder as a plain NUMBER, and that \
+                  is the shape this rule refuses.",
+        vorbehalt: "**It does not give `threads` a domain**, and the surface that would is \
+                    booked elsewhere as a language change \
+                    (messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md §2.3, `PLAN.md` §9.1 and \
+                    §15). It is silent where `D022` has already refused the same quantifier \
+                    -- two refusals for one fault is worse than one, the sentence `D022` \
+                    writes about `D017` and `D023` about `D022`. **And it leaves `D023`'s \
+                    vacuous form standing on purpose**: refusing that as well would make a \
+                    word of the grammar unwritable, which is a grammar change wearing a \
+                    rule's clothes. The word keeps one writable shape, and `D023` goes on \
+                    saying what that shape is worth.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-08 against the checker of `6c835eb`, i.e. WITH \
+                      `D022` and `D023` already in it: `spec fn alle_klein() -> bool = \
+                      forall t in threads : t < N;` gave **4 items, 0 errors, 0 hints**, \
+                      and `gabbro pflichten --lean` on it gave `total 0  goals 0  refused \
+                      0` -- a claim the checker admitted and the proof channel never even \
+                      saw. Poison: beispiele/gift/690. The counter-direction is the whole \
+                      tree: over all **686 `.gab` files the rule falls in ZERO** that were \
+                      clean before, because every `threads` quantifier the tree writes is \
+                      the vacuous one `D023` already hints at (seven sites, all in \
+                      messung/proben/probe-neun-domaenen.gab and probe-stellungen.gab). \
+                      **A rule with no corpus site and one measured hole is the shape of a \
+                      form nobody had probed** -- the 2026-09-07 census's own sentence \
+                      about Trap 80.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; \
+                     messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md §2.3; \
+                     programmlogik/PLAN.md §15; beispiele/gift/690",
+    },
+    Satz {
         name: "n.merkmalsform",
         kennungen: &["N054"],
         aussage: "A machine feature demand names ONE feature, and a feature is a bare name. \

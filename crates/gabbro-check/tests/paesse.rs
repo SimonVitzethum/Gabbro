@@ -2037,6 +2037,62 @@ fn ein_quantorbinder_gegen_seine_domaene() {
     faellt_nicht(&k("forall x in slots of n : r.plaetze[x] != 0"));
 }
 
+/// **`D024` -- the last writable form of `threads`, and it was green** (2026-09-08).
+///
+/// `D022` refuses the binder as a PLACE or an INDEX, `D023` hints where the body never
+/// mentions it -- and between the two sat the binder as a plain NUMBER: measured **0
+/// errors, 0 hints** against the checker of `6c835eb`, and `pflichten --lean` never saw it
+/// at all (`total 0`). It is the one of the three forms that makes a CLAIM, and its truth
+/// value is decided by a set no declaration of the unit gives.
+#[test]
+fn threads_behauptet_ueber_keine_menge() {
+    let spec = |pred: &str| {
+        format!(
+            "module p {{\nconst N : u32 = 8;\n\
+             table T count N {{\n\
+               slot {{ b : bool, }}\n\
+             }}\n\
+             spec fn q(k : ptr<normal, r> T) -> bool\n  = {pred};\n}}"
+        )
+    };
+    faellt_mit(&spec("forall t in threads : t < N"), "D024");
+    faellt_mit(&spec("exists t in threads : t + 1 == N"), "D024");
+
+    // **The counter-direction, and it is three-sided.**
+    //
+    // (1) Another domain in the same position is silent -- the rule is about `threads`,
+    //     not about arithmetic on a binder.
+    assert!(
+        !codes(&spec("forall t in slots of T : t < N"))
+            .iter()
+            .any(|(k, _)| *k == "D024"),
+        "`slots of` hangs on `count N` and states something: {:?}",
+        codes(&spec("forall t in slots of T : t < N"))
+    );
+    // (2) The vacuous body keeps its HINT and gains no refusal -- `D023`'s ground is that
+    //     refusing it would leave `threads` unwritable, and this rule leaves it standing.
+    let leer = codes(&spec("forall t in threads : k.slots[0].b"));
+    assert!(
+        leer.iter().any(|(k, s)| *k == "D023" && *s == Stufe::Hinweis),
+        "die leere Form bleibt ein Hinweis: {leer:?}"
+    );
+    assert!(
+        !leer.iter().any(|(k, _)| *k == "D024"),
+        "und sie ist KEINE Absage: {leer:?}"
+    );
+    // (3) Where `D022` has already spoken, `D024` is silent -- two refusals for one fault
+    //     is worse than one.
+    let indiziert = codes(&spec("forall t in threads : k.slots[t].b"));
+    assert!(
+        indiziert.iter().any(|(k, _)| *k == "D022"),
+        "der Indexgebrauch gehoert `D022`: {indiziert:?}"
+    );
+    assert!(
+        !indiziert.iter().any(|(k, _)| *k == "D024"),
+        "und `D024` schweigt daneben: {indiziert:?}"
+    );
+}
+
 /// **`D023` -- the body of a quantifier mentions its binder** (2026-09-08).
 ///
 /// A hint and not a refusal: the form is vacuous, not inconsistent, and after `D022` the
