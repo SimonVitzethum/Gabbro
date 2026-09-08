@@ -151,15 +151,44 @@ pub enum LeanReason {
     /// in the declaration); a buffer's length is a run-time quantity this model has no place
     /// for. Kept apart from `Builtin`, whose ground is the LAYOUT and not the length.
     BufferLength,
-    /// **A field of a record VALUE** (2026-09-08) -- `let c = f(x); c.len`. The model's
-    /// places are named by a record TYPE, not by a binding; a value bound in the body has no
-    /// place, and inventing one would name the same place for two different values.
+    /// **A field of a record value whose RECORD TYPE no declaration here gives**
+    /// (2026-09-08).
+    ///
+    /// `let c = f(x); c.len` **is carried** since 2026-09-08: a `let` that binds a record
+    /// opens a ghost carrier for its fields (`Ctx::record_value`), fresh per BINDING, so
+    /// two values of one type are two places and the declared shape still reaches the
+    /// proof through `shapeOf`. *Nothing stores into those places*, so the channel can
+    /// read a `u32` off `c.len` and never a value -- which is exactly what the checker
+    /// knows about a record a call handed back.
+    ///
+    /// What falls here is the binding whose record this channel cannot NAME: a foreign
+    /// callee's answer (`ForeignInfo` carries a shape, not a type), or a `let` of a
+    /// pointer type. Without the declaration there is no field list and no shape, and a
+    /// carrier named after a guess would be a place nothing declares.
     RecordValue,
     /// **An array inside a record held in a table SLOT** (2026-09-08) --
     /// `e.slots[i].receivers.buf[j]`. A record type is ONE object of this model (the module
     /// header says so), so every slot's copy of the record would be the SAME place -- and a
     /// body that writes two slots' queues would be modelled as writing one. Refused because
     /// serving it would be unsound, not because it is hard.
+    ///
+    /// **And the ground was MEASURED, not estimated** (2026-09-08, agent a). The one duty
+    /// in the corpus that stands behind it -- `probe-ipc-fastpath-durchgestochen`,
+    /// `call :: antwortpflicht_paarig` -- was run three times, each against a build of this
+    /// file:
+    ///
+    ///   1. as it stands: `refused (slot-record-array)`;
+    ///   2. with the nested place SERVED (any term at all): `refused (no-shape-for-field)`
+    ///      -- `enqueue(e.slots[core].senders, caller)` passes a record held in a slot BY
+    ///      VALUE, and this model has no record `Value`;
+    ///   3. with record-typed slot fields given a shape as well: carried.
+    ///
+    /// *A `Place` with two indices would therefore carry NOTHING on its own*; the same duty
+    /// falls one step later. What both steps want is the same thing -- a record that knows
+    /// which slot holds it -- and that is `Place.field carrier name` becoming
+    /// `Place.field owner carrier name`, which reverses the 2026-09-07 decision written at
+    /// `record_field`: the carrier is the RECORD's name so that a callee's promise about
+    /// `s.len` is readable by a caller writing `t.len`.
     SlotRecordArray,
     /// A call inside an expression: a `spec fn` or a pure function used as a value.
     CallInExpression,
@@ -319,9 +348,9 @@ impl LeanReason {
                  the clause"
             }
             LeanReason::RecordValue => {
-                "a field of a record VALUE bound in the body (`let c = f(x); c.len`) -- this \
-                 model's places are named by a record TYPE; pass the record through a `ptr` \
-                 parameter"
+                "a field of a record value whose record TYPE no declaration here gives -- a \
+                 `let` from a FOREIGN callee, or a pointer binding; annotate the `let` with \
+                 the record type, and its fields are carried"
             }
             LeanReason::SlotRecordArray => {
                 "an array inside a record held in a table SLOT (`e.slots[i].q.buf[j]`) -- one \
@@ -677,6 +706,25 @@ struct Ctx<'a> {
     carrier: HashMap<String, String>,
     /// Base name to the record or `format` it stands for.
     record_carrier: HashMap<String, String>,
+    /// **A `let`-bound record VALUE, and the ghost carrier its fields are named under**
+    /// (2026-09-08): `let c = fertig(k, 7); c.len` maps `c` to `("Completion", "c#r1")`,
+    /// and `c.len` is the place `.field "c#r1" "len"`.
+    ///
+    /// **Why a carrier of its OWN and not the record type's.** A place named
+    /// `.field "Completion" "len"` is the one object of that TYPE (`record_field`), and a
+    /// binding is not that object -- two bindings of one type would be one place, and a
+    /// body that reads both would read one. The ghost carrier is fresh per BINDING
+    /// (`record_binds` counts them), so a `let` that binds the name a second time gets a
+    /// second carrier and the two never meet. **`#` is not a Gabbro identifier character**,
+    /// so no declared carrier can collide with one of these.
+    ///
+    /// *What it does NOT claim*: nothing stores into these places, so the model can prove
+    /// no VALUE for `c.len` -- only the declared SHAPE, which `shapeOf` gives it like any
+    /// other record field and `wellFormed` then carries. An `ensures` about the field's
+    /// value stays the person's; a clause that only needs `c.len` to be a `u32` closes.
+    record_value: HashMap<String, (String, String)>,
+    /// How many record values this body has bound -- the number in the ghost carrier.
+    record_binds: usize,
     /// Parameter and `let` names -- these read from `locals`, not from the world -- with the
     /// shape each has, where it is known. **The shape is what a loop invariant carries
     /// across the pass** (`Body.lean`, `hasShape`).
@@ -875,6 +923,16 @@ fn record_field(base: &str, field: &str, c: &Ctx) -> Result<(String, Shape), Lea
     // **A local that is not a carrier is a record VALUE** (2026-09-08) -- `let c = f(x);
     // c.len`. Its own refusal: the carrier is not missing a declaration, it is not a place
     // at all, and naming one would make two different values the same place.
+    // **A `let`-bound record value is carried under its own ghost carrier** (2026-09-08).
+    // See `Ctx::record_value`: the binding, not the type, names the place.
+    if let Some((rec, ghost)) = c.record_value.get(base) {
+        let fields = c.unit.records.get(rec).ok_or(LeanReason::Carrier)?;
+        let (_, shape) = fields
+            .iter()
+            .find(|(n, _)| n == field)
+            .ok_or(LeanReason::Carrier)?;
+        return Ok((ghost.clone(), shape.ok_or(LeanReason::FieldShape)?));
+    }
     let rec = c
         .record_carrier
         .get(base)
@@ -1699,6 +1757,47 @@ fn nutzlast(n: &Nutzlast) -> String {
 /// **The shape a `let` gives its name** -- from the declared type where there is one, else
 /// from the initialiser, and only where the answer is certain. `None` costs a hypothesis
 /// (the loop invariant will not carry the name), never a false one.
+/// **A `let` that binds a record VALUE opens a ghost carrier for its fields** (2026-09-08).
+///
+/// The name is dropped from the map first, so a `let` that rebinds it with something that
+/// is NOT a record leaves no stale carrier behind, and one that rebinds it with another
+/// record gets a NEW carrier -- *the two values of one name are two places, which is the
+/// whole point.*
+fn note_record_binding(l: &LetStmt, c: &mut Ctx) {
+    let name = l.name.text.clone();
+    c.record_value.remove(&name);
+    let Some(rec) = record_of_init(l, c) else { return };
+    c.record_binds += 1;
+    let ghost = format!("{name}#r{}", c.record_binds);
+    c.record_value.insert(name, (rec, ghost));
+}
+
+/// The RECORD a `let` binds a value of -- from the annotation where there is one, else from
+/// the callee's declared result type. **A POINTER to a record is not one**: it is a place
+/// the record already has a carrier for, and giving it a ghost would make a caller's
+/// promise about `s.len` unreadable to it.
+fn record_of_init(l: &LetStmt, c: &Ctx) -> Option<String> {
+    if let Some(t) = &l.typ {
+        if matches!(t, TypExpr::Zeiger(_)) {
+            return None;
+        }
+        return points_at_record(t, &c.unit.records);
+    }
+    let ExprArt::Ruf(r) = &crate::ohne_klammern(&l.wert).art else {
+        return None;
+    };
+    match resolve_callee(r, c.unit).ok()? {
+        Callee::Routine(f) => {
+            let t = f.decl.ergebnis.as_ref()?;
+            if matches!(t, TypExpr::Zeiger(_)) {
+                return None;
+            }
+            points_at_record(t, &c.unit.records)
+        }
+        _ => None,
+    }
+}
+
 fn shape_of_init(l: &LetStmt, c: &Ctx) -> Option<Shape> {
     if let Some(t) = &l.typ {
         return shape_of(t, &c.unit.u, &c.module);
@@ -1740,7 +1839,11 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
                 return c.locals.iter().rev().find(|(n, _)| *n == o.basis.text).and_then(|(_, s)| *s);
             }
             if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
-                let rec = c.record_carrier.get(&o.basis.text)?;
+                let rec = c
+                    .record_value
+                    .get(&o.basis.text)
+                    .map(|(r, _)| r)
+                    .or_else(|| c.record_carrier.get(&o.basis.text))?;
                 return c.unit.records.get(rec)?.iter().find(|(n, _)| n == &f.text).and_then(|(_, s)| *s);
             }
             if let Some((tab, _)) = array_place(o, c) {
@@ -1944,6 +2047,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
                     let sh = shape_of_init(l, c);
                     c.push_local(&l.name.text, sh);
+                    note_record_binding(l, c);
                     return Ok(format!(
                         "{hoist}(.bindCall {} {n} [{ps}] [{args}] {pre})",
                         quoted(&l.name.text)
@@ -1953,6 +2057,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             let (hoist, w) = hoisted_expr(&l.wert, c)?;
             let sh = shape_of_init(l, c);
             c.push_local(&l.name.text, sh);
+            note_record_binding(l, c);
             Ok(format!("{hoist}(.bindName {} {})", quoted(&l.name.text), w))
         }
         StmtArt::Zuweisung(z) => {
@@ -2678,6 +2783,8 @@ fn ctx_for<'a>(unit: &'a Unit, f: &FnDecl, routine: &str, module: &str, site: Re
         unit,
         carrier,
         record_carrier,
+        record_value: HashMap::new(),
+        record_binds: 0,
         locals,
         ranges,
         device_carrier,
@@ -2716,6 +2823,8 @@ fn ctx_for_invariant<'a>(unit: &'a Unit, self_carrier: Option<String>, module: &
         unit,
         carrier,
         record_carrier: unit.statics_records.clone(),
+        record_value: HashMap::new(),
+        record_binds: 0,
         locals: Vec::new(),
         ranges: HashMap::new(),
         device_carrier: BTreeSet::new(),
@@ -3799,7 +3908,7 @@ fn openings(
     // the well-typed world gives it its shape without any index.
     for (carrier, field, sh) in record_reads {
         let place = format!("(.field {} {})", quoted(carrier), quoted(field));
-        let id = format!("{}_{field}", carrier.replace(['.', ':'], "_"));
+        let id = format!("{}_{field}", carrier.replace(['.', ':', '#'], "_"));
         match sh {
             Shape::Int => lines.push(format!("  obtain ⟨n_{id}, h_{id}⟩ := WF_int shapeOf {state}.world {place} hwf rfl")),
             Shape::IntIn(..) => lines.push(format!("  obtain ⟨n_{id}, h_{id}, lo_{id}, hi_{id}⟩ := WF_intIn shapeOf {state}.world {place} _ _ hwf rfl")),
@@ -4235,6 +4344,26 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         for (f, sh) in &unit.records[t] {
             if let Some(sh) = sh {
                 rdict.push((t.clone(), f.clone(), *sh));
+            }
+        }
+    }
+    // **The ghost carriers of `let`-bound record VALUES** (2026-09-08) -- see
+    // `Ctx::record_value`. A binding is not the one object of its type, so its fields are
+    // named under a carrier of their own; the SHAPE is still the declared one, and
+    // `wellFormed` is what carries it into a proof. **Nothing stores into these places**,
+    // so a proof can read a `u32` off `c.len` and never a VALUE -- which is the whole of
+    // what the checker knows about a record a call handed back.
+    //
+    // *They are read off the translated bodies (`routine_goals` ran above), not walked for
+    // a second time*: a second walk would be a second register over one thing, and the
+    // numbering of the carriers would have to agree with this one by hand.
+    for g in &goals {
+        for (carrier, field, sh) in &g.seen_records {
+            if unit.records.contains_key(carrier) {
+                continue;
+            }
+            if !rdict.iter().any(|(t, f, _)| t == carrier && f == field) {
+                rdict.push((carrier.clone(), field.clone(), *sh));
             }
         }
     }
