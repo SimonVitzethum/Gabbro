@@ -1282,6 +1282,7 @@ fn binderverwendung_pruefen(
         notiz(Absage::fehler("D022", span, satz).mit_notiz(hinweis))
     };
 
+    let fehler_vorher = absagen.fehler_zahl();
     for o in orte {
         // (1) The binder AS A PLACE: `v.field` and `v[i]`. A number carries neither.
         if &o.basis.text == v {
@@ -1417,6 +1418,66 @@ fn binderverwendung_pruefen(
             }
             praefix.suffixe.push(suffix.clone());
         }
+    }
+
+    // **`D024` -- the LAST writable form of `threads`, and it was green.**
+    //
+    // `D022` refuses every use of a `threads` binder as a PLACE (`t.f`, `t[i]`) and as an
+    // INDEX (`T.slots[t]`); `D023` hints where the body never mentions it. Between the two
+    // sat one shape that nothing read, and it was measured green on 2026-09-08 against the
+    // checker of `6c835eb`:
+    //
+    // ```text
+    // spec fn alle_klein() -> bool = forall t in threads : t < N;
+    //     4 items, 0 errors, 0 hints        -- and `pflichten --lean`: total 0
+    // ```
+    //
+    // **The binder in an arithmetic or comparison position** -- a number compared to a
+    // number, which contradicts nothing, so no use-rule of `D022` can reach it. And it is
+    // the one form of the three that makes a CLAIM: `t < N` is true over the empty set,
+    // false over the naturals, and *nothing in Gabbro says which set `threads` is*. A
+    // statement whose truth value is decided by an undeclared set is not a weak statement,
+    // it is an unstated one.
+    //
+    // > **Why this is a refusal where `D023` is a hint.** `D023`'s ground is that the
+    // > vacuous form is *true and useless*; refusing it would leave `threads` unwritable,
+    // > and *a refusal that makes a word of the grammar unwritable is a grammar change
+    // > wearing a rule's clothes*. This form is neither true nor false, and refusing it
+    // > leaves the vacuous form standing -- the word keeps a writable shape, and `D023`
+    // > goes on saying what that shape is worth.
+    //
+    // **What it does NOT do, and this is the whole honest half.** It does not give
+    // `threads` a domain. `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 and
+    // `PLAN.md` §9.1 book that as a language change, and §15 measures why the obvious
+    // surface (`threads over T`, a mark at the table) would be a SYNONYM of `slots of T`
+    // -- byte-identical C, the same proposition, and therefore the very decoration this
+    // rule is closing. *The surface that would mean something needs a semantics for thread
+    // liveness that Gabbro has never had, and that is the owner's decision.*
+    if art == Binderart::Zahl && absagen.fehler_zahl() == fehler_vorher {
+        absagen.schiebe(notiz(
+            Absage::fehler(
+                "D024",
+                q.variable.span,
+                "`threads` names no set, so a statement about its elements states nothing"
+                    .to_string(),
+            )
+            // **The note says what the clause IS, and that is the whole rule.** It is not a
+            // weak promise and not a false one: it *is a statement about* the size of a set
+            // nothing declares, so it is an unstated one. *`pruefe-gruende.py` reads this
+            // text and asks whether a refusal grounds itself in the PROMISE or in the
+            // representation -- and this one has no representation to speak of.*
+            .mit_notiz(format!(
+                "`{v}` is compared and computed with, so the clause is a statement about \
+                 how many threads there are -- a number no declaration of this unit gives, \
+                 and the promise is true over the empty set and false over the naturals",
+            ))
+            .mit_notiz(
+                "every other domain hangs on a declaration -- `slots of` on `count N`, \
+                 `descendants of` on `tree { … }`, `mappings of` on `walk … levels`, \
+                 `queue` on the one array field of a record. Write `slots of <the thread \
+                 table>`",
+            ),
+        ));
     }
 }
 

@@ -76,6 +76,33 @@
 -- und keine gepruefte Aussage -- und `forall t in slots of Faden : …` sagt dem Pruefer
 -- exakt dasselbe, nur ohne die Behauptung.* **Seit `D022` ist die erste Form nicht mehr
 -- schreibbar und die zweite steht unten.**
+--
+-- NACHGETRAGEN 2026-09-08 (zweites Mal am selben Tag): DER BAUAUFTRAG IST GEMESSEN
+-- ---------------------------------------------------------------------------------
+-- Der Kopf nennt oben die fehlende Haelfte: *„Ein `threads over Faden` -- oder eine Marke an
+-- der Tabelle, die sagt ‚das hier ist die Fadenmenge'".* **Genau diese Haelfte ist jetzt
+-- entworfen und nachgemessen, und sie waere ein Synonym** (`PLAN.md` §15):
+--
+--     $ gabbro pflichten --lean beispiele/57-faedenhalt.gab | grep forallSlots
+--         … (.forallSlots "t" 128 (.bin .ne (.place "Faden" (.name "t") "zustand") …))
+--
+-- `slots of Faden` wird zu `.forallSlots "t" 128 …`, und die `128` ist `count NFAEDEN`.
+-- `Body.lean` schreibt den Konstruktor als `forallSlots (v) (count : Int) (body)` -- **eine
+-- Quantorendomaene ist in diesem Modell eine ganze Zahl.** Ein `threads over Faden` haette
+-- nichts anderes hineinzulegen als dieselbe `128`: derselbe Term, dieselbe Aussage, dasselbe
+-- C. *Sechs Registerpflichten mit einem Wort zu kaufen, das keinen Term aendert, kauft sie
+-- mit demselben Schweigen, das die Domaene schon hatte.*
+--
+-- **Was diese Datei wirklich sagen will, ist eine ANDERE Aussage.** `forall t in threads :
+-- Faden.slots[t].zustand != LAEUFT` soll ueber die Faeden laufen, die es GIBT -- nicht ueber
+-- 128 Plaetze, von denen die meisten frei sind. Dafuer braucht es eine Deklaration, welche
+-- Plaetze leben, und die hat Gabbro nicht. **Das ist eine Entscheidung des Eigentuemers und
+-- keine, die ein Lauf erfindet** -- die Absage bleibt stehen, jetzt mit gemessenem Grund.
+--
+-- *Und `gabbro kontexte` ueber dem ganzen Korpus zaehlt SIEBEN Kontexte in fuenf Dateien.*
+-- Ein Kontext ist ein `entry`, also ein statischer Eintrittspunkt; ein Faden ist ein Objekt
+-- zur Laufzeit. **Die Zeile ganz oben -- „das ist heute die ganze Auskunft der Sprache ueber
+-- ‚wer laeuft hier'" -- ist damit nicht mehr Eindruck, sondern Zahl.**
 
 module beispiel::faedenhalt {
 

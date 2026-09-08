@@ -1,0 +1,44 @@
+-- erwartet: D024
+-- **The last writable form of `threads`, and it was green.**
+--
+-- `D022` refuses every use of a `threads` binder as a PLACE (`t.f`, `t[i]`) or as an INDEX
+-- (`T.slots[t]`); `D023` hints where the body never mentions it. Between the two sat one
+-- shape that nothing read -- the binder as a plain NUMBER -- and it was measured green
+-- against the checker of `6c835eb` on 2026-09-08:
+--
+--     spec fn alle_klein() -> bool = forall t in threads : t < N;
+--         4 items, 0 errors, 0 hints        -- and `pflichten --lean`: total 0
+--
+-- **And it is the one of the three forms that makes a CLAIM.** `t < N` is true over the
+-- empty set, false over the naturals, and *nothing in Gabbro says which set `threads` is*.
+-- A statement whose truth value is decided by an undeclared set is not a weak statement,
+-- it is an unstated one.
+--
+-- > **Why a refusal here where `D023` is a hint.** `D023`'s ground is that the vacuous form
+-- > is true and useless, and that refusing it would leave `threads` unwritable -- *a
+-- > refusal that makes a word of the grammar unwritable is a grammar change wearing a
+-- > rule's clothes.* This form is neither true nor false, and refusing it leaves the
+-- > vacuous form standing: the word keeps a writable shape, and `D023` goes on saying what
+-- > that shape is worth.
+--
+-- **What `D024` does NOT do.** It does not give `threads` a domain.
+-- `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 and `PLAN.md` §9.1 book that as a
+-- language change, and `PLAN.md` §15 measures why the obvious surface -- `threads over T`,
+-- or a mark at the table -- would be a SYNONYM of `slots of T`: the same index set, the
+-- same proposition, byte-identical C, and therefore the very decoration this rule closes.
+module gift::threads_ohne_menge {
+
+const N : u32 = 8;
+
+table Faden count N {
+    slot {
+        zustand : u8,
+    }
+}
+
+-- The binder is mentioned, so `D023` is silent; it is used as a number and never as a
+-- place, so no arm of `D022` can reach it. `D024` is what is left.
+spec fn alle_klein() -> bool
+    = forall t in threads : t < N;
+
+}

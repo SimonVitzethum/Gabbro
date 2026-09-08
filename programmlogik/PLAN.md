@@ -1010,3 +1010,216 @@ the file.*
 
 The three recursion probes of §12.3 are **0 errors, 0 `sorry`** in the merged tree, so the
 composition survives the merge with the emitter changes of runs 26–28 in it.
+
+---
+
+## 15. Run 29 — `threads`: the surface was designed, measured, and NOT built (agent f, 2026-09-08)
+
+`messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 books `threads` as a missing grammar
+line, and §9.1 above states the ground: *"every other domain hangs on a declaration; `threads`
+hangs on nothing, so there is no index domain to cut. **A language change, not a model
+change.**"* It is the largest single class in the register. This run designed the language
+change, measured what it would buy, and **found that the obvious surface is a synonym** — so
+it was not built. What was built instead is the objection that closes the last form of
+`threads` which stated nothing.
+
+*Local runs; `ki-pc-fisch-101` unreachable through the jump host all day, and `free -g`
+stands beside every number: 31 GB total, 13–17 GB available, 20 cores.*
+
+### 15.1 What `kontexte.rs` actually knows — measured first, because the design hangs on it
+
+The 2026-09-07 census §8.1 found a premise claiming Gabbro *"does not say who runs
+concurrently"* refuted by `kontexte.rs`, which has printed a context count since 2026-08-19.
+**If the execution contexts already fixed the thread set, the language change would be far
+smaller than §9.1 assumed.** So it was measured before anything was designed:
+
+```bash
+for f in $(git ls-files 'beispiele/*.gab' 'messung/proben/*.gab' | grep -v gift); do
+  ./target/debug/gabbro kontexte "$f"; done | grep -oE 'contexts: [0-9]+' | sort | uniq -c
+#   112  contexts: 0
+#     3  contexts: 1
+#     2  contexts: 2      -- SEVEN contexts in the whole corpus, in FIVE files
+```
+
+The five are `07-eintritt-und-boot`, `11-grammatikbefunde`, `57-faedenhalt`,
+`59-eintritt-nimmt-maskierte-sperre`, `60-annahme-mit-maschine`. And `Kontext`
+(`crates/gabbro-check/src/kontexte.rs`) carries exactly six fields: `name`, `wurzel` (the
+`dispatch` root), `modul`, `nie_verschachtelt`, `maskiert_verschachtelt` and `unterbricht`
+(`via idt`).
+
+> **A context is an `entry` — a static entry point — and a thread is a runtime object.**
+> `erhebe` walks the items and pushes one `Kontext` per `ItemArt::Entry`; there is no other
+> source. So the census's refutation stands and is *narrower than it reads*: Gabbro says which
+> **entry contexts** exist, and says nothing about how many threads run. **§9.1's ground
+> survives the measurement it was most likely to fail.**
+
+The nearest thing to a declared concurrency cardinality is `accumulates … per cpu N` (one cell
+per core, `ast.rs::AccDecl::pro_kern`, five sites in `05-nebenlaeufigkeit` and
+`23-akkumulatoren`). **A core is not a thread** — `57-faedenhalt` declares 128 threads *and*
+per-cpu stacks in one file — and no `accumulates` in the corpus stands beside a thread table.
+
+### 15.2 The class is six duties and two clauses — the register counted the wrong noun
+
+```bash
+for f in $(git ls-files 'beispiele/*.gab' 'messung/proben/*.gab' | grep -v gift); do
+  ./target/debug/gabbro pflichten --lean "$f"; done | grep -cE 'refused \(quantified-threads\)'
+#   6
+```
+
+Six duties, and **four of them are the inherited refusals of §9.2**: `probe-stellungen`'s
+`Knoten` carries one untranslatable invariant (`s8_threads`), and that refuses `s1_slots`,
+`s2_chain`, `s3_descendants` and `s4_ancestors` along with it — each prints its own
+`(inherited: this invariant HAS a term; …)` line. **The class is two clauses**:
+`probe-stellungen::s8_threads` and `probe-neun-domaenen::d8_threads`. *A refusal class counted
+in duties is four fifths one clause, and the largest class in the register was the smallest
+change hiding behind an inheritance rule.*
+
+### 15.3 The design, and why the obvious surface is a decoration
+
+Every other domain hands the model a **number**. That is visible in the emitted term, not
+inferred:
+
+```bash
+./target/debug/gabbro pflichten --lean beispiele/57-faedenhalt.gab | grep forallSlots
+#   … (.forallSlots "t" 128 (.bin .ne (.place "Faden" (.name "t") "zustand") …))
+```
+
+`slots of Faden` becomes `.forallSlots "t" 128 …`, and `128` is the table's `count NFAEDEN`.
+`Body.lean` declares the constructor as `forallSlots (v : String) (count : Int) (body : Expr)`
+— **the domain of a quantifier in this model IS an integer.**
+
+| | surface | what it emits | cost to a program that does not write it | verdict |
+|---|---|---|---|---|
+| **A** | `forall t in threads over Faden : …` | `.forallSlots "t" 128 …` | nothing (`over` exists) | **synonym** |
+| **B** | a mark at the table (`table Faden … is threads`), bare `threads` resolves to it | `.forallSlots "t" 128 …` | nothing (`threads` is already a contextual keyword, `kw.rs`) | **synonym** |
+| **C** | delete `threads` from the grammar | — | breaks four probe files | a terminal fewer, no meaning gained |
+| **D** | `threads` = the LIVE slots: a liveness predicate at the declaration | a **second** constructor beside `forallSlots`, carrying `live` | nothing | **means something — and Gabbro has no liveness** |
+
+**A and B pass the `passes` test of §10.2 and fail the completeness predicate.** They cost a
+program nothing, they need no new terminal and no grammar-table row — and they make
+`forall t in threads : P` the same index set, the same proposition and byte-identical C as
+`forall t in slots of Faden : P`. That is a **synonym**, and a synonym is exactly the *"form
+that means nothing"* of `GRAMMATIK-VOLLSTAENDIG` §1. *Buying six duties with a word that
+changes no term is buying them with the same silence the domain already had.*
+
+**D is the surface that would mean something**, and it is the one this run declines to invent.
+`forall t in threads : Faden.slots[t].zustand != LAEUFT` should quantify over the threads that
+EXIST, not over 128 slots most of which are free — that is what the sentence in
+`57-faedenhalt` is trying to say, and it is a strictly different proposition. It needs a
+declaration of which slots are live, a model constructor that carries it, and a decision about
+what liveness means while a slot is being created or torn down. **Gabbro has never made that
+decision, and a semantics nobody asked for is not a result.** The refusal stays, with a
+measured ground.
+
+### 15.4 What WAS built: `D024`, the last form of `threads` that stated nothing
+
+Between `D022` (the binder used as a place or an index) and `D023` (the body never mentions
+the binder) sat one shape nothing read, and it was **green against the checker of `6c835eb`**:
+
+```bash
+printf 'module p::tp {\nconst N : u32 = 8;\ntable Faden count N {\n slot {\n  zustand : u8,\n }\n}\nspec fn alle_klein() -> bool\n = forall t in threads : t < N;\n}\n' > /tmp/tp.gab
+./target/debug/gabbro pruefe           /tmp/tp.gab   # 4 items, 0 errors, 0 hints
+./target/debug/gabbro pflichten --lean /tmp/tp.gab   # total 0  goals 0  refused 0
+```
+
+**The binder as a plain NUMBER** — compared and computed with, never used as a place, so no
+arm of `D022` can reach it, and the body mentions it, so `D023` is silent. And it is the one
+of the three forms that makes a *claim*: `t < N` is true over the empty set, false over the
+naturals, and nothing in Gabbro says which set `threads` is. *A statement whose truth value is
+decided by an undeclared set is not a weak statement, it is an unstated one.* The proof
+channel never even saw it: `total 0`.
+
+`D024` refuses it, and **leaves `D023`'s vacuous form standing on purpose**. `D023`'s written
+ground is that *"a refusal that makes a word of the grammar unwritable is a grammar change
+wearing a rule's clothes"* — so the word keeps one writable shape, and `D023` goes on saying
+what that shape is worth. Where `D022` has already spoken about the same quantifier, `D024` is
+silent: two refusals for one fault is worse than one.
+
+```bash
+./instrumente/pruefe-kennungen.py       # 283 vergeben, D: 24 -- ALL PASS
+./instrumente/pruefe-grammatiktafel.py  # GRUEN: 0 von 218 Terminalen UNGEDECKT
+```
+
+**The counter-direction is the whole tree.** Over all **686 `.gab` files** the rule falls in
+**zero** that were clean before, because every `threads` quantifier the tree writes is the
+vacuous one `D023` already hints at:
+
+```bash
+git ls-files '*.gab' | while read -r f; do
+  ./target/debug/gabbro pruefe "$f" 2>&1 | grep -q D024 && echo "$f"; done   # empty
+```
+
+*A rule with one measured hole and no corpus site is the shape of a form nobody had probed* —
+the 2026-09-07 census's own sentence about Trap 80, and the reason `GRAMMATIK-VOLLSTAENDIG`
+derives its list from `parse.rs` and not from the corpus. The poison is
+`beispiele/gift/690-threads-behauptet-ueber-keine-menge.gab`.
+
+### 15.5 A refusal that pointed at the bad exit
+
+`lean.rs`'s `quantified-threads` text read *"…write `slots of <the thread table>`, **or the
+language needs a `threads over T`**"* — and §15.3 measures `threads over T` to be a
+decoration. **A refusal must not send a reader to a synonym.** It now names the synonym as one
+and says what the surface that carries more would have to do:
+
+> `threads` — no declaration names the thread set (every other domain hangs on one); write
+> `slots of <the thread table>`. A `threads over T` would be a SYNONYM of that and state
+> nothing more — the surface that would carry more has to say which slots are LIVE, and
+> Gabbro has no such declaration (`PLAN.md` §15).
+
+*The same class as §11.1, one register further on:* a text that names a way out nobody had
+measured is a second register over the design, and only one of the two was read.
+
+### 15.6 Measured — and the register did not move, which is the honest result
+
+Baseline and after are the same commands on the same tree, `ki-pc-fisch-101` unreachable,
+`free -g` beside each: 31 GB total, 13–17 GB available, 20 cores.
+
+| | before (`6c835eb`) | after |
+|---|---|---|
+| modules | 192 | **192** |
+| Lean errors | 0 | **0** |
+| `sorry` | 25 | **25** |
+| `cargo test --no-fail-fast` | 426 / 0 | **427 / 0** (one new test) |
+| refusal codes | 282 | **283** |
+| `pruefe-deckung.py` | exit 0 | **exit 0** |
+| `pruefe-sondendeckung.py` | exit 0 | **exit 0** |
+| `pruefe-grammatiktafel.py` | 0 of 218 uncovered | **0 of 218** |
+
+The Lean register, per tag, over the 128-file corpus — **identical in both columns**:
+
+| tag | before | after |
+|---|---|---|
+| duties (total / goals / refused) | 113 / 65 / 48 | **113 / 65 / 48** |
+| assumed | 39 | **39** |
+| `quantified-threads` | 6 | **6** |
+| `quantified-mappings` | 1 | **1** |
+| `layout-buffer-length` | 1 | **1** |
+| `slot-record-array` | 1 | **1** |
+
+```bash
+cd programmlogik && lake build              # Build completed successfully
+#print axioms Gabbro.Coverage.the_sentence       -- [propext, Classical.choice, Quot.sound]
+#print axioms Gabbro.Coverage.carried_discharges -- [propext, Classical.choice, Quot.sound]
+```
+
+**No `sorryAx` on either**, and `carried_discharges` builds with no `sorry`.
+
+> **A run whose register does not move is a result and not a wasted day**, and the way to tell
+> the two apart is the differential: §15.3 measured what the surface would have bought (six
+> duties, at the price of a form that means nothing), and §15.4 measured what was bought
+> instead (one green hole, closed). *A refusal with a measured ground is a result; a surface
+> nobody asked for is not.*
+
+### 15.7 What this run did NOT measure
+
+* **Whether `D024`'s class is closed.** It closes the shape `GRAMMATIK-VOLLSTAENDIG` §1.1
+  names for `threads`. The other three forms of §1 — a fractional bound on an integer type
+  (§1.2), a `divergent … -> never` that returns (§1.3), an obligation that vanishes on a
+  rename (§1.4) — are untouched, and §1.4 is still the sole measured instance of point 3.
+* **Whether liveness is the right semantics for `threads`.** §15.3 D says it would mean
+  something; it does not say it is what the owner wants, and no probe was written for it.
+* **`traverse … over threads`.** The emitter refuses it by name (`C001`,
+  `messung/proben/probe-vier-zellen.gab`), and this run did not touch that path — `D024` is a
+  rule about quantifiers, and a traversal is not one.
+* **The five other `Reason` tags.** Only `quantified-threads` was measured clause by clause;
+  the inheritance finding of §15.2 may hold for others and was not checked.

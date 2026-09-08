@@ -333,10 +333,19 @@ impl LeanReason {
                  `slots of <table>`, `elems of <array>`, `queue <record>` or \
                  `chain(a, b) in <slot>`, which do"
             }
+            // **The way out named here was measured on 2026-09-08 and is a decoration.**
+            // A `threads over T` -- or any mark that hangs `threads` on a table -- makes
+            // `forall t in threads : P` the SAME index set, the SAME proposition and the
+            // same C as `forall t in slots of T : P`. A synonym is exactly the "form that
+            // means nothing" of `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1, so a
+            // refusal must not send a reader to it. `PLAN.md` §15 has the differential and
+            // the alternative that would NOT be one.
             LeanReason::QuantifiedThreads => {
                 "`threads` -- no declaration names the thread set (every other domain hangs \
-                 on one); write `slots of <the thread table>`, or the language needs a \
-                 `threads over T`"
+                 on one); write `slots of <the thread table>`. A `threads over T` would be \
+                 a SYNONYM of that and state nothing more -- the surface that would carry \
+                 more has to say which slots are LIVE, and Gabbro has no such declaration \
+                 (`PLAN.md` §15)"
             }
             LeanReason::QuantifiedMappings => {
                 "`mappings of <walk>` -- the mappings of a page-table walk are hardware; \
