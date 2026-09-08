@@ -92,7 +92,10 @@ impl fn summe_1071(k : ptr<normal, r> Kopfworte) -> u32
         -- Schleife.** `s` bleibt im Bereich seines Typs -- das ist genau `ensures result <=
         -- 4294967295`, eine Zeile weiter oben, und ohne die Invariante haette der Beweiser
         -- ueber der Schleife gar nichts.
-        invariant s <= 4294967295
+        -- Each word is a `u16`, so the sum after `passes` passes is at most
+        -- `65535 * passes` -- and with ten words that is far below the type's bound,
+        -- which is what `ensures result <= 4294967295` needs.
+        invariant s <= 65535 * passes
     {
         s += k.wort[i];
     }

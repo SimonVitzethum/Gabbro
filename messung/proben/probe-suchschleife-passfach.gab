@@ -131,7 +131,9 @@ impl fn kostenprobe(a : ptr<normal, r> Tafel) -> u32
     let mut summe : u32 in 0 .. 65535 = 0;
     traverse s over slots of a by unvisited
         touches reads a.slots
-        invariant summe <= 65535
+        -- `summe <= 65535` is true and unprovable across one pass; `summe <= passes`
+        -- survives it, and there are at most NSLOTS passes.
+        invariant summe <= passes
     {
         if a.slots[s].belegt {
             summe += 1;

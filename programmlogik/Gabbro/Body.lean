@@ -1642,6 +1642,95 @@ theorem looprule_of_body_in (ρ : Env) (id : String) (wf : State → Prop) (inv 
       simp at hit; subst hit; exact ⟨hwf, hinv⟩
     · exact absurd hit (by simp)
 
+/-! ### 5.1a Counting the passes -- `#pass` (agent b, 2026-09-08)
+
+    **A counter incremented in a loop cannot be bounded by an invariant that does not know
+    how often the loop runs.** `n ≤ 16` does not survive `n += 1`, and it never will: the
+    rule above quantifies over EVERY state that satisfies the invariant, so a pass starting
+    at `n = 16` has to be handled and cannot be. What the person means is `n ≤ <passes so
+    far>`, and for that sentence to be sayable two things must be true of the model:
+
+    * the number of passes already done is a value the invariant can name -- the ghost local
+      `#pass`, bound to `0` right before the loop and increased by one by every pass (the
+      emitter writes both; the increment is the pass's own first statement, so a `next` or a
+      `leave` in the middle does not skip it);
+    * the number of passes is BOUNDED. `RunsLoopIn` says every index lies in the domain's
+      range and says nothing about how many passes there are, and no invariant can bound a
+      counter without that. `RunsLoopN` adds the bound: at most `np` passes, where `np` is
+      the domain's `count`. **This is a stronger assumption about the environment than
+      `RunsLoopIn`, and it is exactly the sentence `by unvisited` makes** -- each slot of the
+      domain is visited at most once, so a traversal of a table of `count N` runs at most `N`
+      passes. It is assumed here, as the running of the body is assumed (`Runs`,
+      `RunsLoop`, `RunsLoopIn`), and not proved: which indices a domain yields is the
+      checker's business (`K008`/`K009`), not this file's.
+
+    The pass may then assume `#pass = i` with `0 ≤ i < np`, and owes `#pass = i + 1` at its
+    end -- one `simp` over the increment the emitter wrote, never a person's line. -/
+
+/-- **`ρ id` runs the loop `id` over indices of a range, in at most `np` passes.** -/
+def RunsLoopN (ρ : Env) (id : String) (body : List Stmt) (v : String) (lo hi np : Int) : Prop :=
+  ∀ t, ∃ ks t', (∀ k ∈ ks, lo ≤ k ∧ k < hi) ∧ (ks.length : Int) ≤ np ∧
+    iterate ρ body v ks t = some t' ∧ (ρ id t).1 = t'
+
+/-- **The loop rule of a loop that counts its passes in the ghost local `pv`.** The same
+    sentence as `LoopRule`, from a state in which the counter stands at zero -- which is
+    where the emitter puts the loop, one `bindName` before it. -/
+def LoopRuleP (ρ : Env) (id : String) (wf : State → Prop) (inv : Expr) (pv : String) : Prop :=
+  ∀ t, wf t → eval t inv = some (.bool true) → t.local' pv = .int 0 →
+    wf (ρ id t).1 ∧ eval (ρ id t).1 inv = some (.bool true)
+
+/-- The induction over the passes, with the counter carried along. -/
+theorem looprule_passes_aux (ρ : Env) (wf : State → Prop) (inv : Expr) (body : List Stmt)
+    (v pv : String) (lo hi np : Int)
+    (hb : ∀ t (k i : Int), lo ≤ k → k < hi → 0 ≤ i → i < np →
+      t.local' pv = .int i → wf t → eval t inv = some (.bool true) →
+      ∃ t', finalState (exec ρ body { t with local' := bindLocal t.local' v (.int k) }) = some t'
+        ∧ wf t' ∧ eval t' inv = some (.bool true) ∧ t'.local' pv = .int (i + 1)) :
+    ∀ (ks : List Int) (i : Int) (t u : State), (∀ k ∈ ks, lo ≤ k ∧ k < hi) →
+      0 ≤ i → i + (ks.length : Int) ≤ np → t.local' pv = .int i →
+      wf t → eval t inv = some (.bool true) → iterate ρ body v ks t = some u →
+      wf u ∧ eval u inv = some (.bool true) := by
+  intro ks
+  induction ks with
+  | nil =>
+    intro i t u _ _ _ _ hw ht hit
+    simp [iterate] at hit; subst hit; exact ⟨hw, ht⟩
+  | cons k ks ih =>
+    intro i t u hks h0 hlen hpv hw ht hit
+    have hk : lo ≤ k ∧ k < hi := hks k (by simp)
+    have hks' : ∀ k' ∈ ks, lo ≤ k' ∧ k' < hi := fun k' hk' => hks k' (by simp [hk'])
+    simp only [List.length_cons] at hlen
+    have hlt : i < np := by omega
+    have hlen' : i + 1 + (ks.length : Int) ≤ np := by omega
+    obtain ⟨u', hu', hwf, hinv, hpv'⟩ := hb t k i hk.1 hk.2 h0 hlt hpv hw ht
+    simp only [iterate] at hit
+    split at hit
+    · rename_i w hw'
+      rw [hw'] at hu'; simp [finalState] at hu'; subst hu'
+      exact ih (i + 1) w u hks' (by omega) hlen' hpv' hwf hinv hit
+    · rename_i w hw'
+      rw [hw'] at hu'; simp [finalState] at hu'; subst hu'
+      exact ih (i + 1) w u hks' (by omega) hlen' hpv' hwf hinv hit
+    · rename_i w hw'
+      rw [hw'] at hu'; simp [finalState] at hu'; subst hu'
+      simp at hit; subst hit; exact ⟨hwf, hinv⟩
+    · exact absurd hit (by simp)
+
+/-- **The loop rule from a pass that may assume its index is in range AND that it is the
+    `i`-th of at most `np` passes.** -/
+theorem looprule_of_body_p (ρ : Env) (id : String) (wf : State → Prop) (inv : Expr)
+    (body : List Stmt) (v pv : String) (lo hi np : Int) (hr : RunsLoopN ρ id body v lo hi np)
+    (hb : ∀ t (k i : Int), lo ≤ k → k < hi → 0 ≤ i → i < np →
+      t.local' pv = .int i → wf t → eval t inv = some (.bool true) →
+      ∃ t', finalState (exec ρ body { t with local' := bindLocal t.local' v (.int k) }) = some t'
+        ∧ wf t' ∧ eval t' inv = some (.bool true) ∧ t'.local' pv = .int (i + 1)) :
+    LoopRuleP ρ id wf inv pv := by
+  intro t hw ht h0
+  obtain ⟨ks, t', hks, hlen, hit, heq⟩ := hr t
+  rw [heq]
+  exact looprule_passes_aux ρ wf inv body v pv lo hi np hb ks 0 t t' hks (by omega)
+    (by omega) h0 hw ht hit
+
 /-! ## 5. What holds over EVERY body
 
     These theorems belong to the model, not to a unit -- the emitter may use them without
@@ -2242,28 +2331,33 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
       if already then continue
       let decls ← (← getMainGoal).withContext do
         let lctx ← getLCtx
-        let mut out : Array (LocalDecl × Bool) := #[]
+        let mut out : Array (LocalDecl × Nat) := #[]
         for d in lctx do
           if d.isImplementationDetail then continue
           let ty ← instantiateMVars d.type
           if ty.isAppOfArity ``Gabbro.Body.Contract 4 then
             let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, false)
+            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 1)
           else if ty.isAppOfArity ``Gabbro.Body.LoopRule 4 then
             let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, true)
+            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 2)
+          -- **the rule of a loop that counts its passes** (agent b, 2026-09-08): a third
+          -- premise, that the counter stands at zero -- the `bindName` right before the loop
+          else if ty.isAppOfArity ``Gabbro.Body.LoopRuleP 5 then
+            let a := ty.getAppArgs
+            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 3)
           -- the bounded self-contract: two holes as well -- the precondition and `Below`
           else if ty.isAppOfArity ``Gabbro.Body.ContractBelow 6 then
             let a := ty.getAppArgs
-            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, true)
+            if (← isDefEq a[0]! ρ) && (← isDefEq a[1]! f) then out := out.push (d, 2)
           -- the bounded contract of a cycle member: the member is a literal, its name first
           else if ty.isAppOfArity ``Gabbro.Body.ContractBelowM 4 then
             let a := ty.getAppArgs
             let m := a[1]!
             if m.isAppOfArity ``Gabbro.Body.Member.mk 5 then
-              if (← isDefEq a[0]! ρ) && (← isDefEq m.getAppArgs[0]! f) then out := out.push (d, true)
+              if (← isDefEq a[0]! ρ) && (← isDefEq m.getAppArgs[0]! f) then out := out.push (d, 2)
         pure out
-      for (d, isLoop) in decls do
+      for (d, nholes) in decls do
         -- one instance that cannot be built is skipped, not the whole composition
         let saved ← saveState
         try
@@ -2272,7 +2366,9 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
           let hn := mkIdent (← mkFreshUserName `hc)
           let before ← getGoals
           let lctxBefore ← (← getMainGoal).withContext getLCtx
-          if isLoop then
+          if nholes == 3 then
+            evalTactic (← `(tactic| have $hn := $c $tt ?_ ?_ ?_))
+          else if nholes == 2 then
             evalTactic (← `(tactic| have $hn := $c $tt ?_ ?_))
           else
             evalTactic (← `(tactic| have $hn := $c $tt ?_))
@@ -2301,7 +2397,7 @@ elab "gabbro_calls" Γ:ident "[" ts:Lean.Parser.Tactic.simpLemma,* "]" : tactic 
             rest := rest ++ (← getGoals)
           setGoals ([main] ++ rest ++ (after.filter (fun m => m != main && before.contains m)))
           -- the instance, simplified into rewrites
-          evalTactic (← `(tactic| try simp only [$ts,*, Gabbro.Body.Contract, Gabbro.Body.LoopRule, Gabbro.Body.ContractBelow, Gabbro.Body.ContractBelowM] at $hn:ident))
+          evalTactic (← `(tactic| try simp only [$ts,*, Gabbro.Body.Contract, Gabbro.Body.LoopRule, Gabbro.Body.LoopRuleP, Gabbro.Body.ContractBelow, Gabbro.Body.ContractBelowM] at $hn:ident))
           evalTactic (← `(tactic| try simp [$ts,*, ↓Gabbro.Body.eval_and_true_iff, ↓Gabbro.Body.eval_hasShape_true_iff, Gabbro.Body.orBool_true_iff,
             Gabbro.Body.eval, Gabbro.Body.binop, Gabbro.Body.unop, Gabbro.Body.bindLocal, Gabbro.Body.bindAll] at $hn:ident))
           -- and opened: the call's answer, the invariants, every clause as its own fact
@@ -2754,6 +2850,88 @@ macro "gabbro_pipeline" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
              gabbro_try 100 (all_goals (try gabbro_bits));
              gabbro_try 100 (all_goals (try omega))))
 
+
+/-! ### The measuring copy of the pipeline (agent b, 2026-09-08)
+
+    `gabbro_pipeline_b` is `gabbro_pipeline` with every step wrapped in `gabbro_timed`, which
+    logs the step's wall time. It exists so that "which step burns the seconds" is a
+    measurement and not a guess; nothing generated uses it, and it is never in a proof. -/
+
+open Lean Elab Tactic in
+/-- Run a tactic and log how long it took, under a name. -/
+elab "gabbro_timed" nm:str tac:tactic : tactic => do
+  let t0 ← IO.monoMsNow
+  evalTactic tac
+  let t1 ← IO.monoMsNow
+  logInfo m!"GTIME {nm.getString} {t1 - t0}"
+
+open Lean.Parser.Tactic in
+macro "gabbro_pipeline_b" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
+  `(tactic| (gabbro_timed "s00" (gabbro_try 300 (gabbro_simp [$ts,*]));
+             gabbro_timed "s01" (gabbro_try 300 (all_goals (try gabbro_cases 4 [$ts,*])));
+             gabbro_timed "s02" (gabbro_try 600 (all_goals (try gabbro_calls $t [$ts,*])));
+             gabbro_timed "s03" (gabbro_try 100 (all_goals (try gabbro_open_hyps)));
+             gabbro_timed "s04" (gabbro_try 300 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s05" (gabbro_try 300 (all_goals (try gabbro_forall [$ts,*])));
+             gabbro_timed "s06" (gabbro_try 300 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s07" (gabbro_try 200 (all_goals (try gabbro_cases 3 [$ts,*])));
+             gabbro_timed "s08" (gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s09" (gabbro_try 50 (all_goals (try (repeat' apply And.intro))));
+             gabbro_timed "s10" (gabbro_try 50 (all_goals (try intros)));
+             gabbro_timed "s11" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
+             gabbro_timed "s12" (gabbro_try 50 (all_goals (try gabbro_shape $t)));
+             -- the witnesses `gabbro_shape` opened are new conditions and new indices --
+             -- and a branch opened by a call's answer may hold a call of its own
+             gabbro_timed "s13" (gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s14" (gabbro_try 200 (all_goals (try gabbro_cases 3 [$ts,*])));
+             gabbro_timed "s15" (gabbro_try 200 (all_goals (try gabbro_calls $t [$ts,*])));
+             -- an answer without a shape, by its constructors -- and the call after it
+             gabbro_timed "s16" (gabbro_try 100 (all_goals (try gabbro_values)));
+             gabbro_timed "s17" (gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s18" (gabbro_try 300 (all_goals (try gabbro_calls $t [$ts,*])));
+             gabbro_timed "s19" (gabbro_try 100 (all_goals (try gabbro_values)));
+             gabbro_timed "s20" (gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s21" (gabbro_try 300 (all_goals (try gabbro_calls $t [$ts,*])));
+             gabbro_timed "s22" (gabbro_try 200 (all_goals (try gabbro_forall [$ts,*])));
+             gabbro_timed "s23" (gabbro_try 200 (all_goals (try gabbro_simp_hyps [$ts,*])));
+             gabbro_timed "s24" (gabbro_try 50 (all_goals (try (repeat' apply And.intro))));
+             gabbro_timed "s25" (gabbro_try 50 (all_goals (try intros)));
+             gabbro_timed "s26" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
+             gabbro_timed "s27" (gabbro_try 50 (all_goals (try gabbro_shape $t)));
+             gabbro_timed "s28" (gabbro_try 200 (all_goals (try (simp [$ts,*, *]; done))));
+             gabbro_timed "s29" (gabbro_try 300 (all_goals (try (gabbro_split <;> (try intros) <;> (try (simp [$ts,*, *]; done))))));
+             gabbro_timed "s30" (gabbro_try 200 (all_goals (try (simp [$ts,*, *]; done))));
+             gabbro_timed "s31" (gabbro_try 100 (all_goals (try gabbro_instantiate)));
+             -- a witness named twice (`x = x'`, a case name `"Kurz" = w`) is one name --
+             -- and two case names for one value are a contradiction `simp_all` then sees
+             gabbro_timed "s32" (gabbro_try 50 (all_goals (try subst_vars)));
+             -- from here on WITHOUT the caller's list: `simp_all` clears a hypothesis it
+             -- has used up (`hall`), and a name in the list that is gone fails the step
+             gabbro_timed "s33" (gabbro_try 600 (all_goals (try simp_all)));
+             -- what `simp_all` exposed: reads at the indices in play, stores at them,
+             -- instances one binder further in -- twice, because each round opens the next
+             gabbro_timed "s34" (gabbro_try 50 (all_goals (try gabbro_shape $t)));
+             -- a store whose value a late witness names is well-typed by that witness
+             gabbro_timed "s35" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
+             -- a condition a late witness made decidable (`narrow i to 0 ..< hinterlegt`
+             -- reads a global whose witness came with `gabbro_shape`) is split here again
+             gabbro_timed "s36" (gabbro_try 200 (all_goals (try gabbro_cases 3 [])));
+             gabbro_timed "s37" (gabbro_try 300 (all_goals (try simp_all)));
+             gabbro_timed "s38" (gabbro_try 200 (all_goals (try (gabbro_split <;> (try intros)))));
+             gabbro_timed "s39" (gabbro_try 100 (all_goals (try gabbro_instantiate)));
+             gabbro_timed "s40" (gabbro_try 300 (all_goals (try simp_all)));
+             gabbro_timed "s41" (gabbro_try 50 (all_goals (try gabbro_shape $t)));
+             gabbro_timed "s42" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
+             gabbro_timed "s43" (gabbro_try 200 (all_goals (try (gabbro_split <;> (try intros)))));
+             gabbro_timed "s44" (gabbro_try 100 (all_goals (try gabbro_instantiate)));
+             gabbro_timed "s45" (gabbro_try 300 (all_goals (try simp_all)));
+             gabbro_timed "s46" (gabbro_try 100 (all_goals (try gabbro_wf $t)));
+             -- the bounds of a division or remainder by a variable, then the arithmetic
+             gabbro_timed "s47" (gabbro_try 100 (all_goals (try gabbro_divmod)));
+             gabbro_timed "s48" (gabbro_try 100 (all_goals (try gabbro_mul)));
+             gabbro_timed "s49" (gabbro_try 100 (all_goals (try gabbro_bits)));
+             gabbro_timed "s50" (gabbro_try 100 (all_goals (try omega)))))
+
 open Lean.Parser.Tactic in
 macro "gabbro_auto" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
   `(tactic| (gabbro_pipeline [$ts,*] using $t; all_goals sorry))
@@ -2763,3 +2941,63 @@ open Lean.Parser.Tactic in
     person who wants to see their own logic before writing it. -/
 macro "gabbro_auto?" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
   `(tactic| (gabbro_pipeline [$ts,*] using $t; trace_state; all_goals sorry))
+
+namespace Gabbro.Body
+
+/-! ## 8. Recursion INSIDE a loop -- the induction and the loop rule in one step
+     (agent a, 2026-09-08)
+
+    `contract_of_duty_rec` runs the induction over the `decreases` around the routine's
+    BODY; `looprule_of_body_in` turns one pass of a loop into that loop's rule. A routine
+    that calls itself from inside its own loop needs both at once, and the order matters:
+    the loop rule has to be built INSIDE the induction, because the pass needs the bounded
+    self-contract, and only the induction hands one down.
+
+    **What the pass may assume, and what it owes for it.** It may assume `ContractBelow ρ f
+    e s0 …` -- the routine's own contract on every state strictly below the ROUTINE'S ENTRY
+    state `s0` in the measure. That is the only bound the induction has. But a loop rule is
+    stated over an arbitrary pass state, and nothing ties that state to `s0` -- so the pass
+    also owes that the measure has not moved: `eval t' e = eval s0 e`. It is carried across
+    the passes as part of the loop's state predicate, exactly where `looprule_of_body_in`
+    carries the well-typed world.
+
+    **Why the second half is not decoration.** Without it a pass could lower the measure and
+    then call the routine "below" a bound that no longer holds -- the assumption would be
+    about a state the loop has left. With it, the bound the induction proved is the bound
+    every pass still stands on.
+-/
+
+/-- **A contract holds below every state.** The one direction that is free: what holds for
+    every state holds for the states below one. Used after the induction, to hand the loop
+    its own rule under the plain well-typed world. -/
+theorem contractBelow_of_contract (ρ : Env) (f : String) (e : Expr) (s : State)
+    (pre : State → Prop) (post : State → State → Option Value → Prop)
+    (h : Contract ρ f pre post) : ContractBelow ρ f e s pre post :=
+  fun t' ht' _ => h t' ht'
+
+/-- **The contract of a routine whose recursive call stands inside ONE ranged loop.**
+    `hb` is the loop's pass, `hd` the routine's body; the induction over `e` and the
+    induction over the passes are composed here once, so that no person writes either. -/
+theorem contract_of_duty_rec_loop_in
+    (ρ : Env) (f : String) (body : List Stmt) (pre : State → Prop)
+    (post : State → State → Option Value → Prop) (e : Expr) (wf : State → Prop)
+    (id : String) (lbody : List Stmt) (v : String) (lo hi : Int) (inv : Expr)
+    (hr : Runs ρ f body)
+    (hl : RunsLoopIn ρ id lbody v lo hi)
+    (hb : ∀ (s0 : State), pre s0 → ContractBelow ρ f e s0 pre post →
+      ∀ (t : State) (k : Int), lo ≤ k → k < hi → wf t → eval t e = eval s0 e →
+        eval t inv = some (.bool true) →
+        ∃ t', finalState (exec ρ lbody { t with local' := bindLocal t.local' v (.int k) })
+                = some t'
+              ∧ (wf t' ∧ eval t' e = eval s0 e) ∧ eval t' inv = some (.bool true))
+    (hd : ∀ t, pre t → ContractBelow ρ f e t pre post →
+        LoopRule ρ id (fun u => wf u ∧ eval u e = eval t e) inv →
+      ∃ s', finalState (exec ρ body t) = some s' ∧ post t s' (finalValue (exec ρ body t))) :
+    Contract ρ f pre post :=
+  contract_of_duty_rec ρ f body pre post e hr (fun t ht hcb =>
+    hd t ht hcb
+      (looprule_of_body_in ρ id (fun u => wf u ∧ eval u e = eval t e) inv lbody v lo hi hl
+        (fun u k hlo hhi hu hiv => hb t ht hcb u k hlo hhi hu.1 hu.2 hiv)))
+
+
+end Gabbro.Body

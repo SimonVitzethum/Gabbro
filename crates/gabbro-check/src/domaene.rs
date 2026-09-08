@@ -534,7 +534,16 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
                     geb.push(t.variable.text.clone());
                     gebunden += 1;
                     if let Some(p) = &t.invariante {
+                        // **`passes` in the invariant of a `traverse` is the pass counter**
+                        // (agent b, 2026-09-08): the number of passes already done. It is
+                        // declared by the loop, exactly as the traversal variable is, and
+                        // only for the invariant -- the body cannot read it, because it is
+                        // a ghost the proof channel binds and the generated C does not.
+                        // A local of that name shadows it: `geb` is consulted after
+                        // `s.lokal`, and the Lean emitter asks `is_local` first too.
+                        geb.push(crate::PASSZAEHLER.to_string());
                         aus_pred(p, s, Stellung::Invariante, geb, absagen);
+                        geb.pop();
                     }
                 }
                 Schleife::Retry(r) => {

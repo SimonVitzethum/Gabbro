@@ -196,6 +196,8 @@ impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
     -- ueberall sonst geklammert ist. Die Vorlage schrieb `touches { reads s }`.
     traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - i)
         touches reads s
+        -- the counter never runs ahead of the passes already done
+        invariant i <= passes
     {
         if w != MUSTER { return i * 8; }
         -- ~~Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die

@@ -8526,3 +8526,398 @@ fn ein_feldanfangswert_wird_nicht_element_fuer_element_ohne_ende_geschrieben() {
          panic in the allocator: {codes}"
     );
 }
+
+// ===========================================================================================
+// THE LEAN CHANNEL -- THE REFUSED FORMS, AND THE ONE WIRING THAT WAS MISSING (2026-09-08)
+//
+// `programmlogik/PLAN.md` §5.2 items 2 and 3. Each test below is the container half of a
+// measurement whose other half runs `lean` over the corpus on the model machine: the
+// emitter's TEXT is what a `cargo test` can hold, and it is held here so that a form that
+// silently stops being carried falls at build time and not eight minutes later.
+// ===========================================================================================
+
+/// **`forall f in fields of <format>` is a FINITE conjunction, and the emitter knows the
+/// list.** Until 2026-09-08 it stood under `quantified` with `threads` and `mappings of` --
+/// three domains, one tag, and only one of the three reasons true for all of them. A body
+/// that does not read the binder is every use of the domain in the corpus, and there the
+/// quantifier collapses to its body.
+#[test]
+fn lean_felder_von_wird_zur_konjunktion() {
+    let q = "module t {
+        table K count 4 { slot { marke : u32, } }
+        format W endian little { g : bool @0, s : bool @1, }
+        impl fn d6(k : ptr<normal, rw> K)
+            ensures forall f in fields of W : k.slots[0].marke == 0
+            effects { reads k.slots, writes k.slots }
+            costs   <= 4 ops
+        { }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        t.contains("carried by `d6_meets`"),
+        "a `fields of` whose body does not read the binder is carried:\n{t}"
+    );
+    assert!(
+        !t.contains("quantified"),
+        "and nothing about it is refused any more:\n{t}"
+    );
+    // the collapsed conjunct IS the body, and the binder appears nowhere
+    assert!(
+        t.contains("(.place \"K\" (.lit (.int 0)) \"marke\")") && !t.contains("(.name \"f\")"),
+        "the quantifier collapses to its body, and the field NAME is not a value:\n{t}"
+    );
+}
+
+/// **A `fields of` whose body READS the binder is still refused** -- a field name is not a
+/// value of this model, and n copies of a term mentioning `f` would be n copies of a name
+/// nothing binds. *The soundness half of the test above.*
+#[test]
+fn lean_felder_von_mit_gelesenem_binder_bleibt_abgesagt() {
+    let q = "module t {
+        table K count 4 { slot { marke : u32, } }
+        format W endian little { g : bool @0, s : bool @1, }
+        impl fn d6(k : ptr<normal, rw> K)
+            ensures forall f in fields of W : k.slots[f].marke == 0
+            effects { reads k.slots, writes k.slots }
+            costs   <= 4 ops
+        { }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        t.contains("refused (quantified)"),
+        "a binder the body reads has no term here, and the refusal says so:\n{t}"
+    );
+}
+
+/// **`threads` and `mappings of` are two refusals and not one.** Their grounds differ --
+/// `threads` has no declaration anywhere in the language, `mappings of` speaks about
+/// hardware -- and so do their ways out. One tag over both told a reader neither.
+#[test]
+fn lean_threads_und_abbildungen_haben_je_eine_marke() {
+    let q = "module t {
+        table K count 4 { slot { belegt : bool, } }
+        format W endian little { g : bool @0, r : u64 embeds [51:12] scale 4096, }
+        walk B levels 2 { node : [W; 512], down : r when it.g, leaf : it.g,
+        }
+        impl fn d8(k : ptr<normal, rw> K)
+            ensures forall x in threads : k.slots[0].belegt
+            effects { reads k.slots, writes k.slots }
+            costs   <= 4 ops
+        { }
+        impl fn d9(w : ptr<normal, rw> B)
+            ensures !exists m in mappings of w : m.g
+            effects { writes w }
+            costs   <= 4 ops
+        { }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        t.contains("refused (quantified-threads)") && t.contains("refused (quantified-mappings)"),
+        "each domain carries its own tag:\n{t}"
+    );
+    assert!(
+        t.contains("threads over T") && t.contains("ASSUMED by name"),
+        "and each names its own way out:\n{t}"
+    );
+}
+
+/// **A refusal that is INHERITED says so.** `ensures result == puffer.e_eintritt` has a
+/// term; what has none is the `requires lenof(puffer) >= sizeof(…)` of the same routine --
+/// and the register used to print the built-in's tag beside the `ensures` with nothing to
+/// say that the `ensures` was not the problem. *A reader went looking for a built-in in a
+/// clause that has none.*
+#[test]
+fn lean_geerbte_absage_nennt_ihren_ursprung() {
+    let q = "module t {
+        format K endian little { e : u64 @[63:0], }
+        impl fn kopf(p : ptr<normal, r> K) -> u64
+            requires lenof(p) >= sizeof(K)
+            ensures  result == p.e
+            effects  { reads p }
+            costs    <= 16 ops
+        { return p.e; }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        t.contains("layout-buffer-length"),
+        "`lenof` over a buffer nothing measures has its OWN tag now:\n{t}"
+    );
+    assert!(
+        t.contains("inherited: this clause HAS a term"),
+        "and the line says that the refusal is not this clause's:\n{t}"
+    );
+}
+
+/// **A recursive call inside a loop is WIRED** (`contract_of_duty_rec_loop_in`,
+/// `Gabbro/Body.lean` §8). Three things have to be in the text, and each was missing before:
+/// the pass gets the bounded self-contract at the ROUTINE's entry state, it carries the
+/// measure across, and `unit_closed` composes the two inductions in one step.
+///
+/// *The corpus had no unit of this shape; `messung/proben/probe-rekursion-in-schleife.gab`
+/// is the one that measures it, and this test is its container half.*
+#[test]
+fn lean_rekursion_in_der_schleife_wird_verdrahtet() {
+    let q = "module t {
+        const T : u32 = 8;
+        table Z count 4 { slot { marke : u32 in 0 .. T, } }
+        impl fn f(z : ptr<normal, rw> Z, n : u32 in 0 .. T)
+            ensures forall s in slots of z : z.slots[s].marke <= T
+            effects { reads z.slots, writes z.slots }
+            costs   <= 65536 ops
+            decreases n
+        {
+            traverse i over slots of z by unvisited
+                touches reads z.slots, writes z.slots
+                invariant n <= T
+            {
+                z.slots[i].marke = n;
+                if n > 0 { f(z, n - 1); }
+            }
+        }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        !t.contains("NOT WIRED"),
+        "the one shape `unit_closed` could not close is closed:\n{t}"
+    );
+    assert!(
+        t.contains("contract_of_duty_rec_loop_in ρ \"f\""),
+        "and it is closed by the model's theorem, not by a hole:\n{t}"
+    );
+    assert!(
+        t.contains("(c_f : ContractBelow ρ \"f\" f_decreases s0 f_requires f_post)"),
+        "the pass assumes the self-contract below the ROUTINE's entry state:\n{t}"
+    );
+    assert!(
+        t.contains("eval t' f_decreases = eval s0 f_decreases"),
+        "and owes that the measure has not moved -- without this the bound is vacuous:\n{t}"
+    );
+    assert!(
+        t.contains("contractBelow_of_contract"),
+        "and the loop's own rule follows from the finished contract:\n{t}"
+    );
+}
+
+/// **A loop shape the induction is NOT written for keeps its refusal, and names which
+/// shape.** The step is written for exactly one ranged loop; two loops would need the rule
+/// of each inside the same induction, and the message says that instead of `recursion`.
+#[test]
+fn lean_rekursion_in_zwei_schleifen_bleibt_unverdrahtet_mit_grund() {
+    let q = "module t {
+        const T : u32 = 8;
+        table Z count 4 { slot { marke : u32 in 0 .. T, } }
+        impl fn f(z : ptr<normal, rw> Z, n : u32 in 0 .. T)
+            effects { reads z.slots, writes z.slots }
+            costs   <= 65536 ops
+            decreases n
+        {
+            traverse i over slots of z by unvisited
+                touches reads z.slots, writes z.slots
+                invariant n <= T
+            {
+                z.slots[i].marke = n;
+                if n > 0 { f(z, n - 1); }
+            }
+            traverse j over slots of z by unvisited
+                touches writes z.slots
+                invariant n <= T
+            {
+                z.slots[j].marke = 0;
+            }
+        }
+    }";
+    let t = lean_modul(q);
+    assert!(
+        t.contains("NOT WIRED") && t.contains("one of SEVERAL loops"),
+        "an unwired shape names the construct and why:\n{t}"
+    );
+}
+// ===========================================================================================
+// **The pass counter of a `traverse`** (agent b, 2026-09-08) -- `PLAN.md` §5.2 item 1.
+//
+// `passes` is the number of passes already done. It is readable in the `invariant` of a
+// `traverse` and nowhere else, it is a GHOST (nothing of it reaches the generated C), and a
+// declared name of the same spelling shadows it. What it buys is the one sentence a counter
+// in a loop needs and could not be written: `n <= passes` survives a pass, while `n <= N`
+// -- true of every run -- does not survive the rule, because the rule quantifies over every
+// state the invariant admits, including `n == N`.
+// ===========================================================================================
+
+const LEAN_ZAEHLER: &str = "module p {
+const NSLOTS : u32 = 16;
+table Werte count NSLOTS { slot { aktiv : bool, } }
+impl fn zaehle(w : ptr<normal, r> Werte) -> u32
+    effects { reads w.slots }
+    costs   <= 999 ops
+{
+    let mut n : u32 in 0 .. NSLOTS = 0;
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+        invariant n <= passes
+    {
+        if w.slots[i].aktiv { n += 1; }
+    }
+    return n;
+}
+}
+";
+
+/// **The emitted form**: the counter is bound to zero before the loop, the pass increases it
+/// as its FIRST statement (so a `next` or a `leave` cannot skip it), the loop's rule is
+/// `LoopRuleP`, and the environment promise carries the bound on the NUMBER of passes.
+#[test]
+fn der_passzaehler_wird_gebunden_erhoeht_und_beschraenkt() {
+    let lean = lean_modul(LEAN_ZAEHLER);
+    assert!(
+        lean.contains("(.bindName \"#pass\" (.lit (.int 0))), (.loop \"zaehle#1\""),
+        "the counter stands at zero one statement before the loop:\n{lean}"
+    );
+    assert!(
+        lean.contains(
+            "def zaehle_loop_1_body : List Stmt :=\n  [(.bindName \"#pass\" (.bin .add (.name \"#pass\") (.lit (.int 1))))"
+        ),
+        "and every pass increases it, first thing:\n{lean}"
+    );
+    assert!(
+        lean.contains("(.bin .le (.name \"n\") (.name \"#pass\"))"),
+        "`passes` in the invariant IS the counter, not a global of that name:\n{lean}"
+    );
+    assert!(
+        !lean.contains("(.global \"passes\")"),
+        "and it is never read out of the world:\n{lean}"
+    );
+    // the bound on the number of passes -- the table's `count`, not the index range
+    assert!(
+        lean.contains("RunsLoopN ρ \"zaehle#1\" zaehle_loop_1_body \"i\" 0 16 16"),
+        "the environment promise bounds how OFTEN the body runs:\n{lean}"
+    );
+    assert!(
+        lean.contains("LoopRuleP ρ \"zaehle#1\" wellFormed zaehle_loop_1_inv \"#pass\"")
+            && lean.contains("looprule_of_body_p ρ \"zaehle#1\""),
+        "and the rule is the one that carries the counter:\n{lean}"
+    );
+    // what the pass may assume, and what it owes back
+    for z in [
+        "(hplo : 0 ≤ i)",
+        "(hphi : i < 16)",
+        "(hpass : t.local' \"#pass\" = .int i)",
+        "∧ t'.local' \"#pass\" = .int (i + 1)",
+    ] {
+        assert!(z_in(&lean, z), "the pass's own hypothesis `{z}` is missing:\n{lean}");
+    }
+}
+
+fn z_in(h: &str, n: &str) -> bool {
+    h.contains(n)
+}
+
+/// **A loop whose invariant does not name `passes` does not move a single line.** A
+/// convenience nobody asked for must not change the proof obligation of every other loop.
+#[test]
+fn ohne_passes_bleibt_die_schleife_wie_sie_war() {
+    let ohne = LEAN_ZAEHLER.replace("invariant n <= passes", "invariant n <= NSLOTS");
+    let lean = lean_modul(&ohne);
+    assert!(!lean.contains("#pass"), "no counter where none was named:\n{lean}");
+    assert!(
+        lean.contains("RunsLoopIn ρ \"zaehle#1\"") && lean.contains("looprule_of_body_in"),
+        "the rule stays `LoopRule`:\n{lean}"
+    );
+}
+
+/// **A declared name shadows the ghost.** `passes` is a word a program may already use, and
+/// where it does, the invariant means the program's name -- in the checker (`D021` stays
+/// silent because the local is declared) and in the emitter alike.
+#[test]
+fn ein_deklariertes_passes_verdeckt_den_zaehler() {
+    let q = "module p {
+const NSLOTS : u32 = 16;
+table Werte count NSLOTS { slot { aktiv : bool, } }
+impl fn zaehle(w : ptr<normal, r> Werte, passes : u32) -> u32
+    effects { reads w.slots }
+    costs   <= 999 ops
+{
+    let mut n : u32 in 0 .. NSLOTS = 0;
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+        invariant n <= passes
+    {
+        if w.slots[i].aktiv { n += 1; }
+    }
+    return n;
+}
+}
+";
+    let lean = lean_modul(q);
+    assert!(
+        !lean.contains("#pass"),
+        "the parameter is the parameter, and no counter is emitted:\n{lean}"
+    );
+}
+
+/// **`passes` outside a loop invariant is still nothing** -- `D021` says so, as it did
+/// before. The ghost is declared by the `traverse` and by nothing else.
+#[test]
+fn passes_ausserhalb_der_invariante_bleibt_unbekannt() {
+    let q = "module p {
+impl fn f(n : u32) -> u32
+    requires n <= passes
+    effects { pure }
+    costs   <= 9 ops
+{
+    return n;
+}
+}
+";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+    assert!(
+        codes.contains(&"D021"),
+        "`passes` in a `requires` names nothing: {codes:?}"
+    );
+}
+
+/// **A loop that is not a bounded `traverse` cannot count its passes.** The checker refuses
+/// the name there (`D021` -- it is declared by a `traverse` and by nothing else); the
+/// emitter, which reads the tree either way, refuses it with a tag of its own instead of
+/// writing `passes` out as a place of the world -- the wrong proof object `D021` names.
+#[test]
+fn passes_ohne_schranke_wird_abgesagt() {
+    let q = "module p {
+static mut a : u32 in 0 .. 16 = 0;
+extern fn zeitablauf() -> never effects { diverges };
+assume geraet_antwortet \"the device answers.\" falsifier sonde;
+impl fn f() -> u32
+    effects { writes a }
+    costs   <= 999 ops
+{
+    retry warten until a == 16
+        bounded 2 ops
+        progress geraet_antwortet
+        on_exceeded zeitablauf
+        effects { writes a }
+        invariant a <= passes
+    {
+        a = 1;
+    }
+    return a;
+}
+}
+";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    let codes: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+    assert!(
+        codes.contains(&"D021"),
+        "`passes` is declared by a `traverse` and by nothing else: {codes:?}"
+    );
+    let lean = gabbro_check::lean::module(&b, "p.gab");
+    assert!(
+        lean.contains("pass-counter"),
+        "and the emitter refuses it with its own tag:\n{lean}"
+    );
+    assert!(
+        !lean.contains("(.global \"passes\")"),
+        "the name never becomes a place of the world:\n{lean}"
+    );
+}

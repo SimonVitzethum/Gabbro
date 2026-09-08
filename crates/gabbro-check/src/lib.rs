@@ -1044,6 +1044,15 @@ pub fn ausdruecke_im_ort(o: &Ort) -> Vec<&Expr> {
 ///
 /// Der Ort SELBST kommt mit, und die Orte in seinen Indizes ebenso: `c.slots[d.slots[j].k].x`
 /// nennt drei Plätze, und alle drei werden gelesen.
+/// **The name of the pass counter of a `traverse` loop** (agent b, 2026-09-08). It is
+/// readable in the loop's `invariant` and nowhere else, it is a ghost (no C is generated
+/// for it), and a declared name of the same spelling shadows it everywhere it is resolved.
+pub const PASSZAEHLER: &str = "passes";
+
+/// The name the Lean model binds the pass counter to -- `passes` is a word a program may
+/// also use, `#pass` is not spellable in Gabbro at all.
+pub const PASSZAEHLER_LEAN: &str = "#pass";
+
 pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
     let mut aus = Vec::new();
     for x in alle_ausdruecke(e) {

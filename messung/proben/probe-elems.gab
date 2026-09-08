@@ -21,6 +21,8 @@ impl fn als_u64(s : ptr<normal, r+own> Feld) -> u64
     let mut n : u64 in 0 .. WORTE = 0;
     traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - n)
         touches reads s
+        -- the counter never runs ahead of the passes already done
+        invariant n <= passes
     {
         if w != MUSTER { return n; }
         n += 1;

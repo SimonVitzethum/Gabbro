@@ -28,3 +28,11 @@ import sys,re,collections"` ohne
 # Aufmerksamkeit, die es ersetzt.*
 *.ps
 sys,re,collections
+
+# **The Lean channel's scratch** (`programmlogik/PLAN.md` §8): `Duty/` and `Proofs/` are
+# WRITTEN by `gabbro prove`/`pflichten --lean` from the `.gab`, and `_pruefung/` is the
+# measurement bench. A second register over the same thing is the class that folder is
+# written against -- so none of it is repository content.
+programmlogik/Duty/
+programmlogik/Proofs/
+programmlogik/_pruefung/

@@ -80,6 +80,12 @@ pub enum LeanReason {
     /// than `slots of`, or a form without a term. (A translatable one is carried by the
     /// routine's theorem since 2026-09-07.)
     Invariant,
+    /// **`passes` where the loop cannot count** (agent b, 2026-09-08): the pass counter is
+    /// readable in a `traverse` whose domain has a `count` -- the number that bounds how
+    /// often the body runs. Where there is no such number the name would go out as a place
+    /// of the world (`.global "passes"`), and that is the wrong-proof-object `D021` names.
+    /// So it is refused, and the refusal carries its own tag.
+    PassCounter,
     /// A precondition at a call site whose CALLER's body this channel could not translate;
     /// where it could, the `V` duty is carried by the caller's theorem (the call gets stuck
     /// without it -- `Body.lean` `step`).
@@ -130,6 +136,31 @@ pub enum LeanReason {
     /// `queue`, `elems of`, `threads`, `fields of`, or a set membership -- the model has the
     /// index domain and the parent chain, and nothing else.
     Quantified,
+    /// **`threads` -- and the language declares no thread set** (2026-09-08). Every other
+    /// domain hangs on a declaration (`slots of` on `count N`, `descendants of` on
+    /// `tree { … }`, `mappings of` on `walk … levels`, `queue` on the one field array of a
+    /// record); `threads` hangs on nothing, so there is no index domain to cut. Kept apart
+    /// from `Quantified` because its way out is a LANGUAGE change, not a rewrite.
+    QuantifiedThreads,
+    /// **`mappings of <walk>`** (2026-09-08) -- the mappings a page-table walk reaches are
+    /// hardware, the same object a `walk` invariant speaks about; those are ASSUMED by name
+    /// (`WalkInvariant`), and this model has no term for one inside a routine's clause.
+    QuantifiedMappings,
+    /// **The LENGTH of a buffer nothing declares** (2026-09-08) -- `lenof(p)` where `p`
+    /// points at a `format`. `lenof` over a fixed-length array IS carried (its length stands
+    /// in the declaration); a buffer's length is a run-time quantity this model has no place
+    /// for. Kept apart from `Builtin`, whose ground is the LAYOUT and not the length.
+    BufferLength,
+    /// **A field of a record VALUE** (2026-09-08) -- `let c = f(x); c.len`. The model's
+    /// places are named by a record TYPE, not by a binding; a value bound in the body has no
+    /// place, and inventing one would name the same place for two different values.
+    RecordValue,
+    /// **An array inside a record held in a table SLOT** (2026-09-08) --
+    /// `e.slots[i].receivers.buf[j]`. A record type is ONE object of this model (the module
+    /// header says so), so every slot's copy of the record would be the SAME place -- and a
+    /// body that writes two slots' queues would be modelled as writing one. Refused because
+    /// serving it would be unsound, not because it is hard.
+    SlotRecordArray,
     /// A call inside an expression: a `spec fn` or a pure function used as a value.
     CallInExpression,
     /// A built-in: `lenof`, `sizeof`, `aligned`, `offset_into`. Each names something about
@@ -200,12 +231,18 @@ impl LeanReason {
             LeanReason::Observe => "observe",
             LeanReason::ErrorPropagation => "let-else",
             LeanReason::Narrowing => "narrow",
+            LeanReason::PassCounter => "pass-counter",
             LeanReason::NonLocalExit => "non-local-exit",
             LeanReason::CompoundAssign => "compound-assignment",
             LeanReason::MatchNotOption => "match-not-option",
             LeanReason::Float => "float",
             LeanReason::OldState => "old-state",
             LeanReason::Quantified => "quantified",
+            LeanReason::QuantifiedThreads => "quantified-threads",
+            LeanReason::QuantifiedMappings => "quantified-mappings",
+            LeanReason::BufferLength => "layout-buffer-length",
+            LeanReason::RecordValue => "record-value",
+            LeanReason::SlotRecordArray => "slot-record-array",
             LeanReason::CallInExpression => "call-in-expression",
             LeanReason::Builtin => "builtin",
             LeanReason::LockWitness => "lock-witness",
@@ -252,6 +289,9 @@ impl LeanReason {
             LeanReason::Observe => "`observes` -- a view that MAY be stale",
             LeanReason::ErrorPropagation => "`let … else` -- two exits out of a call",
             LeanReason::Narrowing => "`narrow` -- the model has no range to narrow into",
+            LeanReason::PassCounter => {
+                "`passes` in a loop whose domain has no `count` -- nothing bounds the passes"
+            }
             LeanReason::NonLocalExit => {
                 "`leave`/`next` aimed at an OUTER loop -- the innermost is carried"
             }
@@ -260,10 +300,40 @@ impl LeanReason {
             LeanReason::Float => "a floating-point value -- this model has no float",
             LeanReason::OldState => "`old(x)` outside an `ensures` -- no earlier state there",
             LeanReason::Quantified => {
-                "a quantifier over a domain other than `slots of`, or a membership"
+                "a quantifier whose domain names no index range here -- rewrite it over \
+                 `slots of <table>`, `elems of <array>`, `queue <record>` or \
+                 `chain(a, b) in <slot>`, which do"
+            }
+            LeanReason::QuantifiedThreads => {
+                "`threads` -- no declaration names the thread set (every other domain hangs \
+                 on one); write `slots of <the thread table>`, or the language needs a \
+                 `threads over T`"
+            }
+            LeanReason::QuantifiedMappings => {
+                "`mappings of <walk>` -- the mappings of a page-table walk are hardware; \
+                 state it as an `invariant` OF the `walk`, which is ASSUMED by name"
+            }
+            LeanReason::BufferLength => {
+                "`lenof` over a buffer whose length no declaration gives -- `lenof` over a \
+                 fixed-length array IS carried; give the parameter an array type, or drop \
+                 the clause"
+            }
+            LeanReason::RecordValue => {
+                "a field of a record VALUE bound in the body (`let c = f(x); c.len`) -- this \
+                 model's places are named by a record TYPE; pass the record through a `ptr` \
+                 parameter"
+            }
+            LeanReason::SlotRecordArray => {
+                "an array inside a record held in a table SLOT (`e.slots[i].q.buf[j]`) -- one \
+                 object per record TYPE here, so every slot's copy would be the SAME place; \
+                 lift the array into a table"
             }
             LeanReason::CallInExpression => "a call inside an expression",
-            LeanReason::Builtin => "a built-in about the LAYOUT, and this model has none",
+            LeanReason::Builtin => {
+                "`sizeof`/`offset_into` -- Gabbro computes no byte layout (the C emitter \
+                 refuses `sizeof(T)` for the same reason); there is nothing for the clause \
+                 to agree with"
+            }
             LeanReason::LockWitness => {
                 "`Held(…)` -- carried by the lock passes (H005/H006/H012/H016), not by a prover"
             }
@@ -276,7 +346,9 @@ impl LeanReason {
             LeanReason::OtherValue => "an error reason value or a function pointer",
             LeanReason::Expression => "a form this channel has no Lean term for",
             LeanReason::Carrier => {
-                "the carrier of a place is not a declared `table`, record or `format`"
+                "the carrier of a place is not a declared `table`, record or `format` -- \
+                 name it through a parameter of that type, so the place has a declaration \
+                 to take its shape from"
             }
             LeanReason::FieldShape => {
                 "the declared type of a slot field has no shape in this channel"
@@ -313,7 +385,12 @@ impl LeanReason {
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.** The speech test
     /// holds the length against the enum.
-    pub const ALL: [LeanReason; 36] = [
+    pub const ALL: [LeanReason; 41] = [
+        LeanReason::QuantifiedThreads,
+        LeanReason::QuantifiedMappings,
+        LeanReason::BufferLength,
+        LeanReason::RecordValue,
+        LeanReason::SlotRecordArray,
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -648,6 +725,20 @@ struct Ctx<'a> {
     kept: Vec<String>,
 }
 
+/// **The type of a loop's rule** -- `LoopRuleP` where the loop counts its passes,
+/// `LoopRule` everywhere else (agent b, 2026-09-08).
+fn loop_rule_type(l: &LoopInfo, wf: &str) -> String {
+    let lid = lean_ident(&l.id);
+    match l.passes {
+        Some(_) => format!(
+            "LoopRuleP ρ {} {wf} {lid}_inv {}",
+            quoted(&l.id),
+            quoted(crate::PASSZAEHLER_LEAN)
+        ),
+        None => format!("LoopRule ρ {} {wf} {lid}_inv", quoted(&l.id)),
+    }
+}
+
 /// One loop of a routine, with everything its own theorem needs.
 #[derive(Clone)]
 pub struct LoopInfo {
@@ -677,6 +768,10 @@ pub struct LoopInfo {
     /// inside one table (its `count`); `None` for a `retry`/`forever` pass. A pass may
     /// assume its index is in the range (`RunsLoopIn`, `looprule_of_body_in`).
     pub range: Option<(i128, i128)>,
+    /// **The bound on the NUMBER of passes** -- the domain's `count` -- for a loop whose
+    /// invariant names `passes` (agent b, 2026-09-08). `None` for every other loop, and
+    /// then nothing of the pass counter is emitted at all.
+    pub passes: Option<i128>,
 }
 
 impl Ctx<'_> {
@@ -769,7 +864,13 @@ fn field_shape(base: &str, feld: &str, c: &Ctx) -> Result<(String, Shape, String
 /// 2026-09-07 the parameter name stood here, and no contract about a record composed
 /// and no read from one had a shape.
 fn record_field(base: &str, field: &str, c: &Ctx) -> Result<(String, Shape), LeanReason> {
-    let rec = c.record_carrier.get(base).ok_or(LeanReason::Carrier)?;
+    // **A local that is not a carrier is a record VALUE** (2026-09-08) -- `let c = f(x);
+    // c.len`. Its own refusal: the carrier is not missing a declaration, it is not a place
+    // at all, and naming one would make two different values the same place.
+    let rec = c
+        .record_carrier
+        .get(base)
+        .ok_or(if c.is_local(base) { LeanReason::RecordValue } else { LeanReason::Carrier })?;
     let fields = c.unit.records.get(rec).ok_or(LeanReason::Carrier)?;
     let (_, shape) = fields
         .iter()
@@ -797,6 +898,17 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
         if c.is_local(n) {
             return Ok(format!("(.name {})", quoted(n)));
         }
+        // **`passes` in a loop invariant is the pass counter** (agent b, 2026-09-08): the
+        // ghost local the emitter binds to 0 before the loop and the pass increases by one.
+        // It is read only where that local exists -- and `passes_is_free` has already
+        // decided that no declared name of that spelling is in the way.
+        if n == crate::PASSZAEHLER && passes_is_free(c) {
+            return if c.is_local(crate::PASSZAEHLER_LEAN) {
+                Ok(format!("(.name {})", quoted(crate::PASSZAEHLER_LEAN)))
+            } else {
+                Err(LeanReason::PassCounter)
+            };
+        }
         // **A constant is its VALUE**, not a place: `WURZEL` names `0`, and a world place
         // called "WURZEL" would be a place nothing declares. Table constants are looked up
         // under the tables in scope as well.
@@ -823,6 +935,17 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
         c.note(&tab, "elem", shape, &format!("element of `{tab}`"));
         c.note_option(&tab, "elem", shape, i);
         return Ok(format!("(.place {} {} \"elem\")", quoted(&tab), idx));
+    }
+    // **`T.slots[i].f.g[j]` -- an array inside a record held in a SLOT** (2026-09-08). The
+    // place exists in the program and the C emitter writes it; this model cannot, and the
+    // ground is soundness and not effort: a record type is ONE object here, so the copy in
+    // slot 3 and the copy in slot 7 would be the same place, and a body writing both would
+    // be modelled as writing one. Named apart from `Carrier` so a reader is not sent looking
+    // for a missing declaration.
+    if let [OrtSuffix::Feld(slots), OrtSuffix::Index(_), OrtSuffix::Feld(_), ..] = &o.suffixe[..] {
+        if slots.text == "slots" && o.suffixe.len() > 3 {
+            return Err(LeanReason::SlotRecordArray);
+        }
     }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] = &o.suffixe[..] else {
         return Err(LeanReason::Carrier);
@@ -1026,9 +1149,14 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                     .and_then(|info| info.count);
                 match count {
                     Some(n) => Ok(format!("(.lit (.int {}))", int_lit(n))),
-                    None => Err(LeanReason::Builtin),
+                    // **A `lenof` whose place is not a fixed-length array** -- a pointer to
+                    // a `format`, say. Its own refusal since 2026-09-08: the ground is that
+                    // NOTHING DECLARES the length, not that the layout is unknown, and the
+                    // way out (an array type on the parameter) is a different one.
+                    None => Err(LeanReason::BufferLength),
                 }
             }
+            Eingebaut::Lenof(TypOderOrt::Typ(_)) => Err(LeanReason::BufferLength),
             _ => Err(LeanReason::Builtin),
         },
         // **`old(e)` is a NAME bound to the value of `e` in the entry state.** Only an
@@ -1056,6 +1184,44 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         ExprArt::Grund { fall, .. } => Ok(format!("(.lit (.reason {}))", quoted(&fall.text))),
         ExprArt::FnWert(_) => Err(LeanReason::OtherValue),
     }
+}
+
+/// **Does this predicate name the pass counter?** (agent b, 2026-09-08) A `traverse` gets
+/// its counter emitted only when its `invariant` reads it -- see `LoopInfo::passes`.
+fn pred_names_passes(p: &Pred) -> bool {
+    let in_expr = |e: &Expr| {
+        crate::alle_orte(e)
+            .into_iter()
+            .any(|o| o.basis.text == crate::PASSZAEHLER)
+    };
+    match &p.art {
+        PredArt::Vergleich(e) => in_expr(e),
+        PredArt::Element(e, _) => in_expr(e),
+        PredArt::Klammer(q) | PredArt::Nicht(q) => pred_names_passes(q),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            pred_names_passes(a) || pred_names_passes(b)
+        }
+        PredArt::Quantor(q) => pred_names_passes(&q.rumpf),
+        PredArt::Erreicht { von, nach, .. } => {
+            von.basis.text == crate::PASSZAEHLER || nach.basis.text == crate::PASSZAEHLER
+        }
+        PredArt::Held { .. } => false,
+    }
+}
+
+/// **Is the spelling `passes` free for the ghost here?** A local, a parameter, a constant,
+/// a global, a type, a table or a `walk` of that name is a PROGRAM name, and a program name
+/// wins: the invariant then says what it always said. *Coarse in the quiet direction* --
+/// the same rule `D021` uses to decide whether a name resolves at all.
+fn passes_is_free(c: &Ctx) -> bool {
+    let n = crate::PASSZAEHLER;
+    !c.is_local(n)
+        && const_value(n, c).is_none()
+        && c.unit.u.suche_global(&c.module, n).is_none()
+        && !c.unit.u.nennt_typ_oder_konstante(&c.module, n)
+        && c.unit.u.nennt_tabelle(&c.module, n).is_none()
+        && !c.unit.u.nennt_walk(&c.module, n)
+        && !c.unit.u.nennt_kopf(&c.module, n)
 }
 
 /// A predicate as a `Gabbro.Body.Expr` that must evaluate to `true`.
@@ -1099,6 +1265,30 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
         // is `forallSlots x count (x ∈ D → P)` and `exists` is `existsSlots x count
         // (x ∈ D ∧ P)`. The five other domains have no term here.
         PredArt::Quantor(q) => {
+            // **`fields of <format|record>` is a FINITE, statically known domain**
+            // (2026-09-08), and the emitter knows the list: `forall f in fields of Wort : P`
+            // is the conjunction of `P` over the declared fields, `exists` the disjunction.
+            // Where the body does not read the binder -- the whole of the corpus's use of
+            // this domain -- every conjunct is the same `P`, so the quantifier collapses to
+            // `P` for a NON-EMPTY list, to `true`/`false` for an empty one. A body that DOES
+            // read the binder is refused: a field NAME is not a value of this model, and a
+            // conjunction over five copies of a term that mentions `f` would be five copies
+            // of a name nothing binds.
+            if let Some(n) = field_count(&q.domaene, c) {
+                let depth = c.locals.len();
+                c.push_local(&q.variable.text, Some(Shape::Int));
+                let body = pred_term(&q.rumpf, c);
+                c.locals.truncate(depth);
+                let body = body?;
+                if body.contains(&format!("(.name {})", quoted(&q.variable.text))) {
+                    return Err(LeanReason::Quantified);
+                }
+                return Ok(match (q.art, n) {
+                    (QuantorArt::Alle, 0) => "(.lit (.bool true))".to_string(),
+                    (QuantorArt::Existiert, 0) => "(.lit (.bool false))".to_string(),
+                    _ => body,
+                });
+            }
             let (tab, member) = domain_of(&q.domaene, &q.variable.text, c)?;
             let count = c
                 .unit
@@ -1274,10 +1464,27 @@ fn domain_of(d: &Domaene, x: &str, c: &mut Ctx) -> Result<(String, Option<String
             }
             Ok((arrays[0].1.clone(), None))
         }
-        Domaene::FelderVon(_)
-        | Domaene::Threads
-        | Domaene::AbbildungenVon(_) => Err(LeanReason::Quantified),
+        // **The three domains that are NOT an index range of a table, each by its own
+        // name** (2026-09-08). `fields of` is served one level up (`PredArt::Quantor`),
+        // where the field LIST is known and the quantifier collapses over it; the other two
+        // have nothing to collapse over, and their reasons differ (`threads` lacks a
+        // declaration, `mappings of` speaks about hardware).
+        Domaene::FelderVon(_) => Err(LeanReason::Quantified),
+        Domaene::Threads => Err(LeanReason::QuantifiedThreads),
+        Domaene::AbbildungenVon(_) => Err(LeanReason::QuantifiedMappings),
     }
+}
+
+/// **How many fields a `fields of <path>` domain runs over.** A `format` and a record both
+/// declare their field list statically, and that list is the whole domain. `None` when the
+/// path names neither -- then there is nothing to run over.
+fn field_count(d: &Domaene, c: &Ctx) -> Option<usize> {
+    let Domaene::FelderVon(p) = d else { return None };
+    let name = &p.teile.last()?.text;
+    if let Some(fs) = c.unit.u.suche_formate(&c.module, name) {
+        return Some(fs.len());
+    }
+    c.unit.records.get(name).map(|fs| fs.len())
 }
 
 /// **`Some(e)` and `None` are VALUES, not calls.**
@@ -2005,6 +2212,15 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 Schleife::Retry(x) => (&x.invariante, &x.rumpf, x.marke.clone(), None),
                 Schleife::Forever(x) => (&x.invariante, &x.rumpf, x.marke.clone(), None),
             };
+            // **The number of passes** -- the domain's `count`, for a `traverse` over a
+            // domain inside one table. It bounds how OFTEN the body runs (`by unvisited`
+            // visits each slot at most once), where `range` bounds only the INDEX.
+            let passes_bound = match sch.as_ref() {
+                Schleife::Traverse(x) => domain_of(&x.domaene, &x.variable.text, c)
+                    .ok()
+                    .and_then(|(tab, _)| c.unit.tables.get(&tab)?.count),
+                _ => None,
+            };
             // the range of the index: every domain inside a table visits its slots
             let range = match sch.as_ref() {
                 Schleife::Traverse(x) => domain_of(&x.domaene, &x.variable.text, c).ok().and_then(|(tab, _)| {
@@ -2030,6 +2246,13 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // The flag and the slot for a `return` inside: bound BEFORE the loop, so that
             // the invariant's shape conjuncts carry them and the test after the loop reads
             // a bound name.
+            // **The pass counter is emitted only where the invariant NAMES it** (agent b,
+            // 2026-09-08). Every other loop keeps the datum it had -- a convenience nobody
+            // asked for should not move a single generated line.
+            let counts_passes = inv.as_ref().is_some_and(|p| pred_names_passes(p))
+                && passes_is_free(c)
+                && range.is_some()
+                && passes_bound.is_some();
             let mut prefix = String::new();
             if may_return {
                 prefix.push_str("(.bindName \"#returned\" (.lit (.bool false))), (.bindName \"#ret\" (.lit .absent)), ");
@@ -2053,6 +2276,16 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // declared range does not hold of an index the loop binds to that name.
             if let Some(v) = &var {
                 c.ranges.remove(v);
+            }
+            // **The counter, bound to zero right before the loop.** It is a local of the
+            // scope the invariant is read in, so the shape conjuncts carry it and the
+            // rule's third premise (`LoopRuleP`) reads it off this very `bindName`.
+            if counts_passes {
+                prefix.push_str(&format!(
+                    "(.bindName {} (.lit (.int 0))), ",
+                    quoted(crate::PASSZAEHLER_LEAN)
+                ));
+                c.push_local(crate::PASSZAEHLER_LEAN, Some(Shape::Int));
             }
             let shapes = shaped_locals(&c.locals);
             let mut parts = shape_conjuncts(&c.locals, &c.ranges);
@@ -2096,6 +2329,41 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             let inner_callees = std::mem::replace(&mut c.callees, outer_callees);
             let inner_loops = std::mem::replace(&mut c.loop_infos, outer_loops);
             let body = body?;
+            // **A pass that starts with the return flag set leaves at once** (agent b,
+            // 2026-09-08). `return e` inside a loop is `#returned = true; #ret = e; leave`,
+            // so in the RUN no pass follows one that returned -- but `LoopRule` quantifies
+            // over every state the invariant admits, including one with the flag set, and
+            // there the invariant is only the routine's promise: the person's own conjunct
+            // is gone and a store in the body cannot meet its range. The guard makes that
+            // pass do what the run does, which is nothing.
+            //
+            // **It is written only where the loop COUNTS its passes**, and that restriction
+            // is measured and not tidiness: the guard is one more `ite` for `gabbro_cases`
+            // to split, and over the whole corpus it closed `probe-elems` and opened
+            // `beispiele/39-auftragsdienst` (net zero, run of 2026-09-08). Where nobody
+            // writes `passes`, no conjunct of the person's is dropped by this branch in the
+            // first place, so the guard buys nothing there and costs a split.
+            let body = if may_return && counts_passes {
+                format!(
+                    "[(.ite (.name \"#returned\") [.leave] []){}{}",
+                    if body == "[]" { "" } else { ", " },
+                    &body[1..]
+                )
+            } else {
+                body
+            };
+            // **The increment is the pass's FIRST statement**, so that a `next` or a
+            // `leave` in the middle of the body cannot skip it.
+            let body = if counts_passes {
+                format!(
+                    "[(.bindName {p} (.bin .add (.name {p}) (.lit (.int 1)))){}{}",
+                    if body == "[]" { "" } else { ", " },
+                    &body[1..],
+                    p = quoted(crate::PASSZAEHLER_LEAN)
+                )
+            } else {
+                body
+            };
             c.callees.extend(inner_callees.iter().cloned());
             let nested: Vec<String> = inner_loops.iter().map(|l| l.id.clone()).collect();
             c.loop_infos.extend(inner_loops);
@@ -2113,6 +2381,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                 ranges: c.ranges.clone(),
                 records: c.seen_records.clone(),
                 range,
+                passes: if counts_passes { passes_bound } else { None },
             });
             let after = if !may_return {
                 String::new()
@@ -3080,6 +3349,26 @@ fn self_recursive(g: &RoutineGoal) -> bool {
     g.callees.contains(&g.name) && !g.loops.iter().any(|l| l.callees.contains(&g.name))
 }
 
+/// **Does the routine call itself from INSIDE one of its loops?** (2026-09-08.)
+///
+/// The composition is `contract_of_duty_rec_loop_in` in the model: the induction over the
+/// `decreases` runs OUTSIDE the loop rule, so the pass may assume the bounded self-contract
+/// at the ROUTINE's entry state -- and owes in return that the measure is still the one the
+/// routine entered with. Without that second half the bound would be vacuous: a pass that
+/// lowered the measure could call itself "below" a bound that no longer holds.
+///
+/// The wiring is written for **one ranged loop with no loop nested in it**. A `retry`/
+/// `forever` pass has no index range to induct over, and two loops would need the rule of
+/// each inside the same induction; both stay unwired, by their own name.
+fn rec_in_loop(g: &RoutineGoal) -> bool {
+    g.callees.contains(&g.name)
+        && g.decreases.is_some()
+        && g.loops.len() == 1
+        && g.loops[0].range.is_some()
+        && g.loops[0].nested.is_empty()
+        && g.loops[0].callees.contains(&g.name)
+}
+
 /// **The whole unit, judged.** Every routine with a body, in declaration order.
 pub fn routine_goals(unit: &Unit) -> Vec<RoutineGoal> {
     let mut out = Vec::new();
@@ -3662,12 +3951,24 @@ fn wiring_order(goals: &[RoutineGoal], all_routines: &BTreeSet<String>) -> (Vec<
                 if self_recursive(g) && g.decreases.is_some() {
                     continue;
                 }
-                let why = if g.decreases.is_none() && self_recursive(g) {
-                    "recursion -- its `decreases` has no term"
-                } else if !self_recursive(g) {
-                    "recursion -- the recursive call stands inside a loop"
+                // **A recursive call inside ONE ranged loop is wired since 2026-09-08**
+                // (`contract_of_duty_rec_loop_in`): the induction over the `decreases` runs
+                // outside the loop rule, and the pass carries the measure across.
+                if rec_in_loop(g) {
+                    continue;
+                }
+                let why = if g.decreases.is_none() {
+                    "recursion -- its `decreases` has no term; add one, and the induction \
+                     over it is written for you"
+                } else if g.loops.len() != 1 {
+                    "recursion -- the recursive call stands inside one of SEVERAL loops; the \
+                     induction is written for a routine with exactly one"
+                } else if g.loops[0].range.is_none() {
+                    "recursion -- the recursive call stands inside a `retry`/`forever` loop, \
+                     which has no index range to induct over; a `traverse` has one"
                 } else {
-                    "recursion"
+                    "recursion -- the recursive call stands inside a NESTED loop; the \
+                     induction is written for one loop, not for a stack of them"
                 };
                 unwired.insert(g.name.clone(), why.into());
             } else if !names.contains(c) {
@@ -3720,6 +4021,67 @@ fn wiring_order(goals: &[RoutineGoal], all_routines: &BTreeSet<String>) -> (Vec<
         }
     }
     (order, wired_cycles, unwired)
+}
+
+/// **Where a refusal really sits** (2026-09-08) -- and it is often not the clause the duty
+/// names. `ensures result == puffer.e_eintritt` has a perfectly good term; what has none is
+/// the `requires lenof(puffer) >= sizeof(Elf64Kopf)` of the same routine, and the whole
+/// routine is refused with it. A reader who sees only `layout-buffer-length` next to the
+/// `ensures` goes looking for a built-in in a clause that has none.
+///
+/// The same for a `table` invariant: it is owed by every routine that WRITES its carrier,
+/// so one untranslatable writer refuses the invariant -- and the invariant's own term may
+/// be right there in the file.
+fn inherited_note(
+    p: &crate::pflichten::Pflicht,
+    r: LeanReason,
+    goals: &[RoutineGoal],
+    unit: &Unit,
+) -> String {
+    if let Some(g) = goals.iter().find(|g| g.name == p.funktion) {
+        if g.body.as_ref().err().copied() == Some(r) {
+            return format!(
+                "\n      (inherited: this clause HAS a term; {} has none)",
+                why_routine_refused(&p.funktion, r, unit)
+            );
+        }
+    }
+    let name = p.gegenstand.strip_prefix("invariant ").unwrap_or(&p.gegenstand);
+    if let Some(inv) = unit.invariants.iter().find(|i| i.name == name) {
+        if inv.term.is_ok() {
+            if let Some(g) = goals
+                .iter()
+                .find(|g| g.body.as_ref().err().copied() == Some(r) && g.writes.iter().any(|w| inv.carriers.contains(w)))
+            {
+                return format!(
+                    "\n      (inherited: this invariant HAS a term; `{}` writes its carrier and {} has none)",
+                    g.name,
+                    why_routine_refused(&g.name, r, unit)
+                );
+            }
+        }
+    }
+    String::new()
+}
+
+/// **What in a routine has no term** -- so that the note above says the construct and not
+/// only the routine. An invariant a routine must keep BECAUSE IT WRITES THE CARRIER is the
+/// case that surprises: nothing in the routine's own text mentions it.
+fn why_routine_refused(f: &str, r: LeanReason, unit: &Unit) -> String {
+    if let Some(info) = unit.routines.get(f) {
+        for m in &info.maintained {
+            if let Some(inv) = unit.invariants.iter().find(|i| i.name == *m) {
+                if inv.term.as_ref().err().copied() == Some(r) {
+                    return format!(
+                        "`{}` -- the invariant `{f}` must keep because it writes `{}`",
+                        inv.name,
+                        inv.carriers.join("`, `")
+                    );
+                }
+            }
+        }
+    }
+    format!("the body or the `requires` of `{f}`")
 }
 
 /// **The unit's obligation register, as a Lean 4 module.**
@@ -3811,11 +4173,12 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             s.push_str(&format!("  {} ({}): {word} -- {}\n", r.tag(), mine.len(), r.sentence()));
             for (i, p) in mine {
                 s.push_str(&format!(
-                    "    duty_{}  {}  {} :: {}\n",
+                    "    duty_{}  {}  {} :: {}{}\n",
                     i + 1,
                     p.art.marke(),
                     p.funktion,
-                    p.gegenstand
+                    p.gegenstand,
+                    inherited_note(p, r, &goals, &unit)
                 ));
             }
             s.push('\n');
@@ -4042,6 +4405,11 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         }
         s.push_str(&format!("/-! ### `{}` -/\n\n", g.name));
 
+        // **A routine whose recursive call stands inside its loop** (2026-09-08): the loop's
+        // pass gets the bounded self-contract at the ROUTINE's entry state `s0`, and owes
+        // that the measure at the end of the pass is still the one at `s0`. See `rec_in_loop`.
+        let ril = rec_in_loop(g) && cycle_of.get(&g.name).is_none();
+
         // The loops, innermost first (they are pushed as they close).
         for l in &g.loops {
             let lid = lean_ident(&l.id);
@@ -4054,28 +4422,84 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                 hyps.push(("hlo".into(), format!("{} ≤ k", int_lit(lo)), "the index is in the loop's range".into()));
                 hyps.push(("hhi".into(), format!("k < {}", int_lit(hi)), "the index is in the loop's range".into()));
             }
+            // **The pass counter** (agent b, 2026-09-08): this is the `i`-th pass of at most
+            // `np`, and the ghost local says so.
+            if let Some(np) = l.passes {
+                hyps.push(("hplo".into(), "0 ≤ i".into(), "this is the `i`-th pass".into()));
+                hyps.push(("hphi".into(), format!("i < {}", int_lit(np)), "the loop runs at most `count` passes".into()));
+                hyps.push((
+                    "hpass".into(),
+                    format!("t.local' {} = .int i", quoted(crate::PASSZAEHLER_LEAN)),
+                    "the counter stands at the number of passes already done".into(),
+                ));
+            }
             hyps.push(("hwf".into(), "wellFormed t".into(), "the well-formed world".into()));
+            let ril_here = ril && l.callees.contains(&g.name);
+            if ril_here {
+                hyps.push((
+                    "s0".into(),
+                    "State".into(),
+                    "the ROUTINE's entry state -- what the induction over `decreases` bounds by".into(),
+                ));
+                hyps.push((
+                    "hmeas".into(),
+                    format!("eval t {}_decreases = eval s0 {}_decreases", g.name, g.name),
+                    "the measure is still the one the routine entered with".into(),
+                ));
+            }
             hyps.push(("hinv".into(), format!("eval t {lid}_inv = some (.bool true)"), "the invariant at the start of the pass".into()));
             for c in &l.callees {
                 let cid = callee_id(c);
-                hyps.push((format!("c_{cid}"), format!("Contract ρ {} {cid}_requires {cid}_post", quoted(c)), format!("the contract of `{c}`")));
+                if ril_here && *c == g.name {
+                    // **The bounded self-contract, at the routine's entry state** -- the pass
+                    // runs inside the induction over the measure, so what it may assume about
+                    // its own recursive call is the contract on states strictly below `s0`.
+                    hyps.push((
+                        format!("c_{cid}"),
+                        format!("ContractBelow ρ {} {cid}_decreases s0 {cid}_requires {cid}_post", quoted(c)),
+                        format!("the contract of `{c}` itself, below the routine's entry state in its `decreases`"),
+                    ));
+                } else {
+                    hyps.push((format!("c_{cid}"), format!("Contract ρ {} {cid}_requires {cid}_post", quoted(c)), format!("the contract of `{c}`")));
+                }
                 hyps.push((format!("fr_{cid}"), format!("Frame ρ {} {cid}_writes", quoted(c)), format!("the frame of `{c}`")));
             }
             for n in &l.nested {
                 let nid = lean_ident(n);
-                hyps.push((format!("l_{nid}"), format!("LoopRule ρ {} wellFormed {nid}_inv", quoted(n)), format!("the rule of loop `{n}`")));
+                let ty = g
+                    .loops
+                    .iter()
+                    .find(|x| x.id == *n)
+                    .map_or_else(|| format!("LoopRule ρ {} wellFormed {nid}_inv", quoted(n)), |x| loop_rule_type(x, "wellFormed"));
+                hyps.push((format!("l_{nid}"), ty, format!("the rule of loop `{n}`")));
             }
+            let after = if ril_here {
+                format!(
+                    "(wellFormed t' ∧ eval t' {}_decreases = eval s0 {}_decreases)",
+                    g.name, g.name
+                )
+            } else {
+                "wellFormed t'".to_string()
+            };
             let concl = format!(
-                "∃ t', finalState (exec ρ {lid}_body {{ t with local' := bindLocal t.local' {} (.int k) }}) = some t'\n        ∧ wellFormed t' ∧ eval t' {lid}_inv = some (.bool true)",
-                quoted(&l.var)
+                "∃ t', finalState (exec ρ {lid}_body {{ t with local' := bindLocal t.local' {} (.int k) }}) = some t'\n        ∧ {after} ∧ eval t' {lid}_inv = some (.bool true){}",
+                quoted(&l.var),
+                match l.passes {
+                    Some(_) => format!(
+                        "\n        ∧ t'.local' {} = .int (i + 1)",
+                        quoted(crate::PASSZAEHLER_LEAN)
+                    ),
+                    None => String::new(),
+                }
             );
             s.push_str(&format!("/-- **The loop rule of `{}`, as a statement over one pass.** -/\n", l.id));
-            s.push_str(&format!("def {lid}_keeps_statement : Prop :=\n  ∀ (ρ : Env) (t : State) (k : Int)"));
+            let pass_binder = if l.passes.is_some() { " (i : Int)" } else { "" };
+            s.push_str(&format!("def {lid}_keeps_statement : Prop :=\n  ∀ (ρ : Env) (t : State) (k : Int){pass_binder}"));
             for (lbl, term, _) in &hyps {
                 s.push_str(&format!("\n    ({lbl} : {term})"));
             }
             s.push_str(&format!(",\n    {concl}\n\n"));
-            s.push_str(&format!("theorem {lid}_keeps : {lid}_keeps_statement := by\n  unfold {lid}_keeps_statement\n  intro ρ t k"));
+            s.push_str(&format!("theorem {lid}_keeps : {lid}_keeps_statement := by\n  unfold {lid}_keeps_statement\n  intro ρ t k{}", if l.passes.is_some() { " i" } else { "" }));
             for (lbl, _, _) in &hyps {
                 s.push_str(&format!(" {lbl}"));
             }
@@ -4092,6 +4516,23 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                 s.push('\n');
             }
             let mut set = format!("{lid}_body, {lid}_inv, wellFormed");
+            if ril_here {
+                // **The measure equation, opened like the invariant is.** Measured
+                // 2026-09-08: without this line the pass left exactly one goal --
+                // `Value.int w_n = s0.local' "n"` -- which IS `hmeas` with the measure
+                // unfolded and the parameter's witness applied. A hypothesis the pipeline
+                // cannot see through is a hypothesis the person is asked for.
+                let mut me = format!("{}_decreases", g.name);
+                for e in &eqs {
+                    me.push_str(&format!(", {e}"));
+                }
+                // **`.symm`, and the direction is the whole point** (measured 2026-09-08):
+                // as `eval t e = eval s0 e` the rewrite runs the WRONG way -- `s0.local' "n"`
+                // replaces the witness in every other hypothesis, and the pass stops
+                // computing. Turned round, `s0` is what disappears.
+                s.push_str(&format!("  have hmeas' := hmeas.symm\n  gabbro_simp_at hmeas' [{me}]\n"));
+                set.push_str(&format!(", {}_decreases, hmeas'", g.name));
+            }
             for c in &l.callees {
                 let cid = callee_id(c);
                 set.push_str(&format!(", {cid}_pre, {cid}_requires, {cid}_post, {cid}_writes, Frame_read _ _ _ fr_{cid}"));
@@ -4103,6 +4544,9 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             for e in &eqs {
                 set.push_str(&format!(", {e}"));
             }
+            if l.passes.is_some() {
+                set.push_str(", hpass");
+            }
             let tactic = format!("gabbro_auto [{set}] using shapeOf");
             if splits.is_empty() {
                 s.push_str(&format!("  {tactic}\n\n"));
@@ -4113,7 +4557,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
 
         // The routine's theorem.
         let in_cycle = cycle_of.get(&g.name).copied();
-        let rec_measure = if self_recursive(g) && in_cycle.is_none() { g.decreases.as_deref() } else { None };
+        let rec_measure = if (self_recursive(g) || ril) && in_cycle.is_none() { g.decreases.as_deref() } else { None };
         let mut hyps: Vec<(String, String, String)> = Vec::new();
         hyps.push(("hwf".into(), "wellFormed s".into(), "the well-formed world (`U2`)".into()));
         hyps.push(("hpre".into(), format!("eval s {} = some (.bool true)", pre_name(&g.name)), "the declared shapes, the `requires`, the invariants it maintains".into()));
@@ -4148,7 +4592,15 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         }
         for l in &g.loops {
             let lid = lean_ident(&l.id);
-            hyps.push((format!("l_{lid}"), format!("LoopRule ρ {} wellFormed {lid}_inv", quoted(&l.id)), format!("the rule of loop `{}`", l.id)));
+            // **The loop of a routine that recurses inside it carries the measure** -- its
+            // rule holds for states that agree with `s` in the `decreases`, and that is what
+            // lets the pass use the bounded self-contract at `s` (`rec_in_loop`).
+            let wf = if ril && l.callees.contains(&g.name) {
+                format!("(fun u => wellFormed u ∧ eval u {n}_decreases = eval s {n}_decreases)", n = g.name)
+            } else {
+                "wellFormed".to_string()
+            };
+            hyps.push((format!("l_{lid}"), loop_rule_type(l, &wf), format!("the rule of loop `{}`", l.id)));
         }
         let concl = format!(
             "∃ s', finalState (exec ρ {n}_body s) = some s'\n        ∧ {n}_post s s' (finalValue (exec ρ {n}_body s))",
@@ -4221,7 +4673,13 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             match l.range {
                 Some((lo, hi)) => prog_parts.push((
                     format!("rl_{lid}"),
-                    format!("RunsLoopIn ρ {} {lid}_body {} {} {}", quoted(&l.id), quoted(&l.var), int_lit(lo), int_lit(hi)),
+                    match l.passes {
+                        Some(np) => format!(
+                            "RunsLoopN ρ {} {lid}_body {} {} {} {}",
+                            quoted(&l.id), quoted(&l.var), int_lit(lo), int_lit(hi), int_lit(np)
+                        ),
+                        None => format!("RunsLoopIn ρ {} {lid}_body {} {} {}", quoted(&l.id), quoted(&l.var), int_lit(lo), int_lit(hi)),
+                    },
                 )),
                 None => prog_parts.push((format!("rl_{lid}"), format!("RunsLoop ρ {} {lid}_body {}", quoted(&l.id), quoted(&l.var)))),
             }
@@ -4240,15 +4698,18 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         for (n, why) in &unwired {
             s.push_str(&format!("      {n}: {why}\n"));
         }
-        s.push_str("    A direct self-recursion is wired by induction over its `decreases`\n");
-        s.push_str("    (`contract_of_duty_rec`); a mutual one, and a recursive call inside a\n");
-        s.push_str("    loop, are not -- the induction over a cycle of names is not written. -/\n\n");
+        s.push_str("    Each line above names the construct and the way out. What IS wired: a\n");
+        s.push_str("    self-recursion, by induction over its `decreases` (`contract_of_duty_rec`);\n");
+        s.push_str("    a cycle of routines, over their shared measure (`contracts_of_duties_rec`);\n");
+        s.push_str("    a recursive call inside ONE ranged loop, by the induction outside the loop\n");
+        s.push_str("    rule (`contract_of_duty_rec_loop_in`, 2026-09-08). A caller of a REFUSED\n");
+        s.push_str("    callee has no contract to compose with: the callee's refusal above is the\n");
+        s.push_str("    line to read, and fixing it wires the caller too. -/\n\n");
     }
     let mut yields: Vec<String> = Vec::new();
     for g in &wired {
         for l in &g.loops {
-            let lid = lean_ident(&l.id);
-            yields.push(format!("LoopRule ρ {} wellFormed {lid}_inv", quoted(&l.id)));
+            yields.push(loop_rule_type(l, "wellFormed"));
         }
         yields.push(format!("Contract ρ {} {}_requires {}_post", quoted(&g.name), g.name, g.name));
     }
@@ -4279,9 +4740,17 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             s.push_str(&format!("  obtain ⟨{}⟩ := ha\n", labels.join(", ")));
         }
         for g in &wired {
+            let ril = rec_in_loop(g) && cycle_of.get(&g.name).is_none();
             // innermost loops first: `loop_infos` is pushed as loops close, so the order is
             // already innermost-first for nesting.
             for l in &g.loops {
+                if ril {
+                    // **The rule of THIS loop cannot be built before the contract**: its pass
+                    // needs the bounded self-contract, which only the induction hands down.
+                    // It is built below, twice -- once inside the induction (bounded by the
+                    // routine's entry state), once after it from the finished contract.
+                    continue;
+                }
                 let lid = lean_ident(&l.id);
                 let mut args = Vec::new();
                 for c in &l.callees {
@@ -4293,6 +4762,17 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                     args.push(format!("l_{}", lean_ident(n)));
                 }
                 match l.range {
+                    Some((lo, hi)) if l.passes.is_some() => s.push_str(&format!(
+                        "  have l_{lid} : {} :=\n    looprule_of_body_p ρ {} wellFormed {lid}_inv {lid}_body {} {} {} {} {} rl_{lid}\n      (fun t k i hlo hhi hplo hphi hpass hw hin => d_{lid} ρ t k i hlo hhi hplo hphi hpass hw hin{})\n",
+                        loop_rule_type(l, "wellFormed"),
+                        quoted(&l.id),
+                        quoted(&l.var),
+                        quoted(crate::PASSZAEHLER_LEAN),
+                        int_lit(lo),
+                        int_lit(hi),
+                        int_lit(l.passes.unwrap()),
+                        args.iter().map(|a| format!(" {a}")).collect::<String>()
+                    )),
                     Some((lo, hi)) => s.push_str(&format!(
                         "  have l_{lid} : LoopRule ρ {} wellFormed {lid}_inv :=\n    looprule_of_body_in ρ {} wellFormed {lid}_inv {lid}_body {} {} {} rl_{lid}\n      (fun t k hlo hhi hw hi => d_{lid} ρ t k hlo hhi hw hi{})\n",
                         quoted(&l.id),
@@ -4373,6 +4853,68 @@ pub fn module(baum: &Programm, datei: &str) -> String {
                     quoted(&g.name),
                     member(&g.name),
                     n = g.name
+                ));
+            } else if ril {
+                // **The recursive call stands inside the loop** (2026-09-08). One step:
+                // `contract_of_duty_rec_loop_in` runs the induction over the `decreases`
+                // OUTSIDE the loop rule, hands the pass the bounded self-contract at the
+                // routine's entry state, and takes back from it that the measure did not
+                // move. Afterwards the loop's own rule follows from the finished contract.
+                let l = &g.loops[0];
+                let lid = lean_ident(&l.id);
+                let (lo, hi) = l.range.unwrap();
+                let n = &g.name;
+                // the arguments of the routine's duty: the self-contract is `hrec`, the loop
+                // rule is `hlr`, everything else is a hypothesis of `unit_closed`.
+                let mut margs = Vec::new();
+                for c in &g.callees {
+                    let cid = callee_id(c);
+                    margs.push(if c == n { "hrec".to_string() } else { format!("c_{cid}") });
+                    margs.push(format!("fr_{cid}"));
+                }
+                margs.push("hlr".to_string());
+                // the arguments of the pass's duty, in the order its statement declares them
+                let mut largs = Vec::new();
+                for c in &l.callees {
+                    let cid = callee_id(c);
+                    largs.push(if c == n { "hrec".to_string() } else { format!("c_{cid}") });
+                    largs.push(format!("fr_{cid}"));
+                }
+                let mut largs2 = Vec::new();
+                for c in &l.callees {
+                    let cid = callee_id(c);
+                    largs2.push(if c == n {
+                        format!("(contractBelow_of_contract ρ {} {n}_decreases t {n}_requires {n}_post c_{n})", quoted(n))
+                    } else {
+                        format!("c_{cid}")
+                    });
+                    largs2.push(format!("fr_{cid}"));
+                }
+                s.push_str(&format!(
+                    "  have c_{n} : Contract ρ {q} {n}_requires {n}_post :=\n    \
+                     contract_of_duty_rec_loop_in ρ {q} {n}_body {n}_requires {n}_post {n}_decreases wellFormed\n      \
+                     {qid} {lid}_body {qv} {lo} {hi} {lid}_inv r_{n} rl_{lid}\n      \
+                     (fun s0 _h0 hrec t k hlo hhi hw hm hin => d_{lid} ρ t k hlo hhi hw s0 hm hin{la})\n      \
+                     (fun t ht hrec hlr => d_{n} ρ t ht.1 ht.2{ma})\n",
+                    q = quoted(n),
+                    qid = quoted(&l.id),
+                    qv = quoted(&l.var),
+                    lo = int_lit(lo),
+                    hi = int_lit(hi),
+                    la = largs.iter().map(|a| format!(" {a}")).collect::<String>(),
+                    ma = margs.iter().map(|a| format!(" {a}")).collect::<String>(),
+                ));
+                s.push_str(&format!(
+                    "  have l_{lid} : LoopRule ρ {qid} wellFormed {lid}_inv :=\n    \
+                     looprule_of_body_in ρ {qid} wellFormed {lid}_inv {lid}_body {qv} {lo} {hi} rl_{lid}\n      \
+                     (by intro t k hlo hhi hw hin\n          \
+                     obtain ⟨t', h1, ⟨h2, _⟩, h3⟩ := d_{lid} ρ t k hlo hhi hw t rfl hin{la2}\n          \
+                     exact ⟨t', h1, h2, h3⟩)\n",
+                    qid = quoted(&l.id),
+                    qv = quoted(&l.var),
+                    lo = int_lit(lo),
+                    hi = int_lit(hi),
+                    la2 = largs2.iter().map(|a| format!(" {a}")).collect::<String>(),
                 ));
             } else if recursive {
                 s.push_str(&format!(

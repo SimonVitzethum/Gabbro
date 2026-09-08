@@ -50,7 +50,9 @@ impl fn zaehle_freie(p : ptr<normal, r> Plaetze) -> u32
         -- bleibt `n` in der Kapazitaet. *Die Aussage, die man eigentlich haben will --
         -- `n == count(s in slots of p : !p.slots[s].belegt)` -- ist «B13» und abgesagt
         -- (`messung/AGGREGATION.md`).*
-        invariant n <= 8
+        -- `n <= 8` is true and unprovable across one pass; `n <= passes` (the number
+        -- of passes already done) survives it and yields the capacity back.
+        invariant n <= passes
     {
         if !p.slots[i].belegt {
             n += 1;

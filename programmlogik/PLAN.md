@@ -223,6 +223,9 @@ Corpus: 189 units, 502 theorems (264 `_meets`, 49 `_keeps`, 189 `unit_closed`). 
 clauses, 12 foreign bodies), 13 refused forms (9 quantifiers over `fields of` / `threads` /
 `mappings of` / a membership, 2 carriers that are not tables, 2 layout built-ins).
 
+*After run 24 the corpus is 190 units and the register 177 duties — 93 carried, 72 assumed,
+**12** refused under six tags instead of one (§9.1).*
+
 `sorry` left to the person, per run (0 Lean errors in every run since the model was
 sealed):
 
@@ -238,6 +241,8 @@ sealed):
 | 21 | 32 | `gabbro_values`, `chase` frame lemmas |
 | 22 | 29 | `gabbro_bits` (`&&&`), arithmetic facts also from hypotheses (`planer` closes) |
 | 23 | 28 | `^^^`/`\|\|\|` bounds in `gabbro_bits` (`udp-echo/falte` closes) |
+| 24 | 29 | the refused forms split into six tags, one of them CARRIED, and recursion inside a loop wired (§9) — the one more `sorry` is a duty that was refused before |
+| 25 | 23 | `passes`, the pass counter (§10) — five counter units close |
 
 The count went *up* once (16) on purpose: every obligation the model did not carry before
 (a declared range) was added to the statements first, and then carried.
@@ -289,15 +294,20 @@ specification), or **gap** (plumbing this plan still owes, with the step that cl
 1. **Counters in loops** (§5.1, six units): not a gap of the model but a candidate for a
    *convenience*: bind the pass index as a ghost local (`#pass`) in every `traverse`, so a
    person can write `n <= #pass` — the model would then carry `#pass < count` from
-   `RunsLoopIn`. Not started; it changes the invariant language.
-2. **Refused forms** (13): quantifiers over `fields of`, `threads`, `mappings of`, a
-   membership (`x in …`); a carrier that is not a table; the layout built-ins (`sizeof`,
+   `RunsLoopIn`. **BUILT 2026-09-08 as `passes`, not `#pass` — §10**; five of the six units
+   closed, and the surface is a plain identifier, not a token.
+2. **Refused forms** (13 → **12**, and one tag became six — §9.1): quantifiers over
+   `fields of`, `threads`, `mappings of`, a membership (`x in …`); a carrier that is not a
+   table; the layout built-ins (`sizeof`,
    `lenof` over a buffer). Each needs a model domain it does not have. They stay refused
    with their tag; a refusal is not a `sorry`.
-3. **Recursion inside a loop** (not wired): the loop's contract and the routine's
-   self-contract in one induction. Named unwired in the register.
-4. **`gabbro_calls` and hole goals** (measured, not fixed): a precondition hole opened for an
-   inner call does not see a hypothesis added by a later instance; the innermost-first order
+3. **Recursion inside a loop** (~~not wired~~ **WIRED 2026-09-08 — §9.3**): the loop's
+   contract and the routine's self-contract in one induction. No corpus unit had the shape,
+   so it is measured on a probe (`messung/proben/probe-rekursion-in-schleife.gab`); three
+   other shapes keep their refusal and now name which.
+4. **`gabbro_calls` and hole goals** (measured, not fixed — the change is written and NOT
+   built, §10.5): a precondition hole opened for an inner call does not see a hypothesis
+   added by a later instance; the innermost-first order
    and the per-goal marks make it rare, not impossible.
 
 ### 5.3 What a person does
@@ -358,3 +368,205 @@ opens the file is what §5.1 describes for their unit, and nothing from §1's ta
 3. Keep `Body.lean` without `sorry` and `cargo test --no-fail-fast` green at every commit;
    commit through `arbeitsprotokoll/.commitmsg` + `./commit.sh`; the measurement scratch
    (`programmlogik/_pruefung/`, `Duty/`, `Proofs/` from test runs) stays out of the tree.
+
+---
+
+## 9. Run 24 — the refused forms, and recursion inside a loop (2026-09-08)
+
+`PLAN.md` §5.2 items 2 and 3, from the emitter's side. Every number below is
+`_pruefung/lauf.sh` over the corpus regenerated from the emitter of this change, and
+`cargo test --no-fail-fast` in the container.
+
+| | before | after |
+|---|---|---|
+| modules | 189 | **190** (one new probe) |
+| Lean errors | 0 | **0** |
+| `sorry` | 28 | **29** |
+| register: duties | 175 | 177 |
+| carried as goals | 90 | **93** |
+| assumed by name | 72 | 72 |
+| **refused forms** | 13 | **12** |
+
+### 9.1 The refused forms (item 2), measured one by one
+
+The thirteen were `quantified` (9), `carrier-not-a-table` (2), `builtin` (2). **One tag
+stood over forms whose grounds and whose ways out differ**, so the register told a reader
+neither. They are now six tags, and one of the thirteen is carried:
+
+- **`fields of <format|record>` — CARRIED.** The field list is declared and finite, so the
+  quantifier is a finite conjunction; where the body does not read the binder — every use
+  in the corpus — it collapses to the body (`true`/`false` for an empty list). A body that
+  DOES read the binder stays refused (`quantified`): a field NAME is not a value of this
+  model. Effect: `probe-neun-domaenen`'s `d6_fields` moved from *refused* to a goal.
+- **`threads` → `quantified-threads`.** Every other domain hangs on a declaration
+  (`count N`, `tree { … }`, `walk … levels`, the one field array of a record); `threads`
+  hangs on nothing, so there is no index domain to cut. `beispiele/57-faedenhalt` says the
+  same thing in its own header. **A language change, not a model change.**
+- **`mappings of <walk>` → `quantified-mappings`.** Hardware — the same object a `walk`
+  invariant speaks about, and those are ASSUMED by name.
+- **`carrier-not-a-table` split in two.** `beispiele/21-verbundwert` is a field of a record
+  VALUE (`let c = fertig(k, 7); c.len`) → `record-value`; the model's places are named by a
+  record TYPE, and a binding has none. `messung/proben/probe-ipc-fastpath-durchgestochen` is
+  `e.slots[core].receivers.buf[i]`, an array inside a record held in a SLOT →
+  `slot-record-array`. **The second is refused for soundness, not for effort:** a record
+  type is one object of this model, so every slot's copy would be the same place, and a body
+  writing two slots' queues would be modelled as writing one.
+- **The layout built-ins stay refused, and the ground is measured, not assumed.**
+  `lenof(puffer) >= sizeof(Elf64Kopf)` (`beispiele/03-format`, `messung/grammatik/messreihe`)
+  fails at `lenof` first → its own tag `layout-buffer-length`: nothing declares that buffer's
+  length. `lenof` over a fixed-length array **was already carried** (the length stands in the
+  declaration). And `sizeof(T)` has no number to give: **the C emitter refuses it by name for
+  exactly this reason** (`emit.rs`, *"`sizeof(T)` would have to agree with the layout the
+  checker computed, and that agreement is not established anywhere"*). A number here would be
+  a layout claim Gabbro itself declines to make.
+
+### 9.2 A refusal that is INHERITED now says so
+
+`duty_1 N kopf_lesen :: ensures #1 — refused (builtin)` sent a reader looking for a built-in
+in an `ensures` that has none: the clause is fine, the routine's `requires` is not. Two
+chains were found by measuring, and both are printed now:
+
+- a clause refused because the ROUTINE's body or `requires` has no term;
+- a `table` invariant refused because one routine that WRITES its carrier has none — and in
+  `probe-stellungen` the writer's own text does not mention the culprit either: the routine
+  inherits `s8_threads` because it writes `Knoten`, and one untranslatable invariant on a
+  table refuses **every** routine that writes it (there: five duties, from one `threads`).
+
+### 9.3 Recursion inside a loop (item 3) — wired, and measured
+
+**No corpus unit had the shape.** Both `NOT WIRED` notes in the corpus
+(`beispiele/41-handschlag`, `probe-transport-warteschlange-aufsetzen`) read *callee refused*.
+A wiring nobody measures is a wiring nobody has, so the shape is now a probe:
+`messung/proben/probe-rekursion-in-schleife.gab` (checker: 0 errors).
+
+The step is `Gabbro/Body.lean` §8, `contract_of_duty_rec_loop_in`: the induction over
+`decreases` runs OUTSIDE the loop rule, so the pass may assume `ContractBelow ρ f e s0 …`
+at the ROUTINE's entry state `s0` — and **owes in return that the measure has not moved**
+(`eval t' e = eval s0 e`, carried across the passes in the loop's state predicate beside the
+well-typed world). Without that second half the bound would be about a state the loop has
+already left, and the assumption would be vacuous. Afterwards the loop's own rule follows
+from the finished contract (`contractBelow_of_contract`).
+
+Measured on the probe: **0 errors, 0 `sorry`** — `f_loop_1_keeps`, `f_meets` and
+`unit_closed` all close, and `unit_closed` yields both the loop rule and the contract.
+One emitter line was needed for it and it is written down: the measure equation has to be
+opened with `.symm` (`have hmeas' := hmeas.symm`); the other direction rewrites the
+parameter's witness into `s0.local' "n"` everywhere and the pass stops computing.
+
+The step is written for **one ranged loop with nothing nested in it**. Three other shapes
+keep their refusal and now name which: several loops, a `retry`/`forever` pass (no index
+range to induct over), a nested loop.
+
+### 9.4 The one `sorry` that came back, and why it is not plumbing
+
+28 → 29, and the difference is `probe-neun-domaenen`'s `d6_fields`: a duty that was
+**refused** is now a **goal**, and what stands is `x = 0` for `Knoten.slots[0].marke` after
+an empty body — the same class as the four `sorry`s that file already had (§5.1: *empty
+bodies with an `ensures`, the syntax probe's, not the model's*). It cannot be carried
+because it is not true of the program. The same shape as run 16: an obligation the channel
+did not state before is stated first, and the count says so.
+
+---
+
+## 10. The pass counter — `passes` (agent b, 2026-09-08)
+
+**§5.2 item 1 is built and measured.** A person may write `n <= passes` over a `traverse`,
+and `passes` is the number of passes already done.
+
+### 10.1 Why it needed the model and not only a word
+
+`n <= NSLOTS` is true of every run of `19-traversierung` and **unprovable as a loop
+invariant**, and no tactic could ever close it: `LoopRule` quantifies over EVERY state the
+invariant admits, so a pass that starts at `n = NSLOTS` has to be handled, and `n + 1 <=
+NSLOTS` is false there. The sentence that survives a pass is `n <= <passes so far>`, and for
+it to be sayable two things had to be added:
+
+- **`#pass`, a ghost local.** The emitter binds it to `0` one `bindName` before the loop and
+  makes the increment the pass's own first statement (so a `next` or a `leave` in the middle
+  cannot skip it). Nothing of it reaches the generated C.
+- **A bound on the NUMBER of passes.** `RunsLoopIn` says every index is in the domain's
+  range and says nothing about how often the body runs — and without that no invariant can
+  bound a counter. `RunsLoopN ρ id body v lo hi np` adds `ks.length ≤ np`, with `np` the
+  domain's `count`. **This is a stronger assumption about the environment than `RunsLoopIn`,
+  and it is the sentence `by unvisited` makes**: each slot is visited at most once, so a
+  traversal of a table of `count N` runs at most `N` passes. It is assumed, as `Runs`,
+  `RunsLoop` and `RunsLoopIn` are assumed (§6), and named here.
+
+Model: `RunsLoopN`, `LoopRuleP ρ id wf inv pv` (the same conclusion as `LoopRule`, from a
+state whose counter stands at zero — where the emitter puts the loop), `looprule_passes_aux`
+and `looprule_of_body_p`. `gabbro_calls` knows `LoopRuleP`'s third premise. No existing
+definition or theorem of `Body.lean` changed.
+
+### 10.2 The language surface
+
+`passes` — a plain identifier, **no keyword, no grammar-table entry** (`pruefe-grammatiktafel.py`
+green, 0 of 218 terminals uncovered; `pruefe-syntax.sh`, `-todo.py`, `-englisch.py`,
+`-kennungen.py` unchanged). It is declared by a `traverse` for its `invariant` and by nothing
+else, exactly as the traversal variable is (`domaene.rs::aus_block`, `D021`/`D017`), and a
+**declared name of that spelling wins** — local, parameter, constant, global, type, table,
+`walk` or head; the emitter asks the same seven questions (`lean.rs::passes_is_free`). Where
+the loop cannot count (no `count` behind the domain) the emitter **refuses with the tag
+`pass-counter`** instead of writing `passes` out as `.global "passes"` — the wrong proof
+object `D021` exists against.
+
+Alternatives considered: `#pass` (unlexable today — a new token, a grammar-table row and a
+guardian update); a keyword `passes` (a reserved word costs every program that already uses
+it). The chosen surface costs nothing to a program that does not write it.
+
+### 10.3 Measured
+
+Corpus of 189 modules, `_pruefung/lauf.sh` with `P=6`, Lean 4.33 on tux:
+
+| run | errors | sorry | secs |
+|---|---|---|---|
+| before (run 23) | 0 | **28** | 493 |
+| after | 0 | **23** | 509 |
+
+Closed: `beispiele/19-traversierung`, `beispiele/46-verneinung`,
+`messung/proben/probe-elems`, `messung/proben/probe-suchschleife-passfach`,
+`messung/netz/udp-echo` — five of the six units of §5.1's counter paragraph. Their `.gab`
+invariants now read `n <= passes` (`summe <= passes`, `s <= 65535 * passes`); the arithmetic
+is `omega`'s once `0 ≤ #pass < count` is in the pass.
+
+`messung/fragmente/F06` keeps its **2** — and they are **not** the counter: with
+`invariant i <= passes` the range obligation of `i += 1` closes, and what stands is
+`w_i * 8 ≤ s.len`, the file's own `ensures result <= s.len`. That is **own logic** (§5.1),
+and §5.1's entry for F06 was half right: one half was plumbing, the other is the person's.
+
+`cargo test --no-fail-fast`: 31 collections, 0 failed (4 new probes in
+`crates/gabbro-check/tests/rechenwerk.rs`). `lake build Gabbro.Body`: green, no `sorry`.
+
+### 10.4 A second finding, kept small on purpose
+
+A loop that may `return` carries the invariant as `(#returned ∧ post) ∨ (¬#returned ∧ inv)`,
+so in the flagged branch **the person's own conjunct is gone** and a store in the body cannot
+meet its range — even though no pass follows a `return` (it desugars to `… ; leave`). The
+emitter now guards such a body with `if #returned { leave }`, which makes the pass do what the
+run does. **Measured over the whole corpus it is one more `ite` for `gabbro_cases` to split**:
+applied to every `may_return` loop it closed `probe-elems` and opened
+`beispiele/39-auftragsdienst` (net zero). It is therefore written **only where the loop counts
+its passes** — where the conjunct that the branch drops is the one just introduced.
+*The general case is open, and its cost is measured, not guessed.*
+
+### 10.5 What this run did NOT measure
+
+Two items of §5.2 were worked and are **not** reported as done, because the Lean machine
+became unreachable in the middle of the run (`device_bash`: *"Workspace unavailable"*, from
+10:00 on; the file system stayed readable, the shell did not come back).
+
+- **Pipeline speed.** `gabbro_pipeline_b` (§7 of `Body.lean`) is `gabbro_pipeline` with every
+  one of its fifty steps wrapped in `gabbro_timed`, which logs the step's wall time;
+  `_pruefung/zeit.sh <module>` sums those per step over a file. It is in the tree and it
+  built, and the numbers it exists to produce were not taken. What IS measured: on
+  `messung/fragmente/F01` (64 s) `set_option profiler true` attributes **56.3 s to `simp`
+  across 48 calls above the 500 ms threshold** — the single largest of them 9.35 s; and the
+  floor is **0.88 s per module** for `import Gabbro.Body` alone (5 runs of an empty importing
+  file, 4.4 s), i.e. ~166 s of the corpus's 509 s is startup and not proof.
+- **`gabbro_calls` and hole goals.** The change is written and is NOT in the model: it stands
+  as a patch beside it, unbuilt. Its shape: the holes a round leaves are collected, and when
+  every instance of the round is in, the round's calls are instantiated a second time INSIDE
+  each hole — a hole's context never receives the main goal's later `have`s, but it does hold
+  the theorem's own contract binders, so the fact is derivable there. An instance whose own
+  premises do not all close at once is rolled back, so a hole never spawns a hole. The
+  minimal example that exhibits the order (two calls at the SAME state, the second's
+  precondition being what the first's contract says about it) is written too, and unrun.
