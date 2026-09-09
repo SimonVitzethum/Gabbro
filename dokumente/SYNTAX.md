@@ -1,90 +1,87 @@
 # Gabbro — the syntax
 
-**The source for the surface.** [`SPRACHE.md`](SPRACHE.md) says which mechanisms there are
-and why; [`BEWEIS.md`](BEWEIS.md), what they are there for; here stands how one writes them down.
-What does not stand here is not writable.
+**The source for the surface, and since 2026-09-09 the source for the proof.**
+[`SPRACHE.md`](SPRACHE.md) says which mechanisms there are and why; [`BEWEIS.md`](BEWEIS.md),
+what they are there for; here stands how one writes them down — **and what every spelling
+has to carry so that it may be written at all.** What does not stand here is not writable.
 
-As of 2026-08-13, second version. **The compiler reads this** — since 2026-08-16 the corpus test
-`die_beispiele_der_grammatik_gehen_selbst_durch` runs the ```gabbro blocks below through the
-checker, `wortschatz.rs` holds the lexer against the vocabulary table, and
-`pruefe-wortschatz.py` holds the table against the terminals of the EBNF. *(Until 2026-08-17 the
-line here read "No compiler reads this." That was true on 2026-08-13 and has been false since the
-compiler existed — a grammar document whose examples nobody translates is the most expensive kind
-of prose: it looks like evidence.)*
+Third version, 2026-09-09. The second version (2026-08-13 … 2026-09-05) is in the `git`
+history of this file; nothing of its surface was removed, every production of it stands below.
+What is new is that **every production carries its attributes** — the range at a number, the
+bound at an index, the held witness at a guarded place, the write right at an assignment, the
+consumed mark at a call, the rank at a `locks`, the stage at a phase mark, the class at a
+register access, the pairing at a publication. A sentence of this grammar is a derivation whose
+attributes are satisfied. With that reading the sentence at the head of the second version —
 
 > **What every rule of this grammar has to achieve:** discharge one **plumbing** obligation by
-> construction — index, overflow, alias, frame, lock, race, refinement. If one of them stays hanging
-> on the programmer, that is **a refutation** at that point, not a blemish.
+> construction — index, overflow, alias, frame, lock, race, refinement. If one of them stays
+> hanging on the programmer, that is **a refutation** at that point, not a blemish.
 > **Logic** the programmer writes anyway, in every language.
+
+— is no longer a demand on the rules but a **theorem about them**: the attributed grammar is a
+typed inductive family in [`grammatik/Grammatik/Syntax.lean`](../grammatik/Grammatik/Syntax.lean),
+its meaning a **total** function in `Semantik.lean`, and the outcome type of that function has
+exactly two error constructors — `logik` (a clause the writer wrote does not hold) and
+`hardware` (an assumption about the machine does not hold). `Satz.lean` states it as
+`zwei_fehler`, and §16 below lists what the theorem does **not** say.
+
+> **Marks in this file.** `NEW «SG-n»` is a production, attribute or word that the second
+> version did not have. `CHANGED «SG-n»` is a production of the second version with an attribute
+> it did not carry, or a stricter form. `SUGAR` is a spelling of the second version that stays
+> writable and rewrites to the attributed form — nothing written against the second version
+> becomes unwritable through a `SUGAR` mark. Unmarked productions are unchanged. Every
+> production names the Lean constructor that carries it (`Lean:`), or says that it is
+> declaration-level (`Deklaration`) or sugar. «SG-n» numbers continue the numbering of
+> `PLAN-GRAMMATIK.md`.
 
 ---
 
 ## State — measured
 
-| | first version | **this one** |
+| | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 40 | **132** |
-| used but never defined | 21 (17 load-bearing) | **0** |
-| open design questions | 7 | **9, named at the end** |
-| **Guardian** | — | `pruefe-syntax.sh` checks **closure of the rules AND coverage of the terminals by the vocabulary**, each with a speech test |
+| defined EBNF rules | 132 | **160** measured (`pruefe-syntax.sh` EBNF branch, 2026-09-09: 160 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`; nothing removed |
+| used but never defined | 0 | **0** (measured same run) |
+| vocabulary words | 221 | **220 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`, 2026-09-09: 220 EBNF terminals against 220 table words, both readings) — new word since the second version: `owner` («SG-9») and `deadline` («SG-22») |
+| productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
+| formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
+| **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
 
-> **THIRD blind spot, the same family — and it cost three grammar errors that made the language
-> unusable.** The guardian checked that every **used** rule is defined, **not whether
-> every defined rule is reachable**. Found by a fragment checker, retrofitted as a
-> reachability run from `program`. It found immediately:
-> **`atomicdecl`, `lockdecl`, `lockstmt` were defined and never reachable from `program`** —
-> so **no atomic, no lock, no critical section** in the whole language, while
-> all six fragments use them. And a **duplicate `item` production** in which the second
-> hid the first.
->
-> Plus two errors no guardian saw, because they lay *inside* valid grammar:
-> **`old(x)` hung under `atompred` instead of under `primary`** — it could stand as a predicate on
-> its own, but could occur in **no expression**, hence never next to `==`. **The difference
-> statement this project carries as a core lesson was not writable** — and our own `delete_leaf`
-> example gave one. And **`fndecl` allowed only `block | ";"`**, with which **not a single `spec fn`
-> was writable**.
-
-> **The guardian had a second blind spot, and it was the same as the first.** It checked
-> the **nonterminals** for closure and claimed alongside a "closed
-> vocabulary", **without ever looking at the terminals** — 39 keywords stood in the grammar
-> and not in the table, four table words (`loop`, `never`, `offset_into`, `old`) in **no
-> production**. Two of them carried arguments: **without `offset_into` ELF is not writable, without
-> `old` the difference statement is not.** And its first find of its own was itself: it read "elf" out
-> of "Self", because it lacked the word boundaries.
-
-The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`,
-`params`, `variants` — are closed. **`pred` is the most important of them**: a proof language
-*is* its predicate language, and only with it can one say where the line lies.
+> **Partly run on 2026-09-09.** The EBNF-closure branch of `pruefe-syntax.sh`
+> (161 rules, 0 open) and `pruefe-wortschatz.py` (220/220 both readings, speech
+> test green) ran from this workstation; the full `pruefe-syntax.sh` (it builds
+> with `cargo build --tests`), `pruefe-grammatiktafel.py` and the parser item of
+> `PLAN-GRAMMATIK.md` §4 are still open. A number in this table that a guardian
+> contradicts is wrong here, not there.
 
 ---
 
-## Five decisions that fix everything else
+## Six decisions that fix everything else
 
 | | Decision | Reason |
 |---|---|---|
 | **E1** | **English keywords, German running text, free identifiers** | Caprock's own practice. The vocabulary is a **closed table**; a swap costs the lexer |
 | **E2** | **Statement-oriented, assignment is NOT an expression** | `if (x = y)` is not writable; the evaluation order stays visible |
-| **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, no catch-all branch, no default value | each of the four classes has a paid-for trap |
+| **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, no catch-all branch, no default value | each of the four classes has a paid-for trap. The single exception is the widening of a range («SG-1»), and it is written as an attribute, not as a conversion |
 | **E4** | **Contracts stand BEFORE the body, in a fixed order** | a tool that has to sort cannot say "`effects` is missing here" |
 | **E5** | **Every declaration is complete at exactly one place** | no preprocessor, no forward declaration |
+| **E6** | **Every attribute is part of the production** — NEW «SG-0» | a rule that a pass checks after the fact can be forgotten by the pass; a rule that is the shape of the derivation cannot. `GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.4 found an obligation that vanished on a rename; under E6 it has no place to vanish from |
 
-> **`obligation` is NOT a source word.** The definition counts it among its thirteen new
-> words; but it stands in the **obligation manifest**, i.e. in the **artefact**. The vocabulary here is
-> that of the **source** — the manifest has a format of its own, and mixing the two would be
-> the same crack as two keyword languages. **Twelve new source words, not thirteen.**
+> **`obligation` is NOT a source word.** It stands in the **obligation manifest**, i.e. in the
+> **artefact**. The vocabulary here is that of the **source**.
 
 > **Writing rule for these files:** `Backticks` denote **today's Gabbro syntax**. An
 > abolished name stands *in italics in quotation marks* — it **is** no longer syntax.
 
 ---
 
-## Vocabulary — closed
+## Vocabulary — closed, 222 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
              spec impl raw divergent prim extern section arch when
   Vertraege  requires ensures maintains refines breaking effects costs where in
-             exhaustive old narrow to induction order advances retires
+              exhaustive old narrow to induction order advances retires deadline
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
@@ -92,7 +89,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              exchange update returns insert remove relabel
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
-             class fields bank at stride count backed mirrors from
+             class fields bank at stride count backed mirrors from owner
              assume falsifier unfalsifiable axiom lock protects rank group rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
@@ -106,58 +103,34 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              reaches via tree parent child sibling observed occupied
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
-  Sonderform O @version Held TESTBUILD    (KEINE Wortschatzwoerter -- s. Fussnote G6)
+  Sonderform O @version Held TESTBUILD    (NOT vocabulary words -- see footnote G6)
 ```
 
-**Everything else is an identifier.** A new word is a language change and needs an
-entry here.
+**Everything else is an identifier.** A new word is a language change and needs an entry here.
+**`owner` is the one new word of the third version** («SG-9», §9): it names the linear mark
+that guards a table. The alternative — `protects` with a mark instead of a lock — would make
+one word mean two things, the trap class `HISTORIE.md` books under `reserved`.
 
 ### And a word of the table is a keyword only where the grammar EXPECTS one
 
-**Set 2026-09-05, `messung/WORTSTELLUNG.md`.** Until then the sentence above had a second
-half — *a word of the table is an identifier nowhere* — and «K3» measured what that costs
-against code nobody wrote for Gabbro: over 585 foreign files (Linux `lib/`, `kernel/`+`mm/`,
-Caprock) **105 of these 221 words are somewhere a name a programmer chose**, and `P002` fired
-in six of the eight «K3» excerpts, every time on an identifier the kernel itself wrote
-(`node`, `old`, `next`, `progress`, `release`, `stack`, `index`). A reader refusal stops the
-body from parsing, so the collision did not cost seven diagnostics — it hid every later one
-in six files.
+**Set 2026-09-05, `messung/WORTSTELLUNG.md`, unchanged.** At every position where the grammar
+writes `ident`, every word of this table is a name. Three positions admit both a keyword
+production and a name, and each is decided by the grammar and not by a list:
 
-> **At every position where the grammar writes `ident`, every word of this table is a name.**
+1. **the head of a `stmt`** — a word followed by `=` `+=` `-=` `&=` `|=` `.` `->` `[` `::` is a
+   **place**, because no keyword statement may continue that way;
+2. **`old` and `result`** — words inside a contract clause, names everywhere else;
+3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
-Three positions in the grammar admit both a keyword production and a name, and each is
-decided by the grammar and not by a list:
-
-1. **the head of a `stmt`** — the thirteen forms below open with a word, and a place may
-   stand there too. One token separates them: a word followed by `=` `+=` `-=` `&=` `|=` `.`
-   `->` `[` `::` is a **place**, because no keyword statement may continue that way. `(` is
-   deliberately not in that set — `if (x) { … }`, `match (x) { … }` and `return (a);` are
-   written that way, so a bare CALL through a function named like a statement head is the one
-   form this costs;
-2. **`old` and `result`** — they name something only a promise has, so they are words inside
-   a contract clause (`requires`, `ensures`, a `spec fn` body, a loop `invariant`, a `table`
-   `invariant`, the `when` of an `exchange`, an `axiom`'s precondition, a `check`'s `floor`)
-   and names everywhere else;
-3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm, so
-   `option`, `ptr` and `mmio` are still not the NAME of a type or of an address space. They
-   stay ordinary variable names.
-
-**Seventeen of the 221 are still not names, on two measured grounds**, and every one of them
-has **zero** declarator sites in those 585 foreign files:
+**Seventeen of the 223 are still not names**, on two measured grounds, and every one of them
+has **zero** declarator sites in 585 foreign files:
 
 ```
   Ausdruck   sizeof lenof aligned forall exists true false Self Some None
   C-Name     const static extern if else return bool
 ```
 
-The first ten head a primary expression or a predicate atom unconditionally, so a variable of
-that name could be bound and never read back. The second seven break the **emitted C** as an
-ordinary local — measured with `cc -std=c11 -Wall -Wextra -Werror` over one file per
-candidate, and they are exactly the seven `crates/gabbro-check/src/cnamen.rs` leaves out of
-its own tables on the grounds that this table refuses them.
-
-*`crates/gabbro-syntax/tests/wortschatz.rs` binds all 221 as a parameter and as a local and
-requires clean exactly for the 204 — the list above is a measurement, not a claim.*
+`owner` and `deadline` join the 206 that are names — neither heads an expression and neither breaks emitted C.
 
 ---
 
@@ -172,88 +145,37 @@ int        = dec | hex | bin ;
 dec        = digit { digit | "_" } ;
 hex        = "0x" hexdigit { hexdigit | "_" } ;
 bin        = "0b" ( "0" | "1" ) { "0" | "1" | "_" } ;
-float      = dec "." dec [ "e" [ "+" | "-" ] dec ] ;           (* «F», 2026-08-18 *)
-(* Der Punkt ist mehrdeutig, und zwar GEMESSEN: `0..100` ist heute gueltiger Bereich. Die
-   Regel ist maximal munch -- `..` frisst zuerst, also ist `1..5` ein Bereich und `1.5` eine
-   Gleitkommazahl. Ein Punkt ohne Ziffer dahinter (`1.`) wird abgelehnt.
-
-   NUR KLEINES `e` im Exponenten. Der Leser lehnt `0X`/`0B` seit jeher ab (`L004`) -- eine
-   Schreibweise, nicht zwei, und die Regel stand schon da. *)
+float      = dec "." dec [ "e" [ "+" | "-" ] dec ] ;           (* «F» *)
+(* Maximal munch: `..` eats first, so `1..5` is a range and `1.5` a float. `1.` is refused.
+   Only lower-case `e` in the exponent; `0X`/`0B` are refused (`L004`) -- one spelling. *)
 string     = quote { char } quote { quote { char } quote } ;   (* «B22» *)
-char       = ? jedes Zeichen ausser quote und newline ? ;
-quote      = ? das Zeichen U+0022 ? ;
-newline    = ? Zeilenende ? ;
+char       = ? any character except quote and newline ? ;
+quote      = ? the character U+0022 ? ;
+newline    = ? end of line ? ;
 comment    = "--" { char } newline ;
 path       = pathseg { "::" pathseg } ;                        (* G5 *)
 pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
            | opname ;
-             (* `u64::max` -- beide Segmente sind Wortschatzwoerter. `primtype` als
-                Pfadsegment zuzulassen ist die kleinere Aenderung; die Alternative waere,
-                die Grenzwerte umzubenennen.
-
-                **`opname` steht hier seit dem 2026-08-28, und die Zeile ist eine
-                RICHTIGSTELLUNG, keine Erweiterung** (`messung/OPS-RUFFORM.md`).
-                `parse.rs::erwarte_feldname` liest hinter einem `::` jedes Wortschatzwort --
-                das tut es seit jeher, und die EBNF sagte es nicht. Damit parste
-                `Verzeichnis::insert(v, i)` schon, bevor irgendjemand es entschieden hatte:
-                gemessen fiel die Datei an `K003`/`E009`, *„`insert` is not declared here"*.
-
-                **Die Rufform einer erzeugten Operation kostet darum kein Wort und keine
-                Produktion.** Was fehlte, war nicht die Form, sondern der GERUFENE -- und der
-                steht in `opdecl`, nicht in der Grammatik des Rufs. Genannt wird hier
-                `opname` und nicht „jedes Wort", weil das die eine Stelle ist, an der ein
-                Wortsegment etwas BEDEUTET; alles Uebrige bleibt, was es war: eine
-                Aufloesung, die niemanden findet. *)
+(* `u64::max` -- both segments are vocabulary words. `opname` as a segment is the call form
+   of a generated table operation (`T::insert`, `messung/OPS-RUFFORM.md`). *)
 identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
 
-> **One comma rule for all lists (2026-08-16).** `entrydecl`, `slotdecl` and
-> `reg … fields` wrote three different rules for the same thing — twice a
-> compulsory trailing comma, once none, and the parser held none of them. **Now one:
-> separating comma between the entries, trailing comma optional.** *The existing code writes it
-> everywhere; nothing breaks, and the grammar has one rule instead of three.*
+**One comma rule for all lists:** separating comma between the entries, trailing comma
+optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `format`), `Held`
+(in `heldpred`) and `TESTBUILD` (in `buildgate`) are terminals of the grammar but not words of
+the vocabulary — identifiers in a fixed position, counted and named by the guardian.
 
-> **The `Sonderform` line and why it is not an exception (G6).** `O` (in `costexpr`),
-> `@version` (in `format`) and `Held` (in `heldpred`) are **terminals of the grammar but
-> not words of the vocabulary**: `O` stands as an identifier in a fixed position (so too in the parser,
-> `parse.rs:costexpr`), `@version` is a composite character, not a keyword.
-> **The finding was never the exception, but that the guardian never looked at it** — it
-> claimed a closed vocabulary over a set out of which two terminals
-> silently fell (capital letter, leading `@`). Now it counts them, names
-> them and carries them in a class of their own. *A named exception is a
-> promise; an invisible one is a hole.*
+**The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
+reports, the vocabulary table. German stays in the working documents of the folder, in source
+comments and in every identifier a *user* chooses.
 
+Strings only in `claim`, `reason`, `assume`, `retires … unfalsifiable`, `section` and `asm`.
 
-> ## The surface of Gabbro is English — decided 2026-08-19
->
-> **Keywords were English from the start**, for the reason written down in `TODO.md`: *that is
-> what the existing code is.* What was never decided is everything **else a user of Gabbro
-> reads** — and it had drifted.
->
-> **Measured on the day of the decision: 41 of 100 refusal messages were German**, and the
-> mixture ran through single sentences (`M101`: *„die Rueckgabe requires `u32 in 0 .. 100`, the
-> value has `u32`"*).
->
-> | | |
-> |---|---|
-> | **English** | keywords · refusal messages and their notes · the reports of `gabbro paesse`, `schablonen`, `pflichten`, `zeugnis` · the vocabulary table |
-> | **German stays** | the working documents of this folder (`PLAN.md`, `MESSUNGEN.md`, `TODO.md`), source comments, and every identifier a *user* chooses |
->
-> **The line is: what Gabbro says is English; what the folder says about Gabbro is not.** *An
-> identifier is the user's word, not the language's* — `beispiele/01` may keep calling a slot
-> `Kappenraum`.
->
-> **And a rule of this kind needs a guardian, or it drifts back** — `pruefe-englisch.py` holds
-> the refusal texts against a German word list, in both directions.
-
-~~**No floating point in the core.**~~ **Revoked 2026-08-18 by «F».** `f32` and `f64` are
-core types: a declared range, a NaN bit and an infinity bit, arithmetic rounded outward,
-round-to-nearest-even pinned. *The sentence stood for as long as the need was measured at
-zero; the folder decided otherwise, and «F0» names the substitute for the missing need
-instead of inventing one.*
-
-Strings only in `claim`, `reason`, `assume` and `section`.
+*Lean:* the lexis has no constructor. A Lean term is a **tree**, and a tree has no tokens; the
+map from the token stream to the tree is the parser, and `PLAN-GRAMMATIK.md` §4 says when it
+exists. Nothing in the theorem depends on it.
 
 ---
 
@@ -266,29 +188,11 @@ item       = [ buildgate ]
              | format | table | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | accdecl | walkdecl | entrydecl | entrustdecl
              | bootdecl ) ;
-buildgate  = "when" "TESTBUILD" ;                              (* «TB», 2026-08-28 *)
-(* **Das Baugatter -- kein neues Wort, ein zweiter Ort fuer ein vorhandenes.**
-
-   `when` stand seit jeher an jedem `item`, und dieses Dokument sagte dazu „es senkt zu
-   `#if` ab". **Der Erzeuger hat das Feld nie gelesen**: ein Item mit `when` erzeugte
-   genau dasselbe C wie eines ohne, und `TESTBUILD` stand am 2026-08-28 in null Zeilen
-   von `crates/`. Die Klausel war nicht halb eingeloest, sondern gar nicht -- und sah
-   dabei eingeloest aus.
-
-   Der Leser nimmt weiterhin jedes `constexpr` an dieser Stelle; **`G002` laesst genau
-   diesen einen Namen durch.** Die Grammatik schreibt hier die engere Menge, weil sie
-   sagen soll, was der Uebersetzer TUT: er kennt einen Bau, auf den er gattern kann.
-
-   `TESTBUILD` ist ein Bezeichner in fester Stellung und **kein Wortschatzwort** -- die
-   G6-Klasse, dieselbe wie `O` in einem `costexpr` und `Held` in einem `heldpred`. Der
-   Grund steht in `messung/SCHLEIFENINVARIANTE.md` §3: *ein zweites Wort fuer einen
-   vorhandenen Begriff ist teurer als eine zweite Fundstelle fuer ein vorhandenes Wort.*
-
-   **Es ist eine Frage des BAUS, nicht der Einheit.** `gabbro emit --testbuild` oeffnet
-   das Gatter, seine Abwesenheit ist der Auslieferungsbau; wer den Namen selbst erklaert,
-   faellt an `G003`. Und `G001` haelt die eine Richtung, die bricht: ein ungegattertes
-   Item darf ein gegattertes nicht rufen -- im Auslieferungsbau gibt es den Gerufenen
-   nicht. *Die Gegenrichtung ist erlaubt und steht in `beispiele/52`.* *)
+buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
+(* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
+   gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
+   code calling a gated function), `G002` refuses any other condition, `G003` refuses the name
+   as a declaration. `TESTBUILD` is a G6 identifier in fixed position. *)
 bootdecl   = "boot" ident "arch" ident "{"
                { bootstep }
                "dispatch" path ";"
@@ -297,9 +201,8 @@ bootstep   = "step" ( call | ident "=" constexpr ) ";" ;
 entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "{"
                "regs" "in"  "{" [ regbind { "," regbind } [ "," ] ] "}"
                "regs" "out" "{" [ regbind { "," regbind } [ "," ] ] "}"   (* G4 *)
-               (* regbind steht unten bei den Hilfsregeln *)
                "preserves" "{" [ identlist ] "}"
-               "clobbers"  "{" [ identlist ] "}"                (* G7: leer erlaubt *)
+               "clobbers"  "{" [ identlist ] "}"                (* G7: empty allowed *)
                entryextra
                "dispatch" path ";"
              "}" ;
@@ -308,69 +211,42 @@ entrustdecl = "entrust" ident "at" ident "arch" ident "{"
                 "stack"  ident
                 "assume" ident ";"
               "}" ;
-(* «entrust» -- der Raum, dessen INHALT Gabbro nicht kennt (2026-08-18).
-
-   Gabbro sagt ueber den Gast NICHTS: keine Kosten, keine Wirkungen, keine Terminierung.
-   Was es sagt, ist der VERTRAG AM EINTRITT -- welche Register der Gast bekommt, auf welchem
-   Stapel er laeuft, und in welchem `code`-Raum er liegt.
-
-   `at` nimmt einen NAMEN, keinen Ausdruck. Der Raum ist ein deklariertes Ding; ein `entrust`
-   auf einen gerechneten Wert waere ein Sprung an eine ausgerechnete Adresse -- genau das,
-   was nicht nennbar sein soll. Der Namenspass haelt ihn (`N006`).
-
-   `assume` ist PFLICHT und nicht schmueckend: dass der Gast seinen Vertrag haelt, ist eine
-   Aussage ueber die Umgebung. Sie muss erklaert und FALSIFIZIERBAR sein -- dieselbe Regel
-   wie bei `progress` (`S003`/`S004`), hier `N004`/`N005`.
-
-   *Kein neuer Pass, kein `effects`, kein `costs`: Isolation statt Beweis. Das ist keine
-   Luecke, sondern der Zweck eines Mikrokernels.* *)
+(* `entrust` -- the room whose CONTENT Gabbro does not know. Gabbro says nothing about the
+   guest; what it says is the CONTRACT AT ENTRY. `at` takes a NAME (`N006`): a jump to a
+   computed address is exactly what must not be nameable. `assume` is compulsory and must be
+   falsifiable (`N004`/`N005`), the same rule as `progress`. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" )
              [ "per" "cpu" constexpr ] ";" ;
-(* `per cpu N` -- die ZELLENZAHL, 2026-08-18. SPRACHE.md 11.4 sagte seit jeher "one cell
-   per core, merged over the NCORES-bounded loop" und nannte die Zahl NIRGENDS; der
-   Erzeuger haette `NCORES` raten muessen. Optional in der Grammatik, PFLICHT fuer die
-   Absenkung -- ohne sie weigert er sich benannt.
-
-   **Der aktuelle Kern ist KEIN Ausdruck der Sprache.** Er ist eine Maschinenfrage, also
-   ein fremder Rumpf (`gabbro_kern()`), und das Zeugnis fuehrt ihn in Abschnitt E mit
-   seinem Vertrag -- genauso wie den Rumpf einer Sperre. *Ihn in die Sprache zu heben
-   hiesse, eine Maschinenfrage als Ausdruck zu tarnen.* *)
-             (* Verbundwerte: typeexpr darf structty sein, merge gilt fuer das erste Feld und
-                traegt die uebrigen mit -- P0 Teil 4c, sync:572-592 wird damit konsistent *)
+(* `per cpu N` is the CELL COUNT, optional in the grammar and compulsory for lowering. The
+   current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
 constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
-constexpr  = expr ;                    (* zur Uebersetzungszeit auswertbar; kein Aufruf einer
-                                          Funktion mit effects, kein place auf mut *)
+constexpr  = expr ;                    (* evaluable at translation time; no call of a function
+                                          with effects, no place on `mut` *)
 staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
-             [ "section" string ] ";" ;
+             [ "section" string ] [ "shared" ] ";"                  (* CHANGED «SG-21» *) ;
 ```
 
-**`when`** stands at every `item` (above in the production) and replaces conditional compilation
-(335 `cfg` sites in Caprock).
+**Attributes and Lean.** Everything in this section is **declaration-level**: it fixes the
+world before the first body and has no run-time meaning of its own.
 
-~~It lowers to `#if` and is **constant-evaluable** — no preprocessor, no text substitution.~~
-**Revoked 2026-08-28 by «TB», and the sentence was never true.** The emitter did not read
-`Item::when` at all; a `when` item produced exactly the same C as one without, `#if` included.
+| production | reading | Lean |
+|---|---|---|
+| `program`, `moduledecl`, `usedecl` | names are static; a module is a namespace, not a construct | `Deklaration` — one per translation unit |
+| `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
+| `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
+| `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
+| `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
+| `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
-> **A gate that lowers to `#if` is not a build gate.** The item still stands in the shipped C,
-> and *the whole point of gating the check harness is that it is not there* —
-> `messung/GEGENRECHNUNG.md` §8 measures that harness at **29,8 % of Caprock, 19 849 lines**,
-> and no language says anything about it.
-
-**What `when` does since «TB»:** it names the BUILD, and there is exactly one build to name —
-`TESTBUILD`. `gabbro emit --testbuild` opens the gate; **its absence is the shipping build**,
-and a gated item then produces **no line of C**. The gate is a filter in front of the
-generator, not a branch inside it (`gatter::ohne_gatter`), so the generator cannot forget it
-at one of its twenty walks.
-
-Three refusals hold it: `G001` (ungated code calls a gated function — the shipping build would
-not link), `G002` (a `when` condition other than `TESTBUILD` — refused rather than silently
-ignored), `G003` (`TESTBUILD` declared as a name). The decision, with both sides of three
-forms, is `messung/BAUGATTER.md`; the corpus site is `beispiele/52`.
+> **What `entry … dispatch` does NOT carry — named in §16.** The contract says what a foreign
+> body may write; it does not say **when** it runs. A handler that interrupts a body holding a
+> lock is a statement about two bodies at once, and the meaning in `Semantik.lean` is of one
+> body at a time. `H013`/`H102` remain passes over the declaration, not attributes.
 
 ---
 
@@ -380,112 +256,57 @@ forms, is `messung/BAUGATTER.md`; the corpus site is `beispiele/52`.
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
              "type" ident [ "(" typelist ")" ] [ markorder ] [ "=" typeexpr ] ";" ;
 markorder  = "order" "{" identlist "}" ;
-(* «B37», 2026-08-17. Der Befund stand im Bootfragment selbst: „die Marke traegt die
-   Reihenfolge, aber sie traegt sie als LINEARITAET, nicht als ORDNUNG." Ein linearer Wert
-   erzwingt eine KETTE, aber nicht WELCHE -- bei sechs Bootschritten typprueften alle 720
-   Reihenfolgen, weil M2 nur sieht, dass jede Marke genau einmal weiterwandert.
-
-   Das Fragment nannte beide Auswege: je Schritt eine eigene Marke (dann waechst der
-   Wortschatz mit jedem Bootschritt) oder eine Ordnung auf Marken. **Gewaehlt ist die
-   zweite** -- die Stufen sind Bezeichner in EINER Deklaration, der Wortschatz waechst um
-   zwei Woerter, einmal.
-
-   `order` steht VOR dem `=`, weil es kein Rumpf ist: eine Ordnung sagt nichts darueber,
-   woraus der Wert besteht, sondern welche Schritte auf ihm zulaessig sind. Ein
-   `linear ghost type` hat ohnehin keinen Rumpf.
-
-   **Diese zwei Woerter -- `order` und `advances` -- sind der GANZE Bestand der
-   Phasenmaschinerie**, und das ist am 2026-09-01 nachgezaehlt worden, weil
-   `PLAN-HARDWARE.md` §42 vier zu sehen glaubte. `class`/`in` an `regphasen` kosten nichts,
-   `consumes` traegt 74 von 104 Fundstellen ohne jede Phase, und von zwanzig
-   `linear ghost type` im Korpus haben drei eine `order`. Ein Wort `phase`, das beide
-   abloeste, senkte den Wortschatz um EINS -- und muesste dafuer `PHASENKLASSE.md` §2
-   Form 3 zuruecknehmen. **Nicht gebaut**, `messung/PHASENKONSTRUKT.md`. *)
+(* «B37»: the stages of a linear mark, in ONE declaration. `order` stands before the `=`
+   because it is not a body: an order says which steps are admissible on the value. *)
 typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
-           | indexty ;
+            | indexty ;
+(* NO general `option T` («SG-26», §18): over `index into T` it is the
+   carrier's index option («SG-4»); over any other `T` the writer spells the
+   two-case `tagged` sum themselves — `match` over it is exhaustive by shape,
+   so nothing is lost and no constructor is added for what a declaration
+   already says. *)
 indexty    = [ "option" ] "index" "into" ident ;
-             (* Der ERZEUGTE Indextyp einer Tabelle: `0 ..< count`. Er steht als `typeexpr`,
-                weil er sonst in keiner Signatur genannt werden kann -- und dann bliebe die
-                Schranke doch wieder ein von Hand geschriebener Typ neben der Tabelle. *)
-nevertype  = "never" ;                             (* Rueckgabetyp von prim/divergent *)
+(* The GENERATED index type of a table: `0 ..< count`. It stands as a `typeexpr` because it
+   must be nameable in a signature -- otherwise the bound would again be a hand-written type
+   beside the table. *)
+nevertype  = "never" ;                             (* return type of prim/divergent *)
 intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
-floatty    = ( "f32" | "f64" ) [ "in" frange ] ;                    (* «F», 2026-08-18 *)
+(* CHANGED «SG-1»: in the core EVERY integer type carries its range. `u32` without `in` is
+   SUGAR for `u32 in 0 .. u32::max`, `i32` for `i32 in i32::min .. i32::max`; a `wrapping`
+   field (§9) is the one place where the width and not the range is the type. *)
+floatty    = ( "f32" | "f64" ) [ "in" frange ] ;                    (* «F» *)
 frange     = fexpr ( ".." | "..=" | "..<" ) fexpr ;
 fexpr      = float [ "rounded" ] | ident | int ;
-(* «F» -- f32 und f64.
-
-   `rounded` ist PFLICHT an einem Literal, das nicht exakt darstellbar ist, und dort auch
-   die einzige Form. Gemessen an 340 Literalen eines echten Renderers waeren ohne es 53
-   abgelehnt worden, darunter ln 2 und 2 pi (FRAGMENTE.md, «F0»). Verboten ist nicht das
-   Inexakte, sondern das STILLSCHWEIGEND Inexakte -- genau der Satz, den `wrapping` ueber
-   den Ueberlauf sagt.
-
-   `finite` steht nur hinter `narrow … to` und stellt Nicht-NaN-Sein her. Ohne diese
-   Tatsache liefert die Negation eines Gleitkommavergleichs NICHTS -- mit ihr rechnet man
-   gewoehnlich weiter. *)
+(* «F» -- f32 and f64. `rounded` is COMPULSORY at a literal that is not exactly representable,
+   and the only form there. `finite` stands only behind `narrow … to` and establishes
+   not-NaN-ness. CHANGED «SG-17»: in the core a float type ALWAYS carries a range, and every
+   value of it is finite and inside -- `f64` without `in` is SUGAR for the widest finite range
+   of the width. *)
 boolty     = "bool" ;
 range      = expr ".." expr | expr "..<" expr ;
 array      = "[" typeexpr ";" constexpr "]" ;
+(* NO variable-length tail («SG-27», §18): a runtime length is a value the
+   declaration does not know, and a bound the declaration does not know is a
+   hand-threaded check at every access — manual plumbing. What is writable is
+   `backed k` plus `narrow i to 0 ..< k` before the access (§9): one entry
+   check, then every access carries the bound as an attribute. *)
 structty   = "{" { field } "}" ;
 field      = ident ":" fieldty [ "@" bitpos ] [ "offset_into" ( ident | "Self" ) ]
-             (* «B36», 2026-08-15: `Self` stand in der Wortschatztabelle und in KEINER
-                Produktion -- ein totes Wort, das der Waechter nie sah, weil seine
-                Terminalregex nur Kleinbuchstaben las. `offset_into Self` steht in
-                SYNTAX.md:524 und im ELF-Fragment; die Grammatik schrieb es nirgends.
-                Dritter Fund derselben Klasse an einem Tag: eine Zusage ueber eine Menge,
-                aus der die grossgeschriebenen Woerter stillschweigend herausfielen. *)
              [ "where" pred ] [ "reserved" ] "," ;
 fieldty    = typeexpr
            | typeexpr "embeds" "[" int ":" int "]" [ "scale" constexpr ] ;
 bitpos     = int | "[" int ":" int "]" ;
 variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
 fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
-
-             (* «B8», 2026-08-21: bis dahin stand hier `typelist` und KEIN Vertrag -- eine
-                Form mit null Korpusstellen, weil die Sprache keinen Wert kannte, den man
-                hineinschreiben konnte. Beide Aenderungen haengen aneinander:
-
-                * `params` statt `typelist`, weil eine Wirkungszeile einen ORT nennt
-                  (`writes r.slots`) und ein Ort einen Namen braucht;
-                * der Vertrag, weil neun Passdateien den Gerufenen STATISCH aufloesen. An
-                  einer indirekten Rufstelle gibt es keinen Namen -- was bleibt, ist die
-                  Zusage am Typ. Ohne sie endete die Wirkungshuelle wieder an der ersten
-                  Aufrufgrenze, so wie vor dem 2026-08-15.
-
-                Es kostet KEIN neues Wort: `effects` und `costs` stehen schon im Wortschatz
-                und stehen hier in derselben festen Reihenfolge wie an einer `fn`-Deklaration
-                (E4). Welche Wirkungswoerter zulaessig sind, entscheidet `N036` und nicht die
-                Grammatik -- `locks`, `masks`, `consumes` und `publishes` werden gelesen von
-                Paessen, die den Gerufenen benennen. *)
-
+(* «B8»: a function pointer type CARRIES ITS CONTRACT, because at an indirect call there is no
+   name to resolve -- what is known about the callee is the promise at the type. *)
 fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
 typelist   = typeexpr { "," typeexpr } ;
 params     = ident ":" typeexpr { "," ident ":" typeexpr } ;
-
-             (* **2026-08-25: der Name im ZEIGERTYP ist wahlfrei.** Am 2026-08-21 trat
-                `params` an die Stelle von `typelist`, damit eine Wirkungszeile am Zeigertyp
-                einen ORT nennen kann (`writes r.slots`) -- das war richtig und hat
-                nebenbei die vorige Form WEGGENOMMEN: `params` verlangt den Namen.
-
-                **Und weggenommen wurde genau die gemessene.** Alle 11 Zeigertypstellen in
-                `caprock-messbasis` (Zweig `arch/x86_64`, nachgemessen 2026-08-25) schreiben
-                ihre Parameter OHNE Namen -- `fn()`, `fn(u8)`, `fn(CapPtr) -> bool`,
-                `fn(u32, usize, &[(usize, CapPtr)], usize, usize) -> LadeUebergabe`. **Null
-                von elf nennen einen.** Die eigene Handprobe des Ordners schreibt es ebenso
-                (`messung/fnptr-proben/p1.gab`:3, `senden : fn(u8)`) und starb an `P002` --
-                einer Leserabsage am Wort, bevor eine Regel sprechen konnte.
-
-                *In einem TYP hat ein Parametername keinen Referenten*, solange ihn keine
-                Wirkungszeile aufgreift. Deshalb steht er in eckigen Klammern und nicht in
-                der Regel: beide Formen sind gemeint, die namenlose ist die gewoehnliche.
-
-                Unterschieden werden sie am ZWEITEN Wort und nur dort -- ein `typeexpr` darf
-                selbst mit einem Bezeichner anfangen (`path`), also trennt `fn(Treiber)` von
-                `fn(t : Treiber)` allein der Doppelpunkt. *)
-
 fnptrparams = fnptrparam { "," fnptrparam } ;
 fnptrparam  = [ ident ":" ] typeexpr ;
+(* The name in a pointer type is optional: all 11 pointer-type sites in Caprock write none. *)
 ```
 
 ```gabbro
@@ -500,14 +321,28 @@ tagged type ObjectKind = { Untyped(Region), Endpoint(EpId), Frame(Pa), Cnode(Slo
 linear type Parked;
 linear type Uninstalled(ObjectId);
 linear ghost type Held(Lock);
-linear ghost type BootPhase;
+linear ghost type BootPhase order { roh, mmu, geraete };
 linear ghost type MayWrite(ThreadId, Pa);
-linear ghost type Duty(farbtest);   -- der Parameter ist der NAME einer `check`-
-                                    -- Deklaration, nicht das Wort `check` (:697)
+linear ghost type Duty(farbtest);   -- the parameter is the NAME of a `check` declaration
 ```
 
-**`tagged`** is the sum type (13 `ObjectKind` variants in Caprock) and lowers to a
-C union with a tag. **`bitpos` as a range** covers the 13 multi-bit fields in `vtd.rs` (F5).
+**Attributes and Lean.**
+
+| production | attribute | Lean |
+|---|---|---|
+| `intty` with `in lo .. hi` | a value **is** a number with its two bound proofs; a value outside its range is not constructible | `Ty.int lo hi`, `Wert D (.int lo hi) = Zahl lo hi` |
+| `indexty` | `0 ..< count` of the named table; `option` adds `None` | `Ty.index n := .int 0 (n-1)`, `Ty.opt n`, value `Option (Zahl 0 (n-1))` — CHANGED «SG-4» (the second version's `option` had no range) |
+| `floatty` with `in` | a value is a machine float **with proofs** that it is finite and inside the range | `Ty.fl lo hi`, `Gleit lo hi` («SG-17») |
+| `boolty` | | `Ty.bool` |
+| `nevertype` | the type without a value: a body `-> never` can derive **no** `return` | `Ty.never`, `Wert D .never = Empty` («SG-18») |
+| `variants` (`tagged`) | a case index **and** its payload, no other shape | `Ty.sum cases`, value `Σ i, Nutzlast (cases.get i)` |
+| `reason` values (§9) | one of `n` declared grounds | `Ty.grund n`, value `Fin n` |
+| `fnptr` | the value is a function **of exactly this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.sig f = sig}` («SG-8») |
+| `ptrty` (§3) | a capability naming a declared carrier and a right | `Ty.ptr tab rw` |
+| `linear type m [order]` | a resource in the context Λ, with a stage | `D.Marke`, `D.stufen`, `Res.marke m stufe` («SG-14») |
+| `structty`, `array`, `path` to a type | a compound is a **table with `count 1`** (a record) or `count N` (an array): the field is a slot field, the element index an index type | `D.Tab` with `count`, `Feld`, `typ` — SUGAR over §9 |
+| `opaque` | no operation but equality and passing — a range `n .. n`-free `int` with no arithmetic derivable *(by absence of a constructor, not by a rule)* | `Ty.int` without `add`/… at the use site; the pass `M1` today, the derivation tomorrow |
+| `field … @ bitpos`, `embeds`, `offset_into`, `reserved`, `where` | layout is the EMITTER's; the value read is of the field's type and `where` is a check at the read (§9, `Block.pruefung`) | layout: none («SG-16», §16 (4)) |
 
 ---
 
@@ -520,69 +355,32 @@ rights = right { "+" right } ;
 right  = "r" | "w" | "rw" | "x" | "own" [ "@" ident ] ;
 ```
 
-**`own` is the ownership right — and what it does TODAY is less than that sentence used to
-promise.** Measured 2026-08-19, prompted by a review from outside:
+**CHANGED «SG-8»: a pointer is the capability to name a declared carrier, and nothing else.**
+The second version measured (2026-08-19/21) that `own` was *"read + write in three `matches!`
+arms"*, that `zwei(r, r)` fell to nobody, and that in `udp-echo.gab` a write through `k`
+made the answer read through `w` stale *"and nothing knows the two are one"*. The third
+version answers the question at the type instead of at an alias analysis:
 
-| | |
-|---|---|
-| what the checker reads | **read + write**, in three `matches!` arms next to `rw` (`m3.rs`, `emit.rs`) |
-| `own @ident` — the origin | **no reader anywhere**; parsed, stored, never asked |
-| occurrences in the corpus | **one** (`beispiele/15`, a file that exists so the rights check gives no false red) |
-| the release it was justified by | **does not exist in the grammar** |
+| | rule | Lean |
+|---|---|---|
+| **what a pointer points at** | a `ptr<space, right> T` is a value of type *"the carrier `T`, number `n`, with right `rw`"*. Its only producer is the name of a **declared** carrier (`&T`, §4); there is no address of an expression and no arithmetic on a pointer | `Ty.ptr n rw`; `Expr.ptrOf t n (ht : D.tabNr n = some t) rw` |
+| **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the owner mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.durch p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
+| **a write through a pointer** | needs the type `ptr<…, rw>` **and** the write right of the enclosing contract on `T` (`R002`/`R003` as shape) | `Stmt.assignDurch (p : Expr … (.ptr n true)) … (hw : V.schreibt t = true)`; theorem `zeiger_schreibt_mit_recht` |
+| **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias |
+| **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own> T` is SUGAR for *"`T` is `owner m` and the callee `consumes m` … `allocs m`"* — the mark is borrowed for the call and comes back. Two `own` parameters of one carrier are then not derivable: the mark is one («SG-9») | `D.eigner`, `eigner_nie_erzeugt` |
+| **`space`** | the barrier follows from the space; the space of a carrier is a declaration fact and the emitter's concern | none — a declaration attribute; `retires … from space` (§6) names it |
+| **`x`** | code space; a pointer with `x` is a `fnptr` (§2) or an `entrust` target (§1) | `Ty.fnptr` |
 
-> The old sentence here read *"whoever holds it may release — with that `Finalized` is
-> expressible without lifetimes."* **The release is not writable in Gabbro**, so the sentence
-> described a language that was planned and not one that is.
-
-**The exclusivity the word stands for is not decidable at any single site without alias
-analysis** — `m3.rs` says so itself (*"no alias analysis: two `ptr<normal, rw>` to the same
-object stay indistinguishable"*). Two `own` parameters of the same carrier are **not** an
-error: `own` asserts they are different objects, which is exactly the case that must stay
-writable. *A rule that only looked like a check would be worse than none.*
-
-**What `own` is good for as it stands:** it says in the signature what a `rw` does not — that
-this handle is the owner — and it is the one right a future release rule can attach to. The
-barrier follows from the **space**, not from the architecture.
-
-### **A SECOND VIEW ON THE SAME BYTES — the edge, fixed 2026-08-21, BEFORE anything is built**
-
-*This is a precondition for a construct that does not exist yet, and it stands here because
-that is where whoever builds it has to walk past.* §9's fourth finding from
-[`messung/netz/`](../messung/netz/README.md) — *"read the same bytes as big-endian 16-bit
-words" is not writable* — will one day be closed by a **byte view**. When it is:
-
-> **The byte view may not open an alias question. One view is writable, all others are
-> read-only, and the change of view is an EVENT.**
-
-That is the shape of `state`/`transition`, applied to views instead of to states. The price of
-not doing it is exact: **the item buys its completeness with a silent alias exception.**
-
-**What M3 does today, measured 2026-08-21 by hand probe, not asserted:**
-
-| written | what falls |
-|---|---|
-| `zwei(r, r)` — one place at two `ptr<normal, rw>` parameters | **0 errors, 0 hints** |
-| `zwei(q, q)` — one place at two `own` parameters | `R004`, and its own note names the rest |
-| the byte-view shape: read through view A, then write through view B, same bytes | **0 errors, 0 hints** |
-
-So the claim *"M3's open remainder IS the alias analysis"* holds at the source: `m3.rs`'s
-module header says it (*"it is not an alias analyser"*), and `R004` — the one rule that bites —
-covers only the **syntactically identical place at the same call**. Two different names for
-the same bytes stay indistinguishable.
-
-**And the case is not hypothetical; it is already in the corpus.** In
-[`messung/netz/udp-echo.gab`](../messung/netz/udp-echo.gab), `echo_beantworten` takes
-`k : ptr<normal, rw> IpKopf` and `w : ptr<normal, r> Kopfworte` — and `w` is
-`kopfworte_von(k)`, *the same bytes*. The body reads the checksum through `w`, then writes
-`k.ttl = 64` through `k`. **The answer read through `w` is stale from that line on**, RFC 791
-requires the checksum recomputed, and `effects { reads w, writes k }` claims both accesses are
-declared. Nothing refuses, because nothing knows the two are one.
-
-Note what is *already right* there: the rights half. `w` is read-only, `k` is writable — one
-writable view, all others reading. **What is missing is the second half, the event**: nothing
-marks `w` as invalidated at the write, and nothing forbids using it afterwards. A byte view
-that only copies the rights half of this and skips the event inherits exactly this hole and
-gives it a construct to hide behind.
+> **Bytes — in the core since the evening of 2026-09-09 («SG-16»).** A byte carrier is a table
+> whose field is `u8 in 0 .. 255`; `n` bytes from index `i` are ONE number in `0 .. 256ⁿ−1`
+> (`Expr.leseBytes`, `Stmt.schreibBytes`), and the attribute at the read is the bound of the
+> whole run: `hi(i) + n ≤ count`. A `format` over a byte carrier is a **view**: `offset_into`,
+> `@bitpos`, `embeds … scale` are reads of this form (`Zucker.lean` §4, `bitfeld`, `embeds`),
+> and **two views on the same bytes read the same world** — the second view of the second
+> version's byte-view rule needs no event, because a view is not a copy: a write through one
+> is visible through the other at the next read. What the rule feared — a stale *value* — is a
+> variable, and a variable is a copy by the grammar. `udp-echo.gab`'s `w`/`k` case is now: `w`
+> is a value read before the write; whoever reads it after the write reads the world.
 
 ---
 
@@ -597,135 +395,87 @@ bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
-             (* **`~`, 2026-09-01 -- das Bitkomplement, und seine ganze Frage ist die
-                BREITE.** Es steht bei `unary`, nimmt also ein `primary`: `~a & b` ist
-                `(~a) & b`, hier wie in C. Der Operand ist VORZEICHENLOS und traegt eine
-                erklaerte Breite; ein Literal und ein `i32` werden mit `M137` abgesagt.
-                **Die ausbuchstabierte Form `x ^ <Allesbits>` bleibt** -- ein Xor gegen
-                eine andere Maske ist eine andere Rechnung. Abgeloest wird nur die
-                Redewendung, die die Breite als Dezimalzahl neben den Typ schreibt:
-                gemessen gibt `c : u32` mit `c ^ 65535` null Fehler und null Hinweise,
-                und aus der Invertierung ist lautlos etwas anderes geworden.
-                Der Bedarfsbeleg ist `messung/netz/udp-echo.gab`:111 (RFC 1071). *)
+(* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
+   carries a width. *)
 fnvalue    = "&" path ;
-             (* **«B8», 2026-08-21: der ERZEUGER eines Funktionszeigers.** `fnptr` stand seit
-                jeher in der Grammatik und hatte **null Korpusstellen** -- weil es keinen
-                Wert gab, den man hineinschreiben konnte. *Ein Typ, den niemand erzeugen
-                kann, ist eine Zusage ohne Einloeser.*
-
-                Es steht bei `unary` und nicht bei `primary`, und es ist KEIN Operator: `&`
-                erwartet einen `path`, keinen Ausdruck. **Es gibt in Gabbro keine Adresse
-                eines Ausdrucks**, und dass es sie nicht gibt, ist der Grund, warum `ptr`
-                ueberhaupt eine Herkunft traegt.
-
-                **Warum `&f` und nicht der blosse Name `f`** (E3, nichts ist implizit): ein
-                blosser Name an einer Wertstelle ist ein `place`. Gemessen 2026-08-21:
-                `Treiber(bereit: wahr)` ergibt **`M119` -- „`wahr` is declared nowhere"**,
-                weil `wahr` als Variable gesucht wird. Das `&` sagt, dass hier eine Funktion
-                zu einem Wert wird.
-
-                **Der Bedarfsbeleg steht ausserhalb** (Regel B): `caprock-hal/src/konsole.rs`
-                traegt `struct Treiber { bereit: fn() -> bool, senden: fn(u8) }` und wird an
-                zwei Stellen befuellt; ueber die beiden Felder wird viermal gerufen. Der
-                ganze Baum: **11 `fn(…)`-Typstellen, 4 Erzeuger, 4 Rufe hindurch**
-                (`messung/FNPTR.md` nennt die Befehle).
-
-                Caprock schreibt es OHNE `&` -- das ist Rusts Regel, nicht die Gestalt der
-                Sache; C laesst beide Schreibungen zu, Gabbro laesst eine zu. *)
+(* «B8»: the PRODUCER of a function pointer. `&` expects a `path`, not an expression: there is
+   no address of an expression in Gabbro. CHANGED «SG-8»: `&T` for a declared carrier `T` is
+   also the producer of a `ptr` -- the one address there is. *)
 primary    = int | "true" | "false" | place | call | paren | builtin | optionexpr
-                                                                (* G9: kein `cast` *)
-           | oldexpr | "result" | reasonval ;
+            | oldexpr | "result" | reasonval | countexpr ;   (* CHANGED «SG-24» *)
+countexpr  = "count" ident "in" domain ":" pred ;
+(* The number of entries of one table satisfying `pred` — over ONE table only
+   (SUGAR «SG-24», §18: a call to the generated count function of the table,
+   like `ops insert/remove` in §9 — `Block.bindCall` with its `requires`).
+   A cross-table count is a `group` invariant («SG-10»), not a wider domain:
+   whoever hand-maintains a count instead of stating it leaks manual plumbing. *)
 reasonval  = ident "::" ident ;
-             (* **Stufe 7, 2026-08-21: der ERZEUGER eines `reason`-Werts.** `-> T or R` steht
-                seit dem 2026-08-20 in der Signatur und `let x = f() else (e) { … }` seit
-                jeher am Rufer -- dazwischen war NICHTS: `primary` kannte keine Produktion
-                fuer einen Grundwert, und alle sieben `or R`-Signaturen des Korpus standen an
-                einem `extern fn`, also an einem Rumpf, den Gabbro nie sieht. *Der Kanal
-                existierte an der Deklaration und hatte keine Schreibform* -- «B9» ein
-                zweites Mal.
-
-                **Der Bedarfsbeleg steht ausserhalb** (Regel B): `FRAGMENTE.md`:269 -- die
-                Freigabe eines Capability-Blattes, aus echtem Code uebernommen -- schreibt
-                `return Fehler::Buchfuehrung;` im `else`-Zweig eines `narrow`. Die Zeile fiel
-                bis heute mit `M119`.
-
-                **Keine neue Anweisung und kein neues Wort:** `return R::F;` IST die
-                Fehlerrueckgabe. Ein Grundwert kann nie den Erfolgstyp haben, also ist die
-                Form eindeutig -- die Bedingung, unter der diese Ersparnis erlaubt ist. Ein
-                Grund geht durch genau ZWEI Tueren: `return` in einer Funktion mit `or R`
-                (`M122`), und der Vergleich gegen einen Grund derselben Deklaration; alles
-                andere sagt `M124` ab, denn die Zahl an einer `reason`-Zeile ist fuer den
-                Bericht da und nicht fuer die Rechnung.
-
-                Die Form parste vorher schon -- als `place` mit Feldsuffix. *Sie war nicht
-                verboten, sie war bedeutungslos.* Zwei Glieder mit Identifier-Basis und ohne
-                `(` kommen im ganzen Korpus null Mal vor (`u64::max` nimmt den Zweig der
-                Integerwoerter), also kostet die Umwidmung keine Stelle. *)
+(* The producer of a `reason` value: `return R::F;` IS the error return (`M122`); a ground
+   compares only against a ground of the same declaration (`M124`). *)
 optionexpr = "Some" "(" expr ")" | "None" ;
-             (* «B35», 2026-08-15: `option index into T` hatte KEINEN Konstruktor. Der
-                Bestand schreibt `Some(x)` seit jeher -- in `match`-Mustern (beispiele/01,
-                dreimal), in Ausdruecken (FRAGMENTE.md IPC) und in SPRACHE.md:381 selbst.
-                Die Grammatik kannte es an keiner der drei Stellen; `Some` parste als
-                gewoehnlicher Aufruf, und der Kostenpass verlangte dafuer eine
-                `costs`-Zeile. Nachgezogen nach R9: die EBNF folgt dem Bestand. *)
 paren      = "(" expr ")" ;
 call       = ( path | place ) "(" [ arglist ] ")" ;
-             (* **«B8», 2026-08-21: der Ruf ueber einen ORT.** `t->senden(b)`. Bis dahin
-                trug `call` nur einen `path`, und ein Ruf ueber ein Feld fiel in
-                Anweisungsstellung als `P017` -- „Zuweisung oder Aufruf erwartet, Klammer
-                gefunden" -- und in Ausdrucksstellung als `P001`. **Eine Absage, die den
-                Aufruf, den sie erwartet, selbst nicht lesen konnte.**
-
-                Der Gerufene ist dann zur Uebersetzungszeit NICHT bekannt. Was ueber ihn
-                feststeht, steht am Typ des Ortes (`fnptr`), und ohne einen Vertrag dort ist
-                der Ruf eine Kante ins Unbekannte: `E009`, nicht Schweigen. Ein Ort, dessen
-                Typ kein Funktionszeiger ist, faellt an `M129`. *)
+(* «B8»: a call over a PLACE is an indirect call; the callee is not known at translation
+   time, and what is known about it stands at the type of the place (`fnptr`). *)
 arglist    = arg { "," arg } ;
-(* «B7»: `arg` traegt eine MARKE, und damit ist `call` zugleich der Verbundkonstruktor:
-   `P(a: 1, b: true)` stellt einen `type P = { a : u32, b : bool }` her.
-
-   **Ein geschweiftes Verbundliteral gibt es nicht, und das ist eine Entscheidung.**
-   `P { a: 1 }` waere die erste Ausdrucksform, die mit `{` weitergeht; an 76 Korpusstellen
-   folgt ein `{` direkt auf einen Ausdruck (`if x {`, `match a {`, `traverse i over d {`,
-   `retry … until p {`, `locks S {`). Rust loest das mit einem Kontextschalter -- und wer
-   den falsch setzt, verliest die 76 Stellen, ohne dass ein Tor es meldet: sie parsen
-   weiter, nur anders. **Ein stiller Verleser ist teurer als eine fehlende Form.**
-
-   Der Preis der gewaehlten Form ist eine Klammer statt einer geschweiften; der Gewinn ist
-   eine Grammatik, die ohne Kontext eindeutig bleibt. Die Marke ist ihrerseits eindeutig:
-   ein Ausdruck kann nie mit `ident ":"` anfangen (Pfade trennen mit `::`, Orte mit `.`).
-
-   M1 haelt die Marken gegen die Felderliste (`M106`) und verlangt sie am Verbund
-   vollstaendig (`M107`) -- `deckt fs zs ⟷ map fst zs = fs`, bewiesen in
-   `beweise/Verbund_Konstruktor.thy`. Entweder ALLE Argumente sind markiert oder keines
-   (`P036`). *)
 arg        = [ ident ":" ] expr ;
-(* G9: `cast` war eine echte Teilmenge von `call` und aus der Grammatik nie eindeutig
-   ableitbar. Die Produktion entfaellt: ein `call`, dessen `path` einen Typ nennt, IST die
-   Umwandlung. Die Unterscheidung ist eine Namensaufloesung, keine Syntaxfrage -- und ein
-   Erreichbarkeitswaechter auf Nichtterminalebene konnte sie nie sehen. *)
+(* «B7»: a labelled call is the record constructor -- `P(a: 1, b: true)`. There is NO braced
+   record literal (`P037`): at 76 corpus sites a `{` follows an expression directly. G9: a
+   `call` whose `path` names a type IS the conversion. *)
 builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")"
            | "aligned" "(" expr "," constexpr ")" ;
-oldexpr    = "old" "(" place ")" ;                 (* AUSDRUCK, nicht Praedikat; nur in ensures *)
+oldexpr    = "old" "(" place ")" ;                 (* EXPRESSION, not predicate; only in ensures *)
 place      = ident { placesuffix } ;
 placesuffix= "." ident | "[" expr "]" | "->" ident ;
 placelist  = place { "," place } ;
 ```
 
-**M1 acts here and nowhere else:** every operation must stay within the range of its result type.
-`a + b` with `a, b : u32 in 0..1000` has the type `u32 in 0..2000`; if that does not fit into the
-target, it is a **compile error**, not a runtime check.
+**Attributes — every operator names the range of its result** (CHANGED «SG-2», «SG-3»):
 
-**Division and remainder demand a denominator whose range excludes zero.**
-`%` and `/` by `u32 in 0..n` are not writable; by `u32 in 1..n` they are.
+| spelling | attribute on the operands | range of the result | Lean |
+|---|---|---|---|
+| `a + b` | `a : lo₁..hi₁`, `b : lo₂..hi₂` | `lo₁+lo₂ .. hi₁+hi₂` | `Expr.add` |
+| `a - b` | | `lo₁−hi₂ .. hi₁−lo₂` | `Expr.sub` |
+| `-a` | | `−hi .. −lo` | `Expr.neg` |
+| `a * b` | | the min and max of the four corners | `Expr.mul` |
+| `a / b`, `a % b` over `0 ..` | **`a : 0 ..`, `b : 1 ..`**: over non-negative operands C's truncating division and integer division coincide, and `0 ≤ a/b ≤ hi₁`, `0 ≤ a%b ≤ hi₂−1` are theorems | `0 .. hi₁`, `0 .. hi₂−1` | `Expr.div h0 h1`, `Expr.rem` |
+| `a / b`, `a % b` signed | **`b : 1 ..` or `b : .. −1`** — the divisor's range excludes zero (`M102` exactly); the quotient is C's truncating `tdiv`, and `\|a/b\| ≤ \|a\|`, `\|a%b\| < \|b\|` are theorems («SG-3», second sentence, evening of 2026-09-09) | `−M .. M` with `M = max \|lo₁\| \|hi₁\|`; `−(N−1) .. N−1` with `N = max \|lo₂\| \|hi₂\|` | `Expr.sdiv hb`, `Expr.srem hb`; theorem `sdivision_ohne_null` |
+| `a & b` | both `0 ..` | `0 .. hi₁` | `Expr.band` |
+| `a \| b`, `a ^ b`, `~a` | both `0 ..`, and the declared width `w` with `hi₁, hi₂ < 2^w` (`M137`) | `0 .. 2^w − 1` | `Expr.bor w`, `Expr.bxor w` |
+| `a << b`, `a >> b` | both `0 ..` | `0 .. hi₁·2^hi₂`, `0 .. hi₁` | `Expr.shl`, `Expr.shr` |
+| `< <= == != > >=` on integers | | `bool` | `Expr.lt le eq` (the rest by `nicht`, swapped operands) |
+| `< <=` on floats | both operands finite by type — the comparison is **total**, the NaN quadrant of «F» does not exist («SG-17») | `bool` | `Expr.fllt`, `Expr.flle` |
+| `&& \|\| !` | | `bool` | `Expr.und oder nicht` |
+| a narrower range at a wider place | `lo' ≤ lo ∧ hi ≤ hi'` — the ONE implicit widening («SG-1», E3) | `lo' .. hi'` | `Expr.weiter h1 h2` |
+| `int` literal `n` | | `n .. n` | `Expr.lit n` |
+| `true`, `false` | | `bool` | `Expr.wahr`, `Expr.falsch` |
+| `place` = a local | | its type | `Expr.var x` |
+| `place` = a `static`/`atomic` | **the guards of the global are in Λ** (`H007`, §11) | its type | `Expr.glob g (hL : gdarf D g Λ)` |
+| `place` = `T.slots[i].f`, `r[i].f` | **`i : index into T`** (CHANGED «SG-4»: no other type reaches an index — a wider number reaches it through `narrow`, §7) **and the guards of `T` are in Λ** («SG-6a») | the field's type | `Expr.slot t f i hL` |
+| `n` bytes at `i` of a byte carrier | `i : lo .. hi` with `0 ≤ lo` and `hi + n ≤ count`; guards of the carrier in Λ («SG-16») | `0 .. 256ⁿ − 1` | `Expr.leseBytes`; theorem `bytes_in_tabelle` |
+| `place` = `p->f`, `p[i].f` | the same, through a pointer (§3) | | `Expr.durch` |
+| `Some(e)`, `None` | `e : index into T` | `option index into T` | `Expr.some`, `Expr.none` |
+| `x.is_some()` / match on `option` | | `bool` | `Expr.istSome` |
+| `Variant(e)` (a `tagged` case) | the payload has the case's type; the case index is in range by shape | the sum type | `Expr.fall cs i nutz` |
+| `R::F` | | `reason R` | `Expr.grund n r` |
+| `&f` | `f` has exactly the signature of the `fnptr` at the place | `fn(…)` | `Expr.fnref f n (h : D.sig f = n)` |
+| `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
+| `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.altGlob hL`, `Expr.altSlot hL` |
+| `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
+| `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
+| a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |
+| `x += e` etc. (§7) | SUGAR for `x = x + e` under the rules above | | `Expr.add` |
 
-> **The limit of M1 is named and has been MEASURED since 2026-08-14.** `31 - x.leading_zeros()`
-> needs a **flow-sensitive** inference. **But only one rule, not general inference:**
-> *a checked condition narrows the range of the checked quantity in the branch after it.* Four
-> sites in the whole tree, all the same turn of phrase. Where it does not get through, Gabbro demands a
-> **narrowing** instead of a proof: `narrow x to 1..u32::max else { … }` — a statement with a
-> named exit, not a proof line. **It counts as plumbing and must stay small; if
-> it does not, that is a refutation** (see open items).
+**M1 acts here and nowhere else:** every operation must stay within the range of its result
+type — and now that is the **shape** of the derivation: `a + b` with `a, b : u32 in 0..1000`
+*is* a `u32 in 0..2000`, and at a place of a narrower type there is no constructor to put it.
+The M1 limit named in the second version — flow-sensitive narrowing — is answered as before:
+`narrow x to 1..u32::max else { … }` (§7), a statement with a named exit.
+
+*Lean:* `Expr : Ctx → List (Res D) → Ty → Type` (`Syntax.lean` §3); theorem `wert_total` (every
+expression has a value of its type), `im_bereich` (a number is in its range), `gleit_endlich`
+(a float is finite and in its range), `fnptr_passt` (a function pointer has its signature),
+`division_hat_nenner` (a division had a positive denominator).
 
 ---
 
@@ -738,63 +488,52 @@ andpred    = notpred { "&&" notpred } ;
 notpred    = [ "!" ] atompred [ "=>" pred ] ;
 atompred   = cmpexpr | quant | member | reach | heldpred | "(" pred ")" ;
 heldpred   = "Held" "(" ident [ "," "shared" ] ")" ;
-             (* Der Sperrzeuge, mit seiner STAERKE. Bis 2026-08-15 war `Held(L)` ein
-                gewoehnlicher Aufruf im Praedikat und trug keine Staerke -- damit war
-                `requires Held-shared` nicht schreibbar, und die Zwischenregel `H005`
-                musste JEDEN Zeugen sperren. Eine eigene Regel statt einer Aufweichung
-                des Ausdrucks: `shared` ist ein Wort des Wortschatzes und soll es
-                bleiben. *)
 quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
-domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
+domain     = "slots" "of" place                  (* the slots of a table *)
            | "chain" "(" ident "," ident ")" "in" place
-           | "descendants" "of" place      (* laeuft an `tree { child, sibling, parent }`
-                der Tabelle -- «B41b», s. `treedecl` *)
-           | "ancestors" "of" place        (* «B41»: dieselbe Kante, andere Richtung;
-                sie braucht von `treedecl` nur `parent` *)
+           | "descendants" "of" place             (* runs on the `tree` edge of the table, «B41b» *)
+           | "ancestors" "of" place               (* «B41»: the same edge, other direction *)
            | "queue" place
            | "fields" "of" path
-           | "elems" "of" place     (* «B12», decided 2026-08-20: binds an INDEX into the
-                array, like `slots of`. A domain is named after WHAT it ranges over, not
-                after what the variable holds -- see the note under the table *)
+           | "elems" "of" place                   (* «B12»: binds an INDEX into the array *)
            | "threads"
-           | "mappings" "of" place ;             (* erzeugt aus einer walk-Deklaration;
-                das Element traegt va, level und index[level] -- P0 Teil 4b: der echte W^X-Audit
-                schliesst die geteilten Kernel-Tabellen ueber index[2] >= FINE_BLOCKS aus *)
+           | "mappings" "of" place ;              (* generated from a walk declaration *)
 member     = expr "in" domain ;
 reach      = place "reaches" place "via" ident ;
 predlist   = pred { "," pred } ;
 ```
 
-> **What a domain BINDS -- decided 2026-08-20 (stage 3), and it is one rule, not eight.**
->
-> **A domain binds the ADDRESS of an entry, and it is named after what it ranges over.**
-> `slots of`, `elems of`, `descendants of`, `ancestors of` and `queue` all bind an index or
-> handle; the element is then `p[i]`. **The single exception is `mappings of`**, whose
-> entries have no single address -- it binds the record the `walk` declaration generates
-> (`va`, `level`, `index[level]`), and the declaration says so.
->
-> *The reason is expressiveness, not taste:* from an index one gets the element, from an
-> element not the index. `forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i])` --
-> the load-bearing promise of the IPC fastpath -- **is not writable under the element
-> reading**, and it was the occasion for the domain.
+**A domain binds the ADDRESS of an entry** (decided 2026-08-20): `slots of`, `elems of`,
+`descendants of`, `ancestors of` and `queue` bind an index; the element is then `p[i]`. The
+single exception is `mappings of`, which binds the record the `walk` declaration generates.
 
-**Eight domains, closed. Nesting at most two.** `old(place)` is permitted in `ensures`
-and nowhere else.
+**Eight domains, closed. Nesting at most two.** `old(place)` is permitted in `ensures` and
+nowhere else. There are **no user-defined quantifier domains, no recursion in `spec fn`, no
+hand-written lemmas**. Whoever needs more needs Verus or F\*. The one exception, and it is
+NOT a lemma: `by induction over <domain>` **names** the scheme the compiler generated from
+the `table` declaration.
 
-> **That is the line, and here it is writable down for the first time.** There are **no
-> user-defined quantifier domains, no recursion in `spec fn`, no hand-written
-> lemmas**. Whoever needs more needs Verus or F\*.
->
-> **The one exception, and it is NOT a lemma: `by induction over <domain>`.** It **names** the
-> induction scheme that the compiler **generated** from the `table` declaration — no
-> proof step, no proof body, no recursive `spec fn`. **The reason it is named and
-> not guessed is predictability:** a compiler that chooses the scheme makes
-> "it compiles" depend on solver luck — and M1 to M4 are types, not solvers.
-> In full in [`SPRACHE.md`](SPRACHE.md).
->
+**Attributes and Lean.** A predicate is an expression of type `bool` — the line between `pred`
+and `expr` is a line of the **surface** (what may stand in a contract), not of the meaning:
+
+| spelling | reading | Lean |
+|---|---|---|
+| `forall k in slots of T : p`, `elems of` | the binder has type `index into T`; the body runs over `0 ..< count`; **the guards of `T` are in Λ** — a quantifier reads the table | `Expr.forallSlots t body hL` |
+| `exists k in slots of T : p` | | `Expr.existsSlots t body hL` |
+| `a reaches b via f` | `f` is an `option index into Self` field of `T` (`T001`–`T003`); the chain is followed for at most `count` steps — more steps than slots repeat one | `Expr.reaches t f hf a b hL` |
+| `descendants of s`, `ancestors of s`, `chain(a, b) in T` | SUGAR: `forall k in slots of T : (s reaches k via child) => …` and the mirror with `parent`; `chain` names its field at the site | `forallSlots` + `reaches` |
+| `queue T`, `fields of T` | SUGAR over `slots of` and over the record's fields | `forallSlots` |
+| `threads` | the domain of the scheduler table | `forallSlots` over the declared `Threads` table |
+| `mappings of root` | the leaves of a `walk` (§9): a nested `traverse` per level, which is a nested `forallSlots` | `forallSlots` per level (SUGAR, «SG-16») |
+| `Held(L)`, `Held(L, shared)` | **`Res.held L ∈ Λ`** — not a value, a fact about the derivation; `shared` is a second witness kind of the same lock (a `locks shared` block adds it) | the index `Λ` of every `Expr`/`Stmt`; theorem `slot_hat_waechter` |
+| `p => q` | `!p \|\| q` | `Expr.oder (Expr.nicht p) q` |
+| `e in domain` | `exists k in domain : k == e` | SUGAR |
+
 > **The price is unquantified and probably the largest of the whole design:** there is no
-> emergency exit. If a kernel property falls outside the seven domains, it is **not
-> formulable** — not "expensive" but **not at all**.
+> emergency exit. If a kernel property falls outside the eight domains, it is **not
+> formulable** — not "expensive" but **not at all**. That does not change in the third version,
+> and it is not a gap of the theorem: a property that cannot be written is not a clause, and
+> the theorem is about clauses.
 
 ---
 
@@ -803,152 +542,87 @@ and nowhere else.
 ```ebnf
 fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
            "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
-           (* **«C3a»: `or <reason>` -- der Fehlerkanal, und er steht in der SIGNATUR**
-              (2026-08-20).
-
-              `let x = f() else (e) { … }` stand seit jeher in der Grammatik und war nicht
-              absenkbar: *„`-> u32` carries no error channel, and nothing binds a function to
-              a `reason`. What `e` holds and how a call reports failure would both have to be
-              invented here."* Beide Fragen beantwortet diese eine Klausel, und zwar dort, wo
-              eine Antwort ueberprueft werden kann -- an der Deklaration des Gerufenen, nicht
-              am Rufer.
-
-              `N028` und `N029` halten sie in beide Richtungen; die Absenkung steht in
-              SPRACHE.md 8.1. **Kein neues Wort:** `or` steht schon im Wortschatz. *)
+           (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
            [ "refines"   path ]
-           (* **«P6a»: die KOPFFORM der Verfeinerungspflicht** (2026-08-24,
-              `messung/VERFEINERUNG.md`). Nur an einem `impl fn`, und der Pfad muss eine
-              erklaerte `spec fn` nennen -- `M130` und `M131` halten beide Haelften.
-
-              *Gemessen vor der Entscheidung:* 8 `spec fn` in 4 Namen gegen 236 `impl fn` in
-              178, und **null** Namen, die beides sind. `spec fn` ist heute ueberall ein
-              Praedikathelfer in `requires`/`ensures`; eine Paarung ueber den NAMEN haette
-              aus einer Umbenennung eine Beweispflicht gemacht, still.
-
-              **Ein neues Wort, mit Absicht** -- anders als bei «C3a» (`or`). Die
-              Verfeinerungspflicht ist die staerkste Aussage dieser Sprache ueber einen
-              Rumpf; sie darf weder aus zusammenfallenden Namen entstehen noch aus einem
-              Wort, das nebenher etwas anderes tut. *Der Preis des geschlossenen
-              Wortschatzes ist hier der Zweck, nicht das Hindernis.*
-
-              Vor `requires`, weil die Spezifikation ihre Vorbedingungen mitbringt und ein
-              Leser sie kennen muss, bevor er die eigenen liest. *)
+           (* «P6a»: only at an `impl fn`; the path names a declared `spec fn` (`M130`/`M131`). *)
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
            [ "maintains" identlist ]
+           (* CHANGED «SG-10»: SUGAR. The obligation is DERIVED from `effects`: a function
+              that writes a carrier of `invariant I` owes `I` at every `return`, whether it
+              names it or not. `maintains I` documents; it can neither add nor lose an
+              obligation. *)
            [ "advances"  ident "->" ident ]
+           (* «B37»: which step this function takes on a mark with `order`. CHANGED «SG-14»:
+              the mark is in Λ at stage `a`, the body leaves it at stage `b = a + 1`. *)
            [ "retires"   ident "from" space
-             ( "falsifier" ident | "unfalsifiable" string ) ]    (* S3, 2026-08-28 *)
-           [ "effects"   "{" efflist "}" ]
-           [ "costs"     "<=" expr "ops" ]
-           [ "decreases" expr ]                                 (* «K5.4» *)
+             ( "falsifier" ident | "unfalsifiable" string ) ]    (* S3 *)
+           (* ONE clause with three parts: the mark (the same that `effects` consumes, `O011`),
+              the space, and the class of the assumption. CHANGED «SG-14»: the mark leaves Λ
+              and the assumption is NAMED in the term. *)
+            [ "effects"   "{" efflist "}" ]
+            [ "costs"     "<=" expr "ops" ]
+            [ "deadline"  "<=" expr "ops" "arch" ident
+              ( "falsifier" ident | "unfalsifiable" string ) ]   (* NEW «SG-22» *)
+            [ "decreases" expr ]                                 (* «K5.4» *)
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ buildgate ]
-           ( block | "=" pred ";" | "=" asmrumpf ";" | ";" ) ;
-           (* Das Gatter steht an der Funktion ZWEIMAL: hier und vor dem `item`. Beide
-              Stellen sind aelter als «TB» und beide werden gelesen -- eine davon zu
-              uebersehen waere genau das Loch, gegen das «TB» gebaut ist. Der Korpus
-              schreibt die Item-Form, weil sie bei allen 23 Item-Arten dieselbe ist. *)
-                                                 (* "=" pred: nur fuer spec fn *)
+           ( endblock | "=" pred ";" | "=" asmrumpf ";" | ";" ) ;
+           (* CHANGED «SG-5»: the body of a `fn` is an `endblock` -- a block that does NOT fall
+              off. A function with a return type ends in `return e;`, one without in `return;`
+              or falls to the closing `}` which is SUGAR for `return;`. `"=" pred` only for
+              `spec fn`. *)
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
              [ "clobbers" "{" identlist "}" ] "}" ;
 asmops   = asmop { "," asmop } ;
 asmop    = ( ident | "result" ) ":" string ;
-         (* `result` ist der Rueckgabewert -- ein Systemaufruf, dessen Rueckgabe
-            man nicht lesen kann, ist ein halber (2026-08-20). *)
-(* `const fn` -- comptime, das WERTE rechnet, 2026-08-17. Die Linie, an der es haengt:
-
-     comptime, das WERTE rechnet   ->  kostet keine Schablone
-     comptime, das CODE  erzeugt   ->  kostet eine, und die will bewiesen werden
-
-   Ein `const fn` erzeugt keinen Code; es liefert eine Zahl, und die steht dann in `count`,
-   in `costs` oder in einer Bereichsgrenze:
-
-     const fn zellen(kerne : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops
-     { return kerne * 4; }
-     table W count zellen(NKERNE) { … }
-
-   **Der Rumpf ist EIN Ausdruck** -- `{ return <expr>; }`. Das ist keine Vorstufe, sondern
-   die Entscheidung: ein `const fn` mit Verzweigung waere ein Auswerter im Pruefer, und ein
-   Auswerter ist ein Erzeuger. Rekursion liefert `None` statt zu haengen -- dieselbe
-   Schranke, die die Sprache ihren Schleifen auferlegt.
-
-   `const` faengt damit zweierlei an; ein Blick auf das naechste Wort trennt sie
-   (`const N : u32 = 4;` gegen `const fn f(…)`), und das ist KEIN Kontextschalter. *)
-
-(* «B37»: `advances roh -> mmu` sagt, WELCHEN Schritt diese Funktion auf einer Marke mit
-   `order` tut. Sie steht an der DEKLARATION, nicht am Rufer -- wer den Schritt macht, weiss,
-   welcher es ist; wer ruft, soll es nicht wiederholen muessen. Zwischen `maintains` und
-   `effects`, weil sie zu den ZUSAGEN gehoert: was der Schritt anfasst, sagt `effects`.
-
-   Geprueft wird in drei Stufen: die Stufen gibt es und der Schritt geht VORWAERTS
-   (`O001`/`O002` -- ohne die zweite Haelfte waere `order` eine Liste), die Marke steht beim
-   Ruf auf der Ausgangsstufe (`O003`), und der Rumpf setzt sich zu seiner eigenen Zusage
-   zusammen (`O004`), und alle Zweige erreichen dieselbe Stufe (`O006`, K11.1) -- ein Zweig,
-   der mit `return` endet, schliesst sich nicht an; ein Schritt in einer Schleife wird
-   abgelehnt. *)
-
-(* **`retires t from boot falsifier sonde_x` -- Schicht S3 des Bootsatzes, 2026-08-28.**
-
-   `SPRACHE.md` §12 verlangt, dass `boot_end` die Marke verbraucht UND die Abbildung von
-   `.boot` entfernt, **EIN Ereignis**. Der naheliegende Bau waere zwei Klauseln -- und der ist
-   falsch, und zwar mechanisch und nicht geschmacklich: *zwei Zusagen, die man einzeln
-   erfuellen kann, sind keine eine.* Wer nur die erste haelt, hat eine Funktion geschrieben,
-   die die Bootphase fuer den TYPPRUEFER beendet und die Bytes abgebildet stehen laesst --
-   genau der Zustand, in dem `beispiele/07` bis heute war (`effects { consumes t, writes
-   code_abbildung }`, ein Wirkungsname neben der Verbrauchszeile, von keinem Pass gelesen).
-
-   Deshalb traegt EINE Klausel drei Teile, und keiner ist allein schreibbar:
-
-     die Marke      -- dieselbe, die `effects` verbraucht                        (`O011`)
-     der Raum       -- `space`, wie am Zeigertyp: normal mmio dma code boot port
-     die Klasse     -- `falsifier <sonde>` oder `unfalsifiable "<grund>"`
-
-   Der Schwanz ist derselbe wie an `assume` und `axiom`, und mit Absicht: die Klausel ERKLAERT
-   eine Annahme der Axiomschicht, und eine dritte Schreibweise fuer dieselbe Sache waere ein
-   zweites Register ueber einer Sache. Er ist PFLICHT -- die dritte Klasse, *nicht gefahren*,
-   ist die Abwesenheit beider Angaben und ein Uebersetzungsfehler (`P029`).
-
-   Dazu `O010`: eine Marke, die eine `raw fn` verlangt, muss jemand stilllegen -- sonst hat
-   S3 gar kein Ereignis. Und `O012`: eine Nachbedingung ueber `mappings of` muss VERNEINEND
-   sagen, was verschwindet. *Das ist die formulierbare Haelfte von S3;* die andere -- eine
-   Adresse ohne Abbildung ist nicht mehr erreichbar -- ist eine Aussage ueber MMU und TLB,
-   faellt unter keinen Pass und steht in `gabbro annahmen`, mit der Sonde der Klausel. *)
 inductlist = induct { "," induct } ;
-induct     = "induction" "over" domain ;      (* nennt das SCHEMA -- kein Lemma, kein Beweisschritt *)
+induct     = "induction" "over" domain ;      (* names the SCHEME -- no lemma, no proof step *)
 efflist  = eff { "," eff } ;
 eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks" ident
          | "allocs" ident | "consumes" place | "publishes" place | "diverges"
          | "pure" ;
+(* CHANGED «SG-6» «SG-8»: `writes T` is the WRITE RIGHT on `T` in the body -- an assignment to
+   a carrier not named here is not derivable; `consumes m` puts `m` into Λ at the head of the
+   body, `allocs m` demands `m` in Λ at every `return`, and `return` demands multiset EQUALITY
+   between Λ and the `allocs` list: linear, not affine. *)
 ```
 
-**`decreases <expr>` — das Abstiegsmass der REKURSION** («K5.4», 2026-08-19). Bis dahin war
-`costs` an einer rekursiven Funktion eine **Annahme**: *„ein Aufruf zählt die deklarierten
-`costs` des Gerufenen"* (§7), und bei einem Zyklus zählt jede Kante einmal. `K001` und `E009`
-benannten das ehrlich — und ehrlich ist nicht vollständig.
+**`effects` is NOT fail-open.** A function **without** `effects` is a compile error; whoever
+touches nothing writes `effects { pure }`.
 
-Mit einem `decreases` ändert sich **die Lesart von `costs`**: es ist die Zusage **eines
-Durchgangs**, und die Tiefe steht im Mass. *Ohne diese Lesart wäre die Zeile unerfüllbar* — der
-rekursive Ruf zählte die eigenen deklarierten Kosten, und der Rumpf käme immer darüber.
-**`K001` fiel an jeder korrekten rekursiven Funktion**, und das ist der Grund, warum im ganzen
-Korpus keine steht.
+**`decreases <expr>` — the descent measure of the RECURSION** («K5.4»): `costs` at a
+recursive function is the promise of **one** pass, and the depth stands in the measure.
+`K008`/`K009` check the necessary condition; **THAT it falls stays the prover's** — in the core
+that is the outcome `logik (abstieg f)`: the meaning of a call at depth `n` is given `n` levels,
+and a recursion that has not bottomed out at depth `n` for any `n` is exactly a measure that did
+not fall.
 
-Geprüft wird die **notwendige** Bedingung, wie bei `S005` am Abstiegsmass einer `traverse`:
+**Attributes and Lean.**
 
-* **`K008`** — eine Funktion, die sich selbst erreicht, trägt ein `decreases`.
-* **`K009`** — das Mass nennt eine Grösse, die der rekursive Ruf **ändert**. Wird jede
-  unverändert durchgereicht, ist das Mass auf jeder Ebene dasselbe.
-
-> **DASS es fällt, bleibt Beweisersache** (`consuming.ordnung`) — dieselbe Trennung wie bei
-> `S005`, und sie ist die Zielform: *die Notation trägt, der Beweis bleibt beim Nutzer.*
-
-
-> **`effects` is NOT fail-open.** A function **without** `effects` is a compile error;
-> whoever touches nothing writes `effects { pure }`. The omission that was formerly possible was at once
-> **the strongest promise and the shortest specification** — the incentive stood against
-> completeness.
+| clause | reading | Lean |
+|---|---|---|
+| `fn f(params) -> T or R` | the **signature** `S`: parameter types, return type, `n` grounds, write rights, consumed and produced marks (with stages) | `Signatur`, `D.sigNr`, `D.sig f`, `vertragVon D f` |
+| `requires p` | at every call of `f`, `p` holds — or the outcome is **`logik (vorbedingung f)`** | `Programm.requires f`; `rufAt` |
+| `ensures p` | at every `return` of `f`, `p` holds over `result`, `old(…)` and the parameters — or **`logik (nachbedingung f)`** | `Programm.ensures f` in `ErgCtx`, `eval σ₀` with the entry world for `old` |
+| `refines g` | `ensures` of `g` ⊆ `ensures` of `f` — a conjunction, not a second channel; a violation is `nachbedingung` | `Programm.ensures` (SUGAR) |
+| `maintains I` | SUGAR (see the production) — the owed invariants are `schuldet f i` | `schuldet`, `rufAt` → `logik (invariante i)` |
+| `advances a -> b` | the body's Λ starts with `marke m a` and the `advances` statement moves it (§7) | `Stmt.advances`, `Res.marke` |
+| `retires m from s …` | the body consumes `m`; the assumption is named | `Stmt.retires m s h a` |
+| `effects { writes T, consumes m, allocs m' }` | the contract `V` of the body | `Vertrag`, `RufPasst`, `Λ` |
+| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | checked against the declaration; `Ziel.lean` `ziel_zeit` |
+| `deadline <= n ops arch X falsifier p` | **by when in cycles on `X`** — a hardware outcome, not a second budget | `Hardware.fortschritt a` (the named `progress`-class assumption with its probe); §18 («SG-22») |
+| `decreases e` | the recursion depth is a parameter of the meaning | `rufAt (fuel)` → `logik (abstieg f)` |
+| `by induction over d` | names the scheme; no term | none |
+| `spec fn … = pred` | a predicate helper: inlined at every use (`M130`) | SUGAR |
+| `const fn` | a translation-time number: a literal at every use | `Expr.lit` (SUGAR) |
+| `raw fn`, `prim fn`, `extern fn`, `= asm { … }` | a **foreign body**: its contract is all Gabbro knows; the body is the machine | `D.Ax` with `aparams`/`aerg`/`aschreibt`; `Stmt.axiomCall`, `Block.bindAxiom` («SG-18») |
+| `-> never`, `divergent fn` | no `return` derivable; the only exits are `leave`/`next` of an enclosing loop, a `return R::F`, or a foreign body | `Ty.never`, theorem `never_leer` |
+| `requires Held(L), …` | **the lock set is part of the contract**: the `Held` list of a signature names EXACTLY the locks held at every call — `∀ L, Held(L) ∈ Λ ↔ L ∈ haelt(S)` («SG-20», evening of 2026-09-09). Only so can a `locks` inside the callee stand above *everything* held (`H006` across call boundaries); a helper used under two lock sets is two signatures | `Signatur.haelt`, `RufPasst.hh`, `Signatur.anfang`, `Vertrag.ende` |
+| a **call** `f(a, b);` | the callee's `writes` ⊆ the caller's, its `consumes` ⊆ Λ, its `Held` = the held set, and a callee with `or R` is callable only through `let … else` | `Stmt.call f args hp hr` with `hp : RufPasst`, `hr : gruende = 0`; theorem `ruf_hat_alles` |
+| an **indirect call** `p(a, b);` | the same, against the signature at the **type** of `p` («SG-8») | `Stmt.callInd`, `Block.bindCallInd`; theorem `zeigerruf_hat_alles` |
 
 ```gabbro
 spec fn cdt_wellformed(c: CapSpace) -> bool =
@@ -970,13 +644,16 @@ impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
 { … }
 ```
 
-**`breaking`** names the region in which an invariant rests — three sites in Caprock:
+**`breaking`** names the region in which an invariant rests:
 
 ```ebnf
 breakstmt = "breaking" identlist block ;
 ```
 
-It must be restored at the end of the block; the region is **visible instead of hidden**.
+It must be restored at the end of the enclosing body; the region is **visible instead of
+hidden**. *Lean:* `Stmt.breaking i body` — the name stands in the term (`D013`), and the
+restoration is demanded at `return` like without `breaking` (`schuldet`): a `breaking` cannot
+lose an obligation, it can only say where one rests.
 
 ---
 
@@ -984,11 +661,26 @@ It must be restored at the end of the block; the region is **visible instead of 
 
 ```ebnf
 block      = "{" { stmt } "}" ;
-stmt       = letstmt | assign | ifstmt | matchstmt | loopform | breakstmt
+endblock   = "{" { stmt } endstmt "}" ;                          (* NEW «SG-5» *)
+endstmt    = "return" [ expr ] ";" | "leave" ident ";" | "next" ident ";" ;
+(* NO value on `leave` («SG-25», §18): the first match leaves through a
+   variable bound before the loop — `assignVar` plus `leave`, read after the
+   loop. The bound still comes from the domain; no cursor or bitmap is
+   hand-threaded. *)
+(* The block that does NOT fall off. The `else` of a `let … else`, of a `narrow`, of a
+   register read and a `format` check ends here; the second version said (§7, line 1029) that
+   the branch "must diverge or return" and never wrote it. `leave`/`next` only under a loop. A
+   `return R::F;` is a `return expr;` whose expression is a ground. *)
+stmt       = letstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
-           | awaitload | exchstmt | "return" [ expr ] ";" | exprstmt ;
+           | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt ;
 leavestmt  = "leave" ident ";" ;
 nextstmt   = "next" ident ";" ;
+advstmt    = "advances" ident "->" ident ";" ;                   (* NEW «SG-14» *)
+(* The step on a phase mark, as a statement in the body that `advances` at the head
+   promises. `O004`/`O006` (the body composes to its promise, every branch reaches the same
+   stage) become the shape: Λ after the statement carries the mark at the next stage, and
+   `return` compares Λ with the head. *)
 awaitload  = "let" ident "=" place "awaits" "{" placelist "}" ";" ;
 exchstmt   = "let" ident "=" place "exchange" xform
              [ "publishes" ( placelist | "nothing" ) ]
@@ -996,37 +688,92 @@ exchstmt   = "let" ident "=" place "exchange" xform
 xform      = "update" "(" ident ")"
              [ "bounded" expr "ops" ] [ "on_exceeded" ident ] block
            | expr "when" pred "returns" ident ;
-(* **«C4b»: dieselben zwei Klauseln wie am `retry`, und aus demselben Grund** (2026-08-20).
-
-   `SPRACHE.md` sagt die Absenkung seit jeher -- die BESCHRAENKTE CAS-Schleife -- und liess
-   offen, woher `NCORES` und der Ausgang kommen. Der Erzeuger hat sich deshalb geweigert, mit
-   dem richtigen Grund: sie standen nirgends. Jetzt sagt sie der Schreiber.
-
-   *Es IST ein `retry`, nur mit einem CAS als Rumpf; wo zwei Formen dasselbe tun, sollen sie
-   gleich heissen.* Kein neues Wort. Fehlen sie, bleibt die Weigerung -- eine unbeschraenkte
-   CAS-Schleife ist genau das, was diese Sprache verbietet. *)
+(* «C4b»: the same two clauses as at `retry` -- a bounded CAS loop, and the writer says the
+   bound and the exit. *)
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
-           | "let" ident "=" ( call | place ) "else" "(" ident ")" block ;   (* «B14b» *)
+           | "let" ident "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
+stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-19» *)
+(* The transition of a `state` field: `transition T.slots[i].s : Idle -> Busy;` names the
+   declared transition -- the SAME construct and the same word as a device `transition`
+   (§10), one level down, which is what the second version said of the two. That the field
+   STANDS on `Idle` is the writer's logic (`logik uebergang`); that `Idle -> Busy` is DECLARED
+   is the shape. The second version wrote `state` transitions through `assign` and left the
+   pre-state to a pass. `shiftplace` has no `->` suffix, and the two stage names are
+   identifiers, not expressions -- so the arrow is never a pointer suffix. No new word. *)
 exprstmt   = call ";" ;
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
-matchstmt  = "match" expr "{" { ident [ "(" ident ")" ] "=>" block } "}" ;
-narrowstmt = "narrow" place "to" ( range | "finite" ) "else" block ;
-(* «F»: `finite` stellt NICHT-NaN-SEIN her, und es ist die einzige Form dafuer.
-
-   Ohne diese Tatsache liefert die Negation eines Gleitkommavergleichs nichts: ist ein
-   Operand NaN, sind alle Vergleiche falsch, und aus `!(x < y)` folgt `x >= y` nicht. Mit
-   ihr rechnet man gewoehnlich weiter -- die Verengungsmaschinerie ist damit BEDINGT statt
-   abgeschaltet.
-
-   Der Korpus zeigt dieselbe Bewegung von Hand (FRAGMENTE.md, «F0»/FF1): dort steht
-   `isnan(de.x) || isinf(de.x) || …` neben dem Vergleich, weil der Vergleich allein den Fall
-   nicht abdeckt. *)
+matchstmt  = "match" expr "{" { matcharm } "}" ;
+matcharm   = ident [ "(" ident ")" ] "=>" block ;                 (* CHANGED «SG-5a» *)
+(* ONE arm per case, in declaration order: exhaustiveness is the SHAPE of the arm list, not a
+   check (`M123`). Over an `option`: `Some(k) => … None => …`, `k : index into T`. Over a
+   `reason` with `n` grounds: `n` arms. *)
+narrowstmt = "narrow" place "to" ( range | "finite" ) "else" endblock ;   (* CHANGED «SG-5» *)
+(* «F»: `finite` establishes not-NaN-ness. CHANGED «SG-17»: in the core every float is finite
+   by type, so `narrow x to finite` is `narrow x to <its whole range>` -- a range narrowing;
+   the form stays for the corpus. *)
 ```
 
 **`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
-compilation. **Error propagation** is `let … else (e) { … }`: no hidden control flow,
-the `else` branch must diverge or return.
+compilation. **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
+`else` branch is an `endblock` — it cannot fall off, so the binding after it always has a value.
+
+**Attributes and Lean.** The **resource context** Λ («SG-6») of a position is the multiset of
+`Held(L)` witnesses and linear marks (with stage) in hand — not written, derived from the
+enclosing `locks` blocks and the statements before the position:
+
+```
+Λ at the head of a body       = the `Held(L)` of the signature + the marks it consumes, at their stage
+Λ after `f(…);`               = Λ − consumes(f) + allocs(f)
+Λ inside `locks L { … }`      = Λ + Held(L)                       (the witness is not consumable)
+Λ after `advances a -> b;`    = Λ − marke(m, a) + marke(m, b)
+Λ after `retires`             = Λ − marke(m, s)
+Λ at `return`                 ≡ the `Held` of the signature + the marks it allocs  (multiset EQUALITY)
+```
+
+| statement | attribute | outcome where one fails at run time | Lean |
+|---|---|---|---|
+| `x = e;` (local) | `e` has the type of `x` | — | `Stmt.assignVar` |
+| `T.slots[i].f = e;` | `i : index into T`; guards of `T` in Λ; **`writes T` in the contract** | — | `Stmt.assignSlot t f i e hw hL`; theorem `zuweisung_hat_recht` |
+| `p->f = e;` | the same, and `p : ptr<…, rw>` | — | `Stmt.assignDurch` |
+| `G = e;` (static) | guards of `G` in Λ; `writes G` | — | `Stmt.assignGlob` |
+| `transition T.slots[i].s : A -> B;` | `A -> B` declared at `state`; `B` in the field's range; `writes T`; guards | **`logik uebergang`** if the field is not on `A` | `Stmt.uebergang`; theorem `uebergang_erklaert` |
+| `x += e;` etc. | SUGAR for `x = x + e;` | — | `Expr.add` |
+| `let x = e;` | binds; `mut` is a surface flag | — | `Block.bind e rest` |
+| `let x = f(…);` | as a call; `f` has a return type and no `or` | — | `Block.bindCall` |
+| `let x = p(…);` | indirect, against the type of `p` | — | `Block.bindCallInd` |
+| `let x = f(…) else (e) endblock;` | `f` has `or R`; `e : reason R` in the `else`; the `else` does not fall off | — | `Block.bindCallElse f args he hp hr err rest` |
+| `let x = axiom(…);` | the axiom's `writes` ⊆ the contract's | **`hardware (annahme a)`** if the answer is outside the declared type | `Block.bindAxiom` |
+| `let x = R;` (register) | `R` has a readable class (§10); the value is held against the type AND against the register's declared promise (`requires` without `else`) | **`hardware (register r)`** if outside the type; **`hardware (geraet r)`** if the promise fails — the device assumption, named at the register | `Block.regLies r hk rest`, `D.rzusage`; theorem `register_lesbar` |
+| `let x = R else (e) endblock;` | `R` carries `requires … else` (§10): the promise is checked on the binding | — (the `else` runs) | `Block.regLiesElse` |
+| `let x = A awaits { p, q };` | `{ p, q }` is **exactly** the payload declared at `A` («SG-13») | **`hardware (sichtbarkeit A10)`** if the machine does not deliver the publication — the memory model, as an outcome | `Block.awaits g payload hp hL rest`, `Orakel.sichtbar`; theorem `awaits_paart` |
+| `let x = A exchange update(v) { … } …;` | read, compute, write as **one** statement; `bounded`/`on_exceeded` as at `retry` | — | `Block.exchange g neu hw hL rest` |
+| `A = e publishes { p, q };` | the declared payload; `writes A` | — | `Stmt.publish`; theorem `publish_paart` |
+| `if c blk else blk` | | — | `Stmt.ite` |
+| `match e { arms }` | one arm per case (see production) | — | `Stmt.onTag`, `Stmt.onOption`, `Stmt.onGrund`; `Arms`, `GrundArms` |
+| `narrow x to lo .. hi else endblock` | the `else` does not fall off; after it `x : lo .. hi` | — | `Block.narrow e lo hi sonst rest` |
+| `narrow x to finite` / a float range | | — | `Block.gleitNarrow` |
+| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`hardware ieee`** if the result is outside or not finite | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
+| `f(…);` | see §6 | `logik (vorbedingung f)` … from the callee | `Stmt.call`, `Stmt.callInd` |
+| `axiom(…);` | | `hardware (annahme a)` | `Stmt.axiomCall` |
+| `R = e;` (register) | `R` has a writable class (§10) | — (the device is outside the world) | `Stmt.regSchreib`; theorem `register_schreibbar` |
+| `transition t { R.b : 0 -> 1 }` | `R` writable, its declared mirror `m` readable; one read of `m`, one write of `R` with the bits under the mask replaced | — | `Stmt.transition r hk m hm hl maske bits`; theorem `transition_hat_spiegel` |
+| `T.slots[i].f = e` on `n` bytes | a byte-carrier write of `n` bytes at `i`, `hi(i) + n ≤ count`, `writes T`, guards | — | `Stmt.schreibBytes` |
+| `locks L blk`, `observes D blk` | §11 | — | `Stmt.locks L hr body` |
+| `breaking I blk` | §6 | — | `Stmt.breaking` |
+| `advances a -> b;` | the mark is at `a` in Λ, `b = a+1 < stages` | — | `Stmt.advances m a h hs`; theorem `stufe_steigt` |
+| `retires` (at the head, §6) | the mark at stage `s` in Λ | — | `Stmt.retires m s h a` |
+| `return e;` | `e` has the return type; **Λ ≡ allocs** | `logik (nachbedingung f)`, `logik (invariante i)` at the call | `Stmt.ret`, `Endblock.ret`; theorem `rueckgabe_bilanziert` |
+| `return R::F;` | the function has `or R` | — | `Stmt.retGrund`, `Endblock.retGrund` |
+| `leave l;`, `next l;` | inside a loop (`l = true`) | — | `Stmt.leave`, `Stmt.next` |
+| a `format` field's `where`, a `requires` at a read | the condition, or the named `else` (§9) | — | `Block.pruefung c sonst rest` |
+
+*Lean:* `Stmt`, `Block` (falls off: outcome `ok`), `Endblock` (does not: outcome `EndAusgang`
+has no `ok`), `Arms`, `GrundArms` — `Syntax.lean` §4. **Theorem `exec_rahmen`** (`Satz.lean`
+§3): a body under contract `V` writes only what `V` names — for every program, every depth,
+every world; the only premise is that the hardware keeps ITS `effects` (H1). The proof is a
+structural induction over **all** of `Stmt`/`Block`/`Endblock`/`Arms`/`GrundArms`, each
+constructor a case.
 
 ---
 
@@ -1042,67 +789,44 @@ traverse   = "traverse" ident [ "of" expr ]
              "by"    ( "unvisited" | "consuming" )
              [ "decreases" expr ]
              [ "touches" efflist ]
+             [ "invariant" pred ]
              block ;
 
 retry      = "retry" [ ident ] [ "until" pred ]
              "bounded"     expr "ops"
              [ "progress"  ident ]
-             "on_exceeded" ident
+             "on_exceeded" ( ident | endblock )                  (* CHANGED «SG-11» *)
              [ "effects" "{" efflist "}" ]
              [ "invariant" pred ]
              block ;
+(* `on_exceeded ident` is SUGAR for `on_exceeded { ident(); return; }` -- the overrun is a
+   named exit, and a named exit is an `endblock`. *)
 
 forever    = "forever" [ ident ]
              "per_pass"  "bounded" expr "ops"
              "on_exceeded" ident
              "effects"   "{" efflist "}"
-             [ "progress" ident ]
+             "progress"  ident                                  (* CHANGED «SG-11»: COMPULSORY *)
              [ "leaves"    identlist ]
              [ "invariant" pred ]
              block ;
+(* `progress` names WHO ends the loop -- an assumption with a falsifier. `UNFALSIFIZIERBAR.md`
+   row 4 measured a wait loop with no `progress` as "writable, and no latch can ever close
+   it" (`beispiele/66`:66). In the core a `forever` ends by `leave` or by the environment, and
+   the environment's contribution IS the named assumption: outcome `hardware (fortschritt a)`.
+   A loop that names nobody would have a third kind of end. *)
 ```
 
-**`invariant pred` stands at all three, immediately before the block** (2026-08-28,
-`messung/SCHLEIFENINVARIANTE.md`). It is **not a new word**: `invariant` already stands at a
-`table` for the same thing -- a predicate that holds throughout. There over the table's
-lifetime, here over the loop's passes. *The measure was carried by the language from the
-start; this is the statement.* `M133` refuses one that names nothing.
+**`invariant pred` stands at all three, immediately before the block**; `M133` refuses one
+that names nothing. `decreasing` fell on 2026-09-01: `decreases` at a loop is the same measure
+over the passes that `decreases` at a `fn` is over the recursion, and it is a **witness** — it
+says nothing about the run that `unvisited` does not.
 
-| Form | ends? | what discharges the plumbing |
-|---|---|---|
-| **`traverse`** | yes, through the set | range **and** termination; `by consuming` additionally the leafness via the ordering of the domain |
-
-**And what the descent witness means FOR THE RUN — decided 2026-08-20 (stage 3):**
-
-| | proves | run |
-|---|---|---|
-| **`by unvisited`** | each entry once | walk the whole domain, order open |
-| **`by consuming`** | the entry is removed | the same walk **plus the removal**, and the removal is a generated `ops` operation |
-| **`decreases e`** | `e` falls each pass — termination | **the same walk.** The measure is a witness and says nothing about the run that `unvisited` does not |
-
-> **And on 2026-09-01 that reading was carried out in the grammar: `decreasing` FELL.** It
-> stood as a third alternative beside the two run forms while its own row said it is not one
-> — *three modes, two runs.* A witness belongs to the contracts, and the contracts already
-> spell it: `decreases` at a `fn` head («K5.4») is the same measure over the recursion that
-> this one is over the passes. **The word it is replaced by was already in the vocabulary**,
-> so the change costs nothing and returns one: `kw.rs` went from 222 words to 221.
->
-> *It is the same move, at the same production, three days earlier:* `invariant` went from
-> the `table` to all three loop forms, and this document says of it *"It is not a new word."*
->
-> **The clause is OPTIONAL and no longer exclusive.** `by consuming decreases e` is writable
-> now and was not before — the vocabulary lost a word and the grammar gained a position, and
-> `instrumente/zaehle-wortschatz.py` prints both numbers precisely so that a trade can be
-> told apart from a loss.
-
-> **«B10» is thereby answered, and the answer is „yes, and that IS the meaning":** `by
-> consuming` empties the whole queue. The IPC fastpath wants *the first live receiver* and
-> then stops — **that is a different loop shape, not a different reading of this one.**
-> `traverse` yields no value and carries no label, so it cannot be left; forcing the fastpath
-> into it turns a rendezvous into a bloodletting. *The exit with a name is open work
-> (stage 4), the meaning of `by consuming` is not.*
-| **`retry`** | yes, through `bounded` | termination as a **number**; the overrun is **named** (`on_exceeded`), not interpreted |
-| **`forever`** | **no — and that is permitted** | every **pass** is bounded, the **frame** stands in `effects` |
+| Form | ends? | what discharges the plumbing | outcome where a clause fails | Lean |
+|---|---|---|---|---|
+| **`traverse`** | yes, through the set | range **and** termination by the finite index set; `by consuming` additionally the removal as a generated `ops` operation | `logik schleife` if `invariant` fails at a pass boundary | `Stmt.traverse t inv body` — iterates `alleIndizes (count t)`; the binder is `index into T` |
+| **`retry`** | yes, through `bounded` | termination as a **number**; the overrun is **named** | `logik schleife`; the overrun runs the `on_exceeded` block | `Stmt.retry n bis body ueberlauf` |
+| **`forever`** | **no — and that is permitted** | every **pass** is bounded, the **frame** stands in `effects`, the end is named | `logik schleife`; **`hardware (fortschritt a)`** if the environment does not end it | `Stmt.forever a inv body` — the passes come from outside (H2) |
 
 ```gabbro
 forever
@@ -1113,129 +837,39 @@ forever
 { … }
 ```
 
-> **That is the narrow frame.** An idle loop, the main loop of a server, a
-> spinlock — they are meant to run forever. What is **not** permitted: a pass that is itself
-> unbounded, or a loop that touches what does not stand in its frame.
-> **`per_pass` and `effects` are compulsory; `forever` without them does not compile.**
->
-> **`progress` names WHO ends it** — an assumption about the environment, with a falsifier. The
-> watchdog **is** the falsifier. With that a wait loop is not "unprovable" but
-> **provable under a named, falsifiable assumption**.
+`leave` ends the loop, `next` the pass; inside the body `Λ` must be the same at every pass
+boundary (`Block true Γ Λ Λ` in Lean — a loop body neither consumes nor allocates a mark,
+which is `O006` as shape). `touches`/`effects` at a loop are a **sub-contract** of the
+function's: SUGAR, the function's contract is what the theorem holds.
 
 ---
 
 ## 9. Tables, traversals, formats
 
 ```ebnf
-table      = [ "pub" ] "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
-               { constdecl | slotdecl | invariant | opdecl | treedecl | occdecl } "}" ;
+table      = [ "pub" ] "table" ident [ "count" constexpr ] [ "backed" ident ]
+             [ "owner" ident ]                                   (* NEW «SG-9» *)
+             [ "shared" ]                                        (* CHANGED «SG-21»: no new word *)
+             "{" { constdecl | slotdecl | invariant | opdecl | treedecl | occdecl } "}" ;
+(* `shared`: the carrier is reachable from more than one thread (`H013` as a declaration).
+   A shared carrier HAS a guard (`protects` or `owner`) -- a shared carrier without one is
+   not declarable; an unshared one belongs to one thread (`per cpu`, a stack, boot). This is
+   the premise `Wettlauf.lean` takes for its race theorem. *)
+(* `owner m` names a `linear type m;` whose mark every access to the table must hold. A table
+   without `owner` and without `protects` is accessible from anywhere -- which is what a
+   `static` is today. An owner mark is ALLOCATED BY NOBODY (`eigner_nie_erzeugt`): it appears
+   in no `allocs`, so a second owner of the same slots cannot come into being. *)
 treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
 kante      = ( "parent" | "child" | "sibling" ) ident ;
-(* **«B41b»: die Kante, an der `descendants of` und `ancestors of` laufen** (2026-08-20).
-
-   Der Befund kam aus dem ERZEUGER, nicht aus dem Entwurf: beim Absenken von `descendants
-   of c.slots[s]` stand die Frage, an welchem der vier Felder von `CapSpace` die Domaene
-   eigentlich laeuft -- `parent`, `first_child`, `next_sibling`, `prev_sibling` -- und die
-   Domaene nannte keins. `chain(a, b) in <ort>` konnte es an seiner Stelle laengst sagen.
-
-   **Die Symmetrie wird hier ANDERSHERUM hergestellt.** `chain` nennt seine Felder AM
-   DURCHLAUF; ein Baum wird an vielen Stellen durchlaufen, und zwei Stellen koennten
-   verschiedene Felder nennen, ohne dass jemand die beiden vergleicht. Die Kante ist eine
-   Aussage ueber die STRUKTUR -- also steht sie einmal an der `table`, wird dort einmal
-   geprueft (`T001`-`T003`: das Feld existiert, es ist `option index into Self`, und keine
-   Kante steht zweimal) und gilt danach fuer jede Domaene, die sie braucht.
-
-   **Eine Teilmenge ist erlaubt und sagt etwas.** `beispiele/18` erklaert nur `parent`:
-   seine Topologie kennt keinen Abstieg, und `descendants of` darueber ist dann kein
-   fehlendes Erzeugerstueck, sondern eine benannte Weigerung.
-
-   Die drei Woerter `parent`, `child`, `sibling` und `tree` selbst sind KONTEXTUELL --
-   ueberall sonst, auch als Slotfeldname, bleiben sie Bezeichner. *)
-(* `count` ist der ADRESSRAUM, `backed` der SPEICHER (Punkt 1, 2026-08-18).
-
-   `count N` sagt, wie viele Plaetze der Typ kennt; `backed k` nennt den WERT, bis zu dem
-   sie hinterlegt sind. Ohne die Trennung fiel beides zusammen -- und dann ist "30 GiB
-   deklarieren, 100 MiB hinterlegen" keine Aussage der Sprache, sondern eine Hoffnung an den
-   Seitenfehlerpfad.
-
-   **Das Tor ist keine neue Pruefung, sondern dieselbe gegen die richtige Zahl:** `M103`
-   haelt jeden Index gegen die deklarierte Schranke, und mit `backed` ist das `k` statt `N`.
-   Die Tatsache `i < k` kommt aus `narrow i to 0 ..< k` -- ein Vergleich zweier STELLEN, und
-   den fuehrt M1 als `Fakt::Beziehung` seit jeher.
-
-   Ein Schreiben auf `k` loescht jede Tatsache, die auf ihm ruht -- damit ist ein
-   SCHRUMPFEN sicher, ohne dass eine Monotonieregel noetig waere. *Die Gefahr war nie das
-   Wachsen.* *)
+(* «B41b»: the edge on which `descendants of` and `ancestors of` run -- ONCE at the table
+   (`T001`-`T003`: the field exists, it is `option index into Self`, no edge twice). *)
 occdecl    = "occupied" ident ";" ;
-(* **Das Feld, an dem ein Slot BELEGT ist** (2026-08-28, Zuschnitt (c)).
-
-   Der Erzeuger fuer `ops` braucht `sigma s = Some sl` aus
-   `beweise/Table_Ops_Erhaltung.thy` als PROGRAMM. Der Korpus nennt dieses Feld unter ELF
-   Namen -- `belegt` 8, `benutzt` 6, `used` 3, `aktiv` 3, dazu sieben Einzelfaelle --, also
-   ist eine Namensheuristik widerlegt und nicht bezweifelt. **Wortgleich zu «B41b»**, wo der
-   Slot vier Kandidaten fuer die Baumkante fuehrte und die Domaene keinen nannte.
-
-   Dieselbe FORM wie `treedecl` und aus demselben Grund: eine Aussage ueber die STRUKTUR
-   steht einmal an der `table`, wird dort einmal geprueft (`D010`: ein `bool`-Feld des
-   eigenen Slots; `D011`: eine `table` mit `ops` traegt es) und gilt danach ueberall.
-
-   `occupied` ist KONTEXTUELL wie `tree` -- ueberall sonst, auch als Slotfeldname, bleibt es
-   ein Bezeichner. Die Entscheidung mit beiden Seiten je Form: `messung/OPS-ERZEUGER.md`. *)
+(* The field at which a slot is OCCUPIED (`D010`/`D011`) -- the premise `sigma s = Some sl` of
+   `Table_Ops_Erhaltung.thy` as a declaration. *)
 opdecl     = "ops" opname { "," opname } ";" ;
 opname     = "insert" | "remove" | "relabel" ;
-             (* «NL.1», decided 2026-08-19: the operation set is CLOSED, and the words are
-                English like every other keyword.
-
-                Until then `opdecl` took arbitrary identifiers, and that made
-                `table.ops.erhaltung` unprovable in the only sense that matters: **from a name
-                no effect follows.** A generator cannot emit `insert` if nothing says what
-                `insert` does.
-
-                MEASURED BEFORE DECIDED (second corpus, `kernel/` + `mm/`, 659 files):
-
-                    remove     479 sites in 151 files
-                    insert     448 in 161
-                    (init)     408 in 132   -- construction, not mutation: `count N` does it
-                    relabel    127 in  43
-                    replace     11 in   7   -- marginal, folded into `relabel`
-
-                Insert and remove carry 63 % of the sites. **`relabel` is the uncomfortable
-                one:** it is re-parenting, and `Table_Ops_Erhaltung.thy` proves the
-                COUNTEREXAMPLE for it (`umhaengen_faellt` — hang one node under the other and
-                *neither* reaches a root any more). Leaving it out would leave 127 measured
-                sites as hand work; taking it in means the generator owes a condition the
-                other two do not.
-
-                **It is taken in, and the condition comes with it** — that is the decision:
-                a language that only covers the easy operations moves the work, it does not
-                remove it. *`init` is deliberately NOT a word: `table … count N` constructs,
-                and `table.absenkung` proves it.*
-
-                **AND THE CONDITION ARRIVED ON 2026-08-28, EVENING** — `umhaengen_erhaelt`
-                (U-3): the new parent is REACHABLE, and the re-hung slot does NOT lie on its
-                parent chain, that parent itself included. Until then `relabel` was the one
-                word of a closed set that emitted nothing and nobody could call — *a clause
-                with no redeemer*, at 127 measured sites. The proof came first (K100's second
-                gate); `umhaengen_faellt` stays and now carries `G-1`/`G-2`, which show it
-                fails at THAT premise and no other. In Gabbro the premise is written
-                `!(t.slots[p] reaches t.slots[s] via <parent>)` — **one clause, no new word,
-                and deliberately not the strict `ancestors of` form**, which says nothing
-                about `p == s` and would let the self-loop through
-                (`messung/OPS-RELABEL.md`).
-
-                **AND SINCE 2026-08-28 AN OPERATION IS CALLED** -- `T::insert(t, n [, p])`,
-                `T::remove(t, s)`, an ordinary `call` whose `path` is the table and the word
-                (`pathseg`, and `messung/OPS-RUFFORM.md` weighs three forms). The morning of
-                that day shipped the generator and no way to reach it: the emitted functions
-                carried `__attribute__((unused))`, *a prohibition (`D001`) with a replacement
-                nobody could call.*
-
-                **`D012` is the point of the form, and not the calling.** The premises of
-                `beweise/Table_Ops_Erhaltung.thy` stood in a C COMMENT; now they stand at the
-                head and are held against every call site -- the slot is FRESH, the parent is
-                REACHABLE where a `parent` edge exists, and `s` is a LEAF for `remove` on such
-                a table. **`relabel` gets no call form**, because it gets no body: a call form
-                for an operation that is never emitted would be the same hole one level up. *)
+(* «NL.1»: the operation set is CLOSED. `T::insert(t, n [, p])`, `T::remove(t, s)` are
+   ordinary calls; `relabel` gets no call form because it gets no body. *)
 walkdecl   = "walk" ident "levels" constexpr "{"
                "node" ":" array ","
                "down" ":" ident "when" pred ","
@@ -1244,75 +878,45 @@ walkdecl   = "walk" ident "levels" constexpr "{"
              "}" ;
 slotdecl   = "slot" "{" [ slotfeld { "," slotfeld } [ "," ] ] "}" ;
 slotfeld   = ident ":" slottype [ "by" "ops" ] ;
-             (* `by ops`: dieses Feld schreiben NUR die erzeugten Operationen der Tabelle.
-                Zwei vorhandene Woerter, null Wortschatzzuwachs. Damit wird die K-Bedingung
-                des Messprotokolls -- *„gilt nur, wenn ALLE Mutationen des Traegers erzeugte
-                Operationen sind"* -- von einer PRUEFVORSCHRIFT zu einer
-                GRAMMATIKEIGENSCHAFT, und `refcount -= 1` von Hand ist schlicht nicht
-                schreibbar. *)
+(* `by ops`: this field is written ONLY by the generated operations -- `refcount -= 1` by hand
+   is not writable. CHANGED «SG-8»: as shape, the field's carrier is in the `writes` of the
+   generated operations and of no other function. *)
 slottype   = typeexpr | intty "wrapping" ;
-             (* `index into T` ERBT die Schranke aus `T`s `count` -- der Indextyp wird
-                erzeugt, nicht geschrieben. Ohne `count` bleibt er unbeschraenkt, und das
-                ist dann eine Aussage der Deklaration statt eine Konvention. *)
 invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
              [ "by" inductlist ] ":" pred ";" ;
 costexpr   = "O" "(" expr ")" ;
 
 format     = [ "pub" ] "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
              "{" { field } "}" ;
+reason     = "reason" ident "{" { ident "=" int string } [ "exhaustive" ] "}" ;
+state      = "state" ident "{" { transition } "}" ;
 ```
 
-### `@version` — **decided 2026-08-21: the REFUSAL, and it is measured, not weighed**
+**`count` is the ADDRESS SPACE, `backed` the MEMORY:** `count N` says how many places the type
+knows; `backed k` names the VALUE up to which they are backed — `M103` holds every index
+against the declared bound, and with `backed` that is `k`, reached by `narrow i to 0 ..< k`.
 
-*Until this date the question stood open in [`TODO.md`](../TODO.md): does an `@version 3`
-reader also read v2 — refusal or migration? **It is the refusal.** Gabbro does not migrate
-between format versions, and it never will by default.*
+**`@version` — the REFUSAL, decided 2026-08-21.** Gabbro does not migrate between format
+versions; two `format`s of one name in one scope fall to `N001`, and `@version` has no reader.
 
-```
-$ ./instrumente/zaehle-formate.py
-  14 @version-Textstellen in Korpus + FRAGMENTE
-    12 x @version 1
-    2 x @version 17
-   7 verschiedene @version-Deklarationen
-   0 Formate mit einer zweiten Fassung
-```
+**Attributes and Lean.**
 
-**Zero measured format evolutions.** Declared migration would mean one mapping rule per field
-pair, a generator for it, and hence a new template — **trust surface for a need with zero
-findings.** That is literally the rule that killed `locks ordered` ([`HISTORIE.md`](HISTORIE.md)):
-*no construct without a measured need.* The objection *"a kernel that finds a v2 device must be
-able to do something"* is correct and does not apply: **"do something" is not "migrate".** A
-named refusal *is* an option for action — the caller decides whether he writes a v2 reader.
-
-**What the checker does today, measured 2026-08-21 by hand probe, not asserted:**
-
-| written | what falls |
-|---|---|
-| two `format`s of one name with **different** `@version`, one scope | `N001` — *"`Kopf` is declared twice in this scope (format)"* |
-| two `format`s of one name with the **same** `@version`, one scope | `N001`, **byte-identical message** |
-| two `format`s of one name in **two modules**, versions differing | **0 errors, 0 hints** |
-
-Two readings follow, and both are load-bearing:
-
-1. **The refusal already exists.** Two versions of one format cannot be written down in one
-   translation unit, so migration has no site to be requested at. No new diagnostic was built
-   for this decision — one would fire exactly where `N001` already fires, and say less.
-2. **`@version` has no reader.** `pub version: Option<u128>`
-   ([`ast.rs:1223`](../crates/gabbro-syntax/src/ast.rs)) is filled by the parser
-   ([`parse.rs:3225`](../crates/gabbro-syntax/src/parse.rs)) and read **nowhere** in
-   `crates/` — `grep -rn "\.version" --include=*.rs crates/` finds nothing. The number is
-   documentation for the human reader; it takes part in no identity, no layout, no emitted C.
-   Two same-named formats in two modules are therefore **two formats**, not two versions of
-   one — and giving the checker the opposite reading would mean making `@version` part of a
-   format's identity, which is the very migration machinery this decision refuses.
-
-> **The number is a LOWER bound** (W10): a format that evolved under a **new name** rather
-> than a new number is invisible to the count, and one that evolved **in place** lives in the
-> `git` history, not in the text. `./instrumente/zaehle-formate.py` prints its own upper bounds beside the
-> 0 and turns **red** the moment a first second version appears — because then the premise of
-> this decision is gone and it has to be argued again.
-
-**Variable lengths and offsets** — with them ELF is a `format`:
+| declaration | reading | Lean |
+|---|---|---|
+| `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
+| `owner m` | `marke m ∈ Λ` at every access | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; no `allocs`, no second owner |
+| `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
+| `invariant I … : p` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every `return` of such a function — and **such a function holds the locks of every carrier of `I`** (`U003` as a declaration rule: `invarianten_gehalten`), because it reads them all at `return` | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
+| `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
+| `ops insert, remove` | **generated functions** with `requires` (the slot is fresh, the parent reachable, `s` a leaf — `D012`) and `writes T`; called like any function | `D.Fn` with a `Signatur`; `Stmt.call` — SUGAR over §6 |
+| `tree { parent p, child c }` | which field `reaches … via` and the domains use | `Expr.reaches t f hf` with `hf : typ t f = opt (count t)` |
+| `occupied f` | the field the generated `ops` test | the generated `requires` |
+| `wrapping` | a field whose width, not range, is the type: `+` on it is `(a + b) % 2^w` — SUGAR over `rem` with the width as denominator | `Expr.rem` with a literal `2^w` |
+| `by ops` | the field is in the `writes` of the generated operations and of no other function | `D.sigNr … .schreibt` |
+| `walk W levels n { node : [Pte; 512], down : f when p, leaf : q }` | `n` tables of `count 512`, one per level; `mappings of` is a `traverse` per level, nested `n` deep, filtered by `p`/`q` — SUGAR («SG-16») | `D.Tab` per level; `Stmt.traverse` nested; `Expr.forallSlots` nested |
+| `format F endian e { field @bitpos where p, … }` | a **view** on a byte carrier: a field `@[hi:lo]` at offset `o` is `(bytes(o, n) >> lo) & mask`, `embeds … scale s` multiplies, `endian big` reverses the byte list, `offset_into` is the offset's bound at the read; **`where p` is a check at the field's read**: the condition, or the named `else` of the enclosing `let … else` | `Expr.leseBytes`, `Zucker.Expr.bitfeld/embeds`, `bytesZuZahlBig`; `Block.pruefung c sonst rest` («SG-16») |
+| `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`) | `Ty.grund n` |
+| `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair | `D.erlaubt t f von nach`; `Stmt.uebergang` («SG-19») |
 
 ```gabbro
 format Elf64 endian little {
@@ -1323,18 +927,7 @@ format Elf64 endian little {
 ```
 
 `offset_into Self` binds the offset to the buffer length; the `where` clause is the **only**
-additional statement and lowers to a range check.
-
-**`reason`** is rule 3 in notation, **`state`** names the permitted transitions of a value:
-
-```ebnf
-reason  = "reason" ident "{" { ident "=" int string } [ "exhaustive" ] "}" ;
-state   = "state" ident "{" { transition } "}" ;
-```
-
-`state` and `device`'s `transition` are **the same construct on two levels**: once over
-fields, once over register bits. `resume` (`iretq`/`eret`) is the transition on the third —
-over the machine state.
+additional statement and is a `pruefung` at the read.
 
 ---
 
@@ -1343,65 +936,26 @@ over the machine state.
 ```ebnf
 device  = [ "pub" ] "device" ident [ "(" params ")" ] "at" space
           "{" [ mirrors ] { regdecl | bank | transition } "}" ;
-mirrors = "mirrors" place "from" place ";" ;       (* EINMAL je Geraet, nicht je Uebergang *)
+mirrors = "mirrors" place "from" place ";" ;       (* ONCE per device, not per transition *)
 bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
 regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
-          (* «B32», 2026-08-15: `slottype = intty "wrapping"` konnte den gewollten Umlauf
-             aussprechen, `regdecl` nicht -- und der HAEUFIGSTE Fall eines Treibers ist ein
-             Hardwarezaehler, der per Entwurf umlaeuft (virtios `AVAIL_IDX` zaehlt modulo
-             2^16 und nimmt den Rest gegen `q.n`). Ohne das Wort stand die Absicht nirgends,
-             und die Zaehlerregel faellt zu Recht -- am falschen Programm. Gemessen am
-             Fragmentkorpus, nicht entworfen. *)
           "class" regklasse [ regphasen ]
           [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
           [ "requires" pred [ "else" ident "::" ident ] ] ;
-          (* «B26», 2026-08-28: das `else` ist der FALSIFIKATOR, und ohne ihn ist `requires`
-             am Register bis heute eine GEZAEHLTE Pflicht (`gabbro pflichten` fuehrt sie als
-             `D`) und sonst nichts. Mit ihm wird die LESUNG fehlbar: sie muss dann in einem
-             `let … else` stehen (`R011`), und der Erzeuger senkt sie zu EINER volatilen
-             Lesung ab, deren Bedingung auf der BINDUNG geprueft wird.
-             Warum keine Tatsache daraus wird: das Register ist fluechtig, und ein
-             feindliches Geraet darf alles melden -- eine angenommene Zusage waere der
-             «B33»-Fehler noch einmal, nur eine Ebene hoeher.
-             KEIN neues Terminal: `else` traegt diese Bedeutung an `let … else` und
-             `narrow … else` schon, und es ist dieselbe -- die Stelle, an der die Verletzung
-             sichtbar wird, statt still umzulaufen. s. `messung/GERAETEVERSPRECHEN.md`. *)
+(* «B26»: the `else` is the FALSIFIER; with it the READ is fallible and must stand in a
+   `let … else` (`R011`). Why no fact is made of it: the register is volatile, and a hostile
+   device may report anything. *)
 regklasse = "r" | "w" | "rw" | "w1c" | "rc" ;
 regphasen = "in" ident { "," regklasse "in" ident } ;
-          (* «B18», 2026-08-28: bis dahin trug ein Register EINE Klasse fuer alle Zeit, und
-             F4 schrieb die gewollte Form als KOMMENTAR hin, weil sie nicht schreibbar war:
-             `reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live`. `class r`
-             allein waere dort falsch -- es verboete genau das Nullen, mit dem der Treiber
-             die bezahlte Falle einer wiederbenutzten Region entschaerft.
-             KEIN neues Terminal: `in` ist seit jeher reserviert, `class` steht schon hier.
-             Die Stufen sind die einer deklarierten `order` («B37»), und die Liste muss JEDE
-             ihrer Stufen genau einmal nennen (`R009`) -- eine ungenannte waere ein stilles
-             Loch in der Regel, die das Loch schliessen soll.
-             Am Zugriff entscheidet die Stufe, auf der die Marke steht (`R005`/`R006`); wo
-             KEINE Marke dieser Ordnung im Sichtbereich ist, gilt, was JEDE Stufe erlaubt.
-             Damit bleibt die lineare Marke eine Erlaubnis, die niemand halten muss --
-             gesagt ist nur, was ohne sie folgt. s. `messung/PHASENKLASSE.md`.
-
-             2026-09-01: `PLAN-HARDWARE.md` §42 wollte diese Form zu einem eigenen Wort
-             `phase` verallgemeinern und zaehlte die sechs Fundstellen als Posten. **Sie
-             sind keiner** -- die Zeile darueber sagt, warum: `in` und `class` kosten hier
-             NICHTS. Ein Wort, das nie gekauft wurde, laesst sich nicht zurueckgeben.
-             Nachgerechnet und abgelehnt in `messung/PHASENKONSTRUKT.md`. *)
+(* «B18»: a class per STAGE of a declared `order` (`R009`: every stage named exactly once).
+   At the access the stage of the mark in Λ decides (`R005`/`R006`); where NO mark of this
+   order is in scope, what EVERY stage allows holds. *)
 regfeld = ident "@" bitpos [ "class" regklasse ] ;
-          (* «B23», 2026-08-20: bis dahin trug `regdecl` EINE Klasse fuer das ganze Wort.
-             FSTS ist gemischt -- 7:0 sind RW1C, 15:8 (FRI) sind nur lesbar, und FRI ist die
-             Stelle, an der der Treiber den Fehlereintrag ueberhaupt FINDET. Ein Feld ohne
-             eigenes Wort erbt die Klasse seines Registers; kein neues Terminal. *)
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
-transset   = placeshift { "," placeshift } ;      (* MEHRERE Orte in EINEM Zug -- s. Grenze *)
+transset   = placeshift { "," placeshift } ;      (* SEVERAL places in ONE move *)
 placeshift = shiftplace ":" expr "->" expr ;                   (* G3 *)
 shiftplace = ident { "." ident | "[" expr "]" } ;
-             (* KEIN "->"-Suffix: in `ST: ACK -> ACK` waere `ACK -> ACK` sonst zugleich
-                placesuffix und Uebergangspfeil. Die Entscheidung steht hier, nicht im
-                Parser -- ein Zeigerzugriff links eines Uebergangs ist damit nicht
-                schreibbar, und das ist die gewollte Seite: ein `transition` beschreibt
-                Registerfelder, keine Zeigerketten. *)
 ```
 
 ```gabbro
@@ -1412,7 +966,7 @@ device Vtd(base: Pa) at mmio {
 
     bank FRR at CAP.FRO * 16 stride 16 count 256 { reg FR : u64 @0x8 class rw }
 
-    mirrors GCMD from GSTS;          -- EINMAL: alle Zustandsbits kommen aus GSTS
+    mirrors GCMD from GSTS;          -- ONCE: all state bits come from GSTS
 
     transition arm_te { GCMD.TE: 0 -> 1 }
         requires GSTS.RTPS == 1
@@ -1420,37 +974,33 @@ device Vtd(base: Pa) at mmio {
 }
 ```
 
-> **`mirrors` kills trap 4, and `class w` alone did not.** The trap is not "reading GCMD"
-> but **"not carrying the state bits along when writing"**. `mirrors` names the bits that
-> the written word must **carry along**; their source is a readable register. A `store`
-> that drops them is thereby **not writable** — and a read of `GCMD` remains
-> untypeable.
->
-> *(Until 2026-08-17 this paragraph said `keeping` three times. The word was renamed to
-> `mirrors`; the production above has carried the new name for a while, the prose carried the old
-> one — and the file's own writing rule says that backticks denote **today's** syntax. A name in
-> backticks that no grammar knows is the same false green as a table word in no production.)*
->
-> **And `mirrors` supplies the PRE-STATE of a `transition`, not only the carried bits.**
-> «B26» asked exactly this and the file did not say. The answer is yes, and it is measurable:
-> `transition scharf_te { GCMD.TE: 0 -> 1 }` lowers to
->
-> ```c
-> uint32_t _s = (*(volatile uint32_t *)(d->basis + 28));   /* GSTS -- the mirror */
-> (*(volatile uint32_t *)(d->basis + 24)) =                /* GCMD -- write-only */
->     (uint32_t)((_s & (uint32_t)~(uint32_t)2147483648u) | (uint32_t)2147483648u);
-> ```
->
-> **One read, one write, and the read is of the OTHER register.** The `0 ->` half of the
-> transition is therefore not an assertion the generator emits; it is the statement *which*
-> bit the write replaces — every other bit comes from the mirror. Measured at
-> `beispiele/20-falle-vier.gab`.
->
-> *An answer that lives only in the generator is the same construction as a promise that
-> lives only in a tool invocation.* That is why it stands here.
+**`mirrors` kills trap 4, and `class w` alone did not.** `transition scharf_te { GCMD.TE: 0
+-> 1 }` lowers to **one read of the mirror and one write** — the `0 ->` half says *which* bit
+the write replaces; every other bit comes from the mirror.
 
-> **`bank`** covers registers at a run-time-computed base (F6): `FRR` at `CAP.FRO*16`. The index
-> is M1-bounded by `count`.
+**Attributes and Lean — CHANGED «SG-15»: the class is an attribute of the access.**
+
+| spelling | attribute | outcome | Lean |
+|---|---|---|---|
+| `reg R : τ @off class K` | a register of type `τ` and class `K` — **outside the world**: a device is not a carrier | | `D.Reg`, `D.rtyp`, `D.rklasse`, `Regklasse` |
+| `let x = R;` | `K` is readable (`r`, `rw`, `w1c`, `rc`); the machine answers **raw**, the answer is held against `τ` | **`hardware (register r)`** if outside `τ` | `Block.regLies r hk rest`; `Orakel.regLies` |
+| `let x = R else (e) endblock;` | additionally `R`'s `requires p` is checked **on the binding**; the `else` does not fall off | — | `Block.regLiesElse r hk zusage sonst rest` |
+| `R = e;` | `K` is writable (`w`, `rw`, `w1c`) | — (the world is unchanged: the device is not in it) | `Stmt.regSchreib r hk e`; `Orakel.regSchreib` |
+| `transition t { R.b : 0 -> 1 }` | `R` writable, `m = mirrors(R)` readable (a declaration fact, `D.spiegel`); ONE read of `m`, ONE write of `R`: `(m & ~mask) \| bits` | | `Stmt.transition` — core, not sugar («SG-15») |
+| `class rw in setup, r in live` | the class is a function of the **stage** of the order mark in Λ: `hk` is `(rklasse r (stage of m in Λ)).lesbar` | | `D.rklasse` per stage — the core carries one class per register and the staged form is its `D` built per stage |
+| `fields { b @31 class r }` | a field with its own class: a register per field — SUGAR | | `D.Reg` per field |
+| `bank B at e stride s count n { reg … }` | `n` registers with an index of `index into B` — a table of registers | | `D.Reg` per index; the index is `Ty.index n` |
+| `mirrors W from R` | the source of the carried bits — a declaration fact read by the `transition` sugar | | none |
+| `requires p` at `reg` without `else` | **the device's promise, held at every read** — a value that breaks it is `hardware (geraet r)`: the assumption about the device, named at its register (turn 3 of 2026-09-09: "devices go through hardware assumptions") | `hardware (geraet r)` | `D.rzusage r`, `Block.regLies` |
+
+> **Devices go through hardware assumptions — and every one is named.** A register is not in
+> `World D`: its value is whatever the oracle answers, and a write does not change the world.
+> That is *"a hostile device may report anything"* as semantics. What the grammar holds it to
+> is the DECLARATION: the type (`hardware (register r)`), the promise (`hardware (geraet r)`),
+> the mirror (`transition` reads it, by construction), the class (not derivable otherwise). The
+> **order** in which the device sees two accesses is the one thing left to an `assume` with a
+> falsifier (`dma_visibility_in_order`) — and it is left there because no grammar can see a
+> bus.
 
 ---
 
@@ -1461,60 +1011,16 @@ atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
               [ "publishes" nutzlast ]                          (* G1 *)
               [ "acquire" | "release" | "seq" | "relaxed" ]
               [ "observed" "by" ident ] ";" ;
-(* **«V9»: die Gegenseite steht in SILIZIUM** (2026-08-20).
-
-   `V001` verlangt zu jeder Veroeffentlichung ein `awaits` -- *eine Veroeffentlichung ohne
-   Gegenstueck ordnet nichts.* Das ist richtig ZWISCHEN ZWEI STUECKEN SOFTWARE. Bei einem
-   Geraet gibt es kein zweites Programm: wer den avail-Index einer Virtqueue liest, ist die
-   Netzkarte, und ihr `awaits` steht in Silizium.
-
-   Gefunden beim ersten Treiber, der nicht aus dem Entwurf kam. Ohne die Klausel bleibt nur,
-   die Gegenseite als FUNKTION hinzuschreiben -- dann steht das Modell im Erzeugnis, und ein
-   Erzeugnis mit einer Luege darin ist schlechter als eine Weigerung.
-
-   **Die Regel wird nicht gelockert, ihre Praemisse wird sichtbar.** Was die Zusage traegt,
-   ist danach die Annahmenschicht: `gabbro annahmen` zaehlt sie, und `N031` verlangt einen
-   FALSIFIKATOR -- dieselbe Regel wie an `progress` und an `entrust`. *Eine Annahme, der keine
-   Sonde je widersprechen kann, ist keine Isolation, sondern ein Wunsch.*
-
-   Null neue Begriffe: `by` steht schon im Wortschatz, `observed` ist KONTEXTUELL. *)
-              (* Reihenfolge nach dem BESTAND, nicht nach dem Entwurf: SYNTAX.md:603 und
-                 FRAGMENTE.md F6 (4x) schreiben `publishes` VOR der Ordnung. *)
+(* «V9»: `observed by <assume>` -- the other side stands in SILICON; the assumption carries
+   the pairing, with a falsifier (`N031`). *)
 publishstmt = place "=" expr "publishes" nutzlast ";" ;
 nutzlast   = "{" placelist "}" | "nothing" ;
-             (* Nach dem BESTAND entschieden (2026-08-15): 22-mal `nothing`, 11-mal die
-                Klammerform, 2-mal klammerlos. Die Grammatik folgt den 33 und nicht den 2 --
-                die beiden Ausnahmen in beispiele/05 sind nachgezogen. Klammern trennen die
-                Nutzlast sichtbar von dem, was folgt (`release`, `;`). *)
 lockdecl   = [ "pub" ] "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;
 rcudecl    = "rcu" ident "protects" "{" placelist "}" [ "reclaims" place ] ";" ;
 observestmt = "observes" ident block ;
-(* RCU, und es ist KEINE Sperre (2026-08-18, aus «K2»).
-
-   Die Leseseite nimmt gar nichts: `observes D { … }` ist ein BEREICH, in dem ein gelesener
-   Zeiger gueltig bleibt -- kein Ausschluss. Die Schreibseite braucht ihre eigene
-   Wechselseitigkeit, denn RCU serialisiert Leser gegen die Rueckgewinnung und nicht
-   Schreiber gegeneinander.
-
-   Daraus zwei Regeln, und beide spiegeln `protects`/`H007`:
-
-     H009  ein LESEN einer rcu-geschuetzten Stelle steht in `observes`
-     H010  ein SCHREIBEN steht zusaetzlich unter einer echten Sperre
-
-   `reclaims` nennt den Ort, an dem ein Platz zurueckgegeben wird -- den Kopf der Freiliste.
-   Daran haengen zwei weitere Regeln:
-
-     H011  eine Rueckgabe steht NICHT in `observes` -- wer zurueckgibt, ist nicht Leser
-     H012  eine Rueckgabe steht unter der Schreibersperre
-
-   Und die GNADENFRIST selbst ist keine Pruefung, sondern eine ANNAHME: dass kein Leser das
-   alte Objekt mehr sehen kann, ist eine Aussage ueber die Umgebung -- kein statischer Pass
-   stellt sie her. Sie gehoert damit dorthin, wo `progress` steht: in die Annahmenschicht,
-   mit Falsifikator. *`progress` nennt, wer eine Schleife beendet; die Gnadenfrist nennt, wer
-   garantiert, dass kein Leser mehr drin ist.* *)
 gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
              ( "{" { invariant } "}" | ";" ) ;
 ```
@@ -1529,54 +1035,45 @@ group Zustellung over { Endpunkte, Faeden } {
 }
 ```
 
-**`group` carries the invariant that lives between two carriers** — *"the counter in A
-corresponds to the number of references in B"*. No `table … invariant` can say that; it
-quantifies only over its own carrier.
+**Attributes and Lean — the race discipline as shape.**
 
-**The lock order does NOT stand at the group.** Every carrier lies under a
-`lock … rank N`, and the ranks give the order — a second declaration would be a
-second truth about the same thing. What the checker makes of it: `U003` demands that
-a function that writes **two** carriers of a group holds **all** their locks, and
-`U005` falls if two locks of a group carry the same rank — then there is no
-order, and the group operation could take them in two directions. `U006` falls if
-a path leaves the body **between** the first and the last write access
-(`return`, `leave`, `let … else`) — there the invariant does not hold.
+| spelling | attribute | Lean |
+|---|---|---|
+| `lock L protects { T, G } rank n` | every access to `T`/`G` carries **`Held(L) ∈ Λ`** (`H007`); reads and writes alike («SG-6a») | `D.Lock`, `D.rang`, `D.braucht t = [.inl L]`, `darf` |
+| `locks L blk` | **`rank(L) > rank(M)` for every `Held(M) ∈ Λ`** (`H006`) — CHANGED «SG-7»; the body's Λ is `Λ + Held(L)` and ends with it (the witness is not consumable); the lock is released at the closing `}` | `Stmt.locks L hr body` with `hr : ∀ M, Res.held M ∈ Λ → rang M < rang L`; theorem `sperre_steigt`, **`keine_verklemmung`**: two bodies each holding one lock and each deriving a `locks` on the other's do not exist — `rang L1 < rang L2 < rang L1` |
+| `locks shared L blk` | a second witness kind on the same lock: `Held(L, shared)`; a write under it is not derivable | a second `D.Lock` value paired with `L` in `D` (SUGAR) |
+| `held <= n ops`, `shared held <= n ops` | cost bounds — the emitter's, §16 (7) | none |
+| `masks irqs` | the state the lock establishes; `H102` reads it against `via idt` entries — a statement about two bodies, §16 (1) | none (declaration fact) |
+| `rcu D protects { T } reclaims p` | `observes D` is a **lock without rank** whose witness the reads of `T` require (`H009`); a write of `T` requires a real lock in addition (`H010`); `reclaims` names the return site, which must stand under the writer's lock and not in `observes` (`H011`/`H012`) — all four as `braucht` lists | `D.Lock` (rank `0`, never compared: `observes` derives no `locks` inside it) + `D.braucht`; the **grace period** is an `assume` |
+| `observes D blk` | | `Stmt.locks` on the RCU lock (SUGAR) |
+| `atomic A : τ publishes { p, q } release` | a global whose writes carry the payload; `V001`–`V004` (every publication has an `awaits` with the **same** set) as shape («SG-13») | `D.Glob`, `D.nutzlast g` |
+| `A = e publishes { p, q };` | `{ p, q } = nutzlast(A)`; `writes A` | `Stmt.publish g e payload hp hw hL`; theorem `publish_paart` |
+| `let x = A awaits { p, q };` | the same set | `Block.awaits`; theorem `awaits_paart` |
+| `let x = A exchange update(v) { … } …;` | read–compute–write as one statement | `Block.exchange` |
+| `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
+| `observed by a` | the other side is the assumption `a` | `D.Annahme` |
+| `group G over { T, U } { invariant I }` | `I` has carriers `T` and `U`: owed by every function that writes either («SG-10»); `U003` (a function writing two carriers holds all their locks) is the `braucht` of each access, `U005` (two ranks equal) is `keine_verklemmung`'s premise, `U006` (leaving between the writes) is `schuldet` at every `return` | `D.Inv` with `traeger = [T, U]` |
+| `accumulates` (§1) | a global plus a generated `merge` assignment; `per cpu N` is the cell table | SUGAR |
 
-**The body is optional, the invariant is not meaningless.** Without a body the lock imprint
-and the move bite; only with it does the connection statement itself stand there. **`U007` falls
-if a group invariant names fewer than two carriers of the group** — then it belongs
-at the `table … invariant`, and the group would be merely the more convenient notation. *A
-construct that is only more convenient has no evidence (W3).*
+**What the discipline proves — over interleavings, since the evening of 2026-09-09.** Every
+access to a carrier derives its guard, every `locks` derives its rank, every publication
+derives its pairing — properties of one derivation. `Semantik.lean` now writes a **trace**: the
+world carries every access with the static Λ of its site and the locks dynamically held, and
+every `nimmt`/`gibt`. `Satz.lean` proves (`exec_spur`) that every event a body leaves behind
+carries its guards, holds every lock its Λ names, takes no lock twice and none out of rank,
+and that the trace stays consistent. `Wettlauf.lean` then takes **any interleaving** of such
+traces and proves:
 
-*The measured need stands in `MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten: four in the
-existing code, three under one lock, one (V4) over two crates with two lock classes.*
+| theorem | statement | premise beyond the traces |
+|---|---|---|
+| `kein_wettlauf` | two accesses of different threads to one table are ordered by happens-before (program order, and `gibt L` before `nimmt L`) | (W3) a lock excludes: whoever takes `L` takes it while no other thread holds it — what a lock IS, the promise of the lock primitive (a foreign body); (W4) a mark is in one thread — linearity, no statement moves a mark across threads; (W5) an unshared carrier belongs to one thread — `shared` |
+| `kein_wettlauf_global` | the same for a global, **or the global is `atomic`** — and then the machine orders it (A10, `hardware (sichtbarkeit)`) | the same |
+| `keine_ueberkreuzung` | no thread takes `L2` holding `L1` while another takes `L1` holding `L2` — the wait chain a deadlock needs has no beginning | none: it is `keine_verklemmung` over runs |
 
-**`publishes` is compulsory at every atomic** — the payload is part of the model, not of the
-comment. **`rank`** gives the lock order; acquiring demands a strictly smaller rank. A `locks` block
-releases at the end; whoever wants copy-and-release does it **inside** and acquires afresh afterwards.
-
-### `masks irqs` — the clause that had no reader until 2026-08-31
-
-`lock … masks irqs` says that taking the lock masks interrupts, and it is the same statement
-Linux writes as `spin_lock_irqsave`. It has stood in the grammar since there has been a `lock`,
-and until this date **no pass read it**: `pruefe-klauseln.py` carried `maskiert / LockDecl`
-under **UNGELESEN** — *"the reader fills it, nobody looks."*
-
-**`H102` reads it now, and the rule needs both halves of a sentence that were never in one
-place:** an `entry` that hardware THROWS (`via idt`) must not reach a `locks L` whose `L`
-declares no masking. *The path it interrupted may be holding that lock, and the handler would
-then wait for a holder who only resumes once the handler returns.* On one core that is the
-standstill, and no loop is spinning in it.
-
-> **`nested never` is not this promise.** It says the vector does not re-enter *itself*; it
-> says nothing about the path underneath it. Three words that look alike and mean three
-> things: `never` is about re-entry, `nested masked` about the state at the entry (`H101`),
-> and `masks irqs` about the state the LOCK establishes.
-
-**And the trigger is `via idt`, which leaves a gap named rather than hidden:** an IPI is thrown
-too, but `beispiele/57`'s `halt_ipi vector 0xF0` writes no `via`, so `H102` stays silent over
-it. `via` is the only place the language says the difference — *the gap is in the grammar, not
-in the rule*, and inventing a second answer here would be a fourth register over the same set.
+**There is no third case.** A conflicting pair of accesses is either happens-before ordered, or
+on an `atomic` — whose ordering is the memory model, a named hardware assumption. §16.2 (1) of
+the morning is closed; what remains of it is the premise (W3), booked where the lock
+primitive is booked.
 
 ---
 
@@ -1593,58 +1090,42 @@ axiom  = "axiom" ident "(" [ params ] ")" [ "->" typeexpr ]
 
 ```gabbro
 assume vtd_te_effective
-    "GCMD.TE schaltet die Uebersetzung scharf; DMA ohne Kontexteintrag faultet."
+    "GCMD.TE switches translation on; DMA without a context entry faults."
     falsifier probe_vtd_te;
 
 assume dma_visibility_in_order arch x86_64
-    "Zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
+    "Two volatile accesses in program order become visible to the device in that order."
     falsifier probe_dma_order;
 
 assume x2apic_two_step
-    "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
-    unfalsifiable "qemu64 hat kein x2APIC";
+    "EN and EXTD in one write is a forbidden transition."
+    unfalsifiable "qemu64 has no x2APIC";
 
 axiom write_cr3(p: Pa) effects { writes tlb, writes active_table } falsifier probe_cr3;
 ```
 
-**`arch` at an assumption is OPTIONAL, and the option is the design** («B40», 2026-08-31).
-An assumption about a timer holds on every machine this unit targets and writes none; one
-about caches, barriers or register semantics is a statement about **one** architecture and
-says so. *A compulsory `arch` would force 39 corpus entries to answer a question they do not
-have.*
+**`arch` at an assumption is OPTIONAL** («B40»): an assumption about a timer holds on every
+machine this unit targets; one about caches, barriers or register semantics names one
+architecture, and `A005` holds the name against a declared `arch`. **Three classes, and the
+third does not exist syntactically:** *falsified*, *not falsifiable* (with a reason), *not
+run* — the absence of both statements, a compile error.
 
-> **The case that bought the clause: `dma_kohaerent` carried TWO claims under one name and
-> one falsifier** — coherence (*device and kernel see the same cells without cache
-> maintenance*) and order (*two volatile accesses become visible to the device in program
-> order*). **The second does not follow from the first**, and on AArch64 it is false in the
-> commonest DMA configuration: a descriptor write to coherent RAM and a following doorbell
-> write to Device-nGnRnE memory can become visible out of order without a `DSB`, and C11
-> `volatile` emits no barrier there. *Its single falsifier runs on x86 and passes.*
->
-> It is two assumptions since 2026-08-31, each with its own probe and its own `arch`. The
-> count of the rest stands in `messung/ANNAHMEKONJUNKTIONEN.md`: **17 of 34 texts are
-> mechanically flagged, 8 judged to carry two independently falsifiable claims** — and the
-> seven that are not split stand there as a named debt, not as done.
+**The assumption set is emitted into the artefact** ("proved under A1…An") as a **set of names
+with a class**. The promise is relative, and that stands in the artefact instead of in a
+footnote: *memory-safe under A1…An*.
 
-**`A005` reads the clause**, and reads only it: an `assume … arch A` names a machine this
-unit declares somewhere — at an `entry`, an `entrust`, a `boot` or an `asm` body. *Otherwise
-the assumption can never be in force here and still travels in the artefact under „proved
-under A1…An", where a reader takes a reach out of it that does not exist.* A unit that
-declares no `arch` at all is not refused (R16): it does not say which machine it runs on, so
-a refusal would be a guess.
+**Attributes and Lean — this is where `hardware` comes from.**
 
-**Three classes, and the third does not exist syntactically:** *falsified* (probe ran and held),
-*not falsifiable* (**with a reason as a string**), *not run* — that is the
-**absence of both statements** and a **compile error**. An assumption that has not been run must
-never look like a falsified one.
+| spelling | reading | Lean |
+|---|---|---|
+| `assume a "…" falsifier p` | a **named** assumption; the grammar makes sure it is named at every site that rests on it (`progress`, `retires`, `observed by`, `entrust … assume`) | `D.Annahme`; `Hardware.fortschritt a` |
+| `axiom x(params) -> τ requires p effects { … } falsifier q` | a **foreign body**: the machine acts (H1, the `Orakel`), the answer is held against `τ`; `requires p` is a `pruefung` before the call (SUGAR); the axiom's `writes` ⊆ the caller's | `D.Ax`, `Orakel.wirkt`; `Stmt.axiomCall`, `Block.bindAxiom` → **`hardware (annahme a)`** |
+| that an axiom writes **only** its `effects` | **an assumption, not a theorem** (`SYNTAX.md` v2:1646 booked it as A_n) — the premise `RahmenO` of `exec_rahmen` | `RahmenO O` |
 
-**The assumption set is emitted into the artefact** ("proved under A1…An"), as a **set of names
-with a class**, not as a number — a ratchet over a cardinal number does not bite against exchange.
-
-> **With that the promise is relative, and that stands in the artefact instead of in a footnote:**
-> *memory-safe under A1…An.* A proof whose assumption set the consumer does not know has
-> no reach. **The axiom layer is the largest unproved surface of the language** — larger
-> than the compiler — and therefore countable and ratchetable.
+> **The axiom layer is the largest unproved surface of the language** — larger than the
+> compiler — and therefore countable and ratchetable. In the theorem it is exactly the
+> parameter `O : Orakel D`, and `#print axioms` at the end of `Satz.lean` shows that nothing
+> else was assumed.
 
 ---
 
@@ -1664,45 +1145,25 @@ check = "check" ident "{"
 The compiler generates a `linear ghost Duty(ident)`. **Four compile errors fall out of
 M1/M2/M3, not out of special rules:** `gates` missing → the obligation is never consumed;
 `can_fail` missing → likewise; a quantity under `measures` that the **measured path** writes →
-write right; a one-sided threshold without `floor` → the quantity has no range.
+write right; a one-sided threshold without `floor` → the quantity has no range. `expects` names
+an **external** probe that belongs to exactly one obligation (`N024`). Since «TB» a `check` can
+stand under `when TESTBUILD`.
 
-**`expects` names an EXTERNAL probe — decided 2026-08-19.** Until then this line said nothing
-about where the identifier is declared, and `counterprobe` therefore stood in
-`pruefe-klauseln.py` as a promise nobody read. The decision is the same one `assume … falsifier`
-already made: **the probe does not stand in Gabbro because it RUNS.** What Gabbro can say about
-it is that it belongs to **exactly one** obligation — `N024` falls when a name carries two.
-*Two obligations on one probe means a green run discharges both, and one of them nobody ever
-checked.*
-
-**And the four errors above now fall.** The first two are the parser's — the grammar makes
-`gates` and `can_fail` compulsory. The other two, and the question whether `gates` names anybody
-at all, are `N020`–`N022`. *`N020` found its first case in `beispiele/06`: `gates abnahme,
-freigabe` named two functions that stood nowhere in the file.*
-
-**The `measures` list IS the report line** — the formatting arises out of it, without
-formatting existing in the language core.
-
-**And since «TB» a `check` can say that it is not in the shipping build:** `when TESTBUILD`
-in front of the declaration, like in front of any other item. Until 2026-08-28 that stood
-twice in `SPRACHE.md` as a plan and nowhere in the compiler — and it is the form the whole
-construct was for. *An obligation that measures the shipped artefact by standing inside it
-has measured the wrong artefact.* Whatever the `check` gates and measures is gated with it;
-`G001` holds the production code away from those names.
+*Lean:* a `check` is a **mark**: `D.Marke` `Duty`, produced by the `check` (a generated function
+with `allocs Duty`), consumed by the functions `gates` names (`consumes Duty` in their
+signature). That is the whole construct — the linear discipline of §6 («SG-6») does the rest,
+and *"the obligation is never consumed"* is *"`return` with a mark in Λ that `allocs` does not
+name"*: not derivable.
 
 ---
 
 ## 14. Boot phase, machine state, assembler
 
 ```gabbro
--- The three names this block SPEAKS ABOUT, so that it is a translation unit and not a
--- sketch. **Added 2026-08-25:** `N040` refuses a type name that resolves to nothing, and
--- this block named three -- *a grammar document whose examples break the grammar is the
--- most expensive kind of prose: it looks like evidence.*
 opaque type Pa = u64;
-linear ghost type BootPhase;
+linear ghost type BootPhase order { roh, mmu, geraete };
 type Context = { sp : u64, };
 
--- The page table, so that the postcondition below has a domain to speak about.
 walk PageTable levels 4 {
     node : [Pte; 512],
     down : frame when it.present && !it.large,
@@ -1723,9 +1184,6 @@ const BOOT_FRAME_HIGH : u64 = 0x2000;
 
 raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
 
--- **Until 2026-08-28 this line read `effects { consumes t, writes code_map }`** — and the
--- sentence below it claimed an event. `code_map` was an effect NAME: no pass read it, and
--- the block passed with 0 errors while the prose promised a mechanism.
 fn boot_end(t: BootPhase, root: PageTable)
     ensures !exists m in mappings of root :
         m.frame >= BOOT_FRAME_LOW && m.frame < BOOT_FRAME_HIGH
@@ -1738,198 +1196,229 @@ prim fn resume(k: ptr<normal,r> Context) -> never effects { reads k };
 divergent fn idle() effects { diverges };
 ```
 
-`boot_end` consumes the **linear** token **and** retires the boot space — **one clause**, so
-that the two are not two promises one can keep separately (`O011`). What disappears is said
-as a `walk` fact and demanded (`O012`); that an address without a mapping is **unreachable**
-is a statement about the MMU, stands in `gabbro annahmen`, and the probe the clause names is
-the falsifier: an access to a `.boot` address afterwards must fault.
+`boot_end` consumes the **linear** token **and** retires the boot space — **one clause**
+(`O011`); what disappears is said as a `walk` fact and demanded (`O012`); that an address without
+a mapping is **unreachable** is a statement about the MMU and the probe the clause names is the
+falsifier.
 
-> **`code<boot>` is not a Gabbro space, and `m.section` is not a field.** The spelling in
-> `SPRACHE.md` §12 was written before either had to parse: `boot` is a space of its own
-> (`space`, §5), and a page table entry has **no section bit** — `.boot` is a link-time
-> range, so the postcondition names frame bounds. *The construct followed the machine, not
-> the sentence.*
+**Attributes and Lean («SG-18»).**
 
----
-
-## What deliberately does not exist
-
-`while` · `for` · `goto` · `union` as reinterpretation · preprocessor · implicit conversion · `void*` ·
-pointer arithmetic without a basis · catch-all branch · exceptions · inheritance · reflection · GC ·
-floating point in the core · assignment as an expression · forward declaration · self-hosting ·
-user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas ·
-**the braced compound literal** · **migration between format versions**.
-
-### The last one is the youngest, and it is the one with a price — «B7», 2026-08-17
-
-`P { a: 1, b: true }` does not exist. A record value is made by a **labelled call**:
-`P(a: 1, b: true)`.
-
-> **It would have been the first expression form in Gabbro that continues with `{`.** At
-> **76** sites of the corpus a `{` follows an expression directly — `if x {`, `match a {`,
-> `traverse i over d {`, `retry … until p {`, `locks S {`. Until now that was unambiguous
-> for exactly one reason: no expression ever went on with a brace.
-
-Rust resolves this with a context flag (*"no struct literal here"*). Gabbro has none, and
-whoever sets one wrongly **misreads all 76 sites without a single gate firing** — they keep
-parsing, only differently. *A silent misparse is dearer than a missing form.*
-
-What is given up: one character. What is kept: a grammar that stays unambiguous **without
-knowing where it stands**. And the mechanism was already there — the parameter list of a
-`device` declaration is its constructor (`Vtd(basis)`); the field list of a `type` is the
-same thing, said about fields.
-
-**Labels are mandatory at a record and forbidden elsewhere** (`M107`), and they must be the
-field list in declaration order (`M106`). That is not politeness: two same-typed fields in a
-positional list are swappable **without any type objecting**, and the name is the only thing
-that tells them apart. The rule is `deckt fs zs ⟷ map fst zs = fs`, machine-checked in
-[`beweise/Verbund_Konstruktor.thy`](../beweise/Verbund_Konstruktor.thy).
-
-Writing the braced form is refused by name (`P037`), not by a follow-on error — the refusal
-carries the reason, because *a form that deliberately does not exist deserves its ground and
-not the silence of one nobody thought about.*
-
-### And the newest one is a refusal **without a site** — format migration, 2026-08-21
-
-The ground is in §9 at the `format` production and it is a number: `./instrumente/zaehle-formate.py`
-counts **0 formats with a second version** over corpus and `FRAGMENTE.md`. What is different
-from `P037` is worth saying, because it decides why **no** new diagnostic was built: the
-braced literal is a form somebody would *write*, and without `P037` 76 corpus sites misparse
-in silence. **Migration has no spelling.** The one thing that can be written down — the same
-format name twice with two `@version` numbers — is already refused, by `N001`, and a second
-diagnostic there would fire at the same place and say less.
-
-*The price is named: an `@version 3` reader that meets a v2 device refuses. That refusal is a
-decision the caller can act on; a silent migration would not be.*
-
----
-
-## Every reader refusal, split — notation or claim (2026-09-01)
-
-`PLAN-HARDWARE.md` §49 B3 counts eight attempts at *„add two numbers"* by somebody with the
-grammar and 63 examples open, and calls five of the seven refusals **syntax paper cuts.**
-This section is the measurement behind that word, over every code the reader issues.
-
-> **The test is not „is it annoying".** It is: *what would become sayable that is not sayable
-> today, and is that thing wrong?* If nothing wrong becomes sayable, it was a paper cut.
-
-| | | |
+| spelling | reading | Lean |
 |---|---|---|
-| **a paper cut** | notation | nothing is safer because the user wrote it the other way |
-| **a guarantee** | claim | removing it makes a WRONG program acceptable |
-
-**The count: 39 P-codes and 7 L-codes.** `P031` and `P032` stand only in comments — they were
-retired, and 39 is the number after that.
-
-| | notation | mixed | claim |
-|---|---|---|---|
-| **P** | `P033` | `P001` `P014` | the other 36 |
-| **L** | `L004` | — | the other 6 |
-
-### The two mixed ones, and why neither was SPLIT
-
-`P001` (*„`X` expected, `Y` found"*) is the generic expectation and it goes both ways: at
-`static TAB : Treiber;` it says the only thing there is to say, and at `effects pure` the
-writer had the right word in the right place and could not tell that a brace list was meant.
-
-**A code that is a cut in one place and a guarantee in another must be split — but this is
-not that case.** `P034` was split off into `P041` because two *unrelated rules* shared one
-identifier, and a probe on it covered neither. Here the rule is ONE (*this token was expected
-at this site*); what differed was how much a reader could reconstruct from it. **So the split
-went into the TEXT and not into the code:** three sites now carry a note naming the form.
-*A second identifier for the same rule would be a coverage claim that is none.*
-
-`P014` is the same shape: *„effect expected"* is a closed-set refusal everywhere except at
-`effects { }`, where an effect list was written and is empty.
-
-### What was cured, and it was the message every time
-
-| written | refusal before | now, additionally |
-|---|---|---|
-| `module m;` | `` `{` expected, `;` found `` | `` `module` carries a brace body -- `module m { … }` `` |
-| `effects pure` | `` `{` expected, `pure` found `` | `` `effects` takes a brace list -- `effects { pure }` `` |
-| `effects { }` | *effect expected, closing brace found* | `` `effects { }` is empty `` · *a function without effects writes `effects { pure }`* |
-| `{ return 0 }` | `` `;` expected, `}` found `` | `` `;` terminates, it does not separate `` |
-| `else { … };` | *a semicolon on its own is not a statement* | *a block form ends with its `}` — the `;` after it is one token too many* |
-
-**Not one of the five changes what parses.** No production, no keyword, no lexer rule, and
-the vocabulary marks stand where they stood: 221 words, 208 without a reason, 333 positions.
-
-### Why the OTHER cure was refused, and it is a calculation
-
-Accepting `effects pure` beside `effects { pure }` is the second way to remove a paper cut,
-and it costs **a second spelling for one meaning.** That is the trade this language refuses
-everywhere else, and the refusals name each other:
-
-* the lexer refuses `0X` beside `0x` (`L004`) — *„one spelling, not two", and the rule stood
-  there already* (§Lexis);
-* `P037` refuses the braced record literal — *„what is given up: one character";*
-* the empty effect list is refused because `pure` already says it, on purpose.
-
-*A paper cut about notation is removed by SAYING the notation.* The one place where the
-folder did buy a second spelling is the trailing comma, and it bought it to replace **three**
-different rules with one — a trade, not an addition.
-
-### The one refusal whose subject IS notation and which is still a claim
-
-`P037` (no braced record literal) looks like the purest notation rule in the language:
-`P { a: 1 }` and `P(a: 1)` would be the same value. It is a claim all the same, and the
-ground is a count: at 76 corpus sites a `{` follows an expression directly, and accepting the
-braced form **misreads all 76 without a gate firing.** *A refusal about notation can still
-carry a claim — about the grammar, not about the program* — and that is why the boundary is
-drawn per refusal and not per family.
-
-### What was measured and left standing
-
-* **`L004`** is a paper cut by the definition and stays: the decision *„one spelling, not
-  two"* is older than this measurement, and the refusal already names the cure in its own
-  note. Removing it would be a language change, not the removal of a paper cut.
-* **`effects { }`** stays refused, and the calculation is in the table above.
-* **The follow-on error after a missing `;`** stays, and it is the ugliest thing left here:
-  the block recovery eats one brace too many, so `{ return 0 }` costs a second, bogus
-  *„no item starts here: `}`"* two lines down. `beispiele/gift/44-uebergang-mit-zeigerpfeil`
-  has the same shape today — repairing the recovery would MOVE a corpus file, and the claim
-  of this whole change is that nothing moved.
-* **`M104`** (*„`u32 + u32` leaves the width of the result type"*) is attempt 4 of the eight
-  and is a **guarantee**, not a cut: *if the result range does not fit, it is a compile error
-  and not a wrap-around.* So is `E001`, the missing `effects` clause of attempt 1.
-
-The counter-direction: `instrumente/vergleiche-binaerprogramme.py` over all 539 `.gab` of the
-tree, `pruefe` output AND emitted C, byte-wise, two binaries — **0 files moved.** The poison
-corpus grew by the five probes `620`–`624` and **not one existing probe changed its verdict.**
+| `raw fn`, `prim fn`, `extern fn`, `= asm { … }`, `entry`, `entrust`, `boot` | a foreign body: contract known, body the machine | `D.Ax`; `Stmt.axiomCall` → `hardware (annahme a)` |
+| `-> never` | no `return` derivable | `Ty.never` |
+| `divergent fn … effects { diverges }` | a foreign body that does not return: the call has no continuation — the statement after it is not derivable (the call is the `endstmt`) | `Ty.never` as `aerg` |
+| `requires BootPhase` at a `raw fn` | the mark in Λ at the call (`O010`: somebody must retire it) | `Signatur.konsumiert` … `produziert` (borrowed) |
+| `retires t from boot falsifier p` | Λ loses `t`; `p` is named in the term | `Stmt.retires` |
+| `advances roh -> mmu` | the stage moves | `Stmt.advances` |
+| `mappings of root` in `ensures` | nested `forallSlots` over the four level tables | SUGAR («SG-16») |
+| `walk … levels 4 { node : [Pte; 512] … }` | four tables of `count 512` | `D.Tab` per level |
 
 ---
 
-## Open items — as of 2026-08-14, after the definition
+## 15. What deliberately does not exist
 
-**The nine design questions are decided in [`SPRACHE.md`](SPRACHE.md) §18 (F1–F9).**
-What stands here is what is **still open** after that — and those are measurements, not designs.
+`while` · `for` · `goto` · `union` as reinterpretation · preprocessor · implicit conversion
+(the widening of a range is an **attribute**, «SG-1») · `void*` · pointer arithmetic · **the
+address of an expression** · catch-all branch · exceptions · inheritance · reflection · GC ·
+assignment as an expression · forward declaration · self-hosting · user-defined quantifier
+domains · recursion in `spec fn` · hand-written lemmas · **the braced compound literal** (`P037`)
+· **migration between format versions** · **signed division** («SG-3»: `narrow` to `0 ..`
+first) · **a `forever` without `progress`** («SG-11») · **an `else` that falls off** («SG-5») ·
+**a `state` write that is not a declared transition** («SG-19») · **a register access against
+its class** («SG-15») · **a publication without its declared payload** («SG-13») · **a second
+owner of a carrier** («SG-9»).
 
-### The one measurement the definition hangs on
+Every item in bold after the first is new in the third version, and each one is an
+**absence of a constructor** in `Syntax.lean` — not a refusal a pass issues, but a term that
+cannot be written. `Satz.lean` §4 shows one (`x / x`: `.div` demands `1 ≤ 0`).
 
-- [ ] **Repeat the 74-obligation measurement against this version: hanging plumbing 19 → 0.**
-      That is the **acceptance** of the definition, not agreement with it. If one stays hanging, it is
-      refuted at that point — with a class and a source reference.
+---
 
-### Four marks, all set in advance
+## 16. What the theorem says — and what it does NOT cover even with this syntax
 
-- [ ] **`narrow` count on the tree: ≤ 24 sites.** If they grow beyond that, the rule set
-      V1–V3 is too small — **and *that* is the refutation, not a further growth of rules in silence.**
-- [ ] **How many of the 17 measured logic obligations need `by induction over`**, how many manage
-      without, **how many would need a recursive `spec fn` or lemmas**? A single case in the
-      last column sets the ceiling lower.
-- [ ] **Cost truth per compiled module** (definition §14.2): generated C against
-      hand-written in the differential benchmark.
-- [ ] **Pull the ten fragments onto this syntax**, guardians green. All ten now lie in
-      [`FRAGMENTE.md`](FRAGMENTE.md) (F1–F10, gate P2 at 10 of 10 since 2026-08-16); the first six
-      are written against the **second** version. *(Until 2026-08-17 this line said "six lie in
-      FRAGMENTE.md" — F7–F10 were written on 2026-08-16 and the line was not pulled up.)*
+### 16.1 The theorem
 
-### What is not covered even after the definition — named, not forgotten
+**`zwei_fehler`** (`Satz.lean` §1): every outcome of a body is control flow (`ok`, `zurueck`,
+`grund`, `leave`, `next`) or **`logik`** or **`hardware`**, and the type has no eighth
+constructor. **`bedeutung_total`**: every body has an outcome — the meaning is a function.
+**`exec_gut`** (§3): a body writes only what its contract names (**frame**), gives every lock
+back, and every access it makes carries the guards of its carrier and holds every lock its Λ
+names, taken in rank order and never twice (**trace**) — under the one premise that the
+hardware keeps its `effects` (H1). **`kein_wettlauf`**, **`kein_wettlauf_global`**,
+**`keine_ueberkreuzung`** (`Wettlauf.lean`): over **any interleaving** of such traces, two
+accesses of different threads to one carrier are happens-before ordered or on an `atomic`,
+and no two lock acquisitions cross in rank. The inversion theorems (`slot_hat_waechter`,
+`zeiger_hat_waechter`, `bytes_in_tabelle`, `zuweisung_hat_recht`, `sdivision_ohne_null`,
+`register_schreibbar`, `transition_hat_spiegel`, `uebergang_erklaert`, `publish_paart`,
+`stufe_steigt`, …) say for each site what its derivation had to carry. `Zucker.lean` defines
+every sugar as a term of the core, so it has no meaning of its own to get wrong.
 
-- [ ] **The seam CPU ↔ device** has no mechanised model to follow ([`BEWEIS.md`](BEWEIS.md)).
-- [ ] **The `iasm` entry path has no downstream prover** — the trust shrinks from
-      161 sites to one site, it does not disappear.
-- [ ] **Liveness and progress** falls under no mechanism.
-- [ ] **The ghost-theory templates are the most trust-critical surface** and belong in
-      Isabelle once ([`BEWEIS.md`](BEWEIS.md), level 1).
+| where the outcome comes from | outcome | class |
+|---|---|---|
+| `requires` of the callee false at the call | `logik (vorbedingung f)` | logic |
+| `ensures` false at `return` | `logik (nachbedingung f)` | logic |
+| an owed `invariant` false at `return` | `logik (invariante i)` | logic |
+| a loop `invariant` false at a pass boundary | `logik schleife` | logic |
+| the recursion does not bottom out (`decreases`) | `logik (abstieg f)` | logic |
+| a `state` field is not on the pre-state of its transition | `logik uebergang` | logic |
+| an `axiom` or foreign body answers outside its declared type | `hardware (annahme a)` | hardware |
+| a `forever … progress a` is not ended by the environment | `hardware (fortschritt a)` | hardware |
+| a float result leaves its declared range or is not finite (IEEE rounding) | `hardware ieee` | hardware |
+| a register answers outside its declared type | `hardware (register r)` | hardware |
+| a register answers against its declared promise (`requires` at the `reg`) | `hardware (geraet r)` | hardware |
+| an `awaits` does not see the publication it pairs with (the memory model) | `hardware (sichtbarkeit A10)` | hardware |
+
+**And there is no thirteenth row.** Index out of range, overflow, division by zero (signed or
+not), an unguarded access (direct, through a pointer, through a byte view, in a quantifier, in
+`old(…)`), a missing write right, a dropped or duplicated mark, a lock taken out of rank or
+twice, a callee that does not declare the held set, a non-exhaustive match, a fall-off
+`else`, a call with the wrong signature, a write through a read-only pointer, a byte run past
+its carrier, a register written against its class, a `transition` without its mirror, a
+publication with the wrong payload, a phase step out of order, a shared carrier without a
+guard, a data race on a guarded carrier, a crossing of the lock order — **none of these has
+an outcome, because none of these has a term or a run.**
+
+### 16.2 What is NOT covered — and what carries it instead
+
+The list of the afternoon had nine items; six of them are now theorems or named outcomes,
+and this section says for each what carries it. Nothing below is an error class of a body.
+
+| item | status on the evening of 2026-09-09 | what carries it |
+|---|---|---|
+| **1. interleavings** | **covered** — `kein_wettlauf` over any interleaving of traces the grammar leaves | three premises, each booked: (W3) the lock primitive excludes (a foreign body, `assume`), (W4) linearity keeps a mark in one thread (a property of the grammar: no constructor moves a mark across threads; owner marks are made by nobody), (W5) `shared` says which carriers two threads reach (`H013` as a declaration) |
+| **2. memory model** | **covered as a hardware outcome** — `awaits` yields `hardware (sichtbarkeit A10)` when the machine does not deliver; accesses to an `atomic` are the only unguarded shared accesses and are ordered by A10 | `assume c11_release_acquire_*` with its falsifier |
+| **3. devices** | **covered through hardware assumptions, each named at its register** — type (`register r`), promise (`geraet r`), mirror (`transition` reads it by construction), class (not derivable otherwise) | the one remaining `assume`: the ORDER in which the device sees two accesses (`dma_visibility_in_order`) — no grammar sees a bus |
+| **4. bytes** | **covered** — `leseBytes`/`schreibBytes` with the run's bound as attribute; `format` fields, `offset_into`, `@bitpos`, `embeds`, `endian big` as sugar over them; two views read one world | — |
+| **5. signed arithmetic, float** | signed `/ %` **covered** (`sdiv`/`srem`, divisor range excludes zero, `\|q\| ≤ \|a\|`); float: every value finite and in range **by type**, every operation checked by the machine → `hardware ieee` — the range of a float operation is **not derived**, because IEEE rounding is the machine's, i.e. a hardware assumption by the letter of the task | `assume ieee754_round_to_nearest_even` with its falsifier |
+| **6. sugar** | **covered** — `Zucker.lean`: every `SUGAR` mark is a Lean definition over the core (`=>`, `!=`, `>`, `~`, `in`, `descendants`, `ancestors`, `chain`, `queue`, `+=` … `\|=`, `observes`, `on_exceeded f`, `accumulates … merge`, `maintains`, a record value, `bitfeld`, `embeds`, `endian big`, `walk` as nested `traverse`, `u32` without `in`) | — (a parser that emits these definitions has nothing to translate) |
+| **7. contexts, cost, emitter, C** | **split since «SG-22» (§18)** — *when* a handler runs (`entry … dispatch`, `via idt`) stays a scheduling fact (a handler is a thread in the run model; `masks irqs` is a declaration the run's well-formedness may use, `H102` stays a pass); *how many ops* (`costs`, `held <=`, `bounded`, `per_pass`) is a **budget in the logic** — statically computed, checked against the declaration; *by when in cycles* (`deadline … arch … falsifier …`) is a **hardware outcome** (`hardware (fortschritt a)`, the named assumption with its probe); *what the C does* is the emitter under the lowering contract of `Ziel.lean` | `PLAN-UMSETZUNG.md`; §18; `grammatik/Grammatik/Ziel.lean` |
+| **8. the parser** | **outside** — `Syntax.lean` is a tree, this file a token grammar; the map is the checker's new front end | `PLAN-UMSETZUNG.md` §2 |
+| **9. the three parameters** | `O`, `passes`, `fuel` — not gaps: the hardware and the logic | — |
+
+> **So the answer to the question — *what is still not covered with this syntax?* — is now:
+> nothing that is an error of a body.** Every failure of a Gabbro body is one of the twelve
+> rows of 16.1: six are the writer's logic, six are a named hardware assumption. What stands
+> outside is (7) the scheduling of handlers and the cost model, (8) the parser that turns this
+> text into the tree, and (9) the three parameters of the meaning — which is exactly the
+> hardware and the logic. The premises of the run theorem (W3–W5) are not a fourth class: W3
+> is the lock primitive's `assume`, W4 and W5 are properties of the declaration.
+
+---
+
+## 17. What moves in the corpus when the third version replaces the second
+
+Measured against the 70 clean examples by reading, not by running (item 8 above):
+
+* `u32` without `in`, `f64` without `in` — everywhere — **SUGAR, nothing moves**;
+* signed `/` or `%`, or a `/` with a signed numerator — **refused**; to be measured (W10);
+* `forever` without `progress` — **one site**, `66-transport-rueckgabe.gab`:66;
+* `let … else` / `narrow … else` whose block falls off — **refused**; the checker refuses these
+  today (`M1`), so the corpus has none;
+* `maintains` — **SUGAR**; an invariant a function writes under and does not `maintains` is
+  now owed anyway (this is the point);
+* `on_exceeded ident` — **SUGAR**;
+* a `state` field written with `=` and a plain value — **refused**; written as `transition … : A -> B;`
+  («SG-19»); to be counted;
+* `owner` — **no site**; the word did not exist;
+* `shared` at a `table`/`static` — **every carrier `H013` finds reachable from two contexts
+  must say it**; to be counted from `H013`'s own output;
+* `requires Held(L)` that does not name the whole held set at a call — **refused** («SG-20»);
+  today `H005`/`H006` accept a callee that names fewer; to be counted;
+* a register read outside `let`, a register written whose class is `r`/`rc` — **refused**;
+  `R005`/`R006` refuse these today, so the corpus has none;
+* `publishes { … }` with a set other than the declared — **refused**; `V001`–`V004` refuse
+  these today.
+* `count k in slots of T : p` — **no site**; the production is new («SG-24»);
+  the word `count` is old.
+* `deadline <= n ops arch X falsifier p` — **no site**; the word and the clause
+  are new («SG-22»).
+* a first match, a non-index option, a runtime-length tail — **nothing moves**;
+  all three were already writable («SG-25»–«SG-27» name the idiom, they add no
+  production).
+
+---
+
+## 18. Fourth version — time, order, and the last expressiveness (2026-09-09)
+
+**What the third version still left on the writer that is not logic and not a
+hardware measure.** Four agents measured it on the same day from four sides
+(plumbing gaps, Lean independence, races/time, expressiveness); each item below
+names its «SG-n», its Lean carrier, and what the writer still owes by hand.
+
+**The goal, repeated so the additions can be checked against it:** whoever
+verifies a Gabbro program proves **only** their own logic (`requires`,
+`ensures`, `invariant`, `decreases`, a `state` pre-state) and their hardware
+measures (`assume`/`axiom` with `falsifier`, `progress`, a register promise, the
+memory model A10) — **and nothing else**. Everything else is carried by Gabbro
+and CompCert, assuming Gabbro is formally verified. The Lean body that states
+this independently of the current `.rs` code is
+`grammatik/Grammatik/Ziel.lean`: it imports only the grammar, defines the
+lowering contract to a closed C subset explicitly, and its `#print axioms`
+shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
+
+| | production | writer still proves by hand | carried by | Lean |
+|---|---|---|---|---|
+| **«SG-22» time split** | `deadline <= n ops arch X falsifier p` at `fn` (NEW, §6) | the `ops` number, honestly and tightly, like `costs`; the falsifier probe for the cycles on `X` | the budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) is logic checked against the declaration; a missed deadline is **`hardware (fortschritt a)`** — the named environment assumption, not a silent reinterpretation of `ops` | `Hardware.fortschritt`; `Ziel.lean` `ziel_zeit` |
+| **«SG-23» payload order** | CHANGED (checker rule, same class as `H102`): `A = e publishes {p,q};` must directly follow the writes of `{p,q}`, `let x = A awaits {p,q};` directly before their reads (same sets as «SG-13») | the logic of what is published | the **order** — the sets are shape (`hp : payload = nutzlast g`), the sequence is a checker rule in `PLAN-UMSETZUNG.md`, closing RACE #21 (`V006`/`V007`) with «SG-13» | `Stmt.publish`, `Block.awaits` |
+| **«SG-24» counting** | `count k in slots of T : p` as an expression (NEW, §4) | the predicate `p` | the traversal that counts it — SUGAR for a call to the table's **generated** count function, like `ops insert/remove` (§9): `Block.bindCall` with its `requires`; over **one** table only, a cross-table count is a `group` invariant, never a hand-maintained counter | `Block.bindCall` |
+| **«SG-25» first match** | NO new syntax: bind the result into a variable before the loop, `leave` out, read it after | which match is first (the logic) | termination and the bound — still from the domain; `assignVar` plus `leave`, never a hand-threaded cursor or bitmap | `Stmt.assignVar`, `Stmt.leave` |
+| **«SG-26» general option** | NO new syntax: over non-index `T` spell the two-case `tagged` sum; `match` over it is exhaustive by shape | the case split | the shape — over `index into T` it stays the carrier's index option (`Expr.some`/`none`); nothing is lost and no constructor is added for what a declaration already says | `Ty.sum`, `Arms` |
+| **«SG-27» variable tails** | NO new syntax: `backed k` plus `narrow i to 0 ..< k` before the access (§9) | that the entry length check holds once | everything after: the bound as an attribute at every access (`leseBytes`/`schreibBytes` with the run's bound) — a runtime length the declaration does not know would be a hand-threaded check at every access, i.e. manual plumbing | `Expr.leseBytes`, `Block.narrow` |
+
+**What deliberately stays a hardware assumption** (no new constructor, no new
+proof duty): the lock primitive's exclusion (W3), the memory-model pairing A10
+(`hardware (sichtbarkeit)`), the device bus order (`assume
+dma_visibility_in_order` named at the `transition` site), IEEE rounding (`assume
+ieee754_round_to_nearest_even`), RCU grace (`reclaims … after grace a` naming
+its `assume`, same pattern as `retires … falsifier`), IRQ arrival (`progress`
+plus probe), and the whole axiom layer. The C side is a **closed list of
+forms** (`Ziel.lean` `CForm`: the 34 used-and-allowed forms, nothing else
+without a ruling); the lowering ledger `Gabbro-op → C-statements` expands each
+primitive boundedly, and quantitative CompCert preserves the `ops` count from C
+to Asm. Wall-clock and cycles never enter the logic — they enter through
+`deadline` and its falsifier.
+
+**Maximal writability without leaking plumbing.** `count` (SUGAR over a generated
+call), the first-match idiom, the `tagged`-spelled option, and `backed` +
+`narrow` close the four cheapest expressiveness blockers (B1–B4 of the
+expressiveness probe) — three of them were already writable and are now named
+instead of inflated, one (`count`) gets its generated function like `ops`
+before it. `deadline` and payload order close the two time/race remainders.
+No new manual plumbing enters through any of them. What stays unwritable stays
+unwritable on purpose: user-defined domains, recursion in `spec fn`,
+hand-written lemmas, a TAL self-proof of the entry path, and the bus as seen
+by the grammar (§15, §16.2).
+
+---
+
+## Open items — as of 2026-09-09
+
+- [ ] **Run the guardians** on this file: `pruefe-syntax.sh` (closure, reachability, terminal
+      coverage — `owner`, `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt` are the
+      new names, `shared` at `table`/`static` a new position of an old word), `zaehle-wortschatz.py`
+      (222), `pruefe-grammatiktafel.py`. Every number in "State — measured" is a hand count
+      until then.
+- [ ] **The parser from this grammar into `Syntax.lean`** — the item that turns 16.2 (8) into a
+      corpus measurement (`PLAN-GRAMMATIK.md` §4).
+- [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09.
+- [x] **A byte-addressed place** — `leseBytes`/`schreibBytes`, evening of 2026-09-09.
+- [ ] **The implementation in checker and emitter** — `PLAN-UMSETZUNG.md`
+  (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`). Until it lands,
+  `pruefe-grammatiktafel.py` names the arrears honestly: `owner` («SG-9») and
+  `deadline` («SG-22») are UNGEDECKT — allowed by the grammar, lowered by no
+  program, named by no diagnostic. That red is the work list, not a refutation:
+  covering a word needs the checker rule first, and the rule is written.
+- [ ] **`pruefe-syntax.sh` prose branch flags `logik uebergang` (×3).**
+  Pre-existing from the third version, not from §18 (which adds zero new
+  prose hits — measured). The word is the Lean outcome constructor
+  (`Logik.uebergang`), not the abolished keyword, but the guardian cannot see
+  the difference and it is right not to try: a rename needs a project-wide
+  decision (Lean ctors, checker aliases, §7/§16 prose), not a quiet edit here.
+- [ ] The four marks of the second version stand: `narrow` count ≤ 24 sites; the 17 logic
+      obligations against `by induction over`; cost truth per compiled module; the ten
+      fragments on this syntax, guardians green.
+- [ ] **What is not covered even after the definition — named, not forgotten:** the seam CPU ↔
+      device has no mechanised model (16.2 (3)); the `iasm` entry path has no downstream prover
+      (16.2 (7)); liveness and progress fall under no mechanism except the named assumption
+      (`hardware (fortschritt a)`); the ghost-theory templates belong in Isabelle once.

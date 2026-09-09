@@ -1,0 +1,32 @@
+/-
+  Grammatik -- die Grammatik von Gabbro als GETYPTE Grammatik, in Lean 4, ueber die GANZE
+  Sprache.
+
+  Der Satz: ein Satz dieser Grammatik hat eine totale Bedeutung, und seine Bedeutung kennt
+  genau zwei Fehlerausgaenge -- die Logik des Schreibers (`requires`, `ensures`,
+  `invariant`, `decreases`, ein `state`-Uebergang) und eine Hardwareannahme (fremder Rumpf,
+  `progress`, IEEE, ein Register, sein Versprechen, das Speichermodell). Es gibt keinen
+  dritten, weil der Ausgangstyp keinen dritten hat. Und ueber Verschraenkungen: zwei Faeden
+  beruehren einen bewachten Traeger nie im Wettlauf (`Wettlauf.lean`).
+
+  Kein `mathlib`, kein Import aus `programmlogik/` oder `passlogik/`: hier steht nur die
+  Grammatik und was ihre Saetze bedeuten -- nichts ueber den Pruefer, nichts ueber den
+  Erzeuger.
+
+  | Datei               | Gegenstand                                                        |
+  |---------------------|-------------------------------------------------------------------|
+  | `Typen.lean`        | die Typen mit Bereich, ihre Werte, die Rechnung (auch mit Vorzeichen), Bytes |
+  | `Syntax.lean`       | die GRAMMATIK: Ausdruecke und Anweisungen als getypte Familie      |
+  | `Semantik.lean`     | was ein Satz bedeutet: `eval` total, `exec` mit zwei Ausgaengen, die Spur |
+  | `Satz.lean`         | der Satz: Rahmen UND Spur in einer Induktion, die Inversionen, `#print axioms` |
+  | `Wettlauf.lean`     | Faeden verschraenkt: kein Wettlauf, keine Ueberkreuzung der Sperrordnung |
+  | `Zucker.lean`       | jede Schreibweise ohne eigenen Konstruktor, als Definition ueber dem Kern |
+| `Ziel.lean`         | DAS ZIEL als Satz ueber der Grammatik -- unabhaengig vom `.rs`-Code       |
+-/
+import Grammatik.Typen
+import Grammatik.Syntax
+import Grammatik.Semantik
+import Grammatik.Satz
+import Grammatik.Wettlauf
+import Grammatik.Zucker
+import Grammatik.Ziel

@@ -1,0 +1,10 @@
+name = "grammatik"
+version = "0.1.0"
+defaultTargets = ["Grammatik"]
+
+# NO mathlib, and NO import of `programmlogik` or `passlogik`: this project is about the
+# GRAMMAR alone -- what the syntax admits and what a sentence of it means. Nothing here
+# reads the checker, the emitter, or `Body.lean`.
+
+[[lean_lib]]
+name = "Grammatik"
