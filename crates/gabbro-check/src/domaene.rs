@@ -14,8 +14,9 @@
 
 use gabbro_syntax::ast::{
     Block, Domaene, Expr, ExprArt, FnRumpf, Ident, Item, ItemArt, Ort, OrtSuffix, Pred, PredArt,
-    Programm, Schleife, StmtArt,
+    Programm, Quantor, QuantorArt, Schleife, StmtArt,
 };
+use gabbro_syntax::span::Span;
 use gabbro_syntax::diag::{Absage, Absagen};
 use std::collections::{HashMap, HashSet};
 
@@ -323,6 +324,10 @@ enum Stellung {
     Untergrenze,
     Walkschritt,
     Tausch,
+    /// **«SG-24»: a `count` in a body.** The rumpf is a predicate evaluated at run
+    /// time, and the refusal names where it stands -- same duty as every other
+    /// Stellung, one more place.
+    Zaehlung,
 }
 
 impl Stellung {
@@ -336,6 +341,7 @@ impl Stellung {
             Stellung::Untergrenze => "a `floor`",
             Stellung::Walkschritt => "the step of a `walk`",
             Stellung::Tausch => "the `when` of an exchange",
+            Stellung::Zaehlung => "a `count`",
         }
     }
 }
@@ -571,6 +577,23 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
                 aus_pred(bedingung, s, Stellung::Tausch, geb, absagen);
             }
         }
+        // **«SG-24»: a `count` in a body position.** Predicates are walked above;
+        // a `count` is an EXPRESSION, so `let n = count k in slots of T : …` never
+        // reaches `aus_pred` on its own. Every expression of the statement is walked
+        // for one, and the rumpf is checked in `Zaehlung` Stellung: the refusal names
+        // the `count`, not a clause around it.
+        for e in crate::eigene_ausdruecke(st) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Zaehle {
+                    variable,
+                    domaene,
+                    rumpf,
+                } = &x.art
+                {
+                    aus_zaehlung(variable, domaene, rumpf, x.span, s, Stellung::Zaehlung, geb, absagen);
+                }
+            }
+        }
         // **A `match` is walked HERE and not through `unterbloecke`**, because each arm
         // carries its OWN binder and a shared walk cannot tell them apart. `Nichts` binds
         // nothing, `Knoten(k)` binds `k`, and neither name reaches the other arm.
@@ -661,6 +684,21 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
                 indexschranke_pruefen(o, s, st, absagen);
                 grundname_im_praedikat(o, s, st, geb, &frei, absagen);
             }
+            // **«SG-24»: a `count` inside a predicate.** The grammar's third producer
+            // of `domain` -- `quant` and `member` were the two the `Element` arm
+            // above writes about, and a form without a reader is a hole. The rumpf
+            // is checked in the same Stellung: the refusal names the clause the
+            // `count` stands in.
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Zaehle {
+                    variable,
+                    domaene,
+                    rumpf,
+                } = &x.art
+                {
+                    aus_zaehlung(variable, domaene, rumpf, x.span, s, st, geb, absagen);
+                }
+            }
         }
         // **`expr in domain` produces a DOMAIN too, and this arm did not read it**
         // (measured 2026-09-02). The grammar has exactly two producers of `domain` --
@@ -677,6 +715,17 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
                 indexschranke_pruefen(o, s, st, absagen);
                 grundname_im_praedikat(o, s, st, geb, &frei, absagen);
             }
+            // **«SG-24»** -- same third producer as in the `Vergleich` arm above.
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Zaehle {
+                    variable,
+                    domaene,
+                    rumpf,
+                } = &x.art
+                {
+                    aus_zaehlung(variable, domaene, rumpf, x.span, s, st, geb, absagen);
+                }
+            }
         }
         PredArt::Erreicht { von, nach, .. } => {
             let frei = HashSet::new();
@@ -688,6 +737,103 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         // `Held(L)` and `Held(L, shared)` name a LOCK and nothing else.
         PredArt::Held { .. } => {}
     }
+}
+
+/// **«SG-24»: a `count` declares its variable, and its rumpf answers to it.**
+///
+/// The same four steps as the `Quantor` arm of `aus_pred` above -- domain, binder
+/// use, declaration, recursion -- minus `abbildungsfelder_pruefen`, which is about
+/// `mappings of`, a domain `D025` refuses below. One fault keeps one refusal: where
+/// the domain already fell, the binder kind is read off a wrong declaration and
+/// `binderverwendung_pruefen` stays silent (the `D022` reservation quoted above).
+fn aus_zaehlung(
+    variable: &Ident,
+    domaene: &Domaene,
+    rumpf: &Pred,
+    span: Span,
+    s: &Sicht,
+    st: Stellung,
+    geb: &mut Vec<String>,
+    absagen: &mut Absagen,
+) {
+    let vorher = absagen.absagen.len();
+    domaene_pruefen(domaene, s, st, geb, absagen);
+    zaehlbar_pruefen(domaene, st, span, absagen);
+    if absagen.absagen.len() == vorher {
+        // The binder-use rule is written against `Quantor`; a count binds the same
+        // three things (variable, domain, body), so it is called with those exact
+        // three rather than rewritten. The `art` is `Existiert`: per entry the
+        // question is whether THIS one satisfies the predicate.
+        let q = Quantor {
+            art: QuantorArt::Existiert,
+            variable: variable.clone(),
+            domaene: domaene.clone(),
+            rumpf: (*rumpf).clone(),
+        };
+        binderverwendung_pruefen(&q, s, st, absagen);
+    }
+    // The count DECLARES its variable, and an inner domain may run over it -- the
+    // same order the `Quantor` arm keeps, for the same reason.
+    geb.push(variable.text.clone());
+    aus_pred(rumpf, s, st, geb, absagen);
+    geb.pop();
+}
+
+/// **D025 -- a `count` RUNS, so its domain must have a length.**
+///
+/// Four domains do (`slots of`, `descendants of`, `ancestors of`, `elems of` --
+/// each with a `domaenenschranke` the cost pass reads, each lowered by the
+/// emitter's `traverse` arms); five do not, each for its own reason, and each
+/// refused by name rather than priced at nothing. *A form whose cost nobody can
+/// bound is not cheap; it is unwritten.*
+fn zaehlbar_pruefen(d: &Domaene, st: Stellung, span: Span, absagen: &mut Absagen) {
+    let (wort, grund) = match d {
+        Domaene::SlotsVon(_)
+        | Domaene::NachfahrenVon(_)
+        | Domaene::VorfahrenVon(_)
+        | Domaene::ElementeVon(_) => return,
+        Domaene::Schlange(_) => (
+            "queue",
+            "it names no ELEMENT SET: a queue is an ordinary record with exactly \
+             one array field, and nothing declares head, tail or count -- counting \
+             it would count dead cells («B10», same ground as the `traverse` arm)",
+        ),
+        Domaene::KetteIn { .. } => (
+            "chain(…) in",
+            "a chain ends because its edge is `option index into Self` -- an END is \
+             not a LENGTH, and nothing bounds how many entries the walk passes",
+        ),
+        Domaene::FelderVon(_) => (
+            "fields of",
+            "it binds the NAMES of a record's fields, not entries -- there is nothing \
+             to count, and the field list is fixed at translation time",
+        ),
+        Domaene::Threads => (
+            "threads",
+            "how many there are is a statement about the machine, not the declaration \
+             -- nothing bounds it and nothing addresses it",
+        ),
+        Domaene::AbbildungenVon(_) => (
+            "mappings of",
+            "a run-time traversal over the leaf set holds no cost promise (SPRACHE.md \
+             §6) -- and a `count` IS such a traversal, not a statement about the set",
+        ),
+    };
+    // The place of the domain carries the span where it names one; `threads`
+    // and `fields of` name none, so the `count` does (`domaenenort` above).
+    let span = domaenenort(d).map(|o| o.span).unwrap_or(span);
+    absagen.schiebe(
+        Absage::fehler(
+            "D025",
+            span,
+            format!("`count` over `{wort}` in {}: {}", st.wort(), grund),
+        )
+        .mit_notiz(
+            "four domains carry a length out of the declaration -- `slots of`, \
+             `descendants of`, `ancestors of`, `elems of` -- and a `count` over \
+             any of them is writable",
+        ),
+    );
 }
 
 /// **`D021` -- the base name of a place in a PREDICATE resolves.**

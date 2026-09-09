@@ -988,6 +988,22 @@ MUTATIONEN = [
         "D021 -- a `reaches … via` predicate stops naming its endpoints, and that is the "
         "form `messung/fragmente/F01.gab` carried with an undeclared `WURZEL`",
     ),
+    # **`D025`, one mutation.** The `threads` arm of `zaehlbar_pruefen` returns instead
+    # of refusing: a `count` over a domain with no length passes again. Probe 693 is
+    # the witness -- it expects D025 among its refusals, so it falls either way, whether
+    # the binder rule behind it stays silent or answers with D024.
+    Mutation(
+        "zaehlung-ueber-threads-geht-durch",
+        "domaene.rs",
+        "        Domaene::Threads => (\n"
+        '            "threads",\n'
+        '            "how many there are is a statement about the machine, not the declaration \\\n'
+        '             -- nothing bounds it and nothing addresses it",\n'
+        "        ),",
+        "        Domaene::Threads => return,",
+        "D025 -- a `count` over `threads` passes again: an END is not a LENGTH, and "
+        "nothing bounds how many entries the walk passes. Probe 693 is the witness.",
+    ),
     # **`N054`, one mutation.** The shape half of the feature demand -- the half that needs
     # no declared list. `Has(RDTSCP, XSAVE)` reads as a demand for two features and is one.
     Mutation(
@@ -1280,12 +1296,46 @@ MUTATIONEN = [
         "und schaltet `K002` still ab. Genau der Zustand vom 2026-08-20: 0 Fehler ueber "
         "einer unbewachten Sperre",
     ),
+    # **`K011`, one mutation** -- the sibling of `K010` directly above: a symbolic `held`
+    # promise fell out of the map there, here a symbolic deadline passes again. Probe 695
+    # is the witness (`K012` stays silent -- no `arch` declared anywhere -- and so does
+    # `N056`, whose probe resolves nowhere).
+    Mutation(
+        "frist-ohne-zahl-geht-durch",
+        "kosten.rs",
+        "            if u.konst_wert(modul, &d.zahl).is_none() {",
+        "            if false && u.konst_wert(modul, &d.zahl).is_none() {",
+        "K011 -- a symbolic deadline passes again: a falsifier probes a number, not a "
+        "formula. Probe 695 is the witness.",
+    ),
+    # **`K012`, one mutation.** A date on a machine the unit never declares passes again.
+    # Probe 696 is the witness (the number reads, so no `K011`; the probe resolves
+    # nowhere, so no `N056`).
+    Mutation(
+        "frist-ohne-maschine-geht-durch",
+        "kosten.rs",
+        "            if !arches.is_empty() && !arches.contains(&d.arch.text) {",
+        "            if false && !arches.is_empty() && !arches.contains(&d.arch.text) {",
+        "K012 -- a deadline on an undeclared machine passes again: a reach nobody can "
+        "take. Probe 696 is the witness.",
+    ),
     Mutation(
         "traversierung-kostenlos",
         "kosten.rs",
         '                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),',
         '                (Kosten::Zahl(rumpf), Some(_)) => Kosten::Zahl(rumpf),',
         "eine Traversierung zaehlt nicht Rumpfkosten x Domaenenschranke",
+    ),
+    # **`N056`, the deadline arm.** A falsifier that resolves to a function which
+    # cannot refute passes again. Probe 697 is the witness (an in-unit `-> u64`
+    # probe: a value, not a verdict).
+    Mutation(
+        "fristsonde-ohne-urteil-geht-durch",
+        "namen.rs",
+        "            if let Some(d) = &f.deadline {",
+        "            if let Some(d) = None::<&Frist> {",
+        "N056 -- a deadline falsifier that resolves to a function which cannot "
+        "refute anything passes again. Probe 697 is the witness.",
     ),
     Mutation(
         "pure-neben-allem",
@@ -2195,6 +2245,18 @@ MUTATIONEN = [
         "                TypExpr::Index { tabelle, optional: true, .. } if tabelle.text == t.name.text => {}",
         "                _ if true => {}\n                #[allow(unreachable_patterns)]\n                TypExpr::Index { tabelle, optional: true, .. } if tabelle.text == t.name.text => {}",
         "D007/D008 -- eine Kante darf ein `u32` sein oder in eine fremde Tabelle zeigen; enden koennen muss sie dann nicht mehr",
+    ),
+    # **`D026`, one mutation.** The refusal in `eigner` becomes an early return: an
+    # `owner` table whose mark nobody holds passes again. Probe 694 is the witness.
+    Mutation(
+        "eigner-ohne-halter-geht-durch",
+        "kbedingung.rs",
+        "        let Some(m) = &t.eigner else { return };",
+        "        let Some(m) = &t.eigner else { return };\n"
+        "        let _ = m;\n"
+        "        return;",
+        "D026 -- an `owner` table passes again: the mark nobody holds reads as a "
+        "discipline. Probe 694 is the witness.",
     ),
     Mutation(
         "nominale-typen-sind-austauschbar",

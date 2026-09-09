@@ -1,0 +1,20 @@
+-- erwartet: D026
+-- **An `owner` table whose mark nobody holds.**
+--
+-- The grammar («SG-9») promises that every access to the table holds the mark
+-- and that nobody mints it -- and says nothing about who mints the FIRST one.
+-- A guard nobody holds is a sentence, not a discipline, so the checker refuses
+-- the clause by name instead of claiming a memory safety no pass enforces.
+-- Until the producer story stands, an `owner` table is unwritable: remove the
+-- clause and guard the table with `protects`.
+module gift::eigner_ohne_erzeuger {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+}

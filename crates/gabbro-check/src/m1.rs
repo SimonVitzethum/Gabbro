@@ -1566,6 +1566,25 @@ impl<'a> Pruefer<'a> {
             //
             // Found by `instrumente/fuzze-grenzen.py`, in the sweep that took the ladder to
             // every rule of the grammar that has a literal slot.
+            // **«SG-24»: a count is a number between nothing and everything.**
+            //
+            // At most every entry satisfies the predicate, at fewest none -- so the
+            // result is `0 ..= N` with `N` the domain bound the declaration names
+            // (`domaenenschranke`, the SAME reader `kosten.rs` and «H2.1» use). Where
+            // the declaration names no bound there is no narrowing either (W10: a
+            // bound that is not proved is not narrowed) -- and the domain itself was
+            // already refused by `domaene.rs` (`D025`), so one fault keeps one refusal.
+            ExprArt::Zaehle { domaene, .. } => {
+                let sicht = crate::domaene::Sicht {
+                    u: self.u,
+                    modul: &self.modul,
+                    lokal: &lage.lokal,
+                };
+                match sicht.domaenenschranke(domaene) {
+                    Some(n) => Typ::Ganzzahl(IntBereich::genau(64, false, 0, n)),
+                    None => Typ::Unbekannt,
+                }
+            }
             ExprArt::Zahl(v) => match i128::try_from(*v) {
                 Ok(w) => Typ::Ganzzahl(IntBereich::konstante(w)),
                 Err(_) => {
@@ -4818,6 +4837,12 @@ fn enthaelt_ruf(e: &Expr) -> bool {
             Eingebaut::Aligned(a, c) => enthaelt_ruf(a) || enthaelt_ruf(c),
             _ => false,
         },
+        // **«SG-24»** -- a call inside the counted predicate runs once per entry:
+        // facts die at it like at any other call (`rufe_im_ausdruck` funnels
+        // through `alle_ausdruecke` and sees it for the same reason).
+        ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
+            .into_iter()
+            .any(enthaelt_ruf),
         _ => false,
     }
 }

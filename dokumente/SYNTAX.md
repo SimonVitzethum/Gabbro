@@ -48,7 +48,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
 
 > **Partly run on 2026-09-09.** The EBNF-closure branch of `pruefe-syntax.sh`
-> (161 rules, 0 open) and `pruefe-wortschatz.py` (220/220 both readings, speech
+> (160 rules, 0 open) and `pruefe-wortschatz.py` (220/220 both readings, speech
 > test green) ran from this workstation; the full `pruefe-syntax.sh` (it builds
 > with `cargo build --tests`), `pruefe-grammatiktafel.py` and the parser item of
 > `PLAN-GRAMMATIK.md` §4 are still open. A number in this table that a guardian
@@ -612,7 +612,7 @@ not fall.
 | `advances a -> b` | the body's Λ starts with `marke m a` and the `advances` statement moves it (§7) | `Stmt.advances`, `Res.marke` |
 | `retires m from s …` | the body consumes `m`; the assumption is named | `Stmt.retires m s h a` |
 | `effects { writes T, consumes m, allocs m' }` | the contract `V` of the body | `Vertrag`, `RufPasst`, `Λ` |
-| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | checked against the declaration; `Ziel.lean` `ziel_zeit` |
+| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | checked against the declaration; `Ziel.lean` `ziel_zeit_ist_hardware` |
 | `deadline <= n ops arch X falsifier p` | **by when in cycles on `X`** — a hardware outcome, not a second budget | `Hardware.fortschritt a` (the named `progress`-class assumption with its probe); §18 («SG-22») |
 | `decreases e` | the recursion depth is a parameter of the meaning | `rufAt (fuel)` → `logik (abstieg f)` |
 | `by induction over d` | names the scheme; no term | none |
@@ -697,7 +697,7 @@ stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-1
 (* The transition of a `state` field: `transition T.slots[i].s : Idle -> Busy;` names the
    declared transition -- the SAME construct and the same word as a device `transition`
    (§10), one level down, which is what the second version said of the two. That the field
-   STANDS on `Idle` is the writer's logic (`logik uebergang`); that `Idle -> Busy` is DECLARED
+   STANDS on `Idle` is the writer's logic (`logik vorzustand`); that `Idle -> Busy` is DECLARED
    is the shape. The second version wrote `state` transitions through `assign` and left the
    pre-state to a pass. `shiftplace` has no `->` suffix, and the two stage names are
    identifiers, not expressions -- so the arrow is never a pointer suffix. No new word. *)
@@ -737,7 +737,7 @@ enclosing `locks` blocks and the statements before the position:
 | `T.slots[i].f = e;` | `i : index into T`; guards of `T` in Λ; **`writes T` in the contract** | — | `Stmt.assignSlot t f i e hw hL`; theorem `zuweisung_hat_recht` |
 | `p->f = e;` | the same, and `p : ptr<…, rw>` | — | `Stmt.assignDurch` |
 | `G = e;` (static) | guards of `G` in Λ; `writes G` | — | `Stmt.assignGlob` |
-| `transition T.slots[i].s : A -> B;` | `A -> B` declared at `state`; `B` in the field's range; `writes T`; guards | **`logik uebergang`** if the field is not on `A` | `Stmt.uebergang`; theorem `uebergang_erklaert` |
+| `transition T.slots[i].s : A -> B;` | `A -> B` declared at `state`; `B` in the field's range; `writes T`; guards | **`logik vorzustand`** if the field is not on `A` | `Stmt.uebergang`; theorem `uebergang_erklaert` |
 | `x += e;` etc. | SUGAR for `x = x + e;` | — | `Expr.add` |
 | `let x = e;` | binds; `mut` is a surface flag | — | `Block.bind e rest` |
 | `let x = f(…);` | as a call; `f` has a return type and no `or` | — | `Block.bindCall` |
@@ -904,7 +904,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | declaration | reading | Lean |
 |---|---|---|
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
-| `owner m` | `marke m ∈ Λ` at every access | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; no `allocs`, no second owner |
+| `owner m` | `marke m ∈ Λ` at every access — **parsed, and refused as `D026` until the producer stands**: who mints the FIRST mark is unwritten, and a guard nobody holds is a sentence, not a discipline (`kbedingung.rs::eigner`, poison `gift/694`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; no `allocs`, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I … : p` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every `return` of such a function — and **such a function holds the locks of every carrier of `I`** (`U003` as a declaration rule: `invarianten_gehalten`), because it reads them all at `return` | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
 | `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
@@ -1261,7 +1261,7 @@ every sugar as a term of the core, so it has no meaning of its own to get wrong.
 | an owed `invariant` false at `return` | `logik (invariante i)` | logic |
 | a loop `invariant` false at a pass boundary | `logik schleife` | logic |
 | the recursion does not bottom out (`decreases`) | `logik (abstieg f)` | logic |
-| a `state` field is not on the pre-state of its transition | `logik uebergang` | logic |
+| a `state` field is not on the pre-state of its transition | `logik vorzustand` | logic |
 | an `axiom` or foreign body answers outside its declared type | `hardware (annahme a)` | hardware |
 | a `forever … progress a` is not ended by the environment | `hardware (fortschritt a)` | hardware |
 | a float result leaves its declared range or is not finite (IEEE rounding) | `hardware ieee` | hardware |
@@ -1308,7 +1308,9 @@ and this section says for each what carries it. Nothing below is an error class 
 
 ## 17. What moves in the corpus when the third version replaces the second
 
-Measured against the 70 clean examples by reading, not by running (item 8 above):
+Measured against the 70 clean examples by reading, not by running (item 8 above);
+the fourth version adds `beispiele/71` (measured by running: checks clean,
+lowers, `cc` accepts at `-O0`/`-O2`):
 
 * `u32` without `in`, `f64` without `in` — everywhere — **SUGAR, nothing moves**;
 * signed `/` or `%`, or a `/` with a signed numerator — **refused**; to be measured (W10);
@@ -1320,7 +1322,8 @@ Measured against the 70 clean examples by reading, not by running (item 8 above)
 * `on_exceeded ident` — **SUGAR**;
 * a `state` field written with `=` and a plain value — **refused**; written as `transition … : A -> B;`
   («SG-19»); to be counted;
-* `owner` — **no site**; the word did not exist;
+* `owner` — **no site**; parses, refused as `D026` (the word did not exist
+  before «SG-9»);
 * `shared` at a `table`/`static` — **every carrier `H013` finds reachable from two contexts
   must say it**; to be counted from `H013`'s own output;
 * `requires Held(L)` that does not name the whole held set at a call — **refused** («SG-20»);
@@ -1329,10 +1332,14 @@ Measured against the 70 clean examples by reading, not by running (item 8 above)
   `R005`/`R006` refuse these today, so the corpus has none;
 * `publishes { … }` with a set other than the declared — **refused**; `V001`–`V004` refuse
   these today.
-* `count k in slots of T : p` — **no site**; the production is new («SG-24»);
-  the word `count` is old.
-* `deadline <= n ops arch X falsifier p` — **no site**; the word and the clause
-  are new («SG-22»).
+* `count k in slots of T : p` — **`beispiele/71`** (with a parameter capture,
+  `schwelle`); poison `gift/693` (`D025`, count over `threads`).
+* `deadline <= n ops arch X falsifier p` — **`beispiele/71`** (with `arch
+  x86_64` on the function); poison `gift/695` (`K011`, symbolic number),
+  `gift/696` (`K012`, undeclared machine), `gift/697` (`N056`, probe without a
+  verdict).
+* `table T owner m` — **no site**; parses, refused as `D026` (poison
+  `gift/694`) until the producer stands.
 * a first match, a non-index option, a runtime-length tail — **nothing moves**;
   all three were already writable («SG-25»–«SG-27» name the idiom, they add no
   production).
@@ -1359,8 +1366,8 @@ shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
 
 | | production | writer still proves by hand | carried by | Lean |
 |---|---|---|---|---|
-| **«SG-22» time split** | `deadline <= n ops arch X falsifier p` at `fn` (NEW, §6) | the `ops` number, honestly and tightly, like `costs`; the falsifier probe for the cycles on `X` | the budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) is logic checked against the declaration; a missed deadline is **`hardware (fortschritt a)`** — the named environment assumption, not a silent reinterpretation of `ops` | `Hardware.fortschritt`; `Ziel.lean` `ziel_zeit` |
-| **«SG-23» payload order** | CHANGED (checker rule, same class as `H102`): `A = e publishes {p,q};` must directly follow the writes of `{p,q}`, `let x = A awaits {p,q};` directly before their reads (same sets as «SG-13») | the logic of what is published | the **order** — the sets are shape (`hp : payload = nutzlast g`), the sequence is a checker rule in `PLAN-UMSETZUNG.md`, closing RACE #21 (`V006`/`V007`) with «SG-13» | `Stmt.publish`, `Block.awaits` |
+| **«SG-22» time split** | `deadline <= n ops arch X falsifier p` at `fn` (NEW, §6) | the `ops` number, honestly and tightly, like `costs`; the falsifier probe for the cycles on `X` | the budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) is logic checked against the declaration; a missed deadline is **`hardware (fortschritt a)`** — the named environment assumption, not a silent reinterpretation of `ops`. Structural checks: the number reads (`K011`), the machine is declared (`K012`, R16); the probe's shape, when it resolves in-unit, is held by `N056` (same tail as `retires`), an unresolved probe is a program next to the tree; `unfalsifiable` stays legal and marked, and the manifest carries `frist_<fn>_eingehalten` with the class | `Hardware.fortschritt`; `Ziel.lean` `ziel_zeit_ist_hardware` |
+| **«SG-23» payload order** | DOCUMENTED (already enforced): `A = e publishes {p,q};` after the writes of `{p,q}`, `let x = A awaits {p,q};` before their reads (same sets as «SG-13») | the logic of what is published | the **order** — enforced since 2026-08-19 by `V006`/`V007` in `paarung.rs` (write-after-publish, read-before-await, `if`-evasion closed 2026-08-20); this version names the rule in the grammar instead of leaving it checker-only | `Stmt.publish`, `Block.awaits` |
 | **«SG-24» counting** | `count k in slots of T : p` as an expression (NEW, §4) | the predicate `p` | the traversal that counts it — SUGAR for a call to the table's **generated** count function, like `ops insert/remove` (§9): `Block.bindCall` with its `requires`; over **one** table only, a cross-table count is a `group` invariant, never a hand-maintained counter | `Block.bindCall` |
 | **«SG-25» first match** | NO new syntax: bind the result into a variable before the loop, `leave` out, read it after | which match is first (the logic) | termination and the bound — still from the domain; `assignVar` plus `leave`, never a hand-threaded cursor or bitmap | `Stmt.assignVar`, `Stmt.leave` |
 | **«SG-26» general option** | NO new syntax: over non-index `T` spell the two-case `tagged` sum; `match` over it is exhaustive by shape | the case split | the shape — over `index into T` it stays the carrier's index option (`Expr.some`/`none`); nothing is lost and no constructor is added for what a declaration already says | `Ty.sum`, `Arms` |
@@ -1403,18 +1410,25 @@ by the grammar (§15, §16.2).
       corpus measurement (`PLAN-GRAMMATIK.md` §4).
 - [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09.
 - [x] **A byte-addressed place** — `leseBytes`/`schreibBytes`, evening of 2026-09-09.
-- [ ] **The implementation in checker and emitter** — `PLAN-UMSETZUNG.md`
-  (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`). Until it lands,
-  `pruefe-grammatiktafel.py` names the arrears honestly: `owner` («SG-9») and
-  `deadline` («SG-22») are UNGEDECKT — allowed by the grammar, lowered by no
-  program, named by no diagnostic. That red is the work list, not a refutation:
-  covering a word needs the checker rule first, and the rule is written.
-- [ ] **`pruefe-syntax.sh` prose branch flags `logik uebergang` (×3).**
-  Pre-existing from the third version, not from §18 (which adds zero new
-  prose hits — measured). The word is the Lean outcome constructor
-  (`Logik.uebergang`), not the abolished keyword, but the guardian cannot see
-  the difference and it is right not to try: a rename needs a project-wide
-  decision (Lean ctors, checker aliases, §7/§16 prose), not a quiet edit here.
+- [x] **The implementation in checker and emitter** — `PLAN-UMSETZUNG.md`
+  (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
+  (`K011`/`K012`, `N056` for the probe, `frist_` manifest entry) and `count`
+  checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
+  counter lowering in `emit.rs` — all green, `beispiele/71` lowers and `cc`
+  accepts at `-O0`/`-O2`. `owner` parses and is refused as `D026`
+  (poison `gift/694`); the producer story is the open item, named at the
+  clause and in §9.
+- [ ] **The `owner` producer** — which linear value becomes the first mark, and
+  at whose hands. Until it stands, `D026` is the whole implementation, and the
+  Lean theorems about `eigner` are true but unapplied.
+- [x] **`pruefe-syntax.sh` prose branch flagged `logik uebergang` (×3) — renamed.**
+  The word was the Lean outcome constructor (`Logik.uebergang`), not the
+  abolished keyword, but the guardian cannot see the difference and it is right
+  not to try. The outcome is now `Logik.vorzustand` (the pre-state, PFLICHTEN.md
+  «B26» — a word that was never a keyword): `Semantik.lean` ctor plus its two
+  uses, three prose cells here. `Stmt.uebergang` and `uebergang_erklaert` stand
+  — the guardian does not read dotted names, and the statement is not the
+  outcome.
 - [ ] The four marks of the second version stand: `narrow` count ≤ 24 sites; the 17 logic
       obligations against `by induction over`; cost truth per compiled module; the ten
       fragments on this syntax, guardians green.

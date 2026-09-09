@@ -962,6 +962,54 @@ pub const D1D2: &[Satz] = &[
                      programmlogik/PLAN.md §15; beispiele/gift/690",
     },
     Satz {
+        name: "d.zaehlungbrauchtlaenge",
+        kennungen: &["D025"],
+        aussage: "A `count` RUNS over its domain, so the domain must have a length. \
+                  Four domains do -- `slots of`, `descendants of`, `ancestors of`, \
+                  `elems of` -- each with a bound the cost pass reads; five do not \
+                  (`chain(…) in` ends but has no length, `fields of` binds names not \
+                  entries, `threads` hangs on no declaration, `mappings of` holds no \
+                  cost promise over a run-time traversal), and each is refused by \
+                  name rather than priced at nothing.",
+        vorbehalt: "The refusal comes before any binder rule: where `D025` fires, \
+                    `D022`/`D023`/`D024` stay silent about the same fault -- one \
+                    fault, one refusal (the `D022`-after-`D017` reservation, one \
+                    construct over). The cost pass reads the same kind list and \
+                    counts open without refusing where this rule fired \
+                    (`kosten.rs`, the twin that breaks with it). What it does NOT \
+                    do is give `queue` a length: counting dead cells is not a \
+                    missing lowering but a wrong set («B10»).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/693: `count k in threads : k == k` in a body -- \
+                      3 items, 1 error, and it is `D025`. The counter-direction is \
+                      the corpus: no clean file counts over a refused domain.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs (`zaehlbar_pruefen`); \
+                     beispiele/gift/693",
+    },
+    Satz {
+        name: "d.eignerbrauchtgeschicht",
+        kennungen: &["D026"],
+        aussage: "A `table … owner m` clause is parsed and refused by name. The \
+                  grammar promises that every access holds the mark and nobody \
+                  mints it -- and says nothing about who mints the FIRST one. A \
+                  guard nobody holds is a sentence, not a discipline, so until the \
+                  producer story stands the clause is unwritable: remove it and \
+                  guard the table with `protects`.",
+        vorbehalt: "This is deliberately NOT the M2 mark discipline deferred: there \
+                    is nothing to defer, because no producer exists to defer it to. \
+                    The day a producer is named (which linear value becomes the first \
+                    mark, and at whose hands), this sentence is replaced by the rule \
+                    that holds it -- not extended. Until then an `owner` table has \
+                    zero sites, and the grammar table carries the word as refused, \
+                    not as lowered.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/694: `table Plaetze count 8 owner Marke` -- \
+                      3 items, 1 error, and it is `D026`. Zero corpus sites carry \
+                      the clause.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`eigner`); \
+                     beispiele/gift/694",
+    },
+    Satz {
         name: "n.merkmalsform",
         kennungen: &["N054"],
         aussage: "A machine feature demand names ONE feature, and a feature is a bare name. \
@@ -2164,6 +2212,47 @@ pub const KOSTEN: &[Satz] = &[
                       not the rule. See `messung/K001-DOMAENENSCHRANKE.md`.",
         fundstelle: "crates/gabbro-check/src/domaene.rs (line 82), umgebung.rs \
                      (`walkschranken`); MESSUNGEN.md:6307; SPRACHE.md:906",
+    },
+    Satz {
+        name: "kosten.fristzahl",
+        kennungen: &["K011"],
+        aussage: "A `deadline <= N ops arch X falsifier p` dates with a NUMBER. The \
+                  falsifier probes one number per run; a formula is not false, it is \
+                  unprobable -- `K005` refused the same shape at `costs` for the same \
+                  reason. What the number MEANS, honestly and tightly, is the \
+                  writer's logic like `costs` itself: no pass re-measures a cycle \
+                  count from the source.",
+        vorbehalt: "No rule holds the two numbers against each other, and that is \
+                    not an omission: `costs` counts Gabbro primitives, `deadline` \
+                    counts cycles on `X` -- different units, and a comparison would \
+                    be a conversion lemma wearing a rule's clothes.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/695: `deadline <= n * 2 ops …` over a parameter \
+                      -- 2 items, 1 error, and it is `K011`. The unit names no \
+                      `arch`, so `K012` stays silent (R16); the probe resolves \
+                      nowhere, so `N056` stays silent with it.",
+        fundstelle: "crates/gabbro-check/src/kosten.rs; beispiele/gift/695",
+    },
+    Satz {
+        name: "kosten.fristmaschine",
+        kennungen: &["K012"],
+        aussage: "A `deadline … arch X …` names a machine the unit declares. Same \
+                  question `A005` asks of an `assume`: a date on a machine that is \
+                  never in force still travels in the artefact beside the assumption \
+                  set, and a reader takes a reach out of it that does not exist. \
+                  Without a single `arch` declaration nothing is refused (R16, same \
+                  as at `A005`).",
+        vorbehalt: "The probe the clause names is held by `N056` (same tail, same \
+                    reading as `retires`): a probe that resolves in-unit must be \
+                    able to refute, one that resolves nowhere is a program next to \
+                    the tree. An `unfalsifiable` tail stays legal and marked -- the \
+                    manifest entry carries the class, so an unprobed date never \
+                    looks measured.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/696: `deadline <= 100 ops arch riscv …` with \
+                      `arch x86_64` on the function -- 2 items, 1 error, and it is \
+                      `K012`. The number reads, the probe resolves nowhere.",
+        fundstelle: "crates/gabbro-check/src/kosten.rs; beispiele/gift/696",
     },
     Satz {
         name: "kosten.haltezeit",

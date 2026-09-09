@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~100~~ 101 Sätze über 12 von 12 Pässen (52 am 2026-08-21, 96 und 98 im Lauf davor), keiner bewiesen** *(gemessen 2026-09-03 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 94 over 12 passes -- 87 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, 228 Codes beansprucht, 275 vergeben; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~101~~ 105 Sätze über 12 von 12 Pässen (52 am 2026-08-21, 96 und 98 im Lauf davor, 100 davor), keiner bewiesen** *(gemessen 2026-09-03 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 94 over 12 passes -- 87 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, 228 Codes beansprucht, 275 vergeben; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
 steht nach dem, was die Ziele einlöst. Der alte Pfad ist damit nicht widerlegt: seine offenen
@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 225 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 229 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *223 → 224 on 2026-09-07: `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md`
       joined — the census of what is open at the checker and at the grammar, whose one
       finding is a CLASS: three sites where `pruefe` reports zero errors, `emit` returns 0,
@@ -809,7 +809,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
       sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**.
       **Seit dem 2026-08-20 stehen beide Zahlen im Register und nicht mehr nur im Bericht:**
-      **168 besetzte Zellen** stehen daneben, **25 nur im Gift** — und `gabbro blindstellen`
+      **169 besetzte Zellen** stehen daneben, **24 nur im Gift** — und `gabbro blindstellen`
       druckt die vier Zahlen getrennt, *auf Ausdruck*, weil ein Einzelwert zwei Wochen später
       wie Fortschritt aussieht.
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
@@ -821,7 +821,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **105 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 125 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 129 sind tragend, 7 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
       eine Eigenschaft der Zusage in ihrem eigenen Text — die TRAGENDE Spalte wächst, nicht
       die unklare.*
@@ -924,7 +924,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute ~~3299~~ ~~3303~~ ~~3324~~ ~~3328~~ ~~3355~~ ~~3358~~ ~~3423~~ ~~3426~~ ~~3499~~ **3538 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.  *3426 → 3499 am 2026-09-08:* die beiden Regeln dieses Laufs — `M146` (eine Bruchschranke an einem Ganzzahltyp) und `S009` (eine `-> never`-Routine, die zurückkehrt) — bringen ihre zwei Sätze im Passregister, ihre zwei Giftproben und drei Prüfungen mit **einer Bahn je Stelle, an der ein Bereich stehen darf**: dreiundsiebzig Fortsetzungen mehr, **0 kleben**. *3358/3423 → 3426 am 2026-09-08:* **zwei Bahnen haben dieselbe Zahl bewegt, und die zusammengeführte ist keine von beiden** — der Lean-Kanal (+3) und die Binderregel `D022`/`D023` (+68) standen einzeln bei 3358 und 3423; nachgemessen im gemeinsamen Baum sind es **3426**. *Eine Zahl, die zwei Zweige einzeln buchen, ist beim Zusammenführen zu MESSEN und nicht zu addieren.* *3355 → 3358 am 2026-09-08:* der Lean-Kanal bekam die Lochphase in `gabbro_calls` und die zwei weiteren Schleifenformen der Rekursion — **drei Fortsetzungen mehr, 0 kleben.** *3328 → 3355 am 2026-09-08:* der Lean-Kanal bekam den Passzähler und die sechs neuen Absagegründe — **siebenundzwanzig Fortsetzungen mehr, 0 kleben.** *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute ~~3299~~ ~~3303~~ ~~3324~~ ~~3328~~ ~~3355~~ ~~3358~~ ~~3423~~ ~~3426~~ ~~3499~~ ~~3538~~ **3629 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.  *3538 → 3629 am 2026-09-09:* die vierte Syntaxfassung (`deadline`, `count`, `owner`, vier neue Absagecodes, fünf neue Sätze, sieben Gift- und Beispielprogramme) bringt ihre Bahnen mit — **einundneunzig Fortsetzungen mehr, 0 kleben**. *3426 → 3499 am 2026-09-08:* die beiden Regeln dieses Laufs — `M146` (eine Bruchschranke an einem Ganzzahltyp) und `S009` (eine `-> never`-Routine, die zurückkehrt) — bringen ihre zwei Sätze im Passregister, ihre zwei Giftproben und drei Prüfungen mit **einer Bahn je Stelle, an der ein Bereich stehen darf**: dreiundsiebzig Fortsetzungen mehr, **0 kleben**. *3358/3423 → 3426 am 2026-09-08:* **zwei Bahnen haben dieselbe Zahl bewegt, und die zusammengeführte ist keine von beiden** — der Lean-Kanal (+3) und die Binderregel `D022`/`D023` (+68) standen einzeln bei 3358 und 3423; nachgemessen im gemeinsamen Baum sind es **3426**. *Eine Zahl, die zwei Zweige einzeln buchen, ist beim Zusammenführen zu MESSEN und nicht zu addieren.* *3355 → 3358 am 2026-09-08:* der Lean-Kanal bekam die Lochphase in `gabbro_calls` und die zwei weiteren Schleifenformen der Rekursion — **drei Fortsetzungen mehr, 0 kleben.** *3328 → 3355 am 2026-09-08:* der Lean-Kanal bekam den Passzähler und die sechs neuen Absagegründe — **siebenundzwanzig Fortsetzungen mehr, 0 kleben.** *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
@@ -1203,7 +1203,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **381 von 398 Ankern** greifen (`--anker`, nachgemessen 2026-09-08; die siebzehn, die INS LEERE greifen, sind alle in `lean.rs` und standen schon vor diesem Lauf so — *ein toter Anker misst nichts und faellt trotzdem unter `ungueltig`, also laeuft die Quote sonst ueber einer schrumpfenden Bezugsgroesse und liest sich wie Deckung.* 397 → 398 an diesem Tag: `binder-ohne-typ` musste MITWANDERN, weil `binder_typ` seine vierte Domaene bekam, und `elems-binder-ohne-schranke` kam als eigener Anker daneben; 2026-09-07; die Zahl stand am selben Tag noch bei 385 —
+      fällt. Mutationskatalog: **386 von 403 Ankern** greifen (`--anker`, nachgemessen 2026-09-09; die siebzehn, die INS LEERE greifen, sind alle in `lean.rs` und standen schon vor diesem Lauf so — *ein toter Anker misst nichts und faellt trotzdem unter `ungueltig`, also laeuft die Quote sonst ueber einer schrumpfenden Bezugsgroesse und liest sich wie Deckung.* 397 → 398 an diesem Tag: `binder-ohne-typ` musste MITWANDERN, weil `binder_typ` seine vierte Domaene bekam, und `elems-binder-ohne-schranke` kam als eigener Anker daneben; 2026-09-07; die Zahl stand am selben Tag noch bei 385 —
       **387 → 388** durch `let-else-ruf-schuldet-keine-vorbedingung`: `pflichten::rufe_im_block`
       sah einen Ruf in einem `let … else` nicht an, und jede Vorbedingung des Gerufenen fiel
       damit STILL aus dem Register. Nachgemessen auf dem Server: die Mutation übersetzt und
@@ -3250,7 +3250,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**116 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**117 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
@@ -3989,7 +3989,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7874 von 24591 Kommentarzeilen** im Pruefer sind deutsch
+**7894 von 24591 Kommentarzeilen** im Pruefer sind deutsch
  1069 von  6496 in den Instrumenten
   415 von  1448 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -4236,7 +4236,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 101 Sätze über 285 Codes, 51 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 105 Sätze über 289 Codes, 53 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*

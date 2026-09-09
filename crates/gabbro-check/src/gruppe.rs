@@ -586,6 +586,13 @@ fn expr_namen(e: &Expr, aus: &mut Vec<String>) {
             Eingebaut::Sizeof(TypOderOrt::Typ(_)) | Eingebaut::Lenof(TypOderOrt::Typ(_)) => {}
         },
         ExprArt::Alt(o) => aus.push(o.basis.text.clone()),
+        // **«SG-24»** -- like the `Quantor` arm of `pred_namen` above: the domain's
+        // carrier and the rumpf's names. A carrier named only inside the counted
+        // predicate is named as surely as one in the outer predicate.
+        ExprArt::Zaehle { domaene, rumpf, .. } => {
+            domaene_namen(domaene, aus);
+            pred_namen(rumpf, aus);
+        }
         _ => {}
     }
 }

@@ -441,6 +441,30 @@ pub(crate) fn fuer_jedes_item(baum: &Programm, f: &mut impl FnMut(&Item)) {
 /// `assume` und `axiom` fuehren dieselbe Klasse (`AnnahmeKlasse`), und beide duerfen einen
 /// Fortschritt tragen -- *wer die Schleife beendet, kann eine Umgebungszusage sein oder eine
 /// Maschineneigenschaft.*
+/// Every `arch` word this unit declares -- at an `entry`, an `entrust`, a `boot`,
+/// a function.
+///
+/// Second reader beside `namen.rs::annahme_arch`, which reads the same five arms
+/// for `A005` and cannot lend them: that function refuses inside its walk, and
+/// splitting collection from refusal would rewrite its lines (the anchor
+/// catalogue matches them literally). *Two readers, one declaration -- the twin
+/// is named here so a third reader does not grow beside it.*
+pub fn deklarierte_architekturen(baum: &Programm) -> Vec<String> {
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Entry(e) => aus.push(e.arch.text.clone()),
+        ItemArt::Entrust(e) => aus.push(e.arch.text.clone()),
+        ItemArt::Boot(b) => aus.push(b.arch.text.clone()),
+        ItemArt::Funktion(f) => {
+            if let Some(a) = &f.arch {
+                aus.push(a.text.clone());
+            }
+        }
+        _ => {}
+    });
+    aus
+}
+
 pub fn annahmen(baum: &Programm) -> std::collections::BTreeMap<String, bool> {
     let mut aus = std::collections::BTreeMap::new();
     crate::fuer_jedes_item(baum, &mut |item| {
@@ -980,6 +1004,10 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         // **Ein Ort trägt Ausdrücke** — in jedem `[…]`. Das war die eine vergessene Kante.
         ExprArt::Ort(o) | ExprArt::Alt(o) => aus.extend(ausdruecke_im_ort(o)),
         ExprArt::Ruf(r) => aus.extend(r.argumente.iter()),
+        // **«SG-24»: a count carries its predicate** -- the expressions the predicate
+        // reads are read here too, or `effects { pure }` would cover a `count` over
+        // foreign writes (same class as the `Folgt`/`Quantor` hole of 2026-08-20).
+        ExprArt::Zaehle { rumpf, .. } => aus.extend(ausdruecke_im_praedikat(rumpf)),
         ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus.push(x),
         ExprArt::Binaer(_, a, b) => {
             aus.push(a);
@@ -1080,7 +1108,11 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             | ExprArt::Ruf(_)
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
-            | ExprArt::Binaer(_, _, _) => {}
+            | ExprArt::Binaer(_, _, _)
+            // **«SG-24»: a count is itself no place** -- its predicate's places arrive
+            // through `alle_ausdruecke`, which descends into the predicate since the
+            // `unterausdruecke` arm above.
+            | ExprArt::Zaehle { .. } => {}
         }
     }
     aus

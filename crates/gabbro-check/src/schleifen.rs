@@ -388,6 +388,13 @@ fn namen_im_ausdruck(e: &Expr, aus: &mut Vec<String>) {
                 namen_im_ausdruck(a, aus);
             }
         }
+        // **«SG-24»** -- names inside the counted predicate move a `decreases`
+        // measure like any other names: the predicate runs, so it reads.
+        ExprArt::Zaehle { rumpf, .. } => {
+            for e in crate::ausdruecke_im_praedikat(rumpf) {
+                namen_im_ausdruck(e, aus);
+            }
+        }
         ExprArt::Eingebaut(b) => match b.as_ref() {
             // **`lenof(s.worte)` nennt einen Ort, und der zaehlt.** Ohne diesen Zweig
             // saehe das Mass aus `FRAGMENTE.md`:1110 wie eine Konstante aus.

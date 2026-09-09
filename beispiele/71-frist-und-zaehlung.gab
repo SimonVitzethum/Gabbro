@@ -1,0 +1,38 @@
+-- 71 -- `deadline` and `count`: the date and the number.
+--
+-- Two clauses of the fourth syntax version («SG-22», «SG-24»), one program. The
+-- `deadline` names by when, on which machine, on whose probe -- the budget
+-- (`costs`) counts Gabbro primitives against the declaration, the date counts
+-- cycles on `x86_64` and is discharged by `sonde_tick`, an external probe the
+-- checker does not resolve (`N056` stays silent for programs next to the tree).
+-- The `count` binds how many slots satisfy the predicate; the predicate may
+-- read the caller's parameter (`schwelle` travels into the generated counter as
+-- an ordinary argument), and the traversal it desugars to falls once, in the
+-- template library, not per program.
+
+module beispiel::frist {
+
+const NSLOTS : u32 = 16;
+
+table Plaetze count NSLOTS {
+    slot {
+        benutzt : bool,
+        wert    : u32 in 0 .. 100,
+    }
+}
+
+lock P protects { Plaetze } rank 1;
+
+impl fn zaehle_werte(schwelle : u32 in 0 .. 100) -> u32 in 0 .. NSLOTS
+    effects { reads Plaetze, reads Plaetze.slots, locks P }
+    costs   <= 500 ops
+    deadline <= 5000 ops arch x86_64 falsifier sonde_tick
+    arch x86_64
+{
+    locks P {
+        let n = count k in slots of Plaetze : Plaetze.slots[k].benutzt && Plaetze.slots[k].wert >= schwelle;
+        return n;
+    }
+}
+
+}

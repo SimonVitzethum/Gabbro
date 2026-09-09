@@ -282,6 +282,20 @@ fn liest_expr(e: &Expr, t: &mut Taten) {
                 liest_expr(a, t);
             }
         }
+        // **«SG-24»** -- the counted predicate runs, so it reads: same decision
+        // as `geteilt.rs::orte_in`, beside the same `aligned` precedent. Missing
+        // it would let a `count` over a carrier pass under `effects { pure }`.
+        // The domain reads too (`domaene_liest`, same as at `traverse`): walking
+        // a carrier's slots touches the carrier, even where the rumpf only
+        // counts.
+        ExprArt::Zaehle {
+            domaene, rumpf, ..
+        } => {
+            domaene_liest(domaene, t);
+            for e in crate::ausdruecke_im_praedikat(rumpf) {
+                liest_expr(e, t);
+            }
+        }
 
         // **`aligned(p, n)` READS `p`, and until 2026-09-01 no pass saw it.** `Eingebaut` was
         // missing from the enumeration, so the whole subtree fell under the catch-all -- the

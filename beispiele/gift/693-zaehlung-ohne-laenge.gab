@@ -1,0 +1,28 @@
+-- erwartet: D025
+-- **A `count` that RUNS over a domain that has no length.**
+--
+-- `threads` names no set (D024), so nothing bounds how many entries the walk
+-- would pass -- an END is not a LENGTH, and neither are the other three refused
+-- domains (`chain(…) in`, `fields of`, `mappings of`, each for its own reason in
+-- `domaene.rs::zaehlbar_pruefen`). *A form whose cost nobody can bound is not
+-- cheap; it is unwritten.*
+--
+-- The refusal comes before any binder rule: `D025` fires, so `D022`/`D023`/`D024`
+-- stay silent about the same fault -- one fault, one refusal.
+module gift::zaehlung_ohne_laenge {
+
+table Plaetze count 8 {
+    slot {
+        benutzt : bool,
+    }
+}
+
+impl fn f() -> u32 in 0 .. 8
+    effects { pure }
+    costs   <= 100 ops
+{
+    let n = count k in threads : k == k;
+    return n;
+}
+
+}

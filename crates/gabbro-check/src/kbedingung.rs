@@ -338,6 +338,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     erschoepfendes_match(baum, absagen);
     baumkanten(baum, absagen);
     belegtfeld(baum, absagen);
+    eigner(baum, absagen);
     // **The other half of `D001`** (2026-08-28): this pass forbids the hand mutation, and
     // `crate::opsruf` holds the generated operation that takes its place -- `D012` demands
     // that the proof's premises stand where it is called. *A prohibition whose replacement
@@ -696,6 +697,42 @@ fn belegtfeld(baum: &Programm, absagen: &mut Absagen) {
             }
             None => {}
         }
+    });
+}
+
+/// **D026 -- `owner m` is parsed and refused, by name** («SG-9»).
+///
+/// The grammar promises that every access to the table holds the mark `m`, and
+/// that nobody mints it (`eigner_nie_erzeugt`, `Syntax.lean`). What it does not
+/// say is who mints the FIRST one -- and a guard nobody holds is a sentence,
+/// not a discipline. Until the producer story stands (which linear value
+/// becomes the first mark, and at whose hands), the checker refuses the clause
+/// instead of claiming a memory safety no pass enforces. *Open item, named in
+/// SYNTAX.md §9 -- not a gap in the goal, which speaks about what the language
+/// carries, and an uncarried guard is not carried.*
+fn eigner(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Tabelle(t) = &item.art else { return };
+        let Some(m) = &t.eigner else { return };
+        absagen.schiebe(
+            Absage::fehler(
+                "D026",
+                m.span,
+                format!(
+                    "`table {}` names `owner {}`, and no pass holds that mark yet",
+                    t.name.text, m.text
+                ),
+            )
+            .mit_notiz(
+                "the grammar promises a guard (`SYNTAX.md` §9) that the checker \
+                 cannot enforce: who mints the FIRST mark is unwritten, and a \
+                 guard nobody holds is a sentence, not a discipline",
+            )
+            .mit_notiz(
+                "until the producer story stands, an `owner` table is unwritable \
+                 -- remove the clause and guard the table with `protects`",
+            ),
+        );
     });
 }
 

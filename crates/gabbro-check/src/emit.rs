@@ -195,6 +195,15 @@ struct Namen {
     /// no table, carries no fields and is not a pointer -- so a DOMAIN over it can be
     /// lowered to nothing, and `ort` would write `i->slots` about an `unsigned int`.
     laufvariablen: BTreeSet<String>,
+    /// **Enclosing `traverse` binders a `count` may close over («SG-24»): name and
+    /// C type, innermost last.** One push per loop form at its `laufsicht` call,
+    /// with the loop header's own C type (`traversebinder_ctyp` -- one table, read
+    /// here and at the collection walk, so the two cannot drift): the counter a
+    /// `count` lowers to takes them as parameters, and this stack resolves them --
+    /// the same names C resolves by scope. Every other binder (`match` arms,
+    /// `exchange`, `awaits`, `let … else`) is NOT threaded: closing over one
+    /// refuses by name, and hoisting it into a `let` first is one line.
+    zaehlbinder: Vec<(String, String)>,
     /// **Die Tabellen, die ueber ihren eigenen NAMEN adressiert werden** -- `beispiele/09`:
     /// *„die Tabelle ist der Speicher, ihr Name der Ort."* Sie bekommen ein Objekt
     /// (`T_speicher`); die anderen nicht, denn *eine ungenutzte Groesse im erzeugten C ist
@@ -2387,6 +2396,27 @@ pub fn emittiere_mit(
              or an assignment, the declaration does not say",
         ),
     });
+    // **«SG-24»: every counter of the unit, defined.** Between the declarations and
+    // the bodies: after the table storage they read (`tabelle()` wrote it into `aus`
+    // above), before the bodies that call them (`rumpf` joins below). Per-item
+    // emission cannot carry them -- source order is free, so a counter emitted at
+    // its function could precede its table -- and the bodies cannot either, being
+    // what the counters are called from. *The same reason all prototypes precede
+    // all bodies, one construct over.*
+    {
+        let mut zaehler = String::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            if let ItemArt::Funktion(f) = &item.art {
+                // `spec fn` emits nothing, and neither do its counters.
+                if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                    return;
+                }
+                let eigen = eigene_sicht(f, &namen);
+                zaehler_funktion(f, &eigen, &mut zaehler, absagen);
+            }
+        });
+        aus.push_str(&zaehler);
+    }
     aus.push_str(&rumpf);
     aus
 }
@@ -2952,6 +2982,10 @@ fn enthaelt_bitnicht(e: &Expr) -> bool {
         ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => enthaelt_bitnicht(x),
         ExprArt::Binaer(_, a, b) => enthaelt_bitnicht(a) || enthaelt_bitnicht(b),
         ExprArt::Ruf(r) => r.argumente.iter().any(enthaelt_bitnicht),
+        // **«SG-24»** -- a `~` inside the counted predicate unfolds nothing either.
+        ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
+            .into_iter()
+            .any(enthaelt_bitnicht),
         ExprArt::Zahl(_)
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
@@ -3884,6 +3918,9 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Op
         // branch -- a new variant asks instead of passing.*
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
+        // **«SG-24»** -- a count is a run-time number, not an address: a bank base
+        // over one names no register field of this device.
+        | ExprArt::Zaehle { .. }
         | ExprArt::Unaer(_, _) => {
             weigere(
                 absagen,
@@ -4955,6 +4992,20 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
         | ExprArt::Unaer(UnOp::Negativ, _) => ausdruck(e, u, absagen),
+        // **«SG-24»: a `count` has no object here.** The generated counter functions are
+        // declared with the functions, after the format accessors -- a `where` clause
+        // calling one would be an implicit declaration. *A `where` speaks about the
+        // FIELDS of its format; counting table slots in one is refused, by name.*
+        ExprArt::Zaehle { .. } => {
+            weigere(
+                absagen,
+                e.span,
+                "`count` in a `where` clause of a `format` -- the generated counter is \
+                 declared with the functions, after the format accessors, and a `where` \
+                 clause speaks about the FIELDS of its format",
+            );
+            String::new()
+        }
     }
 }
 
@@ -6383,6 +6434,14 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
                 sammle_expr_namen(a, aus);
             }
         }
+        // **«SG-24»** -- the counted predicate runs: every name it reads is read by
+        // the emitted counter call. (The binder is a loop variable of that call --
+        // collecting it here is what lets the `(void)k;` decision see it as read.)
+        ExprArt::Zaehle { rumpf, .. } => {
+            for e in crate::ausdruecke_im_praedikat(rumpf) {
+                sammle_expr_namen(e, aus);
+            }
+        }
         // A literal names nothing.
         ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } | ExprArt::Wahr | ExprArt::Falsch => {}
         // **The three forms `ausdruck` refuses -- see there.** `sizeof`/`lenof`/`aligned`,
@@ -7325,6 +7384,9 @@ fn anweisung(
                     // *They join the forms that are refused BY NAME rather than swallowed.*
                     | ExprArt::FnWert(_)
                     | ExprArt::Grund { .. }
+                    // **«SG-24»** -- a count is a traversal, and the expected value of a
+                    // compare-exchange is ONE value, not a loop.
+                    | ExprArt::Zaehle { .. }
                     | ExprArt::Unaer(..) => {
                         weigere(
                             absagen,
@@ -8329,7 +8391,9 @@ fn vorfahren(
          {e}for (uint32_t {v} = {basis}[{wurzel}].{elter}; {v} != {n}u; {v} = {basis}[{v}].{elter}) {{\n"
     ));
     // The domain above was read in the OUTER scope; the BODY is not.
-    let innen = laufsicht(u, v);
+    let mut innen = laufsicht(u, v);
+    // «SG-24»: this loop's binder is a capture a `count` may close over -- with the header's own C type (`traversebinder_ctyp`).
+    innen.zaehlbinder.push((v.clone(), "uint32_t".to_string()));
     for k in &x.rumpf.anweisungen {
         anweisung(k, aus, &innen, absagen, tiefe + 1, austritt);
     }
@@ -8456,7 +8520,9 @@ fn nachfahren(
     // Beide Male steht der Nachfolger schon fest -- der Unterschied ist allein, wo der Rumpf
     // sitzt, und genau das ist die ganze Aussage von `by consuming`.
     // The domain above was read in the OUTER scope; the BODY is not.
-    let innen = laufsicht(u, v);
+    let mut innen = laufsicht(u, v);
+    // «SG-24»: this loop's binder is a capture a `count` may close over -- with the header's own C type (`traversebinder_ctyp`).
+    innen.zaehlbinder.push((v.clone(), "uint32_t".to_string()));
     let rumpf_hin = |aus: &mut String, absagen: &mut Absagen| {
         aus.push_str(&format!("{e}        {{\n{e}            const uint32_t {v} = {k};\n"));
         aus.push_str(&format!("{e}            (void){v};\n"));
@@ -8546,7 +8612,9 @@ fn traverse(
                 "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
             ));
             // The domain above was read in the OUTER scope; the BODY is not.
-            let innen = laufsicht(u, v);
+            let mut innen = laufsicht(u, v);
+            // «SG-24»: this loop's binder is a capture a `count` may close over -- with the header's own C type (`traversebinder_ctyp`).
+            innen.zaehlbinder.push((v.clone(), "uint32_t".to_string()));
             for k in &x.rumpf.anweisungen {
                 anweisung(k, aus, &innen, absagen, tiefe + 1, austritt);
             }
@@ -8624,7 +8692,9 @@ fn traverse(
                 "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
             ));
             // The domain above was read in the OUTER scope; the BODY is not.
-            let innen = laufsicht(u, v);
+            let mut innen = laufsicht(u, v);
+            // «SG-24»: this loop's binder is a capture a `count` may close over -- with the header's own C type (`traversebinder_ctyp`).
+            innen.zaehlbinder.push((v.clone(), "uint64_t".to_string()));
             for k in &x.rumpf.anweisungen {
                 anweisung(k, aus, &innen, absagen, tiefe + 1, austritt);
             }
@@ -9275,6 +9345,12 @@ fn verenge(text: String, e: &Expr, ziel: Option<&str>, u: &Namen) -> String {
 
 fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
+        // **«SG-24»: a count IS a `uint64_t`.** Its counter returns one, and the
+        // `let` that binds it learns the type here -- through the same two readers
+        // (`lokale_lets` and the `Let` arm) that learn every other C type from this
+        // function. The Gabbro range (`0 ..= N`) is M1's fact and lives in the
+        // checker, not in the C.
+        ExprArt::Zaehle { .. } => Some("uint64_t".to_string()),
         // **The signature first, the body second** (2026-08-25). A name a declaration knows is
         // answered from the declaration; only a `let`-bound local falls through to
         // `lokaltyp`, which `lokale_lets` filled from declarations as well. *The order is the
@@ -9515,6 +9591,9 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         // the expression entirely -- a wrong `true` here would delete real code.*
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
+        // **«SG-24»: a count is a run-time number**, not a witness -- its predicate
+        // runs over real slots. Dropping it would delete the traversal.
+        | ExprArt::Zaehle { .. }
         | ExprArt::Binaer(_, _, _) => false,
     }
 }
@@ -10024,6 +10103,431 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
     ausdruck_breit(e, u, absagen, false)
 }
 
+/// Every counter of one function, defined («SG-24»).
+///
+/// The definitions stand between the declarations and the bodies (the caller in
+/// `emittiere_mit` splices them there): after the table storage they read, before
+/// the bodies that call them. Source order is free, so per-item emission would
+/// put a counter before its table -- *the same reason all prototypes precede all
+/// bodies*, one construct over.
+fn zaehler_funktion(f: &FnDecl, eigen: &Namen, aus: &mut String, absagen: &mut Absagen) {
+    let FnRumpf::Block(b) = &f.rumpf else {
+        return;
+    };
+    let mut binder = Vec::new();
+    let mut stellen = Vec::new();
+    zaehlstellen_block(b, &mut binder, eigen, &mut stellen);
+    for z in &stellen {
+        zaehler_definition(z, eigen, aus, absagen);
+    }
+}
+
+/// A predicate as a boolean EXPRESSION -- the condition of the synthetic `if`
+/// in a generated counter («SG-24»).
+///
+/// The same five forms `pred_c` refuses have no expression form either: a
+/// quantifier, `reaches`, a lock witness, membership and implication are proof
+/// devices, not values. Refused with the same sentence shape -- what RUNS is
+/// what C can evaluate, and the checker already proved the rest needs no
+/// evaluation. (The grammar's SUGAR `p => q` for `!p || q` is not rewritten
+/// here, for the same reason `pred_c` does not rewrite it: the emitter does
+/// not rewrite what the author wrote.)
+fn pred_als_expr(p: &Pred, span: gabbro_syntax::span::Span) -> Option<Expr> {
+    let art = match &p.art {
+        PredArt::Vergleich(e) => return Some(e.clone()),
+        PredArt::Klammer(x) => ExprArt::Klammer(Box::new(pred_als_expr(x, span)?)),
+        PredArt::Nicht(x) => ExprArt::Unaer(UnOp::Nicht, Box::new(pred_als_expr(x, span)?)),
+        PredArt::Und(a, b) => ExprArt::Binaer(
+            BinOp::Und,
+            Box::new(pred_als_expr(a, span)?),
+            Box::new(pred_als_expr(b, span)?),
+        ),
+        PredArt::Oder(a, b) => ExprArt::Binaer(
+            BinOp::Oder,
+            Box::new(pred_als_expr(a, span)?),
+            Box::new(pred_als_expr(b, span)?),
+        ),
+        PredArt::Quantor(_)
+        | PredArt::Element(_, _)
+        | PredArt::Erreicht { .. }
+        | PredArt::Held { .. }
+        | PredArt::Folgt(_, _) => return None,
+    };
+    Some(Expr { art, span })
+}
+
+/// One counter: `static uint64_t zaehle_N(captures…)`, accumulator plus the
+/// table's own traversal with a conditional increment.
+///
+/// The loop is not reinvented: a synthetic `Traverse` over the site's domain
+/// with the body `if (<rumpf>) <acc> += 1;` goes through `traverse()` -- the
+/// same arms, the same refusal texts, the same C shapes as the loop the writer
+/// would have written. What is synthetic is only the plumbing around it: the
+/// accumulator, the wrapper statement (a span carrier -- `traverse()` reads
+/// nothing off it but the span), and the `void` exit context (the body cannot
+/// leave, return or break).
+fn zaehler_definition(z: &Zaehlstelle, u: &Namen, aus: &mut String, absagen: &mut Absagen) {
+    // The condition runs: what C cannot evaluate is refused here, by name, with
+    // the same five forms `pred_c` refuses. A counter over one is not a slower
+    // program but a proof device mistaken for a value.
+    let Some(bedingung) = pred_als_expr(&z.rumpf, z.span) else {
+        weigere(
+            absagen,
+            z.span,
+            "`count` over a predicate that is not a run-time condition -- a \
+             quantifier, `reaches`, a lock witness, membership or an implication \
+             is a proof device, and the counter would have to evaluate it",
+        );
+        return;
+    };
+    let params: Vec<String> = z.fangen.iter().map(|(_, d)| d.clone()).collect();
+    let params = if params.is_empty() {
+        "void".to_string()
+    } else {
+        params.join(", ")
+    };
+    let acc_ort = Ort {
+        basis: Ident {
+            text: z.acc.clone(),
+            span: z.span,
+        },
+        suffixe: Vec::new(),
+        span: z.span,
+    };
+    let eins = Expr {
+        art: ExprArt::Zahl(1),
+        span: z.span,
+    };
+    let body = Block {
+        anweisungen: vec![Stmt {
+            art: StmtArt::Wenn(WennStmt {
+                zweige: vec![(
+                    bedingung,
+                    Block {
+                        anweisungen: vec![Stmt {
+                            art: StmtArt::Zuweisung(Zuweisung {
+                                ziel: acc_ort,
+                                op: ZuwOp::Plus,
+                                wert: eins,
+                            }),
+                            span: z.span,
+                        }],
+                        span: z.span,
+                    },
+                )],
+                sonst: None,
+            }),
+            span: z.span,
+        }],
+        span: z.span,
+    };
+    let trav = Traverse {
+        variable: z.variable.clone(),
+        gegenstand: None,
+        domaene: z.domaene.clone(),
+        abstieg: Abstieg::Unbesucht,
+        mass: None,
+        touches: None,
+        invariante: None,
+        rumpf: body,
+        span: z.span,
+    };
+    // The wrapper statement carries the site's span into `traverse()`; its kind
+    // is never read (no exit, no value -- see above).
+    let huelle = Stmt {
+        art: StmtArt::Next(Ident {
+            text: String::new(),
+            span: z.span,
+        }),
+        span: z.span,
+    };
+    let mut rumpf_c = String::new();
+    traverse(
+        &trav,
+        &huelle,
+        &mut rumpf_c,
+        u,
+        absagen,
+        1,
+        &Austritt::default(),
+    );
+    aus.push_str(&format!(
+        "\n/* `count {} in {} : …` -- generated counter («SG-24»). The predicate is the \
+         writer's logic, the traversal the template's: it falls here once, not per site. */\n\
+         static uint64_t {}({}) {{\n\
+         \x20   uint64_t {} = 0;\n\
+         {}    return {};\n\
+         }}\n",
+        z.variable.text,
+        z.domaene.benennung(),
+        z.name,
+        params,
+        z.acc,
+        rumpf_c,
+        z.acc,
+    ));
+}
+
+/// **One `count` site («SG-24»): the counter name and what it closes over.**
+///
+/// The counter is a generated `static` C function, one per site, named after the
+/// site's span (`zaehle_<von>` -- a byte offset is unique per file, and a unit is
+/// one file). It closes over the names the counted predicate reads, minus the
+/// binder: parameters and `let` locals travel as arguments, globals stay global.
+/// A name that is neither -- a `match` binder, an `exchange` binder, an
+/// `awaits` binding -- is refused by name: hoisting it into a `let` first is one
+/// line, and a counter guessing at its type would be the other kind.
+struct Zaehlstelle {
+    name: String,
+    acc: String,
+    variable: Ident,
+    domaene: Domaene,
+    rumpf: Pred,
+    span: gabbro_syntax::span::Span,
+    fangen: Vec<(String, String)>,
+}
+
+/// The C type of a `traverse` binder, by domain -- the SAME words the loop
+/// headers below write (`uint32_t` for an index word, `uint64_t` for an array
+/// index). A second table of the same fact would drift; this one is read at the
+/// collection walk and trusted at the loop both were copied from.
+fn traversebinder_ctyp(d: &Domaene) -> Option<&'static str> {
+    match d {
+        Domaene::SlotsVon(_)
+        | Domaene::NachfahrenVon(_)
+        | Domaene::VorfahrenVon(_) => Some("uint32_t"),
+        Domaene::ElementeVon(_) => Some("uint64_t"),
+        _ => None,
+    }
+}
+
+/// What one `count` site closes over: names the predicate reads, minus the
+/// binder, each with its C declaration.
+///
+/// `Err` carries the refusal TEXT, not the refusal: the caller at the call site
+/// is the one place that reports it, so one fault keeps one refusal even though
+/// two passes compute this function (collection skips silently, the call
+/// reports). A counter that guessed at a capture would emit a call C cannot
+/// resolve, and the sentence belongs where the call stands.
+fn zaehlstelle(
+    e: &Expr,
+    variable: &Ident,
+    domaene: &Domaene,
+    rumpf: &Pred,
+    binder: &[(String, String)],
+    u: &Namen,
+) -> Result<Zaehlstelle, String> {
+    let name = format!("zaehle_{}", e.span.von);
+    let acc = format!("zaehle_acc_{}", e.span.von);
+    let mut namen = BTreeSet::new();
+    for x in crate::ausdruecke_im_praedikat(rumpf) {
+        sammle_expr_namen(x, &mut namen);
+    }
+    let mut fangen = Vec::new();
+    for n in namen.iter() {
+        if n == &variable.text {
+            continue;
+        }
+        // An enclosing `traverse` binder: a C loop variable in scope at the
+        // site, passed down with the loop header's own C type.
+        if let Some((_, t)) = binder.iter().find(|(b, _)| b == n) {
+            fangen.push((n.clone(), format!("{t} {n}")));
+            continue;
+        }
+        if let Some(t) = u.parametertyp.get(n) {
+            if ist_geist(t, u) {
+                return Err(format!(
+                    "`count` over a ghost `{n}` -- a witness has no C value to \
+                     pass, and the predicate runs"
+                ));
+            }
+            let Some(c) = ctyp(t, u) else {
+                return Err(format!(
+                    "`count` closing over `{n}` -- its declared type has no C \
+                     word here"
+                ));
+            };
+            fangen.push((n.clone(), format!("{c} {n}")));
+            continue;
+        }
+        if let Some(c) = u.lokaltyp.get(n) {
+            if u.geistlokal.contains(n) {
+                return Err(format!(
+                    "`count` over a ghost `{n}` -- a witness has no C value to \
+                     pass, and the predicate runs"
+                ));
+            }
+            fangen.push((n.clone(), format!("{c} {n}")));
+            continue;
+        }
+        // A global -- a table, a `static`, a constant, an atomic, an accumulator:
+        // a C symbol in every scope, so no parameter. Anything else is a name this
+        // unit cannot resolve, and the counter must not guess at it (the `let`
+        // rule `C001` of 2026-08-25, one construct over).
+        if !(u.tabellenglobal.contains(n)
+            || u.statiken.contains_key(n)
+            || u.konstanten.contains(n)
+            || u.atomics.contains_key(n)
+            || u.akkus.contains(n))
+        {
+            return Err(format!(
+                "`count` closing over `{n}` -- no parameter, no `let`, no \
+                 enclosing `traverse` binder and no global of this unit carries \
+                 it. A `match` arm, an `exchange` or an `awaits` binding needs one \
+                 line first: bind it into a `let`, and the counter takes it as an \
+                 ordinary argument"
+            ));
+        }
+    }
+    fangen.sort();
+    fangen.dedup();
+    Ok(Zaehlstelle {
+        name,
+        acc,
+        variable: variable.clone(),
+        domaene: domaene.clone(),
+        rumpf: rumpf.clone(),
+        span: e.span,
+        fangen,
+    })
+}
+
+/// The call a `count` lowers to -- the counter name with its captures, in the
+/// same order the definition takes them. Computed from the site, never stored:
+/// the definition and the call cannot drift, because there is one function of
+/// the site and two readers of it. This reader is the one place that REPORTS a
+/// capture refusal (the collector skips silently): one fault, one refusal.
+fn zaehlruf(
+    e: &Expr,
+    variable: &Ident,
+    domaene: &Domaene,
+    rumpf: &Pred,
+    binder: &[(String, String)],
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> String {
+    let z = match zaehlstelle(e, variable, domaene, rumpf, binder, u) {
+        Ok(z) => z,
+        Err(grund) => {
+            weigere(absagen, e.span, &grund);
+            return String::new();
+        }
+    };
+    let args: Vec<String> = z.fangen.iter().map(|(n, _)| n.clone()).collect();
+    format!("{}({})", z.name, args.join(", "))
+}
+
+/// Every `count` of a function body: collected with the binder stack in scope,
+/// so a use of an enclosing loop variable resolves to a capture, not to a
+/// refusal. Contracts are NOT walked here: they lower nowhere in C (the ghost
+/// channel refuses them as `counted`), and the executable predicates (`until`,
+/// invariants, `when`) live in the bodies walked below.
+fn zaehlstellen_block(
+    b: &Block,
+    binder: &mut Vec<(String, String)>,
+    eigen: &Namen,
+    aus: &mut Vec<Zaehlstelle>,
+) {
+    for s in &b.anweisungen {
+        // A `traverse` binder is a C loop variable in its body -- capturable, with
+        // the loop header's own C type (`traversebinder_ctyp`).
+        let mut gedrueckt = 0usize;
+        if let StmtArt::Schleife(sch) = &s.art {
+            if let Schleife::Traverse(t) = sch.as_ref() {
+                if let Some(ct) = traversebinder_ctyp(&t.domaene) {
+                    binder.push((t.variable.text.clone(), ct.to_string()));
+                    gedrueckt += 1;
+                }
+            }
+        }
+        // A `match` binder is in scope in its arm, in NEITHER walk: the
+        // collection here and the `zaehlbinder` threading below both resolve
+        // `traverse` binders only, so both report the same sentence for an arm
+        // binder (hoist it into a `let` first). *Two walks, one rule.*
+        if let StmtArt::Match(m) = &s.art {
+            for z in &m.zweige {
+                zaehlstellen_block(&z.rumpf, binder, eigen, aus);
+            }
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            zaehlstellen_expr(e, binder, eigen, aus);
+        }
+        for p in crate::eigene_praedikate(s) {
+            zaehlstellen_pred(p, binder, eigen, aus);
+        }
+        // Loop invariants are predicates of the body that `eigene_praedikate`
+        // does not return (it covers `retry … until` only): a `count` in one
+        // runs per pass and needs its counter like any other.
+        if let StmtArt::Schleife(sch) = &s.art {
+            let invs: Vec<&Pred> = match sch.as_ref() {
+                Schleife::Traverse(t) => t.invariante.iter().collect(),
+                Schleife::Retry(r) => r.invariante.iter().collect(),
+                Schleife::Forever(f) => f.invariante.iter().collect(),
+            };
+            for p in invs {
+                zaehlstellen_pred(p, binder, eigen, aus);
+            }
+            if let Schleife::Traverse(t) = sch.as_ref() {
+                if let Some(g) = &t.gegenstand {
+                    zaehlstellen_expr(g, binder, eigen, aus);
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            // `Match` arms were walked above, each under its own binder.
+            if !matches!(s.art, StmtArt::Match(_)) {
+                zaehlstellen_block(k, binder, eigen, aus);
+            }
+        }
+        for _ in 0..gedrueckt {
+            binder.pop();
+        }
+    }
+}
+
+fn zaehlstellen_pred(
+    p: &Pred,
+    binder: &mut Vec<(String, String)>,
+    eigen: &Namen,
+    aus: &mut Vec<Zaehlstelle>,
+) {
+    for e in crate::ausdruecke_im_praedikat(p) {
+        zaehlstellen_expr(e, binder, eigen, aus);
+    }
+}
+
+fn zaehlstellen_expr(
+    e: &Expr,
+    binder: &[(String, String)],
+    eigen: &Namen,
+    aus: &mut Vec<Zaehlstelle>,
+) {
+    for x in crate::alle_ausdruecke(e) {
+        if let ExprArt::Zaehle {
+            variable,
+            domaene,
+            rumpf,
+        } = &x.art
+        {
+            // The definition is emitted from the same pure function of the site
+            // as the call (`zaehlstelle`), so a site the call lowers always has
+            // its counter -- and a site whose captures refuse is skipped here and
+            // reported once at the call. Nested counts resolve inside out: the
+            // inner counter's captures are names of the outer scopes, which the
+            // outer counter takes as its own parameters (its reader descends
+            // through the nested node).
+            // Double collection (overlapping walks meet at one node) is deduped
+            // here: two definitions of one name would be a C redefinition, not
+            // a second counter.
+            if let Ok(z) = zaehlstelle(x, variable, domaene, rumpf, binder, eigen) {
+                if !aus.iter().any(|a| a.name == z.name) {
+                    aus.push(z);
+                }
+            }
+        }
+    }
+}
+
 /// `schmal` means: this expression stands inside an `f32` computation, and a literal in it
 /// gets its `f`. **Only three forms pass it on** -- the parenthesis, the binary node and the
 /// literal itself. Everything else starts at `false`: a call, a place, an index carry their
@@ -10128,6 +10632,16 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
+        // **«SG-24»** -- a `count` is a call to its generated counter. The counter
+        // was defined from the same site (`zaehler_funktion`, spliced between the
+        // declarations and the bodies), so the call always resolves; the captures
+        // ride the enclosing loop binders (`u.zaehlbinder`), parameters and
+        // `let` locals, and a capture none of them carries refuses -- once, here.
+        ExprArt::Zaehle {
+            variable,
+            domaene,
+            rumpf,
+        } => zaehlruf(e, variable, domaene, rumpf, &u.zaehlbinder, u, absagen),
         // **Die logische Verneinung -- gebaut, WEIL ein Programm sie gebraucht hat**
         // (2026-08-20, Stufe 4, `messung/netz/udp-echo.gab`).
         //

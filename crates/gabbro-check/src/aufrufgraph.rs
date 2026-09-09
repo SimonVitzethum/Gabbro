@@ -883,6 +883,9 @@ fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
             held_aus_expr(a, aus);
             held_aus_expr(b, aus);
         }
+        // **«SG-24»** -- a `Held(L)` inside the counted predicate names the same
+        // lock (uniform with `has_aus_pred` in `namen.rs`).
+        ExprArt::Zaehle { rumpf, .. } => held_aus_pred(rumpf, aus),
         _ => {}
     }
 }

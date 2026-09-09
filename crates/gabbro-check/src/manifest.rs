@@ -234,6 +234,39 @@ fn stilllegungsannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
     });
 }
 
+/// **«SG-22»: a deadline leaves the checker as a named assumption.**
+///
+/// `deadline <= n ops arch X falsifier p` carries two statements, and only the
+/// number is about the program: that the work keeps its date on machine `X` is
+/// a statement about silicon and the environment, and no pass sees it. It is
+/// exactly the case the axiom layer exists for, and it comes OUT OF THE CLAUSE
+/// instead of out of a second `assume` line beside it (same reason as
+/// `stilllegungsannahmen` above: an assumption one can forget to write is an
+/// assumption that gets forgotten). The probe stands in the clause; the class
+/// travels with the entry, so an unprobed date never looks measured.
+fn fristannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let Some(d) = &f.deadline else { return };
+        out.push(Eintrag {
+            name: format!("frist_{}_eingehalten", f.name.text),
+            art: "assume",
+            arch: Some(d.arch.text.clone()),
+            klasse: klasse(&d.klasse),
+            aussage: format!(
+                "`{}` keeps its deadline on `{}`. That the BODY costs what it \
+                 costs is the `costs` promise and is held (`K001`); that the \
+                 machine executes it in time is a statement about silicon and \
+                 scheduling and falls under no pass. The probe the clause names \
+                 measures the date.",
+                f.name.text, d.arch.text
+            ),
+            voraussetzungen: 0,
+            voraussetzung_text: None,
+        });
+    });
+}
+
 /// Sammelt die Annahmenmenge eines Baums -- **without the source**, so without the wording
 /// of a precondition. See [`Eintrag::voraussetzungen`].
 pub fn sammle(baum: &Programm) -> Vec<Eintrag> {
@@ -250,6 +283,7 @@ pub fn sammle_mit_quelle(baum: &Programm, quelle: &str) -> Vec<Eintrag> {
     gleitkommaannahmen(baum, &mut out);
     sperrabdruckannahme(baum, &mut out);
     stilllegungsannahmen(baum, &mut out);
+    fristannahmen(baum, &mut out);
     sammle_items(&baum.items, quelle, &mut out);
     out.sort_by(|a, b| (&a.name, &a.arch).cmp(&(&b.name, &b.arch)));
     out

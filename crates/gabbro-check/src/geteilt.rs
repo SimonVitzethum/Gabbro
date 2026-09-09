@@ -1014,6 +1014,36 @@ fn orte_in(e: &Expr, f: &mut impl FnMut(&Ort)) {
                 orte_in(a, f);
             }
         }
+        // **«SG-24»: a count READS what its predicate reads** -- decided per form
+        // with the reason beside it, like `aligned` above, not by a walker
+        // answering silently. The predicate runs once per entry, so every place
+        // in it is a read of the enclosing body; missing it would let a `count`
+        // over a protected table pass outside its lock. The DOMAIN reads too:
+        // walking a carrier's slots touches the carrier even where the rumpf
+        // counts nothing (`count k in slots of T : true` still walks `T`).
+        ExprArt::Zaehle { domaene, rumpf, .. } => {
+            for e in crate::ausdruecke_im_praedikat(rumpf) {
+                orte_in(e, f);
+            }
+            let ort = match domaene {
+                Domaene::SlotsVon(o)
+                | Domaene::NachfahrenVon(o)
+                | Domaene::VorfahrenVon(o)
+                | Domaene::Schlange(o)
+                | Domaene::ElementeVon(o)
+                | Domaene::AbbildungenVon(o)
+                | Domaene::KetteIn { ort: o, .. } => Some(o),
+                Domaene::FelderVon(_) | Domaene::Threads => None,
+            };
+            if let Some(o) = ort {
+                f(o);
+                for suf in &o.suffixe {
+                    if let OrtSuffix::Index(ix) = suf {
+                        orte_in(ix, f);
+                    }
+                }
+            }
+        }
 
         // **`aligned(p, n)` READS `p`, and until 2026-09-01 no pass saw it.** `Eingebaut` was
         // missing from the enumeration, so the whole subtree fell under the catch-all -- the

@@ -72,6 +72,7 @@ inductive Reason where
   | oldState | quantified | callInExpression | builtin | lockWitness | result
   | resultInBody | otherValue | expression | carrier | fieldShape | specShape
   | generatedOp | transition | constructedValue | calleeContract | returnInLoop | recursion
+  | counted
   deriving DecidableEq, Repr
 
 /-! ### `quantifiedThreads` -- a refusal whose ground is measured, not merely stated
@@ -144,6 +145,7 @@ def Reason.tag : Reason → String
   | .calleeContract => "callee-requires-no-term"
   | .returnInLoop => "return-in-loop"
   | .recursion => "recursion"
+  | .counted => "counted"
 
 /-- `LeanReason::kind`. -/
 def Reason.kind : Reason → Kind

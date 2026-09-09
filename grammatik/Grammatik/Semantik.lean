@@ -23,7 +23,7 @@
                                nicht
     `Logik.abstieg f`       -- die Rekursion kommt nicht zum Ende: das `decreases`-Mass faellt
                                nicht (K009: "DASS es faellt, bleibt Beweisersache")
-    `Logik.uebergang`       -- ein `state`-Uebergang `von -> nach`, aber das Feld stand nicht auf `von`
+    `Logik.vorzustand`    -- ein `state`-Uebergang `von -> nach`, aber das Feld stand nicht auf `von`
     `Hardware.annahme a`    -- ein `axiom` (jeder fremde Rumpf) antwortet ausserhalb seines Typs
     `Hardware.fortschritt a`-- ein `forever … progress a` wird von der Umgebung nicht beendet
     `Hardware.ieee`         -- eine Gleitkommarechnung verliess ihren erklaerten Bereich
@@ -278,8 +278,10 @@ inductive Logik (D : Deklaration) where
   | invariante (i : D.Inv)
   | schleife
   | abstieg (f : D.Fn)
-  /-- Ein `state`-Uebergang `von -> nach`, aber das Feld stand nicht auf `von`. -/
-  | uebergang
+  /-- Ein `state`-Uebergang `von -> nach`, aber das Feld stand nicht auf `von`.
+      `Vorzustand`, nicht `Uebergang`: das alte Schlüsselwort ist abgelegt, und der
+      Ausgang heisst nach dem, was nicht stimmte (PFLICHTEN.md «B26»). -/
+  | vorzustand
 
 /-- Die Hardware: eine Annahme ueber die Maschine gilt nicht. -/
 inductive Hardware (D : Deklaration) where
@@ -569,7 +571,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       let k := (eval σ i σ ρ).n
       if (hτ ▸ σ.slots t k f : Zahl _ _).n = von
       then .ok (σ.schreibSlot t Λ k f (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))) ρ
-      else .logik .uebergang
+      else .logik .vorzustand
   | .ite c t e, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execBlock t σ ρ else execBlock e σ ρ

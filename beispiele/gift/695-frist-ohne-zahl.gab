@@ -1,0 +1,19 @@
+-- erwartet: K011
+-- **A deadline that is not a number.**
+--
+-- The falsifier probes one number per run; a formula (`n * 2`) is not false, it
+-- is unprobable. `K005` refused the same shape at `costs` on 2026-08-18 -- a
+-- promise the pass cannot read is an empty line, not a promise. The unit names
+-- no `arch` anywhere, so `K012` stays silent (R16); the probe resolves nowhere,
+-- so `N056` stays silent with it.
+module gift::frist_ohne_zahl {
+
+impl fn f(n : u32 in 0 .. 10) -> u32 in 0 .. 10
+    effects { pure }
+    costs   <= 100 ops
+    deadline <= n * 2 ops arch x86_64 falsifier sonde_tick
+{
+    return n;
+}
+
+}

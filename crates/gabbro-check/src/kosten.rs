@@ -299,6 +299,79 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         // -- K008/K009 («K5.4»): die Rekursion bekommt ein Mass.
         rekursionsmass(f, b, modul, &u, &g, absagen);
 
+        // **«SG-22»: the date is not the budget, and it is checked apart.**
+        //
+        // `costs` is owed to the declaration and held against the body (`K001`
+        // below); the deadline is owed to the MACHINE and discharged by the probe
+        // its clause names. Three structural checks, three codes -- the number
+        // must be one (a falsifier probes a number, not a formula), the `arch`
+        // must be declared (a date on no machine floats), the probe must exist
+        // and be falsifiable (an assumption without one is a claim, `S003`/`S004`
+        // for `progress`). What the number MEANS -- honestly and tightly -- is
+        // the writer's logic, like `costs` itself: no pass re-measures a cycle
+        // count from the source, and none claims to.
+        //
+        // **No rule holds the two numbers against each other**, and that is not
+        // an omission: `costs` counts Gabbro primitives, `deadline` counts cycles
+        // on `arch X`. Different units, no conversion -- a comparison would be a
+        // conversion lemma wearing a rule's clothes.
+        if let Some(d) = &f.deadline {
+            // **K011** -- the date must be a number the pass can read. A symbolic
+            // date (`n * 100`) is not false, it is unprobable: the probe the clause
+            // names measures one number per run, and `K005` refused the same shape
+            // at `costs` on 2026-08-18 for the same reason.
+            if u.konst_wert(modul, &d.zahl).is_none() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "K011",
+                        d.zahl.span,
+                        format!(
+                            "`{}` promises a deadline the pass cannot read as one number",
+                            f.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "a falsifier probes a number, not a formula -- `40`, \
+                         `NSLOTS * 8`, never `n * 100`",
+                    ),
+                );
+            }
+            // **K012** -- the machine must be declared. Same question `A005` asks
+            // of an `assume`, asked of the clause that dates the work: a date on
+            // a machine this unit never declares is a reach nobody can take.
+            // Without a single `arch` declaration nothing is refused (R16, same
+            // as at `A005`): a unit that says nowhere which machine it runs on
+            // cannot be held to one.
+            let arches = crate::deklarierte_architekturen(baum);
+            if !arches.is_empty() && !arches.contains(&d.arch.text) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "K012",
+                        d.arch.span,
+                        format!(
+                            "`{}` promises its deadline on `{}`, and this unit declares only `{}`",
+                            f.name.text,
+                            d.arch.text,
+                            arches.join("`, `")
+                        ),
+                    )
+                    .mit_notiz(
+                        "a date on a machine that is never in force still travels \
+                         in the artefact beside the assumption set -- and a reader \
+                         takes a reach out of it that does not exist",
+                    ),
+                );
+            }
+            // **No third code for the probe.** `falsifier p` names a PROBE, not an
+            // assumption (`sonde_kann_fallen` in `namen.rs`: a probe is a program
+            // next to the tree, and 89 of 98 resolve to no declaration anywhere).
+            // What IS decidable -- a probe that resolves in-unit must be able to
+            // refute -- is decided there, under the same `N056`, by extending its
+            // walk to this clause. An `unfalsifiable` tail stays legal and marked
+            // (second class of the assumption set, like at `assume` itself); the
+            // manifest entry below carries the class, so it never looks measured.
+        }
+
         let Some(zusage_expr) = &f.costs else {
             return;
         };
@@ -800,6 +873,45 @@ impl<'a> Rechner<'a> {
                 }
             },
             ExprArt::Ruf(r) => self.ruf(r, lokal),
+            // **«SG-24»: a count runs its predicate over the domain, once per entry.**
+            //
+            // Per entry the predicate plus one increment; the number of entries is the
+            // bound the declaration names (`domaenenschranke`, the same reader the loop
+            // forms use). Where it names none, two cases, and they are different
+            // faults: a domain `D025` already refused (no length to run over) leaves
+            // no cost to hold -- spanless `Unbekannt`, counted as open, no second
+            // refusal for one fault (the `D022`-after-`D017` rule, one construct
+            // over). A countable domain whose bound does not resolve (a table
+            // without `count`) is a cost promise over an unknown quantity, and that
+            // is `K003` -- the same answer a `traverse` over it gets.
+            //
+            // **The kind match twins `domaene.rs::zaehlbar_pruefen`.** Both decide
+            // every `Domaene` variant, so a tenth domain breaks both arms at once
+            // instead of slipping through one of them; the twin is named here so a
+            // third reader does not grow beside it.
+            ExprArt::Zaehle { domaene, rumpf, .. } => {
+                match self.domaenenschranke(domaene, lokal) {
+                    Some(n) => pred_kosten(self, rumpf, lokal)
+                        .plus(Kosten::Zahl(1))
+                        .mal(n, Some(e.span)),
+                    None => {
+                        let unzaehlbar = matches!(
+                            domaene,
+                            Domaene::KetteIn { .. }
+                                | Domaene::FelderVon(_)
+                                | Domaene::Threads
+                                | Domaene::AbbildungenVon(_)
+                                | Domaene::Schlange(_)
+                        );
+                        Kosten::Unbekannt(
+                            "the domain of this `count` names no bound, so its cost \
+                             cannot be held against `costs`"
+                                .to_string(),
+                            (!unzaehlbar).then_some(e.span),
+                        )
+                    }
+                }
+            }
         }
     }
 

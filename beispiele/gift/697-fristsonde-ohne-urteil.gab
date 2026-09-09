@@ -1,0 +1,26 @@
+-- erwartet: N056
+-- **A deadline whose probe cannot refute anything.**
+--
+-- `sonde_tick` resolves in-unit to a `-> u64` function: a value, and a value is
+-- not a verdict. Same tail, same reading as `retires` (`N056` in `namen.rs`):
+-- a probe that cannot go red measures nothing. An unresolved probe would stay
+-- silent (a program next to the tree); this one resolves, so it must answer or
+-- fire.
+module gift::fristsonde_ohne_urteil {
+
+impl fn sonde_tick() -> u64
+    effects { pure }
+    costs   <= 10 ops
+{
+    return 0;
+}
+
+impl fn f() -> u32 in 0 .. 1
+    effects { pure }
+    costs   <= 10 ops
+    deadline <= 100 ops arch x86_64 falsifier sonde_tick
+{
+    return 0;
+}
+
+}

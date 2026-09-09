@@ -1,0 +1,21 @@
+-- erwartet: K012
+-- **A deadline on a machine the unit never declares.**
+--
+-- Same question `A005` asks of an `assume`: a date on a machine that is never in
+-- force still travels in the artefact beside the assumption set, and a reader
+-- takes a reach out of it that does not exist. The function declares
+-- `arch x86_64`, so the unit does say which machine it runs on -- and the date
+-- still names `riscv`. The number reads (no `K011`), the probe resolves nowhere
+-- (no `N056`).
+module gift::frist_ohne_maschine {
+
+impl fn f() -> u32 in 0 .. 1
+    effects { pure }
+    costs   <= 10 ops
+    deadline <= 100 ops arch riscv falsifier sonde_tick
+    arch x86_64
+{
+    return 0;
+}
+
+}

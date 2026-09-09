@@ -840,6 +840,9 @@ fn has_aus_pred(p: &Pred, aus: &mut Vec<String>) {
                 e(a, aus);
                 e(b, aus);
             }
+            // **«SG-24»** -- a `Has(F)` inside the counted predicate names the same
+            // feature.
+            ExprArt::Zaehle { rumpf, .. } => has_aus_pred(rumpf, aus),
             _ => {}
         }
     }
@@ -865,6 +868,14 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
             ExprArt::Binaer(_, a, b) => {
                 ex(a, aus);
                 ex(b, aus);
+            }
+            // **«SG-24»** -- a call inside the counted predicate runs once per entry
+            // and carries its demands like any other call (N016: the index-position
+            // precedent -- a demand does not vanish by moving into brackets).
+            ExprArt::Zaehle { rumpf, .. } => {
+                for e in crate::ausdruecke_im_praedikat(rumpf) {
+                    ex(e, aus);
+                }
             }
             // **A call in INDEX position carried no demand with it** (measured 2026-09-02).
             //
@@ -1103,10 +1114,22 @@ fn binder_im_praedikat(p: &Pred, aus: &mut HashSet<String>) {
             binder_im_praedikat(a, aus);
             binder_im_praedikat(b, aus);
         }
-        PredArt::Vergleich(_)
-        | PredArt::Element(_, _)
-        | PredArt::Erreicht { .. }
-        | PredArt::Held { .. } => {}
+        // **«SG-24»** -- a `count` inside the predicate binds its variable there:
+        // without this arm a use of the count binder reads as an unbound name.
+        // (Device promises only -- everywhere else the domain pass owns the
+        // binder through `geb`.)
+        PredArt::Vergleich(e) | PredArt::Element(e, _) => {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Zaehle {
+                    variable, rumpf, ..
+                } = &x.art
+                {
+                    aus.insert(variable.text.clone());
+                    binder_im_praedikat(rumpf, aus);
+                }
+            }
+        }
+        PredArt::Erreicht { .. } | PredArt::Held { .. } => {}
     }
 }
 
@@ -2531,6 +2554,9 @@ fn namen_im_praedikat(p: &Pred, aus: &mut Vec<String>) {
                     e(a, aus);
                 }
             }
+            // **«SG-24»** -- names inside the counted predicate are names of the
+            // enclosing predicate too.
+            ExprArt::Zaehle { rumpf, .. } => namen_im_praedikat(rumpf, aus),
             ExprArt::Eingebaut(b) => match b.as_ref() {
                 Eingebaut::Lenof(t) => {
                     aus.push("lenof".into());
@@ -3403,10 +3429,18 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
         }
         // `retires t from boot falsifier <probe>` carries the same tail deliberately, so it
         // gets the same reading -- a third spelling would be a second register over one thing.
+        // **«SG-22»: `deadline … falsifier <probe>` carries it too** -- same tail, same
+        // reading, same code. A probe that resolves in-unit must be able to refute;
+        // one that resolves nowhere is a program next to the tree (see the head note).
         ItemArt::Funktion(f) => {
             if let Some(st) = &f.retires {
                 if let AnnahmeKlasse::Falsifizierbar(n) = &st.klasse {
                     pruefe(n, "falsifier");
+                }
+            }
+            if let Some(d) = &f.deadline {
+                if let AnnahmeKlasse::Falsifizierbar(n) = &d.klasse {
+                    pruefe(n, "deadline");
                 }
             }
         }
@@ -3585,6 +3619,14 @@ fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
             // through is none.* Same three decisions as in `sammle_rufe` above, and for
             // the same reasons: an index is evaluated, `aligned` evaluates both sides,
             // `sizeof`/`lenof` reach only the indices of their place.
+            //
+            // **«SG-24»** -- a qualified call inside the counted predicate crosses
+            // the module boundary like any other call; the counter runs it.
+            ExprArt::Zaehle { rumpf, .. } => {
+                for e in crate::ausdruecke_im_praedikat(rumpf) {
+                    aus_expr(e, aus);
+                }
+            }
             ExprArt::Ort(o) => qualifizierte_in_ort(o, aus),
             ExprArt::Eingebaut(g) => match &**g {
                 Eingebaut::Aligned(a, b) => {

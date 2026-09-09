@@ -1651,6 +1651,40 @@ impl<'a> Parser<'a> {
             });
         }
 
+        // «SG-24»: `count k in D : p`. The binder, the domain and the `:` are the
+        // same three the quantifier reads (`quant`); the head word decides whether the
+        // result is a truth (`forall`/`exists`) or a number (`count`). *Two readers
+        // for the same domain would be two meanings.*
+        //
+        // **Lookahead, not reservation.** `count` is a contextual word (kw.rs,
+        // WORTSTELLUNG): where the grammar expects a name it IS one --
+        // `let cpu = count;` (`beispiele/70`) reads a place, and making the word
+        // reserved for this form would take that program away. Only
+        // `count <name> in` is the counting form; anything else falls through to
+        // the place reader below.
+        if let Art::Wort(Kw::Count) = self.blick().art {
+            let name_art = self.blick_n(1).art;
+            let ist_name = matches!(name_art, Art::Ident)
+                || matches!(name_art, Art::Wort(k) if !k.reserviert());
+            if ist_name && matches!(self.blick_n(2).art, Art::Wort(Kw::In)) {
+                let anfang = self.blick().span;
+                self.pos += 1;
+                let variable = self.erwarte_ident()?;
+                self.erwarte_kw(Kw::In)?;
+                let domaene = self.domain()?;
+                self.erwarte_z(Z::Kolon)?;
+                let rumpf = self.pred()?;
+                return Ok(Expr {
+                    span: anfang.bis_zu(rumpf.span),
+                    art: ExprArt::Zaehle {
+                        variable,
+                        domaene,
+                        rumpf: Box::new(rumpf),
+                    },
+                });
+            }
+        }
+
         let t = self.blick();
         match t.art {
             Art::Zahl(v) => {
@@ -2518,6 +2552,26 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // «SG-22» -- the date stands directly behind the budget: both speak about time,
+        // and `costs` alone can never say by when. Fixed order (E4): a tool that has to
+        // sort cannot say "`deadline` is missing here".
+        let deadline = if self.friss_kw(Kw::Deadline) {
+            let anfang = self.vorheriger_span();
+            self.erwarte_z(Z::KleinerGleich)?;
+            let zahl = self.expr()?;
+            self.erwarte_kw(Kw::Ops)?;
+            self.erwarte_kw(Kw::Arch)?;
+            let arch = self.erwarte_ident()?;
+            let klasse = self.annahmeklasse()?;
+            Some(Frist {
+                zahl,
+                arch,
+                klasse,
+                span: anfang.bis_zu(self.vorheriger_span()),
+            })
+        } else {
+            None
+        };
         // «K5.4» -- das Abstiegsmass der Rekursion, direkt hinter den Kosten: beide sagen
         // etwas ueber die Terminierung, und `costs` allein kann es bei einem Zyklus nicht.
         let decreases = if self.friss_kw(Kw::Decreases) {
@@ -2579,6 +2633,7 @@ impl<'a> Parser<'a> {
             retires,
             effects,
             costs,
+            deadline,
             decreases,
             by,
             section,
@@ -3387,6 +3442,14 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **«SG-9»: `owner m` -- a NAME, not a mark.** Nobody mints the mark
+        // itself (see `ast.rs`), so the clause is a name at the declaration and
+        // nothing else -- until the minter story stands, `D026` refuses.
+        let eigner = if self.friss_kw(Kw::Owner) {
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut konstanten = Vec::new();
         let mut slot = None;
@@ -3491,6 +3554,7 @@ impl<'a> Parser<'a> {
             oeffentlich,
             kapazitaet,
             hinterlegt,
+            eigner,
             konstanten,
             slot,
             invarianten,

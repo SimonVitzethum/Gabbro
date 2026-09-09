@@ -136,6 +136,13 @@ pub enum LeanReason {
     /// `queue`, `elems of`, `threads`, `fields of`, or a set membership -- the model has the
     /// index domain and the parent chain, and nothing else.
     Quantified,
+    /// **`count k in D : p` -- the model counts nothing** («SG-24»). `Body.lean` carries
+    /// `forallSlots`/`existsSlots` as expressions but no cardinality: a count is a
+    /// FOLD over the domain, and this channel folds nothing. Bodies lower it to C
+    /// through the emitter's counter functions; contracts stating one are refused
+    /// here, by name, until the model grows a `countSlots` term. *`forall`/`exists`
+    /// stay writable in contracts -- only the number is not one.*
+    Counted,
     /// **`threads` -- and the language declares no thread set** (2026-09-08). Every other
     /// domain hangs on a declaration (`slots of` on `count N`, `descendants of` on
     /// `tree { … }`, `mappings of` on `walk … levels`, `queue` on the one field array of a
@@ -267,6 +274,7 @@ impl LeanReason {
             LeanReason::Float => "float",
             LeanReason::OldState => "old-state",
             LeanReason::Quantified => "quantified",
+            LeanReason::Counted => "counted",
             LeanReason::QuantifiedThreads => "quantified-threads",
             LeanReason::QuantifiedMappings => "quantified-mappings",
             LeanReason::BufferLength => "layout-buffer-length",
@@ -332,6 +340,10 @@ impl LeanReason {
                 "a quantifier whose domain names no index range here -- rewrite it over \
                  `slots of <table>`, `elems of <array>`, `queue <record>` or \
                  `chain(a, b) in <slot>`, which do"
+            }
+            LeanReason::Counted => {
+                "a `count` -- this model folds nothing; state the property with \
+                 `forall`/`exists`, which it carries"
             }
             // **The way out named here was measured on 2026-09-08 and is a decoration.**
             // A `threads over T` -- or any mark that hangs `threads` on a table -- makes
@@ -430,8 +442,9 @@ impl LeanReason {
     /// among the refusals it does not name -- *smaller, which is the direction that
     /// flatters.* The speech test now reads the enum out of THIS FILE and holds every
     /// variant against this array, instead of only checking that what is here is not mute.
-    pub const ALL: [LeanReason; 42] = [
+    pub const ALL: [LeanReason; 43] = [
         LeanReason::PassCounter,
+        LeanReason::Counted,
         LeanReason::QuantifiedThreads,
         LeanReason::QuantifiedMappings,
         LeanReason::BufferLength,
@@ -1209,6 +1222,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
             _ => Err(LeanReason::CallInExpression),
         },
         ExprArt::Gleitkomma { .. } => Err(LeanReason::Float),
+        // **«SG-24»** -- the model folds nothing (`LeanReason::Counted`); bodies
+        // lower the count to C, contracts stating one are refused here, by name.
+        ExprArt::Zaehle { .. } => Err(LeanReason::Counted),
         // **Two built-ins have a meaning here, and the third has none.** `aligned(e, n)` is
         // `e % n == 0`; `lenof` of an array is its declared length, a constant of the
         // declaration and not of the run. `sizeof` is about the LAYOUT, and `lenof` of a
@@ -1867,6 +1883,9 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
             | BinOp::Oder => Some(Shape::Bool),
         },
         ExprArt::Ruf(r) => shape_of_call(r, c),
+        // **«SG-24»** -- a count IS an integer; its shape is one, and the TERM is
+        // what the model refuses (`Counted` in `expr_term` above, never here).
+        ExprArt::Zaehle { .. } => Some(Shape::Int),
         ExprArt::Ort(o) => {
             if o.suffixe.is_empty() {
                 return c.locals.iter().rev().find(|(n, _)| *n == o.basis.text).and_then(|(_, s)| *s);

@@ -11,7 +11,7 @@
 //! > *A new word names either the word it displaces, or the measurement saying that no
 //! > existing form carries it.*
 //!
-//! The first mark counts the words (221); the second counts the words WITHOUT a reason at
+//! The first mark counts the words (223); the second counts the words WITHOUT a reason at
 //! the entry (208). A swap leaves both standing, an addition raises the first, an addition
 //! without a reason raises both. **A reason is a comment block of at least two lines
 //! directly above the entry** -- it stands there and not in the commit message, because it
@@ -25,6 +25,8 @@
 //! a time (`tree`, `parent`, `child`, `sibling`, `observed`, `occupied`). **«K3» measured
 //! what that costs against code written by somebody who has never heard of Gabbro**: over
 //! 585 foreign files -- Linux `lib/`, `kernel/`+`mm/`, and Caprock -- **105 of the 221 words
+//! (measured 2026-09-05; since then `owner` binds in Caprock `kernel/src/system.rs` and
+//! `deadline` binds nowhere measurable from here -- unrebooked delta, not a new count).
 //! are somewhere a name a programmer chose**, and 646 of the 1709 functions «K3» drew from
 //! (37.8 %) bind at least one. Seven of the eight «K3» fragments carried one, and the
 //! reader's refusal stopped the body from parsing, so everything behind it was invisible.
@@ -32,7 +34,7 @@
 //! **The rule is now the other one: a word is a keyword only where the grammar EXPECTS one.**
 //! At a position where the grammar expects a NAME, every word of the table is a name.
 //!
-//! **`res` is down to SEVENTEEN of the 221, and every one of them is measured at ZERO
+//! **`res` is down to SEVENTEEN of the 222, and every one of them is measured at ZERO
 //! foreign declarator sites.** Two reasons, and they are different kinds of reason:
 //!
 //! * **ten head a primary expression or a predicate atom unconditionally**, so a variable of
@@ -60,7 +62,7 @@
 //! > any more -- but `int`, `while` and `NAN` still are.
 //!
 //! **`tests/wortschatz.rs` holds this column against the parser word by word** -- it binds
-//! every one of the 221 as a parameter and as a local, reads it back, and requires clean iff
+//! every one of the 222 as a parameter and as a local, reads it back, and requires clean iff
 //! the column says `ctx`. Without that the column would be a second register beside the
 //! truth (trap 80), which is exactly what it was for the six words above.
 
@@ -81,7 +83,7 @@ macro_rules! wortschatz {
                 match s { $( $text => Some(Kw::$variant), )* _ => None }
             }
 
-            /// Reserved: not an ordinary name. Seventeen of 221 -- see the head of the file.
+            /// Reserved: not an ordinary name. Seventeen of 222 -- see the head of the file.
             pub const fn reserviert(self) -> bool {
                 match self { $( Kw::$variant => wortschatz!(@klasse $klasse) ),* }
             }
@@ -130,6 +132,14 @@ wortschatz! {
     Breaking      => "breaking",      ctx;
     Effects       => "effects",       ctx;
     Costs         => "costs",         ctx;
+    // **«SG-22»: `deadline` -- the date, not the budget.**
+    //
+    // `costs` counts Gabbro primitives, statically, against the declaration. A cycle
+    // number on a machine is a different statement: it speaks about silicon, not about
+    // the program, and no widening of `costs` could carry it without dragging a
+    // conversion lemma into every budget. *One word, one job -- and the closed
+    // vocabulary makes the change countable (222, reason here).*
+    Deadline      => "deadline",      ctx;
     Decreases     => "decreases",     ctx;
     Where         => "where",         ctx;
     In            => "in",            ctx;
@@ -253,6 +263,14 @@ wortschatz! {
     At            => "at",            ctx;
     Stride        => "stride",        ctx;
     Count         => "count",         ctx;
+    // **«SG-9»: `owner` -- the linear mark guarding a table.**
+    //
+    // Access to an `owner`-guarded table holds the mark; nobody can mint it
+    // (`eigner_nie_erzeugt`), so there is no second owner of the same slots.
+    // *Who mints the FIRST mark is still unwritten -- so the clause parses, and
+    // the checker still refuses it by name (`D026`), instead of claiming a guard
+    // nobody holds.*
+    Owner         => "owner",         ctx;
     // **Punkt 1: `count` ist ADRESSRAUM, `backed` ist SPEICHER.**
     //
     // Bis 2026-08-18 fiel beides zusammen, und damit war „30 GiB deklarieren, 100 MiB

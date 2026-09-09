@@ -548,6 +548,20 @@ pub enum ExprArt {
         grund: Ident,
         fall: Ident,
     },
+    /// **`count k in D : p` -- how many entries of ONE table satisfy `p`** («SG-24»).
+    ///
+    /// SUGAR for a call to the table's generated count function (like `ops
+    /// insert/remove`): the writer owes the predicate, the template library owes the
+    /// traversal -- once, not per program. A cross-table count is a `group`
+    /// invariant, never a wider domain; whoever hand-maintains a counter instead of
+    /// stating it has left the shape this variant keeps.
+    Zaehle {
+        variable: Ident,
+        domaene: Domaene,
+        // Boxed like `Quantor` inside `PredArt::Quantor`: a predicate holds an
+        // expression holds a count holds a predicate, and the box is what ends it.
+        rumpf: Box<Pred>,
+    },
     Unaer(UnOp, Box<Expr>),
     Binaer(BinOp, Box<Expr>, Box<Expr>),
 }
@@ -909,6 +923,14 @@ pub struct FnDecl {
     /// -- `effects` is not fail-open.
     pub effects: Option<Wirkungen>,
     pub costs: Option<Expr>,
+    /// **`deadline <= n ops arch X falsifier p` -- the DATE, not the budget** («SG-22»).
+    ///
+    /// `costs` is owed to the declaration and checked against it; the deadline is owed
+    /// to the machine named by `arch` and discharged by the probe `p` names. The two
+    /// numbers coincide nowhere by construction: the checker holds the `ops` number
+    /// like `costs`, and a missed date is `hardware (fortschritt)` -- the named
+    /// environment assumption, not a second budget.
+    pub deadline: Option<Frist>,
     /// **`decreases <expr>` — das Abstiegsmass der REKURSION** («K5.4», 2026-08-19).
     ///
     /// `costs` an einer rekursiven Funktion war bis dahin eine **Annahme**: ein Aufruf zaehlt
@@ -946,6 +968,21 @@ pub struct FnDecl {
     ///   from being prose.
     pub retires: Option<Stilllegung>,
     pub rumpf: FnRumpf,
+    pub span: Span,
+}
+
+/// **`deadline <= n ops arch X falsifier p` -- by when, on which machine, on whose word.**
+///
+/// See `FnDecl::deadline`. The `AnnahmeKlasse` tail is the SAME tail `assume`, `axiom`
+/// and `retires` carry, deliberately: a deadline declares an entry of the axiom layer
+/// (the environment ends the work in time, or the probe says otherwise), and it is
+/// spelled like every other one. *A fourth spelling for the same thing would be a
+/// third register over one matter.*
+#[derive(Debug, Clone)]
+pub struct Frist {
+    pub zahl: Expr,
+    pub arch: Ident,
+    pub klasse: AnnahmeKlasse,
     pub span: Span,
 }
 
@@ -1450,6 +1487,13 @@ pub struct Tabelle {
     /// the declaration**, and "no unchecked indexing" rests on the convention that someone
     /// picked a fitting index type by hand (finding G8).
     pub kapazitaet: Option<Expr>,
+    /// **«SG-9»: `owner m` -- the linear mark guarding every access.**
+    ///
+    /// Parsed, and refused by name (`D026` in `kbedingung.rs`): demanding the mark
+    /// in hand without saying who mints the first one would be a guard nobody
+    /// holds. *No second owner without a minter -- and no first one without a
+    /// history.*
+    pub eigner: Option<Ident>,
     /// **`backed k` -- der WERT, bis zu dem die Plaetze hinterlegt sind.**
     ///
     /// `count` ist Adressraum, `backed` ist Speicher. Ohne die Trennung sagt der Indextyp

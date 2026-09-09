@@ -112,7 +112,7 @@ red when a rule maps to nothing:
 | **M4** (loops, `S003`–`S005`, `M133`) | `traverse` over `alleIndizes`, `retry n`, `forever a` (assumption mandatory), `invariant` → `logik schleife` |
 | **H** (locks, `H005`–`H012`) | `darf`/`gdarf` on every access; `locks L hr`; `RufPasst.hh` exact («SG-20»); `observes` = `locks` on an RCU lock; `H009`–`H012` as `braucht` lists |
 | **E** (effects) | `V.schreibt t = true` on every store; `RufPasst.hw/hg`; `axiomCall hw hg` |
-| **V** (`V001`–`V004`, `V006`/`V007` «SG-23») | `publish hp`, `awaits hp` (`payload = nutzlast g`); the ORDER — payload writes directly before `publishes`, payload reads directly after `awaits` — is a sequence check on the statement list, same class as `H102` |
+| **V** (`V001`–`V004`, `V006`/`V007` «SG-23») | `publish hp`, `awaits hp` (`payload = nutzlast g`); the ORDER (writes-before-`publishes`, reads-after-`awaits`, outer blocks included) enforced since 2026-08-19 — «SG-23» names it in the grammar, it adds no rule |
 | **K** («SG-22») | `deadline n ops arch X falsifier p`: the `ops` number held like `costs`, `X` against a declared `arch`, the falsifier existing like `progress`/`S003`; the outcome rides the `fortschritt` row of §2.1 — no second budget, no new check |
 | **D** («SG-24») | `count k in slots of T : p` desugars to the generated count function of `T` (a `D.Fn` with `requires`, like `ops insert/remove`); the predicate `p` is the writer's logic |
 | **R** (registers, `R005`–`R011`) | `regLies hk` (readable), `regSchreib hk` (writable), `regLiesElse` (fallible read), `transition hm hl` (mirror declared and readable); `rzusage` → `hardware (geraet r)` |
