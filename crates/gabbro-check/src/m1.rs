@@ -3206,6 +3206,14 @@ impl<'a> Pruefer<'a> {
     /// > the coarse one. *Incompleteness costs precision here, not soundness.*
     fn rufe_toeten_fakten(&self, pfade: &[&Pfad], lage: &mut Lage) {
         let Some(geschrieben) = self.geschriebene_orte(pfade) else {
+            // **V4 -- the coarse path expires taints too** (2026-09-10). An
+            // indirect call (`t->f()`) names no hull, so `pfade` is empty and
+            // this early return ran before the V4 kill below: every non-local
+            // V1 fact died while every taint lived on, and a stale decision
+            // after an indirect call passed. An unknown callee can touch
+            // anything, so every taint dies -- the same direction as V1-V3's
+            // coarse rule. Pinned by `beispiele/gift/715`--`/717`.
+            frische_alle_toeten(lage);
             return self.aufruf_toetet_fakten(lage);
         };
         let touches = |k: &str| {

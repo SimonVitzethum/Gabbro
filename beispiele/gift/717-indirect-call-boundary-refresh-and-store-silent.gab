@@ -1,0 +1,52 @@
+-- erwartet: M147
+-- **V4 freshness across an indirect call, the boundary: refresh and store stay
+-- silent, the `narrow` subject falls.**
+--
+-- Arm 1 re-reads AFTER the indirect call -- the re-read IS the refresh, so
+-- deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
+-- the call -- store/move positions never decide, so no refusal. Arm 3 narrows
+-- the stale name itself: a `narrow` subject is a decision position, and only
+-- that decision falls, as `M147`. A run over this file must report exactly
+-- one `M147`, at arm 3.
+module gift717 {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    ruf : fn()
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn aufgefrischt(t : ptr<normal, r> Treiber) -> u32
+    effects { reads t, reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    t->ruf();
+    let frisch : u32 = ZUSTAND;
+    if frisch != 0 { return 1; }
+    return 0;
+}
+
+impl fn abgelegt(t : ptr<normal, r> Treiber) -> u32
+    effects { reads t, reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    t->ruf();
+    ZUSTAND = alt;
+    return 0;
+}
+
+impl fn verengt(t : ptr<normal, r> Treiber) -> u32
+    effects { reads t, reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    t->ruf();
+    narrow alt to 0 .. 8 else { return 0; }
+    return 1;
+}
+
+}
