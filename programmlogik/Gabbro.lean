@@ -15,6 +15,11 @@
   | `Coverage.lean` | WHO ANSWERS for each form -- the plumbing as general lemmas, and the
     proposition that everything except the person's own logic is carried, assumed by name,
     or refused with a tag |
+  | `Sicherheit.lean` | the SAFETY theorem over `Body.lean` (2026-09-09): a body the checker
+    accepts gets stuck only at a `requires` or an `invariant` -- the person's own logic, and
+    nothing else. `Sicherheit/Ausdruck.lean` carries the expression half, `Sicherheit/Anweisung.lean`
+    the statement half; the head file names what is assumed and what was found |
 -/
 import Gabbro.Body
 import Gabbro.Coverage
+import Gabbro.Sicherheit
