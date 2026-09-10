@@ -22,6 +22,14 @@
   | `Wettlauf.lean`     | Faeden verschraenkt: kein Wettlauf, keine Ueberkreuzung der Sperrordnung |
   | `Zucker.lean`       | jede Schreibweise ohne eigenen Konstruktor, als Definition ueber dem Kern |
 | `Ziel.lean`         | DAS ZIEL als Satz ueber der Grammatik -- unabhaengig vom `.rs`-Code       |
+  | `Interferenz.lean`  | das Verbundmodell deklarierter Paare: gueltige Vertraege ueberleben Verschraenkung |
+  | `Koernung.lean`     | die Ereigniskoernung als benannte Praemisse: keine Zerreissung darunter, Bytes als n Ereignisse |
+  | `Geteilt.lean`      | Erreichbarkeit als Konstruktion: ungeteilt heisst von hoechstens einem Faden erreichbar |
+  | `Geraet.lean`       | das Geraet als Laufteilnehmer: Ordnung bewiesen, Inhalt benannte Annahme |
+  | `Unterbrechung.lean`| der Handler als Faden: HB-Deckung ueber Sperrkante oder Maske            |
+  | `Zeugnis.lean`      | die gedruckte Ableitung als Datum: gueltiges Zeugnis heisst Urteil        |
+  | `Budget.lean`       | die ops-Frist als Rechnung: im Budget oder benannt erschoepft, nie still drueber |
+  | `Terminierung.lean` | das Mass faellt heisst der Lauf endet: traversieren, Wiederholung, forever nie |
 -/
 import Grammatik.Typen
 import Grammatik.Syntax
@@ -30,3 +38,11 @@ import Grammatik.Satz
 import Grammatik.Wettlauf
 import Grammatik.Zucker
 import Grammatik.Ziel
+import Grammatik.Interferenz
+import Grammatik.Koernung
+import Grammatik.Geteilt
+import Grammatik.Geraet
+import Grammatik.Unterbrechung
+import Grammatik.Zeugnis
+import Grammatik.Budget
+import Grammatik.Terminierung
