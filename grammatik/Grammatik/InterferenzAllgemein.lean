@@ -456,4 +456,74 @@ theorem allgemeinStabil_invariant (Nb : Nebeneinander) (J : GemeinsamerLauf (D :
 #print axioms Gabbro.Grammatik.invErhalt_aus_Kontext
 #print axioms Gabbro.Grammatik.allgemeinStabil_invariant
 
+/-! ## 12. Gabelmodell: Erzeugung und Vereinigung als Gestalt (G6) -/
+
+/-- Ein Erzeugungseintrag: der Elternfaden `eltern` gibt dem Kindfaden `kind` an der
+    Kettenstelle `k` seine Eintrittswelt -- die Welt der Kette an eben dieser Stelle. -/
+def SpawnEintrag : Type := Faden × Faden × Nat
+
+/-- Ein Vereinigungseintrag: der Elternfaden `eltern` nimmt den Kindfaden `kind` an der
+    Kettenstelle `k` zurueck -- die Welt der Kette an eben dieser Stelle. -/
+def JoinEintrag : Type := Faden × Faden × Nat
+
+/-- Die Eintrittswelt des Kindfadens aus der Erzeugung: die Kettenwelt an der
+    eingetragenen Stelle. Keine eigene Eintrittswelt mehr -- der Gabeleintrag nennt sie. -/
+def KindEintrittAusSpawn (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (s : SpawnEintrag) : Option (World D) :=
+  J.welten[s.2.2]?
+
+/-- Die Rueckkehrwelt des Kindfadens aus der Vereinigung: die Kettenwelt an der
+    eingetragenen Stelle. -/
+def KindEintrittAusJoin (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (j : JoinEintrag) : Option (World D) :=
+  J.welten[j.2.2]?
+
+/-- Die Eintrittswelt eines Kindfadens aus der ganzen Erzeugungsliste: der erste Eintrag,
+    der ihn als Kind nennt, bestimmt die Stelle; ohne Eintrag gibt es keine Welt. -/
+def KindEintrittAusGabel (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (spawns : List SpawnEintrag) (kind : Faden) : Option (World D) :=
+  match spawns.find? (fun s => decide (s.2.1 = kind)) with
+  | none => none
+  | some s => J.welten[s.2.2]?
+
+/-! ## 13. Ausnahmen neben der geteilten Deckung: Atomar und Paarung als Gestalt (G4) -/
+
+/-- Atomare Ausnahme: der Traeger ist ein `atomic`-Global -- seine Zugriffe ordnet die
+    Maschine (A10), nicht die gemeinsame Sperre. -/
+def AtomarAusgenommen (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∃ g : D.Glob, c = .inr g ∧ D.atomar g = true
+
+/-- Paarungsausnahme: der Traeger ist Nutzlast einer Veroeffentlichung -- die Paarung von
+    `publishes` und `awaits` ueber `D.nutzlast` ordnet, nicht die gemeinsame Sperre. -/
+def PaarungAusgenommen (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∃ a p : D.Glob, c = .inr p ∧ p ∈ D.nutzlast a ∧ D.atomar a = true
+
+/-- Geteilte Deckung mit Ausnahmen: schreibt ein zweiter Faden denselben Traeger, so ist
+    der Traeger geteilt UND beide halten entweder eine gemeinsame Sperre seiner Wache
+    ODER eine Ausnahme greift (atomar oder Paarung). Das steht NEBEN `GeteiltGedeckt`,
+    nicht an seiner Stelle. -/
+def GeteiltGedecktMitAusnahmen (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) : Prop :=
+  ∀ (f : Faden), f ∈ J.faeden → ∀ (g : Faden), g ∈ J.faeden → f ≠ g →
+    ∀ (c : D.Tab ⊕ D.Glob),
+      TraegerSchreibt (J.code f) c = true → TraegerSchreibt (J.code g) c = true →
+        Geteilt c = true ∧ (GemeinsameSperre (J.code f) (J.code g) c ∨
+          AtomarAusgenommen (D := D) c ∨ PaarungAusgenommen (D := D) c)
+
+/-! ## 14. Zusicherungen mit Umgebung: Q ueber Welt mal Belegung als Gestalt (G7) -/
+
+/-- Eine Zusicherung mit Umgebung: sie spricht ueber die Welt UND die Belegung des
+    Sichtbereichs -- kein Faden teilt sie, jeder traegt seine eigene. -/
+def EnvZusicherung (Γ : Ctx) : Type := World D → Env D Γ → Prop
+
+/-- Eine Zusicherung mit Umgebung je Faden: jeder Faden traegt seine Belegung ueber
+    seinen eigenen Parametern (`D.params` seines Rumpfs). -/
+def FadenEnvZusicherung (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) : Type :=
+  ∀ (f : Faden), World D → Env D (D.params (J.code f)) → Prop
+
+/-- Der Umgebungserhalt in einem Schritt: die fremde Welt bewegt sich, die eigene
+    Belegung bleibt -- die Gestalt, die `hFremd` und `hEigen` je Belegung annimmt. -/
+def EnvErhalt (Γ : Ctx) (Q : EnvZusicherung (D := D) Γ)
+    (vor nach : World D) (ρ : Env D Γ) : Prop :=
+  Q vor ρ ↔ Q nach ρ
+
 end Gabbro.Grammatik
