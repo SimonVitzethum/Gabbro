@@ -4825,10 +4825,22 @@ Buchfuehrung  705 (67 %)      eigene Logik 188 (18 %)      Hardware 93 (9 %)
 ## OB7 — Beta-Fläche
 
 - [ ] Tutorial, `gabbro new`, „meintest du"-Hinweise. **Acht Anläufe für „addiere zwei
-      Zahlen"**, von der Person mit maximalem Vorwissen.
+      Zahlen"**, von der Person mit maximalem Vorwissen. *Lane B (2026-09-10,
+      gemessen): Skelett `gabbro new hello` → check 0E/0H, emit, `cc
+      -Wall -Wextra -Werror` sauber, build, run druckt `Hi`; `beispiele/63`
+      0E/0H, baut, druckt `Hallo`; TUTORIAL-Blöcke 8/8 ohne Fehler und ohne
+      Hinweise. „Meintest du" für Unterbefehle gebaut (`main.rs::suggest`, ≤2,
+      gleiche Initiale, nur Tabelleneinträge), beide Richtungen gemessen. Rest:
+      P002-Hinweise (gabbro-syntax, fremde Bahn) und feste Proben in `tests/`.*
 - [ ] Die Fahnen sind nur teilweise englisch; **kein Wächter erzwingt einen englischen
-      Erstnamen für einen neuen Unterbefehl.**
+      Erstnamen für einen neuen Unterbefehl.** *Lane B (2026-09-10, gemessen):
+      überholt — `tests/fahnen.rs` hält `kein_erstname_traegt_ein_deutsches_wort`
+      über Fahnen UND Unterbefehle plus Vollständigkeitsratsche;
+      `cargo test -p gabbro-cli` 62/62 grün.*
 - [ ] `at port` ist **abgesagt, nicht gelöst** — x86-I/O findet außerhalb der Sprache statt.
+      *Lane B (2026-09-10, gemessen): überholt — senkt seit 2026-09-02
+      (`emit.rs`, fremde Bahn: `arch`-Forderung, Breiten-/Sitz-/Bank-Absagen);
+      `beispiele/65-port-space.gab` 0E/0H, emittiert `inb`/`outb`.*
 
 ## OB8 — Hardware, die drei Schichten der Seitentabelle
 

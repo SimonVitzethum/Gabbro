@@ -590,9 +590,117 @@ fn main() -> std::process::ExitCode {
         }
         anderes => {
             eprintln!("gabbro: unknown command `{anderes}`");
+            // **"Did you mean …" over the command table, and over nothing else.**
+            //
+            // A misspelt subcommand used to fall through to the whole help text with no
+            // nearer word. The suggestion below names the closest KNOWN spelling, capped
+            // by edit distance (at most 2) and by membership (only what stands in
+            // `COMMAND_NAMES` can be suggested) -- and only across the same initial, so a
+            // guess is never offered where no reading is near. *What is not in the table
+            // cannot be suggested:* no flag, no keyword, no invented word -- hence never a
+            // reserved word as an identifier or vice versa, and never a program the
+            // checker did not accept (a command name is not a program at all).
+            if let Some(near) = suggest(anderes) {
+                eprintln!("did you mean `gabbro {near}`?");
+            }
             hilfe();
             std::process::ExitCode::from(2)
         }
+    }
+}
+
+/// **Every spelling this command line answers to, English first name before the German
+/// second one.** The `match` in `main` is the registry; this table is its shadow for the
+/// unknown-command hint ONLY -- it suggests, it never dispatches. *Two lists over one
+/// thing drift, and this one names its drift guards:* `erstnamen.rs::PAARE` holds the
+/// pairs byte-equal over both spellings, `fahnen.rs::UNTERBEFEHLE` holds the dispatch
+/// arms, and the unit tests below hold the cap (at most 2, same initial, table members
+/// only).
+const COMMAND_NAMES: &[&str] = &[
+    "abi",
+    "build", "bau",
+    "new",
+    "emit",
+    "fragments", "fragmente",
+    "assumptions", "annahmen",
+    "k-condition", "k-bedingung",
+    "effects", "wirkungen",
+    "costs", "kosten",
+    "contexts", "kontexte",
+    "obligations", "pflichten",
+    "lean",
+    "prove", "beweise",
+    "blindspots", "blindstellen",
+    "certificate", "zeugnis",
+    "ceremony", "zeremonie",
+    "templates", "schablonen",
+    "passes", "paesse",
+    "check", "pruefe",
+    "help", "hilfe", "--help", "--hilfe", "-h",
+];
+
+/// Edit distance over characters, no dependencies. All command names are ASCII; the
+/// typed word may not be, so this counts characters and not bytes.
+fn distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut row: Vec<usize> = (0..=b.len()).collect();
+    for (i, &x) in a.iter().enumerate() {
+        let mut next = vec![i + 1];
+        for (j, &y) in b.iter().enumerate() {
+            next.push((row[j] + usize::from(x != y)).min(row[j + 1] + 1).min(next[j] + 1));
+        }
+        row = next;
+    }
+    row[b.len()]
+}
+
+/// The closest known subcommand spelling, or silence. **Fires where due, silent where
+/// not:** at most 2 edits away, same initial letter, and a member of `COMMAND_NAMES` --
+/// anything else returns `None` and the refusal stands alone.
+fn suggest(typed: &str) -> Option<&'static str> {
+    let mut best: Option<(&'static str, usize)> = None;
+    for name in COMMAND_NAMES {
+        if typed.chars().next() != name.chars().next() {
+            continue;
+        }
+        let d = distance(typed, name);
+        if d <= 2 && best.map_or(true, |(_, bd)| d < bd) {
+            best = Some((name, d));
+        }
+    }
+    best.map(|(name, _)| name)
+}
+
+#[cfg(test)]
+mod suggest_tests {
+    use super::{distance, suggest};
+
+    /// **The hint fires where due** -- one slipped letter, one missing letter, one
+    /// transposed pair, each answered with the spelling that was meant.
+    #[test]
+    fn hint_fires_where_due() {
+        assert_eq!(distance("kitten", "sitting"), 3);
+        assert_eq!(distance("chek", "check"), 1);
+        assert_eq!(suggest("chek"), Some("check"));
+        assert_eq!(suggest("pruefen"), Some("pruefe"));
+        assert_eq!(suggest("biuld"), Some("build"));
+        assert_eq!(suggest("hep"), Some("help"));
+        assert_eq!(suggest("kostne"), Some("kosten"));
+    }
+
+    /// **And it stays silent where not** -- no near reading, no guess. `xyz` shares no
+    /// initial with any command; `c` and `h` are too far from every word they start.
+    #[test]
+    fn hint_silent_where_not_due() {
+        assert_eq!(suggest("xyz"), None);
+        assert_eq!(suggest("qqq"), None);
+        assert_eq!(suggest("c"), None);
+        assert_eq!(suggest("h"), None);
+        // Built at run time, not quoted: `fahnen.rs` reads every quoted `"--…"`
+        // literal in this directory as a flag the CLI accepts, and a probe word is
+        // not one. A literal here would turn that ratchet red without a new flag.
+        assert_eq!(suggest(&format!("--{}", "unbekannt")), None);
     }
 }
 
