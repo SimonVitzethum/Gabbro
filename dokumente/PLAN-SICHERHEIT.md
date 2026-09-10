@@ -80,9 +80,13 @@ programmlogik/Gabbro/Sicherheit/Anweisung.lean  1632 lines   36 theorems   state
 programmlogik/Gabbro/Sicherheit.lean             ~185 lines    3 theorems   the sentence, 8 speech tests, `#print axioms`
 ```
 
-`lake build` on Lean `v4.33.1` (the toolchain `passlogik/lean-toolchain` pins), no
-`mathlib`, **0 `sorry`, 0 own `axiom`**, every `#print axioms` shows only `propext`,
-`Classical.choice`, `Quot.sound`.
+`lake build` on Lean `v4.33.0` (the toolchain `programmlogik/lean-toolchain` pins --
+`passlogik` and `grammatik` keep their own), **0 `sorry`, 0 own `axiom`**, every
+`#print axioms` shows only `propext`, `Classical.choice`, `Quot.sound`. Mathlib is
+allowed since 2026-09-10, pinned to `db584cd` with precompiled oleans, importable
+only from `Gabbro/Sicherheit/*` (the S4 range arithmetic needs order lemmas no
+finite hand-proof should duplicate); `Body.lean`, the grammar and `passlogik` stay
+dependency-free.
 
 ### 2.1 The expression half — `schluss_sicher`
 
