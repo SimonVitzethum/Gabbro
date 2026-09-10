@@ -1,0 +1,14 @@
+-- erwartet: P002
+-- **Die Absage steht, und wo ein Nachbarwort als Name taugt, nennt sie ihn.**
+--
+-- `true` ist reserviert und bleibt es -- aber `tree` ist einen Schritt entfernt und ein
+-- gewoehnlicher Name. Der Hinweis ist Text, keine Reparatur: der Code faellt trotzdem,
+-- und was faellt, ist weiter `P002`. Die Gegenprobe ohne Nachbar steht in `699`.
+module gift {
+
+impl fn nehmen() -> u32 effects { pure } {
+    let true = 1;
+    return true;
+}
+
+}

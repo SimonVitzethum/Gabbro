@@ -4841,7 +4841,13 @@ Buchfuehrung  705 (67 %)      eigene Logik 188 (18 %)      Hardware 93 (9 %)
       0E/0H, baut, druckt `Hallo`; TUTORIAL-Blöcke 8/8 ohne Fehler und ohne
       Hinweise. „Meintest du" für Unterbefehle gebaut (`main.rs::suggest`, ≤2,
       gleiche Initiale, nur Tabelleneinträge), beide Richtungen gemessen. Rest:
-      P002-Hinweise (gabbro-syntax, fremde Bahn) und feste Proben in `tests/`.*
+       P002-Hinweise (gabbro-syntax, fremde Bahn) und feste Proben in `tests/`.*
+       Lane B2 (2026-09-10, measured): P002 names the closest name-usable word (≤2 edits,
+       same initial, contextual words only -- never a reserved word as identifier; hint fires
+       for 7 of the 17, silent for 10); permanent probes in
+       `crates/gabbro-cli/tests/hinweise.rs`, `crates/gabbro-syntax/tests/hints.rs` and
+       `beispiele/gift/698-699`; `cargo test -p gabbro-syntax -p gabbro-cli` green, zero
+       warnings.*
 - [ ] Die Fahnen sind nur teilweise englisch; **kein Wächter erzwingt einen englischen
       Erstnamen für einen neuen Unterbefehl.** *Lane B (2026-09-10, gemessen):
       überholt — `tests/fahnen.rs` hält `kein_erstname_traegt_ein_deutsches_wort`

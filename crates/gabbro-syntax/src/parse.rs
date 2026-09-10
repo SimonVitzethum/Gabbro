@@ -317,6 +317,50 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Edit distance over characters, no dependencies. **The twin of
+    /// `gabbro-cli/src/main.rs::distance`** -- a small duplicate on purpose: the syntax
+    /// crate takes no dependency on the CLI crate, and the house pattern for
+    /// dependency-free crates is a copy with the twin named here.
+    fn edit_distance(a: &str, b: &str) -> usize {
+        let a: Vec<char> = a.chars().collect();
+        let b: Vec<char> = b.chars().collect();
+        let mut row: Vec<usize> = (0..=b.len()).collect();
+        for (i, &x) in a.iter().enumerate() {
+            let mut next = vec![i + 1];
+            for (j, &y) in b.iter().enumerate() {
+                next.push((row[j] + usize::from(x != y)).min(row[j + 1] + 1).min(next[j] + 1));
+            }
+            row = next;
+        }
+        row[b.len()]
+    }
+
+    /// The closest NAME-USABLE word for a refused name, or silence. **The twin of
+    /// `gabbro-cli/src/main.rs::suggest`, under the same caps**: at most 2 edits, same
+    /// initial letter, table members only -- and additionally only words that may stand
+    /// where a name stands (`!reserviert()`). At a name position a reserved word is
+    /// refused a second time, so suggesting one would trade one refusal for its twin:
+    /// never a reserved word as an identifier. (The reverse direction -- no identifier
+    /// where a keyword is expected -- belongs to a keyword site, not this one.) *A hint
+    /// is text, not a repair: the refusal stands either way.*
+    fn suggest_name(typed: &str) -> Option<&'static str> {
+        let mut best: Option<(&'static str, usize)> = None;
+        for k in crate::kw::ALLE {
+            if k.reserviert() {
+                continue;
+            }
+            let name = k.text();
+            if typed.chars().next() != name.chars().next() {
+                continue;
+            }
+            let d = Self::edit_distance(typed, name);
+            if d <= 2 && best.map_or(true, |(_, bd)| d < bd) {
+                best = Some((name, d));
+            }
+        }
+        best.map(|(name, _)| name)
+    }
+
     /// A free identifier. **Every word of the vocabulary is one**, except the handful that
     /// `kw.rs` still marks `res` -- see the head of this file.
     fn erwarte_ident(&mut self) -> Erg<Ident> {
@@ -364,20 +408,24 @@ impl<'a> Parser<'a> {
                     "it BEGINS an expression or a predicate, so a variable of this name \
                      could be bound and never read back"
                 };
-                self.absage(
-                    Absage::fehler(
-                        "P002",
-                        t.span,
-                        format!("`{k}` is a word of the vocabulary, not an identifier"),
-                    )
-                    .mit_notiz(grund)
-                    .mit_notiz(
-                        "seventeen words of the 221 are not names, and only these: \
-                         `sizeof` `lenof` `aligned` `forall` `exists` `true` `false` \
-                         `Self` `Some` `None` `const` `static` `extern` `if` `else` \
-                         `return` `bool` -- every other word of the table is an ordinary name",
-                    ),
+                let mut absage = Absage::fehler(
+                    "P002",
+                    t.span,
+                    format!("`{k}` is a word of the vocabulary, not an identifier"),
+                )
+                .mit_notiz(grund)
+                .mit_notiz(
+                    "seventeen words of the 221 are not names, and only these: \
+                     `sizeof` `lenof` `aligned` `forall` `exists` `true` `false` \
+                     `Self` `Some` `None` `const` `static` `extern` `if` `else` \
+                     `return` `bool` -- every other word of the table is an ordinary name",
                 );
+                // **The P002 hint: a nearby name-usable word, or nothing.** Additive text
+                // on the existing refusal -- code, span and rejection unchanged.
+                if let Some(near) = Self::suggest_name(k.text()) {
+                    absage = absage.mit_notiz(format!("did you mean `{near}`?"));
+                }
+                self.absage(absage);
                 Err(Abbruch)
             }
             _ => {
