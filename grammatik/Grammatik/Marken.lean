@@ -61,12 +61,12 @@
   | `Einfaedig`           | (W4) `Gesittet.marke_eindeutig`               |
 
   SCHNITTE (gebucht, nicht versteckt):
-  C1. Keine Saetze: dass erreichbare Staende `StufenTreu` und `StandEinfaedig`
-      erfuellen, waere eine Induktion ueber `Verlauf` -- also ein `theorem`, und
-      der steht hier nicht. Die Definitionen nennen die Form, die er haette.
-  C2. Keine Verdrahtung: `Einfaedig` hat GENAU die Gestalt des W4-Feldes, aber die
-      Projektion (`Gesittet.marke_eindeutig` liefert `Einfaedig`) steht nirgends --
-      sie braucht den Indexeintrag, den dieser Zweig nicht anfassen darf.
+  C1. Erhaltung BEWIESEN (§6 unten): jeder erreichbare Stand ist stufentreu und
+      einfaedrig -- Induktion ueber `Verlauf`, je Schritt Fallunterscheidung.
+  C2. Verdrahtung: `Einfaedig` hat GENAU die Gestalt des W4-Feldes; die Projektion
+      (`marke_eindeutig_aus_einfaedig`, `gesittet_aus_einfaedig`) steht in
+      `Wettlauf.lean` §7 -- sie braucht `Lauf D` und kann darum nicht hier stehen
+      (Importrichtung: `Wettlauf` liest `Marken`, nie umgekehrt).
   C3. Kein Uebergabekonstruktor: dass keine Anweisung eine Marke an einen anderen
       Faden weiterreicht (W4), steht hier als Abwesenheit -- `fuehre` und
       `verbrauche` binden den Schritt an den besitzenden Faden, und einen
@@ -207,5 +207,136 @@ def Einfaedig (l : Lauf) : Prop :=
   ∀ (i j : Nat) (f g : Faden) (m : Marke) (s s' : Nat) (ei ej : Ereignis),
     l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) →
     Res.marke m s ∈ ei.lambda → Res.marke m s' ∈ ej.lambda → f = g
+
+/-! ## 6. Die Erhaltung -- was jeder Verlauf traegt (Schnitt C1, bewiesen)
+
+    Jeder Schritt erhaelt beide Invarianten: `erzeuge` stellt die Marke in genau
+    EINE Hand (sie war frei), `fuehre` behaelt die Hand bei Stufenwechsel, und
+    `verbrauche` nimmt die Hand weg -- was danach zwei Haende zeigt, zeigte sie
+    schon vorher. Darum traegt jeder Verlauf von `Anfang` an beide Formen. -/
+
+/-- Beleben stellt die Marke genau dorthin. -/
+theorem belebe_bei (σ : Stand) (m : Marke) (f : Faden) (s : Nat) :
+    belebe σ m f s m = some (f, s) := by
+  unfold belebe
+  simp
+
+/-- Beleben ruehrt keine andere Marke an. -/
+theorem belebe_anders (σ : Stand) (m m' : Marke) (f : Faden) (s : Nat)
+    (h : m' ≠ m) : belebe σ m f s m' = σ m' := by
+  unfold belebe
+  rw [if_neg h]
+
+/-- Loeschen macht die Marke frei. -/
+theorem loesche_bei (σ : Stand) (m : Marke) : loesche σ m m = none := by
+  unfold loesche
+  simp
+
+/-- Loeschen ruehrt keine andere Marke an. -/
+theorem loesche_anders (σ : Stand) (m m' : Marke) (h : m' ≠ m) :
+    loesche σ m m' = σ m' := by
+  unfold loesche
+  rw [if_neg h]
+
+/-- Ein Schritt erhaelt die Stufentreue. -/
+theorem schritt_stufentreu (κ : MarkDekl) {σ σ' : Stand}
+    (hσ : StufenTreu κ σ) (h : MarkenSchritt κ σ σ') : StufenTreu κ σ' := by
+  cases h with
+  | erzeuge m f s _ hstufe _ =>
+      intro m' f' s' hmem
+      by_cases heq : m' = m
+      · subst heq
+        rw [belebe_bei] at hmem
+        simp at hmem
+        obtain ⟨rfl, rfl⟩ := hmem
+        exact hstufe
+      · rw [belebe_anders _ _ _ _ _ heq] at hmem
+        exact hσ m' f' s' hmem
+  | fuehre m f a _ hstufe =>
+      intro m' f' s' hmem
+      by_cases heq : m' = m
+      · subst heq
+        rw [belebe_bei] at hmem
+        simp at hmem
+        obtain ⟨rfl, rfl⟩ := hmem
+        exact hstufe
+      · rw [belebe_anders _ _ _ _ _ heq] at hmem
+        exact hσ m' f' s' hmem
+  | verbrauche m f s _ =>
+      intro m' f' s' hmem
+      by_cases heq : m' = m
+      · subst heq
+        rw [loesche_bei] at hmem
+        simp at hmem
+      · rw [loesche_anders _ _ _ heq] at hmem
+        exact hσ m' f' s' hmem
+
+/-- Ein Schritt erhaelt die Einzelfaedrigkeit des Standes. -/
+theorem schritt_einfaedig (κ : MarkDekl) {σ σ' : Stand}
+    (hσ : StandEinfaedig σ) (h : MarkenSchritt κ σ σ') :
+    StandEinfaedig σ' := by
+  cases h with
+  | erzeuge m₀ f₀ s₀ _ _ _ =>
+      intro m f g hf hg
+      obtain ⟨s₁, h1⟩ := hf
+      obtain ⟨s₂, h2⟩ := hg
+      by_cases heq : m = m₀
+      · subst heq
+        rw [belebe_bei] at h1 h2
+        have e1 := Option.some_inj.mp h1
+        have e2 := Option.some_inj.mp h2
+        have f1 : f = f₀ := (congrArg Prod.fst e1).symm
+        have g1 : g = f₀ := (congrArg Prod.fst e2).symm
+        rw [f1, g1]
+      · rw [belebe_anders _ _ _ _ _ heq] at h1 h2
+        exact hσ m f g ⟨s₁, h1⟩ ⟨s₂, h2⟩
+  | fuehre m₀ f₀ a _ _ =>
+      intro m f g hf hg
+      obtain ⟨s₁, h1⟩ := hf
+      obtain ⟨s₂, h2⟩ := hg
+      by_cases heq : m = m₀
+      · subst heq
+        rw [belebe_bei] at h1 h2
+        have e1 := Option.some_inj.mp h1
+        have e2 := Option.some_inj.mp h2
+        have f1 : f = f₀ := (congrArg Prod.fst e1).symm
+        have g1 : g = f₀ := (congrArg Prod.fst e2).symm
+        rw [f1, g1]
+      · rw [belebe_anders _ _ _ _ _ heq] at h1 h2
+        exact hσ m f g ⟨s₁, h1⟩ ⟨s₂, h2⟩
+  | verbrauche m₀ f₀ s₀ _ =>
+      intro m f g hf hg
+      obtain ⟨s₁, h1⟩ := hf
+      obtain ⟨s₂, h2⟩ := hg
+      by_cases heq : m = m₀
+      · subst heq
+        rw [loesche_bei] at h1
+        simp at h1
+      · rw [loesche_anders _ _ _ heq] at h1 h2
+        exact hσ m f g ⟨s₁, h1⟩ ⟨s₂, h2⟩
+
+/-- Jeder erreichbare Stand ist stufentreu. -/
+theorem verlauf_stufentreu (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
+    StufenTreu κ σ := by
+  induction v with
+  | anfang =>
+      intro m f s h
+      simp [Anfang] at h
+  | weiter _ h ih =>
+      exact schritt_stufentreu κ ih h
+
+/-- Jeder erreichbare Stand ist einfaedrig. -/
+theorem verlauf_einfaedig (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
+    StandEinfaedig σ := by
+  induction v with
+  | anfang =>
+      intro m f g hf hg
+      obtain ⟨s₁, h1⟩ := hf
+      simp [Anfang] at h1
+  | weiter _ h ih =>
+      exact schritt_einfaedig κ ih h
+
+#print axioms Gabbro.Grammatik.Marken.verlauf_stufentreu
+#print axioms Gabbro.Grammatik.Marken.verlauf_einfaedig
 
 end Gabbro.Grammatik.Marken

@@ -40,12 +40,19 @@
   CUTS (booked, not hidden):
   C1. Table/global collapse: one `Carrier` stands for both; the split
       (`geteilt_treu` per table vs. per global) returns with the wiring.
-  C2. Executable footprint: `schreibtFn` is declared per function, not extracted
-      from `Stmt`/`Block` bodies -- that extraction is the missing joint model
-      (same cut as `Wettlauf.lean` §5: no Owicki-Gries step yet). Dynamic
-      coverage (`BauLauf`) therefore stays a premise, stated explicitly.
-  C3. Concurrent sets are a finite pair list, not the `Nebeneinander` relation.
-  C4. Marks (W4) are untouched; only (W5) is derived here.
+  C2. Executable footprint: `schreibtFn` is declared per function HERE, but
+      `Extraktion.lean` (lane 78) computes it from the effects
+      (`fussAus` over `D.schreibt`/`D.gschreibt`, `fussTreue_aus_bau`) -- the
+      call edges likewise (`ruftDirekt` traversal W-EXT, `kantenTreue_aus_bau`).
+      What stays a premise is the dynamic coverage (`BauLauf`): every access
+      of the run is covered by static reachability, stated explicitly.
+  C3. Concurrent sets are a finite pair list, not the `Nebeneinander` relation;
+      `Extraktion.lean` computes the list from the declaration (`nebenAus`,
+      `paarTreue_aus_bau`/`paarVoll_aus_bau`) and speaks `Nebeneinander`
+      (`Wettlauf.lean` §6) at the fidelity shapes.
+  C4. Marks (W4) are derived, not assumed: `Marken.lean` proves single-threaded
+      stands per `Verlauf`, and `Wettlauf.lean` §7 projects `Einfaedig` into
+      `marke_eindeutig`. Only (W5) is derived HERE.
   C5. `fuel` is the declared exploration bound, mirroring `passes`/`fuel` of
       `Semantik.exec`: the checker and the reachability speak about the SAME
       fuel, so neither can outrun the other.

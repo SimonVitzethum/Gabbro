@@ -46,46 +46,84 @@
                 `EinSnapshot`   -- the premise, named explicitly: both
                                    snapshots agree at the checked address
                                    (single-copy atomicity, Koernung shape).
-                safety / gap    -- `gepruefteKopie_ohneToctou` under the
-                                   premise; `toctouZeuge_toctou` and
-                                   `laufSequenz_toctou_ohneSnapshot` name
-                                   the gap without it.
+               safety / gap    -- `gepruefteKopie_ohneToctou` under the
+                                    premise; `toctouZeuge_toctou` and
+                                    `laufSequenz_toctou_ohneSnapshot` name
+                                    the gap without it.
+               wiring (§7)     -- `weltByte`/`weltBytes` read the checked
+                                    address out of `World` (the same
+                                    `World.bytesAb` the `leseBytes` read
+                                    path binds); `schreibSlot_liestSelbe`
+                                    lands the write where the read looks;
+                                    `modellSequenz_ohneToctou` proves the
+                                    safety INSIDE the model, and
+                                    `modellSequenz_toctou_ohneSnapshotWelt`
+                                    names the gap there. The region check
+                                    itself (`validiert`) still has no `exec`
+                                    counterpart -- that is cut C6, not §7.
 
-             Mirror (standalone -- the lane forbids editing the `Grammatik.lean`
-             index, so this file takes no import, not even the siblings; names
-             are chosen to wire up later):
+              Mirror (this file takes one same-project import,
+              `Grammatik.Semantik`; the `Grammatik.lean` index is untouched,
+              so the file wires itself -- names were chosen for this):
 
              | here                | there                                        |
              |---------------------|----------------------------------------------|
              | `UserRegion`        | the missing seventh `space` (SYNTAX §3)      |
              | `Kopie`             | the missing copy primitive (no `Expr` ctor)  |
              | `GepruefteKopie`    | the missing rule (no M3 rule fires on it)    |
-             | `ohneToctou`        | the missing statement (one flat `World`)     |
-              | `Nat` addresses     | wiring: byte offsets into `Tab`/`Glob` later |
-              | `EinSnapshot`       | the atomic event (`Koernung.lean`: `EreignisAtomar`)|
+              | `ohneToctou`        | the missing statement (one flat `World`)     |
+               | `Nat` addresses     | wiring: byte offsets into a byte carrier     |
+               |                     | (§7: `weltByte` over `World.bytesAb`)        |
+               | `EinSnapshot`       | the atomic event (`Koernung.lean`: `EreignisAtomar`)|
 
-             CUTS (booked, not hidden):
-             C1. Addresses and values are `Nat`: placeholders for byte offsets
-                 and byte strings. The wiring replaces them with `Tab` slots /
-                 `Byte` lists (`Typen.lean`: `Byte`, `bytesZuZahl`).
-             C2. No clock: `PruefDannKopie` orders the two readings by position
-                 (check first, copy second), not by time. A writer between them
-                 is the environment, named as an assumption like `Hardware.*`.
-             C3. One copy per statement: a loop copying a range chunk by chunk
-                 is `n` terms of this shape, each checked -- that per-chunk
-                 check is exactly what the shape demands.
-              C4. `vonUser` only is the hazard direction. `nachUser` shares the
-                  datatype so the check is not skipped on the way out; the
-                  TOCTOU reading hazard runs check-then-copy from user.
-              C5. No writer modelled: `m₁`/`m₂` are check-time/copy-time
-                  snapshots; `EinSnapshot` says they agree at the checked
-                  address. A writer between them is environment (like
-                  `Hardware.*`), never a transition here. One `Nat` per
-                  address again (cut C1, at the run): no byte-list wiring.
+              CUTS (booked, not hidden):
+              C1. Addresses and values are `Nat`: placeholders for byte offsets
+                  and byte strings. §7 wires ONE byte carrier: a `Nat` address
+                  is the `Int` index into a table field typed `.int 0 255`
+                  (`Typen.lean`: `Byte`), read through `World.bytesAb` --
+                  the same function the `leseBytes` read path binds. Every
+                  other carrier (all remaining `Tab` slots / `Glob`s) is
+                  still unwired.
+              C2. No clock: `PruefDannKopie` orders the two readings by position
+                  (check first, copy second), not by time. A writer between them
+                  is the environment, named as an assumption like `Hardware.*`.
+                  §7 keeps this: the two model reads take two worlds, and
+                  nothing in `exec` orders them.
+              C3. One copy per statement: a loop copying a range chunk by chunk
+                  is `n` terms of this shape, each checked -- that per-chunk
+                  check is exactly what the shape demands.
+               C4. `vonUser` only is the hazard direction. `nachUser` shares the
+                   datatype so the check is not skipped on the way out; the
+                   TOCTOU reading hazard runs check-then-copy from user.
+                   Wiring (§7): `vonUser` is the read path (`bytesAb`, as in
+                   `eval`'s `leseBytes` branch); `nachUser` is the write path
+                   (`schreibSlot`/`schreibBytes`, as in `execStmt`).
+               C5. No writer modelled: `m₁`/`m₂` are check-time/copy-time
+                   snapshots; `EinSnapshot` says they agree at the checked
+                   address. A writer between them is environment (like
+                   `Hardware.*`), never a transition here. One `Nat` per
+                   address again (cut C1, at the run): no byte-list wiring.
+                   §7 carries this over: `σ₁`/`σ₂` are two worlds, and
+                   `EinSnapshotWelt` says they agree at the checked byte.
+               C6. The region check is still beside `exec`: `World` is one
+                   flat mapping with no `Seite`, and no `Stmt`/`Block`
+                   transition discharges `validiert` -- an out-of-region
+                   `Kopie` still reads and writes in the model, because the
+                   model memory is total. The exact missing link: a range
+                   check inside `exec` (a statement shape whose transition
+                   requires `validiert`), and a user partition in `World`
+                   it could check against.
 
-              Core only: no `mathlib`, no import at all. Zero `sorry`;
-              `#print axioms` below shows the theorems rest on nothing.
+               Core only: no `mathlib`; one same-project import
+               (`Grammatik.Semantik`), no new dependency. Zero `sorry`,
+               no `admit`, no new `axiom`. `#print axioms` below shows §§1-6
+               rest on nothing; §7 rests on Lean core only (`propext`,
+               `Classical.choice`, `Quot.sound`) -- the same baseline every
+               `Semantik`-based file of the project shows, carried by the
+               `World` types, not by any proof step here.
 -/
+
+import Grammatik.Semantik
 
 namespace Gabbro.Grammatik.Adressraum
 
@@ -282,6 +320,123 @@ theorem laufSequenz_toctou_ohneSnapshot (g : GepruefteKopie) (m₁ m₂ : UserMe
   unfold ohneToctou laufSequenz checkLesung kopieLesung at hc
   exact h (congrArg Lesung.wert hc)
 
+/-! ## 7. Wiring into the world: the checked handle reads the model -/
+
+/- A user address is a byte offset into ONE byte carrier: table `t`, field
+   `f` typed `.int 0 255`. The read below is `World.bytesAb` -- the same
+   function `eval`'s `leseBytes` branch binds as `bs` and `World.schreibBytes`
+   walks. All other carriers stay unwired (cut C1); the region check stays
+   beside `exec` (cut C6). -/
+
+/-- One user-address byte out of the world: the checked address, read from
+    the carrier. `Wert D (.int 0 255)` IS `Byte` (`Typen.lean`: `Byte` is
+    `Zahl 0 255`), so no conversion happens -- the cast only moves the
+    field's type proof, exactly as `World.bytesAb` does. -/
+def weltByte (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (σ : World D) (addr : Nat) : Byte :=
+  cast (congrArg (Wert D) hf) (σ.slots t (addr : Int) f)
+
+/-- `len` user bytes from `addr`: the model read behind the checked handle. -/
+def weltBytes (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (σ : World D) (addr len : Nat) : List Byte :=
+  σ.bytesAb t f hf len (addr : Int)
+
+/-- The model read IS the read path: `weltBytes` is `World.bytesAb` applied
+    to the checked address -- the function the `leseBytes` read path binds
+    (`eval`: `let bs := σ.bytesAb …`) and the `schreibBytes` write path walks
+    (`execStmt`: `σ.schreibBytes …`). Stated as `rfl` because the wiring is
+    by identity, not by correspondence. -/
+theorem weltBytes_istBytesAb (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (σ : World D) (addr len : Nat) :
+    weltBytes D t f hf σ addr len = σ.bytesAb t f hf len (addr : Int) :=
+  rfl
+
+/-- The write lands where the read looks: a slot written through the write
+    path (`World.schreibSlot`, as `execStmt` calls it) reads back the written
+    value. The `nachUser` direction of the shape, at the model. -/
+theorem schreibSlot_liestSelbe (D : Deklaration) (σ : World D) (t : D.Tab)
+    (Λ : List (Res D)) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
+    (σ.schreibSlot t Λ k f v).slots t k f = v := by
+  have e : (σ.schreibSlot t Λ k f v).slots t k f
+      = (σ.storeSlot t k f v).slots t k f := rfl
+  rw [e]
+  simp [World.storeSlot]
+
+/-- The checked reading, from the world at check time: the copy's user
+    address, seen in `σ₁` -- the checked handle, at the model. -/
+def modellPruefung (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₁ : World D) : Lesung :=
+  { addr := g.kopie.userAddr, wert := (weltByte D t f hf σ₁ g.kopie.userAddr).n.toNat }
+
+/-- The copied reading, from the world at copy time: the SAME address, seen
+    in `σ₂`. A copy from another address is not of this shape. -/
+def modellKopie (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₂ : World D) : Lesung :=
+  { addr := g.kopie.userAddr, wert := (weltByte D t f hf σ₂ g.kopie.userAddr).n.toNat }
+
+/-- Running a validated copy against the world: check first, copy second --
+    two worlds, one handle. -/
+def modellSequenz (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₁ σ₂ : World D) :
+    PruefDannKopie :=
+  { pruefung := modellPruefung D t f hf g σ₁, kopie := modellKopie D t f hf g σ₂ }
+
+/-- **Single-copy atomicity, at the model** -- the `EinSnapshot` premise over
+    worlds: both snapshots agree at the checked byte (Koernung shape, one
+    indivisible copy; the writer between them stays environment, cut C5). -/
+def EinSnapshotWelt (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₁ σ₂ : World D) : Prop :=
+  weltByte D t f hf σ₁ g.kopie.userAddr = weltByte D t f hf σ₂ g.kopie.userAddr
+
+/-- The run reads the validated address on both positions: what is checked
+    is what is copied -- the handle, at the model, before any atomicity. -/
+theorem modellSequenz_liestGeprueft (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₁ σ₂ : World D) :
+    (modellSequenz D t f hf g σ₁ σ₂).pruefung.addr = g.kopie.userAddr ∧
+    (modellSequenz D t f hf g σ₁ σ₂).kopie.addr = g.kopie.userAddr :=
+  ⟨rfl, rfl⟩
+
+/-- Under the premise, the two model reads agree: the checked byte IS the
+    copied byte. -/
+theorem einSnapshotWelt_gibtWertGleich (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₁ σ₂ : World D)
+    (h : EinSnapshotWelt D t f hf g σ₁ σ₂) :
+    (modellPruefung D t f hf g σ₁).wert = (modellKopie D t f hf g σ₂).wert := by
+  unfold EinSnapshotWelt at h
+  unfold modellPruefung modellKopie
+  rw [h]
+
+/-- **Validated-copy safety, INSIDE the model.** A checked copy run as a
+    single copy through the checked handle shows no check-then-copy TOCTOU
+    at the model read -- UNDER `EinSnapshotWelt`. The handle fixes the
+    address (both readings name the checked one, out of `World.slots`); the
+    premise fixes the value (no writer between). Drop the premise and the
+    goal is unwritable -- that is the next theorem, not this. -/
+theorem modellSequenz_ohneToctou (D : Deklaration) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (g : GepruefteKopie) (σ₁ σ₂ : World D)
+    (h : EinSnapshotWelt D t f hf g σ₁ σ₂) :
+    ohneToctou (modellSequenz D t f hf g σ₁ σ₂) := by
+  have e : modellPruefung D t f hf g σ₁ = modellKopie D t f hf g σ₂ := by
+    unfold EinSnapshotWelt at h
+    unfold modellPruefung modellKopie
+    rw [h]
+  unfold ohneToctou modellSequenz
+  exact e
+
+/-- **The gap, at the model.** A run whose model reads differ -- the writer
+    between check and copy, i.e. the crossing WITHOUT the single-copy
+    premise -- shows TOCTOU. An unvalidated crossing runs in this shape, so
+    nothing here excludes its TOCTOU; and the region check that would refuse
+    it is still beside `exec` (cut C6). -/
+theorem modellSequenz_toctou_ohneSnapshotWelt (D : Deklaration) (t : D.Tab)
+    (f : D.Feld t) (hf : D.typ t f = .int 0 255) (g : GepruefteKopie)
+    (σ₁ σ₂ : World D)
+    (h : (modellPruefung D t f hf g σ₁).wert ≠ (modellKopie D t f hf g σ₂).wert) :
+    ¬ ohneToctou (modellSequenz D t f hf g σ₁ σ₂) := by
+  intro hc
+  unfold ohneToctou modellSequenz at hc
+  exact h (congrArg Lesung.wert hc)
+
 #print axioms EinSnapshot
 #print axioms einSnapshot_refl
 #print axioms laufSequenz_liestGeprueft
@@ -289,5 +444,11 @@ theorem laufSequenz_toctou_ohneSnapshot (g : GepruefteKopie) (m₁ m₂ : UserMe
 #print axioms toctouZeuge
 #print axioms toctouZeuge_toctou
 #print axioms laufSequenz_toctou_ohneSnapshot
+#print axioms weltBytes_istBytesAb
+#print axioms schreibSlot_liestSelbe
+#print axioms modellSequenz_liestGeprueft
+#print axioms einSnapshotWelt_gibtWertGleich
+#print axioms modellSequenz_ohneToctou
+#print axioms modellSequenz_toctou_ohneSnapshotWelt
 
 end Gabbro.Grammatik.Adressraum

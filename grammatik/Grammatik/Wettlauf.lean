@@ -35,6 +35,7 @@
   eine Marke, sind es derselbe Faden (W4) -- kein zweiter Zugreifer.
 -/
 import Grammatik.Satz
+import Grammatik.Marken
 
 namespace Gabbro.Grammatik
 
@@ -465,11 +466,16 @@ theorem keine_ueberkreuzung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Fa
     unten), und Endstrecken bleiben konsistent (`Konsistent.drop`).
 
     EHRLICH GESAGT -- was dieser Satz NICHT baut (2026-09-10,
-    `messung/ZIEL-BEWERTUNG-2026-09-10.md`):
-    W3 (Ausschluss), W4 (Marke in einem Faden) und W5 (ungeteilt) bleiben
-    PRAEMISSEN: sie sprechen ueber das Verhaeltnis der Faeden zueinander
-    (fremde Sperrprimitive, disjunkte Markenmengen, `shared`-Deklaration), und
-    kein Satz ueber je einen Rumpf kann sie schliessen. Ebenso fehlt der
+    `messung/ZIEL-BEWERTUNG-2026-09-10.md`, Stand Bahn 78):
+    W3 (Ausschluss) und W5 (ungeteilt) bleiben PRAEMISSEN: sie sprechen ueber
+    das Verhaeltnis der Faeden zueinander (fremde Sperrprimitive,
+    `shared`-Deklaration), und kein Satz ueber je einen Rumpf kann sie
+    schliessen. W4 (Marke in einem Faden) ist seit Bahn 78 KEINE blosse
+    Praemisse mehr: `Marken.lean` beweist die Einzelfaedrigkeit jedes
+    `Verlauf`-Standes, und §7 unten projiziert `Einfaedig` in
+    `marke_eindeutig` -- was noch fehlt, ist der Stand HINTER einem echten
+    `Lauf D` (ein `Verlauf` je Faden durch `exec`), also reist `hEin` als
+    explizite Hypothese. Ebenso fehlt der
     Owicki-Gries-Schritt: dass gueltige sequenzielle Logik (`requires` /
     `ensures`) unter Verschraenkung gueltig bleibt, folgt aus HB-Ordnung nicht
     -- dazu brauchte es eine gemeinsame Semantik mit Rahmen-Disjunktheit
@@ -543,6 +549,88 @@ theorem nur_deklariert_teilt_lauf (Nb : Nebeneinander) (l : Lauf D)
     (hi : l[i]? = some (Schritt.mk f ei)) (hj : l[j]? = some (Schritt.mk g ej))
     (hfg : f ≠ g) : Nb f g :=
   hb i j f g ei ej hi hj hfg
+
+/-! ## 7. W4 aus der Konstruktion -- `Einfaedig` liefert `marke_eindeutig`
+
+    `Gesittet.marke_eindeutig` keeps its shape (the consumers in `Ziel.lean` and
+    `Interferenz.lean` read exactly this field), but it is no longer a bare
+    premise: `marke_eindeutig_aus_einfaedig` derives it from `Marken.Einfaedig`
+    over the projected run, and `gesittet_aus_einfaedig` builds the whole
+    `Gesittet` from the construction instead of the bare W4. `Marken.lean`
+    proves that every `Verlauf` yields single-threaded stands
+    (`verlauf_einfaedig`); what REMAINS open (rebooked cut): threading one
+    `Verlauf` per run through `exec` -- the per-thread stand behind a real
+    `Lauf D` stands nowhere yet, so the projection hypothesis `hEin` still
+    travels as an explicit argument. -/
+
+/-- Project a real guard into a code guard over `code`. -/
+def markenProj (code : D.Marke → Nat) : Res D → Marken.Res
+  | .held _ => .held
+  | .marke m s => .marke (code m) s
+
+/-- Project a real event: the same mark list, under codes. -/
+def ereignisProj (code : D.Marke → Nat) (ei : Ereignis D) : Marken.Ereignis :=
+  ⟨ei.lambda.map (markenProj code)⟩
+
+/-- Project a real step: the same thread, the projected event. -/
+def schrittProj (code : D.Marke → Nat) (s : Schritt D) : Marken.Schritt :=
+  ⟨s.faden, ereignisProj code s.ereignis⟩
+
+/-- Project a real run, step by step. -/
+def laufProj (code : D.Marke → Nat) (l : Lauf D) : Marken.Lauf :=
+  l.map (schrittProj code)
+
+/-- Mark membership survives the projection. -/
+theorem markenProj_mem (code : D.Marke → Nat) (ei : Ereignis D)
+    (m : D.Marke) (s : Nat) (h : Res.marke m s ∈ ei.lambda) :
+    Marken.Res.marke (code m) s ∈ (ereignisProj code ei).lambda := by
+  unfold ereignisProj
+  simp only
+  exact List.mem_map.mpr ⟨_, h, rfl⟩
+
+/-- Step lookup survives the projection. -/
+theorem laufProj_get (code : D.Marke → Nat) (l : Lauf D)
+    (i : Nat) (f : Faden) (ei : Ereignis D)
+    (h : l[i]? = some (Schritt.mk f ei)) :
+    (laufProj code l)[i]? =
+      some (Marken.Schritt.mk f (ereignisProj code ei)) := by
+  simp [laufProj, schrittProj, List.getElem?_map, h]
+
+/-- **W4 from the construction.** `Einfaedig` over the projected run IS
+    `marke_eindeutig` over the real run. -/
+theorem marke_eindeutig_aus_einfaedig (code : D.Marke → Nat) (l : Lauf D)
+    (hEin : Marken.Einfaedig (laufProj code l))
+    (i j : Nat) (f g : Faden) (m : D.Marke) (s s' : Nat)
+    (ei ej : Ereignis D)
+    (hi : l[i]? = some (Schritt.mk f ei))
+    (hj : l[j]? = some (Schritt.mk g ej))
+    (hmi : Res.marke m s ∈ ei.lambda)
+    (hmj : Res.marke m s' ∈ ej.lambda) : f = g := by
+  exact hEin i j f g (code m) s s' _ _
+    (laufProj_get code l i f ei hi) (laufProj_get code l j g ej hj)
+    (markenProj_mem code ei m s hmi) (markenProj_mem code ej m s' hmj)
+
+/-- **A `Gesittet` from the construction.** The whole bundle with W4 supplied
+    by `Einfaedig` instead of the bare premise. -/
+theorem gesittet_aus_einfaedig (l : Lauf D)
+    (konsistent : ∀ f j, Konsistent (l.spur f j))
+    (gut : ∀ f j, ∀ e ∈ l.spur f j, e.gut)
+    (ausschluss : ∀ (j : Nat) (f : Faden) (L : D.Lock) (h : List D.Lock),
+      l[j]? = some (Schritt.mk f (.nimmt L h)) → ∀ g, g ≠ f → ¬ l.haelt g L j)
+    (code : D.Marke → Nat) (hEin : Marken.Einfaedig (laufProj code l))
+    (ungeteilt : ∀ (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some o → ej.traeger = some o →
+      (match o with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g) :
+    Gesittet l :=
+  ⟨konsistent, gut, ausschluss, marke_eindeutig_aus_einfaedig code l hEin,
+    ungeteilt⟩
+
+#print axioms Gabbro.Grammatik.marke_eindeutig_aus_einfaedig
+#print axioms Gabbro.Grammatik.gesittet_aus_einfaedig
 
 #print axioms Gabbro.Grammatik.kein_wettlauf
 #print axioms Gabbro.Grammatik.kein_wettlauf_global

@@ -399,6 +399,7 @@ fn klasse(k: &AnnahmeKlasse) -> Klasse {
 pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
     "sonde_abnahme",
     "sonde_barriere",
+    "sonde_bearbeite",
     "sonde_boot_unerreichbar",
     "sonde_byte_legen",
     "sonde_freigabe",
@@ -406,11 +407,14 @@ pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
     "sonde_mxcsr_rne",
     "sonde_rdtscp",
     "sonde_release_sichtbarkeit",
+    "sonde_ruf_verteiler",
     "sonde_schreib_schranke",
     "sonde_schreiben",
     "sonde_speicher_schranke",
+    "sonde_takt_verteiler",
     "sonde_tick",
     "sonde_tsc",
+    "sonde_zaehle",
 ];
 
 /// **A name without a program is STRUCK -- 2026-08-30.**

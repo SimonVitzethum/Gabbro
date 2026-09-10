@@ -25,10 +25,22 @@
       into data; the prose for the new §19 stands in
       `messung/SYNTAX-ERHALTUNG-ENTWURF.md` (this lane does NOT edit it).
 
-  Proven here: NOTHING. There is no `theorem`, `lemma`, or `example` in
-    this file on purpose: the sentences below are `Prop`-valued `def`s --
-    the SHAPES of what a later lane proves, once the form table and the
-    witness pairs stand. The emitter stays the trust base throughout.
+   Proved here (this lane): the Lean-side legs of the emitter contract --
+     correspondence VALIDATION (a Boolean recomputation over the certificate
+     whose success IMPLIES the four correspondence sentences, §6), the alias
+     discharge shape (`aliasKept` from the empty site list, §7), and the cost
+     legs (CerCo preservation as an implication, production measurement as
+     an implication, bounded lowering from the measured bound, §8). The shape
+     mirrors the `Zeugnis.lean` soundness pattern: recompute, then `decide`.
+     Every theorem ends with a `#print axioms` line: Lean's standard axioms
+     (`propext`, `Quot.sound`) only.
+
+   Shapes that stay unproved (booked cuts, not faked): the recomputer that
+     would PRODUCE a valid certificate (needs the second program), what a C
+     form MEANS (witness-pair execution, C semantics), and with them the 29
+     open slots -- `tafel_nicht_geschlossen` (§9) proves the debt is real,
+     and `vertrag_braucht_tafel` proves the contract does not hold today.
+     `satz_tafel` and `satz_erzeugervertrag` stay SPECIFICATION.
 
   Premises (trusted, not proved):
     P1  The 19 `CForm` shapes are the named target language (`Ziel.lean`).
@@ -37,22 +49,32 @@
     P3  The census counts are faithful (`zaehle-c-formen.py`, 2026-08-31:
         64 forms, 30 undecided, 491 pointer-arithmetic sites).
 
-  Cuts (booked, not hidden):
-    C1  No emitter verification: nothing here reads `crates/`, and no `def`
-        below mentions `emit.rs`. The certificate is specified; the
-        recomputer (a second program with its own pattern) is cut, not faked.
-    C2  What a C form MEANS is not modelled: the hand-written table entry
-        plus its executable witness pair carry the meaning, and the
-        common-mode failure (both tables from one text) is named, not closed.
-    C3  `restrict` and `volatile` stay trust: priced option and axiom,
-        carried as data (`beschraenkt_Preis`, `fluechtig_Preis`), never
-        proved.
-    C4  Not wired into `Grammatik.lean`: lane scope forbids the index edit;
-        check this file directly with `lake env lean Grammatik/Erhaltung.lean`.
-    C5  The 19 admissions below are the TEMPLATE ruling, not 19 rulings:
-        each named shape still owes its one-by-one decision the way `?:`
-        got its (`bedingtEntscheid`); the status field is what makes the
-        debt countable.
+   Cuts (rebooked 2026-09-10: shrunk, not faked):
+     C1  The recomputer stays cut: `korrespondenz_sound` proves
+         valid-cert-implies-correspondence, NOT that the emitter (or a second
+         program with its own pattern) PRODUCES a valid certificate. Nothing
+         here reads `crates/`, and no `def` below mentions `emit.rs`.
+     C2  What a C form MEANS stays cut: `geschlossen_immer` proves every
+         named shape IS tabled (closure holds unconditionally), but the
+         meaning still rides on the hand-written table entry plus its
+         executable witness pair, and the common-mode failure (both tables
+         from one text) is named, not closed.
+     C3  `restrict` and `volatile` stay trust: priced option and axiom,
+         carried as data (`beschraenktPreis`, `fluechtigPreis`), never
+         proved.
+     C4  COVERED (was: not wired into `Grammatik.lean`): `Grammatik.lean`
+         imports this file, so `lake build` checks it; after a build the
+         single-file check `lake env lean Grammatik/Erhaltung.lean` holds too.
+     C5  The 19 admissions stay TEMPLATE rulings semantically: Lean proves
+         each named shape is tabled (`ruledB_voll`), not that its price is
+         adequate. Each named shape still owes its one-by-one semantic
+         decision the way `?:` got its (`bedingtEntscheid`); the 29 open
+         slots are proved debt (`tafel_nicht_geschlossen`), countable via
+         the status field.
+
+   No `mathlib`, no `sorry`, no `admit`, no `axiom`, and no new axiom
+     introduced: `#print axioms` at the end names all standard axioms the
+     new theorems rest on.
 
   No `mathlib`, no `sorry`, no `admit`, no `axiom`.
 -/
@@ -320,8 +342,331 @@ def satz_erzeugervertrag (gabbroSites : List Nat) (cert : CorrCert)
   satz_korrespondenz gabbroSites cert ∧ satz_alias o ∧
     satz_kosten k paare a cAnweisungen ∧ satz_tafel
 
+/-! ## 6. Correspondence, Lean side: recompute, then `decide` -/
+
+/-- Recompute 1/4 (completeness, §4.1): every Gabbro site has a joined row.
+    Boolean mirror of `corrComplete`, so a run's certificate can be CHECKED
+    instead of believed. -/
+def vollB (gabbroSites : List Nat) (cert : CorrCert) : Bool :=
+  gabbroSites.all fun g => cert.sites.any fun s => decide (s.gabbroSite = g)
+
+/-- Soundness 1/4: a successful recomputation IMPLIES completeness. -/
+theorem vollB_sound (gabbroSites : List Nat) (cert : CorrCert)
+    (h : vollB gabbroSites cert = true) : corrComplete gabbroSites cert := by
+  have h' : gabbroSites.all (fun g => cert.sites.any fun s => decide (s.gabbroSite = g)) = true := by
+    simpa only [vollB] using h
+  have hall := List.all_eq_true.mp h'
+  intro g hg
+  have hmem := hall g hg
+  have hex := List.any_eq_true.mp hmem
+  obtain ⟨s, hs, heq⟩ := hex
+  exact ⟨s, hs, of_decide_eq_true heq⟩
+
+/-- Recompute 4/4 (no additional effect, §4.4): every row has a preimage. -/
+def ohneExtraB (gabbroSites : List Nat) (cert : CorrCert) : Bool :=
+  cert.sites.all fun s => decide (s.gabbroSite ∈ gabbroSites)
+
+/-- Soundness 4/4: a successful recomputation IMPLIES no additional effect. -/
+theorem ohneExtraB_sound (gabbroSites : List Nat) (cert : CorrCert)
+    (h : ohneExtraB gabbroSites cert = true) : corrNoExtra gabbroSites cert := by
+  have h' : cert.sites.all (fun s => decide (s.gabbroSite ∈ gabbroSites)) = true := by
+    simpa only [ohneExtraB] using h
+  have hall := List.all_eq_true.mp h'
+  intro s hs
+  exact of_decide_eq_true (hall s hs)
+
+/-- Recompute 2/4 (order, §4.2) over the C-site ids. Adjacent check only;
+    transitivity (`Nat.le_trans`) lifts it to every pair (`geordnetB_hilf`). -/
+def geordnetB : List Nat → Bool
+  | [] => true
+  | [_] => true
+  | a :: b :: rest => if a ≤ b then geordnetB (b :: rest) else false
+
+/-- The lift: a passing adjacent check bounds every later element. -/
+theorem geordnetB_hilf : ∀ (l : List Nat) (a : Nat),
+    geordnetB (a :: l) = true → ∀ y ∈ l, a ≤ y
+  | [], _, _, y, hy => False.elim (List.not_mem_nil hy)
+  | b :: rest, a, h, y, hy => by
+    simp only [geordnetB] at h
+    by_cases hab : a ≤ b
+    · rw [if_pos hab] at h
+      simp only [List.mem_cons] at hy
+      cases hy with
+      | inl heq => rw [heq]; exact hab
+      | inr hin =>
+        have hby : b ≤ y := geordnetB_hilf rest b h y hin
+        exact Nat.le_trans hab hby
+    · rw [if_neg hab] at h
+      contradiction
+
+/-- Soundness 2/4: a successful recomputation IMPLIES the order. -/
+theorem geordnet_sound : ∀ (l : List Nat), geordnetB l = true → l.Pairwise (· ≤ ·)
+  | [], _ => List.Pairwise.nil
+  | [_], _ => List.Pairwise.cons (fun _ hx => False.elim (List.not_mem_nil hx)) List.Pairwise.nil
+  | a :: b :: rest, h => by
+    have hunfold : geordnetB (a :: b :: rest) = (if a ≤ b then geordnetB (b :: rest) else false) := by
+      simp only [geordnetB]
+    by_cases hab : a ≤ b
+    · have hrest : geordnetB (b :: rest) = true := by
+        rw [hunfold, if_pos hab] at h
+        exact h
+      exact List.Pairwise.cons (geordnetB_hilf (b :: rest) a h) (geordnet_sound (b :: rest) hrest)
+    · rw [hunfold, if_neg hab] at h
+      contradiction
+
+/-- Order over the certificate: project the C sites, then recompute. -/
+def geordnetCertB (cert : CorrCert) : Bool :=
+  geordnetB (cert.sites.map CorrSite.cSite)
+
+/-- The projection preserves the order statement (`List.pairwise_map`). -/
+theorem geordnetCertB_sound (cert : CorrCert) (h : geordnetCertB cert = true) :
+    corrOrdered cert := by
+  have hp := geordnet_sound _ (by simpa only [geordnetCertB] using h)
+  have hm := List.pairwise_map.mp hp
+  simpa only [corrOrdered] using hm
+
+/-- Recompute 3/4 (closure, §4.3): the form's row is in the table. -/
+def ruledB (f : CForm) : Bool :=
+  tafel.any fun e => match e with
+    | .benannt g _ => decide (g = f)
+    | .luecke _ _ => false
+
+/-- Soundness 3/4: a found row IS a decided table entry. -/
+theorem ruledB_sound (f : CForm) (h : ruledB f = true) :
+    ∃ s : RulingStatus, .benannt f s ∈ tafel ∧ entschieden (.benannt f s) := by
+  have hex := List.any_eq_true.mp (by simpa only [ruledB] using h)
+  obtain ⟨e, he, hb⟩ := hex
+  cases e with
+  | benannt g s =>
+    have hgf : g = f := of_decide_eq_true hb
+    subst hgf
+    exact ⟨s, he, trivial⟩
+  | luecke _ _ =>
+    contradiction
+
+/-- Every named shape has its row: all 19, one by one, each by `decide`. -/
+theorem ruledB_voll : ∀ f, ruledB f = true := by
+  intro f
+  cases f <;> decide
+
+/-- Closure over the certificate, from the row check. -/
+def geschlossenB (cert : CorrCert) : Bool :=
+  cert.sites.all fun s => ruledB s.form
+
+/-- Soundness 3/4 over the certificate. -/
+theorem geschlossenB_sound (cert : CorrCert) (h : geschlossenB cert = true) :
+    corrClosed cert (fun f => ∃ s : RulingStatus, .benannt f s ∈ tafel ∧ entschieden (.benannt f s)) := by
+  have h' : cert.sites.all (fun s => ruledB s.form) = true := by
+    simpa only [geschlossenB] using h
+  have hall := List.all_eq_true.mp h'
+  intro s hs
+  exact ruledB_sound _ (hall s hs)
+
+/-- Closure holds for EVERY certificate: each of the 19 named shapes is
+    tabled, so no image can fall outside the ruled list. (The SEMANTIC
+    ruling -- what the row means -- stays cut C2.) -/
+theorem geschlossen_immer (cert : CorrCert) :
+    corrClosed cert (fun f => ∃ s : RulingStatus, .benannt f s ∈ tafel ∧ entschieden (.benannt f s)) :=
+  geschlossenB_sound cert (List.all_eq_true.mpr (fun s _ => ruledB_voll s.form))
+
+/-- Four passing legs ASSEMBLE the correspondence sentence. -/
+theorem korrespondenz_aus_vieren (gabbroSites : List Nat) (cert : CorrCert)
+    (hv : vollB gabbroSites cert = true) (hg : geschlossenB cert = true)
+    (hn : ohneExtraB gabbroSites cert = true) (ho : geordnetCertB cert = true) :
+    satz_korrespondenz gabbroSites cert :=
+  ⟨vollB_sound _ _ hv, geordnetCertB_sound _ ho,
+    geschlossenB_sound _ hg, ohneExtraB_sound _ _ hn⟩
+
+/-- The per-run check, recomputed Lean-side: all four legs, right-nested so
+    `Bool.and_eq_true_iff` splits it back into the four soundness premises. -/
+def pruefeKorrespondenz (gabbroSites : List Nat) (cert : CorrCert) : Bool :=
+  vollB gabbroSites cert && (geschlossenB cert && (ohneExtraB gabbroSites cert && geordnetCertB cert))
+
+/-- Certificate validity: the recomputation SUCCEEDS. Decidable by
+    construction, so acceptance and rejection both close by `decide` --
+    the `Zeugnis.lean` (`GueltigAbleitung`) pattern. -/
+abbrev GueltigKorrespondenz (gabbroSites : List Nat) (cert : CorrCert) : Prop :=
+  pruefeKorrespondenz gabbroSites cert = true
+
+/-- Soundness: a valid certificate IMPLIES the correspondence sentence.
+    This file's direction, mirroring `zeugnis_sound`: the recomputer that
+    would PRODUCE such a certificate stays cut (C1). -/
+theorem korrespondenz_sound (gabbroSites : List Nat) (cert : CorrCert)
+    (h : GueltigKorrespondenz gabbroSites cert) : satz_korrespondenz gabbroSites cert := by
+  have hval : pruefeKorrespondenz gabbroSites cert = true := h
+  have h4 : vollB gabbroSites cert = true ∧ geschlossenB cert = true ∧
+      ohneExtraB gabbroSites cert = true ∧ geordnetCertB cert = true := by
+    simpa only [pruefeKorrespondenz, Bool.and_eq_true_iff] using hval
+  exact korrespondenz_aus_vieren _ _ h4.1 h4.2.1 h4.2.2.1 h4.2.2.2
+
+/-- Accept: two sites, in order, over named forms, nothing more. -/
+example : GueltigKorrespondenz [0, 1]
+    ⟨[{gabbroSite := 0, cSite := 0, form := .literal},
+      {gabbroSite := 1, cSite := 1, form := .name}]⟩ := by decide
+
+/-- Reject: Gabbro site 1 has no row (completeness fails loudly). -/
+example : ¬ GueltigKorrespondenz [0, 1]
+    ⟨[{gabbroSite := 0, cSite := 0, form := .literal}]⟩ := by decide
+
+/-- Reject: the C sites run backwards (order fails loudly). -/
+example : ¬ GueltigKorrespondenz [0, 1]
+    ⟨[{gabbroSite := 0, cSite := 1, form := .literal},
+      {gabbroSite := 1, cSite := 0, form := .name}]⟩ := by decide
+
+/-- Reject: a C site without a Gabbro preimage (no-extra fails loudly). -/
+example : ¬ GueltigKorrespondenz [0]
+    ⟨[{gabbroSite := 0, cSite := 0, form := .literal},
+      {gabbroSite := 5, cSite := 1, form := .name}]⟩ := by decide
+
+/-- End to end: a valid certificate YIELDS the correspondence sentence. -/
+example : satz_korrespondenz [0, 1]
+    ⟨[{gabbroSite := 0, cSite := 0, form := .literal},
+      {gabbroSite := 1, cSite := 1, form := .name}]⟩ :=
+  korrespondenz_sound _ _ (by decide)
+
+/-- The empty run corresponds, vacuously: no site owes a row. -/
+theorem korrespondenz_leer : satz_korrespondenz [] ⟨[]⟩ := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro g hg
+    exact False.elim (List.not_mem_nil hg)
+  · exact List.Pairwise.nil
+  · intro s hs
+    exact False.elim (List.not_mem_nil hs)
+  · intro s hs
+    exact False.elim (List.not_mem_nil hs)
+
+/-! ## 7. Alias, Lean side: the dischargeable shape -/
+
+/-- `aliasKept` is decidable: the obligation is CHECKABLE per image. -/
+instance aliasKeptDec (o : AliasObligation) : Decidable (aliasKept o) :=
+  inferInstanceAs (Decidable (o.arithSites = []))
+
+/-- Discharge: the empty site list keeps the obligation, by `rfl`. -/
+theorem alias_leer : aliasKept { arithSites := [] } := rfl
+
+/-- The census stands as data: 491 named sites (`BEWEIS.md` C1, §2 row 2). -/
+theorem census_steht : ptrArithCensus = 491 := rfl
+
+/-- Accept: no address-arithmetic site in this image. -/
+example : aliasKept ⟨[]⟩ := by decide
+
+/-- Reject: one named site breaks the obligation. -/
+example : ¬ aliasKept ⟨[0]⟩ := by decide
+
+/-- Reject, honestly: today's image carries the whole census, not the empty
+    list -- `⟨List.replicate ptrArithCensus 0⟩` is the witness the proof must
+    one day TAKE, and it does not discharge. -/
+example : ¬ aliasKept ⟨List.replicate ptrArithCensus 0⟩ := by decide
+
+/-! ## 8. Cost, Lean side: who may claim, who must measure -/
+
+/-- Both cost claims are decidable: per-run CHECKS, not prose. -/
+instance costKeptDec (k : CostClaim) : Decidable (costKept k) :=
+  inferInstanceAs (Decidable (k.carrier = .cerCo → k.opsC = k.opsGabbro))
+
+instance costMeasuredDec (k : CostClaim) (paare : Nat) : Decidable (costMeasured k paare) :=
+  inferInstanceAs (Decidable (k.carrier = .produktion → 0 < paare))
+
+instance senkungDec (a : Absenkung) (n : Nat) : Decidable (senkungBegrenzt a n) :=
+  inferInstanceAs (Decidable (n ≤ a.proPrimitiv))
+
+/-- CerCo leg: under the CerCo carrier, equal counts ARE preservation. -/
+theorem kosten_cerCo_gilt (k : CostClaim) (_hc : k.carrier = .cerCo)
+    (heq : k.opsC = k.opsGabbro) : costKept k := by
+  intro _
+  exact heq
+
+/-- Production leg, first half: under the production carrier `costKept`
+    claims NOTHING -- diverging counts still satisfy it, vacuously. -/
+theorem kosten_produktion_frei (k : CostClaim) (hc : k.carrier = .produktion) :
+    costKept k := by
+  intro hcontra
+  rw [hc] at hcontra
+  contradiction
+
+/-- Production leg, second half: a measurement needs a carrier AND a pair. -/
+theorem gemessen_produktion (k : CostClaim) (paare : Nat)
+    (_hc : k.carrier = .produktion) (hpos : 0 < paare) :
+    costMeasured k paare := by
+  intro _
+  exact hpos
+
+/-- CerCo side of the measurement: nothing to measure, vacuously true. -/
+theorem gemessen_cerCo_frei (k : CostClaim) (paare : Nat)
+    (hc : k.carrier = .cerCo) : costMeasured k paare := by
+  intro hcontra
+  rw [hc] at hcontra
+  contradiction
+
+/-- The carrier distinction IS the data: every claim picks a side. -/
+theorem traeger_trennt (k : CostClaim) :
+    k.carrier = .cerCo ∨ k.carrier = .produktion := by
+  cases k.carrier with
+  | cerCo => exact Or.inl rfl
+  | produktion => exact Or.inr rfl
+
+/-- Bounded lowering from the measured bound: 17 per primitive
+    (`messung/ABSENKUNG-MESSUNG.md`), so anything under 17 stays under. -/
+theorem senkung_aus_schranke (cAnweisungen : Nat) (h : cAnweisungen ≤ 17) :
+    senkungBegrenzt absenkung cAnweisungen := h
+
+/-- Assemble the cost sentence from its three legs. -/
+theorem kosten_satz_bauen (k : CostClaim) (paare : Nat) (a : Absenkung)
+    (cAnweisungen : Nat) (h1 : costKept k) (h2 : costMeasured k paare)
+    (h3 : senkungBegrenzt a cAnweisungen) :
+    satz_kosten k paare a cAnweisungen :=
+  ⟨h1, h2, h3⟩
+
+/-- CerCo with equal counts: kept. -/
+example : costKept ⟨.cerCo, 4, 4⟩ := by decide
+
+/-- Production with DIVERGING counts: still `costKept` -- the claim lives
+    on the CerCo leg only, and this is the measured leg. -/
+example : costKept ⟨.produktion, 4, 9⟩ := by decide
+
+/-- CerCo with diverging counts: NOT kept. -/
+example : ¬ costKept ⟨.cerCo, 4, 9⟩ := by decide
+
+/-- Production with two green pairs: measured. -/
+example : costMeasured ⟨.produktion, 4, 9⟩ 2 := by decide
+
+/-- Production with zero pairs: not a measurement. -/
+example : ¬ costMeasured ⟨.produktion, 4, 9⟩ 0 := by decide
+
+/-- The bound, both directions, at the measured number. -/
+example : senkungBegrenzt absenkung 17 := by decide
+example : ¬ senkungBegrenzt absenkung 18 := by decide
+
+/-! ## 9. What stays cut: the debt, proved real -/
+
+/-- The table is NOT decided: `zeigerArithmetik` stands open, with its row. -/
+theorem tafel_nicht_geschlossen : ¬ satz_tafel := by
+  intro h
+  have hm : (.luecke .zeigerArithmetik .offen : EntscheidZiel) ∈ tafel := by decide
+  have hd := h _ hm
+  exact hd
+
+/-- The contract does not hold today: whatever the run proves, the table
+    leg fails with it. `satz_erzeugervertrag` stays a SPECIFICATION. -/
+theorem vertrag_braucht_tafel (gabbroSites : List Nat) (cert : CorrCert)
+    (o : AliasObligation) (k : CostClaim) (paare : Nat)
+    (a : Absenkung) (cAnweisungen : Nat) :
+    ¬ satz_erzeugervertrag gabbroSites cert o k paare a cAnweisungen := by
+  intro h
+  exact tafel_nicht_geschlossen h.2.2.2
+
 #print axioms Gabbro.Grammatik.entschieden
 #print axioms Gabbro.Grammatik.satz_tafel
 #print axioms Gabbro.Grammatik.satz_erzeugervertrag
+#print axioms Gabbro.Grammatik.korrespondenz_sound
+#print axioms Gabbro.Grammatik.geschlossen_immer
+#print axioms Gabbro.Grammatik.ruledB_voll
+#print axioms Gabbro.Grammatik.korrespondenz_leer
+#print axioms Gabbro.Grammatik.alias_leer
+#print axioms Gabbro.Grammatik.kosten_produktion_frei
+#print axioms Gabbro.Grammatik.gemessen_produktion
+#print axioms Gabbro.Grammatik.senkung_aus_schranke
+#print axioms Gabbro.Grammatik.tafel_nicht_geschlossen
+#print axioms Gabbro.Grammatik.vertrag_braucht_tafel
 
 end Gabbro.Grammatik

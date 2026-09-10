@@ -99,7 +99,15 @@ SONDEN = W / "sonden"
 # diffs at once, same rule as `sonde_tick` (N = 10x the declared `costs` bound, the
 # `beispiele/71` precedent: 500 -> 5000, here 4 -> 40 and 2 -> 20). The orphan mark falls
 # back to 1; the metrology gap above still stands.
-MARK_QUOTE = (13, 46)
+#
+# **(13, 46) -> (17, 50) on 2026-09-10 (lane-80).** Four earned diffs at once: the next
+# runnable date probes in `messung/FRIST-SONDEN-NOTIZ.md` order after lane-72's
+# fence/write rows -- note rows 22-25 (`zaehle`, `takt_verteiler`, `bearbeite`,
+# `ruf_verteiler` in `beispiele/59`), the lock-excluding `P3` rows whose timed body
+# minus the unemitted lock runs in userland. Same 10x rule (8 -> 80, 40 -> 400).
+# Ring-zero rows 7-10 and device rows 12-19 stay unprobed: `invlpg`/`outb` fault in
+# ring 3 and no device stands on the bench. Orphan and outside marks unchanged.
+MARK_QUOTE = (17, 50)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -449,25 +457,34 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # four); without them 5 of 46 miss. The rule for the next move stands
     # beside tooth EIGHT's: smallest newest breaking set, recomputed on
     # earned growth, never shrunk to fit.
-    acht = ("sonde_tick", "sonde_abnahme", "sonde_byte_legen", "sonde_freigabe",
+    #
+    # **Restored on 2026-09-10 (lane-80), same rule, grown not shrunk:**
+    # 17 covered of 50 absorb the removal of any ten newest probes (7 of 50
+    # still meets: 56 >= 50); the smallest newest breaking set is ELEVEN --
+    # rows 40-50 (lane-59's three plus lane-72's four plus lane-80's four),
+    # without which 6 of 50 miss (48 < 50). Ten or fewer removals always
+    # leave 7 covered (56 >= 50), so no smaller set breaks it.
+    elf = ("sonde_abnahme", "sonde_byte_legen", "sonde_freigabe",
             "sonde_barriere", "sonde_schreib_schranke", "sonde_speicher_schranke",
-            "sonde_schreiben")
-    ohne_acht = [x for x in progs if x not in acht]
-    r = lauf(p=ohne_acht)
-    proben.append(("the floor is met today and MISSED without the eight newest probes",
+            "sonde_schreiben", "sonde_zaehle", "sonde_takt_verteiler",
+            "sonde_bearbeite", "sonde_ruf_verteiler")
+    ohne_elf = [x for x in progs if x not in elf]
+    r = lauf(p=ohne_elf)
+    proben.append(("the floor is met today and MISSED without the eleven newest probes",
                    not boden_heute and r[6]))
 
     # EIGHT -- reachability. A corpus that grows without new `P4` rows eventually puts the
     # floor out of reach, and that is a different finding from missing it.
     #
-    # **The stress size is 59 since 2026-09-10 (central assembly), 31 after
-    # lane-59, 30 before.** Seven more earned `P4` rows (lane-59's three plus
-    # lane-72's four: 13 covered of 46) drowned the +31 stress (13 of 77 still
-    # meets the floor). 59 is the smallest restore (13 of 105 < `1/8`; 58 lands
-    # exactly on it and strict `<` cannot name a boundary). Same standing rule:
-    # smallest size that breaks, recomputed on earned growth, never shrunk.
+    # **The stress size is 87 since 2026-09-10 (lane-80), 59 after the
+    # central assembly, 31 after lane-59, 30 before.** Four more earned `P4`
+    # rows (17 covered of 50) drowned the +59 stress (17 of 109 still meets
+    # the floor: 136 >= 109). 87 is the smallest restore (17 of 137 < `1/8`;
+    # 86 lands exactly on it -- 136 < 136 is false -- and strict `<` cannot
+    # name a boundary). Same standing rule: smallest size that breaks,
+    # recomputed on earned growth, never shrunk.
     viel = dict(annahmen)
-    for i in range(59):
+    for i in range(87):
         viel["erfunden_%d" % i] = "sonde_erfunden_%d" % i
     r = lauf(a=viel)
     proben.append(("a floor grown out of reach is named", r[7]))

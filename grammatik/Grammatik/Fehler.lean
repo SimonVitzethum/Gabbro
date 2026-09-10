@@ -38,9 +38,38 @@
     `endZustandF`  -- die `finalState`-Gestalt: ein Fehler hat keinen Nachzustand
                       (`endZustandF_fehler`, `_logik`, `_hardware`, `_ok`).
     `IstBenannt`   -- die Sicherheitsform: `stuck`-oder-Fehler heisst eigene Logik
-                      oder benannter Fehler (`fehler_ist_benannt`, `logik_ist_benannt`,
-                      `hardware_ist_benannt`, `folge_benannt_bleibt`,
-                      `ausF_klassifikation`).
+                       oder benannter Fehler (`fehler_ist_benannt`, `logik_ist_benannt`,
+                       `hardware_ist_benannt`, `folge_benannt_bleibt`,
+                       `ausF_klassifikation`).
+    `AusF.vonAusgang` / `zuAusgang`
+                   -- die Einbettung in die Ausfuehrung: jeder `Ausgang` laeuft als
+                      `weiter` weiter (`zuAusgang_vonAusgang`), ein benannter Fehler
+                      hat keinen `Ausgang` (`zuAusgang_fehler`); `folge_weiter`
+                      stimmt die Folge mit `execBlock` (`ok` weiter, sonst `o`),
+                      je ein Fortpflanzungssatz pro Ausgang (`folge_zurueck`,
+                      `_grund`, `_leave`, `_next` neben `_ok`, `_logik`,
+                      `_hardware`).
+    `IstStecken`   -- `stuck` als Abwesenheit eines Nachzustands; `stuck` heisst
+                      benannt (`stecken_heisst_benannt`) und umgekehrt
+                      (`benannt_heisst_stecken`), in disjunktiver Form
+                      (`stecken_klassifikation`): die `exec_sicher`-Gestalt.
+    `evalArgsMit_stimmt` / `evalArgsF_stimmt`
+                   -- die Uebereinstimmung DURCH die `evalAll`-Gestalt: was die
+                      fehlerfuehrende Liste traegt, rechnet `evalArgs`.
+    `schrittRein` / `schrittFolge_rein`
+                   -- die Schrittfolge ohne Fehler faltet die Welt
+                      (`execBlock`-Gestalt ohne Fehlerarm).
+    `durchlaufRein` / `durchlaufF_rein`
+                   -- der Durchlauf ohne Fehler faltet ueber die Elemente
+                      (`traverseLauf`-Geruest ohne Invarianten-, `leave`-,
+                      `next`-Arme).
+    `schleifeF_als_folge`
+                   -- die treibstoffbegrenzte Schleife ohne Fehler IST die
+                      Schrittfolge ihrer Abwicklungen (`foreverLauf`-Geruest
+                      ohne `fortschritt`-Arm).
+    `endZustandF_*` -- die `finalState`-Abbildung, vollstaendig: je ein Satz pro
+                      Ausgang (`_zurueck`, `_grund`, `_leave`, `_next` neben
+                      `_ok`, `_logik`, `_hardware`, `_fehler`).
 
   Warum `evalF` heute nie fehlt -- und das ist die Aussage, kein Mangel: ein
   `Expr.slot`-Index hat den Typ `.index (D.count t)` und traegt seinen Bereichsbeweis
@@ -50,9 +79,14 @@
 
   DURCHGEFAEDELT (parallel, nicht am Anschluss): die Ausbreitung steht als parallele
     Form MIT Beweisen -- je eine Ausbreitungsaussage pro Kombinator (siehe oben).
-    Was fehlt, ist der ANSCHLUSS, nicht die Form: `evalF` ruft `eval` auf und meldet
-    `wert` (Schnitt S2), und `AusF` liegt neben `Ausgang`, statt dessen `fehler`-Fall
-    zu tragen (Schnitt S1').
+    Der ANSCHLUSS steht als Einbettung mit Uebereinstimmung: `vonAusgang` traegt
+    jeden `Ausgang` als `weiter`, `folge_weiter` stimmt die Folge mit `execBlock`,
+    `stecken_heisst_benannt`/`benannt_heisst_stecken` sagen `stuck` GENAU DANN,
+    wenn benannt, und `evalArgsF_stimmt`/`schrittFolge_rein`/`durchlaufF_rein`/
+    `schleifeF_als_folge` stimmen `evalF` DURCH Schritt- und Schleifengestalten
+    mit `eval`/`evalArgs`. Was fehlt, ist die Durchfaedelung, nicht die Form:
+    `execStmt`/`execBlock`/`traverseLauf` rufen die parallelen Formen nicht auf
+    (Schnitt S1').
 
   Vorausgesetzt (vertraut, nicht bewiesen):
     P1  `eval` aus `Semantik.lean` ist die Bedeutung: `evalF` ruft es auf, statt es
@@ -61,14 +95,24 @@
         Datum, kein Term der Grammatik.
 
   Schnitte (gebucht, nicht versteckt):
-    S1' Anschluss an `exec` weiterhin offen: die Ausbreitung steht als parallele Form
-        mit Beweisen; `Ausgang` bekommt keinen `fehler`-Fall, und `execStmt`/
-        `execBlock`/`traverseLauf` faedeln ihn nicht durch. Die Koordination bleibt,
-        was `S3-FEHLER-ENTWURF.md` §6 nennt.
+    S1' Anschluss an `exec` halb geschlossen: Einbettung (`vonAusgang`,
+        `zuAusgang`), Folgen-Uebereinstimmung (`folge_weiter` plus je ein Satz
+        pro Ausgang), `stuck`-genau-dann-benannt (`stecken_heisst_benannt`,
+        `benannt_heisst_stecken`, `stecken_klassifikation`) und die
+        Uebereinstimmung durch `evalAll`- (`evalArgsF_stimmt`), Schritt-
+        (`schrittFolge_rein`) und Schleifengestalten (`durchlaufF_rein`,
+        `schleifeF_als_folge`) stehen mit Beweisen; `Ausgang` bekommt keinen
+        `fehler`-Fall, und `execStmt`/`execBlock`/`traverseLauf` faedeln ihn
+        nicht durch. Die Koordination bleibt, was `S3-FEHLER-ENTWURF.md` §6
+        nennt.
     S2  `evalF` reicht jeden Aufruf an `eval` durch und meldet `wert`: die Fehler-
         arme sind erreichbar nur ueber die Fallen-Daten, nicht ueber Terme.
         Geschlossen dagegen, was schloss: `evalF_ok_halt`, `evalF_stimmt_halt`,
-        `evalArgsF_ok` -- was heute nie fehlt, steht als Satz, nicht als Behauptung.
+        `evalArgsF_ok` -- und die Uebereinstimmung DURCH die Gestalten:
+        `evalArgsMit_stimmt`/`evalArgsF_stimmt` gegen `evalArgs`,
+        `schrittFolge_rein`/`durchlaufF_rein`/`schleifeF_als_folge` als Faltung
+        ohne Fehlerarm, `endZustandF` je Ausgang. Was heute nie fehlt, steht
+        als Satz, nicht als Behauptung.
     S3  Nicht in `Grammatik.lean` verdrahtet: die Bahnbreite verbietet den
         Indexeingriff; pruefen allein mit `lake env lean Grammatik/Fehler.lean`.
 
@@ -438,6 +482,223 @@ theorem ausF_klassifikation (a : AusF V l Γ) :
   | weiter o => exact .inl ⟨o, rfl⟩
   | fehler k => exact .inr ⟨k, rfl⟩
 
+/-! ## 8. The embedding into execution: `AusF` carries `Ausgang` -/
+
+/-- The embedding: every `Ausgang` of `Semantik.lean` runs on as `weiter` --
+    the hook, not a third exit: `Ausgang` gains no constructor. -/
+def AusF.vonAusgang : Ausgang V l Γ → AusF V l Γ
+  | o => .weiter o
+
+/-- Back: `weiter` projects, a named fault has no `Ausgang` -- as `finalState`
+    maps `fehler` (and `stuck`) to `none` (S3 design A, §6). -/
+def AusF.zuAusgang : AusF V l Γ → Option (Ausgang V l Γ)
+  | .weiter o => some o
+  | .fehler _ => none
+
+/-- There and back: the embedding loses nothing. -/
+theorem AusF.zuAusgang_vonAusgang (o : Ausgang V l Γ) :
+    (AusF.vonAusgang o).zuAusgang = some o :=
+  rfl
+
+/-- A named fault has no `Ausgang` to project to. -/
+theorem AusF.zuAusgang_fehler (k : Fehlerklasse) :
+    (AusF.fehler k : AusF V l Γ).zuAusgang = none :=
+  rfl
+
+/-- The sequencing agreement, end to end: `folge` over an embedded `Ausgang`
+    calls the continuation exactly where `execBlock` continues (`ok`), and
+    carries every other exit unchanged -- as `execBlock`'s `| o => o` arm. -/
+theorem AusF.folge_weiter (o : Ausgang V l Γ)
+    (nach : World D → Env D Γ → AusF V l Γ) :
+    (AusF.weiter o).folge nach =
+      match o with
+      | .ok σ ρ => nach σ ρ
+      | .zurueck σ v => .weiter (.zurueck σ v)
+      | .grund σ r => .weiter (.grund σ r)
+      | .leave h σ ρ => .weiter (.leave h σ ρ)
+      | .next h σ ρ => .weiter (.next h σ ρ)
+      | .logik e => .weiter (.logik e)
+      | .hardware e => .weiter (.hardware e) := by
+  cases o <;> rfl
+
+/-- A returned answer does not continue. -/
+theorem AusF.folge_zurueck (σ : World D) (v : ErgVal D V.erg)
+    (nach : World D → Env D Γ → AusF V l Γ) :
+    (AusF.weiter (.zurueck σ v) : AusF V l Γ).folge nach =
+      .weiter (.zurueck σ v) :=
+  rfl
+
+/-- A raised ground does not continue. -/
+theorem AusF.folge_grund (σ : World D) (r : Fin V.gruende)
+    (nach : World D → Env D Γ → AusF V l Γ) :
+    (AusF.weiter (.grund σ r) : AusF V l Γ).folge nach =
+      .weiter (.grund σ r) :=
+  rfl
+
+/-- A consumed `leave` does not continue. -/
+theorem AusF.folge_leave (h : l = true) (σ : World D) (ρ : Env D Γ)
+    (nach : World D → Env D Γ → AusF V l Γ) :
+    (AusF.weiter (.leave h σ ρ) : AusF V l Γ).folge nach =
+      .weiter (.leave h σ ρ) :=
+  rfl
+
+/-- A consumed `next` does not continue. -/
+theorem AusF.folge_next (h : l = true) (σ : World D) (ρ : Env D Γ)
+    (nach : World D → Env D Γ → AusF V l Γ) :
+    (AusF.weiter (.next h σ ρ) : AusF V l Γ).folge nach =
+      .weiter (.next h σ ρ) :=
+  rfl
+
+/-! ## 9. Stuck-or-fault implies own logic or named fault -/
+
+/-- Stuck: the run carries no post-state. In `Semantik.lean` there is no stuck
+    VALUE -- `eval` is total, `exec` always answers -- so stuck is the ABSENCE
+    of a post-state, which a named fault shares (`endZustandF_fehler`). -/
+def IstStecken : AusF V l Γ → Prop
+  | a => endZustandF a = none
+
+/-- Stuck implies named: a run without post-state is the author's logic or a
+    named fault -- the `exec_sicher` shape of S3 design A, §6, proved on the
+    parallel outcome without touching `Ausgang`. -/
+theorem stecken_heisst_benannt (a : AusF V l Γ) (h : IstStecken a) :
+    IstBenannt a := by
+  cases a with
+  | fehler k => trivial
+  | weiter o =>
+      cases o with
+      | ok σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
+      | zurueck σ v => exact absurd h (by simp [IstStecken, endZustandF])
+      | grund σ r => exact absurd h (by simp [IstStecken, endZustandF])
+      | leave h' σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
+      | next h' σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
+      | logik e => trivial
+      | hardware e => trivial
+
+/-- Named implies stuck: the converse -- together they say stuck MEANS named. -/
+theorem benannt_heisst_stecken (a : AusF V l Γ) (h : IstBenannt a) :
+    IstStecken a := by
+  cases a with
+  | fehler k => rfl
+  | weiter o =>
+      cases o with
+      | ok σ ρ => exact False.elim h
+      | zurueck σ v => exact False.elim h
+      | grund σ r => exact False.elim h
+      | leave h' σ ρ => exact False.elim h
+      | next h' σ ρ => exact False.elim h
+      | logik e => rfl
+      | hardware e => rfl
+
+/-- Stuck-or-fault in the disjunctive form: own logic or named fault. -/
+theorem stecken_klassifikation (a : AusF V l Γ) (h : IstStecken a) :
+    (∃ e : Logik D, a = .weiter (.logik e)) ∨
+    (∃ e : Hardware D, a = .weiter (.hardware e)) ∨
+    (∃ k, a = .fehler k) := by
+  cases a with
+  | fehler k => exact .inr (.inr ⟨k, rfl⟩)
+  | weiter o =>
+      cases o with
+      | ok σ ρ => simp [IstStecken, endZustandF] at h
+      | zurueck σ v => simp [IstStecken, endZustandF] at h
+      | grund σ r => simp [IstStecken, endZustandF] at h
+      | leave h' σ ρ => simp [IstStecken, endZustandF] at h
+      | next h' σ ρ => simp [IstStecken, endZustandF] at h
+      | logik e => exact .inl ⟨e, rfl⟩
+      | hardware e => exact .inr (.inl ⟨e, rfl⟩)
+
+/-! ## 10. `evalF` agreement through the step and loop shapes, end to end -/
+
+/-- Agreement through the `evalAll` shape, for EVERY pointwise-agreeing
+    evaluator -- including one that faults one day (unlike today's `evalF`). -/
+theorem evalArgsMit_stimmt {τs : List Ty}
+    (aus : ∀ {t}, Expr D Γ Λ t → ErgebnisF D t)
+    (σ₀ σ : World D) (ρ : Env D Γ) (as : Args D Γ Λ τs) (ρ' : Env D τs)
+    (hstim : ∀ {t} (e : Expr D Γ Λ t), aus e = .wert (eval σ₀ e σ ρ))
+    (h : evalArgsMit aus as = .inl ρ') :
+    evalArgs σ₀ as σ ρ = ρ' := by
+  induction as with
+  | nil =>
+      simp only [evalArgsMit] at h
+      cases h
+      rfl
+  | cons e rest ih =>
+      simp only [evalArgsMit, hstim] at h
+      obtain ⟨vs, hs⟩ := evalArgsMit_ok aus rest (fun e => ⟨_, hstim e⟩)
+      simp only [hs] at h
+      cases h
+      exact congrArg (Env.cons (eval σ₀ e σ ρ)) (ih _ hs)
+
+/-- Agreement end to end: what today's fault-free argument list carries is what
+    `evalArgs` of `Semantik.lean` computes. -/
+theorem evalArgsF_stimmt {τs : List Ty} (σ₀ σ : World D) (ρ : Env D Γ)
+    (as : Args D Γ Λ τs) (ρ' : Env D τs)
+    (h : evalArgsF σ₀ σ ρ as = .inl ρ') :
+    evalArgs σ₀ as σ ρ = ρ' :=
+  evalArgsMit_stimmt _ σ₀ σ ρ as ρ' (fun _ => rfl) h
+
+/-- A fault-free world step, lifted into the fault channel. -/
+def schrittRein (f : World D → World D) : World D → (World D ⊕ Fehlerklasse) :=
+  fun σ => .inl (f σ)
+
+/-- Step-sequence agreement end to end: fault-free steps thread the world as the
+    fold does -- the `execBlock` sequencing shape without the fault arm. -/
+theorem schrittFolge_rein (fs : List (World D → World D)) (σ : World D) :
+    schrittFolge (fs.map schrittRein) σ = .inl (fs.foldl (fun σ f => f σ) σ) := by
+  induction fs generalizing σ with
+  | nil => rfl
+  | cons f fs ih =>
+      simp only [List.map_cons, schrittFolge, schrittRein, List.foldl_cons]
+      exact ih _
+
+/-- A fault-free element step, lifted into the fault channel. -/
+def durchlaufRein {α : Type} (f : α → World D → World D) :
+    α → World D → (World D ⊕ Fehlerklasse) :=
+  fun x σ => .inl (f x σ)
+
+/-- Traversal agreement end to end: one fault-free pass per element folds the
+    world -- the `traverseLauf` skeleton without invariant, `leave` and `next`
+    arms (control, carried by `weiter`, not by the fault channel). -/
+theorem durchlaufF_rein {α : Type} (f : α → World D → World D) (xs : List α)
+    (σ : World D) :
+    durchlaufF (durchlaufRein f) xs σ = .inl (xs.foldl (fun σ x => f x σ) σ) := by
+  induction xs generalizing σ with
+  | nil => rfl
+  | cons x xs ih =>
+      simp only [durchlaufF, durchlaufRein, List.foldl_cons]
+      exact ih _
+
+/-- Loop agreement end to end: a fuel-bounded fault-free loop IS the step
+    sequence of its unfoldings -- the `foreverLauf` skeleton without the
+    `fortschritt` arm (a hardware assumption, not a fault). -/
+theorem schleifeF_als_folge (f : World D → World D) (n : Nat) (σ : World D) :
+    schleifeF (schrittRein f) n σ =
+      schrittFolge (List.replicate n (schrittRein f)) σ := by
+  induction n generalizing σ with
+  | zero => rfl
+  | succ n ih =>
+      simp only [schleifeF, schrittRein, List.replicate_succ, schrittFolge]
+      exact ih _
+
+/-- A returned answer carries its world. -/
+theorem endZustandF_zurueck (σ : World D) (v : ErgVal D V.erg) :
+    endZustandF (AusF.weiter (.zurueck σ v) : AusF V l Γ) = some σ :=
+  rfl
+
+/-- A raised ground carries its world. -/
+theorem endZustandF_grund (σ : World D) (r : Fin V.gruende) :
+    endZustandF (AusF.weiter (.grund σ r) : AusF V l Γ) = some σ :=
+  rfl
+
+/-- A consumed `leave` carries its world. -/
+theorem endZustandF_leave (h : l = true) (σ : World D) (ρ : Env D Γ) :
+    endZustandF (AusF.weiter (.leave h σ ρ) : AusF V l Γ) = some σ :=
+  rfl
+
+/-- A consumed `next` carries its world. -/
+theorem endZustandF_next (h : l = true) (σ : World D) (ρ : Env D Γ) :
+    endZustandF (AusF.weiter (.next h σ ρ) : AusF V l Γ) = some σ :=
+  rfl
+
 #print axioms Gabbro.Grammatik.evalF
 #print axioms Gabbro.Grammatik.evalF_ok
 #print axioms Gabbro.Grammatik.evalF_stimmt
@@ -481,5 +742,29 @@ theorem ausF_klassifikation (a : AusF V l Γ) :
 #print axioms Gabbro.Grammatik.hardware_ist_benannt
 #print axioms Gabbro.Grammatik.folge_benannt_bleibt
 #print axioms Gabbro.Grammatik.ausF_klassifikation
+#print axioms Gabbro.Grammatik.AusF.vonAusgang
+#print axioms Gabbro.Grammatik.AusF.zuAusgang
+#print axioms Gabbro.Grammatik.AusF.zuAusgang_vonAusgang
+#print axioms Gabbro.Grammatik.AusF.zuAusgang_fehler
+#print axioms Gabbro.Grammatik.AusF.folge_weiter
+#print axioms Gabbro.Grammatik.AusF.folge_zurueck
+#print axioms Gabbro.Grammatik.AusF.folge_grund
+#print axioms Gabbro.Grammatik.AusF.folge_leave
+#print axioms Gabbro.Grammatik.AusF.folge_next
+#print axioms Gabbro.Grammatik.IstStecken
+#print axioms Gabbro.Grammatik.stecken_heisst_benannt
+#print axioms Gabbro.Grammatik.benannt_heisst_stecken
+#print axioms Gabbro.Grammatik.stecken_klassifikation
+#print axioms Gabbro.Grammatik.evalArgsMit_stimmt
+#print axioms Gabbro.Grammatik.evalArgsF_stimmt
+#print axioms Gabbro.Grammatik.schrittRein
+#print axioms Gabbro.Grammatik.schrittFolge_rein
+#print axioms Gabbro.Grammatik.durchlaufRein
+#print axioms Gabbro.Grammatik.durchlaufF_rein
+#print axioms Gabbro.Grammatik.schleifeF_als_folge
+#print axioms Gabbro.Grammatik.endZustandF_zurueck
+#print axioms Gabbro.Grammatik.endZustandF_grund
+#print axioms Gabbro.Grammatik.endZustandF_leave
+#print axioms Gabbro.Grammatik.endZustandF_next
 
 end Gabbro.Grammatik
