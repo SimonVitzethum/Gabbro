@@ -1,0 +1,30 @@
+-- erwartet: V001
+-- **The call-edge twin, must stay silent.** `mw` publishes `{ m }` on `G`, and `mr`
+-- awaits it THROUGH the call edge `mr -> rufe_mw -> mw`. The pair belongs together
+-- along the graph, in the global reading and in any transitive one -- no verdict may
+-- ever touch it.
+--
+-- `w` is the true orphan that carries the verdict: it publishes `{ n }` on `F`, and
+-- nothing awaits it anywhere -- `V001` in every world, fixed or not.
+module gift::call_edge_twin_silent {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+
+-- Carries the verdict: orphaned publication, no counterpart anywhere.
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+-- The twin that must pass: paired along the call edge, silent in every world.
+impl fn mw(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rufe_mw(v : u32) effects { writes m, publishes G } costs <= 12 ops
+{ mw(v); }
+
+impl fn mr() -> u32 effects { writes m, publishes G, reads G, reads m } costs <= 16 ops
+{ rufe_mw(0); let g = G awaits { m }; if g { return m; } return 0; }
+
+}
