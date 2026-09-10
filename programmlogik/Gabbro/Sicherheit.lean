@@ -34,7 +34,9 @@
 
   ## Was der Satz sagt -- und was NICHT
 
-  BEWIESEN (0 `sorry`, 0 eigene Axiome, kein `mathlib`):
+  BEWIESEN (0 `sorry`, 0 eigene Axiome, `mathlib` nur in `Sicherheit/Ausdruck.lean`
+  fuer die Bereichsarithmetik der S4-Naht -- `Body.lean`, Grammatik und `passlogik`
+  bleiben abhaengigkeitsfrei, keine erzeugte Pflicht erbt die Abhaengigkeit):
     * `schluss_sicher`  -- ein Ausdruck, den der Pruefer annimmt, wertet zu einem Wert der
                            gerechneten Gestalt aus. Kein Nenner null, kein Bitoperator auf
                            negativer Zahl, keine Gestaltverwechslung, kein Index ausserhalb

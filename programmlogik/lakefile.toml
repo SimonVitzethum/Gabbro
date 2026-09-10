@@ -2,9 +2,18 @@ name = "programmlogik"
 version = "0.1.0"
 defaultTargets = ["Gabbro"]
 
-# NO mathlib, for the same reason `passlogik` has none: the meaning of a body over a finite
-# record of declared places is finite mathematics. A dependency here would be a dependency in
-# every generated obligation.
+# Mathlib ALLOWED since 2026-09-10 (decision: the range arithmetic of the S4
+# checker-parity fixes needs order lemmas no finite hand-proof should duplicate).
+# Scope is NARROW on purpose: only `Gabbro/Sicherheit/*` may import Mathlib;
+# `Body.lean`, the grammar and `passlogik` stay dependency-free, so no generated
+# obligation and no other project inherits the dependency.
+# Pinned to the newest commit whose toolchain is v4.33.0 (below), with precompiled
+# oleans via `lake exe cache get` -- a source build is not part of any lane.
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "db584cd6d46c92f209a44c0f1c829460d327499d"
 
 [[lean_lib]]
 name = "Gabbro"
