@@ -1200,6 +1200,24 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
                 Ok(LeanCarried::ExprOption.term("(.lit .absent)"))
             }
             Some(n) if n == "Some" && r.argumente.len() == 1 => {
+                // **F10 (S4): `Some(x)` is refused where `x` is provably not a number.**
+                // `schluss` (`Ausdruck.lean:246`) gives `.someOf` a shape only over a
+                // `zahl` inner, and `eval` gets stuck on anything else -- a `someOf`
+                // over a truth value, an option or a `tagged` value has no model value
+                // at all, so carrying it would prove what `pruefe` refuses. The tracked
+                // shape says it where it is known: an index stays `Int`/`IntIn` and
+                // passes, exactly as before. An unknown shape (`None`) still passes --
+                // an unproved bound is not a false one (W10). What this does NOT close
+                // is a well-shaped value outside the TARGET option's bound (`gift/170`,
+                // `Some(8)` on `count 8`): the bound lives at the use site, and reading
+                // it here would be a guess -- that half needs the target type threaded
+                // down, or `Shape.optIn` on the model side (S3 finding 2).
+                if matches!(
+                    shape_of_expr(&r.argumente[0], c),
+                    Some(Shape::Bool) | Some(Shape::Opt) | Some(Shape::Sum(_))
+                ) {
+                    return Err(LeanReason::Expression);
+                }
                 Ok(LeanCarried::ExprOption.term(format!("(.someOf {})", expr_term(&r.argumente[0], c)?)))
             }
             // **`Case(e)` of a `tagged type` is a VALUE**, and so is a bare `Case`.
@@ -2460,9 +2478,19 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
                 && passes_bound.is_some();
             let mut prefix = String::new();
             if may_return {
-                prefix.push_str("(.bindName \"#returned\" (.lit (.bool false))), (.bindName \"#ret\" (.lit .absent)), ");
+                // **F2 (S4): `#ret` is bound ONCE, with the routine's declared answer
+                // shape (`ret_init`) -- not `absent`/`None`.** A `return` inside rebinds
+                // `#ret` to the answer further down, and `binde` keeps a name only under
+                // the SAME shape (`Anweisung.lean:102`, U3) -- entry-absent against an
+                // answer-valued rebinding was a refusal by construction. The per-return
+                // rebindings are untouched (they carry the value); only this one binding
+                // moves, and with it the invariant's `hasShape` conjunct for `#ret`.
+                let (ret_term, ret_shape) = ret_init(c);
+                prefix.push_str(&format!(
+                    "(.bindName \"#returned\" (.lit (.bool false))), (.bindName \"#ret\" {ret_term}), "
+                ));
                 c.push_local("#returned", Some(Shape::Bool));
-                c.push_local("#ret", None);
+                c.push_local("#ret", ret_shape);
             }
             // **A loop without an `invariant` has the invariant `true`** (2026-09-07). Until
             // today it was refused -- *"a loop datum with no statement about it would let a
@@ -3718,6 +3746,34 @@ fn ret_post_of(unit: &Unit, f: &FnDecl, module: &str, maintained: &[String]) -> 
         parts.push(kept_invariant(unit, f, module, m).ok()?);
     }
     Some(conj(&parts))
+}
+
+/// **The single pre-loop binding of `#ret` (F2).**
+///
+/// Returns the term and the shape the binding carries: the routine's declared answer
+/// shape with a value of that shape -- `0`, the range's `lo`, `false`, `absent` -- so
+/// that the invariant's `hasShape` conjunct holds on entry and every `return` inside
+/// rebinds the SAME shape (`binde` keeps on equal, `Anweisung.lean:102`).
+///
+/// Where no `return` can hand the slot a value of the declared shape, the binding stays
+/// `absent`/`None`, as before: no result at all, an unshaped one, a `tagged` one (a
+/// `tagged` value is no literal here, and `schluss` gives `.tagOf` no shape either, so
+/// carrying one would trade today's refusal for an unprovable conjunct), or `-> T or R`
+/// (the slot may hold a reason, and `ret_post_of` above says no shape for it either).
+fn ret_init(c: &Ctx) -> (String, Option<Shape>) {
+    let shape = c
+        .unit
+        .routines
+        .get(&c.routine)
+        .filter(|r| r.decl.fehler.is_none())
+        .and_then(|_| c.unit.result_shape.get(&c.routine).copied().flatten());
+    match shape {
+        Some(Shape::Int) => ("(.lit (.int 0))".into(), shape),
+        Some(Shape::IntIn(lo, _)) => (format!("(.lit (.int {}))", int_lit(lo)), shape),
+        Some(Shape::Bool) => ("(.lit (.bool false))".into(), shape),
+        Some(Shape::Opt) => ("(.lit .absent)".into(), shape),
+        Some(Shape::Sum(_)) | None => ("(.lit .absent)".into(), None),
+    }
 }
 
 /// **`refines g` -- the head form.** The postcondition IS the `spec fn`'s expression body,
@@ -6546,7 +6602,8 @@ pub fn witness(baum: &Programm, datei: &str) -> String {
     s.push_str("    datum, held against `pruefe` (`Gabbro.Sicherheit.Anweisung`). Both checkers\n");
     s.push_str("    accept, or the file goes red at `lake build` -- per routine, per run.\n\n");
     s.push_str("    Adapters (see the function docs): loop variables are bound to `0` at the\n");
-    s.push_str("    routine's entry (A1), `#ret` replays as `.opt` (A2), routines with a loop\n");
+    s.push_str("    routine's entry (A1), `#ret` replays as its recorded shape (`.opt` where\n");
+    s.push_str("    unshaped, A2), routines with a loop\n");
     s.push_str("    over an unshaped residue (`let … else`/`await` names) get NO witness by name.\n");
     s.push_str("    The proposition is `.isSome = true`: `= some _` leaves a metavariable that\n");
     s.push_str("    `decide` cannot evaluate. Entry is the parameter scope: `[]` would refuse\n");
@@ -6640,8 +6697,9 @@ pub fn witness(baum: &Programm, datei: &str) -> String {
             .iter()
             .filter_map(|(n, sh)| sh.map(|v| (n.clone(), v)))
             .collect();
-        // The loop scopes, replayed (A2: `#ret` reads as `.opt`, any other unshaped
-        // residue skips the routine instead of guessing).
+        // The loop scopes, replayed (`#ret` reads as its recorded shape -- `.opt`
+        // for the unshaped residue via A2; any other unshaped residue skips the
+        // routine instead of guessing).
         let mut schleifen: Vec<(String, Vec<(String, Shape)>)> = Vec::new();
         let mut rueckstand: Vec<String> = Vec::new();
         for l in &g.loops {
