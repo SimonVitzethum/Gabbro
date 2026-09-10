@@ -764,7 +764,8 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
-        | ItemArt::Boot(_) => {}
+        | ItemArt::Boot(_)
+        | ItemArt::Concurrent(_) => {}
     });
     ja
 }
@@ -1062,7 +1063,8 @@ pub fn emittiere_mit(
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
-        | ItemArt::Boot(_) => {}
+        | ItemArt::Boot(_)
+        | ItemArt::Concurrent(_) => {}
     });
     // **Second pass, and it needs the first**: whether a parameter is a ghost can only be
     // decided once the ghost names are known.
@@ -1454,7 +1456,8 @@ pub fn emittiere_mit(
             | ItemArt::Walk(_)
             | ItemArt::Entry(_)
             | ItemArt::Entrust(_)
-            | ItemArt::Boot(_) => {}
+            | ItemArt::Boot(_)
+            | ItemArt::Concurrent(_) => {}
         });
         // **«B41b»: ein Baumdurchlauf ueber einem blanken Index adressiert seine Tabelle
         // ebenfalls beim Namen** (2026-08-20).
@@ -1786,7 +1789,8 @@ pub fn emittiere_mit(
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
-        | ItemArt::Boot(_) => {}
+        | ItemArt::Boot(_)
+        | ItemArt::Concurrent(_) => {}
     });
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Typ(t) = &item.art {
@@ -2330,6 +2334,10 @@ pub fn emittiere_mit(
         // PROGRAMM und wird zur Uebersetzungszeit nachgerechnet* -- W6: was der Pruefer
         // entschieden hat, prueft die Maschine nicht noch einmal.
         ItemArt::Gruppe(_) => {}
+        // **Lane C: a `concurrent` set declares which bodies may run together -- like a
+        // `group` it is a statement about the program, checked at translation time
+        // (`nebeneinander.rs`), and costs null at run time: it emits NOTHING.**
+        ItemArt::Concurrent(_) => {}
         // **«C3b»: `rcu` erzeugt zwei Prototypen und keine Zeile Rumpf** -- genau wie eine
         // Sperre, und aus genau demselben Grund.
         //

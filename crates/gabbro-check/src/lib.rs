@@ -56,6 +56,9 @@ pub mod abi;
 /// covers up exactly the error it is meant to find.
 pub mod ableitung;
 pub mod kontexte;
+/// **Lane C -- declared concurrency (`concurrent { f, g };`).** Pairwise
+/// non-interference from transitive hulls, closed world over context roots.
+pub mod nebeneinander;
 pub mod kosten;
 mod m1;
 mod namen;
@@ -381,6 +384,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
+        z!("nebeneinander", nebeneinander::pass(baum, absagen));
         z!("m3", m3::pass(baum, absagen));
         z!("m2", m2::pass(baum, absagen));
         z!("phasen", phasen::pass(baum, absagen));
@@ -410,6 +414,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // Erhebung benutzt. *Sie bekommt keine eigene Passnummer: die Liste ist die Spezifikation,
     // und dies ist eine Regel derselben Spalte, keine neue.*
     kontexte::pass(baum, absagen);
+    nebeneinander::pass(baum, absagen);
     m3::pass(baum, absagen);
     m2::pass(baum, absagen);
     // **«B37», seit 2026-08-17.** M2 sieht, dass eine lineare Marke genau einmal
@@ -586,7 +591,9 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
-        | ItemArt::Boot(_) => {}
+        // **Lane C: `concurrent` declares no type expression** -- paths only.
+        | ItemArt::Boot(_)
+        | ItemArt::Concurrent(_) => {}
     }
 }
 
@@ -874,6 +881,7 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
         ItemArt::Typ(_) => {}
         // **These carry no predicate of their own**, and each stands here by name so that a
         // clause added to one of them breaks the build instead of disappearing.
+        // **Lane C: `concurrent` carries paths, no predicate.**
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Konst(_)
@@ -887,7 +895,8 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
         | ItemArt::Accumulates(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
-        | ItemArt::Boot(_) => {}
+        | ItemArt::Boot(_)
+        | ItemArt::Concurrent(_) => {}
     }
     aus
 }

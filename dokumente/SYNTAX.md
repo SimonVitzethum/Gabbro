@@ -40,15 +40,15 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **160** measured (`pruefe-syntax.sh` EBNF branch, 2026-09-09: 160 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`; nothing removed |
+| defined EBNF rules | 132 | **161** measured (`pruefe-syntax.sh` EBNF branch: 161 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **220 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`, 2026-09-09: 220 EBNF terminals against 220 table words, both readings) — new word since the second version: `owner` («SG-9») and `deadline` («SG-22») |
+| vocabulary words | 221 | **221 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 221 EBNF terminals against 221 table words, both readings) — new word since the second version: `owner` («SG-9»), `deadline` («SG-22») and `concurrent` («SG-23») |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
 
 > **Partly run on 2026-09-09.** The EBNF-closure branch of `pruefe-syntax.sh`
-> (160 rules, 0 open) and `pruefe-wortschatz.py` (220/220 both readings, speech
+> (161 rules, 0 open) and `pruefe-wortschatz.py` (221/221 both readings, speech
 > test green) ran from this workstation; the full `pruefe-syntax.sh` (it builds
 > with `cargo build --tests`), `pruefe-grammatiktafel.py` and the parser item of
 > `PLAN-GRAMMATIK.md` §4 are still open. A number in this table that a guardian
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 222 words
+## Vocabulary — closed, 224 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -90,7 +90,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count backed mirrors from owner
-             assume falsifier unfalsifiable axiom lock protects rank group rcu observes reclaims
+             assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
@@ -122,7 +122,7 @@ production and a name, and each is decided by the grammar and not by a list:
 2. **`old` and `result`** — words inside a contract clause, names everywhere else;
 3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
-**Seventeen of the 223 are still not names**, on two measured grounds, and every one of them
+**Seventeen of the 224 are still not names**, on two measured grounds, and every one of them
 has **zero** declarator sites in 585 foreign files:
 
 ```
@@ -130,7 +130,7 @@ has **zero** declarator sites in 585 foreign files:
   C-Name     const static extern if else return bool
 ```
 
-`owner` and `deadline` join the 206 that are names — neither heads an expression and neither breaks emitted C.
+`owner` and `deadline` join the 207 that are names — neither heads an expression and neither breaks emitted C.
 
 ---
 
@@ -186,7 +186,7 @@ program    = { item } ;
 item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | rcudecl | gruppedecl | accdecl | walkdecl | entrydecl | entrustdecl
+             | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
              | bootdecl ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
@@ -1023,6 +1023,9 @@ rcudecl    = "rcu" ident "protects" "{" placelist "}" [ "reclaims" place ] ";" ;
 observestmt = "observes" ident block ;
 gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
              ( "{" { invariant } "}" | ";" ) ;
+concurrentdecl = "concurrent" "{" path { "," path } [ "," ] "}" ";" ;
+(* «SG-23»: the declared-concurrent bodies -- paths, not idents (dispatch roots or
+   scheduler entry `fn`s); one member at least, trailing comma allowed like `group`. *)
 ```
 
 ```gabbro
@@ -1053,6 +1056,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
 | `observed by a` | the other side is the assumption `a` | `D.Annahme` |
 | `group G over { T, U } { invariant I }` | `I` has carriers `T` and `U`: owed by every function that writes either («SG-10»); `U003` (a function writing two carriers holds all their locks) is the `braucht` of each access, `U005` (two ranks equal) is `keine_verklemmung`'s premise, `U006` (leaving between the writes) is `schuldet` at every `return` | `D.Inv` with `traeger = [T, U]` |
+| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently |
 | `accumulates` (§1) | a global plus a generated `merge` assignment; `per cpu N` is the cell table | SUGAR |
 
 **What the discipline proves — over interleavings, since the evening of 2026-09-09.** Every
@@ -1402,9 +1406,9 @@ by the grammar (§15, §16.2).
 ## Open items — as of 2026-09-09
 
 - [ ] **Run the guardians** on this file: `pruefe-syntax.sh` (closure, reachability, terminal
-      coverage — `owner`, `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt` are the
+      coverage — `owner`, `deadline`, `concurrent`, `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt` are the
       new names, `shared` at `table`/`static` a new position of an old word), `zaehle-wortschatz.py`
-      (222), `pruefe-grammatiktafel.py`. Every number in "State — measured" is a hand count
+      (224), `pruefe-grammatiktafel.py`. Every number in "State — measured" is a hand count
       until then.
 - [ ] **The parser from this grammar into `Syntax.lean`** — the item that turns 16.2 (8) into a
       corpus measurement (`PLAN-GRAMMATIK.md` §4).

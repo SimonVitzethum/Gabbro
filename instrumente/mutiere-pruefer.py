@@ -4352,6 +4352,54 @@ MUTATIONEN = [
         "`M147` -- the taint map stays empty; gifts 702 and 703 (arm 3) read carriers "
         "into names that never taint, so both pass and both gift probes fall",
     ),
+    # -- nebeneinander.rs: W001, the exact-overlap arm (Lane C, 2026-09-10) ----------------
+    #
+    # Gift 704's hulls both carry the string `writes T.slots`, so the refusal fires in the
+    # EXACT arm (`for o in orte`), not the table interim below it. An empty iteration
+    # keeps the body compiling (same `o`, same `m.span`) and runs it zero times.
+    Mutation(
+        "w001-exakte-ueberlappung-stumm",
+        "gabbro-check/src/nebeneinander.rs",
+        "                let (orte, tab) = ueberlappung(&ba, &bb, &atomar, pa, pb, &tabellen);\n"
+        "                for o in orte {\n",
+        "                let (orte, tab) = ueberlappung(&ba, &bb, &atomar, pa, pb, &tabellen);\n"
+        "                for o in orte.into_iter().take(0) {\n",
+        "`W001` -- the exact-overlap refusal runs zero times; gift 704 (both hulls write "
+        "`T.slots`, no common lock) passes, and the gift probe falls over the missing code",
+    ),
+    # -- nebeneinander.rs: W001, the table interim arm (Lane C, 2026-09-10) ----------------
+    #
+    # NEEDS-CATCH-TEST: no committed probe fires this arm alone. Gift 704's overlap is an
+    # EXACT hull-string overlap (`writes T.slots` both sides), so it falls in the arm
+    # above even with this one silenced -- this mutant would SURVIVE, and rightly so: the
+    # interim rule (same table, different places, open question 4) has no witness yet. It
+    # wants a gift whose hull strings differ per body but name one carrier (e.g. effects
+    # `writes T.a` vs `writes T.b`), cited here once it exists.
+    Mutation(
+        "w001-tabellen-interim-stumm",
+        "gabbro-check/src/nebeneinander.rs",
+        "                for t in tab {\n",
+        "                for t in tab.into_iter().take(0) {\n",
+        "`W001` table interim -- NEEDS-CATCH-TEST (no committed probe reaches this arm "
+        "without the exact arm; gift 704 falls above). Survives until the witness gift "
+        "exists",
+    ),
+    # -- nebeneinander.rs: W003 fail-closed to pass-silent (Lane C, 2026-09-10) ------------
+    #
+    # NEEDS-CATCH-TEST: the incomplete-hull refusal is the honest third state beside pass
+    # and refuse, and both halves of `gemessen_an` are still scratch runs with no gift
+    # probe (see the W002/W003 sentence verdict). With the guard forced false an
+    # uncheckable `concurrent` claim passes silently -- the missed-race shape -- and NO
+    # committed probe falls. Wants two gifts: an unresolvable member, and disjoint-looking
+    # sets behind an unknown callee.
+    Mutation(
+        "w003-unvollstaendig-besteht-still",
+        "gabbro-check/src/nebeneinander.rs",
+        "                if ha.unvollstaendig.is_some() || hb.unvollstaendig.is_some() {\n",
+        "                if false {\n",
+        "`W003` -- NEEDS-CATCH-TEST (no committed probe; both halves scratch-measured). "
+        "An incomplete hull passes silently instead of refusing, and nothing falls",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -79,6 +79,8 @@ pub enum ItemArt {
     Rcu(RcuDecl),
     /// `group N over { A, B };` -- a carrier group with a connecting invariant.
     Gruppe(GruppeDecl),
+    /// `concurrent { f, g };` -- the bodies that may run at the same time.
+    Concurrent(ConcurrentDecl),
     Accumulates(AccDecl),
     Walk(WalkDecl),
     Entry(EntryDecl),
@@ -96,6 +98,7 @@ impl ItemArt {
             ItemArt::Konst(k) => Some(&k.name),
             ItemArt::Statisch(s) => Some(&s.name),
             ItemArt::Gruppe(g) => Some(&g.name),
+            ItemArt::Concurrent(_) => None,
             ItemArt::Funktion(f) => Some(&f.name),
             ItemArt::Format(f) => Some(&f.name),
             ItemArt::Tabelle(t) => Some(&t.name),
@@ -137,6 +140,7 @@ impl ItemArt {
             ItemArt::Lock(_) => "lock",
             ItemArt::Rcu(_) => "rcu",
             ItemArt::Gruppe(_) => "group",
+            ItemArt::Concurrent(_) => "concurrent",
             ItemArt::Accumulates(_) => "accumulates",
             ItemArt::Walk(_) => "walk",
             ItemArt::Entry(_) => "entry",
@@ -1779,6 +1783,17 @@ pub struct GruppeDecl {
     /// quantifies over SEVERAL carriers and therefore cannot sit on any single
     /// `table … invariant`.
     pub invarianten: Vec<Invariante>,
+    pub span: Span,
+}
+
+/// `concurrent { f, g };` -- the bodies that may run at the same time.
+///
+/// No name of its own: the set is identified by its members, and the closed
+/// world says what is not in any set never runs concurrently.
+#[derive(Debug, Clone)]
+pub struct ConcurrentDecl {
+    /// The bodies, as paths -- dispatch roots or scheduler entry `fn`s.
+    pub koerper: Vec<Pfad>,
     pub span: Span,
 }
 

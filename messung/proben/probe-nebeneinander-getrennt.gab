@@ -1,0 +1,39 @@
+-- **Declared-concurrent bodies with disjoint write sets pass -- shared reads free.**
+--
+-- The counter-probe to `beispiele/gift/702`: `g_a` writes `T`, `g_b` writes `U`
+-- and only READS `T`. `writes(hull g_a) ∩ writes(hull g_b) = ∅`, so the pair is
+-- clean -- a shared read is not a shared write, and the checker says nothing.
+-- Stays clean on purpose: the day it falls, the disjointness claim is gone.
+--
+-- GEMESSEN am 2026-09-10
+-- ----------------------
+--
+--     $ gabbro pruefe messung/proben/probe-nebeneinander-getrennt.gab
+--     …: 0 errors
+module probe::nebeneinandergetrennt {
+
+table T count 8 {
+    slot { x : u32, }
+}
+
+table U count 8 {
+    slot { y : u32, }
+}
+
+impl fn g_a()
+    effects { writes T.slots }
+    costs <= 4 ops
+{
+    T.slots[0].x = 1;
+}
+
+impl fn g_b()
+    effects { writes U.slots, reads T.slots }
+    costs <= 6 ops
+{
+    U.slots[0].y = T.slots[0].x;
+}
+
+concurrent { g_a, g_b };
+
+}

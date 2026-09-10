@@ -89,8 +89,9 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         ItemArt::Format(f) => f.oeffentlich.then_some(&f.name),
         ItemArt::Device(d) => d.oeffentlich.then_some(&d.name),
         // **A `module` and a `use` bind no symbol.** The module is a namespace the C does
-        // not know; a `use` declares nothing, it fetches.
-        ItemArt::Modul(_) | ItemArt::Use(_) => None,
+        // not know; a `use` declares nothing, it fetches. **Lane C: a `concurrent` set
+        // binds none either** -- it names bodies, and the set itself has no name.
+        ItemArt::Modul(_) | ItemArt::Use(_) | ItemArt::Concurrent(_) => None,
         // The constructs without `pub` -- the grammar gives them none, so nothing of them
         // crosses the boundary either. **Written out and not swept up**, so that a `pub` on
         // one of them shows up here instead of vanishing quietly.
@@ -231,7 +232,9 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
             }
         }
         // These mention nothing beyond their type expressions, or they do not travel at all.
-        // **Written out, no `_`** -- see [`ausgefuehrter_name`].
+        // **Written out, no `_`** -- see [`ausgefuehrter_name`]. **Lane C: `concurrent`
+        // joins this group** -- like `entry`/`boot` it carries paths, and like them it
+        // binds nothing outward; the member paths are resolved by `nebeneinander.rs`.
         ItemArt::Typ(_)
         | ItemArt::Format(_)
         | ItemArt::Modul(_)
@@ -247,7 +250,8 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
-        | ItemArt::Boot(_) => {}
+        | ItemArt::Boot(_)
+        | ItemArt::Concurrent(_) => {}
     }
 }
 

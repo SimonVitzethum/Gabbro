@@ -296,7 +296,15 @@ wortschatz! {
     Observes      => "observes",      ctx;
     // **Die Rueckgewinnung -- der Ort, an dem die Gnadenfrist etwas zu tun bekommt.**
     Reclaims      => "reclaims",      ctx;
-    Group         => "group",         ctx;
+    Group         => "group",          ctx;
+    // **`concurrent` -- the declared set of bodies that may run at the same time.**
+    //
+    // No spawn syntax names a second body (threads are table rows, entries dispatch
+    // into ordinary `fn`s), so interference between two bodies was unnameable.
+    // The zero-word alternative -- reusing `group … over` -- is refused: a group
+    // is over carriers with invariants, and one word meaning two things is the
+    // `reserved` trap class (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §4).
+    Concurrent    => "concurrent",     ctx;
     Protects      => "protects",      ctx;
     Rank          => "rank",          ctx;
     // «B37»: die ORDNUNG auf einer linearen Geistmarke. Zwei Woerter -- und zwar

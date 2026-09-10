@@ -725,6 +725,7 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Lock) => ItemArt::Lock(self.lockdecl(oeffentlich)?),
             Art::Wort(Kw::Rcu) => ItemArt::Rcu(self.rcudecl()?),
             Art::Wort(Kw::Group) => ItemArt::Gruppe(self.gruppedecl()?),
+            Art::Wort(Kw::Concurrent) => ItemArt::Concurrent(self.concurrentdecl()?),
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
@@ -4249,6 +4250,29 @@ impl<'a> Parser<'a> {
             traeger,
             invarianten,
             span: anfang.bis_zu(zu),
+        })
+    }
+
+    /// **`concurrent { f, g };` -- the declared-concurrent bodies.**
+    ///
+    /// One path at least (the EBNF names no empty set); a trailing comma is allowed,
+    /// the same rule as everywhere since 2026-08-16. No name of its own -- the set
+    /// is its members, and what stands in no set never runs concurrently.
+    fn concurrentdecl(&mut self) -> Erg<ConcurrentDecl> {
+        let anfang = self.erwarte_kw(Kw::Concurrent)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut koerper = vec![self.pfad()?];
+        while self.friss_z(Z::Komma) {
+            if self.ist_z(Z::GeschweiftZu) {
+                break; // Schlusskomma -- dieselbe Regel wie ueberall seit 2026-08-16
+            }
+            koerper.push(self.pfad()?);
+        }
+        let _ = self.erwarte_z(Z::GeschweiftZu)?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ConcurrentDecl {
+            koerper,
+            span: anfang.bis_zu(ende),
         })
     }
 

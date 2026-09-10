@@ -3289,6 +3289,69 @@ pub const SPERREN: &[Satz] = &[
                      crates/gabbro-check/src/emit.rs::fehlbare_lesung; \
                      messung/GERAETEVERSPRECHEN.md",
     },
+    // --- Lane C: declared concurrency (2026-09-10, NEBENLAEUFIGKEIT-ENTWURF.md) --------
+    Satz {
+        name: "nebeneinander.paar",
+        kennungen: &["W001"],
+        aussage: "Two bodies of one `concurrent` set write no place both: \
+                  `writes(hull f) ∩ writes(hull g)` is empty over the transitive hulls. \
+                  Shared reads may overlap freely; shared writes need a lock in BOTH \
+                  hulls, a `publishes` pairing, or an `atomic` carrier. Same-table writes \
+                  at different places fall too, unless lock-shared.",
+        vorbehalt: "**The lock exemption is pair-level, not site-level** (open question 1): \
+                    a common `locks L` in both hulls clears the pair even where neither \
+                    body holds `L` across the access -- no held-set analysis exists. \
+                    **Table identity is the SHORT name**: two modules declaring the same \
+                    short table name in one unit read as one carrier. `per cpu` cells are \
+                    NOT exempt by shape (open question 3): disjoint by core, refused \
+                    without a common lock. `entrust` roots are skipped, not cleared (open \
+                    question 2).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/704-gleichzeitig-schreibt-gleiche-tabelle.gab (`W001` \
+                      -- different rows of one table, no lock in either hull). The clean \
+                      side is messung/proben/probe-nebeneinander-getrennt.gab (disjoint \
+                      write sets, shared read, 0 errors).",
+        fundstelle: "crates/gabbro-check/src/nebeneinander.rs; \
+                     messung/NEBENLAEUFIGKEIT-ENTWURF.md §2",
+    },
+    Satz {
+        name: "nebeneinander.geschlossen",
+        kennungen: &["W002"],
+        aussage: "Two context roots (`entry`/`boot` dispatch) whose hulls overlap in \
+                  writes share a `concurrent` set: non-declared pairs are NOT concurrent, \
+                  so an overlapping pair outside every set falls -- declare the pair or \
+                  separate the writes.",
+        vorbehalt: "**Asymmetric over incomplete hulls, and the asymmetry is built in**: \
+                    on visible overlap the lower bound suffices to refuse (presence, not \
+                    absence); where nothing is visible the pair stays silent -- the \
+                    fail-closed half belongs to declared sets (`W003`). A root the graph \
+                    cannot resolve is skipped here (`N018` already refuses the dangling \
+                    `dispatch`).",
+        stand: Satzstand::Vermutet,
+        gemessen_an: "Scratch-measured 2026-09-10 (two entries over one table, no set -- \
+                      `W002` beside the older `H013`); no gift probe yet, because every \
+                      corpus unit with two roots is either disjoint or lock-shared.",
+        fundstelle: "crates/gabbro-check/src/nebeneinander.rs; \
+                     messung/NEBENLAEUFIGKEIT-ENTWURF.md §4",
+    },
+    Satz {
+        name: "nebeneinander.unentscheidbar",
+        kennungen: &["W003"],
+        aussage: "A `concurrent` pair is checked only over COMPLETE hulls: a member that \
+                  resolves to nothing, or whose hull is a lower bound (cycle, unknown \
+                  callee), refuses instead of passing silently.",
+        vorbehalt: "It refuses the DECLARATION, not the bodies: the two functions stay \
+                    checkable on their own, and what falls is the claim that they may run \
+                    together. Like `E009` it is the honest third state beside pass and \
+                    refuse -- but here it bites (`Fehler`, not `Hinweis`), because an \
+                    unchecked concurrency claim is not a frame anyone may rely on.",
+        stand: Satzstand::Vermutet,
+        gemessen_an: "Scratch-measured 2026-09-10 in both halves: unresolvable member, \
+                      and disjoint write sets behind an unknown callee (the shape of a \
+                      missed race -- clean-looking lower bound, refused).",
+        fundstelle: "crates/gabbro-check/src/nebeneinander.rs; \
+                     messung/NEBENLAEUFIGKEIT-ENTWURF.md §2 (`unvollstaendig` is fail-closed)",
+    },
 ];
 
 // ===================================================================================

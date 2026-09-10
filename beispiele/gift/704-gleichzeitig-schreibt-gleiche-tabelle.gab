@@ -1,0 +1,32 @@
+-- erwartet: W001
+-- **Declared-concurrent bodies writing one table fall -- even at different rows.**
+--
+-- `f_a` writes `T.slots[0]`, `f_b` writes `T.slots[1]`: different rows, one
+-- carrier name, and row-level disjointness needs index analysis the checker
+-- lacks. The interim rule over open question 4
+-- (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §6.4) refuses same-table writes unless
+-- lock-shared -- and no lock stands in either hull here. Shared READS would be
+-- fine; shared WRITES without a common lock are the interference.
+module gift704 {
+
+table T count 8 {
+    slot { x : u32, }
+}
+
+impl fn f_a()
+    effects { writes T.slots }
+    costs <= 4 ops
+{
+    T.slots[0].x = 1;
+}
+
+impl fn f_b()
+    effects { writes T.slots }
+    costs <= 4 ops
+{
+    T.slots[1].x = 2;
+}
+
+concurrent { f_a, f_b };
+
+}

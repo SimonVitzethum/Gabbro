@@ -503,9 +503,48 @@ theorem lauf_aus_brav (l : Lauf D) (voll : Faden → List (Ereignis D))
     rw [← hspur] at hmem
     exact hbrav.gut_von_leer hempty hmem
 
+/-! ## 6. Declared concurrency -- who shares a run (lane C, 2026-09-10)
+
+    The declaration `concurrent { f, g };` becomes the premise `Nebeneinander`:
+    which bodies share a run. What stands in no set never runs concurrently
+    (closed world). `kein_wettlauf` above holds over EVERY interleaving; the
+    corollary below names the shape the joint model will consume: the same
+    happens-before order, quantified over the RESTRICTED interleaving of
+    declared pairs. `kein_wettlauf` itself stays as-is.
+
+    The Owicki-Gries step -- `exec_rahmen` per body plus pairwise disjoint
+    frames ⇒ sequential contracts survive interleaving -- is NOT here yet; it
+    needs the joint model of the declared pair set, which stands nowhere. -/
+
+/-- Which bodies share a run: the `concurrent { … }` declaration as a premise.
+    It travels as an explicit `Nb : Nebeneinander` argument below, not a
+    `variable`: the existing theorems above quantify over every interleaving,
+    and a section variable here would rewrite their context. -/
+abbrev Nebeneinander : Type := Faden → Faden → Prop
+
+/-- A run in which only declared pairs interleave: any two steps of different
+    threads stand in the declared relation. -/
+def BeschraenkteVerschraenkung (Nb : Nebeneinander) (l : Lauf D) : Prop :=
+  ∀ (i j : Nat) (f g : Faden) (ei ej : Ereignis D),
+    l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) → f ≠ g →
+    Nb f g
+
+/-- **Race-freedom under the declared relation.** In a gesitteter Lauf whose
+    interleaving is restricted to declared pairs, two accesses of different
+    threads to the same table are ordered by happens-before -- the same order
+    as `kein_wettlauf`, now quantified over the declared pairs. -/
+theorem kein_wettlauf_beschraenkt (Nb : Nebeneinander) (l : Lauf D) (hg : Gesittet l)
+    (_hb : BeschraenkteVerschraenkung (D := D) Nb l)
+    (i j : Nat) (hij : i < j) (f g : Faden)
+    (hfg : f ≠ g) (t : D.Tab) (w w' : Bool) (Λ Λ' : List (Res D)) (h h' : List D.Lock)
+    (hi : l[i]? = some (Schritt.mk f (.zugriff t w Λ h))) (hj : l[j]? = some (Schritt.mk g (.zugriff t w' Λ' h'))) :
+    HB l i j :=
+  kein_wettlauf l hg i j hij f g hfg t w w' Λ Λ' h h' hi hj
+
 #print axioms Gabbro.Grammatik.kein_wettlauf
 #print axioms Gabbro.Grammatik.kein_wettlauf_global
 #print axioms Gabbro.Grammatik.keine_ueberkreuzung
 #print axioms Gabbro.Grammatik.lauf_aus_brav
+#print axioms Gabbro.Grammatik.kein_wettlauf_beschraenkt
 
 end Gabbro.Grammatik

@@ -793,6 +793,8 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Lock(_) => "lock",
         ItemArt::Rcu(_) => "rcu",
         ItemArt::Gruppe(_) => "group",
+        // **Lane C, additive:** the new declaration reports its kind like every other.
+        ItemArt::Concurrent(_) => "concurrent",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
         ItemArt::Entry(_) => "entry",
