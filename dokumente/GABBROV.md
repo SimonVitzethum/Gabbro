@@ -83,6 +83,16 @@ control flow, model no memory. GabbroC has already computed and named the obliga
 > about the tool it describes.* The material exists: `gabbro pflichten --lean` already carries
 > it as a datum (`post_duty_2 : Expr`). `messung/GABBROV-V1.md` §4 has the five lines this was
 > read off.
+>
+> **Answered by Fassung 2, measured 2026-09-10.** The manifest carries
+> `obligation<TAB>name<TAB>class<TAB>anchor<TAB>state<TAB>text` since 2026-09-03, and the
+> per-kind record stands in `messung/gabbrov/MANIFEST-TEXT.md`: 124 of 124 lines over
+> `beispiele/` and `messung/fragmente/` carry a text, none truncated, none `--`. What E1
+> still misses — 43 of 63 — is not a missing FIELD but missing LINES, priced row by row in
+> `PFLICHTEN-KORRESPONDENZ.md` §6: thirteen blocked on the F03 repair, five dropped that
+> need a new `Art` or `Material` (or must never be booked), twenty-five with no clause to
+> carry. *The section's promise holds for every line the register emits; the gate counts
+> the lines it does not.*
 
 Three classes, three tasks:
 

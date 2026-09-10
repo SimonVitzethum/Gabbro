@@ -1073,6 +1073,11 @@ const ZUSTAND: &str = "open";
 /// *It stands at nearly four times the longest one on purpose:* a limit set flush against
 /// today's maximum starts cutting on the next clause somebody writes, and does it silently.
 ///
+/// **Re-measured 2026-09-10 over `beispiele/` + `messung/fragmente/`: longest 131**
+/// (`kind_einhaengen :: kind_zeigt_zurueck`, a `maintains` wording resolved at a `table`
+/// invariant) -- still well under the limit, nothing truncated, no `--` text in 124 lines.
+/// *The figure moved because the corpus moved, not because the cut did.*
+///
 /// **Why not the certificate's 72:** measured, six of 110 texts were cut mid-clause there,
 /// and `AUFTRAG-GABBROV.md` §4 wants the line readable without the source.
 const TEXTGRENZE: usize = 400;
