@@ -465,9 +465,11 @@ def flaechenprobe():
 # English on the way past: the `elems of` assertion in `rechenwerk.rs` and the counter-probe
 # in `beispiele.rs`, both touched for other reasons. *A ratchet that is only ever pulled at
 # the raise is a mark, not a ratchet* -- so the mark travels down with the measurement.
-MARKE_KOMMENTARE = 7892   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+MARKE_KOMMENTARE = 7881   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
 # **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
 # MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
+# **-> 7881 on 2026-09-10.** Lanes translated their own new comments to English as written
+# (deadline/count/owner/hints); the mark follows down.
 # **1062 -> 1069 on 2026-09-01, and the cause is MEASURED and not guessed.** My first note
 # here named `pruefe-umwandlungen.py`, the new truncating-cast guardian, as the source. That
 # was wrong: removing the file leaves the count at 1069 -- its twenty comment lines are all
