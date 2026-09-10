@@ -4050,11 +4050,26 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
     // **The word width in BITS** -- it decides what a whole-word step SAYS. See
     // `schrittbits`: until 2026-08-25 it said "these bits" instead of "the whole word", and
     // at `-> 0` those were none.
+    //
+    // **All eight lowered words stand one by one, and none falls into a ninth.** The
+    // strings come from the same `ganzzahlwort` table as every other width in this
+    // emitter, signed ones included -- a `reg R : i16` checks clean and lowers through
+    // this very match. A ninth string is `C001`, not 64: *a default width here would be
+    // `breite_von`'s `_ => 8`, one level down.*
     let wortbits: u32 = match breite.as_str() {
-        "uint8_t" => 8,
-        "uint16_t" => 16,
-        "uint32_t" => 32,
-        _ => 64,
+        "uint8_t" | "int8_t" => 8,
+        "uint16_t" | "int16_t" => 16,
+        "uint32_t" | "int32_t" => 32,
+        "uint64_t" | "int64_t" => 64,
+        _ => {
+            weigere(
+                absagen,
+                x.span,
+                "a `transition` on a register word outside the eight lowered words -- \
+                 the whole-word mask has no width to stand on",
+            );
+            return;
+        }
     };
 
     // Welche Bits aendert dieser Zug, und auf welchen Wert? Ueber ALLE Schritte veroderrt.

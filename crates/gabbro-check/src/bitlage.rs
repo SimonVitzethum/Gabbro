@@ -68,11 +68,18 @@ pub fn wortbreite(t: &TypExpr) -> Option<(u32, Kw)> {
 }
 
 /// Dieselbe Breite, aber direkt am Ganzzahltyp -- ein `reg` traegt ihn ohne `TypExpr` herum.
+///
+/// **The `_` arm is exhaustiveness, not a default** (Lane T, 2026-09-10): a ninth
+/// word cannot arrive, because the parser builds `IntTy` only behind
+/// `ist_intty` (`P008` refuses anything else) -- unlike `breite_von`'s `_ => 8`,
+/// which read a wider type. If `ist_intty` ever grows, this match must grow
+/// with it; until then there is nothing to refuse.
 pub fn aus_intty(i: &gabbro_syntax::ast::IntTy) -> (u32, Kw) {
     let b = match i.wort {
         Kw::U8 | Kw::I8 => 1,
         Kw::U16 | Kw::I16 => 2,
         Kw::U32 | Kw::I32 => 4,
+        Kw::U64 | Kw::I64 => 8,
         _ => 8,
     };
     (b, i.wort)

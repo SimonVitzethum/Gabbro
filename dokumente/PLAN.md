@@ -4728,9 +4728,17 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
 
 ## OB2 — Der Erzeuger als Vertrauensbasis · **läuft**
 
-- [ ] `breite_von` mit `_ => 8` — **liegt unter allen vier Hardwarepunkten.** Breite außerhalb
-      der Aufzählung muss `C001` sein, kein Vorgabewert.
+- [x] ~~`breite_von` mit `_ => 8` — **liegt unter allen vier Hardwarepunkten.** Breite außerhalb
+      der Aufzählung muss `C001` sein, kein Vorgabewert.~~ **Geschlossen seit `e5e555d`,
+      nachgemessen 2026-09-09 (Lane T):** eine Tafel (`ganzzahlwort`), acht Worte, sonst
+      `C001` an der Spanne; vier Proben halten sie gegen `kw::ALLE` (alle grün).
 - [ ] Zwölf Wildcards: **1 echter Befund, 6 tragende Standardzweige, 4 Korpuslücken.**
+      Teilmessung 2026-09-09 (Lane T, nur `emit.rs`/`m3.rs`): kein wertliefernder `_` mehr —
+      `schreibwort`/`lesewort`/`breite_von`/`ganzzahlwort` zählen auf und geben `None`/`C001`,
+      `portzugriff` verweigert, `portbuchstaben` nur mit 32 erreichbar; der letzte offene
+      Breitenfall in der `transition`-Absenkung (sonst 64) jetzt ausgeschrieben + `C001`,
+      Korpus byteidentisch (71 Dateien). **Rest außerhalb dieser Dateien: `bitlage.rs::aus_intty` trägt `_ => 8`
+      weiter — gemeldet, nicht gebaut.**
 - [x] **`runs online` → `C001`: die Regel ist WIDERLEGT** (`e5e555d`). 11 Fundstellen, drei
       Klassen — `table … ops` (3) trägt es über eine maschinengeprüfte Schablone, `table`
       ohne `ops` (5) als `E`-Pflicht, **`walk` (3) durch nichts.** *Eine Regel über dem Wort
@@ -4755,12 +4763,22 @@ Domänen ruhen auf gar keiner Schranke (`chain(…) in`, `fields of`, `threads`)
 
 ## OB4 — Bitmanipulation · **ein Posten, nicht drei**
 
-- [ ] `~` existiert nicht (`L006`), **und** `u32::max` im Ausdruck emittiert `u32->max`, das
-      nicht übersetzt. Zusammen: **keine Maskeninvertierung im Rumpf schreibbar** — während
-      der Erzeuger sie für `reg`-RMW selbst baut, korrekt und mit Cast.
-- [ ] `w1c` steht unter *Typen* und gehört zu `class`. **Solange es ein Typ ist, ist ein RMW
-      darauf typkorrekt und falsch** — und der RMW-Erzeuger baut ihn.
-- [ ] RMW auf ein Gerät ist drei Erzeugerschritte, **die Atomarität steht nirgends.**
+- [x] ~~`~` existiert nicht (`L006`), **und** `u32::max` im Ausdruck emittiert `u32->max`, das
+      nicht übersetzt.~~ **Beides geschlossen, nachgemessen 2026-09-09 (Lane T):** `~` steht
+      als `UnOp::BitNicht` in Wortschatz/Prüfer (`M137` über Literal und Vorzeichen) und
+      Erzeuger (`({c})~({c})(x)`, sonst `C001`), Gift 443–446, Beispiele 61/62 —
+      `cc -Werror` sauber unter `-O0`/`-O2`, Laufwerte stimmen. `L006` nennt weiter nur
+      Zeichen ohne Form. `u32::max` senkt über `grenzwort` zu `4294967295u`.
+- [x] ~~`w1c` steht unter *Typen* und gehört zu `class`.~~ **Geschlossen seit 2026-09-01,
+      nachgemessen 2026-09-09 (Lane T):** `w1c`/`rc` stehen neben `class` (`kw.rs`), `R012`
+      verweigert RMW über Wörtern mit Nebenwirkung (Gift 448/449 feuern); Ganzwort-Schreibzug
+      und `transition` (eine Lesung, ein Schreibzug, kein Rückschreiben) bleiben die zwei
+      Ausgänge — nachgemessen, `0 errors`, je ein `store`.
+- [x] ~~RMW auf ein Gerät ist drei Erzeugerschritte, **die Atomarität steht nirgends.**~~
+      **Benannt, nachgemessen 2026-09-09 (Lane T):** die Schritte sind volatile Lesung +
+      volatile Schreibzug ohne Atomaritätsbehauptung — benannt im `R012`-Vorbehalt („keine
+      Aussage über Atomarität") und als Nicht-Pflicht der Schablonen; nichts zu verweigern,
+      weil nichts behauptet wird, was C nicht tut.
 
 ## OB5 — Der Bau, und `0 computed edge(s)` · ~~**Voraussetzung, nicht Nebensache**~~ **GEBAUT 2026-09-01**
 
