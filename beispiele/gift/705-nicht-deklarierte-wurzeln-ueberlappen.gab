@@ -1,0 +1,52 @@
+-- erwartet: W002
+-- **Undeclared overlapping context roots fall -- declare the pair or separate.**
+--
+-- `e_a` dispatches to `h_a`, `e_b` to `h_b`; both hulls write `zaehler` and
+-- no `concurrent` set names the pair. Non-declared pairs are NOT concurrent,
+-- so the overlap outside every set is refused as `W002` -- the interference
+-- no declaration covers. Adding `concurrent { h_a, h_b };` would move the
+-- pair under `W001` instead.
+--
+-- The carrier is an `accumulates … per cpu` cell on purpose: it is declared
+-- shared, so `H013` stays silent, and per-core cells are NOT exempt from the
+-- pair check (open question 3) -- what falls here is exactly the missing
+-- declaration, nothing else.
+module gift705 {
+
+const NKERNE : u32 = 64;
+
+accumulates zaehler : u32 merge add per cpu NKERNE;
+
+impl fn h_a(n : u32)
+    effects { writes zaehler }
+    costs <= 8 ops
+{
+    zaehler = n;
+}
+
+impl fn h_b(n : u32)
+    effects { writes zaehler }
+    costs <= 8 ops
+{
+    zaehler = n;
+}
+
+entry e_a arch x86_64 {
+    regs in { }
+    regs out { }
+    preserves { }
+    clobbers { }
+    stack kernstapel
+    dispatch gift705::h_a;
+}
+
+entry e_b arch x86_64 {
+    regs in { }
+    regs out { }
+    preserves { }
+    clobbers { }
+    stack kernstapel
+    dispatch gift705::h_b;
+}
+
+}

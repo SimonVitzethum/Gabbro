@@ -4369,36 +4369,30 @@ MUTATIONEN = [
     ),
     # -- nebeneinander.rs: W001, the table interim arm (Lane C, 2026-09-10) ----------------
     #
-    # NEEDS-CATCH-TEST: no committed probe fires this arm alone. Gift 704's overlap is an
-    # EXACT hull-string overlap (`writes T.slots` both sides), so it falls in the arm
-    # above even with this one silenced -- this mutant would SURVIVE, and rightly so: the
-    # interim rule (same table, different places, open question 4) has no witness yet. It
-    # wants a gift whose hull strings differ per body but name one carrier (e.g. effects
-    # `writes T.a` vs `writes T.b`), cited here once it exists.
+    # Caught since 2026-09-10 by gift 708: hull strings differ per body
+    # (`writes T.slots[0].x` vs `writes T.slots[0].y`), one carrier -- the exact
+    # arm stays silent and only the interim refuses. Silenced, 708 passes.
     Mutation(
         "w001-tabellen-interim-stumm",
         "gabbro-check/src/nebeneinander.rs",
         "                for t in tab {\n",
         "                for t in tab.into_iter().take(0) {\n",
-        "`W001` table interim -- NEEDS-CATCH-TEST (no committed probe reaches this arm "
-        "without the exact arm; gift 704 falls above). Survives until the witness gift "
-        "exists",
+        "`W001` table interim -- gift 708 (same table, different places) passes "
+        "silently, and the gift probe falls over the missing code",
     ),
     # -- nebeneinander.rs: W003 fail-closed to pass-silent (Lane C, 2026-09-10) ------------
     #
-    # NEEDS-CATCH-TEST: the incomplete-hull refusal is the honest third state beside pass
-    # and refuse, and both halves of `gemessen_an` are still scratch runs with no gift
-    # probe (see the W002/W003 sentence verdict). With the guard forced false an
-    # uncheckable `concurrent` claim passes silently -- the missed-race shape -- and NO
-    # committed probe falls. Wants two gifts: an unresolvable member, and disjoint-looking
-    # sets behind an unknown callee.
+    # Caught since 2026-09-10 by gifts 706 (unresolvable member) and 707
+    # (disjoint-looking sets behind a recursive hull, `E009` beside it): with
+    # the guard forced false an uncheckable `concurrent` claim passes silently
+    # -- the missed-race shape -- and the gift probes fall over the missing code.
     Mutation(
         "w003-unvollstaendig-besteht-still",
         "gabbro-check/src/nebeneinander.rs",
         "                if ha.unvollstaendig.is_some() || hb.unvollstaendig.is_some() {\n",
         "                if false {\n",
-        "`W003` -- NEEDS-CATCH-TEST (no committed probe; both halves scratch-measured). "
-        "An incomplete hull passes silently instead of refusing, and nothing falls",
+        "`W003` -- gifts 706/707 pass silently instead of refusing, and the gift "
+        "probes fall over the missing code",
     ),
 ]
 

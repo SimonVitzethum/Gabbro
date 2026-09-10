@@ -1,0 +1,24 @@
+-- erwartet: W003
+-- **A `concurrent` member that resolves to nothing refuses -- fail-closed.**
+--
+-- `h_a` is a real body, `gibt_es_nicht` names none. Without the hull the
+-- pair cannot be checked, and an unchecked pair is not a declared one: the
+-- declaration falls as `W003`, never passes silently. The body itself stays
+-- checkable on its own -- what falls is the claim that it may run together
+-- with something unnamed.
+module gift706 {
+
+table T count 8 {
+    slot { x : u32, }
+}
+
+impl fn h_a()
+    effects { writes T.slots }
+    costs <= 4 ops
+{
+    T.slots[0].x = 1;
+}
+
+concurrent { h_a, gibt_es_nicht };
+
+}

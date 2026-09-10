@@ -1,0 +1,40 @@
+-- erwartet: W003
+-- **A `concurrent` pair over an incomplete hull refuses -- fail-closed.**
+--
+-- `h_a` writes `T`, `h_b` writes `U`: disjoint on the visible hull. But
+-- `h_b` recurses, so its hull is a lower bound (`cycle over …`, booked
+-- beside as Hinweis `E009`) -- and a lower bound that looks disjoint is the
+-- shape of a missed race. The declaration falls as `W003`, never passes
+-- silently. The companion half is `706` (unresolvable member).
+module gift707 {
+
+const TIEFE : u32 = 512;
+
+table T count 8 {
+    slot { x : u32, }
+}
+
+table U count 8 {
+    slot { y : u32, }
+}
+
+impl fn h_a()
+    effects { writes T.slots }
+    costs <= 4 ops
+{
+    T.slots[0].x = 1;
+}
+
+impl fn h_b(n : u32 in 0 .. TIEFE) -> u32
+    effects { writes U.slots }
+    costs <= 8 ops
+    decreases n
+{
+    U.slots[0].y = n;
+    if n == 0 { return 0; }
+    return h_b(n - 1);
+}
+
+concurrent { h_a, h_b };
+
+}

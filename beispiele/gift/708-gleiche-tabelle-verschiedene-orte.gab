@@ -1,0 +1,32 @@
+-- erwartet: W001
+-- **Same-table writes at different places fall -- the interim rule alone.**
+--
+-- Companion to `704` (exact overlap, one hull string): here the hull strings
+-- differ (`writes T.slots[0].x` vs `writes T.slots[0].y`), so the exact arm
+-- stays silent and ONLY the table-level interim rule over open question 4
+-- (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §6.4) refuses -- row-level
+-- disjointness needs index analysis the checker lacks. No lock in either
+-- hull; shared reads would stay free.
+module gift708 {
+
+table T count 8 {
+    slot { x : u32, y : u32, }
+}
+
+impl fn f_a()
+    effects { writes T.slots[0].x }
+    costs <= 4 ops
+{
+    T.slots[0].x = 1;
+}
+
+impl fn f_b()
+    effects { writes T.slots[0].y }
+    costs <= 4 ops
+{
+    T.slots[0].y = 2;
+}
+
+concurrent { f_a, f_b };
+
+}

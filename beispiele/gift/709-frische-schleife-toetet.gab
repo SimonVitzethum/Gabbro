@@ -1,0 +1,28 @@
+-- erwartet: M147
+-- **V4 freshness: a loop boundary expires every taint (§2c).**
+--
+-- `alt` is read from the carrier, then a `traverse` runs -- and loops carry
+-- no taints inward, so `alt` expires even though no visible write names it
+-- between read and use. Deciding on `alt` afterwards falls as `M147`. A value
+-- needed across iterations is re-read inside; the re-read IS the refresh.
+module gift709 {
+
+table T count 8 {
+    slot { x : u32, }
+}
+
+impl fn warte(q : ptr<normal, rw> T, i : index into T) -> u32
+    effects { reads q.slots, writes q.slots }
+    costs <= 64 ops
+{
+    let alt : u32 = q.slots[i].x;
+    traverse eintrag over slots of q by unvisited
+        touches writes q.slots
+    {
+        q.slots[eintrag].x = 0;
+    }
+    if alt != 0 { return 1; }
+    return 0;
+}
+
+}

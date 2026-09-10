@@ -3327,10 +3327,11 @@ pub const SPERREN: &[Satz] = &[
                     fail-closed half belongs to declared sets (`W003`). A root the graph \
                     cannot resolve is skipped here (`N018` already refuses the dangling \
                     `dispatch`).",
-        stand: Satzstand::Vermutet,
-        gemessen_an: "Scratch-measured 2026-09-10 (two entries over one table, no set -- \
-                      `W002` beside the older `H013`); no gift probe yet, because every \
-                      corpus unit with two roots is either disjoint or lock-shared.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/705 (two entries over one `accumulates` cell, \
+                      no set -- `W002` alone, no accompanying refusal: the cell is \
+                      declared shared, so `H013` stays silent, and per-core cells \
+                      are not exempt from the pair check).",
         fundstelle: "crates/gabbro-check/src/nebeneinander.rs; \
                      messung/NEBENLAEUFIGKEIT-ENTWURF.md §4",
     },
@@ -3345,10 +3346,11 @@ pub const SPERREN: &[Satz] = &[
                     together. Like `E009` it is the honest third state beside pass and \
                     refuse -- but here it bites (`Fehler`, not `Hinweis`), because an \
                     unchecked concurrency claim is not a frame anyone may rely on.",
-        stand: Satzstand::Vermutet,
-        gemessen_an: "Scratch-measured 2026-09-10 in both halves: unresolvable member, \
-                      and disjoint write sets behind an unknown callee (the shape of a \
-                      missed race -- clean-looking lower bound, refused).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/706 (unresolvable member -- `W003` alone) and \
+                      /707 (disjoint write sets behind a recursive hull: `W003` as \
+                      the only refusal, `E009` beside it as Hinweis -- the shape of \
+                      a missed race, clean-looking lower bound, refused).",
         fundstelle: "crates/gabbro-check/src/nebeneinander.rs; \
                      messung/NEBENLAEUFIGKEIT-ENTWURF.md §2 (`unvollstaendig` is fail-closed)",
     },
