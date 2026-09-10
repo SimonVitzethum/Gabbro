@@ -279,9 +279,9 @@ def antwortGestaltPasst : Option Shape → Option Shape → Bool
   | _, _ => false
 
 /-- Haelt `rs` jeden Grund von `cs`? Die Boolesche Haelfte von `⊆` (F6). -/
-def grundEnthalten (rs : List String) (r : String) : Bool
-  | [] => false
-  | c :: rest => (r == c) || grundEnthalten rest r
+def grundEnthalten : List String → String → Bool
+  | [], _ => false
+  | c :: rest, r => (r == c) || grundEnthalten rest r
 
 theorem grundEnthalten_mem {rs : List String} {r : String}
     (h : grundEnthalten rs r = true) : r ∈ rs := by
@@ -294,7 +294,7 @@ theorem grundEnthalten_mem {rs : List String} {r : String}
       · exact List.mem_cons_of_mem _ (ih h)
 
 /-- Der Fehlerkanal des Gerufenen gegen den des Rufers (F6). -/
-def gruendePassen (callee caller : List String) : Bool
+def gruendePassen : List String → List String → Bool
   | [], _ => true
   | r :: rest, rs => grundEnthalten rs r && gruendePassen rest rs
 
@@ -787,7 +787,7 @@ theorem pruefe_erweitert (P : Programm) (erg : Option Shape) :
         simp only [vereinige]
         by_cases heq : Δt = Δe
         · rw [if_pos heq]
-          exact erweitert_trans verfeinere_erweitert (pruefeBlock_erweitert P erg t _ _ ht)
+          exact erweitert_trans (verfeinere_erweitert Δ c true) (pruefeBlock_erweitert P erg t _ _ ht)
         · rw [if_neg heq]
           exact erweitert_refl _
       · cases h
@@ -1310,25 +1310,25 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
             · have h1 : erweitert Δt Δe := by rw [heq]; exact erweitert_refl _
               simp only [vereinige]
               rw [if_pos heq]
-              exact Ergebnis_schwaecher verfeinere_erweitert h1 hr
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c false) h1 hr
             · simp only [vereinige]
               rw [if_neg heq]
-              exact Ergebnis_schwaecher verfeinere_erweitert
-                (erweitert_trans verfeinere_erweitert (pruefeBlock_erweitert P erg e _ _ he)) hr
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c false)
+                (erweitert_trans (verfeinere_erweitert Δ c false) (pruefeBlock_erweitert P erg e _ _ he)) hr
           · right; exact LogikS.sonst hv hlog
         · simp only [step, hv]
           have hlT : WFU (verfeinere Δ c true) s.local' := by simpa [verfeinere] using hl
           rcases pruefeBlock_sicher P Γ ρ hD hU hS erg t (verfeinere Δ c true) Δt s ht hw hlT with hr | hlog
           · left
             by_cases heq : Δt = Δe
-            · have h1 : erweitert Δt Δe := by rw [heq]; exact erweitert_refl _
+            · have h1 : erweitert Δt Δt := erweitert_refl _
               simp only [vereinige]
               rw [if_pos heq]
-              exact Ergebnis_schwaecher verfeinere_erweitert h1 hr
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c true) h1 hr
             · simp only [vereinige]
               rw [if_neg heq]
-              exact Ergebnis_schwaecher verfeinere_erweitert
-                (erweitert_trans verfeinere_erweitert (pruefeBlock_erweitert P erg t _ _ ht)) hr
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c true)
+                (erweitert_trans (verfeinere_erweitert Δ c true) (pruefeBlock_erweitert P erg t _ _ ht)) hr
           · right; exact LogikS.dann hv hlog
       · cases h
   | .onOption g bn onP onA, Δ, Δ', s, h, hw, hl => by
@@ -1525,7 +1525,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
           cases b
           · right; exact LogikS.rufZurueck hvs (by rw [hb]; simp)
           · left
-            obtain ⟨hw', ha⟩ := antwort_mit_kanal hU hsig hw hc.2 hc.1
+            obtain ⟨hw', ha⟩ := antwort_mit_kanal hU hsig (t := eintritt s ps vs) hw hc.2 hc.1
             simp only [step, hvs, eintritt] at hb ⊢
             simp only [hb, Ergebnis]
             exact ⟨hw', hl, ha⟩
