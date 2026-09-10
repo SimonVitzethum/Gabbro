@@ -359,9 +359,12 @@ exactly two, and the difference is the whole design:
 #### The sentence a finished Caprock proof carries at the end
 
 ```
-memory-safe       under A1…An            n ≈ 130, measured, ratchetable
-race-free         under c11_*            2, with litmus probes
-functionally open on O1…Ok               k UNKNOWN
+plumbing-safe by exec_sicher under S1 S2 U1 U2
+memory-safe under A1..An
+alias-free NOT CARRIED
+race-free under c11_*
+terminating forever-no-traverse-retry-necessary
+functionally open on O1..Ok
 ```
 
 > **The cost of all the gaps together is: `n` is large, but counted and falling — and `k` is
