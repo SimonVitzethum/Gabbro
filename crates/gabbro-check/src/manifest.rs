@@ -397,7 +397,10 @@ fn klasse(k: &AnnahmeKlasse) -> Klasse {
 ///
 /// *This list is the only route by which a probe name reaches the manifest.*
 pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
+    "sonde_abnahme",
     "sonde_boot_unerreichbar",
+    "sonde_byte_legen",
+    "sonde_freigabe",
     "sonde_keine_ueberbreite",
     "sonde_mxcsr_rne",
     "sonde_rdtscp",

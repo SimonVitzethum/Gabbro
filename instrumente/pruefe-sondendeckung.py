@@ -92,7 +92,14 @@ SONDEN = W / "sonden"
 # is earned the same way the four P4 probes earned theirs -- not a dilution decision.
 # The metrology gap above stands unchanged: the probe reports cycles, it does not
 # convert ops, and the date stays a sample (R15/W10), not a proof.
-MARK_QUOTE = (6, 39)
+#
+# **(6, 39) -> (9, 42) on 2026-09-10 (lane-59).** Lane-49's three parked P0 date probes
+# (`sonde_abnahme`, `sonde_freigabe`, `sonde_byte_legen`) are bound by three `deadline`
+# clauses in `beispiele/06` and `beispiele/25`, each WITH its program -- three earned
+# diffs at once, same rule as `sonde_tick` (N = 10x the declared `costs` bound, the
+# `beispiele/71` precedent: 500 -> 5000, here 4 -> 40 and 2 -> 20). The orphan mark falls
+# back to 1; the metrology gap above still stands.
+MARK_QUOTE = (9, 42)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -441,8 +448,15 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
 
     # EIGHT -- reachability. A corpus that grows without new `P4` rows eventually puts the
     # floor out of reach, and that is a different finding from missing it.
+    #
+    # **The stress size is 31 since 2026-09-10 (lane-59), and 30 before.** Three earned
+    # `P4` additions at once consumed the tooth's slack exactly: at 9 covered of 42, 30
+    # invented no-probe assumptions land the reachable share at exactly `1/8`
+    # (9 of 72), and a strict `<` cannot name a boundary. 31 restores the strictness
+    # with the smallest possible move (9 of 73 < `1/8`); the tooth still names every
+    # real out-of-reach growth, and it moves again whenever earned growth ties it.
     viel = dict(annahmen)
-    for i in range(30):
+    for i in range(31):
         viel["erfunden_%d" % i] = "sonde_erfunden_%d" % i
     r = lauf(a=viel)
     proben.append(("a floor grown out of reach is named", r[7]))

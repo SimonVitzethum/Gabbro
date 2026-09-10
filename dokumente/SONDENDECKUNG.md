@@ -294,6 +294,9 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 37 | **zeitgeber_meldet_sich** | `sonde_zeitgeber_meldet_sich` | `P2` | -- |
 | 38 | **zeitgeber_tickt** | `sonde_zeitgeber_tickt` | `P2` | -- |
 | 39 | **frist_zaehle_werte_eingehalten** | `sonde_tick` | `P4` | **PROGRAM** |
+| 40 | **frist_abnahme_eingehalten** | `sonde_abnahme` | `P4` | **PROGRAM** |
+| 41 | **frist_byte_legen_eingehalten** | `sonde_byte_legen` | `P4` | **PROGRAM** |
+| 42 | **frist_freigabe_eingehalten** | `sonde_freigabe` | `P4` | **PROGRAM** |
 
 **39 rows, 6 of them with a PROGRAM, 6 of them `P4`** — and one probe name carries two rows
 (`sonde_vtd_srtp`, rows 8 and 29), which is why 39 assumptions stand under 38 names.

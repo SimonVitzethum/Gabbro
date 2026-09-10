@@ -97,11 +97,13 @@ axiom wbinvd()          effects { writes cache }
 impl fn abnahme()
     effects { reads kerne_gemessen }
     costs   <= 4 ops
+    deadline <= 40 ops arch x86_64 falsifier sonde_abnahme
 { return; }
 
 impl fn freigabe()
     effects { reads tiefe_max }
     costs   <= 4 ops
+    deadline <= 40 ops arch x86_64 falsifier sonde_freigabe
 { return; }
 
 -- **Die drei gemessenen Groessen -- und bis zum 2026-08-20 stand keine von ihnen
