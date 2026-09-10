@@ -71,6 +71,20 @@
          decision the way `?:` got its (`bedingtEntscheid`); the 29 open
          slots are proved debt (`tafel_nicht_geschlossen`), countable via
          the status field.
+      C6  Der Nachpruefer bleibt Schnitt: `nachpruefer` (§10) rechnet
+          Laufartefakte (Gabbro-Stellen, Zertifikat, Aliaslast, Kostenaussage,
+          Paare, Anweisungszahl) zu einem Urteil nach, und
+          `satz_nachpruefung_vertrauen` nennt die Gestalt der Verknuepfung
+          (gueltiges Urteil heisst vertrauenswuerdiges Zertifikat). Die Gestalt
+          ist ENTWURF, kein Satz: kein `theorem`-Befehl in dieser Bahn, und das
+          zweite Programm, das die Artefakte aus dem Lauf liest, steht nicht
+          hier (Klasse von C1).
+      C7  Die fuenf bepreisten Stellen bleiben Schablonen dem Sinn nach:
+          `tafelNeu` (§11) traegt `bedingt`, `logUndOder`, `fortStmt`,
+          `abbruchStmt` und `zeigerIndex` mit Preis im Statusfeld, sonst
+          unveraendert aus `tafel` nachgerechnet. Lean beweist damit nichts
+          ueber die Angemessenheit eines Preises (C5 gilt weiter); `tafel`
+          selbst bleibt eingefroren, und `satz_tafel` spricht weiter von ihr.
 
    No `mathlib`, no `sorry`, no `admit`, no `axiom`, and no new axiom
      introduced: `#print axioms` at the end names all standard axioms the
@@ -668,5 +682,111 @@ theorem vertrag_braucht_tafel (gabbroSites : List Nat) (cert : CorrCert)
 #print axioms Gabbro.Grammatik.senkung_aus_schranke
 #print axioms Gabbro.Grammatik.tafel_nicht_geschlossen
 #print axioms Gabbro.Grammatik.vertrag_braucht_tafel
+
+/-! ## 10. Der Nachpruefer als Programmgestalt: Laufartefakte hinein, Urteil hinaus -/
+
+/-- Die Eingabe des Nachpruefers: alles, was ein Lauf hinterlaesst. Die
+    Gabbro-Stellen und das Zertifikat kommen aus dem Erzeugnislauf, die
+    Aliaslast aus dem Bild, die Kostenaussage mit ihren Paaren aus dem
+    Messlauf, die Anweisungszahl aus der Absenkung. Das zweite Programm, das
+    diese Artefakte aus dem Lauf liest, steht nicht hier (Schnitt C6). -/
+structure NachprueferEingabe where
+  gabbroSites : List Nat
+  cert : CorrCert
+  o : AliasObligation
+  k : CostClaim
+  paare : Nat
+  cAnweisungen : Nat
+  deriving DecidableEq, Repr
+
+/-- Der Nachpruefer: alle Beine, nachgerechnet. Die Entsprechung ueber
+    `pruefeKorrespondenz` (§6), die Aliaslast ueber die leere Stellenliste
+    (§7), die Kostenaussage ueber ihre zwei Entscheidungsinstanzen (§8) und
+    die Anweisungszahl ueber die gemessene Schranke 17. Ausgabe ist ein Urteil:
+    `true` heisst angenommen. -/
+def nachpruefer (eingabe : NachprueferEingabe) : Bool :=
+  pruefeKorrespondenz eingabe.gabbroSites eingabe.cert &&
+    (decide (eingabe.o.arithSites = []) &&
+      (decide (costKept eingabe.k) &&
+        (decide (costMeasured eingabe.k eingabe.paare) &&
+          decide (eingabe.cAnweisungen ≤ 17))))
+
+/-- Gueltigkeit: das nachgerechnete Urteil lautet angenommen. Entscheidbar aus
+    Bauart, wie `GueltigKorrespondenz` -- Annahme und Ablehnung schliessen beide
+    ueber die Nachrechnung, nicht ueber Glauben. -/
+def nachprueferGueltig (eingabe : NachprueferEingabe) : Prop :=
+  nachpruefer eingabe = true
+
+/-- Die Verknuepfung zur Erzeugung, als Gestalt: ein gueltiges nachgerechnetes
+    Urteil heisst, dem ausgestellten Zertifikat darf vertraut werden --
+    Entsprechung ueber dem Lauf, Aliaslast getragen, Kosten gehalten und
+    gemessen ueber `absenkung`. ENTWURF, kein Satz: die Bruecken von den
+    einzelnen Beinen zu den Saetzen stehen nicht hier (Schnitt C6). -/
+def satz_nachpruefung_vertrauen (eingabe : NachprueferEingabe) : Prop :=
+  nachprueferGueltig eingabe →
+    satz_korrespondenz eingabe.gabbroSites eingabe.cert ∧
+    satz_alias eingabe.o ∧
+    satz_kosten eingabe.k eingabe.paare absenkung eingabe.cAnweisungen
+
+/-! ## 11. Die fuenf bepreisten Stellen: Preis als Datum, kein Bedeutungsanspruch -/
+
+/-- Der Preis von `logUndOder` (`messung/CFORM-REGEL-LOGUNDODER.md`, 23 Stellen):
+    bedingte Auswertung mit Sequenzpunkt, Ergebnis 0 oder 1, Klammerpflicht
+    beim Erzeuger. Zulassung mit Preis, keine Erzeugeraenderung. -/
+def logUndOderEntscheid : RulingStatus :=
+  .aufListe "bedingte Auswertung mit Sequenzpunkt; Ergebnis 0 oder 1; Klammerpflicht beim Erzeuger"
+
+/-- Der Preis von `fortStmt` (`messung/CFORM-REGEL-CONTINUE.md`, 3 Stellen):
+    Steuerung des Laufenskeletts aus einer Emissionszeile, kein Nutzerpfad,
+    kein UB. Zulassung mit Preis, keine Erzeugeraenderung. -/
+def fortEntscheid : RulingStatus :=
+  .aufListe "Steuerung des Laufenskeletts aus einer Emissionszeile; kein Nutzerpfad; kein UB"
+
+/-- Der Preis von `abbruchStmt` (`messung/CFORM-REGEL-BREAK.md`, 51 Stellen):
+    Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei
+    Emissionszeilen, kein Nutzerpfad, kein UB. Zulassung mit Preis, keine
+    Erzeugeraenderung. -/
+def abbruchEntscheid : RulingStatus :=
+  .aufListe "Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei Emissionszeilen; kein Nutzerpfad; kein UB"
+
+/-- Der Preis von `zeigerIndex` (`messung/CFORM-REGEL-ZEIGERINDEX.md`,
+    156 Stellen): Adressrechnung, Pflicht je Stelle, in den Grenzen zu bleiben,
+    UB-Zeile fuer den Aussenfall. Zulassung mit Preis, keine
+    Erzeugeraenderung. -/
+def zeigerIndexEntscheid : RulingStatus :=
+  .aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"
+
+/-- Die fuenf bepreisten Stellen als Nachtrag: `bedingt` traegt den gefuellten
+    Musterentscheid, die vier Zulassungen ihre Preise aus den Regelnotizen.
+    Jede andere Stelle faellt durch (`none`) und behaelt ihren alten Stand. -/
+def tafelPreisNachtrag : OffeneForm → Option RulingStatus
+  | .bedingt => some bedingtEntscheid
+  | .logUndOder => some logUndOderEntscheid
+  | .fortStmt => some fortEntscheid
+  | .abbruchStmt => some abbruchEntscheid
+  | .zeigerIndex => some zeigerIndexEntscheid
+  | _ => none
+
+/-- Der reine Statuswechsel: wo der Nachtrag einen Preis nennt, tritt er an die
+    Stelle des alten Standes; sonst bleibt alles, wie es war. -/
+def tafelStatusNeu (u : OffeneForm) (s : RulingStatus) : RulingStatus :=
+  match tafelPreisNachtrag u with
+  | some s' => s'
+  | none => s
+
+/-- Die Tafel mit den fuenf bepreisten Stellen: dieselben Zeilen wie `tafel`,
+    nur das Statusfeld der fuenf Stellen entschieden mit Preis. `tafel` selbst
+    bleibt eingefroren; diese Tafel traegt den Nachtrag als Datum, und die
+    Angemessenheit jedes Preises bleibt geschuldet (Schnitt C7). -/
+def tafelNeu : List EntscheidZiel :=
+  tafel.map fun e => match e with
+    | .benannt f s => .benannt f s
+    | .luecke u s => .luecke u (tafelStatusNeu u s)
+
+/-- Der spaetere Satz ueber der neuen Tafel, als Gestalt: jede Zeile von
+    `tafelNeu` ist entschieden. ENTWURF, kein Satz -- wie `satz_tafel` eine
+    SPEZIFIKATION bleibt, bis jede Stelle einzeln entschieden ist. -/
+def satz_tafelNeu : Prop :=
+  ∀ e ∈ tafelNeu, entschieden e
 
 end Gabbro.Grammatik
