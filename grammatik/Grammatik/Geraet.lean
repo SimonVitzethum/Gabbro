@@ -31,6 +31,18 @@
           this theorem connects it to the device step, nothing more.
     `dma_uebergabe`        -- ordering (proved) next to content (assumed), so the
       two halves never mix silently.
+    `fenster_ende`         -- one window orders itself: handoff before
+      take-back, through its write.
+    `glied_kante`          -- across one link: take-back before next handoff,
+      by program order of the driver thread that hands the buffer over again.
+    `kette_anfang_vor_schreib` / `kette_anfang_vor_ende` /
+    `kette_schreib_vor_ende` -- chained windows preserve ordering: the first
+      handoff precedes every write, every write precedes the last take-back.
+    `kette_ohne_wettlauf`  -- a CPU access ordered against the chain ENDPOINTS
+      (first handoff, last take-back) is ordered against EVERY device write of
+      the chain.
+    `kette_uebergabe`      -- the chain umbrella: ordering proved, content
+      (`dma_inhalt`, per window) assumed.
 
   ## What stays an assumption
 
@@ -47,9 +59,12 @@
 
   ## Cuts (booked, not hidden)
 
-    (C1) One window per device write: a single handoff/take-back pair `(k, m)`
-         around one write `j`. Chaining several device writes needs the windows
-         linked explicitly; that induction is not here.
+    (C1) One guard per chain: every window of a `KetteGeordnet` runs under the
+         SAME guard `W`, and consecutive windows are linked by the driver
+         thread that takes the buffer back and hands it over again
+         (`FensterGlied`, discharged per driver like `haussen`). Windows under
+         DIFFERENT guards have no edge between them here -- `sync` needs one
+         lock -- so a multi-guard chain stays cut, not faked.
     (C2) The CPU-side ordering `haussen` is a premise, discharged per driver
          (cf. `geordnet_durch_sperre`). This file proves the device connection.
     (C3) The guard is a lock give/take. A doorbell handoff through a REGISTER
@@ -167,8 +182,193 @@ theorem dma_uebergabe (gl : GLauf D) (W : D.Lock) (t : D.Tab) (k m j : Nat)
     (GHB gl hz.idx j ∨ GHB gl j hz.idx) ∧ dma_inhalt D gl t j :=
   ⟨geraet_ohne_wettlauf gl W t k m j hw hz haussen, hinhalt⟩
 
+/-! ## 5. Window chaining: several device writes, linked explicitly -/
+
+/-- One link of a window chain: a guarded window for carrier `t` under the
+    SAME guard `W`, with its witness carried along. Chaining under one guard
+    is what keeps every edge inside `GHB`: the window interiors ride `devVor`
+    / `devNach`, the links ride `po` (see `FensterGlied`). -/
+structure GeraetFenster (gl : GLauf D) (W : D.Lock) (t : D.Tab) where
+  k : Nat
+  m : Nat
+  j : Nat
+  wache : GeraetWache gl W t k m j
+
+/-- Linkage: the thread that takes the buffer back hands it over again --
+    take-back at `a.m` and handoff at `b.k` by the SAME thread, in order.
+    The same-thread premise is the driver's chaining discipline (like
+    `haussen`, discharged per driver); the `po` edge it yields is what links
+    the windows. A take-back followed by a FOREIGN handoff has no edge here.
+    The thread is existentially bound, so the linkage stays a `Prop`. -/
+structure FensterGlied {gl : GLauf D} {W : D.Lock} {t : D.Tab}
+    (a b : GeraetFenster gl W t) : Prop where
+  nimmt_gibt : ∃ f h, gl[a.m]? = some (GSchritt.cpu ⟨f, .nimmt W h⟩) ∧
+    gl[b.k]? = some (GSchritt.cpu ⟨f, .gibt W⟩)
+  reihe : a.m < b.k
+
+/-- An ordered chain: every window hands to the next through one driver
+    thread's take-back / handoff pair. -/
+def KetteGeordnet (gl : GLauf D) (W : D.Lock) (t : D.Tab) :
+    List (GeraetFenster gl W t) → Prop
+  | [] => True
+  | [_] => True
+  | a :: b :: rest => FensterGlied a b ∧ KetteGeordnet gl W t (b :: rest)
+
+/-- The last window of a chain, if any. Own definition so the inductions below
+    compute by `rfl` instead of leaning on library lemma names. -/
+def kettenEnde : List (GeraetFenster gl W t) → Option (GeraetFenster gl W t)
+  | [] => none
+  | [x] => some x
+  | _ :: y :: rest => kettenEnde (y :: rest)
+
+/-- One window orders itself: handoff before take-back, through its write. -/
+theorem fenster_ende (w : GeraetFenster gl W t) : GHB gl w.k w.m := by
+  obtain ⟨f1, hk⟩ := w.wache.gibt
+  obtain ⟨f2, h, hm⟩ := w.wache.nimmt
+  exact GHB.trans _ _ _ (GHB.devVor W f1 w.k w.j t hk w.wache.schreibt w.wache.vor)
+    (GHB.devNach W f2 h w.j w.m t w.wache.schreibt hm w.wache.nach)
+
+/-- Across one link: the earlier take-back precedes the later handoff, by
+    program order of the linking driver thread. -/
+theorem glied_kante {a b : GeraetFenster gl W t} (l : FensterGlied a b) :
+    GHB gl a.m b.k := by
+  obtain ⟨f, h, hnimmt, hgibt⟩ := l.nimmt_gibt
+  exact GHB.po f a.m b.k _ _ hnimmt hgibt l.reihe
+
+/-- Chained windows preserve ordering, first half: the first handoff precedes
+    EVERY write of the chain. -/
+theorem kette_anfang_vor_schreib : ∀ (ch : List (GeraetFenster gl W t)),
+    KetteGeordnet gl W t ch → ∀ (a : GeraetFenster gl W t),
+    ch.head? = some a → ∀ (w : GeraetFenster gl W t), w ∈ ch → GHB gl a.k w.j := by
+  intro ch
+  induction ch with
+  | nil =>
+    intro _ a ha w hm
+    cases hm
+  | cons x rest ih =>
+    intro ho a ha w hm
+    have hax : a = x := (Option.some_inj.mp ha).symm
+    subst a
+    cases List.mem_cons.mp hm with
+    | inl heq =>
+      subst w
+      obtain ⟨f1, hk⟩ := x.wache.gibt
+      exact GHB.devVor W f1 x.k x.j t hk x.wache.schreibt x.wache.vor
+    | inr hmem =>
+      cases rest with
+      | nil => cases hmem
+      | cons y rest' =>
+        simp only [KetteGeordnet] at ho
+        obtain ⟨link, ho'⟩ := ho
+        have hhead : (y :: rest').head? = some y := rfl
+        have ih' := ih ho' y hhead w hmem
+        exact GHB.trans _ _ _ (GHB.trans _ _ _ (fenster_ende x) (glied_kante link)) ih'
+
+/-- Chained windows preserve ordering, endpoints: the first handoff precedes
+    the last take-back, through every link. -/
+theorem kette_anfang_vor_ende : ∀ (ch : List (GeraetFenster gl W t)),
+    KetteGeordnet gl W t ch → ∀ (a z : GeraetFenster gl W t),
+    ch.head? = some a → kettenEnde ch = some z → GHB gl a.k z.m := by
+  intro ch
+  induction ch with
+  | nil =>
+    intro _ a z ha _
+    exact nomatch ha
+  | cons x rest ih =>
+    intro ho a z ha hz
+    have hax : a = x := (Option.some_inj.mp ha).symm
+    subst a
+    cases rest with
+    | nil =>
+      have hzx : z = x := (Option.some_inj.mp hz).symm
+      subst z
+      exact fenster_ende x
+    | cons y rest' =>
+      simp only [KetteGeordnet] at ho
+      obtain ⟨link, ho'⟩ := ho
+      have hhead : (y :: rest').head? = some y := rfl
+      have hend : kettenEnde (y :: rest') = some z := hz
+      have ih' := ih ho' y z hhead hend
+      exact GHB.trans _ _ _ (GHB.trans _ _ _ (fenster_ende x) (glied_kante link)) ih'
+
+/-- Chained windows preserve ordering, second half: EVERY write of the chain
+    precedes the last take-back. -/
+theorem kette_schreib_vor_ende : ∀ (ch : List (GeraetFenster gl W t)),
+    KetteGeordnet gl W t ch → ∀ (z : GeraetFenster gl W t),
+    kettenEnde ch = some z → ∀ (w : GeraetFenster gl W t), w ∈ ch → GHB gl w.j z.m := by
+  intro ch
+  induction ch with
+  | nil =>
+    intro _ z hz w hm
+    cases hm
+  | cons x rest ih =>
+    intro ho z hz w hm
+    cases List.mem_cons.mp hm with
+    | inl heq =>
+      subst w
+      cases rest with
+      | nil =>
+        have hzx : z = x := (Option.some_inj.mp hz).symm
+        subst z
+        obtain ⟨f2, h, hm⟩ := x.wache.nimmt
+        exact GHB.devNach W f2 h x.j x.m t x.wache.schreibt hm x.wache.nach
+      | cons y rest' =>
+        simp only [KetteGeordnet] at ho
+        obtain ⟨link, ho'⟩ := ho
+        have hhead : (y :: rest').head? = some y := rfl
+        have hend : kettenEnde (y :: rest') = some z := hz
+        have hrest := kette_anfang_vor_ende (y :: rest') ho' y z hhead hend
+        obtain ⟨f2, h, hm⟩ := x.wache.nimmt
+        exact GHB.trans _ _ _
+          (GHB.devNach W f2 h x.j x.m t x.wache.schreibt hm x.wache.nach)
+          (GHB.trans _ _ _ (glied_kante link) hrest)
+    | inr hmem =>
+      cases rest with
+      | nil => cases hmem
+      | cons y rest' =>
+        simp only [KetteGeordnet] at ho
+        obtain ⟨_, ho'⟩ := ho
+        have hend : kettenEnde (y :: rest') = some z := hz
+        exact ih ho' z hend w hmem
+
+/-- **Chained race-freedom.** A CPU access ordered against the chain ENDPOINTS
+    (first handoff, last take-back) is ordered against EVERY device write of
+    the chain -- the chain analogue of `geraet_ohne_wettlauf`. The endpoint
+    half stays the driver's obligation; this theorem connects it to every
+    write of the chain, nothing more. -/
+theorem kette_ohne_wettlauf (ch : List (GeraetFenster gl W t))
+    (ho : KetteGeordnet gl W t ch) (hz : CpuZugriff gl t)
+    (a z : GeraetFenster gl W t)
+    (ha : ch.head? = some a) (hzend : kettenEnde ch = some z)
+    (haussen : GHB gl hz.idx a.k ∨ GHB gl z.m hz.idx) :
+    ∀ w ∈ ch, GHB gl hz.idx w.j ∨ GHB gl w.j hz.idx := by
+  intro w hm
+  rcases haussen with h1 | h1
+  · exact Or.inl (GHB.trans _ _ _ h1 (kette_anfang_vor_schreib ch ho a ha w hm))
+  · exact Or.inr (GHB.trans _ _ _ (kette_schreib_vor_ende ch ho z hzend w hm) h1)
+
+/-- Ordering proved, content assumed -- over the whole chain. Each window's
+    content half still takes `dma_inhalt` as a hypothesis: events carry no
+    values, so a chain of runs derives no more content than one run. -/
+theorem kette_uebergabe (ch : List (GeraetFenster gl W t))
+    (ho : KetteGeordnet gl W t ch) (hz : CpuZugriff gl t)
+    (a z : GeraetFenster gl W t)
+    (ha : ch.head? = some a) (hzend : kettenEnde ch = some z)
+    (haussen : GHB gl hz.idx a.k ∨ GHB gl z.m hz.idx)
+    (hinhalt : ∀ w ∈ ch, dma_inhalt D gl t w.j) :
+    (∀ w ∈ ch, GHB gl hz.idx w.j ∨ GHB gl w.j hz.idx) ∧
+    ∀ w ∈ ch, dma_inhalt D gl t w.j :=
+  ⟨kette_ohne_wettlauf ch ho hz a z ha hzend haussen, hinhalt⟩
+
 #print axioms Gabbro.Grammatik.geraet_ohne_sperre
 #print axioms Gabbro.Grammatik.geraet_ohne_wettlauf
 #print axioms Gabbro.Grammatik.dma_uebergabe
+#print axioms Gabbro.Grammatik.fenster_ende
+#print axioms Gabbro.Grammatik.glied_kante
+#print axioms Gabbro.Grammatik.kette_anfang_vor_schreib
+#print axioms Gabbro.Grammatik.kette_anfang_vor_ende
+#print axioms Gabbro.Grammatik.kette_schreib_vor_ende
+#print axioms Gabbro.Grammatik.kette_ohne_wettlauf
+#print axioms Gabbro.Grammatik.kette_uebergabe
 
 end Gabbro.Grammatik
