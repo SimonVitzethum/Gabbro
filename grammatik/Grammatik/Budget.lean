@@ -54,7 +54,9 @@
         not over an instrumentation of `Semantik.exec`. There is NO verified
         link from a `Stmt`/`Block` to its op list; threading a budget through
         `execStmt`/`execBlock` is cut, not faked.
-    C2  `held <=` and `bounded` are not modelled (no held-resources type here).
+    C2  `held <=` and `bounded` are Gestalt only: budget forms, exhaustion
+        outcomes, and run/umbrella shapes beside `per_pass` (defs reusing
+        `runPass`/`runPasses_*`); no proofs, no link to `Semantik.exec`.
     C3  No preservation claim across lowering: nothing about C forms,
         quantitative CompCert, or the probe. Same boundary as `Ziel.lean`.
     C4  Not wired into `Grammatik.lean`: lane scope forbids the index edit;
@@ -339,5 +341,70 @@ theorem per_pass_respected (b : Budget) (passes : List Pass) :
 #print axioms Gabbro.Grammatik.runPasses_complete
 #print axioms Gabbro.Grammatik.runPasses_exceeds
 #print axioms Gabbro.Grammatik.per_pass_respected
+
+/-! ## Gehaltene Sperre: `held <= K ops` als Gestalt neben `per_pass`
+
+    Jede Sperre meldet `held <= K ops`: wer sie haelt, bleibt je Durchgang unter `K`.
+    Die Gestalt unten legt nur die Budgetform, den Erschoepfungsausgang und die
+    Anbindung an `runPass`/`runPasses` fest; sie rechnet nichts neu und bindet
+    nichts an `Semantik.exec` an (Schnitt C2). Nur Definitionen, keine Saetze.
+-/
+
+/-- `held <= K ops` als Budgetgestalt: dieselbe Schranke wie `Budget`, unter dem Haltenamen gelesen. -/
+def heldBudget (K : Nat) : Budget := ⟨K⟩
+
+/-- Der Erschoepfungsausgang zur gehaltenen Sperre: benannt, mit Zahlen, wie `BudgetOut.budget`. -/
+def heldErschoepft (sperrName : String) (gebraucht schranke : Nat) : BudgetOut :=
+  .budget sperrName gebraucht schranke
+
+/-- Ein Durchgang unter gehaltener Sperre: frisches `K` je Durchgang (Anbindung an `runPass`). -/
+def runHeldPass (K : Nat) (ops : List Op) : BudgetOut :=
+  runPass ⟨K⟩ ops
+
+/-- Alle Durchgaenge unter gehaltener Sperre: jeder beginnt frisch, der erste Bruch
+    meldet seinen Namen (Anbindung an `runPasses`). -/
+def runHeldPasses (K : Nat) (paesse : List Pass) : BudgetOut :=
+  runPasses ⟨K⟩ paesse
+
+/-- Die Schirmgestalt zur gehaltenen Sperre: dieselbe Form wie `per_pass_respected`,
+    mit `K` als Schranke. Entweder lief alles im Budget, oder der Lauf nennt die
+    Stelle, die es nicht tat. -/
+def held_respected (K : Nat) (paesse : List Pass) : Prop :=
+  (∃ rest, runHeldPasses K paesse = .ok rest ∧
+    ∀ p ∈ paesse, totalCost p.2 ≤ K) ∨
+  (∃ name gebraucht, runHeldPasses K paesse = .budget name gebraucht K)
+
+/-! ## Begrenzte Schleife: `bounded N ops` als Gestalt neben `per_pass`
+
+    `retry` traegt `bounded N ops`, `forever` traegt `per_pass bounded N ops`: je
+    Durchgang bleibt unter `N`. Die Gestalt unten legt nur die Budgetform, den
+    Erschoepfungsausgang und die Anbindung an `runPass`/`runPasses` fest; sie
+    rechnet nichts neu und bindet nichts an `Semantik.exec` an (Schnitt C2).
+    Nur Definitionen, keine Saetze.
+-/
+
+/-- `bounded N ops` als Budgetgestalt: dieselbe Schranke wie `Budget`, unter dem Schleifennamen gelesen. -/
+def boundedBudget (N : Nat) : Budget := ⟨N⟩
+
+/-- Der Erschoepfungsausgang zur begrenzten Schleife: benannt, mit Zahlen, wie `BudgetOut.budget`. -/
+def boundedErschoepft (schleifenName : String) (gebraucht schranke : Nat) : BudgetOut :=
+  .budget schleifenName gebraucht schranke
+
+/-- Ein Durchgang der begrenzten Schleife: frisches `N` je Durchgang (Anbindung an `runPass`). -/
+def runBoundedPass (N : Nat) (ops : List Op) : BudgetOut :=
+  runPass ⟨N⟩ ops
+
+/-- Alle Durchgaenge der begrenzten Schleife: jeder beginnt frisch, der erste Bruch
+    meldet seinen Namen (Anbindung an `runPasses`). -/
+def runBoundedPasses (N : Nat) (paesse : List Pass) : BudgetOut :=
+  runPasses ⟨N⟩ paesse
+
+/-- Die Schirmgestalt zur begrenzten Schleife: dieselbe Form wie `per_pass_respected`,
+    mit `N` als Schranke. Entweder lief alles im Budget, oder der Lauf nennt die
+    Stelle, die es nicht tat. -/
+def bounded_respected (N : Nat) (paesse : List Pass) : Prop :=
+  (∃ rest, runBoundedPasses N paesse = .ok rest ∧
+    ∀ p ∈ paesse, totalCost p.2 ≤ N) ∨
+  (∃ name gebraucht, runBoundedPasses N paesse = .budget name gebraucht N)
 
 end Gabbro.Grammatik
