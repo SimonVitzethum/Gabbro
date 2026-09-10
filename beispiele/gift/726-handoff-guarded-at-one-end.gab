@@ -1,0 +1,55 @@
+-- erwartet: H018
+-- **The boundary: a guard at ONE half of the window is not a guard across it.**
+--
+-- Between the unguarded handoff (`gift/724`) and the guarded twin stands the case that
+-- decides per site, not per function. `grenze` rings the bell twice: the first doorbell
+-- shares `WACHE` with a buffer write inside the same `locks` block and stays silent, the
+-- second stands outside any guard and falls once with `H018` -- although the function
+-- DOES hold a guard elsewhere. *A guard that covers only the doorbell, or only the
+-- buffer, establishes no window.*
+module gift::handoff_guarded_at_one_end {
+
+opaque type Pa = u64;
+
+device Karte(basis : Pa) at mmio {
+    reg KLINGEL : u32 @0x0c class rw
+}
+
+table Ring count 16 {
+    slot {
+        nutzlast : u32 in 0 .. 65535,
+    }
+}
+
+lock WACHE protects { zaehler } rank 1 held <= 100 ops;
+
+static mut zaehler : u32 = 0;
+
+-- Must fall exactly once: at the second doorbell. The first shares `WACHE` with the
+-- buffer write beside it; the second shares nothing with any buffer write.
+impl fn grenze(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j : index into Ring, m : index into Ring)
+    effects { writes r.slots, writes k.KLINGEL, writes zaehler }
+    costs   <= 16 ops
+{
+    r.slots[j].nutzlast = 1;
+    locks WACHE {
+        zaehler += 1;
+        r.slots[m].nutzlast = 2;
+        k.KLINGEL = 1;
+    }
+    k.KLINGEL = 2;
+}
+
+-- Must pass: the same window, both halves under the guard.
+impl fn fenster(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j : index into Ring)
+    effects { writes r.slots, writes k.KLINGEL, writes zaehler }
+    costs   <= 8 ops
+{
+    locks WACHE {
+        zaehler += 1;
+        r.slots[j].nutzlast = 1;
+        k.KLINGEL = 1;
+    }
+}
+
+}

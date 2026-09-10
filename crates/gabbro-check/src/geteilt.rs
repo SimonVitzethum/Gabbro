@@ -467,6 +467,107 @@ pub fn pass_mit(
         }
     });
 
+    // **H018 -- the driver handoff without a held guard across it** (2026-09-10).
+    //
+    // `grammatik/Grammatik/Geraet.lean` proves race-freedom for a DMA window UNDER a
+    // guard premise (`GeraetWache` plus `haussen`): handoff (`gibt W`) before the device
+    // write, take-back (`nimmt W`) after, and the CPU side ordered against the window
+    // endpoints. The checker never asked for the driver half of that premise: a
+    // function that fills a DMA-visible buffer AND rings the device doorbell with no
+    // guard held across both establishes a window the proof cannot see -- and passed
+    // with **zero errors** (measured at `beispiele/gift/724` before the build).
+    //
+    // The two halves, syntactically: a write to a place rooted at a `ptr<dma, …>`
+    // parameter (the buffer the device is about to read or write) and a write to a
+    // place rooted at a `ptr<mmio, …>` parameter (the doorbell register). ONE guard
+    // has to cover BOTH -- the same guard, per `Geraet.lean` (C1): every window of a
+    // chain runs under one guard, and consecutive windows are linked by the driver
+    // thread that takes the buffer back and hands it over again.
+    //
+    // Held counts as in `H007`: an enclosing `locks` block, an `effects { locks … }`
+    // line, or a `requires Held(…)`. Strength is not asked -- shared or exclusive,
+    // the guard only has to ORDER the two halves against the device.
+    {
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            // A `spec fn` touches nothing at run time -- the same exemption as at
+            // `H007`/`H016`/`H017`, all issued in this file and made for the same reason.
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            let FnRumpf::Block(b) = &f.rumpf else { return };
+            // **The two roots, from the DECLARED spaces.** `Typ` drops `Raum` at
+            // construction, so the check reads the parameter types, not the checker
+            // types -- the same reason `R001` carries its own space reader in `m3.rs`.
+            // A handle built inside the body (a device constructor, a `let` alias) is
+            // NOT read: intraprocedural direct names only, like the rank lookup that
+            // skips what it cannot evaluate instead of inventing an order (W9).
+            let mut puffer: Vec<String> = Vec::new();
+            let mut klingel: Vec<String> = Vec::new();
+            for p in &f.parameter {
+                if let TypExpr::Zeiger(t) = &p.typ {
+                    if t.raum == Raum::Dma {
+                        puffer.push(p.name.text.clone());
+                    } else if t.raum == Raum::Mmio {
+                        klingel.push(p.name.text.clone());
+                    }
+                }
+            }
+            if puffer.is_empty() || klingel.is_empty() {
+                return;
+            }
+            let mut oben: Vec<String> = Vec::new();
+            if let Some(w) = &f.effects {
+                for e in &w.liste {
+                    if let WirkungArt::Sperrt(o) | WirkungArt::SperrtGeteilt(o) = &e.art {
+                        oben.push(o.text());
+                    }
+                }
+            }
+            for p in &f.requires {
+                let mut h = Vec::new();
+                crate::aufrufgraph::held_aus_pred(p, &mut h);
+                oben.extend(h.into_iter().map(|(n, _)| n));
+            }
+            let mut schreibt: Vec<Vec<String>> = Vec::new();
+            let mut tuer: Vec<(Span, String, Vec<String>)> = Vec::new();
+            fenster_sammeln(b, &puffer, &klingel, &oben, &mut schreibt, &mut tuer);
+            if schreibt.is_empty() || tuer.is_empty() {
+                return;
+            }
+            for (span, ort, gehalten) in &tuer {
+                if schreibt
+                    .iter()
+                    .any(|dort| dort.iter().any(|d| gehalten.contains(d)))
+                {
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "H018",
+                        *span,
+                        format!(
+                            "`{ort}` hands a DMA buffer to the device, and no guard is \
+                             held across the handoff"
+                        ),
+                    )
+                    .mit_notiz(
+                        "the window has two halves -- a write to a `ptr<dma, …>` place \
+                         and this doorbell -- and ONE guard has to cover both \
+                         (`Geraet.lean` C1: every window of a chain runs under the \
+                         same guard)",
+                    )
+                    .mit_notiz(
+                        "held counts as: an enclosing `locks` block, an `effects \
+                         { locks … }` (then taking it is the caller's duty), or a \
+                         `requires Held(…)` -- a handoff behind a `transition` call \
+                         or an `extern fn` is not read",
+                    ),
+                );
+            }
+        });
+    }
+
     // **H013 -- K11.2.2: die Ausfuehrungskontexte stehen im Ordner, seit es `entry` gibt.**
     //
     // `PLAN.md` fuehrt die Klasse *Rennen* seit dem 2026-08-16 als **nicht baubar**: *„wer
@@ -775,6 +876,64 @@ fn lock_blocks(b: &Block, f: &mut impl FnMut(String, Span)) {
         for k in crate::unterbloecke(s) {
             lock_blocks(k, f);
         }
+    }
+}
+
+/// Every DMA-buffer write (held sets) and every doorbell write (site plus held set)
+/// of a body -- for `H018`. The held set at a site is the enclosing `locks` stack over
+/// the function-level holds (`offen`): a guard shared between a buffer write and a
+/// doorbell is the established window, and anything else is the refusal.
+fn fenster_sammeln(
+    b: &Block,
+    puffer: &[String],
+    klingel: &[String],
+    offen: &[String],
+    schreibt: &mut Vec<Vec<String>>,
+    tuer: &mut Vec<(Span, String, Vec<String>)>,
+) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Sperrt(l) => {
+                let mut tiefer = offen.to_vec();
+                tiefer.push(l.sperre.text());
+                fenster_sammeln(&l.rumpf, puffer, klingel, &tiefer, schreibt, tuer);
+            }
+            StmtArt::Zuweisung(z) => {
+                fenster_ort(&z.ziel, puffer, klingel, offen, schreibt, tuer);
+            }
+            StmtArt::Publish(p) => {
+                fenster_ort(&p.ziel, puffer, klingel, offen, schreibt, tuer);
+            }
+            StmtArt::Exchange(e) => {
+                fenster_ort(&e.ort, puffer, klingel, offen, schreibt, tuer);
+            }
+            _ => {}
+        }
+        // **`locks` walked above already** -- it carries the changed state, like in
+        // `schutz` and `block` in this file.
+        if !matches!(&s.art, StmtArt::Sperrt(_)) {
+            for k in crate::unterbloecke(s) {
+                fenster_sammeln(k, puffer, klingel, offen, schreibt, tuer);
+            }
+        }
+    }
+}
+
+/// One write site, sorted into the half its root names -- for `H018`. A root that is
+/// neither a `ptr<dma, …>` nor a `ptr<mmio, …>` parameter is neither half.
+fn fenster_ort(
+    o: &Ort,
+    puffer: &[String],
+    klingel: &[String],
+    offen: &[String],
+    schreibt: &mut Vec<Vec<String>>,
+    tuer: &mut Vec<(Span, String, Vec<String>)>,
+) {
+    let w = o.basis.text.clone();
+    if puffer.iter().any(|d| d == &w) {
+        schreibt.push(offen.to_vec());
+    } else if klingel.iter().any(|m| m == &w) {
+        tuer.push((o.span, o.text(), offen.to_vec()));
     }
 }
 

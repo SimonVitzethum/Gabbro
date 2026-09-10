@@ -2656,6 +2656,31 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/geteilt.rs; K11.2.1",
     },
     Satz {
+        name: "sperren.fenster",
+        kennungen: &["H018"],
+        aussage: "A driver handoff holds ONE guard across both halves of the window \
+                  (`H018`): a function that writes a DMA-visible buffer place AND rings \
+                  the device doorbell does both under the same lock -- the checker half \
+                  of the `GeraetWache` premise (`Geraet.lean`): handoff before the device \
+                  write, take-back after, and the CPU side ordered against the endpoints.",
+        vorbehalt: "**Three limits stand beside the rule.** (1) It reads DIRECT writes \
+                    only -- a doorbell behind a `transition` call or an `extern fn` \
+                    (like `beispiele/41`'s `klingel_ziehen`) is not a site, and a handle \
+                    built inside the body is not a root. (2) It is intraprocedural: both \
+                    halves have to stand in ONE function body. (3) Strength is not asked \
+                    -- a shared-held guard orders as well as an exclusive one, and a \
+                    declared `locks` effect counts as held exactly as under `H007`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/724-726: the unguarded handoff, the handoff under \
+                      two different guards, and the guard at one half only -- each with \
+                      a guarded twin that stays silent. The clean corpus has zero sites: \
+                      `beispiele/02` writes DMA registers with no doorbell in the same \
+                      function, and `beispiele/41` rings the bell from behind an \
+                      `extern fn`.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs; \
+                     grammatik/Grammatik/Geraet.lean (`GeraetWache`, C1)",
+    },
+    Satz {
         name: "sperren.kontext",
         kennungen: &["H013"],
         aussage: "An `entry` point reaches only carriers whose execution context it declares \
