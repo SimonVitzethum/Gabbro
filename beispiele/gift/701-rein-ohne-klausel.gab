@@ -1,0 +1,14 @@
+-- erwartet: E001
+-- **Omission fires regardless of the body.** This function touches nothing, so
+-- no contradiction could ever fire on it -- and E001 still does. Together with
+-- `04` (omission + writing) and `700` (omission + reading) this closes the
+-- omission side: E001 is unconditional on the clause's absence, E005/E010 are
+-- conditional on its presence. The intermediate state of OB6 has no crack
+-- between the two registers.
+module gift {
+
+impl fn rein_ohne_klausel(x : u32) -> u32 {
+    return x;
+}
+
+}

@@ -4825,12 +4825,27 @@ Buchfuehrung  705 (67 %)      eigene Logik 188 (18 %)      Hardware 93 (9 %)
 
 - [ ] **`effects` zuerst** (Quellanalyse, 462 Stellen) — *nicht `costs`, weil eine
       abgeleitete Kostenzahl jede offene Erzeugerstelle erbt, und zwar unsichtbar.*
+      *Lane S (2026-09-10, gemessen): 462 nicht rekonstruierbar — heute 389 vergleichbare
+      Einträge + 93 `extern`/`prim` (Vertrauensfläche) über 71 Dateien; davon 316 Ableits-
+      konsistent (281 + 35 `pure`-leer), 64 zu weit, 40 Löcher, R16 0×, Verbreiterung 0×.
+      Hülle sagt 102 zu weit statt 64 — die 38 sind die geerbte Polsterung (§38). Zählung in
+      `messung/SCHREIBLAST-EFFECTS.md`; kein neuer Zähler nötig (`effects --compare`).*
 - [ ] Vorher: `costs` **unter einen Wächter** (gemessene Zahl, wie `377/377`), sonst hört die
-      Schranke auf, ein Riegel zu sein.
+      Schranke auf, ein Riegel zu sein. *Lane S (2026-09-10, gemessen): kein Wächter gebaut —
+      es gibt keinen (`pruefe-zahlen.py` trägt keine `costs`-Zahl). K001 hält je Stelle
+      (953 Stellen baumweit: 843 gepolstert, 83 exakt, 27 negativ — alle Absicht: Gift,
+      Proben, `33-rekursion`); 57 % der `beispiele`-Rümpfe dürfen sich verdoppeln. Entwurf
+      gemeldet statt gebaut, siehe Messdatei.*
 - [ ] Der Zwischenzustand: **beide Register vergleichen, bevor die Deklaration fällt.** *`E005`
-      feuert nur bei Widerspruch, nicht bei Auslassung.*
+      feuert nur bei Widerspruch, nicht bei Auslassung. Lane S (2026-09-10, gemessen):
+      bestätigt am Codepfad UND an sechs Proben — Auslassung feuert immer `E001` (04 schreibt,
+      neu 700 liest, neu 701 rein; nie E005/E010), Widerspruch feuert E005/E010 (28, 29, 62).
+      Offen bleibt: Ursprungspfad in keiner Absage; E005 auf abgeleiteter statt deklarierter
+      Menge nicht gefahren.*
 - [ ] Überdeklaration ist **still** — und sie speist den Sperrrangpass, macht ihn also
-      **strenger als nötig.**
+      **strenger als nötig.** *Lane S (2026-09-10, nachgemessen): `effects --lock-rank`
+      6/1/0 — sechs Absagen stehen beidseitig, die Ableitung befreit genau eine (gebaute
+      Probe 460), keine neue. Im Korpus reibungsfrei, Befund aus §39 steht.*
 
 ## OB7 — Beta-Fläche
 

@@ -1,0 +1,14 @@
+-- erwartet: E001
+-- **Omission is E001, never E010.** The read half of the effects pass only runs
+-- when a clause EXISTS (`wirkungen.rs::funktion`: `None` files E001 and returns).
+-- A body that reads world state without any clause is the same omission as
+-- `04-ohne-wirkungen` (which writes) -- and the write-side twin of `62`, which
+-- shows what the SAME body earns WITH a clause that lacks the `reads` entry.
+module gift {
+
+static mut g : u32 = 0;
+impl fn liest_ohne_klausel() -> u32 {
+    return g;
+}
+
+}
