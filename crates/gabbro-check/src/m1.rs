@@ -310,10 +310,14 @@ struct Lage {
     /// `rufe_toeten_fakten`, the loop boundary), so the map reuses that machinery
     /// instead of walking the tree a second time.
     frisch: HashMap<String, std::collections::HashSet<String>>,
-    /// Locals whose carrier was written since their last fresh read. Acting on one
+    /// Locals whose carrier was written since their last fresh read, each with
+    /// the source carriers it was tainted with when it expired. Acting on one
     /// (branch/match condition, call argument, return, `narrow` subject, index) is
-    /// refused as `M147`; storing or moving one stays allowed.
-    veraltet: std::collections::HashSet<String>,
+    /// refused as `M147`; storing or moving one stays allowed. The recorded
+    /// carriers are what index-vs-content precision reads: an occurrence inside
+    /// an index into a carrier disjoint from them is excused, everything else
+    /// refuses as before. An empty set means unknown -- fail-closed, refuse.
+    veraltet: HashMap<String, std::collections::HashSet<String>>,
 }
 
 impl<'a> Pruefer<'a> {
@@ -844,7 +848,10 @@ impl<'a> Pruefer<'a> {
                         if let Some(s) = lage.frisch.get(&o.basis.text).cloned() {
                             traeger.extend(s);
                         }
-                        veraltet = lage.veraltet.contains(&o.basis.text);
+                        if let Some(s) = lage.veraltet.get(&o.basis.text) {
+                            veraltet = true;
+                            traeger.extend(s.iter().cloned());
+                        }
                         for sx in &o.suffixe {
                             if let OrtSuffix::Index(x) = sx {
                                 veraltet |= self.traeger_im_ausdruck(x, lage, &mut traeger);
@@ -3144,7 +3151,7 @@ impl<'a> Pruefer<'a> {
                 lokal: lage.lokal.clone(),
                 fakten: Vec::new(),
                 frisch: HashMap::new(),
-                veraltet: std::collections::HashSet::new(),
+                veraltet: HashMap::new(),
             };
             lage.fakten.retain(|f| match f {
                 Fakt::Endlich { schluessel, .. }
@@ -3430,7 +3437,14 @@ impl<'a> Pruefer<'a> {
                 if let Some(s) = lage.frisch.get(&o.basis.text) {
                     aus.extend(s.iter().cloned());
                 }
-                veraltet |= lage.veraltet.contains(&o.basis.text);
+                // An expired local's source carriers flow through a move with the
+                // expiry itself: a copy holds the same snapshot value, so it is
+                // stale against the same carriers. Without this a copy would
+                // expire against nothing and read as disjoint from everything.
+                if let Some(s) = lage.veraltet.get(&o.basis.text) {
+                    veraltet = true;
+                    aus.extend(s.iter().cloned());
+                }
                 for sx in &o.suffixe {
                     if let OrtSuffix::Index(x) = sx {
                         veraltet |= self.traeger_im_ausdruck(x, lage, aus);
@@ -3483,7 +3497,10 @@ impl<'a> Pruefer<'a> {
 
     /// **V4 -- the map grows at exactly one place: a `let`** (spec §1). A tainted
     /// move-in marks the name expired; a fresh carrier read taints it; anything
-    /// else rebinds it clean.
+    /// else rebinds it clean. An expired name keeps the carriers the value was
+    /// read or moved from -- including the expired carriers a moved local
+    /// already carried -- so a later use can tell a disjoint index from a
+    /// decision on the stale value itself.
     fn frische_wachsen(
         &self,
         name: &str,
@@ -3494,7 +3511,7 @@ impl<'a> Pruefer<'a> {
         lage.frisch.remove(name);
         lage.veraltet.remove(name);
         if wert_veraltet {
-            lage.veraltet.insert(name.to_string());
+            lage.veraltet.insert(name.to_string(), wert_traeger);
         } else if !wert_traeger.is_empty() {
             lage.frisch.insert(name.to_string(), wert_traeger);
         }
@@ -3503,9 +3520,12 @@ impl<'a> Pruefer<'a> {
     /// **V4 -- refusal at decision-use positions only** (spec §1).
     ///
     /// Branch/match condition, call argument, return value, `narrow` subject,
-    /// index: acting on an expired local falls as `M147`. Store/move positions
-    /// (write RHS, `let` re-binding) stay silent -- and so does every use of a
-    /// local that was never tainted.
+    /// index: acting on an expired local falls as `M147` -- with index-vs-content
+    /// precision since lane 60: an occurrence inside an index into a carrier
+    /// disjoint from the name's recorded sources is excused (see
+    /// `frische_verweigere`). Store/move positions (write RHS, `let`
+    /// re-binding) stay silent -- and so does every use of a local that was
+    /// never tainted.
     fn frische_gebrauch(&mut self, s: &Stmt, lage: &Lage) {
         if lage.veraltet.is_empty() {
             return;
@@ -3518,7 +3538,7 @@ impl<'a> Pruefer<'a> {
             }
             StmtArt::Match(m) => self.frische_verweigere(&m.gegenstand, lage),
             StmtArt::Narrow(n) => {
-                if lage.veraltet.contains(&n.ort.basis.text) {
+                if lage.veraltet.contains_key(&n.ort.basis.text) {
                     self.frische_absage(&n.ort.basis.text, n.ort.span);
                 }
             }
@@ -3548,6 +3568,9 @@ impl<'a> Pruefer<'a> {
             }
         }
         // An index decides which cell is meant -- everywhere, including stores.
+        // The indexed place's own basis travels as the enclosing index carrier,
+        // so an index into a disjoint carrier is excused here exactly as it is
+        // inside conditions and returns.
         let ziele: Vec<&Ort> = match &s.art {
             StmtArt::Zuweisung(z) => vec![&z.ziel],
             StmtArt::Publish(p) => vec![&p.ziel],
@@ -3561,22 +3584,90 @@ impl<'a> Pruefer<'a> {
             _ => vec![],
         };
         for o in ziele {
+            let schutz = vec![o.basis.text.clone()];
             for sx in &o.suffixe {
                 if let OrtSuffix::Index(x) = sx {
-                    self.frische_verweigere(x, lage);
+                    self.frische_verweigere_mit_schutz(x, lage, &schutz);
                 }
             }
         }
     }
 
-    /// Every expired local mentioned in this expression is refused, once per name.
+    /// Every expired local mentioned in this expression is refused, once per name --
+    /// EXCEPT inside an index into a disjoint carrier (index-vs-content precision).
+    ///
+    /// An index value is a copied snapshot: writes to the carrier it was read from
+    /// cannot change the copy, and where it is never re-compared against that
+    /// carrier but only selects a cell of a DIFFERENT, disjoint carrier, the value
+    /// is still the right id for that purpose. That is F01's teardown idiom
+    /// (`let obj = c.slots[s].object; unlink(c, s); release_slot(c, s);` then
+    /// `o.slots[obj]`): the prescribed remedy -- re-reading `c.slots[s].object`
+    /// after `release_slot` -- would read a FREED slot, so a refusal whose remedy
+    /// is wrong is worse than silence there. A decision on the value itself
+    /// (branch condition, call argument, return, `narrow` subject, an index into
+    /// its OWN carrier) still refuses -- that is what gift 702/703/709/715-717 pin.
+    ///
+    /// The walk covers exactly what `alle_ausdruecke` covers: every arm descends
+    /// through `unterausdruecke` except `Ort` (basis plus index subtrees, the same
+    /// two `alle_ausdruecke` sees) and `Ruf` (arguments, which decide -- never
+    /// excused, even inside an index). The place BASIS itself is never excused:
+    /// dereferencing through an expired handle decides which table is meant.
     fn frische_verweigere(&mut self, e: &Expr, lage: &Lage) {
+        self.frische_verweigere_mit_schutz(e, lage, &[]);
+    }
+
+    /// Same refusal with an enclosing index context: `schutz` holds the bases of
+    /// the index positions around `e`, outermost first. The statement-index loop
+    /// passes its place's basis here; every other position starts unprotected.
+    fn frische_verweigere_mit_schutz(&mut self, e: &Expr, lage: &Lage, schutz: &[String]) {
+        let mut faellig: Vec<(String, Span)> = Vec::new();
+        self.frische_sammle(e, lage, schutz, &mut faellig);
         let mut gemeldet = std::collections::HashSet::new();
-        for x in crate::alle_ausdruecke(e) {
-            if let ExprArt::Ort(o) | ExprArt::Alt(o) = &x.art {
-                if lage.veraltet.contains(&o.basis.text) && gemeldet.insert(o.basis.text.clone())
-                {
-                    self.frische_absage(&o.basis.text, o.span);
+        for (name, span) in faellig {
+            if gemeldet.insert(name.clone()) {
+                self.frische_absage(&name, span);
+            }
+        }
+    }
+
+    /// Collects the (name, span) pairs `frische_verweigere` refuses. `schutz`
+    /// holds the bases of the enclosing index positions, outermost first: an
+    /// occurrence is excused only when its recorded source set is non-empty and
+    /// disjoint from every one of them. Unknown sources (empty set) and direct
+    /// occurrences (empty `schutz`) refuse -- fail-closed, as before.
+    fn frische_sammle(
+        &self,
+        e: &Expr,
+        lage: &Lage,
+        schutz: &[String],
+        aus: &mut Vec<(String, Span)>,
+    ) {
+        match &e.art {
+            ExprArt::Ort(o) | ExprArt::Alt(o) => {
+                if let Some(quellen) = lage.veraltet.get(&o.basis.text) {
+                    if quellen.is_empty()
+                        || schutz.is_empty()
+                        || schutz.iter().any(|b| quellen.contains(b))
+                    {
+                        aus.push((o.basis.text.clone(), o.span));
+                    }
+                }
+                let mut tiefer = schutz.to_vec();
+                tiefer.push(o.basis.text.clone());
+                for sx in &o.suffixe {
+                    if let OrtSuffix::Index(x) = sx {
+                        self.frische_sammle(x, lage, &tiefer, aus);
+                    }
+                }
+            }
+            ExprArt::Ruf(r) => {
+                for a in &r.argumente {
+                    self.frische_sammle(a, lage, &[], aus);
+                }
+            }
+            _ => {
+                for k in crate::unterausdruecke(e) {
+                    self.frische_sammle(k, lage, schutz, aus);
                 }
             }
         }
@@ -5148,8 +5239,10 @@ fn ist_zeiger(t: &Typ) -> bool {
 /// kill, §2b). The written name itself is rebound when bare (fresh again) and
 /// stale when only a part of it was written.
 fn frische_toeten_schreiben(traeger: &str, nackt: bool, lage: &mut Lage) {
-    if lage.frisch.remove(traeger).is_some() && !nackt {
-        lage.veraltet.insert(traeger.to_string());
+    if let Some(s) = lage.frisch.remove(traeger) {
+        if !nackt {
+            lage.veraltet.insert(traeger.to_string(), s);
+        }
     }
     if nackt {
         lage.veraltet.remove(traeger);
@@ -5157,13 +5250,15 @@ fn frische_toeten_schreiben(traeger: &str, nackt: bool, lage: &mut Lage) {
     frische_toeten_traeger(lage, traeger);
 }
 
-/// **V4 -- expire every tainted local of this carrier, keep the rest.**
+/// **V4 -- expire every tainted local of this carrier, keep the rest.** Each
+/// expired name keeps the taint set it died with: that set is what later tells
+/// a disjoint index (excused) from a decision on the stale value (refused).
 fn frische_toeten_traeger(lage: &mut Lage, traeger: &str) {
     let frisch = std::mem::take(&mut lage.frisch);
     let mut rest = HashMap::with_capacity(frisch.len());
     for (name, s) in frisch {
         if s.contains(traeger) {
-            lage.veraltet.insert(name);
+            lage.veraltet.insert(name, s);
         } else {
             rest.insert(name, s);
         }
@@ -5172,10 +5267,11 @@ fn frische_toeten_traeger(lage: &mut Lage, traeger: &str) {
 }
 
 /// **V4 -- expire every taint** (spec §2c loops, and the coarse call rule): the
-/// names stay known-expired instead of going silent.
+/// names stay known-expired instead of going silent, each with the carriers it
+/// was read from.
 fn frische_alle_toeten(lage: &mut Lage) {
-    for (name, _) in std::mem::take(&mut lage.frisch) {
-        lage.veraltet.insert(name);
+    for (name, s) in std::mem::take(&mut lage.frisch) {
+        lage.veraltet.insert(name, s);
     }
 }
 
