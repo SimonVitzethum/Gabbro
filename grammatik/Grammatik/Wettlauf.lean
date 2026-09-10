@@ -456,8 +456,56 @@ theorem keine_ueberkreuzung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Fa
   have b := gj.1 L2 h2
   omega
 
+/-! ## 5. Von den Ruempfen in den Lauf -- was `exec` liefert, und was fehlt
+
+    `exec_spur` (`Satz.lean`) sagt ueber EINEN Rumpf: aus leerer Spur kommen nur
+    konsistente Spuren mit guten Ereignissen zurueck (`Brav.konsistent_von_leer`,
+    `Brav.gut_von_leer`). Was ein LAUF daraus macht, steht hier: jede
+    beobachtete Teilspur ist eine Endstrecke der vollen (Verschraenkung
+    unten), und Endstrecken bleiben konsistent (`Konsistent.drop`).
+
+    EHRLICH GESAGT -- was dieser Satz NICHT baut (2026-09-10,
+    `messung/ZIEL-BEWERTUNG-2026-09-10.md`):
+    W3 (Ausschluss), W4 (Marke in einem Faden) und W5 (ungeteilt) bleiben
+    PRAEMISSEN: sie sprechen ueber das Verhaeltnis der Faeden zueinander
+    (fremde Sperrprimitive, disjunkte Markenmengen, `shared`-Deklaration), und
+    kein Satz ueber je einen Rumpf kann sie schliessen. Ebenso fehlt der
+    Owicki-Gries-Schritt: dass gueltige sequenzielle Logik (`requires` /
+    `ensures`) unter Verschraenkung gueltig bleibt, folgt aus HB-Ordnung nicht
+    -- dazu brauchte es eine gemeinsame Semantik mit Rahmen-Disjunktheit
+    (`exec_rahmen` ist der Kandidat fuer die Praemisse), und die steht nirgends.
+    Rennfreiheit und Logikbeweis sind damit zwei unverbundene Saetze. -/
+
+/-- Eine beobachtete Teilspur ist eine Endstrecke der vollen: so sieht eine
+    Verschraenkung aus, die die Faeden nur verzahnt statt umzuschreiben. Ein
+    Lauf, der das verletzt, ist keine Verschraenkung dieser Ausfuehrungen. -/
+def IstVerschraenkung (l : Lauf D) (voll : Faden → List (Ereignis D)) : Prop :=
+  ∀ f j, ∃ k, l.spur f j = (voll f).drop k
+
+/-- W1 und W2 ueber jeder Verschraenkung wohlgeformter Ausfuehrungen: was jeder
+    Faden tut, ist konsistent und gut -- vererbt aus `exec_spur` ueber leere
+    Spuren, erhalten ueber Endstrecken. Mit W3-W5 als Prämissen ist das
+    `Gesittet`; ohne sie ist es genau die Haelfte, die ein Rumpf traegt. -/
+theorem lauf_aus_brav (l : Lauf D) (voll : Faden → List (Ereignis D))
+    (hvoll : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f)
+    (hvers : IstVerschraenkung l voll) :
+    (∀ f j, Konsistent (l.spur f j)) ∧ (∀ f j (e : Ereignis D), e ∈ l.spur f j → e.gut) := by
+  constructor
+  · intro f j
+    obtain ⟨k, hk⟩ := hvers f j
+    obtain ⟨a, b, hempty, hbrav, hspur⟩ := hvoll f
+    rw [hk, ← hspur]
+    exact (hbrav.konsistent_von_leer hempty).drop _ _
+  · intro f j e he
+    obtain ⟨k, hk⟩ := hvers f j
+    obtain ⟨a, b, hempty, hbrav, hspur⟩ := hvoll f
+    have hmem : e ∈ voll f := List.mem_of_mem_drop (hk ▸ he)
+    rw [← hspur] at hmem
+    exact hbrav.gut_von_leer hempty hmem
+
 #print axioms Gabbro.Grammatik.kein_wettlauf
 #print axioms Gabbro.Grammatik.kein_wettlauf_global
 #print axioms Gabbro.Grammatik.keine_ueberkreuzung
+#print axioms Gabbro.Grammatik.lauf_aus_brav
 
 end Gabbro.Grammatik

@@ -402,6 +402,7 @@ pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
     "sonde_mxcsr_rne",
     "sonde_rdtscp",
     "sonde_release_sichtbarkeit",
+    "sonde_tick",
     "sonde_tsc",
 ];
 

@@ -34,6 +34,13 @@
   KEIN Import aus `crates/`, `programmlogik/`, `passlogik/` oder `Body.lean`:
   `lakefile.toml` laesst das nicht zu -- was hier steht, gilt mit DIESER Syntax,
   gleichgueltig, was der heutige `.rs`-Code tut oder laesst.
+
+  GRENZEN, gemessen am 2026-09-10 (`messung/ZIEL-BEWERTUNG-2026-09-10.md`):
+  kein Satz fuehrt `exec`-Spuren in `Gesittet` ueber (die Bruecke steht in
+  `Wettlauf.lean` als `lauf_aus_brav`, mit W3-W5 als Prämissen); die gueltige
+  sequenzielle Logik unter Verschraenkung (Owicki-Gries-Schritt) steht nirgends;
+  die Frist ist hier nur benannt (`fristAlsAnnahme`) -- gemessen wird sie von
+  der Sonde (`sonden/sonde_tick.c`, Probenwaehrung, kein Beweis).
 -/
 import Grammatik.Wettlauf
 import Grammatik.Zucker
@@ -44,22 +51,34 @@ variable {D : Deklaration} {V : Vertrag D}
 
 /-! ## 1. Die C-Seite -- geschlossen, nicht "C" -/
 
-/-- Die geschlossene Zielform: was der Erzeuger je schreiben darf. Was hier
-    nicht steht, wird nie emittiert und braucht keine C-Semantik
-    (`dokumente/BEWEIS.md`, Gegenstand 2: 34 erlaubte und benutzte Formen). -/
+/-- Die Zielformen, ueber die der Absenkungsvertrag spricht -- 19 benannte
+    Gestalten, KEINE geschlossene Liste. Dass der Erzeuger nur diese schreibt,
+    ist unbewiesen: `dokumente/BEWEIS.md`, Gegenstand 2, misst 64 Formen im
+    Erzeugnis, davon 30 ohne Entscheid (u.a. Zeigerarithmetik an 491 Stellen).
+    Wer die Liste schliesst, entscheidet die 19 (`?:` als Muster) oder nimmt
+    sie aus dem Erzeuger. -/
 inductive CForm where
   | statisch | extern | zuweisung | wenn | schalter | zaehlSchleife
   | rueckgabe | sprungAlsSchleifenende | ruf | literal | name | feld
   | index | wahlLesen | atomar | beschraenkt | fluechtig | noreturn | asmEins
   deriving DecidableEq, Repr
 
-/-- Die Absenkung: jede Gabbro-Primitive wird zu einer BEGRENZTEN Liste von
-    C-Formen. `ops` zaehlt die Gabbro-Seite; die C-Seite ist statisch daraus
-    berechenbar -- das ist die Zahl, die quantitatives CompCert erhaelt. -/
+/-- Die Absenkung ALS ANNAHME: jede Gabbro-Primitive wuerde zu einer BEGRENZTEN
+    Liste von C-Formen. `ops` zaehlt die Gabbro-Seite; erhalten wuerde die Zahl
+    ein quantitatives CompCert (CerCo, nicht der Produktionsuebersetzer). -/
 structure Absenkung where
   proPrimitiv : Nat
   begrenzt : proPrimitiv ≤ 8
 
+/-- Die Zahl, auf der der Vertrag ruhen wuerde -- UNGEMESSEN (W7: eine Zahl ohne
+    Suchweg). `4` steht hier, weil der Satz eine Zahl braucht, nicht weil
+    jemand je Primitive gegen `emit.rs` gehalten haette. Der Suchweg stuende so
+    aus: je Gabbro-Primitiv die C-Anweisungen des Erzeugers zaehlen, Maximum
+    nehmen. Solange das nicht geschehen ist, ist jede Berufung auf diese
+    Konstante ein Zitat ohne Quelle -- und CompCert beweist ohnehin
+    Semantikerhaltung, keine Kostenerhaltung (sequenziell, rennfrei, ohne
+    `__asm__`, ohne C11-`_Atomic`: 39 `_Atomic`, 120 `volatile`, 2 `__asm__` im
+    eigenen Erzeugnis). -/
 def absenkung : Absenkung := ⟨4, by decide⟩
 
 /-! ## 2. Das Ziel -- ein Satz je Zeile -/
@@ -130,22 +149,29 @@ theorem ziel_ordnung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Faden)
 /-- Das Budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) ist eine Zahl
     am Deklarierten: statisch berechenbar, gegen die Deklaration gehalten.
     Die Frist (`deadline … arch … falsifier …`) ist KEIN zweites Budget:
-    sie ist die benannte Umgebungsannahme -- `fortschritt`, mit ihrer Sonde.
-    Eine verpasste Frist ist daher kein dritter Fehler, sondern der sechste
-    der Hardware-Seite. -/
+    sie ist die benannte Umgebungsannahme -- `fortschritt`, mit ihrer Sonde. -/
 def fristAlsAnnahme (a : D.Annahme) : Hardware D := .fortschritt a
 
-theorem ziel_zeit_ist_hardware (a : D.Annahme) :
-    ∃ e : Hardware D, fristAlsAnnahme a = e :=
-  ⟨.fortschritt a, rfl⟩
+/- ZURUECKGEZOGEN am 2026-09-10, und zwar der Satz, nicht die Definition:
+   `ziel_zeit_ist_hardware` behauptete `∃ e, fristAlsAnnahme a = e` -- eine
+   Existenzaussage ueber eine totale Funktion, die JEDER Definition gelingt.
+   Nichts konnte sie beschaedigen, also mass sie nichts (dieselbe Klasse wie
+   die trivialen `bedeutung_total`/`wert_total`, die der Ordner als trivial
+   BESTAETIGT -- diese Zeile tat es nicht). Was bleibt, ist die Definition
+   oben: die Abbildung Frist → Annahme. Gemessen wird die Frist von der Sonde
+   (`sonden/sonde_tick.c`, Probenwaehrung R15/W10: Stichprobe, kein Beweis),
+   nicht von einem Satz hier. -/
 
 /-! ## 4. Die Unabhaengigkeit -- was hier NICHT gelesen wurde -/
 
-/-- Das Ziel in einem Satz: jeder Fehler eines Rumpfes ist Logik oder
-    Hardware; jeder Rahmen ist der Vertrag; jede Spur ist bewacht; jede
-    Verschraenkung ist geordnet oder atomar; jede Frist ist eine benannte
-    Annahme. Nichts davon nennt einen Pass, eine Diagnose oder eine
-    Erzeugerzeile -- die Grammatik traegt es als Form. -/
+/-- Das Ziel in einem Satz -- und zwar NUR dieser: jeder Fehler eines
+    Ausgangs ist Kontrollfluss, Logik oder Hardware. Rahmen (`ziel_rahmen`),
+    Spur (`ziel_spur`), Verschraenkung (`ziel_wettlauf`, `ziel_wettlauf_global`,
+    `ziel_ordnung`), Fristabbildung (`fristAlsAnnahme`) und Absenkung
+    (`Absenkung`, als Annahme) stehen als eigene Saetze daneben -- was hier
+    stuende und dort beweist, waere ein Kommentar, der mehr behauptet als sein
+    Satz. Nichts davon nennt einen Pass, eine Diagnose oder eine
+    Erzeugerzeile. -/
 theorem ziel (o : Ausgang V l Γ) :
     (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
     (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨

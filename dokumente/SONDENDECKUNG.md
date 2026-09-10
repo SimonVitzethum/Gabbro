@@ -5,7 +5,7 @@ measures, and what the tree measures against it **today**.
 
 **It was written RED on purpose** — *a bound the tree already meets is a decoration and not a
 gate* — and it names its price in four programs. **The four were written on 2026-09-04 and
-the floor is met with less than nothing to spare: `5 of 39 = 0.1282` against `1/8 = 0.125`.** Every one
+the floor is met with room to spare: `6 of 39 = 0.1538` against `1/8 = 0.125`.** Every one
 of them carries a positive control that was made to fall, because *a probe whose control
 cannot be made to fall is not finished*:
 
@@ -18,7 +18,9 @@ cannot be made to fall is not finished*:
 
 **The floor no longer forbids nothing, it forbids the next assumption arriving without its
 probe** — and there is no `P4` row left to write, so the next one that does has to move the
-apparatus and not this number.
+apparatus and not this number. *2026-09-10: `sonde_tick` did exactly that — row 39, P4 5→6,
+quota (5,39)→(6,39). The prophecy held: the move touched the apparatus (register, mark,
+floor text), not just the number.*
 
     ./instrumente/pruefe-sondendeckung.py
 
@@ -54,7 +56,7 @@ An assumption is in exactly one of three states:
 | state | today | who watches it |
 |---|---:|---|
 | **unfalsifiable**, under a criterion | 6 clauses / 1 admitted | `pruefe-unfalsifizierbar.py` — a ratchet DOWN |
-| **falsifiable, probe stands as a program** | **5 of 39** | this file — a ratchet UP |
+| **falsifiable, probe stands as a program** | **6 of 39** | this file — a ratchet UP |
 | **falsifiable, probe MISSING** | **33 of 39** | *nobody, until this file* |
 
 **The third row is the whole reason this document is not two ratchets.** A ratchet on the
@@ -92,7 +94,7 @@ Both halves come out of the same scan, and both are named here rather than left 
 
 ```bash
 ./instrumente/pruefe-sondendeckung.py
-# ==   5 of 39 falsifiable assumptions carry a probe that stands as a program
+# ==   6 of 39 falsifiable assumptions carry a probe that stands as a program
 ```
 
 **And the denominator is not free either.** Three ways exist to keep `A_p` from falling when
@@ -119,7 +121,7 @@ was written**.
 >
 > **When this was written `A_p = 1 / 38 = 0.026` and the tree missed the floor of 0.125 by a
 > factor of 4.75. The price was four programs; they were written on 2026-09-04, and
-> `A_p = 5 / 39 = 0.1282` MEETS the floor with 0.0032 to spare.**
+> `A_p = 6 / 39 = 0.1538` MEETS the floor with 0.0288 to spare.**
 >
 > *The slack is the smallest a unit fraction leaves, and that is the point:* one more
 > falsifiable assumption without a probe puts `A_p` at `5 / 39 = 0.1282`, still above; two put
@@ -137,19 +139,23 @@ they are read from there rather than invented here:
 | **`P1`** | **ring 0** — a control register, a page table, an MSR, an `in`/`out` | 14 |
 | **`P2`** | **a device** — VT-d, virtio, a 16550, a timer, a counter | 16 |
 | **`P3`** | **a mechanism the generator does not emit** — a grace period, a reader that fetches, a source that ends | 4 |
-| **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **5** |
+| **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **6** |
 
 *The classification is an ESTIMATE per name and not a measurement; `sonden/README.md` says so
 about its own table, and that caveat travels with these rows.* What is not an estimate is the
 consequence:
 
-> **`P4` is the work that needs no device, no privilege and no decision by the owner.** Five
-> rows stand in it, **all five have a program since 2026-09-04**, and there is nothing left in
+> **`P4` is the work that needs no device, no privilege and no decision by the owner.** Six
+> rows stand in it, **all six have a program (five since 2026-09-04, `sonde_tick` since 2026-09-10)**, and there is nothing left in
 > the class to write.
 >
 > `1 + 4 = 5` of 38 is **0.1316**. The largest unit fraction below it is **`1/8` = 0.125**;
 > `1/7` = 0.143 is already out of reach. **So `1/8` is the tightest simple bound that the work
 > which is actually possible reaches — and the tree reaches it exactly.**
+>
+> `1 + 4 + 1 = 6` of 39 is **0.1538** since 2026-09-10: the first dated function arrived
+> WITH its probe (`sonde_tick`), so the share rises by the earned diff instead of falling
+> by dilution. *That is the move the mark exists to record.*
 >
 > *What that costs to say again:* the class is now EMPTY of open work, so the floor can no
 > longer be met by writing another userland probe. **The next assumption that arrives without
@@ -169,7 +175,7 @@ to be entered in `manifest::SONDEN_MIT_PROGRAMM` or the checker keeps striking i
 | `sonde_tsc` | `rdtsc` | hold one core, then read the counter through a function pointer and fall on a standstill **or** a step back; **77** if `CR4.TSD` forbids it | a frozen source and a backward one run through the same detector and must both be caught; from outside, `prctl(PR_SET_TSC, PR_TSC_SIGSEGV)` drove it to **77** and a build with the frozen source in arm 3 to **1** |
 | `sonde_rdtscp` | `rdtscp` | `CPUID` leaf `0x8000'0001` for the `requires`, then the instruction bracketed between two `rdtsc` reads; **77** where the feature is absent | three sources violate by construction — frozen, backward, outside the bracket; from outside, `PR_SET_TSC` gave **77**, a cleared feature bit gave **77**, and a foreign clock in arm 4b gave **1** |
 
-**Measured: 5 of 39 = 0.1282 ≥ 0.125.** The floor is met and not exceeded — *by design,
+**Measured: 6 of 39 = 0.1538 ≥ 0.125.** The floor is met and not exceeded — *by design,
 because a floor with slack in it is a floor nobody has to think about again.*
 
 > **Not one of the four is an analogy** (`sonden/README.md` forbids those). Each forces the
@@ -287,9 +293,9 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 36 | **zaehlwerk_antwortet** | `sonde_zaehlwerk_antwortet` | `P2` | -- |
 | 37 | **zeitgeber_meldet_sich** | `sonde_zeitgeber_meldet_sich` | `P2` | -- |
 | 38 | **zeitgeber_tickt** | `sonde_zeitgeber_tickt` | `P2` | -- |
-| 39 | **frist_zaehle_werte_eingehalten** | `sonde_tick` | `P2` | -- |
+| 39 | **frist_zaehle_werte_eingehalten** | `sonde_tick` | `P4` | **PROGRAM** |
 
-**39 rows, 5 of them with a PROGRAM, 5 of them `P4`** — and one probe name carries two rows
+**39 rows, 6 of them with a PROGRAM, 6 of them `P4`** — and one probe name carries two rows
 (`sonde_vtd_srtp`, rows 8 and 29), which is why 39 assumptions stand under 38 names.
 
 ---

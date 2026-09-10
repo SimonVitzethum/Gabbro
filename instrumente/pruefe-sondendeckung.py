@@ -86,7 +86,13 @@ SONDEN = W / "sonden"
 # subproject, not a probe. Until it stands, every dated function costs share, and this
 # mark records the cost instead of hiding it. *The next silent dilution from 39 breaks it
 # again, which is what the mark is for.*
-MARK_QUOTE = (5, 39)
+#
+# **(5, 39) -> (6, 39) on 2026-09-10.** `sonde_tick` arrived WITH its program (measured
+# p99 337-339 against booked 512, both R14 controls, one obligation N024), so the raise
+# is earned the same way the four P4 probes earned theirs -- not a dilution decision.
+# The metrology gap above stands unchanged: the probe reports cycles, it does not
+# convert ops, and the date stays a sample (R15/W10), not a proof.
+MARK_QUOTE = (6, 39)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the

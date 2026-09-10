@@ -265,6 +265,40 @@ theorem Brav.trans {a b c : World D} (h1 : Brav a b) (h2 : Brav b c) : Brav a c 
     | .inl hb => h1.2.1 e hb
     | .inr g => .inr g, fun k => h2.2.2 (h1.2.2 k)⟩
 
+/-- Aus leerer Spur ist jede zurueckbleibende Spur konsistent: `[]` ist es
+    (`konsistent_nil`), und `Brav` traegt Konsistenz vorwaerts. -/
+theorem Brav.konsistent_von_leer {a b : World D} (h : Brav a b) (hempty : a.spur = []) :
+    Konsistent b.spur := by
+  have hk : Konsistent a.spur := by rw [hempty]; exact konsistent_nil
+  exact h.2.2 hk
+
+/-- Aus leerer Spur ist jedes zurueckbleibende Ereignis gut: es steht nicht in
+    `[]`, also bleibt nur die zweite Haelfte von `Brav`. -/
+theorem Brav.gut_von_leer {a b : World D} (h : Brav a b) (hempty : a.spur = [])
+    {e : Ereignis D} (he : e ∈ b.spur) : e.gut := by
+  rcases h.2.1 e he with hmem | hg
+  · rw [hempty] at hmem; simp at hmem
+  · exact hg
+
+/-- Konsistenz ueberlebt das Vergessen der aeltesten Ereignisse: der Kopf einer
+    konsistenten Spur passt zu seinem Rest, also ist der Rest konsistent. -/
+theorem Konsistent.drop1 {e : Ereignis D} {s : List (Ereignis D)} (h : Konsistent (e :: s)) :
+    Konsistent s := by
+  unfold Konsistent at h ⊢
+  intro m e' hm
+  have h' := h (m + 1) e' (by simpa using hm)
+  simpa using h'
+
+/-- ... und damit jede Endstrecke. -/
+theorem Konsistent.drop (s : List (Ereignis D)) (h : Konsistent s) (k : Nat) :
+    Konsistent (s.drop k) := by
+  induction k generalizing s with
+  | zero => simpa using h
+  | succ k ih =>
+    cases s with
+    | nil => exact konsistent_nil
+    | cons e s => simpa using ih _ (h.drop1)
+
 /-- Rahmen UND Spur. -/
 def Gut (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop :=
   Rahmen W G σ σ' ∧ Brav σ σ'
