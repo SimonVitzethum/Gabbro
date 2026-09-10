@@ -30,6 +30,7 @@ impl fn zaehle(i : index into Takte)
     requires Held(TAKT)
     effects  { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
     costs    <= 8 ops
+    deadline <= 80 ops arch x86_64 falsifier sonde_zaehle
 {
     Takte.slots[i].stand = 1;
 }
@@ -37,6 +38,7 @@ impl fn zaehle(i : index into Takte)
 impl fn takt_verteiler()
     effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
     costs   <= 40 ops
+    deadline <= 400 ops arch x86_64 falsifier sonde_takt_verteiler
 {
     locks TAKT {
         zaehle(0);
@@ -76,6 +78,7 @@ impl fn bearbeite(i : index into Auftraege)
     requires Held(RING)
     effects  { reads Auftraege, reads Auftraege.slots, writes Auftraege.slots, locks RING }
     costs    <= 8 ops
+    deadline <= 80 ops arch x86_64 falsifier sonde_bearbeite
 {
     Auftraege.slots[i].stand = 1;
 }
@@ -83,6 +86,7 @@ impl fn bearbeite(i : index into Auftraege)
 impl fn ruf_verteiler()
     effects { reads Auftraege, reads Auftraege.slots, writes Auftraege.slots, locks RING }
     costs   <= 40 ops
+    deadline <= 400 ops arch x86_64 falsifier sonde_ruf_verteiler
 {
     locks RING {
         bearbeite(0);
