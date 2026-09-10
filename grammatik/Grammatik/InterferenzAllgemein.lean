@@ -1,0 +1,208 @@
+/-
+  Datei:      Grammatik/InterferenzAllgemein.lean
+  Gegenstand: **DAS GEMEINSAME MODELL BELIEBIG VIELER FAEDEN** -- der Entwurf, nicht der
+               Satz. N Faeden (`List Faden`), beliebig viele Schritte (eine Weltenkette),
+               geteilte Traeger eingeschlossen ueber Invariantendisziplin (CSL-Gestalt:
+               ein Invariantenpraedikat je Traeger, Beruehren nur unter der Wache).
+
+  ## Das Modell
+
+  Ein `GemeinsamerLauf` traegt, was die angefuehrten Stellen liefern:
+
+    * `hSchritt` -- jeder Schritt der Kette bleibt im Rahmen seines Fadens (je Schritt
+      das, was `exec_rahmen` je Rumpf liefert, `Satz.lean`; die Kette zaehlt die Schritte
+      in `schrittFaden`, die Welten in `welten`, verkettet ueber `hKette`),
+    * `hPaar` -- je zwei verschiedene Faeden der Liste stehen in `Nb` (deklarierte Paare,
+      `Wettlauf.lean` §6; geschlossene Welt ueber den N Faeden),
+    * `hGesittet` -- der Lauf ist sperrdiszipliniert (`Gesittet`, `Wettlauf.lean`),
+    * `hBeschraenkt` -- nur Deklarierte teilen sich den Lauf (`BeschraenkteVerschraenkung`),
+    * `hEintritt` -- jeder Faden haelt beim Eintritt genau seine erklaerten Sperren
+      (`EintrittPasst`: die Form von `RufPasst.hh`, SG-20, die Sperrmenge in BEIDEN
+      Richtungen, je Faden),
+    * `hSchuld` -- jeder Faden haelt die Sperren aller Traeger jeder geschuldeten
+      Invariante (`SchuldnerHaelt`: die Gestalt von `invarianten_gehalten`, U003, mit
+      `schuldet` als Bedingung),
+    * `hInvSicht` -- die Invariantensicht liest unter gehaltenen Sperren (`InvSichtHaelt`:
+      die Gestalt von `heldIn_invarianten` ueber `hEintritt`, je Faden am Eintritt).
+
+  ## Die Disziplin ueber geteilten Traegern
+
+  `Interferenz.lean` schliesst gemeinsame Schreibtraeger AUS (`Disjunkt`). Hier sind sie
+  EINGESCHLOSSEN, aber nur unter Disziplin: `TraegerInv` traegt ein Praedikat je Traeger
+  (`inv`) plus die Beruehrregel (`disziplin`: wer schreibt, haelt die Waechter --
+  Anfassen nur unter der Wache). `GeteiltGedeckt` sagt, was das fuer die Faeden heisst:
+  schreibt ein zweiter Faden denselben Traeger, so ist der Traeger geteilt UND beide
+  halten eine gemeinsame Sperre seines Waechter (`GemeinsameSperre`). `InvariantenKontext`
+  verlangt das Praedikat an jeder Welt der Kette.
+
+  ## Die Aussage -- Gestalt, nicht Satz
+
+  `StabilSchritt` ist `stabil` (`Interferenz.lean`) als `Prop`-Gestalt: ein fremder Schritt
+  im disjunkten Rahmen erhaelt `Q`. `StabilKette` faltet die Gestalt ueber die Kette.
+  `AllgemeinStabil` ist die Hauptaussage als `def ... : Prop`: unter Invariantenkontext,
+  geteilter Deckung, rahmenabhaengigen Zusicherungen je Faden und sequenzieller Gueltigkeit
+  am Eintritt gilt jede Zusicherung jedes Fadens an der letzten Welt der Kette.
+
+  ## Was dieser Entwurf NICHT sagt -- jeder Schnitt gebucht
+
+  (G1) `AllgemeinStabil` ist eine `def`-Gestalt, kein Satz. Die Induktion ueber die Kette
+       (der `stabil`-Schritt je fremdem Schritt gefaltet) steht nirgends und wird hier
+       NICHT gefuehrt: Beweise sind eine spaetere Phase.
+  (G2) Die vorausgesetzte Menge ist der volle Vertragsrahmen (`D.schreibt` /
+       `D.gschreibt`), nicht der syntaktische Fussabdruck. Wie in (S1) wird angenommen,
+       dass eine Zusicherung nur ihren Rahmen liest (`HaengtAb` als Praemisse).
+  (G3) Die Beruehrregel (`disziplin`) ist eine Praemisse, keine Pruefung. Dass der Pruefer
+       die gehaltenen Mengen je Schreibstelle nachweist, steht nirgends -- der Pruefer
+       kennt keine Haltemengenanalyse (`NEBENLAEUFIGKEIT-ENTWURF.md` §6, Punkt 1).
+  (G4) Nur sperrgeteilte Traeger sind eingeschlossen. `atomic`-Globale (A10, die Maschine
+       ordnet) und `publishes`/`awaits`-Paare (die Paarung ordnet) sind NICHT modelliert:
+       wer sie will, traegt je eine eigene Ausnahme neben `GeteiltGedeckt` ein.
+  (G5) `Gesittet` wird getragen, nicht verbraucht (wie S2): HB-Ordnung aus `kein_wettlauf`
+       ist unverbunden mit Stabilitaet -- geordnete Schreibzugriffe bleiben Schreibzugriffe.
+  (G6) Der Eintritt je Faden ist eine eigene Welt (`eintritt`), kein Gabelmodell: wie
+       Faeden starten und enden, steht nirgends.
+  (G7) `Q` spricht nur ueber die Welt, nicht ueber Belegungen (`Env`): wie in (S6) teilt
+       kein Faden lokale Bindungen.
+-/
+import Grammatik.Interferenz
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-! ## 1. Traegerworte: wer schreibt, und unter welcher Wache -/
+
+/-- Der Schreibschalter je Traeger: Tabellen ueber `D.schreibt`, Globale ueber
+    `D.gschreibt`. -/
+def TraegerSchreibt (f : D.Fn) : D.Tab ⊕ D.Glob → Bool
+  | .inl t => D.schreibt f t
+  | .inr g => D.gschreibt f g
+
+/-- Die Wache eines Traegers, gehalten im Eintritt von `f`: jeder genannte Waechter steht
+    in den Anfangsmitteln der Signatur (`darf`-Gestalt, statisch). -/
+def WaechterGehalten (f : D.Fn) : D.Tab ⊕ D.Glob → Prop
+  | .inl t => ∀ w ∈ D.braucht t, Res.von D w ∈ Signatur.anfang D (D.signatur f)
+  | .inr g => ∀ w ∈ D.gbraucht g, Res.von D w ∈ Signatur.anfang D (D.signatur f)
+
+/-- Geteilt heisst hier: von mehr als einem Faden erreichbar (`H013` als Erklaerung). -/
+def Geteilt : D.Tab ⊕ D.Glob → Bool
+  | .inl t => D.geteilt t
+  | .inr g => D.ggeteilt g
+
+/-- Eine gemeinsame Sperre ueber einem Traeger: beide Faeden nennen `L` in ihren
+    erklaerten Sperren, und `L` steht in seiner Wache. -/
+def GemeinsameSperre (f g : D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
+  ∃ L : D.Lock, L ∈ D.haelt f ∧ L ∈ D.haelt g ∧
+    (match c with
+    | .inl t => Sum.inl L ∈ D.braucht t
+    | .inr x => Sum.inl L ∈ D.gbraucht x)
+
+/-! ## 2. Die Invariantendisziplin je Traeger (CSL-Gestalt) -/
+
+/-- Ein Invariantenpraedikat je Traeger plus die Beruehrregel: wer schreibt, haelt die
+    Waechter (Anfassen nur unter der Wache). -/
+structure TraegerInv where
+  inv : D.Tab ⊕ D.Glob → World D → Prop
+  /-- Die Beruehrregel, statisch je Rumpf: Schreiben setzt gehaltene Waechter voraus. -/
+  disziplin : ∀ (f : D.Fn) (c : D.Tab ⊕ D.Glob), TraegerSchreibt f c = true → WaechterGehalten f c
+
+/-- Der Eintritt passt: der Faden haelt genau seine erklaerten Sperren (die Form von
+    `RufPasst.hh`, SG-20, in beiden Richtungen). -/
+def EintrittPasst (f : D.Fn) (σ : World D) : Prop :=
+  HeldGenau (Signatur.anfang D (D.signatur f)) σ.haelt
+
+/-- Wer eine Invariante schuldet, haelt die Sperren ALLER ihrer Traeger (die Gestalt von
+    `invarianten_gehalten`, U003, mit `schuldet` als Bedingung). -/
+def SchuldnerHaelt (f : D.Fn) : Prop :=
+  ∀ (i : D.Inv), schuldet f i = true →
+    ∀ (t : D.Tab), t ∈ D.traeger i →
+      ∀ (L : D.Lock), Sum.inl L ∈ D.braucht t → L ∈ D.haelt f
+
+/-- Die Invariantensicht liest unter gehaltenen Sperren (die Gestalt von
+    `heldIn_invarianten` am Eintritt). -/
+def InvSichtHaelt (f : D.Fn) (σ : World D) : Prop :=
+  ∀ (i : D.Inv), schuldet f i = true → HeldIn (invSicht D i) σ.haelt
+
+/-! ## 3. Der gemeinsame Lauf: N Faeden, beliebig viele Schritte -/
+
+/-- N Faeden in einer Weltenkette: `welten` zaehlt die Welten, `schrittFaden` je Uebergang
+    den schreibenden Faden; jeder Schritt bleibt im Rahmen seines Fadens, je zwei
+    verschiedene Faeden sind deklariert, der Lauf ist gesittet und beschraenkt, jeder
+    Faden tritt erklaert ein und schuldet unter Sperren. -/
+structure GemeinsamerLauf (Nb : Nebeneinander) where
+  faeden : List Faden
+  code : Faden → D.Fn
+  eintritt : Faden → World D
+  welten : List (World D)
+  schrittFaden : List Faden
+  l : Lauf D
+  /-- Die Kette ist lueckenlos: ein Schritt je Uebergang. -/
+  hKette : welten.length = schrittFaden.length + 1
+  /-- Jeder Schritt bleibt im Rahmen seines Fadens (das liefert `exec_rahmen` je Rumpf). -/
+  hSchritt : ∀ (k : Nat) (f : Faden) (vor nach : World D),
+    schrittFaden[k]? = some f → welten[k]? = some vor → welten[k + 1]? = some nach →
+      f ∈ faeden ∧ Rahmen (D.schreibt (code f)) (D.gschreibt (code f)) vor nach
+  /-- Je zwei verschiedene Faeden sind deklariert (geschlossene Welt ueber den N Faeden). -/
+  hPaar : ∀ (f : Faden), f ∈ faeden → ∀ (g : Faden), g ∈ faeden → f ≠ g → Nb f g
+  /-- Der Lauf ist sperrdiszipliniert. -/
+  hGesittet : Gesittet l
+  /-- Nur Deklarierte teilen sich den Lauf. -/
+  hBeschraenkt : BeschraenkteVerschraenkung Nb l
+  /-- Jeder Faden haelt beim Eintritt genau seine erklaerten Sperren. -/
+  hEintritt : ∀ (f : Faden), f ∈ faeden → EintrittPasst (code f) (eintritt f)
+  /-- Jeder Faden haelt die Sperren aller Traeger jeder geschuldeten Invariante. -/
+  hSchuld : ∀ (f : Faden), f ∈ faeden → SchuldnerHaelt (code f)
+  /-- Die Invariantensicht jedes Fadens liest am Eintritt unter gehaltenen Sperren. -/
+  hInvSicht : ∀ (f : Faden), f ∈ faeden → InvSichtHaelt (code f) (eintritt f)
+
+/-! ## 4. Invariantenkontext und geteilte Deckung -/
+
+/-- Der Invariantenkontext: das Praedikat jedes Traegers gilt an jeder Welt der Kette. -/
+def InvariantenKontext (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) : Prop :=
+  ∀ (c : D.Tab ⊕ D.Glob) (σ : World D), σ ∈ J.welten → I.inv c σ
+
+/-- Geteilte Deckung: schreibt ein zweiter Faden denselben Traeger, so ist der Traeger
+    geteilt UND beide halten eine gemeinsame Sperre seiner Wache. Das schliesst
+    sperrgeteilte Traeger ein, wo `Disjunkt` sie ausschloss. -/
+def GeteiltGedeckt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) : Prop :=
+  ∀ (f : Faden), f ∈ J.faeden → ∀ (g : Faden), g ∈ J.faeden → f ≠ g →
+    ∀ (c : D.Tab ⊕ D.Glob),
+      TraegerSchreibt (J.code f) c = true → TraegerSchreibt (J.code g) c = true →
+        Geteilt c = true ∧ GemeinsameSperre (J.code f) (J.code g) c
+
+/-! ## 5. Stabilitaet als `Prop`-Gestalten -/
+
+/-- **Stabilitaet in einem fremden Schritt** (`stabil` als Gestalt): was nur am Rahmen
+    `(W, G)` haengt, ueberlebt einen Schritt im dazu disjunkten Rahmen. -/
+def StabilSchritt (W : D.Tab → Bool) (G : D.Glob → Bool) (Q : World D → Prop)
+    (fremd : D.Fn) : Prop :=
+  HaengtAb W G Q →
+    ∀ (σ σ' : World D),
+      Rahmen (D.schreibt fremd) (D.gschreibt fremd) σ σ' →
+        Disjunkt W G (D.schreibt fremd) (D.gschreibt fremd) → (Q σ ↔ Q σ')
+
+/-- **Stabilitaet ueber der Kette**: an jedem Uebergang erhaelt der fremde Schritt jedes
+    `Q`, das nur am eigenen Rahmen haengt und zum Rahmen des Schreibenden disjunkt ist. -/
+def StabilKette (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (W : D.Tab → Bool) (G : D.Glob → Bool) (Q : World D → Prop) : Prop :=
+  HaengtAb W G Q ∧
+    ∀ (k : Nat) (f : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some f → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        Disjunkt W G (D.schreibt (J.code f)) (D.gschreibt (J.code f)) → (Q vor ↔ Q nach)
+
+/-! ## 6. Die Hauptaussage als Gestalt -/
+
+/-- **Allgemeine Stabilitaet (Gestalt, kein Satz).** Unter Invariantenkontext und geteilter
+    Deckung ueberlebt jede rahmenabhaengige Zusicherung jedes Fadens, gueltig an seinem
+    Eintritt (die sequenzielle Gueltigkeit), die ganze Kette bis zu ihrer letzten Welt. -/
+def AllgemeinStabil (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop) : Prop :=
+  InvariantenKontext Nb J I →
+    GeteiltGedeckt Nb J →
+      (∀ (f : Faden), f ∈ J.faeden →
+        HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (Q f)) →
+        (∀ (f : Faden), f ∈ J.faeden → Q f (J.eintritt f)) →
+          ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → Q f σ
+
+end Gabbro.Grammatik
