@@ -55,9 +55,15 @@
          Siehe `Sicherheit.lean`, Fund 2.
     (S3) `wrapTo` liefert `.int` ohne Bereich. Dass `wrap b sg n` in `[0, 2^b)` bzw.
          `[-2^(b-1), 2^(b-1))` liegt, ist ein zweiter Satz und steht hier nicht.
-    (S4) Division, Rest, Schiebe- und Bitoperationen liefern `.int` ohne Bereich. Der
-         Pruefer (`typen.rs`) rechnet dort Schranken; hier steht nur, dass sie NICHT
-         STECKEN BLEIBEN. Die Schranken sind der naechste Satz (`Sicherheit.lean`, §3).
+    (S4) Division, remainder, shifts and bitwise operations carry the ranges
+         `typen.rs` computes (`teile`, `rest`, `bitweise`, `schiebe` over
+         `lo1/hi1/lo2/hi2`): the proof shows the value inside the computed
+         interval, so an accepted expression neither gets stuck nor loses its
+         range. What the model cannot name stays out: the machine width behind
+         `ergebnis` (no width lives in `Shape`, Fund 1) and the mixed-form
+         unknowns of `gemeinsame_form` (no width or signedness lives in `Shape`
+         either -- a model range may then refuse where the checker stays
+         silent, and that direction is booked, not built).
 -/
 import Gabbro.Body
 
@@ -117,6 +123,222 @@ theorem produkt_in_ecken (p q r s u v : Int) (hpu : p ≤ u) (huq : u ≤ q) (hr
     rcases hp with ⟨p1, p2⟩ | ⟨p1, p2⟩ <;>
     rcases hq with ⟨q1, q2⟩ | ⟨q1, q2⟩ <;> omega
 
+/-! ## 0.5. Range formulas -- F4 mirrors `teile`, `rest`, `bitweise`, `schiebe`
+
+    Each helper mirrors one function in `crates/gabbro-check/src/typen.rs` over bare
+    bounds (`lo1/hi1/lo2/hi2`); `arith` below only calls them. Two things the checker
+    knows never travel here: the machine width behind `ergebnis` (so no overflow
+    flag and no full-width fallback -- a range that leaves every width is still a
+    range) and the form agreement of `gemeinsame_form` (so no unknown on mixed
+    widths -- `Shape` carries no width and no signedness to agree on). -/
+
+/-- Below `c`, from both sides. -/
+theorem le_imin {a b c : Int} (h1 : c ≤ a) (h2 : c ≤ b) : c ≤ imin a b := by
+  unfold imin; split <;> omega
+
+/-- Above `c`, from both sides. -/
+theorem imax_le {a b c : Int} (h1 : a ≤ c) (h2 : b ≤ c) : imax a b ≤ c := by
+  unfold imax; split <;> omega
+
+/-- Truncated division is antitone in a positive denominator over a non-negative
+    dividend. From the defining equation `q * y + r = x`: a quotient strictly above
+    against a denominator at or above overshoots `x`. -/
+theorem tdiv_anti_nonneg {x y₁ y₂ : Int} (hx : 0 ≤ x) (h1 : 0 < y₁) (h12 : y₁ ≤ y₂) :
+    x.tdiv y₂ ≤ x.tdiv y₁ := by
+  rcases le_or_lt (x.tdiv y₂) (x.tdiv y₁) with h | h
+  · exact h
+  · have hle : x.tdiv y₁ + 1 ≤ x.tdiv y₂ := by omega
+    have e1 := Int.tdiv_mul_add_tmod x y₁
+    have e2 := Int.tdiv_mul_add_tmod x y₂
+    have r1nn : 0 ≤ x.tmod y₁ := Int.tmod_nonneg y₁ hx
+    have r1lt : x.tmod y₁ < y₁ := Int.tmod_lt_of_pos x h1
+    have h2 : 0 < y₂ := lt_of_lt_of_le h1 h12
+    have r2nn : 0 ≤ x.tmod y₂ := Int.tmod_nonneg y₂ hx
+    have q1nn : 0 ≤ x.tdiv y₁ := Int.tdiv_nonneg hx (le_of_lt h1)
+    have s1 : x.tdiv y₁ * y₁ ≤ x.tdiv y₁ * y₂ :=
+      Int.mul_le_mul_of_nonneg_left h12 q1nn
+    have s2 : (x.tdiv y₁ + 1) * y₂ ≤ x.tdiv y₂ * y₂ :=
+      Int.mul_le_mul_of_nonneg_right hle (le_of_lt h2)
+    have hexpand : (x.tdiv y₁ + 1) * y₂ = x.tdiv y₁ * y₂ + y₂ := by ring
+    omega
+
+/-- ... and monotone the same way over a non-positive dividend -- by negation. -/
+theorem tdiv_anti_neg {x y₁ y₂ : Int} (hx : x ≤ 0) (h1 : 0 < y₁) (h12 : y₁ ≤ y₂) :
+    x.tdiv y₁ ≤ x.tdiv y₂ := by
+  have hN := tdiv_anti_nonneg (show (0 : Int) ≤ -x by omega) h1 h12
+  rw [Int.neg_tdiv, Int.neg_tdiv] at hN
+  exact neg_le_neg_iff.mp hN
+
+/-- The signed corners of `teile`. -/
+def divEckenLo (lo1 hi1 lo2 hi2 : Int) : Int :=
+  imin (imin (lo1.tdiv lo2) (lo1.tdiv hi2)) (imin (hi1.tdiv lo2) (hi1.tdiv hi2))
+
+/-- ... the upper corners. -/
+def divEckenHi (lo1 hi1 lo2 hi2 : Int) : Int :=
+  imax (imax (lo1.tdiv lo2) (lo1.tdiv hi2)) (imax (hi1.tdiv lo2) (hi1.tdiv hi2))
+
+/-- The four corners of `teile` over a positive denominator range: every `x/y` with
+    `x` in `[lo1, hi1]` and `y` in `[lo2, hi2]` lies between the extremes of the four
+    corner quotients. Which corner binds depends on the signs of the dividend ends;
+    each link below is numerator monotonicity (`Int.tdiv_le_tdiv`) or denominator
+    (anti-)monotonicity in the bound's own sign -- never in the value's. -/
+theorem tdiv_vierecken (lo1 hi1 lo2 hi2 x y : Int)
+    (hx1 : lo1 ≤ x) (hx2 : x ≤ hi1) (hy1 : lo2 ≤ y) (hy2 : y ≤ hi2) (hpos : 0 < lo2) :
+    divEckenLo lo1 hi1 lo2 hi2 ≤ x.tdiv y ∧ x.tdiv y ≤ divEckenHi lo1 hi1 lo2 hi2 := by
+  have hle : lo1 ≤ hi1 := le_trans hx1 hx2
+  have hypos : (0 : Int) < y := lt_of_lt_of_le hpos hy1
+  have hhi2pos : (0 : Int) < hi2 := lt_of_lt_of_le hpos (le_trans hy1 hy2)
+  rcases le_or_lt 0 lo1 with hlo1 | hlo1
+  · have hhi1nn : (0 : Int) ≤ hi1 := le_trans hlo1 hle
+    have lv : lo1.tdiv hi2 ≤ x.tdiv y :=
+      le_trans (tdiv_anti_nonneg hlo1 hypos hy2) (Int.tdiv_le_tdiv hypos hx1)
+    have uv : x.tdiv y ≤ hi1.tdiv lo2 :=
+      le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_nonneg hhi1nn hypos hy1)
+    simp only [divEckenLo, divEckenHi]
+    exact ⟨le_trans (imin_le_left _ _) (le_trans (imin_le_right _ _) lv),
+      le_trans uv (le_trans (le_imax_left _ _) (le_imax_right _ _))⟩
+  · rcases le_or_lt 0 hi1 with hhi1 | hhi1
+    · have hlo10 : lo1 ≤ 0 := le_of_lt hlo1
+      have lv : lo1.tdiv lo2 ≤ x.tdiv y :=
+        le_trans (tdiv_anti_neg hlo10 hypos hy1) (Int.tdiv_le_tdiv hypos hx1)
+      have uv : x.tdiv y ≤ hi1.tdiv lo2 :=
+        le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_nonneg hhi1 hypos hy1)
+      simp only [divEckenLo, divEckenHi]
+      exact ⟨le_trans (imin_le_left _ _) (le_trans (imin_le_left _ _) lv),
+        le_trans uv (le_trans (le_imax_left _ _) (le_imax_right _ _))⟩
+    · have hhi10 : hi1 ≤ 0 := le_of_lt hhi1
+      have hlo10 : lo1 ≤ 0 := le_trans hle hhi10
+      have lv : lo1.tdiv lo2 ≤ x.tdiv y :=
+        le_trans (tdiv_anti_neg hlo10 hypos hy1) (Int.tdiv_le_tdiv hypos hx1)
+      have uv : x.tdiv y ≤ hi1.tdiv hi2 :=
+        le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_neg hhi10 hypos hy2)
+      simp only [divEckenLo, divEckenHi]
+      exact ⟨le_trans (imin_le_left _ _) (le_trans (imin_le_left _ _) lv),
+        le_trans uv (le_trans (le_imax_right _ _) (le_imax_right _ _))⟩
+
+/-- Negation swaps the extremes -- the negative-denominator reduction of `teile`
+    reads the four corners through this. -/
+theorem imin_neg (a b : Int) : imin (-a) (-b) = -(imax a b) := by
+  rcases le_or_lt a b with h | h
+  · rcases eq_or_lt_of_le h with rfl | hlt
+    · simp [imin, imax]
+    · have hF : ¬ -a ≤ -b := by omega
+      have hT : a ≤ b := le_of_lt hlt
+      simp only [imin, imax, if_neg hF, if_pos hT]
+  · have hT : -a ≤ -b := by omega
+    have hF : ¬ a ≤ b := by omega
+    simp only [imin, imax, if_pos hT, if_neg hF]
+
+/-- ... and back. -/
+theorem imax_neg (a b : Int) : imax (-a) (-b) = -(imin a b) := by
+  rcases le_or_lt a b with h | h
+  · rcases eq_or_lt_of_le h with rfl | hlt
+    · simp [imin, imax]
+    · have hF : ¬ -a ≤ -b := by omega
+      have hT : a ≤ b := le_of_lt hlt
+      simp only [imin, imax, if_neg hF, if_pos hT]
+  · have hT : -a ≤ -b := by omega
+    have hF : ¬ a ≤ b := by omega
+    simp only [imin, imax, if_pos hT, if_neg hF]
+
+/-- The two orders of four corners coincide -- the negated denominator range lists
+    them swapped, and the mirror bound has to meet the proved one. -/
+theorem imax_swap4 (A B C D : Int) :
+    imax (imax A B) (imax C D) ≤ imax (imax B A) (imax D C) :=
+  imax_le
+    (imax_le (le_trans (le_imax_right _ _) (le_imax_left _ _))
+      (le_trans (le_imax_left _ _) (le_imax_left _ _)))
+    (imax_le (le_trans (le_imax_right _ _) (le_imax_right _ _))
+      (le_trans (le_imax_left _ _) (le_imax_right _ _)))
+
+/-- ... and below. -/
+theorem imin_swap4 (A B C D : Int) :
+    imin (imin B A) (imin D C) ≤ imin (imin A B) (imin C D) :=
+  le_imin
+    (le_imin (le_trans (imin_le_left _ _) (imin_le_right _ _))
+      (le_trans (imin_le_left _ _) (imin_le_left _ _)))
+    (le_imin (le_trans (imin_le_right _ _) (imin_le_right _ _))
+      (le_trans (imin_le_right _ _) (imin_le_left _ _)))
+
+/-- `max |lo2| |hi2| - 1` without absolute values: `max hi2 (-lo2) - 1` -- the signed
+    arm of `rest`. -/
+def remSchranke (lo2 hi2 : Int) : Int := imax hi2 (-lo2) - 1
+
+/-- The signed arm of `rest`: against a positive denominator the remainder lies
+    between `±Schranke`. The sign rides on the dividend (`Int.neg_tmod`); the modulus
+    bounds are `Int.tmod_nonneg` and `Int.tmod_lt_of_pos`. -/
+theorem trem_pos (y x : Int) (lo2 hi2 : Int) (hypos : 0 < y)
+    (hS : y ≤ imax hi2 (-lo2)) :
+    -(remSchranke lo2 hi2) ≤ x.tmod y ∧ x.tmod y ≤ remSchranke lo2 hi2 := by
+  have hS1 : y ≤ remSchranke lo2 hi2 + 1 := by simp only [remSchranke]; omega
+  rcases le_or_lt 0 x with hx0 | hx0
+  · have h1 : (0 : Int) ≤ x.tmod y := Int.tmod_nonneg y hx0
+    have h2 : x.tmod y < y := Int.tmod_lt_of_pos x hypos
+    exact ⟨by omega, by omega⟩
+  · have hxN : (0 : Int) < -x := by omega
+    have h1 : (0 : Int) ≤ (-x).tmod y := Int.tmod_nonneg y (le_of_lt hxN)
+    have h2 : (-x).tmod y < y := Int.tmod_lt_of_pos (-x) hypos
+    have hN : x.tmod y = -((-x).tmod y) := by rw [Int.neg_tmod]; simp
+    rw [hN]
+    exact ⟨by omega, by omega⟩
+
+/-- `maske` in `typen.rs`: the smallest `2^k - 1` covering `n` -- the `bor`/`bxor`
+    bound. `0` covers `0`; otherwise the previous mask stands while it covers, else
+    one bit grows. -/
+def maskeNat : Nat → Nat
+  | 0 => 0
+  | (n + 1) => if n + 1 ≤ maskeNat n then maskeNat n else 2 * maskeNat n + 1
+
+/-- Every value fits under its mask. -/
+theorem maskeNat_ge (n : Nat) : n ≤ maskeNat n := by
+  induction n with
+  | zero => exact Nat.zero_le _
+  | succ n ih =>
+    simp only [maskeNat]
+    split
+    · rename_i h; exact h
+    · rename_i h; omega
+
+/-- Every mask plus one is a power of two. -/
+theorem maskeNat_pow2 (n : Nat) : ∃ k, maskeNat n + 1 = 2 ^ k := by
+  induction n with
+  | zero => exact ⟨0, by simp [maskeNat]⟩
+  | succ n ih =>
+    obtain ⟨k, hk⟩ := ih
+    simp only [maskeNat]
+    split
+    · rename_i h; exact ⟨k, hk⟩
+    · rename_i h
+      refine ⟨k + 1, ?_⟩
+      have hk2 : (2 : Nat) ^ (k + 1) = 2 * 2 ^ k := by
+        have s : k + 1 = k.succ := by omega
+        rw [s, Nat.pow_succ]
+        exact Nat.mul_comm _ _
+      omega
+
+/-- ... over `Int`, with `0` for non-positive inputs (there `toNat` is `0`). -/
+def maske (w : Int) : Int := ((maskeNat w.toNat : Nat) : Int)
+
+/-- The mask covers. -/
+theorem maske_ge (w : Int) : w ≤ maske w := by
+  unfold maske
+  cases w with
+  | negSucc n =>
+    have h0 : (Int.negSucc n).toNat = 0 := Int.toNat_negSucc n
+    simp only [maskeNat, h0, Nat.cast_zero]
+    omega
+  | ofNat n =>
+    have h3 : (Int.ofNat n).toNat = n := rfl
+    rw [h3]
+    have h : n ≤ maskeNat n := maskeNat_ge n
+    have h2 : ((n : Nat) : Int) ≤ ((maskeNat n : Nat) : Int) := by exact_mod_cast h
+    exact h2
+
+/-- `2^m ≤ 2^n` over `Int` -- shift counts grow with the count (`schiebe`). -/
+theorem zwei_pow_le {m n : Nat} (h : m ≤ n) : (2 : Int) ^ m ≤ 2 ^ n := by
+  have h' : 2 ^ m ≤ 2 ^ n := Nat.pow_le_pow_right (show (2 : Nat) > 0 by decide) h
+  exact_mod_cast h'
+
 /-! ## 1. Die Typisierung der LOKALEN, neben der der Welt aus `Body.lean` -/
 
 /-- Die Gestalt jedes lokalen Namens -- was `let` und die Parameter erklaert haben.
@@ -172,9 +394,35 @@ def arith (op : BinOp) (a b : Shape) : Option Shape :=
       | .mul => some (.intIn (imin (imin (lo1*lo2) (lo1*hi2)) (imin (hi1*lo2) (hi1*hi2)))
                              (imax (imax (lo1*lo2) (lo1*hi2)) (imax (hi1*lo2) (hi1*hi2))))
       -- `M102`: der Nenner schliesst die Null aus, oder der Pass sagt ab.
-      | .div | .rem => if 0 < lo2 ∨ hi2 < 0 then some .int else none
+      -- Inside: `teile` divides the edges over a non-negative dividend and a
+      -- positive denominator, else the four corners; `rest` is `0 .. min` or
+      -- the symmetric bound. `Int.tdiv`/`Int.tmod` truncate like the machine.
+      | .div =>
+          if 0 < lo2 ∨ hi2 < 0 then
+            if 0 ≤ lo1 ∧ 0 < lo2 then some (.intIn (lo1.tdiv hi2) (hi1.tdiv lo2))
+            else some (.intIn (divEckenLo lo1 hi1 lo2 hi2) (divEckenHi lo1 hi1 lo2 hi2))
+          else none
+      | .rem =>
+          if 0 < lo2 ∨ hi2 < 0 then
+            if 0 ≤ lo1 ∧ 0 < lo2 then some (.intIn 0 (imin (hi2 - 1) hi1))
+            else some (.intIn (-(remSchranke lo2 hi2)) (remSchranke lo2 hi2))
+          else none
       -- `M137`/`M104`: Bitoperatoren und Schiebungen nur ueber NICHTNEGATIVEN Bereichen.
-      | .band | .bor | .bxor | .shl | .shr => if 0 ≤ lo1 ∧ 0 ≤ lo2 then some .int else none
+      -- Inside: `bitweise` (`Und` through the minimum, `Oder`/`Xor` through the mask)
+      -- and the four corners of the shifts (`schiebe_links`, `schiebe_rechts`).
+      -- No width travels here, so no overflow flag either (Fund 1).
+      | .band =>
+          if 0 ≤ lo1 ∧ 0 ≤ lo2 then some (.intIn 0 (imin hi1 hi2)) else none
+      | .bor | .bxor =>
+          if 0 ≤ lo1 ∧ 0 ≤ lo2 then some (.intIn 0 (maske (imax hi1 hi2))) else none
+      | .shl =>
+          if 0 ≤ lo1 ∧ 0 ≤ lo2 then
+            some (.intIn (lo1 * 2 ^ lo2.toNat) (hi1 * 2 ^ hi2.toNat))
+          else none
+      | .shr =>
+          if 0 ≤ lo1 ∧ 0 ≤ lo2 then
+            some (.intIn (lo1.tdiv (2 ^ hi2.toNat)) (hi1.tdiv (2 ^ lo2.toNat)))
+          else none
       | _ => none
   -- Ohne Bereich auf einer Seite: Addition und Co. bleiben Zahlen; Division, Rest und
   -- Bits brauchen einen Bereich, sonst weiss der Pass nichts ueber den Nenner (`M102`).
@@ -276,6 +524,28 @@ def schluss (D : Deklaration) : Lokal → Expr → Option Shape
   -- Form `constructedValue` und sagt sie ab; der Pruefer kennt den Typ nur aus dem ZIEL
   -- (`M106`), und ein Ausdruck allein hat keines. Hier ebenso: `none`. Die Ableitung
   -- gegen ein Ziel steht in `Anweisung.lean` (`fallPasst`).
+
+/-- `Some` against the target option's payload bound (F10, `M101`): with no target any
+    number passes, as before; with `(lo, hi)` only a ranged payload inside it does.
+    `gift/170` (`Some(8)` on `count 8`) is refused here instead of flowing on. The
+    bound lives at the use site, so `schluss` above does not thread it -- the carrier
+    `schlussMitZiel` does, and wiring it into `pruefe` is its own step. -/
+def somePasst : Option (Int × Int) → Shape → Option Shape
+  | none, sh => if (zahl sh).isSome then some .opt else none
+  | some (lo, hi), sh =>
+    match sh with
+    | .intIn lo' hi' => if lo ≤ lo' ∧ hi' ≤ hi then some .opt else none
+    | _ => none
+
+/-- The checker with the option target bound carried into `someOf`: every other form
+    delegates to `schluss`, so the two can never drift apart -- and the safety proof
+    below reuses `schluss_sicher` arm by arm for the same reason. -/
+def schlussMitZiel (D : Deklaration) (ziel : Option (Int × Int)) : Lokal → Expr → Option Shape
+  | Δ, .someOf a =>
+      match schluss D Δ a with
+      | some sh => somePasst ziel sh
+      | none => none
+  | Δ, e => schluss D Δ e
 
 /-! ## 3. Der Satz -- ein angenommener Ausdruck wird nie `none`, und sein Wert passt -/
 
@@ -470,51 +740,249 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
             | div =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  have hy : y ≠ 0 := by omega
-                  simp [eval, hva, hvb, binop, hy, Value.hasShape]
+                · rename_i hc
+                  split at harith
+                  · rename_i hs
+                    cases harith
+                    obtain ⟨hs1, hs2⟩ := hs
+                    have hy : y ≠ 0 := by omega
+                    have hLo : lo1.tdiv hi2 ≤ x.tdiv y :=
+                      le_trans (tdiv_anti_nonneg hs1 (lt_of_lt_of_le hs2 hy1) hy2)
+                        (Int.tdiv_le_tdiv (lt_of_lt_of_le hs2 hy1) hx1)
+                    have hHi : x.tdiv y ≤ hi1.tdiv lo2 :=
+                      le_trans (Int.tdiv_le_tdiv (lt_of_lt_of_le hs2 hy1) hx2)
+                        (tdiv_anti_nonneg (le_trans hs1 (le_trans hx1 hx2)) hs2 hy1)
+                    simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                      Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                    exact ⟨hLo, hHi⟩
+                  · rename_i hs
+                    cases harith
+                    have hy : y ≠ 0 := by omega
+                    rcases hc with hc1 | hc2
+                    · obtain ⟨hlo, hhi⟩ :=
+                        tdiv_vierecken lo1 hi1 lo2 hi2 x y hx1 hx2 hy1 hy2 hc1
+                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                        Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                      exact ⟨hlo, hhi⟩
+                    · have hyN : (0 : Int) < -y := by omega
+                      have hmem1 : -hi2 ≤ -y := by omega
+                      have hmem2 : -y ≤ -lo2 := by omega
+                      have hpos : (0 : Int) < -hi2 := by omega
+                      obtain ⟨hlo', hhi'⟩ :=
+                        tdiv_vierecken lo1 hi1 (-hi2) (-lo2) x (-y) hx1 hx2 hmem1 hmem2 hpos
+                      have e1 : lo1.tdiv lo2 = -(lo1.tdiv (-lo2)) := by
+                        have h := Int.tdiv_neg lo1 (-lo2)
+                        rwa [Int.neg_neg] at h
+                      have e2 : lo1.tdiv hi2 = -(lo1.tdiv (-hi2)) := by
+                        have h := Int.tdiv_neg lo1 (-hi2)
+                        rwa [Int.neg_neg] at h
+                      have e3 : hi1.tdiv lo2 = -(hi1.tdiv (-lo2)) := by
+                        have h := Int.tdiv_neg hi1 (-lo2)
+                        rwa [Int.neg_neg] at h
+                      have e4 : hi1.tdiv hi2 = -(hi1.tdiv (-hi2)) := by
+                        have h := Int.tdiv_neg hi1 (-hi2)
+                        rwa [Int.neg_neg] at h
+                      have ev : x.tdiv y = -(x.tdiv (-y)) := by
+                        have h := Int.tdiv_neg x (-y)
+                        rwa [Int.neg_neg] at h
+                      have hLo : divEckenLo lo1 hi1 lo2 hi2 ≤ x.tdiv y := by
+                        simp only [divEckenLo]
+                        rw [e1, e2, e3, e4, ev, imin_neg, imin_neg, imin_neg]
+                        exact neg_le_neg_iff.mpr (le_trans hhi' (imax_swap4 _ _ _ _))
+                      have hHi : x.tdiv y ≤ divEckenHi lo1 hi1 lo2 hi2 := by
+                        simp only [divEckenHi]
+                        rw [e1, e2, e3, e4, ev, imax_neg, imax_neg, imax_neg]
+                        exact neg_le_neg_iff.mpr (le_trans hlo' (imin_swap4 _ _ _ _))
+                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                        Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                      exact ⟨hLo, hHi⟩
                 · cases harith
             | rem =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  have hy : y ≠ 0 := by omega
-                  simp [eval, hva, hvb, binop, hy, Value.hasShape]
+                · rename_i hc
+                  split at harith
+                  · rename_i hs
+                    cases harith
+                    obtain ⟨hs1, hs2⟩ := hs
+                    have hy : y ≠ 0 := by omega
+                    have hx0 : (0 : Int) ≤ x := le_trans hs1 hx1
+                    have hypos : (0 : Int) < y := lt_of_lt_of_le hs2 hy1
+                    have e1 := Int.tdiv_mul_add_tmod x y
+                    have qnn : (0 : Int) ≤ x.tdiv y := Int.tdiv_nonneg hx0 (le_of_lt hypos)
+                    have qy : (0 : Int) ≤ x.tdiv y * y := Int.mul_nonneg qnn (le_of_lt hypos)
+                    have hrx : x.tmod y ≤ x := by omega
+                    have hlt : x.tmod y < y := Int.tmod_lt_of_pos x hypos
+                    have h0 : (0 : Int) ≤ x.tmod y := Int.tmod_nonneg y hx0
+                    have hHi : x.tmod y ≤ imin (hi2 - 1) hi1 :=
+                      le_imin (by omega) (le_trans hrx hx2)
+                    simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                      Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                    exact ⟨h0, hHi⟩
+                  · rename_i hs
+                    cases harith
+                    have hy : y ≠ 0 := by omega
+                    rcases le_or_lt 0 y with hy0 | hy0
+                    · have hypos : (0 : Int) < y := lt_of_le_of_ne hy0 (Ne.symm hy)
+                      have hS : y ≤ imax hi2 (-lo2) :=
+                        le_trans hy2 (le_imax_left hi2 (-lo2))
+                      obtain ⟨hlo, hhi⟩ := trem_pos y x lo2 hi2 hypos hS
+                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                        Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                      exact ⟨hlo, hhi⟩
+                    · have hyN : (0 : Int) < -y := by omega
+                      have hrw : x.tmod y = x.tmod (-y) := by
+                        have h := Int.tmod_neg x (-y)
+                        rwa [Int.neg_neg] at h
+                      have hS : -y ≤ imax hi2 (-lo2) :=
+                        le_trans (by omega : -y ≤ -lo2) (le_imax_right hi2 (-lo2))
+                      obtain ⟨hlo, hhi⟩ := trem_pos (-y) x lo2 hi2 hyN hS
+                      have hLo : -(remSchranke lo2 hi2) ≤ x.tmod y := by
+                        rw [hrw]; exact hlo
+                      have hHi : x.tmod y ≤ remSchranke lo2 hi2 := by
+                        rw [hrw]; exact hhi
+                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                        Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                      exact ⟨hLo, hHi⟩
                 · cases harith
             | band =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  simp [eval, hva, hvb, binop, bits, show 0 ≤ x by omega, show 0 ≤ y by omega,
-                    Value.hasShape]
+                · rename_i hc
+                  cases harith
+                  obtain ⟨hg1, hg2⟩ := hc
+                  have hxnn : (0 : Int) ≤ x := le_trans hg1 hx1
+                  have hyn : (0 : Int) ≤ y := le_trans hg2 hy1
+                  have hNat1 : x.toNat &&& y.toNat ≤ x.toNat := Nat.and_le_left
+                  have hNat2 : x.toNat &&& y.toNat ≤ y.toNat := Nat.and_le_right
+                  have c1 : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ (((x.toNat : Nat)) : Int) := by
+                    exact_mod_cast hNat1
+                  have c2 : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ (((y.toNat : Nat)) : Int) := by
+                    exact_mod_cast hNat2
+                  have rx : ((((x.toNat : Nat))) : Int) = x := Int.toNat_of_nonneg hxnn
+                  have ry : ((((y.toNat : Nat))) : Int) = y := Int.toNat_of_nonneg hyn
+                  have h0 : (0 : Int) ≤ (((x.toNat &&& y.toNat : Nat)) : Int) := by positivity
+                  have hmin : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ imin hi1 hi2 := by
+                    have h1 : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ hi1 := by omega
+                    have h2 : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ hi2 := by omega
+                    exact le_imin h1 h2
+                  simp only [eval, hva, hvb, binop, bits, show 0 ≤ x by omega,
+                    show 0 ≤ y by omega, Value.hasShape,
+                    Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                  exact ⟨h0, hmin⟩
                 · cases harith
             | bor =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  simp [eval, hva, hvb, binop, bits, show 0 ≤ x by omega, show 0 ≤ y by omega,
-                    Value.hasShape]
+                · rename_i hc
+                  cases harith
+                  obtain ⟨hg1, hg2⟩ := hc
+                  have hxM : x ≤ imax hi1 hi2 := le_trans hx2 (le_imax_left hi1 hi2)
+                  have hyM : y ≤ imax hi1 hi2 := le_trans hy2 (le_imax_right hi1 hi2)
+                  have hxN : x.toNat ≤ (imax hi1 hi2).toNat := Int.toNat_le_toNat hxM
+                  have hyN : y.toNat ≤ (imax hi1 hi2).toNat := Int.toNat_le_toNat hyM
+                  have hcov : (imax hi1 hi2).toNat ≤ maskeNat ((imax hi1 hi2).toNat) :=
+                    maskeNat_ge _
+                  obtain ⟨k, hk⟩ := maskeNat_pow2 ((imax hi1 hi2).toNat)
+                  have hxo : x.toNat < 2 ^ k :=
+                    lt_of_le_of_lt (Nat.le_trans hxN hcov) (by omega)
+                  have hyo : y.toNat < 2 ^ k :=
+                    lt_of_le_of_lt (Nat.le_trans hyN hcov) (by omega)
+                  have hbor : x.toNat ||| y.toNat < 2 ^ k := Nat.or_lt_two_pow hxo hyo
+                  have hle : x.toNat ||| y.toNat ≤ maskeNat ((imax hi1 hi2).toNat) := by omega
+                  have hleI : ((((x.toNat ||| y.toNat : Nat))) : Int)
+                      ≤ ((((maskeNat ((imax hi1 hi2).toNat) : Nat))) : Int) := by
+                    exact_mod_cast hle
+                  have hmask : ((((maskeNat ((imax hi1 hi2).toNat) : Nat))) : Int)
+                      = maske (imax hi1 hi2) := rfl
+                  have hfin : ((((x.toNat ||| y.toNat : Nat))) : Int) ≤ maske (imax hi1 hi2) := by
+                    omega
+                  have h0 : (0 : Int) ≤ ((((x.toNat ||| y.toNat : Nat))) : Int) := by positivity
+                  simp only [eval, hva, hvb, binop, bits, show 0 ≤ x by omega,
+                    show 0 ≤ y by omega, Value.hasShape,
+                    Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                  exact ⟨h0, hfin⟩
                 · cases harith
             | bxor =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  simp [eval, hva, hvb, binop, bits, show 0 ≤ x by omega, show 0 ≤ y by omega,
-                    Value.hasShape]
+                · rename_i hc
+                  cases harith
+                  obtain ⟨hg1, hg2⟩ := hc
+                  have hxM : x ≤ imax hi1 hi2 := le_trans hx2 (le_imax_left hi1 hi2)
+                  have hyM : y ≤ imax hi1 hi2 := le_trans hy2 (le_imax_right hi1 hi2)
+                  have hxN : x.toNat ≤ (imax hi1 hi2).toNat := Int.toNat_le_toNat hxM
+                  have hyN : y.toNat ≤ (imax hi1 hi2).toNat := Int.toNat_le_toNat hyM
+                  have hcov : (imax hi1 hi2).toNat ≤ maskeNat ((imax hi1 hi2).toNat) :=
+                    maskeNat_ge _
+                  obtain ⟨k, hk⟩ := maskeNat_pow2 ((imax hi1 hi2).toNat)
+                  have hxo : x.toNat < 2 ^ k :=
+                    lt_of_le_of_lt (Nat.le_trans hxN hcov) (by omega)
+                  have hyo : y.toNat < 2 ^ k :=
+                    lt_of_le_of_lt (Nat.le_trans hyN hcov) (by omega)
+                  have hxor : x.toNat ^^^ y.toNat < 2 ^ k := Nat.xor_lt_two_pow hxo hyo
+                  have hle : x.toNat ^^^ y.toNat ≤ maskeNat ((imax hi1 hi2).toNat) := by omega
+                  have hleI : ((((x.toNat ^^^ y.toNat : Nat))) : Int)
+                      ≤ ((((maskeNat ((imax hi1 hi2).toNat) : Nat))) : Int) := by
+                    exact_mod_cast hle
+                  have hmask : ((((maskeNat ((imax hi1 hi2).toNat) : Nat))) : Int)
+                      = maske (imax hi1 hi2) := rfl
+                  have hfin : ((((x.toNat ^^^ y.toNat : Nat))) : Int) ≤ maske (imax hi1 hi2) := by
+                    omega
+                  have h0 : (0 : Int) ≤ ((((x.toNat ^^^ y.toNat : Nat))) : Int) := by positivity
+                  simp only [eval, hva, hvb, binop, bits, show 0 ≤ x by omega,
+                    show 0 ≤ y by omega, Value.hasShape,
+                    Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                  exact ⟨h0, hfin⟩
                 · cases harith
             | shl =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  simp [eval, hva, hvb, binop, show 0 ≤ x by omega, show 0 ≤ y by omega,
-                    Value.hasShape]
+                · rename_i hc
+                  cases harith
+                  obtain ⟨hg1, hg2⟩ := hc
+                  have hxnn : (0 : Int) ≤ x := le_trans hg1 hx1
+                  have hhi1nn : (0 : Int) ≤ hi1 := le_trans hg1 (le_trans hx1 hx2)
+                  have ln : lo2.toNat ≤ y.toNat := Int.toNat_le_toNat hy1
+                  have yn : y.toNat ≤ hi2.toNat := Int.toNat_le_toNat hy2
+                  have p0 : (2 : Int) ^ lo2.toNat ≤ 2 ^ y.toNat := zwei_pow_le ln
+                  have p1 : (2 : Int) ^ y.toNat ≤ 2 ^ hi2.toNat := zwei_pow_le yn
+                  have e0 : (0 : Int) ≤ 2 ^ lo2.toNat := Int.pow_nonneg (by omega)
+                  have e1 : (0 : Int) ≤ 2 ^ y.toNat := Int.pow_nonneg (by omega)
+                  have hLo : lo1 * 2 ^ lo2.toNat ≤ x * 2 ^ y.toNat :=
+                    le_trans (Int.mul_le_mul_of_nonneg_right hx1 e0)
+                      (Int.mul_le_mul_of_nonneg_left p0 hxnn)
+                  have hHi : x * 2 ^ y.toNat ≤ hi1 * 2 ^ hi2.toNat :=
+                    le_trans (Int.mul_le_mul_of_nonneg_right hx2 e1)
+                      (Int.mul_le_mul_of_nonneg_left p1 hhi1nn)
+                  simp only [eval, hva, hvb, binop, show 0 ≤ x by omega,
+                    show 0 ≤ y by omega, Value.hasShape,
+                    Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                  exact ⟨hLo, hHi⟩
                 · cases harith
             | shr =>
                 dsimp only at harith
                 split at harith
-                · rename_i hc; cases harith
-                  simp [eval, hva, hvb, binop, show 0 ≤ x by omega, show 0 ≤ y by omega,
-                    Value.hasShape]
+                · rename_i hc
+                  cases harith
+                  obtain ⟨hg1, hg2⟩ := hc
+                  have hxnn : (0 : Int) ≤ x := le_trans hg1 hx1
+                  have hhi1nn : (0 : Int) ≤ hi1 := le_trans hg1 (le_trans hx1 hx2)
+                  have ln : lo2.toNat ≤ y.toNat := Int.toNat_le_toNat hy1
+                  have yn : y.toNat ≤ hi2.toNat := Int.toNat_le_toNat hy2
+                  have p0 : (2 : Int) ^ lo2.toNat ≤ 2 ^ y.toNat := zwei_pow_le ln
+                  have p1 : (2 : Int) ^ y.toNat ≤ 2 ^ hi2.toNat := zwei_pow_le yn
+                  have e0 : (0 : Int) < 2 ^ lo2.toNat := Int.pow_pos (by omega)
+                  have e1 : (0 : Int) < 2 ^ y.toNat := Int.pow_pos (by omega)
+                  have e2 : (0 : Int) < 2 ^ hi2.toNat := Int.pow_pos (by omega)
+                  have hLo : lo1.tdiv (2 ^ hi2.toNat) ≤ x.tdiv (2 ^ y.toNat) :=
+                    le_trans (Int.tdiv_le_tdiv e2 hx1) (tdiv_anti_nonneg hxnn e1 p1)
+                  have hHi : x.tdiv (2 ^ y.toNat) ≤ hi1.tdiv (2 ^ lo2.toNat) :=
+                    le_trans (Int.tdiv_le_tdiv e1 hx2) (tdiv_anti_nonneg hhi1nn e0 p0)
+                  simp only [eval, hva, hvb, binop, show 0 ≤ x by omega,
+                    show 0 ≤ y by omega, Value.hasShape,
+                    Option.some.injEq, exists_eq_left', decide_eq_true_eq]
+                  exact ⟨hLo, hHi⟩
                 · cases harith
             | eq => cases harith
             | ne => cases harith
@@ -688,5 +1156,143 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
   | .tagOf t p, Δ, s, sh => by
       intro _ _ _ h
       cases p <;> simp [schluss] at h
+
+/-- The checker with a carried option target bound is still safe: what it accepts
+    evaluates, and to a value of the computed shape. For every form but `someOf`
+    this is `schluss_sicher` through the delegation; for `someOf` the inner value
+    is a number by `schluss_sicher`, hence `present`, hence `.opt`. The bound
+    itself leaves no trace in the shape -- `Shape.opt` carries none (Fund 2) --
+    it only decides acceptance. -/
+theorem schlussMitZiel_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ)
+    (ziel : Option (Int × Int)) (e : Expr) (Δ : Lokal) (s : State) (sh : Shape)
+    (hw : WF Γ s.world) (hl : WFL Δ s.local') (hk : KettenWohlgeformt D s.world)
+    (h : schlussMitZiel D ziel Δ e = some sh) :
+    ∃ v, eval s e = some v ∧ v.hasShape sh = true := by
+  cases e with
+  | someOf a =>
+    simp only [schlussMitZiel] at h
+    split at h
+    · rename_i sa ha
+      cases ziel with
+      | none =>
+        simp only [somePasst] at h
+        split at h
+        · rename_i hz
+          cases h
+          obtain ⟨v, hv, hvs⟩ := schluss_sicher D Γ hD a Δ s _ hw hl hk ha
+          obtain ⟨n, rfl⟩ := zahl_some_int hz hvs
+          simp [eval, hv, Value.hasShape]
+        · exact absurd h (by simp)
+      | some bh =>
+        obtain ⟨lo, hi⟩ := bh
+        cases sa with
+        | int =>
+          simp only [somePasst] at h
+          cases h
+        | bool =>
+          simp only [somePasst] at h
+          cases h
+        | opt =>
+          simp only [somePasst] at h
+          cases h
+        | intIn lo' hi' =>
+          simp only [somePasst] at h
+          split at h
+          · rename_i hs
+            cases h
+            obtain ⟨v, hv, hvs⟩ := schluss_sicher D Γ hD a Δ s _ hw hl hk ha
+            obtain ⟨n, rfl, _, _⟩ := Value.hasShape_intIn_true v lo' hi' hvs
+            simp [eval, hv, Value.hasShape]
+          · exact absurd h (by simp)
+        | sum cs =>
+          simp only [somePasst] at h
+          cases h
+    · exact absurd h (by simp)
+  | lit v =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.lit v) Δ s sh hw hl hk h
+  | name n =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.name n) Δ s sh hw hl hk h
+  | place c i f =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.place c i f) Δ s sh hw hl hk h
+  | global g =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.global g) Δ s sh hw hl hk h
+  | un op a =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.un op a) Δ s sh hw hl hk h
+  | bin op a b =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.bin op a b) Δ s sh hw hl hk h
+  | fieldOf c f =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.fieldOf c f) Δ s sh hw hl hk h
+  | forallSlots v n b =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.forallSlots v n b) Δ s sh hw hl hk h
+  | existsSlots v n b =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.existsSlots v n b) Δ s sh hw hl hk h
+  | reaches c a z via cnt =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.reaches c a z via cnt) Δ s sh hw hl hk h
+  | chainFrom c hd x via cnt =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.chainFrom c hd x via cnt) Δ s sh hw hl hk h
+  | hasShape n sh' =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.hasShape n sh') Δ s sh hw hl hk h
+  | wrapTo b sg a =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.wrapTo b sg a) Δ s sh hw hl hk h
+  | tagOf t p =>
+    simp only [schlussMitZiel] at h
+    exact schluss_sicher D Γ hD (.tagOf t p) Δ s sh hw hl hk h
+
+/-! ## 4. Decided examples -- the formulas above, computed
+
+    Each example evaluates `schluss` (or `schlussMitZiel`) on literals and checks
+    the exact range the checker promises. They run wherever the file builds. -/
+
+/-- An empty declaration and an empty scope: literals need neither. -/
+def leerD : Deklaration := ⟨fun _ _ => none, fun _ => 0, fun _ _ => none, fun _ => none⟩
+
+/-- `7 / 2` over point ranges: `teile` gives `3 .. 3`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .div (.lit (.int 7)) (.lit (.int 2))) = some (.intIn 3 3) := by decide
+
+/-- `-7 / 2` truncates toward zero through the four corners: `-3 .. -3`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .div (.lit (.int (-7))) (.lit (.int 2))) = some (.intIn (-3) (-3)) := by decide
+
+/-- `7 % 2`: `rest` gives `0 .. min (2 - 1) 7`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .rem (.lit (.int 7)) (.lit (.int 2))) = some (.intIn 0 1) := by decide
+
+/-- `6 & 3`: `bitweise` gives `0 .. min 6 3`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .band (.lit (.int 6)) (.lit (.int 3))) = some (.intIn 0 3) := by decide
+
+/-- `6 | 3`: `bitweise` gives `0 .. maske 6` with `maske 6 = 7`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .bor (.lit (.int 6)) (.lit (.int 3))) = some (.intIn 0 7) := by decide
+
+/-- `3 << 2`: `schiebe_links` gives `3 * 2^2 .. 3 * 2^2`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .shl (.lit (.int 3)) (.lit (.int 2))) = some (.intIn 12 12) := by decide
+
+/-- `7 >> 1`: `schiebe_rechts` gives `7 / 2^1 .. 7 / 2^1`. -/
+example : schluss leerD (fun _ => none)
+    (.bin .shr (.lit (.int 7)) (.lit (.int 1))) = some (.intIn 3 3) := by decide
+
+/-- `Some(8)` against the payload bound `0 .. 7` (`gift/170`): refused (F10). -/
+example : schlussMitZiel leerD (some (0, 7)) (fun _ => none)
+    (.someOf (.lit (.int 8))) = none := by decide
+
+/-- ... and inside `0 .. 8` it passes. -/
+example : schlussMitZiel leerD (some (0, 8)) (fun _ => none)
+    (.someOf (.lit (.int 8))) = some .opt := by decide
 
 end Gabbro.Sicherheit
