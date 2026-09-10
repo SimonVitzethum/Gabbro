@@ -51,6 +51,14 @@
          Zweigs nach dem Zweig noch von derselben Gestalt, wo ein spaeterer Leser sie sieht.
     (U4) Die Faelle eines `tagged`-Typs tragen VERSCHIEDENE Namen (`D005` sagt das ab, hier
          ist es `namenEindeutig` als Bedingung des Pruefers).
+    (U5) Kein erklaerter Gerufener divergiert (`DivergenzOK` ueber `Signatur.divergiert`).
+         Der Fehlerzweig haelt einen Ruf, der nicht zurueckkehrt, nur ueber
+         `endetMitAusgang` (F1) -- `step` aber kehrt von jedem Ruf zurueck. Ohne diese
+         Klausel liefe die Fortsetzung im Modell mit ungebundener Bindung weiter; mit
+         ihr ist der Satz fuer Programme, die einen divergierenden Gerufenen erklaeren,
+         leer. Was faellig ist, steht daneben: ein `step`, das einen divergierenden Ruf
+         nicht zurueckkehren laesst (`Body.lean`), und der Erzeuger, der `divergiert`
+         aus `Typ::Nie` setzt (`lean.rs`).
 -/
 import Gabbro.Sicherheit.Ausdruck
 
@@ -187,13 +195,19 @@ structure Signatur where
   ergebnis : Option Shape
   /-- `or R`: die Faelle des Fehlerkanals; `[]`: kein Fehlerkanal. -/
   gruende  : List String
+  /-- `-> never`: der Gerufene kehrt nicht zurueck (F1). Voreinstellung `false`, damit jedes
+      bestehende Literal weitergeht; der Erzeuger setzt es aus `Typ::Nie`. -/
+  divergiert : Bool := false
 
 /-- Das Programm, wie der Pruefer es sieht: Deklarationen, Signaturen, und je Schleife der
-    Sichtbereich, unter dem sie steht (U2). -/
+    Sichtbereich, unter dem sie steht (U2). `ruferR` ist der Fehlerkanal der Funktion, in
+    der geprueft wird -- ein `return f(a);` reicht einen Grund nur dorthin durch (F6).
+    Voreinstellung `[]`, also das bisherige Verhalten. -/
 structure Programm where
   D        : Deklaration
   sig      : String → Option Signatur
   schleife : String → Option Umgebung
+  ruferR   : List String := []
 
 /-- Der Sichtbereich beim EINTRITT in einen Gerufenen: seine Parameter. -/
 def paramUmgebung : List (String × Option Shape) → Umgebung
@@ -264,20 +278,73 @@ def antwortGestaltPasst : Option Shape → Option Shape → Bool
   | none, none => true
   | _, _ => false
 
-/-- Der Fehlerzweig eines `let … else` endet mit `return`, `leave` oder `next` -- `M1`
-    verlangt es (`SYNTAX.md`:1029: "the `else` branch must diverge or return"). Ohne das
-    liefe der Rumpf mit einer Bindung weiter, die keinen Wert bekam. -/
-def istAusgang : Stmt → Bool
+/-- Haelt `rs` jeden Grund von `cs`? Die Boolesche Haelfte von `⊆` (F6). -/
+def grundEnthalten : List String → String → Bool
+  | [], _ => false
+  | c :: rest, r => (r == c) || grundEnthalten rest r
+
+theorem grundEnthalten_mem {rs : List String} {r : String}
+    (h : grundEnthalten rs r = true) : r ∈ rs := by
+  induction rs with
+  | nil => simp [grundEnthalten] at h
+  | cons c rest ih =>
+      simp only [grundEnthalten, Bool.or_eq_true, beq_iff_eq] at h
+      rcases h with rfl | h
+      · simp
+      · exact List.mem_cons_of_mem _ (ih h)
+
+/-- Der Fehlerkanal des Gerufenen gegen den des Rufers (F6). -/
+def gruendePassen : List String → List String → Bool
+  | [], _ => true
+  | r :: rest, rs => grundEnthalten rs r && gruendePassen rest rs
+
+theorem gruendePassen_mem {cs rs : List String} {r : String}
+    (h : gruendePassen cs rs = true) (hm : r ∈ cs) : r ∈ rs := by
+  induction cs with
+  | nil => simp at hm
+  | cons c rest ih =>
+      simp only [gruendePassen, Bool.and_eq_true] at h
+      obtain ⟨h1, h2⟩ := h
+      rcases List.mem_cons.mp hm with rfl | hm
+      · exact grundEnthalten_mem h1
+      · exact ih h2 hm
+
+/-- Der Fehlerzweig eines `let … else` endet mit `return`, `leave`, `next` -- oder mit
+    einem Ruf, der nicht zurueckkehrt (F1) -- `M1` verlangt es (`SYNTAX.md`:1029: "the
+    `else` branch must diverge or return"). Ohne das liefe der Rumpf mit einer Bindung
+    weiter, die keinen Wert bekam. -/
+def istAusgang (sig : String → Option Signatur) : Stmt → Bool
   | .ret _ => true
   | .retCall _ _ _ _ => true
   | .leave => true
   | .exit => true
+  | .call f _ _ _ =>
+      match sig f with
+      | some S => S.divergiert
+      | none => false
   | _ => false
 
-def endetMitAusgang : List Stmt → Bool
+def endetMitAusgang (sig : String → Option Signatur) : List Stmt → Bool
   | [] => false
-  | [a] => istAusgang a
-  | _ :: rest => endetMitAusgang rest
+  | [a] => istAusgang sig a
+  | _ :: rest => endetMitAusgang sig rest
+
+/-- Der Sichtbereich unter der Bedingung -- heute die Identitaet (F5). `Ge` traegt keine
+    Wertfakten (`M1`s Fakten -- Vergleiche, Bereiche -- leben nicht in `Umgebung`), also
+    verfeinert keine Quellbedingung ihn; die Stelle steht, damit die Polaritaet getragen
+    ist, wenn sie es einmal tut. -/
+def verfeinere (Δ : Umgebung) (_c : Expr) (_b : Bool) : Umgebung := Δ
+
+theorem verfeinere_erweitert (Δ : Umgebung) (c : Expr) (b : Bool) :
+    erweitert Δ (verfeinere Δ c b) :=
+  erweitert_refl _
+
+/-- Die Vereinigung zweier Zweigbereiche (F5): stimmt beides ueberein, gilt es danach --
+    sonst faellt die Stelle auf den Eintrittsbereich zurueck, wie bisher. Der Vergleich
+    ist listenfoermig (reihenfolgeempfindlich); ein Stellungswechsel kostet Praezision,
+    nie Lauterkeit. -/
+def vereinige (Δ Δt Δe : Umgebung) : Umgebung :=
+  if Δt = Δe then Δt else Δ
 
 /-- Der Ruf: die Signatur steht, die Namen der Parameter stimmen, die Argumente passen, und
     die VORBEDINGUNG ist unter den Parametern ein `bool` -- ein `requires`, das steckenbleibt,
@@ -314,8 +381,9 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
       | some sh => binde Δ n (.form sh)
       | none => none
   | Δ, .ite c t e =>
-      match schluss P.D (formen Δ) c, pruefeBlock P erg Δ t, pruefeBlock P erg Δ e with
-      | some .bool, some _, some _ => some Δ
+      match schluss P.D (formen Δ) c, pruefeBlock P erg (verfeinere Δ c true) t,
+        pruefeBlock P erg (verfeinere Δ c false) e with
+      | some .bool, some Δt, some Δe => some (vereinige Δ Δt Δe)
       | _, _, _ => none
   | Δ, .onOption g bn onP onA =>
       match schluss P.D (formen Δ) g, binde Δ bn (.form .int) with
@@ -339,7 +407,7 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
       match rufPasst P (formen Δ) f ps as pre with
       | some S =>
           if S.gruende = [] then none else
-          if !endetMitAusgang onErr then none else
+          if !endetMitAusgang P.sig onErr then none else
           match binde Δ err (.grund S.gruende) with
           | some ΔE =>
               match pruefeBlock P erg ΔE onErr with
@@ -365,7 +433,8 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
       | _ => none
   | Δ, .retCall f ps as pre =>
       match rufPasst P (formen Δ) f ps as pre with
-      | some S => if S.gruende = [] && antwortGestaltPasst erg S.ergebnis then some Δ else none
+      | some S =>
+          if gruendePassen S.gruende P.ruferR && antwortGestaltPasst erg S.ergebnis then some Δ else none
       | none => none
   | Δ, .loop id inv body =>
       match P.schleife id, schluss P.D (formen Δ) inv with
@@ -516,13 +585,24 @@ end
 def Welt (D : Deklaration) (Γ : Typing) (σ : World) : Prop :=
   WF Γ σ ∧ KettenWohlgeformt D σ
 
+/-- **(U5)** Kein erklaerter Gerufener divergiert. Der Fehlerzweig haelt einen Ruf, der
+    nicht zurueckkehrt, nur ueber `endetMitAusgang` -- `step` aber kehrt von jedem Ruf
+    zurueck. Ohne diese Klausel waere der Zweig im Modell erreichbar und die Fortsetzung
+    liefe mit ungebundener Bindung; mit ihr ist der Satz fuer Programme, die einen
+    divergierenden Gerufenen erklaeren, leer. Das ist Schuldigkeit, kein Befund: was
+    faellig ist, ist ein `step`, das einen divergierenden Ruf nicht zurueckkehren laesst
+    (`Body.lean`), und der Erzeuger, der `divergiert` aus `Typ::Nie` setzt (`lean.rs`). -/
+def DivergenzOK (sig : String → Option Signatur) : Prop :=
+  ∀ f S, sig f = some S → S.divergiert = false
+
 /-- **(U1)** Jeder erklaerte Gerufene haelt die Welt und antwortet gemaess Signatur. -/
 def UmgebungOK (P : Programm) (Γ : Typing) (ρ : Env) : Prop :=
   ∀ f S, P.sig f = some S → ∀ t, Welt P.D Γ t.world →
     Welt P.D Γ (ρ f t).1.world ∧
     (match S.ergebnis with
      | some sh => ∃ v, (ρ f t).2 = some v ∧ (v.hasShape sh = true ∨ ∃ r, r ∈ S.gruende ∧ v = .reason r)
-     | none => (ρ f t).2 = none ∨ ∃ r, r ∈ S.gruende ∧ (ρ f t).2 = some (.reason r))
+     | none => (ρ f t).2 = none ∨ ∃ r, r ∈ S.gruende ∧ (ρ f t).2 = some (.reason r)) ∧
+    DivergenzOK P.sig
 
 /-- **(U2)** Jede registrierte Schleife haelt die Welt und ihren Sichtbereich. -/
 def SchleifenOK (P : Programm) (Γ : Typing) (ρ : Env) : Prop :=
@@ -644,11 +724,14 @@ theorem argumente_sicher {P : Programm} {Γ : Typing} (hD : Deklariert P.D Γ) {
 
 /-! ## 6. Der Sicherheitssatz fuer Anweisungen -/
 
-/-- Passt die Antwort zur erklaerten Antwortgestalt? -/
-def AntwortPasst : Option Shape → Option Value → Prop
-  | some sh, some v => v.hasShape sh = true
-  | none, none => True
-  | _, _ => False
+/-- Passt die Antwort zur erklaerten Antwortgestalt -- oder ist sie ein Grund an den
+    Rufer? `R` ist der Fehlerkanal des Rufers (`P.ruferR`): ein Wert muss die Gestalt
+    treffen, ein Grund in `R` liegen (F6). -/
+def AntwortPasst : Option Shape → List String → Option Value → Prop
+  | some sh, R, some v => v.hasShape sh = true ∨ ∃ r, r ∈ R ∧ v = .reason r
+  | none, R, none => True
+  | none, R, some v => ∃ r, r ∈ R ∧ v = .reason r
+  | _, _, _ => False
 
 /-- **Was nach einem Schritt gilt** -- je Ausgang. `Δ0` ist der Sichtbereich beim Eintritt,
     `Δ'` der nach der Anweisung; ein Ausgang aus einem Block (`return`, `next`, `leave`)
@@ -657,7 +740,7 @@ def AntwortPasst : Option Shape → Option Value → Prop
 def Ergebnis (P : Programm) (Γ : Typing) (erg : Option Shape) (Δ0 Δ' : Umgebung) :
     Outcome → Prop
   | .running s' => Welt P.D Γ s'.world ∧ WFU Δ' s'.local'
-  | .returned s' v => Welt P.D Γ s'.world ∧ WFU Δ0 s'.local' ∧ AntwortPasst erg v
+  | .returned s' v => Welt P.D Γ s'.world ∧ WFU Δ0 s'.local' ∧ AntwortPasst erg P.ruferR v
   | .exited s' => Welt P.D Γ s'.world ∧ WFU Δ0 s'.local'
   | .left s' => Welt P.D Γ s'.world ∧ WFU Δ0 s'.local'
   | .stuck => False
@@ -699,7 +782,14 @@ theorem pruefe_erweitert (P : Programm) (erg : Option Shape) :
       · cases h
   | .ite c t e, Δ, Δ', h => by
       simp only [pruefe] at h; split at h
-      · cases h; exact erweitert_refl _
+      · rename_i Δt Δe hc ht he
+        cases h
+        simp only [vereinige]
+        by_cases heq : Δt = Δe
+        · rw [if_pos heq]
+          exact erweitert_trans (verfeinere_erweitert Δ c true) (pruefeBlock_erweitert P erg t _ _ ht)
+        · rw [if_neg heq]
+          exact erweitert_refl _
       · cases h
   | .onOption g bn onP onA, Δ, Δ', h => by
       simp only [pruefe] at h; split at h
@@ -952,8 +1042,8 @@ theorem fall_hat_arm : ∀ (arms : List (String × Option String × List Stmt))
 theorem antwort_ohne_kanal {P : Programm} {Γ : Typing} {ρ : Env} (hU : UmgebungOK P Γ ρ)
     {f : String} {S : Signatur} (hS : P.sig f = some S) (hg : S.gruende = [])
     {t : State} (hw : Welt P.D Γ t.world) :
-    Welt P.D Γ (ρ f t).1.world ∧ AntwortPasst S.ergebnis (ρ f t).2 := by
-  obtain ⟨hw', hr⟩ := hU f S hS t hw
+    Welt P.D Γ (ρ f t).1.world ∧ AntwortPasst S.ergebnis [] (ρ f t).2 := by
+  obtain ⟨hw', hr, _⟩ := hU f S hS t hw
   refine ⟨hw', ?_⟩
   cases he : S.ergebnis with
   | none =>
@@ -966,11 +1056,44 @@ theorem antwort_ohne_kanal {P : Programm} {Γ : Typing} {ρ : Env} (hU : Umgebun
       obtain ⟨v, hv, hvs⟩ := hr
       rw [hv]
       rcases hvs with hvs | ⟨r, hr, _⟩
-      · exact hvs
+      · exact Or.inl hvs
       · rw [hg] at hr; simp at hr
 
+/-- Die Antwort eines Gerufenen MIT Fehlerkanal, wie (U1) sie zusagt -- in die Antwort
+    des Rufers (F6): die Gestalt muss treffen (`antwortGestaltPasst`), und ein Grund muss
+    im Kanal des Rufers liegen (`gruendePassen`). -/
+theorem antwort_mit_kanal {P : Programm} {Γ : Typing} {ρ : Env} (hU : UmgebungOK P Γ ρ)
+    {f : String} {S : Signatur} (hS : P.sig f = some S)
+    {t : State} (hw : Welt P.D Γ t.world)
+    {erg : Option Shape} (hpass : antwortGestaltPasst erg S.ergebnis = true)
+    (hsub : gruendePassen S.gruende P.ruferR = true) :
+    Welt P.D Γ (ρ f t).1.world ∧ AntwortPasst erg P.ruferR (ρ f t).2 := by
+  obtain ⟨hw', hres, _⟩ := hU f S hS t hw
+  refine ⟨hw', ?_⟩
+  cases he : S.ergebnis with
+  | none =>
+      rw [he] at hres
+      cases erg with
+      | none =>
+          rcases hres with hres | ⟨r, hr, hres⟩
+          · rw [hres]; trivial
+          · rw [hres]; exact ⟨r, gruendePassen_mem hsub hr, rfl⟩
+      | some _ => simp [antwortGestaltPasst, he] at hpass
+  | some sh =>
+      rw [he] at hres
+      cases erg with
+      | none => simp [antwortGestaltPasst, he] at hpass
+      | some _ =>
+          simp only [antwortGestaltPasst, he] at hpass
+          obtain ⟨v, hv, hvs⟩ := hres
+          rw [hv]
+          rcases hvs with hvs | ⟨r, hr, rfl⟩
+          · exact Or.inl (passt_hasShape hpass hvs)
+          · exact Or.inr ⟨r, gruendePassen_mem hsub hr, rfl⟩
 
-theorem ausgang_nicht_running (ρ : Env) (a : Stmt) (s s' : State) (h : istAusgang a = true) :
+
+theorem ausgang_nicht_running (ρ : Env) (sig : String → Option Signatur)
+    (hdiv : DivergenzOK sig) (a : Stmt) (s s' : State) (h : istAusgang sig a = true) :
     step ρ a s ≠ .running s' := by
   intro hx
   cases a <;> simp [istAusgang] at h
@@ -983,23 +1106,31 @@ theorem ausgang_nicht_running (ρ : Env) (a : Stmt) (s s' : State) (h : istAusga
     cases v
     · simp [step] at hx
     · simp only [step] at hx; split at hx <;> simp at hx
+  case call f ps as pre =>
+    cases hs : sig f with
+    | none => simp [hs, istAusgang] at h
+    | some S =>
+        simp only [hs, istAusgang] at h
+        have hnb := hdiv f S hs
+        rw [h] at hnb
+        simp at hnb
   case exit => simp [step] at hx
   case leave => simp [step] at hx
 
-theorem endet_nicht_running (ρ : Env) :
-    ∀ (b : List Stmt) (s s' : State), endetMitAusgang b = true → exec ρ b s ≠ .running s'
+theorem endet_nicht_running (ρ : Env) (sig : String → Option Signatur) (hdiv : DivergenzOK sig) :
+    ∀ (b : List Stmt) (s s' : State), endetMitAusgang sig b = true → exec ρ b s ≠ .running s'
   | [], s, s', h, _ => by simp [endetMitAusgang] at h
   | [a], s, s', h, hx => by
       simp only [endetMitAusgang] at h
       simp only [exec] at hx
       split at hx
-      · rename_i t ht; exact ausgang_nicht_running ρ a s t h ht
+      · rename_i t ht; exact ausgang_nicht_running ρ sig hdiv a s t h ht
       · rename_i o ho; exact ho _ hx
   | a :: b :: rest, s, s', h, hx => by
-      have h' : endetMitAusgang (b :: rest) = true := h
+      have h' : endetMitAusgang sig (b :: rest) = true := h
       simp only [exec] at hx
       split at hx
-      · exact endet_nicht_running ρ (b :: rest) _ s' h' hx
+      · exact endet_nicht_running ρ sig hdiv (b :: rest) _ s' h' hx
       · rename_i o ho; exact ho _ hx
 
 /-- Ein Ausgang, der KEIN `running` ist, braucht nur den Eintritts-Sichtbereich. -/
@@ -1012,15 +1143,28 @@ theorem Ergebnis_ausgang {P : Programm} {Γ : Typing} {erg : Option Shape}
   · exact ⟨h.1, WFU_erweitert h0 h.2⟩
   · exact ⟨h.1, WFU_erweitert h0 h.2⟩
 
-theorem antwort_uebertragen {erg z : Option Shape} {v : Option Value}
-    (h : antwortGestaltPasst erg z = true) (hv : AntwortPasst z v) : AntwortPasst erg v := by
-  cases erg <;> cases z <;> simp [antwortGestaltPasst] at h
-  · cases v with
-    | none => trivial
-    | some _ => exact hv.elim
-  · cases v with
-    | none => exact hv.elim
-    | some w => exact passt_hasShape h hv
+theorem antwort_uebertragen {erg z : Option Shape} {R : List String} {v : Option Value}
+    (h : antwortGestaltPasst erg z = true) (hv : AntwortPasst z R v) : AntwortPasst erg R v := by
+  cases erg with
+  | none =>
+      cases z with
+      | none =>
+          cases v with
+          | none => trivial
+          | some _ => exact hv
+      | some _ => simp [antwortGestaltPasst] at h
+  | some _ =>
+      cases z with
+      | none => simp [antwortGestaltPasst] at h
+      | some sh =>
+          simp only [antwortGestaltPasst] at h
+          cases v with
+          | none => simp [AntwortPasst] at hv
+          | some w =>
+              simp only [AntwortPasst] at hv ⊢
+              rcases hv with hv | ⟨r, hr, rfl⟩
+              · exact Or.inl (passt_hasShape h hv)
+              · exact Or.inr ⟨r, hr, rfl⟩
 
 theorem pruefeArme_gibt_Δ (P : Programm) (erg : Option Shape) (Δ : Umgebung) :
     ∀ (arms : List (String × List Stmt)) (Δ' : Umgebung),
@@ -1159,12 +1303,32 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
         obtain ⟨b, rfl⟩ := Value.hasShape_bool_true v hvs
         cases b
         · simp only [step, hv]
-          rcases pruefeBlock_sicher P Γ ρ hD hU hS erg e Δ Δe s he hw hl with hr | hlog
-          · left; exact Ergebnis_schwaecher (erweitert_refl _) (pruefeBlock_erweitert P erg e Δ Δe he) hr
+          have hlE : WFU (verfeinere Δ c false) s.local' := by simpa [verfeinere] using hl
+          rcases pruefeBlock_sicher P Γ ρ hD hU hS erg e (verfeinere Δ c false) Δe s he hw hlE with hr | hlog
+          · left
+            by_cases heq : Δt = Δe
+            · have h1 : erweitert Δt Δe := by rw [heq]; exact erweitert_refl _
+              simp only [vereinige]
+              rw [if_pos heq]
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c false) h1 hr
+            · simp only [vereinige]
+              rw [if_neg heq]
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c false)
+                (erweitert_trans (verfeinere_erweitert Δ c false) (pruefeBlock_erweitert P erg e _ _ he)) hr
           · right; exact LogikS.sonst hv hlog
         · simp only [step, hv]
-          rcases pruefeBlock_sicher P Γ ρ hD hU hS erg t Δ Δt s ht hw hl with hr | hlog
-          · left; exact Ergebnis_schwaecher (erweitert_refl _) (pruefeBlock_erweitert P erg t Δ Δt ht) hr
+          have hlT : WFU (verfeinere Δ c true) s.local' := by simpa [verfeinere] using hl
+          rcases pruefeBlock_sicher P Γ ρ hD hU hS erg t (verfeinere Δ c true) Δt s ht hw hlT with hr | hlog
+          · left
+            by_cases heq : Δt = Δe
+            · have h1 : erweitert Δt Δt := erweitert_refl _
+              simp only [vereinige]
+              rw [if_pos heq]
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c true) h1 hr
+            · simp only [vereinige]
+              rw [if_neg heq]
+              exact Ergebnis_schwaecher (verfeinere_erweitert Δ c true)
+                (erweitert_trans (verfeinere_erweitert Δ c true) (pruefeBlock_erweitert P erg t _ _ ht)) hr
           · right; exact LogikS.dann hv hlog
       · cases h
   | .onOption g bn onP onA, Δ, Δ', s, h, hw, hl => by
@@ -1227,8 +1391,10 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
               | none => simp only [eintritt, hres, AntwortPasst] at ha
               | some v =>
                   simp only [eintritt, hres, AntwortPasst] at ha
-                  simp only [Ergebnis]
-                  exact ⟨hw', WFU_binde h hl ha⟩
+                  rcases ha with ha | ⟨r, hr, _⟩
+                  · simp only [Ergebnis]
+                    exact ⟨hw', WFU_binde h hl ha⟩
+                  · simp at hr
           · cases h
         · cases h
       · cases h
@@ -1242,7 +1408,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
           split at h
           · cases h
           · rename_i hEnd'
-            have hEnd : endetMitAusgang onErr = true := by simpa using hEnd'
+            have hEnd : endetMitAusgang P.sig onErr = true := by simpa using hEnd'
             split at h
             · rename_i ΔE hE
               split at h
@@ -1251,7 +1417,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                 obtain ⟨hsig, _⟩ := rufPasst_eq hr
                 cases b
                 · right; exact LogikS.rufSonst hvs (by rw [hb]; simp)
-                · obtain ⟨hw', hres⟩ := hU f S hsig (eintritt s ps vs) hw
+                · obtain ⟨hw', hres, hdivP⟩ := hU f S hsig (eintritt s ps vs) hw
                   simp only [step, hvs, eintritt] at hb ⊢
                   simp only [hb]
                   -- Drei Antworten: ein Grund, ein Wert, keine.
@@ -1292,7 +1458,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                                bindLocal s.local' err (.reason x)⟩ hErr hw' hlE with hr3 | hlog
                           · left
                             exact Ergebnis_ausgang (binde_erweitert hE)
-                              (fun s' => endet_nicht_running ρ onErr _ s' hEnd) hr3
+                              (fun s' => endet_nicht_running ρ P.sig hdivP onErr _ s' hEnd) hr3
                           · right; exact LogikS.fehlerzweig hvs hr2 hlog
                       | int k => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
                       | bool t => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
@@ -1353,17 +1519,16 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
       · rename_i S hr
         split at h
         · rename_i hc; cases h
-          simp only [Bool.and_eq_true, decide_eq_true_eq] at hc
+          simp only [Bool.and_eq_true] at hc
           obtain ⟨vs, hvs, b, hb⟩ := ruf_eintritt hD hw hl hr
           obtain ⟨hsig, _⟩ := rufPasst_eq hr
           cases b
           · right; exact LogikS.rufZurueck hvs (by rw [hb]; simp)
           · left
-            obtain ⟨hw', ha⟩ := antwort_ohne_kanal hU hsig hc.1 (t := eintritt s ps vs) hw
+            obtain ⟨hw', ha⟩ := antwort_mit_kanal hU hsig (t := eintritt s ps vs) hw hc.2 hc.1
             simp only [step, hvs, eintritt] at hb ⊢
             simp only [hb, Ergebnis]
-            refine ⟨hw', hl, ?_⟩
-            exact antwort_uebertragen hc.2 ha
+            exact ⟨hw', hl, ha⟩
         · cases h
       · cases h
   | .loop id inv body, Δ, Δ', s, h, hw, hl => by
@@ -1456,7 +1621,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
           obtain ⟨v, hv, hvs⟩ := schluss_sicher' hD hw hl he
           left
           simp only [step, hv, Ergebnis, AntwortPasst]
-          exact ⟨hw, hl, passt_hasShape hp hvs⟩
+          exact ⟨hw, hl, Or.inl (passt_hasShape hp hvs)⟩
         · cases h
       · cases h
   | .exit, Δ, Δ', s, h, hw, hl => by
