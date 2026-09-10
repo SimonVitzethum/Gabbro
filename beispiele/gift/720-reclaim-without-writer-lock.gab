@@ -1,0 +1,45 @@
+-- erwartet: H012
+-- **Reclaiming without the writer lock -- the second meaning of `H012`.**
+--
+-- `H012` is issued at two sites in `geteilt.rs` with two different rules: the lock order
+-- across the call boundary (`rufprobe`, covered by `gift/142`, `/250`, `/590`) and the
+-- reclaim without the writer lock (`rcu_schutz`, covered by nothing until this probe).
+-- Both write the same code, so either rule failing alone would keep every probe green --
+-- RACE.md §1.1. This file isolates the second site.
+--
+-- The shape: `frei` is reclaimed outside any `observes` (so `H011` stays silent) and the
+-- grace-period assumption names the domain (so `H015` stays silent). The reclaim branch
+-- returns before the write-side check (so `H010` stays silent), and the writer lock
+-- guards the domain `{ Konten }` but not `frei` itself (so `H007` stays silent -- a lock
+-- taken nowhere cannot cover the reclaim, and that absence is exactly the finding).
+--
+-- One companion stands beside the finding and belongs to it: `H008`, because a writer
+-- lock taken nowhere is what this file is about. The precedent is `gift/272`, which
+-- carries `H017` together with `H007` and `H009`.
+
+module gift::rueckgabe_ohne_schreibersperre {
+
+table Konten count 256 {
+    slot {
+        zaehler : u32 in 0 .. 65535,
+    }
+}
+
+rcu BACCT protects { Konten } reclaims frei;
+
+static mut frei : option index into Konten = None;
+
+lock SCHREIBER protects { Konten } rank 3 held <= 100 ops;
+
+impl fn zurueckgeben_ohne_sperre(i : index into Konten)
+    effects { writes frei }
+    costs   <= 4 ops
+{
+    frei = Some(i);
+}
+
+assume gnadenfrist_ist_abgelaufen
+    "Nach der Ruecknahme des Zeigers ist kein Leser mehr in einem `observes BACCT`."
+    falsifier sonde_leser_noch_drin;
+
+}

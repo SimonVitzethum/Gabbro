@@ -1082,7 +1082,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
 | `observed by a` | the other side is the assumption `a` | `D.Annahme` |
 | `group G over { T, U } { invariant I }` | `I` has carriers `T` and `U`: owed by every function that writes either («SG-10»); `U003` (a function writing two carriers holds all their locks) is the `braucht` of each access, `U005` (two ranks equal) is `keine_verklemmung`'s premise, `U006` (leaving between the writes) is `schuldet` at every `return` | `D.Inv` with `traeger = [T, U]` |
-| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently. The joint run of N declared bodies is `GemeinsamerLauf` (`InterferenzAllgemein.lean`): one world chain, each step in its own frame, every pair declared; lock-shared carriers carry an invariant each (`TraegerInv`), and `AllgemeinStabil` names the stability shape (a `def`, proofs later) |
+| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently. The joint run of N declared bodies is `GemeinsamerLauf` (`InterferenzAllgemein.lean`): one world chain, each step in its own frame, every pair declared; lock-shared carriers carry an invariant each (`TraegerInv`), and `AllgemeinStabil` proves it: sequentially valid assertions survive to the last chain world (shared-side preservation per step assumed, entry validity at the chain head) |
 | `accumulates` (§1) | a global plus a generated `merge` assignment; `per cpu N` is the cell table | SUGAR |
 
 **What the discipline proves — over interleavings, since the evening of 2026-09-09.** Every
@@ -1296,9 +1296,9 @@ hardware keeps its `effects` (H1). **`kein_wettlauf`**, **`kein_wettlauf_global`
 **`keine_ueberkreuzung`** (`Wettlauf.lean`): over **any interleaving** of such traces, two
 accesses of different threads to one carrier are happens-before ordered or on an `atomic`,
 and no two lock acquisitions cross in rank. `AllgemeinStabil` (`InterferenzAllgemein.lean`)
-names the shape the joint model will consume — context, coverage, per-thread frame
-dependence and entry validity, every assertion at the last world — as a `def`, not yet a
-theorem. The inversion theorems (`slot_hat_waechter`,
+proves what the joint model consumes — context, coverage, per-thread frame
+dependence and chain-head entry validity, every assertion at the last world.
+The inversion theorems (`slot_hat_waechter`,
 `zeiger_hat_waechter`, `bytes_in_tabelle`, `zuweisung_hat_recht`, `sdivision_ohne_null`,
 `register_schreibbar`, `transition_hat_spiegel`, `uebergang_erklaert`, `publish_paart`,
 `stufe_steigt`, …) say for each site what its derivation had to carry. `Zucker.lean` defines

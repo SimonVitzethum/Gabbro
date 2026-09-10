@@ -1,0 +1,31 @@
+-- erwartet: M147
+-- **V4 freshness across an indirect call in `let` position, MUST-FAIL.**
+--
+-- Same window as `gift/715`, other funnel: the indirect call stands in a
+-- `let` RHS (`rufe_im_ausdruck`) instead of as a statement. `alt` is read
+-- from carrier `ZUSTAND`, `t->frage()` runs -- naming no hull -- and deciding
+-- on `alt` afterwards falls as `M147`. The call's own return (`gesehen`)
+-- stays clean: an indirect call taints nothing, it only expires. Deciding on
+-- `gesehen` is silent; deciding on `alt` is refused -- exactly one `M147`.
+module gift716 {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    frage : fn() -> bool
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn entscheide(t : ptr<normal, r> Treiber) -> u32
+    effects { reads t, reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    let gesehen : bool = t->frage();
+    if alt != 0 { return 1; }
+    if gesehen { return 2; }
+    return 0;
+}
+
+}

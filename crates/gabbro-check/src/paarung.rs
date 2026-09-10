@@ -490,8 +490,26 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
                 if !a.erwartet.is_empty() {
                     h.traegt_last.insert(grundname(&quelle));
                 }
+                // **The await side carries the same ordering promise.** Until now only
+                // the publish side checked it: an `awaits` on a `relaxed` atomic -- or
+                // on one without any ordering word, which the emitter lowers to
+                // `memory_order_relaxed` on BOTH sides -- loads without acquire, so the
+                // payload it names is a promise without a mechanism. Same question as
+                // `V004`/`V005` at the store, same answer here: the pair goes to
+                // `relaxed_mit_last` and never reaches `erwartet`, so no `V002` fires
+                // beside it.
+                let stille = ordnungen.iter().find_map(|(n, o)| {
+                    (quelle.split(['.', '[']).next() == Some(n.as_str())
+                        && matches!(o, Some(Ordnung::Relaxed) | None))
+                    .then_some(o.is_some())
+                });
                 for o in &a.erwartet {
-                    h.erwartet.push((quelle.clone(), form(&o.text()), s.span));
+                    match stille {
+                        Some(erklaert) => {
+                            h.relaxed_mit_last.push((quelle.clone(), s.span, erklaert))
+                        }
+                        None => h.erwartet.push((quelle.clone(), form(&o.text()), s.span)),
+                    }
                 }
             }
             StmtArt::Exchange(e) => {
@@ -639,16 +657,22 @@ fn reihenfolge(
             _ => {}
         }
         // Diese Anweisung SELBST trägt zu beidem bei -- erst danach, damit sie sich nicht
-        // selbst deckt.
+        // selbst deckt. Die Lesung steigt dabei in Unterblöcke ab (`leseziele`): ein
+        // Lesen in einem FRÜHEREN Zweig steht sonst nicht in `gelesen`, wenn ein
+        // späteres `awaits` geprüft wird -- und `V007` bliebe der Spiegel, der nichts
+        // zeigt (`gift/722`). Die Schreibung tat das seit jeher (`schreibziele`
+        // steigt ab); zwei Antworten auf eine Frage wären eine zuviel.
+        //
+        // Der Abstieg in die EIGENEN Unterblöcke läuft mit dem Stand VOR dieser
+        // Anweisung: was darin steht -- hintere Lesungen, das `awaits` selbst --
+        // ist für die Prüfung darin noch nicht geschehen. Mit dem Stand danach
+        // sähe ein `awaits` im Schleifenrumpf die Lesungen hinter ihm und fiele
+        // über sich selbst (`beispiele/41`: ein Fehlalarm, gemessen).
+        let gelesen_vorher: Vec<String> = gelesen.clone();
         let mut z: Vec<Ort> = Vec::new();
         crate::schreibziele(s, &mut z);
         geschrieben.extend(z.iter().map(|o| grundname(&o.text())));
-        for e in crate::eigene_ausdruecke(s) {
-            orte_gelesen(e, &mut gelesen);
-        }
-        if let StmtArt::AwaitLoad(a) = &s.art {
-            gelesen.extend(a.erwartet.iter().map(|o| grundname(&o.text())));
-        }
+        leseziele(s, &mut gelesen);
         // Was der umgebende Block NACH dieser Anweisung noch schreibt -- plus das, was
         // schon von weiter aussen mitgereicht wurde.
         let mut spaeter: Vec<String> = spaeter_aussen.to_vec();
@@ -658,7 +682,7 @@ fn reihenfolge(
             spaeter.extend(z.iter().map(|o| grundname(&o.text())));
         }
         for k in crate::unterbloecke(s) {
-            reihenfolge(k, &geschrieben, &gelesen, &spaeter, wo, absagen);
+            reihenfolge(k, &geschrieben, &gelesen_vorher, &spaeter, wo, absagen);
         }
     }
 }
@@ -666,6 +690,29 @@ fn reihenfolge(
 /// `s.bytes[i].x` -> `s`.
 fn grundname(k: &str) -> String {
     k.split(['.', '[']).next().unwrap_or(k).to_string()
+}
+
+/// Mirror of `crate::schreibziele` for the read side: every place an instruction
+/// reads -- its own expressions, the payload an `awaits` names (an acquire load is
+/// a read of what follows it), and everything inside its sub-blocks.
+///
+/// `reihenfolge` accumulated reads with `eigene_ausdruecke` only, so a read inside
+/// a PRECEDING sibling branch never reached `gelesen`: `V007` missed exactly the
+/// shape `gift/186` closed for `V006`. Branches of ONE `if` stay separate all the
+/// same -- each is entered with the state from BEFORE the statement, so a read in
+/// one arm never taints an `awaits` in another.
+fn leseziele(s: &Stmt, out: &mut Vec<String>) {
+    for e in crate::eigene_ausdruecke(s) {
+        orte_gelesen(e, out);
+    }
+    if let StmtArt::AwaitLoad(a) = &s.art {
+        out.extend(a.erwartet.iter().map(|o| grundname(&o.text())));
+    }
+    for k in crate::unterbloecke(s) {
+        for i in &k.anweisungen {
+            leseziele(i, out);
+        }
+    }
 }
 
 /// Ueber `crate::alle_orte` -- der Handlaeufer hier hatte `_ => {}` und stieg nicht in

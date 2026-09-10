@@ -1,0 +1,42 @@
+-- erwartet: V004
+-- **Die Leseseite traegt dieselbe Ordnungszusage.** `V004`/`V005` prueften nur die
+-- Schreibseite: ein `awaits` an einem `relaxed`-Atom (Paar 1) oder an einem Atom ganz
+-- ohne Ordnungswort (Paar 2) laedt ohne Erwerb -- die benannte Nutzlast wird versprochen
+-- und von der Maschine nicht hergestellt. Vor der Leseseitenpruefung fiel diese Datei
+-- mit `V004`, `V005` UND `V002` (die wartende Haelfte fand keine veroeffentlichte, weil
+-- die veroeffentlichte als `relaxed` abgebogen war); danach nur noch mit `V004`/`V005`,
+-- je zweimal: an der Speicher- UND an der Ladezeile.
+--
+-- Das dritte Paar (geordnet, richtige Reihenfolge) schweigt -- die Gegenprobe.
+module gift::erwartet_ohne_ordnung {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+static mut k : u32 = 0;
+atomic R : bool relaxed;
+atomic S : bool;
+atomic F : bool release;
+
+-- Paar 1, muss fallen: ausdruecklich `relaxed` -- auf BEIDEN Seiten.
+impl fn wr(v : u32) effects { writes n, publishes R } costs <= 8 ops
+{ n = v; R = true publishes { n }; }
+
+impl fn rr() -> u32 effects { reads R, reads n } costs <= 8 ops
+{ let f = R awaits { n }; if f { return n; } return 0; }
+
+-- Paar 2, muss fallen: gar kein Ordnungswort -- im Erzeugnis beidseitig
+-- `memory_order_relaxed` (vgl. `gift/138`).
+impl fn ws(v : u32) effects { writes m, publishes S } costs <= 8 ops
+{ m = v; S = true publishes { m }; }
+
+impl fn rs() -> u32 effects { reads S, reads m } costs <= 8 ops
+{ let f = S awaits { m }; if f { return m; } return 0; }
+
+-- Gegenprobe, muss schweigen: geordnet und in der richtigen Reihenfolge.
+impl fn wf(v : u32) effects { writes k, publishes F } costs <= 8 ops
+{ k = v; F = true publishes { k }; }
+
+impl fn rf() -> u32 effects { reads F, reads k } costs <= 8 ops
+{ let f = F awaits { k }; if f { return k; } return 0; }
+
+}

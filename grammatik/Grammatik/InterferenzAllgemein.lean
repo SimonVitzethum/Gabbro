@@ -1,9 +1,9 @@
 /-
   Datei:      Grammatik/InterferenzAllgemein.lean
-  Gegenstand: **DAS GEMEINSAME MODELL BELIEBIG VIELER FAEDEN** -- der Entwurf, nicht der
-               Satz. N Faeden (`List Faden`), beliebig viele Schritte (eine Weltenkette),
-               geteilte Traeger eingeschlossen ueber Invariantendisziplin (CSL-Gestalt:
-               ein Invariantenpraedikat je Traeger, Beruehren nur unter der Wache).
+  Gegenstand: **DAS GEMEINSAME MODELL BELIEBIG VIELER FAEDEN** -- N Faeden (`List Faden`),
+               beliebig viele Schritte (eine Weltenkette), geteilte Traeger eingeschlossen
+               ueber Invariantendisziplin (CSL-Gestalt: ein Invariantenpraedikat je Traeger,
+               Beruehren nur unter der Wache).
 
   ## Das Modell
 
@@ -35,34 +35,51 @@
   halten eine gemeinsame Sperre seines Waechter (`GemeinsameSperre`). `InvariantenKontext`
   verlangt das Praedikat an jeder Welt der Kette.
 
-  ## Die Aussage -- Gestalt, nicht Satz
+  ## Die Aussage -- Satz, verengt, aber bewiesen
 
-  `StabilSchritt` ist `stabil` (`Interferenz.lean`) als `Prop`-Gestalt: ein fremder Schritt
-  im disjunkten Rahmen erhaelt `Q`. `StabilKette` faltet die Gestalt ueber die Kette.
-  `AllgemeinStabil` ist die Hauptaussage als `def ... : Prop`: unter Invariantenkontext,
-  geteilter Deckung, rahmenabhaengigen Zusicherungen je Faden und sequenzieller Gueltigkeit
-  am Eintritt gilt jede Zusicherung jedes Fadens an der letzten Welt der Kette.
+  `StabilSchritt` ist `stabil` (`Interferenz.lean`) als `Prop`-Gestalt; `stabilSchritt_gilt`
+  loest sie ein. `StabilKette` faltet die Gestalt ueber die Kette; `stabilKette_gilt` loest
+  sie aus `HaengtAb` ein. `allgemeinStabil` ist der Hauptsatz: unter Invariantenkontext,
+  geteilter Deckung, rahmenabhaengigen Zusicherungen je Faden, Gueltigkeit am Kettenkopf
+  und schrittweiser Erhaltung gilt jede Zusicherung jedes Fadens an der letzten Welt der
+  Kette. Die Erhaltung ist je fremdem Schritt eine Disjunktion -- disjunkt (faellt auf
+  `stabil` zurueck) ODER erhaltend (die geteilte Seite, von der Invariantendisziplin von
+  aussen einzuloesen) -- und je eigenem Schritt eine Erhaltpraemisse. Die Induktion
+  (`kette_erhaelt`) laeuft ueber die Schrittzahl; drei kleine Listenhelfer
+  (`kette_welt_belegt`, `lt_of_belegt`, `getLast?_eq_getElem` aus dem Kern) tragen die
+  Indexrechnung, ganz ohne `mathlib`.
 
-  ## Was dieser Entwurf NICHT sagt -- jeder Schnitt gebucht
+  ## Was dieser Satz NICHT sagt -- jeder Schnitt gebucht
 
-  (G1) `AllgemeinStabil` ist eine `def`-Gestalt, kein Satz. Die Induktion ueber die Kette
-       (der `stabil`-Schritt je fremdem Schritt gefaltet) steht nirgends und wird hier
-       NICHT gefuehrt: Beweise sind eine spaetere Phase.
+  (G1) `AllgemeinStabil` als voraussetzungslose `def`-Gestalt ist GESTRICHEN; an ihrer
+       Stelle steht `allgemeinStabil` mit verengten Praemissen (`hInit` am Kettenkopf,
+       `hFremd` als Disjunktion, `hEigen` je eigenem Schritt). Die Induktion ueber die
+       Kette wird hier gefuehrt (`kette_erhaelt`), nicht vertagt.
   (G2) Die vorausgesetzte Menge ist der volle Vertragsrahmen (`D.schreibt` /
        `D.gschreibt`), nicht der syntaktische Fussabdruck. Wie in (S1) wird angenommen,
-       dass eine Zusicherung nur ihren Rahmen liest (`HaengtAb` als Praemisse).
-  (G3) Die Beruehrregel (`disziplin`) ist eine Praemisse, keine Pruefung. Dass der Pruefer
-       die gehaltenen Mengen je Schreibstelle nachweist, steht nirgends -- der Pruefer
-       kennt keine Haltemengenanalyse (`NEBENLAEUFIGKEIT-ENTWURF.md` §6, Punkt 1).
-  (G4) Nur sperrgeteilte Traeger sind eingeschlossen. `atomic`-Globale (A10, die Maschine
-       ordnet) und `publishes`/`awaits`-Paare (die Paarung ordnet) sind NICHT modelliert:
-       wer sie will, traegt je eine eigene Ausnahme neben `GeteiltGedeckt` ein.
+       dass eine Zusicherung nur ihren Rahmen liest (`HaengtAb` als Praemisse, `hAb`).
+  (G3) Die Beruehrregel (`disziplin`) ist eine Praemisse, keine Pruefung; die geteilte
+       Seite von `hFremd` (Erhalt ohne Disjunktheit) wird je Schritt ANGENOMMEN, nicht
+       aus der Disziplin abgeleitet. Dass der Pruefer die gehaltenen Mengen je
+       Schreibstelle nachweist, steht nirgends -- der Pruefer kennt keine
+       Haltemengenanalyse (`NEBENLAEUFIGKEIT-ENTWURF.md` §6, Punkt 1).
+  (G4) Sperrgeteilte Traeger sind EINGESCHLOSSEN (rechte Seite von `hFremd`, Deckung als
+       `GeteiltGedeckt` getragen). `atomic`-Globale (A10, die Maschine ordnet) und
+       `publishes`/`awaits`-Paare (die Paarung ordnet) sind NICHT modelliert: wer sie
+       will, traegt je eine eigene Ausnahme neben `GeteiltGedeckt` ein.
   (G5) `Gesittet` wird getragen, nicht verbraucht (wie S2): HB-Ordnung aus `kein_wettlauf`
-       ist unverbunden mit Stabilitaet -- geordnete Schreibzugriffe bleiben Schreibzugriffe.
+       ist unverbunden mit Stabilitaet -- geordnete Schreibzugriffe bleiben
+       Schreibzugriffe. Ebenso werden `hInv` und `hDeck` getragen, nicht verbraucht:
+       sie beurkunden die Disziplin, unter der die geteilte Seite von `hFremd`
+       einzuloesen ist.
   (G6) Der Eintritt je Faden ist eine eigene Welt (`eintritt`), kein Gabelmodell: wie
-       Faeden starten und enden, steht nirgends.
+       Faeden starten und enden, steht nirgends. Darum gilt die sequenzielle Gueltigkeit
+       (`hInit`) am Kettenkopf, nicht am Eintritt -- `hEintritt`, `hSchuld` und
+       `hInvSicht` werden getragen, nicht verbraucht.
   (G7) `Q` spricht nur ueber die Welt, nicht ueber Belegungen (`Env`): wie in (S6) teilt
-       kein Faden lokale Bindungen.
+       kein Faden lokale Bindungen. Und `hEigen` wird angenommen, nicht aus der
+       sequenziellen Ausfuehrung abgeleitet: eigene Schritte erhalten `Q`, statt es
+       erst herzustellen.
 -/
 import Grammatik.Interferenz
 
@@ -191,18 +208,127 @@ def StabilKette (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
       J.schrittFaden[k]? = some f → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
         Disjunkt W G (D.schreibt (J.code f)) (D.gschreibt (J.code f)) → (Q vor ↔ Q nach)
 
-/-! ## 6. Die Hauptaussage als Gestalt -/
+/-! ## 6. Die Saetze: Gestalt eingelöst, Kette gefaltet -/
 
-/-- **Allgemeine Stabilitaet (Gestalt, kein Satz).** Unter Invariantenkontext und geteilter
-    Deckung ueberlebt jede rahmenabhaengige Zusicherung jedes Fadens, gueltig an seinem
-    Eintritt (die sequenzielle Gueltigkeit), die ganze Kette bis zu ihrer letzten Welt. -/
-def AllgemeinStabil (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
-    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop) : Prop :=
-  InvariantenKontext Nb J I →
-    GeteiltGedeckt Nb J →
-      (∀ (f : Faden), f ∈ J.faeden →
-        HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (Q f)) →
-        (∀ (f : Faden), f ∈ J.faeden → Q f (J.eintritt f)) →
-          ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → Q f σ
+/-- **Der fremde Schritt gilt.** `StabilSchritt` ist genau das, was `stabil`
+    (`Interferenz.lean`) liefert: Rahmen plus Disjunktheit erhalten jedes
+    rahmenabhaengige `Q`. -/
+theorem stabilSchritt_gilt (W : D.Tab → Bool) (G : D.Glob → Bool) (Q : World D → Prop)
+    (fremd : D.Fn) : StabilSchritt W G Q fremd := by
+  intro hQ σ σ' hR hd
+  exact stabil hQ hR hd
+
+/-- **Die Kette gilt.** Aus `HaengtAb` folgt `StabilKette`: jeder Uebergang bleibt im
+    Rahmen seines Fadens (`hSchritt`), also faellt der bedingte Erhalt auf `stabil`. -/
+theorem stabilKette_gilt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (W : D.Tab → Bool) (G : D.Glob → Bool) (Q : World D → Prop)
+    (hQ : HaengtAb W G Q) : StabilKette Nb J W G Q := by
+  refine ⟨hQ, ?_⟩
+  intro k g vor nach hkg hkv hkn hd
+  obtain ⟨_, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
+  exact stabil hQ hR hd
+
+/-! ## 7. Kettenrechnung im Kern: drei kleine Helfer, handbewiesen -/
+
+/-- An der Stelle `k` steht eine Welt: jede Zahl unter der Laenge trifft. -/
+theorem kette_welt_belegt {α : Type} (w : List α) (k : Nat) (hk : k < w.length) :
+    ∃ σ, w[k]? = some σ := by
+  induction w generalizing k with
+  | nil => simp at hk
+  | cons a as ih =>
+    cases k with
+    | zero => exact ⟨a, by simp⟩
+    | succ k =>
+      have hk' : k < as.length := by
+        simp only [List.length_cons] at hk
+        omega
+      obtain ⟨σ, hσ⟩ := ih k hk'
+      exact ⟨σ, by simpa using hσ⟩
+
+/-- Wo eine Welt steht, liegt die Stelle unter der Laenge. -/
+theorem lt_of_belegt {α : Type} (w : List α) (k : Nat) (σ : α)
+    (h : w[k]? = some σ) : k < w.length := by
+  induction w generalizing k with
+  | nil => simp at h
+  | cons a as ih =>
+    cases k with
+    | zero => simp
+    | succ k =>
+      have h' : as[k]? = some σ := by simpa using h
+      have hk := ih k h'
+      simp only [List.length_cons]
+      omega
+
+/-- **Die Induktion ueber die Kette.** Was am Kopf gilt und jeden Schritt ueberlebt,
+    gilt an jeder Stelle: `hKette` zaehlt einen Schritt je Uebergang, also liefert jede
+    Nachfolgerstelle ihren Schreiber (`kette_welt_belegt`) und ihren Vorgaenger. -/
+theorem kette_erhaelt (welten : List (World D)) (schrittFaden : List Faden)
+    (hKette : welten.length = schrittFaden.length + 1)
+    (Qf : World D → Prop)
+    (hInit : ∀ σ₀ : World D, welten[0]? = some σ₀ → Qf σ₀)
+    (hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      schrittFaden[k]? = some g → welten[k]? = some vor →
+        welten[k + 1]? = some nach → (Qf vor ↔ Qf nach)) :
+    ∀ (k : Nat) (σ : World D), welten[k]? = some σ → Qf σ := by
+  intro k
+  induction k with
+  | zero => exact hInit
+  | succ k ih =>
+    intro σ hσ
+    have hlen : k + 1 < welten.length := lt_of_belegt welten (k + 1) σ hσ
+    have hsk : k < schrittFaden.length := by omega
+    have hwk : k < welten.length := by omega
+    obtain ⟨g, hg⟩ := kette_welt_belegt schrittFaden k hsk
+    obtain ⟨vor, hvor⟩ := kette_welt_belegt welten k hwk
+    exact (hStep k g vor σ hg hvor hσ).mp (ih vor hvor)
+
+/-! ## 8. Der Hauptsatz: N Faeden, geteilte Traeger eingeschlossen -/
+
+/-- **Allgemeine Stabilitaet (N Faeden).** Unter Invariantenkontext und geteilter Deckung
+    ueberlebt jede rahmenabhaengige Zusicherung jedes Fadens -- gueltig am Kettenkopf --
+    die ganze Kette bis zu ihrer letzten Welt, sofern jeder fremde Schritt sie entweder
+    in Disjunktheit schreibt (dann greift `stabil`) oder erhaelt (die geteilte Seite:
+    sperrgeteilt, von der Invariantendisziplin von aussen einzuloesen, G3/G4) und jeder
+    eigene Schritt sie erhaelt (G7). `hInv` und `hDeck` werden getragen, nicht
+    verbraucht (G5): sie beurkunden die Disziplin, unter der die geteilte Seite steht. -/
+theorem allgemeinStabil (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (Q f))
+    (hInit : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ₀ : World D),
+      J.welten[0]? = some σ₀ → Q f σ₀)
+    (hFremd : ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          Disjunkt (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+            (D.schreibt (J.code g)) (D.gschreibt (J.code g)) ∨ (Q f vor ↔ Q f nach))
+    (hEigen : ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (vor nach : World D),
+      J.schrittFaden[k]? = some f → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (Q f vor ↔ Q f nach)) :
+    ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → Q f σ := by
+  intro σ hletzte f hf
+  have hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (Q f vor ↔ Q f nach) := by
+    intro k g vor nach hkg hkv hkn
+    by_cases heq : g = f
+    · subst heq
+      exact hEigen g hf k vor nach hkg hkv hkn
+    · obtain ⟨hgm, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
+      cases hFremd f hf k g vor nach hgm heq hkg hkv hkn with
+      | inl hd => exact stabil (hAb f hf) hR hd
+      | inr hiff => exact hiff
+  have hall := kette_erhaelt J.welten J.schrittFaden J.hKette (Q f) (hInit f hf) hStep
+  have hlast : J.welten[J.welten.length - 1]? = some σ := by
+    rw [← List.getLast?_eq_getElem?]
+    exact hletzte
+  exact hall _ σ hlast
+
+#print axioms Gabbro.Grammatik.stabilSchritt_gilt
+#print axioms Gabbro.Grammatik.stabilKette_gilt
+#print axioms Gabbro.Grammatik.kette_erhaelt
+#print axioms Gabbro.Grammatik.allgemeinStabil
 
 end Gabbro.Grammatik

@@ -156,6 +156,16 @@ const BENANNT: &[&str] = &[
     // > `M140` about parameter `d`, a statement about the wrong thing: had both parameters
     // > been `u32`, the call would have been silent.
     "M143",
+    // 2026-09-10, V4 freshness as fact-set discipline (`m1.frische`): a per-body
+    // taint map beside the M1 facts, grown at carrier-reading `let`s, expired by
+    // carrier-naming writes, loop boundaries and calls. Acting on an expired
+    // local falls at decision positions only (branch/match condition, call
+    // argument, return, narrow subject, index); store/move stays allowed.
+    // Named late: the code existed since 7cbae3e without this entry, and the
+    // korpus test stayed green only while no doc snippet fired it -- lane-43's
+    // indirect-call kill (715-717) widened the firing onto FRAGMENTE.md:268.
+    // Gifts 702/703/709/715/716/717; ceremony priced on 01/09/42 (re-read).
+    "M147",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.

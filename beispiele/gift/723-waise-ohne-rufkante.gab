@@ -1,0 +1,37 @@
+-- erwartet: V001
+-- **Die Paarung ist global, nicht transitiv.** `w` veroeffentlicht `{ n }` auf `F`, und
+-- nichts erwartet es irgendwo -- `V001` faellt, und das ist richtig so. Daneben steht
+-- die Luecke als Gestalt: `r` erwartet `{ m }` auf `G`, und `mw` veroeffentlicht es --
+-- OHNE jede Rufkante zwischen beiden. Die Regel sieht das Gegenstueck IRGENDWO in der
+-- Einheit und schweigt ueber `r`, obwohl kein Pfad von `r` je an `mw` vorbeikommt. Eine
+-- transitive Paarung muesste hier `V002` sagen; die globale sagt nichts.
+--
+-- Das dritte Gespann (`mw`/`rufe_mw`/`mr`) ist die Gegenprobe: dieselbe Paarung ENTLANG
+-- einer Rufkante -- und die muss schweigen. Faellt hier je etwas anderes als `V001`,
+-- ist die Gegenprobe laut geworden.
+module gift::waise_ohne_rufkante {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+
+-- Muss fallen: verwaiste Veroeffentlichung, kein Gegenstueck nirgends.
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+-- Die Luecke in Gestalt: global gepaart (mit `mw`), ohne Rufkante -- schweigt heute.
+impl fn r() -> u32 effects { reads G, reads m } costs <= 8 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+-- Gegenprobe, muss schweigen: die Paarung entlang der Rufkante `mr -> rufe_mw -> mw`.
+impl fn mw(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rufe_mw(v : u32) effects { writes m, publishes G } costs <= 12 ops
+{ mw(v); }
+
+impl fn mr() -> u32 effects { writes m, publishes G, reads G, reads m } costs <= 16 ops
+{ rufe_mw(0); let g = G awaits { m }; if g { return m; } return 0; }
+
+}

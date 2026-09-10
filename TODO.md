@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 257 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 264 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *223 → 224 on 2026-09-07: `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md`
       joined — the census of what is open at the checker and at the grammar, whose one
       finding is a CLASS: three sites where `pruefe` reports zero errors, `emit` returns 0,
@@ -3989,7 +3989,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-~~7881~~ **7883 von 27237 Kommentarzeilen** im Pruefer sind deutsch
+~~7881~~ ~~7883~~ **7891 von 27237 Kommentarzeilen** im Pruefer sind deutsch
  1069 von  6496 in den Instrumenten
   415 von  1448 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -4162,7 +4162,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      ~~68~~ 70 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 440
+      ~~68~~ ~~70~~ 71 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 440
       Giftproben)
       ```
 

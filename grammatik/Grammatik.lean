@@ -36,6 +36,8 @@
   | `Erhaltung.lean`  | der Erzeugervertrag als Pflichtenheft: Entsprechung, Alias, Kosten, Tafel |
   | `Extraktion.lean` | berechnete Huellen: Kanten und Fuesse aus Ruempfen, Bau als Ergebnis     |
   | `Marken.lean`     | lineare Marken als Konstruktion: Besitz als Zustand, Einfaedigkeit als Gestalt |
+  | `Fristlauf.lean`  | Fristablauf zwischen Pruefung und Lauf als benanntes Ergebnis, keine Wanduhr |
+  | `Adressraum.lean` | Nutzerspeicher als Gestalt: gepruefte Kopie oder benannte Luecke          |
 -/
 import Grammatik.Typen
 import Grammatik.Syntax
@@ -58,3 +60,5 @@ import Grammatik.Fehler
 import Grammatik.Erhaltung
 import Grammatik.Extraktion
 import Grammatik.Marken
+import Grammatik.Fristlauf
+import Grammatik.Adressraum
