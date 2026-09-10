@@ -623,8 +623,23 @@ fn result_range_of(t: &TypExpr, u: &crate::umgebung::Umgebung, module: &str) -> 
 }
 
 fn shape_of(t: &TypExpr, u: &crate::umgebung::Umgebung, module: &str) -> Option<Shape> {
-    if let TypExpr::Index { optional, .. } = t {
-        return Some(if *optional { Shape::Opt } else { Shape::Int });
+    if let TypExpr::Index { tabelle, optional, .. } = t {
+        if *optional {
+            return Some(Shape::Opt);
+        }
+        // **F3 (S4, 2026-09-11): `index into T` is `0 ..< count`, not `.int`.** The
+        // type carries the bound by construction (`Umgebung::indextyp` builds it from
+        // the same `count N`), and the checker holds it at every call site -- so the
+        // emitted shape says it, and `schluss` (`Ausdruck.lean`, `.place`) sees the
+        // `intIn` it demands. A table without a `count` keeps `.int` (W10: an unproved
+        // bound is not narrowed).
+        if let Some(q) = u.nennt_tabelle(module, &tabelle.text) {
+            if let Some(n) = u.kapazitaeten.get(&q).copied() {
+                let hi = i128::try_from(n).unwrap_or(i128::MAX).saturating_sub(1);
+                return Some(Shape::IntIn(0, hi.max(0)));
+            }
+        }
+        return Some(Shape::Int);
     }
     shape_of_typ(&u.typ_von_ausdruck_decl(module, t))
 }
