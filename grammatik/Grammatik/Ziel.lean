@@ -68,18 +68,19 @@ inductive CForm where
     ein quantitatives CompCert (CerCo, nicht der Produktionsuebersetzer). -/
 structure Absenkung where
   proPrimitiv : Nat
-  begrenzt : proPrimitiv ≤ 8
+  begrenzt : proPrimitiv ≤ 18
 
-/-- Die Zahl, auf der der Vertrag ruhen wuerde -- UNGEMESSEN (W7: eine Zahl ohne
-    Suchweg). `4` steht hier, weil der Satz eine Zahl braucht, nicht weil
-    jemand je Primitive gegen `emit.rs` gehalten haette. Der Suchweg stuende so
-    aus: je Gabbro-Primitiv die C-Anweisungen des Erzeugers zaehlen, Maximum
-    nehmen. Solange das nicht geschehen ist, ist jede Berufung auf diese
-    Konstante ein Zitat ohne Quelle -- und CompCert beweist ohnehin
+/-- Die Zahl, auf der der Vertrag ruhen wuerde -- TEILGEMESSEN seit 2026-09-10
+    (`messung/ABSENKUNG-MESSUNG.md`, Entscheid `messung/ABSENKUNG-SCHRANKEN-ENTSCHEID.md`):
+    `17` ist das statisch gezaehlte Maximum je Gabbro-Primitiv (staerkste Zeile:
+    `Schleife`/`traverse over descendants of`, `emit.rs:8523-8560`); die Schranke
+    `18` ist das Maximum plus eins Kopfraum. Der Lauf ueber echte Erzeugnisse mit
+    einem Lexer (`ABSENKUNG-ZAEHLUNG.md` §2) steht noch aus -- er kann das Maximum
+    nur bestaetigen oder heben, nie unter `17` senken. CompCert beweist ohnehin
     Semantikerhaltung, keine Kostenerhaltung (sequenziell, rennfrei, ohne
     `__asm__`, ohne C11-`_Atomic`: 39 `_Atomic`, 120 `volatile`, 2 `__asm__` im
     eigenen Erzeugnis). -/
-def absenkung : Absenkung := ⟨4, by decide⟩
+def absenkung : Absenkung := ⟨17, by decide⟩
 
 /-! ## 2. Das Ziel -- ein Satz je Zeile -/
 

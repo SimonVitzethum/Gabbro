@@ -17,11 +17,25 @@
   NAMED, not modelled: measured by the probe, never proved here -- the same
   split as `fristAlsAnnahme` in `Ziel.lean`.
 
-  Proven below: nothing -- this file holds shapes as `def`s, with the probe
-  (`Sprechprobe`: `fristProbe` over the empty declaration `leer`, evaluated
-  by `rfl`) showing each shape computes. What the shapes MEAN over a run --
-  which step counts as the check, which as the use, what sets the deadline
-  moment -- is cut, not faked (C1 below).
+   Proven below (`#print axioms` at the end shows each rests on no axioms):
+     `fristErgebnis_abgelaufen` / `fristErgebnis_ok` -- the outcome answers
+       `Hardware.fortschritt` with the deadline's assumption on expiry, nothing
+       off it. This is the `fristAlsAnnahme` mapping of `Ziel.lean`
+       (`def fristAlsAnnahme (a : D.Annahme) : Hardware D := .fortschritt a`),
+       mirrored by shape, not imported (same boundary as `Budget.lean`, which
+       cites the mapping without reading it; the lane forbids the index edit
+       that would wire the import).
+     `fristErgebnis_eq_some_iff` / `fristErgebnis_eq_none_iff` -- exact on the
+       outcome: `some` iff expiry under some deadline, `none` iff `ok`.
+     `fristlauf_some_abgelaufen` / `fristlauf_some_ok` -- the decision answers
+       expiry exactly when the deadline lies strictly between check and use.
+     `fristErgebnis_fristlauf_some` / `fristErgebnis_fristlauf_ok` -- composed:
+       `fristErgebnis` over `fristlauf` answers `fortschritt` exactly on
+       expiry, `none` exactly off it.
+     `fristErgebnis_fristlauf_none` / `fristlauf_erschöpfend` -- no deadline
+       moment is `ok`; every run is `ok` or expiry. No third outcome.
+   What the shapes MEAN over a run -- which step counts as the check, which as
+   the use, what sets the deadline moment -- is cut, not faked (C1 below).
 
   Premises (trusted, not proved):
     P1  Moments are step indices: `t < t'` is the run order, not the clock.
@@ -35,8 +49,10 @@
         or to `foreverLauf` fuel is cut.
     C2  No duration arithmetic: a deadline is a moment, not a span; nothing
         adds, compares, or converts spans.
-    C3  Not wired into `Grammatik.lean`: lane scope forbids the index edit;
-        check this file directly with `lake env lean Grammatik/Fristlauf.lean`.
+    C3  The `Ziel.lean` mapping is mirrored, not imported: the lane scope
+        forbids the index edit that would wire the import, so `fristAlsAnnahme`
+        is cited by shape (`.fortschritt f.annahme`). Check per-file with
+        `lake env lean Grammatik/Fristlauf.lean` and with the full `lake build`.
 
   No `mathlib`, no `sorry`, no `axiom`.
 -/
@@ -88,10 +104,121 @@ def fristlauf {D : Deklaration} (p : PruefPaar) (f : Frist D)
 
 /-- Expiry answers the hardware assumption `fortschritt` -- the same
     assumption that carries `forever` (`Semantik.lean`), reached through the
-    deadline's name. `ok` answers nothing. -/
+    deadline's name. This is the `fristAlsAnnahme` mapping of `Ziel.lean`,
+    mirrored by shape (`.fortschritt f.annahme`), not imported.
+    `ok` answers nothing. -/
 def fristErgebnis {D : Deklaration} : FristOut D → Option (Hardware D)
   | .ok => none
   | .abgelaufen f => some (.fortschritt f.annahme)
+
+/-! ## Expiry answers the hardware outcome -- exactly `fortschritt` on expiry -/
+
+/-- On expiry the outcome answers `fortschritt` with the deadline's
+    assumption -- the `fristAlsAnnahme` mapping of `Ziel.lean`. -/
+theorem fristErgebnis_abgelaufen {D : Deklaration} (f : Frist D) :
+    fristErgebnis (.abgelaufen f) = some (.fortschritt f.annahme) := rfl
+
+/-- Off expiry the outcome answers nothing. -/
+theorem fristErgebnis_ok {D : Deklaration} :
+    fristErgebnis (.ok : FristOut D) = none := rfl
+
+/-- Exact on the outcome: `some` iff expiry under some deadline, naming exactly
+    that deadline's assumption. -/
+theorem fristErgebnis_eq_some_iff {D : Deklaration} (o : FristOut D) (h : Hardware D) :
+    fristErgebnis o = some h ↔ ∃ f : Frist D, o = .abgelaufen f ∧ .fortschritt f.annahme = h := by
+  cases o with
+  | ok =>
+    constructor
+    · intro hh
+      simp [fristErgebnis] at hh
+    · rintro ⟨_, hg, _⟩
+      cases hg
+  | abgelaufen f =>
+    simp only [fristErgebnis]
+    constructor
+    · intro hh
+      exact ⟨f, rfl, Option.some_inj.mp hh⟩
+    · rintro ⟨_, hg, heq⟩
+      cases hg
+      exact congrArg some heq
+
+/-- Exact on the quiet case: `none` iff `ok`. -/
+theorem fristErgebnis_eq_none_iff {D : Deklaration} (o : FristOut D) :
+    fristErgebnis o = none ↔ o = .ok := by
+  cases o with
+  | ok => simp [fristErgebnis]
+  | abgelaufen _ => simp [fristErgebnis]
+
+/-- The decision, unfolded: a deadline moment expires the run iff it lies
+    strictly between check and use. -/
+theorem fristlauf_some {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : Moment) :
+    fristlauf p f (some m) =
+      (if decide (p.pruef < m ∧ m < p.lauf) then .abgelaufen f else .ok) := rfl
+
+/-- The run expires under the deadline's name exactly when the deadline lies
+    strictly between check and use. -/
+theorem fristlauf_some_abgelaufen {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : Moment) :
+    fristlauf p f (some m) = .abgelaufen f ↔ laeuftAb p m := by
+  rw [fristlauf_some]
+  unfold laeuftAb
+  by_cases h : p.pruef < m ∧ m < p.lauf
+  · rw [if_pos (decide_eq_true h)]
+    exact iff_of_true rfl h
+  · rw [if_neg (fun he => h (of_decide_eq_true he))]
+    exact iff_of_false (by simp) h
+
+/-- The run is `ok` exactly when the deadline does not lie strictly between
+    check and use -- endpoint coincidence included. -/
+theorem fristlauf_some_ok {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : Moment) :
+    fristlauf p f (some m) = .ok ↔ ¬ laeuftAb p m := by
+  rw [fristlauf_some]
+  unfold laeuftAb
+  by_cases h : p.pruef < m ∧ m < p.lauf
+  · rw [if_pos (decide_eq_true h)]
+    exact iff_of_false (by simp) (fun hn => hn h)
+  · rw [if_neg (fun he => h (of_decide_eq_true he))]
+    exact iff_of_true rfl h
+
+/-- Composed, on expiry: `fristErgebnis` over `fristlauf` answers
+    `Hardware.fortschritt` with the deadline's assumption exactly when the
+    deadline lies strictly between check and use. -/
+theorem fristErgebnis_fristlauf_some {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : Moment) :
+    fristErgebnis (fristlauf p f (some m)) = some (.fortschritt f.annahme) ↔ laeuftAb p m := by
+  constructor
+  · intro hh
+    by_cases h : laeuftAb p m
+    · exact h
+    · have hok : fristlauf p f (some m) = .ok := (fristlauf_some_ok p f m).mpr h
+      rw [hok, fristErgebnis_ok] at hh
+      cases hh
+  · intro h
+    rw [(fristlauf_some_abgelaufen p f m).mpr h, fristErgebnis_abgelaufen]
+
+/-- Composed, off expiry: `fristErgebnis` over `fristlauf` answers nothing
+    exactly when the deadline does not lie strictly between check and use. -/
+theorem fristErgebnis_fristlauf_ok {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : Moment) :
+    fristErgebnis (fristlauf p f (some m)) = none ↔ ¬ laeuftAb p m := by
+  constructor
+  · intro hh h
+    have hs := (fristErgebnis_fristlauf_some p f m).mpr h
+    rw [hh] at hs
+    cases hs
+  · intro h
+    rw [(fristlauf_some_ok p f m).mpr h, fristErgebnis_ok]
+
+/-- No deadline moment: the run answers nothing. -/
+theorem fristErgebnis_fristlauf_none {D : Deklaration} (p : PruefPaar) (f : Frist D) :
+    fristErgebnis (fristlauf p f none) = none := rfl
+
+/-- No third outcome: every run is `ok` or expiry under some deadline. -/
+theorem fristlauf_erschöpfend {D : Deklaration} (p : PruefPaar) (f : Frist D) (d : Option Moment) :
+    fristlauf p f d = .ok ∨ ∃ g : Frist D, fristlauf p f d = .abgelaufen g := by
+  cases d with
+  | none => exact Or.inl rfl
+  | some m =>
+    by_cases h : laeuftAb p m
+    · exact Or.inr ⟨f, (fristlauf_some_abgelaufen p f m).mpr h⟩
+    · exact Or.inl ((fristlauf_some_ok p f m).mpr h)
 
 /-! ## Speech probe: the shapes compute (values, not sentences) -/
 
@@ -125,5 +252,16 @@ example : fristErgebnis (FristOut.ok : FristOut leer) = none := by rfl
 #print axioms Gabbro.Grammatik.fristErgebnis
 #print axioms Gabbro.Grammatik.fristProbe
 #print axioms Gabbro.Grammatik.paarProbe
+#print axioms Gabbro.Grammatik.fristErgebnis_abgelaufen
+#print axioms Gabbro.Grammatik.fristErgebnis_ok
+#print axioms Gabbro.Grammatik.fristErgebnis_eq_some_iff
+#print axioms Gabbro.Grammatik.fristErgebnis_eq_none_iff
+#print axioms Gabbro.Grammatik.fristlauf_some
+#print axioms Gabbro.Grammatik.fristlauf_some_abgelaufen
+#print axioms Gabbro.Grammatik.fristlauf_some_ok
+#print axioms Gabbro.Grammatik.fristErgebnis_fristlauf_some
+#print axioms Gabbro.Grammatik.fristErgebnis_fristlauf_ok
+#print axioms Gabbro.Grammatik.fristErgebnis_fristlauf_none
+#print axioms Gabbro.Grammatik.fristlauf_erschöpfend
 
 end Gabbro.Grammatik

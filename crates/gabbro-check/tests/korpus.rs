@@ -63,6 +63,12 @@ const BENANNT: &[&str] = &[
     // > checker looked the rank up, found nothing and stayed silent -- a ring across two
     // > libraries passed with zero errors (`messung/ABI.md`).
     "H016",
+    // 2026-09-10, driver handoff rule (`sperren.fenster`, lane-55): a function
+    // writing a `ptr<dma,…>`-rooted place AND ringing the `ptr<mmio,…>` doorbell
+    // falls at the doorbell unless one guard covers both. Named HERE, not when
+    // first fired -- the M147 lesson (unbenannt seit 7cbae3e, exposed by wider
+    // firing): gifts 724/725/726 pin it and its boundary.
+    "H018",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine

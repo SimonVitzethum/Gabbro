@@ -23,3 +23,4 @@
 import Gabbro.Body
 import Gabbro.Coverage
 import Gabbro.Sicherheit
+import Gabbro.KompositionBeweis

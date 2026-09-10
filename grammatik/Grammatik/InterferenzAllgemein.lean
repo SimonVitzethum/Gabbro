@@ -21,9 +21,10 @@
       Richtungen, je Faden),
     * `hSchuld` -- jeder Faden haelt die Sperren aller Traeger jeder geschuldeten
       Invariante (`SchuldnerHaelt`: die Gestalt von `invarianten_gehalten`, U003, mit
-      `schuldet` als Bedingung),
+      `schuldet` als Bedingung; je Rumpf ableitbar, `schuldnerHaelt_gilt`),
     * `hInvSicht` -- die Invariantensicht liest unter gehaltenen Sperren (`InvSichtHaelt`:
-      die Gestalt von `heldIn_invarianten` ueber `hEintritt`, je Faden am Eintritt).
+      die Gestalt von `heldIn_invarianten` ueber `hEintritt`, je Faden am Eintritt;
+      aus `hEintritt` ableitbar, `invSichtHaelt_aus_Eintritt`).
 
   ## Die Disziplin ueber geteilten Traegern
 
@@ -42,12 +43,19 @@
   sie aus `HaengtAb` ein. `allgemeinStabil` ist der Hauptsatz: unter Invariantenkontext,
   geteilter Deckung, rahmenabhaengigen Zusicherungen je Faden, Gueltigkeit am Kettenkopf
   und schrittweiser Erhaltung gilt jede Zusicherung jedes Fadens an der letzten Welt der
-  Kette. Die Erhaltung ist je fremdem Schritt eine Disjunktion -- disjunkt (faellt auf
-  `stabil` zurueck) ODER erhaltend (die geteilte Seite, von der Invariantendisziplin von
-  aussen einzuloesen) -- und je eigenem Schritt eine Erhaltpraemisse. Die Induktion
-  (`kette_erhaelt`) laeuft ueber die Schrittzahl; drei kleine Listenhelfer
-  (`kette_welt_belegt`, `lt_of_belegt`, `getLast?_eq_getElem` aus dem Kern) tragen die
-  Indexrechnung, ganz ohne `mathlib`.
+   Kette. Die Erhaltung ist je fremdem Schritt eine Disjunktion -- disjunkt (faellt auf
+   `stabil` zurueck) ODER erhaltend (die geteilte Seite, von der Invariantendisziplin von
+   aussen einzuloesen) -- und je eigenem Schritt eine Erhaltpraemisse. Die Induktion
+   (`kette_erhaelt`) laeuft ueber die Schrittzahl; drei kleine Listenhelfer
+   (`kette_welt_belegt`, `lt_of_belegt`, `getLast?_eq_getElem` aus dem Kern) tragen die
+   Indexrechnung, ganz ohne `mathlib`. `FremdDisziplin` traegt je Schritt Wache plus
+   Rahmen; `fremdDisziplin_gilt` loest beides ein (Wache aus der Beruehrregel, Rahmen
+   aus `hSchritt`), und `fremdErhalt_disjunkt_aus_Disziplin` zieht die disjunkte
+   Erhaltung daraus ueber `stabil`. `invErhalt_aus_Kontext` zieht die invariante
+   Erhaltung aus dem Kontext, und `allgemeinStabil_invariant` faltet sie zur Kette:
+   dort ist keine geteilte Praemisse mehr anzunehmen. `schuldnerHaelt_gilt` (U003 je
+   Rumpf) und `invSichtHaelt_aus_Eintritt` (ueber der beidseitigen Eintrittsmenge)
+   loesen die Eintrittsdisziplin ein, soweit die Pruefung sie liefert.
 
   ## Was dieser Satz NICHT sagt -- jeder Schnitt gebucht
 
@@ -58,24 +66,30 @@
   (G2) Die vorausgesetzte Menge ist der volle Vertragsrahmen (`D.schreibt` /
        `D.gschreibt`), nicht der syntaktische Fussabdruck. Wie in (S1) wird angenommen,
        dass eine Zusicherung nur ihren Rahmen liest (`HaengtAb` als Praemisse, `hAb`).
-  (G3) Die Beruehrregel (`disziplin`) ist eine Praemisse, keine Pruefung; die geteilte
-       Seite von `hFremd` (Erhalt ohne Disjunktheit) wird je Schritt ANGENOMMEN, nicht
-       aus der Disziplin abgeleitet. Dass der Pruefer die gehaltenen Mengen je
-       Schreibstelle nachweist, steht nirgends -- der Pruefer kennt keine
-       Haltemengenanalyse (`NEBENLAEUFIGKEIT-ENTWURF.md` §6, Punkt 1).
+   (G3) Die Beruehrregel (`disziplin`) ist eine Praemisse, aber je Schritt EINGELOEST
+        (`fremdDisziplin_gilt`: Wache aus der Regel, Rahmen aus `exec_rahmen` via
+        `hSchritt`); die disjunkte Seite von `hFremd` fliesst daraus ueber `stabil`
+        (`fremdErhalt_disjunkt_aus_Disziplin`), die invariante Seite aus dem Kontext
+        (`invErhalt_aus_Kontext`, `allgemeinStabil_invariant`). Was BLEIBT, ist die
+        geteilte Seite fuer beliebiges rahmenlokales `Q` (rechte Seite von `hFremd` in
+        `allgemeinStabil`): dass der Pruefer die gehaltenen Mengen je Schreibstelle
+        nachweist, steht nirgends -- der Pruefer kennt keine Haltemengenanalyse
+        (`NEBENLAEUFIGKEIT-ENTWURF.md` §6, Punkt 1).
   (G4) Sperrgeteilte Traeger sind EINGESCHLOSSEN (rechte Seite von `hFremd`, Deckung als
        `GeteiltGedeckt` getragen). `atomic`-Globale (A10, die Maschine ordnet) und
        `publishes`/`awaits`-Paare (die Paarung ordnet) sind NICHT modelliert: wer sie
        will, traegt je eine eigene Ausnahme neben `GeteiltGedeckt` ein.
-  (G5) `Gesittet` wird getragen, nicht verbraucht (wie S2): HB-Ordnung aus `kein_wettlauf`
-       ist unverbunden mit Stabilitaet -- geordnete Schreibzugriffe bleiben
-       Schreibzugriffe. Ebenso werden `hInv` und `hDeck` getragen, nicht verbraucht:
-       sie beurkunden die Disziplin, unter der die geteilte Seite von `hFremd`
-       einzuloesen ist.
-  (G6) Der Eintritt je Faden ist eine eigene Welt (`eintritt`), kein Gabelmodell: wie
-       Faeden starten und enden, steht nirgends. Darum gilt die sequenzielle Gueltigkeit
-       (`hInit`) am Kettenkopf, nicht am Eintritt -- `hEintritt`, `hSchuld` und
-       `hInvSicht` werden getragen, nicht verbraucht.
+   (G5) `Gesittet` wird getragen, nicht verbraucht (wie S2): HB-Ordnung aus `kein_wettlauf`
+        ist unverbunden mit Stabilitaet -- geordnete Schreibzugriffe bleiben
+        Schreibzugriffe. `hSchuld` wird ABGELEITET, nicht getragen (`schuldnerHaelt_gilt`:
+        U003 gilt je Rumpf, ohne Laufpraemisse); `hDeck` wird weiter getragen: es
+        beurkundet die Disziplin, unter der die geteilte Restseite von `hFremd` steht;
+        `hInv` wird im invarianten Satz verbraucht (`invErhalt_aus_Kontext`).
+   (G6) Der Eintritt je Faden ist eine eigene Welt (`eintritt`), kein Gabelmodell: wie
+        Faeden starten und enden, steht nirgends. Darum gilt die sequenzielle Gueltigkeit
+        (`hInit`) am Kettenkopf, nicht am Eintritt -- `hEintritt` wird getragen, aber
+        `hInvSicht` folgt daraus (`invSichtHaelt_aus_Eintritt`: die Gestalt von
+        `heldIn_invarianten` ueber der beidseitigen Sperrmenge).
   (G7) `Q` spricht nur ueber die Welt, nicht ueber Belegungen (`Env`): wie in (S6) teilt
        kein Faden lokale Bindungen. Und `hEigen` wird angenommen, nicht aus der
        sequenziellen Ausfuehrung abgeleitet: eigene Schritte erhalten `Q`, statt es
@@ -228,7 +242,79 @@ theorem stabilKette_gilt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
   obtain ⟨_, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
   exact stabil hQ hR hd
 
-/-! ## 7. Kettenrechnung im Kern: drei kleine Helfer, handbewiesen -/
+/-! ## 7. Gepruefte Eintrittsdisziplin: U003 und `RufPasst.hh` -/
+
+/-- **U003 je Rumpf, ohne Laufpraemisse.** Wer eine Invariante schuldet, haelt die
+    Sperren ALLER ihrer Traeger -- `D.invarianten_gehalten`, eingeloest ueber
+    `schuldet` (dass `schuldet` genau die `any`-Bedingung von U003 traegt, zeigt
+    `inv_schreiber_sperren` in `Interferenz.lean`). Darum ist `hSchuld` im Lauf keine
+    Annahme, die je Kette faellt: sie gilt je Rumpf von vornherein. -/
+theorem schuldnerHaelt_gilt (f : D.Fn) : SchuldnerHaelt (D := D) f := by
+  intro i hs t ht L hL
+  exact D.invarianten_gehalten (D.sig f) i hs t ht L hL
+
+/-- **Beidseitige Eintrittsmenge, einseitig verbraucht.** `EintrittPasst` nennt die
+    Sperrmenge in BEIDEN Richtungen (die Form von `RufPasst.hh`, SG-20); wo nur das
+    Halten zaehlt, genuegt die `HeldIn`-Haelfte. -/
+theorem eintrittHeldIn_aus_Passt {f : D.Fn} {σ : World D}
+    (h : EintrittPasst (D := D) f σ) :
+    HeldIn (Signatur.anfang D (D.signatur f)) σ.haelt :=
+  HeldGenau.heldIn h
+
+/-- **Die Invariantensicht folgt aus dem Eintritt.** Am Eintritt jedes Fadens liest die
+    Sicht jeder geschuldeten Invariante unter gehaltenen Sperren -- `hInvSicht` im Lauf
+    ist keine eigene Annahme, sondern `heldIn_invarianten` ueber der beidseitigen
+    Eintrittsmenge (`hEintritt`). -/
+theorem invSichtHaelt_aus_Eintritt (P : Programm D) (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (f : Faden) (hf : f ∈ J.faeden) : InvSichtHaelt (D := D) (J.code f) (J.eintritt f) := by
+  intro i hi
+  exact heldIn_invarianten P (J.code f) (eintrittHeldIn_aus_Passt (J.hEintritt f hf)) i hi
+
+/-! ## 8. Fremddisziplin je Schritt: Wache plus Rahmen -/
+
+/-- **Die gepruefte Fremddisziplin je Schritt**: der fremde Schritt bleibt in seinem
+    Rahmen (das liefert `exec_rahmen` je Rumpf, hier als `hSchritt` getragen) UND
+    respektiert die Wachen jedes Traegers, den er schreibt (das liefert die
+    Beruehrregel `I.disziplin` je Rumpf, statisch). -/
+def FremdDisziplin (g : D.Fn) (vor nach : World D) : Prop :=
+  Rahmen (D.schreibt g) (D.gschreibt g) vor nach ∧
+    ∀ (c : D.Tab ⊕ D.Glob), TraegerSchreibt g c = true → WaechterGehalten g c
+
+/-- **Jeder Kettenschritt ist fremddiszipliniert.** Der Rahmen kommt aus `hSchritt`
+    (`exec_rahmen` je Rumpf), die Wachen aus der Beruehrregel -- je Schritt geprueft,
+    nicht angenommen. -/
+theorem fremdDisziplin_gilt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D))
+    (k : Nat) (g : Faden) (vor nach : World D)
+    (hkg : J.schrittFaden[k]? = some g) (hkv : J.welten[k]? = some vor)
+    (hkn : J.welten[k + 1]? = some nach) :
+    FremdDisziplin (J.code g) vor nach := by
+  obtain ⟨_, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
+  exact ⟨hR, fun c hc => I.disziplin (J.code g) c hc⟩
+
+/-- **Die disjunkte Seite, aus der Disziplin.** Was nur am eigenen Rahmen haengt,
+    ueberlebt einen fremddisziplinierten Schritt in Disjunktheit -- der Rahmen kommt
+    aus der geprueften Fremddisziplin, der Schluss ist `stabil`. -/
+theorem fremdErhalt_disjunkt_aus_Disziplin (g : D.Fn)
+    (W : D.Tab → Bool) (G : D.Glob → Bool) (Q : World D → Prop)
+    (hQ : HaengtAb W G Q) {vor nach : World D}
+    (hD : FremdDisziplin (D := D) g vor nach)
+    (hd : Disjunkt W G (D.schreibt g) (D.gschreibt g)) : Q vor ↔ Q nach :=
+  stabil hQ hD.1 hd
+
+/-- **Die invariante Seite, aus dem Kontext.** Das Praedikat jedes Traegers gilt an
+    jeder Welt der Kette (`hInv`) -- also vor UND nach jedem Schritt. Wo `Q` die
+    Invariante selbst ist, ist die geteilte Erhaltpraemisse keine Annahme, sondern
+    diese Aequivalenz. -/
+theorem invErhalt_aus_Kontext (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (hInv : InvariantenKontext Nb J I)
+    (c : D.Tab ⊕ D.Glob) (vor nach : World D)
+    (hkv : vor ∈ J.welten) (hkn : nach ∈ J.welten) :
+    I.inv c vor ↔ I.inv c nach :=
+  ⟨fun _ => hInv c nach hkn, fun _ => hInv c vor hkv⟩
+
+/-! ## 9. Kettenrechnung im Kern: drei kleine Helfer, handbewiesen -/
 
 /-- An der Stelle `k` steht eine Welt: jede Zahl unter der Laenge trifft. -/
 theorem kette_welt_belegt {α : Type} (w : List α) (k : Nat) (hk : k < w.length) :
@@ -282,14 +368,16 @@ theorem kette_erhaelt (welten : List (World D)) (schrittFaden : List Faden)
     obtain ⟨vor, hvor⟩ := kette_welt_belegt welten k hwk
     exact (hStep k g vor σ hg hvor hσ).mp (ih vor hvor)
 
-/-! ## 8. Der Hauptsatz: N Faeden, geteilte Traeger eingeschlossen -/
+/-! ## 10. Der Hauptsatz: N Faeden, geteilte Traeger eingeschlossen -/
 
 /-- **Allgemeine Stabilitaet (N Faeden).** Unter Invariantenkontext und geteilter Deckung
     ueberlebt jede rahmenabhaengige Zusicherung jedes Fadens -- gueltig am Kettenkopf --
     die ganze Kette bis zu ihrer letzten Welt, sofern jeder fremde Schritt sie entweder
-    in Disjunktheit schreibt (dann greift `stabil`) oder erhaelt (die geteilte Seite:
-    sperrgeteilt, von der Invariantendisziplin von aussen einzuloesen, G3/G4) und jeder
-    eigene Schritt sie erhaelt (G7). `hInv` und `hDeck` werden getragen, nicht
+    in Disjunktheit schreibt (dann greift `stabil`, aus der Fremddisziplin
+    `fremdErhalt_disjunkt_aus_Disziplin`) oder erhaelt (die geteilte Seite:
+    sperrgeteilt, von der Invariantendisziplin von aussen einzuloesen, G3/G4; wo `Q`
+    die Invariante selbst ist, loest `allgemeinStabil_invariant` sie aus dem Kontext
+    ein) und jeder eigene Schritt sie erhaelt (G7). `hInv` und `hDeck` werden getragen, nicht
     verbraucht (G5): sie beurkunden die Disziplin, unter der die geteilte Seite steht. -/
 theorem allgemeinStabil (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
@@ -326,9 +414,46 @@ theorem allgemeinStabil (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     exact hletzte
   exact hall _ σ hlast
 
+/-! ## 11. Der invariante Hauptsatz: keine geteilte Praemisse mehr -/
+
+/-- **Allgemeine Stabilitaet der Invarianten (N Faeden).** Wo `Q` die Invariante selbst
+    ist, faellt die geteilte Erhaltpraemisse weg: jeder Schritt -- fremd wie eigen --
+    wird vom Kontext getragen (`invErhalt_aus_Kontext`), die Kette faltet wie gehabt
+    (`kette_erhaelt` via `allgemeinStabil`). `hDeck` wird getragen, nicht verbraucht:
+    es beurkundet die Disziplin, unter der der Rest -- beliebiges rahmenlokales `Q`
+    ueber geteilten Traegern -- weiter anzunehmen ist (G3); `atomic`-Globale und
+    `publishes`/`awaits`-Paare bleiben ausserhalb (G4). -/
+theorem allgemeinStabil_invariant (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (c : D.Tab ⊕ D.Glob)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (I.inv c))
+    (hInit : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀) :
+    ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → I.inv c σ := by
+  have hErhalt : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (I.inv c vor ↔ I.inv c nach) := by
+    intro k g vor nach _ hkv hkn
+    exact invErhalt_aus_Kontext Nb J I hInv c vor nach
+      (List.mem_of_getElem? hkv) (List.mem_of_getElem? hkn)
+  refine allgemeinStabil Nb J I (fun _ => I.inv c) hInv hDeck hAb hInit ?_ ?_
+  · intro f hf k g vor nach _ _ hkg hkv hkn
+    exact .inr (hErhalt k g vor nach hkg hkv hkn)
+  · intro f hf k vor nach hkg hkv hkn
+    exact hErhalt k f vor nach hkg hkv hkn
+
 #print axioms Gabbro.Grammatik.stabilSchritt_gilt
 #print axioms Gabbro.Grammatik.stabilKette_gilt
 #print axioms Gabbro.Grammatik.kette_erhaelt
 #print axioms Gabbro.Grammatik.allgemeinStabil
+#print axioms Gabbro.Grammatik.schuldnerHaelt_gilt
+#print axioms Gabbro.Grammatik.eintrittHeldIn_aus_Passt
+#print axioms Gabbro.Grammatik.invSichtHaelt_aus_Eintritt
+#print axioms Gabbro.Grammatik.fremdDisziplin_gilt
+#print axioms Gabbro.Grammatik.fremdErhalt_disjunkt_aus_Disziplin
+#print axioms Gabbro.Grammatik.invErhalt_aus_Kontext
+#print axioms Gabbro.Grammatik.allgemeinStabil_invariant
 
 end Gabbro.Grammatik

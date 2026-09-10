@@ -1,0 +1,61 @@
+-- erwartet: H012
+
+-- **One code, two rules: both meanings of `H012` in one file.**
+--
+-- `H012` is issued at two sites in `geteilt.rs` with two different rules: the lock order
+-- across the call boundary (isolated by `gift/142`) and a reclaim without the writer
+-- lock (isolated by `gift/720`). Both write the same code, so a guardian that counts
+-- codes -- `pruefe-vergabe.py`, the coverage table in `messung/DECKUNGSLUECKE.md` --
+-- cannot tell which rule a probe pins (section 1.1 of `messung/RACE.md`).
+--
+-- This file fires both rules at once: `falsch` calls `nimmt_l1` (rank 1) while `L2`
+-- (rank 2) is held, and `zurueckgeben_ohne_sperre` reclaims `frei` without holding
+-- `SCHREIBER`. The reclaim stands outside any `observes` (so `H011` stays silent) and
+-- the grace-period assumption names the domain (so `H015` stays silent). One companion
+-- stands beside the finding and belongs to it: `H008`, because a writer lock taken
+-- nowhere is what the second half is about (the precedent is `gift/272`, which carries
+-- `H017` together with `H007` and `H009`). A future split of the code must touch this
+-- file: one `erwartet` line cannot name two codes.
+module gift::h012_zwei_regeln_ein_code {
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+lock L1 protects { a } rank 1 held <= 100 ops;
+lock L2 protects { b } rank 2 held <= 100 ops;
+
+-- First rule: the rank order across the call boundary (the shape of `gift/142`).
+impl fn nimmt_l1()
+    effects { writes a, locks L1 }
+    costs   <= 8 ops
+{ locks L1 { a = 2; } }
+
+impl fn falsch()
+    effects { writes a, writes b, locks L1, locks L2 }
+    costs   <= 32 ops
+{ locks L2 { b = 2; nimmt_l1(); } }
+
+-- Second rule: a reclaim without the writer lock (the shape of `gift/720`).
+table Konten count 256 {
+    slot {
+        zaehler : u32 in 0 .. 65535,
+    }
+}
+
+rcu BACCT protects { Konten } reclaims frei;
+
+static mut frei : option index into Konten = None;
+
+lock SCHREIBER protects { Konten } rank 3 held <= 100 ops;
+
+impl fn zurueckgeben_ohne_sperre(i : index into Konten)
+    effects { writes frei }
+    costs   <= 4 ops
+{
+    frei = Some(i);
+}
+
+assume gnadenfrist_ist_abgelaufen
+    "Nach der Ruecknahme des Zeigers ist kein Leser mehr in einem `observes BACCT`."
+    falsifier sonde_leser_noch_drin;
+
+}

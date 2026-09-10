@@ -1,0 +1,35 @@
+-- erwartet: V001
+-- **The boundary: transitivity through a middle that carries nothing.** `erzeuger`
+-- publishes `{ m }` on `G`, `verbraucher` awaits it, and between them stands `mitte` --
+-- calling down, publishing nothing, awaiting nothing. The middle must not separate the
+-- halves: the pair is joined along `verbraucher -> mitte -> erzeuger`, two hops, and
+-- stays silent in the global reading and in any transitive one.
+--
+-- A forward-hull-only reading would orphan `erzeuger` here (its callee set carries no
+-- await); the backward half of the component is what keeps it silent. That asymmetry
+-- is the boundary this probe guards.
+--
+-- `w` is the true orphan that carries the verdict: it publishes `{ n }` on `F`, and
+-- nothing awaits it anywhere -- `V001` in every world, fixed or not.
+module gift::two_hop_transitive_boundary {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+
+-- Carries the verdict: orphaned publication, no counterpart anywhere.
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+-- The boundary pair: joined through a middle that carries no half itself.
+impl fn erzeuger(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn mitte(v : u32) effects { writes m, publishes G } costs <= 12 ops
+{ erzeuger(v); }
+
+impl fn verbraucher() -> u32 effects { writes m, publishes G, reads G, reads m } costs <= 16 ops
+{ mitte(0); let g = G awaits { m }; if g { return m; } return 0; }
+
+}

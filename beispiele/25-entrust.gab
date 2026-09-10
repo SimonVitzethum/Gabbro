@@ -47,6 +47,7 @@ table Puffer count 4096 {
 impl fn byte_legen(p : ptr<normal, rw> Puffer, wo : Bytelage, was : u8)
     effects { writes p.slots }
     costs   <= 2 ops
+    deadline <= 20 ops arch x86_64 falsifier sonde_byte_legen
 {
     p.slots[wo].wert = was;
 }

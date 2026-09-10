@@ -1,0 +1,54 @@
+-- erwartet: M147
+-- **V4 index-vs-content precision, MUST-FAIL control beside a MUST-PASS twin.**
+--
+-- The twin (`loese`) is F01's teardown idiom in miniature: `obj` is read from
+-- carrier `p.slots`, the read carrier is written twice, and `obj` is then used
+-- ONLY as an index into the disjoint carrier `o.slots` (`narrow` subject place,
+-- store, branch condition). Every one of those uses stays silent: an index value is a copied snapshot, writes to
+-- the read carrier cannot change the copy, and `obj` is never re-compared
+-- against `p.slots` -- it only selects a cell of `o.slots`. Re-reading
+-- `p.slots[s].object` after the writes would read a FREED slot, so the refused
+-- remedy would be wrong here, not just strict.
+--
+-- The control (`kontrolle`) is the same shape against ONE carrier: `idx` is
+-- read from `k.slots`, `k.slots` is written, and `idx` then selects a cell of
+-- `k.slots` itself -- and only that use falls, as `M147`. A run over this file
+-- must report exactly one `M147`, at the control: that count is what proves
+-- the twin silent.
+module gift733 {
+
+table Objekte count 8 {
+    slot { refcount : u32, }
+}
+
+table Plaetze count 8 {
+    slot { object : index into Objekte, belegt : bool, }
+}
+
+impl fn loese(p : ptr<normal, rw> Plaetze, o : ptr<normal, rw> Objekte, s : index into Plaetze) -> u32
+    effects { reads p.slots, writes p.slots, reads o.slots, writes o.slots }
+    costs <= 64 ops
+{
+    let obj : index into Objekte = p.slots[s].object;
+    p.slots[s].belegt = false;
+    p.slots[s].object = obj;
+    narrow o.slots[obj].refcount to 1 .. 8 else { return 0; }
+    o.slots[obj].refcount = 0;
+    if o.slots[obj].refcount == 0 { return 1; }
+    return 2;
+}
+
+table Paket count 8 {
+    slot { quelle : u32 in 0 ..< 8, ziel : u32, }
+}
+
+impl fn kontrolle(k : ptr<normal, rw> Paket, i : index into Paket) -> u32
+    effects { reads k.slots, writes k.slots }
+    costs <= 32 ops
+{
+    let idx : u32 = k.slots[i].quelle;
+    k.slots[i].quelle = 0;
+    return k.slots[idx].ziel;
+}
+
+}

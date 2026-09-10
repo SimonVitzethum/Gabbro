@@ -92,7 +92,14 @@ SONDEN = W / "sonden"
 # is earned the same way the four P4 probes earned theirs -- not a dilution decision.
 # The metrology gap above stands unchanged: the probe reports cycles, it does not
 # convert ops, and the date stays a sample (R15/W10), not a proof.
-MARK_QUOTE = (6, 39)
+#
+# **(6, 39) -> (9, 42) on 2026-09-10 (lane-59).** Lane-49's three parked P0 date probes
+# (`sonde_abnahme`, `sonde_freigabe`, `sonde_byte_legen`) are bound by three `deadline`
+# clauses in `beispiele/06` and `beispiele/25`, each WITH its program -- three earned
+# diffs at once, same rule as `sonde_tick` (N = 10x the declared `costs` bound, the
+# `beispiele/71` precedent: 500 -> 5000, here 4 -> 40 and 2 -> 20). The orphan mark falls
+# back to 1; the metrology gap above still stands.
+MARK_QUOTE = (13, 46)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -433,16 +440,34 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # floor missed would have gone silent the moment it was paid.*
     r = lauf()
     boden_heute = r[6]
-    vier = ("sonde_mxcsr_rne", "sonde_keine_ueberbreite", "sonde_tsc", "sonde_rdtscp")
-    ohne_vier = [x for x in progs if x not in vier]
-    r = lauf(p=ohne_vier)
-    proben.append(("the floor is met today and MISSED without the four probes",
+    # **The counterfactual moved on 2026-09-10 (central assembly):** the four
+    # probes of 2026-09-04 no longer break the floor alone (13 covered of 46
+    # absorb their removal: 9 of 46 still meets it). The tooth keeps its
+    # meaning -- the floor is earned, and removing the earned work breaks
+    # it -- by naming the SMALLEST newest set that breaks it: the eight
+    # newest PROGRAM rows (39-46: tick plus lane-59's three plus lane-72's
+    # four); without them 5 of 46 miss. The rule for the next move stands
+    # beside tooth EIGHT's: smallest newest breaking set, recomputed on
+    # earned growth, never shrunk to fit.
+    acht = ("sonde_tick", "sonde_abnahme", "sonde_byte_legen", "sonde_freigabe",
+            "sonde_barriere", "sonde_schreib_schranke", "sonde_speicher_schranke",
+            "sonde_schreiben")
+    ohne_acht = [x for x in progs if x not in acht]
+    r = lauf(p=ohne_acht)
+    proben.append(("the floor is met today and MISSED without the eight newest probes",
                    not boden_heute and r[6]))
 
     # EIGHT -- reachability. A corpus that grows without new `P4` rows eventually puts the
     # floor out of reach, and that is a different finding from missing it.
+    #
+    # **The stress size is 59 since 2026-09-10 (central assembly), 31 after
+    # lane-59, 30 before.** Seven more earned `P4` rows (lane-59's three plus
+    # lane-72's four: 13 covered of 46) drowned the +31 stress (13 of 77 still
+    # meets the floor). 59 is the smallest restore (13 of 105 < `1/8`; 58 lands
+    # exactly on it and strict `<` cannot name a boundary). Same standing rule:
+    # smallest size that breaks, recomputed on earned growth, never shrunk.
     viel = dict(annahmen)
-    for i in range(30):
+    for i in range(59):
         viel["erfunden_%d" % i] = "sonde_erfunden_%d" % i
     r = lauf(a=viel)
     proben.append(("a floor grown out of reach is named", r[7]))

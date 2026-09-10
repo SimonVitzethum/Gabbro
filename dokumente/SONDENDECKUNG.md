@@ -56,7 +56,7 @@ An assumption is in exactly one of three states:
 | state | today | who watches it |
 |---|---:|---|
 | **unfalsifiable**, under a criterion | 6 clauses / 1 admitted | `pruefe-unfalsifizierbar.py` — a ratchet DOWN |
-| **falsifiable, probe stands as a program** | **6 of 39** | this file — a ratchet UP |
+| **falsifiable, probe stands as a program** | **13 of 46** | this file — a ratchet UP |
 | **falsifiable, probe MISSING** | **33 of 39** | *nobody, until this file* |
 
 **The third row is the whole reason this document is not two ratchets.** A ratchet on the
@@ -94,7 +94,7 @@ Both halves come out of the same scan, and both are named here rather than left 
 
 ```bash
 ./instrumente/pruefe-sondendeckung.py
-# ==   6 of 39 falsifiable assumptions carry a probe that stands as a program
+# ==   13 of 46 falsifiable assumptions carry a probe that stands as a program
 ```
 
 **And the denominator is not free either.** Three ways exist to keep `A_p` from falling when
@@ -139,7 +139,7 @@ they are read from there rather than invented here:
 | **`P1`** | **ring 0** — a control register, a page table, an MSR, an `in`/`out` | 14 |
 | **`P2`** | **a device** — VT-d, virtio, a 16550, a timer, a counter | 16 |
 | **`P3`** | **a mechanism the generator does not emit** — a grace period, a reader that fetches, a source that ends | 4 |
-| **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **6** |
+| **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **13** |
 
 *The classification is an ESTIMATE per name and not a measurement; `sonden/README.md` says so
 about its own table, and that caveat travels with these rows.* What is not an estimate is the
@@ -294,9 +294,16 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 37 | **zeitgeber_meldet_sich** | `sonde_zeitgeber_meldet_sich` | `P2` | -- |
 | 38 | **zeitgeber_tickt** | `sonde_zeitgeber_tickt` | `P2` | -- |
 | 39 | **frist_zaehle_werte_eingehalten** | `sonde_tick` | `P4` | **PROGRAM** |
+| 40 | **frist_abnahme_eingehalten** | `sonde_abnahme` | `P4` | **PROGRAM** |
+| 41 | **frist_byte_legen_eingehalten** | `sonde_byte_legen` | `P4` | **PROGRAM** |
+| 42 | **frist_freigabe_eingehalten** | `sonde_freigabe` | `P4` | **PROGRAM** |
+| 43 | **frist_barriere_eingehalten** | `sonde_barriere` | `P4` | **PROGRAM** |
+| 44 | **frist_schreib_schranke_eingehalten** | `sonde_schreib_schranke` | `P4` | **PROGRAM** |
+| 45 | **frist_speicher_schranke_eingehalten** | `sonde_speicher_schranke` | `P4` | **PROGRAM** |
+| 46 | **frist_schreiben_eingehalten** | `sonde_schreiben` | `P4` | **PROGRAM** |
 
-**39 rows, 6 of them with a PROGRAM, 6 of them `P4`** — and one probe name carries two rows
-(`sonde_vtd_srtp`, rows 8 and 29), which is why 39 assumptions stand under 38 names.
+**46 rows, 13 of them with a PROGRAM, 13 of them `P4`** — and one probe name carries two rows
+(`sonde_vtd_srtp`, rows 8 and 29), which is why 46 assumptions stand under 45 names.
 
 ---
 

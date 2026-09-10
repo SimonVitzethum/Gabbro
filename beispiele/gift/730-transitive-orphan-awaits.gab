@@ -1,0 +1,42 @@
+-- erwartet: V002
+-- **The transitive orphan, pinned.** `r` awaits `{ m }` on `G`, and `mw` publishes it --
+-- WITHOUT any call edge between the two. The pairing is global, not transitive, so the
+-- rule sees the counterpart SOMEWHERE in the unit and stays silent over `r`, although
+-- no path from `r` ever passes `mw`. A transitive pairing would say `V002` here.
+--
+-- `q` is the true orphan that carries the verdict: it awaits `{ u }` on `H`, and
+-- `u` is written but never published anywhere -- `V002` in every world, fixed or not.
+--
+-- The third pair (`mw`/`rufe_mw`/`mr`) is the counter-probe: the same pairing ALONG a
+-- call edge -- and it must stay silent. If anything but `V002` ever falls here, the
+-- counter-probe has spoken.
+module gift::transitive_orphan_awaits {
+
+static mut m : u32 = 0;
+static mut u : u32 = 0;
+atomic G : bool release;
+atomic H : bool release;
+
+-- Carries the verdict: orphaned await, no counterpart anywhere.
+impl fn q() -> u32 effects { reads H, reads u } costs <= 8 ops
+{ let h = H awaits { u }; if h { return u; } return 0; }
+
+-- The pinned hole: globally paired (with `mw`), no call edge -- silent today.
+impl fn r() -> u32 effects { reads G, reads m } costs <= 8 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+-- Counter-probe, must stay silent: the pairing along `mr -> rufe_mw -> mw`.
+impl fn mw(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rufe_mw(v : u32) effects { writes m, publishes G } costs <= 12 ops
+{ mw(v); }
+
+impl fn mr() -> u32 effects { writes m, publishes G, reads G, reads m } costs <= 16 ops
+{ rufe_mw(0); let g = G awaits { m }; if g { return m; } return 0; }
+
+-- The payload of the true orphan is written, just never published.
+impl fn wu(v : u32) effects { writes u } costs <= 4 ops
+{ u = v; }
+
+}

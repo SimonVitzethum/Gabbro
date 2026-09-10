@@ -1,0 +1,53 @@
+-- erwartet: H018
+-- **The driver handoff without a held guard falls.**
+--
+-- `grammatik/Grammatik/Geraet.lean` proves race-freedom for a DMA window UNDER a guard
+-- premise (`GeraetWache` plus `haussen`): handoff before the device write, take-back
+-- after, and the CPU side ordered against the window endpoints. The checker never asked
+-- for the driver half -- until this probe a function that filled a DMA-visible buffer AND
+-- rang the device doorbell with no guard held across both passed with zero errors.
+--
+-- The window has two halves: a write to a `ptr<dma, …>` place (the buffer the device is
+-- about to touch) and a write to a `ptr<mmio, …>` register (the doorbell). ONE guard has
+-- to cover BOTH (`Geraet.lean` C1). `uebergabe_ohne_wache` holds none and falls once with
+-- `H018`; `uebergabe_mit_wache` holds one across both and stays silent.
+module gift::handoff_without_guard {
+
+opaque type Pa = u64;
+
+device Karte(basis : Pa) at mmio {
+    reg KLINGEL : u32 @0x0c class rw
+}
+
+table Ring count 16 {
+    slot {
+        nutzlast : u32 in 0 .. 65535,
+    }
+}
+
+lock WACHE protects { zaehler } rank 1 held <= 100 ops;
+
+static mut zaehler : u32 = 0;
+
+-- Must fall: the buffer write and the doorbell share no guard.
+impl fn uebergabe_ohne_wache(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j : index into Ring)
+    effects { writes r.slots, writes k.KLINGEL }
+    costs   <= 8 ops
+{
+    r.slots[j].nutzlast = 1;
+    k.KLINGEL = 1;
+}
+
+-- Must pass: the same two halves under ONE guard.
+impl fn uebergabe_mit_wache(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j : index into Ring)
+    effects { writes r.slots, writes k.KLINGEL, writes zaehler }
+    costs   <= 8 ops
+{
+    locks WACHE {
+        zaehler += 1;
+        r.slots[j].nutzlast = 1;
+        k.KLINGEL = 1;
+    }
+}
+
+}
