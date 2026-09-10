@@ -66,6 +66,11 @@
          silent, and that direction is booked, not built).
 -/
 import Gabbro.Body
+-- Umbrella import on purpose: the range proofs below use order, `tdiv`/`tmod`,
+-- bitwise and `norm_cast` lemmas spread over a dozen Mathlib modules, and a wrong
+-- guess at the module split costs a build cycle each. Oleans are cache-fetched,
+-- so this costs load time, not build time. Narrowed later if measured slow.
+import Mathlib
 
 namespace Gabbro.Sicherheit
 
@@ -145,7 +150,7 @@ theorem imax_le {a b c : Int} (h1 : a ≤ c) (h2 : b ≤ c) : imax a b ≤ c := 
     against a denominator at or above overshoots `x`. -/
 theorem tdiv_anti_nonneg {x y₁ y₂ : Int} (hx : 0 ≤ x) (h1 : 0 < y₁) (h12 : y₁ ≤ y₂) :
     x.tdiv y₂ ≤ x.tdiv y₁ := by
-  rcases le_or_lt (x.tdiv y₂) (x.tdiv y₁) with h | h
+  rcases le_or_gt (x.tdiv y₂) (x.tdiv y₁) with h | h
   · exact h
   · have hle : x.tdiv y₁ + 1 ≤ x.tdiv y₂ := by omega
     have e1 := Int.tdiv_mul_add_tmod x y₁
@@ -188,28 +193,28 @@ theorem tdiv_vierecken (lo1 hi1 lo2 hi2 x y : Int)
   have hle : lo1 ≤ hi1 := le_trans hx1 hx2
   have hypos : (0 : Int) < y := lt_of_lt_of_le hpos hy1
   have hhi2pos : (0 : Int) < hi2 := lt_of_lt_of_le hpos (le_trans hy1 hy2)
-  rcases le_or_lt 0 lo1 with hlo1 | hlo1
+  rcases le_or_gt 0 lo1 with hlo1 | hlo1
   · have hhi1nn : (0 : Int) ≤ hi1 := le_trans hlo1 hle
     have lv : lo1.tdiv hi2 ≤ x.tdiv y :=
       le_trans (tdiv_anti_nonneg hlo1 hypos hy2) (Int.tdiv_le_tdiv hypos hx1)
     have uv : x.tdiv y ≤ hi1.tdiv lo2 :=
-      le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_nonneg hhi1nn hypos hy1)
+      le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_nonneg hhi1nn hpos hy1)
     simp only [divEckenLo, divEckenHi]
     exact ⟨le_trans (imin_le_left _ _) (le_trans (imin_le_right _ _) lv),
       le_trans uv (le_trans (le_imax_left _ _) (le_imax_right _ _))⟩
-  · rcases le_or_lt 0 hi1 with hhi1 | hhi1
+  · rcases le_or_gt 0 hi1 with hhi1 | hhi1
     · have hlo10 : lo1 ≤ 0 := le_of_lt hlo1
       have lv : lo1.tdiv lo2 ≤ x.tdiv y :=
-        le_trans (tdiv_anti_neg hlo10 hypos hy1) (Int.tdiv_le_tdiv hypos hx1)
+        le_trans (tdiv_anti_neg hlo10 hpos hy1) (Int.tdiv_le_tdiv hypos hx1)
       have uv : x.tdiv y ≤ hi1.tdiv lo2 :=
-        le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_nonneg hhi1 hypos hy1)
+        le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_nonneg hhi1 hpos hy1)
       simp only [divEckenLo, divEckenHi]
       exact ⟨le_trans (imin_le_left _ _) (le_trans (imin_le_left _ _) lv),
         le_trans uv (le_trans (le_imax_left _ _) (le_imax_right _ _))⟩
     · have hhi10 : hi1 ≤ 0 := le_of_lt hhi1
       have hlo10 : lo1 ≤ 0 := le_trans hle hhi10
       have lv : lo1.tdiv lo2 ≤ x.tdiv y :=
-        le_trans (tdiv_anti_neg hlo10 hypos hy1) (Int.tdiv_le_tdiv hypos hx1)
+        le_trans (tdiv_anti_neg hlo10 hpos hy1) (Int.tdiv_le_tdiv hypos hx1)
       have uv : x.tdiv y ≤ hi1.tdiv hi2 :=
         le_trans (Int.tdiv_le_tdiv hypos hx2) (tdiv_anti_neg hhi10 hypos hy2)
       simp only [divEckenLo, divEckenHi]
@@ -219,7 +224,7 @@ theorem tdiv_vierecken (lo1 hi1 lo2 hi2 x y : Int)
 /-- Negation swaps the extremes -- the negative-denominator reduction of `teile`
     reads the four corners through this. -/
 theorem imin_neg (a b : Int) : imin (-a) (-b) = -(imax a b) := by
-  rcases le_or_lt a b with h | h
+  rcases le_or_gt a b with h | h
   · rcases eq_or_lt_of_le h with rfl | hlt
     · simp [imin, imax]
     · have hF : ¬ -a ≤ -b := by omega
@@ -231,7 +236,7 @@ theorem imin_neg (a b : Int) : imin (-a) (-b) = -(imax a b) := by
 
 /-- ... and back. -/
 theorem imax_neg (a b : Int) : imax (-a) (-b) = -(imin a b) := by
-  rcases le_or_lt a b with h | h
+  rcases le_or_gt a b with h | h
   · rcases eq_or_lt_of_le h with rfl | hlt
     · simp [imin, imax]
     · have hF : ¬ -a ≤ -b := by omega
@@ -271,7 +276,7 @@ theorem trem_pos (y x : Int) (lo2 hi2 : Int) (hypos : 0 < y)
     (hS : y ≤ imax hi2 (-lo2)) :
     -(remSchranke lo2 hi2) ≤ x.tmod y ∧ x.tmod y ≤ remSchranke lo2 hi2 := by
   have hS1 : y ≤ remSchranke lo2 hi2 + 1 := by simp only [remSchranke]; omega
-  rcases le_or_lt 0 x with hx0 | hx0
+  rcases le_or_gt 0 x with hx0 | hx0
   · have h1 : (0 : Int) ≤ x.tmod y := Int.tmod_nonneg y hx0
     have h2 : x.tmod y < y := Int.tmod_lt_of_pos x hypos
     exact ⟨by omega, by omega⟩
@@ -596,9 +601,9 @@ theorem anyBelow_bool (f : Nat → Option Value) :
       exact ⟨a || b, by simp [anyBelowImpl, ha, hb]⟩
 
 /-- `chase` ueber wohlgeformten Ketten liefert einen `bool` -- mit jedem Treibstoff. -/
-theorem chase_bool (σ : World) (c via : String) (to : Int)
+theorem chase_bool (σ : World) (c via : String) (bis : Int)
     (hk : ∀ k, (σ (.slot c k via)).hasShape .opt = true) :
-    ∀ n k, ∃ b, chase σ c via to k n = some (.bool b) := by
+    ∀ n k, ∃ b, chase σ c via bis k n = some (.bool b) := by
   intro n
   rw [chase_eq]
   induction n with
@@ -752,7 +757,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                     have hHi : x.tdiv y ≤ hi1.tdiv lo2 :=
                       le_trans (Int.tdiv_le_tdiv (lt_of_lt_of_le hs2 hy1) hx2)
                         (tdiv_anti_nonneg (le_trans hs1 (le_trans hx1 hx2)) hs2 hy1)
-                    simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                    simp only [eval, hva, hvb, binop, hy, ite_false, Value.hasShape,
                       Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                     exact ⟨hLo, hHi⟩
                   · rename_i hs
@@ -761,7 +766,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                     rcases hc with hc1 | hc2
                     · obtain ⟨hlo, hhi⟩ :=
                         tdiv_vierecken lo1 hi1 lo2 hi2 x y hx1 hx2 hy1 hy2 hc1
-                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                      simp only [eval, hva, hvb, binop, hy, ite_false, Value.hasShape,
                         Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                       exact ⟨hlo, hhi⟩
                     · have hyN : (0 : Int) < -y := by omega
@@ -792,8 +797,8 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                       have hHi : x.tdiv y ≤ divEckenHi lo1 hi1 lo2 hi2 := by
                         simp only [divEckenHi]
                         rw [e1, e2, e3, e4, ev, imax_neg, imax_neg, imax_neg]
-                        exact neg_le_neg_iff.mpr (le_trans hlo' (imin_swap4 _ _ _ _))
-                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                        exact neg_le_neg_iff.mpr (le_trans (imin_swap4 _ _ _ _) hlo')
+                      simp only [eval, hva, hvb, binop, hy, ite_false, Value.hasShape,
                         Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                       exact ⟨hLo, hHi⟩
                 · cases harith
@@ -816,18 +821,18 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                     have h0 : (0 : Int) ≤ x.tmod y := Int.tmod_nonneg y hx0
                     have hHi : x.tmod y ≤ imin (hi2 - 1) hi1 :=
                       le_imin (by omega) (le_trans hrx hx2)
-                    simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                    simp only [eval, hva, hvb, binop, hy, ite_false, Value.hasShape,
                       Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                     exact ⟨h0, hHi⟩
                   · rename_i hs
                     cases harith
                     have hy : y ≠ 0 := by omega
-                    rcases le_or_lt 0 y with hy0 | hy0
+                    rcases le_or_gt 0 y with hy0 | hy0
                     · have hypos : (0 : Int) < y := lt_of_le_of_ne hy0 (Ne.symm hy)
                       have hS : y ≤ imax hi2 (-lo2) :=
                         le_trans hy2 (le_imax_left hi2 (-lo2))
                       obtain ⟨hlo, hhi⟩ := trem_pos y x lo2 hi2 hypos hS
-                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                      simp only [eval, hva, hvb, binop, hy, ite_false, Value.hasShape,
                         Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                       exact ⟨hlo, hhi⟩
                     · have hyN : (0 : Int) < -y := by omega
@@ -841,7 +846,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                         rw [hrw]; exact hlo
                       have hHi : x.tmod y ≤ remSchranke lo2 hi2 := by
                         rw [hrw]; exact hhi
-                      simp only [eval, hva, hvb, binop, hy, Value.hasShape,
+                      simp only [eval, hva, hvb, binop, hy, ite_false, Value.hasShape,
                         Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                       exact ⟨hLo, hHi⟩
                 · cases harith
@@ -866,7 +871,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                     have h1 : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ hi1 := by omega
                     have h2 : (((x.toNat &&& y.toNat : Nat)) : Int) ≤ hi2 := by omega
                     exact le_imin h1 h2
-                  simp only [eval, hva, hvb, binop, bits, show 0 ≤ x by omega,
+                  simp only [eval, hva, hvb, binop, bits, and_true, ite_true, ite_false, show 0 ≤ x by omega,
                     show 0 ≤ y by omega, Value.hasShape,
                     Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                   exact ⟨h0, hmin⟩
@@ -898,7 +903,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                   have hfin : ((((x.toNat ||| y.toNat : Nat))) : Int) ≤ maske (imax hi1 hi2) := by
                     omega
                   have h0 : (0 : Int) ≤ ((((x.toNat ||| y.toNat : Nat))) : Int) := by positivity
-                  simp only [eval, hva, hvb, binop, bits, show 0 ≤ x by omega,
+                  simp only [eval, hva, hvb, binop, bits, and_true, ite_true, ite_false, show 0 ≤ x by omega,
                     show 0 ≤ y by omega, Value.hasShape,
                     Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                   exact ⟨h0, hfin⟩
@@ -930,7 +935,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                   have hfin : ((((x.toNat ^^^ y.toNat : Nat))) : Int) ≤ maske (imax hi1 hi2) := by
                     omega
                   have h0 : (0 : Int) ≤ ((((x.toNat ^^^ y.toNat : Nat))) : Int) := by positivity
-                  simp only [eval, hva, hvb, binop, bits, show 0 ≤ x by omega,
+                  simp only [eval, hva, hvb, binop, bits, and_true, ite_true, ite_false, show 0 ≤ x by omega,
                     show 0 ≤ y by omega, Value.hasShape,
                     Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                   exact ⟨h0, hfin⟩
@@ -955,7 +960,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                   have hHi : x * 2 ^ y.toNat ≤ hi1 * 2 ^ hi2.toNat :=
                     le_trans (Int.mul_le_mul_of_nonneg_right hx2 e1)
                       (Int.mul_le_mul_of_nonneg_left p1 hhi1nn)
-                  simp only [eval, hva, hvb, binop, show 0 ≤ x by omega,
+                  simp only [eval, hva, hvb, binop, and_true, ite_true, ite_false, show 0 ≤ x by omega,
                     show 0 ≤ y by omega, Value.hasShape,
                     Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                   exact ⟨hLo, hHi⟩
@@ -979,7 +984,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
                     le_trans (Int.tdiv_le_tdiv e2 hx1) (tdiv_anti_nonneg hxnn e1 p1)
                   have hHi : x.tdiv (2 ^ y.toNat) ≤ hi1.tdiv (2 ^ lo2.toNat) :=
                     le_trans (Int.tdiv_le_tdiv e1 hx2) (tdiv_anti_nonneg hhi1nn e0 p0)
-                  simp only [eval, hva, hvb, binop, show 0 ≤ x by omega,
+                  simp only [eval, hva, hvb, binop, and_true, ite_true, ite_false, show 0 ≤ x by omega,
                     show 0 ≤ y by omega, Value.hasShape,
                     Option.some.injEq, exists_eq_left', decide_eq_true_eq]
                   exact ⟨hLo, hHi⟩

@@ -157,15 +157,15 @@ example : schluss leer Δx (.bin .div (.lit (.int 1)) (.name "x")) = none := by 
 example : eval ⟨fun _ => .absent, fun n => if n = "x" then .int 0 else .absent⟩
     (.bin .div (.lit (.int 1)) (.name "x")) = none := by decide
 
-/-- `1 / y` mit `y in 1 .. 5`: angenommen, als Zahl ohne Bereich (Fund 5). -/
+/-- `1 / y` mit `y in 1 .. 5`: angenommen, mit Bereich `0 .. 1` (F4 baut Fund 5 hier ab). -/
 example : schluss leer (fun n => if n = "y" then some (.intIn 1 5) else none)
-    (.bin .div (.lit (.int 1)) (.name "y")) = some .int := by decide
+    (.bin .div (.lit (.int 1)) (.name "y")) = some (.intIn 0 1) := by decide
 
 /-- `x + x` mit `x in 0 .. 5`: angenommen, und der Bereich ist `0 .. 10` (`M104`). -/
 example : schluss leer Δx (.bin .add (.name "x") (.name "x")) = some (.intIn 0 10) := by decide
 
 /-- `x & 3`: Bits ueber nichtnegativen Bereichen -- angenommen. `-x & 3` -- ABSAGE (`M137`). -/
-example : schluss leer Δx (.bin .band (.name "x") (.lit (.int 3))) = some .int := by decide
+example : schluss leer Δx (.bin .band (.name "x") (.lit (.int 3))) = some (.intIn 0 3) := by decide
 example : schluss leer Δx (.bin .band (.un .neg (.name "x")) (.lit (.int 3))) = none := by decide
 
 /-- `T.slots[x].f` mit `count T = 4` und `x in 0 .. 5`: ABSAGE (`M103`) -- mit `count 6`
