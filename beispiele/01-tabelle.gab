@@ -150,10 +150,15 @@ impl fn blatt_loeschen(c : ptr<normal, rw> Kappenraum,
     effects   { writes c.slots, writes o.slots, locks KAPPEN }
     costs     <= 200 ops
 {
-    let obj = c.slots[s].objekt;
     aushaengen(c, s);
     c.slots[s].marke   += 1;
     c.slots[s].benutzt  = false;
+
+    -- Die Lesung steht NACH den Schreibungen (V4): `aushaengen` und die beiden
+    -- Schreibungen nennen den Traeger `c`, ein frueheres `obj` waere danach
+    -- veraltet. `.objekt` hat keine davon angeruehrt, daher ist dies dieselbe
+    -- Entscheidung ueber denselben Wert -- nur mit frischem Namen.
+    let obj = c.slots[s].objekt;
 
     -- Die Buchfuehrung: der Zaehler faellt nur, wenn er oben ist. Ohne die Pruefung
     -- verlaesst `- 1` den Bereich von `Zaehler` -- M1 sagt das, nicht ein Testlauf.

@@ -54,9 +54,13 @@ impl fn blatt_loeschen(s : index into Kappenraum)
                writes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 200 ops
 {
-    let obj = Kappenraum.slots[s].objekt;
     Kappenraum.slots[s].benutzt = false;
     Kappenraum.slots[s].elter   = None;
+
+    -- Die Lesung steht NACH den Schreibungen (V4): beide nennen den Traeger
+    -- `Kappenraum`, ein frueheres `obj` waere danach veraltet. `.objekt` hat
+    -- keine davon angeruehrt -- derselbe Wert, frischer Name.
+    let obj = Kappenraum.slots[s].objekt;
 
     if Objekte.slots[obj].zaehler >= 1 {
         Objekte.slots[obj].zaehler -= 1;

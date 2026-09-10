@@ -194,7 +194,6 @@ impl fn anfrage_beantworten(a : Anfrage) -> Zaehlerwert
         }
         Abholen => {
             let f = STAND_FERTIG awaits { stand };
-            let n = anfragenzahl() else (e) { return 0; }
             -- Steht noch gar kein Stand, wird kurz gewartet, statt eine Null zu melden --
             -- **und dieses Warten liegt in dem Zweig, der es braucht**, nicht ueber dem
             -- ganzen `match`.
@@ -204,6 +203,11 @@ impl fn anfrage_beantworten(a : Anfrage) -> Zaehlerwert
                 on_exceeded zaehlwerk_haengt
                 effects { reads stand }
             { }
+            -- Die Lesung steht NACH dem Warten (V4): `retry` ist eine Schleifengrenze,
+            -- und Schleifengrenzen toeten jeden Taint -- `n` traegt den Lesekreis von
+            -- `anfragenzahl` (`reads zaehlwerk`). Entschieden wird ueber dem Stand nach
+            -- dem Warten, also wird auch erst dort gelesen.
+            let n = anfragenzahl() else (e) { return 0; }
             if f {
                 return n;
             }

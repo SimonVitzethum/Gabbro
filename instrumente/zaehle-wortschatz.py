@@ -82,7 +82,11 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # **Nothing new was added**, and the position count stayed at 333 while this denominator
 # fell -- 1,49 became 1,50 per terminal. *That is the shape of a trade; a fall in both would
 # have been a loss.*
-MARKE_WOERTER = 223
+# **223 -> 224 on 2026-09-10, and by the ratchet's own first case.** `concurrent`
+# names the declared-concurrent bodies (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §4):
+# no spawn syntax names a second body, so no existing form carries it, and the
+# reason stands at the entry in `kw.rs`. The second mark does NOT move.
+MARKE_WOERTER = 224
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

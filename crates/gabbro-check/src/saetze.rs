@@ -1514,6 +1514,29 @@ pub const M1: &[Satz] = &[
                      messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md §1.2; \
                      crates/gabbro-check/src/umgebung.rs::intbereich",
     },
+    Satz {
+        name: "m1.frische",
+        kennungen: &["M147"],
+        aussage: "No decision reads a stale-named local: beside the M1 fact set each body \
+                  carries a taint map from locals to their source carriers, grown only at \
+                  `let` with a carrier-read right-hand side (or a callee reads-hull), \
+                  expired by any write naming the carrier -- own writes, loops (all), \
+                  calls (writes-hull), never device registers -- and refused at decision \
+                  positions only (branch/match condition, call argument, return, `narrow` \
+                  subject, index), while storing or moving the name stays allowed.",
+        vorbehalt: "**The literal `messung/netz/udp-echo.gab` still passes, BY DESIGN**: \
+                    its bug is an omission no local holds, so no expiry can fire -- the \
+                    rule catches the udp-echo shape (a named stale use), not the missing \
+                    recompute. Growth is `let`-shaped only: a carrier read moved through \
+                    a bare assignment or an `exchange`/`await` binding does not taint, \
+                    and an indirect call names no hull. With ~0 natural stale-use sites \
+                    the teeth are poison and mutation, not corpus bites -- the same \
+                    standing as `H013`/`H101`/`H017`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/702 (stale decision falls as `M147` alone) and /703 \
+                      (fresh and re-read arms silent, stale control falls once).",
+        fundstelle: "crates/gabbro-check/src/m1.rs; messung/FRISCHE-V4-ENTWURF.md",
+    },
 ];
 
 // ===================================================================================

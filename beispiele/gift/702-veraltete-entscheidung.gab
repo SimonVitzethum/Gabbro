@@ -1,0 +1,22 @@
+-- erwartet: M147
+-- **V4 freshness, MUST-FAIL: the udp-echo SHAPE, not the literal file.**
+--
+-- The LITERAL `messung/netz/udp-echo.gab` still passes under V4 BY DESIGN: its bug is
+-- an OMISSION (the checksum is never recomputed after the `k` writes) and no local
+-- holds the stale value, so no expiry can fire. THIS probe names the stale value
+-- (`alt`): read from the carrier, expired by the write naming that carrier, then
+-- decided upon -- and that decision is refused.
+module gift::frische_veraltet {
+
+table Paket count 8 { slot { quelle : u32, ziel : u32, } }
+
+impl fn antworte(k : ptr<normal, rw> Paket, i : index into Paket) -> u32
+    effects { reads k.slots, writes k.slots } costs <= 16 ops
+{
+    let alt : u32 = k.slots[i].quelle;
+    k.slots[i].quelle = k.slots[i].ziel;
+    if alt != 0 { return 1; }
+    return 0;
+}
+
+}

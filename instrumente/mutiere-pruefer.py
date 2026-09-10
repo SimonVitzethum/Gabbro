@@ -4304,6 +4304,54 @@ MUTATIONEN = [
         "O013 -- `retires t from boot unfalsifiable \"…\"` passes again, so layer S3 of the "
         "boot theorem carries a name and no falsifier. Probe 678 is the witness.",
     ),
+    # -- m1.rs: V4 freshness, the refusal itself (Lane F, 2026-09-10) ---------------------
+    #
+    # `frische_gebrauch` runs beside `grundstellung` at the top of every `anweisung` and
+    # refuses decision-uses of expired locals as `M147`. Without the call the whole V4
+    # map is computed and never read -- taints grow, everything expires, nothing falls.
+    Mutation(
+        "veraltete-entscheidung-faellt-nie",
+        "m1.rs",
+        "        self.grundstellung(s, lage);\n"
+        "        self.frische_gebrauch(s, lage);\n",
+        "        self.grundstellung(s, lage);\n"
+        "        let _ = s;\n",
+        "`M147` -- the freshness refusal never runs; gifts 702 (stale decision) and 703 "
+        "arm 3 (stale control) go silent, and the gift probe falls over the missing code",
+    ),
+    # -- m1.rs: V4 freshness, the carrier kill (Lane F, 2026-09-10) -----------------------
+    #
+    # `frische_toeten_traeger` expires every local tainted with the written carrier. With
+    # the kill switched off the write in 702 lands nowhere: `alt` stays fresh-looking and
+    # the decision on it passes. (The loop-boundary kill `frische_alle_toeten` at the
+    # `Schleife` site has NO committed catching probe -- 42's loop-shaped M147 was
+    # refreshed away in Phase 3, so a mutant there would survive. That gap is booked, not
+    # covered: it wants a gift with a stale use across a loop boundary.)
+    Mutation(
+        "traeger-toetung-greift-nie",
+        "m1.rs",
+        "    for (name, s) in frisch {\n"
+        "        if s.contains(traeger) {\n",
+        "    for (name, s) in frisch {\n"
+        "        if s.contains(traeger) && false {\n",
+        "`M147` -- a write naming the carrier kills nothing; gift 702 reads, writes, "
+        "decides, and the decision stays silent, so the gift probe falls",
+    ),
+    # -- m1.rs: V4 freshness, the map growth (Lane F, 2026-09-10) -------------------------
+    #
+    # `frische_wachsen` is the ONLY place the taint map grows (spec §1: `let` with a
+    # carrier-read RHS). If it never inserts, no local is ever tainted, nothing ever
+    # expires, and both freshness gifts pass clean.
+    Mutation(
+        "frische-waechst-nie",
+        "m1.rs",
+        "        } else if !wert_traeger.is_empty() {\n"
+        "            lage.frisch.insert(name.to_string(), wert_traeger);\n",
+        "        } else if !wert_traeger.is_empty() && false {\n"
+        "            lage.frisch.insert(name.to_string(), wert_traeger);\n",
+        "`M147` -- the taint map stays empty; gifts 702 and 703 (arm 3) read carriers "
+        "into names that never taint, so both pass and both gift probes fall",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -300,6 +300,20 @@ struct Pruefer<'a> {
 struct Lage {
     lokal: HashMap<String, Typ>,
     fakten: Vec<Fakt>,
+    /// **V4 freshness beside the M1 fact set** (`messung/FRISCHE-V4-ENTWURF.md`).
+    ///
+    /// `frisch` maps a local holding carrier-derived data to its source carriers
+    /// (carrier granularity -- never a field path); a killed entry moves to
+    /// `veraltet` instead of vanishing, because only a NAMED expiry can be refused
+    /// later. Re-binding from a fresh read revalidates. Homed here and not in a new
+    /// pass: every kill site is a V1-V3 kill site already (`schreiben_toetet_fakten`,
+    /// `rufe_toeten_fakten`, the loop boundary), so the map reuses that machinery
+    /// instead of walking the tree a second time.
+    frisch: HashMap<String, std::collections::HashSet<String>>,
+    /// Locals whose carrier was written since their last fresh read. Acting on one
+    /// (branch/match condition, call argument, return, `narrow` subject, index) is
+    /// refused as `M147`; storing or moving one stays allowed.
+    veraltet: std::collections::HashSet<String>,
 }
 
 impl<'a> Pruefer<'a> {
@@ -713,6 +727,7 @@ impl<'a> Pruefer<'a> {
 
     fn anweisung(&mut self, s: &Stmt, lage: &mut Lage, ergebnis: Option<&Typ>) {
         self.grundstellung(s, lage);
+        self.frische_gebrauch(s, lage);
         match &s.art {
             StmtArt::Let(l) => {
                 let wert = self.ausdruck(&l.wert, lage);
@@ -725,6 +740,12 @@ impl<'a> Pruefer<'a> {
                 // stirbt, sonst erbt die Verdeckung die Verengung ihres Vorgaengers.
                 lage.fakten
                     .retain(|f| !nennt_namen(f, &l.name.text));
+                // **V4 -- the map grows at a `let` with a carrier-read RHS** (spec
+                // §1): a direct carrier read, a call's reads-hull, or the taint a
+                // moved local already carries. Anything else rebinds the name fresh.
+                let mut traeger = std::collections::HashSet::new();
+                let veraltet = self.traeger_im_ausdruck(&l.wert, lage, &mut traeger);
+                self.frische_wachsen(&l.name.text, traeger, veraltet, lage);
                 // **V1 an der Bindung -- «H2.1», 2026-08-19.**
                 //
                 // `let mut n : u32 in 0 .. NSLOTS = 0;` setzte den Namen bisher auf den
@@ -808,6 +829,30 @@ impl<'a> Pruefer<'a> {
                 lage.lokal.insert(l.name.text.clone(), t);
                 let pfade = l.als_ruf().map(rufnamen_im_ruf).unwrap_or_default();
                 self.rufe_toeten_fakten(&pfade, lage);
+                // **V4 -- like `let`** (spec §1): a fallible call's return taint is
+                // its reads-hull; a place source taints like any carrier read.
+                let mut traeger = std::collections::HashSet::new();
+                let mut veraltet = false;
+                match &l.quelle {
+                    LetQuelle::Ruf(r) => {
+                        traeger = self.rueckgabe_traeger(r, lage);
+                    }
+                    LetQuelle::Ort(o) => {
+                        if let Some(c) = self.traeger_von_ort(o, lage) {
+                            traeger.insert(c);
+                        }
+                        if let Some(s) = lage.frisch.get(&o.basis.text).cloned() {
+                            traeger.extend(s);
+                        }
+                        veraltet = lage.veraltet.contains(&o.basis.text);
+                        for sx in &o.suffixe {
+                            if let OrtSuffix::Index(x) = sx {
+                                veraltet |= self.traeger_im_ausdruck(x, lage, &mut traeger);
+                            }
+                        }
+                    }
+                }
+                self.frische_wachsen(&l.name.text, traeger, veraltet, lage);
                 // **`e` bekommt einen TYP** (Stufe 7, 2026-08-21).
                 //
                 // Bis heute stand `fehlername` in genau EINER Datei des Pruefers -- in
@@ -1283,9 +1328,15 @@ impl<'a> Pruefer<'a> {
                 }
                 // Schleifen tragen keine Fakten hinein -- die Invariante der Traversierung
                 // tut das, und die gehoert dem Beweiser.
+                // **V4 -- loops carry no taints inward either** (spec §2c): every taint
+                // held here expires; a value needed across iterations is re-read
+                // inside. Same sentence as V1-V3, same place.
+                frische_alle_toeten(lage);
                 let mut innen = Lage {
                     lokal: lage.lokal.clone(),
                     fakten: Vec::new(),
+                    frisch: HashMap::new(),
+                    veraltet: lage.veraltet.clone(),
                 };
                 let rumpf = match sch.as_ref() {
                     Schleife::Traverse(t) => {
@@ -1374,6 +1425,10 @@ impl<'a> Pruefer<'a> {
                 let t = self.u.typ_von_ort(&self.modul, &a.quelle, &lage.lokal);
                 self.buche(&t);
                 lage.lokal.insert(a.name.text.clone(), t);
+                // **V4 -- an atomic load rebinds like any non-`let` binding**: the map
+                // grows only at `let`, so the name is cleared, never grown.
+                lage.frisch.remove(&a.name.text);
+                lage.veraltet.remove(&a.name.text);
             }
             // **An `exchange` binds ONE of two things, and until 2026-08-31 it bound the
             // first one twice.**
@@ -1405,6 +1460,9 @@ impl<'a> Pruefer<'a> {
                     innen.lokal.insert(binder.text.clone(), t.clone());
                     self.block(rumpf, &mut innen, Some(&t));
                 }
+                // **V4 -- like `await`: a non-`let` binding rebinds, never grows.**
+                lage.frisch.remove(&e.name.text);
+                lage.veraltet.remove(&e.name.text);
                 self.schreiben_toetet_fakten(&e.ort, lage);
             }
             StmtArt::Return(None) | StmtArt::Leave(_) | StmtArt::Next(_) => {}
@@ -3026,6 +3084,7 @@ impl<'a> Pruefer<'a> {
     fn schreiben_toetet_fakten(&self, ziel: &Ort, lage: &mut Lage) {
         let Some(k) = schluessel_von(ziel) else {
             lage.fakten.clear();
+            frische_alle_toeten(lage);
             return;
         };
         lage.fakten.retain(|f| match f {
@@ -3081,7 +3140,12 @@ impl<'a> Pruefer<'a> {
         // > **Die Ausnahme gilt NICHT fuer Varianten.** Bei einem `tagged` liegen die Felder
         // > uebereinander, und genau dann ist die grobe Regel die richtige.
         if k.contains('.') || k.contains("->") || k.contains('[') {
-            let lage_kopie = &Lage { lokal: lage.lokal.clone(), fakten: Vec::new() };
+            let lage_kopie = &Lage {
+                lokal: lage.lokal.clone(),
+                fakten: Vec::new(),
+                frisch: HashMap::new(),
+                veraltet: std::collections::HashSet::new(),
+            };
             lage.fakten.retain(|f| match f {
                 Fakt::Endlich { schluessel, .. }
             | Fakt::FIntervall { schluessel, .. }
@@ -3094,6 +3158,11 @@ impl<'a> Pruefer<'a> {
                 }
             });
         }
+        // **V4 freshness dies at the same writes** (spec §1-2, carrier granularity
+        // §2a -- no path overlap, syntax only; own writes kill, §2b). A bare write
+        // rebinds its own name instead: the old value is gone, taint and expiry
+        // with it. Reached through `geschriebenes_toeten` for sub-blocks too.
+        frische_toeten_schreiben(&ziel.basis.text, ziel.suffixe.is_empty(), lage);
     }
 
     /// Ein Aufruf toetet die Fakten ueber alles **Nichtlokale**. Lokale Groessen kann er
@@ -3159,6 +3228,21 @@ impl<'a> Pruefer<'a> {
                 .iter()
                 .all(|k| self.ist_lokal(k) || !touches(k))
         });
+        // **V4 -- a call expires what its callee can touch** (spec §2d): the taints
+        // of carriers in the callee's writes-hull (`effects` is mandatory, so the
+        // hull is there to read). Without a readable hull every taint dies -- the
+        // coarse rule, same direction as V1-V3's. No call, no kill.
+        if !pfade.is_empty() {
+            match self.geschriebene_orte(pfade) {
+                Some(geschrieben) => {
+                    for w in &geschrieben {
+                        let traeger = w.split(['.', '[']).next().unwrap_or(w);
+                        frische_toeten_traeger(lage, traeger);
+                    }
+                }
+                None => frische_alle_toeten(lage),
+            }
+        }
     }
 
     /// The places these callees can write -- or `None` when the question cannot be
@@ -3276,6 +3360,234 @@ impl<'a> Pruefer<'a> {
             return false;
         }
         self.u.suche_global(&self.modul, schluessel).is_none()
+    }
+
+    /// **V4 -- the carrier this place reads, if any** (spec §1-2).
+    ///
+    /// A device register read never taints (§2e -- asked of `m3`'s table, never a
+    /// second one). A suffixed read through a plain local value (record, array) is
+    /// no carrier read either (§2a: table/static/world names only -- a `ptr`
+    /// parameter reads the world, a local record reads itself). A bare name reads
+    /// its carrier only when no local binding covers it.
+    fn traeger_von_ort(&self, o: &Ort, lage: &Lage) -> Option<String> {
+        if crate::m3::ort_register(o, &self.geraete, &self.griffe).is_some() {
+            return None;
+        }
+        if o.suffixe.is_empty() {
+            if lage.lokal.contains_key(&o.basis.text) || self.ist_lokal(&o.basis.text) {
+                return None;
+            }
+            // Immutable globals never go stale, so they taint nothing (§1: the map
+            // holds table/static carriers only): a `const` or type name, and a
+            // `static` without `mut` (M1's own map). Only a `static mut` -- and the
+            // world behind a pointer -- can move under a held value.
+            if self.u.nennt_typ_oder_konstante(&self.modul, &o.basis.text)
+                || self.unveraenderliche_statiken.contains_key(&o.basis.text)
+            {
+                return None;
+            }
+            return Some(o.basis.text.clone());
+        }
+        // A suffixed read through a `ptr` reaches the world; through a plain local
+        // value (record, array) it reads the local itself. NOTE: `durchgreifen`
+        // sees THROUGH pointers (it answers the pointee for field access), so the
+        // question here is asked of the type as stored, chasing aliases only.
+        if let Some(t) = lage.lokal.get(&o.basis.text) {
+            if !ist_zeiger(t) {
+                return None;
+            }
+        }
+        Some(o.basis.text.clone())
+    }
+
+    /// Carriers read DIRECTLY by this expression. Call arguments are NOT descended
+    /// into: a call's return taint is its callee's reads-hull (spec §1), never its
+    /// arguments'. Taints of mentioned locals flow through (a move changes no
+    /// belief), and so does expiry. Answers whether an EXPIRED local was mentioned.
+    fn traeger_im_ausdruck(
+        &self,
+        e: &Expr,
+        lage: &Lage,
+        aus: &mut std::collections::HashSet<String>,
+    ) -> bool {
+        let mut veraltet = false;
+        match &e.art {
+            ExprArt::Ruf(r) => {
+                aus.extend(self.rueckgabe_traeger(r, lage));
+            }
+            ExprArt::Ort(o) | ExprArt::Alt(o) => {
+                if let Some(c) = self.traeger_von_ort(o, lage) {
+                    aus.insert(c);
+                }
+                if let Some(s) = lage.frisch.get(&o.basis.text) {
+                    aus.extend(s.iter().cloned());
+                }
+                veraltet |= lage.veraltet.contains(&o.basis.text);
+                for sx in &o.suffixe {
+                    if let OrtSuffix::Index(x) = sx {
+                        veraltet |= self.traeger_im_ausdruck(x, lage, aus);
+                    }
+                }
+            }
+            _ => {
+                for k in crate::unterausdruecke(e) {
+                    veraltet |= self.traeger_im_ausdruck(k, lage, aus);
+                }
+            }
+        }
+        veraltet
+    }
+
+    /// **V4 -- return taint is the callee's reads-hull** (spec §1).
+    ///
+    /// Hull entries naming a callee parameter are mapped through the caller's
+    /// argument at that position; world names (tables, statics) stand as they are.
+    /// An indirect call names no hull and taints nothing.
+    fn rueckgabe_traeger(
+        &self,
+        r: &Ruf,
+        lage: &Lage,
+    ) -> std::collections::HashSet<String> {
+        let mut aus = std::collections::HashSet::new();
+        let Some(pf) = r.path() else {
+            return aus;
+        };
+        let Some(sig) = self.u.funktion(&self.modul, pf) else {
+            return aus;
+        };
+        for e in &sig.effect_list {
+            let Some(rest) = e.strip_prefix("reads ") else {
+                continue;
+            };
+            let basis = rest.split(['.', '[']).next().unwrap_or(rest);
+            if let Some(i) = sig.parameter.iter().position(|(n, _)| n == basis) {
+                if let Some(arg) = r.argumente.get(i) {
+                    let mut tiefe = std::collections::HashSet::new();
+                    self.traeger_im_ausdruck(arg, lage, &mut tiefe);
+                    aus.extend(tiefe);
+                }
+            } else {
+                aus.insert(basis.to_string());
+            }
+        }
+        aus
+    }
+
+    /// **V4 -- the map grows at exactly one place: a `let`** (spec §1). A tainted
+    /// move-in marks the name expired; a fresh carrier read taints it; anything
+    /// else rebinds it clean.
+    fn frische_wachsen(
+        &self,
+        name: &str,
+        wert_traeger: std::collections::HashSet<String>,
+        wert_veraltet: bool,
+        lage: &mut Lage,
+    ) {
+        lage.frisch.remove(name);
+        lage.veraltet.remove(name);
+        if wert_veraltet {
+            lage.veraltet.insert(name.to_string());
+        } else if !wert_traeger.is_empty() {
+            lage.frisch.insert(name.to_string(), wert_traeger);
+        }
+    }
+
+    /// **V4 -- refusal at decision-use positions only** (spec §1).
+    ///
+    /// Branch/match condition, call argument, return value, `narrow` subject,
+    /// index: acting on an expired local falls as `M147`. Store/move positions
+    /// (write RHS, `let` re-binding) stay silent -- and so does every use of a
+    /// local that was never tainted.
+    fn frische_gebrauch(&mut self, s: &Stmt, lage: &Lage) {
+        if lage.veraltet.is_empty() {
+            return;
+        }
+        match &s.art {
+            StmtArt::Wenn(w) => {
+                for (b, _) in &w.zweige {
+                    self.frische_verweigere(b, lage);
+                }
+            }
+            StmtArt::Match(m) => self.frische_verweigere(&m.gegenstand, lage),
+            StmtArt::Narrow(n) => {
+                if lage.veraltet.contains(&n.ort.basis.text) {
+                    self.frische_absage(&n.ort.basis.text, n.ort.span);
+                }
+            }
+            StmtArt::Return(Some(e)) => self.frische_verweigere(e, lage),
+            _ => {}
+        }
+        // Call arguments, wherever the call stands.
+        for e in crate::eigene_ausdruecke(s) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    for a in &r.argumente {
+                        self.frische_verweigere(a, lage);
+                    }
+                }
+            }
+        }
+        if let StmtArt::Ruf(r) = &s.art {
+            for a in &r.argumente {
+                self.frische_verweigere(a, lage);
+            }
+        }
+        if let StmtArt::LetSonst(l) = &s.art {
+            if let Some(r) = l.als_ruf() {
+                for a in &r.argumente {
+                    self.frische_verweigere(a, lage);
+                }
+            }
+        }
+        // An index decides which cell is meant -- everywhere, including stores.
+        let ziele: Vec<&Ort> = match &s.art {
+            StmtArt::Zuweisung(z) => vec![&z.ziel],
+            StmtArt::Publish(p) => vec![&p.ziel],
+            StmtArt::Exchange(e) => vec![&e.ort],
+            StmtArt::Narrow(n) => vec![&n.ort],
+            StmtArt::LetSonst(l) => match &l.quelle {
+                LetQuelle::Ort(o) => vec![o],
+                LetQuelle::Ruf(_) => vec![],
+            },
+            StmtArt::AwaitLoad(a) => vec![&a.quelle],
+            _ => vec![],
+        };
+        for o in ziele {
+            for sx in &o.suffixe {
+                if let OrtSuffix::Index(x) = sx {
+                    self.frische_verweigere(x, lage);
+                }
+            }
+        }
+    }
+
+    /// Every expired local mentioned in this expression is refused, once per name.
+    fn frische_verweigere(&mut self, e: &Expr, lage: &Lage) {
+        let mut gemeldet = std::collections::HashSet::new();
+        for x in crate::alle_ausdruecke(e) {
+            if let ExprArt::Ort(o) | ExprArt::Alt(o) = &x.art {
+                if lage.veraltet.contains(&o.basis.text) && gemeldet.insert(o.basis.text.clone())
+                {
+                    self.frische_absage(&o.basis.text, o.span);
+                }
+            }
+        }
+    }
+
+    fn frische_absage(&mut self, name: &str, span: Span) {
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M147",
+                span,
+                format!(
+                    "`{name}` may be stale here: its carrier was written since `{name}` was read"
+                ),
+            )
+            .mit_notiz(
+                "re-read the carrier into this name after the write -- the re-read IS the \
+                 refresh; storing or moving the name needs none, acting on it does",
+            ),
+        );
     }
 
     // -- Absagen ------------------------------------------------------------------------
@@ -4811,6 +5123,52 @@ fn beruehrt(a: &str, b: &str) -> bool {
     a == b
         || a.starts_with(b) && trennt(a.as_bytes().get(b.len()).copied())
         || b.starts_with(a) && trennt(b.as_bytes().get(a.len()).copied())
+}
+
+/// A `ptr` as stored, chasing aliases but never the pointee (unlike
+/// `durchgreifen`, which answers the pointee for field access).
+fn ist_zeiger(t: &Typ) -> bool {
+    match t {
+        Typ::Zeiger(_) => true,
+        Typ::Benannt { unter, .. } => ist_zeiger(unter),
+        _ => false,
+    }
+}
+
+/// **V4 -- a write naming this carrier expires every local tainted with it**
+/// (spec §1, carrier granularity §2a -- no path overlap, syntax only; own writes
+/// kill, §2b). The written name itself is rebound when bare (fresh again) and
+/// stale when only a part of it was written.
+fn frische_toeten_schreiben(traeger: &str, nackt: bool, lage: &mut Lage) {
+    if lage.frisch.remove(traeger).is_some() && !nackt {
+        lage.veraltet.insert(traeger.to_string());
+    }
+    if nackt {
+        lage.veraltet.remove(traeger);
+    }
+    frische_toeten_traeger(lage, traeger);
+}
+
+/// **V4 -- expire every tainted local of this carrier, keep the rest.**
+fn frische_toeten_traeger(lage: &mut Lage, traeger: &str) {
+    let frisch = std::mem::take(&mut lage.frisch);
+    let mut rest = HashMap::with_capacity(frisch.len());
+    for (name, s) in frisch {
+        if s.contains(traeger) {
+            lage.veraltet.insert(name);
+        } else {
+            rest.insert(name, s);
+        }
+    }
+    lage.frisch = rest;
+}
+
+/// **V4 -- expire every taint** (spec §2c loops, and the coarse call rule): the
+/// names stay known-expired instead of going silent.
+fn frische_alle_toeten(lage: &mut Lage) {
+    for (name, _) in std::mem::take(&mut lage.frisch) {
+        lage.veraltet.insert(name);
+    }
 }
 
 fn trennt(c: Option<u8>) -> bool {
