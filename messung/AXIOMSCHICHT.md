@@ -349,14 +349,14 @@ ssh ki-pc-fisch-101 'cd gabbro-axiom && export PATH=$HOME/.cargo/bin:$PATH && \
 # -- 37 probe name(s) STRUCK: no program stands for them.
 ```
 
-| bucket | of 44 | what it is |
+| bucket | of 45 | what it is |
 |---|---:|---|
-| **falsifiable, probe EXISTS as a program** | ~~2 of 44~~ **1 of 44** | **CORRECTED 2026-09-04, and the two was a sum over two halves that do not overlap.** `stilllegung_boot_ende_ist_unerreichbar` names `sonden/sonde_boot_unerreichbar.c` — *that is the one connection.* `sonden/sonde_release_sichtbarkeit.c` exists as a program and **no `falsifier` line anywhere names it**, so adding it made a bigger number out of a name without a program and a program without a name. **Both are the same broken connection, one end missing on either side, and both are held since today in [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md).** *The bar counts what a probe can do; `gabbro annahmen` counts what the source says — and it reports ONE.* |
-| **falsifiable, probe MISSING** | **39 of 44** | the real work — and 37 of them carry a STRUCK name today |
-| **unfalsifiable under a criterion** | **2 of 44** | `ipi_kommt_an` and `quelle_endet`, both under `U2` |
-| **not an assumption of this layer** | **1 of 44** | `eingabe_endet`, under `R3` |
+| **falsifiable, probe EXISTS as a program** | ~~2 of 44~~ **1 of 45** | **CORRECTED 2026-09-04, and the two was a sum over two halves that do not overlap.** `stilllegung_boot_ende_ist_unerreichbar` names `sonden/sonde_boot_unerreichbar.c` — *that is the one connection.* `sonden/sonde_release_sichtbarkeit.c` exists as a program and **no `falsifier` line anywhere names it**, so adding it made a bigger number out of a name without a program and a program without a name. **Both are the same broken connection, one end missing on either side, and both are held since today in [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md).** *The bar counts what a probe can do; `gabbro annahmen` counts what the source says — and it reports ONE.* |
+| **falsifiable, probe MISSING** | **39 of 45** | the real work — and 37 of them carry a STRUCK name today |
+| **unfalsifiable under a criterion** | **2 of 45** | `ipi_kommt_an` and `quelle_endet`, both under `U2` |
+| **not an assumption of this layer** | **1 of 45** | `eingabe_endet`, under `R3` |
 
-**Eleven of the 44 cannot be binned at all, and the refusal is older than the bar.** `S004`
+**Eleven of the 45 cannot be binned at all, and the refusal is older than the bar.** `S004`
 refuses a `progress` that rests on an unfalsifiable assumption, `N005` an `entrust` that does
 — so for every assumption a construct actually CARRIES, the word is already priced:
 
@@ -370,7 +370,7 @@ comm -12 /tmp/n44 /tmp/p | wc -l
 # 11
 ```
 
-*What the language never priced is the word standing alone, and 33 of the 44 stand alone.*
+*What the language never priced is the word standing alone, and 33 of the 45 stand alone.*
 
 **The second bucket is the answer, and it is the unflattering one.** *A refusal moves a row
 from `unfalsifiable` to `falsifiable and unprobed` — the more expensive place to stand, not
@@ -465,8 +465,8 @@ true.** What has happened since is that its measurand grew:
 
 | | today | direction |
 |---|---:|---|
-| `A_u` — assumptions no probe can ever refute, under `U1`/`U2` | 2 of 44 | **ratchet down**: it may fall, never rise, and a rise carries its reason at the mark (`pruefe-unfalsifizierbar.py`) |
-| `A_p` — assumptions whose probe EXISTS as a program | ~~2 of 44~~ ~~1 of 38~~ **5 of 38** | **a SHARE and not a count since 2026-09-04**, with a ratchet that may not fall and a **floor of `1/8` the tree failed that morning and MET the same day** (the four `P4` probes were written) — [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md), `./instrumente/pruefe-sondendeckung.py`. *The denominator is the falsifiable half, 38 of the 44; the six unfalsifiable ones are `A_u`'s population and not this one's.* |
+| `A_u` — assumptions no probe can ever refute, under `U1`/`U2` | 2 of 45 | **ratchet down**: it may fall, never rise, and a rise carries its reason at the mark (`pruefe-unfalsifizierbar.py`) |
+| `A_p` — assumptions whose probe EXISTS as a program | ~~2 of 44~~ ~~1 of 38~~ **5 of 39** | **a SHARE and not a count since 2026-09-04**, with a ratchet that may not fall and a **floor of `1/8` the tree failed that morning and MET the same day** (the four `P4` probes were written) — [`dokumente/SONDENDECKUNG.md`](../dokumente/SONDENDECKUNG.md), `./instrumente/pruefe-sondendeckung.py`. *The denominator is the falsifiable half, 39 of the 45; the six unfalsifiable ones are `A_u`'s population and not this one's.* |
 
 *`A` itself stays as a census and stops being a gate.* It is a useful number — it says how much
 machine the corpus talks about — and it is not a measure of anything that can be earned.

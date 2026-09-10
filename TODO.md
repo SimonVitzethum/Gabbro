@@ -323,7 +323,7 @@ darunter.
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
       **`pruefe-zahlen.py` führt heute 91 Kennzahlen mit Befehl** und zählt daneben
-      **181 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
+      **179 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
       **Die Zahl ist von ~~145~~ auf 180 GESTIEGEN, und beide Schritte sind Korrekturen und
@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 229 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 231 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *223 → 224 on 2026-09-07: `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md`
       joined — the census of what is open at the checker and at the grammar, whose one
       finding is a CLASS: three sites where `pruefe` reports zero errors, `emit` returns 0,
@@ -924,7 +924,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute ~~3299~~ ~~3303~~ ~~3324~~ ~~3328~~ ~~3355~~ ~~3358~~ ~~3423~~ ~~3426~~ ~~3499~~ ~~3538~~ **3629 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.  *3538 → 3629 am 2026-09-09:* die vierte Syntaxfassung (`deadline`, `count`, `owner`, vier neue Absagecodes, fünf neue Sätze, sieben Gift- und Beispielprogramme) bringt ihre Bahnen mit — **einundneunzig Fortsetzungen mehr, 0 kleben**. *3426 → 3499 am 2026-09-08:* die beiden Regeln dieses Laufs — `M146` (eine Bruchschranke an einem Ganzzahltyp) und `S009` (eine `-> never`-Routine, die zurückkehrt) — bringen ihre zwei Sätze im Passregister, ihre zwei Giftproben und drei Prüfungen mit **einer Bahn je Stelle, an der ein Bereich stehen darf**: dreiundsiebzig Fortsetzungen mehr, **0 kleben**. *3358/3423 → 3426 am 2026-09-08:* **zwei Bahnen haben dieselbe Zahl bewegt, und die zusammengeführte ist keine von beiden** — der Lean-Kanal (+3) und die Binderregel `D022`/`D023` (+68) standen einzeln bei 3358 und 3423; nachgemessen im gemeinsamen Baum sind es **3426**. *Eine Zahl, die zwei Zweige einzeln buchen, ist beim Zusammenführen zu MESSEN und nicht zu addieren.* *3355 → 3358 am 2026-09-08:* der Lean-Kanal bekam die Lochphase in `gabbro_calls` und die zwei weiteren Schleifenformen der Rekursion — **drei Fortsetzungen mehr, 0 kleben.** *3328 → 3355 am 2026-09-08:* der Lean-Kanal bekam den Passzähler und die sechs neuen Absagegründe — **siebenundzwanzig Fortsetzungen mehr, 0 kleben.** *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      Heute ~~3299~~ ~~3303~~ ~~3324~~ ~~3328~~ ~~3355~~ ~~3358~~ ~~3423~~ ~~3426~~ ~~3499~~ ~~3538~~ ~~3629~~ **3631 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.  *3629 → 3631 am 2026-09-10:* zwei Bahnen (`gabbrov`-Gerüst, P002-Hinweise) bringen ihre Fortsetzungen mit — **zwei Fortsetzungen mehr, 0 kleben**. *3538 → 3629 am 2026-09-09:* die vierte Syntaxfassung (`deadline`, `count`, `owner`, vier neue Absagecodes, fünf neue Sätze, sieben Gift- und Beispielprogramme) bringt ihre Bahnen mit — **einundneunzig Fortsetzungen mehr, 0 kleben**. *3426 → 3499 am 2026-09-08:* die beiden Regeln dieses Laufs — `M146` (eine Bruchschranke an einem Ganzzahltyp) und `S009` (eine `-> never`-Routine, die zurückkehrt) — bringen ihre zwei Sätze im Passregister, ihre zwei Giftproben und drei Prüfungen mit **einer Bahn je Stelle, an der ein Bereich stehen darf**: dreiundsiebzig Fortsetzungen mehr, **0 kleben**. *3358/3423 → 3426 am 2026-09-08:* **zwei Bahnen haben dieselbe Zahl bewegt, und die zusammengeführte ist keine von beiden** — der Lean-Kanal (+3) und die Binderregel `D022`/`D023` (+68) standen einzeln bei 3358 und 3423; nachgemessen im gemeinsamen Baum sind es **3426**. *Eine Zahl, die zwei Zweige einzeln buchen, ist beim Zusammenführen zu MESSEN und nicht zu addieren.* *3355 → 3358 am 2026-09-08:* der Lean-Kanal bekam die Lochphase in `gabbro_calls` und die zwei weiteren Schleifenformen der Rekursion — **drei Fortsetzungen mehr, 0 kleben.** *3328 → 3355 am 2026-09-08:* der Lean-Kanal bekam den Passzähler und die sechs neuen Absagegründe — **siebenundzwanzig Fortsetzungen mehr, 0 kleben.** *3299 → 3303 am 2026-09-04:* die `queue`-Absage in `emit.rs` wurde berichtigt und ist von zwei auf sechs Zeilen gewachsen — **vier Fortsetzungen, kein Text mehr an anderer Stelle.**      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       Heute **3183 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
 Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.      *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung      kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
       überlangen Zeile in fortgesetzte umgebrochen sind — *und auf 2136, als das
@@ -1320,7 +1320,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      154 EBNF-Regeln und 218 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      160 EBNF-Regeln und 220 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -1336,7 +1336,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       claims) or renaming (then every user carries the list in their head).
       **The compiler today admits words as names only after `.`/`->` and before `:`.**
       *Kein Messposten: die Zahlen (neun Wörter, elf Stellen) stehen, und `pruefe-wortschatz.py`
-      hält 218 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
+      hält 220 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
       in beiden Richtungen daneben.* Bleibt offen.
 
 - [ ] **Per template at least one mutation that falls ONLY if the once-obligation is really
@@ -5100,7 +5100,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 154 / 218) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 160 / 220) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

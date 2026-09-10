@@ -75,7 +75,18 @@ SONDEN = W / "sonden"
 # same day**: `sonde_mxcsr_rne`, `sonde_keine_ueberbreite`, `sonde_tsc` and `sonde_rdtscp` were
 # written, so the whole of class `P4` now stands as a program. *The raise is not a decision,
 # it is the diff four programs earned* -- and it is the one move this mark exists to record.
-MARK_QUOTE = (5, 38)
+#
+# **5 of 39 since 2026-09-10, and this move is NOT earned.** `beispiele/71` dates one
+# function, so the checker generates `frist_zaehle_werte_eingehalten` -- a falsifiable
+# assumption whose probe (`sonde_tick`) stands as no program. The floor section foresaw
+# exactly this dilution (`5 / 39 = 0.1282`, still above `1/8`), and the manifest carries
+# the entry because omitting it would claim more than proved (the `stilllegung_` rule).
+# What is NOT decided here is the metrology a date probe would need: falsifying a CYCLE
+# count needs an ops-to-cycles map the tree refuses to write (D10) -- that is L4, a
+# subproject, not a probe. Until it stands, every dated function costs share, and this
+# mark records the cost instead of hiding it. *The next silent dilution from 39 breaks it
+# again, which is what the mark is for.*
+MARK_QUOTE = (5, 39)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -107,6 +118,10 @@ MARK_WAISEN = 1
 # program. The register's denominator is `beispiele/` plus the generated entries, and this
 # number is what keeps that narrowing honest: *a figure left out of a quota has to be printed
 # somewhere, or the quota measures the boundary instead of the tree.*
+#
+# **No 14th from `beispiele/71` (2026-09-10):** its `deadline` names `sonde_tick`, but the
+# name attributes to `frist_zaehle_werte_eingehalten` (`klauseln_in`, deadline branch),
+# so it stands INSIDE the assumption set, not outside it.
 MARK_AUSSEN = 13
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
@@ -168,6 +183,9 @@ def korpus_dateien(unterordner):
                   and korpus.verfolgt(p, W))
 
 
+FN_BELEGT = re.compile(r"^\s*(?:pub\s+)?(?:impl\s+|spec\s+|extern\s+)?fn\s+([A-Za-z_][A-Za-z_0-9]*)")
+
+
 def klauseln_in(text):
     """`(assumption, probe)` for every `falsifier` clause, plus the ones with no owner."""
     gefunden, waisen = [], []
@@ -177,6 +195,20 @@ def klauseln_in(text):
         if not m or z.lstrip().startswith("--"):
             continue
         name = None
+        # **A `deadline` carries its falsifier in a `fn` clause, not under an
+        # assumption** («SG-22»): it attributes as the manifest names it
+        # (`frist_<fn>_eingehalten`, `manifest.rs::fristannahmen`), never as a
+        # stilllegung -- and the enclosing `fn` may carry any qualifier (`impl`
+        # included), which `FN` below does not read.
+        if re.search(r"\bdeadline\b", z):
+            for j in range(i, max(-1, i - 14), -1):
+                f = FN_BELEGT.match(zeilen[j])
+                if f:
+                    name = "frist_%s_eingehalten" % f.group(1)
+                    break
+            (gefunden if name else waisen).append(
+                (name, m.group(1)) if name else i + 1)
+            continue
         for j in range(i, max(-1, i - 14), -1):
             d = DECL.match(zeilen[j])
             if d:

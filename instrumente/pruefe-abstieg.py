@@ -284,7 +284,14 @@ def je_funktion(ganz, arten):
 # entry it would have carried was a real defect, and it was repaired the same day
 # (`messung/ABSTIEG.md`). *An empty booking is the only honest starting state -- what goes in
 # has to be argued for.*
-GEBUCHT = {}
+GEBUCHT = {
+    # **Synthesis, not analysis** (2026-09-10): `zaehler_definition` BUILDS a `Wenn`
+    # over a `Zuweisung` for the generated counter and hands both to `traverse()`,
+    # which descends (covered there). Naming statement kinds to construct them is
+    # not walking blocks, so there is no descent to miss -- and no `_ => weigere`
+    # either, because nothing is refused here.
+    "emit::zaehler_definition": "synthesis position -- builds Wenn/Zuweisung, traverse() descends",
+}
 
 # **A DOUBLE descent is never bookable.** It is not a gap in coverage but a run time of
 # 2^depth -- measured at 1,88 s for 26 nested `if`, and longer than ninety seconds at 50.

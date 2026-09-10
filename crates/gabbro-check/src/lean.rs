@@ -444,7 +444,6 @@ impl LeanReason {
     /// variant against this array, instead of only checking that what is here is not mute.
     pub const ALL: [LeanReason; 43] = [
         LeanReason::PassCounter,
-        LeanReason::Counted,
         LeanReason::QuantifiedThreads,
         LeanReason::QuantifiedMappings,
         LeanReason::BufferLength,
@@ -486,6 +485,7 @@ impl LeanReason {
         LeanReason::CalleeContract,
         LeanReason::ReturnInLoop,
         LeanReason::Recursion,
+        LeanReason::Counted,
     ];
 }
 

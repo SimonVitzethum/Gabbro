@@ -5,7 +5,7 @@ measures, and what the tree measures against it **today**.
 
 **It was written RED on purpose** — *a bound the tree already meets is a decoration and not a
 gate* — and it names its price in four programs. **The four were written on 2026-09-04 and
-the floor is met with nothing to spare: `5 of 38 = 0.1316` against `1/8 = 0.125`.** Every one
+the floor is met with less than nothing to spare: `5 of 39 = 0.1282` against `1/8 = 0.125`.** Every one
 of them carries a positive control that was made to fall, because *a probe whose control
 cannot be made to fall is not finished*:
 
@@ -54,13 +54,13 @@ An assumption is in exactly one of three states:
 | state | today | who watches it |
 |---|---:|---|
 | **unfalsifiable**, under a criterion | 6 clauses / 1 admitted | `pruefe-unfalsifizierbar.py` — a ratchet DOWN |
-| **falsifiable, probe stands as a program** | **5 of 38** | this file — a ratchet UP |
-| **falsifiable, probe MISSING** | **33 of 38** | *nobody, until this file* |
+| **falsifiable, probe stands as a program** | **5 of 39** | this file — a ratchet UP |
+| **falsifiable, probe MISSING** | **33 of 39** | *nobody, until this file* |
 
 **The third row is the whole reason this document is not two ratchets.** A ratchet on the
 unfalsifiable count does not fall when nobody writes a probe; a ratchet on the probe count
 only rises when somebody does. **The state the tree is actually in is the one neither of them
-can see** — and it was 37 of 38 when this file was written. It is 33 of 38 today.
+can see** — and it was 37 of 38 when this file was written. It is 33 of 39 today.
 
 *A count cannot watch it either*, and for exactly the reason `A = 19` failed: a count grows
 with the corpus, so writing one more example program makes the number worse without making the
@@ -92,7 +92,7 @@ Both halves come out of the same scan, and both are named here rather than left 
 
 ```bash
 ./instrumente/pruefe-sondendeckung.py
-# ==   5 of 38 falsifiable assumptions carry a probe that stands as a program
+# ==   5 of 39 falsifiable assumptions carry a probe that stands as a program
 ```
 
 **And the denominator is not free either.** Three ways exist to keep `A_p` from falling when
@@ -119,7 +119,7 @@ was written**.
 >
 > **When this was written `A_p = 1 / 38 = 0.026` and the tree missed the floor of 0.125 by a
 > factor of 4.75. The price was four programs; they were written on 2026-09-04, and
-> `A_p = 5 / 38 = 0.1316` MEETS the floor with 0.0066 to spare.**
+> `A_p = 5 / 39 = 0.1282` MEETS the floor with 0.0032 to spare.**
 >
 > *The slack is the smallest a unit fraction leaves, and that is the point:* one more
 > falsifiable assumption without a probe puts `A_p` at `5 / 39 = 0.1282`, still above; two put
@@ -132,10 +132,10 @@ was written**.
 rests on: for each named probe, **what it would need in order to exist**. Four classes, and
 they are read from there rather than invented here:
 
-| | what the probe would need | of 38 |
+| | what the probe would need | of 39 |
 |---|---|---:|
 | **`P1`** | **ring 0** — a control register, a page table, an MSR, an `in`/`out` | 14 |
-| **`P2`** | **a device** — VT-d, virtio, a 16550, a timer, a counter | 15 |
+| **`P2`** | **a device** — VT-d, virtio, a 16550, a timer, a counter | 16 |
 | **`P3`** | **a mechanism the generator does not emit** — a grace period, a reader that fetches, a source that ends | 4 |
 | **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **5** |
 
@@ -169,7 +169,7 @@ to be entered in `manifest::SONDEN_MIT_PROGRAMM` or the checker keeps striking i
 | `sonde_tsc` | `rdtsc` | hold one core, then read the counter through a function pointer and fall on a standstill **or** a step back; **77** if `CR4.TSD` forbids it | a frozen source and a backward one run through the same detector and must both be caught; from outside, `prctl(PR_SET_TSC, PR_TSC_SIGSEGV)` drove it to **77** and a build with the frozen source in arm 3 to **1** |
 | `sonde_rdtscp` | `rdtscp` | `CPUID` leaf `0x8000'0001` for the `requires`, then the instruction bracketed between two `rdtsc` reads; **77** where the feature is absent | three sources violate by construction — frozen, backward, outside the bracket; from outside, `PR_SET_TSC` gave **77**, a cleared feature bit gave **77**, and a foreign clock in arm 4b gave **1** |
 
-**Measured: 5 of 38 = 0.1316 ≥ 0.125.** The floor is met and not exceeded — *by design,
+**Measured: 5 of 39 = 0.1282 ≥ 0.125.** The floor is met and not exceeded — *by design,
 because a floor with slack in it is a floor nobody has to think about again.*
 
 > **Not one of the four is an analogy** (`sonden/README.md` forbids those). Each forces the
@@ -287,9 +287,10 @@ a doubled row would still be counted where the floor's reachability is decided.
 | 36 | **zaehlwerk_antwortet** | `sonde_zaehlwerk_antwortet` | `P2` | -- |
 | 37 | **zeitgeber_meldet_sich** | `sonde_zeitgeber_meldet_sich` | `P2` | -- |
 | 38 | **zeitgeber_tickt** | `sonde_zeitgeber_tickt` | `P2` | -- |
+| 39 | **frist_zaehle_werte_eingehalten** | `sonde_tick` | `P2` | -- |
 
-**38 rows, 5 of them with a PROGRAM, 5 of them `P4`** — and one probe name carries two rows
-(`sonde_vtd_srtp`, rows 8 and 29), which is why 38 assumptions stand under 37 names.
+**39 rows, 5 of them with a PROGRAM, 5 of them `P4`** — and one probe name carries two rows
+(`sonde_vtd_srtp`, rows 8 and 29), which is why 39 assumptions stand under 38 names.
 
 ---
 

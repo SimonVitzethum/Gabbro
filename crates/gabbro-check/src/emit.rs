@@ -9360,12 +9360,26 @@ fn verenge(text: String, e: &Expr, ziel: Option<&str>, u: &Namen) -> String {
 
 fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
-        // **«SG-24»: a count IS a `uint64_t`.** Its counter returns one, and the
-        // `let` that binds it learns the type here -- through the same two readers
-        // (`lokale_lets` and the `Let` arm) that learn every other C type from this
-        // function. The Gabbro range (`0 ..= N`) is M1's fact and lives in the
-        // checker, not in the C.
-        ExprArt::Zaehle { .. } => Some("uint64_t".to_string()),
+        // **«SG-24»: a count has the C type of its domain's index word.** An
+        // index-word domain (`slots of`, `descendants of`, `ancestors of`) counts
+        // at most `count` slots, and `count` fills the index word or the table is
+        // refused -- so the counter returns `uint32_t`, exactly like the loop
+        // variable below, and no narrowing cast is ever written for it. An array
+        // domain (`elems of`) counts up to its length and returns `uint64_t`,
+        // like its loop variable. *The emitter writes no narrowing casts
+        // anywhere (`verenge` only narrows what it re-derives); picking the
+        // width up front keeps the first width-crossing program from tripping
+        // `-Wconversion`.* The Gabbro range (`0 ..= N`) is M1's fact and lives
+        // in the checker, not in the C.
+        ExprArt::Zaehle { domaene, .. } => Some(
+            match domaene {
+                Domaene::SlotsVon(_)
+                | Domaene::NachfahrenVon(_)
+                | Domaene::VorfahrenVon(_) => "uint32_t",
+                _ => "uint64_t",
+            }
+            .to_string(),
+        ),
         // **The signature first, the body second** (2026-08-25). A name a declaration knows is
         // answered from the declaration; only a `let`-bound local falls through to
         // `lokaltyp`, which `lokale_lets` filled from declarations as well. *The order is the
@@ -10266,11 +10280,19 @@ fn zaehler_definition(z: &Zaehlstelle, u: &Namen, aus: &mut String, absagen: &mu
         1,
         &Austritt::default(),
     );
+    // The C width follows the domain's index word (see `wert_ctyp`): index-word
+    // domains count into `uint32_t`, array domains into `uint64_t`. Same width
+    // at the call as at the `let`, so no conversion -- explicit or implicit.
+    let wort = match &z.domaene {
+        Domaene::SlotsVon(_) | Domaene::NachfahrenVon(_) | Domaene::VorfahrenVon(_) => {
+            "uint32_t"
+        }
+        _ => "uint64_t",
+    };
     aus.push_str(&format!(
-        "\n/* `count {} in {} : …` -- generated counter («SG-24»). The predicate is the \
-         writer's logic, the traversal the template's: it falls here once, not per site. */\n\
-         static uint64_t {}({}) {{\n\
-         \x20   uint64_t {} = 0;\n\
+        "\n/* `count {} in {} : …` -- generated counter («SG-24»). The predicate is the writer's logic, the traversal the template's: it falls here once, not per site. */\n\
+         static {wort} {}({}) {{\n\
+         \x20   {wort} {} = 0;\n\
          {}    return {};\n\
          }}\n",
         z.variable.text,
@@ -10458,12 +10480,9 @@ fn zaehlstellen_block(
         // A `match` binder is in scope in its arm, in NEITHER walk: the
         // collection here and the `zaehlbinder` threading below both resolve
         // `traverse` binders only, so both report the same sentence for an arm
-        // binder (hoist it into a `let` first). *Two walks, one rule.*
-        if let StmtArt::Match(m) = &s.art {
-            for z in &m.zweige {
-                zaehlstellen_block(&z.rumpf, binder, eigen, aus);
-            }
-        }
+        // binder (hoist it into a `let` first). *Two walks, one rule.* (Arms
+        // are reached through `unterbloecke` below -- a second walk here would
+        // be a double descent.)
         for e in crate::eigene_ausdruecke(s) {
             zaehlstellen_expr(e, binder, eigen, aus);
         }

@@ -196,7 +196,11 @@ CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
 # the SECOND file for `chain`, `queue` and `threads` -- *a by-product of a measurement with
 # its own subject, which is exactly the shape §5c asks for and not the one it warns against.*
 # The ratchet falls; it is not loosened.
-MARKE_ALLEIN = 0
+# **0 -> 1 on 2026-09-10, and the reason stands here as ordered:** `deadline` hangs on
+# exactly one file (`beispiele/71-frist-und-zaehlung.gab`) -- a new terminal that exactly
+# one program writes, the benign direction the header names. Second program writing it
+# moves the word down out of the bucket and the number falls again.
+MARKE_ALLEIN = 1
 # **IT IS PRINTED, NOT RATCHETED, AND THAT IS A DECISION WITH A REASON.**
 #
 # A mark set on the run that first measured it is a conjecture: this number moved 25 -> 0 in

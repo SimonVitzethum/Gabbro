@@ -318,7 +318,14 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # > rejected on the rule four blocks up: *a ratchet one may dodge by rephrasing measures
 # > spelling, not debt.* The claim is that these four are ONE rule at four constructs, and a
 # > claim about rules in two other files is exactly what this list is for.
-MARKE = 350
+MARKE = 368
+# **350 -> 368 on 2026-09-10, eighteen at once from four lanes.** The fourth syntax
+# version (`deadline`/`count`/`owner`) touches twenty files, and the one-reader doctrine
+# names the twin at every site (`traverse()`, `pred_c`, `zaehlbar_pruefen`, `D025`,
+# `K003`, `Block::bindCall`, `alle_ausdruecke`, `N056`, `fristannahmen`,
+# `eigner_nie_erzeugt`, …); the three Beta lanes add their own (`suggest`, `gabbrov`,
+# `uebergang`-widths). Rephrasing them away was rejected above before it was tried:
+# the cross-reference IS the record of the twin, and the guard counts records, not debt.
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.
 #
 # `instrumente/mutiere-pruefer.py` carries one mutation per anchor -- 383 of them on
