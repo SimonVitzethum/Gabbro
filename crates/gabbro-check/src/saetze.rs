@@ -1933,13 +1933,16 @@ pub const PAARUNG: &[Satz] = &[
                   neither an explicitly `relaxed` atomic nor one without any ordering word \
                   carries payload, and every published payload lies inside the superset \
                   declared at the `atomic`.",
-        vorbehalt: "**The ordering check exists only on the PUBLISH side.** An `awaits` on an \
-                    orderless atomic is silent, and an `exchange … publishes` moves its \
-                    payload straight through, so `V004`/`V005` do not apply to it at all. If \
-                    the base name does not resolve to a declared `atomic` (a device \
-                    register, a foreign module), the store counts as an ordered publication \
-                    -- fail-open in that direction. The superset is voluntary: no clause, no \
-                    check.",
+        vorbehalt: "**`V004`/`V005` check the AWAIT side too (lane 45, 2026-09-10).** \
+                    An `awaits` on a `relaxed` atomic -- or on one without any ordering \
+                    word, which the emitter lowers to `memory_order_relaxed` on BOTH sides \
+                    -- loads without acquire, so the pair goes to `relaxed_mit_last` and \
+                    never reaches `erwartet`: no `V002` fires beside it. An `exchange … \
+                    publishes` still moves its payload straight through, so `V004`/`V005` \
+                    do not apply to it at all. If the base name does not resolve to a \
+                    declared `atomic` (a device register, a foreign module), the store \
+                    counts as an ordered publication -- fail-open in that direction. The \
+                    superset is voluntary: no clause, no check.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: one probe each on `V004`, `V005`, `V008`.",
         fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
@@ -1950,12 +1953,18 @@ pub const PAARUNG: &[Satz] = &[
         aussage: "A published payload is not written AFTER its `publishes`, and an expected \
                   payload is not read BEFORE its `awaits` -- so the release/acquire pair \
                   really brackets the data it is supposed to protect.",
-        vorbehalt: "**`V007` is not the mirror image of `V006`.** The write side descends \
-                    into sub-blocks, the read side does not -- a read inside an `if` branch \
-                    before the `awaits` is invisible. Both compare BASE NAMES only, so `n.a` \
-                    before and `n.b` after counts as covered. And a payload written both \
-                    before AND after the publish falls silently: the check skips any name \
-                    already in the written set.",
+        vorbehalt: "**`V007` is the mirror image of `V006` since lane 45 (2026-09-10).** \
+                    The read side descends into preceding sibling blocks via `leseziele`, \
+                    the mirror of `schreibziele` -- a read inside an earlier `if` branch \
+                    now counts. Branches of ONE `if` stay separate all the same: each is \
+                    entered with the pre-statement state, so a read in one arm never taints \
+                    an `awaits` in another. Descent into a statement's OWN blocks likewise \
+                    uses the pre-statement state, so an `awaits` in a loop body does not \
+                    see the reads behind it (`beispiele/41` stays silent; measured as a \
+                    false positive without the snapshot). Both compare BASE NAMES only, so \
+                    `n.a` before and `n.b` after counts as covered. And a payload written \
+                    both before AND after the publish falls silently: the check skips any \
+                    name already in the written set.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `V006`, one on `V007`.",
         fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
