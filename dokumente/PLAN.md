@@ -4655,6 +4655,11 @@ Wort. Auf so einem Korpus konvergiert der Wortschatz per Konstruktion.**
 
 - [ ] `pruefe-luecken.py`: **null von fünfzehn Verdrehungen je gefahren.** Der Zweig
       `92 von 92` ruht auf einer Sprechprobe. *Dieselbe Form wie der maskierende `panic!`.*
+      Gemessen 2026-09-10 (Lane O): **15 von 15 gefahren, 13 von 13 GEMESSENEN gefangen**,
+      0 tote Anker, 0 entkommen; die 2 Nullmutationen entkommen wie bewiesen. Der Lauf endete
+      mit `rc=2`, weil eine fremde Bahn waehrenddessen `lib.rs` anfasste (eigene Dateien
+      byteidentisch zurueck, gemeldet nicht geheilt). `abnahme.py`-Sprechprobe 25/25 gruen,
+      darunter der Zweig `92 von 92` -- mehr war er nie, und das steht jetzt da.
 - [x] ~~Die 47 ausgelassenen Stellen, davon **45 in `pruefe-emission.sh` allein.**~~
       **Gemessen und entschieden** (2026-09-01, `messung/ABNAHME-STELLEN.md`). Der volle Lauf
       kostet **23 min 10 s** und druckte `hoechstens 94 von 94 -- 100 %` — *während
@@ -4755,6 +4760,11 @@ jetzt    30a2f4b0…  gegen  8e040dca…
 **Der Verifikationspfad hat damit einen Träger.** *Offen bleibt: injektiv in den
 Traversierungsdomänen, nicht allgemein — 36 Paare gemessen, nicht alle Programme. Und drei
 Domänen ruhen auf gar keiner Schranke (`chain(…) in`, `fields of`, `threads`).*
+Gemessen 2026-09-10 (Lane O, `messung/ZEUGNIS-INJEKTIVITAET.md`): **26 Paare ausserhalb
+der Domaenen, 22 Kollisionen** -- das Zeugnis zaehlt Marken, keine Details (`count 8`
+gegen `count 16`, `== 1` gegen `== 2`, Ruf an `g1` gegen `g2`: gleiche Belege bei
+verschiedenem C). Der 36-Paar-Test steht weiter gruen (4/4). *`unbrauchbar-als-Beweistraeger`
+ist damit gemessen: Aequivalenzklasse, nicht Programm.*
 
 > **Damit ist das Zeugnis als Beweisträger nicht schwach, sondern unbrauchbar: es belegt
 > eine Äquivalenzklasse, nicht ein Programm.** Jeder Plan, der Translation Validation über
