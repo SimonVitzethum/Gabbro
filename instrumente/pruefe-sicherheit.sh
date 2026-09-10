@@ -192,6 +192,33 @@ if [ "$N_FUNDE" -gt "$RATCHET_FUNDE" ]; then
     exit 1
 fi
 
+# --- 6. The one named axiom outside the safety theorem ---------------------------
+# `grammatik/Grammatik/Geraet.lean` carries exactly one `axiom` line: the DMA
+# content assumption `dma_inhalt`, named per window, never derived (2026-09-10,
+# R3 of the design review). This step teaches the ratchet that line: a SECOND
+# axiom anywhere in the grammar is a RED, and the fix is a sentence beside
+# it, not silence. If the line is ever discharged, this exception sits unused
+# -- cleanup may remove it, nothing breaks. (Text-level check, like step 2:
+# the build log only reports what `#print axioms` lines ask it to report,
+# and the grammar head file asks for none.)
+stufe "Named axiom"
+AXIOMDATEIEN="$(grep -rln '^axiom ' "$W"/grammatik/Grammatik/*.lean 2>/dev/null || true)"
+if [ -z "$AXIOMDATEIEN" ]; then
+    echo "  no axiom line in grammatik/Grammatik -- the exception sits unused"
+else
+    echo "$AXIOMDATEIEN" | sed 's/^/  /'
+fi
+AXIOMFREMD="$(grep -rh '^axiom ' "$W"/grammatik/Grammatik/*.lean 2>/dev/null \
+    | grep -v '^axiom dma_inhalt ' || true)"
+if [ -n "$AXIOMFREMD" ]; then
+    printf '%s\n' "$AXIOMFREMD" | sed 's/^/  foreign axiom: /'
+    stufe "SAFETY: RED -- an axiom beside the named dma_inhalt stands in the grammar"
+    echo "  Allowed: exactly the dma_inhalt line. Anything else is a new"
+    echo "  foundation, and it needs a sentence beside it, not silence."
+    exit 1
+fi
+echo "  nothing outside the named dma_inhalt line"
+
 # From here on nothing more is measured -- what follows is the verdict over
 # what the steps above ran. Its non-zero exits above are complete answers,
 # not cuts.

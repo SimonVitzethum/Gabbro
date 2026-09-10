@@ -10,18 +10,25 @@ figure here was produced by a build.
 ## 1. The constant and what it lacks
 
 `grammatik/Grammatik/Ziel.lean` carries the lowering assumption as a structure
-with a bound, plus a constant that fills it:
+with a bound, plus a constant that fills it (stand 2026-09-10, measured —
+see below — after `⟨4, ≤ 8⟩` stood here unmeasured since the file was
+written):
 
 ```
 proPrimitiv : Nat
-begrenzt : proPrimitiv <= 8
-def absenkung : Absenkung := ⟨4, by decide⟩
+begrenzt : proPrimitiv <= 18
+def absenkung : Absenkung := ⟨17, by decide⟩
 ```
 
-The comment at the constant says it directly: the value stands there because
-the sentence needs a number, not because anyone ever held each Gabbro
-primitive against `emit.rs`. That is finding W7, a number without a search
-path, and this file is that search path written down before anyone walks it.
+The old comment at the constant said it directly: the value stood there
+because the sentence needs a number, not because anyone ever held each
+Gabbro primitive against `emit.rs`. That was finding W7, a number without
+a search path. The number above is NOT from the lexer procedure below: it
+is the static count of `messung/ABSENKUNG-MESSUNG.md` (maximum 17 at
+`traverse over descendants of`, bound 18 with one line of headroom), which
+preceded the lexer run and stands under its own same-scaffold rule. The
+lexer procedure below stays open — a lexer pass can confirm the 17 or
+raise it, never silently lower it.
 
 The claim the constant would carry is preservation of the `ops` count from C
 to Asm by a quantitative CompCert. Section 4 below says why that carrier is
