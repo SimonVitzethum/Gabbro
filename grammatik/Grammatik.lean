@@ -30,6 +30,12 @@
   | `Zeugnis.lean`      | die gedruckte Ableitung als Datum: gueltiges Zeugnis heisst Urteil        |
   | `Budget.lean`       | die ops-Frist als Rechnung: im Budget oder benannt erschoepft, nie still drueber |
   | `Terminierung.lean` | das Mass faellt heisst der Lauf endet: traversieren, Wiederholung, forever nie |
+  | `InterferenzAllgemein.lean` | N Faeden, beliebig viele Schritte: Stabilitaet als Gestalt, Beweis spaeter |
+  | `Komposition.lean` | Rufgraph und Schleifenregel als Gestalt: Ordnung ohne Mass, Zyklen mit |
+  | `Fehler.lean`     | der Fehlerausgang als paralleles Modell: Klasse, Ergebnis, evalF-Gestalt |
+  | `Erhaltung.lean`  | der Erzeugervertrag als Pflichtenheft: Entsprechung, Alias, Kosten, Tafel |
+  | `Extraktion.lean` | berechnete Huellen: Kanten und Fuesse aus Ruempfen, Bau als Ergebnis     |
+  | `Marken.lean`     | lineare Marken als Konstruktion: Besitz als Zustand, Einfaedigkeit als Gestalt |
 -/
 import Grammatik.Typen
 import Grammatik.Syntax
@@ -46,3 +52,9 @@ import Grammatik.Unterbrechung
 import Grammatik.Zeugnis
 import Grammatik.Budget
 import Grammatik.Terminierung
+import Grammatik.InterferenzAllgemein
+import Grammatik.Komposition
+import Grammatik.Fehler
+import Grammatik.Erhaltung
+import Grammatik.Extraktion
+import Grammatik.Marken

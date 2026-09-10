@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 251 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 257 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *223 → 224 on 2026-09-07: `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md`
       joined — the census of what is open at the checker and at the grammar, whose one
       finding is a CLASS: three sites where `pruefe` reports zero errors, `emit` returns 0,

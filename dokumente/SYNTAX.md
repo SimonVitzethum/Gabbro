@@ -775,6 +775,32 @@ every world; the only premise is that the hardware keeps ITS `effects` (H1). The
 structural induction over **all** of `Stmt`/`Block`/`Endblock`/`Arms`/`GrundArms`, each
 constructor a case.
 
+### Linear marks at run time: the stand
+
+The context Λ says what the derivation holds; the STAND says what the run
+holds. One stand per run: every linear mark is free or owned by exactly one
+thread at exactly one stage. A mark step is one of three — create (only from
+void, only below the stage count, never an `owner` mark: owner marks are never
+produced, `eigner_nie_erzeugt`), advance (only in the hand of the same thread,
+only to the next stage below the count), consume (only from the hand into the
+void). There is no fourth step: no forging, no duplication, no handoff to
+another thread.
+
+| derivation (Λ, §7) | run (stand) |
+|---|---|
+| head Λ = `Held` + consumed marks | initial stand: all void (`Anfang`) |
+| call: Λ − consumes + allocs | the callee's produced marks appear in its own hand |
+| `advances a -> b;` | the same thread advances the same mark `a -> a+1` |
+| `retires` | the owning thread consumes the mark into the void |
+| `return`: Λ ≡ `Held` + allocs | every produced mark is owned, every consumed mark is gone |
+
+Single-threadedness (W4) is the shape every mark step preserves: two events
+naming stages `s`, `s'` of the SAME mark name the SAME thread — stages may
+differ (advance changes the stage, never the owner), threads may not.
+Lean: `Grammatik/Marken.lean` (`Stand`, `MarkenSchritt`, `Verlauf`,
+`Einfaedig`); the projection into `Gesittet.marke_eindeutig` is the wiring
+lane's work.
+
 ---
 
 ## 8. Loops — **three forms, and infinite is one of them**
@@ -1056,7 +1082,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
 | `observed by a` | the other side is the assumption `a` | `D.Annahme` |
 | `group G over { T, U } { invariant I }` | `I` has carriers `T` and `U`: owed by every function that writes either («SG-10»); `U003` (a function writing two carriers holds all their locks) is the `braucht` of each access, `U005` (two ranks equal) is `keine_verklemmung`'s premise, `U006` (leaving between the writes) is `schuldet` at every `return` | `D.Inv` with `traeger = [T, U]` |
-| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently |
+| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently. The joint run of N declared bodies is `GemeinsamerLauf` (`InterferenzAllgemein.lean`): one world chain, each step in its own frame, every pair declared; lock-shared carriers carry an invariant each (`TraegerInv`), and `AllgemeinStabil` names the stability shape (a `def`, proofs later) |
 | `accumulates` (§1) | a global plus a generated `merge` assignment; `per cpu N` is the cell table | SUGAR |
 
 **What the discipline proves — over interleavings, since the evening of 2026-09-09.** Every
@@ -1078,6 +1104,23 @@ traces and proves:
 on an `atomic` — whose ordering is the memory model, a named hardware assumption. §16.2 (1) of
 the morning is closed; what remains of it is the premise (W3), booked where the lock
 primitive is booked.
+
+### `concurrent`, `effects`, `shared` — from declaration to computation
+
+The three declarations that feed the closed-world check arrive computed,
+not transcribed. `effects { writes T }` is the footprint source: per body,
+filtered over the declared carrier domain, it IS `Bau.schreibtFn` — a
+function without `effects` is already a compile error, so the source is
+total. Direct calls (`f(…)`, `let x = f(…)`, `… else …`) are the edge
+source: they ARE `Bau.ruft`, restricted to the declared function domain.
+`concurrent { … }` members resolve to thread numbers over the entries and
+ARE `Bau.neben`. What the computation drops (a call outside the domain, an
+effect outside the carriers, a pair outside the entries, any indirect or
+foreign call) the checker REFUSES — the fidelity shapes state exactly
+that. Unknown carriers count as `shared`: the loud direction, demanding
+the guard. Lean: `Grammatik/Extraktion.lean` (`bauAus`, `bauLaufSpiegel`,
+`kantenTreue`, `fussTreue`, `paarTreue`, `paarVoll`); premises consumed:
+`Geteilt.Bau`/`BauLauf`/`traegerBis`, `Nebeneinander` (`Wettlauf.lean` §6).
 
 ---
 
@@ -1252,7 +1295,10 @@ names, taken in rank order and never twice (**trace**) — under the one premise
 hardware keeps its `effects` (H1). **`kein_wettlauf`**, **`kein_wettlauf_global`**,
 **`keine_ueberkreuzung`** (`Wettlauf.lean`): over **any interleaving** of such traces, two
 accesses of different threads to one carrier are happens-before ordered or on an `atomic`,
-and no two lock acquisitions cross in rank. The inversion theorems (`slot_hat_waechter`,
+and no two lock acquisitions cross in rank. `AllgemeinStabil` (`InterferenzAllgemein.lean`)
+names the shape the joint model will consume — context, coverage, per-thread frame
+dependence and entry validity, every assertion at the last world — as a `def`, not yet a
+theorem. The inversion theorems (`slot_hat_waechter`,
 `zeiger_hat_waechter`, `bytes_in_tabelle`, `zuweisung_hat_recht`, `sdivision_ohne_null`,
 `register_schreibbar`, `transition_hat_spiegel`, `uebergang_erklaert`, `publish_paart`,
 `stufe_steigt`, …) say for each site what its derivation had to carry. `Zucker.lean` defines
@@ -1290,7 +1336,7 @@ and this section says for each what carries it. Nothing below is an error class 
 
 | item | status on the evening of 2026-09-09 | what carries it |
 |---|---|---|
-| **1. interleavings** | **covered** — `kein_wettlauf` over any interleaving of traces the grammar leaves | three premises, each booked: (W3) the lock primitive excludes (a foreign body, `assume`), (W4) linearity keeps a mark in one thread (a property of the grammar: no constructor moves a mark across threads; owner marks are made by nobody), (W5) `shared` says which carriers two threads reach (`H013` as a declaration) |
+| **1. interleavings** | **covered** — `kein_wettlauf` over any interleaving of traces the grammar leaves | three premises, each booked: (W3) the lock primitive excludes (a foreign body, `assume`), (W4) linearity keeps a mark in one thread (a property of the grammar: no constructor moves a mark across threads; owner marks are made by nobody), (W5) `shared` says which carriers two threads reach (`H013` as a declaration; `Geteilt.lean` computes it, `Extraktion.lean` wires the computation). Cuts G1–G7 (`InterferenzAllgemein.lean` header): shape not theorem; full contract frames; `disziplin` assumed; only lock-shared (`atomic`/pairing need own exemptions); `Gesittet` carried; per-thread entry worlds; world-only assertions |
 | **2. memory model** | **covered as a hardware outcome** — `awaits` yields `hardware (sichtbarkeit A10)` when the machine does not deliver; accesses to an `atomic` are the only unguarded shared accesses and are ordered by A10 | `assume c11_release_acquire_*` with its falsifier |
 | **3. devices** | **covered through hardware assumptions, each named at its register** — type (`register r`), promise (`geraet r`), mirror (`transition` reads it by construction), class (not derivable otherwise) | the one remaining `assume`: the ORDER in which the device sees two accesses (`dma_visibility_in_order`) — no grammar sees a bus |
 | **4. bytes** | **covered** — `leseBytes`/`schreibBytes` with the run's bound as attribute; `format` fields, `offset_into`, `@bitpos`, `embeds`, `endian big` as sugar over them; two views read one world | — |
@@ -1440,3 +1486,185 @@ by the grammar (§15, §16.2).
       device has no mechanised model (16.2 (3)); the `iasm` entry path has no downstream prover
       (16.2 (7)); liveness and progress fall under no mechanism except the named assumption
       (`hardware (fortschritt a)`); the ghost-theory templates belong in Isabelle once.
+
+---
+
+## 19. Program composition — in what order the contracts stand
+
+A program is a **body table**: one row per routine with its callees, its
+optional `decreases` measure, and its loop identifiers — plus, per routine,
+the environment entry that runs the body (`Runs`: where the body ends, the
+environment answers with exactly that state and value). The claim is that
+both environment premises of the safety theorem are theorems over this table:
+
+| premise today | theorem after composition | induction |
+|---|---|---|
+| `UmgebungOK` (every declared callee keeps the world and answers per its signature) | `umgebung_ok_of_runs` | topological order where acyclic, measure where cyclic |
+| `SchleifenOK` (every registered loop keeps the world and its scope) | `schleifen_ok_of_runsloop` | index list of the loop (`iterate`) |
+
+**Acyclic part — no measure needed.** Where the call graph below a routine is
+acyclic, callees precede their callers in a topological order and contracts
+are proved innermost first: a leaf meets its duty directly, a caller closes
+each call site with the already proved callee contract. The induction is over
+the graph order, which is well founded because the fragment is finite and
+acyclic.
+
+**Cycles — `decreases` or refusal.** A cycle cannot use the order above: no
+member precedes the others. Every member of a cycle must therefore carry a
+`decreases` expression, and the induction is over the measure, not the graph —
+the `RecursionCycleCarried` shape (`Coverage.lean`): where the environment
+runs every body and every duty holds under the bounded contracts of all cycle
+members, every member holds its contract. A cycle with a member edge that
+carries no `decreases` is not composed; it is refused (`K008`/`K009` on the
+checker side, an undischarged bounded duty on the model side).
+
+**Loops — one pass per index.** A loop runs as a sequence of passes over an
+index list (`iterate`); each pass preserves the world and the scope under the
+invariant, `leave` ends the visitation early. Recursion through a loop body
+nests the inductions in a fixed order: the measure induction outside, the
+loop rule inside.
+
+**Foreign bodies stay hypotheses.** `extern`, `asm`, and entrusted routines
+have no row and hence no duty; their contracts remain hypotheses about the
+environment, threaded through rather than closed.
+
+Lean: `Grammatik/Komposition.lean` (shapes as `def`s, proofs later).
+
+## 20. Fault outcomes — named, beside the semantics, not in it
+
+Four faults have names: `index` (index out of range), `ueberlauf` (store
+outside its declared width), `nenner` (zero denominator), `gestalt` (shape
+mismatch). They live in a PARALLEL outcome (`ErgebnisF`: `wert` or `fehler`)
+next to `Semantik.lean`, never inside it: `eval` stays total, `exec` keeps
+its two error exits (`logik`, `hardware`), and no third exit is added to
+`Ausgang`.
+
+Why the parallel outcome never faults today — and that is the statement,
+not a gap: a `slot` index has type `.index (count t)` and carries its range
+proof with it; out-of-range is not writable. The fault arm is reachable
+only through RAW data (`IndexFalle`: a table plus a bare `Int` with no
+range proof) — exactly the place where the checker holds the range today.
+
+Agreement shape: no fault implies `eval` agrees (`evalF_ok`, `evalF_stimmt`
+as `Prop` definitions). Falsifier shapes are DATA, not proofs: an
+out-of-range index reaches `fehler .index` by definition
+(`indexFalleErgebnis`), every named case its own fault (`fehlerFallErgebnis`).
+
+Cuts: no threading through `execStmt`/`execBlock` (propagation lemmas for
+`evalAll`, step sequence, loop iteration are named, not built); `evalF`
+delegates every call to `eval`; not wired into `Grammatik.lean`.
+Lean: `Grammatik/Fehler.lean` (`Fehlerklasse`, `ErgebnisF`, `evalF`,
+`evalF_ok`, `evalF_stimmt`, `IndexFalle`, `FehlerFall`).
+
+## 21. The producer contract — what the emitter must uphold
+
+§18 closed the C side as a list (`Ziel.lean` `CForm`: 19 named shapes).
+A closed list is not a contract until somebody says what upholding it
+takes, per run, in checkable form. That is this section. It claims no
+verified emitter: every sentence below is specified in
+`Grammatik/Erhaltung.lean` as a `Prop`-valued `def` — the SHAPE of a
+later proof, not the proof. The five later sentences are named
+`satz_korrespondenz`, `satz_alias`, `satz_kosten`, `satz_tafel`, and
+their conjunction `satz_erzeugervertrag`.
+
+### 21.1 Correspondence — one certificate per run (`BEWEIS.md` §4)
+
+Each compilation run produces a coverage certificate: one row per
+evaluation site, `CorrSite = gabbroSite × cSite × form`, collected in
+`CorrCert`. The emitter earns trust when four shapes hold
+(`satz_korrespondenz`):
+
+1. **Completeness** (`corrComplete`) — every Gabbro evaluation site
+   appears at least once.
+2. **Order** (`corrOrdered`) — the C sites stand in the same order.
+3. **Closure** (`corrClosed`) — every C form in the image is a decided
+   row of the table in §21.4.
+4. **No additional effect** (`corrNoExtra`) — no C site without a
+   Gabbro preimage.
+
+The recomputer is a second program with its own pattern, not the same
+code called twice (`checkfat.py` lesson); what is accepted is the
+mutation list, not the existence of the checker. A deliberately
+displaced evaluation site must be noticed. The common-mode failure
+(both tables from one text) is named, not closed; the witness pairs of
+§21.5 are the only instrument against it.
+
+### 21.2 Alias — no address arithmetic in the image
+
+§2 row 2 promised the emission generates no pointer arithmetic, and the
+census measured 491 sites of it (`d->basis + 8`, `v->bytes + 4`).
+The row is rewritten by this section: the obligation is
+`AliasObligation`, the list of address-arithmetic site ids in the
+image, fulfilled (`aliasKept`, `satz_alias`) exactly when the list is
+empty. Until then every entry is a named site, and the census number
+stands as data (`ptrArithCensus = 491`), not as residual risk "none".
+The two declaration shapes behind the count are named in the spec
+(`ArithSource`: `basisPlus` over `volatile uint8_t *`, `bytesPlus`
+over `uint8_t *`). The sibling slot `zeigerIndex` (156 sites) is NOT
+covered by ruling `index` as named: `p[i]` IS `*(p+i)` by C's own
+definition, and the table must say whether it means that too.
+
+### 21.3 Cost — CerCo preserves, production is measured
+
+The budget counts Gabbro-side steps (`costs`, `per_pass … ops`); what
+happens to the number across lowering is a claim with a named carrier
+(`CostCarrier`), and the carrier is data, not prose:
+
+- `cerCo` — quantitative CompCert: the C count IS the Gabbro count
+  (`costKept`). Preservation may be CLAIMED here, once the carrier stands.
+- `produktion` — the production compiler: the count is MEASURED by
+  witness pairs (`costMeasured`: `paare` pairs ran green; zero pairs is
+  not a measurement), never proved.
+
+The Gabbro-side leg is the bounded lowering (`senkungBegrenzt` over
+`Absenkung`: one primitive becomes at most `proPrimitiv` C statements).
+`satz_kosten` conjoins all three legs. Wall-clock and cycles never enter:
+same boundary as `Ziel.lean` (§18 «SG-22») — a deadline is
+`hardware (fortschritt a)` with its probe, not a second budget.
+
+### 21.4 The ruling table — 19 named, 30 slots, one status field
+
+Every row is an `EntscheidZiel`: either a named shape or a census slot,
+each WITH a `RulingStatus` (`offen` | `aufListe preis` |
+`ausErzeuger ersatz`). The status field is what makes 30 holes countable
+instead of invisible; `entschieden` says when a row stopped being debt.
+
+- The **19 named shapes** (`CForm`) stand admitted with the price of
+  their semantics named. Two prices carry real trust and say so:
+  `beschraenkt` exports the effects-promise into C's UB rules (priced
+  option, never default), `fluechtig` is an axiom by name. These 19
+  admissions are the TEMPLATE ruling, not 19 rulings.
+- The **30 census slots** (`OffeneForm`: 7 used-and-forbidden, 19
+  unnamed-and-uncovered, 4 generously covered) stand `offen`, with two
+  exceptions that show the two ways out: `bedingt` carries the filled
+  template (`bedingtEntscheid`: the generator writes
+  `if (v > z) { z = v; }` — costs nothing at `-O0`/`-O2`/`-Os`,
+  byte-identical at the top two), and the four generous readings plus
+  the kept `unerreichbarBuiltin` site carry their admission price.
+- `satz_tafel` (every row decided) is FALSE today — 29 slots still
+  `offen` — and that is the point: the shape counts the debt. Ruling
+  by taste is what produced a list with 30 holes; each of the 19
+  unnamed forms is ruled one by one the way `?:` was, onto the list
+  with the price of its semantics or out of the generator with the
+  price of the change. Deciding `?:` alone does not close the class:
+  `logUndOder` (23 sites) is the same conditional door, undecided,
+  and the float row (`floatTyp`/`doubleTyp`, 26 sites) is a missing
+  row, not a missing word.
+
+### 21.5 Witness pairs — the instrument the table was missing
+
+Every table entry gets an executable witness pair: a Gabbro fragment,
+the expected C, the expected behaviour — run through the REAL C
+compiler and compared. With that the entry's meaning is checkable
+instead of hand-trusted, and an entry without a witness pair is
+incomplete. `costMeasured` counts these pairs on the production leg.
+
+### 21.6 What this section does NOT move
+
+- No verified emitter: the certificate is specified, the recomputer is
+  a later program.
+- No formal C semantics: meaning lives in the table entry plus its
+  witness pair.
+- `restrict` and `volatile` stay trust, priced and named.
+- The 19 admissions are template, each still owes its `?:`-style
+  ruling.
