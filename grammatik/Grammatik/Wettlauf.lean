@@ -529,22 +529,25 @@ def BeschraenkteVerschraenkung (Nb : Nebeneinander) (l : Lauf D) : Prop :=
     l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) → f ≠ g →
     Nb f g
 
-/-- **Race-freedom under the declared relation.** In a gesitteter Lauf whose
-    interleaving is restricted to declared pairs, two accesses of different
-    threads to the same table are ordered by happens-before -- the same order
-    as `kein_wettlauf`, now quantified over the declared pairs. -/
-theorem kein_wettlauf_beschraenkt (Nb : Nebeneinander) (l : Lauf D) (hg : Gesittet l)
-    (_hb : BeschraenkteVerschraenkung (D := D) Nb l)
-    (i j : Nat) (hij : i < j) (f g : Faden)
-    (hfg : f ≠ g) (t : D.Tab) (w w' : Bool) (Λ Λ' : List (Res D)) (h h' : List D.Lock)
-    (hi : l[i]? = some (Schritt.mk f (.zugriff t w Λ h))) (hj : l[j]? = some (Schritt.mk g (.zugriff t w' Λ' h'))) :
-    HB l i j :=
-  kein_wettlauf l hg i j hij f g hfg t w w' Λ Λ' h h' hi hj
+/-- **Nur Deklarierte teilen sich den Lauf (closed world, Satzform).** In einem
+    Lauf, dessen Verschraenkung auf deklarierte Paare beschraenkt ist, haben
+    zwei verschiedene Faeden nur dann Schritte, wenn sie deklariert sind.
+    Das ist die Definition `BeschraenkteVerschraenkung`, angewendet -- kein
+    neuer Inhalt, sondern die benannte Andockstelle: die Checker-Seite
+    (`W002`) verweigert genau die Paare ohne `Nb`, und dieser Satz sagt, dass
+    im beschraenkten Lauf nur `Nb`-Paare vorkommen. Die Prämisse wird benutzt;
+    was hier stuende und mehr bewiebe, stuende als eigener Satz daneben. -/
+theorem nur_deklariert_teilt_lauf (Nb : Nebeneinander) (l : Lauf D)
+    (hb : BeschraenkteVerschraenkung (D := D) Nb l)
+    (i j : Nat) (f g : Faden) (ei ej : Ereignis D)
+    (hi : l[i]? = some (Schritt.mk f ei)) (hj : l[j]? = some (Schritt.mk g ej))
+    (hfg : f ≠ g) : Nb f g :=
+  hb i j f g ei ej hi hj hfg
 
 #print axioms Gabbro.Grammatik.kein_wettlauf
 #print axioms Gabbro.Grammatik.kein_wettlauf_global
 #print axioms Gabbro.Grammatik.keine_ueberkreuzung
 #print axioms Gabbro.Grammatik.lauf_aus_brav
-#print axioms Gabbro.Grammatik.kein_wettlauf_beschraenkt
+#print axioms Gabbro.Grammatik.nur_deklariert_teilt_lauf
 
 end Gabbro.Grammatik
