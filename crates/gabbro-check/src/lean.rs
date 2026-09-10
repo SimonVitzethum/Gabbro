@@ -850,6 +850,13 @@ pub struct LoopInfo {
     /// invariant names `passes` (agent b, 2026-09-08). `None` for every other loop, and
     /// then nothing of the pass counter is emitted at all.
     pub passes: Option<i128>,
+    /// **The locals in scope at the loop's entry, oldest first, WITH duplicates and
+    /// WITHOUT shapes where the walk knows none** (S4, 2026-09-10). A clone of
+    /// `Ctx::locals` taken beside `shapes`: the seam witness replays `binde` over it to
+    /// rebuild the exact `Umgebung` `pruefe` threads to the `.loop` -- duplicates for
+    /// the keep-on-equal rule, `None`s for the skip rule (`#ret` excepted, see there).
+    /// Read-only for every other consumer: nothing of the duty channel looks at it.
+    pub entry_locals: Vec<(String, Option<Shape>)>,
 }
 
 impl Ctx<'_> {
@@ -2471,6 +2478,8 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
                 c.push_local(crate::PASSZAEHLER_LEAN, Some(Shape::Int));
             }
             let shapes = shaped_locals(&c.locals);
+            // S4: the scope at this loop's entry, for the seam witness (see the field).
+            let entry_locals = c.locals.clone();
             let mut parts = shape_conjuncts(&c.locals, &c.ranges);
             // The invariants the routine keeps hold at every pass: a call inside the loop
             // asks for them, and the routine's promise asks for them at the end.
@@ -2565,6 +2574,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
                 records: c.seen_records.clone(),
                 range,
                 passes: if counts_passes { passes_bound } else { None },
+                entry_locals,
             });
             let after = if !may_return {
                 String::new()
@@ -6255,4 +6265,450 @@ mod deckung_tests {
             );
         }
     }
+}
+
+// ===========================================================================================
+// S4 -- THE SEAM WITNESSES (`dokumente/PLAN-SICHERHEIT.md` §4).
+//
+// `gabbro lean` writes `Duty*.lean` per unit against `Gabbro.Body`; this function writes a
+// SECOND module per unit against `Gabbro.Sicherheit.Anweisung`: for every routine whose
+// body the duty channel carries, one theorem
+//
+//   theorem checker_agrees_<routine> :
+//       (pruefeBlock seamP_<routine> <erg> <entry> <body>).isSome = true := by decide
+//
+// A unit the Rust checker accepts and `pruefe` refuses (or the reverse) then fails LOUDLY
+// at `lake build` -- per routine, per run. What it measures is that the two checkers
+// agree on the corpus, not that they are the same function.
+//
+// ## What the witness is, exactly -- and what it is not
+//
+// * The BODY is the duty channel's term (`RoutineGoal::body`), unchanged. The witness
+//   therefore checks the duty datum against `pruefe`, not the source text against it:
+//   a transformation the duty channel applies (hoisted calls, the `narrow`-as-`ite`
+//   reading, the return-in-loop desugar) is checked WITH it, not held against it.
+// * `P` is read from the DECLARATIONS: `D` from tables/records/statics, `sig` from
+//   routine/foreign/op/transition declarations, `schleife` replayed from the walk (below).
+// * The proposition is `.isSome = true`, not `= some _`: the latter leaves a
+//   metavariable `decide` cannot evaluate (the scope is an existential over an infinite
+//   type), while `.isSome` is a closed `Bool` equation. Same seam, decidable form.
+// * `<entry>` is the parameter scope, NOT `[]`: `pruefeBlock P erg [] body` starts with
+//   no names bound, and every routine that reads a parameter would refuse. The plan's
+//   `[]` checks only closed bodies; routines with parameters start from `paramUmgebung`.
+// * `decide` must TERMINATE: one theorem per routine keeps each decision small (a body
+//   is tens of statements; every function `P` unfolds is a finite match). A `decide`
+//   that hangs is a red witness, not a slow one -- run each file under `timeout`.
+// * The file is a SEPARATE module, not a section of the `Duty` file: the duty watchers
+//   (`zaehle-lean.py`, `beweis.rs`' single-`lean` flow) read `Duty` files, and a second
+//   import there would move their subject.
+//
+// ## The two adapters -- places where the duty datum is not `pruefe`-shaped
+//
+// A1. Loop variables. The duty term binds no loop variable (the proof side carries it
+//     in `LoopRule` hypotheses instead), but `pruefe` reads the body under the entry
+//     scope, so an unbound variable refuses. The witness prepends
+//     `(.bindName "v" (.lit (.int 0)))` per loop variable -- shape `IntIn(0,0)`, a POINT:
+//     it satisfies every index bound (`0 < count`) while claiming no upper range the
+//     model never gave. A body that needs the variable's true range may go red (or,
+//     rarely, green) for the adapter's sake, never silently: each such case is triaged
+//     as an adapter case, and the convention gap itself is an S4 finding to the lane
+//     that owns `Anweisung.lean` (a `.loop` that bound its variable would need no this).
+// A2. `#ret`. Bound in-term to `(.lit .absent)` (shape `.opt`) but recorded `None` by
+//     the walk; the replay below reads it as `.opt`. Any OTHER unshaped residue in a
+//     loop-entry snapshot (`let … else` names, `await` names -- both bound in-term with
+//     a shape the walk does not record) skips the routine with a named reason instead
+//     of guessing: a guessed shape would make the goal easier, the one direction a
+//     refusal exists against.
+//
+// ## The scope replay -- exact by construction
+//
+// `LoopInfo::entry_locals` is the walk's push sequence before the loop (branch bindings
+// truncated away by `block_term`, later bindings not yet pushed). Replaying `binde`
+// over `entry ++ synthetics ++ snapshot` rebuilds Lean's list EXACTLY: cons on absent,
+// keep on equal, and Lean refuses on different (the theorem is dead there anyway, and
+// red is then the CORRECT cell -- a U3-class finding when Rust accepts). Youngest entry
+// stays head; the parameter tail keeps declaration order, which is `paramUmgebung`'s.
+//
+/// A Lean identifier from a routine name -- Gabbro names are words, this fires on nothing.
+fn seam_ident(s: &str) -> String {
+    let mut o = String::new();
+    for ch in s.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            o.push(ch);
+        } else {
+            o.push('_');
+        }
+    }
+    if o.is_empty() || o.starts_with(|c: char| c.is_ascii_digit()) {
+        o = format!("n{o}");
+    }
+    o
+}
+
+fn opt_shape_term(sh: Option<Shape>) -> String {
+    match sh {
+        Some(s) => format!("(some {})", s.lean()),
+        None => "none".to_string(),
+    }
+}
+
+/// One `binde` step over the replayed scope (youngest head): cons on absent, keep on
+/// equal. Different means Lean's `binde` gave `none` -- the theorem is dead there; the
+/// old entry is kept so the output stays valid Lean, and the red witness names the cell.
+fn seam_bind(scope: &mut Vec<(String, Shape)>, n: &str, sh: Shape) {
+    if scope.iter().any(|(m, _)| m == n) {
+        // Present: Lean keeps the entry on equal and refuses on different (the theorem
+        // is dead there either way) -- so keep, never duplicate.
+    } else {
+        scope.insert(0, (n.to_string(), sh));
+    }
+}
+
+/// Rebuild the `Umgebung` at a loop's entry, youngest first. `None` (a NON-`#ret`
+/// unshaped residue -- A2) refuses the routine instead of guessing.
+fn replay_scope(
+    entry: &[(String, Shape)],
+    synth: &[(String, Shape)],
+    pushes: &[(String, Option<Shape>)],
+) -> Option<Vec<(String, Shape)>> {
+    let mut scope: Vec<(String, Shape)> = entry.to_vec();
+    for (n, sh) in synth {
+        seam_bind(&mut scope, n, *sh);
+    }
+    for (n, sh) in pushes {
+        match sh {
+            Some(s) => seam_bind(&mut scope, n, *s),
+            // A2: bound in-term to `(.lit .absent)`.
+            None if n == "#ret" => seam_bind(&mut scope, n, Shape::Opt),
+            None => return None,
+        }
+    }
+    Some(scope)
+}
+
+fn umgebung_term(scope: &[(String, Shape)]) -> String {
+    if scope.is_empty() {
+        return "[]".to_string();
+    }
+    let parts: Vec<String> = scope
+        .iter()
+        .map(|(n, sh)| format!("({}, .form {})", quoted(n), sh.lean()))
+        .collect();
+    format!("[{}]", parts.join(", "))
+}
+
+/// `reason R { … }` items: the error-channel cases per reason type, unit-wide.
+fn reason_cases(baum: &Programm) -> BTreeMap<String, Vec<String>> {
+    let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
+        if let ItemArt::Reason(r) = &item.art {
+            out.insert(
+                r.name.text.clone(),
+                r.faelle.iter().map(|f| f.name.text.clone()).collect(),
+            );
+        }
+    });
+    out
+}
+
+/// The `or R` of every FOREIGN callee (their declarations are not in `Unit`).
+fn foreign_fehler(baum: &Programm) -> BTreeMap<String, String> {
+    let mut out: BTreeMap<String, String> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if !matches!(&f.rumpf, FnRumpf::Block(_)) {
+                if let Some(r) = &f.fehler {
+                    out.insert(f.name.text.clone(), r.text.clone());
+                }
+            }
+        }
+    });
+    out
+}
+
+fn sig_entry(params: &[(String, Option<Shape>)], erg: Option<Shape>, gruende: &[String]) -> String {
+    let ps: Vec<String> = params
+        .iter()
+        .map(|(n, s)| format!("({}, {})", quoted(n), opt_shape_term(*s)))
+        .collect();
+    let gs: Vec<String> = gruende.iter().map(|g| quoted(g)).collect();
+    format!(
+        "{{ params := [{}], ergebnis := {}, gruende := [{}] }}",
+        ps.join(", "),
+        opt_shape_term(erg),
+        gs.join(", ")
+    )
+}
+
+/// The `Deklaration`, read from the declarations -- plus the routine's ghost carriers
+/// (per routine, so two routines' `c#r1` never meet).
+fn seam_decl(unit: &Unit, ghosts: &[(String, String, Shape)]) -> String {
+    let mut tnames: Vec<&String> = unit.tables.keys().collect();
+    tnames.sort();
+    let mut slot_arms = Vec::new();
+    for t in &tnames {
+        let mut fs: Vec<&(String, Option<Shape>)> = unit.tables[*t].fields.iter().collect();
+        fs.sort_by(|a, b| a.0.cmp(&b.0));
+        for (f, sh) in fs {
+            if let Some(sh) = sh {
+                slot_arms.push(format!("    | {}, {} => some {}", quoted(t), quoted(f), sh.lean()));
+            }
+        }
+    }
+    let slot = if slot_arms.is_empty() {
+        "fun _ _ => none".to_string()
+    } else {
+        format!("fun c f => match c, f with\n{}\n    | _, _ => none", slot_arms.join("\n"))
+    };
+    let mut count_arms = Vec::new();
+    for t in &tnames {
+        if let Some(n) = unit.tables[*t].count {
+            count_arms.push(format!("    | {} => {}", quoted(t), int_lit(n)));
+        }
+    }
+    let count = if count_arms.is_empty() {
+        "fun _ => 0".to_string()
+    } else {
+        format!("fun c => match c with\n{}\n    | _ => 0", count_arms.join("\n"))
+    };
+    let mut rnames: Vec<&String> = unit.records.keys().collect();
+    rnames.sort();
+    let mut feld_arms = Vec::new();
+    for t in &rnames {
+        let mut fs: Vec<&(String, Option<Shape>)> = unit.records[*t].iter().collect();
+        fs.sort_by(|a, b| a.0.cmp(&b.0));
+        for (f, sh) in fs {
+            if let Some(sh) = sh {
+                feld_arms.push(format!("    | {}, {} => some {}", quoted(t), quoted(f), sh.lean()));
+            }
+        }
+    }
+    let mut seen_ghost: BTreeSet<(&str, &str)> = BTreeSet::new();
+    for (carrier, field, sh) in ghosts {
+        if unit.records.contains_key(carrier) {
+            continue;
+        }
+        if seen_ghost.insert((carrier.as_str(), field.as_str())) {
+            feld_arms.push(format!("    | {}, {} => some {}", quoted(carrier), quoted(field), sh.lean()));
+        }
+    }
+    let feld = if feld_arms.is_empty() {
+        "fun _ _ => none".to_string()
+    } else {
+        format!("fun c f => match c, f with\n{}\n    | _, _ => none", feld_arms.join("\n"))
+    };
+    let mut global_arms = Vec::new();
+    let mut globals: Vec<(String, Shape)> = unit.statics_scalars.clone();
+    globals.sort_by(|a, b| a.0.cmp(&b.0));
+    for (n, sh) in &globals {
+        global_arms.push(format!("    | {} => some {}", quoted(n), sh.lean()));
+    }
+    let global = if global_arms.is_empty() {
+        "fun _ => none".to_string()
+    } else {
+        format!("fun g => match g with\n{}\n    | _ => none", global_arms.join("\n"))
+    };
+    format!("{{ slot := {slot}, count := {count}, feld := {feld}, global := {global} }}")
+}
+
+/// **The unit's seam module: one `checker_agrees` witness per carried routine.**
+/// Routines the duty channel refuses get a comment with the reason, not a theorem --
+/// a missing witness is counted, never silent (the `@seam` line adds up).
+pub fn witness(baum: &Programm, datei: &str) -> String {
+    let unit = Unit::sammle(baum);
+    let goals = routine_goals(&unit);
+    let name = module_name(datei);
+    let reasons = reason_cases(baum);
+    let ffehlers = foreign_fehler(baum);
+    let gruende_of: &dyn Fn(Option<&str>) -> Vec<String> = &|r| {
+        r.and_then(|n| reasons.get(n)).cloned().unwrap_or_default()
+    };
+
+    let mut s = String::new();
+    s.push_str("/-  Written by `gabbro_check::lean::witness` (S4). Do not edit -- the source is\n");
+    s.push_str("    the `.gab`, and this module is the seam measurement, not the duty register.\n\n");
+    s.push_str("    One `checker_agrees` theorem per routine the duty channel carries: the duty\n");
+    s.push_str("    datum, held against `pruefe` (`Gabbro.Sicherheit.Anweisung`). Both checkers\n");
+    s.push_str("    accept, or the file goes red at `lake build` -- per routine, per run.\n\n");
+    s.push_str("    Adapters (see the function docs): loop variables are bound to `0` at the\n");
+    s.push_str("    routine's entry (A1), `#ret` replays as `.opt` (A2), routines with a loop\n");
+    s.push_str("    over an unshaped residue (`let … else`/`await` names) get NO witness by name.\n");
+    s.push_str("    The proposition is `.isSome = true`: `= some _` leaves a metavariable that\n");
+    s.push_str("    `decide` cannot evaluate. Entry is the parameter scope: `[]` would refuse\n");
+    s.push_str("    every routine that reads a parameter.\n-/\n\n");
+    s.push_str("import Gabbro.Sicherheit.Anweisung\n\n");
+    s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body Gabbro.Sicherheit\n\n");
+    s.push_str(&format!("namespace GabbroSeam.{name}\n\n"));
+
+    // ---- the signatures, once for the unit -----------------------------------------
+    s.push_str("/-! ## The callee signatures, from the declarations -/\n\n");
+    s.push_str("def seamSig : String → Option Signatur := fun f => match f with\n");
+    let mut signames: Vec<&String> = unit.routines.keys().collect();
+    signames.sort();
+    for r in &signames {
+        let info = &unit.routines[*r];
+        let gruende = gruende_of(info.decl.fehler.as_ref().map(|i| i.text.as_str()));
+        s.push_str(&format!(
+            "  | {} => some {}\n",
+            quoted(r),
+            sig_entry(&info.params, unit.result_shape.get(*r).copied().flatten(), &gruende)
+        ));
+    }
+    let mut fnames: Vec<&String> = unit.foreign.keys().collect();
+    fnames.sort();
+    for f in &fnames {
+        let info = &unit.foreign[*f];
+        // A foreign `or R` names its cases through the declaration (`foreign_fehler`);
+        // without the declaration the channel is unstatable here -- `[]`, and a `let …
+        // else` over it goes red at `decide`, by name.
+        let gruende = if info.fehler {
+            gruende_of(ffehlers.get(f.as_str()).map(String::as_str))
+        } else {
+            Vec::new()
+        };
+        s.push_str(&format!(
+            "  | {} => some {}\n",
+            quoted(&info.name),
+            sig_entry(&info.params, info.result, &gruende)
+        ));
+    }
+    // Generated ops take unshaped premises (`OpInfo` names no shapes): every parameter
+    // is untyped, and an untyped target accepts every value (`passtIn … none`). Their
+    // answer has no declared shape either -- a `bindCall` on one goes red, triaged.
+    let mut onames: Vec<&String> = unit.ops.keys().collect();
+    onames.sort();
+    for o in &onames {
+        let info = &unit.ops[*o];
+        let ps: Vec<(String, Option<Shape>)> =
+            info.params.iter().map(|n| (n.clone(), None)).collect();
+        s.push_str(&format!("  | {} => some {}\n", quoted(&info.key), sig_entry(&ps, None, &[])));
+    }
+    // A transition is called with the device handle (`call_parts`); untyped, like above.
+    let mut tnames2: Vec<&String> = unit.transitions.keys().collect();
+    tnames2.sort();
+    for t in &tnames2 {
+        let info = &unit.transitions[*t];
+        s.push_str(&format!(
+            "  | {} => some {}\n",
+            quoted(&info.name),
+            sig_entry(&[("d".to_string(), None)], None, &[])
+        ));
+    }
+    s.push_str("  | _ => none\n\n");
+
+    // ---- one witness per carried routine --------------------------------------------
+    s.push_str("/-! ## The witnesses -- one theorem per carried routine -/\n\n");
+    let mut getragen = 0usize;
+    let mut ausgelassen: Vec<(String, String)> = Vec::new();
+    for g in &goals {
+        let r = seam_ident(&g.name);
+        let body = match &g.body {
+            Ok(b) => b.clone(),
+            Err(e) => {
+                ausgelassen.push((g.name.clone(), format!("duty-refused ({})", e.tag())));
+                continue;
+            }
+        };
+        let info = &unit.routines[&g.name];
+        // A1: every loop variable bound to `0` at the routine's entry.
+        let mut vars: Vec<String> = Vec::new();
+        for l in &g.loops {
+            if l.var != "#pass" && !vars.contains(&l.var) {
+                vars.push(l.var.clone());
+            }
+        }
+        let synth: Vec<(String, Shape)> =
+            vars.iter().map(|v| (v.clone(), Shape::IntIn(0, 0))).collect();
+        // The entry scope: the shaped parameters, in declaration order (`paramUmgebung`).
+        let entry: Vec<(String, Shape)> = info
+            .params
+            .iter()
+            .filter_map(|(n, sh)| sh.map(|v| (n.clone(), v)))
+            .collect();
+        // The loop scopes, replayed (A2: `#ret` reads as `.opt`, any other unshaped
+        // residue skips the routine instead of guessing).
+        let mut schleifen: Vec<(String, Vec<(String, Shape)>)> = Vec::new();
+        let mut rueckstand: Vec<String> = Vec::new();
+        for l in &g.loops {
+            match replay_scope(&entry, &synth, &l.entry_locals) {
+                Some(scope) => schleifen.push((l.id.clone(), scope)),
+                None => {
+                    let mut res: Vec<String> = l
+                        .entry_locals
+                        .iter()
+                        .filter(|(n, sh)| sh.is_none() && n != "#ret")
+                        .map(|(n, _)| n.clone())
+                        .collect();
+                    res.sort();
+                    res.dedup();
+                    rueckstand = res;
+                    break;
+                }
+            }
+        }
+        if !rueckstand.is_empty() {
+            ausgelassen.push((g.name.clone(), format!("unshaped-scope ({})", rueckstand.join(", "))));
+            continue;
+        }
+        // The ghosts this routine's bindings opened (per routine: two routines' `c#r1`
+        // never meet).
+        let ghosts: Vec<(String, String, Shape)> = g
+            .seen_records
+            .iter()
+            .filter(|(carrier, _, _)| !unit.records.contains_key(carrier))
+            .cloned()
+            .collect();
+        s.push_str(&format!("def seamD_{r} : Deklaration :=\n  {}\n\n", seam_decl(&unit, &ghosts)));
+        if schleifen.is_empty() {
+            s.push_str(&format!("def seamLoops_{r} : String → Option Umgebung := fun _ => none\n\n"));
+        } else {
+            s.push_str(&format!("def seamLoops_{r} : String → Option Umgebung := fun id => match id with\n"));
+            for (id, scope) in &schleifen {
+                s.push_str(&format!("  | {} => some {}\n", quoted(id), umgebung_term(scope)));
+            }
+            s.push_str("  | _ => none\n\n");
+        }
+        s.push_str(&format!(
+            "def seamP_{r} : Programm := {{ D := seamD_{r}, sig := seamSig, schleife := seamLoops_{r} }}\n\n"
+        ));
+        // The adapted body: A1's bindings first, then the duty datum unchanged.
+        let inner = body
+            .strip_prefix('[')
+            .and_then(|b| b.strip_suffix(']'))
+            .unwrap_or("");
+        let binds: Vec<String> = vars
+            .iter()
+            .map(|v| format!("(.bindName {} (.lit (.int 0)))", quoted(v)))
+            .collect();
+        let adapted = if inner.trim().is_empty() {
+            format!("[{}]", binds.join(", "))
+        } else if binds.is_empty() {
+            body.clone()
+        } else {
+            format!("[{}, {}]", binds.join(", "), inner)
+        };
+        let erg = if info.decl.ergebnis.is_none() {
+            "none".to_string()
+        } else {
+            opt_shape_term(unit.result_shape.get(&g.name).copied().flatten())
+        };
+        s.push_str(&format!(
+            "theorem checker_agrees_{r} : (pruefeBlock seamP_{r} {erg} {} {adapted}).isSome = true := by decide\n\n",
+            umgebung_term(&entry)
+        ));
+        getragen += 1;
+    }
+    for (n, w) in &ausgelassen {
+        s.push_str(&format!("-- no witness for `{n}`: {w}\n"));
+    }
+    if !ausgelassen.is_empty() {
+        s.push('\n');
+    }
+    s.push_str(&format!(
+        "-- @seam {} routines {} witnesses {} skipped\n\nend GabbroSeam.{name}\n",
+        goals.len(),
+        getragen,
+        ausgelassen.len()
+    ));
+    s
 }
