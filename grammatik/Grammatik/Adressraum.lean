@@ -11,8 +11,14 @@
              side may rewrite the bytes between the two reads -- is neither
              writable, statable, nor refused anywhere.
 
-             This file draws the shape and nothing else: defs only, no theorems,
-             no proofs. What it gives:
+              This file draws the shape and proves what the shape carries:
+              a checked copy run as ONE copy through the checked handle shows
+              no check-then-copy TOCTOU -- under the single-copy-atomicity
+              premise `EinSnapshot`, named explicitly (the Koernung shape:
+              `Koernung.lean` runs one event indivisibly; here check and copy
+              are one indivisible copy). An unvalidated crossing runs in the
+              same sequence shape with the premise dropped -- the named gap.
+              What it gives:
 
                `Seite`         -- the two sides of one boundary.
                `UserRegion`    -- a user-memory region: base plus length.
@@ -32,9 +38,18 @@
                                   value IS the copied value -- one snapshot,
                                   read once. A sequence whose two readings can
                                   differ has this property nowhere.
-               `KernAnweisung` / `kreuzt` -- boundary-crossing statement shapes:
-                                  a kernel step is pure or carries exactly one
-                                  copy; crossing is an existential over the term.
+                `KernAnweisung` / `kreuzt` -- boundary-crossing statement shapes:
+                                   a kernel step is pure or carries exactly one
+                                   copy; crossing is an existential over the term.
+                `UserMem` / `laufSequenz` -- the run: check-time and copy-time
+                                   snapshots feeding the checked handle.
+                `EinSnapshot`   -- the premise, named explicitly: both
+                                   snapshots agree at the checked address
+                                   (single-copy atomicity, Koernung shape).
+                safety / gap    -- `gepruefteKopie_ohneToctou` under the
+                                   premise; `toctouZeuge_toctou` and
+                                   `laufSequenz_toctou_ohneSnapshot` name
+                                   the gap without it.
 
              Mirror (standalone -- the lane forbids editing the `Grammatik.lean`
              index, so this file takes no import, not even the siblings; names
@@ -46,7 +61,8 @@
              | `Kopie`             | the missing copy primitive (no `Expr` ctor)  |
              | `GepruefteKopie`    | the missing rule (no M3 rule fires on it)    |
              | `ohneToctou`        | the missing statement (one flat `World`)     |
-             | `Nat` addresses     | wiring: byte offsets into `Tab`/`Glob` later |
+              | `Nat` addresses     | wiring: byte offsets into `Tab`/`Glob` later |
+              | `EinSnapshot`       | the atomic event (`Koernung.lean`: `EreignisAtomar`)|
 
              CUTS (booked, not hidden):
              C1. Addresses and values are `Nat`: placeholders for byte offsets
@@ -58,11 +74,17 @@
              C3. One copy per statement: a loop copying a range chunk by chunk
                  is `n` terms of this shape, each checked -- that per-chunk
                  check is exactly what the shape demands.
-             C4. `vonUser` only is the hazard direction. `nachUser` shares the
-                 datatype so the check is not skipped on the way out; the
-                 TOCTOU reading hazard runs check-then-copy from user.
+              C4. `vonUser` only is the hazard direction. `nachUser` shares the
+                  datatype so the check is not skipped on the way out; the
+                  TOCTOU reading hazard runs check-then-copy from user.
+              C5. No writer modelled: `m₁`/`m₂` are check-time/copy-time
+                  snapshots; `EinSnapshot` says they agree at the checked
+                  address. A writer between them is environment (like
+                  `Hardware.*`), never a transition here. One `Nat` per
+                  address again (cut C1, at the run): no byte-list wiring.
 
-             Core only: no `mathlib`, no import at all. Zero `sorry`.
+              Core only: no `mathlib`, no import at all. Zero `sorry`;
+              `#print axioms` below shows the theorems rest on nothing.
 -/
 
 namespace Gabbro.Grammatik.Adressraum
@@ -178,5 +200,94 @@ structure GepruefterUebergang where
   kopie : Kopie
   traegt : getrageneKopie anweisung = some kopie
   gecheckt : validiert region kopie
+
+/-! ## 5. Validated-copy safety: one snapshot, read once -/
+
+/-- User memory: address to value. One `Nat` per address stands for the
+    byte string there (cut C1 again, at the run); a memory is total, so
+    the hazard modelled here is staleness, never absence. -/
+abbrev UserMem := Nat → Nat
+
+/-- The checked reading: the copy's user address, seen at check time. -/
+def checkLesung (g : GepruefteKopie) (m₁ : UserMem) : Lesung :=
+  { addr := g.kopie.userAddr, wert := m₁ g.kopie.userAddr }
+
+/-- The copied reading: the SAME address, seen at copy time -- the checked
+    handle. A copy from another address is not of this shape; that pairing
+    is the gap in §6. -/
+def kopieLesung (g : GepruefteKopie) (m₂ : UserMem) : Lesung :=
+  { addr := g.kopie.userAddr, wert := m₂ g.kopie.userAddr }
+
+/-- Running a validated copy: check first, copy second (cut C2: order by
+    position, `m₁` then `m₂`, never by time). -/
+def laufSequenz (g : GepruefteKopie) (m₁ m₂ : UserMem) : PruefDannKopie :=
+  { pruefung := checkLesung g m₁, kopie := kopieLesung g m₂ }
+
+/-- **Single-copy atomicity** -- the explicitly named Koernung-shape
+    premise (cf. `Koernung.lean`: `EreignisAtomar`, one event covers at
+    most one cell and runs indivisibly): check and copy are ONE indivisible
+    copy, so no writer runs between the two positions -- both snapshots
+    agree at the checked address. The writer itself stays environment,
+    named here and modelled nowhere (cut C5). -/
+def EinSnapshot (g : GepruefteKopie) (m₁ m₂ : UserMem) : Prop :=
+  m₁ g.kopie.userAddr = m₂ g.kopie.userAddr
+
+/-- The premise is satisfiable, never vacuous: one snapshot agrees with
+    itself (cf. `Koernung.lean`: `ereignisAtomar_gilt`). -/
+theorem einSnapshot_refl (g : GepruefteKopie) (m : UserMem) :
+    EinSnapshot g m m := rfl
+
+/-- The run reads the validated address on both positions: what is checked
+    is what is copied -- the handle, before any atomicity. -/
+theorem laufSequenz_liestGeprueft (g : GepruefteKopie) (m₁ m₂ : UserMem) :
+    (laufSequenz g m₁ m₂).pruefung.addr = g.kopie.userAddr ∧
+    (laufSequenz g m₁ m₂).kopie.addr = g.kopie.userAddr :=
+  ⟨rfl, rfl⟩
+
+/-- **Validated-copy safety.** A checked copy run as a single copy through
+    the checked handle shows no check-then-copy TOCTOU -- UNDER
+    `EinSnapshot`. The handle fixes the address (both readings name the
+    checked one); the premise fixes the value (no writer between). Drop
+    the premise and the goal is unwritable -- that is §6, not this. -/
+theorem gepruefteKopie_ohneToctou (g : GepruefteKopie) (m₁ m₂ : UserMem)
+    (h : EinSnapshot g m₁ m₂) : ohneToctou (laufSequenz g m₁ m₂) := by
+  have e : checkLesung g m₁ = kopieLesung g m₂ := by
+    unfold EinSnapshot at h
+    unfold checkLesung kopieLesung
+    rw [h]
+  exact e
+
+/-! ## 6. The named gap: unvalidated crossing can re-read -/
+
+/-- The witness: checked zero, copied one -- at the SAME address, so the
+    handle alone (one address twice) does NOT exclude TOCTOU. Only the
+    snapshot premise does. -/
+def toctouZeuge : PruefDannKopie :=
+  { pruefung := { addr := 0, wert := 0 }, kopie := { addr := 0, wert := 1 } }
+
+/-- The witness exhibits TOCTOU. -/
+theorem toctouZeuge_toctou : ¬ ohneToctou toctouZeuge := by
+  unfold ohneToctou toctouZeuge at ⊢
+  decide
+
+/-- **The gap, named in `ohneToctou` shape.** A run whose snapshots differ
+    at the copied address -- the writer between check and copy, i.e. the
+    crossing WITHOUT the single-copy premise -- shows TOCTOU. An
+    unvalidated crossing (`kreuzt` with no `GepruefteKopie` behind it) runs
+    in this shape, so nothing here excludes its TOCTOU. -/
+theorem laufSequenz_toctou_ohneSnapshot (g : GepruefteKopie) (m₁ m₂ : UserMem)
+    (h : m₁ g.kopie.userAddr ≠ m₂ g.kopie.userAddr) :
+    ¬ ohneToctou (laufSequenz g m₁ m₂) := by
+  intro hc
+  unfold ohneToctou laufSequenz checkLesung kopieLesung at hc
+  exact h (congrArg Lesung.wert hc)
+
+#print axioms EinSnapshot
+#print axioms einSnapshot_refl
+#print axioms laufSequenz_liestGeprueft
+#print axioms gepruefteKopie_ohneToctou
+#print axioms toctouZeuge
+#print axioms toctouZeuge_toctou
+#print axioms laufSequenz_toctou_ohneSnapshot
 
 end Gabbro.Grammatik.Adressraum
