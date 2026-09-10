@@ -233,6 +233,13 @@ domains, pure helper functions in the translatable part.
 A specification outside the fragment is **rejected**, not approximated. The commonest way such
 tools become unsound is a translation that does not understand something and leaves it out.
 
+> **Measured 2026-09-02: §7's outline is too narrow in one respect, and the
+> fragment is wider than its own sentence.** *"Predicates over values"*
+> reads as ONE state, and **20 of the 66 take two** — read off `V1.lean`
+> rather than estimated. An obligation's meaning is a relation between a
+> pre and a post state, and the fragment holds all twenty, so this is a
+> wording correction (`AUFTRAG-GABBROV.md` §7.1), not a demand.
+
 **One demand already stands.** «B13» hangs on aggregation: `refcount == count(s in slots :
 s.object == o)` is the core bookkeeping of the capability system and cannot be said in `pred`.
 On the Lean side aggregation is a matter of course — the fragment must carry it, or the same
@@ -252,6 +259,16 @@ gap simply moves one level up.
 > it, and a probe through the unchanged checker passes with 0 errors. The Lean channel refuses
 > it by name (`LeanReason::Quantified`). ***The argument this section makes about aggregation
 > applies to it word for word.***
+>
+> > **Measured 2026-09-09: the refusal quoted above no longer fires on the
+> > population.** `lean.rs:1436` emits `(.reaches tab from to via count)`,
+> > and `gabbro pflichten --lean` over `messung/fragmente/F01.gab` reports
+> > `total 17 goals 17 refused 0`. The correspondence table
+> > (`programmlogik/gabbrov/KORRESPONDENZ.md`) carries the row as green and
+> > names the residual shape condition; `OFFEN.md` `O6` carries the cost
+> > question the unrolling still poses. What §7.2 ordered as channel work
+> > is done from the Lean side; what stays is the solver-side tractability,
+> > which no channel work decides.
 >
 > Two further corrections this section owes its next reader:
 >

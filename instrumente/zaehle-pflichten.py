@@ -787,8 +787,163 @@ def gabbrov(zusatz=None, tafelprobe=None, still=False):
     return l, ausgebucht, l - ausgebucht, namen, fehlend, ueberzaehlig
 
 
+# **The correspondence table -- LEAN fragment against Gabbro `pred`/`expr`**
+# (2026-09-09, `AUFTRAG-GABBROV.md` section 7).
+#
+# One row per construct of the Lean fragment with its named counterpart in
+# Gabbro's `pred`/`expr`, kept in `programmlogik/gabbrov/KORRESPONDENZ.md`.
+# This mode holds both lists against each other, in the same shape as
+# `pruefe-grammatiktafel.py`: every name has to occur where its side says
+# it lives, RED has to be empty (section 9 stop-list: a red row is a
+# failure, not a state), and every YELLOW row has to name its `OFFEN.md`
+# entry. A row that names nothing is not a correspondence.
+#
+# Row form, both in the row section and in the demands section:
+#
+#     | `LEAN `a`/`b`` | `GABBRO `c`` | `GREEN` | ... |
+#
+# Cells hold `/`-separated names; the verdict is one of GREEN, YELLOW, RED
+# (rows) or DEMAND (demands, which get rows only once their Gabbro side
+# lands first -- that order is what keeps red empty).
+KORRESPONDENZ_TAFEL = (
+    Path(__file__).resolve().parent.parent / "programmlogik" / "gabbrov"
+    / "KORRESPONDENZ.md"
+)
+KORRESPONDENZ_ZEILE = re.compile(
+    r"^\|\s*`LEAN\s+([^`|]+)`\s*\|\s*`GABBRO\s+([^`|]+)`\s*\|\s*`(GREEN|YELLOW|RED|DEMAND)`"
+)
+KORRESPONDENZ_SEITEN = {
+    "LEAN": [
+        "programmlogik/gabbrov/V1.lean",
+        "programmlogik/gabbrov/V2.lean",
+        "crates/gabbro-check/src/lean.rs",
+        "programmlogik/Gabbro/Body.lean",
+    ],
+    "GABBRO": [
+        "crates/gabbro-syntax/src/ast.rs",
+        "crates/gabbro-syntax/src/kw.rs",
+        "crates/gabbro-syntax/src/parse.rs",
+        "dokumente/SYNTAX.md",
+    ],
+}
+
+
+def _korrespondenz_texte():
+    wurzel = Path(__file__).resolve().parent.parent
+    texte = {}
+    for seite, dateien in KORRESPONDENZ_SEITEN.items():
+        buf = []
+        for d in dateien:
+            p = wurzel / d
+            if p.is_file():
+                buf.append(p.read_text(encoding="utf-8"))
+        texte[seite] = "\n".join(buf)
+    return texte
+
+
+def korrespondenz(tafelprobe=None, still=False):
+    """Hold both sides of the correspondence table against their sources.
+
+    Returns `(rot, gelb_ohne_offen, unaufgeloest)`. Refuses with `2` when
+    the table itself cannot be read -- then nothing was measured.
+    """
+    text = KORRESPONDENZ_TAFEL.read_text(encoding="utf-8")
+    if tafelprobe is not None:
+        text = text.replace(tafelprobe[0], tafelprobe[1], 1)
+    quellen = _korrespondenz_texte()
+    offen = (Path(__file__).resolve().parent.parent / "dokumente"
+             / "OFFEN.md").read_text(encoding="utf-8")
+    zeilen = [(m.groups(), z) for z in text.splitlines()
+              for m in [KORRESPONDENZ_ZEILE.match(z)] if m]
+    if not zeilen:
+        _absage("ABBRUCH: die Korrespondenztafel traegt keine einzige "
+                "lesbare Zeile -- es wurde NICHTS gemessen.")
+    rot, gelb_ohne_offen, unaufgeloest = [], [], []
+    for (lean, gabbrov, urteil), _ in zeilen:
+        for name in [n.strip().strip("`") for n in lean.split("/")]:
+            if name and name not in quellen["LEAN"]:
+                unaufgeloest.append(("LEAN", name))
+        for name in [n.strip().strip("`") for n in gabbrov.split("/")]:
+            if name and name not in quellen["GABBRO"]:
+                unaufgeloest.append(("GABBRO", name))
+        if urteil == "RED":
+            rot.append(lean.strip())
+    for (lean, gabbrov, urteil), ganze in zeilen:
+        # **A YELLOW row without a named OFFEN.md entry fails.** The entry
+        # has to stand in the ROW, not somewhere in the file -- otherwise a
+        # new yellow row inherits an old row's entry and the list grows
+        # quietly, which is what the named list exists to prevent.
+        if urteil == "YELLOW":
+            hinweis = re.search(r"OFFEN\.md.*`?(O\d+)`?", ganze)
+            if not hinweis or hinweis.group(1) not in offen:
+                gelb_ohne_offen.append(lean.strip())
+    if not still:
+        print("== The correspondence table -- both sides, held against "
+              "their sources ==")
+        print(f"  rows                                     {len(zeilen):>3}")
+        print(f"  RED (must be empty)                      {len(rot):>3}")
+        print(f"  YELLOW without an OFFEN.md entry         {len(gelb_ohne_offen):>3}")
+        print(f"  names resolving nowhere                  {len(unaufgeloest):>3}")
+        for seite, name in unaufgeloest:
+            print(f"    {seite:<6} `{name}` resolves nowhere")
+    return rot, gelb_ohne_offen, unaufgeloest
+
+
 if __name__ == "__main__":
-    if "--gabbrov" in sys.argv:
+    if "--korrespondenz" in sys.argv:
+        # **The speech test, in three directions** (R14): an invented name on
+        # either side must fall, an added RED row must fall as red (not as
+        # unresolvable), and a YELLOW row without its OFFEN.md entry must
+        # fall as yellow-without-entry.
+        rot0, gelb0, fehl0 = korrespondenz(still=True)
+        if rot0 or gelb0 or fehl0:
+            print(f"BEFUND: rot={rot0} gelb-ohne-eintrag={gelb0} "
+                  f"unaufgeloest={fehl0}", file=sys.stderr)
+            sys.exit(1)
+        print("== Sprechprobe: ok (beide Seiten loesen auf, rot ist leer) ==")
+        # ONE -- an invented LEAN name resolves nowhere.
+        r1, _, f1 = korrespondenz(
+            tafelprobe=("`LEAN reachesIn`", "`LEAN erfundeneHilfe`"),
+            still=True)
+        if ("LEAN", "erfundeneHilfe") not in f1:
+            print("SPRECHPROBE GESCHEITERT: ein erfundener LEAN-Name wird "
+                  "NICHT bemerkt.", file=sys.stderr)
+            sys.exit(2)
+        print("== Sprechprobe: ok (ein erfundener LEAN-Name faellt) ==")
+        # TWO -- an invented GABBRO name resolves nowhere.
+        _, _, f2 = korrespondenz(
+            tafelprobe=("`GABBRO Erreicht`", "`GABBRO Erfunden`"),
+            still=True)
+        if ("GABBRO", "Erfunden") not in f2:
+            print("SPRECHPROBE GESCHEITERT: ein erfundener GABBRO-Name wird "
+                  "NICHT bemerkt.", file=sys.stderr)
+            sys.exit(2)
+        print("== Sprechprobe: ok (ein erfundener GABBRO-Name faellt) ==")
+        # THREE -- an added RED row falls as red, and a YELLOW row without
+        # an OFFEN.md entry falls as entry-less. Both probes reuse the
+        # first GREEN row so the names stay resolvable and only the verdict
+        # (respectively the entry) moves.
+        r3, _, _ = korrespondenz(
+            tafelprobe=("`GREEN` | `lean.rs:1308`", "`RED` | `lean.rs:1308`"),
+            still=True)
+        if not r3:
+            print("SPRECHPROBE GESCHEITERT: eine rote Zeile bleibt STUMM -- "
+                  "dann meldet dieser Modus kein Rot.", file=sys.stderr)
+            sys.exit(2)
+        print("== Sprechprobe: ok (eine rote Zeile faellt als ROT) ==")
+        # FOUR -- a YELLOW row without an OFFEN.md entry falls as
+        # entry-less. The table carries no yellow row today, so the probe
+        # lends one its verdict; the names stay resolvable.
+        _, g4, _ = korrespondenz(
+            tafelprobe=("`GREEN` | `lean.rs:1305`", "`YELLOW` | `lean.rs:1305`"),
+            still=True)
+        if not g4:
+            print("SPRECHPROBE GESCHEITERT: eine gelbe Zeile ohne OFFEN.md-"
+                  "Eintrag bleibt STUMM.", file=sys.stderr)
+            sys.exit(2)
+        print("== Sprechprobe: ok (eine gelbe Zeile ohne Eintrag faellt) ==\n")
+        korrespondenz()
+    elif "--gabbrov" in sys.argv:
         # **The speech test, and it runs in THREE directions** (R14), because this mode has
         # two sides and a mismatch between them is the thing it exists to catch.
         l0, a0, b0, n0, fehlend, ueberzaehlig = gabbrov(still=True)
