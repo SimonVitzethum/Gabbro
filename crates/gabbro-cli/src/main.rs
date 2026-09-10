@@ -584,6 +584,10 @@ fn main() -> std::process::ExitCode {
             );
             std::process::ExitCode::SUCCESS
         }
+        // **GabbroV §5 -- the harness.** Manifest + specification to passed / refuted /
+        // undecided, with E1 wired into the run. English first names on the flags; the
+        // German `--spez` keeps working beside `--spec`.
+        "gabbrov" => befehl_gabbrov(rest),
         "--help" | "help" | "--hilfe" | "-h" | "hilfe" => {
             hilfe();
             std::process::ExitCode::SUCCESS
@@ -633,6 +637,7 @@ const COMMAND_NAMES: &[&str] = &[
     "blindspots", "blindstellen",
     "certificate", "zeugnis",
     "ceremony", "zeremonie",
+    "gabbrov",
     "templates", "schablonen",
     "passes", "paesse",
     "check", "pruefe",
@@ -771,9 +776,14 @@ fn hilfe() {
                                     WITHOUT `--testbuild` this is the SHIPPING build: an
                                     item marked `when TESTBUILD` produces no line of C
   gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…
-                                    the Lean duties of each unit against `Proofs/<Unit>.lean`:
-                                    GREEN, OWED (what a person still proves), RED, SETUP;
-                                    `--template` prints the file a person starts from
+                                     the Lean duties of each unit against `Proofs/<Unit>.lean`:
+                                     GREEN, OWED (what a person still proves), RED, SETUP;
+                                     `--template` prints the file a person starts from
+  gabbro gabbrov pruefe --manifest <file> --spec <file>
+                                     every manifest obligation line against the
+                                     specification: passed / refuted / undecided.
+                                     E1 is wired in: the run aborts when a line
+                                     goes missing
   gabbro lean       <file.gab>…     the whole PROGRAM as a Lean 4 module: every body, every
                                     precondition, and the shape of every declared place --
                                     and NO specification. What is to hold is said in Lean,
@@ -2043,8 +2053,93 @@ fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
     std::process::ExitCode::SUCCESS
 }
 
-fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {
-    fn geh(items: &[gabbro_syntax::ast::Item]) -> usize {
+/// **GabbroV §5 -- `gabbro gabbrov pruefe --manifest <file> --spec <file>`.**
+///
+/// Every `obligation` line of the manifest gets one verdict -- passed, refuted (with a
+/// counterexample), or undecided (with name and reason). E1 is wired into the run: the
+/// two line counts are compared before anything is printed, and a divergence aborts.
+/// Exit 0 means E1 holds; 1 means a line is refuted or the run itself failed; 2 means
+/// the call was wrong.
+fn befehl_gabbrov(rest: &[String]) -> std::process::ExitCode {
+    let mut args = rest.iter().peekable();
+    let unter = args.next().cloned().unwrap_or_default();
+    if unter != "pruefe" && unter != "check" {
+        eprintln!("gabbro gabbrov: understood is `pruefe`, not `{unter}`");
+        return std::process::ExitCode::from(2);
+    }
+    let mut manifest: Option<String> = None;
+    let mut spez: Option<String> = None;
+    let mut rest: Vec<String> = Vec::new();
+    let mut i = 0;
+    let argv: Vec<&String> = args.collect();
+    while i < argv.len() {
+        match argv[i].as_str() {
+            "--manifest" => {
+                i += 1;
+                match argv.get(i) {
+                    Some(n) => manifest = Some((*n).clone()),
+                    None => {
+                        eprintln!("gabbro gabbrov pruefe: `--manifest` needs a file");
+                        return std::process::ExitCode::from(2);
+                    }
+                }
+            }
+            "--spec" | "--spez" => {
+                i += 1;
+                match argv.get(i) {
+                    Some(n) => spez = Some((*n).clone()),
+                    None => {
+                        eprintln!("gabbro gabbrov pruefe: `--spec` needs a file");
+                        return std::process::ExitCode::from(2);
+                    }
+                }
+            }
+            anderes => rest.push(anderes.to_string()),
+        }
+        i += 1;
+    }
+    if !rest.is_empty() {
+        eprintln!("gabbro gabbrov pruefe: unexpected argument(s): {}", rest.join(" "));
+        return std::process::ExitCode::from(2);
+    }
+    let (manifest_datei, spez_datei) = match (manifest, spez) {
+        (Some(m), Some(s)) => (m, s),
+        _ => {
+            eprintln!("gabbro gabbrov pruefe: needs `--manifest <file> --spec <file>`");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    let manifest_text = match std::fs::read_to_string(&manifest_datei) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("gabbro: {manifest_datei}: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    let spez_text = match std::fs::read_to_string(&spez_datei) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("gabbro: {spez_datei}: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    match gabbro_check::gabbrov::run(&manifest_text, &spez_text) {
+        Ok(bericht) => {
+            print!("{bericht}");
+            if bericht.lines().any(|l| l.starts_with("verdict\t") && l.contains("\trefuted\t")) {
+                std::process::ExitCode::from(1)
+            } else {
+                std::process::ExitCode::SUCCESS
+            }
+        }
+        Err(e) => {
+            eprintln!("gabbro gabbrov pruefe: {e}");
+            std::process::ExitCode::from(1)
+        }
+    }
+}
+
+fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {    fn geh(items: &[gabbro_syntax::ast::Item]) -> usize {
         items
             .iter()
             .map(|i| {

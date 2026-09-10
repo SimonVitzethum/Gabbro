@@ -196,6 +196,18 @@ aborting measurement run: a tool that looks plausible and measures nothing.
 > is that *a discharged obligation still counts*. What moves is **GabbroV's** population:
 > 66 − 3 = **63**, of which **8** are not sayable and **55** are. §11's `G1` note is updated at
 > its own place. `messung/GABBROV-V2.md` §1
+>
+> **BUILT 2026-09-10 — the §5 harness, Lane V2 (`gabbrov pruefe`).**
+> `crates/gabbro-check/src/gabbrov.rs` parses manifest lines (name/class/text, Fassung 2),
+> judges every line against a specification file (`passed`/`refuted` with a counterexample,
+> silence is `undecided` with name and reason), and checks E1 — manifest line count against
+> verdict line count — inside the run. `gabbro gabbrov pruefe --manifest <file> --spec
+> <file>` wires it to the command line; nine integration tests carry Tor 4 (one obligation
+> through all three outcomes) and the E1 speech probes both ways. The specification file
+> stands in for the Lean verdict until the §6C solver channel lands — the verdict SHAPE is
+> what this harness fixes, not the decision procedure. OPEN: `tests/fahnen.rs` still rates
+> the three new flag spellings and the new dispatch arm as unregistered (2 red) — its own
+> register, another lane's file, REPORTED not edited.
 
 ---
 

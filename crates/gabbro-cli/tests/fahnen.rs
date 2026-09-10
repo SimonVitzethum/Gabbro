@@ -178,6 +178,17 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "",
         lebendig: &[],
     },
+    // --- GabbroV, 2026-09-10 ------------------------------------------------------------
+    Fahne {
+        erstname: "--manifest",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
+        erstname: "--spec",
+        zweitname: "--spez",
+        lebendig: &[],
+    },
     // --- the Lean duties, 2026-09-07 ----------------------------------------------------
     Fahne {
         erstname: "--template",
@@ -239,6 +250,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["ceremony", "zeremonie"],
     &["templates", "schablonen"],
     &["passes", "paesse"],
+    &["gabbrov"],
     &["--help", "help", "--hilfe", "-h", "hilfe"],
 ];
 

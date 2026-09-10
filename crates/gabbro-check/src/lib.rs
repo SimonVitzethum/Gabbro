@@ -77,6 +77,8 @@ pub mod korpus;
 pub mod manifest;
 // **P6, die Messsonde** -- was ein Mensch noch schuldet, gezaehlt statt eingeloest.
 pub mod pflichten;
+/// **GabbroV §5 -- the harness (`gabbrov pruefe`).** Pure manifest/spec logic, no tree.
+pub mod gabbrov;
 pub mod phasen;
 /// **P6** -- the same obligation register, in the form a prover reads. See `refinement.rs`.
 pub mod lean;
