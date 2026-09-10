@@ -40,6 +40,7 @@ impl fn seite_vergessen(adr : u64)
 impl fn schreib_schranke()
     effects { writes TLB_FLUSH }
     costs   <= 1 ops
+    deadline <= 10 ops arch x86_64 falsifier sonde_schreib_schranke
     arch    x86_64
     = asm {
         "sfence"
@@ -51,6 +52,7 @@ impl fn schreib_schranke()
 impl fn speicher_schranke()
     effects { writes TLB_FLUSH }
     costs   <= 1 ops
+    deadline <= 10 ops arch x86_64 falsifier sonde_speicher_schranke
     arch    x86_64
     = asm {
         "mfence"
