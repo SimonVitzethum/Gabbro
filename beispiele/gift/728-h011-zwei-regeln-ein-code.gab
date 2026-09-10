@@ -1,0 +1,61 @@
+-- erwartet: H011
+
+-- **One code, two rules: both meanings of `H011` in one file.**
+--
+-- `H011` is issued at two sites in `geteilt.rs` with two different rules: a declared
+-- `locks` effect nobody redeems (the paper lock, isolated by `gift/141`) and a reclaim
+-- inside one's own `observes` region (isolated by `gift/103`). Both write the same
+-- code, so a guardian that counts codes -- `pruefe-vergabe.py`, the coverage table in
+-- `messung/DECKUNGSLUECKE.md` -- cannot tell which rule a probe pins (section 1.1
+-- of `messung/RACE.md`).
+--
+-- This file fires both rules at once: `schreibt` declares `locks L` and never takes it,
+-- `falsch` reclaims `frei` inside `observes BACCT`. The grace-period assumption names
+-- the domain (so `H015` stays silent) and `SCHREIBER` is held at the reclaim (so the
+-- second `H012` stays silent). A future split of the code must touch this file: one
+-- `erwartet` line cannot name two codes.
+module gift::h011_zwei_regeln_ein_code {
+
+table T count 8 { slot { x : u32, } }
+
+table Konten count 256 { slot { zaehler : u32 in 0 .. 100, } }
+
+static mut frei : option index into Konten = None;
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+lock SCHREIBER protects { Konten, frei } rank 3 held <= 100 ops;
+
+rcu BACCT protects { Konten } reclaims frei;
+
+-- First rule: a `locks` effect nobody redeems (the shape of `gift/141`).
+impl fn schreibt(i : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 4 ops
+{
+    T.slots[i].x = 1;
+}
+
+impl fn nimmt_sie()
+    effects { locks L, reads T.slots }
+    costs   <= 8 ops
+{
+    locks L { let a = T.slots[0].x; }
+}
+
+-- Second rule: a reclaim inside one's own read region (the shape of `gift/103`).
+impl fn falsch(i : index into Konten)
+    effects { locks SCHREIBER, writes frei } costs <= 5 ops
+{
+    locks SCHREIBER {
+        observes BACCT {
+            frei = Some(i);
+        }
+    }
+}
+
+assume gnadenfrist_ist_abgelaufen
+    "Nach der Ruecknahme des Zeigers ist kein Leser mehr in einem `observes BACCT`."
+    falsifier sonde_leser_noch_drin;
+
+}

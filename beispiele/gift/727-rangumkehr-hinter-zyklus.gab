@@ -1,0 +1,58 @@
+-- erwartet: Hinweis E009
+
+-- **A real lock-order inversion behind an incomplete hull passes -- race form 7, R16.**
+--
+-- `ping` holds `L2` (rank 2) and calls `pong`; `pong` takes `L1` (rank 1) and calls
+-- back. At runtime that is an ABBA deadlock whenever the counter is positive: each
+-- side holds one lock and waits for the other through the call. The checker reports
+-- nothing but the honest third state. The ping/pong cycle cuts both effect hulls, so
+-- `H012` (`Rufwissen::nimmt`, `geteilt.rs`) sees an incomplete hull and stays silent
+-- (R16), and `H006` sees no nested `locks` block in either body.
+--
+-- The control is `gift/142`: the same call shape without a cycle falls with `H012`.
+-- The `decreases` measures are honest termination bookkeeping (K008/K009 stay silent
+-- because of them, not in spite of them); they change nothing about the lock order.
+--
+-- Refusing over the visible lower bound instead would invert R16, and it is not
+-- provably safe: the visible hull over a cycle is built from DECLARED effects, and
+-- `messung/proben/460` measures that declared `locks` over-states who takes what (a
+-- correct program refused). A lower-bound refusal would refuse correct programs of
+-- the 460 shape wherever a cycle passes nearby. So the silence stands documented
+-- here, not built. (`sperren.rangordnung` in the pass register and section 5(a)
+-- of `messung/H006.md` book the same boundary.)
+module gift::rangumkehr_hinter_zyklus {
+
+const TIEFE : u32 = 16;
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+lock L1 protects { a } rank 1 held <= 100 ops;
+lock L2 protects { b } rank 2 held <= 100 ops;
+
+impl fn ping(t : u32 in 0 .. TIEFE)
+    effects { writes a, writes b, locks L1, locks L2 }
+    costs   <= 64 ops
+    decreases t
+{
+    locks L2 {
+        b = 2;
+        if t >= 1 {
+            pong(t - 1);
+        }
+    }
+}
+
+impl fn pong(t : u32 in 0 .. TIEFE)
+    effects { writes a, writes b, locks L1, locks L2 }
+    costs   <= 64 ops
+    decreases t
+{
+    locks L1 {
+        a = 2;
+        if t >= 1 {
+            ping(t - 1);
+        }
+    }
+}
+
+}
