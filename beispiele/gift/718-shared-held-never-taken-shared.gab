@@ -1,0 +1,28 @@
+-- erwartet: Hinweis H004
+-- **A `shared held` number with no shared site.**
+--
+-- `L` declares `shared held <= 8 ops` but is only ever taken exclusively. The latency
+-- statement of SPRACHE.md §9.3 has no branch for a lock nobody takes shared, so the
+-- number is a claim with no site at which it could fail -- the same shape as the dead
+-- `locks ordered` candidate the construct grew out of.
+--
+-- What stays silent, and why that is the isolation this probe needs: `L` IS taken (so
+-- `H008` has nothing to say), the `locks L` effect is redeemed by the block (so `H011`
+-- stays silent), and every access stands under the lock (so `H007` stays silent).
+-- The checker reports 0 errors and exactly this hint.
+
+module gift::shared_held_ohne_geteilte_nahme {
+
+table T count 8 { slot { x : u32, } }
+lock L protects { T } rank 0 held <= 100 ops shared held <= 8 ops;
+
+impl fn nimmt_exklusiv(i : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 4 ops
+{
+    locks L {
+        T.slots[i].x = 1;
+    }
+}
+
+}

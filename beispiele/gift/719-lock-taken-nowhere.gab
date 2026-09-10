@@ -1,0 +1,26 @@
+-- erwartet: Hinweis H008
+-- **A `protects` clause nobody honours.**
+--
+-- `L` protects `T` and is taken nowhere: no `locks` block, no `effects { locks … }`,
+-- no `requires Held(…)`. A clause that looks like a promise and binds nobody is worse
+-- than none -- it reads as a guarantee while the place stands unguarded. Same shape
+-- as `S004`.
+--
+-- What stays silent, and why that is the isolation this probe needs: the protected
+-- place is never touched at all (so `H007` has nothing to say), no function declares
+-- a `locks` effect (so `H011` stays silent), and `L` declares no `shared held` number
+-- (so `H004` stays silent). The checker reports 0 errors and exactly this hint.
+
+module gift::sperre_nirgends_genommen {
+
+table T count 8 { slot { x : u32, } }
+lock L protects { T } rank 0 held <= 100 ops;
+
+impl fn tut_nichts() -> u32
+    effects { pure }
+    costs   <= 1 ops
+{
+    return 1;
+}
+
+}
