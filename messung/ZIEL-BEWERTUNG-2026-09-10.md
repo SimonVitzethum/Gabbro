@@ -158,11 +158,13 @@ BUILT today for W1/W2 (`lauf_aus_brav`; W3–W5 stay premises, Owicki–Gries st
 (b) ONE running probe per date — first one built AND integrated today (`sonde_tick.c`:
 register row 39 PROGRAM, `SONDEN_MIT_PROGRAMM`, quota (5,39)→(6,39), A_p 6/39 = 0.1538;
 sample currency, locks excluded), 28 to go;
-(c) S4 (`checker_agrees` witness pairs per unit) — scoped below, unbuilt: the W16 seam
-is the one place where both Lean trees could lose their subject together with nothing
-turning red.
+(c) S4 (`checker_agrees` witness pairs per unit) — BUILT today (`lean::witness`,
+`tests/seam.rs`): 189 routines over beispiele/, 119 witnessed — 53 both-accept, 66
+rust-only, 0 lean-only; ten findings (F3 index-`IntIn` largest, F4 = Finding 5).
+The W16 seam now fails loudly per routine per run instead of silently. Status in
+the Sicherheit lane's file, not duplicated here.
 
-### S4 scope (read, not built)
+### S4 scope (built 2026-09-10 — see above)
 
 `PLAN-SICHERHEIT.md`:230 + `PLAN-VERIFIKATION.md` §3/V5: `gabbro lean` writes, per
 unit, `theorem checker_agrees : pruefeBlock P erg [] ⟨body⟩ = some _ := by decide`
