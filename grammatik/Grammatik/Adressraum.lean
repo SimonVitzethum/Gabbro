@@ -58,9 +58,16 @@
                                     `modellSequenz_ohneToctou` proves the
                                     safety INSIDE the model, and
                                     `modellSequenz_toctou_ohneSnapshotWelt`
-                                    names the gap there. The region check
-                                    itself (`validiert`) still has no `exec`
-                                    counterpart -- that is cut C6, not §7.
+                   names the gap there. The region check
+                   itself (`validiert`) still has no `exec`
+                   counterpart -- that is cut C6, not §7.
+                partition (§8, design only, no discharge) -- `KernRegion` /
+                    `SeitenRegion` name both sides of `Seite`; `execFordertBereich`
+                    is the range-check-inside-`exec` shape (out-of-region refuses
+                    as `ausserhalbVerweigert`); `adresseInRegion` /
+                    `schluesselInRegion` / `benutzerTeil` hang the user side of
+                    the world mapping on `UserRegion`, `bereicheGetrennt` names
+                    the split. No transition discharges any of it -- cut C7.
 
               Mirror (this file takes one same-project import,
               `Grammatik.Semantik`; the `Grammatik.lean` index is untouched,
@@ -113,6 +120,11 @@
                    check inside `exec` (a statement shape whose transition
                    requires `validiert`), and a user partition in `World`
                    it could check against.
+               C7. The discharge inside `exec` stays future work (§8 books the
+                   shape, not the transition): no `Stmt`/`Block` transition
+                   requires `execFordertBereich`, and no `World` carries a
+                   `Seite` partition yet -- `benutzerTeil`/`bereicheGetrennt`
+                   name the user side it could check against.
 
                Core only: no `mathlib`; one same-project import
                (`Grammatik.Semantik`), no new dependency. Zero `sorry`,
@@ -450,5 +462,70 @@ theorem modellSequenz_toctou_ohneSnapshotWelt (D : Deklaration) (t : D.Tab)
 #print axioms einSnapshotWelt_gibtWertGleich
 #print axioms modellSequenz_ohneToctou
 #print axioms modellSequenz_toctou_ohneSnapshotWelt
+
+/-! ## 8. Die Seitentrennung: Benutzer- gegen Kernbereich (Entwurf, ohne Entladung) -/
+
+/- Beide Seiten teilen die Form von `UserRegion` (Basis plus Laenge, Schnitt C1),
+   stehen aber als benannte Typen nebeneinander, damit eine kuenftige Pruefung in
+   `exec` gegen genau eine Seite laufen kann. Die Entladung selbst bleibt
+   kuenftige Arbeit (Schnitt C7 im Kopf): kein Uebergang hier stellt eine
+   Forderung an `exec`. -/
+
+/-- Der Kernbereich: dieselbe Form wie `UserRegion` (Basis plus Laenge), als
+    eigener Name, damit die Trennung benennbar bleibt. -/
+def KernRegion := UserRegion
+
+/-- Die seitenabhaengige Bereichsform: je Seite der zugehoerige Bereichstyp. -/
+def SeitenRegion (s : Seite) : Type :=
+  match s with
+  | .kern => KernRegion
+  | .user => UserRegion
+
+/-! ### Die Bereichspruefung in `exec`: Gestalt ohne Entladung -/
+
+/- Die Gestalt, die ein kuenftiger `exec`-Uebergang einloesen muesste: Wer die
+   Kopie `k` traegt, laeuft gegen den Bereich `r` nur bei `validiert r k`.
+   Hier steht die Forderung als Form; der Uebergang, der sie stellt, fehlt
+   noch (Schnitt C7). -/
+
+/-- Die Gestalt der Bereichspruefung in `exec`: ein Uebergang, der die Kopie `k`
+    traegt, darf gegen den Bereich `r` nur bei `validiert r k` laufen. Eine Kopie
+    ausserhalb des Bereichs wird verweigert. -/
+def execFordertBereich (a : KernAnweisung) (r : UserRegion) (k : Kopie) : Prop :=
+  getrageneKopie a = some k → validiert r k
+
+/-- Die Verweigerungsgestalt: eine Kopie ausserhalb des Bereichs wird abgewiesen;
+    erst mit der Entladung in `exec` (Schnitt C7) wird daraus ein Uebergang. -/
+def ausserhalbVerweigert (r : UserRegion) (k : Kopie) : Prop :=
+  ¬ validiert r k
+
+/-! ### Der Benutzerteil der Weltabbildung -/
+
+/- Der Benutzerteil als Adressmenge: `adresseInRegion` nennt die Zugehoerigkeit
+   auf `Nat`-Adressen (die Bereichsform von `innerhalb`, einfacher gelesen),
+   `schluesselInRegion` dieselbe auf den `Int`-Schluesseln von `World.slots` --
+   `weltByte` liest `(addr : Int)`, also haengt hierueber der Benutzerteil der
+   Weltabbildung am Bereich. `bereicheGetrennt` nennt die Trennung selbst. -/
+
+/-- Eine Adresse im Bereich: `[basis, basis + laenge)` -- die Bereichsform von
+    `innerhalb`, als einstellige Zugehoerigkeit. -/
+def adresseInRegion (r : UserRegion) (addr : Nat) : Prop :=
+  r.basis ≤ addr ∧ addr < r.basis + r.laenge
+
+/-- Ein Weltenschluessel im Bereich: dieselbe Zugehoerigkeit auf den
+    `Int`-Schluesseln von `World.slots` -- hierueber haengt der Benutzerteil der
+    Weltabbildung am Bereich. -/
+def schluesselInRegion (r : UserRegion) (k : Int) : Prop :=
+  (r.basis : Int) ≤ k ∧ k < (r.basis : Int) + (r.laenge : Int)
+
+/-- Der Benutzerteil der Weltabbildung: genau die Schluessel des
+    Benutzerbereichs. -/
+def benutzerTeil (u : UserRegion) (k : Int) : Prop :=
+  schluesselInRegion u k
+
+/-- Die Trennung: Benutzer- und Kernbereich teilen keine Adresse -- die
+    Seitentrennung als Gestalt, noch ohne Traeger in `World`. -/
+def bereicheGetrennt (u k : UserRegion) : Prop :=
+  ∀ addr : Nat, adresseInRegion u addr → adresseInRegion k addr → False
 
 end Gabbro.Grammatik.Adressraum

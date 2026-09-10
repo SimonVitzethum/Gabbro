@@ -20,10 +20,21 @@
                                   -- der Schleifendurchgang als Indexliste
     §6  `RufAusOrdnung`, `UmgebungOkAusLaeufen`, `ZyklusAusMass`,
         `SchleifenOkAusLaeufen`   -- die Kompositionssaetze als AussageFORMEN
-    §7  `OhneMassTabelle`, `ZyklusOhneMass`, `ohne_mass_ist_none`,
+  §7  `OhneMassTabelle`, `ZyklusOhneMass`, `ohne_mass_ist_none`,
         `ZyklusOhneMassWirdAbgewiesen`
-                                  -- der Zyklus ohne `decreases` als DATUM, mit
-                                     der Abweisung als pruefbarer Form
+                                   -- der Zyklus ohne `decreases` als DATUM, mit
+                                      der Abweisung als pruefbarer Form
+  §8  `DurchgangImBereich`, `SchleifeLaeuftImBereich`, `DurchgangGezaehlt`,
+      `SchleifeLaeuftGezaehlt`, `SchleifenOkAusGezaehltenLaeufen`
+                                   -- die gezaehlte Laufform (`RunsLoopN`) als
+                                      `def`s nach dem Muster von `RunsLoop` /
+                                      `RunsLoopIn` aus §5
+  §9  `SchleifeInMitglied`, `MassAussenSchleifeInnen`, `SchleifeAussenMassInnen`,
+      `UmgekehrteTabelle`, `Umgekehrt`, `UmgekehrteMitglieder`,
+      `UmgekehrterDurchgang`, `schleife_sitzt_in_a`,
+      `UmgekehrtWirdAbgewiesen`  -- die feste Schachtelung (Mass aussen,
+                                      Schleife innen) und die Abweisung der
+                                      umgekehrten als DATUM mit pruefbarer Form
 
   Entsprechungen (Namen und Form, kein Bezug -- siehe C1):
     `Gefuege.tabelle`             -- `Programm.sig`/`Programm.schleife`
@@ -43,8 +54,15 @@
     `VertragSchranke`             -- `ContractBelowM` (`Body.lean`:1525): der
                                      Vertrag des Zyklusmitglieds, beschraenkt
                                      durch das Mass des Rufers
-    `UmgebungOk`                  -- `UmgebungOK` (`Anweisung.lean`:599)
-    `SchleifenOk`                 -- `SchleifenOK` (`Anweisung.lean`:608)
+  `UmgebungOk`                  -- `UmgebungOK` (`Anweisung.lean`:599)
+  `SchleifenOk`                 -- `SchleifenOK` (`Anweisung.lean`:608)
+  `SchleifeLaeuftImBereich`     -- `RunsLoopIn` (`Body.lean`:1610)
+  `SchleifeLaeuftGezaehlt`      -- `RunsLoopN` (`Body.lean`:1671)
+  `SchleifenOkAusGezaehltenLaeufen`
+                                -- `looprule_of_body_p` (`Body.lean`:1721)
+  `MassAussenSchleifeInnen`     -- die Schachtelung aus `KompositionBeweis.lean`
+                                      (C6): die Schleifenregel unter den
+                                      beschraenkten Vertraegen, der Zyklus aussen
 
   VORAUSSETZUNGEN, gebucht:
     (P1) Jede Zeile der Tabelle nennt alle Rufe ihres Rumpfes (`ruft` ist
@@ -66,9 +84,16 @@
          Pruefers. Diese Datei zeigt nur, WOHIN die Pflicht gehoben wird.
     (C3) Fremde Ruempfe (`extern`, `asm`, anvertraut) haben keine Zeile und
          damit keinen Vertrag: ihre Vertraege bleiben Hypothesen ueber `laeuft`.
-    (C4) Nicht in `Grammatik.lean` verdrahtet: der Bahnumfang verbietet den
-         Indexeingriff; pruefe diese Datei unmittelbar mit
-         `lake env lean Grammatik/Komposition.lean`.
+  (C4) Nicht in `Grammatik.lean` verdrahtet: der Bahnumfang verbietet den
+       Indexeingriff; pruefe diese Datei unmittelbar mit
+       `lake env lean Grammatik/Komposition.lean`.
+  (C5) `indizes` bleibt `List Nat`; Bereich und Schranke sprechen `Int` wie im
+       Modell (`RunsLoopN` laeuft ueber `List Int`). Die Koerzion traegt nur EINE
+       Richtung: ein Durchgang besucht keine negativen Indizes -- was das Modell
+       mit negativen Indizes sagt, sagt diese Datei nicht.
+  (C6) Die Abweisung der umgekehrten Schachtelung steht als `¬`-Form ueber EINEM
+       Datum (`Umgekehrt`) -- wie §7 kein Allgemeinsatz, sondern die Gestalt, in
+       der die umgekehrte Ordnung nichts schliesst.
 
   Kein `mathlib`, kein `sorry`, kein `axiom`.
 -/
@@ -237,5 +262,120 @@ def ZyklusOhneMassWirdAbgewiesen : ¬ ZyklusGetragen ZyklusOhneMass ["a", "b"] :
 
 #print axioms Gabbro.Grammatik.ohne_mass_ist_none
 #print axioms Gabbro.Grammatik.ZyklusOhneMassWirdAbgewiesen
+
+/-! ## 8. Die gezaehlte Laufform (`RunsLoopN`) -/
+
+/-- Der Durchgang im Bereich: jeder besuchte Index liegt in `lo ≤ i < hi` -- die
+    Bedingung von `RunsLoopIn` (`Body.lean`:1610), ein Durchgang je Index wie in §5.
+    (`indizes` bleibt `List Nat`; die Schranken sind `Int` wie im Modell -- siehe C5.) -/
+def DurchgangImBereich (d : Durchgang) (lo hi : Int) : Prop :=
+  ∀ i ∈ d.indizes, lo ≤ (i : Int) ∧ (i : Int) < hi
+
+/-- Die Schleife laeuft im Bereich: ihre Kennung gehoert einem Rumpf der Tabelle,
+    jeder besuchte Index liegt im Bereich, und ihre Regel gilt -- die Form von
+    `RunsLoopIn`, das fehlende Mittelstueck zwischen §5 und der gezaehlten Form. -/
+def SchleifeLaeuftImBereich (G : Gefuege) (d : Durchgang) (lo hi : Int) : Prop :=
+  (∃ f r, G.tabelle f = some r ∧ d.kennung ∈ r.schleifen) ∧
+  DurchgangImBereich d lo hi ∧ G.schleifenRegel d.kennung
+
+/-- Der Durchgang gezaehlt: im Bereich UND hoechstens `np` Durchgaenge -- die
+    Bedingung von `RunsLoopN` (`Body.lean`:1671): `ks.length ≤ np`, wo `np` die
+    Anzahl (`count`) des Bereichs ist. -/
+def DurchgangGezaehlt (d : Durchgang) (lo hi np : Int) : Prop :=
+  DurchgangImBereich d lo hi ∧ (d.indizes.length : Int) ≤ np
+
+/-- Die Schleife laeuft gezaehlt: ihre Kennung gehoert einem Rumpf der Tabelle, der
+    Durchgang ist gezaehlt, und ihre Regel gilt -- die Form von `RunsLoopN`, der
+    dritten Laufform neben `RunsLoop` (§5) und `RunsLoopIn` (hier oben). -/
+def SchleifeLaeuftGezaehlt (G : Gefuege) (d : Durchgang) (lo hi np : Int) : Prop :=
+  (∃ f r, G.tabelle f = some r ∧ d.kennung ∈ r.schleifen) ∧
+  DurchgangGezaehlt d lo hi np ∧ G.schleifenRegel d.kennung
+
+/-- **Die Form von `looprule_of_body_p`.** Wo die Schleife gezaehlt laeuft, gilt
+    (U2) -- die Induktion laeuft ueber `indizes`, der Zaehler reist mit. -/
+def SchleifenOkAusGezaehltenLaeufen (G : Gefuege) (d : Durchgang) (lo hi np : Int) : Prop :=
+  SchleifeLaeuftGezaehlt G d lo hi np → SchleifenOk G
+
+/-! ## 9. Die Schachtelung: das Mass aussen, die Schleife innen -/
+
+/-- Die Schleife sitzt in einem Zyklusmitglied: ihre Kennung gehoert dem Rumpf,
+    dessen Name ein Mitglied traegt -- die Schleife steht INNEN, das Mass AUSSEN. -/
+def SchleifeInMitglied (G : Gefuege) (rs : List Mitglied) (d : Durchgang) : Prop :=
+  ∃ r ∈ rs, ∃ rr, G.tabelle r.name = some rr ∧ d.kennung ∈ rr.schleifen
+
+/-- **Die feste Ordnung.** Wo die Schleife in einem Mitglied sitzt, liefert jede
+    Pflicht ihren Vertrag UND die Schleifenregel UNTER den beschraenkten Vertraegen:
+    die Schleifenregel schliesst innen (je Durchgang, unter dem Mass), die
+    Zyklusvertraege schliessen aussen (durch die Massinduktion). -/
+def MassAussenSchleifeInnen (G : Gefuege) (rs : List Mitglied) (d : Durchgang) : Prop :=
+  SchleifeInMitglied G rs d →
+  (∀ r ∈ rs, (∀ r' ∈ rs, VertragSchranke G r' r.mass) →
+    (G.vertrag r.name ∧ (SchleifeLaeuft G d → SchleifenOk G))) →
+  ((∀ r ∈ rs, G.vertrag r.name) ∧ SchleifenOk G)
+
+/-- **Die umgekehrte Ordnung -- die Form, die abgewiesen werden MUSS.** Die
+    Schleifenregel schliesst aussen, und die Zyklusvertraege schliessen innen darunter:
+    jede Pflicht darf die VOLLEN Vertraege aller Mitglieder annehmen -- also genau das,
+    was erst zu zeigen ist. Wer so schachtelt, nimmt an, was er schliesst. -/
+def SchleifeAussenMassInnen (G : Gefuege) (rs : List Mitglied) (d : Durchgang) : Prop :=
+  SchleifeInMitglied G rs d →
+  (SchleifeLaeuft G d → SchleifenOk G) →
+  ((∀ r ∈ rs, (∀ r' ∈ rs, G.vertrag r'.name) → G.vertrag r.name) →
+   ((∀ r ∈ rs, G.vertrag r.name) ∧ SchleifenOk G))
+
+/-- Zwei Ruempfe im Kreis, BEIDE mit Mass -- damit die Luecke die Ordnung ist und
+    nicht das Mass: `a` traegt die Schleife `s`, `b` kehrt zurueck. -/
+def UmgekehrteTabelle : String → Option Routine
+  | "a" => some { ruft := ["b"], mass := some 1, schleifen := ["s"] }
+  | "b" => some { ruft := ["a"], mass := some 0, schleifen := [] }
+  | _ => none
+
+/-- Das Gefuege ueber dieser Tabelle: die Umgebung laeuft alles, die Schleifenregel
+    gilt -- aber KEIN Vertrag gilt. Die umgekehrte Ordnung duerfte die vollen
+    Vertraege annehmen und schloesse damit nichts. -/
+def Umgekehrt : Gefuege :=
+  { tabelle := UmgekehrteTabelle
+    laeuft := fun _ => True
+    vertrag := fun _ => False
+    schleifenRegel := fun _ => True }
+
+/-- Die Mitglieder des Kreises als Daten: Namen, Rufe und Masse. -/
+def UmgekehrteMitglieder : List Mitglied :=
+  [ ({ name := "a", ruft := ["b"], mass := some 1 } : Mitglied),
+    ({ name := "b", ruft := ["a"], mass := some 0 } : Mitglied) ]
+
+/-- Der Durchgang der Schleife `s`: ein Durchgang ueber einen Index. -/
+def UmgekehrterDurchgang : Durchgang :=
+  { kennung := "s", indizes := [0] }
+
+/-- Die Schachtelung als Datum: die Schleife `s` sitzt im Mitglied `a`. -/
+def schleife_sitzt_in_a :
+    SchleifeInMitglied Umgekehrt UmgekehrteMitglieder UmgekehrterDurchgang := by
+  exact ⟨({ name := "a", ruft := ["b"], mass := some 1 } : Mitglied),
+    by exact List.Mem.head _,
+    ({ ruft := ["b"], mass := some 1, schleifen := ["s"] } : Routine), rfl,
+    by decide⟩
+
+/-- **Die Abweisung.** Die Schleife `s` sitzt in `a`, die Schleifenregel schliesst,
+    jede Pflicht unter vollen Vertraegen haelt -- und trotzdem schliesst die
+    umgekehrte Ordnung KEINEN Vertrag: was sie annimmt, ist, was sie zeigen muesste. -/
+def UmgekehrtWirdAbgewiesen :
+    ¬ SchleifeAussenMassInnen Umgekehrt UmgekehrteMitglieder UmgekehrterDurchgang := by
+  intro h
+  have hA : SchleifeLaeuft Umgekehrt UmgekehrterDurchgang → SchleifenOk Umgekehrt := by
+    intro _ _ _
+    trivial
+  have hB : ∀ r ∈ UmgekehrteMitglieder,
+      (∀ r' ∈ UmgekehrteMitglieder, Umgekehrt.vertrag r'.name) →
+      Umgekehrt.vertrag r.name := by
+    intro _ _ hcirc
+    exact hcirc ({ name := "a", ruft := ["b"], mass := some 1 } : Mitglied)
+      (by exact List.Mem.head _)
+  have hC := h schleife_sitzt_in_a hA hB
+  exact hC.1 ({ name := "a", ruft := ["b"], mass := some 1 } : Mitglied)
+    (by exact List.Mem.head _)
+
+#print axioms Gabbro.Grammatik.schleife_sitzt_in_a
+#print axioms Gabbro.Grammatik.UmgekehrtWirdAbgewiesen
 
 end Gabbro.Grammatik

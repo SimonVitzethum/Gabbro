@@ -382,6 +382,59 @@ version answers the question at the type instead of at an alias analysis:
 > variable, and a variable is a copy by the grammar. `udp-echo.gab`'s `w`/`k` case is now: `w`
 > is a value read before the write; whoever reads it after the write reads the world.
 
+### User memory — the seventh side and the validated copy
+
+Section 3 closes the space alphabet at six sides and maps the whole concept
+out of the grammar: the space of a carrier is a declaration fact and the
+barrier follows from it. That reading holds for kernel carriers, whose bytes
+no other party rewrites. It does not hold for bytes that live on the far side
+of a user/kernel boundary, where a check of a range and the copy from that
+range are two reads and the far side may rewrite the bytes between them. The
+finding is measured in `messung/TOCTOU-ADRESSRAUM.md` with verdict GAP: no
+user-memory region in the grammar or the world, no copy primitive binding
+validation to copying, no shape refusing two reads of the same user bytes
+with a check between them.
+
+#### The two sides
+
+Every boundary-crossing copy names which side each end lives on, and there
+are exactly two sides: kernel memory and user memory. The side is a property
+of the copy datum, not of the pointer type: a pointer names a declared
+carrier, while a copy names a user address, a kernel address, a byte count,
+and the direction the bytes move. A kernel step is then either pure,
+carrying no copy, or it carries exactly one copy; a loop copying a range
+piece by piece is one such step per piece, each checked.
+
+#### The user region, declared
+
+A user-memory region is declared by name and consists of a base address and
+a length in bytes, both fixed at the declaration. A validated copy is then
+a region, a copy, and a proof of the proposition that the whole accessed
+interval lies inside it — inseparable by shape, because the check and the
+copy name the same region, the same address, and the same length. Read back
+off the shape, the checked pair of address and length is what is copied,
+by construction.
+
+#### The validated-copy rule
+
+A validated copy runs as one copy through the checked handle: the checked
+reading takes the copy's user address at check time, the copied reading
+takes the same address at copy time. The rule states that the checked value
+is the copied value — one snapshot, read once. The address part holds by
+the handle alone; the value part holds under the single-copy-atomicity
+premise (both snapshots agree at the checked address), named explicitly
+and satisfiable, never vacuous. Without the premise the goal is unwritable:
+a run whose snapshots differ exhibits the hazard. Lean:
+`Grammatik/Adressraum.lean` (`Seite`, `UserRegion`, `Kopie`,
+`GepruefteKopie`, `PruefDannKopie`, `ohneToctou`, `EinSnapshot`).
+
+#### What stays future work
+
+The region check still stands beside the run: the world is one flat mapping
+with no side partition, and no statement transition discharges it. Missing
+are a range check inside the run and a user partition in the world —
+booked in §16.2 item 12.
+
 ---
 
 ## 4. Expressions — `expr`
@@ -612,7 +665,7 @@ not fall.
 | `advances a -> b` | the body's Λ starts with `marke m a` and the `advances` statement moves it (§7) | `Stmt.advances`, `Res.marke` |
 | `retires m from s …` | the body consumes `m`; the assumption is named | `Stmt.retires m s h a` |
 | `effects { writes T, consumes m, allocs m' }` | the contract `V` of the body | `Vertrag`, `RufPasst`, `Λ` |
-| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | checked against the declaration; the deadline mapping is `Ziel.lean` `fristAlsAnnahme` (a definition — the existence theorem over it was withdrawn 2026-09-10 as vacuous) |
+| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | `Budget.lean` `runOps_within` / `per_pass_respected` (no axioms); the deadline mapping is `Ziel.lean` `fristAlsAnnahme` (a definition — the existence theorem over it was withdrawn 2026-09-10 as vacuous) |
 | `deadline <= n ops arch X falsifier p` | **by when in cycles on `X`** — a hardware outcome, not a second budget | `Hardware.fortschritt a` (the named `progress`-class assumption with its probe); §18 («SG-22») |
 | `decreases e` | the recursion depth is a parameter of the meaning | `rufAt (fuel)` → `logik (abstieg f)` |
 | `by induction over d` | names the scheme; no term | none |
@@ -1077,7 +1130,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | `observes D blk` | | `Stmt.locks` on the RCU lock (SUGAR) |
 | `atomic A : τ publishes { p, q } release` | a global whose writes carry the payload; `V001`–`V004` (every publication has an `awaits` with the **same** set) as shape («SG-13») | `D.Glob`, `D.nutzlast g` |
 | `A = e publishes { p, q };` | `{ p, q } = nutzlast(A)`; `writes A` | `Stmt.publish g e payload hp hw hL`; theorem `publish_paart` |
-| `let x = A awaits { p, q };` | the same set | `Block.awaits`; theorem `awaits_paart` |
+| `let x = A awaits { p, q };` | the same set | `Block.awaits`; theorem `awaits_paart`. The awaits-then-act gap (a load that rebinds clean and is never revalidated) is named in §16.2 item 10 |
 | `let x = A exchange update(v) { … } …;` | read–compute–write as one statement | `Block.exchange` |
 | `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
 | `observed by a` | the other side is the assumption `a` | `D.Annahme` |
@@ -1104,6 +1157,49 @@ traces and proves:
 on an `atomic` — whose ordering is the memory model, a named hardware assumption. §16.2 (1) of
 the morning is closed; what remains of it is the premise (W3), booked where the lock
 primitive is booked.
+
+### Per-form atomicity — which emitted forms are single accesses
+
+Section 11 proves properties of derivations: every access derives its
+guard, every publication derives its pairing. What it does not say is what
+the emitted C lowers to on the machine — whether one Gabbro statement
+becomes one memory access, which no concurrent observer can tear, or a
+sequence of accesses, whose middle it can. That mapping was measured on
+three corpus units at two optimisation levels and ruled. The rule: a form
+is admitted as tear-free exactly when the inventory shows a single machine
+memory access at both levels; admission is never free, and each admitted
+row carries its price. A sequence form is refused as self-sufficient and
+names the exact guarantee that redeems it.
+
+Bounds, stated once for the whole table: every verdict below holds on
+x86_64 with GCC 16.2.1 at optimisation levels -O0 and -O2, and
+nowhere else is claimed. Only lock-prefixed instructions are atomic
+read-modify-write in this table; a single non-locked read-modify-write
+instruction is one instruction with two observable halves, a sequence in
+consequence, not an atomic form.
+
+Admitted — single access at both levels, with price:
+
+| emitted C form | Gabbro source | machine shape, both levels | price of the admission |
+|---|---|---|---|
+| slot plain assign | plain assign to a slot field | single narrow store at -O0 and -O2 | aligned narrow store; one non-torn write, no ordering claim beyond it |
+| shared global plain assign | plain assign to a static global | single 8-byte store at -O0 and -O2 | eight byte alignment; one non-torn write, no read-modify-write atomicity, no ordering |
+| atomic compare-exchange | exchange with declared ordering | single locked compare-exchange at both levels | the declared ordering itself |
+| release store and acquire load | publishes store and awaits load | single narrow store and load at both levels, no fence emitted | x86 total store order plus the compiler barrier; re-measure on any weakly ordered arch |
+| lock take and release | locks block entry and exit | one call instruction per op at both levels | atomicity lives outside the unit: the body is foreign |
+
+Refused — sequence at one or both levels, with consequence:
+
+| emitted C form | Gabbro source | machine shape | guarantee needed | what breaks without it |
+|---|---|---|---|---|
+| slot compound assign | compound assign on a slot field | load, operate, store at -O0; single unlocked memory-operand instruction at -O2 | exclusive access; the atomic form is the upgrade path | lost update under concurrency |
+| guarded compound assign | compound assign inside a guard | load, operate, store triple at both levels | exclusive access; the guard sits beside the sequence, never merges it | the same lost update; the guard refines when the sequence runs without merging it |
+| relaxed merge-add | accumulates report path | load, add, store sequence at both levels | single-writer-per-cell | concurrent writes to one cell tear; mid-sequence reads see the middle |
+
+Volatile register access carries no verdict (no measured unit emits a
+volatile site; the `fluechtig` table row stays open, carried as an axiom
+by name). Any later lane that cites a machine shape names the level, and
+any port names the arch and re-measures the atomar rows.
 
 ### `concurrent`, `effects`, `shared` — from declaration to computation
 
@@ -1338,13 +1434,26 @@ and this section says for each what carries it. Nothing below is an error class 
 |---|---|---|
 | **1. interleavings** | **covered** — `kein_wettlauf` over any interleaving of traces the grammar leaves | three premises, each booked: (W3) the lock primitive excludes (a foreign body, `assume`), (W4) linearity keeps a mark in one thread (a property of the grammar: no constructor moves a mark across threads; owner marks are made by nobody), (W5) `shared` says which carriers two threads reach (`H013` as a declaration; `Geteilt.lean` computes it, `Extraktion.lean` wires the computation). Cuts G1–G7 (`InterferenzAllgemein.lean` header): shape not theorem; full contract frames; `disziplin` assumed; only lock-shared (`atomic`/pairing need own exemptions); `Gesittet` carried; per-thread entry worlds; world-only assertions |
 | **2. memory model** | **covered as a hardware outcome** — `awaits` yields `hardware (sichtbarkeit A10)` when the machine does not deliver; accesses to an `atomic` are the only unguarded shared accesses and are ordered by A10 | `assume c11_release_acquire_*` with its falsifier |
-| **3. devices** | **covered through hardware assumptions, each named at its register** — type (`register r`), promise (`geraet r`), mirror (`transition` reads it by construction), class (not derivable otherwise) | the one remaining `assume`: the ORDER in which the device sees two accesses (`dma_visibility_in_order`) — no grammar sees a bus |
+| **3. devices** | **split — order proved, content assumed** — type (`register r`), promise (`geraet r`), mirror (`transition` reads it by construction), class (not derivable otherwise) | the ORDER across a window chain is proved (`Geraet.lean` `kette_ohne_wettlauf`: a CPU access ordered against the chain endpoints is ordered against every device write); the CONTENT the device observes stays the named assumption (`dma_inhalt`, per window; `dma_visibility_in_order` covers program-order visibility only) — no grammar sees a bus |
 | **4. bytes** | **covered** — `leseBytes`/`schreibBytes` with the run's bound as attribute; `format` fields, `offset_into`, `@bitpos`, `embeds`, `endian big` as sugar over them; two views read one world | — |
 | **5. signed arithmetic, float** | signed `/ %` **covered** (`sdiv`/`srem`, divisor range excludes zero, `\|q\| ≤ \|a\|`); float: every value finite and in range **by type**, every operation checked by the machine → `hardware ieee` — the range of a float operation is **not derived**, because IEEE rounding is the machine's, i.e. a hardware assumption by the letter of the task | `assume ieee754_round_to_nearest_even` with its falsifier |
 | **6. sugar** | **covered** — `Zucker.lean`: every `SUGAR` mark is a Lean definition over the core (`=>`, `!=`, `>`, `~`, `in`, `descendants`, `ancestors`, `chain`, `queue`, `+=` … `\|=`, `observes`, `on_exceeded f`, `accumulates … merge`, `maintains`, a record value, `bitfeld`, `embeds`, `endian big`, `walk` as nested `traverse`, `u32` without `in`) | — (a parser that emits these definitions has nothing to translate) |
 | **7. contexts, cost, emitter, C** | **split since «SG-22» (§18)** — *when* a handler runs (`entry … dispatch`, `via idt`) stays a scheduling fact (a handler is a thread in the run model; `masks irqs` is a declaration the run's well-formedness may use, `H102` stays a pass); *how many ops* (`costs`, `held <=`, `bounded`, `per_pass`) is a **budget in the logic** — statically computed, checked against the declaration; *by when in cycles* (`deadline … arch … falsifier …`) is a **hardware outcome** (`hardware (fortschritt a)`, the named assumption with its probe); *what the C does* is the emitter under the lowering contract of `Ziel.lean` | `PLAN-UMSETZUNG.md`; §18; `grammatik/Grammatik/Ziel.lean` |
-| **8. the parser** | **outside** — `Syntax.lean` is a tree, this file a token grammar; the map is the checker's new front end | `PLAN-UMSETZUNG.md` §2 |
+| **8. the parser** | **outside, mapped** — `Syntax.lean` is a tree, this file a token grammar; the map is the checker's new front end | `PLAN-UMSETZUNG.md` §2; production-to-constructor table 161/161 mapped-or-named in `messung/SYNTAX-PARSER-ENTWURF.md` (124 core, 12 SUGAR, 25 LESESTELLE gaps G-LEX/G-NAME/G-FILTER/G-LAYOUT/G-SPACE/G-SCHEME/G-HELD/G-COST/G-CONC/G-RELABEL, each named) |
 | **9. the three parameters** | `O`, `passes`, `fuel` — not gaps: the hardware and the logic | — |
+| **10. check-then-use** | **named class** — every instance has a check, a window, and a use relying on the fact still holding; the discipline is validation-copy: use after the window only through a held carrier, else revalidate or copy under the guard | narrow-then-use carried (M147, incl. indirect-call expiry and use-granularity precision); driver handoff carried (H018, checker half of `GeraetWache`); syscall/awaits/budget/deadline rows carried at the boundary, open inside foreign bodies and across threads — table below |
+| **11. preemption timing** | **excluded by decision** — no timing defs are introduced and no timing proofs are owed; preemption, bus and cache timing stay outside the model | logical placement stays modelled (preemption only between events: Korngrenze; no foreign handler step under a masking lock: MaskenOrdnung; one event covers at most one cell: EreignisAtomar); scheduling stays a fact; the sonde books counter-body-only scope openly |
+| **12. user-copy hazard** | **future work** — check-then-copy across the user/kernel boundary has shapes but no discharge | region check and world partition missing (Adressraum.lean C6); validated copy proved under the named snapshot premise |
+
+### Check-then-use register
+
+| pattern | window | carrier, or gap with reason |
+|---|---|---|
+| narrow-then-use | narrow point to use point, inside one body | carried: own-body writes kill facts per write, taints expire at carrier granularity (M147); direct calls kill per writes-hull with coarse kill-all-nonlocal on unreadable hulls; indirect calls expire every taint (gift 715–717); loops expire all taints at the boundary (gift 703, 709); use-granularity precision excuses disjoint-index use (gift 733). Open gap: concurrent siblings — no expiry crosses the member boundary; W001 narrows but does not close the read-and-use remainder |
+| syscall check-then-copy | Gabbro-side check to foreign copy | carried at the boundary and exported beyond it: both halves die at the extern call, so a checked value cannot be used afterwards without a re-read. By-construction gap: re-reads inside the foreign body are invisible |
+| awaits-then-act | load to act | carried for order (V006/V007 hold the payload order; V001/V002 refuse orphan halves; V004/V005 hold strength on the publish side). No revalidation rule: the load rebinds clean and nothing expires it on a concurrent publish — staleness stays a logic question |
+| budget-check-then-run | count time to run time, across the call boundary | carried by counting and refusing (K005 refuses unreadable promises; indirect calls cost their fn-type promise; E008 reconciles effects against hull; D025 refuses unbounded domains). Foreign costs are trusted certificate lines |
+| deadline-check-then-run | probe run to deployment on the named machine | carried structurally (K011/K012/N056; hardware fortschritt assumption with manifest entry and sample probe). By-construction gap: a sample is not a bound |
 
 > **So the answer to the question — *what is still not covered with this syntax?* — is now:
 > nothing that is an error of a body.** Every failure of a Gabbro body is one of the twelve
@@ -1416,7 +1525,7 @@ shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
 
 | | production | writer still proves by hand | carried by | Lean |
 |---|---|---|---|---|
-| **«SG-22» time split** | `deadline <= n ops arch X falsifier p` at `fn` (NEW, §6) | the `ops` number, honestly and tightly, like `costs`; the falsifier probe for the cycles on `X` | the budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) is logic checked against the declaration; a missed deadline is **`hardware (fortschritt a)`** — the named environment assumption, not a silent reinterpretation of `ops`. Structural checks: the number reads (`K011`), the machine is declared (`K012`, R16); the probe's shape, when it resolves in-unit, is held by `N056` (same tail as `retires`), an unresolved probe is a program next to the tree; `unfalsifiable` stays legal and marked, and the manifest carries `frist_<fn>_eingehalten` with the class; measured by `sonden/sonde_tick.c` (sample, R15/W10 — the Lean side names the mapping `fristAlsAnnahme` and proves nothing about time) | `Hardware.fortschritt`; `Ziel.lean` `fristAlsAnnahme` |
+| **«SG-22» time split** | `deadline <= n ops arch X falsifier p` at `fn` (NEW, §6) | the `ops` number, honestly and tightly, like `costs`; the falsifier probe for the cycles on `X` | the budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) is logic checked against the declaration; a missed deadline is **`hardware (fortschritt a)`** — the named environment assumption, not a silent reinterpretation of `ops`. Structural checks: the number reads (`K011`), the machine is declared (`K012`, R16); the probe's shape, when it resolves in-unit, is held by `N056` (same tail as `retires`), an unresolved probe is a program next to the tree; `unfalsifiable` stays legal and marked, and the manifest carries `frist_<fn>_eingehalten` with the class; measured by `sonden/sonde_tick.c` (sample, R15/W10 — the Lean side names the mapping `fristAlsAnnahme` and proves nothing about time; `Fristlauf.lean` `fristlauf_erschöpfend` mirrors that mapping by shape and proves exhaustiveness — every run is `ok` or expiry) | `Hardware.fortschritt`; `Ziel.lean` `fristAlsAnnahme`; `Fristlauf.lean` `fristlauf_erschöpfend` |
 | **«SG-23» payload order** | DOCUMENTED (already enforced): `A = e publishes {p,q};` after the writes of `{p,q}`, `let x = A awaits {p,q};` before their reads (same sets as «SG-13») | the logic of what is published | the **order** — enforced since 2026-08-19 by `V006`/`V007` in `paarung.rs` (write-after-publish, read-before-await, `if`-evasion closed 2026-08-20); this version names the rule in the grammar instead of leaving it checker-only | `Stmt.publish`, `Block.awaits` |
 | **«SG-24» counting** | `count k in slots of T : p` as an expression (NEW, §4) | the predicate `p` | the traversal that counts it — SUGAR for a call to the table's **generated** count function, like `ops insert/remove` (§9): `Block.bindCall` with its `requires`; over **one** table only, a cross-table count is a `group` invariant, never a hand-maintained counter | `Block.bindCall` |
 | **«SG-25» first match** | NO new syntax: bind the result into a variable before the loop, `leave` out, read it after | which match is first (the logic) | termination and the bound — still from the domain; `assignVar` plus `leave`, never a hand-threaded cursor or bitmap | `Stmt.assignVar`, `Stmt.leave` |
@@ -1446,6 +1555,19 @@ No new manual plumbing enters through any of them. What stays unwritable stays
 unwritable on purpose: user-defined domains, recursion in `spec fn`,
 hand-written lemmas, a TAL self-proof of the entry path, and the bus as seen
 by the grammar (§15, §16.2).
+
+### Expiry shapes — check at `t`, run at `t'`, expiry strictly between
+
+A deadline names by when, in cycles on a named machine, with a probe that
+can refute it. The Lean side gives that statement named shapes
+(`Grammatik/Fristlauf.lean`): a check-use pair with carried order, a
+deadline as named assumption plus probe, expiry as the strict betweenness
+of check, moment and use, and an answer mapping expiry onto `Hardware.fortschritt`
+(the `Ziel.lean` `fristAlsAnnahme` mapping, mirrored by shape). Time never
+enters as wall-clock — a moment is a step index. Endpoint coincidence is
+`ok`, not expiry; every run is `ok` or expiry, no third outcome. Each date
+carries the fourfold linkage (clause, falsifier, manifest entry, register
+row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 
 ---
 
@@ -1659,7 +1781,23 @@ compiler and compared. With that the entry's meaning is checkable
 instead of hand-trusted, and an entry without a witness pair is
 incomplete. `costMeasured` counts these pairs on the production leg.
 
-### 21.6 What this section does NOT move
+### 21.6 The derivation certificate — validity as one equation
+
+A certificate is a derivation term as plain data (`CertExpr` mirrors the
+`Expr` constructors minus hypotheses; claimed ranges travel beside the
+term). Validity is one equation: the printed claim pair equals exactly
+what the table recomputes — decidable wherever the world is concrete, so
+acceptance and rejection both close by decide. Soundness is the owned
+direction: a valid certificate implies the judgment (`zeugnis_sound`,
+`block_sound`). Forgery fails by construction: a mismatched print is
+provably invalid, never merely refused. Covered: arithmetic with side
+conditions (M102, SG-3, M137, width), reads (variables, globals, slots
+with exact index types and recomputed guards), straight-line int blocks
+with linear balance; CUT shapes for floats, options, sums, grounds,
+quantifiers, `reaches`, pointer reads and `RufPasst`-carrying calls.
+Lean: `Grammatik/Zeugnis.lean`. The printer stays trust base.
+
+### 21.7 What this section does NOT move
 
 - No verified emitter: the certificate is specified, the recomputer is
   a later program.

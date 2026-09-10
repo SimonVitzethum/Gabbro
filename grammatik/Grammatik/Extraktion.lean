@@ -56,8 +56,17 @@
       (`geteilt_treu` verlangt dann den Waechter statt der Einzigkeit);
       `geteiltAus_fremd` beweist es.
 
-  Kern nur: kein `mathlib`, kein `sorry` -- nur `def` und `theorem`, und
-  beides ueber den echten Typen (`Geteilt.Bau`, `Programm`, `Nebeneinander`).
+   Kern nur: kein `mathlib`, kein `sorry` -- nur `def` und `theorem`, und
+   beides ueber den echten Typen (`Geteilt.Bau`, `Programm`, `Nebeneinander`).
+
+   NACHTRAG (Bahn 84, Entwurf -- §12): Die Lesehuelle steht jetzt als Rechnung:
+   `stmtOrte`/`blockOrte`/`endblockOrte`/`armsOrte`/`grundArmsOrte` tragen
+   `Expr.orte` durch die Ruempfe, `liestDirekt`/`liestTab`/`liestGlob`/`liesAus`
+   rechnen die Huelle je Rumpf und je Code, `liesTreue`/`liesVoll` sind die
+   Treue-Formen zur Schreibseite (§8), und `rahmenDecktLies` knuepft die Huelle
+   an die Rahmen von `Interferenz.lean`. Neu gebucht: S6 (Vertraege ausserhalb
+   des Rumpfs), S7 (fremdes Rufziel wie S2). Nur `def`-Formen, als Entwurf: was
+   die Rechnung dem Pruefer schuldet, steht als Form daneben, nicht als Satz.
 -/
 
 import Grammatik.Geteilt
@@ -731,5 +740,201 @@ example (h : Geteilt.ErreichtBau miniB 3 0 7) : (0 : Nat) = 0 :=
 #print axioms Gabbro.Grammatik.Extraktion.mini_errecht
 #print axioms Gabbro.Grammatik.Extraktion.paarTreue_aus_bau
 #print axioms Gabbro.Grammatik.Extraktion.paarVoll_aus_bau
+
+/-! ## 12. Die Lesehuelle als Rechnung -- aus den Ausdruecken, ueber den Ruempfen
+
+    Schnitt S3 nannte die Luecke: `effects` erklaert nur Schreiben, und die
+    `slot`/`glob`-Lesungen in `Expr` standen nirgends als Huelle. Hier steht die
+    Rechnung, Zug fuer Zug die Anordnung der Schreibseite (§1-§3, §8):
+
+    * die Ausdrucksgestalten liefert `Expr.orte` (`Semantik.lean` §2: jedes
+      `slot`/`durch`/`altSlot`/`leseBytes`/`forallSlots`/`existsSlots`/`reaches`
+      nennt seinen Traeger, jedes `glob`/`altGlob` sein Global -- als
+      Ueberdeckung, nie weniger);
+    * `stmtOrte`/`blockOrte`/`endblockOrte`/`armsOrte`/`grundArmsOrte` tragen
+      diese Gestalten durch die Ruempfe (derselbe Gang wie `stmtKanten` in §1,
+      jeder Konstruktor steht explizit da);
+    * `liestDirekt` ist der Rumpf als Huelle (`ruftDirekt` in §1);
+    * `liestTab`/`liestGlob` teilen die Huelle in beide Haelften;
+    * `liesAus` rechnet die Codes ueber der erklaerten Domaene (`fussAus`
+      in §3: was ausserhalb liegt, faellt -- und `liesVoll` verlangt es zurueck);
+    * `liesTreue` ist die Treue-Form (`fussTreue`/`kantenTreue` in §8: die
+      Rechnung darf MEHR sehen, nie weniger);
+    * `rahmenDecktLies` ist die Anknuepfung ans Zwei-Faden-Modell: was der
+      Rumpf liest, liegt im genannten Rahmen -- die Gestalt, die
+      `Interferenz.lean` als `W`/`G` traegt (`Rahmen`, `HaengtAb`, `Disjunkt`
+      nehmen genau solche Prädikate).
+
+    Zwei Zugriffe ohne Ausdrucksgestalt nennt die Rechnung beim Namen: `awaits`
+    und `exchange` lesen das Global, an dem sie haengen (`Semantik.lean`:
+    `execBlock` legt `σ.globs g` auf den Binder) -- darum traegt ihre Zeile
+    das `g` direkt, nicht ueber `Expr.orte`. Registerlesungen (`regLies`,
+    `transition` ueber den Spiegel) betreffen weder Traeger noch Globale und
+    fallen hier nicht unter die Huelle: ausserhalb des Modells, nicht
+    verschwiegen -- der Rahmen von `Interferenz.lean` spricht nur ueber
+    `slots`/`globs`.
+
+    Gebucht, nicht versteckt (vgl. S1-S5 oben):
+    S6. Vertraege ausserhalb: `liestDirekt` traversiert nur `Programm.rumpf`;
+        `requires`/`ensures`/`invariante` sind Ausdruecke mit denselben
+        Lesungen (`Expr.orte` greift dort unmittelbar), aber kein
+        Rumpf-Durchgang deckt sie -- wer die Huelle schliesst, fuehrt sie
+        derselben Rechnung zu.
+    S7. Fremde Ruempfe wie in S2: `callInd` und der fremde Rumpf liefern keine
+        Huelle ihres Ziels; `liesVoll` deckt nur die Domaene, nicht das Ziel.
+        Der Pruefer verweigert, was faellt.
+-/
+
+mutual
+
+/-- Die gelesenen Orte einer Anweisung: jede Ausdruckstelle meldet ihre
+    `Expr.orte`-Gestalt; Rufe melden ihre Argumente (`Args.orte`), die Rueckgabe
+    ihre `ErgExpr.orte`-Gestalt. Was keinen Ort liest (Marken, Register, blosse
+    Verzweigung), meldet nichts. -/
+def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
+  | .assignSlot _ _ i e _ _ => i.orte ++ e.orte
+  | .assignDurch p _ _ _ i e _ _ => p.orte ++ i.orte ++ e.orte
+  | .assignGlob _ e _ _ => e.orte
+  | .schreibBytes _ _ _ _ i _ _ e _ _ => i.orte ++ e.orte
+  | .assignVar _ e => e.orte
+  | .uebergang _ _ _ i _ _ _ _ _ _ => i.orte
+  | .ite c t e => c.orte ++ blockOrte t ++ blockOrte e
+  | .onOption o p a => o.orte ++ blockOrte p ++ blockOrte a
+  | .onTag v arms => v.orte ++ armsOrte arms
+  | .onGrund r arms => r.orte ++ grundArmsOrte arms
+  | .call _ args _ _ => args.orte
+  | .callInd p args _ _ => p.orte ++ args.orte
+  | .locks _ _ body => blockOrte body
+  | .breaking _ body => blockOrte body
+  | .traverse _ inv body => inv.orte ++ blockOrte body
+  | .retry _ bis body ueber => bis.orte ++ blockOrte body ++ blockOrte ueber
+  | .forever _ inv body => inv.orte ++ blockOrte body
+  | .axiomCall _ args _ _ _ => args.orte
+  | .regSchreib _ _ e => e.orte
+  | .transition _ _ _ _ _ _ _ => []
+  | .publish _ e _ _ _ _ => e.orte
+  | .advances _ _ _ _ => []
+  | .retires _ _ _ _ => []
+  | .ret e _ => e.orte
+  | .retGrund _ _ => []
+  | .leave _ => []
+  | .next _ => []
+
+/-- Die gelesenen Orte eines Blocks. `awaits` und `exchange` lesen das Global,
+    an dem sie haengen -- darum nennt ihre Zeile das `g` direkt (keine
+    Ausdrucksgestalt, aber ein Lesezugriff der Bedeutung). -/
+def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Block D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
+  | .nil => []
+  | .cons s rest => stmtOrte s ++ blockOrte rest
+  | .bind e rest => e.orte ++ blockOrte rest
+  | .bindCall _ args _ _ _ rest => args.orte ++ blockOrte rest
+  | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ blockOrte rest
+  | .bindCallElse _ args _ _ _ err rest =>
+      args.orte ++ endblockOrte err ++ blockOrte rest
+  | .bindAxiom _ args _ _ _ rest => args.orte ++ blockOrte rest
+  | .regLies _ _ rest => blockOrte rest
+  | .regLiesElse _ _ zusage sonst rest =>
+      zusage.orte ++ endblockOrte sonst ++ blockOrte rest
+  | .awaits g _ _ _ rest => .inr g :: blockOrte rest
+  | .exchange g neu _ _ rest => .inr g :: neu.orte ++ blockOrte rest
+  | .narrow e _ _ sonst rest =>
+      e.orte ++ endblockOrte sonst ++ blockOrte rest
+  | .pruefung c sonst rest =>
+      c.orte ++ endblockOrte sonst ++ blockOrte rest
+  | .gleit _ a b _ _ rest => a.orte ++ b.orte ++ blockOrte rest
+  | .gleitLit _ _ _ rest => blockOrte rest
+  | .gleitVon e _ _ rest => e.orte ++ blockOrte rest
+  | .gleitNarrow e _ _ sonst rest =>
+      e.orte ++ endblockOrte sonst ++ blockOrte rest
+
+/-- Die gelesenen Orte eines nicht abfallenden Blocks. -/
+def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → List (D.Tab ⊕ D.Glob)
+  | .ret e _ => e.orte
+  | .retGrund _ _ => []
+  | .leave _ => []
+  | .next _ => []
+  | .cons s rest => stmtOrte s ++ endblockOrte rest
+  | .bind e rest => e.orte ++ endblockOrte rest
+
+/-- Die gelesenen Orte der Fallunterscheidung. -/
+def armsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} :
+    Arms D V l Γ Λ Λ' cs → List (D.Tab ⊕ D.Glob)
+  | .nil => []
+  | .cons b rest => blockOrte b ++ armsOrte rest
+
+/-- Die gelesenen Orte der Grund-Fallunterscheidung. -/
+def grundArmsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {n : Nat} :
+    GrundArms D V l Γ Λ Λ' n → List (D.Tab ⊕ D.Glob)
+  | .nil => []
+  | .cons b rest => blockOrte b ++ grundArmsOrte rest
+
+end
+
+/-- Die gelesenen Orte des Rumpfs von `f`: die Lesehuelle am `Programm.rumpf`. -/
+def liestDirekt (P : Programm D) (f : D.Fn) : List (D.Tab ⊕ D.Glob) :=
+  endblockOrte (P.rumpf f)
+
+/-- Die gelesene Traegerhaelfte je Rumpf: nur die `slot`-Seite der Huelle. -/
+def liestTab (P : Programm D) (f : D.Fn) : List D.Tab :=
+  (liestDirekt P f).filterMap fun o => match o with
+    | .inl t => some t
+    | .inr _ => none
+
+/-- Die gelesene Globalhaelfte je Rumpf: nur die `glob`-Seite der Huelle. -/
+def liestGlob (P : Programm D) (f : D.Fn) : List D.Glob :=
+  (liestDirekt P f).filterMap fun o => match o with
+    | .inl _ => none
+    | .inr g => some g
+
+/-- Die Lesehuelle je Code: was die Ruempfe lesen, aus der erklaerten Domaene
+    herausgefiltert, als Codes. Eine Lesung ausserhalb der Domaene faellt
+    weg -- wie die Kante, wie der Fuss: was faellt, verweigert der Pruefer
+    (`liesVoll`). -/
+def liesAus (tabs : List D.Tab) (tabCode : D.Tab → Nat)
+    (globs : List D.Glob) (globCode : D.Glob → Nat)
+    (fns : List D.Fn) (fnCode : D.Fn → Nat) (P : Programm D) :
+    Nat → List Nat :=
+  fun n =>
+    ((fns.filter fun f => decide (fnCode f = n)).flatMap fun f =>
+      (((liestTab P f).map tabCode).filter fun c => decide (c ∈ tabs.map tabCode)) ++
+      (((liestGlob P f).map globCode).filter fun c => decide (c ∈ globs.map globCode)))
+
+/-- **Lesetreue.** Keine Lesung faellt aus der Rechnung: was der Rumpf liest,
+    steht -- in der Domaene -- in `B.schreibtFn`. Die Richtung ist Absicht --
+    die Rechnung darf MEHR sehen (Uebernaeherung), nie weniger. Die gelesenen
+    Traeger fahren im Beruehrfeld des Baus: was gelesen wird, wird beruehrt. -/
+def liesTreue (B : Geteilt.Bau) (P : Programm D)
+    (tabs : List D.Tab) (tabCode : D.Tab → Nat)
+    (globs : List D.Glob) (globCode : D.Glob → Nat)
+    (fns : List D.Fn) (fnCode : D.Fn → Nat) : Prop :=
+  (∀ f ∈ fns, ∀ t ∈ liestTab P f,
+    tabCode t ∈ tabs.map tabCode → tabCode t ∈ B.schreibtFn (fnCode f)) ∧
+  (∀ f ∈ fns, ∀ g ∈ liestGlob P f,
+    globCode g ∈ globs.map globCode → globCode g ∈ B.schreibtFn (fnCode f))
+
+/-- **Lesevollstaendigkeit (die Pflicht des Pruefers).** Keine Lesung haengt
+    ausserhalb der Domaene -- sonst duerfte die Rechnung weniger sehen, als
+    der Rumpf liest, und `liesAus` haette still verschwiegen, was es warf.
+    Unbewiesen als Form: der Pruefer verweigert, was faellt. -/
+def liesVoll (P : Programm D) (fns : List D.Fn)
+    (tabs : List D.Tab) (tabCode : D.Tab → Nat)
+    (globs : List D.Glob) (globCode : D.Glob → Nat) : Prop :=
+  (∀ f ∈ fns, ∀ t ∈ liestTab P f, tabCode t ∈ tabs.map tabCode) ∧
+  (∀ f ∈ fns, ∀ g ∈ liestGlob P f, globCode g ∈ globs.map globCode)
+
+/-- **Die Huelle im Rahmen.** Was die Ruempfe lesen, liegt im genannten Rahmen
+    -- je Haelfte. Das ist die Gestalt, die das Zwei-Faden-Modell verbraucht:
+    `Interferenz.lean` nimmt genau solche `W`/`G`-Rahmen (`Rahmen`,
+    `HaengtAb`, `Disjunkt`); die Trennung der Faeden entscheidet sich dort,
+    die Deckung steht hier. -/
+def rahmenDecktLies (P : Programm D) (fns : List D.Fn)
+    (W : D.Tab → Bool) (G : D.Glob → Bool) : Prop :=
+  (∀ f ∈ fns, ∀ t ∈ liestTab P f, W t = true) ∧
+  (∀ f ∈ fns, ∀ g ∈ liestGlob P f, G g = true)
 
 end Gabbro.Grammatik.Extraktion

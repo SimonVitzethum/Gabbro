@@ -369,5 +369,59 @@ example (h1 : ErreichtBau miniB 3 0 7) (h2 : ErreichtBau miniB 3 0 7) :
 #print axioms Gabbro.Grammatik.Geteilt.ungeteilt_aus_baulauf
 #print axioms Gabbro.Grammatik.Geteilt.nur_deklariert_teilt_lauf
 
+/-! ## 7. Entwurf: Trennung von Tabelle und Global neben `Carrier` (ändert nichts Bestehendes) -/
+
+/-- Tabellen-Träger als eigene Sorte, daneben `Carrier` (Schnitt C1, Entwurf:
+    bindet die heutigen Beweise nicht um). -/
+abbrev TabCarrier := Nat
+
+/-- Global-Träger als eigene Sorte, daneben `Carrier` (Schnitt C1, Entwurf:
+    bindet die heutigen Beweise nicht um). -/
+abbrev GlobCarrier := Nat
+
+/-- Faltung einer Seite: Tabelle nach zusammengelegtem Träger. -/
+def carrierVonTab : TabCarrier → Carrier := fun t => t
+
+/-- Faltung einer Seite: Global nach zusammengelegtem Träger. -/
+def carrierVonGlob : GlobCarrier → Carrier := fun g => g
+
+/-- Spiegel einer Seite: zusammengelegter Träger nach Tabelle. -/
+def tabVonCarrier : Carrier → TabCarrier := fun c => c
+
+/-- Spiegel einer Seite: zusammengelegter Träger nach Global. -/
+def globVonCarrier : Carrier → GlobCarrier := fun c => c
+
+/-- Faltung der geteilten Sorte in den zusammengelegten Träger. -/
+def carrierVonSplit : TabCarrier ⊕ GlobCarrier → Carrier
+  | .inl t => carrierVonTab t
+  | .inr g => carrierVonGlob g
+
+/-- Teilung des zusammengelegten Trägers in die geteilte Sorte; die
+    Kennzeichnung `istTab` bleibt Behauptung der späteren Verdrahtung und wird
+    hier nicht festgelegt. -/
+def splitVonCarrier (istTab : Carrier → Bool) (c : Carrier) :
+    TabCarrier ⊕ GlobCarrier :=
+  if istTab c then .inl (tabVonCarrier c) else .inr (globVonCarrier c)
+
+/-- Rundweg-Gestalt Tabelle: Spiegeln faltet zurück. -/
+def tabRundweg (t : TabCarrier) : Prop :=
+  tabVonCarrier (carrierVonTab t) = t
+
+/-- Rundweg-Gestalt Global: Spiegeln faltet zurück. -/
+def globRundweg (g : GlobCarrier) : Prop :=
+  globVonCarrier (carrierVonGlob g) = g
+
+/-- Rundweg-Gestalt Falten nach Teilen: Falten macht Teilen rückgängig. -/
+def faltTeileForm (istTab : Carrier → Bool) (c : Carrier) : Prop :=
+  carrierVonSplit (splitVonCarrier istTab c) = c
+
+/-- Rundweg-Gestalt Teilen nach Falten, Tabellenseite. -/
+def teileFaltFormTab (istTab : Carrier → Bool) (t : TabCarrier) : Prop :=
+  splitVonCarrier istTab (carrierVonSplit (Sum.inl t)) = Sum.inl t
+
+/-- Rundweg-Gestalt Teilen nach Falten, Globalseite. -/
+def teileFaltFormGlob (istTab : Carrier → Bool) (g : GlobCarrier) : Prop :=
+  splitVonCarrier istTab (carrierVonSplit (Sum.inr g)) = Sum.inr g
+
 end Gabbro.Grammatik.Geteilt
 

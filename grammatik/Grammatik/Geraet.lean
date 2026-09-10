@@ -70,8 +70,35 @@
     (C3) The guard is a lock give/take. A doorbell handoff through a REGISTER
          has no event -- registers are outside the world -- so mapping a real
          doorbell onto `gibt`/`nimmt` is a driver-side argument, not a theorem.
-    (C4) No full-run interleaving with device steps: `GLauf` carries the steps,
-         but there is no `Gesittet` over `GLauf` yet (W3-W5 speak CPU only).
+     (C4) No full-run interleaving with device steps: `GLauf` carries the steps,
+          but there is no `Gesittet` over `GLauf` yet (W3-W5 speak CPU only).
+
+   ## Entwurfsformen (nur `def`, keine Saetze) -- Nummern 6-8 unten
+
+     (M1) Kette ueber WachenMENGEN: `GeraetFensterM` (Fenster mit eigenem
+          Waechter), `FensterGliedM` (Verknuepfung ueber verschiedene Wachen
+          durch denselben Treiberfaden), `KetteGeordnetM` (geordnete Kette),
+          `KetteUeberWachen` (Kette ueber einer Wachenmenge `Ws`).
+     (M2) Tuerklingel als EREIGNIS: `TuerklingelEreignis` (Registersatz als
+          Uebergabe -- das Register steht nur mit Namen und Klasse darin,
+          sein Zustand lebt ausserhalb der Welt: die Tuer, nicht der Raum),
+          `TuerklingelZuFenster` (Klingel oeffnet Fenster: `d = k`),
+          `TuerklingelRueckgabe` (Rueckklingel am `nimmt`).
+     (M3) Gesittet ueber Geraetelaeufen: `GLauf.cpuAnteil` (CPU-Anteil),
+          `GGesittet` (Wohlgeformtheit als Praedikat: CPU-Anteil gesittet,
+          jeder Geraeteschritt in bewachtem Fenster).
+
+   ## Schnitte (gebucht, nicht versteckt) -- Fortsetzung
+
+     (C5) Kanten ueber verschiedene Wachen tragen nur `po` des verkettenden
+          Fadens, kein `sync`: zwischen fremden Wachen gibt es hier keine
+          Kante -- die Kreuzordnung bleibt Treiberpflicht wie `haussen`.
+     (C6) Die Abbildung eines echten Registersatzes auf `gibt`/`nimmt` ist ein
+          treiberseitiges Argument, kein Satz (wie C3): die Klingel nennt das
+          Register, nicht seinen Zustand.
+     (C7) `GGesittet` ist die FORM; kein Satz verbindet sie hier mit `GHB` --
+          das Gegenstueck zu `kette_ohne_wettlauf` ueber `GGesittet` bleibt
+          Schnitt (C4 fuellt das Praedikat, nicht den Satz).
 -/
 import Grammatik.Wettlauf
 
@@ -370,5 +397,81 @@ theorem kette_uebergabe (ch : List (GeraetFenster gl W t))
 #print axioms Gabbro.Grammatik.kette_schreib_vor_ende
 #print axioms Gabbro.Grammatik.kette_ohne_wettlauf
 #print axioms Gabbro.Grammatik.kette_uebergabe
+
+/-! ## 6. Ketten ueber mehrere Wachen: jedes Fenster traegt seine eigene -/
+
+/-- Ein Fenster mit eigenem Waechter: das Paar aus Wache `W` und Fenster
+    darunter. Die Kette aus Abschnitt 5 laeuft unter EINER Wache `W`; hier
+    traegt jedes Fenster seine eigene -- die Menge der Wachen einer Kette
+    steht erst in `KetteUeberWachen`. -/
+def GeraetFensterM (gl : GLauf D) (t : D.Tab) : Type :=
+  (W : D.Lock) × GeraetFenster gl W t
+
+/-- Verknuepfung ueber (moeglicherweise) verschiedene Wachen hinweg: derselbe
+    Faden nimmt den Puffer unter `a.1` zurueck und gibt ihn unter `b.1` wieder
+    heraus, in dieser Reihenfolge. Bei gleicher Wache faellt das mit
+    `FensterGlied` zusammen; bei fremder Wache traegt nur `po` des
+    verkettenden Fadens -- kein `sync` (Schnitt C5). -/
+def FensterGliedM {gl : GLauf D} {t : D.Tab} (a b : GeraetFensterM gl t) : Prop :=
+  ∃ f h, gl[a.2.m]? = some (GSchritt.cpu ⟨f, .nimmt a.1 h⟩) ∧
+    gl[b.2.k]? = some (GSchritt.cpu ⟨f, .gibt b.1⟩) ∧ a.2.m < b.2.k
+
+/-- Eine geordnete Kette ueber mehrere Wachen: jedes Fenster reicht an das
+    naechste durch einen Treiberfaden weiter (`FensterGliedM`). -/
+def KetteGeordnetM (gl : GLauf D) (t : D.Tab) : List (GeraetFensterM gl t) → Prop
+  | [] => True
+  | [_] => True
+  | a :: b :: rest => FensterGliedM a b ∧ KetteGeordnetM gl t (b :: rest)
+
+/-- Kette ueber einer WachenMENGE `Ws`: jedes Fenster der Kette wacht unter
+    einer Wache aus `Ws`, und die Fenster sind geordnet verkettet. -/
+def KetteUeberWachen (gl : GLauf D) (t : D.Tab) (Ws : List D.Lock)
+    (ch : List (GeraetFensterM gl t)) : Prop :=
+  (∀ w ∈ ch, w.1 ∈ Ws) ∧ KetteGeordnetM gl t ch
+
+/-! ## 7. Tuerklingel als Ereignis: der Registersatz als Uebergabe -/
+
+/-- Das Tuerklingelereignis am Index `d`: ein Faden gibt die Wache `W` heraus
+    -- und genau dieser Schritt STEHT fuer den Registersatz auf `r`. Das
+    Register erscheint nur mit Namen und Klasse (`schreibbar`); sein Zustand
+    lebt ausserhalb der Welt, darum modelliert das Ereignis die Tuer, nicht
+    den Raum. -/
+def TuerklingelEreignis (gl : GLauf D) (r : D.Reg) (W : D.Lock) (d : Nat) : Prop :=
+  (D.rklasse r).schreibbar = true ∧
+    ∃ f, gl[d]? = some (GSchritt.cpu ⟨f, .gibt W⟩)
+
+/-- Die Klingel oeffnet das Fenster: die Wache aus `GeraetWache` gilt, die
+    Klingel laeutet, und beides trifft sich am Uebergabeindex (`d = k`). Dass
+    ein echter Registersatz genau dort wirkt, bleibt ein treiberseitiges
+    Argument (Schnitt C6). -/
+def TuerklingelZuFenster (gl : GLauf D) (r : D.Reg) (W : D.Lock) (t : D.Tab)
+    (k m j d : Nat) : Prop :=
+  GeraetWache gl W t k m j ∧ TuerklingelEreignis gl r W d ∧ d = k
+
+/-- Die Rueckklingel am Index `d`: ein Faden nimmt die Wache `W` zurueck --
+    das Gegenstueck zur Uebergabe am Fensterende. Das Register ist hier das
+    lesbare Zustandsregister, an dem der Treiber die Rueckgabe sieht; auch
+    hier steht nur Name und Klasse darin, kein Zustand. -/
+def TuerklingelRueckgabe (gl : GLauf D) (r : D.Reg) (W : D.Lock) (d : Nat) : Prop :=
+  (D.rklasse r).lesbar = true ∧
+    ∃ f h, gl[d]? = some (GSchritt.cpu ⟨f, .nimmt W h⟩)
+
+/-! ## 8. Gesittet ueber Geraetelaeufen: Wohlgeformtheit als Praedikat -/
+
+/-- Der CPU-Anteil eines Geraetelaufs: die `cpu`-Schritte in Reihenfolge, die
+    `dma`-Schritte entfallen. Ueber ihn spricht W1-W5 weiter. -/
+def GLauf.cpuAnteil : GLauf D → Lauf D
+  | [] => []
+  | GSchritt.cpu s :: rest => s :: GLauf.cpuAnteil rest
+  | GSchritt.dma _ :: rest => GLauf.cpuAnteil rest
+
+/-- Wohlgeformtheit eines Geraetelaufs als Praedikat: der CPU-Anteil ist
+    gesittet (W1-W5 sprechen nur CPU), und jeder Geraeteschritt sitzt in einem
+    bewachten Fenster (`GeraetWache` traegt `DmaSichtbar` schon). Die FORM
+    steht hier; der Satz, der sie mit `GHB` verbindet, bleibt Schnitt (C7). -/
+def GGesittet (gl : GLauf D) : Prop :=
+  Gesittet gl.cpuAnteil ∧
+    ∀ (t : D.Tab) (j : Nat),
+      gl[j]? = some (GSchritt.dma t) → ∃ W k m, GeraetWache gl W t k m j
 
 end Gabbro.Grammatik
