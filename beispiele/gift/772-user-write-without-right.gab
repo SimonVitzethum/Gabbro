@@ -1,0 +1,30 @@
+-- erwartet: R002
+-- **Write permission stands on the pointer, over `user` too.** `beispiele/gift/57`
+-- refuses a store through a `ptr<normal, r>`; this is the same refusal over `user`,
+-- the space every validated-copy discipline is about (`Grammatik/Adressraum` carries
+-- `validiert` beside `exec` -- cut C6 -- so the refusal has to stand here, at compile
+-- time, never at the copy). `stores_ro` writes through a read-only user pointer and
+-- falls once with `R002`; the `rw` twin stays silent.
+-- Measured 2026-09-11 against the unchanged checker: falls with `R002`.
+
+module gift::user_write_without_right {
+
+type Text = { n : u32, };
+
+-- Must fall: `q` carries no `w`.
+impl fn stores_ro(q : ptr<user, r> Text)
+    effects { writes q }
+    costs   <= 4 ops
+{
+    q.n = 1;
+}
+
+-- Must pass: the same store with the right the check asks for.
+impl fn stores_rw(p : ptr<user, rw> Text)
+    effects { writes p }
+    costs   <= 4 ops
+{
+    p.n = 1;
+}
+
+}

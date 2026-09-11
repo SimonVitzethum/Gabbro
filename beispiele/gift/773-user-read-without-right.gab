@@ -1,0 +1,30 @@
+-- erwartet: R003
+-- **Read permission stands on the pointer, over `user` too.** `beispiele/gift/59`
+-- refuses a load through a `ptr<normal, w>`; this is the same refusal over `user`,
+-- the space every validated-copy discipline is about (`Grammatik/Adressraum` carries
+-- `validiert` beside `exec` -- cut C6 -- so the refusal has to stand here, at compile
+-- time, never at the copy). `loads_wo` reads through a write-only user pointer and
+-- falls once with `R003`; the `r` twin stays silent.
+-- Measured 2026-09-11 against the unchanged checker: falls with `R003`.
+
+module gift::user_read_without_right {
+
+type Text = { n : u32, };
+
+-- Must fall: `q` carries no `r`.
+impl fn loads_wo(q : ptr<user, w> Text) -> u32
+    effects { reads q }
+    costs   <= 4 ops
+{
+    return q.n;
+}
+
+-- Must pass: the same load with the right the check asks for.
+impl fn loads_r(p : ptr<user, r> Text) -> u32
+    effects { reads p }
+    costs   <= 4 ops
+{
+    return p.n;
+}
+
+}
