@@ -632,9 +632,20 @@ pub fn pass_mit(
         //
         // Ein `static` OHNE `mut` ist unveraenderlich: es gibt nichts zu teilen.
         let mut welt: Vec<String> = Vec::new();
+        // **The Tab half of the split beside the collapsed domain** (lane 132
+        // follow-up): `bau::erhebe` carries which world members are tables
+        // (`ist_tab`, mirroring `splitVonCarrier`'s `istTab` in `Geteilt.lean`
+        // §7). Collected here and not in `bau.rs` on purpose -- the `H013`
+        // section owns the domain, and a second register over the same
+        // declarations would be `W7`. Read-only: the verdict loop below does
+        // not see this vector.
+        let mut tabellen: Vec<String> = Vec::new();
         crate::fuer_jedes_item(baum, &mut |item| match &item.art {
             ItemArt::Statisch(x) if x.veraenderlich => welt.push(x.name.text.clone()),
-            ItemArt::Tabelle(x) => welt.push(x.name.text.clone()),
+            ItemArt::Tabelle(x) => {
+                welt.push(x.name.text.clone());
+                tabellen.push(x.name.text.clone());
+            }
             ItemArt::State(x) => welt.push(x.name.text.clone()),
             _ => {}
         });
@@ -704,7 +715,9 @@ pub fn pass_mit(
         // bodies (the graph's resolved direct calls; an indirect call carries no
         // edge, S2), footprints from the declared `writes` effects (`fussAus`),
         // the domain and the shared flag from the same declarations the verdict
-        // above reads (`welt`, `geschuetzt`; unknown means shared, S5), and the
+        // above reads (`welt`, `geschuetzt`; unknown means shared, S5), the
+        // Tab/Glob tag from the table roots among them (`tabellen`, handed in;
+        // every other world member is the Glob half, §7), and the
         // pair list from the `concurrent` sets (`nebenAus`). `pruefe_ungeteilt`
         // evaluates the W5 premise (`pruefeUngeteilt`) over it. It stands BESIDE
         // the verdict above, not instead of it: the refusal above decides, this
@@ -714,7 +727,7 @@ pub fn pass_mit(
         // exactly that reason. Per-probe agreement is booked in
         // `messung/BAU-NOTIZ.md`.
         {
-            let bau = bau::erhebe(baum, &u, &g, &kontexte, &welt, &geschuetzt);
+            let bau = bau::erhebe(baum, &u, &g, &kontexte, &welt, &geschuetzt, &tabellen);
             let _w5_traeger = bau::pruefe_ungeteilt(&bau, bau::sattigung(&bau));
         }
     }

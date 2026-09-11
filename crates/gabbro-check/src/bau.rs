@@ -14,6 +14,7 @@
 //! | `ruft` | `ruftDirekt` (W-EXT, §1) over `ruftNorm` (§2) | the graph's resolved direct calls (`Knoten::rufe`), filtered to the declared-function domain; an indirect call carries no edge (cut S2) |
 //! | `schreibtFn` | `fussAus` (§3) | the DECLARED `writes` effects per function, reduced to carrier roots, filtered to the world domain |
 //! | `geteilt` / `traeger` | `geteiltAus` / `traegerAus` (§4) | the same declarations `H013` reads (`welt`, `geschuetzt`, handed in); unknown means shared (cut S5, fail-closed to the loud side) |
+//! | `ist_tab` | `splitVonCarrier`'s `istTab` (§7) | the table roots among `welt` (`tabellen`, handed in); every other world member is the Glob half -- carried, not re-collected |
 //! | `neben` | `nebenAus` (§5) | the `concurrent` sets, both ends resolved, unordered and deduplicated |
 //! | `eintritt` | `bauAus` entry codes (§6) | the `entry` roots (`kontexte::erhebe`), resolved to graph keys in context order |
 //!
@@ -40,6 +41,14 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Functions and carriers are named by strings, not by `Nat` codes: a qualified
 /// key (`modul::name`) plays the role of `fnCode`, a world root (`z`, `T`) the
 /// role of `tabCode` / `globCode`. Field for field the Lean type, now computed.
+///
+/// The Tab/Glob split (`Geteilt.lean` §7, `TabCarrier ⊕ GlobCarrier`) rides
+/// along as the `ist_tab` tag: `true` for table roots (the Tab half), `false`
+/// for globals -- `static mut` and `state` (the Glob half). The collapsed
+/// `Carrier` stays the working domain (cut C1); the tag only records which
+/// half each member came from, so a later lane can state the `hinj`/`hdisj`
+/// premises (`tabInjForm` / `globInjForm` / `halvesDisjointForm`, §8) over the
+/// two halves instead of re-collecting them.
 #[derive(Debug, Default)]
 pub struct Bau {
     /// Thread `f` starts in `eintritt[f]` -- resolved entry roots, context order.
@@ -52,8 +61,41 @@ pub struct Bau {
     pub geteilt: BTreeMap<String, bool>,
     /// All carriers of the unit -- the checker's domain.
     pub traeger: Vec<String>,
+    /// Which half each carrier belongs to (`splitVonCarrier`'s `istTab`):
+    /// `true` for table roots, `false` for globals. One entry per `traeger`
+    /// member; a member outside the handed-in table list reads Glob.
+    pub ist_tab: BTreeMap<String, bool>,
     /// Declared concurrent pairs -- unordered (`a < b`), deduplicated.
     pub neben: Vec<(String, String)>,
+}
+
+/// One half of the Tab/Glob split -- the Rust shape of
+/// `TabCarrier ⊕ GlobCarrier` (`Geteilt.lean` §7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Seite {
+    /// A table root -- the `Sum.inl` half.
+    Tab(String),
+    /// A global root (`static mut`, `state`) -- the `Sum.inr` half.
+    Glob(String),
+}
+
+/// The split of one collapsed carrier (`splitVonCarrier`): the tag decides,
+/// the name rides along unchanged -- folding mirrors through the same `Nat`
+/// on both halves (cut C1), so neither direction computes anything.
+pub fn teile(bau: &Bau, traeger: &str) -> Seite {
+    if bau.ist_tab.get(traeger).copied().unwrap_or(false) {
+        Seite::Tab(traeger.to_string())
+    } else {
+        Seite::Glob(traeger.to_string())
+    }
+}
+
+/// The fold of one split carrier (`carrierVonSplit`): either half folds back
+/// to the collapsed name it came from.
+pub fn falte(seite: &Seite) -> &str {
+    match seite {
+        Seite::Tab(t) | Seite::Glob(t) => t,
+    }
 }
 
 /// The carrier root of a `writes` place -- `T` of `writes T.slots`, `z` of
@@ -75,7 +117,9 @@ fn beruehrt(platz: &str, getan: &str) -> bool {
 
 /// **The build from the unit (`bauAus`, §6).** Every argument is read, none is
 /// written: `welt` and `geschuetzt` are the vectors the `H013` section computed
-/// two pages up, `kontexte` the entry list it iterated.
+/// two pages up, `kontexte` the entry list it iterated. `tabellen` names the
+/// table roots among `welt` -- the Tab half of the split (§7); every other
+/// world member (`static mut`, `state`) is the Glob half.
 pub fn erhebe(
     baum: &Programm,
     u: &crate::umgebung::Umgebung,
@@ -83,6 +127,7 @@ pub fn erhebe(
     kontexte: &[crate::kontexte::Kontext],
     welt: &[String],
     geschuetzt: &[String],
+    tabellen: &[String],
 ) -> Bau {
     // The declared-function domain: only calls into it survive (`ruftNorm`).
     // Device transitions, generated `ops` heads and the integer conversions are
@@ -153,6 +198,15 @@ pub fn erhebe(
         geteilt.insert(t.clone(), teilt);
     }
 
+    // The Tab/Glob tag (`splitVonCarrier`'s `istTab`, §7): table roots are the
+    // Tab half, every other world member the Glob half. Handed in, not
+    // re-collected -- the `H013` section owns the domain, and a second
+    // register over the same thing would be `W7`.
+    let mut ist_tab: BTreeMap<String, bool> = BTreeMap::new();
+    for t in welt {
+        ist_tab.insert(t.clone(), tabellen.contains(t));
+    }
+
     // The pair list (`nebenAus`): declared sets, both ends resolved, unordered
     // and deduplicated. A member that resolves to nothing drops out (S4 -- the
     // refusal belongs to `W003`); a self-pair is no pair.
@@ -189,6 +243,7 @@ pub fn erhebe(
         schreibt_fn,
         geteilt,
         traeger: welt.to_vec(),
+        ist_tab,
         neben,
     }
 }
@@ -286,6 +341,7 @@ mod tests {
             ]),
             geteilt: BTreeMap::from([("z".to_string(), false)]),
             traeger: vec!["z".to_string()],
+            ist_tab: BTreeMap::from([("z".to_string(), false)]),
             neben: Vec::new(),
         }
     }
@@ -336,5 +392,33 @@ mod tests {
             .push("fremd".to_string());
         // No `geteilt` entry: unknown reads shared (S5), so only `z` is refused.
         assert_eq!(pruefe_ungeteilt(&b, sattigung(&b)), ["z"]);
+    }
+
+    /// Fold after split is the identity, whatever the tag says (`faltTeile_holds`,
+    /// §8): both halves fold back to the carrier they came from.
+    #[test]
+    fn fold_after_split_is_the_identity() {
+        let mut b = bau_mini();
+        b.traeger.push("T".to_string());
+        b.ist_tab.insert("T".to_string(), true);
+        for c in b.traeger.clone() {
+            assert_eq!(falte(&teile(&b, &c)), c.as_str());
+        }
+    }
+
+    /// Split after fold returns the injected side, provided the tag marks the
+    /// folded carrier accordingly (`teileFaltTab_holds` / `teileFaltGlob_holds`,
+    /// §8).
+    #[test]
+    fn split_returns_the_tagged_side() {
+        let mut b = bau_mini();
+        b.traeger.push("T".to_string());
+        b.ist_tab.insert("T".to_string(), true);
+        assert_eq!(teile(&b, "T"), Seite::Tab("T".to_string()));
+        assert_eq!(teile(&b, "z"), Seite::Glob("z".to_string()));
+        // Outside the tag table the split reads Glob -- the same direction as
+        // S5 (unknown reads the loud side is `geteilt`'s; here the tag only
+        // ever claims Tab for a handed-in table root).
+        assert_eq!(teile(&b, "fremd"), Seite::Glob("fremd".to_string()));
     }
 }
