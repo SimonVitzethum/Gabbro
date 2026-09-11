@@ -7256,6 +7256,57 @@ fn anweisung(
                 );
                 return;
             };
+            // **Relaxed publish-side exchange + exchange-`erwartet` ordering (lane-149).**
+            //
+            // Lane 45 closed the relaxed gap for the two single-sided forms -- a
+            // `publishes` payload on a `relaxed` (or orderless, which lowers to
+            // `relaxed` on both sides) atomic goes to `relaxed_mit_last`, and so does
+            // an `awaits` list -- but left the combined form straight through:
+            // `paarung.rs` collects both exchange halves without that check, and this
+            // arm lowered them without naming them at all. An exchange that stores
+            // without release publishes a promise without a mechanism (the `V004`
+            // question), and one that loads without acquire awaits one (the
+            // `V004`/`V005` await-side question). Same questions, same answer: refuse
+            // with a name. On an ORDERED atomic both halves lower, and the C names
+            // them in the same words the `Publish`/`AwaitLoad` arms use -- *what the C
+            // carries, the C says.*
+            let entspannt = speichern == "memory_order_relaxed";
+            let traege_nutzlast = match &x.nutzlast {
+                Some(Nutzlast::Orte(l)) if !l.is_empty() => {
+                    Some(l.iter().map(|o| o.text()).collect::<Vec<_>>().join(", "))
+                }
+                _ => None,
+            };
+            let traege_erwartung = match &x.erwartet {
+                Some(l) if !l.is_empty() => {
+                    Some(l.iter().map(|o| o.text()).collect::<Vec<_>>().join(", "))
+                }
+                _ => None,
+            };
+            if traege_nutzlast.is_some() && entspannt {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange` with a `publishes` payload on a `relaxed` atomic (or one \
+                     without any ordering word, which lowers to `memory_order_relaxed` on \
+                     both sides) -- a store without release publishes a promise the machine \
+                     never delivers. The same broken promise `V004` refuses at the \
+                     `publishes` side; the combined form is no way around it",
+                );
+                return;
+            }
+            if traege_erwartung.is_some() && entspannt {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange` with an `awaits` list on a `relaxed` atomic (or one without \
+                     any ordering word, which lowers to `memory_order_relaxed` on both \
+                     sides) -- a load without acquire awaits a promise the machine never \
+                     delivers. The same broken promise `V004`/`V005` refuse at the `awaits` \
+                     side; the combined form is no way around it",
+                );
+                return;
+            }
             let wert;
             let bedingung;
             match &x.form {
@@ -7355,6 +7406,19 @@ fn anweisung(
                         b = binder.text,
                         ausgang = ausgang.text,
                     ));
+                    // **Ordered halves are named, not dropped.** `publishes nothing` and
+                    // a missing clause stay byte-identical -- only a carried promise gets
+                    // a line, in the words of the `Publish`/`AwaitLoad` arms.
+                    if let Some(last) = &traege_nutzlast {
+                        aus.push_str(&format!(
+                            "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                        ));
+                    }
+                    if let Some(last) = &traege_erwartung {
+                        aus.push_str(&format!(
+                            "{e}/* awaits {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                        ));
+                    }
                     // Der Rumpf schreibt sein Ergebnis mit `return` -- hier ist das eine
                     // Zuweisung an `_cn` und ein Sprung aus dem inneren Block.
                     rumpf_als_wert(rumpf, &neu_, aus, u, absagen, tiefe + 3);
@@ -7450,6 +7514,18 @@ fn anweisung(
                 return;
             }
             let h = format!("_cx{tiefe}");
+            // **Ordered halves are named, not dropped** -- see the `update` arm above:
+            // `publishes nothing` and a missing clause stay byte-identical.
+            if let Some(last) = &traege_nutzlast {
+                aus.push_str(&format!(
+                    "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                ));
+            }
+            if let Some(last) = &traege_erwartung {
+                aus.push_str(&format!(
+                    "{e}/* awaits {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                ));
+            }
             aus.push_str(&format!(
                 "{e}bool {};\n{e}{{\n{e}    {typ} {h} = ({typ})({erwartet});\n\
                  {e}    /* compare-exchange under the DECLARED ordering -- a plain `=` would \

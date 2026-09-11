@@ -1,0 +1,31 @@
+-- ARM 1, must FALL at emit: relaxed publish-side exchange (lane-149).
+--
+-- Lane 45 closes the relaxed gap for the single-sided forms: `w` publishing on the
+-- `relaxed` atom falls at `V004`, `r` awaiting on it at `V005`. The combined form below
+-- used to lower straight through -- a store without release publishing a promise the
+-- machine never delivers. The emitter now refuses it with a name (`C001`); the
+-- checker verdicts beside it are pre-existing passes, untouched by this lane --
+-- `V004` is the lane-45 baseline, and `V010`/`V001` on the exchange line are what the
+-- straight-through halves always earned once their counterparts diverted.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: V004 x2 (w, r -- the lane-45 baseline), V010 x1 + V001 x1 (x: the
+--           payload names a writer this thread never reaches, and the single-sided
+--           `awaits` beside it went to `relaxed_mit_last`, so no counterpart remains)
+--   emit:   C001 x1 on the exchange line, no C for this unit
+
+module probe::austausch_entspannt_mit_last {
+
+static mut n : u32 = 0;
+atomic R : bool relaxed;
+
+impl fn w(v : u32) effects { writes n, publishes R } costs <= 8 ops
+{ n = v; R = true publishes { n }; }
+
+impl fn x() -> bool effects { writes R, publishes R, reads R, reads n } costs <= 16 ops
+{ let ok = R exchange true when old(R) == false returns erfolg publishes { n }; return ok; }
+
+impl fn r() -> u32 effects { reads R, reads n } costs <= 8 ops
+{ let f = R awaits { n }; if f { return n; } return 0; }
+
+}

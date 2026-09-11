@@ -1,0 +1,28 @@
+-- ARM 1 twin, must LOWER: ordered publish-side exchange (lane-149).
+--
+-- `F` is `release`, so the compare-exchange succeeds with `memory_order_release` and
+-- the `{ n }` payload is a promise with a mechanism. The emitter lowers it and names
+-- the half in the C in the same words the `Publish` arm uses. The payload is written
+-- in the same function (`V010` publishes the writes of its own thread), and `r`
+-- awaits it, so the checker stays silent.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; C carries `publishes { n } -- paired at compile time`
+--   cc:     takes the unit
+
+module probe::austausch_geordnet_mit_last {
+
+static mut n : u32 = 0;
+atomic F : bool release;
+
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+impl fn x(v : u32) -> bool effects { writes n, writes F, publishes F, reads F } costs <= 16 ops
+{ n = v; let ok = F exchange true when old(F) == false returns erfolg publishes { n }; return ok; }
+
+impl fn r() -> u32 effects { reads F, reads n } costs <= 8 ops
+{ let f = F awaits { n }; if f { return n; } return 0; }
+
+}
