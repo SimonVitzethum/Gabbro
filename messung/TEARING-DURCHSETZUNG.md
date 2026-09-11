@@ -87,3 +87,62 @@ inventory's budget. Every verdict stays x86_64-bound and level-bound per the
 ruling. The Erhaltung feed is unchanged: witness material for zuweisung,
 zusammZuweisung, atomar, ruf; fluechtig still open. Booked counts in
 `TODO.md` are the integrator's — lane scope allows these two files only.
+
+## Lane p27: the ruling proved and witnessed (base 2dc02ad, 2026-09-11)
+
+Scope: `grammatik/Grammatik/Koernung.lean` (§8 plus the C2 note, no other
+line of the file changed), `crates/gabbro-check/src/tearing.rs` (one
+appended `Shape`/`Ruling` section, no existing line changed),
+`crates/gabbro-check/tests/tearing.rs` (new file), and this section. No
+`lib.rs` edit, no `emit.rs` edit, no wiring change: the gate stays parked
+for the measured reason above, and the sentence in `saetze.rs`
+(`emitter.reissstelle`, still `Vermutet`) is untouched on purpose.
+
+### The proof: C2 discharged for the measured inventory
+
+`Koernung.lean` §8 turns the lane-70 ruling into theorems over the
+lane-47 inventory as data (`InvForm`, nine rows; `Guarantee`, the two
+disciplines; `InvForm.verdict` / `admitted` / `width`):
+
+* `ruling_covers`: every row lands somewhere — admitted, refused with
+  its guarantee, or the open volatile row. No fourth case.
+* `admitted_no_tear` (plus world-level `admitted_readback_no_tear`):
+  admitted rows are single-access, so every split shows old or new.
+* `AtBoundary` plus `boundary_no_tear`, `refused_no_tear` (plus
+  world-level `refused_readback_no_tear`): each ruling guarantee means
+  exactly one proposition — no observer sees the middle — and at a
+  boundary there is no tear at any width.
+* `mid_interruption_tears`: the ruled-out middle IS the witnessed
+  two-byte tear, so the guarantee is load-bearing, not decoration.
+* `shared_inventory_tearing_free`: the top theorem — every inventory
+  row shows old or new whole under its ruling premise, with the open row
+  carried explicitly instead of silently.
+
+What is NOT claimed: a general interleaving semantics for `eval` still
+does not exist, so outside the nine rows and their ruling premises the
+n-cell fold under a concurrent write still has no model. The C2 note in
+the file says exactly that.
+
+### The witness: the ruling as an executable table
+
+`tearing.rs` gains `Shape` (nine constructors), `Ruling`
+(`Admit { price }` / `Refuse { guarantee }` / `Open`), and
+`Shape::ruling` — an exhaustive match, so a tenth form stays unruled
+only until someone rules it: until then it is a compile error, not a
+silent fourth case. The guarantee words match `Kind::guarantee`
+exactly, and `tests/tearing.rs` proves that mechanically (5 tests:
+nine rows ruled with a 5/3/1 split, the exact guarantees per refused
+row, scanner-ruling agreement on every shape, word agreement between
+scan and ruling, undeclared carriers pass).
+
+### Verification
+
+* `lean Grammatik/Koernung.lean` with `LEAN_PATH` over the prebuilt
+  `grammatik`/`programmlogik` oleans: exit 0, no errors, no `sorryAx`
+  (only the standard `propext`/`Classical`/`Quot` the whole file
+  already carries).
+* `cargo test -p gabbro-check --test tearing --no-fail-fast`:
+  5 passed, 0 failed.
+* `cargo test -p gabbro-check --lib tearing --no-fail-fast`:
+  14 passed, 0 failed, unchanged — the `saetze.rs` note stays
+  literally true.

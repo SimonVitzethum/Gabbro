@@ -45,6 +45,13 @@
      `merke_bytesAb`, `storeSlot_bytesAb_other`, `schreibBytes_slots_other`;
      list facts `interrupted_length_eq`, `interrupted_zero_eq`,
      `interrupted_full_eq`, `interrupted_perByte`.
+  - §8 (C2 discharge over the lane-47 inventory under the lane-70 ruling):
+    `InvForm` (nine rows) + `Guarantee`, `InvForm.verdict` / `admitted` /
+    `width`, `ruling_covers` (no fourth case), `admitted_no_tear` (+
+    world-level `admitted_readback_no_tear`), `AtBoundary` +
+    `boundary_no_tear`, `refused_no_tear` (+ world-level
+    `refused_readback_no_tear`), `mid_interruption_tears` (the ruled-out
+    middle IS the witnessed tear), and `shared_inventory_tearing_free`.
 
   CUTS (booked, not hidden):
   - C1 (was: no world-level readback): bridged in §7 for the prefix case --
@@ -54,9 +61,17 @@
      made about hardware granularity, the premise is still width-based
      (`eventWidth <= 1`) and is explicitly NOT moved by this section.
   - C2: read tearing under a concurrent write DURING the n-cell fold is
-    not proven -- only the granularity mismatch (1 event vs n cells).
-    No interleaving semantics for `eval` exists in the tree (cf. the
-    honest section 5 of `Wettlauf.lean`).
+    discharged for the measured inventory under the ruling (§8): admitted
+    rows cannot tear by width (`admitted_no_tear`, world-level
+    `admitted_readback_no_tear`), refused rows cannot tear under their
+    guarantee (`refused_no_tear`, world-level `refused_readback_no_tear`),
+    every row lands somewhere (`ruling_covers`), and the middle the
+    guarantee rules out IS the witnessed tear (`mid_interruption_tears`).
+    What is NOT built is a general interleaving semantics for `eval` (cf.
+    the honest section 5 of `Wettlauf.lean`): outside the nine inventory
+    rows and their ruling premises the n-cell fold under a concurrent
+    write still has no model, and the volatile row stays open with no
+    theorem.
   - C3: no machine beyond counting is modelled; the premise is
     width-based (`eventWidth <= 1`), the machine step itself stays a word.
 -/
@@ -449,6 +464,183 @@ theorem prefix_readback_full (σ : World D) (t : D.Tab) (f : D.Feld t)
   have hlen : old.length = new.length := by rw [hold, World.bytesAb_length]; omega
   exact interrupted_full_eq old new hlen m (by omega)
 
+/-! ## 8. Tearing freedom over the measured inventory (discharges C2) -/
+
+/-- The lane-47 inventory as data: the eight measured emitted-C forms plus
+    the unmeasured volatile row (`messung/TEARING-INVENTAR.md`). The
+    assembler behind each row is NOT restated here -- it stands in the
+    inventory's evidence block and is copied into the executable witness
+    (`crates/gabbro-check/src/tearing.rs`, `LANE47_ASM`). What is proved
+    here is the CONSEQUENCE the lane-70 ruling (`messung/TEARING-RULING.md`)
+    draws from it. Every row is shared-carrier traffic by construction of
+    the inventory: shared table slots, a `static mut` global, per-core
+    accumulates cells, atomics with declared ordering, foreign lock calls,
+    device registers. -/
+inductive InvForm : Type
+  | slotPlain | globalPlain | slotCompound | guardedCompound
+  | cas | relAcq | mergeAdd | lockOps | volatileReg
+
+/-- The guarantee that redeems a refusal, in the ruling's words. The atomic
+    form is the standing upgrade path, not a third guarantee: the `cas` row
+    shows what it costs, which is why the two disciplines below are worth
+    keeping where they already hold. -/
+inductive Guarantee : Type
+  | exclusiveAccess | singleWriterPerCell
+
+/-- The lane-70 verdict per form: refused rows carry the guarantee that
+    redeems them; admitted and open rows carry none. Admitted rows name
+    their atomicity price (alignment, total store order, declared ordering,
+    foreign body) only in the ruling prose -- a machine assumption, cited,
+    not re-stated as a proposition. -/
+def InvForm.verdict : InvForm → Option Guarantee
+  | .slotCompound | .guardedCompound => some .exclusiveAccess
+  | .mergeAdd => some .singleWriterPerCell
+  | _ => none
+
+/-- The five admitted rows: a single machine memory access at both levels. -/
+def InvForm.admitted : InvForm → Prop
+  | .slotPlain | .globalPlain | .cas | .relAcq | .lockOps => True
+  | _ => False
+
+/-- Measured machine accesses per form, worst level: admitted rows do one;
+    refused rows do two or more (the `-O0` triple counts here as two -- the
+    exact count never enters a proof, only the `≤ 1` / `≥ 2` split does);
+    the volatile row is unmeasured and reads `0`, which no width argument
+    ever consumes. -/
+def InvForm.width : InvForm → Nat
+  | .slotPlain | .globalPlain | .cas | .relAcq | .lockOps => 1
+  | .slotCompound | .guardedCompound | .mergeAdd => 2
+  | .volatileReg => 0
+
+/-- Every inventory row lands somewhere: admitted, refused with its
+    guarantee, or the open volatile row. There is no fourth case -- ruling
+    a tenth row means extending this proof, which is the point. -/
+theorem ruling_covers (f : InvForm) :
+    f.admitted ∨ (∃ g, f.verdict = some g) ∨ f = .volatileReg := by
+  cases f with
+  | slotPlain => exact Or.inl True.intro
+  | globalPlain => exact Or.inl True.intro
+  | slotCompound => exact Or.inr (Or.inl ⟨_, rfl⟩)
+  | guardedCompound => exact Or.inr (Or.inl ⟨_, rfl⟩)
+  | cas => exact Or.inl True.intro
+  | relAcq => exact Or.inl True.intro
+  | mergeAdd => exact Or.inr (Or.inl ⟨_, rfl⟩)
+  | lockOps => exact Or.inl True.intro
+  | volatileReg => exact Or.inr (Or.inr rfl)
+
+/-- Admitted rows are single-access: their width fits one atomic event. -/
+theorem admitted_width_le_one (f : InvForm) (h : f.admitted) : f.width ≤ 1 := by
+  cases f with
+  | slotPlain => decide
+  | globalPlain => decide
+  | slotCompound => simp only [InvForm.admitted] at h
+  | guardedCompound => simp only [InvForm.admitted] at h
+  | cas => decide
+  | relAcq => decide
+  | mergeAdd => simp only [InvForm.admitted] at h
+  | lockOps => decide
+  | volatileReg => simp only [InvForm.admitted] at h
+
+/-- Admitted rows cannot tear: one atomic event covers the whole transfer,
+    so every split shows the old or the new bytes. -/
+theorem admitted_no_tear (f : InvForm) (h : f.admitted)
+    (old new : List Byte) (hlen : old.length = new.length)
+    (hold : old.length = f.width) (m : Nat) :
+    interrupted old new m = old ∨ interrupted old new m = new := by
+  have hw := admitted_width_le_one f h
+  have hb : new.length ≤ 1 := by omega
+  exact width_le_one_no_tear old new hlen hb m
+
+/-- The discipline premise, in the ruling's words as a proposition: no
+    observer sees the middle of the transfer. Exclusive access (lock held,
+    no second thread inside) and single-writer-per-cell (each core its own
+    cell, the merge loop only reads) both mean exactly this: an interruption
+    sits at a boundary -- before the first byte or past the last. -/
+def AtBoundary (_old new : List Byte) (m : Nat) : Prop :=
+  m = 0 ∨ new.length ≤ m
+
+/-- At a boundary there is no tear, at any width: before the first byte
+    shows old, past the last byte shows new. -/
+theorem boundary_no_tear (old new : List Byte) (hlen : old.length = new.length)
+    (m : Nat) (h : AtBoundary old new m) :
+    interrupted old new m = old ∨ interrupted old new m = new := by
+  rcases h with rfl | hle
+  · left; exact interrupted_zero_eq old new
+  · right; exact interrupted_full_eq old new hlen m hle
+
+/-- Refused rows cannot tear UNDER their guarantee: the guarantee is the
+    boundary premise (`AtBoundary`), and the boundary rules out the middle
+    (`boundary_no_tear`). The verdict equality travels as an explicit
+    hypothesis so the theorem is about refused rows, not about any lists. -/
+theorem refused_no_tear (f : InvForm) (g : Guarantee)
+    (h : f.verdict = some g) (old new : List Byte)
+    (hlen : old.length = new.length) (m : Nat) (hd : AtBoundary old new m) :
+    interrupted old new m = old ∨ interrupted old new m = new := by
+  cases g
+  · exact boundary_no_tear old new hlen m hd
+  · exact boundary_no_tear old new hlen m hd
+
+/-- World-level readback of an admitted transfer: writing the admitted row's
+    bytes over a byte carrier and reading back shows old or new whole.
+    The per-byte version holds unconditionally (`prefix_readback_perByte`);
+    this is the whole-list version the no-tearing claim needs. -/
+theorem admitted_readback_no_tear (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (form : InvForm) (hadm : form.admitted)
+    (k : Int) (m : Nat) (old new : List Byte)
+    (hold : old = σ.bytesAb t f hf form.width k)
+    (hnew : new.length = form.width) :
+    ((σ.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf form.width k) = old ∨
+    ((σ.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf form.width k) = new := by
+  rw [schreibBytes_prefix_readback t f hf Λ form.width m k σ old new hold hnew]
+  have hlen : old.length = new.length := by rw [hold, World.bytesAb_length]; omega
+  have holdw : old.length = form.width := by rw [hold, World.bytesAb_length]
+  exact admitted_no_tear form hadm old new hlen holdw m
+
+/-- World-level readback of a refused-but-disciplined transfer: under the
+    guarantee the readback is old or new whole, at any width. -/
+theorem refused_readback_no_tear (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (form : InvForm) (g : Guarantee) (href : form.verdict = some g)
+    (k : Int) (n m : Nat) (old new : List Byte)
+    (hold : old = σ.bytesAb t f hf n k)
+    (hnew : new.length = n) (hd : AtBoundary old new m) :
+    ((σ.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf n k) = old ∨
+    ((σ.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf n k) = new := by
+  rw [schreibBytes_prefix_readback t f hf Λ n m k σ old new hold hnew]
+  have hlen : old.length = new.length := by rw [hold, World.bytesAb_length]; omega
+  exact refused_no_tear form g href old new hlen m hd
+
+/-- The guarantee is load-bearing: the mid-interruption it rules out (one
+    byte of two written) IS the witnessed tear. A discipline that admitted
+    the middle would admit the mix. -/
+theorem mid_interruption_tears :
+    torn [⟨0, by omega, by omega⟩, ⟨0, by omega, by omega⟩]
+         [⟨1, by omega, by omega⟩, ⟨1, by omega, by omega⟩]
+         (interrupted [⟨0, by omega, by omega⟩, ⟨0, by omega, by omega⟩]
+            [⟨1, by omega, by omega⟩, ⟨1, by omega, by omega⟩] 1) := by
+  rw [two_byte_tear_is_interruption]
+  exact two_byte_tear
+
+/-- **C2 discharged for the measured inventory: no tearing on shared
+    carriers under the ruling.** Every inventory row is shared-carrier
+    traffic (see `InvForm`); the ruling leaves each row exactly one way
+    out: admitted rows show old or new by width, refused rows show old or
+    new under their guarantee (no observer sees the middle), and the open
+    volatile row gets no claim -- the disjunction says so explicitly
+    instead of going silent. -/
+theorem shared_inventory_tearing_free (form : InvForm)
+    (old new : List Byte) (hlen : old.length = new.length) (m : Nat)
+    (h : (form.admitted ∧ old.length = form.width) ∨
+         (∃ g, form.verdict = some g ∧ AtBoundary old new m) ∨
+         form = .volatileReg) :
+    form = .volatileReg ∨
+      interrupted old new m = old ∨ interrupted old new m = new := by
+  rcases h with ⟨hadm, hlenw⟩ | ⟨g, href, hdisc⟩ | rfl
+  · exact Or.inr (admitted_no_tear form hadm old new hlen hlenw m)
+  · exact Or.inr (refused_no_tear form g href old new hlen m hdisc)
+  · exact Or.inl rfl
+
 #print axioms EreignisAtomar
 #print axioms atomar_no_tear
 #print axioms schreibBytes_event_count
@@ -474,5 +666,15 @@ theorem prefix_readback_full (σ : World D) (t : D.Tab) (f : D.Feld t)
 #print axioms prefix_readback_perByte
 #print axioms prefix_readback_zero
 #print axioms prefix_readback_full
+#print axioms ruling_covers
+#print axioms admitted_width_le_one
+#print axioms admitted_no_tear
+#print axioms AtBoundary
+#print axioms boundary_no_tear
+#print axioms refused_no_tear
+#print axioms admitted_readback_no_tear
+#print axioms refused_readback_no_tear
+#print axioms mid_interruption_tears
+#print axioms shared_inventory_tearing_free
 
 end Gabbro.Grammatik
