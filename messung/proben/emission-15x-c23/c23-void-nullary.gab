@@ -1,0 +1,27 @@
+-- emission-15x-c23/void-nullary: the empty parameter list as a type.
+--
+-- Census slot C2 `voidTyp`, 930 sites (`dokumente/BEWEIS.md` Subject 2 section
+-- 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.voidTyp`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, `fnzeiger_deklarator` (result `None`
+-- becomes `void`, empty parameter list becomes `(void)`). The `(void)`
+-- spelling is load-bearing: `()` declares unspecified arguments, `(void)`
+-- declares none. Ruling: `messung/CFORM-REGEL-VOID.md` (admit with price).
+--
+-- Verdict: ADMIT. `gabbro pruefe` reports 3 items, 0 errors, 0 hints;
+-- `gabbro emit` exits 0 and writes `int32_t main(void)`; the emission
+-- compiles under `cc -std=c11 -Wall -Wextra -Werror -c` at `-O0` and `-O2`
+-- (measured 2026-09-11, base binary).
+
+module probe::c23_void_nullary {
+
+extern fn putchar(c : i32) -> i32 effects { writes output } costs <= 8 ops;
+
+pub fn main() -> i32
+    effects { writes output }
+    costs   <= 40 ops
+{
+    putchar(72);
+    putchar(10);
+    return 0;
+}
+}

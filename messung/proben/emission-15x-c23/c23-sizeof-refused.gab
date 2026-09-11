@@ -1,0 +1,32 @@
+-- erwartet: C001
+-- emission-15x-c23/sizeof-refused: the layout-less path stays refused.
+--
+-- Census slot C2 `cSizeof`, 27 sites (`dokumente/BEWEIS.md` Subject 2 section
+-- 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.cSizeof`). `sizeof`
+-- outside a `format` predicate has no object to measure: `sizeof(T)` would
+-- have to agree with the layout the checker computed, and that agreement is
+-- established nowhere (the `Eingebaut` arm refuses by name). The
+-- layout-carrying sites stay: traverse bounds (`c23-sizeof-traverse`, the
+-- companion that pins the admitted shape) and the `entrust`
+-- `_Static_assert`. Ruling: `messung/CFORM-REGEL-SIZEOF.md` (admit the
+-- layout-carrying shape with price; this path stays refused).
+--
+-- Expected: `gabbro pruefe` reports 3 items, 0 errors, 0 hints (the checker
+-- holds the shape; the refusal is the emitter's), `gabbro emit` exits
+-- nonzero with one named refusal:
+--   [C001] ...: no lowering: `sizeof` / `aligned` outside a `format`
+--   predicate ...
+-- There is no C to compile: the refusal is the evidence (measured
+-- 2026-09-11, base binary).
+
+module probe::c23_sizeof_refused {
+
+type Kiste = { wert : u32, };
+
+impl fn groesse() -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return sizeof(Kiste);
+}
+}
