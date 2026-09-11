@@ -1803,3 +1803,66 @@ theorem pc_reduktion (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O
 #print axioms Gabbro.Grammatik.pc_reduktion
 
 end Gabbro.Grammatik
+
+/-! ## 13. The chain-machine link: generated PC worlds read as chain worlds
+
+    `SerialLink` (§22 of `InterferenzAllgemein.lean`) is the ORDER side of the
+    run-to-chain link: every writing chain step owns a witness access in the
+    run. This section is the WORLD side: a generated PC run's world history
+    `M.welten` read as the chain worlds `J.welten`.
+
+    Import check (no cycle): `GemeinsamerLauf` and `SerialLink` already arrive
+    through `Grammatik.InterferenzAllgemein` and `Nebeneinander` through
+    `Grammatik.Wettlauf` (the two imports at the head of this file), so this
+    section adds no import.
+
+    What is proved (`kette_ist_maschinenwelt` below, no `sorry`): under the
+    explicit identification `J.welten = M.welten`, the chain worlds inherit
+    everything the generated side proves about its history -- the count
+    (`genWelten_laenge`), good observations (`genWelten_gut`), and the live
+    end-world shape (`genWelten_letzte`) -- projected through `pcReach_gen`.
+    Every premise is load-bearing: `P O passes hO prog sp M pc h` feed the
+    projection and the three world lemmas, `J` types the identification and the
+    conclusion, and `hW` rewrites each conjunct onto the generated history.
+
+    Coverage (exactly): boundary observations only -- length, goodness, and end
+    shape of the world list. The full equivalence (deriving the identification
+    itself from step correspondence: chain steps close over whole bodies via
+    `exec` while machine steps close over leaf statements via `execStmt`, plus
+    the `Nb`/`Gesittet` wiring and the `SerialLink` witnesses) is NOT built.
+
+    Remainder (booked, not hidden): constructing a `GemeinsamerLauf` from a
+    `PCReach` run (or the converse) without assuming `hW`; per-step `Rahmen`
+    correspondence between chain steps and machine micro-steps; lifting
+    `SerialLink` witnesses to that constructed chain.
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **The chain-machine link, boundary-observation fragment.** A generated PC
+    run's worlds read as chain worlds: identified histories share the count,
+    the observations, and the end shape. One direction only (machine to chain,
+    under explicit identification); see §13 for the remainder. -/
+theorem kette_ist_maschinenwelt (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc)
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (hW : J.welten = M.welten) :
+    J.welten.length = M.tiefe + 1 ∧
+    (∀ W ∈ J.welten, ∀ e ∈ W.spur, e.gut) ∧
+    (∃ f, J.welten.getLast? = some (M.speicher.welt (M.spuren f))) := by
+  have hG : GenErreichbar P O passes (GenStart sp) M :=
+    pcReach_gen P O passes prog (GenStart sp) M pc h
+  refine ⟨?_, ?_, ?_⟩
+  · rw [hW]
+    exact genWelten_laenge P O passes hO sp M hG
+  · rw [hW]
+    exact genWelten_gut P O passes hO sp M hG
+  · rw [hW]
+    exact genWelten_letzte P O passes hO sp M hG
+
+#print axioms Gabbro.Grammatik.kette_ist_maschinenwelt
+
+end Gabbro.Grammatik
