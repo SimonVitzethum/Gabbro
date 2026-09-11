@@ -903,4 +903,76 @@ theorem schrittAusfuehrt_entlaedt (D : Deklaration) (t : D.Tab)
 #print axioms geprueft_bool_haelt
 #print axioms schrittAusfuehrt_entlaedt
 
+/-! ## 11. The Seite partition in World, discharged (C7) -/
+
+/- C7, Adressraum side: World carries one Seite per carrier, and a
+   separated region pair forbids the cross-partition step. Untouched:
+   §§6/9 (`BereichSchritt`, `validiert`, the executable checks) keep
+   their owners; the `Stmt`/`exec` branch taking such a step stays
+   Semantik-side work, as §9 books for C6. -/
+
+/-- The Seite partition in World: every carrier -- each table, each
+    global -- sits on exactly one side. The split is in the tags, as in
+    §9; here it is carried by World keys (`D.Tab ⊕ D.Glob`), which is
+    what C7 booked (`benutzerTeil`/`bereicheGetrennt` name the user side
+    it could check against). -/
+def WeltSeite (D : Deklaration) : Type :=
+  (D.Tab ⊕ D.Glob) → Seite
+
+/-- Hanging a world key on the partition: the `Nat` offset tagged with
+    its carrier's side -- the `GetaggteAddr` of §9, read off the World
+    partition. -/
+def weltTag (D : Deklaration) (p : WeltSeite D) (c : D.Tab ⊕ D.Glob)
+    (addr : Nat) : GetaggteAddr :=
+  { seite := p c, addr := addr }
+
+/-- The tag reads back: the tagged key runs on its carrier's side. -/
+theorem weltTag_seite (D : Deklaration) (p : WeltSeite D)
+    (c : D.Tab ⊕ D.Glob) (addr : Nat) :
+    (weltTag D p c addr).seite = p c :=
+  rfl
+
+/-- A user-carrier key in its region is a user-part world key: the
+    partition leg lands where `weltByte` reads (`benutzerTeil`). -/
+theorem weltTag_imTeil (D : Deklaration) (p : WeltSeite D)
+    (u k : UserRegion) (c : D.Tab ⊕ D.Glob) (addr : Nat)
+    (hc : p c = .user) (h : seitenZugehoerig u k (weltTag D p c addr)) :
+    benutzerTeil u (getaggterSchluessel (weltTag D p c addr)) := by
+  have hu : (weltTag D p c addr).seite = .user := by
+    rw [weltTag_seite D p c addr]
+    exact hc
+  exact getaggteUserAddr_imTeil u k _ hu h
+
+/-- A cross-partition exec step: the same offset touched once tagged
+    user (running in the user region) and once tagged kernel (running
+    in the kernel region) -- one address, both sides. -/
+def querSchritt (u k : UserRegion) (a b : GetaggteAddr) : Prop :=
+  a.addr = b.addr ∧ a.seite = .user ∧ b.seite = .kern ∧
+    seitenZugehoerig u k a ∧ seitenZugehoerig u k b
+
+/-- **C7 discharge: Seite separation entails no cross-partition exec
+    step.** Separated regions share no offset (`bereicheGetrennt`); both
+    legs claim the same one, so there is no such step. -/
+theorem getrennteSeite_keinQuerschritt (u k : UserRegion)
+    (hsep : bereicheGetrennt u k) (a b : GetaggteAddr)
+    (h : querSchritt u k a b) : False := by
+  obtain ⟨haddr, ha, hb, hain, hbin⟩ := h
+  exact seitenZugehoerig_trennt u k hsep a b ha hb hain hbin haddr
+
+/-- The user leg of a cross step is a user-part world key -- the
+    contradiction above, read at the world mapping. -/
+theorem querSchritt_userTeil (u k : UserRegion) (a b : GetaggteAddr)
+    (h : querSchritt u k a b) :
+    benutzerTeil u (getaggterSchluessel a) := by
+  obtain ⟨_, ha, _, hain, _⟩ := h
+  exact getaggteUserAddr_imTeil u k a ha hain
+
+#print axioms WeltSeite
+#print axioms weltTag
+#print axioms weltTag_seite
+#print axioms weltTag_imTeil
+#print axioms querSchritt
+#print axioms getrennteSeite_keinQuerschritt
+#print axioms querSchritt_userTeil
+
 end Gabbro.Grammatik.Adressraum

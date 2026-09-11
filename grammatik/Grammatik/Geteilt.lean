@@ -513,5 +513,100 @@ theorem globInj_all (globs : List GlobCarrier) : globInjForm globs := by
 #print axioms Gabbro.Grammatik.Geteilt.tabInj_all
 #print axioms Gabbro.Grammatik.Geteilt.globInj_all
 
+/-! ## 9. World extension: the Seite partition over split carriers -/
+
+/- C7 coordination: the Tab/Glob Bau -- which tables and globals exist
+   and who writes them -- is owned by another wave. This section touches
+   ONLY the World-partition defs: which side each split carrier sits on
+   (`WeltSeiteBau`, `weltSeite`), what a cross-partition world step is
+   (`WeltSchritt`, `quertWelt`, `weltRein`, `weltQuerSchritt`), and the
+   discharge that separation forbids it
+   (`getrennteWelt_keinQuerschritt`). The Adressraum side carries the
+   region version (`Adressraum.WeltSeite`, `querSchritt`,
+   `getrennteSeite_keinQuerschritt`); the fold between the two is
+   `carrierVonSplit` (§7), whose round-trips §8 proves. -/
+
+/-- The two sides, mirrored from `Adressraum.Seite` without the import:
+    this file stays dependency-free (see the header mirror note). -/
+inductive WSeite where
+  | kern
+  | user
+  deriving DecidableEq, Repr
+
+/-- The Seite partition over split world carriers: every table and every
+    global sits on exactly one side. -/
+def WeltSeiteBau :=
+  TabCarrier ⊕ GlobCarrier → WSeite
+
+/-- The side of one split world carrier under the partition. -/
+def weltSeite (p : WeltSeiteBau) (c : TabCarrier ⊕ GlobCarrier) : WSeite :=
+  p c
+
+/-- A one-carrier world step: the carrier it touches and the side it
+    runs on. An exec step runs ON one side; crossing is touching the
+    other side's carrier. -/
+structure WeltSchritt where
+  traeger : TabCarrier ⊕ GlobCarrier
+  seite : WSeite
+
+/-- The step crosses the partition exactly when the touched carrier sits
+    on the other side than the step runs on. -/
+def quertWelt (p : WeltSeiteBau) (s : WeltSchritt) : Prop :=
+  p s.traeger ≠ s.seite
+
+/-- A step confined to its side: touched carrier and running side agree. -/
+def weltRein (p : WeltSeiteBau) (s : WeltSchritt) : Prop :=
+  p s.traeger = s.seite
+
+/-- Confinement is the negation of crossing, by shape. -/
+theorem weltRein_keinQueren (p : WeltSeiteBau) (s : WeltSchritt) :
+    weltRein p s ↔ ¬ quertWelt p s := by
+  unfold weltRein quertWelt
+  constructor
+  · intro h hc
+    exact hc h
+  · intro h
+    by_cases heq : p s.traeger = s.seite
+    · exact heq
+    · exact absurd heq h
+
+/-- A cross-partition world step: the same folded carrier touched once
+    running user-side, once running kernel-side, both confined -- one
+    carrier, both sides. `f` is the fold into the checked carrier
+    (`carrierVonSplit`, §7); the Tab/Glob Bau behind it is owned
+    elsewhere. -/
+def weltQuerSchritt (p : WeltSeiteBau)
+    (f : TabCarrier ⊕ GlobCarrier → Carrier) (a b : WeltSchritt) : Prop :=
+  f a.traeger = f b.traeger ∧ a.seite = .user ∧ b.seite = .kern ∧
+    weltRein p a ∧ weltRein p b
+
+/-- **Discharge: separation entails no cross-partition world step.** If
+    the partition factors through the fold -- the same folded code sits
+    on the same side (the carrier-level separation premise; cf.
+    `halvesDisjointForm`, stated where the codes collide and proved
+    where they cannot) -- then no single folded carrier is touched
+    confined from both sides at once. -/
+theorem getrennteWelt_keinQuerschritt (p : WeltSeiteBau)
+    (f : TabCarrier ⊕ GlobCarrier → Carrier)
+    (hf : ∀ c₁ c₂, f c₁ = f c₂ → p c₁ = p c₂)
+    (a b : WeltSchritt) (h : weltQuerSchritt p f a b) : False := by
+  obtain ⟨hfold, ha, hb, hain, hbin⟩ := h
+  unfold weltRein at hain hbin
+  rw [ha] at hain
+  rw [hb] at hbin
+  have hsame : p a.traeger = p b.traeger := hf _ _ hfold
+  rw [hain, hbin] at hsame
+  simp at hsame
+
+/-- Speech probe: a single-sided partition factors through any fold, so
+    the discharge applies. -/
+example (f : TabCarrier ⊕ GlobCarrier → Carrier)
+    (c₁ c₂ : TabCarrier ⊕ GlobCarrier) (_ : f c₁ = f c₂) :
+    (fun _ => WSeite.user) c₁ = (fun _ => WSeite.user) c₂ :=
+  rfl
+
+#print axioms Gabbro.Grammatik.Geteilt.weltRein_keinQueren
+#print axioms Gabbro.Grammatik.Geteilt.getrennteWelt_keinQuerschritt
+
 end Gabbro.Grammatik.Geteilt
 
