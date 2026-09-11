@@ -1,0 +1,30 @@
+-- erwartet: V012
+-- **Narrowed user pointer handed to the copying callee falls.**
+--
+-- The twin of `gift/766` with the check in `narrow` form: `pruefe` narrows `p[0]`
+-- into range and then hands `p` to `nutze`, which reads `p[0]` without checking.
+-- A `narrow` on the pointer is a validation attempt like a comparison -- there is
+-- nothing else to narrow a user pointer for -- so the same unguarded handoff stands
+-- and falls as `V012`, exactly once. A bare forward with no check is no TOCTOU shape
+-- and stays silent; so does a handoff into foreign code (booked gap, not a refusal).
+-- Measured 2026-09-11 against the unchanged checker: falls with `V012`, exactly once.
+module gift767 {
+
+impl fn nutze(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 8 ops
+{
+    return p[0];
+}
+
+impl fn pruefe(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 24 ops
+{
+    narrow p[0] to 1 .. 255 else {
+        return 0;
+    }
+    return nutze(p);
+}
+
+}
