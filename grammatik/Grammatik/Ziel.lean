@@ -281,4 +281,49 @@ theorem ziel (o : Ausgang V l Γ) :
 #print axioms Gabbro.Grammatik.ziel_wettlauf_global
 #print axioms Gabbro.Grammatik.ziel_ordnung
 
+/-! ## 5. The goal itself, as a theorem (Phase 5 formulation) -/
+
+/-- **What a verified program still owes (`ziel_nutzer_last`).** Every outcome is
+    control flow (`ok`, `zurueck`, `grund`, `leave`, `next`), the author's own
+    logic (`logik`), or a NAMED hardware assumption (`hardware`) -- nothing else.
+    That is the whole user-facing contract: prove your own logic, name your
+    hardware assumptions; Gabbro and CompCert carry the rest (once Gabbro is
+    verified).
+
+    The conclusion already holds -- it is `zwei_fehler`. What does NOT yet hold
+    is the road from a real run to it, so the road travels as explicit premises
+    (named hypotheses, no axioms, no `sorry`). Each premise names the wave that
+    discharges it; as waves land, premises turn into proofs one by one:
+
+    * `hBridge`: every interleaving of well-formed bodies is `Gesittet`. Today
+      `lauf_aus_brav` (Wettlauf.lean) derives only half of it (W1-W2 over
+      suffixes); W3 (exclusion) and W5 (shared) stay premises there, and the
+      per-thread state behind a real `Lauf D` is still carried as `hEin`.
+    * `hSeqLogic`: valid sequential logic (`requires`/`ensures`) survives
+      interleaving (Owicki-Gries step). It stands nowhere yet; `exec_rahmen`
+      is the candidate premise for frame-disjointness.
+    * `hProbe`: the tick probe upholds the named deadline assumption
+      (`fristAlsAnnahme`, `fortschritt` with its probe). The deadline is named
+      here and measured by `sonden/sonde_tick.c` (sampling, no proof).
+    * `hLowering`: the lowering contract (`Absenkung`, at most 18 C forms per
+      primitive) plus quantitative CompCert preserving the `ops` count. The
+      count (17 measured, bound 18) is partially measured; the lexer run over
+      real products is still open. -/
+theorem ziel_nutzer_last (o : Ausgang V l Γ)
+    (hBridge : ∀ (l : Lauf D) (voll : Faden → List (Ereignis D)),
+      IstVerschraenkung l voll → Gesittet l)
+    (hSeqLogic : Prop)
+    (hProbe : Prop)
+    (hLowering : Absenkung) :
+    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
+    (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e) := by
+  have _ := hBridge
+  have _ := hSeqLogic
+  have _ := hProbe
+  have _ := hLowering
+  exact zwei_fehler o
+
+#print axioms Gabbro.Grammatik.ziel_nutzer_last
+
 end Gabbro.Grammatik
