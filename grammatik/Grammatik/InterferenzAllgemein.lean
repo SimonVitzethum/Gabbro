@@ -200,6 +200,91 @@ structure GemeinsamerLauf (Nb : Nebeneinander) where
   hSchuld : ∀ (f : Faden), f ∈ faeden → SchuldnerHaelt (code f)
   /-- Die Invariantensicht jedes Fadens liest am Eintritt unter gehaltenen Sperren. -/
   hInvSicht : ∀ (f : Faden), f ∈ faeden → InvSichtHaelt (code f) (eintritt f)
+  /-- The guard lock bounding step `k`: the take-to-release interval this chain
+      step resolves. `none` marks a lock-free section. One body execution with
+      several lock phases contributes one chain step PER section (see
+      `MehrphasenKoerper` below), not one step per body. -/
+  abschnittWache : Nat → Option D.Lock := fun _ => none
+  /-- Forever-thread residents (dispatcher, idle): chain inhabitants that never
+      return, hence never close a chain step. They stay members (`EwigBewohner`)
+      and hold the invariant at every section boundary they cross
+      (`EwigGrenzeHaelt`), without any return premise. -/
+  ewig : List Faden := []
+
+/-- One chain step is one lock-bounded section (take-to-release interval): where
+    the step's writer touches a carrier, the step names the guard of that
+    section -- a lock in the carrier's watch list, declared held by the writer
+    (the dynamic take at entry and release at return are the body's own
+    critical-section discipline, as in §21). This is the corrected grain: the
+    old "one body = one critical section" reading fits no body with several
+    lock phases (L1 take, release, L2 take, ...), which contributes one step per
+    phase (`MehrphasenKoerper`). -/
+def AbschnittGedeckt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) : Prop :=
+  ∀ (k : Nat) (g : Faden) (vor nach : World D),
+    J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+      ∀ (c : D.Tab ⊕ D.Glob), TraegerSchreibt (J.code g) c = true →
+        ∃ L : D.Lock, J.abschnittWache k = some L ∧ WaechterGehalten (J.code g) c ∧
+          (match c with
+          | .inl t => Sum.inl L ∈ D.braucht t
+          | .inr x => Sum.inl L ∈ D.gbraucht x) ∧
+          L ∈ D.haelt (J.code g)
+
+/-- A body with several lock phases: two chain steps by the same thread under
+    different guards. The chain resolves sections, not bodies. -/
+def MehrphasenKoerper (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) (f : Faden) : Prop :=
+  ∃ (k1 k2 : Nat) (L1 L2 : D.Lock),
+    L1 ≠ L2 ∧ J.schrittFaden[k1]? = some f ∧ J.schrittFaden[k2]? = some f ∧
+      J.abschnittWache k1 = some L1 ∧ J.abschnittWache k2 = some L2
+
+/-- Forever-thread membership: every resident is a chain inhabitant, so
+    interference reasoning covers it even though it never closes a step. -/
+def EwigBewohner (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) : Prop :=
+  ∀ (f : Faden), f ∈ J.ewig → f ∈ J.faeden
+
+/-- The non-terminating resident, explicitly: a forever-thread holds the
+    invariant at every section boundary it crosses -- both worlds of each of
+    its steps -- with no return premise owed (contrast the writer's
+    return-under-guard in §21 `hReturn`: residents never return, so there is
+    nothing to re-establish at an end that never comes). -/
+def EwigGrenzeHaelt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) : Prop :=
+  ∀ (f : Faden), f ∈ J.ewig → ∀ (k : Nat) (vor nach : World D),
+    J.schrittFaden[k]? = some f → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+      ∀ (c : D.Tab ⊕ D.Glob), I.inv c vor ∧ I.inv c nach
+
+/-- **Each section step stays in its writer's frame.** The `hSchritt` engine
+    read at section grain: one take-to-release interval contributes its
+    writer's frame, indivisible at chain level. Later sections consume this
+    the way §21 consumes `schritt_rahmen_aus_korn`. -/
+theorem abschnitt_schritt_rahmen (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (k : Nat) (g : Faden) (vor nach : World D)
+    (hkg : J.schrittFaden[k]? = some g) (hkv : J.welten[k]? = some vor)
+    (hkn : J.welten[k + 1]? = some nach) :
+    g ∈ J.faeden ∧ Rahmen (D.schreibt (J.code g)) (D.gschreibt (J.code g)) vor nach :=
+  J.hSchritt k g vor nach hkg hkv hkn
+
+/-- **Phases are distinct steps.** A body under two different guards occupies
+    two chain positions: the grain is one step per lock-bounded section. -/
+theorem mehrphasen_schritte_verschieden (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (f : Faden) (hM : MehrphasenKoerper Nb J f) :
+    ∃ (k1 k2 : Nat), k1 ≠ k2 ∧ J.schrittFaden[k1]? = some f ∧
+      J.schrittFaden[k2]? = some f := by
+  obtain ⟨k1, k2, L1, L2, hne, h1, h2, hw1, hw2⟩ := hM
+  refine ⟨k1, k2, ?_, h1, h2⟩
+  intro heq
+  subst heq
+  exact hne (Option.some_inj.mp (hw1.symm.trans hw2))
+
+/-- **Residents stay inhabitants.** A forever-thread never closes a step, but
+    it never leaves the chain either. -/
+theorem ewig_bleibt_faden (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (hE : EwigBewohner Nb J) (f : Faden) (hf : f ∈ J.ewig) : f ∈ J.faeden :=
+  hE f hf
+
+#print axioms Gabbro.Grammatik.abschnitt_schritt_rahmen
+#print axioms Gabbro.Grammatik.mehrphasen_schritte_verschieden
+#print axioms Gabbro.Grammatik.ewig_bleibt_faden
 
 /-! ## 4. Invariantenkontext und geteilte Deckung -/
 
