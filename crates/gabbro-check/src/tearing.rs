@@ -175,6 +175,104 @@ impl Report {
     }
 }
 
+/// The lane-47 inventory as the witness reads it: one constructor per
+/// measured emitted-C form. Eight rows were measured at both levels; the
+/// ninth (`Volatile`) is the unmeasured row the inventory and the ruling
+/// both carry openly instead of silently.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Shape {
+    SlotPlain,
+    GlobalPlain,
+    SlotCompound,
+    GuardedCompound,
+    Cas,
+    RelAcq,
+    MergeAdd,
+    LockOps,
+    Volatile,
+}
+
+/// The lane-70 verdict, executable. Admissions carry their atomicity price
+/// (the alignment, architecture, or ordering assumption the single access
+/// rests on); refusals carry the guarantee that redeems them; the
+/// unmeasured row stays open. The guarantee words match
+/// `Kind::guarantee` exactly -- `tests/tearing.rs` proves that
+/// mechanically, so the two wordings cannot drift apart unnoticed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ruling {
+    Admit { price: &'static str },
+    Refuse { guarantee: &'static str },
+    Open,
+}
+
+impl Shape {
+    /// All nine rows, in inventory order. A tenth form rules nothing until
+    /// it is ruled here: the `match` in `ruling` is exhaustive, so an
+    /// unruled form is a compile error, not a silent fourth case.
+    pub fn all() -> [Shape; 9] {
+        [
+            Shape::SlotPlain,
+            Shape::GlobalPlain,
+            Shape::SlotCompound,
+            Shape::GuardedCompound,
+            Shape::Cas,
+            Shape::RelAcq,
+            Shape::MergeAdd,
+            Shape::LockOps,
+            Shape::Volatile,
+        ]
+    }
+
+    /// Short name for reports, in inventory words.
+    pub fn name(self) -> &'static str {
+        match self {
+            Shape::SlotPlain => "slot plain assign",
+            Shape::GlobalPlain => "shared global plain assign",
+            Shape::SlotCompound => "slot compound assign",
+            Shape::GuardedCompound => "guarded compound assign",
+            Shape::Cas => "atomic compare-exchange",
+            Shape::RelAcq => "release store and acquire load",
+            Shape::MergeAdd => "relaxed merge-add",
+            Shape::LockOps => "lock take and release",
+            Shape::Volatile => "volatile register access",
+        }
+    }
+
+    /// The lane-70 verdict for this shape, with price or guarantee. Five
+    /// admissions, three refusals, one open row -- `tests/tearing.rs`
+    /// pins the split, so a reworded ruling that moves a row breaks the
+    /// build it documents.
+    pub fn ruling(self) -> Ruling {
+        match self {
+            Shape::SlotPlain => Ruling::Admit {
+                price: "aligned narrow store; no ordering claim beyond one non-torn write",
+            },
+            Shape::GlobalPlain => Ruling::Admit {
+                price: "eight byte alignment; one non-torn write, no RMW atomicity, no ordering",
+            },
+            Shape::SlotCompound => Ruling::Refuse {
+                guarantee: "exclusive access",
+            },
+            Shape::GuardedCompound => Ruling::Refuse {
+                guarantee: "exclusive access",
+            },
+            Shape::Cas => Ruling::Admit {
+                price: "the declared ordering itself, carried by a lock-prefixed instruction",
+            },
+            Shape::RelAcq => Ruling::Admit {
+                price: "x86_64 total store order plus the compiler barrier inside the builtin; no fence",
+            },
+            Shape::MergeAdd => Ruling::Refuse {
+                guarantee: "single-writer-per-cell",
+            },
+            Shape::LockOps => Ruling::Admit {
+                price: "atomicity lives outside the unit: prototypes only, the body is foreign",
+            },
+            Shape::Volatile => Ruling::Open,
+        }
+    }
+}
+
 /// Scan the emitted C of one unit. Every refusal is collected; the scan
 /// never stops at the first hit — a measurement that aborts at the first
 /// finding answers "at least one fires", not "which ones fire".
