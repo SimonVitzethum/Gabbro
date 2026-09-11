@@ -755,3 +755,79 @@ theorem ggesittet_ohne_wettlauf (h : GGesittet gl) (hz : CpuZugriff gl t)
 #print axioms Gabbro.Grammatik.ggesittet_ohne_wettlauf
 
 end Gabbro.Grammatik
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-! ## 12. The CPU-device seam as publish/await pairing -/
+
+/-- The CPU publish half of the seam: the driver hands the DMA-visible buffer
+    over (`gibt W` at `k`). The publish names the guard and the handoff index;
+    the device write it releases is named only in `SeamPair`. -/
+structure SeamPublish (gl : GLauf D) (W : D.Lock) (t : D.Tab) where
+  k : Nat
+  gibt : ∃ f, gl[k]? = some (GSchritt.cpu ⟨f, .gibt W⟩)
+  sichtbar : DmaSichtbar t
+
+/-- The CPU await half of the seam: the driver takes the buffer back
+    (`nimmt W` at `m`). The await names the guard and the take-back index;
+    which device write it follows is named only in `SeamPair`. -/
+structure SeamAwait (gl : GLauf D) (W : D.Lock) (t : D.Tab) where
+  m : Nat
+  nimmt : ∃ f h, gl[m]? = some (GSchritt.cpu ⟨f, .nimmt W h⟩)
+
+/-- Publish/await pairing across the seam: one publish, one device write, one
+    await, in that order. The pair is the transfer discipline around the named
+    content assumption `dma_inhalt`: order is proved below (`seam_pair_ordered`,
+    `seam_pair_race_free`), content is assumed per write (`seam_handoff`). -/
+structure SeamPair (gl : GLauf D) (W : D.Lock) (t : D.Tab) where
+  pub : SeamPublish gl W t
+  aw : SeamAwait gl W t
+  j : Nat
+  schreibt : gl[j]? = some (GSchritt.dma t)
+  vor : pub.k < j
+  nach : j < aw.m
+
+/-- Every publish/await pair is a guarded window: the bridge into §4. -/
+theorem SeamPair.wache (p : SeamPair gl W t) : GeraetWache gl W t p.pub.k p.aw.m p.j :=
+  { sichtbar := p.pub.sichtbar
+    gibt := p.pub.gibt
+    schreibt := p.schreibt
+    nimmt := p.aw.nimmt
+    vor := p.vor
+    nach := p.nach }
+
+/-- **The pair preserves order across the seam.** The publish precedes the
+    await through the device write -- the handoff edge and the take-back edge,
+    closed by transitivity. -/
+theorem seam_pair_ordered (p : SeamPair gl W t) : GHB gl p.pub.k p.aw.m := by
+  obtain ⟨f1, hk⟩ := p.pub.gibt
+  obtain ⟨f2, h, hm⟩ := p.aw.nimmt
+  exact GHB.trans _ _ _ (GHB.devVor W f1 p.pub.k p.j t hk p.schreibt p.vor)
+    (GHB.devNach W f2 h p.j p.aw.m t p.schreibt hm p.nach)
+
+/-- **The pair preserves race-freedom across the seam.** A CPU access ordered
+    against the pair endpoints (publish, await) is ordered against the device
+    write between them. The endpoint half stays the driver's obligation
+    (`haussen`); this theorem connects it to the write, nothing more. -/
+theorem seam_pair_race_free (p : SeamPair gl W t) (hz : CpuZugriff gl t)
+    (haussen : GHB gl hz.idx p.pub.k ∨ GHB gl p.aw.m hz.idx) :
+    GHB gl hz.idx p.j ∨ GHB gl p.j hz.idx :=
+  geraet_ohne_wettlauf gl W t p.pub.k p.aw.m p.j p.wache hz haussen
+
+/-- Ordering proved, content assumed -- at the seam pair. `dma_inhalt` stays
+    the NAMED hardware assumption: events carry no values, so the content the
+    device observes at `(gl, t, p.j)` is taken as a hypothesis, never derived. -/
+theorem seam_handoff (p : SeamPair gl W t) (hz : CpuZugriff gl t)
+    (haussen : GHB gl hz.idx p.pub.k ∨ GHB gl p.aw.m hz.idx)
+    (hinhalt : dma_inhalt D gl t p.j) :
+    (GHB gl hz.idx p.j ∨ GHB gl p.j hz.idx) ∧ dma_inhalt D gl t p.j :=
+  ⟨seam_pair_race_free p hz haussen, hinhalt⟩
+
+#print axioms Gabbro.Grammatik.seam_pair_ordered
+#print axioms Gabbro.Grammatik.seam_pair_race_free
+#print axioms Gabbro.Grammatik.seam_handoff
+
+end Gabbro.Grammatik
+
