@@ -41,6 +41,8 @@
     `runPasses_exceeds`    -- one pass over bound implies the named budget outcome.
     `per_pass_respected`   -- the umbrella: either all passes ran within bound,
                               or the run names the pass that did not.
+    `held_respected_gilt`    -- the `held <= K` umbrella, through `per_pass_respected`.
+    `bounded_respected_gilt` -- the `bounded N` umbrella, through `per_pass_respected`.
     `seqPasses_complete`   -- every sequence element within bound implies `ok`.
     `seqPasses_exceeds`    -- one element over bound implies the named outcome.
 
@@ -56,9 +58,11 @@
         not over an instrumentation of `Semantik.exec`. There is NO verified
         link from a `Stmt`/`Block` to its op list; threading a budget through
         `execStmt`/`execBlock` is cut, not faked.
-    C2  `held <=` and `bounded` are Gestalt only: budget forms, exhaustion
-        outcomes, and run/umbrella shapes beside `per_pass` (defs reusing
-        `runPass`/`runPasses_*`); no proofs, no link to `Semantik.exec`.
+    C2  `held <=` and `bounded` are budget forms, exhaustion outcomes, and
+        run/umbrella shapes beside `per_pass` (defs reusing
+        `runPass`/`runPasses_*`); the umbrellas are proved
+        (`held_respected_gilt`, `bounded_respected_gilt` through
+        `per_pass_respected`). No link to `Semantik.exec`.
     C3  No preservation claim across lowering: nothing about C forms,
         quantitative CompCert, or the probe. Same boundary as `Ziel.lean`.
     C4  Not wired into `Grammatik.lean`: lane scope forbids the index edit;
@@ -384,6 +388,16 @@ def held_respected (K : Nat) (paesse : List Pass) : Prop :=
     ∀ p ∈ paesse, totalCost p.2 ≤ K) ∨
   (∃ name gebraucht, runHeldPasses K paesse = .budget name gebraucht K)
 
+/-- The held lock respects its budget: the umbrella shape over `held <= K`
+    is the `per_pass` umbrella under the lock name. Either every pass ran
+    within `K`, or the run names the pass that did not -- through `runPass`
+    and `runPasses`, proved by `per_pass_respected`. -/
+theorem held_respected_gilt (K : Nat) (paesse : List Pass) :
+    held_respected K paesse :=
+  per_pass_respected ⟨K⟩ paesse
+
+#print axioms Gabbro.Grammatik.held_respected_gilt
+
 /-! ## Begrenzte Schleife: `bounded N ops` als Gestalt neben `per_pass`
 
     `retry` traegt `bounded N ops`, `forever` traegt `per_pass bounded N ops`: je
@@ -416,6 +430,16 @@ def bounded_respected (N : Nat) (paesse : List Pass) : Prop :=
   (∃ rest, runBoundedPasses N paesse = .ok rest ∧
     ∀ p ∈ paesse, totalCost p.2 ≤ N) ∨
   (∃ name gebraucht, runBoundedPasses N paesse = .budget name gebraucht N)
+
+/-- The bounded loop respects its budget: the umbrella shape over
+    `bounded N` is the `per_pass` umbrella under the loop name. Either
+    every pass ran within `N`, or the run names the pass that did not --
+    through `runPass` and `runPasses`, proved by `per_pass_respected`. -/
+theorem bounded_respected_gilt (N : Nat) (paesse : List Pass) :
+    bounded_respected N paesse :=
+  per_pass_respected ⟨N⟩ paesse
+
+#print axioms Gabbro.Grammatik.bounded_respected_gilt
 
 end Gabbro.Grammatik
 

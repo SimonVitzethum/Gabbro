@@ -257,6 +257,22 @@ theorem stabilKette_gilt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
   obtain ⟨_, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
   exact stabil hQ hR hd
 
+/-- **The chain from the checked steps.** Where every thread keeps every
+    frame-local `Q` across its own steps (`StabilSchritt` per thread), the
+    whole chain keeps `Q` (`StabilKette`): each link stays inside its
+    writer's frame (`hSchritt`), and the step shape closes it via `stabil`. -/
+theorem stabilKette_aus_Schritt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (W : D.Tab → Bool) (G : D.Glob → Bool) (Q : World D → Prop)
+    (hQ : HaengtAb W G Q)
+    (hS : ∀ (g : Faden), g ∈ J.faeden → StabilSchritt W G Q (J.code g)) :
+    StabilKette Nb J W G Q := by
+  refine ⟨hQ, ?_⟩
+  intro k g vor nach hkg hkv hkn hd
+  obtain ⟨hgm, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
+  exact hS g hgm hQ vor nach hR hd
+
+#print axioms Gabbro.Grammatik.stabilKette_aus_Schritt
+
 /-! ## 7. Gepruefte Eintrittsdisziplin: U003 und `RufPasst.hh` -/
 
 /-- **U003 je Rumpf, ohne Laufpraemisse.** Wer eine Invariante schuldet, haelt die
@@ -586,6 +602,38 @@ theorem geteiltGedecktMitAusnahmen_von_Ausnahmen (Nb : Nebeneinander)
   obtain ⟨hT, hA⟩ := h f hf g hg hne c hfc hgc
   exact ⟨hT, Or.inr hA⟩
 
+/-- **Invariant stability under the exceptions deck.** Where `Q` is the
+    invariant itself, the shared side needs no lock argument: every step --
+    foreign or own -- is carried by the context (`invErhalt_aus_Kontext`),
+    and the chain folds as usual (`kette_erhaelt`, the discharge engine
+    behind `allgemeinStabil`). `hDeck` is carried, not consumed: freed
+    carriers change nothing for invariant `Q`, since the invariant comes
+    from the context rather than from the lock. -/
+theorem allgemeinStabil_invariant_mitAusnahmen (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (c : D.Tab ⊕ D.Glob)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedecktMitAusnahmen Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (I.inv c))
+    (hInit : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀) :
+    ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → I.inv c σ := by
+  intro σ hletzte f hf
+  have hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (I.inv c vor ↔ I.inv c nach) := by
+    intro k g vor nach _ hkv hkn
+    exact invErhalt_aus_Kontext Nb J I hInv c vor nach
+      (List.mem_of_getElem? hkv) (List.mem_of_getElem? hkn)
+  have hall := kette_erhaelt J.welten J.schrittFaden J.hKette (I.inv c) (hInit f hf) hStep
+  have hlast : J.welten[J.welten.length - 1]? = some σ := by
+    rw [← List.getLast?_eq_getElem?]
+    exact hletzte
+  exact hall _ σ hlast
+
+#print axioms Gabbro.Grammatik.allgemeinStabil_invariant_mitAusnahmen
+
 /-! ## 16. G6-Einloesung: die Kindwelt kommt aus der eingetragenen Stelle -/
 
 /-- **Erzeugung nennt eine Welt.** Steht die eingetragene Stelle noch in der Kette,
@@ -650,6 +698,37 @@ theorem kindEintrittAusGabel_mem (Nb : Nebeneinander)
   cases heq : spawns.find? (fun s => decide (s.2.1 = kind)) with
   | none => simp [heq] at h
   | some s => simp only [heq] at h; exact List.mem_of_getElem? h
+
+/-- **The spawned entry keeps the invariant.** The named entry world is a
+    chain world (`kindEintrittAusSpawn_mem`), and the context holds the
+    invariant at every chain world -- so the child starts under it. -/
+theorem kindEintrittAusSpawn_inv (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (hInv : InvariantenKontext Nb J I)
+    (c : D.Tab ⊕ D.Glob) (s : SpawnEintrag) (σ : World D)
+    (h : KindEintrittAusSpawn Nb J s = some σ) : I.inv c σ :=
+  hInv c σ (kindEintrittAusSpawn_mem Nb J s σ h)
+
+/-- **The joined return keeps the invariant.** Same, at the reunion entry. -/
+theorem kindEintrittAusJoin_inv (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (hInv : InvariantenKontext Nb J I)
+    (c : D.Tab ⊕ D.Glob) (j : JoinEintrag) (σ : World D)
+    (h : KindEintrittAusJoin Nb J j = some σ) : I.inv c σ :=
+  hInv c σ (kindEintrittAusJoin_mem Nb J j σ h)
+
+/-- **The fork-list entry keeps the invariant.** Same, through the whole
+    spawn list (`kindEintrittAusGabel_mem`). -/
+theorem kindEintrittAusGabel_inv (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (hInv : InvariantenKontext Nb J I)
+    (c : D.Tab ⊕ D.Glob) (spawns : List SpawnEintrag) (kind : Faden) (σ : World D)
+    (h : KindEintrittAusGabel Nb J spawns kind = some σ) : I.inv c σ :=
+  hInv c σ (kindEintrittAusGabel_mem Nb J spawns kind σ h)
+
+#print axioms Gabbro.Grammatik.kindEintrittAusSpawn_inv
+#print axioms Gabbro.Grammatik.kindEintrittAusJoin_inv
+#print axioms Gabbro.Grammatik.kindEintrittAusGabel_inv
 
 /-! ## 17. G7-Einloesung: die eigene Belegung bleibt je Schritt fest -/
 
@@ -726,6 +805,52 @@ theorem fadenEnv_letzte_erhaelt (Nb : Nebeneinander)
     rw [← List.getLast?_eq_getElem?]
     exact hletzte
   exact hall _ σ hlast
+
+/-- **General stability with environments (N threads).** The main theorem
+    lifted to per-thread scopes: where every thread's world-and-scope claim
+    depends only on its own frame (per scope value), holds at the chain head,
+    and survives foreign steps in disjointness or by preservation and own
+    steps by preservation, it holds at the last world under every scope.
+    The foreign disjoint side closes via `stabil` over the checked step
+    frames (`hSchritt`); the chain folds at fixed scope
+    (`fadenEnv_letzte_erhaelt`). Scopes stay per-thread throughout -- no
+    thread ever reads another's. -/
+theorem allgemeinStabil_env (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : FadenEnvZusicherung Nb J)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden → ∀ (ρ : Env D (D.params (J.code f))),
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (fun σ => Q f σ ρ))
+    (hInit : ∀ (f : Faden), f ∈ J.faeden → ∀ (ρ : Env D (D.params (J.code f)))
+      (σ₀ : World D), J.welten[0]? = some σ₀ → Q f σ₀ ρ)
+    (hFremd : ∀ (f : Faden), f ∈ J.faeden → ∀ (ρ : Env D (D.params (J.code f)))
+      (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          Disjunkt (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+            (D.schreibt (J.code g)) (D.gschreibt (J.code g)) ∨ (Q f vor ρ ↔ Q f nach ρ))
+    (hEigen : ∀ (f : Faden), f ∈ J.faeden → ∀ (ρ : Env D (D.params (J.code f)))
+      (k : Nat) (vor nach : World D),
+      J.schrittFaden[k]? = some f → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (Q f vor ρ ↔ Q f nach ρ)) :
+    ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden →
+      ∀ (ρ : Env D (D.params (J.code f))), Q f σ ρ := by
+  intro σ hletzte f hf ρ
+  have hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (Q f vor ρ ↔ Q f nach ρ) := by
+    intro k g vor nach hkg hkv hkn
+    by_cases heq : g = f
+    · subst heq
+      exact hEigen g hf ρ k vor nach hkg hkv hkn
+    · obtain ⟨hgm, hR⟩ := J.hSchritt k g vor nach hkg hkv hkn
+      cases hFremd f hf ρ k g vor nach hgm heq hkg hkv hkn with
+      | inl hd => exact stabil (hAb f hf ρ) hR hd
+      | inr hiff => exact hiff
+  exact fadenEnv_letzte_erhaelt Nb J Q f ρ (hInit f hf ρ) hStep σ hletzte
+
+#print axioms Gabbro.Grammatik.allgemeinStabil_env
 
 #print axioms Gabbro.Grammatik.geteiltGedecktMitAusnahmen_aus_gedeckt
 #print axioms Gabbro.Grammatik.atomarAusgenommen_entlaedt
