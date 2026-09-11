@@ -41,36 +41,43 @@
     CUT-2 bitwise and shifts (`band`/`bor`/`bxor`/`shl`/`shr`, width proofs):
       COVERED below (same shape as CUT-1).
     CUT-3 floats, options, sums, grounds, quantifiers, `reaches`: COVERED below
-      (design only -- constructors, range arms, validity defs with Decidable
-      instances; soundness booked as future `cut3_sound`).
+      (constructors, range arms, validity defs with Decidable instances, and
+      soundness as `cut3_sound`; the quantifier arms take the body as an
+      explicit hypothesis -- the body elaboration is the remaining booked
+      piece, named as `Cut3Body`).
     CUT-4 variables and carrier accesses: COVERED below for the int fragment --
       name reads (`var`, de Bruijn index against `Γ`), global reads (`glob`,
       type from `D.gtyp`, guard `gdarf` recomputed), place reads (`slot`,
       index shape `0 .. count - 1` plus field type plus guard `darf`
       recomputed). Each with certRange arms, `GueltigAbleitung` side
       conditions, soundness cases, pos/neg decide probes.
-      REMAINDER, half booked: `durch`/`ptrOf`/`fnref` are COVERED below
-      (design only -- pointer and function types carry no range, so validity
-      is the recomputed shape, not a range; soundness booked as future
-      `cut4_sound`). Still booked: `altGlob`/`altSlot` (post-entry values,
+      REMAINDER, half covered: `ptrOf`/`fnref` are COVERED below (design plus
+      soundness as `cut4_sound`); `durch` is covered conditional on the
+      pointer it names (`Cut4Ptr` -- the pointer term is the remaining booked
+      piece). Still booked: `altGlob`/`altSlot` (post-entry values,
       not reads of the live world).
     CUT-5 resource contexts: COVERED below for straight-line int blocks --
       `bind` (context extension by the recomputed range), nullary `call`
       (`params = []`, `gruende = 0` recomputed), `ret`/`retWert` (result shape
       plus the linear balance `Λ.Perm V.ende` recomputed). Each with validity
       side conditions, soundness cases, pos/neg decide probes.
-      REMAINDER, COVERED below (design only): calls with arguments
+      REMAINDER, COVERED below (design plus soundness as `block5_sound`,
+      conditional on the argument lists): calls with arguments
       (`callArgs`/`callInd`/`bindCall`) recompute the argument-count shape and
       `gruende = 0`, and a call's `RufPasst` travels AS PROOF in the
       certificate. It quantifies over the arbitrary carrier types (`∀ t`,
       `∀ g`, `∀ L`), so no range table can recompute it the way `certRange`
       recomputes `darf`; carrying it is the honest shrink, and the day
-      `Tab`/`Glob` enumerate, the arm can check it instead. Soundness booked
-      as future `block5_sound`.
-    The fragment is int-typed throughout: every certificate elaborates to an
-    `Expr` of `int` type (reads) or a `Block` over int bindings (statements).
-    Non-int types -- `bool`, pointers, functions, options, sums -- stay booked
-    under CUT-3 and the CUT-4 remainder above.
+      `Tab`/`Glob` enumerate, the arm can check it instead. Each argument's
+      elaboration travels as an explicit hypothesis (`Block5Args`) -- the
+      remaining booked piece; the `bindCallElse` error branch stays booked.
+    The int fragment stands as it was: every `CertExpr` certificate elaborates
+    to an `Expr` of `int` type (reads) or a `Block` over int bindings
+    (statements). Beyond it, `cut3_sound`/`cut4_sound`/`block5_sound` cover
+    floats, options, sums, grounds, `reaches`, pointers, function references,
+    and calls with arguments -- conditional on the three named supplies
+    (`Cut3Body`, `Cut4Ptr`, `Block5Args`). Still booked: `altGlob`/`altSlot`,
+    the `bindCallElse` error branch, and the three supplies themselves.
 
   CHECK
     cd grammatik && lake env lean Grammatik/Zeugnis.lean
@@ -959,8 +966,9 @@ example : ∃ _ : Block TestD TestV false [] [] [], True :=
     is a `def` (`flVonTyp`, `ctxFlTyp`, `certFlTyp`, `certCut3Ok` with its two
     `Bool` helpers), with `Decidable` instances wherever the world is concrete.
     What the table CANNOT recompute is said out loud per arm; the soundness
-    cases (`cut3_sound`: a valid CUT-3 print elaborates to the corresponding
-    `Expr`) are BOOKED future work, not proved here -- no `theorem` below. -/
+    cases are proved below as `cut3_sound` (a valid CUT-3 print elaborates to
+    the corresponding `Expr`), with the quantifier bodies as the explicit
+    `Cut3Body` hypothesis. -/
 
 /-- The float bounds of a type, if it has any. Reads of non-float carriers
     land on `none` -- booked, not faked (mirror of `intVonTyp`). -/
@@ -1099,11 +1107,12 @@ instance decCut3Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut
 
 /-! ## CUT-4 remainder design rows: `durch`, `ptrOf`, `fnref`
 
-    DESIGN ONLY. Pointer and function types carry no range, so the range table
-    has nothing to recompute -- validity here is the SHAPE the table CAN check:
-    the table-number equation, the generated index shape, the guard. The
-    soundness cases (`cut4_sound`: a valid remainder print elaborates to the
-    corresponding `Expr`) are BOOKED future work, not proved here. -/
+    DESIGN rows plus soundness. Pointer and function types carry no range, so
+    the range table has nothing to recompute -- validity here is the SHAPE the
+    table CAN check: the table-number equation, the generated index shape, the
+    guard. The soundness cases are proved below as `cut4_sound` (a valid
+    remainder print elaborates to the corresponding `Expr`), with the `durch`
+    pointer as the explicit `Cut4Ptr` hypothesis. -/
 
 /-- The CUT-4 remainder as plain data: `ptrOf` names its table and number;
     `fnref` its function and signature number; `durch` the carrier, the field,
@@ -1139,15 +1148,16 @@ instance decCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut
 
 /-! ## CUT-5 remainder design rows: calls WITH arguments, carrying `RufPasst`
 
-    DESIGN ONLY. The existing `CertBlock.call` covers nullary callees; the arms
-    below generalise the recomputed shape from `params = []` to
-    `(D.params f).length = nargs` (and `(D.sigNr n).params.length = nargs`
+    DESIGN rows plus soundness. The existing `CertBlock.call` covers nullary
+    callees; the arms below generalise the recomputed shape from `params = []`
+    to `(D.params f).length = nargs` (and `(D.sigNr n).params.length = nargs`
     through a pointer), keep `gruende = 0` recomputed, and carry `RufPasst` AS
     PROOF -- the honest shrink the CUT-5 remainder above books: it quantifies
     over the arbitrary carrier types, so no range table can recompute it.
-    Each argument's elaboration, the `bindCallElse` error branch, and the
-    soundness cases (`block5_sound`: a valid remainder block elaborates to the
-    corresponding `Block`) are BOOKED future work, not proved here. -/
+    Each argument's elaboration travels as the explicit `Block5Args`
+    hypothesis of `block5_sound` below (a valid remainder block elaborates to
+    the corresponding `Block`); the `bindCallElse` error branch has no arm
+    and stays BOOKED. -/
 
 /-- Call certificates with arguments: `callArgs` names the callee and its
     argument COUNT (each argument's type is BOOKED -- `CertExpr` covers the int
@@ -1206,5 +1216,435 @@ instance decBlock5Ok (D : Deklaration) (V : Vertrag D) (Γ : Ctx)
     inferInstanceAs
       (Decidable ((D.params f).length = nargs ∧ D.erg f = some τ ∧ D.gruende f = 0 ∧
         certBlock5Ok D V (τ :: Γ) (nach D f Λ) Λ' rest))
+
+/-! ## CUT-3 soundness: floats, options, sums, grounds, quantifiers, `reaches`
+
+    Proved as `cut3_sound` below, with the `certFl_sound` helper for float
+    reads (`flVonTyp_eq`, `ctxFlTyp_var` mirror `intVonTyp_eq`, `ctxTyp_var`).
+    Every arm elaborates to the `Expr` constructor of the same shape; the
+    result type varies per arm, so the statement is `∃ τ, Expr ... τ`.
+    The two quantifier arms take the body as an explicit hypothesis
+    (`Cut3Body`): the certificate carries the guard only, so the body
+    elaboration is the remaining booked piece -- named here as data, not
+    faked with an invented body. -/
+
+/-- The float bounds of a type, if it has any: a `some` came from a `.fl`
+    type (mirror of `intVonTyp_eq`). -/
+theorem flVonTyp_eq {τ : Ty} {lo hi : Int × Int}
+    (h : flVonTyp τ = some (lo, hi)) : τ = .fl lo hi := by
+  cases τ with
+  | int _ _ => simp [flVonTyp] at h
+  | bool => simp [flVonTyp] at h
+  | opt _ => simp [flVonTyp] at h
+  | sum _ => simp [flVonTyp] at h
+  | grund _ => simp [flVonTyp] at h
+  | never => simp [flVonTyp] at h
+  | fl lo' hi' =>
+    simp [flVonTyp] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rfl
+  | fnptr _ => simp [flVonTyp] at h
+  | ptr _ _ => simp [flVonTyp] at h
+
+/-- What `ctxFlTyp` promises: a `some` names a variable that EXISTS (mirror
+    of `ctxTyp_var`). The `Var` witness is rebuilt here, never trusted from
+    the print. -/
+theorem ctxFlTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int × Int)
+    (h : ctxFlTyp Γ k = some (lo, hi)) : ∃ _ : Var Γ (.fl lo hi), True := by
+  induction Γ generalizing k with
+  | nil =>
+    cases k <;> simp [ctxFlTyp] at h
+  | cons τ Γ ih =>
+    cases k with
+    | zero =>
+      cases τ with
+      | int _ _ => simp [ctxFlTyp, flVonTyp] at h
+      | bool => simp [ctxFlTyp, flVonTyp] at h
+      | opt _ => simp [ctxFlTyp, flVonTyp] at h
+      | sum _ => simp [ctxFlTyp, flVonTyp] at h
+      | grund _ => simp [ctxFlTyp, flVonTyp] at h
+      | never => simp [ctxFlTyp, flVonTyp] at h
+      | fl lo' hi' =>
+        simp [ctxFlTyp, flVonTyp] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨.hier, trivial⟩
+      | fnptr _ => simp [ctxFlTyp, flVonTyp] at h
+      | ptr _ _ => simp [ctxFlTyp, flVonTyp] at h
+    | succ k =>
+      simp [ctxFlTyp] at h
+      obtain ⟨x, _⟩ := ih k h
+      exact ⟨.dort x, trivial⟩
+
+/-- Float-read soundness: a float table hit elaborates to a `.fl` expression
+    (mirror of the `var`/`glob`/`slot` cases of `zeugnis_sound`). -/
+theorem certFl_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (a : CertFl D) (lo hi : Int × Int) (h : certFlTyp D Γ Λ a = some (lo, hi)) :
+    ∃ _ : Expr D Γ Λ (.fl lo hi), True := by
+  cases a with
+  | varFl k =>
+    simp only [certFlTyp] at h
+    obtain ⟨x, _⟩ := ctxFlTyp_var Γ k _ _ h
+    exact ⟨Expr.var x, trivial⟩
+  | globFl g =>
+    simp only [certFlTyp] at h
+    cases ht : flVonTyp (D.gtyp g) with
+    | none => simp [ht] at h
+    | some q =>
+      obtain ⟨lo', hi'⟩ := q
+      simp only [ht] at h
+      by_cases hc : gdarf D g Λ
+      · rw [if_pos hc] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have heq := flVonTyp_eq ht
+        exact ⟨heq ▸ Expr.glob g hc, trivial⟩
+      · simp [hc] at h
+  | slotFl t f i =>
+    simp only [certFlTyp] at h
+    cases ha : certRange D Γ Λ i with
+    | none =>
+      cases ht : flVonTyp (D.typ t f) with
+      | none => simp [ha, ht] at h
+      | some _ => simp [ha, ht] at h
+    | some p =>
+      obtain ⟨l, h'⟩ := p
+      cases ht : flVonTyp (D.typ t f) with
+      | none => simp [ha, ht] at h
+      | some q =>
+        obtain ⟨lo', hi'⟩ := q
+        simp only [ha, ht] at h
+        by_cases hc : l = 0 ∧ h' = D.count t - 1 ∧ darf D t Λ
+        · rw [if_pos hc] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨ei, _⟩ := zeugnis_sound i _ _ ha
+          have heq := flVonTyp_eq ht
+          obtain ⟨hc1, hc2, hc3⟩ := hc
+          subst hc1
+          subst hc2
+          exact ⟨heq ▸ Expr.slot t f ei hc3, trivial⟩
+        · simp [hc] at h
+
+/-- The booked remainder of CUT-3, named as data: the quantifier body. The
+    certificate carries the guard only (`darf` -- the bound variable is the
+    generated index, named by the table, not the print), so the body, an
+    `Expr` over the extended context, has no print to elaborate from. Every
+    other arm needs nothing (`Unit`). -/
+def Cut3Body (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut3 D → Type
+  | .forallSlots t => Expr D (.index (D.count t) :: Γ) Λ .bool
+  | .existsSlots t => Expr D (.index (D.count t) :: Γ) Λ .bool
+  | _ => Unit
+
+/-- CUT-3 soundness: a valid CUT-3 print elaborates to the corresponding
+    `Expr` -- float comparisons to `fllt`/`flle` (via `certFl_sound`),
+    option prints to `none`/`some`/`istSome`, sum prints to `fall`, grounds
+    to `grund`, `reaches` to `reaches` (via `zeugnis_sound` for the endpoint
+    indices), and quantifiers to `forallSlots`/`existsSlots` behind the
+    supplied body. The `istSome` scrutinee must INTRODUCE the option
+    (`certCut3IsOpt` says so); any other scrutinee shape contradicts
+    validity, it is not elaborated. -/
+theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (c : CertCut3 D) (body : Cut3Body D Γ Λ c) (h : certCut3Ok D Γ Λ c) :
+    ∃ τ, ∃ _ : Expr D Γ Λ τ, True := by
+  cases c with
+  | fllt a b =>
+    simp only [certCut3Ok] at h
+    cases ha : certFlTyp D Γ Λ a with
+    | none => exact absurd ha h.1
+    | some _ =>
+      cases hb : certFlTyp D Γ Λ b with
+      | none => exact absurd hb h.2
+      | some _ =>
+        obtain ⟨ea, _⟩ := certFl_sound a _ _ ha
+        obtain ⟨eb, _⟩ := certFl_sound b _ _ hb
+        exact ⟨.bool, Expr.fllt ea eb, trivial⟩
+  | flle a b =>
+    simp only [certCut3Ok] at h
+    cases ha : certFlTyp D Γ Λ a with
+    | none => exact absurd ha h.1
+    | some _ =>
+      cases hb : certFlTyp D Γ Λ b with
+      | none => exact absurd hb h.2
+      | some _ =>
+        obtain ⟨ea, _⟩ := certFl_sound a _ _ ha
+        obtain ⟨eb, _⟩ := certFl_sound b _ _ hb
+        exact ⟨.bool, Expr.flle ea eb, trivial⟩
+  | none n =>
+    exact ⟨.opt n, Expr.none n, trivial⟩
+  | some e n =>
+    simp only [certCut3Ok] at h
+    obtain ⟨ee, _⟩ := zeugnis_sound e 0 (n - 1) h
+    exact ⟨.opt n, Expr.some ee, trivial⟩
+  | istSome o n =>
+    simp only [certCut3Ok] at h
+    obtain ⟨ho, hi⟩ := h
+    cases o with
+    | none m =>
+      simp only [certCut3IsOpt] at hi
+      have hrfl : m = n := of_decide_eq_true hi
+      subst hrfl
+      exact ⟨.bool, Expr.istSome (Expr.none m), trivial⟩
+    | some e m =>
+      simp only [certCut3IsOpt] at hi
+      have hrfl : m = n := of_decide_eq_true hi
+      subst hrfl
+      obtain ⟨ee, _⟩ := zeugnis_sound e 0 (m - 1) ho
+      exact ⟨.bool, Expr.istSome (Expr.some ee), trivial⟩
+    | fllt _ _ => simp [certCut3IsOpt] at hi
+    | flle _ _ => simp [certCut3IsOpt] at hi
+    | istSome _ _ => simp [certCut3IsOpt] at hi
+    | fall _ _ _ => simp [certCut3IsOpt] at hi
+    | grund _ _ => simp [certCut3IsOpt] at hi
+    | forallSlots _ => simp [certCut3IsOpt] at hi
+    | existsSlots _ => simp [certCut3IsOpt] at hi
+    | reaches _ _ _ _ => simp [certCut3IsOpt] at hi
+  | fall cs i p =>
+    simp only [certCut3Ok] at h
+    obtain ⟨hi, hp⟩ := h
+    cases hq : cs[i]? with
+    | none =>
+      have hle : cs.length ≤ i := (List.getElem?_eq_none_iff).mp hq
+      omega
+    | some slot =>
+      rw [hq] at hp
+      obtain ⟨h', hget⟩ := (List.getElem?_eq_some_iff).mp hq
+      have hget' : cs.get ⟨i, hi⟩ = slot := by
+        rw [List.get_eq_getElem]
+        exact hget
+      cases slot with
+      | none =>
+        cases p with
+        | none =>
+          simp only [certCut3PayloadOk] at hp
+          exact ⟨.sum cs, Expr.fall cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.keine),
+            trivial⟩
+        | some _ =>
+          simp [certCut3PayloadOk] at hp
+      | some q =>
+        obtain ⟨lo, hi2⟩ := q
+        cases p with
+        | none =>
+          simp [certCut3PayloadOk] at hp
+        | some e =>
+          simp only [certCut3PayloadOk] at hp
+          have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
+          obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
+          exact ⟨.sum cs, Expr.fall cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.zahl ee),
+            trivial⟩
+  | grund n r =>
+    simp only [certCut3Ok] at h
+    exact ⟨.grund n, Expr.grund n ⟨r, h⟩, trivial⟩
+  | forallSlots t =>
+    simp only [certCut3Ok] at h
+    exact ⟨.bool, Expr.forallSlots t body h, trivial⟩
+  | existsSlots t =>
+    simp only [certCut3Ok] at h
+    exact ⟨.bool, Expr.existsSlots t body h, trivial⟩
+  | reaches t f a b =>
+    simp only [certCut3Ok] at h
+    obtain ⟨hf, har, hbr, hL⟩ := h
+    obtain ⟨ea, _⟩ := zeugnis_sound a 0 (D.count t - 1) har
+    obtain ⟨eb, _⟩ := zeugnis_sound b 0 (D.count t - 1) hbr
+    exact ⟨.bool, Expr.reaches t f hf ea eb hL, trivial⟩
+
+/-! ### CUT-3 soundness probes: options, sums, grounds, quantifier guards -/
+
+/-- The float helpers compute on closed types (no world needed for the
+    lookup itself). -/
+example : flVonTyp (.fl (0, 1) (2, 3)) = some ((0, 1), (2, 3)) := rfl
+
+/-- The float context lookup hits at index `0`. -/
+example : ctxFlTyp [.fl (0, 1) (2, 3)] 0 = some ((0, 1), (2, 3)) := rfl
+
+/-- `none 5` elaborates to `Expr.none`. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut3_sound (.none 5) () trivial
+
+/-- `some 0` at bound `1`: the index shape `0 .. 0` recomputes. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut3_sound (.some (.lit 0) 1) () (by decide)
+
+/-- `istSome` over an introduced option at the same bound. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut3_sound (.istSome (.some (.lit 0) 1) 1) () (by decide)
+
+/-- FORGED bound: `istSome` over `some 0 @ 1`, claimed at `2` -- the bound
+    check fails, so the print is provably not valid. -/
+example : ¬ certCut3Ok TestD [] [] (.istSome (.some (.lit 0) 1) 2) := by decide
+
+/-- NESTED `istSome` under `istSome` is correctly rejected -- the scrutinee
+    must introduce the option, and `Bool` has no bound. -/
+example : ¬ certCut3Ok TestD [] []
+    (.istSome (.istSome (.some (.lit 0) 1) 1) 1) := by decide
+
+/-- The `zahl` case: `fall` at index `0` with a payload that recomputes the
+    cased range. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut3_sound (.fall [some (0, 0)] 0 (some (.lit 0))) () (by decide)
+
+/-- The caseless arm: `fall` at index `0` with no payload. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut3_sound (.fall [none] 0 none) () (by decide)
+
+/-- FORGED payload: the `zahl` arm carries `1`, cased at `(0, 0)`. -/
+example : ¬ certCut3Ok TestD [] []
+    (.fall [some (0, 0)] 0 (some (.lit 1))) := by decide
+
+/-- `grund 1 of 2` elaborates to `Expr.grund`. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut3_sound (.grund 2 1) () (by decide)
+
+/-- The quantifier guard, then `return`: `forallSlots` over the guarded
+    table elaborates behind the supplied body. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
+  cut3_sound (.forallSlots ()) Expr.wahr (by decide)
+
+/-- Same guard, existential half. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
+  cut3_sound (.existsSlots ()) Expr.wahr (by decide)
+
+/-! ## CUT-4 remainder soundness: `durch`, `ptrOf`, `fnref`
+
+    Proved as `cut4_sound` below. `ptrOf`/`fnref` elaborate directly from
+    the recomputed equations; `durch` takes the pointer it names as an
+    explicit hypothesis (`Cut4Ptr`) -- the pointer TERM has no print in
+    `CertCut4`, so its elaboration is the remaining booked piece, named
+    here as data. -/
+
+/-- The booked remainder of CUT-4, named as data: the pointer behind
+    `durch`. The arm checks the capability the pointer NAMES (table number,
+    index shape, guard); the pointer itself travels as proof. Every other
+    arm needs nothing (`Unit`). -/
+def Cut4Ptr (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut4 D → Type
+  | .durch _ _ n _ => Σ rw : Bool, Expr D Γ Λ (.ptr n rw)
+  | _ => Unit
+
+/-- CUT-4 remainder soundness: a valid remainder print elaborates to the
+    corresponding `Expr` -- `ptrOf`/`fnref` from the recomputed equations,
+    `durch` from the named pointer plus the recomputed index shape and
+    guard (via `zeugnis_sound`). -/
+theorem cut4_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (c : CertCut4 D) (s : Cut4Ptr D Γ Λ c) (h : certCut4Ok D Γ Λ c) :
+    ∃ τ, ∃ _ : Expr D Γ Λ τ, True := by
+  cases c with
+  | ptrOf t n rw =>
+    simp only [certCut4Ok] at h
+    exact ⟨.ptr n rw, Expr.ptrOf t n h rw, trivial⟩
+  | fnref f n =>
+    simp only [certCut4Ok] at h
+    exact ⟨.fnptr n, Expr.fnref f n h, trivial⟩
+  | durch t f n i =>
+    simp only [certCut4Ok] at h
+    obtain ⟨ht, hrng, hL⟩ := h
+    obtain ⟨rw, p⟩ := s
+    obtain ⟨ei, _⟩ := zeugnis_sound i 0 (D.count t - 1) hrng
+    exact ⟨D.typ t f, Expr.durch p t ht f ei hL, trivial⟩
+
+/-! ### CUT-4 remainder soundness probes -/
+
+/-- `ptrOf` the table at number `0` elaborates to the pointer capability. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut4_sound (.ptrOf () 0 true) () (by decide)
+
+/-- `fnref` the nullary function at signature `0`. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
+  cut4_sound (.fnref false 0) () (by decide)
+
+/-- `durch` the named pointer: table number, generated index shape, and
+    guard recompute; the pointer travels as proof. -/
+example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
+  cut4_sound (.durch () () 0 (.wide 0 10 (.lit 3)))
+    ⟨true, Expr.ptrOf () 0 rfl true⟩ (by decide)
+
+/-! ## CUT-5 remainder soundness: calls WITH arguments, carrying `RufPasst`
+
+    Proved as `block5_sound` below. The argument COUNT shape and
+    `gruende = 0` recompute (as in `certBlockGueltig`); the carried
+    `RufPasst` is forwarded, never recomputed. Each call's argument list
+    travels as an explicit hypothesis (`Block5Args`): `CertBlock5` carries
+    the count only, and each argument's elaboration at arbitrary param `Ty`
+    is the remaining booked piece -- named here as data. The
+    `bindCallElse` error branch has no arm at all and stays booked. -/
+
+/-- The booked remainder of CUT-5, named as data: the argument list each
+    call site needs. `CertBlock5` carries the COUNT (`nargs`, checked
+    against the callee); the elaboration of each argument -- an `Expr` at
+    arbitrary param `Ty`, which `CertExpr` cannot print -- is supplied here,
+    with the pointer behind `callInd`. -/
+inductive Block5Args (D : Deklaration) (V : Vertrag D) :
+    (Γ : Ctx) → (Λ Λ' : List (Res D)) → CertBlock5 D V Γ Λ Λ' → Type where
+  | nil : Block5Args D V Γ Λ Λ .nil
+  | callArgs (f : D.Fn) (nargs : Nat) (hp : RufPasst D V (D.signatur f) Λ)
+      (args : Args D Γ Λ (D.params f))
+      {r : CertBlock5 D V Γ (nach D f Λ) Λ'} (rest : Block5Args D V Γ (nach D f Λ) Λ' r) :
+      Block5Args D V Γ Λ Λ' (CertBlock5.callArgs f nargs hp r)
+  | callInd (n nargs : Nat) (hp : RufPasst D V (D.sigNr n) Λ)
+      (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      {r : CertBlock5 D V Γ (nachSig D (D.sigNr n) Λ) Λ'}
+      (rest : Block5Args D V Γ (nachSig D (D.sigNr n) Λ) Λ' r) :
+      Block5Args D V Γ Λ Λ' (CertBlock5.callInd n nargs hp r)
+  | bindCall (f : D.Fn) (nargs : Nat) (τ : Ty) (hp : RufPasst D V (D.signatur f) Λ)
+      (args : Args D Γ Λ (D.params f))
+      {r : CertBlock5 D V (τ :: Γ) (nach D f Λ) Λ'}
+      (rest : Block5Args D V (τ :: Γ) (nach D f Λ) Λ' r) :
+      Block5Args D V Γ Λ Λ' (CertBlock5.bindCall f nargs τ hp r)
+
+/-- CUT-5 remainder soundness: a valid remainder block IMPLIES the judgment
+    behind the supplied argument lists -- there EXISTS an accepted `Block`.
+    `callArgs`/`callInd` forward the carried `RufPasst` with the recomputed
+    count shape and `gruende = 0`; `bindCall` additionally extends the
+    context by the checked result type. (The count itself is checked but not
+    load-bearing for the elaboration: the supplied `Args` carry their own
+    length -- the honest shrink is the supply, not the count.) -/
+theorem block5_sound {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (b : CertBlock5 D V Γ Λ Λ')
+    (s : Block5Args D V Γ Λ Λ' b) :
+    certBlock5Ok D V Γ Λ Λ' b → ∃ _ : Block D V l Γ Λ Λ', True := by
+  induction s with
+  | nil => intro _; exact ⟨Block.nil, trivial⟩
+  | callArgs f nargs hp args rest ih =>
+    intro h
+    simp only [certBlock5Ok] at h
+    obtain ⟨_, hgr, hr⟩ := h
+    obtain ⟨blk, _⟩ := ih hr
+    exact ⟨Block.cons (Stmt.call f args hp hgr) blk, trivial⟩
+  | callInd n nargs hp p args rest ih =>
+    intro h
+    simp only [certBlock5Ok] at h
+    obtain ⟨_, hgr, hr⟩ := h
+    obtain ⟨blk, _⟩ := ih hr
+    exact ⟨Block.cons (Stmt.callInd p args hp hgr) blk, trivial⟩
+  | bindCall f nargs τ hp args rest ih =>
+    intro h
+    simp only [certBlock5Ok] at h
+    obtain ⟨_, he, hgr, hr⟩ := h
+    obtain ⟨blk, _⟩ := ih hr
+    exact ⟨Block.bindCall f args he hp hgr blk, trivial⟩
+
+/-! ### CUT-5 remainder soundness probes -/
+
+/-- The nullary call with an (empty) argument list, then the empty tail:
+    params empty and no reasons, so the table accepts. (The implicits are
+    named so that `f` elaborates against a concrete `Fn` type.) -/
+example : ∃ _ : Block TestD TestV false [] [] [], True :=
+  block5_sound (.callArgs false 0 TestHp .nil)
+    (Block5Args.callArgs (D := TestD) (V := TestV) (Γ := []) (Λ := []) (Λ' := [])
+      false 0 TestHp Args.nil .nil) (by decide)
+
+/-- The indirect nullary call through signature `0`: the pointer and the
+    (empty) argument list travel as proof. -/
+example : ∃ _ : Block TestD TestV false [] [] [], True :=
+  block5_sound (.callInd 0 0 TestHp .nil)
+    (Block5Args.callInd (D := TestD) (V := TestV) (Γ := []) (Λ := []) (Λ' := [])
+      0 0 TestHp (Expr.fnref false 0 rfl) Args.nil .nil) (by decide)
+
+/-- A call WITH a param is no nullary call: `RufPasst` goes through, but the
+    count shape fails -- the certificate is honestly rejected. -/
+example : ¬ certBlock5Ok TestD TestV [] [] []
+    (.callArgs true 0 TestHp1 .nil) := by decide
+
+#print axioms cut3_sound
+#print axioms cut4_sound
+#print axioms block5_sound
 
 end Gabbro.Grammatik
