@@ -339,4 +339,87 @@ theorem verlauf_einfaedig (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
 #print axioms Gabbro.Grammatik.Marken.verlauf_stufentreu
 #print axioms Gabbro.Grammatik.Marken.verlauf_einfaedig
 
+/-! ## 7. Die Projektion -- was ohne den Index schliesst (Schnitt C2, Anteil hier)
+
+    Die eigentliche Projektion (`marke_eindeutig_aus_einfaedig`,
+    `gesittet_aus_einfaedig`) braucht `Lauf D` und steht darum in
+    `Wettlauf.lean` §7 -- sie kann nicht hier stehen (Importrichtung:
+    `Wettlauf` liest `Marken`, nie umgekehrt). Was OHNE den Indexeintrag
+    schliesst, steht hier: die beiden `Anfang`-Faelle als benannte Saetze,
+    die Verbindung beider Invarianten in EINEM Satz, die Eindeutigkeit von
+    Faden UND Stufe an einer besessenen Marke, und die W4-Form ueber den
+    markenlosen Laeufen -- leer, einzeln, ohne Marken: wo keine Marke
+    getragen wird, ist keine zu verwechseln. -/
+
+/-- Der Anfang ist stufentreu: keine Hand, keine verletzte Stufe. -/
+theorem anfang_stufentreu (κ : MarkDekl) : StufenTreu κ Anfang := by
+  intro m f s h
+  simp [Anfang] at h
+
+/-- Der Anfang ist einfaedrig: keine Hand, keine zweite. -/
+theorem anfang_einfaedig : StandEinfaedig Anfang := by
+  intro m f g hf hg
+  obtain ⟨s₁, h1⟩ := hf
+  simp [Anfang] at h1
+
+/-- Jeder erreichbare Stand traegt BEIDE Formen in einem Satz. -/
+theorem verlauf_treu_und_einfaedig (κ : MarkDekl) {σ : Stand}
+    (v : Verlauf κ σ) : StufenTreu κ σ ∧ StandEinfaedig σ :=
+  ⟨verlauf_stufentreu κ v, verlauf_einfaedig κ v⟩
+
+/-- Was ein erreichbarer Stand haelt, steht unter der Stufenzahl -- die
+    Besitzform der Stufentreue, benannt fuer die spaetere Verdrahtung. -/
+theorem verlauf_besitz_stufe (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ)
+    (f : Faden) (m : Marke) (h : Besitzt σ f m) :
+    ∃ s, s < κ.stufen m ∧ σ m = some (f, s) := by
+  obtain ⟨s, hs⟩ := h
+  exact ⟨s, verlauf_stufentreu κ v m f s hs, hs⟩
+
+/-- Eine besessene Marke nennt Faden UND Stufe eindeutig: zwei Haende an
+    derselben Marke sind dieselbe Hand auf derselben Stufe. -/
+theorem stand_besitz_eindeutig {σ : Stand} (hσ : StandEinfaedig σ)
+    (m : Marke) (f g : Faden) (s t : Nat)
+    (h1 : σ m = some (f, s)) (h2 : σ m = some (g, t)) :
+    f = g ∧ s = t := by
+  have hst : (f, s) = (g, t) := Option.some_inj.mp (h1.symm.trans h2)
+  exact ⟨hσ m f g ⟨s, h1⟩ ⟨t, h2⟩, congrArg Prod.snd hst⟩
+
+/-- Der leere Lauf ist einfaedrig: kein Ereignis, keine Marke. -/
+theorem einfaedig_leer : Einfaedig [] := by
+  intro i j f g m s s' ei ej hi hj _ _
+  simp at hi
+
+/-- Der einzelne Schritt ist einfaedrig: beide Treffer meinen denselben. -/
+theorem einfaedig_einzel (q : Schritt) : Einfaedig [q] := by
+  intro i j f g m s s' ei ej hi hj _ _
+  have hlen : ∀ (k : Nat) (x : Schritt), [q][k]? = some x → x = q := by
+    intro k x hx
+    cases k with
+    | zero => exact (by simpa using hx : q = x).symm
+    | succ k => simp at hx
+  have e1 := hlen i _ hi
+  have e2 := hlen j _ hj
+  have hf : f = q.faden := congrArg Schritt.faden e1
+  have hg : g = q.faden := congrArg Schritt.faden e2
+  rw [hf, hg]
+
+/-- Wo keine Marke getragen wird, ist keine zu verwechseln: ein markenloser
+    Lauf erfuellt die W4-Form leer. -/
+theorem einfaedig_ohne_marken (l : Lauf)
+    (h : ∀ (i : Nat) (f : Faden) (ei : Ereignis),
+      l[i]? = some (Schritt.mk f ei) → ∀ (m : Marke) (s : Nat),
+      Res.marke m s ∉ ei.lambda) :
+    Einfaedig l := by
+  intro i j f g m s s' ei ej hi hj hmi hmj
+  exact absurd hmi (h i f ei hi m s)
+
+#print axioms Gabbro.Grammatik.Marken.anfang_stufentreu
+#print axioms Gabbro.Grammatik.Marken.anfang_einfaedig
+#print axioms Gabbro.Grammatik.Marken.verlauf_treu_und_einfaedig
+#print axioms Gabbro.Grammatik.Marken.verlauf_besitz_stufe
+#print axioms Gabbro.Grammatik.Marken.stand_besitz_eindeutig
+#print axioms Gabbro.Grammatik.Marken.einfaedig_leer
+#print axioms Gabbro.Grammatik.Marken.einfaedig_einzel
+#print axioms Gabbro.Grammatik.Marken.einfaedig_ohne_marken
+
 end Gabbro.Grammatik.Marken

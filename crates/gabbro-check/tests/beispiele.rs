@@ -521,6 +521,83 @@ group G over { T, U } {
     );
 }
 
+/// **Probe 738: the `H020` must-pass shapes stay silent, and 737/739 fall exactly once.**
+///
+/// `H020` refuses a write whose only cover is the `effects { locks L }` line. These two
+/// shapes carry site cover and must stay clean: a write under its `locks` block, and
+/// the `beispiele/01` idiom -- a naked write under `requires Held(L)`, where the duty
+/// stands at the caller. The second half pins the two gift files to exactly one `H020`
+/// each: the file-level gift run only asserts the code FIRES, so purity (no `H007`
+/// beside it, no second site) is held HERE.
+#[test]
+fn h020_silence_and_single_fire_738() {
+    let still = [
+        // Every write under the guard the line names.
+        "module probe::h020_guarded {\n\
+         table T count 8 { slot { v : u32, } }\n\
+         lock L protects { T } rank 0 held <= 100 ops;\n\
+         impl fn guarded(j : index into T, m : index into T)\n\
+             effects { writes T.slots, locks L }\n\
+             costs   <= 16 ops\n\
+         {\n\
+             locks L {\n\
+                 T.slots[j].v = 0;\n\
+                 T.slots[m].v = 1;\n\
+             }\n\
+         }\n\
+         }\n",
+        // The `beispiele/01` idiom: naked write, duty at the caller via `requires`.
+        "module probe::h020_required {\n\
+         table T count 8 { slot { v : u32, } }\n\
+         lock L protects { T } rank 0 held <= 100 ops;\n\
+         impl fn required(j : index into T)\n\
+             requires Held(L)\n\
+             effects { writes T.slots, locks L }\n\
+             costs   <= 8 ops\n\
+         {\n\
+             T.slots[j].v = 1;\n\
+         }\n\
+         }\n",
+    ];
+    for (n, quelle) in still.iter().enumerate() {
+        let (baum, mut absagen) = gabbro_syntax::lies("still-738.gab", quelle);
+        let _ = gabbro_check::pruefe(&baum, &mut absagen);
+        let fehler: Vec<&str> = absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect();
+        assert!(
+            fehler.is_empty(),
+            "still shape {n} (probe 738) must stay silent, fell with {fehler:?}:\n{}",
+            absagen.zeige(quelle)
+        );
+    }
+    for datei in [
+        "737-line-covers-write-without-guard.gab",
+        "739-hull-redeems-line-write-stays-naked.gab",
+    ] {
+        let pfad = wurzel().join("gift").join(datei);
+        let quelle =
+            std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        let _ = gabbro_check::pruefe(&baum, &mut absagen);
+        let fehler: Vec<&str> = absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect();
+        assert_eq!(
+            fehler,
+            ["H020"],
+            "{datei} must fall exactly once with H020, fell with {fehler:?}:\n{}",
+            absagen.zeige(&quelle)
+        );
+    }
+}
+
 /// **«B26»: a `requires` at a register is COUNTED, since 2026-08-24.**
 ///
 /// Until then no pass read `RegDecl::requires` -- the clause parsed and vanished.

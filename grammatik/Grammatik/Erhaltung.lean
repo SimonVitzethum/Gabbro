@@ -68,9 +68,12 @@
      C5  The 19 admissions stay TEMPLATE rulings semantically: Lean proves
          each named shape is tabled (`ruledB_voll`), not that its price is
          adequate. Each named shape still owes its one-by-one semantic
-         decision the way `?:` got its (`bedingtEntscheid`); the 29 open
-         slots are proved debt (`tafel_nicht_geschlossen`), countable via
-         the status field.
+          decision the way `?:` got its (`bedingtEntscheid`); the 29 open
+          slots are proved debt (`tafel_nicht_geschlossen`), countable via
+          the status field. Lane 121 flips four of them in `tafel` itself
+          (`zeigerIndex`, `abbruchStmt`, `logUndOder`, `fortStmt`, each row
+          citing its `messung/CFORM-REGEL-*.md` ruling); adequacy still owed
+          per slot, the debt proof now rests on the remaining open rows.
       C6  Der Nachpruefer bleibt Schnitt: `nachpruefer` (§10) rechnet
           Laufartefakte (Gabbro-Stellen, Zertifikat, Aliaslast, Kostenaussage,
           Paare, Anweisungszahl) zu einem Urteil nach, und
@@ -85,6 +88,10 @@
           unveraendert aus `tafel` nachgerechnet. Lean beweist damit nichts
           ueber die Angemessenheit eines Preises (C5 gilt weiter); `tafel`
           selbst bleibt eingefroren, und `satz_tafel` spricht weiter von ihr.
+          Bahn 121: `tafel` traegt die vier Zulassungen seither unmittelbar
+          (Statusfeld entschieden mit Preis, je Zeile mit Regelnotiz belegt);
+          `tafelNeu` rechnet denselben Stand nach. Eingefroren heisst seither:
+          nur Statusfeld-Entscheidungen, sonst keine Aenderung.
 
    No `mathlib`, no `sorry`, no `admit`, no `axiom`, and no new axiom
      introduced: `#print axioms` at the end names all standard axioms the
@@ -284,7 +291,7 @@ def tafel : List EntscheidZiel :=
    .benannt .noreturn (.aufListe "proven non-return; the fall-through export needs D005 plus the tag invariant"),
    .benannt .asmEins (.aufListe "exactly one emission site; no downstream prover (16.2 (7))"),
    .luecke .zeigerArithmetik .offen,
-   .luecke .zeigerIndex .offen,
+   .luecke .zeigerIndex (.aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"),  -- ruled: messung/CFORM-REGEL-ZEIGERINDEX.md
    .luecke .cInclude .offen,
    .luecke .cTypedef .offen,
    .luecke .cDefine .offen,
@@ -297,17 +304,17 @@ def tafel : List EntscheidZiel :=
    .luecke .deref .offen,
    .luecke .adressVon .offen,
    .luecke .bitNicht .offen,
-   .luecke .abbruchStmt .offen,
+   .luecke .abbruchStmt (.aufListe "Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei Emissionszeilen; kein Nutzerpfad; kein UB"),  -- ruled: messung/CFORM-REGEL-BREAK.md
    .luecke .schrittStmt .offen,
    .luecke .cSizeof .offen,
-   .luecke .logUndOder .offen,
+   .luecke .logUndOder (.aufListe "bedingte Auswertung mit Sequenzpunkt; Ergebnis 0 oder 1; Klammerpflicht beim Erzeuger"),  -- ruled: messung/CFORM-REGEL-LOGUNDODER.md
    .luecke .doubleTyp .offen,
    .luecke .schleifeStmt .offen,
    .luecke .typOfErw .offen,
    .luecke .floatTyp .offen,
    .luecke .unerreichbarBuiltin (.aufListe "kept at one site: D005 plus the tag invariant; four deletable sites out of the generator"),
    .luecke .wennGnuC .offen,
-   .luecke .fortStmt .offen,
+   .luecke .fortStmt (.aufListe "Steuerung des Laufenskeletts aus einer Emissionszeile; kein Nutzerpfad; kein UB"),  -- ruled: messung/CFORM-REGEL-CONTINUE.md
    .luecke .statikAssert .offen,
    .luecke .pfeilZugriff (.aufListe "generous reading of field access"),
    .luecke .boolTyp (.aufListe "generous reading: <stdbool.h> for _Bool"),

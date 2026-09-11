@@ -38,6 +38,7 @@
   | `Marken.lean`     | lineare Marken als Konstruktion: Besitz als Zustand, Einfaedigkeit als Gestalt |
   | `Fristlauf.lean`  | Fristablauf zwischen Pruefung und Lauf als benanntes Ergebnis, keine Wanduhr |
   | `Adressraum.lean` | Nutzerspeicher als Gestalt: gepruefte Kopie oder benannte Luecke          |
+  | `LesenStabil.lean` | lesestabile Form: Vertragsgelesenes im Rahmen, Kette bis zum letzten Lauf |
 -/
 import Grammatik.Typen
 import Grammatik.Syntax
@@ -62,3 +63,4 @@ import Grammatik.Extraktion
 import Grammatik.Marken
 import Grammatik.Fristlauf
 import Grammatik.Adressraum
+import Grammatik.LesenStabil

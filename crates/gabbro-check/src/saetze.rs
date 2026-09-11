@@ -2690,6 +2690,20 @@ pub const SPERREN: &[Satz] = &[
                      grammatik/Grammatik/Geraet.lean (`GeraetWache`, C1)",
     },
     Satz {
+        name: "sperren effects-locks-zeile",
+        kennungen: &["H020"],
+        aussage: "A direct write to a lock-protected place needs more cover
+                  than the `effects { locks L }` line alone (`H020`).",
+        vorbehalt: "**Exempt with named owners:** `spec fn`, `requires
+                    Held(L)`, RCU-touched places, reads, calls. Disjoint from
+                    `H007` by construction (no line is H007's case).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/737 (must fall) and 739 (hull-redeemed
+                      boundary); inline test h020_silence_and_single_fire_738
+                      in beispiele.rs.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs (`h020`)",
+    },
+    Satz {
         name: "sperren.kontext",
         kennungen: &["H013"],
         aussage: "An `entry` point reaches only carriers whose execution context it declares \

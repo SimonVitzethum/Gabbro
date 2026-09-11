@@ -665,7 +665,7 @@ not fall.
 | `advances a -> b` | the body's Λ starts with `marke m a` and the `advances` statement moves it (§7) | `Stmt.advances`, `Res.marke` |
 | `retires m from s …` | the body consumes `m`; the assumption is named | `Stmt.retires m s h a` |
 | `effects { writes T, consumes m, allocs m' }` | the contract `V` of the body | `Vertrag`, `RufPasst`, `Λ` |
-| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | `Budget.lean` `runOps_within` / `per_pass_respected` (no axioms); the deadline mapping is `Ziel.lean` `fristAlsAnnahme` (a definition — the existence theorem over it was withdrawn 2026-09-10 as vacuous) |
+| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | `Budget.lean` `runOps_within` / `per_pass_respected` (no axioms); `held <=` and `bounded` are the same budget under the lock and loop names (`held_respected`, `bounded_respected` — defs only, no theorems); the deadline mapping is `Ziel.lean` `fristAlsAnnahme` (a definition — the existence theorem over it was withdrawn 2026-09-10 as vacuous) |
 | `deadline <= n ops arch X falsifier p` | **by when in cycles on `X`** — a hardware outcome, not a second budget | `Hardware.fortschritt a` (the named `progress`-class assumption with its probe); §18 («SG-22») |
 | `decreases e` | the recursion depth is a parameter of the meaning | `rufAt (fuel)` → `logik (abstieg f)` |
 | `by induction over d` | names the scheme; no term | none |
@@ -1135,7 +1135,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
 | `observed by a` | the other side is the assumption `a` | `D.Annahme` |
 | `group G over { T, U } { invariant I }` | `I` has carriers `T` and `U`: owed by every function that writes either («SG-10»); `U003` (a function writing two carriers holds all their locks) is the `braucht` of each access, `U005` (two ranks equal) is `keine_verklemmung`'s premise, `U006` (leaving between the writes) is `schuldet` at every `return` | `D.Inv` with `traeger = [T, U]` |
-| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently. The joint run of N declared bodies is `GemeinsamerLauf` (`InterferenzAllgemein.lean`): one world chain, each step in its own frame, every pair declared; lock-shared carriers carry an invariant each (`TraegerInv`), and `AllgemeinStabil` proves it: sequentially valid assertions survive to the last chain world (shared-side preservation per step assumed, entry validity at the chain head) |
+| `concurrent { f, g }` | the declared-concurrent bodies («SG-23»): pairwise non-interference over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots fall (`W002`), incomplete hulls refuse (`W003`) | `Nebeneinander` premise in `Wettlauf.lean` — what stands in no set never runs concurrently. The joint run of N declared bodies is `GemeinsamerLauf` (`InterferenzAllgemein.lean`): one world chain, each step in its own frame, every pair declared; lock-shared carriers carry an invariant each (`TraegerInv`), and `AllgemeinStabil` proves it: sequentially valid assertions survive to the last chain world (shared-side preservation per step assumed, entry validity at the chain head). Reads already overlap freely under W001 (only writes need the lock); the stable-reads shape below names why they stay stable |
 | `accumulates` (§1) | a global plus a generated `merge` assignment; `per cpu N` is the cell table | SUGAR |
 
 **What the discipline proves — over interleavings, since the evening of 2026-09-09.** Every
@@ -1200,6 +1200,33 @@ Volatile register access carries no verdict (no measured unit emits a
 volatile site; the `fluechtig` table row stays open, carried as an axiom
 by name). Any later lane that cites a machine shape names the level, and
 any port names the arch and re-measures the atomar rows.
+
+### Stable reads — the read half beside the write half
+
+A carrier that no declared-concurrent body writes is read-only shared
+data, and every concurrent read of it is stable: the foreign frame never
+touches it, so disjointness holds by absence of writes, not by lock. The
+pair check refuses overlapping shared writes and lets shared reads
+overlap freely — and the stability theorems say why: a foreign step in a
+disjoint frame preserves every assertion that reads only its own frame.
+The config-table shape is the standing instance (dispatch tables,
+capability tables, calibration constants, filled before the concurrent
+set starts and written by nobody inside it). What the shape costs is
+stated beside it: the read-only claim is a whole-set claim, so adding a
+writer anywhere in the set moves the carrier out of this subsection and
+under a lock, an atomic, or a pairing rule. Lean:
+`Grammatik/LesenStabil.lean` (`RequiresLiestIn`, `EnsuresLiestIn`,
+`InvarianteLiestIn` via hull bridges; `LesenStabilKette` folds the
+whole-set claim to the last world; `requiresStabil_kette`,
+`ensuresStabil_kette`, `invarianteStabil_kette`).
+
+Contract reads stay inside the frame: `requires`/`ensures`/`invariante`
+evaluations read only their frame (`haengtAb_requires_bei_Lesen`,
+`haengtAb_ensures_bei_Lesen`, `haengtAb_invariante_bei_Lesen`), and a
+foreign step disjoint from it preserves the verdict on both sides. Lock-
+shared carriers are excluded here by construction (ordered by
+happens-before, not preserved by stability); the footprint direction for
+abstract assertions stays a premise.
 
 ### `concurrent`, `effects`, `shared` — from declaration to computation
 
@@ -1394,6 +1421,9 @@ accesses of different threads to one carrier are happens-before ordered or on an
 and no two lock acquisitions cross in rank. `AllgemeinStabil` (`InterferenzAllgemein.lean`)
 proves what the joint model consumes — context, coverage, per-thread frame
 dependence and chain-head entry validity, every assertion at the last world.
+Frame-bound reader assertions survive disjoint steps
+(`requiresStabil_kette`, `ensuresStabil_kette`, `invarianteStabil_kette` in
+`LesenStabil.lean`): ordered writes stay writes, preserved reads stay reads.
 The inversion theorems (`slot_hat_waechter`,
 `zeiger_hat_waechter`, `bytes_in_tabelle`, `zuweisung_hat_recht`, `sdivision_ohne_null`,
 `register_schreibbar`, `transition_hat_spiegel`, `uebergang_erklaert`, `publish_paart`,

@@ -142,7 +142,7 @@ mutation against it is undamageable, not covered (`README.md`:254):**
 | U3 | (in `binde`) | a name is never rebound with a DIFFERENT shape; `n = n + 1` is allowed, `let x = 1; let x = true;` is refused |
 | U4 | (in `namenEindeutig`) | the cases of a `tagged` type have distinct names |
 
-U1 and U2 are what step 2 discharges.
+~~U1 and U2 are what step 2 discharges.~~ U1 and U2 are discharged since 2026-09-10 — step 2 is proved (`programmlogik/Gabbro/KompositionBeweis.lean`: `umgebung_ok_of_runs`, `schleifen_ok_of_runsloop`; see §4 S2 status).
 
 ### 2.4 The findings — where the specification or the model gave way
 
@@ -191,6 +191,8 @@ terminating        forever: no; traverse/retry: necessary conditions checked
 functionally open  on O1…Ok                                 k UNKNOWN — the person's logic
 ```
 
+U1 and U2 in the first line above are discharged since 2026-09-10 (see §4 S2 status); the block stands as drafted and reads with that carry.
+
 ---
 
 ## 4. The plan — six steps, two of them measurements
@@ -199,8 +201,8 @@ functionally open  on O1…Ok                                 k UNKNOWN — the 
 buys: the sentence *"stuck ⇒ own logic"* is a theorem, and six findings. What it costs:
 nothing in `crates/`; three Lean files, no dependency.
 
-**S2 — The program theorem: discharge U1 and U2.** *Build.* Today the callee's behaviour
-is a premise (`UmgebungOK`). `Body.lean` already has the wiring: `Runs ρ f body`
+**S2 — The program theorem: discharge U1 and U2.** ~~*Build.* Today the callee's behaviour
+is a premise (`UmgebungOK`).~~ *Proved 2026-09-10 (`programmlogik/Gabbro/KompositionBeweis.lean`): the callee case was a premise until then.* `Body.lean` already has the wiring: `Runs ρ f body`
 (`ρ f` is the body), `RunsLoop`/`iterate` (`ρ id` is some sequence of passes). The step is
 one induction:
 
@@ -218,6 +220,8 @@ Condition under which S2 counts: `UmgebungOK` and `SchleifenOK` disappear from
 stated once over a `Programm` with a body table. **Falsifier:** a corpus unit with a
 call cycle without `decreases` — the theorem must refuse it, not assume it.
 
+> **S2 status 2026-09-10: PROVED** (`programmlogik/Gabbro/KompositionBeweis.lean`: `umgebung_ok_of_runs`, `umgebung_ok_of_runs_azyklisch`, `umgebung_ok_of_vertrag`, `vertrag_zyklus_of_pflichten`, `schleifen_ok_of_runsloop`; standard axioms, programmlogik green). The condition above is met: `UmgebungOK` and `SchleifenOK` are theorems over `Runs`/`RunsLoop`, stated once over a program with a body table; cycles carry `decreases` for the well-founded induction.
+
 **S3 — Make the two silent classes FAULTS.** *Build, in `Body.lean` — coordinated, the
 Isabelle proofs rest on the big-step shape (`OFFEN.md` O1).* Finding 1: add an outcome
 that the semantics reaches when an index leaves `0 ..< count c` or a store leaves a
@@ -230,6 +234,8 @@ reach `fehler .index` under `exec` — today they reach a value.
 
 Cheapest form, if `Body.lean` may not move: a *second* evaluator `evalF` beside `eval`
 with the fault, and one theorem that `evalF = eval` wherever `evalF` reports no fault.
+
+> **S3 status 2026-09-10: THREADED** (`grammatik/Grammatik/Fehler.lean`: `evalF` with `evalF_ok_halt`/`evalF_stimmt_halt`, `AusF.folge` with its fault/logic/hardware cases, `schrittFolge` with `schrittFolge_vorn`/`hinten`, `schleifeF` with `schleifeF_fehler`/`spaeter`; fault outcome threaded through parallel execution, end-to-end agreement with `Ausgang` untouched). The `Body.lean` fault coordination with O1 above stands as stated and is unchanged by this carry.
 
 **S4 — The seam (Finding 6): witness pairs, not a proof.** *Build + measurement.* The
 form `PLAN-VERIFIKATION.md` §3 chose for the export, for the same reason (size):
@@ -291,8 +297,8 @@ exists (the folder's oldest open item), the necessary-condition status for termi
 That is the honest form of *"the only error is the user's logic"*: **true for the
 sequential core under named premises, and a list for the rest.**
 
-**Order and dependency:** S5 → S1 (done) → S2 → S4; S3 is independent and coordinated
-with O1; S6 hangs on nothing and is the cheapest item with the largest effect on what the
+**Order and dependency:** ~~S5 → S1 (done) → S2 → S4; S3 is independent and coordinated
+with O1;~~ S5 → S1 (done) → S2 (proved 2026-09-10) → S4 (built 2026-09-10); S3 (threaded 2026-09-10 in `Grammatik/Fehler`, `Body.lean` coordination with O1 as stated); S6 hangs on nothing and is the cheapest item with the largest effect on what the
 README may claim. *No day estimates* (W7): S2 and S4 are builds with a known subject,
 S3 is a decision about a shared file, S5 and S6 are writing.
 
@@ -302,11 +308,11 @@ S3 is a decision about a shared file, S5 and S6 are writing.
 
 | error class | carried by | proved here? | status |
 |---|---|---|---|
-| index in range | `M103` | `schluss_sicher` (checker side) — **not** as a fault of the model (Finding 1) | carried; theorem vacuous on the semantic side until S3 |
+| index in range | `M103` | `schluss_sicher` (checker side) — **not** as a fault of the model (Finding 1) | carried; theorem vacuous on the semantic side until S3 (Grammatik-side fault threaded 2026-09-10 — see S3 status; `Body.lean` side as stated) |
 | no overflow | `M104` | range through `+ − ×` proved; `WF` preserved at every store; `/ % & \| ^ << >>` without range (Finding 5) | carried for the four; open for the rest |
 | no division by zero | `M102` | `schluss_sicher`, `.div/.rem` | **proved** |
 | no shape error, exhaustive `match` | `D005`/`M123`, `N`-passes | `pruefe_sicher`, `pruefeTags_sicher`, `pruefeArme_sicher` | **proved** |
-| call fits signature, answer fits binding | `N028`/`N029`, `M1` | `bindCall`/`bindCallElse`/`retCall` cases | proved under U1 |
+| call fits signature, answer fits binding | `N028`/`N029`, `M1` | `bindCall`/`bindCallElse`/`retCall` cases | proved under U1 (U1 discharged 2026-09-10 — see S2 status) |
 | frame / effects | `E005`/`E008`/`E010` | `Wirkung.lean` (rule), not here — `Body.lean` has no effect lists | outside this theorem |
 | lock held, rank order | `H001`–`H017` | `Rang.lean` (rule); `locked` is the body's here | outside; `R1` open in `Rang.lean` |
 | alias | — | — | **not carried** (3 race forms) |

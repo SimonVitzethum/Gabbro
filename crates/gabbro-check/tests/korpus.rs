@@ -69,6 +69,10 @@ const BENANNT: &[&str] = &[
     // first fired -- the M147 lesson (unbenannt seit 7cbae3e, exposed by wider
     // firing): gifts 724/725/726 pin it and its boundary.
     "H018",
+    // 2026-09-11, effects-locks line is no cover (`sperren.effects-locks-zeile`,
+    // lane-104): a direct write to a lock-protected place needs more than the
+    // `effects { locks L }` line. Gifts 737/739 plus inline test 738 pin it.
+    "H020",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine

@@ -638,4 +638,70 @@ theorem gesittet_aus_einfaedig (l : Lauf D)
 #print axioms Gabbro.Grammatik.lauf_aus_brav
 #print axioms Gabbro.Grammatik.nur_deklariert_teilt_lauf
 
+/-! ## 8. W4 from the Verlauf -- `verlauf_einfaedig` through the trace link
+
+    `marke_eindeutig_aus_einfaedig` (§7) closes W4 against `Marken.Einfaedig`
+    over the projected run. What the construction PROVES, though, is
+    `Marken.verlauf_einfaedig`: every reachable stand is single-threaded
+    (`StandEinfaedig σ` -- one stand, one point in time). That is a different
+    level from `Einfaedig` (pairs of steps across time): a mark freed by one
+    thread (`verbrauche`) and recreated by another (`erzeuge`) is owned by
+    exactly one thread at every stand, yet named by two threads over the run.
+    So no proof from `verlauf_einfaedig` alone can discharge W4 -- the trace
+    link, that projected events name exactly what their thread owns, is the
+    exact remainder, and it stands nowhere yet (no per-thread `Verlauf`
+    through `exec` behind a real `Lauf D`).
+
+    `SpurLink` names that remainder in minimal shape: every mark named by a
+    projected event is owned by that event's thread at one shared reachable
+    stand. Through `verlauf_einfaedig` that stand is single-threaded, and W4
+    follows. `gesittet_aus_verlauf` is the bundle with the construction
+    consumed: `hEin` narrows to a `Verlauf` plus the link. -/
+
+/-- Trace link (booked remainder): every mark a projected event names is owned
+    by that event's thread at one shared reachable stand. -/
+def SpurLink (code : D.Marke → Nat) (l : Lauf D) (σ : Marken.Stand) : Prop :=
+  ∀ (i : Nat) (f : Faden) (ei : Ereignis D),
+    l[i]? = some (Schritt.mk f ei) →
+    ∀ (m : D.Marke) (s : Nat), Res.marke m s ∈ ei.lambda →
+      Marken.Besitzt σ f (code m)
+
+/-- **W4 from the Verlauf.** `verlauf_einfaedig` through the trace link IS
+    `marke_eindeutig` over the real run. -/
+theorem marke_eindeutig_aus_verlauf
+    (κ : Marken.MarkDekl) {σ : Marken.Stand} (v : Marken.Verlauf κ σ)
+    (code : D.Marke → Nat) (l : Lauf D)
+    (hlink : SpurLink (D := D) code l σ)
+    (i j : Nat) (f g : Faden) (m : D.Marke) (s s' : Nat)
+    (ei ej : Ereignis D)
+    (hi : l[i]? = some (Schritt.mk f ei))
+    (hj : l[j]? = some (Schritt.mk g ej))
+    (hmi : Res.marke m s ∈ ei.lambda)
+    (hmj : Res.marke m s' ∈ ej.lambda) : f = g :=
+  Marken.verlauf_einfaedig κ v (code m) f g
+    (hlink i f ei hi m s hmi) (hlink j g ej hj m s' hmj)
+
+/-- **A `Gesittet` from the Verlauf.** The whole bundle with W4 supplied by
+    `verlauf_einfaedig` plus the trace link instead of the bare premise. -/
+theorem gesittet_aus_verlauf (l : Lauf D)
+    (konsistent : ∀ f j, Konsistent (l.spur f j))
+    (gut : ∀ f j, ∀ e ∈ l.spur f j, e.gut)
+    (ausschluss : ∀ (j : Nat) (f : Faden) (L : D.Lock) (h : List D.Lock),
+      l[j]? = some (Schritt.mk f (.nimmt L h)) → ∀ g, g ≠ f → ¬ l.haelt g L j)
+    (κ : Marken.MarkDekl) {σ : Marken.Stand} (v : Marken.Verlauf κ σ)
+    (code : D.Marke → Nat) (hlink : SpurLink (D := D) code l σ)
+    (ungeteilt : ∀ (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some o → ej.traeger = some o →
+      (match o with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g) :
+    Gesittet l :=
+  ⟨konsistent, gut, ausschluss, marke_eindeutig_aus_verlauf κ v code l hlink,
+    ungeteilt⟩
+
+#print axioms Gabbro.Grammatik.marke_eindeutig_aus_verlauf
+#print axioms Gabbro.Grammatik.gesittet_aus_verlauf
+
 end Gabbro.Grammatik
