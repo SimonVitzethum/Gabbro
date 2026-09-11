@@ -513,6 +513,48 @@ impl Certificate {
         }
         out
     }
+
+    /// Render the certificate as one JSON object — the machine-readable sidecar the
+    /// call site writes beside the C. Hand-rolled on purpose, like
+    /// `corrcert::CorrCert::to_json`: this file has no JSON dependency, and the shape
+    /// is three fixed fields. `claimed` is `[lo, hi]` or `null`; `null` is what
+    /// validation rejects, exactly as `render` prints `no range`.
+    pub fn to_json(&self) -> String {
+        let mut out = String::from("{\"term\":\"");
+        out.push_str(&flucht(&self.term));
+        out.push_str("\",\"claimed\":");
+        match self.claimed {
+            Some(r) => out.push_str(&format!("[{},{}]", r.lo, r.hi)),
+            None => out.push_str("null"),
+        }
+        out.push_str(",\"sides\":[");
+        for (i, s) in self.sides.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            out.push('"');
+            out.push_str(&flucht(s));
+            out.push('"');
+        }
+        out.push_str("]}");
+        out
+    }
+}
+
+/// Escape a free-text field for [`Certificate::to_json`]: `\`, `"` and newline.
+/// Names that reach here are identifiers today, but the sides carry rendered ranges
+/// and punctuation — the escaper is total so a future word cannot break the sidecar.
+fn flucht(s: &str) -> String {
+    let mut aus = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' => aus.push_str("\\\\"),
+            '"' => aus.push_str("\\\""),
+            '\n' => aus.push_str("\\n"),
+            _ => aus.push(c),
+        }
+    }
+    aus
 }
 
 /// Emit the certificate for one checked expression.
@@ -522,6 +564,14 @@ pub fn emit(expr: &CertExpr, ctx: &Ctx, world: &World) -> Certificate {
         claimed: expr.cert_range(ctx, world),
         sides: expr.side_conditions(ctx, world),
     }
+}
+
+/// Emit the certificate for one checked expression, rendered as the sidecar object.
+/// One call at the call site: build nothing twice, hold no intermediate. The emitter
+/// half owns the print direction only (see the module head); this is its printable
+/// form beside the C.
+pub fn emit_json(expr: &CertExpr, ctx: &Ctx, world: &World) -> String {
+    emit(expr, ctx, world).to_json()
 }
 
 #[cfg(test)]
@@ -782,5 +832,41 @@ mod tests {
         assert!(text.contains("claimed range: (5, 5)"));
         assert!(text.contains("side conditions:"));
         assert!(text.contains("HOLDS"));
+    }
+
+    #[test]
+    fn json_carries_term_claim_and_sides() {
+        let (ctx, world) = empty();
+        let cert = emit(&CertExpr::Add(lit(2), lit(3)), &ctx, &world);
+        let j = cert.to_json();
+        assert!(j.starts_with("{\"term\":\"(.add (.lit 2) (.lit 3))\""));
+        assert!(j.contains("\"claimed\":[5,5]"));
+        assert!(j.contains("\"sides\":["));
+        assert!(j.contains("HOLDS"));
+        assert!(j.ends_with("]}"));
+    }
+
+    #[test]
+    fn json_claim_without_range_is_null() {
+        // The machine reading of what `render` prints as `no range`.
+        let (ctx, world) = empty();
+        let cert = emit(&CertExpr::Div(lit(7), lit(0)), &ctx, &world);
+        assert_eq!(cert.claimed, None);
+        let j = cert.to_json();
+        assert!(j.contains("\"claimed\":null"));
+        assert!(j.contains("FAILS"));
+    }
+
+    #[test]
+    fn emit_json_is_emit_then_to_json() {
+        let (ctx, world) = empty();
+        let e = CertExpr::Bor(3, lit(6), lit(3));
+        assert_eq!(emit_json(&e, &ctx, &world), emit(&e, &ctx, &world).to_json());
+    }
+
+    #[test]
+    fn flucht_macht_seitenwagenfelder_ganz() {
+        assert_eq!(flucht("a\\b\"c\nd"), "a\\\\b\\\"c\\nd");
+        assert_eq!(flucht("(.lit 42)"), "(.lit 42)");
     }
 }

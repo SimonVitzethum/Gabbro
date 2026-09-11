@@ -34,7 +34,7 @@
 //!   mirroring `ruledB_voll` / `geschlossen_immer`. [`geschlossen`] still re-checks each
 //!   row, so a future form that is not tabled fails loudly instead of silently passing.
 //!
-//! ## NOTE — the ONE hook point (this lane touches neither `lib.rs` nor `emit.rs`)
+//! ## NOTE — the ONE hook point (landed 2026-09-11, lane p20)
 //!
 //! Wire-up belongs in exactly one place:
 //! `crates/gabbro-check/src/emit.rs`, function `emittiere_mit`, AFTER the gate filter
@@ -45,6 +45,17 @@
 //! same reason the gate is a filter in front of the emitter and not a branch inside it.
 //! Until that hook lands, this module is inert: collected by nothing, checked by its
 //! own unit tests below.
+//!
+//! Update (p20, 2026-09-11): the first half of the hook has landed, beside the walks
+//! rather than inside them. `emit.rs` now owns the call site `emittiere_mit_corr` with
+//! the total item mapper `korr_form`: one row per lowered item whose top-level C shape
+//! is one of the 19 named forms, in lowering order, returned beside the C string — the
+//! C itself is byte-identical. Statement- and expression-level rows (the evaluation
+//! sites of §1) stay booked: they need the builder threaded through the body walks,
+//! which is one function (`funktion`), not twenty, and belongs to the follow-up lane.
+//! `messung/CORRCERT-ANBINDUNG.md` carries the threading table with the arm behind
+//! every row. The word-level recorder [`CorrCertBuilder::aufzeichnen_wort`] and the
+//! sidecar path [`sidecar_path`] below are the boundary the follow-up lane reuses.
 //!
 //! ## The C forms
 //!
@@ -234,6 +245,24 @@ impl CorrCert {
         &self.sites
     }
 
+    /// The per-run check in method form — mirrors [`pruefe`]: all four legs, each in
+    /// its own field so a rejection names the failed leg. The call site
+    /// (`emittiere_mit_corr` in `emit.rs`) reads the obligation off its own rows,
+    /// but the recomputer passes its own list — same function, both readers.
+    pub fn pruefe_gegen(&self, gabbro_sites: &[u32]) -> CorrPruefung {
+        pruefe(gabbro_sites, self)
+    }
+
+    /// The sidecar path beside an emitted C file — `<stem>.corrcert`, mirroring
+    /// `kostenledger::sidecar_path` (`<stem>.kostenledger`) so the two sidecars
+    /// share one convention: beside the C, never inside it.
+    pub fn sidecar_path(c_path: &str) -> String {
+        match c_path.rfind('.') {
+            Some(i) => format!("{}.corrcert", &c_path[..i]),
+            None => format!("{c_path}.corrcert"),
+        }
+    }
+
     /// Renders the certificate beside an emission: one JSON object with the row list.
     /// Hand-rolled on purpose — this crate has no JSON dependency, and the shape is
     /// three fixed fields per row. Field names follow the Lean fields word for word
@@ -274,6 +303,20 @@ impl CorrCertBuilder {
     /// order, and a builder that re-sorted would certify an order it did not emit.
     pub fn aufzeichnen(&mut self, gabbro_site: u32, c_site: u32, form: CForm) {
         self.sites.push(CorrSite::neu(gabbro_site, c_site, form));
+    }
+
+    /// Records one lowered site from its Lean-spelled form word — the boundary the
+    /// probes and the recomputer speak. An unknown word records NO row and returns
+    /// `false`: an unparsable shape is a loud refusal, never a silent pass (the same
+    /// rule `CForm::from_str` already keeps — `None` is no row).
+    pub fn aufzeichnen_wort(&mut self, gabbro_site: u32, c_site: u32, wort: &str) -> bool {
+        match CForm::from_str(wort) {
+            Some(form) => {
+                self.aufzeichnen(gabbro_site, c_site, form);
+                true
+            }
+            None => false,
+        }
     }
 
     /// The certificate for this run's rows.
@@ -459,5 +502,40 @@ mod tests {
                 "{\"gabbroSite\":1,\"cSite\":1,\"form\":\"name\"}]}"
             )
         );
+    }
+
+    #[test]
+    fn pruefe_gegen_stimmt_mit_pruefe_ueberein() {
+        // The method form is the same function both readers call: the call site with
+        // its own rows, the recomputer with its own list.
+        let cert = zwei_zeilen();
+        assert_eq!(cert.pruefe_gegen(&[0, 1]), pruefe(&[0, 1], &cert));
+        assert!(cert.pruefe_gegen(&[0, 1]).gueltig());
+        assert!(!cert.pruefe_gegen(&[0, 1, 2]).gueltig());
+    }
+
+    #[test]
+    fn wort_zeichnet_benannte_form_auf_unbekannte_nicht() {
+        let mut b = CorrCertBuilder::neu();
+        assert!(b.aufzeichnen_wort(0, 0, "literal"));
+        assert!(b.aufzeichnen_wort(1, 1, "statisch"));
+        assert!(!b.aufzeichnen_wort(2, 2, "zeigerarithmetik"));
+        assert!(!b.aufzeichnen_wort(2, 2, ""));
+        let cert = b.zertifikat();
+        assert_eq!(cert.zeilen().len(), 2);
+        // The refused word left no row: completeness against [0, 1] still holds,
+        // and the missing site 2 fails loudly instead of passing silently.
+        assert!(cert.pruefe_gegen(&[0, 1]).gueltig());
+        assert!(!cert.pruefe_gegen(&[0, 1, 2]).vollstaendig);
+    }
+
+    #[test]
+    fn seitenwagenpfad_teilt_die_konvention_des_ledgers() {
+        assert_eq!(
+            CorrCert::sidecar_path("out/einheit.c"),
+            "out/einheit.corrcert"
+        );
+        assert_eq!(CorrCert::sidecar_path("einheit.c"), "einheit.corrcert");
+        assert_eq!(CorrCert::sidecar_path("einheit"), "einheit.corrcert");
     }
 }
