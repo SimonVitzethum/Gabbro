@@ -1,0 +1,41 @@
+-- ARM 4, must FALL at emit: `until` over a quantifier (lane-140).
+--
+-- The condition of a `retry` runs every pass; a `forall`/`exists` inside it would need
+-- a loop of its own at a cost the `costs` pass never counted. `pred_c` answered `None`
+-- for it, and the unit fell at emit -- but with "`until` predicate form", a sentence
+-- silent about WHICH form. The emitter now refuses with the quantifier named
+-- (`C001`); the comparison twin beside it (`until-comparison`) keeps lowering, and the
+-- other four non-runtime forms keep the old sentence.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   C001 x1 on the `retry` line, naming the quantifier; no C for this unit
+
+module probe::emission140_until_quantifier {
+
+const NFAEDEN : u32 = 1024;
+
+table Warteschlange count NFAEDEN {
+    slot {
+        aktiv : bool,
+    }
+}
+
+extern fn zeitablauf() -> never effects { diverges };
+
+assume geraet_antwortet "Antwort kommt." falsifier sonde_antwort;
+
+impl fn warten(q : ptr<normal, rw> Warteschlange) -> u32
+    effects { reads q.slots }
+    costs   <= 2048 ops
+{
+    retry warten until forall k in slots of q : q.slots[k].aktiv == true
+        bounded 1024 ops
+        progress geraet_antwortet
+        on_exceeded zeitablauf
+        effects { reads q.slots }
+    { }
+    return 0;
+}
+
+}

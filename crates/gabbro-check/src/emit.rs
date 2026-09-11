@@ -4170,7 +4170,25 @@ fn schrittbits(
                 return None;
             }
             let maske = 1u128 << lo;
-            let an = matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0);
+            // **A field step says one bit, and only a digit says which value (lane-140).**
+            //
+            // Until today this read `matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0)`:
+            // every other form counted as "clear". `GCMD.TE: 0 -> (1)` checked clean and
+            // lowered to a bit-CLEAR with exit 0, though the value is 1 -- and `-> true`
+            // cleared too, for the same silent reason. The corpus writes digits at this
+            // spot, so there is nothing to fold here, only something to name: a step
+            // target that is not a number refuses, by name.
+            let ExprArt::Zahl(n) = &s.nach.art else {
+                weigere(
+                    absagen,
+                    s.nach.span,
+                    "`transition` field step whose target is not a number -- the step sets \
+                     or clears ONE bit, and anything but a digit (`(1)`, `true`, a call) \
+                     has no bit value this lowering may read",
+                );
+                return None;
+            };
+            let an = *n != 0;
             Some((maske, if an { maske } else { 0 }))
         }
         // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
@@ -7779,6 +7797,23 @@ fn retry(
         weigere(absagen, s.span, "`retry` without `until` -- nothing bounds the condition");
         return;
     };
+    // **A quantifier is not a run time condition, and the sentence below does not say
+    // so (lane-140).** `pred_c` answers `None` for a `forall`/`exists` in an `until`,
+    // and the arm below reports "`until` predicate form" -- true, and silent about
+    // WHICH form. A loop condition runs every pass; a quantifier would need a loop of
+    // its own inside it, at a cost the `costs` pass never counted. Name it here, before
+    // the generic arm erases the shape: where no quantifier stands, nothing changes --
+    // `pred_c` still refuses the other four forms with the old sentence.
+    if enthaelt_quantor(bis) {
+        weigere(
+            absagen,
+            s.span,
+            "`until` over a quantifier (`forall`/`exists`) -- the condition runs every \
+             pass, and a quantifier would need a loop inside the condition at a cost \
+             the `costs` pass never counted. A quantifier is proved, not evaluated (W6)",
+        );
+        return;
+    }
     let Some(bedingung) = pred_c(bis, u, absagen) else {
         weigere(absagen, s.span, "`until` predicate form");
         return;
@@ -8195,6 +8230,26 @@ fn rumpf_als_wert(
 
 /// Ein Praedikat als C-Bedingung. **Nur die Formen, die ein `until` heute braucht** -- jede
 /// andere wird abgelehnt, statt sie plausibel zu uebersetzen.
+///
+/// Does this predicate quantify anywhere inside -- at the top or nested under
+/// `&&`/`||`/`!`/parentheses? Read by the `retry` lowering before `pred_c`, so that an
+/// `until` over a quantifier is refused WITH the quantifier named. Spelled out arm by
+/// arm, so a new `PredArt` is a compile error here rather than a silent "no" (the same
+/// rule `ausdruecke_im_praedikat` in `lib.rs` holds).
+fn enthaelt_quantor(p: &Pred) -> bool {
+    match &p.art {
+        PredArt::Quantor(_) => true,
+        PredArt::Klammer(x) | PredArt::Nicht(x) => enthaelt_quantor(x),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            enthaelt_quantor(a) || enthaelt_quantor(b)
+        }
+        PredArt::Vergleich(_)
+        | PredArt::Element(_, _)
+        | PredArt::Erreicht { .. }
+        | PredArt::Held { .. } => false,
+    }
+}
+
 fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
     Some(match &p.art {
         PredArt::Vergleich(e) => ausdruck(e, u, absagen),
@@ -9797,6 +9852,50 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
                 .collect();
             return format!("{}({})", pf.text().replace("::", "_"), args.join(", "));
         }
+    }
+    // **`old(...)` outside a contract is not the pre-state reader (lane-140).**
+    //
+    // `old` is a word only where a contract is read (`parse.rs::im_vertrag`); in a body
+    // it is a name, and `old(x)` is a call. With no declaration behind it the call has
+    // no callee -- and the tail below emitted `old(x)` straight into the C, an implicit
+    // declaration `cc` happens to catch, with exit 0 and no refusal. Measured:
+    // `let x : u64 = old(eintrag);` and `if old(q.slots[k].aktiv) == true` both checked
+    // clean (E009 aside) and both emitted the call verbatim. *Happening to fail is not
+    // refusing* -- the `Some`/`None` arm above exists for the same reason.
+    //
+    // The guard asks `u.funktionen`, the same bare-keyed map the tail lowers through: a
+    // declared `fn old` keeps its call. Transitions, devices and ops are claimed by
+    // their own arms above, so nothing declared can reach this line by accident. A bare
+    // `old` that is never called -- `let old = a;` (`beispiele/70`) -- never reaches
+    // `ruf` at all.
+    if name == "old" && !u.funktionen.contains_key(&name) {
+        weigere(
+            absagen,
+            r.span,
+            "`old(...)` outside a contract -- `old(place)` names the value at entry and \
+             only a contract (`ensures`, an invariant, an exchange `when`) reads one. \
+             Here it is a call to a function nobody declared, and the emitted C would \
+             name a callee that does not exist",
+        );
+        return String::new();
+    }
+    // **`result(...)` outside a contract is not the answer reader (lane-140).**
+    //
+    // Same shape as `old` above, one arm over: `result` is a word only where a contract
+    // is read, and in a body `result(a)` is a call. Measured: `return result(a);`
+    // checked clean (E009 aside) and emitted verbatim. A bare `result` that is never
+    // called -- `let result = old; return result;` (`beispiele/70`) -- never reaches
+    // `ruf`, and a declared `fn result` keeps its call through the same guard.
+    if name == "result" && !u.funktionen.contains_key(&name) {
+        weigere(
+            absagen,
+            r.span,
+            "`result(...)` outside a contract -- `result` names the return value inside \
+             an `ensures`, and a contract is checked at compile time (W6). Here it is \
+             a call to a function nobody declared, and the emitted C would name a \
+             callee that does not exist",
+        );
+        return String::new();
     }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r

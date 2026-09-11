@@ -1,0 +1,28 @@
+-- ARM 1, must FALL at emit: transition field step whose target is not a number
+-- (lane-140).
+--
+-- `GCMD.TE: 0 -> (1)` names the value 1 through a parenthesis. The step sets ONE bit,
+-- and until this lane every non-digit target read as "clear": the unit checked clean
+-- and emitted a bit-CLEAR with exit 0, though the value is 1 (`-> true` cleared for
+-- the same silent reason). The emitter now refuses the step with a name (`C001`); the
+-- digit twin beside it (`transition-field-step-target-number`) keeps lowering.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   C001 x1 on the step target, no C for this unit
+
+module probe::emission140_transition_field_step_target_not_a_number {
+
+opaque type Pa = u64;
+
+device Vtd(basis : Pa) at mmio {
+    reg GCMD : u32 @0x18 class w fields { TE @31, }
+    reg GSTS : u32 @0x1c class r fields { RTPS @30, }
+
+    mirrors GCMD from GSTS;
+
+    transition set_te { GCMD.TE: 0 -> (1) }
+        effects { writes GCMD }
+}
+
+}

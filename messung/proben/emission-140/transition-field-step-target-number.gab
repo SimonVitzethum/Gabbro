@@ -1,0 +1,29 @@
+-- ARM 1 twin, must LOWER: transition field steps with digit targets (lane-140).
+--
+-- `0 -> 1` sets the bit, `1 -> 0` clears it -- the two digit spellings the corpus
+-- writes, and the only two the step lowering reads. Both lower as before; the arm
+-- beside them fires only where no digit stands.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; the C sets TE in `an` and clears it in `aus`
+--   cc:     takes the unit (-std=c11, -O0 and -O2, -Wall -Wextra -Werror, -c)
+
+module probe::emission140_transition_field_step_target_number {
+
+opaque type Pa = u64;
+
+device Vtd(basis : Pa) at mmio {
+    reg GCMD : u32 @0x18 class w fields { TE @31, }
+    reg GSTS : u32 @0x1c class r fields { RTPS @30, }
+
+    mirrors GCMD from GSTS;
+
+    transition an { GCMD.TE: 0 -> 1 }
+        effects { writes GCMD }
+
+    transition aus { GCMD.TE: 1 -> 0 }
+        effects { writes GCMD }
+}
+
+}

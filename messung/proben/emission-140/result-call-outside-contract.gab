@@ -1,0 +1,23 @@
+-- ARM 3, must FALL at emit: `result(...)` calls outside a contract (lane-140).
+--
+-- `result` is a word only where a contract is read; in a body `result(a)` is a call to
+-- a function nobody declared. It checked clean and emitted verbatim (`return
+-- result(a);`), with exit 0 and no refusal. The emitter now refuses the site with a
+-- name (`C001`); a bare `result` that is never called (`let result = a; return
+-- result;`, `beispiele/70`) never reaches the call lowering, and the declared-function
+-- twin beside it (`result-call-declared-function`) keeps lowering.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 1 hint (E009 on `f`: `result` unknown to the call graph --
+--           pre-existing, untouched by this lane)
+--   emit:   C001 x1, no C for this unit
+
+module probe::emission140_result_call_outside_contract {
+
+fn f(a : u64) -> u64
+    effects { pure }
+{
+    return result(a);
+}
+
+}
