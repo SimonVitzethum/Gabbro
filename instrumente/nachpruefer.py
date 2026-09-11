@@ -259,6 +259,206 @@ def pruefe(ledger, zeilen, markiert):
     return befunde
 
 
+# The cost/deadline ledger sidecar (`messung/KOSTEN-LEDGER.md`, `.kostenledger`):
+# twelve primitives, seven keys, one header. The recomputer carries its own
+# table here too -- the same reason REGELFORMEN is written out above: the
+# checkfat lesson says the reader never imports the writer's constants.
+_LEDGER_PRIMITIVE = frozenset({
+    "assign", "arith", "load", "call", "branch", "traverse",
+    "retry", "forever", "locks", "observes", "exchange", "count",
+})
+_LEDGER_SCHLUESSEL = frozenset({
+    "function", "costs", "per_pass", "bounded", "deadline",
+    "body_ops", "absenkung",
+})
+
+
+def _ledger_entweiche(s):
+    """Undo the ledger escapes; returns (value, error). Mirrors the `unescape`
+    half of `crates/gabbro-check/src/kostenledger.rs`: only `\\\\`, `\\n`
+    and `\\p` are escapes, anything else is a loud error, not a guess."""
+    out = []
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == "\\":
+            i += 1
+            if i >= len(s):
+                return None, f"trailing backslash in `{s}`"
+            n = s[i]
+            if n == "\\":
+                out.append("\\")
+            elif n == "n":
+                out.append("\n")
+            elif n == "p":
+                out.append("|")
+            else:
+                return None, f"bad escape `\\{n}` in `{s}`"
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out), None
+
+
+def _ledger_felder(s):
+    """Split on unescaped `|`, keeping the escapes for `_ledger_entweiche`."""
+    felder = []
+    cur = []
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == "\\" and i + 1 < len(s):
+            cur.append(c)
+            cur.append(s[i + 1])
+            i += 2
+        elif c == "|":
+            felder.append("".join(cur))
+            cur = []
+            i += 1
+        else:
+            cur.append(c)
+            i += 1
+    felder.append("".join(cur))
+    return felder
+
+
+def _ledger_zahl(s):
+    """A ledger number: decimal or `?` for the loud unknown the checker
+    already reports. Returns (value, error); `?` reads as None."""
+    if s == "?":
+        return None, None
+    if re.fullmatch(r"[+-]?\d+", s or ""):
+        try:
+            return int(s), None
+        except ValueError:
+            pass
+    return None, f"not a number or `?`: `{s}`"
+
+
+def pruefe_kostenledger(text):
+    """Check one `.kostenledger` sidecar for internal consistency.
+
+    Second-artefact reader leg for `messung/KOSTEN-LEDGER.md`: the ledger is
+    produced BESIDE the C, so the recomputer reads it as data, never as prose.
+    Returns the finding list; empty means the sidecar is well-formed (header,
+    unit, known keys, valid escapes), complete (every function row carries
+    `body_ops` and the `absenkung` census) and byte-shaped (trailing newline,
+    no blank lines, no stray whitespace). A file this function rejects is
+    unreadable input for the recompute step, never a silent pass -- each
+    finding carries the `[ledger]` tag. An empty ledger (header and unit, no
+    rows) passes: the vacuous run corresponds, and green over nothing must
+    still say what it was over.
+    """
+    befunde = []
+
+    def miss(zeile, meldung):
+        befunde.append(f"[ledger] line {zeile}: {meldung}")
+
+    if not text:
+        return ["[ledger] empty ledger"]
+    if "\r" in text:
+        return ["[ledger] carriage returns are not part of the format"]
+    if not text.endswith("\n"):
+        befunde.append("[ledger] missing trailing newline")
+    zeilen = text.split("\n")
+    if zeilen and zeilen[-1] == "":
+        zeilen = zeilen[:-1]
+
+    def _bound(rest, zeile):
+        felder = _ledger_felder(rest)
+        if len(felder) != 3:
+            miss(zeile, f"bound needs 3 fields, got {len(felder)}: `{rest}`")
+            return
+        _, fehler = _ledger_entweiche(felder[0])
+        if fehler:
+            miss(zeile, fehler)
+        _, fehler = _ledger_zahl(felder[1])
+        if fehler:
+            miss(zeile, fehler)
+        if felder[2] != "-" and not felder[2]:
+            miss(zeile, f"bound inputs are `-` or a name list: `{rest}`")
+
+    if not re.fullmatch(r"kosten-ledger v\d+", zeilen[0] if zeilen else ""):
+        return [f"[ledger] line 1: bad header: `{zeilen[0] if zeilen else ''}`"]
+    if len(zeilen) < 2 or not zeilen[1].startswith("unit "):
+        return ["[ledger] line 2: ledger has a header but no unit"]
+    _, fehler = _ledger_entweiche(zeilen[1][len("unit "):])
+    if fehler:
+        return [f"[ledger] line 2: {fehler}"]
+
+    cur = None
+    seen_body = False
+    for nr, zeile in enumerate(zeilen[2:], start=3):
+        if zeile == "":
+            miss(nr, "blank lines are not part of the format")
+            continue
+        if zeile != zeile.rstrip(" \t"):
+            miss(nr, "trailing whitespace is not part of the format")
+            continue
+        key, _, rest = zeile.partition(" ")
+        if key not in _LEDGER_SCHLUESSEL:
+            miss(nr, f"unknown ledger key `{key}` in `{zeile}`")
+            continue
+        if key == "function":
+            if cur is not None and not seen_body:
+                miss(nr - 1, f"function `{cur}` has no body_ops line")
+            _, fehler = _ledger_entweiche(rest)
+            if fehler:
+                miss(nr, fehler)
+                cur = None
+            else:
+                cur = rest
+            seen_body = False
+            continue
+        if cur is None:
+            miss(nr, f"{key} line before any function")
+            continue
+        if key in ("costs", "per_pass", "bounded"):
+            if rest != "-":
+                _bound(rest, nr)
+            elif key != "costs":
+                miss(nr, f"{key} carries no `-` shape: `{zeile}`")
+        elif key == "deadline":
+            if rest != "-":
+                felder = _ledger_felder(rest)
+                if len(felder) != 5:
+                    miss(nr, f"deadline needs 5 fields, got "
+                             f"{len(felder)}: `{rest}`")
+                else:
+                    for k in (felder[0], felder[2], felder[3]):
+                        _, fehler = _ledger_entweiche(k)
+                        if fehler:
+                            miss(nr, fehler)
+                    _, fehler = _ledger_zahl(felder[1])
+                    if fehler:
+                        miss(nr, fehler)
+                    if felder[4] not in ("falsifiable", "assumed"):
+                        miss(nr, "deadline class is falsifiable|assumed, "
+                                 f"got `{felder[4]}`")
+        elif key == "body_ops":
+            _, fehler = _ledger_zahl(rest)
+            if fehler:
+                miss(nr, fehler)
+            else:
+                seen_body = True
+        elif key == "absenkung":
+            if not rest.strip():
+                miss(nr, "absenkung line carries no primitives")
+            else:
+                for zelle in rest.split(" "):
+                    if "=" not in zelle:
+                        miss(nr, f"absenkung cell without `=`: `{zelle}`")
+                        continue
+                    k, _, v = zelle.partition("=")
+                    if k not in _LEDGER_PRIMITIVE:
+                        miss(nr, f"unknown absenkung primitive `{k}`")
+                    elif not re.fullmatch(r"\d+", v):
+                        miss(nr, f"absenkung count not a number: `{zelle}`")
+    if cur is not None and not seen_body:
+        miss(len(zeilen), f"function `{cur}` has no body_ops line")
+    return befunde
+
+
 def beurteile(ledger_pfad, cert_pfad, c_pfad):
     """Load all three artifacts and recompute. Returns (rc, befunde, arbeit)
     with rc 0 green, 1 red findings, 2 abort; arbeit is the work quantity for
