@@ -1,0 +1,31 @@
+-- erwartet: V012
+-- **Checked user pointer handed to the copying callee falls.**
+--
+-- `pruefe` validates `p` (`p[0] != 0`) and then hands `p` to `nutze`, which reads
+-- `p[0]`. The check lives in one body, the use in another: the user side may rewrite
+-- the byte between them, and no checked handle binds the two (`GepruefteKopie`
+-- inseparability ends at the body boundary). The handoff is unguarded -- `nutze`
+-- never revalidates -- and falls as `V012`. The same check with the read in the
+-- same body stays silent (atomic under the snapshot premise); a callee that checks
+-- before its first use stays silent (re-validated).
+-- Measured 2026-09-11 against the unchanged checker: falls with `V012`, exactly once.
+module gift766 {
+
+impl fn nutze(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 8 ops
+{
+    return p[0];
+}
+
+impl fn pruefe(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 24 ops
+{
+    if p[0] != 0 {
+        return nutze(p);
+    }
+    return 0;
+}
+
+}

@@ -1,0 +1,38 @@
+-- erwartet: V012
+-- **Checked user pointer forwarded through a middle body still falls -- once, at the first hop.**
+--
+-- `pruefe` validates `p` and hands it to `mitte`; `mitte` never checks and forwards
+-- `p` to `nutze`, which reads `p[0]`. Forwarding IS a use -- the pointer crosses into
+-- a body whose own walk holds no check -- so the verdict lands at the first handoff
+-- (`pruefe` to `mitte`), not at the read two hops away. The second handoff (`mitte`
+-- to `nutze`) carries no check beside it and stays silent: a handoff with no check is
+-- no TOCTOU shape. Exactly one `V012` in this file, pinning that transitivity stops
+-- at the first uncovered crossing instead of multiplying one defect into two verdicts.
+-- Measured 2026-09-11 against the unchanged checker: falls with `V012`, exactly once.
+module gift768 {
+
+impl fn nutze(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 8 ops
+{
+    return p[0];
+}
+
+impl fn mitte(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 16 ops
+{
+    return nutze(p);
+}
+
+impl fn pruefe(p : ptr<user, r> u8) -> u8
+    effects { reads p }
+    costs <= 32 ops
+{
+    if p[0] != 0 {
+        return mitte(p);
+    }
+    return 0;
+}
+
+}

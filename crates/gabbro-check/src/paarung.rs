@@ -35,6 +35,7 @@ use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 
 /// Eine Nutzlast, auf ihre **Form** gebracht: `c.slots[s].d` und `c.slots[i].d` werden gleich.
 fn form(o: &str) -> String {
@@ -248,6 +249,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
         _ => {}
     });
+    // **V012 -- the unguarded user-copy handoff, below.**
+    benutzer_handoff(baum, &u, &g, absagen);
 
     for (name, h, unvollstaendig, schluessel) in &je_funktion {
         // **W10:** aus einer unteren Schranke wird weder abgesagt noch bestätigt.
@@ -1087,6 +1090,312 @@ fn fremde_lesung(stmts: &[Stmt], at: &str, l: &Torlage) -> Option<(String, Span)
     None
 }
 
+/// **V012 -- the unguarded user-copy handoff.**
+///
+/// The Adressraum shape (`Grammatik/Adressraum.lean`): a validated copy is a region, a
+/// copy, and the check over the SAME triple -- inseparable by shape, because check and
+/// copy name the same region, address, and length (`GepruefteKopie`). A check over one
+/// triple paired with a copy over another is not of that shape; it is the TOCTOU
+/// sequence (`PruefDannKopie`), sound only under the named single-copy premise
+/// (`EinSnapshot`).
+///
+/// At the checker the inseparability ends at the body boundary: a function that checks
+/// a `user`-space pointer and then hands it to a callee puts the check in one body and
+/// the use in another. The user side may rewrite the bytes between them, and no fact
+/// the checker holds crosses that window -- so the handoff is refused unless the use
+/// is covered where it stands:
+///
+/// ```gabbro
+/// impl fn nutze(p : ptr<user, r> u8) -> u8
+///     effects { reads p } costs <= 8 ops { return p[0]; }
+/// impl fn pruefe(p : ptr<user, r> u8) -> u8
+///     effects { reads p } costs <= 16 ops
+/// {
+///     if p[0] != 0 { return nutze(p); }   -- V012: checked here, copied there
+///     return 0;
+/// }
+/// ```
+///
+/// ## What counts, and what stays out by statement
+///
+/// * CHECK on `P` is a comparison (`BinOp::ist_vergleich`) mentioning `P`, or a
+///   `narrow` on `P`. Comparisons on user pointers are validation attempts by
+///   construction: there is nothing else to compare them for. Contract expressions
+///   (`requires`/`ensures`) are promises, not checks, and never count.
+/// * HANDOFF of `P` is a call with the bare name `P` as an argument -- the same
+///   under-approximation `R008` states: a field, a local, or a return value carries no
+///   declared space this pass can read.
+/// * Only NAMED callees with a Gabbro body are followed. An `extern fn` is the booked
+///   foreign-body gap (the boundary kill already forces a re-read after the call);
+///   an indirect call (`t->f()`) or an unresolvable name is undecidable (W10: neither
+///   refused nor confirmed). A callee whose receiving parameter is not itself a
+///   `user`-space pointer belongs to `R008`/`M140`, and a second verdict there would
+///   double-book one defect.
+/// * GUARDED means re-validated or untouched: the callee checks the receiving
+///   parameter before its first use of it (check and use atomic in one body, under
+///   the `EinSnapshot` premise), or the callee never touches it at all (a pure
+///   forward carries nothing). A check AFTER the first use, or on a different
+///   parameter, guards nothing.
+/// * Positions are statement-granular in one in-order walk: a check and a handoff in
+///   the SAME statement never precede each other, and a comparison's own operands
+///   are its check, never its use.
+///
+/// ## Remainder, booked not hidden
+///
+/// * Length companions are not tracked: a check on a `u32` length travelling beside
+///   the pointer does not count as a check on the pointer. The rule sees the
+///   address half of the Adressraum triple, not the length half.
+/// * Overwriting the pointer between check and handoff does not silence the rule:
+///   the check covered the old value, the handoff carries the new unchecked one.
+fn benutzer_handoff(
+    baum: &Programm,
+    u: &crate::umgebung::Umgebung,
+    g: &crate::aufrufgraph::Graph,
+    absagen: &mut Absagen,
+) {
+    // First every Gabbro body, walked once: the callee side needs its own walk
+    // before any handoff into it is judged.
+    struct Koerper {
+        modul: String,
+        benutzer: Vec<(usize, String)>,
+        lauf: BenutzerLauf,
+    }
+    let mut koerper: BTreeMap<String, Koerper> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let mut lauf = BenutzerLauf::default();
+        let mut pos = 0usize;
+        benutzer_lauf(b, &mut pos, &mut lauf);
+        koerper.insert(
+            crate::umgebung::qualifiziere(modul, &f.name.text),
+            Koerper {
+                modul: modul.to_string(),
+                benutzer: benutzer_parameter(f),
+                lauf,
+            },
+        );
+    });
+    for (rufer, k) in &koerper {
+        for h in &k.lauf.rufe {
+            // The handed name must be one of the caller's own user pointers.
+            if !k.benutzer.iter().any(|(_, n)| n == &h.basis) {
+                continue;
+            }
+            // The check must precede the handoff: a validation beside the call
+            // covers no use across it.
+            if !k
+                .lauf
+                .checks
+                .iter()
+                .any(|(c, p)| c == &h.basis && *p < h.pos)
+            {
+                continue;
+            }
+            let Some(ziel) = g.aufloesen(u, &k.modul, &h.ziel) else {
+                continue;
+            };
+            let Some(gk) = koerper.get(&ziel) else {
+                continue;
+            };
+            // The receiving parameter must be a user-space pointer too: anything
+            // else is `R008`/`M140`, not this rule.
+            let Some((_, qname)) = gk.benutzer.iter().find(|(i, _)| *i == h.arg) else {
+                continue;
+            };
+            let erste_nutzung = gk
+                .lauf
+                .nutzungen
+                .iter()
+                .filter(|(n, _)| n == qname)
+                .map(|(_, p)| *p)
+                .min();
+            let gedeckt = match erste_nutzung {
+                None => true,
+                Some(fu) => gk
+                    .lauf
+                    .checks
+                    .iter()
+                    .any(|(c, p)| c == qname && *p < fu),
+            };
+            if gedeckt {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "V012",
+                    h.span,
+                    format!(
+                        "`{}` checks `{}` and hands it to `{}`, which uses it without \
+                         revalidating",
+                        crate::umgebung::kurzname(rufer),
+                        h.basis,
+                        crate::umgebung::kurzname(&ziel),
+                    ),
+                )
+                .mit_notiz(
+                    "a check in one body covers no use in another: the user side may \
+                     rewrite the bytes between them (`PruefDannKopie`)",
+                )
+                .mit_notiz(
+                    "check and use must be atomic (one body) or re-validated (the callee \
+                     checks the same parameter before its first use)",
+                )
+                .mit_notiz(
+                    "SYNTAX.md §16.2 item 12: the run performs no range check -- what the \
+                     checker does not refuse reaches the run unchecked",
+                ),
+            );
+        }
+    }
+}
+
+/// The `user`-space pointer parameters of a function, with their positions:
+/// `ptr<user, …>` is the seventh side, and only it is user memory.
+fn benutzer_parameter(f: &FnDecl) -> Vec<(usize, String)> {
+    f.parameter
+        .iter()
+        .enumerate()
+        .filter_map(|(i, p)| match &p.typ {
+            TypExpr::Zeiger(z) => match &z.raum {
+                Raum::Benannt(n) if n.text == "user" => Some((i, p.name.text.clone())),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect()
+}
+
+/// One body's share of V012: where it checks, where it hands off, where it uses.
+///
+/// Positions are statement-granular from one in-order walk: each statement takes one
+/// position, its sub-blocks follow in place. Two events in the same statement never
+/// precede each other.
+#[derive(Default)]
+struct BenutzerLauf {
+    /// `(basis, pos)`: a comparison mentioning the basis, or a `narrow` on it.
+    checks: Vec<(String, usize)>,
+    /// Handoffs: a bare user-pointer name as a call argument.
+    rufe: Vec<BenutzerRuf>,
+    /// `(basis, pos)`: every other read of the basis -- call arguments, plain
+    /// places, `lenof`/`sizeof` subjects, index expressions. A comparison's own
+    /// operands are its check and never a use.
+    nutzungen: Vec<(String, usize)>,
+}
+
+struct BenutzerRuf {
+    basis: String,
+    arg: usize,
+    ziel: String,
+    span: Span,
+    pos: usize,
+}
+
+fn benutzer_lauf(b: &Block, pos: &mut usize, w: &mut BenutzerLauf) {
+    for s in &b.anweisungen {
+        let p = *pos;
+        *pos += 1;
+        match &s.art {
+            StmtArt::Narrow(n) => {
+                w.checks.push((n.ort.basis.text.clone(), p));
+                for e in crate::ausdruecke_im_ort(&n.ort) {
+                    benutzer_expr(e, p, w);
+                }
+            }
+            StmtArt::Ruf(r) => benutzer_ruf(r, p, w),
+            StmtArt::LetSonst(l) => {
+                if let Some(r) = l.als_ruf() {
+                    benutzer_ruf(r, p, w);
+                }
+            }
+            _ => {}
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            benutzer_expr(e, p, w);
+        }
+        for k in crate::unterbloecke(s) {
+            benutzer_lauf(k, pos, w);
+        }
+    }
+}
+
+fn benutzer_expr(x: &Expr, p: usize, w: &mut BenutzerLauf) {
+    match &x.art {
+        ExprArt::Binaer(op, l, r) if op.ist_vergleich() => {
+            for o in crate::alle_orte(l).iter().chain(crate::alle_orte(r).iter()) {
+                w.checks.push((o.basis.text.clone(), p));
+            }
+            // Calls nested inside the checked expression still hand off
+            // (`if f(q) != 0` passes `q` at this position) -- but an equal
+            // position never precedes, so they stay silent by construction.
+            for y in crate::alle_ausdruecke(x) {
+                if let ExprArt::Ruf(r) = &y.art {
+                    benutzer_ruf(r, p, w);
+                }
+            }
+        }
+        ExprArt::Ruf(r) => benutzer_ruf(r, p, w),
+        _ => {
+            match &x.art {
+                ExprArt::Ort(o) | ExprArt::Alt(o) => {
+                    w.nutzungen.push((o.basis.text.clone(), p));
+                }
+                ExprArt::Eingebaut(g) => match &**g {
+                    Eingebaut::Sizeof(TypOderOrt::Ort(o))
+                    | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                        w.nutzungen.push((o.basis.text.clone(), p));
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+            for k in crate::unterausdruecke(x) {
+                benutzer_expr(k, p, w);
+            }
+        }
+    }
+}
+
+fn benutzer_ruf(r: &Ruf, p: usize, w: &mut BenutzerLauf) {
+    // A record constructor carries no callee: its arguments are uses and checks,
+    // never a handoff.
+    if !r.ist_verbundwert() {
+        if let CallTarget::Path(pfad) = &r.ziel {
+            for (i, a) in r.argumente.iter().enumerate() {
+                if let Some(o) = ort_bloss(a) {
+                    w.rufe.push(BenutzerRuf {
+                        basis: o.basis.text.clone(),
+                        arg: i,
+                        ziel: pfad.text(),
+                        span: r.span,
+                        pos: p,
+                    });
+                }
+            }
+        }
+    }
+    if let CallTarget::Place(o) = &r.ziel {
+        w.nutzungen.push((o.basis.text.clone(), p));
+    }
+    for a in &r.argumente {
+        benutzer_expr(a, p, w);
+    }
+}
+
+/// A bare name under parentheses: `p`, not `p.n` and not `p[i]`. Only a bare
+/// parameter name carries a declared space the rule can read -- the same
+/// under-approximation `R008` states.
+fn ort_bloss(e: &Expr) -> Option<&Ort> {
+    match &e.art {
+        ExprArt::Klammer(x) => ort_bloss(x),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => Some(o),
+        _ => None,
+    }
+}
 #[cfg(test)]
 mod v011_tests {
     use super::*;
@@ -1145,6 +1454,111 @@ mod v011_tests {
             v011_in(&q),
             0,
             "different carrier and publish-before-load must stay silent"
+        );
+    }
+}
+
+#[cfg(test)]
+mod v012_tests {
+    use super::*;
+
+    /// Count V012 verdicts over a source: the unit twin of gift probes 766-768.
+    /// Only this pass runs here (`pass`, not `pruefe`), so the sources below pin
+    /// the V012 shape and nothing else.
+    fn v012_in(quelle: &str) -> usize {
+        let (baum, mut absagen) = gabbro_syntax::lies("probe.gab", quelle);
+        pass(&baum, &mut absagen);
+        absagen.absagen.iter().filter(|a| a.code == "V012").count()
+    }
+
+    const NUTZE: &str = "impl fn nutze(p : ptr<user, r> u8) -> u8 effects { reads p } \
+        costs <= 8 ops { return p[0]; }";
+    const TREU: &str = "impl fn treu(p : ptr<user, r> u8) -> u8 effects { reads p } \
+        costs <= 16 ops { if p[0] != 0 { return p[0]; } return 0; }";
+
+    #[test]
+    fn unguarded_handoff_falls_once() {
+        let q = format!(
+            "module p {{ {NUTZE} \
+             impl fn pruefe(p : ptr<user, r> u8) -> u8 effects {{ reads p }} costs <= 24 ops \
+             {{ if p[0] != 0 {{ return nutze(p); }} return 0; }} }}"
+        );
+        assert_eq!(v012_in(&q), 1, "checked here, used there: must fall exactly once");
+    }
+
+    #[test]
+    fn narrow_check_handoff_falls_once() {
+        let q = format!(
+            "module p {{ {NUTZE} \
+             impl fn pruefe(p : ptr<user, r> u8) -> u8 effects {{ reads p }} costs <= 24 ops \
+             {{ narrow p[0] to 1 .. 255 else {{ return 0; }} return nutze(p); }} }}"
+        );
+        assert_eq!(v012_in(&q), 1, "narrow is a check too: must fall exactly once");
+    }
+
+    #[test]
+    fn same_body_check_and_use_stays_silent() {
+        let q = format!("module p {{ {TREU} }}");
+        assert_eq!(
+            v012_in(&q),
+            0,
+            "check and use in one body are atomic under the snapshot premise"
+        );
+    }
+
+    #[test]
+    fn revalidating_callee_stays_silent() {
+        let q = format!(
+            "module p {{ {TREU} \
+             impl fn rufer(p : ptr<user, r> u8) -> u8 effects {{ reads p }} costs <= 24 ops \
+             {{ if p[0] != 0 {{ return treu(p); }} return 0; }} }}"
+        );
+        assert_eq!(
+            v012_in(&q),
+            0,
+            "the callee checks the same parameter before its first use"
+        );
+    }
+
+    #[test]
+    fn extern_handoff_stays_silent() {
+        // The booked foreign-body gap: the boundary kill forces a re-read after
+        // the call, and what happens inside foreign code is exported, not checked.
+        let q = format!(
+            "module p {{ extern fn liest(p : ptr<user, r> u8) -> u8 effects {{ pure }} \
+             costs <= 1 ops; \
+             impl fn pruefe(p : ptr<user, r> u8) -> u8 effects {{ reads p }} costs <= 16 ops \
+             {{ if p[0] != 0 {{ return liest(p); }} return 0; }} }}"
+        );
+        assert_eq!(v012_in(&q), 0, "foreign callees are the booked gap, not a refusal");
+    }
+
+    #[test]
+    fn forward_without_check_stays_silent() {
+        // `beispiele/68` in miniature: no check, no check-then-use shape.
+        let q = format!(
+            "module p {{ {NUTZE} \
+             impl fn weiter(p : ptr<user, r> u8) -> u8 effects {{ reads p }} costs <= 16 ops \
+             {{ return nutze(p); }} }}"
+        );
+        assert_eq!(v012_in(&q), 0, "a handoff with no check is no TOCTOU shape");
+    }
+
+    #[test]
+    fn check_on_other_param_stays_open() {
+        // The callee checks a DIFFERENT parameter than the one handed over:
+        // still unguarded, still one verdict.
+        let q = format!(
+            "module p {{ \
+             impl fn nutze(p : ptr<user, r> u8, n : u32) -> u8 effects {{ reads p }} \
+             costs <= 8 ops {{ if n != 0 {{ return p[0]; }} return 0; }} \
+             impl fn pruefe(p : ptr<user, r> u8) -> u8 effects {{ reads p }} costs <= 24 ops \
+             {{ if p[0] != 0 {{ return nutze(p, 4); }} return 0; }} }}"
+        );
+        assert_eq!(
+            v012_in(&q),
+            1,
+            "revalidation must cover the handed pointer, not a bystander"
         );
     }
 }
