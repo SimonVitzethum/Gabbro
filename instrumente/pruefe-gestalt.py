@@ -50,7 +50,7 @@ ERWARTET = {
     "Erhaltung.lean": (23, 15, 48),
     "Extraktion.lean": (51, 6, 68),
     "Fehler.lean": (48, 0, 25),
-    "Fristlauf.lean": (11, 6, 9),
+    "Fristlauf.lean": (12, 7, 9),  # p16: +1 theorem (hardware-exhaustive expiry link) +1 example (eval pin)
     "Geraet.lean": (10, 0, 20),
     "Geteilt.lean": (19, 2, 26),
     "InterferenzAllgemein.lean": (13, 0, 25),

@@ -1,0 +1,37 @@
+-- erwartet: N056
+-- **A deadline whose probe diverges but guards nothing.**
+--
+-- The watchdog arm of `N056` at a `deadline` clause. `watch` answers `-> never`
+-- and guards no loop in this unit, so the date names a probe that can never go
+-- red: nothing here can ever say "refuted". The checker refuses with `N056`.
+-- The value arm of the same rule at the same clause is pinned by `697`
+-- (a `-> u64` probe); the `assume` spelling of the value arm by `677`.
+--
+-- `intact` is the control: its date names `sonde_tick`, which resolves nowhere
+-- in this unit. A probe is a program next to the tree, not a declaration in
+-- it, so an unresolvable name stays silent -- the number reads (no `K011`),
+-- and no `arch` is declared anywhere (no `K012` per `R16`). A run over this
+-- file must report `N056` at `due` and nothing at `intact`.
+module gift764 {
+
+extern fn watch() -> never effects { diverges } costs <= 1 ops;
+
+-- Must fall: the probe cannot refute, so the date stands uncovered.
+impl fn due() -> u32 in 0 .. 1
+    effects { pure }
+    costs   <= 10 ops
+    deadline <= 100 ops arch x86_64 falsifier watch
+{
+    return 0;
+}
+
+-- Must pass: an external probe is a program next to the tree.
+impl fn intact() -> u32 in 0 .. 1
+    effects { pure }
+    costs   <= 10 ops
+    deadline <= 100 ops arch x86_64 falsifier sonde_tick
+{
+    return 0;
+}
+
+}
