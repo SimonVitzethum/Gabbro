@@ -1,0 +1,51 @@
+-- erwartet: Hinweis V003
+-- **V003-hint-only, pinned.** `kreis` recurses (`decreases k`), so its call hull
+-- is incomplete -- and it publishes: `Hinweis V003` fires, and the arm `continue`s
+-- past `V008`, `V004`/`V005`, `V010`, `V001` and `V002` for this function
+-- (`crates/gabbro-check/src/paarung.rs`, the `V003` arm).
+--
+-- The publish is the orphan the skip hides: nothing awaits `{ m }` on `G`
+-- anywhere in this unit, the `V001` shape, and no refusal names it. The only
+-- companion is the honest one, `Hinweis E009`: the hull IS undecidable, and the
+-- hint says so. A rule that narrowed the skip (the `V012` candidate in
+-- `messung/V-UHREN.md`) would speak here; today only the hint does.
+--
+-- The twin beside it (`mw`/`mr` on `F`) is the same pairing with a COMPLETE hull:
+-- published and awaited along the graph, silent in every world. If anything but
+-- `Hinweis V003` and `Hinweis E009` ever falls here, the twin has spoken.
+module gift::v003_hint_skips_orphan_check {
+
+const TIEFE : u32 = 512;
+
+static mut m : u32 = 0;
+static mut n : u32 = 0;
+atomic G : bool release;
+atomic F : bool release;
+
+-- Verdict carrier and pinned hole in one body: incomplete hull (self-recursion)
+-- plus an orphaned publish. `m` is written BEFORE the store, so `V006` has
+-- nothing to say; the recursive call writes nothing syntactically, so what
+-- stands after the store is invisible to it too.
+impl fn kreis(k : u32 in 0 .. TIEFE, v : u32)
+    effects { writes m, publishes G }
+    costs   <= 64 ops
+    decreases k
+{
+    m = v;
+    G = true publishes { m };
+    if k == 0 { return; }
+    kreis(k - 1, v);
+}
+
+-- Silent twin: the same pairing with a complete hull -- must stay silent.
+impl fn mw(v : u32)
+    effects { writes n, publishes F }
+    costs   <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+impl fn mr() -> u32
+    effects { writes n, publishes F, reads F, reads n }
+    costs   <= 16 ops
+{ mw(0); let f = F awaits { n }; if f { return n; } return 0; }
+
+}

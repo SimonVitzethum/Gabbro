@@ -1,0 +1,69 @@
+-- erwartet: H012
+-- **H012 misses a call nested in the argument of a statement-level call.**
+--
+-- `falsch` is the verdict carrier, the shape of `gift/142`: `nimmt_l1` takes `L1`
+-- (rank 1) while `L2` (rank 2) is held -- `H012` fires.
+--
+-- `loch` is the SAME inversion with the call folded one level deeper:
+-- `senke` re-takes `L2` (rank-equal, silent by construction), but its argument
+-- `lies_l1()` takes `L1` while `L2` is held -- and nothing falls. The call-graph edge exists
+-- (`aufrufgraph.rs`, `nimm_ruf`, recurses into direct call arguments), the hull
+-- of `loch` even carries `locks L1` (so `effects` stays closed and silent), but
+-- `rufprobe` in `geteilt.rs` never descends into the arguments of a
+-- statement-level call: `StmtArt::Ruf(r) => rufprobe(r, …)` checks the callee
+-- and stops. The expression twin (`rufprobe_expr`, same file) walks arguments --
+-- one position repaired after `gift/179`, its neighbour not.
+--
+-- `aufsteigend` is the must-pass twin: the direct call in ASCENDING order
+-- (`L1` held, `L2` taken) -- allowed, and it must stay silent. If anything but
+-- `H012` ever falls here, the twin has spoken.
+module gift::h012_call_in_statement_argument_silent {
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+lock L1 protects { a } rank 1 held <= 100 ops;
+lock L2 protects { b } rank 2 held <= 100 ops;
+
+-- Takes L1, returns a value: the shape a nested call needs.
+impl fn lies_l1() -> u32
+    effects { reads a, locks L1 }
+    costs   <= 8 ops
+{ locks L1 { return a; } }
+
+impl fn nimmt_l1()
+    effects { writes a, locks L1 }
+    costs   <= 8 ops
+{ locks L1 { a = 2; } }
+
+impl fn nimmt_l2()
+    effects { writes b, locks L2 }
+    costs   <= 8 ops
+{ locks L2 { b = 3; } }
+
+-- Takes L2 around its own write (so H007 stays silent); carries the nested
+-- call as its argument. Re-taking L2 is rank-equal and silent by construction.
+impl fn senke(x : u32)
+    effects { writes b, locks L2 }
+    costs   <= 8 ops
+{ locks L2 { b = x; } }
+
+-- Verdict carrier: the direct inversion, the shape of `gift/142`.
+impl fn falsch()
+    effects { writes a, writes b, locks L1, locks L2 }
+    costs   <= 32 ops
+{ locks L2 { b = 2; nimmt_l1(); } }
+
+-- The pinned hole: the same inversion, the taking call in argument position.
+-- `senke` re-takes L2 (rank-equal, silent), `lies_l1` is never visited -- silence.
+impl fn loch()
+    effects { writes b, reads a, locks L1, locks L2 }
+    costs   <= 48 ops
+{ locks L2 { b = 2; senke(lies_l1()); } }
+
+-- Must-pass twin: the direct call ascending -- allowed, stays silent.
+impl fn aufsteigend()
+    effects { writes a, writes b, locks L1, locks L2 }
+    costs   <= 32 ops
+{ locks L1 { a = 1; nimmt_l2(); } }
+
+}
