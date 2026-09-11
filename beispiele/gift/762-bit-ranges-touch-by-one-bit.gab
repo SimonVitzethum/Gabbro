@@ -1,0 +1,17 @@
+-- erwartet: N008
+-- **The overlap boundary, to the exact bit.** `beispiele/gift/106` overlaps by two bits
+-- (`@[7:4]` against `@[5:2]`); the comment there already names the touching case as clean
+-- (`version @[7:4]` / `dscp @[7:2]` are two bytes). This is the edge between them: `a`
+-- owns bit 4 and `b` claims it too, so the two ranges touch in exactly one shared bit and
+-- `N008` must fire. A mask comparison off by one in either direction moves this file to
+-- the wrong side -- silent, or refusing the clean touch beside it.
+-- Measured 2026-09-11 against the unchanged checker: falls with `N008`.
+
+module gift::bit_ranges_touch_by_one_bit {
+
+format Kopf endian big {
+    a : u8 @[7:4],
+    b : u8 @[4:0],
+}
+
+}
