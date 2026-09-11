@@ -524,4 +524,151 @@ theorem ziel_seqLogic_aus_spec_invariantForm (Nb : Nebeneinander)
 
 #print axioms Gabbro.Grammatik.ziel_seqLogic_aus_spec_invariantForm
 
+/-! ## 8. The goal from discipline: no assumed context, no per-run check (z03, 2026-09-11)
+
+    What §5 still owes, and what this section stops owing. `ziel_nutzer_last`
+    takes the strong `hInv : InvariantenKontext` -- the invariant at EVERY chain
+    world -- as a premise, and the general `hFree : InterferenceFree` beside it;
+    even the §7 invariant variant keeps `hInv` as a premise instead of deriving
+    it. This section wires the goal to the derived side:
+
+    * (a) `hInv` is DERIVED, not assumed: `invariantenKontext_aus_disziplin`
+      (§21, read-only reuse) folds the per-carrier lemma over all carriers from
+      entry (`hEntry` -- the invariant holds at the chain head),
+      return-restoration (`hReturn` -- every writing step re-establishes what it
+      owes at its end world under the guard), and the single watch premise per
+      carrier (`hWatch` -- writing steps hold the guard). The premises are
+      restated honestly in the callee's shape. For tables the watch discharges
+      from `J.hSchuld` plus coverage (`wache_aus_schuld`, from `SchuldnerHaelt`
+      §3 via U003 `Syntax.lean`:181, proved per body by `schuldnerHaelt_gilt`);
+      for globals it stays checker-side -- see the §21 scope prose. No `sorry`,
+      no `axiom`; `InterferenzAllgemein.lean` is not touched.
+    * (b) `hFree` is DERIVED for the covered fragment, not owed per run: the
+      sequential-logic leg runs through the §7 invariant variant
+      (`ziel_seqLogic_aus_spec_invariantForm`), which takes `hForm :
+      InvariantForm` (OWN-LOGIC: exhibit, per thread, the carrier whose
+      invariant the contract conjunction coincides with) in place of `hFree`.
+      The non-invariant fragment stays booked: assertions over shared carriers
+      that are NOT in invariant form still owe `hFree` exactly as §6 books it.
+    * (c) The CSL-exact reading travels as its own leg:
+      `interferenceFree_wo_frei` (§21, read-only reuse) over one shared table
+      carrier -- the standard CSL case -- with the conclusion gated on the guard
+      being free at BOTH step worlds (`LockFrei L vor`, `LockFrei L nach`). Its
+      premises (carrier `t₀`, guard `L`, frame-locality, guard link, entry,
+      return, coverage `hCov`, uniform coincidence `hFormU`) are stated
+      separately from the general discipline premises of (a) because the
+      corollary takes them separately; `hFormU` (uniform: every thread
+      coincides with `t₀`) is stronger than `hForm` (existential per thread)
+      and feeds only this leg.
+
+    Every premise below is load-bearing: each occurs in the proof term applied
+    to one of the reused lemmas, so deleting any premise breaks elaboration.
+    There is no `have _ :=` discard anywhere in the proof. The older variants
+    (`ziel_nutzer_last`, `ziel_seqLogic_aus_spec`,
+    `ziel_seqLogic_aus_spec_invariantForm`) stand untouched as corollaries and
+    steps. -/
+
+/-- The goal from discipline (z03): the `ziel_nutzer_last` conclusion with `hInv`
+    derived from entry plus return-restoration plus watch
+    (`invariantenKontext_aus_disziplin`, §21), `hFree` replaced by `hForm` for
+    the invariant fragment (through the §7 variant
+    `ziel_seqLogic_aus_spec_invariantForm`), and the CSL-exact LockFrei-gated
+    reading as its own leg (`interferenceFree_wo_frei`, §21). Every premise is
+    load-bearing -- each is applied in the proof term below. -/
+theorem ziel_nutzer_last_aus_disziplin (o : Ausgang V l Γ)
+    (run : Lauf D) (voll : Faden → List (Ereignis D))
+    (hvoll : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f)
+    (hvers : IstVerschraenkung run voll)
+    (hausschluss : ForeignExclusion (D := D) run)
+    (code : D.Marke → Nat) (hEin : Marken.Einfaedig (laufProj code run))
+    (hungeteilt : ∀ (i j : Nat) (f g : Faden) (carrier : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      run[i]? = some (Schritt.mk f ei) → run[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some carrier → ej.traeger = some carrier →
+      (match carrier with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g)
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (hLink : J.l = run)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
+    (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool)
+    (hAbD : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c))
+    (hFrameTD : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t)
+    (hFrameGD : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x)
+    (hGuardEx : ∀ c : D.Tab ⊕ D.Glob, ∃ L : D.Lock, Bewacht (D := D) c L)
+    (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g))
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
+    (hForm : InvariantForm Nb J I (SpecQ Pre Post Nb J))
+    (t₀ : D.Tab) (L : D.Lock)
+    (WcL : D.Tab → Bool) (GcL : D.Glob → Bool)
+    (hAbL : HaengtAb WcL GcL (I.inv (.inl t₀)))
+    (hFrameTL : ∀ t : D.Tab, WcL t = true → (.inl t₀ : D.Tab ⊕ D.Glob) = .inl t)
+    (hFrameGL : ∀ x : D.Glob, GcL x = true → (.inl t₀ : D.Tab ⊕ D.Glob) = .inr x)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (hEntryL : ∀ σ₀ : World D, J.welten[0]? = some σ₀ → I.inv (.inl t₀) σ₀)
+    (hReturnL : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
+          L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
+    (hCov : ∀ (g : Faden), g ∈ J.faeden →
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hFormU : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ : World D),
+      SpecQ Pre Post Nb J f σ ↔ I.inv (.inl t₀) σ)
+    (S : Nat) (c : TickClock S) (hstart : c.tick 0 ≤ S)
+    (p : PruefPaar) (fr : Frist D) (d : Moment)
+    (hpd : p.pruef < d) (hdl : d < p.lauf)
+    (hspace : deadlineSpacing S p d)
+    (hLowering : Absenkung) :
+    (Gesittet J.l)
+    ∧ ((∀ f j, Konsistent (run.spur f j)) ∧
+      ∀ f j (e : Ereignis D), e ∈ run.spur f j → e.gut)
+    ∧ (∀ (σ : World D), J.welten.getLast? = some σ →
+      ∀ (f : Faden), f ∈ J.faeden → SpecQ Pre Post Nb J f σ)
+    ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
+      fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
+    ∧ (hLowering.proPrimitiv ≤ 18)
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+      (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
+      (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
+    ∧ (∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+          J.welten[k + 1]? = some nach →
+            LockFrei (D := D) L vor → LockFrei (D := D) L nach →
+              (SpecQ Pre Post Nb J f vor ↔ SpecQ Pre Post Nb J f nach)) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hLink]
+    exact bruecke_exec_gesittet run voll hvoll hvers hausschluss code hEin hungeteilt
+  · exact lauf_aus_brav run voll hvoll hvers
+  · intro σ hletzte f hf
+    exact ziel_seqLogic_aus_spec_invariantForm Nb J I Pre Post
+      (invariantenKontext_aus_disziplin Nb J I Wc Gc hAbD hFrameTD hFrameGD hGuardEx
+        hEntry hReturn hWatch)
+      hDeck hAb hSpec hForm σ hletzte f hf
+  · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
+  · exact hLowering.begrenzt
+  · exact zwei_fehler o
+  · intro f hf k g vor nach hgm hne hkg hkv hkn hFreiVor hFreiNach
+    exact interferenceFree_wo_frei Nb J I (SpecQ Pre Post Nb J) t₀ L WcL GcL
+      hAbL hFrameTL hFrameGL hGuardT hEntryL hReturnL hCov hFormU
+      f hf k g vor nach hgm hne hkg hkv hkn hFreiVor hFreiNach
+
+#print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_disziplin
+
 end Gabbro.Grammatik
