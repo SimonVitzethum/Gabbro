@@ -1047,3 +1047,133 @@ theorem stabil_from_spec (Nb : Nebeneinander)
 #print axioms Gabbro.Grammatik.stabil_from_spec
 
 end Gabbro.Grammatik
+
+/-! ## 20. CSL discharge: invariant-form assertions need no per-run check (x02)
+
+    The auditor's finding: `ziel_seqLogic_aus_spec` (Ziel.lean §6, bound to
+    `stabil_from_spec`, §19 above) books `hFree : InterferenceFree` as user
+    OWN-LOGIC -- and `InterferenceFree` (§18, `:891`) is verbatim the
+    Owicki-Gries condition (every foreign step preserves every assertion), so
+    concurrent code over shared carriers forces the user into a per-run
+    non-interference proof.
+
+    The full derivation -- `InterferenceFree` for ARBITRARY `Q` from
+    `TraegerInv` + `HaengtAb` -- does NOT close, and the reason is one line:
+    `HaengtAb` says `Q` reads only its frame, but a foreign step writing
+    INSIDE that frame may still break `Q`. Frame-locality is not preservation.
+    So the CSL restriction is taken: assertions over lock-shared carriers are
+    allowed ONLY in invariant (resource-invariant) form -- and invariant-form
+    assertions are interference-free BY CONSTRUCTION, on the same engine that
+    carries `allgemeinStabil_invariant` (§11): the context holds the invariant
+    at every chain world (`invErhalt_aus_Kontext`), so each foreign step goes
+    from one invariant world to another and `Q`, being the invariant, follows.
+
+    What this section proves (no `sorry`, no `axiom`):
+
+    * `InvariantForm` -- the covered fragment, named: per thread, `Q f`
+      coincides with some carrier invariant `I.inv c` (the carrier may differ
+      per thread; shared carriers are the point, disjoint ones already travel
+      through the `stabil` side of `hFremd`).
+    * `interferenceFree_of_invariantForm` -- the discharge: form plus context
+      yields `InterferenceFree`. This is the theorem that removes the per-run
+      proof for the covered class.
+    * `owickiGries_stabil_invariantForm` -- the Owicki-Gries corollary with
+      `hFree` replaced by `hForm` (same conclusion as `owickiGries_stabil`).
+    * `stabil_from_spec_invariantForm` -- the contract-level corollary with
+      `hFree` replaced by `hForm` over `SpecQ` (same conclusion as
+      `stabil_from_spec`, §19).
+
+    User-obligation delta, stated exactly (BEFORE = §19 R3, AFTER = this section):
+
+    * BEFORE: the user owes `hFree` -- for every thread `f` and every foreign
+      step, `Q f` survives the step. A per-run preservation proof, OWN-LOGIC.
+    * AFTER (covered class -- `Q` in invariant form): `hFree` is DERIVED. The
+      user owes instead (U1) `hForm` -- exhibit, per thread, the carrier `c`
+      with `Q f σ ↔ I.inv c σ` for all `σ`: a static shape check, no per-step
+      reasoning; and (U2) `hInv` (`InvariantenKontext`) -- UNCHANGED, it was
+      already a premise of `stabil_from_spec`. `hSpec` and `hAb` are likewise
+      unchanged.
+    * NOT covered: assertions over shared carriers that are NOT in invariant
+      form. There `hFree` remains OWN-LOGIC, exactly as §19 R3 books it. This
+      section narrows R3 for the invariant fragment; it does not delete it.
+
+    Remainder (not here, named so no wave re-measures it):
+
+    * The Ziel-level binder -- a `ziel_seqLogic_aus_spec` variant consuming
+      `stabil_from_spec_invariantForm` (with `hForm` instead of `hFree`) --
+      belongs to the proof architect: `Ziel.lean` is owned by another wave and
+      is not touched here (§19 R5 carries over).
+    * `hInv` itself (establishing the context per run: entry plus discipline)
+      is carried as before, not discharged; `hDeck` is carried, not consumed
+      (G5 carries over).
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- An assertion in invariant (resource-invariant) form: for every thread, `Q f`
+    coincides, at every world, with the invariant of some carrier. This is the
+    CSL fragment -- assertions over lock-shared carriers are allowed only in
+    this form; the carrier may differ per thread. -/
+def InvariantForm (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop) : Prop :=
+  ∀ (f : Faden), f ∈ J.faeden → ∃ c : D.Tab ⊕ D.Glob, ∀ (σ : World D), Q f σ ↔ I.inv c σ
+
+/-- **Interference freedom by construction.** An invariant-form assertion
+    survives every foreign step: both worlds of the step are chain worlds, the
+    context holds the invariant at each (`invErhalt_aus_Kontext`, the engine
+    behind `allgemeinStabil_invariant`), and `Q` IS the invariant -- so there
+    is nothing per-run left to prove. -/
+theorem interferenceFree_of_invariantForm (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
+    (hForm : InvariantForm Nb J I Q)
+    (hInv : InvariantenKontext Nb J I) :
+    InterferenceFree Nb J Q := by
+  intro f hf k g vor nach _ _ hkg hkv hkn
+  obtain ⟨c, hc⟩ := hForm f hf
+  rw [hc vor, hc nach]
+  exact invErhalt_aus_Kontext Nb J I hInv c vor nach
+    (List.mem_of_getElem? hkv) (List.mem_of_getElem? hkn)
+
+/-- Owicki-Gries stability for the invariant fragment: sequential triples plus
+    the FORM check give stable assertions at the last world -- `hFree` is
+    derived above, not assumed. Same conclusion as `owickiGries_stabil`. -/
+theorem owickiGries_stabil_invariantForm (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (Q f))
+    (hSeq : ∀ (f : Faden), f ∈ J.faeden → SeqTriple Nb J Q f)
+    (hForm : InvariantForm Nb J I Q) :
+    ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → Q f σ :=
+  owickiGries_stabil Nb J I Q hInv hDeck hAb hSeq
+    (interferenceFree_of_invariantForm Nb J I Q hForm hInv)
+
+/-- Stability from specifications for the invariant fragment: sequential
+    contract triples plus the FORM check over the conjunction give stable
+    contract assertions at the last world. Same conclusion as
+    `stabil_from_spec` (§19), with `hFree` derived instead of owed. -/
+theorem stabil_from_spec_invariantForm (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
+    (hForm : InvariantForm Nb J I (SpecQ Pre Post Nb J)) :
+    ∀ (σ : World D), J.welten.getLast? = some σ →
+      ∀ (f : Faden), f ∈ J.faeden → SpecQ Pre Post Nb J f σ := by
+  refine stabil_from_spec Nb J I Pre Post hInv hDeck hAb hSpec ?_
+  exact interferenceFree_of_invariantForm Nb J I _ hForm hInv
+
+#print axioms Gabbro.Grammatik.interferenceFree_of_invariantForm
+#print axioms Gabbro.Grammatik.owickiGries_stabil_invariantForm
+#print axioms Gabbro.Grammatik.stabil_from_spec_invariantForm
+
+end Gabbro.Grammatik
