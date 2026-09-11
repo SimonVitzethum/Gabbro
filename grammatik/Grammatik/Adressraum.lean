@@ -840,4 +840,67 @@ theorem modellKopieAusfuehrt_quellBereich (D : Deklaration) (t : D.Tab)
 #print axioms validiert_quellSchluessel_imTeil
 #print axioms modellKopieAusfuehrt_quellBereich
 
+/-! ## 10. The exec counterpart of `validiert`: the checked step discharges
+    through the exec write path (C6) -/
+
+/- What `validiert` was missing, given here without touching `Semantik.lean`:
+    the checked transition -- `BereichSchritt.geprueft`, which carries
+    `h : validiert r k` the way `Stmt.schreibBytes` carries
+    `hhi : hi + n ≤ D.count t` -- discharges through the very functions the
+    `exec`/`eval` byte paths bind. `modellKopieAusfuehrt_istExecPfad` names the
+    identity: the validated-copy run IS `World.schreibBytes` over
+    `World.bytesAb` (`execStmt`'s `schreibBytes` branch runs the former,
+    `eval`'s `leseBytes` branch binds the latter, `weltBytes_istBytesAb`
+    above). `schrittAusfuehrt_entlaedt` runs the discharge end to end: from a
+    checked step and its carrier equation, the executable check reads `true`
+    AND the model run has the validated length AND reads only validated
+    user-part keys. What stays booked, unchanged: no `Stmt`/`Block`
+    transition takes such a step yet, and no `World` carries a `Seite`
+    partition -- the Semantik side of cut C6. -/
+
+/-- The validated-copy run, as the exec write path: `World.schreibBytes` over
+    `World.bytesAb` -- the exact pair of calls the `exec`/`eval` byte paths
+    bind. Stated as `rfl` because the wiring is by identity, not by
+    correspondence (cf. `weltBytes_istBytesAb` above). -/
+theorem modellKopieAusfuehrt_istExecPfad (D : Deklaration) (t : D.Tab)
+    (f : D.Feld t) (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (g : GepruefteKopie) (σ : World D) :
+    modellKopieAusfuehrt D t f hf Λ g σ
+      = σ.schreibBytes t f hf Λ (g.kopie.kernAddr : Int)
+          (σ.bytesAb t f hf g.kopie.laenge (g.kopie.userAddr : Int)) :=
+  rfl
+
+/-- The executable check discharges on every checked step: deciding and
+    carrying agree, by construction. -/
+theorem geprueft_bool_haelt (r : UserRegion) (k : Kopie) (h : validiert r k) :
+    kopieImBereichBool r k = true :=
+  Iff.mpr (kopieImBereichBool_holds r k) h
+
+/-- **The checked transition discharges in exec.** From a checked step and its
+    carrier equation: the executable check reads `true`, and the run through
+    the exec write path (`modellKopieAusfuehrt`, i.e. `World.schreibBytes`
+    over `World.bytesAb` per `modellKopieAusfuehrt_istExecPfad`) has the
+    validated length and reads only validated user-part keys. An out-of-region
+    copy has no such step -- there is no proof to build it with
+    (`verweigert_keinGeprueft` above) -- so refusal stays where it was,
+    beside the step. -/
+theorem schrittAusfuehrt_entlaedt (D : Deklaration) (t : D.Tab)
+    (f : D.Feld t) (hf : D.typ t f = .int 0 255)
+    (s : BereichSchritt) (r : UserRegion) (k : Kopie)
+    (h : schrittTraeger s = some (r, k)) (σ : World D) :
+    let g : GepruefteKopie :=
+      { region := r, kopie := k, gecheckt := bereichSchritt_fordertBereich s r k h }
+    kopieImBereichBool r k = true ∧
+    (weltBytes D t f hf σ g.kopie.userAddr g.kopie.laenge).length = g.kopie.laenge ∧
+    ∀ i : Nat, i < g.kopie.laenge →
+      schluesselInRegion g.region ((g.kopie.userAddr + i : Nat) : Int) := by
+  have hv : validiert r k := bereichSchritt_fordertBereich s r k h
+  have hrun := modellKopieAusfuehrt_quellBereich D t f hf
+    ({ region := r, kopie := k, gecheckt := hv }) σ
+  exact ⟨geprueft_bool_haelt r k hv, hrun.1, hrun.2⟩
+
+#print axioms modellKopieAusfuehrt_istExecPfad
+#print axioms geprueft_bool_haelt
+#print axioms schrittAusfuehrt_entlaedt
+
 end Gabbro.Grammatik.Adressraum

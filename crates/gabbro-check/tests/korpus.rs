@@ -844,3 +844,50 @@ fn c2_witness_pairs_have_written_expectations() {
         );
     }
 }
+
+/// **The user-space side of the pointer-rights refusal: gifts 772/773.**
+///
+/// `beispiele/gift/57` refuses a store through `ptr<normal, r>` (`R002`), `59` a load
+/// through `ptr<normal, w>` (`R003`), and `763` pins the same unsound direction over
+/// `user` at a call (`R013`). What stood unpinned was the direct access over `user` --
+/// the space every validated-copy discipline is about (`Grammatik/Adressraum` carries
+/// `validiert` beside `exec`, cut C6, so the refusal has to stand at compile time).
+/// 772 pins the store side, 773 the load side. The generic gift run only asserts the
+/// code FIRES; this pins the exact sets, so a second voice can never sneak in beside
+/// the checked twin staying silent.
+#[test]
+fn user_rights_fall_exactly_once_772_773() {
+    use gabbro_syntax::diag::Stufe;
+    for (datei, erwartet) in [
+        ("772-user-write-without-right.gab", "R002"),
+        ("773-user-read-without-right.gab", "R003"),
+    ] {
+        let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("workspace root")
+            .join("beispiele")
+            .join("gift")
+            .join(datei);
+        let quelle = std::fs::read_to_string(&pfad).expect("gift readable");
+        assert!(
+            quelle.lines().next().is_some_and(|z| z.trim() == format!("-- erwartet: {erwartet}")),
+            "{datei}: first line must pin `-- erwartet: {erwartet}`"
+        );
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        let _ = gabbro_check::pruefe(&baum, &mut absagen);
+        let gefallen: Vec<&str> = absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect();
+        assert_eq!(
+            gefallen,
+            vec![erwartet],
+            "{datei}: must fall with exactly one `{erwartet}` -- the checked twin stays \
+             silent, and no second voice may speak:\n{}",
+            absagen.zeige(&quelle)
+        );
+    }
+}
