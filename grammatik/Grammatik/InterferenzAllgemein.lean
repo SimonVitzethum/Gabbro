@@ -745,4 +745,69 @@ theorem fadenEnv_letzte_erhaelt (Nb : Nebeneinander)
 #print axioms Gabbro.Grammatik.fadenEnv_kette_erhaelt
 #print axioms Gabbro.Grammatik.fadenEnv_letzte_erhaelt
 
+/-! ## 18. Owicki-Gries step: sequential triples plus interference freedom (P15) -/
+
+/-- Sequential triple for one thread `f`: valid at the chain head and preserved
+    by its own steps. This is the sequential-logic side of the Owicki-Gries
+    method: each thread is proved in isolation, carrying exactly the `hInit`
+    and `hEigen` premises that `allgemeinStabil` consumes. -/
+def SeqTriple (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (Q : Faden → World D → Prop) (f : Faden) : Prop :=
+  (∀ σ₀ : World D, J.welten[0]? = some σ₀ → Q f σ₀) ∧
+    ∀ (k : Nat) (vor nach : World D),
+      J.schrittFaden[k]? = some f → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → (Q f vor ↔ Q f nach)
+
+/-- Interference freedom for `Q`: every assertion of `f` survives every step
+    of every distinct thread `g`. This is the Owicki-Gries check: one
+    preservation obligation per foreign step, discharged independently of the
+    sequential proofs. It feeds the shared (preserved) side of the `hFremd`
+    disjunction of `allgemeinStabil`. -/
+def InterferenceFree (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (Q : Faden → World D → Prop) : Prop :=
+  ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
+    g ∈ J.faeden → g ≠ f →
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → (Q f vor ↔ Q f nach)
+
+/-- Interference freedom discharges the foreign premise of `allgemeinStabil`
+    through the shared (preserved) side of the disjunction. -/
+theorem interferenceFree_gives_hFremd (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (Q : Faden → World D → Prop)
+    (hFree : InterferenceFree Nb J Q)
+    (f : Faden) (hf : f ∈ J.faeden)
+    (k : Nat) (g : Faden) (vor nach : World D)
+    (hgm : g ∈ J.faeden) (hne : g ≠ f)
+    (hkg : J.schrittFaden[k]? = some g) (hkv : J.welten[k]? = some vor)
+    (hkn : J.welten[k + 1]? = some nach) :
+    Disjunkt (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+      (D.schreibt (J.code g)) (D.gschreibt (J.code g)) ∨
+      (Q f vor ↔ Q f nach) :=
+  Or.inr (hFree f hf k g vor nach hgm hne hkg hkv hkn)
+
+/-- Owicki-Gries stability (N threads): sequential triples plus interference
+    freedom give stable assertions at the last world, via the proved N-thread
+    theorem `allgemeinStabil`. The sequential proofs supply `hInit`/`hEigen`;
+    the interference check supplies `hFremd` through its preserved side. -/
+theorem owickiGries_stabil (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f)) (Q f))
+    (hSeq : ∀ (f : Faden), f ∈ J.faeden → SeqTriple Nb J Q f)
+    (hFree : InterferenceFree Nb J Q) :
+    ∀ (σ : World D), J.welten.getLast? = some σ → ∀ (f : Faden), f ∈ J.faeden → Q f σ := by
+  refine allgemeinStabil Nb J I Q hInv hDeck hAb
+    (fun f hf σ₀ h₀ => (hSeq f hf).1 σ₀ h₀) ?_ ?_
+  · intro f hf k g vor nach hgm hne hkg hkv hkn
+    exact Or.inr (hFree f hf k g vor nach hgm hne hkg hkv hkn)
+  · intro f hf k vor nach hkg hkv hkn
+    exact (hSeq f hf).2 k vor nach hkg hkv hkn
+
+#print axioms Gabbro.Grammatik.interferenceFree_gives_hFremd
+#print axioms Gabbro.Grammatik.owickiGries_stabil
+
 end Gabbro.Grammatik
