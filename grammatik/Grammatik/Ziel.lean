@@ -92,6 +92,29 @@ structure Absenkung where
     eigenen Erzeugnis). -/
 def absenkung : Absenkung := ⟨17, by decide⟩
 
+/-- FRAGMENT BOUNDARY (p13): what IS modeled here is the NUMERIC bound only --
+    the witness `17` and the cap `18` on `proPrimitiv`. What is NOT modeled:
+    the lowering MAP itself (Gabbro primitive to `List CForm`), per-primitive
+    expansion, C semantics, and quantitative CompCert preservation. Those stay
+    assumptions and cuts (see `Erhaltung.lean` P2/C2, `Budget.lean` C3). The
+    lemmas below discharge the obligation register for the modeled fragment:
+    the witness keeps the bound, and anything under the witness keeps it too.
+    Rust `absenkung.rs` stays unwired and is not read here. -/
+theorem absenkung_wert : absenkung.proPrimitiv = 17 := rfl
+
+/-- The witness discharges the bound the structure demands. -/
+theorem absenkung_haelt_schranke : absenkung.proPrimitiv ≤ 18 :=
+  absenkung.begrenzt
+
+/-- Anything under the measured maximum stays under the witness. -/
+theorem absenkung_unter_maximum (n : Nat) (h : n ≤ 17) :
+    n ≤ absenkung.proPrimitiv := h
+
+/-- The witness preserves the cap transitively: under the witness is under 18. -/
+theorem absenkung_monoton (n : Nat) (h : n ≤ absenkung.proPrimitiv) :
+    n ≤ 18 :=
+  Nat.le_trans h absenkung.begrenzt
+
 /-! ## 2. Das Ziel -- ein Satz je Zeile -/
 
 /-- Jeder Ausgang ist Kontrollfluss, Logik oder Hardware -- kein dritter. -/
