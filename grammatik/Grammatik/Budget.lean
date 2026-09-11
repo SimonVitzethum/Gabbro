@@ -41,6 +41,8 @@
     `runPasses_exceeds`    -- one pass over bound implies the named budget outcome.
     `per_pass_respected`   -- the umbrella: either all passes ran within bound,
                               or the run names the pass that did not.
+    `seqPasses_complete`   -- every sequence element within bound implies `ok`.
+    `seqPasses_exceeds`    -- one element over bound implies the named outcome.
 
   Premises (trusted, not proved):
     P1  Declared costs are faithful: `Op.cost` is the cost the declaration
@@ -61,9 +63,17 @@
         quantitative CompCert, or the probe. Same boundary as `Ziel.lean`.
     C4  Not wired into `Grammatik.lean`: lane scope forbids the index edit;
         check this file directly with `lake env lean Grammatik/Budget.lean`.
+    C5  Statement threading is shapes only (`SeqElem`/`seqPasses` below): the
+        op list of an element is a DECLARED assignment (P1 lifted to
+        statements), resource threading (`Λ` into `Λ'`) between elements is
+        not tracked, and there is NO link to `Semantik.execStmt`/`execBlock`.
+        Closing that link needs `Semantik` changes and stays booked here, not
+        faked.
 
   No `mathlib`, no `sorry`, no `axiom`.
 -/
+
+import Grammatik.Syntax
 
 namespace Gabbro.Grammatik
 
@@ -406,5 +416,127 @@ def bounded_respected (N : Nat) (paesse : List Pass) : Prop :=
   (∃ rest, runBoundedPasses N paesse = .ok rest ∧
     ∀ p ∈ paesse, totalCost p.2 ≤ N) ∨
   (∃ name gebraucht, runBoundedPasses N paesse = .budget name gebraucht N)
+
+end Gabbro.Grammatik
+
+/-! ## Statement threading: `runPasses` over `Stmt`/`Block` sequences
+
+    A sequence is a list of index-erased elements sharing one `l` and one `Γ`:
+    each element keeps its own `Λ`/`Λ'`. The op list of an element comes from a
+    DECLARED assignment `assign` (premise P1 lifted to statements: a number the
+    declaration trusts, not one measured here). Resource threading (`Λ` into
+    `Λ'`) between elements is NOT tracked below, and there is NO verified link
+    from an element to `Semantik.execStmt`/`execBlock`: the full execution
+    linkage stays booked (cut C5), not faked.
+
+    Proven below (`#print axioms` shows `[propext, Classical.choice, Quot.sound]`:
+    the same footprint as `Stmt`/`Block` themselves and as the `Satz.lean`
+    theorems about them -- measured 2026-09-11, inherited by mentioning
+    statements, no new axiom):
+      `seqPasses_complete` -- every element within bound implies `ok`.
+      `seqPasses_exceeds`  -- one element over bound implies the named outcome.
+-/
+
+namespace Gabbro.Grammatik
+
+/-- One element of a budgeted sequence: a statement or a whole block, with its
+    resource indices erased so elements with different `Λ` share one list. -/
+inductive SeqElem (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx) : Type where
+  | ofStmt {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') : SeqElem D V l Γ
+  | ofBlock {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') : SeqElem D V l Γ
+
+/-- The sequence as named passes: element `i` runs under its own fresh budget
+    and reports `"seq.i"` on breach (stuck-with-name, as in `runPasses`). -/
+def seqPassesAux {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (assign : SeqElem D V l Γ → List Op) : Nat → List (SeqElem D V l Γ) → List Pass
+  | _, [] => []
+  | i, e :: es => ("seq." ++ toString i, assign e) :: seqPassesAux assign (i + 1) es
+
+/-- The budgeted sequence run: each element starts fresh; the first breach
+    stops the whole run under the failing element's name. -/
+def seqPasses {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (assign : SeqElem D V l Γ → List Op) (es : List (SeqElem D V l Γ)) : List Pass :=
+  seqPassesAux assign 0 es
+
+theorem seqPassesAux_nil {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (assign : SeqElem D V l Γ → List Op) (i : Nat) :
+    seqPassesAux assign i [] = [] := rfl
+
+theorem seqPassesAux_cons {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (assign : SeqElem D V l Γ → List Op) (i : Nat)
+    (e : SeqElem D V l Γ) (es : List (SeqElem D V l Γ)) :
+    seqPassesAux assign i (e :: es)
+      = (("seq." ++ toString i, assign e) :: seqPassesAux assign (i + 1) es) := rfl
+
+/-- Every pass of the translated sequence is one element's declared ops. -/
+theorem seqPassesAux_all_within {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (assign : SeqElem D V l Γ → List Op) (b : Budget)
+    (es : List (SeqElem D V l Γ)) (i : Nat)
+    (h : ∀ e ∈ es, totalCost (assign e) ≤ b.perPass) :
+    ∀ p ∈ seqPassesAux assign i es, totalCost p.2 ≤ b.perPass := by
+  induction es generalizing i with
+  | nil =>
+    intro p hm
+    rw [seqPassesAux_nil] at hm
+    exact (List.not_mem_nil hm).elim
+  | cons hd tl ih =>
+    intro p hm
+    rw [seqPassesAux_cons] at hm
+    cases List.mem_cons.mp hm with
+    | inl heq =>
+      rw [heq]
+      exact h hd (List.mem_cons.mpr (Or.inl rfl))
+    | inr hmem =>
+      exact ih (i + 1) (fun e he => h e (List.mem_cons.mpr (Or.inr he))) _ hmem
+
+/-- An over-budget element survives translation as an over-budget pass. -/
+theorem seqPassesAux_has_over {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (assign : SeqElem D V l Γ → List Op) (b : Budget)
+    (es : List (SeqElem D V l Γ)) (i : Nat)
+    (h : ∃ e ∈ es, b.perPass < totalCost (assign e)) :
+    ∃ p ∈ seqPassesAux assign i es, b.perPass < totalCost p.2 := by
+  induction es generalizing i with
+  | nil =>
+    obtain ⟨e, hm, _⟩ := h
+    exact (List.not_mem_nil hm).elim
+  | cons hd tl ih =>
+    by_cases hhead : b.perPass < totalCost (assign hd)
+    · refine ⟨("seq." ++ toString i, assign hd), ?_, hhead⟩
+      rw [seqPassesAux_cons]
+      exact List.mem_cons.mpr (Or.inl rfl)
+    · rw [seqPassesAux_cons]
+      obtain ⟨e, hm, hlt⟩ := h
+      cases List.mem_cons.mp hm with
+      | inl heq =>
+        subst heq
+        exact absurd hlt (by omega)
+      | inr hmem =>
+        obtain ⟨p, hpm, hplt⟩ := ih (i + 1) ⟨e, hmem, hlt⟩
+        exact ⟨p, List.mem_cons.mpr (Or.inr hpm), hplt⟩
+
+/-- Per-pass bound respected through sequencing: every element within bound
+    implies the whole sequence runs `ok`. -/
+theorem seqPasses_complete {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (b : Budget) (assign : SeqElem D V l Γ → List Op) (es : List (SeqElem D V l Γ))
+    (h : ∀ e ∈ es, totalCost (assign e) ≤ b.perPass) :
+    ∃ left, runPasses b (seqPasses assign es) = .ok left := by
+  apply runPasses_complete
+  intro p hm
+  exact seqPassesAux_all_within assign b es 0 h p hm
+
+/-- Per-pass bound respected through sequencing: one element over bound
+    implies the run stops under THAT element's sequence name. -/
+theorem seqPasses_exceeds {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (b : Budget) (assign : SeqElem D V l Γ → List Op) (es : List (SeqElem D V l Γ))
+    (h : ∃ e ∈ es, b.perPass < totalCost (assign e)) :
+    ∃ name needed, runPasses b (seqPasses assign es) = .budget name needed b.perPass := by
+  apply runPasses_exceeds
+  obtain ⟨p, hm, hlt⟩ := seqPassesAux_has_over assign b es 0 h
+  exact ⟨p, hm, hlt⟩
+
+#print axioms Gabbro.Grammatik.seqPassesAux_all_within
+#print axioms Gabbro.Grammatik.seqPassesAux_has_over
+#print axioms Gabbro.Grammatik.seqPasses_complete
+#print axioms Gabbro.Grammatik.seqPasses_exceeds
 
 end Gabbro.Grammatik
