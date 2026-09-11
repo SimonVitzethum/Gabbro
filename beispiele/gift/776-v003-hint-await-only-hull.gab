@@ -1,0 +1,47 @@
+-- erwartet: Hinweis V003
+-- **V003-hint-only, await side.** `kreis` recurses (`decreases k`), so its call
+-- hull is incomplete -- and it only AWAITS: nothing publishes `{ m }` on `G`
+-- anywhere in this unit. Before the fix no `V003` fired here (the trigger needed
+-- a non-empty publish set) and `V002` refused against a lower-bound global set.
+-- Now the hint fires and the refusal does not: exactly `Hinweis V003` plus the
+-- honest companion `Hinweis E009`.
+--
+-- The twin beside it (`mw`/`mr` on `F`) is the same await shape with a COMPLETE
+-- hull, paired along the graph: published and awaited, silent in every world.
+-- If anything but `Hinweis V003` and `Hinweis E009` ever falls here, the twin
+-- has spoken.
+module gift::v003_hint_await_only_hull {
+
+const TIEFE : u32 = 512;
+
+static mut m : u32 = 0;
+static mut n : u32 = 0;
+atomic G : bool release;
+atomic F : bool release;
+
+-- Verdict carrier: incomplete hull (self-recursion) plus an orphaned await.
+-- `m` is read only AFTER the load, so `V007` has nothing to say; no `Publish`
+-- to `G` stands anywhere, so `V011` has nothing to say either.
+impl fn kreis(k : u32 in 0 .. TIEFE)
+    effects { reads G, reads m }
+    costs   <= 64 ops
+    decreases k
+{
+    let g = G awaits { m };
+    if k == 0 { if g { return m; } return 0; }
+    kreis(k - 1);
+    if g { return m; } return 0;
+}
+
+-- Silent twin: the same pairing with a complete hull -- must stay silent.
+impl fn mw(v : u32)
+    effects { writes n, publishes F }
+    costs   <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+impl fn mr() -> u32
+    effects { writes n, publishes F, reads F, reads n }
+    costs   <= 16 ops
+{ mw(0); let f = F awaits { n }; if f { return n; } return 0; }
+
+}
