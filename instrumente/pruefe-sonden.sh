@@ -194,4 +194,46 @@ if [ "$WIDERLEGT" -gt 0 ]; then
   echo "   traegt, ist tot, und alles, was auf ihr steht, mit ihr."
   exit 1
 fi
+
+# ---------------------------------------------------------------------------------------
+# APPENDED 2026-09-11 (m03-sondenabnahme): the frist-28 staffel.
+#
+# The fourteen staged date probes under `messung/proben/frist-28/` stand outside every
+# acceptance run ("staged: in keiner Abnahme", `messung/FRIST-SONDEN-28.md`). This stage
+# binds their RUN into this runner, which `instrumente/abnahme.py` drives as part of the
+# standard acceptance: `run.sh` must print `FRIST-28: ALL PASS` and leave with 0, or this
+# runner leaves with 1.
+#
+# What this stage does NOT do: it moves no coverage figure. The staged probes name
+# obligations no `deadline` clause declares and no manifest entry lists, so
+# `pruefe-sondendeckung.py` still reports `17 of 50` after this stage -- honestly, because
+# counting them would be coverage without an obligation behind it. The remainder is booked
+# in `messung/SONDEN-ABDECKUNG-REST.md`; full binding (deadline clauses, `sonden/`
+# programs, `manifest::SONDEN_MIT_PROGRAMM`, register rows, quota-mark move) belongs to an
+# owner assembly with checker-side rights this post does not claim.
+#
+# Position: this stage runs LAST and nothing stands behind it, so its `exit 1` is a
+# complete finding about the staffel, not a cut (`abschnitt.sh`: nothing unmeasured
+# behind a failing exit). The per-probe `FRIST` is the same deadline the loop above uses;
+# the staffel measures about two seconds on `fisch`, so a hang here trips the same
+# `HAENGT` convention the loop books as unbuilt.
+# ---------------------------------------------------------------------------------------
+stufe "Frist-28 staffel -- the fourteen staged date probes"
+FRIST28_OUT="$TMP/frist28.out"
+if timeout "$FRIST" "$W/messung/proben/frist-28/run.sh" >"$FRIST28_OUT" 2>&1; then
+  FRIST28_RC=0
+else
+  FRIST28_RC=$?
+fi
+sed 's/^/      /' "$FRIST28_OUT"
+if [ "$FRIST28_RC" -eq 124 ]; then
+  echo "  HAENGT  frist-28 staffel -- Frist $FRIST s ueberschritten"
+  exit 1
+fi
+if [ "$FRIST28_RC" -eq 0 ] && grep -q "FRIST-28: ALL PASS" "$FRIST28_OUT"; then
+  echo "  HOLDS  frist-28 staffel (14 staged probes behaved as booked)"
+else
+  echo "  FINDING  frist-28 staffel -- run.sh exit $FRIST28_RC or ALL PASS missing (see above)"
+  exit 1
+fi
 exit 0
