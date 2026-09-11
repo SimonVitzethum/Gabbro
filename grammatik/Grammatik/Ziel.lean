@@ -55,6 +55,7 @@ import Grammatik.InterferenzAllgemein
 import Grammatik.Komposition
 import Grammatik.Geteilt
 import Grammatik.Fristlauf
+import Grammatik.Maschine
 
 namespace Gabbro.Grammatik
 
@@ -670,5 +671,121 @@ theorem ziel_nutzer_last_aus_disziplin (o : Ausgang V l Γ)
       f hf k g vor nach hgm hne hkg hkv hkn hFreiVor hFreiNach
 
 #print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_disziplin
+
+/-! ## 9. The goal from the machine: no bare run-side links (m02, 2026-09-11)
+
+    What `ziel_nutzer_last` (§5) still owes on the run side, and what this
+    section stops owing. The §5 bridge leg proves `Gesittet J.l` by rewriting
+    the bare link `hLink : J.l = run` and applying `bruecke_exec_gesittet`,
+    which takes the bare cross-thread shapes `hEin` (W4) and `hungeteilt`
+    (W5) beside per-thread provenance (`hvoll`) and interleaving (`hvers`).
+    This section replaces that whole premise bundle with one machine run:
+
+    * (M) `M : MaschinenLauf D` (m01 `Maschine.lean`, consumed by
+      fast-forward to `cd6e549`, file untouched) IS a reachable run: started
+      threads (`hvoll`, closed per body by `exec_spur`), scheduler
+      interleaving (`hvers`), the scheduler rule (W3, `hausschluss`), the
+      single-thread construction (W4, `hEin` over the projected run), and the
+      declaration side (W5, `hungeteilt`). There is no other way to build one.
+    * (link) `hLink` is gone: the run side needs no equality and no
+      `SerialLink` — `M.run` IS the run. The chain side (`J`, kept for the
+      sequential-logic leg) is tied to the machine run only through the open
+      chain-to-machine wiring booked below; nothing here asserts that link.
+    * (W4) `hEin` is gone as a bare shape: W1, W2, and W4 come from
+      `w1w2w4_aus_maschine` (grammar side plus construction), and the whole
+      bundle from `gesittet_aus_maschine`. Where a `Verlauf` stands behind
+      the run, the one-line closer is `einfaedig_aus_verlauf_getragen` (z05,
+      `Marken.lean`): a carried projection IS the `hEin` shape — cited, not
+      re-proved.
+    * (W5) `hungeteilt` is gone as a bare shape: it travels inside `M` and is
+      consumed by `gesittet_aus_maschine`, exactly as the bridge books the
+      declaration side. The folded-run closer is `ungeteilt_aus_lauf` (z06,
+      `Geteilt.lean` §11, narrowed to split-carrier closed-world runs) —
+      cited, not re-proved; the run-to-`Bau` wiring across the fold (cut C2)
+      stays open.
+    * (worlds) Event-to-world is derived, not asserted: `maschinenWelten`
+      folds the run's own events onto the start world, with length,
+      last-spur, and goodness lemmas. This closes the step the §22 remainder
+      books as open ("no event-to-world step semantics is built ... the
+      bodies contribute worlds") — closed here for run worlds.
+    * (order) Real reduction is derived, not linked: `reduktion_maschine`
+      orders two conflicting accesses in `M.run` via `reduktion_seriell`
+      with machine-derived `Gesittet` — no chain object, no `SerialLink`
+      premise. Narrowing carried explicitly, never widened: single shared
+      TABLE carrier (globals stay on the §§13-15 exception track), two
+      conflicting accesses at order level (no folded global schedule, no
+      observation equality — `mover_nonwriter_past` and `wache_aus_schuld`
+      both take a `GemeinsamerLauf`, which the machine does not supply).
+
+    Every premise below is load-bearing: each is passed whole to at least one
+    lemma application in the proof term, so deleting any premise breaks
+    elaboration. There is no `have _ :=` discard anywhere in the proof. The
+    older variants (`ziel_nutzer_last`,
+    `ziel_nutzer_last_aus_disziplin`) stand untouched as corollaries and
+    steps.
+
+    Remainder (booked, not hidden): the chain-to-machine wiring (`J.welten`
+    versus `maschinenWelten M`); the `Verlauf` behind `M.hEin`
+    (`Getragen`/`SpurLink` — no sentence reads a `Verlauf` off an `exec`
+    outcome); the run-to-`Bau` wiring across the fold (cut C2); shared
+    globals, more than two conflicting sections, restoring writers, and
+    non-uniform invariant form (inherited from the §22 remainder unchanged). -/
+
+/-- The goal from the machine (m02): the `ziel_nutzer_last` conclusion with
+    the bare run-side links replaced — `hLink`/`hEin`/`hungeteilt` are gone,
+    `M : MaschinenLauf D` travels instead, consumed by the machine theorems
+    (`gesittet_aus_maschine`, `w1w2w4_aus_maschine`, `maschinenWelten_*`,
+    `reduktion_maschine`). The sequential-logic, probe, lowering, and outcome
+    legs are unchanged from §5. Every premise is load-bearing. -/
+theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
+    (M : MaschinenLauf D)
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
+    (hFree : InterferenceFree Nb J (SpecQ Pre Post Nb J))
+    (t₀ : D.Tab) (g₁ g₂ : Faden) (hne : g₁ ≠ g₂)
+    (j₁ j₂ : Nat) (w₁ w₂ : Bool) (Λ₁ Λ₂ : List (Res D)) (h₁ h₂ : List D.Lock)
+    (hw₁ : M.run[j₁]? = some (Schritt.mk g₁ (.zugriff t₀ w₁ Λ₁ h₁)))
+    (hw₂ : M.run[j₂]? = some (Schritt.mk g₂ (.zugriff t₀ w₂ Λ₂ h₂)))
+    (S : Nat) (c : TickClock S) (hstart : c.tick 0 ≤ S)
+    (p : PruefPaar) (fr : Frist D) (d : Moment)
+    (hpd : p.pruef < d) (hdl : d < p.lauf)
+    (hspace : deadlineSpacing S p d)
+    (hLowering : Absenkung) :
+    (Gesittet M.run)
+    ∧ ((∀ f j, Konsistent (M.run.spur f j)) ∧
+      ∀ f j (e : Ereignis D), e ∈ M.run.spur f j → e.gut)
+    ∧ (∀ (σ : World D), J.welten.getLast? = some σ →
+      ∀ (f : Faden), f ∈ J.faeden → SpecQ Pre Post Nb J f σ)
+    ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
+      fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
+    ∧ (hLowering.proPrimitiv ≤ 18)
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+      (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
+      (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
+    ∧ ((maschinenWelten M).length = M.run.length + 1)
+    ∧ (((maschinenWelten M).getLast?.map World.spur) =
+      some ((M.run.map Schritt.ereignis).reverse ++ M.start.spur))
+    ∧ (∀ W ∈ maschinenWelten M, ∀ e ∈ W.spur, e ∈ M.start.spur ∨ e.gut)
+    ∧ (HB M.run j₁ j₂ ∨ HB M.run j₂ j₁) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact gesittet_aus_maschine M
+  · exact ⟨(w1w2w4_aus_maschine M).1, (w1w2w4_aus_maschine M).2.1⟩
+  · intro σ hletzte f hf
+    exact stabil_from_spec Nb J I Pre Post hInv hDeck hAb hSpec hFree σ hletzte f hf
+  · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
+  · exact hLowering.begrenzt
+  · exact zwei_fehler o
+  · exact maschinenWelten_laenge M
+  · exact maschinenWelten_letzte_spur M
+  · exact maschinenWelten_gut M
+  · exact reduktion_maschine M t₀ g₁ g₂ hne j₁ j₂ w₁ w₂ Λ₁ Λ₂ h₁ h₂ hw₁ hw₂
+
+#print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_maschine
 
 end Gabbro.Grammatik
