@@ -66,10 +66,12 @@
   theorem). It is DEPRECATED in favour of §§6-11: new work builds generated
   runs; the structure stays only so nothing breaks.
 
-  Remainder (booked, not hidden): thread programs are over-approximated (any
-  leaf any time -- no program counters or continuations yet), so W4 needs the
-  `Einfaedig` projection as premise and W5 the declaration side; full
-  program-counter generation is the open lane.
+  Remainder (booked, not hidden): §12 threads program counters through the
+  generated machine -- positions with footprints, the `Einfaedig` projection
+  premise discharged from program text (`pc_discharge_einfaedig`) and the
+  declaration side likewise (`pc_discharge_unshared`). What stays open: full
+  `Block` continuations (`ite` arms, call stacks, loop resumption as explicit
+  continuation objects) and the run-to-`Bau` wiring for `Geteilt.lean`.
 -/
 import Grammatik.Wettlauf
 import Grammatik.InterferenzAllgemein
@@ -1212,5 +1214,592 @@ theorem gen_welt_speicher_bewegt (P : Programm D) (O : Orakel D) (passes : Nat)
 #print axioms Gabbro.Grammatik.genWelten_gut
 #print axioms Gabbro.Grammatik.genWelten_letzte
 #print axioms Gabbro.Grammatik.gen_welt_speicher_bewegt
+
+/-! ## 12. Program counters -- every thread carries its position
+
+   Section 11 books the remainder honestly: thread programs are over-approximated
+   (any leaf any time), so W4 needs the `Einfaedig` projection as premise and W5
+   the declaration side. This section removes the over-approximation at the
+   position level.
+
+   A thread program (`PCProg`) is the schedule of one thread: one atom per step.
+   A `leaf` atom carries the static footprint of the leaf `Stmt` it points at --
+   its `Λ` (every `zugriff`/`gzugriff` event of a leaf step names exactly that
+   `Λ`: `World.lese`, `World.schreibSlot`, `World.schreibGlob`) and the carrier
+   set the step may touch -- reusing the `Stmt`/`Block` body shapes at leaf
+   grain. A `take`/`rel` atom is one side of a `locks L` section. Sections are
+   take-to-release intervals, the grain of `InterferenzAllgemein.lean` §21
+   (`AbschnittGedeckt`): at event grain the invariant breaks mid-step, at section
+   grain each step re-establishes what it owes.
+
+   Every thread carries its position (`PCStand`, one counter per thread). A
+   `PCSchritt` fires only the pointed-to atom -- the leaf step runs the
+   pointed-to footprint (`hΛa` ties the atom to the fired statement), the lock
+   steps the pointed-to lock -- and advances only the acting thread
+   (`pcAdvance`); every other thread resumes at its stored counter. That advance
+   IS the continuation: resumption is explicit, and no step moves another
+   thread's position (`pcSchritt_eigen`, `pcSchritt_fremd`).
+
+   From positions follow the footprints: `PCMarkInv` (every mark named by a run
+   event sits in its thread's program text) and `PCCarrierInv` (every accessed
+   carrier is reachable from its thread's program text), both preserved by every
+   step. With program-text separation -- disjoint mark codes (`PCMarkSep`), no
+   unshared carrier reached from two threads (`PCUnsharedSep`) -- the projection
+   premise discharges (`pc_discharge_einfaedig`, the discharge fragment) and the
+   declaration side discharges (`pc_discharge_unshared`); `pc_gesittet` closes
+   with neither premise, and `pc_reduktion` runs the serial order on it. The
+   generated race-freedom results keep building untouched: `gen_konsistent`,
+   `gen_gut_obs`, `gen_ausschluss` are consumed through the projection
+   (`pcReach_gen`), never re-proved; the `pc_*` triple restates them on PC runs
+   honestly in-file.
+
+   Remainder (booked, not hidden): full `Block` continuations -- `ite` arms, call
+   stacks, loop resumption as explicit continuation objects -- are not threaded
+   here; the schedule flattens each body to its atom sequence. What W4/W5 need is
+   positions with footprints, and that is what this section carries. The full
+   run-to-`Bau` wiring (`Geteilt.lean`: unshared means reachable from at most one
+   thread) still travels as the carrier-separation shape, not as a `Bau` term. -/
+
+/-- One position in a thread program: the footprint of the statement fired here.
+    `leaf` carries the static `Λ` of the pointed-to leaf `Stmt` plus the carrier
+    set that step may touch; `take`/`rel` carry the lock of the pointed-to
+    `locks L` side. Lock steps name no marks (`Ereignis.lambda` is `[]` there)
+    and touch no carrier (`Ereignis.traeger` is `none` there). -/
+inductive PCAtom (D : Deklaration) where
+  | leaf (Λ : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+  | take (L : D.Lock)
+  | rel (L : D.Lock)
+
+/-- The marks named in one atom's static footprint. -/
+def PCAtom.marks : PCAtom D → List D.Marke
+  | .leaf Λ _ => Λ.filterMap fun r => match r with
+    | .marke m _ => some m
+    | _ => none
+  | _ => []
+
+/-- The carriers one atom may touch. -/
+def PCAtom.carriers : PCAtom D → List (D.Tab ⊕ D.Glob)
+  | .leaf _ cs => cs
+  | _ => []
+
+/-- A thread program: the schedule of one thread, one atom per step. -/
+def PCProg (D : Deklaration) := Faden → List (PCAtom D)
+
+/-- Thread positions: every thread carries its position in its program. -/
+def PCStand := Faden → Nat
+
+/-- Advance one thread, keep every other: the continuation, explicit. -/
+def pcAdvance (pc : PCStand) (f : Faden) : PCStand :=
+  fun g => if g = f then pc f + 1 else pc g
+
+theorem pcAdvance_self (pc : PCStand) (f : Faden) :
+    pcAdvance pc f f = pc f + 1 := by
+  simp [pcAdvance]
+
+theorem pcAdvance_noteq (pc : PCStand) (f g : Faden) (h : g ≠ f) :
+    pcAdvance pc f g = pc g := by
+  simp [pcAdvance, h]
+
+/-- The marks named anywhere in one thread's program text. -/
+def PCProg.marks (prog : PCProg D) (f : Faden) : List D.Marke :=
+  (prog f).flatMap PCAtom.marks
+
+/-- Mark separation, over codes: no code named by one thread's text is named by
+    another's. Program text, not run projection: this replaces `hEin`. -/
+def PCMarkSep (code : D.Marke → Nat) (prog : PCProg D) : Prop :=
+  ∀ f g, f ≠ g → ∀ c, c ∈ (prog.marks f).map code → c ∉ (prog.marks g).map code
+
+/-- The carriers reached anywhere in one thread's program text. -/
+def PCProg.carriers (prog : PCProg D) (f : Faden) : List (D.Tab ⊕ D.Glob) :=
+  (prog f).flatMap PCAtom.carriers
+
+/-- Carrier separation for unshared carriers: a carrier reached from two threads
+    is shared. Program text, not declaration side: this replaces `hungeteilt`. -/
+def PCUnsharedSep (prog : PCProg D) : Prop :=
+  ∀ f g, f ≠ g → ∀ o, o ∈ prog.carriers f → o ∈ prog.carriers g →
+    ¬ (match o with
+      | .inl t => D.geteilt t = false
+      | .inr x => D.ggeteilt x = false)
+
+/-- **One PC step.** The same machine step as `GenSchritt`, firing only the
+    pointed-to atom: the leaf step runs the pointed-to footprint (`hΛa` ties the
+    atom to the fired statement), the lock steps the pointed-to lock. The
+    footprint checks (`hmark`, `hcar`) verify the atom against the step's own
+    events; the counter advances only the acting thread (`pcAdvance`). -/
+inductive PCSchritt (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) : GenMaschine D → PCStand → Faden → GenMaschine D → PCStand → Prop where
+  | leaf (M : GenMaschine D) (pc : PCStand) (f : Faden)
+      (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+      (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+      (hleaf : s.istBlatt = true)
+      (hΛ : HeldGenau Λ (offen (M.spuren f)))
+      (σ' : World D) (neu : List (Ereignis D))
+      (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
+      (hneu : σ'.spur = neu ++ M.spuren f)
+      (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
+      (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+      (hpc : (prog f)[pc f]? = some (PCAtom.leaf Λa cs))
+      (hΛa : Λa = Λ)
+      (hmark : ∀ e ∈ neu, ∀ (m : D.Marke) (st : Nat),
+        Res.marke m st ∈ e.lambda → m ∈ PCAtom.marks (PCAtom.leaf Λa cs))
+      (hcar : ∀ e ∈ neu, ∀ o, e.traeger = some o →
+        o ∈ PCAtom.carriers (PCAtom.leaf Λa cs)) :
+      PCSchritt P O passes prog M pc f
+        ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
+         M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
+        (pcAdvance pc f)
+  | take (M : GenMaschine D) (pc : PCStand) (f : Faden) (L : D.Lock)
+      (hself : L ∉ offen (M.spuren f))
+      (hrang : ∀ K ∈ offen (M.spuren f), D.rang K < D.rang L)
+      (hfrei : GenFrei M f L)
+      (hpc : (prog f)[pc f]? = some (PCAtom.take L)) :
+      PCSchritt P O passes prog M pc f
+        ⟨M.speicher,
+         genUpdate M.spuren f (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f),
+         M.lauf ++ genEigen f [Ereignis.nimmt L (offen (M.spuren f))],
+         M.start,
+         M.welten ++ [M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)],
+         M.tiefe + 1⟩
+        (pcAdvance pc f)
+  | rel (M : GenMaschine D) (pc : PCStand) (f : Faden) (L : D.Lock)
+      (hhaelt : L ∈ offen (M.spuren f))
+      (hpc : (prog f)[pc f]? = some (PCAtom.rel L)) :
+      PCSchritt P O passes prog M pc f
+        ⟨M.speicher,
+         genUpdate M.spuren f (Ereignis.gibt L :: M.spuren f),
+         M.lauf ++ genEigen f [Ereignis.gibt L],
+         M.start,
+         M.welten ++ [M.speicher.welt (Ereignis.gibt L :: M.spuren f)],
+         M.tiefe + 1⟩
+        (pcAdvance pc f)
+
+/-- Reachable PC machines, from a start machine and zeroed counters. -/
+inductive PCReach (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M0 : GenMaschine D) : GenMaschine D → PCStand → Prop where
+  | start : PCReach P O passes prog M0 M0 (fun _ => 0)
+  | step (M M' : GenMaschine D) (pc pc' : PCStand) (f : Faden)
+      (h : PCReach P O passes prog M0 M pc) (hs : PCSchritt P O passes prog M pc f M' pc') :
+      PCReach P O passes prog M0 M' pc'
+
+/-- Every PC step is a generated step: the counter constrains, the machine moves. -/
+theorem pcSchritt_gen (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M M' : GenMaschine D) (pc pc' : PCStand) (f : Faden)
+    (hs : PCSchritt P O passes prog M pc f M' pc') :
+    GenSchritt P O passes M f M' := by
+  rcases hs with ⟨V, l, Γ, Λ, Λ', s, ρ, hleaf, hΛ, σ', neu, hstep, hneu, hkn, _Λa, _cs, _hpc, _hΛa, _hmark, _hcar⟩ |
+    ⟨L, hself, hrang, hfrei, _hpc⟩ | ⟨L, hhaelt, _hpc⟩
+  · exact GenSchritt.blatt M f V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn
+  · exact GenSchritt.nimmt M f L hself hrang hfrei
+  · exact GenSchritt.gibt M f L hhaelt
+
+/-- Every PC-reachable machine is generated: positions project to runs. -/
+theorem pcReach_gen (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M0 M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog M0 M pc) : GenErreichbar P O passes M0 M := by
+  induction h with
+  | start => exact GenErreichbar.start
+  | step M M' pc pc' f _ hs ih =>
+      exact GenErreichbar.schritt M M' f ih (pcSchritt_gen P O passes prog M M' pc pc' f hs)
+
+/-- A step advances its own counter: the acting thread moves to its next atom. -/
+theorem pcSchritt_eigen (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M M' : GenMaschine D) (pc pc' : PCStand) (f : Faden)
+    (hs : PCSchritt P O passes prog M pc f M' pc') : pc' f = pc f + 1 := by
+  rcases hs with ⟨V, l, Γ, Λ, Λ', s, ρ, hleaf, hΛ, σ', neu, hstep, hneu, hkn, _Λa, _cs, _hpc, _hΛa, _hmark, _hcar⟩ |
+    ⟨L, _hself, _hrang, _hfrei, _hpc⟩ | ⟨L, _hhaelt, _hpc⟩
+  · exact pcAdvance_self pc f
+  · exact pcAdvance_self pc f
+  · exact pcAdvance_self pc f
+
+/-- A step moves no other counter: every other thread resumes where it stood. -/
+theorem pcSchritt_fremd (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M M' : GenMaschine D) (pc pc' : PCStand) (f g : Faden)
+    (hs : PCSchritt P O passes prog M pc f M' pc') (hne : g ≠ f) :
+    pc' g = pc g := by
+  rcases hs with ⟨V, l, Γ, Λ, Λ', s, ρ, hleaf, hΛ, σ', neu, hstep, hneu, hkn, _Λa, _cs, _hpc, _hΛa, _hmark, _hcar⟩ |
+    ⟨L, _hself, _hrang, _hfrei, _hpc⟩ | ⟨L, _hhaelt, _hpc⟩
+  · exact pcAdvance_noteq pc f g hne
+  · exact pcAdvance_noteq pc f g hne
+  · exact pcAdvance_noteq pc f g hne
+
+/-- W1 on PC runs: every projection of a PC run is consistent. -/
+theorem pc_konsistent (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc) (f : Faden) (j : Nat) :
+    Konsistent (M.lauf.spur f j) :=
+  gen_konsistent P O passes hO sp M (pcReach_gen P O passes prog _ M pc h) f j
+
+/-- W2 on PC runs: every observed event of a PC run is good. -/
+theorem pc_gut_obs (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc) (f : Faden) (j : Nat)
+    (e : Ereignis D) (he : e ∈ M.lauf.spur f j) : e.gut :=
+  gen_gut_obs P O passes hO sp M (pcReach_gen P O passes prog _ M pc h) f j e he
+
+/-- W3 on PC runs: the scheduler rule holds over the whole PC run. -/
+theorem pc_ausschluss (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc) :
+    ForeignExclusion M.lauf :=
+  gen_ausschluss P O passes hO sp M (pcReach_gen P O passes prog _ M pc h)
+
+/-- Every mark a run event names sits in its thread's program text: which mark a
+    thread holds follows from where its program stands. -/
+def PCMarkInv (prog : PCProg D) (M : GenMaschine D) : Prop :=
+  ∀ (k : Nat) (f : Faden) (e : Ereignis D),
+    M.lauf[k]? = some (Schritt.mk f e) →
+    ∀ (m : D.Marke) (st : Nat), Res.marke m st ∈ e.lambda → m ∈ prog.marks f
+
+/-- Every accessed carrier is reachable from its thread's program text:
+    thread position determines carrier reachability. -/
+def PCCarrierInv (prog : PCProg D) (M : GenMaschine D) : Prop :=
+  ∀ (k : Nat) (f : Faden) (e : Ereignis D),
+    M.lauf[k]? = some (Schritt.mk f e) →
+    ∀ o, e.traeger = some o → o ∈ prog.carriers f
+
+/-- One atom's marks sit in its thread's program text. -/
+theorem pcAtom_mem_marks (prog : PCProg D) (f : Faden) (a : PCAtom D)
+    (h : a ∈ prog f) (m : D.Marke) (hm : m ∈ a.marks) : m ∈ prog.marks f := by
+  unfold PCProg.marks
+  rw [List.mem_flatMap]
+  exact ⟨a, h, hm⟩
+
+/-- One atom's carriers sit in its thread's program text. -/
+theorem pcAtom_mem_carriers (prog : PCProg D) (f : Faden) (a : PCAtom D)
+    (h : a ∈ prog f) (o : D.Tab ⊕ D.Glob) (ho : o ∈ a.carriers) :
+    o ∈ prog.carriers f := by
+  unfold PCProg.carriers
+  rw [List.mem_flatMap]
+  exact ⟨a, h, ho⟩
+
+/-- The start machine names no marks: its run is empty. -/
+theorem pcStart_markInv (prog : PCProg D) (sp : Speicher D) :
+    PCMarkInv prog (GenStart sp) := by
+  intro k f e hk m st hm
+  have hnil : (GenStart sp).lauf = [] := rfl
+  rw [hnil] at hk
+  simp at hk
+
+/-- The start machine touches no carriers: its run is empty. -/
+theorem pcStart_carrierInv (prog : PCProg D) (sp : Speicher D) :
+    PCCarrierInv prog (GenStart sp) := by
+  intro k f e hk o ho
+  have hnil : (GenStart sp).lauf = [] := rfl
+  rw [hnil] at hk
+  simp at hk
+
+/-- A PC step preserves the mark invariant: old positions keep it, new positions
+    carry the pointed-to atom's footprint into its thread's program text. -/
+theorem pcSchritt_markInv (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M M' : GenMaschine D) (pc pc' : PCStand) (f : Faden)
+    (hs : PCSchritt P O passes prog M pc f M' pc')
+    (hinv : PCMarkInv prog M) : PCMarkInv prog M' := by
+  rcases hs with ⟨_V, _l, _Γ, _Λ, _Λ', _s, _ρ, _hleaf, _hΛ, _σ', neu, _hstep, _hneu, _hkn, Λa, cs, hpc, _hΛa, hmark, _hcar⟩ |
+    ⟨L, _hself, _hrang, _hfrei, _hpc⟩ | ⟨L, _hhaelt, _hpc⟩
+  · intro k f' e hk m st hm
+    have hkred : (M.lauf ++ genEigen f neu)[k]? = some (Schritt.mk f' e) := hk
+    by_cases hkk : k < M.lauf.length
+    · rw [List.getElem?_append_left hkk] at hkred
+      exact hinv k f' e hkred m st hm
+    · rw [List.getElem?_append_right (Nat.le_of_not_lt hkk)] at hkred
+      obtain ⟨rfl, hmem⟩ := gen_eigen_getElem f neu _ _ _ hkred
+      have hfoot := hmark e hmem m st hm
+      have ha : PCAtom.leaf Λa cs ∈ prog f' := List.mem_of_getElem? hpc
+      exact pcAtom_mem_marks prog f' _ ha m hfoot
+  · intro k f' e hk m st hm
+    have hkred : (M.lauf ++ genEigen f [Ereignis.nimmt L (offen (M.spuren f))])[k]? =
+        some (Schritt.mk f' e) := hk
+    by_cases hkk : k < M.lauf.length
+    · rw [List.getElem?_append_left hkk] at hkred
+      exact hinv k f' e hkred m st hm
+    · rw [List.getElem?_append_right (Nat.le_of_not_lt hkk)] at hkred
+      obtain ⟨rfl, hmem⟩ := gen_eigen_getElem f [_] _ _ _ hkred
+      simp only [List.mem_singleton] at hmem
+      cases hmem
+      have hlam : (Ereignis.nimmt L (offen (M.spuren f'))).lambda = [] := rfl
+      rw [hlam] at hm
+      simp at hm
+  · intro k f' e hk m st hm
+    have hkred : (M.lauf ++ genEigen f [Ereignis.gibt L])[k]? =
+        some (Schritt.mk f' e) := hk
+    by_cases hkk : k < M.lauf.length
+    · rw [List.getElem?_append_left hkk] at hkred
+      exact hinv k f' e hkred m st hm
+    · rw [List.getElem?_append_right (Nat.le_of_not_lt hkk)] at hkred
+      obtain ⟨rfl, hmem⟩ := gen_eigen_getElem f [_] _ _ _ hkred
+      simp only [List.mem_singleton] at hmem
+      cases hmem
+      have hlam : (Ereignis.gibt L).lambda = [] := rfl
+      rw [hlam] at hm
+      simp at hm
+
+/-- A PC step preserves the carrier invariant: old positions keep it, new
+    positions carry the pointed-to atom's carrier set into its thread's text. -/
+theorem pcSchritt_carrierInv (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M M' : GenMaschine D) (pc pc' : PCStand) (f : Faden)
+    (hs : PCSchritt P O passes prog M pc f M' pc')
+    (hinv : PCCarrierInv prog M) : PCCarrierInv prog M' := by
+  rcases hs with ⟨_V, _l, _Γ, _Λ, _Λ', _s, _ρ, _hleaf, _hΛ, _σ', neu, _hstep, _hneu, _hkn, Λa, cs, hpc, _hΛa, _hmark, hcar⟩ |
+    ⟨L, _hself, _hrang, _hfrei, _hpc⟩ | ⟨L, _hhaelt, _hpc⟩
+  · intro k f' e hk o ho
+    have hkred : (M.lauf ++ genEigen f neu)[k]? = some (Schritt.mk f' e) := hk
+    by_cases hkk : k < M.lauf.length
+    · rw [List.getElem?_append_left hkk] at hkred
+      exact hinv k f' e hkred o ho
+    · rw [List.getElem?_append_right (Nat.le_of_not_lt hkk)] at hkred
+      obtain ⟨rfl, hmem⟩ := gen_eigen_getElem f neu _ _ _ hkred
+      have hfoot := hcar e hmem o ho
+      have ha : PCAtom.leaf Λa cs ∈ prog f' := List.mem_of_getElem? hpc
+      exact pcAtom_mem_carriers prog f' _ ha o hfoot
+  · intro k f' e hk o ho
+    have hkred : (M.lauf ++ genEigen f [Ereignis.nimmt L (offen (M.spuren f))])[k]? =
+        some (Schritt.mk f' e) := hk
+    by_cases hkk : k < M.lauf.length
+    · rw [List.getElem?_append_left hkk] at hkred
+      exact hinv k f' e hkred o ho
+    · rw [List.getElem?_append_right (Nat.le_of_not_lt hkk)] at hkred
+      obtain ⟨rfl, hmem⟩ := gen_eigen_getElem f [_] _ _ _ hkred
+      simp only [List.mem_singleton] at hmem
+      cases hmem
+      have htr : (Ereignis.nimmt L (offen (M.spuren f'))).traeger = none := rfl
+      rw [htr] at ho
+      cases ho
+  · intro k f' e hk o ho
+    have hkred : (M.lauf ++ genEigen f [Ereignis.gibt L])[k]? =
+        some (Schritt.mk f' e) := hk
+    by_cases hkk : k < M.lauf.length
+    · rw [List.getElem?_append_left hkk] at hkred
+      exact hinv k f' e hkred o ho
+    · rw [List.getElem?_append_right (Nat.le_of_not_lt hkk)] at hkred
+      obtain ⟨rfl, hmem⟩ := gen_eigen_getElem f [_] _ _ _ hkred
+      simp only [List.mem_singleton] at hmem
+      cases hmem
+      have htr : (Ereignis.gibt L).traeger = none := rfl
+      rw [htr] at ho
+      cases ho
+
+/-- Every PC-reachable machine maintains the mark invariant. -/
+theorem pcReach_markInv (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc) : PCMarkInv prog M := by
+  induction h with
+  | start => exact pcStart_markInv prog sp
+  | step M M' pc pc' f _ hs ih =>
+      exact pcSchritt_markInv P O passes prog M M' pc pc' f hs ih
+
+/-- Every PC-reachable machine maintains the carrier invariant. -/
+theorem pcReach_carrierInv (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc) : PCCarrierInv prog M := by
+  induction h with
+  | start => exact pcStart_carrierInv prog sp
+  | step M M' pc pc' f _ hs ih =>
+      exact pcSchritt_carrierInv P O passes prog M M' pc pc' f hs ih
+
+/-- A projected mark naming comes from a program-text mark. -/
+theorem markenProj_marke (code : D.Marke → Nat) (m : D.Marke) (st : Nat)
+    (c s : Nat)
+    (h : markenProj code (Res.marke m st) = Marken.Res.marke c s) :
+    code m = c := by
+  have h2 : Marken.Res.marke (code m) st = Marken.Res.marke c s := h
+  cases h2
+  rfl
+
+/-- A lock naming is never a mark naming. -/
+theorem markenProj_held_absurd (code : D.Marke → Nat) (L : D.Lock) (c s : Nat)
+    (h : markenProj code (Res.held L) = Marken.Res.marke c s) : False := by
+  have h2 : Marken.Res.held = Marken.Res.marke c s := h
+  cases h2
+
+/-- **The discharge fragment: program counters discharge `hEin`.** If no mark
+    code is named by two threads' program texts, the projected run is
+    single-threaded: which mark a thread holds follows from where its program
+    stands (`PCMarkInv`), and separation over codes turns two namings into one
+    thread. This replaces the `Einfaedig` projection premise. -/
+theorem pc_discharge_einfaedig (code : D.Marke → Nat) (prog : PCProg D)
+    (M : GenMaschine D)
+    (hinv : PCMarkInv prog M)
+    (hSep : PCMarkSep code prog) :
+    Marken.Einfaedig (laufProj code M.lauf) := by
+  intro i j f g c s s' ei ej hi hj hmi hmj
+  unfold laufProj at hi hj
+  rw [List.getElem?_map] at hi hj
+  cases hxi : M.lauf[i]? with
+  | none =>
+      rw [hxi] at hi
+      simp at hi
+  | some si =>
+      rw [hxi] at hi
+      cases hxj : M.lauf[j]? with
+      | none =>
+          rw [hxj] at hj
+          simp at hj
+      | some sj =>
+          rw [hxj] at hj
+          cases si with
+          | mk fi ei' =>
+              cases sj with
+              | mk fj ej' =>
+                  have hi2 : schrittProj code (Schritt.mk fi ei') =
+                      Marken.Schritt.mk f ei := by
+                    simpa using hi
+                  have hj2 : schrittProj code (Schritt.mk fj ej') =
+                      Marken.Schritt.mk g ej := by
+                    simpa using hj
+                  obtain ⟨rfl, rfl⟩ := hi2
+                  obtain ⟨rfl, rfl⟩ := hj2
+                  have hli : (ereignisProj code ei').lambda =
+                      ei'.lambda.map (markenProj code) := rfl
+                  have hlj : (ereignisProj code ej').lambda =
+                      ej'.lambda.map (markenProj code) := rfl
+                  rw [hli] at hmi
+                  rw [hlj] at hmj
+                  obtain ⟨ri, hri, hreqi⟩ := List.mem_map.mp hmi
+                  obtain ⟨rj, hrj, hreqj⟩ := List.mem_map.mp hmj
+                  cases ri with
+                  | held L =>
+                      exact (markenProj_held_absurd code L c s hreqi).elim
+                  | marke mi sti =>
+                      cases rj with
+                      | held L =>
+                          exact (markenProj_held_absurd code L c s' hreqj).elim
+                      | marke mj stj =>
+                          have hci : code mi = c :=
+                            markenProj_marke code mi sti c s hreqi
+                          have hcj : code mj = c :=
+                            markenProj_marke code mj stj c s' hreqj
+                          have hfi : mi ∈ prog.marks fi :=
+                            hinv i fi ei' hxi mi sti hri
+                          have hfj : mj ∈ prog.marks fj :=
+                            hinv j fj ej' hxj mj stj hrj
+                          have hmemF : c ∈ (prog.marks fi).map code :=
+                            List.mem_map.mpr ⟨mi, hfi, hci⟩
+                          have hmemG : c ∈ (prog.marks fj).map code :=
+                            List.mem_map.mpr ⟨mj, hfj, hcj⟩
+                          by_cases hfg : fi = fj
+                          · exact hfg
+                          · exact absurd hmemG (hSep fi fj hfg c hmemF)
+
+/-- **W4 on PC runs, same shape as `Gesittet.marke_eindeutig`.** The discharge
+    fragment through the construction bridge: no projection premise. -/
+theorem pc_marke_eindeutig (code : D.Marke → Nat) (prog : PCProg D)
+    (M : GenMaschine D)
+    (hinv : PCMarkInv prog M)
+    (hSep : PCMarkSep code prog)
+    (i j : Nat) (f g : Faden) (m : D.Marke) (s s' : Nat)
+    (ei ej : Ereignis D)
+    (hi : M.lauf[i]? = some (Schritt.mk f ei))
+    (hj : M.lauf[j]? = some (Schritt.mk g ej))
+    (hmi : Res.marke m s ∈ ei.lambda)
+    (hmj : Res.marke m s' ∈ ej.lambda) : f = g :=
+  marke_eindeutig_aus_einfaedig code M.lauf
+    (pc_discharge_einfaedig code prog M hinv hSep) i j f g m s s' ei ej hi hj hmi hmj
+
+/-- **The declaration side discharges from program text.** If an unshared
+    carrier is accessed from two threads, both threads' texts reach it --
+    against `PCUnsharedSep`. This replaces the `hungeteilt` declaration side.
+    The shared-side hypothesis comes before the access equations: a `match` on
+    `o` elaborates extra discriminants for hypotheses that already mention `o`,
+    so the match must precede them to keep the `Gesittet` shape. -/
+theorem pc_discharge_unshared (prog : PCProg D) (M : GenMaschine D)
+    (hinv : PCCarrierInv prog M)
+    (hSep : PCUnsharedSep prog)
+    (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob)
+    (ei ej : Ereignis D)
+    (hi : M.lauf[i]? = some (Schritt.mk f ei))
+    (hj : M.lauf[j]? = some (Schritt.mk g ej))
+    (hsh : match o with
+      | .inl t => D.geteilt t = false
+      | .inr x => D.ggeteilt x = false)
+    (hti : ei.traeger = some o) (htj : ej.traeger = some o) :
+    f = g := by
+  have hfi : o ∈ prog.carriers f := hinv i f ei hi o hti
+  have hgj : o ∈ prog.carriers g := hinv j g ej hj o htj
+  by_cases hfg : f = g
+  · exact hfg
+  · exact ((hSep f g hfg o hfi hgj) hsh).elim
+
+/-- **W1, W2, W4 on PC runs, with no projection premise.** W1+W2 come from the
+    generated side through the projection; W4 comes from the program text
+    through the discharge fragment. Same triple shape as `gen_w1w2w4`. -/
+theorem pc_w1w2w4 (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc)
+    (code : D.Marke → Nat) (hMSep : PCMarkSep code prog) :
+    (∀ f j, Konsistent (M.lauf.spur f j)) ∧
+    (∀ f j (e : Ereignis D), e ∈ M.lauf.spur f j → e.gut) ∧
+    (∀ (i j : Nat) (f g : Faden) (m : D.Marke) (s s' : Nat) (ei ej : Ereignis D),
+      M.lauf[i]? = some (Schritt.mk f ei) → M.lauf[j]? = some (Schritt.mk g ej) →
+      Res.marke m s ∈ ei.lambda → Res.marke m s' ∈ ej.lambda → f = g) := by
+  refine ⟨pc_konsistent P O passes hO prog sp M pc h,
+    pc_gut_obs P O passes hO prog sp M pc h, ?_⟩
+  intro i j f g m s s' ei ej hi hj hmi hmj
+  exact pc_marke_eindeutig code prog M
+    (pcReach_markInv P O passes prog sp M pc h) hMSep
+    i j f g m s s' ei ej hi hj hmi hmj
+
+/-- **A PC run is `Gesittet`, with neither premise.** W1-W3 are generated, W4 is
+    discharged from program text, W5 from carrier separation. -/
+theorem pc_gesittet (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc)
+    (code : D.Marke → Nat) (hMSep : PCMarkSep code prog)
+    (hCSep : PCUnsharedSep prog) :
+    Gesittet M.lauf :=
+  gesittet_aus_einfaedig M.lauf
+    (pc_konsistent P O passes hO prog sp M pc h)
+    (pc_gut_obs P O passes hO prog sp M pc h)
+    (pc_ausschluss P O passes hO prog sp M pc h)
+    code
+    (pc_discharge_einfaedig code prog M
+      (pcReach_markInv P O passes prog sp M pc h) hMSep)
+    (fun i j f g o ei ej hi hj hti htj hsh =>
+      pc_discharge_unshared prog M
+        (pcReach_carrierInv P O passes prog sp M pc h) hCSep
+        i j f g o ei ej hi hj hsh hti htj)
+
+/-- **Reduction, serial order, from a PC run (two-access single-carrier
+    fragment).** Same interface as `gen_reduktion`: two conflicting accesses in
+    a PC run are happens-before ordered, in one direction or the other. Closes
+    via `reduktion_seriell` with `Gesittet` derived from positions. -/
+theorem pc_reduktion (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc)
+    (code : D.Marke → Nat) (hMSep : PCMarkSep code prog)
+    (hCSep : PCUnsharedSep prog)
+    (t₀ : D.Tab) (g₁ g₂ : Faden) (hne : g₁ ≠ g₂)
+    (j₁ j₂ : Nat) (w₁ w₂ : Bool) (Λ₁ Λ₂ : List (Res D)) (h₁ h₂ : List D.Lock)
+    (hw₁ : M.lauf[j₁]? = some (Schritt.mk g₁ (.zugriff t₀ w₁ Λ₁ h₁)))
+    (hw₂ : M.lauf[j₂]? = some (Schritt.mk g₂ (.zugriff t₀ w₂ Λ₂ h₂))) :
+    HB M.lauf j₁ j₂ ∨ HB M.lauf j₂ j₁ :=
+  reduktion_seriell M.lauf
+    (pc_gesittet P O passes hO prog sp M pc h code hMSep hCSep)
+    t₀ g₁ g₂ hne j₁ j₂ w₁ w₂ Λ₁ Λ₂ h₁ h₂ hw₁ hw₂
+
+#print axioms Gabbro.Grammatik.pcAdvance_self
+#print axioms Gabbro.Grammatik.pcAdvance_noteq
+#print axioms Gabbro.Grammatik.pcSchritt_gen
+#print axioms Gabbro.Grammatik.pcReach_gen
+#print axioms Gabbro.Grammatik.pcSchritt_eigen
+#print axioms Gabbro.Grammatik.pcSchritt_fremd
+#print axioms Gabbro.Grammatik.pc_konsistent
+#print axioms Gabbro.Grammatik.pc_gut_obs
+#print axioms Gabbro.Grammatik.pc_ausschluss
+#print axioms Gabbro.Grammatik.pcAtom_mem_marks
+#print axioms Gabbro.Grammatik.pcAtom_mem_carriers
+#print axioms Gabbro.Grammatik.pcStart_markInv
+#print axioms Gabbro.Grammatik.pcStart_carrierInv
+#print axioms Gabbro.Grammatik.pcSchritt_markInv
+#print axioms Gabbro.Grammatik.pcSchritt_carrierInv
+#print axioms Gabbro.Grammatik.pcReach_markInv
+#print axioms Gabbro.Grammatik.pcReach_carrierInv
+#print axioms Gabbro.Grammatik.markenProj_marke
+#print axioms Gabbro.Grammatik.markenProj_held_absurd
+#print axioms Gabbro.Grammatik.pc_discharge_einfaedig
+#print axioms Gabbro.Grammatik.pc_marke_eindeutig
+#print axioms Gabbro.Grammatik.pc_discharge_unshared
+#print axioms Gabbro.Grammatik.pc_w1w2w4
+#print axioms Gabbro.Grammatik.pc_gesittet
+#print axioms Gabbro.Grammatik.pc_reduktion
 
 end Gabbro.Grammatik
