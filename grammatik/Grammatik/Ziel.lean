@@ -716,6 +716,24 @@ theorem ziel_nutzer_last_aus_disziplin (o : Ausgang V l Γ)
       conflicting accesses at order level (no folded global schedule, no
       observation equality — `mover_nonwriter_past` and `wache_aus_schuld`
       both take a `GemeinsamerLauf`, which the machine does not supply).
+    * (discipline) No assumed context: the strong `hInv : InvariantenKontext`
+      (the invariant at EVERY chain world) is DERIVED, not assumed, from
+      entry (`hEntry`), return-restoration (`hReturn`), and the single watch
+      premise per carrier (`hWatch`) via `invariantenKontext_aus_disziplin`
+      (§21, read-only reuse) — the §8 discipline package
+      (`ziel_nutzer_last_aus_disziplin` shape: `Wc`/`Gc` frame-locality
+      `hAbD`, carrier-frame links `hFrameTD`/`hFrameGD`, guard existence
+      `hGuardEx`). The r03 fix (2026-09-11): the first §9 cut kept the §5
+      `hInv` premise beside the machine legs — a regression against the
+      discipline package that rounds legs 1-2 closed.
+    * (form) No per-run interference proof for the covered fragment: the
+      general `hFree : InterferenceFree` is replaced by `hForm :
+      InvariantForm` (OWN-LOGIC: exhibit, per thread, the carrier whose
+      invariant the contract conjunction coincides with), consumed through
+      the §7 variant `ziel_seqLogic_aus_spec_invariantForm` (read-only
+      reuse). Assertions over shared carriers that are NOT in invariant
+      form still owe `hFree` exactly as §6 books it — the non-invariant
+      fragment stays open, honestly.
 
     Every premise below is load-bearing: each is passed whole to at least one
     lemma application in the proof term, so deleting any premise breaks
@@ -729,25 +747,49 @@ theorem ziel_nutzer_last_aus_disziplin (o : Ausgang V l Γ)
     (`Getragen`/`SpurLink` — no sentence reads a `Verlauf` off an `exec`
     outcome); the run-to-`Bau` wiring across the fold (cut C2); shared
     globals, more than two conflicting sections, restoring writers, and
-    non-uniform invariant form (inherited from the §22 remainder unchanged). -/
+    the non-invariant fragment — assertions over shared carriers NOT in
+    invariant form still owe `hFree` exactly as §6 books it (inherited from
+    the §22 remainder unchanged). -/
 
-/-- The goal from the machine (m02): the `ziel_nutzer_last` conclusion with
-    the bare run-side links replaced — `hLink`/`hEin`/`hungeteilt` are gone,
-    `M : MaschinenLauf D` travels instead, consumed by the machine theorems
-    (`gesittet_aus_maschine`, `w1w2w4_aus_maschine`, `maschinenWelten_*`,
-    `reduktion_maschine`). The sequential-logic, probe, lowering, and outcome
-    legs are unchanged from §5. Every premise is load-bearing. -/
+/-- The goal from the machine (m02, r03 rewired): the `ziel_nutzer_last`
+    conclusion with the bare run-side links replaced — `hLink`/`hEin`/
+    `hungeteilt` are gone, `M : MaschinenLauf D` travels instead, consumed
+    by the machine theorems (`gesittet_aus_maschine`,
+    `w1w2w4_aus_maschine`, `maschinenWelten_*`, `reduktion_maschine`). The
+    sequential-logic leg runs through the §7 invariant variant
+    (`ziel_seqLogic_aus_spec_invariantForm`) over the §8 discipline-derived
+    context (`invariantenKontext_aus_disziplin`): `hFree` replaced by `hForm`,
+    `hInv` derived from entry plus return-restoration plus watch. Probe,
+    lowering, and outcome legs are unchanged from §5. Every premise is
+    load-bearing. -/
 theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
     (M : MaschinenLauf D)
     (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
-    (hInv : InvariantenKontext Nb J I)
+    (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
+    (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool)
+    (hAbD : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c))
+    (hFrameTD : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t)
+    (hFrameGD : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x)
+    (hGuardEx : ∀ c : D.Tab ⊕ D.Glob, ∃ L : D.Lock, Bewacht (D := D) c L)
+    (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g))
     (hDeck : GeteiltGedeckt Nb J)
     (hAb : ∀ (f : Faden), f ∈ J.faeden →
       HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
         (SpecQ Pre Post Nb J f))
     (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
-    (hFree : InterferenceFree Nb J (SpecQ Pre Post Nb J))
+    (hForm : InvariantForm Nb J I (SpecQ Pre Post Nb J))
     (t₀ : D.Tab) (g₁ g₂ : Faden) (hne : g₁ ≠ g₂)
     (j₁ j₂ : Nat) (w₁ w₂ : Bool) (Λ₁ Λ₂ : List (Res D)) (h₁ h₂ : List D.Lock)
     (hw₁ : M.run[j₁]? = some (Schritt.mk g₁ (.zugriff t₀ w₁ Λ₁ h₁)))
@@ -777,7 +819,10 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
   · exact gesittet_aus_maschine M
   · exact ⟨(w1w2w4_aus_maschine M).1, (w1w2w4_aus_maschine M).2.1⟩
   · intro σ hletzte f hf
-    exact stabil_from_spec Nb J I Pre Post hInv hDeck hAb hSpec hFree σ hletzte f hf
+    exact ziel_seqLogic_aus_spec_invariantForm Nb J I Pre Post
+      (invariantenKontext_aus_disziplin Nb J I Wc Gc hAbD hFrameTD hFrameGD hGuardEx
+        hEntry hReturn hWatch)
+      hDeck hAb hSpec hForm σ hletzte f hf
   · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
   · exact hLowering.begrenzt
   · exact zwei_fehler o
