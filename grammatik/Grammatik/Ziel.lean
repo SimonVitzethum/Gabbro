@@ -833,4 +833,181 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
 
 #print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_maschine
 
+/-! ## 9b. The goal from PC runs: no deprecated fields, no bare shapes (t01, 2026-09-11)
+
+    What `ziel_nutzer_last_aus_maschine` (§9 m02) still owes on the run side, and
+    what this section stops owing. The m02 leg proves `Gesittet M.run` from
+    `M : MaschinenLauf D` -- the DEPRECATED structure (`Maschine.lean` §§1-5,
+    kept byte-identical for its consumer): reachability handed as premises, with
+    `hEin` (W4) and `hungeteilt` (W5) as FIELDS. The §12 PC discharge
+    (`pc_discharge_einfaedig`, `pc_discharge_unshared`, genuinely proved) is not
+    wired in there: no `PCReach`-to-`MaschinenLauf` bridge exists, and §9 takes
+    no `PCReach`. This section rewires the goal onto generated PC runs:
+
+    * (run) `h : PCReach P O passes prog (GenStart sp) M pc` travels instead of
+      `M : MaschinenLauf D` -- a GENERATED run (positions with footprints,
+      `Maschine.lean` §12, read-only reuse): every `PCSchritt` is a generated
+      step (`pcSchritt_gen`), every PC-reachable machine is generated
+      (`pcReach_gen`). There is no other way to build one.
+    * (W4) `hEin` is gone as a bare shape AND as a field: the projection premise
+      discharges from program text (`pc_discharge_einfaedig`, consumed below as
+      its own leg over `pcReach_markInv`), and the whole bundle closes to
+      `Gesittet` (`pc_gesittet`, consumed below).
+    * (W5) `hungeteilt` is gone as a bare shape AND as a field: the declaration
+      side discharges from carrier separation (`pc_discharge_unshared`,
+      consumed below as its own leg over `pcReach_carrierInv`, with the
+      shared-side hypothesis before the access equations as §12 states it).
+    * (order) `pc_reduktion` runs the serial order on the PC run (consumed
+      below) -- the same two-access single-carrier fragment as
+      `reduktion_maschine`, with `Gesittet` derived from positions, never
+      assumed.
+    * (worlds) The live-memory history `M.welten` travels instead of the
+      constant-memory fold: `genWelten_laenge` (one world per step),
+      `genWelten_gut` (good observations), `genWelten_letzte` (the last world
+      is a thread world) -- each through the projection (`pcReach_gen`), never
+      re-proved. This escapes the NEGATIVE shape
+      `maschinenWelten_speicher_gleich` by construction (`gen_welt_speicher_bewegt`
+      moves memory on a fireable write; §12 is read, not modified).
+    * (discipline, form, probe, lowering, outcome) Unchanged from §§7-8 and §5:
+      the sequential-logic leg runs through the §7 invariant variant
+      (`ziel_seqLogic_aus_spec_invariantForm`) over the §8 discipline-derived
+      context (`invariantenKontext_aus_disziplin`); `hFree` is replaced by
+      `hForm` for the covered fragment only.
+
+    The SINGLE residual footprint premise: `h` itself. Each `PCSchritt.leaf`
+    inside `h` carries its footprint checks (`hΛa` tying the atom to the fired
+    statement, `hmark` covering the step's mark namings, `hcar` covering the
+    step's accessed carriers) -- they are owed per step by whoever exhibits the
+    `PCReach` witness, not by this goal as separate hypotheses. No tree
+    definition computes thread programs from bodies yet (there is no `progAus`:
+    `Extraktion.lean` computes carrier/mark hulls (`fussAus`, `stmtOrte`)
+    checker-side, but not per-thread atom sequences; the `HaengtAb` duty of §8
+    covers contract footprints, not step atoms), so per program the annotation
+    is owed as OWN-LOGIC: the user supplies, per thread, the atom footprint
+    sequence (`prog`, with `Λa`/`cs` covering the step events); each step rule
+    verifies it. The checker-side extraction of `prog` from bodies stays booked
+    below. There is exactly one such premise (`h`), and it is load-bearing --
+    it feeds every run-side leg.
+
+    Every premise below is load-bearing: each is passed whole to at least one
+    lemma application in the proof term, so deleting any premise breaks
+    elaboration. There is no `have _ :=` discard anywhere in the proof, and no
+    bare `Prop` slot that `False` could inhabit (every slot has a fixed shape:
+    the run is owed as `PCReach ...`, not as `Prop`). The older variants
+    (`ziel_nutzer_last`, `ziel_nutzer_last_aus_disziplin`,
+    `ziel_nutzer_last_aus_maschine`) stand untouched as corollaries and steps.
+
+    Remainder (booked, not hidden): the checker-side extraction of `prog` from
+    bodies (a `progAus` in the style of `Extraktion.lean`, unwritten and
+    unverified); the chain-to-machine wiring (`J.welten` versus `M.welten`);
+    the run-to-`Bau` wiring across the fold (cut C2); shared globals, more than
+    two conflicting sections, restoring writers; and the non-invariant fragment
+    -- assertions over shared carriers NOT in invariant form still owe `hFree`
+    exactly as §6 books it (inherited from the §8 remainder unchanged). -/
+
+/-- The goal from PC runs (t01): the `ziel_nutzer_last` conclusion with the
+    deprecated run-side bundle replaced -- no `MaschinenLauf`, no `hLink`,
+    no `hEin`/`hungeteilt` as bare shapes or fields. `h : PCReach ...` travels
+    instead (packaging the per-step `hmark`/`hcar` footprint checks), consumed
+    by the PC theorems (`pc_gesittet`, `pc_discharge_einfaedig`,
+    `pc_discharge_unshared`, `pc_reduktion`) and the generated-world lemmas
+    through the projection (`pcReach_gen`). The sequential-logic leg runs
+    through the §7 invariant variant
+    (`ziel_seqLogic_aus_spec_invariantForm`) over the §8 discipline-derived
+    context (`invariantenKontext_aus_disziplin`): `hFree` replaced by `hForm`,
+    `hInv` derived from entry plus return-restoration plus watch. Probe,
+    lowering, and outcome legs are unchanged from §5. Every premise is
+    load-bearing. -/
+theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc)
+    (code : D.Marke → Nat) (hMSep : PCMarkSep code prog)
+    (hCSep : PCUnsharedSep prog)
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
+    (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool)
+    (hAbD : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c))
+    (hFrameTD : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t)
+    (hFrameGD : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x)
+    (hGuardEx : ∀ c : D.Tab ⊕ D.Glob, ∃ L : D.Lock, Bewacht (D := D) c L)
+    (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g))
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
+    (hForm : InvariantForm Nb J I (SpecQ Pre Post Nb J))
+    (t₀ : D.Tab) (g₁ g₂ : Faden) (hne : g₁ ≠ g₂)
+    (j₁ j₂ : Nat) (w₁ w₂ : Bool) (Λ₁ Λ₂ : List (Res D)) (h₁ h₂ : List D.Lock)
+    (hw₁ : M.lauf[j₁]? = some (Schritt.mk g₁ (.zugriff t₀ w₁ Λ₁ h₁)))
+    (hw₂ : M.lauf[j₂]? = some (Schritt.mk g₂ (.zugriff t₀ w₂ Λ₂ h₂)))
+    (S : Nat) (c : TickClock S) (hstart : c.tick 0 ≤ S)
+    (p : PruefPaar) (fr : Frist D) (d : Moment)
+    (hpd : p.pruef < d) (hdl : d < p.lauf)
+    (hspace : deadlineSpacing S p d)
+    (hLowering : Absenkung) :
+    (Gesittet M.lauf)
+    ∧ ((∀ f j, Konsistent (M.lauf.spur f j)) ∧
+      ∀ f j (e : Ereignis D), e ∈ M.lauf.spur f j → e.gut)
+    ∧ (∀ (σ : World D), J.welten.getLast? = some σ →
+      ∀ (f : Faden), f ∈ J.faeden → SpecQ Pre Post Nb J f σ)
+    ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
+      fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
+    ∧ (hLowering.proPrimitiv ≤ 18)
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+      (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
+      (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
+    ∧ (Marken.Einfaedig (laufProj code M.lauf))
+    ∧ (∀ (i j : Nat) (f g : Faden) (carr : D.Tab ⊕ D.Glob) (ei ej : Ereignis D),
+      M.lauf[i]? = some (Schritt.mk f ei) → M.lauf[j]? = some (Schritt.mk g ej) →
+      (match carr with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) →
+      ei.traeger = some carr → ej.traeger = some carr → f = g)
+    ∧ (M.welten.length = M.tiefe + 1)
+    ∧ (∀ W ∈ M.welten, ∀ e ∈ W.spur, e.gut)
+    ∧ (∃ f, M.welten.getLast? = some (M.speicher.welt (M.spuren f)))
+    ∧ (HB M.lauf j₁ j₂ ∨ HB M.lauf j₂ j₁) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact pc_gesittet P O passes hO prog sp M pc h code hMSep hCSep
+  · exact ⟨pc_konsistent P O passes hO prog sp M pc h,
+      pc_gut_obs P O passes hO prog sp M pc h⟩
+  · intro σ hletzte f hf
+    exact ziel_seqLogic_aus_spec_invariantForm Nb J I Pre Post
+      (invariantenKontext_aus_disziplin Nb J I Wc Gc hAbD hFrameTD hFrameGD hGuardEx
+        hEntry hReturn hWatch)
+      hDeck hAb hSpec hForm σ hletzte f hf
+  · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
+  · exact hLowering.begrenzt
+  · exact zwei_fehler o
+  · exact pc_discharge_einfaedig code prog M
+      (pcReach_markInv P O passes prog sp M pc h) hMSep
+  · intro i j f g carr ei ej hi hj hsh hti htj
+    exact pc_discharge_unshared prog M
+      (pcReach_carrierInv P O passes prog sp M pc h) hCSep
+      i j f g carr ei ej hi hj hsh hti htj
+  · exact genWelten_laenge P O passes hO sp M
+      (pcReach_gen P O passes prog (GenStart sp) M pc h)
+  · exact genWelten_gut P O passes hO sp M
+      (pcReach_gen P O passes prog (GenStart sp) M pc h)
+  · exact genWelten_letzte P O passes hO sp M
+      (pcReach_gen P O passes prog (GenStart sp) M pc h)
+  · exact pc_reduktion P O passes hO prog sp M pc h code hMSep hCSep
+      t₀ g₁ g₂ hne j₁ j₂ w₁ w₂ Λ₁ Λ₂ h₁ h₂ hw₁ hw₂
+
+#print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_pc
+
 end Gabbro.Grammatik
