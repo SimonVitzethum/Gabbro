@@ -299,23 +299,23 @@ def tafel : List EntscheidZiel :=
    .luecke .bedingt bedingtEntscheid,
    .luecke .voidTyp .offen,
    .luecke .cAttribut .offen,
-   .luecke .cInline .offen,
-   .luecke .cConst .offen,
-   .luecke .deref .offen,
-   .luecke .adressVon .offen,
-   .luecke .bitNicht .offen,
+   .luecke .cInline (.aufListe "non-binding inline request"),  -- ruled: messung/CFORM-REGEL-INLINE.md
+   .luecke .cConst (.aufListe "read-only qualifier"),  -- ruled: messung/CFORM-REGEL-CONST.md
+   .luecke .deref (.aufListe "plain dereference"),  -- ruled: messung/CFORM-REGEL-DEREF.md
+   .luecke .adressVon (.aufListe "provenance-carrying address"),  -- ruled: messung/CFORM-REGEL-ADRESSE.md
+   .luecke .bitNicht (.aufListe "double-cast width rule"),  -- ruled: messung/CFORM-REGEL-TILDE.md
    .luecke .abbruchStmt (.aufListe "Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei Emissionszeilen; kein Nutzerpfad; kein UB"),  -- ruled: messung/CFORM-REGEL-BREAK.md
-   .luecke .schrittStmt .offen,
+   .luecke .schrittStmt (.aufListe "++ to += 1; exchange CAS untouched"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + ZULASSUNG-143 batch
    .luecke .cSizeof .offen,
    .luecke .logUndOder (.aufListe "bedingte Auswertung mit Sequenzpunkt; Ergebnis 0 oder 1; Klammerpflicht beim Erzeuger"),  -- ruled: messung/CFORM-REGEL-LOGUNDODER.md
-   .luecke .doubleTyp .offen,
-   .luecke .schleifeStmt .offen,
-   .luecke .typOfErw .offen,
-   .luecke .floatTyp .offen,
+   .luecke .doubleTyp (.aufListe "f64 to double lowered; mixed-width refused"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + SENKUNG-144
+   .luecke .schleifeStmt (.aufListe "retry skeleton only"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + SENKUNG-144
+   .luecke .typOfErw (.aufListe "checked reference, single source"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + SENKUNG-144
+   .luecke .floatTyp (.aufListe "f32 to float with suffix"),  -- ruled: messung/CFORM-REGEL-SENKUNG-144.md
    .luecke .unerreichbarBuiltin (.aufListe "kept at one site: D005 plus the tag invariant; four deletable sites out of the generator"),
-   .luecke .wennGnuC .offen,
+   .luecke .wennGnuC (.aufListe "guard fires exactly when all arms return"),  -- ruled: messung/CFORM-REGEL-SENKUNG-144.md
    .luecke .fortStmt (.aufListe "Steuerung des Laufenskeletts aus einer Emissionszeile; kein Nutzerpfad; kein UB"),  -- ruled: messung/CFORM-REGEL-CONTINUE.md
-   .luecke .statikAssert .offen,
+   .luecke .statikAssert (.aufListe "declared spaces keep the assert"),  -- ruled: messung/CFORM-REGEL-SENKUNG-144.md
    .luecke .pfeilZugriff (.aufListe "generous reading of field access"),
    .luecke .boolTyp (.aufListe "generous reading: <stdbool.h> for _Bool"),
    .luecke .boolLit (.aufListe "generous reading: boolean literals"),

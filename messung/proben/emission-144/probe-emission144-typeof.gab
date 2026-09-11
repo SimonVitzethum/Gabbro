@@ -1,0 +1,30 @@
+-- emission-144/typeof: `__typeof__` is the lowering of the checked reference.
+--
+-- Census slot C2 `typOfErw`, 9 sites (`dokumente/BEWEIS.md` Subject 2;
+-- `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.typOfErw`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, `bezugnahme`, which writes
+-- `static __typeof__(ziel) *const marke __attribute__((unused)) = ziel;`.
+-- The form stands so the signature is written ONCE: deriving it from the
+-- declaration here and spelling it out a second time would be two registers
+-- over one fact. Where the target names no body this unit declares, the
+-- emitter writes a comment instead (`N006` holds the declaration side).
+--
+-- Verdict: LOWERED. `gabbro pruefe` reports 0 errors, `gabbro emit` writes the
+-- `__typeof__` binding with 0 refusals, and the emitted unit compiles under
+-- `cc -std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+module probe::emission144_typeof {
+
+-- An entry that destroys nothing says so: the empty lists are a statement.
+entry leiser_eintritt vector 32 arch x86_64 {
+    regs in  { nr : rax }
+    regs out { ret : rax }
+    preserves { }
+    clobbers  { }
+    stack kernstapel
+    dispatch behandler;
+}
+
+extern fn behandler() effects { pure };
+
+}

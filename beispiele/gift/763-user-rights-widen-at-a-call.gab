@@ -1,0 +1,29 @@
+-- erwartet: R013
+-- **Rights widening over a NAMED space.** `beispiele/gift/607` built `R013` over `normal`:
+-- an `r` pointer handed to an `rw` parameter lets the callee write through a pointer its
+-- holder may only read. The direction is the whole rule -- narrowing (`rw` at `r`) stays
+-- silent -- and rights are compared as ATOMS, never as spellings, so the space word beside
+-- them must not matter. This is the same unsound direction over `user`, the space every
+-- validated-copy discipline is about: a callee that writes through a read-only user
+-- pointer, checked against the `«K3»` §4.2 repair that taught `R008` to read named spaces.
+-- Measured 2026-09-11 against the unchanged checker: falls with `R013`.
+
+module gift::user_rights_widen_at_a_call {
+
+type Text = { n : u32, };
+
+impl fn schreibt(p : ptr<user, rw> Text)
+    effects { writes p }
+    costs   <= 4 ops
+{
+    p.n = 1;
+}
+
+impl fn ruft(q : ptr<user, r> Text)
+    effects { writes q }
+    costs   <= 8 ops
+{
+    schreibt(q);
+}
+
+}

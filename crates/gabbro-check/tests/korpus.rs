@@ -73,6 +73,14 @@ const BENANNT: &[&str] = &[
     // lane-104): a direct write to a lock-protected place needs more than the
     // `effects { locks L }` line. Gifts 737/739 plus inline test 738 pin it.
     "H020",
+    // 2026-09-11, dropped derivation edges (`ableitung.kante`, lane-131):
+    // unknown/stumm/contractless call edges fall once per (caller, target).
+    // Gifts 740/741/742 pin fall, twin-silence and pair-half boundary.
+    "H021",
+    // 2026-09-11, bare mutual cycles (`pflichten.masslose-wechselrufe`,
+    // lane-133): each member without `decreases` falls; K008 fires beside
+    // it. Gifts 746/747/748 pin the exact sets.
+    "H022",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine
@@ -176,6 +184,10 @@ const BENANNT: &[&str] = &[
     // indirect-call kill (715-717) widened the firing onto FRAGMENTE.md:268.
     // Gifts 702/703/709/715/716/717; ceremony priced on 01/09/42 (re-read).
     "M147",
+    // 2026-09-11, unary-minus overflow at the operation (lane-134): negating
+    // a full-range signed value into a range that cannot hold it falls.
+    // Gifts 749/750/751 pin core, narrowed twin and boundary.
+    "M150",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.
@@ -239,6 +251,9 @@ const BENANNT: &[&str] = &[
     // sagte 0 Fehler. *Die Kostenklasse vertraegt Symbole, die Sperrklasse nicht.*
     "K010",
     "V001", "V002", "V003", "V004", // Paarung
+    // 2026-09-11, awaited revalidation (lane-136): a clean `awaits` read
+    // after a `Publish` without fresh revalidation falls. Gifts 755-757.
+    "V011",
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
     "R001", "R002", "R003", "R004", // M3, Raeume, Rechte -- und zweimal `own` auf denselben Ort
     // 2026-09-02, beside `R008` and out of the same measurement: `R008` reads `z.raum` and

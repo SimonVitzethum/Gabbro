@@ -1,0 +1,7 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.slot T f (.wide 0 7 (.lit 3)))
+claimed range: (0, 100)
+side conditions:
+  - lit 3: exact (3, 3) -- HOLDS
+  - wide [0, 7]: needs lo' <= l1 and h1 <= hi'; have (3, 3) -- HOLDS
+  - slot T.f: index (0, 7) must be 0 .. count - 1 (count = 8), guard darf = true, field type (0, 100) -- HOLDS

@@ -1,0 +1,28 @@
+-- ARM 2 twin, must LOWER: a call to a DECLARED function named `old` (lane-140).
+--
+-- `old` is a contextual word, so `fn old` declares an ordinary function -- and a call
+-- to it is an ordinary call. The refusal beside it fires only where no declaration
+-- stands behind the name; this twin proves the guard reads `u.funktionen` instead of
+-- the spelling. A bare `old` that is never called (`let old = a;`, `beispiele/70`)
+-- never reaches the call lowering at all.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; the C calls `old`
+--   cc:     takes the unit (-std=c11, -O0 and -O2, -Wall -Wextra -Werror, -c)
+
+module probe::emission140_old_call_declared_function {
+
+fn old(a : u64) -> u64
+    effects { pure }
+{
+    return a;
+}
+
+fn f(a : u64) -> u64
+    effects { pure }
+{
+    return old(a);
+}
+
+}

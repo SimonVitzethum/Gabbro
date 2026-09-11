@@ -1,0 +1,28 @@
+-- ARM 2 twin, must LOWER: ordered exchange-`erwartet` (lane-149).
+--
+-- `G` is `release`, so the compare-exchange fails with `memory_order_acquire` and the
+-- awaited `{ m }` is acquired on the failure path -- the load side carries the
+-- ordering the promise needs. The emitter lowers it and names the half in the C in
+-- the same words the `AwaitLoad` arm uses. Fully paired (`mw` publishes, `mr`
+-- awaits), so the checker stays silent.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; C carries `awaits { m } -- paired at compile time`
+--   cc:     takes the unit
+
+module probe::austausch_geordnet_mit_erwartung {
+
+static mut m : u32 = 0;
+atomic G : bool release;
+
+impl fn mw(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn x() -> bool effects { writes G, publishes G, reads G, reads m } costs <= 16 ops
+{ let ok = G exchange true when old(G) == false returns erfolg awaits { m }; return ok; }
+
+impl fn mr() -> u32 effects { reads G, reads m } costs <= 8 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+}

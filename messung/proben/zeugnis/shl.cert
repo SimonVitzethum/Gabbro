@@ -1,0 +1,7 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.shl (.lit 3) (.lit 2))
+claimed range: (0, 12)
+side conditions:
+  - lit 3: exact (3, 3) -- HOLDS
+  - lit 2: exact (2, 2) -- HOLDS
+  - shl: needs 0 <= l1 and 0 <= l2; have l1 = 3, l2 = 2 -- HOLDS

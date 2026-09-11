@@ -1,0 +1,41 @@
+-- ARM 2, must FALL at emit: `old(...)` calls outside a contract (lane-140).
+--
+-- `old` is a word only where a contract is read (`parse.rs::im_vertrag`); in a body it
+-- is a name, and `old(x)` is a call to a function nobody declared. Both shapes below --
+-- the pre-state of a global (`altGlob`) and of a table slot (`altSlot`) -- checked
+-- clean and emitted the call verbatim into the C (`uint64_t x = old(eintrag);`), with
+-- exit 0 and no refusal. The emitter now refuses each site with a name (`C001`); the
+-- declared-function twin beside it (`old-call-declared-function`) keeps lowering.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 2 hints (E009 on `f`/`g`: `old` unknown to the call graph --
+--           pre-existing, untouched by this lane)
+--   emit:   C001 x2 (one per `old` site), no C for this unit
+
+module probe::emission140_old_call_outside_contract {
+
+const NFAEDEN : u32 = 1024;
+
+table Warteschlange count NFAEDEN {
+    slot {
+        aktiv : bool,
+    }
+}
+
+static mut eintrag : u64 = 0;
+
+fn f() -> u64
+    effects { reads eintrag }
+{
+    let x : u64 = old(eintrag);
+    return x;
+}
+
+impl fn g(q : ptr<normal, rw> Warteschlange, k : index into Warteschlange) -> u64
+    effects { reads q.slots }
+{
+    if old(q.slots[k].aktiv) == true { return 1; }
+    return 0;
+}
+
+}

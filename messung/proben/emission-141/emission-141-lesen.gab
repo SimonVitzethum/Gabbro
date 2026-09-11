@@ -1,0 +1,57 @@
+-- emission-141: direct byte READS with the run bound (lane-141).
+--
+-- A byte carrier indexed directly (`PUFFER[i]`, `s.bytes[i]`) is not a `format`
+-- view and takes no generated reader: it lowers through the `leseBytes` arm in
+-- `emit.rs`. A constant index lowers plain (the checker's case, `M103`); a
+-- dynamic index the emitter cannot re-derive lowers to a bound-checked read
+-- against the carrier's declared length:
+-- `((uint64_t)(i) < 16u ? PUFFER[(uint64_t)(i)] : (__builtin_trap(), (uint8_t)0))`.
+-- On a checked program the trap never fires -- the check is the emitter's
+-- second opinion, the proof stays the checker's.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; `PUFFER[3]` stays `PUFFER[3]`, both dynamic reads carry
+--           the `16u` check with `__builtin_trap`
+--   cc:     `-std=c11 -Wall -Wextra -Werror -O0` and `-O2` clean; runs exit 0
+
+module emission141::lesen {
+
+const KAP : u32 = 16;
+
+pub static mut PUFFER : [u8; KAP] = 0;
+
+pub type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+
+-- Constant index: the checker's case, plain access.
+impl fn lies_konstant() -> u8
+    effects { reads PUFFER } costs <= 4 ops
+{ return PUFFER[3]; }
+
+-- Dynamic index over a static carrier: checked against `KAP`.
+impl fn lies_dynamisch(i : u32 in 0 ..< KAP) -> u8
+    effects { reads PUFFER } costs <= 4 ops
+{ return PUFFER[i]; }
+
+-- Dynamic index over a record value behind a named bound (`requires`):
+-- checked against the field's declared length.
+impl fn lies_wert(s : Text, i : u32 in 0 ..< KAP) -> u8
+    requires i < s.len
+    effects { pure } costs <= 4 ops
+{ return s.bytes[i]; }
+
+pub fn main() -> i32 in 0 .. 1
+    effects { reads PUFFER, writes PUFFER } costs <= 64 ops
+{
+    PUFFER[3] = 65;
+    if lies_konstant() != 65 { return 1; }
+    if lies_dynamisch(3) != 65 { return 1; }
+    let t : Text = Text(bytes: 0, len: 5);
+    t.bytes[2] = 66;
+    if lies_wert(t, 2) != 66 { return 1; }
+    let j : u32 in 0 ..< KAP = 2;
+    if lies_wert(t, j) != 66 { return 1; }
+    return 0;
+}
+
+}

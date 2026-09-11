@@ -1,0 +1,25 @@
+-- emission-144/float: `float` is the lowering of `f32`, not a choice.
+--
+-- Census slot C2 `floatTyp`, 8 sites (`dokumente/BEWEIS.md` Subject 2;
+-- `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.floatTyp`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, `ctyp_primitiv` (F32 -> "float") and
+-- `primitivwort` ("f32" -> "float"); `gleitkommatext` suffixes literals with `f`
+-- wherever the node computes in `float`, so no `float` computation silently
+-- widens to `double`. Same fail-closed shape as `double`: unknown widths fall
+-- to `None` and refuse by name (`C001`).
+--
+-- Verdict: LOWERED. `gabbro pruefe` reports 0 errors, `gabbro emit` writes
+-- `static float halb(float x)` with 0 refusals, and the emitted unit compiles
+-- under `cc -std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+module probe::emission144_float {
+
+-- 0.5 is exact in binary, so no `rounded` is owed (see the `double` unit).
+impl fn halb(x : f32) -> f32
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x * 0.5;
+}
+
+}

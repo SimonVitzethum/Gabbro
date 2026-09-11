@@ -1281,3 +1281,89 @@ fn sammle_vertraege(items: &[Item], aus: &mut Vec<String>) {
         }
     }
 }
+
+/// **H022 -- a call cycle whose members do not all carry `decreases` (assigned 2026-09-11,
+/// lane-133).**
+///
+/// The composition premise behind the recursion-measure refusals
+/// (`kosten.rs::rekursionsmass`): on a cycle every edge counts the DECLARED
+/// `costs` of the callee once, so the promise of a member is an assumption
+/// until a measure falls along the recursion. The cost pass refuses the
+/// member without a measure and the recursive site that does not visibly
+/// lower it.
+///
+/// What `H022` names is the CYCLE as one composition unit: which members it has, which of
+/// them carry no measure, and where the refusal would anchor. The detector below mirrors
+/// the member-without-measure condition over the same graph
+/// (`aufrufgraph::erhebe`, `im_zyklus`), so the two cannot disagree about
+/// membership -- a second READER, not a second register.
+///
+/// **Built, not wired.** Wiring is a line in `lib.rs::pruefe`, and that file is frozen for
+/// this lane. Until a follow-up lane wires it, the cost pass's refusal is the live
+/// enforcement, pinned by `beispiele/gift/746`-`748` (`messung/PFLICHTEN-ORDNUNG.md`).
+pub const H022: &str = "H022";
+
+/// **One member of a call cycle that declares no `decreases`.**
+pub struct Zyklenluecke {
+    /// The bare member.
+    pub funktion: String,
+    /// The module path the member was found in, as `fuer_jedes_item_im_modul` reports it.
+    pub modul: String,
+    /// Where the `decreases` would stand: the member's name.
+    pub span: gabbro_syntax::span::Span,
+}
+
+/// **The `H022` detector: cycle members without a measure, in source order.**
+///
+/// The condition is the member-without-measure rule's, read a second time: in a cycle (`im_zyklus`) and without a
+/// measure (`decreases.is_none()`). A `spec fn` owes nothing -- it IS the statement
+/// (`M113`), same as in `lauf` above.
+pub fn zyklen_ohne_mass(baum: &Programm) -> Vec<Zyklenluecke> {
+    let g = crate::aufrufgraph::erhebe(baum);
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        if f.klasse == Some(FnKlasse::Spec) {
+            return;
+        }
+        if f.decreases.is_some() {
+            return;
+        }
+        let voll = g.schluessel_von(modul, &f.name.text);
+        if g.im_zyklus(&voll) {
+            aus.push(Zyklenluecke {
+                funktion: f.name.text.clone(),
+                modul: modul.to_string(),
+                span: f.name.span,
+            });
+        }
+    });
+    aus
+}
+
+/// **The `H022` refusal for one bare member.**
+///
+/// A constructor and not a pass: the pass would stand in `lib.rs::pruefe`, which is
+/// frozen for this lane. What is pinned here is the refusal itself -- code, site, and
+/// the two notes the human beside it needs.
+pub fn h022_weigerung(l: &Zyklenluecke) -> gabbro_syntax::diag::Absage {
+    gabbro_syntax::diag::Absage::fehler(
+        H022,
+        l.span,
+        format!(
+            "`{}` stands in a call cycle and declares no `decreases`",
+            l.funktion
+        ),
+    )
+    .mit_notiz(
+        "a call counts the DECLARED `costs` of the callee, so on a cycle every edge \
+         counts once -- the promise is an assumption, not a result",
+    )
+    .mit_notiz("`decreases <expr>` names the measure that falls along the recursion")
+}
+
+// **Cycle tests live in `tests/pflichten_zyklen.rs`, not here.** The kennungen
+// guardian counts one code per file (the member-without-measure code already
+// issued in `kosten.rs`): an inline `#[cfg(test)]` module asserting on those
+// findings would double-assign it. Tests NAME codes, only source files
+// ASSIGN them.

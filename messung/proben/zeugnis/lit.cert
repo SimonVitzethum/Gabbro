@@ -1,0 +1,5 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.lit 42)
+claimed range: (42, 42)
+side conditions:
+  - lit 42: exact (42, 42) -- HOLDS

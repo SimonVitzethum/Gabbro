@@ -1330,6 +1330,21 @@ pub const M1: &[Satz] = &[
                      messung/VERFEINERUNG.md",
     },
     Satz {
+        name: "m1.vorzeichenwechsel",
+        kennungen: &["M150"],
+        aussage: "Unary minus checks overflow at the operation (`M150`):
+                  negating a full-range signed value into a range that cannot
+                  hold `-INT_MIN` falls; narrowed and boundary-exact operands
+                  stay silent.",
+        vorbehalt: "**Reads facts, not declarations** (V1-narrowed `0..100`
+                    silent beside an open parameter that falls). Unsigned
+                    negation untouched.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/749-751: full-range fall, narrowed
+                      silence, one-value-apart boundary.",
+        fundstelle: "crates/gabbro-check/src/m1.rs",
+    },
+    Satz {
         name: "v1.bereichsverengung",
         kennungen: &["M108", "M109"],
         aussage: "A checked range condition narrows the range of the checked place in the \
@@ -1968,6 +1983,20 @@ pub const PAARUNG: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `V006`, one on `V007`.",
         fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
+    },
+    Satz {
+        name: "paarung.neuvalidierung",
+        kennungen: &["V011"],
+        aussage: "A clean `awaits` binding read after a `Publish` to the same
+                  carrier without a fresh revalidation falls (`V011`) --
+                  branch-local, `Publish`-only, at V007 read positions.",
+        vorbehalt: "**No concurrent-corpus churn** (measured 2026-09-11);
+                    revalidated, other-carrier and publish-before-load arms
+                    stay silent.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/755-757: stale use falls, fresh twin and
+                      boundary stay silent.",
+        fundstelle: "crates/gabbro-check/src/paarung.rs",
     },
     Satz {
         name: "paarung.fehlende-paarung",
@@ -2702,6 +2731,51 @@ pub const SPERREN: &[Satz] = &[
                       boundary); inline test h020_silence_and_single_fire_738
                       in beispiele.rs.",
         fundstelle: "crates/gabbro-check/src/geteilt.rs (`h020`)",
+    },
+    Satz {
+        name: "ableitung.kante",
+        kennungen: &["H021"],
+        aussage: "A dropped derivation edge falls once per (caller, target) --
+                  unknown target, bodyless target without `effects`, or indirect
+                  call without a contract at the pointer type (`H021`).",
+        vorbehalt: "**Non-place arguments stay `E009`'s.** `Rand` lines,
+                    compiler-supplied entries and pointer contracts stay
+                    silent. Wired 2026-09-11 (lane-131 built the refusal
+                    unwired); clean corpus draws zero H021, measured.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/740-742: stumm edge falls, resolvable
+                      twin silent, publish-side pathless pair silent.",
+        fundstelle: "crates/gabbro-check/src/ableitung.rs (`fehlende_kanten`)",
+    },
+    Satz {
+        name: "pflichten.masslose-wechselrufe",
+        kennungen: &["H022"],
+        aussage: "Bare mutual calls without `decreases` fall once per member
+                  (`H022`); `K008` keeps firing beside it.",
+        vorbehalt: "**Wired 2026-09-11** (lane-133 built the detector
+                    unwired); probes pin the exact sets (K008+H022).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/746-748: mutual, half-measured and
+                      three-member bare cycles.",
+        fundstelle: "crates/gabbro-check/src/pflichten.rs (`zyklen_ohne_mass`)",
+    },
+    Satz {
+        name: "emitter.reissstelle",
+        kennungen: &["T001"],
+        aussage: "A multi-instruction sequence on a shared carrier is refused
+                  (`T001`): compound assign and merge triples need exclusive
+                  access or single-writer-per-cell; single accesses pass.",
+        vorbehalt: "**Parked, not wired.** The check module (`tearing.rs`,
+                    14 unit tests over measured asm lines) and the hook point
+                    (`emit.rs`, `Zuweisung` arm terminal) exist, but wiring
+                    the gate red-flags `01-tabelle` and `05` whose discipline
+                    is invisible in C text. Stand `Vermutet` until hooked and
+                    measured.",
+        stand: Satzstand::Vermutet,
+        gemessen_an: "lane-47 asm lines as fixtures; `messung/TEARING-RULING.md`
+                      per-form verdicts; hook spec in
+                      `messung/TEARING-DURCHSETZUNG.md`.",
+        fundstelle: "crates/gabbro-check/src/tearing.rs (unwired)",
     },
     Satz {
         name: "sperren.kontext",

@@ -1,0 +1,52 @@
+-- erwartet: W001
+-- **W001 exempts every shared write on a pair-level lock, covered or not.**
+--
+-- `h` and `k` are the verdict carrier: both write `X`, no lock stands in either
+-- hull -- `W001` fires.
+--
+-- `f` and `g` are the pinned hole: both write `X` too, and the two writes race
+-- -- but `L` stands in BOTH hulls, so the pair is exempt and stays silent. `L`
+-- is honestly taken in both bodies, and honestly redeemed (`H011` has nothing
+-- to say): it guards `Y`, which is written under it. It guards NOTHING around
+-- `X = 1` / `X = 2`. The pass compares hull SETS (`nebeneinander.rs`,
+-- `ueberlappung`: a shared lock returns no overlap at all), never sites -- the
+-- open question 1 of `messung/NEBENLAEUFIGKEIT-ENTWURF.md` (held-set analysis).
+-- A clock that says "L orders these writes" from co-occurrence, with no site
+-- where L is held across the access.
+--
+-- There is no must-pass twin with a covering lock in this file on purpose: the
+-- covered shape (both writes under `L`) is what the exemption is FOR, and it is
+-- pinned across the corpus already. The twin here is negative space: `f`/`g`
+-- must fall with nothing, `h`/`k` with `W001`, and nothing else may ever speak.
+module gift::w001_pair_level_lock_exempts_uncovered_write {
+
+static mut X : u32 = 0;
+static mut Y : u32 = 0;
+lock L protects { Y } rank 1 held <= 100 ops;
+
+-- The pinned hole: L in both hulls, the X writes outside it -- silent today.
+impl fn f()
+    effects { writes X, writes Y, locks L }
+    costs <= 8 ops
+{ locks L { Y = 1; } X = 1; }
+
+impl fn g()
+    effects { writes X, writes Y, locks L }
+    costs <= 8 ops
+{ locks L { Y = 2; } X = 2; }
+
+-- Verdict carrier: the same overlap with no common lock -- W001.
+impl fn h()
+    effects { writes X }
+    costs <= 4 ops
+{ X = 3; }
+
+impl fn k()
+    effects { writes X }
+    costs <= 4 ops
+{ X = 4; }
+
+concurrent { f, g };
+concurrent { h, k };
+
+}

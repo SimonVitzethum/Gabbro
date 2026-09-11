@@ -1,0 +1,37 @@
+-- ARM 4 twin, must LOWER: `until` over a comparison (lane-140).
+--
+-- A plain comparison is what an `until` is for: it evaluates every pass at a counted
+-- cost. It lowers as before; the quantifier arm beside it fires only where a
+-- `forall`/`exists` stands anywhere inside the condition.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; the C waits on the comparison
+--   cc:     takes the unit (-std=c11, -O0 and -O2, -Wall -Wextra -Werror, -c)
+
+module probe::emission140_until_comparison {
+
+opaque type Pa = u64;
+
+device Statusregister(basis : Pa) at mmio {
+    reg fertig : u32 @0x0 class r
+}
+
+extern fn zeitablauf() -> never effects { diverges };
+
+assume geraet_antwortet "Antwort kommt." falsifier sonde_haengt;
+
+impl fn auf_quittung_warten(g : ptr<mmio, r> Statusregister) -> u32
+    effects { reads g }
+    costs   <= 2048 ops
+{
+    retry warten until g.fertig == 1
+        bounded 1024 ops
+        progress geraet_antwortet
+        on_exceeded zeitablauf
+        effects { reads g }
+    { }
+    return g.fertig;
+}
+
+}

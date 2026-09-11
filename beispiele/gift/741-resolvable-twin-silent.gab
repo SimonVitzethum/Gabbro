@@ -1,0 +1,78 @@
+-- erwartet: V001
+-- **The resolvable twin stays silent (`H021`).** Every call edge in this file
+-- resolves: body to body (`oben -> tief`), body to the edge with a declared line
+-- (`ruft_rand -> rand`, a `Rand` hop), body to the compiler's own pure word
+-- (`u64(a)`), and an indirect call through a contract at the pointer type
+-- (`ausgeben -> t->senden`, a `Zeiger` hop -- the `beispiele/49` idiom in miniature).
+-- None of these may ever draw `H021`: a `Rand` is the trust surface, a conversion
+-- is compiler-supplied, a contract is the source where the callee has no name.
+--
+-- The file falls ONLY at the carrier orphan (`w`, a `V001` in every world): it
+-- publishes `{ n }` on `F`, and nothing awaits it anywhere. That single code is what
+-- proves the twin silent -- any `H021` over-firing on a resolvable edge would add a
+-- second code, and any second code fails this file.
+module gift::resolvable_twin_silent {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+static mut ZUSTAND : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+
+-- Carries the verdict: orphaned publication, no counterpart anywhere.
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+-- Body to body: resolves.
+static mut W : u32 = 0;
+impl fn tief() effects { writes W } costs <= 2 ops { W = 1; }
+impl fn oben() effects { writes W } costs <= 8 ops { tief(); }
+
+-- Body to the edge with a line: `Rand`, silent by design.
+extern fn rand() effects { pure } costs <= 2 ops;
+impl fn ruft_rand() effects { pure } costs <= 8 ops { rand(); }
+
+-- Body to the compiler's own word: `vertraglich` with declared `pure`.
+impl fn wandle(a : u32 in 0 .. 100) -> u64 effects { pure } costs <= 4 ops
+{ return u64(a); }
+
+-- The `beispiele/49` idiom: producer, contract, and call through the place.
+type Treiber = {
+    senden : fn(u8)
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn hart_senden(b : u8)
+    effects { writes ZUSTAND }
+    costs   <= 3 ops
+{
+    ZUSTAND = b;
+}
+
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(senden: &hart_senden);
+}
+
+-- Must stay silent: the indirect edge resolves through the contract.
+impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes ZUSTAND }
+    costs   <= 12 ops
+{
+    t->senden(b);
+}
+
+-- Paired along the call edge, silent in every world (the `731` shape in brief).
+impl fn mw(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rufe_mw(v : u32) effects { writes m, publishes G } costs <= 12 ops
+{ mw(v); }
+
+impl fn mr() -> u32 effects { writes m, publishes G, reads G, reads m } costs <= 16 ops
+{ rufe_mw(0); let g = G awaits { m }; if g { return m; } return 0; }
+
+}

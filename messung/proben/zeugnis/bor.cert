@@ -1,0 +1,7 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.bor 3 (.lit 6) (.lit 3))
+claimed range: (0, 7)
+side conditions:
+  - lit 6: exact (6, 6) -- HOLDS
+  - lit 3: exact (3, 3) -- HOLDS
+  - bor (w = 3): needs 0 <= l1, 0 <= l2, h1 < 2^w and h2 < 2^w; have (6, 6) and (3, 3), 2^w = 8 -- HOLDS

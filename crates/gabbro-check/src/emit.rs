@@ -1665,6 +1665,25 @@ pub fn emittiere_mit(
         }
     });
 
+    // **CForm typOfErw (lane 142): every non-`spec` function lowers its prototype
+    // core once, here -- the same `prototyp_kern` the definition is written from
+    // (`funktion`, same `u`), so a checked reference spells the signature from
+    // the SAME lowering and never a second one (W7). Bodies are not required:
+    // `extern` declarations lower through the same helper, which is exactly the
+    // half `eigene_ruempfe` above does not cover.**
+    let mut bezugskerne: std::collections::BTreeMap<String, (String, String)> =
+        std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            if let Ok(k) = prototyp_kern(f, &namen) {
+                bezugskerne.insert(f.name.text.clone(), k);
+            }
+        }
+    });
+
     // **`gabbro_kern()` ist ein FREMDER Rumpf, und ein fremder Rumpf braucht seinen
     // Prototypen** (2026-08-20).
     //
@@ -2105,6 +2124,8 @@ pub fn emittiere_mit(
                 MergeOp::Or => "or", MergeOp::And => "and",
             };
             let nm = &ac.name.text;
+            // **CForm schrittStmt (lane 142): the merge loop steps with `+= 1`.**
+            // (`z += v` below is the admitted merge itself, untouched.)
             aus.push_str(&format!(
                 "\n/* accumulates {nm} merge {op} per cpu {n} -- one cell per core.\n\
                  \x20* The merge set is a commutative monoid, so the fold is order-independent\n\
@@ -2116,7 +2137,7 @@ pub fn emittiere_mit(
                  static {c} {nm}_lies(void) __attribute__((unused));\n\
                  static {c} {nm}_lies(void) {{\n\
                  \x20   {c} z = ({c}){neutral};\n\
-                 \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k++) {{\n\
+                 \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k += 1) {{\n\
                  \x20       {c} v = atomic_load_explicit(&{nm}_zellen[k], memory_order_relaxed);\n\
                  \x20       {falte}\n\
                  \x20   }}\n\
@@ -2380,9 +2401,9 @@ pub fn emittiere_mit(
         // frei -- `beispiele/11` erklaert `behandler` NACH dem `entry`, der ihn nennt.
         // *Dieselbe Sortierung, aus demselben Grund wie oben bei den Ruempfen.*
         ItemArt::Walk(w) => walk_(w, &mut rumpf, &namen, absagen),
-        ItemArt::Entry(e) => eintritt(e, &mut rumpf, &ruempfe, absagen),
+        ItemArt::Entry(e) => eintritt(e, &mut rumpf, &ruempfe, &bezugskerne, absagen),
         ItemArt::Entrust(t) => anvertrauen(t, &mut rumpf, &namen, absagen),
-        ItemArt::Boot(b) => bootstrecke(b, &mut rumpf, &namen, &ruempfe, absagen),
+        ItemArt::Boot(b) => bootstrecke(b, &mut rumpf, &namen, &ruempfe, &bezugskerne, absagen),
         // -- und die vier, die weiter abgelehnt werden, jetzt aber MIT GRUND -----------
         //
         // **Der Sammelzweig ist weg, und das ist der eigentliche Ertrag.** Ein `_`-Arm ist
@@ -2546,6 +2567,17 @@ fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
              generator that guesses undoes every pass in front of it",
         ),
     );
+}
+
+/// **CForm doubleTyp (lane 142): exactly the mixed pair.** Both sides carrying
+/// the same width is a pure computation of that width; a literal carries no
+/// width until its neighbour decides it (`None`); an integer beside a float is
+/// the checker's `F005`, not this arm.
+fn ist_gemischt_float_double(x: &Option<String>, y: &Option<String>) -> bool {
+    matches!(
+        (x.as_deref(), y.as_deref()),
+        (Some("float"), Some("double")) | (Some("double"), Some("float"))
+    )
 }
 
 /// **`try_from` and NOT `as`, and that is the same defect as `registerlagen()` had.**
@@ -4170,7 +4202,25 @@ fn schrittbits(
                 return None;
             }
             let maske = 1u128 << lo;
-            let an = matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0);
+            // **A field step says one bit, and only a digit says which value (lane-140).**
+            //
+            // Until today this read `matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0)`:
+            // every other form counted as "clear". `GCMD.TE: 0 -> (1)` checked clean and
+            // lowered to a bit-CLEAR with exit 0, though the value is 1 -- and `-> true`
+            // cleared too, for the same silent reason. The corpus writes digits at this
+            // spot, so there is nothing to fold here, only something to name: a step
+            // target that is not a number refuses, by name.
+            let ExprArt::Zahl(n) = &s.nach.art else {
+                weigere(
+                    absagen,
+                    s.nach.span,
+                    "`transition` field step whose target is not a number -- the step sets \
+                     or clears ONE bit, and anything but a digit (`(1)`, `true`, a call) \
+                     has no bit value this lowering may read",
+                );
+                return None;
+            };
+            let an = *n != 0;
             Some((maske, if an { maske } else { 0 }))
         }
         // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
@@ -6789,6 +6839,27 @@ fn anweisung(
         // ist in keiner der drei Waechtereinheiten vorgekommen -- und genau darum hat er
         // ueberlebt. *Dieselbe Sorte stiller Ausfall wie die Null im Ausdruckszweig.*
         StmtArt::Zuweisung(z) => {
+            // **CForm doubleTyp (lane 142): the compound form of the Binaer
+            // refusal above.** `f += d` across the float/double boundary
+            // guesses the way the binary node does. (The companion
+            // zeigerArithmetik check went back out with the Binaer one --
+            // same misresolution, same reason.)
+            if matches!(z.op, ZuwOp::Plus | ZuwOp::Minus) {
+                let ziel = ort_typ(&z.ziel, u)
+                    .and_then(|t| ctyp(&t, u))
+                    .or_else(|| register_ctyp(&z.ziel, u));
+                if ist_gemischt_float_double(&ziel, &wert_ctyp(&z.wert, u)) {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "mixed `float`/`double` arithmetic -- C would widen the \
+                         `float` side and compute in `double`, against the checked \
+                         `f32` fact, and there is no conversion form (the `F005` \
+                         shape)",
+                    );
+                    return;
+                }
+            }
             // **Ein Schreiben auf ein `accumulates` MELDET, es setzt nicht.** Der Kern
             // faltet in seine eigene Zelle -- deshalb braucht es kein CAS: **niemand sonst
             // schreibt sie.** *Die Absenkung waere sonst genau die unbeschraenkte Schleife,
@@ -6824,7 +6895,20 @@ fn anweisung(
                     let ziel = ort_typ(&z.ziel, u)
                         .and_then(|t| ctyp(&t, u))
                         .or_else(|| register_ctyp(&z.ziel, u));
-                    verenge(ausdruck(&z.wert, u, absagen), &z.wert, ziel.as_deref(), u)
+                    // **CForm doubleTyp (lane 142): the assigned value computes
+                    // in the place's width.** A `float` place suffixes its
+                    // literals (`0.5f`), the way the Binaer arm does for a
+                    // `float` neighbour -- without that C lifts the node to
+                    // `double` and narrows late. Integer places read
+                    // `schmal == false`, which is `ausdruck` itself, so their
+                    // text is unchanged; mixed variables refuse above.
+                    let schmal = ziel.as_deref() == Some("float");
+                    verenge(
+                        ausdruck_breit(&z.wert, u, absagen, schmal),
+                        &z.wert,
+                        ziel.as_deref(),
+                        u,
+                    )
                 }
             };
             // **Ein `format`-Feld wird ein SETZER, kein Zuweisungsziel** (2026-08-20).
@@ -7042,6 +7126,12 @@ fn anweisung(
                     }
                 }
             }
+            // **Direct byte writes take the `schreibBytes` arm (lane-141).**
+            // `None` falls through to the generic tail below, exactly as before.
+            if let Some(c) = schreib_bytes(z, &wert, &e, u, absagen) {
+                aus.push_str(&c);
+                return;
+            }
             aus.push_str(&format!(
                 "{e}{} {} {};\n",
                 ort(&z.ziel, u, absagen),
@@ -7049,10 +7139,12 @@ fn anweisung(
                 wert
             ));
         }
-        // **`narrow x to a .. b else { … }` ist die einzige Laufzeitpruefung, die dieser
-        // Erzeuger ausgibt** -- und sie steht hier, weil die Sprache sie als Pruefung
+        // **`narrow x to a .. b else { … }` ist die einzige Laufzeitpruefung, die der
+        // ANWENDER schreibt** -- und sie steht hier, weil die Sprache sie als Pruefung
         // DEFINIERT, nicht weil M1 versagt haette. *W6 gilt in die andere Richtung: was M1
-        // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.*
+        // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.* (Die Schranken an
+        // direkten Bytezugriffen gibt der Erzeuger selbst aus -- `lese_bytes`/`schreib_bytes`
+        // als Zweitmeinung zur getragenen Schranke; siehe dort.)
         StmtArt::Narrow(n) => {
             // **«F»: `finite` senkt zu `isfinite` ab, und die Pruefung BLEIBT.**
             //
@@ -7256,6 +7348,57 @@ fn anweisung(
                 );
                 return;
             };
+            // **Relaxed publish-side exchange + exchange-`erwartet` ordering (lane-149).**
+            //
+            // Lane 45 closed the relaxed gap for the two single-sided forms -- a
+            // `publishes` payload on a `relaxed` (or orderless, which lowers to
+            // `relaxed` on both sides) atomic goes to `relaxed_mit_last`, and so does
+            // an `awaits` list -- but left the combined form straight through:
+            // `paarung.rs` collects both exchange halves without that check, and this
+            // arm lowered them without naming them at all. An exchange that stores
+            // without release publishes a promise without a mechanism (the `V004`
+            // question), and one that loads without acquire awaits one (the
+            // `V004`/`V005` await-side question). Same questions, same answer: refuse
+            // with a name. On an ORDERED atomic both halves lower, and the C names
+            // them in the same words the `Publish`/`AwaitLoad` arms use -- *what the C
+            // carries, the C says.*
+            let entspannt = speichern == "memory_order_relaxed";
+            let traege_nutzlast = match &x.nutzlast {
+                Some(Nutzlast::Orte(l)) if !l.is_empty() => {
+                    Some(l.iter().map(|o| o.text()).collect::<Vec<_>>().join(", "))
+                }
+                _ => None,
+            };
+            let traege_erwartung = match &x.erwartet {
+                Some(l) if !l.is_empty() => {
+                    Some(l.iter().map(|o| o.text()).collect::<Vec<_>>().join(", "))
+                }
+                _ => None,
+            };
+            if traege_nutzlast.is_some() && entspannt {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange` with a `publishes` payload on a `relaxed` atomic (or one \
+                     without any ordering word, which lowers to `memory_order_relaxed` on \
+                     both sides) -- a store without release publishes a promise the machine \
+                     never delivers. The same broken promise `V004` refuses at the \
+                     `publishes` side; the combined form is no way around it",
+                );
+                return;
+            }
+            if traege_erwartung.is_some() && entspannt {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange` with an `awaits` list on a `relaxed` atomic (or one without \
+                     any ordering word, which lowers to `memory_order_relaxed` on both \
+                     sides) -- a load without acquire awaits a promise the machine never \
+                     delivers. The same broken promise `V004`/`V005` refuse at the `awaits` \
+                     side; the combined form is no way around it",
+                );
+                return;
+            }
             let wert;
             let bedingung;
             match &x.form {
@@ -7355,6 +7498,19 @@ fn anweisung(
                         b = binder.text,
                         ausgang = ausgang.text,
                     ));
+                    // **Ordered halves are named, not dropped.** `publishes nothing` and
+                    // a missing clause stay byte-identical -- only a carried promise gets
+                    // a line, in the words of the `Publish`/`AwaitLoad` arms.
+                    if let Some(last) = &traege_nutzlast {
+                        aus.push_str(&format!(
+                            "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                        ));
+                    }
+                    if let Some(last) = &traege_erwartung {
+                        aus.push_str(&format!(
+                            "{e}/* awaits {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                        ));
+                    }
                     // Der Rumpf schreibt sein Ergebnis mit `return` -- hier ist das eine
                     // Zuweisung an `_cn` und ein Sprung aus dem inneren Block.
                     rumpf_als_wert(rumpf, &neu_, aus, u, absagen, tiefe + 3);
@@ -7450,6 +7606,18 @@ fn anweisung(
                 return;
             }
             let h = format!("_cx{tiefe}");
+            // **Ordered halves are named, not dropped** -- see the `update` arm above:
+            // `publishes nothing` and a missing clause stay byte-identical.
+            if let Some(last) = &traege_nutzlast {
+                aus.push_str(&format!(
+                    "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                ));
+            }
+            if let Some(last) = &traege_erwartung {
+                aus.push_str(&format!(
+                    "{e}/* awaits {{ {last} }} -- paired at compile time (V001-V004) */\n"
+                ));
+            }
             aus.push_str(&format!(
                 "{e}bool {};\n{e}{{\n{e}    {typ} {h} = ({typ})({erwartet});\n\
                  {e}    /* compare-exchange under the DECLARED ordering -- a plain `=` would \
@@ -7779,6 +7947,23 @@ fn retry(
         weigere(absagen, s.span, "`retry` without `until` -- nothing bounds the condition");
         return;
     };
+    // **A quantifier is not a run time condition, and the sentence below does not say
+    // so (lane-140).** `pred_c` answers `None` for a `forall`/`exists` in an `until`,
+    // and the arm below reports "`until` predicate form" -- true, and silent about
+    // WHICH form. A loop condition runs every pass; a quantifier would need a loop of
+    // its own inside it, at a cost the `costs` pass never counted. Name it here, before
+    // the generic arm erases the shape: where no quantifier stands, nothing changes --
+    // `pred_c` still refuses the other four forms with the old sentence.
+    if enthaelt_quantor(bis) {
+        weigere(
+            absagen,
+            s.span,
+            "`until` over a quantifier (`forall`/`exists`) -- the condition runs every \
+             pass, and a quantifier would need a loop inside the condition at a cost \
+             the `costs` pass never counted. A quantifier is proved, not evaluated (W6)",
+        );
+        return;
+    }
     let Some(bedingung) = pred_c(bis, u, absagen) else {
         weigere(absagen, s.span, "`until` predicate form");
         return;
@@ -7822,9 +8007,14 @@ fn retry(
     let (hat_leave, hat_next) = sprungziele(&r.rumpf, &marke);
     let mut innen = austritt.clone();
     innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
+    // **CForm schleifeStmt + schrittStmt (lane 142): `for` and `+= 1`.**
+    // `for` is the loop the target list allows, so the bounded wait is one;
+    // the counter steps inside the admitted compound-assignment class. The
+    // `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of scope
+    // for this lane.
     aus.push_str(&format!(
-        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    while (!({bedingung})) {{\n\
-         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z}++;\n"
+        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    for (; !({bedingung}); ) {{\n\
+         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z} += 1;\n"
     ));
     for k in &r.rumpf.anweisungen {
         anweisung(k, aus, u, absagen, tiefe + 2, &innen);
@@ -8195,6 +8385,26 @@ fn rumpf_als_wert(
 
 /// Ein Praedikat als C-Bedingung. **Nur die Formen, die ein `until` heute braucht** -- jede
 /// andere wird abgelehnt, statt sie plausibel zu uebersetzen.
+///
+/// Does this predicate quantify anywhere inside -- at the top or nested under
+/// `&&`/`||`/`!`/parentheses? Read by the `retry` lowering before `pred_c`, so that an
+/// `until` over a quantifier is refused WITH the quantifier named. Spelled out arm by
+/// arm, so a new `PredArt` is a compile error here rather than a silent "no" (the same
+/// rule `ausdruecke_im_praedikat` in `lib.rs` holds).
+fn enthaelt_quantor(p: &Pred) -> bool {
+    match &p.art {
+        PredArt::Quantor(_) => true,
+        PredArt::Klammer(x) | PredArt::Nicht(x) => enthaelt_quantor(x),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            enthaelt_quantor(a) || enthaelt_quantor(b)
+        }
+        PredArt::Vergleich(_)
+        | PredArt::Element(_, _)
+        | PredArt::Erreicht { .. }
+        | PredArt::Held { .. } => false,
+    }
+}
+
 fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
     Some(match &p.art {
         PredArt::Vergleich(e) => ausdruck(e, u, absagen),
@@ -8631,8 +8841,11 @@ fn traverse(
                 format!("{}->slots", ort(o, u, absagen))
             };
             let v = &x.variable.text;
+            // **CForm schrittStmt (lane 142): `+= 1`, not `++`.** The bound is
+            // untouched (`sizeof` stays -- text-pinned and load-bearing); only
+            // the step moves into the admitted compound-assignment class.
             aus.push_str(&format!(
-                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v} += 1) {{\n"
             ));
             // The domain above was read in the OUTER scope; the BODY is not.
             let mut innen = laufsicht(u, v);
@@ -8709,10 +8922,14 @@ fn traverse(
                 );
                 return;
             }
+            // **CForm schrittStmt (lane 142): `+= 1`, not `++`** -- same move as
+            // the `slots of` header above; the `uint64_t` bound is untouched.
+            // (Stands above the header: the mutation anchor below matches this
+            // block literally, and a comment inside it would blind the anchor.)
             let feld = ort(o, u, absagen);
             let v = &x.variable.text;
             aus.push_str(&format!(
-                "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+                "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v} += 1) {{\n"
             ));
             // The domain above was read in the OUTER scope; the BODY is not.
             let mut innen = laufsicht(u, v);
@@ -9185,6 +9402,178 @@ fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
         return u.verbundfeld.get(&(n.clone(), f.text.clone())).cloned();
     }
     None
+}
+
+/// **Direct byte operations and the bound they carry (lane-141).**
+///
+/// A `format` field is a view: it lowers through a generated reader over
+/// `v->bytes + offset` (`format_`, `lesewort`/`schreibwort`). A byte carrier
+/// indexed DIRECTLY -- `PUFFER[i]`, `s.bytes[i]`, `t.bytes[i] = v` -- is not a
+/// view and takes no reader: it lowers to the element itself. `byte_traeger`
+/// names that path so it stops sharing the generic place lowering silently.
+///
+/// **The bound check comes from the run bound, and it is re-derived, not
+/// trusted** (the `O9` stance: `ausdruck_obergrenze` reads the declaration
+/// again rather than taking another pass's word). The carrier's declared
+/// length (`feldlaenge_von`) is the bound each access is held against; the
+/// checker (`M103`, plus `narrow`/`requires` at the source) has already proved
+/// the access in range, so on a checked program the trap never fires -- *the
+/// check is the emitter's second opinion, the proof stays the checker's.*
+/// See `lese_bytes`/`schreib_bytes` for the two C shapes.
+///
+/// Returns the carrier (the place without its trailing index) and its length
+/// in bytes, or `None` where the generic lowering stays in charge. `None` is
+/// always byte-identical to today: every plain path below is the fallthrough,
+/// never a re-spelling.
+fn byte_traeger(o: &Ort, u: &Namen) -> Option<(Ort, u64)> {
+    let idx = match o.suffixe.last() {
+        Some(OrtSuffix::Index(e)) => e,
+        _ => return None,
+    };
+    // Tables, devices, formats and accumulators are never byte carriers, even
+    // where their names would resolve to something array-shaped. Each of them
+    // owns its lowering further up (`ort`, the bank arms, `format_`); a byte
+    // arm reaching into one would be the second register (W7).
+    if u.tabellen.iter().any(|t| *t == o.basis.text)
+        || u.tabellenzeiger.contains_key(&o.basis.text)
+        || u.geraetezeiger.contains_key(&o.basis.text)
+        || u.geraetewerte.contains_key(&o.basis.text)
+        || u.formatwerte.contains_key(&o.basis.text)
+        || u.akkus.contains(&o.basis.text)
+    {
+        return None;
+    }
+    let traeger = Ort {
+        basis: o.basis.clone(),
+        suffixe: o.suffixe[..o.suffixe.len() - 1].to_vec(),
+        span: o.span,
+    };
+    // No arrow inside the carrier: a place reached through `->` is a device or
+    // function-pointer lane, and neither is a byte run.
+    if traeger
+        .suffixe
+        .iter()
+        .any(|s| matches!(s, OrtSuffix::Ueber(_)))
+    {
+        return None;
+    }
+    let t = ort_typ(&traeger, u)?;
+    let TypExpr::Feld(a) = &t else { return None };
+    if ctyp(&a.element, u).as_deref() != Some("uint8_t") {
+        return None;
+    }
+    let laenge = u64::try_from(feldlaenge_von(&t, u)?).ok()?;
+    if laenge == 0 {
+        return None;
+    }
+    // A constant index is the checker's own case: `M103` bounds every index by
+    // the declared length, and a constant past it already carries the checker's
+    // finding. The emitter writes the plain access, exactly as before.
+    if konst_zahl(idx).is_some() {
+        return None;
+    }
+    // A structurally re-derived bound at or under the run bound discharges the
+    // same way -- but only over an UNSIGNED index type, where no negative value
+    // can hide below the re-derived upper bound (`O9` again: the discharge is
+    // read off the operator and the type, never off another pass's facts).
+    if wert_ctyp(idx, u)
+        .as_deref()
+        .is_some_and(|t| c_obergrenze(t).is_some())
+        && ausdruck_obergrenze(idx, u)
+            .is_some_and(|h| h >= 0 && (h as u128) < u128::from(laenge))
+    {
+        return None;
+    }
+    Some((traeger, laenge))
+}
+
+/// An index the bound check may read twice (check, then use). A call would run
+/// twice -- two effects for one written -- and a volatile device read would
+/// sample twice, so either one falls back to the plain access, which evaluates
+/// once. The checker still guards it; the emitter just states no second
+/// opinion where stating one would cost an evaluation.
+fn index_ist_rein(e: &Expr, u: &Namen) -> bool {
+    match &e.art {
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::FnWert(_)
+        | ExprArt::Grund { .. } => true,
+        ExprArt::Klammer(x) => index_ist_rein(x, u),
+        ExprArt::Unaer(_, x) => index_ist_rein(x, u),
+        ExprArt::Binaer(_, a, b) => index_ist_rein(a, u) && index_ist_rein(b, u),
+        ExprArt::Ort(o) => {
+            if u.geraetezeiger.contains_key(&o.basis.text)
+                || u.geraetewerte.contains_key(&o.basis.text)
+            {
+                return false;
+            }
+            o.suffixe.iter().all(|s| match s {
+                OrtSuffix::Feld(_) | OrtSuffix::Ueber(_) => true,
+                OrtSuffix::Index(x) => index_ist_rein(x, u),
+            })
+        }
+        _ => false,
+    }
+}
+
+/// **`leseBytes`: the direct byte read with its run bound (lane-141).**
+///
+/// `s.bytes[i]` becomes `((uint64_t)(i) < LENu ? s->bytes[(uint64_t)(i)] :
+/// (__builtin_trap(), (uint8_t)0))`. The `uint64_t` cast keeps `-Wsign-compare`
+/// quiet over a signed index -- and keeps the semantics: a negative index
+/// converts to a huge value, misses the bound, and traps. The trap arm needs
+/// the comma value because a read is an expression; on a checked program it
+/// never runs. An impure index (`None` from `index_ist_rein`) stays plain:
+/// correctness of the evaluation count outranks the second opinion.
+fn lese_bytes(o: &Ort, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    let (traeger, laenge) = byte_traeger(o, u)?;
+    let idx = match o.suffixe.last() {
+        Some(OrtSuffix::Index(e)) => e,
+        _ => return None,
+    };
+    if !index_ist_rein(idx, u) {
+        return None;
+    }
+    let puffer = ort(&traeger, u, absagen);
+    let i = ausdruck(idx, u, absagen);
+    Some(format!(
+        "((uint64_t)({i}) < {laenge}u ? {puffer}[(uint64_t)({i})] : (__builtin_trap(), (uint8_t)0))"
+    ))
+}
+
+/// **`schreibBytes`: the direct byte write with its run bound (lane-141).**
+///
+/// `t.bytes[i] = v` becomes a scoped block that binds the index ONCE and traps
+/// past the bound -- one evaluation whatever the index carries, so unlike the
+/// read there is no purity fallback. Only `=` takes this path: a compound
+/// assignment on a byte element is the checker's case (`M104` refuses the
+/// `u8` overflow), and the generic tail stays in charge of it, exactly as
+/// before. The block scope keeps `_gabbro_i` off every surrounding binding;
+/// shadowing a user name there is legal C and changes nothing outside.
+fn schreib_bytes(
+    z: &Zuweisung,
+    wert: &str,
+    e: &str,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Option<String> {
+    if !matches!(z.op, ZuwOp::Setzt) {
+        return None;
+    }
+    let (traeger, laenge) = byte_traeger(&z.ziel, u)?;
+    let idx = match z.ziel.suffixe.last() {
+        Some(OrtSuffix::Index(x)) => x,
+        _ => return None,
+    };
+    let puffer = ort(&traeger, u, absagen);
+    let i = ausdruck(idx, u, absagen);
+    Some(format!(
+        "{e}{{\n{e}    uint64_t _gabbro_i = (uint64_t)({i});\n\
+         {e}    if (!(_gabbro_i < {laenge}u)) __builtin_trap();\n\
+         {e}    {puffer}[_gabbro_i] = {wert};\n{e}}}\n"
+    ))
 }
 
 /// **Der C-Typ eines Ausdrucks -- ABGELESEN, und nur wo er eindeutig dasteht.**
@@ -9798,6 +10187,50 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
             return format!("{}({})", pf.text().replace("::", "_"), args.join(", "));
         }
     }
+    // **`old(...)` outside a contract is not the pre-state reader (lane-140).**
+    //
+    // `old` is a word only where a contract is read (`parse.rs::im_vertrag`); in a body
+    // it is a name, and `old(x)` is a call. With no declaration behind it the call has
+    // no callee -- and the tail below emitted `old(x)` straight into the C, an implicit
+    // declaration `cc` happens to catch, with exit 0 and no refusal. Measured:
+    // `let x : u64 = old(eintrag);` and `if old(q.slots[k].aktiv) == true` both checked
+    // clean (E009 aside) and both emitted the call verbatim. *Happening to fail is not
+    // refusing* -- the `Some`/`None` arm above exists for the same reason.
+    //
+    // The guard asks `u.funktionen`, the same bare-keyed map the tail lowers through: a
+    // declared `fn old` keeps its call. Transitions, devices and ops are claimed by
+    // their own arms above, so nothing declared can reach this line by accident. A bare
+    // `old` that is never called -- `let old = a;` (`beispiele/70`) -- never reaches
+    // `ruf` at all.
+    if name == "old" && !u.funktionen.contains_key(&name) {
+        weigere(
+            absagen,
+            r.span,
+            "`old(...)` outside a contract -- `old(place)` names the value at entry and \
+             only a contract (`ensures`, an invariant, an exchange `when`) reads one. \
+             Here it is a call to a function nobody declared, and the emitted C would \
+             name a callee that does not exist",
+        );
+        return String::new();
+    }
+    // **`result(...)` outside a contract is not the answer reader (lane-140).**
+    //
+    // Same shape as `old` above, one arm over: `result` is a word only where a contract
+    // is read, and in a body `result(a)` is a call. Measured: `return result(a);`
+    // checked clean (E009 aside) and emitted verbatim. A bare `result` that is never
+    // called -- `let result = old; return result;` (`beispiele/70`) -- never reaches
+    // `ruf`, and a declared `fn result` keeps its call through the same guard.
+    if name == "result" && !u.funktionen.contains_key(&name) {
+        weigere(
+            absagen,
+            r.span,
+            "`result(...)` outside a contract -- `result` names the return value inside \
+             an `ensures`, and a contract is checked at compile time (W6). Here it is \
+             a call to a function nobody declared, and the emitted C would name a \
+             callee that does not exist",
+        );
+        return String::new();
+    }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r
         .argumente
@@ -10046,6 +10479,12 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // das es im C nicht gibt.
     if o.suffixe.is_empty() && u.akkus.contains(&o.basis.text) {
         return format!("{}_lies()", o.basis.text);
+    }
+    // **Direct byte reads take the `leseBytes` arm, not the generic walk
+    // (lane-141).** `None` falls through and the walk below runs exactly as
+    // before -- every plain path is the old path, never a re-spelling.
+    if let Some(c) = lese_bytes(o, u, absagen) {
+        return c;
     }
     let mut t = o.basis.text.clone();
     // The base of a place in a function is a pointer parameter -- **unless it is a record
@@ -10604,6 +11043,35 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
+            // **CForm zeigerArithmetik WITHDRAWN here 2026-09-11 (central).**
+            // The refusal below (doubleTyp) stays; the pointer-arithmetic
+            // refusal above it went back out the same day it landed: it fired
+            // on `u32` arithmetic in `messung/netz/udp-echo.gab` because
+            // `wert_ctyp` resolves through scope-blind maps (`parametertyp`
+            // answered another function's `a : ptr ArpTabelle` for this
+            // function's `let a : u32` -- measured with a temporary probe,
+            // reverted byte-identical). A refusal that fires on integers is
+            // not strict, it is loaded. Returns with per-function scoping;
+            // see `messung/EMIT-SICHTBARKEIT.md`.
+            // **CForm doubleTyp (lane 142): no silent widening.** With a `double`
+            // operand present, C promotes the `float` side and computes in
+            // `double`, while the checker proved the `f32` fact (7400 of 200000
+            // sampled cases differ). There is no conversion form, so the mixed
+            // node is refused by name instead of computed in the wrong width.
+            if matches!(
+                op,
+                BinOp::Plus | BinOp::Minus | BinOp::Mal | BinOp::Geteilt
+            ) && ist_gemischt_float_double(&wert_ctyp(a, u), &wert_ctyp(b, u))
+            {
+                weigere(
+                    absagen,
+                    e.span,
+                    "mixed `float`/`double` arithmetic -- C would widen the `float` \
+                     side and compute in `double`, against the checked `f32` fact, \
+                     and there is no conversion form (the `F005` shape)",
+                );
+                return String::new();
+            }
             // **Ein `wrapping`-Slot rechnet UNSIGNED -- sonst sagt das C etwas anderes als
             // das Gepruefte** (Rezension 2026-08-20).
             //
@@ -10937,11 +11405,28 @@ fn baum_hat_accumulates(baum: &Programm) -> bool {
 /// niemand; diese Zeile liest der C-Uebersetzer** -- ein Name, den die Uebersetzungseinheit
 /// nicht kennt, ist dort ein Fehler und keine Notiz.
 ///
-/// `__typeof__` steht da, damit die Signatur **nicht zweimal** geschrieben wird: sie einmal
-/// aus der Deklaration abzuleiten und hier ein zweites Mal auszuschreiben waere das zweite
-/// Register ueber derselben Sache (W7) -- *und ein Register, das sich widersprechen kann,
-/// widerspricht sich.*
-fn bezugnahme(marke: &str, ziel: &str) -> String {
+/// `__typeof__` stood here so that the signature is **not written twice**: deriving it
+/// once from the declaration and spelling it here a second time would be the second
+/// register over the same fact (W7) -- *and a register that can contradict itself
+/// contradicts itself.*
+///
+/// **CForm typOfErw (lane 142) reads it from the first register instead.** `kerne`
+/// carries each function lowered by the same `prototyp_kern` the definition is
+/// written from, so the reference spells the signature from the SAME lowering --
+/// `static void (*const m)(void) __attribute__((unused)) = f;`, the shape the
+/// `forever` watchdog already ships. A name with no core falls back to the old
+/// spelling; that only happens where the prototype emission refused the same
+/// name through the same helper, so the unit already carries that refusal.
+fn bezugnahme(
+    marke: &str,
+    ziel: &str,
+    kerne: &std::collections::BTreeMap<String, (String, String)>,
+) -> String {
+    if let Some((rueck, liste)) = kerne.get(ziel) {
+        return format!(
+            "static {rueck} (*const {marke})({liste}) __attribute__((unused)) = {ziel};\n"
+        );
+    }
     format!("static __typeof__({ziel}) *const {marke} __attribute__((unused)) = {ziel};\n")
 }
 
@@ -11222,11 +11707,13 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         "static inline __attribute__((unused)) bool {n}_steigt_ab(const {elem} *it) {{ return (bool)({ab_wenn}); }}\n"
     ));
     // **Der Abstieg. `levels` ist die Schranke, und sie steht als Zahl da.**
+    // **CForm schrittStmt (lane 142): `+= 1`, not `++`** -- the level counter
+    // steps inside the admitted class like every other generator loop.
     aus.push_str(&format!(
         "\nstatic inline __attribute__((unused)) bool {n}_absteigen(const {n}_knoten *wurzel, const uint32_t *index,\n\
          \x20       bool (*knoten_zu)(uint64_t, const {n}_knoten **), const {elem} **blatt) {{\n\
          \x20   const {n}_knoten *k = wurzel;\n\
-         \x20   for (uint32_t e = 0; e < {n}_EBENEN; e++) {{\n\
+         \x20   for (uint32_t e = 0; e < {n}_EBENEN; e += 1) {{\n\
          \x20       /* The bound comes from `node [{elem}; {weite}]`; the VALUE comes from\n\
          \x20          the caller, and that is why the check stands here (W6). */\n\
          \x20       if (index[e] >= {n}_WEITE) return false;\n\
@@ -11261,7 +11748,13 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// **Eine andere Architektur wird BENANNT abgelehnt.** Registerabdruck, Stapelwechsel und
 /// Verschachtelung sind je Architektur andere; `arch` steht in der Deklaration, damit hier
 /// nicht geraten wird.
-fn eintritt(e: &EntryDecl, aus: &mut String, ruempfe: &BTreeSet<String>, absagen: &mut Absagen) {
+fn eintritt(
+    e: &EntryDecl,
+    aus: &mut String,
+    ruempfe: &BTreeSet<String>,
+    kerne: &std::collections::BTreeMap<String, (String, String)>,
+    absagen: &mut Absagen,
+) {
     if e.arch.text != "x86_64" {
         weigere(
             absagen,
@@ -11345,7 +11838,7 @@ fn eintritt(e: &EntryDecl, aus: &mut String, ruempfe: &BTreeSet<String>, absagen
     // **`dispatch` waere sonst der eine Name, der spurlos verschwindet.**
     let ziel = e.dispatch.teile.last().map(|i| i.text.clone()).unwrap_or_default();
     if ruempfe.contains(&ziel) {
-        aus.push_str(&bezugnahme(&format!("gabbro_eintritt_{n}_verteiler"), &ziel));
+        aus.push_str(&bezugnahme(&format!("gabbro_eintritt_{n}_verteiler"), &ziel, kerne));
     } else {
         aus.push_str(&format!(
             "/* dispatch `{}`: not declared in this unit, so there is nothing here to bind it\n\
@@ -11418,6 +11911,21 @@ fn anvertrauen(t: &EntrustDecl, aus: &mut String, u: &Namen, absagen: &mut Absag
             "_Static_assert(sizeof({raum}) > 0,\n\
              \x20   \"the space an `entrust` hands over must be a declared, complete type\");\n"
         ));
+    } else {
+        // **emission-144 (`statikAssert`): the assert or a named refusal, no silent state.**
+        // A range type lowers to its carrier and has no declared C type, and an
+        // undeclared space has nothing at all -- in both cases the `_Static_assert`
+        // cannot be written, and handing the space over without it would be a guess.
+        weigere(
+            absagen,
+            t.span,
+            &format!(
+                "an `entrust` space with no complete C type in this unit (`{raum}` names \
+                 no declared record, table, format, or device) -- the `_Static_assert` \
+                 cannot be written, and without it the handover is refused, not guessed"
+            ),
+        );
+        return;
     }
     aus.push_str(&format!("void gabbro_gast_{n}(void);\n"));
 }
@@ -11448,6 +11956,7 @@ fn bootstrecke(
     aus: &mut String,
     u: &Namen,
     ruempfe: &BTreeSet<String>,
+    kerne: &std::collections::BTreeMap<String, (String, String)>,
     absagen: &mut Absagen,
 ) {
     if b.arch.text != "x86_64" {
@@ -11492,7 +12001,7 @@ fn bootstrecke(
             BootSchritt::Ruf(r) => {
                 let ziel = r.path().and_then(|p| p.teile.last()).map(|x| x.text.clone()).unwrap_or_default();
                 if ruempfe.contains(&ziel) {
-                    aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_s{}", i + 1), &ziel));
+                    aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_s{}", i + 1), &ziel, kerne));
                 }
             }
             BootSchritt::Setzt { name, wert } => {
@@ -11506,7 +12015,7 @@ fn bootstrecke(
     }
     let ziel = b.dispatch.teile.last().map(|x| x.text.clone()).unwrap_or_default();
     if ruempfe.contains(&ziel) {
-        aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_dispatch"), &ziel));
+        aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_dispatch"), &ziel, kerne));
     } else {
         aus.push_str(&format!(
             "/* dispatch `{}`: not declared in this unit, so there is nothing here to bind it\n\

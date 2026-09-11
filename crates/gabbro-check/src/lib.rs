@@ -48,6 +48,11 @@ pub mod paarung;
 pub mod gruppe;
 pub mod emit;
 pub mod geteilt;
+// **Emission-side enforcement, unwired pending hooks (central assembly).**
+// `absenkung` refuses over-budget primitives (bound 18); `tearing` refuses
+// shared-carrier sequences. Both are pure check modules until hooked.
+pub mod absenkung;
+pub mod tearing;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
@@ -96,6 +101,13 @@ pub mod schablonen;
 pub mod saetze;
 pub mod blindstellen;
 pub mod zeugnis;
+// **Per-run derivation certificates (Erhaltung) and cost/ledger sidecars.**
+// Unwired pending their hooks (central assembly): `certemit` prints
+// CertExpr validity certificates, `corrcert` collects per-run
+// correspondence rows, `kostenledger` renders the ops/deadline ledger.
+pub mod certemit;
+pub mod corrcert;
+pub mod kostenledger;
 pub mod zeremonie;
 
 /// Was ein Pass heute leistet.
@@ -385,6 +397,12 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("geteilt", geteilt::pass(baum, absagen));
         z!("kontexte", kontexte::pass(baum, absagen));
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
+        // H021 + H022, same wiring as below (timed variant).
+        z!("ableitung", ableitung::pass(baum, absagen));
+        let h022 = { let t = std::time::Instant::now(); let r = pflichten::zyklen_ohne_mass(baum); eprintln!("{:>10} {:?}", "h022", t.elapsed()); r };
+        for luecke in &h022 {
+            absagen.schiebe(pflichten::h022_weigerung(luecke));
+        }
         z!("m3", m3::pass(baum, absagen));
         z!("m2", m2::pass(baum, absagen));
         z!("phasen", phasen::pass(baum, absagen));
@@ -415,6 +433,16 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // und dies ist eine Regel derselben Spalte, keine neue.*
     kontexte::pass(baum, absagen);
     nebeneinander::pass(baum, absagen);
+    // **H021 -- dropped derivation edges fall once per (caller, target).**
+    // Wired 2026-09-11 (lane-131 built the refusal unwired); clean corpus
+    // draws zero H021, measured before wiring.
+    ableitung::pass(baum, absagen);
+    // **H022 -- bare mutual cycles fall once per member.** Wired 2026-09-11
+    // (lane-133 built the detector unwired); K008 keeps firing beside it,
+    // and probes pin the exact sets.
+    for luecke in &pflichten::zyklen_ohne_mass(baum) {
+        absagen.schiebe(pflichten::h022_weigerung(luecke));
+    }
     m3::pass(baum, absagen);
     m2::pass(baum, absagen);
     // **«B37», seit 2026-08-17.** M2 sieht, dass eine lineare Marke genau einmal

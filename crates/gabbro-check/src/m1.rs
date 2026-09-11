@@ -1849,15 +1849,64 @@ impl<'a> Pruefer<'a> {
             }
             ExprArt::Unaer(UnOp::Negativ, i) => {
                 let t = self.ausdruck(i, lage);
-                match t.bereich() {
-                    Some(b) => Typ::Ganzzahl(IntBereich::genau(
-                        b.breite,
-                        true,
-                        -b.max,
-                        -b.min,
-                    )),
-                    None => Typ::Unbekannt,
+                let Some(b) = t.bereich() else { return Typ::Unbekannt };
+                // **`M150` -- the negation leaves the width, and no rule said so.**
+                //
+                // Every binary operator refuses an out-of-width result at the
+                // operation (`M104`); unary minus built the same out-of-width
+                // range and stayed silent. Measured over the unchanged checker:
+                // `return -x;` with `x : i32` into `i64` passed with 0 errors,
+                // because `M101` only compares intervals and never widths -- the
+                // computed type then claims a value (`-INT_MIN`) that fits no
+                // `i32` and is undefined behaviour in the C it lowers to.
+                //
+                // The check mirrors `M104`: the mathematical range `-max .. -min`
+                // has to fit the operand's own width, at this node and not at
+                // the assignment. A `wrapping` operand stays exempt for the same
+                // reason it is at `M104` -- its overflow is declared, not found.
+                // A narrowed operand stays silent too -- the range is read with
+                // its V1/V2 facts (`mit_fakt` ran inside `ausdruck`), not off
+                // the declaration.
+                let (Some(lo), Some(hi)) = (b.max.checked_neg(), b.min.checked_neg()) else {
+                    // Outside `i128` -- and therefore outside every width Gabbro
+                    // has. Only a literal at `i128::MIN` reaches here; refusing
+                    // is the only direction that does not invent a type.
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M150",
+                            e.span,
+                            "this negation has no counterpart in any integer width",
+                        )
+                        .mit_notiz(
+                            "SYNTAX.md §4: if the result range does not fit, it is a compile error \
+                             and not a wrap-around",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                };
+                let r = IntBereich::genau(b.breite, true, lo, hi);
+                if !r.passt_in_die_breite() && !t.laeuft_um() {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M150",
+                            e.span,
+                            format!(
+                                "`-` over `{}` leaves the width of the operand type",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "SYNTAX.md §4: if the result range does not fit, it is a compile error \
+                             and not a wrap-around -- negating the smallest value of a signed \
+                             width has no counterpart left in it",
+                        )
+                        .mit_notiz(
+                            "a check before it narrows the range (V1), otherwise `narrow x to … \
+                             else { … }`",
+                        ),
+                    );
                 }
+                Typ::Ganzzahl(r)
             }
             // **`~x` -- and the operand's WIDTH is the whole rule.**
             //
@@ -6093,5 +6142,94 @@ mod operatortafel {
             assert_eq!(op_zeichen(op), crate::fremdverengung::zeichen(op), "{op:?}");
             assert_ne!(op_zeichen(op), "?", "{op:?}");
         }
+    }
+}
+
+/// **M150 probes -- unary minus leaves the width.**
+///
+/// The gift files `749`/`750`/`751` pin the shapes file by file; these tests pin
+/// the exactness the file-level run cannot: the must-fall fires EXACTLY once,
+/// and the must-pass twins fire NOTHING AT ALL (no `M150` beside another code,
+/// no second site).
+#[cfg(test)]
+mod m150_proben {
+    use gabbro_syntax::diag::Stufe;
+
+    fn fehler(quelle: &str) -> Vec<&'static str> {
+        let (baum, mut absagen) = gabbro_syntax::lies("m150.gab", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    /// Must-fall: a full-range `i32` negated into a wider result. `M101` stays
+    /// silent here -- it compares intervals, never widths -- so without `M150`
+    /// this program passed with 0 errors (measured over the unchanged checker).
+    #[test]
+    fn offene_negation_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::m150_fall {\n\
+             impl fn negiere(x : i32) -> i64 effects { pure } {\n\
+                 return -x;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M150"], "open negation must fall exactly once");
+    }
+
+    /// Must-pass: a V1-narrowed operand, the declared boundary without the
+    /// smallest value, and a `wrapping` operand whose overflow is declared.
+    #[test]
+    fn enge_negation_schweigt() {
+        let still = [
+            // V1 fact: `-x` over `0 .. 100` is `-100 .. 0` and fits.
+            "module probe::m150_eng1 {\n\
+             impl fn negiere(x : i32) -> i64 effects { pure } {\n\
+                 narrow x to 0 .. 100 else { return 0; }\n\
+                 return -x;\n\
+             }\n\
+             }\n",
+            // Declared boundary: without `INT_MIN` the negation fits exactly.
+            "module probe::m150_eng2 {\n\
+             impl fn negiere(x : i32 in -2147483647 .. 2147483647) -> i64 effects { pure } {\n\
+                 return -x;\n\
+             }\n\
+             }\n",
+            // Declared overflow: `wrapping` is exempt, as at `M104`.
+            "module probe::m150_eng3 {\n\
+             table Z count 4 { slot { marke : u32 wrapping, } }\n\
+             impl fn negiere(z : ptr<normal, r> Z) -> i64 effects { reads z.slots } {\n\
+                 return -z.slots[0].marke;\n\
+             }\n\
+             }\n",
+        ];
+        for (n, quelle) in still.iter().enumerate() {
+            assert!(
+                fehler(quelle).is_empty(),
+                "still shape {n} must stay silent, fell with {:?}",
+                fehler(quelle)
+            );
+        }
+    }
+
+    /// Boundary: one value decides. The pair differs by the smallest value of
+    /// the width only -- the first stays silent, the second falls exactly once.
+    #[test]
+    fn grenze_entscheidet_um_einen_wert() {
+        let f = fehler(
+            "module probe::m150_grenze {\n\
+             impl fn rand(x : i32 in -2147483647 .. 2147483647) -> i64 effects { pure } {\n\
+                 return -x;\n\
+             }\n\
+             impl fn voll(y : i32) -> i64 effects { pure } {\n\
+                 return -y;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M150"], "boundary pair must fall exactly once");
     }
 }

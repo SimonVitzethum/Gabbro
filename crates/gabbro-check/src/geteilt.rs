@@ -75,6 +75,17 @@ use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 use std::collections::{BTreeMap, BTreeSet};
 
+/// **Lane 132: `Geteilt.Bau`, built from this unit -- beside `H013`, not instead.**
+///
+/// The module computes the closed-world declaration (`eintritt`, `ruft`,
+/// `schreibtFn`, `geteilt`, `traeger`, `neben`) out of the bodies, following
+/// `grammatik/Grammatik/Extraktion.lean` shape for shape. It is wired here and
+/// not in `lib.rs` on purpose: the Bau answers the question of THIS pass, and
+/// a central registration would make it look like a thirteenth pass, which it
+/// is not -- it decides nothing, it only accompanies the verdict below.
+#[path = "bau.rs"]
+pub mod bau;
+
 /// Nennt die `requires`-Klausel einen `Held(…)`-Zeugen? — der Prädikatbaum, flach gelesen.
 /// Was über eine Sperre im Baum steht.
 struct Sperre {
@@ -685,6 +696,26 @@ pub fn pass_mit(
                     ),
                 );
             }
+        }
+
+        // **W5 beside `H013` (lane 132): the built `Bau` answers the same question.**
+        //
+        // `bau::erhebe` builds `Geteilt.Bau` from this unit -- call edges from the
+        // bodies (the graph's resolved direct calls; an indirect call carries no
+        // edge, S2), footprints from the declared `writes` effects (`fussAus`),
+        // the domain and the shared flag from the same declarations the verdict
+        // above reads (`welt`, `geschuetzt`; unknown means shared, S5), and the
+        // pair list from the `concurrent` sets (`nebenAus`). `pruefe_ungeteilt`
+        // evaluates the W5 premise (`pruefeUngeteilt`) over it. It stands BESIDE
+        // the verdict above, not instead of it: the refusal above decides, this
+        // answer is computed and pinned silent, so the observable behaviour is
+        // unchanged by construction. A divergence between the two is a finding
+        // about the derivation, never a refusal -- it stays out of `absagen` for
+        // exactly that reason. Per-probe agreement is booked in
+        // `messung/BAU-NOTIZ.md`.
+        {
+            let bau = bau::erhebe(baum, &u, &g, &kontexte, &welt, &geschuetzt);
+            let _w5_traeger = bau::pruefe_ungeteilt(&bau, bau::sattigung(&bau));
         }
     }
 

@@ -194,3 +194,98 @@ pub fn lies(felder: &[FeldDecl]) -> (Vec<Eintrag>, Vec<Befund>) {
     }
     (aus, befunde)
 }
+
+/// **Boundary pins for the bit-range checks above -- edges, not classes.**
+///
+/// The example corpus can only tell a class apart: `beispiele/gift/105` falls with `N007`
+/// at `@[9:4]` on a `u8` for EVERY wrong top edge between 8 and 255 alike, and `106` with
+/// `N008` at a two-bit overlap for every wrong mask. These rows stand on the edge where a
+/// by-one error moves the verdict to the other side: the top bit itself, the reversed
+/// range, the touch in exactly one shared bit. Probes `761`--`763` pin the same edges at
+/// the corpus level; these pin them at the function.
+#[cfg(test)]
+mod grenzen {
+    use super::*;
+    use gabbro_syntax::ast::{FeldTy, Ident, IntTy};
+    use gabbro_syntax::span::Span;
+
+    fn u8_feld(name: &str, lage: Option<BitPos>) -> FeldDecl {
+        let span = Span::neu(0, 1);
+        FeldDecl {
+            name: Ident {
+                text: name.into(),
+                span,
+            },
+            typ: FeldTy {
+                typ: TypExpr::Int(IntTy {
+                    wort: Kw::U8,
+                    bereich: None,
+                    span,
+                }),
+                embeds: None,
+                scale: None,
+            },
+            bitpos: lage,
+            offset_into: None,
+            bedingung: None,
+            reserviert: false,
+            span,
+        }
+    }
+
+    #[test]
+    fn single_bit_at_the_word_edge() {
+        // Bit 7 of a `u8` is the top bit and legal; bit 8 is beyond the word.
+        assert!(
+            lage_pruefen(&BitPos::Bit(7), 8, 0, "a", "u8").is_none(),
+            "the top bit itself is inside the word"
+        );
+        let b = lage_pruefen(&BitPos::Bit(8), 8, 1, "b", "u8").expect("one past the top falls");
+        assert_eq!(b.kennung, "N007");
+        assert_eq!(b.feld, 1);
+    }
+
+    #[test]
+    fn reversed_range_names_no_bits() {
+        // `@[3:7]` runs from high to low nowhere: the high bit is below the low one.
+        let b = lage_pruefen(&BitPos::Bereich(3, 7), 8, 0, "a", "u8").expect("reversed falls");
+        assert_eq!(b.kennung, "N007");
+    }
+
+    #[test]
+    fn touch_by_one_bit_is_overlap() {
+        // `a` owns bit 4 and `b` claims it too: exactly one shared bit, and `N008` fires
+        // against the second field, naming the first.
+        let felder = vec![
+            u8_feld("a", Some(BitPos::Bereich(7, 4))),
+            u8_feld("b", Some(BitPos::Bereich(4, 0))),
+        ];
+        let (_, befunde) = lies(&felder);
+        assert_eq!(befunde.len(), 1, "one shared bit is one overlap");
+        assert_eq!(befunde[0].kennung, "N008");
+        assert_eq!(befunde[0].feld, 1);
+        assert_eq!(befunde[0].anderes, Some(0));
+    }
+
+    #[test]
+    fn exact_touch_tiles_clean() {
+        // The neighbour of the row above: `[7:4]` beside `[3:0]` shares nothing, tiles the
+        // word exactly, and stays silent.
+        let felder = vec![
+            u8_feld("a", Some(BitPos::Bereich(7, 4))),
+            u8_feld("b", Some(BitPos::Bereich(3, 0))),
+        ];
+        let (eintraege, befunde) = lies(&felder);
+        assert!(befunde.is_empty(), "adjacent ranges do not overlap");
+        assert_eq!(eintraege.len(), 1, "one word, not two");
+        match &eintraege[0] {
+            Eintrag::Gruppe {
+                felder, gekachelt, ..
+            } => {
+                assert_eq!(felder.len(), 2);
+                assert!(gekachelt, "every bit named, none twice");
+            }
+            _ => panic!("two adjacent bitfields are one group"),
+        }
+    }
+}

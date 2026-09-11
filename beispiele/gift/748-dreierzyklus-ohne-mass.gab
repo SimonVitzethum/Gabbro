@@ -1,0 +1,21 @@
+-- erwartet: H022
+-- **The boundary of the cycle premise: a THREE-member cycle without `decreases`
+-- (must fall on every member).**
+--
+-- `f` calls `g` calls `h` calls `f`, none with a measure. The premise does not stop at
+-- two: composition induction over a cycle needs every member to carry its own descent,
+-- and `K008` fires per member, not per cycle. The two-member shape is `gift/746`.
+module gift::dreierzyklus_ohne_mass {
+
+static mut a : u32 = 0;
+
+impl fn f(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return g(n); }
+
+impl fn g(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return h(n); }
+
+impl fn h(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return f(n); }
+
+}

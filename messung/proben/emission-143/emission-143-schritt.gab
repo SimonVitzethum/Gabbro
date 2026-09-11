@@ -1,0 +1,33 @@
+-- emission-143: pins `++` (Census C2, OffeneForm.schrittStmt, 42 sites).
+-- Every site is emitter-internal loop machinery, never a user spelling: here the
+-- bounded retry counter (`_r1++`). There is no Gabbro operator to refuse, so a
+-- named refusal has no attach point; rewriting to `+= 1` would churn every loop
+-- for zero semantic difference. Verdict: admit (no ruling note yet; booked for
+-- the step-4 batch in messung/CFORM-ABARBEITUNG.md). No emitter change.
+
+module emission143::schritt {
+
+opaque type Pa = u64;
+
+device D(basis : Pa) at mmio {
+    reg FERTIG : u32 @0x0 class r
+}
+
+assume geraet_antwortet "The device answers." falsifier sonde_haengt;
+
+extern fn zeitablauf() -> never effects { diverges };
+
+impl fn auf_quittung_warten(g : ptr<mmio, r> D) -> u32
+    effects { reads g }
+    costs <= 2048 ops
+{
+    retry warten until g.FERTIG == 1
+        bounded 1024 ops
+        progress geraet_antwortet
+        on_exceeded zeitablauf
+        effects { reads g }
+    { }
+    return 0;
+}
+
+}

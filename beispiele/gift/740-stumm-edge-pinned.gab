@@ -1,0 +1,37 @@
+-- erwartet: H021
+-- **The stumm edge, pinned (`H021`).** `stumm` is an `extern fn` with NO `effects`
+-- clause: the declaration falls with `E001`, and that verdict carries this file.
+--
+-- But the CALLER's edge draws nothing of its own. The derivation finds no body and
+-- no line to derive from (`stumm` bookkeeping), drops the edge into a lower bound
+-- (`unvollstaendig`), and an `E009` hint is all that names the call. A derivation
+-- that cannot resolve a target must refuse AT THE CALLER -- that refusal is `H021`
+-- (assigned, verified free; the rule stands ready in `ableitung.rs`, unwired:
+-- central assembly is frozen for this lane -- see `messung/ABLEITUNG-WEG.md`).
+--
+-- The twin (`ruft_rand`) calls the same shape WITH a declared line: the edge of the
+-- checked world (`Rand`), silent by design -- `H021` must never touch it. This file
+-- must fall with `E001` and nothing else at `Fehler` level: that single code is what
+-- proves the call itself silent.
+module gift::stumm_edge_pinned {
+
+-- No `effects`: the declaration falls with `E001`.
+extern fn stumm() costs <= 2 ops;
+
+-- The edge of the checked world: no body, but a declared line. Silent by design.
+extern fn rand() effects { pure } costs <= 2 ops;
+
+-- Must stay silent at `Fehler` level: the edge to `stumm` draws no refusal of its
+-- own today (an `E009` hint at most). `H021` would fall here, once, at the caller.
+impl fn ruft_stumm() effects { pure } costs <= 8 ops
+{
+    stumm();
+}
+
+-- Must stay silent in every world: `Rand`, not a hole.
+impl fn ruft_rand() effects { pure } costs <= 8 ops
+{
+    rand();
+}
+
+}

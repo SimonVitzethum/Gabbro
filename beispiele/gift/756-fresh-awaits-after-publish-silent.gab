@@ -1,0 +1,47 @@
+-- erwartet: V011
+-- **Fresh twin stays silent beside the stale arm that carries the verdict.**
+--
+-- `stale` awaits `F`, publishes `F`, then decides on the old binding: falls as
+-- `V011`. `fresh` runs the same prefix but re-reads AFTER the publish and decides
+-- on the new binding `g`: the re-read IS the revalidation, so it stays silent. The
+-- unused `f` in `fresh` never decides and stays silent with it. A run over this
+-- file must report `V011` for `stale` and nothing for `fresh`.
+module gift756 {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+-- Must fall: expired load decides.
+impl fn stale() -> u32 effects { reads F, reads n, writes n, publishes F } costs <= 16 ops
+{
+    let f = F awaits { n };
+    n = 1;
+    F = true publishes { n };
+    if f { return n; }
+    return 0;
+}
+
+-- Must pass: same prefix, but the decision reads the post-publish load.
+impl fn fresh() -> u32 effects { reads F, reads n, writes n, publishes F } costs <= 16 ops
+{
+    let f = F awaits { n };
+    n = 1;
+    F = true publishes { n };
+    let g = F awaits { n };
+    if g { return n; }
+    return 0;
+}
+
+-- Counterpart pair so the pairing is complete and stays silent.
+impl fn wg(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rg() -> u32 effects { reads G, reads m } costs <= 8 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+}

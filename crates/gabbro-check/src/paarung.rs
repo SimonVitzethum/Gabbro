@@ -163,6 +163,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         sammle(b, &ordnungen, &mut h);
         // «K5.1» -- die Reihenfolge INNERHALB des Rumpfes.
         reihenfolge(b, &[], &[], &[], &f.name.text, absagen);
+        // **V011 -- a clean awaited load expires on a publish to the same carrier.**
+        stale_gebrauch(b, &ordnungen, &f.name.text, absagen);
         let schluessel = g.schluessel_von(modul, &f.name.text);
         let unvollstaendig = g.huelle(&schluessel).unvollstaendig.is_some();
         je_funktion.push((f.name.text.clone(), h, unvollstaendig, Some(schluessel)));
@@ -187,6 +189,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let mut h = Haelften::default();
         sammle(&c.can_fail, &ordnungen, &mut h);
         reihenfolge(&c.can_fail, &[], &[], &[], &c.name.text, absagen);
+        stale_gebrauch(&c.can_fail, &ordnungen, &c.name.text, absagen);
         je_funktion.push((c.name.text.clone(), h, false, None));
     });
 
@@ -687,6 +690,156 @@ fn reihenfolge(
     }
 }
 
+/// **V011 -- a clean awaited load expires on a publish to the same carrier.**
+///
+/// An `awaits` load is fresh until a concurrent store to the SAME carrier lands: a
+/// `Publish` to that carrier between the load and the use invalidates the loaded
+/// value, and any later read of the old binding without revalidation falls.
+///
+/// ```gabbro
+/// let f = F awaits { n };
+/// n = 1;
+/// F = true publishes { n };
+/// if f { return n; }   -- V011: `f` was expired by the publish above
+/// ```
+///
+/// Revalidation is a fresh `awaits` binding of the same name AFTER the publish; a
+/// publish to a DIFFERENT carrier does not expire; a publish BEFORE the load does
+/// not expire either. Only clean carriers are tracked (declared `acquire`,
+/// `release` or `seq`): a `relaxed` load or one without an ordering word already
+/// falls at `V004`/`V005`, and a second verdict there would double-book one defect.
+///
+/// Branch-local on purpose: a publish inside one `if` arm expires uses inside that
+/// arm, not uses after the `if` and not uses in a sibling arm. The other direction
+/// (union over arms) would refuse programs where only one path publishes, and the
+/// corpus (`beispiele/42`, match arms that await in one arm and publish in another)
+/// says that path is the common one. Fewer ends recognised means fewer refusals.
+///
+/// Call arguments are not read positions here, for the same reason `V007` does not
+/// see them either (`eigene_ausdruecke` carries no `Ruf`): `if`, `match`, `return`,
+/// `let`/`assignment` values and `narrow` subjects are. An `exchange` to the same
+/// carrier does NOT expire either -- this rule tracks `Publish` only, and says so.
+fn stale_gebrauch(
+    b: &Block,
+    ordnungen: &[(String, Option<Ordnung>)],
+    wo: &str,
+    absagen: &mut Absagen,
+) {
+    let mut live: Vec<(String, String)> = Vec::new();
+    let mut stale: Vec<String> = Vec::new();
+    stale_block(b, ordnungen, wo, &mut live, &mut stale, absagen);
+}
+
+/// Live awaited bindings (`var -> carrier`) and expired ones, threaded linearly
+/// through one block; sub-blocks are entered with a clone and never merged back.
+fn stale_block(
+    b: &Block,
+    ordnungen: &[(String, Option<Ordnung>)],
+    wo: &str,
+    live: &mut Vec<(String, String)>,
+    stale: &mut Vec<String>,
+    absagen: &mut Absagen,
+) {
+    for s in &b.anweisungen {
+        for name in gelesene_namen(s) {
+            if stale.iter().any(|v| v == &name) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "V011",
+                        s.span,
+                        format!(
+                            "`{name}` was awaited in `{wo}` and is used after a publish \
+                             to the same carrier without revalidation"
+                        ),
+                    )
+                    .mit_notiz(
+                        "an acquire load is fresh until a store to the same carrier lands \
+                         -- after the publish the old value is stale",
+                    )
+                    .mit_notiz(
+                        "revalidate with a fresh `awaits` load after the publish; a publish \
+                         to a different carrier, or before the load, does not expire it",
+                    ),
+                );
+                break;
+            }
+        }
+        match &s.art {
+            StmtArt::AwaitLoad(a) => {
+                live.retain(|(v, _)| v != &a.name.text);
+                stale.retain(|v| v != &a.name.text);
+                if ist_sauber(&grundname(&a.quelle.text()), ordnungen) {
+                    live.push((a.name.text.clone(), grundname(&a.quelle.text())));
+                }
+            }
+            StmtArt::Publish(p) => {
+                let traeger = grundname(&p.ziel.text());
+                let mut abgelaufen: Vec<String> = Vec::new();
+                live.retain(|(v, c)| {
+                    if c == &traeger {
+                        abgelaufen.push(v.clone());
+                        false
+                    } else {
+                        true
+                    }
+                });
+                for v in abgelaufen {
+                    if !stale.iter().any(|x| x == &v) {
+                        stale.push(v);
+                    }
+                }
+            }
+            StmtArt::Let(l) => {
+                live.retain(|(v, _)| v != &l.name.text);
+                stale.retain(|v| v != &l.name.text);
+            }
+            StmtArt::Exchange(e) => {
+                live.retain(|(v, _)| v != &e.name.text);
+                stale.retain(|v| v != &e.name.text);
+            }
+            StmtArt::LetSonst(l) => {
+                live.retain(|(v, _)| v != &l.name.text);
+                stale.retain(|v| v != &l.name.text);
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            let mut live2 = live.clone();
+            let mut stale2 = stale.clone();
+            stale_block(k, ordnungen, wo, &mut live2, &mut stale2, absagen);
+        }
+    }
+}
+
+/// Clean means the carrier declares an ordering that carries: `acquire`, `release`
+/// or `seq`. `relaxed` and the missing word lower to `memory_order_relaxed` on both
+/// sides and already fall at `V004`/`V005`. An undeclared carrier is tracked: the
+/// rule knows the statement shape, not the declaration, and silence there would be
+/// fail-open.
+fn ist_sauber(traeger: &str, ordnungen: &[(String, Option<Ordnung>)]) -> bool {
+    match ordnungen.iter().find(|(n, _)| n == traeger) {
+        Some((_, Some(Ordnung::Acquire) | Some(Ordnung::Release) | Some(Ordnung::Seq))) => true,
+        Some(_) => false,
+        None => true,
+    }
+}
+
+/// Every place a statement itself reads: its own expressions plus the `narrow`
+/// subject, which `eigene_ausdruecke` does not carry. Same positions `V007` reads;
+/// call arguments stay out for the same reason they stay out there.
+fn gelesene_namen(s: &Stmt) -> Vec<String> {
+    let mut aus: Vec<String> = Vec::new();
+    for e in crate::eigene_ausdruecke(s) {
+        for o in crate::alle_orte(e) {
+            aus.push(o.basis.text.clone());
+        }
+    }
+    if let StmtArt::Narrow(n) = &s.art {
+        aus.push(n.ort.basis.text.clone());
+    }
+    aus
+}
+
 /// `s.bytes[i].x` -> `s`.
 fn grundname(k: &str) -> String {
     k.split(['.', '[']).next().unwrap_or(k).to_string()
@@ -932,4 +1085,66 @@ fn fremde_lesung(stmts: &[Stmt], at: &str, l: &Torlage) -> Option<(String, Span)
         }
     }
     None
+}
+
+#[cfg(test)]
+mod v011_tests {
+    use super::*;
+
+    /// Count V011 verdicts over a source: the unit twin of the gift probes below.
+    fn v011_in(quelle: &str) -> usize {
+        let (baum, mut absagen) = gabbro_syntax::lies("probe.gab", quelle);
+        pass(&baum, &mut absagen);
+        absagen.absagen.iter().filter(|a| a.code == "V011").count()
+    }
+
+    const KOPF: &str = "module p { static mut n : u32 = 0; static mut m : u32 = 0;
+        atomic F : bool release; atomic G : bool release;
+        impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+        { n = v; F = true publishes { n }; }
+        impl fn wg(v : u32) effects { writes m, publishes G } costs <= 8 ops
+        { m = v; G = true publishes { m }; }
+        impl fn rg() -> u32 effects { reads G, reads m } costs <= 8 ops
+        { let g = G awaits { m }; if g { return m; } return 0; }";
+
+    #[test]
+    fn stale_use_after_publish_falls() {
+        let q = format!(
+            "{KOPF} impl fn r() -> u32 effects {{ reads F, reads n, writes n, publishes F }} \
+             costs <= 16 ops {{ let f = F awaits {{ n }}; n = 1; F = true publishes {{ n }}; \
+             if f {{ return n; }} return 0; }} }}"
+        );
+        assert_eq!(v011_in(&q), 1, "stale use must fall exactly once");
+    }
+
+    #[test]
+    fn fresh_revalidation_stays_silent() {
+        let q = format!(
+            "{KOPF} impl fn r() -> u32 effects {{ reads F, reads n, writes n, publishes F }} \
+             costs <= 16 ops {{ let f = F awaits {{ n }}; n = 1; F = true publishes {{ n }}; \
+             let g = F awaits {{ n }}; if g {{ return n; }} return 0; }} }}"
+        );
+        assert_eq!(
+            v011_in(&q),
+            0,
+            "revalidation after the publish must stay silent"
+        );
+    }
+
+    #[test]
+    fn other_carrier_and_prior_publish_stay_silent() {
+        let q = format!(
+            "{KOPF} impl fn r() -> u32 effects {{ reads F, reads n, writes m, publishes G }} \
+             costs <= 16 ops {{ let f = F awaits {{ n }}; m = 1; G = true publishes {{ m }}; \
+             if f {{ return n; }} return 0; }}
+             impl fn s() -> u32 effects {{ reads F, reads n, writes n, publishes F }} costs <= 16 ops
+             {{ n = 1; F = true publishes {{ n }}; let f = F awaits {{ n }}; \
+             if f {{ return n; }} return 0; }} }}"
+        );
+        assert_eq!(
+            v011_in(&q),
+            0,
+            "different carrier and publish-before-load must stay silent"
+        );
+    }
 }

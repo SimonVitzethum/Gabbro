@@ -1,0 +1,29 @@
+-- Lane 142, CForm typOfErw, lowered (boot half; the entry half shares the
+-- helper). A checked reference spells the callee's signature from the same
+-- prototyp_kern lowering as the definition -- one register, not two -- so
+-- `__typeof__` leaves the emission. Expected shapes:
+-- `static void (*const gabbro_boot_start_s2)(uint64_t wurzel)`
+-- `__attribute__((unused)) = tabellen_laden;` and the same for the dispatch
+-- reference. No axiom steps: an `axiom` would need a `falsifier`, and a new
+-- probe name would move the sondendeckung mark. Shape modelled on the
+-- bootstrecke gift probe (impl bodies, const step, full-path dispatch).
+module probe::bezug142 {
+const STAPEL_OBEN : u64 = 0x9000;
+pub static mut tlb : u64 = 0;
+pub impl fn tabellen_laden(wurzel : u64)
+    effects { writes tlb }
+    costs   <= 8 ops
+{
+    tlb = wurzel;
+}
+pub impl fn rust_eintritt()
+    effects { pure }
+    costs   <= 1 ops
+{
+}
+boot start arch x86_64 {
+    step stapelzeiger = STAPEL_OBEN;
+    step tabellen_laden(STAPEL_OBEN);
+    dispatch probe::bezug142::rust_eintritt;
+}
+}

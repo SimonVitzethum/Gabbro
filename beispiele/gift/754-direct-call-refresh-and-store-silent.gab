@@ -1,0 +1,52 @@
+-- erwartet: M147
+-- **V4 freshness across a DIRECT call, the refresh/store boundary.**
+--
+-- Arm 1 re-reads AFTER the overlapping call -- the re-read IS the refresh, so
+-- deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
+-- the call -- store/move positions never decide, so no refusal. Arm 3 decides
+-- on the stale name itself, and only that decision falls, as `M147`. The
+-- direct-call mirror of gift/717, which pins the same boundary across an
+-- indirect call. A run over this file must report exactly one `M147`, at arm 3.
+module gift754 {
+
+static mut ZUSTAND : u32 = 0;
+
+impl fn schreiber()
+    effects { writes ZUSTAND }
+    costs <= 4 ops
+{
+    ZUSTAND = 1;
+}
+
+impl fn aufgefrischt() -> u32
+    effects { reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    schreiber();
+    let frisch : u32 = ZUSTAND;
+    if frisch != 0 { return 1; }
+    return 0;
+}
+
+impl fn abgelegt() -> u32
+    effects { reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    schreiber();
+    ZUSTAND = alt;
+    return 0;
+}
+
+impl fn faellig() -> u32
+    effects { reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    schreiber();
+    if alt != 0 { return 1; }
+    return 0;
+}
+
+}

@@ -1,0 +1,19 @@
+-- erwartet: C001
+-- Lane 142, CForm doubleTyp, mixed arm. One `float` side makes the node a float
+-- computation for the checker, but C widens the `double` side and computes in
+-- double: 7400 of 200000 sampled cases differ from the float computation, the
+-- same silent-widening class the `f` suffix guards against (39 990 of 200 000
+-- on literals). There is no conversion form (the F005 shape for integers), so
+-- the emitter refuses mixed `float`/`double` arithmetic by name. Pure-double
+-- and pure-float nodes are unaffected (both sides read the same width), and so
+-- are comparisons (widening preserves the value) and literals (typeless until
+-- the neighbour decides). The corpus holds no mixed node (scan over 662 units);
+-- this unit proves the refused path. Checker half merge-verified.
+module probe::misch142 {
+impl fn mische(a : f64, b : f32) -> f64
+    effects { pure }
+    costs   <= 8 ops
+{
+    return a + b;
+}
+}

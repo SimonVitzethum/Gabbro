@@ -1,0 +1,20 @@
+-- emission-143: pins `*` dereference (Census C2, OffeneForm.deref, 141 sites).
+-- The bit-field reader dereferences the device window through a volatile cast:
+-- `(((*(volatile u32 *)(v->basis + 0)) >> 0) & 1u)`.
+-- Verdict: admit with price (ruled in messung/CFORM-REGEL-DEREF.md). No emitter change.
+
+module emission143::deref {
+
+opaque type Pa = u64;
+
+device D(basis : Pa) at mmio {
+    reg R : u32 @0x0 class r fields { BEREIT @0, }
+}
+
+impl fn feld_lesen(v : ptr<mmio, r> D) -> u32
+    effects { reads v.R }
+{
+    return v.R.BEREIT;
+}
+
+}

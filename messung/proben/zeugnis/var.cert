@@ -1,0 +1,5 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.var 0)
+claimed range: (3, 3)
+side conditions:
+  - var 0: context lookup = (3, 3) -- HOLDS

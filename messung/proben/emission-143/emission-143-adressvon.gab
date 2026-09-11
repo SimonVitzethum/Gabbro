@@ -1,0 +1,22 @@
+-- emission-143: pins `&` address-of (Census C2, OffeneForm.adressVon, 111 sites).
+-- A `let … else` call over the error channel passes the out-parameter and the
+-- error slot by address: `if (!gib_opt(&v, &e))`.
+-- Verdict: admit with price (ruled in messung/CFORM-REGEL-ADRESSE.md). No emitter change.
+
+module emission143::adressvon {
+
+reason Fehler {
+    Leer = 1 "leer"
+    exhaustive
+}
+
+extern fn gib_opt() -> u32 or Fehler effects { pure };
+
+fn ruf() -> u32 effects { pure } {
+    let v = gib_opt() else (e) {
+        return 0;
+    }
+    return v;
+}
+
+}

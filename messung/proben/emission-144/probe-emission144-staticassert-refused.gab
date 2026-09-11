@@ -1,0 +1,33 @@
+-- emission-144/staticassert-refused: the residue the assert cannot cover.
+--
+-- Census slot C2 `statikAssert` (`grammatik/Grammatik/Erhaltung.lean`,
+-- `OffeneForm.statikAssert`); companion to `probe-emission144-staticassert`,
+-- which pins the lowered shape. Where the `entrust` space names a declared
+-- record, table, format, or device, the emitter writes the `_Static_assert`.
+-- Where it does not -- a range type, which lowers to its carrier and has no
+-- declared C type -- the assert cannot be written, and the handover is REFUSED
+-- by name instead of handed over unchecked (`emit.rs::anvertrauen`).
+--
+-- Expected: `gabbro pruefe` reports 0 errors (the checker holds the shape;
+-- the completeness proof is the emitter's), `gabbro emit` exits nonzero with
+-- one named refusal:
+--   [C001] ...: no lowering: an `entrust` space with no complete C type ...
+-- There is no C to compile: a refusal is the evidence.
+
+module probe::emission144_staticassert_refused {
+
+-- A range, not a declaration: fully known to the checker, without a C type
+-- name the assert could measure.
+type Schmal = u32 in 0 .. 64;
+
+assume gast_bleibt
+    "The guest stays in its space."
+    falsifier sonde_gastausbruch;
+
+entrust gastklein at Schmal arch x86_64 {
+    regs in { eintritt : rdi, }
+    stack gaststapel
+    assume gast_bleibt;
+}
+
+}
