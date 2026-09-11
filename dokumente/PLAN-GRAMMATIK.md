@@ -177,6 +177,14 @@ is `atomic`. **`keine_ueberkreuzung`**: the recorded ranks cannot cross.
 **`keine_verklemmung`** — two derivations, each holding one lock and deriving a `locks` on
 the other's, do not exist; `omega` on the constructor hypotheses.
 
+> **Cut G3 status 2026-09-10: NARROWED** (not the build step G3 in §4; the `InterferenzAllgemein` cut). Shared-side preservation is derived from checked lock discipline (`grammatik/Grammatik/InterferenzAllgemein.lean`: `schuldnerHaelt_gilt`, `eintrittHeldIn_aus_Passt`, `invSichtHaelt_aus_Eintritt`, `fremdDisziplin_gilt`, `fremdErhalt_disjunkt_aus_Disziplin`, `invErhalt_aus_Kontext`): each chain step respects guards and stays in its frame, the disjoint side flows through stability, and where the invariant itself is the property the shared-side premise is the derived equivalence — no preservation premise left to assume.
+>
+> **Stability status 2026-09-10: PROVED** (general N-thread theorem `allgemeinStabil` over a joint run, with the invariant corollary `allgemeinStabil_invariant`; `stabilSchritt_gilt`, `stabilKette_gilt`, `kette_erhaelt`).
+>
+> **Device status 2026-09-10: CHAINED** (`grammatik/Grammatik/Geraet.lean`: `dma_uebergabe`, `geraet_ohne_wettlauf`, `kette_anfang_vor_schreib`, `kette_schreib_vor_ende`, `kette_ohne_wettlauf`, `kette_uebergabe`; chained windows with doorbell linkage).
+>
+> **Copy status 2026-09-10: VALIDATED** (`grammatik/Grammatik/Adressraum.lean`: `gepruefteKopie_ohneToctou`, `modellSequenz_ohneToctou`, `einSnapshotWelt_gibtWertGleich`; validated copy is safe inside the model and wired to `World` (`weltBytes_istBytesAb`, `modellPruefung`/`modellKopie`/`modellSequenz`); the exec-side range check stays missing as booked).
+
 ### 1.5 What the semantics takes as a parameter — and why that is the answer
 
 | parameter | what it is | class |
@@ -250,6 +258,8 @@ outcome sources of `SYNTAX.md` §16.1 — six the writer's logic, six a named ha
 assumption — and over any interleaving of bodies no data race on a guarded carrier and no
 crossing of the lock order exists. What is outside is the scheduling of handlers, the cost
 model, the parser, and the emitter — none of them an error class of a program.
+
+Carries 2026-09-10/11 (see §1.4 statuses): N-thread stability and its invariant corollary hold as theorems; device windows chain with handover; validated copy holds inside the model; the sentence above stands and reads with those carries.
 
 ---
 
@@ -326,8 +336,8 @@ access (ordered by the theorem) or an `atomic` (ordered by A10, `hardware`).
 | invariants, state transitions | outside | invariants owed by construction | **both**: `logik (invariante i)`, `logik uebergang` |
 | termination | outside | by construction / named assumption | same |
 | memory safety | outside | tables and globals; pointers designed | **tables, globals, and pointers** (carrier-level); bytes: G5 |
-| devices, publication, float, foreign bodies | outside | designed | **in the core**, each with its `hardware` row |
-| races | outside | discipline by construction; interleavings not modelled | same — G7 |
+| devices, publication, float, foreign bodies | outside | designed | **in the core**, each with its `hardware` row (device windows chained 2026-09-10 — see §1.4 status) |
+| races | outside | discipline by construction; interleavings not modelled | same — G7 (N-thread stability proved 2026-09-10 — see §1.4 status) |
 | seam to the checker (`W16`) | open | gone — the grammar is the type system | same; what replaces it is G2 |
 | `SYNTAX.md` | — | §15 appended, fenced `text` | **one document**, every production with its constructor |
 | what remains | `requires`, `invariant` | logic + hardware | **ten outcome sources**, six logic and four hardware — and the scope items of §3 |
