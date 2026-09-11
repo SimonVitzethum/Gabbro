@@ -103,3 +103,65 @@ Only `CARGO_BUILD_JOBS=4 cargo test -p gabbro-check --test beispiele` (lane
 scope; no other targets, no builds elsewhere). It covers the clean
 `beispiele/*.gab` corpus plus all 503 gift files including 752/753/754. Tail
 in the lane report.
+
+## 6. Transitive (two-hop) expiry: the same transport, one hop further out (probes 769/770/771, verified free)
+
+Numbers 769/770/771 were verified free at this base (gifts reach 763; 764-771
+all absent). All three expect `M147` -- the existing transport's code, not a
+new one. Each file carries its verdict; the silent arms are pinned by the
+"exactly one" claims below, read off the implementation in §1 (same standing
+as gift/703, gift/717, and gift/753/754, whose purity the file-level run
+likewise does not assert).
+
+| probe | kind | shape |
+|---|---|---|
+| `beispiele/gift/769-transitive-call-expires-stale-read.gab` | must fall (`-- erwartet: M147`) | `alt` read from `ZUSTAND`, call to `mitte` (which calls `schreiber`, `writes ZUSTAND`, covered by `mitte`'s own declared `writes ZUSTAND`), decision on `alt` falls |
+| `beispiele/gift/770-transitive-call-disjoint-hull-stays-fresh.gab` | boundary (`-- erwartet: M147`) | `intakt`: same read, chain through `mitte_fremd` (`writes ANDERE`) -- decision stays silent; `faellig`: overlapping-chain control falls |
+| `beispiele/gift/771-transitive-call-refresh-and-store-silent.gab` | boundary (`-- erwartet: M147`) | transitive mirror of gift/754: re-read arm silent, store arm silent, stale-decision control falls |
+
+Measured per-file runs over the built binary: 769 reports exactly one `M147`
+(at `entscheide`); 770 reports exactly one `M147` (at `faellig`, `intakt`
+silent); 771 reports exactly one `M147` (at `faellig` arm 3, refresh and store
+arms silent).
+
+Why this is the same transport and not a second one: `geschriebene_orte`
+reads the DIRECT callee's declared list, and the mid's declared list covers
+its own callee's write because `E008` reconciles each body hull against its
+declaration. Transitivity therefore arrives through the declaration, not
+through a re-walk of `Graph::huelle` -- the pinned hole of §4 stands, and
+these probes pin that the declared-list reading carries the two-hop shape
+with it.
+
+## 7. Booked remainder beside these probes: awaited loads do NOT expire across a call
+
+`V011` (`paarung.rs` `stale_gebrauch` / `stale_block`) is per-body state
+threaded through one block walk, branch-local on purpose, `Publish`-only --
+and it never looks at a call edge. `M147` does expire across the same edge,
+but it tracks plain `let x = CARRIER` reads, never `AwaitLoad` bindings. So
+an awaited load in the caller, a direct call to a function whose hull
+publishes the same carrier, and a use of the old binding afterwards is
+silent on both maps.
+
+Measured, not believed: a caller that awaits `F`, calls a mid that publishes
+`F`, then decides on the old binding reports `0 errors, 0 hints` -- the hole
+is real and stands open. Owner if ever built: whoever owns the `m1`
+freshness internals or the `paarung.rs` awaited map, with the taint map
+carried across the call edge the way §2 refuses to duplicate here. `H023`
+stays assigned-free and unbuilt; `ableitung.rs` is untouched (its cross-body
+functions -- `leite_ab`, `fehlende_kanten`, `erhebe_kantenbuch`,
+`Ableitung::pfad`, `pass`, `verbreitere` / `verbreitere_fuer_probe` -- derive
+or refuse edges, they expire nothing, and this lane changes none of them).
+
+## 8. Registers touched and verification (this lane)
+
+Touched: three gift files (769/770/771) plus this note (§§6-8). Untouched by
+choice with reason in §2 (still standing): `nebeneinander.rs`,
+`ableitung.rs`, `m1.rs`, `paarung.rs`, `geteilt.rs`; untouched by scope:
+`lib.rs`/`saetze.rs`/`mutiere-pruefer.py`/corpus classes/`tests/beispiele.rs`
+(central). No `Satz` entry, no `BENANNT` entry, no count re-anchoring:
+central, frozen for this lane. Gift population moves 503 -> 506 files; the
+re-anchor belongs to integration.
+
+Only `cargo test -p gabbro-check --test beispiele` (lane scope; no other
+targets, no builds elsewhere). It covers the clean `beispiele/*.gab` corpus
+plus all 506 gift files including 769/770/771. Tail in the lane report.
