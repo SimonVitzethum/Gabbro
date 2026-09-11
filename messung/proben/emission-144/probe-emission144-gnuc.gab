@@ -1,0 +1,33 @@
+-- emission-144/gnuc: `#if defined(__GNUC__)` guards the handed-down verdict.
+--
+-- Census slot C2 `wennGnuC`, 5 sites (`dokumente/BEWEIS.md` Subject 2;
+-- `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.wennGnuC`). Emitter sites:
+-- `crates/gabbro-check/src/emit.rs`, `match_markiert` and `match_grund`, which
+-- write the guard around `__builtin_unreachable()` exactly when every arm ends
+-- in `return`. The guard is load-bearing, not decorative: without it a compiler
+-- that does not know the builtin would reject a program Gabbro finds correct,
+-- and with it unconditional the same would hold the other way round. `D005`
+-- decided the distinction is closed; this line hands THAT decision down.
+--
+-- Verdict: LOWERED. `gabbro pruefe` reports 0 errors, `gabbro emit` writes the
+-- guard with 0 refusals, and the emitted unit compiles under
+-- `cc -std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+module probe::emission144_gnuc {
+
+tagged type Nachricht = { Leer, Kurz(u32) };
+
+-- Every arm returns, so the point after the `switch` is unreachable -- and C
+-- does not know it. The guard below is the handover of that knowledge.
+impl fn gewicht(m : Nachricht) -> u64
+    effects { pure }
+    costs   <= 12 ops
+{
+    match m {
+        Leer    => { return 0; }
+        Kurz(k) => { return k; }
+    }
+    return 0;
+}
+
+}

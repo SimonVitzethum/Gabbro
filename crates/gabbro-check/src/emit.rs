@@ -11418,6 +11418,21 @@ fn anvertrauen(t: &EntrustDecl, aus: &mut String, u: &Namen, absagen: &mut Absag
             "_Static_assert(sizeof({raum}) > 0,\n\
              \x20   \"the space an `entrust` hands over must be a declared, complete type\");\n"
         ));
+    } else {
+        // **emission-144 (`statikAssert`): the assert or a named refusal, no silent state.**
+        // A range type lowers to its carrier and has no declared C type, and an
+        // undeclared space has nothing at all -- in both cases the `_Static_assert`
+        // cannot be written, and handing the space over without it would be a guess.
+        weigere(
+            absagen,
+            t.span,
+            &format!(
+                "an `entrust` space with no complete C type in this unit (`{raum}` names \
+                 no declared record, table, format, or device) -- the `_Static_assert` \
+                 cannot be written, and without it the handover is refused, not guessed"
+            ),
+        );
+        return;
     }
     aus.push_str(&format!("void gabbro_gast_{n}(void);\n"));
 }

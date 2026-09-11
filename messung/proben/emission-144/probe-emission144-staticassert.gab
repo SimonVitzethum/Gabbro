@@ -1,0 +1,34 @@
+-- emission-144/staticassert: `_Static_assert` is the lowering of the space check.
+--
+-- Census slot C2 `statikAssert`, 1 site (`dokumente/BEWEIS.md` Subject 2;
+-- `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.statikAssert`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, `anvertrauen`, which writes
+-- `_Static_assert(sizeof(raum) > 0, ...)` when the `entrust` space names a type
+-- this unit declares (record, table, format, or device). The assert forces the
+-- C compiler to know the type completely: a space this unit cannot explain
+-- fails there instead of handing over an incomplete type. Gabbro says nothing
+-- about the guest body; what it says is the contract at entry, and the assert
+-- is the checkable half of it.
+--
+-- Verdict: LOWERED. `gabbro pruefe` reports 0 errors, `gabbro emit` writes the
+-- assert with 0 refusals, and the emitted unit compiles under
+-- `cc -std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+module probe::emission144_staticassert {
+
+type Gastbild = {
+    eintritt : u64,
+    laenge   : u32,
+};
+
+assume gast_bleibt_in_seinem_raum
+    "The guest only jumps to its entry address and stays in its space."
+    falsifier sonde_gastausbruch;
+
+entrust jitpuffer at Gastbild arch x86_64 {
+    regs in { eintritt : rdi, }
+    stack gaststapel
+    assume gast_bleibt_in_seinem_raum;
+}
+
+}

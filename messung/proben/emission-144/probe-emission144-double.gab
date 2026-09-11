@@ -1,0 +1,25 @@
+-- emission-144/double: `double` is the lowering of `f64`, not a choice.
+--
+-- Census slot C2 `doubleTyp`, 18 sites (`dokumente/BEWEIS.md` Subject 2;
+-- `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.doubleTyp`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, `ctyp_primitiv` (F64 -> "double") and
+-- `primitivwort` ("f64" -> "double"). The lowering is fail-closed: a third float
+-- word has no arm and falls to `None`, and every `None` caller refuses by name
+-- (`C001`), so no float width can silently become `double`.
+--
+-- Verdict: LOWERED. `gabbro pruefe` reports 0 errors, `gabbro emit` writes
+-- `static double halb(double x)` with 0 refusals, and the emitted unit compiles
+-- under `cc -std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+module probe::emission144_double {
+
+-- 0.5 is exact in binary, so no `rounded` is owed: what is forbidden is the
+-- silently inexact literal, not the inexact one (`beispiele/26-gleitkomma`).
+impl fn halb(x : f64) -> f64
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x * 0.5;
+}
+
+}

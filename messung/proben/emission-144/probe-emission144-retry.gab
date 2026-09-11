@@ -1,0 +1,39 @@
+-- emission-144/while: `while` is the lowering of `retry`, and only of `retry`.
+--
+-- Census slot C2 `schleifeStmt`, 11 sites (`dokumente/BEWEIS.md` Subject 2;
+-- `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.schleifeStmt`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, `emit.rs::retry`, which writes
+-- `while (!(condition))` around a counter-guarded body (`if (z >= gaenge) exit`).
+-- No user path writes it: `leave`/`next` lower to `goto`, `traverse` ends
+-- through its visited set, `forever` never ends. The bound is named
+-- (`bounded 64 ops`), not interpreted: exceeding it calls the named exit.
+--
+-- Verdict: LOWERED. `gabbro pruefe` reports 0 errors, `gabbro emit` writes the
+-- `while` skeleton with 0 refusals, and the emitted unit compiles under
+-- `cc -std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+module probe::emission144_retry {
+
+extern fn haengt() -> never effects { diverges } costs <= 1 ops;
+
+assume geht_weiter
+    "The condition becomes true within the bound."
+    falsifier sonde_haengt;
+
+static mut zaehler : u32 = 0;
+
+impl fn warte()
+    effects { writes zaehler, reads zaehler }
+    costs   <= 128 ops
+{
+    retry lauf until zaehler == 3
+        bounded 64 ops
+        progress geht_weiter
+        on_exceeded haengt
+        effects { writes zaehler, reads zaehler }
+    {
+        zaehler = 3;
+    }
+}
+
+}
