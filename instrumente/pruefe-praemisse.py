@@ -45,10 +45,27 @@ Usage:
     instrumente/pruefe-praemisse.py --sprechprobe
     instrumente/pruefe-praemisse.py [--fisch] [--keep] THM[:prem] ... STRUCT.f ... THM:@Word ...
 
-Builds run on ki-pc-fisch-101 under /tmp/praemisse-k01 (own scratch lane,
+Builds run on ki-pc-fisch-101 under /tmp/praemisse-r02 (own scratch lane,
 never a shared tree) unless --local is given. The speech test is
-hermetic: two small Lean files through `lean` on this host, no lake
+hermetic: small Lean files through `lean` on this host, no lake
 project, no network.
+
+Two extensions over the per-theorem verdict:
+
+  conjunct probe  THM:prem^c splits a conjunction conclusion into one
+                  tripwire copy per conjunct (same binders, narrowed
+                  conclusion, proof closer isolated -- see
+                  parse_conjunct_proof) and builds them all in ONE
+                  variant: NEEDS (copy red) vs FREE (copy green).
+                  Mixed copies read SPLIT, all-red UNIFORM, all-green
+                  DETACHED. STRUCT.field@TARGET does the same against
+                  a removed structure field (no strength dual: dropping
+                  every other field changes the representation itself).
+  strength probe  for each NEEDS conjunct a second variant weakens
+                  every OTHER premise instead: green reads ALONE (the
+                  premise alone carries the conjunct -- restatement
+                  shape, weak) and red reads JOINT (real joint use,
+                  strong). FREE conjuncts have no strength question.
 """
 import os
 import pathlib
@@ -64,14 +81,15 @@ GRAMMATIK = TREE / "grammatik"
 LEAN = os.environ.get("LEANBIN", os.path.expanduser("~/.elan/bin/lean"))
 LAKE = os.environ.get("LAKE", os.path.expanduser("~/.elan/bin/lake"))
 FISCH = "ki-pc-fisch-101"
-REMOTE_ROOT = "/tmp/praemisse-k01"
-LOCAL_ROOT = "/tmp/praemisse-k01-local"
+REMOTE_ROOT = "/tmp/praemisse-r02"
+LOCAL_ROOT = "/tmp/praemisse-r02-local"
 BUILD_TIMEOUT = 900
 
 DECLKIND = r"(?:theorem|def|abbrev|structure|example|instance|opaque|class|inductive)"
 DECLRE = re.compile(r"^((?:noncomputable\s+|private\s+)?" + DECLKIND +
                     r")\s+(\S+)")
 ERRORRE = re.compile(r"^error: (.+\.lean):(\d+):(\d+): (.*)$")
+HERMERRORRE = re.compile(r"^(.+\.lean):(\d+):(\d+): error: (.*)$")
 ARROW = "\u2192"
 
 
@@ -86,9 +104,9 @@ def find_decl_source(name):
     return hits
 
 
-def decl_table(path):
-    """Map each declaration in a file to (keyword, start, end) lines."""
-    lines = path.read_text(encoding="utf-8").splitlines()
+def decl_table_text(text):
+    """Map each declaration in source text to (keyword, start, end) lines."""
+    lines = text.splitlines()
     starts = []
     for i, line in enumerate(lines):
         m = DECLRE.match(line)
@@ -105,6 +123,11 @@ def decl_table(path):
         end = starts[k + 1][0] - 1 if k + 1 < len(starts) else len(lines)
         table[name] = (kind, start, end)
     return table
+
+
+def decl_table(path):
+    """Map each declaration in a file to (keyword, start, end) lines."""
+    return decl_table_text(path.read_text(encoding="utf-8"))
 
 
 def find_matching(text, open_pos, open_ch="(", close_ch=")"):
@@ -564,7 +587,7 @@ class Lane:
         if self.remote:
             code, out = run(["ssh", "-o", "ConnectTimeout=10", FISCH,
                              "mkdir -p %s/work && rm -rf %s/work/grammatik && "
-                             "cp -r ~/gabbro-k01/grammatik %s/work/grammatik && "
+                             "cp -r ~/gabbro-r02/grammatik %s/work/grammatik && "
                              "du -sh %s/work/grammatik | cut -f1"
                              % (self.root, self.root, self.root, self.root)])
             return code == 0, out[-500:]
@@ -606,18 +629,18 @@ class Lane:
         if self.remote:
             code, out = run(["ssh", "-o", "ConnectTimeout=10", FISCH,
                              "cd %s/work/grammatik && export PATH=$HOME/.elan/bin:$PATH && "
-                             "lake build > /tmp/praemisse-k01-last.log 2>&1; "
-                             "echo EXIT=$?; echo ERRORS=$(grep -c '^error: ' "
-                             "/tmp/praemisse-k01-last.log); "
-                             "grep '^error: ' /tmp/praemisse-k01-last.log | head -n 120"
+                             "lake build > /tmp/praemisse-r02-last.log 2>&1; "
+                              "echo EXIT=$?; echo ERRORS=$(grep -c '^error: ' "
+                              "/tmp/praemisse-r02-last.log); "
+                              "grep '^error: ' /tmp/praemisse-r02-last.log | head -n 120"
                              % self.root], timeout=BUILD_TIMEOUT + 120)
             ok = "EXIT=0" in out
             return ok, out
         work = pathlib.Path(self.root) / "work" / "grammatik"
-        code, out = run(["bash", "-lc", "cd '%s' && '%s' build > /tmp/praemisse-k01-local.log 2>&1; "
+        code, out = run(["bash", "-lc", "cd '%s' && '%s' build > /tmp/praemisse-r02-local.log 2>&1; "
                          "echo EXIT=$?; echo ERRORS=$(grep -c '^error: ' "
-                         "/tmp/praemisse-k01-local.log); "
-                         "grep '^error: ' /tmp/praemisse-k01-local.log | head -n 120" %
+                         "/tmp/praemisse-r02-local.log); "
+                         "grep '^error: ' /tmp/praemisse-r02-local.log | head -n 120" %
                          (work, LAKE)], timeout=BUILD_TIMEOUT + 60)
         ok = "EXIT=0" in out
         return ok, out
@@ -763,17 +786,15 @@ def probe_hyp(lane, thm, prem, keep):
     return report
 
 
-def probe_field(lane, struct, field, keep):
-    """Remove STRUCT.field and rebuild the cone."""
-    hits = find_decl_source(struct)
-    if len(hits) != 1:
-        return {"verdict": "INCONCLUSIVE", "note": "structure not unique"}
-    src = hits[0]
-    proj_rel = "Grammatik/" + src.name
-    text = src.read_text(encoding="utf-8")
+def strip_structure_field(text, struct, field):
+    """Blank STRUCT.field and repair constructor literals.
+
+    Returns (patched_text, error): blanking keeps every newline, so
+    error line numbers still match the tree.
+    """
     fields = structure_fields(text, struct)
     if not fields or field not in [f[0] for f in fields]:
-        return {"verdict": "INCONCLUSIVE", "note": "field not found"}
+        return None, "field not found"
     span = [f for f in fields if f[0] == field][0]
     # Blank the field instead of deleting it: a multi-line field would
     # shift every error line below it and misattribute the breakage.
@@ -810,7 +831,20 @@ def probe_field(lane, struct, field, keep):
         blanked = blank_span(stripped, bstart, bend)
         for j, ch in enumerate(blanked):
             chars[bstart + j] = ch
-    repaired = "".join(chars)
+    return "".join(chars), None
+
+
+def probe_field(lane, struct, field, keep):
+    """Remove STRUCT.field and rebuild the cone."""
+    hits = find_decl_source(struct)
+    if len(hits) != 1:
+        return {"verdict": "INCONCLUSIVE", "note": "structure not unique"}
+    src = hits[0]
+    proj_rel = "Grammatik/" + src.name
+    text = src.read_text(encoding="utf-8")
+    repaired, err = strip_structure_field(text, struct, field)
+    if err:
+        return {"verdict": "INCONCLUSIVE", "note": err}
     lane.restore([proj_rel])
     ok, msg = lane.push_files({proj_rel: repaired})
     if not ok:
@@ -978,6 +1012,583 @@ def probe_gates(lane, thm, word, keep):
             "note": "failure mentions no gate -- inspect log"}
 
 
+def split_conjuncts(ty):
+    """Split a proposition at top-level conjunctions; return conjuncts.
+
+    Separators are the unicode `∧` and the ASCII `/\\` at bracket depth
+    zero. Anything else (including a bare proposition) returns as one
+    conjunct. Conjunctions under binders (after a `∀`) are NOT split:
+    the caller passes the whole conclusion, and a leading `∀ ... ,`
+    body keeps its depth-zero `∧` -- splitting there would claim one
+    theorem where the binders belong to both sides. Callers that want
+    the top arrow/forall spine intact check `split_top_spans` first;
+    here depth counts only brackets, so `∀ x, P x ∧ Q x` splits into
+    `∀ x, P x` and `Q x`, which is wrong -- such conclusions are
+    rejected by parse_conjunct_proof unless every `∧` sits before any
+    top-level `∀`/`,` binder tail. In practice the tree targets carry
+    closed conjuncts (`(∀ f j, ...) ∧ ...`), which split cleanly.
+    """
+    parts, depth, cur = [], 0, []
+    i = 0
+    in_str = False
+    while i < len(ty):
+        ch = ty[i]
+        if ch == '"' and (i == 0 or ty[i - 1] != "\\"):
+            in_str = not in_str
+            cur.append(ch)
+            i += 1
+            continue
+        if in_str:
+            cur.append(ch)
+            i += 1
+            continue
+        if ch in "([{" or ch in "⟨‹«":
+            depth += 1
+            cur.append(ch)
+        elif ch in ")]}" or ch in "⟩›»":
+            depth -= 1
+            cur.append(ch)
+        elif depth == 0 and ch == "∧":
+            parts.append("".join(cur))
+            cur = []
+        elif depth == 0 and ty.startswith("/\\", i):
+            parts.append("".join(cur))
+            cur = []
+            i += 1
+        else:
+            cur.append(ch)
+        i += 1
+    parts.append("".join(cur))
+    return parts
+
+
+def sig_conclusion(sig):
+    """Split a signature into (binder prefix, conclusion).
+
+    The binder prefix is the leading run of groups; the conclusion is
+    everything after it. Returns (None, None) when no group leads.
+    """
+    pos = 0
+    while True:
+        while pos < len(sig) and sig[pos] in " \t\n":
+            pos += 1
+        if pos < len(sig) and sig[pos] in "([{":
+            end = find_matching(sig, pos, sig[pos],
+                                {"(": ")", "[": "]", "{": "}"}[sig[pos]])
+            if end < 0:
+                return None, None
+            pos = end
+        else:
+            break
+    if pos == 0:
+        return None, None
+    conclusion = sig[pos:].strip()
+    # The `:` separating binders from the conclusion belongs to
+    # neither side: strip one leading colon.
+    if conclusion.startswith(":"):
+        conclusion = conclusion[1:].strip()
+    return sig[:pos], conclusion
+
+
+def explicit_binder_names(text, thm):
+    """Explicit binder names of the signature prefix (never the conclusion).
+
+    parse_signature over the whole signature would also read parenthesized
+    groups inside the conclusion as binders; the prefix walk stops where
+    the binders stop.
+    """
+    sig = theorem_signature(text, thm)
+    if sig is None:
+        return None
+    prefix, _conc = sig_conclusion(sig)
+    if prefix is None:
+        return None
+    return [nm for names, exp, _h in parse_signature(prefix)
+            for nm in names if exp]
+
+
+def weaken_names_in_sig(sig, targets):
+    """Weaken several binder types to True; return (prefix, error).
+
+    Runs through a synthetic mini-declaration so the existing
+    single-premise patch applies unchanged. Groups weaken as one
+    bundle: every name in a touched group must be a target, else the
+    group cannot split and the probe reports INCONCLUSIVE (same rule
+    as the per-theorem variant A).
+    """
+    remaining = set(targets)
+    cur = "theorem __tmp" + sig + " := sorry"
+    while remaining:
+        entries, err = group_spans(cur, "__tmp")
+        if err:
+            return None, err
+        todo = None
+        for names, explicit, has_type, estart, eend, _pos in entries:
+            if not explicit or not has_type:
+                continue
+            if cur[estart:eend].strip() == "True":
+                remaining.difference_update(names)
+                continue
+            touch = [nm for nm in names if nm in remaining]
+            if not touch:
+                continue
+            if len(touch) != len(names):
+                return None, "shared binder group " + " ".join(names)
+            todo = (estart, eend, names)
+            break
+        if todo is None:
+            if remaining:
+                return None, "premise %s not found in signature" % sorted(
+                    remaining)[0]
+            break
+        estart, eend, names = todo
+        cur = weaken_span(cur, estart, eend)
+        remaining.difference_update(names)
+    back = theorem_signature(cur, "__tmp")
+    if back is None:
+        return None, "weakened signature not parsed"
+    prefix, _conc = sig_conclusion(back)
+    if prefix is None:
+        return None, "weakened binders not parsed"
+    return prefix, None
+
+
+def parse_conjunct_proof(text, thm):
+    """Split a conjunction theorem into prefix + per-conjunct closers.
+
+    Handles two proof shapes, both with a shared tactic prefix (obtain/
+    have lines) before a tuple closer:
+
+      exact shape   `exact ⟨c1, ..., cN⟩` -- closer i is `exact ci`.
+      refine shape  `refine ⟨s1, ..., sN⟩` with one `·` bullet block per
+                    `?_` hole in order -- closer i is the dedented bullet
+                    block for a hole, `exact si` for a term.
+
+    Returns (prefix_sig, conjuncts, closers, error): prefix_sig is the
+    (unweakened) binder prefix, conjuncts the conclusion parts, closers
+    the per-conjunct proof bodies. Anything else (no conjunction,
+    other closer, component/conjunct count mismatch, missing bullet)
+    returns an error and the caller reports INCONCLUSIVE -- the shape
+    vocabulary stays closed rather than guessing.
+    """
+    sig = theorem_signature(text, thm)
+    if sig is None:
+        return None, None, None, "signature of %s not parsed" % thm
+    prefix_sig, conclusion = sig_conclusion(sig)
+    if conclusion is None:
+        return None, None, None, "no binder prefix in signature"
+    # A top-level forall spine owns the conjunction: `∀ x, P x ∧ Q x`
+    # would split into a binder fragment and a bare tail. Reject when
+    # the conclusion opens with a forall before any conjunction part.
+    stripped = conclusion.strip()
+    if stripped.startswith("∀") or re.match(r"forall\b", stripped):
+        return None, None, None, "conclusion is forall-quantified"
+    conjuncts = split_conjuncts(conclusion)
+    if len(conjuncts) < 2:
+        return None, None, None, "conclusion is not a conjunction"
+    table = decl_table_text(text)
+    if thm not in table:
+        return None, None, None, "declaration lines not found"
+    _kind, start, end = table[thm]
+    lines = text.splitlines()
+    body_lines = lines[start - 1:end]
+    body = "\n".join(body_lines)
+    # The proof opens after the declaration-level `:=`: a plain find
+    # would stop at binder defaults like `(D := D)` in the signature.
+    # Walk from the declaration match at depth zero instead.
+    dm = re.search(r"^((?:noncomputable\s+|private\s+)?" + DECLKIND +
+                   r")\s+" + re.escape(thm) + r"\b", text, re.M)
+    if dm is None:
+        return None, None, None, "declaration head not found"
+    di, depth = dm.end(), 0
+    assign = -1
+    while di < len(text):
+        ch = text[di]
+        if ch in "([{" or ch in "⟨‹«":
+            depth += 1
+        elif ch in ")]}" or ch in "⟩›»":
+            depth -= 1
+        elif depth == 0 and text.startswith(":=", di):
+            assign = di - (len("\n".join(lines[:start - 1])) +
+                           (1 if start > 1 else 0))
+            break
+        di += 1
+    if assign < 0 or assign >= len(body):
+        return None, None, None, "proof body not found"
+    tactics = body[assign + 2:]
+    m = None
+    for cm in re.finditer(r"^([ \t]*)(exact|refine)\s+⟨", tactics, re.M):
+        m = cm
+    if m is None:
+        return None, None, None, "no exact/refine tuple closer"
+    open_pos = tactics.find("⟨", m.start())
+    body_open = assign + 2 + open_pos
+    close_end = find_matching(body, body_open, "⟨", "⟩")
+    if close_end < 0:
+        return None, None, None, "unbalanced tuple closer"
+    inner = body[body_open + 1:close_end - 1]
+    components = split_top_commas(inner)
+    if len(components) != len(conjuncts):
+        return None, None, None, \
+            "component/conjunct count mismatch %d vs %d" % \
+            (len(components), len(conjuncts))
+    after = tactics[m.end():]
+    bullets = []
+    cur_block, in_block = [], False
+    for ln in after.splitlines()[1:]:
+        if re.match(r"^[ \t]*·", ln):
+            if cur_block:
+                bullets.append(cur_block)
+            cur_block = [ln]
+            in_block = True
+        elif in_block:
+            if ln.strip() == "":
+                cur_block.append(ln)
+            elif re.match(r"^[ \t]*·", ln):
+                bullets.append(cur_block)
+                cur_block = [ln]
+            else:
+                # Continuation while indented past the bullet; a new
+                # declaration or dedented tactic ends the block run.
+                indent = len(ln) - len(ln.lstrip())
+                if indent >= 2 and ln.strip() != "":
+                    cur_block.append(ln)
+                else:
+                    break
+    if cur_block:
+        bullets.append(cur_block)
+    holes = [c for c in components if c.strip() == "?_"]
+    if len(holes) > len(bullets):
+        return None, None, None, "fewer bullet blocks than holes"
+    # The shared prefix is everything between `by` and the closer line.
+    closer_line_start = tactics[:m.start()].count("\n")
+    prelim = tactics.splitlines()[:closer_line_start]
+    # tactics opens with the rest of the `:= by` line: a lone `by` is
+    # the opening, not a prefix step.
+    if prelim and prelim[0].strip() == "by":
+        prelim = prelim[1:]
+    prefix = "\n".join(prelim)
+    if not prefix.endswith("\n") and prefix.strip() != "":
+        prefix += "\n"
+    closers = []
+    bullet_idx = 0
+    for comp in components:
+        if comp.strip() == "?_":
+            block = bullets[bullet_idx]
+            bullet_idx += 1
+            # Content column of the bullet line (`  · tac` -> tac at 4):
+            # continuations dedent by the same width, or the tactic
+            # column staggers and the block dies for grammar reasons.
+            mfirst = re.match(r"^[ \t]*·\s?", block[0])
+            base_col = len(mfirst.group(0)) if mfirst else 0
+            first = block[0][base_col:]
+            rest = [ln[base_col:] if ln.strip() and len(ln) >= base_col
+                    and ln[:base_col].strip() == "" else ln
+                    for ln in block[1:]]
+            closers.append(first + "\n" + "\n".join(rest))
+        else:
+            closers.append("exact " + comp.strip())
+    return prefix_sig, conjuncts, (prefix, closers), None
+
+
+def build_conjunct_copies(text, thm, weaken_targets, drop_res):
+    """Insert one tripwire copy per conjunct; return (new_text, error).
+
+    Each copy `THM__c{i}` keeps the (weakened) binders, narrows the
+    conclusion to conjunct i, and runs the shared prefix minus dropped
+    lines plus its own closer. weaken_targets are binder names set to
+    True; drop_res are regexes for prefix lines that cannot survive
+    the strip (obtain lines off a weakened premise). Copies go right
+    after the target declaration -- still inside its namespace -- and
+    the original is untouched, so no call site needs patching.
+    """
+    if re.search(r"\b" + re.escape(thm) + r"__c\d+\b", text):
+        return None, "tripwire names already present"
+    parsed = parse_conjunct_proof(text, thm)
+    prefix_sig, conjuncts, proof, err = parsed
+    if err:
+        return None, err
+    weakened, err = weaken_names_in_sig(prefix_sig, weaken_targets)
+    if err:
+        return None, err
+    prefix, closers = proof
+    kept = []
+    for ln in prefix.splitlines(keepends=True):
+        if any(rx.search(ln) for rx in drop_res):
+            continue
+        kept.append(ln)
+    kept_prefix = "".join(kept)
+    copies = []
+    for i, (conj, closer) in enumerate(zip(conjuncts, closers), start=1):
+        # Generated closer lines take two spaces: a tactic at column
+        # zero after `by` parses as a command and the copy dies for
+        # grammar reasons instead of premise reasons. Prefix lines
+        # keep their tree indentation.
+        indented = "\n".join(("  " + ln) if ln.strip() else ln
+                             for ln in closer.splitlines())
+        copies.append("theorem %s__c%d%s : %s := by\n%s%s\n" %
+                     (thm, i, weakened, conj.strip(), kept_prefix, indented))
+    table = decl_table_text(text)
+    _kind, _start, end = table[thm]
+    off = len("\n".join(text.splitlines()[:end]))
+    # Trailing non-declaration commands (`#print axioms`, `end`) are
+    # not declarations: table end can sit past the namespace close,
+    # which would strand the copies outside it. Cap the insertion at
+    # the first `end` line after the declaration head.
+    for i, ln in enumerate(text.splitlines()):
+        if i + 1 >= _start and re.match(r"^end(\s|$)", ln):
+            off = min(off, len("\n".join(text.splitlines()[:i])))
+            break
+    return text[:off] + "\n" + "\n".join(copies) + "\n" + text[off:], None
+
+
+def check_conjunct_variant(src, thm, prem, idx, weaken_rest=False):
+    """Append narrowed tripwire copies, check copy idx with lean.
+
+    Returns (verdict_word, log): NEEDS/FREE for the need question
+    (weaken prem), ALONE/JOINT for the strength question (weaken every
+    other explicit premise). None plus a note when the text patch
+    itself fails -- the fixture is out of shape vocabulary.
+    """
+    sig = theorem_signature(src, thm)
+    if sig is None:
+        return None, "signature not parsed"
+    if weaken_rest:
+        bound = explicit_binder_names(src, thm)
+        if bound is None:
+            return None, "binder prefix not parsed"
+        targets = [nm for nm in bound if nm != prem]
+        drops = [re.compile(r"\b" + re.escape(nm) + r"\b")
+                 for nm in targets]
+    else:
+        targets, drops = [prem], [re.compile(r"\b" + re.escape(prem) +
+                                             r"\b")]
+    variant, err = build_conjunct_copies(src, thm, targets, drops)
+    if err:
+        return None, err
+    with tempfile.NamedTemporaryFile("w", suffix=".lean", delete=False,
+                                     encoding="utf-8") as tmp:
+        tmp.write(variant)
+        tmpname = tmp.name
+    try:
+        code, out = run([LEAN, tmpname], timeout=180)
+    finally:
+        os.unlink(tmpname)
+    table = decl_table_text(variant)
+    copy = "%s__c%d" % (thm, idx)
+    red = False
+    for line in out.splitlines():
+        # Hermetic `lean` prints `file:line:col: error:` (lake build
+        # prints the mirrored `error: file:line:col:` that ERRORRE
+        # reads -- lane attribution is untouched).
+        m = HERMERRORRE.match(line.strip())
+        if not m:
+            continue
+        lineno = int(m.group(2))
+        if copy in table and table[copy][1] <= lineno <= table[copy][2]:
+            red = True
+            break
+    if weaken_rest:
+        return ("JOINT" if red else "ALONE"), out[-800:]
+    return ("NEEDS" if red else "FREE"), out[-800:]
+
+
+def copies_failed(log, patched_tables, target_thm, proj_rel, count):
+    """Per-copy red/green from a tripwire build log.
+
+    Tables are recomputed from the patched text (copies live past EOF,
+    so tree tables cannot see them). Returns (need_list, failed_map)
+    with NEEDS/FREE per conjunct index.
+    """
+    cone = dict(patched_tables)
+    failed = classify_build(log, cone, target_thm)
+    real = {k: v for k, v in failed.items()
+            if not k.startswith("CASCADE")}
+    need = []
+    for i in range(1, count + 1):
+        hit = [k for k in real if k.endswith(":%s__c%d" % (target_thm, i))]
+        need.append("NEEDS" if hit else "FREE")
+    return need, real
+
+
+def rollup_conjuncts(need):
+    if all(w == "NEEDS" for w in need):
+        return "UNIFORM"
+    if all(w == "FREE" for w in need):
+        return "DETACHED"
+    return "SPLIT"
+
+
+def probe_hyp_conjuncts(lane, thm, prem, keep):
+    """Per-conjunct need plus per-conjunct strength for THM:prem.
+
+    Two lane builds: need (copies with prem weakened, prem-mentioning
+    prefix lines dropped) and strength (copies with every other
+    explicit premise weakened instead, for NEEDS conjuncts only).
+    """
+    hits = find_decl_source(thm)
+    if len(hits) != 1:
+        return {"verdict": "INCONCLUSIVE",
+                "note": "declaration %s found in %d files" % (thm, len(hits))}
+    src = hits[0]
+    proj_rel = "Grammatik/" + src.name
+    text = src.read_text(encoding="utf-8")
+    parsed = parse_conjunct_proof(text, thm)
+    _sig, conjuncts, _proof, err = parsed
+    if err:
+        return {"verdict": "INCONCLUSIVE", "note": err}
+    count = len(conjuncts)
+    sig = theorem_signature(text, thm)
+    pos = explicit_position(text, thm, prem)
+    if pos is None or pos < 0:
+        return {"verdict": "INCONCLUSIVE", "note": "premise position unknown"}
+    bound = explicit_binder_names(text, thm)
+    if bound is None or prem not in bound:
+        return {"verdict": "INCONCLUSIVE", "note": "binder prefix not parsed"}
+    others = [nm for nm in bound if nm != prem]
+    report = {"conjuncts": count, "others": others}
+    # ---- Need variant: weaken prem, drop prem-mentioning prefix lines.
+    need_text, err = build_conjunct_copies(
+        text, thm, [prem], [re.compile(r"\b" + re.escape(prem) + r"\b")])
+    if err:
+        return {"verdict": "INCONCLUSIVE", "note": "need copies: " + err}
+    lane.restore([proj_rel])
+    ok, msg = lane.push_files({proj_rel: need_text})
+    if not ok:
+        return {"verdict": "INCONCLUSIVE", "note": "push failed: " + msg}
+    _ok_n, log_n = lane.build()
+    base = cone_tables()
+    patched = dict(base)
+    patched[proj_rel] = decl_table_text(need_text)
+    need, real_n = copies_failed(log_n, patched, thm, proj_rel, count)
+    report["need"] = need
+    report["need_failed"] = real_n
+    verdict = rollup_conjuncts(need)
+    # ---- Strength variant: weaken the rest, for NEEDS conjuncts only.
+    strength = ["n/a"] * count
+    if any(w == "NEEDS" for w in need) and others:
+        drops = [re.compile(r"\b" + re.escape(nm) + r"\b")
+                 for nm in others]
+        str_text, err = build_conjunct_copies(text, thm, others, drops)
+        if err:
+            report["strength_note"] = "strength copies: " + err
+        else:
+            ok, msg = lane.push_files({proj_rel: str_text})
+            if not ok:
+                report["strength_note"] = "push failed"
+            else:
+                _ok_s, log_s = lane.build()
+                patched_s = dict(base)
+                patched_s[proj_rel] = decl_table_text(str_text)
+                _need_s, real_s = copies_failed(log_s, patched_s, thm,
+                                                proj_rel, count)
+                report["strength_failed"] = real_s
+                for i in range(count):
+                    if need[i] == "NEEDS":
+                        hit = [k for k in real_s
+                               if k.endswith(":%s__c%d" % (thm, i + 1))]
+                        strength[i] = "JOINT" if hit else "ALONE"
+    if not keep:
+        lane.restore([proj_rel])
+    report["strength"] = strength
+    if any(s == "ALONE" for s in strength):
+        note = "conjunct follows from the premise alone -- restatement shape"
+    elif any(s == "JOINT" for s in strength):
+        note = "needy conjuncts need the rest too -- joint use"
+    elif verdict == "SPLIT":
+        note = "premise feeds only some conjuncts"
+    elif verdict == "UNIFORM":
+        note = "every conjunct needs the premise"
+    else:
+        note = "no conjunct needs the premise"
+    report.update({"verdict": verdict, "note": note})
+    return report
+
+
+def probe_field_conjuncts(lane, struct, field, target, keep):
+    """Per-conjunct need of TARGET against a removed STRUCT.field.
+
+    One lane build: the structure patch plus one tripwire copy per
+    conjunct of the target. No strength dual (weakening every other
+    field changes the representation itself, not the premise).
+    """
+    shits = find_decl_source(struct)
+    thits = find_decl_source(target)
+    if len(shits) != 1 or len(thits) != 1:
+        return {"verdict": "INCONCLUSIVE", "note": "declaration not unique"}
+    ssrc, tsrc = shits[0], thits[0]
+    srel, trel = "Grammatik/" + ssrc.name, "Grammatik/" + tsrc.name
+    stext = ssrc.read_text(encoding="utf-8")
+    ttext = tsrc.read_text(encoding="utf-8")
+    stripped, err = strip_structure_field(stext, struct, field)
+    if err:
+        return {"verdict": "INCONCLUSIVE", "note": err}
+    base = stripped if srel == trel else ttext
+    parsed = parse_conjunct_proof(base, target)
+    _sig, conjuncts, _proof, perr = parsed
+    if perr:
+        return {"verdict": "INCONCLUSIVE", "note": perr}
+    count = len(conjuncts)
+    # Prefix lines off the stripped field cannot survive: an obtain
+    # line over M.hEin breaks as a whole even for conjuncts that never
+    # touch it. The closer itself stays intact -- its own redness is
+    # the signal.
+    copies, err = build_conjunct_copies(
+        base, target, [], [re.compile(r"\b" + re.escape(field) + r"\b")])
+    if err:
+        return {"verdict": "INCONCLUSIVE", "note": "copies: " + err}
+    changed = {srel: stripped}
+    if srel == trel:
+        # Copies were built on the stripped text: both patches compose
+        # in the one file.
+        changed = {srel: copies}
+    else:
+        changed[trel] = copies
+    lane.restore([srel] if srel == trel else [srel, trel])
+    ok, msg = lane.push_files(changed)
+    if not ok:
+        return {"verdict": "INCONCLUSIVE", "note": "push failed: " + msg}
+    _ok_n, log_n = lane.build()
+    base_tables = cone_tables()
+    patched = dict(base_tables)
+    for rel, txt in changed.items():
+        patched[rel] = decl_table_text(txt)
+    need, real_n = copies_failed(log_n, patched, target, trel, count)
+    if not keep:
+        lane.restore([srel] if srel == trel else [srel, trel])
+    verdict = rollup_conjuncts(need)
+    report = {"verdict": verdict, "conjuncts": count, "need": need,
+              "need_failed": real_n,
+              "note": "field feeds only some conjuncts" if verdict == "SPLIT"
+              else "every conjunct needs the field" if verdict == "UNIFORM"
+              else "no conjunct needs the field"}
+    return report
+
+
+SPEECH_SPLIT = """-- Speech fixture SPLIT: w1w2w4 shape -- conjunct 1 from h,
+-- conjunct 2 from k. Per-conjunct need must read [NEEDS, FREE].
+theorem mid (h : 0 < 1) (k : 2 < 3) : 0 < 1 ∧ 2 < 3 := by
+  exact ⟨h, k⟩
+"""
+
+SPEECH_UNIFORM = """-- Speech fixture UNIFORM: both conjuncts from h alone.
+-- Per-conjunct need must read [NEEDS, NEEDS].
+theorem mid (h : 0 < 1) : 0 < 1 ∧ 0 < 2 := by
+  exact ⟨h, Nat.lt_trans h (by decide)⟩
+"""
+
+SPEECH_WEAK = """-- Speech fixture WEAK: restatement shape -- conjunct 1 IS h.
+-- Need reads NEEDS, strength reads ALONE (k weakened, copy green).
+theorem mid (h : 0 < 1) (k : 2 < 3) : 0 < 1 ∧ 0 < 1 := by
+  exact ⟨h, h⟩
+"""
+
+SPEECH_STRONG = """-- Speech fixture STRONG: joint-use shape -- conjunct 1 needs
+-- h AND k together. Need reads NEEDS, strength reads JOINT.
+theorem mid (h : 0 < 1) (k : 1 < 2) : 0 < 2 ∧ 0 < 1 := by
+  exact ⟨Nat.lt_trans h k, h⟩
+"""
+
 SPEECH_DERIVED = """-- Speech fixture DERIVED: joint-use pattern quoted from
 -- `ungeteilt_aus_lauf` (Geteilt.lean): the stripped premise is one
 -- ingredient among several in the proof term.
@@ -1032,7 +1643,7 @@ def check_single_variant(src, thm, prem, weaken_all_but=None):
 
 
 def speech_probe():
-    """Both directions, hermetic: lean over scratch files, no lake."""
+    """All directions, hermetic: lean over scratch files, no lake."""
     cases = [("derived", SPEECH_DERIVED, "mid", "h", "DERIVED"),
              ("forwarded", SPEECH_FORWARDED, "mid", "h", "FORWARDED")]
     results = []
@@ -1067,11 +1678,76 @@ def speech_probe():
         print("  speech %-9s reads %-9s (want %-9s) -- %s (%s)" %
               (tag, got, want, "PASS" if ok else "FAIL", note))
         results.append(ok)
+    # Per-conjunct need: SPLIT says [NEEDS, FREE], UNIFORM [NEEDS, NEEDS].
+    conj_cases = [("split", SPEECH_SPLIT, "mid", "h",
+                   ["NEEDS", "FREE"], "SPLIT"),
+                  ("uniform", SPEECH_UNIFORM, "mid", "h",
+                   ["NEEDS", "NEEDS"], "UNIFORM")]
+    for tag, src, thm, prem, want_need, want in conj_cases:
+        if not speech_conjunct_basis(tag, src):
+            return False
+        need = []
+        for idx in (1, 2):
+            got_w, log = check_conjunct_variant(src, thm, prem, idx)
+            if got_w is None:
+                print("  speech %s: need variant error at c%d: %s" %
+                      (tag, idx, log[-400:]))
+                return False
+            need.append(got_w)
+        got = ("SPLIT" if "NEEDS" in need and "FREE" in need
+               else "UNIFORM" if all(w == "NEEDS" for w in need)
+               else "DETACHED")
+        ok = need == want_need and got == want
+        print("  speech %-9s reads %-9s %-16s (want %-9s %-16s) -- %s" %
+              (tag, got, need, want, want_need,
+               "PASS" if ok else "FAIL"))
+        results.append(ok)
+    # Strength per conjunct: WEAK reads ALONE, STRONG reads JOINT.
+    strength_cases = [("weak", SPEECH_WEAK, "mid", "h", 1,
+                       "NEEDS", "ALONE"),
+                      ("strong", SPEECH_STRONG, "mid", "h", 1,
+                       "NEEDS", "JOINT")]
+    for tag, src, thm, prem, idx, want_need, want in strength_cases:
+        if not speech_conjunct_basis(tag, src):
+            return False
+        got_need, log = check_conjunct_variant(src, thm, prem, idx)
+        if got_need is None:
+            print("  speech %s: need variant error: %s" % (tag, log[-400:]))
+            return False
+        got_str, log = check_conjunct_variant(src, thm, prem, idx,
+                                              weaken_rest=True)
+        if got_str is None:
+            print("  speech %s: strength variant error: %s" %
+                  (tag, log[-400:]))
+            return False
+        ok = got_need == want_need and got_str == want
+        print("  speech %-9s reads need %-5s strength %-5s "
+              "(want need %-5s strength %-5s) -- %s" %
+              (tag, got_need, got_str, want_need, want,
+               "PASS" if ok else "FAIL"))
+        results.append(ok)
     return all(results)
 
 
+def speech_conjunct_basis(tag, src):
+    """Green-basis gate for a conjunct fixture; False prints and fails."""
+    with tempfile.NamedTemporaryFile("w", suffix=".lean", delete=False,
+                                     encoding="utf-8") as tmp:
+        tmp.write(src)
+        tmpname = tmp.name
+    try:
+        code, out = run([LEAN, tmpname], timeout=180)
+    finally:
+        os.unlink(tmpname)
+    if code != 0:
+        print("  speech %s: FIXTURE RED (not a probe result)" % tag)
+        print(out[-1500:])
+        return False
+    return True
+
+
 USAGE = ("usage: pruefe-praemisse.py [--local] [--keep] --sprechprobe | "
-         "THM[:prem] ... STRUCT.field ... THM:@Word ...")
+          "THM[:prem[^c]] ... STRUCT.field[@TARGET] ... THM:@Word ...")
 
 
 def main(argv):
@@ -1084,7 +1760,7 @@ def main(argv):
         elif a == "--keep":
             keep = True
         elif a == "--sprechprobe":
-            print("== premise probe: speech test (both directions) ==")
+            print("== premise probe: speech test (all directions) ==")
             sys.exit(0 if speech_probe() else 2)
         else:
             args.append(a)
@@ -1109,6 +1785,9 @@ def main(argv):
             thm, _, prem = spec.partition(":")
             if prem.startswith("@"):
                 rows.append((spec, "gate", probe_gates(lane, thm, prem[1:], keep)))
+            elif prem.endswith("^c"):
+                rows.append((spec, "conj",
+                             probe_hyp_conjuncts(lane, thm, prem[:-2], keep)))
             else:
                 hits = find_decl_source(thm)
                 is_struct = bool(hits) and bool(re.search(
@@ -1120,7 +1799,14 @@ def main(argv):
                     rows.append((spec, "hyp", probe_hyp(lane, thm, prem, keep)))
         elif "." in spec:
             struct, _, field = spec.partition(".")
-            rows.append((spec, "field", probe_field(lane, struct, field, keep)))
+            if "@" in field:
+                field, _, target = field.partition("@")
+                rows.append((spec, "conj",
+                             probe_field_conjuncts(lane, struct, field,
+                                                   target, keep)))
+            else:
+                rows.append((spec, "field",
+                             probe_field(lane, struct, field, keep)))
         else:
             hits = find_decl_source(spec)
             if len(hits) != 1:
@@ -1143,7 +1829,11 @@ def main(argv):
     for spec, kind, rep in rows:
         print("  %-52s %-6s %-12s %s" % (spec, kind, rep.get("verdict"),
                                          rep.get("note", "")[:70]))
-        for key in ("A_failed", "B_failed", "failed"):
+        if rep.get("need") is not None:
+            print("      need %-24s strength %s" %
+                  (rep.get("need"), rep.get("strength")))
+        for key in ("A_failed", "B_failed", "failed", "need_failed",
+                    "strength_failed"):
             for site, msg in list(rep.get(key, {}).items())[:6]:
                 print("      %-48s %s" % (site, msg[:90]))
         for site in rep.get("sites", [])[:6]:
