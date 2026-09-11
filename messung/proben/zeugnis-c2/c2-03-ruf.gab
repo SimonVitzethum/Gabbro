@@ -1,0 +1,24 @@
+-- C2 witness pair 03: call to a declared body.
+--
+-- Exhibits CForm `ruf` (Erhaltung.lean `c2Paare` row 3): the callee is
+-- declared in the same unit, the caller carries the callee's effects.
+-- Expected: `gabbro pruefe` reports 0 errors; `gabbro emit` writes the
+-- `gib()` call with 0 refusals.
+
+module probe::c2_ruf {
+
+static mut k : u32 = 0;
+
+impl fn gib() -> u32
+    effects { reads k }
+{
+    return k;
+}
+
+impl fn lies() -> u32
+    effects { reads k }
+{
+    return gib();
+}
+
+}

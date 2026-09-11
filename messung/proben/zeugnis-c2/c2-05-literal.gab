@@ -1,0 +1,17 @@
+-- C2 witness pair 05: constant of a named type.
+--
+-- Exhibits CForm `literal` (Erhaltung.lean `c2Paare` row 5): a `const` of a
+-- named type, read at a return. Expected: `gabbro pruefe` reports 0 errors;
+-- `gabbro emit` writes the `8` literal with 0 refusals.
+
+module probe::c2_literal {
+
+const N : u32 = 8;
+
+impl fn gib() -> u32
+    effects { pure }
+{
+    return N;
+}
+
+}

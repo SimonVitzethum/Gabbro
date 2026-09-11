@@ -1,0 +1,17 @@
+-- C2 witness pair 02: two-sided branch.
+--
+-- Exhibits CForm `wenn` (Erhaltung.lean `c2Paare` row 2): a branch with both
+-- arms present, no fall-through. Expected: `gabbro pruefe` reports 0 errors;
+-- `gabbro emit` writes `if` with an `else` arm and 0 refusals.
+
+module probe::c2_wenn {
+
+static mut m : u32 = 0;
+
+impl fn nimm(a : u32, b : u32)
+    effects { writes m }
+{
+    if a > b { m = a; } else { m = b; }
+}
+
+}

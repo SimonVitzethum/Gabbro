@@ -1,0 +1,17 @@
+-- C2 witness pair 01: assignment.
+--
+-- Exhibits CForm `zuweisung` (Erhaltung.lean `c2Paare` row 1): one effect,
+-- one statement. Expected: `gabbro pruefe` reports 0 errors; `gabbro emit`
+-- writes `k = 41;` with 0 refusals.
+
+module probe::c2_zuweisung {
+
+static mut k : u32 = 0;
+
+impl fn setze()
+    effects { writes k }
+{
+    k = 41;
+}
+
+}
