@@ -1,0 +1,9 @@
+== derivation certificate (CUT-4 remainder, p29 witness) ==
+term: (.durch () () 0 (.wide 0 10 (.lit 3)))
+claimed field type: (0, 10)
+side conditions:
+  - lit 3: exact (3, 3) -- HOLDS
+  - wide [0, 10]: needs lo' <= l1 and h1 <= hi'; have (3, 3) -- HOLDS
+  - durch: table number 0 = some (), index (0, 10) must be 0 .. count - 1 (count = 11), guard darf = true -- HOLDS
+  - pointer: travels as proof (Expr.ptrOf () 0 rfl true), never recomputed -- CARRIED
+elaborates: cut4_sound (.durch () () 0 (.wide 0 10 (.lit 3))) <ptr> (by decide)

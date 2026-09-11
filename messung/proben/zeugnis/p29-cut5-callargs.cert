@@ -1,0 +1,9 @@
+== derivation certificate (CUT-5 remainder, p29 witness) ==
+term: (.callArgs false 0 TestHp .nil)
+claimed shape: params [].length = 0, gruende = 0
+side conditions:
+  - callArgs false: (D.params false).length = 0 = nargs -- HOLDS
+  - gruende false = 0 -- HOLDS
+  - RufPasst: travels AS PROOF (TestHp), never recomputed -- CARRIED
+  - argument list: empty (Args.nil) for empty params -- SUPPLIED
+elaborates: block5_sound (.callArgs false 0 TestHp .nil) <args> (by decide)
