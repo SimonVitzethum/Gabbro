@@ -2450,6 +2450,300 @@ pub fn emittiere_mit(
     aus
 }
 
+/// **P20 — the correspondence call site: item-level certificate rows beside the C.**
+///
+/// One row per lowered item whose top-level C shape is one of the 19 named forms
+/// ([`corrcert::CForm`]), in lowering order, returned beside the C string. The C
+/// itself goes through the unchanged `emittiere_mit` on the unchanged tree, so the
+/// artefact is byte-identical with the uncertified run — pinned by
+/// `c_ist_mit_und_ohne_zertifikat_gleich` below. *A sidecar that rewrites the
+/// artefact would be a second emitter wearing a certificate's clothes* (the same
+/// rule `kostenledger` keeps).
+///
+/// The obligation convention is the row index: `gabbro_site == c_site ==` position
+/// among the rowed items, so the recomputer's list is `0 .. rows`. Statement- and
+/// expression-level shapes (`zuweisung`, the if-form, `ruf`, …) are not item
+/// shapes;
+/// their rows need the builder threaded through the body walks and stay booked —
+/// see `korr_form` and `messung/CORRCERT-ANBINDUNG.md`.
+pub fn emittiere_mit_corr(
+    baum: &Programm,
+    absagen: &mut Absagen,
+    bau: crate::gatter::Bau,
+) -> (String, crate::corrcert::CorrCert) {
+    // The same gate the generator itself reads: rows cover what the C covers —
+    // a gated item owes no C and no row.
+    let gefiltert;
+    let baum = match bau {
+        crate::gatter::Bau::Auslieferung => {
+            gefiltert = crate::gatter::ohne_gatter(baum);
+            &gefiltert
+        }
+        crate::gatter::Bau::Pruefbau => baum,
+    };
+    let c = emittiere_mit(baum, absagen, crate::gatter::Bau::Pruefbau);
+    let mut sammler = crate::corrcert::CorrCertBuilder::neu();
+    let mut zeile: u32 = 0;
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let Some(form) = korr_form(&item.art) {
+            sammler.aufzeichnen(zeile, zeile, form);
+            zeile += 1;
+        }
+    });
+    (c, sammler.zertifikat())
+}
+
+/// **P20 — the item-to-form table: which lowered item earns a correspondence row.**
+///
+/// Total over `ItemArt`: every variant stands here exactly once, either with the
+/// form its emitting arm demonstrably writes or with the reason it earns no row.
+/// An item that lowers to no C site (scaffolding, ghost, refusal) owes no row —
+/// exactly like a gated item owes no C. A row without a C site would BE the extra
+/// effect `ohne_extra` refuses.
+fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
+    use crate::corrcert::CForm::*;
+    match art {
+        // `#define N lit` — the arm writes the literal value, or refuses.
+        ItemArt::Konst(_) => Some(Literal),
+        // Static storage, with or without initializer; `tabelle()` writes the same
+        // kind of storage for tables, `accumulates` one cell per core.
+        ItemArt::Statisch(_) | ItemArt::Tabelle(_) | ItemArt::Accumulates(_) => {
+            Some(Statisch)
+        }
+        // `_Atomic T name;` — the atomic shape, not plain storage.
+        ItemArt::Atomic(_) => Some(Atomar),
+        // Prototypes and nothing else: the lock pair, the `rcu` pair, and a
+        // bodyless foreign function (its prototype always stands above).
+        ItemArt::Lock(_) | ItemArt::Rcu(_) => Some(Extern),
+        ItemArt::Funktion(f) => korr_form_funktion(f),
+        // Definitions and declarations whose shape is not among the 19: struct and
+        // reader declarations, device descriptions, the `reason` enumeration,
+        // check bodies, dispatch and startup. Booked against the open ruling
+        // table (§19.4), not guessed here.
+        ItemArt::Typ(_)
+        | ItemArt::Format(_)
+        | ItemArt::Device(_)
+        | ItemArt::Reason(_)
+        | ItemArt::Check(_)
+        | ItemArt::Walk(_)
+        | ItemArt::Entry(_)
+        | ItemArt::Entrust(_)
+        | ItemArt::Boot(_) => None,
+        // Scaffolding, ghost, or refusal: no C site, no row.
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Assume(_)
+        | ItemArt::Axiom(_)
+        | ItemArt::Gruppe(_)
+        | ItemArt::Concurrent(_)
+        | ItemArt::State(_) => None,
+    }
+}
+
+/// The function arm of the table: only the item shapes the prototype and body arms
+/// demonstrably write. A defined block body is statements — booked for the
+/// body-walk follow-up, not rowed here.
+fn korr_form_funktion(f: &FnDecl) -> Option<crate::corrcert::CForm> {
+    use crate::corrcert::CForm::*;
+    // A `spec fn` emits nothing at all — the early return beside `funktion`.
+    if matches!(f.klasse, Some(FnKlasse::Spec)) {
+        return None;
+    }
+    // An `asm` body is one `__asm__ __volatile__` block («OPT3»).
+    if matches!(f.rumpf, FnRumpf::Asm(_)) {
+        return Some(AsmEins);
+    }
+    // `-> never` is `_Noreturn` on the prototype, defined or not.
+    if matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
+        return Some(Noreturn);
+    }
+    // A bodyless foreign function is a prototype and nothing else.
+    if !matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_)) {
+        return Some(Extern);
+    }
+    None
+}
+
+/// **P20 — the derivation call site for `certemit`: one certificate per folded const.**
+///
+/// For every `const` whose value the emitter folds itself ([`konst_zahl`]: a `Zahl`
+/// literal — the only shape the emitter folds, nothing else), the certificate that
+/// `certemit::emit` prints over `CertExpr::Lit`: the exact value with the exact
+/// range, beside the `#define` the Konst arm writes. Float consts, `u64::max`
+/// words and `konstwert`-folded names are NOT covered: their source spelling is
+/// not a literal, and a `Lit` certificate over them would certify the emitter's
+/// reading instead of the checked expression. The boundary is the folder's.
+pub fn konst_zertifikate(
+    baum: &Programm,
+) -> Vec<(String, crate::certemit::Certificate)> {
+    let empty_ctx = crate::certemit::Ctx::new(vec![]);
+    let empty_world = crate::certemit::World::default();
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Konst(k) = &item.art {
+            if let Some(n) = konst_zahl(&k.wert) {
+                let z = crate::certemit::emit(
+                    &crate::certemit::CertExpr::Lit(n),
+                    &empty_ctx,
+                    &empty_world,
+                );
+                aus.push((k.name.text.clone(), z));
+            }
+        }
+    });
+    aus
+}
+
+#[cfg(test)]
+mod korr_anbindung {
+    use super::*;
+
+    fn baum_fuer(quelle: &str) -> (Programm, Absagen) {
+        gabbro_syntax::lies("anbindung", quelle)
+    }
+
+    fn mikro() -> &'static str {
+        "const K : u32 = 3;\n\
+         static mut Z : u32 = 0;\n\
+         lock RIEGEL protects { Z } rank 0 held <= 8 ops;\n\
+         impl fn f() -> u32 effects { pure } costs <= 1 ops {\n\
+         \x20   return K;\n\
+         }\n"
+    }
+
+    #[test]
+    fn c_ist_mit_und_ohne_zertifikat_gleich() {
+        // The sidecar must not move the artefact: same tree, same build, same C.
+        let (baum, mut absagen) = baum_fuer(mikro());
+        let (certified, _) = emittiere_mit_corr(
+            &baum,
+            &mut absagen,
+            crate::gatter::Bau::Auslieferung,
+        );
+        let (baum2, mut absagen2) = baum_fuer(mikro());
+        let plain = emittiere_mit(&baum2, &mut absagen2, crate::gatter::Bau::Auslieferung);
+        assert_eq!(certified, plain);
+    }
+
+    #[test]
+    fn zeilen_tragen_form_und_ordnung() {
+        let (baum, mut absagen) = baum_fuer(mikro());
+        let (_, cert) = emittiere_mit_corr(
+            &baum,
+            &mut absagen,
+            crate::gatter::Bau::Auslieferung,
+        );
+        // const, static, lock — in lowering order; the plain function body is
+        // statements and earns no item row.
+        assert_eq!(
+            cert.to_json(),
+            concat!(
+                "{\"sites\":[{\"gabbroSite\":0,\"cSite\":0,\"form\":\"literal\"},",
+                "{\"gabbroSite\":1,\"cSite\":1,\"form\":\"statisch\"},",
+                "{\"gabbroSite\":2,\"cSite\":2,\"form\":\"extern\"}]}"
+            )
+        );
+        let obliegen: Vec<u32> = (0..3).collect();
+        assert!(cert.pruefe_gegen(&obliegen).gueltig());
+    }
+
+    #[test]
+    fn reine_typen_einheit_hat_leeres_gueltiges_zertifikat() {
+        // Nothing among the 19 is lowered: no rows, no obligation, valid.
+        let (baum, mut absagen) = baum_fuer("type Z = u32 in 0 .. 10;\n");
+        let (c, cert) = emittiere_mit_corr(
+            &baum,
+            &mut absagen,
+            crate::gatter::Bau::Auslieferung,
+        );
+        let plain = emittiere_mit(
+            &baum_fuer("type Z = u32 in 0 .. 10;\n").0,
+            &mut gabbro_syntax::lies("x", "").1,
+            crate::gatter::Bau::Auslieferung,
+        );
+        assert_eq!(c, plain);
+        assert!(cert.zeilen().is_empty());
+        assert!(cert.pruefe_gegen(&[]).gueltig());
+        assert!(!cert.pruefe_gegen(&[0]).gueltig());
+    }
+
+    #[test]
+    fn asm_und_noreturn_tragen_ihre_form() {
+        let quelle = "extern fn abbruch() -> never effects { diverges } costs <= 1 ops;\n\
+             extern fn hol() -> u32 effects { pure } costs <= 1 ops;\n\
+             impl fn schranke()\n\
+             \x20   effects { pure }\n\
+             \x20   costs <= 1 ops\n\
+             \x20   arch x86_64\n\
+             \x20   = asm {\n\
+             \x20       \"sfence\"\n\
+             \x20       in { }\n\
+             \x20       clobbers { memory }\n\
+             \x20   };\n";
+        let (baum, mut absagen) = baum_fuer(quelle);
+        let (_, cert) = emittiere_mit_corr(
+            &baum,
+            &mut absagen,
+            crate::gatter::Bau::Auslieferung,
+        );
+        // A foreign never-function carries `_Noreturn` on its prototype —
+        // `noreturn`; a bodyless foreign function without one is a bare
+        // prototype — `extern`. The `asm` body: one `__asm__` — `asmEins`.
+        assert_eq!(
+            cert.to_json(),
+            concat!(
+                "{\"sites\":[{\"gabbroSite\":0,\"cSite\":0,\"form\":\"noreturn\"},",
+                "{\"gabbroSite\":1,\"cSite\":1,\"form\":\"extern\"},",
+                "{\"gabbroSite\":2,\"cSite\":2,\"form\":\"asmEins\"}]}"
+            )
+        );
+    }
+
+    #[test]
+    fn konst_zertifikate_tragen_exakte_bereiche() {
+        let (baum, _) = baum_fuer(mikro());
+        let zs = konst_zertifikate(&baum);
+        assert_eq!(zs.len(), 1);
+        assert_eq!(zs[0].0, "K");
+        assert_eq!(zs[0].1.term, "(.lit 3)");
+        assert_eq!(
+            zs[0].1.claimed,
+            Some(crate::certemit::Range::new(3, 3))
+        );
+        assert_eq!(
+            zs[0].1.to_json(),
+            concat!(
+                "{\"term\":\"(.lit 3)\",\"claimed\":[3,3],",
+                "\"sides\":[\"lit 3: exact (3, 3) -- HOLDS\"]}"
+            )
+        );
+    }
+
+    #[test]
+    fn beispiel_67_traegt_asm_zeilen() {
+        // End to end over a shipped sample: the certificate is emitted on the run,
+        // beside C the uncertified path writes byte-identically.
+        let quelle = include_str!("../../../beispiele/67-befehlsebene.gab");
+        let (baum, mut absagen) = baum_fuer(quelle);
+        let (certified, cert) = emittiere_mit_corr(
+            &baum,
+            &mut absagen,
+            crate::gatter::Bau::Auslieferung,
+        );
+        let (baum2, mut absagen2) = baum_fuer(quelle);
+        let plain = emittiere_mit(&baum2, &mut absagen2, crate::gatter::Bau::Auslieferung);
+        assert_eq!(certified, plain);
+        assert!(
+            cert.zeilen()
+                .iter()
+                .any(|z| z.form == crate::corrcert::CForm::AsmEins),
+            "67 lowers asm bodies, so the run must carry asmEins rows"
+        );
+        let obliegen: Vec<u32> = (0..cert.zeilen().len() as u32).collect();
+        assert!(cert.pruefe_gegen(&obliegen).gueltig());
+    }
+}
+
 /// **`bounded N ops` ist ein OPERATIONSBUDGET, kein Schleifenzaehler — und das ist die
 /// Entscheidung, die diese Funktion traegt.**
 ///
