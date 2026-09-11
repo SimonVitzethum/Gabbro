@@ -1,0 +1,31 @@
+-- emission-143: pins `sizeof` (Census C2, OffeneForm.cSizeof, 27 sites).
+-- `traverse … over slots of` lowers the loop bound from the declared layout:
+-- `eintrag < (u32)(sizeof(q->slots) / sizeof(q->slots[0]))`. The checker already
+-- refuses `sizeof` outside `format` predicates, so only layout-carrying sites
+-- remain, and no desugar exists without re-deriving the layout in the emitter.
+-- Verdict: admit (no ruling note yet; booked for the step-4 batch in
+-- messung/CFORM-ABARBEITUNG.md). No emitter change.
+
+module emission143::groesse {
+
+const N : u32 = 8;
+
+table Warteschlange count N {
+    slot {
+        aktiv : bool,
+        frist : u64,
+    }
+}
+
+impl fn alle_wecken(q : ptr<normal, rw> Warteschlange)
+    effects { writes q.slots }
+    costs <= N * 5 ops
+{
+    traverse eintrag over slots of q by unvisited
+        touches writes q.slots
+    {
+        q.slots[eintrag].aktiv = true;
+    }
+}
+
+}
