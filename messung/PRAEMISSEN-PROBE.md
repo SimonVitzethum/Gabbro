@@ -1,10 +1,10 @@
 # Premise probe: does the goal chain derive or forward?
 
-Base `76b2510`, branch `k01-praemissenprobe`. Instrument
+Base `8329a57`, branch `r02-probenkonjunkt`. Instrument
 `instrumente/pruefe-praemisse.py` (auditor-suggested, precedent
 `mutiere-pruefer.py --anker` for checker passes). All variant builds ran
-on `ki-pc-fisch-101` in the own lane `/tmp/praemisse-k01`, seeded from
-`gabbro-k01`; the tree was read, never written.
+on `ki-pc-fisch-101` in the own lane `/tmp/praemisse-r02`, seeded from
+`gabbro-r02`; the tree was read, never written.
 
 ## The question
 
@@ -28,24 +28,63 @@ line numbers, so error lines still point at the tree. `unknown
 constant` / `Unknown identifier` fallout of the stripped theorem itself
 folds back onto it and never counts as downstream breakage.
 
-## Speech test (both directions)
+Two extensions probe conjunction conclusions per conjunct, one
+tripwire copy `THM__c{i}` per conjunct in a single variant build
+(same binders, narrowed conclusion, proof closer isolated; the
+original is untouched, so no call site needs patching):
 
-`./instrumente/pruefe-praemisse.py --sprechprobe` -- hermetic, two small
-Lean files through `lean`, no lake project. The fixtures quote the two
-tree proof patterns: the DERIVED fixture mirrors `ungeteilt_aus_lauf`
-(`Geteilt.lean`: the stripped premise is one ingredient among several),
-the FORWARDED fixture mirrors `ziel_l5_schranke` (`Ziel.lean`: the
-premise alone is the conclusion). Green both directions locally and on
-fisch (2026-09-11):
+- `THM:prem^c` -- per-conjunct need plus per-conjunct strength.
+  Need weakens `prem` (premise-mentioning prefix lines dropped);
+  strength weakens every other explicit premise instead, for NEEDS
+  conjuncts only.
+- `STRUCT.field@TARGET` -- per-conjunct need of `TARGET` against the
+  removed field. No strength dual: weakening every other field
+  changes the representation itself, not the premise.
+
+| verdict | meaning |
+|---|---|
+| SPLIT | mixed copies -- the premise feeds only some conjuncts (need `[NEEDS, NEEDS, FREE]`) |
+| UNIFORM | every conjunct needs the premise |
+| DETACHED | no conjunct needs the premise |
+| ALONE | (strength) the needy conjunct follows from the premise alone -- restatement shape, weak |
+| JOINT | (strength) the needy conjunct needs the rest too -- joint use, strong |
+
+Only two proof shapes split (`exact ⟨c1, …, cN⟩`, and
+`refine ⟨s1, …, sN⟩` with one `·` bullet per `?_` hole in order);
+anything else reports INCONCLUSIVE instead of guessing.
+
+## Speech test (all directions)
+
+`./instrumente/pruefe-praemisse.py --sprechprobe` -- hermetic, small
+Lean files through `lean`, no lake project. The per-theorem fixtures
+quote the two tree proof patterns: the DERIVED fixture mirrors
+`ungeteilt_aus_lauf` (`Geteilt.lean`: the stripped premise is one
+ingredient among several), the FORWARDED fixture mirrors
+`ziel_l5_schranke` (`Ziel.lean`: the premise alone is the conclusion).
+The four conjunct fixtures cover both extensions in both directions:
+SPLIT (`⟨h, k⟩` probed at `h` reads `[NEEDS, FREE]`), UNIFORM (both
+conjuncts from `h` reads `[NEEDS, NEEDS]`), WEAK (a conjunct that IS
+`h` reads strength ALONE), STRONG (`Nat.lt_trans h k` reads strength
+JOINT). Green all six directions locally and on fisch (2026-09-11):
 
 - speech derived reads DERIVED (want DERIVED) -- PASS (A red, B red)
 - speech forwarded reads FORWARDED (want FORWARDED) -- PASS (A red, B green)
+- speech split reads SPLIT [NEEDS, FREE] (want SPLIT [NEEDS, FREE]) -- PASS
+- speech uniform reads UNIFORM [NEEDS, NEEDS] (want UNIFORM [NEEDS, NEEDS]) -- PASS
+- speech weak reads need NEEDS strength ALONE (want need NEEDS strength ALONE) -- PASS
+- speech strong reads need NEEDS strength JOINT (want need NEEDS strength JOINT) -- PASS
 
 ## Baseline verdict table (2026-09-11, fisch, basis GREEN)
 
-No premise is FORWARDED today. Every stripped premise breaks a genuine
-derivation, and every variant-B (rest weakened) breaks too: the chain
-derives jointly everywhere it was probed.
+Per-theorem verdicts re-run unchanged (DERIVED 11); the five new
+probes flag what the per-theorem view hid. The `w1w2w4` split is now
+measured: W1/W2 ride `hvoll`/`hvers`, W4 rides `hEin` alone. The
+`serial_chain_from_run` observations conjunct does not need `hLink`
+at all; the HB conjunct needs it jointly (JOINT -- real use, not a
+restatement). One premise reads FORWARDED: `maschinenWelten_speicher_gleich`
+follows from its machine premise alone -- the constant-memory
+folding shape (`World.merke` never touches slots/globs, so the
+conclusion restates the construction).
 
 | probe | kind | verdict | what breaks |
 |---|---|---|---|
@@ -60,6 +99,11 @@ derives jointly everywhere it was probed.
 | `MaschinenLauf.hEin` | field | DERIVED | `w1w2w4_aus_maschine`, `gesittet_aus_maschine` |
 | `MaschinenLauf.hungeteilt` | field | DERIVED | `gesittet_aus_maschine` only -- W5 feeds the bridge alone |
 | `interferenceFree_wo_frei:@LockFrei` | gate | DERIVED | body: Unknown identifier `hFreiNach` (gates consumed, not decorative) |
+| `serial_chain_from_run:hLink^c` | conj | SPLIT | need [FREE, NEEDS], strength [n/a, JOINT] -- observations free of `hLink`, HB needs it jointly (`Unknown identifier j₁` in c2) |
+| `MaschinenLauf.hvoll@w1w2w4_aus_maschine` | conj | SPLIT | need [NEEDS, NEEDS, FREE] -- W1/W2 need `hvoll` (`Unknown identifier hkons/hgut`), W4 builds |
+| `MaschinenLauf.hvers@w1w2w4_aus_maschine` | conj | SPLIT | need [NEEDS, NEEDS, FREE] -- same shape as `hvoll` |
+| `MaschinenLauf.hEin@w1w2w4_aus_maschine` | conj | SPLIT | need [FREE, FREE, NEEDS] -- W4 alone needs `hEin` (`Invalid field hEin` in c3 only) |
+| `maschinenWelten_speicher_gleich:M` | hyp | FORWARDED | A: target breaks; B builds -- premise alone carries the conclusion |
 
 Scope note: `serial_chain_from_run` and
 `einfaedig_aus_verlauf_getragen` have no in-tree consumers yet
@@ -73,7 +117,8 @@ the documented shape: W1/W2/W4 (`hvoll`, `hvers`, `hEin`) feed
 
 ```bash
 rsync -rlpgoD --delete --exclude 'target/' --exclude '__pycache__/' \
-      --exclude '.claude/worktrees/' ./ ki-pc-fisch-101:gabbro-k01/
+      --exclude '.claude/worktrees/' ./ ki-pc-fisch-101:gabbro-r02/
+rsync -a beweise/ ki-pc-fisch-101:gabbro-r02/beweise/
 ./instrumente/pruefe-praemisse.py --sprechprobe
 ./instrumente/pruefe-praemisse.py \
   serial_chain_from_run:hLink einfaedig_aus_verlauf_getragen:hT \
@@ -81,11 +126,17 @@ rsync -rlpgoD --delete --exclude 'target/' --exclude '__pycache__/' \
   stabil_from_spec_invariantForm:hForm \
   MaschinenLauf.hvoll MaschinenLauf.hvers MaschinenLauf.hausschluss \
   MaschinenLauf.hEin MaschinenLauf.hungeteilt \
-  interferenceFree_wo_frei:@LockFrei
+  interferenceFree_wo_frei:@LockFrei \
+  'serial_chain_from_run:hLink^c' \
+  MaschinenLauf.hvoll@w1w2w4_aus_maschine \
+  MaschinenLauf.hvers@w1w2w4_aus_maschine \
+  MaschinenLauf.hEin@w1w2w4_aus_maschine \
+  maschinenWelten_speicher_gleich:M
 ```
 
-Full runs take about six minutes (basis plus up to two incremental
-`lake build` per probe). Per-probe logs: `/tmp/probe-k01-final2.log`
-(hyp), `/tmp/probe-k01-fields2.log` (fields), `/tmp/probe-k01-gate2.log`
-(gates) on the invoking host; last remote build log at
-`/tmp/praemisse-k01-last.log` on fisch.
+Full runs take about ten minutes (basis plus up to two incremental
+`lake build` per probe). Per-probe logs: `/tmp/opencode/r02/batch6.log`
+(per-theorem regression, DERIVED 11), `/tmp/opencode/r02/batch2.log`
+(field splits plus folding flag), `/tmp/opencode/r02/batch5.log`
+(SerialLink split plus strength) on the invoking host; last remote
+build log at `/tmp/praemisse-r02-last.log` on fisch.
