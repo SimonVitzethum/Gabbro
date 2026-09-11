@@ -1,0 +1,56 @@
+-- erwartet: V011
+-- **Boundary: order and carrier decide expiry, and only they do.**
+--
+-- `stale` carries the verdict: awaits `F`, publishes `F`, decides on the old
+-- binding, falls as `V011`. `order_ok` publishes FIRST, then awaits, then decides:
+-- the load is younger than the publish, so it stays silent. `other_ok` awaits `F`
+-- but publishes `G`: a publish to a different carrier does not expire the load, so
+-- deciding on `f` stays silent. A run over this file must report exactly one
+-- `V011`, at `stale`.
+module gift757 {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+impl fn wg(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rg() -> u32 effects { reads G, reads m } costs <= 8 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+-- Must fall: the boundary's witness.
+impl fn stale() -> u32 effects { reads F, reads n, writes n, publishes F } costs <= 16 ops
+{
+    let f = F awaits { n };
+    n = 1;
+    F = true publishes { n };
+    if f { return n; }
+    return 0;
+}
+
+-- Must pass: publish before load expires nothing.
+impl fn order_ok() -> u32 effects { reads F, reads n, writes n, publishes F } costs <= 16 ops
+{
+    n = 1;
+    F = true publishes { n };
+    let f = F awaits { n };
+    if f { return n; }
+    return 0;
+}
+
+-- Must pass: a publish to `G` leaves a load from `F` fresh.
+impl fn other_ok() -> u32 effects { reads F, reads n, writes m, publishes G } costs <= 16 ops
+{
+    let f = F awaits { n };
+    m = 1;
+    G = true publishes { m };
+    if f { return n; }
+    return 0;
+}
+
+}
