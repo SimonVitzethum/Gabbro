@@ -45,7 +45,7 @@ Usage:
     instrumente/pruefe-praemisse.py --sprechprobe
     instrumente/pruefe-praemisse.py [--fisch] [--keep] THM[:prem] ... STRUCT.f ... THM:@Word ...
 
-Builds run on ki-pc-fisch-101 under /tmp/praemisse-r02 (own scratch lane,
+Builds run on ki-pc-fisch-101 under /tmp/praemisse-t02 (own scratch lane,
 never a shared tree) unless --local is given. The speech test is
 hermetic: small Lean files through `lean` on this host, no lake
 project, no network.
@@ -81,8 +81,8 @@ GRAMMATIK = TREE / "grammatik"
 LEAN = os.environ.get("LEANBIN", os.path.expanduser("~/.elan/bin/lean"))
 LAKE = os.environ.get("LAKE", os.path.expanduser("~/.elan/bin/lake"))
 FISCH = "ki-pc-fisch-101"
-REMOTE_ROOT = "/tmp/praemisse-r02"
-LOCAL_ROOT = "/tmp/praemisse-r02-local"
+REMOTE_ROOT = "/tmp/praemisse-t02"
+LOCAL_ROOT = "/tmp/praemisse-t02-local"
 BUILD_TIMEOUT = 900
 
 DECLKIND = r"(?:theorem|def|abbrev|structure|example|instance|opaque|class|inductive)"
@@ -587,7 +587,7 @@ class Lane:
         if self.remote:
             code, out = run(["ssh", "-o", "ConnectTimeout=10", FISCH,
                              "mkdir -p %s/work && rm -rf %s/work/grammatik && "
-                             "cp -r ~/gabbro-r02/grammatik %s/work/grammatik && "
+                             "cp -r ~/gabbro-t02/grammatik %s/work/grammatik && "
                              "du -sh %s/work/grammatik | cut -f1"
                              % (self.root, self.root, self.root, self.root)])
             return code == 0, out[-500:]
@@ -629,18 +629,18 @@ class Lane:
         if self.remote:
             code, out = run(["ssh", "-o", "ConnectTimeout=10", FISCH,
                              "cd %s/work/grammatik && export PATH=$HOME/.elan/bin:$PATH && "
-                             "lake build > /tmp/praemisse-r02-last.log 2>&1; "
+                             "lake build > /tmp/praemisse-t02-last.log 2>&1; "
                               "echo EXIT=$?; echo ERRORS=$(grep -c '^error: ' "
-                              "/tmp/praemisse-r02-last.log); "
-                              "grep '^error: ' /tmp/praemisse-r02-last.log | head -n 120"
+                              "/tmp/praemisse-t02-last.log); "
+                              "grep '^error: ' /tmp/praemisse-t02-last.log | head -n 120"
                              % self.root], timeout=BUILD_TIMEOUT + 120)
             ok = "EXIT=0" in out
             return ok, out
         work = pathlib.Path(self.root) / "work" / "grammatik"
-        code, out = run(["bash", "-lc", "cd '%s' && '%s' build > /tmp/praemisse-r02-local.log 2>&1; "
+        code, out = run(["bash", "-lc", "cd '%s' && '%s' build > /tmp/praemisse-t02-local.log 2>&1; "
                          "echo EXIT=$?; echo ERRORS=$(grep -c '^error: ' "
-                         "/tmp/praemisse-r02-local.log); "
-                         "grep '^error: ' /tmp/praemisse-r02-local.log | head -n 120" %
+                         "/tmp/praemisse-t02-local.log); "
+                         "grep '^error: ' /tmp/praemisse-t02-local.log | head -n 120" %
                          (work, LAKE)], timeout=BUILD_TIMEOUT + 60)
         ok = "EXIT=0" in out
         return ok, out
