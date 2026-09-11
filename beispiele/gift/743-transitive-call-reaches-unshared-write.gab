@@ -1,0 +1,58 @@
+-- erwartet: H013
+-- **Transitive call edges reach the unshared write (`Geteilt.Bau` probe 1/3).**
+--
+-- `e1` dispatches to `mitte`, and `mitte` CALLS `tief`, which writes the unshared
+-- `static mut z`. The write reaches the entry only through the call edge -- the
+-- shape `bau::erhebe` must traverse (`ruftDirekt` over bodies, then `ruftNorm`
+-- into the declared domain). `H013` reads the same write through the effect hull
+-- and refuses; the built Bau reaches it through the body edge, and the W5 answer
+-- beside `H013` names the same carrier. The twin `ruhig` writes a lock-guarded
+-- table under its guard and stands in no entry -- it stays silent.
+module gift::bau_transitive_call {
+
+static mut z : u32 = 0;
+
+impl fn tief() effects { writes z } costs <= 4 ops { z = 1; }
+
+impl fn mitte() effects { writes z } costs <= 8 ops { tief(); }
+
+impl fn seite() effects { writes z } costs <= 4 ops { z = 2; }
+
+entry syscall_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift::bau_transitive_call::mitte;
+}
+
+entry syscall_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift::bau_transitive_call::seite;
+}
+
+table T count 8 {
+    slot {
+        v : u32,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must pass: every write under the guard the line names, and no entry reaches it.
+impl fn ruhig(j : index into T, m : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 16 ops
+{
+    locks L {
+        T.slots[j].v = 0;
+        T.slots[m].v = 1;
+    }
+}
+
+}

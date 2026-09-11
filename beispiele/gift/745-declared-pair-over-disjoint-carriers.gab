@@ -1,0 +1,61 @@
+-- erwartet: H013
+-- **Declared pair over disjoint carriers (`Geteilt.Bau` probe 3/3).**
+--
+-- `concurrent { h_a, h_b };` declares the pair, and the two entries dispatch to
+-- its members -- the shape the Bau's pair list (`neben`, built as `nebenAus`
+-- builds it from the declaration) must carry. The members write DISJOINT
+-- unshared carriers (`za`, `zb`), so the pair level stays silent on its own:
+-- what falls is `H013`, once per carrier, and the W5 answer beside it names the
+-- same two. The declaration changes nothing about the verdict -- a pair list is
+-- the second half of `BauLauf` (`nurPaareLaufen`), not of `pruefeUngeteilt`.
+-- The twin `ruhig` writes a lock-guarded table under its guard and stands in no
+-- entry.
+module gift::bau_declared_pair {
+
+static mut za : u32 = 0;
+static mut zb : u32 = 0;
+
+impl fn h_a() effects { writes za } costs <= 4 ops { za = 1; }
+
+impl fn h_b() effects { writes zb } costs <= 4 ops { zb = 2; }
+
+entry syscall_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift::bau_declared_pair::h_a;
+}
+
+entry syscall_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift::bau_declared_pair::h_b;
+}
+
+concurrent { h_a, h_b };
+
+table T count 8 {
+    slot {
+        v : u32,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must pass: every write under the guard the line names, and no entry reaches it.
+impl fn ruhig(j : index into T, m : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 16 ops
+{
+    locks L {
+        T.slots[j].v = 0;
+        T.slots[m].v = 1;
+    }
+}
+
+}
