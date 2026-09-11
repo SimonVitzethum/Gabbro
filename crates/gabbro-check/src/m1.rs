@@ -2235,15 +2235,28 @@ impl<'a> Pruefer<'a> {
         };
 
         // V2: unter `a >= b` faengt `a - b` bei 0 an, unter `a > b` bei 1.
+        // The narrowed range still has to fit the width it is computed in --
+        // asking that question HERE, at the operation, and not at the
+        // assignment (`M101`), is the `M150` lesson one door down: under
+        // `a >= b` with two open `i32` the range below is `0 .. 4294967295`,
+        // and into an `i64` result even `M101` stays silent (measured
+        // 2026-09-11, 0 errors over the unchanged checker), while the C this
+        // lowers to overflows on `INT_MAX - INT_MIN`. A `wrapping` left side
+        // stays exempt, as at the tail below -- its overflow is declared, and
+        // the emitter computes it unsigned.
         if op == BinOp::Minus {
             if let (ExprArt::Ort(oa), ExprArt::Ort(ob)) = (&a.art, &b.art) {
                 if let Some(untergrenze) = self.beziehung(oa, ob, lage) {
-                    return Typ::Ganzzahl(IntBereich::genau(
+                    let eng = IntBereich::genau(
                         ba.breite,
                         ba.vorzeichen,
                         untergrenze,
                         (ba.max - bb.min).max(untergrenze),
-                    ));
+                    );
+                    if !eng.passt_in_die_breite() && !ta.laeuft_um() {
+                        self.ueberlauf_ausdruck(span, &ba, &bb, op_zeichen(op));
+                    }
+                    return Typ::Ganzzahl(eng);
                 }
             }
         }
@@ -2277,7 +2290,60 @@ impl<'a> Pruefer<'a> {
                 if op == BinOp::Geteilt {
                     typen::teile(&ba, &bb)
                 } else {
-                    typen::rest(&ba, &bb)
+                    let r = typen::rest(&ba, &bb);
+                    // **`M152` -- the remainder at `INT_MIN % -1` traps, and no rule said so.**
+                    //
+                    // Division got this right long ago: `INT_MIN / -1` leaves the
+                    // width through `teile` and falls at `M104`. The remainder
+                    // over the same inputs claims a range that FITS (`|a % b| <=
+                    // |b| - 1`), so `M104` has nothing to say -- yet the C the
+                    // emitter writes (`a % b`, signed) traps exactly where the
+                    // division does: `INT_MIN % -1` raises SIGFPE on x86-64
+                    // (measured 2026-09-11, exit 136), because C defines `%`
+                    // through `/` (C11 6.5.5). Measured over the unchanged
+                    // checker: `x % y` with `x : i32` open and `y : i32 in
+                    // -1 .. -1` passed with 0 errors, and the emitter wrote
+                    // `return x % y;` straight into the C.
+                    //
+                    // The check mirrors `M150`: it fires at the operation, with
+                    // the `SPRACHE.md §3` note (compile error, not a trap) and
+                    // the V1 remedy note. The ranges are read WITH their V1/V2
+                    // facts, so a divisor narrowed away from `-1` and a
+                    // dividend narrowed away from the smallest value stay
+                    // silent. Unsigned operands stay silent too: `%` over
+                    // unsigned C is defined for every nonzero divisor.
+                    //
+                    // No `wrapping` exemption, unlike `M104`/`M150`: the
+                    // unsigned lowering that exempts them covers only
+                    // `+ - * <<` (`emit.rs::rechnet`), so a `wrapping`
+                    // remainder still lowers to signed C `%` and still traps.
+                    if r.bereich.is_some() && ba.vorzeichen && bb.vorzeichen {
+                        let (kleinste, _) = typen::grenzen(ba.breite, true);
+                        if ba.min == kleinste && bb.min <= -1 && -1 <= bb.max {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M152",
+                                    span,
+                                    format!(
+                                        "`{} % {}` traps at the smallest value over `-1`",
+                                        ba.text(),
+                                        bb.text()
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "SPRACHE.md §3: if the result range does not fit, it is a compile error \
+                                     and not a wrap-around -- `INT_MIN % -1` traps in the C this lowers to, \
+                                     because C defines `%` through `/`",
+                                )
+                                .mit_notiz(
+                                    "a check before it narrows the range (V1), otherwise `narrow … to … \
+                                     else { … }` -- away from `-1` on the divisor or away from the \
+                                     smallest value on the dividend",
+                                ),
+                            );
+                        }
+                    }
+                    r
                 }
             }
             BinOp::BitUnd => typen::bitweise(&ba, &bb, typen::BitOpArt::Und),
@@ -6231,5 +6297,160 @@ mod m150_proben {
              }\n",
         );
         assert_eq!(f, vec!["M150"], "boundary pair must fall exactly once");
+    }
+}
+
+/// **M152 probes -- the remainder at `INT_MIN % -1` traps.**
+///
+/// The gift files `780`/`781`/`782` pin the shapes file by file; these tests pin
+/// the exactness the file-level run cannot: the must-fall fires EXACTLY once,
+/// and the must-pass twins fire NOTHING AT ALL (no `M152` beside another code,
+/// no second site).
+#[cfg(test)]
+mod m152_proben {
+    use gabbro_syntax::diag::Stufe;
+
+    fn fehler(quelle: &str) -> Vec<&'static str> {
+        let (baum, mut absagen) = gabbro_syntax::lies("m152.gab", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    /// Must-fall: an open `i32` dividend against a `-1` denominator. The
+    /// computed range fits (`0 .. 0`), so without `M152` this program passed
+    /// with 0 errors (measured over the unchanged checker) -- and the emitter
+    /// wrote `return x % y;` into C that traps at `x == INT_MIN`.
+    #[test]
+    fn offener_rest_gegen_minus_eins_faellt_genau_einmal() {
+        let f = fehler(
+            "module probe::m152_fall {\n\
+             impl fn rest(x : i32, y : i32 in -1 .. -1) -> i32 effects { pure } {\n\
+                 return x % y;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M152"], "open remainder over -1 must fall exactly once");
+    }
+
+    /// Must-pass: a denominator narrowed away from `-1`, an unsigned pair
+    /// (defined in C for every nonzero denominator), and a dividend narrowed
+    /// away from the smallest value.
+    #[test]
+    fn enger_rest_schweigt() {
+        let still = [
+            // No `-1` in the denominator range: nothing can trap.
+            "module probe::m152_eng1 {\n\
+             impl fn rest(x : i32, y : i32 in 1 .. 100) -> i32 effects { pure } {\n\
+                 return x % y;\n\
+             }\n\
+             }\n",
+            // Unsigned: `%` is defined for every nonzero denominator.
+            "module probe::m152_eng2 {\n\
+             impl fn rest(x : u32, y : u32) -> u32 effects { pure } {\n\
+                 if y >= 1 {\n\
+                     return x % y;\n\
+                 }\n\
+                 return 0;\n\
+             }\n\
+             }\n",
+            // Dividend without its smallest value: `-1` divides everything left.
+            "module probe::m152_eng3 {\n\
+             impl fn rest(x : i32 in -100 .. 100, y : i32 in -1 .. -1) -> i32 effects { pure } {\n\
+                 return x % y;\n\
+             }\n\
+             }\n",
+        ];
+        for (n, quelle) in still.iter().enumerate() {
+            assert!(
+                fehler(quelle).is_empty(),
+                "still shape {n} must stay silent, fell with {:?}",
+                fehler(quelle)
+            );
+        }
+    }
+
+    /// Boundary: one value decides. The pair differs by `-1` in the denominator
+    /// range only -- the first stays silent, the second falls exactly once.
+    #[test]
+    fn nennergrenze_entscheidet_um_einen_wert() {
+        let f = fehler(
+            "module probe::m152_grenze {\n\
+             impl fn eng(x : i32, y : i32 in -2 .. -2) -> i32 effects { pure } {\n\
+                 return x % y;\n\
+             }\n\
+             impl fn offen(x : i32, y : i32 in -2 .. -1) -> i32 effects { pure } {\n\
+                 return x % y;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(f, vec!["M152"], "denominator boundary must fall exactly once");
+    }
+}
+
+/// **V2-subtraction probes -- `M104` at the operation, not `M101` at the assignment.**
+///
+/// The gift file `783` pins the shape file by file; these tests pin the
+/// exactness the file-level run cannot: the open subtraction under `a >= b`
+/// falls with EXACTLY `["M104"]` at the operation (measured over the unchanged
+/// checker it passed with 0 errors into an `i64` result), and the narrowed
+/// twin fires nothing.
+#[cfg(test)]
+mod vsub_proben {
+    use gabbro_syntax::diag::Stufe;
+
+    fn fehler(quelle: &str) -> Vec<&'static str> {
+        let (baum, mut absagen) = gabbro_syntax::lies("vsub.gab", quelle);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == Stufe::Fehler)
+            .map(|a| a.code)
+            .collect()
+    }
+
+    /// Must-fall: two open `i32` under `a >= b` build `0 .. 4294967295` -- out
+    /// of the width the C computes in -- and refuse at the `-` node itself.
+    #[test]
+    fn offene_v2_differenz_faellt_an_der_operation() {
+        let f = fehler(
+            "module probe::vsub_fall {\n\
+             impl fn diff(a : i32, b : i32) -> i64 effects { pure } {\n\
+                 if a >= b {\n\
+                     return a - b;\n\
+                 }\n\
+                 return 0;\n\
+             }\n\
+             }\n",
+        );
+        assert_eq!(
+            f,
+            vec!["M104"],
+            "open V2 difference must fall at the operation"
+        );
+    }
+
+    /// Must-pass: narrowed operands keep the V2 range inside the width.
+    #[test]
+    fn enge_v2_differenz_schweigt() {
+        let f = fehler(
+            "module probe::vsub_still {\n\
+             impl fn diff(a : i32 in 0 .. 100, b : i32 in 0 .. 50) -> i64 effects { pure } {\n\
+                 if a >= b {\n\
+                     return a - b;\n\
+                 }\n\
+                 return 0;\n\
+             }\n\
+             }\n",
+        );
+        assert!(
+            f.is_empty(),
+            "narrowed V2 difference must stay silent, fell with {f:?}"
+        );
     }
 }

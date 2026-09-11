@@ -1,0 +1,17 @@
+-- erwartet: M152
+-- **M152 boundary: one value decides.**
+--
+-- `i32 in -2 .. -2` never holds `-1`, and the remainder over it stays silent.
+-- `i32 in -2 .. -1` holds one value more, and at that value with `x ==
+-- INT_MIN` the lowered C traps -- M152.
+module gift766 {
+
+impl fn eng(x : i32, y : i32 in -2 .. -2) -> i32 effects { pure } {
+    return x % y;
+}
+
+impl fn rand(x : i32, y : i32 in -2 .. -1) -> i32 effects { pure } {
+    return x % y;
+}
+
+}
