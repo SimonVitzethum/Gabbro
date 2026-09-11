@@ -1,0 +1,45 @@
+-- erwartet: H019
+-- **A `requires` read outside the write frame falls (hT shape).**
+--
+-- `grammatik/Grammatik/Extraktion.lean` discharges `HaengtAb` at the signature frame
+-- under the premise `hT`/`hG` (`haengtAb_requires`): every `requires` place lies inside
+-- the function's writes. The checker never asked for that premise -- until this probe a
+-- `requires` naming a carrier the frame does not write passed with zero errors.
+--
+-- The frame is the WRITE frame: `bedarfs_lesung_fremd` reads `Deckung` while its effects
+-- write only `Kappe`, and falls once with `H019`; `bedarfs_lesung_eigen` reads the same
+-- carrier with `Deckung` inside the frame and stays silent.
+module gift734 {
+
+table Deckung count 8 {
+    slot {
+        bereit : bool,
+    }
+}
+
+table Kappe count 8 {
+    slot {
+        x : u32,
+    }
+}
+
+-- Must fall: `requires` reads `Deckung`, the frame writes only `Kappe`.
+impl fn bedarfs_lesung_fremd(i : index into Deckung, j : index into Kappe)
+    requires Deckung.slots[i].bereit
+    effects { writes Kappe.slots }
+    costs <= 16 ops
+{
+    Kappe.slots[j].x = 1;
+}
+
+-- Must pass: the same read with `Deckung` inside the frame.
+impl fn bedarfs_lesung_eigen(i : index into Deckung, j : index into Kappe)
+    requires Deckung.slots[i].bereit
+    effects { writes Deckung.slots, writes Kappe.slots }
+    costs <= 16 ops
+{
+    Deckung.slots[i].bereit = false;
+    Kappe.slots[j].x = 1;
+}
+
+}

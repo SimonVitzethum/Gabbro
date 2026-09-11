@@ -477,6 +477,7 @@ impl<'a> Pruefer<'a> {
             if let ItemArt::Funktion(f) = &item.art {
                 self.modul = modul.to_string();
                 self.ensures_pruefen(f);
+                self.vertrag_rahmen_pruefen(f);
                 self.maintains_pruefen(f);
                 self.verfeinert_pruefen(f);
             }
@@ -4520,6 +4521,106 @@ impl<'a> Pruefer<'a> {
                         "it names neither `result` nor a place the function writes \
                             according to `effects` -- then it is a `requires` or a \
                             `maintains` in the wrong place",
+                    ),
+                );
+            }
+        }
+    }
+
+    /// **`H019` -- a contract read outside the write frame.**
+    ///
+    /// `grammatik/Grammatik/Extraktion.lean` discharges `HaengtAb` at the signature
+    /// frame under the premise `hT`/`hG` (`haengtAb_requires`, `haengtAb_ensures`):
+    /// every `requires`/`ensures` place lies inside the function's writes. The
+    /// checker never asked for that premise -- a `requires` naming a carrier the
+    /// frame does not write passed with **zero errors** (measured at
+    /// `beispiele/gift/734` before the build).
+    ///
+    /// The frame is the DECLARED `effects` writes -- the same register `M111`
+    /// reads above (`Schreibt`/`Veroeffentlicht` bases): `E008` already reconciles
+    /// the body hull against that list, so a second hull read here would be a
+    /// second reader of one thing. What counts as a read is a KNOWN world carrier
+    /// named in the contract: `sammle_namen_pred` minus parameters, `result`,
+    /// `Self` and `&f` (none of which is a carrier -- `Held(…)` never even
+    /// reaches the list), kept only when `ist_weltname` answers yes. An unknown
+    /// name stays silent -- another rule owns the typo, and this one refuses
+    /// carriers, not spellings.
+    ///
+    /// **Three limits stand beside the rule.** (1) It reads DIRECT names only --
+    /// a carrier reached through a `spec fn` call in the contract is not
+    /// unfolded, and a handle built from a `ptr` parameter is its parameter,
+    /// not its table (same direction as `H018`). (2) `reads` covers nothing: the
+    /// frame is the WRITE frame, and a contract read under a `reads` line still
+    /// falls (`beispiele/gift/736` is that boundary). (3) Invariants are not
+    /// read here at all -- a `table`/`walk`/`group` item carries no `effects`
+    /// list, so there is no declared frame to hold the footprint against; that
+    /// half is booked in `messung/H019-REGEL.md`, not guessed here.
+    fn vertrag_rahmen_pruefen(&mut self, f: &FnDecl) {
+        let Some(w) = &f.effects else { return };
+        let rahmen: Vec<String> = w
+            .liste
+            .iter()
+            .filter_map(|x| match &x.art {
+                WirkungArt::Schreibt(o) | WirkungArt::Veroeffentlicht(o) => {
+                    Some(o.basis.text.clone())
+                }
+                _ => None,
+            })
+            .collect();
+        for (klausel, p) in f
+            .requires
+            .iter()
+            .map(|p| ("requires", p))
+            .chain(f.ensures.iter().map(|p| ("ensures", p)))
+        {
+            let mut namen = Vec::new();
+            sammle_namen_pred(p, &mut namen);
+            let mut gemeldet: Vec<String> = Vec::new();
+            for n in namen {
+                if n == "result" || n == "Self" || n.starts_with('&') {
+                    continue;
+                }
+                if f.parameter.iter().any(|x| x.name.text == n) {
+                    continue;
+                }
+                // **Constants and type names are values, not carriers** (measured
+                // 2026-09-11 at `beispiele/07`: `ensures … m.rahmen >=
+                // BOOT_RAHMEN_UNTEN` -- two `const u64` the world map answers
+                // for, and neither is state. Same reader `traeger_von_ort`
+                // uses for the same reason).
+                if self.u.nennt_typ_oder_konstante(&self.modul, &n) {
+                    continue;
+                }
+                if !self.u.ist_weltname(&self.modul, &n) {
+                    continue;
+                }
+                if rahmen.iter().any(|g| g == &n) {
+                    continue;
+                }
+                if gemeldet.contains(&n) {
+                    continue;
+                }
+                gemeldet.push(n.clone());
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "H019",
+                        p.span,
+                        format!(
+                            "`{klausel}` of `{}` reads `{n}`, and the write frame \
+                             names it nowhere",
+                            f.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "every contract place has to hang on the signature frame \
+                         (`Extraktion.lean`: `haengtAb_requires`/`haengtAb_ensures` \
+                         discharge `HaengtAb` under `hT`/`hG` -- each \
+                         `requires`/`ensures` place lies inside the writes)",
+                    )
+                    .mit_notiz(
+                        "the frame is the declared `effects` writes -- a `reads` line \
+                         covers no contract read, and parameters, `result`, `Self`, \
+                         `&f` and lock witnesses name no carrier",
                     ),
                 );
             }

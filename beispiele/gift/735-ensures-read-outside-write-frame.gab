@@ -1,0 +1,45 @@
+-- erwartet: H019
+-- **An `ensures` read outside the write frame falls -- through the `result` door.**
+--
+-- The `ensures` half of the same premise (`haengtAb_ensures` in
+-- `grammatik/Grammatik/Extraktion.lean`): every `ensures` place lies inside the
+-- function's writes. `sichert_fremd` names `result`, so `M111` is satisfied and stays
+-- silent -- the only refusal is `H019` for the `Abdeckung` read outside the frame.
+-- `sichert_eigen` reads the same carrier with `Abdeckung` inside the frame and stays
+-- silent.
+module gift735 {
+
+table Abdeckung count 8 {
+    slot {
+        zaehler : u32,
+    }
+}
+
+table Kappe count 8 {
+    slot {
+        x : u32,
+    }
+}
+
+-- Must fall: `ensures` reads `Abdeckung`, the frame writes only `Kappe`.
+impl fn sichert_fremd(i : index into Abdeckung, j : index into Kappe) -> u32
+    ensures result == Abdeckung.slots[i].zaehler
+    effects { reads Kappe.slots, writes Kappe.slots }
+    costs <= 16 ops
+{
+    Kappe.slots[j].x = 1;
+    return Kappe.slots[j].x;
+}
+
+-- Must pass: the same read with `Abdeckung` inside the frame.
+impl fn sichert_eigen(i : index into Abdeckung, j : index into Kappe) -> u32
+    ensures result == Abdeckung.slots[i].zaehler
+    effects { reads Kappe.slots, writes Abdeckung.slots, writes Kappe.slots }
+    costs <= 16 ops
+{
+    Abdeckung.slots[i].zaehler = 0;
+    Kappe.slots[j].x = 1;
+    return Kappe.slots[j].x;
+}
+
+}
