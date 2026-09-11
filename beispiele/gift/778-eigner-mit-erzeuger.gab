@@ -1,0 +1,27 @@
+-- erwartet: D026
+-- **A named producer does not lift the refusal: the first mark is still unwritten.**
+--
+-- `gift/694` pins the bare shape -- an `owner` table whose mark nobody holds.
+-- This is the producer-path neighbour: a function whose signature RETURNS the
+-- very mark (`extern fn erste() -> Marke`) stands beside the table, and the
+-- checker still refuses the clause by name. A return type is not an initial
+-- holding: `eigner_nie_erzeugt` (`Syntax.lean:149`, applied in
+-- `grammatik/Grammatik/Typen.lean` §5 and `Geteilt.lean` §9) says no signature
+-- produces an owner mark, so the producer story is still unwritten and `D026`
+-- is still the whole implementation. Measured against the unchanged checker:
+-- falls with `D026`, and nothing else.
+module gift::eigner_mit_erzeuger {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+static mut w : u32 = 0;
+
+extern fn erste() -> Marke effects { writes w } costs <= 8 ops;
+
+}

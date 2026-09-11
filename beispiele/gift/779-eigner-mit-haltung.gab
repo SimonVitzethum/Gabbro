@@ -1,0 +1,35 @@
+-- erwartet: D026
+-- **Even the held mark does not lift the refusal: it fires by name, not by use.**
+--
+-- `gift/694` pins the bare shape, `gift/778` the named producer. This is the
+-- second direction: a body that HOLDS the mark through the whole discipline --
+-- produced once, consumed once, never duplicated -- and the checker still
+-- refuses the table by name. The holding is correct and the refusal stands
+-- beside it, because the unwritten part was never the holding but the FIRST
+-- mark: with no initial holder there is nothing to hold first
+-- (`eigner_aus_leer_nie` in `grammatik/Grammatik/Typen.lean` §5). Measured
+-- against the unchanged checker: falls with `D026`, and nothing else.
+module gift::eigner_mit_haltung {
+
+table Plaetze count 8 owner Marke {
+    slot {
+        benutzt : bool,
+    }
+}
+
+linear ghost type Marke;
+
+static mut w : u32 = 0;
+
+extern fn erste() -> Marke effects { writes w } costs <= 8 ops;
+extern fn lege_ab(m : Marke) effects { consumes m, writes w } costs <= 8 ops;
+
+impl fn runde()
+    effects { writes w }
+    costs   <= 32 ops
+{
+    let m = erste();
+    lege_ab(m);
+}
+
+}

@@ -513,5 +513,82 @@ theorem globInj_all (globs : List GlobCarrier) : globInjForm globs := by
 #print axioms Gabbro.Grammatik.Geteilt.tabInj_all
 #print axioms Gabbro.Grammatik.Geteilt.globInj_all
 
+/-! ## 9. Owner marks on the producer path -- the sharing-level application
+
+    `Syntax.lean:149` carries `eigner_nie_erzeugt` -- no signature produces an
+    owner mark -- and `SYNTAX.md:1625` books it as true but unapplied. §5 of
+    `Typen.lean` applies it to one call step; here it is applied to the closed
+    world: along every call chain from the entries, the produced marks carry
+    no owner mark, so an owner mark held anywhere in the world traces back to
+    an entry's initial holdings. That entry context -- which linear value
+    becomes the first mark, and at whose hands -- is the producer story `D026`
+    waits for. Nothing below modifies `Bau` or the world-partition regions;
+    the owner declaration stands beside them and reads the existing
+    reachability (`schrittBis`, `geteilt_treu`) without touching it.
+-/
+
+/-- Owner marks, as numbers. Mirrors `D.Marke` cut down to identity. -/
+abbrev OwnerMarke := Nat
+
+/-- Who holds the first mark: the owner declaration beside the closed world.
+    `eignerVon` folds `D.eigner` to the closed-world `Carrier`; `anfang` names
+    the entry's initial holdings (the `Signaturkopf` story of `Marken.lean`
+    cut C4); `erzeugtFn` mirrors `S.produziert` along the call graph. -/
+structure OwnerAnfang where
+  /-- Owner marks per carrier (`D.eigner`, folded). -/
+  eignerVon : Carrier → List OwnerMarke
+  /-- Initial holdings per entry function: the marks the entry starts with. -/
+  anfang : Fn → List OwnerMarke
+  /-- Produced marks per function (mirrors `S.produziert`). -/
+  erzeugtFn : Fn → List OwnerMarke
+  /-- The applied theorem: no function produces an owner mark
+      (`eigner_nie_erzeugt`, `Syntax.lean:149`). A premise here, as `Bau`
+      fields are premises above -- the wiring instantiates it. -/
+  eigner_nie_erzeugt : ∀ f m, m ∈ erzeugtFn f → ¬ ∃ c, m ∈ eignerVon c
+
+/-- Every mark produced along the reachable calls from entry `e`. -/
+def weltErzeugt (W : OwnerAnfang) (ruft : Fn → List Fn) (fuel : Nat)
+    (e : Fn) : List OwnerMarke :=
+  (schrittBis ruft fuel e).flatMap W.erzeugtFn
+
+/-- **The reachable producer path carries no owner mark.** Whatever the calls
+    from the entries produce, no owner mark is among it. -/
+theorem eigner_nie_in_welt (W : OwnerAnfang) (ruft : Fn → List Fn)
+    (fuel : Nat) (e : Fn)
+    (m : OwnerMarke) (hm : m ∈ weltErzeugt W ruft fuel e) :
+    ¬ ∃ c, m ∈ W.eignerVon c := by
+  unfold weltErzeugt at hm
+  obtain ⟨g, _, hg⟩ := List.mem_flatMap.mp hm
+  exact W.eigner_nie_erzeugt g m hg
+
+/-- **The first mark comes from the entry.** An owner mark held anywhere in
+    the closed world -- initial holdings or produced along the calls -- was
+    in the entry's initial holdings: the produced half cannot carry it. -/
+theorem eigner_erster_aus_anfang (W : OwnerAnfang) (ruft : Fn → List Fn)
+    (fuel : Nat) (e : Fn)
+    (m : OwnerMarke) (_hmE : ∃ c, m ∈ W.eignerVon c)
+    (hmem : m ∈ W.anfang e ++ weltErzeugt W ruft fuel e) :
+    m ∈ W.anfang e := by
+  rcases List.mem_append.mp hmem with h | h
+  · exact h
+  · exact absurd _hmE (eigner_nie_in_welt W ruft fuel e m h)
+
+/-- **Owner-guarded and unshared means one thread.** An owner-guarded carrier
+    that the declaration leaves unshared is reached by at most one thread --
+    `geteilt_treu` applied to the owner case. The proof goes through
+    unshared-ness; the owner premise selects the carriers this speaks about,
+    and the two theorems above name where their first mark comes from. -/
+theorem eigner_ungeteilt_ein_faden (B : Bau) (W : OwnerAnfang) (fuel : Nat)
+    (h : pruefeUngeteilt B fuel = true)
+    (c : Carrier) (hmem : c ∈ B.traeger) (hu : B.geteilt c = false)
+    (m : OwnerMarke) (_hm : m ∈ W.eignerVon c)
+    (f g : Nat) (hf : ErreichtBau B fuel f c) (hg : ErreichtBau B fuel g c) :
+    f = g :=
+  geteilt_treu B fuel h c hmem hu f g hf hg
+
+#print axioms Gabbro.Grammatik.Geteilt.eigner_nie_in_welt
+#print axioms Gabbro.Grammatik.Geteilt.eigner_erster_aus_anfang
+#print axioms Gabbro.Grammatik.Geteilt.eigner_ungeteilt_ein_faden
+
 end Gabbro.Grammatik.Geteilt
 
