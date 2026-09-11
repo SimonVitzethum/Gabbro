@@ -1841,3 +1841,18 @@ Lean: `Grammatik/Zeugnis.lean`. The printer stays trust base.
 
 The per-cut status of this chapter (proved, shape, open across cuts C1, C2, C3, C6,
 with deciding witness and recompute command) is booked in `messung/SYNTAX-EMITTER-ANHANG.md`.
+
+### 21.9 Shared carriers carry assertions in invariant form only
+
+Assertions over lock-shared carriers are admitted only in invariant
+(resource-invariant) form: a contract clause that reads a shared carrier
+must coincide with that carrier's declared invariant, and every other
+shape over the same carrier stays unwritable. The reason is the
+interference check it would otherwise owe per run: frame-locality is not
+preservation, so only the invariant itself survives every foreign step by
+construction (Lean: `InvariantForm` with `interferenceFree_of_invariantForm`
+in `InterferenzAllgemein.lean` §20, bound at Ziel level by
+`ziel_seqLogic_aus_spec_invariantForm`). Checker side the form check is
+booked as `D027` in `domaene.rs aus_pred`, decided against the declared
+table invariants; until it lands, non-invariant shapes over shared
+carriers are own-logic debt, not refused text.

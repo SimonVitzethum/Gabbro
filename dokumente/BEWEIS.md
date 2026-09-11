@@ -1619,3 +1619,28 @@ comparison renders under the **same** file name, so the header cannot do the wor
   decision to a caller that refuses. The sweep struck the arms that answered with a
   *plausible value*; the honest-unknown ones stay, and the reasoning stands in
   `messung/WILDCARD-ZWEIGE.md`.
+
+---
+
+## The `hFree` remainder: non-invariant assertions over shared carriers (2026-09-11)
+
+The invariant-form discharge (`InterferenzAllgemein.lean` §20, Ziel-level
+`ziel_seqLogic_aus_spec_invariantForm`) removes the per-run interference
+proof for exactly one class: contract assertions that coincide with a
+declared carrier invariant. What remains is stated exactly, so no wave
+re-measures it: a contract clause over a lock-shared carrier that is NOT
+in invariant form still owes `hFree`, the per-run preservation proof over
+every foreign step, as user own-logic.
+
+Why own-logic and not plumbing: the dividing-line table above books "the
+lock is held, the order is right" and "no data race" as plumbing — the
+discipline that orders guarded access falls by construction (checked lock
+discipline, `Wettlauf.lean`). But WHICH value-level statement a contract
+clause makes about the shared bytes is the author's choice about the
+subject — "the refcount is the number of references", not "the guard is
+held". No construction can choose it for them; a checker that refused
+every non-invariant shape would refuse programs, not discharge them. The
+bound is exact: the owed proof covers precisely the foreign steps of the
+joint run (`InterferenceFree` over `schrittFaden`), nothing about the
+sequential triples, nothing about the frame — and it vanishes the moment
+the clause takes invariant form.
