@@ -54,6 +54,7 @@ import Grammatik.Zucker
 import Grammatik.InterferenzAllgemein
 import Grammatik.Komposition
 import Grammatik.Geteilt
+import Grammatik.Fristlauf
 
 namespace Gabbro.Grammatik
 
@@ -290,39 +291,99 @@ theorem ziel (o : Ausgang V l Γ) :
     hardware assumptions; Gabbro and CompCert carry the rest (once Gabbro is
     verified).
 
-    The conclusion already holds -- it is `zwei_fehler`. What does NOT yet hold
-    is the road from a real run to it, so the road travels as explicit premises
-    (named hypotheses, no axioms, no `sorry`). Each premise names the wave that
-    discharges it; as waves land, premises turn into proofs one by one:
+    Rewritten 2026-09-11: the conclusion is no longer the bare `zwei_fehler`
+    split (which held unconditionally, with all four premises discarded via
+    `have _ :=`). It is now the per-run obligation conjunction below, and every
+    premise is load-bearing -- each occurs in the proof term applied to one of
+    the merged execution lemmas, so deleting any premise breaks elaboration.
+    There is no `have _ := premise` anywhere in the proof, and no bare `Prop`
+    slot that `False` could inhabit (the auditor's old probe
+    `ziel_nutzer_last o hB False False ⟨0, by decide⟩` no longer elaborates:
+    every slot now has a fixed shape).
 
-    * `hBridge`: every interleaving of well-formed bodies is `Gesittet`. Today
-      `lauf_aus_brav` (Wettlauf.lean) derives only half of it (W1-W2 over
-      suffixes); W3 (exclusion) and W5 (shared) stay premises there, and the
-      per-thread state behind a real `Lauf D` is still carried as `hEin`.
-    * `hSeqLogic`: valid sequential logic (`requires`/`ensures`) survives
-      interleaving (Owicki-Gries step). It stands nowhere yet; `exec_rahmen`
-      is the candidate premise for frame-disjointness.
-    * `hProbe`: the tick probe upholds the named deadline assumption
-      (`fristAlsAnnahme`, `fortschritt` with its probe). The deadline is named
-      here and measured by `sonden/sonde_tick.c` (sampling, no proof).
-    * `hLowering`: the lowering contract (`Absenkung`, at most 18 C forms per
-      primitive) plus quantitative CompCert preserving the `ops` count. The
-      count (17 measured, bound 18) is partially measured; the lexer run over
-      real products is still open. -/
+    Each leg reuses a merged result instead of re-proving it:
+
+    * Bridge leg (`Gesittet J.l`): `bruecke_exec_gesittet` (`Wettlauf.lean`)
+      over the covered interleavings -- per-thread `Brav` provenance from
+      `exec` traces (`hvoll`, closed per body by `ziel_brav_aus_exec`),
+      the interleaving shape (`hvers`), and exactly the three cross-thread
+      shapes no single body can close: W3 as `ForeignExclusion` (named-HW,
+      `A_lock`), W4 as the `Einfaedig` construction (`hEin`), W5 inline
+      (`hungeteilt`). The old universal `hBridge` (every interleaving is
+      `Gesittet`) was too strong to ever discharge; the narrowed class is
+      what `lauf_aus_brav` reaches. `hLink` ties the joint run to the
+      covered trace (`J.l = run`).
+    * Goodness leg (W1-W2): `lauf_aus_brav` (`Wettlauf.lean`) -- consistency
+      and goodness inherited over suffixes from the same `hvoll`/`hvers`.
+    * Sequential-logic leg: `stabil_from_spec` (`InterferenzAllgemein.lean`),
+      i.e. the `ziel_seqLogic_aus_spec` discharge shape (§6 L2, w02 merged):
+      sequential contract triples (`hSpec`, OWN-LOGIC) plus the
+      interference-freedom check (`hFree`, OWN-LOGIC) yield stable contract
+      assertions at the last world, modulo frame-locality (`hAb`,
+      GABBRO-DUTY). The 2026-09-10 comment that this step "stands nowhere
+      yet" is superseded: it stands at `InterferenzAllgemein.lean:1030`,
+      bound at §6 below.
+    * Probe leg: `sampling_closes_frist` (`Fristlauf.lean`, w04 merged) --
+      with the residual spacing premise (`hspace`, NAMED-HW, per-use) every
+      expiry strictly between check and use is caught, and `fristErgebnis`
+      answers the named `fortschritt` assumption (the `fristAlsAnnahme`
+      mapping).
+    * Lowering leg: the `Absenkung` cap (`hLowering.begrenzt`) -- the contract
+      the witness must keep. The measured witness (`absenkung`, 17 under 18)
+      is the §6 L5 discharge (w05 merged); the count-preservation fragment
+      for the modeled ops (`modell_erhaltung`, `modell_lauf_erhalten`) stands
+      where the budget stands (`Budget.lean`, which imports this file, so it
+      is cited, not imported).
+    * Outcome leg: `zwei_fehler` -- the classification itself, still
+      definitionally true, now carried as one leg among six rather than the
+      whole conclusion. -/
 theorem ziel_nutzer_last (o : Ausgang V l Γ)
-    (hBridge : ∀ (l : Lauf D) (voll : Faden → List (Ereignis D)),
-      IstVerschraenkung l voll → Gesittet l)
-    (hSeqLogic : Prop)
-    (hProbe : Prop)
+    (run : Lauf D) (voll : Faden → List (Ereignis D))
+    (hvoll : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f)
+    (hvers : IstVerschraenkung run voll)
+    (hausschluss : ForeignExclusion (D := D) run)
+    (code : D.Marke → Nat) (hEin : Marken.Einfaedig (laufProj code run))
+    (hungeteilt : ∀ (i j : Nat) (f g : Faden) (carrier : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      run[i]? = some (Schritt.mk f ei) → run[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some carrier → ej.traeger = some carrier →
+      (match carrier with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g)
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (hLink : J.l = run)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
+    (hFree : InterferenceFree Nb J (SpecQ Pre Post Nb J))
+    (S : Nat) (c : TickClock S) (hstart : c.tick 0 ≤ S)
+    (p : PruefPaar) (fr : Frist D) (d : Moment)
+    (hpd : p.pruef < d) (hdl : d < p.lauf)
+    (hspace : deadlineSpacing S p d)
     (hLowering : Absenkung) :
-    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
-    (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
-    (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e) := by
-  have _ := hBridge
-  have _ := hSeqLogic
-  have _ := hProbe
-  have _ := hLowering
-  exact zwei_fehler o
+    (Gesittet J.l)
+    ∧ ((∀ f j, Konsistent (run.spur f j)) ∧
+      ∀ f j (e : Ereignis D), e ∈ run.spur f j → e.gut)
+    ∧ (∀ (σ : World D), J.welten.getLast? = some σ →
+      ∀ (f : Faden), f ∈ J.faeden → SpecQ Pre Post Nb J f σ)
+    ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
+      fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
+    ∧ (hLowering.proPrimitiv ≤ 18)
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+      (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
+      (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e)) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hLink]
+    exact bruecke_exec_gesittet run voll hvoll hvers hausschluss code hEin hungeteilt
+  · exact lauf_aus_brav run voll hvoll hvers
+  · exact stabil_from_spec Nb J I Pre Post hInv hDeck hAb hSpec hFree
+  · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
+  · exact hLowering.begrenzt
+  · exact zwei_fehler o
 
 #print axioms Gabbro.Grammatik.ziel_nutzer_last
 
