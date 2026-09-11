@@ -1,0 +1,18 @@
+-- erwartet: C001
+-- Lane 142, CForm zeigerArithmetik, binary arm. Gabbro gives pointer arithmetic
+-- exactly one form (SPRACHE.md 5.2: `place[expr]` with an M1-bounded index, plus
+-- `offset_into` in formats). `p + 1` is none of them: M1 answers the sum with
+-- `Unbekannt` (no range for a pointer, typen.rs bereich), and the emitter used
+-- to write the sum into the C unasked. It now refuses by name at the Binaer arm
+-- instead of emitting `p + 1`. Checker half merge-verified (this lane runs no
+-- builds); this unit proves the emitter path.
+module probe::ptrplus142 {
+type Zelle = { wert : u32, };
+impl fn eins_weiter(p : ptr<normal, r> Zelle) -> u32
+    effects { reads p }
+    costs   <= 8 ops
+{
+    let versatz = p + 1;
+    return 0;
+}
+}

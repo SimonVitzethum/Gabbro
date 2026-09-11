@@ -1,0 +1,24 @@
+-- Lane 142, CForm schleifeStmt, lowered. The `retry` skeleton is a bounded
+-- wait, and `for` is the loop the target list allows, so the generator writes
+-- `for (; !(condition); )` where it wrote `while (!(condition))`. Counter,
+-- bound check and body stand unchanged (the counter moves with the schrittStmt
+-- lowering). Expected shape:
+-- `{ uint32_t _r0 = 0; for (; !(stand >= 1); ) { if (_r0 >= 1024u) { haengt(); }
+-- _r0 += 1; } }`. No `progress` clause: the emitter never reads it, and an
+-- `assume`/`falsifier` pair would move the sondendeckung mark. Shape modelled
+-- on beispiele/42 (static stand) and beispiele/04 (empty retry body).
+module probe::wieder142 {
+static mut stand : u32 = 0;
+extern fn haengt() -> never effects { diverges } costs <= 1 ops;
+impl fn warten() -> u32
+    effects { reads stand }
+    costs   <= 2048 ops
+{
+    retry schleife until stand >= 1
+        bounded 1024 ops
+        on_exceeded haengt
+        effects { reads stand }
+    { }
+    return stand;
+}
+}

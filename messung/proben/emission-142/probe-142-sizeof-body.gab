@@ -1,0 +1,18 @@
+-- erwartet: C001
+-- Lane 142, CForm cSizeof, user path (pre-existing refusal, documented here).
+-- `sizeof` outside a `format` predicate has no object to measure: `sizeof(T)`
+-- would have to agree with the layout the checker computed, and that agreement
+-- is established nowhere (emit.rs Eingebaut arm). `lenof` over a fixed array
+-- lowers to its declared length; over anything else it is refused beside it.
+-- The load-bearing sites (traverse bounds, entrust `_Static_assert`) stay:
+-- the first is pinned by text assertions, the second has no alternative
+-- spelling. This unit proves the refused path.
+module probe::groesse142 {
+type Kiste = { wert : u32, };
+impl fn groesse() -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return sizeof(Kiste);
+}
+}

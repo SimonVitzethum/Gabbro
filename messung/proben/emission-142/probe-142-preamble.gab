@@ -1,0 +1,18 @@
+-- Lane 142, CForm cInclude, site inventory. Every emitting unit carries the
+-- four-line preamble (KOPF): stdint, stdbool, stdatomic, math. Each line is
+-- load-bearing under `cc -std=c11 -Wall -Wextra -Werror`: dropping stdint
+-- loses `uint32_t`, stdbool loses `bool`, stdatomic loses the atomic
+-- operations, math loses `isfinite` (narrow-finite, beispiele/26). There is no
+-- alternative spelling for "make the words known" and no unit that needs none
+-- of them, so the form is neither lowerable nor refusable; this minimal unit
+-- (modelled on beispiele/32, read side) documents the site. Measured with
+-- drop-one-include cc runs, 2026-09-11.
+module probe::kopf142 {
+type Mini = { wert : u32, };
+impl fn lies(m : ptr<normal, r> Mini) -> u32
+    effects { reads m }
+    costs   <= 4 ops
+{
+    return m.wert;
+}
+}

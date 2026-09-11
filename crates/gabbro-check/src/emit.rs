@@ -1665,6 +1665,25 @@ pub fn emittiere_mit(
         }
     });
 
+    // **CForm typOfErw (lane 142): every non-`spec` function lowers its prototype
+    // core once, here -- the same `prototyp_kern` the definition is written from
+    // (`funktion`, same `u`), so a checked reference spells the signature from
+    // the SAME lowering and never a second one (W7). Bodies are not required:
+    // `extern` declarations lower through the same helper, which is exactly the
+    // half `eigene_ruempfe` above does not cover.**
+    let mut bezugskerne: std::collections::BTreeMap<String, (String, String)> =
+        std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            if let Ok(k) = prototyp_kern(f, &namen) {
+                bezugskerne.insert(f.name.text.clone(), k);
+            }
+        }
+    });
+
     // **`gabbro_kern()` ist ein FREMDER Rumpf, und ein fremder Rumpf braucht seinen
     // Prototypen** (2026-08-20).
     //
@@ -2105,6 +2124,8 @@ pub fn emittiere_mit(
                 MergeOp::Or => "or", MergeOp::And => "and",
             };
             let nm = &ac.name.text;
+            // **CForm schrittStmt (lane 142): the merge loop steps with `+= 1`.**
+            // (`z += v` below is the admitted merge itself, untouched.)
             aus.push_str(&format!(
                 "\n/* accumulates {nm} merge {op} per cpu {n} -- one cell per core.\n\
                  \x20* The merge set is a commutative monoid, so the fold is order-independent\n\
@@ -2116,7 +2137,7 @@ pub fn emittiere_mit(
                  static {c} {nm}_lies(void) __attribute__((unused));\n\
                  static {c} {nm}_lies(void) {{\n\
                  \x20   {c} z = ({c}){neutral};\n\
-                 \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k++) {{\n\
+                 \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k += 1) {{\n\
                  \x20       {c} v = atomic_load_explicit(&{nm}_zellen[k], memory_order_relaxed);\n\
                  \x20       {falte}\n\
                  \x20   }}\n\
@@ -2380,9 +2401,9 @@ pub fn emittiere_mit(
         // frei -- `beispiele/11` erklaert `behandler` NACH dem `entry`, der ihn nennt.
         // *Dieselbe Sortierung, aus demselben Grund wie oben bei den Ruempfen.*
         ItemArt::Walk(w) => walk_(w, &mut rumpf, &namen, absagen),
-        ItemArt::Entry(e) => eintritt(e, &mut rumpf, &ruempfe, absagen),
+        ItemArt::Entry(e) => eintritt(e, &mut rumpf, &ruempfe, &bezugskerne, absagen),
         ItemArt::Entrust(t) => anvertrauen(t, &mut rumpf, &namen, absagen),
-        ItemArt::Boot(b) => bootstrecke(b, &mut rumpf, &namen, &ruempfe, absagen),
+        ItemArt::Boot(b) => bootstrecke(b, &mut rumpf, &namen, &ruempfe, &bezugskerne, absagen),
         // -- und die vier, die weiter abgelehnt werden, jetzt aber MIT GRUND -----------
         //
         // **Der Sammelzweig ist weg, und das ist der eigentliche Ertrag.** Ein `_`-Arm ist
@@ -2546,6 +2567,26 @@ fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
              generator that guesses undoes every pass in front of it",
         ),
     );
+}
+
+/// **CForm zeigerArithmetik (lane 142): a `*` at the end of the C type is a
+/// pointer, and nothing else in this emitter's type vocabulary ends with one.**
+/// Integers, `bool`, `float`/`double`, struct names and the `void` of an empty
+/// parameter list never match; a pointer (`const Text *`, `uint8_t *`) always
+/// does. The check is exact, so it never fires on integer arithmetic.
+fn ist_zeigerwort(t: &Option<String>) -> bool {
+    t.as_deref().is_some_and(|c| c.trim_end().ends_with('*'))
+}
+
+/// **CForm doubleTyp (lane 142): exactly the mixed pair.** Both sides carrying
+/// the same width is a pure computation of that width; a literal carries no
+/// width until its neighbour decides it (`None`); an integer beside a float is
+/// the checker's `F005`, not this arm.
+fn ist_gemischt_float_double(x: &Option<String>, y: &Option<String>) -> bool {
+    matches!(
+        (x.as_deref(), y.as_deref()),
+        (Some("float"), Some("double")) | (Some("double"), Some("float"))
+    )
 }
 
 /// **`try_from` and NOT `as`, and that is the same defect as `registerlagen()` had.**
@@ -6789,6 +6830,38 @@ fn anweisung(
         // ist in keiner der drei Waechtereinheiten vorgekommen -- und genau darum hat er
         // ueberlebt. *Dieselbe Sorte stiller Ausfall wie die Null im Ausdruckszweig.*
         StmtArt::Zuweisung(z) => {
+            // **CForm zeigerArithmetik / doubleTyp (lane 142): the compound forms
+            // of the two Binaer refusals above.** `p += 1` on a pointer place and
+            // `f += d` across the float/double boundary guess the same way the
+            // binary nodes do. Integer and register places carry no `*` and take
+            // the same width on both sides, so neither check fires on them --
+            // the corpus scan found no pointer-typed or mixed-width `+=`/`-=`.
+            if matches!(z.op, ZuwOp::Plus | ZuwOp::Minus) {
+                let ziel = ort_typ(&z.ziel, u)
+                    .and_then(|t| ctyp(&t, u))
+                    .or_else(|| register_ctyp(&z.ziel, u));
+                if ist_zeigerwort(&ziel) {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "pointer arithmetic -- the language carries no bound for a \
+                         computed address outside `place[expr]`, and an unproven \
+                         bound is not emitted",
+                    );
+                    return;
+                }
+                if ist_gemischt_float_double(&ziel, &wert_ctyp(&z.wert, u)) {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "mixed `float`/`double` arithmetic -- C would widen the \
+                         `float` side and compute in `double`, against the checked \
+                         `f32` fact, and there is no conversion form (the `F005` \
+                         shape)",
+                    );
+                    return;
+                }
+            }
             // **Ein Schreiben auf ein `accumulates` MELDET, es setzt nicht.** Der Kern
             // faltet in seine eigene Zelle -- deshalb braucht es kein CAS: **niemand sonst
             // schreibt sie.** *Die Absenkung waere sonst genau die unbeschraenkte Schleife,
@@ -6824,7 +6897,20 @@ fn anweisung(
                     let ziel = ort_typ(&z.ziel, u)
                         .and_then(|t| ctyp(&t, u))
                         .or_else(|| register_ctyp(&z.ziel, u));
-                    verenge(ausdruck(&z.wert, u, absagen), &z.wert, ziel.as_deref(), u)
+                    // **CForm doubleTyp (lane 142): the assigned value computes
+                    // in the place's width.** A `float` place suffixes its
+                    // literals (`0.5f`), the way the Binaer arm does for a
+                    // `float` neighbour -- without that C lifts the node to
+                    // `double` and narrows late. Integer places read
+                    // `schmal == false`, which is `ausdruck` itself, so their
+                    // text is unchanged; mixed variables refuse above.
+                    let schmal = ziel.as_deref() == Some("float");
+                    verenge(
+                        ausdruck_breit(&z.wert, u, absagen, schmal),
+                        &z.wert,
+                        ziel.as_deref(),
+                        u,
+                    )
                 }
             };
             // **Ein `format`-Feld wird ein SETZER, kein Zuweisungsziel** (2026-08-20).
@@ -7822,9 +7908,14 @@ fn retry(
     let (hat_leave, hat_next) = sprungziele(&r.rumpf, &marke);
     let mut innen = austritt.clone();
     innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
+    // **CForm schleifeStmt + schrittStmt (lane 142): `for` and `+= 1`.**
+    // `for` is the loop the target list allows, so the bounded wait is one;
+    // the counter steps inside the admitted compound-assignment class. The
+    // `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of scope
+    // for this lane.
     aus.push_str(&format!(
-        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    while (!({bedingung})) {{\n\
-         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z}++;\n"
+        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    for (; !({bedingung}); ) {{\n\
+         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z} += 1;\n"
     ));
     for k in &r.rumpf.anweisungen {
         anweisung(k, aus, u, absagen, tiefe + 2, &innen);
@@ -8631,8 +8722,11 @@ fn traverse(
                 format!("{}->slots", ort(o, u, absagen))
             };
             let v = &x.variable.text;
+            // **CForm schrittStmt (lane 142): `+= 1`, not `++`.** The bound is
+            // untouched (`sizeof` stays -- text-pinned and load-bearing); only
+            // the step moves into the admitted compound-assignment class.
             aus.push_str(&format!(
-                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v} += 1) {{\n"
             ));
             // The domain above was read in the OUTER scope; the BODY is not.
             let mut innen = laufsicht(u, v);
@@ -8711,8 +8805,10 @@ fn traverse(
             }
             let feld = ort(o, u, absagen);
             let v = &x.variable.text;
+            // **CForm schrittStmt (lane 142): `+= 1`, not `++`** -- same move as
+            // the `slots of` header above; the `uint64_t` bound is untouched.
             aus.push_str(&format!(
-                "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+                "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v} += 1) {{\n"
             ));
             // The domain above was read in the OUTER scope; the BODY is not.
             let mut innen = laufsicht(u, v);
@@ -10604,6 +10700,43 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
+            // **CForm zeigerArithmetik (lane 142): no computed address.** Gabbro
+            // gives pointer arithmetic exactly one form (`SPRACHE.md` 5.2:
+            // `place[expr]` with an M1-bounded index); a `+`/`-` with a pointer
+            // operand is none of them, so the emitter refuses by name instead
+            // of writing it into the C. Comparisons stay untouched (ordering
+            // two addresses computes no address), and so does every integer.
+            if matches!(op, BinOp::Plus | BinOp::Minus)
+                && (ist_zeigerwort(&wert_ctyp(a, u)) || ist_zeigerwort(&wert_ctyp(b, u)))
+            {
+                weigere(
+                    absagen,
+                    e.span,
+                    "pointer arithmetic -- the language carries no bound for a \
+                     computed address outside `place[expr]`, and an unproven bound \
+                     is not emitted",
+                );
+                return String::new();
+            }
+            // **CForm doubleTyp (lane 142): no silent widening.** With a `double`
+            // operand present, C promotes the `float` side and computes in
+            // `double`, while the checker proved the `f32` fact (7400 of 200000
+            // sampled cases differ). There is no conversion form, so the mixed
+            // node is refused by name instead of computed in the wrong width.
+            if matches!(
+                op,
+                BinOp::Plus | BinOp::Minus | BinOp::Mal | BinOp::Geteilt
+            ) && ist_gemischt_float_double(&wert_ctyp(a, u), &wert_ctyp(b, u))
+            {
+                weigere(
+                    absagen,
+                    e.span,
+                    "mixed `float`/`double` arithmetic -- C would widen the `float` \
+                     side and compute in `double`, against the checked `f32` fact, \
+                     and there is no conversion form (the `F005` shape)",
+                );
+                return String::new();
+            }
             // **Ein `wrapping`-Slot rechnet UNSIGNED -- sonst sagt das C etwas anderes als
             // das Gepruefte** (Rezension 2026-08-20).
             //
@@ -10937,11 +11070,28 @@ fn baum_hat_accumulates(baum: &Programm) -> bool {
 /// niemand; diese Zeile liest der C-Uebersetzer** -- ein Name, den die Uebersetzungseinheit
 /// nicht kennt, ist dort ein Fehler und keine Notiz.
 ///
-/// `__typeof__` steht da, damit die Signatur **nicht zweimal** geschrieben wird: sie einmal
-/// aus der Deklaration abzuleiten und hier ein zweites Mal auszuschreiben waere das zweite
-/// Register ueber derselben Sache (W7) -- *und ein Register, das sich widersprechen kann,
-/// widerspricht sich.*
-fn bezugnahme(marke: &str, ziel: &str) -> String {
+/// `__typeof__` stood here so that the signature is **not written twice**: deriving it
+/// once from the declaration and spelling it here a second time would be the second
+/// register over the same fact (W7) -- *and a register that can contradict itself
+/// contradicts itself.*
+///
+/// **CForm typOfErw (lane 142) reads it from the first register instead.** `kerne`
+/// carries each function lowered by the same `prototyp_kern` the definition is
+/// written from, so the reference spells the signature from the SAME lowering --
+/// `static void (*const m)(void) __attribute__((unused)) = f;`, the shape the
+/// `forever` watchdog already ships. A name with no core falls back to the old
+/// spelling; that only happens where the prototype emission refused the same
+/// name through the same helper, so the unit already carries that refusal.
+fn bezugnahme(
+    marke: &str,
+    ziel: &str,
+    kerne: &std::collections::BTreeMap<String, (String, String)>,
+) -> String {
+    if let Some((rueck, liste)) = kerne.get(ziel) {
+        return format!(
+            "static {rueck} (*const {marke})({liste}) __attribute__((unused)) = {ziel};\n"
+        );
+    }
     format!("static __typeof__({ziel}) *const {marke} __attribute__((unused)) = {ziel};\n")
 }
 
@@ -11222,11 +11372,13 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         "static inline __attribute__((unused)) bool {n}_steigt_ab(const {elem} *it) {{ return (bool)({ab_wenn}); }}\n"
     ));
     // **Der Abstieg. `levels` ist die Schranke, und sie steht als Zahl da.**
+    // **CForm schrittStmt (lane 142): `+= 1`, not `++`** -- the level counter
+    // steps inside the admitted class like every other generator loop.
     aus.push_str(&format!(
         "\nstatic inline __attribute__((unused)) bool {n}_absteigen(const {n}_knoten *wurzel, const uint32_t *index,\n\
          \x20       bool (*knoten_zu)(uint64_t, const {n}_knoten **), const {elem} **blatt) {{\n\
          \x20   const {n}_knoten *k = wurzel;\n\
-         \x20   for (uint32_t e = 0; e < {n}_EBENEN; e++) {{\n\
+         \x20   for (uint32_t e = 0; e < {n}_EBENEN; e += 1) {{\n\
          \x20       /* The bound comes from `node [{elem}; {weite}]`; the VALUE comes from\n\
          \x20          the caller, and that is why the check stands here (W6). */\n\
          \x20       if (index[e] >= {n}_WEITE) return false;\n\
@@ -11261,7 +11413,13 @@ fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// **Eine andere Architektur wird BENANNT abgelehnt.** Registerabdruck, Stapelwechsel und
 /// Verschachtelung sind je Architektur andere; `arch` steht in der Deklaration, damit hier
 /// nicht geraten wird.
-fn eintritt(e: &EntryDecl, aus: &mut String, ruempfe: &BTreeSet<String>, absagen: &mut Absagen) {
+fn eintritt(
+    e: &EntryDecl,
+    aus: &mut String,
+    ruempfe: &BTreeSet<String>,
+    kerne: &std::collections::BTreeMap<String, (String, String)>,
+    absagen: &mut Absagen,
+) {
     if e.arch.text != "x86_64" {
         weigere(
             absagen,
@@ -11345,7 +11503,7 @@ fn eintritt(e: &EntryDecl, aus: &mut String, ruempfe: &BTreeSet<String>, absagen
     // **`dispatch` waere sonst der eine Name, der spurlos verschwindet.**
     let ziel = e.dispatch.teile.last().map(|i| i.text.clone()).unwrap_or_default();
     if ruempfe.contains(&ziel) {
-        aus.push_str(&bezugnahme(&format!("gabbro_eintritt_{n}_verteiler"), &ziel));
+        aus.push_str(&bezugnahme(&format!("gabbro_eintritt_{n}_verteiler"), &ziel, kerne));
     } else {
         aus.push_str(&format!(
             "/* dispatch `{}`: not declared in this unit, so there is nothing here to bind it\n\
@@ -11448,6 +11606,7 @@ fn bootstrecke(
     aus: &mut String,
     u: &Namen,
     ruempfe: &BTreeSet<String>,
+    kerne: &std::collections::BTreeMap<String, (String, String)>,
     absagen: &mut Absagen,
 ) {
     if b.arch.text != "x86_64" {
@@ -11492,7 +11651,7 @@ fn bootstrecke(
             BootSchritt::Ruf(r) => {
                 let ziel = r.path().and_then(|p| p.teile.last()).map(|x| x.text.clone()).unwrap_or_default();
                 if ruempfe.contains(&ziel) {
-                    aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_s{}", i + 1), &ziel));
+                    aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_s{}", i + 1), &ziel, kerne));
                 }
             }
             BootSchritt::Setzt { name, wert } => {
@@ -11506,7 +11665,7 @@ fn bootstrecke(
     }
     let ziel = b.dispatch.teile.last().map(|x| x.text.clone()).unwrap_or_default();
     if ruempfe.contains(&ziel) {
-        aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_dispatch"), &ziel));
+        aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_dispatch"), &ziel, kerne));
     } else {
         aus.push_str(&format!(
             "/* dispatch `{}`: not declared in this unit, so there is nothing here to bind it\n\
