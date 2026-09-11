@@ -67,9 +67,23 @@
                    -- die treibstoffbegrenzte Schleife ohne Fehler IST die
                       Schrittfolge ihrer Abwicklungen (`foreverLauf`-Geruest
                       ohne `fortschritt`-Arm).
-    `endZustandF_*` -- die `finalState`-Abbildung, vollstaendig: je ein Satz pro
-                      Ausgang (`_zurueck`, `_grund`, `_leave`, `_next` neben
-                      `_ok`, `_logik`, `_hardware`, `_fehler`).
+     `endZustandF_*` -- die `finalState`-Abbildung, vollstaendig: je ein Satz pro
+                       Ausgang (`_zurueck`, `_grund`, `_leave`, `_next` neben
+                       `_ok`, `_logik`, `_hardware`, `_fehler`).
+     `blockF` / `traverseAusF` / `foreverAusF`
+                    -- die `execBlock`- / `traverseLauf`- / `foreverLauf`-Gestalt mit
+                       Fehlerarm: ein fehlerhafter Kopf fehlert den Block
+                       (`blockF_cons_fehler`), `ok` uebergibt (`blockF_cons_ok`),
+                       jeder andere Ausgang bleibt stehen (`blockF_cons_weiter`);
+                       ein fehlerhaftes Element fehlert den Durchlauf
+                       (`traverseAusF_kopf_fehler`), `ok`/`next` laufen weiter
+                       (`traverseAusF_kopf_ok`, `_kopf_next`), der fehlerhafte
+                       Rest traegt durch (`traverseAusF_ok_rest_fehler`);
+                       fehlerfrei stimmt der Durchlauf mit `traverseLauf`
+                       (`traverseAusF_stimmt`); der treibstoffbegrenzte Lauf
+                       ebenso (`foreverAusF_kopf_fehler`, `_kopf_ok`); ein
+                       fehlerhafter Kopf ist benannt
+                       (`blockF_cons_fehler_benannt`).
 
   Warum `evalF` heute nie fehlt -- und das ist die Aussage, kein Mangel: ein
   `Expr.slot`-Index hat den Typ `.index (D.count t)` und traegt seinen Bereichsbeweis
@@ -83,10 +97,14 @@
     jeden `Ausgang` als `weiter`, `folge_weiter` stimmt die Folge mit `execBlock`,
     `stecken_heisst_benannt`/`benannt_heisst_stecken` sagen `stuck` GENAU DANN,
     wenn benannt, und `evalArgsF_stimmt`/`schrittFolge_rein`/`durchlaufF_rein`/
-    `schleifeF_als_folge` stimmen `evalF` DURCH Schritt- und Schleifengestalten
-    mit `eval`/`evalArgs`. Was fehlt, ist die Durchfaedelung, nicht die Form:
-    `execStmt`/`execBlock`/`traverseLauf` rufen die parallelen Formen nicht auf
-    (Schnitt S1').
+     `schleifeF_als_folge` stimmen `evalF` DURCH Schritt- und Schleifengestalten
+     mit `eval`/`evalArgs`. Was fehlt, ist die Durchfaedelung, nicht die Form:
+     `execStmt`/`execBlock`/`traverseLauf` rufen die parallelen Formen nicht auf
+     (Schnitt S1'). Seit §11 stehen auch die Block- und Schleifenformen mit
+     Fehlerarm als parallele Form mit Beweisen (`blockF_*`, `traverseAusF_*`,
+     `foreverAusF_*` samt `traverseAusF_stimmt`); was weiterhin fehlt, ist die
+     echte Rekursion ueber `Stmt`/`Block` -- sie steht in `Semantik.lean` und
+     ruft die parallelen Formen nicht auf.
 
   Vorausgesetzt (vertraut, nicht bewiesen):
     P1  `eval` aus `Semantik.lean` ist die Bedeutung: `evalF` ruft es auf, statt es
@@ -95,16 +113,32 @@
         Datum, kein Term der Grammatik.
 
   Schnitte (gebucht, nicht versteckt):
-    S1' Anschluss an `exec` halb geschlossen: Einbettung (`vonAusgang`,
-        `zuAusgang`), Folgen-Uebereinstimmung (`folge_weiter` plus je ein Satz
-        pro Ausgang), `stuck`-genau-dann-benannt (`stecken_heisst_benannt`,
-        `benannt_heisst_stecken`, `stecken_klassifikation`) und die
-        Uebereinstimmung durch `evalAll`- (`evalArgsF_stimmt`), Schritt-
-        (`schrittFolge_rein`) und Schleifengestalten (`durchlaufF_rein`,
-        `schleifeF_als_folge`) stehen mit Beweisen; `Ausgang` bekommt keinen
-        `fehler`-Fall, und `execStmt`/`execBlock`/`traverseLauf` faedeln ihn
-        nicht durch. Die Koordination bleibt, was `S3-FEHLER-ENTWURF.md` §6
-        nennt.
+     S1' Anschluss an `exec` halb geschlossen: Einbettung (`vonAusgang`,
+         `zuAusgang`), Folgen-Uebereinstimmung (`folge_weiter` plus je ein Satz
+         pro Ausgang), `stuck`-genau-dann-benannt (`stecken_heisst_benannt`,
+         `benannt_heisst_stecken`, `stecken_klassifikation`) und die
+         Uebereinstimmung durch `evalAll`- (`evalArgsF_stimmt`), Schritt-
+         (`schrittFolge_rein`) und Schleifengestalten (`durchlaufF_rein`,
+         `schleifeF_als_folge`) stehen mit Beweisen; dazu seit §11 die Block-
+         und Schleifenfortpflanzung mit Fehlerarm (`blockF_cons_fehler`,
+         `_cons_ok`, `_cons_weiter`, `traverseAusF_kopf_fehler`, `_kopf_ok`,
+         `_kopf_next`, `_ok_rest_fehler`, `foreverAusF_kopf_fehler`,
+         `_kopf_ok`), die Durchlauf-Uebereinstimmung (`traverseAusF_stimmt`)
+         und der Benannt-Anschluss (`blockF_cons_fehler_benannt`); `Ausgang`
+         bekommt keinen `fehler`-Fall, und `execStmt`/`execBlock`/`traverseLauf`
+         faedeln ihn nicht durch. Die Koordination bleibt, was
+         `S3-FEHLER-ENTWURF.md` §6 nennt.
+         Offen (braucht `Semantik.lean`, exakt gebucht): die echte
+         Durchfaedelung durch `Stmt`/`Block` -- `execStmt`/`execBlock`/`execEnd`
+         ueber `P`/`O`/`passes`/`R` und `traverseLauf` mit `Block`-Ruempfen.
+         Fehlendes Lemma, exakt: `execBlock_cons_fehler` -- fuer alle `P O`
+         `passes R s rest σ ρ k` gilt: liefert die fehlerfuehrende Form von
+         `execStmt s σ ρ` den Fehler `k`, so liefert die fehlerfuehrende Form
+         von `execBlock (cons s rest) σ ρ` den Fehler `k`. Es schliesst hier
+         nicht, weil `Ausgang` keinen `fehler`-Fall traegt und `execStmt`/
+         `execBlock` weder `AusF.folge` noch `blockF` rufen; es zu schliessen
+         verlangt den Fehlerarm in `Semantik.lean` (Rueckgabe `AusF` statt
+         `Ausgang`), und das ist gebucht, nicht getan.
     S2  `evalF` reicht jeden Aufruf an `eval` durch und meldet `wert`: die Fehler-
         arme sind erreichbar nur ueber die Fallen-Daten, nicht ueber Terme.
         Geschlossen dagegen, was schloss: `evalF_ok_halt`, `evalF_stimmt_halt`,
@@ -699,6 +733,202 @@ theorem endZustandF_next (h : l = true) (σ : World D) (ρ : Env D Γ) :
     endZustandF (AusF.weiter (.next h σ ρ) : AusF V l Γ) = some σ :=
   rfl
 
+/-! ## 11. Fault threading through the `execBlock`/`traverseLauf` shapes -/
+
+/-- The `execBlock` sequencing shape over fault-carrying steps: `nil` answers
+    `ok`, `cons` continues through `AusF.folge` -- a faulted head faults the
+    block, a non-`ok` exit stops it, exactly as `execBlock`'s `| o => o` arm. -/
+def blockF : List (World D → Env D Γ → AusF V l Γ) → World D → Env D Γ → AusF V l Γ
+  | [], σ, ρ => .weiter (.ok σ ρ)
+  | s :: ss, σ, ρ => (s σ ρ).folge (fun σ' ρ' => blockF ss σ' ρ')
+
+/-- The empty block answers `ok` -- the `execBlock.nil` shape. -/
+theorem blockF_nil (σ : World D) (ρ : Env D Γ) :
+    blockF ([] : List (World D → Env D Γ → AusF V l Γ)) σ ρ = .weiter (.ok σ ρ) :=
+  rfl
+
+/-- A faulted head faults the block -- the rest does not run. -/
+theorem blockF_cons_fehler (s : World D → Env D Γ → AusF V l Γ)
+    (ss : List (World D → Env D Γ → AusF V l Γ)) (σ : World D) (ρ : Env D Γ)
+    (k : Fehlerklasse) (h : s σ ρ = (AusF.fehler k : AusF V l Γ)) :
+    blockF (s :: ss) σ ρ = (AusF.fehler k : AusF V l Γ) := by
+  simp only [blockF, h, AusF.folge_fehler]
+
+/-- An `ok` head hands world and scope to the rest -- the `execBlock` step. -/
+theorem blockF_cons_ok (s : World D → Env D Γ → AusF V l Γ)
+    (ss : List (World D → Env D Γ → AusF V l Γ)) (σ σ' : World D) (ρ ρ' : Env D Γ)
+    (h : s σ ρ = (AusF.weiter (.ok σ' ρ') : AusF V l Γ)) :
+    blockF (s :: ss) σ ρ = blockF ss σ' ρ' := by
+  simp only [blockF, h, AusF.folge_ok]
+
+/-- Any other head unfolds to its `folge` -- in particular every non-`ok` exit
+    stops the block, as `execBlock`'s `| o => o` arm. -/
+theorem blockF_cons_weiter (s : World D → Env D Γ → AusF V l Γ)
+    (ss : List (World D → Env D Γ → AusF V l Γ)) (σ : World D) (ρ : Env D Γ)
+    (o : Ausgang V l Γ) (h : s σ ρ = (AusF.weiter o : AusF V l Γ)) :
+    blockF (s :: ss) σ ρ = (AusF.weiter o).folge (fun σ' ρ' => blockF ss σ' ρ') := by
+  simp only [blockF, h]
+
+/-- A faulted head is named -- the sequencing-to-safety link for blocks. -/
+theorem blockF_cons_fehler_benannt (s : World D → Env D Γ → AusF V l Γ)
+    (ss : List (World D → Env D Γ → AusF V l Γ)) (σ : World D) (ρ : Env D Γ)
+    (k : Fehlerklasse) (h : s σ ρ = (AusF.fehler k : AusF V l Γ)) :
+    IstBenannt (blockF (s :: ss) σ ρ) := by
+  rw [blockF_cons_fehler s ss σ ρ k h]
+  trivial
+
+/-- The `traverseLauf` shape with a fault arm: the step answers in `AusF`, so a
+    faulted element faults the run; every `Ausgang` arm continues exactly as
+    `traverseLauf` does (`ok`/`next` recurse, `leave` checks the invariant,
+    everything else stops). -/
+def traverseAusF (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool) :
+    List (Wert D τ) → World D → Env D Γ → AusF V l Γ
+  | [], σ, ρ =>
+      if (inv σ ρ).2 = true then .weiter (.ok (inv σ ρ).1 ρ)
+      else .weiter (.logik .schleife)
+  | k :: ks, σ, ρ =>
+      if (inv σ ρ).2 = false then .weiter (.logik .schleife)
+      else match schrittF (inv σ ρ).1 (.cons k ρ) with
+        | .fehler e => .fehler e
+        | .weiter (.ok σ' ρ') => traverseAusF schrittF inv ks σ' ρ'.tail
+        | .weiter (.next _ σ' ρ') => traverseAusF schrittF inv ks σ' ρ'.tail
+        | .weiter (.leave _ σ' ρ') =>
+            if (inv σ' ρ'.tail).2 = true then .weiter (.ok (inv σ' ρ'.tail).1 ρ'.tail)
+            else .weiter (.logik .schleife)
+        | .weiter (.zurueck σ' v) => .weiter (.zurueck σ' v)
+        | .weiter (.grund σ' r) => .weiter (.grund σ' r)
+        | .weiter (.logik e) => .weiter (.logik e)
+        | .weiter (.hardware e) => .weiter (.hardware e)
+
+/-- A faulted element faults the run -- at a held invariant boundary. -/
+theorem traverseAusF_kopf_fehler
+    (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (k : Wert D τ) (ks : List (Wert D τ)) (σ : World D) (ρ : Env D Γ)
+    (e : Fehlerklasse)
+    (hinv : (inv σ ρ).2 = true)
+    (h : schrittF (inv σ ρ).1 (.cons k ρ) = (AusF.fehler e : AusF V true (τ :: Γ))) :
+    traverseAusF schrittF inv (k :: ks) σ ρ = (AusF.fehler e : AusF V l Γ) := by
+  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  simp only [traverseAusF, if_neg hneg, h]
+
+/-- An `ok` element hands world and scope to the rest of the run. -/
+theorem traverseAusF_kopf_ok
+    (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (k : Wert D τ) (ks : List (Wert D τ)) (σ σ' : World D) (ρ : Env D Γ)
+    (ρ' : Env D (τ :: Γ))
+    (hinv : (inv σ ρ).2 = true)
+    (h : schrittF (inv σ ρ).1 (.cons k ρ) =
+      (AusF.weiter (.ok σ' ρ') : AusF V true (τ :: Γ))) :
+    (traverseAusF schrittF inv (k :: ks) σ ρ : AusF V l Γ) =
+      traverseAusF schrittF inv ks σ' ρ'.tail := by
+  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  simp only [traverseAusF, if_neg hneg, h]
+
+/-- A `next` element ends its pass and hands world and scope to the rest. -/
+theorem traverseAusF_kopf_next
+    (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (k : Wert D τ) (ks : List (Wert D τ)) (σ σ' : World D) (ρ : Env D Γ)
+    (ρ' : Env D (τ :: Γ))
+    (hinv : (inv σ ρ).2 = true)
+    (h : schrittF (inv σ ρ).1 (.cons k ρ) =
+      (AusF.weiter (.next rfl σ' ρ') : AusF V true (τ :: Γ))) :
+    (traverseAusF schrittF inv (k :: ks) σ ρ : AusF V l Γ) =
+      traverseAusF schrittF inv ks σ' ρ'.tail := by
+  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  simp only [traverseAusF, if_neg hneg, h]
+
+/-- A faulted rest faults the run -- past a fault-free head. -/
+theorem traverseAusF_ok_rest_fehler
+    (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (k : Wert D τ) (ks : List (Wert D τ)) (σ σ' : World D) (ρ : Env D Γ)
+    (ρ' : Env D (τ :: Γ)) (e : Fehlerklasse)
+    (hinv : (inv σ ρ).2 = true)
+    (h : schrittF (inv σ ρ).1 (.cons k ρ) =
+      (AusF.weiter (.ok σ' ρ') : AusF V true (τ :: Γ)))
+    (hr : traverseAusF schrittF inv ks σ' ρ'.tail = (AusF.fehler e : AusF V l Γ)) :
+    traverseAusF schrittF inv (k :: ks) σ ρ = (AusF.fehler e : AusF V l Γ) := by
+  rw [traverseAusF_kopf_ok schrittF inv k ks σ σ' ρ ρ' hinv h, hr]
+
+/-- Agreement end to end: a fault-free pass IS the `traverseLauf` pass -- the
+    `traverseLauf` skeleton with the fault arm never taken (control, carried by
+    `weiter`, not by the fault channel). -/
+theorem traverseAusF_stimmt
+    (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
+    (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (xs : List (Wert D τ)) (σ : World D) (ρ : Env D Γ)
+    (h : ∀ σ ρ, ∃ o, schrittF σ ρ = AusF.weiter o ∧ schritt σ ρ = o) :
+    (traverseAusF schrittF inv xs σ ρ : AusF V l Γ) =
+      AusF.vonAusgang (traverseLauf schritt inv xs σ ρ) := by
+  induction xs generalizing σ ρ with
+  | nil =>
+      by_cases hg : (inv σ ρ).2 = true
+      · simp only [traverseAusF, traverseLauf, AusF.vonAusgang, if_pos hg]
+      · simp only [traverseAusF, traverseLauf, AusF.vonAusgang, if_neg hg]
+  | cons k ks ih =>
+      by_cases hg : (inv σ ρ).2 = false
+      · simp only [traverseAusF, traverseLauf, AusF.vonAusgang, if_pos hg]
+      · obtain ⟨o, ho1, ho2⟩ := h (inv σ ρ).1 (.cons k ρ)
+        simp only [traverseAusF, traverseLauf, AusF.vonAusgang, if_neg hg, ho1, ho2]
+        cases o with
+        | ok σ' ρ' => exact ih _ _
+        | zurueck σ' v => rfl
+        | grund σ' r => rfl
+        | leave h' σ' ρ' =>
+            by_cases hi : (inv σ' ρ'.tail).2 = true
+            · simp only [if_pos hi]
+            · simp only [if_neg hi]
+        | next h' σ' ρ' => exact ih _ _
+        | logik e => rfl
+        | hardware e => rfl
+
+/-- The `foreverLauf` shape with a fault arm: fuel bounds the run, a faulted
+    pass faults it; every `Ausgang` arm continues exactly as `foreverLauf`
+    does (`ok`/`next` recurse, `leave` answers `ok`, everything else stops). -/
+def foreverAusF (a : D.Annahme) (schrittF : World D → Env D Γ → AusF V true Γ)
+    (inv : World D → Env D Γ → World D × Bool) :
+    Nat → World D → Env D Γ → AusF V l Γ
+  | 0, _, _ => .weiter (.hardware (.fortschritt a))
+  | n + 1, σ, ρ =>
+      if (inv σ ρ).2 = false then .weiter (.logik .schleife)
+      else match schrittF (inv σ ρ).1 ρ with
+        | .fehler e => .fehler e
+        | .weiter (.ok σ' ρ') => foreverAusF a schrittF inv n σ' ρ'
+        | .weiter (.next _ σ' ρ') => foreverAusF a schrittF inv n σ' ρ'
+        | .weiter (.leave _ σ' ρ') => .weiter (.ok σ' ρ')
+        | .weiter (.zurueck σ' v) => .weiter (.zurueck σ' v)
+        | .weiter (.grund σ' r) => .weiter (.grund σ' r)
+        | .weiter (.logik e) => .weiter (.logik e)
+        | .weiter (.hardware e) => .weiter (.hardware e)
+
+/-- A faulted pass faults the fuel-bounded run -- in every pass. -/
+theorem foreverAusF_kopf_fehler (a : D.Annahme)
+    (schrittF : World D → Env D Γ → AusF V true Γ)
+    (inv : World D → Env D Γ → World D × Bool)
+    (n : Nat) (σ : World D) (ρ : Env D Γ) (e : Fehlerklasse)
+    (hinv : (inv σ ρ).2 = true)
+    (h : schrittF (inv σ ρ).1 ρ = (AusF.fehler e : AusF V true Γ)) :
+    foreverAusF a schrittF inv (n + 1) σ ρ = (AusF.fehler e : AusF V l Γ) := by
+  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  simp only [foreverAusF, if_neg hneg, h]
+
+/-- A fault-free `ok` pass hands world and scope to the remaining fuel. -/
+theorem foreverAusF_kopf_ok (a : D.Annahme)
+    (schrittF : World D → Env D Γ → AusF V true Γ)
+    (inv : World D → Env D Γ → World D × Bool)
+    (n : Nat) (σ σ' : World D) (ρ ρ' : Env D Γ)
+    (hinv : (inv σ ρ).2 = true)
+    (h : schrittF (inv σ ρ).1 ρ = (AusF.weiter (.ok σ' ρ') : AusF V true Γ)) :
+    (foreverAusF a schrittF inv (n + 1) σ ρ : AusF V l Γ) =
+      foreverAusF a schrittF inv n σ' ρ' := by
+  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  simp only [foreverAusF, if_neg hneg, h]
+
 #print axioms Gabbro.Grammatik.evalF
 #print axioms Gabbro.Grammatik.evalF_ok
 #print axioms Gabbro.Grammatik.evalF_stimmt
@@ -766,5 +996,20 @@ theorem endZustandF_next (h : l = true) (σ : World D) (ρ : Env D Γ) :
 #print axioms Gabbro.Grammatik.endZustandF_grund
 #print axioms Gabbro.Grammatik.endZustandF_leave
 #print axioms Gabbro.Grammatik.endZustandF_next
+#print axioms Gabbro.Grammatik.blockF
+#print axioms Gabbro.Grammatik.blockF_nil
+#print axioms Gabbro.Grammatik.blockF_cons_fehler
+#print axioms Gabbro.Grammatik.blockF_cons_ok
+#print axioms Gabbro.Grammatik.blockF_cons_weiter
+#print axioms Gabbro.Grammatik.blockF_cons_fehler_benannt
+#print axioms Gabbro.Grammatik.traverseAusF
+#print axioms Gabbro.Grammatik.traverseAusF_kopf_fehler
+#print axioms Gabbro.Grammatik.traverseAusF_kopf_ok
+#print axioms Gabbro.Grammatik.traverseAusF_kopf_next
+#print axioms Gabbro.Grammatik.traverseAusF_ok_rest_fehler
+#print axioms Gabbro.Grammatik.traverseAusF_stimmt
+#print axioms Gabbro.Grammatik.foreverAusF
+#print axioms Gabbro.Grammatik.foreverAusF_kopf_fehler
+#print axioms Gabbro.Grammatik.foreverAusF_kopf_ok
 
 end Gabbro.Grammatik
