@@ -665,7 +665,7 @@ not fall.
 | `advances a -> b` | the body's Λ starts with `marke m a` and the `advances` statement moves it (§7) | `Stmt.advances`, `Res.marke` |
 | `retires m from s …` | the body consumes `m`; the assumption is named | `Stmt.retires m s h a` |
 | `effects { writes T, consumes m, allocs m' }` | the contract `V` of the body | `Vertrag`, `RufPasst`, `Λ` |
-| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | `Budget.lean` `runOps_within` / `per_pass_respected` (no axioms); the deadline mapping is `Ziel.lean` `fristAlsAnnahme` (a definition — the existence theorem over it was withdrawn 2026-09-10 as vacuous) |
+| `costs <= n ops` | a **budget in the logic**: statically computed ops held against the declaration — §18 («SG-22») | `Budget.lean` `runOps_within` / `per_pass_respected` (no axioms); `held <=` and `bounded` are the same budget under the lock and loop names (`held_respected`, `bounded_respected` — defs only, no theorems); the deadline mapping is `Ziel.lean` `fristAlsAnnahme` (a definition — the existence theorem over it was withdrawn 2026-09-10 as vacuous) |
 | `deadline <= n ops arch X falsifier p` | **by when in cycles on `X`** — a hardware outcome, not a second budget | `Hardware.fortschritt a` (the named `progress`-class assumption with its probe); §18 («SG-22») |
 | `decreases e` | the recursion depth is a parameter of the meaning | `rufAt (fuel)` → `logik (abstieg f)` |
 | `by induction over d` | names the scheme; no term | none |
