@@ -1,0 +1,7 @@
+== derivation certificate (CUT-3 remainder, p29 witness) ==
+term: (.some (.lit 0) 1)
+claimed option bound: 1
+side conditions:
+  - lit 0: exact (0, 0) -- HOLDS
+  - some @ 1: index (0, 0) must be 0 .. n - 1 = 0 .. 0 -- HOLDS
+elaborates: cut3_sound (.some (.lit 0) 1) () (by decide)

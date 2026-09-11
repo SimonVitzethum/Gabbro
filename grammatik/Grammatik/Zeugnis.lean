@@ -1503,6 +1503,18 @@ example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
 example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
   cut3_sound (.existsSlots ()) Expr.wahr (by decide)
 
+/-- FORGED payload: `some 1` at bound `1` claims the index shape `0 .. 0`,
+    but the payload recomputes `(1, 1)` -- provably not valid. -/
+example : ¬ certCut3Ok TestD [] [] (.some (.lit 1) 1) := by decide
+
+/-- FORGED ground: case `2` of `2` reasons is out of range (`r < n` fails). -/
+example : ¬ certCut3Ok TestD [] [] (.grund 2 2) := by decide
+
+/-- FORGED `reaches`: both endpoint indices recompute `(0, 10)`, but the
+    field carries `.int 0 10`, not an option into self -- no certificate. -/
+example : ¬ certCut3Ok TestD [] []
+    (.reaches () () (.wide 0 10 (.lit 3)) (.wide 0 10 (.lit 4))) := by decide
+
 /-! ## CUT-4 remainder soundness: `durch`, `ptrOf`, `fnref`
 
     Proved as `cut4_sound` below. `ptrOf`/`fnref` elaborate directly from
@@ -1555,6 +1567,19 @@ example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
 example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
   cut4_sound (.durch () () 0 (.wide 0 10 (.lit 3)))
     ⟨true, Expr.ptrOf () 0 rfl true⟩ (by decide)
+
+/-- FORGED signature: the nullary function claimed at signature `1` -- the
+    signature equation fails, so the print is provably not valid. -/
+example : ¬ certCut4Ok TestD [] [] (.fnref false 1) := by decide
+
+/-- FORGED index: a bare `3` is not of index type `0 .. 10` -- without the
+    widening the `durch` has no validity. -/
+example : ¬ certCut4Ok TestD [] [Res.held ()]
+    (.durch () () 0 (.lit 3)) := by decide
+
+/-- FORGED guard: the widened index is right, but the hands are empty. -/
+example : ¬ certCut4Ok TestD [] []
+    (.durch () () 0 (.wide 0 10 (.lit 3))) := by decide
 
 /-! ## CUT-5 remainder soundness: calls WITH arguments, carrying `RufPasst`
 
@@ -1642,6 +1667,16 @@ example : ∃ _ : Block TestD TestV false [] [] [], True :=
     count shape fails -- the certificate is honestly rejected. -/
 example : ¬ certBlock5Ok TestD TestV [] [] []
     (.callArgs true 0 TestHp1 .nil) := by decide
+
+/-- An indirect call WITH a param is no nullary indirect call: same count
+    shape failure through signature `1`. -/
+example : ¬ certBlock5Ok TestD TestV [] [] []
+    (.callInd 1 0 TestHp1 .nil) := by decide
+
+/-- A binding call with a result is no nullary call: the callee returns
+    nothing, so the result shape fails -- honestly rejected. -/
+example : ¬ certBlock5Ok TestD TestV [] [] []
+    (.bindCall false 0 (.int 1 1) TestHp .nil) := by decide
 
 #print axioms cut3_sound
 #print axioms cut4_sound
