@@ -75,25 +75,40 @@
         `allgemeinStabil`): dass der Pruefer die gehaltenen Mengen je Schreibstelle
         nachweist, steht nirgends -- der Pruefer kennt keine Haltemengenanalyse
         (`NEBENLAEUFIGKEIT-ENTWURF.md` §6, Punkt 1).
-  (G4) Sperrgeteilte Traeger sind EINGESCHLOSSEN (rechte Seite von `hFremd`, Deckung als
-       `GeteiltGedeckt` getragen). `atomic`-Globale (A10, die Maschine ordnet) und
-       `publishes`/`awaits`-Paare (die Paarung ordnet) sind NICHT modelliert: wer sie
-       will, traegt je eine eigene Ausnahme neben `GeteiltGedeckt` ein.
+(G4) Sperrgeteilte Traeger sind EINGESCHLOSSEN (rechte Seite von `hFremd`, Deckung als
+     `GeteiltGedeckt` getragen). `atomic`-Globale (A10, die Maschine ordnet) und
+     `publishes`/`awaits`-Paare (die Paarung ordnet) stehen als Ausnahmen NEBEN
+     `GeteiltGedeckt` (`AtomarAusgenommen`, `PaarungAusgenommen`,
+     `GeteiltGedecktMitAusnahmen`, §13): befreite Traeger brauchen kein
+     Sperrargument (`atomarAusgenommen_entlaedt`, `paarungAusgenommen_entlaedt`,
+     `geteiltGedecktMitAusnahmen_von_Ausnahmen`, §15). Was BLEIBT, ist die
+     Einloesung je Schreibstelle im Pruefer (G3) -- die Ausnahme entlaedt den
+     Traeger, nicht den Nachweis, dass sie greift.
    (G5) `Gesittet` wird getragen, nicht verbraucht (wie S2): HB-Ordnung aus `kein_wettlauf`
         ist unverbunden mit Stabilitaet -- geordnete Schreibzugriffe bleiben
         Schreibzugriffe. `hSchuld` wird ABGELEITET, nicht getragen (`schuldnerHaelt_gilt`:
         U003 gilt je Rumpf, ohne Laufpraemisse); `hDeck` wird weiter getragen: es
         beurkundet die Disziplin, unter der die geteilte Restseite von `hFremd` steht;
         `hInv` wird im invarianten Satz verbraucht (`invErhalt_aus_Kontext`).
-   (G6) Der Eintritt je Faden ist eine eigene Welt (`eintritt`), kein Gabelmodell: wie
-        Faeden starten und enden, steht nirgends. Darum gilt die sequenzielle Gueltigkeit
-        (`hInit`) am Kettenkopf, nicht am Eintritt -- `hEintritt` wird getragen, aber
-        `hInvSicht` folgt daraus (`invSichtHaelt_aus_Eintritt`: die Gestalt von
-        `heldIn_invarianten` ueber der beidseitigen Sperrmenge).
-  (G7) `Q` spricht nur ueber die Welt, nicht ueber Belegungen (`Env`): wie in (S6) teilt
-       kein Faden lokale Bindungen. Und `hEigen` wird angenommen, nicht aus der
-       sequenziellen Ausfuehrung abgeleitet: eigene Schritte erhalten `Q`, statt es
-       erst herzustellen.
+ (G6) Der Eintritt je Faden ist eine eigene Welt (`eintritt`), kein Gabelmodell: wie
+     Faeden starten und enden, steht nirgends. Erzeugung und Vereinigung stehen als
+     Eintraege daneben (`SpawnEintrag`/`JoinEintrag`: die Kindwelt ist die Kettenwelt
+     an der eingetragenen Stelle, §12, eingelöst in §16
+     `kindEintrittAusSpawn_belegt/mem`, `kindEintrittAusJoin_belegt/mem`,
+     `kindEintrittAusGabel_belegt_aus_find/mem`). Was BLEIBT: kein
+     Ausfuehrungsmodell der Gabel -- die Eintraege nennen die Stelle, sie erzeugen
+     sie nicht. Darum gilt die sequenzielle Gueltigkeit (`hInit`) weiter am
+     Kettenkopf, nicht am Eintritt -- `hEintritt` wird getragen, aber `hInvSicht`
+     folgt daraus (`invSichtHaelt_aus_Eintritt`: die Gestalt von
+     `heldIn_invarianten` ueber der beidseitigen Sperrmenge).
+(G7) `Q` des Hauptsatzes spricht nur ueber die Welt; Belegungen stehen als Gestalt
+     daneben (`EnvZusicherung`, `FadenEnvZusicherung`, `EnvErhalt`, §14, eingelöst
+     in §17: Kette `kette_erhaelt_env`, `fadenEnv_kette_erhaelt`,
+     `fadenEnv_letzte_erhaelt`, Hebung `envErhalt_aus_weltErhalt`, Schrittgleichheit
+     `envErhalt_refl/symm/trans`): die eigene Belegung bleibt je Schritt fest, kein
+     Faden teilt sie. Was BLEIBT (wie in S6): `hEigen` wird angenommen, nicht aus
+     der sequenziellen Ausfuehrung abgeleitet -- eigene Schritte erhalten `Q`,
+     statt es erst herzustellen.
 -/
 import Grammatik.Interferenz
 
@@ -525,5 +540,209 @@ def FadenEnvZusicherung (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) :
 def EnvErhalt (Γ : Ctx) (Q : EnvZusicherung (D := D) Γ)
     (vor nach : World D) (ρ : Env D Γ) : Prop :=
   Q vor ρ ↔ Q nach ρ
+
+/-! ## 15. G4-Einloesung: befreite Traeger brauchen kein Sperrargument -/
+
+/-- **Deckung mit Ausnahmen aus Deckung ohne.** Wer die gemeinsame Sperre je
+    doppelt geschriebenem Traeger nachweist, erfuellt erst recht die Deckung mit
+    Ausnahmen -- die linke Seite der Disjunktion genuegt. -/
+theorem geteiltGedecktMitAusnahmen_aus_gedeckt (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (hD : GeteiltGedeckt Nb J) : GeteiltGedecktMitAusnahmen Nb J := by
+  intro f hf g hg hne c hfc hgc
+  obtain ⟨hT, hS⟩ := hD f hf g hg hne c hfc hgc
+  exact ⟨hT, Or.inl hS⟩
+
+/-- **Atomar entlaedt.** Ein `atomic`-Global braucht kein Sperrargument und keine
+    Paarung: die mittlere Seite der Disjunktion steht von vornherein, gleichgueltig
+    was links (`S`) und rechts (`P`) stuende. -/
+theorem atomarAusgenommen_entlaedt (c : D.Tab ⊕ D.Glob)
+    (hT : Geteilt c = true) (hA : AtomarAusgenommen (D := D) c)
+    (S P : Prop) :
+    Geteilt c = true ∧ (S ∨ AtomarAusgenommen (D := D) c ∨ P) :=
+  ⟨hT, Or.inr (Or.inl hA)⟩
+
+/-- **Paarung entlaedt.** Nutzlast einer Veroeffentlichung braucht kein
+    Sperrargument und keine Atomarseite: die rechte Seite der Disjunktion steht von
+    vornherein, gleichgueltig was links (`S`, `A`) stuende. -/
+theorem paarungAusgenommen_entlaedt (c : D.Tab ⊕ D.Glob)
+    (hT : Geteilt c = true) (hP : PaarungAusgenommen (D := D) c)
+    (S A : Prop) :
+    Geteilt c = true ∧ (S ∨ A ∨ PaarungAusgenommen (D := D) c) :=
+  ⟨hT, Or.inr (Or.inr hP)⟩
+
+/-- **Deckung aus lauter Ausnahmen.** Ist jeder doppelt geschriebene Traeger geteilt
+    und ausgenommen (atomar oder Paarung), so gilt die Deckung mit Ausnahmen ganz
+    ohne Sperrargument -- die rechte Seite der Disjunktion traegt jeden Fall. -/
+theorem geteiltGedecktMitAusnahmen_von_Ausnahmen (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (h : ∀ (f : Faden), f ∈ J.faeden → ∀ (g : Faden), g ∈ J.faeden → f ≠ g →
+      ∀ (c : D.Tab ⊕ D.Glob),
+        TraegerSchreibt (J.code f) c = true → TraegerSchreibt (J.code g) c = true →
+          Geteilt c = true ∧
+            (AtomarAusgenommen (D := D) c ∨ PaarungAusgenommen (D := D) c)) :
+    GeteiltGedecktMitAusnahmen Nb J := by
+  intro f hf g hg hne c hfc hgc
+  obtain ⟨hT, hA⟩ := h f hf g hg hne c hfc hgc
+  exact ⟨hT, Or.inr hA⟩
+
+/-! ## 16. G6-Einloesung: die Kindwelt kommt aus der eingetragenen Stelle -/
+
+/-- **Erzeugung nennt eine Welt.** Steht die eingetragene Stelle noch in der Kette,
+    so nennt der Erzeugungseintrag eine Eintrittswelt -- keine eigene Welt, die
+    Kettenwelt an eben dieser Stelle. -/
+theorem kindEintrittAusSpawn_belegt (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (eltern kind : Faden) (k : Nat) (hk : k < J.welten.length) :
+    ∃ σ, KindEintrittAusSpawn Nb J (eltern, kind, k) = some σ := by
+  unfold KindEintrittAusSpawn
+  show ∃ σ, J.welten[k]? = some σ
+  exact kette_welt_belegt J.welten k hk
+
+/-- **Vereinigung nennt eine Welt.** Dasselbe an der Rueckkehrstelle: die
+    Rueckkehrwelt ist die Kettenwelt an der eingetragenen Stelle. -/
+theorem kindEintrittAusJoin_belegt (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (eltern kind : Faden) (k : Nat) (hk : k < J.welten.length) :
+    ∃ σ, KindEintrittAusJoin Nb J (eltern, kind, k) = some σ := by
+  unfold KindEintrittAusJoin
+  show ∃ σ, J.welten[k]? = some σ
+  exact kette_welt_belegt J.welten k hk
+
+/-- **Was die Erzeugung nennt, liegt in der Kette.** Jede genannte Eintrittswelt ist
+    eine Kettenwelt. -/
+theorem kindEintrittAusSpawn_mem (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (s : SpawnEintrag) (σ : World D)
+    (h : KindEintrittAusSpawn Nb J s = some σ) : σ ∈ J.welten := by
+  unfold KindEintrittAusSpawn at h
+  exact List.mem_of_getElem? h
+
+/-- **Was die Vereinigung nennt, liegt in der Kette.** Dasselbe an der
+    Rueckkehrstelle. -/
+theorem kindEintrittAusJoin_mem (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (j : JoinEintrag) (σ : World D)
+    (h : KindEintrittAusJoin Nb J j = some σ) : σ ∈ J.welten := by
+  unfold KindEintrittAusJoin at h
+  exact List.mem_of_getElem? h
+
+/-- **Die Gabel nennt eine Welt, wo der Eintrag eine nennt.** Findet die
+    Erzeugungsliste das Kind an gueltiger Stelle, so nennt die Liste seine
+    Eintrittswelt. -/
+theorem kindEintrittAusGabel_belegt_aus_find (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (spawns : List SpawnEintrag) (kind : Faden) (s : SpawnEintrag)
+    (hfind : spawns.find? (fun s => decide (s.2.1 = kind)) = some s)
+    (hk : s.2.2 < J.welten.length) :
+    ∃ σ, KindEintrittAusGabel Nb J spawns kind = some σ := by
+  unfold KindEintrittAusGabel
+  rw [hfind]
+  exact kette_welt_belegt J.welten s.2.2 hk
+
+/-- **Was die Gabel nennt, liegt in der Kette.** Jede genannte Kindwelt -- ueber
+    welchen Eintrag auch immer -- ist eine Kettenwelt. -/
+theorem kindEintrittAusGabel_mem (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (spawns : List SpawnEintrag) (kind : Faden) (σ : World D)
+    (h : KindEintrittAusGabel Nb J spawns kind = some σ) : σ ∈ J.welten := by
+  unfold KindEintrittAusGabel at h
+  cases heq : spawns.find? (fun s => decide (s.2.1 = kind)) with
+  | none => simp [heq] at h
+  | some s => simp only [heq] at h; exact List.mem_of_getElem? h
+
+/-! ## 17. G7-Einloesung: die eigene Belegung bleibt je Schritt fest -/
+
+/-- **Gleichheit je Schritt, reflexiv.** Wo die Welt steht, steht sie -- die eigene
+    Belegung stellt keine Frage. -/
+theorem envErhalt_refl (Γ : Ctx) (Q : EnvZusicherung (D := D) Γ)
+    (σ : World D) (ρ : Env D Γ) : EnvErhalt Γ Q σ σ ρ := by
+  rfl
+
+/-- **Gleichheit je Schritt, symmetrisch.** -/
+theorem envErhalt_symm (Γ : Ctx) (Q : EnvZusicherung (D := D) Γ)
+    {vor nach : World D} {ρ : Env D Γ}
+    (h : EnvErhalt Γ Q vor nach ρ) : EnvErhalt Γ Q nach vor ρ :=
+  Iff.symm h
+
+/-- **Gleichheit je Schritt, transitiv.** -/
+theorem envErhalt_trans (Γ : Ctx) (Q : EnvZusicherung (D := D) Γ)
+    {a b c : World D} {ρ : Env D Γ}
+    (h1 : EnvErhalt Γ Q a b ρ) (h2 : EnvErhalt Γ Q b c ρ) :
+    EnvErhalt Γ Q a c ρ :=
+  Iff.trans h1 h2
+
+/-- **Die Kette mit Umgebung.** Was am Kopf fuer die eigene Belegung gilt und jeden
+    Schritt bei fester Belegung ueberlebt, gilt an jeder Stelle -- `kette_erhaelt`
+    mit der Belegung als stummer Zeugin. -/
+theorem kette_erhaelt_env (welten : List (World D)) (schrittFaden : List Faden)
+    (hKette : welten.length = schrittFaden.length + 1)
+    (Γ : Ctx) (Q : EnvZusicherung (D := D) Γ) (ρ : Env D Γ)
+    (hInit : ∀ σ₀ : World D, welten[0]? = some σ₀ → Q σ₀ ρ)
+    (hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      schrittFaden[k]? = some g → welten[k]? = some vor →
+        welten[k + 1]? = some nach → EnvErhalt Γ Q vor nach ρ) :
+    ∀ (k : Nat) (σ : World D), welten[k]? = some σ → Q σ ρ := by
+  exact kette_erhaelt welten schrittFaden hKette (fun σ => Q σ ρ) hInit hStep
+
+/-- **Hebung aus der Welt.** Wo die Zusicherung mit Umgebung nur die Welt liest,
+    traegt der Welterhalt den Umgebungserhalt -- die Gestalt, die `hFremd` und
+    `hEigen` je Belegung annehmen, ohne je die Belegung anzufassen. -/
+theorem envErhalt_aus_weltErhalt (Γ : Ctx) (P : World D → Prop)
+    (Q : EnvZusicherung (D := D) Γ)
+    (hQ : ∀ (σ : World D) (ρ : Env D Γ), Q σ ρ ↔ P σ)
+    {vor nach : World D} (hP : P vor ↔ P nach) (ρ : Env D Γ) :
+    EnvErhalt Γ Q vor nach ρ := by
+  unfold EnvErhalt
+  rw [hQ vor ρ, hQ nach ρ]
+  exact hP
+
+/-- **Die Fadenskette mit Umgebung.** Je Faden und eigener Belegung ueber seinen
+    Parametern: Kopf plus schrittweiser Erhalt bei fester Belegung falten zur
+    Kette -- die Form, die `allgemeinStabil` je Belegung annimmt. -/
+theorem fadenEnv_kette_erhaelt (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (Q : FadenEnvZusicherung Nb J) (f : Faden) (ρ : Env D (D.params (J.code f)))
+    (hInit : ∀ σ₀ : World D, J.welten[0]? = some σ₀ → Q f σ₀ ρ)
+    (hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (Q f vor ρ ↔ Q f nach ρ)) :
+    ∀ (k : Nat) (σ : World D), J.welten[k]? = some σ → Q f σ ρ :=
+  kette_erhaelt J.welten J.schrittFaden J.hKette (fun σ => Q f σ ρ) hInit hStep
+
+/-- **Die letzte Welt mit Umgebung.** Kopf plus schrittweiser Erhalt bei fester
+    Belegung gelten an der letzten Welt der Kette -- der Schluss von
+    `allgemeinStabil`, je Belegung. -/
+theorem fadenEnv_letzte_erhaelt (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (Q : FadenEnvZusicherung Nb J) (f : Faden) (ρ : Env D (D.params (J.code f)))
+    (hInit : ∀ σ₀ : World D, J.welten[0]? = some σ₀ → Q f σ₀ ρ)
+    (hStep : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        (Q f vor ρ ↔ Q f nach ρ))
+    (σ : World D) (hletzte : J.welten.getLast? = some σ) : Q f σ ρ := by
+  have hall := fadenEnv_kette_erhaelt Nb J Q f ρ hInit hStep
+  have hlast : J.welten[J.welten.length - 1]? = some σ := by
+    rw [← List.getLast?_eq_getElem?]
+    exact hletzte
+  exact hall _ σ hlast
+
+#print axioms Gabbro.Grammatik.geteiltGedecktMitAusnahmen_aus_gedeckt
+#print axioms Gabbro.Grammatik.atomarAusgenommen_entlaedt
+#print axioms Gabbro.Grammatik.paarungAusgenommen_entlaedt
+#print axioms Gabbro.Grammatik.geteiltGedecktMitAusnahmen_von_Ausnahmen
+#print axioms Gabbro.Grammatik.kindEintrittAusSpawn_belegt
+#print axioms Gabbro.Grammatik.kindEintrittAusJoin_belegt
+#print axioms Gabbro.Grammatik.kindEintrittAusSpawn_mem
+#print axioms Gabbro.Grammatik.kindEintrittAusJoin_mem
+#print axioms Gabbro.Grammatik.kindEintrittAusGabel_belegt_aus_find
+#print axioms Gabbro.Grammatik.kindEintrittAusGabel_mem
+#print axioms Gabbro.Grammatik.envErhalt_refl
+#print axioms Gabbro.Grammatik.envErhalt_symm
+#print axioms Gabbro.Grammatik.envErhalt_trans
+#print axioms Gabbro.Grammatik.kette_erhaelt_env
+#print axioms Gabbro.Grammatik.envErhalt_aus_weltErhalt
+#print axioms Gabbro.Grammatik.fadenEnv_kette_erhaelt
+#print axioms Gabbro.Grammatik.fadenEnv_letzte_erhaelt
 
 end Gabbro.Grammatik
