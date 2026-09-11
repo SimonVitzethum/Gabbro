@@ -2651,4 +2651,497 @@ example : progAus miniP (fun _ => true) miniTabs miniGlobs 0 = [] := rfl
 #print axioms Gabbro.Grammatik.Extraktion.stmtAtome_traeger_deckt
 #print axioms Gabbro.Grammatik.Extraktion.progTreue_aus_progAus
 
+/-! ## 17. The execution link: fired leaf events against extracted atoms
+
+    (Tasked as §15; §§15-16 are already taken and the file ends with a second
+    §14 -- the `prog` extraction -- so this section is §17: numbers stay
+    unique, content stays appended, nothing existing moves.)
+
+    What the English §14 (`prog` extraction) books as its remainder: discharging
+    a fired step's `hmark`/`hcar` against the extracted atom needs the per-leaf
+    `execStmt` event characterization. This section proves it and discharges
+    the checks.
+
+    * `mem_leseEr` is the read-event shape (one `World.lese`): statement `Λ`
+      exactly, carriers inside the read list.
+    * `rep_append_single`/`schreibBytes_spur_eq` are the byte-write shape:
+      `World.schreibBytes` emits one `zugriff` per byte; lock state is untouched
+      by `zugriff`, so every event shares the entry `haelt`.
+    * `uebergang_ereignis_aus_blatt` is the `uebergang` branch case, split off:
+      `split` with bullets inside `cases ... with` breaks the outer
+      alternatives (measured: every later alternative reports "not provided"),
+      so it lives here as its own lemma.
+    * `execEreignis_aus_blatt_ohne_axiomCall` is the characterization per leaf:
+      a fired non-oracle leaf step's every new event carries exactly the
+      statement's `Λ`, and every carrier it touches sits in the written
+      carrier plus the `stmtOrte` read hull.
+    * `hmark_hcar_aus_progAus_ohne_axiomCall` discharges the `PCSchritt`
+      footprint checks (`hmark`/`hcar`) against `progAus` atoms: a fired
+      non-oracle leaf whose counter points at its extracted atom names only
+      that atom's marks and touches only its carriers -- hence the thread's
+      program text (`pcAtom_mem_marks`/`pcAtom_mem_carriers`).
+
+    Remainder (booked, not hidden; continuing the S-series of §14):
+    S12. Atom identity (`hcs`): the counter must point at the atom
+         `stmtAtome_blatt_eq` yields for the fired statement. Positing the
+         pointed-to atom is the scheduler/witness duty (as `hpc` is); proving
+         the counter always does so is the scheduling argument, not this
+         section.
+    S13. `axiomCall`: the oracle (`O.wirkt`) answers with an arbitrary world,
+         so its events carry arbitrary `Λ`/carriers. Closing it needs an
+         oracle-event contract (every oracle event names the statement `Λ`
+         within the declared writes plus `args.orte`) -- carried as a
+         hypothesis by `GenSchritt`/`PCSchritt`, never derived here.
+-/
+
+/-- Read events of one `World.lese`: they carry the statement `Λ` exactly,
+    and every carrier they name sits in the read list. -/
+theorem mem_leseEr {Λ : List (Res D)} {h : List D.Lock}
+    {os : List (D.Tab ⊕ D.Glob)} {e : Ereignis D}
+    (hm : e ∈ os.map fun o => match o with
+      | .inl t => Ereignis.zugriff t false Λ h
+      | .inr g => Ereignis.gzugriff g false Λ h) :
+    e.lambda = Λ ∧ ∀ o, e.traeger = some o → o ∈ os := by
+  obtain ⟨o, ho, rfl⟩ := List.mem_map.mp hm
+  cases o with
+  | inl t =>
+      refine ⟨rfl, fun o' h' => ?_⟩
+      have h2 : o' = .inl t := by simpa [Ereignis.traeger] using h'.symm
+      rw [h2]; exact ho
+  | inr g =>
+      refine ⟨rfl, fun o' h' => ?_⟩
+      have h2 : o' = .inr g := by simpa [Ereignis.traeger] using h'.symm
+      rw [h2]; exact ho
+
+/-- Appending one more copy on the right is consing on the left, for
+    `replicate`. -/
+theorem rep_append_single {α : Type} (n : Nat) (a : α) :
+    List.replicate n a ++ [a] = a :: List.replicate n a := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [List.replicate_succ, ih]
+
+/-- `schreibBytes` emits exactly one `zugriff` event per byte, all with the
+    statement `Λ` on the written carrier (lock state is untouched by
+    `zugriff`, so every event shares the entry `haelt`). -/
+theorem schreibBytes_spur_eq (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (k : Int) (bs : List Byte) :
+    (σ.schreibBytes t f hf Λ k bs).spur =
+      List.replicate bs.length (Ereignis.zugriff t true Λ σ.haelt) ++ σ.spur := by
+  induction bs generalizing σ k with
+  | nil => rfl
+  | cons b bs ih =>
+      simp only [World.schreibBytes]
+      rw [ih]
+      have hhaelt : (σ.schreibSlot t Λ k f
+          (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)))).haelt =
+          σ.haelt := rfl
+      have hspur1 : (σ.schreibSlot t Λ k f
+          (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)))).spur =
+          [Ereignis.zugriff t true Λ σ.haelt] ++ σ.spur := rfl
+      rw [hhaelt, hspur1, List.length_cons, ← List.append_assoc,
+        rep_append_single, List.replicate_succ]
+
+/-- `uebergang` through the taken branch: one write plus the
+    `.inl t :: i.orte` reads. Split off from `execEreignis_aus_blatt_ohne_axiomCall`:
+    `split` with bullets inside `cases ... with` breaks the outer alternatives,
+    so this branch case lives here as its own lemma. -/
+theorem uebergang_ereignis_aus_blatt (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} (l : Bool) {Γ : Ctx} {Λ : List (Res D)}
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (t : D.Tab) (f : D.Feld t) {lo hi : Int} (hτ : D.typ t f = .int lo hi)
+    (i : Expr D Γ Λ (.index (D.count t))) (von nach : Int)
+    (hn : lo ≤ nach ∧ nach ≤ hi)
+    (he : D.erlaubt t f von nach = true) (hw : V.schreibt t = true)
+    (hL : darf D t Λ)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      ((Stmt.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    (∀ e ∈ neu, e.lambda = Λ) ∧
+      (∀ e ∈ neu, ∀ o, e.traeger = some o →
+        o ∈ stmtTraeger tabs globs
+          ((Stmt.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ)) ++
+          stmtOrte ((Stmt.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ))) := by
+  simp only [execStmt] at hstep
+  split at hstep
+  · simp only [Ausgang.welt, Option.some.injEq] at hstep
+    have hspur : σ'.spur =
+        [Ereignis.zugriff t true Λ (σ.lese Λ (.inl t :: i.orte)).haelt] ++
+        (.inl t :: i.orte).map (fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+          | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+      rw [← hstep]; rfl
+    rw [hspur] at hneu
+    have hneueq := List.append_cancel_right hneu
+    subst hneueq
+    constructor
+    · intro e' he'
+      rcases List.mem_append.mp he' with h1 | h1
+      · obtain rfl := List.mem_singleton.mp h1
+        rfl
+      · exact (mem_leseEr h1).1
+    · intro e' he' o ho
+      rcases List.mem_append.mp he' with h1 | h1
+      · obtain rfl := List.mem_singleton.mp h1
+        have ho' : o = .inl t := by simpa [Ereignis.traeger] using ho.symm
+        subst ho'
+        simp only [stmtTraeger, stmtOrte]
+        exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+      · have hmem : o ∈ .inl t :: i.orte := (mem_leseEr h1).2 o ho
+        simp only [stmtTraeger, stmtOrte]
+        rcases List.mem_cons.mp hmem with rfl | hm
+        · exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · exact List.mem_append.mpr (Or.inr hm)
+  · simp only [Ausgang.welt] at hstep
+    simp at hstep
+
+/-- A fired non-oracle leaf step carries exactly its statement footprint:
+    every new event names the statement `Λ`, and every carrier it touches
+    sits in the written carrier plus the `stmtOrte` read hull. `axiomCall`
+    is excluded: the oracle (`O.wirkt`) answers with an arbitrary world, so
+    its events carry arbitrary `Λ`/carriers (remainder S13 below). -/
+theorem execEreignis_aus_blatt_ohne_axiomCall
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
+    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    (∀ e ∈ neu, e.lambda = Λ) ∧
+      (∀ e ∈ neu, ∀ o, e.traeger = some o →
+        o ∈ stmtTraeger tabs globs s ++ stmtOrte s) := by
+  cases s with
+  | assignSlot t f i e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt] ++
+          (i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          rfl
+        · exact (mem_leseEr h1).1
+      · intro e' he' o ho
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          have ho' : o = .inl t := by simpa [Ereignis.traeger] using ho.symm
+          subst ho'
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · have hmem : o ∈ i.orte ++ e.orte := (mem_leseEr h1).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
+  | assignDurch p t ht f i e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.zugriff t true Λ
+            (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt] ++
+          (p.orte ++ i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          rfl
+        · exact (mem_leseEr h1).1
+      · intro e' he' o ho
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          have ho' : o = .inl t := by simpa [Ereignis.traeger] using ho.symm
+          subst ho'
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · have hmem : o ∈ p.orte ++ i.orte ++ e.orte := (mem_leseEr h1).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
+  | assignGlob g e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.gzugriff g true Λ (σ.lese Λ e.orte).haelt] ++
+          (e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          rfl
+        · exact (mem_leseEr h1).1
+      · intro e' he' o ho
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          have ho' : o = .inr g := by simpa [Ereignis.traeger] using ho.symm
+          subst ho'
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · have hmem : o ∈ e.orte := (mem_leseEr h1).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
+  | schreibBytes t f hf n i hlo hhi e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          List.replicate (zahlZuBytes n
+            (eval (σ.lese Λ (i.orte ++ e.orte)) e
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n).length
+            (Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt) ++
+          ((i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur) := by
+        rw [← hstep, schreibBytes_spur_eq]; rfl
+      rw [hspur, ← List.append_assoc] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        rcases List.mem_append.mp he' with h1 | h1
+        · have heq : e' =
+              Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt :=
+            (List.mem_replicate.mp h1).2
+          rw [heq]
+          rfl
+        · exact (mem_leseEr h1).1
+      · intro e' he' o ho
+        rcases List.mem_append.mp he' with h1 | h1
+        · have heq : e' =
+              Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt :=
+            (List.mem_replicate.mp h1).2
+          rw [heq] at ho
+          have ho' : o = .inl t := by simpa [Ereignis.traeger] using ho.symm
+          subst ho'
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · have hmem : o ∈ i.orte ++ e.orte := (mem_leseEr h1).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
+  | assignVar x e =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          (e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        exact (mem_leseEr he').1
+      · intro e' he' o ho
+        have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
+        simp only [stmtTraeger, stmtOrte]
+        exact List.mem_append.mpr (Or.inr hmem)
+  | uebergang t f hτ i von nach hn he hw hL =>
+      exact uebergang_ereignis_aus_blatt O passes l tabs globs t f hτ i von nach
+        hn he hw hL σ ρ σ' neu hstep hneu
+  | ite c t e => simp [Stmt.istBlatt] at hleaf
+  | onOption o p a => simp [Stmt.istBlatt] at hleaf
+  | onTag v arms => simp [Stmt.istBlatt] at hleaf
+  | onGrund r arms => simp [Stmt.istBlatt] at hleaf
+  | call f args hp hr => simp [Stmt.istBlatt] at hleaf
+  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
+  | locks L hr body => simp [Stmt.istBlatt] at hleaf
+  | breaking i body => simp [Stmt.istBlatt] at hleaf
+  | traverse t inv body => simp [Stmt.istBlatt] at hleaf
+  | retry n bis body ueberlauf => simp [Stmt.istBlatt] at hleaf
+  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+  | axiomCall a args h hw hg => exact False.elim hax
+  | regSchreib r hk e =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          (e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        exact (mem_leseEr he').1
+      · intro e' he' o ho
+        have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
+        simp only [stmtTraeger, stmtOrte]
+        exact List.mem_append.mpr (Or.inr hmem)
+  | transition r hk m hm hl maske bits =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        simp at he'
+      · intro e' he' o ho
+        simp at he'
+  | publish g e payload hp hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.gzugriff g true Λ (σ.lese Λ e.orte).haelt] ++
+          (e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          rfl
+        · exact (mem_leseEr h1).1
+      · intro e' he' o ho
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          have ho' : o = .inr g := by simpa [Ereignis.traeger] using ho.symm
+          subst ho'
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · have hmem : o ∈ e.orte := (mem_leseEr h1).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
+  | advances m a h hs =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        simp at he'
+      · intro e' he' o ho
+        simp at he'
+  | retires m s h a =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        simp at he'
+      · intro e' he' o ho
+        simp at he'
+  | ret e hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          (e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        exact (mem_leseEr he').1
+      · intro e' he' o ho
+        have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
+        simp only [stmtTraeger, stmtOrte]
+        exact List.mem_append.mpr (Or.inr hmem)
+  | retGrund r hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        simp at he'
+      · intro e' he' o ho
+        simp at he'
+  | leave h =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        simp at he'
+      · intro e' he' o ho
+        simp at he'
+  | next h =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        simp at he'
+      · intro e' he' o ho
+        simp at he'
+
+/-- The `PCSchritt` footprint checks discharged against `progAus` atoms: a
+    fired non-oracle leaf step whose counter points at its extracted atom
+    names only that atom's marks and touches only its carriers -- hence the
+    thread's program text (`pcAtom_mem_marks`/`pcAtom_mem_carriers`). The
+    atom-identity premise (`hcs`) is the scheduler/witness duty: the counter
+    must point at the atom `stmtAtome_blatt_eq` yields for `s` (remainder S12 below). -/
+theorem hmark_hcar_aus_progAus_ohne_axiomCall
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (P : Programm D) (code : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
+    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (M : GenMaschine D) (f : Faden) (ρ : Env D Γ)
+    (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ (M.weltVon f).spur)
+    (pc : PCStand) (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (progAus P code tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ)
+    (hcs : cs = stmtTraeger tabs globs s ++ stmtOrte s) :
+    (∀ e ∈ neu, ∀ (m : D.Marke) (st : Nat), Res.marke m st ∈ e.lambda →
+      m ∈ (progAus P code tabs globs).marks f) ∧
+    (∀ e ∈ neu, ∀ o, e.traeger = some o →
+      o ∈ (progAus P code tabs globs).carriers f) := by
+  obtain ⟨hlam, hcar⟩ :=
+    execEreignis_aus_blatt_ohne_axiomCall O passes s hleaf hax tabs globs
+      _ ρ σ' neu hstep hneu
+  have ha : PCAtom.leaf Λa cs ∈ progAus P code tabs globs f :=
+    List.mem_of_getElem? hpc
+  constructor
+  · intro e he m st hm
+    rw [hlam e he] at hm
+    rw [← hΛa] at hm
+    exact pcAtom_mem_marks _ _ _ ha m
+      (by simp only [PCAtom.marks]
+          exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩)
+  · intro e he o ho
+    have hmem : o ∈ stmtTraeger tabs globs s ++ stmtOrte s := hcar e he o ho
+    apply pcAtom_mem_carriers _ _ _ ha o
+    simp only [PCAtom.carriers]
+    rw [hcs]
+    exact hmem
+
+#print axioms Gabbro.Grammatik.Extraktion.mem_leseEr
+#print axioms Gabbro.Grammatik.Extraktion.rep_append_single
+#print axioms Gabbro.Grammatik.Extraktion.schreibBytes_spur_eq
+#print axioms Gabbro.Grammatik.Extraktion.uebergang_ereignis_aus_blatt
+#print axioms Gabbro.Grammatik.Extraktion.execEreignis_aus_blatt_ohne_axiomCall
+#print axioms Gabbro.Grammatik.Extraktion.hmark_hcar_aus_progAus_ohne_axiomCall
+
+
 end Gabbro.Grammatik.Extraktion
