@@ -1,0 +1,19 @@
+-- erwartet: H022
+-- **A self-call without a descent measure (must fall).**
+--
+-- `f` reaches itself and declares no `decreases`. On a cycle every edge counts the
+-- DECLARED `costs` of the callee once, so the promise is an assumption, not a result.
+-- `K008` refuses the bare member (the self-recursive shape on its own stands in
+-- `gift/150`); `H022` names the cycle as one composition unit. `K001` fires beside
+-- them: the self-call counts the DECLARED `costs` (8), so the body (13) exceeds its
+-- own promise -- on a bare member that over-count is structural (`kosten.rs`: a
+-- recursive call costs nothing only under `decreases`). The mutual shape is
+-- `gift/746`, the three-member shape `gift/748`.
+module gift::selbstruf_ohne_mass {
+
+static mut a : u32 = 0;
+
+impl fn f(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return f(n); }
+
+}

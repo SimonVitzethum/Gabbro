@@ -1367,3 +1367,15 @@ pub fn h022_weigerung(l: &Zyklenluecke) -> gabbro_syntax::diag::Absage {
 // issued in `kosten.rs`): an inline `#[cfg(test)]` module asserting on those
 // findings would double-assign it. Tests NAME codes, only source files
 // ASSIGN them.
+
+// **The next H-code, `H023`, is WITHDRAWN -- not built, not assigned.**
+//
+// The candidate was the cross-body freshness expiry: expiring caller taints across
+// call edges from the callee's write-hull, with `nebeneinander.rs` as the home.
+// Measured in `messung/CROSSBODY-REGEL.md`: the transport already runs in `m1.rs`
+// (`rufe_toeten_fakten`, refused as `M147`, pinned by `beispiele/gift/752`-`754`),
+// so a second refusal would double-book one defect -- and the code-to-pass map puts
+// `W`-codes in `nebeneinander.rs` while the `H`-family lives in `geteilt.rs`.
+// Owner if ever built: whoever owns the `m1` freshness internals, not this lane.
+// Until then the code stays assigned-free: this paragraph NAMES it (backticks) and
+// ASSIGNs nothing (no quoted form, per `instrumente/pruefe-kennungen.py`).

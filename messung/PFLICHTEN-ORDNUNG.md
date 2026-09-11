@@ -89,3 +89,45 @@ belongs to the lane that takes it.
 - This note (new).
 - Nothing else: `lib.rs`, `saetze.rs`, the mutation catalog, the code catalog
   (`BENANNT`), and `tests/beispiele.rs` are untouched.
+
+## 6. Addendum 2026-09-11 (p07): `H022` wired, `H023` withdrawn, probes 774-775
+
+**`H022` is wired, beside `K008`.** The line §2 left open stands in
+`crates/gabbro-check/src/lib.rs`: every gap `pflichten::zyklen_ohne_mass`
+reports is refused via `pflichten::h022_weigerung`, in both the plain and the
+`GABBRO_ZEIT` pass list. Detector + constructor are unchanged from §2. The
+sentence register books the rule (`saetze.rs`:
+`pflichten.masslose-wechselrufe`, `H022`, `Gemessen`). This supersedes the
+"Unwired on purpose" paragraph of §2; that paragraph stays as the lane-133
+record.
+
+**Measured full sets, not just the booked pair.** The register books
+`K008+H022`; what the pipeline emits per bare member is the triple `H022` +
+`K001` + `K008`. `K001` is structural, not noise: a call counts the callee's
+DECLARED `costs`, so a bare member always exceeds its own promise -- a
+recursive call costs nothing only under `decreases` (`kosten.rs`). The measured
+member of a half-covered cycle stays fully silent (no `K008`, no `K009`, no
+`K001`). Pinned per file in `crates/gabbro-check/tests/pflichten_zyklen.rs`,
+where the file-level gift run only asserts the expected code fires.
+
+**`H023` is withdrawn, in code.** The candidate was the cross-body freshness
+expiry (callee write-hulls expiring caller taints, `nebeneinander.rs` as the
+home). `messung/CROSSBODY-REGEL.md` measures that the transport already runs in
+`m1.rs` (`rufe_toeten_fakten`, refused as `M147`, pinned by `gift/752`-`754`),
+so a second refusal would double-book one defect -- and the code-to-pass map
+puts `W`-codes in `nebeneinander.rs` while the `H`-family lives in
+`geteilt.rs`. The withdrawal stands as a reason note beside the `H022` section
+in `pflichten.rs` (backticks only: it NAMES the code and ASSIGNs nothing, per
+`instrumente/pruefe-kennungen.py`). Owner if ever built: whoever owns the `m1`
+freshness internals.
+
+| probe | shape | falls with (exact, measured) |
+|---|---|---|
+| `beispiele/gift/774-selbstruf-ohne-mass.gab` | self-cycle, no measure (length-one complement to 746/748) | `H022`, `K001`, `K008` |
+| `beispiele/gift/775-dreierzyklus-halbes-mass.gab` | three-member cycle, measure on one side only (length-three complement to 747) | `H022` x2, `K001` x2, `K008` x2 on the bare members; the measured member silent |
+
+Verification, scoped (server down, 2026-09-11): `cargo +nightly test -p
+gabbro-check --test pflichten_zyklen` 8/8, `--test beispiele` 25/25. Local
+stable (`rustc 1.97.1`) does NOT build this base: pre-existing `E0614` at
+`lean.rs:4475` and `refinement.rs:494`, in files this lane never touched;
+nightly (`1.98.0-nightly 2026-06-22`) builds it clean.

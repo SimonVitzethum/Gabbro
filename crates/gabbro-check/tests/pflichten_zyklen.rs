@@ -104,3 +104,80 @@ fn h022_wechselruf_faellt_je_glied_mit_k008() {
         .count();
     assert_eq!(k008, 2, "bare cycle fell with {k008} K008, not 2");
 }
+
+/// **Gift-file probe readings live here, not in `beispiele.rs`.**
+///
+/// The file-level gift run only asserts the expected code FIRES, so the exact
+/// multiset per file (no `K009` beside it, `K001` where the cost pass owes it)
+/// is held HERE -- the same split as `h020_silence_and_single_fire_738` in
+/// `beispiele.rs`, kept in the topic file per the one-file rule.
+fn gift_wurzel() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("beispiele")
+        .join("gift")
+}
+
+fn fehler_ueber_datei(datei: &str) -> (String, String, Vec<&'static str>) {
+    let pfad = gift_wurzel().join(datei);
+    let quelle =
+        std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+    let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    let mut fehler: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| matches!(a.stufe, Stufe::Fehler))
+        .map(|a| a.code)
+        .collect();
+    fehler.sort();
+    let bericht = absagen.zeige(&quelle);
+    (quelle, bericht, fehler)
+}
+
+/// **Probe 774: the self-cycle draws exactly `H022` + `K001` + `K008`.**
+///
+/// No gift probe pinned `H022` on the length-one cycle before: `gift/150` predates
+/// the wiring and asserts `K008` only (a presence claim, still green). The detector
+/// names the single bare member; the pipeline adds nothing past the triple.
+/// `K001` belongs to it structurally: the self-call counts the DECLARED `costs`,
+/// so a bare member always exceeds its own promise (`kosten.rs`: a recursive call
+/// costs nothing only under `decreases`).
+#[test]
+fn h022_self_cycle_falls_exactly_with_h022_k001_and_k008() {
+    let datei = "774-selbstruf-ohne-mass.gab";
+    let pfad = gift_wurzel().join(datei);
+    let quelle =
+        std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+    let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+    assert_eq!(namen(&zyklen_ohne_mass(&baum)), ["f"]);
+    let (_, bericht, fehler) = fehler_ueber_datei(datei);
+    assert_eq!(
+        fehler,
+        ["H022", "K001", "K008"],
+        "{datei} must fall exactly once with each, fell with {fehler:?}:\n{bericht}"
+    );
+}
+
+/// **Probe 775: the half-measured three-cycle names only the two bare members.**
+///
+/// Extends the `gift/747` premise (half a measure is no measure on the cycle) from
+/// length two to length three: `f` carries and lowers `decreases n`, so neither
+/// `K008` nor `K009` touches it (and its cycle calls cost nothing, so no `K001`
+/// either), while `g` and `h` each draw the triple.
+#[test]
+fn h022_half_measured_three_cycle_names_only_bare_members() {
+    let datei = "775-dreierzyklus-halbes-mass.gab";
+    let pfad = gift_wurzel().join(datei);
+    let quelle =
+        std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+    let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+    assert_eq!(namen(&zyklen_ohne_mass(&baum)), ["g", "h"]);
+    let (_, bericht, fehler) = fehler_ueber_datei(datei);
+    assert_eq!(
+        fehler,
+        ["H022", "H022", "K001", "K001", "K008", "K008"],
+        "{datei} must fall exactly twice with each, fell with {fehler:?}:\n{bericht}"
+    );
+}

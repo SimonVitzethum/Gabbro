@@ -1,0 +1,23 @@
+-- erwartet: H022
+-- **Half a measure on a THREE-member cycle (must fall on the two bare members).**
+--
+-- `f` declares `decreases n` and lowers into `g`; `g` and `h` answer without any
+-- measure of their own. `K008` falls exactly on the bare members -- a measure on one
+-- side of a cycle is not a measure on the cycle -- with `K001` beside it (each bare
+-- body counts the callee's DECLARED 8); `f` stays `K001`-clean because a recursive
+-- call under `decreases` costs nothing (`kosten.rs`). The two-member half is
+-- `gift/747`, the fully bare three-cycle `gift/748`.
+module gift::dreierzyklus_halbes_mass {
+
+static mut a : u32 = 0;
+
+impl fn f(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n
+{ a = n; if n == 0 { return 0; } return g(n - 1); }
+
+impl fn g(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return h(n); }
+
+impl fn h(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return f(n); }
+
+}
