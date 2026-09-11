@@ -1177,3 +1177,378 @@ theorem stabil_from_spec_invariantForm (Nb : Nebeneinander)
 #print axioms Gabbro.Grammatik.stabil_from_spec_invariantForm
 
 end Gabbro.Grammatik
+
+/-! ## 21. CSL-exact discipline: the invariant from entry plus return (Posten 1)
+
+    The auditor's finding against §20: `interferenceFree_of_invariantForm` derives
+    interference freedom from `InvariantenKontext` (`∀ c σ, σ ∈ J.welten → I.inv c σ` --
+    the invariant at EVERY world), but that context is discharged nowhere and is
+    STRONGER than CSL: real code breaks the invariant mid-critical-section at
+    instruction granularity, so the theorem fits no real code unless a chain step is
+    a whole critical section -- and no file fixed what a `GemeinsamerLauf` step is.
+
+    This section fixes the grain FIRST, then proves the context FROM DISCIPLINE.
+
+    GRAIN (stated and used): one `GemeinsamerLauf` step is ONE WHOLE CRITICAL SECTION --
+    one sequential body execution, indivisible at chain level. The step stays inside the
+    writer's whole frame (`hSchritt`, discharged per body by `exec_rahmen`, `Satz.lean`:1323,
+    named at `rahmen_aus_exec`, `Interferenz.lean`:148). It is NOT one machine event:
+    `Koernung.lean` proves an n-byte `schreibBytes` leaves exactly n events
+    (`schreibBytes_event_count`:158) and is NOT one event for 2 <= n
+    (`schreibBytes_not_single`:173); a `leseBytes` records ONE event while folding over
+    n cells (`leseBytes_not_atomic`:195); and the interrupted middle IS the witnessed
+    tear (`two_byte_tear`:208, `mid_interruption_tears`:617). So at event grain the
+    invariant DOES break mid-step, and a context claimed at every event-world would fit
+    no real code -- exactly the auditor's charge. The chain therefore resolves bodies,
+    not events (the same reason `Wettlauf.lean` §5, honest passage, builds no general
+    interleaving semantics for `eval`): the invariant is claimed only at chain worlds,
+    which are section boundaries, and each step re-establishes what it owes at return
+    (`rufAt`, `Semantik.lean`:778-780: a normal return carries every owed invariant).
+    `schritt_rahmen_aus_korn` is the grain as a theorem, CONSUMED below: the non-writer
+    preservation (`nichtschreiber_erhaelt`) runs `stabil` over exactly that whole-frame
+    step.
+
+    DISCIPLINE (proved, not assumed): `hinv_aus_disziplin` derives the invariant from
+    (E) entry -- it holds at the chain head (caller/sequential side, same shape as `hInit`);
+    (R) return -- every WRITING step re-establishes it at its end world, conditioned on
+    holding the guard (the `rufAt` return-check shape under `schuldet`, `Semantik.lean`:374);
+    (W) THE single lock-holding premise, bounded -- writing steps hold the guard, as a
+    STATIC declared-holds fact (`D.haelt` shape, exactly like `SchuldnerHaelt`, §3:162,
+    which already travels per thread in `GemeinsamerLauf.hSchritt`'s sibling `hSchuld`,
+    §3:200, proved per body by `schuldnerHaelt_gilt`, §7:283, from U003
+    `invarianten_gehalten`, `Syntax.lean`:181, via `inv_schreiber_sperren`,
+    `Interferenz.lean`:159); plus the standard frame-locality of the invariant
+    (`HaengtAb` over its carrier singleton, with the carrier-frame link) and the static
+    guard link (`Bewacht`). The conclusion is CSL-exact: `LockFrei L σ → I.inv c σ`
+    (lock free implies invariant), NOT at every world. `hinv_kette_aus_disziplin` is the
+    unconditional chain lemma underneath (forward induction over `k`, reusing §9
+    `lt_of_belegt`/`kette_welt_belegt`); `hinv_aus_disziplin` is its CSL-exact weakening.
+
+    What exists and is CITED, not rebuilt: `SchuldnerHaelt` (§3:162), `schuldet`
+    (`Semantik.lean`:374), U003 (`Syntax.lean`:181), `schuldnerHaelt_gilt` (§7:283),
+    `inv_schreiber_sperren` (`Interferenz.lean`:159), `heldIn_invarianten`
+    (`Satz.lean`:1249), `eintrittHeldIn_aus_Passt` (§7:290, entry declared-holds goes
+    dynamic at entry). `wache_aus_schuld` DISCHARGES the watch premise for TABLE carriers
+    from `J.hSchuld` plus invariant coverage (every written table sits in some owed
+    invariant's carrier list -- the CSL coverage side condition, per thread, no run
+    reasoning); the guard fact `Sum.inl L ∈ D.braucht t` is consumed there.
+
+    Scope, honestly narrowed: U003 (`Syntax.lean`:181-182) quantifies over TABLE carriers
+    (`D.traeger : Inv → List Tab`) only -- globals have no `schuldet` coverage, so the
+    derived watch (`wache_aus_schuld`) and the named `hinv_aus_disziplin` are TABLE-scoped.
+    Shared globals stay on the §13-§15 exception track (`AtomarAusgenommen` via A10
+    machine ordering, `PaarungAusgenommen` via publishes/awaits); the general per-carrier
+    lemma (`hinv_kette_aus_disziplin`, `invariantenKontext_aus_disziplin`) keeps the watch
+    as its single named premise, which for globals is checker-side. Per-site dynamic
+    holding (that the checker proves held sets at every write site) stands nowhere --
+    the G3 remainder (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §6 point 1); the static
+    declared-holds side is what U003 delivers, and the interior of a step (take at
+    entry, release at return) is the body's own critical-section discipline, booked as
+    checker remainder beside `hReturn`.
+
+    Re-derivation (§20 untouched): `invariantenKontext_aus_disziplin` folds the lemma to
+    the full `InvariantenKontext` (per carrier, via `kette_belegt_of_mem`);
+    `interferenceFree_of_invariantForm_aus_disziplin` feeds that derived context into
+    `interferenceFree_of_invariantForm` (§20:1128) -- the §20 chain now runs on a derived
+    premise. `interferenceFree_wo_frei` is the literal CSL interface: invariant-form
+    assertions (uniform shared carrier, the standard CSL case) are interference-free
+    WHERE THE LOCK IS FREE, both step worlds free.
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- The guard lock of a carrier: the lock in the carrier's watch list (`D.braucht`
+    for tables, `D.gbraucht` for globals -- the static side of the touch rule
+    `TraegerInv.disziplin`). -/
+def Bewacht (c : D.Tab ⊕ D.Glob) (L : D.Lock) : Prop :=
+  match c with
+  | .inl t => Sum.inl L ∈ D.braucht t
+  | .inr x => Sum.inl L ∈ D.gbraucht x
+
+/-- CSL lock-freedom at a world: the guard is not held (`World.haelt`,
+    `Semantik.lean`: `offen` of the trace; `nimmt` takes, `gibt` releases). -/
+def LockFrei (L : D.Lock) (σ : World D) : Prop :=
+  L ∉ σ.haelt
+
+/-- **The grain, as a theorem.** Every chain step is a whole-frame step of its writer:
+    one sequential body execution (`hSchritt`, per body `exec_rahmen`), indivisible at
+    chain level -- NOT one machine event (cf. `Koernung.lean`: an n-byte transfer is n
+    events, `schreibBytes_not_single`). Consumed by `nichtschreiber_erhaelt`. -/
+theorem schritt_rahmen_aus_korn (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (k : Nat) (g : Faden) (vor nach : World D)
+    (hkg : J.schrittFaden[k]? = some g) (hkv : J.welten[k]? = some vor)
+    (hkn : J.welten[k + 1]? = some nach) :
+    Rahmen (D.schreibt (J.code g)) (D.gschreibt (J.code g)) vor nach :=
+  (J.hSchritt k g vor nach hkg hkv hkn).2
+
+/-- **Non-writers preserve.** Where the invariant reads only its carrier (frame covered
+    by `c`) and the step's writer does not write `c`, the whole-frame step (`hSchritt`
+    via `schritt_rahmen_aus_korn`) preserves the invariant by `stabil`. -/
+theorem nichtschreiber_erhaelt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (c : D.Tab ⊕ D.Glob)
+    (Wc : D.Tab → Bool) (Gc : D.Glob → Bool)
+    (hAb : HaengtAb Wc Gc (I.inv c))
+    (hFrameT : ∀ t : D.Tab, Wc t = true → c = .inl t)
+    (hFrameG : ∀ x : D.Glob, Gc x = true → c = .inr x)
+    (k : Nat) (g : Faden) (vor nach : World D)
+    (hkg : J.schrittFaden[k]? = some g) (hkv : J.welten[k]? = some vor)
+    (hkn : J.welten[k + 1]? = some nach)
+    (hN : TraegerSchreibt (J.code g) c = false) :
+    I.inv c vor ↔ I.inv c nach := by
+  refine stabil hAb (schritt_rahmen_aus_korn Nb J k g vor nach hkg hkv hkn) ?_
+  constructor
+  · intro t ht
+    have hc := hFrameT t ht
+    cases c with
+    | inl t₀ =>
+      simp at hc
+      subst hc
+      simp only [TraegerSchreibt] at hN
+      exact hN
+    | inr x₀ => simp at hc
+  · intro x hx
+    have hc := hFrameG x hx
+    cases c with
+    | inl t₀ => simp at hc
+    | inr x₀ =>
+      simp at hc
+      subst hc
+      simp only [TraegerSchreibt] at hN
+      exact hN
+
+/-- **The chain lemma: entry plus return plus watch.** The invariant holds at every
+    chain world: at the head by entry; across a writing step by return-under-guard
+    (unlocked by the single watch premise); across a non-writing step by frame
+    preservation (`nichtschreiber_erhaelt`). The guard link `hGuard` is carried
+    (G5-style): it ties `L` to `c`, and is consumed where the watch is discharged
+    (`wache_aus_schuld`). -/
+theorem hinv_kette_aus_disziplin (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (c : D.Tab ⊕ D.Glob) (L : D.Lock)
+    (Wc : D.Tab → Bool) (Gc : D.Glob → Bool)
+    (hAb : HaengtAb Wc Gc (I.inv c))
+    (hFrameT : ∀ t : D.Tab, Wc t = true → c = .inl t)
+    (hFrameG : ∀ x : D.Glob, Gc x = true → c = .inr x)
+    (hGuard : Bewacht (D := D) c L)
+    (hEntry : ∀ σ₀ : World D, J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) c = true →
+          L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) c = true →
+          L ∈ D.haelt (J.code g)) :
+    ∀ (k : Nat) (σ : World D), J.welten[k]? = some σ → I.inv c σ := by
+  intro k
+  induction k with
+  | zero => exact hEntry
+  | succ k ih =>
+    intro σ hσ
+    have hK := J.hKette
+    have hlen : k + 1 < J.welten.length := lt_of_belegt J.welten (k + 1) σ hσ
+    have hsk : k < J.schrittFaden.length := by omega
+    have hwk : k < J.welten.length := by omega
+    obtain ⟨g, hg⟩ := kette_welt_belegt J.schrittFaden k hsk
+    obtain ⟨vor, hvor⟩ := kette_welt_belegt J.welten k hwk
+    have hgm : g ∈ J.faeden := (J.hSchritt k g vor σ hg hvor hσ).1
+    cases heq : TraegerSchreibt (J.code g) c with
+    | true =>
+      exact hReturn k g vor σ hgm hg hvor hσ heq
+        (hWatch k g vor σ hgm hg hvor hσ heq)
+    | false =>
+      exact (nichtschreiber_erhaelt Nb J I c Wc Gc hAb hFrameT hFrameG
+        k g vor σ hg hvor hσ heq).mp (ih vor hvor)
+
+/-- Membership anywhere in a list is membership at some index. -/
+theorem kette_belegt_of_mem {α : Type} (w : List α) (σ : α) (h : σ ∈ w) :
+    ∃ k : Nat, w[k]? = some σ := by
+  induction w with
+  | nil => simp at h
+  | cons a as ih =>
+    simp only [List.mem_cons] at h
+    rcases h with rfl | h
+    · exact ⟨0, by simp⟩
+    · obtain ⟨k, hk⟩ := ih h
+      exact ⟨k + 1, by simp only [List.getElem?_cons_succ]; exact hk⟩
+
+/-- A `schreibt`-hit inside a carrier list fires the `any`: the `schuldet` unfolding
+    step for `wache_aus_schuld`. -/
+theorem any_of_mem_true (ts : List D.Tab) (P : D.Tab → Bool) (t₀ : D.Tab)
+    (hm : t₀ ∈ ts) (hP : P t₀ = true) : ts.any P = true := by
+  induction ts with
+  | nil => simp at hm
+  | cons a as ih =>
+    simp only [List.mem_cons] at hm
+    simp only [List.any_cons]
+    rcases hm with rfl | hm
+    · simp [hP]
+    · cases hPa : P a with
+      | true => simp
+      | false => simp [ih hm]
+
+/-- **The watch, discharged for tables.** A writer of table `t₀` holds every guard in
+    `t₀`'s watch list: coverage gives an owed invariant over `t₀` (its carrier list hits
+    the writer's frame, so `schuldet` fires), U003 (`J.hSchuld`, proved per body by
+    `schuldnerHaelt_gilt`) gives the declared holds, and the guard fact picks `L`.
+    Globals are OUTSIDE this discharge: U003 is table-only (`Syntax.lean`:181-182). -/
+theorem wache_aus_schuld (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (t₀ : D.Tab) (L : D.Lock)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (g : Faden) (hg : g ∈ J.faeden)
+    (hW : TraegerSchreibt (J.code g) (.inl t₀) = true)
+    (hCov : ∃ i : D.Inv, t₀ ∈ D.traeger i) :
+    L ∈ D.haelt (J.code g) := by
+  obtain ⟨i, hi⟩ := hCov
+  have hP : D.schreibt (J.code g) t₀ = true := by
+    unfold TraegerSchreibt at hW
+    exact hW
+  have hs : schuldet (J.code g) i = true := by
+    unfold schuldet
+    exact any_of_mem_true (D.traeger i) _ t₀ hi hP
+  exact J.hSchuld g hg i hs t₀ hi L hGuardT
+
+/-- **The invariant from discipline, CSL-exact (`lockFree → inv`).** For a table carrier
+    with guard `L`: entry plus return-under-guard plus frame-locality, where the watch
+    premise is DISCHARGED (`wache_aus_schuld` from `J.hSchuld` plus coverage) rather than
+    assumed -- so no lock premise is owed here; the discipline cited above does the work.
+    Table-scoped because U003 is table-only; see the section prose. -/
+theorem hinv_aus_disziplin (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (t₀ : D.Tab) (L : D.Lock)
+    (Wc : D.Tab → Bool) (Gc : D.Glob → Bool)
+    (hAb : HaengtAb Wc Gc (I.inv (.inl t₀)))
+    (hFrameT : ∀ t : D.Tab, Wc t = true → (.inl t₀ : D.Tab ⊕ D.Glob) = .inl t)
+    (hFrameG : ∀ x : D.Glob, Gc x = true → (.inl t₀ : D.Tab ⊕ D.Glob) = .inr x)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (hEntry : ∀ σ₀ : World D, J.welten[0]? = some σ₀ → I.inv (.inl t₀) σ₀)
+    (hReturn : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
+          L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
+    (hCov : ∀ (g : Faden), g ∈ J.faeden →
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i) :
+    ∀ (k : Nat) (σ : World D), J.welten[k]? = some σ → LockFrei (D := D) L σ →
+      I.inv (.inl t₀) σ := by
+  intro k σ h _
+  exact hinv_kette_aus_disziplin Nb J I (.inl t₀) L Wc Gc hAb hFrameT hFrameG
+    hGuardT hEntry hReturn
+    (fun k g vor nach hgm hkg hkv hkn hW =>
+      wache_aus_schuld Nb J t₀ L hGuardT g hgm hW (hCov g hgm hW))
+    k σ h
+
+/-- **The derived context.** The per-carrier lemma folded over all carriers: entry,
+    return-under-guard, frame-locality, guard existence, and the single watch premise
+    per carrier yield the full `InvariantenKontext` (§4:207) -- the premise §20 assumed.
+    For tables the watch discharges via `wache_aus_schuld`; for globals it is
+    checker-side (see section prose). -/
+theorem invariantenKontext_aus_disziplin (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb) (I : TraegerInv (D := D))
+    (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
+    (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool)
+    (hAb : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c))
+    (hFrameT : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t)
+    (hFrameG : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x)
+    (hGuardEx : ∀ c : D.Tab ⊕ D.Glob, ∃ L : D.Lock, Bewacht (D := D) c L)
+    (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g)) :
+    InvariantenKontext Nb J I := by
+  intro c σ hmem
+  obtain ⟨k, hk⟩ := kette_belegt_of_mem J.welten σ hmem
+  obtain ⟨L, hL⟩ := hGuardEx c
+  exact hinv_kette_aus_disziplin Nb J I c L (Wc c) (Gc c) (hAb c) (hFrameT c)
+    (hFrameG c) hL (hEntry c)
+    (fun k g vor nach hgm hkg hkv hkn hW hHold =>
+      hReturn c L k g vor nach hL hgm hkg hkv hkn hW hHold)
+    (fun k g vor nach hgm hkg hkv hkn hW =>
+      hWatch c L k g vor nach hL hgm hkg hkv hkn hW)
+    k σ hk
+
+/-- **The §20 chain on the derived premise.** `interferenceFree_of_invariantForm`
+    (§20:1128) with the context derived above instead of assumed: same conclusion
+    (`InterferenceFree`), §20 itself untouched. -/
+theorem interferenceFree_of_invariantForm_aus_disziplin (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
+    (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
+    (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool)
+    (hAb : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c))
+    (hFrameT : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t)
+    (hFrameG : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x)
+    (hGuardEx : ∀ c : D.Tab ⊕ D.Glob, ∃ L : D.Lock, Bewacht (D := D) c L)
+    (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g))
+    (hForm : InvariantForm Nb J I Q) :
+    InterferenceFree Nb J Q :=
+  interferenceFree_of_invariantForm Nb J I Q hForm
+    (invariantenKontext_aus_disziplin Nb J I Wc Gc hAb hFrameT hFrameG hGuardEx
+      hEntry hReturn hWatch)
+
+/-- **Invariant-form assertions are interference-free WHERE THE LOCK IS FREE.**
+    The literal CSL interface over one shared table carrier (the standard CSL case):
+    `Q` coincides with the carrier invariant per thread, and each foreign step goes
+    from one lock-free world to another -- so `Q` follows from `hinv_aus_disziplin`
+    at both ends. No per-run preservation proof is owed for the covered class. -/
+theorem interferenceFree_wo_frei (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Q : Faden → World D → Prop)
+    (t₀ : D.Tab) (L : D.Lock)
+    (Wc : D.Tab → Bool) (Gc : D.Glob → Bool)
+    (hAb : HaengtAb Wc Gc (I.inv (.inl t₀)))
+    (hFrameT : ∀ t : D.Tab, Wc t = true → (.inl t₀ : D.Tab ⊕ D.Glob) = .inl t)
+    (hFrameG : ∀ x : D.Glob, Gc x = true → (.inl t₀ : D.Tab ⊕ D.Glob) = .inr x)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (hEntry : ∀ σ₀ : World D, J.welten[0]? = some σ₀ → I.inv (.inl t₀) σ₀)
+    (hReturn : ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+        J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
+          L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
+    (hCov : ∀ (g : Faden), g ∈ J.faeden →
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hFormU : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ : World D),
+      Q f σ ↔ I.inv (.inl t₀) σ) :
+    ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor →
+          J.welten[k + 1]? = some nach →
+            LockFrei (D := D) L vor → LockFrei (D := D) L nach → (Q f vor ↔ Q f nach) := by
+  intro f hf k g vor nach _ _ _ hkv hkn hFreiVor hFreiNach
+  have hInv := hinv_aus_disziplin Nb J I t₀ L Wc Gc hAb hFrameT hFrameG hGuardT
+    hEntry hReturn hCov
+  rw [hFormU f hf vor, hFormU f hf nach]
+  exact ⟨fun _ => hInv _ nach hkn hFreiNach, fun _ => hInv _ vor hkv hFreiVor⟩
+
+#print axioms Gabbro.Grammatik.Bewacht
+#print axioms Gabbro.Grammatik.LockFrei
+#print axioms Gabbro.Grammatik.schritt_rahmen_aus_korn
+#print axioms Gabbro.Grammatik.nichtschreiber_erhaelt
+#print axioms Gabbro.Grammatik.hinv_kette_aus_disziplin
+#print axioms Gabbro.Grammatik.kette_belegt_of_mem
+#print axioms Gabbro.Grammatik.any_of_mem_true
+#print axioms Gabbro.Grammatik.wache_aus_schuld
+#print axioms Gabbro.Grammatik.hinv_aus_disziplin
+#print axioms Gabbro.Grammatik.invariantenKontext_aus_disziplin
+#print axioms Gabbro.Grammatik.interferenceFree_of_invariantForm_aus_disziplin
+#print axioms Gabbro.Grammatik.interferenceFree_wo_frei
+
+end Gabbro.Grammatik
