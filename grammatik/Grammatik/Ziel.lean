@@ -178,6 +178,68 @@ theorem ziel_ordnung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Faden)
     (h1 : L1 ∈ h) (h2 : L2 ∈ h') : False :=
   keine_ueberkreuzung l hg i j f g L1 L2 h h' hi hj h1 h2
 
+/-! ## 2b. From `exec` traces to `Gesittet` -- the narrowed class (p14)
+
+    The gap named in GRENZEN above: no sentence carries `exec` traces into
+    `Gesittet`; the bridge stands in `Wettlauf.lean` as `lauf_aus_brav`, with
+    W3-W5 as premises. This section closes it as far as one body reaches, and
+    narrows the trace class explicitly for the rest -- no `sorry`.
+
+    What one body reaches: `ziel_brav_aus_exec` reads a single `exec` outcome
+    as `Brav` (it IS `exec_spur`, whose conclusion is `Brav` unfolded). What no
+    single-body sentence can reach: W3 (exclusion speaks about foreign lock
+    primitives), W4 (one mark in one thread, across threads), W5 (an unshared
+    carrier belongs to one thread -- the declaration). So the narrowed class
+    `ExecEng` carries exactly those three shapes plus the `Einfaedig`
+    construction for W4, and `ziel_gesittet_aus_exec_eng` builds `Gesittet`
+    from it through `lauf_aus_brav` (W1, W2) and `gesittet_aus_einfaedig`
+    (W3-W5). Each `ExecEng.provenienz` witness is closed per body by
+    `ziel_brav_aus_exec`; the Owicki-Gries step (sequential contracts surviving
+    interleaving) is NOT here -- it stands nowhere yet and stays open. -/
+
+/-- A single `exec` outcome is `Brav`: the open locks are unchanged, every new
+    event is good, and a consistent trace stays consistent. This is `exec_spur`
+    read as `Brav` -- one provenance witness per body. -/
+theorem ziel_brav_aus_exec (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
+    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
+    Brav σ σ' :=
+  exec_spur P O passes fuel hO b σ ρ hh σ' h
+
+/-- The narrowed trace class: per-thread `exec` provenance (`Brav` from empty
+    traces, closed per body by `ziel_brav_aus_exec`), the interleaving shape,
+    and exactly the three cross-thread premises no single body can close --
+    W3 as exclusion, W4 as the `Einfaedig` construction over the projected run,
+    W5 as the unshared-carrier shape. -/
+structure ExecEng (l : Lauf D) (voll : Faden → List (Ereignis D)) (code : D.Marke → Nat) : Prop where
+  /-- Per-thread provenance: each full trace is `Brav` from an empty trace. -/
+  provenienz : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f
+  /-- The observed sub-traces are tails of the full ones (interleaving). -/
+  verschraenkung : IstVerschraenkung l voll
+  /-- (W3) Exclusion: who takes `L` takes it while no other thread holds it. -/
+  ausschluss : ∀ (j : Nat) (f : Faden) (L : D.Lock) (h : List D.Lock),
+    l[j]? = some (Schritt.mk f (.nimmt L h)) → ∀ g, g ≠ f → ¬ l.haelt g L j
+  /-- (W4) One mark in one thread, as the construction over the projected run. -/
+  einfaedig : Marken.Einfaedig (laufProj code l)
+  /-- (W5) An unshared carrier belongs to one thread. -/
+  ungeteilt : ∀ (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob) (ei ej : Ereignis D),
+    l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) →
+    ei.traeger = some o → ej.traeger = some o →
+    (match o with | .inl t => D.geteilt t = false | .inr x => D.ggeteilt x = false) → f = g
+
+/-- **From `exec` traces to `Gesittet`, over the narrowed class.** W1 and W2
+    come from `lauf_aus_brav` (per-thread `Brav` over empty traces, inherited
+    over tails); W3-W5 travel in `ExecEng` and are consumed by
+    `gesittet_aus_einfaedig`. -/
+theorem ziel_gesittet_aus_exec_eng (l : Lauf D) (voll : Faden → List (Ereignis D))
+    (code : D.Marke → Nat) (h : ExecEng l voll code) : Gesittet l := by
+  obtain ⟨hvoll, hvers, hausschluss, heinfaedig, hungeteilt⟩ := h
+  obtain ⟨hkons, hgut⟩ := lauf_aus_brav l voll hvoll hvers
+  exact gesittet_aus_einfaedig l hkons hgut hausschluss code heinfaedig hungeteilt
+
+#print axioms Gabbro.Grammatik.ziel_brav_aus_exec
+#print axioms Gabbro.Grammatik.ziel_gesittet_aus_exec_eng
+
 /-! ## 3. Die Zeit -- Budget als Logik, Frist als Hardware («SG-22») -/
 
 /-- Das Budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) ist eine Zahl
