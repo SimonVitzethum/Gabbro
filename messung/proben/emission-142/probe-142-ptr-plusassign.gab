@@ -1,0 +1,29 @@
+-- erwartet: C001
+-- Lane 142, CForm zeigerArithmetik, compound-assignment arm, CORRECTED
+-- 2026-09-11. Same form, second spelling: `p += 1` on a pointer place. The
+-- place's resolved C type ends with `*`, so the Zuweisung arm refuses by name
+-- instead of emitting `p += 1`. Integer places (`s.len += 1`, register
+-- writes, slot counters) carry no `*` and are unaffected. The first version
+-- of this unit stood withdrawn with the binary one: the type behind the `*`
+-- came from a unit-wide map, so a colliding integer in another scope could
+-- trip it. The sibling below pins that shape: an integer `p` under a
+-- colliding pointer parameter name takes `+= 1` cleanly, and the unit's one
+-- C001 names the pointer site, not the integer one. Checker half
+-- merge-verified; this unit proves the emitter path.
+module probe::ptrzuw142 {
+type Zelle = { wert : u32, };
+impl fn eins_weiter_zu(p : ptr<normal, rw> Zelle)
+    effects { reads p, writes p }
+    costs   <= 8 ops
+{
+    p += 1;
+}
+impl fn zaehler() -> u32
+    effects { pure }
+    costs   <= 8 ops
+{
+    let mut p : u32 = 40;
+    p += 1;
+    return p;
+}
+}
