@@ -132,3 +132,88 @@ guardians) plus two register lines the new files move by construction:
 `DONE.md:1562` and `README.md:163` say `500 poison probes`; with
 758/759/760 the tree holds 503. The number moves here, the register follows
 at merge -- one writer per register, no lane edits it alone.
+
+## 6. V003 doubt propagation: closed 2026-09-11 (lane p08)
+
+Sections 1--5 above are lane 137's read-only measurement; this section is the
+lane that closed its first remainder. Base `2dc02ad`, branch `p08-ziel`.
+Touched: `paarung.rs` function `pass` only (set split `:208-243`, `V003`
+trigger `:280-313`, `V001` fallback `:413-431`, `V002` fallback `:474-492`),
+this note, and two new gift probes. NOT touched: `stale_gebrauch`,
+`stale_block`, `ist_sauber`, `gelesene_namen` and `v011_tests` -- the
+awaits-then-act (user-copy TOCTOU) machinery owned by another wave.
+
+Two of §1's four bullets were defects, and both are gone:
+
+- **Await-only incomplete hulls hint now.** The `V003` trigger was the
+  non-empty publish set; an incomplete hull that only awaited got no hint and
+  its `V002` ran against a lower-bound global set -- a refusal drawn from what
+  the graph cannot see. The trigger is ANY half now (span taken from whichever
+  half exists), and the `continue` skips `V008`/`V004`/`V005`/`V010`/`V001`/
+  `V002` for that function exactly as before.
+- **The doubt propagates through the global sets.** Halves from incomplete
+  hulls stood INSIDE `alle_publiziert`/`alle_erwartet`, so an incomplete
+  function silently redeemed a complete function's orphan (and vice versa).
+  The sets are split: decidable halves (complete hulls, plus `can_fail`
+  bodies, which count as complete) stay in the global sets; undecidable halves
+  stand beside them in `unsicher_publiziert`/`unsicher_erwartet`. A complete
+  half whose SOLE counterpart is undecidable gets `Hinweis V003` at its own
+  `V001`/`V002` site -- neither the refusal (drawn from a lower bound) nor
+  silence (which would confirm what the graph cannot see). W10 leaves exactly
+  that answer, and a hint is neither refusal nor confirmation.
+
+Deliberately unchanged, with the reason beside each:
+
+- **The global-not-transitive design stays** (`RACE.md` §4, row 19's first
+  half). A `publishes` in module A still pairs with an `awaits` in module B
+  with no call relation -- pin `gift/723` still measures exactly that, and it
+  still passes. The split only stops UNDECIDABLE halves from redeeming; the
+  transitivity question is a redesign, not a refusal.
+- **A relaxed-only half on an incomplete hull still takes the other road.**
+  `relaxed_mit_last` never reaches `publiziert`/`erwartet`, so no `V003` fires
+  and `V004`/`V005` speak normally. Ordering strength is a property of the
+  declared atomic, not of the hull -- the skip would buy nothing there.
+- **RACE rows 20 and 21 need no work from this lane.** Their table caveats
+  (`nur auf der PUBLISH-Seite`, `V007 steigt nicht ab`) predate lane 45, which
+  closed both: the await side reaches `relaxed_mit_last` (pin `gift/721`,
+  re-run green here) and `V007` descends via `leseziele` (pin `gift/722`,
+  re-run green here). The German table cells still name the old caveats; they
+  are another lane's cells and move at merge, not here.
+
+**Pin:** `beispiele/gift/776-v003-hint-await-only-hull.gab`
+(`-- erwartet: Hinweis V003`). Recursive `kreis` awaits an orphaned `{ m }`
+on `G`: exactly `Hinweis V003` plus the honest companion `Hinweis E009`, no
+errors. The twin (`mw`/`mr` on `F`) is the same await shape with a complete
+hull and stays silent.
+
+**Pin:** `beispiele/gift/777-v003-hint-counterpart-behind-hull.gab`
+(`-- erwartet: Hinweis V003`). Complete `r` awaits `{ m }` on `G`; the ONLY
+publisher is recursive `kreis`. Before the fix `r` stayed silent (the
+undecidable half sat in the global set); now exactly two `Hinweis V003` (one
+at each side) plus `Hinweis E009`, no errors. The twin (`mw`/`mr` on `F`)
+pairs two complete hulls and stays silent.
+
+## 7. Re-measurement (lane p08)
+
+Server unreachable through the jump host -- local lane, `free -g` beside
+every run (9--11 GB available), `CARGO_BUILD_JOBS=4`, staggered sleeps
+between runs, scoped suites only (`--no-fail-fast`), no full
+test/abnahme/lake. Lean untouched (no `.lean` in scope).
+
+```bash
+cargo build -p gabbro-check          # green
+cargo build -p gabbro-cli            # green (single-run probe checks below)
+./target/debug/gabbro pruefe beispiele/gift/776-*.gab beispiele/gift/777-*.gab beispiele/gift/758-*.gab
+cargo test -p gabbro-check --test beispiele --no-fail-fast   # 25 passed, 0 failed
+cargo test -p gabbro-check --test korpus --test hinweise --no-fail-fast  # 4 + 8 passed
+cargo test -p gabbro-check --test paesse --no-fail-fast      # 69 passed, 0 failed
+cargo test -p gabbro-check --lib --no-fail-fast              # 121 passed, 0 failed
+```
+
+`gift/721`, `gift/722`, `gift/723` re-run green beside the new pins (rows
+20/21 and the transitive-design half of row 19 unchanged). Gift `.gab` count
+moves `524 -> 526` with 776/777; the `DONE.md:1562` / `README.md:163`
+registers still say `500` and follow at merge. Owed at merge by the owning
+lanes: the full surface this lane could not run (`korpus` beyond the scoped
+suite is run, but `rechenwerk`, `einheit`, `pruefe-emission.sh`, all guardians
+including `pruefe-zahlen.py` verdict counts, and any Lean/Isabelle surface).

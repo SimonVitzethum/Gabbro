@@ -1,0 +1,55 @@
+-- erwartet: Hinweis V003
+-- **V003 propagates to the complete side.** `kreis` recurses (`decreases k`),
+-- so its hull is incomplete -- and it is the ONLY publisher of `{ m }` on `G`.
+-- `r` is complete and awaits exactly that payload. Before the fix the
+-- undecidable half sat inside the global set and `r` stayed silent; now the
+-- doubt propagates: `r` gets `Hinweis V003` (neither the `V002` refusal nor
+-- silence -- W10), and `kreis` gets its own `Hinweis V003` for the publish.
+-- Exactly two `Hinweis V003` plus the honest companion `Hinweis E009`.
+--
+-- The twin beside it (`mw`/`mr` on `F`) is the same pairing with BOTH hulls
+-- complete: published and awaited along the graph, silent in every world.
+-- If anything but `Hinweis V003` and `Hinweis E009` ever falls here, the twin
+-- has spoken.
+module gift::v003_hint_counterpart_behind_hull {
+
+const TIEFE : u32 = 512;
+
+static mut m : u32 = 0;
+static mut n : u32 = 0;
+atomic G : bool release;
+atomic F : bool release;
+
+-- The undecidable publisher: incomplete hull (self-recursion). `m` is written
+-- BEFORE the store, so `V006` has nothing to say.
+impl fn kreis(k : u32 in 0 .. TIEFE, v : u32)
+    effects { writes m, publishes G }
+    costs   <= 64 ops
+    decreases k
+{
+    m = v;
+    G = true publishes { m };
+    if k == 0 { return; }
+    kreis(k - 1, v);
+}
+
+-- Complete hull, awaits `{ m }` on `G`: its only counterpart stands behind
+-- the incomplete hull above. `m` is read only AFTER the load, so `V007` has
+-- nothing to say.
+impl fn r() -> u32
+    effects { reads G, reads m }
+    costs   <= 16 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+-- Silent twin: the same pairing with complete hulls on both sides.
+impl fn mw(v : u32)
+    effects { writes n, publishes F }
+    costs   <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+impl fn mr() -> u32
+    effects { writes n, publishes F, reads F, reads n }
+    costs   <= 16 ops
+{ mw(0); let f = F awaits { n }; if f { return n; } return 0; }
+
+}

@@ -205,14 +205,42 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     });
-    let alle_publiziert: BTreeSet<(String, String)> = je_funktion
-        .iter()
-        .flat_map(|(_, h, _, _)| h.publiziert.iter().map(|(a, o, _)| (a.clone(), o.clone())))
-        .collect();
-    let alle_erwartet: BTreeSet<(String, String)> = je_funktion
-        .iter()
-        .flat_map(|(_, h, _, _)| h.erwartet.iter().map(|(a, o, _)| (a.clone(), o.clone())))
-        .collect();
+    let alle_publiziert: BTreeSet<(String, String)>;
+    let alle_erwartet: BTreeSet<(String, String)>;
+    // **Halves behind an incomplete hull stand beside the global sets, not in them.**
+    //
+    // An incomplete hull yields only a LOWER bound (W10): a half it names neither
+    // redeems a complete orphan nor confirms one. Before this split the undecidable
+    // halves sat inside `alle_publiziert` / `alle_erwartet`, so an incomplete
+    // function silently redeemed a complete function's orphan (and vice versa) --
+    // the doubt never propagated. The complete sets below hold the decidable
+    // halves only; a complete half whose SOLE counterpart is undecidable gets the
+    // `V003` hint at its own `V001`/`V002` site instead of the refusal -- and
+    // instead of silence. From a lower bound nothing is refused and nothing is
+    // confirmed, and a hint is neither.
+    let mut unsicher_publiziert: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut unsicher_erwartet: BTreeSet<(String, String)> = BTreeSet::new();
+    {
+        let mut voll_p: BTreeSet<(String, String)> = BTreeSet::new();
+        let mut voll_e: BTreeSet<(String, String)> = BTreeSet::new();
+        for (_, h, unvollstaendig, _) in &je_funktion {
+            let (zp, ze) = if *unvollstaendig {
+                (&mut unsicher_publiziert, &mut unsicher_erwartet)
+            } else {
+                (&mut voll_p, &mut voll_e)
+            };
+            zp.extend(
+                h.publiziert
+                    .iter()
+                    .map(|(a, o, _)| (a.clone(), o.clone())),
+            );
+            ze.extend(
+                h.erwartet.iter().map(|(a, o, _)| (a.clone(), o.clone())),
+            );
+        }
+        alle_publiziert = voll_p;
+        alle_erwartet = voll_e;
+    }
 
     // **`V009`: which atomics are declared PAYLOAD-FREE over the whole program?**
     //
@@ -251,11 +279,25 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 
     for (name, h, unvollstaendig, schluessel) in &je_funktion {
         // **W10:** aus einer unteren Schranke wird weder abgesagt noch bestätigt.
-        if *unvollstaendig && !h.publiziert.is_empty() {
+        //
+        // The trigger is ANY half, publish or await: an incomplete hull that only
+        // awaits got no hint before (the publish set was the whole trigger) and
+        // its `V002` ran against a lower-bound global set -- a refusal drawn from
+        // what the graph cannot see. A `relaxed`-only half takes the other road
+        // on purpose: it never reaches `publiziert`/`erwartet`, so no `V003`
+        // fires for it and `V004`/`V005` speak normally. Ordering strength is a
+        // property of the declared atomic, not of the hull.
+        if *unvollstaendig && (!h.publiziert.is_empty() || !h.erwartet.is_empty()) {
+            let span = h
+                .publiziert
+                .first()
+                .map(|(_, _, s)| *s)
+                .or_else(|| h.erwartet.first().map(|(_, _, s)| *s))
+                .expect("one half is non-empty: the condition just checked it");
             absagen.schiebe(
                 Absage::hinweis(
                     "V003",
-                    h.publiziert[0].2,
+                    span,
                     format!("the pairing in `{name}` is undecidable: the call graph is incomplete here"),
                 )
                 .mit_notiz(
@@ -364,6 +406,28 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 continue;
             }
             if !alle_erwartet.contains(&(at.clone(), o.clone())) {
+                // **The counterpart exists, but only behind an incomplete hull.**
+                // Refusing here would draw completeness from a lower bound; staying
+                // silent would confirm what the graph cannot see. W10 leaves one
+                // answer: the `V003` hint, at the complete function's own site.
+                if unsicher_erwartet.contains(&(at.clone(), o.clone())) {
+                    absagen.schiebe(
+                        Absage::hinweis(
+                            "V003",
+                            *span,
+                            format!(
+                                "`publishes {o}` on `{at}` in `{name}` -- the only \
+                                 counterpart stands in a function whose call hull is \
+                                 incomplete"
+                            ),
+                        )
+                        .mit_notiz(
+                            "the payload sets of an incomplete hull are only a LOWER \
+                             bound -- no completeness follows from them",
+                        ),
+                    );
+                    continue;
+                }
                 absagen.schiebe(
                     Absage::fehler(
                         "V001",
@@ -405,6 +469,26 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 continue;
             }
             if !alle_publiziert.contains(&(at.clone(), o.clone())) {
+                // **Same doubt, await side:** the only publisher stands behind an
+                // incomplete hull. Hint, not refusal and not silence (see above).
+                if unsicher_publiziert.contains(&(at.clone(), o.clone())) {
+                    absagen.schiebe(
+                        Absage::hinweis(
+                            "V003",
+                            *span,
+                            format!(
+                                "`awaits {o}` on `{at}` in `{name}` -- the only \
+                                 counterpart stands in a function whose call hull is \
+                                 incomplete"
+                            ),
+                        )
+                        .mit_notiz(
+                            "the payload sets of an incomplete hull are only a LOWER \
+                             bound -- no completeness follows from them",
+                        ),
+                    );
+                    continue;
+                }
                 absagen.schiebe(
                     Absage::fehler(
                         "V002",
