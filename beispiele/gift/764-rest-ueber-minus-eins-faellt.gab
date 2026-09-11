@@ -1,0 +1,17 @@
+-- erwartet: M152
+-- **M152 -- the remainder at `INT_MIN % -1` traps, and no M-rule said so.**
+--
+-- `return x % y;` over a full-range `i32` dividend and a `-1` denominator
+-- computes `INT_MIN % -1` when `x` holds the smallest value, and that traps
+-- in the C this lowers to (SIGFPE on x86-64, measured 2026-09-11). Division
+-- over the same inputs falls at `M104`; the remainder claims a range that
+-- FITS (`|a % b| <= |b| - 1`), so `M104` stays silent -- and before this rule
+-- the file passed with 0 errors while the emitter wrote `return x % y;`
+-- straight into the C.
+module gift764 {
+
+impl fn rest(x : i32, y : i32 in -1 .. -1) -> i32 effects { pure } {
+    return x % y;
+}
+
+}

@@ -1,0 +1,28 @@
+-- erwartet: M104
+-- **The V2-narrowed subtraction refuses at the operation, not at the
+-- assignment.**
+--
+-- Under `a >= b` with two open `i32`, `a - b` builds `i32 in 0 ..
+-- 4294967295` -- out of the width the C computes in (`INT_MAX - INT_MIN`
+-- overflows 32-bit `int`). Before this fix the operation stayed silent and
+-- only `M101` at an `i32` assignment spoke; into the `i64` below even `M101`
+-- stays silent, and the file passed with 0 errors (measured 2026-09-11).
+-- `eng` narrows both operands so the V2 range keeps the width, and stays
+-- silent. One file, both directions.
+module gift767 {
+
+impl fn offen(a : i32, b : i32) -> i64 effects { pure } {
+    if a >= b {
+        return a - b;
+    }
+    return 0;
+}
+
+impl fn eng(a : i32 in 0 .. 100, b : i32 in 0 .. 50) -> i64 effects { pure } {
+    if a >= b {
+        return a - b;
+    }
+    return 0;
+}
+
+}

@@ -413,6 +413,65 @@ theorem einfaedig_ohne_marken (l : Lauf)
   intro i j f g m s s' ei ej hi hj hmi hmj
   exact absurd hmi (h i f ei hi m s)
 
+/-- Der Zugriff in die gekuerzte Liste trifft dieselbe Stelle in der vollen:
+    `take` liest vorne weg, nicht um. -/
+theorem nimm_zugriff (l : Lauf) (n i : Nat) (q : Schritt)
+    (h : (l.take n)[i]? = some q) : l[i]? = some q := by
+  induction l generalizing n i with
+  | nil =>
+      simp at h
+  | cons hd tl ih =>
+      cases n with
+      | zero => simp at h
+      | succ n =>
+          cases i with
+          | zero =>
+              simp at h ⊢
+              exact h
+          | succ i =>
+              simp at h ⊢
+              exact ih n i h
+
+/-- Jede beobachtete Vorsilbe eines einfaedrigen Laufs ist einfaedrig: der
+    Zugriff in die Vorsilbe trifft dieselbe Stelle im vollen Lauf, also
+    entscheidet dort dieselbe Hand. -/
+theorem einfaedig_nimm (l : Lauf) (n : Nat) (hEin : Einfaedig l) :
+    Einfaedig (l.take n) := by
+  intro i j f g m s s' ei ej hi hj hmi hmj
+  exact hEin i j f g m s s' ei ej
+    (nimm_zugriff l n i _ hi) (nimm_zugriff l n j _ hj) hmi hmj
+
+/-- Ein markenloser Schritt vorne dran aendert nichts an der W4-Form: zwei
+    Treffer im alten Lauf meint dieselbe Hand wie vorher, und ein Treffer im
+    neuen Schritt traegt keine Marke, ueber die man sich streiten koennte. -/
+theorem einfaedig_cons_ohne_marke (q : Schritt) (l : Lauf)
+    (hq : ∀ (m : Marke) (s : Nat), Res.marke m s ∉ q.ereignis.lambda)
+    (hEin : Einfaedig l) : Einfaedig (q :: l) := by
+  intro i j f g m s s' ei ej hi hj hmi hmj
+  cases i with
+  | zero =>
+      cases j with
+      | zero =>
+          have h1 : q = Schritt.mk f ei := by simpa using hi
+          have h2 : q = Schritt.mk g ej := by simpa using hj
+          have hf : f = q.faden := congrArg Schritt.faden h1.symm
+          have hg : g = q.faden := congrArg Schritt.faden h2.symm
+          rw [hf, hg]
+      | succ j =>
+          have h1 : q = Schritt.mk f ei := by simpa using hi
+          have he : ei = q.ereignis := congrArg Schritt.ereignis h1.symm
+          exact absurd (he ▸ hmi) (hq m s)
+  | succ i =>
+      cases j with
+      | zero =>
+          have h2 : q = Schritt.mk g ej := by simpa using hj
+          have he : ej = q.ereignis := congrArg Schritt.ereignis h2.symm
+          exact absurd (he ▸ hmj) (hq m s')
+      | succ j =>
+          have hi' : l[i]? = some (Schritt.mk f ei) := by simpa using hi
+          have hj' : l[j]? = some (Schritt.mk g ej) := by simpa using hj
+          exact hEin i j f g m s s' ei ej hi' hj' hmi hmj
+
 #print axioms Gabbro.Grammatik.Marken.anfang_stufentreu
 #print axioms Gabbro.Grammatik.Marken.anfang_einfaedig
 #print axioms Gabbro.Grammatik.Marken.verlauf_treu_und_einfaedig
@@ -421,5 +480,8 @@ theorem einfaedig_ohne_marken (l : Lauf)
 #print axioms Gabbro.Grammatik.Marken.einfaedig_leer
 #print axioms Gabbro.Grammatik.Marken.einfaedig_einzel
 #print axioms Gabbro.Grammatik.Marken.einfaedig_ohne_marken
+#print axioms Gabbro.Grammatik.Marken.nimm_zugriff
+#print axioms Gabbro.Grammatik.Marken.einfaedig_nimm
+#print axioms Gabbro.Grammatik.Marken.einfaedig_cons_ohne_marke
 
 end Gabbro.Grammatik.Marken
