@@ -198,6 +198,52 @@ structure GepruefteKopie where
 def GepruefteKopie.bereich (g : GepruefteKopie) : Nat × Nat :=
   (g.kopie.userAddr, g.kopie.laenge)
 
+/-! ### Pointer-arithmetic discharge: the validated range covers every step -/
+
+/- `SPRACHE.md` §5.2 gives computed addresses exactly one form: `place[expr]`
+   with a bounded index, otherwise none. This is the Adressraum side of that
+   shape, at the validation: a validated range discharges every one-byte step
+   inside it -- `p + i` for `i < len` is itself a validated single read. What
+   stays elsewhere: the transition refusing the undischargeable rest (the
+   decided check below fires exactly on the covered steps and says nothing
+   past them). -/
+
+/-- A validated range discharges every one-byte step inside it: offset `i`
+    below the validated length is itself a validated single read. -/
+theorem validiert_entlaedt_schritt (r : UserRegion) (k : Kopie)
+    (h : validiert r k) (i : Nat) (hi : i < k.laenge) :
+    innerhalb r (k.userAddr + i) 1 := by
+  unfold validiert at h
+  unfold innerhalb at h ⊢
+  obtain ⟨h1, h2⟩ := h
+  constructor <;> omega
+
+/-- The one-byte step check, executable: the `decide` of the step proposition,
+    stated over the conjunction itself so no unfolding instance is needed. -/
+def schrittImBereichBool (r : UserRegion) (addr : Nat) : Bool :=
+  decide (r.basis ≤ addr ∧ addr + 1 ≤ r.basis + r.laenge)
+
+/-- The executable step check holds exactly where the step proposition holds. -/
+theorem schrittImBereichBool_holds (r : UserRegion) (addr : Nat) :
+    schrittImBereichBool r addr = true ↔ innerhalb r addr 1 := by
+  unfold schrittImBereichBool innerhalb
+  constructor
+  · intro h
+    exact of_decide_eq_true h
+  · intro h
+    exact decide_eq_true h
+
+/-- The discharge, decided: the boolean check fires on every arithmetic step
+    of a validated copy -- the decided rule discharges the transitions. -/
+theorem validiert_entlaedt_schritt_bool (r : UserRegion) (k : Kopie)
+    (h : validiert r k) (i : Nat) (hi : i < k.laenge) :
+    schrittImBereichBool r (k.userAddr + i) = true :=
+  (schrittImBereichBool_holds r _).mpr (validiert_entlaedt_schritt r k h i hi)
+
+#print axioms validiert_entlaedt_schritt
+#print axioms schrittImBereichBool_holds
+#print axioms validiert_entlaedt_schritt_bool
+
 /-! ## 3. The TOCTOU sequence: two readings, one check between them -/
 
 /-- One reading of user memory: the address and the value seen (cut C1: the

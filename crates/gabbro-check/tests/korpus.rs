@@ -465,6 +465,12 @@ const BENANNT: &[&str] = &[
     // > probe, that probe does not exist, and no list of feature names exists in the
     // > language.
     "N054",
+    // 2026-09-11, pointer-arithmetic discharge (p04, exec side; rule p03):
+    // computed addresses outside `place[expr]` (`SPRACHE.md` §5.2) are refused
+    // at the emission site, and `C001` is that refusal channel. Gifts 764/765
+    // pin the two spellings (`p + 1`, `p += 1`); the Lean discharge behind the
+    // admitted index form is `validiert_entlaedt_schritt` (`Adressraum.lean`).
+    "C001",
 ];
 
 #[test]
