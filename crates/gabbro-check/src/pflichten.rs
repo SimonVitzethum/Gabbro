@@ -1281,3 +1281,182 @@ fn sammle_vertraege(items: &[Item], aus: &mut Vec<String>) {
         }
     }
 }
+
+/// **H022 -- a call cycle whose members do not all carry `decreases` (assigned 2026-09-11,
+/// lane-133).**
+///
+/// The composition premise behind `K008`/`K009` (`kosten.rs::rekursionsmass`): on a cycle
+/// every edge counts the DECLARED `costs` of the callee once, so the promise of a member
+/// is an assumption until a measure falls along the recursion. `K008` refuses the member
+/// without a measure; `K009` refuses the recursive site that does not visibly lower it.
+///
+/// What `H022` names is the CYCLE as one composition unit: which members it has, which of
+/// them carry no measure, and where the refusal would anchor. The detector below mirrors
+/// the `K008` condition over the same graph (`aufrufgraph::erhebe`, `im_zyklus`), so the
+/// two cannot disagree about membership -- a second READER, not a second register.
+///
+/// **Built, not wired.** Wiring is a line in `lib.rs::pruefe`, and that file is frozen for
+/// this lane. Until a follow-up lane wires it, `K008` is the live enforcement, pinned by
+/// `beispiele/gift/746`-`748` (`messung/PFLICHTEN-ORDNUNG.md`).
+pub const H022: &str = "H022";
+
+/// **One member of a call cycle that declares no `decreases`.**
+pub struct Zyklenluecke {
+    /// The bare member.
+    pub funktion: String,
+    /// The module path the member was found in, as `fuer_jedes_item_im_modul` reports it.
+    pub modul: String,
+    /// Where the `decreases` would stand: the member's name.
+    pub span: gabbro_syntax::span::Span,
+}
+
+/// **The `H022` detector: cycle members without a measure, in source order.**
+///
+/// The condition is `K008`'s, read a second time: in a cycle (`im_zyklus`) and without a
+/// measure (`decreases.is_none()`). A `spec fn` owes nothing -- it IS the statement
+/// (`M113`), same as in `lauf` above.
+pub fn zyklen_ohne_mass(baum: &Programm) -> Vec<Zyklenluecke> {
+    let g = crate::aufrufgraph::erhebe(baum);
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        if f.klasse == Some(FnKlasse::Spec) {
+            return;
+        }
+        if f.decreases.is_some() {
+            return;
+        }
+        let voll = g.schluessel_von(modul, &f.name.text);
+        if g.im_zyklus(&voll) {
+            aus.push(Zyklenluecke {
+                funktion: f.name.text.clone(),
+                modul: modul.to_string(),
+                span: f.name.span,
+            });
+        }
+    });
+    aus
+}
+
+/// **The `H022` refusal for one bare member.**
+///
+/// A constructor and not a pass: the pass would stand in `lib.rs::pruefe`, which is
+/// frozen for this lane. What is pinned here is the refusal itself -- code, site, and
+/// the two notes the human beside it needs.
+pub fn h022_weigerung(l: &Zyklenluecke) -> gabbro_syntax::diag::Absage {
+    gabbro_syntax::diag::Absage::fehler(
+        H022,
+        l.span,
+        format!(
+            "`{}` stands in a call cycle and declares no `decreases`",
+            l.funktion
+        ),
+    )
+    .mit_notiz(
+        "a call counts the DECLARED `costs` of the callee, so on a cycle every edge \
+         counts once -- the promise is an assumption, not a result",
+    )
+    .mit_notiz("`decreases <expr>` names the measure that falls along the recursion")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gabbro_syntax::diag::Stufe;
+
+    const WECHSELRUF: &str = "module gift::wechselruf {\n\
+        static mut a : u32 = 0;\n\
+        impl fn ping(n : u32) -> u32 effects { writes a } costs <= 8 ops\n\
+        { a = n; if n == 0 { return 0; } return pong(n); }\n\
+        impl fn pong(n : u32) -> u32 effects { writes a } costs <= 8 ops\n\
+        { a = n; if n == 0 { return 0; } return ping(n); }\n\
+        }\n";
+
+    const HALBES_MASS: &str = "module gift::halbes_mass {\n\
+        static mut a : u32 = 0;\n\
+        impl fn ping(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n\n\
+        { a = n; if n == 0 { return 0; } return pong(n - 1); }\n\
+        impl fn pong(n : u32) -> u32 effects { writes a } costs <= 8 ops\n\
+        { a = n; if n == 0 { return 0; } return ping(n - 1); }\n\
+        }\n";
+
+    const VOLLES_MASS: &str = "module gift::volles_mass {\n\
+        static mut a : u32 = 0;\n\
+        impl fn ting(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n\n\
+        { a = n; if n == 0 { return 0; } return tong(n - 1); }\n\
+        impl fn tong(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n\n\
+        { a = n; if n == 0 { return 0; } return ting(n - 1); }\n\
+        }\n";
+
+    const KETTE: &str = "module gift::kette {\n\
+        static mut a : u32 = 0;\n\
+        impl fn f(n : u32) -> u32 effects { writes a } costs <= 8 ops\n\
+        { a = n; if n == 0 { return 0; } return g(n); }\n\
+        impl fn g(n : u32) -> u32 effects { writes a } costs <= 8 ops\n\
+        { a = n; if n == 0 { return 0; } return n; }\n\
+        }\n";
+
+    fn namen(l: &[Zyklenluecke]) -> Vec<&str> {
+        l.iter().map(|x| x.funktion.as_str()).collect()
+    }
+
+    #[test]
+    fn h022_findet_beide_glieder_des_wechselrufs() {
+        let (baum, _) = gabbro_syntax::lies("h022-wechselruf", WECHSELRUF);
+        assert_eq!(namen(&zyklen_ohne_mass(&baum)), ["ping", "pong"]);
+    }
+
+    #[test]
+    fn h022_halbes_mass_nennt_nur_das_blosse_glied() {
+        let (baum, _) = gabbro_syntax::lies("h022-halbes-mass", HALBES_MASS);
+        assert_eq!(namen(&zyklen_ohne_mass(&baum)), ["pong"]);
+    }
+
+    #[test]
+    fn h022_schweigt_mit_mass_und_ohne_zyklus() {
+        let (voll, _) = gabbro_syntax::lies("h022-volles-mass", VOLLES_MASS);
+        assert!(zyklen_ohne_mass(&voll).is_empty());
+        let (kette, _) = gabbro_syntax::lies("h022-kette", KETTE);
+        assert!(zyklen_ohne_mass(&kette).is_empty());
+    }
+
+    #[test]
+    fn h022_weigerung_tragt_code_stufe_und_glied() {
+        let (baum, _) = gabbro_syntax::lies("h022-halbes-mass", HALBES_MASS);
+        let l = zyklen_ohne_mass(&baum);
+        assert_eq!(l.len(), 1);
+        let w = h022_weigerung(&l[0]);
+        assert_eq!(w.code, H022);
+        assert!(matches!(w.stufe, Stufe::Fehler));
+        assert!(w.text.contains("pong"));
+    }
+
+    /// **The twin through the pipeline stays silent** -- the shape `gift/747` carries
+    /// in-file. Measured 2026-09-11 over the same bodies: zero `Fehler`.
+    #[test]
+    fn h022_zwilling_bleibt_still() {
+        let (baum, mut absagen) = gabbro_syntax::lies("h022-volles-mass", VOLLES_MASS);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        let fehler: Vec<&str> = absagen
+            .absagen
+            .iter()
+            .filter(|a| matches!(a.stufe, Stufe::Fehler))
+            .map(|a| a.code)
+            .collect();
+        assert!(fehler.is_empty(), "twin fell with {fehler:?}");
+    }
+
+    /// **The bare cycle through the pipeline falls with `K008` on each member** -- what
+    /// `gift/746` asserts file by file, here per member.
+    #[test]
+    fn h022_wechselruf_faellt_je_glied_mit_k008() {
+        let (baum, mut absagen) = gabbro_syntax::lies("h022-wechselruf", WECHSELRUF);
+        let _ = crate::pruefe(&baum, &mut absagen);
+        let k008 = absagen
+            .absagen
+            .iter()
+            .filter(|a| matches!(a.stufe, Stufe::Fehler) && a.code == "K008")
+            .count();
+        assert_eq!(k008, 2, "bare cycle fell with {k008} K008, not 2");
+    }
+}

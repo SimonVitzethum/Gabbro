@@ -1,0 +1,23 @@
+-- erwartet: K008
+-- **A mutual call cycle without a descent measure (must fall).**
+--
+-- `ping` calls `pong` calls `ping`, and neither declares `decreases`. On a cycle every
+-- edge counts the DECLARED `costs` of the callee once (`SPRACHE.md` §7), so each promise
+-- is an assumption, not a result -- and without a measure nothing turns it into one.
+-- `K008` refuses each bare member; the self-recursive shape stands in `gift/150`.
+--
+-- The composition premise this pins: a termination argument must cover EVERY member of
+-- the cycle, not just one of them. The half-covered cycle (one measure) is `gift/747`,
+-- the three-member cycle `gift/748`, and the rule this will become is `H022`
+-- (`messung/PFLICHTEN-ORDNUNG.md`).
+module gift::wechselruf_ohne_mass {
+
+static mut a : u32 = 0;
+
+impl fn ping(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return pong(n); }
+
+impl fn pong(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return ping(n); }
+
+}

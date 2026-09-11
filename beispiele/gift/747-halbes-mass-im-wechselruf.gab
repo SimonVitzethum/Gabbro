@@ -1,0 +1,31 @@
+-- erwartet: K008
+-- **Half a measure on a mutual cycle: one member carries `decreases`, the other does not
+-- (must fall once, with the twin in-file staying silent).**
+--
+-- `ping` declares `decreases n` and lowers into `pong`; `pong` answers without any
+-- measure of its own. `K008` falls exactly on the bare member -- a measure on one side
+-- of a cycle is not a measure on the cycle.
+--
+-- The must-pass twin stands in the same file: `ting`/`tong` carry both measures and
+-- lower at both sites, and the run over them is silent (measured 2026-09-11: zero
+-- `Fehler`, two `E009` hints -- the honest third state over the cycle hull, same as
+-- `gift/727`). *A probe whose twin is elsewhere can rot elsewhere; this one cannot.*
+module gift::halbes_mass_im_wechselruf {
+
+static mut a : u32 = 0;
+
+impl fn ping(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n
+{ a = n; if n == 0 { return 0; } return pong(n - 1); }
+
+impl fn pong(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return ping(n - 1); }
+
+-- The twin: the same cycle with both measures declared and lowered. Silent.
+
+impl fn ting(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n
+{ a = n; if n == 0 { return 0; } return tong(n - 1); }
+
+impl fn tong(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n
+{ a = n; if n == 0 { return 0; } return ting(n - 1); }
+
+}
