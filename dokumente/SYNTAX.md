@@ -1836,3 +1836,8 @@ Lean: `Grammatik/Zeugnis.lean`. The printer stays trust base.
 - `restrict` and `volatile` stay trust, priced and named.
 - The 19 admissions are template, each still owes its `?:`-style
   ruling.
+
+### 21.8 Ledger pointer
+
+The per-cut status of this chapter (proved, shape, open across cuts C1, C2, C3, C6,
+with deciding witness and recompute command) is booked in `messung/SYNTAX-EMITTER-ANHANG.md`.
