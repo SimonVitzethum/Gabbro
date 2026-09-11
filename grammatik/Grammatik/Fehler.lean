@@ -210,6 +210,35 @@ structure FehlerFall where
 def fehlerFallErgebnis {τ : Ty} (f : FehlerFall) : ErgebnisF D τ :=
   .fehler f.klasse
 
+/-- An out-of-range index reaches `fehler .index` -- by definition: the
+    raw-datum falsifier faults where no grammar term can (`indexFalleErgebnis`). -/
+theorem indexFalleErgebnis_fehler (F : IndexFalle D) :
+    (indexFalleErgebnis F : ErgebnisF D τ) = .fehler .index :=
+  rfl
+
+/-- A named fault datum reaches its own fault -- by definition
+    (`fehlerFallErgebnis`). -/
+theorem fehlerFallErgebnis_fehler (f : FehlerFall) :
+    (fehlerFallErgebnis f : ErgebnisF D τ) = .fehler f.klasse :=
+  rfl
+
+/-- The index falsifier never counts as ok: raw data faults, it does not agree. -/
+theorem evalF_ok_nicht_indexFalle (F : IndexFalle D) :
+    ¬ evalF_ok (indexFalleErgebnis F : ErgebnisF D τ) := by
+  unfold evalF_ok indexFalleErgebnis
+  exact id
+
+/-- A named fault datum never counts as ok. -/
+theorem evalF_ok_nicht_fehlerFall (f : FehlerFall) :
+    ¬ evalF_ok (fehlerFallErgebnis f : ErgebnisF D τ) := by
+  unfold evalF_ok fehlerFallErgebnis
+  exact id
+
+#print axioms Gabbro.Grammatik.indexFalleErgebnis_fehler
+#print axioms Gabbro.Grammatik.fehlerFallErgebnis_fehler
+#print axioms Gabbro.Grammatik.evalF_ok_nicht_indexFalle
+#print axioms Gabbro.Grammatik.evalF_ok_nicht_fehlerFall
+
 /-! ## 1. Die Uebereinstimmung, bewiesen wo sie schliesst -/
 
 /-- `evalF` meldet heute immer einen Wert -- als Satz ueber der Definition, nicht als
