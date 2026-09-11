@@ -1,0 +1,30 @@
+-- erwartet: D027
+-- **D027 -- a `requires` over a shared carrier must name its invariant.**
+--
+-- The function takes the lock shared, so its contract reads a lock-shared
+-- carrier. `k.slots[i].belegt` restates what the declared invariant
+-- `raum_belegt_zaehlt` (or the `spec fn` stating it) already says -- and the
+-- per-run preservation proof that restatement would owe (`hFree`) is
+-- discharged for the invariant fragment by construction, for nothing else.
+-- The writable form names the invariant instead of repeating it.
+module gift792 {
+
+const N : u32 = 64;
+
+table Raum count N {
+    slot { belegt : bool, rechte : u32, }
+    invariant raum_belegt_zaehlt cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;
+
+impl fn liest_belegt(k : ptr<normal, r> Raum, i : index into Raum) -> bool
+    requires Held(KAPPEN, shared), k.slots[i].belegt
+    effects { reads k.slots }
+    costs <= 2 ops
+{
+    return k.slots[i].belegt;
+}
+
+}

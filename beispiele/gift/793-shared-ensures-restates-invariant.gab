@@ -1,0 +1,29 @@
+-- erwartet: D027
+-- **D027 -- an `ensures` over a shared carrier must name its invariant.**
+--
+-- The twin of 792 on the postcondition side: the function runs under a shared
+-- witness, so `k.slots[i].belegt` in `ensures` reads a lock-shared carrier
+-- and restates instead of naming. One restated clause draws exactly one
+-- `D027`, no matter which side of the contract it stands on.
+module gift793 {
+
+const N : u32 = 64;
+
+table Raum count N {
+    slot { belegt : bool, rechte : u32, }
+    invariant raum_belegt_zaehlt cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;
+
+impl fn setzt_belegt(k : ptr<normal, rw> Raum, i : index into Raum)
+    requires Held(KAPPEN, shared)
+    ensures k.slots[i].belegt
+    effects { writes k.slots }
+    costs <= 2 ops
+{
+    k.slots[i].belegt = true;
+}
+
+}

@@ -1010,6 +1010,36 @@ pub const D1D2: &[Satz] = &[
                      beispiele/gift/694",
     },
     Satz {
+        name: "d.sharedcarriernamesinvariant",
+        kennungen: &["D027"],
+        aussage: "A `requires`/`ensures` clause of a shared-side function that \
+                  reads a table carrier must call a declared invariant -- or a \
+                  `spec fn` stating one -- by name; a restated predicate is \
+                  refused. Shared-side arrives through a `locks shared` effect \
+                  or a `Held(L, shared)` witness, which is the only syntactic \
+                  mark a shared carrier leaves.",
+        vorbehalt: "The rule is the syntactic shadow of the invariant form, not \
+                    the form itself: that the named call coincides with the \
+                    carrier invariant (`hForm`) is the prover's, and a bare \
+                    invariant name is no resolvable call -- the call graph \
+                    names that edge (`H021`), not this rule. Outside contract \
+                    position (loop invariants, `spec fn` bodies, functions \
+                    without a shared side) non-invariant shapes stay own-logic \
+                    debt, and where `D021` already refused the same clause this \
+                    rule stays silent -- one fault, one refusal.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/792 (`requires` restates), 793 (`ensures` \
+                      restates), 794 (quantifier restates), 795 (reference \
+                      beside a restatement): each falls with exactly one \
+                      `D027`. The counter-directions stand in \
+                      `crates/gabbro-check/tests/paesse.rs` \
+                      (`eine_geteilte_klausel_nennt_ihre_invariante`): `spec \
+                      fn` reference silent, witness alone silent, \
+                      exclusive-side restatement silent.",
+        fundstelle: "crates/gabbro-check/src/domaene.rs (`d027_klausel_pruefen`); \
+                     beispiele/gift/792-795",
+    },
+    Satz {
         name: "n.merkmalsform",
         kennungen: &["N054"],
         aussage: "A machine feature demand names ONE feature, and a feature is a bare name. \
