@@ -34,6 +34,11 @@
        expiry, `none` exactly off it.
      `fristErgebnis_fristlauf_none` / `fristlauf_erschöpfend` -- no deadline
        moment is `ok`; every run is `ok` or expiry. No third outcome.
+      `fristErgebnis_fristlauf_erschöpfend` -- exhaustive over the HARDWARE
+        answer: every run answers `none` or a named `fortschritt`
+        assumption. The expiry side is decided (`laeuftAb`); the hardware
+        side stays an existential over the deadline's name (goal-conform,
+        the `dma_inhalt` shape: a named hypothesis, never modelled).
    What the shapes MEAN over a run -- which step counts as the check, which as
    the use, what sets the deadline moment -- is cut, not faked (C1 below).
 
@@ -220,6 +225,23 @@ theorem fristlauf_erschöpfend {D : Deklaration} (p : PruefPaar) (f : Frist D) (
     · exact Or.inr ⟨f, (fristlauf_some_abgelaufen p f m).mpr h⟩
     · exact Or.inl ((fristlauf_some_ok p f m).mpr h)
 
+/-- Exhaustive over the HARDWARE answer: every run answers nothing or a named
+    hardware `fortschritt` assumption -- no third hardware outcome. The expiry
+    side is decided by `laeuftAb` (proved above); the hardware side stays an
+    existential over the deadline's named assumption -- goal-conform, the same
+    shape as `dma_inhalt` in `Geraet.lean`, where the content invariant is a
+    named hypothesis, never modelled. -/
+theorem fristErgebnis_fristlauf_erschöpfend {D : Deklaration} (p : PruefPaar)
+    (f : Frist D) (d : Option Moment) :
+    fristErgebnis (fristlauf p f d) = none ∨
+      ∃ a : D.Annahme, fristErgebnis (fristlauf p f d) = some (.fortschritt a) := by
+  cases d with
+  | none => exact Or.inl rfl
+  | some m =>
+    by_cases h : laeuftAb p m
+    · exact Or.inr ⟨f.annahme, (fristErgebnis_fristlauf_some p f m).mpr h⟩
+    · exact Or.inl ((fristErgebnis_fristlauf_ok p f m).mpr h)
+
 /-! ## Speech probe: the shapes compute (values, not sentences) -/
 
 /-- The probe deadline over the empty declaration: the assumption is `unit`,
@@ -247,6 +269,20 @@ example : fristErgebnis (FristOut.abgelaufen fristProbe) = some (.fortschritt ()
 /-- `ok` answers nothing. -/
 example : fristErgebnis (FristOut.ok : FristOut leer) = none := by rfl
 
+-- Executable witness: the expiry decision RUNS at check time. `Hardware`
+-- carries no `Repr`, so the witness projects the `fristlauf` decision to
+-- strings: expiry inside the open interval, `ok` at either endpoint
+-- coincidence. The `example` pins the printed triple, so a silent change in
+-- the decision breaks the build instead of the log.
+#eval (match fristlauf paarProbe fristProbe (some 5) with | .abgelaufen _ => "expired" | .ok => "ok",
+  match fristlauf paarProbe fristProbe (some 7) with | .abgelaufen _ => "expired" | .ok => "ok",
+  match fristlauf paarProbe fristProbe (some 3) with | .abgelaufen _ => "expired" | .ok => "ok")
+
+example : (match fristlauf paarProbe fristProbe (some 5) with | .abgelaufen _ => "expired" | .ok => "ok",
+    match fristlauf paarProbe fristProbe (some 7) with | .abgelaufen _ => "expired" | .ok => "ok",
+    match fristlauf paarProbe fristProbe (some 3) with | .abgelaufen _ => "expired" | .ok => "ok") =
+    ("expired", "ok", "ok") := by rfl
+
 #print axioms Gabbro.Grammatik.laeuftAb
 #print axioms Gabbro.Grammatik.fristlauf
 #print axioms Gabbro.Grammatik.fristErgebnis
@@ -263,5 +299,6 @@ example : fristErgebnis (FristOut.ok : FristOut leer) = none := by rfl
 #print axioms Gabbro.Grammatik.fristErgebnis_fristlauf_ok
 #print axioms Gabbro.Grammatik.fristErgebnis_fristlauf_none
 #print axioms Gabbro.Grammatik.fristlauf_erschöpfend
+#print axioms Gabbro.Grammatik.fristErgebnis_fristlauf_erschöpfend
 
 end Gabbro.Grammatik
