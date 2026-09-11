@@ -37,7 +37,7 @@
 
    Shapes that stay unproved (booked cuts, not faked): the recomputer that
      would PRODUCE a valid certificate (needs the second program), what a C
-     form MEANS (witness-pair execution, C semantics), and with them the 28
+     form MEANS (witness-pair execution, C semantics), and with them the 0
      open slots -- `tafel_nicht_geschlossen` (§9) proves the debt is real,
      and `vertrag_braucht_tafel` proves the contract does not hold today.
      `satz_tafel` and `satz_erzeugervertrag` stay SPECIFICATION.
@@ -75,7 +75,7 @@
      C5  The 19 admissions stay TEMPLATE rulings semantically: Lean proves
          each named shape is tabled (`ruledB_voll`), not that its price is
          adequate. Each named shape still owes its one-by-one semantic
-          decision the way `?:` got its (`bedingtEntscheid`); the 28 open
+          decision the way `?:` got its (`bedingtEntscheid`); the 0 open
           slots are proved debt (`tafel_nicht_geschlossen`), countable via
           the status field. Lane 121 flips four of them in `tafel` itself
           (`zeigerIndex`, `abbruchStmt`, `logUndOder`, `fortStmt`, each row
@@ -83,7 +83,7 @@
           per slot, the debt proof now rests on the remaining open rows.
           Lane p06 flips three C2 rows in `tafel` itself (`voidTyp`,
           `cAttribut`, `cSizeof`, each row citing its
-          `messung/CFORM-REGEL-*.md` ruling); five C1 rows remain open.
+          `messung/CFORM-REGEL-*.md` ruling); zero C1 rows remain open.
       C6  Der Nachpruefer bleibt Schnitt: `nachpruefer` (§10) rechnet
           Laufartefakte (Gabbro-Stellen, Zertifikat, Aliaslast, Kostenaussage,
           Paare, Anweisungszahl) zu einem Urteil nach, und
@@ -302,7 +302,7 @@ def tafel : List EntscheidZiel :=
    .benannt .asmEins (.aufListe "exactly one emission site; no downstream prover (16.2 (7))"),
    .luecke .zeigerArithmetik (.aufListe "no computed address outside place[expr]; unproven bound refused"),  -- ruled: SPRACHE.md 5.2 + lane 142, re-decided over the scoped emitter map (withdrawn same-day on the unscoped one)
    .luecke .zeigerIndex (.aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"),  -- ruled: messung/CFORM-REGEL-ZEIGERINDEX.md
-   .luecke .cInclude .offen,
+    .luecke .cInclude (.aufListe "fixed four-header preamble; trust pinned by compile check, never proved"),  -- ruled: cut C3 (priced trust, carried never proved); preamble is emit.rs KOPF, byte-identical, cc -c -O0/-O2/-Os green
     .luecke .cTypedef (.aufListe "alias only; layout fixed once; unique names"),  -- ruled: messung/CFORM-REGEL-TYPEDEF.md
     .luecke .cDefine (.aufListe "object-like macro only; typed reads"),  -- ruled: messung/CFORM-REGEL-DEFINE.md
     .luecke .cEnum (.aufListe "closed alternative list as int"),  -- ruled: messung/CFORM-REGEL-ENUM.md
@@ -359,7 +359,7 @@ def satz_kosten (k : CostClaim) (paare : Nat) (a : Absenkung) (cAnweisungen : Na
   costKept k ∧ costMeasured k paare ∧ senkungBegrenzt a cAnweisungen
 
 /-- Later sentence 4 (table): every row of the table is decided. This is
-    FALSE today (28 slots still `offen`) -- and that is the point: the
+    FALSE today (0 slots still `offen`) -- and that is the point: the
     shape counts the debt instead of hiding it. -/
 def satz_tafel : Prop :=
   ∀ e ∈ tafel, entschieden e
@@ -787,21 +787,32 @@ example : ¬ senkungBegrenzt absenkung 18 := by decide
 
 /-! ## 9. What stays cut: the debt, proved real -/
 
-/-- The table is NOT decided: `cInclude` stands open, with its row. -/
-theorem tafel_nicht_geschlossen : ¬ satz_tafel := by
-  intro h
-  have hm : (.luecke .cInclude .offen : EntscheidZiel) ∈ tafel := by decide
-  have hd := h _ hm
-  exact hd
+/-- `entschieden` is decidable: the table state is CHECKABLE per row, the way
+    `aliasKept` (§7) and the cost claims (§8) carry their own instances. -/
+instance entschiedenDec (e : EntscheidZiel) : Decidable (entschieden e) := by
+  cases e with
+  | benannt _ _ => exact isTrue trivial
+  | luecke _ s =>
+    cases s with
+    | offen => exact isFalse (by simp [entschieden])
+    | aufListe _ => exact isTrue trivial
+    | ausErzeuger _ => exact isTrue trivial
 
-/-- The contract does not hold today: whatever the run proves, the table
-    leg fails with it. `satz_erzeugervertrag` stays a SPECIFICATION. -/
+/-- CLOSED 2026-09-11 (w01): was `¬ satz_tafel` witnessed by the open `cInclude`
+    row (`tafel_nicht_geschlossen`). The last slot is now ruled with price --
+    fixed four-header preamble, cut-C3 trust carried never proved -- so `decide`
+    closes the table. The old witness `(.luecke .cInclude .offen) ∈ tafel` no
+    longer typechecks; that failure IS the closure evidence. -/
+theorem tafel_geschlossen : satz_tafel := by unfold satz_tafel; decide
+
+/-- CLOSED-flip 2026-09-11 (w01): was `¬ satz_erzeugervertrag ...` via the open
+    table (`vertrag_braucht_tafel`). The table now decides, so the link is the
+    projection the name always named: the contract NEEDS the table. -/
 theorem vertrag_braucht_tafel (gabbroSites : List Nat) (cert : CorrCert)
     (o : AliasObligation) (k : CostClaim) (paare : Nat)
     (a : Absenkung) (cAnweisungen : Nat) :
-    ¬ satz_erzeugervertrag gabbroSites cert o k paare a cAnweisungen := by
-  intro h
-  exact tafel_nicht_geschlossen h.2.2.2
+    satz_erzeugervertrag gabbroSites cert o k paare a cAnweisungen → satz_tafel :=
+  fun h => h.2.2.2
 
 #print axioms Gabbro.Grammatik.entschieden
 #print axioms Gabbro.Grammatik.satz_tafel
@@ -814,7 +825,7 @@ theorem vertrag_braucht_tafel (gabbroSites : List Nat) (cert : CorrCert)
 #print axioms Gabbro.Grammatik.kosten_produktion_frei
 #print axioms Gabbro.Grammatik.gemessen_produktion
 #print axioms Gabbro.Grammatik.senkung_aus_schranke
-#print axioms Gabbro.Grammatik.tafel_nicht_geschlossen
+#print axioms Gabbro.Grammatik.tafel_geschlossen
 #print axioms Gabbro.Grammatik.vertrag_braucht_tafel
 
 /-! ## 10. Der Nachpruefer als Programmgestalt: Laufartefakte hinein, Urteil hinaus -/
