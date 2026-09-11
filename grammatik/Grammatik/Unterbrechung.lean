@@ -36,11 +36,18 @@
 
   CUTS, booked here so nobody has to guess them later (shrunk, not faked):
     (C1) WHEN a handler runs stays a scheduling fact: `entry`/`dispatch`/`via idt`
-        have no constructor here; the theorems quantify over runs in which the
-        handler DID run as a thread.
-    (C2) No priority levels: masking is one boolean per lock (`D.maskiert`), not a
-        priority lattice. Preemption AMONG handlers themselves is plain threads --
-        covered by the sentence, HB-ordered like any pair.
+        have no constructor here; the run-side SHAPE is section 4 below
+        (`HandlerSchritt`, `HandlerEintritt`, `HandlerVersand`): the theorems
+        quantify over runs in which the handler DID run as a thread, and dispatch
+        admissibility is the mask-state face of (M)
+        (`versand_gibt_maskenordnung`). What stays booked is the syntax
+        constructor, not the shape.
+    (C2) No priority levels IN THE DECLARATION: masking stays one boolean per lock
+        (`D.maskiert`), not a priority lattice. The run-side SHAPE is section 5
+        below (`EbenenOrdnung`, `MaskenEbene`, `EbenenPlan`): the boolean mask is
+        the 0/1 case of levels (`ebenenplan_gibt_versand`). Preemption AMONG
+        handlers themselves stays plain threads -- covered by the sentence,
+        HB-ordered like any pair.
     (C3) The Owicki-Gries step is not here: that valid sequential logic survives
         interleaving needs the joint model (see the honesty note at the end of
         `Wettlauf.lean` section 5). Race-freedom extends to handlers; the logic
@@ -164,5 +171,136 @@ theorem maske_schliesst_handler_aus (l : Lauf D) (H : Handler)
 #print axioms Gabbro.Grammatik.handler_wettlauf_frei_global
 #print axioms Gabbro.Grammatik.handler_nach_freigabe
 #print axioms Gabbro.Grammatik.maske_schliesst_handler_aus
+
+/-! ## 4. Schedule shape (C1, narrowed): WHEN a handler runs, as run predicates -/
+
+/-- (C1-shape) Position `j` carries a handler step by `g`: the run-side reading of
+    `entry ... dispatch` / `via idt`. WHEN the scheduler puts `g` there stays the
+    scheduler's business (no constructor here); THAT it is a thread step is this
+    predicate. -/
+def HandlerSchritt (H : Handler) (l : Lauf D) (j : Nat) (g : Faden) : Prop :=
+  ∃ e, l[j]? = some (Schritt.mk g e) ∧ H g
+
+/-- (C1-shape) Entry at the boundary: the handler step at `j` is one whole event --
+    good, and fitting its thread trace (the K condition read at that point).
+    Preemption lands BETWEEN events because entry says so here, one position at
+    a time. -/
+def HandlerEintritt (H : Handler) (l : Lauf D) (j : Nat) (g : Faden) : Prop :=
+  HandlerSchritt (D := D) H l j g ∧
+    ∀ e, l[j]? = some (Schritt.mk g e) → e.gut ∧ e.passt (l.spur g j)
+
+/-- (C1-shape) Mask-state-driven dispatch: handler `g` takes position `j` only where
+    no foreign thread holds a masking lock. This is the schedule-admissibility face
+    of (M): the scheduler may place `g` at `j` exactly where the mask state admits
+    it (`versand_gibt_maskenordnung` says they are the same condition). -/
+def HandlerVersand (H : Handler) (l : Lauf D) (j : Nat) (g : Faden) : Prop :=
+  HandlerSchritt (D := D) H l j g ∧
+    ∀ (f : Faden) (L : D.Lock), l.haelt f L j → f = g ∨ D.maskiert L = false
+
+/-- (C1-shape) Entry is what K discharges: any handler step in a K-run is a
+    boundary entry. The mirror of `korngrenze_aus_gesittet`, one position at a
+    time. -/
+theorem handler_eintritt_aus_korngrenze (H : Handler) (l : Lauf D)
+    (K : Korngrenze (D := D) l) (j : Nat) (g : Faden)
+    (hS : HandlerSchritt (D := D) H l j g) :
+    HandlerEintritt (D := D) H l j g :=
+  ⟨hS, fun e he => K j g e he⟩
+
+/-- (C1-shape) An entry step is one whole, good event. -/
+theorem handler_eintritt_ganzes_ereignis (H : Handler) (l : Lauf D)
+    (j : Nat) (g : Faden)
+    (hE : HandlerEintritt (D := D) H l j g)
+    (e : Ereignis D) (he : l[j]? = some (Schritt.mk g e)) : e.gut :=
+  (hE.2 e he).1
+
+/-- (C1-shape) Dispatch admissibility IS the run-side masking order: where every
+    dispatch respects the mask state, no foreign handler step cuts into a held
+    masking lock. -/
+theorem versand_gibt_maskenordnung (H : Handler) (l : Lauf D)
+    (hV : ∀ (j : Nat) (g : Faden),
+      HandlerSchritt (D := D) H l j g → HandlerVersand (D := D) H l j g) :
+    MaskenOrdnung (D := D) H l := by
+  intro j f g L e hk hHg hfg hhaelt hmask
+  have hS : HandlerSchritt (D := D) H l j g := ⟨e, hk, hHg⟩
+  have hd := (hV j g hS).2 f L hhaelt
+  rcases hd with hgg | hcon
+  · exact hfg hgg.symm
+  · rw [hmask] at hcon
+    exact Bool.noConfusion hcon
+
+/-- (C1-shape) Masking-path corollary: `f` takes a masking lock `L` at `k'` and holds
+    it through `k`; then no foreign handler `g` is dispatched at `k`. The admitted
+    schedule never cuts the masked section -- where the lock-edge sentence takes
+    over after `f`'s release. -/
+theorem versand_nach_nahme_ausgeschlossen (H : Handler) (l : Lauf D)
+    (hV : ∀ (j : Nat) (g : Faden),
+      HandlerSchritt (D := D) H l j g → HandlerVersand (D := D) H l j g)
+    (f g : Faden) (hfg : g ≠ f) (hHg : H g)
+    (L : D.Lock) (hmask : D.maskiert L = true)
+    (k k' : Nat) (hh : List D.Lock)
+    (hnk' : l[k']? = some (Schritt.mk f (.nimmt L hh))) (hlt : k' < k)
+    (hfrei : ∀ r, k' < r → r < k → l[r]? ≠ some (Schritt.mk f (.gibt L)))
+    (e : Ereignis D) (hk : l[k]? = some (Schritt.mk g e)) : False :=
+  maske_schliesst_handler_aus l H (versand_gibt_maskenordnung H l hV) f g hfg hHg
+    L hmask k k' hh hnk' hlt hfrei e hk
+
+/-! ## 5. Priority levels (C2, narrowed): the boolean mask as the 0/1 case -/
+
+/-- (C2-shape) Level order: levels are natural numbers, and the HIGHER number
+    preempts the LOWER one. Stated as a def so `EbenenPlan` reads it by name. -/
+def EbenenOrdnung (a b : Nat) : Prop := a < b
+
+/-- (C2-shape) The boolean mask read as a level: `masks irqs` is level 1, anything
+    else level 0. The DECLARATION stays boolean (`D.maskiert`); this is the run
+    side generalized, so handlers THEMSELVES can be ordered against held locks. -/
+def MaskenEbene (b : Bool) : Nat :=
+  if b then 1 else 0
+
+/-- (C2-shape) Level-driven dispatch: `g` at priority `prio g` takes position `j`
+    only where every held foreign lock sits BELOW its level. The boolean
+    `HandlerVersand` is the 0/1 instance (`ebenenplan_gibt_versand`). -/
+def EbenenPlan (stufe : D.Lock → Nat) (prio : Faden → Nat) (l : Lauf D)
+    (j : Nat) (g : Faden) : Prop :=
+  ∀ (f : Faden) (L : D.Lock), l.haelt f L j → f = g ∨ EbenenOrdnung (stufe L) (prio g)
+
+/-- (C2-shape) The 0/1 embedding is strict where the declaration says so: a masking
+    lock outranks a non-masking one. -/
+theorem maskenebene_monoton (L M : D.Lock)
+    (hL : D.maskiert L = true) (hM : D.maskiert M = false) :
+    EbenenOrdnung (MaskenEbene (D.maskiert M)) (MaskenEbene (D.maskiert L)) := by
+  show (if D.maskiert M then (1 : Nat) else 0) < (if D.maskiert L then 1 else 0)
+  rw [hM, hL]
+  exact Nat.zero_lt_succ 0
+
+/-- (C2-shape) Levels specialize to the boolean mask: a level-1 handler admitted by
+    the level plan at `j` is admitted by the mask-state dispatch. The boolean C2
+    cut is the 0/1 case, not a second rule. -/
+theorem ebenenplan_gibt_versand (H : Handler) (l : Lauf D)
+    (prio : Faden → Nat) (hP : ∀ g, H g → prio g = 1)
+    (j : Nat) (g : Faden)
+    (hS : HandlerSchritt (D := D) H l j g)
+    (hE : EbenenPlan (D := D) (fun L => MaskenEbene (D.maskiert L)) prio l j g) :
+    HandlerVersand (D := D) H l j g := by
+  obtain ⟨e, hk, hHg⟩ := hS
+  refine ⟨⟨e, hk, hHg⟩, fun f L hhaelt => ?_⟩
+  rcases hE f L hhaelt with hgg | hlt
+  · exact Or.inl hgg
+  · right
+    have hpg : prio g = 1 := hP g hHg
+    rw [hpg] at hlt
+    change MaskenEbene (D.maskiert L) < 1 at hlt
+    cases hm : D.maskiert L with
+    | true =>
+        have h1 : MaskenEbene true = 1 := rfl
+        rw [hm, h1] at hlt
+        exact absurd hlt (Nat.lt_irrefl 1)
+    | false => rfl
+
+#print axioms Gabbro.Grammatik.handler_eintritt_aus_korngrenze
+#print axioms Gabbro.Grammatik.handler_eintritt_ganzes_ereignis
+#print axioms Gabbro.Grammatik.versand_gibt_maskenordnung
+#print axioms Gabbro.Grammatik.versand_nach_nahme_ausgeschlossen
+#print axioms Gabbro.Grammatik.maskenebene_monoton
+#print axioms Gabbro.Grammatik.ebenenplan_gibt_versand
 
 end Gabbro.Grammatik
