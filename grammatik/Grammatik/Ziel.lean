@@ -19,6 +19,13 @@
     * Die Wettlaeufe sind `Wettlauf.lean` (`kein_wettlauf`,
       `kein_wettlauf_global`, `keine_ueberkreuzung`): ueber JEDER Verschraenkung
       solcher Spuren ist ein bewachter Traeger geordnet oder `atomic`.
+    * Die Stabilitaet ist `InterferenzAllgemein.lean` (`allgemeinStabil`):
+      gueltige und schrittweise erhaltene Zusicherungen gelten an der letzten
+      Welt der Kette.
+    * Die Komposition ist `Komposition.lean` (`UmgebungOk`, `SchleifenOk`):
+      die Ruf- und Schleifenordnung als Gestalt, noch ohne Beweis.
+    * Das Geteilte ist `Geteilt.lean` (`geteilt_treu`): als ungeteilt
+      Erklaertes erreicht hoechstens ein Faden -- gerechnet, nicht angenommen.
     * Die Zeit ist geteilt («SG-22», `SYNTAX.md` §18): das Budget
       (`costs`, `held <=`, `bounded`, `per_pass … ops`) ist Logik am
       Deklarierten; die Frist (`deadline … arch … falsifier …`) ist das
@@ -44,6 +51,9 @@
 -/
 import Grammatik.Wettlauf
 import Grammatik.Zucker
+import Grammatik.InterferenzAllgemein
+import Grammatik.Komposition
+import Grammatik.Geteilt
 
 namespace Gabbro.Grammatik
 
