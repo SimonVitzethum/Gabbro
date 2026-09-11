@@ -1,0 +1,70 @@
+-- Lowering lexer run, shared scaffold. Primitive: Sperrt.
+-- The scaffold (module, declarations, signature, effects) is identical in all
+-- seventeen units of this directory; only the body below differs.
+
+module absenkung::probe {
+
+const N : u32 = 8;
+
+table Baum count N {
+    tree { parent elter, child kind, sibling schwester }
+    slot {
+        benutzt : bool,
+        elter : option index into Baum,
+        kind : option index into Baum,
+        schwester : option index into Baum,
+    }
+    invariant kette_ruht cost O(1) runs online :
+        forall e in slots of Self : Self.slots[e].benutzt == Self.slots[e].benutzt;
+}
+
+lock SPERRE protects { eintrag } rank 0 held <= 400 ops;
+
+rcu LESER protects { Baum } reclaims frei;
+
+static mut eintrag : u64 = 0;
+static mut frei : option index into Baum = None;
+static mut farbbericht : u64 = 0;
+
+atomic BEREIT : bool release;
+atomic PEGEL : u32 relaxed;
+
+reason Fehler {
+    Leer = 1 "leer"
+    exhaustive
+}
+
+tagged type Art = { A(u32), B(bool) };
+
+device Geraet(basis : u64) at mmio {
+    reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Fehler::Leer
+    reg QUIT : u32 @0x04 class rw fields { ACK @0 }
+}
+
+assume tickt "Der Zeitgeber unterbricht." falsifier sonde_tickt;
+
+extern fn aufgeben() -> never effects { diverges };
+extern fn gib_art() -> Art effects { pure };
+extern fn gib_opt() -> u32 or Fehler effects { pure };
+
+fn gegenstelle_schreibt(wert : u64)
+    effects { writes farbbericht, writes BEREIT, publishes BEREIT }
+{
+    farbbericht = wert;
+    BEREIT = true publishes { farbbericht };
+}
+
+fn gegenstelle_liest() -> u64
+    effects { reads BEREIT, reads farbbericht }
+{
+    let f = BEREIT awaits { farbbericht };
+    if f { return farbbericht; }
+    return 0;
+}
+
+fn main(d : Geraet, b : ptr<normal, rw> Baum, s : index into Baum, w : u64, n : u32) -> u32
+    effects { writes farbbericht, writes BEREIT, writes PEGEL, writes d.QUIT, reads d, reads BEREIT, reads PEGEL, publishes BEREIT, locks SPERRE }
+{
+    locks SPERRE { } return n;
+}
+}
