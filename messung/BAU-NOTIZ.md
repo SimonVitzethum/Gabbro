@@ -71,3 +71,33 @@ reachability -- stated, not shown. Unit tests for the pure half
 the hunk emits nothing) and `jedes_gift_faellt_mit_seinem_code` green over all
 gift files including 743/744/745 (`H013` preserved on each). See the test tail
 in the commit trailer / lane report.
+
+## 6. Tab/Glob split, carried (follow-up lane, base 2dc02ad)
+
+`Geteilt.lean` §§7-8 state the split beside the collapsed `Carrier` (cut C1):
+`TabCarrier ⊕ GlobCarrier` with the `istTab` tag (`splitVonCarrier`), the fold
+(`carrierVonSplit`), and the round-trips proved (`faltTeile_holds`,
+`teileFaltTab_holds`, `teileFaltGlob_holds`; separation stays a stated shape).
+The Rust side now carries the same tag instead of re-collecting the halves:
+
+* `Bau.ist_tab`: one entry per `traeger` member -- `true` for table roots (Tab
+  half), `false` for globals (`static mut`, `state`; Glob half). Handed into
+  `bau::erhebe` as `tabellen` from the `H013` section, which owns the domain
+  (a second collection there would be a second register over the same
+  declarations -- `W7`). A member outside the handed-in list reads Glob, the
+  same direction as S5.
+* `Seite::{Tab, Glob}` with `teile` / `falte`: the `Sum` and its two
+  directions; neither computes anything, both move the name across unchanged
+  (cut C1 folds both halves through the same code).
+* Unit tests in `bau.rs` mirror the three Lean round-trips; integration tests
+  in `crates/gabbro-check/tests/bau.rs` build the Bau over a parsed unit
+  (table + global, two entries, transitive call edge) and pin the agreement:
+  the W5 answer names the carrier `H013` refuses, and the guarded twin stays
+  silent on both sides.
+
+Zero-delta restated: the tag is a pure computation beside the verdict, its
+result is discarded with the rest of the Bau, and `lib.rs` gains no
+registration -- the Bau answers this pass's question, it is not a thirteenth
+pass. Scoped evidence: `cargo test -p gabbro-check --test bau,beispiele,korpus`
+green, with the korpus pair (`beispiele` 25, `korpus` 8) identical before and
+after the change.
