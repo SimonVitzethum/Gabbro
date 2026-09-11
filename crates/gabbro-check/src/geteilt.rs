@@ -354,6 +354,10 @@ pub fn pass_mit(
         schutz(b, &da, &sperren, &rcu_domaenen, &[], &f.name.text, absagen);
     });
 
+    // **H020 -- a write a `locks` line covers but no guard holds.** The site-precision
+    // half of the `H007`/`H011` handshake; implementation at `h020` below.
+    h020(baum, &sperren, &rcu_domaenen, absagen);
+
     // **H009/H010 -- RCU, und es ist KEINE Sperre.**
     //
     // Aus «K2»: der zweite Korpus zeigte die Klasse, die der erste nie zeigte. Die Leseseite
@@ -934,6 +938,180 @@ fn fenster_ort(
         schreibt.push(offen.to_vec());
     } else if klingel.iter().any(|m| m == &w) {
         tuer.push((o.span, o.text(), offen.to_vec()));
+    }
+}
+
+/// **H020 -- a write a `locks` line covers but no guard holds.**
+///
+/// `H007` counts a declared `effects { locks L }` line as HELD at every site of the
+/// body, and `H011` redeems that line at FUNCTION granularity -- by a `locks` block in
+/// this body, by a callee whose hull carries it, or by `requires Held(L)`. Neither asks
+/// the site question: a body that takes `L` around one statement and writes an
+/// `L`-protected place beside it is covered on paper and naked at the site. *The line
+/// is redeemed; the write is not guarded.* This rule supplies the missing half: the
+/// held set PER WRITE SITE -- enclosing `locks` blocks plus `requires Held(L)` -- and
+/// refuses a direct write whose only cover is the line.
+///
+/// It fires if and only if `H007` stays silent because of the line: a site with no
+/// cover at all is `H007`'s, and this rule stays quiet there, so one site never draws
+/// two refusals for one missing guard.
+///
+/// The shape, measured at `beispiele/gift/737` (must fall) and `beispiele/gift/739`
+/// (the boundary: the line redeemed through a callee hull while the body's own write
+/// stands naked):
+///
+/// ```gabbro
+/// lock L protects { T } rank 0 held <= 100 ops;
+/// impl fn m(j : index into T, m : index into T)
+///     effects { writes T.slots, locks L } costs <= 16 ops
+/// {
+///     locks L { T.slots[j].v = 0; }   // redeems the line (`H011`), guards THIS write
+///     T.slots[m].v = 1;               // -> H020: the line covers the function, and no
+/// }                                   // guard covers this site
+/// ```
+///
+/// Exemptions, each with its owner:
+/// * `spec fn` -- runtime discipline on a proof expression (same as `H007`/`H018`);
+/// * no `locks` line for the covering lock -- then `H007` fired, not us;
+/// * `requires Held(L)` -- the caller's duty, `H007`'s third cover (the `beispiele/01`
+///   idiom: `aushaengen` writes naked under `requires Held(KAPPEN)`);
+/// * places an RCU domain touches -- `H010` owns RCU writes, even line-covered ones;
+/// * reads -- shared-side stability is about WRITERS holding guards (G3 `disziplin`);
+///   a line-covered read stays `H007`'s silence;
+/// * calls -- transitive writes through the call edge are the booked remainder, not
+///   this rule (the `verlangt` + hull join of `NEBENLAEUFIGKEIT-ENTWURF.md` §6 Q1).
+///
+/// What this rule does NOT supply (G3 remainder, next lanes): the held set AT a call
+/// site against the callee hull's writes. It also has no `Satz` entry yet --
+/// `saetze.rs` is frozen for this lane; the booking stands in `messung/H020-REGEL.md`.
+///
+/// Read-only neighbours, touched by nothing here: the per-body hulls
+/// (`aufrufgraph::Huelle` via `Graph::huelle`), the caller-side lock knowledge
+/// (`Rufwissen`), the `H007` site walk (`schutz` with its mixed `da`), the `H018`
+/// write-site held sets (`fenster_sammeln`), and the freshness internals of `m1.rs`
+/// (lane-103's territory: `frische_*`, `veraltet` -- this rule reads no freshness).
+fn h020(
+    baum: &Programm,
+    sperren: &BTreeMap<String, Sperre>,
+    rcu: &BTreeMap<String, Vec<String>>,
+    absagen: &mut Absagen,
+) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        // A `spec fn` touches nothing at run time -- the same exemption as at `H007`
+        // and `H018`, both issued in this file and made for the same reason.
+        if matches!(f.klasse, Some(FnKlasse::Spec)) {
+            return;
+        }
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        // No line, no H020: a site with no cover at all is `H007`'s refusal.
+        let Some(w) = &f.effects else { return };
+        let mut linie: Vec<String> = Vec::new();
+        for e in &w.liste {
+            if let WirkungArt::Sperrt(o) | WirkungArt::SperrtGeteilt(o) = &e.art {
+                linie.push(o.text());
+            }
+        }
+        if linie.is_empty() {
+            return;
+        }
+        // `requires Held(L)` is site cover: the duty stands at the caller, and `H007`
+        // counts it -- so does this rule, or `beispiele/01` (`aushaengen` under
+        // `requires Held(KAPPEN)`) would fall here.
+        let mut verlangt: Vec<String> = Vec::new();
+        for p in &f.requires {
+            let mut h = Vec::new();
+            crate::aufrufgraph::held_aus_pred(p, &mut h);
+            verlangt.extend(h.into_iter().map(|(n, _)| n));
+        }
+        h020_block(b, &[], &linie, &verlangt, sperren, rcu, &f.name.text, absagen);
+    });
+}
+
+/// The per-site walk for `H020`: `offen` is the enclosing `locks` stack ONLY -- the
+/// `effects` line deliberately does NOT travel, because the line is the question.
+fn h020_block(
+    b: &Block,
+    offen: &[String],
+    linie: &[String],
+    verlangt: &[String],
+    sperren: &BTreeMap<String, Sperre>,
+    rcu: &BTreeMap<String, Vec<String>>,
+    wo: &str,
+    absagen: &mut Absagen,
+) {
+    let pruefe = |o: &Ort, absagen: &mut Absagen| {
+        let t = o.text();
+        // RCU-touching writes stay `H010`'s, even line-covered ones -- one missing
+        // guard draws one refusal, and `H010` gives the better message.
+        if rcu
+            .values()
+            .any(|orte| orte.iter().any(|p| beruehrt(p, &t)))
+        {
+            return;
+        }
+        // The same cover lookup as `H007`: the FIRST lock whose `protects` touches.
+        let Some(sperre) = sperren
+            .iter()
+            .find(|(_, sp)| sp.schuetzt.iter().any(|p| beruehrt(p, &t)))
+            .map(|(n, _)| n.clone())
+        else {
+            return;
+        };
+        // Held at the site -- by a block or by the caller's duty -- is silent.
+        if offen.iter().any(|d| d == &sperre) || verlangt.iter().any(|d| d == &sperre) {
+            return;
+        }
+        // No line for this lock: `H007` fired at this site, and a second refusal
+        // would send the reader hunting at the wrong place.
+        if !linie.iter().any(|d| d == &sperre) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "H020",
+                o.span,
+                format!(
+                    "`{t}` is protected by `{sperre}`, and no guard is held at this \
+                     write -- the `locks {sperre}` line covers `{wo}`, not this site"
+                ),
+            )
+            .mit_notiz(
+                "held at the SITE counts as: an enclosing `locks` block or a \
+                 `requires Held(…)` -- the `effects` line redeems the function \
+                 (`H011`), it does not guard the write",
+            )
+            .mit_notiz(
+                "the honest forms: take the lock around this write too, demand it \
+                 from the caller, or drop a line no site redeems",
+            ),
+        );
+    };
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Sperrt(l) => {
+                let mut tiefer = offen.to_vec();
+                tiefer.push(l.sperre.text());
+                h020_block(&l.rumpf, &tiefer, linie, verlangt, sperren, rcu, wo, absagen);
+            }
+            // **`observes` holds NOTHING, but the walker still enters** -- the same
+            // blind-spot reasoning as at `H007`: a write hiding in a read block is
+            // still a write.
+            StmtArt::Observiert(o) => {
+                h020_block(&o.rumpf, offen, linie, verlangt, sperren, rcu, wo, absagen);
+            }
+            StmtArt::Zuweisung(z) => pruefe(&z.ziel, absagen),
+            StmtArt::Publish(p) => pruefe(&p.ziel, absagen),
+            StmtArt::Exchange(e) => pruefe(&e.ort, absagen),
+            _ => {}
+        }
+        // `locks` and `observes` walked above already -- they carry the changed state
+        // (or the unchanged one, for `observes`), like in `schutz` in this file.
+        if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_)) {
+            for k in crate::unterbloecke(s) {
+                h020_block(k, offen, linie, verlangt, sperren, rcu, wo, absagen);
+            }
+        }
     }
 }
 

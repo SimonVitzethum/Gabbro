@@ -1,0 +1,48 @@
+-- erwartet: H020
+-- **The boundary: the line redeemed through a callee hull while the body's own write
+-- stands naked (`H020`).**
+--
+-- `guarded` takes `L` around its write, so its hull carries `locks L` -- and that
+-- redeems the caller's line (`H011` stays silent: a callee that takes it redeems it).
+-- But redemption is not cover: `gap_across_call` writes an `L`-protected place beside
+-- the call with no guard of its own, and that site falls once with `H020`. The twin
+-- delegates the WHOLE write -- no own write, no site, no refusal.
+module gift::hull_redeems_line_write_stays_naked {
+
+table T count 8 {
+    slot {
+        v : u32,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+impl fn guarded(j : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 4 ops
+{
+    locks L {
+        T.slots[j].v = 0;
+    }
+}
+
+-- Must fall exactly once: at the direct write. The call redeems the line through
+-- `guarded`'s hull, but no guard covers this site.
+impl fn gap_across_call(j : index into T, m : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 16 ops
+{
+    guarded(j);
+    T.slots[m].v = 1;
+}
+
+-- Must pass: the whole write delegated -- the line redeemed through the hull and no
+-- own write left naked.
+impl fn delegated(j : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 8 ops
+{
+    guarded(j);
+}
+
+}

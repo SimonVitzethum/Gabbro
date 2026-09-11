@@ -1,0 +1,42 @@
+-- erwartet: H020
+-- **A write a `locks` line covers but no guard holds (`H020`).**
+--
+-- `H007` counts a declared `locks L` line as HELD, and `H011` redeems the line at
+-- function granularity. Neither asks the site question. `gap_beside_guard` takes `L`
+-- around one write -- redeeming the line -- and writes an `L`-protected place beside
+-- it: covered on paper, naked at the site. The naked write falls once with `H020`;
+-- the guarded twin stays silent.
+module gift::line_covers_write_without_guard {
+
+table T count 8 {
+    slot {
+        v : u32,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+-- Must fall exactly once: at the second write. The first stands under the `locks`
+-- block that redeems the line; the second shares nothing with any guard.
+impl fn gap_beside_guard(j : index into T, m : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 16 ops
+{
+    locks L {
+        T.slots[j].v = 0;
+    }
+    T.slots[m].v = 1;
+}
+
+-- Must pass: every write under the guard the line names.
+impl fn guarded(j : index into T, m : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 16 ops
+{
+    locks L {
+        T.slots[j].v = 0;
+        T.slots[m].v = 1;
+    }
+}
+
+}
