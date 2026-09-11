@@ -1,0 +1,32 @@
+-- emission-15x-c23/attribut-unused: the truthful unused statement.
+--
+-- Census slot C2 `cAttribut`, 766 sites (`dokumente/BEWEIS.md` Subject 2
+-- section 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.cAttribut`).
+-- Emitter site: `crates/gabbro-check/src/emit.rs`, the `unused` families
+-- (static cells, inline accessors, conditional `leise` emission where this
+-- unit does not call the operation). The attribute is emitted only where
+-- this unit does not call the operation, so the statement stays true by
+-- construction. Ruling: `messung/CFORM-REGEL-ATTRIBUT.md` (admit with price).
+--
+-- Verdict: ADMIT. `gabbro pruefe` reports 5 items, 0 errors, 0 hints;
+-- `gabbro emit` exits 0 and writes `static uint32_t lager
+-- __attribute__((unused))` plus a `__attribute__((pure))` reader; the
+-- emission compiles under `cc -std=c11 -Wall -Wextra -Werror -c` at `-O0`
+-- and `-O2` (measured 2026-09-11, base binary).
+
+module probe::c23_attribut_unused {
+
+const K : u32 = 64;
+
+static mut lager : u32 in 0 .. K = 64;
+
+table Halde count K backed lager { slot { kopf : u64, } }
+
+impl fn lesen(h : ptr<normal, r> Halde, i : index into Halde) -> u64
+    effects { reads h.slots, reads lager }
+    costs   <= 4 ops
+{
+    narrow i to 0 ..< lager else { return 0; }
+    return h.slots[i].kopf;
+}
+}

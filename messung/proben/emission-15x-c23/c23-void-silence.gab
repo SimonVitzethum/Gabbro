@@ -1,0 +1,28 @@
+-- emission-15x-c23/void-silence: the deliberate-silence cast.
+--
+-- Census slot C2 `voidTyp`, 930 sites (`dokumente/BEWEIS.md` Subject 2 section
+-- 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.voidTyp`). Emitter site:
+-- `crates/gabbro-check/src/emit.rs`, the unread-binding arm (a `let` binding
+-- with no reader lowers to `(void)name;`, the same runner that stills unread
+-- parameters). The cast evaluates and discards; its only meaning is the one
+-- the warning net gives it. Ruling: `messung/CFORM-REGEL-VOID.md` (admit
+-- with price). Companion to `c23-void-nullary`, which pins the `(void)`
+-- prototype shape of the same slot.
+--
+-- Verdict: ADMIT. `gabbro pruefe` reports 3 items, 0 errors, 0 hints;
+-- `gabbro emit` exits 0 and writes `(void)rest;`; the emission compiles
+-- under `cc -std=c11 -Wall -Wextra -Werror -c` at `-O0` and `-O2`
+-- (measured 2026-09-11, base binary).
+
+module probe::c23_void_silence {
+
+extern fn fuellen(a : u64) -> u64 effects { writes a } costs <= 4 ops;
+
+pub fn dienst(a : u64) -> u64
+    effects { writes a }
+    costs <= 16 ops
+{
+    let rest = fuellen(a);
+    return 0;
+}
+}

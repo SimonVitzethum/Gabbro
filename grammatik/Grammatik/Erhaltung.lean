@@ -74,6 +74,9 @@
           (`zeigerIndex`, `abbruchStmt`, `logUndOder`, `fortStmt`, each row
           citing its `messung/CFORM-REGEL-*.md` ruling); adequacy still owed
           per slot, the debt proof now rests on the remaining open rows.
+          Lane p06 flips three C2 rows in `tafel` itself (`voidTyp`,
+          `cAttribut`, `cSizeof`, each row citing its
+          `messung/CFORM-REGEL-*.md` ruling); five C1 rows remain open.
       C6  Der Nachpruefer bleibt Schnitt: `nachpruefer` (§10) rechnet
           Laufartefakte (Gabbro-Stellen, Zertifikat, Aliaslast, Kostenaussage,
           Paare, Anweisungszahl) zu einem Urteil nach, und
@@ -297,8 +300,8 @@ def tafel : List EntscheidZiel :=
    .luecke .cDefine .offen,
    .luecke .cEnum .offen,
    .luecke .bedingt bedingtEntscheid,
-   .luecke .voidTyp .offen,
-   .luecke .cAttribut .offen,
+   .luecke .voidTyp (.aufListe "empty result and parameter types as types; silence casts as deliberate"),  -- ruled: messung/CFORM-REGEL-VOID.md
+   .luecke .cAttribut (.aufListe "truthful unused statement; checked pure/const effect promise; two-name section promise"),  -- ruled: messung/CFORM-REGEL-ATTRIBUT.md
    .luecke .cInline (.aufListe "non-binding inline request"),  -- ruled: messung/CFORM-REGEL-INLINE.md
    .luecke .cConst (.aufListe "read-only qualifier"),  -- ruled: messung/CFORM-REGEL-CONST.md
    .luecke .deref (.aufListe "plain dereference"),  -- ruled: messung/CFORM-REGEL-DEREF.md
@@ -306,7 +309,7 @@ def tafel : List EntscheidZiel :=
    .luecke .bitNicht (.aufListe "double-cast width rule"),  -- ruled: messung/CFORM-REGEL-TILDE.md
    .luecke .abbruchStmt (.aufListe "Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei Emissionszeilen; kein Nutzerpfad; kein UB"),  -- ruled: messung/CFORM-REGEL-BREAK.md
    .luecke .schrittStmt (.aufListe "++ to += 1; exchange CAS untouched"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + ZULASSUNG-143 batch
-   .luecke .cSizeof .offen,
+   .luecke .cSizeof (.aufListe "layout-derived compile-time count; operands never evaluated"),  -- ruled: messung/CFORM-REGEL-SIZEOF.md
    .luecke .logUndOder (.aufListe "bedingte Auswertung mit Sequenzpunkt; Ergebnis 0 oder 1; Klammerpflicht beim Erzeuger"),  -- ruled: messung/CFORM-REGEL-LOGUNDODER.md
    .luecke .doubleTyp (.aufListe "f64 to double lowered; mixed-width refused"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + SENKUNG-144
    .luecke .schleifeStmt (.aufListe "retry skeleton only"),  -- ruled: messung/CFORM-REGEL-SENKUNG-142.md + SENKUNG-144

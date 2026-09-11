@@ -1,0 +1,27 @@
+-- emission-15x-c23/attribut-pure: the checked effect promise.
+--
+-- Census slot C2 `cAttribut`, 766 sites (`dokumente/BEWEIS.md` Subject 2
+-- section 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.cAttribut`).
+-- Emitter site: `crates/gabbro-check/src/emit.rs`, `wirkungsweise` (a fully
+-- pure callee with no pointer parameters carries `__attribute__((const))`,
+-- a read-only one `__attribute__((pure))`, derived from the declared effect
+-- set). The promise is an instruction to the optimiser, and it matches the
+-- checker-computed effects by construction. Ruling:
+-- `messung/CFORM-REGEL-ATTRIBUT.md` (admit with price). Companion to
+-- `c23-attribut-unused`, which pins the `unused` family of the same slot.
+--
+-- Verdict: ADMIT. `gabbro pruefe` reports 2 items, 0 errors, 0 hints;
+-- `gabbro emit` exits 0 and writes `static double halb(double x)
+-- __attribute__((const)) __attribute__((unused));`; the emission compiles
+-- under `cc -std=c11 -Wall -Wextra -Werror -c` at `-O0` and `-O2`
+-- (measured 2026-09-11, base binary).
+
+module probe::c23_attribut_pure {
+
+impl fn halb(x : f64) -> f64
+    effects { pure }
+    costs   <= 2 ops
+{
+    return x * 0.5;
+}
+}

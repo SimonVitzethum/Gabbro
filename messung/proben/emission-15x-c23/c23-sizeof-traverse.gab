@@ -1,0 +1,40 @@
+-- emission-15x-c23/sizeof-traverse: the bound from the declared layout.
+--
+-- Census slot C2 `cSizeof`, 27 sites (`dokumente/BEWEIS.md` Subject 2 section
+-- 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.cSizeof`). Emitter
+-- site: `crates/gabbro-check/src/emit.rs`, the traverse-over-slots bound
+-- lowering (`eintrag < (u32)(sizeof(q->slots) / sizeof(q->slots[0]))`). The
+-- bound falls out of the declared table type, so growing the table cannot
+-- desynchronise the loop; `sizeof` is a compile-time constant whose operand
+-- is never evaluated. Ruling: `messung/CFORM-REGEL-SIZEOF.md` (admit with
+-- price).
+--
+-- Verdict: ADMIT. `gabbro pruefe` reports 4 items, 0 errors, 0 hints;
+-- `gabbro emit` exits 0 and writes the `sizeof(q->slots) /
+-- sizeof(q->slots[0])` bound; the emission compiles under `cc -std=c11
+-- -Wall -Wextra -Werror -c` at `-O0` and `-O2` (measured 2026-09-11, base
+-- binary).
+
+module probe::c23_sizeof_traverse {
+
+const N : u32 = 4;
+
+table Puffer count N {
+    slot {
+        bereit : bool,
+        stand : u64,
+    }
+}
+
+impl fn alle_setzen(q : ptr<normal, rw> Puffer)
+    effects { writes q.slots }
+    costs <= N * 5 ops
+{
+    traverse eintrag over slots of q by unvisited
+        touches writes q.slots
+    {
+        q.slots[eintrag].bereit = true;
+    }
+}
+
+}
