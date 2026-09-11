@@ -35,6 +35,25 @@
       `UmgekehrtWirdAbgewiesen`  -- die feste Schachtelung (Mass aussen,
                                       Schleife innen) und die Abweisung der
                                       umgekehrten als DATUM mit pruefbarer Form
+  §10 `zyklus_aus_mass_genau`, `umgebung_ok_aus_pflichten`,
+      `schleife_gibt_regel`, `bereich_gibt_regel`, `gezaehlt_gibt_regel`,
+      `gezaehlt_ist_bereich`, `gezaehlt_laeuft_bereich`, `bereich_laeuft`,
+      `gezaehlt_laeuft`, `gezaehlt_schranke_nichtnegativ`,
+      `schleifen_ok_aus_allen_lauefen`,
+      `schleifen_ok_aus_gezaehlten_allen`, `durchgang_falte_erhaelt`,
+      `ZweiSchleifenTabelle`, `ZweiSchleifen`, `EinDurchgang`,
+      `ein_durchgang_laeuft_gezaehlt`, `zwei_schleifen_nicht_ok`,
+      `einzelner_lauf_schliesst_nicht_alle`,
+      `einzelner_gezaehlter_lauf_schliesst_nicht_alle`,
+      `zyklus_ohne_mass_abgewiesen_satz`, `umgekehrt_abgewiesen_satz`
+                                    -- die S2-Saetze als `theorem` (bewiesen, kein
+                                       `sorry`/`axiom`): die Zyklushebung aus der
+                                       getragenen Form, die Umgebung aus Deckung
+                                       plus Pflichten je Zeile, die Schleifenregel
+                                       aus einem Lauf je Schleife (gezaehlt ueber
+                                       `DurchgangGezaehlt`), die Induktion ueber
+                                       `indizes` als `foldl`-Erhaltung, und die
+                                       Abweisung der Ein-Lauf-Formen als Daten
 
   Entsprechungen (Namen und Form, kein Bezug -- siehe C1):
     `Gefuege.tabelle`             -- `Programm.sig`/`Programm.schleife`
@@ -94,6 +113,26 @@
   (C6) Die Abweisung der umgekehrten Schachtelung steht als `¬`-Form ueber EINEM
        Datum (`Umgekehrt`) -- wie §7 kein Allgemeinsatz, sondern die Gestalt, in
        der die umgekehrte Ordnung nichts schliesst.
+  (C7) Die Ein-Lauf-Formen schliessen NICHT: `SchleifenOkAusLaeufen` und
+       `SchleifenOkAusGezaehltenLaeufen` folgen aus EINEM Lauf die Regel ALLER
+       Schleifen -- das Datum `ZweiSchleifen` (`s1` laeuft, `s2` gilt nicht)
+       widerlegt beide (`einzelner_lauf_schliesst_nicht_alle`,
+       `einzelner_gezaehlter_lauf_schliesst_nicht_alle`). Was schliesst, ist
+       die Verkleinerung: die Regel DIESER Schleife (§10, Projektionen) und
+       die Regel aller Schleifen aus einem Lauf JE Schleife
+       (`schleifen_ok_aus_allen_lauefen`, gezaehlt
+       `schleifen_ok_aus_gezaehlten_allen`).
+  (C8) Kein Import auch in §10 (C1 gilt weiter): `Durchgang.indizes`
+       (`List Nat`) spiegelt die Indexlisten-Rekursion von `traverseLauf`
+       (`Semantik.lean`: `List (Wert D τ)`) -- nicht `Body.iterate` aus
+       `programmlogik` (anderes Modell: `Env` plus `List Int`). Die
+       Entsprechung gilt ueber Namen und Form, nicht ueber Bezug; nichts in
+       §10 nennt `traverseLauf`/`exec`/`Runs` als Term. Die Induktion ueber
+       `indizes` (`durchgang_falte_erhaelt`) ist die Schleifeninduktion in
+       dieser Gestalt.
+  (C9) `theorem` gehoert in §10 der bewiesenen Phase: §1-§9 bleiben `def`-Formen
+       und sind unberuehrt -- §10 legt die Saetze daneben, mit `#print axioms`
+       je Satz.
 
   Kein `mathlib`, kein `sorry`, kein `axiom`.
 -/
@@ -377,5 +416,231 @@ def UmgekehrtWirdAbgewiesen :
 
 #print axioms Gabbro.Grammatik.schleife_sitzt_in_a
 #print axioms Gabbro.Grammatik.UmgekehrtWirdAbgewiesen
+
+/-! ## 10. Die S2-Saetze ueber Grammatik-Koerpern -- bewiesen
+
+    `theorem`, nicht `def`: was §1-§9 als Form hinstellte, schliesst hier, wo es
+    schliesst -- und wo es nicht schliesst, steht das Datum daneben (C7). Kein
+    Import (C8): die Laufform ist `Durchgang.indizes`, die Induktion laeuft ueber
+    diese Liste wie `traverseLauf` ueber der seinen. -/
+
+/-- **Die Zyklushebung IST die getragene Form.** `ZyklusAusMass` und
+    `RekursionZyklusGetragen` sind derselbe Satz ueber demselben Gefuege -- die
+    Pflicht unter den beschraenkten Vertraegen schliesst jeden Vertrag des Zyklus.
+    Das ist die Gestalt von `contracts_of_duties_rec` (`Body.lean`), hier ohne
+    fremdes Modell: Voraussetzung und Schluss stehen in dieser Datei. -/
+theorem zyklus_aus_mass_genau (G : Gefuege) (rs : List Mitglied) :
+    ZyklusAusMass G rs ↔ RekursionZyklusGetragen G rs :=
+  Iff.rfl
+
+/-- Die Richtung, die die Komposition verbraucht: wo der getragene Zyklus steht,
+    schliesst die Zyklushebung. -/
+theorem zyklus_schliesst_aus_getragen (G : Gefuege) (rs : List Mitglied) :
+    RekursionZyklusGetragen G rs → ZyklusAusMass G rs :=
+  fun h => h
+
+/-- **Die Umgebung aus Deckung plus Pflichten je Zeile.** Jede Zeile der Tabelle
+    liegt im azyklischen Teil oder im getragenen Zyklus (die Deckung, wie in
+    `UmgebungOkAusLaeufen`); die Pflicht je Zeile -- unter Ordnung oder unter Mass
+    geschlossen -- liefert den Vertrag aus dem Lauf. Die Pflichten sind
+    Praemissen, nie Axiome: wessen Logik sie einloest, steht in C2. -/
+theorem umgebung_ok_aus_pflichten (G : Gefuege) (fs zs : List String)
+    (hdeck : ∀ f, (∃ r, G.tabelle f = some r) → f ∈ fs ∨ f ∈ zs)
+    (hazy : ∀ f ∈ fs, G.laeuft f → G.vertrag f)
+    (hzy : ∀ z ∈ zs, G.laeuft z → G.vertrag z) :
+    UmgebungOk G := by
+  intro f htab hlauf
+  rcases hdeck f htab with h | h
+  · exact hazy f h hlauf
+  · exact hzy f h hlauf
+
+/-- **Ein Lauf gibt DIESE Regel.** Die Verkleinerung von `SchleifenOkAusLaeufen`
+    (C7): ein Lauf schliesst die Regel seiner Kennung, nicht die aller Schleifen. -/
+theorem schleife_gibt_regel (G : Gefuege) (d : Durchgang)
+    (h : SchleifeLaeuft G d) : G.schleifenRegel d.kennung :=
+  h.2
+
+/-- **Ein Bereichslauf gibt DIESE Regel.** Dasselbe fuer `RunsLoopIn`-Gestalt. -/
+theorem bereich_gibt_regel (G : Gefuege) (d : Durchgang) (lo hi : Int)
+    (h : SchleifeLaeuftImBereich G d lo hi) : G.schleifenRegel d.kennung :=
+  h.2.2
+
+/-- **Ein gezaehlter Lauf gibt DIESE Regel.** Dasselbe fuer die `RunsLoopN`-Gestalt. -/
+theorem gezaehlt_gibt_regel (G : Gefuege) (d : Durchgang) (lo hi np : Int)
+    (h : SchleifeLaeuftGezaehlt G d lo hi np) : G.schleifenRegel d.kennung :=
+  h.2.2
+
+/-- **Gezaehlt liegt im Bereich.** Die `RunsLoopN`-Bedingung traegt die von
+    `RunsLoopIn`: wer gezaehlt laeuft, besucht nur Indizes im Bereich. -/
+theorem gezaehlt_ist_bereich (d : Durchgang) (lo hi np : Int)
+    (h : DurchgangGezaehlt d lo hi np) : DurchgangImBereich d lo hi :=
+  h.1
+
+/-- **Gezaehlt laeuft im Bereich.** Die Laufform steigt ab: `RunsLoopN`_IMPLIZIERT
+    `RunsLoopIn`-Gestalt (Kennung, Bereich, Regel). -/
+theorem gezaehlt_laeuft_bereich (G : Gefuege) (d : Durchgang) (lo hi np : Int)
+    (h : SchleifeLaeuftGezaehlt G d lo hi np) :
+    SchleifeLaeuftImBereich G d lo hi :=
+  ⟨h.1, h.2.1.1, h.2.2⟩
+
+/-- **Im Bereich heisst laufend.** Die `RunsLoopIn`-Gestalt steigt weiter ab zur
+    `RunsLoop`-Gestalt: Kennung und Regel reisen mit, der Bereich faellt. -/
+theorem bereich_laeuft (G : Gefuege) (d : Durchgang) (lo hi : Int)
+    (h : SchleifeLaeuftImBereich G d lo hi) : SchleifeLaeuft G d :=
+  ⟨h.1, h.2.2⟩
+
+/-- **Gezaehlt heisst laufend.** Die Kette in einem Schritt: `RunsLoopN`-Gestalt
+    gibt `RunsLoop`-Gestalt. -/
+theorem gezaehlt_laeuft (G : Gefuege) (d : Durchgang) (lo hi np : Int)
+    (h : SchleifeLaeuftGezaehlt G d lo hi np) : SchleifeLaeuft G d :=
+  bereich_laeuft G d lo hi (gezaehlt_laeuft_bereich G d lo hi np h)
+
+/-- **Die gezaehlte Schranke ist nichtnegativ.** Wer gezaehlt laeuft, zaehlt gegen
+    ein `np ≥ 0`: die Laenge ist als `Int` nichtnegativ, also ist es die Schranke
+    darueber. -/
+theorem gezaehlt_schranke_nichtnegativ (d : Durchgang) (lo hi np : Int)
+    (h : DurchgangGezaehlt d lo hi np) : 0 ≤ np := by
+  have hle := h.2
+  omega
+
+/-- **Alle Schleifen aus je einem Lauf.** Die volle (U2)-Gestalt (C7): wo JEDE
+    eingetragene Schleife einen Lauf hat -- Kennung an Kennung --, gilt
+    `SchleifenOk`. Das ist `schleifen_ok_of_runsloop` in dieser Gestalt: die
+    Induktion je Durchgang steht in `durchgang_falte_erhaelt`, die Deckung ueber
+    alle Kennungen steht hier. -/
+theorem schleifen_ok_aus_allen_lauefen (G : Gefuege) (ds : List Durchgang)
+    (hdeck : ∀ id, (∃ f r, G.tabelle f = some r ∧ id ∈ r.schleifen) →
+      ∃ d ∈ ds, d.kennung = id)
+    (halle : ∀ d ∈ ds, SchleifeLaeuft G d) :
+    SchleifenOk G := by
+  intro id hex
+  obtain ⟨d, hds, rfl⟩ := hdeck id hex
+  exact (halle d hds).2
+
+/-- **Alle Schleifen aus je einem gezaehlten Lauf.** Dasselbe fuer die
+    `RunsLoopN`-Gestalt (`looprule_of_body_p` in dieser Gestalt): der Zaehler
+    reist im Durchgang mit (`DurchgangGezaehlt`), die Regel folgt je Kennung. -/
+theorem schleifen_ok_aus_gezaehlten_allen (G : Gefuege) (ds : List Durchgang)
+    (lo hi np : Int)
+    (hdeck : ∀ id, (∃ f r, G.tabelle f = some r ∧ id ∈ r.schleifen) →
+      ∃ d ∈ ds, d.kennung = id)
+    (halle : ∀ d ∈ ds, SchleifeLaeuftGezaehlt G d lo hi np) :
+    SchleifenOk G := by
+  apply schleifen_ok_aus_allen_lauefen G ds hdeck
+  intro d hds
+  exact gezaehlt_laeuft G d lo hi np (halle d hds)
+
+/-- **Die Induktion ueber die Durchgaenge.** Wo jeder besuchte Index die
+    Invariante erhaelt -- ein Durchgang je Index wie in `traverseLauf` --, erhaelt
+    die Faltung ueber `indizes` sie: die Schleifeninduktion in der Gestalt dieser
+    Datei (C8). -/
+theorem durchgang_falte_erhaelt (inv : Nat → Prop) (step : Nat → Nat → Nat)
+    (xs : List Nat) (h : ∀ i ∈ xs, ∀ s, inv s → inv (step s i))
+    (s : Nat) (hs : inv s) : inv (xs.foldl step s) := by
+  induction xs generalizing s with
+  | nil => simpa using hs
+  | cons x xs ih =>
+      simp only [List.foldl_cons]
+      apply ih
+      · intro i hi s' hs'
+        exact h i (List.mem_cons_of_mem _ hi) s' hs'
+      · exact h x List.mem_cons_self s hs
+
+/-- Dasselbe am Durchgang: die Faltung ueber `d.indizes` erhaelt die Invariante. -/
+theorem durchgang_erhaelt (inv : Nat → Prop) (step : Nat → Nat → Nat)
+    (d : Durchgang) (h : ∀ i ∈ d.indizes, ∀ s, inv s → inv (step s i))
+    (s : Nat) (hs : inv s) : inv (d.indizes.foldl step s) :=
+  durchgang_falte_erhaelt inv step d.indizes h s hs
+
+/-! ### Das Datum, das die Ein-Lauf-Formen abweist -/
+
+/-- EIN Rumpf, ZWEI Schleifen: `f` traegt `s1` und `s2`. -/
+def ZweiSchleifenTabelle : String → Option Routine
+  | "f" => some { ruft := [], mass := some 0, schleifen := ["s1", "s2"] }
+  | _ => none
+
+/-- Das Gefuege darueber: die Umgebung laeuft alles, jeder Vertrag gilt -- aber nur
+    die Regel von `s1` gilt. `s2` ist eingetragen und gilt nicht. -/
+def ZweiSchleifen : Gefuege :=
+  { tabelle := ZweiSchleifenTabelle
+    laeuft := fun _ => True
+    vertrag := fun _ => True
+    schleifenRegel := fun id => id = "s1" }
+
+/-- Der Durchgang ueber `s1`: ein Durchgang ueber einen Index im Bereich. -/
+def EinDurchgang : Durchgang :=
+  { kennung := "s1", indizes := [0] }
+
+/-- Der Durchgang laeuft gezaehlt: Kennung eingetragen, Index im Bereich
+    `0 ≤ i < 1`, genau ein Durchgang gegen `np = 1` -- und die Regel gilt. -/
+def ein_durchgang_laeuft_gezaehlt :
+    SchleifeLaeuftGezaehlt ZweiSchleifen EinDurchgang 0 1 1 := by
+  refine ⟨⟨"f", { ruft := [], mass := some 0, schleifen := ["s1", "s2"] },
+    rfl, by decide⟩, ?_, rfl⟩
+  constructor
+  · intro i hi
+    simp only [EinDurchgang, List.mem_singleton] at hi
+    subst hi
+    exact ⟨by decide, by decide⟩
+  · decide
+
+/-- ... also laeuft er im Bereich und schlicht. -/
+def ein_durchgang_laeuft_bereich :
+    SchleifeLaeuftImBereich ZweiSchleifen EinDurchgang 0 1 :=
+  gezaehlt_laeuft_bereich ZweiSchleifen EinDurchgang 0 1 1
+    ein_durchgang_laeuft_gezaehlt
+
+/-- ... also laeuft er schlicht. -/
+def ein_durchgang_laeuft : SchleifeLaeuft ZweiSchleifen EinDurchgang :=
+  gezaehlt_laeuft ZweiSchleifen EinDurchgang 0 1 1
+    ein_durchgang_laeuft_gezaehlt
+
+/-- **Und trotzdem gilt (U2) nicht:** `s2` ist eingetragen und gilt nicht. -/
+def zwei_schleifen_nicht_ok : ¬ SchleifenOk ZweiSchleifen := by
+  intro h
+  have h2 := h "s2" ⟨"f",
+    { ruft := [], mass := some 0, schleifen := ["s1", "s2"] }, rfl, by decide⟩
+  simp only [ZweiSchleifen] at h2
+  exact absurd h2 (by decide)
+
+/-- **Die Abweisung der Ein-Lauf-Form.** Ein Lauf (`s1`) schliesst NICHT die Regel
+    aller Schleifen (`s2` bleibt): `SchleifenOkAusLaeufen` gilt nicht allgemein --
+    die Verkleinerung (`schleife_gibt_regel`,
+    `schleifen_ok_aus_allen_lauefen`) steht daneben. -/
+theorem einzelner_lauf_schliesst_nicht_alle :
+    ¬ SchleifenOkAusLaeufen ZweiSchleifen EinDurchgang := by
+  intro h
+  exact zwei_schleifen_nicht_ok (h ein_durchgang_laeuft)
+
+/-- **Die Abweisung der gezaehlten Ein-Lauf-Form.** Dasselbe fuer
+    `SchleifenOkAusGezaehltenLaeufen`: ein gezaehlter Lauf schliesst nicht alle. -/
+theorem einzelner_gezaehlter_lauf_schliesst_nicht_alle :
+    ¬ SchleifenOkAusGezaehltenLaeufen ZweiSchleifen EinDurchgang 0 1 1 := by
+  intro h
+  exact zwei_schleifen_nicht_ok (h ein_durchgang_laeuft_gezaehlt)
+
+/-- Die Abweisung aus §7 als Satz: der Zyklus ohne Mass ist nicht getragen. -/
+theorem zyklus_ohne_mass_abgewiesen_satz :
+    ¬ ZyklusGetragen ZyklusOhneMass ["a", "b"] :=
+  ZyklusOhneMassWirdAbgewiesen
+
+/-- Die Abweisung aus §9 als Satz: die umgekehrte Schachtelung schliesst nichts. -/
+theorem umgekehrt_abgewiesen_satz :
+    ¬ SchleifeAussenMassInnen Umgekehrt UmgekehrteMitglieder UmgekehrterDurchgang :=
+  UmgekehrtWirdAbgewiesen
+
+#print axioms Gabbro.Grammatik.zyklus_aus_mass_genau
+#print axioms Gabbro.Grammatik.umgebung_ok_aus_pflichten
+#print axioms Gabbro.Grammatik.schleife_gibt_regel
+#print axioms Gabbro.Grammatik.gezaehlt_laeuft_bereich
+#print axioms Gabbro.Grammatik.gezaehlt_schranke_nichtnegativ
+#print axioms Gabbro.Grammatik.schleifen_ok_aus_allen_lauefen
+#print axioms Gabbro.Grammatik.schleifen_ok_aus_gezaehlten_allen
+#print axioms Gabbro.Grammatik.durchgang_falte_erhaelt
+#print axioms Gabbro.Grammatik.ein_durchgang_laeuft_gezaehlt
+#print axioms Gabbro.Grammatik.zwei_schleifen_nicht_ok
+#print axioms Gabbro.Grammatik.einzelner_lauf_schliesst_nicht_alle
+#print axioms Gabbro.Grammatik.einzelner_gezaehlter_lauf_schliesst_nicht_alle
+#print axioms Gabbro.Grammatik.umgekehrt_abgewiesen_satz
 
 end Gabbro.Grammatik
