@@ -37,7 +37,7 @@
 
    Shapes that stay unproved (booked cuts, not faked): the recomputer that
      would PRODUCE a valid certificate (needs the second program), what a C
-     form MEANS (witness-pair execution, C semantics), and with them the 29
+     form MEANS (witness-pair execution, C semantics), and with them the 28
      open slots -- `tafel_nicht_geschlossen` (§9) proves the debt is real,
      and `vertrag_braucht_tafel` proves the contract does not hold today.
      `satz_tafel` and `satz_erzeugervertrag` stay SPECIFICATION.
@@ -68,7 +68,7 @@
      C5  The 19 admissions stay TEMPLATE rulings semantically: Lean proves
          each named shape is tabled (`ruledB_voll`), not that its price is
          adequate. Each named shape still owes its one-by-one semantic
-          decision the way `?:` got its (`bedingtEntscheid`); the 29 open
+          decision the way `?:` got its (`bedingtEntscheid`); the 28 open
           slots are proved debt (`tafel_nicht_geschlossen`), countable via
           the status field. Lane 121 flips four of them in `tafel` itself
           (`zeigerIndex`, `abbruchStmt`, `logUndOder`, `fortStmt`, each row
@@ -290,7 +290,7 @@ def tafel : List EntscheidZiel :=
    .benannt .fluechtig (.aufListe fluechtigPreis),
    .benannt .noreturn (.aufListe "proven non-return; the fall-through export needs D005 plus the tag invariant"),
    .benannt .asmEins (.aufListe "exactly one emission site; no downstream prover (16.2 (7))"),
-   .luecke .zeigerArithmetik .offen,
+   .luecke .zeigerArithmetik (.aufListe "no computed address outside place[expr]; unproven bound refused"),  -- ruled: SPRACHE.md 5.2 + lane 142, re-decided over the scoped emitter map (withdrawn same-day on the unscoped one)
    .luecke .zeigerIndex (.aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"),  -- ruled: messung/CFORM-REGEL-ZEIGERINDEX.md
    .luecke .cInclude .offen,
    .luecke .cTypedef .offen,
@@ -349,7 +349,7 @@ def satz_kosten (k : CostClaim) (paare : Nat) (a : Absenkung) (cAnweisungen : Na
   costKept k ∧ costMeasured k paare ∧ senkungBegrenzt a cAnweisungen
 
 /-- Later sentence 4 (table): every row of the table is decided. This is
-    FALSE today (29 slots still `offen`) -- and that is the point: the
+    FALSE today (28 slots still `offen`) -- and that is the point: the
     shape counts the debt instead of hiding it. -/
 def satz_tafel : Prop :=
   ∀ e ∈ tafel, entschieden e
@@ -660,10 +660,10 @@ example : ¬ senkungBegrenzt absenkung 18 := by decide
 
 /-! ## 9. What stays cut: the debt, proved real -/
 
-/-- The table is NOT decided: `zeigerArithmetik` stands open, with its row. -/
+/-- The table is NOT decided: `cInclude` stands open, with its row. -/
 theorem tafel_nicht_geschlossen : ¬ satz_tafel := by
   intro h
-  have hm : (.luecke .zeigerArithmetik .offen : EntscheidZiel) ∈ tafel := by decide
+  have hm : (.luecke .cInclude .offen : EntscheidZiel) ∈ tafel := by decide
   have hd := h _ hm
   exact hd
 

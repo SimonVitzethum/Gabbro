@@ -1,0 +1,32 @@
+-- erwartet: C001
+-- Lane 142, CForm zeigerArithmetik, binary arm, CORRECTED 2026-09-11. Gabbro
+-- gives pointer arithmetic exactly one form (SPRACHE.md 5.2: `place[expr]`
+-- with an M1-bounded index). `p + 1` is none of them: M1 answers the sum with
+-- `Unbekannt` (no range for a pointer), and the emitter refuses it by name at
+-- the Binaer arm instead of writing `p + 1` into the C. The refusal reads the
+-- resolved TYPE (`*` on the C word), never the name -- and the resolution is
+-- function-scoped. The first version of this unit stood withdrawn the same
+-- day it landed: the map behind the type was unit-wide, so another function's
+-- `a : ptr ArpTabelle` fired the refusal on this function's `let a : u32`
+-- arithmetic in `messung/netz/udp-echo.gab`. The sibling below pins that
+-- shape: an integer `p` under a colliding pointer parameter name emits, and
+-- the unit's one C001 names the pointer site, not the integer one. Checker
+-- half merge-verified; this unit proves the emitter path.
+module probe::ptrplus142 {
+type Zelle = { wert : u32, };
+impl fn eins_weiter(p : ptr<normal, r> Zelle) -> u32
+    effects { reads p }
+    costs   <= 8 ops
+{
+    let versatz = p + 1;
+    return 0;
+}
+impl fn ganzzahlig() -> u32
+    effects { pure }
+    costs   <= 8 ops
+{
+    let p : u32 = 40;
+    let q = p + 1;
+    return q;
+}
+}

@@ -256,6 +256,12 @@ struct Namen {
     konstwert: HashMap<String, i128>,
     /// Name -> erklaerter Parametertyp, konservativ ueber alle Funktionen. **Nur damit
     /// bekommt ein `let d = a - b;` seinen Typ**, ohne dass ihn jemand raet.
+    ///
+    /// Unit-wide by construction -- and therefore NEVER read as-is for a name in a
+    /// body. `eigene_sicht` clears the inherited entries and inserts only the
+    /// current function's parameters, so every per-function view answers from
+    /// its own scope. A reader holding the collected map (a static initializer,
+    /// a prototype) answers a different question and says so at its own site.
     parametertyp: HashMap<String, TypExpr>,
     /// **`let`-bound local -> its C type, read from a declaration and not guessed**
     /// (2026-08-25).
@@ -2567,6 +2573,18 @@ fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
              generator that guesses undoes every pass in front of it",
         ),
     );
+}
+
+/// **CForm zeigerArithmetik: a `*` at the end of the RESOLVED C type is a
+/// pointer, and nothing else in this emitter's type vocabulary ends with one.**
+/// Integers, `bool`, `float`/`double`, struct names and the `void` of an empty
+/// parameter list never match; a pointer (`const Text *`, `uint8_t *`) always
+/// does. The check reads the type, not the spelling -- and the map behind the
+/// resolution is function-scoped (`eigene_sicht`), so a same-named integer in
+/// another scope never matches. Withdrawn 2026-09-11 on the unscoped map,
+/// re-added on the scoped one.
+fn ist_zeigerwort(t: &Option<String>) -> bool {
+    t.as_deref().is_some_and(|c| c.trim_end().ends_with('*'))
 }
 
 /// **CForm doubleTyp (lane 142): exactly the mixed pair.** Both sides carrying
@@ -5672,6 +5690,18 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
             }
         }
     }
+    // **The parameter map is scoped to this function before its own entries
+    // go in.** The collected map is unit-wide by construction (see the
+    // collection: a name bound anywhere stays unless two functions disagree on
+    // its type) -- so without this line a body reads ANOTHER function's
+    // parameter type for its own same-named `let`. Measured 2026-09-11:
+    // `messung/netz/udp-echo.gab` binds `let a : u32` in a function whose unit
+    // also declares `a : ptr ArpTabelle` elsewhere, and `wert_ctyp` answered
+    // the pointer -- which fired the pointer-arithmetic refusal below on
+    // integer arithmetic, reverted the same day. The per-name removals that
+    // follow are not enough: they hide this function's names, while the leak
+    // is every OTHER function's.
+    lokal.parametertyp.clear();
     for p in &f.parameter {
         let name = &p.name.text;
         // **Erst loeschen, dann eintragen.** Was diese Funktion selbst bindet, kommt aus
@@ -6839,15 +6869,28 @@ fn anweisung(
         // ist in keiner der drei Waechtereinheiten vorgekommen -- und genau darum hat er
         // ueberlebt. *Dieselbe Sorte stiller Ausfall wie die Null im Ausdruckszweig.*
         StmtArt::Zuweisung(z) => {
-            // **CForm doubleTyp (lane 142): the compound form of the Binaer
-            // refusal above.** `f += d` across the float/double boundary
-            // guesses the way the binary node does. (The companion
-            // zeigerArithmetik check went back out with the Binaer one --
-            // same misresolution, same reason.)
+            // **CForm zeigerArithmetik / doubleTyp: the compound forms of the
+            // two Binaer refusals above.** `p += 1` on a pointer place and
+            // `f += d` across the float/double boundary guess the same way the
+            // binary nodes do. Integer and register places carry no `*` and take
+            // the same width on both sides, so neither check fires on them --
+            // the corpus scan found no pointer-typed or mixed-width `+=`/`-=`.
+            // (The pointer half stood withdrawn with the Binaer one over the
+            // unscoped map and returns with it on the scoped one.)
             if matches!(z.op, ZuwOp::Plus | ZuwOp::Minus) {
                 let ziel = ort_typ(&z.ziel, u)
                     .and_then(|t| ctyp(&t, u))
                     .or_else(|| register_ctyp(&z.ziel, u));
+                if ist_zeigerwort(&ziel) {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "pointer arithmetic -- the language carries no bound for a \
+                         computed address outside `place[expr]`, and an unproven \
+                         bound is not emitted",
+                    );
+                    return;
+                }
                 if ist_gemischt_float_double(&ziel, &wert_ctyp(&z.wert, u)) {
                     weigere(
                         absagen,
@@ -11043,16 +11086,30 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
-            // **CForm zeigerArithmetik WITHDRAWN here 2026-09-11 (central).**
-            // The refusal below (doubleTyp) stays; the pointer-arithmetic
-            // refusal above it went back out the same day it landed: it fired
-            // on `u32` arithmetic in `messung/netz/udp-echo.gab` because
-            // `wert_ctyp` resolves through scope-blind maps (`parametertyp`
-            // answered another function's `a : ptr ArpTabelle` for this
-            // function's `let a : u32` -- measured with a temporary probe,
-            // reverted byte-identical). A refusal that fires on integers is
-            // not strict, it is loaded. Returns with per-function scoping;
-            // see `messung/EMIT-SICHTBARKEIT.md`.
+            // **CForm zeigerArithmetik, re-decided 2026-09-11: no computed
+            // address.** Gabbro gives pointer arithmetic exactly one form
+            // (`SPRACHE.md` 5.2: `place[expr]` with an M1-bounded index); a
+            // `+`/`-` with a pointer operand is none of them, so the emitter
+            // refuses by name instead of writing it into the C. Comparisons
+            // stay untouched (ordering two addresses computes no address), and
+            // so does every integer: the `*` is read off the scope-resolved
+            // type (`ist_zeigerwort`), never off a name. The same-day
+            // withdrawal fired on `u32` arithmetic in
+            // `messung/netz/udp-echo.gab` because that type came from another
+            // function's parameter through the then-unscoped map; the map is
+            // scoped since (`eigene_sicht`), and the refusal is back on it.
+            if matches!(op, BinOp::Plus | BinOp::Minus)
+                && (ist_zeigerwort(&wert_ctyp(a, u)) || ist_zeigerwort(&wert_ctyp(b, u)))
+            {
+                weigere(
+                    absagen,
+                    e.span,
+                    "pointer arithmetic -- the language carries no bound for a \
+                     computed address outside `place[expr]`, and an unproven \
+                     bound is not emitted",
+                );
+                return String::new();
+            }
             // **CForm doubleTyp (lane 142): no silent widening.** With a `double`
             // operand present, C promotes the `float` side and computes in
             // `double`, while the checker proved the `f32` fact (7400 of 200000
