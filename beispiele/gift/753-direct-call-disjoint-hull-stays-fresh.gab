@@ -1,0 +1,49 @@
+-- erwartet: M147
+-- **V4 freshness across a DIRECT call, the disjoint boundary: a hull naming another carrier expires nothing.**
+--
+-- `intakt` reads `alt` from `ZUSTAND` and calls `fremd`, whose hull writes only
+-- `ANDERE` -- so `alt` stays fresh and deciding on it stays silent. `faellig`
+-- is the control: the same read, but `schreiber`'s hull names `ZUSTAND`, so the
+-- decision falls as `M147`. A run over this file must report `M147` at the
+-- control only -- the silent arm is the pin this file owes: carrier granularity
+-- at the call edge, no path overlap, syntax only.
+module gift753 {
+
+static mut ZUSTAND : u32 = 0;
+static mut ANDERE : u32 = 0;
+
+impl fn fremd()
+    effects { writes ANDERE }
+    costs <= 4 ops
+{
+    ANDERE = 1;
+}
+
+impl fn schreiber()
+    effects { writes ZUSTAND }
+    costs <= 4 ops
+{
+    ZUSTAND = 1;
+}
+
+impl fn intakt() -> u32
+    effects { reads ZUSTAND, writes ANDERE }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    fremd();
+    if alt != 0 { return 1; }
+    return 0;
+}
+
+impl fn faellig() -> u32
+    effects { reads ZUSTAND, writes ZUSTAND }
+    costs <= 32 ops
+{
+    let alt : u32 = ZUSTAND;
+    schreiber();
+    if alt != 0 { return 1; }
+    return 0;
+}
+
+}
