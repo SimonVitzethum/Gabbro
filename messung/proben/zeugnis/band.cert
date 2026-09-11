@@ -1,0 +1,7 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.band (.lit 6) (.lit 3))
+claimed range: (0, 6)
+side conditions:
+  - lit 6: exact (6, 6) -- HOLDS
+  - lit 3: exact (3, 3) -- HOLDS
+  - band: needs 0 <= l1 and 0 <= l2; have l1 = 6, l2 = 3 -- HOLDS

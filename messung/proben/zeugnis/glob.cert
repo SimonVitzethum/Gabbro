@@ -1,0 +1,5 @@
+== derivation certificate (int fragment, emitter half) ==
+term: (.glob G)
+claimed range: (0, 255)
+side conditions:
+  - glob G: carrier (0, 255), guard gdarf = true -- HOLDS
