@@ -2342,3 +2342,80 @@ fn ein_elems_binder_traegt_seine_schranke() {
     // `0 errors` from `pruefe` AND C from `emit`, over a `uint32_t buf[8]`.
     faellt_mit(&m("  r.buf[i + 1000000] = 1;"), "M103");
 }
+
+/// **`D027` -- a clause over a shared carrier names its invariant instead of
+/// restating it** (2026-09-11).
+///
+/// `SYNTAX.md` §21.9 admits assertions over lock-shared carriers only in
+/// invariant form; the checker side is the syntactic shadow of that form: a
+/// `requires`/`ensures` clause of a shared-side function (a `locks shared`
+/// effect or a `Held(L, shared)` witness) that reads a table carrier must
+/// call a declared invariant -- or a `spec fn` stating one -- by name. A
+/// restated predicate is refused.
+///
+/// The four falling directions are pinned again in `beispiele/gift/792`
+/// (requires), `793` (ensures), `794` (quantifier), `795` (reference beside a
+/// restatement); what stands here are the boundaries the gifts do not draw.
+#[test]
+fn eine_geteilte_klausel_nennt_ihre_invariante() {
+    // One preamble: a table with a declared invariant, a `spec fn` stating
+    // one, and a lock with a shared side.
+    let mit = |klauseln: &str, rumpf: &str| {
+        format!(
+            "module p {{\n\
+             const N : u32 = 64;\n\
+             table Raum count N {{\n  slot {{ belegt : bool, rechte : u32, }}\n\
+             invariant raum_belegt_zaehlt cost O(n) runs offline :\n\
+             forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;\n}}\n\
+             lock KAPPEN protects {{ belegt, rechte }} rank 0 held <= 8 ops shared held <= 8 ops;\n\
+             spec fn raum_ok(k : ptr<normal, r> Raum) -> bool\n  effects {{ pure }}\n  = k.slots[0].belegt;\n\
+             impl fn f(k : ptr<normal, r> Raum, i : index into Raum) -> bool\n  {klauseln}\n\
+             effects {{ reads k.slots }}\n  costs <= 2 ops\n{{{rumpf}}}\n}}"
+        )
+    };
+    let liest = "requires Held(KAPPEN, shared)";
+    let rumpf = "return k.slots[i].belegt;";
+    // The restatement falls, on either side of the contract.
+    faellt_mit(
+        &mit(&format!("{liest}, k.slots[i].belegt"), rumpf),
+        "D027",
+    );
+    // The shared side also arrives through the effect list, not only through
+    // the witness.
+    faellt_mit(
+        "module p {\n\
+         const N : u32 = 64;\n\
+         table Raum count N {\n  slot { belegt : bool, rechte : u32, }\n\
+         invariant raum_belegt_zaehlt cost O(n) runs offline :\n\
+         forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;\n}\n\
+         lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;\n\
+         impl fn g(k : ptr<normal, r> Raum, i : index into Raum) -> bool\n\
+         requires k.slots[i].belegt\n\
+         effects { reads k.slots, locks shared KAPPEN }\n  costs <= 2 ops\n\
+         { locks shared KAPPEN { return k.slots[i].belegt; } return false; }\n}",
+        "D027",
+    );
+    // The reference is silent -- through a `spec fn` …
+    faellt_nicht(&mit(&format!("{liest}, raum_ok(k)"), rumpf));
+    // … and through the declared table invariant by name. That form is a
+    // reference, so `D027` stays silent about it -- but it is not a
+    // *resolvable* call (an invariant is no function), and `H021` names the
+    // dropped derivation edge. One fault, one refusal, and the owner is the
+    // call graph, not this rule.
+    {
+        let c = codes(&mit(&format!("{liest}, raum_belegt_zaehlt(k)"), rumpf));
+        assert!(
+            !c.iter().any(|(k, s)| *k == "D027" && *s == Stufe::Fehler),
+            "a reference names instead of restating, so `D027` stays silent: {c:?}",
+        );
+        assert!(
+            c.iter().any(|(k, s)| *k == "H021" && *s == Stufe::Fehler),
+            "the invariant is no function, so the call graph names the edge: {c:?}",
+        );
+    }
+    // The witness alone names a lock and reads nothing.
+    faellt_nicht(&mit(liest, rumpf));
+    // Exclusive side: the same restatement `beispiele/01` has always written
+    // stays writable -- the rule is about the shared side, not about tables.
+    faellt_nicht(&mit("requires Held(KAPPEN), k.slots[i].belegt", rumpf));
+}

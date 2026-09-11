@@ -13,11 +13,12 @@
 //! haengte).
 
 use gabbro_syntax::ast::{
-    Block, Domaene, Expr, ExprArt, FnRumpf, Ident, Item, ItemArt, Ort, OrtSuffix, Pred, PredArt,
-    Programm, Quantor, QuantorArt, Schleife, StmtArt,
+    Block, Domaene, Eingebaut, Expr, ExprArt, FnKlasse, FnRumpf, Ident, Item, ItemArt, Ort,
+    OrtSuffix, Pred, PredArt, Programm, Quantor, QuantorArt, Schleife, StmtArt, TypOderOrt,
+    WirkungArt,
 };
 use gabbro_syntax::span::Span;
-use gabbro_syntax::diag::{Absage, Absagen};
+use gabbro_syntax::diag::{Absage, Absagen, Stufe};
 use std::collections::{HashMap, HashSet};
 
 use crate::typen::Typ;
@@ -302,8 +303,42 @@ impl<'a> Sicht<'a> {
 /// needs a statement about what the author MEANT, and no measurement of this bench carries
 /// one.* The gap is named in `messung/DOMAENENNAMEN.md` and left open there.
 pub fn domaenen(baum: &Programm, u: &Umgebung, absagen: &mut Absagen) {
+    // **The names a shared-side contract clause may invoke (`D027` below).**
+    //
+    // A clause over a lock-shared carrier must NAME the declared invariant by
+    // reference instead of restating a predicate, and the reference is a call
+    // to a name this unit declares: a `table`/`walk`/`group` invariant or a
+    // `spec fn` stating one. Both are collected here, once per unit, because
+    // `aus_pred` sees one clause at a time and must not re-walk the tree per
+    // clause. The register is the same one `maintains` reads (`m1.rs::
+    // sammle_spezifikationen` mixes the two kinds for the same reason: a table
+    // invariant IS the named statement about its carrier); only the arity map
+    // is dropped, because `D027` asks whether the name EXISTS, not what it
+    // takes.
+    let mut verweise = HashSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Funktion(f) if f.klasse == Some(FnKlasse::Spec) => {
+            verweise.insert(f.name.text.clone());
+        }
+        ItemArt::Tabelle(t) => {
+            for i in &t.invarianten {
+                verweise.insert(i.name.text.clone());
+            }
+        }
+        ItemArt::Walk(w) => {
+            for i in &w.invarianten {
+                verweise.insert(i.name.text.clone());
+            }
+        }
+        ItemArt::Gruppe(g) => {
+            for i in &g.invarianten {
+                verweise.insert(i.name.text.clone());
+            }
+        }
+        _ => {}
+    });
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
-        domaenen_im_item(item, modul, u, absagen);
+        domaenen_im_item(item, modul, u, &verweise, absagen);
     });
 }
 
@@ -346,7 +381,13 @@ impl Stellung {
     }
 }
 
-fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absagen) {
+fn domaenen_im_item(
+    item: &Item,
+    modul: &str,
+    u: &Umgebung,
+    verweise: &HashSet<String>,
+    absagen: &mut Absagen,
+) {
     match &item.art {
         // A function: its parameters are the local view, and its CONTRACTS as well as
         // its BODY are read. **All positions**, not just `ensures` -- the position finding
@@ -358,16 +399,39 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             }
             let s = Sicht { u, modul, lokal: &lokal };
             let mut geb = Vec::new();
+            // **`D027` travels only on contract clauses of a shared-side function.**
+            //
+            // Shared-side means: the function takes a lock shared (`locks shared`
+            // in `effects`) or demands a shared witness (`Held(L, shared)` in
+            // `requires`, read through the call graph's own collector rather
+            // than re-spelled). Every other `aus_pred` site in this file --
+            // invariants, `spec fn` bodies, loop clauses, `floor`, `walk`
+            // steps, exchanges, counts -- walks with `None` and is outside the
+            // rule; what stays writable there but owes `hFree` is the remainder
+            // `BEWEIS.md` keeps.
+            let geteilt = f.effects.as_ref().is_some_and(|w| {
+                w.liste
+                    .iter()
+                    .any(|e| matches!(e.art, WirkungArt::SperrtGeteilt(_)))
+            }) || {
+                let mut h = Vec::new();
+                for p in &f.requires {
+                    crate::aufrufgraph::held_aus_pred(p, &mut h);
+                }
+                h.iter().any(|(_, g)| *g)
+            };
+            let blick = D027Blick { verweise };
+            let d027 = if geteilt { Some(&blick) } else { None };
             for p in &f.requires {
-                aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen);
+                aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen, d027);
             }
             for p in &f.ensures {
-                aus_pred(p, &s, Stellung::Nachbedingung, &mut geb, absagen);
+                aus_pred(p, &s, Stellung::Nachbedingung, &mut geb, absagen, d027);
             }
             match &f.rumpf {
                 // A `spec fn` body IS a predicate -- and `= forall s in slots of c : …` is
                 // five of the 53 places.
-                FnRumpf::Pred(p) => aus_pred(p, &s, Stellung::Spezifikation, &mut geb, absagen),
+                FnRumpf::Pred(p) => aus_pred(p, &s, Stellung::Spezifikation, &mut geb, absagen, None),
                 FnRumpf::Block(b) => aus_block(b, &s, &mut geb, absagen),
                 FnRumpf::Asm(_) | FnRumpf::Keiner => {}
             }
@@ -380,7 +444,7 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             let s = Sicht { u, modul, lokal: &lokal };
             let mut geb = Vec::new();
             for i in &t.invarianten {
-                aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen);
+                aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen, None);
             }
         }
         // **A `walk` invariant, and until today no reader of this pass came here.** Four of
@@ -397,7 +461,7 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             let s = Sicht { u, modul, lokal: &lokal };
             let mut geb = Vec::new();
             for i in &w.invarianten {
-                aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen);
+                aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen, None);
             }
             // **`down … when` and `leaf` are predicates, and until 2026-09-02 no pass of
             // this file came here.** All twenty name kinds were accepted in both.
@@ -407,8 +471,8 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             // quantifier variable gets: the pass knows the name is bound and nothing about
             // its type, and guessing one would be `D018` speaking about a guess.
             geb.push("it".to_string());
-            aus_pred(&w.ab_wenn, &s, Stellung::Walkschritt, &mut geb, absagen);
-            aus_pred(&w.blatt, &s, Stellung::Walkschritt, &mut geb, absagen);
+            aus_pred(&w.ab_wenn, &s, Stellung::Walkschritt, &mut geb, absagen, None);
+            aus_pred(&w.blatt, &s, Stellung::Walkschritt, &mut geb, absagen, None);
             geb.pop();
         }
         // **The assumption tier, and it is the position with the most weight.** A
@@ -423,7 +487,7 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             let s = Sicht { u, modul, lokal: &lokal };
             let mut geb = Vec::new();
             for p in &a.requires {
-                aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen);
+                aus_pred(p, &s, Stellung::Vorbedingung, &mut geb, absagen, None);
             }
         }
         // **A `check … floor` names quantities, and nothing said they exist.** `N022` in
@@ -436,7 +500,7 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             let s = Sicht { u, modul, lokal: &lokal };
             let mut geb = Vec::new();
             for p in &c.floor {
-                aus_pred(p, &s, Stellung::Untergrenze, &mut geb, absagen);
+                aus_pred(p, &s, Stellung::Untergrenze, &mut geb, absagen, None);
             }
             aus_block(&c.can_fail, &s, &mut geb, absagen);
         }
@@ -463,7 +527,7 @@ fn domaenen_im_item(item: &Item, modul: &str, u: &Umgebung, absagen: &mut Absage
             let s = Sicht { u, modul, lokal: &lokal };
             let mut geb = Vec::new();
             for i in &g.invarianten {
-                aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen);
+                aus_pred(&i.pred, &s, Stellung::Invariante, &mut geb, absagen, None);
             }
         }
         _ => {}
@@ -548,21 +612,21 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
                         // A local of that name shadows it: `geb` is consulted after
                         // `s.lokal`, and the Lean emitter asks `is_local` first too.
                         geb.push(crate::PASSZAEHLER.to_string());
-                        aus_pred(p, s, Stellung::Invariante, geb, absagen);
+                        aus_pred(p, s, Stellung::Invariante, geb, absagen, None);
                         geb.pop();
                     }
                 }
                 Schleife::Retry(r) => {
                     if let Some(p) = &r.invariante {
-                        aus_pred(p, s, Stellung::Invariante, geb, absagen);
+                        aus_pred(p, s, Stellung::Invariante, geb, absagen, None);
                     }
                     if let Some(p) = &r.bis {
-                        aus_pred(p, s, Stellung::Invariante, geb, absagen);
+                        aus_pred(p, s, Stellung::Invariante, geb, absagen, None);
                     }
                 }
                 Schleife::Forever(f) => {
                     if let Some(p) = &f.invariante {
-                        aus_pred(p, s, Stellung::Invariante, geb, absagen);
+                        aus_pred(p, s, Stellung::Invariante, geb, absagen, None);
                     }
                 }
             }
@@ -574,7 +638,7 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
         // the map below, after the check, the same order a `let` gets.
         if let StmtArt::Exchange(x) = &st.art {
             if let gabbro_syntax::ast::XForm::Vergleich { bedingung, .. } = &x.form {
-                aus_pred(bedingung, s, Stellung::Tausch, geb, absagen);
+                aus_pred(bedingung, s, Stellung::Tausch, geb, absagen, None);
             }
         }
         // **«SG-24»: a `count` in a body position.** Predicates are walked above;
@@ -647,7 +711,14 @@ fn binde(st: &gabbro_syntax::ast::Stmt, karte: &mut HashMap<String, Typ>, u: &Um
     }
 }
 
-fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &mut Absagen) {
+fn aus_pred(
+    p: &Pred,
+    s: &Sicht,
+    st: Stellung,
+    geb: &mut Vec<String>,
+    absagen: &mut Absagen,
+    d027: Option<&D027Blick>,
+) {
     match &p.art {
         PredArt::Quantor(q) => {
             // **`D022` only speaks where the DOMAIN stood.** If `D017`/`D018`/`D019`
@@ -665,13 +736,13 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
             // The quantifier DECLARES its variable, and an inner domain may run over it --
             // without this the rule would refuse the name the outer line just introduced.
             geb.push(q.variable.text.clone());
-            aus_pred(&q.rumpf, s, st, geb, absagen);
+            aus_pred(&q.rumpf, s, st, geb, absagen, None);
             geb.pop();
         }
-        PredArt::Klammer(i) | PredArt::Nicht(i) => aus_pred(i, s, st, geb, absagen),
+        PredArt::Klammer(i) | PredArt::Nicht(i) => aus_pred(i, s, st, geb, absagen, None),
         PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
-            aus_pred(a, s, st, geb, absagen);
-            aus_pred(b, s, st, geb, absagen);
+            aus_pred(a, s, st, geb, absagen, None);
+            aus_pred(b, s, st, geb, absagen, None);
         }
         // **No `_` arm.** The remaining predicate kinds carry no quantifier, and when
         // one grows that changes this pass should fail to compile rather than overlook it
@@ -737,6 +808,271 @@ fn aus_pred(p: &Pred, s: &Sicht, st: Stellung, geb: &mut Vec<String>, absagen: &
         // `Held(L)` and `Held(L, shared)` name a LOCK and nothing else.
         PredArt::Held { .. } => {}
     }
+    // **`D027` runs after the walk, not before it.** The walk above may have
+    // refused the same clause at `D021` (a phantom name beside a table read),
+    // and a second refusal for one fault is worse than one -- so the rule
+    // reads the verdicts first and stays silent where `D021` already spoke
+    // (the `D022`-after-`D017` reservation, one construct over). It runs only
+    // at the top clause (`Some` travels exactly there; every recursive call
+    // below carries `None`), so one restated clause draws exactly one refusal
+    // no matter how deep the restatement nests.
+    if let Some(blick) = d027 {
+        d027_klausel_pruefen(p, s, blick, st, absagen);
+    }
+}
+
+/// What `D027` may see: the declared reference names of the unit. `None`
+/// instead of this struct means the position is outside the rule.
+struct D027Blick<'a> {
+    verweise: &'a HashSet<String>,
+}
+
+/// **D027 -- a clause over a shared carrier names its invariant instead of
+/// restating it.**
+///
+/// `SYNTAX.md` §21.9 admits assertions over lock-shared carriers only in
+/// invariant form, and the Lean side discharges exactly that fragment by
+/// construction (`interferenceFree_of_invariantForm` over `InvariantForm`:
+/// `Q f σ ↔ I.inv c σ`). What the checker can decide without a semantic
+/// comparator is the syntactic shadow of that form: a `requires`/`ensures`
+/// clause of a shared-side function that reads a table carrier must be a call
+/// naming a declared invariant (or a `spec fn` stating one) -- a restated
+/// predicate is refused.
+///
+/// Three deliberate narrowings, each with its owner:
+///
+/// * **Only contract clauses of shared-side functions.** Shared-side is a
+///   `locks shared` effect or a `Held(L, shared)` witness in the contract;
+///   the `table` grammar carries no `shared` word, so the acquisition is the
+///   only syntactic mark a shared carrier leaves. An exclusive-side clause
+///   like `beispiele/01`'s `requires Held(KAPPEN), c.slots[s].benutzt` stays
+///   silent -- refusing it would refuse the corpus.
+/// * **A reference is a whole-clause call.** Outer brackets are transparent;
+///   anything else -- a conjunction beside a reference, a negation, a
+///   quantifier -- is read for what it states, not for what it names. The
+///   places inside a reference call's own arguments do not count as reads:
+///   `raum_ok(k)` passes the carrier, it does not assert over it.
+/// * **Unknown stays silent.** A place whose carrier cannot be proved a table
+///   (`D018`'s rule, one file over) is not a place of the wrong kind, and a
+///   refusal about the checker's own ignorance would be the false alarm this
+///   bench spent a whole build undoing.
+///
+/// What is NOT covered stays named: loop invariants and `spec fn` bodies read
+/// no `D027` (they walk with `None`), and a phantom callee beside a table
+/// read stays `D021`'s alone. Both remain own-logic debt in `BEWEIS.md`.
+fn d027_klausel_pruefen(
+    p: &Pred,
+    s: &Sicht,
+    blick: &D027Blick,
+    st: Stellung,
+    absagen: &mut Absagen,
+) {
+    // One fault keeps one refusal: where `D021` already refused a name of this
+    // clause, the carrier reading beside it is read off a declaration the
+    // checker has already called wrong.
+    let vergeben = absagen.absagen.iter().any(|a| {
+        a.code == "D021"
+            && a.stufe == Stufe::Fehler
+            && a.span.von >= p.span.von
+            && a.span.bis <= p.span.bis
+    });
+    if vergeben {
+        return;
+    }
+    if d027_ist_verweis(p, blick.verweise) {
+        return;
+    }
+    let mut orte = Vec::new();
+    d027_orte_aus_pred(p, blick.verweise, &mut orte);
+    for o in &orte {
+        if d027_liest_traeger(o, s) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "D027",
+                    o.span,
+                    format!(
+                        "`{}` over a shared carrier must name its invariant -- `{}` restates a predicate",
+                        st.wort(),
+                        o.text(),
+                    ),
+                )
+                .mit_notiz(
+                    "assertions over lock-shared carriers are admitted only in invariant \
+                     form (`SYNTAX.md` §21.9): call the declared invariant -- or a `spec fn` \
+                     stating it -- by name instead of restating what it says. The per-run \
+                     preservation proof the restatement would owe (`hFree`) is discharged \
+                     for the invariant fragment by construction, and for nothing else",
+                )
+                .mit_notiz(
+                    "silent where the clause IS such a call, where the function holds no \
+                     shared lock, and where `D021` already refused the same clause -- one \
+                     fault, one refusal",
+                ),
+            );
+            return;
+        }
+    }
+}
+
+/// **Whether this clause is a reference: a call naming a declared invariant
+/// or `spec fn`, under brackets and nothing else.**
+///
+/// A negation around the call is not transparent: `!raum_ok(k)` states
+/// something the invariant does not (its complement), so it is read for what
+/// it states. A conjunction beside a reference restates beside naming, and
+/// falls under the rule like any restatement.
+fn d027_ist_verweis(p: &Pred, verweise: &HashSet<String>) -> bool {
+    let mut p = p;
+    while let PredArt::Klammer(x) = &p.art {
+        p = x;
+    }
+    let PredArt::Vergleich(e) = &p.art else {
+        return false;
+    };
+    let ExprArt::Ruf(r) = &crate::ohne_klammern(e).art else {
+        return false;
+    };
+    d027_ist_verweisruf(r, verweise)
+}
+
+/// **Whether this call is the reference form.** `Has`/`Held` are pseudo-calls
+/// over machine features and locks rather than statements about a carrier; a
+/// record constructor (`P(a: 1)`) builds a value rather than naming one; an
+/// indirect call names no declaration. All three are read for what they carry,
+/// not for what they name.
+fn d027_ist_verweisruf(r: &gabbro_syntax::ast::Ruf, verweise: &HashSet<String>) -> bool {
+    if r.heisst("Has") || r.heisst("Held") || r.ist_verbundwert() {
+        return false;
+    }
+    let Some(pfad) = r.path() else {
+        return false;
+    };
+    let Some(letzter) = pfad.teile.last() else {
+        return false;
+    };
+    verweise.contains(&letzter.text)
+}
+
+/// Every place a clause reads, except the arguments of a reference call --
+/// passing the carrier (`raum_ok(k)`) is not asserting over it. The walk
+/// mirrors `aus_pred` arm for arm (quantifiers, `in`-domains, `reaches`,
+/// brackets, connectives, `count` rumpfs); a new `PredArt` variant fails to
+/// compile here rather than overlooking its places -- the lesson of the 78
+/// holes behind `lib.rs::unterbloecke`.
+fn d027_orte_aus_pred(p: &Pred, verweise: &HashSet<String>, aus: &mut Vec<Ort>) {
+    match &p.art {
+        PredArt::Vergleich(e) => d027_orte_aus_expr(e, verweise, aus),
+        PredArt::Quantor(q) => {
+            if let Some(o) = domaenenort(&q.domaene) {
+                aus.push(o.clone());
+            }
+            d027_orte_aus_pred(&q.rumpf, verweise, aus);
+        }
+        PredArt::Element(e, d) => {
+            d027_orte_aus_expr(e, verweise, aus);
+            if let Some(o) = domaenenort(d) {
+                aus.push(o.clone());
+            }
+        }
+        PredArt::Erreicht { von, nach, .. } => {
+            d027_ort_mit_index(von, verweise, aus);
+            d027_ort_mit_index(nach, verweise, aus);
+        }
+        PredArt::Held { .. } => {}
+        PredArt::Klammer(x) | PredArt::Nicht(x) => d027_orte_aus_pred(x, verweise, aus),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            d027_orte_aus_pred(a, verweise, aus);
+            d027_orte_aus_pred(b, verweise, aus);
+        }
+    }
+}
+
+/// Every place an expression reads, with the reference-call exception above.
+/// Written out variant by variant like `crate::alle_orte`: a silent catch-all
+/// is the most common hole shape in this folder.
+fn d027_orte_aus_expr(e: &Expr, verweise: &HashSet<String>, aus: &mut Vec<Ort>) {
+    let e = crate::ohne_klammern(e);
+    match &e.art {
+        ExprArt::Ruf(r) => {
+            if d027_ist_verweisruf(r, verweise) {
+                return;
+            }
+            if let Some(o) = r.place() {
+                d027_ort_mit_index(o, verweise, aus);
+            }
+            for a in &r.argumente {
+                d027_orte_aus_expr(a, verweise, aus);
+            }
+        }
+        ExprArt::Ort(o) | ExprArt::Alt(o) => d027_ort_mit_index(o, verweise, aus),
+        ExprArt::Zaehle { domaene, rumpf, .. } => {
+            if let Some(o) = domaenenort(domaene) {
+                aus.push(o.clone());
+            }
+            d027_orte_aus_pred(rumpf, verweise, aus);
+        }
+        ExprArt::Eingebaut(g) => match &**g {
+            Eingebaut::Aligned(a, b) => {
+                d027_orte_aus_expr(a, verweise, aus);
+                d027_orte_aus_expr(b, verweise, aus);
+            }
+            Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => {
+                if let TypOderOrt::Ort(o) = t {
+                    d027_ort_mit_index(o, verweise, aus);
+                }
+            }
+        },
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::FnWert(_)
+        | ExprArt::Ergebnis
+        | ExprArt::Grund { .. }
+        | ExprArt::Klammer(_)
+        | ExprArt::Unaer(_, _)
+        | ExprArt::Binaer(_, _, _) => {
+            for k in crate::unterausdruecke(e) {
+                d027_orte_aus_expr(k, verweise, aus);
+            }
+        }
+    }
+}
+
+/// A place plus the places inside its indices: `c.slots[d.slots[j].k].x` reads
+/// three places, and all three are owed the question.
+fn d027_ort_mit_index(o: &Ort, verweise: &HashSet<String>, aus: &mut Vec<Ort>) {
+    aus.push(o.clone());
+    for x in crate::ausdruecke_im_ort(o) {
+        d027_orte_aus_expr(x, verweise, aus);
+    }
+}
+
+/// **Whether this place reads a table carrier -- `None` where it cannot be
+/// proved.** Three ways to know, and all three are lookups, not guesses: the
+/// base IS a declared table; the whole place resolves to one
+/// (`Sicht::tabellenname`: `index into T`, a table type); or the base alone is
+/// a pointer the locals declare over a table (`k.slots…` for `k :
+/// ptr<…> T`). Anything else -- an unknown name, a scalar, a binder -- stays
+/// silent, the safe direction.
+fn d027_liest_traeger(o: &Ort, s: &Sicht) -> bool {
+    if s.u.nennt_tabelle(s.modul, &o.basis.text).is_some() {
+        return true;
+    }
+    if s.tabellenname(o).is_some() {
+        return true;
+    }
+    let nur_basis = Ort {
+        basis: o.basis.clone(),
+        suffixe: Vec::new(),
+        span: o.basis.span,
+    };
+    let t = s.u.typ_von_ort(s.modul, &nur_basis, s.lokal);
+    let spitze = match &t {
+        Typ::Zeiger(x) => &**x,
+        _ => &t,
+    };
+    matches!(spitze.durchgreifen(), Typ::Tabelle(_))
 }
 
 /// **«SG-24»: a `count` declares its variable, and its rumpf answers to it.**
@@ -775,7 +1111,7 @@ fn aus_zaehlung(
     // The count DECLARES its variable, and an inner domain may run over it -- the
     // same order the `Quantor` arm keeps, for the same reason.
     geb.push(variable.text.clone());
-    aus_pred(rumpf, s, st, geb, absagen);
+    aus_pred(rumpf, s, st, geb, absagen, None);
     geb.pop();
 }
 

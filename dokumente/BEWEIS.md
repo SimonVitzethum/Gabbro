@@ -1644,3 +1644,13 @@ bound is exact: the owed proof covers precisely the foreign steps of the
 joint run (`InterferenceFree` over `schrittFaden`), nothing about the
 sequential triples, nothing about the frame — and it vanishes the moment
 the clause takes invariant form.
+
+`D027` (checker, `domaene.rs::aus_pred`, `SYNTAX.md` §21.9) has since
+closed the contract half of this remainder: a `requires`/`ensures` clause
+of a shared-side function that reads a table carrier and restates instead
+of naming is refused, so no such clause reaches the prover as own-logic.
+What stands above is unchanged OUTSIDE contract position — loop invariants
+over shared carriers, `spec fn` bodies, and clauses of functions without a
+shared side still owe `hFree` as user own-logic where they leave invariant
+form. The two registers agree: `SYNTAX.md` §21.9 states the refusal, this
+section states what the refusal does not cover.

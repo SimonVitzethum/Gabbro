@@ -1,0 +1,32 @@
+-- erwartet: D027
+-- **D027 -- a quantifier over a shared carrier is a restatement, not a reference.**
+--
+-- No call names a declared invariant here: `forall s in slots of k : …`
+-- runs over the shared carrier and states its own predicate. The reference
+-- form (`raum_ok(k)`) is the writable shape; spelling the traversal out is
+-- refused even though every name in it resolves.
+module gift794 {
+
+const N : u32 = 64;
+
+table Raum count N {
+    slot { belegt : bool, rechte : u32, }
+    invariant raum_belegt_zaehlt cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;
+
+spec fn raum_ok(k : ptr<normal, r> Raum) -> bool
+    effects { pure }
+    = k.slots[0].belegt;
+
+impl fn alle_belegt(k : ptr<normal, r> Raum) -> bool
+    requires Held(KAPPEN, shared), forall s in slots of k : k.slots[s].belegt
+    effects { reads k.slots }
+    costs <= 2 ops
+{
+    return k.slots[0].belegt;
+}
+
+}

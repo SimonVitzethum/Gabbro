@@ -1,0 +1,32 @@
+-- erwartet: D027
+-- **D027 -- a reference beside a restatement still restates.**
+--
+-- The first conjunct names the invariant (`raum_ok(k)` -- silent on its own),
+-- the second states its own predicate over the same shared carrier. Naming in
+-- one place does not licence restating in the next: the clause is read for
+-- what it states, and what it states beside the reference is refused.
+module gift795 {
+
+const N : u32 = 64;
+
+table Raum count N {
+    slot { belegt : bool, rechte : u32, }
+    invariant raum_belegt_zaehlt cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;
+
+spec fn raum_ok(k : ptr<normal, r> Raum) -> bool
+    effects { pure }
+    = k.slots[0].belegt;
+
+impl fn mischt(k : ptr<normal, r> Raum, i : index into Raum) -> bool
+    requires Held(KAPPEN, shared), raum_ok(k) && k.slots[i].belegt
+    effects { reads k.slots }
+    costs <= 2 ops
+{
+    return k.slots[i].belegt;
+}
+
+}

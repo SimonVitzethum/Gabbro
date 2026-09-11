@@ -1853,6 +1853,11 @@ preservation, so only the invariant itself survives every foreign step by
 construction (Lean: `InvariantForm` with `interferenceFree_of_invariantForm`
 in `InterferenzAllgemein.lean` §20, bound at Ziel level by
 `ziel_seqLogic_aus_spec_invariantForm`). Checker side the form check is
-booked as `D027` in `domaene.rs aus_pred`, decided against the declared
-table invariants; until it lands, non-invariant shapes over shared
-carriers are own-logic debt, not refused text.
+`D027` in `domaene.rs::aus_pred`, decided against the declared table
+invariants and the declared `spec fn` names: a `requires`/`ensures` clause
+of a shared-side function (a `locks shared` effect or a `Held(L, shared)`
+witness in its contract) that reads a table carrier must call a declared
+invariant -- or a `spec fn` stating one -- by name, and a restated predicate
+is refused. Outside contract position -- loop invariants, `spec fn` bodies,
+functions without a shared side -- non-invariant shapes stay own-logic debt
+(remainder in `BEWEIS.md`).
