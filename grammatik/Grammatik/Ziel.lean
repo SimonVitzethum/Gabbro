@@ -326,4 +326,103 @@ theorem ziel_nutzer_last (o : Ausgang V l Γ)
 
 #print axioms Gabbro.Grammatik.ziel_nutzer_last
 
+/-! ## 6. Discharge record (w06 proof architect, 2026-09-11)
+
+    Verdict: CONDITIONAL -- see `messung/ZIEL-BEWEIS.md` §5 for the exact open
+    list.     This section binds each PASSED wave result at Ziel level (theorem, or
+    `def` for the witness itself, no `sorry`) and keeps each FAILED premise an explicit hypothesis: nothing
+    is papered over, and nothing is duplicated across an import cycle.
+
+    Ledger tags: OWN-LOGIC (the user's `Logik D`), NAMED-HW (a named
+    `Hardware D` assumption with its probe), GABBRO-DUTY (a named
+    checker-side duty, carried under the standing assumption that Gabbro is
+    verified -- "Den Rest tragen Gabbro und CompCert").
+
+    L1 (w01 `f890dac`, PASS, merged): the last open ruling-table slot is
+    decided. The discharge theorem stands where the table stands --
+    `tafel_geschlossen : satz_tafel` (`Erhaltung.lean:806`, with
+    `entschiedenDec` at `:792`) -- because `Erhaltung` imports `Ziel`
+    (`Erhaltung.lean:112`), so `Ziel` cannot import it back; this record
+    names that theorem instead of duplicating it. The row
+    (`Erhaltung.lean:305`) admits the fixed four-header preamble with price
+    (cut C3, trust pinned by `cc -c`, never proved -- ledger NAMED-HW,
+    toolchain assumption with its check).
+
+    L2 (below, PASS, merged): the concrete sequential-logic shape behind
+    `ziel_nutzer_last`'s abstract `hSeqLogic` slot.
+
+    L5 (below, PASS, merged): the lowering witness and its bound, closed.
+    The count-preservation fragment for the seven modeled ops stands where
+    the budget stands -- `modell_lauf_erhalten` (`Budget.lean:690`,
+    `modell_erhaltung` at `:681`) -- because `Budget` imports `Ziel`
+    (`Budget.lean:92`), so `Ziel` cannot import it back; the measured bound
+    (`ABSENKUNG-DURCHSETZUNG.md` §§5-6, fisch re-run, max 17) is cited, not
+    re-stated.
+
+    L3 (w03 `1fc7f4a`, FAIL partial, NOT merged): `hBridge` stays a
+    hypothesis. Proved on the branch (read-only cite, no import):
+    `bruecke_exec_gesittet` (`Wettlauf.lean:793`), `gut_without_suffix`
+    (`:767`), `covered_prefix` (`:779`) -- with `ForeignExclusion` (`:760`,
+    accepted as NAMED-HW, `A_lock`) as premise. OPEN: the W4 trace link
+    (per-thread `Verlauf` through `exec` behind a real `Lauf` stands
+    nowhere) and the W5 run-to-`Bau` wiring (cut C2).
+
+    L4 (w04 `231c514`, FAIL partial, NOT merged): `hProbe` stays a
+    hypothesis. Proved on the branch (read-only cite, no import):
+    `TickClock.window` (`Fristlauf.lean:328`), `sampling_upholds_frist`
+    (`:373`), `sampling_closes_frist` (`:395`). OPEN: the probe-to-grid
+    link (C4 at `:82` -- the hardware keeping the grid is a per-use
+    premise; `sonde_tick.c` is not a periodic sampler), per-use
+    `deadlineSpacing` (`:388`, NAMED-HW), and 28 of 29 deadlines without a
+    running probe.
+-/
+
+/-- L2 discharge (w02 `0bcff72`, PASS, merged): the concrete shape that fills
+    `ziel_nutzer_last`'s abstract `hSeqLogic` slot -- sequential contract
+    triples (`hSpec`, OWN-LOGIC: the user's requires/ensures) plus the
+    interference-freedom check (`hFree`, OWN-LOGIC: the per-program
+    Owicki-Gries obligation) yield stable contract assertions at the last
+    world, modulo the frame-locality premise (`hAb`, GABBRO-DUTY: the
+    checker's footprint duty, discharged downstream by
+    `haengtAb_vertrag_gesamt` once both footprints lie in the signature
+    frame). Proved by `stabil_from_spec`
+    (`InterferenzAllgemein.lean:1030`, merged §19). -/
+theorem ziel_seqLogic_aus_spec (Nb : Nebeneinander)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (hInv : InvariantenKontext Nb J I)
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hSpec : ∀ (f : Faden), f ∈ J.faeden → SpecTriple Pre Post Nb J f)
+    (hFree : InterferenceFree Nb J (SpecQ Pre Post Nb J))
+    (σ : World D) (hletzte : J.welten.getLast? = some σ)
+    (f : Faden) (hf : f ∈ J.faeden) :
+    SpecQ Pre Post Nb J f σ :=
+  stabil_from_spec Nb J I Pre Post hInv hDeck hAb hSpec hFree σ hletzte f hf
+
+/-- L5 discharge, witness (w05 `d3b0647`, PASS, merged): the `hLowering` slot
+    of `ziel_nutzer_last` takes an `Absenkung` -- this is the measured one,
+    `17` under `18` (fisch re-run `ABSENKUNG-DURCHSETZUNG.md` §5: seventeen
+    units exit 0, T/V/R identical to lane-122, max 17 at
+    Schleife/traverse-over-descendants-of). -/
+def ziel_l5_absenkung_zeuge : Absenkung :=
+  absenkung
+
+/-- L5 discharge, bound: the witness keeps the cap. -/
+theorem ziel_l5_schranke : absenkung.proPrimitiv ≤ 18 :=
+  absenkung_haelt_schranke
+
+/-- L5 discharge, maximum: the measured maximum sits under the witness
+    (anything under 17 stays under it -- the lexer run can only confirm or
+    raise, never lower below 17). -/
+theorem ziel_l5_max : 17 ≤ absenkung.proPrimitiv :=
+  absenkung_unter_maximum 17 (Nat.le_refl 17)
+
+#print axioms Gabbro.Grammatik.ziel_seqLogic_aus_spec
+#print axioms Gabbro.Grammatik.ziel_l5_absenkung_zeuge
+#print axioms Gabbro.Grammatik.ziel_l5_schranke
+#print axioms Gabbro.Grammatik.ziel_l5_max
+
 end Gabbro.Grammatik

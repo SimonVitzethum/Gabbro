@@ -45,6 +45,13 @@
     `bounded_respected_gilt` -- the `bounded N` umbrella, through `per_pass_respected`.
     `seqPasses_complete`   -- every sequence element within bound implies `ok`.
     `seqPasses_exceeds`    -- one element over bound implies the named outcome.
+    `senkKosten_modell`      -- a modeled lowering head costs exactly one C-side op.
+    `senkKosten_unter_schranke` -- that one op fits under the measured maximum.
+    `modell_erhaltung`       -- preservation for the modeled ops: a valid print
+                               elaborates (meaning, reused) AND fits the max
+                               (count, new).
+    `modell_lauf_erhalten`   -- over modeled runs the lowered count IS the source
+                               count: one op in, one op out.
 
   Premises (trusted, not proved):
     P1  Declared costs are faithful: `Op.cost` is the cost the declaration
@@ -65,6 +72,10 @@
         `per_pass_respected`). No link to `Semantik.exec`.
     C3  No preservation claim across lowering: nothing about C forms,
         quantitative CompCert, or the probe. Same boundary as `Ziel.lean`.
+        NARROWED 2026-09-11 for the seven modeled heads (CUT-1/2): the
+        appendix `Lowering preservation for the modeled ops` below proves
+        the count leg beside the reused `zeugnis_sound` meaning leg, over
+        the measured maximum; the remainder named there stays cut.
     C4  Not wired into `Grammatik.lean`: lane scope forbids the index edit;
         check this file directly with `lake env lean Grammatik/Budget.lean`.
     C5  Statement threading is shapes only (`SeqElem`/`seqPasses` below): the
@@ -78,6 +89,8 @@
 -/
 
 import Grammatik.Syntax
+import Grammatik.Ziel
+import Grammatik.Zeugnis
 
 namespace Gabbro.Grammatik
 
@@ -562,5 +575,147 @@ theorem seqPasses_exceeds {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx
 #print axioms Gabbro.Grammatik.seqPassesAux_has_over
 #print axioms Gabbro.Grammatik.seqPasses_complete
 #print axioms Gabbro.Grammatik.seqPasses_exceeds
+
+end Gabbro.Grammatik
+
+/-! ## Lowering preservation for the modeled ops (hLowering leg b, 2026-09-11)
+
+    What `hLowering` in `Ziel.lean` (`ziel_nutzer_last`) owes beyond the numeric
+    fragment (`absenkung_wert`, `absenkung_haelt_schranke`: the witness `17`
+    keeps the cap `18`) is the CompCert-style preservation leg: lowering keeps
+    the `ops` count. This section states and proves it for the MODELED ops --
+    the seven CUT-1/2 certificate heads (`sdiv`, `srem`, `band`, `bor`, `bxor`,
+    `shl`, `shr`), whose meaning leg is already proved (`zeugnis_sound` in
+    `Zeugnis.lean`: a valid print elaborates to the judged `Expr`). Nothing
+    below re-proves meaning; the new claim is the COUNT leg beside it, over
+    the measured maximum (`absenkung.proPrimitiv = 17`, counted statically in
+    `messung/ABSENKUNG-MESSUNG.md`, confirmed over emitted products in
+    `messung/ABSENKUNG-LEXERLAUF.md`, re-confirmed on `fisch` in
+    `messung/ABSENKUNG-DURCHSETZUNG.md` section 5):
+
+      `senkKosten_modell`         -- a modeled head lowers to exactly one C-side op.
+      `senkKosten_unter_schranke` -- that one op fits under the measured maximum.
+      `modell_erhaltung`          -- the preservation theorem: a valid modeled
+                                    print elaborates (meaning, reused) AND fits
+                                    the max (count, new).
+      `modell_lauf_erhalten`      -- over a run of modeled heads the lowered
+                                    count IS the source count: one op in, one
+                                    op out, no silent loss or gain.
+
+    Proven below (`#print axioms` at the end shows the footprint:
+    `modell_erhaltung` inherits whatever `zeugnis_sound` rests on, nothing
+    more).
+
+    What is NOT modeled here (booked follow-up, not silent):
+
+    - The eleven other `CertExpr` heads: `lit`, `add`, `sub`, `neg`, `mul`,
+      `div`, `rem` (closed-fragment arithmetic: meaning proved, count leg not
+      claimed), `wide` (the index widening), `var`, `glob`, `slot` (CUT-4
+      reads: meaning proved, count leg not claimed). `modellKopf` says `false`
+      for each of them, and every theorem below demands `modellKopf c = true`,
+      so the `0` beside `senkKosten` is unreachable, never a claim.
+    - The CUT-3 shapes (`CertCut3`: floats, options, sums, grounds,
+      quantifiers, `reaches`) and the CUT-4/5 remainders (`durch`, `ptrOf`,
+      `fnref`, calls WITH arguments): soundness proved in `Zeugnis.lean`
+      (`cut3_sound`, `cut4_sound`, `block5_sound`, lane 106), preservation
+      not stated.
+    - The `StmtArt`-level expansions above one statement (the descendants
+      walk at seventeen and every row beneath it): bounded by the lexer run
+      (`17 <= 18`, enforced by `absenkung.rs` once the hook is applied), with
+      no per-op preservation claim -- the bound is the enforcement, not the
+      proof.
+    - The C-to-Asm leg: `costKept` (CerCo, the implication shape in
+      `Erhaltung.lean`) and `costMeasured` (production, witness pairs) are
+      untouched here; this section speaks Gabbro-to-C only.
+
+    No `mathlib`, no `sorry`, no `axiom`.
+-/
+
+namespace Gabbro.Grammatik
+
+/-- The modeled op heads: the seven CUT-1/2 certificate shapes (signed
+    division and remainder, bitwise and shifts). Everything else is `false`:
+    the unmodeled remainder, named in the section header, not hidden. -/
+def modellKopf {D : Deklaration} : CertExpr D → Bool
+  | .sdiv _ _ => true
+  | .srem _ _ => true
+  | .band _ _ => true
+  | .bor _ _ _ => true
+  | .bxor _ _ _ => true
+  | .shl _ _ => true
+  | .shr _ _ => true
+  | _ => false
+
+/-- The lowered C-side cost of one head: a modeled op is exactly one C-side
+    op site of cost 1 (one op in, one op out -- the CompCert-style count leg,
+    declared P1-style). Unmodeled heads carry `0`, which no theorem below can
+    observe: each demands `modellKopf c = true`. -/
+def senkKosten {D : Deklaration} : CertExpr D → Nat
+  | .sdiv _ _ => 1
+  | .srem _ _ => 1
+  | .band _ _ => 1
+  | .bor _ _ _ => 1
+  | .bxor _ _ _ => 1
+  | .shl _ _ => 1
+  | .shr _ _ => 1
+  | _ => 0
+
+/-- Count leg: a modeled head lowers to exactly one C-side op. -/
+theorem senkKosten_modell {D : Deklaration} (c : CertExpr D)
+    (h : modellKopf c = true) :
+    senkKosten c = 1 := by
+  cases c <;> simp_all [modellKopf, senkKosten]
+
+/-- Bound leg: the one lowered op fits under the measured maximum. -/
+theorem senkKosten_unter_schranke {D : Deklaration} (c : CertExpr D)
+    (h : modellKopf c = true) :
+    senkKosten c ≤ absenkung.proPrimitiv := by
+  have h1 : senkKosten c = 1 := senkKosten_modell c h
+  have h17 : absenkung.proPrimitiv = 17 := absenkung_wert
+  omega
+
+/-- Preservation for the modeled ops: a valid print of a modeled head
+    elaborates to the judged expression (meaning, reused from
+    `zeugnis_sound` -- not re-proved) AND lowers to one C-side op under the
+    measured maximum (count, new). -/
+theorem modell_erhaltung {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (c : CertExpr D) (lo hi : Int)
+    (hmod : modellKopf c = true) (hval : GueltigAbleitung D Γ Λ c lo hi) :
+    (∃ _ : Expr D Γ Λ (.int lo hi), True) ∧
+      senkKosten c ≤ absenkung.proPrimitiv :=
+  ⟨zeugnis_sound c lo hi hval, senkKosten_unter_schranke c hmod⟩
+
+/-- Over a run of modeled heads the lowered C-side count IS the source count:
+    one op in, one op out, no silent loss or gain. -/
+theorem modell_lauf_erhalten {D : Deklaration} (cs : List (CertExpr D)) :
+    (∀ c ∈ cs, modellKopf c = true) → (cs.map senkKosten).sum = cs.length := by
+  induction cs with
+  | nil => intro _; rfl
+  | cons hd tl ih =>
+    intro h
+    have hhd : modellKopf hd = true := h hd (List.mem_cons.mpr (Or.inl rfl))
+    have htl : ∀ c ∈ tl, modellKopf c = true :=
+      fun c hm => h c (List.mem_cons.mpr (Or.inr hm))
+    simp only [List.map_cons, List.sum_cons, List.length_cons,
+      senkKosten_modell hd hhd, ih htl, Nat.add_comm]
+
+/-- Accept: `7 sdiv 2` is a modeled head. -/
+example : modellKopf (D := TestD) (.sdiv (.lit 7) (.lit 2)) = true := by decide
+
+/-- Reject: `add` is not modeled -- the remainder, not a shrug. -/
+example : modellKopf (D := TestD) (.add (.lit 1) (.lit 2)) = false := by decide
+
+/-- End to end: a valid modeled print elaborates AND fits under the maximum
+    (the CUT-1 probe `7 sdiv 2`, through `modell_erhaltung`). -/
+example : (∃ _ : Expr TestD [] [] (.int (-7) 7), True) ∧
+    senkKosten (D := TestD) (.sdiv (.lit 7) (.lit 2)) ≤ absenkung.proPrimitiv :=
+  modell_erhaltung _ _ _ rfl (by decide)
+
+#print axioms Gabbro.Grammatik.modellKopf
+#print axioms Gabbro.Grammatik.senkKosten
+#print axioms Gabbro.Grammatik.senkKosten_modell
+#print axioms Gabbro.Grammatik.senkKosten_unter_schranke
+#print axioms Gabbro.Grammatik.modell_erhaltung
+#print axioms Gabbro.Grammatik.modell_lauf_erhalten
 
 end Gabbro.Grammatik
