@@ -1,0 +1,26 @@
+-- erwartet: C001
+-- **Pointer arithmetic, compound `+=` on a pointer.** The same §5.2 shape as
+-- `764`: `p += 1` computes an address no region check discharged, spelled as
+-- an assignment instead of a sum. The two spellings (`Binaer` +/- and
+-- compound +=/-= with a pointer-typed operand) stand or fall together -- a
+-- refusal catching one and missing the other is a spelling check, not a rule.
+-- Against the unchanged tree the checker stays silent (`0 errors`) and the
+-- emitter lowers it to `p += 1`. The rule this probe pairs with (p03) refuses
+-- both spellings at the emission site by name (`C001`); this file pins the
+-- second one. The twin `p[1]` is the admitted index form and stays silent.
+--
+-- Measured 2026-09-11 against the unchanged checker+emitter: falls with
+-- nothing -- red until the rule lands, green with it (integrator reconciles).
+module gift::pointer_arith_compound_refused {
+
+type Text = { n : u32, };
+
+impl fn weiter(p : ptr<user, rw> Text)
+    effects { writes p }
+    costs <= 8 ops
+{
+    p[1].n = 2;
+    p += 1;
+}
+
+}

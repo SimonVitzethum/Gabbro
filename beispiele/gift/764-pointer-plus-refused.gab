@@ -1,0 +1,26 @@
+-- erwartet: C001
+-- **Pointer arithmetic, `+` on a pointer.** `SPRACHE.md` §5.2 gives computed
+-- addresses exactly one form -- `place[expr]` with a bounded index -- and
+-- `p + 1` is not it: the sum of an address and a number is no address any
+-- region check ever covered. Against the unchanged tree the checker types the
+-- sum as unknown and stays silent (`0 errors`), and the emitter lowers it to
+-- C pointer arithmetic (`q = p + 1`), which computes exactly the uncovered
+-- address. The rule this probe pairs with (p03) refuses the shape at the
+-- emission site by name (`C001`); this file pins what it must catch.
+-- The twin `p[1]` is the admitted index form and stays silent.
+--
+-- Measured 2026-09-11 against the unchanged checker+emitter: falls with
+-- nothing -- red until the rule lands, green with it (integrator reconciles).
+module gift::pointer_arith_plus_refused {
+
+type Text = { n : u32, };
+
+impl fn weiter(p : ptr<user, rw> Text)
+    effects { writes p }
+    costs <= 8 ops
+{
+    p[1].n = 2;
+    let q = p + 1;
+}
+
+}
