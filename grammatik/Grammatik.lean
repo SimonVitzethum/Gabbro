@@ -64,3 +64,4 @@ import Grammatik.Marken
 import Grammatik.Fristlauf
 import Grammatik.Adressraum
 import Grammatik.LesenStabil
+import Grammatik.Maschine
