@@ -118,3 +118,45 @@ reads as a matching one.
 * Not a proof: that a `bounded` budget is honest about the world, or that a
   falsifier goes red when the assumption breaks, is discharged by the probe run,
   not by this file. The ledger names the probe so the run can find it.
+
+## 7. Rechecking a shipped ledger
+
+The check runs from the two artefacts the hook leaves behind: `out/foo.c`
+(untouched) and `out/foo.kostenledger` (the record). It has two halves, and
+both must hold: the sidecar is well-formed on its own, and it matches a fresh
+recomputation from the sources.
+
+Structural check first -- the second-artefact reader in
+`instrumente/nachpruefer.py`. It parses the sidecar with its own table (header,
+unit, known keys, escapes, one `body_ops` and one `absenkung` census per row,
+trailing newline, no blank lines) and names every divergence with the
+`[ledger]` tag. Empty output is green:
+
+```
+python3 - <<'EOF'
+import sys
+sys.path.insert(0, "instrumente")
+import nachpruefer
+text = open("out/foo.kostenledger", encoding="utf-8").read()
+befunde = nachpruefer.pruefe_kostenledger(text)
+print("LEDGER GREEN" if not befunde else "\n".join(befunde))
+sys.exit(0 if not befunde else 1)
+EOF
+```
+
+Full recompute second -- the Rust reader in `kostenledger.rs`. Re-emit the
+ledger from the sources, then hold the shipped bytes against it with
+`verify_text`: parse failure is one loud finding (never a silent pass), a file
+whose bytes are not the canonical rendering of its own parse is reported as
+not byte-stable, and every field divergence is listed instead of stopping at
+the first. The single-file check covers the whole surface, writer and reader:
+
+```
+rustc --test crates/gabbro-check/src/kostenledger.rs -o /tmp/kostenledger-test && /tmp/kostenledger-test
+```
+
+A shipped ledger is accepted only when BOTH halves are empty: the sidecar
+parses and is byte-stable, and the recomputed ledger matches it field by
+field. Either half red means the artefact does not defend its numbers --
+whether the writer drifted or the sources moved since emission, the record no
+longer covers the C beside it.

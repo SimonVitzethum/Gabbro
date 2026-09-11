@@ -202,6 +202,19 @@ pub struct Ledger {
 }
 
 impl Ledger {
+    /// Canonical row order: by function name, rows only.
+    ///
+    /// The hook walks the tree in whatever order the module walk yields, and a
+    /// walk order is not a promise (`verify` already compares order-insensitively).
+    /// Canonicalising before `render` makes the sidecar byte-stable regardless of
+    /// that order: same unit, same bytes. Within a row nothing moves -- `per_pass`
+    /// and `bounded` follow source order, which IS a promise.
+    pub fn canonical(&self) -> Ledger {
+        let mut out = self.clone();
+        out.rows.sort_by(|a, b| a.function.cmp(&b.function));
+        out
+    }
+
     /// Compare two ledgers field by field and report EVERY divergence.
     ///
     /// Empty output means the recomputed ledger matches the recorded one. The
@@ -290,6 +303,53 @@ pub fn sidecar_path(c_path: &str) -> String {
         Some((stem, _)) if !stem.is_empty() => format!("{stem}.kostenledger"),
         _ => format!("{c_path}.kostenledger"),
     }
+}
+
+/// Render the canonical form: rows sorted by function name, bytes stable across
+/// walk orders. This is the form `write_sidecar` stores and `verify_text` expects.
+pub fn render_canonical(ledger: &Ledger) -> String {
+    render(&ledger.canonical())
+}
+
+/// Write the ledger beside the C output and report where it landed.
+///
+/// Renders the canonical form and stores it at [`sidecar_path`] -- `<stem>.kostenledger`
+/// next to the `.c` file. Only the sidecar is created or overwritten; the C file is
+/// never opened, read, or written: *a sidecar writer that touches the artefact is a
+/// second emitter wearing a ledger's clothes.* No directories are created; the caller
+/// owns the output directory exactly like it owns the C file's.
+pub fn write_sidecar(c_path: &str, ledger: &Ledger) -> std::io::Result<String> {
+    let ziel = sidecar_path(c_path);
+    std::fs::write(&ziel, render_canonical(ledger))?;
+    Ok(ziel)
+}
+
+/// Reader leg: parse recorded text and compare against a recomputed ledger.
+///
+/// Parse failure is ONE loud finding, not a silent pass and not an empty diff --
+/// *a sidecar the recomputer cannot read is a sidecar that does not exist.* A recorded
+/// file whose bytes are not the canonical rendering of its own parse is reported too,
+/// so a drifting emitter cannot hide behind a tolerant reader. Empty output means the
+/// recorded sidecar parses, is byte-stable, and matches the recomputation field by
+/// field.
+pub fn verify_text(recorded: &str, recomputed: &Ledger) -> Vec<String> {
+    let mut out = Vec::new();
+    let gelesen = match parse(recorded) {
+        Ok(l) => l,
+        Err(meldung) => {
+            out.push(format!("kostenledger sidecar unreadable: {meldung}"));
+            return out;
+        }
+    };
+    if render(&gelesen) != recorded {
+        out.push(
+            "kostenledger sidecar not byte-stable: recorded bytes differ from \
+             the canonical rendering of their own parse"
+                .to_string(),
+        );
+    }
+    out.extend(gelesen.verify(recomputed));
+    out
 }
 
 // --- escaping: `\` and newline in free text; `|` is the field separator ---------
@@ -690,5 +750,59 @@ mod tests {
         a.call = 3;
         a.forever = 1;
         assert_eq!(a.total(), 6);
+    }
+
+    #[test]
+    fn canonical_orders_rows_and_keeps_source_order_within() {
+        let mut shuffled = sample();
+        shuffled.rows.reverse();
+        let ordered = shuffled.canonical();
+        assert_eq!(ordered.rows[0].function, "kern::handler");
+        assert_eq!(ordered.rows[1].function, "kern::wartet");
+        // Same unit, same bytes, whatever the walk order was.
+        assert_eq!(render_canonical(&shuffled), render_canonical(&sample()));
+        // Within-row order is a promise: per_pass order survives canonicalising.
+        assert_eq!(ordered.rows[0].per_pass, sample().rows[0].per_pass);
+    }
+
+    #[test]
+    fn sidecar_lands_beside_c_and_leaves_c_alone() {
+        let dir =
+            std::env::temp_dir().join(format!("p19-kostenledger-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        let c_pfad = dir.join("einheit.c");
+        std::fs::write(&c_pfad, "int x;\n").expect("c fixture");
+        let c_vor = std::fs::read(&c_pfad).expect("c fixture back");
+        let ziel =
+            write_sidecar(c_pfad.to_str().unwrap(), &sample()).expect("sidecar writes");
+        assert_eq!(ziel, dir.join("einheit.kostenledger").to_str().unwrap());
+        // The artefact is borrowed, never touched.
+        assert_eq!(std::fs::read(&c_pfad).expect("c again"), c_vor);
+        let text = std::fs::read_to_string(&ziel).expect("sidecar reads back");
+        assert_eq!(text, render_canonical(&sample()));
+        assert!(verify_text(&text, &sample()).is_empty());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn reader_reports_unreadable_loudly_instead_of_going_silent() {
+        let meldungen = verify_text("kein ledger\n", &sample());
+        assert_eq!(meldungen.len(), 1, "{meldungen:?}");
+        assert!(meldungen[0].contains("unreadable"));
+        // A parseable file that lost its canonical shape fails byte-stability.
+        let mut hand = render_canonical(&sample());
+        hand.pop();
+        let meldungen = verify_text(&hand, &sample());
+        assert!(
+            meldungen.iter().any(|m| m.contains("byte-stable")),
+            "{meldungen:?}"
+        );
+        // And a recomputation that dropped a row is named, not swallowed.
+        let leer = Ledger {
+            rows: Vec::new(),
+            ..sample()
+        };
+        let meldungen = verify_text(&render_canonical(&sample()), &leer);
+        assert_eq!(meldungen.len(), 2, "{meldungen:?}");
     }
 }
