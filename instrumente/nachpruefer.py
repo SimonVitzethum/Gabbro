@@ -467,5 +467,69 @@ def main():
     return 1
 
 
+def check_c1_probe(pfad):
+    """C1 witness check over one machine-readable correspondence probe.
+
+    A probe mirrors the emitted certificate rows word for word (Lean
+    `emittedRowFields` / `cformWort` in `grammatik/Grammatik/Erhaltung.lean`
+    section 6b, witnessed by `messung/proben/corrcert/korr-*.json`):
+      {"gabbro_sites": [g, ...],
+       "sites": [{"gabbroSite": g, "cSite": c, "form": "<CForm>"}],
+       "erwartet": {"vollstaendig": b, "geordnet": b, "geschlossen": b,
+                    "ohne_extra": b, "gueltig": b}}
+    The four legs recompute exactly as the Lean shapes do (`vollB`,
+    `geordnetCertB`, `geschlossenB` over the ruled list above,
+    `ohneExtraB`); every `erwartet` entry present is held against its leg.
+    Returns (rc, findings): rc 0 means the probe says what recomputation
+    says, rc 1 lists every leg where they disagree, rc 2 aborts on an
+    unreadable probe. Probes carry no image, so the marker leg
+    (`markerStimmtB`) is out of scope here -- it runs over ledger/cert/C
+    triples in `pruefe`, not over probes.
+    """
+    try:
+        roh = pathlib.Path(pfad).read_text(encoding="utf-8")
+    except OSError as e:
+        return 2, [f"[C1] probe unreadable: {pfad}: {e.strerror or e}"]
+    try:
+        daten = json.loads(roh)
+    except json.JSONDecodeError as e:
+        return 2, [f"[C1] probe is no JSON: {pfad}: {e}"]
+    if not isinstance(daten, dict) or \
+            not isinstance(daten.get("sites"), list) or \
+            not isinstance(daten.get("gabbro_sites"), list):
+        return 2, [f"[C1] probe carries no gabbro_sites/sites lists: {pfad}"]
+    inventar = daten["gabbro_sites"]
+    zeilen = daten["sites"]
+    if not all(_ist_nat(g) for g in inventar):
+        return 2, [f"[C1] probe gabbro_sites is no nat list: {inventar!r}"]
+    for i, z in enumerate(zeilen):
+        if not isinstance(z, dict) or not _ist_nat(z.get("gabbroSite")) or \
+                not _ist_nat(z.get("cSite")) or \
+                not isinstance(z.get("form"), str):
+            return 2, \
+                [f"[C1] probe row {i} carries no nat ids and form: {z!r}"]
+    erwartet = daten.get("erwartet", {})
+    if not isinstance(erwartet, dict):
+        erwartet = {}
+    vollstaendig = all(
+        any(s["gabbroSite"] == g for s in zeilen) for g in inventar)
+    geordnet = all(
+        nach["cSite"] >= vor["cSite"]
+        for vor, nach in zip(zeilen, zeilen[1:]))
+    geschlossen = all(z["form"] in REGELFORMEN for z in zeilen)
+    ohne_extra = all(z["gabbroSite"] in inventar for z in zeilen)
+    gueltig = vollstaendig and geordnet and geschlossen and ohne_extra
+    gemessen = {"vollstaendig": vollstaendig, "geordnet": geordnet,
+                "geschlossen": geschlossen, "ohne_extra": ohne_extra,
+                "gueltig": gueltig}
+    befunde = [
+        f"[C1] leg {bein} recomputed {gemessen[bein]!r}, "
+        f"probe expects {erwartet[bein]!r}"
+        for bein in sorted(gemessen)
+        if bein in erwartet and erwartet[bein] != gemessen[bein]
+    ]
+    return (1 if befunde else 0), befunde
+
+
 if __name__ == "__main__":
     sys.exit(abschnitt.fahre(main))
