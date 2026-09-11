@@ -1,0 +1,15 @@
+-- C2 witness pair 04: single return of the declared type.
+--
+-- Exhibits CForm `rueckgabe` (Erhaltung.lean `c2Paare` row 4): the returned
+-- value has exactly the declared type. Expected: `gabbro pruefe` reports
+-- 0 errors; `gabbro emit` writes `return 1;` with 0 refusals.
+
+module probe::c2_rueckgabe {
+
+impl fn eins() -> u32
+    effects { pure }
+{
+    return 1;
+}
+
+}

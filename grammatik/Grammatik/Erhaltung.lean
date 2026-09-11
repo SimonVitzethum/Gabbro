@@ -50,19 +50,22 @@
         64 forms, 30 undecided, 491 pointer-arithmetic sites).
 
    Cuts (rebooked 2026-09-10: shrunk, not faked):
-      C1  CLOSED (2026-09-11, p17): `korrespondenz_sound` still proves
-          valid-cert-implies-correspondence, but the correspondence now NAMES
-          its image -- `emittedMarker` is the word `emit.rs` (`emittiere_mit`)
-          writes beside each emitted site, `emittedRowFields`/`cformWort`
-          mirror the certificate rows witnessed by
-          `messung/proben/corrcert/korr-*.json`, and `markerStimmtB` rechecks
-          marker-vs-row agreement (§6b). Lean still PRODUCES no certificate;
-          the second program stays `instrumente/nachpruefer.py`.
-     C2  What a C form MEANS stays cut: `geschlossen_immer` proves every
-         named shape IS tabled (closure holds unconditionally), but the
-         meaning still rides on the hand-written table entry plus its
-         executable witness pair, and the common-mode failure (both tables
-         from one text) is named, not closed.
+     C1  CLOSED (2026-09-11, p17): `korrespondenz_sound` still proves
+         valid-cert-implies-correspondence, but the correspondence now NAMES
+         its image -- `emittedMarker` is the word `emit.rs` (`emittiere_mit`)
+         writes beside each emitted site, `emittedRowFields`/`cformWort`
+         mirror the certificate rows witnessed by
+         `messung/proben/corrcert/korr-*.json`, and `markerStimmtB` rechecks
+         marker-vs-row agreement (§6b). Lean still PRODUCES no certificate;
+         the second program stays `instrumente/nachpruefer.py`.
+      C2  What a C form MEANS stays cut, but the witness-pair LINKAGE is a
+          checked shape (§4b): each `ZeugenPaar` names its `CForm`, its probe
+          under `messung/proben/zeugnis-c2/`, and its expected outcome;
+          `zeugenPaarGueltig` recomputes the linkage (`ruledB` over the form,
+          non-empty probe name), `zeugenPaar_sound` lifts success to the
+          tabled sentence, and `c2AlleGueltig` decides green over the whole
+          list. The meaning itself (C-semantics execution) stays cut, and the
+          common-mode failure (both tables from one text) is named, not closed.
      C3  `restrict` and `volatile` stay trust: priced option and axiom,
          carried as data (`beschraenktPreis`, `fluechtigPreis`), never
          proved.
@@ -476,6 +479,62 @@ theorem ruledB_sound (f : CForm) (h : ruledB f = true) :
 theorem ruledB_voll : ∀ f, ruledB f = true := by
   intro f
   cases f <;> decide
+
+/-! ## 4b. Witness pairs: the C2 linkage as a checked shape -/
+
+/-- A witness pair: the probe file that exhibits a C form, the form itself,
+    and the expected outcome. The probe lives under
+    `messung/proben/zeugnis-c2/` and runs through `gabbro pruefe` (clean)
+    plus `gabbro emit` (the named C fragment); the expectation here is data
+    both sides recompute, not prose one side believes. -/
+structure ZeugenPaar where
+  probe : String
+  form : CForm
+  erwartetSauber : Bool
+  deriving DecidableEq, Repr
+
+/-- Linkage recomputation: the form is tabled (`ruledB`) and the probe name
+    is non-empty. Boolean, so acceptance and rejection both close by
+    `decide` -- the §6 pattern. -/
+def zeugenPaarGueltig (p : ZeugenPaar) : Bool :=
+  ruledB p.form && !p.probe.isEmpty
+
+/-- Soundness: a valid pair IS a decided table entry for its form. -/
+theorem zeugenPaar_sound (p : ZeugenPaar) (h : zeugenPaarGueltig p = true) :
+    ∃ s : RulingStatus, .benannt p.form s ∈ tafel ∧ entschieden (.benannt p.form s) := by
+  have h4 : ruledB p.form = true ∧ (!p.probe.isEmpty) = true := by
+    simpa only [zeugenPaarGueltig, Bool.and_eq_true_iff] using h
+  exact ruledB_sound _ h4.1
+
+/-- The measured pairs: one row per probe in `messung/proben/zeugnis-c2/`.
+    Each row names the C form the probe exhibits; `erwartetSauber` is true
+    exactly when `gabbro pruefe` must report zero errors. -/
+def c2Paare : List ZeugenPaar :=
+  [{ probe := "c2-01-zuweisung", form := .zuweisung, erwartetSauber := true },
+   { probe := "c2-02-wenn", form := .wenn, erwartetSauber := true },
+   { probe := "c2-03-ruf", form := .ruf, erwartetSauber := true },
+   { probe := "c2-04-rueckgabe", form := .rueckgabe, erwartetSauber := true },
+   { probe := "c2-05-literal", form := .literal, erwartetSauber := true }]
+
+/-- All pairs recompute green. -/
+def c2AlleGueltig : Bool :=
+  c2Paare.all zeugenPaarGueltig
+
+/-- The linkage holds for every listed pair, by `decide`. -/
+theorem c2Alle_decided : c2AlleGueltig = true := by decide
+
+/-- Each listed pair names a tabled form -- the linkage the cut C2 owes. -/
+theorem c2Paar_gedeckt (p : ZeugenPaar) (_h : p ∈ c2Paare)
+    (hv : zeugenPaarGueltig p = true) :
+    ∃ s : RulingStatus, .benannt p.form s ∈ tafel ∧ entschieden (.benannt p.form s) :=
+  zeugenPaar_sound p hv
+
+/-- Reject: an empty probe name is no witness, even over a tabled form. -/
+example : zeugenPaarGueltig { probe := "", form := .literal, erwartetSauber := true } = false := by decide
+
+#print axioms Gabbro.Grammatik.zeugenPaar_sound
+#print axioms Gabbro.Grammatik.c2Alle_decided
+#print axioms Gabbro.Grammatik.c2Paar_gedeckt
 
 /-- Closure over the certificate, from the row check. -/
 def geschlossenB (cert : CorrCert) : Bool :=

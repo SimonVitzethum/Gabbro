@@ -748,3 +748,93 @@ fn keine_zwei_korpusdateien_teilen_eine_nummer() {
         }
     }
 }
+
+/// **C2 witness pairs: the execution half of the linkage in `Erhaltung.lean` §4b.**
+///
+/// Each probe in `messung/proben/zeugnis-c2/` exhibits one named C form (the
+/// `c2Paare` row Lean-side) and must pass `pruefe` with zero errors; the
+/// emitted C must carry the named fragment from `EXPECTED.md`. The Lean side
+/// recomputes the form half (`zeugenPaarGueltig`); this test measures the
+/// execution half. A red probe is a finding about the linkage, not noise.
+#[test]
+fn c2_witness_pairs_run_clean_and_emit_their_form() {
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..");
+    let verzeichnis = wurzel.join("messung/proben/zeugnis-c2");
+    // (probe file, C form word, C fragment the emission must carry)
+    let erwartet: &[(&str, &str, &str)] = &[
+        ("c2-01-zuweisung.gab", "zuweisung", "= 41"),
+        ("c2-02-wenn.gab", "wenn", "else"),
+        ("c2-03-ruf.gab", "ruf", "gib()"),
+        ("c2-04-rueckgabe.gab", "rueckgabe", "return"),
+        ("c2-05-literal.gab", "literal", "8"),
+    ];
+    let mut gesehen = Vec::new();
+    for eintrag in std::fs::read_dir(&verzeichnis)
+        .unwrap_or_else(|e| panic!("{}: {e}", verzeichnis.display()))
+    {
+        let pfad = eintrag.expect("entry").path();
+        if pfad.extension().and_then(|x| x.to_str()) != Some("gab") {
+            continue;
+        }
+        gesehen.push(pfad.file_name().unwrap().to_string_lossy().to_string());
+    }
+    gesehen.sort();
+    let namen: Vec<String> = erwartet.iter().map(|(n, _, _)| n.to_string()).collect();
+    assert_eq!(
+        gesehen, namen,
+        "the probe directory and the Lean `c2Paare` list must name the same pairs"
+    );
+    for (name, _form, fragment) in erwartet {
+        let pfad = verzeichnis.join(name);
+        let quelle = std::fs::read_to_string(&pfad).expect("readable");
+        let (baum, mut absagen) = gabbro_syntax::lies(name, &quelle);
+        let _ = gabbro_check::pruefe(&baum, &mut absagen);
+        let fehler: Vec<_> = absagen
+            .absagen
+            .iter()
+            .filter(|a| a.stufe == gabbro_syntax::diag::Stufe::Fehler)
+            .map(|a| a.code)
+            .collect();
+        assert!(
+            fehler.is_empty(),
+            "{name}: expected 0 errors, got {fehler:?}:\n{}",
+            absagen.zeige(&quelle)
+        );
+        let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+        assert!(
+            c.contains(fragment),
+            "{name}: the emission must carry `{fragment}`, got:\n{c}"
+        );
+    }
+}
+
+/// **The expectation file travels with the probes.**
+///
+/// `EXPECTED.md` is the readable half of each witness pair; if it stops
+/// naming a probe, the pair is half a pair.
+#[test]
+fn c2_witness_pairs_have_written_expectations() {
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..");
+    let pfad = wurzel.join("messung/proben/zeugnis-c2/EXPECTED.md");
+    let md = std::fs::read_to_string(&pfad).expect("EXPECTED.md readable");
+    for (name, form) in [
+        ("c2-01-zuweisung", "zuweisung"),
+        ("c2-02-wenn", "wenn"),
+        ("c2-03-ruf", "ruf"),
+        ("c2-04-rueckgabe", "rueckgabe"),
+        ("c2-05-literal", "literal"),
+    ] {
+        assert!(
+            md.contains(name),
+            "EXPECTED.md must name the probe `{name}`"
+        );
+        assert!(
+            md.contains(form),
+            "EXPECTED.md must name the C form `{form}`"
+        );
+    }
+}
