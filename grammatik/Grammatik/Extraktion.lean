@@ -70,6 +70,7 @@
 -/
 
 import Grammatik.Geteilt
+import Grammatik.Maschine
 import Grammatik.Syntax
 import Grammatik.Wettlauf
 import Grammatik.Semantik
@@ -2357,5 +2358,297 @@ def offeneVerweigerungspflichten (P : Programm D) (fns : List D.Fn)
 #print axioms Gabbro.Grammatik.Extraktion.bauAus_schreibtFn_in_traeger
 #print axioms Gabbro.Grammatik.Extraktion.eintritt_aus_baulaufSpiegel_aus_bau
 #print axioms Gabbro.Grammatik.Extraktion.nur_deklariert_aus_baulaufSpiegel_aus_bau
+
+/-! ## 14. The `prog` extraction: per-thread atoms from bodies
+
+    What `Ziel.lean` §9b books as its single residual footprint premise: the
+    goal consumes `prog : PCProg D` (one atom per thread and step) as
+    own-logic -- the per-thread atom sequences are handed in by hand, and
+    each `PCSchritt` rule verifies the pointed-to atom (`hpc` positions it,
+    `hΛa` ties it to the fired statement, `hmark`/`hcar` check it against
+    the step's events). This section computes that annotation from bodies,
+    in the `fussAus`/`stmtOrte` style: a traversal over `Stmt`/`Block`/
+    `Endblock`/`Arms`/`GrundArms` flattens each body into its atom sequence
+    (`stmtAtome` and friends), and `progAus` runs that flattening per
+    thread through a thread-to-function map (`code`).
+
+    Every constructor stands explicitly -- including the ones that emit NO
+    atom -- for the same reason as in §1: a silent drop must read as a
+    decision, not as an oversight.
+
+    What emits an atom: exactly the constructs a `GenSchritt`/`PCSchritt`
+    can fire. A leaf `Stmt` (`istBlatt = true`) fires as `blatt`, so it
+    emits one atom: `leaf` carrying the statement's own `Λ` as `Λa` (hence
+    `hΛa` closes by `rfl` -- `stmtAtome_blatt_eq`) and, as `cs`, the written
+    carrier plus the `stmtOrte` read hull (`stmtTraeger`,
+    `stmtAtome_traeger_deckt`). A `locks L` side fires as `take`/`rel`, so
+    it emits the bracket around its body (`stmtAtome_locks`). Compound
+    statements (`ite`, calls, loops, ...) never fire as steps -- they open
+    into further steps -- so they emit only their sub-bodies' atoms (both
+    arms of a branch: over-approximation, never less, as in §8).
+
+    What emits NO atom, and why (booked, not hidden):
+    S8. Block-level reads (`bind`, `awaits`, `exchange`, the `regLiesElse`
+        promise, `narrow`/`pruefung`/`gleit` conditions): no `GenSchritt`
+        case fires a `Block` form, so these reads produce no PC-step event.
+        They stay covered by the `stmtOrte` hull (§12); threading them as
+        steps is `Maschine.lean` §12's booked Block-continuation work.
+    S9. Call arguments and branch conditions: calls and compounds never
+        fire, so their argument/condition reads produce no PC-step event.
+        Callee bodies reach threads through the thread map (`code`); the
+        foreign-body duty stays with S7.
+    S10. Terminal `Endblock` forms (`ret`, `leave`, `next`):
+        `GenSchritt.blatt` fires `Stmt` only, so a terminal never fires.
+        Its expression reads are booked with S8.
+    S11. `axiomCall` writes come from the axiom declaration, not the body:
+        `stmtTraeger` filters the declared domains (`tabs`/`globs`) by
+        `D.aschreibt`/`D.agschreibt`, exactly as `fussAus` filters by
+        `D.schreibt`/`D.gschreibt` (§3).
+
+    Remainder (booked, not hidden): the execution link. What closes here is
+    the program-text match -- extracted atoms carry the fired statement's
+    `Λ` definitionally and cover its static footprint. Discharging `hmark`/
+    `hcar` of a fired step against the extracted atom needs, per leaf, the
+    `execStmt` event characterization (every event's `lambda` is the
+    statement's `Λ`; every event's `traeger` is the written carrier or a
+    `stmtOrte` carrier) -- unwritten, the same grain as the §13 keystone
+    but one level up (steps instead of expressions).
+-/
+
+/-- The written carrier of one statement: the touch no read hull covers.
+    Compounds carry none (they never fire); `axiomCall` carries its declared
+    writes over the given domains (`fussAus` in §3). -/
+def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
+  | .assignSlot t _ _ _ _ _ => [.inl t]
+  | .assignDurch _ t _ _ _ _ _ _ => [.inl t]
+  | .assignGlob g _ _ _ => [.inr g]
+  | .schreibBytes t _ _ _ _ _ _ _ _ _ => [.inl t]
+  | .assignVar _ _ => []
+  | .uebergang t _ _ _ _ _ _ _ _ _ => [.inl t]
+  | .ite _ _ _ => []
+  | .onOption _ _ _ => []
+  | .onTag _ _ => []
+  | .onGrund _ _ => []
+  | .call _ _ _ _ => []
+  | .callInd _ _ _ _ => []
+  | .locks _ _ _ => []
+  | .breaking _ _ => []
+  | .traverse _ _ _ => []
+  | .retry _ _ _ _ => []
+  | .forever _ _ _ => []
+  | .axiomCall a _ _ _ _ =>
+      (tabs.filter (D.aschreibt a)).map .inl ++
+        (globs.filter (D.agschreibt a)).map .inr
+  | .regSchreib _ _ _ => []
+  | .transition _ _ _ _ _ _ _ => []
+  | .publish g _ _ _ _ _ => [.inr g]
+  | .advances _ _ _ _ => []
+  | .retires _ _ _ _ => []
+  | .ret _ _ => []
+  | .retGrund _ _ => []
+  | .leave _ => []
+  | .next _ => []
+
+mutual
+
+/-- The atoms of one statement: a leaf emits its singleton (`Λa` IS the
+    statement's `Λ`, `cs` the written carrier plus the read hull);
+    compounds emit their sub-bodies' atoms (`locks` bracketed by its sides);
+    calls emit none (they open into further steps, S9). -/
+def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → List (PCAtom D)
+  | .ite _ t e => blockAtome tabs globs t ++ blockAtome tabs globs e
+  | .onOption _ p a => blockAtome tabs globs p ++ blockAtome tabs globs a
+  | .onTag _ arms => armsAtome tabs globs arms
+  | .onGrund _ arms => grundArmsAtome tabs globs arms
+  | .call _ _ _ _ => []
+  | .callInd _ _ _ _ => []
+  | .locks L _ body =>
+      [PCAtom.take L] ++ blockAtome tabs globs body ++ [PCAtom.rel L]
+  | .breaking _ body => blockAtome tabs globs body
+  | .traverse _ _ body => blockAtome tabs globs body
+  | .retry _ _ body ueber =>
+      blockAtome tabs globs body ++ blockAtome tabs globs ueber
+  | .forever _ _ body => blockAtome tabs globs body
+  | s@(.assignSlot _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.assignDurch _ _ _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.assignGlob _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.schreibBytes _ _ _ _ _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.assignVar _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.uebergang _ _ _ _ _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.axiomCall _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.regSchreib _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.transition _ _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.publish _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.advances _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.retires _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.ret _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.retGrund _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.leave _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.next _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+
+/-- The atoms of one block: the statement atoms in order; pure reads
+    (`bind`, `awaits`, `exchange`, conditions) emit none (S8); else-branches
+    emit theirs (either side may run). -/
+def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Block D V l Γ Λ Λ' → List (PCAtom D)
+  | .nil => []
+  | .cons s rest => stmtAtome tabs globs s ++ blockAtome tabs globs rest
+  | .bind _ rest => blockAtome tabs globs rest
+  | .bindCall _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .bindCallInd _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .bindCallElse _ _ _ _ _ err rest =>
+      endblockAtome tabs globs err ++ blockAtome tabs globs rest
+  | .bindAxiom _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .regLies _ _ rest => blockAtome tabs globs rest
+  | .regLiesElse _ _ _ sonst rest =>
+      endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
+  | .awaits _ _ _ _ rest => blockAtome tabs globs rest
+  | .exchange _ _ _ _ rest => blockAtome tabs globs rest
+  | .narrow _ _ _ sonst rest =>
+      endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
+  | .pruefung _ sonst rest =>
+      endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
+  | .gleit _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .gleitLit _ _ _ rest => blockAtome tabs globs rest
+  | .gleitVon _ _ _ rest => blockAtome tabs globs rest
+  | .gleitNarrow _ _ _ sonst rest =>
+      endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
+
+/-- The atoms of a non-falling block: terminals emit none (they never fire,
+    S10); the chain emits its statements' atoms. -/
+def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → List (PCAtom D)
+  | .ret _ _ => []
+  | .retGrund _ _ => []
+  | .leave _ => []
+  | .next _ => []
+  | .cons s rest => stmtAtome tabs globs s ++ endblockAtome tabs globs rest
+  | .bind _ rest => endblockAtome tabs globs rest
+
+/-- The atoms of a case split: every arm may run. -/
+def armsAtome (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} :
+    Arms D V l Γ Λ Λ' cs → List (PCAtom D)
+  | .nil => []
+  | .cons b rest => blockAtome tabs globs b ++ armsAtome tabs globs rest
+
+/-- The atoms of a ground case split: every arm may run. -/
+def grundArmsAtome (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {n : Nat} :
+    GrundArms D V l Γ Λ Λ' n → List (PCAtom D)
+  | .nil => []
+  | .cons b rest => blockAtome tabs globs b ++ grundArmsAtome tabs globs rest
+
+end
+
+/-- **The thread program from bodies.** Thread `f` runs `code f`: its
+    program text is that body's flattened atoms. This is the annotation the
+    goal's build-time premise consumes (`Ziel.lean` §9b) -- computed here
+    instead of handed in by hand. -/
+def progAus (P : Programm D) (code : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob) : PCProg D :=
+  fun f => endblockAtome tabs globs (P.rumpf (code f))
+
+/-- `progAus` unfolds to the body's atoms. -/
+theorem progAus_aus_rumpf (P : Programm D) (code : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob) (f : Faden) :
+    progAus P code tabs globs f = endblockAtome tabs globs (P.rumpf (code f)) :=
+  rfl
+
+/-- A `locks` body extracts to its bracketed atoms: the sides a
+    `PCSchritt.take`/`rel` step points at. -/
+theorem stmtAtome_locks (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (L : D.Lock) (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
+    (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ)) :
+    stmtAtome tabs globs (Stmt.locks L hr body) =
+      [PCAtom.take L] ++ blockAtome tabs globs body ++ [PCAtom.rel L] :=
+  rfl
+
+/-- **The leaf match.** A leaf statement extracts to exactly one atom, and
+    its `Λa` IS the statement's `Λ`: a witness firing this statement takes
+    the pointed-to atom to be this one, and `hΛa` closes by `rfl`. -/
+theorem stmtAtome_blatt_eq {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (tabs : List D.Tab) (globs : List D.Glob) (h : s.istBlatt = true) :
+    stmtAtome tabs globs s =
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)] := by
+  cases s <;> first | exact rfl | (simp [Stmt.istBlatt] at h)
+
+/-- **Mark cover.** Every held mark of a leaf statement is named in its
+    atom's mark text: what `hmark` must find is there. -/
+theorem stmtAtome_marken_deckt {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (tabs : List D.Tab) (globs : List D.Glob) (h : s.istBlatt = true)
+    (m : D.Marke) (st : Nat) (hm : Res.marke m st ∈ Λ) :
+    m ∈ (stmtAtome tabs globs s).flatMap PCAtom.marks := by
+  rw [stmtAtome_blatt_eq s tabs globs h]
+  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    PCAtom.marks]
+  exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+
+/-- **Carrier cover.** The written carrier and every read-hull carrier of a
+    leaf statement sit in its atom's carrier text: what `hcar` must find is
+    there. -/
+theorem stmtAtome_traeger_deckt {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (tabs : List D.Tab) (globs : List D.Glob) (h : s.istBlatt = true)
+    (o : D.Tab ⊕ D.Glob)
+    (ho : o ∈ stmtTraeger tabs globs s ++ stmtOrte s) :
+    o ∈ (stmtAtome tabs globs s).flatMap PCAtom.carriers := by
+  rw [stmtAtome_blatt_eq s tabs globs h]
+  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    PCAtom.carriers]
+  exact ho
+
+/-- **Program fidelity.** Every atom the body traversal yields is program
+    text: the computed `prog` covers the flattened bodies, never less (the
+    `kantenTreue` shape of §8, one level down: atoms, not edges). -/
+def progTreue (prog : PCProg D) (P : Programm D) (code : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob) : Prop :=
+  ∀ f, ∀ a ∈ endblockAtome tabs globs (P.rumpf (code f)), a ∈ prog f
+
+/-- The computed program is faithful: what the bodies flatten to is text. -/
+theorem progTreue_aus_progAus (P : Programm D) (code : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob) :
+    progTreue (progAus P code tabs globs) P code tabs globs := by
+  intro f a ha
+  exact ha
+
+/-- Sprechprobe: the probe bodies are bare terminals (S10: never fired), so
+    the extracted thread program is empty -- the computation runs to the
+    end, loudly (`rfl` fails at elaboration on a wrong atom). -/
+example : progAus miniP (fun _ => true) miniTabs miniGlobs 0 = [] := rfl
+
+#print axioms Gabbro.Grammatik.Extraktion.progAus_aus_rumpf
+#print axioms Gabbro.Grammatik.Extraktion.stmtAtome_locks
+#print axioms Gabbro.Grammatik.Extraktion.stmtAtome_blatt_eq
+#print axioms Gabbro.Grammatik.Extraktion.stmtAtome_marken_deckt
+#print axioms Gabbro.Grammatik.Extraktion.stmtAtome_traeger_deckt
+#print axioms Gabbro.Grammatik.Extraktion.progTreue_aus_progAus
 
 end Gabbro.Grammatik.Extraktion
