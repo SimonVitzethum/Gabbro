@@ -296,9 +296,9 @@ def tafel : List EntscheidZiel :=
    .luecke .zeigerArithmetik .offen,
    .luecke .zeigerIndex (.aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"),  -- ruled: messung/CFORM-REGEL-ZEIGERINDEX.md
    .luecke .cInclude .offen,
-   .luecke .cTypedef .offen,
-   .luecke .cDefine .offen,
-   .luecke .cEnum .offen,
+    .luecke .cTypedef (.aufListe "alias only; layout fixed once; unique names"),  -- ruled: messung/CFORM-REGEL-TYPEDEF.md
+    .luecke .cDefine (.aufListe "object-like macro only; typed reads"),  -- ruled: messung/CFORM-REGEL-DEFINE.md
+    .luecke .cEnum (.aufListe "closed alternative list as int"),  -- ruled: messung/CFORM-REGEL-ENUM.md
    .luecke .bedingt bedingtEntscheid,
    .luecke .voidTyp (.aufListe "empty result and parameter types as types; silence casts as deliberate"),  -- ruled: messung/CFORM-REGEL-VOID.md
    .luecke .cAttribut (.aufListe "truthful unused statement; checked pure/const effect promise; two-name section promise"),  -- ruled: messung/CFORM-REGEL-ATTRIBUT.md

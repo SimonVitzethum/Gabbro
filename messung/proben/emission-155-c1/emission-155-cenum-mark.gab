@@ -1,0 +1,23 @@
+-- emission-155: pins `enum` over a mark tag (Census C1, OffeneForm.cEnum, 28 sites).
+-- A tagged type lowers to `typedef enum { ... } Anfrage_marke;` plus the struct
+-- with the union; `match` without a catch-all keeps the closed-alternative
+-- reading on both sides. Second enum shape beside the reason half of the pair.
+-- Verdict: admit with price (ruled in messung/CFORM-REGEL-ENUM.md). No emitter change.
+
+module emission155::cenum_mark {
+
+tagged type Anfrage = { Leer, Kurz(u32), Lang(u64) };
+
+impl fn gewicht(m : Anfrage) -> u64
+    effects { pure }
+    costs   <= 12 ops
+{
+    match m {
+        Leer    => { return 0; }
+        Kurz(k) => { return k; }
+        Lang(p) => { return p; }
+    }
+    return 0;
+}
+
+}
