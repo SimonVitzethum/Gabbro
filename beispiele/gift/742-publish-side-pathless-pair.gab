@@ -1,0 +1,57 @@
+-- erwartet: V001
+-- **The publish-side pathless pair, pinned (`H021`).** `erzeuger` publishes `{ m }`
+-- on `G` and `verbraucher` awaits `{ m }` on `G`, and no call path joins the two
+-- halves in either direction (disjoint subgraphs): globally paired, silent today.
+-- A hull-bound (transitive) reading would say `V001` at the publisher -- the exact
+-- mirror of `730`, which pins the await side (`V002` that never comes).
+--
+-- The counter-probe (`mw`/`rufe_mw`/`mr`) is the same pairing ALONG a call edge and
+-- must stay silent in every world; the boundary (`erzeuger2`/`mitte`/`verbraucher2`)
+-- joins the halves through a middle that carries nothing itself (`732`) and must
+-- stay silent too. If anything but `V001` ever falls here, the twin or the boundary
+-- has spoken.
+--
+-- `w` is the true orphan that carries the verdict: it publishes `{ n }` on `F`, and
+-- nothing awaits it anywhere -- `V001` in every world, fixed or not.
+module gift::publish_side_pathless_pair {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+static mut m2 : u32 = 0;
+atomic F : bool release;
+atomic G : bool release;
+atomic H : bool release;
+
+-- Carries the verdict: orphaned publication, no counterpart anywhere.
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+-- The pinned hole: globally paired with `verbraucher`, no call path either way.
+-- Silent today; a transitive pairing would say `V001` here.
+impl fn erzeuger(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn verbraucher() -> u32 effects { reads G, reads m } costs <= 8 ops
+{ let g = G awaits { m }; if g { return m; } return 0; }
+
+-- Counter-probe, must stay silent: the pairing along `mr -> rufe_mw -> mw`.
+impl fn mw(v : u32) effects { writes m, publishes G } costs <= 8 ops
+{ m = v; G = true publishes { m }; }
+
+impl fn rufe_mw(v : u32) effects { writes m, publishes G } costs <= 12 ops
+{ mw(v); }
+
+impl fn mr() -> u32 effects { writes m, publishes G, reads G, reads m } costs <= 16 ops
+{ rufe_mw(0); let g = G awaits { m }; if g { return m; } return 0; }
+
+-- Boundary, must stay silent: joined through a middle that carries no half itself.
+impl fn erzeuger2(v : u32) effects { writes m2, publishes H } costs <= 8 ops
+{ m2 = v; H = true publishes { m2 }; }
+
+impl fn mitte(v : u32) effects { writes m2, publishes H } costs <= 12 ops
+{ erzeuger2(v); }
+
+impl fn verbraucher2() -> u32 effects { writes m2, publishes H, reads H, reads m2 } costs <= 16 ops
+{ mitte(0); let h = H awaits { m2 }; if h { return m2; } return 0; }
+
+}
