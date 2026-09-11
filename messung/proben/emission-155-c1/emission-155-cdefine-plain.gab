@@ -1,0 +1,17 @@
+-- emission-155: pins `#define` over a plain constant (Census C1, OffeneForm.cDefine, 210 sites).
+-- A plain constant lowers to `#define K 41`, read as `41 + 1`: the preprocessor
+-- expands before the compiler runs, so both spellings are the same program at
+-- every level. Object-like only; any future function-like macro owes hygiene.
+-- Verdict: admit with price (ruled in messung/CFORM-REGEL-DEFINE.md). No emitter change.
+
+module emission155::cdefine_plain {
+
+const K : u32 = 41;
+
+fn eins_weiter() -> u32
+    effects { pure }
+{
+    return K + 1;
+}
+
+}

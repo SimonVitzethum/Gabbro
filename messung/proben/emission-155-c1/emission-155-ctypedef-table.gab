@@ -1,0 +1,28 @@
+-- emission-155: pins `typedef` over a table (Census C1, OffeneForm.cTypedef, 240 sites).
+-- A table lowers to two aliases, the slot struct plus the table struct itself;
+-- same alias-only price as the record half of the pair, second aggregate shape.
+-- Verdict: admit with price (ruled in messung/CFORM-REGEL-TYPEDEF.md). No emitter change.
+
+module emission155::ctypedef_table {
+
+const N : u32 = 8;
+
+table Schlange count N {
+    slot {
+        aktiv : bool,
+        frist : u64,
+    }
+}
+
+impl fn wecke_alle(q : ptr<normal, rw> Schlange)
+    effects { writes q.slots }
+    costs <= N * 5 ops
+{
+    traverse eintrag over slots of q by unvisited
+        touches writes q.slots
+    {
+        q.slots[eintrag].aktiv = true;
+    }
+}
+
+}

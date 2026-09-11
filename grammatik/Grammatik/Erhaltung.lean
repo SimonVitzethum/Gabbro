@@ -293,9 +293,9 @@ def tafel : List EntscheidZiel :=
    .luecke .zeigerArithmetik .offen,
    .luecke .zeigerIndex (.aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"),  -- ruled: messung/CFORM-REGEL-ZEIGERINDEX.md
    .luecke .cInclude .offen,
-   .luecke .cTypedef .offen,
-   .luecke .cDefine .offen,
-   .luecke .cEnum .offen,
+    .luecke .cTypedef (.aufListe "alias only; layout fixed once; unique names"),  -- ruled: messung/CFORM-REGEL-TYPEDEF.md
+    .luecke .cDefine (.aufListe "object-like macro only; typed reads"),  -- ruled: messung/CFORM-REGEL-DEFINE.md
+    .luecke .cEnum (.aufListe "closed alternative list as int"),  -- ruled: messung/CFORM-REGEL-ENUM.md
    .luecke .bedingt bedingtEntscheid,
    .luecke .voidTyp .offen,
    .luecke .cAttribut .offen,

@@ -1,0 +1,17 @@
+-- emission-155: pins `typedef` over a record (Census C1, OffeneForm.cTypedef, 240 sites).
+-- A record type lowers to one alias, `typedef struct { ... } Paar;`: the layout,
+-- padding, and field order are fixed by the single struct definition the alias
+-- names, and the alias is derived from the Gabbro type name (unique per unit).
+-- Verdict: admit with price (ruled in messung/CFORM-REGEL-TYPEDEF.md). No emitter change.
+
+module emission155::ctypedef_record {
+
+type Paar = { a : u32 in 0 .. 1000, b : u32 in 0 .. 1000, };
+
+impl fn summe(m : ptr<normal, r> Paar) -> u32
+    effects { reads m }
+{
+    return m.a + m.b;
+}
+
+}
