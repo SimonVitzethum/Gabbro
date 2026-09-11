@@ -704,4 +704,133 @@ theorem gesittet_aus_verlauf (l : Lauf D)
 #print axioms Gabbro.Grammatik.marke_eindeutig_aus_verlauf
 #print axioms Gabbro.Grammatik.gesittet_aus_verlauf
 
+/-! ## 9. The bridge -- from `exec` traces to `Gesittet`, with honest coverage
+
+    `hBridge` (`Ziel.lean`, `ziel_nutzer_last`): every interleaving of well-formed
+    bodies is `Gesittet`. One body reaches W1 and W2 (through `Brav` over empty
+    traces, inherited over tails -- `lauf_aus_brav`); no single-body sentence can
+    reach W3 (exclusion speaks about FOREIGN lock primitives), W4 (one mark in
+    one thread, across threads), or W5 (an unshared carrier belongs to one
+    thread -- the declaration). This section discharges the bridge over EXACTLY
+    the covered class, and names every premise that remains.
+
+    COVERAGE (proved, not claimed):
+    - W2 needs no suffix: `gut_without_suffix` -- any observation whose events
+      all occur in the full per-thread trace is good. The suffix restriction is
+      unnecessary for goodness (membership is all `Brav.gut_von_leer` reads).
+    - W1 keeps the suffix: `Konsistent` reads `offen` of the REST (`passt`), so
+      only tails (`drop`) inherit it. The covered interleavings are exactly the
+      suffix-closed ones -- `IstVerschraenkung` -- and `covered_prefix` shows the
+      class is closed under halting early (a temporal prefix stays covered).
+    - `bruecke_exec_gesittet` discharges THOSE interleavings: per-thread `Brav`
+      provenance (closed per body by `ziel_brav_aus_exec`) plus the three
+      cross-thread shapes yields `Gesittet`. `ExecEng` (`Ziel.lean`) is the same
+      bundle as a structure -- the narrowed corollary; this theorem is its
+      unfolded form beside `lauf_aus_brav`.
+
+    PREMISES (named, bounded):
+    - W3 travels as `ForeignExclusion`: the mutual-exclusion promise of the
+      FOREIGN lock primitives (`A_lock`). No sentence over one body can close
+      it -- the other thread's `nimmt`/`gibt` steps are not in this body's
+      trace. Hardware-assumption class, goal-conform: named here, and BOUNDED
+      to lock takes (it constrains only `nimmt` steps -- accesses, releases,
+      and marks pass through untouched). THE single remaining HW-adjacent
+      premise: W4 is construction (`Marken.lean`), W5 is declaration
+      (`Geteilt.lean` wiring, see below).
+    - W4 travels as `hEin`: `Einfaedig` over the projected run. Where a
+      per-thread `Verlauf` plus the trace link stands, `SpurLink` narrows it --
+      `bruecke_exec_gesittet_of_verlauf` consumes the construction instead.
+      The link itself (projected events name what their thread owns) stands
+      nowhere yet: no per-thread `Verlauf` through `exec` behind a real
+      `Lauf D` -- rebooked cut, stated in §8.
+    - W5 travels inline (the `ungeteilt` shape): the declaration side is
+      discharged by `Geteilt.ungeteilt_aus_bau` (passing check plus static
+      coverage gives one thread); what remains here is the run-to-`Bau` wiring
+      (body-extraction coverage, cut C2 there) -- a declaration premise, not a
+      hardware one.
+    - The Owicki-Gries step is NOT here: valid sequential contracts surviving
+      interleaving needs the joint model with frame disjointness -- stands
+      nowhere yet, stays open (as in `Ziel.lean` §2b).
+    - No `sorry`, no `admit`, no `axiom` -- the `#print axioms` lines below
+      show only Lean's own (`propext`, `Classical.choice`, `Quot.sound`). -/
+
+/-- (W3) as the named HW-adjacent premise: foreign lock exclusion. Who takes `L`
+    takes it while no other thread holds it -- the promise of the FOREIGN lock
+    primitives (`A_lock`), bounded to `nimmt` steps. -/
+def ForeignExclusion (l : Lauf D) : Prop :=
+  ∀ (j : Nat) (f : Faden) (L : D.Lock) (h : List D.Lock),
+    l[j]? = some (Schritt.mk f (.nimmt L h)) → ∀ g, g ≠ f → ¬ l.haelt g L j
+
+/-- W2 needs no suffix: any observation whose events all occur in the full
+    per-thread trace is good. The suffix restriction of `lauf_aus_brav` is
+    unnecessary for goodness -- `Brav.gut_von_leer` reads membership only. -/
+theorem gut_without_suffix (voll : Faden → List (Ereignis D))
+    (hvoll : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f)
+    (f : Faden) {s : List (Ereignis D)} (hmem : ∀ e ∈ s, e ∈ voll f) :
+    ∀ e ∈ s, e.gut := by
+  intro e he
+  obtain ⟨a, b, hempty, hbrav, hspur⟩ := hvoll f
+  have hmem' : e ∈ b.spur := by rw [hspur]; exact hmem e he
+  exact hbrav.gut_von_leer hempty hmem'
+
+/-- The covered class is closed under halting early: a temporal prefix of a
+    suffix-closed interleaving is suffix-closed (per thread, the observed trace
+    at `j` in the prefix is the observed trace at `min n j` in the full run). -/
+theorem covered_prefix (l : Lauf D) (voll : Faden → List (Ereignis D))
+    (hvers : IstVerschraenkung l voll) (n : Nat) :
+    IstVerschraenkung (l.take n) voll := by
+  intro f j
+  obtain ⟨k, hk⟩ := hvers f (min n j)
+  refine ⟨k, ?_⟩
+  unfold Lauf.spur
+  rw [List.take_take, Nat.min_comm j n]
+  exact hk
+
+/-- **The bridge: from `exec` traces to `Gesittet`, over exactly the covered
+    interleavings.** Per-thread `Brav` provenance (W1, W2 via `lauf_aus_brav`)
+    plus the three cross-thread shapes (W3 as `ForeignExclusion`, W4 as `hEin`,
+    W5 inline) yields `Gesittet`. -/
+theorem bruecke_exec_gesittet (l : Lauf D) (voll : Faden → List (Ereignis D))
+    (hvoll : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f)
+    (hvers : IstVerschraenkung l voll)
+    (hausschluss : ForeignExclusion (D := D) l)
+    (code : D.Marke → Nat) (hEin : Marken.Einfaedig (laufProj code l))
+    (hungeteilt : ∀ (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some o → ej.traeger = some o →
+      (match o with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g) :
+    Gesittet l := by
+  obtain ⟨hkons, hgut⟩ := lauf_aus_brav l voll hvoll hvers
+  exact gesittet_aus_einfaedig l hkons hgut hausschluss code hEin hungeteilt
+
+/-- **The bridge through the per-thread Verlauf.** The same covered
+    interleavings, with W4 supplied by `verlauf_einfaedig` plus the trace link
+    (`SpurLink` narrows `hEin`) instead of the bare `Einfaedig` hypothesis. -/
+theorem bruecke_exec_gesittet_of_verlauf (l : Lauf D)
+    (voll : Faden → List (Ereignis D))
+    (hvoll : ∀ f, ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll f)
+    (hvers : IstVerschraenkung l voll)
+    (hausschluss : ForeignExclusion (D := D) l)
+    (κ : Marken.MarkDekl) {σ : Marken.Stand} (v : Marken.Verlauf κ σ)
+    (code : D.Marke → Nat) (hlink : SpurLink (D := D) code l σ)
+    (hungeteilt : ∀ (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      l[i]? = some (Schritt.mk f ei) → l[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some o → ej.traeger = some o →
+      (match o with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g) :
+    Gesittet l := by
+  obtain ⟨hkons, hgut⟩ := lauf_aus_brav l voll hvoll hvers
+  exact gesittet_aus_verlauf l hkons hgut hausschluss κ v code hlink hungeteilt
+
+#print axioms Gabbro.Grammatik.ForeignExclusion
+#print axioms Gabbro.Grammatik.gut_without_suffix
+#print axioms Gabbro.Grammatik.covered_prefix
+#print axioms Gabbro.Grammatik.bruecke_exec_gesittet
+#print axioms Gabbro.Grammatik.bruecke_exec_gesittet_of_verlauf
+
 end Gabbro.Grammatik
