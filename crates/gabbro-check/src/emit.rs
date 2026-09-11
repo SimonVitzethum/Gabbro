@@ -7042,6 +7042,12 @@ fn anweisung(
                     }
                 }
             }
+            // **Direct byte writes take the `schreibBytes` arm (lane-141).**
+            // `None` falls through to the generic tail below, exactly as before.
+            if let Some(c) = schreib_bytes(z, &wert, &e, u, absagen) {
+                aus.push_str(&c);
+                return;
+            }
             aus.push_str(&format!(
                 "{e}{} {} {};\n",
                 ort(&z.ziel, u, absagen),
@@ -7049,10 +7055,12 @@ fn anweisung(
                 wert
             ));
         }
-        // **`narrow x to a .. b else { … }` ist die einzige Laufzeitpruefung, die dieser
-        // Erzeuger ausgibt** -- und sie steht hier, weil die Sprache sie als Pruefung
+        // **`narrow x to a .. b else { … }` ist die einzige Laufzeitpruefung, die der
+        // ANWENDER schreibt** -- und sie steht hier, weil die Sprache sie als Pruefung
         // DEFINIERT, nicht weil M1 versagt haette. *W6 gilt in die andere Richtung: was M1
-        // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.*
+        // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.* (Die Schranken an
+        // direkten Bytezugriffen gibt der Erzeuger selbst aus -- `lese_bytes`/`schreib_bytes`
+        // als Zweitmeinung zur getragenen Schranke; siehe dort.)
         StmtArt::Narrow(n) => {
             // **«F»: `finite` senkt zu `isfinite` ab, und die Pruefung BLEIBT.**
             //
@@ -9187,6 +9195,178 @@ fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
     None
 }
 
+/// **Direct byte operations and the bound they carry (lane-141).**
+///
+/// A `format` field is a view: it lowers through a generated reader over
+/// `v->bytes + offset` (`format_`, `lesewort`/`schreibwort`). A byte carrier
+/// indexed DIRECTLY -- `PUFFER[i]`, `s.bytes[i]`, `t.bytes[i] = v` -- is not a
+/// view and takes no reader: it lowers to the element itself. `byte_traeger`
+/// names that path so it stops sharing the generic place lowering silently.
+///
+/// **The bound check comes from the run bound, and it is re-derived, not
+/// trusted** (the `O9` stance: `ausdruck_obergrenze` reads the declaration
+/// again rather than taking another pass's word). The carrier's declared
+/// length (`feldlaenge_von`) is the bound each access is held against; the
+/// checker (`M103`, plus `narrow`/`requires` at the source) has already proved
+/// the access in range, so on a checked program the trap never fires -- *the
+/// check is the emitter's second opinion, the proof stays the checker's.*
+/// See `lese_bytes`/`schreib_bytes` for the two C shapes.
+///
+/// Returns the carrier (the place without its trailing index) and its length
+/// in bytes, or `None` where the generic lowering stays in charge. `None` is
+/// always byte-identical to today: every plain path below is the fallthrough,
+/// never a re-spelling.
+fn byte_traeger(o: &Ort, u: &Namen) -> Option<(Ort, u64)> {
+    let idx = match o.suffixe.last() {
+        Some(OrtSuffix::Index(e)) => e,
+        _ => return None,
+    };
+    // Tables, devices, formats and accumulators are never byte carriers, even
+    // where their names would resolve to something array-shaped. Each of them
+    // owns its lowering further up (`ort`, the bank arms, `format_`); a byte
+    // arm reaching into one would be the second register (W7).
+    if u.tabellen.iter().any(|t| *t == o.basis.text)
+        || u.tabellenzeiger.contains_key(&o.basis.text)
+        || u.geraetezeiger.contains_key(&o.basis.text)
+        || u.geraetewerte.contains_key(&o.basis.text)
+        || u.formatwerte.contains_key(&o.basis.text)
+        || u.akkus.contains(&o.basis.text)
+    {
+        return None;
+    }
+    let traeger = Ort {
+        basis: o.basis.clone(),
+        suffixe: o.suffixe[..o.suffixe.len() - 1].to_vec(),
+        span: o.span,
+    };
+    // No arrow inside the carrier: a place reached through `->` is a device or
+    // function-pointer lane, and neither is a byte run.
+    if traeger
+        .suffixe
+        .iter()
+        .any(|s| matches!(s, OrtSuffix::Ueber(_)))
+    {
+        return None;
+    }
+    let t = ort_typ(&traeger, u)?;
+    let TypExpr::Feld(a) = &t else { return None };
+    if ctyp(&a.element, u).as_deref() != Some("uint8_t") {
+        return None;
+    }
+    let laenge = u64::try_from(feldlaenge_von(&t, u)?).ok()?;
+    if laenge == 0 {
+        return None;
+    }
+    // A constant index is the checker's own case: `M103` bounds every index by
+    // the declared length, and a constant past it already carries the checker's
+    // finding. The emitter writes the plain access, exactly as before.
+    if konst_zahl(idx).is_some() {
+        return None;
+    }
+    // A structurally re-derived bound at or under the run bound discharges the
+    // same way -- but only over an UNSIGNED index type, where no negative value
+    // can hide below the re-derived upper bound (`O9` again: the discharge is
+    // read off the operator and the type, never off another pass's facts).
+    if wert_ctyp(idx, u)
+        .as_deref()
+        .is_some_and(|t| c_obergrenze(t).is_some())
+        && ausdruck_obergrenze(idx, u)
+            .is_some_and(|h| h >= 0 && (h as u128) < u128::from(laenge))
+    {
+        return None;
+    }
+    Some((traeger, laenge))
+}
+
+/// An index the bound check may read twice (check, then use). A call would run
+/// twice -- two effects for one written -- and a volatile device read would
+/// sample twice, so either one falls back to the plain access, which evaluates
+/// once. The checker still guards it; the emitter just states no second
+/// opinion where stating one would cost an evaluation.
+fn index_ist_rein(e: &Expr, u: &Namen) -> bool {
+    match &e.art {
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::FnWert(_)
+        | ExprArt::Grund { .. } => true,
+        ExprArt::Klammer(x) => index_ist_rein(x, u),
+        ExprArt::Unaer(_, x) => index_ist_rein(x, u),
+        ExprArt::Binaer(_, a, b) => index_ist_rein(a, u) && index_ist_rein(b, u),
+        ExprArt::Ort(o) => {
+            if u.geraetezeiger.contains_key(&o.basis.text)
+                || u.geraetewerte.contains_key(&o.basis.text)
+            {
+                return false;
+            }
+            o.suffixe.iter().all(|s| match s {
+                OrtSuffix::Feld(_) | OrtSuffix::Ueber(_) => true,
+                OrtSuffix::Index(x) => index_ist_rein(x, u),
+            })
+        }
+        _ => false,
+    }
+}
+
+/// **`leseBytes`: the direct byte read with its run bound (lane-141).**
+///
+/// `s.bytes[i]` becomes `((uint64_t)(i) < LENu ? s->bytes[(uint64_t)(i)] :
+/// (__builtin_trap(), (uint8_t)0))`. The `uint64_t` cast keeps `-Wsign-compare`
+/// quiet over a signed index -- and keeps the semantics: a negative index
+/// converts to a huge value, misses the bound, and traps. The trap arm needs
+/// the comma value because a read is an expression; on a checked program it
+/// never runs. An impure index (`None` from `index_ist_rein`) stays plain:
+/// correctness of the evaluation count outranks the second opinion.
+fn lese_bytes(o: &Ort, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    let (traeger, laenge) = byte_traeger(o, u)?;
+    let idx = match o.suffixe.last() {
+        Some(OrtSuffix::Index(e)) => e,
+        _ => return None,
+    };
+    if !index_ist_rein(idx, u) {
+        return None;
+    }
+    let puffer = ort(&traeger, u, absagen);
+    let i = ausdruck(idx, u, absagen);
+    Some(format!(
+        "((uint64_t)({i}) < {laenge}u ? {puffer}[(uint64_t)({i})] : (__builtin_trap(), (uint8_t)0))"
+    ))
+}
+
+/// **`schreibBytes`: the direct byte write with its run bound (lane-141).**
+///
+/// `t.bytes[i] = v` becomes a scoped block that binds the index ONCE and traps
+/// past the bound -- one evaluation whatever the index carries, so unlike the
+/// read there is no purity fallback. Only `=` takes this path: a compound
+/// assignment on a byte element is the checker's case (`M104` refuses the
+/// `u8` overflow), and the generic tail stays in charge of it, exactly as
+/// before. The block scope keeps `_gabbro_i` off every surrounding binding;
+/// shadowing a user name there is legal C and changes nothing outside.
+fn schreib_bytes(
+    z: &Zuweisung,
+    wert: &str,
+    e: &str,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Option<String> {
+    if !matches!(z.op, ZuwOp::Setzt) {
+        return None;
+    }
+    let (traeger, laenge) = byte_traeger(&z.ziel, u)?;
+    let idx = match z.ziel.suffixe.last() {
+        Some(OrtSuffix::Index(x)) => x,
+        _ => return None,
+    };
+    let puffer = ort(&traeger, u, absagen);
+    let i = ausdruck(idx, u, absagen);
+    Some(format!(
+        "{e}{{\n{e}    uint64_t _gabbro_i = (uint64_t)({i});\n\
+         {e}    if (!(_gabbro_i < {laenge}u)) __builtin_trap();\n\
+         {e}    {puffer}[_gabbro_i] = {wert};\n{e}}}\n"
+    ))
+}
+
 /// **Der C-Typ eines Ausdrucks -- ABGELESEN, und nur wo er eindeutig dasteht.**
 ///
 /// Drei Quellen, und jede ist eine Deklaration: ein Ort (Slotfeld, `static`, Parameter), ein
@@ -10046,6 +10226,12 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // das es im C nicht gibt.
     if o.suffixe.is_empty() && u.akkus.contains(&o.basis.text) {
         return format!("{}_lies()", o.basis.text);
+    }
+    // **Direct byte reads take the `leseBytes` arm, not the generic walk
+    // (lane-141).** `None` falls through and the walk below runs exactly as
+    // before -- every plain path is the old path, never a re-spelling.
+    if let Some(c) = lese_bytes(o, u, absagen) {
+        return c;
     }
     let mut t = o.basis.text.clone();
     // The base of a place in a function is a pointer parameter -- **unless it is a record

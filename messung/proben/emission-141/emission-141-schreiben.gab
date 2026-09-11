@@ -1,0 +1,66 @@
+-- emission-141: direct byte WRITES with the run bound (lane-141).
+--
+-- The write half of the `leseBytes` arm's twin: `t.bytes[i] = v` lowers through
+-- the `schreibBytes` arm in `emit.rs`. A constant index writes plain; a dynamic
+-- index writes through a scoped block that binds the index once and traps past
+-- the carrier's declared length. Only `=` takes this path -- a compound
+-- assignment on a byte element stays with the generic tail (the checker refuses
+-- the `u8` overflow as `M104`). The `narrow` guard below is untouched: it is
+-- the check the user wrote, the block is the emitter's second opinion.
+--
+-- Measured verdicts (recorded after the run, not before):
+--   pruefe: 0 errors, 0 hints
+--   emit:   exit 0; `PUFFER[3] = v` stays plain, both dynamic writes carry a
+--           `_gabbro_i < 16u` block with `__builtin_trap`
+--   cc:     `-std=c11 -Wall -Wextra -Werror -O0` and `-O2` clean; runs exit 0
+
+module emission141::schreiben {
+
+const KAP : u32 = 16;
+
+pub static mut PUFFER : [u8; KAP] = 0;
+
+pub type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+
+-- Constant index: plain write, exactly as before.
+impl fn schreib_konstant(v : u8) -> u8
+    effects { reads PUFFER, writes PUFFER } costs <= 4 ops
+{
+    PUFFER[3] = v;
+    return PUFFER[3];
+}
+
+-- Dynamic index over a static carrier: checked block against `KAP`.
+impl fn schreib_dynamisch(i : u32 in 0 ..< KAP, v : u8) -> u8
+    effects { reads PUFFER, writes PUFFER } costs <= 4 ops
+{
+    PUFFER[i] = v;
+    return PUFFER[i];
+}
+
+-- The `beispiele/32` idiom on a local value: `narrow` guards, the checked
+-- block writes, the range carries the length.
+impl fn anhaengen_lokal(s : Text, b : u8) -> Text
+    effects { pure } costs <= 16 ops
+{
+    let mut t : Text = s;
+    narrow t.len to 0 ..< KAP else { return s; }
+    t.bytes[t.len] = b;
+    t.len += 1;
+    return t;
+}
+
+pub fn main() -> i32 in 0 .. 1
+    effects { reads PUFFER, writes PUFFER } costs <= 64 ops
+{
+    if schreib_konstant(65) != 65 { return 1; }
+    if schreib_dynamisch(4, 66) != 66 { return 1; }
+    if PUFFER[4] != 66 { return 1; }
+    let t : Text = Text(bytes: 0, len: 0);
+    let u = anhaengen_lokal(t, 67);
+    if u.bytes[0] != 67 { return 1; }
+    if u.len != 1 { return 1; }
+    return 0;
+}
+
+}
