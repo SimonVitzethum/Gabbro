@@ -1,0 +1,17 @@
+-- erwartet: M150
+-- **M150 boundary: one value decides.**
+--
+-- `i32 in -2147483647 .. 2147483647` is the full width without its smallest
+-- value, and its negation fits exactly -- silent. The full `i32` beside it
+-- holds one value more, and its negation leaves the width -- M150.
+module gift {
+
+impl fn negiere_rand(x : i32 in -2147483647 .. 2147483647) -> i64 effects { pure } {
+    return -x;
+}
+
+impl fn negiere_voll(y : i32) -> i64 effects { pure } {
+    return -y;
+}
+
+}

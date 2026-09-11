@@ -1,0 +1,15 @@
+-- erwartet: M150
+-- **M150 -- unary minus leaves the width, and no M-rule said so.**
+--
+-- `return -x;` over a full-range `i32` computes `-INT_MIN` when `x` holds the
+-- smallest value, and that value fits no `i32`. The binary operators refuse
+-- this shape at the operation (`M104`); unary minus built the out-of-width
+-- range and stayed silent. Into a wider result even `M101` stays silent,
+-- because it only compares intervals, never widths.
+module gift {
+
+impl fn negiere(x : i32) -> i64 effects { pure } {
+    return -x;
+}
+
+}

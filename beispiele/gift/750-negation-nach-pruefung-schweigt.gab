@@ -1,0 +1,19 @@
+-- erwartet: M150
+-- **M150 must-pass twin: a narrowed operand stays silent.**
+--
+-- `narrow x to 0 .. 100` carries the V1 fact into `-x`, whose range is then
+-- `-100 .. 0` and fits its width. The open parameter beside it carries no
+-- such fact and falls. One file, both directions: the rule reads facts, not
+-- declarations.
+module gift {
+
+impl fn negiere_nach_pruefung(x : i32) -> i64 effects { pure } {
+    narrow x to 0 .. 100 else { return 0; }
+    return -x;
+}
+
+impl fn negiere_offen(y : i32) -> i64 effects { pure } {
+    return -y;
+}
+
+}
