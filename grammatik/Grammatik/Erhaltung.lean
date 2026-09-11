@@ -50,10 +50,14 @@
         64 forms, 30 undecided, 491 pointer-arithmetic sites).
 
    Cuts (rebooked 2026-09-10: shrunk, not faked):
-     C1  The recomputer stays cut: `korrespondenz_sound` proves
-         valid-cert-implies-correspondence, NOT that the emitter (or a second
-         program with its own pattern) PRODUCES a valid certificate. Nothing
-         here reads `crates/`, and no `def` below mentions `emit.rs`.
+      C1  CLOSED (2026-09-11, p17): `korrespondenz_sound` still proves
+          valid-cert-implies-correspondence, but the correspondence now NAMES
+          its image -- `emittedMarker` is the word `emit.rs` (`emittiere_mit`)
+          writes beside each emitted site, `emittedRowFields`/`cformWort`
+          mirror the certificate rows witnessed by
+          `messung/proben/corrcert/korr-*.json`, and `markerStimmtB` rechecks
+          marker-vs-row agreement (§6b). Lean still PRODUCES no certificate;
+          the second program stays `instrumente/nachpruefer.py`.
      C2  What a C form MEANS stays cut: `geschlossen_immer` proves every
          named shape IS tabled (closure holds unconditionally), but the
          meaning still rides on the hand-written table entry plus its
@@ -558,6 +562,67 @@ theorem korrespondenz_leer : satz_korrespondenz [] ⟨[]⟩ := by
     exact False.elim (List.not_mem_nil hs)
   · intro s hs
     exact False.elim (List.not_mem_nil hs)
+
+/-! ## 6b. The emitted witness: the C1 correspondence names its image -/
+
+/-- The word the emitter writes into the image beside each emitted evaluation
+    site (`crates/gabbro-check/src/emit.rs`, `emittiere_mit`, as the comment
+    `/* gabbro-site <cSite> <form> */`). Naming the word is the C1 closure
+    Lean-side: the recomputer (`instrumente/nachpruefer.py`) reads exactly
+    this marker back. -/
+def emittedMarker : String := "gabbro-site"
+
+/-- The JSON field names of one certificate row, as the emitter writes them
+    beside the C output (`CorrCert::to_json` in
+    `crates/gabbro-check/src/corrcert.rs`). Machine-readable witness:
+    `messung/proben/corrcert/korr-*.json` carry these names word for word. -/
+def emittedRowFields : List String :=
+  ["gabbroSite", "cSite", "form"]
+
+/-- The word of one target shape: the `form` value a certificate row carries.
+    Mirrors `CForm::as_str` in `crates/gabbro-check/src/corrcert.rs` one for
+    one, so Lean rows, certificate JSON, and image markers spell every form
+    with one word. -/
+def cformWort : CForm → String
+  | .statisch => "statisch"
+  | .extern => "extern"
+  | .zuweisung => "zuweisung"
+  | .wenn => "wenn"
+  | .schalter => "schalter"
+  | .zaehlSchleife => "zaehlSchleife"
+  | .rueckgabe => "rueckgabe"
+  | .sprungAlsSchleifenende => "sprungAlsSchleifenende"
+  | .ruf => "ruf"
+  | .literal => "literal"
+  | .name => "name"
+  | .feld => "feld"
+  | .index => "index"
+  | .wahlLesen => "wahlLesen"
+  | .atomar => "atomar"
+  | .beschraenkt => "beschraenkt"
+  | .fluechtig => "fluechtig"
+  | .noreturn => "noreturn"
+  | .asmEins => "asmEins"
+
+/-- Marker agreement (the image direction of no-extra): every marked C site
+    owns a certificate row in the same form word. The cert-only direction
+    (`ohneExtraB`: every row has a preimage) cannot see an effect the image
+    names but no row claims; this Boolean is what the recomputer checks the
+    emitted construct against. -/
+def markerStimmtB (cert : CorrCert) (marken : List (Nat × String)) : Bool :=
+  marken.all fun m => cert.sites.any fun s =>
+    decide (s.cSite = m.1) && decide (cformWort s.form = m.2)
+
+/-- Accept: the marked image agrees with its rows, word for word. -/
+example : markerStimmtB
+    ⟨[{gabbroSite := 0, cSite := 0, form := .literal},
+      {gabbroSite := 1, cSite := 1, form := .name}]⟩
+    [(0, "literal"), (1, "name")] = true := by decide
+
+/-- Reject: the image marks C site 0 `name`, the row says `literal`. -/
+example : markerStimmtB
+    ⟨[{gabbroSite := 0, cSite := 0, form := .literal}]⟩
+    [(0, "name")] = false := by decide
 
 /-! ## 7. Alias, Lean side: the dischargeable shape -/
 
