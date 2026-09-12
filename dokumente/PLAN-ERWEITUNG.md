@@ -38,15 +38,22 @@ program calls the library -- for a GPU kernel, the launch through the driver. So
 * **The verification reaches the hand-over:** arguments, payload type, contract and effects at
   the call are checked; the library's run-time behaviour is the assumption it exports.
 
-**Always compiled at translation time, never at run time (owner, 2026-09-12).** The payload
-is fully compiled when the program is translated; at run time the library only executes or
-launches it. No just-in-time compilation and no run-time interpretation of a region, by the
-library or by anything it calls. Consequence for GPU payloads: portable intermediate formats
-(SPIR-V, PTX) are compiled by the driver when they are loaded -- that is compilation at run
-time and is excluded. A GPU payload must therefore be native code for the target GPU
-(for example a CUDA cubin for one fixed architecture), and that target is a keyed entry of the
-program's hardware profile (§0c), so a mismatch is refused at link time instead of failing at
-load time.
+**Gabbro code is always compiled at translation time, never at run time (owner, 2026-09-12,
+clarified the same day).** Everything the program does is fixed when it is translated: no
+Gabbro source, region or AST is compiled, generated or interpreted while the program runs. The
+payload of a region is fully produced at translation time; at run time the library only
+executes or launches it. **What the program does at run time is unrestricted within that
+rule** -- open TCP connections, read files, launch GPU work -- provided the code doing it was
+fixed at translation time; the DATA is dynamic, the code is not.
+
+Consequence for GPU payloads: a portable intermediate format (SPIR-V, PTX) is **admitted**.
+Gabbro produces it at translation time from a kernel written in Gabbro; that the driver lowers
+it to the GPU's instruction set when it is loaded is the driver's step, not a compilation of
+Gabbro code. That step is a **named assumption** of the hardware profile (§0c) -- "the driver
+compiles this SPIR-V version faithfully", keyed by API and SPIR-V version, with its falsifier
+probe -- in the same class as trusting the C compiler, the CPU's decoder or the kernel behind a
+`syscall`. A native binary for one fixed GPU (for example a CUDA cubin) stays possible and
+removes that assumption at the price of portability.
 
 Compile-time expansion of regions into core Gabbro (§0) stays possible as a later form, but it
 is not what `@lib#func` means.
@@ -150,7 +157,25 @@ mechanism (b) is a hole with a library label. Two further facts for GPU work:
   barriers and divergence; this is a concurrency model of its own, not a backend detail.
 * **A cheaper intermediate target:** emit a closed subset of OpenCL C (or CUDA C) with a form
   table and a UB inventory, reusing the method that exists for C, instead of a binary format
-  with its own semantics.
+  with its own semantics. The OpenCL C is turned into SPIR-V **at build time** by a pinned
+  compiler (`clang -target spirv64`), recorded in the manifest like the C compiler today.
+
+### 4a. GPU kernels written in Gabbro -- staged (owner question, 2026-09-12)
+
+Gabbro's existing restrictions fit a GPU unusually well: no recursion, bounded loops, no
+unbounded allocation, sized tables. What is new is the concurrency model. The stages differ in
+proof load by an order of magnitude each, so they are separate decisions:
+
+| stage | kernel form | race freedom by | new proof load |
+|---|---|---|---|
+| G1 | **map**: each invocation reads anything read-only and writes only `out[gid]` | construction -- the only writable index is the invocation's own id, so two invocations cannot write one cell (`PLAN-BITS.md` §0, option 2) | the lowering (form table, UB inventory for the OpenCL C subset), FP environment keys (denormals, contraction: `NoContraction`), host launch contract |
+| G2 | **fixed patterns**: reduction, scan, histogram as library kernels proved once | the pattern's proof, done once in the library | one proof per pattern |
+| G3 | **free kernels** with workgroup memory, barriers, scoped atomics | a SIMT memory model with barrier divergence -- research grade (compare GPUVerify, VerCors) | a concurrency model of its own |
+
+**Recommendation:** G1 is worth it and fits the structure of §6 (payload = SPIR-V produced by
+the translator at translation time, launch = run-time library call with a contract). G2 follows
+naturally. G3 is not planned. None of it comes before the verification core closes; the
+structure lanes of §6 keep the road open.
 
 ## 5. Order
 
