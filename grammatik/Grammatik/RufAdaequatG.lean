@@ -16,6 +16,15 @@
   and environment `ρ`, runs to the continuation `k` at the world and
   environment `execBlock` returns (`.ok`), or pops the frame with the value
   `execBlock` returns (`.zurueck`).
+
+  Main results: `rufG_adaequat` (TARGET A), `rufG_adaequat_R` (A under any
+  call handler), `rufG_adaequat_umkehr` (TARGET B: every f-only run that
+  pops the frame logs the value `execEnd` returns -- proved through a frame
+  semantics `semR` that each of the 70 step rules preserves,
+  `schrittErhalt`), with witnesses `rufG_adaequat_zeuge`,
+  `rufG_adaequat_umkehr_zeuge`. Two findings against G's rules,
+  machine-checked: `befund_travFertig` (`traverse` with a false invariant)
+  and `befund_ruf_wiederholt` (`ruf` re-enters the callee after `rueck`).
 -/
 import Grammatik.RufMaschineG
 import Grammatik.HoareRegeln
@@ -2580,6 +2589,141 @@ theorem rufG_adaequat (P : Programm D) (O : Orakel D) (passes : Nat)
     (M.weltVon f) σ' ρ v hexec M hZ (by rw [hsp]; exact hΛ) hfrei
   exact ⟨M', hl, hG.1, hG.2, rufLaufG_fremd hl⟩
 
+/-! ### The covered fragment is call-free in the sense of `HoareRegeln.lean`
+
+    `EndG` refines `EndOhneRuf`: every covered body is a body the Hoare
+    rules' call-freedom predicate accepts, so the sequential side of
+    TARGET A is `R`-independent (`endOhneRuf_Runabhaengig`). -/
+
+theorem blattG_ohneRuf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {s : Stmt D V l Γ Λ Λ'} (h : BlattG s) : StmtOhneRuf s := by
+  cases h <;> constructor
+
+mutual
+
+theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ'),
+    StmtG A mr s → StmtOhneRuf s
+  | _, _, _, _, _, .assignSlot t f' i e hw hL, _ => blattG_ohneRuf (.assignSlot t f' i e hw hL)
+  | _, _, _, _, _, .assignDurch p t ht f' i e hw hL, _ =>
+      blattG_ohneRuf (.assignDurch _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignGlob g e hw hL, _ => blattG_ohneRuf (.assignGlob g e hw hL)
+  | _, _, _, _, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _ =>
+      blattG_ohneRuf (.schreibBytes t f' hf n i hlo hhi e hw hL)
+  | _, _, _, _, _, .assignVar x e, _ => blattG_ohneRuf (.assignVar x e)
+  | _, _, _, _, _, .uebergang t f' hτ i von nach hn he hw hL, _ =>
+      blattG_ohneRuf (.uebergang t f' hτ i von nach hn he hw hL)
+  | _, _, _, _, _, .regSchreib r hk e, _ => blattG_ohneRuf (.regSchreib r hk e)
+  | _, _, _, _, _, .transition r hk m hm hl maske bits, _ =>
+      blattG_ohneRuf (.transition r hk m hm hl maske bits)
+  | _, _, _, _, _, .publish g e payload hp hw hL, _ =>
+      blattG_ohneRuf (.publish g e payload hp hw hL)
+  | _, _, _, _, _, .advances m a h hs, _ => blattG_ohneRuf (.advances m a h hs)
+  | _, _, _, _, _, .retires m s h a, _ => blattG_ohneRuf (.retires m s h a)
+  | _, _, _, _, _, .ite _ t e, hs =>
+      .ite _ _ _ (blockG_ohneRuf t hs.ite_inv.1) (blockG_ohneRuf e hs.ite_inv.2)
+  | _, _, _, _, _, .onOption _ p a, hs =>
+      .onOption _ _ _ (blockG_ohneRuf p hs.onOption_inv.1) (blockG_ohneRuf a hs.onOption_inv.2)
+  | _, _, _, _, _, .onTag _ arms, hs => .onTag _ _ (armsG_ohneRuf arms hs.onTag_inv)
+  | _, _, _, _, _, .onGrund _ arms, hs => .onGrund _ _ (grundG_ohneRuf arms hs.onGrund_inv)
+  | _, _, _, _, _, .call .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .locks _ _ body, hs => .locks _ _ _ (blockG_ohneRuf body hs.locks_inv.2)
+  | _, _, _, _, _, .breaking _ body, hs => .breaking _ _ (blockG_ohneRuf body hs.breaking_inv)
+  | _, _, _, _, _, .traverse .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retry .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .forever .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .ret e hΛ, _ => .ret e hΛ
+  | _, _, _, _, _, .retGrund .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+
+theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ'),
+    BlockG A mr b → BlockOhneRuf b
+  | _, _, _, _, _, .nil, _ => .nil
+  | _, _, _, _, _, .cons s rest, hb =>
+      .cons _ _ (stmtG_ohneRuf s hb.cons_inv.1) (blockG_ohneRuf rest hb.cons_inv.2)
+  | _, _, _, _, _, .bind _ rest, hb => .bind _ _ (blockG_ohneRuf rest hb.bind_inv)
+  | _, _, _, _, _, .bindCall .., hb => by cases hb
+  | _, _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, _, .bindCallElse .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, _, .regLies _ _ rest, hb => .regLies _ _ _ (blockG_ohneRuf rest hb.regLies_inv)
+  | _, _, _, _, _, .regLiesElse _ _ _ sonst rest, hb =>
+      .regLiesElse _ _ _ _ _ (endG_ohneRuf sonst hb.regLiesElse_inv.2.2.1)
+        (blockG_ohneRuf rest hb.regLiesElse_inv.2.1)
+  | _, _, _, _, _, .awaits _ _ _ _ rest, hb =>
+      .awaits _ _ _ _ _ (blockG_ohneRuf rest hb.awaits_inv)
+  | _, _, _, _, _, .exchange _ _ _ _ rest, hb =>
+      .exchange _ _ _ _ _ (blockG_ohneRuf rest hb.exchange_inv)
+  | _, _, _, _, _, .narrow _ _ _ sonst rest, hb =>
+      .narrow _ _ _ _ _ (endG_ohneRuf sonst hb.narrow_inv.2.2.1)
+        (blockG_ohneRuf rest hb.narrow_inv.2.1)
+  | _, _, _, _, _, .pruefung _ sonst rest, hb =>
+      .pruefung _ _ _ (endG_ohneRuf sonst hb.pruefung_inv.2.2.1)
+        (blockG_ohneRuf rest hb.pruefung_inv.2.1)
+  | _, _, _, _, _, .gleit _ _ _ _ _ rest, hb =>
+      .gleit _ _ _ _ _ _ (blockG_ohneRuf rest hb.gleit_inv)
+  | _, _, _, _, _, .gleitLit _ _ _ rest, hb =>
+      .gleitLit _ _ _ _ (blockG_ohneRuf rest hb.gleitLit_inv)
+  | _, _, _, _, _, .gleitVon _ _ _ rest, hb =>
+      .gleitVon _ _ _ _ (blockG_ohneRuf rest hb.gleitVon_inv)
+  | _, _, _, _, _, .gleitNarrow _ _ _ sonst rest, hb =>
+      .gleitNarrow _ _ _ _ _ (endG_ohneRuf sonst hb.gleitNarrow_inv.2.2.1)
+        (blockG_ohneRuf rest hb.gleitNarrow_inv.2.1)
+
+theorem endG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
+    ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
+    EndG A e → EndOhneRuf e
+  | _, _, _, .ret e hΛ, _ => .ret e hΛ
+  | _, _, _, .retGrund .., he => by cases he
+  | _, _, _, .leave .., he => by cases he
+  | _, _, _, .next .., he => by cases he
+  | _, _, _, .cons s rest, he =>
+      .cons _ _ (stmtG_ohneRuf s he.cons_inv.1) (endG_ohneRuf rest he.cons_inv.2.1)
+  | _, _, _, .bind _ rest, he => .bind _ _ (endG_ohneRuf rest he.bind_inv)
+
+theorem armsG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    (arms : Arms D V l Γ Λ Λ' cs), ArmsG A mr arms → ArmsOhneRuf arms
+  | _, _, _, _, _, _, .nil, _ => .nil
+  | _, _, _, _, _, _, .cons b rest, ha =>
+      .cons _ _ (blockG_ohneRuf b ha.cons_inv.1) (armsG_ohneRuf rest ha.cons_inv.2)
+
+theorem grundG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (arms : GrundArms D V l Γ Λ Λ' n), GrundArmsG A mr arms → GrundArmsOhneRuf arms
+  | _, _, _, _, _, _, .nil, _ => .nil
+  | _, _, _, _, _, _, .cons b rest, ha =>
+      .cons _ _ (blockG_ohneRuf b ha.cons_inv.1) (grundG_ohneRuf rest ha.cons_inv.2)
+
+end
+
+/-- **TARGET A for any call handler.** A covered body is call-free, so the
+    sequential run under ANY handler `R` (e.g. `rufAt P O passes fuel`, the
+    one the program semantics and the Hoare rules use) is the run under
+    `keinRuf`; `rufG_adaequat` applies verbatim. -/
+theorem rufG_adaequat_R (P : Programm D) (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (M : RufMaschineG D) (f : Faden) (fn : D.Fn) (rho : Env D (D.params fn))
+    (s0 : World D) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+    (spur : List (Ereignis D)) (log : List (RufEreignisF D)) {Γ : Ctx}
+    {Λ : List (Res D)} (ρ : Env D Γ) (b : Endblock D (vertragVon D fn) false Γ Λ)
+    (A : D.Lock → Prop) (hb : EndG A b)
+    (hM : M.faeden f = ⟨caller :: rst, ⟨fn, rho, s0, ⟨false, Γ, Λ, ρ, .ende b⟩⟩, spur, log⟩)
+    (hΛ : HeldGenau Λ (offen spur))
+    (hfrei : ∀ L, A L → RufFreiG M f L)
+    (σ' : World D) (v : ErgVal D (vertragVon D fn).erg)
+    (hexec : execEnd O passes R b (M.weltVon f) ρ = .zurueck σ' v) :
+    ∃ M', RufLaufG P O passes f M M' ∧
+      M'.faeden f = ⟨rst, caller, σ'.spur, RufEreignisF.rueck fn rho v s0 σ' :: log⟩ ∧
+      M'.speicher = σ'.speicher ∧
+      (∀ g, g ≠ f → M'.faeden g = M.faeden g) := by
+  rw [endOhneRuf_Runabhaengig O passes R keinRuf b (endG_ohneRuf b hb)] at hexec
+  exact rufG_adaequat P O passes M f fn rho s0 caller rst spur log ρ b A hb hM hΛ hfrei σ' v hexec
+
 /-! ## 12. Witness: a `locks` block around an `if` whose taken branch writes
 
     `adD` has one table `konto` (2 slots, one `.int 0 100` field) guarded by
@@ -3904,6 +4048,7 @@ theorem armWahlG_ohne' {V : Vertrag D} {l : Bool} {Γ : Ctx}
   rw [hw] at h0
   exact h0
 
+set_option linter.unusedSimpArgs false in
 theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock → Prop}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -4360,5 +4505,238 @@ theorem rufG_adaequat_umkehr (P : Programm D) (O : Orakel D) (passes : Nat)
       subst hvw
       exact ⟨σ', rfl, hsg.speicher.symm, rfl, rfl⟩
     | _ => intro hg; exact absurd hg id
+
+/-- The witness body never consults the oracle. -/
+theorem adRumpf_ohneOrakel : adRumpf.ohneOrakel = true := rfl
+
+/-- **Witness for `rufG_adaequat_umkehr`.** All premises instantiated
+    jointly on the `locks`/`if`/write program: the machine `adM`, the
+    covered oracle-free body, the run of thread 0 that `rufG_adaequat`
+    produces (a real run of the machine, through `endeEntf`, `dannLocks`,
+    `dannIteWahr`, the writing `dannBlatt`, `freiGib`, ... and `rueckCons`),
+    and its log, which holds exactly the pop. The converse then recovers
+    from the MACHINE's log that the sequential semantics returns the logged
+    value `7`, with the memory of the logged world (slot 0 moved to 5). -/
+theorem rufG_adaequat_umkehr_zeuge :
+    ∃ (M'' : RufMaschineG adD) (v : ErgVal adD (adD.erg adFn)) (s1 : World adD),
+      RufLaufG adP adO 0 0 adM M'' ∧
+      (M''.faeden 0).log = [RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) s1] ∧
+      (s1.slots () 0 ()).n = 5 ∧
+      ∃ σ', execEnd adO 0 keinRuf adRumpf (adM.weltVon 0) Env.nil = .zurueck σ' v ∧
+        σ'.speicher = s1.speicher ∧ (show Zahl 0 100 from v).n = 7 := by
+  obtain ⟨σ', v, _, h5, _, h7, M', hl, hf, _, _, _⟩ := rufG_adaequat_zeuge
+  have hlog : (M'.faeden 0).log =
+      RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) σ' :: [] := by rw [hf]
+  obtain ⟨σ'', hex, hsp, _, _⟩ := rufG_adaequat_umkehr adP adO 0 adM 0 adFn Env.nil
+    (adSp0.welt []) [adCaller] [] [] Env.nil adRumpf (fun L : adD.Lock => L = ())
+    adRumpf_G adRumpf_ohneOrakel rfl M' hl Env.nil v (adSp0.welt []) σ' hlog
+  exact ⟨M', v, σ', hl, hlog, h5, σ'', hex, hsp, h7⟩
+
+/-! ## 18. FINDING: `dannTravFertig` disagrees with `traverseLauf`
+
+    When the invariant of a `traverse` is false at the start, the machine
+    rule `dannTravFertig` SKIPS the loop and continues with the rest of the
+    block; the sequential semantics (`traverseLauf`, both for an empty and
+    a non-empty index list) ends in `logik .schleife`. Concretely, the body
+    `traverse konto invariant false { }; return 7` fails sequentially,
+    while the machine pops the frame logging the value `7`. So neither
+    TARGET A's trace equality nor TARGET B holds for `traverse`; it is not
+    in the covered fragment, and no proof here works around it.
+
+    (Two further disagreements of the same rule family, not formalised:
+    `dannTravWeiter` reads the invariant and then `travNext` reads it AGAIN
+    before the first iteration, while `travDone` never reads it after the
+    last one -- `traverseLauf` reads it once before each iteration and once
+    at the end. With `inv.orte ≠ []` the trace differs even when both
+    succeed, and a false final invariant is `logik .schleife`
+    sequentially but ignored by the machine.) -/
+
+theorem w_travFertig {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (t : D.Tab) (inv : Expr D Γ Λ .bool)
+    (body : Block D (vertragVon D z.kopf.f) true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.traverse t inv body) rest) k⟩)
+    (hw : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
+      = false) :
+    ∃ M', RufSchrittG P O passes M f M' ∧
+      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.dann rest k)
+        ((M.weltVon f).lese Λ inv.orte) := by
+  subst hz
+  exact ⟨_, RufSchrittG.dannTravFertig M f l Γ Λ Λ Λ'' t inv body rest k ρ hhead _ rfl hw _ rfl,
+    zustandG_neu rfl rfl⟩
+
+/-- `traverse konto invariant false { }` in the witness function. -/
+def adTrav : Stmt adD (vertragVon adD adFn) false [] [] [] :=
+  .traverse () .falsch .nil
+
+/-- The counterexample body: `traverse konto invariant false { }; return 7`. -/
+def adTravRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
+  .cons adTrav (.ret (.wert adSieben) List.Perm.nil)
+
+def adTravFaden : RufFadenG adD :=
+  ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adTravRumpf⟩⟩,
+    [], []⟩
+
+def adTravM : RufMaschineG adD := ⟨adSp0, fun _ => adTravFaden, [], adSp0.welt []⟩
+
+/-- **The counterexample, machine-checked.** The sequential semantics of the
+    body ends in `logik .schleife` (never a return), yet thread 0 of the
+    machine, by steps of its own (`endeEntf`, `dannTravFertig`, `dannLeer`,
+    `rueck`), pops the frame and logs a return of `7`. -/
+theorem befund_travFertig :
+    execEnd adO 0 keinRuf adTravRumpf (adTravM.weltVon 0) Env.nil =
+      .logik .schleife ∧
+    ∃ (M' : RufMaschineG adD) (v : ErgVal adD (adD.erg adFn)) (s1 : World adD),
+      RufLaufG adP adO 0 0 adTravM M' ∧
+      (M'.faeden 0).log = [RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) s1] ∧
+      (show Zahl 0 100 from v).n = 7 := by
+  refine ⟨rfl, ?_⟩
+  have hZ0 : ZustandG adTravM 0 [adCaller] adFn Env.nil (adSp0.welt []) []
+      (Env.nil : Env adD []) (.ende adTravRumpf) (adTravM.weltVon 0) := ⟨rfl, rfl⟩
+  obtain ⟨M1, hs1, hZ1⟩ := w_endeEntf (P := adP) (O := adO) (passes := 0) hZ0.1
+    adTrav (.ret (.wert adSieben) List.Perm.nil) Env.nil rfl rfl
+  obtain ⟨M2, hs2, hZ2⟩ := w_travFertig (P := adP) (O := adO) (passes := 0) hZ1.1
+    () .falsch .nil .nil (.ende (.ret (.wert adSieben) List.Perm.nil)) Env.nil rfl rfl
+  obtain ⟨M3, hs3, hZ3⟩ := w_dannLeer (P := adP) (O := adO) (passes := 0) hZ2.1
+    (.ende (.ret (.wert adSieben) List.Perm.nil)) Env.nil rfl
+  obtain ⟨M4, hs4, hG⟩ := w_rueck (P := adP) (O := adO) (passes := 0) hZ3.1 adCaller [] rfl
+    (.wert adSieben) List.Perm.nil Env.nil rfl
+    (by
+      show HeldGenau [] (offen (M2.weltVon 0).spur)
+      rw [hZ2.welt, hZ1.welt]
+      intro L
+      simp [offen, World.lese, World.merke, adTravM, adTravFaden, RufMaschineG.weltVon,
+        Speicher.welt, Expr.orte])
+  refine ⟨M4,
+    (show ErgVal adD (adD.erg adFn) from
+      evalErg ((M3.weltVon 0).lese [] adSieben.orte) (ErgExpr.wert adSieben)
+        ((M3.weltVon 0).lese [] adSieben.orte) Env.nil),
+    (M3.weltVon 0).lese [] adSieben.orte,
+    RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (RufLaufG.schritt hs3 (RufLaufG.einzeln hs4))),
+    ?_, rfl⟩
+  rw [hG.1]
+  rfl
+
+/-! ## 19. FINDING: `ruf` (and `rufCallInd`) re-enter the callee after `rueck`
+
+    At `ende` position the rule `ruf` pushes the caller frame UNCHANGED --
+    `(M.faeden f).kopf :: stapel`, whose residue is still
+    `.ende (.cons (.call g args hp hr) rest)` -- instead of a frame with
+    residue `.ende rest` at holdings `nach D g Λ` (as `rufDann` does in
+    block position with `.dann rest k`). `rueck` restores that frame as the
+    head, so the caller executes the same call AGAIN; since `call` is
+    neither a leaf nor `GEntfaltbar`, `ruf` is the only rule for that head,
+    and the caller can never reach `rest`. The sequential semantics runs
+    the call once and continues with `rest`. `rufCallInd` has the same
+    shape. The machine's own witness `M7G` (`RufMaschineG.lean`) shows it:
+    after the witness call has returned, the restored caller head is the
+    original body, and `ruf` fires again, logging a second `eintritt` of the
+    callee for the single call of `rufCallerRumpfF`. So calls at `ende`
+    position are outside every adequacy statement here (and TARGET 4 --
+    bodies with calls -- is not attempted: its most common call form is
+    exactly this one). -/
+theorem befund_ruf_wiederholt :
+    (M7G.faeden 0).kopf = (M0G.faeden 0).kopf ∧
+    (M7G.faeden 0).log = [RufEreignisF.rueck rufIncF rufRhoF vF (M0G.weltVon 0) s1G,
+      RufEreignisF.eintritt rufIncF rufRhoF (M0G.weltVon 0),
+      RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] ∧
+    ∃ M8 : RufMaschineG rufDF, RufSchrittG gP rufOF 0 M7G 0 M8 ∧
+      (M8.faeden 0).log =
+        RufEreignisF.eintritt rufIncF rufRhoF (M7G.weltVon 0) :: (M7G.faeden 0).log := by
+  refine ⟨rfl, rfl, ?_⟩
+  have hhead : (M7G.faeden 0).kopf.rest =
+      ⟨false, rufDF.params rufCallerF, [],
+       rhoCallerF,
+       .ende (.cons (.call rufIncF rufArgsF rufHpF rfl)
+         ((rufDF_params rufCallerF).symm ▸
+           (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+             Expr rufDF (rufDF.params rufIncF) [] (.int 0 6)))) (by decide)) :
+           Endblock rufDF (vertragVon rufDF rufCallerF) false
+             (rufDF.params rufIncF) (nach rufDF rufIncF [])))⟩ := by
+    show (M0G.faeden 0).kopf.rest = _
+    rw [M0G_kopf]
+    rfl
+  have hs0 : M7G.weltVon 0 = (M7G.weltVon 0).lese [] (Args.orte rufArgsF) := by
+    rw [argsOrteF]
+    rfl
+  have hrho : rufRhoF = evalArgs (M7G.weltVon 0) rufArgsF (M7G.weltVon 0) rhoCallerF := rfl
+  have hneu : (M7G.weltVon 0).spur = [] ++ (M7G.faeden 0).spur := rfl
+  exact ⟨_, RufSchrittG.ruf M7G 0 false (rufDF.params rufCallerF) [] rufIncF
+    rufArgsF rufHpF rfl _ rhoCallerF hhead (heldLeerF _) _ hs0 _ hrho _ hneu, rfl⟩
+
+/-! ## CUTS:
+  What is proved: TARGET A (`rufG_adaequat`, and `rufG_adaequat_R` for any
+  call handler) and TARGET B (`rufG_adaequat_umkehr`) for the covered
+  fragment `EndG`/`StmtG`/`BlockG`/`ArmsG`/`GrundArmsG`, each with a joint
+  witness on a `locks { if { write } }; return` body; two FINDINGS against
+  G's step rules, each machine-checked (`befund_travFertig`,
+  `befund_ruf_wiederholt`). What is NOT proved:
+
+  - Calls of every form (`call`, `callInd`, `bindCall`, `bindCallInd`,
+    `bindCallElse`), so TARGET 4 (bodies with calls, one level) is not
+    attempted. Reason: FINDING `befund_ruf_wiederholt` -- `ruf` and
+    `rufCallInd` (calls at `ende` position, the form of every call that is
+    a body's last statement before `return`) push the caller frame with its
+    unchanged residue, so after `rueck` the caller repeats the call and
+    never reaches the rest. Calls in block position (`rufDann`,
+    `dannCallInd`, the bind-call rules) look consistent with `execBlock`
+    under a handler that runs the callee body, but proving that needs the
+    simulation generalised over a growing call log; not done.
+  - `traverse`. Reason: FINDING `befund_travFertig` -- `dannTravFertig`
+    skips the loop on a false start invariant where `traverseLauf` ends in
+    `logik .schleife` (the machine then returns a value the sequential
+    semantics never returns); also `dannTravWeiter`+`travNext` read the
+    invariant twice before the first iteration and `travDone` never after
+    the last, so traces differ and a false final invariant is ignored.
+  - `retry`, `forever`, `leave`, `next`: the loop shims and the peel rules
+    are not simulated (no RufRest invariant for `wiederRest`/`ewigRest`,
+    no abrupt-exit simulation). Not a finding; not done. Known gaps of G
+    there (booked in `RufMaschineG.lean`'s CUTS or found here, not
+    formalised): a `sonst` ending in `ret` inside a loop body stands at
+    `ende` with loop level `true`, where neither `rueck` nor `rueckCons`
+    fires (both demand level `false`), so the machine stalls where
+    `execBlock` returns.
+  - `retGrund`, `Endblock.retGrund`, `Endblock.leave`/`next`, and every
+    `sonst` branch that does not end in `ret` at loop level `false`
+    (machine has no grund rule; `leave`/`next` at `ende` are G's CUTS).
+  - `axiomCall`, `bindAxiom`: the oracle may answer with any world, the
+    machine step demands a trace that extends the old one without `nimmt`
+    (`hneu`/`hkein_nimmt`); a premise on the oracle would close it, none
+    is taken.
+  - A `ret` under a `locks` body (the `mr = false` flag): `dannRet` pops
+    without the `gibt` that `execStmt`'s `locks` appends to the return
+    world, so the logged world would differ in the trace. Such a `ret` is
+    untypable in a function body (`V.ende` names only entry locks, the
+    `locks` rank rule excludes them), so nothing real is lost.
+  - TARGET B needs `ohneOrakel` (no `regLies`/`regLiesElse`/`awaits`): the
+    machine's bare `nimmt`/`gibt` steps let a thread take and release a
+    free lock at any time; that changes only its trace, but those three
+    forms hand the whole world, trace included, to the oracle, so a
+    trace-reading oracle can then answer differently. TARGET A covers
+    them (its run has no bare lock steps). B relates the logged world to
+    `execEnd`'s world in MEMORY only (`σ'.speicher = s1'.speicher`), since
+    bare lock steps add trace events; A states full equality `s1 = σ'`.
+  - Only single-thread runs (`RufLaufG` = steps of thread `f`); no
+    statement about interleavings with other threads beyond the
+    lock-freedom premise of A (`hfrei`, on the locks the body may take).
+  - No contract discharge: `requires`/`ensures`/invariants are not checked
+    by the machine and not related to `rueck` events here.
+-/
+
+#print axioms Gabbro.Grammatik.rufG_adaequat
+#print axioms Gabbro.Grammatik.rufG_adaequat_R
+#print axioms Gabbro.Grammatik.rufG_adaequat_zeuge
+#print axioms Gabbro.Grammatik.rufG_adaequat_umkehr
+#print axioms Gabbro.Grammatik.rufG_adaequat_umkehr_zeuge
+#print axioms Gabbro.Grammatik.befund_travFertig
+#print axioms Gabbro.Grammatik.befund_ruf_wiederholt
+#print axioms Gabbro.Grammatik.schrittErhalt
+#print axioms Gabbro.Grammatik.blockOk
+#print axioms Gabbro.Grammatik.endRet
+
+end Gabbro.Grammatik
 
 
