@@ -1811,6 +1811,90 @@ theorem axFeuert (σ : World D2) (ρ : Env D2 [])
   show (!(σ.lese [] []).slots () 0 ()) = _
   rw [hlese]
 
+/-- The recorded list of the axiom-call firing carries no write for `t`:
+    the oracle keeps the trace, and the `lese` reads carry `false`. -/
+theorem axNeu_kein_schrieb (σ : World D2) (ρ : Env D2 [])
+    (σ' : World D2) (neu : List (Ereignis D2))
+    (hstep : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur)
+    (ev : Ereignis D2) (hmem : ev ∈ neu)
+    (htr : ev.traeger = some (Sum.inl ())) :
+    False := by
+  -- The outcome spur is the `lese` prefix over the old spur.
+  have hspur₀ : (σ.lese [] []).spur = σ.spur := rfl
+  have hσspur : σ'.spur = (σ.lese [] []).spur := by
+    have hcomp := hstep
+    have hAns : axiomAntwort (O := O2) () (σ.lese [] [])
+        (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
+          (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) =
+        (Wflip2 (σ.lese [] []), Option.some ()) := by
+      rfl
+    -- Unfold the firing through the answer.
+    have hrfl : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt =
+        (match axiomAntwort (O := O2) () (σ.lese [] [])
+          (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
+            (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) with
+        | (σ₂, Option.some _) => (Ausgang.ok σ₂ ρ : Ausgang V2 false []).welt
+        | (_, Option.none) =>
+          (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
+    rw [hrfl, hAns, Ausgang.welt] at hcomp
+    have hσ'_top : σ' = Wflip2 (σ.lese [] []) := Option.some_inj.mp hcomp.symm
+    rw [hσ'_top]
+    rfl
+  have hσ' : σ' = Wflip2 (σ.lese [] []) := by
+    have hcomp2 := hstep
+    have hAns2 : axiomAntwort (O := O2) () (σ.lese [] [])
+        (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
+          (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) =
+        (Wflip2 (σ.lese [] []), Option.some ()) := by
+      rfl
+    have hrfl2 : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt =
+        (match axiomAntwort (O := O2) () (σ.lese [] [])
+          (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
+            (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) with
+        | (σ₂, Option.some _) => (Ausgang.ok σ₂ ρ : Ausgang V2 false []).welt
+        | (_, Option.none) =>
+          (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
+    rw [hrfl2, hAns2, Ausgang.welt] at hcomp2
+    exact Option.some_inj.mp hcomp2.symm
+  -- `neu` is therefore empty: substitute everything and cancel.
+  have hcancel : neu = [] := by
+    have hWspur : (Wflip2 (σ.lese [] [])).spur = σ.spur := rfl
+    have hσspur2 : σ'.spur = σ.spur := by
+      rw [hσ', hWspur]
+    rw [hσspur2] at hneu
+    -- `hneu : σ.spur = neu ++ σ.spur`: cancel.
+    have hnil : ([] : List (Ereignis D2)) ++ σ.spur = neu ++ σ.spur := by
+      show σ.spur = neu ++ σ.spur
+      exact hneu
+    exact (List.append_cancel_right hnil).symm
+  rw [hcancel] at hmem
+  simp at hmem
+
+/-- **Counterexample (the finding).** The target without `hNoAx` is false at
+    `Stmt.axiomCall`: with `hNurG` holding vacuously (empty program texts
+    never name `t`), a foreign step firing `axCall` flips the slot
+    (`axFeuert` from `false`) while recording no `Sum.inl t` event
+    (`axNeu_kein_schrieb`), so the slot conclusion fails. -/
+theorem axiomCall_ohne_ereignis_falsch :
+    ¬ ∀ (P : Programm D2) (O : Orakel D2) (passes : Nat) (_ : GutO O)
+      (prog : PCProg D2) (sp : Speicher D2) (g : Faden) (t : D2.Tab),
+      (∀ h, h ≠ g → ∀ a ∈ prog h,
+        (Sum.inl t : D2.Tab ⊕ D2.Glob) ∉ PCAtom.carriers a) →
+      ∀ (M pc h M' pc' : _) (_ : PCReach P O passes prog (GenStart sp) M pc)
+        (_ : PCSchritt P O passes prog M pc h M' pc') (_ : h ≠ g)
+        (k : Int) (f : D2.Feld t),
+        M'.speicher.slots t k f = M.speicher.slots t k f := by
+  intro hAll
+  -- Instantiate: empty program, oracle O2, start slot false, g = 0, t = ().
+  -- Program texts are empty, so `hNurG` holds vacuously.
+  have hNur : ∀ h : Faden, h ≠ (0 : Faden) → ∀ a ∈ (fun _ : Faden => ([] : List (PCAtom D2))) h,
+      (Sum.inl () : D2.Tab ⊕ D2.Glob) ∉ PCAtom.carriers a := by
+    intro h _ a ha
+    simp at ha
+  -- The firing: thread 1 runs axCall from the false-slot world.
+  sorry
+
 end AxGegen
 
 end Gabbro.Grammatik.EZD
