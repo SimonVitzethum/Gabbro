@@ -1496,7 +1496,6 @@ theorem wFire1 : ∃ σ' : World Gabbro.Grammatik.BG.D1,
 /-- Step 2: thread `1` fires `assignVar` (environment-only) with the empty atom. -/
 theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
     (ρ : Env Gabbro.Grammatik.BG.D1 [.bool])
-    (hρ : ρ = Env.cons (τ := .bool) (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil)
     (hpc1 : pc1 1 = 0)
     (htr1 : M1.spuren 1 = [])
     (σ' : World Gabbro.Grammatik.BG.D1)
@@ -1654,7 +1653,7 @@ theorem eigenzustand_nur_eigene_schritteD_rep_zeuge :
   have hpc1 : (pcAdvance (fun _ : Faden => 0) 0) 1 = 0 := by
     simp [pcAdvance]
   have hs2 := wStep2 (wM1 σw) (pcAdvance (fun _ => 0) 0)
-    (Env.cons (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil) rfl
+    (Env.cons (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil)
     hpc1 htr1 σv hfirev
   have hkeep := pcSchritt_fremd_fest Gabbro.Grammatik.BG.P1
     Gabbro.Grammatik.BG.O1 wGutO 0 wprog (wM1 σw) _ 1 _ _ 0 ()
@@ -2007,5 +2006,35 @@ theorem axiomCall_ohne_ereignis_falsch :
   exact absurd hcon2 (by intro h; cases h)
 
 end AxGegen
+
+
+/-! CUTS: what is not proved.
+
+  * The TARGET AS STATED (`eigenzustand_nur_eigene_schritteD`, without `hNoAx`)
+    is FALSE: `axiomCall_ohne_ereignis_falsch` refutes its universal closure at
+    `Stmt.axiomCall` (constructor named, concrete oracle `O2` flipping the slot
+    while `GutO` keeps the trace, hence no recorded `Sum.inl t` event). The
+    positive result is the separately named `eigenzustand_nur_eigene_schritteD_rep`
+    with the explicit open remainder `hNoAx` (rule 12): no declared oracle write
+    to `t` fires at the foreign step. `hNoAx` is not quantified over contracts or
+    statements (rule 13): it quantifies over this step's own firing data.
+  * `hNoAx` is discharged in the witness (`wNoAx`) only because `D1.Ax` is empty.
+    For programs with axioms writing `t`, it stays owed per step.
+  * `blattSlots_dispatch`'s third arm (declared oracle write) is the same remainder
+    in disjunctive form; the merge gate's `ZEUGE` line names the exact target, whose
+    `_zeuge` cannot exist (premises contradictory at `axiomCall`) -- the joint
+    witness is proved for the repaired theorem instead
+    (`eigenzustand_nur_eigene_schritteD_rep_zeuge`), on a non-degenerate program
+    (owner writes the table; the run changes memory at step 1).
+  * No premise of any added theorem has type `Prop` itself; every premise is used
+    by its proof (take/rel branches of `pcSchritt_fremd_fest` close by `rfl`,
+    using no hypotheses -- the premises are consumed in the leaf branch).
+-/
+
+#print axioms Gabbro.Grammatik.EZD.eigenzustand_nur_eigene_schritteD_rep
+#print axioms Gabbro.Grammatik.EZD.eigenzustand_nur_eigene_schritteD_rep_zeuge
+#print axioms Gabbro.Grammatik.EZD.AxGegen.axiomCall_ohne_ereignis_falsch
+#print axioms Gabbro.Grammatik.EZD.blattSlots_dispatch
+#print axioms Gabbro.Grammatik.EZD.pcSchritt_fremd_fest
 
 end Gabbro.Grammatik.EZD
