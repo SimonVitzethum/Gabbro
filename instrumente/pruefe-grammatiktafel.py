@@ -200,7 +200,10 @@ CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
 # exactly one file (`beispiele/71-frist-und-zaehlung.gab`) -- a new terminal that exactly
 # one program writes, the benign direction the header names. Second program writing it
 # moves the word down out of the bucket and the number falls again.
-MARKE_ALLEIN = 1
+# **1 -> 0 on 2026-09-12, the way the line above ordered it.** The lane-59 probes bind
+# `deadline` clauses beside `71`, so the word hangs on no single file any more.
+# The ratchet falls; it is not loosened.
+MARKE_ALLEIN = 0
 # **IT IS PRINTED, NOT RATCHETED, AND THAT IS A DECISION WITH A REASON.**
 #
 # A mark set on the run that first measured it is a conjecture: this number moved 25 -> 0 in
