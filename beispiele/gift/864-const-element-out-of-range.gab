@@ -1,0 +1,11 @@
+-- erwartet: K194
+-- **Gift 864 -- a const-table element outside the element range.**
+--
+-- `300` evaluates (so this is not `K190`) but does not fit `u8`: each
+-- element is held against the element type, not the table.
+
+module gift::const_element_out_of_range {
+
+const Q : [u8; 2] = [1, 300];
+
+}

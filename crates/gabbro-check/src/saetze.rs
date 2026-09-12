@@ -1795,6 +1795,73 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; beispiele/gift/776-*; \
                      beispiele/gift/788-return-carries-a-value-without-a-result.gab",
     },
+    Satz {
+        name: "consts.evaluable",
+        kennungen: &["K190"],
+        aussage: "A `const` initializer, or a const-table element, outside the total, \
+                  effect-free fragment falls (`K190`): carrier reads, layout queries, \
+                  indirect calls and block-bodied calls do not fold, and the pass names \
+                  the site instead of leaving the emitter's unnamed refusal.",
+        vorbehalt: "It says nothing where another rule already speaks: division by zero \
+                    stays `M102`'s, `~` stays the emitter's (`C001`, gift 445), floats \
+                    stay silent (the fragment is integers), and scalar ranges stay \
+                    `M101`'s. A recursive hull without `decreases` is `K008`/`K009`/\
+                    `H022` where it stands, never `K190` -- recursion is their \
+                    territory, even when a `const` calls into it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/860 (a table read in an element falls as `K190` \
+                      alone); the pure block-bodied call is pinned inline \
+                      (`k190_reiner_aufruf_ohne_huelle` in \
+                      crates/gabbro-check/tests/konstanten.rs). The clean side is \
+                      beispiele/92-const-squares.gab and \
+                      beispiele/93-const-scalars.gab.",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_skalar`, \
+                     `pruefe_tabelle`); dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
+    Satz {
+        name: "consts.table",
+        kennungen: &["K191", "K194"],
+        aussage: "A const-table literal holds exactly the declared count (`K191`), and \
+                  every element evaluates inside the declared element range (`K194`). \
+                  The literal is element-wise: nothing is filled in, and `m1` leaves \
+                  the literal `Unbekannt` by construction, so no second rule ranges \
+                  the same elements.",
+        vorbehalt: "It checks the SHAPE, not the meaning: that the 64 entries are the \
+                    squares is the Lean certificate (`Konstanten.quadrate64_zert`), not \
+                    this rule. A length the declaration does not name (an unfoldable \
+                    count) skips the count check -- the count's own `const` owes the \
+                    refusal then, not the table.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/861 (two entries for three fall as `K191` alone) \
+                      and /864 (`300` in a `u8` table falls as `K194` alone). The clean \
+                      side is beispiele/92-const-squares.gab (64 folded entries, \
+                      emitted and compiled).",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_tabelle`); \
+                     dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
+    Satz {
+        name: "consts.callhull",
+        kennungen: &["K192", "K193"],
+        aussage: "Every function in a `const`'s call hull is `pure` (`K192`), and a \
+                  reference cycle through a `const` falls (`K193`): a `const` carries \
+                  no `decreases` by grammar shape, so a cycle through one is unbounded \
+                  as const evaluation. The hull descends through single-return \
+                  `const fn` bodies; anything else is opaque to it.",
+        vorbehalt: "Non-recursive callees without `decreases` are accepted: the bound \
+                    is owed where unboundedness lives, the same line `K008` draws. A \
+                    cycle of functions ALONE stays `K008`/`K009`/`H022`'s -- this pass \
+                    stays silent on it, including the `K190` it would otherwise owe. A \
+                    recursive `const fn` WITH `decreases` still exceeds the \
+                    single-unfolding folder and falls at `K190`, honestly named.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/862 (a `reads` callee falls as `K192` alone) and \
+                      /863 (two consts naming each other fall as `K193`, once per \
+                      member); the transitive impurity through a `const fn` is pinned \
+                      inline (`k192_through_const_fn`). The clean side is the \
+                      `quad` calls of beispiele/92-const-squares.gab.",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`hull_expr`); \
+                     dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
 ];
 
 // ===================================================================================
