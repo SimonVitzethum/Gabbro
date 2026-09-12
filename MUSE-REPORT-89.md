@@ -1,7 +1,8 @@
 # MUSE-REPORT-89 — guardian consolidation (lane 89)
 
-Python + docs lane. No Lean changes, no Rust changes. Six commits on
-`muse/89` (pieces 1-6 below); this report is piece 7.
+Python + docs lane. No Lean changes, no Rust changes. Seven lane commits on
+`muse/89` (pieces 1-6 plus this report as piece 7), then the master merge
+below as a separate commit.
 
 ## Result table: guardian, before, after, cause, action
 
@@ -98,13 +99,51 @@ None — Python + docs lane, no Lean work. No existing theorems touched.
   (plus `✔ [49/50] Built Grammatik (155ms)`; only axiom-dependency info lines
   above — no Lean files touched by this lane).
 - `./emission-pruef`: `== exit 0` (222 of 222 compile, both compilers).
-- `./cargo-pruef` was NOT run (no Rust changes in this lane; binary reused
-  from the emission build for read-only `pruefe`/`emit` probes).
+- `./cargo-pruef` was NOT run for the lane work (no Rust changes; binary reused
+  from the emission build for read-only `pruefe`/`emit` probes). It WAS run
+  once for the master merge (which brought Rust changes): `== exit 0;
+  failing tests: 0`. See the merge section below.
 
 ## Open / for owning lanes
 
 F-EMIT-1, F-TAFEL-1, F-ENG-1, F-ZAHL-1..4, F-TODO-1 (above). Observed but
 unregistered (no guardian covers them, left untouched): README emission
 `128 of 128` (now 222 of 222) and `28 run`, README pass register
-`94 sentences / 227 codes`, PASSREGISTER `87 measured`, DONE `451 tests ·
-55 translation units`, `beispiele/73` header reading `-- 72 --`.
+`94 sentences / 227 codes`, DONE `451 tests · 55 translation units`,
+`beispiele/73` header reading `-- 72 --`. (PASSREGISTER `87 measured` from
+the old list was resolved by the merge to the measured 112.)
+
+## After master merge (2026-09-12, commit 030a3033)
+
+Reviewer-started merge of master-neu (lane 64 library calls + N057; lanes
+85, 81, 82) into `muse/89`; conflicts in `TODO.md` + `PASSREGISTER.md`
+resolved by re-measuring on the merged tree with a fresh binary
+(`./cargo-pruef`: exit 0, 0 failing tests — run this time because the merge
+brought Rust changes). Neither side survived the union:
+
+| Figure | Lane 89 | Master | Merged (measured) |
+|---|---|---|---|
+| Sentences over passes | 119 | 118 | **120** (`SENTENCES: 120 over 12 passes -- 112 measured, 2 ARGUED, 6 CONJECTURED`) |
+| PASSREGISTER measured | 87 | 110 | **112** (`--je-satz` tags) |
+| Codes | 305 | 304 | **306** (`pruefe-kennungen.py`) |
+| Claimed by a sentence | 250 | 249 | **251** (306 − 55; both sides' rows were stale) |
+| Without sentence | 55 | 53 | **55** (Zahn 2 mark already 55 via the merge — green) |
+| Gruende tragend | 139 | 139 | **140** (`N057` adds one; lane E1's note kept and extended) |
+
+Follow-up drift from the merged lanes, re-booked with dated reasons in the
+same pass: diagnostics 305→306, EBNF rules 165→167 (226 terminals hold),
+gift 556→560 (new probes 802–805, N057 lane), continuations 4017→4036,
+widerruf files 377→381. The merge also moved the saetze mark 53→55 itself
+(`«SS-1» over a tree that already moved` note) — nothing for this lane to do.
+
+Post-merge guardian states: emission exit 0 (all six marks hold — the four
+new probes fall at the checker under N057, so no mark moves); vergabe,
+gifttreffer (560 files, verdeckt still 19, 0 FEHLT), saetze, gruende exit 0;
+tafel still abi/errors (F-TAFEL-1); englisch 7905/1085 hold, still the one
+booked sink hit (F-ENG-1); zahlen aborts on exactly F-ZAHL-1/2/3 with zero
+stale figures left — the second clean-tree confirmation of F-ZAHL-4;
+todo keeps only the 3 `heute ?` collateral lines (F-TODO-1).
+`./lean-bau`: `Build completed successfully (53 jobs).`
+
+No guardian file of this lane was touched by the merge (no conflicts there);
+all lane marks verified intact after it.
