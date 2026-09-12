@@ -1811,6 +1811,29 @@ theorem axFeuert (σ : World D2) (ρ : Env D2 [])
   show (!(σ.lese [] []).slots () 0 ()) = _
   rw [hlese]
 
+/-- Start memory for the counterexample: slot `false`. -/
+def wspF : Speicher D2 := ⟨fun _ _ _ => false, fun g => (nomatch g)⟩
+
+/-- Program texts: every thread holds the carrier-free atom. -/
+def progF : PCProg D2 := fun _ => [PCAtom.leaf [] []]
+
+/-- Any program: bodies never fire here (only the axiom step matters). -/
+def P2w : Programm D2 where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf := fun _ => .ret .keine (List.Perm.refl [])
+
+/-- `hNurG` for the counterexample program: all atoms are carrier-free. -/
+theorem hNurF : ∀ h : Faden, h ≠ (0 : Faden) → ∀ a ∈ progF h,
+    (Sum.inl () : D2.Tab ⊕ D2.Glob) ∉ PCAtom.carriers a := by
+  intro h _ a ha
+  simp only [progF] at ha
+  simp only [List.mem_singleton] at ha
+  subst ha
+  simp [PCAtom.carriers]
+
+
 /-- The recorded list of the axiom-call firing carries no write for `t`:
     the oracle keeps the trace, and the `lese` reads carry `false`. -/
 theorem axNeu_kein_schrieb (σ : World D2) (ρ : Env D2 [])
@@ -1892,8 +1915,96 @@ theorem axiomCall_ohne_ereignis_falsch :
       (Sum.inl () : D2.Tab ⊕ D2.Glob) ∉ PCAtom.carriers a := by
     intro h _ a ha
     simp at ha
-  -- The firing: thread 1 runs axCall from the false-slot world.
-  sorry
+  -- The firing: thread 1 runs axCall from the false-slot world, with a
+  -- carrier-free program text (so `hNurG` holds) that still fires.
+  have hSpur0 : ((GenStart wspF).weltVon 1).spur = [] := rfl
+  have hSlot0 : ((GenStart wspF).weltVon 1).slots () 0 () = false := rfl
+  have hfire : ∃ σ' : World D2,
+      (execStmt (O := O2) 0 keinRuf axCall
+        ((GenStart wspF).weltVon 1) Env.nil).welt = some σ' := by
+    have hcomp : (execStmt (O := O2) 0 keinRuf axCall
+        ((GenStart wspF).weltVon 1) Env.nil).welt =
+        (match axiomAntwort (O := O2) ()
+          (((GenStart wspF).weltVon 1).lese [] [])
+          (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
+            (Args.nil (D := D2) (Γ := []) (Λ := []))
+            (((GenStart wspF).weltVon 1).lese [] []) Env.nil) with
+        | (σ₂, Option.some _) => (Ausgang.ok σ₂ Env.nil : Ausgang V2 false []).welt
+        | (_, Option.none) =>
+          (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
+    have hAns : axiomAntwort (O := O2) ()
+        (((GenStart wspF).weltVon 1).lese [] [])
+        (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
+          (Args.nil (D := D2) (Γ := []) (Λ := []))
+          (((GenStart wspF).weltVon 1).lese [] []) Env.nil) =
+        (Wflip2 (((GenStart wspF).weltVon 1).lese [] []), Option.some ()) := by
+      rfl
+    rw [hcomp, hAns, Ausgang.welt]
+    exact ⟨_, rfl⟩
+  obtain ⟨σ', hfire'⟩ := hfire
+  -- The recorded list is empty (no write event): `axNeu_kein_schrieb`.
+  have hneu : σ'.spur = ([] : List (Ereignis D2)) ++ (GenStart wspF).spuren 1 := by
+    have hsp : (GenStart wspF).spuren 1 = [] := rfl
+    rw [hsp, List.append_nil]
+    have hσ' : σ' = Wflip2 (((GenStart wspF).weltVon 1).lese [] []) := by
+      have hcomp2 := hfire'
+      have hAns2 : axiomAntwort (O := O2) ()
+          (((GenStart wspF).weltVon 1).lese [] [])
+          (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
+            (Args.nil (D := D2) (Γ := []) (Λ := []))
+            (((GenStart wspF).weltVon 1).lese [] []) Env.nil) =
+          (Wflip2 (((GenStart wspF).weltVon 1).lese [] []), Option.some ()) := by
+        rfl
+      have hrfl2 : (execStmt (O := O2) 0 keinRuf axCall
+          ((GenStart wspF).weltVon 1) Env.nil).welt =
+          (match axiomAntwort (O := O2) ()
+            (((GenStart wspF).weltVon 1).lese [] [])
+            (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
+              (Args.nil (D := D2) (Γ := []) (Λ := []))
+              (((GenStart wspF).weltVon 1).lese [] []) Env.nil) with
+          | (σ₂, Option.some _) => (Ausgang.ok σ₂ Env.nil : Ausgang V2 false []).welt
+          | (_, Option.none) =>
+            (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
+      rw [hrfl2, hAns2, Ausgang.welt] at hcomp2
+      exact Option.some_inj.mp hcomp2.symm
+    rw [hσ']
+    rfl
+  have hs : PCSchritt (P := P2w) (O := O2) 0 progF (GenStart wspF)
+      (fun _ => 0) 1
+      ⟨σ'.speicher, genUpdate (GenStart wspF).spuren 1 σ'.spur,
+        (GenStart wspF).lauf ++ genEigen 1 [], (GenStart wspF).start,
+        (GenStart wspF).welten ++ [σ'], (GenStart wspF).tiefe + 1⟩
+      (pcAdvance (fun _ => 0) 1) := by
+    refine PCSchritt.leaf (V := V2) (l := false) (Γ := []) (Λ := []) (Λ' := [])
+      (s := axCall) (ρ := Env.nil) (σ' := σ') (neu := [])
+      (Λa := []) (cs := []) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    · rfl
+    · intro L
+      exact nomatch L
+    · exact hfire'
+    · exact hneu
+    · intro L h hm
+      simp at hm
+    · have hpc : (progF 1)[(fun _ : Faden => 0) 1]? =
+          some (PCAtom.leaf (D := D2) [] []) := by
+        simp [progF]
+      exact hpc
+    · rfl
+    · intro e he m st hm
+      simp at he
+    · intro e he o ho
+      simp at he
+  -- Instantiate the universal at this data; the slot equality contradicts
+  -- the flip (`true = false`).
+  have hcon := hAll P2w O2 0 O2gut progF wspF 0 () hNurF
+    (GenStart wspF) (fun _ => 0) 1 _ _ PCReach.start hs (by decide) 0 ()
+  have hflip := axFeuert ((GenStart wspF).weltVon 1) Env.nil σ' hfire'
+  have hMslot : (GenStart wspF).speicher.slots () 0 () = false := rfl
+  -- Project the machine memories to world slots (definitional).
+  have hcon2 : σ'.slots () 0 () = (GenStart wspF).speicher.slots () 0 () := hcon
+  rw [hflip, hSlot0, hMslot] at hcon2
+  -- `hcon2 : true = false`: discriminate.
+  exact absurd hcon2 (by intro h; cases h)
 
 end AxGegen
 
