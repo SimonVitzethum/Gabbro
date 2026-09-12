@@ -2032,6 +2032,45 @@ theorem ezdProg_nurG (h : Faden) (a : PCAtom refD) (ha : a ∈ ezdProg h) :
   subst ha
   simp [PCAtom.carriers]
 
+/-- The witnessed foreign step: thread `0` fires `leave` (memory-preserving,
+    empty recorded list, carrier-free atom) from any machine whose thread-0
+    trace is empty. Every premise is used: `hempty` fixes the trace in the
+    `hΛ` and `hneu` computations. -/
+theorem ezdLeave_step (M : GenMaschine refD) (hempty : M.spuren 0 = []) :
+    PCSchritt (P := refP) (O := refO) 0 ezdProg M (fun _ => 0) 0
+      ⟨(M.weltVon 0).speicher, genUpdate M.spuren 0 (M.weltVon 0).spur,
+        M.lauf ++ genEigen 0 [], M.start,
+        M.welten ++ [(M.weltVon 0)], M.tiefe + 1⟩
+      (pcAdvance (fun _ => 0) 0) := by
+  refine PCSchritt.leaf (V := vertragVon refD refEin) (l := true) (Γ := []) (Λ := []) (Λ' := [])
+    (s := Stmt.leave (V := vertragVon refD refEin) (l := true) (Γ := []) (Λ := []) (rfl : true = true))
+    (ρ := Env.nil) (σ' := M.weltVon 0) (neu := [])
+    (Λa := []) (cs := []) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · rfl
+  · intro L
+    cases L with
+    | unit =>
+        have e : offen (M.spuren 0) = [] := by
+          rw [hempty]
+          rfl
+        show Res.held () ∈ ([] : List (Res refD)) ↔ () ∈ offen (M.spuren 0)
+        rw [e]
+        exact (List.mem_nil_iff _).trans (List.mem_nil_iff _).symm
+  · rfl
+  · have hspur : (M.weltVon 0).spur = [] := by
+      have h1 : (M.weltVon 0).spur = M.spuren 0 := rfl
+      rw [h1, hempty]
+    rw [hspur, hempty]
+    rfl
+  · intro L h hm
+    simp at hm
+  · rfl
+  · rfl
+  · intro e he m st hm
+    simp at he
+  · intro e he o ho
+    simp at he
+
 
 /-! CUTS: what is not proved.
 
