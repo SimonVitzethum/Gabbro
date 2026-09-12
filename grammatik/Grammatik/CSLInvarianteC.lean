@@ -196,7 +196,7 @@ theorem blatt_slots_t_gleich
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
     (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (σ' : World D)
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
     (neu : List (Ereignis D))
@@ -497,7 +497,7 @@ theorem blatt_slots_t_gleich
   | traverse u inv body => simp [Stmt.istBlatt] at hleaf
   | retry n bis body ueber => simp [Stmt.istBlatt] at hleaf
   | forever a inv body => simp [Stmt.istBlatt] at hleaf
-  | axiomCall a args hh hw hg => exact False.elim (hax)
+  | axiomCall a args hh hw hg _ _ => exact False.elim (hax)
   | regSchreib r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
