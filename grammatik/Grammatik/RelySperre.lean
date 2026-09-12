@@ -413,6 +413,172 @@ theorem rely_aus_sperre_global (P : Programm D) (O : Orakel D) (passes : Nat) (h
   | rel L hhaelt hpc =>
       rfl
 
-#print axioms Gabbro.Grammatik.lese_globs_gleich
-#print axioms Gabbro.Grammatik.storeGlob_fremd_global
-#print axioms Gabbro.Grammatik.schreibSlot_globs_gleich
+/-! ## 5. Witness on the reference fixture: table rely -/
+
+/-- Thread program for the table witness: thread 1 takes the lock and
+    fires the writing leaf (as in `refB_prog`); thread 0 rests on an
+    empty-holdings leaf atom so it can step with a local assignment. -/
+def witProg : PCProg refD
+  | 1 => [.take (), .leaf [Res.held (D := refD) ()] [Sum.inl (())]]
+  | _ => [.leaf ([] : List (Res refD)) []]
+
+/-- Step 1 (witness): thread 1 takes the lock from the start machine. -/
+theorem wit_take :
+    PCSchritt refP refO 0 witProg (GenStart refSp0) (fun _ => 0) 1
+      refPC1pre refB_pc1 := by
+  have hself : (() : refD.Lock) ∉ offen ((GenStart refSp0).spuren 1) := by
+    intro hmem
+    have e : ((GenStart refSp0).spuren 1) = [] := rfl
+    have hnil : offen ((GenStart refSp0).spuren 1) = [] := by rw [e]; rfl
+    have h2 : (()) ∈ ([] : List refD.Lock) := hnil ▸ hmem
+    exact (List.mem_nil_iff _).mp h2 |>.elim
+  have hrang : ∀ K ∈ offen ((GenStart refSp0).spuren 1),
+      refD.rang K < refD.rang (()) := by
+    intro K hK
+    have e : ((GenStart refSp0).spuren 1) = [] := rfl
+    have hnil : offen ([] : List (Ereignis refD)) = [] := rfl
+    rw [e, hnil, List.mem_nil_iff] at hK
+    exact absurd hK (by decide)
+  have hfrei : GenFrei (GenStart refSp0) 1 (()) := by
+    intro g hne hmem
+    have e : ((GenStart refSp0).spuren g) = [] := rfl
+    have hnil : offen ((GenStart refSp0).spuren g) = [] := by rw [e]; rfl
+    have h2 : (()) ∈ ([] : List refD.Lock) := hnil ▸ hmem
+    exact (List.mem_nil_iff _).mp h2 |>.elim
+  have hpc : (witProg 1)[(fun _ => 0) 1]? =
+      some (PCAtom.take (D := refD) ()) := rfl
+  exact PCSchritt.take (GenStart refSp0) (fun _ => 0) 1 ()
+    hself hrang hfrei hpc
+
+/-- Step 2 (witness): thread 1 fires the writing leaf at position 1. -/
+theorem wit_leaf :
+    PCSchritt refP refO 0 witProg refPC1pre refB_pc1 1 refPC2 refB_pc2 := by
+  have hpc : (witProg 1)[refB_pc1 1]? =
+      some (PCAtom.leaf [Res.held (D := refD) ()] [Sum.inl (())]) := rfl
+  have hneu : (((refPC1pre.weltVon 1).lese [Res.held (D := refD) ()]
+      (refIdxEin.orte ++ refHundert.orte)).schreibSlot ()
+      [Res.held (D := refD) ()] refK0 () refV100).spur =
+      [Ereignis.zugriff () true [Res.held (D := refD) ()]
+        (refPC1pre.weltVon 1).haelt] ++ refPC1pre.spuren 1 := rfl
+  have hkn : ∀ (L : refD.Lock) (h : List refD.Lock),
+      Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
+        [Res.held (D := refD) ()] (refPC1pre.weltVon 1).haelt] := by
+    intro L h hm
+    simp at hm
+  have hmark : ∀ e ∈ [Ereignis.zugriff () true [Res.held (D := refD) ()]
+      (refPC1pre.weltVon 1).haelt], ∀ (m : refD.Marke) (st : Nat),
+      Res.marke m st ∈ e.lambda →
+        m ∈ PCAtom.marks (PCAtom.leaf [Res.held (D := refD) ()]
+          [Sum.inl (())]) := by
+    intro e hm m st hlam
+    simp at hm
+    subst hm
+    simp [Ereignis.lambda] at hlam
+  have hcar : ∀ e ∈ [Ereignis.zugriff () true [Res.held (D := refD) ()]
+      (refPC1pre.weltVon 1).haelt], ∀ o, e.traeger = some o →
+        o ∈ PCAtom.carriers (PCAtom.leaf [Res.held (D := refD) ()]
+          [Sum.inl (())]) := by
+    intro e hm o ho
+    simp at hm
+    subst hm
+    simp [Ereignis.traeger] at ho
+    subst ho
+    have hc : PCAtom.carriers (D := refD)
+        (PCAtom.leaf [Res.held (D := refD) ()] [Sum.inl (())]) =
+        [Sum.inl (())] := rfl
+    rw [hc]
+    exact List.mem_singleton.mpr rfl
+  exact PCSchritt.leaf refPC1pre refB_pc1 1
+    (vertragVon refD refEin) false [.int 0 10]
+    [Res.held (D := refD) ()] [Res.held (D := refD) ()]
+    refWriteStAt refRho7 rfl refPC1haelt _ _ refPCwrite hneu hkn
+    [Res.held (D := refD) ()] [Sum.inl (())] hpc rfl hmark hcar
+
+/-- The witness reachability: lock, then the writing leaf. -/
+theorem wit_reach :
+    PCReach refP refO 0 witProg (GenStart refSp0) refPC2 refB_pc2 := by
+  have h1 : PCReach refP refO 0 witProg (GenStart refSp0) refPC1pre
+      refB_pc1 :=
+    PCReach.step _ _ _ _ _ PCReach.start wit_take
+  exact PCReach.step _ _ _ _ _ h1 wit_leaf
+
+/-- The thread-0 step statement: a local assignment, touching no
+    memory and recording no events. -/
+def witStmt0 : Stmt refD (vertragVon refD refEin) false [.bool] [] [] :=
+  .assignVar (τ := .bool) Var.hier
+    (.falsch : Expr refD [.bool] [] .bool)
+
+/-- Its environment: the local starts `false`. -/
+def witRho0 : Env refD [.bool] := .cons false .nil
+
+/-- The outcome world of the thread-0 step: the read world. -/
+def witW0' : World refD :=
+  (refPC2.weltVon 0).lese ([] : List (Res refD))
+    ([] : List (refD.Tab ⊕ refD.Glob))
+
+/-- The machine after the thread-0 step. -/
+def witM' : GenMaschine refD :=
+  ⟨witW0'.speicher, genUpdate refPC2.spuren 0 witW0'.spur,
+    refPC2.lauf ++ genEigen 0 [], refPC2.start,
+    refPC2.welten ++ [witW0'], refPC2.tiefe + 1⟩
+
+/-- Step 3 (witness): thread 0 fires the local assignment. -/
+theorem wit_step0 :
+    PCSchritt refP refO 0 witProg refPC2 refB_pc2 0 witM'
+      (pcAdvance refB_pc2 0) := by
+  have hΛ : HeldGenau ([] : List (Res refD)) (offen (refPC2.spuren 0)) := by
+    have e : refPC2.spuren 0 = [] := rfl
+    rw [e]
+    intro L
+    simp [offen]
+  have hstep : (execStmt (D := refD) (V := vertragVon refD refEin) refO 0
+      keinRuf witStmt0 (refPC2.weltVon 0) witRho0).welt = some witW0' := rfl
+  have hneu : witW0'.spur = [] ++ refPC2.spuren 0 := rfl
+  have hkn : ∀ (L : refD.Lock) (h : List refD.Lock),
+      Ereignis.nimmt L h ∉ ([] : List (Ereignis refD)) := by
+    intro L h hm
+    simp at hm
+  have hpc : (witProg 0)[refB_pc2 0]? =
+      some (PCAtom.leaf (D := refD) [] []) := rfl
+  refine PCSchritt.leaf refPC2 refB_pc2 0 (V := vertragVon refD refEin)
+    (l := false) (Γ := [.bool]) (Λ := []) (Λ' := []) (s := witStmt0)
+    (ρ := witRho0) (σ' := witW0') (neu := []) (Λa := []) (cs := [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · rfl
+  · exact hΛ
+  · exact hstep
+  · exact hneu
+  · exact hkn
+  · exact hpc
+  · rfl
+  · intro e he m st hm
+    simp at he
+  · intro e he o ho
+    simp at he
+
+/-- Thread 1 holds the lock after the writing leaf. -/
+theorem wit_haelt1 : (() : refD.Lock) ∈ offen (refPC2.spuren 1) := by
+  have e : offen (refPC2.spuren 1) = [()] := rfl
+  rw [e]
+  exact List.mem_singleton.mpr rfl
+
+/-- The lock guards the table. -/
+theorem wit_guard : Sum.inl (() : refD.Lock) ∈ refD.braucht () :=
+  List.mem_singleton.mpr rfl
+
+/-- **Inhabitation for `rely_aus_sperre`.** All premises hold jointly on
+    the reference fixture: the PC run reaches `refPC2` (lock, then the
+    writing leaf) with thread 1 holding the lock of `konto`, and a step
+    of thread 0 (a local assignment) keeps every slot. Non-degenerate:
+    `einzahlen` writes `konto` and the run moves slot `0` from `0` to
+    `100`. -/
+theorem rely_aus_sperre_zeuge :
+    (∀ (k : Int) (fld : refD.Feld ()),
+      witM'.speicher.slots () k fld = refPC2.speicher.slots () k fld) ∧
+    refPC2.speicher.slots () 0 () ≠ refSp0.slots () 0 () ∧
+    (vertragVon refD refEin).schreibt () = true := by
+  refine ⟨?_, refB_pc_schreibt, refEin_schreibt _⟩
+  intro k fld
+  exact rely_aus_sperre refP refO 0 refO_gut witProg refSp0 refPC2 refB_pc2
+    wit_reach 1 0 (by decide) () wit_haelt1 witM' _ wit_step0 () wit_guard
+    k fld
