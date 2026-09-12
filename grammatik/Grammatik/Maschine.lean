@@ -1866,3 +1866,380 @@ theorem kette_ist_maschinenwelt (P : Programm D) (O : Orakel D) (passes : Nat) (
 #print axioms Gabbro.Grammatik.kette_ist_maschinenwelt
 
 end Gabbro.Grammatik
+
+/-! ## 14. The chain from the machine: identification by construction
+
+    `kette_ist_maschinenwelt` (§13) reads machine worlds as chain worlds UNDER
+    the assumed identification `hW : J.welten = M.welten`. This section derives
+    the identification itself -- however narrow -- instead of assuming it.
+
+    What is proved (no `sorry`):
+
+    - `kette_aus_maschinenlauf`: the zero-step base. From shared memory `sp`
+      and one function entry `fn0`, the start machine `GenStart sp` IS a
+      chain: worlds, run, and `SerialLink` come along by construction, so the
+      identification `J.welten = M.welten` holds by `rfl`, never assumed.
+      `SerialLink` holds vacuously: a chain with no steps has no writing step
+      that could owe a witness.
+    - `kette_aus_maschinenlauf_schritt`: one induction step over a
+      memory-preserving machine step. From a chain `J` tracking `M` (the
+      world history `hJw`, a member thread `hmem`, the inherited link `hLink`)
+      and a successor `M'` whose worlds append one memory-preserving world
+      (`hM'w` with `hslots` / `hglobs`) and whose run appends one step of `f`
+      (`hM'l`), the extended chain tracks `M'`, again by construction
+      (`rfl`). `Gesittet` and the scheduler rule for the extended run come
+      from the read-only projection theorems (`gen_konsistent`,
+      `gen_gut_obs`, `gen_ausschluss`); ownership (`marke_eindeutig`,
+      `ungeteilt`) and the declaration side (`BeschraenkteVerschraenkung`)
+      come from the single-thread premise (`hsingle`): every run step is
+      `f`'s, so distinct-thread conclusions close by arithmetic. The frame
+      (`hSchritt`) for the new step holds for ANY writer frame because lock
+      steps keep slots and globals by construction -- no `exec` / `execStmt`
+      correspondence is needed at this boundary. `SerialLink` is inherited
+      along the old steps (witness indices transport over the run prefix) and
+      vacuous at the new step under the non-writer guard.
+    - `kette_aus_maschinenlauf_nimmt` / `_gibt`: the two lock-step
+      instantiations, via the `GenSchritt` constructors as evidence.
+
+    Read-only inputs, never modified: `gen_konsistent`, `gen_gut_obs`,
+    `gen_ausschluss`, `genWelten_letzte`, `gen_eigen_getElem`, `GenStart`,
+    `GenSchritt.nimmt`, `GenSchritt.gibt`. Every premise is load-bearing
+    (each one is consumed by its proof; the old run-link `J.l = M.lauf` is
+    deliberately NOT taken as a premise because the run side rebuilds from
+    the projection theorems instead of transporting).
+
+    Coverage (exactly): the start machine, plus one single-thread lock step
+    (`nimmt` / `gibt`) by a member thread, with `SerialLink` vacuous at the
+    base and guarded-vacuous at the new step.
+
+    Remainder (booked, not hidden): `blatt` steps -- the `execStmt` frame is
+    for the statement's own contract, while `hSchritt` needs the code
+    function's writes (`Nb` / code wiring, as §13 books it); iterating the
+    step over a whole `PCReach` (counter routing via `pcSchritt_gen` /
+    `pcReach_gen` stays future work); multi-thread runs (discharging
+    `hsingle` needs the `Einfaedig` projection plus the declaration side, as
+    `gen_gesittet` books them); non-vacuous `SerialLink` witnesses for
+    writing steps; globals and multi-carrier conflicts (as before).
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **The chain from the machine, zero-step base.** The start machine over
+    shared memory is a chain by construction: empty thread list, empty step
+    list, the generated worlds and the empty run. The identification holds by
+    `rfl`; `SerialLink` holds vacuously over any carrier. -/
+theorem kette_aus_maschinenlauf (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    ∃ J : GemeinsamerLauf (D := D) Nb,
+      J.welten = (GenStart sp).welten ∧
+      J.l = (GenStart sp).lauf ∧
+      ∀ t₀ : D.Tab, SerialLink Nb J (GenStart sp).lauf t₀ := by
+  have hGes : Gesittet ([] : Lauf D) := by
+    refine ⟨?_, ?_, ?_, ?_, ?_⟩
+    · intro f j
+      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+      rw [hsp]
+      exact konsistent_nil
+    · intro f j e he
+      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+      rw [hsp] at he
+      simp at he
+    · intro j f L h hi g hne
+      simp at hi
+    · intro i j f g m s s' ei ej hi hj hm hm'
+      simp at hi
+    · intro i j f g o ei ej hi hj ht1 ht2 hu
+      simp at hi
+  have hBeschr : BeschraenkteVerschraenkung (D := D) Nb ([] : Lauf D) := by
+    intro i j f g ei ej hi hj hne
+    simp at hi
+  have hKette0 : (GenStart sp).welten.length = ([] : List Faden).length + 1 := by
+    simp [GenStart]
+  have hSchritt0 : ∀ (k : Nat) (f : Faden) (vor nach : World D),
+      ([] : List Faden)[k]? = some f → (GenStart sp).welten[k]? = some vor →
+      (GenStart sp).welten[k + 1]? = some nach →
+      f ∈ ([] : List Faden) ∧
+        Rahmen (D.schreibt ((fun _ => fn0) f)) (D.gschreibt ((fun _ => fn0) f)) vor nach := by
+    intro k f vor nach hk _ _
+    simp at hk
+  have hPaar0 : ∀ (f : Faden), f ∈ ([] : List Faden) → ∀ (g : Faden),
+      g ∈ ([] : List Faden) → f ≠ g → Nb f g := by
+    intro f hf
+    simp at hf
+  have hEintritt0 : ∀ (f : Faden), f ∈ ([] : List Faden) →
+      EintrittPasst ((fun _ => fn0) f) ((fun _ => (GenStart sp).start) f) := by
+    intro f hf
+    simp at hf
+  have hSchuld0 : ∀ (f : Faden), f ∈ ([] : List Faden) →
+      SchuldnerHaelt ((fun _ => fn0) f) := by
+    intro f hf
+    simp at hf
+  have hInvSicht0 : ∀ (f : Faden), f ∈ ([] : List Faden) →
+      InvSichtHaelt ((fun _ => fn0) f) ((fun _ => (GenStart sp).start) f) := by
+    intro f hf
+    simp at hf
+  refine ⟨{ faeden := [], code := fun _ => fn0, eintritt := fun _ => (GenStart sp).start,
+            welten := (GenStart sp).welten, schrittFaden := [], l := ([] : Lauf D),
+            hKette := hKette0, hSchritt := hSchritt0, hPaar := hPaar0,
+            hGesittet := hGes, hBeschraenkt := hBeschr,
+            hEintritt := hEintritt0, hSchuld := hSchuld0, hInvSicht := hInvSicht0 },
+          rfl, rfl, ?_⟩
+  intro t₀ k g hk _
+  have hk' : ([] : List Faden)[k]? = some g := hk
+  simp at hk'
+
+/-- **The chain from the machine, one induction step.** A chain tracking `M`
+    extends along one memory-preserving step of a member thread: worlds and
+    run by construction (`rfl`), order and goodness from the read-only
+    projection theorems, ownership and declaration side from the single-thread
+    run, the new frame from memory preservation, `SerialLink` inherited plus
+    guarded-vacuous at the new step. -/
+theorem kette_aus_maschinenlauf_schritt
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (Nb : Nebeneinander)
+    (M M' : GenMaschine D) (f : Faden)
+    (hReach : GenErreichbar P O passes (GenStart sp) M)
+    (hReach' : GenErreichbar P O passes (GenStart sp) M')
+    (e : Ereignis D) (nach : World D)
+    (hM'l : M'.lauf = M.lauf ++ genEigen f [e])
+    (hM'w : M'.welten = M.welten ++ [nach])
+    (hslots : ∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+      nach.slots t k fld = M.speicher.slots t k fld)
+    (hglobs : ∀ g : D.Glob, nach.globs g = M.speicher.globs g)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (hJw : J.welten = M.welten)
+    (hmem : f ∈ J.faeden)
+    (hLink : ∀ t₀ : D.Tab, SerialLink Nb J M.lauf t₀)
+    (hsingle : ∀ s ∈ M.lauf, s.faden = f) :
+    ∃ J' : GemeinsamerLauf (D := D) Nb,
+      J'.welten = M'.welten ∧
+      J'.l = M'.lauf ∧
+      (∀ t₀ : D.Tab, TraegerSchreibt (J.code f) (.inl t₀) = false →
+        SerialLink Nb J' M'.lauf t₀) := by
+  have hlen : M.welten.length = J.schrittFaden.length + 1 := by
+    rw [← hJw]
+    exact J.hKette
+  obtain ⟨f0, hlast⟩ := genWelten_letzte P O passes hO sp M hReach
+  have hLastIdx : M.welten[J.schrittFaden.length]? =
+      some (M.speicher.welt (M.spuren f0)) := by
+    have hget : M.welten.getLast? = M.welten[M.welten.length - 1]? :=
+      List.getLast?_eq_getElem?
+    have hn : M.welten.length - 1 = J.schrittFaden.length := by omega
+    rw [hn] at hget
+    rw [hlast] at hget
+    exact hget.symm
+  have hfaden : ∀ (i : Nat) (g : Faden) (ei : Ereignis D),
+      M'.lauf[i]? = some (Schritt.mk g ei) → g = f := by
+    intro i g ei hi
+    rw [hM'l] at hi
+    by_cases hlt : i < M.lauf.length
+    · rw [List.getElem?_append_left hlt] at hi
+      exact hsingle _ (List.mem_of_getElem? hi)
+    · have hle : M.lauf.length ≤ i := by omega
+      rw [List.getElem?_append_right hle] at hi
+      exact (gen_eigen_getElem f [e] _ _ _ hi).1
+  have hGes' : Gesittet M'.lauf := by
+    refine ⟨gen_konsistent P O passes hO sp M' hReach',
+            gen_gut_obs P O passes hO sp M' hReach',
+            gen_ausschluss P O passes hO sp M' hReach', ?_, ?_⟩
+    · intro i j g1 g2 m s s' e1 e2 hi hj _ _
+      have h1 := hfaden i g1 e1 hi
+      have h2 := hfaden j g2 e2 hj
+      exact h1.trans h2.symm
+    · intro i j g1 g2 o e1 e2 hi hj _ _ _
+      have h1 := hfaden i g1 e1 hi
+      have h2 := hfaden j g2 e2 hj
+      exact h1.trans h2.symm
+  have hBeschr' : BeschraenkteVerschraenkung (D := D) Nb M'.lauf := by
+    intro i j g1 g2 e1 e2 hi hj hne
+    have h1 := hfaden i g1 e1 hi
+    have h2 := hfaden j g2 e2 hj
+    exact absurd (h1.trans h2.symm) hne
+  have hKette' : M'.welten.length = (J.schrittFaden ++ [f]).length + 1 := by
+    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp
+    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp
+    omega
+  have hSchritt' : ∀ (k : Nat) (g0 : Faden) (vor nach0 : World D),
+      (J.schrittFaden ++ [f])[k]? = some g0 → M'.welten[k]? = some vor →
+      M'.welten[k + 1]? = some nach0 →
+      g0 ∈ J.faeden ∧
+        Rahmen (D.schreibt (J.code g0)) (D.gschreibt (J.code g0)) vor nach0 := by
+    intro k g0 vor nach0 hk hkv hkn
+    rw [hM'w] at hkv hkn
+    by_cases hlt : k < J.schrittFaden.length
+    · have e1 : (J.schrittFaden ++ [f])[k]? = J.schrittFaden[k]? :=
+        List.getElem?_append_left hlt
+      rw [e1] at hk
+      have hltM : k < M.welten.length := by omega
+      have e2 : (M.welten ++ [nach])[k]? = M.welten[k]? :=
+        List.getElem?_append_left hltM
+      rw [e2] at hkv
+      have hJkv : J.welten[k]? = some vor := by rw [hJw]; exact hkv
+      have hltM1 : k + 1 < M.welten.length := by omega
+      have e3 : (M.welten ++ [nach])[k + 1]? = M.welten[k + 1]? :=
+        List.getElem?_append_left hltM1
+      rw [e3] at hkn
+      have hJkn : J.welten[k + 1]? = some nach0 := by rw [hJw]; exact hkn
+      exact J.hSchritt k g0 vor nach0 hk hJkv hJkn
+    · by_cases heq : k = J.schrittFaden.length
+      · subst heq
+        have eNew : (J.schrittFaden ++ [f])[J.schrittFaden.length]? = some f := by
+          rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+          rfl
+        rw [eNew] at hk
+        have hg0 : g0 = f := (Option.some_inj.mp hk).symm
+        have eW : (M.welten ++ [nach])[J.schrittFaden.length]? =
+            M.welten[J.schrittFaden.length]? :=
+          List.getElem?_append_left (by omega)
+        rw [eW, hLastIdx] at hkv
+        have hvor : vor = M.speicher.welt (M.spuren f0) :=
+          Option.some_inj.mp hkv.symm
+        have eW2 : (M.welten ++ [nach])[J.schrittFaden.length + 1]? = some nach := by
+          have hle2 : M.welten.length ≤ J.schrittFaden.length + 1 := by omega
+          rw [List.getElem?_append_right hle2]
+          have hsub : J.schrittFaden.length + 1 - M.welten.length = 0 := by omega
+          rw [hsub]
+          rfl
+        rw [eW2] at hkn
+        have hnach0 : nach = nach0 := Option.some_inj.mp hkn
+        rw [hg0, hvor, ← hnach0]
+        refine ⟨hmem, ?_, ?_⟩
+        · intro t _ k2 fld
+          exact hslots t k2 fld
+        · intro g _
+          exact hglobs g
+      · have hle : J.schrittFaden.length ≤ k := by omega
+        have eNone : (J.schrittFaden ++ [f])[k]? = none := by
+          rw [List.getElem?_append_right hle, List.getElem?_eq_none_iff,
+            List.length_singleton]
+          omega
+        rw [eNone] at hk
+        simp at hk
+  refine ⟨{ faeden := J.faeden, code := J.code, eintritt := J.eintritt,
+            welten := M'.welten, schrittFaden := J.schrittFaden ++ [f], l := M'.lauf,
+            hKette := hKette', hSchritt := hSchritt', hPaar := J.hPaar,
+            hGesittet := hGes', hBeschraenkt := hBeschr',
+            hEintritt := J.hEintritt, hSchuld := J.hSchuld, hInvSicht := J.hInvSicht },
+          rfl, rfl, ?_⟩
+  intro t₀ hnw k0 g0 hk0 hwr
+  have hk0' : (J.schrittFaden ++ [f])[k0]? = some g0 := hk0
+  have hwr0 : TraegerSchreibt (J.code g0) (.inl t₀) = true := hwr
+  by_cases hlt : k0 < J.schrittFaden.length
+  · have eOld : (J.schrittFaden ++ [f])[k0]? = J.schrittFaden[k0]? :=
+      List.getElem?_append_left hlt
+    rw [eOld] at hk0'
+    obtain ⟨j, w, Λ, h, hw⟩ := hLink t₀ k0 g0 hk0' hwr0
+    have hjlt : j < M.lauf.length := by
+      by_cases h : j < M.lauf.length
+      · exact h
+      · have hle : M.lauf.length ≤ j := by omega
+        rw [List.getElem?_eq_none hle] at hw
+        simp at hw
+    have hw' : M'.lauf[j]? = some (Schritt.mk g0 (.zugriff t₀ w Λ h)) := by
+      rw [hM'l, List.getElem?_append_left hjlt]
+      exact hw
+    exact ⟨j, w, Λ, h, hw'⟩
+  · by_cases heq : k0 = J.schrittFaden.length
+    · subst heq
+      have hg0 : g0 = f := by
+        have eNew : (J.schrittFaden ++ [f])[J.schrittFaden.length]? = some f := by
+          rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+          rfl
+        rw [eNew] at hk0'
+        exact (Option.some_inj.mp hk0').symm
+      rw [hg0] at hwr
+      have hwrF : TraegerSchreibt (J.code f) (.inl t₀) = true := hwr
+      rw [hnw] at hwrF
+      simp at hwrF
+    · have hle : J.schrittFaden.length ≤ k0 := by omega
+      have eNone : (J.schrittFaden ++ [f])[k0]? = none := by
+        rw [List.getElem?_append_right hle, List.getElem?_eq_none_iff,
+          List.length_singleton]
+        omega
+      rw [eNone] at hk0'
+      simp at hk0'
+
+/-- **The chain from the machine, lock-take instance.** A fireable `nimmt`
+    step of a member thread extends a tracking chain: the successor and its
+    evidence come from the `GenSchritt` constructor, the link from the
+    one-step extension. -/
+theorem kette_aus_maschinenlauf_nimmt
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (Nb : Nebeneinander)
+    (M : GenMaschine D) (f : Faden) (L : D.Lock)
+    (hself : L ∉ offen (M.spuren f))
+    (hrang : ∀ K ∈ offen (M.spuren f), D.rang K < D.rang L)
+    (hfrei : GenFrei M f L)
+    (hReach : GenErreichbar P O passes (GenStart sp) M)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (hJw : J.welten = M.welten)
+    (hmem : f ∈ J.faeden)
+    (hLink : ∀ t₀ : D.Tab, SerialLink Nb J M.lauf t₀)
+    (hsingle : ∀ s ∈ M.lauf, s.faden = f) :
+    ∃ M' : GenMaschine D, ∃ J' : GemeinsamerLauf (D := D) Nb,
+      J'.welten = M'.welten ∧
+      J'.l = M'.lauf ∧
+      (∀ t₀ : D.Tab, TraegerSchreibt (J.code f) (.inl t₀) = false →
+        SerialLink Nb J' M'.lauf t₀) := by
+  let eN : Ereignis D := Ereignis.nimmt L (offen (M.spuren f))
+  let nachN : World D := M.speicher.welt (eN :: M.spuren f)
+  let M' : GenMaschine D :=
+    ⟨M.speicher, genUpdate M.spuren f (eN :: M.spuren f),
+     M.lauf ++ genEigen f [eN], M.start, M.welten ++ [nachN], M.tiefe + 1⟩
+  have hs : GenSchritt P O passes M f M' :=
+    GenSchritt.nimmt M f L hself hrang hfrei
+  have hReach' : GenErreichbar P O passes (GenStart sp) M' :=
+    GenErreichbar.schritt M M' f hReach hs
+  have hM'l : M'.lauf = M.lauf ++ genEigen f [eN] := rfl
+  have hM'w : M'.welten = M.welten ++ [nachN] := rfl
+  have hslots : ∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+      nachN.slots t k fld = M.speicher.slots t k fld := fun t k fld => rfl
+  have hglobs : ∀ g : D.Glob, nachN.globs g = M.speicher.globs g := fun g => rfl
+  refine ⟨M', ?_⟩
+  exact kette_aus_maschinenlauf_schritt P O passes hO sp Nb M M' f
+    hReach hReach' eN nachN hM'l hM'w hslots hglobs J hJw hmem hLink hsingle
+
+/-- **The chain from the machine, lock-release instance.** A held `gibt`
+    step of a member thread extends a tracking chain: same shape as the
+    take instance, memory-preserving by the same construction. -/
+theorem kette_aus_maschinenlauf_gibt
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (Nb : Nebeneinander)
+    (M : GenMaschine D) (f : Faden) (L : D.Lock)
+    (hhaelt : L ∈ offen (M.spuren f))
+    (hReach : GenErreichbar P O passes (GenStart sp) M)
+    (J : GemeinsamerLauf (D := D) Nb)
+    (hJw : J.welten = M.welten)
+    (hmem : f ∈ J.faeden)
+    (hLink : ∀ t₀ : D.Tab, SerialLink Nb J M.lauf t₀)
+    (hsingle : ∀ s ∈ M.lauf, s.faden = f) :
+    ∃ M' : GenMaschine D, ∃ J' : GemeinsamerLauf (D := D) Nb,
+      J'.welten = M'.welten ∧
+      J'.l = M'.lauf ∧
+      (∀ t₀ : D.Tab, TraegerSchreibt (J.code f) (.inl t₀) = false →
+        SerialLink Nb J' M'.lauf t₀) := by
+  let eG : Ereignis D := Ereignis.gibt L
+  let nachG : World D := M.speicher.welt (eG :: M.spuren f)
+  let M' : GenMaschine D :=
+    ⟨M.speicher, genUpdate M.spuren f (eG :: M.spuren f),
+     M.lauf ++ genEigen f [eG], M.start, M.welten ++ [nachG], M.tiefe + 1⟩
+  have hs : GenSchritt P O passes M f M' :=
+    GenSchritt.gibt M f L hhaelt
+  have hReach' : GenErreichbar P O passes (GenStart sp) M' :=
+    GenErreichbar.schritt M M' f hReach hs
+  have hM'l : M'.lauf = M.lauf ++ genEigen f [eG] := rfl
+  have hM'w : M'.welten = M.welten ++ [nachG] := rfl
+  have hslots : ∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+      nachG.slots t k fld = M.speicher.slots t k fld := fun t k fld => rfl
+  have hglobs : ∀ g : D.Glob, nachG.globs g = M.speicher.globs g := fun g => rfl
+  refine ⟨M', ?_⟩
+  exact kette_aus_maschinenlauf_schritt P O passes hO sp Nb M M' f
+    hReach hReach' eG nachG hM'l hM'w hslots hglobs J hJw hmem hLink hsingle
+
+#print axioms Gabbro.Grammatik.kette_aus_maschinenlauf
+#print axioms Gabbro.Grammatik.kette_aus_maschinenlauf_schritt
+#print axioms Gabbro.Grammatik.kette_aus_maschinenlauf_nimmt
+#print axioms Gabbro.Grammatik.kette_aus_maschinenlauf_gibt
+
+end Gabbro.Grammatik
