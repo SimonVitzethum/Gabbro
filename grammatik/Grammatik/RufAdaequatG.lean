@@ -22,9 +22,12 @@
   pops the frame logs the value `execEnd` returns -- proved through a frame
   semantics `semR` that each of the 70 step rules preserves,
   `schrittErhalt`), with witnesses `rufG_adaequat_zeuge`,
-  `rufG_adaequat_umkehr_zeuge`. Two findings against G's rules,
-  machine-checked: `befund_travFertig` (`traverse` with a false invariant)
-  and `befund_ruf_wiederholt` (`ruf` re-enters the callee after `rueck`).
+  `rufG_adaequat_umkehr_zeuge`. Two findings against G's rules were
+  machine-checked here (`traverse` with a false invariant; `ruf` re-entering
+  the callee after `rueck`); both rule families are repaired in
+  `RufMaschineG.lean`, and the findings became agreement theorems
+  (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). Bodies WITH calls:
+  `RufAdaequatRufG.lean`.
 -/
 import Grammatik.RufMaschineG
 import Grammatik.HoareRegeln
@@ -4283,8 +4286,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     refine Or.inl ⟨_, _, _, _, k, _, rufUpdateG_self _ _ _, hcov.schrumpf_inv, ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq rfl
-  | dannTravWeiter _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-  | dannTravFertig _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | travNext _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | travFort _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | travDone _ _ _ _ _ _ _ _ hhead => widerlege hhead
@@ -4333,6 +4335,22 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     cases hhead
     subst hfg hs0 hs1 hv
     refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueckCons O passes e hperm rest _ _)⟩
+    rw [faeden_upd, hrho]
+    rfl
+  | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ2 hhead caller rst hpop l2 Γ2 Λ2 Λ2' τ restb
+      k ρc hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hfg hs0 hs1 hv
+    refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_dannRet O passes e hperm restk kk _ _)⟩
+    rw [faeden_upd, hrho]
+    rfl
+  | rueckConsBind lk Γk Λk e hperm restk ρ2 hhead caller rst hpop l2 Γ2 Λ2 Λ2' τ restb
+      k ρc hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hfg hs0 hs1 hv
+    refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueckCons O passes e hperm restk _ _)⟩
     rw [faeden_upd, hrho]
     rfl
   | dannRegLies _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
@@ -4532,47 +4550,316 @@ theorem rufG_adaequat_umkehr_zeuge :
     adRumpf_G adRumpf_ohneOrakel rfl M' hl Env.nil v (adSp0.welt []) σ' hlog
   exact ⟨M', v, σ', hl, hlog, h5, σ'', hex, hsp, h7⟩
 
-/-! ## 18. FINDING: `dannTravFertig` disagrees with `traverseLauf`
+/-! ## 18. AGREEMENT (formerly a finding): `traverse` now mirrors `traverseLauf`
 
-    When the invariant of a `traverse` is false at the start, the machine
-    rule `dannTravFertig` SKIPS the loop and continues with the rest of the
-    block; the sequential semantics (`traverseLauf`, both for an empty and
-    a non-empty index list) ends in `logik .schleife`. Concretely, the body
-    `traverse konto invariant false { }; return 7` fails sequentially,
-    while the machine pops the frame logging the value `7`. So neither
-    TARGET A's trace equality nor TARGET B holds for `traverse`; it is not
-    in the covered fragment, and no proof here works around it.
+    The old rules `dannTravWeiter`/`dannTravFertig` read the invariant at the
+    unfold and SKIPPED the loop on a false start invariant (the machine then
+    returned where `traverseLauf` ends in `logik .schleife`), `travNext` read
+    it a second time before the first iteration, and `travDone` never read it
+    after the last. The repaired rules: `dannTrav` unfolds WITHOUT a read,
+    `travNext` reads before every iteration, `travDone` reads after the last
+    one (both only on `true`), `dannLeaveTrav` reads after a `leave` (only on
+    `true`) -- exactly the reads of `traverseLauf`. On a false read NO rule
+    for the frame fires (`trav_falsch_steht`): the frame is stuck, and no
+    normal return can follow, matching `logik .schleife`. The old
+    counterexample now agrees (`trav_einig`). -/
 
-    (Two further disagreements of the same rule family, not formalised:
-    `dannTravWeiter` reads the invariant and then `travNext` reads it AGAIN
-    before the first iteration, while `travDone` never reads it after the
-    last one -- `traverseLauf` reads it once before each iteration and once
-    at the end. With `inv.orte ≠ []` the trace differs even when both
-    succeed, and a false final invariant is `logik .schleife`
-    sequentially but ignored by the machine.) -/
+/-- Is the statement a `traverse`? -/
+def Stmt.istTraverse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → Bool
+  | .traverse .. => true
+  | _ => false
 
-theorem w_travFertig {P : Programm D} {O : Orakel D} {passes : Nat}
-    {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
-    (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+/-- Does the residue start with a `traverse` statement? (Refutes heads whose
+    statement differs where the holdings indices do not unify.) -/
+def GRest.kopfTraverse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .ende (.cons s _) => s.istTraverse
+  | .dann (.cons s _) _ => s.istTraverse
+  | _ => false
+
+set_option hygiene false in
+/-- Close a step case whose head shape cannot be the given one, or whose
+    side condition contradicts it. -/
+macro "kopfweg" : tactic => `(tactic| (
+  first
+  | (rw [hR] at hhead; cases hhead; done)
+  | (rw [hR] at hhead
+     have hk := congrArg (fun x => GRest.kopfTraverse x.2.2.2.2) hhead
+     simp [GRest.kopfTraverse, Stmt.istTraverse] at hk; done)
+  | (rw [hR] at hhead; cases hhead; simp [Stmt.istBlatt] at hleaf; done)
+  | (rw [hR] at hhead; cases hhead; simp [execStmt] at hstep; done)
+  | (rw [hS] at hpop; cases hpop; done)))
+
+/-- At a head `ende (traverse …; rest)` every step of `f` is a bare lock step
+    (frame, stack and log kept) or the unfold `endeEntf`. -/
+theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t : D.Tab) (inv : Expr D Γ Λ .bool)
+    (body : Block D (vertragVon D z.kopf.f) true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Endblock D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
+    (hR : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.cons (.traverse t inv body) rest)⟩) :
+    (∃ sp, M'.faeden f = ⟨z.stapel, z.kopf, sp, z.log⟩) ∨
+    (∃ sp, M'.faeden f = ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
+      ⟨l, Γ, Λ, ρ, .dann (.cons (.traverse t inv body) .nil) (.ende rest)⟩⟩, sp, z.log⟩) := by
+  subst hz
+  cases hs with
+  | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | nimmt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
+  | gibt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
+  | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
+  | endeEntf _ _ _ _ _ _ _ _ hhead => (rw [hR] at hhead; cases hhead; exact Or.inr ⟨_, rufUpdateG_self _ _ _⟩)
+  | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | dannLeer _ _ _ _ _ hhead => kopfweg
+  | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
+  | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
+  | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
+  | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | freiGib _ _ _ _ _ _ hhead => kopfweg
+  | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
+  | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
+  | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
+  | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
+  | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+
+/-- At a head `dann (traverse …; rest) k` every step of `f` is a bare lock
+    step or the read-free unfold `dannTrav`. -/
+theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
     (t : D.Tab) (inv : Expr D Γ Λ .bool)
     (body : Block D (vertragVon D z.kopf.f) true (.index (D.count t) :: Γ) Λ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.traverse t inv body) rest) k⟩)
-    (hw : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
-      = false) :
-    ∃ M', RufSchrittG P O passes M f M' ∧
-      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ (.dann rest k)
-        ((M.weltVon f).lese Λ inv.orte) := by
+    (hR : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.traverse t inv body) rest) k⟩) :
+    (∃ sp, M'.faeden f = ⟨z.stapel, z.kopf, sp, z.log⟩) ∨
+    (∃ sp, M'.faeden f = ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
+      ⟨l, Γ, Λ, ρ, .trav t inv body (alleIndizes (D.count t)) (.dann rest k)⟩⟩, sp, z.log⟩) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannTravFertig M f l Γ Λ Λ Λ'' t inv body rest k ρ hhead _ rfl hw _ rfl,
-    zustandG_neu rfl rfl⟩
+  cases hs with
+  | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | nimmt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
+  | gibt => exact Or.inl ⟨_, rufUpdateG_self _ _ _⟩
+  | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
+  | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | dannLeer _ _ _ _ _ hhead => kopfweg
+  | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
+  | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
+  | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
+  | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | freiGib _ _ _ _ _ _ hhead => kopfweg
+  | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
+  | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => (rw [hR] at hhead; cases hhead; exact Or.inr ⟨_, rufUpdateG_self _ _ _⟩)
+  | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
+  | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
+  | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
+  | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+
+/-- **A `traverse` whose invariant reads false is stuck.** At a head
+    `trav t inv body (i :: is) k` whose invariant, read at the thread's
+    current world, is false, every step of `f` is a bare lock step: frame,
+    stack and log stay. The machine never runs the next iteration and never
+    returns from the frame -- where `traverseLauf` ends in
+    `logik .schleife`. -/
+theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t : D.Tab) (inv : Expr D Γ Λ .bool)
+    (body : Block D (vertragVon D z.kopf.f) true (.index (D.count t) :: Γ) Λ Λ)
+    (i : Wert D (.index (D.count t))) (is : List (Wert D (.index (D.count t))))
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
+    (hR : z.kopf.rest = ⟨l, Γ, Λ, ρ, .trav t inv body (i :: is) k⟩)
+    (hw0 : wahr? (eval ((M.weltVon f).lese Λ inv.orte) inv ((M.weltVon f).lese Λ inv.orte) ρ)
+      = false) :
+    ∃ sp, M'.faeden f = ⟨z.stapel, z.kopf, sp, z.log⟩ := by
+  subst hz
+  cases hs with
+  | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | nimmt => exact ⟨_, rufUpdateG_self _ _ _⟩
+  | gibt => exact ⟨_, rufUpdateG_self _ _ _⟩
+  | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
+  | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | dannLeer _ _ _ _ _ hhead => kopfweg
+  | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
+  | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
+  | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
+  | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | freiGib _ _ _ _ _ _ hhead => kopfweg
+  | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
+  | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => (rw [hR] at hhead; cases hhead; subst hs₁; rw [hw0] at hw; cases hw)
+  | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
+  | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
+  | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
+  | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
 
 /-- `traverse konto invariant false { }` in the witness function. -/
 def adTrav : Stmt adD (vertragVon adD adFn) false [] [] [] :=
   .traverse () .falsch .nil
 
-/-- The counterexample body: `traverse konto invariant false { }; return 7`. -/
+/-- The old counterexample body: `traverse konto invariant false { }; return 7`. -/
 def adTravRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
   .cons adTrav (.ret (.wert adSieben) List.Perm.nil)
 
@@ -4582,123 +4869,196 @@ def adTravFaden : RufFadenG adD :=
 
 def adTravM : RufMaschineG adD := ⟨adSp0, fun _ => adTravFaden, [], adSp0.welt []⟩
 
-/-- **The counterexample, machine-checked.** The sequential semantics of the
-    body ends in `logik .schleife` (never a return), yet thread 0 of the
-    machine, by steps of its own (`endeEntf`, `dannTravFertig`, `dannLeer`,
-    `rueck`), pops the frame and logs a return of `7`. -/
-theorem befund_travFertig :
+/-- The three frames the witness thread can be in: at the body, after the
+    unfold of the `traverse` statement, at the loop. -/
+def adTravK0 : RufRahmenG adD :=
+  ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adTravRumpf⟩⟩
+
+def adTravK1 : RufRahmenG adD :=
+  ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil,
+    .dann (.cons adTrav .nil) (.ende (.ret (.wert adSieben) List.Perm.nil))⟩⟩
+
+def adTravK2 : RufRahmenG adD :=
+  ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil,
+    .trav () .falsch .nil (alleIndizes (adD.count ()))
+      (.dann .nil (.ende (.ret (.wert adSieben) List.Perm.nil)))⟩⟩
+
+/-- The run invariant of the witness thread: one of the three frames, the
+    caller below, NOTHING logged. -/
+def AdTravZ (M : RufMaschineG adD) : Prop :=
+  ∃ sp, M.faeden 0 = ⟨[adCaller], adTravK0, sp, []⟩ ∨
+    M.faeden 0 = ⟨[adCaller], adTravK1, sp, []⟩ ∨
+    M.faeden 0 = ⟨[adCaller], adTravK2, sp, []⟩
+
+theorem adTravZ_schritt {M M' : RufMaschineG adD} (hs : RufSchrittG adP adO 0 M 0 M')
+    (h : AdTravZ M) : AdTravZ M' := by
+  obtain ⟨sp, h | h | h⟩ := h
+  · rcases trav_ende_schritt hs _ h () .falsch .nil (.ret (.wert adSieben) List.Perm.nil)
+      Env.nil rfl with ⟨sp', e⟩ | ⟨sp', e⟩
+    · exact ⟨sp', Or.inl e⟩
+    · exact ⟨sp', Or.inr (Or.inl e)⟩
+  · rcases trav_dann_schritt hs _ h () .falsch .nil .nil
+      (.ende (.ret (.wert adSieben) List.Perm.nil)) Env.nil rfl with ⟨sp', e⟩ | ⟨sp', e⟩
+    · exact ⟨sp', Or.inr (Or.inl e)⟩
+    · exact ⟨sp', Or.inr (Or.inr e)⟩
+  · obtain ⟨sp', e⟩ := trav_falsch_steht hs _ h () .falsch .nil
+      ⟨0, by decide, by decide⟩ [⟨1, by decide, by decide⟩]
+      (.dann .nil (.ende (.ret (.wert adSieben) List.Perm.nil))) Env.nil rfl rfl
+    exact ⟨sp', Or.inr (Or.inr e)⟩
+
+theorem adTravZ_lauf {M M' : RufMaschineG adD} (hl : RufLaufG adP adO 0 0 M M')
+    (h : AdTravZ M) : AdTravZ M' := by
+  induction hl with
+  | refl => exact h
+  | schritt hs _ ih => exact ih (adTravZ_schritt hs h)
+
+/-- **The old counterexample now AGREES.** The sequential semantics of
+    `traverse konto invariant false { }; return 7` ends in `logik .schleife`;
+    and NO run of thread 0 of the machine logs anything at all -- in
+    particular no return of `7`, which the old rule `dannTravFertig`
+    produced. -/
+theorem trav_einig :
     execEnd adO 0 keinRuf adTravRumpf (adTravM.weltVon 0) Env.nil =
       .logik .schleife ∧
-    ∃ (M' : RufMaschineG adD) (v : ErgVal adD (adD.erg adFn)) (s1 : World adD),
-      RufLaufG adP adO 0 0 adTravM M' ∧
-      (M'.faeden 0).log = [RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) s1] ∧
-      (show Zahl 0 100 from v).n = 7 := by
+    ∀ M' : RufMaschineG adD, RufLaufG adP adO 0 0 adTravM M' → (M'.faeden 0).log = [] := by
   refine ⟨rfl, ?_⟩
-  have hZ0 : ZustandG adTravM 0 [adCaller] adFn Env.nil (adSp0.welt []) []
-      (Env.nil : Env adD []) (.ende adTravRumpf) (adTravM.weltVon 0) := ⟨rfl, rfl⟩
-  obtain ⟨M1, hs1, hZ1⟩ := w_endeEntf (P := adP) (O := adO) (passes := 0) hZ0.1
-    adTrav (.ret (.wert adSieben) List.Perm.nil) Env.nil rfl rfl
-  obtain ⟨M2, hs2, hZ2⟩ := w_travFertig (P := adP) (O := adO) (passes := 0) hZ1.1
-    () .falsch .nil .nil (.ende (.ret (.wert adSieben) List.Perm.nil)) Env.nil rfl rfl
-  obtain ⟨M3, hs3, hZ3⟩ := w_dannLeer (P := adP) (O := adO) (passes := 0) hZ2.1
-    (.ende (.ret (.wert adSieben) List.Perm.nil)) Env.nil rfl
-  obtain ⟨M4, hs4, hG⟩ := w_rueck (P := adP) (O := adO) (passes := 0) hZ3.1 adCaller [] rfl
-    (.wert adSieben) List.Perm.nil Env.nil rfl
-    (by
-      show HeldGenau [] (offen (M2.weltVon 0).spur)
-      rw [hZ2.welt, hZ1.welt]
-      intro L
-      simp [offen, World.lese, World.merke, adTravM, adTravFaden, RufMaschineG.weltVon,
-        Speicher.welt, Expr.orte])
-  refine ⟨M4,
-    (show ErgVal adD (adD.erg adFn) from
-      evalErg ((M3.weltVon 0).lese [] adSieben.orte) (ErgExpr.wert adSieben)
-        ((M3.weltVon 0).lese [] adSieben.orte) Env.nil),
-    (M3.weltVon 0).lese [] adSieben.orte,
-    RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (RufLaufG.schritt hs3 (RufLaufG.einzeln hs4))),
-    ?_, rfl⟩
-  rw [hG.1]
-  rfl
+  intro M' hl
+  obtain ⟨sp, h | h | h⟩ := adTravZ_lauf hl ⟨[], Or.inl rfl⟩ <;> rw [h]
 
-/-! ## 19. FINDING: `ruf` (and `rufCallInd`) re-enter the callee after `rueck`
+/-! ## 19. AGREEMENT (formerly a finding): `ruf` continues after the call
 
-    At `ende` position the rule `ruf` pushes the caller frame UNCHANGED --
-    `(M.faeden f).kopf :: stapel`, whose residue is still
-    `.ende (.cons (.call g args hp hr) rest)` -- instead of a frame with
-    residue `.ende rest` at holdings `nach D g Λ` (as `rufDann` does in
-    block position with `.dann rest k`). `rueck` restores that frame as the
-    head, so the caller executes the same call AGAIN; since `call` is
-    neither a leaf nor `GEntfaltbar`, `ruf` is the only rule for that head,
-    and the caller can never reach `rest`. The sequential semantics runs
-    the call once and continues with `rest`. `rufCallInd` has the same
-    shape. The machine's own witness `M7G` (`RufMaschineG.lean`) shows it:
-    after the witness call has returned, the restored caller head is the
-    original body, and `ruf` fires again, logging a second `eintritt` of the
-    callee for the single call of `rufCallerRumpfF`. So calls at `ende`
-    position are outside every adequacy statement here (and TARGET 4 --
-    bodies with calls -- is not attempted: its most common call form is
-    exactly this one). -/
-theorem befund_ruf_wiederholt :
-    (M7G.faeden 0).kopf = (M0G.faeden 0).kopf ∧
+    The old `ruf`/`rufCallInd` pushed the caller frame UNCHANGED, so after
+    `rueck` the caller executed the same call again. The repaired rules push
+    the caller with its residue advanced to `.ende rest` at holdings
+    `nach D g Λ` (resp. `nachSig`), exactly like `rufDann`. In the machine's
+    own witness run (`M0G` … `M7G`) the restored caller is now the frame
+    after the call, whose residue is the parameter return, and no further
+    step of thread 0 logs anything: the callee is entered exactly once, as
+    in the sequential semantics. Bodies with calls are adequate in general
+    (`RufAdaequatRufG.lean`). -/
+
+/-- At an EMPTY stack a head `ende (ret e)` is final for the log: every step
+    of `f` is a bare lock step (no frame to pop to, no call to make). -/
+theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (z : RufFadenG D) (hz : M.faeden f = z) (hS : z.stapel = []) {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D z.kopf.f).erg)
+    (hperm : Λ.Perm (vertragVon D z.kopf.f).ende) (ρ : Env D Γ)
+    (hR : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.ret e hperm)⟩) :
+    ∃ sp, M'.faeden f = ⟨z.stapel, z.kopf, sp, z.log⟩ := by
+  subst hz
+  cases hs with
+  | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | nimmt => exact ⟨_, rufUpdateG_self _ _ _⟩
+  | gibt => exact ⟨_, rufUpdateG_self _ _ _⟩
+  | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
+  | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | dannLeer _ _ _ _ _ hhead => kopfweg
+  | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
+  | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
+  | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
+  | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | freiGib _ _ _ _ _ _ hhead => kopfweg
+  | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
+  | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
+  | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
+  | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
+  | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+
+theorem ruf_fortsetzung :
+    (M7G.faeden 0).kopf = callerFrameG ∧
+    callerFrameG.rest = ⟨false, rufDF.params rufCallerF, nach rufDF rufIncF [], rhoCallerF,
+      .ende callerRestG⟩ ∧
     (M7G.faeden 0).log = [RufEreignisF.rueck rufIncF rufRhoF vF (M0G.weltVon 0) s1G,
       RufEreignisF.eintritt rufIncF rufRhoF (M0G.weltVon 0),
       RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] ∧
-    ∃ M8 : RufMaschineG rufDF, RufSchrittG gP rufOF 0 M7G 0 M8 ∧
-      (M8.faeden 0).log =
-        RufEreignisF.eintritt rufIncF rufRhoF (M7G.weltVon 0) :: (M7G.faeden 0).log := by
-  refine ⟨rfl, rfl, ?_⟩
-  have hhead : (M7G.faeden 0).kopf.rest =
-      ⟨false, rufDF.params rufCallerF, [],
-       rhoCallerF,
-       .ende (.cons (.call rufIncF rufArgsF rufHpF rfl)
-         ((rufDF_params rufCallerF).symm ▸
-           (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
-             Expr rufDF (rufDF.params rufIncF) [] (.int 0 6)))) (by decide)) :
-           Endblock rufDF (vertragVon rufDF rufCallerF) false
-             (rufDF.params rufIncF) (nach rufDF rufIncF [])))⟩ := by
-    show (M0G.faeden 0).kopf.rest = _
-    rw [M0G_kopf]
-    rfl
-  have hs0 : M7G.weltVon 0 = (M7G.weltVon 0).lese [] (Args.orte rufArgsF) := by
-    rw [argsOrteF]
-    rfl
-  have hrho : rufRhoF = evalArgs (M7G.weltVon 0) rufArgsF (M7G.weltVon 0) rhoCallerF := rfl
-  have hneu : (M7G.weltVon 0).spur = [] ++ (M7G.faeden 0).spur := rfl
-  exact ⟨_, RufSchrittG.ruf M7G 0 false (rufDF.params rufCallerF) [] rufIncF
-    rufArgsF rufHpF rfl _ rhoCallerF hhead (heldLeerF _) _ hs0 _ hrho _ hneu, rfl⟩
+    ∀ M8 : RufMaschineG rufDF, RufSchrittG gP rufOF 0 M7G 0 M8 →
+      (M8.faeden 0).log = (M7G.faeden 0).log := by
+  refine ⟨rfl, rfl, rfl, ?_⟩
+  intro M8 hs
+  obtain ⟨sp, e⟩ := ret_leer_schritt hs _ rfl rfl _ _ _ rfl
+  rw [e]
 
 /-! ## CUTS:
   What is proved: TARGET A (`rufG_adaequat`, and `rufG_adaequat_R` for any
   call handler) and TARGET B (`rufG_adaequat_umkehr`) for the covered
   fragment `EndG`/`StmtG`/`BlockG`/`ArmsG`/`GrundArmsG`, each with a joint
-  witness on a `locks { if { write } }; return` body; two FINDINGS against
-  G's step rules, each machine-checked (`befund_travFertig`,
-  `befund_ruf_wiederholt`). What is NOT proved:
+  witness on a `locks { if { write } }; return` body; the two former
+  FINDINGS against G's step rules, now repaired, as agreement theorems
+  (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). What is NOT
+  proved here:
 
   - Calls of every form (`call`, `callInd`, `bindCall`, `bindCallInd`,
-    `bindCallElse`), so TARGET 4 (bodies with calls, one level) is not
-    attempted. Reason: FINDING `befund_ruf_wiederholt` -- `ruf` and
-    `rufCallInd` (calls at `ende` position, the form of every call that is
-    a body's last statement before `return`) push the caller frame with its
-    unchanged residue, so after `rueck` the caller repeats the call and
-    never reaches the rest. Calls in block position (`rufDann`,
-    `dannCallInd`, the bind-call rules) look consistent with `execBlock`
-    under a handler that runs the callee body, but proving that needs the
-    simulation generalised over a growing call log; not done.
-  - `traverse`. Reason: FINDING `befund_travFertig` -- `dannTravFertig`
-    skips the loop on a false start invariant where `traverseLauf` ends in
-    `logik .schleife` (the machine then returns a value the sequential
-    semantics never returns); also `dannTravWeiter`+`travNext` read the
-    invariant twice before the first iteration and `travDone` never after
-    the last, so traces differ and a false final invariant is ignored.
-  - `retry`, `forever`, `leave`, `next`: the loop shims and the peel rules
-    are not simulated (no RufRest invariant for `wiederRest`/`ewigRest`,
-    no abrupt-exit simulation). Not a finding; not done. Known gaps of G
-    there (booked in `RufMaschineG.lean`'s CUTS or found here, not
-    formalised): a `sonst` ending in `ret` inside a loop body stands at
-    `ende` with loop level `true`, where neither `rueck` nor `rueckCons`
-    fires (both demand level `false`), so the machine stalls where
-    `execBlock` returns.
+    `bindCallElse`): direct calls and bind-calls are covered in
+    `RufAdaequatRufG.lean` (TARGET 4, any nesting depth), after the repair
+    of `ruf`/`rufCallInd` (they pushed the caller frame with its unchanged
+    residue, so after `rueck` the caller repeated the call).
+  - `traverse`: after the repair (`dannTrav` reads nothing, `travNext`/
+    `travDone`/`dannLeaveTrav` read exactly where `traverseLauf` does, a
+    false read fires no rule) the rules agree with `traverseLauf`
+    (`trav_falsch_steht`); the loop is simulated in `RufAdaequatRufG.lean`
+    (`travOkR`/`travRetR`, with bounded `retry`: `retryOkR`/`retryRetR`),
+    not in this file's fragment.
+  - `forever`, `leave`, `next`: the peel rules and the abrupt-exit shims
+    are not simulated (no RufRest invariant for `ewigRest`, no abrupt-exit
+    simulation). Not a finding; not done. (The former gap "a `sonst` ending
+    in `ret` inside a loop body stalls" is closed: `rueck` and `rueckCons`
+    now accept any loop level.)
   - `retGrund`, `Endblock.retGrund`, `Endblock.leave`/`next`, and every
     `sonst` branch that does not end in `ret` at loop level `false`
     (machine has no grund rule; `leave`/`next` at `ende` are G's CUTS).
@@ -4731,8 +5091,9 @@ theorem befund_ruf_wiederholt :
 #print axioms Gabbro.Grammatik.rufG_adaequat_zeuge
 #print axioms Gabbro.Grammatik.rufG_adaequat_umkehr
 #print axioms Gabbro.Grammatik.rufG_adaequat_umkehr_zeuge
-#print axioms Gabbro.Grammatik.befund_travFertig
-#print axioms Gabbro.Grammatik.befund_ruf_wiederholt
+#print axioms Gabbro.Grammatik.trav_falsch_steht
+#print axioms Gabbro.Grammatik.trav_einig
+#print axioms Gabbro.Grammatik.ruf_fortsetzung
 #print axioms Gabbro.Grammatik.schrittErhalt
 #print axioms Gabbro.Grammatik.blockOk
 #print axioms Gabbro.Grammatik.endRet
