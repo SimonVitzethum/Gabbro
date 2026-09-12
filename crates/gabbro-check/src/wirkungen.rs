@@ -159,6 +159,10 @@ fn sammle_lets_im_block(b: &Block, aus: &mut std::collections::BTreeSet<String>)
             StmtArt::LetSonst(l) => {
                 aus.insert(l.name.text.clone());
             }
+            // **«E4»:** the bound index is made here, not observed.
+            StmtArt::Alloc(a) => {
+                aus.insert(a.name.text.clone());
+            }
             _ => {}
         }
         for k in crate::unterbloecke(s) {
@@ -200,6 +204,8 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
         match &s.art {
             StmtArt::Let(l) => aus.push(l.name.text.clone()),
             StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+            // **«E4»:** an arena index lives on the stack like any `let`.
+            StmtArt::Alloc(a) => aus.push(a.name.text.clone()),
             StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
             StmtArt::Exchange(e) => {
                 aus.push(e.name.text.clone());
@@ -369,6 +375,18 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 liest_expr(&p.wert, t);
             }
             StmtArt::Let(l) => liest_expr(&l.wert, t),
+            // **«E4»:** an allocation stores the value and takes a slot --
+            // the arena is written, and the value is read. A reset moves
+            // the used counter back to zero -- the arena is written, and
+            // nothing is read. Both need `writes A` in the effects, like
+            // any other store to a carrier.
+            StmtArt::Alloc(a) => {
+                t.schreibt.push((a.tisch.text.clone(), s.span));
+                liest_expr(&a.wert, t);
+            }
+            StmtArt::ResetArena(tisch) => {
+                t.schreibt.push((tisch.text.clone(), s.span));
+            }
             StmtArt::Return(Some(x)) => liest_expr(x, t),
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {

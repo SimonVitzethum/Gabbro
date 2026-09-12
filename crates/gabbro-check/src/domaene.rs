@@ -700,6 +700,15 @@ fn binde(st: &gabbro_syntax::ast::Stmt, karte: &mut HashMap<String, Typ>, u: &Um
         StmtArt::LetSonst(l) => {
             karte.insert(l.name.text.clone(), Typ::Unbekannt);
         }
+        // **«E4»:** the bound index carries `index into A` -- the
+        // annotation, or the arena's own index type, like in `kosten.rs`.
+        StmtArt::Alloc(a) => {
+            let t = match &a.typ {
+                Some(td) => u.typ_von_ausdruck_decl(modul, td),
+                None => u.indextyp(modul, &a.tisch.text, false),
+            };
+            karte.insert(a.name.text.clone(), t);
+        }
         StmtArt::AwaitLoad(a) => {
             let t = u.typ_von_ort(modul, &a.quelle, karte);
             karte.insert(a.name.text.clone(), t);

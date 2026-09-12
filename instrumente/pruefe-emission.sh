@@ -2842,7 +2842,14 @@ fi
 # measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
 # *A mark that absorbs foreign growth without naming it is a slack ratchet,
 # so the decomposition stands here and not in a merge note.*
-MARKE_EMIT=75
+# **75 -> 78 on 2026-09-12, and only two of the three are this lane's («E4»).**
+# The run measures 78 emitting files in `beispiele/`: 75 booked, three found
+# (`80-bibliothek-erklaert` -- lane E2's declaration-only library, emitting
+# since it landed, the mark never pulled up -- plus `98-arena-erklaert` and
+# `99-arena-grenze`, this lane's positive direction with its static array and
+# counter, both compiling under `-Werror` at `-O0` and `-O2`). *Same rule as
+# above: the decomposition stands here, not in a merge note.*
+MARKE_EMIT=78
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

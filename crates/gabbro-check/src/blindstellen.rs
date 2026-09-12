@@ -170,6 +170,14 @@ fn tafel_typen(baum: &Programm, t: &mut Tafel) {
                 }
             }
         }
+        // **«E4»:** the element type is a typed declaration like a slot
+        // field -- the class table counts it, or the arena column stays
+        // blind to what the buffer holds.
+        ItemArt::Arena(a) => {
+            if let Some((c, z)) = klasse_von(&a.element, &k) {
+                zaehle(t, c, hinter("arena element", z));
+            }
+        }
         _ => {}
     });
 }
@@ -287,6 +295,9 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             // **Lane E2:** a run-time library call, refused by the checker
             // (`N057` unresolved, `N069` resolved).
             StmtArt::LibraryCall(_) => "library call",
+            // **«E4»:** the monotone allocation and the generation reset.
+            StmtArt::Alloc(_) => "alloc",
+            StmtArt::ResetArena(_) => "arena reset",
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 Schleife::Traverse(_) => "traverse",
                 Schleife::Retry(_) => "retry",

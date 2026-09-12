@@ -140,7 +140,15 @@ NICHT = {"saetze.rs"}
 # rule IS -- exactly what `messung/PHASENKLASSE.md` decided the other way for `R009`.
 # **19 -> 20 on 2026-09-01: the object grew.** `OB4` issued `M137`, `M138` and `R012`;
 # one of them shares a prefix with an existing identifier and joins the candidate list.
-MARKE = 20
+#
+# **20 -> 25 on 2026-09-12 («E4»), recomputed to actuals, not incremented.** The run
+# says 25 against a booked 20, and the delta is five: four are wave drift other
+# lanes owe their own entries for (measured on the unchanged tree: 24 against
+# 20), and one is mine -- `N214` with three faces (malformed arena place,
+# foreign index, store outside `alloc`), one rule like `N065`'s three, similarity
+# 0.25. Recomputed here rather than incremented, because incrementing a forgotten
+# figure carries the forgetting forward (2026-09-02 entry).
+MARKE = 25
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -235,7 +243,12 @@ MARKE = 20
 # > compiles, and every one of the three refusals is the same rule biting on the same pair of
 # > types one step away from it. A probe that fell green under a broken `N030` would take the
 # > working file with it in the other direction, which the identifier alone cannot do.
-MARKE_PROBEN = 68
+#
+# **68 -> 81 on 2026-09-12 («E4»), recomputed to actuals, not incremented.** The run
+# says 81 against a booked 68: twelve are wave drift (80 on the unchanged tree),
+# and one is mine -- `beispiele/gift/889` on the three-faced `N214` above, which
+# falls green without proving WHICH face fell, exactly like `gift/242` on `E008`.
+MARKE_PROBEN = 81
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

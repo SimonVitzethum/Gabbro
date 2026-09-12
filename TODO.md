@@ -911,7 +911,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       eigenen Gegenstands.*
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
-      *(2026-08-19, nachgemessen 2026-08-20)*. **25 von 23 Item-Arten** sind „gelesen" —
+      *(2026-08-19, nachgemessen 2026-08-20)*. **26 von 26 Item-Arten** sind „gelesen" —
       **`ops` und `check` darunter**, obwohl keine ihrer Zusagen geprüft wird.
       `ItemArt::Check` wird nur angefasst, um in `can_fail` hineinzulaufen; `ops` steht als
       `!is_empty()` da. **Ein Konstrukt kann berührt werden, ohne dass eine einzige seiner
@@ -4247,8 +4247,8 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 130 Sätze über 330 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
-Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane S6: +1 Satz mit fünf Codes, `syscall.stub` über `C180`-`C184`.) (2026-09-12, lane E2: +6 Sätze mit ihren Codes, `namen.bibliothek_ruf/-huelle/-nutzlast/-direktruf` über `N069`-`N061` und `parser.bibliothek-nutzlast/-rumpf` über `P043`/`P044`.)
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 131 Sätze über 331 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
+Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane S6: +1 Satz mit fünf Codes, `syscall.stub` über `C180`-`C184`.) (2026-09-12, lane E2: +6 Sätze mit ihren Codes, `namen.bibliothek_ruf/-huelle/-nutzlast/-direktruf` über `N069`-`N061` und `parser.bibliothek-nutzlast/-rumpf` über `P043`/`P044`.) (2026-09-12, lane E4: +1 Satz mit fünf Codes, `arena.erklaerung` über `N210`-`N214`.)
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

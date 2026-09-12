@@ -3010,6 +3010,8 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
                     match &s.art {
                         StmtArt::Let(l) => aus.push(l.name.text.clone()),
                         StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+                        // **«E4»:** the bound index is visible like any `let`.
+                        StmtArt::Alloc(a) => aus.push(a.name.text.clone()),
                         StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
                         StmtArt::Exchange(e) => aus.push(e.name.text.clone()),
                         _ => {}

@@ -85,6 +85,8 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         ItemArt::Typ(t) => t.oeffentlich.then_some(&t.name),
         ItemArt::Atomic(a) => a.oeffentlich.then_some(&a.name),
         ItemArt::Tabelle(t) => t.oeffentlich.then_some(&t.name),
+        // **«E4»:** a carrier like a table -- `pub` crosses the boundary.
+        ItemArt::Arena(a) => a.oeffentlich.then_some(&a.name),
         ItemArt::Lock(l) => l.oeffentlich.then_some(&l.name),
         ItemArt::Format(f) => f.oeffentlich.then_some(&f.name),
         ItemArt::Device(d) => d.oeffentlich.then_some(&d.name),
@@ -235,6 +237,14 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
             for i in &t.invarianten {
                 pred_namen(&i.pred, t.name.span, aus);
             }
+        }
+        // **«E4»:** an arena's bounds travel like a table's `count` -- a
+        // `capacity N .. M` over named constants has to be explainable.
+        // The element type travels through `jeder_typausdruck_im_item`
+        // above, like every other declared type.
+        ItemArt::Arena(a) => {
+            expr_namen(&a.lo, aus);
+            expr_namen(&a.hi, aus);
         }
         ItemArt::Lock(l) => {
             for o in &l.schuetzt {
