@@ -95,3 +95,4 @@ import Grammatik.WacheGlobal
 import Grammatik.StabilBewacht
 import Grammatik.DisziplinBedarf
 import Grammatik.VertragsFuss
+import Grammatik.RufAdaequatG
