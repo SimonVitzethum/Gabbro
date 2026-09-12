@@ -230,8 +230,29 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # `-Wconversion`/`-Wsign-conversion` over 140 translated units, where the count was one
 # before the repair. *Whoever finds it red again should fix the emitter, not the number* --
 # unchanged, because the sentence does not expire when the number does.
-MARKE_TABELLE = 66
-MARKE_UNERLAUBT = 31
+# **66 -> 67 and 31 -> 32 on 2026-09-12, and the new form is the syscall
+# stub's half of PLAN-SYSCALL.md item 1 (lane S6).** The emitter writes the
+# stub itself -- arguments bound to the declared registers, the number in
+# `rax`, one `syscall` instruction -- and the sixteen x86_64 general registers
+# have no complete constraint-letter set (`r10` has none), so the binding is
+# spelled with explicit register variables (`register uint64_t _sys_rdi
+# __asm__("rdi")`, the musl idiom). `register` stood in the catalogue as an
+# unnamed form and never in the emitted C; now it stands in both.
+#
+# **Booked as ONE form, never silently, as the lane's task demands:** the
+# template's every other construct (`if`, comparison, assignment, `return`,
+# call, `__builtin_unreachable`, the `syscall` `__asm__` itself) is an
+# already-counted form. Measured over the corpus: 4 sites, all in
+# `beispiele/74-syscall-schreiben.gab` (one pin per bound register plus the
+# `rax` number pin); `beispiele/90` adds sites, not forms.
+#
+# **The `asm` row below stays one row for two sites.** The catalogue line
+# still reads "inline assembler": the stub's `syscall` is the second emission
+# site beside the `asm` bodies, and the UNGEMESSEN note at the end of this
+# file names both. *A row per site would count the decision twice; the mark
+# above counts it once.*
+MARKE_TABELLE = 67
+MARKE_UNERLAUBT = 32
 
 # ---------------------------------------------------------------------------------------
 # **A note the rise made overdue: `goto` is ALLOWED here, and the allowance has a price
@@ -577,7 +598,8 @@ KATALOG = {
     # line of its own, with both readings printed.
     "index auf zeiger": ("Ausdruck", N, "struk", "NIE: pointer arithmetic (`p[i]` = `*(p+i)`)",
                          "Expressions: index"),
-    # `asm ( "…" : "=r"(x) : "r"(y) )` -- the operand lists of the one `asm` site. They
+    # `asm ( "…" : "=r"(x) : "r"(y) )` -- the operand lists of the `asm` sites
+    # (an `asm` body and the syscall stub since lane S6). They
     # belong to `Other: inline assembler` but are a piece of syntax in their own right.
     "asm-operanden": ("Sonstiges", E, "struk", "Other: inline assembler (Operandenliste)", None),
     "#?": ("Praeprozessor", U, "lex", "eine Direktive, die der Katalog nicht kennt", None),
@@ -595,7 +617,7 @@ KATALOG = {
     "memory_order_*": ("Sonstiges", E, "lex", "Other: _Atomic with NAMED ordering", None),
     "_Noreturn": ("Sonstiges", E, "lex", "Other: _Noreturn", None),
     "restrict": ("Sonstiges", E, "lex", "Other: restrict", None),
-    "asm": ("Sonstiges", E, "lex", "Other: inline assembler at exactly one emission site", None),
+    "asm": ("Sonstiges", E, "lex", "Other: inline assembler at two emission sites (`asm` bodies and the syscall stub, PLAN-SYSCALL.md item 1)", None),
     "const": ("Sonstiges", U, "lex", "auf keiner Liste -- nur `const` DISCARDING steht dort", None),
     "inline": ("Sonstiges", U, "lex",
                "auf keiner Liste -- die `Other`-Zeile nennt `_Noreturn` und `restrict`", None),
@@ -632,7 +654,7 @@ KATALOG = {
     "_Static_assert": ("Sonstiges", U, "lex", "auf keiner Liste (aber `BEWEIS.md` §3 will es)", None),
     "_Alignas": ("Sonstiges", U, "lex", "auf keiner Liste", None),
     "_Thread_local": ("Sonstiges", U, "lex", "auf keiner Liste", None),
-    "register": ("Sonstiges", U, "lex", "auf keiner Liste", None),
+    "register": ("Sonstiges", U, "lex", "auf keiner Liste -- seit lane S6 die expliziten Registervariablen der Syscall-Registerbindung (PLAN-SYSCALL.md item 1)", None),
     "auto": ("Sonstiges", U, "lex", "auf keiner Liste", None),
 }
 
@@ -1424,8 +1446,9 @@ def main():
     print("     sind der `_fertig`-Verbund eines `update` und verlassen keine Schleife.")
     print("     Einmal von Hand nachgezaehlt, die Notiz an `MARKE_TABELLE` traegt es; dieser")
     print("     Lauf misst es weiterhin nicht.")
-    print("   * `asm` `at exactly one emission site`: gezaehlt werden die Vorkommen im C,")
-    print("     nicht die Stellen in `emit.rs`.")
+    print("   * `asm` at two emission sites since lane S6: gezaehlt werden die Vorkommen im C,")
+    print("     nicht die Stellen in `emit.rs` -- ein `asm`-Rumpf und der `syscall`-Rumpf des")
+    print("     syscall-Stubs (PLAN-SYSCALL.md item 1, eine Schablone) teilen sich diese Zeile.")
     print("   * Menge B ist eine OBERE Schranke: ein 128. Programm kann einen toten Eintrag")
     print("     wiederbeleben.")
 

@@ -211,10 +211,11 @@ pub const EINORDNUNG: &[Posten] = &[
     Posten {
         konstrukt: "syscall",
         traegt: Traegt::Fremd,
-        grund: "the stub (inline `syscall` with the declared register binding) is \
-                GENERATED in lane S6; the other side -- the number, the errno table, \
-                the kept contract -- is the kernel's. Until S6 lands a unit carrying \
-                one is refused (`C001`), so this row books the promise, not a lowering",
+        grund: "the USER side is generated -- the stub (inline `syscall` with the declared \
+                register binding, clobbers, and the errno decoding over the `or R` channel) \
+                is `syscall_stumpf` since lane S6. What stays foreign is the OTHER side: \
+                the number, the errno table, the kept contract -- the kernel's, under the \
+                named assumption this row carries beside the stub",
     },
     // -- Anweisungen -------------------------------------------------------------------
     Posten {
@@ -746,12 +747,12 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "check");
             block(&c.can_fail, &mut e, &geister);
         }
-        // **A `syscall` is a foreign body with an ABI binding** -- and the one
+        // **A `syscall` is a generated stub over a foreign kernel** -- and the one
         // line for which the word exists. It names the whole contract outward:
         // the ABI table, the machine, the number, and the counterpart the call
         // rests on. *A syscall without this line would be a foreign body the
-        // certificate hides.* The stub itself is lane S6's; until it lands the
-        // emitter refuses the unit, but the promise stands here first.
+        // certificate hides.* The stub itself is lane S6's (`syscall_stumpf`);
+        // the promise stands here beside it, not instead of it.
         ItemArt::Syscall(s) => {
             zaehle(&mut e, "syscall");
             let gegenueber = match &s.paarung {
@@ -855,8 +856,9 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Gruppe(_) => "group",
         // **Lane C, additive:** the new declaration reports its kind like every other.
         ItemArt::Concurrent(_) => "concurrent",
-        // **Lane S5, additive:** a `syscall` is refused at the emitter (`C001`),
-        // so the certificate books the kind and owes no lowering row for it.
+        // **Lane S6, additive:** a `syscall` lowers to its stub, so the
+        // certificate books the kind beside the generated body -- the
+        // counterpart line above carries what the stub assumes.
         ItemArt::Syscall(_) => "syscall",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",

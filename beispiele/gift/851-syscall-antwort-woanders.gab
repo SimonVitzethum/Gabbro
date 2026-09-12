@@ -1,0 +1,29 @@
+-- erwartet: C181
+-- **Gift 851 -- the answer arrives in `rax`, nowhere else.**
+--
+-- The Linux x86_64 kernel leaves the raw answer in `rax`; the stub reads it
+-- there and nowhere else. A `regs out` naming `rbx` is well-formed as a map
+-- (a general register, unclobbered) and checks clean -- but the stub built on
+-- it would read the wrong register, so the emitter refuses it, by name.
+
+module gift::syscall_antwort_anderswo {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rbx }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

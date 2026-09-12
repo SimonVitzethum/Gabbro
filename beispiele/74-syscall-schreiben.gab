@@ -7,8 +7,9 @@
 -- `let … else` the `or` channel demands, the declared effects in the caller's
 -- hull, and no lock owed because the declaration touches none.
 --
--- The stub template is lane S6's: this file checks clean and falls only at the
--- emitter (`C001`, pinned by `gift/797`).
+-- The stub template is lane S6's: this file checks clean and now EMITS the stub
+-- (inline `syscall`, register binding, clobbers, generated errno decoding) --
+-- `beispiele/90` carries the error path, the emission check runs this one.
 
 module beispiel::syscall_schreiben {
 
@@ -23,9 +24,9 @@ assume linux_write_contract
     "Write keeps its contract on this machine."
     falsifier sonde_write;
 
-syscall write(fd : u64, len : u64) -> u64 or IoError
+syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
     abi linux arch x86_64 number 1
-    regs in { rdi = fd, rdx = len }
+    regs in { rdi = fd, rsi = buf, rdx = len }
     regs out { rax }
     clobbers { rcx, r11 }
     errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
@@ -35,10 +36,10 @@ syscall write(fd : u64, len : u64) -> u64 or IoError
     assume linux_write_contract falsifier sonde_write;
 
 -- The call: `let … else` because the callee can fail, and nothing else owed.
-impl fn schreibe(fd : u64, len : u64) -> u64
+impl fn schreibe(fd : u64, buf : u64, len : u64) -> u64
     effects { pure }
 {
-    let n = write(fd, len) else (e) {
+    let n = write(fd, buf, len) else (e) {
         match e {
             BadFd       => { return 0; }
             Interrupted => { return 0; }
