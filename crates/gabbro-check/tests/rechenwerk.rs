@@ -671,6 +671,29 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
     // Der Ueberlauf ist BENANNT -- D11 woertlich.
     assert!(c.contains("{ leer(); }"), "der benannte Ausgang wird gerufen:\n{c}");
     assert!(c.contains("_Noreturn void leer(void);"), "und er kehrt nicht zurueck:\n{c}");
+
+    // **The bounded wait is a counting `for`, not a `while` (lane 73).** `while`
+    // was lowered away on purpose, and the lane-142 `for (; !(cond); )` fired
+    // clang's `-Wfor-loop-analysis` where the condition names a value no
+    // statement of the body writes (measured 2026-09-12 on
+    // `beispiele/66-transport-rueckgabe.gab`: clang 18.1.3 fires, gcc 13.3.0
+    // stays silent). The watchdog counter therefore stands in the header AND
+    // the condition -- `for (; !(cond) && z < N; z += 1)` -- and the bound arm
+    // stands after the loop, firing only on the bound path
+    // (`if (z >= N && !(cond))`), so the early-exit path samples the condition
+    // exactly as often as the old loop did.
+    assert!(
+        c.contains("for (; !(schritt(k) == 9) && _r1 < "),
+        "the wait loop is a counting `for`:\n{c}"
+    );
+    assert!(
+        c.contains("if (_r1 >= ") && c.contains("&& !(schritt(k) == 9)) { leer(); }"),
+        "and the bound arm stands after the loop:\n{c}"
+    );
+    assert!(
+        !c.contains("while ("),
+        "and no `while` remains:\n{c}"
+    );
 }
 
 /// **Zwei Regeln, die eine ueberlebende Mutation aufgedeckt hat (2026-08-17).**
@@ -3885,6 +3908,53 @@ entry sc vector 0x80 via idt arch x86_64 {
     );
     assert!(!ohne.contains(&"H101"), "ohne Traeger gibt es nichts zu decken: {ohne:?}");
     assert!(ohne.contains(&"H013"), "der ungeschuetzte Platz faellt weiterhin: {ohne:?}");
+}
+
+/// **PLAN-BITS §1: `uN`/`iN` sugar -- storage, range, refusal, lowering.**
+///
+/// The parser desugars to the storage word plus the exact range, so the checker
+/// and the emitter below read sugar exactly as if the longhand had been
+/// written. Each direction stands beside its longhand twin: the range the
+/// checker holds, the width the emitter writes, the width it refuses, and the
+/// exact bound the limit form names.
+#[test]
+fn zuckerbreiten_tragen_speicher_bereich_und_schranke() {
+    fn codes(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn c_und_codes(quelle: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.code.to_string()).collect())
+    }
+    // 1 -- the range the checker holds: 8192 leaves `u13`, 8191 stays.
+    let voll = codes("module t { impl fn f() -> u13 effects { pure } costs <= 2 ops { return 8192; } }");
+    assert!(voll.iter().any(|c| c == "M101"), "8192 leaves `u13`: {voll:?}");
+    let rand = codes("module t { impl fn f() -> u13 effects { pure } costs <= 2 ops { return 8191; } }");
+    assert!(!rand.iter().any(|c| c == "M101"), "8191 stays in `u13`: {rand:?}");
+    // 2 -- the signed twin: `i37` holds -2^36 and refuses past it.
+    let neg = codes("module t { impl fn f(x : i37) -> i64 effects { pure } costs <= 2 ops { return x; } }");
+    assert!(neg.is_empty(), "`i37` at its storage word stays silent: {neg:?}");
+    // 3 -- the width the emitter writes: storage, never `_BitInt`.
+    let (c, ab) = c_und_codes(
+        "module t { impl fn f(x : u13) -> u16 effects { pure } costs <= 2 ops { return x; } }",
+    );
+    assert!(ab.is_empty(), "sugar at its storage word emits: {ab:?}");
+    assert!(c.contains("uint16_t"), "the storage of `u13` is `uint16_t`:\n{c}");
+    assert!(!c.contains("_BitInt"), "no `_BitInt` in the lowering:\n{c}");
+    // 4 -- the exact bound the limit form names: `u13::max` is 8191.
+    let (cm, _) = c_und_codes(
+        "module t { impl fn f() -> u64 effects { pure } costs <= 2 ops { return u13::max; } }",
+    );
+    assert!(cm.contains("8191u"), "`u13::max` lowers its exact bound:\n{cm}");
+    // 5 -- the conversion at the storage word: `u13(a)` is `(uint16_t)(a)`.
+    let (cc, ac) = c_und_codes(
+        "module t { impl fn f(a : u32 in 0 .. 100) -> u13 effects { pure } costs <= 4 ops { return u13(a); } }",
+    );
+    assert!(ac.is_empty(), "the sugared conversion checks: {ac:?}");
+    assert!(cc.contains("(uint16_t)"), "`u13(a)` lowers at the storage word:\n{cc}");
 }
 
 /// **Die Zahl neben dem Urteil: ein erklaerter Traeger, den KEIN Kontext erreicht.**
@@ -8025,6 +8095,69 @@ check c {
     );
 }
 
+/// **`M148`: a `return` with a value in a function that declares none.**
+///
+/// The fourth door in the `M140` wall, and this one was never a range question either:
+/// the EXISTENCE of the slot. `m1.rs` compared the return value solely against the
+/// declared result (`if let Some(z) = ergebnis`), so a value in a result-less body fell
+/// through the `if` silently -- and the emitter writes it straight into a `void`
+/// function, where both C families refuse it (`-Werror=return-type`).
+///
+/// Measured 2026-09-12 on `beispiele/gift/776`: the checker said 0 errors, the emitter
+/// wrote `return m;` into `static void kreis`, and `cc` and `clang` refused it line for
+/// line. *Three stages passed it, and the fourth is not part of the language* -- the same
+/// shape as `N044`'s, one construct further out. The poison probe is
+/// `beispiele/gift/788`; the twin `gib` beside it declares `-> u32` and keeps the same
+/// lines silent, and the bare `return;` of `leer` is the third arm.
+#[test]
+fn rueckgabe_traegt_einen_wert_ohne_ergebnis() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(kopf: &str, rumpf: &str) -> String {
+        format!(
+            "module t {{
+static mut m : u32 = 0;
+impl fn f(){kopf} effects {{ reads m }} costs <= 1 ops {{ {rumpf} }} }}"
+        )
+    }
+
+    // 1 -- a valued `return` in a result-less body falls, and falls ALONE: the bare
+    // `return;` beside it is the form SYNTAX.md reads as the end of such a body.
+    let a = absagen(&mit("", "if m > 0 { return m; } return 0;"));
+    assert_eq!(
+        a.iter().filter(|c| *c == "M148").count(),
+        2,
+        "beide wertvollen `return` fallen an M148, und sonst nichts: {a:?}"
+    );
+
+    // 2 -- the counter-direction. The same lines under a declared `-> u32` are the
+    // program the rule must never touch; the bare `return;` under no result is the
+    // sugar SYNTAX.md promises such a body.
+    for (kopf, rumpf) in [
+        (" -> u32", "if m > 0 { return m; } return 0;"),
+        ("", "return;"),
+        ("", "if m > 0 { return; }"),
+    ] {
+        let g = absagen(&mit(kopf, rumpf));
+        assert!(
+            !g.iter().any(|c| c == "M148"),
+            "`f(){kopf} {{ {rumpf} }}` ist richtig und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- a valued `return` is refused WHEREVER it stands, not only at the top level:
+    // the emitted C does not care how deeply the statement is nested.
+    let tief = absagen(&mit("", "if m > 0 { if m > 9 { return m; } return 0; } return 0;"));
+    assert_eq!(
+        tief.iter().filter(|c| *c == "M148").count(),
+        3,
+        "auch zwei Ebenen tief faellt jedes wertvolle `return`: {tief:?}"
+    );
+}
+
 /// **The block boundary of `N001` -- and the mutation that showed it had no anchor.**
 ///
 /// `namen.rs::rumpf_geltung` refuses two declarations of one name in ONE scope, because the
@@ -9062,5 +9195,73 @@ impl fn f() -> u32
     assert!(
         !lean.contains("(.global \"passes\")"),
         "the name never becomes a place of the world:\n{lean}"
+    );
+}
+
+/// **A `dispatch`/`step` reference to a `-> never` function is a plain pointer,
+/// never a `_Noreturn` pointer** (lane 71).
+///
+/// `beispiele/07-eintritt-und-boot.gab` dispatches its boot path to `rust_eintritt`,
+/// an `extern fn ... -> never`. The emitter spelled the checked reference with the
+/// callee's own core, `_Noreturn void`, and both compilers refuse the line: gcc
+/// with `declared '_Noreturn'`, clang with `'_Noreturn' can only appear on
+/// functions` -- C11 has no pointer-to-noreturn type. The guarantee stays where
+/// both compilers read it, on the function's own prototype; the reference binds
+/// a plain pointer to that noreturn function.
+#[test]
+fn ein_bezug_auf_never_ist_ein_schlichter_zeiger() {
+    let c_von = |q: &str| {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "the probe itself does not parse:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+        c
+    };
+    // **The poison direction.** A boot dispatch to a `-> never` target must not
+    // carry `_Noreturn` on the pointer: no such type exists in C11.
+    let c = c_von(
+        "module p {
+assume ein_kern \"one core\" falsifier sonde;
+linear ghost type BootPhase;
+extern fn ziel(t : BootPhase) -> never effects { diverges } costs <= 1 ops;
+boot b arch x86_64 {
+    dispatch p::ziel;
+}
+}",
+    );
+    assert!(
+        !c.contains("_Noreturn void (*const"),
+        "a `_Noreturn` pointer is not a C11 type -- gcc and clang both refuse it:\n{c}"
+    );
+    assert!(
+        c.contains("static void (*const gabbro_boot_b_dispatch)(void) __attribute__((unused)) = ziel;"),
+        "the reference stays a plain checked pointer to the target:\n{c}"
+    );
+    // **The positive direction.** The noreturn guarantee itself is kept -- on the
+    // function's own declaration, where both compilers accept it.
+    assert!(
+        c.contains("_Noreturn void ziel(void);"),
+        "the guarantee stands on the prototype, not on the pointer:\n{c}"
+    );
+    // **The entry form reads the same core.** A dispatch to a returning target is
+    // untouched: its reference keeps the spelled signature verbatim.
+    let d = c_von(
+        "module p {
+assume ein_kern \"one core\" falsifier sonde;
+static mut z : u32 = 0;
+impl fn a() effects { writes z } costs <= 4 ops { z = 1; }
+entry sc vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ks per cpu nested never
+    dispatch p::a;
+}
+}",
+    );
+    assert!(
+        d.contains("static void (*const gabbro_eintritt_sc_verteiler)(void) __attribute__((unused)) = a;"),
+        "a returning dispatch keeps its reference line verbatim:\n{d}"
     );
 }

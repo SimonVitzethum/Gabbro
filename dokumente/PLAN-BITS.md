@@ -86,8 +86,10 @@ Without `-mfma` the x86_64 baseline has no FMA instruction at all; with it (or `
 recent CPU) both compilers contract. The lowering "one effect per statement" does NOT protect:
 GCC in GNU mode contracts across exactly that form, and Clang contracts within one statement.
 
-1. **Prelude:** the pragma only under `#if defined(__clang__)` -- GCC does not implement it and
-   `-Wall -Werror` refuses it.
+1. **Prelude: no pragma at all** (revised 2026-09-12 after the build). The first plan put it
+   under `#if defined(__clang__)`; measured afterwards, that added `#pragma` -- a form on the
+   NEVER list of the C-form census (`instrumente/zaehle-c-formen.py`) -- and it carries nothing
+   items 2 and 3 do not already carry.
 2. **Manifest, binding:** `-std=c11` (ISO, never `gnu*`) **and** `-ffp-contract=off`, for every
    compiler. `-std=c11` is already the emission check line.
 3. **Evidence, not intention -- a build-time probe:** a triple where the fused and the separately

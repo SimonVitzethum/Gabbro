@@ -219,6 +219,7 @@ mod grenzen {
             typ: FeldTy {
                 typ: TypExpr::Int(IntTy {
                     wort: Kw::U8,
+                    zucker: None,
                     bereich: None,
                     span,
                 }),

@@ -1,0 +1,14 @@
+-- erwartet: P008
+-- **No width outside 1..64 -- and never widened silently.**
+--
+-- `u0` names no storage width at all: the next standard word above a zero-bit
+-- range does not exist, and answering `u8` would be a guess. The reader refuses
+-- with `P008` where the type is read; a `u0` anywhere else stays an ordinary
+-- name (K3), and a named type called `u0` still resolves.
+module gift {
+
+impl fn f(x : u0) -> u32 effects { pure } costs <= 2 ops {
+    return x;
+}
+
+}

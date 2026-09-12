@@ -73,7 +73,7 @@ impl Ctx {
 }
 
 /// One global: its carrier range (`intVonTyp` over `D.gtyp`) and whether its
-/// guard holds (`gdarf`, recomputed -- never trusted from the print).
+/// guard holds (recomputed -- never trusted from the print).
 #[derive(Debug, Clone)]
 pub struct Global {
     pub name: String,
@@ -82,7 +82,7 @@ pub struct Global {
 }
 
 /// One table: its `count`, its fields with carrier ranges, and whether its guard
-/// holds (`darf`, recomputed).
+/// holds (recomputed, never trusted from the print).
 #[derive(Debug, Clone)]
 pub struct Table {
     pub name: String,
@@ -403,7 +403,7 @@ impl CertExpr {
             CertExpr::Glob(g) => match world.global(g) {
                 Some(decl) => match decl.range {
                     Some(r) => out.push(format!(
-                        "glob {g}: carrier ({}, {}), guard gdarf = {} -- {}",
+                        "glob {g}: carrier ({}, {}), guard holds = {} -- {}",
                         r.lo,
                         r.hi,
                         decl.guard,
@@ -434,7 +434,7 @@ impl CertExpr {
                             .unwrap_or_else(|| "no range".to_string());
                         out.push(format!(
                             "slot {t}.{f}: index {have_idx} must be 0 .. count - 1 \
-                             (count = {}), guard darf = {}, field type {have_field} -- {}",
+                             (count = {}), guard holds = {}, field type {have_field} -- {}",
                             tab.count,
                             tab.guard,
                             verdict(ok)

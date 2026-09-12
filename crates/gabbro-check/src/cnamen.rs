@@ -43,6 +43,20 @@ pub enum Klasse {
     /// name of this variant keeps the older half of the truth -- what makes all four
     /// dangerous is the second half of the sentence above, not which standard added them.
     Posix(&'static str),
+    /// **The hosted entry point.** `main` is neither a keyword, nor in any of the four
+    /// headers the generated unit includes, nor a built-in the implementation knows
+    /// without an `#include` -- and both compilers still refuse a `static main` that is
+    /// not `int main`: gcc with `-Wmain` (*return type of 'main' is not 'int'*, *'main'
+    /// is normally a non-static function*), clang with `-Wmain` (*'main' should not be
+    /// declared static*, *'main' must return 'int'*). Measured 2026-09-12 over the
+    /// seventeen units of `messung/proben/absenkung/`: `gabbro pruefe` said `0 errors`,
+    /// `gabbro emit` wrote `static uint32_t main(…)`, and both families refused it.
+    /// The entry rule (`gabbro build`, `bau.rs::eintrittsregel`) owns the HOSTED entry
+    /// -- a `pub fn main()` in a `program` unit, which IS C's `main` and links. This
+    /// class owns every OTHER `main`: a function that happens to be called `main` in a
+    /// unit that is not a hosted program, where the name collides with C's entry point
+    /// instead of being it.
+    Hosteintritt,
 }
 
 impl Klasse {
@@ -64,13 +78,17 @@ impl Klasse {
                  sees no conflict, and the link finds the real symbol behind whatever this \
                  unit declared"
             ),
+            Klasse::Hosteintritt => format!(
+                "`{name}` is the hosted entry point of C -- a `static` function of this \
+                 name is not the entry, and neither compiler accepts it as one"
+            ),
         }
     }
 }
 
 /// **The lookup.** `None` means C has not taken the name.
 ///
-/// The three tables are sorted, and the order is asserted by a probe -- a binary search over a
+/// The four tables are sorted, and the order is asserted by a probe -- a binary search over a
 /// table that has slipped out of order answers `None` for a name that IS taken, and that is a
 /// false green in the only direction that matters here.
 pub fn vergeben(name: &str) -> Option<Klasse> {
@@ -83,16 +101,21 @@ pub fn vergeben(name: &str) -> Option<Klasse> {
     if EINGEBAUT.binary_search(&name).is_ok() {
         return Some(Klasse::Eingebaut);
     }
+    if HOSTEINTRITT.binary_search(&name).is_ok() {
+        return Some(Klasse::Hosteintritt);
+    }
     None
 }
 
 /// How many names the table carries -- read by the probe, so the number has one home.
-pub fn umfang() -> (usize, usize, usize) {
-    (C11_WORT.len(), HEADER.len(), EINGEBAUT.len())
+pub fn umfang() -> (usize, usize, usize, usize) {
+    (C11_WORT.len(), HEADER.len(), EINGEBAUT.len(), HOSTEINTRITT.len())
 }
 
 /// C11 §6.4.1, minus `const else extern if return sizeof static` -- those are words of
 /// Gabbro's own vocabulary and never reach a name -- see `P002`, which lives in `parse.rs`.
+/// `main` is deliberately NOT here: it is no keyword, and its row would misname the
+/// finding site. It stands in `HOSTEINTRITT` with its own class and its own sentence.
 static C11_WORT: [&str; 37] = [
     "_Alignas", "_Alignof", "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary",
     "_Noreturn", "_Static_assert", "_Thread_local", "auto", "break", "case", "char",
@@ -258,6 +281,18 @@ static EINGEBAUT: [&str; 155] = [
     "strrchr", "strspn", "strstr", "tolower", "toupper", "towlower", "towupper", "vfprintf",
     "vfscanf", "vprintf", "vscanf", "vsnprintf", "vsprintf", "vsscanf",
 ];
+
+/// **The hosted entry point -- one name, and `main` is not a keyword.**
+///
+/// C11 §5.1.2.2.1 names the function a hosted implementation calls at startup.
+/// The name is reserved in the sense that matters here: a `static` function
+/// carrying it is not the entry, and both compilers refuse it even where no
+/// declaration in the unit contradicts it (gcc `-Wmain`, clang `-Wmain` --
+/// measured 2026-09-12, see `Klasse::Hosteintritt`). The table carries one
+/// row because one name was measured; a list of "reserved identifiers" beyond
+/// it would measure the standard and call it the toolchain (Rule A -- the
+/// same decision `C11_WORT` documents for the 883 underscore macros).
+static HOSTEINTRITT: [&str; 1] = ["main"];
 
 /// **What C declares for a name -- and whether an `extern fn` can bind it at all.**
 ///

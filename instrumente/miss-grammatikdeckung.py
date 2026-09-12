@@ -381,6 +381,10 @@ probe("eff.shared", "wirkung", "", ", locks shared Z")
 # -- types -------------------------------------------------------------------------------
 for _w in ("u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"):
     probe(f"intty.{_w}", "typ", "u32", _w, V="1")
+# PLAN-BITS §1: `uN`/`iN` sugar -- the storage width moves the C, the exact range
+# moves the checks; each probes against the `u32` base of the `typ` host.
+for _w in ("u1", "u13", "i37", "u64"):
+    probe(f"intty.{_w}", "typ", "u32", _w, V="1")
 probe("intty.in", "typ", "u32", "u32 in 0 .. 10", V="1")
 probe("range...<", "typ", "u32 in 0 .. 10", "u32 in 0 ..< 10", V="1")
 probe("typeexpr_innen.bool", "typ", "u32", "bool", V="true")

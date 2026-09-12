@@ -28,6 +28,22 @@
 use gabbro_syntax::ast::*;
 use std::collections::{BTreeMap, BTreeSet};
 
+/// PLAN-BITS §1: rewrite a sugared conversion callee to its storage word.
+///
+/// The parser keeps the sugar spelling on the call path (`u13(a)`), because the
+/// spelling is what the writer wrote. The graph, the cost pass and the emitter
+/// all read conversions by NAME against the eight storage words, so a sugar
+/// spelling left in place would read as a call to a function nobody declares
+/// (`E009`/`H021`/`K003` over a correct program). One rewrite, read at every
+/// site that resolves a callee name by spelling.
+///
+/// `None` for anything that is not well-formed sugar -- then the name stands
+/// as written, and the passes answer it as written.
+pub fn zucker_umschreiben(name: &str) -> Option<String> {
+    let speicher = gabbro_syntax::zucker_speicher(name)?;
+    Some(speicher.text().to_string())
+}
+
 /// Was über eine Funktion im Graphen steht.
 #[derive(Debug, Clone)]
 pub struct Knoten {
@@ -304,6 +320,10 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     // it is what `emit.rs::ruf` lowers it to, an ordinary C cast. Inserted once, at the
     // ROOT: no module qualifies a vocabulary word, and `aufloesen` below finds a root key
     // through the same candidate search every other name already uses.
+    //
+    // PLAN-BITS §1: the list is read off the checker, not repeated by hand. A
+    // sugared width (`u13`) is never a callee: the conversion spells the storage
+    // word (`u16`), so no node under the sugar spelling is needed or wanted.
     for wort in ["u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"] {
         let mut eigen = BTreeSet::new();
         eigen.insert("pure".to_string());
@@ -757,7 +777,10 @@ fn nimm_ruf(
         CallTarget::Path(p) => {
             if let Some(n) = p.teile.last() {
                 if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-                    aus.push((p.text(), args));
+                    // PLAN-BITS §1: same rewrite as `nimm` above -- the sugar
+                    // spelling resolves to the storage word's callee node.
+                    let name = zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
+                    aus.push((name, args));
                 }
             }
         }
@@ -934,8 +957,7 @@ fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
     // the case the paragraph below describes: `E009` over a CORRECT program.
     if crate::ist_praedikatswort(r) {
         return;
-    }
-    // **Ein Konstruktor ruft nichts.** Dieselbe Aussage wie bei «B14b» und dieselbe wie
+    }    // **Ein Konstruktor ruft nichts.** Dieselbe Aussage wie bei «B14b» und dieselbe wie
     // bei `Some`/`None` -- und sie ist hier die wichtigste von allen: eine Kante auf einen
     // Namen, hinter dem keine Funktion steht, macht den Gerufenen UNBEKANNT, und ueber
     // einem unbekannten Gerufenen ist jede Huelle nur noch eine untere Schranke (`E009`).
@@ -960,7 +982,11 @@ fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
                 // **Der ganze Pfad, nicht nur sein letztes Stueck.** `a::hilf()` und
                 // `b::hilf()` waren bis 2026-08-19 derselbe Name; aufgeloest wird spaeter,
                 // in `erhebe_mit`.
-                aus.insert(p.text());
+                //
+                // PLAN-BITS §1: a sugared conversion (`u13(a)`) enters under its
+                // storage word (`u16`), the name the callee nodes carry.
+                let name = zucker_umschreiben(&p.text()).unwrap_or_else(|| p.text());
+                aus.insert(name);
             }
         }
     }

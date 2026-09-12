@@ -275,8 +275,26 @@ pub struct FloatTy {
 #[derive(Debug, Clone)]
 pub struct IntTy {
     pub wort: Kw,
+    /// PLAN-BITS §1: `Some` exactly when this type was spelled `uN`/`iN` with a
+    /// non-standard width; then `wort` is the storage word and `bereich` the
+    /// exact range. `None` is the longhand form.
+    pub zucker: Option<ZuckerBreite>,
     pub bereich: Option<Bereich>,
     pub span: Span,
+}
+
+/// **PLAN-BITS §1 (`uN`/`iN` sugar): the storage word of a sugared width.**
+///
+/// `u13` is sugar for `u16 in 0 .. 2^13 - 1`; `i37` for `i64 in -2^36 .. 2^36 - 1`.
+/// The storage is the next standard width (8/16/32/64); the range is the exact
+/// `N`-bit one. The parser fills this in at the `intty` rule, so every pass
+/// below reads `wort` (the storage word, always one of the eight) and `bereich`
+/// (always `Some` here) exactly as if the longhand had been written. `None`
+/// means the longhand form: a standard word with no sugar involved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ZuckerBreite {
+    pub breite: u32,
+    pub vorzeichen: bool,
 }
 
 /// `range = expr ".." expr | expr "..<" expr`

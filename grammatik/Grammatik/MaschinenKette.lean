@@ -1778,7 +1778,7 @@ theorem hwit_falt_instanz_J0
     (hsingle_prog : ∀ g, g ≠ f → prog g = [])
     (hax_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (_hleaf : s.istBlatt = true),
-      (match s with | .axiomCall _ _ _ _ _ => False | _ => True))
+      (match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True))
     (hmem_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (_hleaf : s.istBlatt = true),
       .inl t₀ ∈ Extraktion.stmtTraeger tabs globs s)

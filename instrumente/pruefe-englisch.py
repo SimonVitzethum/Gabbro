@@ -385,6 +385,28 @@ def lesbarkeitsprobe():
     return len(kg) == 1, len(ks) == 0, pg, ps, pt
 
 
+# **Lane S1 (2026-09-12): the `syscall` declaration words.**
+#
+# The syscall surface (`dokumente/SYNTAX.md`, PLAN-SYSCALL §1) adds seven
+# English clause words: `syscall` (the header) and `abi`, `arch`, `number`,
+# `regs`, `clobbers`, `errors` (the clauses). `arch`, `regs`, `clobbers`
+# stand in checker sources already (entry/axiom clauses); `syscall`, `abi`
+# and `number` arrive with the S5 parser lane. *A word that will be a
+# keyword must be a word first, in both guardians at once.*
+#
+# **Bilingual pattern first, per rule 14:** `pruefe-wortschatz.py` reads the
+# vocabulary row labels in both languages (`ETIKETTEN` -- `Fremdkoerper` /
+# `Foreign`, `Systemrufe` / `Syscalls`), so the new SYNTAX.md rows must be
+# written under those labels or the counter-direction probe falls. What
+# stands here is the narrow half of the same move: the German function-word
+# list must not contain a future keyword, or an English diagnostic naming
+# the new clause would trip this guardian. Today that is vacuous -- none
+# of the seven is in `DEUTSCH` -- and it is written down so the fact is
+# checked, not assumed. The speech probe below pins it.
+SYSCALL_WORTE = {"syscall", "abi", "arch", "number", "regs", "clobbers", "errors",
+                 "kernel"}
+
+
 def sprechprobe():
     """R14, in beide Richtungen: ein deutscher Text musz fallen, ein englischer nicht."""
     gift = deutsch("die Rueckgabe requires `u32`, der Wert ist zu gross")
@@ -392,7 +414,13 @@ def sprechprobe():
     print("== Sprechprobe (R14) ==")
     print("  deutscher Text faellt:   %s" % ("ja" if gift else "NEIN"))
     print("  englischer bleibt frei:  %s" % ("ja" if not sauber else "NEIN -- %s" % sauber))
-    return bool(gift) and not sauber
+    # **Lane S1:** the seven syscall clause words are English surface -- a
+    # diagnostic naming each of them must pass. A future keyword inside the
+    # German function-word list would trip this guardian on an English
+    # sentence; the check below makes that failure loud today.
+    syscall_frei = all(not deutsch(w) for w in sorted(SYSCALL_WORTE))
+    print("  syscall-Worte bleiben frei: %s" % ("ja" if syscall_frei else "NEIN"))
+    return bool(gift) and not sauber and syscall_frei
 
 
 def flaechenprobe():

@@ -192,8 +192,8 @@ inductive CertExpr (D : Deklaration) where
   | band (a b : CertExpr D)
   | bor (w : Nat) (a b : CertExpr D)
   | bxor (w : Nat) (a b : CertExpr D)
-  | shl (a b : CertExpr D)
-  | shr (a b : CertExpr D)
+  | shl (w : Nat) (a b : CertExpr D)
+  | shr (w : Nat) (a b : CertExpr D)
   | wide (lo' hi' : Int) (a : CertExpr D)
   | var (k : Nat)
   | glob (g : D.Glob)
@@ -271,15 +271,17 @@ def certRange (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertExpr D → 
     | some (l1, h1), some (l2, h2) =>
       if 0 ≤ l1 ∧ 0 ≤ l2 ∧ h1 < 2 ^ w ∧ h2 < 2 ^ w then some (0, 2 ^ w - 1) else none
     | _, _ => none
-  | .shl a b =>
+  | .shl w a b =>
     match certRange D Γ Λ a, certRange D Γ Λ b with
     | some (l1, h1), some (l2, h2) =>
-      if 0 ≤ l1 ∧ 0 ≤ l2 then some (0, h1 * 2 ^ h2.toNat) else none
+      if 0 ≤ l1 ∧ 0 ≤ l2 ∧ h1 < 2 ^ w ∧ h2 < (w : Int)
+      then some (0, h1 * 2 ^ h2.toNat) else none
     | _, _ => none
-  | .shr a b =>
+  | .shr w a b =>
     match certRange D Γ Λ a, certRange D Γ Λ b with
-    | some (l1, h1), some (l2, _h2) =>
-      if 0 ≤ l1 ∧ 0 ≤ l2 then some (0, h1) else none
+    | some (l1, h1), some (l2, h2) =>
+      if 0 ≤ l1 ∧ 0 ≤ l2 ∧ h1 < 2 ^ w ∧ h2 < (w : Int)
+      then some (0, h1) else none
     | _, _ => none
   | .wide lo' hi' a =>
     match certRange D Γ Λ a with
@@ -508,7 +510,7 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨h0, h0', hw1, hw2⟩ := hc
           exact ⟨Expr.bxor w h0 h0' hw1 hw2 ea eb, trivial⟩
         · simp [hc] at h
-  | shl a b iha ihb =>
+  | shl w a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
     | none => simp [ha] at h
@@ -519,15 +521,16 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
-        by_cases hc : 0 ≤ l1 ∧ 0 ≤ l2
+        by_cases hc : 0 ≤ l1 ∧ 0 ≤ l2 ∧ h1 < 2 ^ w ∧ h2 < (w : Int)
         · rw [if_pos hc] at h
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
-          exact ⟨Expr.shl hc.1 hc.2 ea eb, trivial⟩
+          obtain ⟨hc1, hc2, hcw1, hcw2⟩ := hc
+          exact ⟨Expr.shl w hcw1 hcw2 hc1 hc2 ea eb, trivial⟩
         · simp [hc] at h
-  | shr a b iha ihb =>
+  | shr w a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
     | none => simp [ha] at h
@@ -536,15 +539,16 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       cases hb : certRange D Γ Λ b with
       | none => simp [ha, hb] at h
       | some q =>
-        obtain ⟨l2, _⟩ := q
+        obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
-        by_cases hc : 0 ≤ l1 ∧ 0 ≤ l2
+        by_cases hc : 0 ≤ l1 ∧ 0 ≤ l2 ∧ h1 < 2 ^ w ∧ h2 < (w : Int)
         · rw [if_pos hc] at h
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
-          exact ⟨Expr.shr hc.1 hc.2 ea eb, trivial⟩
+          obtain ⟨hc1, hc2, hcw1, hcw2⟩ := hc
+          exact ⟨Expr.shr w hcw1 hcw2 hc1 hc2 ea eb, trivial⟩
         · simp [hc] at h
   | wide lo' hi' a iha =>
     simp only [GueltigAbleitung, certRange] at h
@@ -753,17 +757,24 @@ example : GueltigAbleitung TestD [] [] (.bxor 3 (.lit 6) (.lit 3)) 0 7 := by dec
 /-- FORGED proof: width 2 does not hold `6` under `bxor` either. -/
 example : ¬ GueltigAbleitung TestD [] [] (.bxor 2 (.lit 6) (.lit 3)) 0 3 := by decide
 
-/-- `3 shl 2` printed as `(0, 12)`: `3 * 2 ^ 2`, both operands nonneg. -/
-example : GueltigAbleitung TestD [] [] (.shl (.lit 3) (.lit 2)) 0 12 := by decide
+/-- `3 shl 2` printed as `(0, 12)`: `3 * 2 ^ 2`, both operands nonneg,
+    operand bound `3 < 2^32`, amount `2 < 32` (PLAN-BITS.md section 2). -/
+example : GueltigAbleitung TestD [] [] (.shl 32 (.lit 3) (.lit 2)) 0 12 := by decide
 
 /-- FORGED proof: a negative value shifted -- no range at all. -/
-example : ¬ GueltigAbleitung TestD [] [] (.shl (.sub (.lit 0) (.lit 1)) (.lit 2)) 0 0 := by decide
+example : ¬ GueltigAbleitung TestD [] [] (.shl 32 (.sub (.lit 0) (.lit 1)) (.lit 2)) 0 0 := by decide
+
+/-- FORGED proof: the amount `32` reaches the width -- the C UB row. -/
+example : ¬ GueltigAbleitung TestD [] [] (.shl 32 (.lit 3) (.lit 32)) 0 0 := by decide
 
 /-- `12 shr 2` printed as `(0, 12)`: a right shift never widens (M137). -/
-example : GueltigAbleitung TestD [] [] (.shr (.lit 12) (.lit 2)) 0 12 := by decide
+example : GueltigAbleitung TestD [] [] (.shr 32 (.lit 12) (.lit 2)) 0 12 := by decide
 
 /-- FORGED proof: a negative value shifted right -- no range at all. -/
-example : ¬ GueltigAbleitung TestD [] [] (.shr (.sub (.lit 0) (.lit 1)) (.lit 2)) 0 0 := by decide
+example : ¬ GueltigAbleitung TestD [] [] (.shr 32 (.sub (.lit 0) (.lit 1)) (.lit 2)) 0 0 := by decide
+
+/-- FORGED proof: the amount `40` is past the width -- undefined in C. -/
+example : ¬ GueltigAbleitung TestD [] [] (.shr 32 (.lit 12) (.lit 40)) 0 0 := by decide
 
 /-! ### CUT-4 probes: variables and carrier accesses -/
 

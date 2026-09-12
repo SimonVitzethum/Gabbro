@@ -43,6 +43,37 @@ fn doppelte_deklaration_faellt() {
     faellt_nicht("const A : u32 = 1;\nconst B : u32 = 2;");
 }
 
+/// **A `main` that is not the hosted entry falls at the boundary (lane 73).**
+///
+/// The emitter writes the Gabbro name into C unchanged, so `fn main` becomes
+/// `static uint32_t main(…)` -- and both compilers refuse it (gcc `-Wmain`,
+/// clang `-Wmain`; measured 2026-09-12 over the seventeen units of
+/// `messung/proben/absenkung/`). The hosted entry -- a `pub fn main()` in a
+/// `program` unit, held by the entry rule of `gabbro build` -- is C's `main`
+/// and links; anything else carrying the name collides with it. The poison
+/// side is `beispiele/gift/798-eine-main-die-kein-eintritt-ist.gab`; the
+/// positive side is `beispiele/63-druckt.gab`, whose `pub fn main` must stay
+/// silent here (the entry rule, not this pass, owns that shape).
+#[test]
+fn eine_main_die_kein_eintritt_ist_faellt() {
+    faellt_mit(
+        "impl fn main() -> u32 effects { pure } costs <= 8 ops { return 7; }",
+        "N041",
+    );
+    faellt_mit(
+        "extern fn main() -> u32 effects { pure } costs <= 8 ops;",
+        "N041",
+    );
+    // **The hosted entry is exempt from this pass.** A `pub fn main` IS C's `main`
+    // by design; the entry rule of `gabbro build` owns that shape, and this pass
+    // runs over single files where no manifest is in scope. Refusing it here
+    // would forbid `beispiele/63-druckt.gab` itself.
+    faellt_nicht(
+        "pub fn main() -> i32 in 0 .. 1 effects { pure } costs <= 8 ops { return 0; }",
+    );
+    faellt_nicht("impl fn haupt() -> u32 effects { pure } costs <= 8 ops { return 7; }");
+}
+
 #[test]
 fn zwei_architekturen_sind_keine_doppelung() {
     // FRAGMENTE.md F5 deklariert `invoke` zweimal -- einmal je Architektur. Wer das als
