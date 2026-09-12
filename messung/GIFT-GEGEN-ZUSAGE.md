@@ -343,6 +343,10 @@ Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl i
 > Text von `pruefe-zahlen.py` gelesen werden; die MARKE in
 > `instrumente/zaehle-gifttreffer.py` ist die Stelle, an der die Zahl gilt, und
 > sie steht auf 8.
+>
+> **NINETEEN since 2026-09-12** (lane 89 booking): eleven more pairs, each with
+> its reason in the new rows below. The heading stays frozen for the same
+> reason as above; the mark in `instrumente/zaehle-gifttreffer.py` stands at 19.
 
 | Probe | erwartet | Kette | warum es nicht geht |
 |---|---|---|---|
@@ -355,6 +359,17 @@ Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl i
 | `188-schritt-in-locks-in-schleife` | `O006` | L108@33 · L107@45 · **O006**@38 | **Ein Phasenschritt verbraucht eine lineare Marke.** Also ist jede Probe für *„Phasenschritt in einer Schleife"* zwangsläufig auch eine für *„lineare Marke in einer Schleife verbraucht"* (`L108`). Zwei unbeabsichtigte Nachbarn (`K002`, `K006`) sind weg; die zwei linearen bleiben. |
 | `300-zeiger-auf-raw-fn` | `O009` | O010@17 · **O009**@29 | **Beide Auswege sind Absagen.** Ohne Marke sagt `O008` *„`raw fn` demands no `linear ghost` token"*, mit Marke sagt `O010` *„no function retires it"* — gemessen, indem beides gefahren wurde. Der dritte Weg ist ein `retires t from boot falsifier …`, und der verlangt einen `boot`-Block **und** eine Nachbedingung über die Abbildungen (`O012`, ebenfalls gemessen). *Mehr Gerüst, als die Probe groß ist.* |
 | `662-an-initialiser-written-one-element-at-a-time` | `C001` | M140@80 · **C001**@80 | **Der Erzeuger wird erreicht, obwohl der Prüfer schon abgesagt hat.** Der Befund ist ein Feldanfangswert, der Element für Element geschrieben wird — und der braucht einen Wert *ungleich null* an einer Feldstelle. Genau die Gestalt weist `M140` seit dem 2026-09-02 ab; `ist_null` ist der einzige Wert, den `m1.rs::gestalt_grund` dort durchlässt. **Die Datei ist ohne `M140` nicht schreibbar.** Dass `C001` trotzdem fällt, ist der Befund selbst: `command_emit` ruft `emittiere_mit` *vor* `absagen.fehler_zahl()`, also läuft das Hinterteil auch über einem abgewiesenen Baum — darum steht der Zaun am Erzeuger und nicht an dieser Regel. |
+| `141-locks-nie-genommen` | `H011` | H020@18 · **H011**@15 | **The declaration and the site are two halves of one shape.** `H011` names the `locks L` line nobody redeems; `H020` (lane 104, newer than this 2026-08-19 probe) names the unguarded write that line covers. Any H011 probe stages such a write, so the newer rule always answers first. |
+| `150-rekursion-ohne-mass` | `K008` | H022@11 · **K008**@11 | **One omission, two readers.** The cycle declares no `decreases`: `H022` (wire-shape lanes, newer than this 2026-08-19 probe) names it at the declaration, `K008` prices it at the costs. The hint `E009` in the chain is a different stage and covers nothing. |
+| `220-old-in-einem-rumpf` | `K003` | H021@32 · **K003**@36 | **One unknown, two readers.** `old` has no graph edge: `H021` (lane 131, newer than the probe) names the dropped edge, `K003` names the cost promise over it. A probe about `old` in a body cannot stage one without the other. |
+| `724-handoff-without-guard` | `H018` | M104@47 · M101@47 · E006@46 · **H018**@38 | **The staging is the cover.** The handoff needs a counting write (which leaves its range: `M104`/`M101`) and a `locks` line missing from the effects (`E006`) before `H018` can name the unguarded handoff. Same for `725` and `726`, with two and three counting writes respectively. |
+| `725-handoff-under-two-guards` | `H018` | M104@37 · M101@37 · M104@41 · M101@41 · M104@52 · M101@52 · E006@36 · E006@40 · E006@51 · **H018**@42 | Same pair as `724`, three counting writes. |
+| `726-handoff-guarded-at-one-end` | `H018` | M104@36 · M101@36 · M104@49 · M101@49 · E006@35 · E006@48 · **H018**@40 | Same pair as `724`, two counting writes. |
+| `728-h011-zwei-regeln-ein-code` | `H011` | H020@36 · **H011**@52 · **H011**@33 | **A deliberate dual pin.** The header says it: one code, both meanings of `H011` in one file, and the `locks`-line shape `H020` reads. Written with the cover, not under it. |
+| `740-stumm-edge-pinned` | `H021` | E001@19 · **H021**@26 | **Falls with `E001` by design.** The header says it: a `stumm` edge is an `extern fn` with no `effects` clause, so the declaration verdict carries the file and `H021` pins the dropped edge beside it. |
+| `758-v003-hint-skips-orphan-check` | `V003` (hint) | E009?@29 · V003?@35 | **Doubt needs a partial hull, and the partiality is itself a hint.** `V003` doubt about the pairing is only expressible where the call graph is incomplete; the incompleteness is the `E009` hint at the same declaration. Same for `777`. |
+| `776-v003-hint-await-only-hull` | `V003` (hint) | M148@31 · M148@33 · E009?@25 · V003?@30 | **The staging trips the newer rule.** The await-only shape needs valued returns in a result-less body, which `M148` (lane 72, newer than the probe) refuses; the pairing doubt stands beside it. |
+| `777-v003-hint-counterpart-behind-hull` | `V003` (hint) | E009?@25 · V003?@31 · V003?@42 | Same pair as `758`: doubt behind an incomplete hull, incompleteness as `E009` hint. |
 
 > **Fünf der sieben sind keine Nachlässigkeit, sondern eine Aussage über die Sprache.**
 > `F001`/`M101`, `N021`/`N027`, `L102`/`E008`, `U003`/`H007`, `O006`/`L108` — das sind
