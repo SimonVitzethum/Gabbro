@@ -38,6 +38,16 @@ program calls the library -- for a GPU kernel, the launch through the driver. So
 * **The verification reaches the hand-over:** arguments, payload type, contract and effects at
   the call are checked; the library's run-time behaviour is the assumption it exports.
 
+**Always compiled at translation time, never at run time (owner, 2026-09-12).** The payload
+is fully compiled when the program is translated; at run time the library only executes or
+launches it. No just-in-time compilation and no run-time interpretation of a region, by the
+library or by anything it calls. Consequence for GPU payloads: portable intermediate formats
+(SPIR-V, PTX) are compiled by the driver when they are loaded -- that is compilation at run
+time and is excluded. A GPU payload must therefore be native code for the target GPU
+(for example a CUDA cubin for one fixed architecture), and that target is a keyed entry of the
+program's hardware profile (§0c), so a mismatch is refused at link time instead of failing at
+load time.
+
 Compile-time expansion of regions into core Gabbro (§0) stays possible as a later form, but it
 is not what `@lib#func` means.
 
