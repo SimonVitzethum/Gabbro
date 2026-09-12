@@ -42,7 +42,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 |---|---|---|
 | defined EBNF rules | 132 | **161** measured (`pruefe-syntax.sh` EBNF branch: 161 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **221 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 221 EBNF terminals against 221 table words, both readings) — new word since the second version: `owner` («SG-9»), `deadline` («SG-22») and `concurrent` («SG-23») |
+| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, specified not implemented — lexer/table gates red until S5, G6b) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 224 words
+## Vocabulary — closed, 230 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -99,6 +99,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              embeds scale walk levels node down leaf mappings
              entry entrust vector regs out preserves clobbers stack dispatch asm
              per cpu ist nested masked awaits port step via
+  Fremdkoerper syscall abi number errors kernel
   Domaenen   slots of chain descendants ancestors queue elems fields threads
              reaches via tree parent child sibling observed occupied
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
@@ -167,6 +168,15 @@ optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `f
 (in `heldpred`) and `TESTBUILD` (in `buildgate`) are terminals of the grammar but not words of
 the vocabulary — identifiers in a fixed position, counted and named by the guardian.
 
+**The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors` and `kernel` are
+words of the vocabulary but not terminals the lexer knows — specified in §12.1
+(«SS-1»), not yet implemented by the checker (S5 owns the lexer entries). The
+guardian counts them as table words and the EBNF side carries them through
+`syscalldecl`; `crates/gabbro-syntax/tests/wortschatz.rs` (lexer against table)
+and `zaehle-wortschatz.py` (macro-call count) go red until S5 lands, by
+construction. *A specified word that the lexer refuses is a named handoff, not
+a silent gap — and the red gates that name it are the receipt.*
+
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
 reports, the vocabulary table. German stays in the working documents of the folder, in source
 comments and in every identifier a *user* chooses.
@@ -187,7 +197,7 @@ item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
-             | bootdecl ) ;
+             | bootdecl | syscalldecl ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
    gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
@@ -217,6 +227,22 @@ entrustdecl = "entrust" ident "at" ident "arch" ident "{"
    falsifiable (`N004`/`N005`), the same rule as `progress`. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
+(* Specified, NOT yet implemented by the checker («SS-1», §12.1): the user side of a
+   system call. The checker refuses every `syscall` with a named error until S5 lands;
+   the grammar below is the surface the checker, the emitter ruling and the corpus
+   example (§12.1) are written against. *)
+syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+              "abi" ident "arch" ident "number" constexpr
+              "regs" "in"  "{" [ regbind { "," regbind } [ "," ] ] "}"
+              "regs" "out" "{" [ regbind { "," regbind } [ "," ] ] "}"
+              "clobbers" "{" [ identlist ] "}"
+              "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}"
+              [ "requires" predlist ]
+              [ "ensures"  predlist ]
+              "effects" "{" efflist "}"
+              ( "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
+              | "kernel" path ";" ) ;
+errmap     = ident "=>" ident ;
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" )
              [ "per" "cpu" constexpr ] ";" ;
@@ -240,6 +266,7 @@ world before the first body and has no run-time meaning of its own.
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
+| `syscalldecl` (§12.1) | **specified, not yet implemented by the checker** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -1296,6 +1323,56 @@ footnote: *memory-safe under A1…An*.
 > compiler — and therefore countable and ratchetable. In the theorem it is exactly the
 > parameter `O : Orakel D`, and `#print axioms` at the end of `Satz.lean` shows that nothing
 > else was assumed.
+
+### 12.1 `syscall` — the user side of a system call (specified, not yet implemented)
+
+**Specified, not yet implemented by the checker («SS-1»).** What follows is the
+surface of `PLAN-SYSCALL.md` §1, written as grammar, named checks and one
+example, so that the checker lane (S5), the emitter lane (S6) and the corpus
+lane (S7) have a text to build against. Until S5 lands, every `syscall` is
+refused with a named error; nothing below is checked by any pass. The example
+block is an excerpt (`…`), not a translation unit.
+
+**The checks** — each names the passes of §1 it mirrors (`G4`, `G7` at
+`entrydecl`; `A005` at `assume`). The `syscalldecl` production whose lines
+they point at stands in §1 beside `entrydecl`.
+
+* **arch** — the `arch` after `abi` is held against a declared `arch`, as for
+  `assume` (`A005`). A syscall for a machine no `arch` declares is refused.
+  **x86_64 only** — `aarch64` stays sealed.
+* **register map** — `regs in` / `regs out` / `clobbers` carry the same checks
+  as `entry`: every binding names a register the ABI table knows (`G4`, same
+  `regbind` shape), `clobbers` may be empty (`G7`).
+* **error map** — `errors` is a total map from the errnos the contract admits
+  to the declared reasons (`or R`): every admitted errno has exactly one arm,
+  no arm names an errno outside the table. The decoding is generated; an errno
+  outside the table is `hardware (annahme a)` — the kernel answered outside
+  its contract.
+* **`assume … falsifier …` or `kernel <path>`** — with `kernel`, the call is
+  paired with a Gabbro kernel's dispatch `entry` for the same `number` and no
+  assumption is named; with `assume`, the per-call assumption is named with
+  its falsifier, as for a device (`N004`/`N005` shape).
+
+```gabbro
+syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
+    -> u64 in 0 .. MAXLEN or IoError
+    abi linux arch x86_64 number 1
+    regs in  { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors   { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    requires Open(fd)
+    ensures  result <= len
+    effects  { reads buf, writes os.fds }
+    assume   linux_write_contract falsifier probe_write;
+…
+```
+
+*Lean:* a `syscall` declaration is an `Ax` with `sysabi` (number, register
+map, clobbers — consumed only by the emitter); the answer type is the sum
+`ok value | reason r`, filled by the generated errno decoding; `einpassen`
+holds the raw answer against it. Ghost OS state (`os.fds`, …) is tables the
+semantics treats like any carrier and the emitter omits.
 
 ---
 
