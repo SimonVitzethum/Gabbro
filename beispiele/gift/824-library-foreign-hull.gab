@@ -1,0 +1,27 @@
+-- erwartet: N059
+-- Lane E2: the library body calls an `extern fn` -- a foreign body in the
+-- hull, refused by structure (PLAN-ERWEITUNG.md §0c). The call itself still
+-- resolves, so the translation refusal fires beside it.
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+extern fn launch(d : u32) -> u32 effects { pure } costs <= 1 ops;
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return launch(n);
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
+    @spirv#kernel(a) { dispatch 0 };
+    return a;
+}
+}

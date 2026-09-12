@@ -1,0 +1,27 @@
+-- 80 -- **The library declaration.** A library module declares a run-time
+-- function with a contract and a payload type (`library fn` with
+-- `payload <table>`, SYNTAX.md §7.1): ordinary parameters, an optional
+-- result, an error channel like any function, and a Gabbro body whose
+-- hull holds no foreign code. The declaration alone is fully clean --
+-- a CALL (`@lib#f`) always carries the translation refusal (`N058`),
+-- so calls live in the poison corpus (`beispiele/gift/820`), not here.
+--
+-- The one rule this file exercises without falling: a library function
+-- IS an ordinary function for every declaration-side check -- types,
+-- contracts, effects, costs -- and only the call FORM differs.
+
+module beispiel::bibliothek {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}

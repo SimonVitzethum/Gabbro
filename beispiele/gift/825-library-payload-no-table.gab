@@ -1,0 +1,13 @@
+-- erwartet: N060
+-- Lane E2: the payload clause names no declared table -- refused, although
+-- everything else about the declaration is clean.
+module gpu::spirv {
+pub library fn kernel(n : u32) -> u32 payload NoSuchTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}
