@@ -374,6 +374,7 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             StmtArt::Exchange(_) => {}
             // The forms that bind no name at all. **Written out one by one** so that a new
             // `StmtArt` is a compile error here rather than a silent "binds nothing".
+            // **Lane E1:** a library call in statement position binds nothing.
             StmtArt::Zuweisung(_)
             | StmtArt::Wenn(_)
             | StmtArt::Match(_)
@@ -386,7 +387,8 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             | StmtArt::Next(_)
             | StmtArt::Publish(_)
             | StmtArt::Return(_)
-            | StmtArt::Ruf(_) => {}
+            | StmtArt::Ruf(_)
+            | StmtArt::LibraryCall(_) => {}
         }
         // **The descent is not spelled out a second time.** It used to be -- nine arms of
         // its own -- and the copy had drifted: `observes { … }` and the `update` body of an
@@ -3334,6 +3336,9 @@ fn enthaelt_bitnicht(e: &Expr) -> bool {
         ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => enthaelt_bitnicht(x),
         ExprArt::Binaer(_, a, b) => enthaelt_bitnicht(a) || enthaelt_bitnicht(b),
         ExprArt::Ruf(r) => r.argumente.iter().any(enthaelt_bitnicht),
+        // **Lane E1:** a `~` in the arguments unfolds nothing either; the
+        // region is raw tokens, not Gabbro code, and is never scanned.
+        ExprArt::LibraryCall(r) => r.args.iter().any(enthaelt_bitnicht),
         // **«SG-24»** -- a `~` inside the counted predicate unfolds nothing either.
         ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
             .into_iter()
@@ -4272,7 +4277,9 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Op
         | ExprArt::Grund { .. }
         // **«SG-24»** -- a count is a run-time number, not an address: a bank base
         // over one names no register field of this device.
+        // **Lane E1** -- a library call is no address either.
         | ExprArt::Zaehle { .. }
+        | ExprArt::LibraryCall(_)
         | ExprArt::Unaer(_, _) => {
             weigere(
                 absagen,
@@ -5376,6 +5383,9 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         // non-field forms -- `ausdruck` refuses them by name if they ever get here.
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
+        // **Lane E1:** a library call in a `where` clause lowers through the
+        // general reader, which refuses it by name -- like any other call form.
+        | ExprArt::LibraryCall(_)
         | ExprArt::Unaer(UnOp::Negativ, _) => ausdruck(e, u, absagen),
         // **«SG-24»: a `count` has no object here.** The generated counter functions are
         // declared with the functions, after the format accessors -- a `where` clause
@@ -6831,6 +6841,13 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
                 sammle_expr_namen(a, aus);
             }
         }
+        // **Lane E1:** the arguments of a library call name places like any
+        // call's; the region is raw tokens and names none.
+        ExprArt::LibraryCall(r) => {
+            for a in &r.args {
+                sammle_expr_namen(a, aus);
+            }
+        }
         // **«SG-24»** -- the counted predicate runs: every name it reads is read by
         // the emitted counter call. (The binder is a loop variable of that call --
         // collecting it here is what lets the `(void)k;` decision see it as read.)
@@ -6887,6 +6904,12 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             }
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {
+                    e(a, aus);
+                }
+            }
+            // **Lane E1:** same as above, at the statement form.
+            StmtArt::LibraryCall(r) => {
+                for a in &r.args {
                     e(a, aus);
                 }
             }
@@ -7532,6 +7555,15 @@ fn anweisung(
             aus.push_str(&format!("{e}}}\n"));
         }
         StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
+        // **Lane E1:** no lowering exists -- the checker refuses every
+        // library call (`N057`), and the emitter never guesses one.
+        StmtArt::LibraryCall(r) => {
+            weigere(
+                absagen,
+                r.span,
+                "no lowering: `library call` -- the region has no payload yet (lane E1)",
+            );
+        }
         // **The third place the ghost erasure has to hold, and the one that is silent if it
         // does not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays.
         // Making it `void p1 = mmu_an();` does not compile; dropping the whole statement
@@ -7900,6 +7932,8 @@ fn anweisung(
                     // *They join the forms that are refused BY NAME rather than swallowed.*
                     | ExprArt::FnWert(_)
                     | ExprArt::Grund { .. }
+                    // **Lane E1** -- a library call is no expected value either.
+                    | ExprArt::LibraryCall(_)
                     // **«SG-24»** -- a count is a traversal, and the expected value of a
                     // compare-exchange is ONE value, not a loop.
                     | ExprArt::Zaehle { .. }
@@ -8635,12 +8669,13 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // Ein `leave`/`next` auf eine ANDERE Marke -- es springt, aber nicht hier
                 // heraus. Die Marke, auf die es zielt, fragt sich selbst.
                 StmtArt::Leave(_) | StmtArt::Next(_) => {}
-                // **Und die fuenfzehn, die ueberhaupt nicht springen -- einzeln.** Der
+                // **Und die sechzehn, die ueberhaupt nicht springen -- einzeln.** Der
                 // Abstieg darunter kommt von `crate::unterbloecke`, und das erzwingt fuer
                 // eine neue `StmtArt` nur die Frage *„traegst du einen Block?"*. Ob sie
                 // SPRINGT, fragt es nicht -- und ein neues `goto` waere hier stumm
                 // durchgefallen, waehrend `-Wunused-label` dann eine Marke meldet, die sehr
-                // wohl angesprungen wird.
+                // wohl angesprungen wird. (**Fuenfzehn** bis lane E1; ein Bibliothekruf
+                // springt so wenig wie ein Ruf.)
                 StmtArt::Let(_)
                 | StmtArt::LetSonst(_)
                 | StmtArt::Zuweisung(_)
@@ -8655,7 +8690,8 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 | StmtArt::AwaitLoad(_)
                 | StmtArt::Exchange(_)
                 | StmtArt::Return(_)
-                | StmtArt::Ruf(_) => {}
+                | StmtArt::Ruf(_)
+                | StmtArt::LibraryCall(_) => {}
             }
             // Eine innere Schleife DERSELBEN Marke verdeckt sie -- `S001` bindet an die
             // naechste, und das Erzeugnis muss dieselbe Bindung treffen.
@@ -10356,7 +10392,10 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         | ExprArt::Grund { .. }
         // **«SG-24»: a count is a run-time number**, not a witness -- its predicate
         // runs over real slots. Dropping it would delete the traversal.
+        // **Lane E1:** a library call is a run-time call the same way -- its
+        // value is not a ghost, and dropping it would delete real code.
         | ExprArt::Zaehle { .. }
+        | ExprArt::LibraryCall(_)
         | ExprArt::Binaer(_, _, _) => false,
     }
 }
@@ -11493,6 +11532,15 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
+        // **Lane E1:** no lowering exists here either -- see the statement arm.
+        ExprArt::LibraryCall(r) => {
+            weigere(
+                absagen,
+                r.span,
+                "no lowering: `library call` -- the region has no payload yet (lane E1)",
+            );
+            String::new()
+        }
         // **«SG-24»** -- a `count` is a call to its generated counter. The counter
         // was defined from the same site (`zaehler_funktion`, spliced between the
         // declarations and the bodies), so the call always resolves; the captures

@@ -723,6 +723,21 @@ impl<'a> Rechner<'a> {
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),
+            // **Lane E1:** a library call has no callee and no `costs` promise
+            // until lane E2 checks it -- an unknown cost WITH A REASON, never
+            // zero, the same answer an indirect call without one gets.
+            StmtArt::LibraryCall(r) => {
+                let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
+                    a.plus(self.ausdruck(e, lokal))
+                });
+                args.plus(Kosten::Unbekannt(
+                    format!(
+                        "`@{}#{}` names no declared function, so the call declares no costs",
+                        r.library.text, r.function.text
+                    ),
+                    Some(r.span),
+                ))
+            }
             StmtArt::Narrow(n) => Kosten::Zahl(1).plus(groesser(
                 Kosten::Zahl(0),
                 self.block(&n.sonst, lokal),
@@ -873,6 +888,21 @@ impl<'a> Rechner<'a> {
                 }
             },
             ExprArt::Ruf(r) => self.ruf(r, lokal),
+            // **Lane E1:** a library call in binding position costs its
+            // arguments plus an unknown remainder -- no callee, no `costs`
+            // promise, the same answer the statement form gets.
+            ExprArt::LibraryCall(r) => {
+                let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
+                    a.plus(self.ausdruck(e, lokal))
+                });
+                args.plus(Kosten::Unbekannt(
+                    format!(
+                        "`@{}#{}` names no declared function, so the call declares no costs",
+                        r.library.text, r.function.text
+                    ),
+                    Some(r.span),
+                ))
+            }
             // **«SG-24»: a count runs its predicate over the domain, once per entry.**
             //
             // Per entry the predicate plus one increment; the number of entries is the

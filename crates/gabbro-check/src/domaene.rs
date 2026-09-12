@@ -1029,9 +1029,12 @@ fn d027_orte_aus_expr(e: &Expr, verweise: &HashSet<String>, aus: &mut Vec<Ort>) 
         | ExprArt::FnWert(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
-        | ExprArt::Klammer(_)
+        |         ExprArt::Klammer(_)
         | ExprArt::Unaer(_, _)
-        | ExprArt::Binaer(_, _, _) => {
+        // **Lane E1:** the arguments of a library call name places like any
+        // call's; the descent runs through `unterausdruecke` like the rest.
+        | ExprArt::Binaer(_, _, _)
+        | ExprArt::LibraryCall(_) => {
             for k in crate::unterausdruecke(e) {
                 d027_orte_aus_expr(k, verweise, aus);
             }

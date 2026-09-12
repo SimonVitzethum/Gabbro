@@ -319,6 +319,35 @@ pub const NAMEN: &[Satz] = &[
                       have a declared probe, so its population is EMPTY.*",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; sonden/README.md",
     },
+    // --- lane E1, 2026-09-12: the parsed-but-unchecked library call ---------------------
+    //
+    // **The rule that refuses what the next lane defines.** `@library#function`
+    // reads as a run-time call whose region the reader captures without
+    // interpreting; what the region means is not implemented yet, so there is
+    // no declaration, no contract and no payload type to hold the call
+    // against. The sentence is therefore not a claim about the call but about
+    // the refusal: every such call falls here, in both positions, until lane
+    // E2 checks it like any call and retires the code.
+    Satz {
+        name: "namen.library_call",
+        kennungen: &["N057"],
+        aussage: "Every library call `@library#function ( args ) { region }` is \
+                  refused -- once per call, in statement and in binding position. \
+                  A form the checker cannot judge is never silently accepted and \
+                  never crashed on.",
+        vorbehalt: "**The refusal is the whole rule, and that is a decision and not \
+                    a gap** -- the arguments ARE judged: they are ordinary \
+                    expressions, and every pass reads them through the shared \
+                    walkers. What no pass judges is the call itself: callee, \
+                    region and payload. Lane E2 retires this code when it checks \
+                    the call like any call.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/796` (unbalanced region, `P001`), `/797` \
+                      (missing `#`, `P001`), `/798` (empty library name, `P003`), \
+                      `/799` (the refusal itself, `N057`, in both positions); \
+                      counter-direction in `paesse.rs` (`library_call_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; PLAN-ERWEITUNG.md §6",
+    },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
     // **What bought the clause was a CONJUNCTION, not a missing keyword.** `dma_kohaerent`

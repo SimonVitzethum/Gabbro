@@ -2419,3 +2419,71 @@ fn eine_geteilte_klausel_nennt_ihre_invariante() {
     // stays writable -- the rule is about the shared side, not about tables.
     faellt_nicht(&mit("requires Held(KAPPEN), k.slots[i].belegt", rumpf));
 }
+
+// -- Lane E1: library calls ------------------------------------------------------------
+// `@library#function ( args ) { region }` parses in statement and binding
+// position; the checker refuses every such call with `N057` until lane E2
+// checks it. Malformed shapes fall at the reader with the ordinary codes.
+
+fn library_call_frame(body: &str) -> String {
+    format!(
+        "module t {{ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 32 ops {{ {body} return a; }} }}"
+    )
+}
+
+#[test]
+fn library_call_statement_is_parsed_and_refused() {
+    faellt_mit(
+        &library_call_frame("@spirv#kernel(a) { dispatch 0 };"),
+        "N057",
+    );
+}
+
+#[test]
+fn library_call_binding_is_parsed_and_refused() {
+    faellt_mit(
+        &library_call_frame("let code = @spirv#kernel(a) { dispatch 0 }; let _x = code;"),
+        "N057",
+    );
+}
+
+#[test]
+fn library_call_region_holds_nested_braces() {
+    // Nested `{ … }` pairs belong to the region; only the balancing `}` ends it.
+    faellt_mit(
+        &library_call_frame("@spirv#kernel(a) { dispatch { nested } 0 };"),
+        "N057",
+    );
+}
+
+#[test]
+fn library_call_unbalanced_region_falls() {
+    faellt_mit(
+        &library_call_frame("@spirv#kernel(a) { dispatch 0;"),
+        "P001",
+    );
+}
+
+#[test]
+fn library_call_missing_hash_falls() {
+    faellt_mit(
+        &library_call_frame("@spirv kernel(a) { dispatch 0 };"),
+        "P001",
+    );
+}
+
+#[test]
+fn library_call_empty_library_falls() {
+    faellt_mit(
+        &library_call_frame("@#kernel(a) { dispatch 0 };"),
+        "P003",
+    );
+}
+
+#[test]
+fn library_call_labelled_argument_falls() {
+    faellt_mit(
+        &library_call_frame("@spirv#kernel(x: a) { dispatch 0 };"),
+        "P036",
+    );
+}
