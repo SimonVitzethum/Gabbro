@@ -303,4 +303,91 @@ theorem pruefeSchluessel_einigung {D : Deklaration} (P : Profil D)
               exact ihCross x hxtl y hy k v w h1 h2
   exact (hall P (fun x hx => hx) h).1
 
+/-- A requirement entry: what a library asks of the profile, by content. -/
+inductive Anforderung (D : Deklaration) where
+  | modus (name : String) (klasse : String) (key : ProfilSchluessel) (val : Nat)
+  | frei (name : String) (klasse : String) (claim : World D → Prop)
+
+/-- The entry a requirement denotes. -/
+def anforderungEintrag {D : Deklaration} : Anforderung D → AnnahmeEintrag D
+  | .modus n c k v => .modus n c k v
+  | .frei n c p => .frei n c p
+
+/-- A library: a name and its requirements. -/
+structure Bibliothek (D : Deklaration) where
+  name : String
+  anforderungen : List (Anforderung D)
+
+/-- Name of a requirement. -/
+def anforderungName {D : Deklaration} : Anforderung D → String
+  | .modus n _ _ _ => n
+  | .frei n _ _ => n
+
+/-- Name lookup in the profile. -/
+def profilEintrag {D : Deklaration} (P : Profil D) (n : String) :
+    Option (AnnahmeEintrag D) :=
+  P.find? (fun a => decide (eintragName a = n))
+
+/-- `Profil.bindet lib`: every required name is in the profile with identical
+    content -- requirements by NAME reference (PLAN-ERWEITUNG.md section 0c,
+    point 2). -/
+def Profil.bindet {D : Deklaration} (P : Profil D) (lib : Bibliothek D) : Prop :=
+  ∀ r ∈ lib.anforderungen, ∃ a ∈ P,
+    eintragName a = anforderungName r ∧
+    namensGleichheit a (anforderungEintrag r)
+
+/-- The conjunction of a library's requirements over a mode. -/
+def Bibliothek.gilt {D : Deklaration} (lib : Bibliothek D)
+    (m : ModusBelegung) : Prop :=
+  ∀ r ∈ lib.anforderungen, erfuellt m (anforderungEintrag r)
+
+/-- Bound entries satisfy their requirement: same-named keyed content forces
+    the same mode equation. -/
+theorem namensGleichheit_erfuellt_modus {D : Deklaration}
+    (a : AnnahmeEintrag D) (r : Anforderung D) (m : ModusBelegung)
+    (h : namensGleichheit a (anforderungEintrag r))
+    (hm : erfuellt m a) :
+    erfuellt m (anforderungEintrag r) := by
+  cases ra : r with
+  | modus n c k v =>
+      simp only [ra, anforderungEintrag] at h ⊢
+      cases ha : a with
+      | modus na ca ka va =>
+          simp only [ha] at h
+          obtain ⟨_, _, hkk, hvv⟩ := h
+          simp only [ha, erfuellt] at hm
+          subst hkk
+          subst hvv
+          simp only [erfuellt]
+          exact hm
+      | frei na ca p =>
+          unfold namensGleichheit namensGleichheitAux at h
+          rw [ha] at h
+          simp only at h
+  | frei n c p =>
+      simp only [anforderungEintrag, erfuellt]
+
+/-- Linking adds no premise: if a library binds, the profile's conjunction
+    implies the conjunction of the library's requirements. -/
+theorem bindung_fuegt_nichts_hinzu {D : Deklaration} (P : Profil D)
+    (lib : Bibliothek D) (m : ModusBelegung)
+    (hgilt : Profil.gilt P m)
+    (hbind : Profil.bindet P lib) :
+    Bibliothek.gilt lib m := by
+  intro r hr
+  obtain ⟨a, hamem, _, hcon⟩ := hbind r hr
+  have hma := hgilt a hamem
+  exact namensGleichheit_erfuellt_modus a r m hcon hma
+
+/-- Two entries with one key and different values make `Profil.gut` false. -/
+theorem widerspruch_abgelehnt {D : Deklaration} (P : Profil D)
+    (k : ProfilSchluessel) (v w : Nat) (hvw : v ≠ w)
+    (a b : AnnahmeEintrag D)
+    (ha : a ∈ P) (hb : b ∈ P)
+    (h1 : istModus a k v) (h2 : istModus b k w) :
+    ¬ Profil.gut P := by
+  intro hgut
+  have hagree := hgut.1 a ha b hb k v w h1 h2
+  exact hvw hagree
+
 end Gabbro.Grammatik
