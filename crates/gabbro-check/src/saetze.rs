@@ -1582,6 +1582,28 @@ pub const M1: &[Satz] = &[
                       (fresh and re-read arms silent, stale control falls once).",
         fundstelle: "crates/gabbro-check/src/m1.rs; messung/FRISCHE-V4-ENTWURF.md",
     },
+    Satz {
+        name: "m1.rueckgabe_ohne_ergebnis",
+        kennungen: &["M148"],
+        aussage: "A `return` with a value stands only in a function that declares a result. \
+                  `m1.rs` compared the value solely against the declared result (`if let \
+                  Some(z) = ergebnis`), so a value in a result-less body fell through the \
+                  `if` silently -- and the emitter writes it straight into a `void` \
+                  function, where both C families refuse it (`-Werror=return-type`).",
+        vorbehalt: "It says nothing about the TYPE of the value -- that stays `M101`'s, \
+                    `M135`'s and `M140`'s where a result is declared. The bare `return;` \
+                    stays silent: a result-less function ends in `return;` or falls to its \
+                    closing brace, which SYNTAX.md reads as sugar for `return;`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-12 against the UNCHANGED checker: \
+                      beispiele/gift/776 carries `return m;` and `return 0;` in a function \
+                      without `-> T`; `gabbro pruefe` said 0 errors, `gabbro emit` wrote \
+                      `static void kreis` with four valued returns, and `cc` and `clang` \
+                      refused every one of them. Poison is beispiele/gift/788, whose twin \
+                      `gib` declares `-> u32` and keeps the same lines silent.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; beispiele/gift/776-*; \
+                     beispiele/gift/788-return-carries-a-value-without-a-result.gab",
+    },
 ];
 
 // ===================================================================================
