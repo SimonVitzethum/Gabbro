@@ -1216,6 +1216,32 @@ impl Umgebung {
                     unterwegs,
                 )
             }
+            // **Lane 121: a nested `const fn` call keeps the bindings.** The
+            // fallback below (`auswerten` without `werte`) silently dropped
+            // the parameters, so `doppelt(doppelt(n))` evaluated to nothing
+            // while the printer printed it -- values and source parted ways
+            // exactly where this lane joins them. Same recursion guard and
+            // arity check as `auswerten`; only the bindings travel.
+            ExprArt::Ruf(r) => {
+                let name = self
+                    .kandidaten(von, &r.path()?.text())
+                    .into_iter()
+                    .find(|k| self.konst_fn.contains_key(k))?;
+                if !unterwegs.insert(format!("constfn:{name}")) {
+                    return None;
+                }
+                let (params, rumpf) = self.konst_fn.get(&name)?.clone();
+                if params.len() != r.argumente.len() {
+                    return None;
+                }
+                let mut neu = HashMap::new();
+                for (p, a) in params.iter().zip(r.argumente.iter()) {
+                    neu.insert(p.clone(), self.auswerten_mit(von, a, werte, unterwegs)?);
+                }
+                let erg = self.auswerten_mit(modul_von(&name), &rumpf, &neu, unterwegs);
+                unterwegs.remove(&format!("constfn:{name}"));
+                erg
+            }
             _ => self.auswerten(von, e, unterwegs),
         }
     }

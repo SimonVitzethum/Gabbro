@@ -532,35 +532,52 @@ fn check_const(
 }
 
 /// Print the evaluated values of a const table as a Lean certificate file:
-/// a `List Nat` literal plus the defining equation as a `List.all`
+/// the TRANSLATED const fn definition (lane 121: `konst_lean` renders the
+/// body, so Lean checks the values against the SOURCE -- never a hand
+/// equation), a `List Nat` literal, and the check as a `List.all`
 /// predicate over `zipIdx` (encoding N of the certificate measurement),
-/// closed by `decide`. `equation` is the equation body over the pair `p`
-/// (`p.1` the value, `p.2` the index), e.g. `p.1 == p.2 * p.2`.
-pub fn certificate(name: &str, values: &[u64], equation: &str) -> String {
+/// closed by `decide`. `fn_def` is the full translated definition line;
+/// `fn_name` the function the check applies.
+pub fn certificate(name: &str, values: &[u64], fn_def: &str, fn_name: &str) -> String {
     use std::fmt::Write;
     let mut out = String::new();
     let _ = writeln!(
         out,
-        "-- Compile-time certificate printed by gabbro-check (lane 111):"
+        "-- Compile-time certificate printed by gabbro-check (lanes 111/121):"
     );
     let _ = writeln!(
         out,
         "-- the evaluated values of const-table `{name}` and their defining"
     );
-    let _ = writeln!(out, "-- equation as a `List.all` predicate (encoding N).");
-    let _ = writeln!(out, "def {name}Vals : List Nat :=");
-    let _ = write!(out, "  [");
-    for (i, w) in values.iter().enumerate() {
-        if i > 0 {
-            let _ = write!(out, ", ");
-        }
-        let _ = write!(out, "{w}");
-    }
-    let _ = writeln!(out, "]");
     let _ = writeln!(
         out,
-        "def {name}Ok : Bool := ({name}Vals.zipIdx).all (fun p => {equation})"
+        "-- function, translated from the const fn source, as a `List.all`"
+    );
+    let _ = writeln!(out, "-- predicate (encoding N).");
+    let _ = writeln!(out, "{fn_def}");
+    let _ = writeln!(out, "def {name}Vals : List Nat :=");
+    let werte: Vec<u128> = values.iter().map(|w| *w as u128).collect();
+    let _ = writeln!(out, "  {}", crate::konst_lean::tabelle_lean(&werte));
+    let _ = writeln!(
+        out,
+        "def {name}Ok : Bool := ({name}Vals.zipIdx).all (fun p => p.1 == {fn_name} p.2)"
     );
     let _ = writeln!(out, "theorem {name}_zert : {name}Ok = true := by decide");
     out
+}
+
+/// The certificate for a table computed by one const fn: translate the
+/// body through `konst_lean`, then assemble. `None` where the body leaves
+/// the printable fragment -- then there is no certificate, not a weaker
+/// one.
+pub fn certificate_of_const_fn(
+    name: &str,
+    values: &[u64],
+    lean_fn: &str,
+    param: &str,
+    body: &Expr,
+    funktionen: &HashMap<String, String>,
+) -> Option<String> {
+    let fn_def = crate::konst_lean::funktion_lean(lean_fn, param, body, funktionen)?;
+    Some(certificate(name, values, &fn_def, lean_fn))
 }

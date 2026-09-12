@@ -13,6 +13,11 @@
 //! * the printed certificate carries the same literal the Lean witness
 //!   (`Konstanten.squares64`) closes by `decide` -- a drift breaks this
 //!   file, and the `decide` itself breaks `./lean-bau`.
+//!
+//! Lane 121: the defining equation is no longer handed in --
+//! `konst_lean` translates the `const fn` body, and
+//! `certificate_of_const_fn` assembles values plus translation, so Lean
+//! checks the values against the SOURCE.
 
 use gabbro_syntax::diag::Stufe;
 use std::process::Command;
@@ -273,14 +278,26 @@ fn table_computes_at_runtime() {
 // -- the certificate: printed values meet the Lean witness -----------------
 
 /// The 64 squares, as the checker prints them and as `Konstanten.lean`
-/// carries them: one literal, two readers, no drift between them.
+/// carries them: one literal, two readers, no drift between them. The
+/// defining function is translated from the `quad` source (lane 121),
+/// not handed in.
 #[test]
 fn certificate_meets_witness() {
     let values: Vec<u64> = (0..64).map(|i| i * i).collect();
-    let cert = gabbro_check::konstanten::certificate("sq", &values, "p.1 == p.2 * p.2");
+    let (baum, _) = gabbro_syntax::lies("<probe>", &format!("module t {{{QUAD}}}"));
+    let (_, body, _) = const_fn_body(&baum, "quad");
+    let leer: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let cert = gabbro_check::konstanten::certificate_of_const_fn(
+        "sq", &values, "quad", "i", &body, &leer,
+    )
+    .expect("quad is in the printable fragment");
     assert!(
-        cert.contains("def sqVals : List Nat :=") && cert.contains("(sqVals.zipIdx).all (fun p => p.1 == p.2 * p.2)"),
-        "values plus the defining equation as a List.all predicate:\n{cert}"
+        cert.contains("def quad (i : Nat) : Nat := i * i"),
+        "the translated SOURCE stands in the certificate:\n{cert}"
+    );
+    assert!(
+        cert.contains("def sqVals : List Nat :=") && cert.contains("(sqVals.zipIdx).all (fun p => p.1 == quad p.2)"),
+        "values plus the translated function as a List.all predicate:\n{cert}"
     );
     assert!(
         cert.contains("theorem sq_zert : sqOk = true := by decide"),
@@ -310,7 +327,157 @@ fn certificate_meets_witness() {
         "the printed literal drifts from squares64 -- the decide would close over other values"
     );
     assert!(
-        flach(&lean).contains(&flach("konstZert squares64 (fun i v => v == i * i) = true := by decide")),
+        flach(&lean).contains(&flach("konstZert squares64 (fun i v => v == quad i) = true := by decide")),
         "the witness closes the same shape the printer prints"
     );
+}
+
+// -- lane 121: the printed Lean IS the translated source -------------------
+// The VALUES below come from the checker's own folder at 0..64 (not hand
+// numbers); the DEFINING FUNCTION is the translated `quad` body.
+
+use gabbro_syntax::ast::{FnKlasse, FnRumpf, ItemArt, StmtArt};
+
+// SQUARES-CERT-BEGIN
+const SQUARES_CERT_EXPECTED: &str = r#"-- Compile-time certificate printed by gabbro-check (lanes 111/121):
+-- the evaluated values of const-table `sq` and their defining
+-- function, translated from the const fn source, as a `List.all`
+-- predicate (encoding N).
+def quad (i : Nat) : Nat := i * i
+def sqVals : List Nat :=
+  [0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961, 1024, 1089, 1156, 1225, 1296, 1369, 1444, 1521, 1600, 1681, 1764, 1849, 1936, 2025, 2116, 2209, 2304, 2401, 2500, 2601, 2704, 2809, 2916, 3025, 3136, 3249, 3364, 3481, 3600, 3721, 3844, 3969]
+def sqOk : Bool := (sqVals.zipIdx).all (fun p => p.1 == quad p.2)
+theorem sq_zert : sqOk = true := by decide
+"#;
+// SQUARES-CERT-END
+
+/// The single-expression body and parameter name of the named `const fn`,
+/// with the module path the folder resolves it under.
+fn const_fn_body(
+    baum: &gabbro_syntax::ast::Programm,
+    name: &str,
+) -> (String, gabbro_syntax::ast::Expr, String) {
+    let mut found: Option<(String, gabbro_syntax::ast::Expr, String)> = None;
+    gabbro_check::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if f.name.text == name && matches!(f.klasse, Some(FnKlasse::Konst)) {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    if let [s] = &b.anweisungen[..] {
+                        if let StmtArt::Return(Some(w)) = &s.art {
+                            found = Some((
+                                modul.to_string(),
+                                w.clone(),
+                                f.parameter[0].name.text.clone(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    });
+    found.unwrap_or_else(|| panic!("const fn {name} with a single return not found"))
+}
+
+#[test]
+fn printed_lean_is_the_translation_of_quad() {
+    let (baum, mut absagen) = gabbro_syntax::lies("quad.gab", &format!("module t {{{QUAD}}}"));
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(&format!("module t {{{QUAD}}}")));
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    let (modul, body, param) = const_fn_body(&baum, "quad");
+    assert_eq!(param, "i");
+    // The VALUES come from the checker's own folder at 0..64.
+    let u = gabbro_check::umgebung::Umgebung::sammle(&baum);
+    let werte = gabbro_check::konst_lean::werte_tabelle(&u, &modul, "quad", 64);
+    let erwartet: Vec<u128> = (0..64).map(|k| k * k).collect();
+    assert_eq!(werte, Some(erwartet));
+    let values: Vec<u64> = (0..64).map(|k| k * k).collect();
+    // The whole certificate file, byte for byte: translated function plus
+    // evaluated table, no hand equation anywhere.
+    let leer: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    assert_eq!(
+        gabbro_check::konstanten::certificate_of_const_fn(
+            "sq", &values, "quad", "i", &body, &leer
+        ),
+        Some(SQUARES_CERT_EXPECTED.to_string())
+    );
+}
+
+/// Parse `const K : u64 = <expr>;` and print the initializer.
+fn const_init_of(expr: &str) -> gabbro_syntax::ast::Expr {
+    let quelle = format!("module t {{ const K : u64 = {expr}; }}");
+    let (baum, absagen) = gabbro_syntax::lies("probe.gab", &quelle);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(&quelle));
+    let mut found = None;
+    gabbro_check::fuer_jedes_item_im_modul(&baum, &mut |item, _| {
+        if let ItemArt::Konst(k) = &item.art {
+            found = Some(k.wert.clone());
+        }
+    });
+    found.expect("const initializer not found")
+}
+
+fn prints_as(expr: &str) -> Option<String> {
+    let leer: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    gabbro_check::konst_lean::ausdruck_lean(&const_init_of(expr), "i", &leer)
+}
+
+#[test]
+fn every_operator_family_prints_its_nat_form() {
+    assert_eq!(prints_as("2 * 3 + 1"), Some("(2 * 3) + 1".to_string()));
+    assert_eq!(prints_as("i * i"), Some("i * i".to_string()));
+    assert_eq!(prints_as("i - 1"), Some("i - 1".to_string()));
+    assert_eq!(prints_as("7 / 2"), Some("7 / 2".to_string()));
+    assert_eq!(prints_as("7 % 2"), Some("7 % 2".to_string()));
+    assert_eq!(prints_as("1 << 10"), Some("Nat.shiftLeft 1 10".to_string()));
+    assert_eq!(prints_as("1024 >> 10"), Some("Nat.shiftRight 1024 10".to_string()));
+    assert_eq!(prints_as("3 & 5"), Some("Nat.land 3 5".to_string()));
+    assert_eq!(prints_as("3 | 5"), Some("Nat.lor 3 5".to_string()));
+    assert_eq!(prints_as("3 ^ 5"), Some("Nat.xor 3 5".to_string()));
+    assert_eq!(prints_as("true"), Some("1".to_string()));
+    assert_eq!(prints_as("false"), Some("0".to_string()));
+    assert_eq!(prints_as("!true"), Some("(if 1 == 0 then 1 else 0)".to_string()));
+    assert_eq!(prints_as("3 < 3"), Some("(if 3 < 3 then 1 else 0)".to_string()));
+    assert_eq!(prints_as("NKERNE"), Some("NKERNE".to_string()));
+}
+
+#[test]
+fn nested_const_calls_print_as_lean_application() {
+    let quelle = "module t {\n\
+const fn doppelt(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
+{ return n + n; }\n\
+const fn plusEins(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
+{ return n + 1; }\n\
+const fn zweimalPlusEins(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
+{ return doppelt(plusEins(n)); } }";
+    let (baum, absagen) = gabbro_syntax::lies("nest.gab", quelle);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+    let (_, body, _) = const_fn_body(&baum, "zweimalPlusEins");
+    let mut funktionen: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    funktionen.insert("doppelt".to_string(), "doppelt".to_string());
+    funktionen.insert("plusEins".to_string(), "plusEins".to_string());
+    assert_eq!(
+        gabbro_check::konst_lean::ausdruck_lean(&body, "n", &funktionen),
+        Some("doppelt (plusEins n)".to_string())
+    );
+    // And the checker agrees on the value at a probe point.
+    // (Self-nesting like `doppelt(doppelt(n))` stays `None`: the recursion
+    // guard names functions, not calls, and keeps rejecting it.)
+    let u = gabbro_check::umgebung::Umgebung::sammle(&baum);
+    let ruf = gabbro_check::konst_lean::ruf_ausdruck("zweimalPlusEins", &[21]);
+    assert_eq!(u.konst_wert("t", &ruf), Some(44));
+}
+
+#[test]
+fn unprintable_yields_no_certificate() {
+    // Negation has no Nat form.
+    assert_eq!(prints_as("-i"), None);
+    // Division by zero is no value in the checker, so no table follows.
+    let quelle = "module t {\n\
+const fn d(x : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
+{ return 1 / (x - x); } }";
+    let (baum, absagen) = gabbro_syntax::lies("div0.gab", quelle);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+    let (modul, _, _) = const_fn_body(&baum, "d");
+    let u = gabbro_check::umgebung::Umgebung::sammle(&baum);
+    assert_eq!(gabbro_check::konst_lean::werte_tabelle(&u, &modul, "d", 4), None);
 }

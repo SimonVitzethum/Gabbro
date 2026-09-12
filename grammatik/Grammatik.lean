@@ -99,6 +99,7 @@ import Grammatik.DisziplinBedarf
 import Grammatik.VertragsFuss
 import Grammatik.RelySperre
 import Grammatik.Trennung
+import Grammatik.Konstanten
 import Grammatik.AuditW5
 import Grammatik.RufAdaequatG
 import Grammatik.RufAdaequatRufG
