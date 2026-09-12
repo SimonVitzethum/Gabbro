@@ -1422,6 +1422,44 @@ impl<'a> Pruefer<'a> {
                 if let Some(z) = ergebnis {
                     let z = z.clone();
                     self.passt_wert(e, &t, &z, e.span, "the return value");
+                } else {
+                    // **`M148` -- a `return` with a value in a function that declares
+                    // none.**
+                    //
+                    // A function without a result lowers to `void`, and a `return e;`
+                    // in it becomes `return <e>;` in a `void` function -- refused by
+                    // both C families (`-Werror=return-type`). Measured 2026-09-12 on
+                    // `beispiele/gift/776`: the checker said 0 errors, the emitter
+                    // wrote `return m;` into `static void kreis`, and `cc` and `clang`
+                    // refused it line for line. *Three stages passed it, and the
+                    // fourth is not part of the language* -- the same shape as
+                    // `N044`'s, one construct further out.
+                    //
+                    // The bare `return;` stays silent: a result-less function ends in
+                    // `return;` or falls to its closing brace, which SYNTAX.md reads
+                    // as sugar for `return;`. Only a value where none is declared
+                    // falls here.
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M148",
+                            e.span,
+                            format!(
+                                "`return` carries `{}`, but this function answers nothing",
+                                t.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a `return <value>;` in a function without `-> T` lowers to \
+                             `return <value>;` in a `void` function -- and the two C \
+                             families refuse exactly that line, where the checker \
+                             before this rule compared the value only against a result \
+                             that was never declared",
+                        )
+                        .mit_notiz(
+                            "either declare the result the value answers, or return \
+                             without one",
+                        ),
+                    );
                 }
             }
             StmtArt::Ruf(r) => {

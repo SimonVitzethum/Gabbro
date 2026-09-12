@@ -149,6 +149,14 @@ const BENANNT: &[&str] = &[
     // emitter refused 96 -- which is the `N041` shape, a trust base holding one stage too
     // late -- and 22 reached green C.
     "M140",
+    // 2026-09-12, the FOURTH door in that same wall, and this one was never a range
+    // question either: the EXISTENCE of the slot. `m1.rs` compared the return value
+    // solely against the declared result (`if let Some(z) = ergebnis`), so a value in
+    // a result-less body fell through the `if` silently -- and the emitter writes it
+    // straight into a `void` function, where both C families refuse it. Measured on
+    // `beispiele/gift/776`: 0 errors, `static void kreis` with four valued returns,
+    // `cc` and `clang` refusing every one. Poison is `beispiele/gift/788`.
+    "M148",
     // 2026-09-02, the residue `M140`'s own reservation named: `M128` holds arity, effects
     // and cost at a `fn(...)` slot and **nothing about the values that travel through it**.
     // `&eng` with `eng(b : u8) -> u8` went into a `fn(u32) -> u32` slot with `0 errors` and

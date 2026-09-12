@@ -8025,6 +8025,69 @@ check c {
     );
 }
 
+/// **`M148`: a `return` with a value in a function that declares none.**
+///
+/// The fourth door in the `M140` wall, and this one was never a range question either:
+/// the EXISTENCE of the slot. `m1.rs` compared the return value solely against the
+/// declared result (`if let Some(z) = ergebnis`), so a value in a result-less body fell
+/// through the `if` silently -- and the emitter writes it straight into a `void`
+/// function, where both C families refuse it (`-Werror=return-type`).
+///
+/// Measured 2026-09-12 on `beispiele/gift/776`: the checker said 0 errors, the emitter
+/// wrote `return m;` into `static void kreis`, and `cc` and `clang` refused it line for
+/// line. *Three stages passed it, and the fourth is not part of the language* -- the same
+/// shape as `N044`'s, one construct further out. The poison probe is
+/// `beispiele/gift/788`; the twin `gib` beside it declares `-> u32` and keeps the same
+/// lines silent, and the bare `return;` of `leer` is the third arm.
+#[test]
+fn rueckgabe_traegt_einen_wert_ohne_ergebnis() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn mit(kopf: &str, rumpf: &str) -> String {
+        format!(
+            "module t {{
+static mut m : u32 = 0;
+impl fn f(){kopf} effects {{ reads m }} costs <= 1 ops {{ {rumpf} }} }}"
+        )
+    }
+
+    // 1 -- a valued `return` in a result-less body falls, and falls ALONE: the bare
+    // `return;` beside it is the form SYNTAX.md reads as the end of such a body.
+    let a = absagen(&mit("", "if m > 0 { return m; } return 0;"));
+    assert_eq!(
+        a.iter().filter(|c| *c == "M148").count(),
+        2,
+        "beide wertvollen `return` fallen an M148, und sonst nichts: {a:?}"
+    );
+
+    // 2 -- the counter-direction. The same lines under a declared `-> u32` are the
+    // program the rule must never touch; the bare `return;` under no result is the
+    // sugar SYNTAX.md promises such a body.
+    for (kopf, rumpf) in [
+        (" -> u32", "if m > 0 { return m; } return 0;"),
+        ("", "return;"),
+        ("", "if m > 0 { return; }"),
+    ] {
+        let g = absagen(&mit(kopf, rumpf));
+        assert!(
+            !g.iter().any(|c| c == "M148"),
+            "`f(){kopf} {{ {rumpf} }}` ist richtig und darf nicht fallen: {g:?}"
+        );
+    }
+
+    // 3 -- a valued `return` is refused WHEREVER it stands, not only at the top level:
+    // the emitted C does not care how deeply the statement is nested.
+    let tief = absagen(&mit("", "if m > 0 { if m > 9 { return m; } return 0; } return 0;"));
+    assert_eq!(
+        tief.iter().filter(|c| *c == "M148").count(),
+        3,
+        "auch zwei Ebenen tief faellt jedes wertvolle `return`: {tief:?}"
+    );
+}
+
 /// **The block boundary of `N001` -- and the mutation that showed it had no anchor.**
 ///
 /// `namen.rs::rumpf_geltung` refuses two declarations of one name in ONE scope, because the
