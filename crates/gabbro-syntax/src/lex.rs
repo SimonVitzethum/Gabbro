@@ -46,6 +46,9 @@ pub enum Z {
     Bang,
     Tilde,
     At,
+    /// `#` -- the library call separator in `@library#function` (lane E1).
+    /// A punctuation mark like `@`, not a vocabulary word: no `Kw` entry.
+    Hash,
     RundAuf,
     RundZu,
     EckAuf,
@@ -92,6 +95,7 @@ impl Z {
             Z::Bang => "!",
             Z::Tilde => "~",
             Z::At => "@",
+            Z::Hash => "#",
             Z::RundAuf => "(",
             Z::RundZu => ")",
             Z::EckAuf => "[",
@@ -482,6 +486,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
             ("!", Z::Bang),
             ("~", Z::Tilde),
             ("@", Z::At),
+            ("#", Z::Hash),
             ("(", Z::RundAuf),
             (")", Z::RundZu),
             ("[", Z::EckAuf),

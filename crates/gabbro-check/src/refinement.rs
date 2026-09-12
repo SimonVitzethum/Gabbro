@@ -329,7 +329,9 @@ fn argument_term(a: &Expr, caller: &[CallerParam]) -> Result<String, Reason> {
         | ExprArt::Alt(_)
         // **«SG-24»: a count has no term in this theory** (`Main`, no cardinality
         // library) -- a `refines` head over one is refused by name, not defaulted.
+        // **Lane E1:** a library call has no term here either.
         | ExprArt::Zaehle { .. }
+        | ExprArt::LibraryCall(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
         | ExprArt::Unaer(_, _)
@@ -428,6 +430,8 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::FnWert(_)
         | ExprArt::Ruf(_)
+        // **Lane E1:** a library call has no term in this theory either.
+        | ExprArt::LibraryCall(_)
         | ExprArt::Eingebaut(_)
         | ExprArt::Alt(_)
         | ExprArt::Ergebnis
