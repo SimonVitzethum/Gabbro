@@ -1466,13 +1466,36 @@ impl<'a> Pruefer<'a> {
                 let _ = self.ruf(r, lage);
                 self.rufe_toeten_fakten(&rufnamen_im_ruf(r), lage);
             }
-            // **Lane E1:** no callee and no contract -- the call itself is
-            // refused (`N057`). What remains for M1 is the arguments:
-            // ordinary expressions with ordinary diagnostics.
+            // **Lane E2:** a resolved library call is checked like any call
+            // (arity, argument shape and range, `requires`, result
+            // narrowing) over the callee's declared signature, and kills
+            // facts like one. Unresolved it stays what E1 made it: typed
+            // arguments, no callee, `N057` from the name pass.
             StmtArt::LibraryCall(r) => {
+                let mut argtypen = Vec::new();
                 for a in &r.args {
-                    self.ausdruck(a, lage);
+                    argtypen.push((self.ausdruck(a, lage), a.span));
                     self.rufe_im_ausdruck(a, lage);
+                }
+                if let Some(z) =
+                    self.u.bibliothek(&self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(sig) = self.u.funktionen.get(&z.name).cloned() {
+                        let ziel = format!("@{}#{}", r.library.text, r.function.text);
+                        let _ = self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
+                    }
+                    let pfad = gabbro_syntax::ast::Pfad {
+                        teile: z
+                            .name
+                            .split("::")
+                            .map(|t| gabbro_syntax::ast::Ident {
+                                text: t.to_string(),
+                                span: r.span,
+                            })
+                            .collect(),
+                        span: r.span,
+                    };
+                    self.rufe_toeten_fakten(&[&pfad], lage);
                 }
             }
             StmtArt::AwaitLoad(a) => {
@@ -1939,12 +1962,22 @@ impl<'a> Pruefer<'a> {
             // `old(x)` ist ein Geisterausdruck: er steht in `ensures`, nicht im Rumpf.
             ExprArt::Alt(_) => Typ::Unbekannt,
             ExprArt::Ruf(r) => self.ruf_roh(r, lage),
-            // **Lane E1:** a library call has no type until lane E2 checks
-            // it; its arguments are ordinary expressions, diagnosed where
-            // they stand. The call itself is refused (`N057`).
+            // **Lane E2:** a resolved library call answers its declared
+            // result, checked like any call; unresolved it stays untyped.
+            // The call itself is refused (`N057` unresolved, `N058`
+            // resolved) by the name pass.
             ExprArt::LibraryCall(r) => {
+                let mut argtypen = Vec::new();
                 for a in &r.args {
-                    self.ausdruck(a, lage);
+                    argtypen.push((self.ausdruck(a, lage), a.span));
+                }
+                if let Some(z) =
+                    self.u.bibliothek(&self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(sig) = self.u.funktionen.get(&z.name).cloned() {
+                        let ziel = format!("@{}#{}", r.library.text, r.function.text);
+                        return self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
+                    }
                 }
                 Typ::Unbekannt
             }
@@ -2627,14 +2660,36 @@ impl<'a> Pruefer<'a> {
         // *What the arity of a transition call ought to be is a question this rule does not
         // answer* -- see the register's reservation.
         let uebergang = r.path().is_some_and(|p| self.u.ist_uebergang(&self.modul, p));
+        let ziel = r.target_text();
+        self.ruf_aufgeloest(&ziel, r.span, uebergang, &argtypen, &sig)
+    }
+
+    /// **Lane E2: a resolved call, whoever spelled it.**
+    ///
+    /// The tail of `ruf_roh`'s direct path -- arity (`M143`), per-argument
+    /// shape and range (`passt`), `requires` (`M115`), and the
+    /// `ensures`-narrowing with its foreign booking -- over an already
+    /// resolved signature. A library call (`@lib#f`) resolves through
+    /// `Umgebung::bibliothek` instead of `Umgebung::funktion` and lands
+    /// here with the same signature; what it reports and what it answers
+    /// are the same by construction, not by parallel code. `uebergang` is
+    /// always false across a library edge: the resolved name stands for a
+    /// `library fn`, never for a transition placeholder.
+    fn ruf_aufgeloest(
+        &mut self,
+        ziel: &str,
+        span: Span,
+        uebergang: bool,
+        argtypen: &[(Typ, Span)],
+        sig: &crate::umgebung::Signatur,
+    ) -> Typ {
         if !uebergang && argtypen.len() != sig.parameter.len() {
-            let name = r.target_text();
             let (n, m) = (sig.parameter.len(), argtypen.len());
             self.absagen.schiebe(
                 Absage::fehler(
                     "M143",
-                    r.span,
-                    format!("`{name}` declares {n} parameter(s), this call passes {m}"),
+                    span,
+                    format!("`{ziel}` declares {n} parameter(s), this call passes {m}"),
                 )
                 .mit_notiz(
                     "a parameter with no argument is a slot every pass behind this one still \
@@ -2652,7 +2707,7 @@ impl<'a> Pruefer<'a> {
         for ((t, span), (pname, pt)) in argtypen.iter().zip(sig.parameter.iter()) {
             self.passt(t, pt, *span, &format!("argument `{pname}`"));
         }
-        self.requires_pruefen(r, &sig, &argtypen);
+        self.requires_pruefen(ziel, &sig, &argtypen);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
         let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
         // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
@@ -2670,8 +2725,8 @@ impl<'a> Pruefer<'a> {
             for s in &v.schritte {
                 self.fremd.push(Stelle {
                     rufer: self.rufer.clone(),
-                    gerufener: r.target_text(),
-                    span: r.span,
+                    gerufener: ziel.to_string(),
+                    span,
                     klausel: s.klausel.clone(),
                     wirkung: Wirkung::Bereich {
                         vorher: s.vorher.clone(),
@@ -2798,7 +2853,12 @@ impl<'a> Pruefer<'a> {
     /// Gedeckt ist die Form `<parameter> <op> <zahl>` -- dieselbe, die `aus_ensures` in der
     /// Gegenrichtung liest. Alles Uebrige (Weltzustand, Quantoren) bleibt liegen und ist im
     /// TODO als die staerkere Haelfte gebucht.
-    fn requires_pruefen(&mut self, r: &Ruf, sig: &crate::umgebung::Signatur, argtypen: &[(Typ, Span)]) {
+    fn requires_pruefen(
+        &mut self,
+        ziel: &str,
+        sig: &crate::umgebung::Signatur,
+        argtypen: &[(Typ, Span)],
+    ) {
         for p in &sig.requires {
             let PredArt::Vergleich(e) = &p.art else { continue };
             let ExprArt::Binaer(op, a, c) = &e.art else { continue };
@@ -2831,7 +2891,7 @@ impl<'a> Pruefer<'a> {
                         format!(
                             "`{}` requires `{name} {} {zahl}`, and the argument lies in \
                                 {} .. {}",
-                            r.target_text(),
+                            ziel,
                             zeichen(op),
                             b.min,
                             b.max

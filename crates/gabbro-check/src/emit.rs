@@ -7602,8 +7602,9 @@ fn anweisung(
             aus.push_str(&format!("{e}}}\n"));
         }
         StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
-        // **Lane E1:** no lowering exists -- the checker refuses every
-        // library call (`N057`), and the emitter never guesses one.
+        // **Lane E2:** no lowering exists -- the checker refuses every
+        // library call (`N057` unresolved, `N058` resolved), and the emitter
+        // never guesses one.
         StmtArt::LibraryCall(r) => {
             weigere(
                 absagen,

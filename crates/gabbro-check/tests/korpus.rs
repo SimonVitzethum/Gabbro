@@ -29,11 +29,18 @@ const BENANNT: &[&str] = &[
     // `P041` took the stray `pub`: two unrelated rules stood under one identifier, and each
     // of their two poison probes would have stayed green while the OTHER rule was out.
     "P032", "P035", "P041", "P042", // Grammatik
+    // Lane E2: `P043` a `library fn` without its `payload` clause, `P044`
+    // one without a Gabbro body.
+    "P043", "P044",
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     // Lane E1: `N057` -- every library call is parsed and refused until lane
     // E2 checks it. Named here so the corpus run counts the rule, not noise.
     "N057",
+    // Lane E2: `N058` the resolved call (payload translation missing),
+    // `N059` a foreign body in a library hull, `N060` a payload naming no
+    // table, `N061` a direct call to a library function.
+    "N058", "N059", "N060", "N061",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

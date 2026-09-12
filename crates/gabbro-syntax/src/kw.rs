@@ -231,6 +231,27 @@ wortschatz! {
     Own           => "own",           ctx;
 
     // -- Library -----------------------------------------------------------------------
+    // **«E2» (2026-09-12): the `library fn` declaration, specified in
+    // `dokumente/SYNTAX.md` §7.1 and checked by lane E2.**
+    //
+    // The header of a run-time library function: an ordinary Gabbro
+    // function with a body, a contract and a payload type, called
+    // through `@lib#f`. Without the word the declaration is an ordinary
+    // function and a direct call would silently bypass the payload
+    // mechanism (`N061`); with it the hull check (`N059`) and the
+    // payload-type check (`N060`) have a declaration to hold.
+    // CONTEXTUAL like every other declaration word: everywhere a name
+    // stands, it stays an identifier.
+    Library       => "library",       ctx;
+    // **«E2» (2026-09-12): the payload clause of a `library fn`.**
+    //
+    // Names the table (a tree table is a table, `PLAN-ERWEITUNG.md` §2)
+    // the translator will fill at translation time (§0b); the checker
+    // holds the name against the declared tables (`N060`). A bare
+    // `payload` elsewhere -- a parameter, a local, a field -- keeps
+    // parsing as a name: only the fixed clause position after a
+    // `library fn` signature gives the word meaning.
+    Payload       => "payload",       ctx;
     Format        => "format",        ctx;
     Table         => "table",         ctx;
     Slot          => "slot",          ctx;

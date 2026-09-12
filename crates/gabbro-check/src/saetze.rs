@@ -319,34 +319,111 @@ pub const NAMEN: &[Satz] = &[
                       have a declared probe, so its population is EMPTY.*",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; sonden/README.md",
     },
-    // --- lane E1, 2026-09-12: the parsed-but-unchecked library call ---------------------
+    // --- lane E1, 2026-09-12: the unresolved library call ---------------------------
     //
-    // **The rule that refuses what the next lane defines.** `@library#function`
-    // reads as a run-time call whose region the reader captures without
-    // interpreting; what the region means is not implemented yet, so there is
-    // no declaration, no contract and no payload type to hold the call
-    // against. The sentence is therefore not a claim about the call but about
-    // the refusal: every such call falls here, in both positions, until lane
-    // E2 checks it like any call and retires the code.
+    // **The rule that refuses what resolves nowhere -- narrowed by lane E2.**
+    // `@library#function` reads as a run-time call whose region the reader
+    // captures without interpreting; where `library` names no used module
+    // or the module declares no such `library fn`, there is no declaration,
+    // no contract and no payload type to hold the call against. The sentence
+    // is therefore not a claim about the call but about the refusal: every
+    // such call falls here, in both positions. A call that DOES resolve
+    // falls under `N058` instead (`namen.bibliothek_ruf` below).
     Satz {
         name: "namen.library_call",
         kennungen: &["N057"],
-        aussage: "Every library call `@library#function ( args ) { region }` is \
-                  refused -- once per call, in statement and in binding position. \
-                  A form the checker cannot judge is never silently accepted and \
-                  never crashed on.",
+        aussage: "Every library call `@library#function ( args ) { region }` that \
+                  resolves nowhere is refused -- once per call, in statement \
+                  and in binding position, naming whether the library or the \
+                  function failed. A form the checker cannot judge is never \
+                  silently accepted and never crashed on.",
         vorbehalt: "**The refusal is the whole rule, and that is a decision and not \
                     a gap** -- the arguments ARE judged: they are ordinary \
                     expressions, and every pass reads them through the shared \
-                    walkers. What no pass judges is the call itself: callee, \
-                    region and payload. Lane E2 retires this code when it checks \
-                    the call like any call.",
+                    walkers. Lane E2 narrowed the code to the unresolved call; \
+                    the resolved one is `N058`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/802` (unbalanced region, `P001`), `/803` \
                       (missing `#`, `P001`), `/804` (empty library name, `P003`), \
-                      `/805` (the refusal itself, `N057`, in both positions); \
-                      counter-direction in `paesse.rs` (`library_call_*`).",
+                      `/805` (unresolved, `N057`, in both positions); \
+                      `beispiele/gift/821` (unknown library), `/822` (unknown \
+                      function); counter-direction in `paesse.rs` \
+                      (`library_call_*`, `bibliothek_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; PLAN-ERWEITUNG.md §6",
+    },
+    // --- lane E2, 2026-09-12: the checked library call --------------------------------
+    //
+    // **The structure lane of PLAN-ERWEITUNG.md §6.** A library module declares
+    // a run-time function with a contract and a payload type (`library fn`
+    // with `payload <table>`, SYNTAX.md §7.1); the call `@lib#f` resolves
+    // like any name and is checked like any call -- arguments (`M143` and
+    // per-argument shape and range), effects through the call graph
+    // (`E008`), costs against the declaration. Four new refusals hold the
+    // four things no ordinary check can: the missing translator (`N058`),
+    // a foreign body in the hull (`N059`, §0c), a payload naming no table
+    // (`N060`), and a direct call bypassing the region (`N061`).
+    Satz {
+        name: "namen.bibliothek_ruf",
+        kennungen: &["N058"],
+        aussage: "Every RESOLVED library call is refused with the translation \
+                  diagnostic -- once per call, in both positions. Its arguments, \
+                  effects, error channel and costs are checked exactly like an \
+                  ordinary call's; only the region is still not interpreted, so \
+                  until the translator exists (lanes E3/E5) the call cannot pass.",
+        vorbehalt: "The refusal is load-bearing, not provisional: a checked call \
+                    without a payload would be a silent acceptance of a region \
+                    nobody compiled. `beispiele/gift/820` carries a declaration \
+                    and two calls and falls with nothing but this code.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N058` only); \
+                      `/823` (wrong argument type beside it); counter-direction \
+                      in `paesse.rs` (`bibliothek_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
+    },
+    Satz {
+        name: "namen.bibliothek_huelle",
+        kennungen: &["N059"],
+        aussage: "No `library fn` reaches a foreign body: the transitive call \
+                  hull of every declared library function holds no `extern`, \
+                  `raw`, `prim` or `asm` -- including itself.",
+        vorbehalt: "Structure, not prose comparison (PLAN-ERWEITUNG.md §0c): \
+                    contradictory hardware assumptions would make every proof \
+                    over the combined program vacuous. Calls through a place \
+                    have no static callee and stay guarded by `E009` instead.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/824` (library body calling an `extern fn`); \
+                      counter-direction in `paesse.rs` (`bibliothek_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; PLAN-ERWEITUNG.md §0c",
+    },
+    Satz {
+        name: "namen.bibliothek_nutzlast",
+        kennungen: &["N060"],
+        aussage: "The `payload` clause of every `library fn` names a declared \
+                  table -- a tree table is a table, anything else is not a \
+                  payload.",
+        vorbehalt: "Resolved from the declaring module outward over the same \
+                    candidate order every other name uses; a missing clause is \
+                    not this rule but the reader's (`P043`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/825` (payload naming no table); \
+                      `beispiele/gift/826` (missing clause, `P043`); \
+                      counter-direction in `paesse.rs` (`bibliothek_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §0b",
+    },
+    Satz {
+        name: "namen.bibliothek_direktruf",
+        kennungen: &["N061"],
+        aussage: "No direct call names a `library fn`: without a region there \
+                  is no payload, so the call would silently bypass the \
+                  mechanism the declaration stands for. The function is called \
+                  through `@lib#f` with a region.",
+        vorbehalt: "Fires on the call FORM, in statement, binding, `let … else` \
+                    and contract position; constructors, conversions and calls \
+                    through a place never resolve to a declared function and \
+                    stay silent here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "counter-direction in `paesse.rs` (`bibliothek_direktruf_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1",
     },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //

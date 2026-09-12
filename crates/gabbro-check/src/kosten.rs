@@ -723,13 +723,19 @@ impl<'a> Rechner<'a> {
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),
-            // **Lane E1:** a library call has no callee and no `costs` promise
-            // until lane E2 checks it -- an unknown cost WITH A REASON, never
-            // zero, the same answer an indirect call without one gets.
+            // **Lane E2:** a resolved library call costs what its
+            // declaration promises, like any call; unresolved it keeps the
+            // unknown remainder with its reason.
             StmtArt::LibraryCall(r) => {
                 let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
                     a.plus(self.ausdruck(e, lokal))
                 });
+                if let Some(z) = self.u.bibliothek(self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(n) = self.deklariert.get(&z.name).copied() {
+                        return args.plus(Kosten::Zahl(n));
+                    }
+                }
                 args.plus(Kosten::Unbekannt(
                     format!(
                         "`@{}#{}` names no declared function, so the call declares no costs",
@@ -888,13 +894,19 @@ impl<'a> Rechner<'a> {
                 }
             },
             ExprArt::Ruf(r) => self.ruf(r, lokal),
-            // **Lane E1:** a library call in binding position costs its
-            // arguments plus an unknown remainder -- no callee, no `costs`
-            // promise, the same answer the statement form gets.
+            // **Lane E2:** a resolved library call costs what its
+            // declaration promises, like any call; unresolved it keeps the
+            // unknown remainder with its reason.
             ExprArt::LibraryCall(r) => {
                 let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
                     a.plus(self.ausdruck(e, lokal))
                 });
+                if let Some(z) = self.u.bibliothek(self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(n) = self.deklariert.get(&z.name).copied() {
+                        return args.plus(Kosten::Zahl(n));
+                    }
+                }
                 args.plus(Kosten::Unbekannt(
                     format!(
                         "`@{}#{}` names no declared function, so the call declares no costs",

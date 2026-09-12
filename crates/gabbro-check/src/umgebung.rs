@@ -241,6 +241,39 @@ pub struct Umgebung {
     /// `pruefe-zahlen.py` als „Blicke ohne Modulkandidaten -- jeder ein moegliches
     /// `M103`-Loch" zaehlt.* Aufgeloest wird beim Nachschlagen, ueber `kandidaten`.
     pub fehlerkanaele: HashMap<String, (String, String)>,
+    /// **Every declared module, by qualified path (lane E2).**
+    ///
+    /// `verwendet` keys only the modules that CARRY a `use` line; a library
+    /// module without one would be invisible to the `@lib#f` resolution,
+    /// and `N057` would fire on a declaration standing right there. The
+    /// set is filled beside `sammle_roh`'s recursion, never queried
+    /// directly (`.get(` on a short name is the `M103` shape) -- only
+    /// through `bibliothek` below.
+    pub module: std::collections::HashSet<String>,
+    /// **Qualified names of `library fn` declarations (lane E2).**
+    ///
+    /// A library function IS an ordinary function too: its signature
+    /// stands in `funktionen` like any other, so every declaration-side
+    /// check reads it. This set answers the other question -- may
+    /// `@lib#f` name it, and must a direct call avoid it (`N061`).
+    pub bibliotheken: std::collections::HashSet<String>,
+    /// **Qualified library-function name -> (declaring module, payload
+    /// table path as written, clause span) (lane E2).**
+    ///
+    /// The payload is stored RAW, resolved at the read site from the
+    /// declaring module outward -- the same decision `walkknoten` documents
+    /// above: qualifying here would break exactly when the table lives in
+    /// an enclosing module.
+    pub nutzlasten: HashMap<String, (String, String, gabbro_syntax::span::Span)>,
+}
+
+/// **A resolved library call (lane E2): the module the call named and the
+/// qualified function behind it.**
+pub struct BibliotheksZiel {
+    /// The module, qualified (`gpu::spirv`).
+    pub modul: String,
+    /// The function, qualified (`gpu::spirv::kernel`).
+    pub name: String,
 }
 
 /// Das Modul, in dem ein qualifizierter Name steht.
@@ -494,6 +527,38 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
+    /// **Resolves `@lib#func` from the caller's module (lane E2).**
+    ///
+    /// `lib` goes through the same candidate order every other name uses
+    /// (own module, enclosing, root, `use` lines); the first candidate
+    /// naming a declared module wins, and `func` must name a `library fn`
+    /// declared directly in it. Anything else is `None`; the two public
+    /// halves below let the caller tell "unknown library" from "unknown
+    /// function" without re-resolving by hand.
+    pub fn bibliothek(&self, von: &str, lib: &str, func: &str) -> Option<BibliotheksZiel> {
+        let modul = self.bibliothek_modul(von, lib)?;
+        let name = qualifiziere(&modul, func);
+        if self.ist_bibliothek(&name) {
+            Some(BibliotheksZiel { modul, name })
+        } else {
+            None
+        }
+    }
+
+    /// **The module half of `bibliothek` (lane E2):** the first candidate
+    /// for `lib` that names a declared module, if any.
+    pub fn bibliothek_modul(&self, von: &str, lib: &str) -> Option<String> {
+        self.kandidaten(von, lib)
+            .into_iter()
+            .find(|k| self.module.contains(k))
+    }
+
+    /// **The function half of `bibliothek` (lane E2):** does this
+    /// qualified name stand for a declared `library fn`?
+    pub fn ist_bibliothek(&self, qualifiziert: &str) -> bool {
+        self.bibliotheken.contains(qualifiziert)
+    }
+
     /// **Does this path name a `transition`?** Its `Signatur` carries an empty parameter
     /// list that is a placeholder, not a declaration -- see `Umgebung::uebergangsnamen`.
     pub fn ist_uebergang(&self, von: &str, pfad: &Pfad) -> bool {
@@ -545,6 +610,9 @@ impl Umgebung {
             match &i.art {
                 ItemArt::Modul(m) => {
                     let innen = qualifiziere(pfad, &m.pfad.text());
+                    // **Lane E2:** every module is named, whether or not it
+                    // carries a `use` line -- see the `module` field.
+                    self.module.insert(innen.clone());
                     self.sammle_roh(&m.items, &innen);
                 }
                 ItemArt::Use(u) => {
@@ -861,6 +929,18 @@ impl Umgebung {
                         span: f.span,
                     };
                     self.funktionen.insert(q(&f.name.text), sig);
+                    // **Lane E2:** the signature above already carries
+                    // everything the call-site checks read; what remains is
+                    // the library flag and the raw payload path.
+                    if f.bibliothek {
+                        self.bibliotheken.insert(q(&f.name.text));
+                        if let Some(nutz) = &f.nutzlast {
+                            self.nutzlasten.insert(
+                                q(&f.name.text),
+                                (pfad.to_string(), nutz.text(), nutz.span),
+                            );
+                        }
+                    }
                 }
                 ItemArt::Axiom(a) => {
                     let sig = Signatur {
