@@ -221,26 +221,26 @@ echo
 # -ffp-contract=fast` it MUST fall, or the green line above is decoration.
 # Holding there would mean this machine does not contract even when fast --
 # and the probe would witness nothing.
-LETZTE_STUFE="der FMA-Sonde"
-echo "== FMA-Sonde: kein fused multiply-add in der Erzeugerform (PLAN-BITS.md 5.3) =="
+LETZTE_STUFE="the FMA probe"
+echo "== FMA probe: no fused multiply-add in the emitted shape (PLAN-BITS.md 5.3) =="
 if ! cc -std=c11 -ffp-contract=off -O2 -mfma -Wall -Wextra -Werror \
         -o "$ARB/sonde-fma" "$W/instrumente/sonde-fma.c" 2> "$ARB/fma-ccfehler"; then
-    echo "  FMA-Sonde:  GESCHEITERT beim Uebersetzen (Manifestfahnen)"; head -10 "$ARB/fma-ccfehler"; exit 1
+    echo "  FMA probe:  FAILED to compile (manifest flags)"; head -10 "$ARB/fma-ccfehler"; exit 1
 fi
 if ! "$ARB/sonde-fma" > "$ARB/fma-ausgabe" 2>&1; then
-    echo "  FMA-Sonde:  FUSION -- getrennt gerundet kaeme 0 heraus, der Bau zieht zusammen:"
+    echo "  FMA probe:  FUSED -- separate rounding gives 0, this build contracts:"
     cat "$ARB/fma-ausgabe"; exit 1
 fi
-echo "  FMA-Sonde:  ok ($(cat "$ARB/fma-ausgabe" | head -1) -- getrennt gerundet, r == 0)"
+echo "  FMA probe:  ok ($(head -1 "$ARB/fma-ausgabe"))"
 cc -std=gnu17 -ffp-contract=fast -O2 -mfma -o "$ARB/sonde-fma-schnell" \
     "$W/instrumente/sonde-fma.c" 2>/dev/null
 if "$ARB/sonde-fma-schnell" > /dev/null 2>&1; then
-    echo "  Sprechprobe: GESCHEITERT -- dieselbe Sonde faellt unter -ffp-contract=fast NICHT."
-    echo "               Dann bezeugte sie kein Zusammenziehen, sondern Konstantenfaltung"
-    echo "               (oder diese Maschine hat kein FMA) -- und die Zeile oben misst NICHTS."
+    echo "  Speech probe: FAILED -- the same probe does NOT fall under -ffp-contract=fast."
+    echo "               Then it witnessed constant folding, not contraction"
+    echo "               (or this machine has no FMA) -- and the line above measures NOTHING."
     exit 2
 fi
-echo "  Sprechprobe: ok (unter -std=gnu17 -ffp-contract=fast fusioniert sie -- die Sonde beisst)"
+echo "  Speech probe: ok (under -std=gnu17 -ffp-contract=fast it fuses -- the probe bites)"
 echo
 
 # Schneidet den ```gabbro-Block, der eine gegebene Zeile enthaelt, aus einer Markdown-Datei.
