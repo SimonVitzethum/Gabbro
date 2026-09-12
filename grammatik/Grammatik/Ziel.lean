@@ -1104,9 +1104,9 @@ theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
       run-side leg of `ziel_nutzer_last_aus_pc` (its `hO` premise already feeds
       `pc_gesittet`, `pc_konsistent`, `pc_gut_obs`, `pc_reduktion`).
     * (narrowing, carried explicitly) The covered class is GutO oracles only:
-      the oracle answers without emitting events of its own (`spur` preserved,
-      the `spur` conjunct of `GutO`). Oracles that emit their own events stay
-      open (the `Extraktion` §18 remainder, inherited unchanged). Atom identity
+      the oracle answers with its recorded write events (`axiomSpur`, the
+      trace conjunct of `GutO`), over caller domains covering the declared
+      writes (`hct`/`hcg`). Atom identity
       (`hpc`, `hΛa`, `hcs`) stays the scheduler/witness duty (S12); `take`/`rel`
       steps need only `hpc`.
 
@@ -1123,7 +1123,7 @@ theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
     the statement footprint, S12 scheduler/witness duty) build the
     `PCSchritt.leaf` over `Extraktion.progAus P fcode tabs globs`, discharging
     `hmark`/`hcar` through `Extraktion.execEreignis_aus_axiomCall` (read-only
-    reuse, never widened: GutO oracles only; event-emitting oracles stay open).
+    reuse: GutO oracles only, with the domain-completeness premises).
     Every premise is load-bearing: each is passed whole to the link or to the
     constructor. -/
 theorem pcSchritt_blatt_progAus_axiomCall
@@ -1137,6 +1137,8 @@ theorem pcSchritt_blatt_progAus_axiomCall
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (hct : ∀ t, D.aschreibt a t = true → t ∈ tabs)
+    (hcg : ∀ g, D.agschreibt a g = true → g ∈ globs)
     (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
@@ -1155,17 +1157,20 @@ theorem pcSchritt_blatt_progAus_axiomCall
       ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
        M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
       (pcAdvance pc f) := by
-  obtain ⟨hlam, hcar⟩ :=
+  obtain ⟨Λe, hmf, hlam, hcar⟩ :=
     Extraktion.execEreignis_aus_axiomCall O passes a args h hw hg hd hgd hO tabs globs
-      (M.weltVon f) ρ σ' neu hstep hneu
+      hct hcg (M.weltVon f) ρ σ' neu hstep hneu
   refine PCSchritt.leaf M pc f V l Γ Λ Λ
     (Stmt.axiomCall a args h hw hg hd hgd) ρ rfl hΛ σ' neu hstep hneu
     hkein_nimmt Λa cs hpc hΛa ?_ ?_
   · intro e he m st hm
-    rw [hlam e he] at hm
-    rw [← hΛa] at hm
-    simp only [PCAtom.marks]
-    exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+    rcases hlam e he with hL | hLe
+    · rw [hL] at hm
+      rw [← hΛa] at hm
+      simp only [PCAtom.marks]
+      exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+    · rw [hLe] at hm
+      exact absurd hm (hmf m st)
   · intro e he o ho
     have hmem : o ∈ Extraktion.stmtTraeger tabs globs
         (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
@@ -1197,6 +1202,8 @@ theorem pcReach_blatt_progAus_axiomCall
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (hct : ∀ t, D.aschreibt a t = true → t ∈ tabs)
+    (hcg : ∀ g, D.agschreibt a g = true → g ∈ globs)
     (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
@@ -1217,7 +1224,7 @@ theorem pcReach_blatt_progAus_axiomCall
       (pcAdvance pc f) :=
   PCReach.step _ _ _ _ f h
     (pcSchritt_blatt_progAus_axiomCall O passes hO P fcode tabs globs M pc f V l Γ Λ
-      a args hh hw hg hd hgd ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs)
+      a args hh hw hg hd hgd hct hcg ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs)
 
 #print axioms Gabbro.Grammatik.pcReach_blatt_progAus_axiomCall
 
@@ -1781,8 +1788,7 @@ theorem kette_mit_zeugen
     `GutO`.** The firing data of an oracle leaf builds the covered PC step
     through `pcSchritt_blatt_progAus_axiomCall` under the oracle bound
     (`hO` feeds the lifter, the frame, and the projection lemmas -- GutO
-    oracles only; event-emitting oracles stay open exactly as §9b books
-    them), while the SAME `neu` feeds the witnessed chain extension
+    oracles only, with recorded write events), while the SAME `neu` feeds the witnessed chain extension
     (`kette_mit_zeugen_schritt`) with the frame wiring (`hW`/`hG`), the
     prefix witness duty (`hwit_old`), and the step witness (`hneu_wit`).
     The conclusion carries the extended chain, its member, the unconditional
@@ -1801,6 +1807,8 @@ theorem kette_mit_zeugen_orakel
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (hct : ∀ t, D.aschreibt a t = true → t ∈ tabs)
+    (hcg : ∀ g, D.agschreibt a g = true → g ∈ globs)
     (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
@@ -1845,7 +1853,7 @@ theorem kette_mit_zeugen_orakel
        M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
       (pcAdvance pc f) :=
     pcSchritt_blatt_progAus_axiomCall O passes hO P fcode tabs globs M pc f V l Γ Λ
-      a args hh hw hg hd hgd ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs
+      a args hh hw hg hd hgd hct hcg ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs
   have hReach : GenErreichbar P O passes (GenStart sp) M :=
     pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h
   have hPC' : PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp)

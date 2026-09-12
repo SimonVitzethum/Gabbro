@@ -791,9 +791,79 @@ def GutR (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : P
   ∀ f σ ρ, HeldGenau (Signatur.anfang D (D.signatur f)) σ.haelt →
     ∀ σ', (R f σ ρ).welt = some σ' → Gut (D.schreibt f) (D.gschreibt f) σ σ'
 
+/-- The write events of one axiom over explicit carrier domains, in a fixed
+    order (tables, then globals): one `zugriff`-with-`true` per declared table
+    write, one `gzugriff`-with-`true` per declared global write -- the
+    `schreibSlot`/`World.merke` write-event constructor. The domains ride
+    along because carrier types are not enumerable (`stmtTraeger` in
+    `Extraktion.lean` takes them for the same reason); `Λ`/`h` ride along
+    because a recorded event must name its guards and the held locks. -/
+def axiomSpur (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax)
+    (Λ : List (Res D)) (h : List D.Lock) : List (Ereignis D) :=
+  (tabs.filter (D.aschreibt a)).map (fun t => Ereignis.zugriff t true Λ h) ++
+    (globs.filter (D.agschreibt a)).map (fun g => Ereignis.gzugriff g true Λ h)
+
+/-- Membership in `axiomSpur`: a declared table write or a declared global
+    write, with the call's guards and held locks. -/
+theorem axiomSpur_mem {tabs : List D.Tab} {globs : List D.Glob} {a : D.Ax}
+    {Λ : List (Res D)} {h : List D.Lock} {e : Ereignis D}
+    (hmem : e ∈ axiomSpur tabs globs a Λ h) :
+    (∃ t, t ∈ tabs ∧ D.aschreibt a t = true ∧ e = Ereignis.zugriff t true Λ h) ∨
+      (∃ g, g ∈ globs ∧ D.agschreibt a g = true ∧ e = Ereignis.gzugriff g true Λ h) := by
+  simp only [axiomSpur, List.mem_append, List.mem_map] at hmem
+  rcases hmem with ⟨t, htf, rfl⟩ | ⟨g, hgf, rfl⟩
+  · obtain ⟨hmem, hwr⟩ := List.mem_filter.mp htf
+    exact Or.inl ⟨t, hmem, hwr, rfl⟩
+  · obtain ⟨hmem, hwr⟩ := List.mem_filter.mp hgf
+    exact Or.inr ⟨g, hmem, hwr, rfl⟩
+
+/-- Every `axiomSpur` event records the held locks. -/
+theorem axiomSpur_zugriffMit (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax)
+    (Λ : List (Res D)) (h : List D.Lock) :
+    ∀ e ∈ axiomSpur tabs globs a Λ h, e.zugriffMit h := by
+  intro e hmem
+  rcases axiomSpur_mem hmem with ⟨t, _, _, rfl⟩ | ⟨g, _, _, rfl⟩ <;>
+    simp [Ereignis.zugriffMit]
+
+/-- Every `axiomSpur` event is good, when the guards hold it. -/
+theorem axiomSpur_gut (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax)
+    (Λ : List (Res D)) (h : List D.Lock)
+    (hdt : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hdg : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (hhi : HeldIn Λ h) :
+    ∀ e ∈ axiomSpur tabs globs a Λ h, e.gut := by
+  intro e hmem
+  rcases axiomSpur_mem hmem with ⟨t, _, hwr, rfl⟩ | ⟨g, _, hwr, rfl⟩
+  · exact ⟨hdt t hwr, hhi⟩
+  · exact ⟨hdg g hwr, hhi⟩
+
+/-- A declared table write is recorded in `axiomSpur`. -/
+theorem axiomSpur_write_tab (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax)
+    (Λ : List (Res D)) (h : List D.Lock) (t : D.Tab)
+    (hmem : t ∈ tabs) (hwr : D.aschreibt a t = true) :
+    Ereignis.zugriff t true Λ h ∈ axiomSpur tabs globs a Λ h := by
+  simp only [axiomSpur, List.mem_append]
+  exact Or.inl (List.mem_map.mpr ⟨t, List.mem_filter.mpr ⟨hmem, hwr⟩, rfl⟩)
+
+/-- A declared global write is recorded in `axiomSpur`. -/
+theorem axiomSpur_write_glob (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax)
+    (Λ : List (Res D)) (h : List D.Lock) (g : D.Glob)
+    (hmem : g ∈ globs) (hwr : D.agschreibt a g = true) :
+    Ereignis.gzugriff g true Λ h ∈ axiomSpur tabs globs a Λ h := by
+  simp only [axiomSpur, List.mem_append]
+  exact Or.inr (List.mem_map.mpr ⟨g, List.mem_filter.mpr ⟨hmem, hwr⟩, rfl⟩)
+
 def GutO (O : Orakel D) : Prop :=
   ∀ a σ ρ, Rahmen (D.aschreibt a) (D.agschreibt a) σ (O.wirkt a σ ρ).1 ∧
-    (O.wirkt a σ ρ).1.haelt = σ.haelt ∧ (O.wirkt a σ ρ).1.spur = σ.spur
+    (O.wirkt a σ ρ).1.haelt = σ.haelt ∧
+    ∃ tabs : List D.Tab, ∃ globs : List D.Glob, ∃ Λe : List (Res D),
+      (∀ t, D.aschreibt a t = true → t ∈ tabs) ∧
+      (∀ g, D.agschreibt a g = true → g ∈ globs) ∧
+      (∀ t, D.aschreibt a t = true → darf D t Λe) ∧
+      (∀ g, D.agschreibt a g = true → gdarf D g Λe) ∧
+      (∀ m st, Res.marke m st ∉ Λe) ∧
+      HeldIn Λe σ.haelt ∧
+      (O.wirkt a σ ρ).1.spur = axiomSpur tabs globs a Λe σ.haelt ++ σ.spur
 
 section Schleifen
 variable {W : D.Tab → Bool} {G : D.Glob → Bool} {Λ : List (Res D)}
@@ -910,8 +980,16 @@ variable (O : Orakel D)
 theorem axiomAntwort_gut (hO : GutO O) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     Gut (D.aschreibt a) (D.agschreibt a) σ (axiomAntwort O a σ ρ).1 := by
   simp only [axiomAntwort]
-  obtain ⟨hr, hh, hs⟩ := hO a σ ρ
-  exact ⟨hr, hh, fun e he => .inl (hs ▸ he), fun k => hs ▸ k⟩
+  obtain ⟨hr, hhaelt, tabs, globs, Λe, _, _, hdt, hdg, _, hhi, hspur⟩ := hO a σ ρ
+  refine ⟨hr, hhaelt, fun e he => ?_, fun k => ?_⟩
+  · have he' : e ∈ (O.wirkt a σ ρ).1.spur := he
+    rw [hspur, List.mem_append] at he'
+    rcases he' with hnew | hold
+    · exact .inr (axiomSpur_gut tabs globs a Λe σ.haelt hdt hdg hhi e hnew)
+    · exact .inl hold
+  · have hc := konsistent_merke σ.haelt (axiomSpur tabs globs a Λe σ.haelt) σ.spur
+      (fun e he => axiomSpur_zugriffMit tabs globs a Λe σ.haelt e he) rfl k
+    exact hspur ▸ hc
 
 variable (passes : Nat)
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)

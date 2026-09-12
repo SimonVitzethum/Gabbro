@@ -85,12 +85,13 @@ def σF : World DF :=
     globs := fun g => nomatch g
     spur := [@Ereignis.nimmt DF () []] }
 
-/-- The oracle: flips every slot to `true`, keeps globals, locks, trace. -/
+/-- The oracle: flips every slot to `true`, keeps globals and locks, and
+    records the axiom's write event (as the recording `GutO` demands). -/
 def OF : Orakel DF :=
   { wirkt := fun _ σ _ =>
       ({ slots := fun _ _ _ => true
          globs := fun g => nomatch g
-         spur := σ.spur }, 0)
+         spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0)
     regLies := fun r _ => nomatch r
     regSchreib := fun r _ => nomatch r
     sichtbar := fun g _ => nomatch g }
@@ -119,17 +120,15 @@ theorem hwF : ∀ t, DF.aschreibt () t = true → VF.schreibt t = true :=
 theorem hgF : ∀ g, DF.agschreibt () g = true → VF.gschreibt g = true :=
   fun g => nomatch g
 
-/-- The oracle respects its frame and leaves locks and trace alone. -/
-theorem hOF : GutO OF := by
-  intro a σ ρ
-  cases a
-  refine ⟨?_, rfl, rfl⟩
-  constructor
-  · intro t ht
-    cases t
-    contradiction
-  · intro g
-    exact nomatch g
+/- REMOVED (lane 80): `hOF : GutO OF` is unprovable under the recording
+    `GutO`. The oracle writes the lock-guarded table `()`, so its write event
+    would need `darf DF () Λe` (hence `Res.held () ∈ Λe`) and
+    `HeldIn Λe σ.haelt` for every `σ` -- impossible. The general fact is
+    proved in `EigenZustand.lean` (`GutO_schreibt_unbewacht`): a recording-`GutO`
+    oracle writes only lock-unguarded tables. As a consequence the premises of
+    `axiomCall_haelt_waechter` (memory change forcing a declared write, plus a
+    lock guard on it) are jointly unsatisfiable under the new `GutO`; the
+    theorem itself is kept unchanged (its proof uses only the frame clause). -/
 
 /-- The static trace names exactly the held lock. -/
 theorem hhF : HeldGenau ΛF σF.haelt := by
@@ -264,19 +263,10 @@ theorem hLmem : Sum.inl () ∈ DF.braucht () := List.Mem.head _
 /-- Non-degeneracy: the declaration has a function writing the table. -/
 theorem zeuge_schreibt : DF.schreibt () () = true := rfl
 
-/-- **Inhabitation.** All premises of `axiomCall_haelt_waechter` hold jointly
-    on the guarded one-table declaration: the guard proof, the oracle bound,
-    the held-exactly fact, a reached run step (`hexecF`) that changes memory
-    (`hdiffF`), and the guard membership -- plus the non-degeneracy facts (a
-    function writes the table, the reached step flips its slot). -/
-theorem axiomCall_haelt_waechter_zeuge :
-    () ∈ σF.haelt ∧
-      Rahmen VF.schreibt VF.gschreibt σF σF' ∧
-      DF.schreibt () () = true ∧
-      (∃ k : Int, ∃ f : DF.Feld (), σF'.slots () k f ≠ σF.slots () k f) := by
-  have hmain := axiomCall_haelt_waechter () argsF rfl hwF hgF hdF hgdF
-    OF 0 RF hOF σF ρF hhF σF' hexecF () hdiffF () hLmem
-  exact ⟨hmain.1, hmain.2.2, zeuge_schreibt, hdiffF⟩
+/- REMOVED (lane 80): `axiomCall_haelt_waechter_zeuge` needed `hOF`
+    (removed above: no recording-`GutO` oracle writes the guarded table, so
+    the joint premises cannot be instantiated). The non-degeneracy facts
+    (`hexecF`, `hdiffF`, `zeuge_schreibt`) are kept as stated. -/
 
 /-! ## CUTS
 
@@ -284,16 +274,19 @@ theorem axiomCall_haelt_waechter_zeuge :
     world differs on a slot) and global guards statically (everything the
     axiom may write). A dynamic global-guard leg (oracle differs on a global)
     is not stated.
-  (F2) The oracle bound `GutO` still forces
-    `(O.wirkt a σ ρ).1.spur = σ.spur`: the foreign body records no access
-    events for its own writes. Whether it must is a report-level proposal,
-    not a theorem here.
+  (F2) (lane 80) The oracle bound `GutO` now RECORDS a write access event
+    per declared table/global write (`axiomSpur`, `Satz.lean`): the old
+    `spur`-preserving clause is gone. `OF` emits its write event; `hOF` and
+    `axiomCall_haelt_waechter_zeuge` are removed (a recording-`GutO` oracle
+    writes only lock-unguarded tables -- `GutO_schreibt_unbewacht` in
+    `EigenZustand.lean` -- so `OF`'s guarded write admits no `GutO` proof and
+    the joint witness premises cannot be instantiated; the main theorem is
+    kept unchanged but vacuous on guarded writers).
   (F3) `Block.bindAxiom` carries no new guard premises in this lane; only
     `Stmt.axiomCall` was repaired as tasked.
 -/
 
 #print axioms Gabbro.Grammatik.axiomCall_haelt_waechter
-#print axioms Gabbro.Grammatik.axiomCall_haelt_waechter_zeuge
 #print axioms Gabbro.Grammatik.axiomCall_ohne_sperre_nicht_ableitbar
 
 end Gabbro.Grammatik

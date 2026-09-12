@@ -1798,31 +1798,41 @@ def V2 : Vertrag D2 :=
     haelt := []
     produziert := [] }
 
-/-- Flipped world: the slot negated, everything else kept. -/
+/-- Flipped world: the slot negated, the axiom's write event recorded (as the
+    recording `GutO` demands), everything else kept. -/
 def Wflip2 (σ : World D2) : World D2 :=
   { slots := fun _ _ _ => !(σ.slots () 0 ()), globs := fun g => (nomatch g),
-    spur := σ.spur }
+    spur := axiomSpur [()] [] () [] σ.haelt ++ σ.spur }
 
-/-- Oracle: flips the slot, keeps the trace (as `GutO` demands). -/
+/-- Oracle: flips the slot and records the write event. -/
 def O2 : Orakel D2 where
   wirkt := fun _ σ _ => (Wflip2 σ, 0)
   regLies := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g _ => nomatch g
 
-/-- The oracle is good: it writes only the declared table and keeps trace. -/
+/-- The oracle is good: it writes only the declared (unguarded) table and
+    records its write event over complete domains with the empty guard
+    trace. -/
 theorem O2gut : GutO (D := D2) O2 := by
   intro a σ ρ
   cases a with
   | unit =>
       have hW : O2.wirkt () σ ρ = (Wflip2 σ, 0) := rfl
       rw [hW]
-      refine ⟨?_, by rfl, by rfl⟩
-      show (∀ (t : D2.Tab), D2.aschreibt () t = false → ∀ (k : Int) (f : D2.Feld t),
-          (Wflip2 σ, 0).fst.slots t k f = σ.slots t k f) ∧
-        (∀ (g : D2.Glob), D2.agschreibt () g = false →
-          (Wflip2 σ, 0).fst.globs g = σ.globs g)
-      exact ⟨fun t ht => absurd ht (by simp [D2]), fun g _ => nomatch g⟩
+      refine ⟨?_, by rfl, [()], [], [], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · show (∀ (t : D2.Tab), D2.aschreibt () t = false → ∀ (k : Int) (f : D2.Feld t),
+            (Wflip2 σ).slots t k f = σ.slots t k f) ∧
+          (∀ (g : D2.Glob), D2.agschreibt () g = false →
+            (Wflip2 σ).globs g = σ.globs g)
+        exact ⟨fun t ht => absurd ht (by simp [D2]), fun g _ => nomatch g⟩
+      · intro t _; cases t; exact List.Mem.head _
+      · intro g; exact nomatch g
+      · intro t _ w hw; simp [D2] at hw; cases hw
+      · intro g; exact nomatch g
+      · intro m st hm; cases hm
+      · intro L hL; cases hL
+      · rfl
 
 /-- The axiom call statement (answer type `none`, so it is a `Stmt`).
     The new guard premises hold: `D2`'s table is UNGUARDED (`braucht = []`),
@@ -1883,177 +1893,13 @@ theorem hNurF : ∀ h : Faden, h ≠ (0 : Faden) → ∀ a ∈ progF h,
   simp [PCAtom.carriers]
 
 
-/-- The recorded list of the axiom-call firing carries no write for `t`:
-    the oracle keeps the trace, and the `lese` reads carry `false`. -/
-theorem axNeu_kein_schrieb (σ : World D2) (ρ : Env D2 [])
-    (σ' : World D2) (neu : List (Ereignis D2))
-    (hstep : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt = some σ')
-    (hneu : σ'.spur = neu ++ σ.spur)
-    (ev : Ereignis D2) (hmem : ev ∈ neu)
-    (htr : ev.traeger = some (Sum.inl ())) :
-    False := by
-  -- The outcome spur is the `lese` prefix over the old spur.
-  have hspur₀ : (σ.lese [] []).spur = σ.spur := rfl
-  have hσspur : σ'.spur = (σ.lese [] []).spur := by
-    have hcomp := hstep
-    have hAns : axiomAntwort (O := O2) () (σ.lese [] [])
-        (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
-          (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) =
-        (Wflip2 (σ.lese [] []), Option.some ()) := by
-      rfl
-    -- Unfold the firing through the answer.
-    have hrfl : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt =
-        (match axiomAntwort (O := O2) () (σ.lese [] [])
-          (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
-            (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) with
-        | (σ₂, Option.some _) => (Ausgang.ok σ₂ ρ : Ausgang V2 false []).welt
-        | (_, Option.none) =>
-          (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
-    rw [hrfl, hAns, Ausgang.welt] at hcomp
-    have hσ'_top : σ' = Wflip2 (σ.lese [] []) := Option.some_inj.mp hcomp.symm
-    rw [hσ'_top]
-    rfl
-  have hσ' : σ' = Wflip2 (σ.lese [] []) := by
-    have hcomp2 := hstep
-    have hAns2 : axiomAntwort (O := O2) () (σ.lese [] [])
-        (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
-          (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) =
-        (Wflip2 (σ.lese [] []), Option.some ()) := by
-      rfl
-    have hrfl2 : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt =
-        (match axiomAntwort (O := O2) () (σ.lese [] [])
-          (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
-            (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) with
-        | (σ₂, Option.some _) => (Ausgang.ok σ₂ ρ : Ausgang V2 false []).welt
-        | (_, Option.none) =>
-          (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
-    rw [hrfl2, hAns2, Ausgang.welt] at hcomp2
-    exact Option.some_inj.mp hcomp2.symm
-  -- `neu` is therefore empty: substitute everything and cancel.
-  have hcancel : neu = [] := by
-    have hWspur : (Wflip2 (σ.lese [] [])).spur = σ.spur := rfl
-    have hσspur2 : σ'.spur = σ.spur := by
-      rw [hσ', hWspur]
-    rw [hσspur2] at hneu
-    -- `hneu : σ.spur = neu ++ σ.spur`: cancel.
-    have hnil : ([] : List (Ereignis D2)) ++ σ.spur = neu ++ σ.spur := by
-      show σ.spur = neu ++ σ.spur
-      exact hneu
-    exact (List.append_cancel_right hnil).symm
-  rw [hcancel] at hmem
-  simp at hmem
-
-/-- **Counterexample (the finding).** The target without `hNoAx` is false at
-    `Stmt.axiomCall`: with `hNurG` holding vacuously (empty program texts
-    never name `t`), a foreign step firing `axCall` flips the slot
-    (`axFeuert` from `false`) while recording no `Sum.inl t` event
-    (`axNeu_kein_schrieb`), so the slot conclusion fails. -/
-theorem axiomCall_ohne_ereignis_falsch :
-    ¬ ∀ (P : Programm D2) (O : Orakel D2) (passes : Nat) (_ : GutO O)
-      (prog : PCProg D2) (sp : Speicher D2) (g : Faden) (t : D2.Tab),
-      (∀ h, h ≠ g → ∀ a ∈ prog h,
-        (Sum.inl t : D2.Tab ⊕ D2.Glob) ∉ PCAtom.carriers a) →
-      ∀ (M pc h M' pc' : _) (_ : PCReach P O passes prog (GenStart sp) M pc)
-        (_ : PCSchritt P O passes prog M pc h M' pc') (_ : h ≠ g)
-        (k : Int) (f : D2.Feld t),
-        M'.speicher.slots t k f = M.speicher.slots t k f := by
-  intro hAll
-  -- Instantiate: empty program, oracle O2, start slot false, g = 0, t = ().
-  -- Program texts are empty, so `hNurG` holds vacuously.
-  have hNur : ∀ h : Faden, h ≠ (0 : Faden) → ∀ a ∈ (fun _ : Faden => ([] : List (PCAtom D2))) h,
-      (Sum.inl () : D2.Tab ⊕ D2.Glob) ∉ PCAtom.carriers a := by
-    intro h _ a ha
-    simp at ha
-  -- The firing: thread 1 runs axCall from the false-slot world, with a
-  -- carrier-free program text (so `hNurG` holds) that still fires.
-  have hSpur0 : ((GenStart wspF).weltVon 1).spur = [] := rfl
-  have hSlot0 : ((GenStart wspF).weltVon 1).slots () 0 () = false := rfl
-  have hfire : ∃ σ' : World D2,
-      (execStmt (O := O2) 0 keinRuf axCall
-        ((GenStart wspF).weltVon 1) Env.nil).welt = some σ' := by
-    have hcomp : (execStmt (O := O2) 0 keinRuf axCall
-        ((GenStart wspF).weltVon 1) Env.nil).welt =
-        (match axiomAntwort (O := O2) ()
-          (((GenStart wspF).weltVon 1).lese [] [])
-          (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
-            (Args.nil (D := D2) (Γ := []) (Λ := []))
-            (((GenStart wspF).weltVon 1).lese [] []) Env.nil) with
-        | (σ₂, Option.some _) => (Ausgang.ok σ₂ Env.nil : Ausgang V2 false []).welt
-        | (_, Option.none) =>
-          (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
-    have hAns : axiomAntwort (O := O2) ()
-        (((GenStart wspF).weltVon 1).lese [] [])
-        (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
-          (Args.nil (D := D2) (Γ := []) (Λ := []))
-          (((GenStart wspF).weltVon 1).lese [] []) Env.nil) =
-        (Wflip2 (((GenStart wspF).weltVon 1).lese [] []), Option.some ()) := by
-      rfl
-    rw [hcomp, hAns, Ausgang.welt]
-    exact ⟨_, rfl⟩
-  obtain ⟨σ', hfire'⟩ := hfire
-  -- The recorded list is empty (no write event): `axNeu_kein_schrieb`.
-  have hneu : σ'.spur = ([] : List (Ereignis D2)) ++ (GenStart wspF).spuren 1 := by
-    have hsp : (GenStart wspF).spuren 1 = [] := rfl
-    rw [hsp, List.append_nil]
-    have hσ' : σ' = Wflip2 (((GenStart wspF).weltVon 1).lese [] []) := by
-      have hcomp2 := hfire'
-      have hAns2 : axiomAntwort (O := O2) ()
-          (((GenStart wspF).weltVon 1).lese [] [])
-          (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
-            (Args.nil (D := D2) (Γ := []) (Λ := []))
-            (((GenStart wspF).weltVon 1).lese [] []) Env.nil) =
-          (Wflip2 (((GenStart wspF).weltVon 1).lese [] []), Option.some ()) := by
-        rfl
-      have hrfl2 : (execStmt (O := O2) 0 keinRuf axCall
-          ((GenStart wspF).weltVon 1) Env.nil).welt =
-          (match axiomAntwort (O := O2) ()
-            (((GenStart wspF).weltVon 1).lese [] [])
-            (evalArgs (Γ := []) (Λ := []) (((GenStart wspF).weltVon 1).lese [] [])
-              (Args.nil (D := D2) (Γ := []) (Λ := []))
-              (((GenStart wspF).weltVon 1).lese [] []) Env.nil) with
-          | (σ₂, Option.some _) => (Ausgang.ok σ₂ Env.nil : Ausgang V2 false []).welt
-          | (_, Option.none) =>
-            (Ausgang.hardware (D := D2) (.annahme ()) : Ausgang V2 false []).welt) := rfl
-      rw [hrfl2, hAns2, Ausgang.welt] at hcomp2
-      exact Option.some_inj.mp hcomp2.symm
-    rw [hσ']
-    rfl
-  have hs : PCSchritt (P := P2w) (O := O2) 0 progF (GenStart wspF)
-      (fun _ => 0) 1
-      ⟨σ'.speicher, genUpdate (GenStart wspF).spuren 1 σ'.spur,
-        (GenStart wspF).lauf ++ genEigen 1 [], (GenStart wspF).start,
-        (GenStart wspF).welten ++ [σ'], (GenStart wspF).tiefe + 1⟩
-      (pcAdvance (fun _ => 0) 1) := by
-    refine PCSchritt.leaf (V := V2) (l := false) (Γ := []) (Λ := []) (Λ' := [])
-      (s := axCall) (ρ := Env.nil) (σ' := σ') (neu := [])
-      (Λa := []) (cs := []) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    · rfl
-    · intro L
-      exact nomatch L
-    · exact hfire'
-    · exact hneu
-    · intro L h hm
-      simp at hm
-    · have hpc : (progF 1)[(fun _ : Faden => 0) 1]? =
-          some (PCAtom.leaf (D := D2) [] []) := by
-        simp [progF]
-      exact hpc
-    · rfl
-    · intro e he m st hm
-      simp at he
-    · intro e he o ho
-      simp at he
-  -- Instantiate the universal at this data; the slot equality contradicts
-  -- the flip (`true = false`).
-  have hcon := hAll P2w O2 0 O2gut progF wspF 0 () hNurF
-    (GenStart wspF) (fun _ => 0) 1 _ _ PCReach.start hs (by decide) 0 ()
-  have hflip := axFeuert ((GenStart wspF).weltVon 1) Env.nil σ' hfire'
-  have hMslot : (GenStart wspF).speicher.slots () 0 () = false := rfl
-  -- Project the machine memories to world slots (definitional).
-  have hcon2 : σ'.slots () 0 () = (GenStart wspF).speicher.slots () 0 () := hcon
-  rw [hflip, hSlot0, hMslot] at hcon2
-  -- `hcon2 : true = false`: discriminate.
-  exact absurd hcon2 (by intro h; cases h)
+/- REMOVED (lane 80): `axNeu_kein_schrieb` and `axiomCall_ohne_ereignis_falsch`
+    are false under the recording `GutO` -- the oracle now records its write
+    event (`O2gut`), so the recorded list DOES carry a `Sum.inl ()` event and
+    the target-as-stated is no longer refuted at `Stmt.axiomCall`. The lane-80
+    target (`EigenZustand.lean`) proves the original statement; the `AxGegen`
+    fixture (`D2`/`V2`/`O2`/`axCall`/`axFeuert`/`wspF`/`progF`/`P2w`/`hNurF`)
+    is kept for its second witness. -/
 
 end AxGegen
 
@@ -2143,13 +1989,16 @@ theorem pcSchritt_fremd_fest_zeuge :
 
 /-! CUTS: what is not proved.
 
-  * The TARGET AS STATED (`eigenzustand_nur_eigene_schritteD`, without `hNoAx`)
-    is FALSE: `axiomCall_ohne_ereignis_falsch` refutes its universal closure at
-    `Stmt.axiomCall` (constructor named, concrete oracle `O2` flipping the slot
-    while `GutO` keeps the trace, hence no recorded `Sum.inl t` event). The
-    positive result is the separately named `eigenzustand_nur_eigene_schritteD_rep`
-    with the explicit open remainder `hNoAx` (rule 12): no declared oracle write
-    to `t` fires at the foreign step. `hNoAx` is not quantified over contracts or
+  * (lane 80) The TARGET AS STATED (`eigenzustand_nur_eigene_schritte`, no
+    remainder) is now PROVED in `EigenZustand.lean` (the recording `GutO`
+    discharges the old `hNoAx` remainder: an oracle write records its event).
+    The `AxGegen` counterexample (`axiomCall_ohne_ereignis_falsch`) and its
+    `axNeu_kein_schrieb` lemma were false under the recording `GutO` and are
+    removed; the `AxGegen` fixture is kept for the lane-80 second witness.
+  * The positive result here stays the separately named
+    `eigenzustand_nur_eigene_schritteD_rep` with the explicit open remainder
+    `hNoAx` (rule 12): no declared oracle write to `t` fires at the foreign
+    step. `hNoAx` is not quantified over contracts or
     statements (rule 13): it quantifies over this step's own firing data.
   * `hNoAx` is discharged in the witnesses only because the fixture declares
     no axiom (`refD.Ax` is empty, so the oracle-write existential is absurd
@@ -2173,7 +2022,6 @@ theorem pcSchritt_fremd_fest_zeuge :
 
 #print axioms Gabbro.Grammatik.EZD.eigenzustand_nur_eigene_schritteD_rep
 #print axioms Gabbro.Grammatik.EZD.eigenzustand_nur_eigene_schritteD_rep_zeuge
-#print axioms Gabbro.Grammatik.EZD.AxGegen.axiomCall_ohne_ereignis_falsch
 #print axioms Gabbro.Grammatik.EZD.blattSlots_dispatch
 #print axioms Gabbro.Grammatik.EZD.pcSchritt_fremd_fest
 #print axioms Gabbro.Grammatik.EZD.pcSchritt_fremd_fest_zeuge
