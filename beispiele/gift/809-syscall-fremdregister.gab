@@ -1,0 +1,28 @@
+-- erwartet: N060
+-- **Gift 809 -- a binding outside the general registers has no ABI slot.**
+--
+-- `xmm0` is a floating-point register; no Linux syscall argument travels in
+-- one. The binding names one of the sixteen general registers or nothing --
+-- so the register falls, by name.
+
+module gift::syscall_fremdregister {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier probe_write;
+
+syscall daneben(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { xmm0 = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier probe_write;
+
+}

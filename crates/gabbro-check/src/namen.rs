@@ -1622,6 +1622,41 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
             Some(true) => {}
         }
     });
+    // **A `syscall` names its assumption the same way (lane 86, SYNTAX.md §12.1:
+    // `N004`/`N005` shape).** The per-call assumption is a clause that names
+    // something, so it names something this unit declares -- and what no probe
+    // can ever refute belongs in the certificate, not in a pass. The falsifier
+    // itself stays an external probe, as at `assume`/`axiom` (`N056` reads its
+    // shape where it resolves; the manifest books where it does not).
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Syscall(s) = &item.art else { return };
+        let SyscallPaarung::Annahme { annahme, .. } = &s.paarung else { return };
+        match annahmen.get(&annahme.text) {
+            None => absagen.schiebe(
+                Absage::fehler(
+                    "N004",
+                    annahme.span,
+                    format!("`syscall {}` names no declared assumption", s.name.text),
+                )
+                .mit_notiz(
+                    "the syscall gets a number, a register map and an errno decoding -- \
+                        and Gabbro owes it no proof, only the named assumption",
+                ),
+            ),
+            Some(false) => absagen.schiebe(
+                Absage::fehler(
+                    "N005",
+                    annahme.span,
+                    format!("`syscall {}` rests on an unfalsifiable assumption", s.name.text),
+                )
+                .mit_notiz(
+                    "an assumption about the kernel that no probe can ever refute \
+                        belongs in the certificate, not in a pass",
+                ),
+            ),
+            Some(true) => {}
+        }
+    });
 }
 
 fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
@@ -1807,6 +1842,13 @@ fn auswahl(item: &Item) -> Auswahl {
         if let Some(a) = &f.arch {
             return Auswahl::Arch(a.text.clone());
         }
+    }
+    // **A `syscall` names its machine, like a function with `arch`.** Two
+    // declarations of one name for DIFFERENT architectures are one declaration
+    // per target, not a duplication -- the same conditional-translation form
+    // `prim fn … arch` already carries.
+    if let ItemArt::Syscall(s) = &item.art {
+        return Auswahl::Arch(s.arch.text.clone());
     }
     Auswahl::Immer
 }
@@ -3818,6 +3860,46 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
             ),
         );
     });
+    // **A `syscall` names its machine the same way (lane 86, PLAN-SYSCALL.md §1).**
+    //
+    // The rule is the same rule, asked of the declaration instead of the
+    // assumption: a syscall for a machine no `arch` declares can never be in
+    // force here. The sealed-architecture half (`A006`, anything but x86_64)
+    // is a sentence of its own in `syscall.rs` -- what fires there is not a
+    // mismatch but a machine the emitter cannot lower at all.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Syscall(s) = &item.art else { return };
+        if s.arch.text != "x86_64" {
+            return;
+        }
+        if bekannt.contains(&s.arch.text) {
+            return;
+        }
+        let mut genannt: Vec<&str> = bekannt.iter().map(|s| s.as_str()).collect();
+        genannt.sort_unstable();
+        genannt.dedup();
+        absagen.schiebe(
+            Absage::fehler(
+                "A005",
+                s.arch.span,
+                format!(
+                    "`{}` is a syscall for `{}`, and this unit declares only `{}`",
+                    s.name.text,
+                    s.arch.text,
+                    genannt.join("`, `")
+                ),
+            )
+            .mit_notiz(
+                "a syscall that can never be in force here still travels in the \
+                 artefact under `proved under A1…An` -- and a reader takes a reach out of \
+                 it that does not exist",
+            )
+            .mit_notiz(
+                "name the machine at an `entry`, a `boot`, an `entrust` or an `asm` \
+                 body -- that is where this unit says which machine it runs on",
+            ),
+        );
+    });
 }
 
 fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
@@ -3937,6 +4019,15 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
         if let ItemArt::Funktion(f) = &item.art {
             if let Some(r) = &f.fehler {
                 kann_scheitern.insert(f.name.text.clone(), r.text.clone());
+            }
+        }
+        // **A `syscall` with `or R` can fail like an `extern fn` with one.** The
+        // `let … else` at its call sites is the only error propagation, so the
+        // channel has to stand in this map -- otherwise every honest syscall
+        // call falls at `N028`, and every bare one passes `N029` in silence.
+        if let ItemArt::Syscall(s) = &item.art {
+            if let Some(r) = &s.fehler {
+                kann_scheitern.insert(s.name.text.clone(), r.text.clone());
             }
         }
     });

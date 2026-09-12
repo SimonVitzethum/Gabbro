@@ -745,6 +745,11 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
             ja |= f.parameter.iter().any(|p| im_typ(&p.typ));
             ja |= f.ergebnis.as_ref().is_some_and(im_typ);
         }
+        // **A `syscall` declares parameter and result types like an `fn`.**
+        ItemArt::Syscall(s) => {
+            ja |= s.parameter.iter().any(|p| im_typ(&p.typ));
+            ja |= s.ergebnis.as_ref().is_some_and(im_typ);
+        }
         ItemArt::Accumulates(a) => ja |= im_typ(&a.typ),
         // **Zwei Traeger, die der Sammelzweig verschwiegen hat** (2026-08-21): ein
         // `table T { slot { g : f64, } }` und ein `format F { x : f32, }` rechnen mit
@@ -826,6 +831,24 @@ pub fn emittiere_mit(
     };
     let mut namen = Namen::default();
     namen.opsgerufen = crate::opsruf::gerufene(baum);
+    // **A `syscall` has no lowering yet (lane S5; the stub template is lane
+    // S6's).** The emitter refuses the unit BY NAME instead of emitting a
+    // hand-written `asm` block for it -- a generator that guesses undoes every
+    // pass in front of it. The refusal stands on the PARSED tree and never
+    // consults the passes, like every `C001` in this file.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Syscall(s) = &item.art else { return };
+        weigere(
+            absagen,
+            s.name.span,
+            &format!(
+                "`syscall {}` -- the stub template (inline `syscall`, register \
+                 binding, clobbers) lands in lane S6, and until then a unit \
+                 carrying a syscall is not emitted",
+                s.name.text
+            ),
+        );
+    });
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Tabelle(t) = &item.art {
             for k in crate::opsruf::koepfe(t) {
@@ -1085,6 +1108,10 @@ pub fn emittiere_mit(
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
+        // **A `syscall` declares no name a lowering looks up.** Its parameter and
+        // result types travel through `Umgebung`, and the unit is refused above
+        // before any lowering reads this map.
+        | ItemArt::Syscall(_)
         | ItemArt::Concurrent(_) => {}
     });
     // **Second pass, and it needs the first**: whether a parameter is a ghost can only be
@@ -1108,6 +1135,31 @@ pub fn emittiere_mit(
                 namen.ergebnistyp.insert(f.name.text.clone(), e.clone());
             }
             namen.funktionen.insert(f.name.text.clone(), sig);
+        }
+        // **A `syscall` lowers its call sites exactly like an `extern fn`.** The
+        // signature carries the same fields -- ghost flags, the `or R` channel,
+        // the result -- so a `let … else` over a syscall call takes the same
+        // arm as over a foreign body. The unit itself is refused at the top of
+        // `emittiere_mit` (`C001`); this entry only keeps the call lowering
+        // from inventing a second refusal for the same declaration.
+        if let ItemArt::Syscall(s) = &item.art {
+            let sig = Signatur {
+                geist_param: s.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
+                geist_rueck: s.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
+                nie_rueck: matches!(s.ergebnis, Some(TypExpr::Never(_))),
+                fehler: s.fehler.as_ref().map(|i| i.text.clone()),
+                rueck: s.ergebnis.clone(),
+                option_rueck: match &s.ergebnis {
+                    Some(TypExpr::Index { tabelle, optional: true, .. }) => {
+                        Some(tabelle.text.clone())
+                    }
+                    _ => None,
+                },
+            };
+            if let Some(e) = &s.ergebnis {
+                namen.ergebnistyp.insert(s.name.text.clone(), e.clone());
+            }
+            namen.funktionen.insert(s.name.text.clone(), sig);
         }
     });
     // **Dritter Sammelgang: die fremden Zeigerziele.** C verlangt den Tag VOR der
@@ -1478,6 +1530,9 @@ pub fn emittiere_mit(
             | ItemArt::Entry(_)
             | ItemArt::Entrust(_)
             | ItemArt::Boot(_)
+            // **A `syscall` has no body -- the body is the machine.** Like every
+            // other body-less carrier it names no table through a block.
+            | ItemArt::Syscall(_)
             | ItemArt::Concurrent(_) => {}
         });
         // **«B41b»: ein Baumdurchlauf ueber einem blanken Index adressiert seine Tabelle
@@ -1830,6 +1885,9 @@ pub fn emittiere_mit(
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
+        // **A `syscall` hoists no constant.** Its `number` may name one, but the
+        // number is read by the stub (lane S6), not emitted as a `#define`.
+        | ItemArt::Syscall(_)
         | ItemArt::Concurrent(_) => {}
     });
     crate::fuer_jedes_item(baum, &mut |item| {
@@ -2445,6 +2503,12 @@ pub fn emittiere_mit(
              ELSEWHERE; which C object holds the state, and whether a transition is a check \
              or an assignment, the declaration does not say",
         ),
+        // **A `syscall` emits NOTHING here -- the unit was already refused at the top
+        // of `emittiere_mit` (`C001`), and this arm only keeps the match total.**
+        // The stub template is lane S6's; until it lands there is no C site for
+        // this declaration, and a second refusal here would bury the named one
+        // under a duplicate.
+        ItemArt::Syscall(_) => {}
     });
     // **«SG-24»: every counter of the unit, defined.** Between the declarations and
     // the bodies: after the table storage they read (`tabelle()` wrote it into `aus`
@@ -2550,14 +2614,17 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_) => None,
-        // Scaffolding, ghost, or refusal: no C site, no row.
+        // Scaffolding, ghost, or refusal: no C site, no row. A `syscall` stands
+        // here too: the emitter refuses the unit (`C001`), so there is no C
+        // site a row could cover.
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Assume(_)
         | ItemArt::Axiom(_)
         | ItemArt::Gruppe(_)
         | ItemArt::Concurrent(_)
-        | ItemArt::State(_) => None,
+        | ItemArt::State(_)
+        | ItemArt::Syscall(_) => None,
     }
 }
 

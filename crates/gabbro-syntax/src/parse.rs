@@ -729,61 +729,14 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
-            // **«SS-1» (2026-09-12): `syscall` is specified (`SYNTAX.md` §12.1)
-            // and not implemented.** The grammar production stands, the lexer
-            // knows the words, and the parser refuses the item BY NAME -- a
-            // controlled refusal, never silent acceptance and never a crash.
-            // *`entry syscall …` keeps parsing: the entry NAME is an
-            // identifier, and `syscall` as a `ctx` word stays one there.*
-            Art::Wort(Kw::Syscall) => {
-                // **Skip the whole item before refusing it.** The caller
-                // (`programm`/`synchronisiere`) recovers at the next item head
-                // or `;` at depth 0 -- and a `syscall` body carries no `;`
-                // until its closing line, so recovery would re-enter MID-ITEM
-                // (`abi`, `regs`, …) and bury the one refusal under knock-on
-                // errors. *One fault, one refusal:* consume to the balancing
-                // `}` (or `;`, for the one-line shape), THEN refuse by name.
-                let sp = self.span();
-                let mut tiefe = 0i32;
-                loop {
-                    match self.blick().art {
-                        Art::Ende => break,
-                        Art::Zeichen(Z::GeschweiftAuf) => {
-                            tiefe += 1;
-                            self.pos += 1;
-                        }
-                        Art::Zeichen(Z::GeschweiftZu) => {
-                            self.pos += 1;
-                            if tiefe <= 0 {
-                                break;
-                            }
-                            tiefe -= 1;
-                        }
-                        Art::Zeichen(Z::Semi) if tiefe <= 0 => {
-                            self.pos += 1;
-                            break;
-                        }
-                        _ => {
-                            self.pos += 1;
-                        }
-                    }
-                }
-                self.absage(
-                    Absage::fehler(
-                        "P042",
-                        sp,
-                        "`syscall` declarations are specified (SYNTAX.md \u{00a7}12.1) \
-                         but not yet implemented",
-                    )
-                    .mit_notiz(
-                        "the grammar production `syscalldecl` stands since lane S1; \
-                         the checker, the emitter ruling and the corpus example \
-                         (lanes S5-S7) are written against it -- until then every \
-                         `syscall` item falls here, by name",
-                    ),
-                );
-                return Err(Abbruch);
-            }
+            // **«SS-1» (2026-09-12), built in lane S5: `syscall` parses into
+            // `SyscallDecl` (SYNTAX.md §12.1, `syscalldecl`).** The grammar
+            // production stands beside `entrydecl`; the checks live in the
+            // checker (`gabbro-check/src/syscall.rs`), the stub refusal in
+            // the emitter. *`entry syscall …` keeps parsing: the entry NAME
+            // is an identifier, and `syscall` as a `ctx` word stays one
+            // there.*
+            Art::Wort(Kw::Syscall) => ItemArt::Syscall(self.syscalldecl()?),
             Art::Wort(Kw::Entrust) => ItemArt::Entrust(self.entrustdecl()?),
             Art::Wort(Kw::Boot) => ItemArt::Boot(self.bootdecl()?),
             _ => {
@@ -4902,6 +4855,175 @@ impl<'a> Parser<'a> {
             dispatch,
             span: anfang.bis_zu(ende),
         })
+    }
+
+    /// **`syscalldecl` -- the user side of a system call** («SS-1», SYNTAX.md §12.1).
+    ///
+    /// ```ebnf
+    /// syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+    ///               "abi" ident "arch" ident "number" constexpr
+    ///               "regs" "in"  "{" [ sysregbind { "," sysregbind } [ "," ] ] "}"
+    ///               "regs" "out" "{" [ ident { "," ident } [ "," ] ] "}"
+    ///               "clobbers" "{" [ identlist ] "}"
+    ///               "errors"   "{" [ errmap { "," errmap } [ "," ] ] "}"
+    ///               [ "requires" predlist ]
+    ///               [ "ensures"  predlist ]
+    ///               "effects" "{" efflist "}"
+    ///               ( "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
+    ///               | "kernel" path ";" ) ;
+    /// sysregbind = ident ( "=" | ":" ) ident ;   (* register first, parameter second *)
+    /// errmap     = ident "=>" ident ;
+    /// ```
+    ///
+    /// **Two places where the written examples fix the production's letter.** The §1
+    /// production line says `regbind` (`ident ":" ident`, entry order) for both maps,
+    /// but every written example -- PLAN-SYSCALL.md §1, SYNTAX.md §12.1, the gift probe
+    /// and the speech test -- writes `regs in { rdi = fd }` (register first, `=`) and
+    /// `regs out { rax }` (bare registers). The examples agree with each other and the
+    /// production agrees with `entrydecl`; what is built here is what the examples
+    /// write, with `:` accepted beside `=` at `regs in` so the production's spelling
+    /// reads too. *A `regs out` pair has no meaning -- the out value has no Gabbro-side
+    /// name, the generated decoding fills `result` -- so only the bare form reads
+    /// there, and a pair falls at `P001`.*
+    fn syscalldecl(&mut self) -> Erg<SyscallDecl> {
+        let anfang = self.erwarte_kw(Kw::Syscall)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_z(Z::RundAuf)?;
+        let parameter = if self.ist_z(Z::RundZu) {
+            Vec::new()
+        } else {
+            self.params()?
+        };
+        self.erwarte_z(Z::RundZu)?;
+        let ergebnis = if self.friss_z(Z::Pfeil) {
+            Some(self.typeexpr()?)
+        } else {
+            None
+        };
+        let fehler = if self.friss_kw(Kw::Or) {
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
+        self.erwarte_kw(Kw::Abi)?;
+        let abi = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Arch)?;
+        let arch = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Sysnumber)?;
+        let nummer = self.expr()?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::In)?;
+        let regs_in = self.sysregs_in()?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::Out)?;
+        let regs_out = self.sysregs_out()?;
+        self.erwarte_kw(Kw::Clobbers)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let clobbers = self.identlist_leer_erlaubt()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        self.erwarte_kw(Kw::Errors)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let errors = self.errmaps()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        // E4: the clauses stand in a FIXED order, as at an `fn` -- a tool that has to
+        // sort cannot say "`effects` is missing here".
+        let requires = if self.friss_kw(Kw::Requires) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let ensures = if self.friss_kw(Kw::Ensures) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let effects = self.effects_block()?;
+        // `assume … falsifier …` or `kernel <path>` -- exactly one of the two (E3:
+        // nothing is implicit, and a missing counterpart is the absence of both
+        // entries, a compile error at `P001`/`P029`).
+        let paarung = if self.friss_kw(Kw::Assume) {
+            let annahme = self.erwarte_ident()?;
+            let klasse = self.annahmeklasse()?;
+            self.erwarte_z(Z::Semi)?;
+            SyscallPaarung::Annahme { annahme, klasse }
+        } else {
+            self.erwarte_kw(Kw::Kernel)?;
+            let pfad = self.pfad()?;
+            self.erwarte_z(Z::Semi)?;
+            SyscallPaarung::Kernel { pfad }
+        };
+        Ok(SyscallDecl {
+            name,
+            parameter,
+            ergebnis,
+            fehler,
+            abi,
+            arch,
+            nummer,
+            regs_in,
+            regs_out,
+            clobbers,
+            errors,
+            requires,
+            ensures,
+            effects,
+            paarung,
+            span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// `sysregbind = ident ( "=" | ":" ) ident` -- register first, parameter second.
+    ///
+    /// The mirror image of `entry`'s `regbind`: at an entry the Gabbro side names the
+    /// slot (`nr : rax`), here the ABI fixes the register and Gabbro binds its
+    /// parameter into it (`rdi = fd`). Both separators read -- the examples write `=`,
+    /// the §1 production line writes `:` -- and both carry the same order.
+    fn sysregs_in(&mut self) -> Erg<Vec<(Ident, Ident)>> {
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut liste = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let reg = self.erwarte_ident()?;
+            if !self.friss_z(Z::Gleich) {
+                self.erwarte_z(Z::Kolon)?;
+            }
+            let param = self.erwarte_ident()?;
+            liste.push((reg, param));
+            // The trailing comma is optional, as at `regsliste` (G4).
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(liste)
+    }
+
+    /// Bare out registers (`regs out { rax }`), with the optional trailing comma.
+    fn sysregs_out(&mut self) -> Erg<Vec<Ident>> {
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut liste = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            liste.push(self.erwarte_ident()?);
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(liste)
+    }
+
+    /// `errmap = ident "=>" ident` -- errno to reason case, trailing comma optional.
+    fn errmaps(&mut self) -> Erg<Vec<(Ident, Ident)>> {
+        let mut liste = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let errno = self.erwarte_ident()?;
+            self.erwarte_z(Z::Doppelpfeil)?;
+            let grund = self.erwarte_ident()?;
+            liste.push((errno, grund));
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        Ok(liste)
     }
 
     fn regsliste(&mut self) -> Erg<Vec<(Ident, Ident)>> {

@@ -1,0 +1,27 @@
+-- erwartet: N061
+-- **Gift 804 -- an errno mapped to a reason the channel never declares.**
+--
+-- `QuotenFehler` is no case of `IoError`. The generated decoding would carry a
+-- dead arm -- a target that never arrives -- so the arm falls, by name.
+
+module gift::syscall_fremder_grund {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier probe_write;
+
+syscall fremd(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => QuotenFehler }
+    effects { pure }
+    assume linux_write_contract falsifier probe_write;
+
+}

@@ -308,6 +308,49 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
         }
         g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
+    // **A `syscall` is a callee with declared effects, exactly like an `extern
+    // fn`.** Without a node here the call effects of every caller are
+    // undecidable (`E009`) over a CORRECT program -- a hole in the GRAPH, not
+    // in the program. The node carries the declared effects, the parameter
+    // names for the cross-boundary bridge, and the `Held` requirements; the
+    // contract calls of `requires`/`ensures` are edges like at an `fn`. There
+    // is no body to scan -- the body is the machine.
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Syscall(s) = &item.art else {
+            return;
+        };
+        let mut k = Knoten {
+            eigen: BTreeSet::new(),
+            ruft: BTreeSet::new(),
+            verlangt: Vec::new(),
+            hat_effects: true,
+            parameter: s.parameter.iter().map(|p| p.name.text.clone()).collect(),
+            rufe: Vec::new(),
+            indirect: Vec::new(),
+            modul: modul.to_string(),
+            span: s.name.span,
+        };
+        for e in &s.effects.liste {
+            k.eigen.insert(e.art.text());
+        }
+        for p in &s.requires {
+            held_aus_pred(p, &mut k.verlangt);
+        }
+        for p in s.requires.iter().chain(&s.ensures) {
+            for e in crate::ausdruecke_im_praedikat(p) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        if crate::ist_praedikatswort(r) {
+                            continue;
+                        }
+                        nimm(r, &mut k.ruft);
+                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None);
+                    }
+                }
+            }
+        }
+        g.knoten.insert(schluessel(modul, &s.name.text), k);
+    });
     // **G9, 2026-09-04 -- the eight integer conversions are CALLEES with declared
     // effects, exactly the gap the three comments above already name.** Without a node
     // here, `u64(a)` inside a `pure` function made that function's OWN effect hull

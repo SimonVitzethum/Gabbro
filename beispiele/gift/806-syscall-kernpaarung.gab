@@ -1,0 +1,25 @@
+-- erwartet: N062
+-- **Gift 806 -- a `kernel` pairing, refused until the pairing check lands.**
+--
+-- With `kernel` the call is paired with a Gabbro kernel's dispatch entry for
+-- the same number and no assumption is named. The pairing check and the stub
+-- are lane S6's -- until then every `kernel` form falls here, by name, never
+-- silent.
+
+module gift::syscall_kernpaarung {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    kernel kern::dispatch;
+
+}

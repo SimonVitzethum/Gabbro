@@ -1,15 +1,25 @@
--- erwartet: P042
--- **A `syscall` declaration, specified and not implemented.**
+-- erwartet: C001
+-- **Gift 797 -- a checked syscall is refused at the emitter, by name.**
 --
--- The grammar production `syscalldecl` stands since lane S1 (`SYNTAX.md`
--- §12.1, «SS-1»); the checker, the emitter ruling and the corpus example
--- (lanes S5-S7) are written against it. Until then every `syscall` item
--- falls HERE, by name -- a controlled refusal, never silent acceptance
--- and never a crash. `entry syscall …` keeps parsing: the entry NAME is an
--- identifier, and `syscall` as a `ctx` word stays one there.
-module gift::syscall_nicht_implementiert {
+-- Until lane S5 this file fell at the parser (`P042`: specified, not yet
+-- implemented). Since lane S5 the declaration CHECKS -- the register map, the
+-- errno decoding, the machine and the named assumption all hold -- and what is
+-- still missing is the lowering: the stub template (inline `syscall`, register
+-- binding, clobbers) is lane S6's. The emitter refuses the unit with `C001`
+-- instead of emitting a hand-written `asm` block for it.
 
-syscall write(fd : u64) -> u64
+module gift::syscall_emission_offen {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier probe_write;
+
+syscall write(fd : u64) -> u64 or IoError
     abi linux arch x86_64 number 1
     regs in { rdi = fd }
     regs out { rax }

@@ -237,8 +237,9 @@ pub const NAMEN: &[Satz] = &[
         aussage: "Every clause that names something -- `entrust`, `offset_into`, `per cpu`, \
                   `requires Has`, `dispatch`, `gates`, `measures`, `mirrors`, a probe \
                   obligation, `observed by`, a `format` `where`, `step`, a nominal type at a \
-                  `let`/`return`/comparison/argument/assignment -- names something this unit \
-                  declares, and names it in the form the clause requires.",
+                  `let`/`return`/comparison/argument/assignment, and a `syscall`'s \
+                  assumption -- names something this unit declares, and names it in the \
+                  form the clause requires.",
         vorbehalt: "**`N028`/`N029` carry a KEY ASYMMETRY that is a plain bug** (found \
                     2026-08-21 while writing this sentence): the map is filled under the \
                     SHORT name and calls are looked up under the FULL path, so `m::f()` \
@@ -328,8 +329,9 @@ pub const NAMEN: &[Satz] = &[
         name: "namen.annahmemaschine",
         kennungen: &["A005"],
         aussage: "An `assume … arch A` names a machine this unit declares somewhere -- \
-                  at an `entry`, an `entrust`, a `boot` or an `asm` body. An assumption \
-                  that can never be in force here does not travel in the artefact's \
+                  at an `entry`, an `entrust`, a `boot` or an `asm` body. A `syscall` \
+                  names its machine the same way (`arch` after `abi`). An assumption \
+                  -- or a syscall -- that can never be in force here does not travel in the artefact's \
                   assumption set as though it could.",
         vorbehalt: "**The rule reads the `arch`, never the TEXT.** Whether an assumption \
                     carries two claims under one name is a human judgement; a guard \
@@ -2537,23 +2539,32 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/DECKUNGSLUECKE.md",
     },
     Satz {
-        name: "parser.syscall-bevor-s5",
-        kennungen: &["P042"],
-        aussage: "A `syscall` item is refused BY NAME until the checker implements it. \
-                  The grammar production `syscalldecl` stands since lane S1 \
-                  (`SYNTAX.md` §12.1, «SS-1»); the checker, the emitter ruling and \
-                  the corpus example (lanes S5-S7) are written against it, and until \
-                  then every `syscall` item falls here -- a controlled refusal, never \
-                  silent acceptance and never a crash.",
-        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing about \
-                    whether the ABI binding, the register map or the error map are RIGHT \
-                    -- those checks belong to lanes S5-S7, and until they stand every \
-                    such question falls here unread. `entry syscall …` keeps parsing: \
-                    the entry NAME is an identifier, and `syscall` as a `ctx` word \
-                    stays one there. Probe 796 pins it.",
+        name: "syscall.erklaerung",
+        kennungen: &["N057", "N058", "N059", "N060", "N061", "N062", "A006"],
+        aussage: "A `syscall` declaration holds its own shape: the in-registers are \
+                  pairwise distinct (`N057`), no out register is clobbered (`N058`), \
+                  every parameter is bound to exactly one register and every binding \
+                  names a parameter (`N059`), every named register is an x86_64 general \
+                  register (`N060`), the `errors` map answers every listed errno once \
+                  and every target is a case of the declared `or R` channel (`N061`), a \
+                  `kernel` pairing is refused until the pairing check lands (`N062`), \
+                  and the declaration names no sealed architecture (`A006`, x86_64 \
+                  only). The `arch` against the declared arches (`A005`) and the named \
+                  assumption (`N004`/`N005` shape) are sentences of their own, and the \
+                  call site reuses the `extern` path -- the `Signatur` in the shared \
+                  map, the call-graph node, and `H007` at the boundary.",
+        vorbehalt: "A declaration rule, and nothing else. It says nothing about whether \
+                    the number is the kernel's, whether the errno table is the kernel's, \
+                    or whether the assumption holds -- those are the counterpart's \
+                    business (lane S6) and the falsifier's. A `regs out` pair has no \
+                    reading and falls at the parser, not here; two out registers naming \
+                    one register are not refused by any code above. The emitter refuses \
+                    every unit carrying a syscall (`C001`) until the stub lands.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probe 796 on `P042`.",
-        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §12.1",
+        gemessen_an: "beispiele/gift: probes on `N057`, `N058`, `N059`, `N060`, `N061`, \
+                      `N062` and `A006`; beispiele/73 checks clean and falls only at the \
+                      emitter (`C001`).",
+        fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",
     },
     Satz {
         name: "bootsatz.schichten",

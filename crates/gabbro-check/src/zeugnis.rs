@@ -795,6 +795,9 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Gruppe(_) => "group",
         // **Lane C, additive:** the new declaration reports its kind like every other.
         ItemArt::Concurrent(_) => "concurrent",
+        // **Lane S5, additive:** a `syscall` is refused at the emitter (`C001`),
+        // so the certificate books the kind and owes no lowering row for it.
+        ItemArt::Syscall(_) => "syscall",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
         ItemArt::Entry(_) => "entry",
