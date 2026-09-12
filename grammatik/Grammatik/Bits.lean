@@ -540,4 +540,91 @@ theorem bswap32n_invol (x : Nat) (hx : x < 256 ^ 4) :
     exact bswap32n_nest b3 b2 b1 b0
   rw [hsplit, hswap, hfin]
 
+theorem ladder4 (x : Nat) : x / 256 ^ 4 = (((x / 256) / 256) / 256) / 256 := by
+  have e : (256 : Nat) ^ 4 = 256 * 256 * 256 * 256 := by decide
+  rw [e, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul]
+
+theorem ladder5 (x : Nat) : x / 256 ^ 5 = ((((x / 256) / 256) / 256) / 256) / 256 := by
+  have e : (256 : Nat) ^ 5 = 256 * 256 * 256 * 256 * 256 := by decide
+  rw [e, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul,
+    ← Nat.div_div_eq_div_mul]
+
+theorem ladder6 (x : Nat) : x / 256 ^ 6 = (((((x / 256) / 256) / 256) / 256) / 256) / 256 := by
+  have e : (256 : Nat) ^ 6 = 256 * 256 * 256 * 256 * 256 * 256 := by decide
+  rw [e, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul,
+    ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul]
+
+theorem ladder7 (x : Nat) : x / 256 ^ 7 = ((((((x / 256) / 256) / 256) / 256) / 256) / 256) / 256 := by
+  have e : (256 : Nat) ^ 7 = 256 * 256 * 256 * 256 * 256 * 256 * 256 := by decide
+  rw [e, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul,
+    ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul]
+
+/-- Eight-byte split from the `u64` bound. Uses `hx` (value fits). -/
+theorem split8 (x : Nat) (hx : x < 256 ^ 8) :
+    ∃ b0 b1 b2 b3 b4 b5 b6 b7,
+      b0 < 256 ∧ b1 < 256 ∧ b2 < 256 ∧ b3 < 256 ∧
+      b4 < 256 ∧ b5 < 256 ∧ b6 < 256 ∧ b7 < 256 ∧
+      x = ((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0 := by
+  refine ⟨x % 256, (x / 256) % 256, (x / 256 / 256) % 256, (x / 256 / 256 / 256) % 256,
+    (x / 256 / 256 / 256 / 256) % 256, (x / 256 / 256 / 256 / 256 / 256) % 256,
+    (x / 256 / 256 / 256 / 256 / 256 / 256) % 256, x / 256 / 256 / 256 / 256 / 256 / 256 / 256,
+    Nat.mod_lt _ (by decide), Nat.mod_lt _ (by decide), Nat.mod_lt _ (by decide),
+    Nat.mod_lt _ (by decide), Nat.mod_lt _ (by decide), Nat.mod_lt _ (by decide),
+    Nat.mod_lt _ (by decide), ?_, ?_⟩
+  · have h256 : (256 : Nat) ^ 8
+        = 256 * (256 * (256 * (256 * (256 * (256 * (256 * 256)))))) := by decide
+    rw [h256] at hx
+    have h1 := Nat.div_lt_of_lt_mul hx
+    have h2 := Nat.div_lt_of_lt_mul h1
+    have h3 := Nat.div_lt_of_lt_mul h2
+    have h4 := Nat.div_lt_of_lt_mul h3
+    have h5 := Nat.div_lt_of_lt_mul h4
+    have h6 := Nat.div_lt_of_lt_mul h5
+    exact Nat.div_lt_of_lt_mul h6
+  · have h := Nat.div_add_mod x 256
+    have h2 := Nat.div_add_mod (x / 256) 256
+    have h3 := Nat.div_add_mod (x / 256 / 256) 256
+    have h4 := Nat.div_add_mod (x / 256 / 256 / 256) 256
+    have h5 := Nat.div_add_mod (x / 256 / 256 / 256 / 256) 256
+    have h6 := Nat.div_add_mod (x / 256 / 256 / 256 / 256 / 256) 256
+    have h7 := Nat.div_add_mod (x / 256 / 256 / 256 / 256 / 256 / 256) 256
+    omega
+
+/-- Eight-byte nest reads back all bytes. -/
+theorem byteOf_nest8 (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
+    (h0 : b0 < 256) (h1 : b1 < 256) (h2 : b2 < 256) (h3 : b3 < 256)
+    (h4 : b4 < 256) (h5 : b5 < 256) (h6 : b6 < 256) (h7 : b7 < 256) :
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 0 = b0 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 1 = b1 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 2 = b2 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 3 = b3 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 4 = b4 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 5 = b5 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 6 = b6 ∧
+    byteOf (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) 7 = b7 := by
+  have d1 : (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0) / 256
+      = (((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1 :=
+    pkt_div _ _ h0
+  have d2 : ((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) / 256
+      = (((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) :=
+    pkt_div _ _ h1
+  have d3 : ((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2)) / 256
+      = ((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) :=
+    pkt_div _ _ h2
+  have d4 : (((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3)) / 256
+      = ((((b7 * 256 + b6) * 256 + b5) * 256 + b4)) :=
+    pkt_div _ _ h3
+  have d5 : ((((b7 * 256 + b6) * 256 + b5) * 256 + b4)) / 256
+      = (((b7 * 256 + b6) * 256 + b5)) :=
+    pkt_div _ _ h4
+  have d6 : ((((b7 * 256 + b6) * 256 + b5))) / 256
+      = ((b7 * 256 + b6)) :=
+    pkt_div _ _ h5
+  have d7 : (((b7 * 256 + b6))) / 256 = b7 :=
+    pkt_div _ _ h6
+  simp only [byteOf, ladder0, d1, d2, d3, d4, d5, d6, d7, ladder2, ladder3,
+    ladder4, ladder5, ladder6, ladder7]
+  refine ⟨pkt_mod _ _ h0, pkt_mod _ _ h1, pkt_mod _ _ h2, pkt_mod _ _ h3,
+    pkt_mod _ _ h4, pkt_mod _ _ h5, pkt_mod _ _ h6, Nat.mod_eq_of_lt h7⟩
+
 end Gabbro.Grammatik
