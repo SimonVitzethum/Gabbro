@@ -98,3 +98,4 @@ import Grammatik.DisziplinBedarf
 import Grammatik.VertragsFuss
 import Grammatik.RelySperre
 import Grammatik.Trennung
+import Grammatik.Konstanten

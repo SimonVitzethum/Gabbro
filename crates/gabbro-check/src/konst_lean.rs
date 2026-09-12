@@ -59,7 +59,8 @@ pub fn ausdruck_lean(
 }
 
 /// One operand inside an operator or call: compound operands take
-/// parentheses, atoms and calls stand bare (application binds tightest).
+/// parentheses, atoms and nullary names stand bare (application binds
+/// tightest, so a call with arguments needs parentheses as an operand).
 fn operand_lean(
     e: &Expr,
     param: &str,
@@ -68,6 +69,7 @@ fn operand_lean(
     let text = ausdruck_lean(e, param, funktionen)?;
     match &crate::ohne_klammern(e).art {
         ExprArt::Binaer(_, _, _) | ExprArt::Unaer(_, _) => Some(format!("({text})")),
+        ExprArt::Ruf(r) if !r.argumente.is_empty() => Some(format!("({text})")),
         _ => Some(text),
     }
 }
@@ -144,7 +146,7 @@ pub fn zertifikat_lean(
 ) -> Option<String> {
     let definition = funktion_lean(lean_name, param, rumpf, funktionen)?;
     Some(format!(
-        "{definition}\ndef {tabelle_name} : List Nat := {}\ndef {pruefe_name} : Bool := List.all (fun (v, i) => v == {lean_name} i) {tabelle_name}.zipIdx\nexample : {pruefe_name} = true := by decide\n",
+        "{definition}\ndef {tabelle_name} : List Nat := {}\ndef {pruefe_name} : Bool := List.all {tabelle_name}.zipIdx (fun (v, i) => v == {lean_name} i)\nexample : {pruefe_name} = true := by decide\n",
         tabelle_lean(werte)
     ))
 }

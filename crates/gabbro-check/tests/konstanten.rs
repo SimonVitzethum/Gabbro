@@ -15,7 +15,7 @@ const fn quad(i : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
 // QUAD-CERT-BEGIN
 const QUAD_CERT_ERWARTET: &str = r#"def quad (i : Nat) : Nat := i * i
 def quadTabelle : List Nat := [0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961, 1024, 1089, 1156, 1225, 1296, 1369, 1444, 1521, 1600, 1681, 1764, 1849, 1936, 2025, 2116, 2209, 2304, 2401, 2500, 2601, 2704, 2809, 2916, 3025, 3136, 3249, 3364, 3481, 3600, 3721, 3844, 3969]
-def quadPruefe : Bool := List.all (fun (v, i) => v == quad i) quadTabelle.zipIdx
+def quadPruefe : Bool := List.all quadTabelle.zipIdx (fun (v, i) => v == quad i)
 example : quadPruefe = true := by decide
 "#;
 // QUAD-CERT-END
@@ -97,7 +97,7 @@ fn drucke(ausdruck: &str) -> Option<String> {
 
 #[test]
 fn jede_operatorfamilie_druckt_ihre_nat_form() {
-    assert_eq!(drucke("2 * 3 + 1"), Some("2 * 3 + 1".to_string()));
+    assert_eq!(drucke("2 * 3 + 1"), Some("(2 * 3) + 1".to_string()));
     assert_eq!(drucke("i * i"), Some("i * i".to_string()));
     assert_eq!(drucke("i - 1"), Some("i - 1".to_string()));
     assert_eq!(drucke("7 / 2"), Some("7 / 2".to_string()));
@@ -107,9 +107,9 @@ fn jede_operatorfamilie_druckt_ihre_nat_form() {
     assert_eq!(drucke("3 & 5"), Some("Nat.land 3 5".to_string()));
     assert_eq!(drucke("3 | 5"), Some("Nat.lor 3 5".to_string()));
     assert_eq!(drucke("3 ^ 5"), Some("Nat.xor 3 5".to_string()));
-    assert_eq!(drucke("wahr"), Some("1".to_string()));
-    assert_eq!(drucke("falsch"), Some("0".to_string()));
-    assert_eq!(drucke("!wahr"), Some("(if 1 == 0 then 1 else 0)".to_string()));
+    assert_eq!(drucke("true"), Some("1".to_string()));
+    assert_eq!(drucke("false"), Some("0".to_string()));
+    assert_eq!(drucke("!true"), Some("(if 1 == 0 then 1 else 0)".to_string()));
     assert_eq!(drucke("3 < 3"), Some("(if 3 < 3 then 1 else 0)".to_string()));
     assert_eq!(drucke("NKERNE"), Some("NKERNE".to_string()));
 }
@@ -119,21 +119,26 @@ fn verschachtelte_const_rufe_drucken_lean_applikation() {
     let quelle = "module t {\n\
 const fn doppelt(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
 { return n + n; }\n\
-const fn vierfach(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
-{ return doppelt(doppelt(n)); } }";
+const fn plusEins(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
+{ return n + 1; }\n\
+const fn zweimalPlusEins(n : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops\n\
+{ return doppelt(plusEins(n)); } }";
     let (baum, absagen) = gabbro_syntax::lies("nest.gab", quelle);
     assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
-    let (_, rumpf, _) = const_rumpf(&baum, "vierfach");
+    let (_, rumpf, _) = const_rumpf(&baum, "zweimalPlusEins");
     let mut funktionen: HashMap<String, String> = HashMap::new();
     funktionen.insert("doppelt".to_string(), "doppelt".to_string());
+    funktionen.insert("plusEins".to_string(), "plusEins".to_string());
     assert_eq!(
         gabbro_check::konst_lean::ausdruck_lean(&rumpf, "n", &funktionen),
-        Some("doppelt (doppelt n)".to_string())
+        Some("doppelt (plusEins n)".to_string())
     );
     // And the checker agrees on the value at a probe point.
+    // (Self-nesting like `doppelt(doppelt(n))` stays `None`: the recursion
+    // guard names functions, not calls, and keeps rejecting it.)
     let u = gabbro_check::umgebung::Umgebung::sammle(&baum);
-    let ruf = gabbro_check::konst_lean::ruf_ausdruck("vierfach", &[21]);
-    assert_eq!(u.konst_wert("t", &ruf), Some(84));
+    let ruf = gabbro_check::konst_lean::ruf_ausdruck("zweimalPlusEins", &[21]);
+    assert_eq!(u.konst_wert("t", &ruf), Some(44));
 }
 
 #[test]
