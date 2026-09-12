@@ -1012,7 +1012,7 @@ theorem stmt_gut : ∀ (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
   | .forever a inv body, σ, ρ, hh, σ', h =>
       foreverLauf_gut (Λ := Λ) a _ _ (fun σ ρ hh => block_gut body σ ρ hh)
         (fun σ ρ hh => gut_lese σ Λ _ inv.orte_darf hh.heldIn) passes σ ρ hh σ' h
-  | .axiomCall a args _ hw hg, σ, ρ, hh, σ', h => by
+  | .axiomCall a args _ hw hg _ _, σ, ρ, hh, σ', h => by
       simp only [execStmt] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
       split at h
