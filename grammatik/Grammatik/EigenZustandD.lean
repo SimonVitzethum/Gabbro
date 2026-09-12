@@ -709,4 +709,100 @@ theorem ret_slots_fest (O : Orakel D) (passes : Nat)
   rw [hsg']
   rfl
 
+/-! ## 5. Identity leaves: `transition`, `advances`, `retires`, `retGrund`,
+    `leave`, `next` compute `.ok/.leave/.next` of the entry world or `σ`
+    itself; every table slot rides along by one substitution. -/
+
+/-- `transition` keeps every table slot (device-only step). -/
+theorem transition_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : D.Reg} {hk : (D.rklasse r).schreibbar = true} {m : D.Reg}
+    {hm : D.spiegel r = some m} {hl : (D.rklasse m).lesbar = true}
+    {maske bits : Int}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.transition (V := V) (l := l) r hk m hm hl maske bits)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `advances` keeps every table slot (mark step, memory-free). -/
+theorem advances_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {mm : D.Marke} {a : Nat} {h : Res.marke mm a ∈ Λ} {hs : a + 1 < D.stufen mm}
+    (s : Stmt D V l Γ Λ ((Λ.erase (.marke mm a)) ++ [.marke mm (a + 1)]))
+    (hs : s = Stmt.advances (V := V) (l := l) mm a h hs)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `retires` keeps every table slot (mark step, memory-free). -/
+theorem retires_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {mm : D.Marke} {s2 : Nat} {h : Res.marke mm s2 ∈ Λ} {a : D.Annahme}
+    (s : Stmt D V l Γ Λ (Λ.erase (.marke mm s2)))
+    (hs : s = Stmt.retires (V := V) (l := l) mm s2 h a)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `retGrund` keeps every table slot (control step, memory-free). -/
+theorem retGrund_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : Fin V.gruende} {hΛ : Λ.Perm V.ende}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.retGrund (V := V) (l := l) r hΛ)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `leave` keeps every table slot (control step, memory-free). -/
+theorem leave_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+    {h : true = true}
+    (s : Stmt D V true Γ Λ Λ)
+    (hs : s = Stmt.leave (V := V) h)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `next` keeps every table slot (control step, memory-free). -/
+theorem next_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+    {h : true = true}
+    (s : Stmt D V true Γ Λ Λ)
+    (hs : s = Stmt.next (V := V) h)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
 end Gabbro.Grammatik.EZD
