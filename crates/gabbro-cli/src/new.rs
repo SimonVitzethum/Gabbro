@@ -139,7 +139,7 @@ fn manifest(name: &str) -> String {
 --
 -- The unit graph is read out of `module` and `use` IN THE SOURCES and never from a line
 -- here -- a manifest that repeated it would be a second register that can drift.
-compiler cc -std=c11 -O0 -Wall -Wextra -Werror
+compiler cc -std=c11 -O0 -ffp-contract=off -Wall -Wextra -Werror
 out      target/{name}
 
 unit {name} program
