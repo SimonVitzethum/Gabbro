@@ -87,6 +87,14 @@ pub fn zeichen(op: BinOp) -> &'static str {
         BinOp::Mal => "*",
         BinOp::Geteilt => "/",
         BinOp::Rest => "%",
+        // PLAN-BITS section 4 (lane 88): the overflow spellings -- the same
+        // answer `m1::op_zeichen` and `opsruf::zeichen` give, held together by
+        // `zwei_operatortafeln_stimmen_ueberein`.
+        BinOp::PlusWrap => "+%",
+        BinOp::MinusWrap => "-%",
+        BinOp::MalWrap => "*%",
+        BinOp::SchiebLinksWrap => "<<%",
+        BinOp::PlusSat => "+|",
     }
 }
 

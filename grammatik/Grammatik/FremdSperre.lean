@@ -85,12 +85,13 @@ def σF : World DF :=
     globs := fun g => nomatch g
     spur := [@Ereignis.nimmt DF () []] }
 
-/-- The oracle: flips every slot to `true`, keeps globals, locks, trace. -/
+/-- The oracle: flips every slot to `true`, keeps globals and locks, and
+    records the axiom's write event (as the recording `GutO` demands). -/
 def OF : Orakel DF :=
   { wirkt := fun _ σ _ =>
       ({ slots := fun _ _ _ => true
          globs := fun g => nomatch g
-         spur := σ.spur }, 0)
+         spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0)
     regLies := fun r _ => nomatch r
     regSchreib := fun r _ => nomatch r
     sichtbar := fun g _ => nomatch g }
@@ -119,17 +120,49 @@ theorem hwF : ∀ t, DF.aschreibt () t = true → VF.schreibt t = true :=
 theorem hgF : ∀ g, DF.agschreibt () g = true → VF.gschreibt g = true :=
   fun g => nomatch g
 
-/-- The oracle respects its frame and leaves locks and trace alone. -/
+/-- The oracle satisfies the conditional bound: frame (only the declared
+    table moves) and held locks in every world; in worlds where the guard is
+    held, the write event over the complete domains with the guard trace.
+    In worlds where the guard is not held the trace clause discharges
+    vacuously -- and no typed `axiomCall` fires there (`hd` needs the guard).
+    Every premise is used: `hgt` gives the held lock for `HeldIn`. -/
 theorem hOF : GutO OF := by
   intro a σ ρ
-  cases a
-  refine ⟨?_, rfl, rfl⟩
-  constructor
-  · intro t ht
-    cases t
-    contradiction
-  · intro g
-    exact nomatch g
+  cases a with
+  | unit =>
+      have hW : OF.wirkt () σ ρ =
+          ({ slots := fun _ _ _ => true
+             globs := fun g => nomatch g
+             spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0) := rfl
+      refine ⟨?_, by rw [hW]; rfl, ?_⟩
+      · constructor
+        · intro t ht
+          cases t
+          contradiction
+        · intro g
+          exact nomatch g
+      · intro hgt hgg
+        refine ⟨[()], [], [Res.held ()], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · intro t _
+          cases t
+          exact List.Mem.head _
+        · intro g
+          exact nomatch g
+        · intro t hwr
+          exact hdF t hwr
+        · intro g
+          exact nomatch g
+        · intro m st hm
+          simp at hm
+        · intro L hL
+          have eL : L = () := by
+            have heq : Res.held (D := DF) L = Res.held (D := DF) () :=
+              List.mem_singleton.mp hL
+            cases heq
+            rfl
+          rw [eL]
+          exact hgt () rfl () (List.Mem.head _)
+        · rw [hW]
 
 /-- The static trace names exactly the held lock. -/
 theorem hhF : HeldGenau ΛF σF.haelt := by
@@ -264,6 +297,9 @@ theorem hLmem : Sum.inl () ∈ DF.braucht () := List.Mem.head _
 /-- Non-degeneracy: the declaration has a function writing the table. -/
 theorem zeuge_schreibt : DF.schreibt () () = true := rfl
 
+/- RESTORED (reviewer revision): `axiomCall_haelt_waechter_zeuge` holds again
+    -- under the conditional `GutO`, the guarded-write oracle `OF` satisfies
+    the bound (`hOF`), so the joint premises can be instantiated. -/
 /-- **Inhabitation.** All premises of `axiomCall_haelt_waechter` hold jointly
     on the guarded one-table declaration: the guard proof, the oracle bound,
     the held-exactly fact, a reached run step (`hexecF`) that changes memory
@@ -278,22 +314,47 @@ theorem axiomCall_haelt_waechter_zeuge :
     OF 0 RF hOF σF ρF hhF σF' hexecF () hdiffF () hLmem
   exact ⟨hmain.1, hmain.2.2, zeuge_schreibt, hdiffF⟩
 
+/-- **Guarded-oracle inhabitation (rule 13).** An oracle whose axiom writes a
+    lock-guarded table satisfies the conditional `GutO`: `OF` with `hOF`,
+    jointly with the guard proof (`hdF`), the held-exactly fact (`hhF`), a
+    memory-changing oracle step (`hdiffF` at the answer world), and the
+    non-degeneracy fact (a function writes the table). Every component is
+    used: the package is the joint instantiation. -/
+theorem gutO_bewacht_zeuge :
+    ∃ (O : Orakel DF),
+      GutO O ∧
+      (∀ t, DF.aschreibt () t = true → darf DF t ΛF) ∧
+      HeldGenau ΛF σF.haelt ∧
+      (∃ k : Int, ∃ f : DF.Feld (),
+        (O.wirkt () σrF ρrF).1.slots () k f ≠ σF.slots () k f) ∧
+      DF.schreibt () () = true := by
+  obtain ⟨k, f, hne⟩ := hdiffF
+  refine ⟨OF, hOF, hdF, hhF, ?_, zeuge_schreibt⟩
+  exact ⟨k, f, hne⟩
+
 /-! ## CUTS
 
   (F1) `axiomCall_haelt_waechter` covers table guards dynamically (the oracle
     world differs on a slot) and global guards statically (everything the
     axiom may write). A dynamic global-guard leg (oracle differs on a global)
     is not stated.
-  (F2) The oracle bound `GutO` still forces
-    `(O.wirkt a σ ρ).1.spur = σ.spur`: the foreign body records no access
-    events for its own writes. Whether it must is a report-level proposal,
-    not a theorem here.
-  (F3) `Block.bindAxiom` carries no new guard premises in this lane; only
-    `Stmt.axiomCall` was repaired as tasked.
+  (F2) (reviewer revision) The oracle bound `GutO` RECORDS a write access
+    event per declared table/global write (`axiomSpur`, `Satz.lean`) -- but
+    only CONDITIONALLY on the axiom's lock guards being held in the calling
+    world; elsewhere the trace is unconstrained. The unconditional version
+    was a vacuity trap (no guarded-table writer satisfied it). `OF` emits
+    its write event and satisfies the bound (`hOF`: frame and locks
+    everywhere, events where the guard is held); `gutO_bewacht_zeuge`
+    packages the joint inhabitation and `axiomCall_haelt_waechter_zeuge` is
+    restored. Guarded-table writers exist (`hOF` below).
+  (F3) (reviewer revision) `Block.bindAxiom` now carries the guard premises
+    `hd`/`hgd` like `Stmt.axiomCall` (constructor change in `Syntax.lean`);
+    the lane-74 repair is complete for both axiom forms.
 -/
 
 #print axioms Gabbro.Grammatik.axiomCall_haelt_waechter
 #print axioms Gabbro.Grammatik.axiomCall_haelt_waechter_zeuge
+#print axioms Gabbro.Grammatik.gutO_bewacht_zeuge
 #print axioms Gabbro.Grammatik.axiomCall_ohne_sperre_nicht_ableitbar
 
 end Gabbro.Grammatik

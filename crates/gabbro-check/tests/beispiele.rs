@@ -45,7 +45,7 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
         .to_string();
     let (baum, mut absagen) = gabbro_syntax::lies(&name, &quelle);
     let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    // **Und der ERZEUGER laeuft mit, wenn die Datei ihn meint** (2026-08-20).
+    // **The emitter runs for every file that expects IT to refuse** (2026-08-20).
     //
     // Bis heute lief hier nur `pruefe`, und damit hatte `C001` **keine einzige Giftprobe** --
     // die Kennung des Erzeugers war die einzige, die der Giftkorpus nicht erreichte. Sie
@@ -56,7 +56,16 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
     // > Der Erzeuger laeuft nur fuer die Dateien, die ihn erwarten. Ueber einem Baum, den die
     // > Paesse abgelehnt haben, waere seine Absage ohnehin keine Aussage -- und die anderen
     // > Giftdateien sind genau das.
-    if quelle.starts_with("-- erwartet: C001") {
+    //
+    // **Lane S6 (2026-09-12): the syscall stub rules `C180`-`C184` join `C001`
+    // here.** They are emitter rules with poison probes (`beispiele/gift/850`
+    // -`854`), so the emitter must run for them exactly as for `C001` -- a
+    // probe the emitter never sees is a probe that never bites.
+    if quelle.starts_with("-- erwartet: C001")
+        || ["C180", "C181", "C182", "C183", "C184"]
+            .iter()
+            .any(|c| quelle.starts_with(&format!("-- erwartet: {c}")))
+    {
         let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
     }
     let codes = absagen

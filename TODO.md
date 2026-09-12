@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~111~~ 118 Sätze über 12 von 12 Pässen (52 am 2026-08-21, 96 und 98 im Lauf davor, 100 davor), keiner bewiesen** *(gemessen 2026-09-03 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 94 over 12 passes -- 87 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, 228 Codes beansprucht, 275 vergeben; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~118~~ 122 Sätze über 12 von 12 Pässen (52 am 2026-08-21, 96 und 98 im Lauf davor, 100 davor), keiner bewiesen** *(gemessen 2026-09-03 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 94 over 12 passes -- 87 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, 228 Codes beansprucht, 275 vergeben; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 6) |
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
 steht nach dem, was die Ziele einlöst. Der alte Pfad ist damit nicht widerlegt: seine offenen
@@ -818,10 +818,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] ~~105~~ ~~108~~ **107 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
+- [ ] ~~105~~ ~~108~~ **117 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ 139 sind tragend, 7 verdächtig — und **~~87~~ 107 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ 143 sind tragend, 8 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**. *2026-09-12, lane E1: recomputed (`7 verdaechtig · 139 tragend · 107 unklar`); `N057`
       states its obligation (`until lane E2 discharges that obligation`) and stands in the tragend column — +1 of it is
       this lane, the rest is wave drift other lanes owe their own entries for.* *108 → 110 am 2026-08-31: `D017` und `D018` nennen beide
@@ -829,6 +829,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       die unklare.*
       *86 → 87 am 2026-08-31: `N042` kam dazu und steht wie sein Nachbar `N041` in der
       unklaren Spalte — der Gegenstand ist um einen Code gewachsen, nicht die Unklarheit.*
+      *7 → 8 verdächtig, 107 → 117 unklar am 2026-09-12 (lane S6): `C184` steht in der
+      verdächtigen Spalte (sein Text nennt die Übersetzung, nicht die Zusage — `number`/`bound`
+      faltet nicht), `C180`-`C183` in der unklaren; `143 - 139 = 4` und `117 - 107 - 4 = 6`
+      sind Wellendrift. Die 7 davor steht weiter oben ohne Streichung, weil das Muster
+      `Zahl + "sind tragend, " + Zahl` keine zweite Streichung verträgt.*
       *104 → 105 → 108 tragende am selben Tag: `N043` nennt die Absenkungseigenschaft in seinem
       eigenen Text (`the report line`), also wächst die TRAGENDE Spalte und nicht die
       unklare.*
@@ -906,7 +911,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       eigenen Gegenstands.*
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
-      *(2026-08-19, nachgemessen 2026-08-20)*. **24 von 23 Item-Arten** sind „gelesen" —
+      *(2026-08-19, nachgemessen 2026-08-20)*. **25 von 23 Item-Arten** sind „gelesen" —
       **`ops` und `check` darunter**, obwohl keine ihrer Zusagen geprüft wird.
       `ItemArt::Check` wird nur angefasst, um in `can_fail` hineinzulaufen; `ops` steht als
       `!is_empty()` da. **Ein Konstrukt kann berührt werden, ohne dass eine einzige seiner
@@ -3252,8 +3257,12 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**117 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**122 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
+
+*117 → 122 am 2026-09-12 (lane S6): vier davon sind Wellendrift, einer ist dieser Bahn —
+`beispiele/90-syscall-errno.gab` trägt seinen `syscall` als fünften fremden Rumpf mit
+Vertrag; `beispiele/74` zählte schon als einer und zählt weiter als einer.*
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
 Verteiler eines `entry`. **Der Zähler „sprechen ihre Pflicht aus" bleibt bei 11**, und damit
@@ -4238,8 +4247,8 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 126 Sätze über 312 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
-Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane E2: heute 126 Sätze über 312 Codes — +6 Sätze mit ihren Codes, `namen.bibliothek_ruf/-huelle/-nutzlast/-direktruf` über `N069`-`N061` und `parser.bibliothek-nutzlast/-rumpf` über `P043`/`P044`; +2/+2 daneben sind Wellendrift.)
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 130 Sätze über 330 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
+Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane S6: +1 Satz mit fünf Codes, `syscall.stub` über `C180`-`C184`.) (2026-09-12, lane E2: +6 Sätze mit ihren Codes, `namen.bibliothek_ruf/-huelle/-nutzlast/-direktruf` über `N069`-`N061` und `parser.bibliothek-nutzlast/-rumpf` über `P043`/`P044`.)
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

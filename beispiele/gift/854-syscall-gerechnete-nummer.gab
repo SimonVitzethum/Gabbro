@@ -1,0 +1,30 @@
+-- erwartet: C184
+-- **Gift 854 -- the call number is loaded, not computed at run time.**
+--
+-- The stub carries the number as an immediate into `rax`. A number the
+-- translation-time folder cannot evaluate -- here a parameter, which is a
+-- run-time value -- has no immediate to load. The declaration checks clean
+-- (the number is the stub's business, lane S6); the emitter refuses it, by
+-- name.
+
+module gift::syscall_gerechnete_nummer {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number fd
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

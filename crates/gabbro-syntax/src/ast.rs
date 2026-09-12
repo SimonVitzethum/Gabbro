@@ -86,6 +86,14 @@ pub enum ItemArt {
     Entry(EntryDecl),
     Entrust(EntrustDecl),
     Boot(BootDecl),
+    /// **`syscall` -- the user side of a system call** («SS-1», SYNTAX.md §12.1).
+    ///
+    /// Parsed since lane S5; refused by name as `P042` before. The declaration is an
+    /// `extern`-like head with an ABI binding (`abi`/`arch`/`number`), a register map
+    /// (`regs in`/`regs out`/`clobbers`), a total errno decoding (`errors` over the
+    /// `or R` channel) and either a named assumption (`assume … falsifier …`) or a
+    /// kernel pairing (`kernel <path>`, refused until lane S6's stub lands).
+    Syscall(SyscallDecl),
 }
 
 impl ItemArt {
@@ -116,6 +124,7 @@ impl ItemArt {
             ItemArt::Entry(e) => Some(&e.name),
             ItemArt::Entrust(e) => Some(&e.name),
             ItemArt::Boot(b) => Some(&b.name),
+            ItemArt::Syscall(s) => Some(&s.name),
         }
     }
 
@@ -146,6 +155,7 @@ impl ItemArt {
             ItemArt::Entry(_) => "entry",
             ItemArt::Entrust(_) => "entrust",
             ItemArt::Boot(_) => "boot",
+            ItemArt::Syscall(_) => "syscall",
         }
     }
 }
@@ -630,6 +640,16 @@ pub enum BinOp {
     Mal,
     Geteilt,
     Rest,
+    /// **PLAN-BITS section 4 (lane 88): the overflow operators.** Each rides at
+    /// the precedence of its base operator (`parse.rs`: `addexpr` for the `+`-
+    /// family, `mulexpr` for `*%`, `bitexpr` for `<<%`). `PlusWrap`/`MinusWrap`/
+    /// `MalWrap`/`SchiebLinksWrap` wrap modulo 2^N on an exact unsigned range
+    /// `0 .. 2^N-1`; `PlusSat` clamps a sum into the shared operand range.
+    PlusWrap,
+    MinusWrap,
+    MalWrap,
+    SchiebLinksWrap,
+    PlusSat,
 }
 
 impl BinOp {
@@ -2050,4 +2070,55 @@ pub struct BootDecl {
 pub enum BootSchritt {
     Ruf(Ruf),
     Setzt { name: Ident, wert: Expr },
+}
+
+/// **`syscall` -- the user side of a system call** («SS-1», SYNTAX.md §12.1).
+///
+/// One EBNF rule (`syscalldecl`), one node here. What is optional in the grammar is
+/// `Option` here; what is mandatory there is a plain field here -- except `effects`,
+/// which the grammar makes mandatory (like at an `fn`, the clause is not fail-open).
+///
+/// The register side reads **register first, parameter second** (`rdi = fd`): the
+/// mirror image of `entry` (`nr : rax`), where the Gabbro side names the slot and the
+/// machine provides the register. Here the ABI fixes the register and Gabbro binds
+/// its parameter into it. `regs out` names bare registers (`rax`): the out value has
+/// no Gabbro-side name to bind, the generated errno decoding fills `result`.
+#[derive(Debug, Clone)]
+pub struct SyscallDecl {
+    pub name: Ident,
+    pub parameter: Vec<Parameter>,
+    pub ergebnis: Option<TypExpr>,
+    /// **`or R` -- the declared reason channel of the errno decoding.**
+    ///
+    /// Every target of the `errors` map must be a case of this `reason`; without it no
+    /// arm has a declared target.
+    pub fehler: Option<Ident>,
+    pub abi: Ident,
+    pub arch: Ident,
+    /// The call number -- a `constexpr`, read by the emitter's stub (lane S6).
+    pub nummer: Expr,
+    /// `(register, parameter)` -- every parameter bound exactly once.
+    pub regs_in: Vec<(Ident, Ident)>,
+    /// Bare out registers -- never clobbered.
+    pub regs_out: Vec<Ident>,
+    pub clobbers: Vec<Ident>,
+    /// `(errno, reason case)` -- total over the listed errnos.
+    pub errors: Vec<(Ident, Ident)>,
+    pub requires: Vec<Pred>,
+    pub ensures: Vec<Pred>,
+    pub effects: Wirkungen,
+    pub paarung: SyscallPaarung,
+    pub span: Span,
+}
+
+/// **`assume … falsifier …` or `kernel <path>`** -- the counterpart of a syscall.
+///
+/// With `assume` the per-call assumption is named with its falsifier, as for a
+/// device. With `kernel` the call is paired with a Gabbro kernel's dispatch entry
+/// for the same number and no assumption is named -- refused until the pairing
+/// check and the stub land (lane S6).
+#[derive(Debug, Clone)]
+pub enum SyscallPaarung {
+    Annahme { annahme: Ident, klasse: AnnahmeKlasse },
+    Kernel { pfad: Pfad },
 }

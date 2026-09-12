@@ -16,30 +16,32 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **126** | `gabbro paesse` |
-| of those `measured` | **118** | a poison-probe case or a caught mutation |
+| Sentences in the register | **130** | `gabbro paesse` |
+| of those `measured` | **122** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **312** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **257** | `./instrumente/pruefe-saetze.py` |
+| Codes in the checker | **330** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **275** | `./instrumente/pruefe-saetze.py` |
 
-> **2026-09-12, lane E2: recomputed to actuals, +6 of them mine.**
-> `namen.bibliothek_ruf` (`N069`, the resolved call refused until the
-> translator exists), `namen.bibliothek_huelle` (`N059`, no foreign body in
-> a library hull), `namen.bibliothek_nutzlast` (`N060`, the payload names a
-> table), `namen.bibliothek_direktruf` (`N061`, no direct call to a library
-> function), `parser.bibliothek-nutzlast` (`P043`, the mandatory clause)
-> and `parser.bibliothek-rumpf` (`P044`, the mandatory Gabbro body) --
-> six measured sentences claiming six codes, each with its gift probe
-> (820-828) and its `paesse.rs` counter-direction. The rest of the
+> **2026-09-12, merge of lanes E2 and S6: recomputed to actuals.**
+> Lane S6 brings `syscall.stub` (`C180`-`C184`, one measured sentence over
+> the five stub-template rules, each with its poison probe). Lane E2
+> brings `namen.bibliothek_ruf` (`N069`, the resolved call refused until
+> the translator exists), `namen.bibliothek_huelle` (`N059`, no foreign
+> body in a library hull), `namen.bibliothek_nutzlast` (`N060`, the payload
+> names a table), `namen.bibliothek_direktruf` (`N061`, no direct call to a
+> library function), `parser.bibliothek-nutzlast` (`P043`, the mandatory
+> clause) and `parser.bibliothek-rumpf` (`P044`, the mandatory Gabbro
+> body) -- six measured sentences claiming six codes, each with its gift
+> probe (820-828) and its `paesse.rs` counter-direction. The rest of the
 > movement since the last booking is wave drift other lanes owe their own
-> entries for (+2 sentences, +2 codes); it is recomputed here rather than
-> incremented, because incrementing a forgotten figure carries the
-> forgetting forward (2026-09-02 entry). The `ohne Satz` ratchet below
-> stands unmoved at 55 -- every new code of this lane arrived with its
-> sentence in the same branch.
+> entries for; it is recomputed here rather than incremented, because
+> incrementing a forgotten figure carries the forgetting forward
+> (2026-09-02 entry). The `ohne Satz` ratchet below stands unmoved at 55
+> -- every new code of both lanes arrived with its sentence in the same
+> branch.
 
 > **2026-09-12, lane E1: recomputed to `gabbro paesse` actuals, +1 of them mine.**
 > `namen.library_call` (`N057`, every library call refused until lane E2 checks

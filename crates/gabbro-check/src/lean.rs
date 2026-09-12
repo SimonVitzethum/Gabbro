@@ -1184,6 +1184,18 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
                 BinOp::BitXor => "bxor",
                 BinOp::SchiebLinks => "shl",
                 BinOp::SchiebRechts => "shr",
+                // PLAN-BITS section 4 (lane 88): the overflow operators have no
+                // term here. `Ueberlauf.lean` carries `Zahl.addW/subW/mulW/shlW`
+                // as proof-level functions, but `Syntax.lean`'s `Expr` has no
+                // wrapping or saturating constructor -- and the modulus `N`
+                // is nowhere in this channel, the same reason `~` is refused
+                // two arms above. Carrying them as plain `add`/`sub` would
+                // prove what `pruefe` refuses.
+                BinOp::PlusWrap
+                | BinOp::MinusWrap
+                | BinOp::MalWrap
+                | BinOp::SchiebLinksWrap
+                | BinOp::PlusSat => return Err(LeanReason::Expression),
             };
             Ok(LeanCarried::ExprBinary.term(format!(
                 "(.bin .{z} {} {})",
@@ -1919,11 +1931,19 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
             | BinOp::Mal
             | BinOp::Geteilt
             | BinOp::Rest
-            | BinOp::BitUnd
+            |             BinOp::BitUnd
             | BinOp::BitOder
             | BinOp::BitXor
             | BinOp::SchiebLinks
             | BinOp::SchiebRechts => Some(Shape::Int),
+            // PLAN-BITS section 4 (lane 88): no shape, like `~` -- the value
+            // is an integer, but no term of this channel can name the
+            // operation, so no proof about it can be built here either.
+            BinOp::PlusWrap
+            | BinOp::MinusWrap
+            | BinOp::MalWrap
+            | BinOp::SchiebLinksWrap
+            | BinOp::PlusSat => None,
             BinOp::Gleich
             | BinOp::Ungleich
             | BinOp::Kleiner

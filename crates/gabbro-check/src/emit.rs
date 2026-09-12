@@ -747,6 +747,11 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
             ja |= f.parameter.iter().any(|p| im_typ(&p.typ));
             ja |= f.ergebnis.as_ref().is_some_and(im_typ);
         }
+        // **A `syscall` declares parameter and result types like an `fn`.**
+        ItemArt::Syscall(s) => {
+            ja |= s.parameter.iter().any(|p| im_typ(&p.typ));
+            ja |= s.ergebnis.as_ref().is_some_and(im_typ);
+        }
         ItemArt::Accumulates(a) => ja |= im_typ(&a.typ),
         // **Zwei Traeger, die der Sammelzweig verschwiegen hat** (2026-08-21): ein
         // `table T { slot { g : f64, } }` und ein `format F { x : f32, }` rechnen mit
@@ -793,6 +798,23 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
     ja
 }
 
+/// **The two tree-only maps the syscall stub lowering reads.**
+///
+/// Collected once per emission in `emittiere_mit`, before any lowering runs:
+/// source order is free, so a `reason` may stand after the `syscall` that
+/// decodes into it. Both maps are keyed by BARE name, exactly like
+/// `Namen::funktionen` -- and a collision answers the same way: last wins
+/// for the module, loud refusal for two different case lists.
+#[derive(Default)]
+struct SyscallTabellen {
+    /// Bare syscall name -> the module it stands in (for `konst_wert`).
+    module: HashMap<String, String>,
+    /// Bare reason name -> its cases with declared numbers (for decoding).
+    gruende: HashMap<String, Vec<(String, u128)>>,
+    /// Bare reason names declared twice with DIFFERENT case lists.
+    strittig: BTreeSet<String>,
+}
+
 /// Emits C for a tree, or refuses by name.
 /// **The shipping build.** A `when TESTBUILD` item produces no line of C.
 ///
@@ -828,6 +850,44 @@ pub fn emittiere_mit(
     };
     let mut namen = Namen::default();
     namen.opsgerufen = crate::opsruf::gerufene(baum);
+    // **The syscall stub tables (lane S6).** Two tree-only maps the stub
+    // lowering reads: which module each `syscall` stands in (for folding
+    // `number` and result bounds through `Umgebung::konst_wert`), and the
+    // `reason` case numbers the errno decoding compares against. Both stand
+    // on the PARSED tree and never consult the passes, like every refusal
+    // in this file -- a second `syscall` with the same bare name in another
+    // module is last-wins here, exactly as in `Namen::funktionen` below.
+    let mut syscall_tabellen = SyscallTabellen::default();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Syscall(s) = &item.art {
+            syscall_tabellen
+                .module
+                .insert(s.name.text.clone(), modul.to_string());
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Reason(r) = &item.art {
+            let faelle: Vec<(String, u128)> = r
+                .faelle
+                .iter()
+                .map(|f| (f.name.text.clone(), f.wert))
+                .collect();
+            match syscall_tabellen.gruende.get(&r.name.text) {
+                // **One name, one case list -- the same rule `funktion` keeps
+                // for prototypes.** Two same-named `reason` declarations with
+                // the same cases share one C `enum` anyway; with different
+                // ones the decoding could not pick a number, so the name is
+                // marked and the stub refuses it loudly at its own site.
+                None => {
+                    syscall_tabellen.gruende.insert(r.name.text.clone(), faelle);
+                }
+                Some(vorher) if *vorher == faelle => {}
+                _ => {
+                    syscall_tabellen.strittig.insert(r.name.text.clone());
+                }
+            }
+        }
+    });
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Tabelle(t) = &item.art {
             for k in crate::opsruf::koepfe(t) {
@@ -1087,6 +1147,10 @@ pub fn emittiere_mit(
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
+        // **A `syscall` declares no name a lowering looks up.** Its parameter and
+        // result types travel through `Umgebung`, and its own lowering
+        // (`syscall_stumpf`) reads the register map straight from the tree.
+        | ItemArt::Syscall(_)
         | ItemArt::Concurrent(_) => {}
     });
     // **Second pass, and it needs the first**: whether a parameter is a ghost can only be
@@ -1110,6 +1174,31 @@ pub fn emittiere_mit(
                 namen.ergebnistyp.insert(f.name.text.clone(), e.clone());
             }
             namen.funktionen.insert(f.name.text.clone(), sig);
+        }
+        // **A `syscall` lowers its call sites exactly like an `extern fn`.** The
+        // signature carries the same fields -- ghost flags, the `or R` channel,
+        // the result -- so a `let … else` over a syscall call takes the same
+        // arm as over a foreign body. The declaration itself lowers to the
+        // stub (`syscall_stumpf`); this entry keeps the call lowering from
+        // inventing a second refusal for the same declaration.
+        if let ItemArt::Syscall(s) = &item.art {
+            let sig = Signatur {
+                geist_param: s.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
+                geist_rueck: s.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
+                nie_rueck: matches!(s.ergebnis, Some(TypExpr::Never(_))),
+                fehler: s.fehler.as_ref().map(|i| i.text.clone()),
+                rueck: s.ergebnis.clone(),
+                option_rueck: match &s.ergebnis {
+                    Some(TypExpr::Index { tabelle, optional: true, .. }) => {
+                        Some(tabelle.text.clone())
+                    }
+                    _ => None,
+                },
+            };
+            if let Some(e) = &s.ergebnis {
+                namen.ergebnistyp.insert(s.name.text.clone(), e.clone());
+            }
+            namen.funktionen.insert(s.name.text.clone(), sig);
         }
     });
     // **Dritter Sammelgang: die fremden Zeigerziele.** C verlangt den Tag VOR der
@@ -1480,6 +1569,10 @@ pub fn emittiere_mit(
             | ItemArt::Entry(_)
             | ItemArt::Entrust(_)
             | ItemArt::Boot(_)
+            // **A `syscall` names no table through a block.** Its body is the
+            // machine -- the stub template (`syscall_stumpf`) reads the
+            // register map, not carrier names.
+            | ItemArt::Syscall(_)
             | ItemArt::Concurrent(_) => {}
         });
         // **«B41b»: ein Baumdurchlauf ueber einem blanken Index adressiert seine Tabelle
@@ -1573,6 +1666,14 @@ pub fn emittiere_mit(
     // Preemption und Kontextgroesse -- nicht ueber Zahlen.
     if rechnet_mit_gleitkomma(baum) {
         aus.push_str(KOPF_GLEITKOMMA);
+    }
+    // **PLAN-BITS section 4 (lane 88): the saturating helpers, on demand.**
+    // `needs_saturation` is a syntactic presence scan -- it cannot see signs,
+    // so both helpers are emitted on `true` (the unused one silenced, like every
+    // unused generated reader). Every form in them is already in the C-form
+    // census; the scan is what keeps a unit that never saturates free of them.
+    if needs_saturation(baum) {
+        aus.push_str(SATURATION_PRELUDE);
     }
     let annahmen = crate::manifest::sammle(baum);
     namen.annahmen = annahmen.iter().map(|a| a.name.clone()).collect();
@@ -1832,6 +1933,9 @@ pub fn emittiere_mit(
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
+        // **A `syscall` hoists no constant.** Its `number` may name one, but the
+        // number is read by the stub (lane S6), not emitted as a `#define`.
+        | ItemArt::Syscall(_)
         | ItemArt::Concurrent(_) => {}
     });
     crate::fuer_jedes_item(baum, &mut |item| {
@@ -2447,6 +2551,20 @@ pub fn emittiere_mit(
              ELSEWHERE; which C object holds the state, and whether a transition is a check \
              or an assignment, the declaration does not say",
         ),
+        // **A `syscall` lowers to its stub** -- prototype into `aus`,
+        // definition into `rumpf`, exactly like `funktion` above. The stub
+        // template is `syscall_stumpf` at the end of this file.
+        ItemArt::Syscall(s) => {
+            syscall_stumpf(
+                s,
+                &mut aus,
+                &mut rumpf,
+                &namen,
+                &syscall_tabellen,
+                baum,
+                absagen,
+            );
+        }
     });
     // **«SG-24»: every counter of the unit, defined.** Between the declarations and
     // the bodies: after the table storage they read (`tabelle()` wrote it into `aus`
@@ -2468,6 +2586,32 @@ pub fn emittiere_mit(
             }
         });
         aus.push_str(&zaehler);
+    }
+    // **Rotation helpers are GENERATED, not assumed -- and only the used ones.**
+    // The same principle the word readers above answer to: an unused function in
+    // the emitted C is a finding about the generator. Collection is a scan of
+    // the lowered BODIES just before they join the unit: what is collected is
+    // the helper NAME as `ruf` emits the call (`gabbro_rotl32(`), so the two
+    // can never disagree the way a width read twice could -- the call site
+    // reads types from the per-function view that exists only while a body is
+    // lowered, and no pre-pass walk can see it. A user comment naming a helper
+    // would over-collect; the over-collected body is `static inline`, which
+    // neither compiler warns about when unused.
+    {
+        let mut dreh: BTreeSet<&'static str> = BTreeSet::new();
+        for (n, _) in DREH_C {
+            if rumpf.contains(&format!("{n}(")) {
+                dreh.insert(*n);
+            }
+        }
+        if !dreh.is_empty() {
+            aus.push_str(
+                "\n/* Bit rotation (PLAN-BITS §3). Generated, not assumed: C has no rotate. */\n",
+            );
+            for d in &dreh {
+                aus.push_str(DREH_C.iter().find(|(n, _)| n == d).map(|(_, c)| *c).unwrap_or(""));
+            }
+        }
     }
     aus.push_str(&rumpf);
     aus
@@ -2552,14 +2696,19 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_) => None,
-        // Scaffolding, ghost, or refusal: no C site, no row.
+        // Scaffolding, ghost, or refusal: no C site, no row. A `syscall`
+        // stands here too: its stub body is generated statements around one
+        // `__asm__`, and statement-level rows belong to the body-walk
+        // follow-up -- exactly like a defined block function above, which
+        // earns no row here either.
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Assume(_)
         | ItemArt::Axiom(_)
         | ItemArt::Gruppe(_)
         | ItemArt::Concurrent(_)
-        | ItemArt::State(_) => None,
+        | ItemArt::State(_)
+        | ItemArt::Syscall(_) => None,
     }
 }
 
@@ -5206,6 +5355,32 @@ fn lesewort(breite: u32, gross: bool) -> Option<&'static str> {
     })
 }
 
+/// **Rotation helpers (PLAN-BITS §3): the portable shift-or pattern, once per width.**
+///
+/// C has no rotate, and the pattern needs the amount TWICE (`x << s` and
+/// `x >> (w - s)`). Emitting it inline would evaluate an effectful amount twice
+/// -- a duplicated call is a duplicated effect, not a rotation. So the pattern
+/// lives in a helper and the call site passes each argument ONCE, the way C
+/// passes every argument once. The amount is masked inside (`s &= w-1`), which
+/// is the masking PLAN-BITS §3 asks for, and which also keeps the `w - s` shift
+/// below the width when `s` is 0 (a plain `x >> (w - s)` is undefined there).
+///
+/// Sub-32-bit rotations compute in `unsigned int` and cast back: a `uint16_t`
+/// promotes to SIGNED `int` in C, and `x << 15` on the promoted value would
+/// leave the signed range. The final cast keeps the low `w` bits, which are
+/// exactly the rotated word; the conversion to an unsigned type is defined as
+/// the value modulo `2^w`.
+const DREH_C: &[(&str, &str)] = &[
+    ("gabbro_rotl8", "static inline uint8_t gabbro_rotl8(uint8_t x, uint8_t s) { s &= 7; return (uint8_t)(((unsigned)x << s) | ((unsigned)x >> ((8 - s) & 7))); }\n"),
+    ("gabbro_rotr8", "static inline uint8_t gabbro_rotr8(uint8_t x, uint8_t s) { s &= 7; return (uint8_t)(((unsigned)x >> s) | ((unsigned)x << ((8 - s) & 7))); }\n"),
+    ("gabbro_rotl16", "static inline uint16_t gabbro_rotl16(uint16_t x, uint16_t s) { s &= 15; return (uint16_t)(((unsigned)x << s) | ((unsigned)x >> ((16 - s) & 15))); }\n"),
+    ("gabbro_rotr16", "static inline uint16_t gabbro_rotr16(uint16_t x, uint16_t s) { s &= 15; return (uint16_t)(((unsigned)x >> s) | ((unsigned)x << ((16 - s) & 15))); }\n"),
+    ("gabbro_rotl32", "static inline uint32_t gabbro_rotl32(uint32_t x, uint32_t s) { s &= 31; return (x << s) | (x >> ((32 - s) & 31)); }\n"),
+    ("gabbro_rotr32", "static inline uint32_t gabbro_rotr32(uint32_t x, uint32_t s) { s &= 31; return (x >> s) | (x << ((32 - s) & 31)); }\n"),
+    ("gabbro_rotl64", "static inline uint64_t gabbro_rotl64(uint64_t x, uint64_t s) { s &= 63; return (x << s) | (x >> ((64 - s) & 63)); }\n"),
+    ("gabbro_rotr64", "static inline uint64_t gabbro_rotr64(uint64_t x, uint64_t s) { s &= 63; return (x >> s) | (x << ((64 - s) & 63)); }\n"),
+];
+
 /// Reader and writer word for a width, or a refusal by name. **A word this emitter does not
 /// have is not replaced by the next best one.**
 fn wortpaar_oder_absage(
@@ -6812,6 +6987,595 @@ fn funktion(
         aus.push_str("    return true;\n");
     }
     aus.push_str("}\n");
+}
+
+/// **A syscall refusal with its own code (`C180`-`C184`).**
+///
+/// The five shape rules of the stub template each carry one code, so each has
+/// its own poison probe -- the same reason `N063`-`N068` stand apart in
+/// `syscall.rs` instead of sharing one. Everything the stub cannot lower for
+/// any OTHER reason stays the generic `C001` (`weigere`), exactly as at
+/// `prototyp_kern`: a code of its own is for a rule of its own, not for a
+/// second spelling of "no lowering".
+fn syscall_code(
+    absagen: &mut Absagen,
+    code: &'static str,
+    span: gabbro_syntax::span::Span,
+    was: &str,
+) {
+    absagen.schiebe(
+        Absage::fehler(code, span, format!("no lowering: {was}")).mit_notiz(
+            "the emitter refuses by name instead of emitting something plausible -- a \
+             generator that guesses undoes every pass in front of it",
+        ),
+    );
+}
+
+/// **The syscall stub (lane S6, PLAN-SYSCALL.md lane S6): one C function per
+/// declared `syscall`.**
+///
+/// The template binds every parameter to its declared in-register, loads
+/// `number` into `rax`, executes the `syscall` instruction as extended inline
+/// `__asm__` -- declared clobbers plus `memory`, `rcx` and `r11`, the two the
+/// instruction itself destroys -- and decodes the raw `rax` answer: a
+/// negative `-4095..-1` against the `errors` map into the `or R` channel, an
+/// unlisted errno or an out-of-range non-negative value into the hardware
+/// outcome -- `hardware (annahme a)`, the kernel answered outside its
+/// contract (SYNTAX.md 12.1).
+///
+/// Five shape rules guard the five places where the template would otherwise
+/// emit a plausible wrong stub (`C180`-`C184`, each with its poison probe);
+/// everything else unlowerable is `C001` via `weigere`.
+///
+/// The signature is the one the call sites already lower against
+/// (`prototyp_kern` for fallible functions, `let … else` at the call):
+/// `bool f(params, T *_wert, R *_grund)` with the channel, `T f(params)`
+/// without one. The stub carries NO `const`/`pure` attribute whatever the
+/// declared effects say -- `effects { pure }` is the checker's contract
+/// fiction, while the C function executes `syscall` behind a `memory`
+/// clobber, and a `const` would let GCC merge two writes into one
+/// (`wirkungsattribut` states the same for fallible functions).
+///
+/// The pinned `register … __asm__("reg")` locals are the musl idiom for this
+/// ABI: the sixteen general registers have no complete constraint-letter set
+/// (`r10` has none), so letters alone cannot bind them. Under the named
+/// assumption the `#if defined(__GNUC__)` handover compiles on both measured
+/// families (GCC and Clang define it); anywhere else it falls through and
+/// `cc` complains loudly instead of the stub deciding something on its own --
+/// the same handover `match_grund` writes for `D005`.
+#[allow(clippy::too_many_arguments)]
+fn syscall_stumpf(
+    s: &SyscallDecl,
+    aus: &mut String,
+    rumpf_aus: &mut String,
+    u: &Namen,
+    tabellen: &SyscallTabellen,
+    baum: &Programm,
+    absagen: &mut Absagen,
+) {
+    let n = &s.name.text;
+    // **C182 -- the pair after `abi`/`arch` is the template's own ABI.**
+    // The checker holds `arch` against the declared arches (`A005`) and
+    // refuses a sealed one (`A006`), but the emitter runs on the PARSED tree
+    // and never consults the passes -- a blind tree must not receive a Linux
+    // stub for another machine's declaration.
+    if s.abi.text != "linux" || s.arch.text != "x86_64" {
+        syscall_code(
+            absagen,
+            "C182",
+            s.name.span,
+            &format!(
+                "`syscall {n}` declares `abi {}` `arch {}`, and the stub template is the \
+                 Linux x86_64 `syscall` ABI -- the number in `rax`, the answer in `rax`, \
+                 `rcx` and `r11` destroyed. A stub for another machine would carry another \
+                 instruction and is not this template",
+                s.abi.text, s.arch.text
+            ),
+        );
+        return;
+    }
+    // **C180 -- no in-register the stub cannot keep.** `rax` carries the call
+    // number before the kernel reads anything, so a parameter bound there
+    // would never arrive; a register named under `clobbers` is scratch by
+    // declaration, so the kernel may destroy the parameter after reading it
+    // while the C still names the stale pin. One code, like `N065`'s three
+    // sub-cases under one code in `syscall.rs`.
+    for (reg, param) in &s.regs_in {
+        if reg.text == "rax" {
+            syscall_code(
+                absagen,
+                "C180",
+                reg.span,
+                &format!(
+                    "`syscall {n}` binds parameter `{}` to `rax` in `regs in` -- the stub \
+                     loads the call number there, and the parameter value would never reach \
+                     the kernel",
+                    param.text
+                ),
+            );
+            return;
+        }
+        if s.clobbers.iter().any(|c| c.text == reg.text) {
+            syscall_code(
+                absagen,
+                "C180",
+                reg.span,
+                &format!(
+                    "`syscall {n}` binds parameter `{}` to `{}` in `regs in`, and the same \
+                     register stands under `clobbers` -- scratch by declaration, so the stub \
+                     cannot keep the parameter value in it",
+                    param.text, reg.text
+                ),
+            );
+            return;
+        }
+    }
+    // **C181 -- the answer register is `rax`, and it is not scratch.** The
+    // Linux x86_64 kernel leaves the raw answer in `rax`; the stub reads it
+    // there and nowhere else. An empty `regs out`, another register, or two
+    // registers (which the checker lets through -- see the `vorbehalt` of
+    // `syscall.erklaerung`) would make it read the wrong place.
+    if s.regs_out.len() != 1 || s.regs_out[0].text != "rax" {
+        let hat: Vec<&str> = s.regs_out.iter().map(|r| r.text.as_str()).collect();
+        syscall_code(
+            absagen,
+            "C181",
+            s.name.span,
+            &format!(
+                "`syscall {n}` names `regs out` {{{}}}, and the Linux x86_64 answer arrives \
+                 in `rax` -- the stub reads the raw answer there and nowhere else",
+                hat.join(", ")
+            ),
+        );
+        return;
+    }
+    if s.clobbers.iter().any(|c| c.text == "rax") {
+        syscall_code(
+            absagen,
+            "C181",
+            s.name.span,
+            &format!(
+                "`syscall {n}` carries its answer out in `rax` and lists `rax` under \
+                 `clobbers` -- what is carried out is not destroyed"
+            ),
+        );
+        return;
+    }
+    let modul = tabellen.module.get(n).cloned().unwrap_or_default();
+    let umg = crate::umgebung::Umgebung::sammle(baum);
+    // **C184 -- the number folds.** The stub loads it as an immediate; an
+    // expression nobody folds (or a number outside the 64-bit number
+    // register) has no immediate to load.
+    let nummer: u64 = match umg.konst_wert(&modul, &s.nummer) {
+        Some(v) if 0 <= v && v <= u64::MAX as i128 => v as u64,
+        _ => {
+            syscall_code(
+                absagen,
+                "C184",
+                s.nummer.span,
+                &format!(
+                    "`syscall {n}` numbers its call with an expression the stub cannot load \
+                     -- not a translation-time constant, or outside the 64-bit number register"
+                ),
+            );
+            return;
+        }
+    };
+    // **A ghost parameter has no register value.** It is erased from the
+    // signature, so its `regs in` binding would carry a value nobody put
+    // there -- the generic refusal, since this is "no lowering" and not a
+    // rule of the template's own.
+    for p in &s.parameter {
+        if ist_geist(&p.typ, u) {
+            weigere(
+                absagen,
+                p.name.span,
+                &format!(
+                    "`syscall {n}` takes a ghost parameter `{}` -- erased from the signature, \
+                     so the `regs in` binding for it would carry a value nobody put there",
+                    p.name.text
+                ),
+            );
+            return;
+        }
+    }
+    let mut params: Vec<String> = Vec::new();
+    for p in &s.parameter {
+        match ctyp(&p.typ, u) {
+            Some(c) => {
+                let luecke = if c.ends_with('*') { "" } else { " " };
+                params.push(format!("{c}{luecke}{}", p.name.text));
+            }
+            None => {
+                weigere(
+                    absagen,
+                    p.name.span,
+                    &format!(
+                        "`syscall {n}` takes `{}` of a type with no C -- the stub binds every \
+                         parameter to a register, and an unlowerable one has no register value",
+                        p.name.text
+                    ),
+                );
+                return;
+            }
+        }
+    }
+    // **The answer shape: integer with a checkable bound, or nothing.**
+    // `C183` -- the decoding holds the raw answer against the declared result
+    // range (`einpassen` as C, PLAN-UMSETZUNG.md 2.1); a non-integer answer
+    // has no range to check. A named type is refused with it too: its carrier
+    // lowers, but its range lives in a declaration the stub does not resolve
+    // -- one line of honesty instead of a check against the wrong bound.
+    enum Antwort {
+        Leer,
+        Ganz { ctyp: String, unter: Option<i128>, ober: Option<i128> },
+    }
+    let antwort = match &s.ergebnis {
+        None => Antwort::Leer,
+        Some(TypExpr::Int(i)) => {
+            let Some(c) = ctyp(&s.ergebnis.clone().unwrap(), u) else {
+                weigere(absagen, s.name.span, "return type");
+                return;
+            };
+            let (mut unter, mut ober): (Option<i128>, Option<i128>) = (None, None);
+            if let Some(b) = &i.bereich {
+                let (Some(lo), Some(hi)) =
+                    (umg.konst_wert(&modul, &b.von), umg.konst_wert(&modul, &b.bis))
+                else {
+                    syscall_code(
+                        absagen,
+                        "C184",
+                        b.span,
+                        &format!(
+                            "`syscall {n}` bounds its answer with a range the stub cannot fold \
+                             -- a bound nobody evaluates at translation time is no bound"
+                        ),
+                    );
+                    return;
+                };
+                let hi = if b.exklusiv { hi - 1 } else { hi };
+                if hi < lo {
+                    weigere(
+                        absagen,
+                        b.span,
+                        &format!(
+                            "`syscall {n}` declares an empty answer range -- no kernel answer \
+                             could satisfy it, and the decoding would be all hardware outcome"
+                        ),
+                    );
+                    return;
+                }
+                unter = Some(lo);
+                ober = Some(hi);
+            } else {
+                // **No declared range: the storage word is the range -- read
+                // off the same width table every other lowering reads.**
+                // A 64-bit word needs no check (every non-negative `int64_t`
+                // fits); a narrower one is checked against its own bound, and
+                // the check the template writes is exactly that bound.
+                let Some((_, bytes)) = ganzzahlwort(i.wort) else {
+                    weigere(absagen, s.name.span, "return type");
+                    return;
+                };
+                let breite: u32 = bytes * 8;
+                let vorzeichen = matches!(
+                    i.wort,
+                    gabbro_syntax::kw::Kw::I8
+                        | gabbro_syntax::kw::Kw::I16
+                        | gabbro_syntax::kw::Kw::I32
+                        | gabbro_syntax::kw::Kw::I64
+                );
+                if breite < 64 {
+                    ober = Some(if vorzeichen {
+                        (1i128 << (breite - 1)) - 1
+                    } else {
+                        (1i128 << breite) - 1
+                    });
+                }
+            }
+            // **A check the compiler would prove vacuous is not written.**
+            // `raw > hi` with `hi >= 2^63 - 1` is always false over the
+            // non-negative `int64_t` leg, and `-Wtype-limits` (in `-Wextra`)
+            // refuses a comparison it can decide itself. Likewise a lower
+            // bound at or below zero holds by construction of the leg.
+            if ober.is_some_and(|h| h >= i64::MAX as i128) {
+                ober = None;
+            }
+            if unter.is_some_and(|l| l <= 0) {
+                unter = None;
+            }
+            if let Some(l) = unter {
+                if l > i64::MAX as i128 {
+                    weigere(
+                        absagen,
+                        s.name.span,
+                        &format!(
+                            "`syscall {n}` demands an answer above {l} -- past what the raw \
+                             `int64_t` answer can ever hold, so the decoding would be all \
+                             hardware outcome"
+                        ),
+                    );
+                    return;
+                }
+            }
+            Antwort::Ganz { ctyp: c, unter, ober }
+        }
+        Some(_) => {
+            syscall_code(
+                absagen,
+                "C183",
+                s.name.span,
+                &format!(
+                    "`syscall {n}` answers a non-integer type, and the decoding holds the raw \
+                     answer against the declared result range -- a non-integer answer has no \
+                     range to check"
+                ),
+            );
+            return;
+        }
+    };
+    // **The error channel: every listed errno against its reason's declared
+    // number.** The `errors` map names errnos by Linux name (`EBADF`) and
+    // targets by reason case (`BadFd`); the number the kernel actually sends
+    // is the case's DECLARED value (`BadFd = 9`), which is the only number
+    // the unit itself writes down. An errno name the kernel numbers
+    // differently than the reason declares is a declaration question the
+    // checker does not ask (`N067` holds names, not numbers) -- the stub
+    // reads the numbers, and says so here.
+    let mut arme: Vec<(i128, String)> = Vec::new();
+    if !s.errors.is_empty() {
+        let Some(rname) = &s.fehler else {
+            weigere(
+                absagen,
+                s.name.span,
+                &format!(
+                    "`syscall {n}` maps errnos with no `or R` channel -- the decoding has \
+                     nowhere to deliver"
+                ),
+            );
+            return;
+        };
+        if tabellen.strittig.contains(&rname.text) {
+            weigere(
+                absagen,
+                rname.span,
+                &format!(
+                    "`reason {}` is declared twice with different cases -- the errno decoding \
+                     of `syscall {n}` could not pick a number for either",
+                    rname.text
+                ),
+            );
+            return;
+        }
+        let Some(faelle) = tabellen.gruende.get(&rname.text) else {
+            weigere(
+                absagen,
+                rname.span,
+                &format!(
+                    "`or {}` resolves to no `reason` of this unit -- the errno decoding of \
+                     `syscall {n}` has no numbers to compare against",
+                    rname.text
+                ),
+            );
+            return;
+        };
+        for (_, ziel) in &s.errors {
+            let Some((_, wert)) = faelle.iter().find(|(c, _)| c == &ziel.text) else {
+                weigere(
+                    absagen,
+                    ziel.span,
+                    &format!(
+                        "`{}` is no case of `reason {}` -- the errno decoding of `syscall \
+                         {n}` has no number for it (the checker refuses this shape as `N067`)",
+                        ziel.text, rname.text
+                    ),
+                );
+                return;
+            };
+            let Ok(wert) = i128::try_from(*wert) else {
+                weigere(
+                    absagen,
+                    ziel.span,
+                    &format!(
+                        "`{}` of `reason {}` is wider than the decoding compares -- the stub \
+                         holds errnos in `int64_t`",
+                        ziel.text, rname.text
+                    ),
+                );
+                return;
+            };
+            arme.push((wert, format!("{}_{}", rname.text, ziel.text)));
+        }
+    }
+    // **The signature: the one the call sites lower against.** With the
+    // channel the error takes the return slot and the value leaves through
+    // `_wert` (`prototyp_kern`); without one it is a plain function. A
+    // result-less channel has no `_wert` parameter (the `delete_leaf` shape
+    // of `messung/fragmente/F01.gab`).
+    let grundtyp: Option<String> = s.fehler.as_ref().map(|r| r.text.clone());
+    let wert_ctyp: Option<String> = match &antwort {
+        Antwort::Ganz { ctyp, .. } => Some(ctyp.clone()),
+        Antwort::Leer => None,
+    };
+    let hat_wert = wert_ctyp.is_some();
+    let rueck = if grundtyp.is_some() {
+        "bool".to_string()
+    } else {
+        match &antwort {
+            Antwort::Ganz { ctyp, .. } => ctyp.clone(),
+            Antwort::Leer => "void".to_string(),
+        }
+    };
+    let mut liste = params.clone();
+    if let Some(c) = &wert_ctyp {
+        liste.push(format!("{c} *_wert"));
+    }
+    if let Some(g) = &grundtyp {
+        liste.push(format!("{g} *_grund"));
+    }
+    let liste = if liste.is_empty() {
+        "void".to_string()
+    } else {
+        liste.join(", ")
+    };
+    // **Without `pub` the binding is INTERNAL -- like `funktion`.** The
+    // declaration names no visibility, so the stub is `static`, and
+    // `__attribute__((unused))` for the unit that declares and never calls.
+    aus.push_str(&format!("\nstatic {rueck} {n}({liste}) __attribute__((unused));\n"));
+    let b2 = rumpf_aus;
+    // **The counterpart each stub answers to.** With `assume` the kernel
+    // keeps its contract under the named assumption; with `kernel` the peer
+    // is a Gabbro dispatch entry for the same number (the pairing check is a
+    // later lane's -- the stub is the same either way, only the comment
+    // knows which side it faces).
+    let gegen = match &s.paarung {
+        SyscallPaarung::Annahme { annahme, klasse } => {
+            let art = match klasse {
+                AnnahmeKlasse::Falsifizierbar(sonde) => format!("falsifier {}", sonde.text),
+                AnnahmeKlasse::NichtFalsifizierbar(grund) => {
+                    format!("unfalsifiable {}", grund.text)
+                }
+            };
+            format!("the named assumption `{}` ({art})", annahme.text)
+        }
+        SyscallPaarung::Kernel { pfad } => {
+            format!("the Gabbro kernel entry `{}`", pfad.text())
+        }
+    };
+    let bindungen: Vec<String> = s
+        .regs_in
+        .iter()
+        .map(|(r, p)| format!("{} in {}", p.text, r.text))
+        .collect();
+    b2.push_str(&format!(
+        "\nstatic {rueck} {n}({liste}) {{\n\
+         \x20   /* syscall {n} -- number {nummer} in rax; {}.\n\
+         \x20    * The kernel behind this stub is {}: that it answers inside its\n\
+         \x20    * contract is assumed, and the decoding below is generated from the\n\
+         \x20    * declared `errors` map, exhaustively. */\n",
+        if bindungen.is_empty() {
+            "no argument registers".to_string()
+        } else {
+            bindungen.join(", ")
+        },
+        gegen
+    ));
+    // **The register pins.** Every parameter travels in its declared register
+    // (always widened to the full word -- a `u16` in `rdi` is the same value,
+    // and a half-width pin would ask GCC for a mode it does not promise);
+    // the number is the `rax` pin's initial value, so the answer returns in
+    // the same variable (`+a`, one name, no input/output aliasing question).
+    for (reg, param) in &s.regs_in {
+        // A binding without a parameter binds nothing -- the checker refuses
+        // it as `N065`, and on a blind tree the C names an undeclared
+        // identifier, which `cc` refuses loudly instead of the stub guessing.
+        b2.push_str(&format!(
+            "    register uint64_t _sys_{} __asm__(\"{}\") = (uint64_t){};\n",
+            reg.text, reg.text, param.text
+        ));
+    }
+    b2.push_str(&format!(
+        "    register int64_t _sys_rax __asm__(\"rax\") = (int64_t){nummer}u;\n"
+    ));
+    let eingaben: Vec<String> = s
+        .regs_in
+        .iter()
+        .map(|(r, _)| format!("\"r\" (_sys_{})", r.text))
+        .collect();
+    let mut zerstoert: Vec<String> = s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
+    for fest in ["\"rcx\"", "\"r11\"", "\"memory\""] {
+        if !zerstoert.iter().any(|c| c == fest) {
+            zerstoert.push(fest.to_string());
+        }
+    }
+    b2.push_str("    __asm__ __volatile__(\n        \"syscall\\n\"\n");
+    b2.push_str("        : \"+a\" (_sys_rax)\n");
+    if eingaben.is_empty() {
+        b2.push_str("        : /* no argument registers */\n");
+    } else {
+        b2.push_str(&format!("        : {}\n", eingaben.join(", ")));
+    }
+    b2.push_str(&format!("        : {});\n", zerstoert.join(", ")));
+    // **The hardware outcome, once per depth.** An unlisted errno, an errno
+    // past the Linux `-4095` bound, or a non-negative value outside the
+    // declared result range all mean the same thing: the kernel answered
+    // outside its contract. Under the named assumption this point is not
+    // reached, and that is what the handover below tells the C compiler --
+    // nothing of its own, the `D005` shape at `match_grund`. One builder for
+    // both depths, so the wording cannot drift between the two sites.
+    let annahme = match &s.paarung {
+        SyscallPaarung::Annahme { annahme, .. } => annahme.text.clone(),
+        SyscallPaarung::Kernel { pfad } => pfad.text(),
+    };
+    let hardware = |e: &str| {
+        format!(
+            "{e}/* `hardware ({annahme})` -- the kernel answered outside its contract.\n\
+             {e} * Under the named assumption this point is not reached; that decision is\n\
+             {e} * handed to the C compiler, which decides nothing of its own. */\n\
+             {e}#if defined(__GNUC__)\n\
+             {e}__builtin_unreachable();\n\
+             {e}#endif\n"
+        )
+    };
+    // **The sign leg reads the pin; the value leg checks the declared range.**
+    // `-_sys_rax` is safe: the `-4095` fence stands before it, so UBSan sees
+    // no negation overflow by construction, not by luck.
+    let liest_roh = !arme.is_empty() || grundtyp.is_some() || hat_wert;
+    if !liest_roh {
+        b2.push_str("    (void)_sys_rax;\n");
+    } else {
+        b2.push_str("    if (_sys_rax < 0) {\n");
+        b2.push_str("        if (_sys_rax < -4095) {\n");
+        b2.push_str(&hardware("        "));
+        b2.push_str("        }\n");
+        if !arme.is_empty() {
+            b2.push_str("        int64_t _sys_errno = -_sys_rax;\n");
+            for (nummer, fall) in &arme {
+                b2.push_str(&format!(
+                    "        if (_sys_errno == {nummer}) {{\n\
+                     \x20           *_grund = {fall};\n\
+                     \x20           return false;\n\
+                     \x20       }}\n"
+                ));
+            }
+            b2.push_str("        /* An errno the `errors` map does not admit. */\n");
+            b2.push_str(&hardware("        "));
+        } else if grundtyp.is_some() {
+            // **A channel with no admitted errnos.** Every negative answer is
+            // unlisted by construction -- the fence above already handed the
+            // past-bound ones over, this hands over the rest.
+            b2.push_str("        /* No admitted errnos: every negative answer is unlisted. */\n");
+            b2.push_str(&hardware("        "));
+        } else {
+            // **No channel at all: a negative answer has nowhere to go.**
+            // The declaration promises a plain value; the kernel sent an
+            // error. That is the contract's outside, not a fourth outcome.
+            b2.push_str("        /* No `or R` channel: a negative answer has nowhere to go. */\n");
+            b2.push_str(&hardware("        "));
+        }
+        b2.push_str("    }\n");
+        if let Antwort::Ganz { ctyp, unter, ober } = &antwort {
+            if let Some(lo) = unter {
+                b2.push_str(&format!("    if (_sys_rax < {lo}) {{\n"));
+                b2.push_str(&hardware("    "));
+                b2.push_str("    }\n");
+            }
+            if let Some(hi) = ober {
+                b2.push_str(&format!("    if (_sys_rax > {hi}) {{\n"));
+                b2.push_str(&hardware("    "));
+                b2.push_str("    }\n");
+            }
+            if hat_wert {
+                b2.push_str(&format!("    *_wert = ({ctyp})_sys_rax;\n"));
+            }
+        }
+        if grundtyp.is_some() {
+            b2.push_str("    return true;\n");
+        } else if let Some(c) = &wert_ctyp {
+            b2.push_str(&format!("    return ({c})_sys_rax;\n"));
+        }
+    }
+    b2.push_str("}\n");
 }
 
 /// Die Namen in einem Praedikat -- ein `until` liest ebenso wie ein Rumpf.
@@ -10053,7 +10817,17 @@ fn schreib_bytes(
 fn rechnet(op: &BinOp) -> bool {
     matches!(
         op,
-        BinOp::Plus | BinOp::Minus | BinOp::Mal | BinOp::SchiebLinks
+        BinOp::Plus
+            | BinOp::Minus
+            | BinOp::Mal
+            | BinOp::SchiebLinks
+            // PLAN-BITS section 4 (lane 88): the wrapping operators compute too
+            // -- modulo 2^N on the unsigned storage type. `PlusSat` is NOT here:
+            // it lowers to a saturating helper call, never to an operator.
+            | BinOp::PlusWrap
+            | BinOp::MinusWrap
+            | BinOp::MalWrap
+            | BinOp::SchiebLinksWrap
     )
 }
 
@@ -10087,6 +10861,639 @@ fn umlaeufer_typ(e: &Expr, u: &Namen) -> Option<IntTy> {
         }
         _ => None,
     }
+}
+
+/// **PLAN-BITS section 4 (lane 88): the overflow lowerings.**
+///
+/// Wrapping computes on the unsigned storage type and masks to `N` bits where `N`
+/// is not the storage width (`(a + b) & mask`); saturating calls one of the two
+/// file-scope helpers below with an explicit compare and no builtins. Every form
+/// in both -- `static` functions, `if`/`else`, `return`, comparisons, casts,
+/// `&` -- is already in the C-form census (`zaehle-c-formen.py`); `?:` is on its
+/// NEVER list, which is why the clamp is a helper with `if`s and not a ternary.
+///
+/// All three range readers below are second opinions in the `O9` stance:
+/// re-derived from declarations at the emission site, never trusted from the
+/// checker -- and where nothing can be derived the site is refused with `C001`
+/// instead of guessed.
+
+/// Storage width in bits and signedness of a declared integer type.
+fn storage(i: &IntTy) -> Option<(u32, bool)> {
+    use gabbro_syntax::kw::Kw;
+    let bits = match i.wort {
+        Kw::U8 | Kw::I8 => 8,
+        Kw::U16 | Kw::I16 => 16,
+        Kw::U32 | Kw::I32 => 32,
+        Kw::U64 | Kw::I64 => 64,
+        _ => return None,
+    };
+    let signed = matches!(i.wort, Kw::I8 | Kw::I16 | Kw::I32 | Kw::I64);
+    Some((bits, signed))
+}
+
+/// The C word for a storage width. `None` is not a guess -- the callers turn it
+/// into `C001` by name.
+fn storage_ctyp(bits: u32, signed: bool) -> Option<&'static str> {
+    Some(match (bits, signed) {
+        (8, false) => "uint8_t",
+        (16, false) => "uint16_t",
+        (32, false) => "uint32_t",
+        (64, false) => "uint64_t",
+        (8, true) => "int8_t",
+        (16, true) => "int16_t",
+        (32, true) => "int32_t",
+        (64, true) => "int64_t",
+        _ => return None,
+    })
+}
+
+/// A translation-time integer: a literal, a parenthesised one, a negated one,
+/// or a `const` name. Anything else is not known here -- and `None` says so.
+fn constexpr_value(e: &Expr, u: &Namen) -> Option<i128> {
+    match &e.art {
+        ExprArt::Klammer(x) => constexpr_value(x, u),
+        ExprArt::Zahl(n) => i128::try_from(*n).ok(),
+        ExprArt::Unaer(UnOp::Negativ, x) => constexpr_value(x, u)?.checked_neg(),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => u.konstwert.get(&o.basis.text).copied(),
+        _ => None,
+    }
+}
+
+/// The promised interval of a declared integer type: the sugar's exact range,
+/// a literal `lo .. hi` bound (`..<` excludes its top), or the full storage
+/// word. `None` where no interval stands -- the caller refuses, never guesses.
+fn intty_interval(t: &IntTy, u: &Namen) -> Option<(i128, i128)> {
+    if let Some(z) = &t.zucker {
+        if z.breite == 0 || z.breite > 64 {
+            return None;
+        }
+        // Unsigned sugar promises `0 .. 2^N-1`; signed sugar promises the
+        // symmetric interval around zero on the storage word.
+        if !z.vorzeichen {
+            return Some((0, (1i128 << z.breite) - 1));
+        }
+        let halb = 1i128 << (z.breite - 1);
+        return Some((-halb, halb - 1));
+    }
+    if let Some(b) = &t.bereich {
+        let lo = constexpr_value(&b.von, u)?;
+        let mut hi = constexpr_value(&b.bis, u)?;
+        if b.exklusiv {
+            hi -= 1;
+        }
+        return Some((lo, hi));
+    }
+    let (bits, signed) = storage(t)?;
+    if signed {
+        let halb = 1i128 << (bits - 1);
+        Some((-halb, halb - 1))
+    } else {
+        Some((0, (1i128 << bits) - 1))
+    }
+}
+
+/// One side of a wrapping site: a declared word with its promised interval, or
+/// an adopting literal point (storage `0` -- it takes the other's).
+enum WrapSide {
+    Word(u32, i128, i128),
+    Literal(i128),
+}
+
+fn wrap_side(e: &Expr, u: &Namen) -> Option<WrapSide> {
+    match &e.art {
+        ExprArt::Klammer(x) => wrap_side(x, u),
+        ExprArt::Zahl(n) => {
+            let v = i128::try_from(*n).ok()?;
+            if v < 0 {
+                return None;
+            }
+            Some(WrapSide::Literal(v))
+        }
+        ExprArt::Ort(o) => {
+            if o.suffixe.is_empty() {
+                if let Some(w) = u.konstwert.get(&o.basis.text).copied() {
+                    if w < 0 {
+                        return None;
+                    }
+                    return Some(WrapSide::Literal(w));
+                }
+            }
+            let TypExpr::Int(i) = ort_typ(o, u)? else {
+                return None;
+            };
+            // Signed storage never wraps: signed overflow is undefined in C,
+            // and the checker (`M153`) never lets it reach this emitter.
+            let (bits, signed) = storage(&i)?;
+            if signed {
+                return None;
+            }
+            let (lo, hi) = intty_interval(&i, u)?;
+            Some(WrapSide::Word(bits, lo, hi))
+        }
+        ExprArt::Ruf(r) => {
+            let n = r.path()?.teile.last()?.text.clone();
+            let TypExpr::Int(i) = u.funktionen.get(&n)?.rueck.as_ref()? else {
+                return None;
+            };
+            let (bits, signed) = storage(i)?;
+            if signed {
+                return None;
+            }
+            let (lo, hi) = intty_interval(i, u)?;
+            Some(WrapSide::Word(bits, lo, hi))
+        }
+        // A nested wrap is exact by construction -- its interval is its modulus.
+        // A nested SHIFT resolves left-only (the amount is never exact).
+        ExprArt::Binaer(op, x, y)
+            if matches!(
+                op,
+                BinOp::PlusWrap | BinOp::MinusWrap | BinOp::MalWrap | BinOp::SchiebLinksWrap
+            ) =>
+        {
+            let (bits, n) = if *op == BinOp::SchiebLinksWrap {
+                wrap_shift_form(x, u)?
+            } else {
+                wrap_form(x, y, u)?
+            };
+            Some(WrapSide::Word(bits, 0, (1i128 << n) - 1))
+        }
+        // A nested clamp hands its interval up; the outer site checks exactness.
+        ExprArt::Binaer(BinOp::PlusSat, x, y) => {
+            let (bits, _, lo, hi) = saturation_facts(x, y, u)?;
+            Some(WrapSide::Word(bits, lo, hi))
+        }
+        _ => None,
+    }
+}
+
+/// Storage width in bits and exact bit count `N` of a wrapping site. Mirrors
+/// the checker's `M153` rule joint-for-joint: unsigned storage, both sides
+/// jointly exact, a literal side adopting when its point lies in the other's
+/// interval. `None` is `C001` at the call site, never a guessed mask.
+fn wrap_form(a: &Expr, b: &Expr, u: &Namen) -> Option<(u32, u32)> {
+    let exact = |bits: u32, lo: i128, hi: i128| {
+        crate::typen::exact_wrap_n(&crate::typen::IntBereich::genau(bits as u8, false, lo, hi))
+    };
+    let (bits, n) = match (wrap_side(a, u)?, wrap_side(b, u)?) {
+        (WrapSide::Word(ba, l1, h1), WrapSide::Word(bb, l2, h2)) => {
+            if ba != bb {
+                return None;
+            }
+            let (n1, n2) = (exact(ba, l1, h1)?, exact(bb, l2, h2)?);
+            if n1 != n2 {
+                return None;
+            }
+            (ba, n1)
+        }
+        (WrapSide::Word(b, lo, hi), WrapSide::Literal(v))
+        | (WrapSide::Literal(v), WrapSide::Word(b, lo, hi)) => {
+            let n = exact(b, lo, hi)?;
+            if v < 0 || v > (1i128 << n) - 1 {
+                return None;
+            }
+            (b, n)
+        }
+        (WrapSide::Literal(_), WrapSide::Literal(_)) => return None,
+    };
+    if n == 0 || n > bits {
+        return None;
+    }
+    Some((bits, n))
+}
+
+/// Storage width and bit count of a wrapping SHIFT site, from the VALUE side
+/// alone: the amount only has to lie below `N` (the checker proved it), it is
+/// never exact itself. A literal value side has no storage anywhere -- `C001`.
+fn wrap_shift_form(x: &Expr, u: &Namen) -> Option<(u32, u32)> {
+    let WrapSide::Word(bits, lo, hi) = wrap_side(x, u)? else {
+        return None;
+    };
+    let n = crate::typen::exact_wrap_n(&crate::typen::IntBereich::genau(
+        bits as u8,
+        false,
+        lo,
+        hi,
+    ))?;
+    if n == 0 || n > bits {
+        return None;
+    }
+    Some((bits, n))
+}
+
+/// Storage width, signedness and clamp interval of a saturating site. Mirrors
+/// the checker's `M154` rule: one shared interval (a literal side adopting),
+/// on any signedness and any width. `None` is `C001`, never a guessed bound.
+fn saturation_facts(
+    a: &Expr,
+    b: &Expr,
+    u: &Namen,
+) -> Option<(u32, bool, i128, i128)> {
+    /// Declared sides carry storage, sign and interval; a literal side only
+    /// adopts the other's interval -- its own value never matters to the clamp,
+    /// so the variant carries no payload (a dead field would be the finding the
+    /// Baugatter names).
+    enum Side {
+        Word(u32, bool, i128, i128),
+        Literal,
+    }
+    fn side(e: &Expr, u: &Namen) -> Option<Side> {
+        match &e.art {
+            ExprArt::Klammer(x) => side(x, u),
+            ExprArt::Zahl(_) => Some(Side::Literal),
+            ExprArt::Ort(o) => {
+                if o.suffixe.is_empty() && u.konstwert.contains_key(&o.basis.text) {
+                    return Some(Side::Literal);
+                }
+                let TypExpr::Int(i) = ort_typ(o, u)? else {
+                    return None;
+                };
+                let (bits, signed) = storage(&i)?;
+                let (lo, hi) = intty_interval(&i, u)?;
+                Some(Side::Word(bits, signed, lo, hi))
+            }
+            ExprArt::Ruf(r) => {
+                let n = r.path()?.teile.last()?.text.clone();
+                let TypExpr::Int(i) = u.funktionen.get(&n)?.rueck.as_ref()? else {
+                    return None;
+                };
+                let (bits, signed) = storage(i)?;
+                let (lo, hi) = intty_interval(i, u)?;
+                Some(Side::Word(bits, signed, lo, hi))
+            }
+            // A nested clamp hands its interval up; exactness is the outer
+            // site's question, sharedness is answered here by construction.
+            ExprArt::Binaer(BinOp::PlusSat, x, y) => {
+                let (bits, signed, lo, hi) = saturation_facts(x, y, u)?;
+                Some(Side::Word(bits, signed, lo, hi))
+            }
+            _ => None,
+        }
+    }
+    let (bits, signed, lo, hi) = match (side(a, u)?, side(b, u)?) {
+        (Side::Word(ba, sa, l1, h1), Side::Word(bb, sb, l2, h2)) => {
+            if ba != bb || sa != sb || l1 != l2 || h1 != h2 {
+                return None;
+            }
+            (ba, sa, l1, h1)
+        }
+        (Side::Word(b, s, lo, hi), Side::Literal)
+        | (Side::Literal, Side::Word(b, s, lo, hi)) => (b, s, lo, hi),
+        // Two literals: no interval anywhere -- the checker answers their exact
+        // sum, and this emitter has no bound to clamp into. `C001`, honestly.
+        (Side::Literal, Side::Literal) => return None,
+    };
+    // The clamp must sit inside the storage it is computed for; a declared
+    // interval that already leaves its width never reaches this emitter (the
+    // checker refuses it), but a second opinion that trusts nothing says so.
+    let (slo, shi) = if signed {
+        let halb = 1i128 << (bits - 1);
+        (-halb, halb - 1)
+    } else {
+        (0, (1i128 << bits) - 1)
+    };
+    if lo < slo || hi > shi {
+        return None;
+    }
+    Some((bits, signed, lo, hi))
+}
+
+/// The BASE operator of a wrapping site -- C has no `+%`, it computes `(a + b)`
+/// on the unsigned storage type and the mask makes it modulo 2^N. `None` for
+/// anything else; the caller turns it into `C001`.
+fn wrap_op_text(op: &BinOp) -> Option<&'static str> {
+    Some(match op {
+        BinOp::PlusWrap => "+",
+        BinOp::MinusWrap => "-",
+        BinOp::MalWrap => "*",
+        BinOp::SchiebLinksWrap => "<<",
+        _ => return None,
+    })
+}
+
+/// A wrapping site as C: on the unsigned storage type, masked to `N` bits when
+/// `N` is not the storage width. The mask is a plain decimal literal (`czahl`
+/// spells it, so `2^64 - 1` stays impossible the same way everywhere) --
+/// no new C form either way.
+fn wrap_c(
+    op: &BinOp,
+    a: &Expr,
+    b: &Expr,
+    bits: u32,
+    n: u32,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> String {
+    let (Some(ct), Some(base)) = (storage_ctyp(bits, false), wrap_op_text(op)) else {
+        weigere(absagen, a.span, "the unsigned storage type of a wrapping computation");
+        return String::new();
+    };
+    let rt = if bits <= 32 { "uint32_t" } else { "uint64_t" };
+    let core = format!(
+        "(({rt})({}) {base} ({rt})({}))",
+        ausdruck(a, u, absagen),
+        ausdruck(b, u, absagen)
+    );
+    if n == bits {
+        // Full width: C's unsigned arithmetic IS modulo 2^N (C11 6.2.5p9) --
+        // the same shape the `wrapping` field attribute lowers to.
+        return format!("({ct})({core})");
+    }
+    let Some(mask) = czahl(((1i128 << n) - 1) as u128) else {
+        weigere(absagen, a.span, "the mask of a wrapping computation");
+        return String::new();
+    };
+    format!("({ct})(({core}) & {mask})")
+}
+
+/// A saturating site as C: one of the two file-scope helpers with the clamp
+/// interval as arguments. Operands ride up to 64 bits (value-preserving for
+/// every storage width); the helper clamps without any wider type, so even
+/// `u64`/`i64` need no `__int128` and no builtin.
+fn saturation_c(
+    a: &Expr,
+    b: &Expr,
+    bits: u32,
+    signed: bool,
+    lo: i128,
+    hi: i128,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> String {
+    let (Some(ct), wide) = (
+        storage_ctyp(bits, signed),
+        if signed { "int64_t" } else { "uint64_t" },
+    ) else {
+        weigere(absagen, a.span, "the storage type of a saturating computation");
+        return String::new();
+    };
+    // Bounds as 64-bit literals: `czahl` spells the wide ones with the same `u`
+    // suffix every other wide literal carries; a negative bound rides on unary
+    // minus, which is how the language spells it too.
+    fn bound(
+        v: i128,
+        signed: bool,
+        span: gabbro_syntax::span::Span,
+        absagen: &mut Absagen,
+    ) -> String {
+        if signed && v < 0 {
+            match czahl((-v) as u128) {
+                Some(t) => format!("-{t}"),
+                None => {
+                    weigere(absagen, span, "a clamp bound past `2^64 - 1`");
+                    String::new()
+                }
+            }
+        } else {
+            match czahl(v as u128) {
+                Some(t) => t,
+                None => {
+                    weigere(absagen, span, "a clamp bound past `2^64 - 1`");
+                    String::new()
+                }
+            }
+        }
+    }
+    let (lo_t, hi_t) = (
+        bound(lo, signed, a.span, absagen),
+        bound(hi, signed, a.span, absagen),
+    );
+    if lo_t.is_empty() || hi_t.is_empty() {
+        return String::new();
+    }
+    let helper = if signed {
+        "_gabbro_sat_i"
+    } else {
+        "_gabbro_sat_u"
+    };
+    format!(
+        "({ct})({helper}(({wide})({}), ({wide})({}), ({wide})({lo_t}), ({wide})({hi_t})))",
+        ausdruck(a, u, absagen),
+        ausdruck(b, u, absagen),
+    )
+}
+
+/// The two saturating helpers, with the explicit compare and no builtins.
+///
+/// Both compute so that no intermediate ever leaves 64 bits: the unsigned one
+/// subtracts only `b <= hi` (`hi - b >= 0`, and `a > hi - b` is `a + b > hi`
+/// without ever forming the sum); the signed one guards each side by the sign
+/// of `b` (`hi - b >= 0` needs `b <= hi`, `lo - b <= 0` needs `b >= lo` --
+/// both hold for every value the checker lets through). `cc -Wconversion`
+/// stays silent: every narrowing is a cast the generator wrote down.
+const SATURATION_PRELUDE: &str = "\
+/* PLAN-BITS section 4 (lane 88): saturating `+|` -- an explicit compare, no builtins. */\n\
+static uint64_t _gabbro_sat_u(uint64_t a, uint64_t b, uint64_t lo, uint64_t hi) __attribute__((unused));\n\
+static uint64_t _gabbro_sat_u(uint64_t a, uint64_t b, uint64_t lo, uint64_t hi) {\n\
+    if (a > hi - b) {\n\
+        return hi;\n\
+    }\n\
+    if (a + b < lo) {\n\
+        return lo;\n\
+    }\n\
+    return a + b;\n\
+}\n\
+static int64_t _gabbro_sat_i(int64_t a, int64_t b, int64_t lo, int64_t hi) __attribute__((unused));\n\
+static int64_t _gabbro_sat_i(int64_t a, int64_t b, int64_t lo, int64_t hi) {\n\
+    if ((b > 0) && (a > hi - b)) {\n\
+        return hi;\n\
+    }\n\
+    if ((b < 0) && (a < lo - b)) {\n\
+        return lo;\n\
+    }\n\
+    return a + b;\n\
+}\n";
+
+/// Does this unit saturate? A syntactic pre-scan for `+|` over bodies,
+/// contracts and initialisers -- no types involved, so it answers presence
+/// only, and both helpers are emitted on `true` (the unused one silenced, like
+/// every unused generated reader). Missing a site would be a call to a
+/// function that is not there -- so the walk covers every position that
+/// lowers a run-time expression, and whatever it cannot see (translation-time
+/// bounds, which the checker refuses for these operators first) cannot reach
+/// the C either.
+fn needs_saturation(baum: &Programm) -> bool {
+    fn suffixe(o: &Ort) -> bool {
+        o.suffixe.iter().any(|s| match s {
+            OrtSuffix::Index(x) => expr(x),
+            _ => false,
+        })
+    }
+    fn expr(e: &Expr) -> bool {
+        match &e.art {
+            ExprArt::Binaer(BinOp::PlusSat, _, _) => true,
+            ExprArt::Binaer(_, a, b) => expr(a) || expr(b),
+            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => expr(x),
+            ExprArt::Ort(o) => suffixe(o),
+            ExprArt::Alt(o) => suffixe(o),
+            ExprArt::Ruf(r) => r.argumente.iter().any(expr),
+            // **A library call carries run-time arguments like a call.** The
+            // region is raw tokens, not expressions, so there is nothing to
+            // walk there -- a `+|` inside it is text the checker refuses
+            // (`N057`) before it could ever lower.
+            ExprArt::LibraryCall(l) => l.args.iter().any(expr),
+            ExprArt::Eingebaut(b) => match b.as_ref() {
+                Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => match t {
+                    TypOderOrt::Ort(o) => suffixe(o),
+                    TypOderOrt::Typ(_) => false,
+                },
+                Eingebaut::Aligned(x, y) => expr(x) || expr(y),
+            },
+            ExprArt::Zaehle { rumpf, .. } => pred(rumpf),
+            ExprArt::Zahl(_)
+            | ExprArt::Gleitkomma { .. }
+            | ExprArt::Wahr
+            | ExprArt::Falsch
+            | ExprArt::FnWert(_)
+            | ExprArt::Ergebnis
+            | ExprArt::Grund { .. } => false,
+        }
+    }
+    fn domaene(d: &Domaene) -> bool {
+        match d {
+            Domaene::SlotsVon(o)
+            | Domaene::NachfahrenVon(o)
+            | Domaene::VorfahrenVon(o)
+            | Domaene::Schlange(o)
+            | Domaene::ElementeVon(o)
+            | Domaene::AbbildungenVon(o) => suffixe(o),
+            Domaene::KetteIn { ort, .. } => suffixe(ort),
+            Domaene::FelderVon(_) | Domaene::Threads => false,
+        }
+    }
+    fn pred(p: &Pred) -> bool {
+        match &p.art {
+            PredArt::Vergleich(e) => expr(e),
+            PredArt::Klammer(x) | PredArt::Nicht(x) => pred(x),
+            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+                pred(a) || pred(b)
+            }
+            PredArt::Quantor(q) => domaene(&q.domaene) || pred(&q.rumpf),
+            PredArt::Element(e, d) => expr(e) || domaene(d),
+            PredArt::Erreicht { von, nach, .. } => suffixe(von) || suffixe(nach),
+            PredArt::Held { .. } => false,
+        }
+    }
+    fn block(b: &Block) -> bool {
+        b.anweisungen.iter().any(stmt)
+    }
+    fn stmt(s: &Stmt) -> bool {
+        match &s.art {
+            StmtArt::Let(l) => expr(&l.wert),
+            StmtArt::LetSonst(l) => match &l.quelle {
+                LetQuelle::Ruf(r) => r.argumente.iter().any(expr) || block(&l.sonst),
+                LetQuelle::Ort(o) => suffixe(o) || block(&l.sonst),
+            },
+            StmtArt::Zuweisung(z) => suffixe(&z.ziel) || expr(&z.wert),
+            StmtArt::Wenn(w) => {
+                w.zweige.iter().any(|(c, b)| expr(c) || block(b))
+                    || w.sonst.as_ref().is_some_and(block)
+            }
+            StmtArt::Match(m) => {
+                expr(&m.gegenstand) || m.zweige.iter().any(|z| block(&z.rumpf))
+            }
+            StmtArt::Schleife(s) => match s.as_ref() {
+                Schleife::Traverse(t) => {
+                    t.gegenstand.as_ref().is_some_and(expr)
+                        || domaene(&t.domaene)
+                        || t.mass.as_ref().is_some_and(expr)
+                        || t.touches.as_ref().is_some_and(wirkungen)
+                        || block(&t.rumpf)
+                }
+                Schleife::Retry(r) => {
+                    r.bis.as_ref().is_some_and(pred)
+                        || expr(&r.schranke)
+                        || r.invariante.as_ref().is_some_and(pred)
+                        || block(&r.rumpf)
+                }
+                Schleife::Forever(f) => {
+                    expr(&f.je_durchgang)
+                        || f.invariante.as_ref().is_some_and(pred)
+                        || block(&f.rumpf)
+                }
+            },
+            StmtArt::Bricht(b) => block(&b.rumpf),
+            StmtArt::Narrow(n) => {
+                suffixe(&n.ort)
+                    || match &n.ziel {
+                        NarrowZiel::Bereich(b) => expr(&b.von) || expr(&b.bis),
+                        NarrowZiel::Endlich(_) => false,
+                    }
+                    || block(&n.sonst)
+            }
+            StmtArt::Sperrt(s) => suffixe(&s.sperre) || block(&s.rumpf),
+            StmtArt::Observiert(o) => block(&o.rumpf),
+            StmtArt::Publish(p) => {
+                suffixe(&p.ziel) || expr(&p.wert) || block_in_nutzlast(&p.nutzlast)
+            }
+            StmtArt::AwaitLoad(a) => {
+                suffixe(&a.quelle) || a.erwartet.iter().any(suffixe)
+            }
+            StmtArt::Exchange(x) => {
+                suffixe(&x.ort)
+                    || match &x.form {
+                        XForm::Update {
+                            schranke,
+                            rumpf,
+                            ..
+                        } => schranke.as_ref().is_some_and(expr) || block(rumpf),
+                        XForm::Vergleich { wert, bedingung, .. } => {
+                            expr(wert) || pred(bedingung)
+                        }
+                    }
+                    || x.nutzlast.as_ref().is_some_and(block_in_nutzlast)
+                    || x.erwartet.as_ref().is_some_and(|os| os.iter().any(suffixe))
+            }
+            StmtArt::Return(e) => e.as_ref().is_some_and(expr),
+            StmtArt::Ruf(r) => r.argumente.iter().any(expr),
+            // **Same as the expression arm above:** the arguments lower, the
+            // region is raw text the checker refuses before it could lower.
+            StmtArt::LibraryCall(l) => l.args.iter().any(expr),
+            StmtArt::Leave(_) | StmtArt::Next(_) => false,
+        }
+    }
+    fn block_in_nutzlast(n: &Nutzlast) -> bool {
+        match n {
+            Nutzlast::Orte(os) => os.iter().any(suffixe),
+            Nutzlast::Nichts(_) => false,
+        }
+    }
+    // Effect lists name places; an index in one is walked, not trusted --
+    // the scan over-approximates on purpose (see `needs_saturation`).
+    fn wirkungen(w: &Wirkungen) -> bool {
+        w.liste.iter().any(|x| match &x.art {
+            WirkungArt::Liest(o)
+            | WirkungArt::Schreibt(o)
+            | WirkungArt::Sperrt(o)
+            | WirkungArt::SperrtGeteilt(o)
+            | WirkungArt::Verbraucht(o)
+            | WirkungArt::Veroeffentlicht(o) => suffixe(o),
+            WirkungArt::Maskiert(_)
+            | WirkungArt::Belegt(_)
+            | WirkungArt::Divergiert
+            | WirkungArt::Rein => false,
+        })
+    }
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if ja {
+            return;
+        }
+        match &item.art {
+            ItemArt::Funktion(f) => {
+                ja |= f.requires.iter().any(pred)
+                    || f.ensures.iter().any(pred)
+                    || f.decreases.as_ref().is_some_and(expr)
+                    || f.costs.as_ref().is_some_and(expr);
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    ja |= block(b);
+                }
+            }
+            ItemArt::Konst(k) => ja |= expr(&k.wert),
+            ItemArt::Statisch(s) => ja |= expr(&s.wert),
+            _ => {}
+        }
+    });
+    ja
 }
 
 /// The largest value an unsigned C integer type can hold. `None` for everything else --
@@ -10285,6 +11692,26 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             let n = &r.path()?.teile.last()?.text;
             if u.geraete.contains_key(n) {
                 return Some(n.clone());
+            }
+            // **Bit intrinsics (PLAN-BITS §3): the result width is the operand's
+            // width.** `let y = clz(x);` without an annotation needs a C type
+            // from the value, and the intrinsic's result lives in the operand's
+            // own width (`0 .. w-1` still lowers to `uintN_t`). `None` falls
+            // into the caller's `C001` by name -- the same honest exit an
+            // unresolvable `let` value gets.
+            if crate::ist_bitintrinsik(n)
+                && r.path().is_some_and(|p| p.teile.len() == 1)
+            {
+                let a = r.argumente.first()?;
+                let w = intrinsik_breite(a, u)?;
+                return Some(match w {
+                    8 => "uint8_t",
+                    16 => "uint16_t",
+                    32 => "uint32_t",
+                    64 => "uint64_t",
+                    _ => return None,
+                }
+                .to_string());
             }
             // **Und sonst: der erklaerte Rueckgabetyp des Gerufenen.** Er stand die ganze
             // Zeit da; gefragt hat ihn niemand.
@@ -10545,6 +11972,25 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         };
         return format!("({ctyp})({})", ausdruck(arg, u, absagen));
     }
+    // **Bit intrinsics (PLAN-BITS §3): the lowering.**
+    //
+    // Only the BARE name lowers: a qualified path (`m::clz`) is an ordinary
+    // call, the same line `m1.rs` draws. `m1.rs::intrinsik_ruf` owns arity and
+    // ranges; the emitter reads the overlap and refuses a shape it cannot lower
+    // rather than indexing past the end. Every argument is rendered ONCE --
+    // the rotation pattern needs its amount twice, which is why `rotl`/`rotr`
+    // lower to a helper call (`DREH_C`, emitted on demand above) instead of an
+    // inline shift-or.
+    //
+    // `__builtin_clz/ctz` count in the width of `unsigned int`; on a narrower
+    // operand the count is adjusted down (`- 24` for 8 bits, `- 16` for 16).
+    // The cases are unreachable for zero -- the checker excludes it (`M157`) --
+    // so the builtins' undefined zero case never fires.
+    if crate::ist_bitintrinsik(&name)
+        && r.path().is_some_and(|p| p.teile.len() == 1)
+    {
+        return intrinsik_c(&name, r, u, absagen);
+    }
     // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
     // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
     //
@@ -10711,6 +12157,175 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         .map(|(_, a)| ausdruck(a, u, absagen))
         .collect();
     format!("{name}({})", args.join(", "))
+}
+
+/// **Bit intrinsics (PLAN-BITS §3): one call, one C expression.**
+///
+/// `w` is the operand's own width (`intrinsik_breite`), so the builtin's width
+/// and the checker's `breite` are read from the same place. Widths outside the
+/// four standard ones, and a `bswap` outside 16/32/64, are refused by name --
+/// the checker owns those shapes (`M158`/`M159`/`M160`), and this arm is where
+/// an unchecked tree would otherwise invent a lowering.
+fn intrinsik_c(name: &str, r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
+    let Some(a) = r.argumente.first() else {
+        weigere(
+            absagen,
+            r.span,
+            &format!("`{name}` without an argument -- there is no value to count"),
+        );
+        return String::new();
+    };
+    let Some(w) = intrinsik_breite(a, u) else {
+        weigere(
+            absagen,
+            r.span,
+            &format!(
+                "`{name}` over an operand whose C width cannot be read -- the \
+                 builtin is width-specific (`__builtin_clz` counts 32 bits), and \
+                 guessing the width would count the wrong word"
+            ),
+        );
+        return String::new();
+    };
+    if !matches!(w, 8 | 16 | 32 | 64) {
+        weigere(
+            absagen,
+            r.span,
+            &format!("`{name}` over a {w}-bit operand -- no standard width to count in"),
+        );
+        return String::new();
+    }
+    let x = ausdruck(a, u, absagen);
+    match name {
+        "clz" => match w {
+            64 => format!("__builtin_clzll((unsigned long long)({x}))"),
+            32 => format!("__builtin_clz((unsigned)({x}))"),
+            16 => format!("(__builtin_clz((unsigned)({x})) - 16)"),
+            _ => format!("(__builtin_clz((unsigned)({x})) - 24)"),
+        },
+        "ctz" => match w {
+            64 => format!("__builtin_ctzll((unsigned long long)({x}))"),
+            _ => format!("__builtin_ctz((unsigned)({x}))"),
+        },
+        "log2_floor" => match w {
+            64 => format!("(63 - __builtin_clzll((unsigned long long)({x})))"),
+            32 => format!("(31 - __builtin_clz((unsigned)({x})))"),
+            16 => format!("(15 - (__builtin_clz((unsigned)({x})) - 16))"),
+            _ => format!("(7 - (__builtin_clz((unsigned)({x})) - 24))"),
+        },
+        "popcount" => match w {
+            64 => format!("__builtin_popcountll((unsigned long long)({x}))"),
+            _ => format!("__builtin_popcount((unsigned)({x}))"),
+        },
+        "rotl" | "rotr" => {
+            let Some(s) = r.argumente.get(1) else {
+                weigere(
+                    absagen,
+                    r.span,
+                    &format!("`{name}` without an amount -- rotation needs both sides"),
+                );
+                return String::new();
+            };
+            let s = ausdruck(s, u, absagen);
+            format!("gabbro_{name}{w}({x}, {s})")
+        }
+        "bswap" => match w {
+            16 => format!("__builtin_bswap16((uint16_t)({x}))"),
+            32 => format!("__builtin_bswap32((uint32_t)({x}))"),
+            64 => format!("__builtin_bswap64((uint64_t)({x}))"),
+            _ => {
+                weigere(
+                    absagen,
+                    r.span,
+                    "`bswap` needs `u16`, `u32` or `u64` -- a one-byte value has \
+                     no byte order to reverse",
+                );
+                String::new()
+            }
+        },
+        _ => {
+            weigere(
+                absagen,
+                r.span,
+                &format!("`{name}` -- no lowering for this intrinsic"),
+            );
+            String::new()
+        }
+    }
+}
+
+/// **The C width an intrinsic counts in: the operand's lowered type, never its range.**
+///
+/// A narrowed `u32 in 1 .. 5` still lowers to `uint32_t`, and the builtin must
+/// count 32 bits -- reading the range here would count 3. The arms mirror what
+/// the checker reads in `m1.rs`, in the order the emitter can answer: a
+/// literal carries the checker's own smallest-width rule
+/// (`IntBereich::konstante`), a conversion carries its target width, a named
+/// limit (`u32::max`) carries `grenzwort`, and everything else goes through
+/// `wert_ctyp`, which already knows parameters, locals, fields and calls.
+/// `None` refuses at the caller -- guessing the width counts the wrong word.
+fn intrinsik_breite(e: &Expr, u: &Namen) -> Option<u8> {
+    let e = crate::ohne_klammern(e);
+    match &e.art {
+        ExprArt::Zahl(n) => {
+            let v = *n;
+            if v > u64::MAX as u128 {
+                return None;
+            }
+            Some(if v <= 0xFF {
+                8
+            } else if v <= 0xFFFF {
+                16
+            } else if v <= 0xFFFF_FFFF {
+                32
+            } else {
+                64
+            })
+        }
+        ExprArt::Ruf(r) => {
+            if let Some(einfach) = r.path().and_then(|p| p.einfach()) {
+                if let Some(k) = gabbro_syntax::kw::Kw::suche(&einfach.text).filter(|k| k.ist_intty()) {
+                    return crate::umgebung::breite_von(k).map(|(b, _)| b);
+                }
+                if let Some(speicher) = crate::aufrufgraph::zucker_umschreiben(&einfach.text) {
+                    return gabbro_syntax::kw::Kw::suche(&speicher)
+                        .filter(|k| k.ist_intty())
+                        .and_then(crate::umgebung::breite_von)
+                        .map(|(b, _)| b);
+                }
+            }
+            ctyp_breite(&wert_ctyp(e, u)?)
+        }
+        ExprArt::Ort(o) => {
+            if let Some((b, _, _)) = crate::umgebung::grenzwort(o) {
+                return Some(b);
+            }
+            // A sugared limit (`u13::max`) carries the storage word's width --
+            // the same shape `m1.rs` types it in.
+            if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
+                if f.text == "max" || f.text == "min" {
+                    if let Some(speicher) = gabbro_syntax::zucker_speicher(&o.basis.text) {
+                        return crate::umgebung::breite_von(speicher).map(|(b, _)| b);
+                    }
+                }
+            }
+            ctyp_breite(&wert_ctyp(e, u)?)
+        }
+        _ => ctyp_breite(&wert_ctyp(e, u)?),
+    }
+}
+
+/// A lowered C integer type back to its width. Only the four unsigned words --
+/// a signed width here means the checker already refused the program, and the
+/// refusal below (not a guess) is what such a tree gets.
+fn ctyp_breite(c: &str) -> Option<u8> {
+    Some(match c {
+        "uint8_t" => 8,
+        "uint16_t" => 16,
+        "uint32_t" => 32,
+        "uint64_t" => 64,
+        _ => return None,
+    })
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
@@ -11531,6 +13146,51 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
+            // **PLAN-BITS section 4 (lane 88): the overflow lowerings go first.**
+            // They answer from the operand DECLARATIONS, not from any `wrapping`
+            // attribute, and neither takes the pointer-arithmetic or mixed-float
+            // refusals below -- the checker typed both sides as integers.
+            if matches!(
+                op,
+                BinOp::PlusWrap
+                    | BinOp::MinusWrap
+                    | BinOp::MalWrap
+                    | BinOp::SchiebLinksWrap
+            ) {
+                // The shift resolves left-only: the amount is bounded, never exact.
+                let form = if *op == BinOp::SchiebLinksWrap {
+                    wrap_shift_form(a, u)
+                } else {
+                    wrap_form(a, b, u)
+                };
+                let Some((bits, n)) = form else {
+                    weigere(
+                        absagen,
+                        e.span,
+                        &format!(
+                            "wrapping `{}` over operands whose exact ranges cannot \
+                             be read off their declarations -- both sides need an \
+                             exact unsigned range `0 .. 2^N - 1` on one storage width",
+                            op_text(op)
+                        ),
+                    );
+                    return String::new();
+                };
+                return wrap_c(op, a, b, bits, n, u, absagen);
+            }
+            if *op == BinOp::PlusSat {
+                let Some((bits, signed, lo, hi)) = saturation_facts(a, b, u) else {
+                    weigere(
+                        absagen,
+                        e.span,
+                        "saturating `+|` over operands whose clamp interval cannot \
+                         be read off their declarations -- both sides need one \
+                         shared integer range on one width",
+                    );
+                    return String::new();
+                };
+                return saturation_c(a, b, bits, signed, lo, hi, u, absagen);
+            }
             // **CForm zeigerArithmetik, re-decided 2026-09-11: no computed
             // address.** Gabbro gives pointer arithmetic exactly one form
             // (`SPRACHE.md` 5.2: `place[expr]` with an M1-bounded index); a
@@ -11824,6 +13484,14 @@ fn ist_bitop(op: &BinOp) -> bool {
             | BinOp::BitXor
             | BinOp::SchiebLinks
             | BinOp::SchiebRechts
+            // PLAN-BITS section 4 (lane 88): the wrapping operators group with
+            // the bit level for parenthesisation -- their lowering is a cast-
+            // and-mask shape, and a bare neighbour must not merge into it.
+            // `PlusSat` stays out: its shape is a call, which binds on its own.
+            | BinOp::PlusWrap
+            | BinOp::MinusWrap
+            | BinOp::MalWrap
+            | BinOp::SchiebLinksWrap
     )
 }
 
@@ -11861,6 +13529,14 @@ fn op_text(op: &BinOp) -> &'static str {
         BinOp::Mal => "*",
         BinOp::Geteilt => "/",
         BinOp::Rest => "%",
+        // PLAN-BITS section 4 (lane 88): the overflow spellings, quoted the way
+        // the source wrote them. The WRAPPING lowering below prints the BASE
+        // operator (`wrap_op_text`), never these -- C has no `+%`.
+        BinOp::PlusWrap => "+%",
+        BinOp::MinusWrap => "-%",
+        BinOp::MalWrap => "*%",
+        BinOp::SchiebLinksWrap => "<<%",
+        BinOp::PlusSat => "+|",
         BinOp::BitUnd => "&",
         BinOp::BitOder => "|",
         BinOp::BitXor => "^",

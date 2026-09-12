@@ -670,7 +670,7 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       | .grund σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
       | .logik e => .logik e
       | .hardware e => .hardware e
-  | .bindAxiom a args he _ _ rest, σ, ρ =>
+  | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
