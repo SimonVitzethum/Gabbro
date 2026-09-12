@@ -97,4 +97,66 @@ theorem schreibBytes_slots_other (σ : World D) (t : D.Tab) (f : D.Feld t)
       rw [hcons, ih]
       exact storeSlot_andere _ _ _ _ _ _ hne _ _
 
+/-! ## 2. Per-constructor write lemmas: every table write records its event.
+
+  For each leaf statement form that can change a slot of table `t`,
+  `execStmt` computes the outcome as one `schreibSlot` (whose head event
+  is `zugriff t true ..`), one `schreibBytes` fold (nonempty iff the byte
+  list is nonempty), or the oracle answer; the `schreibBytes` and `axiomCall`
+  arms need the `GutO` frame (first conjunct) to rule the slot change out. -/
+
+/-- `assignSlot t` records its write event in the recorded list. -/
+theorem assignSlot_neu (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t : D.Tab} {f : D.Feld t}
+    {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
+    {hw : V.schreibt t = true} {hL : darf D t Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ neu := by
+  have h1 : σ'.spur =
+      Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt ::
+        ((i.orte ++ e.orte).map fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+          | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
+    have h := (schreibt_wirkt_slot (D := D) O passes V l Γ Λ t f i e hw hL σ ρ).1
+    have hsame : (execStmt O passes keinRuf
+        ((.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
+        (execStmt O passes keinRuf
+        ((.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt := rfl
+    rw [h] at hstep
+    have hspur : (σ.lese Λ (i.orte ++ e.orte)).spur =
+        ((i.orte ++ e.orte).map fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+          | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := rfl
+    have hsc : (σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+        (eval (σ.lese Λ (i.orte ++ e.orte)) i
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+        (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ) =
+        ((σ.lese Λ (i.orte ++ e.orte)).storeSlot t
+          (eval (σ.lese Λ (i.orte ++ e.orte)) i
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ)).merke
+        [.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt] := rfl
+    have hσ' : σ' = (σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+        (eval (σ.lese Λ (i.orte ++ e.orte)) i
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+        (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ) :=
+      Option.some_inj.mp hstep.symm
+    rw [hσ', hsc]
+    simp only [World.merke]
+    have hspur₂ : ((σ.lese Λ (i.orte ++ e.orte)).storeSlot t
+          (eval (σ.lese Λ (i.orte ++ e.orte)) i
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ)).spur =
+        (σ.lese Λ (i.orte ++ e.orte)).spur := rfl
+    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+  exact neu_head h1 hneu
+
 end Gabbro.Grammatik.EZD
