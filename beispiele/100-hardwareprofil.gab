@@ -37,6 +37,14 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
     return n;
 }
 
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+
 }
 
 profile {

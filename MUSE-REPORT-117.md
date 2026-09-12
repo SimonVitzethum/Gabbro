@@ -147,3 +147,19 @@ EBNF `profiledecl/requiresprofile/profileentry`, SYNTAX.md §12.2.
 theorems (`profil_modell`, `bindung_fuegt_nichts_hinzu`,
 `widerspruch_abgelehnt`) are lane 66's, untouched; no `#print axioms` added
 because no theorem was added.
+
+## Merge with master-neu (reviewer, 2026-09-12)
+
+Resolved per instruction: `kw.rs` + `zaehle-wortschatz.py` keep both sides
+(E6 profile words beside E3 `translator`/`for`; mark 236 → 238 with both
+ledger lines); `SYNTAX.md` keeps both productions and vocabulary rows with
+re-measured counts (173 EBNF rules — lane 111's `constwert`/`arraylit` found
+by the union diff, not assumed; 235 terminals both readings; heading 239);
+`saetze.rs`/`paesse.rs` keep both lanes' sentences and tests;
+README/TODO/DONE/PASSREGISTER taken `--ours`. `./cargo-pruef` green after
+adding the now-mandatory `translator build for …` to examples 100/101
+(master's `N200` refused translator-less `library fn`s). `./lean-bau`
+green (64 jobs). Known aftermath, not mine: PASSREGISTER/TODO corpus
+figures now underbook master's sentences/codes/examples (reviewer-accepted
+`--ours`); `pruefe-syntax.sh` warnings stage names two snake-case test fns
+from master's `referenz` test.
