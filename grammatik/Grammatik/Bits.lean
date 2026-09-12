@@ -335,4 +335,54 @@ theorem popcountn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
     exact popAux_add_mul_pow t s lo hi hlox
   simp [popcountn, hrot, hLHS, hRHS, Nat.add_comm]
 
+/-! ## Byteswap at `Nat` level: one byte reader, three widths. -/
+
+/-- Byte `n` of `x` (base 256). -/
+def byteOf (x n : Nat) : Nat := (x / 256 ^ n) % 256
+
+theorem byteOf_lt (x n : Nat) : byteOf x n < 256 :=
+  Nat.mod_lt _ (by decide)
+
+theorem ladder0 (x : Nat) : x / 256 ^ 0 = x := by
+  have : (256 : Nat) ^ 0 = 1 := Nat.pow_zero 256
+  rw [this, Nat.div_one]
+
+theorem ladder2 (x : Nat) : x / 256 ^ 2 = (x / 256) / 256 := by
+  have e : (256 : Nat) ^ 2 = 256 * 256 := by decide
+  rw [e, ← Nat.div_div_eq_div_mul]
+
+theorem ladder3 (x : Nat) : x / 256 ^ 3 = ((x / 256) / 256) / 256 := by
+  have e3 : (256 : Nat) ^ 3 = 256 * 256 * 256 := by decide
+  rw [e3, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul]
+
+/-- One packet step: low byte out, rest down. Uses `hb` (byte fits). -/
+theorem pkt_div (r b : Nat) (hb : b < 256) : (r * 256 + b) / 256 = r := by
+  have e : r * 256 + b = b + r * 256 := Nat.add_comm _ _
+  rw [e, Nat.add_mul_div_right _ _ (by decide : 0 < 256)]
+  have hb0 : b / 256 = 0 := Nat.div_eq_zero_iff.mpr (Or.inr hb)
+  omega
+
+/-- One packet step for `%`. Uses `hb` (byte fits). -/
+theorem pkt_mod (r b : Nat) (hb : b < 256) : (r * 256 + b) % 256 = b := by
+  have e : r * 256 + b = b + r * 256 := Nat.add_comm _ _
+  rw [e, Nat.add_mul_mod_self_right]
+  exact Nat.mod_eq_of_lt hb
+
+/-- Packet bound: one more byte stays under the next power. -/
+theorem pkt_lt (r b k : Nat) (hr : r < 256 ^ k) (hb : b < 256) :
+    r * 256 + b < 256 ^ (k + 1) := by
+  have e : (256 : Nat) ^ (k + 1) = 256 ^ k * 256 := Nat.pow_succ 256 k
+  have hr1 : r + 1 ≤ 256 ^ k := hr
+  have hmul : (r + 1) * 256 ≤ 256 ^ k * 256 := Nat.mul_le_mul_right _ hr1
+  have hexpand : (r + 1) * 256 = r * 256 + 256 := by
+    rw [Nat.add_mul, Nat.one_mul]
+  have hlt : r * 256 + b < r * 256 + 256 :=
+    Nat.add_lt_add_left hb _
+  have hle : r * 256 + 256 ≤ 256 ^ k * 256 := by
+    rw [← hexpand]
+    exact hmul
+  have hfin : r * 256 + b < 256 ^ k * 256 := Nat.lt_of_lt_of_le hlt hle
+  rw [e]
+  exact hfin
+
 end Gabbro.Grammatik
