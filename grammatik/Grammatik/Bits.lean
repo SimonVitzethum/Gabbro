@@ -767,4 +767,81 @@ def Zahl.log2_floor (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     Int.ofNat_le.mpr
       (log2n_le_of_bounds w _ (zahlNat_bounds w x).1 (zahlNat_bounds w x).2)⟩
 
+/-- Rotation amount as a `Nat` bounded by `w`. Uses the amount range. -/
+theorem zahlAmt_le (w : Nat) (s : Zahl 0 (w : Int)) : s.n.toNat ≤ w := by
+  have hlo := s.lo_le
+  have hhi := s.le_hi
+  have hnn : 0 ≤ s.n := by omega
+  exact (Int.toNat_le).mpr hhi
+
+/-- Full-range (`uN`) value as a `Nat` under `2 ^ (w+1)`. -/
+theorem zahlFull_bounds (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
+    x.n.toNat < 2 ^ (w + 1) := by
+  have hhi := x.le_hi
+  have hnn : 0 ≤ x.n := by have := x.lo_le; omega
+  have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hlt : x.n < ((2 ^ (w + 1) : Nat) : Int) := by omega
+  exact (Int.toNat_lt hnn).mpr hlt
+
+/-- `rotr ∘ rotl = id` helper: right rotation stays in range. -/
+theorem rotrn_lt (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
+    rotrn w s x < 2 ^ (w + 1) := by
+  have hW : s + (w + 1 - s) = w + 1 := by omega
+  have hpowW : 2 ^ s * 2 ^ (w + 1 - s) = 2 ^ (w + 1) := by
+    rw [← Nat.pow_add, hW]
+  have hmod : x % 2 ^ s < 2 ^ s :=
+    Nat.mod_lt x (Nat.pow_pos (by decide))
+  have hdiv : x / 2 ^ s < 2 ^ (w + 1 - s) := by
+    have hxW : x < 2 ^ s * 2 ^ (w + 1 - s) := by omega
+    exact Nat.div_lt_of_lt_mul hxW
+  have hmul1 : (x % 2 ^ s + 1) * 2 ^ (w + 1 - s)
+      ≤ 2 ^ s * 2 ^ (w + 1 - s) :=
+    Nat.mul_le_mul_right _ hmod
+  have hexpand : (x % 2 ^ s + 1) * 2 ^ (w + 1 - s)
+      = (x % 2 ^ s) * 2 ^ (w + 1 - s) + 2 ^ (w + 1 - s) := by
+    rw [Nat.add_mul, Nat.one_mul]
+  have hstep : (x % 2 ^ s) * 2 ^ (w + 1 - s) + x / 2 ^ s
+      < (x % 2 ^ s) * 2 ^ (w + 1 - s) + 2 ^ (w + 1 - s) :=
+    Nat.add_lt_add_left hdiv _
+  have h2 : (x % 2 ^ s) * 2 ^ (w + 1 - s) + 2 ^ (w + 1 - s) ≤ 2 ^ (w + 1) := by
+    rw [← hexpand]
+    exact Nat.le_trans hmul1 (Nat.le_of_eq hpowW)
+  have hchain : (x % 2 ^ s) * 2 ^ (w + 1 - s) + x / 2 ^ s < 2 ^ (w + 1) :=
+    Nat.lt_of_lt_of_le hstep h2
+  show rotrn w s x < 2 ^ (w + 1)
+  unfold rotrn
+  exact hchain
+
+/-- `Zahl.popcount`: population count over width `w + 1`. -/
+def Zahl.popcount (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
+    Zahl 0 ((w : Int) + 1) :=
+  ⟨(popcountn w x.n.toNat : Nat), by simp,
+    Int.ofNat_le.mpr (popcountn_le w _)⟩
+
+/-- `Zahl.rotl`: rotate left over width `w + 1`. -/
+def Zahl.rotl (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
+    (s : Zahl 0 (w : Int)) : Zahl 0 ((2 : Int) ^ (w + 1) - 1) :=
+  ⟨(rotln w s.n.toNat x.n.toNat : Nat), by
+      have := x.lo_le; simp,
+    by
+      have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+      have hlt : rotln w s.n.toNat x.n.toNat < 2 ^ (w + 1) :=
+        rotln_lt w _ _ (zahlAmt_le w s) (zahlFull_bounds w x)
+      have hle : ((rotln w s.n.toNat x.n.toNat : Nat) : Int)
+          < ((2 ^ (w + 1) : Nat) : Int) := Int.ofNat_lt.mpr hlt
+      omega⟩
+
+/-- `Zahl.rotr`: rotate right over width `w + 1`. -/
+def Zahl.rotr (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
+    (s : Zahl 0 (w : Int)) : Zahl 0 ((2 : Int) ^ (w + 1) - 1) :=
+  ⟨(rotrn w s.n.toNat x.n.toNat : Nat), by
+      have := x.lo_le; simp,
+    by
+      have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+      have hlt : rotrn w s.n.toNat x.n.toNat < 2 ^ (w + 1) :=
+        rotrn_lt w _ _ (zahlAmt_le w s) (zahlFull_bounds w x)
+      have hle : ((rotrn w s.n.toNat x.n.toNat : Nat) : Int)
+          < ((2 ^ (w + 1) : Nat) : Int) := Int.ofNat_lt.mpr hlt
+      omega⟩
+
 end Gabbro.Grammatik
