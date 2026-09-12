@@ -375,11 +375,16 @@ pub const NAMEN: &[Satz] = &[
         vorbehalt: "The refusal is load-bearing, not provisional: a checked call \
                     without a payload would be a silent acceptance of a region \
                     nobody compiled. `beispiele/gift/820` carries a declaration \
-                    and two calls and falls with nothing but this code.",
+                    and two calls and falls with nothing but this code. Since \
+                    lane E7 the refusal's span sits INSIDE the region -- at its \
+                    first token, carried back through the region span map \
+                    (`regionkarte.rs`) -- never at the call around it.",
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N069` only); \
-                      `/823` (wrong argument type beside it); counter-direction \
-                      in `paesse.rs` (`bibliothek_*`).",
+                      `/823` (wrong argument type beside it); `/875` and `/876` \
+                      (multi-line regions, span at the first region token, in \
+                      statement and in binding position); counter-direction \
+                      in `paesse.rs` (`bibliothek_*`, `library_n069_points_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
     },
     Satz {

@@ -1,0 +1,28 @@
+-- erwartet: N069
+-- Lane E7: the same routing in binding position -- `let code = @lib#f …`
+-- over a region spanning several lines. The refusal points at the first
+-- region token, exactly as in statement position.
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    let code = @spirv#kernel(a) {
+        dispatch 0
+    };
+    return code;
+}
+}
