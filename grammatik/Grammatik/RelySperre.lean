@@ -346,6 +346,73 @@ theorem sperre_exklusiv (P : Programm D) (O : Orakel D) (passes : Nat) (hO : Gut
                 exact ih f g hfg L hLf'
               exact hgoal
 
+/-! ## 4. The rely from lock exclusivity -/
+
+/-- **The table rely from lock exclusivity.** While `f` holds a lock `L`
+    guarding table `t`, a step of another thread `g` keeps every slot of
+    `t`: `f` holding `L` excludes `g` from holding it
+    (`sperre_exklusiv` over the reachability inside `hR`), and a leaf
+    step of a thread not holding `L` preserves the guarded slots
+    (`blatt_erhaelt_slots`); take/release steps keep memory by
+    construction. This discharges the memory-level `hRelyT` premise of
+    `stabil_aus_bewachung` on the PC machine.
+
+    Every premise is used: `hO` (leaf preservation and the oracle
+    frame inside it, exclusivity), `hR` (exclusivity), `hfg`/`hL`
+    (exclusivity), `hS` (the step case), `hGuard` (leaf preservation). -/
+theorem rely_aus_sperre (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (hR : PCReach P O passes prog (GenStart sp) M pc)
+    (f g : Faden) (hfg : g ≠ f) (L : D.Lock) (hL : L ∈ offen (M.spuren f))
+    (M' : GenMaschine D) (pc' : PCStand) (hS : PCSchritt P O passes prog M pc g M' pc')
+    (t : D.Tab) (hGuard : Sum.inl L ∈ D.braucht t) :
+    ∀ k fld, M'.speicher.slots t k fld = M.speicher.slots t k fld := by
+  have hG : GenErreichbar P O passes (GenStart sp) M :=
+    pcReach_gen P O passes prog _ M pc hR
+  have hfrei : L ∉ offen (M.spuren g) :=
+    sperre_exklusiv P O passes hO sp M hG f g (Ne.symm hfg) L hL
+  cases hS with
+  | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn Λa cs hpc hΛa hmark hcar =>
+      intro k fld
+      show σ'.speicher.slots t k fld = M.speicher.slots t k fld
+      exact blatt_erhaelt_slots O passes hO M g s ρ hleaf σ' hstep t L
+        hGuard hΛ hfrei k fld
+  | take L hself hrang hfrei' hpc =>
+      intro k fld
+      rfl
+  | rel L hhaelt hpc =>
+      intro k fld
+      rfl
+
+/-- **The global rely from lock exclusivity.** While `f` holds a lock
+    `L` guarding global `x`, a step of another thread `g` keeps `x`:
+    same argument as `rely_aus_sperre` through the global leaf lemma
+    `blatt_erhaelt_globs`. This discharges the memory-level `hRelyG`
+    premise of `stabil_aus_bewachung` on the PC machine.
+
+    Every premise is used: `hO`, `hR`, `hfg`/`hL` (exclusivity), `hS`
+    (the step case), `hGuard` (leaf preservation). -/
+theorem rely_aus_sperre_global (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (hR : PCReach P O passes prog (GenStart sp) M pc)
+    (f g : Faden) (hfg : g ≠ f) (L : D.Lock) (hL : L ∈ offen (M.spuren f))
+    (M' : GenMaschine D) (pc' : PCStand) (hS : PCSchritt P O passes prog M pc g M' pc')
+    (x : D.Glob) (hGuard : Sum.inl L ∈ D.gbraucht x) :
+    M'.speicher.globs x = M.speicher.globs x := by
+  have hG : GenErreichbar P O passes (GenStart sp) M :=
+    pcReach_gen P O passes prog _ M pc hR
+  have hfrei : L ∉ offen (M.spuren g) :=
+    sperre_exklusiv P O passes hO sp M hG f g (Ne.symm hfg) L hL
+  cases hS with
+  | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn Λa cs hpc hΛa hmark hcar =>
+      show σ'.speicher.globs x = M.speicher.globs x
+      exact blatt_erhaelt_globs O passes hO M g s ρ hleaf σ' hstep x L
+        hGuard hΛ hfrei
+  | take L hself hrang hfrei' hpc =>
+      rfl
+  | rel L hhaelt hpc =>
+      rfl
+
 #print axioms Gabbro.Grammatik.lese_globs_gleich
 #print axioms Gabbro.Grammatik.storeGlob_fremd_global
 #print axioms Gabbro.Grammatik.schreibSlot_globs_gleich
