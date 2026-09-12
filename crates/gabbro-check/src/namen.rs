@@ -3499,9 +3499,10 @@ fn library_call_not_checked(baum: &Programm, absagen: &mut Absagen) {
             ))
             .mit_notiz(
                 "the region is compiled at translation time into a payload \
-                 (PLAN-ERWEITUNG.md §0b); until lane E2 checks arguments, payload \
-                 and contract, every such call is refused here -- never silently \
-                 accepted, never crashed on",
+                 (PLAN-ERWEITUNG.md §0b); until lane E2 discharges that \
+                 obligation -- checking arguments, payload and contract -- \
+                 every such call is refused here: never silently accepted, \
+                 never crashed on",
             ),
         );
     }
