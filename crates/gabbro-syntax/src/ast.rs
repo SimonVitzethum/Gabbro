@@ -609,6 +609,15 @@ pub enum ExprArt {
     },
     Unaer(UnOp, Box<Expr>),
     Binaer(BinOp, Box<Expr>, Box<Expr>),
+    /// **`[e0, e1, ...]` -- the const-table literal, and ONLY that.**
+    ///
+    /// Parsed exclusively as a `const` initializer (`constdecl`); the general
+    /// expression reader never produces it, so no body ever holds one. The
+    /// checker holds it against the declared array type element-wise
+    /// (`konstanten.rs`, `K190`-`K194`) and the emitter lowers it to one
+    /// `static const` C array. Any other position never parses, which is a
+    /// grammar fact rather than a refusal.
+    ArrayLit(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -991,6 +1000,17 @@ pub struct FnDecl {
     /// (`N060`). A path and not a bare name, so the table may stand in
     /// another module than the function.
     pub nutzlast: Option<Pfad>,
+    /// **`translator build for kernel` -- the served library function (lane E3).**
+    ///
+    /// `Some(kernel)` on a translator declaration: the `library fn` in the
+    /// same module whose payload type this translator fills at translation
+    /// time (`SYNTAX.md` §7.2). `None` on every other function. The parser
+    /// fills it from the `for` link; the checker holds exactly-one per
+    /// library function (`N200`/`N201`), `effects { pure }` (`N202`), a
+    /// `decreases` clause (`N203`) and the result against the payload
+    /// (`N204`). Read by the name pass; the body is checked by every pass
+    /// like any function body.
+    pub translator_fuer: Option<Ident>,
     pub name: Ident,
     pub parameter: Vec<Parameter>,
     pub ergebnis: Option<TypExpr>,

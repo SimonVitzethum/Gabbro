@@ -48,6 +48,10 @@ const BENANNT: &[&str] = &[
     // `N212` a missing `else` past the reservation, `N213` an undeclared
     // arena, `N214` a place or index of another kind.
     "N210", "N211", "N212", "N213", "N214",
+    // Lane E3: `N200` a library function without its translator, `N201` a
+    // second or dangling translator, `N202` a translator with effects,
+    // `N203` one without `decreases`, `N204` one answering another type.
+    "N200", "N201", "N202", "N203", "N204",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

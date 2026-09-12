@@ -289,6 +289,22 @@ wortschatz! {
     // Only the statement head position gives the word meaning; followed
     // by a place continuation it stays a name.
     Reset         => "reset",         ctx;
+    // **«E3» (2026-09-12): the translator declaration (`SYNTAX.md` §7.2).**
+    //
+    // Heads the total, effect-free map from a call region's AST to the
+    // served function's payload type. Running it needs the compile-time
+    // evaluator (lane E5); only the declaration and its typing are built
+    // now. Contextual like `library`: a function or a local named
+    // `translator` keeps parsing as a name everywhere else.
+    Translator    => "translator",    ctx;
+    // **«E3» (2026-09-12): the link of a translator to its function.**
+    //
+    // `translator build for kernel` serves `kernel` in the same module;
+    // the checker holds exactly-one per `library fn` (`N200`/`N201`).
+    // No existing form carries the link -- a bare name would collide
+    // with the served function -- and the word stays an identifier
+    // everywhere the grammar expects one.
+    For           => "for",           ctx;
     Format        => "format",        ctx;
     Table         => "table",         ctx;
     Slot          => "slot",          ctx;

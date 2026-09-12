@@ -103,7 +103,15 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # §3): no existing form carries a bounded heap -- a `table` has no lower
 # bound and no whole-region release, and an `owner` mark has no minter -- and
 # the reason stands at EACH entry in `kw.rs`. The second mark does NOT move.
-MARKE_WOERTER = 235
+#
+# **235 -> 237 on 2026-09-12 («E3», merged).** `translator` + `for` name the
+# translator declaration (`dokumente/SYNTAX.md` §7.2,
+# `PLAN-ERWEITUNG.md` §6, lane E3): no existing form carries the
+# region-to-payload map or its link to the served function -- a bare name
+# would collide with the served function -- and the reason stands at each
+# entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
+# so the third mark does not move either.
+MARKE_WOERTER = 237
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

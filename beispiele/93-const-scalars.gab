@@ -1,0 +1,24 @@
+-- 93 -- scalar compile-time constants over the evaluable fragment.
+--
+-- Integer literals, other consts, arithmetic and bit operators, and calls of
+-- `pure` single-return `const fn`: the checker folds every initializer at
+-- translation time, and whatever leaves the fragment falls by name (`K190`
+-- outside the fragment, `K192` for an impure callee, `K193` for a reference
+-- cycle through a `const`). Scalar ranges stay `M101`'s -- this file holds
+-- none, because every value fits where it is declared.
+
+module beispiel::const_scalars {
+
+const A : u32 = 6 * 7;
+
+const B : u32 = A + 2 * (A ^ 3) - (A >> 1);
+
+const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 effects { pure } costs <= 4 ops { return n + n; }
+
+const C : u32 = doppelt(21);
+
+const D : u32 = B - 3;
+
+impl fn f() -> u32 effects { pure } costs <= 4 ops { return C + D - D; }
+
+}

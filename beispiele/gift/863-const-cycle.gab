@@ -1,0 +1,14 @@
+-- erwartet: K193
+-- **Gift 863 -- two consts naming each other: unbounded recursion.**
+--
+-- The reference cycle passes through a `const`, and a `const` carries no
+-- `decreases` by grammar shape. A cycle of functions alone would be
+-- `K008`/`K009`/`H022` where it stands.
+
+module gift::const_cycle {
+
+const A : u32 = B;
+
+const B : u32 = A;
+
+}

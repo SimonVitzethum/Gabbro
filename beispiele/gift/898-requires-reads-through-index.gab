@@ -1,0 +1,46 @@
+-- erwartet: E220
+-- **A `requires` that reads through an index falls -- and a read-only carrier passes.**
+--
+-- `ungedeckt` reads `T.slots[i].v`: `i` is a parameter (no read), `T` is written
+-- by `schreibt` below and uncovered, so the index path must still refuse. `lesbar`
+-- reads the same shape over `F`, which nothing in the program writes -- read-only
+-- carriers need no cover, and it stays silent.
+module gift::vertrag_fuss_index {
+
+table T count 4 {
+    slot {
+        v : u32,
+    }
+}
+
+table F count 4 {
+    slot {
+        v : u32,
+    }
+}
+
+-- Must fall: the read reaches a written carrier through the index.
+impl fn ungedeckt(i : index into T) -> u32
+    requires T.slots[i].v == 0
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- Must pass: `F` is never written by any function, so no cover is owed.
+impl fn lesbar(i : index into F) -> u32
+    requires F.slots[i].v == 0
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- The writer that makes `T` (and only `T`) non-read-only.
+impl fn schreibt(i : index into T) effects { writes T.slots } costs <= 8 ops
+{
+    T.slots[i].v = 1;
+}
+
+}

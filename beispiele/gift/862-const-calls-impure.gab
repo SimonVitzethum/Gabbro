@@ -1,0 +1,15 @@
+-- erwartet: K192
+-- **Gift 862 -- a `const` calling a function that is not `pure`.**
+--
+-- `fetch` reads `Z` and says so (`reads Z`); a `const` initializer may only
+-- call `effects { pure }` functions, so the call falls where it stands.
+
+module gift::const_calls_impure {
+
+static mut Z : u32 = 0;
+
+impl fn fetch() -> u32 effects { reads Z } costs <= 2 ops { return Z; }
+
+const A : u32 = fetch();
+
+}

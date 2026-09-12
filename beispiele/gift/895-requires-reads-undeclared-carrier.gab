@@ -1,0 +1,37 @@
+-- erwartet: E220
+-- **A `requires` that reads a written carrier without cover falls.**
+--
+-- The contract is part of the frame: `ungedeckt` reads `zaehler` in its
+-- `requires`, `zaehler` is written by `schreibt` below, and neither
+-- `reads zaehler` nor `writes zaehler` stands in its effects. `gedeckt`
+-- names the cover and stays silent -- the positive twin of the same rule.
+module gift::vertrag_fuss_requires {
+
+static mut zaehler : u32 = 0;
+
+-- Must fall: the `requires` reads a carrier the effects do not cover.
+impl fn ungedeckt() -> u32
+    requires zaehler == 0
+    effects { pure }
+    costs   <= 8 ops
+{
+    return 0;
+}
+
+-- Must pass: the same read with the cover named.
+impl fn gedeckt() -> u32
+    requires zaehler == 0
+    effects { reads zaehler }
+    costs   <= 8 ops
+{
+    return zaehler;
+}
+
+-- The writer that makes `zaehler` non-read-only: without it the carrier would
+-- need no cover at all, and the first function would pass too.
+impl fn schreibt() effects { writes zaehler } costs <= 8 ops
+{
+    zaehler = 1;
+}
+
+}

@@ -885,6 +885,13 @@ impl<'a> Rechner<'a> {
             ExprArt::Binaer(_, a, b) => {
                 Kosten::Zahl(1).plus(self.ausdruck(a, lokal)).plus(self.ausdruck(b, lokal))
             }
+            // **Lane 111:** a table literal evaluates one expression per
+            // element -- the elements are ordinary expressions and cost what
+            // they cost. (No `const` initializer ever runs -- the parser reads
+            // `[` only there -- but the sum is the honest answer regardless.)
+            ExprArt::ArrayLit(es) => es
+                .iter()
+                .fold(Kosten::Zahl(0), |k, e| k.plus(self.ausdruck(e, lokal))),
             // **`aligned(a, b)` evaluates TWO expressions, and both of them cost.**
             //
             // ```text
