@@ -105,6 +105,14 @@ PFLICHTEN_SUMME = (
 
 # Je Eintrag: (Datei, Muster mit EINER Gruppe = die Zahl im Text, Befehl, Auszug mit EINER
 # Gruppe = die Zahl aus dem Lauf, was die Zahl bedeutet)
+#
+# **STUFE 0 -- BILINGUAL PATTERNS FIRST (2026-09-12).** Every document label below stands
+# German-only in its file today, and the English alternative beside it fires the day that
+# file moves. The alternatives are drafted, not quoted: on moving day the translator picks
+# the wording and carries the pattern along, and any label that loses BOTH spellings
+# reports UNBEWACHT -- loud, not silent (the speech test above measures exactly that, per
+# entry, over the real text). No document was touched for this; see
+# `messung/WAECHTER-STUFE0.md` for the record and the booked cell moves.
 EINTRAEGE = [
     # **The cut in the middle of the run** (2026-08-31). The two figures out of
     # `messung/RUECKLAUFWERTE.md`, its own section on the cut -- the item the empty tree
@@ -121,35 +129,35 @@ EINTRAEGE = [
         # the day a 52nd instrument arrived the entry went silent instead of red -- the
         # guard's own fixed-point bolt caught it. *A pattern that pins the denominator stops
         # watching the numerator the moment the population moves.*
-        r"\*\*(\d+) von \d+\*\* Wächtern können mitten im Lauf",
+        r"\*\*(\d+) (?:von|of) \d+\*\* (?:Wächtern können mitten im Lauf|guardians can abort mid-run)",
         ["./instrumente/pruefe-waechter.py"],
         r"^== Ein Abbruch MITTEN im Lauf: (\d+) von \d+ koennen",
         "Waechter, die mitten im Lauf abbrechen koennen",
     ),
     (
         "messung/RUECKLAUFWERTE.md",
-        r"\*\*(\d+) Ausgangsstellen\*\* liegen hinter dem jeweils ersten",
+        r"\*\*(\d+) (?:Ausgangsstellen|exit sites)\*\* (?:liegen hinter dem jeweils ersten|sit behind their respective first)",
         ["./instrumente/pruefe-waechter.py"],
         r"^   (\d+) Ausgangsstellen liegen hinter dem jeweils ersten",
         "Ausgangsstellen hinter dem jeweils ersten -- die Schnittflaeche",
     ),
     (
         "messung/fragmente/README.md",
-        r"(\d+) von 10 prüfen sauber",
+        r"(\d+) (?:von 10 prüfen sauber|of 10 check clean)",
         ["./instrumente/zaehle-fragmente.py"],
         r"^  (\d+) von 10 pruefen sauber",
         "vervollstaendigte Fragmente, die sauber pruefen",
     ),
     (
         "messung/fragmente/README.md",
-        r"(\d+) von 10 senken ab",
+        r"(\d+) (?:von 10 senken ab|of 10 lower)",
         ["./instrumente/zaehle-fragmente.py"],
         r"^  (\d+) von 10 senken ab",
         "vervollstaendigte Fragmente, die absenken",
     ),
     (
         "TODO.md",
-        r"Marke (\d+) — eine Ratsche, keine Zielzahl · 0 ohne Adresse",
+        r"(?:Marke|Mark) (\d+) — (?:eine Ratsche, keine Zielzahl · 0 ohne Adresse|a ratchet, not a target number · 0 without an address)",
         ["./instrumente/pruefe-schablonen.py"],
         r"^   Marke (\d+) -- eine Ratsche",
         "Zahn 3 -- Praemissen bewiesener Schablonen ohne Pass",
@@ -172,7 +180,7 @@ EINTRAEGE = [
     # finding this guardian was built from. So the remainder is measured, not estimated.
     (
         "TODO.md",
-        r"\*\*(\d+) von \d+ Kommentarzeilen\*\* im Pruefer sind deutsch",
+        r"\*\*(\d+) (?:von \d+ Kommentarzeilen|of \d+ comment lines)\*\* (?:im Pruefer sind deutsch|in the checker are German)",
         ["./instrumente/pruefe-englisch.py"],
         r"^== Quellsprache: (\d+) von \d+ Kommentarzeilen",
         "deutsche Kommentarzeilen im Pruefer -- die Ratsche der Uebersetzung",
@@ -183,7 +191,7 @@ EINTRAEGE = [
     # Deckungsaussage heute nicht halten koennen, weil ihre Kennung mehrdeutig ist.
     (
         "TODO.md",
-        r"(\d+) Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen",
+        r"(\d+) (?:Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen|probes point at an identifier with dissimilar assignment sites)",
         ["./instrumente/pruefe-vergabe.py"],
         r"^== Was das RUECKWIRKEND kostet: (\d+) von \d+ Giftproben ==",
         "Giftproben auf einer mehrdeutigen Kennung",
@@ -251,7 +259,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"(\d+) Formate mit einer zweiten Fassung",
+        r"(\d+) (?:Formate mit einer zweiten Fassung|formats with a second version)",
         ["./instrumente/zaehle-formate.py"],
         r"^  (\d+) Formate mit einer zweiten Fassung",
         "gemessene Formatentwicklungen -- die NULL, die die Absage traegt",
@@ -267,7 +275,7 @@ EINTRAEGE = [
     # ohne Befehl ist die leichteste Zahl, die man spaeter stillschweigend anders liest.
     (
         "TODO.md",
-        r"(\d+) Traversierungsruempfe stehen heute im Korpus",
+        r"(\d+) (?:Traversierungsruempfe stehen heute im Korpus|traversal stumps stand in the corpus today)",
         ["./instrumente/zaehle-traversierungen.py"],
         r"^  (\d+) Traversierungsruempfe stehen heute im Korpus",
         "Traversierungsruempfe im Korpus -- das N zur Duplikatzahl (W11)",
@@ -295,28 +303,28 @@ EINTRAEGE = [
     ),
     (
         "messung/ZEREMONIE.md",
-        r"\| \*\*echter Code\*\* .*?\| (\d+) von 109",
+        r"\| \*\*(?:echter Code|real code)\*\* .*?\| (\d+) (?:von|of) 109",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  echter Code: (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen im ECHTEN Code, die sinken duerfen",
     ),
     (
         "messung/ZEREMONIE.md",
-        r"(\d+) von \d+ Stellen dürfen sinken",
+        r"(\d+) (?:von|of) \d+ (?:Stellen dürfen sinken|places may sink)",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen, die sinken duerfen -- Ziel 3",
     ),
     (
         "messung/ZEREMONIE.md",
-        r"\d+ von (\d+) Stellen dürfen sinken",
+        r"\d+ (?:von|of) (\d+) (?:Stellen dürfen sinken|places may sink)",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  \d+ von (\d+) Stellen duerfen sinken",
         "Zeremoniestellen insgesamt -- das N zur Quote (W11)",
     ),
     (
         "messung/ZEREMONIE.md",
-        r"\*\*(\d+) Regeln, 14 vom Korpus",
+        r"\*\*(\d+) (?:Regeln, 14 vom Korpus|rules, 14 from the corpus)",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  (\d+) Regeln in der Tafel",
         "Regeln der Kalibriertafel -- jede mit Grund",
@@ -423,14 +431,14 @@ EINTRAEGE = [
     ),
     (
         "dokumente/PLAN.md",
-        r"daneben aber \*\*(\d+) Prämissen ohne Pass\*\*",
+        r"(?:daneben aber|but beside it) \*\*(\d+) (?:Prämissen ohne Pass|premises without a pass)\*\*",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
         r"PREMISES WITHOUT A PASS \(tooth 3\): (\d+)",
         "Praemissen ohne Pass (Zahn 3)",
     ),
     (
         "dokumente/MESSUNGEN.md",
-        r"`N_folgenlos` — ein `narrow`, dessen Entfernung nichts ändert, ist Zierde\. Heute\n> \*\*(\d+)\*\*",
+        r"`N_folgenlos` — (?:ein `narrow`, dessen Entfernung nichts ändert, ist Zierde|a `narrow` whose removal changes nothing is decoration)\. (?:Heute|Today)\n> \*\*(\d+)\*\*",
         ["./instrumente/zaehle-bereichspflichten.py"],
         r"N_folgenlos = (\d+)",
         "N_folgenlos -- folgenlose `narrow`-Stellen",
@@ -461,7 +469,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*(\d+) fremde Rümpfe im Korpus, \d+ sprechen ihre Pflicht aus",
+        r"\*\*(\d+) (?:fremde Rümpfe im Korpus|foreign bodies in the corpus), \d+ (?:sprechen ihre Pflicht aus|state their duty)",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- zeugnis beispiele/*.gab | "
          "grep -oE '[0-9]+ foreign bodies' | awk '{s+=$1} END {print s\" fremde\"}'"],
@@ -474,7 +482,7 @@ EINTRAEGE = [
     # prueft seine eigene Erwartung.*
     (
         "TODO.md",
-        r"fremde Rümpfe im Korpus, (\d+) sprechen ihre Pflicht aus",
+        r"(?:fremde Rümpfe im Korpus|foreign bodies in the corpus), (\d+) (?:sprechen ihre Pflicht aus|state their duty)",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- zeugnis beispiele/*.gab | "
          "grep -oE '\\([0-9]+ state their duty\\)' | grep -oE '[0-9]+' | "
@@ -507,7 +515,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"blinde Zellen von (\d+)\.",
+        r"(?:blinde Zellen von|blind cells of) (\d+)\.",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
         r"of (\d+) pairs",
@@ -548,42 +556,42 @@ EINTRAEGE = [
     ),
     (
         "dokumente/PLAN.md",
-        r"\| \*\*Prämissen ohne Pass\*\* \| \*\*(\d+)\*\*",
+        r"\| \*\*(?:Prämissen ohne Pass|Premises without a pass)\*\* \| \*\*(\d+)\*\*",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
         r"PREMISES WITHOUT A PASS \(tooth 3\): (\d+)",
         "Praemissen ohne Pass, in der «NL»-Tafel",
     ),
     (
         "TODO.md",
-        r"(\d+) sind tragend, \d+ verdächtig",
+        r"(\d+) (?:sind tragend|are carrying), \d+ (?:verdächtig|suspect)",
         ["./instrumente/pruefe-gruende.py"],
         r"\d+ verdaechtig · (\d+) tragend",
         "Absagen, deren Text den tragenden Grund nennt",
     ),
     (
         "TODO.md",
-        r"\d+ sind tragend, (\d+) verdächtig",
+        r"\d+ (?:sind tragend|are carrying), (\d+) (?:verdächtig|suspect)",
         ["./instrumente/pruefe-gruende.py"],
         r"^\s+(\d+) verdaechtig ·",
         "Absagen, die sich ueber die DARSTELLUNG begruenden",
     ),
     (
         "TODO.md",
-        r"\*\*(\d+) Absagetexte sagen ihren Grund in KEINER der beiden Sprachen\*\*",
+        r"\*\*(\d+) (?:Absagetexte sagen ihren Grund in KEINER der beiden Sprachen|rejection texts state their reason in NEITHER language)\*\*",
         ["./instrumente/pruefe-gruende.py"],
         r"· (\d+) unklar",
         "Absagen ohne erkennbaren Grund",
     ),
     (
         "TODO.md",
-        r'\*\*(\d+) von 23 Item-Arten\*\* sind „gelesen"',
+        r'\*\*(\d+) (?:von 23 Item-Arten|of 23 item kinds)\*\* (?:sind „gelesen"|are "read")',
         ["./instrumente/pruefe-konstrukte.py"],
         r"^\s+gelesen\s+(\d+)\s*$",
         "Item-Arten, die ein Pass anfasst",
     ),
     (
         "TODO.md",
-        r"Mutationskatalog: \*\*(\d+) von \d+ Ankern\*\*",
+        r"(?:Mutationskatalog|Mutation catalogue): \*\*(\d+) (?:von \d+ Ankern|of \d+ anchors)\*\*",
         ["./instrumente/mutiere-pruefer.py", "--anker"],
         r"== (\d+) von \d+ Ankern greifen",
         "Mutationsanker, die im Pruefer wirklich sitzen",
@@ -605,14 +613,14 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*(\d+) Zeilenfortsetzungen\*\* in den Quellen",
+        r"\*\*(\d+) (?:Zeilenfortsetzungen|continuation lines)\*\* (?:in den Quellen|in the sources)",
         ["./instrumente/pruefe-englisch.py"],
         r"== Lesbarkeit: (\d+) Zeilenfortsetzungen",
         "Zeilenfortsetzungen -- die Flaeche der Klebeprobe",
     ),
     (
         "TODO.md",
-        r"Zeilenfortsetzungen\*\* in den Quellen, \*\*(\d+) kleben\*\*",
+        r"(?:Zeilenfortsetzungen|continuation lines)\*\* (?:in den Quellen|in the sources), \*\*(\d+) (?:kleben|stick)\*\*",
         ["./instrumente/pruefe-englisch.py"],
         r"^\s+(\d+) von \d+ Naehten kleben",
         "klebende Nahtstellen",
@@ -647,7 +655,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*(\d+) besetzte Zellen\*\* stehen daneben",
+        r"\*\*(\d+) (?:besetzte Zellen|covered cells)\*\* (?:stehen daneben|stand beside)",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
         r"· (\d+) covered ·",
@@ -655,7 +663,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"besetzte Zellen\*\* stehen daneben, \*\*(\d+) nur im Gift\*\*",
+        r"(?:besetzte Zellen|covered cells)\*\* (?:stehen daneben|stand beside), \*\*(\d+) (?:nur im Gift|poison-only)\*\*",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab -- beispiele/gift/*.gab"],
         r"· (\d+) poison-only ·",
@@ -667,14 +675,14 @@ EINTRAEGE = [
     # Zahl, die veraltet ist, sondern eine, die nie ableitbar war.*
     (
         "TODO.md",
-        r"\*\*(\d+) direkte Blicke\*\* auf die Karten",
+        r"\*\*(\d+) (?:direkte Blicke|direct looks)\*\* (?:auf die Karten|at the maps)",
         ["./instrumente/zaehle-karten.py"],
         r"direkte Blicke\s+(\d+)",
         "direkte Blicke auf die Karten der `Umgebung`",
     ),
     (
         "TODO.md",
-        r"direkte Blicke\*\* auf die Karten[^\n]*\n[^\n]*\*\*(\d+) davon unqualifiziert\*\*",
+        r"(?:direkte Blicke|direct looks)\*\* (?:auf die Karten|at the maps)[^\n]*\n[^\n]*\*\*(\d+) (?:davon unqualifiziert|of them unqualified)\*\*",
         ["./instrumente/zaehle-karten.py"],
         r"davon UNQUALIFIZIERT\s+(\d+)",
         "Blicke ohne Modulkandidaten -- jeder ein moegliches `M103`-Loch",
@@ -692,7 +700,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*(\d+) Zeilen Modell und Beweis\*\*",
+        r"\*\*(\d+) (?:Zeilen Modell und Beweis|lines of model and proof)\*\*",
         ["./instrumente/zaehle-theorien.py"],
         r"Modell \+ Beweis = (\d+) Zeilen",
         "die Haelfte, die einer Verus-Zeilenzahl gegenuebersteht",
@@ -718,7 +726,7 @@ EINTRAEGE = [
     ),
     (
         "dokumente/PLAN.md",
-        r"\| \*\*ZUSAGE ohne Leser\*\* \| \*\*(\d+)\*\*",
+        r"\| \*\*(?:ZUSAGE ohne Leser|ZUSAGE without a reader)\*\* \| \*\*(\d+)\*\*",
         ["./instrumente/pruefe-klauseln.py"],
         r"^\s+ZUSAGE\s+(\d+)\s",
         "ZUSAGE-Klauseln ohne Leser -- das Tor von «NL»",
@@ -750,7 +758,7 @@ EINTRAEGE = [
     ),
     (
         "dokumente/PLAN.md",
-        r"H = (\d+)        ueber den zehn Fragmenten kein Handbeweis mehr",
+        r"H = (\d+)\s+(?:ueber den zehn Fragmenten kein Handbeweis mehr|over the ten fragments no more hand proofs)",
         ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H im «NL»-Kasten",
@@ -835,7 +843,7 @@ EINTRAEGE = [
     # over one number are W7 -- while both stand, each gets its own command.
     (
         "dokumente/PLAN.md",
-        r"\*\*Heute steht dort (\d+)\*\*",
+        r"\*\*(?:Heute steht dort|Today it stands at) (\d+)\*\*",
         ["sh", "-c", "cargo run -q --bin gabbro -- annahmen beispiele/*.gab"],
         r"^-- (\d+) Annahmen",
         "Annahmen -- die Zahl im Fliesstext von K100",
@@ -852,14 +860,14 @@ EINTRAEGE = [
     # classifier.
     (
         "TODO.md",
-        r"stehen ~~\d+~~ (\d+) Sätze über \d+ von \d+ Pässen",
+        r"(?:stehen|stand) ~~\d+~~ (\d+) (?:Sätze über \d+ von \d+ Pässen|sentences over \d+ of \d+ passes)",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "paesse"],
         r"SENTENCES: (\d+) over \d+ passes",
         "Saetze ueber den Paessen -- Ausloeser 1 fuer Ziel 9",
     ),
     (
         "TODO.md",
-        r"Sätze über (\d+) von \d+ Pässen",
+        r"(?:Sätze über|Sentences over) (\d+) (?:von \d+ Pässen|of \d+ passes)",
         ["cargo", "run", "-q", "--bin", "gabbro", "--", "paesse"],
         r"SENTENCES: \d+ over (\d+) passes",
         "Paesse, ueber denen die Saetze stehen",

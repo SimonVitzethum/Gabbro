@@ -754,6 +754,19 @@ def main():
     print("   eine gute. Gemessen wird die SPRACHE, nicht der Inhalt.")
     print("   **Wer Bezeichner umbenennt, zieht `mutiere-pruefer.py` mit** -- seine 264")
     print("   Anker sind woertliche Quellzeilen, und `--anker` faellt sofort, wenn nicht.")
+    # **The evidence stands beside the verdict, not behind it.** Until 2026-09-12 the German
+    # sink hits were printed only on the path BELOW the ratchet verdicts -- so a broken
+    # comment ratchet (exit 1 above) hid the one German message the sink half had found.
+    # A red guardian that does not say WHERE is half a measurement (W17 in this file's
+    # own feeder half). The feeders printed only their last eight for the same reason.
+    if gefunden:
+        print("   Die deutschen Meldungen, je Stelle -- was die Ratsche unten zaehlt:")
+        for datei, zeile, woerter, text in gefunden:
+            print("     %s:%d  [%s]  %s" % (datei, zeile, ", ".join(woerter[:4]), text))
+    if zub_deutsch:
+        print("   Die deutschen Zubringer, alle -- was die Ratsche unten zaehlt:")
+        for datei, zeile, woerter, text in zub_deutsch:
+            print("     %s:%d  [%s]  %s" % (datei, zeile, ", ".join(woerter[:3]), text))
     if klebt and not gefunden:
         print("\n== LESBARKEIT: %d von %d Naehten kleben ==" % (len(klebt), naht_gesamt))
         print("   Dieselbe Klasse wie die 161 vom 2026-08-19 -- englisch und unlesbar.")
@@ -776,8 +789,7 @@ def main():
         print("\n  RATSCHE GEBROCHEN: %d deutsche Zubringer, gebucht sind %d."
               % (len(zub_deutsch), MARKE_ZUBRINGER))
         print("   Ein NEUER Weg, auf dem Text in eine Meldung gelangt, sieht genau so aus.")
-        for datei, zeile, woerter, text in zub_deutsch[-8:]:
-            print("     %s:%d  [%s]  %s" % (datei, zeile, ", ".join(woerter[:3]), text))
+        print("   (Die Stellen stehen oben -- hier steht nur das Urteil.)")
         ratsche = 1
     if len(gefunden) > MARKE_MELDUNGEN:
         print("\n  RATSCHE GEBROCHEN: %d deutsche Meldungen an einem Sink, gebucht sind %d."
@@ -791,8 +803,6 @@ def main():
         print("   %d Funktionswoertern. Was der Waechter nicht nennt, kann trotzdem" % len(DEUTSCH))
         print("   deutsch sein -- er verpflichtet, er spricht nicht frei (W10).")
         return 0
-    for datei, zeile, woerter, text in gefunden:
-        print("  %s:%d  [%s]  %s" % (datei, zeile, ", ".join(woerter[:4]), text))
     print("\n== ENGLISCH: %d von %d Meldungen sind deutsch ==" % (len(gefunden), gesamt))
     print("   Die Sprachflaeche von Gabbro ist englisch (SYNTAX.md, 2026-08-19).")
     print("   Quellkommentare und die Arbeitsdokumente sind es NICHT -- die Linie laeuft")

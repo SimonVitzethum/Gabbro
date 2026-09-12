@@ -230,7 +230,23 @@ HOMONYME = {
         "`Expr` der `invariant`-Klausel. `opsruf.rs`:382 baut daraus die `deklariert`-Karte "
         "fuer `kosten.rs`, `umgebung.rs`:549 setzt `cost_bound` einer Signatur -- beide auf "
         "`opsruf::koepfe(t)`, keiner auf einer `Invariante`. **Keine der beiden Dateien nennt "
-        "`Invariante` ueberhaupt.**",
+        "`Invariante` ueberhaupt.",
+    ),
+    # **`version` rose on 2026-09-12 and the rise is the same trap as `kosten`.**
+    #
+    # The only `.version` accesses in checker sources are `kostenledger.rs:226,229,456`,
+    # all on `Ledger` (`pub version: u32`, the format version of the cost ledger,
+    # compared in `Ledger::verify` and printed as `kosten-ledger v...`). The AST clause
+    # is `Format.version: Option<u128>` (`ast.rs:1599`, the `@version` of a format
+    # declaration). Different struct, different type, same field name -- and no pass
+    # names `Format` at all. Deleting the `TOT` entry instead (as the verdict below
+    # suggests) would un-book a clause no pass reads, over a ledger field.
+    "version": (
+        {"kostenledger.rs"},
+        "Ledger",
+        "`Ledger.version` is the format version of the cost ledger (`u32`); "
+        "`Format.version` is the `@version` of a format declaration "
+        "(`Option<u128>`). The three accesses are all on `Ledger`, none on a `Format`.",
     ),
 }
 
