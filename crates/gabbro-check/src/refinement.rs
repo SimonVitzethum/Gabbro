@@ -329,7 +329,9 @@ fn argument_term(a: &Expr, caller: &[CallerParam]) -> Result<String, Reason> {
         | ExprArt::Alt(_)
         // **«SG-24»: a count has no term in this theory** (`Main`, no cardinality
         // library) -- a `refines` head over one is refused by name, not defaulted.
+        // **Lane E1:** a library call has no term here either.
         | ExprArt::Zaehle { .. }
+        | ExprArt::LibraryCall(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
         | ExprArt::Unaer(_, _)
@@ -417,6 +419,15 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
                 | BinOp::SchiebRechts
                 | BinOp::Geteilt
                 | BinOp::Rest => return Err(Reason::NoTerm),
+                // PLAN-BITS section 4 (lane 88): the overflow operators are
+                // refused for the same reason as the bit operations -- this
+                // theory imports `Main`, and neither a modulo-2^N wrap nor a
+                // clamp has a term in it.
+                BinOp::PlusWrap
+                | BinOp::MinusWrap
+                | BinOp::MalWrap
+                | BinOp::SchiebLinksWrap
+                | BinOp::PlusSat => return Err(Reason::NoTerm),
             };
             Ok(format!(
                 "({}) {z} ({})",
@@ -428,6 +439,8 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::FnWert(_)
         | ExprArt::Ruf(_)
+        // **Lane E1:** a library call has no term in this theory either.
+        | ExprArt::LibraryCall(_)
         | ExprArt::Eingebaut(_)
         | ExprArt::Alt(_)
         | ExprArt::Ergebnis

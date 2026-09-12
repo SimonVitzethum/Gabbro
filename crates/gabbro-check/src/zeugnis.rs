@@ -208,6 +208,14 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Geloescht,
         grund: "stands as an assumption in the head of the artefact, not as code (SYNTAX.md 12)",
     },
+    Posten {
+        konstrukt: "syscall",
+        traegt: Traegt::Fremd,
+        grund: "the stub (inline `syscall` with the declared register binding) is \
+                GENERATED in lane S6; the other side -- the number, the errno table, \
+                the kept contract -- is the kernel's. Until S6 lands a unit carrying \
+                one is refused (`C001`), so this row books the promise, not a lowering",
+    },
     // -- Anweisungen -------------------------------------------------------------------
     Posten {
         konstrukt: "let",
@@ -447,6 +455,18 @@ pub const EINORDNUNG: &[Posten] = &[
                 (`option index into T` already does that -- W7), and the REASON leaves \
                 through an exit of its own, because `reason` values are handed out by people \
                 and no word is free for „no error\"",
+    },
+    // **Lane E1: booked, although nothing lowers it.** An entry without a
+    // lowering is harmless by this table's own contract; a lowering without
+    // an entry is `UNZUGEORDNET`. The checker refuses every library call
+    // (`N057`) until lane E2 checks it, so no C carries this mark yet --
+    // lane E2 re-books it with the lowering it brings.
+    Posten {
+        konstrukt: "library call",
+        traegt: Traegt::Fremd,
+        grund: "a run-time call of a function someone else provides (`N057` refuses \
+                every such call until lane E2 checks arguments, payload and \
+                contract) -- no prototype, no lowering, only the refusal",
     },
 ];
 
@@ -726,11 +746,51 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "check");
             block(&c.can_fail, &mut e, &geister);
         }
+        // **A `syscall` is a foreign body with an ABI binding** -- and the one
+        // line for which the word exists. It names the whole contract outward:
+        // the ABI table, the machine, the number, and the counterpart the call
+        // rests on. *A syscall without this line would be a foreign body the
+        // certificate hides.* The stub itself is lane S6's; until it lands the
+        // emitter refuses the unit, but the promise stands here first.
+        ItemArt::Syscall(s) => {
+            zaehle(&mut e, "syscall");
+            let gegenueber = match &s.paarung {
+                SyscallPaarung::Annahme { annahme, .. } => {
+                    format!("`assume {}` holds", annahme.text)
+                }
+                SyscallPaarung::Kernel { pfad } => {
+                    format!("paired with kernel `{}`", pfad.text())
+                }
+            };
+            e.fremde.push((
+                s.name.text.clone(),
+                format!(
+                    "SYSCALL under abi `{}` on `{}`, number {} -- {}; the errno \
+                     decoding is generated over the `or {}` channel",
+                    s.abi.text,
+                    s.arch.text,
+                    nummer_text(&s.nummer),
+                    gegenueber,
+                    s.fehler.as_ref().map(|r| r.text.as_str()).unwrap_or("-"),
+                ),
+            ));
+        }
         // **Kein Auffangzweig.** Ein Item, das hier nicht steht, ist keines, das der Erzeuger
         // stillschweigend mitnimmt — es faellt als `UNZUGEORDNET` auf.
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
     });
     e
+}
+
+/// The call number of a `syscall` as the certificate prints it: the literal
+/// where one stands, and the shape where a `constexpr` does. The checker does
+/// not evaluate it -- the stub (lane S6) reads the value, the certificate only
+/// names which declaration it came from.
+fn nummer_text(n: &Expr) -> String {
+    match &n.art {
+        ExprArt::Zahl(v) => v.to_string(),
+        _ => "constexpr".to_string(),
+    }
 }
 
 /// **Sagt diese Deklaration, was ihr Rumpf HERSTELLEN muss?**
@@ -795,6 +855,9 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Gruppe(_) => "group",
         // **Lane C, additive:** the new declaration reports its kind like every other.
         ItemArt::Concurrent(_) => "concurrent",
+        // **Lane S5, additive:** a `syscall` is refused at the emitter (`C001`),
+        // so the certificate books the kind and owes no lowering row for it.
+        ItemArt::Syscall(_) => "syscall",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
         ItemArt::Entry(_) => "entry",
@@ -810,6 +873,9 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Zuweisung(_) => zaehle(e, "assignment"),
             StmtArt::Return(_) => zaehle(e, "return"),
             StmtArt::Ruf(_) => zaehle(e, "call"),
+            // **Lane E1:** a library call is refused by the checker (`N057`)
+            // until lane E2 checks it -- the entry vouches nothing beyond that.
+            StmtArt::LibraryCall(_) => zaehle(e, "library call"),
             StmtArt::Wenn(w) => {
                 zaehle(e, "if");
                 for (_, r) in &w.zweige {

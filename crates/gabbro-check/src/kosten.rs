@@ -723,6 +723,21 @@ impl<'a> Rechner<'a> {
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
             StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),
+            // **Lane E1:** a library call has no callee and no `costs` promise
+            // until lane E2 checks it -- an unknown cost WITH A REASON, never
+            // zero, the same answer an indirect call without one gets.
+            StmtArt::LibraryCall(r) => {
+                let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
+                    a.plus(self.ausdruck(e, lokal))
+                });
+                args.plus(Kosten::Unbekannt(
+                    format!(
+                        "`@{}#{}` names no declared function, so the call declares no costs",
+                        r.library.text, r.function.text
+                    ),
+                    Some(r.span),
+                ))
+            }
             StmtArt::Narrow(n) => Kosten::Zahl(1).plus(groesser(
                 Kosten::Zahl(0),
                 self.block(&n.sonst, lokal),
@@ -873,6 +888,21 @@ impl<'a> Rechner<'a> {
                 }
             },
             ExprArt::Ruf(r) => self.ruf(r, lokal),
+            // **Lane E1:** a library call in binding position costs its
+            // arguments plus an unknown remainder -- no callee, no `costs`
+            // promise, the same answer the statement form gets.
+            ExprArt::LibraryCall(r) => {
+                let args = r.args.iter().fold(Kosten::Zahl(0), |a, e| {
+                    a.plus(self.ausdruck(e, lokal))
+                });
+                args.plus(Kosten::Unbekannt(
+                    format!(
+                        "`@{}#{}` names no declared function, so the call declares no costs",
+                        r.library.text, r.function.text
+                    ),
+                    Some(r.span),
+                ))
+            }
             // **«SG-24»: a count runs its predicate over the domain, once per entry.**
             //
             // Per entry the predicate plus one increment; the number of entries is the
@@ -985,6 +1015,20 @@ impl<'a> Rechner<'a> {
         if gabbro_syntax::kw::Kw::suche(&name).is_some_and(|k| k.ist_intty())
             || crate::aufrufgraph::zucker_umschreiben(&name).is_some()
         {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
+        }
+        // **Bit intrinsics (PLAN-BITS §3): a language primitive, not a callee,
+        // and the cost is fixed the way a conversion's is.** There is no
+        // declaration to carry a `costs` clause, so without this branch every
+        // `clz(x)` fell into `K003` -- true and unhelpful, since no declaration
+        // will ever name it (`namen.rs` refuses one as `N058`). One primitive
+        // op, `SPRACHE.md` §7's unit -- the emitted form is a single
+        // `__builtin_*` expression or one `gabbro_rot*` helper call
+        // (`emit.rs::ruf`), plus the cost of the arguments themselves.
+        if crate::ist_bitintrinsik(&name) {
             return r
                 .argumente
                 .iter()

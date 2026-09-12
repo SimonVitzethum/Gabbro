@@ -414,6 +414,7 @@ pub const SONDEN_MIT_PROGRAMM: &[&str] = &[
     "sonde_takt_verteiler",
     "sonde_tick",
     "sonde_tsc",
+    "sonde_write",
     "sonde_zaehle",
 ];
 

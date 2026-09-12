@@ -1466,6 +1466,15 @@ impl<'a> Pruefer<'a> {
                 let _ = self.ruf(r, lage);
                 self.rufe_toeten_fakten(&rufnamen_im_ruf(r), lage);
             }
+            // **Lane E1:** no callee and no contract -- the call itself is
+            // refused (`N057`). What remains for M1 is the arguments:
+            // ordinary expressions with ordinary diagnostics.
+            StmtArt::LibraryCall(r) => {
+                for a in &r.args {
+                    self.ausdruck(a, lage);
+                    self.rufe_im_ausdruck(a, lage);
+                }
+            }
             StmtArt::AwaitLoad(a) => {
                 let t = self.u.typ_von_ort(&self.modul, &a.quelle, &lage.lokal);
                 self.buche(&t);
@@ -1930,6 +1939,15 @@ impl<'a> Pruefer<'a> {
             // `old(x)` ist ein Geisterausdruck: er steht in `ensures`, nicht im Rumpf.
             ExprArt::Alt(_) => Typ::Unbekannt,
             ExprArt::Ruf(r) => self.ruf_roh(r, lage),
+            // **Lane E1:** a library call has no type until lane E2 checks
+            // it; its arguments are ordinary expressions, diagnosed where
+            // they stand. The call itself is refused (`N057`).
+            ExprArt::LibraryCall(r) => {
+                for a in &r.args {
+                    self.ausdruck(a, lage);
+                }
+                Typ::Unbekannt
+            }
             ExprArt::Eingebaut(_) => Typ::Unbekannt,
             ExprArt::Unaer(UnOp::Nicht, i) => {
                 let _ = self.ausdruck(i, lage);
@@ -2349,6 +2367,22 @@ impl<'a> Pruefer<'a> {
             }
         }
 
+        // **PLAN-BITS section 4 (lane 88): the overflow operators never take
+        // the width-overflow path below.** Wrapping is defined modulo 2^N on an
+        // exact unsigned range and saturating clamps into the shared operand
+        // range by construction -- there is no `M104` for either of them, only
+        // the exactness refusals `M153`/`M154` inside.
+        if matches!(
+            op,
+            BinOp::PlusWrap
+                | BinOp::MinusWrap
+                | BinOp::MalWrap
+                | BinOp::SchiebLinksWrap
+                | BinOp::PlusSat
+        ) {
+            return self.wrapping_or_saturating(op, &ba, &bb, span);
+        }
+
         let r = match op {
             BinOp::Plus => typen::addiere(&ba, &bb),
             BinOp::Minus => typen::subtrahiere(&ba, &bb),
@@ -2457,6 +2491,20 @@ impl<'a> Pruefer<'a> {
     }
 
     fn ruf_roh(&mut self, r: &Ruf, lage: &Lage) -> Typ {
+        // **Bit intrinsics (PLAN-BITS §3): seven single-segment call names the
+        // language claims.** Like the integer conversions below they are typed
+        // here rather than looked up as functions: there is no declaration, and
+        // a lookup would answer `Unbekannt` -- the compatible-with-everything
+        // exit that hid «B8». A labelled call (`clz(x: v)`) is NOT one: it falls
+        // through to `marken_pruefen`, which refuses labels at non-constructors
+        // (`M107`), the same sentence a labelled conversion gets.
+        if !r.ist_verbundwert() {
+            if let Some(einfach) = r.path().and_then(|p| p.einfach()) {
+                if crate::ist_bitintrinsik(&einfach.text) {
+                    return self.intrinsik_ruf(&einfach.text, r, lage);
+                }
+            }
+        }
         // **G9, repaired 2026-09-04 -- a call whose path names an integer type IS the
         // conversion.** `SYNTAX.md`:588 marks `primary` with `G9` -- no `cast` production -- and :656-659
         // gives the reason in full: *"a call whose path names a type IS the conversion --
@@ -2758,6 +2806,240 @@ impl<'a> Pruefer<'a> {
             _ => IntBereich::voll(breite, vorzeichen),
         };
         Typ::Ganzzahl(bereich)
+    }
+
+    /// **Bit intrinsics (PLAN-BITS §3): typing of the seven claimed calls.**
+    ///
+    /// The surface spells them per width until generics exist; the width here is
+    /// the operand's OWN `breite`, so no width is named twice and none can
+    /// disagree with the declaration. Ranges follow `PLAN-BITS.md` §3: the
+    /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M157`, with the
+    /// `narrow` remedy the task asks for); every operand must be an unsigned
+    /// standard width (`M158`/`M159`/`M160`); rotation needs the EXACT full
+    /// range and an amount in `0 .. w-1` (`M159`); `bswap` needs `u16`/`u32`/`u64`
+    /// (`M160`). Results are exact, never widened: `0 .. w-1` for the nonzero
+    /// group, `0 .. w` for `popcount`, the full range for rotation and swap.
+    ///
+    /// An `Unbekannt` (or `never`) operand stays silent: there is nothing to
+    /// hold against it, and inventing a width would be the `U10` defect again.
+    /// An EMPTY range does the same -- `M117` owns it at the declaration.
+    fn intrinsik_ruf(&mut self, name: &str, r: &Ruf, lage: &Lage) -> Typ {
+        let will = match name {
+            "rotl" | "rotr" => 2,
+            _ => 1,
+        };
+        if r.argumente.len() != will {
+            let code = match name {
+                "rotl" | "rotr" => "M159",
+                "bswap" => "M160",
+                _ => "M158",
+            };
+            self.absagen.schiebe(
+                Absage::fehler(
+                    code,
+                    r.span,
+                    format!(
+                        "`{name}` takes {will} argument(s), this call passes {}",
+                        r.argumente.len()
+                    ),
+                )
+                .mit_notiz(
+                    "an intrinsic is a fixed form, not a declared function -- the form counts its \
+                     operands, and a value beyond them is a statement about nothing the lowering \
+                     could keep",
+                ),
+            );
+            return Typ::Unbekannt;
+        }
+        let mut argtypen = Vec::new();
+        for a in &r.argumente {
+            argtypen.push((self.ausdruck(a, lage), a.span));
+        }
+        let code = match name {
+            "rotl" | "rotr" => "M159",
+            "bswap" => "M160",
+            _ => "M158",
+        };
+        let (b, _span) = match self.intrinsik_bereich(&argtypen[0].0, argtypen[0].1, name, code, "operand") {
+            Some(x) => x,
+            None => return Typ::Unbekannt,
+        };
+        let w = b.breite;
+        match name {
+            "clz" | "ctz" | "log2_floor" => {
+                if b.min < 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M157",
+                            argtypen[0].1,
+                            format!(
+                                "`{name}` needs an operand whose range excludes zero, \
+                                 and `{}` does not",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "SPRACHE.md §3: like a divisor, the argument must exclude \
+                             zero -- the lowering reaches `__builtin_clz/ctz`, whose \
+                             zero case is undefined",
+                        )
+                        .mit_notiz(
+                            "the caller relies on the result lying in `0 .. w-1` -- \
+                             with zero admitted, `31 - clz(x)` leaves the range the \
+                             checker promised, and the index derivation breaks on \
+                             exactly that case",
+                        )
+                        .mit_notiz(
+                            "a check `if x >= 1 { … }` narrows it (V1), otherwise \
+                             `narrow x to 1 .. … else { … }`",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::genau(w, false, 0, w as i128 - 1))
+            }
+            "popcount" => Typ::Ganzzahl(IntBereich::genau(w, false, 0, w as i128)),
+            "rotl" | "rotr" => {
+                if b.min != 0 || b.max != (1i128 << w) - 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M159",
+                            argtypen[0].1,
+                            format!(
+                                "`{name}` rotates a whole word and needs the exact \
+                                 full range `u{w} in 0 .. {}, and `{}` is not it",
+                                (1i128 << w) - 1,
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "rotation has no width except the operand's own -- on a \
+                             narrowed range the wrap point is ambiguous, and an \
+                             ambiguous wrap is a guess dressed as a proof; the \
+                             caller relies on getting the whole word back",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                let (c, cspan) =
+                    match self.intrinsik_bereich(&argtypen[1].0, argtypen[1].1, name, "M159", "amount") {
+                        Some(x) => x,
+                        None => return Typ::Unbekannt,
+                    };
+                if c.min < 0 || c.max > w as i128 - 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M159",
+                            cspan,
+                            format!(
+                                "`{name}` needs an amount in `0 .. {}`, and `{}` is not",
+                                w as i128 - 1,
+                                c.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a shift by the width or more is undefined in C -- the \
+                             amount is typed like a divisor, and `narrow` narrows it",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::voll(w, false))
+            }
+            _ => {
+                if !matches!(w, 16 | 32 | 64) {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M160",
+                            argtypen[0].1,
+                            format!(
+                                "`bswap` reverses whole bytes and needs `u16`, `u32` \
+                                 or `u64`, and `{}` is none of them",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a one-byte value has no byte order to reverse -- write \
+                             the value itself",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::voll(w, false))
+            }
+        }
+    }
+
+    /// The integer range of an intrinsic operand: unsigned, standard width, known.
+    ///
+    /// Returns the range and the span it was read at. `None` is the honest exit:
+    /// `Unbekannt`/`never` stay silent (nothing to hold), an empty range is
+    /// `M117`'s at the declaration, and every other shape falls at `code`.
+    fn intrinsik_bereich(
+        &mut self,
+        t: &Typ,
+        span: Span,
+        name: &str,
+        code: &'static str,
+        was: &str,
+    ) -> Option<(IntBereich, Span)> {
+        if let Typ::Benannt { undurchsichtig: true, name: bn, .. } = t.durchgreifen() {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "D003",
+                    span,
+                    format!("`{bn}` is opaque -- it does not have the arithmetic of its carrier"),
+                )
+                .mit_notiz(
+                    "bit intrinsics read the carrier's bits, and an `opaque type` \
+                     says exactly that its carrier is hidden",
+                ),
+            );
+            return None;
+        }
+        let Some(b) = t.bereich() else {
+            if !matches!(t.durchgreifen(), Typ::Unbekannt | Typ::Nie) {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        code,
+                        span,
+                        format!(
+                            "`{name}` takes an unsigned integer {was}, and this one \
+                             has type `{}`",
+                            t.text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "only `u8`, `u16`, `u32` and `u64` (or the `uN` sugar over them) carry bits -- \
+                         a truth value, a pointer or a float has none to count, and counting is a \
+                         statement about the operand's bit pattern",
+                    ),
+                );
+            }
+            return None;
+        };
+        if b.ist_leer() {
+            return None;
+        }
+        if b.vorzeichen || !matches!(b.breite, 8 | 16 | 32 | 64) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    code,
+                    span,
+                    format!(
+                        "`{name}` takes an unsigned standard width (`u8`, `u16`, \
+                         `u32`, `u64`), and `{}` is not one",
+                        b.text()
+                    ),
+                )
+                .mit_notiz(
+                    "a signed operand has no unsigned bit pattern to read -- convert \
+                     it first, where the conversion's own rule (`M144`/`M145`) holds",
+                ),
+            );
+            return None;
+        }
+        Some((b, span))
     }
 
     /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**
@@ -3782,6 +4064,12 @@ impl<'a> Pruefer<'a> {
                 }
             }
         }
+        // **Lane E1:** the arguments of a library call decide like any call's.
+        if let StmtArt::LibraryCall(r) = &s.art {
+            for a in &r.args {
+                self.frische_verweigere(a, lage);
+            }
+        }
         // An index decides which cell is meant -- everywhere, including stores.
         // The indexed place's own basis travels as the enclosing index carrier,
         // so an index into a disjoint carrier is excused here exactly as it is
@@ -4522,6 +4810,196 @@ impl<'a> Pruefer<'a> {
             .mit_notiz(
                 "a check before it narrows the range (V1), a relation between two places \
                     carries too (V2)",
+            ),
+        );
+    }
+
+    /// **PLAN-BITS section 4 (lane 88): the overflow operators.**
+    ///
+    /// Wrapping (`+%`, `-%`, `*%`, `<<%`) lives only on an exact unsigned range
+    /// `0 .. 2^N - 1` and answers that range; saturating (`+|`) lives on one
+    /// shared integer range and answers it, clamped. Neither ever takes the
+    /// `M104` width path -- a wrap is defined modulo 2^N and a clamp fits its
+    /// interval by construction. What fails here is exactness (`M153`) or
+    /// sharedness (`M154`), never width.
+    ///
+    /// A literal operand has no range of its own: it takes the other's exact
+    /// range when its value lies in it (the `M153`/`M154` sentences say so).
+    /// Two literals wrap in their common width and saturate to their exact sum.
+    fn wrapping_or_saturating(
+        &mut self,
+        op: BinOp,
+        ba: &IntBereich,
+        bb: &IntBereich,
+        span: Span,
+    ) -> Typ {
+        if op == BinOp::PlusSat {
+            return self.saturating(ba, bb, span);
+        }
+        if op == BinOp::SchiebLinksWrap {
+            return self.wrapping_shift(ba, bb, span);
+        }
+        let Some((width, signed)) = typen::gemeinsame_form(ba, bb) else {
+            return Typ::Unbekannt;
+        };
+        if signed {
+            self.wrapping_refused(span, ba, bb, op_zeichen(op));
+            return Typ::Unbekannt;
+        }
+        let na = if ba.literal {
+            None
+        } else {
+            typen::exact_wrap_n(ba)
+        };
+        let nb = if bb.literal {
+            None
+        } else {
+            typen::exact_wrap_n(bb)
+        };
+        let n = match (na, nb) {
+            (Some(x), Some(y)) if x == y => x,
+            (Some(x), None)
+                if bb.literal && bb.min >= 0 && bb.max <= ((1i128 << x) - 1) =>
+            {
+                x
+            }
+            (None, Some(y))
+                if ba.literal && ba.min >= 0 && ba.max <= ((1i128 << y) - 1) =>
+            {
+                y
+            }
+            // Two literals: no declared range anywhere, so the common width is
+            // the modulus -- both values have to lie in it.
+            (None, None)
+                if ba.literal
+                    && bb.literal
+                    && ba.min >= 0
+                    && bb.min >= 0
+                    && ba.max <= ((1i128 << width) - 1)
+                    && bb.max <= ((1i128 << width) - 1) =>
+            {
+                width as u32
+            }
+            _ => {
+                self.wrapping_refused(span, ba, bb, op_zeichen(op));
+                return Typ::Unbekannt;
+            }
+        };
+        if n == 0 || n as u8 > width {
+            self.wrapping_refused(span, ba, bb, op_zeichen(op));
+            return Typ::Unbekannt;
+        }
+        Typ::Ganzzahl(IntBereich::genau(width, false, 0, (1i128 << n) - 1))
+    }
+
+    /// Wrapping dynamic left shift: the value side is exact unsigned, the amount
+    /// side only has to lie below the bit count -- like `schiebe_links`, but
+    /// against `N` instead of the storage width (PLAN-BITS section 2: the amount
+    /// is in the type; `Zahl.shlW` takes it as `Zahl 0 w`).
+    fn wrapping_shift(&mut self, ba: &IntBereich, bb: &IntBereich, span: Span) -> Typ {
+        let n = if ba.literal {
+            let (width, signed) = (ba.breite, ba.vorzeichen);
+            if signed || ba.min < 0 || ba.max > ((1i128 << width) - 1) {
+                self.wrapping_refused(span, ba, bb, op_zeichen(BinOp::SchiebLinksWrap));
+                return Typ::Unbekannt;
+            }
+            width as u32
+        } else {
+            match typen::exact_wrap_n(ba) {
+                Some(n) if !ba.vorzeichen && n as u8 <= ba.breite => n,
+                _ => {
+                    self.wrapping_refused(span, ba, bb, op_zeichen(BinOp::SchiebLinksWrap));
+                    return Typ::Unbekannt;
+                }
+            }
+        };
+        if bb.min < 0 || bb.max >= n as i128 {
+            // The amount leaves `0 .. N-1`: the same width refusal a plain shift
+            // gets from `schiebe_links`, at the operation and not at the use.
+            self.ueberlauf_ausdruck(span, ba, bb, op_zeichen(BinOp::SchiebLinksWrap));
+        }
+        Typ::Ganzzahl(IntBereich::genau(ba.breite, false, 0, (1i128 << n) - 1))
+    }
+
+    /// Saturating addition: one shared integer range in, the same range clamped
+    /// out. Signed or unsigned, any interval -- the clamp is what makes it total.
+    fn saturating(&mut self, ba: &IntBereich, bb: &IntBereich, span: Span) -> Typ {
+        let Some((width, signed)) = typen::gemeinsame_form(ba, bb) else {
+            return Typ::Unbekannt;
+        };
+        let (lo, hi) = match (ba.literal, bb.literal) {
+            (true, true) => match ba.min.checked_add(bb.min) {
+                Some(s) if ba.min == ba.max && bb.min == bb.max => (s, s),
+                _ => return Typ::Unbekannt,
+            },
+            (true, false) => (bb.min, bb.max),
+            (false, true) => (ba.min, ba.max),
+            (false, false) => {
+                if ba.min != bb.min || ba.max != bb.max {
+                    self.saturation_refused(span, ba, bb);
+                    return Typ::Unbekannt;
+                }
+                (ba.min, ba.max)
+            }
+        };
+        let out = IntBereich::genau(width, signed, lo, hi);
+        if !out.passt_in_die_breite() {
+            // Only the two-literals corner reaches here with a range of its own
+            // making: a declared range that already leaves its width falls at
+            // its declaration, long before this operation reads it.
+            self.ueberlauf_ausdruck(span, ba, bb, op_zeichen(BinOp::PlusSat));
+        }
+        Typ::Ganzzahl(out)
+    }
+
+    /// **`M153` -- wrapping needs a power-of-two range.**
+    fn wrapping_refused(&mut self, span: Span, a: &IntBereich, b: &IntBereich, zeichen: &str) {
+        let mut absage = Absage::fehler(
+            "M153",
+            span,
+            format!(
+                "wrapping `{zeichen}` needs both sides on an exact unsigned range \
+                 `0 .. 2^N - 1`, found `{}` and `{}`",
+                a.text(),
+                b.text()
+            ),
+        );
+        if a.vorzeichen || b.vorzeichen {
+            absage = absage.mit_notiz(
+                "wrapping is unsigned-only: signed overflow is undefined in C, \
+                 and the conversion back from unsigned is implementation-defined \
+                 (PLAN-BITS.md section 5b)",
+            );
+        } else {
+            absage = absage.mit_notiz(
+                "on a range like `0 .. 5` wrapping is ambiguous (mod 6 costs a \
+                 division per operation), so it is not derivable there \
+                 (PLAN-BITS.md section 4)",
+            );
+        }
+        absage = absage.mit_notiz(
+            "saturating `+|` clamps into the shared range instead and works on \
+             every integer range",
+        );
+        self.absagen.schiebe(absage);
+    }
+
+    /// **`M154` -- saturating needs one shared range.**
+    fn saturation_refused(&mut self, span: Span, a: &IntBereich, b: &IntBereich) {
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M154",
+                span,
+                format!(
+                    "saturating `+|` needs one shared integer range to clamp into, \
+                     found `{}` and `{}`",
+                    a.text(),
+                    b.text()
+                ),
+            )
+            .mit_notiz(
+                "narrow both sides to one range first (`narrow … to … else { … }`); \
+                 a literal takes the other's range",
             ),
         );
     }
@@ -5527,6 +6005,9 @@ fn enthaelt_ruf(e: &Expr) -> bool {
         ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
             .into_iter()
             .any(enthaelt_ruf),
+        // **Lane E1:** a call inside the arguments of a library call kills
+        // facts like any other call.
+        ExprArt::LibraryCall(r) => r.args.iter().any(enthaelt_ruf),
         _ => false,
     }
 }
@@ -5804,6 +6285,14 @@ fn op_zeichen(op: BinOp) -> &'static str {
         BinOp::Mal => "*",
         BinOp::Geteilt => "/",
         BinOp::Rest => "%",
+        // PLAN-BITS section 4 (lane 88): the overflow spellings, quoted the way
+        // the source wrote them -- held to the same answer as the other two
+        // tables by `op_zeichen_sagt_dasselbe_wie_fremdverengung` below.
+        BinOp::PlusWrap => "+%",
+        BinOp::MinusWrap => "-%",
+        BinOp::MalWrap => "*%",
+        BinOp::SchiebLinksWrap => "<<%",
+        BinOp::PlusSat => "+|",
         BinOp::SchiebLinks => "<<",
         BinOp::SchiebRechts => ">>",
         BinOp::BitUnd => "&",
@@ -6310,6 +6799,11 @@ mod operatortafel {
             BinOp::Mal,
             BinOp::Geteilt,
             BinOp::Rest,
+            BinOp::PlusWrap,
+            BinOp::MinusWrap,
+            BinOp::MalWrap,
+            BinOp::SchiebLinksWrap,
+            BinOp::PlusSat,
         ];
         for op in alle {
             assert_eq!(op_zeichen(op), crate::fremdverengung::zeichen(op), "{op:?}");

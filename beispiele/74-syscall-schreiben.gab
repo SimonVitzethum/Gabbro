@@ -1,0 +1,51 @@
+-- 74 -- the user side of a system call, declared and called.
+--
+-- A `syscall` declaration after lane S5: the ABI binding (`abi`/`arch`/`number`),
+-- the register map, the total errno decoding over the `or IoError` channel, the
+-- contract, and the named per-call assumption with its falsifier. The call site
+-- below reads it exactly like an `extern fn` -- argument count and types, the
+-- `let … else` the `or` channel demands, the declared effects in the caller's
+-- hull, and no lock owed because the declaration touches none.
+--
+-- The stub template is lane S6's: this file checks clean and falls only at the
+-- emitter (`C001`, pinned by `gift/797`).
+
+module beispiel::syscall_schreiben {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    WouldBlock  = 11 "the descriptor is non-blocking and the write would block"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64, len : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    requires len <= 1024
+    ensures result <= len
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+-- The call: `let … else` because the callee can fail, and nothing else owed.
+impl fn schreibe(fd : u64, len : u64) -> u64
+    effects { pure }
+{
+    let n = write(fd, len) else (e) {
+        match e {
+            BadFd       => { return 0; }
+            Interrupted => { return 0; }
+            WouldBlock  => { return 0; }
+        }
+    }
+    return n;
+}
+
+}

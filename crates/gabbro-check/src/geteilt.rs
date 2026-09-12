@@ -367,6 +367,14 @@ pub fn pass_mit(
                     }
                 }
             }
+            // **A `syscall` at the call boundary (lane 86): body-less by
+            // construction, so its declared `reads`/`writes` places owe the
+            // protecting lock HELD at every call site -- the same snapshot as
+            // for an `extern fn`, read from the declaration.**
+            if let ItemArt::Syscall(s) = &item.art {
+                let fe = FremdEffekte::aus_syscall(s, modul);
+                fremd.insert(crate::umgebung::qualifiziere(modul, &s.name.text), fe);
+            }
         });
         crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
             let ItemArt::Funktion(f) = &item.art else { return };
@@ -1624,6 +1632,35 @@ impl FremdEffekte {
                 .map(|p| (p.name.text.clone(), p.typ.clone()))
                 .collect(),
         })
+    }
+
+    /// **A `syscall` is body-less by construction.** Its declared `reads`/`writes`
+    /// places owe the protecting lock HELD at the call site, exactly like an
+    /// `extern fn`'s -- the same snapshot, read from the declaration instead of
+    /// an `FnDecl`. The effects clause is mandatory in the grammar, so this
+    /// always yields a snapshot, never `None`.
+    fn aus_syscall(s: &SyscallDecl, modul: &str) -> FremdEffekte {
+        let mut plaetze = Vec::new();
+        let mut nimmt = Vec::new();
+        for e in &s.effects.liste {
+            match &e.art {
+                WirkungArt::Liest(o) => plaetze.push((e.art.text(), o.text(), false)),
+                WirkungArt::Schreibt(o) => plaetze.push((e.art.text(), o.text(), true)),
+                WirkungArt::Sperrt(o) => nimmt.push((o.text(), false)),
+                WirkungArt::SperrtGeteilt(o) => nimmt.push((o.text(), true)),
+                _ => {}
+            }
+        }
+        FremdEffekte {
+            plaetze,
+            nimmt,
+            modul: modul.to_string(),
+            parameter: s
+                .parameter
+                .iter()
+                .map(|p| (p.name.text.clone(), p.typ.clone()))
+                .collect(),
+        }
     }
 }
 

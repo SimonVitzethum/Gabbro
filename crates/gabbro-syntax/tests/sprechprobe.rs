@@ -367,30 +367,71 @@ fn modul_mit_strichpunkt_nennt_den_rumpf() {
     faellt_mit_notiz("module m;", "P001", "`module` carries a brace body");
 }
 
-// -- «SS-1» (2026-09-12): `syscall` is specified and refused by name ----------------------
-//
-// **One test, three directions.** A `syscall …` item falls with EXACTLY the named
-// diagnostic -- a controlled refusal, never a crash and never silent acceptance.
-// And the entry name `syscall` stays legal: `entry syscall …` is an identifier
-// at a name position (`ctx`), not the header word.
+// -- Lane E1: library calls ------------------------------------------------------------
+// `@library#function ( args ) { region }` parses in statement position; the
+// reader captures names, arguments and the brace-balanced region without
+// interpreting it. (The checker says `N057`; this crate never refuses what it
+// can read.)
+
 #[test]
-fn syscall_faellt_mit_einem_namen() {
-    // The refusal: exactly one error, and it is `P042`.
-    let quelle = "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
-                  regs in { rdi = fd } regs out { rax } clobbers { rcx } \
-                  errors { EBADF => BadFd } effects { pure } \
-                  assume linux_write_contract falsifier probe_write;";
-    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
-    let fehler: Vec<_> = absagen
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .collect();
-    assert_eq!(
-        fehler.iter().map(|a| a.code).collect::<Vec<_>>(),
-        vec!["P042"],
-        "a `syscall` item falls with exactly one diagnostic:\n{quelle}\n{}",
+fn library_call_reads_names_args_and_region() {
+    let quelle = "module t { impl fn f(a : u32) -> u32 effects { pure } costs <= 8 ops \
+                  { @spirv#kernel(a) { dispatch { nested } 0 }; return a; } }";
+    let (baum, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    assert!(
+        !absagen.absagen.iter().any(|a| a.stufe == Stufe::Fehler),
+        "a well-formed library call parses:\n{}",
         absagen.zeige(quelle)
+    );
+    let gabbro_syntax::ast::ItemArt::Modul(m) = &baum.items[0].art else {
+        panic!("a module parses as a module");
+    };
+    let gabbro_syntax::ast::ItemArt::Funktion(f) = &m.items[0].art else {
+        panic!("a function parses as a function");
+    };
+    let gabbro_syntax::ast::FnRumpf::Block(b) = &f.rumpf else {
+        panic!("a body parses as a block");
+    };
+    let gabbro_syntax::ast::StmtArt::LibraryCall(r) = &b.anweisungen[0].art else {
+        panic!("a library call parses as a library call");
+    };
+    assert_eq!(r.library.text, "spirv");
+    assert_eq!(r.function.text, "kernel");
+    assert_eq!(r.args.len(), 1);
+    // The region is raw tokens: nested braces balanced, nothing interpreted.
+    let rohtexte: Vec<&str> = r.region.iter().map(|t| t.text.as_str()).collect();
+    assert_eq!(rohtexte, vec!["dispatch", "{", "nested", "}", "0"]);
+}
+
+// -- «SS-1» (2026-09-12), built in lane S5: `syscall` parses -------------------------
+//
+// **One declaration, three directions.** A `syscall …` item reads into
+// `SyscallDecl` -- the `=` binding of the written examples and the `:` binding
+// of the §1 production line both. And the entry name `syscall` stays legal:
+// `entry syscall …` is an identifier at a name position (`ctx`), not the header
+// word.
+#[test]
+fn syscall_wird_gelesen() {
+    // The written shape: `=` bindings, bare out registers, `=>` error arms.
+    faellt_nicht(
+        "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+         regs in { rdi = fd } regs out { rax } clobbers { rcx } \
+         errors { EBADF => BadFd } effects { pure } \
+         assume linux_write_contract falsifier probe_write;",
+    );
+    // The §1 production line spells the binding with `:` -- it reads too.
+    faellt_nicht(
+        "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+         regs in { rdi : fd } regs out { rax } clobbers { rcx } \
+         errors { EBADF => BadFd } effects { pure } \
+         assume linux_write_contract falsifier probe_write;",
+    );
+    // The `kernel` counterpart reads too (the checker refuses it as `N068`).
+    faellt_nicht(
+        "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+         regs in { rdi = fd } regs out { rax } clobbers { rcx } \
+         errors { EBADF => BadFd } effects { pure } \
+         kernel k::dispatch;",
     );
     // The name stays free: `entry syscall …` names an entry, not a syscall.
     faellt_nicht(

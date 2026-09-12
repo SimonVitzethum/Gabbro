@@ -830,6 +830,13 @@ const fn zeichen(op: BinOp) -> &'static str {
         BinOp::Mal => "*",
         BinOp::Geteilt => "/",
         BinOp::Rest => "%",
+        // PLAN-BITS section 4 (lane 88): the overflow spellings -- see
+        // `fremdverengung::zeichen` for why three tables say one thing.
+        BinOp::PlusWrap => "+%",
+        BinOp::MinusWrap => "-%",
+        BinOp::MalWrap => "*%",
+        BinOp::SchiebLinksWrap => "<<%",
+        BinOp::PlusSat => "+|",
     }
 }
 
@@ -869,6 +876,11 @@ mod operatortafeln {
         BinOp::Mal,
         BinOp::Geteilt,
         BinOp::Rest,
+        BinOp::PlusWrap,
+        BinOp::MinusWrap,
+        BinOp::MalWrap,
+        BinOp::SchiebLinksWrap,
+        BinOp::PlusSat,
     ];
 
     #[test]

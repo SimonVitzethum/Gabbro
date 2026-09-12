@@ -56,6 +56,11 @@ pub mod tearing;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
+/// **The `syscall` declaration (PLAN-SYSCALL.md, lane S5).** The register map,
+/// the errno decoding and the machine/counterpart questions -- the call
+/// boundary reuses the `extern` path through `Umgebung`, the call graph and
+/// `H007`, so this module holds only the declaration itself.
+pub mod syscall;
 /// **«T1» -- the fixpoint over the BODIES**, as against the hull over the declarations in
 /// `aufrufgraph`. See the module head: a derivation that takes a callee's *declared* effects
 /// covers up exactly the error it is meant to find.
@@ -75,6 +80,20 @@ pub mod umgebung;
 
 pub use m1::Zaehlung;
 pub use kosten::Zaehlung as Kostenzaehlung;
+
+/// **Bit intrinsics (PLAN-BITS §3, surface half): the seven claimed call names.
+///
+/// One predicate, read at every site that treats a call by name (`m1.rs` typing,
+/// `kosten.rs` cost, `aufrufgraph.rs` hull, `emit.rs` lowering, `namen.rs`
+/// declaration refusal): seven spellings, one claim. Only the BARE name matches --
+/// a qualified path (`m::clz`) is an ordinary call, and the `Ruf` name helper
+/// compares the last segment only, so no site may use it for this question.
+pub fn ist_bitintrinsik(name: &str) -> bool {
+    matches!(
+        name,
+        "clz" | "ctz" | "log2_floor" | "popcount" | "rotl" | "rotr" | "bswap"
+    )
+}
 // **Die Zusage eines fremden Rumpfes, als Tatsache im Pruefer** -- der EINE Leser der Frage
 // „verengt diese `ensures`-Klausel, und wie?", und die Buchung der Stellen, an denen sie es
 // getan hat. M1 nimmt den Typ, das Zeugnis nimmt die Stellen.
@@ -391,6 +410,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("bindung", bindung::pass(baum, absagen));
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
+        z!("syscall", syscall::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
@@ -422,6 +442,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // about the artefact, not about the semantics of the call.
     gatter::pass(baum, absagen);
     kbedingung::pass(baum, absagen);
+    // **Directly behind the name-adjacent passes.** The syscall declaration is
+    // declaration-level like `entry`/`entrust`: its own shape is held here, and
+    // every body pass below reads it through the shared maps.
+    syscall::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
@@ -583,6 +607,15 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
                 typ(e, f);
             }
         }
+        // **A `syscall` declares parameter and result types like an `fn`.**
+        ItemArt::Syscall(d) => {
+            for p in &d.parameter {
+                typ(&p.typ, f);
+            }
+            if let Some(e) = &d.ergebnis {
+                typ(e, f);
+            }
+        }
         ItemArt::Konst(d) => typ(&d.typ, f),
         ItemArt::Statisch(d) => typ(&d.typ, f),
         ItemArt::Atomic(d) => typ(&d.typ, f),
@@ -694,7 +727,8 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
         | StmtArt::Return(_)
-        | StmtArt::Ruf(_) => Vec::new(),
+        | StmtArt::Ruf(_)
+        | StmtArt::LibraryCall(_) => Vec::new(),
     }
 }
 
@@ -727,6 +761,10 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
             Schleife::Retry(_) | Schleife::Forever(_) => Vec::new(),
         },
         // `let x = f() else …` trägt seinen Ruf in der Quelle, nicht in einem `Expr`.
+        // A library call in statement position carries its arguments the same
+        // way: every pass that walks `eigene_ausdruecke` sees them, so a call
+        // inside them stays visible to the effect hull, the costs and the graph.
+        StmtArt::LibraryCall(r) => r.args.iter().collect(),
         StmtArt::LetSonst(_)
         | StmtArt::Ruf(_)
         | StmtArt::Bricht(_)
@@ -805,6 +843,7 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         | StmtArt::Wenn(_)
         | StmtArt::Match(_)
         | StmtArt::Ruf(_)
+        | StmtArt::LibraryCall(_)
         | StmtArt::Bricht(_)
         | StmtArt::Narrow(_)
         | StmtArt::Sperrt(_)
@@ -897,6 +936,13 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
             }
         }
         ItemArt::Axiom(a) => aus.extend(a.requires.iter()),
+        // **A `syscall` carries `requires`/`ensures` like an `fn`.** No body to
+        // walk -- the body is the machine -- but the contract clauses are
+        // predicate positions like any other.
+        ItemArt::Syscall(s) => {
+            aus.extend(s.requires.iter());
+            aus.extend(s.ensures.iter());
+        }
         ItemArt::Check(c) => {
             aus.extend(c.floor.iter());
             praedikate_im_block(&c.can_fail, &mut aus);
@@ -1043,6 +1089,9 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         // **Ein Ort trägt Ausdrücke** — in jedem `[…]`. Das war die eine vergessene Kante.
         ExprArt::Ort(o) | ExprArt::Alt(o) => aus.extend(ausdruecke_im_ort(o)),
         ExprArt::Ruf(r) => aus.extend(r.argumente.iter()),
+        // **Lane E1:** the arguments of a library call are evaluated like any
+        // call's; the region is raw tokens, not expressions, and stays out.
+        ExprArt::LibraryCall(r) => aus.extend(r.args.iter()),
         // **«SG-24»: a count carries its predicate** -- the expressions the predicate
         // reads are read here too, or `effects { pure }` would cover a `count` over
         // foreign writes (same class as the `Folgt`/`Quantor` hole of 2026-08-20).
@@ -1145,6 +1194,8 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             // gezaehlt, die es gar nicht gibt.
             | ExprArt::Grund { .. }
             | ExprArt::Ruf(_)
+            // **Lane E1:** a library call is itself no place.
+            | ExprArt::LibraryCall(_)
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
             | ExprArt::Binaer(_, _, _)
@@ -1238,6 +1289,9 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         | StmtArt::Zuweisung(_)
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
+        // **Lane E1:** a library call returns to its caller -- until lane E2
+        // checks the call there is no callee whose divergence could be read.
+        | StmtArt::LibraryCall(_)
         | StmtArt::Exchange(_) => false,
     }
 }
