@@ -208,6 +208,14 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Geloescht,
         grund: "stands as an assumption in the head of the artefact, not as code (SYNTAX.md 12)",
     },
+    Posten {
+        konstrukt: "syscall",
+        traegt: Traegt::Fremd,
+        grund: "the stub (inline `syscall` with the declared register binding) is \
+                GENERATED in lane S6; the other side -- the number, the errno table, \
+                the kept contract -- is the kernel's. Until S6 lands a unit carrying \
+                one is refused (`C001`), so this row books the promise, not a lowering",
+    },
     // -- Anweisungen -------------------------------------------------------------------
     Posten {
         konstrukt: "let",
@@ -726,11 +734,51 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             zaehle(&mut e, "check");
             block(&c.can_fail, &mut e, &geister);
         }
+        // **A `syscall` is a foreign body with an ABI binding** -- and the one
+        // line for which the word exists. It names the whole contract outward:
+        // the ABI table, the machine, the number, and the counterpart the call
+        // rests on. *A syscall without this line would be a foreign body the
+        // certificate hides.* The stub itself is lane S6's; until it lands the
+        // emitter refuses the unit, but the promise stands here first.
+        ItemArt::Syscall(s) => {
+            zaehle(&mut e, "syscall");
+            let gegenueber = match &s.paarung {
+                SyscallPaarung::Annahme { annahme, .. } => {
+                    format!("`assume {}` holds", annahme.text)
+                }
+                SyscallPaarung::Kernel { pfad } => {
+                    format!("paired with kernel `{}`", pfad.text())
+                }
+            };
+            e.fremde.push((
+                s.name.text.clone(),
+                format!(
+                    "SYSCALL under abi `{}` on `{}`, number {} -- {}; the errno \
+                     decoding is generated over the `or {}` channel",
+                    s.abi.text,
+                    s.arch.text,
+                    nummer_text(&s.nummer),
+                    gegenueber,
+                    s.fehler.as_ref().map(|r| r.text.as_str()).unwrap_or("-"),
+                ),
+            ));
+        }
         // **Kein Auffangzweig.** Ein Item, das hier nicht steht, ist keines, das der Erzeuger
         // stillschweigend mitnimmt — es faellt als `UNZUGEORDNET` auf.
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
     });
     e
+}
+
+/// The call number of a `syscall` as the certificate prints it: the literal
+/// where one stands, and the shape where a `constexpr` does. The checker does
+/// not evaluate it -- the stub (lane S6) reads the value, the certificate only
+/// names which declaration it came from.
+fn nummer_text(n: &Expr) -> String {
+    match &n.art {
+        ExprArt::Zahl(v) => v.to_string(),
+        _ => "constexpr".to_string(),
+    }
 }
 
 /// **Sagt diese Deklaration, was ihr Rumpf HERSTELLEN muss?**

@@ -1,0 +1,25 @@
+-- erwartet: N004
+-- **Gift 813 -- a syscall names an assumption nobody declared.**
+--
+-- `nirgends_erklaert` stands in no `assume` and no `axiom`. The per-call
+-- assumption is a clause that names something, so it names something this unit
+-- declares -- the same rule an `entrust` answers to (`N004`), asked of the
+-- declaration instead of the guest.
+
+module gift::syscall_annahme_nirgends {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+syscall ins_leere(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume nirgends_erklaert falsifier sonde_nirgends;
+
+}

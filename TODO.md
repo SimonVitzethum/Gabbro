@@ -904,7 +904,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       eigenen Gegenstands.*
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
-      *(2026-08-19, nachgemessen 2026-08-20)*. **24 von 23 Item-Arten** sind „gelesen" —
+      *(2026-08-19, nachgemessen 2026-08-20)*. **25 von 23 Item-Arten** sind „gelesen" —
       **`ops` und `check` darunter**, obwohl keine ihrer Zusagen geprüft wird.
       `ItemArt::Check` wird nur angefasst, um in `can_fail` hineinzulaufen; `ops` steht als
       `!is_empty()` da. **Ein Konstrukt kann berührt werden, ohne dass eine einzige seiner

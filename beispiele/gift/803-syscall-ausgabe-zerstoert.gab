@@ -14,7 +14,7 @@ reason IoError {
 
 assume linux_write_contract
     "Write keeps its contract on this machine."
-    falsifier probe_write;
+    falsifier sonde_write;
 
 syscall ausgabe_weg(fd : u64) -> u64 or IoError
     abi linux arch x86_64 number 1
@@ -23,6 +23,6 @@ syscall ausgabe_weg(fd : u64) -> u64 or IoError
     clobbers { rax, rcx }
     errors { EBADF => BadFd }
     effects { pure }
-    assume linux_write_contract falsifier probe_write;
+    assume linux_write_contract falsifier sonde_write;
 
 }

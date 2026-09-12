@@ -182,12 +182,19 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
 
 /// **`N061` -- the `errors` map is total over the listed errnos.**
 ///
-/// Three directions, one site: a target outside the declared `or R` channel, a
-/// channel that is not declared here at all, and an errno with two arms. What
-/// is NOT checked here is the errno side against a kernel table -- the map
-/// itself lists the admitted errnos, and an errno outside the table is the
-/// named hardware outcome (`hardware (annahme a)`), not a declaration fault.
+/// Four ways of failing, ONE issuance site below: a target outside the declared
+/// `or R` channel, a channel that is not declared here at all, a map with no
+/// channel, and an errno with two arms. What is NOT checked here is the errno
+/// side against a kernel table -- the map itself lists the admitted errnos, and
+/// an errno outside the table is the named hardware outcome (`hardware
+/// (annahme a)`), not a declaration fault.
 fn fehlertabelle(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Absagen) {
+    /// One fault of the map, with the span it points at and the detail behind
+    /// the shared sentence.
+    struct Fehler {
+        span: gabbro_syntax::span::Span,
+        detail: String,
+    }
     let u = crate::umgebung::Umgebung::sammle(baum);
     // The declared cases of the `or R` channel, resolved from the syscall's own
     // module outward -- the same order every name resolution uses. **One fault,
@@ -199,83 +206,77 @@ fn fehlertabelle(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Ab
             .into_iter()
             .find_map(|k| u.gruende.get(&k).cloned()),
     };
+    let mut fehler: Vec<Fehler> = Vec::new();
     if !s.errors.is_empty() {
         match (&s.fehler, &faelle) {
             (None, _) => {
                 let (errno, ziel) = &s.errors[0];
-                absagen.schiebe(
-                    Absage::fehler(
-                        "N061",
-                        ziel.span,
-                        format!(
-                            "`{}` maps `{}` to `{}` with no `or R` channel -- no arm has a declared target",
-                            s.name.text, errno.text, ziel.text
-                        ),
-                    )
-                    .mit_notiz(
-                        "every target is a case of the reason the signature declares -- \
-                         without `or R` the decoding has nowhere to deliver",
+                fehler.push(Fehler {
+                    span: ziel.span,
+                    detail: format!(
+                        "`{}` => `{}` with no `or R` channel -- the decoding has nowhere to deliver",
+                        errno.text, ziel.text
                     ),
-                );
-                return;
+                });
             }
             (Some(r), None) => {
-                absagen.schiebe(
-                    Absage::fehler(
-                        "N061",
-                        r.span,
-                        format!(
-                            "`{}` declares `or {}` and no `reason {}` stands in this unit",
-                            s.name.text, r.text, r.text
-                        ),
-                    )
-                    .mit_notiz(
-                        "every target is a case of the reason the signature declares -- \
-                         a channel without a declaration has no cases",
+                fehler.push(Fehler {
+                    span: r.span,
+                    detail: format!(
+                        "`or {}` declares nothing -- a channel without cases is none",
+                        r.text
                     ),
-                );
-                return;
+                });
             }
             (Some(_), Some(_)) => {}
         }
     }
-    let faelle = faelle.unwrap_or_default();
-    let mut errnos: HashSet<&str> = HashSet::new();
-    for (errno, ziel) in &s.errors {
-        if !errnos.insert(errno.text.as_str()) {
-            absagen.schiebe(
-                Absage::fehler(
-                    "N061",
-                    errno.span,
-                    format!(
-                        "`{}` maps `{}` twice -- every listed errno has exactly one arm",
-                        s.name.text, errno.text
+    if fehler.is_empty() {
+        let faelle = faelle.unwrap_or_default();
+        let mut errnos: HashSet<&str> = HashSet::new();
+        for (errno, ziel) in &s.errors {
+            if !errnos.insert(errno.text.as_str()) {
+                fehler.push(Fehler {
+                    span: errno.span,
+                    detail: format!(
+                        "`{}` twice -- the second arm decides nothing, and the decoding it \
+                         generates would carry a dead branch",
+                        errno.text
                     ),
-                )
-                .mit_notiz(
-                    "a total map answers each admitted errno once -- the second arm \
-                     decides nothing, and the decoding it generates would carry a \
-                     dead branch",
-                ),
-            );
-        }
-        if !faelle.iter().any(|c| c == &ziel.text) {
-            absagen.schiebe(
-                Absage::fehler(
-                    "N061",
-                    ziel.span,
-                    format!(
-                        "`{}` maps `{}` to `{}`, and that is no case of the declared channel",
-                        s.name.text, errno.text, ziel.text
+                });
+            }
+            if !faelle.iter().any(|c| c == &ziel.text) {
+                fehler.push(Fehler {
+                    span: ziel.span,
+                    detail: format!(
+                        "`{}` => `{}` -- an undeclared reason never arrives, and the decoding \
+                         it generates would carry a dead arm",
+                        errno.text, ziel.text
                     ),
-                )
-                .mit_notiz(
-                    "every target is a case of the reason the signature \
-                     declares -- an undeclared reason never arrives, and the \
-                     decoding it generates would carry a dead arm",
-                ),
-            );
+                });
+            }
         }
+    }
+    // **The one issuance site of this rule.** Every fault above shares the
+    // sentence; the detail behind the dash names which arm failed and how.
+    // *One fault, one refusal:* a missing channel falls ONCE, not once per arm
+    // -- but two bad arms are two faults, and both are refused.
+    for f in fehler {
+        absagen.schiebe(
+            Absage::fehler(
+                "N061",
+                f.span,
+                format!(
+                    "`{}` mistargets its `errors` map -- {}",
+                    s.name.text, f.detail
+                ),
+            )
+            .mit_notiz(
+                "every listed errno has exactly one arm, and every target is a case \
+                 of the reason the signature declares -- a total map answers each \
+                 admitted errno once, with nowhere else to deliver",
+            ),
+        );
     }
 }
 
@@ -291,8 +292,8 @@ fn bauart(s: &SyscallDecl, absagen: &mut Absagen) {
                 "A006",
                 s.arch.span,
                 format!(
-                    "`{}` is a syscall for `{}`, and only `x86_64` is implemented",
-                    s.name.text, s.arch.text
+                    "`{}` declares `arch {}` after `abi {}`, and only `x86_64` is implemented",
+                    s.name.text, s.arch.text, s.abi.text
                 ),
             )
             .mit_notiz(

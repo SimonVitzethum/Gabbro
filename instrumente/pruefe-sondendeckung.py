@@ -107,7 +107,15 @@ SONDEN = W / "sonden"
 # minus the unemitted lock runs in userland. Same 10x rule (8 -> 80, 40 -> 400).
 # Ring-zero rows 7-10 and device rows 12-19 stay unprobed: `invlpg`/`outb` fault in
 # ring 3 and no device stands on the bench. Orphan and outside marks unchanged.
-MARK_QUOTE = (17, 50)
+#
+# **(17, 50) -> (18, 51) on 2026-09-12 (lane S5, syscall).** One earned diff: the
+# first per-call OS assumption (`linux_write_contract` in `beispiele/74`) arrives
+# WITH its program (`sonden/sonde_write.c`, row 51, class `P4` userland -- a pipe
+# stands in for the descriptor, the admitted errno is answered, `--kaputt` is
+# the control that must fall). Same rule as every earned diff before it: the
+# assumption and its probe land together, so the quota rises because the object
+# grew, not because a rule was issued twice.
+MARK_QUOTE = (18, 51)
 
 # **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
@@ -464,10 +472,17 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # rows 40-50 (lane-59's three plus lane-72's four plus lane-80's four),
     # without which 6 of 50 miss (48 < 50). Ten or fewer removals always
     # leave 7 covered (56 >= 50), so no smaller set breaks it.
+    #
+    # **Grown on 2026-09-12 (lane S5, syscall), same rule:** 18 covered of 51
+    # absorb the removal of any eleven newest probes (7 of 51 still meets:
+    # 56 >= 51); the smallest newest breaking set is TWELVE -- rows 40-51
+    # (the eleven above plus lane S5's `sonde_write`), without which 6 of 51
+    # miss (48 < 51). Eleven or fewer removals always leave 7 covered
+    # (56 >= 51), so no smaller set breaks it.
     elf = ("sonde_abnahme", "sonde_byte_legen", "sonde_freigabe",
             "sonde_barriere", "sonde_schreib_schranke", "sonde_speicher_schranke",
             "sonde_schreiben", "sonde_zaehle", "sonde_takt_verteiler",
-            "sonde_bearbeite", "sonde_ruf_verteiler")
+            "sonde_bearbeite", "sonde_ruf_verteiler", "sonde_write")
     ohne_elf = [x for x in progs if x not in elf]
     r = lauf(p=ohne_elf)
     proben.append(("the floor is met today and MISSED without the eleven newest probes",
@@ -483,8 +498,14 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
     # 86 lands exactly on it -- 136 < 136 is false -- and strict `<` cannot
     # name a boundary). Same standing rule: smallest size that breaks,
     # recomputed on earned growth, never shrunk.
+    #
+    # **The stress size is 94 since 2026-09-12 (lane S5, syscall), same rule.**
+    # One more earned `P4` row (18 covered of 51) drowns the +87 stress
+    # (18 of 138 still meets the floor: 144 >= 138). 94 is the smallest
+    # restore (18 of 145 < `1/8`; 93 lands exactly on it -- 144 < 144 is
+    # false -- and strict `<` cannot name a boundary).
     viel = dict(annahmen)
-    for i in range(87):
+    for i in range(94):
         viel["erfunden_%d" % i] = "sonde_erfunden_%d" % i
     r = lauf(a=viel)
     proben.append(("a floor grown out of reach is named", r[7]))

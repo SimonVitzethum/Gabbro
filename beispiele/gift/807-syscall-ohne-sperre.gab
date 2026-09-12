@@ -33,7 +33,7 @@ reason IoError {
 
 assume kern_schreibt
     "The kernel side keeps the slot contract for this number."
-    falsifier probe_kern_schreibt;
+    falsifier sonde_kern_schreibt;
 
 -- The honest form: the lock taken around the write itself.
 impl fn ordentlich(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
@@ -52,7 +52,7 @@ syscall fremd_schreibt(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum
     clobbers { rcx, r11 }
     errors { EBADF => BadFd }
     effects { writes k.slots }
-    assume kern_schreibt falsifier probe_kern_schreibt;
+    assume kern_schreibt falsifier sonde_kern_schreibt;
 
 -- The race: a declared write to a protected place with no lock held at the call.
 impl fn ohne_sperre(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte) -> u32

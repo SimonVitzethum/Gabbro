@@ -254,7 +254,8 @@ pub const NAMEN: &[Satz] = &[
                     down anywhere, and that is a finding about the SPECIFICATION.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 5 probes on `N030` (`669`/`670` hold the FIELD, read \
-                      and written), 2 each on `N027` and `N031`, and single probes on 12 \
+                      and written), 2 each on `N027` and `N031`, `813` on a `syscall` \
+                      naming an undeclared assumption (`N004`), and single probes on 12 \
                       further codes of this group.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md, SPRACHE.md §15",
     },
@@ -356,7 +357,9 @@ pub const NAMEN: &[Satz] = &[
                       `fn … arch` branch went through `beispiele/60`, because an `entry` \
                       in the same file supplied the machine anyway. *A witness standing \
                       next to a second source of the same answer witnesses nothing.* \
-                      `/463` is the one that has no second source.",
+                      `/463` is the one that has no second source. Lane S5 extends the \
+                      rule to `syscall … arch`, pinned by `beispiele/gift/805` (a syscall \
+                      for `x86_64` in a unit that declares only `aarch64`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12; «B40»",
     },
     Satz {
@@ -2561,9 +2564,11 @@ pub const PHASEN: &[Satz] = &[
                     one register are not refused by any code above. The emitter refuses \
                     every unit carrying a syscall (`C001`) until the stub lands.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes on `N057`, `N058`, `N059`, `N060`, `N061`, \
-                      `N062` and `A006`; beispiele/73 checks clean and falls only at the \
-                      emitter (`C001`).",
+        gemessen_an: "beispiele/gift: probes `802`/`803`/`807`/`808`/`809` on \
+                      `N057`/`N058`/`H007`/`N059`/`N060`, `804`/`811`/`812` on the three \
+                      directions of `N061`, `806` on `N062`, `805` on `A005` and `810` \
+                      on `A006`; beispiele/74 checks clean and falls only at the \
+                      emitter (`C001`, pinned by gift 797).",
         fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",
     },
     Satz {

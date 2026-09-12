@@ -1,0 +1,29 @@
+-- erwartet: N061
+-- **Gift 811 -- every listed errno has exactly one arm.**
+--
+-- `EBADF` stands twice. A total map answers each admitted errno once -- the
+-- second arm decides nothing -- so the second arm falls, by name. Same rule as
+-- gift 804 (`N061`): one rule, and each probe pins one of its directions.
+
+module gift::syscall_doppelerrno {
+
+reason IoError {
+    BadFd       = 9 "the file descriptor is not open"
+    Interrupted = 4 "the call was interrupted before anything was written"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall zweimal(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd, EBADF => Interrupted }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}
