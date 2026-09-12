@@ -40,12 +40,12 @@ storage width, never `_BitInt`.
 
 ## Probes
 
-- `beispiele/72-sugar-widths.gab`: positive (`u1`, `u13`, `i37`, `u64` checks
+- `beispiele/73-sugar-widths.gab`: positive (`u1`, `u13`, `i37`, `u64` checks
   clean, emits `uint8_t`/`uint16_t`/`int64_t`, `u13::max` -> `8191u`,
   `u13(a)` -> `(uint16_t)(a)`).
-- `beispiele/gift/796-sugar-width-zero-falls.gab` (`P008`, `u0`),
-  `797-sugar-width-above-range-falls.gab` (`P008`, `u65`),
-  `798-sugar-range-bites.gab` (`M101`, `return 8192` at `-> u13`).
+- `beispiele/gift/799-sugar-width-zero-falls.gab` (`P008`, `u0`),
+  `800-sugar-width-above-range-falls.gab` (`P008`, `u65`),
+  `801-sugar-range-bites.gab` (`M101`, `return 8192` at `-> u13`).
 - `crates/gabbro-syntax/tests/sprechprobe.rs::zuckerbreiten_tragen_bereich_und_speicher`
   (positive + `u0`/`u65`/`i0`/`i65` + `u13 in ...` second-range refusal).
 - `crates/gabbro-check/tests/rechenwerk.rs::zuckerbreiten_tragen_speicher_bereich_und_schranke`
