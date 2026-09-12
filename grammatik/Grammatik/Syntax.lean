@@ -441,7 +441,9 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | forever (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block true Γ Λ Λ) : Stmt l Γ Λ Λ
   | axiomCall (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
       (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true) : Stmt l Γ Λ Λ
+      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) : Stmt l Γ Λ Λ
   /-- `R = e;` an einem Register (`transition` ist dieselbe Anweisung mit dem Spiegel): die
       Klasse erlaubt das Schreiben, oder die Anweisung ist nicht ableitbar (`R005`/`R006`). -/
   | regSchreib (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :

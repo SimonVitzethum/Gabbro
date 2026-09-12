@@ -934,7 +934,7 @@ theorem pcSchritt_blatt_progAus_ohne_axiomCall
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
     (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -1135,29 +1135,31 @@ theorem pcSchritt_blatt_progAus_axiomCall
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+      (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ M.spuren f)
     (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
     (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
     (hpc : (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
     (hΛa : Λa = Λ)
     (hcs : cs = Extraktion.stmtTraeger tabs globs
-      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+      (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
       Extraktion.stmtOrte
-        (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ)) :
+        (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ)) :
     PCSchritt P O passes (Extraktion.progAus P fcode tabs globs) M pc f
       ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
        M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
       (pcAdvance pc f) := by
   obtain ⟨hlam, hcar⟩ :=
-    Extraktion.execEreignis_aus_axiomCall O passes a args h hw hg hO tabs globs
+    Extraktion.execEreignis_aus_axiomCall O passes a args h hw hg hd hgd hO tabs globs
       (M.weltVon f) ρ σ' neu hstep hneu
   refine PCSchritt.leaf M pc f V l Γ Λ Λ
-    (Stmt.axiomCall a args h hw hg) ρ rfl hΛ σ' neu hstep hneu
+    (Stmt.axiomCall a args h hw hg hd hgd) ρ rfl hΛ σ' neu hstep hneu
     hkein_nimmt Λa cs hpc hΛa ?_ ?_
   · intro e he m st hm
     rw [hlam e he] at hm
@@ -1166,9 +1168,9 @@ theorem pcSchritt_blatt_progAus_axiomCall
     exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
   · intro e he o ho
     have hmem : o ∈ Extraktion.stmtTraeger tabs globs
-        (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+        (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
         Extraktion.stmtOrte
-          (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) :=
+          (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) :=
       hcar e he o ho
     simp only [PCAtom.carriers]
     rw [hcs]
@@ -1193,27 +1195,29 @@ theorem pcReach_blatt_progAus_axiomCall
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+      (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ M.spuren f)
     (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
     (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
     (hpc : (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
     (hΛa : Λa = Λ)
     (hcs : cs = Extraktion.stmtTraeger tabs globs
-      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) ++
+      (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
       Extraktion.stmtOrte
-        (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ)) :
+        (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ)) :
     PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp)
       ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
        M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
       (pcAdvance pc f) :=
   PCReach.step _ _ _ _ f h
     (pcSchritt_blatt_progAus_axiomCall O passes hO P fcode tabs globs M pc f V l Γ Λ
-      a args hh hw hg ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs)
+      a args hh hw hg hd hgd ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs)
 
 #print axioms Gabbro.Grammatik.pcReach_blatt_progAus_axiomCall
 
@@ -1714,7 +1718,7 @@ theorem kette_mit_zeugen
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
     (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -1795,20 +1799,22 @@ theorem kette_mit_zeugen_orakel
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+      (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ M.spuren f)
     (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
     (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
     (hpc : (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
     (hΛa : Λa = Λ)
     (hcs : cs = Extraktion.stmtTraeger tabs globs
-      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) ++
+      (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
       Extraktion.stmtOrte
-        (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ))
+        (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ))
     (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     (hJw : J.welten = M.welten)
     (hmem : f ∈ J.faeden)
@@ -1839,7 +1845,7 @@ theorem kette_mit_zeugen_orakel
        M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
       (pcAdvance pc f) :=
     pcSchritt_blatt_progAus_axiomCall O passes hO P fcode tabs globs M pc f V l Γ Λ
-      a args hh hw hg ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs
+      a args hh hw hg hd hgd ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs
   have hReach : GenErreichbar P O passes (GenStart sp) M :=
     pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h
   have hPC' : PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp)
@@ -1853,7 +1859,7 @@ theorem kette_mit_zeugen_orakel
     pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) _ _ hPC'
   obtain ⟨J', hJ'w, hJ'l, hmem', hLink', hGuard'⟩ :=
     kette_mit_zeugen_schritt P O passes hO sp Nb M _ f hReach hReach' V l Γ Λ Λ
-      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) ρ
+      (Stmt.axiomCall a args hh hw hg hd hgd : Stmt D V l Γ Λ Λ) ρ
       hΛ σ' neu hstep rfl rfl J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
   exact ⟨J', _, _, hJ'w, hJ'l, hmem', hLink', hGuard', hPC'⟩
 
