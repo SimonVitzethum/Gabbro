@@ -3143,5 +3143,144 @@ theorem hmark_hcar_aus_progAus_ohne_axiomCall
 #print axioms Gabbro.Grammatik.Extraktion.execEreignis_aus_blatt_ohne_axiomCall
 #print axioms Gabbro.Grammatik.Extraktion.hmark_hcar_aus_progAus_ohne_axiomCall
 
+/-! ## 18. The oracle bound: event characterization for `axiomCall` leaves
+
+    (Closes the S13 remainder of §17 for the bounded-oracle fragment.)
+
+    The contract is the tree's own named oracle bound, `GutO` (`Satz.lean`):
+    for every axiom, entry world, and environment, the oracle answer respects
+    the declared footprint (`Rahmen (D.aschreibt a) (D.agschreibt a)`), keeps
+    the held locks, and emits no events of its own (`spur` preserved). It
+    travels as a hypothesis -- the `dma_inhalt` class (`Geraet.lean`): a NAMED
+    assumption, never derived here, never an axiom.
+
+    Under that bound a fired `axiomCall` leaf emits exactly its argument
+    reads: the oracle adds nothing, so `neu` is the `args.orte` read prefix
+    (`mem_leseEr`); every new event names the statement `Λ`, and every
+    carrier it touches sits in the declared writes plus the read hull
+    (`stmtTraeger ++ stmtOrte`).
+
+    * `execEreignis_aus_axiomCall` is the characterization per oracle leaf.
+    * `hmark_hcar_aus_progAus_axiomCall` discharges the `PCSchritt`
+      footprint checks (`hmark`/`hcar`) against `progAus` atoms for oracle
+      leaves -- the `hmark_hcar_aus_progAus_ohne_axiomCall` shape with the
+      contract premise (`hO`) in place of the exclusion premise (`hax`).
+      The proof consumes the `spur` conjunct of `GutO`; `Rahmen` and `haelt`
+      ride along as the value-side bound (used by `stmt_gut`, harmless here).
+
+    Remainder (booked, not hidden): oracles that emit their own events stay
+    open. Closing them needs a per-event contract (every oracle-added event
+    names the statement `Λ` within the declared writes plus `args.orte`) --
+    same class, stronger duty, unwritten.
+-/
+
+/-- A fired oracle leaf step carries exactly its statement footprint, under
+    the oracle bound: the oracle (`O.wirkt`) answers without emitting events
+    of its own (`GutO`), so every new event is an argument read -- it names
+    the statement `Λ`, and every carrier it touches sits in the declared
+    writes plus the `args.orte` read hull. -/
+theorem execEreignis_aus_axiomCall
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hO : GutO O)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    (∀ e ∈ neu, e.lambda = Λ) ∧
+      (∀ e ∈ neu, ∀ o, e.traeger = some o →
+        o ∈ stmtTraeger tabs globs
+          (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+          stmtOrte
+            (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ)) := by
+  have hspurO : ((O.wirkt a (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1).spur =
+      (σ.lese Λ args.orte).spur :=
+    (hO a _ _).2.2
+  simp only [execStmt] at hstep
+  split at hstep
+  · rename_i σ1 v ha
+    simp only [Ausgang.welt, Option.some.injEq] at hstep
+    subst hstep
+    have hσ1 : σ1 = (O.wirkt a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1 := by
+      have hfst := congrArg Prod.fst ha
+      simp only [axiomAntwort] at hfst
+      exact hfst.symm
+    rw [hσ1, hspurO] at hneu
+    have hneu2 : (args.orte.map fun o => match o with
+        | .inl t => Ereignis.zugriff t false Λ σ.haelt
+        | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur =
+        neu ++ σ.spur := hneu
+    have hneueq := List.append_cancel_right hneu2
+    subst hneueq
+    constructor
+    · intro e' he'
+      exact (mem_leseEr he').1
+    · intro e' he' o ho
+      have hmem : o ∈ args.orte := (mem_leseEr he').2 o ho
+      simp only [stmtTraeger, stmtOrte]
+      exact List.mem_append.mpr (Or.inr hmem)
+  · simp [Ausgang.welt] at hstep
+
+/-- The `PCSchritt` footprint checks discharged against `progAus` atoms for
+    oracle leaves: a fired `axiomCall` leaf whose counter points at its
+    extracted atom, under the oracle bound (`hO`), names only that atom's
+    marks and touches only its carriers -- hence the thread's program text
+    (`pcAtom_mem_marks`/`pcAtom_mem_carriers`). The atom-identity premise
+    (`hcs`) stays the scheduler/witness duty (remainder S12 of §17). -/
+theorem hmark_hcar_aus_progAus_axiomCall
+    (O : Orakel D) (passes : Nat)
+    (P : Programm D) (code : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hO : GutO O)
+    (M : GenMaschine D) (f : Faden) (ρ : Env D Γ)
+    (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ (M.weltVon f).spur)
+    (pc : PCStand) (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (progAus P code tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ)
+    (hcs : cs = stmtTraeger tabs globs
+      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+      stmtOrte (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ)) :
+    (∀ e ∈ neu, ∀ (m : D.Marke) (st : Nat), Res.marke m st ∈ e.lambda →
+      m ∈ (progAus P code tabs globs).marks f) ∧
+    (∀ e ∈ neu, ∀ o, e.traeger = some o →
+      o ∈ (progAus P code tabs globs).carriers f) := by
+  obtain ⟨hlam, hcar⟩ :=
+    execEreignis_aus_axiomCall O passes a args h hw hg hO tabs globs
+      _ ρ σ' neu hstep hneu
+  have ha : PCAtom.leaf Λa cs ∈ progAus P code tabs globs f :=
+    List.mem_of_getElem? hpc
+  constructor
+  · intro e he m st hm
+    rw [hlam e he] at hm
+    rw [← hΛa] at hm
+    exact pcAtom_mem_marks _ _ _ ha m
+      (by simp only [PCAtom.marks]
+          exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩)
+  · intro e he o ho
+    have hmem : o ∈ stmtTraeger tabs globs
+        (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+        stmtOrte (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) :=
+      hcar e he o ho
+    apply pcAtom_mem_carriers _ _ _ ha o
+    simp only [PCAtom.carriers]
+    rw [hcs]
+    exact hmem
+
+#print axioms Gabbro.Grammatik.Extraktion.execEreignis_aus_axiomCall
+#print axioms Gabbro.Grammatik.Extraktion.hmark_hcar_aus_progAus_axiomCall
+
 
 end Gabbro.Grammatik.Extraktion
