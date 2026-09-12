@@ -581,4 +581,29 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
         rw [hcancel]
         exact List.mem_append_left _ hHeadPre
 
+/-! ## 3. The oracle arm: `axiomCall` writes stay inside the declared frame.
+
+  `GutO` says the oracle answer's world differs from the entry world at most
+  on carriers with `D.aschreibt/D.agschreibt = true`. Hence a slot of `t`
+  with `D.aschreibt a t = false` survives any `axiomCall a` step.
+  Proved via `axiomAntwort_gut` (the `Gut` package) rather than by unfolding
+  `execStmt`: the `Rahmen` half is exactly the needed slot equality. -/
+
+/-- The oracle frame keeps a non-written table slot, via `axiomAntwort_gut`. -/
+theorem axiomCall_slots_frame (O : Orakel D) (hO : GutO O) (a : D.Ax)
+    (t : D.Tab) (ht : D.aschreibt a t = false)
+    (sg : World D) (rho : Env D (D.aparams a)) (k : Int) (f : D.Feld t) :
+    (O.wirkt a sg rho).1.slots t k f = sg.slots t k f := by
+  have hG := axiomAntwort_gut (D := D) (O := O) hO a sg rho
+  -- `hG : Gut (D.aschreibt a) (D.agschreibt a) sg (axiomAntwort ..).1`;
+  -- project the `Rahmen` slot leg at `ht`.
+  have hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg
+      (axiomAntwort O a sg rho).1 := hG.1
+  have hEq := hR.1 t ht k f
+  -- `(axiomAntwort ..).1 = (wirkt ..).1` by `rfl` on the pair projection.
+  have hProj : (axiomAntwort O a sg rho).1 =
+      (O.wirkt a sg rho).1 := rfl
+  rw [hProj] at hEq
+  exact hEq
+
 end Gabbro.Grammatik.EZD
