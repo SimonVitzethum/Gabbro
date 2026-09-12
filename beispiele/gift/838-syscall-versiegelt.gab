@@ -1,0 +1,28 @@
+-- erwartet: A006
+-- **Gift 810 -- a syscall for a sealed architecture.**
+--
+-- `aarch64` stays sealed: the emitter cannot lower a stub for it, so a syscall
+-- naming it promises what nobody writes. What falls here is the machine
+-- itself; the mismatch against the declared arches is `A005` (gift 805).
+
+module gift::syscall_versiegelt {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch aarch64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

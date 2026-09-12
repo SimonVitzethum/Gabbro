@@ -1,0 +1,27 @@
+-- erwartet: N065
+-- **Gift 808 -- an unbound parameter has no register on entry.**
+--
+-- `len` is declared and never bound. The stub would read a value nobody put
+-- there -- so the parameter falls, by name.
+
+module gift::syscall_ungebunden {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall unvollstaendig(fd : u64, len : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

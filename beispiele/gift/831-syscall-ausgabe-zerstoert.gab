@@ -1,0 +1,28 @@
+-- erwartet: N064
+-- **Gift 803 -- what is carried out is not destroyed.**
+--
+-- `rax` carries the answer out and stands under `clobbers` at once. The contract
+-- would promise the answer in a register the declaration hands to the kernel as
+-- scratch -- so the clobber line falls, by name.
+
+module gift::syscall_ausgabe_zerstoert {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall ausgabe_weg(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rax, rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}
