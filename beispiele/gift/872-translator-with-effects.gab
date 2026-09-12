@@ -1,0 +1,27 @@
+-- erwartet: N202
+-- Lane E3: the translator carries effects -- refused, although the linkage
+-- (one translator, `decreases`, fitting result) is clean. A translator is
+-- a total, effect-free map; anything but `pure` would run effects at
+-- translation time.
+module m {
+table P count 1 {
+    slot {
+        words : u32,
+    }
+}
+library fn f(n : u32) -> u32 payload P
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator b for f(region : P) -> P
+    effects { writes P.slots }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}

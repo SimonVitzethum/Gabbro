@@ -2305,6 +2305,77 @@ lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
      's/_grund = IoError_BadFd;/_grund = IoError_Interrupted;/' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 22. The reference fixture as a running program (lane 126) ---------------------------
+#
+# `beispiele/104-referenz.gab` is the Lean reference fixture
+# (`grammatik/Grammatik/ReferenzB.lean`: `refD`/`refP`) in surface syntax: one
+# table `Konto` of 2 slots with one `0 .. 100` field, one guarding lock `M`,
+# `einzahlen` (writes the slot to the cap 100, then calls `lies`) and `lies`
+# (reads the slot back). Both run under the held lock (`requires Held(M)`).
+#
+# Threads cannot be driven from a C driver -- the emitted unit has no thread
+# notion (a `concurrent` declaration would generate no C and, worse, the
+# certificate books it as UNCLASSIFIED, which fails stage 7) -- so the driver
+# runs the SEQUENTIAL COMPOSITION of both threads: `einzahlen` like thread 1
+# (with the witness argument 7 of `refRho7`), then `lies` like thread 0.
+#
+#    Expected:
+#      100  -- `lies` answers what `einzahlen` wrote (the `refB_schreibt` half:
+#              slot `0 -> 100`, the memory move the Lean witness names)
+#      100  -- the slot itself reads the cap
+#        0  -- and slot 1 is untouched: the write hits ONE slot
+#
+# The poison takes the cap off the write: both numbers fall to 99, so the
+# comparison measures that the observed value comes OUT OF THE WRITE and not
+# out of the initial memory (which reads 0 either way).
+TREIBER104='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static Konto k;
+    einzahlen(&k, 0, 7);
+    unsigned g = lies(&k, 0);
+    printf("%u %u %u\n", g, (unsigned)k.slots[0].stand, (unsigned)k.slots[1].stand);
+    return 0;
+}
+'
+lauf "beispiel104" "$W/beispiele/104-referenz.gab" "$TREIBER104" "100 100 0" \
+     's/k->slots\[i\]\.stand = 100;/k->slots[i].stand = 99;/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 6 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 22b. The buffered writer over the same call (lane S7) -------------------------------
+#
+# **The first program that keeps kernel bytes between two calls.**
+# `beispiele/96` holds four bytes in a table, `push`es six ("hello\n") through
+# it -- the fifth push flushes midway, so the full-buffer path runs live, not
+# only the final flush -- and answers the last flush's byte count:
+#
+#      hello -- four bytes out of the midway auto-flush, two out of the end
+#      2     -- and the answer came back as a VALUE: the final flush wrote 2
+#
+# The watchdog the `forever` names (`writer_hangs`, a `-> never` extern) is
+# provided by the driver the way a `sonde_*` falsifier is provided beside the
+# unit: it aborts, and a run that reaches it answers nothing expected.
+#
+# **The poison takes the instruction, not the decoding** -- the same gift as
+# `beispiel74` (`nop` for `syscall`): `rax` keeps the number 1, the decoding
+# reads a value 1 per pass, the loop "succeeds" without writing, and the run
+# answers `2` without `hello`. *A run that prints the count without the bytes
+# is exactly what a faked flush would look like.*
+TREIBER96='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+void writer_hangs(void) { fprintf(stderr, "writer_hangs: overrun\n"); abort(); }
+int main(void) {
+    uint64_t n = writer_demo(1);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel96" "$W/beispiele/96-buffered-writer.gab" "$TREIBER96" "$(printf 'hello\n2')" \
+     's/"syscall\\n"/"nop\\n"/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 13 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2842,7 +2913,28 @@ fi
 # measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
 # *A mark that absorbs foreign growth without naming it is a slack ratchet,
 # so the decomposition stands here and not in a merge note.*
-MARKE_EMIT=75
+# **75 -> 77 on 2026-09-12 (lane 118, root cleanup).** `+1` is `beispiele/halde.gab`,
+# moved from the repository root (checker-clean: `pruefe` 0 errors, 0 hints; the
+# basename is kept, so the `.gab` comments naming it stay true). `+1` is
+# `beispiele/80-bibliothek-erklaert.gab` (lane 91/E2, emitting since merge `2e9be3c0`,
+# landed after the 75 booking above) -- foreign growth booked here WITH its address,
+# under the same decomposition rule as the 72 -> 75 booking.
+# **77 -> 78 on 2026-09-12 (lane S7/114, merge resolution).** `+1` is
+# `beispiele/96-buffered-writer.gab`, the buffered writer over `write` (checks
+# clean, emits, compiles under cc AND clang, runs beside 74/90). Provisional
+# sum 75 + halde + 80 + 96 -- re-measured by the run below, not added up.
+# **78 -> 80 on 2026-09-12 (merge resolution, measured).** `+2` are
+# `beispiele/92-const-squares.gab` and `93-const-scalars.gab` (const lanes,
+# both emitting -- verified file by file, not added up). The run below reads
+# 80; the provisional 78 never held.
+# **80 -> 81 on 2026-09-12 (lane 126 merge resolution, provisional).** `+1`
+# is `beispiele/104-referenz.gab` (the reference fixture as a Gabbro program,
+# driven as `beispiel104` above). Final number from the run below.
+# **81 -> 83 on 2026-09-12 (lane 126 merge resolution, measured).** `+2` are
+# `beispiele/94-uebersetzer-erklaert.gab` and `95-uebersetzer-vertrag.gab`
+# (translator lane E3/112 -- both emitting, verified file by file with
+# `gabbro emit`, not added up). The run below reads 83.
+MARKE_EMIT=83
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -3044,7 +3136,13 @@ MARKE_EMIT=75
 # `messung/proben/probe-ipc-fastpath-durchgestochen.gab` (owner, same day) and emits from
 # there, while the frozen fragment stays at 27 errors and emits nothing. *The object grew by
 # exactly one file and the reason stands here at the mark.*
-MARKE_EMIT_M=73
+# **73 -> 132 on 2026-09-12 (merge resolution, measured).** The run below reads 132;
+# the 73 lagged the corpus since no later than lane S6 -- MUSE-REPORT-107 already
+# measured 132 at its base, lanes 118/120 re-measured the same pair (132/73) on
+# the merged tree. No per-file decomposition is offered here: 59 files of
+# multi-lane growth since 2026-09-03, and an invented split would be the slack
+# ratchet this mark exists against. What is booked is the measurement.
+MARKE_EMIT_M=132
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -3055,7 +3153,12 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 # straight-line code and merged its state into the join. The arm was healed (`f1831fa`), and
 # the file has emitted since. *A mark that stood at zero because a false refusal held the
 # only witness.*
-MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten darueber
+# **1 -> 0 on 2026-09-12 (lane 118, root cleanup).** The last root outside the five
+# booked roots stopped being one: `halde.gab` moved to `beispiele/halde.gab` (counted
+# at `MARKE_EMIT` now), and `Claude outputs/` -- 7 emitting scratch copies of committed
+# files, 15 tracked files, no live reference -- is deleted next. Nothing outside the
+# five roots emits anymore.
+MARKE_EMIT_X=0
 #
 # **Und `arbeitsprotokoll/` ist ausgenommen, weil es nicht im Baum ist** (2026-08-31). Der
 # erste Lauf dieser erweiterten Reichweite meldete `NEUE WURZEL EMITTIERT: 2` -- beide unter
@@ -3097,7 +3200,13 @@ MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten dar
 #
 # That is the cap moving the way its own message says it should -- *a probe caught before it
 # emits* -- and it is now back where it stood before 2026-09-02.
-MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
+# **2 -> 8 on 2026-09-12 (merge resolution, measured).** The run below reads 8 emitting
+# gifts: 286 (compiles), 414 (`-- erwartet: cc`, bites), 689, 718, 719, 727, 758, 777
+# (all seven compile -- slipping through, the direction this cap calls a breach).
+# Same 8 lane 120 enumerated on the merged tree; MUSE-REPORT-107 already measured
+# 8 at its base. None is this resolution's: the merged lanes' new gifts (860-864,
+# 895-899) all fall at the checker and emit nothing.
+MARKE_EMIT_G=8      # 286, 414, 689, 718, 719, 727, 758, 777 -- measured, see above
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
@@ -3142,7 +3251,14 @@ MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 # `D22` repaired the defect: `let x = f() else (e)` binding a record no longer lowers to
 # `x->field`, so the probe stops biting and has lost its `-- erwartet: cc` header. *The debt
 # was not rebooked, it was paid* -- and by a different lane on the same day it was entered.
-MARKE_UMGEKEHRT=4
+# **4 -> 2 on 2026-09-12 (merge resolution, measured).** Two of the three `B001` entry
+# probes never reach the branch anymore: `-privat` and `-zwei` fall at the CHECKER
+# (`N041`, `` `main` is a name C has already taken``), so no compiler is asked about
+# them. Caught sooner is the good direction -- but the branch keeps only `gift/414`
+# and `-parameter` as objects, and the count follows them down. Whether the two
+# re-headed probes still cover their shapes is the B001 lane's question, not this
+# mark's: a probe that cannot bite reads like one that never could, either way.
+MARKE_UMGEKEHRT=2
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

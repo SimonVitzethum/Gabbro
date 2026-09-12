@@ -105,7 +105,15 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # spelling and move the set into a string comparison nobody reads -- and
 # the reason stands above EACH entry in `kw.rs`. The second mark does NOT
 # move; the third does not move either (all five are `ctx`).
-MARKE_WOERTER = 236
+#
+# **236 -> 238 on merge with master-neu («E3»).** `translator` + `for` name
+# the translator declaration (`dokumente/SYNTAX.md` §7.2,
+# `PLAN-ERWEITUNG.md` §6, lane E3): no existing form carries the
+# region-to-payload map or its link to the served function -- a bare name
+# would collide with the served function -- and the reason stands at each
+# entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
+# so the third mark does not move either.
+MARKE_WOERTER = 238
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

@@ -1,0 +1,53 @@
+-- erwartet: H222
+-- **Two threads writing one unshared carrier fall -- once per carrier.**
+--
+-- `mitte` and `seite` both write `z`, nothing declares it shared, and two
+-- entries reach them -- so the carrier is shared without saying so. H013
+-- fires beside it (once per carrier, the companion, not the duplicate): H013
+-- already sees one thread, H222 sees the PAIR. The pair is even declared
+-- `concurrent` below, and H222 fires anyway: declaring that two bodies MAY
+-- run together is not declaring the carrier shared -- and the pair rule W001
+-- fires third, for the overlapping write hulls. `allein` under its single
+-- entry draws H013 but NOT H222 -- the positive twin of this rule: one
+-- thread alone owns its carrier, and H222 names only `z`, never `eigen`.
+module gift::ungeteilt_zwei_faeden {
+
+static mut z : u32 = 0;
+static mut eigen : u32 = 0;
+
+-- Must fall (H222, with H013 beside it): reached for writing by both entries.
+impl fn mitte() effects { writes z } costs <= 8 ops { z = 1; }
+impl fn seite() effects { writes z } costs <= 8 ops { z = 2; }
+
+-- Must pass H222: one thread alone owns its carrier.
+impl fn allein() effects { writes eigen } costs <= 8 ops { eigen = 3; }
+
+-- The pair runs together by declaration -- and still may not share `z`.
+concurrent { mitte, seite };
+
+entry syscall_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift::ungeteilt_zwei_faeden::mitte;
+}
+entry syscall_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift::ungeteilt_zwei_faeden::seite;
+}
+entry syscall_c vector 0x82 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kc per cpu nested never
+    dispatch gift::ungeteilt_zwei_faeden::allein;
+}
+
+}

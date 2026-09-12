@@ -2,7 +2,10 @@
 -- function with a contract and a payload type (`library fn` with
 -- `payload <table>`, SYNTAX.md §7.1): ordinary parameters, an optional
 -- result, an error channel like any function, and a Gabbro body whose
--- hull holds no foreign code. The declaration alone is fully clean --
+-- hull holds no foreign code -- plus exactly one translator from the
+-- region AST to the payload (`translator … for …`, SYNTAX.md §7.2, lane
+-- E3), here the identity: the region already stands in payload form.
+-- The declaration alone is fully clean --
 -- a CALL (`@lib#f`) always carries the translation refusal (`N069`),
 -- so calls live in the poison corpus (`beispiele/gift/820`), not here.
 --
@@ -23,5 +26,12 @@ library fn kernel(n : u32) -> u32 payload KernelTab
     costs <= 8 ops
 {
     return n;
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
 }
 }
