@@ -70,3 +70,4 @@ import Grammatik.QLeer
 import Grammatik.BlattGegenbeispiel
 import Grammatik.VertragOrtB
 import Grammatik.KetteMehrfadenC
+import Grammatik.HoareRegeln
