@@ -9265,3 +9265,327 @@ entry sc vector 0x80 arch x86_64 {
         "a returning dispatch keeps its reference line verbatim:\n{d}"
     );
 }
+
+// ---------------------------------------------------------------------------------------
+// **Bit intrinsics (PLAN-BITS §3, surface half): one probe per intrinsic, then the run.**
+//
+// The seven calls are ordinary single-segment calls the checker claims by name
+// (`m1.rs::intrinsik_ruf`, `M153`-`M156`): no new word, no grammar change. What
+// stands here pins all four halves -- the typing (clean here, refusal below),
+// the lowering text, the compilation under two compilers with `-Werror`, and
+// the computed VALUES at run time (a text probe alone cannot tell
+// `__builtin_clz` from `__builtin_ctz`: both compile, only one counts right).
+// ---------------------------------------------------------------------------------------
+
+/// The unit every probe below checks: one function per intrinsic and width.
+const BITS_QUELLE: &str = "module t {
+impl fn clz32(v : u32 in 1 .. 4294967295) -> u32 effects { pure } costs <= 9 ops { return clz(v); }
+impl fn ctz32(v : u32 in 1 .. 4294967295) -> u32 effects { pure } costs <= 9 ops { return ctz(v); }
+impl fn log32(v : u32 in 1 .. 4294967295) -> u32 effects { pure } costs <= 9 ops { return log2_floor(v); }
+impl fn pop32(v : u32) -> u32 effects { pure } costs <= 9 ops { return popcount(v); }
+impl fn rot32(x : u32, s : u32 in 0 .. 31) -> u32 effects { pure } costs <= 9 ops { return rotl(x, s); }
+impl fn ror32(x : u32, s : u32 in 0 .. 31) -> u32 effects { pure } costs <= 9 ops { return rotr(x, s); }
+impl fn swp32(v : u32) -> u32 effects { pure } costs <= 9 ops { return bswap(v); }
+impl fn clz16(v : u16 in 1 .. 65535) -> u16 effects { pure } costs <= 9 ops { return clz(v); }
+impl fn rot16(x : u16, s : u16 in 0 .. 15) -> u16 effects { pure } costs <= 9 ops { return rotl(x, s); }
+impl fn swp16(v : u16) -> u16 effects { pure } costs <= 9 ops { return bswap(v); }
+impl fn clz8(v : u8 in 1 .. 255) -> u8 effects { pure } costs <= 9 ops { return clz(v); }
+impl fn pop64(v : u64) -> u64 effects { pure } costs <= 9 ops { return popcount(v); }
+impl fn rot64(x : u64, s : u64 in 0 .. 63) -> u64 effects { pure } costs <= 9 ops { return rotl(x, s); }
+impl fn swp64(v : u64) -> u64 effects { pure } costs <= 9 ops { return bswap(v); }
+impl fn mix64(v : u64 in 1 .. 1000000) -> u64 effects { pure } costs <= 9 ops { return clz(v) + ctz(v) + log2_floor(v); }
+}";
+
+/// Checker verdicts over a source: `(error codes, all diagnostic texts)`.
+fn bits_absagen(q: &str) -> (Vec<String>, Vec<String>) {
+    let (baum, mut a) = gabbro_syntax::lies("bits.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "the probe itself does not parse:\n{}", a.zeige(q));
+    let _ = gabbro_check::pruefe(&baum, &mut a);
+    let codes: Vec<String> = a
+        .absagen
+        .iter()
+        .filter(|x| x.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|x| x.code.to_string())
+        .collect();
+    // The message AND its notes: the remedy (`narrow`) stands in a note, and
+    // a probe that only reads the first line cannot tell whether it is named.
+    let mut texte: Vec<String> = Vec::new();
+    for x in &a.absagen {
+        texte.push(x.text.clone());
+        texte.extend(x.notizen.iter().cloned());
+    }
+    (codes, texte)
+}
+
+/// The emitted C of the shared unit -- and the checker has to stay silent
+/// first, or every line below measures a program that was never accepted.
+fn bits_c() -> String {
+    let (baum, mut a) = gabbro_syntax::lies("bits.gab", BITS_QUELLE);
+    assert_eq!(a.fehler_zahl(), 0, "the probe itself does not parse:\n{}", a.zeige(BITS_QUELLE));
+    let _ = gabbro_check::pruefe(&baum, &mut a);
+    let fehler: Vec<&str> = a
+        .absagen
+        .iter()
+        .filter(|x| x.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|x| x.code)
+        .collect();
+    assert!(
+        fehler.is_empty(),
+        "the intrinsic probe is REFUSED ({fehler:?}) -- then the run below measures nothing:\n{}",
+        a.zeige(BITS_QUELLE)
+    );
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert!(!c.is_empty(), "the intrinsic probe emits NOTHING -- nothing measured");
+    c
+}
+
+#[test]
+fn bit_intrinsics_lower_to_the_documented_c_forms() {
+    let c = bits_c();
+    // The 32-bit builtins, spelled out -- a text probe that dies the day the
+    // emitter counts in the wrong width.
+    assert!(c.contains("__builtin_clz((unsigned)"), "no 32-bit clz lowering:\n{c}");
+    assert!(c.contains("__builtin_ctz((unsigned)"), "no 32-bit ctz lowering:\n{c}");
+    assert!(c.contains("__builtin_popcount((unsigned)"), "no 32-bit popcount lowering:\n{c}");
+    assert!(c.contains("__builtin_bswap32((uint32_t)"), "no 32-bit swap lowering:\n{c}");
+    assert!(c.contains("(31 - __builtin_clz((unsigned)"), "log2 is not `(31 - clz)`:\n{c}");
+    // Rotation goes through the helper -- the amount stands once at the call,
+    // the shift-or pattern with its mask stands in the helper body.
+    assert!(c.contains("gabbro_rotl32("), "no rotl32 helper call:\n{c}");
+    assert!(c.contains("gabbro_rotr32("), "no rotr32 helper call:\n{c}");
+    assert!(
+        c.contains("static inline uint32_t gabbro_rotl32(uint32_t x, uint32_t s)"),
+        "the rotl32 helper body is missing:\n{c}"
+    );
+    assert!(c.contains("s &= 31"), "the helper does not mask its amount:\n{c}");
+    // The narrow widths adjust the 32-bit count down instead of counting wrong.
+    assert!(c.contains("__builtin_clz((unsigned)") && c.contains("- 16)"), "no 16-bit clz adjustment:\n{c}");
+    assert!(c.contains("__builtin_bswap16((uint16_t)"), "no 16-bit swap lowering:\n{c}");
+    assert!(c.contains("__builtin_popcountll((unsigned long long)"), "no 64-bit popcount lowering:\n{c}");
+    assert!(c.contains("__builtin_bswap64((uint64_t)"), "no 64-bit swap lowering:\n{c}");
+    // Only the used helpers are generated -- an unused one is a finding about
+    // the generator, and this unit never rotates backwards in 16 or 64 bits.
+    assert!(!c.contains("gabbro_rotr16"), "an unused helper is generated:\n{c}");
+    assert!(!c.contains("gabbro_rotr64"), "an unused helper is generated:\n{c}");
+}
+
+const BITS_TREIBER: &str = r#"
+#include <stdio.h>
+
+int main(void) {
+    int bad = 0;
+#define C(name, expr, want) \
+    do { unsigned long long g = (unsigned long long)(expr); \
+         unsigned long long w = (unsigned long long)(want); \
+         if (g != w) { bad++; \
+             printf("MISS %s: got=%llu want=%llu\n", name, g, w); } \
+    } while (0)
+    C("clz32", clz32(1u), 31u);
+    C("ctz32", ctz32(12u), 2u);
+    C("log32", log32(1000u), 9u);
+    C("pop32", pop32(0xFFFFFFFFu), 32u);
+    C("rot32", rot32(0x80000001u, 1u), 3u);
+    C("rot32-null", rot32(0x80000001u, 0u), 0x80000001u);
+    C("ror32", ror32(0x80000001u, 1u), 0xC0000000u);
+    C("ror32-null", ror32(0x80000001u, 0u), 0x80000001u);
+    C("swp32", swp32(0x12345678u), 0x78563412u);
+    C("clz16", clz16(0x0100u), 7u);
+    C("rot16", rot16(0x8001u, 1u), 3u);
+    C("swp16", swp16(0x1234u), 0x3412u);
+    C("clz8", clz8(1u), 7u);
+    C("pop64", pop64(0xFFFFFFFFFFFFFFFFull), 64u);
+    C("rot64", rot64(0x8000000000000001ull, 1ull), 3ull);
+    C("swp64", swp64(0x0102030405060708ull), 0x0807060504030201ull);
+    C("mix64", mix64(1ull), 63u);
+    printf("checked=17 bad=%d\n", bad);
+    return 0;
+}
+"#;
+
+/// Compile one C text with one compiler and run it, demanding the exact line.
+fn bits_baue_und_laufe(c: &str, cc: &str, stufen: &[&str], name: &str) {
+    let d = std::env::temp_dir().join("gabbro-bits-87");
+    std::fs::create_dir_all(&d).expect("the work directory is writable");
+    let quelle = d.join(format!("lauf-{name}.c"));
+    let ziel = d.join(format!("lauf-{name}"));
+    std::fs::write(&quelle, c).expect("the emitted C is writable");
+    let mut args: Vec<std::ffi::OsString> =
+        vec!["-std=c11".into(), "-Wall".into(), "-Wextra".into(), "-Werror".into()];
+    for s in stufen {
+        args.push((*s).into());
+    }
+    args.push("-o".into());
+    args.push(ziel.clone().into_os_string());
+    args.push(quelle.clone().into_os_string());
+    let bau = std::process::Command::new(cc).args(&args).output();
+    let bau = match bau {
+        Ok(r) => r,
+        // **A missing compiler is a missing measurement, never a green one** (W1).
+        Err(e) => panic!("`{cc}` cannot be started ({e}) -- NOTHING measured"),
+    };
+    assert!(
+        bau.status.success(),
+        "the emitted C does not compile under `{cc} -Werror`:\n{}\n{}",
+        String::from_utf8_lossy(&bau.stderr),
+        quelle.display()
+    );
+    let lauf = std::process::Command::new(&ziel)
+        .output()
+        .unwrap_or_else(|e| panic!("the compiled program does not run ({e}) -- NOTHING measured"));
+    assert!(lauf.status.success(), "the compiled program aborts under {cc}/{name}");
+    let aus = String::from_utf8_lossy(&lauf.stdout);
+    assert!(
+        aus.contains("checked=17 bad=0"),
+        "the shipped C computes something other than what was checked ({cc}/{name}):\n{aus}"
+    );
+    let _ = std::fs::remove_file(&quelle);
+    let _ = std::fs::remove_file(&ziel);
+}
+
+/// **The run: every intrinsic, two compilers, three optimisation levels.**
+///
+/// `mix64(1)` pins the whole nonzero group in one row: `clz64(1) = 63`,
+/// `ctz64(1) = 0`, `log2_floor(1) = 0`, total `63`.
+#[test]
+fn bit_intrinsics_run_under_cc_and_clang() {
+    let mut c = bits_c();
+    c.push_str(BITS_TREIBER);
+    bits_baue_und_laufe(&c, "cc", &["-O0"], "cc-O0");
+    bits_baue_und_laufe(&c, "cc", &["-O2"], "cc-O2");
+    bits_baue_und_laufe(&c, "clang", &["-O2"], "clang-O2");
+}
+
+/// **The zero case lives in the argument type -- and the refusal names `narrow`.**
+///
+/// `clz` over a plain `u32` admits 0, and the lowering would reach
+/// `__builtin_clz(0)`, which is undefined. The diagnostic must name the remedy
+/// (`narrow`), and it must fall with `M153` alone: a companion code would mean
+/// a second rule fires on the same line for a different reason.
+#[test]
+fn bit_intrinsic_clz_refuses_a_zero_admitting_operand() {
+    let (codes, texte) = bits_absagen(
+        "module t {
+impl fn p(x : u32) -> u32 effects { pure } costs <= 9 ops { return clz(x); }
+}",
+    );
+    assert_eq!(codes, vec!["M153"], "clz over `u32` must fall with `M153` alone: {codes:?}");
+    assert!(
+        texte.iter().any(|t| t.contains("narrow")),
+        "the refusal must name `narrow` as the remedy: {texte:?}"
+    );
+    // The twin spellings of the same defect: `ctz` and `log2_floor` over the
+    // same operand fall at the same code, for the same reason.
+    for name in ["ctz", "log2_floor"] {
+        let (codes, _) = bits_absagen(&format!(
+            "module t {{
+impl fn p(x : u32) -> u32 effects {{ pure }} costs <= 9 ops {{ return {name}(x); }}
+}}"
+        ));
+        assert_eq!(codes, vec!["M153"], "`{name}` over `u32` must fall with `M153` alone: {codes:?}");
+    }
+    // And the narrowed twin stays silent: `1 ..` excludes zero, so there is
+    // nothing to refuse -- the V1 half of the same rule.
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : u32 in 1 .. 100) -> u32 effects { pure } costs <= 9 ops { return clz(x); }
+}",
+    );
+    assert!(codes.is_empty(), "clz over `u32 in 1 .. 100` must stay silent: {codes:?}");
+    // A BRANCH fact narrows the same way: under `x >= 1` the place carries
+    // `1 ..`, and the call below it is the same call the declaration above
+    // accepts. Without this row the remedy note would prescribe a fact the
+    // rule does not read.
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : u32) -> u32 effects { pure } costs <= 9 ops { if x >= 1 { return clz(x); } return 0; }
+}",
+    );
+    assert!(codes.is_empty(), "clz under `x >= 1` must stay silent: {codes:?}");
+    // The sugar half (lane 60): `u13` admits zero, so `clz` falls -- until
+    // `narrow` lifts the lower bound. The width is the storage width (16),
+    // and the emitted count adjusts down from 32 bits.
+    let (baum, mut a) = gabbro_syntax::lies(
+        "bits.gab",
+        "module t {
+impl fn p(v : u13) -> u16 effects { pure } costs <= 9 ops { narrow v to 1 .. 8191 else { return 0; } return clz(v); }
+}",
+    );
+    assert_eq!(a.fehler_zahl(), 0, "the probe itself does not parse");
+    let _ = gabbro_check::pruefe(&baum, &mut a);
+    let codes: Vec<String> = a
+        .absagen
+        .iter()
+        .filter(|x| x.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|x| x.code.to_string())
+        .collect();
+    assert!(codes.is_empty(), "clz over narrowed `u13` must stay silent: {codes:?}");
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert!(
+        c.contains("(__builtin_clz((unsigned)(v)) - 16)"),
+        "clz over `u13` counts in its storage width:\n{c}"
+    );
+}
+
+/// **Rotation needs a whole word.** Over `u32 in 0 .. 5` the wrap point is
+/// ambiguous (mod 6 costs a division per operation), so it is not derivable
+/// there -- `M155` alone.
+#[test]
+fn bit_intrinsic_rotl_refuses_a_narrowed_range() {
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : u32 in 0 .. 5, s : u32 in 0 .. 31) -> u32 effects { pure } costs <= 9 ops { return rotl(x, s); }
+}",
+    );
+    assert_eq!(codes, vec!["M155"], "rotl over `u32 in 0 .. 5` must fall with `M155` alone: {codes:?}");
+    // The amount is typed too: 32 is not a shift in a 32-bit word.
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : u32, s : u32 in 0 .. 32) -> u32 effects { pure } costs <= 9 ops { return rotl(x, s); }
+}",
+    );
+    assert_eq!(codes, vec!["M155"], "rotl with an amount reaching 32 must fall with `M155` alone: {codes:?}");
+    // A sub-width sugar range is EXACT (`u13 in 0 .. 8191`) and still falls:
+    // the checker reads the storage width (`u16`), and a 13-bit rotation in a
+    // 16-bit word is a different function from a 16-bit one. The type system
+    // erases `u13` from `u16 in 0 .. 8191`, so no rule could tell which width
+    // to rotate in -- refusing is the only direction that does not guess it.
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : u13, s : u8 in 0 .. 7) -> u16 effects { pure } costs <= 9 ops { return rotl(x, s); }
+}",
+    );
+    assert_eq!(codes, vec!["M155"], "rotl over exact `u13` must fall with `M155` alone: {codes:?}");
+}
+
+/// **A one-byte value has no byte order.** `bswap` over `u8` falls with `M156`
+/// alone; the signed twin (`i32`) falls at the same code, for the unsigned
+/// half of the rule.
+#[test]
+fn bit_intrinsic_bswap_refuses_u8() {
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : u8) -> u8 effects { pure } costs <= 9 ops { return bswap(x); }
+}",
+    );
+    assert_eq!(codes, vec!["M156"], "bswap over `u8` must fall with `M156` alone: {codes:?}");
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn p(x : i32) -> i32 effects { pure } costs <= 9 ops { return bswap(x); }
+}",
+    );
+    assert_eq!(codes, vec!["M156"], "bswap over `i32` must fall with `M156` alone: {codes:?}");
+}
+
+/// **A declaration carrying an intrinsic name stands uncalled.** The call form
+/// never reaches it, so the declaration is refused (`N057`) -- the
+/// prohibition-without-replacement shape, caught at the declaration instead of
+/// at every call that routes around it.
+#[test]
+fn bit_intrinsic_name_cannot_be_declared() {
+    let (codes, _) = bits_absagen(
+        "module t {
+impl fn clz(x : u32) -> u32 effects { pure } costs <= 9 ops { return x; }
+}",
+    );
+    assert_eq!(codes, vec!["N057"], "a `fn clz` must fall with `N057` alone: {codes:?}");
+}

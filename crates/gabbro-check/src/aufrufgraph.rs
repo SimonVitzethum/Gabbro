@@ -342,6 +342,43 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             },
         );
     }
+    // **Bit intrinsics (PLAN-BITS §3): the seven claimed calls are CALLEES with
+    // declared effects, for the same reason the eight conversions above are.**
+    // Without a node here, `clz(x)` inside a `pure` function made that function's
+    // own hull undecidable (*"`f` are undecidable: `clz` is unknown to the
+    // graph"*) and drew `H021` over a correct program. An intrinsic reads its
+    // arguments and writes nothing -- `pure` is what `emit.rs::ruf` lowers it
+    // to (a `__builtin_*` expression or a `gabbro_rot*` helper call), so the
+    // node says `pure` the way the conversion nodes do. Read off
+    // `crate::ist_bitintrinsik`, never repeated by hand: a name the predicate
+    // does not know gets no node here and falls where undeclared callees fall.
+    for wort in [
+        "clz",
+        "ctz",
+        "log2_floor",
+        "popcount",
+        "rotl",
+        "rotr",
+        "bswap",
+    ] {
+        debug_assert!(crate::ist_bitintrinsik(wort));
+        let mut eigen = BTreeSet::new();
+        eigen.insert("pure".to_string());
+        g.knoten.insert(
+            wort.to_string(),
+            Knoten {
+                eigen,
+                ruft: BTreeSet::new(),
+                verlangt: Vec::new(),
+                hat_effects: true,
+                parameter: Vec::new(),
+                rufe: Vec::new(),
+                indirect: Vec::new(),
+                modul: String::new(),
+                span: gabbro_syntax::span::Span::neu(0, 0),
+            },
+        );
+    }
     // **Dritte Phase: die Kanten aufloesen.** Erst jetzt stehen alle Schluessel fest. Ein
     // Pfad wird relativ zum Modul des RUFERS gesucht, mit derselben Ordnung, die M1 seit
     // dem 2026-08-14 benutzt (eigenes Modul, umgebende, Wurzel, `use`-Zeile). Was sich nicht

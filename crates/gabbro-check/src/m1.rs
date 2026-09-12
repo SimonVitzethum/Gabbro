@@ -2457,6 +2457,20 @@ impl<'a> Pruefer<'a> {
     }
 
     fn ruf_roh(&mut self, r: &Ruf, lage: &Lage) -> Typ {
+        // **Bit intrinsics (PLAN-BITS §3): seven single-segment call names the
+        // language claims.** Like the integer conversions below they are typed
+        // here rather than looked up as functions: there is no declaration, and
+        // a lookup would answer `Unbekannt` -- the compatible-with-everything
+        // exit that hid «B8». A labelled call (`clz(x: v)`) is NOT one: it falls
+        // through to `marken_pruefen`, which refuses labels at non-constructors
+        // (`M107`), the same sentence a labelled conversion gets.
+        if !r.ist_verbundwert() {
+            if let Some(einfach) = r.path().and_then(|p| p.einfach()) {
+                if crate::ist_bitintrinsik(&einfach.text) {
+                    return self.intrinsik_ruf(&einfach.text, r, lage);
+                }
+            }
+        }
         // **G9, repaired 2026-09-04 -- a call whose path names an integer type IS the
         // conversion.** `SYNTAX.md`:588 marks `primary` with `G9` -- no `cast` production -- and :656-659
         // gives the reason in full: *"a call whose path names a type IS the conversion --
@@ -2758,6 +2772,240 @@ impl<'a> Pruefer<'a> {
             _ => IntBereich::voll(breite, vorzeichen),
         };
         Typ::Ganzzahl(bereich)
+    }
+
+    /// **Bit intrinsics (PLAN-BITS §3): typing of the seven claimed calls.**
+    ///
+    /// The surface spells them per width until generics exist; the width here is
+    /// the operand's OWN `breite`, so no width is named twice and none can
+    /// disagree with the declaration. Ranges follow `PLAN-BITS.md` §3: the
+    /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M153`, with the
+    /// `narrow` remedy the task asks for); every operand must be an unsigned
+    /// standard width (`M154`/`M155`/`M156`); rotation needs the EXACT full
+    /// range and an amount in `0 .. w-1` (`M155`); `bswap` needs `u16`/`u32`/`u64`
+    /// (`M156`). Results are exact, never widened: `0 .. w-1` for the nonzero
+    /// group, `0 .. w` for `popcount`, the full range for rotation and swap.
+    ///
+    /// An `Unbekannt` (or `never`) operand stays silent: there is nothing to
+    /// hold against it, and inventing a width would be the `U10` defect again.
+    /// An EMPTY range does the same -- `M117` owns it at the declaration.
+    fn intrinsik_ruf(&mut self, name: &str, r: &Ruf, lage: &Lage) -> Typ {
+        let will = match name {
+            "rotl" | "rotr" => 2,
+            _ => 1,
+        };
+        if r.argumente.len() != will {
+            let code = match name {
+                "rotl" | "rotr" => "M155",
+                "bswap" => "M156",
+                _ => "M154",
+            };
+            self.absagen.schiebe(
+                Absage::fehler(
+                    code,
+                    r.span,
+                    format!(
+                        "`{name}` takes {will} argument(s), this call passes {}",
+                        r.argumente.len()
+                    ),
+                )
+                .mit_notiz(
+                    "an intrinsic is a fixed form, not a declared function -- the form counts its \
+                     operands, and a value beyond them is a statement about nothing the lowering \
+                     could keep",
+                ),
+            );
+            return Typ::Unbekannt;
+        }
+        let mut argtypen = Vec::new();
+        for a in &r.argumente {
+            argtypen.push((self.ausdruck(a, lage), a.span));
+        }
+        let code = match name {
+            "rotl" | "rotr" => "M155",
+            "bswap" => "M156",
+            _ => "M154",
+        };
+        let (b, _span) = match self.intrinsik_bereich(&argtypen[0].0, argtypen[0].1, name, code, "operand") {
+            Some(x) => x,
+            None => return Typ::Unbekannt,
+        };
+        let w = b.breite;
+        match name {
+            "clz" | "ctz" | "log2_floor" => {
+                if b.min < 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M153",
+                            argtypen[0].1,
+                            format!(
+                                "`{name}` needs an operand whose range excludes zero, \
+                                 and `{}` does not",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "SPRACHE.md §3: like a divisor, the argument must exclude \
+                             zero -- the lowering reaches `__builtin_clz/ctz`, whose \
+                             zero case is undefined",
+                        )
+                        .mit_notiz(
+                            "the caller relies on the result lying in `0 .. w-1` -- \
+                             with zero admitted, `31 - clz(x)` leaves the range the \
+                             checker promised, and the index derivation breaks on \
+                             exactly that case",
+                        )
+                        .mit_notiz(
+                            "a check `if x >= 1 { … }` narrows it (V1), otherwise \
+                             `narrow x to 1 .. … else { … }`",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::genau(w, false, 0, w as i128 - 1))
+            }
+            "popcount" => Typ::Ganzzahl(IntBereich::genau(w, false, 0, w as i128)),
+            "rotl" | "rotr" => {
+                if b.min != 0 || b.max != (1i128 << w) - 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M155",
+                            argtypen[0].1,
+                            format!(
+                                "`{name}` rotates a whole word and needs the exact \
+                                 full range `u{w} in 0 .. {}, and `{}` is not it",
+                                (1i128 << w) - 1,
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "rotation has no width except the operand's own -- on a \
+                             narrowed range the wrap point is ambiguous, and an \
+                             ambiguous wrap is a guess dressed as a proof; the \
+                             caller relies on getting the whole word back",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                let (c, cspan) =
+                    match self.intrinsik_bereich(&argtypen[1].0, argtypen[1].1, name, "M155", "amount") {
+                        Some(x) => x,
+                        None => return Typ::Unbekannt,
+                    };
+                if c.min < 0 || c.max > w as i128 - 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M155",
+                            cspan,
+                            format!(
+                                "`{name}` needs an amount in `0 .. {}`, and `{}` is not",
+                                w as i128 - 1,
+                                c.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a shift by the width or more is undefined in C -- the \
+                             amount is typed like a divisor, and `narrow` narrows it",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::voll(w, false))
+            }
+            _ => {
+                if !matches!(w, 16 | 32 | 64) {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M156",
+                            argtypen[0].1,
+                            format!(
+                                "`bswap` reverses whole bytes and needs `u16`, `u32` \
+                                 or `u64`, and `{}` is none of them",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a one-byte value has no byte order to reverse -- write \
+                             the value itself",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::voll(w, false))
+            }
+        }
+    }
+
+    /// The integer range of an intrinsic operand: unsigned, standard width, known.
+    ///
+    /// Returns the range and the span it was read at. `None` is the honest exit:
+    /// `Unbekannt`/`never` stay silent (nothing to hold), an empty range is
+    /// `M117`'s at the declaration, and every other shape falls at `code`.
+    fn intrinsik_bereich(
+        &mut self,
+        t: &Typ,
+        span: Span,
+        name: &str,
+        code: &'static str,
+        was: &str,
+    ) -> Option<(IntBereich, Span)> {
+        if let Typ::Benannt { undurchsichtig: true, name: bn, .. } = t.durchgreifen() {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "D003",
+                    span,
+                    format!("`{bn}` is opaque -- it does not have the arithmetic of its carrier"),
+                )
+                .mit_notiz(
+                    "bit intrinsics read the carrier's bits, and an `opaque type` \
+                     says exactly that its carrier is hidden",
+                ),
+            );
+            return None;
+        }
+        let Some(b) = t.bereich() else {
+            if !matches!(t.durchgreifen(), Typ::Unbekannt | Typ::Nie) {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        code,
+                        span,
+                        format!(
+                            "`{name}` takes an unsigned integer {was}, and this one \
+                             has type `{}`",
+                            t.text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "only `u8`, `u16`, `u32` and `u64` (or the `uN` sugar over them) carry bits -- \
+                         a truth value, a pointer or a float has none to count, and counting is a \
+                         statement about the operand's bit pattern",
+                    ),
+                );
+            }
+            return None;
+        };
+        if b.ist_leer() {
+            return None;
+        }
+        if b.vorzeichen || !matches!(b.breite, 8 | 16 | 32 | 64) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    code,
+                    span,
+                    format!(
+                        "`{name}` takes an unsigned standard width (`u8`, `u16`, \
+                         `u32`, `u64`), and `{}` is not one",
+                        b.text()
+                    ),
+                )
+                .mit_notiz(
+                    "a signed operand has no unsigned bit pattern to read -- convert \
+                     it first, where the conversion's own rule (`M144`/`M145`) holds",
+                ),
+            );
+            return None;
+        }
+        Some((b, span))
     }
 
     /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**

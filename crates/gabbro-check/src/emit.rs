@@ -2467,6 +2467,32 @@ pub fn emittiere_mit(
         });
         aus.push_str(&zaehler);
     }
+    // **Rotation helpers are GENERATED, not assumed -- and only the used ones.**
+    // The same principle the word readers above answer to: an unused function in
+    // the emitted C is a finding about the generator. Collection is a scan of
+    // the lowered BODIES just before they join the unit: what is collected is
+    // the helper NAME as `ruf` emits the call (`gabbro_rotl32(`), so the two
+    // can never disagree the way a width read twice could -- the call site
+    // reads types from the per-function view that exists only while a body is
+    // lowered, and no pre-pass walk can see it. A user comment naming a helper
+    // would over-collect; the over-collected body is `static inline`, which
+    // neither compiler warns about when unused.
+    {
+        let mut dreh: BTreeSet<&'static str> = BTreeSet::new();
+        for (n, _) in DREH_C {
+            if rumpf.contains(&format!("{n}(")) {
+                dreh.insert(*n);
+            }
+        }
+        if !dreh.is_empty() {
+            aus.push_str(
+                "\n/* Bit rotation (PLAN-BITS §3). Generated, not assumed: C has no rotate. */\n",
+            );
+            for d in &dreh {
+                aus.push_str(DREH_C.iter().find(|(n, _)| n == d).map(|(_, c)| *c).unwrap_or(""));
+            }
+        }
+    }
     aus.push_str(&rumpf);
     aus
 }
@@ -5198,6 +5224,32 @@ fn lesewort(breite: u32, gross: bool) -> Option<&'static str> {
         _ => return None,
     })
 }
+
+/// **Rotation helpers (PLAN-BITS §3): the portable shift-or pattern, once per width.**
+///
+/// C has no rotate, and the pattern needs the amount TWICE (`x << s` and
+/// `x >> (w - s)`). Emitting it inline would evaluate an effectful amount twice
+/// -- a duplicated call is a duplicated effect, not a rotation. So the pattern
+/// lives in a helper and the call site passes each argument ONCE, the way C
+/// passes every argument once. The amount is masked inside (`s &= w-1`), which
+/// is the masking PLAN-BITS §3 asks for, and which also keeps the `w - s` shift
+/// below the width when `s` is 0 (a plain `x >> (w - s)` is undefined there).
+///
+/// Sub-32-bit rotations compute in `unsigned int` and cast back: a `uint16_t`
+/// promotes to SIGNED `int` in C, and `x << 15` on the promoted value would
+/// leave the signed range. The final cast keeps the low `w` bits, which are
+/// exactly the rotated word; the conversion to an unsigned type is defined as
+/// the value modulo `2^w`.
+const DREH_C: &[(&str, &str)] = &[
+    ("gabbro_rotl8", "static inline uint8_t gabbro_rotl8(uint8_t x, uint8_t s) { s &= 7; return (uint8_t)(((unsigned)x << s) | ((unsigned)x >> ((8 - s) & 7))); }\n"),
+    ("gabbro_rotr8", "static inline uint8_t gabbro_rotr8(uint8_t x, uint8_t s) { s &= 7; return (uint8_t)(((unsigned)x >> s) | ((unsigned)x << ((8 - s) & 7))); }\n"),
+    ("gabbro_rotl16", "static inline uint16_t gabbro_rotl16(uint16_t x, uint16_t s) { s &= 15; return (uint16_t)(((unsigned)x << s) | ((unsigned)x >> ((16 - s) & 15))); }\n"),
+    ("gabbro_rotr16", "static inline uint16_t gabbro_rotr16(uint16_t x, uint16_t s) { s &= 15; return (uint16_t)(((unsigned)x >> s) | ((unsigned)x << ((16 - s) & 15))); }\n"),
+    ("gabbro_rotl32", "static inline uint32_t gabbro_rotl32(uint32_t x, uint32_t s) { s &= 31; return (x << s) | (x >> ((32 - s) & 31)); }\n"),
+    ("gabbro_rotr32", "static inline uint32_t gabbro_rotr32(uint32_t x, uint32_t s) { s &= 31; return (x >> s) | (x << ((32 - s) & 31)); }\n"),
+    ("gabbro_rotl64", "static inline uint64_t gabbro_rotl64(uint64_t x, uint64_t s) { s &= 63; return (x << s) | (x >> ((64 - s) & 63)); }\n"),
+    ("gabbro_rotr64", "static inline uint64_t gabbro_rotr64(uint64_t x, uint64_t s) { s &= 63; return (x >> s) | (x << ((64 - s) & 63)); }\n"),
+];
 
 /// Reader and writer word for a width, or a refusal by name. **A word this emitter does not
 /// have is not replaced by the next best one.**
@@ -10249,6 +10301,26 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             if u.geraete.contains_key(n) {
                 return Some(n.clone());
             }
+            // **Bit intrinsics (PLAN-BITS §3): the result width is the operand's
+            // width.** `let y = clz(x);` without an annotation needs a C type
+            // from the value, and the intrinsic's result lives in the operand's
+            // own width (`0 .. w-1` still lowers to `uintN_t`). `None` falls
+            // into the caller's `C001` by name -- the same honest exit an
+            // unresolvable `let` value gets.
+            if crate::ist_bitintrinsik(n)
+                && r.path().is_some_and(|p| p.teile.len() == 1)
+            {
+                let a = r.argumente.first()?;
+                let w = intrinsik_breite(a, u)?;
+                return Some(match w {
+                    8 => "uint8_t",
+                    16 => "uint16_t",
+                    32 => "uint32_t",
+                    64 => "uint64_t",
+                    _ => return None,
+                }
+                .to_string());
+            }
             // **Und sonst: der erklaerte Rueckgabetyp des Gerufenen.** Er stand die ganze
             // Zeit da; gefragt hat ihn niemand.
             ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
@@ -10505,6 +10577,25 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         };
         return format!("({ctyp})({})", ausdruck(arg, u, absagen));
     }
+    // **Bit intrinsics (PLAN-BITS §3): the lowering.**
+    //
+    // Only the BARE name lowers: a qualified path (`m::clz`) is an ordinary
+    // call, the same line `m1.rs` draws. `m1.rs::intrinsik_ruf` owns arity and
+    // ranges; the emitter reads the overlap and refuses a shape it cannot lower
+    // rather than indexing past the end. Every argument is rendered ONCE --
+    // the rotation pattern needs its amount twice, which is why `rotl`/`rotr`
+    // lower to a helper call (`DREH_C`, emitted on demand above) instead of an
+    // inline shift-or.
+    //
+    // `__builtin_clz/ctz` count in the width of `unsigned int`; on a narrower
+    // operand the count is adjusted down (`- 24` for 8 bits, `- 16` for 16).
+    // The cases are unreachable for zero -- the checker excludes it (`M153`) --
+    // so the builtins' undefined zero case never fires.
+    if crate::ist_bitintrinsik(&name)
+        && r.path().is_some_and(|p| p.teile.len() == 1)
+    {
+        return intrinsik_c(&name, r, u, absagen);
+    }
     // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
     // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
     //
@@ -10671,6 +10762,175 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         .map(|(_, a)| ausdruck(a, u, absagen))
         .collect();
     format!("{name}({})", args.join(", "))
+}
+
+/// **Bit intrinsics (PLAN-BITS §3): one call, one C expression.**
+///
+/// `w` is the operand's own width (`intrinsik_breite`), so the builtin's width
+/// and the checker's `breite` are read from the same place. Widths outside the
+/// four standard ones, and a `bswap` outside 16/32/64, are refused by name --
+/// the checker owns those shapes (`M154`/`M155`/`M156`), and this arm is where
+/// an unchecked tree would otherwise invent a lowering.
+fn intrinsik_c(name: &str, r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
+    let Some(a) = r.argumente.first() else {
+        weigere(
+            absagen,
+            r.span,
+            &format!("`{name}` without an argument -- there is no value to count"),
+        );
+        return String::new();
+    };
+    let Some(w) = intrinsik_breite(a, u) else {
+        weigere(
+            absagen,
+            r.span,
+            &format!(
+                "`{name}` over an operand whose C width cannot be read -- the \
+                 builtin is width-specific (`__builtin_clz` counts 32 bits), and \
+                 guessing the width would count the wrong word"
+            ),
+        );
+        return String::new();
+    };
+    if !matches!(w, 8 | 16 | 32 | 64) {
+        weigere(
+            absagen,
+            r.span,
+            &format!("`{name}` over a {w}-bit operand -- no standard width to count in"),
+        );
+        return String::new();
+    }
+    let x = ausdruck(a, u, absagen);
+    match name {
+        "clz" => match w {
+            64 => format!("__builtin_clzll((unsigned long long)({x}))"),
+            32 => format!("__builtin_clz((unsigned)({x}))"),
+            16 => format!("(__builtin_clz((unsigned)({x})) - 16)"),
+            _ => format!("(__builtin_clz((unsigned)({x})) - 24)"),
+        },
+        "ctz" => match w {
+            64 => format!("__builtin_ctzll((unsigned long long)({x}))"),
+            _ => format!("__builtin_ctz((unsigned)({x}))"),
+        },
+        "log2_floor" => match w {
+            64 => format!("(63 - __builtin_clzll((unsigned long long)({x})))"),
+            32 => format!("(31 - __builtin_clz((unsigned)({x})))"),
+            16 => format!("(15 - (__builtin_clz((unsigned)({x})) - 16))"),
+            _ => format!("(7 - (__builtin_clz((unsigned)({x})) - 24))"),
+        },
+        "popcount" => match w {
+            64 => format!("__builtin_popcountll((unsigned long long)({x}))"),
+            _ => format!("__builtin_popcount((unsigned)({x}))"),
+        },
+        "rotl" | "rotr" => {
+            let Some(s) = r.argumente.get(1) else {
+                weigere(
+                    absagen,
+                    r.span,
+                    &format!("`{name}` without an amount -- rotation needs both sides"),
+                );
+                return String::new();
+            };
+            let s = ausdruck(s, u, absagen);
+            format!("gabbro_{name}{w}({x}, {s})")
+        }
+        "bswap" => match w {
+            16 => format!("__builtin_bswap16((uint16_t)({x}))"),
+            32 => format!("__builtin_bswap32((uint32_t)({x}))"),
+            64 => format!("__builtin_bswap64((uint64_t)({x}))"),
+            _ => {
+                weigere(
+                    absagen,
+                    r.span,
+                    "`bswap` needs `u16`, `u32` or `u64` -- a one-byte value has \
+                     no byte order to reverse",
+                );
+                String::new()
+            }
+        },
+        _ => {
+            weigere(
+                absagen,
+                r.span,
+                &format!("`{name}` -- no lowering for this intrinsic"),
+            );
+            String::new()
+        }
+    }
+}
+
+/// **The C width an intrinsic counts in: the operand's lowered type, never its range.**
+///
+/// A narrowed `u32 in 1 .. 5` still lowers to `uint32_t`, and the builtin must
+/// count 32 bits -- reading the range here would count 3. The arms mirror what
+/// the checker reads in `m1.rs`, in the order the emitter can answer: a
+/// literal carries the checker's own smallest-width rule
+/// (`IntBereich::konstante`), a conversion carries its target width, a named
+/// limit (`u32::max`) carries `grenzwort`, and everything else goes through
+/// `wert_ctyp`, which already knows parameters, locals, fields and calls.
+/// `None` refuses at the caller -- guessing the width counts the wrong word.
+fn intrinsik_breite(e: &Expr, u: &Namen) -> Option<u8> {
+    let e = crate::ohne_klammern(e);
+    match &e.art {
+        ExprArt::Zahl(n) => {
+            let v = *n;
+            if v > u64::MAX as u128 {
+                return None;
+            }
+            Some(if v <= 0xFF {
+                8
+            } else if v <= 0xFFFF {
+                16
+            } else if v <= 0xFFFF_FFFF {
+                32
+            } else {
+                64
+            })
+        }
+        ExprArt::Ruf(r) => {
+            if let Some(einfach) = r.path().and_then(|p| p.einfach()) {
+                if let Some(k) = gabbro_syntax::kw::Kw::suche(&einfach.text).filter(|k| k.ist_intty()) {
+                    return crate::umgebung::breite_von(k).map(|(b, _)| b);
+                }
+                if let Some(speicher) = crate::aufrufgraph::zucker_umschreiben(&einfach.text) {
+                    return gabbro_syntax::kw::Kw::suche(&speicher)
+                        .filter(|k| k.ist_intty())
+                        .and_then(crate::umgebung::breite_von)
+                        .map(|(b, _)| b);
+                }
+            }
+            ctyp_breite(&wert_ctyp(e, u)?)
+        }
+        ExprArt::Ort(o) => {
+            if let Some((b, _, _)) = crate::umgebung::grenzwort(o) {
+                return Some(b);
+            }
+            // A sugared limit (`u13::max`) carries the storage word's width --
+            // the same shape `m1.rs` types it in.
+            if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
+                if f.text == "max" || f.text == "min" {
+                    if let Some(speicher) = gabbro_syntax::zucker_speicher(&o.basis.text) {
+                        return crate::umgebung::breite_von(speicher).map(|(b, _)| b);
+                    }
+                }
+            }
+            ctyp_breite(&wert_ctyp(e, u)?)
+        }
+        _ => ctyp_breite(&wert_ctyp(e, u)?),
+    }
+}
+
+/// A lowered C integer type back to its width. Only the four unsigned words --
+/// a signed width here means the checker already refused the program, and the
+/// refusal below (not a guess) is what such a tree gets.
+fn ctyp_breite(c: &str) -> Option<u8> {
+    Some(match c {
+        "uint8_t" => 8,
+        "uint16_t" => 16,
+        "uint32_t" => 32,
+        "uint64_t" => 64,
+        _ => return None,
+    })
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
