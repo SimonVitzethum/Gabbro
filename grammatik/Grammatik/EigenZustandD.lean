@@ -10,6 +10,7 @@
 -/
 import Grammatik.Maschine
 import Grammatik.Satz
+import Grammatik.BlattGegenbeispiel
 
 namespace Gabbro.Grammatik.EZD
 
@@ -1392,4 +1393,159 @@ theorem eigenzustand_nur_eigene_schritteD_rep
       exact pcSchritt_fremd_fest P O hO passes prog M2 pc2 h M' pc' g t hs hOg
         (hNurG h hOg) (hNoAx M2 pc2 h) k f
 
+/-! ## 12. Witness: a two-step run over `Gabbro.Grammatik.BG.D1` with a foreign preserving step.
+
+  Thread `0` (the owner `g`) writes the single slot `false → true` (memory
+  changes); thread `1 ≠ g` then fires `assignVar` (memory-preserving) whose
+  program text never names `t`. Joint instantiation for
+  `eigenzustand_nur_eigene_schritteD_rep`: `hNurG` holds since every
+  `h ≠ 0` program is `[leaf [] []]`; `hNoAx` holds since `D1.Ax` is empty;
+  `PCReach` is the two-step derivation; the step is the second firing. -/
+
+/-- Start memory: the single slot reads `false`. -/
+def wsp0 : Speicher Gabbro.Grammatik.BG.D1 := ⟨fun _ _ _ => false, fun g => nomatch g⟩
+
+/-- Thread program: owner `0` holds the write atom, everyone else the empty atom. -/
+def wprog : PCProg Gabbro.Grammatik.BG.D1 :=
+  fun h => if h = 0 then [PCAtom.leaf [] [.inl ()]] else [PCAtom.leaf [] []]
+
+/-- The oracle is good: no axioms exist. -/
+theorem wGutO : GutO (D := Gabbro.Grammatik.BG.D1) Gabbro.Grammatik.BG.O1 := by
+  intro a σ ρ
+  exact nomatch a
+
+/-- `hNurG` at `g = 0`: every `h ≠ 0` program is carrier-free. -/
+theorem wNurG : ∀ h, h ≠ 0 →
+    ∀ a ∈ wprog h, (Sum.inl () : Gabbro.Grammatik.BG.D1.Tab ⊕ Gabbro.Grammatik.BG.D1.Glob) ∉ PCAtom.carriers a := by
+  intro h hh a ha
+  simp only [wprog] at ha
+  rw [if_neg hh] at ha
+  simp only [List.mem_singleton] at ha
+  subst ha
+  simp [PCAtom.carriers]
+
+/-- `hNoAx` holds vacuously: `D1.Ax` is empty. -/
+theorem wNoAx (M : GenMaschine Gabbro.Grammatik.BG.D1) (pc : PCStand) (h : Faden)
+    (V : Vertrag Gabbro.Grammatik.BG.D1) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res Gabbro.Grammatik.BG.D1))
+    (s : Stmt Gabbro.Grammatik.BG.D1 V l Γ Λ Λ') (ρ : Env Gabbro.Grammatik.BG.D1 Γ)
+    (σ' : World Gabbro.Grammatik.BG.D1) (neu : List (Ereignis Gabbro.Grammatik.BG.D1))
+    (hstep : (execStmt Gabbro.Grammatik.BG.O1 0 keinRuf s (M.weltVon h) ρ).welt = some σ')
+    (Λa : List (Res Gabbro.Grammatik.BG.D1)) (cs : List (Gabbro.Grammatik.BG.D1.Tab ⊕ Gabbro.Grammatik.BG.D1.Glob))
+    (hpc : (wprog h)[pc h]? = some (PCAtom.leaf Λa cs)) :
+    ¬ ∃ (a : Gabbro.Grammatik.BG.D1.Ax) (args : Args Gabbro.Grammatik.BG.D1 Γ Λ (Gabbro.Grammatik.BG.D1.aparams a))
+      (hh : Gabbro.Grammatik.BG.D1.aerg a = none)
+      (hw : ∀ t, Gabbro.Grammatik.BG.D1.aschreibt a t = true → V.schreibt t = true)
+      (hg : ∀ g, Gabbro.Grammatik.BG.D1.agschreibt a g = true → V.gschreibt g = true),
+      (execStmt Gabbro.Grammatik.BG.O1 0 keinRuf
+        (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+        (M.weltVon h) ρ).welt = some σ' ∧ Gabbro.Grammatik.BG.D1.aschreibt a t = true := by
+  intro hEx
+  obtain ⟨a, _, _, _, _, _, _⟩ := hEx
+  exact nomatch a
+
+/-- Step 1: thread `0` fires the write leaf; the slot flips to `true`. -/
+theorem wStep1 (σ' : World Gabbro.Grammatik.BG.D1)
+    (hσ' : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf Gabbro.Grammatik.BG.writeLeaf
+      ((GenStart wsp0).weltVon 0) Env.nil).welt = some σ') :
+    PCSchritt (P := Gabbro.Grammatik.BG.P1) (O := Gabbro.Grammatik.BG.O1) 0 wprog (GenStart wsp0) (fun _ => 0) 0
+      ⟨σ'.speicher, genUpdate (GenStart wsp0).spuren 0 σ'.spur,
+        (GenStart wsp0).lauf ++ genEigen 0 σ'.spur, (GenStart wsp0).start,
+        (GenStart wsp0).welten ++ [σ'], (GenStart wsp0).tiefe + 1⟩
+      (pcAdvance (fun _ => 0) 0) := by
+  refine PCSchritt.leaf (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := []) (Λ := []) (Λ' := [])
+    (s := Gabbro.Grammatik.BG.writeLeaf) (ρ := Env.nil) (σ' := σ') (neu := σ'.spur)
+    (Λa := []) (cs := [.inl ()]) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · rfl
+  · intro L
+    exact nomatch L
+  · exact hσ'
+  · have hsp : (GenStart wsp0).spuren 0 = [] := rfl
+    rw [hsp, List.append_nil]
+  · intro L h hm
+    exact nomatch L
+  · have h0 : (wprog 0)[(fun _ : Faden => 0) 0]? =
+        some (PCAtom.leaf (D := Gabbro.Grammatik.BG.D1) [] [.inl ()]) := by
+      simp [wprog]
+    exact h0
+  · rfl
+  · intro e he m st hm
+    exact nomatch m
+  · intro e he o ho
+    cases e with
+    | zugriff t2 b Lam h =>
+        simp only [Ereignis.traeger, Option.some.injEq] at ho
+        subst ho
+        cases t2
+        simp [PCAtom.carriers]
+    | gzugriff g b Lam h =>
+        exact nomatch g
+    | nimmt L h =>
+        exact nomatch L
+    | gibt L =>
+        exact nomatch L
+
+/-- The write fires from the start world. -/
+theorem wFire1 : ∃ σ' : World Gabbro.Grammatik.BG.D1,
+    (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf Gabbro.Grammatik.BG.writeLeaf
+      ((GenStart wsp0).weltVon 0) Env.nil).welt = some σ' := by
+  have h := (schreibt_wirkt_slot (D := Gabbro.Grammatik.BG.D1) Gabbro.Grammatik.BG.O1 0 Gabbro.Grammatik.BG.V1 false [] []
+    () () Gabbro.Grammatik.BG.i0 Gabbro.Grammatik.BG.negE rfl (fun w => nomatch w)
+    ((GenStart wsp0).weltVon 0) Env.nil).1
+  exact ⟨_, h⟩
+
+/-- Step 2: thread `1` fires `assignVar` (environment-only) with the empty atom. -/
+theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
+    (ρ : Env Gabbro.Grammatik.BG.D1 [.bool])
+    (hρ : ρ = Env.cons (τ := .bool) (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil)
+    (hpc1 : pc1 1 = 0)
+    (htr1 : M1.spuren 1 = [])
+    (σ' : World Gabbro.Grammatik.BG.D1)
+    (hσ' : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
+      (Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := [.bool]) (Λ := []) (τ := .bool)
+        Var.hier (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool)) (M1.weltVon 1) ρ).welt
+      = some σ') :
+    PCSchritt (P := Gabbro.Grammatik.BG.P1) (O := Gabbro.Grammatik.BG.O1) 0 wprog M1 pc1 1
+      ⟨σ'.speicher, genUpdate M1.spuren 1 σ'.spur,
+        M1.lauf ++ genEigen 1 [], M1.start,
+        M1.welten ++ [σ'], M1.tiefe + 1⟩
+      (pcAdvance pc1 1) := by
+  refine PCSchritt.leaf (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := [.bool]) (Λ := []) (Λ' := [])
+    (s := Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) Var.hier
+      (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool))
+    (ρ := ρ) (σ' := σ') (neu := []) (Λa := []) (cs := []) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · rfl
+  · intro L
+    exact nomatch L
+  · exact hσ'
+  · -- `assignVar` with empty `orte` records nothing: outcome spur is old.
+    have hlese : ((M1.weltVon 1).lese ([] : List (Res Gabbro.Grammatik.BG.D1))
+        (Expr.falsch.orte (D := Gabbro.Grammatik.BG.D1) (Γ := [.bool]) (Λ := []))).spur =
+        (M1.weltVon 1).spur := by
+      have : (Expr.falsch (D := Gabbro.Grammatik.BG.D1) (Γ := [.bool]) (Λ := ([] : List (Res Gabbro.Grammatik.BG.D1)))).orte = [] := rfl
+      rw [this]
+      rfl
+    have hcomp : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
+        (Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := [.bool]) (Λ := [])
+          (τ := .bool) Var.hier
+          (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool)) (M1.weltVon 1) ρ).welt =
+        some ((M1.weltVon 1).lese [] []) := rfl
+    rw [hcomp] at hσ'
+    have hσspur : σ'.spur = (M1.weltVon 1).spur :=
+      congrArg World.spur (Option.some_inj.mp hσ'.symm)
+    have hwSpur : (M1.weltVon 1).spur = M1.spuren 1 := rfl
+    rw [hσspur, hwSpur, htr1, List.append_nil]
+  · intro L h hm
+    simp at hm
+  · -- `pc1 1 = 0` and `wprog 1 = [leaf [] []]` since `1 ≠ 0`.
+    have h1 : (wprog 1)[pc1 1]? = some (PCAtom.leaf (D := Gabbro.Grammatik.BG.D1) [] []) := by
+      rw [hpc1]
+      simp [wprog]
+    exact h1
+  · rfl
+  · intro e he m st hm
+    simp at he
+  · intro e he o ho
+    simp at he
+
 end Gabbro.Grammatik.EZD
+
