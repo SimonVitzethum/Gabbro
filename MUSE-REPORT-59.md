@@ -100,6 +100,58 @@ review asked for. No Lean change — `./lean-bau` not run, nothing to build.
   PASSREGISTER pre-V012 figures, README/TODO prose) — none mine, all reproduced
   on the stashed base.
 
+## Reviewer round 3: ROT 2/226 — why a refused item cannot cover (measured)
+
+The suggested fix is already in place and does not cover — that is the finding.
+`beispiele/gift/796-syscall-nicht-implementiert.gab` has spelled the full
+PLAN-SYSCALL.md §1 shape since its creation (`abi linux arch x86_64 number 1`,
+`errors { EBADF => BadFd }`, full `regs`/`clobbers`/`effects`/`assume` body).
+Re-run with `PATH=$HOME/.cargo/bin:$PATH`:
+
+- speech 17/17 green (all five directions, incl. the `syscall` carrier probe);
+- state: `gesenkt` 220, `abgesagt` 0, `vom Pruefer` 4, **UNGEDECKT 2 — `abi`,
+  `errors`**, each `niemand nennt es` + `kontextuell`.
+
+Why a refused item cannot count as coverage — register by register, each read
+before claimed (`instrumente/pruefe-grammatiktafel.py`):
+
+- `volle_emission` (:393-397) admits only files with **0 checker errors and 0
+  `C001`**. Gift/796 carries `P042` (asserted by `jedes_gift_faellt_mit_seinem_code`
+  and by the new sprechprobe test) — excluded by construction. A poison file
+  is *supposed* to fall; a word occurring only there is under test, not in use
+  (same population rule as `zaehle-wortschatz.py::korpusdateien`).
+- `prueferworte` (:384-390) reads `crates/gabbro-check/src/*.rs` except
+  `emit.rs`. `P042` lives in `crates/gabbro-syntax/src/parse.rs` — invisible to
+  this register. No checker pass can ever fire on a parser-dropped item (the
+  `syscall` arm consumes the item and returns `Err(Abbruch)`; the tree keeps no
+  node), so no checker text can honestly name `abi`/`errors` from a measured
+  refusal.
+- `absageworte` heads come from `emit.rs` `C001` texts. The emitter never sees
+  the dropped item either.
+
+Alternatives considered and refused, each with its reason:
+
+- Stuffing `` `abi` ``/`` `errors` `` into a checker error text would flip the
+  state via an ABGELEITET mention — a mention is not a measurement (W25, the
+  direction this guardian's own probe (f) guards). Manufacturing coverage in
+  the register is the fault the register exists to catch.
+- Extending `beispiele/70-kernel-namen.gab`: `abi`/`errors` are not
+  kernel-measured names — no foreign-declarator evidence in `K3-BEFUND.md` /
+  `WORTSTELLUNG.md` (the nine frequent words are fixed and booked); adding them
+  would falsify the file's documented subject and its README line.
+- A new clean example: file-set churn (71→72 across README/DONE/TODO, emission
+  marks, blindstellen pairs, `zaehle-wortschatz` denominator) for a program
+  written against a word list (trap 80, GRAMMATIKTAFEL §5c) — that is S7's job
+  with the real lowering, whose program carries all five words through
+  `gesenkt` honestly.
+
+For the record: the base is ROT too (`messung/GRAMMATIKTAFEL.md` books
+UNGEDECKT 1 pre-lane); this lane moves ROT 1/221 → 2/226 with speech green and
+every other guardian as green as the base. `./cargo-pruef` exit 0, 0 failing —
+incl. `syscall_faellt_mit_einem_namen`, which asserts exactly `["P042"]` over
+the full-shape item (abi + errors clauses present), and gift/796 falling with
+exactly `P042`.
+
 ## What I believe was wrong (task + review, measured)
 
 - S1-as-scoped (documents + guardians, no `kw.rs`) forces a red
