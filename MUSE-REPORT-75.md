@@ -102,13 +102,19 @@ existing example stays green and the two new probes behave as specified).
   of the commit at `.tmp/lane75/emission-baseline.log`). Pre-existing causes:
   `messung/proben/absenkung/*` C failures (`main` return type), booked-count
   drift (messung 73->133, gift 2->9, stray `Claude outputs/` + `halde.gab`
-  roots), `NUR CLANG` on beispiele/66. My commit's emission delta, measured
-  directly: both new files emit C that passes `cc` AND `clang`
-  (`-std=c11 -Wall -Wextra -Werror -c`); after tracking, beispiele/ 71->72
-  and gift-emitting 9->10 become good-case count marks. No compile failure
-  is added. (One transient: a single `gabbro emit` of 796 exited 1 among
-  6+ exit-0 runs of the same file/binary; not reproducible, reported as
-  observed.)
+  roots), `NUR CLANG` on beispiele/66. Post-commit measurement: beispiele/
+  emitting 71->72 (the positive probe -- good-case mark, its C passes `cc`
+  AND `clang -c -Werror`); gift-emitting UNCHANGED at 9. Correction of the
+  first version of this report (which predicted 9->10 from direct `gabbro
+  emit` runs): `gabbro emit` runs the full checker first
+  (`crates/gabbro-cli/src/main.rs`: "The checker runs first, and that is the
+  point") and refuses 796 with the new H007 -- 30/30 deterministic runs of
+  both `pruefe` and `emit` on the final binary. Four earlier silent-emit
+  observations (exit 0 with C written) all predate the final rebuild, are
+  not reproducible since, and most likely saw a stale binary under the
+  shared build queue -- not checker nondeterminism (all new checker paths
+  iterate ordered maps; Umgebung maps are only point-queried). No compile
+  failure is added by this lane.
 - `mutiere-pruefer.py --anker` Sprechprobe and `pruefe-gestalt.py` (Lean
   counters): red identically at baseline -- pre-existing.
 
