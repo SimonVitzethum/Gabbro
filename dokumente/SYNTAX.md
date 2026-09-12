@@ -477,9 +477,11 @@ expr       = orexpr ;
 orexpr     = andexpr { "||" andexpr } ;
 andexpr    = cmpexpr { "&&" cmpexpr } ;
 cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
-bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
-addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
-mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
+bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" | "<<%" ) addexpr } ;
+addexpr    = mulexpr { ( "+" | "-" | "+%" | "-%" | "+|" ) mulexpr } ;
+mulexpr    = unary { ( "*" | "/" | "%" | "*%" ) unary } ;
+(* PLAN-BITS section 4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
+   each rides at the precedence of its base operator. *)
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
 (* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
    carries a width. *)
@@ -529,6 +531,9 @@ placelist  = place { "," place } ;
 | `a & b` | both `0 ..` | `0 .. hi₁` | `Expr.band` |
 | `a \| b`, `a ^ b`, `~a` | both `0 ..`, and the declared width `w` with `hi₁, hi₂ < 2^w` (`M137`) | `0 .. 2^w − 1` | `Expr.bor w`, `Expr.bxor w` |
 | `a << b`, `a >> b` | both `0 ..` | `0 .. hi₁·2^hi₂`, `0 .. hi₁` | `Expr.shl`, `Expr.shr` |
+| `a +% b`, `a -% b`, `a *% b` | both exactly `0 .. 2^N − 1`, unsigned, same width (`M153` otherwise, naming `+\|`); a literal operand takes the other's range when its value lies in it | `0 .. 2^N − 1` | `Zahl.addW/subW/mulW` |
+| `a <<% b` | `a` exactly `0 .. 2^N − 1` unsigned, `b : 0 .. N − 1` | `0 .. 2^N − 1` | `Zahl.shlW` |
+| `a +\| b` | one shared integer range `lo .. hi` (`M154` otherwise); a literal operand takes the other's range | `lo .. hi`, the sum clamped to it | `Zahl.addS` |
 | `< <= == != > >=` on integers | | `bool` | `Expr.lt le eq` (the rest by `nicht`, swapped operands) |
 | `< <=` on floats | both operands finite by type — the comparison is **total**, the NaN quadrant of «F» does not exist («SG-17») | `bool` | `Expr.fllt`, `Expr.flle` |
 | `&& \|\| !` | | `bool` | `Expr.und oder nicht` |

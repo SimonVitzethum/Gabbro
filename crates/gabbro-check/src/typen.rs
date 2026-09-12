@@ -122,7 +122,7 @@ pub fn grenzen(breite: u8, vorzeichen: bool) -> (i128, i128) {
 
 /// Die Breite, in der zwei Operanden gerechnet werden. Gabbro kennt **keine implizite
 /// Umwandlung**; bei verschiedenen Breiten ist das Ergebnis unbekannt statt geraten.
-fn gemeinsame_form(a: &IntBereich, b: &IntBereich) -> Option<(u8, bool)> {
+pub fn gemeinsame_form(a: &IntBereich, b: &IntBereich) -> Option<(u8, bool)> {
     if a.breite == b.breite && a.vorzeichen == b.vorzeichen {
         return Some((a.breite, a.vorzeichen));
     }
@@ -781,6 +781,28 @@ fn maske(wert: i128) -> i128 {
     }
 }
 
+/// **PLAN-BITS section 4 (lane 88): the exact unsigned ranges wrapping lives on.**
+///
+/// Returns `N` when the range is exactly `0 .. 2^N - 1` with `1 <= N <= 64` --
+/// a full unsigned word or the `uN` sugar's range. Anything else (`0 .. 5`, a
+/// signed range, a literal point) is `None`: wrapping there is ambiguous (mod 6
+/// costs a division per operation), so it is not derivable there.
+///
+/// Signedness is deliberately NOT judged here: a signed range like `0 .. 255`
+/// is exact but still no wrapping operand (signed overflow is undefined in C)
+/// -- the caller refuses it with the unsigned sentence.
+pub fn exact_wrap_n(b: &IntBereich) -> Option<u32> {
+    if b.min != 0 {
+        return None;
+    }
+    for n in 1..=64u32 {
+        if b.max == (1i128 << n) - 1 {
+            return Some(n);
+        }
+    }
+    None
+}
+
 pub fn schiebe_links(a: &IntBereich, b: &IntBereich) -> Rechnung {
     // Eine Schiebeweite ausserhalb der Breite ist keine Rechnung, sondern ein Befund.
     if b.min < 0 || b.max >= a.breite as i128 {
@@ -884,6 +906,32 @@ mod proben {
             schiebe_links(&nur_unten, &zwanzig).laeuft_ueber,
             "-3000 << 20 leaves i32 at the bottom"
         );
+    }
+
+    /// **PLAN-BITS section 4 (lane 88): only exact `0 .. 2^N-1` ranges wrap.**
+    #[test]
+    fn exact_wrap_only_exact_ranges() {
+        assert_eq!(
+            exact_wrap_n(&IntBereich::genau(32, false, 0, 4294967295)),
+            Some(32)
+        );
+        assert_eq!(
+            exact_wrap_n(&IntBereich::genau(16, false, 0, 8191)),
+            Some(13)
+        );
+        assert_eq!(
+            exact_wrap_n(&IntBereich::genau(64, false, 0, i128::from(u64::MAX))),
+            Some(64)
+        );
+        assert_eq!(exact_wrap_n(&IntBereich::genau(32, false, 0, 5)), None);
+        assert_eq!(exact_wrap_n(&IntBereich::genau(8, false, 0, 0)), None);
+        // Exact but signed -- the RANGE is exact, the caller still refuses it:
+        // signed overflow is undefined in C, so wrapping is unsigned-only.
+        assert_eq!(
+            exact_wrap_n(&IntBereich::genau(32, true, 0, 255)),
+            Some(8)
+        );
+        assert_eq!(exact_wrap_n(&IntBereich::konstante(1)), None);
     }
 
     #[test]
