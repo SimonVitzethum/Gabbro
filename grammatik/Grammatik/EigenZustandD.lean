@@ -1255,4 +1255,85 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
       exact Or.inr (Or.inl fun k f =>
         next_slots_fest O passes (Stmt.next h) rfl σ ρ σ' hstep t k f)
 
+/-! ## 10. The step theorem: a foreign step keeps the slots of `t`.
+
+  `pcSchritt_fremd_fest`: invert the `PCSchritt`. Take/release keep
+  `M.speicher` by construction (`rfl` after `cases`). For a leaf, run the
+  dispatch (§9): a recorded write for `t` contradicts `hNurG` via `hcar`
+  (the event's carrier lies in the fired atom's carriers, and the atom is
+  in `prog h` at `pc h`); slots kept is the goal; a declared oracle write
+  to `t` contradicts `hNurG` the same way when the oracle's declared writes
+  are covered by the atom carriers -- since `stmtTraeger` covers them, but
+  the fired atom is ARBITRARY `prog` (not `progAus`), the oracle arm needs
+  the atom to actually carry `inl t`: it does NOT by `hNurG`. Hence the
+  oracle-write arm is impossible under `hNurG` ONLY IF the atom carriers
+  cover the oracle writes -- which `hcar` does not guarantee (it constrains
+  RECORDED events, and `GutO` records none for the oracle). So the oracle
+  arm stays open: the step theorem takes it as an explicit existential
+  hypothesis discharged by the witness (whose oracle writes nothing). -/
+
+theorem pcSchritt_fremd_fest (P : Programm D) (O : Orakel D) (hO : GutO O)
+    (passes : Nat)
+    (prog : PCProg D) (M pc h M' pc') (g : Faden) (t : D.Tab)
+    (hs : PCSchritt P O passes prog M pc h M' pc')
+    (hOg : h ≠ g)
+    (hNurG : ∀ a ∈ prog h,
+      (Sum.inl t : D.Tab ⊕ D.Glob) ∉ PCAtom.carriers a)
+    (hNoAx : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+      (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+      (σ' : World D) (neu : List (Ereignis D))
+      (hstep : (execStmt O passes keinRuf s (M.weltVon h) ρ).welt = some σ')
+      (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+      (hpc : (prog h)[pc h]? = some (PCAtom.leaf Λa cs)),
+      ¬ ∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
+        (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+        (execStmt O passes keinRuf
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (M.weltVon h) ρ).welt = some σ' ∧ D.aschreibt a t = true)
+    (k : Int) (f : D.Feld t) :
+    M'.speicher.slots t k f = M.speicher.slots t k f := by
+  cases hs with
+  | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn Λa cs hpc hΛa hmark hcar =>
+      -- The outcome memory is `σ'.speicher`; the goal is about slots.
+      have hmem : (∀ k f, σ'.slots t k f = (M.weltVon h).slots t k f) ∨
+          (∃ ev ∈ neu, ev.traeger = some (Sum.inl t)) ∨
+          (∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
+            (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+            (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+            (execStmt O passes keinRuf
+              (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+              (M.weltVon h) ρ).welt = some σ' ∧ D.aschreibt a t = true) := by
+        have hdisp := blattSlots_dispatch O hO passes s ρ hleaf
+          (M.weltVon h) σ' neu hstep hneu t
+        rcases hdisp with hRec | hFest | hAx
+        · exact Or.inr (Or.inl hRec)
+        · exact Or.inl hFest
+        · exact Or.inr (Or.inr hAx)
+      rcases hmem with hFest | hRec | hAx
+      · -- Slots kept: the leaf rule sets `M'` memory to `σ'.speicher`.
+        show σ'.speicher.slots t k f = M.speicher.slots t k f
+        have h1 : σ'.slots t k f = (M.weltVon h).slots t k f := hFest k f
+        have h2 : (M.weltVon h).slots t k f = M.speicher.slots t k f := rfl
+        have hσ1 : σ'.speicher.slots t k f = σ'.slots t k f := rfl
+        have hσ2 : (M.weltVon h).speicher.slots t k f =
+            (M.weltVon h).slots t k f := rfl
+        rw [hσ1, h1, h2]
+      · -- Recorded write for `t`: `hcar` puts its carrier in the atom.
+        obtain ⟨ev, hmemNeu, htr⟩ := hRec
+        have hcarEv := hcar ev hmemNeu _ htr
+        have hatom : PCAtom.leaf Λa cs ∈ prog h := by
+          have hget := hpc
+          exact List.mem_of_getElem? hget
+        have hcon := hNurG _ hatom hcarEv
+        exact absurd hcon (by simp)
+      · -- Declared oracle write: excluded by `hNoAx`.
+        obtain ⟨a, args, hh, hw, hg, hfire, hwr⟩ := hAx
+        exact absurd ⟨a, args, hh, hw, hg, hfire, hwr⟩
+          (hNoAx V l Γ Λ Λ' s ρ σ' neu hstep Λa cs hpc)
+  | take L hself hrang hfrei hpc =>
+      rfl
+  | rel L hhaelt hpc =>
+      rfl
+
 end Gabbro.Grammatik.EZD
