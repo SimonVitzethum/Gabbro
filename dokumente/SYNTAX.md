@@ -40,7 +40,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **161** measured (`pruefe-syntax.sh` EBNF branch: 161 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»); nothing removed |
+| defined EBNF rules | 132 | **163** measured (`pruefe-syntax.sh` EBNF branch: 163 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
 | vocabulary words | 221 | **221 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 221 EBNF terminals against 221 table words, both readings) — new word since the second version: `owner` («SG-9»), `deadline` («SG-22») and `concurrent` («SG-23») |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
@@ -726,7 +726,8 @@ endstmt    = "return" [ expr ] ";" | "leave" ident ";" | "next" ident ";" ;
    `return R::F;` is a `return expr;` whose expression is a ground. *)
 stmt       = letstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
-           | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt ;
+           | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt
+           | libcall ";" ;                                       (* lane E1: statement position *)
 leavestmt  = "leave" ident ";" ;
 nextstmt   = "next" ident ";" ;
 advstmt    = "advances" ident "->" ident ";" ;                   (* NEW «SG-14» *)
@@ -745,6 +746,7 @@ xform      = "update" "(" ident ")"
    bound and the exit. *)
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
+           | "let" [ "mut" ] ident [ ":" typeexpr ] "=" libcall ";" ;   (* lane E1: binding position *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
 stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-19» *)
 (* The transition of a `state` field: `transition T.slots[i].s : Idle -> Busy;` names the
@@ -853,6 +855,38 @@ differ (advance changes the stage, never the owner), threads may not.
 Lean: `Grammatik/Marken.lean` (`Stand`, `MarkenSchritt`, `Verlauf`,
 `Einfaedig`); the projection into `Gesittet.marke_eindeutig` is the wiring
 lane's work.
+
+### Library calls — `@library#function ( args ) { region }` (lane E1)
+
+A library call is a **run-time call** of `function` in `library`
+(`PLAN-ERWEITUNG.md` §0b, §1, §6). It stands in statement position and in
+binding position:
+
+```ebnf
+libcall    = "@" ident "#" ident "(" [ arglist ] ")" "{" libregion "}" ;
+libregion  = ? brace-balanced token tree, captured without interpreting ? ;
+```
+
+`stmt` carries `libcall ";"`, `letstmt` carries `"=" libcall ";"`; `arglist`
+is the ordinary argument list. The region is a brace-balanced token tree the
+reader captures WITHOUT interpreting: the opening `{`, nested `{ … }` pairs,
+the closing `}`. What the region MEANS — compiled at translation time into a
+payload the call carries (`PLAN-ERWEITUNG.md` §0b) — is **not implemented
+yet**: no translator runs and no payload type is checked. The checker refuses
+every library call with `N057` (`library calls are parsed but not yet
+checked`); the refusal is controlled — never a crash and never a silent
+acceptance — and stands until lane E2 checks the call like any call. In any
+other expression position the reader refuses the `@` with `P011`.
+
+```gabbro
+@spirv#kernel(n) { dispatch 0 };
+let code = @spirv#kernel(n) { dispatch 0 };
+```
+
+| spelling | attribute | Lean |
+|---|---|---|
+| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; refused | no term — refused by `N057` |
+| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057` |
 
 ---
 
