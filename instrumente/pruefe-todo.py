@@ -152,12 +152,20 @@ def done_korpuszahlen(dt, n_bsp, n_gift):
     return befunde
 
 
-def pruefe(text, zahlen, vollstaendig=False):
+def pruefe(text, zahlen, vollstaendig=False, done_text=None):
     """Gibt die Liste der Befunde. Leer heisst: die Liste stimmt ueber sich selbst.
 
     `vollstaendig` heisst: der Text ist die ECHTE `TODO.md` und traegt darum jede bewachte
     Zahl. Nur dann ist ein Muster ohne Treffer ein Befund -- die zwei Vorlagen der
     Sprechprobe sind kurz und sollen es nicht sein.
+
+    `done_text` carries the DONE.md text to check. `None` (the default) reads the live
+    file, which is what the real run wants. The speech test passes an invented clean
+    text instead: rule 8 used to read the LIVE `DONE.md` even for its invented templates,
+    so a stale count in the real file (DONE.md vs the corpus) failed the CLEAN template
+    and aborted the guardian over its own subject -- exit 2, nothing behind it measured.
+    A probe that grades invented lists against a live file measures the file, not the
+    lists.
     """
     befunde = []
 
@@ -274,8 +282,13 @@ def pruefe(text, zahlen, vollstaendig=False):
     #    derselbe Fehler wie ein `[x]` im TODO, nur spiegelverkehrt -- und er faellt
     #    niemandem auf, weil ihn niemand sucht.
     d = WURZEL / "DONE.md"
-    if d.is_file():
+    if done_text is not None:
+        dt = done_text
+    elif d.is_file():
         dt = d.read_text()
+    else:
+        dt = None
+    if dt is not None:
         # **Rule 7 named ONE file, and that is why the other one went stale** (2026-08-30).
         #
         # The counts above run over `TODO.md`, because that is the text this function is
@@ -582,6 +595,18 @@ def readme_vorlage(text):
     return text
 
 
+def _leere_done():
+    """An invented DONE.md that is clean by construction -- for the speech test.
+
+    Carries today's corpus counts (derived, never typed), no open checkbox, no
+    proof-table row. Whatever the live `DONE.md` claims, the templates below are
+    judged against this text and nothing else.
+    """
+    n_b = len(list((WURZEL / "beispiele").glob("*.gab")))
+    n_g = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
+    return f"**{n_b} clean examples, {n_g} poison probes** --\n"
+
+
 def sprechprobe(zahlen):
     """In beide Richtungen: eine kaputte Liste MUSS fallen, eine saubere NICHT."""
     gift = """# Probe
@@ -628,10 +653,10 @@ Numbers left standing from P1: 117 rules, 187 terminals (today 1 / 1)
 
 **Exclusively what is open.**
 """
-    b_gift = pruefe(gift, zahlen)
-    b_sauber = pruefe(sauber, zahlen)
-    b_gift_en = pruefe(gift_en, zahlen)
-    b_sauber_en = pruefe(sauber_en, zahlen)
+    b_gift = pruefe(gift, zahlen, done_text=_leere_done())
+    b_sauber = pruefe(sauber, zahlen, done_text=_leere_done())
+    b_gift_en = pruefe(gift_en, zahlen, done_text=_leere_done())
+    b_sauber_en = pruefe(sauber_en, zahlen, done_text=_leere_done())
     # **Fuenf statt drei, seit die heute-Klammer mitgeprueft wird.** Die Marke wandert mit dem
     # Waechter mit: eine Untergrenze, die stehenbleibt, waehrend Regeln dazukommen, misst
     # irgendwann nur noch die aeltesten.
@@ -667,8 +692,8 @@ Numbers left standing from P1: 117 rules, 187 terminals (today 1 / 1)
                  "without one** · 999 EBNF rules\n")
     en_richtig = (f"**{k} metrics with a command** · **{fz} bold numbers in table cells "
                   f"without one** · {rg} EBNF rules\n")
-    en_b = pruefe(en_falsch, zahlen)
-    en_s = pruefe(en_richtig, zahlen)
+    en_b = pruefe(en_falsch, zahlen, done_text=_leere_done())
+    en_s = pruefe(en_richtig, zahlen, done_text=_leere_done())
     en_ok = len(en_b) >= 3 and not en_s
     print(f"  EN-Beschriftung: {len(en_b)} Befunde bei verstellten Zahlen, "
           f"{len(en_s)} bei richtigen", end="")
