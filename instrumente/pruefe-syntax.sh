@@ -19,7 +19,16 @@ export LC_ALL=C
 cd "$(dirname "$0")/.."
 
 # Woerter, die es laut dokumente/SYNTAX.md ABSICHTLICH nicht gibt.
-VERBOTEN='\bwhile\b|\bfor\b|\bgoto\b|\bunion\b|\bswitch\b|_ =>|\bvoid\*'
+VERBOTEN='\bwhile\b|\bgoto\b|\bunion\b|\bswitch\b|_ =>|\bvoid\*'
+# **2026-09-12, lane E3: `for` left the list above.** It is vocabulary now --
+# the link of a translator declaration (`translator build for kernel`,
+# SYNTAX.md §7.2) -- so a ```gabbro block spelling a translator trips
+# `\bfor\b` without spelling a loop. What stays refused is the `for`
+# LOOP, and that refusal lives in the reader (`P035` out of
+# `abgeschaffte_form`), pinned by the `for (i)` case of
+# `crates/gabbro-syntax/tests/sprechprobe.rs` -- not by this text scan.
+# A word the grammar carries cannot be caught by a list of words it does
+# not carry; the list holds only what is still nothing at all.
 # Deutsche Schluesselwoerter aus der Zeit vor E1 -- zwei Oberflaechen sind ein Riss.
 ALTDEUTSCH='\bwirkung\b|\bbenoetigt\b|\buebergang\b|\bgattert\b|\bsprechprobe\b|\buntergrenze\b|\bgegenprobe\b|\bklasse\b|\bfelder\b|\berhaelt\b|\bmaskiert\b|\bwechsle\b|\bentfernt\b|\bdecrement\b|\beinheit\b|\broh fn\b|\blaeuft\b'
 

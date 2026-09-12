@@ -990,6 +990,17 @@ pub struct FnDecl {
     /// (`N060`). A path and not a bare name, so the table may stand in
     /// another module than the function.
     pub nutzlast: Option<Pfad>,
+    /// **`translator build for kernel` -- the served library function (lane E3).**
+    ///
+    /// `Some(kernel)` on a translator declaration: the `library fn` in the
+    /// same module whose payload type this translator fills at translation
+    /// time (`SYNTAX.md` §7.2). `None` on every other function. The parser
+    /// fills it from the `for` link; the checker holds exactly-one per
+    /// library function (`N200`/`N201`), `effects { pure }` (`N202`), a
+    /// `decreases` clause (`N203`) and the result against the payload
+    /// (`N204`). Read by the name pass; the body is checked by every pass
+    /// like any function body.
+    pub translator_fuer: Option<Ident>,
     pub name: Ident,
     pub parameter: Vec<Parameter>,
     pub ergebnis: Option<TypExpr>,

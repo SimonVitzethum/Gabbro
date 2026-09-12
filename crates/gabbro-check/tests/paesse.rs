@@ -2558,6 +2558,16 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
 {
     return n;
 }
+-- **Lane E3:** the serving translator -- identity, the region already in
+-- payload form. Without it every fixture below would carry `N200` beside
+-- the code it pins.
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
 }
 "
     .to_string()
@@ -2697,6 +2707,13 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
 {
     return mid(n);
 }
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
 }
 module app {
 use gpu::spirv;
@@ -2711,6 +2728,9 @@ impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
 
 #[test]
 fn library_payload_no_table_n060() {
+    // The translator answers `u32` -- neither side names a table, so the
+    // payload refusal stands alone: `N204` pins only a translator whose
+    // result misses a NAMED payload.
     faellt_genau(
         "module gpu::spirv {
 pub library fn kernel(n : u32) -> u32 payload NoSuchTab
@@ -2720,6 +2740,13 @@ pub library fn kernel(n : u32) -> u32 payload NoSuchTab
     costs <= 8 ops
 {
     return n;
+}
+translator build for kernel(region : u32) -> u32
+    effects { pure }
+    costs <= 8 ops
+    decreases region
+{
+    return region;
 }
 }",
         &["N060"],
@@ -2740,6 +2767,8 @@ library fn f(a : u32) -> u32 effects { pure } costs <= 1 ops {
 
 #[test]
 fn library_missing_body_p044() {
+    // The translator stands -- the body refusal pins the library
+    // declaration alone, not its linkage.
     faellt_genau(
         "module m {
 table T count 1 {
@@ -2748,6 +2777,13 @@ table T count 1 {
     }
 }
 library fn f(a : u32) -> u32 payload T effects { pure } costs <= 1 ops;
+translator b for f(region : T) -> T
+    effects { pure }
+    costs <= 1 ops
+    decreases region.w
+{
+    return region;
+}
 }",
         &["P044"],
     );
@@ -2775,6 +2811,13 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
 pub impl fn direct(n : u32) -> u32 effects { pure } costs <= 16 ops {
     return kernel(n);
 }
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
 }
 module app {
 use gpu::spirv;
@@ -2783,5 +2826,250 @@ impl fn g(a : u32) -> u32 effects { pure } costs <= 16 ops {
 }
 }",
         &["N061", "N061"],
+    );
+}
+
+// -- Lane E3: the translator declaration side (SYNTAX.md §7.2) ----------------------------
+// Every `library fn` with a payload type has exactly one translator in its
+// module; the translator is `effects { pure }` with a `decreases` clause
+// and answers the payload type. Its body is checked by the ordinary
+// checker; the region still is not translated, so the call refusal
+// (`N069`) names the translator that WOULD run.
+
+/// A library module with a payload table and a library function, and a
+/// translator head behind it -- the caller fills the translator tail.
+fn translator_modul_src(translator: &str) -> String {
+    format!(
+        "module gpu::spirv {{
+table KernelTab count 1 {{
+    slot {{
+        words : u32,
+    }}
+}}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects {{ pure }}
+    costs <= 8 ops
+{{
+    return n;
+}}
+{translator}
+}}
+"
+    )
+}
+
+#[test]
+fn translator_declared_call_names_it_n069() {
+    // The positive direction: declaration plus translator, and the call
+    // falls with nothing but the translation refusal -- no N200-N204.
+    faellt_genau(
+        &format!(
+            "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 32 ops {{
+    @spirv#kernel(a) {{ dispatch 0 }};
+    return a;
+}}
+}}",
+            translator_modul_src(
+                "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+            )
+        ),
+        &["N069"],
+    );
+}
+
+#[test]
+fn translator_missing_n200() {
+    // No translator serves the function: the declaration-side refusal.
+    faellt_genau(
+        &translator_modul_src(""),
+        &["N200"],
+    );
+}
+
+#[test]
+fn translator_second_n201() {
+    // Two translators name one function: the first (by position) serves
+    // it, the second serves nothing.
+    faellt_genau(
+        &translator_modul_src(
+            "translator eins for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+translator zwei for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+        ),
+        &["N201"],
+    );
+}
+
+#[test]
+fn translator_dangling_n201() {
+    // A translator naming no library function serves nothing either.
+    faellt_genau(
+        &translator_modul_src(
+            "translator b for missing(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+        ),
+        &["N200", "N201"],
+    );
+}
+
+#[test]
+fn translator_effects_n202() {
+    faellt_genau(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { writes KernelTab.slots }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}"
+        ),
+        &["N202"],
+    );
+}
+
+#[test]
+fn translator_no_effects_n202() {
+    // A missing clause is not a silent `pure`: without the line nobody
+    // promised anything. The ordinary missing-`effects` refusal (`E001`)
+    // fires beside it -- two rules, two diagnostics.
+    faellt_genau(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}",
+        ),
+        &["N202", "E001"],
+    );
+}
+
+#[test]
+fn translator_no_decreases_n203() {
+    faellt_genau(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+{
+    return region;
+}"
+        ),
+        &["N203"],
+    );
+}
+
+#[test]
+fn translator_result_mismatch_n204() {
+    // The translator answers another declared table: not the payload.
+    faellt_genau(
+        &"module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+table Andere count 2 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator build for kernel(region : Andere) -> Andere
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+"
+        .to_string(),
+        &["N204"],
+    );
+}
+
+#[test]
+fn translator_foreign_hull_n059() {
+    // A translator calling an `extern fn` carries the hull refusal with
+    // the translator named -- the same rule as a library body.
+    faellt_genau(
+        &"module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+extern fn launch(d : u32) -> u32 effects { pure } costs <= 1 ops;
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 16 ops
+{
+    return n;
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 16 ops
+    decreases region.words
+{
+    launch(region.words);
+    return region;
+}
+}
+"
+        .to_string(),
+        &["N059"],
+    );
+}
+
+#[test]
+fn translator_without_body_p044() {
+    // A bodyless translator is a foreign promise, like a bodyless
+    // `library fn` -- the same rule refuses both.
+    faellt_mit(
+        &translator_modul_src(
+            "translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words;",
+        ),
+        "P044",
     );
 }

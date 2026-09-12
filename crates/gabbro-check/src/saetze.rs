@@ -360,26 +360,33 @@ pub const NAMEN: &[Satz] = &[
     // with `payload <table>`, SYNTAX.md §7.1); the call `@lib#f` resolves
     // like any name and is checked like any call -- arguments (`M143` and
     // per-argument shape and range), effects through the call graph
-    // (`E008`), costs against the declaration. Four new refusals hold the
-    // four things no ordinary check can: the missing translator (`N069`),
-    // a foreign body in the hull (`N059`, §0c), a payload naming no table
-    // (`N060`), and a direct call bypassing the region (`N061`).
+    // (`E008`), costs against the declaration. Four refusals hold the
+    // four things no ordinary check can: the still-untranslated call
+    // (`N069`, naming the translator lane E3 declares), a foreign body in
+    // the hull (`N059`, §0c), a payload naming no table (`N060`), and a
+    // direct call bypassing the region (`N061`). The translator linkage
+    // itself is `namen.uebersetzer_*` below (lane E3).
     Satz {
         name: "namen.bibliothek_ruf",
         kennungen: &["N069"],
         aussage: "Every RESOLVED library call is refused with the translation \
-                  diagnostic -- once per call, in both positions. Its arguments, \
+                  diagnostic -- once per call, in both positions, naming the \
+                  translator that WOULD run the region. Its arguments, \
                   effects, error channel and costs are checked exactly like an \
                   ordinary call's; only the region is still not interpreted, so \
-                  until the translator exists (lanes E3/E5) the call cannot pass.",
+                  until a translator RUNS it (declared since lane E3, running \
+                  it is lane E5) the call cannot pass.",
         vorbehalt: "The refusal is load-bearing, not provisional: a checked call \
                     without a payload would be a silent acceptance of a region \
-                    nobody compiled. `beispiele/gift/820` carries a declaration \
-                    and two calls and falls with nothing but this code.",
+                    nobody compiled. `beispiele/gift/820` carries a declaration, \
+                    its translator and two calls and falls with nothing but \
+                    this code.",
+        gemessen_an: "`beispiele/gift/820` (declaration plus translator plus \
+                      calls, `N069` only); `/823` (wrong argument type beside \
+                      it); `beispiele/gift/870` (the E3-numbered positive); \
+                      counter-direction in `paesse.rs` (`bibliothek_*`, \
+                      `translator_declared_call_names_it_n069`).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N069` only); \
-                      `/823` (wrong argument type beside it); counter-direction \
-                      in `paesse.rs` (`bibliothek_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
     },
     Satz {
@@ -426,6 +433,52 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "counter-direction in `paesse.rs` (`bibliothek_direktruf_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1",
+    },
+    // --- lane E3, 2026-09-12: the translator declaration ---------------------------------
+    //
+    // **The DECLARATION side of translators (PLAN-ERWEITUNG.md §6, lane E3).**
+    // A library declares, per run-time function, the translator from the
+    // region AST to the payload (`translator … for …`, SYNTAX.md §7.2) --
+    // a total, effect-free Gabbro function whose body every pass checks
+    // like any function body. Running it needs the compile-time evaluator
+    // (lane E5); only the declaration and the typing are built now. Five
+    // new refusals hold the five things only the linkage can fail.
+    Satz {
+        name: "namen.uebersetzer_einzigkeit",
+        kennungen: &["N200", "N201"],
+        aussage: "Every `library fn` with a payload type has exactly one \
+                  translator in its module: none is refused on the function, \
+                  a second one -- and a translator naming no library function \
+                  at all -- on the translator.",
+        vorbehalt: "The first declaration by position serves the function; a \
+                    function without a payload clause (`P043`) owes no \
+                    translator -- one refusal per defect.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/871` (missing, `N200`); counter-direction \
+                      in `paesse.rs` (`translator_missing_n200`, \
+                      `translator_second_n201`, `translator_dangling_n201`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; PLAN-ERWEITUNG.md §6",
+    },
+    Satz {
+        name: "namen.uebersetzer_signatur",
+        kennungen: &["N202", "N203", "N204"],
+        aussage: "A serving translator is `effects { pure }` with a \
+                  `decreases` clause and answers the served function's \
+                  payload table: anything else -- including a missing clause \
+                  or a missing result -- is refused on the translator.",
+        vorbehalt: "A payload naming no table itself (`N060` beside it) pins \
+                    no `N204`: one refusal per defect. The body is ordinary \
+                    Gabbro for every other pass; a translator hull reaching a \
+                    foreign body falls under `N059` like a library body.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/872` (effects, `N202`); `/873` (no \
+                      decreases, `N203`); `/874` (foreign result, `N204`); \
+                      counter-direction in `paesse.rs` (`translator_effects_n202`, \
+                      `translator_no_effects_n202`, `translator_no_decreases_n203`, \
+                      `translator_result_mismatch_n204`, \
+                      `translator_foreign_hull_n059`, \
+                      `translator_without_body_p044`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; PLAN-ERWEITUNG.md §6",
     },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //

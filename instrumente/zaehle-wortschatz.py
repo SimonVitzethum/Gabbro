@@ -97,7 +97,15 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 #
 # **229 -> 231 on 2026-09-12 («E2»).** `library` + `payload` arrive with one
 # reason block above EACH entry, so the second mark below does not move.
-MARKE_WOERTER = 231
+#
+# **231 -> 233 on 2026-09-12 («E3»).** `translator` + `for` name the
+# translator declaration (`dokumente/SYNTAX.md` §7.2,
+# `PLAN-ERWEITUNG.md` §6, lane E3): no existing form carries the
+# region-to-payload map or its link to the served function -- a bare name
+# would collide with the served function -- and the reason stands at each
+# entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
+# so the third mark does not move either.
+MARKE_WOERTER = 233
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #
