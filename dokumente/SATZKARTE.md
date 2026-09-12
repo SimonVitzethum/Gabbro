@@ -187,3 +187,26 @@ per-thread form exhibit (`hForm`), the head validity (`hSeedAll`), the oracle bo
 the separation facts (`hMSep`/`hCSep`), the footprint containments, and the per-use spacing
 (`hspace`) are all owed per program, per chain, or per run. The non-invariant fragment
 (assertions over shared carriers not in invariant form) is not covered by this variant at all.
+
+## 5. Flags from the independent draft B (lane 17) that draft A does not carry
+
+Draft B was written independently of this map; its premise table agrees with §2. These
+flags are new or sharper, and each was re-read against the Lean before being folded in:
+
+- **B8 -- `hMSep` excludes two threads running the same function.** `PCMarkSep`
+  (`Maschine.lean:1309`) demands that no mark code named by one thread's program text is
+  named by another's. `progAus` (`Extraktion.lean:2572`) extracts each thread's text from
+  the body of the function it runs, so two threads running the same function carry the same
+  atoms, and every mark named in that body appears in both texts. The most ordinary
+  multithreaded shape -- the same routine on two threads -- therefore cannot reach the W4
+  discharge (`pc_discharge_einfaedig`). Marks are static names (`D.Marke`), not per-thread
+  instances; a per-thread mark needs an instance notion the extraction does not have.
+- **B5 -- `hBlattAll` excludes break-and-restore.** The per-firing `↔` forbids a thread's own
+  step from breaking its contract even temporarily (a counter mid-update, two linked fields
+  updated in sequence). Only contracts that no own write can touch discharge.
+- **B11 -- the lowering leg is numeric only.** `hLowering.proPrimitiv ≤ 18` says nothing about
+  the 30 undecided C forms in real output (`Ziel.lean:68-73`); count preservation for the
+  seven modeled ops lives downstream (`Budget.lean:681-690`).
+- **B12 -- the order leg names one table and two accesses.** Conjunct 12 orders exactly
+  `hw₁`/`hw₂` on `t₀`; everything else an ordinary program races on is not ordered by this
+  theorem (shared globals, more than two sections, restoring writers stay open).
