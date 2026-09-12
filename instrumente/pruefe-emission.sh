@@ -2238,6 +2238,73 @@ lauf "beispiel52" "$W/beispiele/52-baugatter.gab" "$TREIBER52" "42 0" \
      's/p->slots\[i\].fuellstand = v;/(void)v;/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 9 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 20. Der Systemaufruf, und er geht an den Kern ---------------------------------------
+#
+# **Die erste Absenkung, deren Gegenueber kein C ist.** `beispiele/74` erklaert
+# `syscall write(fd, buf, len)` -- Nummer 1 in `rax`, Argumente in
+# `rdi`/`rsi`/`rdx` -- und der Erzeuger schreibt den Rumpf selbst (lane S6):
+# ein `syscall` als erweitertes `__asm__` mit den erklaerten Clobbern plus
+# `memory`, `rcx` und `r11`, dann die erzeugte Errnodekodierung ueber den
+# `or IoError`-Kanal. Was dahinter steht, ist eine ANNAHME
+# (`linux_write_contract` mit `sonde_write`), kein Koerper.
+#
+# Die zwei Zahlen unten sind die zwei Seiten derselben Schablone:
+#
+#      ok  -- der Kern hat die drei Bytes wirklich geschrieben (`write(1,
+#             "ok\n", 3)` geht an Dateideskriptor 1, nicht an einen Puffer des
+#             Treibers). *Ein Stub, der die Register falsch belegt, schreibt
+#             woandershin oder liest die Antwort aus dem falschen Register --
+#             und genau das faellt hier auf.*
+#      3   -- und die Antwort kam als WERT zurueck, nicht als Grund: `rax = 3`
+#             ist nichtnegativ und liegt in `u64`, also fuellt die Dekodierung
+#             `_wert` und meldet Erfolg.
+#
+# **Das Gift nimmt den Befehl weg, nicht die Dekodierung.** `nop` statt
+# `syscall` laesst `rax` auf der Nummer stehen -- die Antwort ist dann `1`,
+# ebenfalls nichtnegativ, und der Lauf meldet `1` statt `ok` + `3`. *Ein Gift,
+# das die Fehlerarme statt des Befehls tauschte, belegte die Arme, nicht den
+# Weg dorthin.*
+TREIBER74='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static const char msg[3] = {'"'"'o'"'"', '"'"'k'"'"', '"'"'\n'"'"'};
+    uint64_t n = schreibe(1, (uint64_t)msg, 3);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel74" "$W/beispiele/74-syscall-schreiben.gab" "$TREIBER74" "$(printf 'ok\n3')" \
+     's/"syscall\\n"/"nop\\n"/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 21. ... und der Kern sagt nein -------------------------------------------------------
+#
+# **Die andere Haelfte derselben Schablone.** `beispiele/90` ruft dasselbe
+# `write` auf einem Deskriptor auf, der nie offen ist (9999 -- ausserhalb der
+# Tabelle, wo sie kleiner ist, geschlossen, wo sie groesser ist). Der Kern
+# antwortet `EBADF`, die erzeugte Dekodierung liefert `BadFd` durch den Kanal,
+# und der Rufer benennt ihn: `777`. *Ein Stub, der das Vorzeichen falsch
+# herum laese, meldete Erfolg mit dem Zweierkomplement als Wert; einer, der
+# die Fallnummern aus den Namen statt aus den erklaerten Werten naehme,
+# liefe in den Hardwareausgang.*
+#
+# **Das Gift tauscht den Grund, nicht den Weg.** `Interrupted` statt `BadFd`
+# laesst denselben negativen Rohwert durch denselben `if` laufen -- und der
+# Rufer meldet `0` statt `777`. *Belegt ist damit, dass die Fallunterscheidung
+# den Unterschied macht, nicht dass irgendein Fehlerarm existiert.*
+TREIBER90='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static const char msg[3] = {'"'"'o'"'"', '"'"'k'"'"', '"'"'\n'"'"'};
+    uint64_t n = schreibe_ungueltig((uint64_t)msg, 3);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
+     's/_grund = IoError_BadFd;/_grund = IoError_Interrupted;/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2761,7 +2828,21 @@ fi
 # heaviest colliding words of the whole foreign measurement, as parameters, locals, a record's
 # field names, a named type, an assignment target and a loop label. Until 2026-09-05 not one
 # line of it was writable. *It emits and compiles.*
-MARKE_EMIT=70
+# **70 -> 72 on 2026-09-12, and both files are the syscall stub (lane S6).**
+# `beispiele/74-syscall-schreiben.gab` refused at the emitter until today
+# (`C001`); with the stub it emits and compiles, and the differenztest runs
+# it (`write(1, "ok\n", 3)` returns 3). `beispiele/90-syscall-errno.gab` is
+# new and carries the error path (`EBADF` decodes to `BadFd`). *The object
+# grew by two units that lower, so the floor rises by two -- with the runs
+# beside it, not instead of them.*
+# **72 -> 75 the same day, and only two of the three are this lane's.** The
+# run measures 75 emitting files in `beispiele/`: 70 booked, three found
+# (`71-frist-und-zaehlung`, `72-fremdruf-unter-sperre`, `73-sugar-widths` --
+# other lanes, emitting since they landed, the mark never pulled up; already
+# measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
+# *A mark that absorbs foreign growth without naming it is a slack ratchet,
+# so the decomposition stands here and not in a merge note.*
+MARKE_EMIT=75
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

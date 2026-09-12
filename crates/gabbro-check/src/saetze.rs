@@ -2613,17 +2613,50 @@ pub const PHASEN: &[Satz] = &[
         vorbehalt: "A declaration rule, and nothing else. It says nothing about whether \
                     the number is the kernel's, whether the errno table is the kernel's, \
                     or whether the assumption holds -- those are the counterpart's \
-                    business (lane S6) and the falsifier's. A `regs out` pair has no \
+                    business and the falsifier's. A `regs out` pair has no \
                     reading and falls at the parser, not here; two out registers naming \
-                    one register are not refused by any code above. The emitter refuses \
-                    every unit carrying a syscall (`C001`) until the stub lands.",
+                    one register are not refused by any code above. The stub the emitter \
+                    writes for a checked declaration is a sentence of its own \
+                    (`syscall.stub`).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes `830`/`831`/`835`/`836`/`837` on \
                       `N063`/`N064`/`H007`/`N065`/`N066`, `832`/`839`/`840` on the three \
                       directions of `N067`, `834` on `N068`, `833` on `A005` and `838` \
-                      on `A006`; beispiele/74 checks clean and falls only at the \
-                      emitter (`C001`, pinned by gift 797).",
+                      on `A006`; beispiele/74 checks clean and emits the stub, \
+                      beispiele/90 the error path.",
         fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
+        name: "syscall.stub",
+        kennungen: &["C180", "C181", "C182", "C183", "C184"],
+        aussage: "A checked `syscall` lowers to one C function: every parameter in its \
+                  declared in-register, the number in `rax`, the `syscall` instruction \
+                  as extended inline `__asm__` with the declared clobbers plus `memory`, \
+                  `rcx` and `r11`, and the raw `rax` answer decoded -- a negative \
+                  `-4095..-1` against the `errors` map into the `or R` channel, an \
+                  unlisted errno or an out-of-range non-negative value into the hardware \
+                  outcome. Five shape rules guard the five places a plausible wrong stub \
+                  would stand: no in-register the stub cannot keep (`C180` -- `rax` or a \
+                  clobbered register), the answer in `rax` and not scratch (`C181`), the \
+                  Linux x86_64 ABI and no other (`C182`), an integer answer with a \
+                  checkable range (`C183`), and a number -- and every result bound -- \
+                  that folds at translation time (`C184`).",
+        vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
+                    kernel keeps the contract it decodes against -- that is the named \
+                    assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
+                    to the C compiler where no value can be delivered. The errno NAME is \
+                    never held against a kernel table: the number compared is the \
+                    reason case's DECLARED value, and a declaration that numbers its \
+                    reasons differently than the kernel numbers its errnos decodes \
+                    against its own numbers. A ghost parameter, an `errors` map with no \
+                    channel, and an unresolvable reason stay the generic `C001`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
+                      `C180`/`C181`/`C182`/`C183`/`C184` -- each checker-clean, each \
+                      refused by exactly its code; beispiele/74 runs the value path \
+                      (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
+        fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
+                     dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
     },
     Satz {
         name: "bootsatz.schichten",

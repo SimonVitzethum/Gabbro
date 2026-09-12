@@ -2,8 +2,9 @@
 //!
 //! The parser reads the `syscalldecl` production (SYNTAX.md §12.1) into
 //! `SyscallDecl`; this pass holds the declaration against its own shape. The
-//! stub template is lane S6's -- until it lands the emitter refuses every unit
-//! carrying a syscall (`C001`), so nothing here promises a lowering.
+//! stub template is lane S6's (`syscall_stumpf` in `emit.rs`, rules
+//! `C180`-`C184`) -- what stands here is the declaration side, and nothing
+//! here promises the lowering.
 //!
 //! The six rules, each with its probe:
 //!

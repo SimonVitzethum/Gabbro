@@ -1,0 +1,29 @@
+-- erwartet: C183
+-- **Gift 853 -- the decoding holds the answer against an integer range.**
+--
+-- The generated errno decoding is `einpassen` as C: a non-negative raw answer
+-- is checked against the declared result range. A non-integer answer has no
+-- range to check, so a `syscall` declaring one checks clean and is refused at
+-- the emitter, by name.
+
+module gift::syscall_keine_ganzzahl {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> bool or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

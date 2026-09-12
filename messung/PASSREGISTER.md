@@ -16,14 +16,21 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **118** | `gabbro paesse` |
-| of those `measured` | **110** | a poison-probe case or a caught mutation |
+| Sentences in the register | **122** | `gabbro paesse` |
+| of those `measured` | **114** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **304** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **249** | `./instrumente/pruefe-saetze.py` |
+| Codes in the checker | **319** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **264** | `./instrumente/pruefe-saetze.py` |
+
+> **2026-09-12, lane S6: recomputed to `gabbro paesse` actuals, +1 sentence
+> and +5 codes of them mine.** `syscall.stub` (`C180`-`C184`, one measured
+> sentence over the five stub-template rules, each with its poison probe)
+> brings the sentence and the codes. The rest of the movement since the last
+> booking is wave drift other lanes owe their own entries for; it is
+> recomputed here rather than incremented, for E1's reason above.
 
 > **2026-09-12, lane E1: recomputed to `gabbro paesse` actuals, +1 of them mine.**
 > `namen.library_call` (`N057`, every library call refused until lane E2 checks

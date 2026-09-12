@@ -1,0 +1,29 @@
+-- erwartet: C180
+-- **Gift 850 -- a parameter bound to the number register has no reading.**
+--
+-- The stub loads the call number into `rax` before the kernel reads anything,
+-- so a parameter bound to `rax` in `regs in` would never arrive. The checker
+-- lets the map through (`rax` is a general register, bound once, not
+-- clobbered); the emitter refuses it, by name.
+
+module gift::syscall_rax_gebunden {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rax = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

@@ -1,0 +1,30 @@
+-- erwartet: C182
+-- **Gift 852 -- the stub template is one ABI, not every name of one.**
+--
+-- The declaration may name any ABI; the checker holds only the `arch`
+-- (`A005`/`A006`). The stub the emitter writes is the Linux x86_64
+-- `syscall` instruction -- number in `rax`, answer in `rax`, `rcx`/`r11`
+-- destroyed -- and a stub for another ABI would carry another instruction.
+-- It is refused here, by name, instead of wearing the wrong one.
+
+module gift::syscall_fremdes_abi {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi plan9 arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}
