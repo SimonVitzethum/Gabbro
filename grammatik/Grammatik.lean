@@ -68,3 +68,4 @@ import Grammatik.Maschine
 import Grammatik.MaschinenKette
 import Grammatik.QLeer
 import Grammatik.BlattGegenbeispiel
+import Grammatik.VertragOrtB
