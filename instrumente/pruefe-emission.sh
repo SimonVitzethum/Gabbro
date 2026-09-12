@@ -2761,7 +2761,12 @@ fi
 # heaviest colliding words of the whole foreign measurement, as parameters, locals, a record's
 # field names, a named type, an assignment target and a loop label. Until 2026-09-05 not one
 # line of it was writable. *It emits and compiles.*
-MARKE_EMIT=70
+# **70 -> 73 on 2026-09-12, and the object grew by three clean examples.**
+# `beispiele/71-frist-und-zaehlung.gab`, `72-fremdruf-unter-sperre.gab` (lane 75: the
+# foreign call under its guard, H007's working counterpart) and `73-sugar-widths.gab`
+# (lane 60: the uN/iN width sugar). All three emit and compile under `cc -Werror`
+# at -O0 and -O2. *The good case, and the reason stands here at the mark.*
+MARKE_EMIT=73
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -2963,7 +2968,15 @@ MARKE_EMIT=70
 # `messung/proben/probe-ipc-fastpath-durchgestochen.gab` (owner, same day) and emits from
 # there, while the frozen fragment stays at 27 errors and emits nothing. *The object grew by
 # exactly one file and the reason stands here at the mark.*
-MARKE_EMIT_M=73
+# **73 -> 132 on 2026-09-12, and the object grew by whole emission families.**
+# Measured against the mark commit: 75 `.gab` files added under `messung/` since, of
+# which 59 emit and compile -- the `emission-140` through `emission-155-c1` series
+# (M140/C001, float/int lowering, C23 attributes, ownership handover), the
+# `emission-15x-c23` series, 17 `absenkung` lowering probes, plus single probes
+# (`nebeneinander`, recursion-in-retry/loop, retry-for73). Stage 9 itself reports
+# 222 of 222 translating units compile under `cc -Werror` at -O0 and -O2 and under
+# `clang`, so every added file in the count earned its place. *The good case.*
+MARKE_EMIT_M=132
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
@@ -2975,6 +2988,13 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 # the file has emitted since. *A mark that stood at zero because a false refusal held the
 # only witness.*
 MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten darueber
+# **1 -> 8 on 2026-09-12: seven files under the tracked scratch root `Claude outputs/`.**
+# `19-traversierung`, `46-verneinung`, `F06`, `probe-elems`, `probe-rekursion-in-schleife`,
+# `probe-suchschleife-passfach`, `udp-echo` emit and compile; with `halde.gab` that is 8.
+# The directory is versioned (agent-C work, incl. a `.tgz`), so the arbeitsprotokoll
+# exemption does not cover it. Booking the set as found; whether the root stays
+# versioned is a decision for an owning lane, not this booking.
+MARKE_EMIT_X=8      # `halde.gab` + the seven emitting files under `Claude outputs/`
 #
 # **Und `arbeitsprotokoll/` ist ausgenommen, weil es nicht im Baum ist** (2026-08-31). Der
 # erste Lauf dieser erweiterten Reichweite meldete `NEUE WURZEL EMITTIERT: 2` -- beide unter
@@ -3016,7 +3036,15 @@ MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten dar
 #
 # That is the cap moving the way its own message says it should -- *a probe caught before it
 # emits* -- and it is now back where it stood before 2026-09-02.
-MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
+# **2 -> 8 on 2026-09-12: six new hint probes that legitimately reach the emitter.**
+# `689` (D023), `718` (H004), `719` (H008), `727` (E009), `758`/`777` (V003) all carry
+# `-- erwartet: Hinweis ...`, and a hint is not a refusal -- the file emits, and each
+# hint was verified to fall (`gabbro pruefe` shows D023/H004/H008/E009/V003 on the
+# respective file; `zaehle-gifttreffer.py` counts zero FEHLT). Precedent is `gift/286`,
+# the booked member that likewise translates under a hint. The stage message names
+# only the `-- erwartet: cc` case; the hint case is booked here instead, with the
+# same direction: a probe that stops emitting moves this number down.
+MARKE_EMIT_G=8      # `gift/286`, `gift/414`, + the six hint probes 689/718/719/727/758/777
 #
 # **Und die umgekehrten Proben werden GEZAEHLT, weil eine Probe ohne Gegenstand nichts misst.**
 # Faellt diese Zahl auf 0, laeuft der `-- erwartet: cc`-Zweig oben ueber keine einzige Datei
@@ -3061,7 +3089,14 @@ MARKE_EMIT_G=2      # `gift/286` (uebersetzt) und `gift/414` (`-- erwartet: cc`)
 # `D22` repaired the defect: `let x = f() else (e)` binding a record no longer lowers to
 # `x->field`, so the probe stops biting and has lost its `-- erwartet: cc` header. *The debt
 # was not rebooked, it was paid* -- and by a different lane on the same day it was entered.
-MARKE_UMGEKEHRT=4
+# **4 -> 2 on 2026-09-12, and the direction is the good one twice.** Lane 73 taught the
+# checker to refuse a non-entry `main` by name (`N041`), so `probe-eintritt-privat` and
+# `probe-eintritt-zwei` now fall at the checker and never reach the `cc` branch; only
+# `gift/414` and `probe-eintritt-parameter` still bite. The two headers still read
+# `-- erwartet: cc` although the checker answers first -- a stale header, reported as a
+# finding by the consolidating lane, not repaired here. *Two debts paid at their source;*
+# the branch keeps two objects, so it keeps saying something.
+MARKE_UMGEKEHRT=2
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then
