@@ -8407,21 +8407,39 @@ fn retry(
     let (hat_leave, hat_next) = sprungziele(&r.rumpf, &marke);
     let mut innen = austritt.clone();
     innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
-    // **CForm schleifeStmt + schrittStmt (lane 142, repaired lane 73): `while` and `+= 1`.**
-    // `while` is the loop the target list admits (`BEWEIS.md` §1: only `for`
-    // (counting loop) is named, and the retry wait is NOT a counting loop --
-    // its bound lives in the watchdog arm, not in the header). The lane-142
-    // `for (; !(cond); )` drew `-Wfor-loop-analysis` under clang where the
-    // condition names a value no statement of the body writes (measured
+    // **CForm schleifeStmt + schrittStmt (lane 142, re-repaired lane 73): `for` and `+= 1`.**
+    // `for` is the loop the target list admits (`BEWEIS.md` §1: `for (counting
+    // loop)`); `while` was lowered away on purpose and stays lowered away -- a
+    // `while` wait would widen the C semantics Gabbro must one day formalise
+    // (`zaehle-c-formen.py` MARKE_TABELLE/MARKE_UNERLAUBT rose 67/32 to 68/33
+    // on exactly that form).
+    //
+    // The lane-142 `for (; !(cond); )` drew clang's `-Wfor-loop-analysis` where
+    // the condition names a value no statement of the body writes (measured
     // 2026-09-12: `beispiele/66-transport-rueckgabe.gab`, parameter `bereit`;
-    // clang 18.1.3 fires, gcc 13.3.0 stays silent). A `while` with the same
-    // condition is silent under both families at `-O0` and `-O2`, and the
-    // counter steps inside the admitted compound-assignment class. The
-    // `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of scope
-    // for this lane.
+    // clang 18.1.3 fires, gcc 13.3.0 stays silent, at `-O0` and `-O2`). That
+    // warning fires exactly when NO variable of the condition is modified in
+    // the body or the increment -- so the watchdog counter moves into the
+    // header AND the condition: `for (; !(cond) && z < N; z += 1)`. The counter
+    // IS a condition variable now, and both families are silent (measured over
+    // the exact skeleton, empty and non-empty body, `-O0` and `-O2`).
+    //
+    // The bound arm leaves the loop and stands after it: `if (z >= N && !(cond))
+    // { exit(); }`. Case by case against the old in-loop arm (`if (z >= N)`
+    // inside, checked after the condition each pass): the body still runs at
+    // most N times (iterations z=0..N-1); N=0 still exceeds without a body;
+    // `leave` still jumps past the arm (`_ende:` stands after the block, as
+    // before); `return` still leaves the function. The one deliberate
+    // difference from the review sketch (`if (!(cond))` unconditional): the
+    // bound-first order re-samples the condition ONLY on the bound path -- on
+    // the early-exit path z<N short-circuits it, so that path evaluates the
+    // condition exactly as often as the old loop did (bodies+1). The condition
+    // may call (`schritt(k) == 9`) or read volatile state; sampling it once
+    // more than necessary is a semantic change, not a spelling one.
+    // The `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of
+    // scope for this lane.
     aus.push_str(&format!(
-        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    while (!({bedingung})) {{\n\
-         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z} += 1;\n"
+        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    for (; !({bedingung}) && {z} < {gaenge}u; {z} += 1) {{\n"
     ));
     for k in &r.rumpf.anweisungen {
         anweisung(k, aus, u, absagen, tiefe + 2, &innen);
@@ -8429,7 +8447,10 @@ fn retry(
     if hat_next {
         aus.push_str(&format!("{e}    {marke}_weiter: ;\n"));
     }
-    aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+    aus.push_str(&format!("{e}    }}\n"));
+    aus.push_str(&format!(
+        "{e}    if ({z} >= {gaenge}u && !({bedingung})) {{ {ausgang}(); }}\n{e}}}\n"
+    ));
     if hat_leave {
         aus.push_str(&format!("{e}{marke}_ende: ;\n"));
     }

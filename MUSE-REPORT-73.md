@@ -1,9 +1,16 @@
 # MUSE-REPORT-73: emitter repair -- a user function named `main`, and clang's for-loop analysis
 
-Lane 73 (Rust/emitter). Both halves of the task are repaired in the emitter and the
-checker; `./cargo-pruef` is green (0 failing tests); all seventeen absenkung units plus
+Lane 73 (Rust/emitter). Both halves of the task are repaired; `./cargo-pruef` is
+green (0 failing tests); all seventeen absenkung units plus
 `beispiele/66-transport-rueckgabe.gab` compile under gcc and clang with
 `-std=c11 -Wall -Wextra -Werror` at `-O0` and `-O2`.
+
+REVIEW ROUND 2 (accepted with one change): the first repair lowered `retry` to
+`while (!(cond))`. The reviewer measured with `instrumente/zaehle-c-formen.py`:
+master 67/32, my tree 68/33 -- `while` was lowered away on purpose and stays
+lowered away. This report documents the second repair instead: the wait is a
+counting `for` again, and clang is silent within the admitted form. Nothing
+below the `main` half changed in round 2.
 
 ## 1. What was wrong (measured, not assumed)
 
@@ -45,20 +52,30 @@ checker; `./cargo-pruef` is green (0 failing tests); all seventeen absenkung uni
   under `N041` and never reaches `N046` (C declares no bindable signature).
 
 **Emitter -- `crates/gabbro-check/src/emit.rs` (`retry`):**
-- The bounded wait now lowers to `while (!(cond))` instead of
-  `for (; !(cond); )`. Counter, bound check (`if (z >= N) exit`), body and the
-  `+= 1` step stand unchanged. `while (!(bereit))` is silent under both
-  families at `-O0`/`-O2`; the `for` form fired clang and only clang.
-- On the admitted-form question (`Erhaltung.lean` `OffeneForm.schleifeStmt`,
-  BEWEIS.md Subject 2: allow list names only `for (counting loop)`, census
-  books `while` at 11 sites as UNNAMED): neither surviving form is the named
-  counting loop -- the retry wait is not a counting loop, its bound lives in
-  the watchdog arm, not in the header. So there is NO form within the admitted
-  set that expresses this loop; the repair picks the census-documented `while`
-  (11 measured sites, its own ruling still open) over the admitted `for`,
-  because the admitted `for` is admitted as a *counting* loop and this use is
-  exactly what clang's analysis rejects. Reported plainly as weakness, not
-  strength: the `schleifeStmt` slot still owes its ruling.
+- The bounded wait is a counting `for` again:
+  `for (; !(cond) && z < N; z += 1) { body }` with the bound arm after the loop:
+  `if (z >= N && !(cond)) { exit(); }`. `-Wfor-loop-analysis` fires exactly when
+  NO variable of the condition is modified in the body or the increment -- the
+  watchdog counter now stands in the header AND the condition, so both families
+  are silent (measured over the exact skeleton, empty and non-empty body, `-O0`
+  and `-O2`, clang 18.1.3 + gcc 13.3.0).
+- Equivalence against the old in-loop arm, case by case: the body still runs at
+  most N times (iterations z=0..N-1); N=0 still exceeds bodiless; `leave` still
+  jumps past the arm (`_ende:` stands after the block, as before); `return`
+  still leaves the function; `next` still steps the counter once per pass (the
+  header increment runs after a `goto weiter`, exactly as the old pre-body
+  increment did). Deliberate difference from the review sketch (unconditional
+  `if (!(cond))`): the bound-first order re-samples the condition ONLY on the
+  bound path -- on the early-exit path `z < N` short-circuits it, so that path
+  evaluates the condition exactly as often as the old loop (bodies+1). The
+  condition may call (`schritt(k) == 9`) or read volatile state; sampling it
+  once more than necessary would be a semantic change, not a spelling one.
+- Census standing: `for` is the admitted counting loop; `&&`/`||` is unadmitted
+  but PRE-EXISTING in the corpus (range lowerings, `pred_c` Und/Oder -- verified
+  on the stashed base), so the repair adds sites, not a form. `while` is gone
+  from the emitted corpus again: measured MARKE_TABELLE/MARKE_UNERLAUBT 67/32,
+  exactly the reviewer's master numbers (down from 68/33 with the `while`
+  repair).
 
 **Emitter -- `crates/gabbro-check/src/emit.rs` (`AwaitLoad` silencer):**
 - The `awaitload` absenkung row binds `fertig` and returns past it, so the
@@ -82,28 +99,37 @@ checker; `./cargo-pruef` is green (0 failing tests); all seventeen absenkung uni
   which carries no `;`).
 - New poison probe `beispiele/gift/796-eine-main-die-kein-eintritt-ist.gab`
   (`-- erwartet: N041`, private `fn main`).
-- New positive/shape probe
-  `messung/proben/probe-retry-while73.gab` (retry wait checks clean, emits
-  `while (!(bereit))`, no `for (;` wait loop).
+- New positive/shape probe `messung/proben/probe-retry-for73.gab` (retry wait
+  checks clean, emits the counting `for` plus the trailing bound arm, no
+  `while`).
 
 **Tests:**
 - `crates/gabbro-check/tests/paesse.rs::eine_main_die_kein_eintritt_ist_faellt`:
   private `fn main` and `extern fn main` fall with `N041`; `pub fn main` and an
   ordinary `fn haupt` stay silent.
 - `crates/gabbro-check/tests/rechenwerk.rs::retry_teilt_das_budget_und_format_liest_bytes`:
-  asserts the wait loop is `while (!(…))` and no `for (; …` wait loop remains.
+  asserts the wait loop is the counting `for (; !(…) && …)` with the trailing
+  bound arm, and no `while` remains.
 - `crates/gabbro-check/src/saetze.rs` (`namen.c_hat_den_namen`): population and
   `extern fn` exception documented, with the `main` exception-to-the-exception.
 
 ## 3. Verification
 
 - `./cargo-pruef`: `== exit 0; failing tests: 0` (full log
-  `.tmp/l73/cargo6.log`).
-- Direct matrix over all 18 units (17 absenkung + beispiele/66): `gabbro emit`
-  exit 0 everywhere; `cc` and `clang` with `-std=c11 -Wall -Wextra -Werror -c`
-  silent everywhere, at `-O0` and `-O2` (logs `.tmp/l73/v5-*.c`).
-- `./emission-pruef` stage 9: `218 von 220` compile under `cc`,
-  `218 von 218` of those also under `clang`, `0 von 2` reverse probes bite
+  `.tmp/l73/cargo7.log` -- after the round-2 `for` repair).
+- Direct matrix over all 19 units (17 absenkung + beispiele/66 +
+  probe-retry-for73): `gabbro emit` exit 0 everywhere; `cc` and `clang` with
+  `-std=c11 -Wall -Wextra -Werror -c` silent everywhere, at `-O0` and `-O2`.
+- C-form census (`PATH=$HOME/.cargo/bin:$PATH python3
+  instrumente/zaehle-c-formen.py`, full log `.tmp/l73/census1.log`):
+  MARKE_TABELLE 67 / MARKE_UNERLAUBT 32 -- exactly the reviewer's master
+  numbers (A=35, C=32 over 223 emitting units). No `while` row anywhere in the
+  output; `&&/||` at 90 sites was already in the corpus (range lowerings,
+  `pred_c`), so the retry `&&` adds sites, not a form. (The tool exits 1 only
+  against the FILE's 66/31 marks, which lag the measurement on the base too --
+  bumping marks is the integrator's business, not this lane's.)
+- `./emission-pruef` stage 9: `219 von 221` compile under `cc`,
+  `219 von 219` of those also under `clang`, `0 von 2` reverse probes bite
   under `cc` alone. The two task-named findings are gone: no
   `messung/proben/absenkung/*` line and no `NUR CLANG … 66-transport` line
   remain. The stage as a whole stays red on PRE-EXISTING marks that this lane
@@ -138,26 +164,27 @@ checker; `./cargo-pruef` is green (0 failing tests); all seventeen absenkung uni
   is what holds: `main` is not a Gabbro vocabulary word (correctly -- the
   hosted entry needs the identifier), so the checker refuses non-entry
   `main`s with `N041` instead.
-- The task's suggested `while (!(bereit))` is what I emitted, but NOT for the
-  reason given: the task implies the CForm table admits `while`. It does not
-  (allow list: only `for (counting loop)`; `while` is 11 census sites without
-  cover, ruling open). The repair is within the MEASURED set, not the
-  ADMITTED set -- see section 2. The referenced commit `c3592a2d` does not
-  exist in this tree (`git log --all` has no such hash; the `while`-lowering
-  it allegedly made lives today only in `messung/proben/emission-144/*` prose
-  and in `probe-142-retry-for.gab`, whose header documents the lane-142
-  `while` -> `for` change).
+- The task's suggested `while (!(bereit))` was the round-1 repair and is
+  WITHDRAWN in round 2 for the reason the reviewer measured: `while` was
+  lowered away on purpose (CForm census), and reintroducing it moved
+  MARKE_TABELLE/MARKE_UNERLAUBT 67/32 to 68/33. The admitted `for` DOES cover
+  this loop once the counter joins the condition -- the reviewer's candidate
+  shape, kept with one change (bound-first trailing arm, see section 2). The
+  referenced commit `c3592a2d` does not exist in this tree (`git log --all`
+  has no such hash); the `while`-lowering it allegedly made lives today only
+  in `messung/proben/emission-144/*` prose and in `probe-142-retry-for.gab`,
+  whose header documents the lane-142 `while` -> `for` change.
 - `messung/proben/emission-142/probe-142-retry-for.gab` still documents the
-  `for` shape as expected. It is a prose expectation, read by no test, but it
-  now describes output the emitter no longer writes. Either its header or the
-  `tafel` row should be updated by the lane that owns the CForm census; I
-  left the file untouched (rule 5: no existing file moves unless the task
-  says so -- and the task names only the emitter function and the guardian).
+  bare `for (; !(…); )` shape as expected; the emitter now writes the counter
+  into the condition plus a trailing arm. It is a prose expectation, read by no
+  test, but it no longer matches the output. Either its header or the `tafel`
+  row should be updated by the lane that owns the CForm census; I left the
+  file untouched (rule 5).
 - No Lean work in this lane (Rust lane; rule 5 needs no new Lean file, and
   `./lean-bau` was not touched).
 - Rule 13 (inhabitation): this lane adds no Lean theorems, so no `_zeuge`
   companion is owed. The Rust-side equivalents of witnesses are the probes:
-  poison `gift/796` (checker fires) + positive `probe-retry-while73.gab`
+  poison `gift/796` (checker fires) + positive `probe-retry-for73.gab`
   (checker silent, emitter writes the new shape) + the `paesse.rs`/`rechenwerk.rs`
   assertions pinning both directions.
 
@@ -173,4 +200,4 @@ checker; `./cargo-pruef` is green (0 failing tests); all seventeen absenkung uni
   `while` assertions in `retry_teilt_das_budget_und_format_liest_bytes`
   (`rechenwerk.rs`).
 - Probes: `beispiele/gift/796-eine-main-die-kein-eintritt-ist.gab`,
-  `messung/proben/probe-retry-while73.gab`.
+  `messung/proben/probe-retry-for73.gab`.
