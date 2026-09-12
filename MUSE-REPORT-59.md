@@ -47,7 +47,7 @@ review asked for. No Lean change — `./lean-bau` not run, nothing to build.
    - `crates/gabbro-syntax/tests/sprechprobe.rs`: `syscall_faellt_mit_einem_namen`
      — a `syscall …` item falls with exactly `["P042"]`, and
      `entry syscall vector …` stays clean.
-   - `beispiele/gift/796-syscall-nicht-implementiert.gab`: poison probe
+   - `beispiele/gift/797-syscall-nicht-implementiert.gab`: poison probe
      (`-- erwartet: P042`, inside `module gift::…` per the corpus rule).
    - `crates/gabbro-check/src/saetze.rs`: `parser.syscall-bevor-s5` claims
      `P042` (Gemessen, probe 796); `tests/korpus.rs` `BENANNT` gains `P042`.
@@ -103,7 +103,7 @@ review asked for. No Lean change — `./lean-bau` not run, nothing to build.
 ## Reviewer round 3: ROT 2/226 — why a refused item cannot cover (measured)
 
 The suggested fix is already in place and does not cover — that is the finding.
-`beispiele/gift/796-syscall-nicht-implementiert.gab` has spelled the full
+`beispiele/gift/797-syscall-nicht-implementiert.gab` has spelled the full
 PLAN-SYSCALL.md §1 shape since its creation (`abi linux arch x86_64 number 1`,
 `errors { EBADF => BadFd }`, full `regs`/`clobbers`/`effects`/`assume` body).
 Re-run with `PATH=$HOME/.cargo/bin:$PATH`:
