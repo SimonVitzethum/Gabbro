@@ -971,4 +971,46 @@ theorem ctz_spez (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     rw [hval] at hnat2
     exact hnat2
 
+/-- `popcount_rotl`: popcount is invariant under rotation, as values. -/
+theorem popcount_rotl (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
+    (s : Zahl 0 (w : Int)) :
+    (Zahl.popcount w (Zahl.rotl w x s)).n = (Zahl.popcount w x).n := by
+  have hs : s.n.toNat ≤ w := zahlAmt_le w s
+  have hx : x.n.toNat < 2 ^ (w + 1) := zahlFull_bounds w x
+  have h := popcountn_rotln w s.n.toNat x.n.toNat hs hx
+  show ((popcountn w (rotln w s.n.toNat x.n.toNat) : Nat) : Int)
+    = ((popcountn w x.n.toNat : Nat) : Int)
+  rw [h]
+
+/-- `rotl_rotr`: `rotr ∘ rotl = id`, as values. -/
+theorem rotl_rotr (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
+    (s : Zahl 0 (w : Int)) :
+    (Zahl.rotr w (Zahl.rotl w x s) s).n = x.n := by
+  have hs : s.n.toNat ≤ w := zahlAmt_le w s
+  have hx : x.n.toNat < 2 ^ (w + 1) := zahlFull_bounds w x
+  have hnn : 0 ≤ x.n := by have := x.lo_le; omega
+  have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
+  have h := rotrn_rotln w s.n.toNat x.n.toNat hs hx
+  show ((rotrn w s.n.toNat (rotln w s.n.toNat x.n.toNat) : Nat) : Int) = x.n
+  rw [h, h2n]
+
+/-- `bswap_bswap`: double reversal is identity, at all three widths. -/
+theorem bswap_bswap16 (x : Zahl 0 ((2 : Int) ^ 16 - 1)) :
+    (Zahl.bswap16 (Zahl.bswap16 x)).n = x.n := by
+  have hnn : 0 ≤ x.n := by have := x.lo_le; omega
+  have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
+  have hx : x.n.toNat < 256 ^ 2 := by
+    have hhi := x.le_hi
+    have hcast : ((2 ^ 16 : Nat) : Int) = (2 : Int) ^ 16 := by simp
+    have e : (256 : Nat) ^ 2 = 2 ^ 16 := by decide
+    rw [e]
+    have hlt : x.n < ((2 ^ 16 : Nat) : Int) := by omega
+    exact (Int.toNat_lt hnn).mpr hlt
+  have hmid : (Zahl.bswap16 x).n.toNat = bswap16n x.n.toNat := by
+    show ((bswap16n x.n.toNat : Nat) : Int).toNat = _
+    exact Int.toNat_natCast _
+  have h := bswap16n_invol x.n.toNat hx
+  show ((bswap16n (Zahl.bswap16 x).n.toNat : Nat) : Int) = x.n
+  rw [hmid, h, h2n]
+
 end Gabbro.Grammatik
