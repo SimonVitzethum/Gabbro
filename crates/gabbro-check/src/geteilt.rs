@@ -332,8 +332,44 @@ pub fn pass_mit(
     });
 
     // **H007 -- K11.2.1: `protects` beisst.**
-    crate::fuer_jedes_item(baum, &mut |item| {
-        let ItemArt::Funktion(f) = &item.art else { return };
+    //
+    // **H007 at the call boundary (lane 75, 2026-09-12): a call to a body-less
+    // (`extern`) function owes, for every place in the callee's declared
+    // `reads`/`writes` effects that a lock protects, that lock HELD.**
+    //
+    // Measured: `p-fremd.gab` (an `extern fn` with `writes k.slots` called from a
+    // function that does not hold `KAPPEN`) passed with **0 errors**, while the
+    // same write spelled directly is refused. That is a data race the checker
+    // did not see.
+    //
+    // Scope, each with its reason:
+    // * body-less callees (`extern` and forward declarations, i.e. no block body)
+    //   ONLY. A Gabbro callee that writes naked is already refused at its own
+    //   body by this same rule, and one that takes the lock itself forces the
+    //   caller to declare it (`E008`) -- which this rule counts as held, and
+    //   which a callee hull redeems (`H011`). Flagging Gabbro calls too would
+    //   draw two refusals for one race.
+    // * a callee that declares `locks L` takes it itself: the caller owes
+    //   nothing here (exclusive covers reads and writes, `locks shared` covers
+    //   reads -- a write under a shared taking is still owed by the caller).
+    //   What a held lock at the caller plus a taking callee means is the rank
+    //   rules' (`H006`/`H012`), not this one's.
+    // * held counts as in the direct walk: an enclosing `locks` block, an
+    //   `effects { locks … }` line, or a `requires Held(…)`.
+    {
+        let u = crate::umgebung::Umgebung::sammle(baum);
+        let mut fremd: BTreeMap<String, FremdEffekte> = BTreeMap::new();
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            if let ItemArt::Funktion(f) = &item.art {
+                if matches!(f.rumpf, FnRumpf::Keiner) {
+                    if let Some(fe) = FremdEffekte::von(f, modul) {
+                        fremd.insert(crate::umgebung::qualifiziere(modul, &f.name.text), fe);
+                    }
+                }
+            }
+        });
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            let ItemArt::Funktion(f) = &item.art else { return };
         // **Ein `spec fn` fasst zur Laufzeit nichts an.** Es ist Beweisersache, und eine
         // Sperre dort zu verlangen hiesse, eine Laufzeitdisziplin auf einen Geistausdruck
         // anzuwenden. *Gefunden bei der Vorabmessung: beide gemeldeten Stellen des Korpus
@@ -362,8 +398,18 @@ pub fn pass_mit(
             crate::aufrufgraph::held_aus_pred(p, &mut h);
             da.extend(h.into_iter().map(|(n, _)| n));
         }
-        schutz(b, &da, &sperren, &rcu_domaenen, &[], &f.name.text, absagen);
-    });
+        let rh = Rufhalte {
+            u: &u,
+            g: &g,
+            fremd: &fremd,
+            sperren: &sperren,
+            rcu: &rcu_domaenen,
+            modul,
+            wo: &f.name.text,
+        };
+        schutz(b, &da, &[], &rh, absagen);
+        });
+    }
 
     // **H020 -- a write a `locks` line covers but no guard holds.** The site-precision
     // half of the `H007`/`H011` handshake; implementation at `h020` below.
@@ -1026,7 +1072,10 @@ fn fenster_ort(
 ///   this rule (the `verlangt` + hull join of `NEBENLAEUFIGKEIT-ENTWURF.md` §6 Q1).
 ///
 /// What this rule does NOT supply (G3 remainder, next lanes): the held set AT a call
-/// site against the callee hull's writes. It also has no `Satz` entry yet --
+/// site against the callee hull's writes -- update lane 75: a call to a body-less
+/// callee is now `ruf_h007`'s below in this file, so the remainder stands for
+/// Gabbro callees (refused at their own bodies instead) and for strength
+/// (shared hold against a foreign write). It also has no `Satz` entry yet --
 /// `saetze.rs` is frozen for this lane; the booking stands in `messung/H020-REGEL.md`.
 ///
 /// Read-only neighbours, touched by nothing here: the per-body hulls
@@ -1268,14 +1317,12 @@ fn observes_blocks(b: &Block, f: &mut impl FnMut(String, Span)) {
 fn schutz(
     b: &Block,
     da: &[String],
-    sperren: &BTreeMap<String, Sperre>,
-    rcu: &BTreeMap<String, Vec<String>>,
     beobachtet: &[String],
-    wo: &str,
+    rh: &Rufhalte,
     absagen: &mut Absagen,
 ) {
     let deckt = |ort: &str| -> Option<String> {
-        sperren
+        rh.sperren
             .iter()
             .find(|(_, sp)| sp.schuetzt.iter().any(|p| beruehrt(p, ort)))
             .map(|(n, _)| n.clone())
@@ -1294,7 +1341,7 @@ fn schutz(
     // bessere Meldung gibt -- „RCU serialisiert Schreiber nicht" statt „die Sperre fehlt".
     // Ein Schreiben unter der richtigen Sperre besteht beide, eines ohne faellt an `H010`.
     let rcu_deckt_lesen = |ort: &str| -> bool {
-        rcu.iter().any(|(d, orte)| {
+        rh.rcu.iter().any(|(d, orte)| {
             beobachtet.iter().any(|b| b == d) && orte.iter().any(|p| beruehrt(p, ort))
         })
     };
@@ -1311,7 +1358,7 @@ fn schutz(
             Absage::fehler(
                 "H007",
                 o.span,
-                format!("`{t}` is protected by `{sperre}`, and `{wo}` does not hold it"),
+                format!("`{t}` is protected by `{sperre}`, and `{}` does not hold it", rh.wo),
             )
             .mit_notiz(
                 "held counts as: an enclosing `locks` block, an `effects { locks … }` (then taking it \
@@ -1328,7 +1375,7 @@ fn schutz(
             StmtArt::Sperrt(l) => {
                 let mut innen = da.to_vec();
                 innen.push(l.sperre.text());
-                schutz(&l.rumpf, &innen, sperren, rcu, beobachtet, wo, absagen);
+                schutz(&l.rumpf, &innen, beobachtet, rh, absagen);
             }
             // **`observes` haelt NICHTS, und der Waechter muss trotzdem hineinsehen.**
             //
@@ -1339,26 +1386,71 @@ fn schutz(
             StmtArt::Observiert(o) => {
                 let mut tiefer = beobachtet.to_vec();
                 tiefer.push(o.domaene.text.clone());
-                schutz(&o.rumpf, da, sperren, rcu, &tiefer, wo, absagen);
+                schutz(&o.rumpf, da, &tiefer, rh, absagen);
             }
             StmtArt::Zuweisung(z) => {
                 pruefe(&z.ziel, absagen);
                 orte_in(&z.wert, &mut |o| pruefe(o, absagen));
+                let mut rufe = Vec::new();
+                rufe_in(&z.wert, &mut rufe);
+                for r in rufe {
+                    ruf_h007(rh, r, da, beobachtet, absagen);
+                }
             }
             StmtArt::Publish(p) => {
                 pruefe(&p.ziel, absagen);
                 orte_in(&p.wert, &mut |o| pruefe(o, absagen));
             }
-            StmtArt::Let(l) => orte_in(&l.wert, &mut |o| pruefe(o, absagen)),
-            StmtArt::Return(Some(x)) => orte_in(x, &mut |o| pruefe(o, absagen)),
+            StmtArt::Let(l) => {
+                orte_in(&l.wert, &mut |o| pruefe(o, absagen));
+                let mut rufe = Vec::new();
+                rufe_in(&l.wert, &mut rufe);
+                for r in rufe {
+                    ruf_h007(rh, r, da, beobachtet, absagen);
+                }
+            }
+            StmtArt::Return(Some(x)) => {
+                orte_in(x, &mut |o| pruefe(o, absagen));
+                let mut rufe = Vec::new();
+                rufe_in(x, &mut rufe);
+                for r in rufe {
+                    ruf_h007(rh, r, da, beobachtet, absagen);
+                }
+            }
             StmtArt::Ruf(r) => {
+                ruf_h007(rh, r, da, beobachtet, absagen);
                 for a in &r.argumente {
                     orte_in(a, &mut |o| pruefe(o, absagen));
+                    let mut rufe = Vec::new();
+                    rufe_in(a, &mut rufe);
+                    for r in rufe {
+                        ruf_h007(rh, r, da, beobachtet, absagen);
+                    }
                 }
             }
             StmtArt::Wenn(w) => {
                 for (bed, _) in &w.zweige {
                     orte_in(bed, &mut |o| pruefe(o, absagen));
+                    let mut rufe = Vec::new();
+                    rufe_in(bed, &mut rufe);
+                    for r in rufe {
+                        ruf_h007(rh, r, da, beobachtet, absagen);
+                    }
+                }
+            }
+            // **`let … else` over a call is a call site too.** The direct walk
+            // reads neither the call nor a place source here (that gap predates
+            // this rule); the call's DECLARED places are still owed a lock.
+            StmtArt::LetSonst(x) => {
+                if let Some(r) = x.als_ruf() {
+                    ruf_h007(rh, r, da, beobachtet, absagen);
+                    for a in &r.argumente {
+                        let mut rufe = Vec::new();
+                        rufe_in(a, &mut rufe);
+                        for r in rufe {
+                            ruf_h007(rh, r, da, beobachtet, absagen);
+                        }
+                    }
                 }
             }
             _ => {}
@@ -1367,7 +1459,7 @@ fn schutz(
         // schon getan, weil beide den mitgeführten Stand ändern.
         if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_)) {
             for k in crate::unterbloecke(s) {
-                schutz(k, da, sperren, rcu, beobachtet, wo, absagen);
+                schutz(k, da, beobachtet, rh, absagen);
             }
         }
     }
@@ -1457,6 +1549,297 @@ fn orte_in(e: &Expr, f: &mut impl FnMut(&Ort)) {
                     for suf in &o.suffixe {
                         if let OrtSuffix::Index(ix) = suf {
                             orte_in(ix, f);
+                        }
+                    }
+                }
+            }
+        },
+        _ => {}
+    }
+}
+
+/// **What a call site needs to answer the H007 question for a foreign callee.**
+///
+/// The static half of the walk: everything that does not change between two sites
+/// of one body. Built once per function beside the `da` vector, and carried down
+/// unchanged -- like `Rufwissen` above, but for the callee's DECLARED places
+/// instead of its locks and demands.
+struct Rufhalte<'a> {
+    u: &'a crate::umgebung::Umgebung,
+    g: &'a crate::aufrufgraph::Graph,
+    /// Body-less callees by qualified key: `extern` and forward declarations --
+    /// the functions no body check ever sees. Owned snapshots (clause text,
+    /// place, write?) and self-taken locks -- the closure that collects them
+    /// only lends its items, so references would not outlive it.
+    fremd: &'a BTreeMap<String, FremdEffekte>,
+    sperren: &'a BTreeMap<String, Sperre>,
+    rcu: &'a BTreeMap<String, Vec<String>>,
+    modul: &'a str,
+    wo: &'a str,
+}
+
+impl Rufhalte<'_> {
+    /// The body-less callee this call names, if it names one. An indirect call
+    /// (through a place) and an unresolvable name answer `None` -- the first is
+    /// the contract rules' business, the second the name rules'.
+    fn fremd(&self, r: &Ruf) -> Option<&FremdEffekte> {
+        let pfad = r.path()?;
+        let voll = self.g.aufloesen(self.u, self.modul, &pfad.text())?;
+        self.fremd.get(&voll)
+    }
+}
+
+/// **A body-less callee's declared footprint, owned.** What `ruf_h007` reads:
+/// the `reads`/`writes` places (with their clause text for the refusal), the
+/// locks the callee takes itself, and the scope needed to resolve an effect
+/// root to its table.
+struct FremdEffekte {
+    plaetze: Vec<(String, String, bool)>,
+    nimmt: Vec<(String, bool)>,
+    modul: String,
+    parameter: Vec<(String, TypExpr)>,
+}
+
+impl FremdEffekte {
+    fn von(f: &FnDecl, modul: &str) -> Option<FremdEffekte> {
+        let w = f.effects.as_ref()?;
+        let mut plaetze = Vec::new();
+        let mut nimmt = Vec::new();
+        for e in &w.liste {
+            match &e.art {
+                WirkungArt::Liest(o) => plaetze.push((e.art.text(), o.text(), false)),
+                WirkungArt::Schreibt(o) => plaetze.push((e.art.text(), o.text(), true)),
+                WirkungArt::Sperrt(o) => nimmt.push((o.text(), false)),
+                WirkungArt::SperrtGeteilt(o) => nimmt.push((o.text(), true)),
+                _ => {}
+            }
+        }
+        Some(FremdEffekte {
+            plaetze,
+            nimmt,
+            modul: modul.to_string(),
+            parameter: f
+                .parameter
+                .iter()
+                .map(|p| (p.name.text.clone(), p.typ.clone()))
+                .collect(),
+        })
+    }
+}
+
+/// Does a declared callee effect touch a `protects` entry? Two disjuncts, and
+/// the second exists because the first misses the lane's own probe.
+///
+/// * token match (`beruehrt`): the entry names a table or a path the effect
+///   spells out -- `protects { K }` against `writes K.slots`.
+/// * type-directed: the entry names a SLOT FIELD (`protects { rechte }`) while
+///   the effect names the whole region (`writes k.slots`). Then the tokens
+///   never meet, and only the table type connects them: the effect root
+///   resolves -- through the callee's parameter types, else through the
+///   globals -- to a table whose slot fields contain the entry, and the effect
+///   path reaches below the root (through `slots`, or is the table itself).
+///   A bare handle (`writes k` for a pointer `k`) touches no slot and stays
+///   silent here.
+fn effekt_trifft(
+    u: &crate::umgebung::Umgebung,
+    callee: &FremdEffekte,
+    effekt: &str,
+    schutz_eintrag: &str,
+) -> bool {
+    if beruehrt(schutz_eintrag, effekt) {
+        return true;
+    }
+    let kern = schutz_eintrag
+        .rsplit('.')
+        .next()
+        .unwrap_or(schutz_eintrag);
+    let mut teile = effekt.split(['.', '[']);
+    let Some(wurzel) = teile.next() else {
+        return false;
+    };
+    let rest: Vec<&str> = teile.collect();
+    let typ = callee
+        .parameter
+        .iter()
+        .find(|(n, _)| n == wurzel)
+        .map(|(_, t)| u.typ_von_ausdruck_decl(&callee.modul, t));
+    if rest.is_empty() {
+        // The effect names the root itself. That is the whole region only for
+        // a table -- a global table name, or a table-typed parameter. A bare
+        // pointer handle (`writes k`) touches no slot and stays silent here.
+        let direkt: Option<String> = match typ {
+            Some(t) => match tabellenname(&t) {
+                Some((tab, true)) => Some(tab.clone()),
+                _ => None,
+            },
+            None => u.nennt_tabelle(&callee.modul, wurzel),
+        };
+        let Some(tab) = direkt else {
+            return false;
+        };
+        return u
+            .tabellen
+            .get(&tab)
+            .is_some_and(|felder| felder.iter().any(|(n, _)| n == kern));
+    }
+    // Below the root only `slots` reaches the fields -- through a pointer or
+    // otherwise, the path decides, not the handle.
+    if !rest.iter().any(|t| *t == "slots") {
+        return false;
+    }
+    let tabelle: Option<String> = match typ {
+        Some(t) => tabellenname(&t).map(|(tab, _)| tab.clone()),
+        None => u.nennt_tabelle(&callee.modul, wurzel),
+    };
+    let Some(tab) = tabelle else {
+        return false;
+    };
+    u.tabellen
+        .get(&tab)
+        .is_some_and(|felder| felder.iter().any(|(n, _)| n == kern))
+}
+
+/// Unwrap a declared type to the table it points at, if it points at one --
+/// through pointers and named types, and no further. The flag tells whether
+/// the table was reached WITHOUT crossing a pointer: writing the root itself
+/// writes the fields only then.
+fn tabellenname(t: &crate::typen::Typ) -> Option<(&String, bool)> {
+    fn geh(t: &crate::typen::Typ, durch_zeiger: bool) -> Option<(&String, bool)> {
+        match t {
+            crate::typen::Typ::Zeiger(i) => geh(i, true),
+            crate::typen::Typ::Benannt { unter, .. } => geh(unter, durch_zeiger),
+            crate::typen::Typ::Tabelle(n) => Some((n, !durch_zeiger)),
+            _ => None,
+        }
+    }
+    geh(t, false)
+}
+
+/// **H007 at one call site -- the callee's declared places against the held set.**
+///
+/// For every `reads`/`writes` place of a body-less callee that a lock protects,
+/// the caller owes that lock held -- unless the callee takes it itself (its
+/// declared `locks` effect; exclusive covers reads and writes, `locks shared`
+/// covers reads). A site that holds nothing at all is this rule's refusal; a
+/// site the direct walk already refused is the direct walk's.
+fn ruf_h007(rh: &Rufhalte, r: &Ruf, da: &[String], beobachtet: &[String], absagen: &mut Absagen) {
+    let Some(callee) = rh.fremd(r) else { return };
+    for (klausel, t, schreibt) in &callee.plaetze {
+        // The RCU read cover, same as the direct walk: a read of an RCU place
+        // inside its `observes` owes no writer lock.
+        if !*schreibt
+            && rh.rcu.iter().any(|(d, orte)| {
+                beobachtet.iter().any(|b| b == d) && orte.iter().any(|p| beruehrt(p, t))
+            })
+        {
+            continue;
+        }
+        // The cover lookup: the FIRST lock with a `protects` entry the effect
+        // touches -- by token, or through the table type for a whole-region
+        // effect (`writes k.slots` against `protects { rechte }`).
+        let Some(sperre) = rh
+            .sperren
+            .iter()
+            .find(|(_, sp)| {
+                sp.schuetzt
+                    .iter()
+                    .any(|p| effekt_trifft(rh.u, callee, t, p))
+            })
+            .map(|(n, _)| n.clone())
+        else {
+            continue;
+        };
+        if da.iter().any(|d| d == &sperre) {
+            continue;
+        }
+        // The callee takes it itself -- then taking is its business.
+        if callee
+            .nimmt
+            .iter()
+            .any(|(n, geteilt)| n == &sperre && (!geteilt || !*schreibt))
+        {
+            continue;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "H007",
+                r.span,
+                format!(
+                    "`{}` {} `{t}` through its declared `{klausel}` effect, and `{}` does not hold \
+                     `{sperre}` which protects it",
+                    r.ziel.text(),
+                    if *schreibt { "writes" } else { "reads" },
+                    rh.wo
+                ),
+            )
+            .mit_notiz(
+                "held counts as: an enclosing `locks` block, an `effects { locks … }` (then taking it \
+                 is the caller's duty), or a `requires Held(…)`",
+            )
+            .mit_notiz(
+                "a callee that takes the lock itself (`locks` in its effects) needs no held \
+                 lock here -- a Gabbro callee that writes naked is refused at its own body instead",
+            ),
+        );
+    }
+}
+
+/// Every call inside an expression -- the call sites the place walk (`orte_in`)
+/// steps past. Same arms, other question: an index expression is evaluated at
+/// run time, wherever it stands, so a call in it is a call at this site.
+fn rufe_in<'a>(e: &'a Expr, out: &mut Vec<&'a Ruf>) {
+    match &e.art {
+        ExprArt::Ruf(r) => {
+            out.push(r);
+            for a in &r.argumente {
+                rufe_in(a, out);
+            }
+        }
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => rufe_in(x, out),
+        ExprArt::Binaer(_, a, b) => {
+            rufe_in(a, out);
+            rufe_in(b, out);
+        }
+        ExprArt::Ort(o) => {
+            for suf in &o.suffixe {
+                if let OrtSuffix::Index(ix) = suf {
+                    rufe_in(ix, out);
+                }
+            }
+        }
+        ExprArt::Zaehle { domaene, rumpf, .. } => {
+            for e in crate::ausdruecke_im_praedikat(rumpf) {
+                rufe_in(e, out);
+            }
+            let ort = match domaene {
+                Domaene::SlotsVon(o)
+                | Domaene::NachfahrenVon(o)
+                | Domaene::VorfahrenVon(o)
+                | Domaene::Schlange(o)
+                | Domaene::ElementeVon(o)
+                | Domaene::AbbildungenVon(o)
+                | Domaene::KetteIn { ort: o, .. } => Some(o),
+                Domaene::FelderVon(_) | Domaene::Threads => None,
+            };
+            if let Some(o) = ort {
+                for suf in &o.suffixe {
+                    if let OrtSuffix::Index(ix) = suf {
+                        rufe_in(ix, out);
+                    }
+                }
+            }
+        }
+        ExprArt::Eingebaut(g) => match &**g {
+            gabbro_syntax::ast::Eingebaut::Aligned(a, b) => {
+                rufe_in(a, out);
+                rufe_in(b, out);
+            }
+            gabbro_syntax::ast::Eingebaut::Sizeof(x)
+            | gabbro_syntax::ast::Eingebaut::Lenof(x) => {
+                if let gabbro_syntax::ast::TypOderOrt::Ort(o) = x {
+                    for suf in &o.suffixe {
+                        if let OrtSuffix::Index(ix) = suf {
+                            rufe_in(ix, out);
                         }
                     }
                 }
