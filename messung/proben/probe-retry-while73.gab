@@ -1,0 +1,39 @@
+-- **The `retry` wait must compile under both compiler families, with no warning
+-- disabled: the clang half of the `main` repair.**
+--
+-- The bounded wait lowers to a loop whose condition names a value no statement of
+-- the body writes (here the parameter `bereit`): the exit runs through the named
+-- `on_exceeded` arm, and the body only steps the watchdog counter. Under
+-- `clang -Wall -Wextra -Werror` the lane-142 shape `for (; !(bereit); )` fires
+-- `-Wfor-loop-analysis` (*variable 'bereit' used in loop condition not modified
+-- in loop body*), while gcc stays silent -- measured 2026-09-12 on
+-- `beispiele/66-transport-rueckgabe.gab` (clang 18.1.3 fires, gcc 13.3.0 silent,
+-- at `-O0` and `-O2` alike). The emitter therefore writes `while (!(…))`, which
+-- is silent under both families and changes neither the counter, nor the bound
+-- check, nor the body.
+--
+-- This file pins the SHAPE, not just the acceptance: the emitted C must carry
+-- `while (!(bereit))` and no `for (;` wait loop. The acceptance itself --
+-- every emitting unit compiling under both compilers -- is held by stage 9 of
+-- `instrumente/pruefe-emission.sh`, which runs `cc` and `clang` side by side.
+--
+-- Counterpart: `messung/proben/emission-142/probe-142-retry-for.gab` documents the
+-- lane-142 shape this repair replaces.
+
+module probe::wieder73 {
+
+extern fn haengt() -> never effects { diverges } costs <= 1 ops;
+
+impl fn warten(bereit : bool) -> bool
+    effects { pure }
+    costs <= 2048 ops
+{
+    retry schleife until bereit
+        bounded 1024 ops
+        on_exceeded haengt
+        effects { pure }
+    { }
+    return bereit;
+}
+
+}

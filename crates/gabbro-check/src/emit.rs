@@ -6719,6 +6719,31 @@ fn funktion(
             aus.push_str(&format!("    (void){};\n", p.name.text));
         }
     }
+    // **`(void)fertig;` for an `awaits` binding the body never reads back.**
+    //
+    // The same answer the two lines above give an unread parameter, and for the
+    // same reason (`Namen::ungelesene_lets` carries the weighing). An `AwaitLoad`
+    // binds outside `sammle_lets` -- that walker only sees `StmtArt::Let` -- so
+    // the shared set cannot carry it; this site asks the same `benutzte_namen`
+    // set directly. Measured 2026-09-12: the `awaitload` row of
+    // `messung/proben/absenkung/` binds `fertig` and returns past it, so the
+    // emitted `bool fertig = atomic_load_explicit(…)` fell at
+    // `-Werror=unused-variable` under BOTH families -- the one stage-9 finding
+    // of this lane that is not a `main`.
+    //
+    // **Deferred past the body, not beside the binding.** The silencer must
+    // stand AFTER the declaration in the C -- `funktion` collects the unread
+    // `awaits` names here and hands them to the statement loop below through
+    // `rahmen` (see `Austritt::stille_awaits`); the `AwaitLoad` arm emits the
+    // silencer where the name is already declared.
+    let mut stille_awaits: Vec<String> = Vec::new();
+    for s in &b.anweisungen {
+        if let StmtArt::AwaitLoad(al) = &s.art {
+            if !gelesen.contains(&al.name.text) {
+                stille_awaits.push(al.name.text.clone());
+            }
+        }
+    }
     // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
     //
     // **Der Grund hat seit Stufe 7 einen Erzeuger** (2026-08-21). Bis dahin stand hier
@@ -6742,6 +6767,7 @@ fn funktion(
         },
         schleifen: Vec::new(),
         fehlerkanal: f.fehler.is_some(),
+        stille_awaits,
     };
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
@@ -7035,6 +7061,12 @@ struct Austritt {
     /// **Hat diese Funktion einen Fehlerkanal (`-> T or R`)?** Dann ist der Rueckgabewert
     /// der ERFOLG, und das Ergebnis geht durch `*_wert`. Siehe `StmtArt::Return`.
     fehlerkanal: bool,
+    /// **Unread `awaits` bindings of this body, collected in `funktion`.**
+    ///
+    /// An `AwaitLoad` binds outside `sammle_lets`, so the shared unread-`let` set
+    /// cannot carry it; the arm that lowers it reads this list instead and emits
+    /// the `(void)name;` silencer where the name is already declared (lane 73).
+    stille_awaits: Vec<String>,
 }
 
 fn einzug(n: usize) -> String {
@@ -7642,6 +7674,21 @@ fn anweisung(
                  {e}{typ} {} = atomic_load_explicit(&{quelle}, {ordnung});\n",
                 al.name.text
             ));
+            // **`(void)fertig;` where the binding is never read back** -- the same
+            // answer the `let` arm gives through `Namen::ungelesene_lets`, and for
+            // the same reason: `cc -Wextra` finds the unread local, no pass of this
+            // compiler does, and the user did not write the generated line.
+            // Measured 2026-09-12: the `awaitload` row of
+            // `messung/proben/absenkung/` binds and returns past its load, so the
+            // emitted `bool fertig = …` fell at `-Werror=unused-variable` under
+            // BOTH families -- the one stage-9 finding that is not a `main`.
+            // An `AwaitLoad` binds outside `sammle_lets` (that walker only sees
+            // `StmtArt::Let`), so the shared set cannot carry it; `funktion`
+            // collects the unread ones into `Austritt::stille_awaits`, and the
+            // silencer stands AFTER the declaration, where the name exists.
+            if austritt.stille_awaits.iter().any(|n| *n == al.name.text) {
+                aus.push_str(&format!("{e}(void){};\n", al.name.text));
+            }
         }
         // **«C3b»: `observes D { … }` -- dieselbe Gestalt wie `locks`, und der Unterschied
         // ist genau das, was FEHLT.**
@@ -8360,13 +8407,20 @@ fn retry(
     let (hat_leave, hat_next) = sprungziele(&r.rumpf, &marke);
     let mut innen = austritt.clone();
     innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
-    // **CForm schleifeStmt + schrittStmt (lane 142): `for` and `+= 1`.**
-    // `for` is the loop the target list allows, so the bounded wait is one;
-    // the counter steps inside the admitted compound-assignment class. The
+    // **CForm schleifeStmt + schrittStmt (lane 142, repaired lane 73): `while` and `+= 1`.**
+    // `while` is the loop the target list admits (`BEWEIS.md` §1: only `for`
+    // (counting loop) is named, and the retry wait is NOT a counting loop --
+    // its bound lives in the watchdog arm, not in the header). The lane-142
+    // `for (; !(cond); )` drew `-Wfor-loop-analysis` under clang where the
+    // condition names a value no statement of the body writes (measured
+    // 2026-09-12: `beispiele/66-transport-rueckgabe.gab`, parameter `bereit`;
+    // clang 18.1.3 fires, gcc 13.3.0 stays silent). A `while` with the same
+    // condition is silent under both families at `-O0` and `-O2`, and the
+    // counter steps inside the admitted compound-assignment class. The
     // `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of scope
     // for this lane.
     aus.push_str(&format!(
-        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    for (; !({bedingung}); ) {{\n\
+        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    while (!({bedingung})) {{\n\
          {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z} += 1;\n"
     ));
     for k in &r.rumpf.anweisungen {
