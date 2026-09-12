@@ -109,6 +109,10 @@ pub mod gabbrov;
 pub mod phasen;
 /// **P6** -- the same obligation register, in the form a prover reads. See `refinement.rs`.
 pub mod lean;
+/// **Const certificate from the source (lane 121)** -- a `const fn` body in
+/// the single-expression fragment printed to a Lean `Nat` function, so the
+/// `List.all` certificate checks values against the translated source.
+pub mod konst_lean;
 /// **The person's half, measured** -- the Lean duties of a unit against the proofs a
 /// person wrote for them (`gabbro beweise`, `gabbro emit --mit-beweis`).
 pub mod beweis;
