@@ -2488,6 +2488,25 @@ pub const WIRKUNGEN: &[Satz] = &[
                       ban on calls, not a contract.*",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs (`probenrumpf`); `N027` in namen.rs",
     },
+    Satz {
+        name: "wirkungen.vertragsfuss",
+        kennungen: &["E220", "E221"],
+        aussage: "A contract is part of the frame: every known world carrier a `requires` \
+                  (`E220`) or `ensures` (`E221`) clause reads is covered by a declared \
+                  `reads` or `writes` effect -- unless no function of the program writes \
+                  it at all, in which case it is read-only and needs no cover.",
+        vorbehalt: "Parameters, quantifier binders, constants and unknown names are no \
+                    world reads (the E010 line); `Has`/`Held` name a capability or a lock, \
+                    not a read; calls into spec functions count only their arguments. \
+                    `syscall`/`axiom` contracts, `maintains` and the `= pred ;` body of a \
+                    `spec fn` are not read. Device registers read bare are outside known \
+                    world state and stay silent -- the same boundary E010 draws.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/895-896 (requires/ensures over an undeclared \
+                      written carrier) and 898 (the index path); read-only and covered \
+                      twins pass.",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs (`vertrag_gegen_wirkungen`)",
+    },
 ];
 
 // ===================================================================================
@@ -3199,6 +3218,24 @@ pub const SPERREN: &[Satz] = &[
                       `gabbro kontexte` prints the zero beside the rule, which is the \
                       difference between „found nothing\" and „looked at nothing\".",
         fundstelle: "crates/gabbro-check/src/geteilt.rs; K11.2.2",
+    },
+    Satz {
+        name: "sperren.ungeteilt",
+        kennungen: &["H222"],
+        aussage: "A carrier no declaration shares is own state: it is written by the code \
+                  of at most one thread (`H222`). The computation is the W5 premise over \
+                  the built `Bau` -- the same reachability H013 is built beside, extended \
+                  by the thread witnesses, not a second one.",
+        vorbehalt: "H013 refuses per entry (one context already shares with every other \
+                    core in it); H222 refuses per carrier and only on a pair. No \
+                    `ein_kern`/`masks` exemption: masking orders one core against \
+                    preemption, while state written by two entries persists across both. \
+                    Unknown carriers read shared (S5); unresolvable entries drop out (S4).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/897 (two entries, one unshared write) and 899 \
+                      (the transitive leg); single-thread and guarded twins pass.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs (`H222`); bau.rs \
+                     (`ungeteilt_mit_faeden`)",
     },
     // --- Die drei Kennungen aus Stufe 6, nachgetragen 2026-08-21 -----------------------
     //
