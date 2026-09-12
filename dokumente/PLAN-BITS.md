@@ -60,7 +60,7 @@ the index derivation breaks exactly on the case the convention introduced.
 
 The lowering reaches `__builtin_clz` only with a provably non-zero argument, so its undefined
 zero case is unreachable. **The Lean definitions are parametric in `w` from the start**
-(`Zahl.clz (w : Nat) (x : Zahl 1 (2^w - 1)) : Zahl 0 (w - 1)`): the surface spells them per
+(`Zahl.clz (w : Nat) (x : Zahl 1 (2^(w+1) - 1)) : Zahl 0 w` -- the width is carried as `w + 1`, so no `Nat` truncation can turn `w - 1` into a silently wrong bound at `w = 0`): the surface spells them per
 width until generics exist, and later parametrisation is a substitution, not a rewrite.
 
 ## 4. Overflow forms
@@ -73,18 +73,52 @@ width until generics exist, and later parametrisation is a substitution, not a r
   need `uN`.
 * Default unchanged: an operation without a suffix must fit its range by construction.
 
-## 5. Floats -- more than a flag
+## 5. Floats -- four parts, measured on this machine (GCC 16.2.1, Clang 22.1.8, 2026-09-12)
 
-* **Contraction:** the emitted prelude states `#pragma STDC FP_CONTRACT OFF` (standard C, not a
-  compiler flag), plus the flag as a belt.
-* **Excess precision:** on x86_64 SSE2 is required and probed (`MEMO-GLEITKOMMA.md`:66,
-  `sonden/sonde_keine_ueberbreite.c`). For every other target (aarch64 is planned) the
-  prelude asserts `_Static_assert(FLT_EVAL_METHOD == 0, …)`, so a target with wider
-  intermediates fails the build instead of changing the result.
-* **libm:** not in the language today. If `sin`, `exp`, `pow` … are ever admitted, each is
-  either a shipped correctly-rounded implementation, or a named assumption whose manifest
-  entry records the libm and its version. A proof must never depend on a libm version nobody
-  wrote down.
+| | GCC 16 | Clang 22 |
+|---|---|---|
+| `#pragma STDC FP_CONTRACT OFF` under `-std=c11 -Wall -Wextra -Werror` | **breaks the build** (`-Wunknown-pragmas` is in `-Wall`) | accepted |
+| contraction inside one expression (`a*b+c`), ISO mode, `-mfma` | off | **on by default** |
+| contraction across statements (`p = a*b; return p+c;`), `-mfma` | only under `-std=gnu17` | only under `-ffp-contract=fast` |
+| the pragma takes effect | not implemented | yes, except under `-ffp-contract=fast` |
+
+Without `-mfma` the x86_64 baseline has no FMA instruction at all; with it (or `-march` of any
+recent CPU) both compilers contract. The lowering "one effect per statement" does NOT protect:
+GCC in GNU mode contracts across exactly that form, and Clang contracts within one statement.
+
+1. **Prelude:** the pragma only under `#if defined(__clang__)` -- GCC does not implement it and
+   `-Wall -Werror` refuses it.
+2. **Manifest, binding:** `-std=c11` (ISO, never `gnu*`) **and** `-ffp-contract=off`, for every
+   compiler. `-std=c11` is already the emission check line.
+3. **Evidence, not intention -- a build-time probe:** a triple where the fused and the separately
+   rounded result differ, in the emitted two-statement shape, with `volatile` inputs so nothing is
+   folded: `a = 1 + 2^-27`, `b = 1 - 2^-27`, `c = -1` gives `a*b = 1 - 2^-54`, which rounds to
+   `1.0` (tie to even), so separate rounding yields `0` and a fused multiply-add `-2^-54`. The
+   probe is compiled with the manifest's flags and run at build time; any result but `0` fails
+   the build. This, not the pragma, carries the claim.
+4. **Excess precision, unconditional:** `_Static_assert(FLT_EVAL_METHOD == 0, ...)` on EVERY
+   target, x86_64 included -- measured: `__FLT_EVAL_METHOD__` is `0` by default and `2` under
+   `-mfpmath=387` and under `-m32`, flags someone may set for unrelated reasons. `== 0` also
+   excludes `-1` (indeterminable). This replaces the prose assumption "SSE2 instead of x87".
+5. **libm:** not in the language today. If `sin`, `exp`, `pow` ... are ever admitted, each is either
+   a shipped correctly-rounded implementation, or a named assumption whose manifest entry records
+   the libm and its version.
+
+## 5b. Signed operations in C -- pin implementation-defined behaviour, never rely on it silently
+
+* **`sar`:** a right shift of a negative value is implementation-defined in C11/C17 (and, as far
+  as this folder knows, still in C23, which mandated only two's complement representation; C++20
+  is the standard that defined the arithmetic shift). Implementation-defined -- unlike undefined
+  -- is fixed per implementation, so the prelude pins it:
+  `_Static_assert((-1 >> 1) == -1, "arithmetic right shift");`
+  and the conversion back from unsigned:
+  `_Static_assert((int)0xFFFFFFFFu == -1, "modular conversion");`
+  Both compile under GCC 16 and Clang 22 with `-Werror`. The standard stays C11.
+* **`+%`, `-%`, `*%` exist only on `uN` (§4), and that is the reason, not a coincidence:** signed
+  overflow is undefined in C, and the conversion back from unsigned is implementation-defined.
+  Wrapping on unsigned C types is defined behaviour.
+* Same mechanism as the `clz` zero case: the C level has an undefined or implementation-defined
+  edge, and Gabbro either makes it unreachable or pins it at build time.
 
 ## 6. Compile-time evaluation -- measure the certificate before building
 
@@ -97,7 +131,13 @@ Certificates are therefore **lists of explicit entries checked entry by entry** 
 over entries with a `Decidable` instance, arithmetic on `Nat` literals, which the kernel
 evaluates efficiently), never a definitional comparison of whole tables. **Before item 6 is
 built, one measurement lane** checks a table of realistic size (a four-level walk with 512
-entries per level) that way and records time and memory.
+entries per level). It compares two encodings -- the certificate predicate on bare `Nat`
+literals with the range proofs attached afterwards, versus entries as `Zahl` values carrying
+their proofs (which leaves the kernel's fast `Nat` path through projections) -- and records,
+separately, elaboration time and memory, kernel-check time and memory, and the size of the
+proof term. **Fallback, planned now:** cut the certificate into blocks checked one by one; it
+bounds memory even where total time stays the same. The measurement decides whether it is
+needed.
 
 ## 7. Order
 
