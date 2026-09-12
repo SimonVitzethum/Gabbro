@@ -210,3 +210,87 @@ flags are new or sharper, and each was re-read against the Lean before being fol
 - **B12 -- the order leg names one table and two accesses.** Conjunct 12 orders exactly
   `hw₁`/`hw₂` on `t₀`; everything else an ordinary program races on is not ordered by this
   theorem (shared globals, more than two sections, restoring writers stay open).
+
+## 6. What the wave-1 merges established
+
+Section 6 line numbers refer to the working tree on branch `muse/47` (the §§1-5
+numbers above still refer to `muse/16` per the header).
+Each row names the merged Lean artifact with exact `file:line` citations (verified by
+grep against the working tree). "PROVES" means a checked Lean theorem now decides the
+flagged point; "reading" means the flag still rests on statement/proof-term inspection
+and no merged theorem discharges it.
+
+| # | Merged result | Exact Lean names and locations | Effect |
+|---|---|---|---|
+| R1 | QLeer (lane 15) | `qRequires_nowhere` (`grammatik/Grammatik/QLeer.lean:133`), `qEnsures_nowhere` (`QLeer.lean:142`), `qSeedAll_unmoeglich_req` (`QLeer.lean:154`), `qSeedAll_unmoeglich_ens` (`QLeer.lean:170`) over `QRequires` (`grammatik/Grammatik/Extraktion.lean:1437`) / `QEnsures` (`Extraktion.lean:1442`) | Proved theorems on a concrete one-function program, not a reading |
+| R2 | BlattGegenbeispiel (lane 14) | `hblatt_post_falsch` (`grammatik/Grammatik/BlattGegenbeispiel.lean:242`), `hblatt_konj_falsch` (`BlattGegenbeispiel.lean:262`), `hblattall_falsch_schreibend` (`BlattGegenbeispiel.lean:286`) | Proved counterexample to `hBlattAll` for a writing leaf |
+| R3 | VertragOrtB (lane 02, attempt B) | `ReqAmEintritt` (`grammatik/Grammatik/VertragOrtB.lean:114`), `EnsAmRueck` (`VertragOrtB.lean:120`), `VertragAmOrtB` (`VertragOrtB.lean:137`), `rufAt_ok_of_gates` (`VertragOrtB.lean:406`), `rueck_ohne_nachbedingung` (`VertragOrtB.lean:444`) | Proved place-check construction plus one-direction bridge; not wired into the goal theorem (import-cycle remainder) |
+| R4 | KetteMehrfadenC (lane 11, attempt C) | `KettenSpurDeckung` (`grammatik/Grammatik/KetteMehrfadenC.lean:115`), `kette_zwei_aus_lauf` (`KetteMehrfadenC.lean:766`), `kette_aus_deckung` (`KetteMehrfadenC.lean:879`), `deckung_strikt_schwaecher` (`KetteMehrfadenC.lean:909`) | Proved chain-from-run for the two-thread lock-only fragment; N-thread discharge open |
+| R5 | Audit muse/23, F2 (HIGH) | Filed: `allgemeinStabil` (`grammatik/Grammatik/InterferenzAllgemein.lean:498`) never consumes `hInv`/`hDeck`. Demo: `audit_allgemeinStabil_ohne_InvDeck` (`messung/muse-audit/23/F2_HauptsatzNutztInvDeckNicht.lean:25`), `audit_allgemeinStabil_forget` (`F2_HauptsatzNutztInvDeckNicht.lean:61`) | Checked demonstration, not a `Grammatik` theorem |
+| R6 | Audit muse/23, F4 (HIGH) | Filed: `serial_chain_from_run` (`grammatik/Grammatik/InterferenzAllgemein.lean:1816`) proves its HB half from `SerialLink` + `reduktion_seriell` alone. Demo: `audit_hb_sidecar_ohne_kette` (`messung/muse-audit/23/F4_ReduktionOhneKette.lean:31`), `audit_kette_ohne_run` (`F4_ReduktionOhneKette.lean:47`) | Checked demonstration, not a `Grammatik` theorem |
+| R7 | Audit muse/23, F5 (HIGH) | Filed: `hinv_aus_disziplin` (`grammatik/Grammatik/InterferenzAllgemein.lean:1502`) discards `LockFrei` (`intro k σ h _`), so `interferenceFree_wo_frei` (`InterferenzAllgemein.lean:1597`) restricts nothing. Demo: `audit_hinv_ohne_frei` (`messung/muse-audit/23/F5_LockFreiUngenutzt.lean:23`), `audit_hinv_forget_frei` (`F5_LockFreiUngenutzt.lean:47`) | Checked demonstration, not a `Grammatik` theorem |
+| R8 | Audit muse/24, F9 (HIGH) | Filed: `QRequires` (`grammatik/Grammatik/Extraktion.lean:1437`) / `QEnsures` (`Extraktion.lean:1442`) quantify over all envs/values at one world fed twice as entry and present (`eval σ e σ ρ`). Demo: `audit_QRequires_unfold` (`messung/muse-audit/24/Audit24.lean:80`), `audit_QEnsures_unfold` (`Audit24.lean:85`), both `rfl` | Checked demonstration, not a `Grammatik` theorem |
+| R9 | Audit muse/24, F11 (HIGH) | Filed: `hmem_all` of `hwit_aus_lauf` (`grammatik/Grammatik/Extraktion.lean:3829`, premise at `:3840`) and `hwit_alt_faltung` (`Extraktion.lean:3609`, premise at `:3621`) demands `.inl t₀ ∈ stmtTraeger tabs globs s` for every leaf, but `stmtTraeger` (`Extraktion.lean:2421`) returns `[]` for `assignVar` (`:2428`), `ite`, calls, locks, registers, marks, terminals. Demo: `assignVar`-implies-`False` example (`messung/muse-audit/24/Audit24.lean:107-112`) | Checked demonstration, not a `Grammatik` theorem |
+| R10 | Audit muse/26, F7 (HIGH) | Filed: `handler_wettlauf_frei` (`grammatik/Grammatik/Unterbrechung.lean:103`) and `handler_wettlauf_frei_global` (`Unterbrechung.lean:120`) discard the handler/boundary premises (`have _ :=`, `rcases hH with _ \| _`). Demo: `audit26_handler_premise_discarded` (`messung/muse-audit/26/F7_HandlerPremise.lean:17`) | Checked demonstration, not a `Grammatik` theorem |
+
+Flag-by-flag verdicts for §§3 and 5:
+
+- **§3.1 (`hSeedAll` demands `Post` at entry): PROVED (instantiated).**
+  `qSeedAll_unmoeglich_req` (`QLeer.lean:154`) / `qSeedAll_unmoeglich_ens`
+  (`QLeer.lean:170`) derive `False` from the goal theorem's `hSeedAll` shape for any run
+  whose member thread runs the parameter/result function (`qRequires_nowhere`,
+  `qEnsures_nowhere` supply the failing legs). Scope limit, stated in the theorems:
+  runs with no member thread on that function supply `hSeedAll` vacuously. The same
+  quantification defect is independently exhibited by R8 (`audit_QEnsures_unfold`).
+- **§3.2 (`hForm` invariant form): stays a reading.** No merged result proves or
+  discharges `InvariantForm`; R3 (`ReqAmEintritt`/`EnsAmRueck`) offers the repair
+  direction (contracts evaluated at entry/return with actual values) without replacing
+  the premise.
+- **§3.3 (`hReturn`/`hWatch` over all carriers and steps): stays a reading.** Neither
+  premise is discharged by a merged theorem. Adjacent sharpening only: R7 proves the
+  neighbouring lock-freedom side-claim vacuous (`hinv_aus_disziplin` ignores `LockFrei`),
+  and table watches still route via `wache_aus_schuld` exactly as §2 books it.
+- **§3.4 (`hGuardEx` for every carrier): stays a reading.** Untouched by every merge.
+- **§3.5 (`hJw`/`hJsf` chain-machine identity): PROVED for the two-thread lock-only
+  fragment, open in general.** `kette_zwei_aus_lauf` (`KetteMehrfadenC.lean:766`)
+  concludes `J.welten = M.welten` and `J.schrittFaden = tr` as theorems (never assumed)
+  for two-thread lock-only programs, at the price of named extra premises (`hforeign`,
+  `hlock_prog`, `hMSep`, `hCSep`, `hEintritt`, `hSchuld`, `hInvSicht`); `kette_aus_deckung`
+  (`KetteMehrfadenC.lean:879`) isolates the exact N-thread premise (`KettenSpurDeckung`),
+  whose discharge for leaves and N threads remains open per the file's `CUTS`.
+  The grain-mismatch half of the flag (chain sections vs per-event machine worlds) is
+  unaffected: the construction only threads lock steps.
+- **§3.6 (`hBlattAll` uniform over all reachable machines): PROVED (refuted for writing
+  leaves).** `hblattall_falsch_schreibend` (`BlattGegenbeispiel.lean:286`) falsifies the
+  `hBlattAll`-shaped universal at a concrete writing leaf (`hblatt_post_falsch` flips the
+  thread's own `QEnsures`); only the `QRequires` leg (`.wahr` here) survives. The §2
+  booking stands confirmed in both directions: the nine memory-preserving leaves still
+  discharge via `hBlattAll_speicherfest_aus_feuerung`, the writing shapes do not.
+- **§3.7 (`hDeck` bans lock-free sharing): stays a reading as a premise of the goal
+  theorem.** Adjacent proved fact: R5 shows `hDeck` (with `hInv`) is unconsumed by the
+  `allgemeinStabil` conclusion (`audit_allgemeinStabil_ohne_InvDeck`), i.e. the
+  interference-freedom leg the goal theorem routes through `hForm` does not depend on
+  the deck — but `hDeck` itself is still owed wherever the goal theorem asks for it.
+- **§3.8 (C4/C12 narrowing): stays a reading.** Endpoints, absent deadlines, and
+  witness-less runs are still outside the conclusion. Adjacent proved fact: R6 separates
+  the C12-side order from any chain conclusion (`audit_hb_sidecar_ohne_kette`), so the
+  leg orders the two exhibited accesses and nothing more — exactly as flagged.
+- **§3.9 (`hO` excludes event-emitting oracles): stays a reading.** Untouched by every
+  merge.
+- **§3.10 (`hspace` per-use timing): stays a reading.** Untouched by every merge.
+- **§5 B8 (`hMSep` excludes same-function threads): stays a reading.** R4 assumes
+  `hMSep` (`kette_zwei_aus_lauf` takes it as a premise) rather than removing it; no
+  per-thread mark notion was added.
+- **§5 B5 (no break-and-restore): PROVED (same counterexample as §3.6).**
+  `hblatt_post_falsch` (`BlattGegenbeispiel.lean:242`) is exactly an own write flipping
+  the thread's own `Post` mid-establishment; `hblatt_konj_falsch` (`:262`) refutes the
+  full per-firing conjunction. R3's `hBlattCall` replacement proposal (per-call boundary
+  premise, MUSE-REPORT-14) is the booked repair, not a merged theorem.
+- **§5 B11 (lowering leg numeric only): stays a reading.** Untouched by every merge.
+- **§5 B12 (one table, two accesses): stays a reading for C12 itself.** Adjacent proved
+  fact on the witness side: R9 shows the `hwit_aus_lauf`/`hwit_alt_faltung` coverage
+  premise `hmem_all` is uninhabitable outside the fragment where every leaf writes the
+  same table (witnessed at `assignVar`, `Audit24.lean:107-112` over
+  `stmtTraeger` at `Extraktion.lean:2421-2428`) — so witness production for C12-style
+  accesses is itself fragment-restricted, as the flag's "restoring writers stay open"
+  already suspects.
