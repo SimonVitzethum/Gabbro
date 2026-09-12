@@ -477,11 +477,18 @@ end Inv
     `rueckConsBind`, `dannRetBind`). `ziel v` is the resumed frame. -/
 inductive PopArt (fn : D.Fn) (caller : RufRahmenG D) :
     (ErgVal D (D.erg fn) → RufRahmenG D) → Prop where
-  | wie : PopArt fn caller (fun _ => caller)
+  | wie (hnw : caller.wartend = false) : PopArt fn caller (fun _ => caller)
   | bind {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
       (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D caller.f) l Γ Λ') (ρc : Env D Γ)
       (hc : caller.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩) (he : D.erg fn = some τ) :
+      PopArt fn caller (fun v => ⟨caller.f, caller.rho, caller.s0,
+        ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc, .dann restb (.schrumpf k)⟩⟩)
+  | bindSonst {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (n : Nat)
+      (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ)
+      (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D caller.f) l Γ Λ') (ρc : Env D Γ)
+      (hc : caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩) (he : D.erg fn = some τ) :
       PopArt fn caller (fun v => ⟨caller.f, caller.rho, caller.s0,
         ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc, .dann restb (.schrumpf k)⟩⟩)
 
@@ -505,12 +512,17 @@ theorem w_rueckP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   cases hart with
-  | wie =>
+  | wie hnw =>
     exact ⟨_, RufSchrittG.rueck M f caller rst hpop Γ Λ e hperm ρ hhead _ rfl
-      (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl _ rfl _ rfl, gepopptG_neu rfl rfl⟩
+      (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl _ rfl _ rfl hnw, gepopptG_neu rfl rfl⟩
   | bind restb k ρc hc he =>
-    exact ⟨_, RufSchrittG.rueckBind M f caller rst hpop _ _ _ _ _ restb k ρc hc Γ Λ e hperm ρ
-      hhead _ rfl (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl _ rfl he _ rfl, gepopptG_neu rfl rfl⟩
+    exact ⟨_, RufSchrittG.rueckBind M f caller rst hpop _ _ _ _ _ restb k ρc (Or.inl hc) Γ Λ e
+      hperm ρ hhead _ rfl (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl _ rfl he _ rfl,
+      gepopptG_neu rfl rfl⟩
+  | bindSonst n err restb k ρc hc he =>
+    exact ⟨_, RufSchrittG.rueckBind M f caller rst hpop _ _ _ _ _ restb k ρc
+      (Or.inr ⟨n, err, hc⟩) Γ Λ e hperm ρ hhead _ rfl (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl
+      _ rfl he _ rfl, gepopptG_neu rfl rfl⟩
 
 theorem w_rueckConsP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
@@ -529,13 +541,17 @@ theorem w_rueckConsP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   cases hart with
-  | wie =>
+  | wie hnw =>
     exact ⟨_, RufSchrittG.rueckCons M f caller rst hpop Γ Λ e hperm rest ρ hhead _ rfl
-      (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl _ rfl _ rfl, gepopptG_neu rfl rfl⟩
+      (M.faeden f).kopf.rho rfl _ rfl hΛ _ rfl _ rfl _ rfl hnw, gepopptG_neu rfl rfl⟩
   | bind restb k ρc hc he =>
     exact ⟨_, RufSchrittG.rueckConsBind M f _ Γ Λ e hperm rest ρ hhead caller rst hpop _ _ _ _ _
-      restb k ρc hc hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl he _ rfl,
+      restb k ρc (Or.inl hc) hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl he _ rfl,
       gepopptG_neu rfl rfl⟩
+  | bindSonst n err restb k ρc hc he =>
+    exact ⟨_, RufSchrittG.rueckConsBind M f _ Γ Λ e hperm rest ρ hhead caller rst hpop _ _ _ _ _
+      restb k ρc (Or.inr ⟨n, err, hc⟩) hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl he
+      _ rfl, gepopptG_neu rfl rfl⟩
 
 theorem w_dannRetP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
@@ -555,13 +571,17 @@ theorem w_dannRetP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   cases hart with
-  | wie =>
+  | wie hnw =>
     exact ⟨_, RufSchrittG.dannRet M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ
-      _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl, gepopptG_neu rfl rfl⟩
+      _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw, gepopptG_neu rfl rfl⟩
   | bind restb k' ρc hc he =>
     exact ⟨_, RufSchrittG.dannRetBind M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop
-      _ _ _ _ _ restb k' ρc hc hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl he _ rfl,
-      gepopptG_neu rfl rfl⟩
+      _ _ _ _ _ restb k' ρc (Or.inl hc) hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl he
+      _ rfl, gepopptG_neu rfl rfl⟩
+  | bindSonst n err restb k' ρc hc he =>
+    exact ⟨_, RufSchrittG.dannRetBind M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop
+      _ _ _ _ _ restb k' ρc (Or.inr ⟨n, err, hc⟩) hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl
+      _ rfl he _ rfl, gepopptG_neu rfl rfl⟩
 
 /-- `rufDann`: the caller advances to `dann rest k` and waits below the
     callee frame, which starts at the read world with the evaluated
@@ -1468,7 +1488,7 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M1, hs1, hZ1⟩ := w_rufDann (P := P) (O := O) (passes := passes) hZ.1
           g args hp hr rest k ρ rfl hΛ
         rw [hW] at hZ1
-        obtain ⟨M2, e2, hl2, hG2, ho2⟩ := hRuf g hC _ _ _ _ hR2 M1 _ stapel _ hZ1 _ PopArt.wie
+        obtain ⟨M2, e2, hl2, hG2, ho2⟩ := hRuf g hC _ _ _ _ hR2 M1 _ stapel _ hZ1 _ (PopArt.wie rfl)
           (heldGenau_eintritt hp hΛ _ _) (hA.lauf (RufLaufG.einzeln hs1))
         exact ⟨M2, _, RufLaufG.schritt hs1 hl2, gepoppt_zustand hG2 rfl,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
@@ -2064,7 +2084,7 @@ theorem endeConsOkR (hRuf : RufOk P O passes f A R C) {mr l : Bool} {Γ : Ctx}
         obtain ⟨M1, hs1, hZ1⟩ := w_rufEnde (P := P) (O := O) (passes := passes) hZ.1
           g args hp hr rest ρ rfl hΛ
         rw [hW] at hZ1
-        obtain ⟨M2, e2, hl2, hG2, ho2⟩ := hRuf g hC _ _ _ _ hR2 M1 _ stapel _ hZ1 _ PopArt.wie
+        obtain ⟨M2, e2, hl2, hG2, ho2⟩ := hRuf g hC _ _ _ _ hR2 M1 _ stapel _ hZ1 _ (PopArt.wie rfl)
           (heldGenau_eintritt hp hΛ _ _) (hA.lauf (RufLaufG.einzeln hs1))
         exact ⟨M2, _, RufLaufG.schritt hs1 hl2, gepoppt_zustand hG2 rfl,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
@@ -2873,6 +2893,7 @@ theorem rufG_adaequat_ruf (P : Programm D) (O : Orakel D) (passes : Nat) (n : Na
     {Λ : List (Res D)} (ρ : Env D Γ) (b : Endblock D (vertragVon D fn) false Γ Λ)
     (A : D.Lock → Prop) (hb : EndR A (Tief P A n) b)
     (hM : M.faeden f = ⟨caller :: rst, ⟨fn, rho, s0, ⟨false, Γ, Λ, ρ, .ende b⟩⟩, spur, log⟩)
+    (hnw : caller.wartend = false)
     (hΛ : HeldGenau Λ (offen spur))
     (hfrei : ∀ L, A L → RufFreiG M f L)
     (σ' : World D) (v : ErgVal D (vertragVon D fn).erg)
@@ -2887,7 +2908,7 @@ theorem rufG_adaequat_ruf (P : Programm D) (O : Orakel D) (passes : Nat) (n : Na
   have hZ : ZustandG M f (caller :: rst) fn rho s0 log ρ (.ende b) (M.weltVon f) :=
     ⟨by rw [hsp]; exact hM, rfl⟩
   obtain ⟨M', ext, hl, hG, _⟩ := endRetR P O passes f fn caller rst rho s0 A
-    (rufRumpf P O passes n) (Tief P A n) (fun _ => caller) PopArt.wie (rufOk_tief P O passes f A n)
+    (rufRumpf P O passes n) (Tief P A n) (fun _ => caller) (PopArt.wie hnw) (rufOk_tief P O passes f A n)
     b hb log (M.weltVon f) σ' ρ v hexec M hZ (by rw [hsp]; exact hΛ) hfrei
   exact ⟨M', ext, hl, hG.1, hG.2, rufLaufG_fremd hl⟩
 
@@ -3194,7 +3215,7 @@ theorem rufG_adaequat_ruf_zeuge :
   obtain ⟨σ', v, hex, h5, h7, h9⟩ := t4F_exec
   obtain ⟨M', ext, hl, hf, hsp, hfr⟩ := rufG_adaequat_ruf t4P t4O 0 1 (t4M t4F t4FRumpf) 0 t4F
     Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4FRumpf (fun _ => False)
-    (t4FRumpf_R _) rfl t4_held (t4_frei t4F t4FRumpf) σ' v hex
+    (t4FRumpf_R _) rfl rfl t4_held (t4_frei t4F t4FRumpf) σ' v hex
   refine ⟨σ', v, hex, rfl, rfl, h5, h7, h9, M', ext, hl, hf, hsp, ?_, ?_, hfr⟩
   · rw [hsp]; exact h5
   · rw [hsp]; exact h7
@@ -3217,7 +3238,7 @@ theorem rufG_adaequat_ruf_zeuge_bind :
   obtain ⟨σ', v, hex, h5, h3, h9⟩ := t4B_exec
   obtain ⟨M', ext, hl, hf, hsp, _⟩ := rufG_adaequat_ruf t4P t4O 0 1 (t4M t4B t4BRumpf) 0 t4B
     Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4BRumpf (fun _ => False)
-    (t4BRumpf_R _) rfl t4_held (t4_frei t4B t4BRumpf) σ' v hex
+    (t4BRumpf_R _) rfl rfl t4_held (t4_frei t4B t4BRumpf) σ' v hex
   refine ⟨σ', v, hex, h5, h3, h9, M', ext, hl, hf, ?_, ?_⟩
   · rw [hsp]; exact h5
   · rw [hsp]; exact h3
@@ -3252,28 +3273,25 @@ theorem rufG_adaequat_ruf_zeuge_schleife :
   obtain ⟨σ', v, hex, h5, h8, h6, h9⟩ := t4L_exec
   obtain ⟨M', ext, hl, hf, hsp, _⟩ := rufG_adaequat_ruf t4P t4O 0 1 (t4M t4L t4LRumpf) 0 t4L
     Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4LRumpf (fun _ => False)
-    (t4LRumpf_R _) rfl t4_held (t4_frei t4L t4LRumpf) σ' v hex
+    (t4LRumpf_R _) rfl rfl t4_held (t4_frei t4L t4LRumpf) σ' v hex
   refine ⟨σ', v, hex, h9, M', ext, hl, hf, ?_, ?_, ?_⟩
   · rw [hsp]; exact h5
   · rw [hsp]; exact h8
   · rw [hsp]; exact h6
 
 
-/-! ## 12. FINDING: a verbatim pop into a waiting bind-caller deadlocks
+/-! ## 12. AGREEMENT (formerly a finding): a pop never restores a waiting caller
 
-    `rueck`, `rueckCons` and `dannRet` pop the callee frame and restore the
-    caller frame VERBATIM. When the caller waits for a bound value (residue
-    `wartet rest k`, pushed by `dannBindCall`/`dannBindCallInd`/
-    `dannBindCallElse`), the restored head is `wartet …`, for which NO rule
-    exists: the thread is stuck for good (`wartet_steht`), while the
-    sequential semantics binds the value and continues. The binding pops
-    (`rueckBind`, and the new `rueckConsBind`/`dannRetBind`) exist beside
-    the verbatim ones, so the machine HAS the right run (that is what
-    `rufG_adaequat_ruf_zeuge_bind` uses) -- but it also has this wrong one.
-    Excluding it would need a premise "the caller does not wait" on the three
-    verbatim pops, which changes the statement of `rufG_adaequat`
-    (`RufAdaequatG.lean`, any caller frame) -- so it is reported, not
-    repaired. Machine-checked on the bind witness: -/
+    Before the repair, `rueck`, `rueckCons` and `dannRet` popped the callee
+    frame and restored the caller frame VERBATIM, also when the caller
+    waited for a bound value (residue `wartet rest k`): the restored head
+    `wartet …` has no rule, the thread was stuck for good (`wartet_steht`,
+    `wartet_lauf` below), while the sequential semantics binds the value and
+    continues. The three verbatim pops now demand a caller that does not
+    wait (`hnw : caller.wartend = false`, `RufMaschineG.lean`); a waiting
+    caller is resumed only by a binding pop. `rufG_nie_wartend` shows that
+    no reachable head waits; `wartet_einig` checks it on the bind witness
+    from its waiting state. -/
 
 /-- At a head `wartet rest k` every step of `f` is a bare lock step. -/
 theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -3356,6 +3374,9 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | rueckGrund _ _ _ hhead => kopfweg
+  | rueckConsGrund _ _ _ _ hhead => kopfweg
+  | dannRetGrund _ _ _ _ _ hhead => kopfweg
 
 /-- A thread whose head waits stays so, and logs nothing, along any run. -/
 theorem wartet_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
@@ -3378,19 +3399,33 @@ theorem wartet_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
 def RufEreignisF.fnVon : RufEreignisF D → D.Fn
   | .eintritt f .. => f
   | .rueck f .. => f
+  | .grund f .. => f
 
-/-- The bind witness: the frame of `t4B` after `endeEntf`, `dannIteWahr`,
-    `dannBindCall`, the callee's writing leaf, and a VERBATIM `rueck`. -/
-theorem befund_wartet :
-    (∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4B).erg),
-      execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4BRumpf ((t4M t4B t4BRumpf).weltVon 0) Env.nil =
-        .zurueck σ' v ∧ (show Zahl 0 100 from v).n = 9) ∧
-    ∃ M5 : RufMaschineG t4D, RufLaufG t4P t4O 0 0 (t4M t4B t4BRumpf) M5 ∧
-      ∀ M' : RufMaschineG t4D, RufLaufG t4P t4O 0 0 M5 M' →
-        (M'.faeden 0).log = (M5.faeden 0).log ∧ (M'.faeden 0).kopf = (M5.faeden 0).kopf ∧
-        ∀ (w : ErgVal t4D (t4D.erg t4B)) (s1 : World t4D),
-          RufEreignisF.rueck t4B Env.nil w (t4Sp.welt []) s1 ∉ (M'.faeden 0).log := by
-  refine ⟨⟨_, _, rfl, rfl⟩, ?_⟩
+/-- Runs of one thread keep the no-waiting-head invariant of every thread. -/
+theorem rufLaufG_sauber {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (hl : RufLaufG P O passes f M M')
+    (h : ∀ g, RufFadenSauberG (M.faeden g)) : ∀ g, RufFadenSauberG (M'.faeden g) := by
+  induction hl with
+  | refl => exact h
+  | schritt hs _ ih => exact ih (rufSchrittG_sauber hs h)
+
+/-- The witness machines satisfy the invariant: `ende` heads above `t4Unten`. -/
+theorem t4M_sauber (fn : t4D.Fn) (b : Endblock t4D (vertragVon t4D fn) false [] []) :
+    ∀ g, RufFadenSauberG ((t4M fn b).faeden g) := by
+  intro g
+  refine ⟨rfl, ?_⟩
+  intro r hr
+  simp only [t4M, List.mem_cons, List.not_mem_nil, or_false] at hr
+  subst hr
+  rfl
+
+/-- The bind witness up to its waiting state: `endeEntf`, `dannIteWahr`,
+    `dannBindCall` -- the caller frame of `t4B` now WAITS (`wartet`) below
+    the callee frame of `t4G`. -/
+theorem t4B_wartet :
+    ∃ M3 : RufMaschineG t4D, RufLaufG t4P t4O 0 0 (t4M t4B t4BRumpf) M3 ∧
+      ∃ caller : RufRahmenG t4D, (M3.faeden 0).stapel = [caller, t4Unten] ∧
+        caller.f = t4B ∧ caller.wartend = true ∧ (M3.faeden 0).kopf.f = t4G := by
   have hZ0 : ZustandG (t4M t4B t4BRumpf) 0 [t4Unten] t4B Env.nil (t4Sp.welt []) []
       (Env.nil : Env t4D []) (.ende t4BRumpf) ((t4M t4B t4BRumpf).weltVon 0) := ⟨rfl, rfl⟩
   obtain ⟨M1, hs1, hZ1⟩ := w_endeEntf (P := t4P) (O := t4O) (passes := 0) hZ0.1
@@ -3403,35 +3438,29 @@ theorem befund_wartet :
     t4G .nil rfl (t4Hp t4B) rfl (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
     (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
     rfl (fun L => nomatch L)
-  have hleaf : ∃ σ4, execStmt t4O 0 keinRuf
-      (Stmt.assignSlot (V := vertragVon t4D t4G) (l := false) () () t4Idx0
-        (t4Lit 5 (by decide) (by decide)) rfl t4Darf) (M3.weltVon 0) Env.nil = .ok σ4 Env.nil :=
-    ⟨_, rfl⟩
-  obtain ⟨σ4, h4⟩ := hleaf
-  obtain ⟨M4, hs4, hZ4⟩ := w_blatt (P := t4P) (O := t4O) (passes := 0) hZ3.1
-    (Stmt.assignSlot () () t4Idx0 (t4Lit 5 (by decide) (by decide)) rfl t4Darf)
-    (.ret (.wert (t4Lit 3 (by decide) (by decide))) List.Perm.nil) Env.nil rfl rfl
-    (fun L => nomatch L) σ4 Env.nil h4
-    (by
-      have e := BlattG.erw t4O 0 keinRuf (BlattG.assignSlot (l := false) (V := vertragVon t4D t4G)
-        () () t4Idx0 (t4Lit 5 (by decide) (by decide)) rfl t4Darf) _ _ _ _ h4
-      exact e)
-  obtain ⟨M5, hs5, hG⟩ := w_rueck (P := t4P) (O := t4O) (passes := 0) hZ4.1 _ [t4Unten] rfl
-    (.wert (t4Lit 3 (by decide) (by decide))) List.Perm.nil Env.nil rfl (fun L => nomatch L)
-  refine ⟨M5, RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (RufLaufG.schritt hs3
-    (RufLaufG.schritt hs4 (RufLaufG.einzeln hs5)))), ?_⟩
-  intro M' hl
-  obtain ⟨sp, e⟩ := wartet_lauf hl (M5.faeden 0).stapel (M5.faeden 0).kopf (M5.faeden 0).log
-    (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
-    (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
-    (by rw [hG.1]; rfl) (M5.faeden 0).spur rfl
-  refine ⟨by rw [e], by rw [e], ?_⟩
-  intro w s1 hm
-  rw [e, hG.1] at hm
-  have hf := List.mem_map_of_mem (f := RufEreignisF.fnVon) hm
-  simp only [RufEreignisF.fnVon, List.map_cons, List.map_nil, List.mem_cons,
-    List.not_mem_nil, or_false, or_self] at hf
-  exact absurd (congrArg Fin.val hf) (by decide)
+  refine ⟨M3, RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (RufLaufG.einzeln hs3)), _,
+    by rw [hZ3.1], rfl, rfl, by rw [hZ3.1]⟩
+
+/-- **AGREEMENT (formerly the finding `befund_wartet`).** On the bind
+    witness, from the state in which the caller of `t4B` WAITS below the
+    callee: no machine reachable by steps of the thread has a waiting head
+    (the verbatim pops can no longer restore the waiting caller; the
+    deadlock run is gone), and the sequential semantics returns `9`. -/
+theorem wartet_einig :
+    (∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4B).erg),
+      execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4BRumpf ((t4M t4B t4BRumpf).weltVon 0) Env.nil =
+        .zurueck σ' v ∧ (show Zahl 0 100 from v).n = 9) ∧
+    ∃ M3 : RufMaschineG t4D, RufLaufG t4P t4O 0 0 (t4M t4B t4BRumpf) M3 ∧
+      (∃ caller : RufRahmenG t4D, (M3.faeden 0).stapel = [caller, t4Unten] ∧
+        caller.f = t4B ∧ caller.wartend = true) ∧
+      ∀ M' : RufMaschineG t4D, RufLaufG t4P t4O 0 0 M3 M' →
+        ∀ g, (M'.faeden g).kopf.wartend = false := by
+  refine ⟨⟨_, _, rfl, rfl⟩, ?_⟩
+  obtain ⟨M3, hl3, caller, hst, hf, hw, _⟩ := t4B_wartet
+  refine ⟨M3, hl3, ⟨caller, hst, hf, hw⟩, ?_⟩
+  intro M' hl g
+  exact (rufLaufG_sauber (hl3.trans hl) (t4M_sauber t4B t4BRumpf) g).kopf_wartend
+
 
 /-! ## 13. NOTE: the machine realises `rufRumpf`, not `rufAt`
 
@@ -3468,7 +3497,7 @@ theorem befund_vertrag :
     EndR.cons _ _ (StmtR.call _ t4G rfl hG)
       (EndR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) (EndR.ret _ _))
   obtain ⟨M', ext, hl, hf, _, _⟩ := rufG_adaequat_ruf t4Pk t4O 0 1 (t4M t4F t4FRumpf) 0 t4F
-    Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4FRumpf (fun _ => False) hb rfl t4_held
+    Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4FRumpf (fun _ => False) hb rfl rfl t4_held
     (t4_frei t4F t4FRumpf) σ' v hex
   exact ⟨σ', v, hex, M', ext, hl, hf⟩
 
@@ -3529,7 +3558,7 @@ theorem befund_vertrag :
 #print axioms Gabbro.Grammatik.travOkR
 #print axioms Gabbro.Grammatik.travRetR
 #print axioms Gabbro.Grammatik.blockAbbR
-#print axioms Gabbro.Grammatik.befund_wartet
+#print axioms Gabbro.Grammatik.wartet_einig
 #print axioms Gabbro.Grammatik.befund_vertrag
 #print axioms Gabbro.Grammatik.stmtOkR
 #print axioms Gabbro.Grammatik.endRetR

@@ -29,11 +29,16 @@ variable {D : Deklaration}
 /-- Call/return events carrying the ACTUAL values: entry carries the actual
     parameter environment `rho` and the entry world `s0`; return carries the
     actual `rho`, the actual result `v`, the entry world `s0` (the `old(..)`
-    side of `ensures`) and the return world `s1`. -/
+    side of `ensures`) and the return world `s1`. `grund` is a return
+    through the error channel (a callee answering a reason `r`); the F
+    machine never logs it, the G machine logs it when a `retGrund` pops
+    into a caller waiting in a `let x = g(…) else { … }`. -/
 inductive RufEreignisF (D : Deklaration) where
   | eintritt (f : D.Fn) (rho : Env D (D.params f)) (s0 : World D)
   | rueck (f : D.Fn) (rho : Env D (D.params f))
       (v : ErgVal D (D.erg f)) (s0 s1 : World D)
+  | grund (f : D.Fn) (rho : Env D (D.params f))
+      (r : Fin (D.gruende f)) (s0 s1 : World D)
 
 /-! ## 2. Frames, threads, the machine -/
 
