@@ -2629,3 +2629,142 @@ theorem zaehler_aus_konstruktion_einzelblatt_lauf
 #print axioms Gabbro.Grammatik.zaehler_aus_konstruktion_einzelblatt_lauf
 
 end Gabbro.Grammatik
+
+/-! ## 17. The counter identity from construction, full run form (S12, positional fragment)
+
+    Section 16 derives the positional identity for first steps (counter zero
+    from the threading plus `HeadAtom`) and for single-leaf threads (every
+    occurring step is a first step by construction). This section drops both
+    restrictions -- no zero hypothesis, no text shape -- by reading the fired
+    atom off the occurring step's own counter slot instead of computing it
+    from the program text: every `PCSchritt` carries its fired atom in `hpc`
+    (`leaf` / `take` / `rel`), advances exactly its acting thread
+    (`pcSchritt_eigen`), and moves no other (`pcSchritt_fremd`).
+
+    What closes here (no `sorry`, step shapes only, read-only reuse of
+    Section 12 routing):
+
+    - `zaehler_aus_konstruktion_voll`: every step occurring anywhere in a
+      generated run (`SchrittImLauf`, as in `zaehler_zeigt_atom_lauf`) fires
+      the atom its counter points at -- leaf, take, or rel, read off the
+      step's own counter slot -- and advances its acting thread by one.
+      Arbitrary counters (`k > 0` included: no zero hypothesis anywhere),
+      arbitrary multi-atom text (no text-shape hypothesis anywhere), all
+      three atom kinds (`take` / `rel` were impossible over singleton-leaf
+      text in Section 16 and are covered here). Every premise is
+      load-bearing: `hs` is cased on (feeds each disjunct's witness),
+      `h` / `hmem` feed membership in this run, the advance reuses
+      `pcSchritt_eigen`.
+    - `zaehler_routing_fremd`: an occurring step by `f` moves no other
+      thread's counter -- resumption is explicit at arbitrary `k`
+      (`pcSchritt_fremd` read-only): between two firings of `g`, only `g`'s
+      own steps move `g`'s counter.
+    - `zaehler_routing_gen`: an occurring PC step projects to a generated
+      step by the same thread (`pcSchritt_gen` read-only) -- the generated
+      run's steps are counter-fired steps.
+
+    What still posits identity (booked, not hidden): the extraction match --
+    that the fired atom IS the `progAus` / `stmtAtome` output for the fired
+    statement (`Λa = Λ`, `cs = cs₀` per occurrence, the `hmark` / `hcar`
+    discharge, the `take` / `rel` bracket correspondence, the `axiomCall`
+    event contract) -- stays witness duty per Section 15. This section
+    closes the positional routing (the atom the counter points at fires),
+    never the extraction naming (which atom the text holds at that
+    counter). Sections 15 and 16 stand unchanged; the zero and singleton
+    restrictions of Section 16 are lifted here without touching either.
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **The counter identity from construction, full run form.** Every step
+    occurring anywhere in a generated run fires the atom its counter points
+    at -- leaf, take, or rel, read off the step's own counter slot -- and
+    advances its acting thread by one. No zero hypothesis, no text shape:
+    arbitrary counters over arbitrary multi-atom text. Every premise is
+    load-bearing: `hs` is cased on (feeds each disjunct), `h` / `hmem` feed
+    membership, the advance reuses `pcSchritt_eigen`. -/
+theorem zaehler_aus_konstruktion_voll
+    (prog : PCProg D) (M0 : GenMaschine D)
+    (Mmid : GenMaschine D) (pcmid : PCStand) (f : Faden)
+    (M' : GenMaschine D) (pc' : PCStand)
+    (P : Programm D) (O : Orakel D) (passes : Nat)
+    (hs : PCSchritt P O passes prog Mmid pcmid f M' pc')
+    (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog M0 M pc)
+    (hmem : SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs h) :
+    (∃ Λa : List (Res D), ∃ cs : List (D.Tab ⊕ D.Glob),
+      (prog f)[pcmid f]? = some (PCAtom.leaf Λa cs) ∧ pc' f = pcmid f + 1) ∨
+    (∃ L : D.Lock, (prog f)[pcmid f]? = some (PCAtom.take L) ∧ pc' f = pcmid f + 1) ∨
+    (∃ L : D.Lock, (prog f)[pcmid f]? = some (PCAtom.rel L) ∧ pc' f = pcmid f + 1) := by
+  have hadv : pc' f = pcmid f + 1 :=
+    pcSchritt_eigen P O passes prog Mmid M' pcmid pc' f hs
+  cases hmem with
+  | letzter _ =>
+      rcases hs with
+        ⟨_V, _l, _Γ, _Λs, _Λs', _s, _ρ, _hleaf, _hΛ, _σ', _neu, _hstep, _hneu,
+          _hkn, Λa, cs, hpc, _hΛa, _hmark, _hcar⟩
+        | ⟨L, _hself, _hrang, _hfrei, hpcT⟩
+        | ⟨L, _hhaelt, hpcR⟩
+      · exact Or.inl ⟨Λa, cs, hpc, hadv⟩
+      · exact Or.inr (Or.inl ⟨L, hpcT, hadv⟩)
+      · exact Or.inr (Or.inr ⟨L, hpcR, hadv⟩)
+  | frueher _ _ _ =>
+      rcases hs with
+        ⟨_V, _l, _Γ, _Λs, _Λs', _s, _ρ, _hleaf, _hΛ, _σ', _neu, _hstep, _hneu,
+          _hkn, Λa, cs, hpc, _hΛa, _hmark, _hcar⟩
+        | ⟨L, _hself, _hrang, _hfrei, hpcT⟩
+        | ⟨L, _hhaelt, hpcR⟩
+      · exact Or.inl ⟨Λa, cs, hpc, hadv⟩
+      · exact Or.inr (Or.inl ⟨L, hpcT, hadv⟩)
+      · exact Or.inr (Or.inr ⟨L, hpcR, hadv⟩)
+
+/-- **Resumption is explicit: another thread's occurring step moves no
+    counter but its own.** An occurring step by `f` keeps every other
+    thread's counter where it stood, at arbitrary `k` over arbitrary text
+    (`pcSchritt_fremd` read-only). Every premise is load-bearing: `hs`
+    feeds the preservation, `g` / `hne` type it, `h` / `hmem` feed
+    membership. -/
+theorem zaehler_routing_fremd
+    (prog : PCProg D) (M0 : GenMaschine D)
+    (Mmid : GenMaschine D) (pcmid : PCStand) (f : Faden)
+    (M' : GenMaschine D) (pc' : PCStand)
+    (P : Programm D) (O : Orakel D) (passes : Nat)
+    (hs : PCSchritt P O passes prog Mmid pcmid f M' pc')
+    (g : Faden) (hne : g ≠ f)
+    (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog M0 M pc)
+    (hmem : SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs h) :
+    pc' g = pcmid g := by
+  cases hmem with
+  | letzter _ =>
+      exact pcSchritt_fremd P O passes prog Mmid M' pcmid pc' f g hs hne
+  | frueher _ _ _ =>
+      exact pcSchritt_fremd P O passes prog Mmid M' pcmid pc' f g hs hne
+
+/-- **Counter routing into the generated run.** An occurring PC step projects
+    to a generated step by the same thread (`pcSchritt_gen` read-only): the
+    generated run's steps are counter-fired steps. Every premise is
+    load-bearing: `hs` feeds the projection, `h` / `hmem` feed membership. -/
+theorem zaehler_routing_gen
+    (prog : PCProg D) (M0 : GenMaschine D)
+    (Mmid : GenMaschine D) (pcmid : PCStand) (f : Faden)
+    (M' : GenMaschine D) (pc' : PCStand)
+    (P : Programm D) (O : Orakel D) (passes : Nat)
+    (hs : PCSchritt P O passes prog Mmid pcmid f M' pc')
+    (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog M0 M pc)
+    (hmem : SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs h) :
+    GenSchritt P O passes Mmid f M' := by
+  cases hmem with
+  | letzter _ =>
+      exact pcSchritt_gen P O passes prog Mmid M' pcmid pc' f hs
+  | frueher _ _ _ =>
+      exact pcSchritt_gen P O passes prog Mmid M' pcmid pc' f hs
+
+#print axioms Gabbro.Grammatik.zaehler_aus_konstruktion_voll
+#print axioms Gabbro.Grammatik.zaehler_routing_fremd
+#print axioms Gabbro.Grammatik.zaehler_routing_gen
+
+end Gabbro.Grammatik
