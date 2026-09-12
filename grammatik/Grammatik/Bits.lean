@@ -1051,4 +1051,21 @@ theorem bswap_bswap64 (x : Zahl 0 ((2 : Int) ^ 64 - 1)) :
   show ((bswap64n (Zahl.bswap64 x).n.toNat : Nat) : Int) = x.n
   rw [hmid, h, h2n]
 
+/-! ## Witness for `clz_log2` (rule 13): width 32, `x = 1` and `x = 2 ^ 31`.
+
+    `clz_log2` has no universal premise over program syntax, but the lane
+    names it as TARGET (`ZEUGE: clz_log2`), so it needs a joint witness
+    anyway. Both cases evaluate by `decide` to the required numerals. -/
+
+/-- Width-32 field element `1`: `clz = 31`, `log2 = 0`. -/
+def zeuge1 : Zahl 1 ((2 : Int) ^ (31 + 1) - 1) := ⟨1, by decide, by decide⟩
+
+/-- Width-32 field element `2 ^ 31`: `clz = 0`, `log2 = 31`. -/
+def zeuge2 : Zahl 1 ((2 : Int) ^ (31 + 1) - 1) := ⟨2 ^ 31, by decide, by decide⟩
+
+theorem clz_log2_zeuge :
+    (Zahl.clz 31 zeuge1).n = 31 ∧ (Zahl.log2_floor 31 zeuge1).n = 0
+      ∧ (Zahl.clz 31 zeuge2).n = 0 ∧ (Zahl.log2_floor 31 zeuge2).n = 31 := by
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> decide
+
 end Gabbro.Grammatik
