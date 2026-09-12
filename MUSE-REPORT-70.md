@@ -2,7 +2,7 @@
 
 ## What was done
 
-New file `grammatik/Grammatik/HoareRuf.lean` (~230 lines), wired via
+New file `grammatik/Grammatik/HoareRuf.lean` (~250 lines), wired via
 `import Grammatik.HoareRuf` at the end of `grammatik/Grammatik.lean`.
 It adds the missing call rule on top of `HoareRegeln.lean` (merged wave 2),
 stated against a contract-respecting call handler.
@@ -17,15 +17,23 @@ New definitions/theorems (all `Gabbro.Grammatik`):
   `ReqAmEintritt`/`EnsAmRueck` are taken from `VertragOrtB.lean`
   at the actual entry world, return world, arguments and result.
 - `hoare_call (P O passes R) (hR : RespektiertVertraege P R)
-  (f args hp hr) : STTripel ... (.call f args hp hr) Pre Post`
-  where `Pre sig rho` is "requires holds at the argument world
-  `(sig.lese ... args.orte)` with the evaluated arguments
-  `evalArgs ...`", and `Post s' _` is
-  `exists s0 rho0 v, R f s0 rho0 = .ok s' v /\ EnsAmRueck P f s0 s' rho0 v`.
-  Proof: unfold `execStmt` on `.call` (argument-world read, then match
-  on `R`); the `.ok` branch closes with `hR`, the `.grund` branch by
-  the empty `Fin` (`hr : D.gruende f = 0`), the error branches by
-  discrimination. All three premises used (`hR`, `hPre`, `hr`).
+  (f args hp hr) (s0 rho0 r0) : STTripel ... (.call f args hp hr) Pre Post`
+  with LOGICAL VARIABLES fixed by the precondition:
+  `Pre sig rho` is `sig.lese ... = s0 /\ evalArgs ... = rho0 /\
+  rho = r0 /\ ReqAmEintritt P f s0 rho0`, and `Post s' rho'` is
+  `rho' = r0 /\ exists v, R f s0 rho0 = .ok s' v /\
+  EnsAmRueck P f s0 s' rho0 v`.
+  The postcondition pins the ACTUAL call (reviewer fix 2026-09-12: the
+  previous version bound `s0`/`rho0` existentially, so any entry world
+  leading to `s'` satisfied it); the caller environment is unchanged
+  (`rho' = r0`, carried as third logical variable, since `.call`
+  discards the result and keeps `rho`).
+  Proof: rewrite the `execStmt` unfolding with the `hPre` equalities,
+  case-split `R f s0 rho0`; the `.ok` branch closes with `hR`, the
+  `.grund` branch by the empty `Fin` (`hr : D.gruende f = 0`), the error
+  branches by discrimination. All premises used (`hR`, all four `hPre`
+  conjuncts, `hr`). The old existential-`s0`/`rho0` version is replaced,
+  not kept (nothing else used it).
 - Witness on the instructed one-function `rufPD` program of
   `RufMaschineD.lean` (increment, ensures result = param + 1) with a
   handler that runs the body:
@@ -36,8 +44,13 @@ New definitions/theorems (all `Gabbro.Grammatik`):
     `ok` branch; ensures duty by computation),
   - `witStmt70` (`.call rufIncD rufArgsD ...`), `witPre70` (entry gate
     by `rfl`), `witRun70` (normal run by `rfl`),
-  - `hoare_call_zeuge`: the CONJUNCTION of all three, i.e. all premises
-    of `hoare_call` instantiated jointly with concrete values and proved.
+  - `s0wit70`/`rho0wit70` (witness logical variables: read world,
+    evaluated args),
+  - `hoare_call_zeuge`: handler respect (`hRwit70`) AND the precondition
+    conjuncts at the witness state AND the postcondition for EVERY normal
+    outcome of the witness run (proved by applying `hoare_call` itself,
+    so the rule fires on the witness) AND existence of such an outcome
+    (`witRun70`, so the universal is not vacuous).
 
 ## Last `./lean-bau` result line
 
@@ -56,18 +69,14 @@ Listed in the file's `CUTS` block: `callInd`/`bindCall`/`bindCallInd`/
 
 ## Believed-wrong parts of the task
 
-One deviation, forced by the real code and weaker than the task sketch
-in one respect: the sketch's `R` type
-`World D -> Env D (D.params f) -> RufAusgang f` omits the `Programm`/`Orakel`/`passes`
-context of `execStmt`, and the sketch's postcondition names "the actual
-entry world" -- but a `Stmt.call` outcome is just `.ok s' rho` with the
-CALLER env; the entry world `s0` and result `v` are not recoverable from
-the outcome alone, so they are existentially bound in the postcondition
-(`exists s0 rho0 v, R f s0 rho0 = .ok s' v /\ EnsAmRueck ...`).
-This is the standard formulation (cf. `hoare_assignVar_fwd`'s
-existential postcondition in `HoareRegeln.lean`); nothing is added or
-dropped beyond that elaboration.
-The witness program `rufD` has no tables (inherited from `RufMaschineD.lean`),
-so "at least one table that some function writes" is met only in the
-degenerate `schreibt = false` sense; the reached call with a normal
-outcome is exhibited (`witRun70`), and memory motion is vacuous there.
+None outstanding after the reviewer fix; two notes:
+- The sketch's `R` type omits the `Programm`/`Orakel`/`passes` context of
+  `execStmt`; the statement is elaborated against the real `execStmt`
+  `.call` equation (argument-world read, then match on `R`).
+- The witness program `rufD` declares one table (`Tab := Unit`) but with
+  `schreibt := fun _ => false`, so no function writes it and the witness
+  run moves no memory. The instructed witness (`rufPD`) is used anyway;
+  the strict rule-13 non-degeneracy clause (a written table, a
+  memory-changing step) is not met on this program. The reached call with
+  a normal outcome IS exhibited (`witRun70`), and the postcondition is
+  proved non-vacuously for it.

@@ -14,15 +14,15 @@
 
   `hoare_call`: whenever `R` respects the contracts, the call
   statement `.call f args hp hr` satisfies the statement triple
-  whose precondition is "requires holds at the argument world with
-  the evaluated arguments" and whose postcondition is "ensures holds
-  with the actual entry world, the actual return world, the actual
-  arguments and the actual result".
+  with logical variables `s0`/`rho0`/`r0` fixed by the precondition
+  (argument world IS `s0`, evaluated arguments ARE `rho0`, caller
+  environment IS `r0`, requires holds there) and postcondition
+  "the handler answered THIS `s0`/`rho0` with return world `σ'`
+  and some result satisfying ensures, caller environment unchanged".
 
-  Witness: `hoare_call_zeuge` on a non-degenerate one-function
-  program (one table that the function writes; ensures result =
-  param + 1) with a handler that runs the body, plus the instructed
-  `rufPD` witness (`respektiert_rufPD`).
+  Witness: `hoare_call_zeuge` on the one-function `rufPD` program of
+  `RufMaschineD.lean` (ensures result = param + 1) with a handler
+  that runs the body.
 -/
 import Grammatik.HoareRegeln
 import Grammatik.VertragOrtB
@@ -44,39 +44,44 @@ def RespektiertVertraege (P : Programm D)
       EnsAmRueck P f σ σ' ρ v
 
 /-- Soundness of the call rule: a `.call f args hp hr` statement satisfies
-    the triple whose precondition is "`requires f` holds at the argument
-    world with the evaluated arguments" and whose postcondition is
-    "`ensures f` holds with the actual entry world, return world,
-    arguments and result". The actual values appear (no quantification
-    over environments in the contract); the result `v` is existentially
-    bound in the postcondition because the statement discards it.
-    Every premise is used: `hR` in the `ok` branch, `hPre` as its gate,
-    `hr` in the `grund` branch (the empty `Fin` eliminates). -/
+    the triple with LOGICAL VARIABLES `s0`/`rho0`/`r0` fixed by the
+    precondition: the argument world IS `s0`, the evaluated arguments ARE
+    `rho0`, the caller environment IS `r0`, and `requires f` holds there.
+    The postcondition pins the ACTUAL call: the handler answered THIS
+    `s0`/`rho0` with return world `σ'` and some result `v` satisfying
+    `ensures f`, and the caller environment is unchanged (`ρ' = r0`,
+    since `.call` discards the result and keeps `ρ`).
+    Every premise is used: `hR` in the `ok` branch, the four `hPre`
+    conjuncts as rewrites/gate/post, `hr` in the `grund` branch (the
+    empty `Fin` eliminates). -/
 theorem hoare_call (P : Programm D) (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (hR : RespektiertVertraege P R)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (f : D.Fn) (args : Args D Γ Λ (D.params f))
-    (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0) :
+    (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0)
+    (s0 : World D) (rho0 : Env D (D.params f)) (r0 : Env D Γ) :
     STTripel (V := V) (l := l) (Γ := Γ) (Λ := Λ) O passes R (.call f args hp hr)
-      (fun σ ρ => ReqAmEintritt P f (σ.lese Λ args.orte)
-        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ))
-      (fun σ' _ => ∃ (s0 : World D) (rho0 : Env D (D.params f))
-        (v : ErgVal D (D.erg f)),
-        R f s0 rho0 = RufAusgang.ok σ' v ∧ EnsAmRueck P f s0 σ' rho0 v) := by
+      (fun σ ρ => σ.lese Λ args.orte = s0 ∧
+                  evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ = rho0 ∧
+                  ρ = r0 ∧
+                  ReqAmEintritt P f s0 rho0)
+      (fun σ' ρ' => ρ' = r0 ∧
+        ∃ v, R f s0 rho0 = RufAusgang.ok σ' v ∧ EnsAmRueck P f s0 σ' rho0 v) := by
   intro σ ρ hPre σ' ρ' hrun
-  have hrun2 : (match R f (σ.lese Λ args.orte)
-      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+  obtain ⟨hlese, hargs, hr0eq, hreq⟩ := hPre
+  have hrun2 : (match R f s0 rho0 with
     | .ok σ'' _ => Ausgang.ok (V := V) (l := l) (Γ := Γ) σ'' ρ
     | .grund _ r => keinGrund hr r
     | .logik e => Ausgang.logik e
-    | .hardware e => Ausgang.hardware e) = Ausgang.ok σ' ρ' := hrun
-  cases hRv : R f (σ.lese Λ args.orte)
-      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+    | .hardware e => Ausgang.hardware e) = Ausgang.ok σ' ρ' := by
+    rw [← hlese, ← hargs]
+    exact hrun
+  cases hRv : R f s0 rho0 with
   | ok σ'' v =>
     simp only [hRv] at hrun2
     cases hrun2
-    exact ⟨_, _, _, hRv, hR f _ _ hPre _ _ hRv⟩
+    exact ⟨hr0eq, v, rfl, hR f _ _ hreq _ _ hRv⟩
   | grund σ'' r =>
     simp only [hRv] at hrun2
     exact (Fin.cast hr r).elim0
@@ -174,20 +179,45 @@ theorem witRun70 :
   exact ⟨_, _, rfl⟩
 
 open RufMaschineD in
-/-- Joint witness for `hoare_call`: ALL premises instantiated with
-    concrete values and proved -- handler respect (`hRwit70`), entry
-    gate (`witPre70`), and a normal run of the call (`witRun70`)
-    whose outcome satisfies `ensures` at the actual values. -/
+/-- The witness logical variables: the read world, the evaluated
+    arguments, and the caller environment. -/
+def s0wit70 : World rufD := rufWeltD.lese [] rufArgsD.orte
+
+open RufMaschineD in
+def rho0wit70 : Env rufD (rufD.params rufIncD) :=
+  evalArgs s0wit70 rufArgsD s0wit70 rufRhoD
+
+open RufMaschineD in
+/-- Joint witness for `hoare_call`: ALL premises instantiated jointly
+    with concrete values and proved -- handler respect (`hRwit70`),
+    the logical variables (`s0wit70`/`rho0wit70`/`rufRhoD`), the
+    precondition at the witness state, and the postcondition for every
+    normal outcome of the witness run (via `hoare_call` itself, so the
+    rule fires on the witness). -/
 theorem hoare_call_zeuge :
     RespektiertVertraege (D := rufD) rufPD Rwit70 ∧
-    ReqAmEintritt rufPD rufIncD
-      (rufWeltD.lese [] rufArgsD.orte)
-      (evalArgs (rufWeltD.lese [] rufArgsD.orte) rufArgsD
-        (rufWeltD.lese [] rufArgsD.orte) rufRhoD) ∧
+    (rufWeltD.lese [] rufArgsD.orte = s0wit70 ∧
+      evalArgs (rufWeltD.lese [] rufArgsD.orte) rufArgsD
+        (rufWeltD.lese [] rufArgsD.orte) rufRhoD = rho0wit70 ∧
+      rufRhoD = (rufRhoD : Env rufD [Ty.int 0 5]) ∧
+      ReqAmEintritt rufPD rufIncD s0wit70 rho0wit70) ∧
+    (∀ σ' : World rufD, ∀ ρ' : Env rufD [Ty.int 0 5],
+      execStmt (V := vertragVon rufD rufIncD) rufOD 0 Rwit70
+        witStmt70 rufWeltD rufRhoD = Ausgang.ok σ' ρ' →
+        ρ' = (rufRhoD : Env rufD [Ty.int 0 5]) ∧
+        ∃ v, Rwit70 rufIncD s0wit70 rho0wit70 = RufAusgang.ok σ' v ∧
+          EnsAmRueck rufPD rufIncD s0wit70 σ' rho0wit70 v) ∧
     (∃ σ' : World rufD, ∃ ρ' : Env rufD [Ty.int 0 5],
       execStmt (V := vertragVon rufD rufIncD) rufOD 0 Rwit70
         witStmt70 rufWeltD rufRhoD = Ausgang.ok σ' ρ') := by
-  exact ⟨hRwit70, witPre70, witRun70⟩
+  refine ⟨hRwit70, ⟨rfl, rfl, rfl, witPre70_unfolded⟩, ?_, witRun70⟩
+  intro σ' ρ' hrun
+  exact hoare_call rufPD rufOD 0 Rwit70 hRwit70 rufIncD rufArgsD
+    rufHpD rfl s0wit70 rho0wit70 rufRhoD rufWeltD rufRhoD
+    ⟨rfl, rfl, rfl, witPre70_unfolded⟩ σ' ρ' hrun
+where
+  witPre70_unfolded :
+      ReqAmEintritt rufPD rufIncD s0wit70 rho0wit70 := witPre70
 
 /-! ## CUTS: what is not proved.
 
