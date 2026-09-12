@@ -120,6 +120,52 @@ theorem schreibBytes_fremd_traeger (σ : World D)
         storeSlot_fremd_traeger _ h _ _ _ k' f'
       rw [h1, h2]
 
+/-- Same-carrier byte write with no write event in the trace: the byte list
+    must be empty (a nonempty list emits a `zugriff t true` head event via
+    `schreibBytes_spur_eq`, ruled out by `hno`), and the empty list leaves
+    slots unchanged (`lese` only extends the trace). Used: `hf` types the
+    byte field in `hstep`/`hspur`, `hstep` fixes the outcome, `hneu` aligns
+    the trace tails, `hno` fires on the head write event. -/
+theorem schreibBytes_gleich_samma_traeger (σ₀ : World D) (t : D.Tab)
+    (fld : D.Feld t) (hf : D.typ t fld = .int 0 255) (Λ : List (Res D))
+    (orte : List (D.Tab ⊕ D.Glob)) (k : Int) (bs : List Byte)
+    (σ' : World D)
+    (hstep : ((σ₀.lese Λ orte).schreibBytes t fld hf Λ k bs) = σ')
+    (neu : List (Ereignis D)) (hneu : σ'.spur = neu ++ σ₀.spur)
+    (hno : ∀ e ∈ neu, e.traeger = some (.inl t : D.Tab ⊕ D.Glob) →
+      ∀ (Λe : List (Res D)) (h : List D.Lock),
+        e = Ereignis.zugriff t true Λe h → False) :
+    ∀ (k' : Int) (fld' : D.Feld t), σ'.slots t k' fld' = σ₀.slots t k' fld' := by
+  cases bs with
+  | nil =>
+      intro k' fld'
+      have hnil : ((σ₀.lese Λ orte).schreibBytes t fld hf Λ k []) =
+          σ₀.lese Λ orte := rfl
+      have hseq : σ' = σ₀.lese Λ orte := by rw [← hstep, hnil]
+      rw [hseq]
+      exact lese_slots_gleich _ _ _ _ _ _
+  | cons b bs' =>
+      have hspur := Extraktion.schreibBytes_spur_eq (σ₀.lese Λ orte) t fld hf Λ k (b :: bs')
+      have hlese : (σ₀.lese Λ orte).spur = (orte.map fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ₀.haelt
+          | .inr g => Ereignis.gzugriff g false Λ σ₀.haelt) ++ σ₀.spur := rfl
+      rw [← hstep] at hneu
+      rw [hspur, hlese, ← List.append_assoc] at hneu
+      have hneueq := List.append_cancel_right hneu
+      have hev : Ereignis.zugriff t true Λ (σ₀.lese Λ orte).haelt ∈ neu := by
+        rw [← hneueq]
+        have hrep : List.replicate (List.length (b :: bs'))
+            (Ereignis.zugriff t true Λ (σ₀.lese Λ orte).haelt) =
+            Ereignis.zugriff t true Λ (σ₀.lese Λ orte).haelt ::
+            List.replicate (List.length bs')
+              (Ereignis.zugriff t true Λ (σ₀.lese Λ orte).haelt) :=
+          List.replicate_succ
+        rw [hrep]
+        exact List.mem_append_left _ (List.mem_cons.mpr (Or.inl rfl))
+      have htr : (Ereignis.zugriff t true Λ (σ₀.lese Λ orte).haelt).traeger =
+          some (.inl t : D.Tab ⊕ D.Glob) := rfl
+      exact False.elim (hno _ hev htr Λ _ rfl)
+
 /-! ## 4. The leaf lemma: a firing leaf of a thread not holding L
     preserves the slots of the L-guarded carrier -/
 
@@ -345,17 +391,14 @@ theorem blatt_slots_t_gleich
         -- this path; the empty case is `rfl` by `schreibBytes`.
         -- Full case split on the byte list (as sketched) needs `hstep`
         -- intact; it is, since we did not subst. Do it now.
-        have hsp := Extraktion.schreibBytes_spur_eq (D := D)
-          ((M.weltVon f).lese Λ (i.orte ++ e.orte)) u fld hf Λ
-          (eval ((M.weltVon f).lese Λ (i.orte ++ e.orte)) i
-            ((M.weltVon f).lese Λ (i.orte ++ e.orte)) ρ).n
-          (zahlZuBytes n (eval ((M.weltVon f).lese Λ (i.orte ++ e.orte)) e
-            ((M.weltVon f).lese Λ (i.orte ++ e.orte)) ρ).n)
         -- `hsp` tails at the READ world, but `hneu` tails at the ENTRY
-        -- world: the read prefix sits between them. Rewrite `hneu`
-        -- through the read-event equation to align the tails, then read
-        -- off the first write event. This alignment is the remaining gap.
-        sorry
+        -- world: the read prefix must be aligned before the first write
+        -- event can be read off into `neu`. Closed by
+        -- `schreibBytes_gleich_samma_traeger`: the byte-list case split
+        -- lives there (empty list keeps slots, nonempty head event fires
+        -- `hnoWrite`).
+        exact schreibBytes_gleich_samma_traeger (M.weltVon f) _ _ _ _
+          _ _ _ _ hstep _ hneu hnoWrite
       · intro k fld'
         -- `hstep : schreibBytes-world = σ'`; rewrite the goal into the
         -- schreibBytes world, then apply the foreign-carrier frame.
