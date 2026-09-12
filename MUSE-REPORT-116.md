@@ -105,3 +105,12 @@ measured, 331 codes, 276 claimed, `ohne Satz` unmoved at 55); `TODO.md` figures
 - Arithmetic on arena reads needs widening binds (`let x : u32 = A[i];`) — full-range
   elements overflow under `M104` otherwise; probes use comparisons, examples widen.
 - `module m;` is not a form (braces required) — probes/examples wrap in modules.
+
+## Merge resolution (reviewer, 2026-09-12, commit ec78ca29)
+
+Merged master-neu (translator E3, const lanes, syscall corpus, root cleanup) keeping both
+sides in `kw.rs` (237 words), `SYNTAX.md` (234 table words, 173 EBNF rules, both
+re-measured), `lib.rs`, `korpus.rs` BENANNT, `paesse.rs`, and `pruefe-emission.sh`
+(`MARKE_EMIT` 85 confirmed by the run); README/TODO/DONE/PASSREGISTER at `--ours` per
+instruction. After the merge: `cargo-pruef` exit 0, `emission-pruef` ALL PASS (226/226,
+Stufe 10 included), `lean-bau` 0 errors, grammatiktafel 0/234 UNGEDECKT.
