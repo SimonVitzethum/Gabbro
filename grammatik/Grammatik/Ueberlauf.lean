@@ -125,22 +125,19 @@ theorem addS_exakt_wenn_passt_zeuge :
 
 /-- `addW` equals C unsigned addition on the storage type: C computes
     unsigned addition as `(a + b) mod 2^n` on `Nat` for storage width
-    `n = w + 1`, transported through `Int.toNat`/`Int` casts. The modulus
-    hypothesis `hmod` records the width `n = w + 1` and is used in
-    `hmodNat`; the round-trip hypothesis `hrt` records that both values
-    round-trip through `Nat` and yields `ha_nn`/`hb_nn`, which drive the
-    cast bridge `hcast`. -/
+    `n = w + 1`, transported through `Int.toNat`/`Int` casts. The width
+    bridge `hmod` and the value round-trips `hart`/`hbrt` are closed facts
+    proved inside (`simp`, `Int.toNat_of_nonneg` from the `Zahl` lower
+    bounds), not hypotheses. -/
 theorem addW_c_gleich (w : Nat)
-    (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
-    (hmod : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1))
-    (hrt : ∀ x : Zahl 0 ((2 : Int) ^ (w + 1) - 1),
-      ((x.n.toNat : Nat) : Int) = x.n ∧ 0 ≤ x.n) :
+    (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
     (Zahl.addW w a b).n =
       (((a.n.toNat + b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
-  have hart := (hrt a).1
-  have ha_nn := (hrt a).2
-  have hbrt := (hrt b).1
-  have hb_nn := (hrt b).2
+  have hmod : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hart : ((a.n.toNat : Nat) : Int) = a.n := Int.toNat_of_nonneg a.lo_le
+  have ha_nn : (0 : Int) ≤ a.n := a.lo_le
+  have hbrt : ((b.n.toNat : Nat) : Int) = b.n := Int.toNat_of_nonneg b.lo_le
+  have hb_nn : (0 : Int) ≤ b.n := b.lo_le
   have hcastInt : ((a.n.toNat + b.n.toNat : Nat) : Int) = a.n + b.n := by
     have h := Int.toNat_add ha_nn hb_nn
     have hback : ((((a.n + b.n).toNat : Nat)) : Int) = a.n + b.n :=
@@ -172,6 +169,126 @@ theorem addW_c_gleich (w : Nat)
           rw [hmodNat]
       _ = ((a.n + b.n) % (2 : Int) ^ (w + 1)).toNat := by exact congrArg _ hsymm
   rw [hback.symm, hcastMod, ← hcastInt]
+
+/-! ## `subW` and `mulW` equal their C unsigned forms -/
+
+/-- `subW` equals C unsigned subtraction: C computes `(a - b) mod 2^n` on
+    `Nat` as `(a + 2^n - b) % 2^n` (truncated subtraction cannot name the
+    negative middle). The width bridge `hM` and the bound facts `haM`/`hbM`
+    are closed facts proved inside (`simp`, the `Zahl` bounds); the shift
+    `hshift` rewrites the `Int` value into `(a - b) + M * 1` so
+    `Int.add_mul_emod_self_left` applies. -/
+theorem subW_c_gleich (w : Nat)
+    (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
+    (Zahl.subW w a b).n =
+      (((a.n.toNat + 2 ^ (w + 1) - b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
+  have hM : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have haM : a.n.toNat ≤ 2 ^ (w + 1) := by
+    have hhi := a.le_hi
+    have hbound : a.n ≤ ((2 ^ (w + 1) : Nat) : Int) := by
+      have hhi' : a.n ≤ (2 : Int) ^ (w + 1) - 1 := hhi
+      omega
+    have h := Int.toNat_le_toNat hbound
+    rw [Int.toNat_natCast] at h
+    exact h
+  have hbM : b.n.toNat ≤ 2 ^ (w + 1) := by
+    have hhi := b.le_hi
+    have hbound : b.n ≤ ((2 ^ (w + 1) : Nat) : Int) := by
+      have hhi' : b.n ≤ (2 : Int) ^ (w + 1) - 1 := hhi
+      omega
+    have h := Int.toNat_le_toNat hbound
+    rw [Int.toNat_natCast] at h
+    exact h
+  have hmodNe : (2 : Int) ^ (w + 1) ≠ 0 := by have := zweiPow_pos w; omega
+  have hmodNN : (0 : Int) ≤ (2 : Int) ^ (w + 1) := by have := zweiPow_pos w; omega
+  have hmodNat : (2 ^ (w + 1) : Int).toNat = 2 ^ (w + 1) := by
+    rw [← hM, Int.toNat_natCast]
+  show (a.n - b.n) % (2 : Int) ^ (w + 1) = _
+  have hcastNat : ((a.n.toNat + 2 ^ (w + 1) - b.n.toNat : Nat) : Int) =
+      a.n + (2 : Int) ^ (w + 1) - b.n := by
+    have hsub : (a.n.toNat + 2 ^ (w + 1) - b.n.toNat : Nat) =
+        (a.n.toNat + (2 ^ (w + 1) - b.n.toNat)) := by omega
+    have hstep : ((a.n.toNat + (2 ^ (w + 1) - b.n.toNat) : Nat) : Int) =
+        a.n + (2 : Int) ^ (w + 1) - b.n := by
+      have hbrt : ((b.n.toNat : Nat) : Int) = b.n := Int.toNat_of_nonneg b.lo_le
+      have hMnat : (((2 ^ (w + 1) - b.n.toNat : Nat)) : Int) =
+          ((2 ^ (w + 1) : Nat) : Int) - ((b.n.toNat : Nat) : Int) :=
+        Int.ofNat_sub hbM
+      have hsplit : ((a.n.toNat + (2 ^ (w + 1) - b.n.toNat) : Nat) : Int) =
+          ((a.n.toNat : Nat) : Int) + (((2 ^ (w + 1) - b.n.toNat : Nat)) : Int) :=
+        Int.natCast_add _ _
+      have hart : ((a.n.toNat : Nat) : Int) = a.n := Int.toNat_of_nonneg a.lo_le
+      have hMnatU : (((2 ^ (w + 1) - b.n.toNat : Nat)) : Int) =
+          (2 : Int) ^ (w + 1) - b.n := by rw [hMnat, hbrt, hM]
+      omega
+    rw [← hsub] at hstep
+    exact hstep
+  have hshift : a.n + (2 : Int) ^ (w + 1) - b.n =
+      (a.n - b.n) + (2 : Int) ^ (w + 1) * 1 := by omega
+  have hmodval : (a.n + (2 : Int) ^ (w + 1) - b.n) % (2 : Int) ^ (w + 1) =
+      (a.n - b.n) % (2 : Int) ^ (w + 1) := by
+    rw [hshift, Int.add_mul_emod_self_left]
+  have hsumNN : (0 : Int) ≤ a.n + (2 : Int) ^ (w + 1) - b.n := by
+    have := a.lo_le; have := b.le_hi; have := zweiPow_pos w; omega
+  have hcastMod : (((a.n.toNat + 2 ^ (w + 1) - b.n.toNat : Nat) % 2 ^ (w + 1) : Nat) : Int) =
+      ((a.n + (2 : Int) ^ (w + 1) - b.n) % (2 : Int) ^ (w + 1)).toNat := by
+    have h := Int.toNat_emod hsumNN hmodNN
+    rw [hmodNat] at h
+    have hcastNatU := hcastNat
+    have hfold : (a.n + (2 : Int) ^ (w + 1) - b.n).toNat % (2 ^ (w + 1) : Int).toNat =
+        (a.n.toNat + 2 ^ (w + 1) - b.n.toNat) % 2 ^ (w + 1) := by
+      rw [hmodNat, ← hcastNatU, Int.toNat_natCast]
+    have hfoldU := hfold
+    have h2 : (a.n + (2 : Int) ^ (w + 1) - b.n).toNat % 2 ^ (w + 1) =
+        (a.n.toNat + 2 ^ (w + 1) - b.n.toNat) % 2 ^ (w + 1) := by
+      rw [← hmodNat]
+      exact hfoldU
+    rw [h2] at h
+    exact congrArg _ h.symm
+  have hnn := Int.emod_nonneg (a.n - b.n) hmodNe
+  have hback := Int.toNat_of_nonneg hnn
+  have hgoal : (a.n - b.n) % (2 : Int) ^ (w + 1) =
+      (((a.n.toNat + 2 ^ (w + 1) - b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
+    rw [hcastMod, hmodval]
+    exact hback.symm
+  exact hgoal
+
+/-- `mulW` equals C unsigned multiplication: `(a * b) mod 2^n` on `Nat`.
+    The width bridge `hM` and round-trips `hart`/`hbrt` are closed facts
+    proved inside (`simp`, `Int.toNat_of_nonneg`); the cast bridge `hcast`
+    pushes the product through `Nat` casts. -/
+theorem mulW_c_gleich (w : Nat)
+    (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
+    (Zahl.mulW w a b).n =
+      (((a.n.toNat * b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
+  have hM : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hart : ((a.n.toNat : Nat) : Int) = a.n := Int.toNat_of_nonneg a.lo_le
+  have hbrt : ((b.n.toNat : Nat) : Int) = b.n := Int.toNat_of_nonneg b.lo_le
+  have hcast : ((a.n.toNat * b.n.toNat : Nat) : Int) = a.n * b.n := by
+    rw [Int.natCast_mul, hart, hbrt]
+  show (a.n * b.n) % (2 : Int) ^ (w + 1) = _
+  have hprodNN : (0 : Int) ≤ a.n * b.n :=
+    Int.mul_nonneg a.lo_le b.lo_le
+  have hcastN : (a.n.toNat * b.n.toNat : Nat) = (a.n * b.n).toNat :=
+    (Int.toNat_mul a.lo_le b.lo_le).symm
+  rw [hcastN]
+  have hmodPos : (0 : Int) < 2 ^ (w + 1) := zweiPow_pos w
+  have hmodNe : (2 : Int) ^ (w + 1) ≠ 0 := by omega
+  have hmodNN : (0 : Int) ≤ (2 : Int) ^ (w + 1) := by omega
+  have hnn := Int.emod_nonneg (a.n * b.n) hmodNe
+  have hback := Int.toNat_of_nonneg hnn
+  have hmodNat : (2 ^ (w + 1) : Int).toNat = 2 ^ (w + 1) := by
+    rw [← hM, Int.toNat_natCast]
+  have hcastMod : (((a.n * b.n).toNat % 2 ^ (w + 1) : Nat) : Int) =
+      ((a.n * b.n) % (2 : Int) ^ (w + 1)).toNat := by
+    have h := Int.toNat_emod hprodNN hmodNN
+    rw [hmodNat] at h
+    have hsymm := h.symm
+    calc (((a.n * b.n).toNat % 2 ^ (w + 1) : Nat) : Int)
+        = (((a.n * b.n).toNat % (2 ^ (w + 1) : Int).toNat : Nat) : Int) := by
+          rw [hmodNat]
+      _ = ((a.n * b.n) % (2 : Int) ^ (w + 1)).toNat := by exact congrArg _ hsymm
+  rw [hback.symm, hcastMod, ← hcast]
 
 /-! ## Wrapping leaves the range `0 .. 5` -/
 
