@@ -822,6 +822,190 @@ theorem refSchrittBF : RufSchrittF refP refO 0 refM1F 1 refM2F := by
 theorem refReachBF : RufErreichbarF refP refO 0 refM0F refM2F :=
   RufErreichbarF.schritt _ _ 1 refReachAF refSchrittBF
 
+/-- Step C (F): thread 1 calls `lies`. The head residue after step B is
+    the call under the stored `refRho7`; the argument reads (empty) leave
+    the world unchanged, and the evaluated arguments are `Env.nil`. -/
+def refM3F : RufMaschineF refD :=
+  ⟨refM2F.speicher,
+   rufUpdateF refM2F.faeden 1
+     ⟨(refM2F.faeden 1).kopf :: (refM2F.faeden 1).stapel,
+      ⟨refLies, Env.nil, refM2F.weltVon 1,
+       ⟨false, refD.params refLies,
+        Signatur.anfang refD (refD.signatur refLies),
+        Env.nil, refP.rumpf refLies⟩⟩,
+      (refM2F.weltVon 1).spur,
+      (RufEreignisF.eintritt refLies Env.nil (refM2F.weltVon 1)) ::
+        (refM2F.faeden 1).log⟩,
+   refM2F.lauf ++ rufEigenF 1 [],
+   refM2F.start⟩
+
+/-- After step B, thread 1 holds the lock exactly (F). -/
+theorem refM2Fhaelt :
+    HeldGenau [Res.held (D := refD) ()]
+      (offen (refM2F.faeden 1).spur) := by
+  have e : offen (refM2F.faeden 1).spur =
+      offen (refM1F.faeden 1).spur := rfl
+  rw [e]
+  exact refM1Fhaelt
+
+theorem refSchrittCF : RufSchrittF refP refO 0 refM2F 1 refM3F := by
+  have hhead : (refM2F.faeden 1).kopf.rest =
+      ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
+        .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
+          refHpLiesAt rfl)
+          (.ret .keine (by rfl))⟩ := rfl
+  have hs0 : refM2F.weltVon 1 =
+      (refM2F.weltVon 1).lese [Res.held (D := refD) ()]
+        (Args.orte refArgsLies) := rfl
+  have hrho : (Env.nil : Env refD (refD.params refLies)) =
+      evalArgs (refM2F.weltVon 1) refArgsLies (refM2F.weltVon 1) refRho7 := rfl
+  have hneu : (refM2F.weltVon 1).spur =
+      [] ++ (refM2F.faeden 1).spur := rfl
+  have hΛ : HeldGenau [Res.held (D := refD) ()]
+      (offen (refM2F.faeden 1).spur) := refM2Fhaelt
+  exact RufSchrittF.ruf (P := refP) (O := refO) (passes := 0) refM2F 1
+    false [.int 0 10] [Res.held (D := refD) ()]
+    refLies refArgsLies refHpLiesAt rfl _ refRho7 hhead hΛ _
+    hs0 _ hrho _ hneu
+
+theorem refReachCF : RufErreichbarF refP refO 0 refM0F refM3F :=
+  RufErreichbarF.schritt _ _ 1 refReachBF refSchrittCF
+
+/-- The caller frame waiting under the `lies` call (F): start entry
+    world, stored environment `refRho7`, residue past the write. -/
+def refCallerFF : RufRahmenF refD :=
+  ⟨refEin, refRho7, refSp0.welt [],
+   ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
+    .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
+      refHpLiesAt rfl)
+      (.ret .keine (by rfl))⟩⟩
+
+/-- The return value: the cap `100` at the `lies` result type. -/
+def refV100back : ErgVal refD (refD.erg refLies) :=
+  refLies_erg.symm ▸ refV100
+
+/-- Step D (F): thread 1 returns from `lies`. The return reads the slot,
+    so the return world is the READ world `(weltVon).lese Λ e.orte` with
+    its read event; the value is the post-write cap `100`. -/
+def MB : RufMaschineF refD :=
+  ⟨(refM3F.weltVon 1).speicher,
+   rufUpdateF refM3F.faeden 1
+     ⟨[], refCallerFF,
+      ((refM3F.weltVon 1).lese [Res.held (D := refD) ()] [Sum.inl (())]).spur,
+      (RufEreignisF.rueck refLies Env.nil refV100back
+        (refM3F.faeden 1).kopf.s0
+        ((refM3F.weltVon 1).lese [Res.held (D := refD) ()] [Sum.inl (())])) ::
+        (refM3F.faeden 1).log⟩,
+   refM3F.lauf ++ rufEigenF 1
+     [Ereignis.zugriff () false [Res.held (D := refD) ()]
+       (refM3F.weltVon 1).haelt],
+   refM3F.start⟩
+
+/-- The `lies` return expression: the slot read as a result. -/
+def refRetLies : ErgExpr refD [] (Signatur.anfang refD (refD.signatur refLies))
+    (refD.erg refLies) :=
+  .wert (.slot () () refIdxBodyLies refDarfBodyLies)
+
+/-- The return reads the table (one carrier). -/
+theorem refRetLies_orte : ErgExpr.orte refRetLies = [Sum.inl (())] := rfl
+
+/-- After step C the head runs `lies` with the empty environment (F). -/
+theorem refM3Frho : (refM3F.faeden 1).kopf.rho = Env.nil := rfl
+
+/-- After step C the head residue is the `lies` return (F). -/
+theorem refM3Frest :
+    (refM3F.faeden 1).kopf.rest =
+      ⟨false, refD.params refLies,
+        Signatur.anfang refD (refD.signatur refLies),
+        Env.nil, refP.rumpf refLies⟩ := rfl
+
+/-- Step D (F): thread 1 returns from `lies` with value `100`, read from
+    the post-write slot through the read world. Every premise is used:
+    `hpop`/`hfg`/`hrho`/`hs0` select the head frame, `hΛ` the lock state,
+    `hs1`/`hv`/`hneu` feed the constructor. -/
+theorem refSchrittDF : RufSchrittF refP refO 0 refM3F 1 MB := by
+  have hpop : (refM3F.faeden 1).stapel = [refCallerFF] := rfl
+  have hhead : (refM3F.faeden 1).kopf.rest =
+      ⟨false, refD.params refLies,
+        Signatur.anfang refD (refD.signatur refLies),
+        Env.nil, .ret refRetLies (by rfl)⟩ := by
+    rw [refM3Frest]
+    rfl
+  have hfg : (refM3F.faeden 1).kopf.f = refLies := rfl
+  have hrho : (refM3F.faeden 1).kopf.rho =
+      (refLies_params ▸ Env.nil : Env refD (refD.params refLies)) := refM3Frho
+  have hs0 : (refM3F.faeden 1).kopf.s0 = refM2F.weltVon 1 := rfl
+  have hΛ : HeldGenau (Signatur.anfang refD (refD.signatur refLies))
+      (offen (refM3F.faeden 1).spur) := by
+    have e : offen (refM3F.faeden 1).spur =
+        offen (refM1F.faeden 1).spur := rfl
+    rw [e, refLies_start]
+    exact refM1Fhaelt
+  have hs1 : ((refM3F.weltVon 1).lese [Res.held (D := refD) ()] [Sum.inl (())]) =
+      (refM3F.weltVon 1).lese (Signatur.anfang refD (refD.signatur refLies))
+        (ErgExpr.orte refRetLies) := rfl
+  have hv : refV100back =
+      hfg ▸ evalErg ((refM3F.weltVon 1).lese [Res.held (D := refD) ()] [Sum.inl (())])
+        refRetLies
+        ((refM3F.weltVon 1).lese [Res.held (D := refD) ()] [Sum.inl (())])
+        Env.nil := rfl
+  have hneu : (((refM3F.weltVon 1).lese [Res.held (D := refD) ()] [Sum.inl (())])).spur =
+      [Ereignis.zugriff () false [Res.held (D := refD) ()]
+        (refM3F.weltVon 1).haelt] ++ (refM3F.faeden 1).spur := rfl
+  exact RufSchrittF.rueck (P := refP) (O := refO) (passes := 0) refM3F 1
+    _ [] hpop _ _ _ _ _ hhead _ hfg _ hrho _ hs0 hΛ _
+    hs1 _ hv _ hneu
+
+theorem refReachDF : RufErreichbarF refP refO 0 refM0F MB :=
+  RufErreichbarF.schritt _ _ 1 refReachCF refSchrittDF
+
+/-- `refM0F` IS the start machine. -/
+theorem refM0F_start : refM0F = RufStartF refP refSp0 initB := rfl
+
+/-- The F witness run: lock, writing leaf, call, return -- reached from
+    the start state. -/
+theorem refB_erreicht :
+    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB := by
+  rw [← refM0F_start]
+  exact refReachDF
+
+/-- The final memory carries the written cap at `konto[0]`. -/
+theorem refMB_slot : MB.speicher.slots () 0 () = refV100 := by
+  have hhit := storeSlot_hit (D := refD)
+    ((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
+      (refIdxEin.orte ++ refHundert.orte)) () refK0 () refV100
+  have k0 : refK0 = (0 : Int) := rfl
+  have hmem : MB.speicher.slots () 0 () =
+      ((((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
+        (refIdxEin.orte ++ refHundert.orte)).storeSlot ()
+        refK0 () refV100).slots () 0 ()) := rfl
+  rw [k0] at hhit
+  rw [hmem, k0]
+  exact hhit
+
+/-- Memory really moved: `konto[0]` reads `100`, the start reads `0`. -/
+theorem refB_schreibt : MB.speicher.slots () 0 () ≠
+    refSp0.slots () 0 () := by
+  have h100 := refMB_slot
+  have h0 : refSp0.slots () 0 () =
+      (⟨0, by decide, by decide⟩ : Wert refD (refD.typ () ())) := rfl
+  rw [h100, h0]
+  intro hcon
+  have hn : (refV100.n) = ((⟨0, by decide, by decide⟩ :
+      Wert refD (refD.typ () ())).n) := congrArg Zahl.n hcon
+  simp [refV100] at hn
+
+/-- Witness for `refB_schreibt`: the premises of the reached run are
+    instantiated JOINTLY -- the concrete machine `MB` reached from the
+    start state with a memory-changing step (slot `0 -> 100`). The run is
+    NON-DEGENERATE: one table that the leaf writes (`refSchrittBF` via
+    `execStmt`) and four reached steps (`nimmt`, writing `blatt`, `ruf`,
+    `rueck`). Both conjuncts are used. -/
+theorem refB_schreibt_zeuge : ∃ (M : RufMaschineF refD),
+    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
+    M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
+  ⟨MB, refB_erreicht, refB_schreibt⟩
+
 /-! ## CUTS:
   - PARTIAL RESULT (attempt B of 2, rule 8): `refD`/`refP`/`refO`/
     `refO_gut`/`refSp0` are proved; the call-machine run reaches through
