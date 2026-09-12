@@ -385,4 +385,74 @@ theorem pkt_lt (r b k : Nat) (hr : r < 256 ^ k) (hb : b < 256) :
   rw [e]
   exact hfin
 
+/-- Byte pair reads back both bytes. Uses `h0`, `h1` (bytes fit). -/
+theorem byteOf_pair (b0 b1 : Nat) (h0 : b0 < 256) (h1 : b1 < 256) :
+    byteOf (b1 * 256 + b0) 0 = b0 ∧ byteOf (b1 * 256 + b0) 1 = b1 := by
+  have m0 : byteOf (b1 * 256 + b0) 0 = b0 := by
+    simp only [byteOf]
+    have e0 : (b1 * 256 + b0) / 256 ^ 0 = b1 * 256 + b0 := by
+      have e : (256 : Nat) ^ 0 = 1 := Nat.pow_zero 256
+      rw [e, Nat.div_one]
+    rw [e0]
+    exact pkt_mod _ _ h0
+  have m1 : byteOf (b1 * 256 + b0) 1 = b1 := by
+    simp only [byteOf]
+    have e : (256 : Nat) ^ 1 = 256 := Nat.pow_one 256
+    rw [e, pkt_div _ _ h0]
+    exact Nat.mod_eq_of_lt h1
+  exact ⟨m0, m1⟩
+
+/-- Two-byte split from the `u16` bound. Uses `hx` (value fits). -/
+theorem split2 (x : Nat) (hx : x < 256 ^ 2) :
+    ∃ b0 b1, b0 < 256 ∧ b1 < 256 ∧ x = b1 * 256 + b0 := by
+  refine ⟨x % 256, x / 256, Nat.mod_lt _ (by decide), ?_, ?_⟩
+  · have h256 : (256 : Nat) ^ 2 = 256 * 256 := by decide
+    rw [h256] at hx
+    exact Nat.div_lt_of_lt_mul hx
+  · have h := Nat.div_add_mod x 256
+    omega
+
+/-- Four-byte split from the `u32` bound. Uses `hx` (value fits). -/
+theorem split4 (x : Nat) (hx : x < 256 ^ 4) :
+    ∃ b0 b1 b2 b3, b0 < 256 ∧ b1 < 256 ∧ b2 < 256 ∧ b3 < 256 ∧
+      x = ((b3 * 256 + b2) * 256 + b1) * 256 + b0 := by
+  refine ⟨x % 256, (x / 256) % 256, (x / 256 / 256) % 256, x / 256 / 256 / 256,
+    Nat.mod_lt _ (by decide), Nat.mod_lt _ (by decide), Nat.mod_lt _ (by decide),
+    ?_, ?_⟩
+  · have h256 : (256 : Nat) ^ 4 = 256 * (256 * (256 * 256)) := by decide
+    rw [h256] at hx
+    have h1 : x / 256 < 256 * (256 * 256) := Nat.div_lt_of_lt_mul hx
+    have h2 : x / 256 / 256 < 256 * 256 := Nat.div_lt_of_lt_mul h1
+    exact Nat.div_lt_of_lt_mul h2
+  · have h := Nat.div_add_mod x 256
+    have h2 := Nat.div_add_mod (x / 256) 256
+    have h3 := Nat.div_add_mod (x / 256 / 256) 256
+    omega
+
+/-- Four-byte nest reads back all bytes. -/
+theorem byteOf_nest (b0 b1 b2 b3 : Nat)
+    (h0 : b0 < 256) (h1 : b1 < 256) (h2 : b2 < 256) (h3 : b3 < 256) :
+    byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 0 = b0 ∧
+    byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 1 = b1 ∧
+    byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 2 = b2 ∧
+    byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 3 = b3 := by
+  have d1 : ((((b3 * 256 + b2) * 256 + b1) * 256 + b0) / 256)
+      = ((b3 * 256 + b2) * 256 + b1) := pkt_div _ _ h0
+  have d2 : ((((b3 * 256 + b2) * 256 + b1)) / 256)
+      = (b3 * 256 + b2) := pkt_div _ _ h1
+  have d3 : (((b3 * 256 + b2)) / 256) = b3 := pkt_div _ _ h2
+  have m0 : byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 0 = b0 := by
+    simp only [byteOf, ladder0]
+    exact pkt_mod _ _ h0
+  have m1 : byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 1 = b1 := by
+    simp only [byteOf, d1]
+    exact pkt_mod _ _ h1
+  have m2 : byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 2 = b2 := by
+    simp only [byteOf, ladder2, d1, d2]
+    exact pkt_mod _ _ h2
+  have m3 : byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 3 = b3 := by
+    simp only [byteOf, ladder3, d1, d2, d3]
+    exact Nat.mod_eq_of_lt h3
+  exact ⟨m0, m1, m2, m3⟩
+
 end Gabbro.Grammatik
