@@ -28,7 +28,7 @@ const BENANNT: &[&str] = &[
     // `P041` -- split off from `P034` on 2026-08-30. `P034` kept the missing catch-all arm,
     // `P041` took the stray `pub`: two unrelated rules stood under one identifier, and each
     // of their two poison probes would have stayed green while the OTHER rule was out.
-    "P032", "P035", "P041", // Grammatik
+    "P032", "P035", "P041", "P042", // Grammatik
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     // Lane E1: `N057` -- every library call is parsed and refused until lane
@@ -152,6 +152,14 @@ const BENANNT: &[&str] = &[
     // emitter refused 96 -- which is the `N041` shape, a trust base holding one stage too
     // late -- and 22 reached green C.
     "M140",
+    // 2026-09-12, the FOURTH door in that same wall, and this one was never a range
+    // question either: the EXISTENCE of the slot. `m1.rs` compared the return value
+    // solely against the declared result (`if let Some(z) = ergebnis`), so a value in
+    // a result-less body fell through the `if` silently -- and the emitter writes it
+    // straight into a `void` function, where both C families refuse it. Measured on
+    // `beispiele/gift/776`: 0 errors, `static void kreis` with four valued returns,
+    // `cc` and `clang` refusing every one. Poison is `beispiele/gift/788`.
+    "M148",
     // 2026-09-02, the residue `M140`'s own reservation named: `M128` holds arity, effects
     // and cost at a `fn(...)` slot and **nothing about the values that travel through it**.
     // `&eng` with `eng(b : u8) -> u8` went into a `fn(u32) -> u32` slot with `0 errors` and

@@ -167,6 +167,13 @@ fn erzeugter_name_zweimal(baum: &Programm, absagen: &mut Absagen) {
 /// declares no C identifier, `use` declares no name at all, and **an `extern fn` MEANS to take
 /// the name**; see `extern_bindet_c_namen` for what stands there instead.
 ///
+/// **`main` is refused even as an `extern fn`.** The hosted entry is a DEFINITION the
+/// program unit links (`bau.rs::eintrittsregel`); binding the name from outside through an
+/// `extern fn` declaration is the same collision one declaration further out, and no
+/// signature table carries what C declares for it (C11 §5.1.2.2.1 names the startup
+/// function, not a declarable signature). Measured 2026-09-12: `extern fn main()` checked
+/// clean before this arm, and `cc` refused the emitted prototype with `-Wmain`.
+///
 /// > **`extern fn` was in this rule until 2026-09-01, and it cost the language its front
 /// > door.** `putchar`, `puts` and `printf` all stand in the table, so no Gabbro program could
 /// > print -- *the first thing anybody does in a new language.* The rule contradicted its own
@@ -198,9 +205,35 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
         }
         let Some(name) = item.art.name() else { return };
         let vergeben = crate::cnamen::vergeben(&name.text);
-        // **The one item that means to take the name gets the other question asked.**
+        // **The hosted entry is exempt: a `pub fn main` IS C's `main` by design.**
+        //
+        // The entry rule (`bau.rs::eintrittsregel`) owns the HOSTED entry -- a
+        // `pub fn main()` in a `program` unit, which links as C's `main`. The
+        // checker pass runs over single files, where no manifest is in scope, so
+        // it cannot tell the hosted entry from a collision; refusing every
+        // `pub fn main` here would forbid the one shape the build rule demands
+        // (`beispiele/63-druckt.gab`, `messung/proben/probe-eintritt.gab`,
+        // `messung/einheit-proben/prog-haupt.gab`, and everything `gabbro new`
+        // writes). The exemption is deliberately narrow: exactly `pub fn main`,
+        // the shape the entry rule accepts. A private `fn main` still falls --
+        // it lowers to a `static` the linker never sees -- and so does an
+        // `extern fn main`, which binds nothing a hosted unit may define.
         if let ItemArt::Funktion(f) = &item.art {
-            if f.klasse == Some(FnKlasse::Extern) {
+            if f.name.text == "main"
+                && f.oeffentlich
+                && f.klasse != Some(FnKlasse::Extern)
+            {
+                return;
+            }
+        }
+        // **The one item that means to take the name gets the other question asked --
+        // except `main`, which no hosted unit may bind from outside.** The entry rule
+        // (`bau.rs::eintrittsregel`) owns the hosted entry as a DEFINITION; an
+        // `extern fn main` declaration is the same collision one declaration further
+        // out, and C declares no bindable signature for it. So `main` falls through
+        // to the plain `N041` refusal below instead of reaching `extern_bindet_c_namen`.
+        if let ItemArt::Funktion(f) = &item.art {
+            if f.klasse == Some(FnKlasse::Extern) && name.text != "main" {
                 // **And at THIS construct the POSIX table is read too** -- an `extern fn`
                 // asks for the C side's symbol, so a POSIX name is a real declaration to
                 // agree with. It is read nowhere else; see `cnamen::posix` for the edge and
@@ -215,6 +248,20 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
             }
         }
         let Some(klasse) = vergeben else { return };
+        // **The hosted entry is not renamed away.** The plain `N041` note below says
+        // "rename the declaration, and nothing else has to move" -- true for `exit`,
+        // wrong for the one name the build rule owns. A `main` that falls here is
+        // either the hosted entry (then the unit builds it through `gabbro build`,
+        // and the entry rule holds the shape) or it collides with C's entry point
+        // (then it must go). The note names both instead of prescribing one.
+        let hinweis = if name.text == "main" {
+            "the hosted entry is a `pub fn main()` in a `program` unit, held by the \
+             entry rule of `gabbro build` -- anything else carrying this name collides \
+             with C's entry point instead of being it"
+        } else {
+            "the name is fine everywhere except at the boundary -- rename the \
+             declaration, and nothing else has to move"
+        };
         absagen.schiebe(
             Absage::fehler(
                 "N041",
@@ -231,10 +278,7 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
                 "measured 2026-08-31 with `cc -std=c11 -O0 -Wall -Wextra -Werror`; \
                  the table and its command stand in `messung/C-NAMEN.md`",
             )
-            .mit_notiz(
-                "the name is fine everywhere except at the boundary -- rename the \
-                 declaration, and nothing else has to move",
-            ),
+            .mit_notiz(hinweis),
         );
     });
 }
@@ -1203,6 +1247,10 @@ fn typname_bekannt(baum: &Programm, u: &crate::umgebung::Umgebung, absagen: &mut
         absagen: &mut Absagen,
     ) {
         match t {
+            // PLAN-BITS §1: a desugared integer type is `TypExpr::Int` and never
+            // reaches this arm -- the parser builds the storage word plus the
+            // exact range, and `typ_von_ausdruck_decl` below types it. Only a
+            // NAMED type (`Pfad`) can be undeclared.
             TypExpr::Pfad(p) => {
                 if !matches!(u.typ_von_ausdruck_decl(modul, t), crate::typen::Typ::Unbekannt) {
                     return;

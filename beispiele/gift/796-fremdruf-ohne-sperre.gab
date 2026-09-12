@@ -1,0 +1,50 @@
+-- erwartet: H007
+-- **Gift 796 -- a foreign body that writes a protected place owes the lock at the call.**
+--
+-- Until lane 75 this file passed with **0 errors**: `H007` checked every direct
+-- access but never looked at a callee's declared `reads`/`writes`. An `extern fn`
+-- with `writes k.slots`, called from a function that does not hold `KAPPEN`, is a
+-- data race the checker did not see -- the same write spelled directly is refused.
+--
+-- `ordentlich` beside it is the honest form, and it keeps `H008` quiet: the lock
+-- is taken somewhere, just not at the call below.
+
+module gift796 {
+
+const NSLOTS : u32 = 4096;
+
+type Rechte = u32 in 0 .. 15;
+
+table Kappenraum count NSLOTS {
+    slot {
+        belegt : bool,
+        rechte : Rechte,
+        objekt : u32,
+    }
+}
+
+lock KAPPEN protects { belegt, rechte, objekt } rank 0 held <= 50 ops;
+
+-- The honest form: the lock taken around the write itself.
+impl fn ordentlich(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots, locks KAPPEN }
+    costs <= 50 ops
+{
+    locks KAPPEN {
+        k.slots[i].rechte = r;
+    }
+}
+
+extern fn fremd_setzt(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots }
+    costs <= 8 ops;
+
+-- The race: a foreign write to a protected place with no lock held at the call.
+impl fn ohne_sperre(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots }
+    costs <= 50 ops
+{
+    fremd_setzt(k, i, r);
+}
+
+}

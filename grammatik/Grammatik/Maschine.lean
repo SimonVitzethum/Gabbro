@@ -4045,7 +4045,7 @@ theorem speicherfest_speicher
       simp [Stmt.speicherfest] at hFest
   | forever a inv body =>
       simp [Stmt.speicherfest] at hFest
-  | axiomCall a args h hw hg =>
+  | axiomCall a args h hw hg hd hgd =>
       simp [Stmt.speicherfest] at hFest
   | regSchreib r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep

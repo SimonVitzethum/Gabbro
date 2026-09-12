@@ -204,7 +204,15 @@ if "--probe" not in sys.argv:
     ETIKETTEN = [("Struktur", "Structure"), ("Vertraege", "Contracts"),
                  ("Wirkungen", "Effects"), ("Ablauf", "Control"), ("Zeiger", "Pointers"),
                  ("Bibliothek", "Library"), ("Domaenen", "Domains"), ("Typen", "Types"),
-                 ("Eingebaut", "Builtin"), ("Sonderform", "Special")]
+                 ("Eingebaut", "Builtin"), ("Sonderform", "Special"),
+                 # **Lane S1 (2026-09-12): the `syscall` declaration comes with six
+                 # clause words (`abi`, `arch`, `number`, `regs`, `clobbers`, `errors`)
+                 # and one header word (`syscall`). `arch`, `regs` and `clobbers` stand
+                 # in the table already (entry/axiom clauses); `abi`, `number` and
+                 # `errors` arrive with the syscall section. *Every one of them is read
+                 # under the same anchor rule as the old labels -- an English label that
+                 # misses leaves `roh_tabelle` empty and trips the empty-set latch.*
+                 ("Fremdkoerper", "Foreign"), ("Systemrufe", "Syscalls")]
     englisch = d
     for de, en in ETIKETTEN:
         englisch = englisch.replace("\n  %s " % de, "\n  %s " % en)

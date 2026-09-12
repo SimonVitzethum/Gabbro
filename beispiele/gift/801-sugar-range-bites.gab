@@ -1,0 +1,14 @@
+-- erwartet: M101
+-- **The sugared range bites: a `u13` literal 8192 leaves the type.**
+--
+-- `u13` is sugar for `u16 in 0 .. 8191`. The value 8192 fits the storage word
+-- and leaves the promised range, so `M101` holds it -- the checker reads the
+-- desugared range exactly as if the longhand had been written. Its twin 8191
+-- stays silent; the passing value is not this probe.
+module gift {
+
+impl fn f() -> u13 effects { pure } costs <= 2 ops {
+    return 8192;
+}
+
+}

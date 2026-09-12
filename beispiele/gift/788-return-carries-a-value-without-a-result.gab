@@ -1,0 +1,43 @@
+-- erwartet: M148
+-- **A `return` with a value in a function that declares none.**
+--
+-- Measured 2026-09-12: a function without `-> T` lowers to `void`, and the
+-- emitter writes the value straight into it -- `return m;` inside
+-- `static void kreis`. `cc` and `clang` refuse it (`-Werror=return-type`),
+-- and no pass before them says a word: `m1.rs` compared the value only where
+-- a result stood (`if let Some(z) = ergebnis`), and a result-less body fell
+-- through the `if` silently.
+--
+-- The positive side stands in the same file: `gib` declares `-> u32` and its
+-- `return m;` is the same line a refusal here would never touch. The bare
+-- `return;` of `leer` is the third arm -- a result-less function ends in
+-- `return;` or falls to its closing brace, and neither says anything.
+
+module gift::return_ohne_ergebnis {
+
+static mut m : u32 = 0;
+
+impl fn falsch()
+    effects { reads m }
+    costs   <= 4 ops
+{
+    if m > 0 { return m; }
+    return 0;
+}
+
+impl fn gib() -> u32
+    effects { reads m }
+    costs   <= 4 ops
+{
+    if m > 0 { return m; }
+    return 0;
+}
+
+impl fn leer()
+    effects { pure }
+    costs   <= 1 ops
+{
+    return;
+}
+
+}

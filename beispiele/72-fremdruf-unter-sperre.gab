@@ -1,0 +1,54 @@
+-- 72 -- a foreign call under its lock, and a foreign body that takes it itself.
+--
+-- The counterpart of `gift/796`: both calls below are the honest forms, and this
+-- file passes with 0 errors.
+--
+-- * `mit_sperre` holds `KAPPEN` across the call to an `extern fn` whose declared
+--   `writes k.slots` touches what the lock protects.
+-- * `ruft_nehmenden` calls an `extern fn` that declares `locks KAPPEN` itself --
+--   taking is then the callee's business, and the caller owes the declared line
+--   (`E008`) but no held lock (`H007` stays quiet through the self-take exemption).
+
+module beispiel::fremdruf_unter_sperre {
+
+const NSLOTS : u32 = 4096;
+
+type Rechte = u32 in 0 .. 15;
+
+table Kappenraum count NSLOTS {
+    slot {
+        belegt : bool,
+        rechte : Rechte,
+        objekt : u32,
+    }
+}
+
+lock KAPPEN protects { belegt, rechte, objekt } rank 0 held <= 50 ops;
+
+extern fn fremd_setzt(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots }
+    costs <= 8 ops;
+
+extern fn fremd_nimmt(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots, locks KAPPEN }
+    costs <= 8 ops;
+
+-- The call sits inside the lock it owes.
+impl fn mit_sperre(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots, locks KAPPEN }
+    costs <= 50 ops
+{
+    locks KAPPEN {
+        fremd_setzt(k, i, r);
+    }
+}
+
+-- The callee takes the lock itself: the caller owes the line, not the hold.
+impl fn ruft_nehmenden(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots, locks KAPPEN }
+    costs <= 50 ops
+{
+    fremd_nimmt(k, i, r);
+}
+
+}

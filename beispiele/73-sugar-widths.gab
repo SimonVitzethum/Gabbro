@@ -1,0 +1,38 @@
+-- 72 -- **`uN`/`iN` sugar (PLAN-BITS §1): storage, range and limit in one unit.**
+--
+-- `u13` is `u16 in 0 .. 8191`; `i37` is `i64 in -2^36 .. 2^36 - 1`. The storage
+-- is the next standard width, and the emitted C uses it -- never `_BitInt`.
+-- The range is the exact one: 8191 stays, 8192 would fall (`gift/798`), and
+-- `u13::max` lowers the exact bound. `u1` is the narrowest sugar; `u64` beside
+-- it shows the standard words keep their full-width meaning exactly.
+module beispiel::zuckerbreiten {
+
+-- The narrowest sugar and the flag position beside it: both stay silent.
+impl fn eins(x : u1) -> u8 effects { pure } costs <= 2 ops {
+    return x;
+}
+
+-- Thirteen bits in a sixteen-bit word: the range, the conversion, the limit.
+impl fn dreizehn(x : u13) -> u16 effects { pure } costs <= 2 ops {
+    return x;
+}
+
+impl fn wandle(a : u32 in 0 .. 100) -> u13 effects { pure } costs <= 4 ops {
+    return u13(a);
+}
+
+impl fn grenze() -> u64 effects { pure } costs <= 2 ops {
+    return u13::max;
+}
+
+-- Thirty-seven bits in a sixty-four-bit word, signed: stays silent at its word.
+impl fn minus(x : i37) -> i64 effects { pure } costs <= 2 ops {
+    return x;
+}
+
+-- The standard word beside the sugar: full width, unchanged meaning.
+impl fn voll(x : u64) -> u64 effects { pure } costs <= 2 ops {
+    return x;
+}
+
+}

@@ -165,7 +165,7 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .leseBytes t _ _ _ i _ _ _ => .inl t :: i.orte
   | .weiter _ _ e => e.orte
   | .add a b | .sub a b | .mul a b | .div _ _ a b | .rem _ _ a b | .sdiv _ a b | .srem _ a b
-  | .band _ _ a b | .bor _ _ _ _ _ a b | .bxor _ _ _ _ _ a b | .shl _ _ a b | .shr _ _ a b
+  | .band _ _ a b | .bor _ _ _ _ _ a b | .bxor _ _ _ _ _ a b | .shl _ _ _ _ _ a b | .shr _ _ _ _ _ a b
   | .lt a b | .le a b | .eq a b | .fllt a b | .flle a b | .und a b | .oder a b => a.orte ++ b.orte
   | .neg a | .nicht a | .some a | .istSome a => a.orte
   | .fall _ _ nutz => nutz.orte
@@ -237,8 +237,8 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .band h0 h0' a b, σ, ρ => Zahl.band h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .bor w h0 h0' hw1 hw2 a b, σ, ρ => Zahl.bor w h0 h0' hw1 hw2 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .bxor w h0 h0' hw1 hw2 a b, σ, ρ => Zahl.bxor w h0 h0' hw1 hw2 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
-  | .shl h0 h0' a b, σ, ρ => Zahl.shl h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
-  | .shr h0 h0' a b, σ, ρ => Zahl.shr h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
+  | .shl w hw1 hw2 h0 h0' a b, σ, ρ => Zahl.shl w hw1 hw2 h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
+  | .shr w hw1 hw2 h0 h0' a b, σ, ρ => Zahl.shr w hw1 hw2 h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .lt a b, σ, ρ => decide ((eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n)
   | .le a b, σ, ρ => decide ((eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n)
   | .eq a b, σ, ρ => decide ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n)
@@ -614,7 +614,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .forever a inv body, σ, ρ =>
       foreverLauf a (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) passes σ ρ
-  | .axiomCall a args _ _ _, σ, ρ =>
+  | .axiomCall a args _ _ _ _ _, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some _) => .ok σ' ρ

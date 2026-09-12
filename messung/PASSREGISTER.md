@@ -57,7 +57,17 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > says 87, `Codes` at 243 where it says 274, `claimed` at 198 where it says 223. They are
 > recomputed here rather than incremented, because incrementing a forgotten figure carries
 > the forgetting forward.
-| **Codes without a sentence — the ratchet** | **53** | `./instrumente/pruefe-saetze.py` |
+>
+> **2026-09-12, and this time the ratchet DOES move («SS-1» over a tree that
+> already moved).** The run says 55 against a booked 53, and the delta is two
+> halves: `P042` (`parser.syscall-bevor-s5`, the `syscall` item refused by name
+> until lanes S5-S7) arrives with its sentence in the same commit, so the residue
+> is unmoved by construction there; `V012` (the user-copy TOCTOU refusal, lane
+> p26, merged 2026-09-11) stands in `paarung.rs` with three gift probes and no
+> sentence -- the base already carried it while booking 53. *The same shape as
+> 2026-09-02, and the reason the tooth exists: a code without its sentence in
+> the same commit is the gap.*
+| **Codes without a sentence — the ratchet** | **55** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not
 diligence but a measurement: several passes hold **two claims of different strength**,

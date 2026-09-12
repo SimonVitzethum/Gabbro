@@ -109,7 +109,7 @@ def stmtKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse _ _ body => blockKanten body
   | .retry _ _ body ueber => blockKanten body ++ blockKanten ueber
   | .forever _ _ body => blockKanten body
-  | .axiomCall _ _ _ _ _ => []
+  | .axiomCall _ _ _ _ _ _ _ => []
   | .regSchreib _ _ _ => []
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ _ _ _ _ _ => []
@@ -830,7 +830,7 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse _ inv body => inv.orte ++ blockOrte body
   | .retry _ bis body ueber => bis.orte ++ blockOrte body ++ blockOrte ueber
   | .forever _ inv body => inv.orte ++ blockOrte body
-  | .axiomCall _ args _ _ _ => args.orte
+  | .axiomCall _ args _ _ _ _ _ => args.orte
   | .regSchreib _ _ e => e.orte
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ e _ _ _ _ => e.orte
@@ -1194,7 +1194,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval]
       rw [ha, hb]
-  | .shl _ _ a b =>
+  | .shl _ _ _ _ _ a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
@@ -1203,7 +1203,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval]
       rw [ha, hb]
-  | .shr _ _ a b =>
+  | .shr _ _ _ _ _ a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
@@ -2438,7 +2438,7 @@ def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
   | .traverse _ _ _ => []
   | .retry _ _ _ _ => []
   | .forever _ _ _ => []
-  | .axiomCall a _ _ _ _ =>
+  | .axiomCall a _ _ _ _ _ _ =>
       (tabs.filter (D.aschreibt a)).map .inl ++
         (globs.filter (D.agschreibt a)).map .inr
   | .regSchreib _ _ _ => []
@@ -2485,7 +2485,7 @@ def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.uebergang _ _ _ _ _ _ _ _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
-  | s@(.axiomCall _ _ _ _ _) =>
+  | s@(.axiomCall _ _ _ _ _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.regSchreib _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
@@ -2805,7 +2805,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (O : Orakel D) (passes : Nat)
     (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (tabs : List D.Tab) (globs : List D.Glob)
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
@@ -2963,7 +2963,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
   | traverse t inv body => simp [Stmt.istBlatt] at hleaf
   | retry n bis body ueberlauf => simp [Stmt.istBlatt] at hleaf
   | forever a inv body => simp [Stmt.istBlatt] at hleaf
-  | axiomCall a args h hw hg => exact False.elim hax
+  | axiomCall a args h hw hg hd hgd => exact False.elim hax
   | regSchreib r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur =
@@ -3104,7 +3104,7 @@ theorem hmark_hcar_aus_progAus_ohne_axiomCall
     (P : Programm D) (code : Faden → D.Fn)
     (tabs : List D.Tab) (globs : List D.Glob)
     (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (M : GenMaschine D) (f : Faden) (ρ : Env D Γ)
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -3185,18 +3185,20 @@ theorem execEreignis_aus_axiomCall
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (hO : GutO O)
     (tabs : List D.Tab) (globs : List D.Glob)
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+      (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
     (∀ e ∈ neu, e.lambda = Λ) ∧
       (∀ e ∈ neu, ∀ o, e.traeger = some o →
         o ∈ stmtTraeger tabs globs
-          (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+          (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
           stmtOrte
-            (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ)) := by
+            (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ)) := by
   have hspurO : ((O.wirkt a (σ.lese Λ args.orte)
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1).spur =
       (σ.lese Λ args.orte).spur :=
@@ -3241,24 +3243,26 @@ theorem hmark_hcar_aus_progAus_axiomCall
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (hO : GutO O)
     (M : GenMaschine D) (f : Faden) (ρ : Env D Γ)
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+      (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ (M.weltVon f).spur)
     (pc : PCStand) (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
     (hpc : (progAus P code tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
     (hΛa : Λa = Λ)
     (hcs : cs = stmtTraeger tabs globs
-      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
-      stmtOrte (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ)) :
+      (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
+      stmtOrte (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ)) :
     (∀ e ∈ neu, ∀ (m : D.Marke) (st : Nat), Res.marke m st ∈ e.lambda →
       m ∈ (progAus P code tabs globs).marks f) ∧
     (∀ e ∈ neu, ∀ o, e.traeger = some o →
       o ∈ (progAus P code tabs globs).carriers f) := by
   obtain ⟨hlam, hcar⟩ :=
-    execEreignis_aus_axiomCall O passes a args h hw hg hO tabs globs
+    execEreignis_aus_axiomCall O passes a args h hw hg hd hgd hO tabs globs
       _ ρ σ' neu hstep hneu
   have ha : PCAtom.leaf Λa cs ∈ progAus P code tabs globs f :=
     List.mem_of_getElem? hpc
@@ -3271,8 +3275,8 @@ theorem hmark_hcar_aus_progAus_axiomCall
           exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩)
   · intro e he o ho
     have hmem : o ∈ stmtTraeger tabs globs
-        (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
-        stmtOrte (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) :=
+        (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
+        stmtOrte (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) :=
       hcar e he o ho
     apply pcAtom_mem_carriers _ _ _ ha o
     simp only [PCAtom.carriers]
@@ -3334,7 +3338,7 @@ theorem hwit_aus_feuerung_ohne_axiomCall
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (O : Orakel D) (passes : Nat)
     (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (tabs : List D.Tab) (globs : List D.Glob)
     (t₀ : D.Tab) (hmem : .inl t₀ ∈ stmtTraeger tabs globs s)
     (hbytes : match s with | .schreibBytes _ _ _ n _ _ _ _ _ _ => 0 < n | _ => True)
@@ -3436,7 +3440,7 @@ theorem hwit_aus_feuerung_ohne_axiomCall
   | traverse t inv body => simp [Stmt.istBlatt] at hleaf
   | retry n bis body ueberlauf => simp [Stmt.istBlatt] at hleaf
   | forever a inv body => simp [Stmt.istBlatt] at hleaf
-  | axiomCall a args h hw hg => exact False.elim hax
+  | axiomCall a args h hw hg hd hgd => exact False.elim hax
   | regSchreib r hk e =>
       simp [stmtTraeger] at hmem
   | transition r hk m hm hl maske bits =>
@@ -3617,7 +3621,7 @@ theorem hwit_alt_faltung
     (hsingle_prog : ∀ g, g ≠ f → prog g = [])
     (hax_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (_hleaf : s.istBlatt = true),
-      (match s with | .axiomCall _ _ _ _ _ => False | _ => True))
+      (match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True))
     (hmem_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (_hleaf : s.istBlatt = true),
       .inl t₀ ∈ stmtTraeger tabs globs s)
@@ -3804,7 +3808,7 @@ theorem hwit_aus_lauf_blatt
     (M : GenMaschine D) (f : Faden)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
-    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hax : match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True)
     (tabs : List D.Tab) (globs : List D.Glob)
     (t₀ : D.Tab) (hmem : .inl t₀ ∈ stmtTraeger tabs globs s)
     (hbytes : match s with | .schreibBytes _ _ _ n _ _ _ _ _ _ => 0 < n | _ => True)
@@ -3836,7 +3840,7 @@ theorem hwit_aus_lauf
       (prog f)[n]? ≠ some (PCAtom.take L) ∧ (prog f)[n]? ≠ some (PCAtom.rel L))
     (hax_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (_hleaf : s.istBlatt = true),
-      (match s with | .axiomCall _ _ _ _ _ => False | _ => True))
+      (match s with | .axiomCall _ _ _ _ _ _ _ => False | _ => True))
     (hmem_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (_hleaf : s.istBlatt = true),
       .inl t₀ ∈ stmtTraeger tabs globs s)

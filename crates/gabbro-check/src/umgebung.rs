@@ -1050,6 +1050,28 @@ impl Umgebung {
             }
             ExprArt::Ort(o) => {
                 // `u64::max` und `i32::min` -- die Grenzen einer Breite als Konstante.
+                //
+                // PLAN-BITS §1: a sugared width reads its bound off the SUGAR, not
+                // the storage. `u13::max` is 8191 (the exact range), not 65535
+                // (the `u16` word that stores it) -- the desugared range is what
+                // the type promises, and the constant is the edge of that promise.
+                if !o.suffixe.is_empty() {
+                    if let Some((lo, hi)) = gabbro_syntax::zucker_bereich(&o.basis.text) {
+                        if o.suffixe.len() == 1 {
+                            if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+                                let wert = match f.text.as_str() {
+                                    "max" => Some(hi),
+                                    "min" => Some(lo),
+                                    _ => None,
+                                };
+                                if let Some(w) = wert {
+                                    return Some(w);
+                                }
+                            }
+                        }
+                        return None;
+                    }
+                }
                 if let Some((_, _, w)) = grenzwort(o) {
                     return Some(w);
                 }
@@ -1784,6 +1806,10 @@ pub fn grenzwort(o: &Ort) -> Option<(u8, bool, i128)> {
 ///
 /// *This function lives in the CHECKER, not in the emitter; it cannot say `C001`.* Both of
 /// its callers answer the `None` themselves, and both in the conservative direction.
+///
+/// PLAN-BITS §1: a sugared width (`u13`) never reaches this table -- the parser
+/// desugars it to the storage word (`u16`) before any pass runs. What arrives
+/// here is always one of the eight.
 pub fn breite_von(k: Kw) -> Option<(u8, bool)> {
     Some(match k {
         Kw::U8 => (8, false),

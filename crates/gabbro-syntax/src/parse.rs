@@ -729,6 +729,61 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
+            // **«SS-1» (2026-09-12): `syscall` is specified (`SYNTAX.md` §12.1)
+            // and not implemented.** The grammar production stands, the lexer
+            // knows the words, and the parser refuses the item BY NAME -- a
+            // controlled refusal, never silent acceptance and never a crash.
+            // *`entry syscall …` keeps parsing: the entry NAME is an
+            // identifier, and `syscall` as a `ctx` word stays one there.*
+            Art::Wort(Kw::Syscall) => {
+                // **Skip the whole item before refusing it.** The caller
+                // (`programm`/`synchronisiere`) recovers at the next item head
+                // or `;` at depth 0 -- and a `syscall` body carries no `;`
+                // until its closing line, so recovery would re-enter MID-ITEM
+                // (`abi`, `regs`, …) and bury the one refusal under knock-on
+                // errors. *One fault, one refusal:* consume to the balancing
+                // `}` (or `;`, for the one-line shape), THEN refuse by name.
+                let sp = self.span();
+                let mut tiefe = 0i32;
+                loop {
+                    match self.blick().art {
+                        Art::Ende => break,
+                        Art::Zeichen(Z::GeschweiftAuf) => {
+                            tiefe += 1;
+                            self.pos += 1;
+                        }
+                        Art::Zeichen(Z::GeschweiftZu) => {
+                            self.pos += 1;
+                            if tiefe <= 0 {
+                                break;
+                            }
+                            tiefe -= 1;
+                        }
+                        Art::Zeichen(Z::Semi) if tiefe <= 0 => {
+                            self.pos += 1;
+                            break;
+                        }
+                        _ => {
+                            self.pos += 1;
+                        }
+                    }
+                }
+                self.absage(
+                    Absage::fehler(
+                        "P042",
+                        sp,
+                        "`syscall` declarations are specified (SYNTAX.md \u{00a7}12.1) \
+                         but not yet implemented",
+                    )
+                    .mit_notiz(
+                        "the grammar production `syscalldecl` stands since lane S1; \
+                         the checker, the emitter ruling and the corpus example \
+                         (lanes S5-S7) are written against it -- until then every \
+                         `syscall` item falls here, by name",
+                    ),
+                );
+                return Err(Abbruch);
+            }
             Art::Wort(Kw::Entrust) => ItemArt::Entrust(self.entrustdecl()?),
             Art::Wort(Kw::Boot) => ItemArt::Boot(self.bootdecl()?),
             _ => {
@@ -847,6 +902,10 @@ impl<'a> Parser<'a> {
         // **G5.** `u64::max` -- both segments are vocabulary words. As the FIRST segment a
         // primitive type is admitted (`pathseg = ident | "u8" | … | "i64"`); that covers the
         // limit values without softening the vocabulary anywhere else.
+        //
+        // PLAN-BITS §1: a sugared width takes the same first-segment arm, so
+        // `u13::max` parses as a path over the sugar spelling. The checker
+        // resolves the bound through the storage word (`grenzwort`).
         let erste = match self.blick().art {
             Art::Wort(k)
                 if k.ist_intty() && matches!(self.blick_n(1).art, Art::Zeichen(Z::Kolon2)) =>
@@ -857,6 +916,16 @@ impl<'a> Parser<'a> {
                     text: k.text().to_string(),
                     span,
                 }
+            }
+            Art::Ident
+                if matches!(zuckerbreite(self.blick().text(self.quelle)), Some(Ok(_)))
+                    && matches!(self.blick_n(1).art, Art::Zeichen(Z::Kolon2)) =>
+            {
+                let t = self.blick();
+                let span = t.span;
+                let text = t.text(self.quelle).to_string();
+                self.pos += 1;
+                Ident { text, span }
             }
             _ => self.erwarte_ident()?,
         };
@@ -936,6 +1005,15 @@ impl<'a> Parser<'a> {
         let t = self.blick();
         match t.art {
             Art::Wort(k) if k.ist_intty() => Ok(TypExpr::Int(self.intty()?)),
+            // PLAN-BITS §1: `uN`/`iN` sugar reads as one identifier off the
+            // lexer (closed vocabulary); the type rule desugars it. Stands
+            // directly below the eight standard words and above the name arm,
+            // so `u13` is never the NAME of a type here. A bad width (`u0`)
+            // takes the same arm: `intty` refuses it with `P008` at its span,
+            // and it never reaches the name arm below.
+            Art::Ident if matches!(zuckerbreite(t.text(self.quelle)), Some(_)) => {
+                Ok(TypExpr::Int(self.intty()?))
+            }
             Art::Wort(Kw::Bool) => {
                 self.pos += 1;
                 Ok(TypExpr::Bool(t.span))
@@ -1016,6 +1094,27 @@ impl<'a> Parser<'a> {
 
     fn intty(&mut self) -> Erg<IntTy> {
         let t = self.blick();
+        // PLAN-BITS §1: `uN`/`iN` sugar. The lexer leaves `u13` an identifier
+        // (closed vocabulary, rule 14); the type rule reads it here. A bad
+        // width (`u0`, `u65`) is refused with `P008` at its own span; a name
+        // that is merely sugar-shaped but not sugar (`u`, `ux`) is not this
+        // rule's business and falls through to the longhand arms below.
+        // The refusal fires ONLY in a type rule (`intty`, `slottype`, the
+        // `typeexpr_innen` sugar arm): a `u0` anywhere else stays an ordinary
+        // name (K3), and a named type called `u0` still resolves.
+        if t.art == Art::Ident {
+            let text = t.text(self.quelle).to_string();
+            match zuckerbreite(&text) {
+                Some(Ok((breite, vorzeichen))) => {
+                    return self.zucker_intty(t.span, &text, breite, vorzeichen);
+                }
+                Some(Err(grund)) => {
+                    self.absage(Absage::fehler("P008", t.span, grund));
+                    return Err(Abbruch);
+                }
+                None => {}
+            }
+        }
         let Art::Wort(wort) = t.art else {
             let gefunden = t.benennung(self.quelle);
             self.absage(Absage::fehler(
@@ -1042,10 +1141,100 @@ impl<'a> Parser<'a> {
         };
         Ok(IntTy {
             wort,
+            zucker: None,
             bereich,
             span: t.span.bis_zu(self.vorheriger_span()),
         })
     }
+
+    /// PLAN-BITS §1: desugar `uN`/`iN` to the storage word plus the exact range.
+    /// `u13` is `u16 in 0 .. 8191`; `i37` is `i64 in -2^36 .. 2^36 - 1`.
+    /// Widths outside 1..64 are refused at the caller with `P008`, never widened.
+    /// The range is built out of literal nodes over the sugar token's own span,
+    /// so every pass below reads it exactly as if the longhand had been written.
+    /// An explicit `in` beside sugar is refused: the sugar already carries one
+    /// range, and a second would be ambiguous (E3: nothing is implicit).
+    fn zucker_intty(
+        &mut self,
+        span: Span,
+        text: &str,
+        breite: u32,
+        vorzeichen: bool,
+    ) -> Erg<IntTy> {
+        self.pos += 1;
+        if self.ist_kw(Kw::In) {
+            self.absage(Absage::fehler(
+                "P008",
+                self.blick().span,
+                format!(
+                    "`{text}` already carries its range -- sugar for the storage width \
+                     plus the exact range, with no room for a second `in`"
+                ),
+            ));
+            return Err(Abbruch);
+        }
+        let speicher: u32 = if breite <= 8 {
+            8
+        } else if breite <= 16 {
+            16
+        } else if breite <= 32 {
+            32
+        } else {
+            64
+        };
+        let wort = match (vorzeichen, speicher) {
+            (false, 8) => Kw::U8,
+            (false, 16) => Kw::U16,
+            (false, 32) => Kw::U32,
+            (false, 64) => Kw::U64,
+            (true, 8) => Kw::I8,
+            (true, 16) => Kw::I16,
+            (true, 32) => Kw::I32,
+            (true, 64) => Kw::I64,
+            _ => {
+                self.absage(Absage::fehler(
+                    "P008",
+                    span,
+                    format!("`{text}` -- no storage width for this sugar"),
+                ));
+                return Err(Abbruch);
+            }
+        };
+        let zahl = |v: u128| Expr {
+            art: ExprArt::Zahl(v),
+            span,
+        };
+        let (von, bis) = if vorzeichen {
+            let halb: u128 = 1u128 << (breite - 1);
+            (
+                Expr {
+                    art: ExprArt::Unaer(UnOp::Negativ, Box::new(zahl(halb))),
+                    span,
+                },
+                zahl(halb - 1),
+            )
+        } else {
+            (zahl(0), zahl((1u128 << breite) - 1))
+        };
+        let bis_span = self.vorheriger_span();
+        Ok(IntTy {
+            wort,
+            zucker: Some(ZuckerBreite { breite, vorzeichen }),
+            bereich: Some(Bereich {
+                von,
+                bis,
+                exklusiv: false,
+                span: span.bis_zu(bis_span),
+            }),
+            span: span.bis_zu(bis_span),
+        })
+    }
+
+    /// PLAN-BITS §1: refuse a sugared width outside 1..64, or a name that merely
+    /// starts like one (`u`, `i`, `ux`, `u0x10`). `None` means "not sugar-shaped":
+    /// the caller falls through to the longhand arms. `Some` carries the width
+    /// and the signedness the name asks for; the range check for 1..64 happens
+    /// beside the width table so a bad width and a bad name cannot merge.
 
     fn range(&mut self) -> Erg<Bereich> {
         let von = self.expr()?;
@@ -1864,6 +2053,12 @@ impl<'a> Parser<'a> {
             // `messung/K3-BEFUND.md` §4.1 against the unchanged checker). `ruf_ab` below
             // already builds the call when it sees `(` -- that arm was dead code for a
             // single-segment integer path until this line let it be reached.
+            //
+            // PLAN-BITS §1: a sugared width takes the same arm. `u13(a)` is the
+            // conversion to the storage word (`u16` here); `u13::max` reads as
+            // the path over the sugar spelling, and the checker resolves the
+            // bound through `grenzwort` on the longhand word. Only well-formed
+            // sugar takes this arm; `u0(a)` stays a call to the name `u0`.
             Art::Wort(k)
                 if k.ist_intty()
                     && matches!(
@@ -1876,6 +2071,41 @@ impl<'a> Parser<'a> {
                     text: k.text().to_string(),
                     span: t.span,
                 }];
+                while self.friss_z(Z::Kolon2) {
+                    teile.push(self.erwarte_feldname()?);
+                }
+                let span = t.span.bis_zu(self.vorheriger_span());
+                let pfad = Pfad { teile, span };
+                if self.ist_z(Z::RundAuf) {
+                    let ruf = self.ruf_ab(CallTarget::Path(pfad))?;
+                    Ok(Expr {
+                        span: ruf.span,
+                        art: ExprArt::Ruf(ruf),
+                    })
+                } else {
+                    Ok(Expr {
+                        span,
+                        art: ExprArt::Ort(Ort {
+                            basis: pfad.teile[0].clone(),
+                            suffixe: pfad.teile[1..]
+                                .iter()
+                                .map(|i| OrtSuffix::Feld(i.clone()))
+                                .collect(),
+                            span,
+                        }),
+                    })
+                }
+            }
+            Art::Ident
+                if matches!(zuckerbreite(t.text(self.quelle)), Some(Ok(_)))
+                    && matches!(
+                        self.blick_n(1).art,
+                        Art::Zeichen(Z::Kolon2) | Art::Zeichen(Z::RundAuf)
+                    ) =>
+            {
+                let text = t.text(self.quelle).to_string();
+                self.pos += 1;
+                let mut teile = vec![Ident { text, span: t.span }];
                 while self.friss_z(Z::Kolon2) {
                     teile.push(self.erwarte_feldname()?);
                 }
@@ -3811,8 +4041,28 @@ impl<'a> Parser<'a> {
                 return Ok(SlotTyp::Typ(TypExpr::Int(ity)));
             }
         }
+        // PLAN-BITS §1: sugar takes the same `wrapping` branch as the longhand.
+        // Stands above `typeexpr` so `u13 wrapping` parses as one slot type.
+        // Only well-formed sugar takes this arm; `u0`/`u65` fall to `typeexpr`
+        // and then to `pfad`, where they read as a (here undeclared) name.
+        if self.blick().art == Art::Ident
+            && matches!(
+                zuckerbreite(self.blick().text(self.quelle)),
+                Some(Ok(_))
+            )
+        {
+            let ity = self.intty()?;
+            if self.friss_kw(Kw::Wrapping) {
+                return Ok(SlotTyp::Wrapping(ity));
+            }
+            return Ok(SlotTyp::Typ(TypExpr::Int(ity)));
+        }
         Ok(SlotTyp::Typ(self.typeexpr()?))
     }
+
+    /// PLAN-BITS §1: `regdecl` takes a sugared width through the same `intty`.
+    /// The `wrapping` beside it is the declaration-spoken wraparound («B32»);
+    /// sugar carries the storage word, so the check below reads it unchanged.
 
     fn invariant(&mut self) -> Erg<Invariante> {
         let anfang = self.erwarte_kw(Kw::Invariant)?;
@@ -4817,10 +5067,91 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// PLAN-BITS §1: read `uN`/`iN` off an identifier's text.
+///
+/// `Ok` carries `(width, signed)`: the spelling is sugar-shaped and well-formed.
+/// `Err` carries the refusal text: the spelling is sugar-shaped (`u`/`i` plus
+/// digits) but the width is outside 1..64 -- `u0`, `u65`, `i0` and wider.
+/// `None` is not sugar-shaped at all (`u`, `i`, `ux`, `u0x10`): the caller
+/// falls through to the longhand arms, so a user type named `u` stays one.
+/// Digits only, no sign, no separators: `u_13` is a name, not a width.
+fn zuckerbreite(text: &str) -> Option<Result<(u32, bool), String>> {
+    let (rest, vorzeichen) = match text.strip_prefix('u') {
+        Some(r) => (r, false),
+        None => match text.strip_prefix('i') {
+            Some(r) => (r, true),
+            None => return None,
+        },
+    };
+    if rest.is_empty() || !rest.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let mut breite: u32 = 0;
+    for b in rest.bytes() {
+        breite = breite.saturating_mul(10).saturating_add(u32::from(b - b'0'));
+    }
+    let buchstabe = if vorzeichen { "i" } else { "u" };
+    if breite < 1 || breite > 64 {
+        return Some(Err(format!(
+            "`{text}` -- no such width: sugar widths run 1..64, and the storage \
+             of `{buchstabe}{rest}` would be no standard word at all"
+        )));
+    }
+    Some(Ok((breite, vorzeichen)))
+}
+
+/// PLAN-BITS §1: the storage word of a sugared width name (`u13` -> `U16`).
+/// `None` for anything that is not well-formed sugar. The checker reads the
+/// conversion `u13(a)` through this: the path names the sugar spelling, and
+/// the conversion answers the storage word's range.
+///
+/// `zucker_bereich` is the other half: the EXACT range the sugar promises
+/// (`u13` -> `(0, 8191)`), which `u13::max`/`u13::min` read. Storage and range
+/// never travel in one value: the constant is the edge of the promise, not of
+/// the word that stores it.
+pub fn zucker_speicher(text: &str) -> Option<Kw> {
+    let (breite, vorzeichen) = zuckerbreite(text)?.ok()?;
+    let speicher: u32 = if breite <= 8 {
+        8
+    } else if breite <= 16 {
+        16
+    } else if breite <= 32 {
+        32
+    } else {
+        64
+    };
+    Some(match (vorzeichen, speicher) {
+        (false, 8) => Kw::U8,
+        (false, 16) => Kw::U16,
+        (false, 32) => Kw::U32,
+        (false, 64) => Kw::U64,
+        (true, 8) => Kw::I8,
+        (true, 16) => Kw::I16,
+        (true, 32) => Kw::I32,
+        (true, 64) => Kw::I64,
+        _ => return None,
+    })
+}
+
+/// PLAN-BITS §1: the exact range of a sugared width name (`u13` -> `(0, 8191)`).
+/// `None` for anything that is not well-formed sugar. Built from the same
+/// width the desugar rule (`zucker_intty`) builds its literal range nodes
+/// from, so the constant and the type can never disagree.
+pub fn zucker_bereich(text: &str) -> Option<(i128, i128)> {
+    let (breite, vorzeichen) = zuckerbreite(text)?.ok()?;
+    if vorzeichen {
+        Some((
+            -(1i128 << (breite - 1)),
+            (1i128 << (breite - 1)) - 1,
+        ))
+    } else {
+        Some((0, (1i128 << breite) - 1))
+    }
+}
+
 /// The forms of the prohibition list, each with its replacement. Without this table
 /// `while (x) {}` falls as "`;` expected" -- a knock-on error that hides the reason.
-fn abgeschaffte_form(wort: &str) -> Option<&'static str> {
-    match wort {
+fn abgeschaffte_form(wort: &str) -> Option<&'static str> {    match wort {
         "while" | "for" | "do" | "loop" => Some(
             "there are three loop forms and only these: `traverse … over … by …`, \
              `retry … bounded … ops on_exceeded …`, `forever per_pass bounded … ops`",
@@ -4872,6 +5203,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Entry
             | Kw::Entrust
             | Kw::Boot
+            | Kw::Syscall
             | Kw::Pub
             | Kw::When
     )

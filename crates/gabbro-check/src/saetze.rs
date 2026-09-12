@@ -1611,6 +1611,28 @@ pub const M1: &[Satz] = &[
                       (fresh and re-read arms silent, stale control falls once).",
         fundstelle: "crates/gabbro-check/src/m1.rs; messung/FRISCHE-V4-ENTWURF.md",
     },
+    Satz {
+        name: "m1.rueckgabe_ohne_ergebnis",
+        kennungen: &["M148"],
+        aussage: "A `return` with a value stands only in a function that declares a result. \
+                  `m1.rs` compared the value solely against the declared result (`if let \
+                  Some(z) = ergebnis`), so a value in a result-less body fell through the \
+                  `if` silently -- and the emitter writes it straight into a `void` \
+                  function, where both C families refuse it (`-Werror=return-type`).",
+        vorbehalt: "It says nothing about the TYPE of the value -- that stays `M101`'s, \
+                    `M135`'s and `M140`'s where a result is declared. The bare `return;` \
+                    stays silent: a result-less function ends in `return;` or falls to its \
+                    closing brace, which SYNTAX.md reads as sugar for `return;`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured 2026-09-12 against the UNCHANGED checker: \
+                      beispiele/gift/776 carries `return m;` and `return 0;` in a function \
+                      without `-> T`; `gabbro pruefe` said 0 errors, `gabbro emit` wrote \
+                      `static void kreis` with four valued returns, and `cc` and `clang` \
+                      refused every one of them. Poison is beispiele/gift/788, whose twin \
+                      `gib` declares `-> u32` and keeps the same lines silent.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; beispiele/gift/776-*; \
+                     beispiele/gift/788-return-carries-a-value-without-a-result.gab",
+    },
 ];
 
 // ===================================================================================
@@ -2544,6 +2566,25 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/DECKUNGSLUECKE.md",
     },
     Satz {
+        name: "parser.syscall-bevor-s5",
+        kennungen: &["P042"],
+        aussage: "A `syscall` item is refused BY NAME until the checker implements it. \
+                  The grammar production `syscalldecl` stands since lane S1 \
+                  (`SYNTAX.md` §12.1, «SS-1»); the checker, the emitter ruling and \
+                  the corpus example (lanes S5-S7) are written against it, and until \
+                  then every `syscall` item falls here -- a controlled refusal, never \
+                  silent acceptance and never a crash.",
+        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing about \
+                    whether the ABI binding, the register map or the error map are RIGHT \
+                    -- those checks belong to lanes S5-S7, and until they stand every \
+                    such question falls here unread. `entry syscall …` keeps parsing: \
+                    the entry NAME is an identifier, and `syscall` as a `ctx` word \
+                    stays one there. Probe 796 pins it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 796 on `P042`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],
         aussage: "The boot theorem's first two layers: a `raw fn` demands a `linear ghost` \
@@ -3037,7 +3078,8 @@ pub const SPERREN: &[Satz] = &[
                     558 reachable names in three classes -- 37 C11 keywords (44 minus the \
                     seven Gabbro's own vocabulary refuses at `P002`), 366 from the four \
                     headers every generated unit includes, 155 built-in functions of the C \
-                    implementation. The third class was measured file by file WITHOUT any \
+                    implementation -- plus the hosted entry `main` as a fourth class of one \
+                    (lane 73). The third class was measured file by file WITHOUT any \
                     `#include`; a different `cc` can know a different set, and then this \
                     table is a lower bound. *`messung/C-NAMEN.md` carries the command for \
                     every line of it.*\n\
@@ -3054,11 +3096,15 @@ pub const SPERREN: &[Satz] = &[
                     `extern fn`** (2026-09-01). At an `extern fn` taking C's name is the \
                     POINT, so the question is the signature and it is asked by `N046`. *Until \
                     that day this rule held it too, and no Gabbro program could print: \
-                    `putchar`, `puts` and `printf` all stand in the table.*",
+                    `putchar`, `puts` and `printf` all stand in the table.* **The one \
+                    exception to the exception is `main` (lane 73):** an `extern fn main` \
+                    binds nothing a hosted unit may define -- the entry rule owns the \
+                    hosted entry as a definition -- so it falls here, under `N041`, and \
+                    never reaches `N046`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/410-c-name-schluesselwort.gab (C11 keyword), 409 \
                       (a `<math.h>` name), 510 (a macro at an `extern fn`), 511 (`printf`, \
-                      variadic); \
+                      variadic), 796 (a `fn main` that is not the hosted entry); \
                       counter-probe messung/proben/probe-c-namen-frei.gab -- `read` `write` \
                       `open` `close` `signal` are POSIX, not C, and pass with 0 errors. \
                       **Recounted 2026-09-01 with its handle** (`W28`): over the 526 `.gab` \

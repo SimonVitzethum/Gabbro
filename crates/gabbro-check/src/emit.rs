@@ -684,6 +684,11 @@ pub const KOPF: &str = "\
 #include <stdbool.h>
 #include <stdatomic.h>
 #include <math.h>
+/* The shift and conversion this generator relies on are implementation-defined in C11 --
+ * so the prelude pins them (PLAN-BITS.md section 5b), on EVERY unit, float or not.
+ * Two's complement itself is the language's own rule and needs no probe. */
+_Static_assert((-1 >> 1) == -1, \"arithmetic right shift\");
+_Static_assert((int)0xFFFFFFFFu == -1, \"modular conversion\");
 ";
 
 /// **«F»: der Zusatz, wenn eine Einheit mit Gleitkomma rechnet.**
@@ -695,7 +700,7 @@ pub const KOPF_GLEITKOMMA: &str = "\
 /* This unit computes in floating point.
  *
  *   -ffast-math is FORBIDDEN. It permits reassociation, and addition is not associative --
- *   every bound the checker computed falls with it.
+ *   every bound the checker computed falls with it. Build with `-ffp-contract=off`.
  *
  *   On x86, SSE2 is presupposed (the x87 registers compute at 80 bits and round twice).
  *   That stands in the certificate as an assumption, with its falsifier.
@@ -703,6 +708,16 @@ pub const KOPF_GLEITKOMMA: &str = "\
  *   The rounding mode is round-to-nearest-even. It is global state (MXCSR/FPCR); that it
  *   holds is an assumption, never a promise of this generator.
  */
+#include <float.h>
+/* No `#pragma STDC FP_CONTRACT OFF`: `#pragma` is on the C-form census's NEVER list
+ * (`instrumente/zaehle-c-formen.py`), GCC does not implement it, and it carries nothing
+ * the build does not already carry -- `-ffp-contract=off` is binding in the manifest for
+ * every compiler, and the probe `instrumente/sonde-fma.c` PROVES it at build time
+ * (PLAN-BITS.md section 5). */
+/* No excess precision anywhere, x86_64 included: `__FLT_EVAL_METHOD__` is 0 by default
+ * and 2 under `-mfpmath=387` or `-m32` -- flags somebody may set for unrelated reasons.
+ * `== 0` also excludes `-1` (indeterminable). This replaces the prose SSE2 assumption. */
+_Static_assert(FLT_EVAL_METHOD == 0, \"FLT_EVAL_METHOD == 0 (no excess precision)\");
 ";
 
 /// **«F»: benutzt diese Uebersetzungseinheit ueberhaupt Gleitkomma?**
@@ -6713,6 +6728,31 @@ fn funktion(
             aus.push_str(&format!("    (void){};\n", p.name.text));
         }
     }
+    // **`(void)fertig;` for an `awaits` binding the body never reads back.**
+    //
+    // The same answer the two lines above give an unread parameter, and for the
+    // same reason (`Namen::ungelesene_lets` carries the weighing). An `AwaitLoad`
+    // binds outside `sammle_lets` -- that walker only sees `StmtArt::Let` -- so
+    // the shared set cannot carry it; this site asks the same `benutzte_namen`
+    // set directly. Measured 2026-09-12: the `awaitload` row of
+    // `messung/proben/absenkung/` binds `fertig` and returns past it, so the
+    // emitted `bool fertig = atomic_load_explicit(…)` fell at
+    // `-Werror=unused-variable` under BOTH families -- the one stage-9 finding
+    // of this lane that is not a `main`.
+    //
+    // **Deferred past the body, not beside the binding.** The silencer must
+    // stand AFTER the declaration in the C -- `funktion` collects the unread
+    // `awaits` names here and hands them to the statement loop below through
+    // `rahmen` (see `Austritt::stille_awaits`); the `AwaitLoad` arm emits the
+    // silencer where the name is already declared.
+    let mut stille_awaits: Vec<String> = Vec::new();
+    for s in &b.anweisungen {
+        if let StmtArt::AwaitLoad(al) = &s.art {
+            if !gelesen.contains(&al.name.text) {
+                stille_awaits.push(al.name.text.clone());
+            }
+        }
+    }
     // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
     //
     // **Der Grund hat seit Stufe 7 einen Erzeuger** (2026-08-21). Bis dahin stand hier
@@ -6736,6 +6776,7 @@ fn funktion(
         },
         schleifen: Vec::new(),
         fehlerkanal: f.fehler.is_some(),
+        stille_awaits,
     };
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
@@ -7042,6 +7083,12 @@ struct Austritt {
     /// **Hat diese Funktion einen Fehlerkanal (`-> T or R`)?** Dann ist der Rueckgabewert
     /// der ERFOLG, und das Ergebnis geht durch `*_wert`. Siehe `StmtArt::Return`.
     fehlerkanal: bool,
+    /// **Unread `awaits` bindings of this body, collected in `funktion`.**
+    ///
+    /// An `AwaitLoad` binds outside `sammle_lets`, so the shared unread-`let` set
+    /// cannot carry it; the arm that lowers it reads this list instead and emits
+    /// the `(void)name;` silencer where the name is already declared (lane 73).
+    stille_awaits: Vec<String>,
 }
 
 fn einzug(n: usize) -> String {
@@ -7658,6 +7705,21 @@ fn anweisung(
                  {e}{typ} {} = atomic_load_explicit(&{quelle}, {ordnung});\n",
                 al.name.text
             ));
+            // **`(void)fertig;` where the binding is never read back** -- the same
+            // answer the `let` arm gives through `Namen::ungelesene_lets`, and for
+            // the same reason: `cc -Wextra` finds the unread local, no pass of this
+            // compiler does, and the user did not write the generated line.
+            // Measured 2026-09-12: the `awaitload` row of
+            // `messung/proben/absenkung/` binds and returns past its load, so the
+            // emitted `bool fertig = …` fell at `-Werror=unused-variable` under
+            // BOTH families -- the one stage-9 finding that is not a `main`.
+            // An `AwaitLoad` binds outside `sammle_lets` (that walker only sees
+            // `StmtArt::Let`), so the shared set cannot carry it; `funktion`
+            // collects the unread ones into `Austritt::stille_awaits`, and the
+            // silencer stands AFTER the declaration, where the name exists.
+            if austritt.stille_awaits.iter().any(|n| *n == al.name.text) {
+                aus.push_str(&format!("{e}(void){};\n", al.name.text));
+            }
         }
         // **«C3b»: `observes D { … }` -- dieselbe Gestalt wie `locks`, und der Unterschied
         // ist genau das, was FEHLT.**
@@ -8378,14 +8440,39 @@ fn retry(
     let (hat_leave, hat_next) = sprungziele(&r.rumpf, &marke);
     let mut innen = austritt.clone();
     innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
-    // **CForm schleifeStmt + schrittStmt (lane 142): `for` and `+= 1`.**
-    // `for` is the loop the target list allows, so the bounded wait is one;
-    // the counter steps inside the admitted compound-assignment class. The
-    // `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of scope
-    // for this lane.
+    // **CForm schleifeStmt + schrittStmt (lane 142, re-repaired lane 73): `for` and `+= 1`.**
+    // `for` is the loop the target list admits (`BEWEIS.md` §1: `for (counting
+    // loop)`); `while` was lowered away on purpose and stays lowered away -- a
+    // `while` wait would widen the C semantics Gabbro must one day formalise
+    // (`zaehle-c-formen.py` MARKE_TABELLE/MARKE_UNERLAUBT rose 67/32 to 68/33
+    // on exactly that form).
+    //
+    // The lane-142 `for (; !(cond); )` drew clang's `-Wfor-loop-analysis` where
+    // the condition names a value no statement of the body writes (measured
+    // 2026-09-12: `beispiele/66-transport-rueckgabe.gab`, parameter `bereit`;
+    // clang 18.1.3 fires, gcc 13.3.0 stays silent, at `-O0` and `-O2`). That
+    // warning fires exactly when NO variable of the condition is modified in
+    // the body or the increment -- so the watchdog counter moves into the
+    // header AND the condition: `for (; !(cond) && z < N; z += 1)`. The counter
+    // IS a condition variable now, and both families are silent (measured over
+    // the exact skeleton, empty and non-empty body, `-O0` and `-O2`).
+    //
+    // The bound arm leaves the loop and stands after it: `if (z >= N && !(cond))
+    // { exit(); }`. Case by case against the old in-loop arm (`if (z >= N)`
+    // inside, checked after the condition each pass): the body still runs at
+    // most N times (iterations z=0..N-1); N=0 still exceeds without a body;
+    // `leave` still jumps past the arm (`_ende:` stands after the block, as
+    // before); `return` still leaves the function. The one deliberate
+    // difference from the review sketch (`if (!(cond))` unconditional): the
+    // bound-first order re-samples the condition ONLY on the bound path -- on
+    // the early-exit path z<N short-circuits it, so that path evaluates the
+    // condition exactly as often as the old loop did (bodies+1). The condition
+    // may call (`schritt(k) == 9`) or read volatile state; sampling it once
+    // more than necessary is a semantic change, not a spelling one.
+    // The `exchange` CAS loop keeps its `++` -- a sibling-owned arm, out of
+    // scope for this lane.
     aus.push_str(&format!(
-        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    for (; !({bedingung}); ) {{\n\
-         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z} += 1;\n"
+        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    for (; !({bedingung}) && {z} < {gaenge}u; {z} += 1) {{\n"
     ));
     for k in &r.rumpf.anweisungen {
         anweisung(k, aus, u, absagen, tiefe + 2, &innen);
@@ -8393,7 +8480,10 @@ fn retry(
     if hat_next {
         aus.push_str(&format!("{e}    {marke}_weiter: ;\n"));
     }
-    aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+    aus.push_str(&format!("{e}    }}\n"));
+    aus.push_str(&format!(
+        "{e}    if ({z} >= {gaenge}u && !({bedingung})) {{ {ausgang}(); }}\n{e}}}\n"
+    ));
     if hat_leave {
         aus.push_str(&format!("{e}{marke}_ende: ;\n"));
     }
@@ -10440,6 +10530,10 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
     // one integer argument before this ever runs; `ganzzahlwort` is the SAME table
     // `intty`/`breite_von` use for a declared type, so a conversion's target and a
     // declaration's type can never disagree on the C spelling.
+    //
+    // PLAN-BITS §1: a sugared conversion lowers through its storage word.
+    // `u13(a)` is `(uint16_t)(a)` -- no `_BitInt`, the next standard width.
+    let name = crate::aufrufgraph::zucker_umschreiben(&name).unwrap_or(name);
     if let Some((ctyp, _)) = gabbro_syntax::kw::Kw::suche(&name)
         .filter(|k| k.ist_intty())
         .and_then(ganzzahlwort)
@@ -10641,6 +10735,23 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // The suffix follows the same rule as the `#define`: `u` for a non-negative value, none
     // for `i32::min` -- an `-2147483648u` would not merely be ugly, it would be another
     // number.
+    //
+    // PLAN-BITS §1: a sugared limit lowers its exact bound. `u13::max` is
+    // `8191u` -- the edge of the promised range, not of the storage word.
+    if let Some((lo, hi)) = gabbro_syntax::zucker_bereich(&o.basis.text) {
+        if o.suffixe.len() == 1 {
+            if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+                let w = match f.text.as_str() {
+                    "max" => Some(hi),
+                    "min" => Some(lo),
+                    _ => None,
+                };
+                if let Some(w) = w {
+                    return if w < 0 { format!("({w})") } else { format!("{w}u") };
+                }
+            }
+        }
+    }
     if let Some((_, _, w)) = crate::umgebung::grenzwort(o) {
         return if w < 0 { format!("({w})") } else { format!("{w}u") };
     }
@@ -11816,14 +11927,25 @@ fn baum_hat_accumulates(baum: &Programm) -> bool {
 /// `forever` watchdog already ships. A name with no core falls back to the old
 /// spelling; that only happens where the prototype emission refused the same
 /// name through the same helper, so the unit already carries that refusal.
+///
+/// **The `_Noreturn` of a `-> never` core is NOT spelled here** (lane 71). `_Noreturn`
+/// is a property of a FUNCTION declaration, and C11 has no pointer-to-noreturn
+/// type: `static _Noreturn void (*const m)(void)` is refused by gcc
+/// (`declared '_Noreturn'`) and by clang (`'_Noreturn' can only appear on
+/// functions`), measured on `beispiele/07-eintritt-und-boot.gab`. The guarantee
+/// stays where both compilers read it -- on the function's own prototype, which
+/// this same lowering writes as `_Noreturn void rust_eintritt(void);` -- so the
+/// reference binds a plain pointer to a noreturn function instead of naming a
+/// type the language does not have.
 fn bezugnahme(
     marke: &str,
     ziel: &str,
     kerne: &std::collections::BTreeMap<String, (String, String)>,
 ) -> String {
     if let Some((rueck, liste)) = kerne.get(ziel) {
+        let rueck_zeiger = rueck.strip_prefix("_Noreturn ").unwrap_or(rueck);
         return format!(
-            "static {rueck} (*const {marke})({liste}) __attribute__((unused)) = {ziel};\n"
+            "static {rueck_zeiger} (*const {marke})({liste}) __attribute__((unused)) = {ziel};\n"
         );
     }
     format!("static __typeof__({ziel}) *const {marke} __attribute__((unused)) = {ziel};\n")

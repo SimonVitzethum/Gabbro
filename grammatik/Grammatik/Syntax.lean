@@ -181,6 +181,12 @@ structure Deklaration where
   invarianten_gehalten : ∀ n i, (traeger i).any (sigNr n).schreibt = true →
       ∀ t ∈ traeger i, ∀ L, Sum.inl L ∈ braucht t → L ∈ (sigNr n).haelt
   ggeteilt_bewacht : ∀ g, ggeteilt g = true → gbraucht g ≠ [] ∨ atomar g = true
+  /-- `ghost table T` / `ghost static G` -- spec-only carriers: the semantics treats
+      them like any carrier (so every theorem stays valid) and the emitter omits
+      them. That the emitter may do so is rule `G001`: executable code reads no
+      ghost -- `Geist.lean` says what that means. Default: none is ghost. -/
+  geist : Tab → Bool := fun _ => false
+  ggeist : Glob → Bool := fun _ => false
 
 attribute [instance] Deklaration.decTab Deklaration.decFeld Deklaration.decGlob
   Deklaration.decLock Deklaration.decMarke
@@ -335,9 +341,9 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ (.int 0 (2 ^ w - 1))
   | bxor (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
       (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ (.int 0 (2 ^ w - 1))
-  | shl (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
+  | shl (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
       Expr Γ Λ (.int 0 (h1 * 2 ^ h2.toNat))
-  | shr (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
+  | shr (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
       Expr Γ Λ (.int 0 h1)
   | lt (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ .bool
   | le (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ .bool
@@ -441,7 +447,9 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | forever (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block true Γ Λ Λ) : Stmt l Γ Λ Λ
   | axiomCall (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
       (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true) : Stmt l Γ Λ Λ
+      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) : Stmt l Γ Λ Λ
   /-- `R = e;` an einem Register (`transition` ist dieselbe Anweisung mit dem Spiegel): die
       Klasse erlaubt das Schreiben, oder die Anweisung ist nicht ableitbar (`R005`/`R006`). -/
   | regSchreib (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :

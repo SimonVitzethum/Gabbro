@@ -334,9 +334,35 @@ fn strichpunkt_nach_block_beschreibt_die_seite() {
     );
 }
 
+/// **PLAN-BITS §1: `uN`/`iN` sugar -- the poison and the positive side by side.**
+///
+/// The vocabulary stays closed (rule 14): the lexer never learns `u13`, the type
+/// rule desugars it to the storage word plus the exact range. Widths outside
+/// 1..64 (`u0`, `u65`, `i0`) are refused with `P008`; the eight standard words
+/// keep their full-width meaning exactly.
+#[test]
+fn zuckerbreiten_tragen_bereich_und_speicher() {
+    // Positive side: each sugar form parses clean here; the checker and the
+    // emitter probes below hold the range and the storage width.
+    faellt_nicht("impl fn f(x : u1) effects { pure } { }");
+    faellt_nicht("impl fn f(x : u13) effects { pure } { }");
+    faellt_nicht("impl fn f(x : i37) effects { pure } { }");
+    faellt_nicht("impl fn f(x : u64) effects { pure } { }");
+    // The eight standard words are untouched by the sugar arm.
+    faellt_nicht("impl fn f(x : u8) effects { pure } { }");
+    faellt_nicht("impl fn f(x : i64) effects { pure } { }");
+    // Poison side: no width outside 1..64, and never widened silently.
+    // In a TYPE rule the bad width is the reader's own refusal (`P008`).
+    faellt_mit("impl fn f(x : u0) effects { pure } { }", "P008");
+    faellt_mit("impl fn f(x : u65) effects { pure } { }", "P008");
+    faellt_mit("impl fn f(x : i0) effects { pure } { }", "P008");
+    faellt_mit("impl fn f(x : i65) effects { pure } { }", "P008");
+    // Sugar already carries its range: a second `in` has no room beside it.
+    faellt_mit("impl fn f(x : u13 in 0 .. 7) effects { pure } { }", "P008");
+}
+
 #[test]
 fn modul_mit_strichpunkt_nennt_den_rumpf() {
-    // The cut BEFORE the eight attempts, and it stands in line one of the file.
     faellt_nicht("module m { }");
     faellt_mit_notiz("module m;", "P001", "`module` carries a brace body");
 }
@@ -375,4 +401,36 @@ fn library_call_reads_names_args_and_region() {
     // The region is raw tokens: nested braces balanced, nothing interpreted.
     let rohtexte: Vec<&str> = r.region.iter().map(|t| t.text.as_str()).collect();
     assert_eq!(rohtexte, vec!["dispatch", "{", "nested", "}", "0"]);
+}
+
+// -- «SS-1» (2026-09-12): `syscall` is specified and refused by name ----------------------
+//
+// **One test, three directions.** A `syscall …` item falls with EXACTLY the named
+// diagnostic -- a controlled refusal, never a crash and never silent acceptance.
+// And the entry name `syscall` stays legal: `entry syscall …` is an identifier
+// at a name position (`ctx`), not the header word.
+#[test]
+fn syscall_faellt_mit_einem_namen() {
+    // The refusal: exactly one error, and it is `P042`.
+    let quelle = "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+                  regs in { rdi = fd } regs out { rax } clobbers { rcx } \
+                  errors { EBADF => BadFd } effects { pure } \
+                  assume linux_write_contract falsifier probe_write;";
+    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    let fehler: Vec<_> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .collect();
+    assert_eq!(
+        fehler.iter().map(|a| a.code).collect::<Vec<_>>(),
+        vec!["P042"],
+        "a `syscall` item falls with exactly one diagnostic:\n{quelle}\n{}",
+        absagen.zeige(quelle)
+    );
+    // The name stays free: `entry syscall …` names an entry, not a syscall.
+    faellt_nicht(
+        "entry syscall vector 0x80 arch x86_64 { regs in { } regs out { } \
+         preserves { } clobbers { r11 } stack s dispatch m::f; }",
+    );
 }
