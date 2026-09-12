@@ -1,0 +1,29 @@
+-- erwartet: N041
+-- **The hosted entry name outside a hosted program: a `fn main` that is not the entry.**
+--
+-- The emitter writes the Gabbro name into C unchanged -- there is no name mangling --
+-- so `fn main` becomes `static uint32_t main(…)`, and both compilers refuse it:
+-- gcc with `-Wmain` (*return type of 'main' is not 'int'*, *'main' is normally a
+-- non-static function*), clang with `-Wmain` (*'main' should not be declared static*,
+-- *'main' must return 'int'*). Measured 2026-09-12 over the seventeen units of
+-- `messung/proben/absenkung/`, which all declared this shape: `gabbro pruefe` said
+-- `0 errors`, `gabbro emit` wrote the `static main`, and both families refused it.
+--
+-- The HOSTED entry -- a `pub fn main()` in a `program` unit -- IS C's `main` and links;
+-- the entry rule of `gabbro build` (`crates/gabbro-cli/src/bau.rs::eintrittsregel`)
+-- holds that shape, and `beispiele/63-druckt.gab` is its positive side. Anything else
+-- carrying this name collides with C's entry point instead of being it, and the checker
+-- refuses it here, before the third tool has to.
+--
+-- Counterpart: `messung/proben/probe-c-namen-frei.gab` -- names nobody took go through.
+
+module gift {
+
+fn main() -> u32
+    effects { pure }
+    costs <= 8 ops
+{
+    return 7;
+}
+
+}

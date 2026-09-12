@@ -103,7 +103,24 @@ import korpus  # noqa: E402
 # They stand without a sentence because nobody has yet written what `m1.umwandlung` (the
 # rule this repair adds) promises as a whole, of which the arity and the tag are two
 # ordinary preconditions.
-MARKE = 53
+#
+# **53 -> 55 on 2026-09-12 («SS-1» over a tree that already moved).** The run
+# says 55 against a booked 53, and the delta decomposes into two halves that
+# weigh differently -- the same decomposition the 2026-08-28 entry books for
+# `F002`/`K009`:
+#
+# * +1 is MINE: `P042` (the `syscall` item refused by name) arrives WITH its
+#   sentence (`parser.syscall-bevor-s5`, probe 796) in the same commit. *The
+#   mark rises because the object grew, and it falls the day that sentence is
+#   written* -- here the sentence is written the same day, so the residue is
+#   unmoved by construction.
+# * +1 is NOT mine: `V012` (the user-copy TOCTOU refusal, lane p26, merged
+#   2026-09-11) stands in `paarung.rs` with three gift probes and NO sentence
+#   in `saetze.rs`. The base I branched from already carried it: the parent
+#   commit's own `PASSREGISTER.md` books 53 while its tree already holds the
+#   code. *A mark that stands too low looks like a held ratchet and is a
+#   forgotten one* -- the file says so itself, 2026-08-31.
+MARKE = 55
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

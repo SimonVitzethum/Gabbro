@@ -28,7 +28,7 @@ const BENANNT: &[&str] = &[
     // `P041` -- split off from `P034` on 2026-08-30. `P034` kept the missing catch-all arm,
     // `P041` took the stray `pub`: two unrelated rules stood under one identifier, and each
     // of their two poison probes would have stayed green while the OTHER rule was out.
-    "P032", "P035", "P041", // Grammatik
+    "P032", "P035", "P041", "P042", // Grammatik
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     "S001", "S002", // Schleifen und Kontrollfluss

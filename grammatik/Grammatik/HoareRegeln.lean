@@ -97,8 +97,10 @@ inductive StmtOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
       StmtOhneRuf (.forever a inv body)
   | axiomCall (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
       (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true) :
-      StmtOhneRuf (.axiomCall a args h hw hg)
+      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
+      StmtOhneRuf (.axiomCall a args h hw hg hd hgd)
   | regSchreib (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :
       StmtOhneRuf (.regSchreib r hk e)
   | transition (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (m : D.Reg)
@@ -667,7 +669,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact retryKey O passes R₁ R₂ n bis body ueberlauf (fun σ ρ => ihb σ ρ) (fun σ ρ => ihu σ ρ) σ ρ)
     (fun a inv body hb ihb σ ρ => by
         exact foreverKey O passes R₁ R₂ a inv body (fun σ ρ => ihb σ ρ) σ ρ)
-    (fun a args h hw hg σ ρ => by
+    (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
     (fun r hk e σ ρ => rfl)
@@ -891,7 +893,7 @@ theorem blockOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact retryKey O passes R₁ R₂ n bis body ueberlauf (fun σ ρ => ihb σ ρ) (fun σ ρ => ihu σ ρ) σ ρ)
     (fun a inv body hb ihb σ ρ => by
         exact foreverKey O passes R₁ R₂ a inv body (fun σ ρ => ihb σ ρ) σ ρ)
-    (fun a args h hw hg σ ρ => by
+    (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
     (fun r hk e σ ρ => rfl)
@@ -1115,7 +1117,7 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         exact retryKey O passes R₁ R₂ n bis body ueberlauf (fun σ ρ => ihb σ ρ) (fun σ ρ => ihu σ ρ) σ ρ)
     (fun a inv body hb ihb σ ρ => by
         exact foreverKey O passes R₁ R₂ a inv body (fun σ ρ => ihb σ ρ) σ ρ)
-    (fun a args h hw hg σ ρ => by
+    (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
     (fun r hk e σ ρ => rfl)
@@ -1340,7 +1342,7 @@ theorem armsOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact retryKey O passes R₁ R₂ n bis body ueberlauf (fun σ ρ => ihb σ ρ) (fun σ ρ => ihu σ ρ) σ ρ)
     (fun a inv body hb ihb σ ρ => by
         exact foreverKey O passes R₁ R₂ a inv body (fun σ ρ => ihb σ ρ) σ ρ)
-    (fun a args h hw hg σ ρ => by
+    (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
     (fun r hk e σ ρ => rfl)

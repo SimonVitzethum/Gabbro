@@ -62,7 +62,7 @@ fn gegenstelle_liest() -> u64
     return 0;
 }
 
-fn main(d : Geraet, b : ptr<normal, rw> Baum, s : index into Baum, w : u64, n : u32) -> u32
+fn absenkung_haupt(d : Geraet, b : ptr<normal, rw> Baum, s : index into Baum, w : u64, n : u32) -> u32
     effects { writes farbbericht, writes BEREIT, writes PEGEL, writes d.QUIT, reads d, reads BEREIT, reads PEGEL, publishes BEREIT }
 {
     traverse opfer over descendants of b.slots[s] by consuming touches consumes b.slots { } return n;
