@@ -553,144 +553,41 @@ theorem blatt_slots_t_gleich
       intro k fld'
       rfl
 
-/-! ## 5. The main theorem: CSL resource invariant at event grain -/
+/-! ## 5. The main theorem: CUT -- the target is false for `axiomCall`
 
-/-- **CSL resource invariant at event grain (attempt C).**
-
-    While lock `L` is free in every thread trace, the carrier-`t`
-    invariant `inv` holds at the machine memory -- provided `inv`
-    depends only on `t`'s slots (`hLokal`), holds at start (`hStart`),
-    and every release step of `L` restores it (`hRelease`, the writer's
-    own obligation).
-
-    Proof: induction over `PCReach`. The start case is `hStart`. For a
-    step, case on the step kind and on whether `L` was free before:
-    - leaf by a thread not holding `L`: `blatt_slots_t_gleich` keeps
-      every slot of `t`, so `hLokal` transports `inv`;
-    - leaf by a thread holding `L`: `L` is not free after (access events
-      never give locks), so the conclusion's freeness premise is
-      contradictory -- UNLESS the thread releases later, which is the
-      `hRelease` case;
-    - take of `L`: `L` becomes held, freeness premise contradictory;
-    - take of another lock: memory unchanged, `hLokal` transports;
-    - release of `L`: `hRelease` restores `inv` directly;
-    - release of another lock: memory unchanged, `hLokal` transports.
-
-    Every premise is used: `hO` feeds event goodness in the leaf lemma,
-    `hGuard` names the guard there, `hLokal` transports `inv` across
-    slot-preserving steps, `hStart` grounds the induction, `hRelease`
-    closes the release case. -/
-theorem csl_ressourceninvarianteC
-    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
-    (prog : PCProg D) (sp : Speicher D)
-    (t : D.Tab) (L : D.Lock) (inv : Speicher D → Prop)
-    (hGuard : Sum.inl L ∈ D.braucht t)
-    (hLokal : ∀ s s' : Speicher D, (∀ k f, s.slots t k f = s'.slots t k f) → (inv s ↔ inv s'))
-    (hStart : inv sp)
-    (hRelease : ∀ M pc f M' pc', PCReach P O passes prog (GenStart sp) M pc →
-        PCSchritt P O passes prog M pc f M' pc' →
-        L ∈ offen (M.spuren f) → L ∉ offen (M'.spuren f) → inv M'.speicher) :
-    ∀ M pc, PCReach P O passes prog (GenStart sp) M pc →
-      (∀ g, L ∉ offen (M.spuren g)) → inv M.speicher := by
-  intro M pc hReach hfrei
-  induction hReach with
-  | start =>
-      -- `GenStart sp` carries `sp` as its memory definitionally.
-      show inv (GenStart sp).speicher
-      exact hStart
-  | step M M' pc pc' f hReach hs ih =>
-      -- Whether L was free at M decides which argument fires.
-      by_cases hvor : (∀ g, L ∉ offen (M.spuren g))
-      · -- L was free before: the IH gives `inv M.speicher`.
-        have hinvM : inv M.speicher := ih hvor
-        -- Case on the step kind.
-        cases hs with
-        | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn Λa cs hpc hΛa hmark hcar =>
-            -- A leaf step: memory moves to `σ'.speicher`, traces extend.
-            -- If f held L, `hvor f` contradicts; else the leaf lemma
-            -- keeps t's slots and `hLokal` transports `inv`.
-            by_cases hheld : L ∈ offen (M.spuren f)
-            · exact absurd hheld (hvor f)
-            · -- Build the leaf-lemma inputs: non-oracle shape, goodness
-              -- of new events from the machine invariant.
-              sorry
-        | take L' hself hrang hfrei' hpc =>
-            -- A take step leaves memory unchanged definitionally: the
-            -- result memory is `M.speicher`. Transport `inv` across the
-            -- definitional equality.
-            have hmem : (⟨M.speicher,
-                genUpdate M.spuren f (Ereignis.nimmt L' (offen (M.spuren f)) :: M.spuren f),
-                M.lauf ++ genEigen f [Ereignis.nimmt L' (offen (M.spuren f))],
-                M.start,
-                M.welten ++ [M.speicher.welt (Ereignis.nimmt L' (offen (M.spuren f)) :: M.spuren f)],
-                M.tiefe + 1⟩ : GenMaschine D).speicher = M.speicher := rfl
-            -- The goal is `inv M'.speicher` where `M'` is that tuple.
-            show inv (⟨M.speicher,
-                genUpdate M.spuren f (Ereignis.nimmt L' (offen (M.spuren f)) :: M.spuren f),
-                M.lauf ++ genEigen f [Ereignis.nimmt L' (offen (M.spuren f))],
-                M.start,
-                M.welten ++ [M.speicher.welt (Ereignis.nimmt L' (offen (M.spuren f)) :: M.spuren f)],
-                M.tiefe + 1⟩ : GenMaschine D).speicher
-            rw [hmem]
-            exact hinvM
-        | rel L' hhaelt hpc =>
-            -- A release step leaves memory unchanged, unless it releases
-            -- L itself -- then `hRelease` restores `inv` directly.
-            by_cases hLL : L' = L
-            · -- Release of L itself: apply the writer's obligation.
-              -- After subst, `L'` IS the outer `L`; rebuild the step.
-              subst hLL
-              have hs' : PCSchritt P O passes prog M pc f
-                  ⟨M.speicher,
-                   genUpdate M.spuren f (Ereignis.gibt L' :: M.spuren f),
-                   M.lauf ++ genEigen f [Ereignis.gibt L'],
-                   M.start,
-                   M.welten ++ [M.speicher.welt (Ereignis.gibt L' :: M.spuren f)],
-                   M.tiefe + 1⟩
-                  (pcAdvance pc f) :=
-                PCSchritt.rel M pc f L' hhaelt hpc
-              -- `hRelease` needs the reachability at M: it is the
-              -- induction's `hReach`. L' was held before (`hhaelt`), and
-              -- the conclusion's freeness (at M') gives not-held after.
-              sorry
-            · -- Release of another lock: memory unchanged, transport.
-              have hmem : (⟨M.speicher,
-                  genUpdate M.spuren f (Ereignis.gibt L' :: M.spuren f),
-                  M.lauf ++ genEigen f [Ereignis.gibt L'],
-                  M.start,
-                  M.welten ++ [M.speicher.welt (Ereignis.gibt L' :: M.spuren f)],
-                  M.tiefe + 1⟩ : GenMaschine D).speicher = M.speicher := rfl
-              show inv (⟨M.speicher,
-                  genUpdate M.spuren f (Ereignis.gibt L' :: M.spuren f),
-                  M.lauf ++ genEigen f [Ereignis.gibt L'],
-                  M.start,
-                  M.welten ++ [M.speicher.welt (Ereignis.gibt L' :: M.spuren f)],
-                  M.tiefe + 1⟩ : GenMaschine D).speicher
-              rw [hmem]
-              exact hinvM
-      · -- L was NOT free before: some thread held it. But the conclusion
-        -- demands L free now. The only steps that free L are releases of
-        -- L -- closed by `hRelease`. All other steps keep some holder:
-        -- leaf steps never give locks, takes only add, releases of other
-        -- locks use erase of another key. This holder-persistence is the
-        -- remaining gap alongside the leaf case above.
-        sorry
+    The fixed target `csl_ressourceninvarianteC` is recorded in
+    `MUSE-REPORT-54.md`, not proved here. Finding: `Stmt.axiomCall`
+    (Semantik.lean:617) answers with the oracle world `O.wirkt a σ ρ`,
+    which may change `t`'s slots while recording NO access event (the
+    trace may even be unchanged); `GutO` enforces only the declared
+    frame, not the guard. The leaf branch of the `PCReach` induction
+    owes `hax` (non-oracle shape) for the fired statement, underivable
+    for `axiomCall` -- and slot preservation is genuinely false there.
+    Per rule 12, a variant with an added no-oracle premise is future
+    work; per rule 13 no `_zeuge` is owed for a cut theorem. -/
+/- Target cut: fixed statement and model finding recorded in MUSE-REPORT-54.md. -/
 
 /-! ## CUTS
-  - `blatt_slots_t_gleich`: green except the same-carrier `schreibBytes`
-    case (byte-list replicate alignment between the read-world tail of
-    `schreibBytes_spur_eq` and the entry-world tail of `hneu`).
-  - `csl_ressourceninvarianteC`: skeleton induction over `PCReach` with
-    take/other-release transport closed by `rfl`; open: leaf case wiring
-    (non-oracle shape + new-event goodness from the machine invariant),
-    same-L release via `hRelease` (needs post-step freeness unfolding),
-    and the not-free-before holder-persistence branch.
+  - Green (no `sorry`, standard axioms only): `zugriff_darf_aus_gut`,
+    `held_in_Λ_aus_offen` (unused, kept as a named utterance of the
+    `HeldGenau` tie), `kein_schreibzugriff_ohne_sperre`, all frame lemmas
+    (`lese_slots_gleich`, `storeSlot_fremd_traeger`, `storeSlot_fremd_slot`,
+    `storeSlot_fremd_feld`, `storeGlob_slots_gleich`,
+    `schreibBytes_fremd_traeger`), `schreibBytes_gleich_samma_traeger`
+    (new in C: same-carrier byte-write case split), `blatt_slots_t_gleich`
+    (fully closed in C, including the same-carrier `schreibBytes` case).
+  - CUT (not in this file, recorded in MUSE-REPORT-54.md):
+    `csl_ressourceninvarianteC` -- the fixed target is FALSE for
+    `Stmt.axiomCall`: the oracle answer may write `t` with no `Held L`
+    access event, so the leaf branch owes an underivable `hax`. A
+    variant with an added no-oracle premise (rule 12) and its `_zeuge`
+    (rule 13) are future work.
 -/
 
 #print axioms Gabbro.Grammatik.zugriff_darf_aus_gut
 #print axioms Gabbro.Grammatik.kein_schreibzugriff_ohne_sperre
 #print axioms Gabbro.Grammatik.blatt_slots_t_gleich
-#print axioms Gabbro.Grammatik.csl_ressourceninvarianteC
+#print axioms Gabbro.Grammatik.schreibBytes_gleich_samma_traeger
 
 #print axioms Gabbro.Grammatik.zugriff_darf_aus_gut
 #print axioms Gabbro.Grammatik.kein_schreibzugriff_ohne_sperre
