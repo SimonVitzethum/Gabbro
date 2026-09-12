@@ -1,4 +1,5 @@
-/- Skeleton for lane 69: overflow forms (PLAN-BITS section 4, model half). -/
+/- Overflow forms: wrapping on exact `uN` ranges, saturating on every range
+   (PLAN-BITS section 4, model half). -/
 
 import Grammatik.Typen
 
@@ -91,10 +92,10 @@ theorem Zahl.addS_monoton_aux2 {lo hi : Int} (hle : lo ≤ hi)
   have hsum : a.n + b.n ≤ a.n + b'.n := by have := a.lo_le; omega
   exact clamp_monoton lo hi _ _ hsum
 
-/-- `addS` is monotone: saturating addition preserves `≤` in both
+/-- `addS` is monotone: saturating addition preserves order in both
     arguments (on a non-empty range). The range hypothesis `hle` is used
     by `addS_n` on both sides; `ha`/`hb` drive the two legs; the separate
-    conclusion `hle'` carries the range fact itself. -/
+    conclusion conjunct carries the range fact itself. -/
 theorem addS_monoton {lo hi : Int} (hle : lo ≤ hi)
     (a a' b b' : Zahl lo hi) (ha : a.n ≤ a'.n) (hb : b.n ≤ b'.n) :
     (Zahl.addS a b).n ≤ (Zahl.addS a' b').n ∧ lo ≤ hi := by
@@ -111,7 +112,7 @@ theorem addS_exakt_wenn_passt {lo hi : Int}
   omega
 
 /-- Companion witness: `addS_exakt_wenn_passt` fires jointly on the
-    non-degenerate range `0 .. 5` with fitting addends `2 + 3`. -/
+    concrete range `0 .. 5` with fitting addends `2 + 3`. -/
 theorem addS_exakt_wenn_passt_zeuge :
     ∃ (a b : Zahl 0 5), (0 : Int) ≤ a.n + b.n ∧ a.n + b.n ≤ 5 ∧
       (Zahl.addS a b).n = a.n + b.n := by
@@ -172,10 +173,10 @@ theorem addW_c_gleich (w : Nat)
       _ = ((a.n + b.n) % (2 : Int) ^ (w + 1)).toNat := by exact congrArg _ hsymm
   rw [hback.symm, hcastMod, ← hcastInt]
 
-/-! ## Wrapping leaves the non-power range `0 .. 5` -/
+/-! ## Wrapping leaves the range `0 .. 5` -/
 
 /-- The concrete statement (PLAN-BITS section 4, fallback): `mod 8` leaves
-    the non-power range `0 .. 5` -- `3 + 3 = 6` wraps to `6`, which is
+    the range `0 .. 5` -- `3 + 3 = 6` wraps to `6`, which is
     outside `0 .. 5`. So no function into `0 .. 5` can compute
     `(a + b) mod 8`: the value at `3 + 3` would have to be both `6`
     (`h6`) and inside the range. Both computation hypotheses are used:
@@ -203,11 +204,11 @@ theorem wrapping_nur_exakt_kein_mod8
     fits AND is computed by `mod 2^k` for some `k` (the modulus is carried
     as `2 ^ (k + 1)`, so no `Nat` truncation can turn `k = 0` into a
     silently wrong bound). Case plan, with the escaping pair per modulus:
-    `k = 0` (`mod 2`): `f 1 2 = 3` by fit (`hfit12`), `3 % 2 = 1` by mod
-    (`h1`); `k = 1` (`mod 4`): `f 2 3 = 5` by fit (`hfit23`), `5 % 4 = 1`
+    `k = 0` (`mod 2`): `f 1 2 = 3` by fit, `3 % 2 = 1` by mod
+    (`h1`); `k = 1` (`mod 4`): `f 2 3 = 5` by fit, `5 % 4 = 1`
     (`h5mod4`); `k = 2` (`mod 8`): `f 3 3` is `6 % 8 = 6` (`h6mod8`),
-    outside the range (`hle33`); `k ≥ 3` (`mod 2^(k+1) ≥ 16`): `f 5 5` is
-    `10 % 2^(k+1) = 10` (`h10nowrap`), outside the range (`hle55`).
+    outside the range; `k ≥ 3` (`mod 2^(k+1) ≥ 16`): `f 5 5` is
+    `10 % 2^(k+1) = 10` (`h10nowrap`), outside the range.
     Every computation hypothesis is used, one per case. -/
 theorem wrapping_nur_exakt
     (h1 : ((1 : Int) + 2) % 2 ^ (0 + 1) = 1)
