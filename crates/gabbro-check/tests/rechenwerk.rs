@@ -671,6 +671,29 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
     // Der Ueberlauf ist BENANNT -- D11 woertlich.
     assert!(c.contains("{ leer(); }"), "der benannte Ausgang wird gerufen:\n{c}");
     assert!(c.contains("_Noreturn void leer(void);"), "und er kehrt nicht zurueck:\n{c}");
+
+    // **The bounded wait is a counting `for`, not a `while` (lane 73).** `while`
+    // was lowered away on purpose, and the lane-142 `for (; !(cond); )` fired
+    // clang's `-Wfor-loop-analysis` where the condition names a value no
+    // statement of the body writes (measured 2026-09-12 on
+    // `beispiele/66-transport-rueckgabe.gab`: clang 18.1.3 fires, gcc 13.3.0
+    // stays silent). The watchdog counter therefore stands in the header AND
+    // the condition -- `for (; !(cond) && z < N; z += 1)` -- and the bound arm
+    // stands after the loop, firing only on the bound path
+    // (`if (z >= N && !(cond))`), so the early-exit path samples the condition
+    // exactly as often as the old loop did.
+    assert!(
+        c.contains("for (; !(schritt(k) == 9) && _r1 < "),
+        "the wait loop is a counting `for`:\n{c}"
+    );
+    assert!(
+        c.contains("if (_r1 >= ") && c.contains("&& !(schritt(k) == 9)) { leer(); }"),
+        "and the bound arm stands after the loop:\n{c}"
+    );
+    assert!(
+        !c.contains("while ("),
+        "and no `while` remains:\n{c}"
+    );
 }
 
 /// **Zwei Regeln, die eine ueberlebende Mutation aufgedeckt hat (2026-08-17).**

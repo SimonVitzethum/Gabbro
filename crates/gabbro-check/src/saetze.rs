@@ -3030,7 +3030,8 @@ pub const SPERREN: &[Satz] = &[
                     558 reachable names in three classes -- 37 C11 keywords (44 minus the \
                     seven Gabbro's own vocabulary refuses at `P002`), 366 from the four \
                     headers every generated unit includes, 155 built-in functions of the C \
-                    implementation. The third class was measured file by file WITHOUT any \
+                    implementation -- plus the hosted entry `main` as a fourth class of one \
+                    (lane 73). The third class was measured file by file WITHOUT any \
                     `#include`; a different `cc` can know a different set, and then this \
                     table is a lower bound. *`messung/C-NAMEN.md` carries the command for \
                     every line of it.*\n\
@@ -3047,11 +3048,15 @@ pub const SPERREN: &[Satz] = &[
                     `extern fn`** (2026-09-01). At an `extern fn` taking C's name is the \
                     POINT, so the question is the signature and it is asked by `N046`. *Until \
                     that day this rule held it too, and no Gabbro program could print: \
-                    `putchar`, `puts` and `printf` all stand in the table.*",
+                    `putchar`, `puts` and `printf` all stand in the table.* **The one \
+                    exception to the exception is `main` (lane 73):** an `extern fn main` \
+                    binds nothing a hosted unit may define -- the entry rule owns the \
+                    hosted entry as a definition -- so it falls here, under `N041`, and \
+                    never reaches `N046`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/410-c-name-schluesselwort.gab (C11 keyword), 409 \
                       (a `<math.h>` name), 510 (a macro at an `extern fn`), 511 (`printf`, \
-                      variadic); \
+                      variadic), 796 (a `fn main` that is not the hosted entry); \
                       counter-probe messung/proben/probe-c-namen-frei.gab -- `read` `write` \
                       `open` `close` `signal` are POSIX, not C, and pass with 0 errors. \
                       **Recounted 2026-09-01 with its handle** (`W28`): over the 526 `.gab` \
