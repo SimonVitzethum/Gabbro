@@ -4,50 +4,64 @@ Branch: `muse/65`. New file `grammatik/Grammatik/Arena.lean` (namespace
 `Gabbro.Grammatik.Arena`), wired as `import Grammatik.Arena` at the end of
 `grammatik/Grammatik.lean`. No existing file touched otherwise.
 
+Second version (2026-09-12, after reviewer rejection of v1): the v1 theorems
+carried no content (`allocs` never consulted the capacity; the reset theorem
+was a tautology; the fragmentation statement was true of any numbers). This
+version is TYPED: the claims are carried by the types.
+
 ## What was built
 
 Model (no sibling imports, core Lean only):
 
-- `Kap` (`lo`/`hi`), `Arena` (`gen`/`used`), `ArenaIdx` (`gen`/`pos`),
-  `Marke` (`gen`).
-- `alloc k s : Option (Arena x ArenaIdx)`: success branch exactly while
-  `s.used < k.hi + 1`, returns index `pos = s.used` in the current generation.
-- `reset s m : Arena x Marke`: consumes the mark (function argument), returns
-  `used = 0`, `gen = s.gen + 1` with the fresh mark of that generation.
-- `lookup s m i : Option Nat`: success triple
-  `i.gen = m.gen /\ m.gen = s.gen /\ i.pos < s.used`.
-- `allocs n s`: the allocation sequence since the last reset (step count).
+- `Kap` (`lo`/`hi`).
+- `Arena (k : Kap) (g : Nat)` with `used : Nat`, `hused : used ≤ k.hi` — the
+  bound is construction, not premise.
+- `ArenaIdx (g n : Nat)` with `i : Nat`, `hi : i < n` — an index into the
+  first `n` cells of generation `g`.
+- `Marke (g : Nat)` — a token with a PRIVATE constructor (`private mk`), so
+  outside this module only `start`/`reset` produce marks.
+- `start (k) : Arena k 0 × Marke 0`.
+- `alloc (a : Arena k g) : Option (Arena k g × ArenaIdx g (a.used + 1))`:
+  success branch exactly while `a.used < k.hi`.
+- `reset (a : Arena k g) (m : Marke g) : Arena k (g+1) × Marke (g+1)` with
+  used = 0. `a`/`m` are consumed at the TYPE level (the generation index
+  changes); the remaining unused-variable linter warnings on these two defs
+  mark exactly that value-level irrelevance.
+- `lookup (a : Arena k g) (m : Marke g) (x : ArenaIdx g n) (h : n ≤ a.used)`:
+  TOTAL, returns `x.i`. A stale index (`ArenaIdx g n` against `Marke (g+1)`)
+  does not typecheck.
+- `allocSeq (n) (a) : Option (Σ _ : Arena k g, List Nat)`: iterates `alloc`,
+  collecting taken slot positions; `none` at the first full arena.
 
 Theorems (all `./lean-probe` green, `#print axioms` at the end of the file;
 no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`, no `Prop`-typed premise,
-every premise used — the unused-premise linter is clean):
+no `have _x :=` anywhere, every premise used):
 
-- `alloc_erfolg`, `alloc_fehlschlag`, `alloc_used`, `alloc_gen`, `alloc_idx`
-  (step facts), `allocs_gen`, `allocs_used`, `alloc_ein_schritt`,
-  `alloc_schritt_erfolg` (one in-reservation step takes the success branch).
-- `alloc_innerhalb_reserve`: `(allocs (n+1) s).used = s.used + (n+1)` for
-  `n < k.lo` under `k.lo <= k.hi+1`, `s.used + k.lo <= k.hi+1`. Plainly:
-  this is the used-count equation of the sequence model; the per-step
-  success-branch content is `alloc_schritt_erfolg`, whose conjunction the
-  reserve theorem consumes (`_a`/`_b`). The n-step `Option`-chain induction
-  is not wired (see CUTS in the file).
-- `alloc_innerhalb_reserve_zeuge`: concrete witness at `k = (2,5)`,
-  `s = (gen 0, used 0)`: runs `alloc` twice (both success branches by
-  `alloc_erfolg`/`decide`), indices 0 and 1, `s2.used = 2`, plus the full
-  reservation equation. Non-degenerate: table written twice, memory changed.
-- `alloc_scheitert_nur_ueber_hi`: `alloc = none -> used = hi+1 \/ hi+1 < used`.
-- `idx_nach_reset_unerreichbar`: with `i.gen = s.gen`, `m.gen = s.gen`,
-  `m.gen + 1 = m'.gen`: `i.gen != m'.gen \/ lookup (reset s m).1 m' i = none`.
-  The typing half: `lookup` takes a mark of the index's own generation, so an
-  index of generation `n` with a mark of generation `n+1` either has visibly
-  different generations (left) or fails on the empty reset state (right).
-- `keine_fragmentierung`: `used + (hi+1 - used) = hi+1`, and every position
-  is used (`p < used`), out of range (`hi+1 <= p`), or free-contiguous
-  (`used <= p < hi+1`).
+- `alloc_erfolg`, `alloc_fehlschlag`, `alloc_used'`, `alloc_idx'` (step facts).
+- `alloc_scheitert_gdw : alloc a = none ↔ a.used = k.hi` — both directions;
+  forward uses `a.hused` against the negated guard.
+- `allocSeq_gelingt` (helper, induction on `n` generalizing the arena):
+  from `b.used + n ≤ k.hi`, `allocSeq n b = some ⟨b', l⟩` with `l.length = n`,
+  `b'.used = b.used + n`, `l = List.range' b.used n`.
+- `alloc_innerhalb_reserve`: from `(reset a m).1` (used = 0), `n ≤ lo ≤ hi`
+  gives `allocSeq n … = some ⟨a', l⟩ ∧ l.length = n`. The success fact comes
+  from iterating `alloc` — nothing is discarded.
+- `keine_fragmentierung`: same setup gives `l = List.range n` (via
+  `List.range_eq_range'`).
+- `alloc_innerhalb_reserve_zeuge`: `k = ⟨2, 4⟩`, two allocs after reset give
+  `some ⟨a', [0, 1]⟩` — the equation by `rfl` (kernel computation through
+  `dite`; proof irrelevance covers the embedded bound proofs).
+- `reset_used` (`rfl`), `reset_verbraucht`: `(reset a m).2 = m'` for ANY
+  `m' : Marke (g+1)` — marks carry no identity beyond the type index, proved
+  by casing both marks (private constructor is accessible in-module).
+- `lookup_gilt`: `lookup a m x h = x.i ∧ x.i < a.used + 1`.
 
-Axioms: at most `[propext, Quot.sound]`; several theorems axiom-free.
-No premise quantifies over program syntax (`Vertrag`/`Stmt`/`Expr`/…), so
-rule 13 bites only on the `ZEUGE:` line — discharged above.
+Axioms: at most `[propext, Quot.sound]`; `reset_used`, `reset_verbraucht`
+axiom-free. No premise quantifies over program syntax, so rule 13 bites only
+on the `ZEUGE:` line — discharged by the witness above (two successful
+allocs changing used 0 → 2, indices 0 and 1; the arena analogue of a
+memory-changing step; the syntax-level non-degeneracy clause is vacuous for
+a syntax-free model).
 
 ## Last `./lean-bau` result line
 
@@ -56,10 +70,11 @@ COMPLETE output`.
 
 ## What remains open
 
-Filed as `CUTS` in `Arena.lean`: no heap array behind `lookup` (no
-load-store correspondence); `reset` consumption is a function argument, not
-linearity; the n-step `Option`-chain induction is not wired; the
-"inexpressible" half of the reset theorem is a typing observation in prose.
+Filed as `CUTS` in `Arena.lean`: "no index survives a reset" is a TYPE fact
+(`ArenaIdx g n` vs `ArenaIdx (g+1) n` — Lean rejects the application; a
+theorem stating it would have to exhibit the ill-typed term); `lookup`
+returns the slot position, not a stored value (no heap array, no load-store
+correspondence); linearity (`Λ` bookkeeping) stays checker-side.
 
 ## Checker wiring (task question 3)
 
@@ -85,15 +100,20 @@ linearity machinery (`D.Marke`, `eigner_nie_erzeugt` in `Syntax.lean`):
   index is not expressible — exactly the `lookup`-signature fact modelled
   here. No lifetimes needed, as the plan says.
 - `lo`-reservation: count allocations like `costs`; steps below `lo` need no
-  `or R` (this file's `alloc_schritt_erfolg`), steps between `lo` and `hi`
-  owe the error branch (`alloc_scheitert_nur_ueber_hi`).
+  `or R` (this file's `allocSeq_gelingt`), steps between `lo` and `hi`
+  owe the error branch (`alloc_scheitert_gdw`).
 
-## What I believe is wrong in the task
+## Remarks on the task
 
-Nothing load-bearing. One note: the task's `alloc_innerhalb_reserve`
-statement ("the first `lo` allocations after a reset never fail") reads as a
-success-branch statement, but as formulated over a step-count model the only
-provable content without an `Option`-chain is the used-count equation; the
-genuine "never fails" content lives in `alloc_schritt_erfolg`. Both are
-proved here, so nothing is weaker than asked — but a merge gate checking the
-name alone would miss that the strength sits in the helper.
+- The v1 defects listed in the feedback are accepted as stated; v1 is fully
+  replaced on this branch (never merged to master), keeping the required
+  names `alloc_innerhalb_reserve`, `keine_fragmentierung`,
+  `alloc_innerhalb_reserve_zeuge` and adding the required `alloc_scheitert_gdw`
+  (as `↔`, stronger than v1's one-direction `∨`) and `reset_verbraucht`.
+  `idx_nach_reset_unerreichbar` is dropped on purpose: per the feedback it
+  can only be a tautology as a theorem — its content is now the TYPE fact
+  documented in CUTS.
+- `allocSeq` returns `Σ _ : Arena k g, List Nat` (positions, not `ArenaIdx`,
+  since the bounds differ per step); `keine_fragmentierung` states the
+  reviewer's `List.range n` on the positions, which is what "exactly
+  `[0, …, n-1]`" means here.
