@@ -94,3 +94,4 @@ import Grammatik.CSLInvariante
 import Grammatik.WacheGlobal
 import Grammatik.StabilBewacht
 import Grammatik.DisziplinBedarf
+import Grammatik.VertragsFuss
