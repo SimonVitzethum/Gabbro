@@ -3,6 +3,13 @@
 Branch: `muse/114`. Gabbro + Rust lane. No Lean changes (`./lean-bau` green, see §7).
 No new checker/emitter codes, no new probes beyond one gift file.
 
+**Merge resolution 2026-09-12 (reviewer direction):** master merged in; README.md +
+DONE.md take master's side; `pruefe-emission.sh` keeps both sides' 32 stages/drivers
+complete; marks re-measured in the merged tree — EMIT 80, M 132, G 8 (286/414/689/
+718/719/727/758/777), UMGEKEHRT 2, X 0 — each with a dated reason at the mark;
+`./emission-pruef` ALL PASS (32 piercing runs, 221/221 cc+clang, stage 10 green),
+`./cargo-pruef` exit 0, 0 failing.
+
 ## 1. What was built
 
 **`beispiele/96-buffered-writer.gab`** (new, English, corpus essay header): a buffered
