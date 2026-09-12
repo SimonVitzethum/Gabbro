@@ -3347,5 +3347,1018 @@ end
 
 end Spur
 
--- @ENDE
+/-! ## 15. What a residue still returns: the frame semantics `semR`
+
+    `semR k σ ρ` runs the residue `k` sequentially: an end block by
+    `execEnd`, a `dann b k` by `execBlock b` and then `k`, a `schrumpf` by
+    dropping the innermost binding, a `frei L` by the `gibt L` of its
+    `locks`. Only a return counts (`REnde.zurueck`); every other outcome is
+    `sonst`. Loop shims and `wartet` are outside the fragment (`sonst`). -/
+
+inductive REnde (V : Vertrag D) where
+  | zurueck (σ : World D) (v : ErgVal D V.erg)
+  | sonst
+
+/-- Agreement of frame results up to the trace. -/
+def REnde.gleich {V : Vertrag D} : REnde V → REnde V → Prop
+  | .zurueck σ v, .zurueck σ' v' => SG σ σ' ∧ v = v'
+  | .sonst, .sonst => True
+  | _, _ => False
+
+theorem REnde.gleich_refl {V : Vertrag D} (r : REnde V) : r.gleich r := by
+  cases r with
+  | zurueck σ v => exact ⟨⟨rfl, rfl⟩, rfl⟩
+  | sonst => trivial
+
+theorem REnde.gleich_symm {V : Vertrag D} {r r' : REnde V} (h : r.gleich r') : r'.gleich r := by
+  cases r <;> cases r' <;> simp_all [REnde.gleich, SG]
+
+theorem REnde.gleich_trans {V : Vertrag D} {r r' r'' : REnde V} (h1 : r.gleich r')
+    (h2 : r'.gleich r'') : r.gleich r'' := by
+  cases r <;> cases r' <;> cases r'' <;> simp_all [REnde.gleich, SG]
+
+section Sem
+
+variable (O : Orakel D) (passes : Nat) {V : Vertrag D}
+
+def endErg {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → REnde V
+  | .zurueck σ v => .zurueck σ v
+  | _ => .sonst
+
+def semR : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ Λ → World D →
+    Env D Γ → REnde V
+  | _, _, _, .ende e, σ, ρ => endErg (execEnd O passes keinRuf e σ ρ)
+  | _, _, _, .dann b k, σ, ρ =>
+      match execBlock O passes keinRuf b σ ρ with
+      | .ok σ' ρ' => semR k σ' ρ'
+      | .zurueck σ' v => .zurueck σ' v
+      | _ => .sonst
+  | _, _, _, .schrumpf k, σ, ρ => semR k σ ρ.tail
+  | _, _, _, .frei L k, σ, ρ => semR k (σ.gibt L) ρ
+  | _, _, _, .trav .., _, _ => .sonst
+  | _, _, _, .travRest .., _, _ => .sonst
+  | _, _, _, .wieder .., _, _ => .sonst
+  | _, _, _, .wiederRest .., _, _ => .sonst
+  | _, _, _, .ewig .., _, _ => .sonst
+  | _, _, _, .ewigRest .., _, _ => .sonst
+  | _, _, _, .wartet .., _, _ => .sonst
+
+/-- Continue with `k` after an outcome. -/
+def nachA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)
+    (k : GRest D V l Γ Λ) : REnde V :=
+  match o with
+  | .ok σ ρ => semR O passes k σ ρ
+  | .zurueck σ v => .zurueck σ v
+  | _ => .sonst
+
+variable {l : Bool} {Γ : Ctx}
+
+theorem semR_dann {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
+    (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann b k) σ ρ = nachA O passes (execBlock O passes keinRuf b σ ρ) k := by
+  simp only [semR, nachA]
+
+theorem nachA_cons {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
+    nachA O passes (execBlock O passes keinRuf (.cons s rest) σ ρ) k =
+      nachA O passes (execStmt O passes keinRuf s σ ρ) (.dann rest k) := by
+  simp only [execBlock]
+  generalize execStmt O passes keinRuf s σ ρ = o
+  cases o <;> simp only [nachA, semR_dann]
+
+theorem nachA_schrumpf {τ : Ty} {Λ : List (Res D)} (o : Ausgang V l (τ :: Γ))
+    (k : GRest D V l Γ Λ) :
+    nachA O passes o.schrumpf k = nachA O passes o (.schrumpf k) := by
+  cases o <;> simp only [Ausgang.schrumpf, nachA, semR]
+
+theorem nachA_schrumpfArm (c : Option (Int × Int)) {Λ : List (Res D)}
+    (o : Ausgang V l (ArmCtx Γ c)) (k : GRest D V l Γ Λ) :
+    nachA O passes (o.schrumpfArm c) k =
+      (match c, o with
+       | none, o => nachA O passes o k
+       | some (_, _), o => nachA O passes o (.schrumpf k)) := by
+  cases c with
+  | none => rfl
+  | some p => exact nachA_schrumpf O passes o k
+
+theorem nachA_zuAusgang {Λ : List (Res D)} (o : EndAusgang V l Γ) (k : GRest D V l Γ Λ) :
+    nachA O passes o.zuAusgang k = endErg o := by
+  cases o <;> rfl
+
+theorem endErg_schrumpf {τ : Ty} (o : EndAusgang V l (τ :: Γ)) : endErg o.schrumpf = endErg o := by
+  cases o <;> rfl
+
+theorem endErg_cons {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (rest : Endblock D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
+    endErg (execEnd O passes keinRuf (.cons s rest) σ ρ) =
+      nachA O passes (execStmt O passes keinRuf s σ ρ) (.dann .nil (.ende rest)) := by
+  simp only [execEnd]
+  generalize execStmt O passes keinRuf s σ ρ = o
+  cases o <;> simp only [endErg, nachA, semR, execBlock]
+
+/-- The `locks` release: a return inside the body loses the final `gibt`
+    (the machine pops without it), which only the trace sees. -/
+theorem nachA_frei {Λ : List (Res D)} (o : Ausgang V l Γ) (L : D.Lock)
+    (k : GRest D V l Γ Λ) :
+    (nachA O passes o (.frei L k)).gleich (nachA O passes (o.mapWelt (·.gibt L)) k) := by
+  cases o with
+  | ok σ ρ => exact REnde.gleich_refl _
+  | zurueck σ v => exact ⟨⟨rfl, rfl⟩, rfl⟩
+  | _ => trivial
+
+theorem endErg_SG {o o' : EndAusgang V l Γ} (h : EndSG o o') :
+    (endErg o).gleich (endErg o') := by
+  cases o <;> cases o' <;> simp_all [EndSG, endErg, REnde.gleich]
+
+end Sem
+
+/-- The residues the converse follows: covered, oracle-free blocks in
+    `dann` position, covered end blocks, `schrumpf` and `frei` layers. -/
+inductive RestG {V : Vertrag D} (A : D.Lock → Prop) :
+    {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ Λ → Prop where
+  | ende {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ)
+      (he : EndG A e) (ho : e.ohneOrakel = true) : RestG A (.ende e)
+  | dann {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ')
+      (k : GRest D V l Γ Λ') (hb : BlockG A mr b) (ho : b.ohneOrakel = true)
+      (hk : RestG A k) : RestG A (.dann b k)
+  | schrumpf {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (k : GRest D V l Γ Λ)
+      (hk : RestG A k) : RestG A (.schrumpf (τ := τ) k)
+  | frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ)
+      (hk : RestG A k) : RestG A (.frei L k)
+
+section RestInv
+
+variable {V : Vertrag D} {A : D.Lock → Prop} {l : Bool} {Γ : Ctx}
+
+theorem RestG.ende_inv {Λ : List (Res D)} {e : Endblock D V l Γ Λ}
+    (h : RestG A (.ende e)) : EndG A e ∧ e.ohneOrakel = true := by
+  cases h with
+  | ende _ he ho => exact ⟨he, ho⟩
+
+theorem RestG.dann_inv {Λ Λ' : List (Res D)} {b : Block D V l Γ Λ Λ'}
+    {k : GRest D V l Γ Λ'} (h : RestG A (.dann b k)) :
+    (∃ mr, BlockG A mr b) ∧ b.ohneOrakel = true ∧ RestG A k := by
+  cases h with
+  | dann _ _ hb ho hk => exact ⟨⟨_, hb⟩, ho, hk⟩
+
+theorem RestG.schrumpf_inv {Λ : List (Res D)} {τ : Ty} {k : GRest D V l Γ Λ}
+    (h : RestG A (.schrumpf (τ := τ) k)) : RestG A k := by
+  cases h with
+  | schrumpf _ hk => exact hk
+
+theorem RestG.frei_inv {Λ : List (Res D)} {L : D.Lock} {k : GRest D V l Γ Λ}
+    (h : RestG A (.frei L k)) : RestG A k := by
+  cases h with
+  | frei _ _ hk => exact hk
+
+/-- The head statement of a covered `dann` block is a covered form. -/
+theorem RestG.dann_cons_art {Λ Λ' Λ'' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
+    {rest : Block D V l Γ Λ' Λ''} {k : GRest D V l Γ Λ''}
+    (h : RestG A (.dann (.cons s rest) k)) : s.gArt = true := by
+  obtain ⟨⟨_, hb⟩, _, _⟩ := h.dann_inv
+  exact hb.cons_inv.1.art
+
+theorem RestG.ende_cons_art {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
+    {rest : Endblock D V l Γ Λ'} (h : RestG A (.ende (.cons s rest))) : s.gArt = true := by
+  obtain ⟨he, _⟩ := h.ende_inv
+  exact he.cons_inv.1.art
+
+end RestInv
+
+/-- Frame results do not see the trace (covered, oracle-free residues). -/
+theorem semR_SG (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Prop) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ), RestG A r →
+    ∀ (σ σ' : World D) (ρ : Env D Γ), SG σ σ' →
+      (semR O passes r σ ρ).gleich (semR O passes r σ' ρ)
+  | _, _, _, .ende e, hr => by
+      intro σ σ' ρ h
+      obtain ⟨he, ho⟩ := hr.ende_inv
+      exact endErg_SG (endSG O passes A e he ho σ σ' ρ h)
+  | _, _, _, .dann b k, hr => by
+      intro σ σ' ρ h
+      obtain ⟨⟨_, hb⟩, ho, hk⟩ := hr.dann_inv
+      have h1 := blockSG O passes A b hb ho σ σ' ρ h
+      rw [semR_dann, semR_dann]
+      generalize execBlock O passes keinRuf b σ ρ = o at h1 ⊢
+      generalize execBlock O passes keinRuf b σ' ρ = o' at h1 ⊢
+      cases o <;> cases o' <;>
+        first
+        | exact False.elim h1
+        | exact h1
+        | trivial
+        | (obtain ⟨hs1, rfl⟩ := h1; exact semR_SG O passes A k hk _ _ _ hs1)
+  | _, _, _, .schrumpf k, hr => by
+      intro σ σ' ρ h
+      exact semR_SG O passes A k hr.schrumpf_inv σ σ' ρ.tail h
+  | _, _, _, .frei L k, hr => by
+      intro σ σ' ρ h
+      exact semR_SG O passes A k hr.frei_inv (σ.gibt L) (σ'.gibt L) ρ (h.gibt L)
+  | _, _, _, .trav .., hr => by cases hr
+  | _, _, _, .travRest .., hr => by cases hr
+  | _, _, _, .wieder .., hr => by cases hr
+  | _, _, _, .wiederRest .., hr => by cases hr
+  | _, _, _, .ewig .., hr => by cases hr
+  | _, _, _, .ewigRest .., hr => by cases hr
+  | _, _, _, .wartet .., hr => by cases hr
+
+theorem REnde.gleich_of_eq {V : Vertrag D} {r r' : REnde V} (h : r = r') : r.gleich r' := by
+  rw [h]
+  exact REnde.gleich_refl r'
+
+/-! ## 16. Each machine step keeps the frame semantics -/
+
+section SemSchritt
+
+variable (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+
+theorem sem_blatt {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (rest : Endblock D V l Γ Λ')
+    (σ σ' : World D) (ρ ρ' : Env D Γ) (h : execStmt O passes keinRuf s σ ρ = .ok σ' ρ') :
+    semR O passes (.ende rest) σ' ρ' = semR O passes (.ende (.cons s rest)) σ ρ := by
+  simp only [semR, execEnd, h]
+
+theorem sem_dannBlatt {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ σ' : World D) (ρ ρ' : Env D Γ)
+    (h : execStmt O passes keinRuf s σ ρ = .ok σ' ρ') :
+    semR O passes (.dann rest k) σ' ρ' = semR O passes (.dann (.cons s rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons s rest), nachA_cons, h]
+  rfl
+
+theorem sem_endeEntf {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
+    (rest : Endblock D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann (.cons s .nil) (.ende rest)) σ ρ =
+      semR O passes (.ende (.cons s rest)) σ ρ := by
+  rw [semR_dann, nachA_cons]
+  exact (endErg_cons O passes s rest σ ρ).symm
+
+theorem sem_iteWahr {Λ Λ' Λ'' : List (Res D)} (c : Expr D Γ Λ .bool)
+    (t e : Block D V l Γ Λ Λ') (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'')
+    (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true) :
+    semR O passes (.dann t (.dann rest k)) (σ.lese Λ c.orte) ρ =
+      semR O passes (.dann (.cons (.ite c t e) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt, hw, if_true]
+
+theorem sem_iteFalsch {Λ Λ' Λ'' : List (Res D)} (c : Expr D Γ Λ .bool)
+    (t e : Block D V l Γ Λ Λ') (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'')
+    (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
+    semR O passes (.dann e (.dann rest k)) (σ.lese Λ c.orte) ρ =
+      semR O passes (.dann (.cons (.ite c t e) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt, hw, Bool.false_eq_true, if_false]
+
+theorem sem_optSome {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.opt n))
+    (p : Block D V l (.index n :: Γ) Λ Λ') (a : Block D V l Γ Λ Λ')
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
+    (v : Wert D (.index n))
+    (hv : eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = Option.some v) :
+    semR O passes (.dann p (.schrumpf (.dann rest k))) (σ.lese Λ o.orte) (.cons v ρ) =
+      semR O passes (.dann (.cons (.onOption o p a) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt, hv]
+  rw [nachA_schrumpf]
+
+theorem sem_optNone {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.opt n))
+    (p : Block D V l (.index n :: Γ) Λ Λ') (a : Block D V l Γ Λ Λ')
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
+    (hv : eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = Option.none) :
+    semR O passes (.dann a (.dann rest k)) (σ.lese Λ o.orte) ρ =
+      semR O passes (.dann (.cons (.onOption o p a) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt, hv]
+
+theorem sem_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+    (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
+    (lo hi : Int) (b : Block D V l (.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+    (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) =
+      ⟨some (lo, hi), b, nutz⟩) :
+    semR O passes (.dann b (.schrumpf (.dann rest k))) (σ.lese Λ v.orte) (armEnv nutz ρ) =
+      semR O passes (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons]
+  simp only [execStmt]
+  rw [execArms_wahl, hw]
+  exact (semR_dann O passes b _ _ _).trans (nachA_schrumpf O passes _ _).symm
+
+theorem sem_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+    (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
+    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast none)
+    (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
+    semR O passes (.dann b (.dann rest k)) (σ.lese Λ v.orte) (armEnv nutz ρ) =
+      semR O passes (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons]
+  simp only [execStmt]
+  rw [execArms_wahl, hw]
+  exact semR_dann O passes b _ _ _
+
+theorem sem_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.grund n))
+    (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
+    (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann (grundWahlG arms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρ))
+        (.dann rest k)) (σ.lese Λ r.orte) ρ =
+      semR O passes (.dann (.cons (.onGrund r arms) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt]
+  rw [execGrund_wahlW O passes keinRuf arms]
+
+theorem sem_breaking {Λ Λ' Λ'' : List (Res D)} (i : D.Inv) (body : Block D V l Γ Λ Λ')
+    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann body (.dann rest k)) σ ρ =
+      semR O passes (.dann (.cons (.breaking i body) rest) k) σ ρ := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt]
+
+theorem sem_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
+    (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
+    (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ))
+    (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
+    (semR O passes (.dann body (.frei L (.dann rest k))) (σ.nimmt L) ρ).gleich
+      (semR O passes (.dann (.cons (.locks L hr body) rest) k) σ ρ) := by
+  rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
+  simp only [execStmt]
+  exact nachA_frei O passes _ L _
+
+theorem sem_endeBind {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
+    (rest : Endblock D V l (τ :: Γ) Λ) (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.ende rest) (σ.lese Λ e.orte)
+        (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) =
+      semR O passes (.ende (.bind e rest)) σ ρ := by
+  simp only [semR, execEnd]
+  rw [endErg_schrumpf]
+
+theorem sem_dannBind {Λ Λ' : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
+    (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte)
+        (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) =
+      semR O passes (.dann (.bind e rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock]
+  rw [nachA_schrumpf]
+
+theorem sem_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
+    (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
+    (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
+    (h : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi') :
+    semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte)
+        (Env.cons (τ := .int lo' hi')
+          ⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, h.1, h.2⟩ ρ) =
+      semR O passes (.dann (.narrow e lo' hi' sonst rest) k) σ ρ := by
+  rw [semR_dann O passes (.narrow e lo' hi' sonst rest), execBlock_narrow]
+  unfold narrowWeiter
+  rw [dif_pos h, nachA_schrumpf, semR_dann]
+
+theorem sem_narrowElse {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
+    (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
+    (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
+    (h : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) :
+    semR O passes (.ende sonst) (σ.lese Λ e.orte) ρ =
+      semR O passes (.dann (.narrow e lo' hi' sonst rest) k) σ ρ := by
+  rw [semR_dann O passes (.narrow e lo' hi' sonst rest), execBlock_narrow]
+  unfold narrowWeiter
+  rw [dif_neg h, nachA_zuAusgang]
+  rfl
+
+theorem sem_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
+    (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
+    (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true) :
+    semR O passes (.dann rest k) (σ.lese Λ c.orte) ρ =
+      semR O passes (.dann (.pruefung c sonst rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock, hw, if_true]
+
+theorem sem_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
+    (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
+    (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
+    semR O passes (.ende sonst) (σ.lese Λ c.orte) ρ =
+      semR O passes (.dann (.pruefung c sonst rest) k) σ ρ := by
+  rw [semR_dann]
+  simp only [execBlock, hw, Bool.false_eq_true, if_false]
+  rw [nachA_zuAusgang]
+  rfl
+
+theorem sem_exchange {Λ Λ' : List (Res D)} (g : D.Glob)
+    (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)) (hw : V.gschreibt g = true)
+    (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
+    (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann rest (.schrumpf k))
+        ((σ.lese Λ (.inr g :: neuE.orte)).schreibGlob g Λ
+          (eval (σ.lese Λ (.inr g :: neuE.orte)) neuE (σ.lese Λ (.inr g :: neuE.orte))
+            (.cons ((σ.lese Λ (.inr g :: neuE.orte)).globs g) ρ)))
+        (.cons ((σ.lese Λ (.inr g :: neuE.orte)).globs g) ρ) =
+      semR O passes (.dann (.exchange g neuE hw hL rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock]
+  rw [nachA_schrumpf]
+
+theorem sem_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (op : GleitOp)
+    (a : Expr D Γ Λ (.fl l₁ h₁)) (b : Expr D Γ Λ (.fl l₂ h₂)) (lo hi : Int × Int)
+    (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
+    (ρ : Env D Γ) (v : Wert D (.fl lo hi))
+    (hv : gleitPasst lo hi (gleitRechne op
+      (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
+      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
+    semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ) =
+      semR O passes (.dann (.gleit op a b lo hi rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock, hv]
+  rw [nachA_schrumpf]
+
+theorem sem_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
+    (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
+    (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
+    semR O passes (.dann rest (.schrumpf k)) σ (.cons v ρ) =
+      semR O passes (.dann (.gleitLit q lo hi rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock, hv]
+  rw [nachA_schrumpf]
+
+theorem sem_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ Λ (.int l₁ h₁))
+    (lo hi : Int × Int) (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ')
+    (σ : World D) (ρ : Env D Γ) (v : Wert D (.fl lo hi))
+    (hv : gleitPasst lo hi (Float.ofInt (eval (σ.lese Λ e.orte) e
+      (σ.lese Λ e.orte) ρ).n) = some v) :
+    semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
+      semR O passes (.dann (.gleitVon e lo hi rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock, hv]
+  rw [nachA_schrumpf]
+
+theorem sem_gleitNarrowOk {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
+    (e : Expr D Γ Λ (.fl l₁ h₁)) (lo hi : Int × Int) (sonst : Endblock D V l Γ Λ)
+    (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
+    (ρ : Env D Γ) (v : Wert D (.fl lo hi))
+    (hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = some v) :
+    semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
+      semR O passes (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+  rw [semR_dann, semR_dann]
+  simp only [execBlock, hv]
+  rw [nachA_schrumpf]
+
+theorem sem_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
+    (e : Expr D Γ Λ (.fl l₁ h₁)) (lo hi : Int × Int) (sonst : Endblock D V l Γ Λ)
+    (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
+    (ρ : Env D Γ)
+    (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
+    semR O passes (.ende sonst) (σ.lese Λ e.orte) ρ =
+      semR O passes (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+  rw [semR_dann]
+  simp only [execBlock, hn]
+  rw [nachA_zuAusgang]
+  rfl
+
+theorem sem_rueck {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
+    (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.ende (.ret (l := l) e hperm)) σ ρ =
+      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := rfl
+
+theorem sem_rueckCons {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
+    (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.ende (.cons (.ret e hperm) rest)) σ ρ =
+      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
+  simp only [semR, execEnd, execStmt, endErg]
+
+theorem sem_dannRet {Λ Λ'' : List (Res D)} (e : ErgExpr D Γ Λ V.erg)
+    (hperm : Λ.Perm V.ende) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
+    (σ : World D) (ρ : Env D Γ) :
+    semR O passes (.dann (.cons (.ret e hperm) rest) k) σ ρ =
+      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
+  rw [semR_dann, nachA_cons]
+  rfl
+
+end SemSchritt
+
+theorem faeden_upd (sp : Speicher D) (m : Faden → RufFadenG D) (f : Faden)
+    (z : RufFadenG D) (la : Lauf D) (st : World D) :
+    (⟨sp, rufUpdateG m f z, la, st⟩ : RufMaschineG D).faeden f = z :=
+  rufUpdateG_self m f z
+
+theorem weltVon_upd (sp : Speicher D) (m : Faden → RufFadenG D) (f : Faden)
+    (z : RufFadenG D) (la : Lauf D) (st : World D) :
+    (⟨sp, rufUpdateG m f z, la, st⟩ : RufMaschineG D).weltVon f = sp.welt z.spur := by
+  simp only [RufMaschineG.weltVon, rufUpdateG_self]
+
+/-- What one step of thread `f` does to a covered frame: either the frame
+    stays on top with a covered residue and the same frame result (up to
+    the trace), or it pops, logging a `rueck` whose world and value ARE the
+    frame result (up to the trace). -/
+def ErhaltG (O : Orakel D) (passes : Nat) (A : D.Lock → Prop) (M M' : RufMaschineG D)
+    (f : Faden) (z : RufFadenG D) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
+    (r : GRest D (vertragVon D z.kopf.f) l Γ Λ) : Prop :=
+  (∃ (l' : Bool) (Γ' : Ctx) (Λ' : List (Res D)) (ρ' : Env D Γ')
+      (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (sp : List (Ereignis D)),
+      M'.faeden f = ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, sp, z.log⟩ ∧
+      RestG A r' ∧ (semR O passes r' (M'.weltVon f) ρ').gleich (semR O passes r (M.weltVon f) ρ)) ∨
+  (∃ (v : ErgVal D (D.erg z.kopf.f)) (s1 : World D),
+      (M'.faeden f).log = RufEreignisF.rueck z.kopf.f z.kopf.rho v z.kopf.s0 s1 :: z.log ∧
+      (semR O passes r (M.weltVon f) ρ).gleich (.zurueck s1 v))
+
+set_option hygiene false in
+/-- Refute a step whose head shape the covered residue cannot have. -/
+macro "widerlege" h:ident : tactic => `(tactic| (
+  rw [hR] at $h:ident
+  cases $h:ident
+  first
+  | exact absurd hcov.dann_cons_art (by simp [Stmt.gArt, Stmt.blattArt])
+  | exact absurd hcov.ende_cons_art (by simp [Stmt.gArt, Stmt.blattArt])
+  | (obtain ⟨_, hbo, _⟩ := hcov.dann_inv; simp [Block.ohneOrakel] at hbo; done)
+  | (obtain ⟨⟨_, hbw⟩, _, _⟩ := hcov.dann_inv; cases hbw; done)
+  | cases hcov))
+
+theorem armWahlG_G {V : Vertrag D} {A : D.Lock → Prop} {mr l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} :
+    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ArmsG A mr arms → BlockG A mr (armWahlG arms v).2.1
+  | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
+  | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => h.cons_inv.1
+  | _, .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩, h => armWahlG_G rest _ h.cons_inv.2
+
+theorem grundWahlG_G {V : Vertrag D} {A : D.Lock → Prop} {mr l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} :
+    ∀ {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n),
+    GrundArmsG A mr arms → BlockG A mr (grundWahlG arms r)
+  | _, .nil, ⟨k, hk⟩, _ => (Nat.not_lt_zero k hk).elim
+  | _, .cons _ _, ⟨0, _⟩, h => h.cons_inv.1
+  | _, .cons _ rest, ⟨_ + 1, _⟩, h => grundWahlG_G rest _ h.cons_inv.2
+
+theorem armWahlG_G' {V : Vertrag D} {A : D.Lock → Prop} {mr l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : ArmsG A mr arms) :
+    BlockG A mr b := by
+  have h0 := armWahlG_G arms v h
+  rw [hw] at h0
+  exact h0
+
+theorem armWahlG_ohne' {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.ohneOrakel = true) :
+    b.ohneOrakel = true := by
+  have h0 := armWahlG_ohneOrakel arms v h
+  rw [hw] at h0
+  exact h0
+
+theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock → Prop}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (ρ : Env D Γ) (r : GRest D (vertragVon D z.kopf.f) l Γ Λ)
+    (hR : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩) (hcov : RestG A r) :
+    ErhaltG O passes A M M' f z ρ r := by
+  subst hz
+  unfold ErhaltG
+  cases hs with
+  | blatt l2 Γ2 Λ2 Λ2' s rest ρ2 hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨he, ho⟩ := hcov.ende_inv
+    obtain ⟨_, hr, _⟩ := he.cons_inv
+    simp only [Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .ende rest, _, rufUpdateG_self _ _ _, RestG.ende rest hr ho.2, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_blatt O passes s rest _ _ _ ρ' hstep)
+  | nimmt L _ _ _ =>
+    refine Or.inl ⟨l, Γ, Λ, ρ, r, Ereignis.nimmt L (offen (M.faeden f).spur) ::
+      (M.faeden f).spur, ?_, hcov, ?_⟩
+    · rw [faeden_upd, ← hR]
+    · rw [weltVon_upd]
+      exact semR_SG O passes A r hcov _ _ ρ ⟨rfl, rfl⟩
+  | gibt L _ =>
+    refine Or.inl ⟨l, Γ, Λ, ρ, r, Ereignis.gibt L ::
+      (M.faeden f).spur, ?_, hcov, ?_⟩
+    · rw [faeden_upd, ← hR]
+    · rw [weltVon_upd]
+      exact semR_SG O passes A r hcov _ _ ρ ⟨rfl, rfl⟩
+  | ruf _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | rueck caller rst hpop Γ2 Λ2 e hperm ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hfg hs0 hs1 hv
+    refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueck O passes e hperm _ _)⟩
+    rw [faeden_upd, hrho]
+    rfl
+  | endeEntf l2 Γ2 Λ2 Λ2' s rest ρ2 hent hhead =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨he, ho⟩ := hcov.ende_inv
+    obtain ⟨hs, hr, _⟩ := he.cons_inv
+    simp only [Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann (.cons s .nil) (.ende rest), _, rufUpdateG_self _ _ _, RestG.dann _ _ (BlockG.cons s .nil hs BlockG.nil) (by simp [Block.ohneOrakel, ho.1]) (RestG.ende rest hr ho.2), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_endeEntf O passes s rest _ _)
+  | dannBlatt l2 Γ2 Λ2 Λ2' Λ2'' s rest k ρ2 hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest k, _, rufUpdateG_self _ _ _, RestG.dann _ _ hr ho.2 hk, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_dannBlatt O passes s rest k _ _ _ ρ' hstep)
+  | dannLeer l2 Γ2 Λ2 k ρ2 hhead =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    refine Or.inl ⟨_, _, _, _, k, _, rufUpdateG_self _ _ _, hk, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq rfl
+  | dannIteWahr l2 Γ2 Λ2 Λ2' Λ2'' c t e rest k ρ2 hhead σ₁ hs₁ hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    obtain ⟨ht, he⟩ := hst.ite_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann t (.dann rest k), _, rufUpdateG_self _ _ _, RestG.dann _ _ ht ho.1.1 (RestG.dann _ _ hr ho.2 hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_iteWahr O passes c t e rest k _ _ hw)
+  | dannIteFalsch l2 Γ2 Λ2 Λ2' Λ2'' c t e rest k ρ2 hhead σ₁ hs₁ hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    obtain ⟨ht, he⟩ := hst.ite_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann e (.dann rest k), _, rufUpdateG_self _ _ _, RestG.dann _ _ he ho.1.2 (RestG.dann _ _ hr ho.2 hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_iteFalsch O passes c t e rest k _ _ hw)
+  | dannOnOptionSome l2 Γ2 Λ2 Λ2' Λ2'' n o p a rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    obtain ⟨hp, ha⟩ := hst.onOption_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann p (.schrumpf (.dann rest k)), _, rufUpdateG_self _ _ _, RestG.dann _ _ hp ho.1.1 (RestG.schrumpf _ (RestG.dann _ _ hr ho.2 hk)), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_optSome O passes o p a rest k _ _ v hv)
+  | dannOnOptionNone l2 Γ2 Λ2 Λ2' Λ2'' n o p a rest k ρ2 hhead σ₁ hs₁ hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    obtain ⟨hp, ha⟩ := hst.onOption_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann a (.dann rest k), _, rufUpdateG_self _ _ _, RestG.dann _ _ ha ho.1.2 (RestG.dann _ _ hr ho.2 hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_optNone O passes o p a rest k _ _ hv)
+  | dannOnTagSome l2 Γ2 Λ2 Λ2' Λ2'' cs v arms rest k ρ2 hhead σ₁ hs₁ lo hi b nutz hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    have ha := hst.onTag_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    have hbb := armWahlG_G' arms _ hw ha
+    have hbo := armWahlG_ohne' arms _ hw ho.1
+    refine Or.inl ⟨_, _, _, _, .dann b (.schrumpf (.dann rest k)), _, rufUpdateG_self _ _ _, RestG.dann _ _ hbb hbo (RestG.schrumpf _ (RestG.dann _ _ hr ho.2 hk)), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_tagSome O passes v arms rest k _ _ lo hi b nutz hw)
+  | dannOnTagNone l2 Γ2 Λ2 Λ2' Λ2'' cs v arms rest k ρ2 hhead σ₁ hs₁ b nutz hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    have ha := hst.onTag_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    have hbb := armWahlG_G' arms _ hw ha
+    have hbo := armWahlG_ohne' arms _ hw ho.1
+    refine Or.inl ⟨_, _, _, _, .dann b (.dann rest k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hbb hbo (RestG.dann _ _ hr ho.2 hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_tagNone O passes v arms rest k _ _ b nutz hw)
+  | dannOnGrund l2 Γ2 Λ2 Λ2' Λ2'' n rg arms rest k ρ2 hhead σ₁ hs₁ b hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁ hw
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    have ha := hst.onGrund_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, _, _, rufUpdateG_self _ _ _, RestG.dann _ _ (grundWahlG_G arms _ ha) (grundWahlG_ohneOrakel arms _ ho.1) (RestG.dann _ _ hr ho.2 hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_grund O passes rg arms rest k _ _)
+  | endeBind l2 Γ2 Λ2 τ e rest ρ2 hhead σ₁ hs₁ neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨he, ho⟩ := hcov.ende_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .ende rest, _, rufUpdateG_self _ _ _, RestG.ende rest he.bind_inv ho, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_endeBind O passes e rest (M.weltVon f) ρ)
+  | dannBind l2 Γ2 Λ2 Λ2' Λ2'' τ e rest k ρ2 hhead σ₁ hs₁ neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.bind_inv ho (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_dannBind O passes e rest k (M.weltVon f) ρ)
+  | dannNarrowOk l2 Γ2 Λ2 Λ2' Λ2'' lo hi lo' hi' e sonst rest k ρ2 hhead σ₁ hs₁ h neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨_, hr, hs, _⟩ := hb.narrow_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hr ho.2 (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_narrowOk O passes e lo' hi' sonst rest k _ _ h)
+  | dannNarrowElse l2 Γ2 Λ2 Λ2' Λ2'' lo hi lo' hi' e sonst rest k ρ2 hhead σ₁ hs₁ h neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨_, hr, hs, _⟩ := hb.narrow_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestG.ende sonst hs ho.1, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_narrowElse O passes e lo' hi' sonst rest k _ _ h)
+  | dannPruefWahr l2 Γ2 Λ2 Λ2' Λ2'' c sonst rest k ρ2 hhead σ₁ hs₁ hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest k, _, rufUpdateG_self _ _ _, RestG.dann _ _ hr ho.2 hk, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_pruefWahr O passes c sonst rest k _ _ hw)
+  | dannPruefFalsch l2 Γ2 Λ2 Λ2' Λ2'' c sonst rest k ρ2 hhead σ₁ hs₁ hw neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestG.ende sonst hs ho.1, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_pruefFalsch O passes c sonst rest k _ _ hw)
+  | dannBreaking l2 Γ2 Λ2 Λ2' Λ2'' i body rest k ρ2 hhead =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    have hbd := hst.breaking_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann body (.dann rest k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hbd ho.1 (RestG.dann _ _ hr ho.2 hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_breaking O passes i body rest k _ _)
+  | dannLocks l2 Γ2 Λ2 Λ2'' L hrg body rest k ρ2 hhead hself hrang hfrei =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨hst, hr⟩ := hb.cons_inv
+    obtain ⟨_, hbd⟩ := hst.locks_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann body (.frei L (.dann rest k)), _, rufUpdateG_self _ _ _, RestG.dann _ _ hbd ho.1 (RestG.frei _ _ (RestG.dann _ _ hr ho.2 hk)), ?_⟩
+    rw [weltVon_upd]
+    exact sem_locks O passes L hrg body rest k (M.weltVon f) ρ
+  | freiGib l2 Γ2 Λ2 L k ρ2 hhead =>
+    rw [hR] at hhead
+    cases hhead
+    refine Or.inl ⟨_, _, _, _, k, _, rufUpdateG_self _ _ _, hcov.frei_inv, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq rfl
+  | schrumpfVergiss l2 Γ2 Λ2 τ k v ρ2 hhead =>
+    rw [hR] at hhead
+    cases hhead
+    refine Or.inl ⟨_, _, _, _, k, _, rufUpdateG_self _ _ _, hcov.schrumpf_inv, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq rfl
+  | dannTravWeiter _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannTravFertig _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | travNext _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | travFort _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | travDone _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | wiederUeber _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | wiederWeiter _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | wiederSchritt _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | wiederFort _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | ewigWeiter _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | ewigFort _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | rueckBind caller rst hpop l2 Γ2 Λ2 Λ2' τ restb k ρc hcaller Γc Λc e hperm ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hfg hs0 hs1 hv
+    refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueck O passes e hperm _ _)⟩
+    rw [faeden_upd, hrho]
+    rfl
+  | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelDannLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelDannNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelFreiLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | peelFreiNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannRet l2 Γ2 Λ2 Λ2'' e hperm rest k ρ2 hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hfg hs0 hs1 hv
+    refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_dannRet O passes e hperm rest k _ _)⟩
+    rw [faeden_upd, hrho]
+    rfl
+  | rueckCons caller rst hpop Γ2 Λ2 e hperm rest ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hfg hs0 hs1 hv
+    refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueckCons O passes e hperm rest _ _)⟩
+    rw [faeden_upd, hrho]
+    rfl
+  | dannRegLies _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannExchange l2 Γ2 Λ2 Λ2' g neuE hw hL rest k ρ2 hhead σ₁ hs₁ σ₂ hs₂ neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    subst hs₂
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.exchange_inv ho (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_exchange O passes g neuE hw hL rest k (M.weltVon f) ρ)
+  | dannGleit l2 Γ2 Λ2 Λ2' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.gleit_inv ho (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_gleit O passes op a b lo hi rest k _ _ v hv)
+  | dannGleitLit l2 Γ2 Λ2 Λ2' q lo hi rest k ρ2 hhead v hv =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.gleitLit_inv ho (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_gleitLit O passes q lo hi rest k _ _ v hv)
+  | dannGleitVon l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.gleitVon_inv ho (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_gleitVon O passes e lo hi rest k _ _ v hv)
+  | dannGleitNarrowOk l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hr ho.2 (RestG.schrumpf _ hk), ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_gleitNarrowOk O passes e lo hi sonst rest k _ _ v hv)
+  | dannGleitNarrowElse l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ hn neu hneu =>
+    rw [hR] at hhead
+    cases hhead
+    subst hs₁
+    obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
+    obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
+    simp only [Block.ohneOrakel, Stmt.ohneOrakel, Endblock.ohneOrakel, Bool.and_eq_true] at ho
+    refine Or.inl ⟨_, _, _, _, .ende sonst, _, rufUpdateG_self _ _ _, RestG.ende sonst hs ho.1, ?_⟩
+    rw [weltVon_upd]
+    exact REnde.gleich_of_eq (sem_gleitNarrowElse O passes e lo hi sonst rest k _ _ hn)
+  | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+
+/-- A step of thread `f` keeps its log or prepends one event. -/
+theorem rufSchrittG_log {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : RufMaschineG D}
+    {f : Faden} (hs : RufSchrittG P O passes M f M') :
+    (M'.faeden f).log = (M.faeden f).log ∨ ∃ e, (M'.faeden f).log = e :: (M.faeden f).log := by
+  cases hs <;> rw [faeden_upd] <;>
+    first
+    | exact Or.inl rfl
+    | exact Or.inr ⟨_, rfl⟩
+
+/-! ## 17. TARGET B: the converse for the value -/
+
+/-- The run invariant of the converse: either the frame of `fn` is still on
+    top with a covered residue whose frame result agrees (up to the trace)
+    with the fixed result `S`, or it has popped, and the log, below any later
+    events, holds a `rueck` whose world and value agree with `S`. -/
+def InvB (O : Orakel D) (passes : Nat) (A : D.Lock → Prop) (f : Faden) (fn : D.Fn)
+    (rho : Env D (D.params fn)) (s0 : World D) (stapel : List (RufRahmenG D))
+    (log : List (RufEreignisF D)) (S : REnde (vertragVon D fn)) (M : RufMaschineG D) : Prop :=
+  (∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
+      (r : GRest D (vertragVon D fn) l Γ Λ) (sp : List (Ereignis D)),
+      M.faeden f = ⟨stapel, ⟨fn, rho, s0, ⟨l, Γ, Λ, ρ, r⟩⟩, sp, log⟩ ∧
+      RestG A r ∧ (semR O passes r (M.weltVon f) ρ).gleich S) ∨
+  (∃ (v : ErgVal D (D.erg fn)) (s1 : World D) (ext : List (RufEreignisF D)),
+      (M.faeden f).log = ext ++ RufEreignisF.rueck fn rho v s0 s1 :: log ∧
+      (REnde.zurueck (V := vertragVon D fn) s1 v).gleich S)
+
+theorem invB_schritt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock → Prop}
+    {f : Faden} {fn : D.Fn} {rho : Env D (D.params fn)} {s0 : World D}
+    {stapel : List (RufRahmenG D)} {log : List (RufEreignisF D)} {S : REnde (vertragVon D fn)}
+    {M M' : RufMaschineG D} (hs : RufSchrittG P O passes M f M')
+    (h : InvB O passes A f fn rho s0 stapel log S M) :
+    InvB O passes A f fn rho s0 stapel log S M' := by
+  rcases h with ⟨l, Γ, Λ, ρ, r, sp, hM, hc, hg⟩ | ⟨v, s1, ext, hlog, hg⟩
+  · rcases schrittErhalt (A := A) hs _ hM ρ r rfl hc with
+      ⟨l', Γ', Λ', ρ', r', sp', hM', hc', hg'⟩ | ⟨v, s1, hlog, hg'⟩
+    · exact Or.inl ⟨l', Γ', Λ', ρ', r', sp', hM', hc', REnde.gleich_trans hg' hg⟩
+    · refine Or.inr ⟨v, s1, [], ?_, REnde.gleich_trans (REnde.gleich_symm hg') hg⟩
+      rw [List.nil_append]
+      exact hlog
+  · rcases rufSchrittG_log hs with he | ⟨e, he⟩
+    · exact Or.inr ⟨v, s1, ext, by rw [he]; exact hlog, hg⟩
+    · exact Or.inr ⟨v, s1, e :: ext, by rw [he, hlog]; rfl, hg⟩
+
+theorem invB_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock → Prop}
+    {f : Faden} {fn : D.Fn} {rho : Env D (D.params fn)} {s0 : World D}
+    {stapel : List (RufRahmenG D)} {log : List (RufEreignisF D)} {S : REnde (vertragVon D fn)}
+    {M M' : RufMaschineG D} (hl : RufLaufG P O passes f M M')
+    (h : InvB O passes A f fn rho s0 stapel log S M) :
+    InvB O passes A f fn rho s0 stapel log S M' := by
+  induction hl with
+  | refl => exact h
+  | schritt hs _ ih => exact ih (invB_schritt hs h)
+
+/-- **TARGET B -- the converse for the value.** Thread `f` of `M` runs a
+    frame of `fn` with residue `.ende b` for a covered, oracle-free end
+    block `b`. If ANY run of thread `f` alone reaches a machine whose log is
+    the old log with exactly one new event `rueck fn rho' v' s0' s1'` (the
+    pop of this frame -- a further call or return would add events), then
+    the sequential semantics, started at the thread's world `M.weltVon f`,
+    ends normally, returning THE SAME value `v'`, in a world with the same
+    shared memory as the logged `s1'`; the logged parameters and entry
+    world are the frame's.
+
+    The run may interleave the machine's bare `nimmt`/`gibt` steps (a
+    thread may take and release a free lock outside any `locks`
+    statement); they change only the trace, so the logged `s1'` agrees with
+    `execEnd`'s world in memory, not necessarily in trace. No lock-freedom
+    or holdings premise is needed: the statement is about runs that exist.
+    `b.ohneOrakel` excludes `regLies`/`regLiesElse`/`awaits`, whose oracle
+    sees the whole world, trace included (see the CUTS block). -/
+theorem rufG_adaequat_umkehr (P : Programm D) (O : Orakel D) (passes : Nat)
+    (M : RufMaschineG D) (f : Faden) (fn : D.Fn) (rho : Env D (D.params fn))
+    (s0 : World D) (stapel : List (RufRahmenG D)) (spur : List (Ereignis D))
+    (log : List (RufEreignisF D)) {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
+    (b : Endblock D (vertragVon D fn) false Γ Λ) (A : D.Lock → Prop) (hb : EndG A b)
+    (ho : b.ohneOrakel = true)
+    (hM : M.faeden f = ⟨stapel, ⟨fn, rho, s0, ⟨false, Γ, Λ, ρ, .ende b⟩⟩, spur, log⟩)
+    (M'' : RufMaschineG D) (hl : RufLaufG P O passes f M M'')
+    (rho' : Env D (D.params fn)) (v' : ErgVal D (D.erg fn)) (s0' s1' : World D)
+    (hlog : (M''.faeden f).log = RufEreignisF.rueck fn rho' v' s0' s1' :: log) :
+    ∃ σ', execEnd O passes keinRuf b (M.weltVon f) ρ = .zurueck σ' v' ∧
+      σ'.speicher = s1'.speicher ∧ rho' = rho ∧ s0' = s0 := by
+  have h0 : InvB O passes A f fn rho s0 stapel log
+      (endErg (execEnd O passes keinRuf b (M.weltVon f) ρ)) M :=
+    Or.inl ⟨false, Γ, Λ, ρ, .ende b, spur, hM, RestG.ende b hb ho, REnde.gleich_refl _⟩
+  rcases invB_lauf hl h0 with ⟨l, Γ', Λ', ρ', r, sp, hM'', _, _⟩ | ⟨v, s1, ext, hlog', hg⟩
+  · rw [hM''] at hlog
+    have hlen := congrArg List.length hlog
+    simp at hlen
+  · rw [hlog'] at hlog
+    have hext : ext = [] := by
+      have hlen := congrArg List.length hlog
+      simp at hlen
+      exact hlen
+    subst hext
+    simp only [List.nil_append, List.cons.injEq, RufEreignisF.rueck.injEq] at hlog
+    obtain ⟨⟨_, hrho, hv, hs0, hs1⟩, _⟩ := hlog
+    have hv' : v = v' := eq_of_heq hv
+    have hrho' : rho = rho' := eq_of_heq hrho
+    subst hv' hrho' hs0 hs1
+    revert hg
+    cases hex : execEnd O passes keinRuf b (M.weltVon f) ρ with
+    | zurueck σ' w =>
+      intro hg
+      obtain ⟨hsg, hvw⟩ := hg
+      subst hvw
+      exact ⟨σ', rfl, hsg.speicher.symm, rfl, rfl⟩
+    | _ => intro hg; exact absurd hg id
+
 
