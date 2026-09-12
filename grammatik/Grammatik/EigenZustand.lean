@@ -24,7 +24,10 @@ variable {D : Deklaration}
 
 /-- An oracle write to `t` is recorded: a fired `axiomCall` whose axiom
     declares the write leaves a write event with carrier `Sum.inl t` in the
-    recorded list. From the `GutO` witness domains (complete over the
+    recorded list. The `GutO` trace clause is conditional on the guards being
+    held; the fired statement discharges it from its guard premises `hd`/`hgd`
+    plus `HeldGenau` at the entry world (reads preserve `haelt`). From the
+    `GutO` witness domains (complete over the
     declared writes) the event is the `axiomSpur` table write; the `lese`
     reads sit underneath. A failed `einpassen` yields no world. -/
 theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
@@ -35,14 +38,25 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
     {hd : ∀ t, D.aschreibt a t = true → darf D t Λ}
     {hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ}
     {σ : World D} {ρ : Env D Γ} {σ' : World D} {neu : List (Ereignis D)}
+    (hh : HeldGenau Λ σ.haelt)
     (hstep : (execStmt O passes keinRuf
       (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ σ.spur)
     {t : D.Tab} (hwr : D.aschreibt a t = true) :
     ∃ ev ∈ neu, ev.traeger = some (Sum.inl t) := by
-  obtain ⟨_, _, tabs₀, globs₀, Λe, hct₀, _, _, _, _, _, hspurO⟩ :=
-    hO a (σ.lese Λ args.orte)
-      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+  have hhaelt : (σ.lese Λ args.orte).haelt = σ.haelt := lese_haelt _ _ _
+  have hhL : HeldGenau Λ (σ.lese Λ args.orte).haelt := by
+    rw [hhaelt]
+    exact hh
+  have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
+      L ∈ (σ.lese Λ args.orte).haelt :=
+    fun t hwr L hL => (hhL L).mp (hd t hwr _ hL)
+  have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
+      L ∈ (σ.lese Λ args.orte).haelt :=
+    fun g hwr L hL => (hhL L).mp (hgd g hwr _ hL)
+  obtain ⟨_, _, hcond⟩ := hO a (σ.lese Λ args.orte)
+    (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+  obtain ⟨tabs₀, globs₀, Λe, hct₀, _, _, _, _, _, hspurO⟩ := hcond hgt hgg
   have hlese : (σ.lese Λ args.orte).spur =
       (args.orte.map fun o => match o with
         | .inl t => Ereignis.zugriff t false Λ σ.haelt
@@ -144,7 +158,7 @@ theorem foreignStepKeepsSlots (P : Programm D) (O : Orakel D) (hO : GutO O)
         exact absurd hcarEv (hNurG _ hatom)
       · obtain ⟨a, args, hh, hw, hg, hd, hgd, hfire, hwr⟩ := hAx
         obtain ⟨ev, hmemNeu, htr⟩ :=
-          axiomCallRecordsWrite O hO passes hfire hneu hwr
+          axiomCallRecordsWrite O hO passes hΛ hfire hneu hwr
         have hcarEv := hcar ev hmemNeu _ htr
         have hatom : PCAtom.leaf Λa cs ∈ prog h :=
           List.mem_of_getElem? hpc
@@ -178,22 +192,14 @@ theorem eigenzustand_nur_eigene_schritte
       exact foreignStepKeepsSlots P O hO passes prog M2 pc2 h M' pc' t hs
         (hNurG h hOg) k f
 
-/-- A recording-oracle write holds the guard: if the axiom declares a write
-    to `t`, every lock guarding `t` is held in the calling world. The `GutO`
-    witness domains are complete, so the `axiomSpur` table write is recorded;
-    its goodness gives the static guard, and held-in gives the dynamic lock.
-    Consequence: no recording-`GutO` oracle writes a lock-guarded table
-    without the caller holding the guard (the removed `hOF` needed it for
-    every world). -/
-theorem oracleWriteHoldsGuard (O : Orakel D) (hO : GutO O)
-    (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
-    (t : D.Tab) (hwr : D.aschreibt a t = true)
-    (L : D.Lock) (hL : Sum.inl L ∈ D.braucht t) : L ∈ σ.haelt := by
-  obtain ⟨_, _, tabs₀, globs₀, Λe, hct₀, _, hdt₀, hdg₀, _, hhi₀, _⟩ := hO a σ ρ
-  have hmem := axiomSpur_write_tab tabs₀ globs₀ a Λe σ.haelt t (hct₀ t hwr) hwr
-  have hg := axiomSpur_gut tabs₀ globs₀ a Λe σ.haelt hdt₀ hdg₀ hhi₀ _ hmem
-  obtain ⟨hdar, hheld⟩ := hg
-  exact hheld L (hdar _ hL)
+/- REMOVED (reviewer revision): `oracleWriteHoldsGuard` (an oracle write
+    holds the guard from the bound alone) is unprovable under the
+    CONDITIONAL `GutO` -- its only link to the goal needs the full
+    guard-held antecedent, and with guard premises added it would be
+    trivial without `GutO`. Guarded-table writers exist (`FremdSperre.hOF`):
+    the guard flows from the constructor's `hd`/`hgd` plus `HeldGenau`,
+    which is exactly how `axiomAntwort_gut`, `axiomCallRecordsWrite`, and
+    the `Extraktion` characterization discharge the antecedent. -/
 
 /-- Joint witness for the target (rule 13) on the reference fixture: all
     premises instantiated together -- `hNurG` over the constant carrier-free
@@ -431,13 +437,14 @@ theorem eigenzustand_axiom_zeuge :
     The caller's extracted atom covers the declared writes only over
     caller-side domains that are complete (`hct`/`hcg`, carried explicitly
     through `Extraktion.execEreignis_aus_axiomCall` and the `Ziel` lifters).
-  * `Block.bindAxiom` (the value-returning axiom form) is not touched: only
-    `Stmt.axiomCall` records here. Its `Gut` strength flows from the same
-    rewritten `axiomAntwort_gut` through `block_gut`, unchanged.
-  * The guard theorem `oracleWriteHoldsGuard` is stated per calling world:
-    a recording-`GutO` oracle writes a lock-guarded table only when the
-    caller holds the guard. The removed `FremdSperre.hOF` (guarded write
-    with no held lock) is unprovable, not merely unproved.
+  * `Block.bindAxiom` now carries the guard premises `hd`/`hgd` like
+    `Stmt.axiomCall` (reviewer revision, `Syntax.lean`); its `Gut` strength
+    flows from the same rewritten `axiomAntwort_gut` through `block_gut`.
+  * The per-world guard theorem is gone (reviewer revision): under the
+    conditional `GutO` it is unprovable as stated and trivial with guard
+    premises. Guarded-table writers exist (`FremdSperre.hOF`,
+    `gutO_bewacht_zeuge`); the guard flows from the constructor's `hd`/`hgd`
+    plus `HeldGenau` at each discharge site.
   * `stmtTraeger`/`stmtAtome` (`Extraktion.lean`) already list the axiom's
     declared written carriers for `axiomCall`; no change was needed there.
 -/
@@ -445,7 +452,6 @@ theorem eigenzustand_axiom_zeuge :
 #print axioms Gabbro.Grammatik.axiomCallRecordsWrite
 #print axioms Gabbro.Grammatik.foreignStepKeepsSlots
 #print axioms Gabbro.Grammatik.eigenzustand_nur_eigene_schritte
-#print axioms Gabbro.Grammatik.oracleWriteHoldsGuard
 #print axioms Gabbro.Grammatik.eigenzustand_nur_eigene_schritte_zeuge
 #print axioms Gabbro.Grammatik.eigenzustand_axiom_zeuge
 

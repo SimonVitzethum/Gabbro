@@ -1159,7 +1159,7 @@ theorem pcSchritt_blatt_progAus_axiomCall
       (pcAdvance pc f) := by
   obtain ⟨Λe, hmf, hlam, hcar⟩ :=
     Extraktion.execEreignis_aus_axiomCall O passes a args h hw hg hd hgd hO tabs globs
-      hct hcg (M.weltVon f) ρ σ' neu hstep hneu
+      hct hcg (M.weltVon f) ρ σ' neu hΛ hstep hneu
   refine PCSchritt.leaf M pc f V l Γ Λ Λ
     (Stmt.axiomCall a args h hw hg hd hgd) ρ rfl hΛ σ' neu hstep hneu
     hkein_nimmt Λa cs hpc hΛa ?_ ?_

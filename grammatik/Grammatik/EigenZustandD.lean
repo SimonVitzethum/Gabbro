@@ -591,16 +591,17 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
   Proved via `axiomAntwort_gut` (the `Gut` package) rather than by unfolding
   `execStmt`: the `Rahmen` half is exactly the needed slot equality. -/
 
-/-- The oracle frame keeps a non-written table slot, via `axiomAntwort_gut`. -/
+/-- The oracle frame keeps a non-written table slot, via the unconditional
+    `Rahmen` conjunct of `GutO` (the trace clause is conditional and not
+    needed here). -/
 theorem axiomCall_slots_frame (O : Orakel D) (hO : GutO O) (a : D.Ax)
     (t : D.Tab) (ht : D.aschreibt a t = false)
     (sg : World D) (rho : Env D (D.aparams a)) (k : Int) (f : D.Feld t) :
     (O.wirkt a sg rho).1.slots t k f = sg.slots t k f := by
-  have hG := axiomAntwort_gut (D := D) (O := O) hO a sg rho
-  -- `hG : Gut (D.aschreibt a) (D.agschreibt a) sg (axiomAntwort ..).1`;
+  -- `hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg (axiomAntwort ..).1`;
   -- project the `Rahmen` slot leg at `ht`.
   have hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg
-      (axiomAntwort O a sg rho).1 := hG.1
+      (axiomAntwort O a sg rho).1 := (hO a sg rho).1
   have hEq := hR.1 t ht k f
   -- `(axiomAntwort ..).1 = (wirkt ..).1` by `rfl` on the pair projection.
   have hProj : (axiomAntwort O a sg rho).1 =
@@ -1813,26 +1814,29 @@ def O2 : Orakel D2 where
 
 /-- The oracle is good: it writes only the declared (unguarded) table and
     records its write event over complete domains with the empty guard
-    trace. -/
+    trace. The conditional antecedents hold vacuously (`D2` carriers are
+    unguarded) and are not needed below. -/
 theorem O2gut : GutO (D := D2) O2 := by
   intro a σ ρ
   cases a with
   | unit =>
       have hW : O2.wirkt () σ ρ = (Wflip2 σ, 0) := rfl
       rw [hW]
-      refine ⟨?_, by rfl, [()], [], [], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      refine ⟨?_, by rfl, ?_⟩
       · show (∀ (t : D2.Tab), D2.aschreibt () t = false → ∀ (k : Int) (f : D2.Feld t),
             (Wflip2 σ).slots t k f = σ.slots t k f) ∧
           (∀ (g : D2.Glob), D2.agschreibt () g = false →
             (Wflip2 σ).globs g = σ.globs g)
         exact ⟨fun t ht => absurd ht (by simp [D2]), fun g _ => nomatch g⟩
-      · intro t _; cases t; exact List.Mem.head _
-      · intro g; exact nomatch g
-      · intro t _ w hw; simp [D2] at hw; cases hw
-      · intro g; exact nomatch g
-      · intro m st hm; cases hm
-      · intro L hL; cases hL
-      · rfl
+      · intro hgt hgg
+        refine ⟨[()], [], [], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · intro t _; cases t; exact List.Mem.head _
+        · intro g; exact nomatch g
+        · intro t _ w hw; simp [D2] at hw; cases hw
+        · intro g; exact nomatch g
+        · intro m st hm; simp at hm
+        · intro L hL; simp at hL
+        · rfl
 
 /-- The axiom call statement (answer type `none`, so it is a `Stmt`).
     The new guard premises hold: `D2`'s table is UNGUARDED (`braucht = []`),

@@ -131,7 +131,7 @@ def blockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd _ _ _ _ _ rest => blockKanten rest
   | .bindCallElse f _ _ _ _ err rest =>
       f :: endblockKanten err ++ blockKanten rest
-  | .bindAxiom _ _ _ _ _ rest => blockKanten rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => blockKanten rest
   | .regLies _ _ rest => blockKanten rest
   | .regLiesElse _ _ _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
@@ -853,7 +853,7 @@ def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ blockOrte rest
   | .bindCallElse _ args _ _ _ err rest =>
       args.orte ++ endblockOrte err ++ blockOrte rest
-  | .bindAxiom _ args _ _ _ rest => args.orte ++ blockOrte rest
+  | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
   | .regLies _ _ rest => blockOrte rest
   | .regLiesElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrte sonst ++ blockOrte rest
@@ -2519,7 +2519,7 @@ def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .bindCallInd _ _ _ _ _ rest => blockAtome tabs globs rest
   | .bindCallElse _ _ _ _ _ err rest =>
       endblockAtome tabs globs err ++ blockAtome tabs globs rest
-  | .bindAxiom _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => blockAtome tabs globs rest
   | .regLies _ _ rest => blockAtome tabs globs rest
   | .regLiesElse _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
@@ -3149,9 +3149,10 @@ theorem hmark_hcar_aus_progAus_ohne_axiomCall
 
     The contract is the tree's own named oracle bound, `GutO` (`Satz.lean`):
     for every axiom, entry world, and environment, the oracle answer respects
-    the declared footprint (`Rahmen (D.aschreibt a) (D.agschreibt a)`), keeps
-    the held locks, and records its declared writes as `axiomSpur` events over
-    its own domains (with a mark-free guard trace `Λe` it holds). It
+    the declared footprint (`Rahmen (D.aschreibt a) (D.agschreibt a)`) and keeps
+    the held locks; in worlds where the axiom's lock guards are held it
+    records its declared writes as `axiomSpur` events over its own domains
+    (with a mark-free guard trace `Λe` it holds). It
     travels as a hypothesis -- the `dma_inhalt` class (`Geraet.lean`): a NAMED
     assumption, never derived here, never an axiom.
 
@@ -3197,6 +3198,7 @@ theorem execEreignis_aus_axiomCall
     (hct : ∀ t, D.aschreibt a t = true → t ∈ tabs)
     (hcg : ∀ g, D.agschreibt a g = true → g ∈ globs)
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hh : HeldGenau Λ σ.haelt)
     (hstep : (execStmt O passes keinRuf
       (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
@@ -3208,9 +3210,19 @@ theorem execEreignis_aus_axiomCall
           (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
           stmtOrte
             (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ)) := by
-  obtain ⟨_, _, tabs₀, globs₀, Λe, _, _, _, _, hmf₀, _, hspurO⟩ :=
-    hO a (σ.lese Λ args.orte)
-      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+  have hhaelt : (σ.lese Λ args.orte).haelt = σ.haelt := lese_haelt _ _ _
+  have hhL : HeldGenau Λ (σ.lese Λ args.orte).haelt := by
+    rw [hhaelt]
+    exact hh
+  have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
+      L ∈ (σ.lese Λ args.orte).haelt :=
+    fun t hwr L hL => (hhL L).mp (hd t hwr _ hL)
+  have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
+      L ∈ (σ.lese Λ args.orte).haelt :=
+    fun g hwr L hL => (hhL L).mp (hgd g hwr _ hL)
+  obtain ⟨_, _, hcond⟩ := hO a (σ.lese Λ args.orte)
+    (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+  obtain ⟨tabs₀, globs₀, Λe, _, _, _, _, hmf₀, _, hspurO⟩ := hcond hgt hgg
   simp only [execStmt] at hstep
   split at hstep
   · rename_i σ1 v ha
@@ -3290,6 +3302,7 @@ theorem hmark_hcar_aus_progAus_axiomCall
     (hstep : (execStmt O passes keinRuf
       (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ (M.weltVon f).spur)
+    (hh : HeldGenau Λ (M.weltVon f).haelt)
     (pc : PCStand) (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
     (hpc : (progAus P code tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
     (hΛa : Λa = Λ)
@@ -3302,7 +3315,7 @@ theorem hmark_hcar_aus_progAus_axiomCall
       o ∈ (progAus P code tabs globs).carriers f) := by
   obtain ⟨Λe, hmf, hlam, hcar⟩ :=
     execEreignis_aus_axiomCall O passes a args h hw hg hd hgd hO tabs globs
-      hct hcg _ ρ σ' neu hstep hneu
+      hct hcg _ ρ σ' neu hh hstep hneu
   have ha : PCAtom.leaf Λa cs ∈ progAus P code tabs globs f :=
     List.mem_of_getElem? hpc
   constructor
