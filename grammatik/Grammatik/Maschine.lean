@@ -2243,3 +2243,127 @@ theorem kette_aus_maschinenlauf_gibt
 #print axioms Gabbro.Grammatik.kette_aus_maschinenlauf_gibt
 
 end Gabbro.Grammatik
+
+/-! ## 15. The scheduler atom identity (S12, slot-collapse fragment)
+
+    What `Ziel.lean` §9b books as atom identity (S12): the scheduled counter at
+    each step points at exactly the atom `stmtAtome_blatt_eq`
+    (`Extraktion.lean` §14) yields for the fired statement -- per step and per
+    run -- feeding the `hpc`/`hΛa`/`hcs` slots of `PCSchritt.leaf` (§12) and of
+    the lifter `pcSchritt_blatt_progAus_ohne_axiomCall`.
+
+    What closes HERE (no `sorry`, PC shapes only -- this file cannot see
+    `Extraktion`: `Extraktion.lean` imports this file, so the instantiation
+    `prog := Extraktion.progAus ...` with
+    `cs₀ := Extraktion.stmtTraeger ... ++ Extraktion.stmtOrte ...` plus the
+    `stmtAtome_blatt_eq` rewrite lives one level up, where both modules are
+    visible):
+
+    - `zaehler_zeigt_atom`: the three leaf slots collapse to one identity --
+      from `hpc`/`hΛa`/`hcs` over any `prog`, the counter points at
+      `leaf Λ cs₀`. Under the extraction instantiation this IS the
+      `stmtAtome_blatt_eq` atom of the fired statement.
+    - `hpc_hΛa_hcs_aus_zaehler`: the discharge corollary -- one posited
+      identity feeds all three `PCSchritt.leaf` slots
+      (`∃ Λa cs, hpc ∧ hΛa ∧ hcs`), so a witness positing the identity owes
+      nothing more per leaf step.
+    - `zaehler_zeigt_atom_lauf`: the per-run form -- any leaf step occurring
+      anywhere in a generated run derivation (`SchrittImLauf`: the last step,
+      or a step of the prefix) satisfies the same identity. The step proof
+      `hs` evidences that the step fired, the membership proof that it fired
+      in THIS run, the triple that it fired as this leaf.
+
+    Remainder (booked, not hidden): deriving the identity FROM the run -- that
+    a witness-built `PCReach` over `progAus` always posits the extracted atom
+    -- is the scheduler-construction duty and stays open (S12); the `take`/
+    `rel` bracket correspondence (`stmtAtome_locks` sides) and the `axiomCall`
+    event contract (S13) likewise; calls and compounds never fire as leaves
+    (`istBlatt = false`), so they owe no leaf identity. Positions stay
+    derivation-external: proof irrelevance forbids computing a thread's step
+    count off a `PCReach` derivation (large elimination -- measured above),
+    so no endpoint-level atom identity is stated; per-run coverage IS
+    per-step coverage at every occurring step.
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **The counter identity, leaf fragment.** The three `PCSchritt.leaf` counter
+    slots (`hpc`: the counter points at `leaf Λa cs`; `hΛa`: that `Λa` is the
+    fired footprint; `hcs`: those `cs` are the extracted carriers) collapse to
+    one identity: the counter points at `leaf Λ cs₀`. Every premise is
+    load-bearing: `prog`/`f`/`pc`/`Λa`/`cs` type `hpc`, `Λ`/`cs₀` type the
+    rewrites and the conclusion. -/
+theorem zaehler_zeigt_atom (prog : PCProg D) (f : Faden) (pc : PCStand)
+    (Λ : List (Res D)) (cs₀ : List (D.Tab ⊕ D.Glob))
+    (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (prog f)[pc f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ) (hcs : cs = cs₀) :
+    (prog f)[pc f]? = some (PCAtom.leaf Λ cs₀) := by
+  rw [hΛa, hcs] at hpc
+  exact hpc
+
+/-- **The discharge corollary: one identity feeds the three leaf slots.** A
+    witness positing the counter identity owes `hpc`/`hΛa`/`hcs` of
+    `PCSchritt.leaf` (and hence of the `progAus` lifter) at once: the triple
+    is the unpacked existential. Every premise is load-bearing:
+    `prog`/`f`/`pc`/`Λ`/`cs₀` type `hident`, `hident` is the witness. -/
+theorem hpc_hΛa_hcs_aus_zaehler (prog : PCProg D) (f : Faden) (pc : PCStand)
+    (Λ : List (Res D)) (cs₀ : List (D.Tab ⊕ D.Glob))
+    (hident : (prog f)[pc f]? = some (PCAtom.leaf Λ cs₀)) :
+    ∃ Λa : List (Res D), ∃ cs : List (D.Tab ⊕ D.Glob),
+      (prog f)[pc f]? = some (PCAtom.leaf Λa cs) ∧ Λa = Λ ∧ cs = cs₀ := by
+  exact ⟨Λ, cs₀, hident, rfl, rfl⟩
+
+/-- **A generated step occurring in a generated run derivation**: the last
+    step (`letzter`), or a step of the prefix (`frueher`). The step proof is
+    fixed; the run varies over derivations containing it. -/
+inductive SchrittImLauf (P : Programm D) (O : Orakel D) (passes : Nat)
+    (prog : PCProg D) (M0 Mmid : GenMaschine D) (pcmid : PCStand) (f : Faden)
+    (M' : GenMaschine D) (pc' : PCStand)
+    (hs : PCSchritt P O passes prog Mmid pcmid f M' pc') :
+    ∀ {M : GenMaschine D} {pc : PCStand},
+    PCReach P O passes prog M0 M pc → Prop where
+  | letzter (h : PCReach P O passes prog M0 Mmid pcmid) :
+      SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs
+        (PCReach.step Mmid M' pcmid pc' f h hs)
+  | frueher {M'' : GenMaschine D} {pc'' : PCStand} {g : Faden}
+      {M''' : GenMaschine D} {pc''' : PCStand}
+      (h : PCReach P O passes prog M0 M'' pc'')
+      (hs2 : PCSchritt P O passes prog M'' pc'' g M''' pc''')
+      (hmem : SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs h) :
+      SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs
+        (PCReach.step M'' M''' pc'' pc''' g h hs2)
+
+/-- **The counter identity, per run.** Any leaf step occurring anywhere in a
+    generated run derivation points at `leaf Λ cs₀`: the step proof `hs`
+    evidences that the step fired, the membership proof that it fired in this
+    run, the triple that it fired as this leaf. Every premise is load-bearing:
+    `prog`/`M0`/`Mmid`/`pcmid`/`f`/`M'`/`pc'`/`P`/`O`/`passes` type `hs` and
+    `hmem`, `hs` is the fired step, `Λ`/`cs₀`/`Λa`/`cs`/`hpc`/`hΛa`/`hcs`
+    feed the per-step identity, `M`/`pc`/`h` type `hmem`, `hmem` is cased on. -/
+theorem zaehler_zeigt_atom_lauf (prog : PCProg D) (M0 : GenMaschine D)
+    (Mmid : GenMaschine D) (pcmid : PCStand) (f : Faden)
+    (M' : GenMaschine D) (pc' : PCStand)
+    (P : Programm D) (O : Orakel D) (passes : Nat)
+    (hs : PCSchritt P O passes prog Mmid pcmid f M' pc')
+    (Λ : List (Res D)) (cs₀ : List (D.Tab ⊕ D.Glob))
+    (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (prog f)[pcmid f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ) (hcs : cs = cs₀)
+    (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog M0 M pc)
+    (hmem : SchrittImLauf P O passes prog M0 Mmid pcmid f M' pc' hs h) :
+    (prog f)[pcmid f]? = some (PCAtom.leaf Λ cs₀) := by
+  cases hmem with
+  | letzter _ =>
+      exact zaehler_zeigt_atom prog f pcmid Λ cs₀ Λa cs hpc hΛa hcs
+  | frueher _ _ _ =>
+      exact zaehler_zeigt_atom prog f pcmid Λ cs₀ Λa cs hpc hΛa hcs
+
+#print axioms Gabbro.Grammatik.zaehler_zeigt_atom
+#print axioms Gabbro.Grammatik.hpc_hΛa_hcs_aus_zaehler
+#print axioms Gabbro.Grammatik.zaehler_zeigt_atom_lauf
+
+end Gabbro.Grammatik
