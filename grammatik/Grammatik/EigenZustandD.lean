@@ -606,4 +606,107 @@ theorem axiomCall_slots_frame (O : Orakel D) (hO : GutO O) (a : D.Ax)
   rw [hProj] at hEq
   exact hEq
 
+/-! ## 4. Slot preservation per leaf shape: every non-recording leaf keeps `slots t`.
+
+  Each lemma below takes the firing equation `hstep` for ONE statement form
+  and concludes `σ'.slots t k f = σ.slots t k f` for every table `t`. All are
+  used by their proofs (rule 3): the two global-writing forms (`assignGlob`,
+  `publish`) by the step lemma's global case, the rest by the compound-case
+  analysis there. Forms that write a table slot (`assignSlot`, `assignDurch`,
+  `uebergang`, `schreibBytes`) are NOT here: they record their event (§2). -/
+
+/-- `assignGlob` writes a global: every table slot rides along. -/
+theorem assignGlob_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {g : D.Glob} {e : Expr D Γ Λ (D.gtyp g)}
+    {hw : V.gschreibt g = true} {hL : gdarf D g Λ}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignGlob (V := V) (l := l) g e hw hL) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.assignGlob (V := V) (l := l) g e hw hL) sg rho).welt =
+      some ((sg.lese Λ e.orte).schreibGlob g Λ
+        (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = ((sg.lese Λ e.orte).schreibGlob g Λ
+      (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `publish` writes a global: every table slot rides along. -/
+theorem publish_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {g : D.Glob} {e : Expr D Γ Λ (D.gtyp g)} {payload : List D.Glob}
+    {hp : payload = D.nutzlast g} {hw : V.gschreibt g = true} {hL : gdarf D g Λ}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.publish (V := V) (l := l) g e payload hp hw hL) sg rho).welt
+      = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.publish (V := V) (l := l) g e payload hp hw hL) sg rho).welt =
+      some ((sg.lese Λ e.orte).schreibGlob g Λ
+        (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = ((sg.lese Λ e.orte).schreibGlob g Λ
+      (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `assignVar` touches only the environment: every table slot rides along. -/
+theorem assignVar_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {x : Var Γ τ} {e : Expr D Γ Λ τ}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignVar (V := V) (l := l) x e) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.assignVar (V := V) (l := l) x e) sg rho).welt =
+      some (sg.lese Λ e.orte) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `regSchreib` touches only the device: every table slot rides along. -/
+theorem regSchreib_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : D.Reg} {hk : (D.rklasse r).schreibbar = true} {e : Expr D Γ Λ (D.rtyp r)}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.regSchreib (V := V) (l := l) r hk e) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.regSchreib (V := V) (l := l) r hk e) sg rho).welt =
+      some (sg.lese Λ e.orte) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `ret` only reads: every table slot rides along. -/
+theorem ret_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {e : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.ret (V := V) (l := l) e hΛ) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.ret (V := V) (l := l) e hΛ) sg rho).welt =
+      some (sg.lese Λ e.orte) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
 end Gabbro.Grammatik.EZD
