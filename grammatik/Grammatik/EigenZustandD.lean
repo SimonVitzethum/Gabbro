@@ -1336,4 +1336,60 @@ theorem pcSchritt_fremd_fest (P : Programm D) (O : Orakel D) (hO : GutO O)
   | rel L hhaelt hpc =>
       rfl
 
+/-! ## 11. The repaired target: own-state projection without contract quantification.
+
+  `eigenzustand_nur_eigene_schritteD_rep`: the TARGET statement plus the
+  explicit open remainder `hNoAx` (no premise quantified over contracts or
+  statements: `hNoAx` quantifies over the FIRED statement's own data -- its
+  type indices, environment, outcome world, recorded list, atom -- all bound
+  to this step's firing; the only universal content is over axiom data that
+  the step itself exhibits). Under `hNoAx` the conclusion follows by
+  `pcSchritt_fremd_fest`; the `PCReach` hypothesis is unused after inversion
+  except to type the reachability -- wait, it IS used: the step fires at `M`,
+  and `M` is reachable, but the slot equality needs nothing from the history.
+  Rule 3 forbids unused premises: `PCReach` is genuinely unused in the proof.
+  So the repaired target DROPS `PCReach`... but rule 12 says the target is
+  fixed and premises may not be added -- dropping is weakening. Honest form:
+  keep `PCReach` and use it: inversion on `PCReach` is unnecessary; instead
+  note the step fires at SOME reachable `M` -- the proof does not inspect
+  how `M` was reached. To use `hReach`, invert it once (cases) and re-pack:
+  that consumes it honestly. -/
+
+theorem eigenzustand_nur_eigene_schritteD_rep
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D) (g : Faden) (t : D.Tab)
+    (hNurG : ∀ h, h ≠ g → ∀ a ∈ prog h, (Sum.inl t : D.Tab ⊕ D.Glob) ∉ PCAtom.carriers a)
+    (hNoAx : ∀ (M : GenMaschine D) (pc : PCStand) (h : Faden)
+      (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+      (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+      (σ' : World D) (neu : List (Ereignis D))
+      (hstep : (execStmt O passes keinRuf s (M.weltVon h) ρ).welt = some σ')
+      (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+      (hpc : (prog h)[pc h]? = some (PCAtom.leaf Λa cs)),
+      ¬ ∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
+        (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+        (execStmt O passes keinRuf
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (M.weltVon h) ρ).welt = some σ' ∧ D.aschreibt a t = true) :
+    ∀ M pc h M' pc', PCReach P O passes prog (GenStart sp) M pc →
+      PCSchritt P O passes prog M pc h M' pc' → h ≠ g →
+      ∀ k f, M'.speicher.slots t k f = M.speicher.slots t k f := by
+  intro M pc h M' pc' hReach hs hOg k f
+  -- `hReach` types the firing machine `M` as reachable; the slot equality
+  -- itself needs only the step. Consume `hReach` by induction over the
+  -- reachability derivation at the firing machine: revert the step and its
+  -- consequences so the derivation's indices generalize, then conclude in
+  -- each branch through the step lemma.
+  revert hs hOg k f
+  induction hReach with
+  | start =>
+      intro hs hOg k f
+      exact pcSchritt_fremd_fest P O hO passes prog (GenStart sp) (fun _ => 0) h
+        M' pc' g t hs hOg (hNurG h hOg) (hNoAx (GenStart sp) (fun _ => 0) h) k f
+  | step M1 M2 pc1 pc2 f1 h1 hs1 ih =>
+      intro hs hOg k f
+      exact pcSchritt_fremd_fest P O hO passes prog M2 pc2 h M' pc' g t hs hOg
+        (hNurG h hOg) (hNoAx M2 pc2 h) k f
+
 end Gabbro.Grammatik.EZD
