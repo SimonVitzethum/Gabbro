@@ -1082,4 +1082,138 @@ theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
 
 #print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_pc
 
+/-! ## 9b continued. The oracle lifter: `axiomCall` leaves over `progAus` (a02)
+
+    What §9b above leaves booked: the lifter `pcSchritt_blatt_progAus_ohne_axiomCall`
+    wires only the non-oracle fragment (the `hax` exclusion); the merged S13 oracle
+    characterization (`Extraktion.execEreignis_aus_axiomCall`,
+    `Extraktion.hmark_hcar_aus_progAus_axiomCall`, read-only reuse, never widened)
+    stands unused. This block wires it in, mirroring the non-oracle lifter exactly.
+
+    * (lifter) `pcSchritt_blatt_progAus_axiomCall` builds a `PCSchritt.leaf` over
+      the computed `Extraktion.progAus P fcode tabs globs` from the firing data of
+      an `axiomCall` leaf, discharging `hmark`/`hcar` through
+      `Extraktion.execEreignis_aus_axiomCall` under the oracle bound
+      (`hO : GutO O`). `hO` travels as a named premise (the `dma_inhalt` class:
+      a named assumption, never derived here, never an axiom). The leaf shape
+      needs no exclusion premise: `hax` is replaced by `hO`.
+    * (application) `pcReach_blatt_progAus_axiomCall` extends a covered run
+      (`h : PCReach ...`) by one oracle-leaf step through the lifter, so oracle
+      leaves are covered wherever the goal consumes `PCReach` -- which is every
+      run-side leg of `ziel_nutzer_last_aus_pc` (its `hO` premise already feeds
+      `pc_gesittet`, `pc_konsistent`, `pc_gut_obs`, `pc_reduktion`).
+    * (narrowing, carried explicitly) The covered class is GutO oracles only:
+      the oracle answers without emitting events of its own (`spur` preserved,
+      the `spur` conjunct of `GutO`). Oracles that emit their own events stay
+      open (the `Extraktion` §18 remainder, inherited unchanged). Atom identity
+      (`hpc`, `hΛa`, `hcs`) stays the scheduler/witness duty (S12); `take`/`rel`
+      steps need only `hpc`.
+
+    Every premise below is load-bearing: each is passed whole to the link, to
+    the constructor, or to the reach step, so deleting any premise breaks
+    elaboration. There is no `have _ :=` discard anywhere in the proofs, no
+    `sorry`/`admit`/`axiom`, and no bare `Prop` slot that `False` could inhabit
+    (the run is owed as `PCReach ...`, the bound as `GutO O`). -/
+
+/-- One oracle-leaf step over the computed program (a02): the firing data of an
+    `axiomCall` leaf (`a`, `args`, `h`, `hw`, `hg`, `ρ`, `hΛ`, `hstep`, `hneu`,
+    `hkein_nimmt`) under the oracle bound (`hO`) plus the booked atom identity
+    (`hpc`: the counter points at the extracted atom; `hΛa`, `hcs`: that atom IS
+    the statement footprint, S12 scheduler/witness duty) build the
+    `PCSchritt.leaf` over `Extraktion.progAus P fcode tabs globs`, discharging
+    `hmark`/`hcar` through `Extraktion.execEreignis_aus_axiomCall` (read-only
+    reuse, never widened: GutO oracles only; event-emitting oracles stay open).
+    Every premise is load-bearing: each is passed whole to the link or to the
+    constructor. -/
+theorem pcSchritt_blatt_progAus_axiomCall
+    (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (P : Programm D) (fcode : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (M : GenMaschine D) (pc : PCStand) (f : Faden)
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ : List (Res D))
+    (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (ρ : Env D Γ)
+    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ M.spuren f)
+    (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
+    (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ)
+    (hcs : cs = Extraktion.stmtTraeger tabs globs
+      (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+      Extraktion.stmtOrte
+        (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ)) :
+    PCSchritt P O passes (Extraktion.progAus P fcode tabs globs) M pc f
+      ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
+       M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
+      (pcAdvance pc f) := by
+  obtain ⟨hlam, hcar⟩ :=
+    Extraktion.execEreignis_aus_axiomCall O passes a args h hw hg hO tabs globs
+      (M.weltVon f) ρ σ' neu hstep hneu
+  refine PCSchritt.leaf M pc f V l Γ Λ Λ
+    (Stmt.axiomCall a args h hw hg) ρ rfl hΛ σ' neu hstep hneu
+    hkein_nimmt Λa cs hpc hΛa ?_ ?_
+  · intro e he m st hm
+    rw [hlam e he] at hm
+    rw [← hΛa] at hm
+    simp only [PCAtom.marks]
+    exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+  · intro e he o ho
+    have hmem : o ∈ Extraktion.stmtTraeger tabs globs
+        (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) ++
+        Extraktion.stmtOrte
+          (Stmt.axiomCall a args h hw hg : Stmt D V l Γ Λ Λ) :=
+      hcar e he o ho
+    simp only [PCAtom.carriers]
+    rw [hcs]
+    exact hmem
+
+#print axioms Gabbro.Grammatik.pcSchritt_blatt_progAus_axiomCall
+
+/-- Oracle leaves extend the covered run (a02 application): one `axiomCall` leaf
+    step through the oracle lifter extends `PCReach` over the computed program,
+    so the `ziel_nutzer_last_aus_pc` run premise (`h : PCReach ...`, which takes
+    no leaf-shape premise of its own) covers oracle leaves wherever a witness
+    builds them with the lifter above -- under `hO`, with the S12 atom identity
+    owed per step exactly as for non-oracle leaves. Every premise is
+    load-bearing: `h` feeds the reach step, the rest feed the lifter. -/
+theorem pcReach_blatt_progAus_axiomCall
+    (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (P : Programm D) (fcode : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (sp : Speicher D) (M : GenMaschine D) (pc : PCStand) (f : Faden)
+    (h : PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc)
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ : List (Res D))
+    (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (ρ : Env D Γ)
+    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) (M.weltVon f) ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ M.spuren f)
+    (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
+    (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ)
+    (hcs : cs = Extraktion.stmtTraeger tabs globs
+      (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ) ++
+      Extraktion.stmtOrte
+        (Stmt.axiomCall a args hh hw hg : Stmt D V l Γ Λ Λ)) :
+    PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp)
+      ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
+       M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
+      (pcAdvance pc f) :=
+  PCReach.step _ _ _ _ f h
+    (pcSchritt_blatt_progAus_axiomCall O passes hO P fcode tabs globs M pc f V l Γ Λ
+      a args hh hw hg ρ hΛ σ' neu hstep hneu hkein_nimmt Λa cs hpc hΛa hcs)
+
+#print axioms Gabbro.Grammatik.pcReach_blatt_progAus_axiomCall
+
 end Gabbro.Grammatik
