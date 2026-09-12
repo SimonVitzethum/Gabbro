@@ -1795,8 +1795,7 @@ impl<'a> Pruefer<'a> {
                 // «G5» put both segments into the vocabulary and the constant folder has read
                 // the pair ever since -- `const G : u32 = u32::max;` lowers to
                 // `#define G 4294967295u`, correctly. **In an EXPRESSION nobody asked it.**
-                // Measured: `return w ^ u32::max;` with `w : u16` passed with 0 errors and
-                // booked two of three expressions as untyped, while the same mask spelled
+                // Measured: `return w ^ u32::max;` with `w : u16` passed with 0 errors and                // booked two of three expressions as untyped, while the same mask spelled
                 // `4294967295` falls at `M104` *(`u16 ^ u32 in 4294967295 .. 4294967295`
                 // leaves the width of the result type)* and at `M101`.
                 //
@@ -1808,6 +1807,28 @@ impl<'a> Pruefer<'a> {
                 // declares and asking that question first is how the form got treated as a
                 // place. The value comes from `umgebung::grenzwort`, the same reader the
                 // folder uses (W7).
+                //
+                // PLAN-BITS §1: a sugared limit (`u13::max`) answers the SUGAR's
+                // exact bound (8191), in the storage word's width -- the same
+                // shape the desugared range gives the type itself.
+                if let Some((lo, hi)) = gabbro_syntax::zucker_bereich(&o.basis.text) {
+                    if o.suffixe.len() == 1 {
+                        if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+                            let speicher = gabbro_syntax::zucker_speicher(&o.basis.text)
+                                .and_then(crate::umgebung::breite_von);
+                            if let (Some((breite, vz)), Some(w)) = (
+                                speicher,
+                                match f.text.as_str() {
+                                    "max" => Some(hi),
+                                    "min" => Some(lo),
+                                    _ => None,
+                                },
+                            ) {
+                                return Typ::Ganzzahl(IntBereich::genau(breite, vz, w, w));
+                            }
+                        }
+                    }
+                }
                 if let Some((breite, vz, w)) = crate::umgebung::grenzwort(o) {
                     return Typ::Ganzzahl(IntBereich::genau(breite, vz, w, w));
                 }
@@ -1822,6 +1843,10 @@ impl<'a> Pruefer<'a> {
                 // `let` can give it a third: `u32` is a WORD, not a name a body binds. So
                 // this is not `M119` ("declared nowhere", fixed by a declaration) -- there
                 // is no declaration that would fix it.
+                //
+                // PLAN-BITS §1: a sugared width has the same two members. `u13::gross`
+                // is refused here, beside `u32::gross` -- the sugar spelling is a
+                // word where a type is read, and words have no third member.
                 if let (Some(kw), 1, Some(OrtSuffix::Feld(f))) =
                     (gabbro_syntax::kw::Kw::suche(&o.basis.text), o.suffixe.len(), o.suffixe.first())
                 {
@@ -1842,6 +1867,31 @@ impl<'a> Pruefer<'a> {
                             ),
                         );
                         return Typ::Unbekannt;
+                    }
+                }
+                if o.suffixe.len() == 1
+                    && gabbro_syntax::zucker_speicher(&o.basis.text).is_some()
+                {
+                    if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+                        if f.text != "max" && f.text != "min" {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M138",
+                                    e.span,
+                                    format!(
+                                        "`{}::{}` -- an integer word has `max` and `min`, \
+                                         and nothing else",
+                                        o.basis.text, f.text
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "`u13` is sugar for the storage width plus the exact \
+                                     range -- a word where a type is read, with no third \
+                                     member",
+                                ),
+                            );
+                            return Typ::Unbekannt;
+                        }
                     }
                 }
                 self.name_aufloesen(o, lage);
@@ -2426,6 +2476,18 @@ impl<'a> Pruefer<'a> {
                 .filter(|k| k.ist_intty())
             {
                 return self.umwandlung_ruf(r, ziel, lage);
+            }
+            // PLAN-BITS §1: `u13(a)` converts to the sugar's storage word. The
+            // path names the sugar spelling; `umwandlung` answers the storage
+            // word's full range, the same conservative answer a narrowing
+            // conversion to the longhand gives. The sugar spelling never
+            // reaches the graph or the cost pass as a callee: both read the
+            // rewritten name (see `aufrufgraph::zucker_umschreiben` and the
+            // `kosten.rs` conversion arm), so neither mistakes it for a call.
+            if let Some(einfach) = pfad.einfach() {
+                if let Some(speicher) = gabbro_syntax::zucker_speicher(&einfach.text) {
+                    return self.umwandlung_ruf(r, speicher, lage);
+                }
             }
         }
         // **An indirect call is typed from the CONTRACT at the place's type** («B8»,
@@ -5103,6 +5165,13 @@ impl<'a> Pruefer<'a> {
         // then the exemption was a silent pass: `return u32;` with `u32` undeclared gave
         // **0 errors** and the generator wrote `return u32;` into the C. *An exemption whose
         // premise is taken away somewhere else does not announce itself.*
+        //
+        // PLAN-BITS §1: a sugared width reads as one identifier, so the sugar
+        // spelling reaches this resolver as an UNqualified bare name -- and the
+        // qualified `u13::max` is exempted one line up like `u64::max`. A bare
+        // `u13` as a PLACE is the same defect the `breite_wort` exemption was:
+        // the type rule desugars the spelling, but a place never passes through
+        // it. `return u13;` with `u13` undeclared must fall here, not confirm.
         if o.text().contains("::") {
             return;
         }
