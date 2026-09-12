@@ -166,7 +166,7 @@ emission lauf `beispiel104` with `TREIBER104`.
 
 ## Merge resolution (2026-09-12, reviewer merge of master-neu)
 
-Resolved per reviewer instruction: README/TODO/DONE/PLAN take the master side, emission keeps both stages (`beispiel104` beside `beispiel96`), `MARKE_EMIT` re-booked to the measured merged count (81 -> 83, the 94/95 translator files), ZEREMONIE re-measured (111 von 1501); gates on the merged tree: cargo-pruef exit 0, lean-bau green, emission-pruef exit 0 (ALL PASS). Note: the instruction's `--ours` flag names the wrong side under merge semantics (ours is muse/126, master's side is `--theirs`) — followed the intent (master's content), not the flag.
+Merge resolved per instruction (docs take the master side — note: under merge semantics that side is `--theirs`, not `--ours`; emission keeps `beispiel104` beside `beispiel96`; `MARKE_EMIT` re-booked 81 -> 83 measured; ZEREMONIE re-measured 111 von 1501); gates on the merged tree: cargo-pruef exit 0, lean-bau green, emission-pruef exit 0 (ALL PASS).
 
 ## CUTS
 
