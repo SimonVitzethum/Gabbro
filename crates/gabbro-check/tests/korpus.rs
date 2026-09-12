@@ -484,11 +484,11 @@ const BENANNT: &[&str] = &[
     // 2026-09-12, lane S5: the `syscall` declaration parses and checks, so the
     // `SYNTAX.md` §12.1 excerpt -- `Fd`/`Bytes`/`IoError` undeclared in
     // the cut -- falls where a whole unit would not. `N004` (the named
-    // assumption is declared nowhere in the excerpt) and `N061` (the `or
+    // assumption is declared nowhere in the excerpt) and `N067` (the `or
     // IoError` channel has no `reason` in the excerpt) are CORRECT here for the
     // same reason `M126` is two entries up: in the full unit the names
     // resolve, in the excerpt they do not.
-    "N004", "N061",
+    "N004", "N067",
 ];
 
 #[test]

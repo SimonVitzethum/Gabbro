@@ -1,4 +1,4 @@
--- erwartet: N061
+-- erwartet: N067
 -- **Gift 804 -- an errno mapped to a reason the channel never declares.**
 --
 -- `QuotenFehler` is no case of `IoError`. The generated decoding would carry a

@@ -1,9 +1,9 @@
--- erwartet: N061
+-- erwartet: N067
 -- **Gift 812 -- an errors map with no channel has nowhere to deliver.**
 --
 -- The arms name targets, but the signature declares no `or R` -- so no arm has
 -- a declared target, and the map falls once (not once per arm), by name. Same
--- rule as gifts 804/811 (`N061`): one rule, and each probe pins one of its
+-- rule as gifts 804/811 (`N067`): one rule, and each probe pins one of its
 -- directions.
 
 module gift::syscall_ohne_kanal {

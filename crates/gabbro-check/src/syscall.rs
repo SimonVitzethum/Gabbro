@@ -9,12 +9,12 @@
 //!
 //! | code | rule | probe |
 //! |---|---|---|
-//! | `N057` | the in-registers are pairwise distinct | gift: duplicate in-register |
-//! | `N058` | an out register is never clobbered | gift: clobbered out-register |
-//! | `N059` | every parameter is bound exactly once | gift: unbound parameter |
-//! | `N060` | every named register is an x86_64 general register | gift: unknown register |
-//! | `N061` | the `errors` map is total over the listed errnos and every target is a case of the `or R` channel | gift: errno mapped to an undeclared reason |
-//! | `N062` | a `kernel` pairing is refused until the pairing check lands | gift: kernel path |
+//! | `N063` | the in-registers are pairwise distinct | gift: duplicate in-register |
+//! | `N064` | an out register is never clobbered | gift: clobbered out-register |
+//! | `N065` | every parameter is bound exactly once | gift: unbound parameter |
+//! | `N066` | every named register is an x86_64 general register | gift: unknown register |
+//! | `N067` | the `errors` map is total over the listed errnos and every target is a case of the `or R` channel | gift: errno mapped to an undeclared reason |
+//! | `N068` | a `kernel` pairing is refused until the pairing check lands | gift: kernel path |
 //! | `A006` | the syscall names no sealed architecture -- x86_64 only | gift: arch mismatch |
 //!
 //! Three questions belong to existing rules and are NOT re-issued here: the
@@ -46,14 +46,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **`N057`/`N058`/`N059`/`N060` -- the register map is well-formed.**
+/// **`N063`/`N064`/`N065`/`N066` -- the register map is well-formed.**
 ///
 /// Four refusals, one walk, in clause order: unknown registers first (a name
 /// the ABI table does not know poisons every later question about it), then
 /// the duplicate in-register, the clobbered out-register and the parameter
 /// binding. Each code has exactly one issuance site in this file.
 fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
-    // **N060 -- every named register is an x86_64 general register.**
+    // **N066 -- every named register is an x86_64 general register.**
     for (reg, wo) in s
         .regs_in
         .iter()
@@ -64,7 +64,7 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
         if !REGISTER.contains(&reg.text.as_str()) {
             absagen.schiebe(
                 Absage::fehler(
-                    "N060",
+                    "N066",
                     reg.span,
                     format!(
                         "`{}` names `{}` in `{}`, and that is no x86_64 general register",
@@ -79,13 +79,13 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
             );
         }
     }
-    // **N057 -- the in-registers are pairwise distinct.**
+    // **N063 -- the in-registers are pairwise distinct.**
     let mut gesehen: HashMap<&str, gabbro_syntax::span::Span> = HashMap::new();
     for (reg, _) in &s.regs_in {
         if let Some(erste) = gesehen.get(reg.text.as_str()) {
             absagen.schiebe(
                 Absage::fehler(
-                    "N057",
+                    "N063",
                     reg.span,
                     format!(
                         "`{}` binds `{}` twice in `regs in`",
@@ -102,12 +102,12 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
             gesehen.insert(reg.text.as_str(), reg.span);
         }
     }
-    // **N058 -- an out register is never clobbered.**
+    // **N064 -- an out register is never clobbered.**
     for r in &s.regs_out {
         if let Some(c) = s.clobbers.iter().find(|c| c.text == r.text) {
             absagen.schiebe(
                 Absage::fehler(
-                    "N058",
+                    "N064",
                     c.span,
                     format!(
                         "`{}` carries `{}` out and lists it under `clobbers`",
@@ -122,7 +122,7 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
             );
         }
     }
-    // **N059 -- every parameter is bound exactly once.**
+    // **N065 -- every parameter is bound exactly once.**
     let mut bindungen: HashMap<&str, usize> = HashMap::new();
     for (_, p) in &s.regs_in {
         *bindungen.entry(p.text.as_str()).or_default() += 1;
@@ -132,7 +132,7 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
             1 => {}
             0 => absagen.schiebe(
                 Absage::fehler(
-                    "N059",
+                    "N065",
                     p.name.span,
                     format!(
                         "`{}` never binds parameter `{}` to a register",
@@ -146,7 +146,7 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
             ),
             n => absagen.schiebe(
                 Absage::fehler(
-                    "N059",
+                    "N065",
                     p.name.span,
                     format!(
                         "`{}` binds parameter `{}` to {n} registers",
@@ -164,7 +164,7 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
         if !s.parameter.iter().any(|q| q.name.text == p.text) {
             absagen.schiebe(
                 Absage::fehler(
-                    "N059",
+                    "N065",
                     p.span,
                     format!(
                         "`{}` binds `{}` to a register, and no parameter is so named",
@@ -180,7 +180,7 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
     }
 }
 
-/// **`N061` -- the `errors` map is total over the listed errnos.**
+/// **`N067` -- the `errors` map is total over the listed errnos.**
 ///
 /// Four ways of failing, ONE issuance site below: a target outside the declared
 /// `or R` channel, a channel that is not declared here at all, a map with no
@@ -264,7 +264,7 @@ fn fehlertabelle(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Ab
     for f in fehler {
         absagen.schiebe(
             Absage::fehler(
-                "N061",
+                "N067",
                 f.span,
                 format!(
                     "`{}` mistargets its `errors` map -- {}",
@@ -280,10 +280,10 @@ fn fehlertabelle(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Ab
     }
 }
 
-/// **`A006`/`N062` -- the machine and the counterpart.**
+/// **`A006`/`N068` -- the machine and the counterpart.**
 ///
 /// `A006`: the syscall names no sealed architecture -- x86_64 only, as the
-/// whole emitter is. `N062`: a `kernel` pairing is refused until the pairing
+/// whole emitter is. `N068`: a `kernel` pairing is refused until the pairing
 /// check and the stub land (lane S6) -- with its own name, never silence.
 fn bauart(s: &SyscallDecl, absagen: &mut Absagen) {
     if s.arch.text != "x86_64" {
@@ -305,7 +305,7 @@ fn bauart(s: &SyscallDecl, absagen: &mut Absagen) {
     if let SyscallPaarung::Kernel { pfad } = &s.paarung {
         absagen.schiebe(
             Absage::fehler(
-                "N062",
+                "N068",
                 pfad.span,
                 format!(
                     "`{}` pairs with kernel `{}`, and kernel pairing not implemented yet",

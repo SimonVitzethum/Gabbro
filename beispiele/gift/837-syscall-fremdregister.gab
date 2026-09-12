@@ -1,4 +1,4 @@
--- erwartet: N060
+-- erwartet: N066
 -- **Gift 809 -- a binding outside the general registers has no ABI slot.**
 --
 -- `xmm0` is a floating-point register; no Linux syscall argument travels in

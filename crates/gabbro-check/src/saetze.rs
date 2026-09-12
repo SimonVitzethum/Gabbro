@@ -2543,14 +2543,14 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "syscall.erklaerung",
-        kennungen: &["N057", "N058", "N059", "N060", "N061", "N062", "A006"],
+        kennungen: &["N063", "N064", "N065", "N066", "N067", "N068", "A006"],
         aussage: "A `syscall` declaration holds its own shape: the in-registers are \
-                  pairwise distinct (`N057`), no out register is clobbered (`N058`), \
+                  pairwise distinct (`N063`), no out register is clobbered (`N064`), \
                   every parameter is bound to exactly one register and every binding \
-                  names a parameter (`N059`), every named register is an x86_64 general \
-                  register (`N060`), the `errors` map answers every listed errno once \
-                  and every target is a case of the declared `or R` channel (`N061`), a \
-                  `kernel` pairing is refused until the pairing check lands (`N062`), \
+                  names a parameter (`N065`), every named register is an x86_64 general \
+                  register (`N066`), the `errors` map answers every listed errno once \
+                  and every target is a case of the declared `or R` channel (`N067`), a \
+                  `kernel` pairing is refused until the pairing check lands (`N068`), \
                   and the declaration names no sealed architecture (`A006`, x86_64 \
                   only). The `arch` against the declared arches (`A005`) and the named \
                   assumption (`N004`/`N005` shape) are sentences of their own, and the \
@@ -2565,8 +2565,8 @@ pub const PHASEN: &[Satz] = &[
                     every unit carrying a syscall (`C001`) until the stub lands.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes `802`/`803`/`807`/`808`/`809` on \
-                      `N057`/`N058`/`H007`/`N059`/`N060`, `804`/`811`/`812` on the three \
-                      directions of `N061`, `806` on `N062`, `805` on `A005` and `810` \
+                      `N063`/`N064`/`H007`/`N065`/`N066`, `804`/`811`/`812` on the three \
+                      directions of `N067`, `806` on `N068`, `805` on `A005` and `810` \
                       on `A006`; beispiele/74 checks clean and falls only at the \
                       emitter (`C001`, pinned by gift 797).",
         fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",

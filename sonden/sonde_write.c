@@ -27,7 +27,7 @@
  *
  * What it does NOT assert: timing (no date is declared here), `EINTR` and
  * `EAGAIN` (no signal and no non-blocking descriptor stand on this bench --
- * those arms are covered by shape (`N061`), not by this run), and any
+ * those arms are covered by shape (`N067`), not by this run), and any
  * descriptor but a pipe.
  *
  * POSITIVE CONTROL (R14)

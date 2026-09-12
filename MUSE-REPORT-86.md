@@ -16,10 +16,10 @@ still an entry).
 
 **Checker** (new pass `crates/gabbro-check/src/syscall.rs`, wired in `lib.rs`
 as a helper pass like `geteilt`):
-`N057` duplicate in-register, `N058` out register clobbered, `N059` every
-parameter bound exactly once (3 sub-cases, 1 code), `N060` only x86_64 general
-registers (the 16 GPRs), `N061` errors map total (4 directions, ONE issuance
-site), `N062` `kernel` refused ("kernel pairing not implemented yet"),
+`N063` duplicate in-register, `N064` out register clobbered, `N065` every
+parameter bound exactly once (3 sub-cases, 1 code), `N066` only x86_64 general
+registers (the 16 GPRs), `N067` errors map total (4 directions, ONE issuance
+site), `N068` `kernel` refused ("kernel pairing not implemented yet"),
 `A006` sealed arch (anything but `x86_64`). Reused existing codes in
 `namen.rs`: `A005` (syscall arch against declared arches, R16 preserved),
 `N004`/`N005` (named assumption declared and falsifiable), `N001` duplicates
@@ -44,10 +44,10 @@ recomputed (eleven->twelve newest, stress 87->94, same standing rules).
 
 **Probes**: `beispiele/74-syscall-schreiben.gab` (checks clean incl. a call,
 falls only at emit with exactly one `C001`); gift `797` rewritten to pin the
-`C001` emission refusal (was `P042`); new poison `802` (`N057`), `803`
-(`N058`), `804` (`N061` target), `805` (`A005`), `806` (`N062`), `807`
-(`H007` via syscall, mirrors `796`), `808` (`N059`), `809` (`N060`), `810`
-(`A006`), `811` (`N061` dup errno), `812` (`N061` no channel), `813`
+`C001` emission refusal (was `P042`); new poison `802` (`N063`), `803`
+(`N064`), `804` (`N067` target), `805` (`A005`), `806` (`N068`), `807`
+(`H007` via syscall, mirrors `796`), `808` (`N065`), `809` (`N066`), `810`
+(`A006`), `811` (`N067` dup errno), `812` (`N067` no channel), `813`
 (`N004` via syscall).
 
 **Documents**: `SYNTAX.md` §12.1 + §1 + State table (P042 wording replaced,
@@ -60,7 +60,7 @@ code names added, `sonde_write` in the example); `SONDENDECKUNG.md` (row 51,
 
 - `ast.rs`: `SyscallDecl`, `SyscallPaarung`, `ItemArt::Syscall`.
 - `syscall.rs`: `pass`, `registerkarte`, `fehlertabelle`, `bauart`,
-  `REGISTER`; codes `N057 N058 N059 N060 N061 N062 A006`.
+  `REGISTER`; codes `N063 N064 N065 N066 N067 N068 A006`.
 - `saetze.rs`: `syscall.erklaerung` (replaces `parser.syscall-bevor-s5`).
 - Extended (no new codes): `A005`/`N004`/`N005`/`N001`/`N028`/`N029`/`H007`/
   `E008` (graph)/`K003` (same-as-extern)/`C001` for syscalls.
@@ -121,7 +121,7 @@ code names added, `sonde_write` in the example); `SONDENDECKUNG.md` (row 51,
    machinery, which is where the tree decided it lives.
 3. **`errors` "total over the listed errnos"** is vacuous as written (the map
    itself lists them); the checkable content is exactly-one-arm-per-errno
-   plus channel membership, which is what `N061` holds.
+   plus channel membership, which is what `N067` holds.
 4. **Stale prose found, not mine, left alone**: SONDENDECKUNG "Six rows"
    (17 P4 rows), TODO deutsch/Verweise drifts, emission marks, PLAN "four
    buckets over all 45". Touched only booked numbers my lane moves.

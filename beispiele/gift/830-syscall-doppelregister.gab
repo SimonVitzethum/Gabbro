@@ -1,4 +1,4 @@
--- erwartet: N057
+-- erwartet: N063
 -- **Gift 802 -- two parameters in one register have no reading.**
 --
 -- `rdi` is bound twice in `regs in`. The stub writes the register once, and one

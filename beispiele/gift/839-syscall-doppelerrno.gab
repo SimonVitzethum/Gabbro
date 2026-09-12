@@ -1,9 +1,9 @@
--- erwartet: N061
+-- erwartet: N067
 -- **Gift 811 -- every listed errno has exactly one arm.**
 --
 -- `EBADF` stands twice. A total map answers each admitted errno once -- the
 -- second arm decides nothing -- so the second arm falls, by name. Same rule as
--- gift 804 (`N061`): one rule, and each probe pins one of its directions.
+-- gift 804 (`N067`): one rule, and each probe pins one of its directions.
 
 module gift::syscall_doppelerrno {
 

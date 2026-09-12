@@ -390,7 +390,7 @@ fn syscall_wird_gelesen() {
          errors { EBADF => BadFd } effects { pure } \
          assume linux_write_contract falsifier probe_write;",
     );
-    // The `kernel` counterpart reads too (the checker refuses it as `N062`).
+    // The `kernel` counterpart reads too (the checker refuses it as `N068`).
     faellt_nicht(
         "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
          regs in { rdi = fd } regs out { rax } clobbers { rcx } \

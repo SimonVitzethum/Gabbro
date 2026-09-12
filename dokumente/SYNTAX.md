@@ -171,7 +171,7 @@ the vocabulary — identifiers in a fixed position, counted and named by the gua
 **The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors` and `kernel` are
 words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
 side carries them through `syscalldecl`, and a `syscall` item has been checked
-since lane S5 (`N057`-`N062`, `A005`/`A006`; emission refused as `C001` until the
+since lane S5 (`N063`-`N068`, `A005`/`A006`; emission refused as `C001` until the
 lane-S6 stub lands). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
@@ -227,7 +227,7 @@ entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 (* Checked since lane S5 («SS-1», §12.1): the user side of a
    system call. The checker holds the declaration against its own shape
-   (`N057`-`N062`, `A005`/`A006`) and refuses the emission as `C001` until
+   (`N063`-`N068`, `A005`/`A006`) and refuses the emission as `C001` until
    the lane-S6 stub lands;
    the grammar below is the surface the checker, the emitter ruling and the corpus
    example (§12.1) are written against. *)
@@ -1353,17 +1353,17 @@ they point at stands in §1 beside `entrydecl`.
   **x86_64 only** — `aarch64` stays sealed (`A006`).
 * **register map** — `regs in` / `regs out` / `clobbers` carry the same checks
   as `entry` (`G4`, `G7` at `entrydecl`): the in-registers are pairwise
-  distinct (`N057`), no out register is clobbered (`N058`), every parameter is
-  bound exactly once (`N059`), and every named register is one of the sixteen
-  x86_64 general registers (`N060`); `clobbers` may be empty.
+  distinct (`N063`), no out register is clobbered (`N064`), every parameter is
+  bound exactly once (`N065`), and every named register is one of the sixteen
+  x86_64 general registers (`N066`); `clobbers` may be empty.
 * **error map** — `errors` is a total map from the errnos the contract admits
   to the declared reasons (`or R`): every admitted errno has exactly one arm,
-  every target is a case of the declared channel (`N061`). The decoding is
+  every target is a case of the declared channel (`N067`). The decoding is
   generated; an errno outside the table is `hardware (annahme a)` — the kernel
   answered outside its contract.
 * **`assume … falsifier …` or `kernel <path>`** — with `kernel`, the call is
   paired with a Gabbro kernel's dispatch `entry` for the same `number` and no
-  assumption is named (refused as `N062` until the pairing check lands); with
+  assumption is named (refused as `N068` until the pairing check lands); with
   `assume`, the per-call assumption is named with its falsifier, as for a
   device (`N004`/`N005` shape).
 
