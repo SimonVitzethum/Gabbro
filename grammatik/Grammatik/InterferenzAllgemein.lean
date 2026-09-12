@@ -1862,3 +1862,352 @@ theorem serial_chain_from_run (Nb : Nebeneinander)
 #print axioms Gabbro.Grammatik.serial_chain_from_run
 
 end Gabbro.Grammatik
+
+/-! ## 23. Eval reads only memory: the hMem engine (o02-hmem)
+
+    The finding (SEV1, two checkers): `spec_aus_fuehrung_schritt` (`Maschine.lean`)
+    carries `hMem : SpeicherVertrag Pre Post` on both legs of the spec step --
+    lock steps go through memory constancy plus memory-only contracts -- but the
+    discharge for `QRequires` / `QEnsures` was open: the per-expression induction
+    showing `eval` reads only slots and globals lives downstream where the
+    contract instantiation lives (§19 R1 books exactly this cut), while
+    `LesenStabil.lean` holds only the `HaengtAb` frame side
+    (`haengtAb_requires_bei_Lesen`, `haengtAb_ensures_bei_Lesen`,
+    `requiresStabil_schritt`, `ensuresStabil_schritt`).
+
+    What this section proves (no `sorry`, no `admit`, no `axiom`):
+
+    * `eval_liest_nur_speicher` (plus `evalNutz_liest_nur_speicher`, mutual):
+      `eval` agrees on worlds that agree on all slots and all globals -- the
+      entry pair and the present pair separately, so `old(...)` (which reads
+      the entry world) is covered. The induction is over `eval` itself, case
+      for case; the three non-trivial leaves carry local helpers
+      (`speicher_bytesAb_gleich`, `speicher_kette_gleich`,
+      `speicher_list_all_congr` / `speicher_list_any_congr`), proved here
+      because their downstream twins (`bytesAb_gleich`, `kette_gleich`,
+      `list_all_congr`, `list_any_congr` in `Extraktion.lean`) are not
+      importable upstream.
+    * `eval_liest_nur_speicher_diag`: the diagonal both worlds read at once --
+      the exact shape a `SpeicherVertrag` instance consumes.
+
+    Import honesty (read, not worked around): this file is imported BY
+    `Maschine.lean` (home of `SpeicherVertrag` / `World.speicher`) and BY
+    `Extraktion.lean` (home of `QRequires` / `QEnsures` / `eval_liest_nur_orte`),
+    and `LesenStabil.lean` imports `Extraktion.lean` -- so none of those names
+    is citable here without a cycle. Reuse of the `LesenStabil` `HaengtAb`
+    lemmas is therefore shape-level: those lemmas say contracts hang on their
+    read frame; this section says `eval` hangs on memory; the conjunction --
+    `SpeicherVertrag` over `QRequires` / `QEnsures` -- folds the two
+    downstream, where all three names are visible.
+
+    Coverage (exactly): every `Expr` constructor (including `durch`, which never
+    evaluates its pointer, and `reaches` / `forallSlots` / `existsSlots` /
+    `leseBytes`, which read whole columns), plus both `NutzlastExpr` shapes.
+    Every premise is load-bearing: `hS` fires on `slot`, `durch`, `leseBytes`
+    and `reaches`; `hG` on `glob`; `h0S` on `altSlot`; `h0G` on `altGlob`.
+
+    Remainder (named, not hidden):
+
+    * The `SpeicherVertrag` instance over `QRequires` / `QEnsures` itself --
+      unfolding a `World.speicher` equality into the four slot/glob agreements
+      above and folding the contract predicates over the diagonal -- belongs
+      downstream (the `Maschine.lean` / `Extraktion.lean` direction), owned by
+      whoever touches those files. This section is the engine; the binder is
+      not here.
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- `bytesAb` reads only its column: equal columns give equal bytes. -/
+theorem speicher_bytesAb_gleich {t : D.Tab} {f : D.Feld t} {hf : D.typ t f = .int 0 255}
+    {σ σ' : World D}
+    (h : ∀ k f', σ.slots t k f' = σ'.slots t k f')
+    (n : Nat) (k : Int) :
+    σ.bytesAb t f hf n k = σ'.bytesAb t f hf n k := by
+  induction n generalizing k with
+  | zero => rfl
+  | succ n ih =>
+      simp only [World.bytesAb]
+      rw [h k f, ih]
+
+/-- `kette` reads only its `weiter` column: equal columns, equal reachability. -/
+theorem speicher_kette_gleich {n : Int} {weiter weiter' : Int → Option (Zahl 0 (n - 1))}
+    (fuel : Nat) (k ziel : Int)
+    (h : ∀ k, weiter k = weiter' k) :
+    kette weiter fuel k ziel = kette weiter' fuel k ziel := by
+  induction fuel generalizing k with
+  | zero => rfl
+  | succ fuel ih =>
+      show (if k = ziel then true
+          else match weiter k with
+          | none => false
+          | some m => kette weiter fuel m.n ziel) =
+        (if k = ziel then true
+          else match weiter' k with
+          | none => false
+          | some m => kette weiter' fuel m.n ziel)
+      by_cases hk : k = ziel
+      · simp [hk]
+      · simp only [if_neg hk]
+        rw [h k]
+        cases hm : weiter' k with
+        | none => rfl
+        | some m => exact ih _
+
+/-- Pointwise equal predicates count equal (`all`). -/
+theorem speicher_list_all_congr {α : Type} {l : List α} {p q : α → Bool}
+    (h : ∀ x ∈ l, p x = q x) : l.all p = l.all q := by
+  induction l with
+  | nil => rfl
+  | cons x xs ih =>
+      have hx : p x = q x := h x List.mem_cons_self
+      have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
+      simp [List.all_cons, hx, ih']
+
+/-- Pointwise equal predicates count equal (`any`). -/
+theorem speicher_list_any_congr {α : Type} {l : List α} {p q : α → Bool}
+    (h : ∀ x ∈ l, p x = q x) : l.any p = l.any q := by
+  induction l with
+  | nil => rfl
+  | cons x xs ih =>
+      have hx : p x = q x := h x List.mem_cons_self
+      have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
+      simp [List.any_cons, hx, ih']
+
+mutual
+
+/-- **The memory-footprint stone, upstream:** `eval` reads only slots and
+    globals. Worlds that agree on every slot and every global -- at entry and
+    at present separately -- give `eval` the same value. The entry pair covers
+    `old(...)`; the trace never matters. -/
+theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ)
+    (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hG : ∀ g : D.Glob, σ.globs g = σ'.globs g)
+    (h0S : ∀ t : D.Tab, ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
+    (h0G : ∀ g : D.Glob, σ₀.globs g = σ₀'.globs g) :
+    eval σ₀ e σ ρ = eval σ₀' e σ' ρ := by
+  match e with
+  | .lit _ => rfl
+  | .wahr => rfl
+  | .falsch => rfl
+  | .var _ => rfl
+  | .ptrOf _ _ _ _ => rfl
+  | .fnref _ _ _ => rfl
+  | .none _ => rfl
+  | .grund _ _ => rfl
+  | .glob g _ =>
+      simp only [eval]
+      exact hG g
+  | .altGlob g _ =>
+      simp only [eval]
+      exact h0G g
+  | .slot t f i _ =>
+      have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval, hi]
+      exact hS t _ _
+  | .altSlot t f i _ =>
+      have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval, hi]
+      exact h0S t _ _
+  | .durch _ t _ f i _ =>
+      have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval, hi]
+      exact hS t _ _
+  | .weiter _ _ e =>
+      have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [h]
+  | .neg a =>
+      have h := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [h]
+  | .nicht a =>
+      have h := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [h]
+  | .some e =>
+      have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [h]
+  | .istSome e =>
+      have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [h]
+  | .fall _ _ nutz =>
+      have hn := evalNutz_liest_nur_speicher nutz σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [hn]
+  | .add a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .sub a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .mul a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .div _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .rem _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .sdiv _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .srem _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .band _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .bor _ _ _ _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .bxor _ _ _ _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .shl _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .shr _ _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .lt a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .le a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .eq a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .fllt a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .flle a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .und a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .oder a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .leseBytes t f hf n i _ _ _ =>
+      have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb : σ.bytesAb t f hf n (eval σ₀' i σ' ρ).n =
+          σ'.bytesAb t f hf n (eval σ₀' i σ' ρ).n :=
+        speicher_bytesAb_gleich (fun k f' => hS t k f') n _
+      -- `simp only` rewrites under the dependent tuple proofs (where `rw`
+      -- fails the motive check) but leaves the proof-irrelevant rest: `rfl`.
+      simp only [eval, hi, hb]
+      rfl
+  | .forallSlots t body _ =>
+      have hbody : ∀ k : Wert D (.index (D.count t)),
+          k ∈ alleIndizes (D.count t) →
+          wahr? (eval σ₀ body σ (.cons k ρ)) =
+            wahr? (eval σ₀' body σ' (.cons k ρ)) := by
+        intro k _
+        exact congrArg wahr? (eval_liest_nur_speicher body σ₀ σ₀' σ σ' (.cons k ρ)
+          hS hG h0S h0G)
+      simp only [eval]
+      exact speicher_list_all_congr hbody
+  | .existsSlots t body _ =>
+      have hbody : ∀ k : Wert D (.index (D.count t)),
+          k ∈ alleIndizes (D.count t) →
+          wahr? (eval σ₀ body σ (.cons k ρ)) =
+            wahr? (eval σ₀' body σ' (.cons k ρ)) := by
+        intro k _
+        exact congrArg wahr? (eval_liest_nur_speicher body σ₀ σ₀' σ σ' (.cons k ρ)
+          hS hG h0S h0G)
+      simp only [eval]
+      exact speicher_list_any_congr hbody
+  | .reaches t f hf a b _ =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hw : ∀ k, (fun k => hf ▸ σ.slots t k f) k =
+          (fun k => hf ▸ σ'.slots t k f) k := by
+        intro k
+        show (hf ▸ σ.slots t k f) = (hf ▸ σ'.slots t k f)
+        rw [hS t k f]
+      simp only [eval]
+      rw [ha, hb]
+      exact speicher_kette_gleich _ _ _ hw
+
+/-- The payload reads only its places: the second half of the stone. -/
+theorem evalNutz_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+    (nutz : NutzlastExpr D Γ Λ c)
+    (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hG : ∀ g : D.Glob, σ.globs g = σ'.globs g)
+    (h0S : ∀ t : D.Tab, ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
+    (h0G : ∀ g : D.Glob, σ₀.globs g = σ₀'.globs g) :
+    evalNutz σ₀ nutz σ ρ = evalNutz σ₀' nutz σ' ρ := by
+  match nutz with
+  | .keine => rfl
+  | .zahl e =>
+      have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [evalNutz]
+      rw [h]
+
+end
+
+/-- **The diagonal a `SpeicherVertrag` instance consumes:** where both the entry
+    and the present world are read at once, one memory agreement suffices. Both
+    premises fire twice (entry and present side). -/
+theorem eval_liest_nur_speicher_diag {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ)
+    (σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hG : ∀ g : D.Glob, σ.globs g = σ'.globs g) :
+    eval σ e σ ρ = eval σ' e σ' ρ :=
+  eval_liest_nur_speicher e σ σ' σ σ' ρ hS hG hS hG
+
+#print axioms Gabbro.Grammatik.eval_liest_nur_speicher
+#print axioms Gabbro.Grammatik.evalNutz_liest_nur_speicher
+#print axioms Gabbro.Grammatik.eval_liest_nur_speicher_diag
+
+end Gabbro.Grammatik
