@@ -1020,6 +1020,20 @@ impl<'a> Rechner<'a> {
                 .iter()
                 .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
         }
+        // **Bit intrinsics (PLAN-BITS §3): a language primitive, not a callee,
+        // and the cost is fixed the way a conversion's is.** There is no
+        // declaration to carry a `costs` clause, so without this branch every
+        // `clz(x)` fell into `K003` -- true and unhelpful, since no declaration
+        // will ever name it (`namen.rs` refuses one as `N058`). One primitive
+        // op, `SPRACHE.md` §7's unit -- the emitted form is a single
+        // `__builtin_*` expression or one `gabbro_rot*` helper call
+        // (`emit.rs::ruf`), plus the cost of the arguments themselves.
+        if crate::ist_bitintrinsik(&name) {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
+        }
         // **«B7»: ein Verbundwert ist ein Konstruktor, und seine Kosten stehen fest.**
         //
         // Die bewiesene Schablone sagt, WAS er tut: *setzt jedes Feld genau einmal und laesst

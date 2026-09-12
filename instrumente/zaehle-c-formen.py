@@ -602,6 +602,32 @@ KATALOG = {
     "__attribute__": ("Sonstiges", U, "lex", "auf keiner Liste -- eine GNU-Erweiterung", None),
     "__builtin_unreachable": ("Sonstiges", U, "lex",
                               "auf keiner Liste -- GNU, und sie sagt `hier ist es UB`", None),
+    # **Bit intrinsics (PLAN-BITS §3, lane 87): the lowerings `emit.rs::intrinsik_c`
+    # writes.** Like `__builtin_unreachable` above: on NEITHER list (stand `U`),
+    # counted per name from the day they are used. No versioned `.gab` uses them
+    # -- they arrive with the lane's inline probes only, never as a file -- so
+    # both marks stand unchanged: this classifies the forms, it does not book a
+    # rise. The day a versioned unit rotates, the form shows up under `C2`
+    # instead of `UNBEKANNT`, which is the same movement `__builtin_unreachable`
+    # already made.
+    "__builtin_clz": ("Sonstiges", U, "lex",
+                      "auf keiner Liste -- GNU, `clz` der PLAN-BITS-Intrinsik", None),
+    "__builtin_clzll": ("Sonstiges", U, "lex",
+                        "auf keiner Liste -- GNU, `clz` ueber 64 Bit", None),
+    "__builtin_ctz": ("Sonstiges", U, "lex",
+                      "auf keiner Liste -- GNU, `ctz` der PLAN-BITS-Intrinsik", None),
+    "__builtin_ctzll": ("Sonstiges", U, "lex",
+                        "auf keiner Liste -- GNU, `ctz` ueber 64 Bit", None),
+    "__builtin_popcount": ("Sonstiges", U, "lex",
+                           "auf keiner Liste -- GNU, `popcount` der PLAN-BITS-Intrinsik", None),
+    "__builtin_popcountll": ("Sonstiges", U, "lex",
+                             "auf keiner Liste -- GNU, `popcount` ueber 64 Bit", None),
+    "__builtin_bswap16": ("Sonstiges", U, "lex",
+                          "auf keiner Liste -- GNU, `bswap` ueber 16 Bit", None),
+    "__builtin_bswap32": ("Sonstiges", U, "lex",
+                          "auf keiner Liste -- GNU, `bswap` ueber 32 Bit", None),
+    "__builtin_bswap64": ("Sonstiges", U, "lex",
+                          "auf keiner Liste -- GNU, `bswap` ueber 64 Bit", None),
     "__typeof__": ("Sonstiges", U, "lex", "auf keiner Liste -- eine GNU-Erweiterung", None),
     "_Static_assert": ("Sonstiges", U, "lex", "auf keiner Liste (aber `BEWEIS.md` §3 will es)", None),
     "_Alignas": ("Sonstiges", U, "lex", "auf keiner Liste", None),
@@ -624,6 +650,11 @@ NAME_FORM = {
     "volatile": "volatile", "_Atomic": "_Atomic", "_Noreturn": "_Noreturn",
     "restrict": "restrict", "const": "const", "inline": "inline",
     "__attribute__": "__attribute__", "__builtin_unreachable": "__builtin_unreachable",
+    "__builtin_clz": "__builtin_clz", "__builtin_clzll": "__builtin_clzll",
+    "__builtin_ctz": "__builtin_ctz", "__builtin_ctzll": "__builtin_ctzll",
+    "__builtin_popcount": "__builtin_popcount", "__builtin_popcountll": "__builtin_popcountll",
+    "__builtin_bswap16": "__builtin_bswap16", "__builtin_bswap32": "__builtin_bswap32",
+    "__builtin_bswap64": "__builtin_bswap64",
     "__typeof__": "__typeof__", "typeof": "__typeof__", "_Static_assert": "_Static_assert",
     "_Alignas": "_Alignas", "_Thread_local": "_Thread_local", "register": "register",
     "auto": "auto", "asm": "asm", "__asm__": "asm", "__volatile__": "asm",
@@ -1157,6 +1188,7 @@ static void zzg(unsigned char *p, int n) {
     a = b = 7;                 /* geschachtelte Zuweisung */
     zzruf((a = 3));            /* Zuweisung im Ausdruck */
     c = (a, b);                /* Kommaoperator */
+    __builtin_clz(1);          /* ein benannter __builtin_*-Ruf ausserhalb von `unreachable` */
     p = p + n;                 /* Zeigerarithmetik */
     p[0] = 1;                  /* Index auf einem Zeiger */
     while (a) { a--; }
@@ -1171,9 +1203,9 @@ ERWARTET_POSITIV = {
     "?:": 0, "bitfeld": 2, "enum": 1, "varargs ...": 1, "void*": 1, "typedef": 1,
     "geschachtelte zuweisung": 1, "zuweisung im ausdruck": 1, "komma-operator": 1,
     "zeigerarithmetik": 1, "index auf zeiger": 1, "while": 1, "default": 1,
-    "sizeof": 1, "__builtin_unreachable": 1, "#ifdef": 1, "#endif": 2,
+    "sizeof": 1, "__builtin_unreachable": 1, "__builtin_clz": 1, "#ifdef": 1, "#endif": 2,
     "#if auf __GNUC__": 1, "#if aus `when`": 0,
-    "break": 1, "inkrement ++/--": 1, "ruf": 2,
+    "break": 1, "inkrement ++/--": 1, "ruf": 3,
 }
 
 

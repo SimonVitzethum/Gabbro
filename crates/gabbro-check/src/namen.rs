@@ -38,6 +38,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
+    intrinsik_name_vergeben(baum, absagen);
     library_call_not_checked(baum, absagen);
 }
 
@@ -279,6 +280,54 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
                  the table and its command stand in `messung/C-NAMEN.md`",
             )
             .mit_notiz(hinweis),
+        );
+    });
+}
+
+/// **`N058` -- a declaration carrying the name of a bit intrinsic.**
+///
+/// The seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, `rotr` and
+/// `bswap` are claimed calls (`m1.rs::intrinsik_ruf` types them, `emit.rs::ruf`
+/// lowers them): a call in that spelling never reaches a declared callee. A
+/// declaration of the same name would therefore stand uncalled -- not dead code
+/// the writer can find, but a callee the language routes around. That is the
+/// prohibition-without-replacement shape `opsruf.rs` documents: the call form
+/// was never missing, the callee it names would be.
+///
+/// The rule holds every named item except `module` and `use` (neither declares
+/// a name a call could reach), the same line `N041` draws. Locals and
+/// parameters keep the names: they are not callees, and the call form
+/// `clz(x)` types as the intrinsic the way `u64(a)` converts despite a local
+/// named `u64` -- the conversion precedent (`G9`), not a new distinction.
+fn intrinsik_name_vergeben(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if matches!(item.art, ItemArt::Modul(_) | ItemArt::Use(_)) {
+            return;
+        }
+        let Some(name) = item.art.name() else { return };
+        if !crate::ist_bitintrinsik(&name.text) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "N058",
+                name.span,
+                format!(
+                    "`{}` names a bit intrinsic -- a call in this spelling never \
+                     reaches a declaration",
+                    name.text
+                ),
+            )
+            .mit_notiz(
+                "the seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, \
+                 `rotr` and `bswap` are claimed calls: the checker types them \
+                 (`M157`-`M160`) and the emitter lowers them (`__builtin_*`, \
+                 `gabbro_rot*`) without asking any declaration",
+            )
+            .mit_notiz(
+                "rename the declaration -- the name is fine everywhere except at \
+                 an item, where it promises a callee the call form routes around",
+            ),
         );
     });
 }

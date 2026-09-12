@@ -1434,6 +1434,61 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs",
     },
     Satz {
+        name: "m1.bitintrinsik",
+        kennungen: &["M157", "M158", "M159", "M160"],
+        aussage: "The seven bit intrinsics (`clz`, `ctz`, `log2_floor`,
+                  `popcount`, `rotl`, `rotr`, `bswap`) are typed at the call:
+                  the nonzero group needs an operand whose range excludes zero
+                  (`M157`); every operand must be an unsigned standard width
+                  (`M158` for the unary group, `M159` for rotation, `M160` for
+                  swap); rotation needs the exact full `uN` range and an amount
+                  in `0 .. w-1` (`M159`); `bswap` needs `u16`, `u32` or `u64`
+                  (`M160`). Results are exact: `0 .. w-1` for the nonzero
+                  group, `0 .. w` for `popcount`, the full range for rotation
+                  and swap -- so the lowering reaches `__builtin_clz/ctz`
+                  only with a provably nonzero argument, whose undefined zero
+                  case stays unreachable.",
+        vorbehalt: "**Reads facts, not declarations**: a V1-narrowed `1 ..`
+                    stays silent beside an open `u32` that falls at `M157`.
+                    An `Unbekannt` operand stays silent (nothing to hold), and
+                    an empty range is `M117`'s at the declaration. The sentence
+                    says nothing about the C the call lowers to beyond the
+                    zero case -- that the counted width is the declared one is
+                    the emitter's own reading (`emit.rs::intrinsik_breite`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: one positive
+                      probe per intrinsic (checked, emitted, compiled under
+                      `cc` and `clang` with `-Wall -Wextra -Werror`, run under
+                      both optimisation levels) and three poison probes
+                      (`M157` on `u32`, `M159` on `u32 in 0 .. 5`, `M160` on
+                      `u8`), each falling with its code alone.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`intrinsik_ruf`,
+                      `intrinsik_bereich`); crates/gabbro-check/src/emit.rs
+                      (`intrinsik_c`, `DREH_C`)",
+    },
+    Satz {
+        name: "namen.bitintrinsik-name",
+        kennungen: &["N058"],
+        aussage: "No declaration carries the name of a bit intrinsic (`N058`):
+                  a call in one of the seven spellings never reaches a declared
+                  callee, so a declaration of the same name would stand
+                  uncalled -- a callee the language routes around. Locals and
+                  parameters keep the names: they are not callees, and the call
+                  form types as the intrinsic the way `u64(a)` converts despite
+                  a local named `u64`.",
+        vorbehalt: "**The rule holds items, not places.** A field or a local
+                    named `clz` stays legal; only the item -- the thing a call
+                    could resolve to -- is refused. It says nothing about
+                    qualified paths (`m::clz`), which are ordinary calls and
+                    fall where undeclared callees fall.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: a `fn clz`
+                      declaration falls with `N058` alone; the clean corpus
+                      carries none of the seven names at any item.",
+        fundstelle: "crates/gabbro-check/src/namen.rs
+                      (`intrinsik_name_vergeben`)",
+    },
+    Satz {
         name: "v1.bereichsverengung",
         kennungen: &["M108", "M109"],
         aussage: "A checked range condition narrows the range of the checked place in the \
