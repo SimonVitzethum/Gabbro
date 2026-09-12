@@ -215,10 +215,136 @@ theorem blatt_erhaelt_globs
       subst hstep
       rfl
 
-/-! ## CUTS: what is not proved here
-  - Skeleton only: `blatt_erhaelt_globs`, `sperre_exklusiv`,
-    `rely_aus_sperre`, `rely_aus_sperre_global` and both witnesses follow.
--/
+/-! ## 3. Lock exclusivity: two threads never hold the same lock -/
+
+/-- **Lock exclusivity over reachable machines.** If `f` holds `L` at a
+    machine reachable from a start machine, no other thread holds `L`
+    there. No such state-level lemma existed: `gen_ausschluss` /
+    `pc_ausschluss` (Maschine.lean) state `ForeignExclusion` over the
+    run (who takes a lock takes it while nobody else holds it *at that
+    position*); this lifts the scheduler rule to held-state
+    disjointness by induction over `GenErreichbar`:
+    - `blatt` keeps every held set (`blatt_brav`), so disjointness
+      pushes through;
+    - `nimmt L'` fires only while nobody else holds `L'` (`hfrei`):
+      the new `L'`-holding is either the fresh take (excluded
+      elsewhere by `hfrei`) or an old holding (exclusive by the
+      induction hypothesis);
+    - `gibt` only shrinks a held set.
+    Every premise is used: `hO` feeds `blatt_brav` in the leaf case,
+    `h` drives the induction. -/
+theorem sperre_exklusiv (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (M : GenMaschine D)
+    (h : GenErreichbar P O passes (GenStart sp) M)
+    (f g : Faden) (hfg : f ≠ g) (L : D.Lock)
+    (hLf : L ∈ offen (M.spuren f)) : L ∉ offen (M.spuren g) := by
+  revert f g hfg L hLf
+  induction h with
+  | start =>
+      intro f g hfg L hLf
+      have e : (GenStart sp).spuren f = [] := rfl
+      rw [e] at hLf
+      simp [offen] at hLf
+  | schritt M M' f0 _ hs ih =>
+      intro f g hfg L hLf
+      cases hs with
+      | blatt V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn =>
+          have hbrav := blatt_brav O passes hO M f0 V l Γ Λ Λ' s ρ hΛ σ' hstep
+          have hopen : offen σ'.spur = offen (M.spuren f0) := by
+            have e1 : σ'.haelt = offen σ'.spur := rfl
+            have e2 : (M.weltVon f0).haelt = offen (M.spuren f0) := rfl
+            rw [← e1, ← e2]
+            exact hbrav.1
+          by_cases hf0 : f = f0
+          · subst hf0
+            have hLf' : L ∈ offen (genUpdate M.spuren f σ'.spur f) := hLf
+            rw [genUpdate_self, hopen] at hLf'
+            have hgoal : L ∉ offen (genUpdate M.spuren f σ'.spur g) := by
+              rw [genUpdate_noteq _ _ _ (Ne.symm hfg)]
+              exact ih f g hfg L hLf'
+            exact hgoal
+          · have hLf' : L ∈ offen (genUpdate M.spuren f0 σ'.spur f) := hLf
+            rw [genUpdate_noteq _ _ _ hf0] at hLf'
+            by_cases hg0 : g = f0
+            · subst hg0
+              have hgoal : L ∉ offen (genUpdate M.spuren g σ'.spur g) := by
+                rw [genUpdate_self, hopen]
+                intro hcon
+                exact (ih g f (Ne.symm hf0) L hcon) hLf'
+              exact hgoal
+            · have hgoal : L ∉ offen (genUpdate M.spuren f0 σ'.spur g) := by
+                rw [genUpdate_noteq _ _ _ hg0]
+                exact ih f g hfg L hLf'
+              exact hgoal
+      | nimmt L' hself hrang hfrei =>
+          by_cases hf0 : f = f0
+          · subst hf0
+            have hLf' : L ∈ offen (genUpdate M.spuren f
+                (Ereignis.nimmt L' (offen (M.spuren f)) :: M.spuren f) f) := hLf
+            rw [genUpdate_self] at hLf'
+            simp only [offen, List.mem_cons] at hLf'
+            rcases hLf' with rfl | hLf'
+            · have hgoal : L ∉ offen (genUpdate M.spuren f
+                  (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f) g) := by
+                rw [genUpdate_noteq _ _ _ (Ne.symm hfg)]
+                exact hfrei g (Ne.symm hfg)
+              exact hgoal
+            · have hgoal : L ∉ offen (genUpdate M.spuren f
+                  (Ereignis.nimmt L' (offen (M.spuren f)) :: M.spuren f) g) := by
+                rw [genUpdate_noteq _ _ _ (Ne.symm hfg)]
+                exact ih f g hfg L hLf'
+              exact hgoal
+          · have hLf' : L ∈ offen (genUpdate M.spuren f0
+                (Ereignis.nimmt L' (offen (M.spuren f0)) :: M.spuren f0) f) := hLf
+            rw [genUpdate_noteq _ _ _ hf0] at hLf'
+            by_cases hg0 : g = f0
+            · subst hg0
+              have hgoal : L ∉ offen (genUpdate M.spuren g
+                  (Ereignis.nimmt L' (offen (M.spuren g)) :: M.spuren g) g) := by
+                rw [genUpdate_self]
+                simp only [offen, List.mem_cons]
+                intro hcon
+                rcases hcon with rfl | hcon
+                · exact (hfrei f hf0) hLf'
+                · exact (ih g f (Ne.symm hf0) L hcon) hLf'
+              exact hgoal
+            · have hgoal : L ∉ offen (genUpdate M.spuren f0
+                  (Ereignis.nimmt L' (offen (M.spuren f0)) :: M.spuren f0) g) := by
+                rw [genUpdate_noteq _ _ _ hg0]
+                exact ih f g hfg L hLf'
+              exact hgoal
+      | gibt L' hhaelt =>
+          by_cases hf0 : f = f0
+          · subst hf0
+            have hLf' : L ∈ offen (genUpdate M.spuren f
+                (Ereignis.gibt L' :: M.spuren f) f) := hLf
+            rw [genUpdate_self] at hLf'
+            simp only [offen] at hLf'
+            have hLf'' : L ∈ offen (M.spuren f) :=
+              List.mem_of_mem_erase hLf'
+            have hgoal : L ∉ offen (genUpdate M.spuren f
+                (Ereignis.gibt L' :: M.spuren f) g) := by
+              rw [genUpdate_noteq _ _ _ (Ne.symm hfg)]
+              exact ih f g hfg L hLf''
+            exact hgoal
+          · have hLf' : L ∈ offen (genUpdate M.spuren f0
+                (Ereignis.gibt L' :: M.spuren f0) f) := hLf
+            rw [genUpdate_noteq _ _ _ hf0] at hLf'
+            by_cases hg0 : g = f0
+            · subst hg0
+              have hgoal : L ∉ offen (genUpdate M.spuren g
+                  (Ereignis.gibt L' :: M.spuren g) g) := by
+                rw [genUpdate_self]
+                simp only [offen]
+                intro hcon
+                exact (ih g f (Ne.symm hf0) L
+                  (List.mem_of_mem_erase hcon)) hLf'
+              exact hgoal
+            · have hgoal : L ∉ offen (genUpdate M.spuren f0
+                  (Ereignis.gibt L' :: M.spuren f0) g) := by
+                rw [genUpdate_noteq _ _ _ hg0]
+                exact ih f g hfg L hLf'
+              exact hgoal
 
 #print axioms Gabbro.Grammatik.lese_globs_gleich
 #print axioms Gabbro.Grammatik.storeGlob_fremd_global
