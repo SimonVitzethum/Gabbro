@@ -140,7 +140,13 @@ NICHT = {"saetze.rs"}
 # rule IS -- exactly what `messung/PHASENKLASSE.md` decided the other way for `R009`.
 # **19 -> 20 on 2026-09-01: the object grew.** `OB4` issued `M137`, `M138` and `R012`;
 # one of them shares a prefix with an existing identifier and joins the candidate list.
-MARKE = 20
+# **20 -> 22 on 2026-09-12: two new rules with two dissimilar arms each.** `W003`
+# (lane C, 2026-09-10: declared concurrency from transitive hulls, both issuance
+# sites in `nebeneinander.rs`) and `P008` (lane 60, 2026-09-12: the uN/iN width
+# sugar added issuance sites to `parse.rs` beside the old integer-type one).
+# Measured against `d3d9ff4` (the 68-booking): exactly these two identifiers join
+# the list, no other. Both are new rules, not double issues of old ones.
+MARKE = 22
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -235,7 +241,13 @@ MARKE = 20
 # > compiles, and every one of the three refusals is the same rule biting on the same pair of
 # > types one step away from it. A probe that fell green under a broken `N030` would take the
 # > working file with it in the other direction, which the identifier alone cannot do.
-MARKE_PROBEN = 68
+# **68 -> 77 on 2026-09-12: nine correct probes inherit an old ambiguity.**
+# `706`/`707` (concurrency, on `W003`), `720`/`729`/`759` (on `H012`), `728` (on
+# `H011`), `783` (V2-subtraction, on `M104`), `799`/`800` (sugar widths, on `P008`).
+# `671`/`672` were renumbered to `673`/`674` in between, so the gross adds are nine
+# and the net is nine. No identifier became newly ambiguous; nine more probes point
+# at old ones. *The object grew, not the damage.*
+MARKE_PROBEN = 77
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 
