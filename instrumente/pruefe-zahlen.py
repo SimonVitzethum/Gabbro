@@ -584,7 +584,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r'\*\*(\d+) (?:von 23 Item-Arten|of 23 item kinds)\*\* (?:sind „gelesen"|are "read")',
+        r'\*\*(\d+) (?:von 27 Item-Arten|of 27 item kinds)\*\* (?:sind „gelesen"|are "read")',
         ["./instrumente/pruefe-konstrukte.py"],
         r"^\s+gelesen\s+(\d+)\s*$",
         "Item-Arten, die ein Pass anfasst",

@@ -247,14 +247,14 @@ profile {
 };
 }";
     let e = sammle(&baum(q));
-    assert_eq!(e.len(), 2, "zwei Schluessel, zwei Zeilen: {e:?}");
+    assert_eq!(e.len(), 2, "two keys, two lines: {e:?}");
     let arch = e.iter().find(|x| x.name == "profile.arch").expect("profile.arch");
     assert_eq!(arch.art, "profile");
     assert_eq!(arch.aussage, "arch x86_64");
     let fp = e.iter().find(|x| x.name == "profile.fp_contract").expect("fp_contract");
     assert!(
         fp.aussage.contains("-ffp-contract=off"),
-        "sagt der Profil `fp_contract off`, traegt das Manifest die Flagge: {}",
+        "where the profile says `fp_contract off`, the manifest carries the flag: {}",
         fp.aussage
     );
 }
@@ -280,12 +280,12 @@ impl fn f(a : u32) -> u32 effects { pure } costs <= 1 ops {
     assert_eq!(req.art, "requires");
     assert!(
         req.aussage.contains("required by library `lib`"),
-        "die Bibliothek steht in der Zeile: {}",
+        "the library stands in the line: {}",
         req.aussage
     );
     assert!(
         req.aussage.contains("`app::f` (1 call)"),
-        "der abhaengige Ruf steht in der Zeile: {}",
+        "the relying call stands in the line: {}",
         req.aussage
     );
 }
@@ -302,7 +302,7 @@ requires profile {
     let req = e.iter().find(|x| x.name == "lib#arch").expect("lib#arch");
     assert!(
         req.aussage.contains("no call in this unit"),
-        "ohne Ruf steht das dran, nicht nichts: {}",
+        "with no call that stands there instead of nothing: {}",
         req.aussage
     );
 }
@@ -324,7 +324,7 @@ requires profile {
     assert_eq!(
         req.klasse,
         Klasse::Falsifizierbar { sonde: "sonde_tick".into() },
-        "die Klasse laeuft mit: {:?}",
+        "the class travels along: {:?}",
         req.klasse
     );
     // And the declaration itself still stands as its own line -- the
@@ -347,6 +347,6 @@ requires profile {
 }";
     let e = sammle(&baum(q));
     let (menge, streit) = vereinige(e);
-    assert!(streit.is_empty(), "Verweis und Erklaerung sind kein Streit: {streit:?}");
+    assert!(streit.is_empty(), "reference and declaration are no dispute: {streit:?}");
     assert_eq!(menge.len(), 2, "zwei Zeilen: {menge:?}");
 }

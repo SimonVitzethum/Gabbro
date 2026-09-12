@@ -911,7 +911,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       eigenen Gegenstands.*
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
-      *(2026-08-19, nachgemessen 2026-08-20)*. **25 von 23 Item-Arten** sind „gelesen" —
+      *(2026-08-19, nachgemessen 2026-08-20)*. **27 von 27 Item-Arten** sind „gelesen" —
+      *(2026-09-12, lane E6: 25 → 27 gelesen — `Profil`/`ProfilBedarf`; die Grundgesamtheit
+      23 → 27 holt `Syscall`, `Concurrent` und die beiden Profilblöcke nach, mechanisch aus
+      `ast.rs` gelesen)* —
       **`ops` und `check` darunter**, obwohl keine ihrer Zusagen geprüft wird.
       `ItemArt::Check` wird nur angefasst, um in `can_fail` hineinzulaufen; `ops` steht als
       `!is_empty()` da. **Ein Konstrukt kann berührt werden, ohne dass eine einzige seiner
@@ -1327,8 +1330,8 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      167 EBNF-Regeln und 228 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
-      gegen sich selbst, nie den Parser gegen die Grammatik.* (2026-09-12, lane E2: 163 → 167 sind Wellendrift — `syscalldecl` u. a.; +2 Terminale sind `library`/`payload`, §7.1.) Ein Wächter für die Differenz
+      170 EBNF-Regeln und 233 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      gegen sich selbst, nie den Parser gegen die Grammatik.* (2026-09-12, lane E2: 163 → 167 sind Wellendrift — `syscalldecl` u. a.; +2 Terminale sind `library`/`payload`, §7.1.) (2026-09-12, lane E6: 167 → 170 — `profiledecl`, `requiresprofile`, `profileentry`; +5 Terminale sind `profile`/`rounding`/`fp_contract`/`memory_model`/`interrupt_routing`, §12.2.) Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
       *Das ist Bauarbeit am Parser, nicht am Wächter.* Bleibt offen.
@@ -1343,7 +1346,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       claims) or renaming (then every user carries the list in their head).
       **The compiler today admits words as names only after `.`/`->` and before `:`.**
        *Kein Messposten: die Zahlen (neun Wörter, elf Stellen) stehen, und `pruefe-wortschatz.py`
-      hält 228 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
+      hält 233 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
       in beiden Richtungen daneben.* Bleibt offen.
 
 - [ ] **Per template at least one mutation that falls ONLY if the once-obligation is really
@@ -4247,8 +4250,8 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 130 Sätze über 330 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
-Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane S6: +1 Satz mit fünf Codes, `syscall.stub` über `C180`-`C184`.) (2026-09-12, lane E2: +6 Sätze mit ihren Codes, `namen.bibliothek_ruf/-huelle/-nutzlast/-direktruf` über `N069`-`N061` und `parser.bibliothek-nutzlast/-rumpf` über `P043`/`P044`.)
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 135 Sätze über 335 Codes, 55 Codes noch ohne — `D017`/`D018` kamen am 2026-08-31 mit ihrem Satz `d.domaenenort` im selben Commit).**Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit— 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *285 → 289 Codes, 101 → 105 Sätze, 51 → 53 ohne am 2026-09-09:* `D025`/`D026`/`K011`/`K012` kamen mit ihren Sätzen im selben Commit. *Genau die Bewegung, für die der
+Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.* (2026-09-12, lane E1: heute 118 Sätze über 304 Codes — +1 Satz mit seinem Code, `namen.library_call` über `N057`.) (2026-09-12, lane S6: +1 Satz mit fünf Codes, `syscall.stub` über `C180`-`C184`.) (2026-09-12, lane E2: +6 Sätze mit ihren Codes, `namen.bibliothek_ruf/-huelle/-nutzlast/-direktruf` über `N069`-`N061` und `parser.bibliothek-nutzlast/-rumpf` über `P043`/`P044`.) (2026-09-12, lane E6: +5 Sätze mit ihren Codes, `namen.profil_schluessel/-namensgleichheit/-bindung/-plattform/-gestalt` über `N215`-`N219`.)
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -5111,7 +5114,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 167 / 228) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 170 / 233) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

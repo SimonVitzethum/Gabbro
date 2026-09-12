@@ -3901,7 +3901,8 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 "consistency is a subset check against ONE set \
                  (PLAN-ERWEITUNG.md §0c): two profiles are two sets, and \
                  merging them silently would hide exactly the conflict \
-                 `N215` exists to refuse",
+                 `N215` exists to refuse; the single set is the promise \
+                 linking relies on",
             ),
         );
     }
@@ -3934,7 +3935,8 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         )
                         .mit_notiz(format!(
                             "in {} -- contradictory modes make every proof over \
-                             the combined program vacuous (PLAN-ERWEITUNG.md §0c)",
+                             the combined program vacuous, and every caller \
+                             relies on one mode (PLAN-ERWEITUNG.md §0c)",
                             if modul.is_empty() {
                                 "this unit".to_string()
                             } else {
@@ -3968,7 +3970,8 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     .mit_notiz(
                         "a profile entry references the declared assumption, \
                          never a copy of its text (PLAN-ERWEITUNG.md §0c) -- \
-                         and there is no declaration here to reference",
+                         and there is no declaration here to reference; \
+                         a reference with no declaration promises nothing",
                     ),
                 );
                 continue;
@@ -4001,7 +4004,8 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     .mit_notiz(
                         "the profile holds the NAME, so two statements under \
                          it are two assumptions wearing one name -- linking \
-                         would prove under either (PLAN-ERWEITUNG.md §0c)",
+                         relies on the name meaning one statement \
+                         (PLAN-ERWEITUNG.md §0c)",
                     ),
                 );
             }
@@ -4046,7 +4050,8 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                                 "linking refuses a library whose requirements are \
                                  not in the profile -- the main program must add \
                                  them to its profile, where they meet everything \
-                                 else (PLAN-ERWEITUNG.md §0c)",
+                                 else; every call into the library relies on them \
+                                 (PLAN-ERWEITUNG.md §0c)",
                             ),
                         );
                     }
@@ -4088,7 +4093,8 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                                 "linking refuses a library whose requirements are \
                                  not in the profile -- the main program must add \
                                  them to its profile, where they meet everything \
-                                 else (PLAN-ERWEITUNG.md §0c)",
+                                 else; every call into the library relies on them \
+                                 (PLAN-ERWEITUNG.md §0c)",
                             ),
                         );
                     }
@@ -4124,7 +4130,9 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                             "the prelude carries no pragma and the manifest \
                              carries the flag for every compiler \
                              (PLAN-BITS.md §5) -- a profile promising \
-                             contraction re-opens what the prelude closed",
+                             contraction re-opens what the prelude closed, \
+                             and every bound the checker computed relies on \
+                             the flag staying off",
                         ),
                     );
                 }
@@ -4145,7 +4153,9 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         .mit_notiz(
                             "the profile is the one set of hardware assumptions \
                              the program runs under -- an `arch` beside every \
-                             declared one is a second machine wearing one name",
+                             declared one is a second machine wearing one name, \
+                             and every foreign body relies on running on the \
+                             declared one",
                         ),
                     );
                 }

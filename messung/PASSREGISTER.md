@@ -16,14 +16,28 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **130** | `gabbro paesse` |
-| of those `measured` | **122** | a poison-probe case or a caught mutation |
+| Sentences in the register | **135** | `gabbro paesse` |
+| of those `measured` | **127** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **330** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **275** | `./instrumente/pruefe-saetze.py` |
+| Codes in the checker | **335** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **280** | `./instrumente/pruefe-saetze.py` |
+
+> **2026-09-12, lane E6: +5 sentences with their codes, all mine.**
+> `namen.profil_schluessel` (`N215`, two keyed entries with one key and
+> different values), `namen.profil_namensgleichheit` (`N216`, a same-named
+> assumption with different content), `namen.profil_bindung` (`N217`,
+> linking as a subset check), `namen.profil_plattform` (`N218`, the profile
+> against the float prelude and the declared machines) and
+> `namen.profil_gestalt` (`N219`, one profile per program, every reference
+> resolving) -- five measured sentences claiming five codes, each with its
+> gift probe (890-894) and its `paesse.rs` counter-direction. The figures
+> move by exactly the lane's own delta (130 → 135, 122 → 127, 330 → 335,
+> 275 → 280); no wave drift stands between the booking and this branch.
+> The `ohne Satz` ratchet below stands unmoved at 55 -- every new code of
+> this lane arrived with its sentence in the same branch.
 
 > **2026-09-12, merge of lanes E2 and S6: recomputed to actuals.**
 > Lane S6 brings `syscall.stub` (`C180`-`C184`, one measured sentence over
