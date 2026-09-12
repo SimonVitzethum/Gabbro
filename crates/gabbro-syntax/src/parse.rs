@@ -1724,6 +1724,8 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::Dach) => BinOp::BitXor,
                 Art::Zeichen(Z::SchiebLinks) => BinOp::SchiebLinks,
                 Art::Zeichen(Z::SchiebRechts) => BinOp::SchiebRechts,
+                // PLAN-BITS section 4 (lane 88): `<<%` rides with the shifts.
+                Art::Zeichen(Z::SchiebLinksProzent) => BinOp::SchiebLinksWrap,
                 _ => break,
             };
             self.pos += 1;
@@ -1742,6 +1744,11 @@ impl<'a> Parser<'a> {
             let op = match self.blick().art {
                 Art::Zeichen(Z::Plus) => BinOp::Plus,
                 Art::Zeichen(Z::Minus) => BinOp::Minus,
+                // PLAN-BITS section 4 (lane 88): `+%`, `-%` and `+|` ride
+                // with `+`/`-` (same level, same left associativity).
+                Art::Zeichen(Z::PlusProzent) => BinOp::PlusWrap,
+                Art::Zeichen(Z::MinusProzent) => BinOp::MinusWrap,
+                Art::Zeichen(Z::PlusStrich) => BinOp::PlusSat,
                 _ => break,
             };
             self.pos += 1;
@@ -1761,6 +1768,8 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::Stern) => BinOp::Mal,
                 Art::Zeichen(Z::Schraeg) => BinOp::Geteilt,
                 Art::Zeichen(Z::Prozent) => BinOp::Rest,
+                // PLAN-BITS section 4 (lane 88): `*%` rides with `*`.
+                Art::Zeichen(Z::SternProzent) => BinOp::MalWrap,
                 _ => break,
             };
             self.pos += 1;
@@ -2255,6 +2264,92 @@ impl<'a> Parser<'a> {
             ziel,
             argumente,
             marken,
+        })
+    }
+
+    /// `@library#function ( args ) { region }` (lane E1, `SYNTAX.md` §7).
+    ///
+    /// The region is captured as a brace-balanced token tree WITHOUT
+    /// interpreting it: nested `{ … }` pairs count, every other token --
+    /// strings and comments already arrive as single tokens -- is payload.
+    /// Malformed shapes fall with the ordinary codes, never silently: a
+    /// missing `#`, `)` or `}` is `P001`, a missing name `P003`, a labelled
+    /// argument `P036`.
+    fn library_call(&mut self) -> Erg<LibraryCall> {
+        let anfang = self.erwarte_z(Z::At)?;
+        let library = self.erwarte_ident()?;
+        self.erwarte_z(Z::Hash)?;
+        let function = self.erwarte_ident()?;
+        self.erwarte_z(Z::RundAuf)?;
+        let mut args = Vec::new();
+        if !self.ist_z(Z::RundZu) {
+            loop {
+                // No labels: until lane E2 checks the call its arguments are
+                // plain values, and a half-labelled list is neither (`P036`).
+                if matches!(self.blick().art, Art::Ident | Art::Wort(_))
+                    && self.blick_n(1).art == Art::Zeichen(Z::Kolon)
+                {
+                    let m = self.erwarte_feldname()?;
+                    self.absage(
+                        Absage::fehler(
+                            "P036",
+                            m.span,
+                            "a library call takes plain arguments, no labelled ones",
+                        )
+                        .mit_notiz(
+                            "`P(a: 1, b: 2)` builds a record, `f(1, 2)` calls a function \
+                             -- `@lib#fn` is a call",
+                        ),
+                    );
+                    return Err(Abbruch);
+                }
+                args.push(self.expr()?);
+                if !self.friss_z(Z::Komma) {
+                    break;
+                }
+                if self.ist_z(Z::RundZu) {
+                    break;
+                }
+            }
+        }
+        self.erwarte_z(Z::RundZu)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut region = Vec::new();
+        let mut tiefe = 0u32;
+        loop {
+            let t = self.blick();
+            match t.art {
+                Art::Zeichen(Z::GeschweiftZu) if tiefe == 0 => break,
+                Art::Ende => {
+                    let gefunden = t.benennung(self.quelle);
+                    self.absage(Absage::fehler(
+                        "P001",
+                        t.span,
+                        format!("`}}` expected, {gefunden} found"),
+                    ));
+                    return Err(Abbruch);
+                }
+                _ => {
+                    if t.art == Art::Zeichen(Z::GeschweiftAuf) {
+                        tiefe += 1;
+                    } else if t.art == Art::Zeichen(Z::GeschweiftZu) {
+                        tiefe -= 1;
+                    }
+                    region.push(RawToken {
+                        text: t.text(self.quelle).to_string(),
+                        span: t.span,
+                    });
+                    self.pos += 1;
+                }
+            }
+        }
+        let ende = self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(LibraryCall {
+            library,
+            function,
+            args,
+            region,
+            span: anfang.bis_zu(ende),
         })
     }
 
@@ -3097,6 +3192,17 @@ impl<'a> Parser<'a> {
         // `ist_ortfortsetzung`: `match = 1;` assigns to a variable called `match`, and
         // `match s { … }` is the form. Without this line every one of the thirteen would be
         // a name a user has to avoid, and `next` alone carries 246 foreign declarator sites.
+        //
+        // **Lane E1: a library call in statement position.** `@` opens no other
+        // statement, so there is no head-word competition to decide.
+        if self.ist_z(Z::At) {
+            let ruf = self.library_call()?;
+            self.erwarte_z(Z::Semi)?;
+            return Ok(Stmt {
+                art: StmtArt::LibraryCall(ruf),
+                span: anfang.bis_zu(self.vorheriger_span()),
+            });
+        }
         let kopf = if self.wort_ist_anweisungskopf() {
             self.blick().art
         } else {
@@ -3200,7 +3306,17 @@ impl<'a> Parser<'a> {
         };
         self.erwarte_z(Z::Gleich)?;
 
-        let wert = self.expr()?;
+        // **Lane E1: a library call in binding position.**
+        let wert = if self.ist_z(Z::At) {
+            let ruf = self.library_call()?;
+            let span = ruf.span;
+            Expr {
+                art: ExprArt::LibraryCall(ruf),
+                span,
+            }
+        } else {
+            self.expr()?
+        };
 
         if self.ist_kw(Kw::Awaits) {
             let ExprArt::Ort(quelle) = wert.art else {

@@ -456,6 +456,18 @@ pub const EINORDNUNG: &[Posten] = &[
                 through an exit of its own, because `reason` values are handed out by people \
                 and no word is free for „no error\"",
     },
+    // **Lane E1: booked, although nothing lowers it.** An entry without a
+    // lowering is harmless by this table's own contract; a lowering without
+    // an entry is `UNZUGEORDNET`. The checker refuses every library call
+    // (`N057`) until lane E2 checks it, so no C carries this mark yet --
+    // lane E2 re-books it with the lowering it brings.
+    Posten {
+        konstrukt: "library call",
+        traegt: Traegt::Fremd,
+        grund: "a run-time call of a function someone else provides (`N057` refuses \
+                every such call until lane E2 checks arguments, payload and \
+                contract) -- no prototype, no lowering, only the refusal",
+    },
 ];
 
 /// Alles, was in dieser Datei vorkommt, mit Fundstellenzahl.
@@ -861,6 +873,9 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Zuweisung(_) => zaehle(e, "assignment"),
             StmtArt::Return(_) => zaehle(e, "return"),
             StmtArt::Ruf(_) => zaehle(e, "call"),
+            // **Lane E1:** a library call is refused by the checker (`N057`)
+            // until lane E2 checks it -- the entry vouches nothing beyond that.
+            StmtArt::LibraryCall(_) => zaehle(e, "library call"),
             StmtArt::Wenn(w) => {
                 zaehle(e, "if");
                 for (_, r) in &w.zweige {

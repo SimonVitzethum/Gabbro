@@ -374,6 +374,7 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             StmtArt::Exchange(_) => {}
             // The forms that bind no name at all. **Written out one by one** so that a new
             // `StmtArt` is a compile error here rather than a silent "binds nothing".
+            // **Lane E1:** a library call in statement position binds nothing.
             StmtArt::Zuweisung(_)
             | StmtArt::Wenn(_)
             | StmtArt::Match(_)
@@ -386,7 +387,8 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             | StmtArt::Next(_)
             | StmtArt::Publish(_)
             | StmtArt::Return(_)
-            | StmtArt::Ruf(_) => {}
+            | StmtArt::Ruf(_)
+            | StmtArt::LibraryCall(_) => {}
         }
         // **The descent is not spelled out a second time.** It used to be -- nine arms of
         // its own -- and the copy had drifted: `observes { … }` and the `update` body of an
@@ -1626,6 +1628,14 @@ pub fn emittiere_mit(
     // Preemption und Kontextgroesse -- nicht ueber Zahlen.
     if rechnet_mit_gleitkomma(baum) {
         aus.push_str(KOPF_GLEITKOMMA);
+    }
+    // **PLAN-BITS section 4 (lane 88): the saturating helpers, on demand.**
+    // `needs_saturation` is a syntactic presence scan -- it cannot see signs,
+    // so both helpers are emitted on `true` (the unused one silenced, like every
+    // unused generated reader). Every form in them is already in the C-form
+    // census; the scan is what keeps a unit that never saturates free of them.
+    if needs_saturation(baum) {
+        aus.push_str(SATURATION_PRELUDE);
     }
     let annahmen = crate::manifest::sammle(baum);
     namen.annahmen = annahmen.iter().map(|a| a.name.clone()).collect();
@@ -3416,6 +3426,9 @@ fn enthaelt_bitnicht(e: &Expr) -> bool {
         ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => enthaelt_bitnicht(x),
         ExprArt::Binaer(_, a, b) => enthaelt_bitnicht(a) || enthaelt_bitnicht(b),
         ExprArt::Ruf(r) => r.argumente.iter().any(enthaelt_bitnicht),
+        // **Lane E1:** a `~` in the arguments unfolds nothing either; the
+        // region is raw tokens, not Gabbro code, and is never scanned.
+        ExprArt::LibraryCall(r) => r.args.iter().any(enthaelt_bitnicht),
         // **«SG-24»** -- a `~` inside the counted predicate unfolds nothing either.
         ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
             .into_iter()
@@ -4354,7 +4367,9 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Op
         | ExprArt::Grund { .. }
         // **«SG-24»** -- a count is a run-time number, not an address: a bank base
         // over one names no register field of this device.
+        // **Lane E1** -- a library call is no address either.
         | ExprArt::Zaehle { .. }
+        | ExprArt::LibraryCall(_)
         | ExprArt::Unaer(_, _) => {
             weigere(
                 absagen,
@@ -5458,6 +5473,9 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         // non-field forms -- `ausdruck` refuses them by name if they ever get here.
         | ExprArt::FnWert(_)
         | ExprArt::Grund { .. }
+        // **Lane E1:** a library call in a `where` clause lowers through the
+        // general reader, which refuses it by name -- like any other call form.
+        | ExprArt::LibraryCall(_)
         | ExprArt::Unaer(UnOp::Negativ, _) => ausdruck(e, u, absagen),
         // **«SG-24»: a `count` has no object here.** The generated counter functions are
         // declared with the functions, after the format accessors -- a `where` clause
@@ -6939,6 +6957,13 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
                 sammle_expr_namen(a, aus);
             }
         }
+        // **Lane E1:** the arguments of a library call name places like any
+        // call's; the region is raw tokens and names none.
+        ExprArt::LibraryCall(r) => {
+            for a in &r.args {
+                sammle_expr_namen(a, aus);
+            }
+        }
         // **«SG-24»** -- the counted predicate runs: every name it reads is read by
         // the emitted counter call. (The binder is a loop variable of that call --
         // collecting it here is what lets the `(void)k;` decision see it as read.)
@@ -6995,6 +7020,12 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
             }
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {
+                    e(a, aus);
+                }
+            }
+            // **Lane E1:** same as above, at the statement form.
+            StmtArt::LibraryCall(r) => {
+                for a in &r.args {
                     e(a, aus);
                 }
             }
@@ -7646,6 +7677,15 @@ fn anweisung(
             aus.push_str(&format!("{e}}}\n"));
         }
         StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
+        // **Lane E1:** no lowering exists -- the checker refuses every
+        // library call (`N057`), and the emitter never guesses one.
+        StmtArt::LibraryCall(r) => {
+            weigere(
+                absagen,
+                r.span,
+                "no lowering: `library call` -- the region has no payload yet (lane E1)",
+            );
+        }
         // **The third place the ghost erasure has to hold, and the one that is silent if it
         // does not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays.
         // Making it `void p1 = mmu_an();` does not compile; dropping the whole statement
@@ -8029,6 +8069,8 @@ fn anweisung(
                     // *They join the forms that are refused BY NAME rather than swallowed.*
                     | ExprArt::FnWert(_)
                     | ExprArt::Grund { .. }
+                    // **Lane E1** -- a library call is no expected value either.
+                    | ExprArt::LibraryCall(_)
                     // **«SG-24»** -- a count is a traversal, and the expected value of a
                     // compare-exchange is ONE value, not a loop.
                     | ExprArt::Zaehle { .. }
@@ -8792,12 +8834,13 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // Ein `leave`/`next` auf eine ANDERE Marke -- es springt, aber nicht hier
                 // heraus. Die Marke, auf die es zielt, fragt sich selbst.
                 StmtArt::Leave(_) | StmtArt::Next(_) => {}
-                // **Und die fuenfzehn, die ueberhaupt nicht springen -- einzeln.** Der
+                // **Und die sechzehn, die ueberhaupt nicht springen -- einzeln.** Der
                 // Abstieg darunter kommt von `crate::unterbloecke`, und das erzwingt fuer
                 // eine neue `StmtArt` nur die Frage *„traegst du einen Block?"*. Ob sie
                 // SPRINGT, fragt es nicht -- und ein neues `goto` waere hier stumm
                 // durchgefallen, waehrend `-Wunused-label` dann eine Marke meldet, die sehr
-                // wohl angesprungen wird.
+                // wohl angesprungen wird. (**Fuenfzehn** bis lane E1; ein Bibliothekruf
+                // springt so wenig wie ein Ruf.)
                 StmtArt::Let(_)
                 | StmtArt::LetSonst(_)
                 | StmtArt::Zuweisung(_)
@@ -8812,7 +8855,8 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 | StmtArt::AwaitLoad(_)
                 | StmtArt::Exchange(_)
                 | StmtArt::Return(_)
-                | StmtArt::Ruf(_) => {}
+                | StmtArt::Ruf(_)
+                | StmtArt::LibraryCall(_) => {}
             }
             // Eine innere Schleife DERSELBEN Marke verdeckt sie -- `S001` bindet an die
             // naechste, und das Erzeugnis muss dieselbe Bindung treffen.
@@ -10083,7 +10127,17 @@ fn schreib_bytes(
 fn rechnet(op: &BinOp) -> bool {
     matches!(
         op,
-        BinOp::Plus | BinOp::Minus | BinOp::Mal | BinOp::SchiebLinks
+        BinOp::Plus
+            | BinOp::Minus
+            | BinOp::Mal
+            | BinOp::SchiebLinks
+            // PLAN-BITS section 4 (lane 88): the wrapping operators compute too
+            // -- modulo 2^N on the unsigned storage type. `PlusSat` is NOT here:
+            // it lowers to a saturating helper call, never to an operator.
+            | BinOp::PlusWrap
+            | BinOp::MinusWrap
+            | BinOp::MalWrap
+            | BinOp::SchiebLinksWrap
     )
 }
 
@@ -10117,6 +10171,631 @@ fn umlaeufer_typ(e: &Expr, u: &Namen) -> Option<IntTy> {
         }
         _ => None,
     }
+}
+
+/// **PLAN-BITS section 4 (lane 88): the overflow lowerings.**
+///
+/// Wrapping computes on the unsigned storage type and masks to `N` bits where `N`
+/// is not the storage width (`(a + b) & mask`); saturating calls one of the two
+/// file-scope helpers below with an explicit compare and no builtins. Every form
+/// in both -- `static` functions, `if`/`else`, `return`, comparisons, casts,
+/// `&` -- is already in the C-form census (`zaehle-c-formen.py`); `?:` is on its
+/// NEVER list, which is why the clamp is a helper with `if`s and not a ternary.
+///
+/// All three range readers below are second opinions in the `O9` stance:
+/// re-derived from declarations at the emission site, never trusted from the
+/// checker -- and where nothing can be derived the site is refused with `C001`
+/// instead of guessed.
+
+/// Storage width in bits and signedness of a declared integer type.
+fn storage(i: &IntTy) -> Option<(u32, bool)> {
+    use gabbro_syntax::kw::Kw;
+    let bits = match i.wort {
+        Kw::U8 | Kw::I8 => 8,
+        Kw::U16 | Kw::I16 => 16,
+        Kw::U32 | Kw::I32 => 32,
+        Kw::U64 | Kw::I64 => 64,
+        _ => return None,
+    };
+    let signed = matches!(i.wort, Kw::I8 | Kw::I16 | Kw::I32 | Kw::I64);
+    Some((bits, signed))
+}
+
+/// The C word for a storage width. `None` is not a guess -- the callers turn it
+/// into `C001` by name.
+fn storage_ctyp(bits: u32, signed: bool) -> Option<&'static str> {
+    Some(match (bits, signed) {
+        (8, false) => "uint8_t",
+        (16, false) => "uint16_t",
+        (32, false) => "uint32_t",
+        (64, false) => "uint64_t",
+        (8, true) => "int8_t",
+        (16, true) => "int16_t",
+        (32, true) => "int32_t",
+        (64, true) => "int64_t",
+        _ => return None,
+    })
+}
+
+/// A translation-time integer: a literal, a parenthesised one, a negated one,
+/// or a `const` name. Anything else is not known here -- and `None` says so.
+fn constexpr_value(e: &Expr, u: &Namen) -> Option<i128> {
+    match &e.art {
+        ExprArt::Klammer(x) => constexpr_value(x, u),
+        ExprArt::Zahl(n) => i128::try_from(*n).ok(),
+        ExprArt::Unaer(UnOp::Negativ, x) => constexpr_value(x, u)?.checked_neg(),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => u.konstwert.get(&o.basis.text).copied(),
+        _ => None,
+    }
+}
+
+/// The promised interval of a declared integer type: the sugar's exact range,
+/// a literal `lo .. hi` bound (`..<` excludes its top), or the full storage
+/// word. `None` where no interval stands -- the caller refuses, never guesses.
+fn intty_interval(t: &IntTy, u: &Namen) -> Option<(i128, i128)> {
+    if let Some(z) = &t.zucker {
+        if z.breite == 0 || z.breite > 64 {
+            return None;
+        }
+        // Unsigned sugar promises `0 .. 2^N-1`; signed sugar promises the
+        // symmetric interval around zero on the storage word.
+        if !z.vorzeichen {
+            return Some((0, (1i128 << z.breite) - 1));
+        }
+        let halb = 1i128 << (z.breite - 1);
+        return Some((-halb, halb - 1));
+    }
+    if let Some(b) = &t.bereich {
+        let lo = constexpr_value(&b.von, u)?;
+        let mut hi = constexpr_value(&b.bis, u)?;
+        if b.exklusiv {
+            hi -= 1;
+        }
+        return Some((lo, hi));
+    }
+    let (bits, signed) = storage(t)?;
+    if signed {
+        let halb = 1i128 << (bits - 1);
+        Some((-halb, halb - 1))
+    } else {
+        Some((0, (1i128 << bits) - 1))
+    }
+}
+
+/// One side of a wrapping site: a declared word with its promised interval, or
+/// an adopting literal point (storage `0` -- it takes the other's).
+enum WrapSide {
+    Word(u32, i128, i128),
+    Literal(i128),
+}
+
+fn wrap_side(e: &Expr, u: &Namen) -> Option<WrapSide> {
+    match &e.art {
+        ExprArt::Klammer(x) => wrap_side(x, u),
+        ExprArt::Zahl(n) => {
+            let v = i128::try_from(*n).ok()?;
+            if v < 0 {
+                return None;
+            }
+            Some(WrapSide::Literal(v))
+        }
+        ExprArt::Ort(o) => {
+            if o.suffixe.is_empty() {
+                if let Some(w) = u.konstwert.get(&o.basis.text).copied() {
+                    if w < 0 {
+                        return None;
+                    }
+                    return Some(WrapSide::Literal(w));
+                }
+            }
+            let TypExpr::Int(i) = ort_typ(o, u)? else {
+                return None;
+            };
+            // Signed storage never wraps: signed overflow is undefined in C,
+            // and the checker (`M153`) never lets it reach this emitter.
+            let (bits, signed) = storage(&i)?;
+            if signed {
+                return None;
+            }
+            let (lo, hi) = intty_interval(&i, u)?;
+            Some(WrapSide::Word(bits, lo, hi))
+        }
+        ExprArt::Ruf(r) => {
+            let n = r.path()?.teile.last()?.text.clone();
+            let TypExpr::Int(i) = u.funktionen.get(&n)?.rueck.as_ref()? else {
+                return None;
+            };
+            let (bits, signed) = storage(i)?;
+            if signed {
+                return None;
+            }
+            let (lo, hi) = intty_interval(i, u)?;
+            Some(WrapSide::Word(bits, lo, hi))
+        }
+        // A nested wrap is exact by construction -- its interval is its modulus.
+        // A nested SHIFT resolves left-only (the amount is never exact).
+        ExprArt::Binaer(op, x, y)
+            if matches!(
+                op,
+                BinOp::PlusWrap | BinOp::MinusWrap | BinOp::MalWrap | BinOp::SchiebLinksWrap
+            ) =>
+        {
+            let (bits, n) = if *op == BinOp::SchiebLinksWrap {
+                wrap_shift_form(x, u)?
+            } else {
+                wrap_form(x, y, u)?
+            };
+            Some(WrapSide::Word(bits, 0, (1i128 << n) - 1))
+        }
+        // A nested clamp hands its interval up; the outer site checks exactness.
+        ExprArt::Binaer(BinOp::PlusSat, x, y) => {
+            let (bits, _, lo, hi) = saturation_facts(x, y, u)?;
+            Some(WrapSide::Word(bits, lo, hi))
+        }
+        _ => None,
+    }
+}
+
+/// Storage width in bits and exact bit count `N` of a wrapping site. Mirrors
+/// the checker's `M153` rule joint-for-joint: unsigned storage, both sides
+/// jointly exact, a literal side adopting when its point lies in the other's
+/// interval. `None` is `C001` at the call site, never a guessed mask.
+fn wrap_form(a: &Expr, b: &Expr, u: &Namen) -> Option<(u32, u32)> {
+    let exact = |bits: u32, lo: i128, hi: i128| {
+        crate::typen::exact_wrap_n(&crate::typen::IntBereich::genau(bits as u8, false, lo, hi))
+    };
+    let (bits, n) = match (wrap_side(a, u)?, wrap_side(b, u)?) {
+        (WrapSide::Word(ba, l1, h1), WrapSide::Word(bb, l2, h2)) => {
+            if ba != bb {
+                return None;
+            }
+            let (n1, n2) = (exact(ba, l1, h1)?, exact(bb, l2, h2)?);
+            if n1 != n2 {
+                return None;
+            }
+            (ba, n1)
+        }
+        (WrapSide::Word(b, lo, hi), WrapSide::Literal(v))
+        | (WrapSide::Literal(v), WrapSide::Word(b, lo, hi)) => {
+            let n = exact(b, lo, hi)?;
+            if v < 0 || v > (1i128 << n) - 1 {
+                return None;
+            }
+            (b, n)
+        }
+        (WrapSide::Literal(_), WrapSide::Literal(_)) => return None,
+    };
+    if n == 0 || n > bits {
+        return None;
+    }
+    Some((bits, n))
+}
+
+/// Storage width and bit count of a wrapping SHIFT site, from the VALUE side
+/// alone: the amount only has to lie below `N` (the checker proved it), it is
+/// never exact itself. A literal value side has no storage anywhere -- `C001`.
+fn wrap_shift_form(x: &Expr, u: &Namen) -> Option<(u32, u32)> {
+    let WrapSide::Word(bits, lo, hi) = wrap_side(x, u)? else {
+        return None;
+    };
+    let n = crate::typen::exact_wrap_n(&crate::typen::IntBereich::genau(
+        bits as u8,
+        false,
+        lo,
+        hi,
+    ))?;
+    if n == 0 || n > bits {
+        return None;
+    }
+    Some((bits, n))
+}
+
+/// Storage width, signedness and clamp interval of a saturating site. Mirrors
+/// the checker's `M154` rule: one shared interval (a literal side adopting),
+/// on any signedness and any width. `None` is `C001`, never a guessed bound.
+fn saturation_facts(
+    a: &Expr,
+    b: &Expr,
+    u: &Namen,
+) -> Option<(u32, bool, i128, i128)> {
+    /// Declared sides carry storage, sign and interval; a literal side only
+    /// adopts the other's interval -- its own value never matters to the clamp,
+    /// so the variant carries no payload (a dead field would be the finding the
+    /// Baugatter names).
+    enum Side {
+        Word(u32, bool, i128, i128),
+        Literal,
+    }
+    fn side(e: &Expr, u: &Namen) -> Option<Side> {
+        match &e.art {
+            ExprArt::Klammer(x) => side(x, u),
+            ExprArt::Zahl(_) => Some(Side::Literal),
+            ExprArt::Ort(o) => {
+                if o.suffixe.is_empty() && u.konstwert.contains_key(&o.basis.text) {
+                    return Some(Side::Literal);
+                }
+                let TypExpr::Int(i) = ort_typ(o, u)? else {
+                    return None;
+                };
+                let (bits, signed) = storage(&i)?;
+                let (lo, hi) = intty_interval(&i, u)?;
+                Some(Side::Word(bits, signed, lo, hi))
+            }
+            ExprArt::Ruf(r) => {
+                let n = r.path()?.teile.last()?.text.clone();
+                let TypExpr::Int(i) = u.funktionen.get(&n)?.rueck.as_ref()? else {
+                    return None;
+                };
+                let (bits, signed) = storage(i)?;
+                let (lo, hi) = intty_interval(i, u)?;
+                Some(Side::Word(bits, signed, lo, hi))
+            }
+            // A nested clamp hands its interval up; exactness is the outer
+            // site's question, sharedness is answered here by construction.
+            ExprArt::Binaer(BinOp::PlusSat, x, y) => {
+                let (bits, signed, lo, hi) = saturation_facts(x, y, u)?;
+                Some(Side::Word(bits, signed, lo, hi))
+            }
+            _ => None,
+        }
+    }
+    let (bits, signed, lo, hi) = match (side(a, u)?, side(b, u)?) {
+        (Side::Word(ba, sa, l1, h1), Side::Word(bb, sb, l2, h2)) => {
+            if ba != bb || sa != sb || l1 != l2 || h1 != h2 {
+                return None;
+            }
+            (ba, sa, l1, h1)
+        }
+        (Side::Word(b, s, lo, hi), Side::Literal)
+        | (Side::Literal, Side::Word(b, s, lo, hi)) => (b, s, lo, hi),
+        // Two literals: no interval anywhere -- the checker answers their exact
+        // sum, and this emitter has no bound to clamp into. `C001`, honestly.
+        (Side::Literal, Side::Literal) => return None,
+    };
+    // The clamp must sit inside the storage it is computed for; a declared
+    // interval that already leaves its width never reaches this emitter (the
+    // checker refuses it), but a second opinion that trusts nothing says so.
+    let (slo, shi) = if signed {
+        let halb = 1i128 << (bits - 1);
+        (-halb, halb - 1)
+    } else {
+        (0, (1i128 << bits) - 1)
+    };
+    if lo < slo || hi > shi {
+        return None;
+    }
+    Some((bits, signed, lo, hi))
+}
+
+/// The BASE operator of a wrapping site -- C has no `+%`, it computes `(a + b)`
+/// on the unsigned storage type and the mask makes it modulo 2^N. `None` for
+/// anything else; the caller turns it into `C001`.
+fn wrap_op_text(op: &BinOp) -> Option<&'static str> {
+    Some(match op {
+        BinOp::PlusWrap => "+",
+        BinOp::MinusWrap => "-",
+        BinOp::MalWrap => "*",
+        BinOp::SchiebLinksWrap => "<<",
+        _ => return None,
+    })
+}
+
+/// A wrapping site as C: on the unsigned storage type, masked to `N` bits when
+/// `N` is not the storage width. The mask is a plain decimal literal (`czahl`
+/// spells it, so `2^64 - 1` stays impossible the same way everywhere) --
+/// no new C form either way.
+fn wrap_c(
+    op: &BinOp,
+    a: &Expr,
+    b: &Expr,
+    bits: u32,
+    n: u32,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> String {
+    let (Some(ct), Some(base)) = (storage_ctyp(bits, false), wrap_op_text(op)) else {
+        weigere(absagen, a.span, "the unsigned storage type of a wrapping computation");
+        return String::new();
+    };
+    let rt = if bits <= 32 { "uint32_t" } else { "uint64_t" };
+    let core = format!(
+        "(({rt})({}) {base} ({rt})({}))",
+        ausdruck(a, u, absagen),
+        ausdruck(b, u, absagen)
+    );
+    if n == bits {
+        // Full width: C's unsigned arithmetic IS modulo 2^N (C11 6.2.5p9) --
+        // the same shape the `wrapping` field attribute lowers to.
+        return format!("({ct})({core})");
+    }
+    let Some(mask) = czahl(((1i128 << n) - 1) as u128) else {
+        weigere(absagen, a.span, "the mask of a wrapping computation");
+        return String::new();
+    };
+    format!("({ct})(({core}) & {mask})")
+}
+
+/// A saturating site as C: one of the two file-scope helpers with the clamp
+/// interval as arguments. Operands ride up to 64 bits (value-preserving for
+/// every storage width); the helper clamps without any wider type, so even
+/// `u64`/`i64` need no `__int128` and no builtin.
+fn saturation_c(
+    a: &Expr,
+    b: &Expr,
+    bits: u32,
+    signed: bool,
+    lo: i128,
+    hi: i128,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> String {
+    let (Some(ct), wide) = (
+        storage_ctyp(bits, signed),
+        if signed { "int64_t" } else { "uint64_t" },
+    ) else {
+        weigere(absagen, a.span, "the storage type of a saturating computation");
+        return String::new();
+    };
+    // Bounds as 64-bit literals: `czahl` spells the wide ones with the same `u`
+    // suffix every other wide literal carries; a negative bound rides on unary
+    // minus, which is how the language spells it too.
+    fn bound(
+        v: i128,
+        signed: bool,
+        span: gabbro_syntax::span::Span,
+        absagen: &mut Absagen,
+    ) -> String {
+        if signed && v < 0 {
+            match czahl((-v) as u128) {
+                Some(t) => format!("-{t}"),
+                None => {
+                    weigere(absagen, span, "a clamp bound past `2^64 - 1`");
+                    String::new()
+                }
+            }
+        } else {
+            match czahl(v as u128) {
+                Some(t) => t,
+                None => {
+                    weigere(absagen, span, "a clamp bound past `2^64 - 1`");
+                    String::new()
+                }
+            }
+        }
+    }
+    let (lo_t, hi_t) = (
+        bound(lo, signed, a.span, absagen),
+        bound(hi, signed, a.span, absagen),
+    );
+    if lo_t.is_empty() || hi_t.is_empty() {
+        return String::new();
+    }
+    let helper = if signed {
+        "_gabbro_sat_i"
+    } else {
+        "_gabbro_sat_u"
+    };
+    format!(
+        "({ct})({helper}(({wide})({}), ({wide})({}), ({wide})({lo_t}), ({wide})({hi_t})))",
+        ausdruck(a, u, absagen),
+        ausdruck(b, u, absagen),
+    )
+}
+
+/// The two saturating helpers, with the explicit compare and no builtins.
+///
+/// Both compute so that no intermediate ever leaves 64 bits: the unsigned one
+/// subtracts only `b <= hi` (`hi - b >= 0`, and `a > hi - b` is `a + b > hi`
+/// without ever forming the sum); the signed one guards each side by the sign
+/// of `b` (`hi - b >= 0` needs `b <= hi`, `lo - b <= 0` needs `b >= lo` --
+/// both hold for every value the checker lets through). `cc -Wconversion`
+/// stays silent: every narrowing is a cast the generator wrote down.
+const SATURATION_PRELUDE: &str = "\
+/* PLAN-BITS section 4 (lane 88): saturating `+|` -- an explicit compare, no builtins. */\n\
+static uint64_t _gabbro_sat_u(uint64_t a, uint64_t b, uint64_t lo, uint64_t hi) __attribute__((unused));\n\
+static uint64_t _gabbro_sat_u(uint64_t a, uint64_t b, uint64_t lo, uint64_t hi) {\n\
+    if (a > hi - b) {\n\
+        return hi;\n\
+    }\n\
+    if (a + b < lo) {\n\
+        return lo;\n\
+    }\n\
+    return a + b;\n\
+}\n\
+static int64_t _gabbro_sat_i(int64_t a, int64_t b, int64_t lo, int64_t hi) __attribute__((unused));\n\
+static int64_t _gabbro_sat_i(int64_t a, int64_t b, int64_t lo, int64_t hi) {\n\
+    if ((b > 0) && (a > hi - b)) {\n\
+        return hi;\n\
+    }\n\
+    if ((b < 0) && (a < lo - b)) {\n\
+        return lo;\n\
+    }\n\
+    return a + b;\n\
+}\n";
+
+/// Does this unit saturate? A syntactic pre-scan for `+|` over bodies,
+/// contracts and initialisers -- no types involved, so it answers presence
+/// only, and both helpers are emitted on `true` (the unused one silenced, like
+/// every unused generated reader). Missing a site would be a call to a
+/// function that is not there -- so the walk covers every position that
+/// lowers a run-time expression, and whatever it cannot see (translation-time
+/// bounds, which the checker refuses for these operators first) cannot reach
+/// the C either.
+fn needs_saturation(baum: &Programm) -> bool {
+    fn suffixe(o: &Ort) -> bool {
+        o.suffixe.iter().any(|s| match s {
+            OrtSuffix::Index(x) => expr(x),
+            _ => false,
+        })
+    }
+    fn expr(e: &Expr) -> bool {
+        match &e.art {
+            ExprArt::Binaer(BinOp::PlusSat, _, _) => true,
+            ExprArt::Binaer(_, a, b) => expr(a) || expr(b),
+            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => expr(x),
+            ExprArt::Ort(o) => suffixe(o),
+            ExprArt::Alt(o) => suffixe(o),
+            ExprArt::Ruf(r) => r.argumente.iter().any(expr),
+            ExprArt::Eingebaut(b) => match b.as_ref() {
+                Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => match t {
+                    TypOderOrt::Ort(o) => suffixe(o),
+                    TypOderOrt::Typ(_) => false,
+                },
+                Eingebaut::Aligned(x, y) => expr(x) || expr(y),
+            },
+            ExprArt::Zaehle { rumpf, .. } => pred(rumpf),
+            ExprArt::Zahl(_)
+            | ExprArt::Gleitkomma { .. }
+            | ExprArt::Wahr
+            | ExprArt::Falsch
+            | ExprArt::FnWert(_)
+            | ExprArt::Ergebnis
+            | ExprArt::Grund { .. } => false,
+        }
+    }
+    fn domaene(d: &Domaene) -> bool {
+        match d {
+            Domaene::SlotsVon(o)
+            | Domaene::NachfahrenVon(o)
+            | Domaene::VorfahrenVon(o)
+            | Domaene::Schlange(o)
+            | Domaene::ElementeVon(o)
+            | Domaene::AbbildungenVon(o) => suffixe(o),
+            Domaene::KetteIn { ort, .. } => suffixe(ort),
+            Domaene::FelderVon(_) | Domaene::Threads => false,
+        }
+    }
+    fn pred(p: &Pred) -> bool {
+        match &p.art {
+            PredArt::Vergleich(e) => expr(e),
+            PredArt::Klammer(x) | PredArt::Nicht(x) => pred(x),
+            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+                pred(a) || pred(b)
+            }
+            PredArt::Quantor(q) => domaene(&q.domaene) || pred(&q.rumpf),
+            PredArt::Element(e, d) => expr(e) || domaene(d),
+            PredArt::Erreicht { von, nach, .. } => suffixe(von) || suffixe(nach),
+            PredArt::Held { .. } => false,
+        }
+    }
+    fn block(b: &Block) -> bool {
+        b.anweisungen.iter().any(stmt)
+    }
+    fn stmt(s: &Stmt) -> bool {
+        match &s.art {
+            StmtArt::Let(l) => expr(&l.wert),
+            StmtArt::LetSonst(l) => match &l.quelle {
+                LetQuelle::Ruf(r) => r.argumente.iter().any(expr) || block(&l.sonst),
+                LetQuelle::Ort(o) => suffixe(o) || block(&l.sonst),
+            },
+            StmtArt::Zuweisung(z) => suffixe(&z.ziel) || expr(&z.wert),
+            StmtArt::Wenn(w) => {
+                w.zweige.iter().any(|(c, b)| expr(c) || block(b))
+                    || w.sonst.as_ref().is_some_and(block)
+            }
+            StmtArt::Match(m) => {
+                expr(&m.gegenstand) || m.zweige.iter().any(|z| block(&z.rumpf))
+            }
+            StmtArt::Schleife(s) => match s.as_ref() {
+                Schleife::Traverse(t) => {
+                    t.gegenstand.as_ref().is_some_and(expr)
+                        || domaene(&t.domaene)
+                        || t.mass.as_ref().is_some_and(expr)
+                        || t.touches.as_ref().is_some_and(wirkungen)
+                        || block(&t.rumpf)
+                }
+                Schleife::Retry(r) => {
+                    r.bis.as_ref().is_some_and(pred)
+                        || expr(&r.schranke)
+                        || r.invariante.as_ref().is_some_and(pred)
+                        || block(&r.rumpf)
+                }
+                Schleife::Forever(f) => {
+                    expr(&f.je_durchgang)
+                        || f.invariante.as_ref().is_some_and(pred)
+                        || block(&f.rumpf)
+                }
+            },
+            StmtArt::Bricht(b) => block(&b.rumpf),
+            StmtArt::Narrow(n) => {
+                suffixe(&n.ort)
+                    || match &n.ziel {
+                        NarrowZiel::Bereich(b) => expr(&b.von) || expr(&b.bis),
+                        NarrowZiel::Endlich(_) => false,
+                    }
+                    || block(&n.sonst)
+            }
+            StmtArt::Sperrt(s) => suffixe(&s.sperre) || block(&s.rumpf),
+            StmtArt::Observiert(o) => block(&o.rumpf),
+            StmtArt::Publish(p) => {
+                suffixe(&p.ziel) || expr(&p.wert) || block_in_nutzlast(&p.nutzlast)
+            }
+            StmtArt::AwaitLoad(a) => {
+                suffixe(&a.quelle) || a.erwartet.iter().any(suffixe)
+            }
+            StmtArt::Exchange(x) => {
+                suffixe(&x.ort)
+                    || match &x.form {
+                        XForm::Update {
+                            schranke,
+                            rumpf,
+                            ..
+                        } => schranke.as_ref().is_some_and(expr) || block(rumpf),
+                        XForm::Vergleich { wert, bedingung, .. } => {
+                            expr(wert) || pred(bedingung)
+                        }
+                    }
+                    || x.nutzlast.as_ref().is_some_and(block_in_nutzlast)
+                    || x.erwartet.as_ref().is_some_and(|os| os.iter().any(suffixe))
+            }
+            StmtArt::Return(e) => e.as_ref().is_some_and(expr),
+            StmtArt::Ruf(r) => r.argumente.iter().any(expr),
+            StmtArt::Leave(_) | StmtArt::Next(_) => false,
+        }
+    }
+    fn block_in_nutzlast(n: &Nutzlast) -> bool {
+        match n {
+            Nutzlast::Orte(os) => os.iter().any(suffixe),
+            Nutzlast::Nichts(_) => false,
+        }
+    }
+    // Effect lists name places; an index in one is walked, not trusted --
+    // the scan over-approximates on purpose (see `needs_saturation`).
+    fn wirkungen(w: &Wirkungen) -> bool {
+        w.liste.iter().any(|x| match &x.art {
+            WirkungArt::Liest(o)
+            | WirkungArt::Schreibt(o)
+            | WirkungArt::Sperrt(o)
+            | WirkungArt::SperrtGeteilt(o)
+            | WirkungArt::Verbraucht(o)
+            | WirkungArt::Veroeffentlicht(o) => suffixe(o),
+            WirkungArt::Maskiert(_)
+            | WirkungArt::Belegt(_)
+            | WirkungArt::Divergiert
+            | WirkungArt::Rein => false,
+        })
+    }
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if ja {
+            return;
+        }
+        match &item.art {
+            ItemArt::Funktion(f) => {
+                ja |= f.requires.iter().any(pred)
+                    || f.ensures.iter().any(pred)
+                    || f.decreases.as_ref().is_some_and(expr)
+                    || f.costs.as_ref().is_some_and(expr);
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    ja |= block(b);
+                }
+            }
+            ItemArt::Konst(k) => ja |= expr(&k.wert),
+            ItemArt::Statisch(s) => ja |= expr(&s.wert),
+            _ => {}
+        }
+    });
+    ja
 }
 
 /// The largest value an unsigned C integer type can hold. `None` for everything else --
@@ -10513,7 +11192,10 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         | ExprArt::Grund { .. }
         // **«SG-24»: a count is a run-time number**, not a witness -- its predicate
         // runs over real slots. Dropping it would delete the traversal.
+        // **Lane E1:** a library call is a run-time call the same way -- its
+        // value is not a ghost, and dropping it would delete real code.
         | ExprArt::Zaehle { .. }
+        | ExprArt::LibraryCall(_)
         | ExprArt::Binaer(_, _, _) => false,
     }
 }
@@ -11558,6 +12240,51 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
         ExprArt::Binaer(op, a, b) => {
+            // **PLAN-BITS section 4 (lane 88): the overflow lowerings go first.**
+            // They answer from the operand DECLARATIONS, not from any `wrapping`
+            // attribute, and neither takes the pointer-arithmetic or mixed-float
+            // refusals below -- the checker typed both sides as integers.
+            if matches!(
+                op,
+                BinOp::PlusWrap
+                    | BinOp::MinusWrap
+                    | BinOp::MalWrap
+                    | BinOp::SchiebLinksWrap
+            ) {
+                // The shift resolves left-only: the amount is bounded, never exact.
+                let form = if *op == BinOp::SchiebLinksWrap {
+                    wrap_shift_form(a, u)
+                } else {
+                    wrap_form(a, b, u)
+                };
+                let Some((bits, n)) = form else {
+                    weigere(
+                        absagen,
+                        e.span,
+                        &format!(
+                            "wrapping `{}` over operands whose exact ranges cannot \
+                             be read off their declarations -- both sides need an \
+                             exact unsigned range `0 .. 2^N - 1` on one storage width",
+                            op_text(op)
+                        ),
+                    );
+                    return String::new();
+                };
+                return wrap_c(op, a, b, bits, n, u, absagen);
+            }
+            if *op == BinOp::PlusSat {
+                let Some((bits, signed, lo, hi)) = saturation_facts(a, b, u) else {
+                    weigere(
+                        absagen,
+                        e.span,
+                        "saturating `+|` over operands whose clamp interval cannot \
+                         be read off their declarations -- both sides need one \
+                         shared integer range on one width",
+                    );
+                    return String::new();
+                };
+                return saturation_c(a, b, bits, signed, lo, hi, u, absagen);
+            }
             // **CForm zeigerArithmetik, re-decided 2026-09-11: no computed
             // address.** Gabbro gives pointer arithmetic exactly one form
             // (`SPRACHE.md` 5.2: `place[expr]` with an M1-bounded index); a
@@ -11671,6 +12398,15 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
+        // **Lane E1:** no lowering exists here either -- see the statement arm.
+        ExprArt::LibraryCall(r) => {
+            weigere(
+                absagen,
+                r.span,
+                "no lowering: `library call` -- the region has no payload yet (lane E1)",
+            );
+            String::new()
+        }
         // **«SG-24»** -- a `count` is a call to its generated counter. The counter
         // was defined from the same site (`zaehler_funktion`, spliced between the
         // declarations and the bodies), so the call always resolves; the captures
@@ -11842,6 +12578,14 @@ fn ist_bitop(op: &BinOp) -> bool {
             | BinOp::BitXor
             | BinOp::SchiebLinks
             | BinOp::SchiebRechts
+            // PLAN-BITS section 4 (lane 88): the wrapping operators group with
+            // the bit level for parenthesisation -- their lowering is a cast-
+            // and-mask shape, and a bare neighbour must not merge into it.
+            // `PlusSat` stays out: its shape is a call, which binds on its own.
+            | BinOp::PlusWrap
+            | BinOp::MinusWrap
+            | BinOp::MalWrap
+            | BinOp::SchiebLinksWrap
     )
 }
 
@@ -11879,6 +12623,14 @@ fn op_text(op: &BinOp) -> &'static str {
         BinOp::Mal => "*",
         BinOp::Geteilt => "/",
         BinOp::Rest => "%",
+        // PLAN-BITS section 4 (lane 88): the overflow spellings, quoted the way
+        // the source wrote them. The WRAPPING lowering below prints the BASE
+        // operator (`wrap_op_text`), never these -- C has no `+%`.
+        BinOp::PlusWrap => "+%",
+        BinOp::MinusWrap => "-%",
+        BinOp::MalWrap => "*%",
+        BinOp::SchiebLinksWrap => "<<%",
+        BinOp::PlusSat => "+|",
         BinOp::BitUnd => "&",
         BinOp::BitOder => "|",
         BinOp::BitXor => "^",

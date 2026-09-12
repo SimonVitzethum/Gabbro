@@ -284,6 +284,9 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             StmtArt::Leave(_) => "leave",
             StmtArt::Next(_) => "next",
             StmtArt::Ruf(_) => "call",
+            // **Lane E1:** a run-time library call, refused by the checker
+            // (`N057`) until lane E2 checks it.
+            StmtArt::LibraryCall(_) => "library call",
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 Schleife::Traverse(_) => "traverse",
                 Schleife::Retry(_) => "retry",

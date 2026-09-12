@@ -33,6 +33,9 @@ const BENANNT: &[&str] = &[
     "P032", "P035", "P041", // Grammatik
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
+    // Lane E1: `N057` -- every library call is parsed and refused until lane
+    // E2 checks it. Named here so the corpus run counts the rule, not noise.
+    "N057",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

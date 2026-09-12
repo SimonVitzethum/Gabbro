@@ -282,6 +282,14 @@ fn liest_expr(e: &Expr, t: &mut Taten) {
                 liest_expr(a, t);
             }
         }
+        // **Lane E1:** the arguments of a library call are evaluated, so
+        // they read like any call's; the region is raw tokens, not
+        // expressions, and reads nothing.
+        ExprArt::LibraryCall(r) => {
+            for a in &r.args {
+                liest_expr(a, t);
+            }
+        }
         // **«SG-24»** -- the counted predicate runs, so it reads: same decision
         // as `geteilt.rs::orte_in`, beside the same `aligned` precedent. Missing
         // it would let a `count` over a carrier pass under `effects { pure }`.
@@ -364,6 +372,12 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
             StmtArt::Return(Some(x)) => liest_expr(x, t),
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {
+                    liest_expr(a, t);
+                }
+            }
+            // **Lane E1:** same as above, at the statement form.
+            StmtArt::LibraryCall(r) => {
+                for a in &r.args {
                     liest_expr(a, t);
                 }
             }

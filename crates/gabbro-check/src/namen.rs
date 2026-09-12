@@ -38,6 +38,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
+    library_call_not_checked(baum, absagen);
 }
 
 /// **`N042` -- two declarations, one C name, and the generator formed both.**
@@ -3536,6 +3537,77 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
         }
         _ => {}
     });
+}
+
+/// **`N057` -- a library call is parsed, not checked** (lane E1).
+///
+/// `@library#function ( args ) { region }` reads as a run-time call whose
+/// region the reader captures without interpreting (`SYNTAX.md` §7). What the
+/// region means -- compiled at translation time into a payload -- is not
+/// implemented yet, so there is nothing to hold the call against: no declared
+/// function, no contract, no payload type. Letting it through would be a
+/// silent acceptance; crashing on it would be worse. What stands instead is
+/// the controlled refusal, once per call, in both positions.
+///
+/// Lane E2 checks the call like any call and retires this rule; the hook is
+/// `lane_e2_checks_calls` below, which answers what the tree declares.
+fn library_call_not_checked(baum: &Programm, absagen: &mut Absagen) {
+    if lane_e2_checks_calls(baum) {
+        return;
+    }
+    fn im_block(b: &Block, absagen: &mut Absagen) {
+        for s in &b.anweisungen {
+            if let StmtArt::LibraryCall(r) = &s.art {
+                melde(r, absagen);
+            }
+            for e in crate::eigene_ausdruecke(s) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::LibraryCall(r) = &x.art {
+                        melde(r, absagen);
+                    }
+                }
+            }
+            for k in crate::unterbloecke(s) {
+                im_block(k, absagen);
+            }
+        }
+    }
+    fn melde(r: &LibraryCall, absagen: &mut Absagen) {
+        absagen.schiebe(
+            Absage::fehler(
+                "N057",
+                r.span,
+                "library calls are parsed but not yet checked",
+            )
+            .mit_notiz(format!(
+                "`@{}#{}` is a run-time call with {} arguments and a region of {} \
+                 raw tokens -- the region is captured, not interpreted",
+                r.library.text,
+                r.function.text,
+                r.args.len(),
+                r.region.len()
+            ))
+            .mit_notiz(
+                "the region is compiled at translation time into a payload \
+                 (PLAN-ERWEITUNG.md §0b); until lane E2 discharges that \
+                 obligation -- checking arguments, payload and contract -- \
+                 every such call is refused here: never silently accepted, \
+                 never crashed on",
+            ),
+        );
+    }
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        im_block(b, absagen);
+    });
+}
+
+/// Whether lane E2 has landed: the tree declares library functions such a
+/// call could be checked against. No such declaration exists yet, so this
+/// answers `false`; when E2 lands it reads that declaration here instead.
+fn lane_e2_checks_calls(_baum: &Programm) -> bool {
+    false
 }
 
 /// **What a declared function's result can SAY** -- the four states `N056` tells apart.

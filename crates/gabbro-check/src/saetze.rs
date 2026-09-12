@@ -321,6 +321,35 @@ pub const NAMEN: &[Satz] = &[
                       have a declared probe, so its population is EMPTY.*",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; sonden/README.md",
     },
+    // --- lane E1, 2026-09-12: the parsed-but-unchecked library call ---------------------
+    //
+    // **The rule that refuses what the next lane defines.** `@library#function`
+    // reads as a run-time call whose region the reader captures without
+    // interpreting; what the region means is not implemented yet, so there is
+    // no declaration, no contract and no payload type to hold the call
+    // against. The sentence is therefore not a claim about the call but about
+    // the refusal: every such call falls here, in both positions, until lane
+    // E2 checks it like any call and retires the code.
+    Satz {
+        name: "namen.library_call",
+        kennungen: &["N057"],
+        aussage: "Every library call `@library#function ( args ) { region }` is \
+                  refused -- once per call, in statement and in binding position. \
+                  A form the checker cannot judge is never silently accepted and \
+                  never crashed on.",
+        vorbehalt: "**The refusal is the whole rule, and that is a decision and not \
+                    a gap** -- the arguments ARE judged: they are ordinary \
+                    expressions, and every pass reads them through the shared \
+                    walkers. What no pass judges is the call itself: callee, \
+                    region and payload. Lane E2 retires this code when it checks \
+                    the call like any call.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/802` (unbalanced region, `P001`), `/803` \
+                      (missing `#`, `P001`), `/804` (empty library name, `P003`), \
+                      `/805` (the refusal itself, `N057`, in both positions); \
+                      counter-direction in `paesse.rs` (`library_call_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; PLAN-ERWEITUNG.md §6",
+    },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
     // **What bought the clause was a CONJUNCTION, not a missing keyword.** `dma_kohaerent`
@@ -1363,6 +1392,31 @@ pub const M1: &[Satz] = &[
                       `beispiele/50-verfeinerung.gab`",
         fundstelle: "crates/gabbro-check/src/m1.rs::verfeinert_pruefen; \
                      messung/VERFEINERUNG.md",
+    },
+    Satz {
+        name: "m1.umlauf_saettigung",
+        kennungen: &["M153", "M154"],
+        aussage: "The overflow operators check exactness at the operation: wrapping \
+                  (`+%`, `-%`, `*%`, `<<%`) lives only on an exact unsigned range \
+                  `0 .. 2^N-1` and answers it (`M153` elsewhere, naming `+|`), \
+                  saturating (`+|`) lives on one shared integer range and answers \
+                  it clamped (`M154` on two ranges). A literal operand takes the \
+                  other's range when its value lies in it; two literals wrap in \
+                  their common width. Neither ever takes the `M104` width path.",
+        vorbehalt: "**Exactness is read off the operand ranges with their V1/V2 \
+                    facts, not off the declarations**: a narrowed `0..3` is not \
+                    exact and still falls. Mixed widths answer `Unbekannt`, like \
+                    plain `+` -- no implicit conversion, and no refusal either. \
+                    The shift amount is bounded, never exact. Says nothing about \
+                    whether the lowered C computes the wrap -- that is the \
+                    emitter's `umlauf_c`/`saettigung_c`, measured separately.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/ueberlauf.rs: exact-shape \
+                      acceptance (u32, u13, literals, signed saturation), \
+                      `M153`/`M154`/`M104` refusals by code, emitted mask and \
+                      helper-call shapes, compiled-and-run values.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`umlauf_oder_saettigung`); \
+                     PLAN-BITS.md section 4",
     },
     Satz {
         name: "m1.vorzeichenwechsel",
