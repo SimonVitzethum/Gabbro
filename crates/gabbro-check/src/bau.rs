@@ -301,22 +301,41 @@ pub fn traeger_bis(bau: &Bau, fuel: usize, f: usize) -> Vec<String> {
 /// every carrier of the domain that is NOT shared and is reached by more than
 /// one thread. Unknown carriers read shared (S5) and never appear here.
 pub fn pruefe_ungeteilt(bau: &Bau, fuel: usize) -> Vec<String> {
-    let mut verletzt: Vec<String> = Vec::new();
+    ungeteilt_mit_faeden(bau, fuel)
+        .into_iter()
+        .map(|(c, _)| c)
+        .collect()
+}
+
+/// The same premise, each violated carrier with the entry roots that reach it
+/// (thread witnesses, context order, at most the first two -- a third writer adds
+/// no new fact for the refusal, and the message names a pair).
+///
+/// Lane 120 wires this beside `H013`: `pruefe_ungeteilt` above only accompanied
+/// the verdict silently, and a second reachability beside it would be a second
+/// register over the same matter. This function IS that computation, extended by
+/// the witnesses the refusal names -- one function, two readers.
+pub fn ungeteilt_mit_faeden(bau: &Bau, fuel: usize) -> Vec<(String, Vec<String>)> {
+    let mut verletzt: Vec<(String, Vec<String>)> = Vec::new();
     for c in &bau.traeger {
         if bau.geteilt.get(c).copied().unwrap_or(true) {
             continue;
         }
-        let mut faeden = 0;
+        let mut faeden: Vec<String> = Vec::new();
         for f in 0..bau.eintritt.len() {
             if traeger_bis(bau, fuel, f).contains(c) {
-                faeden += 1;
-                if faeden > 1 {
+                if let Some(e) = bau.eintritt.get(f) {
+                    if !faeden.contains(e) {
+                        faeden.push(e.clone());
+                    }
+                }
+                if faeden.len() > 1 {
                     break;
                 }
             }
         }
-        if faeden > 1 {
-            verletzt.push(c.clone());
+        if faeden.len() > 1 {
+            verletzt.push((c.clone(), faeden));
         }
     }
     verletzt
@@ -376,6 +395,19 @@ mod tests {
         let mut c = bau_mini();
         c.eintritt.truncate(1);
         assert!(pruefe_ungeteilt(&c, sattigung(&c)).is_empty());
+    }
+
+    #[test]
+    fn w5_nennt_die_beiden_eintrittswurzeln() {
+        let b = bau_mini();
+        // Both entries reach `z`: the witnesses name the pair in context order.
+        assert_eq!(
+            ungeteilt_mit_faeden(&b, sattigung(&b)),
+            [(
+                "z".to_string(),
+                vec!["m::mitte".to_string(), "m::seite".to_string()]
+            )]
+        );
     }
 
     #[test]

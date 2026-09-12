@@ -330,7 +330,9 @@ fn argument_term(a: &Expr, caller: &[CallerParam]) -> Result<String, Reason> {
         // **«SG-24»: a count has no term in this theory** (`Main`, no cardinality
         // library) -- a `refines` head over one is refused by name, not defaulted.
         // **Lane E1:** a library call has no term here either.
+        // **Lane 111:** a table literal is no actual argument either.
         | ExprArt::Zaehle { .. }
+        | ExprArt::ArrayLit(_)
         | ExprArt::LibraryCall(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
@@ -446,7 +448,10 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
         | ExprArt::Ergebnis
         // **«SG-24»** -- same refusal as in `argument_term` above: no cardinality
         // in `Main`, refused by name.
+        // **Lane 111:** a table literal has no term either -- the theory has
+        // no array literal form.
         | ExprArt::Zaehle { .. }
+        | ExprArt::ArrayLit(_)
         | ExprArt::Grund { .. } => Err(Reason::NoTerm),
     }
 }
