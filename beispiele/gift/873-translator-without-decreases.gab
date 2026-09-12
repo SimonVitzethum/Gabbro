@@ -1,0 +1,25 @@
+-- erwartet: N203
+-- Lane E3: the translator carries no `decreases` clause -- refused,
+-- although the linkage (one translator, `pure`, fitting result) is clean.
+-- A translator is total; the witness is the signature, not a convention.
+module m {
+table P count 1 {
+    slot {
+        words : u32,
+    }
+}
+library fn f(n : u32) -> u32 payload P
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator b for f(region : P) -> P
+    effects { pure }
+    costs <= 8 ops
+{
+    return region;
+}
+}

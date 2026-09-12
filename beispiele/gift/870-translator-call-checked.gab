@@ -1,0 +1,32 @@
+-- erwartet: N069
+-- Lane E3: library function WITH its translator -- the call is refused
+-- ONLY because the translator does not RUN yet (lane E5). The N069 names
+-- the translator that WOULD run the region (`m::b`).
+module m {
+table P count 1 {
+    slot {
+        words : u32,
+    }
+}
+library fn f(n : u32) -> u32 payload P
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator b for f(region : P) -> P
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}
+module app {
+impl fn g(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @m#f(a) { dispatch 0 };
+    return a;
+}
+}

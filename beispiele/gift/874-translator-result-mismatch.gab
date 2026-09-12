@@ -1,0 +1,32 @@
+-- erwartet: N204
+-- Lane E3: the translator answers another table than the served
+-- function's payload -- refused, although the linkage (one translator,
+-- `pure`, `decreases`) is clean. A result naming anything else leaves
+-- the call without a payload of its type.
+module m {
+table P count 1 {
+    slot {
+        words : u32,
+    }
+}
+table Q count 2 {
+    slot {
+        words : u32,
+    }
+}
+library fn f(n : u32) -> u32 payload P
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator b for f(region : Q) -> Q
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+}

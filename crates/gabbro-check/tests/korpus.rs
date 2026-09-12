@@ -44,6 +44,10 @@ const BENANNT: &[&str] = &[
     // `N059` a foreign body in a library hull, `N060` a payload naming no
     // table, `N061` a direct call to a library function.
     "N069", "N059", "N060", "N061",
+    // Lane E3: `N200` a library function without its translator, `N201` a
+    // second or dangling translator, `N202` a translator with effects,
+    // `N203` one without `decreases`, `N204` one answering another type.
+    "N200", "N201", "N202", "N203", "N204",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein
