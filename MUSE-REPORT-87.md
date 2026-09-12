@@ -22,14 +22,14 @@ the integer conversions (`u64(a)`, G9) are claimed by name. Consequences:
 **Typing** (`crates/gabbro-check/src/m1.rs`): `intrinsik_ruf` (hooked at the
 top of `ruf_roh`, before conversions) + `intrinsik_bereich` (operand reader).
 
-- `M153`: `clz`/`ctz`/`log2_floor` over a range admitting zero. Diagnostic
+- `M157`: `clz`/`ctz`/`log2_floor` over a range admitting zero. Diagnostic
   names `narrow` as the remedy (task requirement), plus the V1 alternative
   (`if x >= 1`). Result `0 .. w-1` in the operand's own width.
-- `M154`: unary-group shape (non-integer, signed, non-standard width, wrong
+- `M158`: unary-group shape (non-integer, signed, non-standard width, wrong
   arity). `popcount` result `0 .. w`.
-- `M155`: rotation needs the exact full range (`min == 0 && max == 2^w-1`)
+- `M159`: rotation needs the exact full range (`min == 0 && max == 2^w-1`)
   and an amount in `0 .. w-1` (plus arity 2). Result is the full range.
-- `M156`: `bswap` needs `u16`/`u32`/`u64` (plus arity 1). `bswap` over `u8`
+- `M160`: `bswap` needs `u16`/`u32`/`u64` (plus arity 1). `bswap` over `u8`
   falls; narrowed ranges of the right width pass.
 - `D003` (reused, same file): intrinsic over an `opaque` carrier.
 - `Unbekannt`/`never`/empty operands stay silent (nothing to hold; `M117`
@@ -38,15 +38,15 @@ top of `ruf_roh`, before conversions) + `intrinsik_bereich` (operand reader).
   `if`-checked operand passes: pinned by tests.
 
 **Deliberate boundary (sound refusal, task-conformant):** rotation over an
-exact sub-width sugar range (`u13`, i.e. `u16 in 0 .. 8191`) falls at `M155`.
+exact sub-width sugar range (`u13`, i.e. `u16 in 0 .. 8191`) falls at `M159`.
 The checker reads the storage width (16); a 13-bit rotation in a 16-bit word
 is a different function, and the type system erases `u13` from
 `u16 in 0 .. 8191`, so no rule could tell which width to rotate in. Refusing
 is the only direction that does not guess it. Pinned by test
-(`rotl over exact u13 falls with M155 alone`).
+(`rotl over exact u13 falls with M159 alone`).
 
 **Name claim** (`crates/gabbro-check/src/namen.rs`): `intrinsik_name_vergeben`,
-code `N057` -- any item (except `module`/`use`) named as an intrinsic is
+code `N058` -- any item (except `module`/`use`) named as an intrinsic is
 refused, since the call form routes around it (prohibition-without-replacement
 shape). Locals/params keep the names (conversion precedent, G9).
 
@@ -80,7 +80,7 @@ plus `ctyp_breite`; `wert_ctyp` answers the result width so
 - `bswap`: `__builtin_bswap16/32/64`.
 
 **Sentences** (`crates/gabbro-check/src/saetze.rs`): `m1.bitintrinsik`
-(`M153`-`M156`) and `namen.bitintrinsik-name` (`N057`), both `Gemessen`
+(`M157`-`M160`) and `namen.bitintrinsik-name` (`N058`), both `Gemessen`
 against `rechenwerk.rs`.
 
 **Shared predicate** (`crates/gabbro-check/src/lib.rs`): `ist_bitintrinsik`
@@ -100,14 +100,14 @@ find the form (speechprobe verified in isolation: no failures).
 - `bit_intrinsics_run_under_cc_and_clang`: 17 value rows over all seven
   intrinsics and four widths, compiled `cc -O0`, `cc -O2`, `clang -O2` with
   `-std=c11 -Wall -Wextra -Werror`, run, exact `checked=17 bad=0` thrice.
-- `bit_intrinsic_clz_refuses_a_zero_admitting_operand`: `M153` alone over
+- `bit_intrinsic_clz_refuses_a_zero_admitting_operand`: `M157` alone over
   `u32` (message + notes name `narrow`); `ctz`/`log2_floor` twins; silent
   twins (`u32 in 1 .. 100`, `if x >= 1`, narrowed `u13` via `narrow` with the
   `- 16` lowering pinned).
-- `bit_intrinsic_rotl_refuses_a_narrowed_range`: `M155` alone over
+- `bit_intrinsic_rotl_refuses_a_narrowed_range`: `M159` alone over
   `u32 in 0 .. 5`, over amount `0 .. 32`, over exact `u13`.
-- `bit_intrinsic_bswap_refuses_u8`: `M156` alone over `u8` and over `i32`.
-- `bit_intrinsic_name_cannot_be_declared`: `N057` alone for `fn clz`.
+- `bit_intrinsic_bswap_refuses_u8`: `M160` alone over `u8` and over `i32`.
+- `bit_intrinsic_name_cannot_be_declared`: `N058` alone for `fn clz`.
 
 ## Verification results (last lines)
 
@@ -139,10 +139,10 @@ find the form (speechprobe verified in isolation: no failures).
 
 - `pruefe-zahlen`: 23 baseline BEFUNDs -> 24 (same lines, moved numbers:
   PASSREGISTER sentences 119 -> 121, TODO Absagekennungen 305 -> 310,
-  "tragenden Grund" 139 -> 143, new DARSTELLUNG row 7 -> 8 for `M155`'s
+  "tragenden Grund" 139 -> 143, new DARSTELLUNG row 7 -> 8 for `M159`'s
   width half, "ohne Grund" 107 -> 108, Zeilenfortsetzungen 4017 -> 4039).
   After the gruende-note pass all five new codes read `tragend`
-  (`M155`/`M156` also match a DARSTELLUNG word each, honestly: width/bytes
+  (`M159`/`M160` also match a DARSTELLUNG word each, honestly: width/bytes
   are what those rules are partly about).
 - `pruefe-todo`: README Absagekennungen 304 -> 310 (same stale line).
 - Deliberately NOT written into `TODO.md`/`README.md`/`PASSREGISTER.md`:
@@ -152,7 +152,7 @@ find the form (speechprobe verified in isolation: no failures).
 
 ## What remains open / remarks on the task
 
-1. Sub-width exact sugar (`u13`) rotation is refused (`M155`), not lowered --
+1. Sub-width exact sugar (`u13`) rotation is refused (`M159`), not lowered --
    see "Deliberate boundary" above. If the task's "`uN`" row meant 13-bit
    rotation in 16-bit storage, that needs the sugar width carried into
    `IntBereich` (currently erased) plus a masked 13-bit lowering -- a
@@ -175,8 +175,8 @@ find the form (speechprobe verified in isolation: no failures).
 
 - `crates/gabbro-check/src/lib.rs`: `ist_bitintrinsik`.
 - `crates/gabbro-check/src/m1.rs`: `ruf_roh` hook, `intrinsik_ruf`,
-  `intrinsik_bereich` (`M153`, `M154`, `M155`, `M156`, `D003` reuse).
-- `crates/gabbro-check/src/namen.rs`: `intrinsik_name_vergeben` (`N057`),
+  `intrinsik_bereich` (`M157`, `M158`, `M159`, `M160`, `D003` reuse).
+- `crates/gabbro-check/src/namen.rs`: `intrinsik_name_vergeben` (`N058`),
   wired in `pass`.
 - `crates/gabbro-check/src/aufrufgraph.rs`: seven `pure` root nodes.
 - `crates/gabbro-check/src/kosten.rs`: 1-op intrinsic arm.

@@ -283,7 +283,7 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **`N057` -- a declaration carrying the name of a bit intrinsic.**
+/// **`N058` -- a declaration carrying the name of a bit intrinsic.**
 ///
 /// The seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, `rotr` and
 /// `bswap` are claimed calls (`m1.rs::intrinsik_ruf` types them, `emit.rs::ruf`
@@ -309,7 +309,7 @@ fn intrinsik_name_vergeben(baum: &Programm, absagen: &mut Absagen) {
         }
         absagen.schiebe(
             Absage::fehler(
-                "N057",
+                "N058",
                 name.span,
                 format!(
                     "`{}` names a bit intrinsic -- a call in this spelling never \
@@ -320,7 +320,7 @@ fn intrinsik_name_vergeben(baum: &Programm, absagen: &mut Absagen) {
             .mit_notiz(
                 "the seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, \
                  `rotr` and `bswap` are claimed calls: the checker types them \
-                 (`M153`-`M156`) and the emitter lowers them (`__builtin_*`, \
+                 (`M157`-`M160`) and the emitter lowers them (`__builtin_*`, \
                  `gabbro_rot*`) without asking any declaration",
             )
             .mit_notiz(

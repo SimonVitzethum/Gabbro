@@ -994,7 +994,7 @@ impl<'a> Rechner<'a> {
         // and the cost is fixed the way a conversion's is.** There is no
         // declaration to carry a `costs` clause, so without this branch every
         // `clz(x)` fell into `K003` -- true and unhelpful, since no declaration
-        // will ever name it (`namen.rs` refuses one as `N057`). One primitive
+        // will ever name it (`namen.rs` refuses one as `N058`). One primitive
         // op, `SPRACHE.md` §7's unit -- the emitted form is a single
         // `__builtin_*` expression or one `gabbro_rot*` helper call
         // (`emit.rs::ruf`), plus the cost of the arguments themselves.

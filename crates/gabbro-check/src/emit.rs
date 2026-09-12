@@ -10589,7 +10589,7 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
     //
     // `__builtin_clz/ctz` count in the width of `unsigned int`; on a narrower
     // operand the count is adjusted down (`- 24` for 8 bits, `- 16` for 16).
-    // The cases are unreachable for zero -- the checker excludes it (`M153`) --
+    // The cases are unreachable for zero -- the checker excludes it (`M157`) --
     // so the builtins' undefined zero case never fires.
     if crate::ist_bitintrinsik(&name)
         && r.path().is_some_and(|p| p.teile.len() == 1)
@@ -10769,7 +10769,7 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
 /// `w` is the operand's own width (`intrinsik_breite`), so the builtin's width
 /// and the checker's `breite` are read from the same place. Widths outside the
 /// four standard ones, and a `bswap` outside 16/32/64, are refused by name --
-/// the checker owns those shapes (`M154`/`M155`/`M156`), and this arm is where
+/// the checker owns those shapes (`M158`/`M159`/`M160`), and this arm is where
 /// an unchecked tree would otherwise invent a lowering.
 fn intrinsik_c(name: &str, r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
     let Some(a) = r.argumente.first() else {

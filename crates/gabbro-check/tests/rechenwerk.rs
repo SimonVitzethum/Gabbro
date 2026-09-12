@@ -9270,7 +9270,7 @@ entry sc vector 0x80 arch x86_64 {
 // **Bit intrinsics (PLAN-BITS §3, surface half): one probe per intrinsic, then the run.**
 //
 // The seven calls are ordinary single-segment calls the checker claims by name
-// (`m1.rs::intrinsik_ruf`, `M153`-`M156`): no new word, no grammar change. What
+// (`m1.rs::intrinsik_ruf`, `M157`-`M160`): no new word, no grammar change. What
 // stands here pins all four halves -- the typing (clean here, refusal below),
 // the lowering text, the compilation under two compilers with `-Werror`, and
 // the computed VALUES at run time (a text probe alone cannot tell
@@ -9459,7 +9459,7 @@ fn bit_intrinsics_run_under_cc_and_clang() {
 ///
 /// `clz` over a plain `u32` admits 0, and the lowering would reach
 /// `__builtin_clz(0)`, which is undefined. The diagnostic must name the remedy
-/// (`narrow`), and it must fall with `M153` alone: a companion code would mean
+/// (`narrow`), and it must fall with `M157` alone: a companion code would mean
 /// a second rule fires on the same line for a different reason.
 #[test]
 fn bit_intrinsic_clz_refuses_a_zero_admitting_operand() {
@@ -9468,7 +9468,7 @@ fn bit_intrinsic_clz_refuses_a_zero_admitting_operand() {
 impl fn p(x : u32) -> u32 effects { pure } costs <= 9 ops { return clz(x); }
 }",
     );
-    assert_eq!(codes, vec!["M153"], "clz over `u32` must fall with `M153` alone: {codes:?}");
+    assert_eq!(codes, vec!["M157"], "clz over `u32` must fall with `M157` alone: {codes:?}");
     assert!(
         texte.iter().any(|t| t.contains("narrow")),
         "the refusal must name `narrow` as the remedy: {texte:?}"
@@ -9481,7 +9481,7 @@ impl fn p(x : u32) -> u32 effects { pure } costs <= 9 ops { return clz(x); }
 impl fn p(x : u32) -> u32 effects {{ pure }} costs <= 9 ops {{ return {name}(x); }}
 }}"
         ));
-        assert_eq!(codes, vec!["M153"], "`{name}` over `u32` must fall with `M153` alone: {codes:?}");
+        assert_eq!(codes, vec!["M157"], "`{name}` over `u32` must fall with `M157` alone: {codes:?}");
     }
     // And the narrowed twin stays silent: `1 ..` excludes zero, so there is
     // nothing to refuse -- the V1 half of the same rule.
@@ -9528,7 +9528,7 @@ impl fn p(v : u13) -> u16 effects { pure } costs <= 9 ops { narrow v to 1 .. 819
 
 /// **Rotation needs a whole word.** Over `u32 in 0 .. 5` the wrap point is
 /// ambiguous (mod 6 costs a division per operation), so it is not derivable
-/// there -- `M155` alone.
+/// there -- `M159` alone.
 #[test]
 fn bit_intrinsic_rotl_refuses_a_narrowed_range() {
     let (codes, _) = bits_absagen(
@@ -9536,14 +9536,14 @@ fn bit_intrinsic_rotl_refuses_a_narrowed_range() {
 impl fn p(x : u32 in 0 .. 5, s : u32 in 0 .. 31) -> u32 effects { pure } costs <= 9 ops { return rotl(x, s); }
 }",
     );
-    assert_eq!(codes, vec!["M155"], "rotl over `u32 in 0 .. 5` must fall with `M155` alone: {codes:?}");
+    assert_eq!(codes, vec!["M159"], "rotl over `u32 in 0 .. 5` must fall with `M159` alone: {codes:?}");
     // The amount is typed too: 32 is not a shift in a 32-bit word.
     let (codes, _) = bits_absagen(
         "module t {
 impl fn p(x : u32, s : u32 in 0 .. 32) -> u32 effects { pure } costs <= 9 ops { return rotl(x, s); }
 }",
     );
-    assert_eq!(codes, vec!["M155"], "rotl with an amount reaching 32 must fall with `M155` alone: {codes:?}");
+    assert_eq!(codes, vec!["M159"], "rotl with an amount reaching 32 must fall with `M159` alone: {codes:?}");
     // A sub-width sugar range is EXACT (`u13 in 0 .. 8191`) and still falls:
     // the checker reads the storage width (`u16`), and a 13-bit rotation in a
     // 16-bit word is a different function from a 16-bit one. The type system
@@ -9554,10 +9554,10 @@ impl fn p(x : u32, s : u32 in 0 .. 32) -> u32 effects { pure } costs <= 9 ops { 
 impl fn p(x : u13, s : u8 in 0 .. 7) -> u16 effects { pure } costs <= 9 ops { return rotl(x, s); }
 }",
     );
-    assert_eq!(codes, vec!["M155"], "rotl over exact `u13` must fall with `M155` alone: {codes:?}");
+    assert_eq!(codes, vec!["M159"], "rotl over exact `u13` must fall with `M159` alone: {codes:?}");
 }
 
-/// **A one-byte value has no byte order.** `bswap` over `u8` falls with `M156`
+/// **A one-byte value has no byte order.** `bswap` over `u8` falls with `M160`
 /// alone; the signed twin (`i32`) falls at the same code, for the unsigned
 /// half of the rule.
 #[test]
@@ -9567,17 +9567,17 @@ fn bit_intrinsic_bswap_refuses_u8() {
 impl fn p(x : u8) -> u8 effects { pure } costs <= 9 ops { return bswap(x); }
 }",
     );
-    assert_eq!(codes, vec!["M156"], "bswap over `u8` must fall with `M156` alone: {codes:?}");
+    assert_eq!(codes, vec!["M160"], "bswap over `u8` must fall with `M160` alone: {codes:?}");
     let (codes, _) = bits_absagen(
         "module t {
 impl fn p(x : i32) -> i32 effects { pure } costs <= 9 ops { return bswap(x); }
 }",
     );
-    assert_eq!(codes, vec!["M156"], "bswap over `i32` must fall with `M156` alone: {codes:?}");
+    assert_eq!(codes, vec!["M160"], "bswap over `i32` must fall with `M160` alone: {codes:?}");
 }
 
 /// **A declaration carrying an intrinsic name stands uncalled.** The call form
-/// never reaches it, so the declaration is refused (`N057`) -- the
+/// never reaches it, so the declaration is refused (`N058`) -- the
 /// prohibition-without-replacement shape, caught at the declaration instead of
 /// at every call that routes around it.
 #[test]
@@ -9587,5 +9587,5 @@ fn bit_intrinsic_name_cannot_be_declared() {
 impl fn clz(x : u32) -> u32 effects { pure } costs <= 9 ops { return x; }
 }",
     );
-    assert_eq!(codes, vec!["N057"], "a `fn clz` must fall with `N057` alone: {codes:?}");
+    assert_eq!(codes, vec!["N058"], "a `fn clz` must fall with `N058` alone: {codes:?}");
 }

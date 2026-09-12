@@ -1376,21 +1376,21 @@ pub const M1: &[Satz] = &[
     },
     Satz {
         name: "m1.bitintrinsik",
-        kennungen: &["M153", "M154", "M155", "M156"],
+        kennungen: &["M157", "M158", "M159", "M160"],
         aussage: "The seven bit intrinsics (`clz`, `ctz`, `log2_floor`,
                   `popcount`, `rotl`, `rotr`, `bswap`) are typed at the call:
                   the nonzero group needs an operand whose range excludes zero
-                  (`M153`); every operand must be an unsigned standard width
-                  (`M154` for the unary group, `M155` for rotation, `M156` for
+                  (`M157`); every operand must be an unsigned standard width
+                  (`M158` for the unary group, `M159` for rotation, `M160` for
                   swap); rotation needs the exact full `uN` range and an amount
-                  in `0 .. w-1` (`M155`); `bswap` needs `u16`, `u32` or `u64`
-                  (`M156`). Results are exact: `0 .. w-1` for the nonzero
+                  in `0 .. w-1` (`M159`); `bswap` needs `u16`, `u32` or `u64`
+                  (`M160`). Results are exact: `0 .. w-1` for the nonzero
                   group, `0 .. w` for `popcount`, the full range for rotation
                   and swap -- so the lowering reaches `__builtin_clz/ctz`
                   only with a provably nonzero argument, whose undefined zero
                   case stays unreachable.",
         vorbehalt: "**Reads facts, not declarations**: a V1-narrowed `1 ..`
-                    stays silent beside an open `u32` that falls at `M153`.
+                    stays silent beside an open `u32` that falls at `M157`.
                     An `Unbekannt` operand stays silent (nothing to hold), and
                     an empty range is `M117`'s at the declaration. The sentence
                     says nothing about the C the call lowers to beyond the
@@ -1401,7 +1401,7 @@ pub const M1: &[Satz] = &[
                       probe per intrinsic (checked, emitted, compiled under
                       `cc` and `clang` with `-Wall -Wextra -Werror`, run under
                       both optimisation levels) and three poison probes
-                      (`M153` on `u32`, `M155` on `u32 in 0 .. 5`, `M156` on
+                      (`M157` on `u32`, `M159` on `u32 in 0 .. 5`, `M160` on
                       `u8`), each falling with its code alone.",
         fundstelle: "crates/gabbro-check/src/m1.rs (`intrinsik_ruf`,
                       `intrinsik_bereich`); crates/gabbro-check/src/emit.rs
@@ -1409,8 +1409,8 @@ pub const M1: &[Satz] = &[
     },
     Satz {
         name: "namen.bitintrinsik-name",
-        kennungen: &["N057"],
-        aussage: "No declaration carries the name of a bit intrinsic (`N057`):
+        kennungen: &["N058"],
+        aussage: "No declaration carries the name of a bit intrinsic (`N058`):
                   a call in one of the seven spellings never reaches a declared
                   callee, so a declaration of the same name would stand
                   uncalled -- a callee the language routes around. Locals and
@@ -1424,7 +1424,7 @@ pub const M1: &[Satz] = &[
                     fall where undeclared callees fall.",
         stand: Satzstand::Gemessen,
         gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: a `fn clz`
-                      declaration falls with `N057` alone; the clean corpus
+                      declaration falls with `N058` alone; the clean corpus
                       carries none of the seven names at any item.",
         fundstelle: "crates/gabbro-check/src/namen.rs
                       (`intrinsik_name_vergeben`)",

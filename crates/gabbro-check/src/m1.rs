@@ -2779,11 +2779,11 @@ impl<'a> Pruefer<'a> {
     /// The surface spells them per width until generics exist; the width here is
     /// the operand's OWN `breite`, so no width is named twice and none can
     /// disagree with the declaration. Ranges follow `PLAN-BITS.md` §3: the
-    /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M153`, with the
+    /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M157`, with the
     /// `narrow` remedy the task asks for); every operand must be an unsigned
-    /// standard width (`M154`/`M155`/`M156`); rotation needs the EXACT full
-    /// range and an amount in `0 .. w-1` (`M155`); `bswap` needs `u16`/`u32`/`u64`
-    /// (`M156`). Results are exact, never widened: `0 .. w-1` for the nonzero
+    /// standard width (`M158`/`M159`/`M160`); rotation needs the EXACT full
+    /// range and an amount in `0 .. w-1` (`M159`); `bswap` needs `u16`/`u32`/`u64`
+    /// (`M160`). Results are exact, never widened: `0 .. w-1` for the nonzero
     /// group, `0 .. w` for `popcount`, the full range for rotation and swap.
     ///
     /// An `Unbekannt` (or `never`) operand stays silent: there is nothing to
@@ -2796,9 +2796,9 @@ impl<'a> Pruefer<'a> {
         };
         if r.argumente.len() != will {
             let code = match name {
-                "rotl" | "rotr" => "M155",
-                "bswap" => "M156",
-                _ => "M154",
+                "rotl" | "rotr" => "M159",
+                "bswap" => "M160",
+                _ => "M158",
             };
             self.absagen.schiebe(
                 Absage::fehler(
@@ -2822,9 +2822,9 @@ impl<'a> Pruefer<'a> {
             argtypen.push((self.ausdruck(a, lage), a.span));
         }
         let code = match name {
-            "rotl" | "rotr" => "M155",
-            "bswap" => "M156",
-            _ => "M154",
+            "rotl" | "rotr" => "M159",
+            "bswap" => "M160",
+            _ => "M158",
         };
         let (b, _span) = match self.intrinsik_bereich(&argtypen[0].0, argtypen[0].1, name, code, "operand") {
             Some(x) => x,
@@ -2836,7 +2836,7 @@ impl<'a> Pruefer<'a> {
                 if b.min < 1 {
                     self.absagen.schiebe(
                         Absage::fehler(
-                            "M153",
+                            "M157",
                             argtypen[0].1,
                             format!(
                                 "`{name}` needs an operand whose range excludes zero, \
@@ -2869,7 +2869,7 @@ impl<'a> Pruefer<'a> {
                 if b.min != 0 || b.max != (1i128 << w) - 1 {
                     self.absagen.schiebe(
                         Absage::fehler(
-                            "M155",
+                            "M159",
                             argtypen[0].1,
                             format!(
                                 "`{name}` rotates a whole word and needs the exact \
@@ -2888,14 +2888,14 @@ impl<'a> Pruefer<'a> {
                     return Typ::Unbekannt;
                 }
                 let (c, cspan) =
-                    match self.intrinsik_bereich(&argtypen[1].0, argtypen[1].1, name, "M155", "amount") {
+                    match self.intrinsik_bereich(&argtypen[1].0, argtypen[1].1, name, "M159", "amount") {
                         Some(x) => x,
                         None => return Typ::Unbekannt,
                     };
                 if c.min < 0 || c.max > w as i128 - 1 {
                     self.absagen.schiebe(
                         Absage::fehler(
-                            "M155",
+                            "M159",
                             cspan,
                             format!(
                                 "`{name}` needs an amount in `0 .. {}`, and `{}` is not",
@@ -2916,7 +2916,7 @@ impl<'a> Pruefer<'a> {
                 if !matches!(w, 16 | 32 | 64) {
                     self.absagen.schiebe(
                         Absage::fehler(
-                            "M156",
+                            "M160",
                             argtypen[0].1,
                             format!(
                                 "`bswap` reverses whole bytes and needs `u16`, `u32` \
