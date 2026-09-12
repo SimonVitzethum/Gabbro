@@ -17,10 +17,15 @@ arbeitsprotokoll/
 # standen darum in jedem Diff (gefunden beim Merge, 2026-08-20).
 __pycache__/
 *.pyc
-programmlogik/.lake/
+# Lean build output, at ANY depth (2026-09-12). The per-project lines stood here before, and
+# two agent copies named `programmlogik-a/` and `programmlogik-b/` walked past them in merge
+# 12075947: 100 `.lake` files (134 MB unpacked, `.olean` plus IR `.c`) entered the history.
+# A pattern that names one directory covers one directory.
+.lake/
 programmlogik/lake-manifest.json
-grammatik/.lake/
 grammatik/lake-manifest.json
+# Agent working copies of `programmlogik/` -- scratch, never repository content.
+programmlogik-*/
 
 # **Ein Heredoc-Unfall vom 2026-09-01**: `python3 -c "
 import sys,re,collections"` ohne
