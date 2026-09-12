@@ -3257,8 +3257,12 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**122 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**123 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
+
+*122 → 123 am 2026-09-12 (lane 126): `beispiele/104-referenz.gab` carries its lock `M`
+as one more foreign body (the lock prototypes come from outside, rank and hold time
+stay in the checker). The "state their duty" count stays at 11.*
 
 *117 → 122 am 2026-09-12 (lane S6): vier davon sind Wellendrift, einer ist dieser Bahn —
 `beispiele/90-syscall-errno.gab` trägt seinen `syscall` als fünften fremden Rumpf mit

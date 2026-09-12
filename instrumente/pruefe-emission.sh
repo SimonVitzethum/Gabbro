@@ -2305,6 +2305,43 @@ lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
      's/_grund = IoError_BadFd;/_grund = IoError_Interrupted;/' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 22. The reference fixture as a running program (lane 126) ---------------------------
+#
+# `beispiele/104-referenz.gab` is the Lean reference fixture
+# (`grammatik/Grammatik/ReferenzB.lean`: `refD`/`refP`) in surface syntax: one
+# table `Konto` of 2 slots with one `0 .. 100` field, one guarding lock `M`,
+# `einzahlen` (writes the slot to the cap 100, then calls `lies`) and `lies`
+# (reads the slot back). Both run under the held lock (`requires Held(M)`).
+#
+# Threads cannot be driven from a C driver -- the emitted unit has no thread
+# notion (a `concurrent` declaration would generate no C and, worse, the
+# certificate books it as UNCLASSIFIED, which fails stage 7) -- so the driver
+# runs the SEQUENTIAL COMPOSITION of both threads: `einzahlen` like thread 1
+# (with the witness argument 7 of `refRho7`), then `lies` like thread 0.
+#
+#    Expected:
+#      100  -- `lies` answers what `einzahlen` wrote (the `refB_schreibt` half:
+#              slot `0 -> 100`, the memory move the Lean witness names)
+#      100  -- the slot itself reads the cap
+#        0  -- and slot 1 is untouched: the write hits ONE slot
+#
+# The poison takes the cap off the write: both numbers fall to 99, so the
+# comparison measures that the observed value comes OUT OF THE WRITE and not
+# out of the initial memory (which reads 0 either way).
+TREIBER104='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static Konto k;
+    einzahlen(&k, 0, 7);
+    unsigned g = lies(&k, 0);
+    printf("%u %u %u\n", g, (unsigned)k.slots[0].stand, (unsigned)k.slots[1].stand);
+    return 0;
+}
+'
+lauf "beispiel104" "$W/beispiele/104-referenz.gab" "$TREIBER104" "100 100 0" \
+     's/k->slots\[i\]\.stand = 100;/k->slots[i].stand = 99;/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 6 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2842,7 +2879,10 @@ fi
 # measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
 # *A mark that absorbs foreign growth without naming it is a slack ratchet,
 # so the decomposition stands here and not in a merge note.*
-MARKE_EMIT=75
+# **75 -> 76 on 2026-09-12, lane 126.** The one new emitting file is this
+# lane's own: `beispiele/104-referenz.gab` (the reference fixture as a Gabbro
+# program, driven as `beispiel104` above). No other root moves with it.
+MARKE_EMIT=76
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

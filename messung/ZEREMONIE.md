@@ -9,7 +9,15 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       88        A1  4 · A4 84
   redundant        0
   tragend       1281
-94 von 1408 Stellen dürfen sinken
+96 von 1423 Stellen dürfen sinken
+
+> **Decomposition of this line, measured 2026-09-12 (lane 126).** The sinkable
+> count 94 -> 96 is all this lane: `beispiele/104-referenz.gab` brings two
+> more sites that may sink. The denominator moves in two steps: 1408 -> 1412
+> is unbooked drift from earlier lanes (measured on the tree without this
+> lane's files), 1412 -> 1423 is this lane (eleven ceremony sites in the new
+> example: its `requires`/`ensures`/`effects`/`costs` clauses, the lock rank
+> and hold time, and the table count).
 
 > **Am 2026-09-01 stand hier für eine Stunde 1111, und das war eine Fehlmessung.** Der Lauf
 > zählt alle `.gab` des Baums — und in diesem Baum schrieb gleichzeitig eine zweite Spur.
