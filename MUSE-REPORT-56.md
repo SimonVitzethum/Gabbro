@@ -1,8 +1,11 @@
 # MUSE-REPORT-56
 
 Lane 56, own-state projection (attempt D of 2). New file
-`grammatik/Grammatik/EigenZustandD.lean` (2039 lines), imported at the end of
+`grammatik/Grammatik/EigenZustandD.lean`, imported at the end of
 `grammatik/Grammatik.lean`. No existing file touched except the import line.
+Review continuation (this section): both inhabitation witnesses rebuilt on
+the reference fixture `ReferenzB` (`refD`/`refP`/`refO`/`refSp0`); the file
+additionally imports `Grammatik.ReferenzB`.
 
 ## What was asked
 
@@ -59,22 +62,54 @@ Route, bottom-up, all in the new file:
   the step lemma; every premise is used).
 
 Witness (rule 13): `eigenzustand_nur_eigene_schritteD_rep_zeuge` instantiates
-ALL premises jointly on a non-degenerate program: `BG.D1` (one table, owner
-contract writes it), two-step run -- owner write `false -> true` (memory
-changes, `wSchreibtWechsel`) then foreign `assignVar` (slots preserved,
-`wStep2` with carrier-free atom). `hNurG` by `wNurG`, `hNoAx` by `wNoAx`
-(`D1.Ax` empty), reachability by the two-step derivation. Note: no `_zeuge`
+ALL premises jointly on a non-degenerate program, and
+`pcSchritt_fremd_fest_zeuge` does the same for the step lemma (whose `hNoAx`
+premise quantifies over `Vertrag`/`Stmt`). Note: no `_zeuge`
 exists for the EXACT target name (its premises are jointly contradictory at
-`axiomCall` -- that IS the finding); the joint witness is proved for the
-repaired theorem.
+`axiomCall` -- that IS the finding); the joint witnesses are proved for the
+repaired theorem and the step lemma.
+
+## Review continuation: witnesses on the reference fixture
+
+Per reviewer direction both witnesses now live on `ReferenzB` (`refD`, one
+table `konto`, lock `m`, no axioms/registers/marks/globals):
+
+- Shared setup (§15): `ezdProg` (constant carrier-free program text
+  `[leaf [] []]`), `ezdProg_nurG`, and `ezdLeave_step` (thread `0` fires
+  `leave` -- memory-preserving, empty recorded list, carrier-free atom --
+  from any machine with empty thread-0 trace; all premises probed first in
+  `$TMPDIR`).
+- `pcSchritt_fremd_fest_zeuge`: `P`/`O`/`passes`/`hO` := `refP`/`refO`/`0`/
+  `refO_gut`; step `ezdLeave_step refPC2` by thread `0 ≠ 1` from the reached
+  machine `refPC2`; `hNurG` by `ezdProg_nurG`; **`hNoAx` is provable here**
+  (no finding of unprovability): `refD.Ax` is `Empty`, so the oracle-write
+  existential is absurd by `nomatch`. The conclusion instance is proved by
+  `pcSchritt_fremd_fest` itself; non-degeneracy by `refEin` writing `konto`
+  (`refEin_schreibt`) and the reached memory-changing run
+  (`refB_pc_erreicht`, `refB_pc_schreibt`).
+- `eigenzustand_nur_eigene_schritteD_rep_zeuge` (same name, fixture
+  superseded `BG.D1` → `refD` per reviewer direction; the `BG.D1` helpers
+  stay as proved facts): same `hNurG`/`hNoAx` exhibits, conclusion instance
+  with `M` := `GenStart refSp0` (`PCReach.start`) and the `leave` step from
+  the start machine, plus the same non-degeneracy conjuncts. The vacuous
+  foreignness hypothesis (`hh : h ≠ g` unused against the constant program
+  text) is named visibly, not discarded -- there is honestly nothing to
+  derive from it.
+- Environment notes from this round: `x ∈ []` does not reduce definitionally
+  (prove `offen [] = []` by `rfl`, then close both sides via
+  `(List.mem_nil_iff _).trans (List.mem_nil_iff _).symm`); anonymous-constructor
+  holes elaborate left to right, so a trailing `by decide` must come after
+  the term fixing its metavariables (or give values explicitly, e.g. `k`/`f`
+  as `0`/`()`).
 
 ## Verification
 
 - `./lean-probe grammatik/Grammatik/EigenZustandD.lean`: 0 errors.
-- `./lean-bau` last line: `Build completed successfully (37 jobs).`
+- `./lean-bau` last line: `Build completed successfully (47 jobs).`
 - No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`, no `Prop`-typed
   premise, no `intro _`/`have _ :=` discards (checked by grep).
-- `#print axioms` for the five main theorems: all depend only on
+- `#print axioms` for the six main theorems (now including
+  `pcSchritt_fremd_fest_zeuge`): all depend only on
   `[propext, Classical.choice, Quot.sound]`.
 
 ## What remains open
