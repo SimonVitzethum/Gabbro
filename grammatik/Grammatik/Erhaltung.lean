@@ -1,113 +1,121 @@
 /-
   File:       Grammatik/Erhaltung.lean
-  Subject:    The PRODUCER CONTRACT as specification: what the emitter must
-              uphold, written as Lean shapes. Design only.
+  Subject:    The PRODUCER CONTRACT as Lean shapes: correspondence, alias,
+             cost, ruling table, rechecker shape, and priced admissions.
+             Design plus checked legs; the semantic rulings stay cut.
 
   Claim (in one sentence):
-    The emitter earns trust per run through a correspondence certificate
-    (every Gabbro evaluation site exactly once, in order, over ruled forms
-    only, with no C site lacking a Gabbro preimage), through an alias
-    obligation (no address arithmetic in the image, the 491 census sites
-    named), and through a cost obligation (CerCo preserves the ops count,
-    the production compiler is only measured by witness pairs) -- and the
-    per-form ruling table below names all 49 slots with their status, the
-    `?:` ruling as the filled template.
+    The file turns the emitter contract into data (certificate rows,
+    alias obligation, cost claim, ruling table with priced statuses) and
+    proves the Lean-side legs that hold without C semantics: every
+    recomputation whose success IMPLIES its sentence (§§6-8), the priced
+    admissions as table data (§11), and the table now CLOSED
+    (`tafel_geschlossen`) -- while the per-slot semantic adequacy, the
+    certificate producer, C execution meaning, and the rechecker program
+    stay cut.
 
-  Mapping to the measured base (read-only, not imported as code):
-    `Ziel.lean` `CForm`/`Absenkung` -- the 19 named shapes this table rules on,
-      and the bounded lowering the cost shape rests on.
-    `dokumente/BEWEIS.md` Gegenstand 2 -- the census (64 forms over 8001
-      lines: 34 allowed-and-used, 30 undecided), the two rulings (`?:`,
-      `__builtin_unreachable`), the UB inventory rows 2/5/11/12, and the
-      per-run coverage certificate (§4: completeness, order, closure,
-      no additional effect).
-    `dokumente/SYNTAX.md` §18 -- the closed-list sentence this file turns
-      into data; the prose for the new §19 stands in
-      `messung/SYNTAX-ERHALTUNG-ENTWURF.md` (this lane does NOT edit it).
+  What the file actually contains (§ by §):
+    §1  Correspondence as data plus four Prop shapes: `CorrSite` /
+        `CorrCert` rows, `corrComplete` / `corrOrdered` / `corrClosed` /
+        `corrNoExtra`, and the assembled sentence `satz_korrespondenz`.
+    §2  Alias as data: `ArithSource`, `AliasObligation`
+        (address-arithmetic sites carried openly), `aliasKept`
+        (empty site list), census number `ptrArithCensus = 491`.
+    §3  Cost as data: `CostCarrier` (CerCo vs production), `CostClaim`,
+        `costKept` (CerCo only), `costMeasured` (production needs a
+        pair), `senkungBegrenzt` (at most `proPrimitiv` C statements
+        per primitive).
+    §4  Ruling table: `RulingStatus` (`offen` / `aufListe` price /
+        `ausErzeuger`), the 30 census slots `OffeneForm`
+        (C1 = 7, C2 = 19, C3 = 4), the `?:` template
+        `bedingtEntscheid`, rows `EntscheidZiel`, prices
+        `beschraenktPreis` / `fluechtigPreis`, the table `tafel`
+        (19 named shapes admitted with price), `entschieden`,
+        and the sentences `satz_korrespondenz` / `satz_alias` /
+        `satz_kosten` / `satz_tafel` / `satz_erzeugervertrag`
+        (shapes only, §5).
+    §6  Correspondence recomputation: Boolean legs `vollB` /
+        `ohneExtraB` / `geordnetB` / `geordnetCertB` / `ruledB` /
+        `geschlossenB` / `pruefeKorrespondenz` with soundness theorems
+        (`vollB_sound`, `ohneExtraB_sound`, `geordnet_sound`,
+        `geordnetCertB_sound`, `ruledB_sound`, `ruledB_voll`,
+        `geschlossenB_sound`, `geschlossen_immer`,
+        `korrespondenz_aus_vieren`, `korrespondenz_sound`,
+        `korrespondenz_leer`), each with accept/reject `example`s.
+    §4b Witness-pair linkage (C2 shape): `ZeugenPaar`
+        (probe name, C form, expected outcome), `zeugenPaarGueltig`
+        (form tabled, probe name non-empty), `zeugenPaar_sound`,
+        the five measured pairs `c2Paare` under
+        `messung/proben/zeugnis-c2/`, `c2AlleGueltig` /
+        `c2Alle_decided` (green by `decide`), `c2Paar_gedeckt`.
+    §6b Emitted witness (C1 shape): `emittedMarker` (`gabbro-site`,
+        written by `emit.rs` `emittiere_mit`), `emittedRowFields` /
+        `cformWort` (mirror of `corrcert.rs` rows, witnessed by
+        `messung/proben/corrcert/korr-*.json`), `markerStimmtB`
+        (marker-vs-row agreement, accept/reject `example`s).
+    §7  Alias discharge: `alias_leer` (empty list keeps the
+        obligation), `census_steht` (491 as data), accept/reject
+        `example`s including the honest reject of today's full
+        census image.
+    §8  Cost legs: `kosten_cerCo_gilt`, `kosten_produktion_frei`
+        (production claims nothing on the CerCo leg),
+        `gemessen_produktion` (needs carrier plus pair),
+        `gemessen_cerCo_frei`, `traeger_trennt`,
+        `senkung_aus_schranke` (17 per primitive from
+        `messung/ABSENKUNG-MESSUNG.md`), `kosten_satz_bauen`,
+        both-directions `example`s at the measured number.
+    §9  Debt proved real, then closed: `tafel_geschlossen`
+        (`satz_tafel` by `decide` -- the last slot is now ruled
+        with price) and `vertrag_braucht_tafel` (the contract
+        NEEDS the table, as a projection, not an assumption).
+    §10 Rechecker as program SHAPE (draft, no `theorem`):
+        `NachprueferEingabe` (run artefacts in), `nachpruefer`
+        (recompute to a verdict), `nachprueferGueltig`,
+        `satz_nachpruefung_vertrauen` (valid verdict means
+        trustworthy certificate -- linkage shape only).
+    §11 Five priced slots as data: `logUndOderEntscheid` /
+        `fortEntscheid` / `abbruchEntscheid` / `zeigerIndexEntscheid`
+        (admissions with price from `messung/CFORM-REGEL-*.md`),
+        `tafelPreisNachtrag` / `tafelStatusNeu` / `tafelNeu`
+        (same rows, five statuses decided), `satz_tafelNeu`
+        (shape, still draft).
+    Every theorem ends with a `#print axioms` line: Lean's standard
+    axioms (`propext`, `Quot.sound`, plus `Classical.choice` where
+    the build reports it) only.
 
-   Proved here (this lane): the Lean-side legs of the emitter contract --
-     correspondence VALIDATION (a Boolean recomputation over the certificate
-     whose success IMPLIES the four correspondence sentences, §6), the alias
-     discharge shape (`aliasKept` from the empty site list, §7), and the cost
-     legs (CerCo preservation as an implication, production measurement as
-     an implication, bounded lowering from the measured bound, §8). The shape
-     mirrors the `Zeugnis.lean` soundness pattern: recompute, then `decide`.
-     Every theorem ends with a `#print axioms` line: Lean's standard axioms
-     (`propext`, `Quot.sound`) only.
+  What stays cut (no C semantics, no producer, no adequacy):
+    C1  Lean PRODUCES no certificate; the second program stays
+        `instrumente/nachpruefer.py`. The correspondence now NAMES
+        its image (§6b) but the reader program is not here.
+    C2  What a C form MEANS stays cut (C-semantics execution);
+        the witness-pair LINKAGE is a checked shape (§4b), and the
+        common-mode failure (both tables from one text) is named,
+        not closed.
+    C3  `restrict` and `volatile` stay trust: priced option and
+        axiom, carried as data (`beschraenktPreis`,
+        `fluechtigPreis`), never proved.
+    C5  The admissions stay TEMPLATE rulings semantically: Lean
+        proves each named shape is tabled, not that its price is
+        adequate. Each named shape still owes its one-by-one
+        semantic decision; adequacy stays owed per slot.
+    C6  The rechecker (§10) is DRAFT, no `theorem`: the bridges
+        from its legs to the sentences, and the second program
+        that reads the run artefacts, stand outside this file.
+    C7  The five priced slots (§11) carry price as DATA; Lean
+        proves nothing about price adequacy. `tafel` itself is
+        frozen except status-field decisions.
 
-   Shapes that stay unproved (booked cuts, not faked): the recomputer that
-     would PRODUCE a valid certificate (needs the second program), what a C
-     form MEANS (witness-pair execution, C semantics), and with them the 0
-     open slots -- `tafel_nicht_geschlossen` (§9) proves the debt is real,
-     and `vertrag_braucht_tafel` proves the contract does not hold today.
-     `satz_tafel` and `satz_erzeugervertrag` stay SPECIFICATION.
-
-  Premises (trusted, not proved):
-    P1  The 19 `CForm` shapes are the named target language (`Ziel.lean`).
-    P2  Each Gabbro primitive lowers to at most `proPrimitiv` C statements
-        (`Absenkung`; the number 4 is itself unmeasured -- see `Ziel.lean`).
-    P3  The census counts are faithful (`zaehle-c-formen.py`, 2026-08-31:
-        64 forms, 30 undecided, 491 pointer-arithmetic sites).
-
-   Cuts (rebooked 2026-09-10: shrunk, not faked):
-     C1  CLOSED (2026-09-11, p17): `korrespondenz_sound` still proves
-         valid-cert-implies-correspondence, but the correspondence now NAMES
-         its image -- `emittedMarker` is the word `emit.rs` (`emittiere_mit`)
-         writes beside each emitted site, `emittedRowFields`/`cformWort`
-         mirror the certificate rows witnessed by
-         `messung/proben/corrcert/korr-*.json`, and `markerStimmtB` rechecks
-         marker-vs-row agreement (§6b). Lean still PRODUCES no certificate;
-         the second program stays `instrumente/nachpruefer.py`.
-      C2  What a C form MEANS stays cut, but the witness-pair LINKAGE is a
-          checked shape (§4b): each `ZeugenPaar` names its `CForm`, its probe
-          under `messung/proben/zeugnis-c2/`, and its expected outcome;
-          `zeugenPaarGueltig` recomputes the linkage (`ruledB` over the form,
-          non-empty probe name), `zeugenPaar_sound` lifts success to the
-          tabled sentence, and `c2AlleGueltig` decides green over the whole
-          list. The meaning itself (C-semantics execution) stays cut, and the
-          common-mode failure (both tables from one text) is named, not closed.
-     C3  `restrict` and `volatile` stay trust: priced option and axiom,
-         carried as data (`beschraenktPreis`, `fluechtigPreis`), never
-         proved.
-     C4  COVERED (was: not wired into `Grammatik.lean`): `Grammatik.lean`
-         imports this file, so `lake build` checks it; after a build the
-         single-file check `lake env lean Grammatik/Erhaltung.lean` holds too.
-     C5  The 19 admissions stay TEMPLATE rulings semantically: Lean proves
-         each named shape is tabled (`ruledB_voll`), not that its price is
-         adequate. Each named shape still owes its one-by-one semantic
-          decision the way `?:` got its (`bedingtEntscheid`); the 0 open
-          slots are proved debt (`tafel_nicht_geschlossen`), countable via
-          the status field. Lane 121 flips four of them in `tafel` itself
-          (`zeigerIndex`, `abbruchStmt`, `logUndOder`, `fortStmt`, each row
-          citing its `messung/CFORM-REGEL-*.md` ruling); adequacy still owed
-          per slot, the debt proof now rests on the remaining open rows.
-          Lane p06 flips three C2 rows in `tafel` itself (`voidTyp`,
-          `cAttribut`, `cSizeof`, each row citing its
-          `messung/CFORM-REGEL-*.md` ruling); zero C1 rows remain open.
-      C6  Der Nachpruefer bleibt Schnitt: `nachpruefer` (§10) rechnet
-          Laufartefakte (Gabbro-Stellen, Zertifikat, Aliaslast, Kostenaussage,
-          Paare, Anweisungszahl) zu einem Urteil nach, und
-          `satz_nachpruefung_vertrauen` nennt die Gestalt der Verknuepfung
-          (gueltiges Urteil heisst vertrauenswuerdiges Zertifikat). Die Gestalt
-          ist ENTWURF, kein Satz: kein `theorem`-Befehl in dieser Bahn, und das
-          zweite Programm, das die Artefakte aus dem Lauf liest, steht nicht
-          hier (Klasse von C1).
-      C7  Die fuenf bepreisten Stellen bleiben Schablonen dem Sinn nach:
-          `tafelNeu` (§11) traegt `bedingt`, `logUndOder`, `fortStmt`,
-          `abbruchStmt` und `zeigerIndex` mit Preis im Statusfeld, sonst
-          unveraendert aus `tafel` nachgerechnet. Lean beweist damit nichts
-          ueber die Angemessenheit eines Preises (C5 gilt weiter); `tafel`
-          selbst bleibt eingefroren, und `satz_tafel` spricht weiter von ihr.
-          Bahn 121: `tafel` traegt die vier Zulassungen seither unmittelbar
-          (Statusfeld entschieden mit Preis, je Zeile mit Regelnotiz belegt);
-          `tafelNeu` rechnet denselben Stand nach. Eingefroren heisst seither:
-          nur Statusfeld-Entscheidungen, sonst keine Aenderung.
+   Premises (trusted, not proved):
+     P1  The 19 `CForm` shapes are the named target language (`Ziel.lean`).
+     P2  Each Gabbro primitive lowers to at most `proPrimitiv` C statements
+         (`Absenkung`; the measured bound is 17 -- see `Ziel.lean` and
+         `messung/ABSENKUNG-MESSUNG.md`).
+     P3  The census counts are faithful (`zaehle-c-formen.py`: 64 forms,
+         30 undecided census slots, 491 pointer-arithmetic sites).
 
    No `mathlib`, no `sorry`, no `admit`, no `axiom`, and no new axiom
-     introduced: `#print axioms` at the end names all standard axioms the
-     new theorems rest on.
-
-  No `mathlib`, no `sorry`, no `admit`, no `axiom`.
+   introduced: `#print axioms` at the end names all standard axioms the
+   new theorems rest on.
 -/
 import Grammatik.Ziel
 
@@ -798,8 +806,8 @@ instance entschiedenDec (e : EntscheidZiel) : Decidable (entschieden e) := by
     | aufListe _ => exact isTrue trivial
     | ausErzeuger _ => exact isTrue trivial
 
-/-- CLOSED 2026-09-11 (w01): was `¬ satz_tafel` witnessed by the open `cInclude`
-    row (`tafel_nicht_geschlossen`). The last slot is now ruled with price --
+/-- CLOSED 2026-09-11 (w01): was `¬ satz_tafel` witnessed by the open slot
+    (formerly `tafel_nicht_geschlossen`). The last slot is now ruled with price --
     fixed four-header preamble, cut-C3 trust carried never proved -- so `decide`
     closes the table. The old witness `(.luecke .cInclude .offen) ∈ tafel` no
     longer typechecks; that failure IS the closure evidence. -/
@@ -828,13 +836,13 @@ theorem vertrag_braucht_tafel (gabbroSites : List Nat) (cert : CorrCert)
 #print axioms Gabbro.Grammatik.tafel_geschlossen
 #print axioms Gabbro.Grammatik.vertrag_braucht_tafel
 
-/-! ## 10. Der Nachpruefer als Programmgestalt: Laufartefakte hinein, Urteil hinaus -/
+/-! ## 10. The rechecker as program shape: run artefacts in, verdict out -/
 
-/-- Die Eingabe des Nachpruefers: alles, was ein Lauf hinterlaesst. Die
-    Gabbro-Stellen und das Zertifikat kommen aus dem Erzeugnislauf, die
-    Aliaslast aus dem Bild, die Kostenaussage mit ihren Paaren aus dem
-    Messlauf, die Anweisungszahl aus der Absenkung. Das zweite Programm, das
-    diese Artefakte aus dem Lauf liest, steht nicht hier (Schnitt C6). -/
+/-- The rechecker input: everything a run leaves behind. The Gabbro sites
+    and the certificate come from the producer run, the alias load from
+    the image, the cost claim with its pairs from the measurement run,
+    the statement count from the lowering. The second program that reads
+    these artefacts out of the run stands outside this file (cut C6). -/
 structure NachprueferEingabe where
   gabbroSites : List Nat
   cert : CorrCert
@@ -844,11 +852,11 @@ structure NachprueferEingabe where
   cAnweisungen : Nat
   deriving DecidableEq, Repr
 
-/-- Der Nachpruefer: alle Beine, nachgerechnet. Die Entsprechung ueber
-    `pruefeKorrespondenz` (§6), die Aliaslast ueber die leere Stellenliste
-    (§7), die Kostenaussage ueber ihre zwei Entscheidungsinstanzen (§8) und
-    die Anweisungszahl ueber die gemessene Schranke 17. Ausgabe ist ein Urteil:
-    `true` heisst angenommen. -/
+/-- The rechecker: all legs recomputed. Correspondence over
+    `pruefeKorrespondenz` (§6), the alias load over the empty site list
+    (§7), the cost claim over its two decision instances (§8), and the
+    statement count over the measured bound 17. Output is a verdict:
+    `true` means accepted. -/
 def nachpruefer (eingabe : NachprueferEingabe) : Bool :=
   pruefeKorrespondenz eingabe.gabbroSites eingabe.cert &&
     (decide (eingabe.o.arithSites = []) &&
@@ -856,54 +864,55 @@ def nachpruefer (eingabe : NachprueferEingabe) : Bool :=
         (decide (costMeasured eingabe.k eingabe.paare) &&
           decide (eingabe.cAnweisungen ≤ 17))))
 
-/-- Gueltigkeit: das nachgerechnete Urteil lautet angenommen. Entscheidbar aus
-    Bauart, wie `GueltigKorrespondenz` -- Annahme und Ablehnung schliessen beide
-    ueber die Nachrechnung, nicht ueber Glauben. -/
+/-- Validity: the recomputed verdict reads accepted. Decidable by
+    construction, like `GueltigKorrespondenz` -- acceptance and rejection
+    both close over the recomputation, not over belief. -/
 def nachprueferGueltig (eingabe : NachprueferEingabe) : Prop :=
   nachpruefer eingabe = true
 
-/-- Die Verknuepfung zur Erzeugung, als Gestalt: ein gueltiges nachgerechnetes
-    Urteil heisst, dem ausgestellten Zertifikat darf vertraut werden --
-    Entsprechung ueber dem Lauf, Aliaslast getragen, Kosten gehalten und
-    gemessen ueber `absenkung`. ENTWURF, kein Satz: die Bruecken von den
-    einzelnen Beinen zu den Saetzen stehen nicht hier (Schnitt C6). -/
+/-- The link to the producer, as a shape: a valid recomputed verdict
+    means the issued certificate may be trusted -- correspondence over
+    the run, alias load carried, cost kept and measured over `absenkung`.
+    DRAFT, no theorem: the bridges from the single legs to the sentences
+    stand outside this file (cut C6). -/
 def satz_nachpruefung_vertrauen (eingabe : NachprueferEingabe) : Prop :=
   nachprueferGueltig eingabe →
     satz_korrespondenz eingabe.gabbroSites eingabe.cert ∧
     satz_alias eingabe.o ∧
     satz_kosten eingabe.k eingabe.paare absenkung eingabe.cAnweisungen
 
-/-! ## 11. Die fuenf bepreisten Stellen: Preis als Datum, kein Bedeutungsanspruch -/
+/-! ## 11. The five priced slots: price as data, no meaning claim -/
 
-/-- Der Preis von `logUndOder` (`messung/CFORM-REGEL-LOGUNDODER.md`, 23 Stellen):
-    bedingte Auswertung mit Sequenzpunkt, Ergebnis 0 oder 1, Klammerpflicht
-    beim Erzeuger. Zulassung mit Preis, keine Erzeugeraenderung. -/
+/-- The price of `logUndOder` (`messung/CFORM-REGEL-LOGUNDODER.md`, 23 sites):
+    short-circuit evaluation with sequence point, result 0 or 1, mandatory
+    parentheses at the emitter. Admission with price, no emitter change. -/
 def logUndOderEntscheid : RulingStatus :=
   .aufListe "bedingte Auswertung mit Sequenzpunkt; Ergebnis 0 oder 1; Klammerpflicht beim Erzeuger"
 
-/-- Der Preis von `fortStmt` (`messung/CFORM-REGEL-CONTINUE.md`, 3 Stellen):
-    Steuerung des Laufenskeletts aus einer Emissionszeile, kein Nutzerpfad,
-    kein UB. Zulassung mit Preis, keine Erzeugeraenderung. -/
+/-- The price of `fortStmt` (`messung/CFORM-REGEL-CONTINUE.md`, 3 sites):
+    control of the run skeleton from one emit line, no user path, no UB.
+    Admission with price, no emitter change. -/
 def fortEntscheid : RulingStatus :=
   .aufListe "Steuerung des Laufenskeletts aus einer Emissionszeile; kein Nutzerpfad; kein UB"
 
-/-- Der Preis von `abbruchStmt` (`messung/CFORM-REGEL-BREAK.md`, 51 Stellen):
-    Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei
-    Emissionszeilen, kein Nutzerpfad, kein UB. Zulassung mit Preis, keine
-    Erzeugeraenderung. -/
+/-- The price of `abbruchStmt` (`messung/CFORM-REGEL-BREAK.md`, 51 sites):
+    exit from the run skeleton and closing of the case arms from two emit
+    lines each, no user path, no UB. Admission with price, no emitter
+    change. -/
 def abbruchEntscheid : RulingStatus :=
   .aufListe "Austritt aus dem Laufenskelett und Abschluss der Fallarme aus je zwei Emissionszeilen; kein Nutzerpfad; kein UB"
 
-/-- Der Preis von `zeigerIndex` (`messung/CFORM-REGEL-ZEIGERINDEX.md`,
-    156 Stellen): Adressrechnung, Pflicht je Stelle, in den Grenzen zu bleiben,
-    UB-Zeile fuer den Aussenfall. Zulassung mit Preis, keine
-    Erzeugeraenderung. -/
+/-- The price of `zeigerIndex` (`messung/CFORM-REGEL-ZEIGERINDEX.md`,
+    156 sites): address arithmetic, per-site duty to stay in bounds,
+    UB row for the outside case. Admission with price, no emitter
+    change. -/
 def zeigerIndexEntscheid : RulingStatus :=
   .aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"
 
-/-- Die fuenf bepreisten Stellen als Nachtrag: `bedingt` traegt den gefuellten
-    Musterentscheid, die vier Zulassungen ihre Preise aus den Regelnotizen.
-    Jede andere Stelle faellt durch (`none`) und behaelt ihren alten Stand. -/
+/-- The five priced slots as a supplement: `bedingt` carries the filled
+    template decision, the four admissions their prices from the ruling
+    notes. Every other slot fails through (`none`) and keeps its old
+    status. -/
 def tafelPreisNachtrag : OffeneForm → Option RulingStatus
   | .bedingt => some bedingtEntscheid
   | .logUndOder => some logUndOderEntscheid
@@ -912,25 +921,25 @@ def tafelPreisNachtrag : OffeneForm → Option RulingStatus
   | .zeigerIndex => some zeigerIndexEntscheid
   | _ => none
 
-/-- Der reine Statuswechsel: wo der Nachtrag einen Preis nennt, tritt er an die
-    Stelle des alten Standes; sonst bleibt alles, wie es war. -/
+/-- The pure status change: where the supplement names a price, it takes
+    the place of the old status; otherwise everything stays as it was. -/
 def tafelStatusNeu (u : OffeneForm) (s : RulingStatus) : RulingStatus :=
   match tafelPreisNachtrag u with
   | some s' => s'
   | none => s
 
-/-- Die Tafel mit den fuenf bepreisten Stellen: dieselben Zeilen wie `tafel`,
-    nur das Statusfeld der fuenf Stellen entschieden mit Preis. `tafel` selbst
-    bleibt eingefroren; diese Tafel traegt den Nachtrag als Datum, und die
-    Angemessenheit jedes Preises bleibt geschuldet (Schnitt C7). -/
+/-- The table with the five priced slots: the same rows as `tafel`,
+    only the status field of the five slots decided with price. `tafel`
+    itself stays frozen; this table carries the supplement as data, and the
+    adequacy of every price stays owed (cut C7). -/
 def tafelNeu : List EntscheidZiel :=
   tafel.map fun e => match e with
     | .benannt f s => .benannt f s
     | .luecke u s => .luecke u (tafelStatusNeu u s)
 
-/-- Der spaetere Satz ueber der neuen Tafel, als Gestalt: jede Zeile von
-    `tafelNeu` ist entschieden. ENTWURF, kein Satz -- wie `satz_tafel` eine
-    SPEZIFIKATION bleibt, bis jede Stelle einzeln entschieden ist. -/
+/-- The later sentence over the new table, as a shape: every row of
+    `tafelNeu` is decided. DRAFT, no theorem -- as `satz_tafel` stays a
+    SPECIFICATION until every slot is decided one by one. -/
 def satz_tafelNeu : Prop :=
   ∀ e ∈ tafelNeu, entschieden e
 
