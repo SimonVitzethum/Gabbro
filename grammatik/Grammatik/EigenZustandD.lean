@@ -861,4 +861,204 @@ theorem callInd_slots_fest (O : Orakel D) (passes : Nat)
       simp only [Ausgang.welt] at hstep
       exact absurd hstep (by simp)
 
+/-! ## 7. Other-table and degenerate arms: slots of `t` survive writes to `t₂ ≠ t`.
+
+  Each lemma takes the firing equation for ONE constructor form with an
+  explicit inequality hypothesis. All premises are used: `hstep` fixes the
+  outcome, the inequality selects the `storeSlot_andere`/`schreibBytes_slots_other`
+  leg. -/
+
+/-- `assignSlot t₂` with `t₂ ≠ t` keeps every slot of `t`. -/
+theorem assignSlot_andere_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t₂ : D.Tab} {f₂ : D.Feld t₂}
+    {i : Expr D Γ Λ (.index (D.count t₂))} {e : Expr D Γ Λ (D.typ t₂ f₂)}
+    {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignSlot (V := V) (l := l) t₂ f₂ i e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
+      = some σ')
+    (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hEq : (execStmt O passes keinRuf
+      (Stmt.assignSlot (V := V) (l := l) t₂ f₂ i e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt =
+      some ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t₂ Λ
+        (eval (σ.lese Λ (i.orte ++ e.orte)) i
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n f₂
+        (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ)) := rfl
+  rw [hEq] at hstep
+  have hσ' : σ' = ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t₂ Λ
+      (eval (σ.lese Λ (i.orte ++ e.orte)) i
+        (σ.lese Λ (i.orte ++ e.orte)) ρ).n f₂
+      (eval (σ.lese Λ (i.orte ++ e.orte)) e
+        (σ.lese Λ (i.orte ++ e.orte)) ρ)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hσ']
+  have hne : t ≠ t₂ := fun h => ht h.symm
+  show ((σ.lese Λ (i.orte ++ e.orte)).storeSlot t₂ _ f₂ _).slots t k f =
+    σ.slots t k f
+  rw [storeSlot_andere _ _ _ _ _ _ hne]
+  rfl
+
+/-- `assignDurch t₂` with `t₂ ≠ t` keeps every slot of `t`. -/
+theorem assignDurch_andere_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat}
+    {p : Expr D Γ Λ (.ptr n true)} {t₂ : D.Tab} {ht₂ : D.tabNr n = some t₂}
+    {f₂ : D.Feld t₂}
+    {i : Expr D Γ Λ (.index (D.count t₂))} {e : Expr D Γ Λ (D.typ t₂ f₂)}
+    {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignDurch (V := V) (l := l) p t₂ ht₂ f₂ i e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hEq : (execStmt O passes keinRuf
+      (Stmt.assignDurch (V := V) (l := l) p t₂ ht₂ f₂ i e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt =
+      some ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t₂ Λ
+        (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
+          (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n f₂
+        (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) e
+          (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)) := rfl
+  rw [hEq] at hstep
+  have hσ' : σ' = ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t₂ Λ
+      (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
+        (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n f₂
+      (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) e
+        (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hσ']
+  have hne : t ≠ t₂ := fun h => ht h.symm
+  show ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).storeSlot t₂ _ f₂ _).slots t k f =
+    σ.slots t k f
+  rw [storeSlot_andere _ _ _ _ _ _ hne]
+  rfl
+
+/-- `uebergang t₂` with `t₂ ≠ t` keeps every slot of `t` (failed guard
+    yields no world; success writes `t₂`). -/
+theorem uebergang_andere_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t₂ : D.Tab} {f₂ : D.Feld t₂} {lo hi : Int}
+    {hτ : D.typ t₂ f₂ = .int lo hi}
+    {i : Expr D Γ Λ (.index (D.count t₂))} {von nach : Int}
+    {hn : lo ≤ nach ∧ nach ≤ hi} {he : D.erlaubt t₂ f₂ von nach = true}
+    {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.uebergang (V := V) (l := l) t₂ f₂ hτ i von nach hn he hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.uebergang (V := V) (l := l) t₂ f₂ hτ i von nach hn he hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt =
+      (if (hτ ▸ (σ.lese Λ (.inl t₂ :: i.orte)).slots t₂
+        (eval (σ.lese Λ (.inl t₂ :: i.orte)) i
+          (σ.lese Λ (.inl t₂ :: i.orte)) ρ).n f₂ : Zahl _ _).n = von
+      then (Ausgang.ok ((σ.lese Λ (.inl t₂ :: i.orte)).schreibSlot t₂ Λ
+        (eval (σ.lese Λ (.inl t₂ :: i.orte)) i
+          (σ.lese Λ (.inl t₂ :: i.orte)) ρ).n f₂
+        (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))) ρ : Ausgang V l Γ)
+      else .logik .vorzustand).welt := rfl
+  rw [hcomp] at hstep
+  by_cases hvon : (hτ ▸ (σ.lese Λ (.inl t₂ :: i.orte)).slots t₂
+      (eval (σ.lese Λ (.inl t₂ :: i.orte)) i
+        (σ.lese Λ (.inl t₂ :: i.orte)) ρ).n f₂ : Zahl _ _).n = von
+  · rw [if_pos hvon, Ausgang.welt] at hstep
+    have hσ' : σ' = ((σ.lese Λ (.inl t₂ :: i.orte)).schreibSlot t₂ Λ
+        (eval (σ.lese Λ (.inl t₂ :: i.orte)) i
+          (σ.lese Λ (.inl t₂ :: i.orte)) ρ).n f₂
+        (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))) :=
+      Option.some_inj.mp hstep.symm
+    rw [hσ']
+    have hne : t ≠ t₂ := fun h => ht h.symm
+    show ((σ.lese Λ (.inl t₂ :: i.orte)).storeSlot t₂ _ f₂ _).slots t k f =
+      σ.slots t k f
+    rw [storeSlot_andere _ _ _ _ _ _ hne]
+    rfl
+  · rw [if_neg hvon, Ausgang.welt] at hstep
+    exact absurd hstep (by simp)
+
+/-- `schreibBytes t₂` with `t₂ ≠ t` keeps every slot of `t` (every fold
+    step targets `t₂`). -/
+theorem schreibBytes_andere_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t₂ : D.Tab} {f₂ : D.Feld t₂} {hf₂ : D.typ t₂ f₂ = .int 0 255} {n : Nat}
+    {lo hi : Int}
+    {i : Expr D Γ Λ (.int lo hi)} {hlo : 0 ≤ lo} {hhi : hi + n ≤ D.count t₂}
+    {e : Expr D Γ Λ (.int 0 (256 ^ n - 1))}
+    {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.schreibBytes (V := V) (l := l) t₂ f₂ hf₂ n i hlo hhi e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hEq : (execStmt O passes keinRuf
+      (Stmt.schreibBytes (V := V) (l := l) t₂ f₂ hf₂ n i hlo hhi e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt =
+      some ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t₂ f₂ hf₂ Λ
+        (eval (σ.lese Λ (i.orte ++ e.orte)) i
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+        (zahlZuBytes n
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n)) := rfl
+  rw [hEq] at hstep
+  have hσ' : σ' = ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t₂ f₂ hf₂ Λ
+      (eval (σ.lese Λ (i.orte ++ e.orte)) i
+        (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+      (zahlZuBytes n
+        (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hσ']
+  have hne : t ≠ t₂ := fun h => ht h.symm
+  exact schreibBytes_slots_other _ _ _ _ _ _ hne _ _ _ _
+
+/-- `schreibBytes t` at `n = 0` keeps every slot of `t` (empty byte list,
+    the fold is the identity on top of the `lese` prefix). -/
+theorem schreibBytes_null_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t : D.Tab} {f₂ : D.Feld t} {hf₂ : D.typ t f₂ = .int 0 255}
+    {lo hi : Int}
+    {i : Expr D Γ Λ (.int lo hi)} {hlo : 0 ≤ lo} {hhi : hi + 0 ≤ D.count t}
+    {e : Expr D Γ Λ (.int 0 (256 ^ 0 - 1))}
+    {hw : V.schreibt t = true} {hL : darf D t Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.schreibBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hlen0 : zahlZuBytes 0
+      (eval (σ.lese Λ (i.orte ++ e.orte)) e
+        (σ.lese Λ (i.orte ++ e.orte)) ρ).n = [] := by
+    have hlen := zahlZuBytes_length 0
+      (eval (σ.lese Λ (i.orte ++ e.orte)) e
+        (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+    simp at hlen
+    exact hlen
+  have hEq : (execStmt O passes keinRuf
+      (Stmt.schreibBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt =
+      some ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t f₂ hf₂ Λ
+        (eval (σ.lese Λ (i.orte ++ e.orte)) i
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+        (zahlZuBytes 0
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n)) := rfl
+  rw [hEq] at hstep
+  have hσ' : σ' = ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t f₂ hf₂ Λ
+      (eval (σ.lese Λ (i.orte ++ e.orte)) i
+        (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+      (zahlZuBytes 0
+        (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hσ', hlen0]
+  rfl
+
 end Gabbro.Grammatik.EZD
