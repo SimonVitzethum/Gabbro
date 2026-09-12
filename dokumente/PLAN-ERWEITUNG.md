@@ -32,15 +32,49 @@ program calls the library -- for a GPU kernel, the launch through the driver. So
   translator is not trusted; a wrong translator produces a payload the checker refuses.
 * **At run time** the call is a library call with a contract (`requires`, `ensures`,
   `effects`), exactly like a foreign body or the `syscall` construct of `PLAN-SYSCALL.md`:
-  in Lean an `Ax` whose arguments include the payload. What the library does at run time is
-  its exported, named assumption (§4, E6) -- unless the library function is itself Gabbro code
-  with a proved contract, in which case the call is an ordinary proved call and no assumption
-  is named (the same pairing idea as `PLAN-SYSCALL.md` item 4).
+  in Lean a call whose arguments include the payload. By §0c the library function is safe
+  Gabbro with a proved contract, so the call is an ordinary proved call; what remains are the
+  hardware assumptions the library requires from the program's profile.
 * **The verification reaches the hand-over:** arguments, payload type, contract and effects at
   the call are checked; the library's run-time behaviour is the assumption it exports.
 
 Compile-time expansion of regions into core Gabbro (§0) stays possible as a later form, but it
 is not what `@lib#func` means.
+
+## 0c. Decision (owner, 2026-09-12): a library function is always safe Gabbro, with no hardware assumption contradicting the main program
+
+**Why this is load-bearing:** contradictory assumptions make every proof over the combined
+program vacuous -- from a contradiction everything follows. That is the defect class the
+first two agent waves found again and again (premises that no ordinary program can satisfy),
+here at the level of hardware assumptions. Consistency is therefore enforced **by structure**,
+never by comparing prose.
+
+1. **Safe Gabbro only.** A function reachable through `@lib#func` is Gabbro code checked by the
+   same checker; its contract is proved like any other. Foreign bodies (`extern`, `raw`,
+   `prim`, `asm`) are refused anywhere in its call hull. A library that must reach hardware does
+   so through Gabbro constructs -- `syscall` (`PLAN-SYSCALL.md`), `device`/`reg`, `atomic` --
+   whose assumptions are named. The library's run-time behaviour is then covered by the proof;
+   what remains are its declared hardware assumptions, handled by points 2-4.
+2. **One hardware profile per program.** The main program declares the profile: the one set of
+   hardware assumptions the whole program runs under (target arch, memory-model assumptions,
+   FP environment, device assumptions, ...). A library does not ASSERT assumptions; it REQUIRES
+   profile entries, by reference to the declared assumption, never by a copy of its text.
+   Linking refuses a library whose requirements are not in the profile -- the main program
+   must add them to its profile, where they meet everything else. **Consistency becomes a
+   subset check against one set**, decidable and cheap.
+3. **Keyed assumptions for modes and resources.** An assumption that fixes a mode or a
+   resource names its key and value (FP rounding mode, FP contraction, memory-model mode,
+   interrupt routing, arch). Two entries with the same key and different values are refused
+   at the profile itself. A same-named assumption with a different statement or class is
+   refused.
+4. **Exclusivity by linearity.** Device and register access reaches a library only as a
+   linear capability (an owner mark, `D.eigner`); two components cannot both assume exclusive
+   ownership of one device, because the mark exists once (`eigner_nie_erzeugt`).
+5. **In Lean:** the program theorem takes ONE assumption set, the profile; a library's set is
+   required to be a subset, so linking adds no premise. For keyed mode assumptions with
+   pairwise distinct keys, a theorem constructs a model (an oracle satisfying all of them) --
+   the profile is satisfiable by construction, not merely unrefuted. Free-prose assumptions
+   carry their falsifier probe as today.
 
 ## 1. Extension slots, not free mixfix
 
@@ -135,7 +169,7 @@ poison probes.
 | E2 | library function declaration | a library declares a run-time function with a contract and a PAYLOAD TYPE; the call is checked like any call (arguments, effects, `or R`) plus the payload's type; in Lean the call is an `Ax` whose arguments include the payload -- no new statement constructor | E1 |
 | E3 | translator declaration | a library declares the translator from region to payload; the checker holds its signature to `effects { pure }` with `decreases`; the payload type is a table/tree type (trees as tables, §2). Running the translator needs the compile-time evaluator -- **only the declaration and the typing are built now** | -- |
 | E4 | arena | `arena A capacity lo .. hi` as a linear mark (§3): allocation within the reservation needs no `or R`, `reset` consumes the mark and allocates a fresh one; Lean: an index into a reset arena is not expressible, a monotone arena has no fragmentation. Serves the translator (compile time) and run-time code alike | -- |
-| E6 | exported assumptions | a library exports named assumptions (`assume … falsifier …`); every importing unit's manifest lists them with their origin library and the calls that rely on them; a library function that is Gabbro code with a proved contract exports none | E2 |
+| E6 | hardware profile and library requirements | per §0c: the program's hardware profile as a declaration; libraries REQUIRE profile entries by reference; linking refuses requirements outside the profile, a same-named assumption with a different statement, and two keyed entries with one key and different values; foreign bodies refused in the hull of any `@lib` function; the manifest lists every requirement with its library and the calls relying on it. Lean: the program theorem over one profile, library sets as subsets, and a model for keyed mode assumptions with distinct keys | E2 |
 | E7 | error mapping | a span map from payload values (and later expanded terms) back to positions in the region; one checker diagnostic routed through it, with a test | E1 |
 | E5 | translation stage with certificate | the checker runs translators at compile time and checks the payload; the certificate is the payload's typing derivation, so Lean checks the OUTPUT and never needs the translator | the compile-time evaluator (`PLAN-BITS.md` §6) -- **therefore the wave after next** |
 
