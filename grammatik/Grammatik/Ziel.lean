@@ -56,6 +56,7 @@ import Grammatik.Komposition
 import Grammatik.Geteilt
 import Grammatik.Fristlauf
 import Grammatik.Maschine
+import Grammatik.Extraktion
 
 namespace Gabbro.Grammatik
 
@@ -844,7 +845,8 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
     wired in there: no `PCReach`-to-`MaschinenLauf` bridge exists, and §9 takes
     no `PCReach`. This section rewires the goal onto generated PC runs:
 
-    * (run) `h : PCReach P O passes prog (GenStart sp) M pc` travels instead of
+    * (run) `h : PCReach P O passes (progAus P fcode tabs globs) (GenStart sp) M pc`
+      travels instead of
       `M : MaschinenLauf D` -- a GENERATED run (positions with footprints,
       `Maschine.lean` §12, read-only reuse): every `PCSchritt` is a generated
       step (`pcSchritt_gen`), every PC-reachable machine is generated
@@ -874,20 +876,25 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
       context (`invariantenKontext_aus_disziplin`); `hFree` is replaced by
       `hForm` for the covered fragment only.
 
-    The SINGLE residual footprint premise: `h` itself. Each `PCSchritt.leaf`
-    inside `h` carries its footprint checks (`hΛa` tying the atom to the fired
-    statement, `hmark` covering the step's mark namings, `hcar` covering the
-    step's accessed carriers) -- they are owed per step by whoever exhibits the
-    `PCReach` witness, not by this goal as separate hypotheses. No tree
-    definition computes thread programs from bodies yet (there is no `progAus`:
-    `Extraktion.lean` computes carrier/mark hulls (`fussAus`, `stmtOrte`)
-    checker-side, but not per-thread atom sequences; the `HaengtAb` duty of §8
-    covers contract footprints, not step atoms), so per program the annotation
-    is owed as OWN-LOGIC: the user supplies, per thread, the atom footprint
-    sequence (`prog`, with `Λa`/`cs` covering the step events); each step rule
-    verifies it. The checker-side extraction of `prog` from bodies stays booked
-    below. There is exactly one such premise (`h`), and it is load-bearing --
-    it feeds every run-side leg.
+    The program text is computed, not handed in: `progAus`
+    (`Extraktion.lean` §14) flattens each body through the thread-to-function
+    map (`fcode`) into its atom sequence, faithfully
+    (`progTreue_aus_progAus`: every flattened body atom is program text). The
+    goal takes `fcode`/`tabs`/`globs` and a run over
+    `progAus P fcode tabs globs` -- there is no `(prog : PCProg D)` premise
+    anymore. The per-step footprint checks inside `h` discharge through the
+    execution link (`Extraktion.lean` §17): the lifter
+    `pcSchritt_blatt_progAus_ohne_axiomCall` below builds a `PCSchritt.leaf`
+    over `progAus` from the firing data, discharging `hmark`/`hcar` through
+    `execEreignis_aus_blatt_ohne_axiomCall` (every event of a fired non-oracle
+    leaf names the statement `Λ` and touches only the written carrier plus
+    the `stmtOrte` read hull). What the witness still owes per step is exactly
+    the booked remainder: atom identity (S12 -- the counter points at the
+    extracted atom: `hpc`, `hΛa`, `hcs`) and the non-oracle shape (`hax`);
+    `take`/`rel` steps need only `hpc`. `axiomCall` stays booked (S13): the
+    oracle answers with an arbitrary world, so its events carry arbitrary
+    marks and carriers. There is exactly one run premise (`h`), and it is
+    load-bearing -- it feeds every run-side leg.
 
     Every premise below is load-bearing: each is passed whole to at least one
     lemma application in the proof term, so deleting any premise breaks
@@ -897,19 +904,77 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
     (`ziel_nutzer_last`, `ziel_nutzer_last_aus_disziplin`,
     `ziel_nutzer_last_aus_maschine`) stand untouched as corollaries and steps.
 
-    Remainder (booked, not hidden): the checker-side extraction of `prog` from
-    bodies (a `progAus` in the style of `Extraktion.lean`, unwritten and
-    unverified); the chain-to-machine wiring (`J.welten` versus `M.welten`);
-    the run-to-`Bau` wiring across the fold (cut C2); shared globals, more than
-    two conflicting sections, restoring writers; and the non-invariant fragment
-    -- assertions over shared carriers NOT in invariant form still owe `hFree`
-    exactly as §6 books it (inherited from the §8 remainder unchanged). -/
+    Remainder (booked, not hidden): the scheduling argument (S12 -- proving
+    the counter always points at the atom `stmtAtome_blatt_eq` yields for the
+    fired statement, per step and per run); the `axiomCall` oracle-event
+    contract (S13 -- every oracle event names the statement `Λ` within the
+    declared writes plus `args.orte`); the chain-to-machine wiring (`J.welten`
+    versus `M.welten`); the run-to-`Bau` wiring across the fold (cut C2);
+    shared globals, more than two conflicting sections, restoring writers; and
+    the non-invariant fragment -- assertions over shared carriers NOT in
+    invariant form still owe `hFree` exactly as §6 books it (inherited from
+    the §8 remainder unchanged). -/
 
-/-- The goal from PC runs (t01): the `ziel_nutzer_last` conclusion with the
-    deprecated run-side bundle replaced -- no `MaschinenLauf`, no `hLink`,
-    no `hEin`/`hungeteilt` as bare shapes or fields. `h : PCReach ...` travels
-    instead (packaging the per-step `hmark`/`hcar` footprint checks), consumed
-    by the PC theorems (`pc_gesittet`, `pc_discharge_einfaedig`,
+/-- One leaf step over the computed program (q02): the firing data of a
+    non-oracle leaf (`s`, `ρ`, `hleaf`, `hΛ`, `hstep`, `hneu`,
+    `hkein_nimmt`) plus the booked atom identity (`hpc`: the counter points
+    at the extracted atom; `hΛa`, `hcs`: that atom IS the statement
+    footprint, S12 scheduler/witness duty) build the `PCSchritt.leaf` over
+    `Extraktion.progAus P fcode tabs globs`, discharging `hmark`/`hcar`
+    through `Extraktion.execEreignis_aus_blatt_ohne_axiomCall` (read-only
+    reuse, never widened: `hax` keeps the non-`axiomCall` fragment;
+    `axiomCall` stays booked as S13). Every premise is load-bearing: each is
+    passed whole to the constructor or to the link. -/
+theorem pcSchritt_blatt_progAus_ohne_axiomCall
+    (O : Orakel D) (passes : Nat)
+    (P : Programm D) (fcode : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (M : GenMaschine D) (pc : PCStand) (f : Faden)
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
+    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ M.spuren f)
+    (hkein_nimmt : ∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu)
+    (Λa : List (Res D)) (cs : List (D.Tab ⊕ D.Glob))
+    (hpc : (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λa cs))
+    (hΛa : Λa = Λ)
+    (hcs : cs = Extraktion.stmtTraeger tabs globs s ++ Extraktion.stmtOrte s) :
+    PCSchritt P O passes (Extraktion.progAus P fcode tabs globs) M pc f
+      ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
+       M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩
+      (pcAdvance pc f) := by
+  obtain ⟨hlam, hcar⟩ :=
+    Extraktion.execEreignis_aus_blatt_ohne_axiomCall O passes s hleaf hax
+      tabs globs (M.weltVon f) ρ σ' neu hstep hneu
+  refine PCSchritt.leaf M pc f V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu
+    hkein_nimmt Λa cs hpc hΛa ?_ ?_
+  · intro e he m st hm
+    rw [hlam e he] at hm
+    rw [← hΛa] at hm
+    simp only [PCAtom.marks]
+    exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+  · intro e he o ho
+    have hmem : o ∈ Extraktion.stmtTraeger tabs globs s ++ Extraktion.stmtOrte s :=
+      hcar e he o ho
+    simp only [PCAtom.carriers]
+    rw [hcs]
+    exact hmem
+
+#print axioms Gabbro.Grammatik.pcSchritt_blatt_progAus_ohne_axiomCall
+
+/-- The goal from PC runs (t01, q02 rewired): the `ziel_nutzer_last`
+    conclusion with the deprecated run-side bundle replaced -- no
+    `MaschinenLauf`, no `hLink`, no `hEin`/`hungeteilt` as bare shapes or
+    fields -- and no hand-supplied program: `h : PCReach ...` travels over
+    the computed `Extraktion.progAus P fcode tabs globs` (§14; fidelity
+    `progTreue_aus_progAus`), whose per-step `hmark`/`hcar` checks the
+    witness builds through the lifter `pcSchritt_blatt_progAus_ohne_axiomCall`
+    above (execution link §17, non-`axiomCall` fragment only). The run is
+    consumed by the PC theorems (`pc_gesittet`, `pc_discharge_einfaedig`,
     `pc_discharge_unshared`, `pc_reduktion`) and the generated-world lemmas
     through the projection (`pcReach_gen`). The sequential-logic leg runs
     through the §7 invariant variant
@@ -917,13 +982,16 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
     context (`invariantenKontext_aus_disziplin`): `hFree` replaced by `hForm`,
     `hInv` derived from entry plus return-restoration plus watch. Probe,
     lowering, and outcome legs are unchanged from §5. Every premise is
-    load-bearing. -/
+    load-bearing, and no bare `Prop` slot admits `False` (the run is owed as
+    `PCReach ...`, not as `Prop`). -/
 theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
     (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
-    (prog : PCProg D) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
-    (h : PCReach P O passes prog (GenStart sp) M pc)
-    (code : D.Marke → Nat) (hMSep : PCMarkSep code prog)
-    (hCSep : PCUnsharedSep prog)
+    (fcode : Faden → D.Fn) (tabs : List D.Tab) (globs : List D.Glob)
+    (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc)
+    (code : D.Marke → Nat)
+    (hMSep : PCMarkSep code (Extraktion.progAus P fcode tabs globs))
+    (hCSep : PCUnsharedSep (Extraktion.progAus P fcode tabs globs))
     (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
     (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
@@ -982,9 +1050,10 @@ theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
     ∧ (∃ f, M.welten.getLast? = some (M.speicher.welt (M.spuren f)))
     ∧ (HB M.lauf j₁ j₂ ∨ HB M.lauf j₂ j₁) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact pc_gesittet P O passes hO prog sp M pc h code hMSep hCSep
-  · exact ⟨pc_konsistent P O passes hO prog sp M pc h,
-      pc_gut_obs P O passes hO prog sp M pc h⟩
+  · exact pc_gesittet P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h
+      code hMSep hCSep
+  · exact ⟨pc_konsistent P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h,
+      pc_gut_obs P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h⟩
   · intro σ hletzte f hf
     exact ziel_seqLogic_aus_spec_invariantForm Nb J I Pre Post
       (invariantenKontext_aus_disziplin Nb J I Wc Gc hAbD hFrameTD hFrameGD hGuardEx
@@ -993,19 +1062,22 @@ theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
   · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
   · exact hLowering.begrenzt
   · exact zwei_fehler o
-  · exact pc_discharge_einfaedig code prog M
-      (pcReach_markInv P O passes prog sp M pc h) hMSep
+  · exact pc_discharge_einfaedig code (Extraktion.progAus P fcode tabs globs) M
+      (pcReach_markInv P O passes (Extraktion.progAus P fcode tabs globs) sp M pc h)
+      hMSep
   · intro i j f g carr ei ej hi hj hsh hti htj
-    exact pc_discharge_unshared prog M
-      (pcReach_carrierInv P O passes prog sp M pc h) hCSep
+    exact pc_discharge_unshared (Extraktion.progAus P fcode tabs globs) M
+      (pcReach_carrierInv P O passes (Extraktion.progAus P fcode tabs globs) sp M pc h)
+      hCSep
       i j f g carr ei ej hi hj hsh hti htj
   · exact genWelten_laenge P O passes hO sp M
-      (pcReach_gen P O passes prog (GenStart sp) M pc h)
+      (pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h)
   · exact genWelten_gut P O passes hO sp M
-      (pcReach_gen P O passes prog (GenStart sp) M pc h)
+      (pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h)
   · exact genWelten_letzte P O passes hO sp M
-      (pcReach_gen P O passes prog (GenStart sp) M pc h)
-  · exact pc_reduktion P O passes hO prog sp M pc h code hMSep hCSep
+      (pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h)
+  · exact pc_reduktion P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h
+      code hMSep hCSep
       t₀ g₁ g₂ hne j₁ j₂ w₁ w₂ Λ₁ Λ₂ h₁ h₂ hw₁ hw₂
 
 #print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_pc
