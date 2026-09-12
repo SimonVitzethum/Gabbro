@@ -74,3 +74,13 @@ import Grammatik.KetteMehrfadenC
 import Grammatik.MarkenInstanzA
 import Grammatik.RufMaschineD
 import Grammatik.EigenZustandD
+import Grammatik.ReferenzB
+import Grammatik.HoareRegeln
+import Grammatik.RufMaschineF
+import Grammatik.Syscall
+import Grammatik.Ueberlauf
+import Grammatik.Profil
+import Grammatik.Schiebung
+import Grammatik.Bits
+import Grammatik.CSLInvarianteC
+import Grammatik.Arena
