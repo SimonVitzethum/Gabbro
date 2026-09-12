@@ -576,7 +576,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **13 Widerrufe** über 299 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **13 Widerrufe** über 399 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *223 → 224 on 2026-09-07: `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md`
       joined — the census of what is open at the checker and at the grammar, whose one
       finding is a CLASS: three sites where `pruefe` reports zero errors, `emit` returns 0,
@@ -3257,12 +3257,16 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**122 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**124 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 *117 → 122 am 2026-09-12 (lane S6): vier davon sind Wellendrift, einer ist dieser Bahn —
 `beispiele/90-syscall-errno.gab` trägt seinen `syscall` als fünften fremden Rumpf mit
 Vertrag; `beispiele/74` zählte schon als einer und zählt weiter als einer.*
+
+*122 → 124 am 2026-09-12 (lane S7): beide sind diese Bahn — `beispiele/96-buffered-writer.gab`
+trägt einen `syscall write` mit Vertrag und den nie zurückkehrenden `writer_hangs` als
+Wachhund seines `forever`.*
 
 *89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
 Verteiler eines `entry`. **Der Zähler „sprechen ihre Pflicht aus" bleibt bei 11**, und damit

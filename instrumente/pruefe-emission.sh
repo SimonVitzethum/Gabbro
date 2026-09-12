@@ -2305,6 +2305,40 @@ lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
      's/_grund = IoError_BadFd;/_grund = IoError_Interrupted;/' \
      "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 5 direct forms, 1 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 22. The buffered writer over the same call (lane S7) -------------------------------
+#
+# **The first program that keeps kernel bytes between two calls.**
+# `beispiele/96` holds four bytes in a table, `push`es six ("hello\n") through
+# it -- the fifth push flushes midway, so the full-buffer path runs live, not
+# only the final flush -- and answers the last flush's byte count:
+#
+#      hello -- four bytes out of the midway auto-flush, two out of the end
+#      2     -- and the answer came back as a VALUE: the final flush wrote 2
+#
+# The watchdog the `forever` names (`writer_hangs`, a `-> never` extern) is
+# provided by the driver the way a `sonde_*` falsifier is provided beside the
+# unit: it aborts, and a run that reaches it answers nothing expected.
+#
+# **The poison takes the instruction, not the decoding** -- the same gift as
+# `beispiel74` (`nop` for `syscall`): `rax` keeps the number 1, the decoding
+# reads a value 1 per pass, the loop "succeeds" without writing, and the run
+# answers `2` without `hello`. *A run that prints the count without the bytes
+# is exactly what a faked flush would look like.*
+TREIBER96='#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+void writer_hangs(void) { fprintf(stderr, "writer_hangs: overrun\n"); abort(); }
+int main(void) {
+    uint64_t n = writer_demo(1);
+    printf("%llu\n", (unsigned long long)n);
+    return 0;
+}
+'
+lauf "beispiel96" "$W/beispiele/96-buffered-writer.gab" "$TREIBER96" "$(printf 'hello\n2')" \
+     's/"syscall\\n"/"nop\\n"/' \
+     "1 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 1 templates (0 of them UNPROVED), 13 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # **Die Sprechprobe des Absenkungsmodus, und sie faellt an der Stufe, auf die es ankommt.**
 # ---------------------------------------------------------------------------------------
 # *Ein Zaehler, der nicht falsch antworten kann, misst nichts* (R14) -- und dieser hier steht
@@ -2842,7 +2876,13 @@ fi
 # measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
 # *A mark that absorbs foreign growth without naming it is a slack ratchet,
 # so the decomposition stands here and not in a merge note.*
-MARKE_EMIT=75
+# **75 -> 76 on 2026-09-12, and the file is this lane's (S7).**
+# `beispiele/96-buffered-writer.gab` is the buffered writer over `write`: it
+# checks clean, emits, compiles under cc AND clang, and runs beside 74/90
+# (`writer_demo(1)` answers `hello` + `2`). *The object grew by the unit the
+# plan asked for, so the floor rises by one -- with the run beside it, not
+# instead of it.*
+MARKE_EMIT=76
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
