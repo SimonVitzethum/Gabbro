@@ -1013,4 +1013,42 @@ theorem bswap_bswap16 (x : Zahl 0 ((2 : Int) ^ 16 - 1)) :
   show ((bswap16n (Zahl.bswap16 x).n.toNat : Nat) : Int) = x.n
   rw [hmid, h, h2n]
 
+theorem bswap_bswap32 (x : Zahl 0 ((2 : Int) ^ 32 - 1)) :
+    (Zahl.bswap32 (Zahl.bswap32 x)).n = x.n := by
+  have hnn : 0 ≤ x.n := by have := x.lo_le; omega
+  have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
+  have hx : x.n.toNat < 256 ^ 4 := by
+    have hhi := x.le_hi
+    have e : (256 : Nat) ^ 4 = 2 ^ 32 := by decide
+    rw [e]
+    have hlt : x.n < ((2 ^ 32 : Nat) : Int) := by
+      have hcast : ((2 ^ 32 : Nat) : Int) = (2 : Int) ^ 32 := by simp
+      omega
+    exact (Int.toNat_lt hnn).mpr hlt
+  have hmid : (Zahl.bswap32 x).n.toNat = bswap32n x.n.toNat := by
+    show ((bswap32n x.n.toNat : Nat) : Int).toNat = _
+    exact Int.toNat_natCast _
+  have h := bswap32n_invol x.n.toNat hx
+  show ((bswap32n (Zahl.bswap32 x).n.toNat : Nat) : Int) = x.n
+  rw [hmid, h, h2n]
+
+theorem bswap_bswap64 (x : Zahl 0 ((2 : Int) ^ 64 - 1)) :
+    (Zahl.bswap64 (Zahl.bswap64 x)).n = x.n := by
+  have hnn : 0 ≤ x.n := by have := x.lo_le; omega
+  have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
+  have hx : x.n.toNat < 256 ^ 8 := by
+    have hhi := x.le_hi
+    have e : (256 : Nat) ^ 8 = 2 ^ 64 := by decide
+    rw [e]
+    have hlt : x.n < ((2 ^ 64 : Nat) : Int) := by
+      have hcast : ((2 ^ 64 : Nat) : Int) = (2 : Int) ^ 64 := by simp
+      omega
+    exact (Int.toNat_lt hnn).mpr hlt
+  have hmid : (Zahl.bswap64 x).n.toNat = bswap64n x.n.toNat := by
+    show ((bswap64n x.n.toNat : Nat) : Int).toNat = _
+    exact Int.toNat_natCast _
+  have h := bswap64n_invol x.n.toNat hx
+  show ((bswap64n (Zahl.bswap64 x).n.toNat : Nat) : Int) = x.n
+  rw [hmid, h, h2n]
+
 end Gabbro.Grammatik
