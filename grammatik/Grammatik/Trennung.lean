@@ -16,6 +16,7 @@
 -/
 import Grammatik.Maschine
 import Grammatik.Extraktion
+import Grammatik.ReferenzB
 
 namespace Gabbro.Grammatik
 
@@ -272,5 +273,92 @@ theorem pcMarkSep_scheitert_geteilte_marke (code : D.Marke → Nat)
   exact (hSep f g hfg (code m)
     (List.mem_map.mpr ⟨m, hmf, rfl⟩))
     (List.mem_map.mpr ⟨m, hmg, rfl⟩)
+
+/-! ## 5. Witnesses on the reference program `refB_prog`.
+
+  Both_soundness theorems take general `prog`; the companions below
+  instantiate ALL premises JOINTLY on `refB_prog` (thread 1 takes the
+  lock, then fires the writing leaf; thread 0 rests). The Bools evaluate
+  by `decide`. Non-degeneracy rides along: `einzahlen` writes `konto`
+  (`refEin_schreibt`) and the reached PC run moves memory
+  (`refB_pc_erreicht`, `refB_pc_schreibt`). -/
+
+/-- Coverage for the witness: every thread outside `[0, 1]` has empty
+    text in `refB_prog`. Proved from the program definition. -/
+theorem refB_prog_abdeckung : ∀ h, h ∉ [0, 1] → refB_prog h = [] := by
+  intro h hh
+  -- `h1` discharges the wildcard equation's side condition; the linter
+  -- reports it unused, but dropping it leaves the match unsolved.
+  have h1 : h ≠ 1 := by
+    intro e
+    subst e
+    simp at hh
+  simp [refB_prog, h1]
+
+/-- Joint witness for `markSep_aus_B`: decided check, coverage, a table
+    the function writes, and a reached run that changes memory. -/
+theorem markSep_aus_B_zeuge :
+    ∃ (code : refD.Marke → Nat) (fs : List Faden),
+      markSepB code refB_prog fs = true ∧
+      (∀ h, h ∉ fs → refB_prog h = []) ∧
+      (vertragVon refD refEin).schreibt () = true ∧
+      ∃ (M : GenMaschine refD) (pc : PCStand),
+        PCReach refP refO 0 refB_prog (GenStart refSp0) M pc ∧
+        M.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hB : markSepB (fun _ => 0) refB_prog [0, 1] = true := by decide
+  exact ⟨fun _ => 0, [0, 1], hB, refB_prog_abdeckung,
+    refEin_schreibt (), refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
+
+/-- Joint witness for `nurG_aus_B`: thread 1 owns `konto`, thread 0
+    names nothing; decided check, coverage, written table, moving run. -/
+theorem nurG_aus_B_zeuge :
+    ∃ (t : refD.Tab) (g : Faden) (fs : List Faden),
+      nurGB t g refB_prog fs = true ∧
+      (∀ h, h ∉ fs → refB_prog h = []) ∧
+      (vertragVon refD refEin).schreibt () = true ∧
+      ∃ (M : GenMaschine refD) (pc : PCStand),
+        PCReach refP refO 0 refB_prog (GenStart refSp0) M pc ∧
+        M.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hB : nurGB () 1 refB_prog [0, 1] = true := by decide
+  exact ⟨(), 1, [0, 1], hB, refB_prog_abdeckung,
+    refEin_schreibt (), refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
+
+/-- The unshared check agrees on the witness program (shared `konto`,
+    silent thread 0): corroboration, no witness obligation. -/
+example : unsharedSepB refB_prog [0, 1] = true := by decide
+
+/-! ## CUTS: what is not proved.
+
+  * The decided checks range over an explicit thread list `fs` with the
+    coverage side-condition `hcov`; the checker discharges `hcov` by
+    construction (it spawns exactly `fs`). No theorem here ties `fs` to
+    a checker thread table.
+  * `pcMarkSep_aus_verschiedenen_funktionen` carries the cross-function
+    code-disjointness premise `hDisj`: the task's two premises (distinct
+    functions, nonzero codes) do not suffice, mechanized as
+    `pcMarkSep_scheitert_geteilte_marke`. Same-function threads stay
+    excluded (B8); per-thread instances are groundwork in
+    MarkenInstanzA.lean, not a discharge here.
+  * No `PCSchritt` firing is built here: separation is program text;
+    the run discharge is `pc_discharge_einfaedig` / `pc_discharge_unshared`
+    (Maschine.lean). The witnesses reuse the reached `refB_prog` run
+    (`refB_pc_erreicht`) for non-degeneracy only.
+  * `refB_prog` names no marks (`refD.Marke` is empty), so both witnesses
+    discharge vacuously on the mark side; the carrier side (`konto`,
+    shared) fires for real.
+-/
+
+#print axioms Gabbro.Grammatik.markSep_aus_B
+#print axioms Gabbro.Grammatik.unsharedSep_aus_B
+#print axioms Gabbro.Grammatik.nurG_aus_B
+#print axioms Gabbro.Grammatik.markSep_aus_B_progAus
+#print axioms Gabbro.Grammatik.unsharedSep_aus_B_progAus
+#print axioms Gabbro.Grammatik.nurG_aus_B_progAus
+#print axioms Gabbro.Grammatik.marke_aus_progAus_in_koerper
+#print axioms Gabbro.Grammatik.pcMarkSep_aus_verschiedenen_funktionen
+#print axioms Gabbro.Grammatik.pcMarkSep_scheitert_geteilte_marke
+#print axioms Gabbro.Grammatik.refB_prog_abdeckung
+#print axioms Gabbro.Grammatik.markSep_aus_B_zeuge
+#print axioms Gabbro.Grammatik.nurG_aus_B_zeuge
 
 end Gabbro.Grammatik
