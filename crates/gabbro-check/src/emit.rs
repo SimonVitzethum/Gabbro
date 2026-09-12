@@ -1858,9 +1858,24 @@ pub fn emittiere_mit(
     // einem Verbund, und ein `typedef` vor seinem `#define` ist eine unbekannte Laenge.
     // *Beim ersten Anlauf stand genau das da: die Hochziehung hat einen Fehler geheilt und
     // beim Nachbarn einen aufgemacht -- und `cc` hat ihn in derselben Minute gemeldet.*
-    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Konst(k) => {
-            if let Some(w) = konst_zahl(&k.wert) {
+            // **Lane 111:** a const table lowers to one `static const` C array,
+            // element-wise from the same folder the checker reads (`umgebung.rs`
+            // computes it for `table … count N` anyway -- a second evaluator
+            // beside it would be the second register over the same fact, W7).
+            // Anything the folder does not fold is `C001`, never guessed.
+            if let ExprArt::ArrayLit(elements) = &k.wert.art {
+                match const_table(k, elements, modul, baum) {
+                    Some(zeile) => aus.push_str(&zeile),
+                    None => weigere(
+                        absagen,
+                        k.name.span,
+                        "const table without a lowering: the element type needs a C \
+                         word and every element a translation-time value",
+                    ),
+                };
+            } else if let Some(w) = konst_zahl(&k.wert) {
                 aus.push_str(&format!("\n#define {} {}u\n", k.name.text, w));
             // **«F»: eine Gleitkommakonstante ist ein `#define` ohne `u`.**
             //
@@ -2671,7 +2686,12 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
     use crate::corrcert::CForm::*;
     match art {
         // `#define N lit` — the arm writes the literal value, or refuses.
-        ItemArt::Konst(_) => Some(Literal),
+        // **Lane 111:** a const TABLE writes `static const` storage instead --
+        // the `Statisch` row, like every other static array the emitter lays down.
+        ItemArt::Konst(k) => match &k.wert.art {
+            ExprArt::ArrayLit(_) => Some(Statisch),
+            _ => Some(Literal),
+        },
         // Static storage, with or without initializer; `tabelle()` writes the same
         // kind of storage for tables, `accumulates` one cell per core.
         ItemArt::Statisch(_) | ItemArt::Tabelle(_) | ItemArt::Accumulates(_) => {
@@ -3094,6 +3114,49 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
     }
 }
 
+/// **Lane 111:** lower a const table to one `static const` C array.
+///
+/// The element C word comes from `ctyp_primitiv` (primitives only -- a named
+/// element type has no C spelling here, and the callers turn the `None` into
+/// `C001` by name); every value comes from the checker's own folder
+/// (`Umgebung::konst_wert`, W7). The bound is the literal's element count:
+/// on a checked tree it equals the declared count (`K191` holds that), and
+/// on an unchecked one the literal is the honest number. `None` anywhere is
+/// `C001` at the caller, never a guess.
+fn const_table(
+    k: &KonstDecl,
+    elements: &[Expr],
+    module: &str,
+    tree: &Programm,
+) -> Option<String> {
+    let TypExpr::Feld(field) = &k.typ else {
+        return None;
+    };
+    let word = ctyp_primitiv(&field.element)?;
+    let env = crate::umgebung::Umgebung::sammle(tree);
+    let mut values = Vec::with_capacity(elements.len());
+    for e in elements {
+        values.push(env.konst_wert(module, e)?);
+    }
+    let unsigned = word.starts_with('u');
+    let mut literals = String::new();
+    for (i, w) in values.iter().enumerate() {
+        if i > 0 {
+            literals.push_str(", ");
+        }
+        if *w < 0 || !unsigned {
+            literals.push_str(&w.to_string());
+        } else {
+            literals.push_str(&format!("{w}u"));
+        }
+    }
+    Some(format!(
+        "\nstatic const {word} {}[{}] __attribute__((unused)) = {{{literals}}};\n",
+        k.name.text,
+        elements.len()
+    ))
+}
+
 /// **A literal as C writes it -- with the `u` where C needs one, and `None` where C has no
 /// type at all** (`D3`/`D4`, 2026-09-03).
 ///
@@ -3507,6 +3570,9 @@ fn enthaelt_bitnicht(e: &Expr) -> bool {
         ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
             .into_iter()
             .any(enthaelt_bitnicht),
+        // **Lane 111:** a `~` inside a table element unfolds nothing either --
+        // the elements are ordinary expressions and read here like any other.
+        ExprArt::ArrayLit(es) => es.iter().any(enthaelt_bitnicht),
         ExprArt::Zahl(_)
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
@@ -4442,8 +4508,11 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Op
         // **«SG-24»** -- a count is a run-time number, not an address: a bank base
         // over one names no register field of this device.
         // **Lane E1** -- a library call is no address either.
+        // **Lane 111** -- a table literal is no address either: it stands only
+        // as a `const` initializer and never reaches a bank base.
         | ExprArt::Zaehle { .. }
         | ExprArt::LibraryCall(_)
+        | ExprArt::ArrayLit(_)
         | ExprArt::Unaer(_, _) => {
             weigere(
                 absagen,
@@ -5575,7 +5644,11 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         | ExprArt::Grund { .. }
         // **Lane E1:** a library call in a `where` clause lowers through the
         // general reader, which refuses it by name -- like any other call form.
+        // **Lane 111:** a table literal likewise -- it never stands here (the
+        // parser reads `[` only as a `const` initializer), and the general
+        // reader answers for it.
         | ExprArt::LibraryCall(_)
+        | ExprArt::ArrayLit(_)
         | ExprArt::Unaer(UnOp::Negativ, _) => ausdruck(e, u, absagen),
         // **«SG-24»: a `count` has no object here.** The generated counter functions are
         // declared with the functions, after the format accessors -- a `where` clause
@@ -7653,6 +7726,13 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
                 sammle_expr_namen(a, aus);
             }
         }
+        // **Lane 111:** the elements of a table literal name places like any
+        // expression's -- a `const` initializer is not name-free.
+        ExprArt::ArrayLit(es) => {
+            for e in es {
+                sammle_expr_namen(e, aus);
+            }
+        }
         // **«SG-24»** -- the counted predicate runs: every name it reads is read by
         // the emitted counter call. (The binder is a loop variable of that call --
         // collecting it here is what lets the `(void)k;` decision see it as read.)
@@ -8761,6 +8841,9 @@ fn anweisung(
                     | ExprArt::Grund { .. }
                     // **Lane E1** -- a library call is no expected value either.
                     | ExprArt::LibraryCall(_)
+                    // **Lane 111** -- a table literal is no expected value either:
+                    // the expected value of a compare-exchange is ONE value.
+                    | ExprArt::ArrayLit(_)
                     // **«SG-24»** -- a count is a traversal, and the expected value of a
                     // compare-exchange is ONE value, not a loop.
                     | ExprArt::Zaehle { .. }
@@ -11331,6 +11414,9 @@ fn needs_saturation(baum: &Programm) -> bool {
             // walk there -- a `+|` inside it is text the checker refuses
             // (`N057`) before it could ever lower.
             ExprArt::LibraryCall(l) => l.args.iter().any(expr),
+            // **Lane 111:** a `+|` inside a table element lowers like any
+            // other -- the elements are ordinary expressions.
+            ExprArt::ArrayLit(es) => es.iter().any(expr),
             ExprArt::Eingebaut(b) => match b.as_ref() {
                 Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => match t {
                     TypOderOrt::Ort(o) => suffixe(o),
@@ -11912,8 +11998,11 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         // runs over real slots. Dropping it would delete the traversal.
         // **Lane E1:** a library call is a run-time call the same way -- its
         // value is not a ghost, and dropping it would delete real code.
+        // **Lane 111:** a table literal is folded numbers, not a witness --
+        // its elements name no ghost a const scope could even see.
         | ExprArt::Zaehle { .. }
         | ExprArt::LibraryCall(_)
+        | ExprArt::ArrayLit(_)
         | ExprArt::Binaer(_, _, _) => false,
     }
 }
@@ -13451,6 +13540,19 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
                 "`result` -- it names the return value of the surrounding function inside an \
                  `ensures`, and a contract is checked at compile time (W6). There is no run \
                  time object for it",
+            );
+            String::new()
+        }
+        // **Lane 111:** a table literal stands only as a `const` initializer --
+        // the parser never reads `[` anywhere else, so the general reader has
+        // no object for it. The `const` gang above lowers it to `static const`
+        // storage; here it is refused by name.
+        ExprArt::ArrayLit(_) => {
+            weigere(
+                absagen,
+                e.span,
+                "array literal outside a const-table initializer -- the parser reads \
+                 `[…]` only there, and only the `const` gang lowers it",
             );
             String::new()
         }

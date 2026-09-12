@@ -1,0 +1,26 @@
+-- erwartet: N067
+-- **Gift 880 -- an `errors` map whose channel declares nothing.**
+--
+-- `or GibtEsNicht` names no `reason` of this unit. The arm names a target,
+-- but with no declared channel no arm has cases to hit -- so the channel
+-- itself falls, once, by name. Same rule as gifts 804/811/812 (`N067`): one
+-- rule, and each probe pins one of its directions. This is the fourth
+-- direction -- a channel that resolves nowhere -- beside the undeclared
+-- target (832), the doubled errno (839) and the missing channel (840).
+
+module gift::syscall_undeclared_channel {
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall fehlend(fd : u64) -> u64 or GibtEsNicht
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

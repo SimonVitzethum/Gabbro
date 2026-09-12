@@ -278,6 +278,12 @@ for _w, _s in _ITEM.items():
     probe(f"item.{_w}", "item", "", "    " + _s)
 probe("item.pub", "item", "    const Q : u32 = 1;", "    pub const Q : u32 = 1;")
 probe("item.when", "item", "    const Q : u32 = 1;", "    when TESTBUILD const Q : u32 = 1;")
+# Lane 111 (`constdecl.[`, the const-table literal): the base holds a scalar
+# const, the variant the table form -- the C gains the `static const` array,
+# so the form scores CARRIES. The broken twin (a short literal) is refused by
+# name (`K191`, gift 861), which the `gegenprobe` column carries.
+probe("constdecl.[", "modul", "    const Q : u32 = 1;",
+      "    const Q : [u32; 2] = [1, 2];")
 
 # -- statement heads ---------------------------------------------------------------------
 _STMT = {

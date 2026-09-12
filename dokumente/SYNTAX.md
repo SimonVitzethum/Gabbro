@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **167** measured (`pruefe-syntax.sh` EBNF branch: 167 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **168** measured (`pruefe-syntax.sh` EBNF branch: 168 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **228 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 228 EBNF terminals against 228 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1) |
+| vocabulary words | 221 | **230 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 230 EBNF terminals against 230 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 232 words
+## Vocabulary — closed, 234 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -93,7 +93,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
-             library payload
+             library payload translator for
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
@@ -196,7 +196,7 @@ item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
-             | bootdecl | syscalldecl ) ;
+             | bootdecl | syscalldecl | translatordecl ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
    gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
@@ -251,9 +251,16 @@ accdecl    = "accumulates" ident ":" typeexpr
    current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
-constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
+constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constwert ";" ;
 constexpr  = expr ;                    (* evaluable at translation time; no call of a function
                                           with effects, no place on `mut` *)
+constwert  = constexpr | arraylit ;
+(* CHANGED lane 111: a const-table literal. It stands ONLY as a `const`
+   initializer of array type (`const T : [u32; N] = […]`); the general
+   expression reader never reads `[`, so anywhere else it is `P011` by
+   grammar shape. The checker holds it element-wise (`K190`-`K194`); the
+   emitter writes one `static const` array. *)
+arraylit   = "[" [ expr { "," expr } [ "," ] ] "]" ;
 staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
              [ "section" string ] [ "shared" ] ";"                  (* CHANGED «SG-21» *) ;
 ```
@@ -265,6 +272,7 @@ world before the first body and has no run-time meaning of its own.
 |---|---|---|
 | `program`, `moduledecl`, `usedecl` | names are static; a module is a namespace, not a construct | `Deklaration` — one per translation unit |
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
+| `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
 | `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
@@ -558,6 +566,7 @@ placelist  = place { "," place } ;
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.altGlob hL`, `Expr.altSlot hL` |
 | `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
+| `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |
 | `x += e` etc. (§7) | SUGAR for `x = x + e` under the rules above | | `Expr.add` |
 
@@ -923,7 +932,7 @@ payload the call carries (`PLAN-ERWEITUNG.md` §0b) — is **not implemented
 yet**: no translator runs. A call that resolves `lib` to a used module and
 `function` to a declared `library fn` in it (§7.1) is checked like an
 ordinary call — arguments, effects, `or R`, costs — and then refused with
-`N069` (`library call checked; payload translation not implemented`). A call
+`N069`, which names the translator that WOULD run it (§7.2). A call
 that resolves nowhere is refused with `N057`; the refusal is controlled —
 never a crash and never a silent acceptance. In any other expression position
 the reader refuses the `@` with `P011`.
@@ -989,8 +998,9 @@ plus the four things only a library declaration can fail:
 * **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
   root, `use` lines) and `f` to a `library fn` in it; arguments, effects
   (through the call graph), `or R` and costs are checked exactly like an
-  ordinary call. Resolved calls are refused with `N069` until the
-  translator exists (lanes E3/E5); unresolved calls with `N057`.
+  ordinary call. Resolved calls are refused with `N069` until a
+  translator RUNS them (declared since lane E3, §7.2; running them is lane
+  E5); unresolved calls with `N057`.
 * **no bypass** — a direct call to a `library fn` is refused (`N061`):
   without a region there is no payload.
 
@@ -1002,6 +1012,89 @@ of such a call are exactly the `Stmt.axiomCall` premises for the serving
 axiom, as an equivalence; witnessed on a one-table declaration with a
 reached two-step run that moves memory
 (`bibliotheksruf_ist_ax_zeuge`).
+
+### 7.2 `translator` — the declaration from region to payload (lane E3)
+
+**Specified, the words lexed, the declaration checked («E3»).** A library
+declares, for each of its run-time functions, the *translator*: a total,
+effect-free Gabbro function from the call region's AST (a tree table type,
+`PLAN-ERWEITUNG.md` §2) to the function's payload type. Running it needs
+the compile-time evaluator — **only the declaration and the typing are
+built now** (`PLAN-ERWEITUNG.md` §6, lane E3). The region still is not
+translated: a resolved call is still refused with `N069`, which now names
+the translator that WOULD run.
+
+**The surface** — one translator per library function, in the same module,
+named after its own job and linked with `for`:
+
+```ebnf
+translatordecl = [ "pub" ] "translator" ident "for" ident "(" ident ":" typeexpr ")"
+                 [ "->" typeexpr ]
+                 (* The result names the served function's payload table;
+                    absent or naming anything else it is `N204`. *)
+                 [ "requires" predlist ] [ "ensures" predlist ]
+                 [ "effects" "{" efflist "}" ]
+                 (* `effects { pure }`, held by `N202`, not by the grammar:
+                    a translator with effects must be REFUSED, not unwritable. *)
+                 [ "costs" "<=" expr "ops" ]
+                 [ "decreases" expr ]
+                 (* The termination witness, held by `N203` for the same reason. *)
+                 endblock ;
+                 (* A Gabbro block, nothing else (`P044`) -- the translator IS
+                    ordinary Gabbro checked by the ordinary checker. *)
+```
+
+```gabbro
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+…
+pub translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
+}
+…
+```
+
+The example translates by identity: the region AST already stands in
+payload form. A translator between two DIFFERENT tables needs
+translation-time value construction -- building a fresh payload value
+without a run-time effect -- and that is lane E5's compile-time
+evaluator, not this lane: under the current checker a `pure` body cannot
+construct a table value out of another table's (`M140` is nominal, and a
+carrier read under `pure` is `E010`). What this lane checks is the
+declaration and the typing; the calls stay refused until a translator
+RUNS.
+
+**The checks** — the body is an ordinary function body: types, contracts,
+effects and costs are checked by the ordinary checker, and the transitive
+call hull holds no `extern`, `raw`, `prim` or `asm` (`N059`,
+`PLAN-ERWEITUNG.md` §0c). Five new refusals hold the five things only the
+linkage can fail:
+
+* **one translator** — every `library fn` with a payload type has exactly
+  one translator in its module: none is `N200` on the function, a second
+  one — and a translator naming no library function at all — is `N201` on
+  the translator;
+* **pure** — the translator's signature is `effects { pure }` (`N202` for
+  anything else, including a missing clause);
+* **total** — it carries a `decreases` clause (`N203` without one);
+* **fitting** — its result type names the served function's payload table
+  (`N204` for anything else, including a missing result).
+
+| spelling | attribute | Lean |
+|---|---|---|
+| `translator build for kernel(region : RegionAst) -> KernelTab effects { pure } decreases e { … }` | a total, effect-free map from the region AST to the payload; checked like any function body; runs only at translation time (lane E5) | no new term — an ordinary pure function; the certificate (lane E5) checks its OUTPUT |
+
+*Lean:* nothing new. A translator is an ordinary Gabbro function with a
+`pure` contract and a termination witness; the translation certificate of
+lane E5 checks the produced payload, never the translator.
 
 ---
 

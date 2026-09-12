@@ -77,7 +77,7 @@ a hand-written proof, 0,5 : 1 is lost on that day — independently of everythin
 A plan made of constructs somebody considers good is a wish list. The constructs below are derived
 from the **base rate**: the 100 entries of the list "traps this project has already paid for".
 Every entry is classified individually in
-[`fallen-klassifikation.tsv`](../fallen-klassifikation.tsv); the numbers below are **derived** with
+[`fallen-klassifikation.tsv`](../messung/fallen-klassifikation.tsv); the numbers below are **derived** with
 `./instrumente/zaehle-fallen.sh`, not written down beside them.
 
 | Class | Share | means |
@@ -3463,7 +3463,7 @@ irgendwann, eine fehlende nie.
 | **Erhaltungspflichten** | **6** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand. *5 → 6 am 2026-08-31: `beispiele/55-kindkette.gab` erhält `kind_zeigt_zurueck` — die Zahl steigt mit dem Korpus* |
 | **ZUSAGE ohne Leser** | **0** | `./instrumente/pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
 | **Fremdpflichten** | **11** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
-| **Vorbedingungen am Rufort** | **21** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`; **16 → 18 am 2026-09-03, und zwar ohne eine neue Rufstelle**: `pflichten.rs::rufe_im_block` sah ein `let x = f(…) else (e) { … }` nicht als Ruf an, und die zwei Zeilen in `beispiele/48-grund-mit-erzeuger.gab` standen die ganze Zeit da — gezählt hat sie niemand; 19 → 20 am 2026-09-12 (lane S6) mit `beispiele/90-syscall-errno.gab`, dessen `write`-Ruf unter `requires len <= 1024` steht; 20 → 21 on 2026-09-12 (lane 126) with `beispiele/104-referenz.gab`, whose `lies` call stands under `requires Held(M)`.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
+| **Vorbedingungen am Rufort** | **21** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS; 12 → 13 am 2026-08-31 mit `beispiele/57-faedenhalt.gab`; **16 → 18 am 2026-09-03, und zwar ohne eine neue Rufstelle**: `pflichten.rs::rufe_im_block` sah ein `let x = f(…) else (e) { … }` nicht als Ruf an, und die zwei Zeilen in `beispiele/48-grund-mit-erzeuger.gab` standen die ganze Zeit da — gezählt hat sie niemand; 19 → 20 am 2026-09-12 (lane S6) mit `beispiele/90-syscall-errno.gab`, dessen `write`-Ruf unter `requires len <= 1024` steht; 20 → 21 am 2026-09-12 (lane S7) mit `beispiele/96-buffered-writer.gab`, dessen `flush` denselben `write` unter derselben Klausel ruft.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **6** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
 | **Absenkungspflichten** | **1** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten. *1 → 0 am 2026-09-04, und es ist keine Einlösung:* F3s Absenkung ist in die **Notationsspalte** desselben Befehls gewandert, die dort seither daneben steht. Der Grund ist mechanisch — `gabbro pruefe messung/fragmente/F03.gab` meldet **18 Fehler**, also erreicht kein Erzeugerzweig die Datei, also löst keine Absenkung die Pflicht ein |
 
