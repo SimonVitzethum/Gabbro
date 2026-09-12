@@ -56,6 +56,11 @@ pub mod tearing;
 pub mod kbedingung;
 pub mod opsruf;
 pub mod abi;
+/// **The `syscall` declaration (PLAN-SYSCALL.md, lane S5).** The register map,
+/// the errno decoding and the machine/counterpart questions -- the call
+/// boundary reuses the `extern` path through `Umgebung`, the call graph and
+/// `H007`, so this module holds only the declaration itself.
+pub mod syscall;
 /// **«T1» -- the fixpoint over the BODIES**, as against the hull over the declarations in
 /// `aufrufgraph`. See the module head: a derivation that takes a callee's *declared* effects
 /// covers up exactly the error it is meant to find.
@@ -75,6 +80,20 @@ pub mod umgebung;
 
 pub use m1::Zaehlung;
 pub use kosten::Zaehlung as Kostenzaehlung;
+
+/// **Bit intrinsics (PLAN-BITS §3, surface half): the seven claimed call names.
+///
+/// One predicate, read at every site that treats a call by name (`m1.rs` typing,
+/// `kosten.rs` cost, `aufrufgraph.rs` hull, `emit.rs` lowering, `namen.rs`
+/// declaration refusal): seven spellings, one claim. Only the BARE name matches --
+/// a qualified path (`m::clz`) is an ordinary call, and the `Ruf` name helper
+/// compares the last segment only, so no site may use it for this question.
+pub fn ist_bitintrinsik(name: &str) -> bool {
+    matches!(
+        name,
+        "clz" | "ctz" | "log2_floor" | "popcount" | "rotl" | "rotr" | "bswap"
+    )
+}
 // **Die Zusage eines fremden Rumpfes, als Tatsache im Pruefer** -- der EINE Leser der Frage
 // „verengt diese `ensures`-Klausel, und wie?", und die Buchung der Stellen, an denen sie es
 // getan hat. M1 nimmt den Typ, das Zeugnis nimmt die Stellen.
@@ -391,6 +410,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("bindung", bindung::pass(baum, absagen));
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
+        z!("syscall", syscall::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
@@ -422,6 +442,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // about the artefact, not about the semantics of the call.
     gatter::pass(baum, absagen);
     kbedingung::pass(baum, absagen);
+    // **Directly behind the name-adjacent passes.** The syscall declaration is
+    // declaration-level like `entry`/`entrust`: its own shape is held here, and
+    // every body pass below reads it through the shared maps.
+    syscall::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
@@ -576,6 +600,15 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
             }
         }
         ItemArt::Funktion(d) => {
+            for p in &d.parameter {
+                typ(&p.typ, f);
+            }
+            if let Some(e) = &d.ergebnis {
+                typ(e, f);
+            }
+        }
+        // **A `syscall` declares parameter and result types like an `fn`.**
+        ItemArt::Syscall(d) => {
             for p in &d.parameter {
                 typ(&p.typ, f);
             }
@@ -903,6 +936,13 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
             }
         }
         ItemArt::Axiom(a) => aus.extend(a.requires.iter()),
+        // **A `syscall` carries `requires`/`ensures` like an `fn`.** No body to
+        // walk -- the body is the machine -- but the contract clauses are
+        // predicate positions like any other.
+        ItemArt::Syscall(s) => {
+            aus.extend(s.requires.iter());
+            aus.extend(s.ensures.iter());
+        }
         ItemArt::Check(c) => {
             aus.extend(c.floor.iter());
             praedikate_im_block(&c.can_fail, &mut aus);

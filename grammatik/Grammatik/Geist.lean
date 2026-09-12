@@ -125,7 +125,7 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       orteOk (D := D) (p.orte ++ args.orte) && g001 rest
   | .bindCallElse _ args _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001 rest
-  | .bindAxiom _ args _ _ _ rest => orteOk (D := D) args.orte && g001 rest
+  | .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
   | .regLies _ _ rest => g001 rest
   | .regLiesElse _ _ zusage sonst rest =>
       orteOk (D := D) zusage.orte && g001End sonst && g001 rest
@@ -463,7 +463,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001End_korrekt err h2.2 o ho'
       · exact g001_korrekt rest h1.2 o ho'
-  | .bindAxiom a args he hw hg rest =>
+  | .bindAxiom a args he hw hg hd hgd rest =>
       intro h ho
       have h0 : (orteOk (D := D) args.orte && g001 rest) = true := h
       have ho' : o ∈ args.orte ∨ o ∈ Extraktion.blockOrte rest := by

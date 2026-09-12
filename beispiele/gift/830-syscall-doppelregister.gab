@@ -1,0 +1,27 @@
+-- erwartet: N063
+-- **Gift 802 -- two parameters in one register have no reading.**
+--
+-- `rdi` is bound twice in `regs in`. The stub writes the register once, and one
+-- of the two values never arrives -- so the second binding falls, by name.
+
+module gift::syscall_doppelregister {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall doppelt(fd : u64, len : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rdi = len }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+}

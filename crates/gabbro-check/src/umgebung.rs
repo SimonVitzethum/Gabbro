@@ -862,6 +862,40 @@ impl Umgebung {
                     };
                     self.funktionen.insert(q(&f.name.text), sig);
                 }
+                ItemArt::Syscall(s) => {
+                    // **A `syscall` is callable exactly like an `extern fn`.**
+                    // The declaration carries its contract (parameters, result,
+                    // `or R` channel, `requires`/`ensures`, declared effects);
+                    // the body is the machine, so `rumpf_da` is false and there
+                    // is no `costs` clause to evaluate -- a caller with a cost
+                    // promise meets `K003` over it, as over an `extern fn`
+                    // without `costs`. *Without this entry every call site
+                    // reads the callee as unknown.*
+                    if let Some(r) = &s.fehler {
+                        self.fehlerkanaele
+                            .insert(q(&s.name.text), (pfad.to_string(), r.text.clone()));
+                    }
+                    let sig = Signatur {
+                        parameter: s
+                            .parameter
+                            .iter()
+                            .map(|p| (p.name.text.clone(), self.typ_von_ausdruck_decl(pfad, &p.typ)))
+                            .collect(),
+                        ergebnis: s.ergebnis.as_ref().map(|t| self.typ_von_ausdruck_decl(pfad, t)),
+                        ensures: s.ensures.clone(),
+                        requires: s.requires.clone(),
+                        rumpf_da: false,
+                        effect_list: s
+                            .effects
+                            .liste
+                            .iter()
+                            .map(|e| e.art.text())
+                            .collect(),
+                        cost_bound: None,
+                        span: s.span,
+                    };
+                    self.funktionen.insert(q(&s.name.text), sig);
+                }
                 ItemArt::Axiom(a) => {
                     let sig = Signatur {
                         parameter: a
@@ -1122,6 +1156,16 @@ impl Umgebung {
                     BinOp::GroesserGleich => i128::from(x >= y),
                     BinOp::Und => i128::from(x != 0 && y != 0),
                     BinOp::Oder => i128::from(x != 0 || y != 0),
+                    // PLAN-BITS section 4 (lane 88): the overflow operators are
+                    // not constant-folded here. The modulus of a wrap and the
+                    // interval of a clamp live in the CHECKER's ranges, not in
+                    // the two values -- folding `(a + b) mod 2^N` without `N`
+                    // would be a guess, and this function does not guess.
+                    BinOp::PlusWrap
+                    | BinOp::MinusWrap
+                    | BinOp::MalWrap
+                    | BinOp::SchiebLinksWrap
+                    | BinOp::PlusSat => return None,
                 })
             }
             // **Ein `const fn` wird HIER gerechnet, und nur hier.**

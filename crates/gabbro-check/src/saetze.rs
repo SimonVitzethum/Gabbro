@@ -237,8 +237,9 @@ pub const NAMEN: &[Satz] = &[
         aussage: "Every clause that names something -- `entrust`, `offset_into`, `per cpu`, \
                   `requires Has`, `dispatch`, `gates`, `measures`, `mirrors`, a probe \
                   obligation, `observed by`, a `format` `where`, `step`, a nominal type at a \
-                  `let`/`return`/comparison/argument/assignment -- names something this unit \
-                  declares, and names it in the form the clause requires.",
+                  `let`/`return`/comparison/argument/assignment, and a `syscall`'s \
+                  assumption -- names something this unit declares, and names it in the \
+                  form the clause requires.",
         vorbehalt: "**`N028`/`N029` carry a KEY ASYMMETRY that is a plain bug** (found \
                     2026-08-21 while writing this sentence): the map is filled under the \
                     SHORT name and calls are looked up under the FULL path, so `m::f()` \
@@ -253,7 +254,8 @@ pub const NAMEN: &[Satz] = &[
                     down anywhere, and that is a finding about the SPECIFICATION.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 5 probes on `N030` (`669`/`670` hold the FIELD, read \
-                      and written), 2 each on `N027` and `N031`, and single probes on 12 \
+                      and written), 2 each on `N027` and `N031`, `813` on a `syscall` \
+                      naming an undeclared assumption (`N004`), and single probes on 12 \
                       further codes of this group.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md, SPRACHE.md §15",
     },
@@ -357,8 +359,9 @@ pub const NAMEN: &[Satz] = &[
         name: "namen.annahmemaschine",
         kennungen: &["A005"],
         aussage: "An `assume … arch A` names a machine this unit declares somewhere -- \
-                  at an `entry`, an `entrust`, a `boot` or an `asm` body. An assumption \
-                  that can never be in force here does not travel in the artefact's \
+                  at an `entry`, an `entrust`, a `boot` or an `asm` body. A `syscall` \
+                  names its machine the same way (`arch` after `abi`). An assumption \
+                  -- or a syscall -- that can never be in force here does not travel in the artefact's \
                   assumption set as though it could.",
         vorbehalt: "**The rule reads the `arch`, never the TEXT.** Whether an assumption \
                     carries two claims under one name is a human judgement; a guard \
@@ -383,7 +386,9 @@ pub const NAMEN: &[Satz] = &[
                       `fn … arch` branch went through `beispiele/60`, because an `entry` \
                       in the same file supplied the machine anyway. *A witness standing \
                       next to a second source of the same answer witnesses nothing.* \
-                      `/463` is the one that has no second source.",
+                      `/463` is the one that has no second source. Lane S5 extends the \
+                      rule to `syscall … arch`, pinned by `beispiele/gift/833` (a syscall \
+                      for `x86_64` in a unit that declares only `aarch64`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12; «B40»",
     },
     Satz {
@@ -1389,6 +1394,31 @@ pub const M1: &[Satz] = &[
                      messung/VERFEINERUNG.md",
     },
     Satz {
+        name: "m1.umlauf_saettigung",
+        kennungen: &["M153", "M154"],
+        aussage: "The overflow operators check exactness at the operation: wrapping \
+                  (`+%`, `-%`, `*%`, `<<%`) lives only on an exact unsigned range \
+                  `0 .. 2^N-1` and answers it (`M153` elsewhere, naming `+|`), \
+                  saturating (`+|`) lives on one shared integer range and answers \
+                  it clamped (`M154` on two ranges). A literal operand takes the \
+                  other's range when its value lies in it; two literals wrap in \
+                  their common width. Neither ever takes the `M104` width path.",
+        vorbehalt: "**Exactness is read off the operand ranges with their V1/V2 \
+                    facts, not off the declarations**: a narrowed `0..3` is not \
+                    exact and still falls. Mixed widths answer `Unbekannt`, like \
+                    plain `+` -- no implicit conversion, and no refusal either. \
+                    The shift amount is bounded, never exact. Says nothing about \
+                    whether the lowered C computes the wrap -- that is the \
+                    emitter's `umlauf_c`/`saettigung_c`, measured separately.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/ueberlauf.rs: exact-shape \
+                      acceptance (u32, u13, literals, signed saturation), \
+                      `M153`/`M154`/`M104` refusals by code, emitted mask and \
+                      helper-call shapes, compiled-and-run values.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`umlauf_oder_saettigung`); \
+                     PLAN-BITS.md section 4",
+    },
+    Satz {
         name: "m1.vorzeichenwechsel",
         kennungen: &["M150"],
         aussage: "Unary minus checks overflow at the operation (`M150`):
@@ -1402,6 +1432,61 @@ pub const M1: &[Satz] = &[
         gemessen_an: "beispiele/gift/749-751: full-range fall, narrowed
                       silence, one-value-apart boundary.",
         fundstelle: "crates/gabbro-check/src/m1.rs",
+    },
+    Satz {
+        name: "m1.bitintrinsik",
+        kennungen: &["M157", "M158", "M159", "M160"],
+        aussage: "The seven bit intrinsics (`clz`, `ctz`, `log2_floor`,
+                  `popcount`, `rotl`, `rotr`, `bswap`) are typed at the call:
+                  the nonzero group needs an operand whose range excludes zero
+                  (`M157`); every operand must be an unsigned standard width
+                  (`M158` for the unary group, `M159` for rotation, `M160` for
+                  swap); rotation needs the exact full `uN` range and an amount
+                  in `0 .. w-1` (`M159`); `bswap` needs `u16`, `u32` or `u64`
+                  (`M160`). Results are exact: `0 .. w-1` for the nonzero
+                  group, `0 .. w` for `popcount`, the full range for rotation
+                  and swap -- so the lowering reaches `__builtin_clz/ctz`
+                  only with a provably nonzero argument, whose undefined zero
+                  case stays unreachable.",
+        vorbehalt: "**Reads facts, not declarations**: a V1-narrowed `1 ..`
+                    stays silent beside an open `u32` that falls at `M157`.
+                    An `Unbekannt` operand stays silent (nothing to hold), and
+                    an empty range is `M117`'s at the declaration. The sentence
+                    says nothing about the C the call lowers to beyond the
+                    zero case -- that the counted width is the declared one is
+                    the emitter's own reading (`emit.rs::intrinsik_breite`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: one positive
+                      probe per intrinsic (checked, emitted, compiled under
+                      `cc` and `clang` with `-Wall -Wextra -Werror`, run under
+                      both optimisation levels) and three poison probes
+                      (`M157` on `u32`, `M159` on `u32 in 0 .. 5`, `M160` on
+                      `u8`), each falling with its code alone.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`intrinsik_ruf`,
+                      `intrinsik_bereich`); crates/gabbro-check/src/emit.rs
+                      (`intrinsik_c`, `DREH_C`)",
+    },
+    Satz {
+        name: "namen.bitintrinsik-name",
+        kennungen: &["N058"],
+        aussage: "No declaration carries the name of a bit intrinsic (`N058`):
+                  a call in one of the seven spellings never reaches a declared
+                  callee, so a declaration of the same name would stand
+                  uncalled -- a callee the language routes around. Locals and
+                  parameters keep the names: they are not callees, and the call
+                  form types as the intrinsic the way `u64(a)` converts despite
+                  a local named `u64`.",
+        vorbehalt: "**The rule holds items, not places.** A field or a local
+                    named `clz` stays legal; only the item -- the thing a call
+                    could resolve to -- is refused. It says nothing about
+                    qualified paths (`m::clz`), which are ordinary calls and
+                    fall where undeclared callees fall.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: a `fn clz`
+                      declaration falls with `N058` alone; the clean corpus
+                      carries none of the seven names at any item.",
+        fundstelle: "crates/gabbro-check/src/namen.rs
+                      (`intrinsik_name_vergeben`)",
     },
     Satz {
         name: "v1.bereichsverengung",
@@ -2566,23 +2651,34 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/DECKUNGSLUECKE.md",
     },
     Satz {
-        name: "parser.syscall-bevor-s5",
-        kennungen: &["P042"],
-        aussage: "A `syscall` item is refused BY NAME until the checker implements it. \
-                  The grammar production `syscalldecl` stands since lane S1 \
-                  (`SYNTAX.md` §12.1, «SS-1»); the checker, the emitter ruling and \
-                  the corpus example (lanes S5-S7) are written against it, and until \
-                  then every `syscall` item falls here -- a controlled refusal, never \
-                  silent acceptance and never a crash.",
-        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing about \
-                    whether the ABI binding, the register map or the error map are RIGHT \
-                    -- those checks belong to lanes S5-S7, and until they stand every \
-                    such question falls here unread. `entry syscall …` keeps parsing: \
-                    the entry NAME is an identifier, and `syscall` as a `ctx` word \
-                    stays one there. Probe 796 pins it.",
+        name: "syscall.erklaerung",
+        kennungen: &["N063", "N064", "N065", "N066", "N067", "N068", "A006"],
+        aussage: "A `syscall` declaration holds its own shape: the in-registers are \
+                  pairwise distinct (`N063`), no out register is clobbered (`N064`), \
+                  every parameter is bound to exactly one register and every binding \
+                  names a parameter (`N065`), every named register is an x86_64 general \
+                  register (`N066`), the `errors` map answers every listed errno once \
+                  and every target is a case of the declared `or R` channel (`N067`), a \
+                  `kernel` pairing is refused until the pairing check lands (`N068`), \
+                  and the declaration names no sealed architecture (`A006`, x86_64 \
+                  only). The `arch` against the declared arches (`A005`) and the named \
+                  assumption (`N004`/`N005` shape) are sentences of their own, and the \
+                  call site reuses the `extern` path -- the `Signatur` in the shared \
+                  map, the call-graph node, and `H007` at the boundary.",
+        vorbehalt: "A declaration rule, and nothing else. It says nothing about whether \
+                    the number is the kernel's, whether the errno table is the kernel's, \
+                    or whether the assumption holds -- those are the counterpart's \
+                    business (lane S6) and the falsifier's. A `regs out` pair has no \
+                    reading and falls at the parser, not here; two out registers naming \
+                    one register are not refused by any code above. The emitter refuses \
+                    every unit carrying a syscall (`C001`) until the stub lands.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probe 796 on `P042`.",
-        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §12.1",
+        gemessen_an: "beispiele/gift: probes `830`/`831`/`835`/`836`/`837` on \
+                      `N063`/`N064`/`H007`/`N065`/`N066`, `832`/`839`/`840` on the three \
+                      directions of `N067`, `834` on `N068`, `833` on `A005` and `838` \
+                      on `A006`; beispiele/74 checks clean and falls only at the \
+                      emitter (`C001`, pinned by gift 797).",
+        fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",
     },
     Satz {
         name: "bootsatz.schichten",

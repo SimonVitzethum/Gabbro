@@ -1,0 +1,69 @@
+-- erwartet: H007
+-- **Gift 807 -- a syscall that writes a protected place owes the lock at the call.**
+--
+-- The counterpart of `gift/796` for the syscall lane: `fremd_schreibt` declares
+-- `writes k.slots`, which `KAPPEN` protects, and `ohne_sperre` holds nothing at
+-- the call. A syscall is body-less by construction, so its declared places owe
+-- the protecting lock HELD -- the same rule, the same code, read from the
+-- declaration instead of an `extern fn`.
+--
+-- `ordentlich` beside it is the honest form, and it keeps `H008` quiet: the lock
+-- is taken somewhere, just not at the call below.
+
+module gift::syscall_ohne_sperre {
+
+const NSLOTS : u32 = 4096;
+
+type Rechte = u32 in 0 .. 15;
+
+table Kappenraum count NSLOTS {
+    slot {
+        belegt : bool,
+        rechte : Rechte,
+        objekt : u32,
+    }
+}
+
+lock KAPPEN protects { belegt, rechte, objekt } rank 0 held <= 50 ops;
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume kern_schreibt
+    "The kernel side keeps the slot contract for this number."
+    falsifier sonde_kern_schreibt;
+
+-- The honest form: the lock taken around the write itself.
+impl fn ordentlich(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots, locks KAPPEN }
+    costs <= 50 ops
+{
+    locks KAPPEN {
+        k.slots[i].rechte = r;
+    }
+}
+
+syscall fremd_schreibt(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte) -> u32 or IoError
+    abi linux arch x86_64 number 7
+    regs in { rdi = k, rsi = i, rdx = r }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { writes k.slots }
+    assume kern_schreibt falsifier sonde_kern_schreibt;
+
+-- The race: a declared write to a protected place with no lock held at the call.
+impl fn ohne_sperre(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte) -> u32
+    effects { writes k.slots }
+{
+    let n = fremd_schreibt(k, i, r) else (e) {
+        match e {
+            BadFd => { return 0; }
+        }
+    }
+    return n;
+}
+
+}
