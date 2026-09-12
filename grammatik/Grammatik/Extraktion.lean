@@ -1194,7 +1194,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval]
       rw [ha, hb]
-  | .shl _ _ a b =>
+  | .shl _ _ _ _ _ a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
@@ -1203,7 +1203,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval]
       rw [ha, hb]
-  | .shr _ _ a b =>
+  | .shr _ _ _ _ _ a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G

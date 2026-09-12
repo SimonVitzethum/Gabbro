@@ -642,8 +642,8 @@ def modellKopf {D : Deklaration} : CertExpr D → Bool
   | .band _ _ => true
   | .bor _ _ _ => true
   | .bxor _ _ _ => true
-  | .shl _ _ => true
-  | .shr _ _ => true
+  | .shl _ _ _ => true
+  | .shr _ _ _ => true
   | _ => false
 
 /-- The lowered C-side cost of one head: a modeled op is exactly one C-side
@@ -656,8 +656,8 @@ def senkKosten {D : Deklaration} : CertExpr D → Nat
   | .band _ _ => 1
   | .bor _ _ _ => 1
   | .bxor _ _ _ => 1
-  | .shl _ _ => 1
-  | .shr _ _ => 1
+  | .shl _ _ _ => 1
+  | .shr _ _ _ => 1
   | _ => 0
 
 /-- Count leg: a modeled head lowers to exactly one C-side op. -/

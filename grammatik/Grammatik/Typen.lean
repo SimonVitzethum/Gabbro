@@ -280,14 +280,21 @@ def Zahl.bxor {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
       omega⟩
 
 /-- `a << b` ist `a · 2^b`; die Schiebeweite ist eine Zahl in `0 .. h2`, und das Ergebnis
-    liegt in `0 .. h1 · 2^h2`. -/
-def Zahl.shl {l1 h1 l2 h2 : Int} (h0 : 0 ≤ l1) (_h0' : 0 ≤ l2) (a : Zahl l1 h1) (b : Zahl l2 h2) :
+    liegt in `0 .. h1 · 2^h2`. Die Weite `w` ist die Speicherbreite des Operanden
+    in Bits (`hw1`, wie bei `bor`/`bxor`); die Weite des Betrags liegt darunter
+    (`hw2 : h2 < w` -- die Rust-Pruefung `b.max >= a.breite` in `typen.rs`
+    `schiebe_links` als Lean-Voraussetzung). Ohne `hw2` waere `0 << 40`
+    ableitbar und in C undefiniert (BEWEIS.md §2, Zeile 4). -/
+def Zahl.shl {l1 h1 l2 h2 : Int} (w : Nat) (_hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int))
+    (h0 : 0 ≤ l1) (_h0' : 0 ≤ l2) (a : Zahl l1 h1) (b : Zahl l2 h2) :
     Zahl 0 (h1 * 2 ^ h2.toNat) :=
   ⟨a.n * 2 ^ b.n.toNat, by
       have ha := a.lo_le
       exact Int.mul_nonneg (by omega) (Int.pow_nonneg_two _),
     by
       have ha := a.lo_le; have hh := a.le_hi; have hb := b.lo_le; have hh' := b.le_hi
+      have hb2 : b.n ≤ h2 := b.le_hi
+      have hw2' : h2 < (w : Int) := hw2
       have hpow : (2 : Int) ^ b.n.toNat ≤ 2 ^ h2.toNat := by
         have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show b.n.toNat ≤ h2.toNat by omega)
         have e1 : ((2 ^ b.n.toNat : Nat) : Int) = (2:Int) ^ b.n.toNat := by simp
@@ -299,10 +306,15 @@ def Zahl.shl {l1 h1 l2 h2 : Int} (h0 : 0 ≤ l1) (_h0' : 0 ≤ l2) (a : Zahl l1 
         Int.mul_le_mul_of_nonneg_left hpow (show (0:Int) ≤ h1 by omega)
       omega⟩
 
-def Zahl.shr {l1 h1 l2 h2 : Int} (h0 : 0 ≤ l1) (_h0' : 0 ≤ l2) (a : Zahl l1 h1) (b : Zahl l2 h2) :
+/-- `a >> b`: dieselben Weitenvoraussetzungen wie `shl`
+    (`typen.rs` `schiebe_rechts`). -/
+def Zahl.shr {l1 h1 l2 h2 : Int} (w : Nat) (_hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int))
+    (h0 : 0 ≤ l1) (_h0' : 0 ≤ l2) (a : Zahl l1 h1) (b : Zahl l2 h2) :
     Zahl 0 h1 :=
   ⟨a.n / 2 ^ b.n.toNat, by
       have ha := a.lo_le
+      have hw2' : h2 < (w : Int) := hw2
+      have hb2 : b.n ≤ h2 := b.le_hi
       exact Int.ediv_nonneg (by omega) (Int.pow_nonneg_two _),
     by
       have ha := a.lo_le; have hh := a.le_hi

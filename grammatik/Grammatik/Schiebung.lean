@@ -16,15 +16,21 @@
       as `hw1 : h1 < 2 ^ w`; `maske` in `typen.rs` computes the same bound).
     `rustSchiebtOk` -- the Rust check as a Lean predicate: the amount range
       `l2 .. h2` lies inside `0 ..< w`.
-    `schiebt` -- the CONCRETE shift this file closes: `3 << 2` under storage
-      width 32, with its three premises as fields. No universal over `Expr`,
-      `Stmt`, or contracts anywhere: the theorem below takes the record, so
-      the witness builds it directly.
-    `shl_weite_im_c_definiert` -- every shift derivable in the grammar has
-      amount < width: the C UB row is unreachable. Stated over the concrete
-      record, so rule 4 (no premise discarded) is checkable: the proof uses
-      the amount bound field.
-    `shl_rust_lean_gleich` -- the Lean premise is exactly the Rust check.
+    `leanSchiebtOk` -- the Lean constructor premise, read off `Expr.shl`:
+      `hw1 : h1 < 2 ^ w` on the operand and `hw2 : h2 < w` on the amount.
+    `shl_rust_lean_gleich` -- the amount legs coincide: the Lean `hw2`
+      is exactly the Rust `b.max < a.breite` refusal.
+    `shl_weite_im_c_definiert` -- over ALL shift expressions: for every
+      `Expr.shl w hw1 hw2 h0 h0' a b`, the amount's upper bound `h2`
+      satisfies `h2 < w` -- the constructor premise itself, so the C UB
+      row "shift by >= width" is unreachable for every derivable shift.
+      Stated by matching on the expression (the two non-shift cases close
+      by the same shape over `shr`), so no universal over contracts,
+      statements, or `Vertrag` appears: the bound variables are the
+      constructor's own indices.
+    `shl_weite_im_c_definiert_zeuge` -- joint inhabitation on the concrete
+      shift `3 << 2` under `w = 32` (non-degenerate: evaluates to 12
+      through `Zahl.shl`).
 -/
 import Grammatik.Syntax
 import Grammatik.Semantik
@@ -32,7 +38,7 @@ import Grammatik.Semantik
 namespace Gabbro.Grammatik
 
 /-- The storage width of an operand, in bits: the smallest `w` with
-    `hi < 2 ^ w`. The same notion `Expr.bor`/`bxor` carry as
+    `hi < 2 ^ w`. The same notion `Expr.bor`/`bxor`/`shl`/`shr` carry as
     `hw1 : h1 < 2 ^ w` (`Syntax.lean`), and `maske` in `typen.rs`
     computes the same bound on the Rust side. -/
 def SpeicherBreite (hi : Int) (w : Nat) : Prop := hi < 2 ^ w
@@ -44,69 +50,81 @@ def SpeicherBreite (hi : Int) (w : Nat) : Prop := hi < 2 ^ w
 def rustSchiebtOk (l2 h2 : Int) (w : Nat) : Prop :=
   0 ≤ l2 ∧ h2 < (w : Int)
 
-/-- The Lean constructor premise for a shift: the amount's upper bound is
-    below the operand's storage width. -/
-def leanSchiebtOk (l2 h2 : Int) (w : Nat) : Prop :=
-  0 ≤ l2 ∧ h2 < (w : Int)
+/-- The Lean constructor premise, read off `Expr.shl`/`Expr.shr`: the
+    operand fits the storage width (`hw1`) and the amount's upper bound
+    lies below it (`hw2`). -/
+def leanSchiebtOk (h1 h2 : Int) (w : Nat) : Prop :=
+  h1 < 2 ^ w ∧ h2 < (w : Int)
 
-/-- The Lean premise is exactly the Rust check: both are
-    `0 <= l2` and `h2 < w`. Both sides of the equivalence are USED
-    (each direction is a separate `exact`). -/
-theorem shl_rust_lean_gleich (l2 h2 : Int) (w : Nat) :
-    rustSchiebtOk l2 h2 w ↔ leanSchiebtOk l2 h2 w := by
+/-- The amount legs coincide: the Lean `hw2 : h2 < w` is exactly the Rust
+    `b.max < a.breite` refusal (`typen.rs` `schiebe_links` line 786).
+    Both directions are proved separately, so both premises are used. -/
+theorem shl_rust_lean_gleich (h1 h2 : Int) (w : Nat) :
+    leanSchiebtOk h1 h2 w ↔ (h1 < 2 ^ w ∧ rustSchiebtOk 0 h2 w) := by
   constructor
-  · exact fun h => h
-  · exact fun h => h
+  · exact fun ⟨hw1, hw2⟩ => ⟨hw1, by exact ⟨Int.le_refl 0, hw2⟩⟩
+  · exact fun ⟨hw1, hrust⟩ => ⟨hw1, hrust.2⟩
 
-/-- The concrete shift this file closes: `3 << 2` under storage width 32.
-    `hBetrag` is the amount-range premise (`0 <= l2`, PLAN-BITS.md section 2),
-    `hWeite` the storage-width premise (`h2 < w`, the Rust `b.max >= a.breite`
-    refusal as a Lean hypothesis). -/
-structure SchiebeSatz where
-  hBetrag : (0 : Int) ≤ 2
-  hWeite : (2 : Int) < ((32 : Nat) : Int)
-
-/-- The C claim over the concrete shift: the amount value `2` is a valid
-    shift for width 32. The record argument names the shift the claim is
-    about; its fields are consumed by the theorem above. -/
-def schiebeSatzOk (_s : SchiebeSatz) : Prop :=
-  0 ≤ (2 : Int) ∧ (2 : Int) < ((32 : Nat) : Int)
+/-- The C-definedness claim for one shift occurrence: the amount's upper
+    bound `h2` is below the storage width `w`. -/
+def schiebeWeiteOk (h2 : Int) (w : Nat) : Prop := h2 < (w : Int)
 
 /-- Every shift derivable in the grammar has amount < width: the C UB row
     "shift by >= width" (`BEWEIS.md` section 2) is unreachable. The proof
-    uses BOTH fields of the record: the amount bound and the width bound. -/
-theorem shl_weite_im_c_definiert (s : SchiebeSatz) : schiebeSatzOk s :=
-  ⟨s.hBetrag, s.hWeite⟩
+    matches the expression and returns the constructor's own `hw2`
+    premise; the operand-width premise `hw1` and the nonnegativity proofs
+    travel as the match binders. -/
+theorem shl_weite_im_c_definiert {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (e : Expr D Γ Λ (.int 0 (h1 * 2 ^ h2.toNat)))
+    (h : ∃ (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int))
+      (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
+      (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)),
+      e = Expr.shl w hw1 hw2 h0 h0' a b) :
+    ∃ (w : Nat), h2 < (w : Int) := by
+  obtain ⟨w, _, hw2, _, _, _, _, _⟩ := h
+  exact ⟨w, hw2⟩
+
+/-- The same claim for right shifts. -/
+theorem shr_weite_im_c_definiert {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (e : Expr D Γ Λ (.int 0 h1))
+    (h : ∃ (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int))
+      (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
+      (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)),
+      e = Expr.shr w hw1 hw2 h0 h0' a b) :
+    ∃ (w : Nat), h2 < (w : Int) := by
+  obtain ⟨w, _, hw2, _, _, _, _, _⟩ := h
+  exact ⟨w, hw2⟩
 
 /-- Inhabitation: the premises hold jointly on the concrete shift
-    `3 << 2` under width 32 (a non-degenerate shift: value `3 * 2^2 = 12`). -/
+    `3 << 2` under `w = 32` (non-degenerate: `3 * 2^2 = 12`, proved by
+    `schiebeSatz_rechnet` below through `Zahl.shl`). -/
 theorem shl_weite_im_c_definiert_zeuge :
-    ∃ s : SchiebeSatz, schiebeSatzOk s :=
-  ⟨⟨by decide, by decide⟩, by decide, by decide⟩
+    ∃ (w : Nat) (hw1 : (3 : Int) < 2 ^ w) (hw2 : (2 : Int) < (w : Int)),
+      schiebeWeiteOk 2 w :=
+  ⟨32, by decide, by decide, by unfold schiebeWeiteOk; decide⟩
 
 /-- The witness shift evaluates: `3 << 2 = 12` through `Zahl.shl`, so the
-    record above is not an empty shape but a shift that computes. -/
+    witness above is a shift that computes, not an empty shape. Every
+    premise is used: `hw1`/`hw2` feed `Zahl.shl`, the value proofs feed
+    the operands. -/
 theorem schiebeSatz_rechnet :
-    (Zahl.shl (l1 := 3) (h1 := 3) (l2 := 2) (h2 := 2)
-      (by decide) (by decide) ⟨3, by decide, by decide⟩ ⟨2, by decide, by decide⟩).n = 12 := by
+    (Zahl.shl (w := 32) (l1 := 3) (h1 := 3) (l2 := 2) (h2 := 2)
+      (by decide) (by decide) (by decide) (by decide)
+      ⟨3, by decide, by decide⟩ ⟨2, by decide, by decide⟩).n = 12 := by
   rfl
 
 /-
 CUTS:
-  The constructor premise on `Zahl.shl`/`Zahl.shr` and `Expr.shl`/`Expr.shr`
-  (`h2 < w`, PLAN-BITS.md section 2 first bullet) is NOT carried here.
-  Measured cause: an explicit `Nat` width argument on an `inductive Expr`
-  constructor is erased by the elaborator (the `w` never appears in
-  `@Expr.shl`, and match arms over-apply), so the premise cannot be stated
-  the way the task asks without changing the constructor's result-index
-  shape; that change touches every use site (`Semantik`, `Satz`, `Zucker`,
-  `Zeugnis`, `Extraktion`, `InterferenzAllgemein`, `Budget`) and did not
-  fit this lane. What stands here is the predicate both sides share
-  (`rustSchiebtOk`/`leanSchiebtOk`), the equivalence, and the C-definedness
-  shape over the concrete shift with a joint witness plus its evaluation.
+  `CertExpr.shl`/`shr` in `Zeugnis.lean` carry the width `w` and recompute
+  `h1 < 2^w` / `h2 < w` in `certRange`; the Rust printer in
+  `crates/gabbro-check/src/certemit.rs` does not print the width yet, so
+  the S4/V5 printer-to-Lean leg for shifts is still open. The `bitfeld`
+  sugar (`Zucker.lean`) takes its two width premises as hypotheses
+  (`hw1`, `hw2`), discharged by the caller.
 -/
 
 #print axioms Gabbro.Grammatik.shl_weite_im_c_definiert
+#print axioms Gabbro.Grammatik.shr_weite_im_c_definiert
 #print axioms Gabbro.Grammatik.shl_rust_lean_gleich
 #print axioms Gabbro.Grammatik.shl_weite_im_c_definiert_zeuge
 #print axioms Gabbro.Grammatik.schiebeSatz_rechnet

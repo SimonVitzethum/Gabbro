@@ -480,7 +480,7 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
   | .neg a, o, h | .nicht a, o, h | .some a, o, h | .istSome a, o, h => a.orte_darf o h
   | .add a b, o, h | .sub a b, o, h | .mul a b, o, h | .div _ _ a b, o, h | .rem _ _ a b, o, h
   | .sdiv _ a b, o, h | .srem _ a b, o, h | .band _ _ a b, o, h | .bor _ _ _ _ _ a b, o, h
-  | .bxor _ _ _ _ _ a b, o, h | .shl _ _ a b, o, h | .shr _ _ a b, o, h | .lt a b, o, h
+  | .bxor _ _ _ _ _ a b, o, h | .shl _ _ _ _ _ a b, o, h | .shr _ _ _ _ _ a b, o, h | .lt a b, o, h
   | .le a b, o, h | .eq a b, o, h | .fllt a b, o, h | .flle a b, o, h | .und a b, o, h
   | .oder a b, o, h => by
       simp only [Expr.orte, List.mem_append] at h
