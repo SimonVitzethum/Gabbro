@@ -627,4 +627,86 @@ theorem byteOf_nest8 (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
   refine ⟨pkt_mod _ _ h0, pkt_mod _ _ h1, pkt_mod _ _ h2, pkt_mod _ _ h3,
     pkt_mod _ _ h4, pkt_mod _ _ h5, pkt_mod _ _ h6, Nat.mod_eq_of_lt h7⟩
 
+/-- One Horner fold step: factor a shared `256 ^ k` out of the head pair. -/
+theorem horner_step (a b k : Nat) :
+    a * 256 ^ (k + 1) + b * 256 ^ k = (a * 256 + b) * 256 ^ k := by
+  calc a * 256 ^ (k + 1) + b * 256 ^ k
+      = a * (256 ^ k * 256) + b * 256 ^ k := by rw [Nat.pow_succ]
+    _ = (a * 256 ^ k) * 256 + b * 256 ^ k := by rw [Nat.mul_assoc a]
+    _ = ((a * 256 ^ k) * 256 + b * 256 ^ k) := rfl
+    _ = ((a * 256) * 256 ^ k + b * 256 ^ k) := by
+        have h : (a * 256 ^ k) * 256 = (a * 256) * 256 ^ k := by
+          calc (a * 256 ^ k) * 256 = a * (256 ^ k * 256) := by rw [Nat.mul_assoc]
+            _ = a * (256 * 256 ^ k) := by rw [Nat.mul_comm (256 ^ k) 256]
+            _ = (a * 256) * 256 ^ k := by rw [Nat.mul_assoc]
+        rw [h]
+    _ = (a * 256 + b) * 256 ^ k := by rw [Nat.add_mul]
+
+/-- 64-bit nest folds to the packet form. -/
+theorem bswap64n_nest (b0 b1 b2 b3 b4 b5 b6 b7 : Nat) :
+    b0 * 256 ^ 7 + b1 * 256 ^ 6 + b2 * 256 ^ 5 + b3 * 256 ^ 4
+      + b4 * 256 ^ 3 + b5 * 256 ^ 2 + b6 * 256 + b7
+      = ((((((b0 * 256 + b1) * 256 + b2) * 256 + b3) * 256 + b4) * 256 + b5) * 256 + b6) * 256 + b7 := by
+  have e6 : (6 : Nat) + 1 = 7 := rfl
+  have e5 : (5 : Nat) + 1 = 6 := rfl
+  have e4 : (4 : Nat) + 1 = 5 := rfl
+  have e3 : (3 : Nat) + 1 = 4 := rfl
+  have e2 : (2 : Nat) + 1 = 3 := rfl
+  have e1 : (1 : Nat) + 1 = 2 := rfl
+  have h7 : b7 = b7 * 256 ^ 0 := by simp
+  rw [h7, ← e6, horner_step, ← e5, horner_step, ← e4, horner_step, ← e3,
+    horner_step, ← e2, horner_step, ← e1, horner_step, horner_step]
+
+/-- `bswap64` stays in range. Uses the byte bounds. -/
+theorem bswap64n_lt (x : Nat) : bswap64n x < 256 ^ 8 := by
+  have h0 : byteOf x 0 < 256 := byteOf_lt x 0
+  have h1 : byteOf x 1 < 256 := byteOf_lt x 1
+  have h2 : byteOf x 2 < 256 := byteOf_lt x 2
+  have h3 : byteOf x 3 < 256 := byteOf_lt x 3
+  have h4 : byteOf x 4 < 256 := byteOf_lt x 4
+  have h5 : byteOf x 5 < 256 := byteOf_lt x 5
+  have h6 : byteOf x 6 < 256 := byteOf_lt x 6
+  have h7 : byteOf x 7 < 256 := byteOf_lt x 7
+  have h0' : byteOf x 0 < 256 ^ 1 := by
+    have e : (256 : Nat) ^ 1 = 256 := Nat.pow_one 256
+    rw [e]; exact h0
+  have hA := pkt_lt (byteOf x 0) (byteOf x 1) 1 h0' h1
+  rw [show (1 : Nat) + 1 = 2 from rfl] at hA
+  have hB := pkt_lt _ (byteOf x 2) 2 hA h2
+  rw [show (2 : Nat) + 1 = 3 from rfl] at hB
+  have hC := pkt_lt _ (byteOf x 3) 3 hB h3
+  rw [show (3 : Nat) + 1 = 4 from rfl] at hC
+  have hD := pkt_lt _ (byteOf x 4) 4 hC h4
+  rw [show (4 : Nat) + 1 = 5 from rfl] at hD
+  have hE := pkt_lt _ (byteOf x 5) 5 hD h5
+  rw [show (5 : Nat) + 1 = 6 from rfl] at hE
+  have hF := pkt_lt _ (byteOf x 6) 6 hE h6
+  rw [show (6 : Nat) + 1 = 7 from rfl] at hF
+  have hG := pkt_lt _ (byteOf x 7) 7 hF h7
+  rw [show (7 : Nat) + 1 = 8 from rfl] at hG
+  have hnest := bswap64n_nest (byteOf x 0) (byteOf x 1) (byteOf x 2) (byteOf x 3)
+    (byteOf x 4) (byteOf x 5) (byteOf x 6) (byteOf x 7)
+  simp only [bswap64n] at hnest ⊢
+  rw [hnest]
+  exact hG
+
+/-- `bswap64` is an involution on `u64`. Uses `hx` (value fits). -/
+theorem bswap64n_invol (x : Nat) (hx : x < 256 ^ 8) :
+    bswap64n (bswap64n x) = x := by
+  obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, h0, h1, h2, h3, h4, h5, h6, h7, hsplit⟩ :=
+    split8 x hx
+  obtain ⟨e0, e1, e2, e3, e4, e5, e6, e7⟩ :=
+    byteOf_nest8 b0 b1 b2 b3 b4 b5 b6 b7 h0 h1 h2 h3 h4 h5 h6 h7
+  have hswap : bswap64n (((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0)
+      = ((((((b0 * 256 + b1) * 256 + b2) * 256 + b3) * 256 + b4) * 256 + b5) * 256 + b6) * 256 + b7 := by
+    simp only [bswap64n, e0, e1, e2, e3, e4, e5, e6, e7]
+    exact bswap64n_nest b0 b1 b2 b3 b4 b5 b6 b7
+  obtain ⟨f0, f1, f2, f3, f4, f5, f6, f7⟩ :=
+    byteOf_nest8 b7 b6 b5 b4 b3 b2 b1 b0 h7 h6 h5 h4 h3 h2 h1 h0
+  have hfin : bswap64n (((((((b0 * 256 + b1) * 256 + b2) * 256 + b3) * 256 + b4) * 256 + b5) * 256 + b6) * 256 + b7)
+      = ((((((b7 * 256 + b6) * 256 + b5) * 256 + b4) * 256 + b3) * 256 + b2) * 256 + b1) * 256 + b0 := by
+    simp only [bswap64n, f0, f1, f2, f3, f4, f5, f6, f7]
+    exact bswap64n_nest b7 b6 b5 b4 b3 b2 b1 b0
+  rw [hsplit, hswap, hfin]
+
 end Gabbro.Grammatik
