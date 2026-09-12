@@ -3892,5 +3892,75 @@ theorem hwit_aus_lauf
 
 #print axioms Gabbro.Grammatik.Extraktion.hwit_aus_lauf
 
+/-! ## 22. The memory-contract instance: `SpeicherVertrag` over `QRequires` / `QEnsures`
+
+    The downstream fold of the §23 engine (`InterferenzAllgemein.lean`,
+    read-only here): a `World.speicher` equality unfolds into slot and global
+    agreements, and the contract predicates fold over the diagonal
+    (`eval_liest_nur_speicher_diag`).
+
+    What is proved (no `sorry`, no `admit`, no `axiom`):
+
+    - `speicherVertrag_aus_Q`: the contracts of `P` at `f` -- `QRequires P`
+      as `Pre`, `QEnsures P` as `Post` -- read only live memory. Both legs
+      unfold the memory equality into pointwise slot/global agreement
+      (`congrArg` on the `Speicher` projections) and fold the contract
+      predicate over the diagonal: `requires` quantifies over parameter
+      environments, `ensures` over return values and parameter environments,
+      and each instance meets the diagonal at exactly its environment.
+      Every premise is load-bearing: `hmem` feeds both `hS` and `hG`,
+      and both fire in every diagonal call.
+
+    Coverage (exactly): both `SpeicherVertrag` legs (`memPre`, `memPost`)
+    for every program `P` and every function `f`, with no footprint premise.
+
+    Remainder (booked, not hidden): none -- the fold closes fully.
+-/
+
+/-- The contracts of `P` at `f` read only live memory: worlds over the same
+    memory agree on `requires` and on `ensures`. The memory equality unfolds
+    into pointwise slot/global agreement; each contract predicate then folds
+    over the `eval` diagonal at its own environment. -/
+theorem speicherVertrag_aus_Q (P : Programm D) (f : D.Fn) :
+    SpeicherVertrag (QRequires P) (QEnsures P) f :=
+  { memPre := by
+      intro σ σ' hmem
+      have hS : ∀ t : D.Tab, ∀ (k : Int) (f' : D.Feld t),
+          σ.slots t k f' = σ'.slots t k f' :=
+        fun t k f' => congrArg (fun s : Speicher D => s.slots t k f') hmem
+      have hG : ∀ g : D.Glob, σ.globs g = σ'.globs g :=
+        fun g => congrArg (fun s : Speicher D => s.globs g) hmem
+      simp only [QRequires, QExpr]
+      constructor
+      · intro h ρ
+        have he := eval_liest_nur_speicher_diag (P.requires f) σ σ' ρ hS hG
+        rw [← he]
+        exact h ρ
+      · intro h ρ
+        have he := eval_liest_nur_speicher_diag (P.requires f) σ σ' ρ hS hG
+        rw [he]
+        exact h ρ
+    , memPost := by
+      intro σ σ' hmem
+      have hS : ∀ t : D.Tab, ∀ (k : Int) (f' : D.Feld t),
+          σ.slots t k f' = σ'.slots t k f' :=
+        fun t k f' => congrArg (fun s : Speicher D => s.slots t k f') hmem
+      have hG : ∀ g : D.Glob, σ.globs g = σ'.globs g :=
+        fun g => congrArg (fun s : Speicher D => s.globs g) hmem
+      simp only [QEnsures]
+      constructor
+      · intro h v ρ
+        have he := eval_liest_nur_speicher_diag (P.ensures f) σ σ'
+          (ergEnv (D.erg f) v ρ) hS hG
+        rw [← he]
+        exact h v ρ
+      · intro h v ρ
+        have he := eval_liest_nur_speicher_diag (P.ensures f) σ σ'
+          (ergEnv (D.erg f) v ρ) hS hG
+        rw [he]
+        exact h v ρ }
+
+#print axioms Gabbro.Grammatik.Extraktion.speicherVertrag_aus_Q
+
 
 end Gabbro.Grammatik.Extraktion
