@@ -3282,5 +3282,195 @@ theorem hmark_hcar_aus_progAus_axiomCall
 #print axioms Gabbro.Grammatik.Extraktion.execEreignis_aus_axiomCall
 #print axioms Gabbro.Grammatik.Extraktion.hmark_hcar_aus_progAus_axiomCall
 
+/-! ## 19. The hwit discharger: fired steps produce their zugriff events
+
+    What `Ziel.lean` §10 books as its two remaining witness duties: the step
+    witness (`hneu_wit`: the fired leaf's `neu` carries the `zugriff` event
+    when the code writes the carrier) and the prefix witness (`hwit_old`:
+    the old run's accesses are still posited, as scheduler duty). This
+    section discharges the step duty at its source -- production by
+    construction -- and names the induction base for the prefix duty.
+    Read-only use of the §17 event shapes and the `execStmt` neu-event
+    constructions (`schreibSlot`, `schreibBytes`, the taken `uebergang`
+    branch); nothing existing moves.
+
+    * `hwit_aus_feuerung_ohne_axiomCall` is the producer: a fired non-oracle
+      leaf whose written carrier is the tracked table `t₀` (read as
+      `.inl t₀ ∈ stmtTraeger tabs globs s`, §14) leaves a `zugriff` event
+      for `t₀` in `neu` -- the write the `execStmt` shape puts there by
+      construction. The `hneu_wit` duty of `kette_mit_zeugen[_orakel]` is
+      then `fun _ => hwit_aus_feuerung_ohne_axiomCall ...`: the code
+      predicate is vacuous once the leaf produces -- the event exists
+      whenever the writing leaf fires, with `w = true` and the statement
+      `Λ`.
+    * `hwit_leer` is the prefix base: with no thread steps owed, no witness
+      is owed -- the duty holds vacuously over any run. The induction step
+      is the read-only `kette_mit_zeugen_schritt` link construction
+      (`Ziel.lean` §10): old steps inherit from the package, the new
+      writing step rides `genEigen_wit_index` on exactly the event produced
+      here.
+
+    Coverage (exactly): non-oracle leaves writing the tracked TABLE carrier
+    (`assignSlot`, `assignDurch`, `uebergang`, `schreibBytes` with `0 < n`
+    via `hbytes`); every premise is load-bearing (`hbytes` feeds the byte
+    case, `hax` kills the oracle case, `hleaf` kills the compounds, `hmem`
+    names the carrier in every other case).
+
+    Remainder (booked, not hidden): `axiomCall` leaves (the oracle adds no
+    events under `GutO`, §18 -- closing them needs the per-event oracle
+    contract, same class as the S13 remainder); empty `schreibBytes`
+    (`n = 0` writes nothing though the carrier is declared); leaves that
+    write no table (`assignGlob`, `publish`, reads, terminals -- no table
+    event exists to produce); globals (`gzugriff`, as `Ziel.lean` §10
+    books); the full-run fold of the prefix duty over `PCReach`
+    derivations (base here, step read-only, induction unwritten).
+-/
+
+/-- A fired non-oracle leaf that writes the tracked table produces its
+    witness: `neu` carries a `zugriff` event for `t₀` (with `w = true` and
+    the statement `Λ`). The byte writer needs `0 < n` (`hbytes`); `hstep`
+    forces the taken `uebergang` branch, as in §17. -/
+theorem hwit_aus_feuerung_ohne_axiomCall
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
+    (hax : match s with | .axiomCall _ _ _ _ _ => False | _ => True)
+    (tabs : List D.Tab) (globs : List D.Glob)
+    (t₀ : D.Tab) (hmem : .inl t₀ ∈ stmtTraeger tabs globs s)
+    (hbytes : match s with | .schreibBytes _ _ _ n _ _ _ _ _ _ => 0 < n | _ => True)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    ∃ (w : Bool) (Λw : List (Res D)) (hwL : List D.Lock),
+      Ereignis.zugriff t₀ w Λw hwL ∈ neu := by
+  cases s with
+  | assignSlot t f i e hw hL =>
+      simp only [stmtTraeger] at hmem
+      have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt] ++
+          (i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      refine ⟨true, Λ, (σ.lese Λ (i.orte ++ e.orte)).haelt, ?_⟩
+      rw [hteq]
+      exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+  | assignDurch p t ht f i e hw hL =>
+      simp only [stmtTraeger] at hmem
+      have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.zugriff t true Λ
+            (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt] ++
+          (p.orte ++ i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      refine ⟨true, Λ, (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt, ?_⟩
+      rw [hteq]
+      exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+  | assignGlob g e hw hL =>
+      simp [stmtTraeger] at hmem
+  | schreibBytes t f hf n i hlo hhi e hw hL =>
+      simp only [stmtTraeger] at hmem
+      have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          List.replicate (zahlZuBytes n
+            (eval (σ.lese Λ (i.orte ++ e.orte)) e
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n).length
+            (Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt) ++
+          ((i.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur) := by
+        rw [← hstep, schreibBytes_spur_eq]; rfl
+      rw [hspur, ← List.append_assoc] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      have hlen : (zahlZuBytes n
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n).length = n :=
+        zahlZuBytes_length n _
+      refine ⟨true, Λ, (σ.lese Λ (i.orte ++ e.orte)).haelt, ?_⟩
+      rw [hteq]
+      exact List.mem_append.mpr
+        (Or.inl (List.mem_replicate.mpr ⟨by rw [hlen]; omega, rfl⟩))
+  | assignVar x e =>
+      simp [stmtTraeger] at hmem
+  | uebergang t f hτ i von nach hn he hw hL =>
+      simp only [stmtTraeger] at hmem
+      have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
+      simp only [execStmt] at hstep
+      split at hstep
+      · simp only [Ausgang.welt, Option.some.injEq] at hstep
+        have hspur : σ'.spur =
+            [Ereignis.zugriff t true Λ (σ.lese Λ (.inl t :: i.orte)).haelt] ++
+            (.inl t :: i.orte).map (fun o => match o with
+              | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+              | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+          rw [← hstep]; rfl
+        rw [hspur] at hneu
+        have hneueq := List.append_cancel_right hneu
+        subst hneueq
+        refine ⟨true, Λ, (σ.lese Λ (.inl t :: i.orte)).haelt, ?_⟩
+        rw [hteq]
+        exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+      · simp only [Ausgang.welt] at hstep
+        simp at hstep
+  | ite c t e => simp [Stmt.istBlatt] at hleaf
+  | onOption o p a => simp [Stmt.istBlatt] at hleaf
+  | onTag v arms => simp [Stmt.istBlatt] at hleaf
+  | onGrund r arms => simp [Stmt.istBlatt] at hleaf
+  | call f args hp hr => simp [Stmt.istBlatt] at hleaf
+  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
+  | locks L hr body => simp [Stmt.istBlatt] at hleaf
+  | breaking i body => simp [Stmt.istBlatt] at hleaf
+  | traverse t inv body => simp [Stmt.istBlatt] at hleaf
+  | retry n bis body ueberlauf => simp [Stmt.istBlatt] at hleaf
+  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+  | axiomCall a args h hw hg => exact False.elim hax
+  | regSchreib r hk e =>
+      simp [stmtTraeger] at hmem
+  | transition r hk m hm hl maske bits =>
+      simp [stmtTraeger] at hmem
+  | publish g e payload hp hw hL =>
+      simp [stmtTraeger] at hmem
+  | advances m a h hs =>
+      simp [stmtTraeger] at hmem
+  | retires m s h a =>
+      simp [stmtTraeger] at hmem
+  | ret e hΛ =>
+      simp [stmtTraeger] at hmem
+  | retGrund r hΛ =>
+      simp [stmtTraeger] at hmem
+  | leave h =>
+      simp [stmtTraeger] at hmem
+  | next h =>
+      simp [stmtTraeger] at hmem
+
+/-- The prefix base: with no thread steps owed, no witness is owed -- the
+    witness duty holds vacuously over any run. `hempty` types the
+    contradiction; `run`/`t₀` type the conclusion. -/
+theorem hwit_leer (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (run : Lauf D) (t₀ : D.Tab) (hempty : J.schrittFaden = []) :
+    ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
+      TraegerSchreibt (J.code g) (.inl t₀) = true →
+      ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
+        run[j]? = some (Schritt.mk g (.zugriff t₀ w Λe he)) := by
+  intro k g hk _
+  rw [hempty] at hk
+  simp at hk
+
+#print axioms Gabbro.Grammatik.Extraktion.hwit_aus_feuerung_ohne_axiomCall
+#print axioms Gabbro.Grammatik.Extraktion.hwit_leer
+
 
 end Gabbro.Grammatik.Extraktion
