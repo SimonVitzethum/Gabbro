@@ -1217,6 +1217,186 @@ theorem pcReach_blatt_progAus_axiomCall
 
 #print axioms Gabbro.Grammatik.pcReach_blatt_progAus_axiomCall
 
+/-! ## 9b continued. The stabil consumer: the run induction feeds the goal (q01, 2026-09-12)
+
+    BEFUND (rank VERDRAHTUNG HOCH, two checkers): `stabil_aus_lauf`
+    (`Maschine.lean:3879`) has ZERO consumers -- `ziel_nutzer_last_aus_pc`
+    (§9b above) still takes `hSpec` directly. Everything proved lies ready,
+    nothing consumes it: the per-thread run induction (`spec_aus_lauf_voll`
+    over `PCSpur`, folded per member thread inside `stabil_aus_lauf`) feeds
+    `stabil_from_spec`, i.e. `owickiGries_stabil`'s consumer, while the goal
+    posits the triples it could derive.
+
+    What this block wires in (variant theorem, the original stands untouched):
+
+    * `ziel_nutzer_last_aus_pc_stabil` concludes the exact
+      `ziel_nutzer_last_aus_pc` conclusion (all twelve conjuncts), but its
+      sequential-logic leg runs through `stabil_aus_lauf` (read-only reuse,
+      `Maschine.lean` not touched) instead of the §7 invariant variant over a
+      posited `hSpec`. What `hSpec` became: it is REPLACED by the three run
+      premises `stabil_aus_lauf` consumes -- `hMemAll` (memory-only contracts
+      per member thread), `hSeedAll` (head validity per member thread from
+      thread entry), `hBlattAll` (uniform per-firing preservation over every
+      reachable intermediate machine) -- in the exact callee shapes.
+    * The `J`↔`M` wiring is carried explicitly as the narrowing it is:
+      `tr`/`htr` (the thread trace of the run over the computed `progAus`
+      program), `hJw` (`J.welten = M.welten`), `hJsf`
+      (`J.schrittFaden = tr`). The spur is no new assumption class:
+      `pcSpur_von_reach` (read-only reuse) bridges any `PCReach` derivation
+      to its spur, but the spur travels as a premise because `hJsf` names it.
+      The `hJw`/`hJsf` shape is exactly what `kette_aus_lauf_bezeugt_closed`
+      (§12, read-only reference, NOT applied) supplies for witnessed runs --
+      not applied because that corollary narrows to single-thread runs while
+      this goal stays two-thread (its last conjunct is the `HB` disjunction
+      over `g₁ ≠ g₂`).
+    * No §7/§8 regression: `stabil_aus_lauf` owes `hFree`, but the variant
+      keeps the `hForm` premise (not `hFree`) and derives the check inside
+      via `interferenceFree_of_invariantForm` (read-only reuse) over the
+      discipline-derived context -- the same derivation §8 already feeds the
+      §7 variant. The invariant fragment stays per-run-check-free; the
+      non-invariant fragment stays booked exactly as §9b books it.
+    * `hO` (already a premise) now feeds `stabil_aus_lauf` as well as the run
+      legs; `prog` is the computed `Extraktion.progAus P fcode tabs globs`
+      (no new gift numbers: `P`, `O`, `passes`, `fcode`, `tabs`, `globs`
+      already travel).
+
+    Every premise is load-bearing: each is passed whole to a run-side lemma,
+    to the discipline derivation, or to the `stabil_aus_lauf` application
+    (through `hInv`, which `hForm` shares for the `hFree` derivation), so
+    deleting any premise breaks elaboration. There is no `have _ :=`
+    discard, no `sorry`/`admit`/`axiom`, and no bare `Prop` slot that
+    `False` could inhabit (the run is owed as `PCReach`/`PCSpur`, the wiring
+    as equations over them).
+
+    Remainder (booked, not hidden): discharging `hJw`/`hJsf` per program
+    (the chain-to-machine wiring -- §12 closes it for witnessed
+    single-thread runs); discharging `hBlattAll` per leaf (execution link)
+    and `hMemAll` per contract (the instantiation side); head validity from
+    thread entry (caller side, `hSeedAll` shape). -/
+
+/-- The goal from PC runs through the run induction (q01 consumer wiring):
+    the `ziel_nutzer_last_aus_pc` conclusion with the posited `hSpec`
+    replaced by the `stabil_aus_lauf` run premises (`hMemAll`, `hSeedAll`,
+    `hBlattAll`) plus the explicit `J`↔`M` wiring (`tr`, `htr`, `hJw`,
+    `hJsf`), keeping `hForm` (the `hFree` check derives inside). Every
+    premise is load-bearing. -/
+theorem ziel_nutzer_last_aus_pc_stabil (o : Ausgang V l Γ)
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (fcode : Faden → D.Fn) (tabs : List D.Tab) (globs : List D.Glob)
+    (sp : Speicher D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc)
+    (code : D.Marke → Nat)
+    (hMSep : PCMarkSep code (Extraktion.progAus P fcode tabs globs))
+    (hCSep : PCUnsharedSep (Extraktion.progAus P fcode tabs globs))
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (I : TraegerInv (D := D)) (Pre Post : D.Fn → World D → Prop)
+    (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool)
+    (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool)
+    (hAbD : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c))
+    (hFrameTD : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t)
+    (hFrameGD : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x)
+    (hGuardEx : ∀ c : D.Tab ⊕ D.Glob, ∃ L : D.Lock, Bewacht (D := D) c L)
+    (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D),
+      J.welten[0]? = some σ₀ → I.inv c σ₀)
+    (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach)
+    (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden)
+      (vor nach : World D),
+      Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g →
+        J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+          TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g))
+    (hDeck : GeteiltGedeckt Nb J)
+    (hAb : ∀ (f : Faden), f ∈ J.faeden →
+      HaengtAb (D.schreibt (J.code f)) (D.gschreibt (J.code f))
+        (SpecQ Pre Post Nb J f))
+    (hForm : InvariantForm Nb J I (SpecQ Pre Post Nb J))
+    (tr : List Faden)
+    (htr : PCSpur P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc tr)
+    (hJw : J.welten = M.welten)
+    (hJsf : J.schrittFaden = tr)
+    (hMemAll : ∀ (g : Faden), g ∈ J.faeden → SpeicherVertrag Pre Post (J.code g))
+    (hSeedAll : ∀ (g : Faden), g ∈ J.faeden →
+      (∀ σ₀ : World D, (GenStart sp).welten[0]? = some σ₀ → Pre (J.code g) σ₀) ∧
+      (∀ σ₀ : World D, (GenStart sp).welten[0]? = some σ₀ → Post (J.code g) σ₀))
+    (hBlattAll : ∀ (g : Faden), g ∈ J.faeden → ∀ (M₀ : GenMaschine D) (pc₀ : PCStand),
+      PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M₀ pc₀ →
+      ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+      (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ),
+      s.istBlatt = true → HeldGenau Λ (offen (M₀.spuren g)) →
+      ∀ (σ' : World D) (neu : List (Ereignis D)),
+      (execStmt O passes keinRuf s (M₀.weltVon g) ρ).welt = some σ' →
+      σ'.spur = neu ++ M₀.spuren g →
+      (∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu) →
+      (Pre (J.code g) (M₀.weltVon g) ↔ Pre (J.code g) σ') ∧
+        (Post (J.code g) (M₀.weltVon g) ↔ Post (J.code g) σ'))
+    (t₀ : D.Tab) (g₁ g₂ : Faden) (hne : g₁ ≠ g₂)
+    (j₁ j₂ : Nat) (w₁ w₂ : Bool) (Λ₁ Λ₂ : List (Res D)) (h₁ h₂ : List D.Lock)
+    (hw₁ : M.lauf[j₁]? = some (Schritt.mk g₁ (.zugriff t₀ w₁ Λ₁ h₁)))
+    (hw₂ : M.lauf[j₂]? = some (Schritt.mk g₂ (.zugriff t₀ w₂ Λ₂ h₂)))
+    (S : Nat) (c : TickClock S) (hstart : c.tick 0 ≤ S)
+    (p : PruefPaar) (fr : Frist D) (d : Moment)
+    (hpd : p.pruef < d) (hdl : d < p.lauf)
+    (hspace : deadlineSpacing S p d)
+    (hLowering : Absenkung) :
+    (Gesittet M.lauf)
+    ∧ ((∀ f j, Konsistent (M.lauf.spur f j)) ∧
+      ∀ f j (e : Ereignis D), e ∈ M.lauf.spur f j → e.gut)
+    ∧ (∀ (σ : World D), J.welten.getLast? = some σ →
+      ∀ (f : Faden), f ∈ J.faeden → SpecQ Pre Post Nb J f σ)
+    ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
+      fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
+    ∧ (hLowering.proPrimitiv ≤ 18)
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+      (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
+      (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
+    ∧ (Marken.Einfaedig (laufProj code M.lauf))
+    ∧ (∀ (i j : Nat) (f g : Faden) (carr : D.Tab ⊕ D.Glob) (ei ej : Ereignis D),
+      M.lauf[i]? = some (Schritt.mk f ei) → M.lauf[j]? = some (Schritt.mk g ej) →
+      (match carr with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) →
+      ei.traeger = some carr → ej.traeger = some carr → f = g)
+    ∧ (M.welten.length = M.tiefe + 1)
+    ∧ (∀ W ∈ M.welten, ∀ e ∈ W.spur, e.gut)
+    ∧ (∃ f, M.welten.getLast? = some (M.speicher.welt (M.spuren f)))
+    ∧ (HB M.lauf j₁ j₂ ∨ HB M.lauf j₂ j₁) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact pc_gesittet P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h
+      code hMSep hCSep
+  · exact ⟨pc_konsistent P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h,
+      pc_gut_obs P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h⟩
+  · intro σ hletzte f hf
+    have hInv := invariantenKontext_aus_disziplin Nb J I Wc Gc hAbD hFrameTD hFrameGD
+      hGuardEx hEntry hReturn hWatch
+    exact stabil_aus_lauf P O passes hO (Extraktion.progAus P fcode tabs globs) sp Nb J M
+      pc tr htr hJw hJsf Pre Post I hInv hDeck hAb hMemAll hSeedAll hBlattAll
+      (interferenceFree_of_invariantForm Nb J I _ hForm hInv) σ hletzte f hf
+  · exact sampling_closes_frist (S := S) c hstart p fr d hpd hdl hspace
+  · exact hLowering.begrenzt
+  · exact zwei_fehler o
+  · exact pc_discharge_einfaedig code (Extraktion.progAus P fcode tabs globs) M
+      (pcReach_markInv P O passes (Extraktion.progAus P fcode tabs globs) sp M pc h)
+      hMSep
+  · intro i j f g carr ei ej hi hj hsh hti htj
+    exact pc_discharge_unshared (Extraktion.progAus P fcode tabs globs) M
+      (pcReach_carrierInv P O passes (Extraktion.progAus P fcode tabs globs) sp M pc h)
+      hCSep
+      i j f g carr ei ej hi hj hsh hti htj
+  · exact genWelten_laenge P O passes hO sp M
+      (pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h)
+  · exact genWelten_gut P O passes hO sp M
+      (pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h)
+  · exact genWelten_letzte P O passes hO sp M
+      (pcReach_gen P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc h)
+  · exact pc_reduktion P O passes hO (Extraktion.progAus P fcode tabs globs) sp M pc h
+      code hMSep hCSep
+      t₀ g₁ g₂ hne j₁ j₂ w₁ w₂ Λ₁ Λ₂ h₁ h₂ hw₁ hw₂
+
+#print axioms Gabbro.Grammatik.ziel_nutzer_last_aus_pc_stabil
+
 end Gabbro.Grammatik
 
 /-! ## 10. The chain with witnesses: folding the witness package into the step (g02, 2026-09-12)
