@@ -94,7 +94,10 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # generated errno decoding, the ghost OS state and the kernel pairing -- and
 # the reason stands at the entry in `kw.rs`. The third mark does NOT move:
 # all five are `ctx`, like every other clause word.
-MARKE_WOERTER = 229
+#
+# **229 -> 231 on 2026-09-12 («E2»).** `library` + `payload` arrive with one
+# reason block above EACH entry, so the second mark below does not move.
+MARKE_WOERTER = 231
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

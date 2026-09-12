@@ -798,6 +798,23 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
     ja
 }
 
+/// **The two tree-only maps the syscall stub lowering reads.**
+///
+/// Collected once per emission in `emittiere_mit`, before any lowering runs:
+/// source order is free, so a `reason` may stand after the `syscall` that
+/// decodes into it. Both maps are keyed by BARE name, exactly like
+/// `Namen::funktionen` -- and a collision answers the same way: last wins
+/// for the module, loud refusal for two different case lists.
+#[derive(Default)]
+struct SyscallTabellen {
+    /// Bare syscall name -> the module it stands in (for `konst_wert`).
+    module: HashMap<String, String>,
+    /// Bare reason name -> its cases with declared numbers (for decoding).
+    gruende: HashMap<String, Vec<(String, u128)>>,
+    /// Bare reason names declared twice with DIFFERENT case lists.
+    strittig: BTreeSet<String>,
+}
+
 /// Emits C for a tree, or refuses by name.
 /// **The shipping build.** A `when TESTBUILD` item produces no line of C.
 ///
@@ -833,23 +850,43 @@ pub fn emittiere_mit(
     };
     let mut namen = Namen::default();
     namen.opsgerufen = crate::opsruf::gerufene(baum);
-    // **A `syscall` has no lowering yet (lane S5; the stub template is lane
-    // S6's).** The emitter refuses the unit BY NAME instead of emitting a
-    // hand-written `asm` block for it -- a generator that guesses undoes every
-    // pass in front of it. The refusal stands on the PARSED tree and never
-    // consults the passes, like every `C001` in this file.
+    // **The syscall stub tables (lane S6).** Two tree-only maps the stub
+    // lowering reads: which module each `syscall` stands in (for folding
+    // `number` and result bounds through `Umgebung::konst_wert`), and the
+    // `reason` case numbers the errno decoding compares against. Both stand
+    // on the PARSED tree and never consult the passes, like every refusal
+    // in this file -- a second `syscall` with the same bare name in another
+    // module is last-wins here, exactly as in `Namen::funktionen` below.
+    let mut syscall_tabellen = SyscallTabellen::default();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Syscall(s) = &item.art {
+            syscall_tabellen
+                .module
+                .insert(s.name.text.clone(), modul.to_string());
+        }
+    });
     crate::fuer_jedes_item(baum, &mut |item| {
-        let ItemArt::Syscall(s) = &item.art else { return };
-        weigere(
-            absagen,
-            s.name.span,
-            &format!(
-                "`syscall {}` -- the stub template (inline `syscall`, register \
-                 binding, clobbers) lands in lane S6, and until then a unit \
-                 carrying a syscall is not emitted",
-                s.name.text
-            ),
-        );
+        if let ItemArt::Reason(r) = &item.art {
+            let faelle: Vec<(String, u128)> = r
+                .faelle
+                .iter()
+                .map(|f| (f.name.text.clone(), f.wert))
+                .collect();
+            match syscall_tabellen.gruende.get(&r.name.text) {
+                // **One name, one case list -- the same rule `funktion` keeps
+                // for prototypes.** Two same-named `reason` declarations with
+                // the same cases share one C `enum` anyway; with different
+                // ones the decoding could not pick a number, so the name is
+                // marked and the stub refuses it loudly at its own site.
+                None => {
+                    syscall_tabellen.gruende.insert(r.name.text.clone(), faelle);
+                }
+                Some(vorher) if *vorher == faelle => {}
+                _ => {
+                    syscall_tabellen.strittig.insert(r.name.text.clone());
+                }
+            }
+        }
     });
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Tabelle(t) = &item.art {
@@ -1111,8 +1148,8 @@ pub fn emittiere_mit(
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
         // **A `syscall` declares no name a lowering looks up.** Its parameter and
-        // result types travel through `Umgebung`, and the unit is refused above
-        // before any lowering reads this map.
+        // result types travel through `Umgebung`, and its own lowering
+        // (`syscall_stumpf`) reads the register map straight from the tree.
         | ItemArt::Syscall(_)
         | ItemArt::Concurrent(_) => {}
     });
@@ -1141,9 +1178,9 @@ pub fn emittiere_mit(
         // **A `syscall` lowers its call sites exactly like an `extern fn`.** The
         // signature carries the same fields -- ghost flags, the `or R` channel,
         // the result -- so a `let … else` over a syscall call takes the same
-        // arm as over a foreign body. The unit itself is refused at the top of
-        // `emittiere_mit` (`C001`); this entry only keeps the call lowering
-        // from inventing a second refusal for the same declaration.
+        // arm as over a foreign body. The declaration itself lowers to the
+        // stub (`syscall_stumpf`); this entry keeps the call lowering from
+        // inventing a second refusal for the same declaration.
         if let ItemArt::Syscall(s) = &item.art {
             let sig = Signatur {
                 geist_param: s.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
@@ -1532,8 +1569,9 @@ pub fn emittiere_mit(
             | ItemArt::Entry(_)
             | ItemArt::Entrust(_)
             | ItemArt::Boot(_)
-            // **A `syscall` has no body -- the body is the machine.** Like every
-            // other body-less carrier it names no table through a block.
+            // **A `syscall` names no table through a block.** Its body is the
+            // machine -- the stub template (`syscall_stumpf`) reads the
+            // register map, not carrier names.
             | ItemArt::Syscall(_)
             | ItemArt::Concurrent(_) => {}
         });
@@ -2528,12 +2566,20 @@ pub fn emittiere_mit(
              ELSEWHERE; which C object holds the state, and whether a transition is a check \
              or an assignment, the declaration does not say",
         ),
-        // **A `syscall` emits NOTHING here -- the unit was already refused at the top
-        // of `emittiere_mit` (`C001`), and this arm only keeps the match total.**
-        // The stub template is lane S6's; until it lands there is no C site for
-        // this declaration, and a second refusal here would bury the named one
-        // under a duplicate.
-        ItemArt::Syscall(_) => {}
+        // **A `syscall` lowers to its stub** -- prototype into `aus`,
+        // definition into `rumpf`, exactly like `funktion` above. The stub
+        // template is `syscall_stumpf` at the end of this file.
+        ItemArt::Syscall(s) => {
+            syscall_stumpf(
+                s,
+                &mut aus,
+                &mut rumpf,
+                &namen,
+                &syscall_tabellen,
+                baum,
+                absagen,
+            );
+        }
     });
     // **«SG-24»: every counter of the unit, defined.** Between the declarations and
     // the bodies: after the table storage they read (`tabelle()` wrote it into `aus`
@@ -2555,6 +2601,32 @@ pub fn emittiere_mit(
             }
         });
         aus.push_str(&zaehler);
+    }
+    // **Rotation helpers are GENERATED, not assumed -- and only the used ones.**
+    // The same principle the word readers above answer to: an unused function in
+    // the emitted C is a finding about the generator. Collection is a scan of
+    // the lowered BODIES just before they join the unit: what is collected is
+    // the helper NAME as `ruf` emits the call (`gabbro_rotl32(`), so the two
+    // can never disagree the way a width read twice could -- the call site
+    // reads types from the per-function view that exists only while a body is
+    // lowered, and no pre-pass walk can see it. A user comment naming a helper
+    // would over-collect; the over-collected body is `static inline`, which
+    // neither compiler warns about when unused.
+    {
+        let mut dreh: BTreeSet<&'static str> = BTreeSet::new();
+        for (n, _) in DREH_C {
+            if rumpf.contains(&format!("{n}(")) {
+                dreh.insert(*n);
+            }
+        }
+        if !dreh.is_empty() {
+            aus.push_str(
+                "\n/* Bit rotation (PLAN-BITS §3). Generated, not assumed: C has no rotate. */\n",
+            );
+            for d in &dreh {
+                aus.push_str(DREH_C.iter().find(|(n, _)| n == d).map(|(_, c)| *c).unwrap_or(""));
+            }
+        }
     }
     aus.push_str(&rumpf);
     aus
@@ -2644,9 +2716,11 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_) => None,
-        // Scaffolding, ghost, or refusal: no C site, no row. A `syscall` stands
-        // here too: the emitter refuses the unit (`C001`), so there is no C
-        // site a row could cover.
+        // Scaffolding, ghost, or refusal: no C site, no row. A `syscall`
+        // stands here too: its stub body is generated statements around one
+        // `__asm__`, and statement-level rows belong to the body-walk
+        // follow-up -- exactly like a defined block function above, which
+        // earns no row here either.
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Assume(_)
@@ -5350,6 +5424,32 @@ fn lesewort(breite: u32, gross: bool) -> Option<&'static str> {
     })
 }
 
+/// **Rotation helpers (PLAN-BITS §3): the portable shift-or pattern, once per width.**
+///
+/// C has no rotate, and the pattern needs the amount TWICE (`x << s` and
+/// `x >> (w - s)`). Emitting it inline would evaluate an effectful amount twice
+/// -- a duplicated call is a duplicated effect, not a rotation. So the pattern
+/// lives in a helper and the call site passes each argument ONCE, the way C
+/// passes every argument once. The amount is masked inside (`s &= w-1`), which
+/// is the masking PLAN-BITS §3 asks for, and which also keeps the `w - s` shift
+/// below the width when `s` is 0 (a plain `x >> (w - s)` is undefined there).
+///
+/// Sub-32-bit rotations compute in `unsigned int` and cast back: a `uint16_t`
+/// promotes to SIGNED `int` in C, and `x << 15` on the promoted value would
+/// leave the signed range. The final cast keeps the low `w` bits, which are
+/// exactly the rotated word; the conversion to an unsigned type is defined as
+/// the value modulo `2^w`.
+const DREH_C: &[(&str, &str)] = &[
+    ("gabbro_rotl8", "static inline uint8_t gabbro_rotl8(uint8_t x, uint8_t s) { s &= 7; return (uint8_t)(((unsigned)x << s) | ((unsigned)x >> ((8 - s) & 7))); }\n"),
+    ("gabbro_rotr8", "static inline uint8_t gabbro_rotr8(uint8_t x, uint8_t s) { s &= 7; return (uint8_t)(((unsigned)x >> s) | ((unsigned)x << ((8 - s) & 7))); }\n"),
+    ("gabbro_rotl16", "static inline uint16_t gabbro_rotl16(uint16_t x, uint16_t s) { s &= 15; return (uint16_t)(((unsigned)x << s) | ((unsigned)x >> ((16 - s) & 15))); }\n"),
+    ("gabbro_rotr16", "static inline uint16_t gabbro_rotr16(uint16_t x, uint16_t s) { s &= 15; return (uint16_t)(((unsigned)x >> s) | ((unsigned)x << ((16 - s) & 15))); }\n"),
+    ("gabbro_rotl32", "static inline uint32_t gabbro_rotl32(uint32_t x, uint32_t s) { s &= 31; return (x << s) | (x >> ((32 - s) & 31)); }\n"),
+    ("gabbro_rotr32", "static inline uint32_t gabbro_rotr32(uint32_t x, uint32_t s) { s &= 31; return (x >> s) | (x << ((32 - s) & 31)); }\n"),
+    ("gabbro_rotl64", "static inline uint64_t gabbro_rotl64(uint64_t x, uint64_t s) { s &= 63; return (x << s) | (x >> ((64 - s) & 63)); }\n"),
+    ("gabbro_rotr64", "static inline uint64_t gabbro_rotr64(uint64_t x, uint64_t s) { s &= 63; return (x >> s) | (x << ((64 - s) & 63)); }\n"),
+];
+
 /// Reader and writer word for a width, or a refusal by name. **A word this emitter does not
 /// have is not replaced by the next best one.**
 fn wortpaar_oder_absage(
@@ -6962,6 +7062,595 @@ fn funktion(
     aus.push_str("}\n");
 }
 
+/// **A syscall refusal with its own code (`C180`-`C184`).**
+///
+/// The five shape rules of the stub template each carry one code, so each has
+/// its own poison probe -- the same reason `N063`-`N068` stand apart in
+/// `syscall.rs` instead of sharing one. Everything the stub cannot lower for
+/// any OTHER reason stays the generic `C001` (`weigere`), exactly as at
+/// `prototyp_kern`: a code of its own is for a rule of its own, not for a
+/// second spelling of "no lowering".
+fn syscall_code(
+    absagen: &mut Absagen,
+    code: &'static str,
+    span: gabbro_syntax::span::Span,
+    was: &str,
+) {
+    absagen.schiebe(
+        Absage::fehler(code, span, format!("no lowering: {was}")).mit_notiz(
+            "the emitter refuses by name instead of emitting something plausible -- a \
+             generator that guesses undoes every pass in front of it",
+        ),
+    );
+}
+
+/// **The syscall stub (lane S6, PLAN-SYSCALL.md lane S6): one C function per
+/// declared `syscall`.**
+///
+/// The template binds every parameter to its declared in-register, loads
+/// `number` into `rax`, executes the `syscall` instruction as extended inline
+/// `__asm__` -- declared clobbers plus `memory`, `rcx` and `r11`, the two the
+/// instruction itself destroys -- and decodes the raw `rax` answer: a
+/// negative `-4095..-1` against the `errors` map into the `or R` channel, an
+/// unlisted errno or an out-of-range non-negative value into the hardware
+/// outcome -- `hardware (annahme a)`, the kernel answered outside its
+/// contract (SYNTAX.md 12.1).
+///
+/// Five shape rules guard the five places where the template would otherwise
+/// emit a plausible wrong stub (`C180`-`C184`, each with its poison probe);
+/// everything else unlowerable is `C001` via `weigere`.
+///
+/// The signature is the one the call sites already lower against
+/// (`prototyp_kern` for fallible functions, `let … else` at the call):
+/// `bool f(params, T *_wert, R *_grund)` with the channel, `T f(params)`
+/// without one. The stub carries NO `const`/`pure` attribute whatever the
+/// declared effects say -- `effects { pure }` is the checker's contract
+/// fiction, while the C function executes `syscall` behind a `memory`
+/// clobber, and a `const` would let GCC merge two writes into one
+/// (`wirkungsattribut` states the same for fallible functions).
+///
+/// The pinned `register … __asm__("reg")` locals are the musl idiom for this
+/// ABI: the sixteen general registers have no complete constraint-letter set
+/// (`r10` has none), so letters alone cannot bind them. Under the named
+/// assumption the `#if defined(__GNUC__)` handover compiles on both measured
+/// families (GCC and Clang define it); anywhere else it falls through and
+/// `cc` complains loudly instead of the stub deciding something on its own --
+/// the same handover `match_grund` writes for `D005`.
+#[allow(clippy::too_many_arguments)]
+fn syscall_stumpf(
+    s: &SyscallDecl,
+    aus: &mut String,
+    rumpf_aus: &mut String,
+    u: &Namen,
+    tabellen: &SyscallTabellen,
+    baum: &Programm,
+    absagen: &mut Absagen,
+) {
+    let n = &s.name.text;
+    // **C182 -- the pair after `abi`/`arch` is the template's own ABI.**
+    // The checker holds `arch` against the declared arches (`A005`) and
+    // refuses a sealed one (`A006`), but the emitter runs on the PARSED tree
+    // and never consults the passes -- a blind tree must not receive a Linux
+    // stub for another machine's declaration.
+    if s.abi.text != "linux" || s.arch.text != "x86_64" {
+        syscall_code(
+            absagen,
+            "C182",
+            s.name.span,
+            &format!(
+                "`syscall {n}` declares `abi {}` `arch {}`, and the stub template is the \
+                 Linux x86_64 `syscall` ABI -- the number in `rax`, the answer in `rax`, \
+                 `rcx` and `r11` destroyed. A stub for another machine would carry another \
+                 instruction and is not this template",
+                s.abi.text, s.arch.text
+            ),
+        );
+        return;
+    }
+    // **C180 -- no in-register the stub cannot keep.** `rax` carries the call
+    // number before the kernel reads anything, so a parameter bound there
+    // would never arrive; a register named under `clobbers` is scratch by
+    // declaration, so the kernel may destroy the parameter after reading it
+    // while the C still names the stale pin. One code, like `N065`'s three
+    // sub-cases under one code in `syscall.rs`.
+    for (reg, param) in &s.regs_in {
+        if reg.text == "rax" {
+            syscall_code(
+                absagen,
+                "C180",
+                reg.span,
+                &format!(
+                    "`syscall {n}` binds parameter `{}` to `rax` in `regs in` -- the stub \
+                     loads the call number there, and the parameter value would never reach \
+                     the kernel",
+                    param.text
+                ),
+            );
+            return;
+        }
+        if s.clobbers.iter().any(|c| c.text == reg.text) {
+            syscall_code(
+                absagen,
+                "C180",
+                reg.span,
+                &format!(
+                    "`syscall {n}` binds parameter `{}` to `{}` in `regs in`, and the same \
+                     register stands under `clobbers` -- scratch by declaration, so the stub \
+                     cannot keep the parameter value in it",
+                    param.text, reg.text
+                ),
+            );
+            return;
+        }
+    }
+    // **C181 -- the answer register is `rax`, and it is not scratch.** The
+    // Linux x86_64 kernel leaves the raw answer in `rax`; the stub reads it
+    // there and nowhere else. An empty `regs out`, another register, or two
+    // registers (which the checker lets through -- see the `vorbehalt` of
+    // `syscall.erklaerung`) would make it read the wrong place.
+    if s.regs_out.len() != 1 || s.regs_out[0].text != "rax" {
+        let hat: Vec<&str> = s.regs_out.iter().map(|r| r.text.as_str()).collect();
+        syscall_code(
+            absagen,
+            "C181",
+            s.name.span,
+            &format!(
+                "`syscall {n}` names `regs out` {{{}}}, and the Linux x86_64 answer arrives \
+                 in `rax` -- the stub reads the raw answer there and nowhere else",
+                hat.join(", ")
+            ),
+        );
+        return;
+    }
+    if s.clobbers.iter().any(|c| c.text == "rax") {
+        syscall_code(
+            absagen,
+            "C181",
+            s.name.span,
+            &format!(
+                "`syscall {n}` carries its answer out in `rax` and lists `rax` under \
+                 `clobbers` -- what is carried out is not destroyed"
+            ),
+        );
+        return;
+    }
+    let modul = tabellen.module.get(n).cloned().unwrap_or_default();
+    let umg = crate::umgebung::Umgebung::sammle(baum);
+    // **C184 -- the number folds.** The stub loads it as an immediate; an
+    // expression nobody folds (or a number outside the 64-bit number
+    // register) has no immediate to load.
+    let nummer: u64 = match umg.konst_wert(&modul, &s.nummer) {
+        Some(v) if 0 <= v && v <= u64::MAX as i128 => v as u64,
+        _ => {
+            syscall_code(
+                absagen,
+                "C184",
+                s.nummer.span,
+                &format!(
+                    "`syscall {n}` numbers its call with an expression the stub cannot load \
+                     -- not a translation-time constant, or outside the 64-bit number register"
+                ),
+            );
+            return;
+        }
+    };
+    // **A ghost parameter has no register value.** It is erased from the
+    // signature, so its `regs in` binding would carry a value nobody put
+    // there -- the generic refusal, since this is "no lowering" and not a
+    // rule of the template's own.
+    for p in &s.parameter {
+        if ist_geist(&p.typ, u) {
+            weigere(
+                absagen,
+                p.name.span,
+                &format!(
+                    "`syscall {n}` takes a ghost parameter `{}` -- erased from the signature, \
+                     so the `regs in` binding for it would carry a value nobody put there",
+                    p.name.text
+                ),
+            );
+            return;
+        }
+    }
+    let mut params: Vec<String> = Vec::new();
+    for p in &s.parameter {
+        match ctyp(&p.typ, u) {
+            Some(c) => {
+                let luecke = if c.ends_with('*') { "" } else { " " };
+                params.push(format!("{c}{luecke}{}", p.name.text));
+            }
+            None => {
+                weigere(
+                    absagen,
+                    p.name.span,
+                    &format!(
+                        "`syscall {n}` takes `{}` of a type with no C -- the stub binds every \
+                         parameter to a register, and an unlowerable one has no register value",
+                        p.name.text
+                    ),
+                );
+                return;
+            }
+        }
+    }
+    // **The answer shape: integer with a checkable bound, or nothing.**
+    // `C183` -- the decoding holds the raw answer against the declared result
+    // range (`einpassen` as C, PLAN-UMSETZUNG.md 2.1); a non-integer answer
+    // has no range to check. A named type is refused with it too: its carrier
+    // lowers, but its range lives in a declaration the stub does not resolve
+    // -- one line of honesty instead of a check against the wrong bound.
+    enum Antwort {
+        Leer,
+        Ganz { ctyp: String, unter: Option<i128>, ober: Option<i128> },
+    }
+    let antwort = match &s.ergebnis {
+        None => Antwort::Leer,
+        Some(TypExpr::Int(i)) => {
+            let Some(c) = ctyp(&s.ergebnis.clone().unwrap(), u) else {
+                weigere(absagen, s.name.span, "return type");
+                return;
+            };
+            let (mut unter, mut ober): (Option<i128>, Option<i128>) = (None, None);
+            if let Some(b) = &i.bereich {
+                let (Some(lo), Some(hi)) =
+                    (umg.konst_wert(&modul, &b.von), umg.konst_wert(&modul, &b.bis))
+                else {
+                    syscall_code(
+                        absagen,
+                        "C184",
+                        b.span,
+                        &format!(
+                            "`syscall {n}` bounds its answer with a range the stub cannot fold \
+                             -- a bound nobody evaluates at translation time is no bound"
+                        ),
+                    );
+                    return;
+                };
+                let hi = if b.exklusiv { hi - 1 } else { hi };
+                if hi < lo {
+                    weigere(
+                        absagen,
+                        b.span,
+                        &format!(
+                            "`syscall {n}` declares an empty answer range -- no kernel answer \
+                             could satisfy it, and the decoding would be all hardware outcome"
+                        ),
+                    );
+                    return;
+                }
+                unter = Some(lo);
+                ober = Some(hi);
+            } else {
+                // **No declared range: the storage word is the range -- read
+                // off the same width table every other lowering reads.**
+                // A 64-bit word needs no check (every non-negative `int64_t`
+                // fits); a narrower one is checked against its own bound, and
+                // the check the template writes is exactly that bound.
+                let Some((_, bytes)) = ganzzahlwort(i.wort) else {
+                    weigere(absagen, s.name.span, "return type");
+                    return;
+                };
+                let breite: u32 = bytes * 8;
+                let vorzeichen = matches!(
+                    i.wort,
+                    gabbro_syntax::kw::Kw::I8
+                        | gabbro_syntax::kw::Kw::I16
+                        | gabbro_syntax::kw::Kw::I32
+                        | gabbro_syntax::kw::Kw::I64
+                );
+                if breite < 64 {
+                    ober = Some(if vorzeichen {
+                        (1i128 << (breite - 1)) - 1
+                    } else {
+                        (1i128 << breite) - 1
+                    });
+                }
+            }
+            // **A check the compiler would prove vacuous is not written.**
+            // `raw > hi` with `hi >= 2^63 - 1` is always false over the
+            // non-negative `int64_t` leg, and `-Wtype-limits` (in `-Wextra`)
+            // refuses a comparison it can decide itself. Likewise a lower
+            // bound at or below zero holds by construction of the leg.
+            if ober.is_some_and(|h| h >= i64::MAX as i128) {
+                ober = None;
+            }
+            if unter.is_some_and(|l| l <= 0) {
+                unter = None;
+            }
+            if let Some(l) = unter {
+                if l > i64::MAX as i128 {
+                    weigere(
+                        absagen,
+                        s.name.span,
+                        &format!(
+                            "`syscall {n}` demands an answer above {l} -- past what the raw \
+                             `int64_t` answer can ever hold, so the decoding would be all \
+                             hardware outcome"
+                        ),
+                    );
+                    return;
+                }
+            }
+            Antwort::Ganz { ctyp: c, unter, ober }
+        }
+        Some(_) => {
+            syscall_code(
+                absagen,
+                "C183",
+                s.name.span,
+                &format!(
+                    "`syscall {n}` answers a non-integer type, and the decoding holds the raw \
+                     answer against the declared result range -- a non-integer answer has no \
+                     range to check"
+                ),
+            );
+            return;
+        }
+    };
+    // **The error channel: every listed errno against its reason's declared
+    // number.** The `errors` map names errnos by Linux name (`EBADF`) and
+    // targets by reason case (`BadFd`); the number the kernel actually sends
+    // is the case's DECLARED value (`BadFd = 9`), which is the only number
+    // the unit itself writes down. An errno name the kernel numbers
+    // differently than the reason declares is a declaration question the
+    // checker does not ask (`N067` holds names, not numbers) -- the stub
+    // reads the numbers, and says so here.
+    let mut arme: Vec<(i128, String)> = Vec::new();
+    if !s.errors.is_empty() {
+        let Some(rname) = &s.fehler else {
+            weigere(
+                absagen,
+                s.name.span,
+                &format!(
+                    "`syscall {n}` maps errnos with no `or R` channel -- the decoding has \
+                     nowhere to deliver"
+                ),
+            );
+            return;
+        };
+        if tabellen.strittig.contains(&rname.text) {
+            weigere(
+                absagen,
+                rname.span,
+                &format!(
+                    "`reason {}` is declared twice with different cases -- the errno decoding \
+                     of `syscall {n}` could not pick a number for either",
+                    rname.text
+                ),
+            );
+            return;
+        }
+        let Some(faelle) = tabellen.gruende.get(&rname.text) else {
+            weigere(
+                absagen,
+                rname.span,
+                &format!(
+                    "`or {}` resolves to no `reason` of this unit -- the errno decoding of \
+                     `syscall {n}` has no numbers to compare against",
+                    rname.text
+                ),
+            );
+            return;
+        };
+        for (_, ziel) in &s.errors {
+            let Some((_, wert)) = faelle.iter().find(|(c, _)| c == &ziel.text) else {
+                weigere(
+                    absagen,
+                    ziel.span,
+                    &format!(
+                        "`{}` is no case of `reason {}` -- the errno decoding of `syscall \
+                         {n}` has no number for it (the checker refuses this shape as `N067`)",
+                        ziel.text, rname.text
+                    ),
+                );
+                return;
+            };
+            let Ok(wert) = i128::try_from(*wert) else {
+                weigere(
+                    absagen,
+                    ziel.span,
+                    &format!(
+                        "`{}` of `reason {}` is wider than the decoding compares -- the stub \
+                         holds errnos in `int64_t`",
+                        ziel.text, rname.text
+                    ),
+                );
+                return;
+            };
+            arme.push((wert, format!("{}_{}", rname.text, ziel.text)));
+        }
+    }
+    // **The signature: the one the call sites lower against.** With the
+    // channel the error takes the return slot and the value leaves through
+    // `_wert` (`prototyp_kern`); without one it is a plain function. A
+    // result-less channel has no `_wert` parameter (the `delete_leaf` shape
+    // of `messung/fragmente/F01.gab`).
+    let grundtyp: Option<String> = s.fehler.as_ref().map(|r| r.text.clone());
+    let wert_ctyp: Option<String> = match &antwort {
+        Antwort::Ganz { ctyp, .. } => Some(ctyp.clone()),
+        Antwort::Leer => None,
+    };
+    let hat_wert = wert_ctyp.is_some();
+    let rueck = if grundtyp.is_some() {
+        "bool".to_string()
+    } else {
+        match &antwort {
+            Antwort::Ganz { ctyp, .. } => ctyp.clone(),
+            Antwort::Leer => "void".to_string(),
+        }
+    };
+    let mut liste = params.clone();
+    if let Some(c) = &wert_ctyp {
+        liste.push(format!("{c} *_wert"));
+    }
+    if let Some(g) = &grundtyp {
+        liste.push(format!("{g} *_grund"));
+    }
+    let liste = if liste.is_empty() {
+        "void".to_string()
+    } else {
+        liste.join(", ")
+    };
+    // **Without `pub` the binding is INTERNAL -- like `funktion`.** The
+    // declaration names no visibility, so the stub is `static`, and
+    // `__attribute__((unused))` for the unit that declares and never calls.
+    aus.push_str(&format!("\nstatic {rueck} {n}({liste}) __attribute__((unused));\n"));
+    let b2 = rumpf_aus;
+    // **The counterpart each stub answers to.** With `assume` the kernel
+    // keeps its contract under the named assumption; with `kernel` the peer
+    // is a Gabbro dispatch entry for the same number (the pairing check is a
+    // later lane's -- the stub is the same either way, only the comment
+    // knows which side it faces).
+    let gegen = match &s.paarung {
+        SyscallPaarung::Annahme { annahme, klasse } => {
+            let art = match klasse {
+                AnnahmeKlasse::Falsifizierbar(sonde) => format!("falsifier {}", sonde.text),
+                AnnahmeKlasse::NichtFalsifizierbar(grund) => {
+                    format!("unfalsifiable {}", grund.text)
+                }
+            };
+            format!("the named assumption `{}` ({art})", annahme.text)
+        }
+        SyscallPaarung::Kernel { pfad } => {
+            format!("the Gabbro kernel entry `{}`", pfad.text())
+        }
+    };
+    let bindungen: Vec<String> = s
+        .regs_in
+        .iter()
+        .map(|(r, p)| format!("{} in {}", p.text, r.text))
+        .collect();
+    b2.push_str(&format!(
+        "\nstatic {rueck} {n}({liste}) {{\n\
+         \x20   /* syscall {n} -- number {nummer} in rax; {}.\n\
+         \x20    * The kernel behind this stub is {}: that it answers inside its\n\
+         \x20    * contract is assumed, and the decoding below is generated from the\n\
+         \x20    * declared `errors` map, exhaustively. */\n",
+        if bindungen.is_empty() {
+            "no argument registers".to_string()
+        } else {
+            bindungen.join(", ")
+        },
+        gegen
+    ));
+    // **The register pins.** Every parameter travels in its declared register
+    // (always widened to the full word -- a `u16` in `rdi` is the same value,
+    // and a half-width pin would ask GCC for a mode it does not promise);
+    // the number is the `rax` pin's initial value, so the answer returns in
+    // the same variable (`+a`, one name, no input/output aliasing question).
+    for (reg, param) in &s.regs_in {
+        // A binding without a parameter binds nothing -- the checker refuses
+        // it as `N065`, and on a blind tree the C names an undeclared
+        // identifier, which `cc` refuses loudly instead of the stub guessing.
+        b2.push_str(&format!(
+            "    register uint64_t _sys_{} __asm__(\"{}\") = (uint64_t){};\n",
+            reg.text, reg.text, param.text
+        ));
+    }
+    b2.push_str(&format!(
+        "    register int64_t _sys_rax __asm__(\"rax\") = (int64_t){nummer}u;\n"
+    ));
+    let eingaben: Vec<String> = s
+        .regs_in
+        .iter()
+        .map(|(r, _)| format!("\"r\" (_sys_{})", r.text))
+        .collect();
+    let mut zerstoert: Vec<String> = s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
+    for fest in ["\"rcx\"", "\"r11\"", "\"memory\""] {
+        if !zerstoert.iter().any(|c| c == fest) {
+            zerstoert.push(fest.to_string());
+        }
+    }
+    b2.push_str("    __asm__ __volatile__(\n        \"syscall\\n\"\n");
+    b2.push_str("        : \"+a\" (_sys_rax)\n");
+    if eingaben.is_empty() {
+        b2.push_str("        : /* no argument registers */\n");
+    } else {
+        b2.push_str(&format!("        : {}\n", eingaben.join(", ")));
+    }
+    b2.push_str(&format!("        : {});\n", zerstoert.join(", ")));
+    // **The hardware outcome, once per depth.** An unlisted errno, an errno
+    // past the Linux `-4095` bound, or a non-negative value outside the
+    // declared result range all mean the same thing: the kernel answered
+    // outside its contract. Under the named assumption this point is not
+    // reached, and that is what the handover below tells the C compiler --
+    // nothing of its own, the `D005` shape at `match_grund`. One builder for
+    // both depths, so the wording cannot drift between the two sites.
+    let annahme = match &s.paarung {
+        SyscallPaarung::Annahme { annahme, .. } => annahme.text.clone(),
+        SyscallPaarung::Kernel { pfad } => pfad.text(),
+    };
+    let hardware = |e: &str| {
+        format!(
+            "{e}/* `hardware ({annahme})` -- the kernel answered outside its contract.\n\
+             {e} * Under the named assumption this point is not reached; that decision is\n\
+             {e} * handed to the C compiler, which decides nothing of its own. */\n\
+             {e}#if defined(__GNUC__)\n\
+             {e}__builtin_unreachable();\n\
+             {e}#endif\n"
+        )
+    };
+    // **The sign leg reads the pin; the value leg checks the declared range.**
+    // `-_sys_rax` is safe: the `-4095` fence stands before it, so UBSan sees
+    // no negation overflow by construction, not by luck.
+    let liest_roh = !arme.is_empty() || grundtyp.is_some() || hat_wert;
+    if !liest_roh {
+        b2.push_str("    (void)_sys_rax;\n");
+    } else {
+        b2.push_str("    if (_sys_rax < 0) {\n");
+        b2.push_str("        if (_sys_rax < -4095) {\n");
+        b2.push_str(&hardware("        "));
+        b2.push_str("        }\n");
+        if !arme.is_empty() {
+            b2.push_str("        int64_t _sys_errno = -_sys_rax;\n");
+            for (nummer, fall) in &arme {
+                b2.push_str(&format!(
+                    "        if (_sys_errno == {nummer}) {{\n\
+                     \x20           *_grund = {fall};\n\
+                     \x20           return false;\n\
+                     \x20       }}\n"
+                ));
+            }
+            b2.push_str("        /* An errno the `errors` map does not admit. */\n");
+            b2.push_str(&hardware("        "));
+        } else if grundtyp.is_some() {
+            // **A channel with no admitted errnos.** Every negative answer is
+            // unlisted by construction -- the fence above already handed the
+            // past-bound ones over, this hands over the rest.
+            b2.push_str("        /* No admitted errnos: every negative answer is unlisted. */\n");
+            b2.push_str(&hardware("        "));
+        } else {
+            // **No channel at all: a negative answer has nowhere to go.**
+            // The declaration promises a plain value; the kernel sent an
+            // error. That is the contract's outside, not a fourth outcome.
+            b2.push_str("        /* No `or R` channel: a negative answer has nowhere to go. */\n");
+            b2.push_str(&hardware("        "));
+        }
+        b2.push_str("    }\n");
+        if let Antwort::Ganz { ctyp, unter, ober } = &antwort {
+            if let Some(lo) = unter {
+                b2.push_str(&format!("    if (_sys_rax < {lo}) {{\n"));
+                b2.push_str(&hardware("    "));
+                b2.push_str("    }\n");
+            }
+            if let Some(hi) = ober {
+                b2.push_str(&format!("    if (_sys_rax > {hi}) {{\n"));
+                b2.push_str(&hardware("    "));
+                b2.push_str("    }\n");
+            }
+            if hat_wert {
+                b2.push_str(&format!("    *_wert = ({ctyp})_sys_rax;\n"));
+            }
+        }
+        if grundtyp.is_some() {
+            b2.push_str("    return true;\n");
+        } else if let Some(c) = &wert_ctyp {
+            b2.push_str(&format!("    return ({c})_sys_rax;\n"));
+        }
+    }
+    b2.push_str("}\n");
+}
+
 /// Die Namen in einem Praedikat -- ein `until` liest ebenso wie ein Rumpf.
 ///
 /// **Written out over every `PredArt`, no catch-all -- and the reason is that there is no
@@ -7757,8 +8446,9 @@ fn anweisung(
             aus.push_str(&format!("{e}}}\n"));
         }
         StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
-        // **Lane E1:** no lowering exists -- the checker refuses every
-        // library call (`N057`), and the emitter never guesses one.
+        // **Lane E2:** no lowering exists -- the checker refuses every
+        // library call (`N057` unresolved, `N069` resolved), and the emitter
+        // never guesses one.
         StmtArt::LibraryCall(r) => {
             weigere(
                 absagen,
@@ -11089,6 +11779,26 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             if u.geraete.contains_key(n) {
                 return Some(n.clone());
             }
+            // **Bit intrinsics (PLAN-BITS §3): the result width is the operand's
+            // width.** `let y = clz(x);` without an annotation needs a C type
+            // from the value, and the intrinsic's result lives in the operand's
+            // own width (`0 .. w-1` still lowers to `uintN_t`). `None` falls
+            // into the caller's `C001` by name -- the same honest exit an
+            // unresolvable `let` value gets.
+            if crate::ist_bitintrinsik(n)
+                && r.path().is_some_and(|p| p.teile.len() == 1)
+            {
+                let a = r.argumente.first()?;
+                let w = intrinsik_breite(a, u)?;
+                return Some(match w {
+                    8 => "uint8_t",
+                    16 => "uint16_t",
+                    32 => "uint32_t",
+                    64 => "uint64_t",
+                    _ => return None,
+                }
+                .to_string());
+            }
             // **Und sonst: der erklaerte Rueckgabetyp des Gerufenen.** Er stand die ganze
             // Zeit da; gefragt hat ihn niemand.
             ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
@@ -11351,6 +12061,25 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         };
         return format!("({ctyp})({})", ausdruck(arg, u, absagen));
     }
+    // **Bit intrinsics (PLAN-BITS §3): the lowering.**
+    //
+    // Only the BARE name lowers: a qualified path (`m::clz`) is an ordinary
+    // call, the same line `m1.rs` draws. `m1.rs::intrinsik_ruf` owns arity and
+    // ranges; the emitter reads the overlap and refuses a shape it cannot lower
+    // rather than indexing past the end. Every argument is rendered ONCE --
+    // the rotation pattern needs its amount twice, which is why `rotl`/`rotr`
+    // lower to a helper call (`DREH_C`, emitted on demand above) instead of an
+    // inline shift-or.
+    //
+    // `__builtin_clz/ctz` count in the width of `unsigned int`; on a narrower
+    // operand the count is adjusted down (`- 24` for 8 bits, `- 16` for 16).
+    // The cases are unreachable for zero -- the checker excludes it (`M157`) --
+    // so the builtins' undefined zero case never fires.
+    if crate::ist_bitintrinsik(&name)
+        && r.path().is_some_and(|p| p.teile.len() == 1)
+    {
+        return intrinsik_c(&name, r, u, absagen);
+    }
     // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
     // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
     //
@@ -11517,6 +12246,175 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         .map(|(_, a)| ausdruck(a, u, absagen))
         .collect();
     format!("{name}({})", args.join(", "))
+}
+
+/// **Bit intrinsics (PLAN-BITS §3): one call, one C expression.**
+///
+/// `w` is the operand's own width (`intrinsik_breite`), so the builtin's width
+/// and the checker's `breite` are read from the same place. Widths outside the
+/// four standard ones, and a `bswap` outside 16/32/64, are refused by name --
+/// the checker owns those shapes (`M158`/`M159`/`M160`), and this arm is where
+/// an unchecked tree would otherwise invent a lowering.
+fn intrinsik_c(name: &str, r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
+    let Some(a) = r.argumente.first() else {
+        weigere(
+            absagen,
+            r.span,
+            &format!("`{name}` without an argument -- there is no value to count"),
+        );
+        return String::new();
+    };
+    let Some(w) = intrinsik_breite(a, u) else {
+        weigere(
+            absagen,
+            r.span,
+            &format!(
+                "`{name}` over an operand whose C width cannot be read -- the \
+                 builtin is width-specific (`__builtin_clz` counts 32 bits), and \
+                 guessing the width would count the wrong word"
+            ),
+        );
+        return String::new();
+    };
+    if !matches!(w, 8 | 16 | 32 | 64) {
+        weigere(
+            absagen,
+            r.span,
+            &format!("`{name}` over a {w}-bit operand -- no standard width to count in"),
+        );
+        return String::new();
+    }
+    let x = ausdruck(a, u, absagen);
+    match name {
+        "clz" => match w {
+            64 => format!("__builtin_clzll((unsigned long long)({x}))"),
+            32 => format!("__builtin_clz((unsigned)({x}))"),
+            16 => format!("(__builtin_clz((unsigned)({x})) - 16)"),
+            _ => format!("(__builtin_clz((unsigned)({x})) - 24)"),
+        },
+        "ctz" => match w {
+            64 => format!("__builtin_ctzll((unsigned long long)({x}))"),
+            _ => format!("__builtin_ctz((unsigned)({x}))"),
+        },
+        "log2_floor" => match w {
+            64 => format!("(63 - __builtin_clzll((unsigned long long)({x})))"),
+            32 => format!("(31 - __builtin_clz((unsigned)({x})))"),
+            16 => format!("(15 - (__builtin_clz((unsigned)({x})) - 16))"),
+            _ => format!("(7 - (__builtin_clz((unsigned)({x})) - 24))"),
+        },
+        "popcount" => match w {
+            64 => format!("__builtin_popcountll((unsigned long long)({x}))"),
+            _ => format!("__builtin_popcount((unsigned)({x}))"),
+        },
+        "rotl" | "rotr" => {
+            let Some(s) = r.argumente.get(1) else {
+                weigere(
+                    absagen,
+                    r.span,
+                    &format!("`{name}` without an amount -- rotation needs both sides"),
+                );
+                return String::new();
+            };
+            let s = ausdruck(s, u, absagen);
+            format!("gabbro_{name}{w}({x}, {s})")
+        }
+        "bswap" => match w {
+            16 => format!("__builtin_bswap16((uint16_t)({x}))"),
+            32 => format!("__builtin_bswap32((uint32_t)({x}))"),
+            64 => format!("__builtin_bswap64((uint64_t)({x}))"),
+            _ => {
+                weigere(
+                    absagen,
+                    r.span,
+                    "`bswap` needs `u16`, `u32` or `u64` -- a one-byte value has \
+                     no byte order to reverse",
+                );
+                String::new()
+            }
+        },
+        _ => {
+            weigere(
+                absagen,
+                r.span,
+                &format!("`{name}` -- no lowering for this intrinsic"),
+            );
+            String::new()
+        }
+    }
+}
+
+/// **The C width an intrinsic counts in: the operand's lowered type, never its range.**
+///
+/// A narrowed `u32 in 1 .. 5` still lowers to `uint32_t`, and the builtin must
+/// count 32 bits -- reading the range here would count 3. The arms mirror what
+/// the checker reads in `m1.rs`, in the order the emitter can answer: a
+/// literal carries the checker's own smallest-width rule
+/// (`IntBereich::konstante`), a conversion carries its target width, a named
+/// limit (`u32::max`) carries `grenzwort`, and everything else goes through
+/// `wert_ctyp`, which already knows parameters, locals, fields and calls.
+/// `None` refuses at the caller -- guessing the width counts the wrong word.
+fn intrinsik_breite(e: &Expr, u: &Namen) -> Option<u8> {
+    let e = crate::ohne_klammern(e);
+    match &e.art {
+        ExprArt::Zahl(n) => {
+            let v = *n;
+            if v > u64::MAX as u128 {
+                return None;
+            }
+            Some(if v <= 0xFF {
+                8
+            } else if v <= 0xFFFF {
+                16
+            } else if v <= 0xFFFF_FFFF {
+                32
+            } else {
+                64
+            })
+        }
+        ExprArt::Ruf(r) => {
+            if let Some(einfach) = r.path().and_then(|p| p.einfach()) {
+                if let Some(k) = gabbro_syntax::kw::Kw::suche(&einfach.text).filter(|k| k.ist_intty()) {
+                    return crate::umgebung::breite_von(k).map(|(b, _)| b);
+                }
+                if let Some(speicher) = crate::aufrufgraph::zucker_umschreiben(&einfach.text) {
+                    return gabbro_syntax::kw::Kw::suche(&speicher)
+                        .filter(|k| k.ist_intty())
+                        .and_then(crate::umgebung::breite_von)
+                        .map(|(b, _)| b);
+                }
+            }
+            ctyp_breite(&wert_ctyp(e, u)?)
+        }
+        ExprArt::Ort(o) => {
+            if let Some((b, _, _)) = crate::umgebung::grenzwort(o) {
+                return Some(b);
+            }
+            // A sugared limit (`u13::max`) carries the storage word's width --
+            // the same shape `m1.rs` types it in.
+            if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
+                if f.text == "max" || f.text == "min" {
+                    if let Some(speicher) = gabbro_syntax::zucker_speicher(&o.basis.text) {
+                        return crate::umgebung::breite_von(speicher).map(|(b, _)| b);
+                    }
+                }
+            }
+            ctyp_breite(&wert_ctyp(e, u)?)
+        }
+        _ => ctyp_breite(&wert_ctyp(e, u)?),
+    }
+}
+
+/// A lowered C integer type back to its width. Only the four unsigned words --
+/// a signed width here means the checker already refused the program, and the
+/// refusal below (not a guess) is what such a tree gets.
+fn ctyp_breite(c: &str) -> Option<u8> {
+    Some(match c {
+        "uint8_t" => 8,
+        "uint16_t" => 16,
+        "uint32_t" => 32,
+        "uint64_t" => 64,
+        _ => return None,
+    })
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {

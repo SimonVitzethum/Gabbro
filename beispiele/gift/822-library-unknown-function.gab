@@ -1,0 +1,17 @@
+-- erwartet: N057
+-- Lane E2: the module resolves, the function does not -- refused as
+-- unresolved (N057). Neither `missing` (undeclared) nor `helper` (an
+-- ordinary function, named in the note) is a `library fn` of the module.
+module gpu::spirv {
+impl fn helper(n : u32) -> u32 effects { pure } costs <= 1 ops {
+    return n;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @spirv#missing(a) { dispatch 0 };
+    @spirv#helper(a) { dispatch 0 };
+    return a;
+}
+}

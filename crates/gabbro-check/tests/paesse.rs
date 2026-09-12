@@ -2518,3 +2518,270 @@ fn library_call_labelled_argument_falls() {
         "P036",
     );
 }
+
+// -- Lane E2: the checked library call ---------------------------------------------------
+// A library module declares a run-time function with a contract and a
+// payload type; the call resolves and is checked like an ordinary call,
+// then refused with `N069` until the translator exists. Unresolved calls
+// stay `N057`; the declaration side has `N059`/`N060`/`P043`/`P044`, and a
+// direct call to a library function is `N061`.
+
+/// The exact Fehler set, sorted -- for probes that must fall with
+/// nothing beside the pinned codes.
+fn faellt_genau(quelle: &str, erwartet: &[&str]) {
+    let mut gefallen: Vec<&str> = codes(quelle)
+        .iter()
+        .filter(|(_, s)| *s == Stufe::Fehler)
+        .map(|(k, _)| *k)
+        .collect();
+    gefallen.sort_unstable();
+    let mut soll: Vec<&str> = erwartet.to_vec();
+    soll.sort_unstable();
+    assert_eq!(
+        gefallen, soll,
+        "expected exactly {soll:?}, got {gefallen:?}\n{quelle}"
+    );
+}
+
+fn library_module_src() -> String {
+    "module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}
+"
+    .to_string()
+}
+
+fn library_call_src(stmt: &str) -> String {
+    format!(
+        "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
+    {stmt}
+    return a;
+}}
+}}",
+        library_module_src()
+    )
+}
+
+#[test]
+fn library_resolved_n058_and_nothing_else() {
+    // The positive probe: two resolving calls, and nothing fires beside
+    // the translation refusal -- no N057, no M143, no E009, no H021, no
+    // K003. Arguments, effects and costs are all clean.
+    faellt_genau(
+        &library_call_src(
+            "@spirv#kernel(a) { dispatch 0 };\n    let code = @spirv#kernel(a) { dispatch 0 };",
+        ),
+        &["N069", "N069"],
+    );
+}
+
+#[test]
+fn library_unknown_module_n057() {
+    faellt_mit(
+        "module app {
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @nope#kernel(a) { dispatch 0 };
+    return a;
+}
+}",
+        "N057",
+    );
+}
+
+#[test]
+fn library_unknown_function_n057() {
+    // The module resolves, the function does not -- including the case
+    // where the name stands for an ordinary function (named in the note).
+    faellt_mit(&library_call_src("@spirv#missing(a) { dispatch 0 };"), "N057");
+    faellt_genau(
+        "module gpu::spirv {
+impl fn helper(n : u32) -> u32 effects { pure } costs <= 1 ops {
+    return n;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @spirv#helper(a) { dispatch 0 };
+    return a;
+}
+}",
+        &["N057", "H021", "K003"],
+    );
+}
+
+#[test]
+fn library_wrong_argument_like_ordinary() {
+    // A resolving call with a `bool` where `u32` stands: the ordinary
+    // per-argument diagnostic fires beside the translation refusal.
+    faellt_genau(
+        &library_call_src("@spirv#kernel(true) { dispatch 0 };"),
+        &["M135", "N069"],
+    );
+}
+
+#[test]
+fn library_wrong_arity_m143() {
+    // Arity is held at the library edge exactly as at a direct call.
+    faellt_mit(&library_call_src("@spirv#kernel(a, a) { dispatch 0 };"), "M143");
+    faellt_genau(
+        &library_call_src("@spirv#kernel(a, a) { dispatch 0 };"),
+        &["M143", "N069"],
+    );
+}
+
+#[test]
+fn library_effect_edge_e008() {
+    // Effects cross the library edge through the call graph: a writing
+    // library function under a `pure` caller is E008, like any call.
+    faellt_mit(
+        "module gpu::spirv {
+table KernelTab count 4 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn store(i : index into KernelTab) payload KernelTab
+    effects { writes KernelTab.slots }
+    costs <= 8 ops
+{
+    KernelTab.slots[i].words = 1;
+    return;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
+    @spirv#store(a) { dispatch 0 };
+    return a;
+}
+}",
+        "E008",
+    );
+}
+
+#[test]
+fn library_foreign_hull_n059() {
+    // Direct (`launch`) and transitive (`mid` -> `launch`) foreign bodies
+    // are both named; the resolving call still carries N069 beside it.
+    faellt_genau(
+        "module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+extern fn launch(d : u32) -> u32 effects { pure } costs <= 1 ops;
+impl fn mid(n : u32) -> u32 effects { pure } costs <= 2 ops {
+    return launch(n);
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 16 ops
+{
+    return mid(n);
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
+    @spirv#kernel(a) { dispatch 0 };
+    return a;
+}
+}",
+        &["N069", "N059"],
+    );
+}
+
+#[test]
+fn library_payload_no_table_n060() {
+    faellt_genau(
+        "module gpu::spirv {
+pub library fn kernel(n : u32) -> u32 payload NoSuchTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}",
+        &["N060"],
+    );
+}
+
+#[test]
+fn library_missing_payload_p043() {
+    faellt_genau(
+        "module m {
+library fn f(a : u32) -> u32 effects { pure } costs <= 1 ops {
+    return a;
+}
+}",
+        &["P043"],
+    );
+}
+
+#[test]
+fn library_missing_body_p044() {
+    faellt_genau(
+        "module m {
+table T count 1 {
+    slot {
+        w : u32,
+    }
+}
+library fn f(a : u32) -> u32 payload T effects { pure } costs <= 1 ops;
+}",
+        &["P044"],
+    );
+}
+
+#[test]
+fn library_direct_call_n061() {
+    // A direct call to a library function -- from its own module and from
+    // another one -- has no region and no payload: refused by form.
+    faellt_genau(
+        "module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+pub impl fn direct(n : u32) -> u32 effects { pure } costs <= 16 ops {
+    return kernel(n);
+}
+}
+module app {
+use gpu::spirv;
+impl fn g(a : u32) -> u32 effects { pure } costs <= 16 ops {
+    return gpu::spirv::kernel(a);
+}
+}",
+        &["N061", "N061"],
+    );
+}

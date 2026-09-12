@@ -27,7 +27,8 @@
         per primitive).
     §4  Ruling table: `RulingStatus` (`offen` / `aufListe` price /
         `ausErzeuger`), the 30 census slots `OffeneForm`
-        (C1 = 7, C2 = 19, C3 = 4), the `?:` template
+        (C1 = 7, C2 = 19, C3 = 4) plus the syscall boundary slot
+        `syscallStub`, the `?:` template
         `bedingtEntscheid`, rows `EntscheidZiel`, prices
         `beschraenktPreis` / `fluechtigPreis`, the table `tafel`
         (19 named shapes admitted with price), `entschieden`,
@@ -212,7 +213,8 @@ def costMeasured (k : CostClaim) (paare : Nat) : Prop :=
 def senkungBegrenzt (a : Absenkung) (cAnweisungen : Nat) : Prop :=
   cAnweisungen ≤ a.proPrimitiv
 
-/-! ## 4. The ruling table: 19 named shapes, 30 census slots, one status -/
+/-! ## 4. The ruling table: 19 named shapes, 30 census slots plus the
+    syscall boundary, one status -/
 
 /-- The status every slot carries. `aufListe` names the PRICE of the form's
     semantics; `ausErzeuger` names the REPLACEMENT the generator writes
@@ -223,7 +225,9 @@ inductive RulingStatus where
   | ausErzeuger (ersatz : String)
   deriving DecidableEq, Repr
 
-/-- The 30 census slots (`BEWEIS.md` §1a: C1 = 7, C2 = 19, C3 = 4).
+/-- The 30 census slots (`BEWEIS.md` §1a: C1 = 7, C2 = 19, C3 = 4),
+    plus the syscall boundary slot below the census (lane S6,
+    PLAN-SYSCALL.md item 1: generated, not found).
     Each doc line carries its site count, so the table quotes the census
     instead of restating it. -/
 inductive OffeneForm where
@@ -252,11 +256,16 @@ inductive OffeneForm where
   | unerreichbarBuiltin-- C2: 5 sites; RULED once, kept at one site (`BEWEIS.md` §1b)
   | wennGnuC           -- C2: 5 sites; `#if defined(__GNUC__)` changes the program per compiler
   | fortStmt           -- C2: 3 sites (`continue`)
-  | statikAssert       -- C2: 1 site (`_Static_assert`)
-  | pfeilZugriff       -- C3: 704 sites; generous reading of "field access"
-  | boolTyp            -- C3: 350 sites; `<stdbool.h>` for `_Bool`
-  | boolLit            -- C3: 211 sites (`true`/`false`)
-  | zusammZuweisung    -- C3: 24 sites; generous reading of "assignment"
+   | statikAssert       -- C2: 1 site (`_Static_assert`)
+   | pfeilZugriff       -- C3: 704 sites; generous reading of "field access"
+   | boolTyp            -- C3: 350 sites; `<stdbool.h>` for `_Bool`
+   | boolLit            -- C3: 211 sites (`true`/`false`)
+   | zusammZuweisung    -- C3: 24 sites; generous reading of "assignment"
+   -- | syscallStub     -- NOT a census slot: the generated stub as an
+   -- assumption boundary (lane S6, PLAN-SYSCALL.md item 1). The kernel
+   -- behind the stub is the named assumption (`assume … falsifier …`);
+   -- an unlisted errno or an out-of-range answer is the hardware outcome.
+   | syscallStub
   deriving DecidableEq, Repr
 
 /-- The filled template: the `?:` ruling the way every slot must be ruled.
@@ -337,7 +346,13 @@ def tafel : List EntscheidZiel :=
    .luecke .pfeilZugriff (.aufListe "generous reading of field access"),
    .luecke .boolTyp (.aufListe "generous reading: <stdbool.h> for _Bool"),
    .luecke .boolLit (.aufListe "generous reading: boolean literals"),
-   .luecke .zusammZuweisung (.aufListe "generous reading of assignment")]
+   .luecke .zusammZuweisung (.aufListe "generous reading of assignment"),
+   -- The syscall stub as an assumption boundary (lane S6,
+   -- PLAN-SYSCALL.md item 1): the stub is generated, so its shape is
+   -- ruled here once instead of per site; the kernel behind it is the
+   -- named assumption, and whatever the kernel answers outside the
+   -- declared contract is the hardware outcome, never a value.
+   .luecke .syscallStub (.aufListe "generated stub; the kernel behind it is the named assumption")]
 
 /-- Decided: a named shape always counts as tabled; a slot counts exactly
     when its status stopped being `offen`. -/
@@ -942,5 +957,20 @@ def tafelNeu : List EntscheidZiel :=
     SPECIFICATION until every slot is decided one by one. -/
 def satz_tafelNeu : Prop :=
   ∀ e ∈ tafelNeu, entschieden e
+
+/-
+CUTS:
+* No adequacy claim: `tafel_geschlossen` proves every table row is decided,
+  not that any price is adequate (cut C5) -- including the new `syscallStub`
+  row, whose price (the kernel keeps its contract under the named assumption)
+  is an assumption, never a proved premise.
+* No emitter linkage: nothing here proves the generated stub matches the
+  `syscallStub` price -- the stub lives in `crates/gabbro-check/src/emit.rs`
+  (`syscall_stumpf`), and adequacy of the decoding against `einpassen` is
+  not stated anywhere in Lean.
+* No pairing: a `kernel`-paired syscall needs no assumption by the
+  PLAN-SYSCALL.md §2 pairing theorem, which is not stated here -- the row
+  prices the `assume` shape only.
+-/
 
 end Gabbro.Grammatik

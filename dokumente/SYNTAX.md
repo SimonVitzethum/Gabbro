@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **167** measured (`pruefe-syntax.sh` EBNF branch: 167 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); nothing removed |
+| defined EBNF rules | 132 | **167** measured (`pruefe-syntax.sh` EBNF branch: 167 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6) |
+| vocabulary words | 221 | **228 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 228 EBNF terminals against 228 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 230 words
+## Vocabulary — closed, 232 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -93,6 +93,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
+             library payload
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
@@ -643,9 +644,14 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 ## 6. Functions and contracts — E4
 
 ```ebnf
-fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
+fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
            "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
            (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
+           [ "payload" path ]
+           (* «E2» (§7.1): only on a `library fn` (`P043` without it) -- the payload
+              type, a table (a tree table is a table), held against the declared
+              tables (`N060`). It stands behind the signature because it extends
+              the call shape, not the contract. *)
            [ "refines"   path ]
            (* «P6a»: only at an `impl fn`; the path names a declared `spec fn` (`M130`/`M131`). *)
            [ "requires"  predlist ]
@@ -674,7 +680,8 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
            (* CHANGED «SG-5»: the body of a `fn` is an `endblock` -- a block that does NOT fall
               off. A function with a return type ends in `return e;`, one without in `return;`
               or falls to the closing `}` which is SUGAR for `return;`. `"=" pred` only for
-              `spec fn`. *)
+              `spec fn`. «E2» (§7.1): a `library fn` takes the `endblock` and nothing else
+              (`P044`) -- it IS safe Gabbro, not a foreign promise. *)
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
@@ -922,11 +929,13 @@ is the ordinary argument list. The region is a brace-balanced token tree the
 reader captures WITHOUT interpreting: the opening `{`, nested `{ … }` pairs,
 the closing `}`. What the region MEANS — compiled at translation time into a
 payload the call carries (`PLAN-ERWEITUNG.md` §0b) — is **not implemented
-yet**: no translator runs and no payload type is checked. The checker refuses
-every library call with `N057` (`library calls are parsed but not yet
-checked`); the refusal is controlled — never a crash and never a silent
-acceptance — and stands until lane E2 checks the call like any call. In any
-other expression position the reader refuses the `@` with `P011`.
+yet**: no translator runs. A call that resolves `lib` to a used module and
+`function` to a declared `library fn` in it (§7.1) is checked like an
+ordinary call — arguments, effects, `or R`, costs — and then refused with
+`N069` (`library call checked; payload translation not implemented`). A call
+that resolves nowhere is refused with `N057`; the refusal is controlled —
+never a crash and never a silent acceptance. In any other expression position
+the reader refuses the `@` with `P011`.
 
 ```gabbro
 @spirv#kernel(n) { dispatch 0 };
@@ -935,8 +944,73 @@ let code = @spirv#kernel(n) { dispatch 0 };
 
 | spelling | attribute | Lean |
 |---|---|---|
-| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; refused | no term — refused by `N057` |
-| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057` |
+| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; resolved calls refused with `N069`, unresolved with `N057` | no term — refused by `N057`/`N069` |
+| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057`/`N069` |
+
+### 7.1 `library fn` — the declaration with a payload type (lane E2)
+
+**Specified, the words lexed, the declaration checked («E2»).** A library
+module declares a run-time function with a contract and a PAYLOAD TYPE; the
+example block is an excerpt (`…`), not a translation unit.
+
+**The surface** — a `library fn` is an ordinary function with a body, every
+clause in the fixed order of §6, and one extra clause behind the signature:
+
+```gabbro
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+…
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+…
+```
+
+```gabbro
+module app {
+use gpu::spirv;
+…
+@spirv#kernel(n) { dispatch 0 };
+…
+}
+```
+
+**The checks** — each names what an ordinary declaration already carries,
+plus the four things only a library declaration can fail:
+
+* **payload** — the clause is mandatory on a `library fn` (`P043`); it names
+  a declared table — a tree table is a table — resolved from the declaring
+  module outward (`N060`). It stands behind the signature because it extends
+  the call shape (what the translator fills), not the contract.
+* **body** — a Gabbro block, nothing else (`P044`: no `;`, no `= pred ;`,
+  no `= asm`). The transitive call hull holds no `extern`, `raw`, `prim`
+  or `asm` (`N059`, `PLAN-ERWEITUNG.md` §0c) — structure, never prose
+  comparison.
+* **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
+  root, `use` lines) and `f` to a `library fn` in it; arguments, effects
+  (through the call graph), `or R` and costs are checked exactly like an
+  ordinary call. Resolved calls are refused with `N069` until the
+  translator exists (lanes E3/E5); unresolved calls with `N057`.
+* **no bypass** — a direct call to a `library fn` is refused (`N061`):
+  without a region there is no payload.
+
+*Lean:* a library call is an `Ax` whose parameter list is the ordinary
+parameters with the payload appended — no new statement constructor.
+Theorem `bibliotheksruf_ist_ax`
+(`grammatik/Grammatik/Bibliothek.lean`): the typing and effect obligations
+of such a call are exactly the `Stmt.axiomCall` premises for the serving
+axiom, as an equivalence; witnessed on a one-table declaration with a
+reached two-step run that moves memory
+(`bibliotheksruf_ist_ax_zeuge`).
 
 ---
 

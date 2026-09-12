@@ -493,6 +493,8 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | bindAxiom (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
       (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
       (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
       (rest : Block l (τ :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- `let x = R;` -- eine Registerlesung, lesbar nach Klasse; `requires … else` (B26) ist die
       Form `regLiesElse`. -/

@@ -87,7 +87,15 @@ import Grammatik.Bits
 import Grammatik.CSLInvarianteC
 import Grammatik.Arena
 import Grammatik.HoareRuf
+import Grammatik.EigenZustand
 import Grammatik.SyscallPaarung
 import Grammatik.RufMaschineG
 import Grammatik.CSLInvariante
 import Grammatik.Konstanten
+import Grammatik.Bibliothek
+import Grammatik.WacheGlobal
+import Grammatik.StabilBewacht
+import Grammatik.DisziplinBedarf
+import Grammatik.VertragsFuss
+import Grammatik.RelySperre
+import Grammatik.Trennung

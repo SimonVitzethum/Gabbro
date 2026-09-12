@@ -657,6 +657,7 @@ impl<'a> Parser<'a> {
                         | Kw::Tagged
                         | Kw::Type
                         | Kw::Fn
+                        | Kw::Library
                         | Kw::Spec
                         | Kw::Impl
                         | Kw::Raw
@@ -711,7 +712,7 @@ impl<'a> Parser<'a> {
                 ItemArt::Typ(self.typedecl(oeffentlich)?)
             }
             Art::Wort(
-                Kw::Fn | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
+                Kw::Fn | Kw::Library | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
             ) => ItemArt::Funktion(self.fndecl(oeffentlich)?),
             Art::Wort(Kw::Atomic) => ItemArt::Atomic(self.atomicdecl(oeffentlich)?),
             Art::Wort(Kw::Format) => ItemArt::Format(self.format(oeffentlich)?),
@@ -2802,6 +2803,13 @@ impl<'a> Parser<'a> {
 
     fn fndecl(&mut self, oeffentlich: bool) -> Erg<FnDecl> {
         let anfang = self.span();
+        // **Lane E2: `library fn`.** `library` fills the same prefix slot the
+        // class words fill, and it is orthogonal to them: a library function
+        // is an ordinary Gabbro function (any implementor kind) with a body,
+        // a contract and a payload type. `library extern fn … ;` parses and
+        // falls in the checker (`N059` holds the hull, `P044` the body) --
+        // the reader refuses a FORM, never a combination it cannot judge.
+        let bibliothek = self.friss_kw(Kw::Library);
         let klasse = match self.blick().art {
             Art::Wort(Kw::Spec) => Some(FnKlasse::Spec),
             Art::Wort(Kw::Const) => Some(FnKlasse::Konst),
@@ -2842,6 +2850,33 @@ impl<'a> Parser<'a> {
         // sentence -- and this folder has 45 of those.*
         let verfeinert = if self.friss_kw(Kw::Refines) {
             Some(self.pfad()?)
+        } else {
+            None
+        };
+        // **Lane E2: `payload <path>`.** The payload type of a `library fn`
+        // stands directly behind the signature: it extends the call shape
+        // (what the translator fills), not the contract (what the function
+        // promises). Fixed position (E4): after `or R`, before `requires`.
+        // Missing on a `library fn` is `P043` -- the grammar carries the
+        // clause, so the reader holds it, not a pass behind it.
+        let nutzlast = if bibliothek {
+            if self.friss_kw(Kw::Payload) {
+                Some(self.pfad()?)
+            } else {
+                self.absage(
+                    Absage::fehler(
+                        "P043",
+                        anfang.bis_zu(self.vorheriger_span()),
+                        "a `library fn` declares a payload type -- `payload <table>`",
+                    )
+                    .mit_notiz(
+                        "the payload is the value the translator fills at translation \
+                         time (PLAN-ERWEITUNG.md §0b); a library function without one \
+                         has no call shape for `@lib#f` to check against",
+                    ),
+                );
+                return Err(Abbruch);
+            }
         } else {
             None
         };
@@ -2977,9 +3012,32 @@ impl<'a> Parser<'a> {
             self.erwarte_z(Z::Semi)?;
             FnRumpf::Keiner
         };
+        // **Lane E2: a library function IS Gabbro code (`P044`).** The hull
+        // check (`N059`) walks bodies; a declaration without one (`;`), a
+        // spec contract (`= pred ;`) or a sealed block (`= asm`) leaves it
+        // nothing to walk. What the body must NOT call is a statement about
+        // the program and belongs in the checker (`N059`), not here.
+        if bibliothek && !matches!(rumpf, FnRumpf::Block(_)) {
+            self.absage(
+                Absage::fehler(
+                    "P044",
+                    anfang.bis_zu(self.vorheriger_span()),
+                    "a `library fn` carries a Gabbro body -- `{ … }`, not `;`",
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: a function reachable through `@lib#f` \
+                     is safe Gabbro checked by the same checker -- a bodyless \
+                     declaration would be a foreign promise, exactly what the \
+                     library mechanism stands against",
+                ),
+            );
+            return Err(Abbruch);
+        }
         Ok(FnDecl {
             oeffentlich,
             klasse,
+            bibliothek,
+            nutzlast,
             name,
             parameter,
             ergebnis,
@@ -5344,6 +5402,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Const
             | Kw::Static
             | Kw::Fn
+            | Kw::Library
             | Kw::Spec
             | Kw::Impl
             | Kw::Raw

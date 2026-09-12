@@ -38,7 +38,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
-    library_call_not_checked(baum, absagen);
+    bibliothek_pruefen(baum, absagen);
+    intrinsik_name_vergeben(baum, absagen);
 }
 
 /// **`N042` -- two declarations, one C name, and the generator formed both.**
@@ -279,6 +280,54 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
                  the table and its command stand in `messung/C-NAMEN.md`",
             )
             .mit_notiz(hinweis),
+        );
+    });
+}
+
+/// **`N058` -- a declaration carrying the name of a bit intrinsic.**
+///
+/// The seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, `rotr` and
+/// `bswap` are claimed calls (`m1.rs::intrinsik_ruf` types them, `emit.rs::ruf`
+/// lowers them): a call in that spelling never reaches a declared callee. A
+/// declaration of the same name would therefore stand uncalled -- not dead code
+/// the writer can find, but a callee the language routes around. That is the
+/// prohibition-without-replacement shape `opsruf.rs` documents: the call form
+/// was never missing, the callee it names would be.
+///
+/// The rule holds every named item except `module` and `use` (neither declares
+/// a name a call could reach), the same line `N041` draws. Locals and
+/// parameters keep the names: they are not callees, and the call form
+/// `clz(x)` types as the intrinsic the way `u64(a)` converts despite a local
+/// named `u64` -- the conversion precedent (`G9`), not a new distinction.
+fn intrinsik_name_vergeben(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if matches!(item.art, ItemArt::Modul(_) | ItemArt::Use(_)) {
+            return;
+        }
+        let Some(name) = item.art.name() else { return };
+        if !crate::ist_bitintrinsik(&name.text) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "N058",
+                name.span,
+                format!(
+                    "`{}` names a bit intrinsic -- a call in this spelling never \
+                     reaches a declaration",
+                    name.text
+                ),
+            )
+            .mit_notiz(
+                "the seven names `clz`, `ctz`, `log2_floor`, `popcount`, `rotl`, \
+                 `rotr` and `bswap` are claimed calls: the checker types them \
+                 (`M157`-`M160`) and the emitter lowers them (`__builtin_*`, \
+                 `gabbro_rot*`) without asking any declaration",
+            )
+            .mit_notiz(
+                "rename the declaration -- the name is fine everywhere except at \
+                 an item, where it promises a callee the call form routes around",
+            ),
         );
     });
 }
@@ -3539,75 +3588,248 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **`N057` -- a library call is parsed, not checked** (lane E1).
+/// **`N057` -- an unresolved library call; `N069` -- a resolved one;
+/// `N059` -- a foreign body in a library hull; `N060` -- a payload that
+/// names no table; `N061` -- a direct call to a library function**
+/// (lanes E1+E2).
 ///
 /// `@library#function ( args ) { region }` reads as a run-time call whose
-/// region the reader captures without interpreting (`SYNTAX.md` §7). What the
-/// region means -- compiled at translation time into a payload -- is not
-/// implemented yet, so there is nothing to hold the call against: no declared
-/// function, no contract, no payload type. Letting it through would be a
-/// silent acceptance; crashing on it would be worse. What stands instead is
-/// the controlled refusal, once per call, in both positions.
+/// region the reader captures without interpreting (`SYNTAX.md` §7). Lane
+/// E1 refused every such call with `N057`; lane E2 checks the call like
+/// any call and narrows the codes to what each statement can still mean:
 ///
-/// Lane E2 checks the call like any call and retires this rule; the hook is
-/// `lane_e2_checks_calls` below, which answers what the tree declares.
-fn library_call_not_checked(baum: &Programm, absagen: &mut Absagen) {
-    if lane_e2_checks_calls(baum) {
-        return;
+/// * the call resolves `lib` to a used module and `function` to a
+///   declared `library fn` in it -- otherwise `N057`, naming which half
+///   failed (unknown library vs unknown function, including the case
+///   where the name stands for an ordinary function);
+/// * a resolved call is refused with `N069`: arguments, effects, `or R`
+///   and costs are checked exactly like an ordinary call (m1, the call
+///   graph, kosten), but the region is still not interpreted -- until
+///   the translator exists (lanes E3/E5) there is no payload to hold the
+///   call against, so the refusal stands instead of a silent acceptance;
+/// * the declaration side is held here too: the payload must name a
+///   declared table (`N060`), and the library function's transitive hull
+///   must hold no `extern`/`raw`/`prim`/`asm` (`N059`,
+///   `PLAN-ERWEITUNG.md` §0c);
+/// * a DIRECT call to a library function is refused with `N061`: without
+///   a region there is no payload, so the call would silently bypass the
+///   mechanism the declaration stands for.
+///
+/// Every diagnostic fires once per site, in both call positions.
+fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    // Declaration side first: one diagnostic per declaration, so a
+    // library function called ten times does not report its payload
+    // ten times.
+    let mut bibs: Vec<&String> = u.bibliotheken.iter().collect();
+    bibs.sort();
+    for qual in bibs {
+        if let Some((decl_modul, nutzlast, span)) = u.nutzlasten.get(qual) {
+            let benennt_tabelle = u
+                .kandidaten_aufloesbar(decl_modul, nutzlast)
+                .into_iter()
+                .any(|k| u.tabellen.contains_key(&k));
+            if !benennt_tabelle {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N060",
+                        *span,
+                        format!(
+                            "`payload {nutzlast}` of `library fn {qual}` names no declared table"
+                        ),
+                    )
+                    .mit_notiz(
+                        "the payload is a table or tree type (PLAN-ERWEITUNG.md §0b/§2): \
+                         a tree table is a table, anything else is not a payload",
+                    ),
+                );
+            }
+        }
+        let span = u
+            .funktionen
+            .get(qual)
+            .map(|s| s.span)
+            .unwrap_or(gabbro_syntax::span::Span::neu(0, 0));
+        for fremd in g.fremde_in_huelle(qual) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N059",
+                    span,
+                    format!(
+                        "`library fn {qual}` reaches the foreign body `{fremd}`"
+                    ),
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: a function reachable through `@lib#f` \
+                     is safe Gabbro -- `extern`, `raw`, `prim` and `asm` are \
+                     refused anywhere in its call hull, including itself",
+                ),
+            );
+        }
     }
-    fn im_block(b: &Block, absagen: &mut Absagen) {
+    // Call side, with the caller's module for resolution.
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        im_block(b, modul, &u, absagen);
+    });
+    fn im_block(
+        b: &Block,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        absagen: &mut Absagen,
+    ) {
         for s in &b.anweisungen {
             if let StmtArt::LibraryCall(r) = &s.art {
-                melde(r, absagen);
+                melde_bibliothek_ruf(r, modul, u, absagen);
+            }
+            if let StmtArt::Ruf(r) = &s.art {
+                melde_direkt_ruf(r, modul, u, absagen);
+            }
+            if let StmtArt::LetSonst(l) = &s.art {
+                if let Some(r) = l.als_ruf() {
+                    melde_direkt_ruf(r, modul, u, absagen);
+                }
             }
             for e in crate::eigene_ausdruecke(s) {
                 for x in crate::alle_ausdruecke(e) {
-                    if let ExprArt::LibraryCall(r) = &x.art {
-                        melde(r, absagen);
+                    match &x.art {
+                        ExprArt::LibraryCall(r) => melde_bibliothek_ruf(r, modul, u, absagen),
+                        ExprArt::Ruf(r) => melde_direkt_ruf(r, modul, u, absagen),
+                        _ => {}
+                    }
+                }
+            }
+            // A direct call in a contract names the same callee; the form
+            // is wrong there too. (A library call cannot stand here: the
+            // reader wires `libcall` only into statement and binding
+            // position.)
+            for pr in crate::eigene_praedikate(s) {
+                for e in crate::ausdruecke_im_praedikat(pr) {
+                    for x in crate::alle_ausdruecke(e) {
+                        if let ExprArt::Ruf(r) = &x.art {
+                            melde_direkt_ruf(r, modul, u, absagen);
+                        }
                     }
                 }
             }
             for k in crate::unterbloecke(s) {
-                im_block(k, absagen);
+                im_block(k, modul, u, absagen);
             }
         }
     }
-    fn melde(r: &LibraryCall, absagen: &mut Absagen) {
-        absagen.schiebe(
-            Absage::fehler(
-                "N057",
-                r.span,
-                "library calls are parsed but not yet checked",
-            )
-            .mit_notiz(format!(
-                "`@{}#{}` is a run-time call with {} arguments and a region of {} \
-                 raw tokens -- the region is captured, not interpreted",
-                r.library.text,
-                r.function.text,
-                r.args.len(),
-                r.region.len()
-            ))
-            .mit_notiz(
-                "the region is compiled at translation time into a payload \
-                 (PLAN-ERWEITUNG.md §0b); until lane E2 discharges that \
-                 obligation -- checking arguments, payload and contract -- \
-                 every such call is refused here: never silently accepted, \
-                 never crashed on",
+    /// `N057`: the call resolves nowhere -- naming which half failed.
+    fn melde_bibliothek_ruf(
+        r: &LibraryCall,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        absagen: &mut Absagen,
+    ) {
+        if u.bibliothek(modul, &r.library.text, &r.function.text).is_some() {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N069",
+                    r.span,
+                    "library call checked -- payload translation not implemented",
+                )
+                .mit_notiz(format!(
+                    "`@{}#{}` resolves: arguments, effects, `or R` and costs \
+                     are checked like an ordinary call -- but the region is \
+                     captured, not interpreted, so there is no payload yet",
+                    r.library.text, r.function.text
+                ))
+                .mit_notiz(
+                    "the region is compiled at translation time into a payload \
+                     (PLAN-ERWEITUNG.md §0b); until the translator exists \
+                     (lanes E3/E5) every resolved call is refused here: never \
+                     silently accepted, never crashed on",
+                ),
+            );
+            return;
+        }
+        match u.bibliothek_modul(modul, &r.library.text) {
+            None => absagen.schiebe(
+                Absage::fehler(
+                    "N057",
+                    r.span,
+                    format!(
+                        "`@{}` names no used module -- the library call resolves nowhere",
+                        r.library.text
+                    ),
+                )
+                .mit_notiz(
+                    "the library is the module the function stands in, visible \
+                     from the caller like any name (own module, enclosing \
+                     modules, root, `use` lines)",
+                ),
             ),
-        );
+            Some(gefunden) => {
+                let qual = crate::umgebung::qualifiziere(&gefunden, &r.function.text);
+                let is_ordinary = u.funktionen.contains_key(&qual);
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N057",
+                        r.span,
+                        format!(
+                            "`@{}` resolves to module `{gefunden}`, which declares no \
+                             library function `{}`",
+                            r.library.text, r.function.text
+                        ),
+                    )
+                    .mit_notiz(if is_ordinary {
+                        format!(
+                            "`{qual}` is an ordinary function -- a library call \
+                             names a `library fn`; an ordinary call to it would \
+                             bypass the payload (`N061`)"
+                        )
+                    } else {
+                        "a library call names a `library fn` declared in the \
+                         named module -- no such declaration, no call"
+                            .to_string()
+                    }),
+                );
+            }
+        }
     }
-    crate::fuer_jedes_item(baum, &mut |i| {
-        let ItemArt::Funktion(f) = &i.art else { return };
-        let FnRumpf::Block(b) = &f.rumpf else { return };
-        im_block(b, absagen);
-    });
-}
-
-/// Whether lane E2 has landed: the tree declares library functions such a
-/// call could be checked against. No such declaration exists yet, so this
-/// answers `false`; when E2 lands it reads that declaration here instead.
-fn lane_e2_checks_calls(_baum: &Programm) -> bool {
-    false
+    /// `N061`: a direct call names a `library fn` -- without a region
+    /// there is no payload, so the call would silently bypass the
+    /// mechanism. Constructors (`P(a: 1)`), `Some`/`None`, conversions
+    /// and indirect calls never resolve to a declared function and fall
+    /// through here without a word.
+    fn melde_direkt_ruf(
+        r: &Ruf,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        absagen: &mut Absagen,
+    ) {
+        if r.ist_verbundwert() {
+            return;
+        }
+        let Some(p) = r.path() else { return };
+        let text = p.text();
+        let ziel = u
+            .kandidaten_aufloesbar(modul, &text)
+            .into_iter()
+            .find(|k| u.funktionen.contains_key(k));
+        if ziel.is_some_and(|k| u.ist_bibliothek(&k)) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N061",
+                    r.span,
+                    format!(
+                        "direct call to the library function `{text}` -- call it \
+                         through `@lib#f` with a region"
+                    ),
+                )
+                .mit_notiz(
+                    "the region compiles at translation time into the payload \
+                     the call carries (PLAN-ERWEITUNG.md §0b); a direct call \
+                     has no region, so it would run the body with no payload",
+                ),
+            );
+        }
+    }
 }
 
 /// **What a declared function's result can SAY** -- the four states `N056` tells apart.

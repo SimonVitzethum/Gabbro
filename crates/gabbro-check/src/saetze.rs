@@ -321,34 +321,111 @@ pub const NAMEN: &[Satz] = &[
                       have a declared probe, so its population is EMPTY.*",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; sonden/README.md",
     },
-    // --- lane E1, 2026-09-12: the parsed-but-unchecked library call ---------------------
+    // --- lane E1, 2026-09-12: the unresolved library call ---------------------------
     //
-    // **The rule that refuses what the next lane defines.** `@library#function`
-    // reads as a run-time call whose region the reader captures without
-    // interpreting; what the region means is not implemented yet, so there is
-    // no declaration, no contract and no payload type to hold the call
-    // against. The sentence is therefore not a claim about the call but about
-    // the refusal: every such call falls here, in both positions, until lane
-    // E2 checks it like any call and retires the code.
+    // **The rule that refuses what resolves nowhere -- narrowed by lane E2.**
+    // `@library#function` reads as a run-time call whose region the reader
+    // captures without interpreting; where `library` names no used module
+    // or the module declares no such `library fn`, there is no declaration,
+    // no contract and no payload type to hold the call against. The sentence
+    // is therefore not a claim about the call but about the refusal: every
+    // such call falls here, in both positions. A call that DOES resolve
+    // falls under `N069` instead (`namen.bibliothek_ruf` below).
     Satz {
         name: "namen.library_call",
         kennungen: &["N057"],
-        aussage: "Every library call `@library#function ( args ) { region }` is \
-                  refused -- once per call, in statement and in binding position. \
-                  A form the checker cannot judge is never silently accepted and \
-                  never crashed on.",
+        aussage: "Every library call `@library#function ( args ) { region }` that \
+                  resolves nowhere is refused -- once per call, in statement \
+                  and in binding position, naming whether the library or the \
+                  function failed. A form the checker cannot judge is never \
+                  silently accepted and never crashed on.",
         vorbehalt: "**The refusal is the whole rule, and that is a decision and not \
                     a gap** -- the arguments ARE judged: they are ordinary \
                     expressions, and every pass reads them through the shared \
-                    walkers. What no pass judges is the call itself: callee, \
-                    region and payload. Lane E2 retires this code when it checks \
-                    the call like any call.",
+                    walkers. Lane E2 narrowed the code to the unresolved call; \
+                    the resolved one is `N069`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/802` (unbalanced region, `P001`), `/803` \
                       (missing `#`, `P001`), `/804` (empty library name, `P003`), \
-                      `/805` (the refusal itself, `N057`, in both positions); \
-                      counter-direction in `paesse.rs` (`library_call_*`).",
+                      `/805` (unresolved, `N057`, in both positions); \
+                      `beispiele/gift/821` (unknown library), `/822` (unknown \
+                      function); counter-direction in `paesse.rs` \
+                      (`library_call_*`, `bibliothek_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; PLAN-ERWEITUNG.md §6",
+    },
+    // --- lane E2, 2026-09-12: the checked library call --------------------------------
+    //
+    // **The structure lane of PLAN-ERWEITUNG.md §6.** A library module declares
+    // a run-time function with a contract and a payload type (`library fn`
+    // with `payload <table>`, SYNTAX.md §7.1); the call `@lib#f` resolves
+    // like any name and is checked like any call -- arguments (`M143` and
+    // per-argument shape and range), effects through the call graph
+    // (`E008`), costs against the declaration. Four new refusals hold the
+    // four things no ordinary check can: the missing translator (`N069`),
+    // a foreign body in the hull (`N059`, §0c), a payload naming no table
+    // (`N060`), and a direct call bypassing the region (`N061`).
+    Satz {
+        name: "namen.bibliothek_ruf",
+        kennungen: &["N069"],
+        aussage: "Every RESOLVED library call is refused with the translation \
+                  diagnostic -- once per call, in both positions. Its arguments, \
+                  effects, error channel and costs are checked exactly like an \
+                  ordinary call's; only the region is still not interpreted, so \
+                  until the translator exists (lanes E3/E5) the call cannot pass.",
+        vorbehalt: "The refusal is load-bearing, not provisional: a checked call \
+                    without a payload would be a silent acceptance of a region \
+                    nobody compiled. `beispiele/gift/820` carries a declaration \
+                    and two calls and falls with nothing but this code.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N069` only); \
+                      `/823` (wrong argument type beside it); counter-direction \
+                      in `paesse.rs` (`bibliothek_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
+    },
+    Satz {
+        name: "namen.bibliothek_huelle",
+        kennungen: &["N059"],
+        aussage: "No `library fn` reaches a foreign body: the transitive call \
+                  hull of every declared library function holds no `extern`, \
+                  `raw`, `prim` or `asm` -- including itself.",
+        vorbehalt: "Structure, not prose comparison (PLAN-ERWEITUNG.md §0c): \
+                    contradictory hardware assumptions would make every proof \
+                    over the combined program vacuous. Calls through a place \
+                    have no static callee and stay guarded by `E009` instead.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/824` (library body calling an `extern fn`); \
+                      counter-direction in `paesse.rs` (`bibliothek_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; PLAN-ERWEITUNG.md §0c",
+    },
+    Satz {
+        name: "namen.bibliothek_nutzlast",
+        kennungen: &["N060"],
+        aussage: "The `payload` clause of every `library fn` names a declared \
+                  table -- a tree table is a table, anything else is not a \
+                  payload.",
+        vorbehalt: "Resolved from the declaring module outward over the same \
+                    candidate order every other name uses; a missing clause is \
+                    not this rule but the reader's (`P043`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/825` (payload naming no table); \
+                      `beispiele/gift/826` (missing clause, `P043`); \
+                      counter-direction in `paesse.rs` (`bibliothek_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §0b",
+    },
+    Satz {
+        name: "namen.bibliothek_direktruf",
+        kennungen: &["N061"],
+        aussage: "No direct call names a `library fn`: without a region there \
+                  is no payload, so the call would silently bypass the \
+                  mechanism the declaration stands for. The function is called \
+                  through `@lib#f` with a region.",
+        vorbehalt: "Fires on the call FORM, in statement, binding, `let … else` \
+                    and contract position; constructors, conversions and calls \
+                    through a place never resolve to a declared function and \
+                    stay silent here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "counter-direction in `paesse.rs` (`bibliothek_direktruf_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1",
     },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
@@ -1432,6 +1509,61 @@ pub const M1: &[Satz] = &[
         gemessen_an: "beispiele/gift/749-751: full-range fall, narrowed
                       silence, one-value-apart boundary.",
         fundstelle: "crates/gabbro-check/src/m1.rs",
+    },
+    Satz {
+        name: "m1.bitintrinsik",
+        kennungen: &["M157", "M158", "M159", "M160"],
+        aussage: "The seven bit intrinsics (`clz`, `ctz`, `log2_floor`,
+                  `popcount`, `rotl`, `rotr`, `bswap`) are typed at the call:
+                  the nonzero group needs an operand whose range excludes zero
+                  (`M157`); every operand must be an unsigned standard width
+                  (`M158` for the unary group, `M159` for rotation, `M160` for
+                  swap); rotation needs the exact full `uN` range and an amount
+                  in `0 .. w-1` (`M159`); `bswap` needs `u16`, `u32` or `u64`
+                  (`M160`). Results are exact: `0 .. w-1` for the nonzero
+                  group, `0 .. w` for `popcount`, the full range for rotation
+                  and swap -- so the lowering reaches `__builtin_clz/ctz`
+                  only with a provably nonzero argument, whose undefined zero
+                  case stays unreachable.",
+        vorbehalt: "**Reads facts, not declarations**: a V1-narrowed `1 ..`
+                    stays silent beside an open `u32` that falls at `M157`.
+                    An `Unbekannt` operand stays silent (nothing to hold), and
+                    an empty range is `M117`'s at the declaration. The sentence
+                    says nothing about the C the call lowers to beyond the
+                    zero case -- that the counted width is the declared one is
+                    the emitter's own reading (`emit.rs::intrinsik_breite`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: one positive
+                      probe per intrinsic (checked, emitted, compiled under
+                      `cc` and `clang` with `-Wall -Wextra -Werror`, run under
+                      both optimisation levels) and three poison probes
+                      (`M157` on `u32`, `M159` on `u32 in 0 .. 5`, `M160` on
+                      `u8`), each falling with its code alone.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`intrinsik_ruf`,
+                      `intrinsik_bereich`); crates/gabbro-check/src/emit.rs
+                      (`intrinsik_c`, `DREH_C`)",
+    },
+    Satz {
+        name: "namen.bitintrinsik-name",
+        kennungen: &["N058"],
+        aussage: "No declaration carries the name of a bit intrinsic (`N058`):
+                  a call in one of the seven spellings never reaches a declared
+                  callee, so a declaration of the same name would stand
+                  uncalled -- a callee the language routes around. Locals and
+                  parameters keep the names: they are not callees, and the call
+                  form types as the intrinsic the way `u64(a)` converts despite
+                  a local named `u64`.",
+        vorbehalt: "**The rule holds items, not places.** A field or a local
+                    named `clz` stays legal; only the item -- the thing a call
+                    could resolve to -- is refused. It says nothing about
+                    qualified paths (`m::clz`), which are ordinary calls and
+                    fall where undeclared callees fall.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/rechenwerk.rs: a `fn clz`
+                      declaration falls with `N058` alone; the clean corpus
+                      carries none of the seven names at any item.",
+        fundstelle: "crates/gabbro-check/src/namen.rs
+                      (`intrinsik_name_vergeben`)",
     },
     Satz {
         name: "v1.bereichsverengung",
@@ -2680,17 +2812,81 @@ pub const PHASEN: &[Satz] = &[
         vorbehalt: "A declaration rule, and nothing else. It says nothing about whether \
                     the number is the kernel's, whether the errno table is the kernel's, \
                     or whether the assumption holds -- those are the counterpart's \
-                    business (lane S6) and the falsifier's. A `regs out` pair has no \
+                    business and the falsifier's. A `regs out` pair has no \
                     reading and falls at the parser, not here; two out registers naming \
-                    one register are not refused by any code above. The emitter refuses \
-                    every unit carrying a syscall (`C001`) until the stub lands.",
+                    one register are not refused by any code above. The stub the emitter \
+                    writes for a checked declaration is a sentence of its own \
+                    (`syscall.stub`).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes `830`/`831`/`835`/`836`/`837` on \
                       `N063`/`N064`/`H007`/`N065`/`N066`, `832`/`839`/`840` on the three \
                       directions of `N067`, `834` on `N068`, `833` on `A005` and `838` \
-                      on `A006`; beispiele/74 checks clean and falls only at the \
-                      emitter (`C001`, pinned by gift 797).",
+                      on `A006`; beispiele/74 checks clean and emits the stub, \
+                      beispiele/90 the error path.",
         fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
+        name: "syscall.stub",
+        kennungen: &["C180", "C181", "C182", "C183", "C184"],
+        aussage: "A checked `syscall` lowers to one C function: every parameter in its \
+                  declared in-register, the number in `rax`, the `syscall` instruction \
+                  as extended inline `__asm__` with the declared clobbers plus `memory`, \
+                  `rcx` and `r11`, and the raw `rax` answer decoded -- a negative \
+                  `-4095..-1` against the `errors` map into the `or R` channel, an \
+                  unlisted errno or an out-of-range non-negative value into the hardware \
+                  outcome. Five shape rules guard the five places a plausible wrong stub \
+                  would stand: no in-register the stub cannot keep (`C180` -- `rax` or a \
+                  clobbered register), the answer in `rax` and not scratch (`C181`), the \
+                  Linux x86_64 ABI and no other (`C182`), an integer answer with a \
+                  checkable range (`C183`), and a number -- and every result bound -- \
+                  that folds at translation time (`C184`).",
+        vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
+                    kernel keeps the contract it decodes against -- that is the named \
+                    assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
+                    to the C compiler where no value can be delivered. The errno NAME is \
+                    never held against a kernel table: the number compared is the \
+                    reason case's DECLARED value, and a declaration that numbers its \
+                    reasons differently than the kernel numbers its errnos decodes \
+                    against its own numbers. A ghost parameter, an `errors` map with no \
+                    channel, and an unresolvable reason stay the generic `C001`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
+                      `C180`/`C181`/`C182`/`C183`/`C184` -- each checker-clean, each \
+                      refused by exactly its code; beispiele/74 runs the value path \
+                      (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
+        fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
+                     dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
+    },
+    Satz {
+        name: "parser.bibliothek-nutzlast",
+        kennungen: &["P043"],
+        aussage: "A `library fn` carries its `payload <table>` clause: the grammar \
+                  line `fndecl` (`SYNTAX.md` §6, «E2») holds the clause behind the \
+                  signature, so a library declaration without one falls at the \
+                  reader, not in a pass behind it.",
+        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing \
+                    about whether the named table EXISTS -- that check belongs to \
+                    the checker (`N060`). Probes 826 (missing) and 820 (present) \
+                    pin both directions.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 826 on `P043`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
+    },
+    Satz {
+        name: "parser.bibliothek-rumpf",
+        kennungen: &["P044"],
+        aussage: "A `library fn` carries a Gabbro block body: the grammar admits \
+                  only the `endblock` arm for it (`SYNTAX.md` §6, «E2»). A \
+                  bodyless declaration would be a foreign promise -- exactly \
+                  what the library mechanism stands against \
+                  (`PLAN-ERWEITUNG.md` §0c) -- and a spec or sealed body leaves \
+                  the hull check (`N059`) nothing to walk.",
+        vorbehalt: "A shape rule of the parser, and nothing else. What the body \
+                    must NOT call is a statement about the program and belongs \
+                    to the checker (`N059`). Probe 827 pins the `;` form.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 827 on `P044`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
     },
     Satz {
         name: "bootsatz.schichten",

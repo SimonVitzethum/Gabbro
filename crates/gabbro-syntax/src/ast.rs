@@ -971,6 +971,25 @@ impl Domaene {
 pub struct FnDecl {
     pub oeffentlich: bool,
     pub klasse: Option<FnKlasse>,
+    /// **`library fn` -- a run-time library function (lane E2).**
+    ///
+    /// An ordinary Gabbro function with a body, a contract and a payload
+    /// type, called through `@lib#name`. The flag stands beside `klasse`
+    /// instead of inside it: the hull check (`N059`) and the payload check
+    /// (`N060`) ask about library functions of any implementor kind, and a
+    /// second `FnKlasse` variant would force every `klasse` match to decide
+    /// what a library is. `library extern fn` never parses: `library`
+    /// fills the same prefix slot the class words fill.
+    pub bibliothek: bool,
+    /// **`payload <path>` -- the payload type of a `library fn` (lane E2).**
+    ///
+    /// Names the table (a tree table is a table) the translator fills at
+    /// translation time (`PLAN-ERWEITUNG.md` §0b); `None` on every other
+    /// function. The parser demands the clause on a `library fn`
+    /// (`P043`); the checker holds the name against the declared tables
+    /// (`N060`). A path and not a bare name, so the table may stand in
+    /// another module than the function.
+    pub nutzlast: Option<Pfad>,
     pub name: Ident,
     pub parameter: Vec<Parameter>,
     pub ergebnis: Option<TypExpr>,

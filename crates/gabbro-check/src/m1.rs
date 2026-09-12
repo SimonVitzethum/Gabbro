@@ -1466,13 +1466,36 @@ impl<'a> Pruefer<'a> {
                 let _ = self.ruf(r, lage);
                 self.rufe_toeten_fakten(&rufnamen_im_ruf(r), lage);
             }
-            // **Lane E1:** no callee and no contract -- the call itself is
-            // refused (`N057`). What remains for M1 is the arguments:
-            // ordinary expressions with ordinary diagnostics.
+            // **Lane E2:** a resolved library call is checked like any call
+            // (arity, argument shape and range, `requires`, result
+            // narrowing) over the callee's declared signature, and kills
+            // facts like one. Unresolved it stays what E1 made it: typed
+            // arguments, no callee, `N057` from the name pass.
             StmtArt::LibraryCall(r) => {
+                let mut argtypen = Vec::new();
                 for a in &r.args {
-                    self.ausdruck(a, lage);
+                    argtypen.push((self.ausdruck(a, lage), a.span));
                     self.rufe_im_ausdruck(a, lage);
+                }
+                if let Some(z) =
+                    self.u.bibliothek(&self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(sig) = self.u.funktionen.get(&z.name).cloned() {
+                        let ziel = format!("@{}#{}", r.library.text, r.function.text);
+                        let _ = self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
+                    }
+                    let pfad = gabbro_syntax::ast::Pfad {
+                        teile: z
+                            .name
+                            .split("::")
+                            .map(|t| gabbro_syntax::ast::Ident {
+                                text: t.to_string(),
+                                span: r.span,
+                            })
+                            .collect(),
+                        span: r.span,
+                    };
+                    self.rufe_toeten_fakten(&[&pfad], lage);
                 }
             }
             StmtArt::AwaitLoad(a) => {
@@ -1939,12 +1962,22 @@ impl<'a> Pruefer<'a> {
             // `old(x)` ist ein Geisterausdruck: er steht in `ensures`, nicht im Rumpf.
             ExprArt::Alt(_) => Typ::Unbekannt,
             ExprArt::Ruf(r) => self.ruf_roh(r, lage),
-            // **Lane E1:** a library call has no type until lane E2 checks
-            // it; its arguments are ordinary expressions, diagnosed where
-            // they stand. The call itself is refused (`N057`).
+            // **Lane E2:** a resolved library call answers its declared
+            // result, checked like any call; unresolved it stays untyped.
+            // The call itself is refused (`N057` unresolved, `N069`
+            // resolved) by the name pass.
             ExprArt::LibraryCall(r) => {
+                let mut argtypen = Vec::new();
                 for a in &r.args {
-                    self.ausdruck(a, lage);
+                    argtypen.push((self.ausdruck(a, lage), a.span));
+                }
+                if let Some(z) =
+                    self.u.bibliothek(&self.modul, &r.library.text, &r.function.text)
+                {
+                    if let Some(sig) = self.u.funktionen.get(&z.name).cloned() {
+                        let ziel = format!("@{}#{}", r.library.text, r.function.text);
+                        return self.ruf_aufgeloest(&ziel, r.span, false, &argtypen, &sig);
+                    }
                 }
                 Typ::Unbekannt
             }
@@ -2497,6 +2530,20 @@ impl<'a> Pruefer<'a> {
     }
 
     fn ruf_roh(&mut self, r: &Ruf, lage: &Lage) -> Typ {
+        // **Bit intrinsics (PLAN-BITS §3): seven single-segment call names the
+        // language claims.** Like the integer conversions below they are typed
+        // here rather than looked up as functions: there is no declaration, and
+        // a lookup would answer `Unbekannt` -- the compatible-with-everything
+        // exit that hid «B8». A labelled call (`clz(x: v)`) is NOT one: it falls
+        // through to `marken_pruefen`, which refuses labels at non-constructors
+        // (`M107`), the same sentence a labelled conversion gets.
+        if !r.ist_verbundwert() {
+            if let Some(einfach) = r.path().and_then(|p| p.einfach()) {
+                if crate::ist_bitintrinsik(&einfach.text) {
+                    return self.intrinsik_ruf(&einfach.text, r, lage);
+                }
+            }
+        }
         // **G9, repaired 2026-09-04 -- a call whose path names an integer type IS the
         // conversion.** `SYNTAX.md`:588 marks `primary` with `G9` -- no `cast` production -- and :656-659
         // gives the reason in full: *"a call whose path names a type IS the conversion --
@@ -2649,14 +2696,36 @@ impl<'a> Pruefer<'a> {
         // *What the arity of a transition call ought to be is a question this rule does not
         // answer* -- see the register's reservation.
         let uebergang = r.path().is_some_and(|p| self.u.ist_uebergang(&self.modul, p));
+        let ziel = r.target_text();
+        self.ruf_aufgeloest(&ziel, r.span, uebergang, &argtypen, &sig)
+    }
+
+    /// **Lane E2: a resolved call, whoever spelled it.**
+    ///
+    /// The tail of `ruf_roh`'s direct path -- arity (`M143`), per-argument
+    /// shape and range (`passt`), `requires` (`M115`), and the
+    /// `ensures`-narrowing with its foreign booking -- over an already
+    /// resolved signature. A library call (`@lib#f`) resolves through
+    /// `Umgebung::bibliothek` instead of `Umgebung::funktion` and lands
+    /// here with the same signature; what it reports and what it answers
+    /// are the same by construction, not by parallel code. `uebergang` is
+    /// always false across a library edge: the resolved name stands for a
+    /// `library fn`, never for a transition placeholder.
+    fn ruf_aufgeloest(
+        &mut self,
+        ziel: &str,
+        span: Span,
+        uebergang: bool,
+        argtypen: &[(Typ, Span)],
+        sig: &crate::umgebung::Signatur,
+    ) -> Typ {
         if !uebergang && argtypen.len() != sig.parameter.len() {
-            let name = r.target_text();
             let (n, m) = (sig.parameter.len(), argtypen.len());
             self.absagen.schiebe(
                 Absage::fehler(
                     "M143",
-                    r.span,
-                    format!("`{name}` declares {n} parameter(s), this call passes {m}"),
+                    span,
+                    format!("`{ziel}` declares {n} parameter(s), this call passes {m}"),
                 )
                 .mit_notiz(
                     "a parameter with no argument is a slot every pass behind this one still \
@@ -2674,7 +2743,7 @@ impl<'a> Pruefer<'a> {
         for ((t, span), (pname, pt)) in argtypen.iter().zip(sig.parameter.iter()) {
             self.passt(t, pt, *span, &format!("argument `{pname}`"));
         }
-        self.requires_pruefen(r, &sig, &argtypen);
+        self.requires_pruefen(ziel, &sig, &argtypen);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
         let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
         // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
@@ -2692,8 +2761,8 @@ impl<'a> Pruefer<'a> {
             for s in &v.schritte {
                 self.fremd.push(Stelle {
                     rufer: self.rufer.clone(),
-                    gerufener: r.target_text(),
-                    span: r.span,
+                    gerufener: ziel.to_string(),
+                    span,
                     klausel: s.klausel.clone(),
                     wirkung: Wirkung::Bereich {
                         vorher: s.vorher.clone(),
@@ -2800,6 +2869,240 @@ impl<'a> Pruefer<'a> {
         Typ::Ganzzahl(bereich)
     }
 
+    /// **Bit intrinsics (PLAN-BITS §3): typing of the seven claimed calls.**
+    ///
+    /// The surface spells them per width until generics exist; the width here is
+    /// the operand's OWN `breite`, so no width is named twice and none can
+    /// disagree with the declaration. Ranges follow `PLAN-BITS.md` §3: the
+    /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M157`, with the
+    /// `narrow` remedy the task asks for); every operand must be an unsigned
+    /// standard width (`M158`/`M159`/`M160`); rotation needs the EXACT full
+    /// range and an amount in `0 .. w-1` (`M159`); `bswap` needs `u16`/`u32`/`u64`
+    /// (`M160`). Results are exact, never widened: `0 .. w-1` for the nonzero
+    /// group, `0 .. w` for `popcount`, the full range for rotation and swap.
+    ///
+    /// An `Unbekannt` (or `never`) operand stays silent: there is nothing to
+    /// hold against it, and inventing a width would be the `U10` defect again.
+    /// An EMPTY range does the same -- `M117` owns it at the declaration.
+    fn intrinsik_ruf(&mut self, name: &str, r: &Ruf, lage: &Lage) -> Typ {
+        let will = match name {
+            "rotl" | "rotr" => 2,
+            _ => 1,
+        };
+        if r.argumente.len() != will {
+            let code = match name {
+                "rotl" | "rotr" => "M159",
+                "bswap" => "M160",
+                _ => "M158",
+            };
+            self.absagen.schiebe(
+                Absage::fehler(
+                    code,
+                    r.span,
+                    format!(
+                        "`{name}` takes {will} argument(s), this call passes {}",
+                        r.argumente.len()
+                    ),
+                )
+                .mit_notiz(
+                    "an intrinsic is a fixed form, not a declared function -- the form counts its \
+                     operands, and a value beyond them is a statement about nothing the lowering \
+                     could keep",
+                ),
+            );
+            return Typ::Unbekannt;
+        }
+        let mut argtypen = Vec::new();
+        for a in &r.argumente {
+            argtypen.push((self.ausdruck(a, lage), a.span));
+        }
+        let code = match name {
+            "rotl" | "rotr" => "M159",
+            "bswap" => "M160",
+            _ => "M158",
+        };
+        let (b, _span) = match self.intrinsik_bereich(&argtypen[0].0, argtypen[0].1, name, code, "operand") {
+            Some(x) => x,
+            None => return Typ::Unbekannt,
+        };
+        let w = b.breite;
+        match name {
+            "clz" | "ctz" | "log2_floor" => {
+                if b.min < 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M157",
+                            argtypen[0].1,
+                            format!(
+                                "`{name}` needs an operand whose range excludes zero, \
+                                 and `{}` does not",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "SPRACHE.md §3: like a divisor, the argument must exclude \
+                             zero -- the lowering reaches `__builtin_clz/ctz`, whose \
+                             zero case is undefined",
+                        )
+                        .mit_notiz(
+                            "the caller relies on the result lying in `0 .. w-1` -- \
+                             with zero admitted, `31 - clz(x)` leaves the range the \
+                             checker promised, and the index derivation breaks on \
+                             exactly that case",
+                        )
+                        .mit_notiz(
+                            "a check `if x >= 1 { … }` narrows it (V1), otherwise \
+                             `narrow x to 1 .. … else { … }`",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::genau(w, false, 0, w as i128 - 1))
+            }
+            "popcount" => Typ::Ganzzahl(IntBereich::genau(w, false, 0, w as i128)),
+            "rotl" | "rotr" => {
+                if b.min != 0 || b.max != (1i128 << w) - 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M159",
+                            argtypen[0].1,
+                            format!(
+                                "`{name}` rotates a whole word and needs the exact \
+                                 full range `u{w} in 0 .. {}, and `{}` is not it",
+                                (1i128 << w) - 1,
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "rotation has no width except the operand's own -- on a \
+                             narrowed range the wrap point is ambiguous, and an \
+                             ambiguous wrap is a guess dressed as a proof; the \
+                             caller relies on getting the whole word back",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                let (c, cspan) =
+                    match self.intrinsik_bereich(&argtypen[1].0, argtypen[1].1, name, "M159", "amount") {
+                        Some(x) => x,
+                        None => return Typ::Unbekannt,
+                    };
+                if c.min < 0 || c.max > w as i128 - 1 {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M159",
+                            cspan,
+                            format!(
+                                "`{name}` needs an amount in `0 .. {}`, and `{}` is not",
+                                w as i128 - 1,
+                                c.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a shift by the width or more is undefined in C -- the \
+                             amount is typed like a divisor, and `narrow` narrows it",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::voll(w, false))
+            }
+            _ => {
+                if !matches!(w, 16 | 32 | 64) {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M160",
+                            argtypen[0].1,
+                            format!(
+                                "`bswap` reverses whole bytes and needs `u16`, `u32` \
+                                 or `u64`, and `{}` is none of them",
+                                b.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a one-byte value has no byte order to reverse -- write \
+                             the value itself",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Ganzzahl(IntBereich::voll(w, false))
+            }
+        }
+    }
+
+    /// The integer range of an intrinsic operand: unsigned, standard width, known.
+    ///
+    /// Returns the range and the span it was read at. `None` is the honest exit:
+    /// `Unbekannt`/`never` stay silent (nothing to hold), an empty range is
+    /// `M117`'s at the declaration, and every other shape falls at `code`.
+    fn intrinsik_bereich(
+        &mut self,
+        t: &Typ,
+        span: Span,
+        name: &str,
+        code: &'static str,
+        was: &str,
+    ) -> Option<(IntBereich, Span)> {
+        if let Typ::Benannt { undurchsichtig: true, name: bn, .. } = t.durchgreifen() {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "D003",
+                    span,
+                    format!("`{bn}` is opaque -- it does not have the arithmetic of its carrier"),
+                )
+                .mit_notiz(
+                    "bit intrinsics read the carrier's bits, and an `opaque type` \
+                     says exactly that its carrier is hidden",
+                ),
+            );
+            return None;
+        }
+        let Some(b) = t.bereich() else {
+            if !matches!(t.durchgreifen(), Typ::Unbekannt | Typ::Nie) {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        code,
+                        span,
+                        format!(
+                            "`{name}` takes an unsigned integer {was}, and this one \
+                             has type `{}`",
+                            t.text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "only `u8`, `u16`, `u32` and `u64` (or the `uN` sugar over them) carry bits -- \
+                         a truth value, a pointer or a float has none to count, and counting is a \
+                         statement about the operand's bit pattern",
+                    ),
+                );
+            }
+            return None;
+        };
+        if b.ist_leer() {
+            return None;
+        }
+        if b.vorzeichen || !matches!(b.breite, 8 | 16 | 32 | 64) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    code,
+                    span,
+                    format!(
+                        "`{name}` takes an unsigned standard width (`u8`, `u16`, \
+                         `u32`, `u64`), and `{}` is not one",
+                        b.text()
+                    ),
+                )
+                .mit_notiz(
+                    "a signed operand has no unsigned bit pattern to read -- convert \
+                     it first, where the conversion's own rule (`M144`/`M145`) holds",
+                ),
+            );
+            return None;
+        }
+        Some((b, span))
+    }
+
     /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**
     ///
     /// Gemessen am selben Tag: `extern fn nimm(x : u32) requires bereit == 1;` gerufen mit
@@ -2820,7 +3123,12 @@ impl<'a> Pruefer<'a> {
     /// Gedeckt ist die Form `<parameter> <op> <zahl>` -- dieselbe, die `aus_ensures` in der
     /// Gegenrichtung liest. Alles Uebrige (Weltzustand, Quantoren) bleibt liegen und ist im
     /// TODO als die staerkere Haelfte gebucht.
-    fn requires_pruefen(&mut self, r: &Ruf, sig: &crate::umgebung::Signatur, argtypen: &[(Typ, Span)]) {
+    fn requires_pruefen(
+        &mut self,
+        ziel: &str,
+        sig: &crate::umgebung::Signatur,
+        argtypen: &[(Typ, Span)],
+    ) {
         for p in &sig.requires {
             let PredArt::Vergleich(e) = &p.art else { continue };
             let ExprArt::Binaer(op, a, c) = &e.art else { continue };
@@ -2853,7 +3161,7 @@ impl<'a> Pruefer<'a> {
                         format!(
                             "`{}` requires `{name} {} {zahl}`, and the argument lies in \
                                 {} .. {}",
-                            r.target_text(),
+                            ziel,
                             zeichen(op),
                             b.min,
                             b.max
