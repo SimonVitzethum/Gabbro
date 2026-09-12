@@ -1,0 +1,17 @@
+-- erwartet: N212
+-- Lane E4: the missing `else` -- the second allocation since the last reset
+-- stands past the reservation of one, so the full-arena continuation is
+-- owed. Both indices are of the current generation, the arena is
+-- well-formed, and the effect and budget lines are clean.
+module beispiel::arena_eng {
+arena Eng capacity 1 .. 4 of u16;
+
+impl fn f() -> u32 effects { writes Eng } costs <= 8 ops {
+    let a = alloc Eng (1);
+    let b = alloc Eng (2);
+    if a == b {
+        return Eng[a];
+    }
+    return Eng[b];
+}
+}

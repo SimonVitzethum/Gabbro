@@ -641,6 +641,8 @@ impl<'a> Parser<'a> {
         // to say so with. *An implicit export set is exactly what D2 forbids.* The word
         // now stands at the carrier, and the closure is caught by `N038` in
         // `gabbro-check/src/bindung.rs`.
+        // **Since «E4» (2026-09-12) TWELVE: `arena` is a carrier too** -- it emits
+        // storage like a table, so it carries the word like one.
         let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
@@ -667,6 +669,7 @@ impl<'a> Parser<'a> {
                         | Kw::Extern
                         | Kw::Atomic
                         | Kw::Table
+                        | Kw::Arena
                         | Kw::Device
                         | Kw::Format
                         | Kw::Lock
@@ -692,10 +695,10 @@ impl<'a> Parser<'a> {
                     ),
                 )
                 .mit_notiz(
-                    "`[ \"pub\" ]` stands at eleven item kinds: module use const static \
-                     type fn atomic table device format lock -- the parser accepted it \
-                     everywhere and threw it away",
-                ),
+                        "`[ \"pub\" ]` stands at twelve item kinds: module use const static \
+                      type fn atomic table arena device format lock -- the parser accepted it \
+                      everywhere and threw it away",
+                    ),
             );
         }
         let art = match t.art {
@@ -730,6 +733,11 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Atomic) => ItemArt::Atomic(self.atomicdecl(oeffentlich)?),
             Art::Wort(Kw::Format) => ItemArt::Format(self.format(oeffentlich)?),
             Art::Wort(Kw::Table) => ItemArt::Tabelle(self.table(oeffentlich)?),
+            // **«E4» (2026-09-12): `arena A capacity lo .. hi of T;`.**
+            // A monotone region beside the table: the declaration holds the
+            // reservation and the hard bound, the checker (`arena.rs`) the
+            // rest. `pub` is carried like at every other carrier.
+            Art::Wort(Kw::Arena) => ItemArt::Arena(self.arena(oeffentlich)?),
             Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason()?),
             Art::Wort(Kw::State) => ItemArt::State(self.statedecl()?),
             Art::Wort(Kw::Device) => ItemArt::Device(self.device(oeffentlich)?),
@@ -3534,6 +3542,17 @@ impl<'a> Parser<'a> {
                 self.erwarte_z(Z::Semi)?;
                 StmtArt::Return(wert)
             }
+            // **«E4»: `reset A;` -- a fresh generation of the arena.**
+            //
+            // The head word decides, like at every other keyword statement:
+            // `reset = 1;` and `reset.f = x;` continue with a place
+            // continuation and stay assignments to a name of that spelling.
+            Art::Wort(Kw::Reset) => {
+                self.pos += 1;
+                let tisch = self.erwarte_ident()?;
+                self.erwarte_z(Z::Semi)?;
+                StmtArt::ResetArena(tisch)
+            }
             _ => self.zuweisung_oder_ruf()?,
         };
         Ok(Stmt {
@@ -3563,6 +3582,36 @@ impl<'a> Parser<'a> {
                 art: ExprArt::LibraryCall(ruf),
                 span,
             }
+        // **«E4»: `let i = alloc A (v) [else block];`.**
+        //
+        // Only when the word is followed by a name and `(`: a bare `alloc`
+        // stays an ordinary expression (a variable, a call of a function
+        // of that name). The `else` needs no error binder -- like `narrow`,
+        // the failure continuation carries no value, only the decision to
+        // continue elsewhere.
+        } else if self.ist_kw(Kw::Alloc)
+            && matches!(self.blick_n(1).art, Art::Ident | Art::Wort(_))
+            && matches!(self.blick_n(2).art, Art::Zeichen(Z::RundAuf))
+        {
+            self.pos += 1;
+            let tisch = self.erwarte_ident()?;
+            self.erwarte_z(Z::RundAuf)?;
+            let wert = self.expr()?;
+            self.erwarte_z(Z::RundZu)?;
+            let sonst = if self.friss_kw(Kw::Else) {
+                Some(self.block()?)
+            } else {
+                None
+            };
+            self.erwarte_z(Z::Semi)?;
+            return Ok(StmtArt::Alloc(AllocStmt {
+                veraenderlich,
+                name,
+                typ,
+                tisch,
+                wert,
+                sonst,
+            }));
         } else {
             self.expr()?
         };
@@ -4158,6 +4207,35 @@ impl<'a> Parser<'a> {
             ops,
             baum,
             belegt,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **`arena A capacity lo .. hi of T;` («E4»).**
+    ///
+    /// A monotone region beside `table`: no body, no slots, no guards --
+    /// the declaration holds the reservation `lo`, the hard bound `hi`
+    /// and the element type `T`, and nothing else. Both bounds are full
+    /// `constexpr` positions (a literal or a `const` name); the checker
+    /// holds them constant and ordered (`N210`). Only `..` joins the two
+    /// bounds: both count elements, so an exclusive upper bound would be a
+    /// second spelling of `hi - 1`.
+    fn arena(&mut self, oeffentlich: bool) -> Erg<ArenaDecl> {
+        let anfang = self.erwarte_kw(Kw::Arena)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Capacity)?;
+        let lo = self.expr()?;
+        self.erwarte_z(Z::Bereich)?;
+        let hi = self.expr()?;
+        self.erwarte_kw(Kw::Of)?;
+        let element = self.typeexpr()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ArenaDecl {
+            name,
+            oeffentlich,
+            lo,
+            hi,
+            element,
             span: anfang.bis_zu(ende),
         })
     }
@@ -5585,6 +5663,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Entry
             | Kw::Entrust
             | Kw::Boot
+            | Kw::Arena
             | Kw::Syscall
             | Kw::Pub
             | Kw::When

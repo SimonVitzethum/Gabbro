@@ -16,26 +16,14 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **132** | `gabbro paesse` |
-| of those `measured` | **124** | a poison-probe case or a caught mutation |
+| Sentences in the register | **131** | `gabbro paesse` |
+| of those `measured` | **123** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
 | of those `PROVED` | **0** | **that is the figure PL.2 is about** |
 | Passes with at least one sentence | **12 of 12** | `gabbro paesse` |
-| Codes in the checker | **335** | `./pruefe-kennungen.py` |
-| of those claimed by a sentence | **280** | `./instrumente/pruefe-saetze.py` |
-
-> **2026-09-12, lane E3 (translator declaration, PLAN-ERWEITUNG.md §6): +2 of them mine.**
-> `namen.uebersetzer_einzigkeit` (`N200`, no translator; `N201`, a second or
-> dangling translator) and `namen.uebersetzer_signatur` (`N202`, effects;
-> `N203`, no `decreases`; `N204`, foreign result) -- two measured sentences
-> claiming five codes, each refusal with its gift probe (`870`-`874`) and
-> its `paesse.rs` counter-direction (`translator_*`). The translator body
-> itself is ordinary Gabbro for every pass (parsed into `ItemArt::Funktion`
-> with `translator_fuer`); a hull reaching a foreign body falls under
-> `N059` like a library body, a bodyless translator under `P044` like a
-> bodyless `library fn`. The `ohne Satz` ratchet stands unmoved at 55 --
-> every new code arrived with its sentence in the same branch.
+| Codes in the checker | **331** | `./pruefe-kennungen.py` |
+| of those claimed by a sentence | **276** | `./instrumente/pruefe-saetze.py` |
 
 > **2026-09-12, merge of lanes E2 and S6: recomputed to actuals.**
 > Lane S6 brings `syscall.stub` (`C180`-`C184`, one measured sentence over
@@ -54,6 +42,20 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (2026-09-02 entry). The `ohne Satz` ratchet below stands unmoved at 55
 > -- every new code of both lanes arrived with its sentence in the same
 > branch.
+
+> **2026-09-12, lane E4: recomputed to `gabbro paesse` actuals, +1 of it mine.**
+> `arena.erklaerung` (`N210`, unusable bounds; `N211`, a use outside its
+> generation; `N212`, the missing `else` past the reservation; `N213`, a name
+> declaring no arena; `N214`, a place or index of another kind -- at the one
+> place that types every `Ort`) brings one measured sentence claiming five
+> codes, each with its gift probe (885-889) and its `paesse.rs`
+> counter-direction, plus the positive direction (`beispiele/98`, `/99`,
+> emission included). The rest of the movement since the last booking is wave
+> drift other lanes owe their own entries for; it is recomputed here rather
+> than incremented, because incrementing a forgotten figure carries the
+> forgetting forward (2026-09-02 entry). The `ohne Satz` ratchet below stands
+> unmoved at 55 -- every new code of this lane arrived with its sentence in
+> the same branch.
 
 > **2026-09-12, lane E1: recomputed to `gabbro paesse` actuals, +1 of them mine.**
 > `namen.library_call` (`N057`, every library call refused until lane E2 checks

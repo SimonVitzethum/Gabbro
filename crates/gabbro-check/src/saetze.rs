@@ -2960,6 +2960,48 @@ pub const PHASEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: probe 827 on `P044`.",
         fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
     },
+    // --- lane E4, 2026-09-12: the monotone arena, checker half -------------------------
+    //
+    // **The structure lane of PLAN-ERWEITUNG.md §3.** A heap is allowed but never
+    // unbounded: `arena A capacity lo .. hi of T` declares the reservation and the
+    // hard bound, `let i = alloc A (v) else { … }` stores into the next free slot,
+    // `A[i]` reads, and `reset A` starts a fresh generation. Five refusals hold the
+    // five things no ordinary check can: unusable bounds (`N210`), a use outside
+    // its generation (`N211`), a missing `else` past the reservation (`N212`), a
+    // name that declares no arena (`N213`), and a place or index of another kind
+    // (`N214`, at the one place that types every `Ort`).
+    Satz {
+        name: "arena.erklaerung",
+        kennungen: &["N210", "N211", "N212", "N213", "N214"],
+        aussage: "Every arena declares two constant bounds with `0 <= lo <= hi` \
+                  (`N210`); every `alloc` past the reservation owes its `else` \
+                  (`N212`, counted per function like `costs`); no index is read \
+                  outside the generation its `alloc` bound it in (`N211`); \
+                  `alloc` and `reset` name a declared arena (`N213`); and a \
+                  place over an arena is exactly `A[i]` with `i : index into \
+                  A`, never written outside `alloc` (`N214`). The emitted array \
+                  holds exactly `hi` elements beside its `used` counter -- no \
+                  heap allocation in the C -- and `reset` stores zero into the \
+                  counter.",
+        vorbehalt: "The count is per function body: two functions allocating into \
+                    one arena share the runtime counter, and no static count sees \
+                    the other -- like `costs`, whose recursion carries an \
+                    assumption instead of a computation. A reservation shared \
+                    across functions needs the whole-program discipline, and that \
+                    is future work, not a silent promise. `beispiele/98` and \
+                    `/99` carry the positive direction (emission included); the \
+                    five poison probes pin the five refusals.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe `885` on `N210` (inverted bounds), \
+                      `886` on `N211` (stale index after `reset`), `887` on \
+                      `N212` (missing `else` past the reservation), `888` on \
+                      `N213` (undeclared arena), `889` on `N214` (foreign \
+                      index); beispiele/98 checks clean and emits, /99 the \
+                      boundary; counter-direction in `paesse.rs` (`arena_*`).",
+        fundstelle: "crates/gabbro-check/src/arena.rs (`N210`-`N213`); \
+                     crates/gabbro-check/src/m1.rs (`N214`); \
+                     dokumente/SYNTAX.md §9.1; PLAN-ERWEITUNG.md §3",
+    },
     Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],

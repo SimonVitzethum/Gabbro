@@ -420,7 +420,8 @@ fn fluss(
             // **Ein `else`-Zweig ist ein AUSWEG, kein Weiterweg.** `narrow … else` und
             // `let … else` verlassen den Hauptpfad; ihr Stand joint nicht zurück, und ein
             // Schritt darin wird trotzdem geprüft -- vorher wurde er gar nicht angesehen.
-            StmtArt::Narrow(_) | StmtArt::LetSonst(_) => {
+            // **«E4»:** the full-arena continuation is the same shape.
+            StmtArt::Narrow(_) | StmtArt::LetSonst(_) | StmtArt::Alloc(_) => {
                 for k in crate::unterbloecke(s) {
                     let mut ausweg = stand.clone();
                     fluss(k, u, modul, schritte, &mut ausweg, absagen, melden, umfeld);

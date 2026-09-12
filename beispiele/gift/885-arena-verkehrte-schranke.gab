@@ -1,0 +1,12 @@
+-- erwartet: N210
+-- Lane E4: inverted bounds -- the reservation is larger than the capacity,
+-- so "within the reservation" promises room that is not there. Nothing else
+-- is wrong with this unit: the arena is well-formed, the function is pure
+-- and within budget.
+module beispiel::arena_falsch {
+arena Falsch capacity 8 .. 2 of u32;
+
+impl fn f() -> u32 effects { pure } costs <= 1 ops {
+    return 0;
+}
+}

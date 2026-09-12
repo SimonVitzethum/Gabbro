@@ -98,14 +98,20 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # **229 -> 231 on 2026-09-12 («E2»).** `library` + `payload` arrive with one
 # reason block above EACH entry, so the second mark below does not move.
 #
-# **231 -> 233 on 2026-09-12 («E3»).** `translator` + `for` name the
+# **231 -> 235 on 2026-09-12 («E4»).** `arena` + `capacity` + `alloc` + `reset`
+# name the monotone region (`dokumente/SYNTAX.md` §9.1, `PLAN-ERWEITUNG.md`
+# §3): no existing form carries a bounded heap -- a `table` has no lower
+# bound and no whole-region release, and an `owner` mark has no minter -- and
+# the reason stands at EACH entry in `kw.rs`. The second mark does NOT move.
+#
+# **235 -> 237 on 2026-09-12 («E3», merged).** `translator` + `for` name the
 # translator declaration (`dokumente/SYNTAX.md` §7.2,
 # `PLAN-ERWEITUNG.md` §6, lane E3): no existing form carries the
 # region-to-payload map or its link to the served function -- a bare name
 # would collide with the served function -- and the reason stands at each
 # entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
 # so the third mark does not move either.
-MARKE_WOERTER = 233
+MARKE_WOERTER = 237
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

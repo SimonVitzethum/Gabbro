@@ -2913,28 +2913,24 @@ fi
 # measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
 # *A mark that absorbs foreign growth without naming it is a slack ratchet,
 # so the decomposition stands here and not in a merge note.*
-# **75 -> 77 on 2026-09-12 (lane 118, root cleanup).** `+1` is `beispiele/halde.gab`,
-# moved from the repository root (checker-clean: `pruefe` 0 errors, 0 hints; the
-# basename is kept, so the `.gab` comments naming it stay true). `+1` is
-# `beispiele/80-bibliothek-erklaert.gab` (lane 91/E2, emitting since merge `2e9be3c0`,
-# landed after the 75 booking above) -- foreign growth booked here WITH its address,
-# under the same decomposition rule as the 72 -> 75 booking.
-# **77 -> 78 on 2026-09-12 (lane S7/114, merge resolution).** `+1` is
-# `beispiele/96-buffered-writer.gab`, the buffered writer over `write` (checks
-# clean, emits, compiles under cc AND clang, runs beside 74/90). Provisional
-# sum 75 + halde + 80 + 96 -- re-measured by the run below, not added up.
-# **78 -> 80 on 2026-09-12 (merge resolution, measured).** `+2` are
-# `beispiele/92-const-squares.gab` and `93-const-scalars.gab` (const lanes,
-# both emitting -- verified file by file, not added up). The run below reads
-# 80; the provisional 78 never held.
-# **80 -> 81 on 2026-09-12 (lane 126 merge resolution, provisional).** `+1`
-# is `beispiele/104-referenz.gab` (the reference fixture as a Gabbro program,
-# driven as `beispiel104` above). Final number from the run below.
-# **81 -> 83 on 2026-09-12 (lane 126 merge resolution, measured).** `+2` are
-# `beispiele/94-uebersetzer-erklaert.gab` and `95-uebersetzer-vertrag.gab`
-# (translator lane E3/112 -- both emitting, verified file by file with
-# `gabbro emit`, not added up). The run below reads 83.
-MARKE_EMIT=83
+# **75 -> 78 on 2026-09-12, and only two of the three are this lane's («E4»).**
+# The run measures 78 emitting files in `beispiele/`: 75 booked, three found
+# (`80-bibliothek-erklaert` -- lane E2's declaration-only library, emitting
+# since it landed, the mark never pulled up -- plus `98-arena-erklaert` and
+# `99-arena-grenze`, this lane's positive direction with its static array and
+# counter, both compiling under `-Werror` at `-O0` and `-O2`). *Same rule as
+# above: the decomposition stands here, not in a merge note.*
+# **78 -> 83 on 2026-09-12 (merge resolution, lane 118 + S7/114 + const lanes
+# + lane 126 + E3/112).** `+1` is `beispiele/halde.gab`, moved from the
+# repository root; `+1` is `beispiele/80-bibliothek-erklaert.gab` (counted
+# above, booked here with its address); `+1` is `96-buffered-writer.gab`
+# (lane S7/114); `+2` are `92-const-squares`/`93-const-scalars` (const lanes);
+# `+1` is `104-referenz.gab` (lane 126); `+2` are `94-`/`95-uebersetzer-*`
+# (lane E3/112). Each verified file by file, not added up.
+# **83 -> 85 on 2026-09-12 (merge resolution, lane E4/116).** `+2` are
+# `98-arena-erklaert` and `99-arena-grenze` (this lane, counted above).
+# Provisional sum -- re-measured by the run below, not added up.
+MARKE_EMIT=85
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

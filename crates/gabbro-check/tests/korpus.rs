@@ -44,6 +44,10 @@ const BENANNT: &[&str] = &[
     // `N059` a foreign body in a library hull, `N060` a payload naming no
     // table, `N061` a direct call to a library function.
     "N069", "N059", "N060", "N061",
+    // Lane E4 («E4»): `N210` unusable arena bounds, `N211` a stale index,
+    // `N212` a missing `else` past the reservation, `N213` an undeclared
+    // arena, `N214` a place or index of another kind.
+    "N210", "N211", "N212", "N213", "N214",
     // Lane E3: `N200` a library function without its translator, `N201` a
     // second or dangling translator, `N202` a translator with effects,
     // `N203` one without `decreases`, `N204` one answering another type.

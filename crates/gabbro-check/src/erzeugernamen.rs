@@ -439,6 +439,19 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
         // A function, a constant and a `static` form nothing from their name -- but the name
         // enters the pool, because five of the nine measured collisions are exactly of that
         // shape: a second declaration spelling a suffix of the first.
+        // **«E4»:** the buffer struct is always emitted (`{A}_arena`), so it
+        // enters the pool; the storage (`{A}_arena_speicher`) is conditional
+        // on use and stays out, exactly like `{T}_speicher` above.
+        ItemArt::Arena(a) => {
+            let n = &a.name.text;
+            schiebe(
+                &mut v,
+                format!("{n}_arena"),
+                a.name.span,
+                "{Arena}_arena",
+                "the buffer struct".into(),
+            );
+        }
         ItemArt::Funktion(f) => {
             eigen(&mut v, f.name.text.clone(), f.name.span, "{fn}", "the function".into());
         }
