@@ -10621,6 +10621,10 @@ fn needs_saturation(baum: &Programm) -> bool {
             ExprArt::Ort(o) => suffixe(o),
             ExprArt::Alt(o) => suffixe(o),
             ExprArt::Ruf(r) => r.argumente.iter().any(expr),
+            // A library call carries raw region tokens beside its arguments;
+            // the region holds no Gabbro expression, so walking `args` answers
+            // the scan completely, exactly like an ordinary call's arguments.
+            ExprArt::LibraryCall(l) => l.args.iter().any(expr),
             ExprArt::Eingebaut(b) => match b.as_ref() {
                 Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => match t {
                     TypOderOrt::Ort(o) => suffixe(o),
@@ -10735,6 +10739,9 @@ fn needs_saturation(baum: &Programm) -> bool {
             }
             StmtArt::Return(e) => e.as_ref().is_some_and(expr),
             StmtArt::Ruf(r) => r.argumente.iter().any(expr),
+            // Same as the expression arm above: the region is raw tokens, the
+            // arguments are ordinary expressions.
+            StmtArt::LibraryCall(l) => l.args.iter().any(expr),
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }

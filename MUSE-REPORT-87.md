@@ -5,6 +5,28 @@ existed; this lane adds the surface: parsing needs nothing (see below), the
 checker types the seven calls, the emitter lowers them, probes pin all four
 halves. No Lean changes.
 
+## Reviewer follow-up (2026-09-12, after the merge)
+
+The reviewer (1) renumbered this lane's codes because master took them
+meanwhile: `M153`-`M156` are now `M157`-`M160`, `N057` is now `N058`
+(lane 64 owns `N057` for library calls, lane 88 owns `M153`/`M154` for the
+overflow operators); (2) merged current master into `muse/87` and resolved
+the one `namen.rs` conflict (both `intrinsik_name_vergeben` and
+`library_call_not_checked` are called in `pass`). All code, prose, Satz
+entries and tests below read under the new numbers unless stated otherwise.
+
+The merge broke the build in lane 88's `needs_saturation` walker
+(`emit.rs`): its `expr`/`stmt` matches predated lane 64's
+`StmtArt::LibraryCall` / `ExprArt::LibraryCall`. Fixed with two arms that
+walk `l.args` like a call's arguments (the raw region holds no Gabbro
+expression, so that answers the scan completely -- same pattern as
+`lib.rs:748` and `emit.rs:3390`). Lane 88's new `BinOp` variants
+(`PlusWrap`, `MinusWrap`, `MalWrap`, `SchiebLinksWrap`, `PlusSat`) needed no
+change on this lane's side: none of the lane-87 functions matches on `BinOp`
+(zero occurrences; binary operators reach the intrinsics only through
+`wert_ctyp`/`ausdruck`, which are operator-generic). `./cargo-pruef` green
+again afterwards (exit 0, 0 failing; rechenwerk 162/162).
+
 ## What was built
 
 **Surface: no new words, no grammar change.** The seven intrinsics
