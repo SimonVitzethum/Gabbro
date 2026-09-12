@@ -2539,7 +2539,7 @@ fn faellt_genau(quelle: &str, erwartet: &[&str]) {
     soll.sort_unstable();
     assert_eq!(
         gefallen, soll,
-        "genau {soll:?} erwartet, gefallen ist {gefallen:?}\n{quelle}"
+        "expected exactly {soll:?}, got {gefallen:?}\n{quelle}"
     );
 }
 
