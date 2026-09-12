@@ -1,0 +1,41 @@
+-- 101 -- **The remaining profile keys, and a library requiring keyed modes only.**
+--
+-- Lane E6 beside `beispiele/100`: the profile carries the two keys `100`
+-- leaves out (`memory_model`, `interrupt_routing`), and the library
+-- requires keyed entries without any `assume` reference. Every rule stays
+-- silent here as well -- no declaration is ambiguous, every requirement is
+-- covered, and the unit names no machine its profile could contradict.
+
+module beispiel::profil_schluessel {
+
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+
+module dsp {
+
+requires profile {
+    memory_model c11;
+    interrupt_routing fest;
+};
+
+pub library fn filter(n : u32) -> u32 payload KernelTab
+    requires n <= 64
+    ensures result == n
+    effects { pure }
+    costs <= 4 ops
+{
+    return n;
+}
+
+}
+
+profile {
+    arch x86_64;
+    memory_model c11;
+    interrupt_routing fest;
+};
+
+}

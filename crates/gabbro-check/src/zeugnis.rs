@@ -209,6 +209,18 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "stands as an assumption in the head of the artefact, not as code (SYNTAX.md 12)",
     },
     Posten {
+        konstrukt: "profile",
+        traegt: Traegt::Geloescht,
+        grund: "the one hardware profile of the program (SYNTAX.md 12.2): its entries \
+                are manifest lines (`manifest::profil_und_bedarf`), not code",
+    },
+    Posten {
+        konstrukt: "requires profile",
+        traegt: Traegt::Geloescht,
+        grund: "what a library asks of the profile (SYNTAX.md 12.2): name references \
+                held by linking (`N217`), manifest lines, not code",
+    },
+    Posten {
         konstrukt: "syscall",
         traegt: Traegt::Fremd,
         grund: "the USER side is generated -- the stub (inline `syscall` with the declared \
@@ -635,6 +647,11 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
+        // **Lane E6:** the profile and its requirements lower to no C --
+        // their entries are manifest lines (`manifest::profil_und_bedarf`),
+        // booked here like the assumptions beside them.
+        ItemArt::Profil(_) => zaehle(&mut e, "profile"),
+        ItemArt::ProfilBedarf(_) => zaehle(&mut e, "requires profile"),
         ItemArt::Reason(_) => zaehle(&mut e, "reason"),
         ItemArt::Rcu(r) => {
             zaehle(&mut e, "rcu");
@@ -856,6 +873,10 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Gruppe(_) => "group",
         // **Lane C, additive:** the new declaration reports its kind like every other.
         ItemArt::Concurrent(_) => "concurrent",
+        // **Lane E6, additive:** the profile blocks report their kind like
+        // every other -- the entries themselves are manifest lines.
+        ItemArt::Profil(_) => "profile",
+        ItemArt::ProfilBedarf(_) => "requires profile",
         // **Lane S6, additive:** a `syscall` lowers to its stub, so the
         // certificate books the kind beside the generated body -- the
         // counterpart line above carries what the stub assumes.

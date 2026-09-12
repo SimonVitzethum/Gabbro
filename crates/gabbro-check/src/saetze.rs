@@ -427,6 +427,102 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "counter-direction in `paesse.rs` (`bibliothek_direktruf_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1",
     },
+    // --- lane E6, 2026-09-12: the hardware profile and library requirements ------------
+    //
+    // **The checker half of `PLAN-ERWEITUNG.md` §0c.** The main program
+    // declares ONE hardware profile (`profile { … }`, SYNTAX.md §12.2); a
+    // library REQUIRES profile entries by reference (`requires profile
+    // { … }`). Five refusals hold the five things no ordinary check can:
+    // the key conflict (`N215`, the `einigung` half of `Profil.gut`), the
+    // same-named assumption with different content (`N216`, the
+    // `namensGleichheit` half), the requirement outside the profile
+    // (`N217`, linking as a subset check), the profile against the
+    // platform (`N218`: `fp_contract` other than `off` contradicts the
+    // float prelude binding `-ffp-contract=off`, an `arch` beside every
+    // declared machine), and the profile structure (`N219`: one profile
+    // per program, every reference resolving).
+    Satz {
+        name: "namen.profil_schluessel",
+        kennungen: &["N215"],
+        aussage: "Two keyed entries with one key and different values are \
+                  refused -- once per conflicting key and block, in `profile` \
+                  and in `requires profile` alike. Duplicates with one value \
+                  are silent: a set holds them once.",
+        vorbehalt: "The `einigung` half of `Profil.gut` \
+                    (`grammatik/Grammatik/Profil.lean`): contradictory modes \
+                    make every proof over the combined program vacuous, so the \
+                    refusal stands at the profile itself, never at the use.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/890` (conflicting keyed entries); \
+                      counter-direction in `paesse.rs` (`profil_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; PLAN-ERWEITUNG.md §0c",
+    },
+    Satz {
+        name: "namen.profil_namensgleichheit",
+        kennungen: &["N216"],
+        aussage: "A same-named assumption with different content is refused: \
+                  where an `assume <name>` reference in a profile block meets \
+                  two declarations under that name with different statements, \
+                  the reference is ambiguous and falls.",
+        vorbehalt: "The `namensGleichheit` half of `Profil.gut`: the profile \
+                    holds the NAME, so two statements under it are two \
+                    assumptions wearing one name. One declaration under the \
+                    name -- however often referenced -- stays silent.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/891` (same name, different statements); \
+                      counter-direction in `paesse.rs` (`profil_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; PLAN-ERWEITUNG.md §0c",
+    },
+    Satz {
+        name: "namen.profil_bindung",
+        kennungen: &["N217"],
+        aussage: "Linking refuses a library whose requirements are not in the \
+                  profile -- once per uncovered requirement. A keyed \
+                  requirement needs the key with the value; an `assume` \
+                  requirement needs a profile reference to a declaration with \
+                  the same name and content (`Profil.bindet`).",
+        vorbehalt: "Unit-wide: the unit IS the program, so a requirement in an \
+                    unused module is still a requirement. A requirement the \
+                    reference cannot resolve is not this rule but `N219`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/892` (requirement outside the profile); \
+                      the positive direction in `beispiele/100` (library \
+                      requiring a subset, clean) and in `paesse.rs` \
+                      (`profil_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; PLAN-ERWEITUNG.md §0c",
+    },
+    Satz {
+        name: "namen.profil_plattform",
+        kennungen: &["N218"],
+        aussage: "The profile is held against the platform: `fp_contract` \
+                  other than `off` contradicts the float prelude, which binds \
+                  `-ffp-contract=off` for every compiler (`PLAN-BITS.md` §5); \
+                  an `arch` the unit never declares contradicts the declared \
+                  machines. Without declared machines nothing is refused.",
+        vorbehalt: "The `arch` leg mirrors the `R16` shape of `annahme_arch`: \
+                    a unit with no machine named constrains no machine. The \
+                    `fp_contract` leg has no such exit -- the prelude binds \
+                    the flag unconditionally.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/893` (`fp_contract fast` against the \
+                      prelude); counter-direction in `paesse.rs` (`profil_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; PLAN-BITS.md §5",
+    },
+    Satz {
+        name: "namen.profil_gestalt",
+        kennungen: &["N219"],
+        aussage: "One hardware profile per program: the second `profile` \
+                  block falls, never silently merged. An `assume <name>` \
+                  reference resolving to no declared assumption falls beside \
+                  it -- a link against air.",
+        vorbehalt: "Two arms, one code, like `N065`'s three: both refuse the \
+                    profile's FORM, and neither judges its content. An empty \
+                    `profile {}` passes here -- vacuous, not contradictory.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/894` (second profile block); \
+                      counter-direction in `paesse.rs` (`profil_*`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; PLAN-ERWEITUNG.md §0c",
+    },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
     // **What bought the clause was a CONJUNCTION, not a missing keyword.** `dma_kohaerent`

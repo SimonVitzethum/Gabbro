@@ -654,7 +654,11 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
         | ItemArt::Entrust(_)
         // **Lane C: `concurrent` declares no type expression** -- paths only.
         | ItemArt::Boot(_)
-        | ItemArt::Concurrent(_) => {}
+        // **Lane E6: a profile block declares modes and references, no type
+        // expression** -- keys and `assume` names, never types.
+        | ItemArt::Concurrent(_)
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_) => {}
     }
 }
 
@@ -956,6 +960,9 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
         // **These carry no predicate of their own**, and each stands here by name so that a
         // clause added to one of them breaks the build instead of disappearing.
         // **Lane C: `concurrent` carries paths, no predicate.**
+        // **Lane E6: a profile block carries modes and references, no
+        // predicate** -- the referenced assumptions' own clauses are
+        // collected at their declarations, not at the reference.
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Konst(_)
@@ -970,6 +977,8 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
         | ItemArt::Boot(_)
+        | ItemArt::Profil(_)
+        | ItemArt::ProfilBedarf(_)
         | ItemArt::Concurrent(_) => {}
     }
     aus

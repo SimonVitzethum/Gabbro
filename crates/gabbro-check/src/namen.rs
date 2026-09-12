@@ -39,6 +39,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
     bibliothek_pruefen(baum, absagen);
+    profil_pruefen(baum, absagen);
     intrinsik_name_vergeben(baum, absagen);
 }
 
@@ -3828,6 +3829,328 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                      has no region, so it would run the body with no payload",
                 ),
             );
+        }
+    }
+}
+
+/// **`N215` -- two keyed entries, one key, different values; `N216` -- a
+/// same-named assumption with different content; `N217` -- a library
+/// requirement outside the program's profile; `N218` -- the profile against
+/// the platform; `N219` -- profile structure** (lane E6, checker half).
+///
+/// The main program declares ONE hardware profile (`profile { … }`); a
+/// library REQUIRES profile entries by reference (`requires profile { … }`),
+/// never by a copy of their text (`PLAN-ERWEITUNG.md` §0c). Consistency is a
+/// subset check against the one set -- decidable and cheap -- plus the two
+/// halves of `Profil.gut` (`grammatik/Grammatik/Profil.lean`): key agreement
+/// (`einigung`, `N215`) and same-name content agreement
+/// (`namensGleichheit`, `N216`).
+///
+/// * unit-wide, module by module: the unit IS the program, so a requirement
+///   in an unused module is still a requirement -- linking sees the whole
+///   unit, not the call graph;
+/// * every diagnostic fires once per site: one `N215` per conflicting key
+///   and block, one `N217` per uncovered requirement, one `N218` per
+///   contradicting entry.
+fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
+    // The blocks with their modules, and every declared `assume` by
+    // qualified name -- owned by `Umgebung`, in source order, so two
+    // conflicts come out in the same order on every run.
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let profile = &u.profile;
+    let bedarfe = &u.bedarfe;
+    let annahmen = &u.annahmen;
+    /// The content of a declared assumption: text, class and machine.
+    /// Two declarations with one name and different content are the
+    /// `N216` shape -- the checker never compares prose, only this triple.
+    fn inhalt(a: &Assume) -> (String, String, Option<String>) {
+        let klasse = match &a.klasse {
+            AnnahmeKlasse::Falsifizierbar(s) => format!("falsifier {}", s.text),
+            AnnahmeKlasse::NichtFalsifizierbar(g) => format!("unfalsifiable {}", g.text),
+        };
+        (
+            a.text.text.clone(),
+            klasse,
+            a.arch.as_ref().map(|x| x.text.clone()),
+        )
+    }
+    /// The declaration an `assume <name>` reference resolves to from its
+    /// block's module -- own module, enclosing, root, `use` lines, the
+    /// same candidate order every other name uses.
+    fn loese_auf<'a>(
+        u: &crate::umgebung::Umgebung,
+        annahmen: &'a HashMap<String, Assume>,
+        modul: &str,
+        name: &str,
+    ) -> Option<&'a Assume> {
+        u.kandidaten_aufloesbar(modul, name)
+            .into_iter()
+            .find_map(|k| annahmen.get(&k))
+    }
+    // `N219`: the second `profile` block -- one hardware profile per
+    // program (`PLAN-ERWEITUNG.md` §0c, point 2). The first block stands;
+    // every further one falls here, never silently merged.
+    for (_, b) in profile.iter().skip(1) {
+        absagen.schiebe(
+            Absage::fehler(
+                "N219",
+                b.span,
+                "a second `profile` block -- one hardware profile per program",
+            )
+            .mit_notiz(
+                "consistency is a subset check against ONE set \
+                 (PLAN-ERWEITUNG.md §0c): two profiles are two sets, and \
+                 merging them silently would hide exactly the conflict \
+                 `N215` exists to refuse",
+            ),
+        );
+    }
+    // `N215`: two keyed entries with one key and different values, per
+    // block. Duplicates with one value are silent -- a set holds them
+    // once, like `manifest::vereinige` holds one line.
+    for (modul, b) in profile.iter().chain(bedarfe.iter()) {
+        let mut gesehen: HashMap<ProfilSchluessel, &Ident> = HashMap::new();
+        for e in &b.eintraege {
+            let ProfilEintrag::Modus { schluessel, wert, span } = e else {
+                continue;
+            };
+            match gesehen.get(schluessel) {
+                None => {
+                    gesehen.insert(*schluessel, wert);
+                }
+                Some(erste) if erste.text == wert.text => {}
+                Some(erste) => {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N215",
+                            *span,
+                            format!(
+                                "two keyed entries with one key and different values: \
+                                 `{}` holds `{}` and `{}`",
+                                schluessel.text(),
+                                erste.text,
+                                wert.text
+                            ),
+                        )
+                        .mit_notiz(format!(
+                            "in {} -- contradictory modes make every proof over \
+                             the combined program vacuous (PLAN-ERWEITUNG.md §0c)",
+                            if modul.is_empty() {
+                                "this unit".to_string()
+                            } else {
+                                format!("module `{modul}`")
+                            }
+                        )),
+                    );
+                }
+            }
+        }
+    }
+    // `N219`/`N216` over every `assume <name>` reference: the name must
+    // resolve to a declared assumption, and one name must not carry two
+    // contents. The check runs over profile and requirements alike -- a
+    // requirement naming nothing is a link against air.
+    for (modul, b) in profile.iter().chain(bedarfe.iter()) {
+        for e in &b.eintraege {
+            let ProfilEintrag::Annahme { name, span } = e else {
+                continue;
+            };
+            if loese_auf(&u, annahmen, modul, &name.text).is_none() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N219",
+                        *span,
+                        format!(
+                            "`assume {}` names no declared assumption",
+                            name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "a profile entry references the declared assumption, \
+                         never a copy of its text (PLAN-ERWEITUNG.md §0c) -- \
+                         and there is no declaration here to reference",
+                    ),
+                );
+                continue;
+            }
+            // Every declaration under this short name, unit-wide: two
+            // contents under one name make the reference ambiguous.
+            let mut inhalte: Vec<(&str, (String, String, Option<String>))> = annahmen
+                .iter()
+                .filter(|(q, _)| crate::umgebung::kurzname(q.as_str()) == name.text)
+                .map(|(q, a)| (q.as_str(), inhalt(a)))
+                .collect();
+            inhalte.sort();
+            inhalte.dedup_by(|a, b| a.1 == b.1);
+            if inhalte.len() > 1 {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N216",
+                        *span,
+                        format!(
+                            "a same-named assumption with different content: \
+                             `{}` is declared {} with different statements",
+                            name.text,
+                            inhalte
+                                .iter()
+                                .map(|(q, _)| format!("`{q}`"))
+                                .collect::<Vec<_>>()
+                                .join(" and ")
+                        ),
+                    )
+                    .mit_notiz(
+                        "the profile holds the NAME, so two statements under \
+                         it are two assumptions wearing one name -- linking \
+                         would prove under either (PLAN-ERWEITUNG.md §0c)",
+                    ),
+                );
+            }
+        }
+    }
+    // `N217`: linking -- every requirement of every library stands in the
+    // program's profile with identical content. A keyed requirement needs
+    // the key with the value; an `assume` requirement needs a reference to
+    // a declaration with the same name and content (`Profil.bindet`).
+    let profil_eintraege: &[ProfilEintrag] = match profile.first() {
+        Some((_, b)) => &b.eintraege,
+        None => &[],
+    };
+    for (modul, b) in bedarfe.iter() {
+        let bibliothek = if modul.is_empty() {
+            "this unit".to_string()
+        } else {
+            format!("module `{modul}`")
+        };
+        for e in &b.eintraege {
+            match e {
+                ProfilEintrag::Modus { schluessel, wert, span } => {
+                    let gedeckt = profil_eintraege.iter().any(|p| match p {
+                        ProfilEintrag::Modus { schluessel: k, wert: v, .. } => {
+                            *k == *schluessel && v.text == wert.text
+                        }
+                        ProfilEintrag::Annahme { .. } => false,
+                    });
+                    if !gedeckt {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N217",
+                                *span,
+                                format!(
+                                    "library {bibliothek} requires `{} {}`, and the \
+                                     program profile holds no such entry",
+                                    schluessel.text(),
+                                    wert.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "linking refuses a library whose requirements are \
+                                 not in the profile -- the main program must add \
+                                 them to its profile, where they meet everything \
+                                 else (PLAN-ERWEITUNG.md §0c)",
+                            ),
+                        );
+                    }
+                }
+                ProfilEintrag::Annahme { name, span } => {
+                    // The requirement's own declaration, resolved from the
+                    // library: content the profile must agree with.
+                    let gefordert = loese_auf(&u, annahmen, modul, &name.text)
+                        .map(inhalt);
+                    // The profile half resolves from the profile's own
+                    // module, not from the library's.
+                    let profil_modul: &str =
+                        profile.first().map(|(m, _)| m.as_str()).unwrap_or("");
+                    let gedeckt = match gefordert {
+                        None => true,
+                        Some(inhalt_fordert) => profil_eintraege.iter().any(|p| match p {
+                            ProfilEintrag::Annahme { name: n, .. } => {
+                                n.text == name.text
+                                    && loese_auf(&u, annahmen, profil_modul, &n.text)
+                                        .is_some_and(|a| inhalt(a) == inhalt_fordert)
+                            }
+                            ProfilEintrag::Modus { .. } => false,
+                        }),
+                    };
+                    // An unresolvable requirement is already `N219` above;
+                    // here only the uncovered one falls.
+                    if !gedeckt {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N217",
+                                *span,
+                                format!(
+                                    "library {bibliothek} requires `assume {}`, and the \
+                                     program profile holds no such entry",
+                                    name.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "linking refuses a library whose requirements are \
+                                 not in the profile -- the main program must add \
+                                 them to its profile, where they meet everything \
+                                 else (PLAN-ERWEITUNG.md §0c)",
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+    }
+    // `N218`: the profile against the platform. `fp_contract` other than
+    // `off` contradicts the float prelude, which binds
+    // `-ffp-contract=off` for every compiler (`PLAN-BITS.md` §5); an
+    // `arch` the unit never declares contradicts the declared machines.
+    // Without `arch` declarations nothing is refused (R16): a unit with no
+    // machine named constrains no machine.
+    if let Some((_, b)) = profile.first() {
+        let archs = crate::deklarierte_architekturen(baum);
+        for e in &b.eintraege {
+            let ProfilEintrag::Modus { schluessel, wert, span } = e else {
+                continue;
+            };
+            match schluessel {
+                ProfilSchluessel::FpKontraktion if wert.text != "off" => {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N218",
+                            *span,
+                            format!(
+                                "`fp_contract {}` contradicts the float prelude, which \
+                                 binds `-ffp-contract=off`",
+                                wert.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "the prelude carries no pragma and the manifest \
+                             carries the flag for every compiler \
+                             (PLAN-BITS.md §5) -- a profile promising \
+                             contraction re-opens what the prelude closed",
+                        ),
+                    );
+                }
+                ProfilSchluessel::Arch
+                    if !archs.is_empty() && !archs.contains(&wert.text) =>
+                {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N218",
+                            *span,
+                            format!(
+                                "`arch {}` names a machine this unit never declares \
+                                 ({})",
+                                wert.text,
+                                archs.join(", ")
+                            ),
+                        )
+                        .mit_notiz(
+                            "the profile is the one set of hardware assumptions \
+                             the program runs under -- an `arch` beside every \
+                             declared one is a second machine wearing one name",
+                        ),
+                    );
+                }
+                _ => {}
+            }
         }
     }
 }

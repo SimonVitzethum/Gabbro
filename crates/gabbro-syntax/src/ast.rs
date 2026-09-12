@@ -94,6 +94,18 @@ pub enum ItemArt {
     /// `or R` channel) and either a named assumption (`assume … falsifier …`) or a
     /// kernel pairing (`kernel <path>`, refused until lane S6's stub lands).
     Syscall(SyscallDecl),
+    /// **`profile { … }` -- the ONE hardware profile of the program** («E6»).
+    ///
+    /// The one set of hardware assumptions the whole program runs under
+    /// (`PLAN-ERWEITUNG.md` §0c): keyed mode entries plus references to
+    /// declared `assume` items. At most one block per unit (`N219`).
+    Profil(ProfilBlock),
+    /// **`requires profile { … }` -- what a library asks of the profile** («E6»).
+    ///
+    /// A library does not assert assumptions; it requires profile entries
+    /// by reference. Linking refuses a requirement the program's profile
+    /// does not carry (`N217`).
+    ProfilBedarf(ProfilBlock),
 }
 
 impl ItemArt {
@@ -125,6 +137,9 @@ impl ItemArt {
             ItemArt::Entrust(e) => Some(&e.name),
             ItemArt::Boot(b) => Some(&b.name),
             ItemArt::Syscall(s) => Some(&s.name),
+            // **«E6»:** a profile block carries entries, not a name -- like
+            // `use` and `concurrent` it names nothing into the scope.
+            ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => None,
         }
     }
 
@@ -156,6 +171,8 @@ impl ItemArt {
             ItemArt::Entrust(_) => "entrust",
             ItemArt::Boot(_) => "boot",
             ItemArt::Syscall(_) => "syscall",
+            ItemArt::Profil(_) => "profile",
+            ItemArt::ProfilBedarf(_) => "requires profile",
         }
     }
 }
@@ -2121,4 +2138,64 @@ pub struct SyscallDecl {
 pub enum SyscallPaarung {
     Annahme { annahme: Ident, klasse: AnnahmeKlasse },
     Kernel { pfad: Pfad },
+}
+
+// ---------------------------------------------------------------------------------------
+// E6. The hardware profile and library requirements
+// ---------------------------------------------------------------------------------------
+
+/// **The fixed key set of the hardware profile (lane E6, «E6»).**
+///
+/// Mirrors `ProfilSchluessel` in `grammatik/Grammatik/Profil.lean`
+/// (`PLAN-ERWEITUNG.md` §0c, point 3): an assumption fixing a mode or a
+/// resource names its key and value. `arch` reuses the existing word; the
+/// other four are words of their own so a typo falls at the reader, not in
+/// a string comparison nobody reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProfilSchluessel {
+    Arch,
+    Rundung,
+    FpKontraktion,
+    SpeicherModell,
+    InterruptRouting,
+}
+
+impl ProfilSchluessel {
+    /// The spelling in the source -- the word the reader matched.
+    pub const fn text(self) -> &'static str {
+        match self {
+            ProfilSchluessel::Arch => "arch",
+            ProfilSchluessel::Rundung => "rounding",
+            ProfilSchluessel::FpKontraktion => "fp_contract",
+            ProfilSchluessel::SpeicherModell => "memory_model",
+            ProfilSchluessel::InterruptRouting => "interrupt_routing",
+        }
+    }
+}
+
+/// One entry of a `profile` or `requires profile` block: a keyed mode
+/// assumption (`arch x86_64;`) or a reference to a declared `assume` item
+/// (`assume <name>;`), never a copy of its text (`PLAN-ERWEITUNG.md` §0c,
+/// point 2).
+#[derive(Debug, Clone)]
+pub enum ProfilEintrag {
+    Modus { schluessel: ProfilSchluessel, wert: Ident, span: Span },
+    Annahme { name: Ident, span: Span },
+}
+
+impl ProfilEintrag {
+    pub fn span(&self) -> Span {
+        match self {
+            ProfilEintrag::Modus { span, .. } => *span,
+            ProfilEintrag::Annahme { span, .. } => *span,
+        }
+    }
+}
+
+/// The shared shape of `profile { … }` and `requires profile { … }`:
+/// the entries in source order with the block's site.
+#[derive(Debug, Clone)]
+pub struct ProfilBlock {
+    pub eintraege: Vec<ProfilEintrag>,
+    pub span: Span,
 }

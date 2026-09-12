@@ -97,7 +97,15 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 #
 # **229 -> 231 on 2026-09-12 («E2»).** `library` + `payload` arrive with one
 # reason block above EACH entry, so the second mark below does not move.
-MARKE_WOERTER = 231
+#
+# **231 -> 236 on 2026-09-12 («E6»).** `profile` + `rounding` + `fp_contract`
+# + `memory_model` + `interrupt_routing` name the hardware profile
+# (`dokumente/SYNTAX.md` §12.2, `PLAN-ERWEITUNG.md` §0c): no existing form
+# carries the fixed key set -- an identifier for a key would accept any
+# spelling and move the set into a string comparison nobody reads -- and
+# the reason stands above EACH entry in `kw.rs`. The second mark does NOT
+# move; the third does not move either (all five are `ctx`).
+MARKE_WOERTER = 236
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #
