@@ -5051,12 +5051,14 @@ theorem ruf_fortsetzung :
   - `traverse`: after the repair (`dannTrav` reads nothing, `travNext`/
     `travDone`/`dannLeaveTrav` read exactly where `traverseLauf` does, a
     false read fires no rule) the rules agree with `traverseLauf`
-    (`trav_falsch_steht`), but the loop is not simulated here.
-  - `retry`, `forever`, `leave`, `next`: the loop shims and the peel rules
-    are not simulated (no RufRest invariant for `wiederRest`/`ewigRest`,
-    no abrupt-exit simulation). Not a finding; not done. (The former gap
-    "a `sonst` ending in `ret` inside a loop body stalls" is closed: `rueck`
-    and `rueckCons` now accept any loop level.)
+    (`trav_falsch_steht`); the loop is simulated in `RufAdaequatRufG.lean`
+    (`travOkR`/`travRetR`, with bounded `retry`: `retryOkR`/`retryRetR`),
+    not in this file's fragment.
+  - `forever`, `leave`, `next`: the peel rules and the abrupt-exit shims
+    are not simulated (no RufRest invariant for `ewigRest`, no abrupt-exit
+    simulation). Not a finding; not done. (The former gap "a `sonst` ending
+    in `ret` inside a loop body stalls" is closed: `rueck` and `rueckCons`
+    now accept any loop level.)
   - `retGrund`, `Endblock.retGrund`, `Endblock.leave`/`next`, and every
     `sonst` branch that does not end in `ret` at loop level `false`
     (machine has no grund rule; `leave`/`next` at `ende` are G's CUTS).
