@@ -1608,7 +1608,7 @@ int main(void) {
 # entfallen -- ein Zaehler erbt die Schranke seiner Domaene, und die Zeile war ein Ritual.
 # *Eine direkte Form weniger heisst hier: eine Klempnereizeile weniger, nicht eine Luecke.*
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
-     's/; i++)/; i += 2)/' \
+     's/; i += 1)/; i += 2)/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
