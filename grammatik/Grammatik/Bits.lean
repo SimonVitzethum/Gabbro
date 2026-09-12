@@ -844,4 +844,50 @@ def Zahl.rotr (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
           < ((2 ^ (w + 1) : Nat) : Int) := Int.ofNat_lt.mpr hlt
       omega⟩
 
+/-- 256-power / 2-power bridges for the three widths. -/
+theorem pow256_eq_pow2_16 : (256 : Nat) ^ 2 = 2 ^ 16 := by decide
+
+theorem pow256_eq_pow2_32 : (256 : Nat) ^ 4 = 2 ^ 32 := by decide
+
+theorem pow256_eq_pow2_64 : (256 : Nat) ^ 8 = 2 ^ 64 := by decide
+
+/-- `Zahl.bswap16`: byte reversal on `u16`. -/
+def Zahl.bswap16 (x : Zahl 0 ((2 : Int) ^ 16 - 1)) :
+    Zahl 0 ((2 : Int) ^ 16 - 1) :=
+  ⟨((bswap16n x.n.toNat : Nat) : Int), by
+    have := x.lo_le; simp,
+   by
+    have hlt : bswap16n x.n.toNat < 256 ^ 2 := bswap16n_lt _
+    rw [pow256_eq_pow2_16] at hlt
+    have hcast : ((2 ^ 16 : Nat) : Int) = (2 : Int) ^ 16 := by simp
+    have hltI : ((bswap16n x.n.toNat : Nat) : Int) < ((2 ^ 16 : Nat) : Int) :=
+      Int.ofNat_lt.mpr hlt
+    omega⟩
+
+/-- `Zahl.bswap32`: byte reversal on `u32`. -/
+def Zahl.bswap32 (x : Zahl 0 ((2 : Int) ^ 32 - 1)) :
+    Zahl 0 ((2 : Int) ^ 32 - 1) :=
+  ⟨((bswap32n x.n.toNat : Nat) : Int), by
+    have := x.lo_le; simp,
+   by
+    have hlt : bswap32n x.n.toNat < 256 ^ 4 := bswap32n_lt _
+    rw [pow256_eq_pow2_32] at hlt
+    have hcast : ((2 ^ 32 : Nat) : Int) = (2 : Int) ^ 32 := by simp
+    have hltI : ((bswap32n x.n.toNat : Nat) : Int) < ((2 ^ 32 : Nat) : Int) :=
+      Int.ofNat_lt.mpr hlt
+    omega⟩
+
+/-- `Zahl.bswap64`: byte reversal on `u64`. -/
+def Zahl.bswap64 (x : Zahl 0 ((2 : Int) ^ 64 - 1)) :
+    Zahl 0 ((2 : Int) ^ 64 - 1) :=
+  ⟨((bswap64n x.n.toNat : Nat) : Int), by
+    have := x.lo_le; simp,
+   by
+    have hlt : bswap64n x.n.toNat < 256 ^ 8 := bswap64n_lt _
+    rw [pow256_eq_pow2_64] at hlt
+    have hcast : ((2 ^ 64 : Nat) : Int) = (2 : Int) ^ 64 := by simp
+    have hltI : ((bswap64n x.n.toNat : Nat) : Int) < ((2 ^ 64 : Nat) : Int) :=
+      Int.ofNat_lt.mpr hlt
+    omega⟩
+
 end Gabbro.Grammatik
