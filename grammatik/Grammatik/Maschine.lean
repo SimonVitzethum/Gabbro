@@ -3921,3 +3921,191 @@ theorem stabil_aus_lauf
 
 end Gabbro.Grammatik
 
+/-! ## 22. The execution link, memory-preserving fragment
+    (`hBlattAll_speicherfest_aus_feuerung`)
+
+    BEFUND (rank HOCH, two checkers): `hBlattAll` per leaf (execution link) is
+    open -- the uniform per-firing preservation over every reachable
+    intermediate machine (the `spec_aus_lauf_voll` / `stabil_aus_lauf` premise,
+    re-exported by the goal variant `ziel_nutzer_last_aus_pc_stabil`) has no
+    discharger.
+
+    What is proved (no `sorry`):
+
+    - `Stmt.speicherfest`: the memory-preserving leaf test. The nine leaves
+      whose every `some`-valued `execStmt` outcome keeps `speicher` (slots and
+      globals) test true: `assignVar` and `regSchreib` (read into the
+      environment / the device, trace grows, memory stands), `transition`
+      (device mirror step, the world passes through untouched), `advances`
+      and `retires` (mark bookkeeping, `.ok` on the input world), `ret`
+      (reads only, `.zurueck` on the read world), `retGrund`, `leave`, `next`
+      (pass-through outcomes on the input world). Everything else tests false:
+      the four writes (`assignSlot`, `assignDurch`, `assignGlob`,
+      `schreibBytes`), the conditional write (`uebergang`), the oracle answer
+      (`axiomCall`), the global publish (`publish`), and all eleven compounds.
+    - `speicherfest_speicher`: firing evidence for a `speicherfest` leaf keeps
+      live memory. Case analysis on the statement: excluded shapes die at the
+      test (`simp [Stmt.speicherfest] at hFest`); the nine included shapes
+      compute through `execStmt` / `Ausgang.welt` / `Option.some.injEq` to a
+      read-only or unchanged world, whose `speicher` is the input's by
+      construction (`lese` / `merke` extend only the trace, §6).
+    - `hBlattAll_speicherfest_aus_feuerung`: the `hBlattAll` conclusion for the
+      memory-preserving fragment, uniformly over every intermediate machine,
+      from firing evidence (`hstep`) plus memory-only contracts (`hMem`):
+      memory constancy bridges both the `Pre` and the `Post` iff. No
+      reachability is owed -- a pure `execStmt` fact holds at every machine,
+      reachable or not, so the uniform shape is the easy direction: each
+      `hBlattAll` application site whose fired leaf tests `speicherfest`
+      discharges through this theorem instead of a posit.
+
+    Coverage (exactly): the nine memory-preserving leaf shapes, every thread,
+    every intermediate machine. Every premise is load-bearing: `O` / `passes`
+    feed the firing in `hstep`; `Pre` / `Post` / `fn` name the conclusion;
+    `hMem` bridges both iffs; `M₀` / `g` supply the two worlds; `s` / `ρ` /
+    `hFest` select the fragment and compute; `σ'` / `hstep` carry the firing.
+    Deleting any premise breaks elaboration. There is no `have _ :=`
+    discard, no `sorry` / `admit` / `axiom`, and no bare `Prop` slot.
+
+    Remainder (booked, not hidden): the seven memory-changing / oracle leaves
+    (`assignSlot`, `assignDurch`, `assignGlob`, `schreibBytes`, `uebergang`,
+    `axiomCall`, `publish`) stay owed per program and contract -- the
+    sequential-verification duty. The full `hBlattAll` over abstract
+    `Pre` / `Post` (which takes no memory hypothesis) is unprovable, not
+    merely unproved: a writing leaf can break an arbitrary memory predicate,
+    so no induction over `PCSpur` can conjure it. The step lemma's universal
+    `hBlatt` premise still owes those seven leaves; `axiomCall` stays with
+    S13 (arbitrary oracle answers); the `hMem` discharge per contract and
+    head validity from thread entry stay where §21 books them.
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **Memory-preserving leaves.** The nine leaves whose every `some`-valued
+    `execStmt` outcome keeps `speicher`: reads and pass-through outcomes only,
+    never a slot / global write and never an oracle answer. -/
+def Stmt.speicherfest : Stmt D V l Γ Λ Λ' → Bool
+  | .assignVar _ _ => true
+  | .regSchreib _ _ _ => true
+  | .transition _ _ _ _ _ _ _ => true
+  | .advances _ _ _ _ => true
+  | .retires _ _ _ _ => true
+  | .ret _ _ => true
+  | .retGrund _ _ => true
+  | .leave _ => true
+  | .next _ => true
+  | _ => false
+
+/-- **Firing a memory-preserving leaf keeps live memory.** From the firing
+    evidence alone: excluded shapes die at the `speicherfest` test, the nine
+    included shapes compute to a read-only or unchanged world. -/
+theorem speicherfest_speicher
+    (O : Orakel D) (passes : Nat)
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hFest : s.speicherfest = true)
+    (σ σ' : World D)
+    (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ') :
+    σ'.speicher = σ.speicher := by
+  cases s with
+  | assignSlot t f i e hw hL =>
+      simp [Stmt.speicherfest] at hFest
+  | assignDurch p t ht f i e hw hL =>
+      simp [Stmt.speicherfest] at hFest
+  | assignGlob g e hw hL =>
+      simp [Stmt.speicherfest] at hFest
+  | schreibBytes t f hf n i hlo hhi e hw hL =>
+      simp [Stmt.speicherfest] at hFest
+  | assignVar x e =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | uebergang t f hτ i von nach hn he hw hL =>
+      simp [Stmt.speicherfest] at hFest
+  | ite c t e =>
+      simp [Stmt.speicherfest] at hFest
+  | onOption o p a =>
+      simp [Stmt.speicherfest] at hFest
+  | onTag v arms =>
+      simp [Stmt.speicherfest] at hFest
+  | onGrund r arms =>
+      simp [Stmt.speicherfest] at hFest
+  | call f args hp hr =>
+      simp [Stmt.speicherfest] at hFest
+  | callInd p args hp hr =>
+      simp [Stmt.speicherfest] at hFest
+  | locks L hr body =>
+      simp [Stmt.speicherfest] at hFest
+  | breaking i body =>
+      simp [Stmt.speicherfest] at hFest
+  | traverse t inv body =>
+      simp [Stmt.speicherfest] at hFest
+  | retry n bis body ueberlauf =>
+      simp [Stmt.speicherfest] at hFest
+  | forever a inv body =>
+      simp [Stmt.speicherfest] at hFest
+  | axiomCall a args h hw hg =>
+      simp [Stmt.speicherfest] at hFest
+  | regSchreib r hk e =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | transition r hk m hm hl maske bits =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | publish g e payload hp hw hL =>
+      simp [Stmt.speicherfest] at hFest
+  | advances m a h hs =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retires m s h a =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | ret e hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retGrund r hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | leave h =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | next h =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+
+#print axioms Gabbro.Grammatik.speicherfest_speicher
+
+/-- **Per-firing preservation for memory-preserving leaves, uniformly over
+    every intermediate machine.** The `hBlattAll` conclusion for the
+    `speicherfest` fragment, from firing evidence plus memory-only contracts:
+    the fired leaf keeps live memory (`speicherfest_speicher`), and contracts
+    read only live memory (`hMem`), so `Pre` / `Post` survive with no user
+    logic owed. -/
+theorem hBlattAll_speicherfest_aus_feuerung
+    (O : Orakel D) (passes : Nat)
+    (Pre Post : D.Fn → World D → Prop) (fn : D.Fn)
+    (hMem : SpeicherVertrag Pre Post fn)
+    (M₀ : GenMaschine D) (g : Faden)
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hFest : s.speicherfest = true)
+    (σ' : World D)
+    (hstep : (execStmt O passes keinRuf s (M₀.weltVon g) ρ).welt = some σ') :
+    (Pre fn (M₀.weltVon g) ↔ Pre fn σ') ∧ (Post fn (M₀.weltVon g) ↔ Post fn σ') := by
+  have hspeicher : σ'.speicher = (M₀.weltVon g).speicher :=
+    speicherfest_speicher O passes V l Γ Λ Λ' s ρ hFest _ _ hstep
+  exact ⟨hMem.memPre _ _ hspeicher.symm, hMem.memPost _ _ hspeicher.symm⟩
+
+#print axioms Gabbro.Grammatik.hBlattAll_speicherfest_aus_feuerung
+
+end Gabbro.Grammatik
+
