@@ -51,7 +51,7 @@ fn doppelte_deklaration_faellt() {
 /// `messung/proben/absenkung/`). The hosted entry -- a `pub fn main()` in a
 /// `program` unit, held by the entry rule of `gabbro build` -- is C's `main`
 /// and links; anything else carrying the name collides with it. The poison
-/// side is `beispiele/gift/796-eine-main-die-kein-eintritt-ist.gab`; the
+/// side is `beispiele/gift/798-eine-main-die-kein-eintritt-ist.gab`; the
 /// positive side is `beispiele/63-druckt.gab`, whose `pub fn main` must stay
 /// silent here (the entry rule, not this pass, owns that shape).
 #[test]

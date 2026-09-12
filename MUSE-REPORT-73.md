@@ -97,7 +97,7 @@ below the `main` half changed in round 2.
   region must be re-anchored to `absenkung_haupt` on the next lexer run (the
   counts themselves do not move: the rename changes only the definition line,
   which carries no `;`).
-- New poison probe `beispiele/gift/796-eine-main-die-kein-eintritt-ist.gab`
+- New poison probe `beispiele/gift/798-eine-main-die-kein-eintritt-ist.gab`
   (`-- erwartet: N041`, private `fn main`).
 - New positive/shape probe `messung/proben/probe-retry-for73.gab` (retry wait
   checks clean, emits the counting `for` plus the trailing bound arm, no
@@ -199,5 +199,5 @@ below the `main` half changed in round 2.
 - Tests: `eine_main_die_kein_eintritt_ist_faellt` (`paesse.rs`),
   `while` assertions in `retry_teilt_das_budget_und_format_liest_bytes`
   (`rechenwerk.rs`).
-- Probes: `beispiele/gift/796-eine-main-die-kein-eintritt-ist.gab`,
+- Probes: `beispiele/gift/798-eine-main-die-kein-eintritt-ist.gab`,
   `messung/proben/probe-retry-for73.gab`.
