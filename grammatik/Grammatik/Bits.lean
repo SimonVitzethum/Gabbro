@@ -59,4 +59,106 @@ theorem clzn_log2n {w x : Nat} (hx0 : 0 < x) (hxW : x < 2 ^ (w + 1)) :
       omega
   omega
 
+/-! ## Trailing zeros: `ctz` with the dvd spec.
+
+    `ctzAux fuel x` recurses on `x / 2` with fuel `w + 1`; the spec is
+    `2 ^ r ∣ x` and `¬ 2 ^ (r+1) ∣ x`, which pins `r` uniquely. -/
+
+/-- Trailing-zero count, fuel-bounded recursion on `x / 2`. -/
+def ctzAux : Nat → Nat → Nat
+  | 0, _ => 0
+  | fuel + 1, x =>
+    if x = 0 then 0 else if x % 2 = 1 then 0 else 1 + ctzAux fuel (x / 2)
+
+/-- Trailing-zero count over width `W = w + 1`. -/
+def ctzn (w x : Nat) : Nat := ctzAux (w + 1) x
+
+theorem ctzAux_rw {fuel x : Nat} (hne : x ≠ 0) (heven : x % 2 = 0) :
+    ctzAux (fuel + 1) x = 1 + ctzAux fuel (x / 2) := by
+  simp [ctzAux, hne, heven]
+
+theorem ctzAux_spez (fuel x : Nat) (hx0 : 0 < x) (hxW : x < 2 ^ fuel) :
+    2 ^ ctzAux fuel x ∣ x ∧ ¬ 2 ^ (ctzAux fuel x + 1) ∣ x := by
+  induction fuel generalizing x with
+  | zero =>
+    simp at hxW
+    omega
+  | succ fuel ih =>
+    have hne : x ≠ 0 := by omega
+    have hcase : x % 2 = 1 ∨ x % 2 = 0 := by
+      rcases Nat.mod_two_eq_zero_or_one x with h | h
+      · exact Or.inr h
+      · exact Or.inl h
+    cases hcase with
+    | inl hodd =>
+      have hrw : ctzAux (fuel + 1) x = 0 := by simp [ctzAux, hodd, hne]
+      rw [hrw]
+      constructor
+      · simp
+      · intro hdvd
+        have hmod := (@Nat.dvd_iff_mod_eq_zero 2 x).mp hdvd
+        omega
+    | inr heven =>
+      have hx2 : 0 < x / 2 := Nat.div_pos (by omega) (by decide)
+      have hlt : x < 2 * 2 ^ fuel := by
+        have hps : 2 ^ (fuel + 1) = 2 ^ fuel * 2 := Nat.pow_succ 2 fuel
+        omega
+      have hxW2 : x / 2 < 2 ^ fuel := Nat.div_lt_of_lt_mul hlt
+      obtain ⟨ihdvd, ihnondvd⟩ := ih (x / 2) hx2 hxW2
+      have hxeq : x = 2 * (x / 2) := by
+        have h := Nat.div_add_mod x 2
+        omega
+      generalize hgen : ctzAux fuel (x / 2) = c
+      have hrw : ctzAux (fuel + 1) x = 1 + c := by
+        simp [ctzAux, hne, heven, hgen]
+      have hpow1 : 2 ^ (1 + c) = 2 * 2 ^ c := by
+        rw [Nat.pow_add, Nat.pow_one]
+      have hpow2 : 2 ^ ((1 + c) + 1) = 2 * 2 ^ (c + 1) := by
+        have e : (1 + c) + 1 = 1 + (c + 1) := by omega
+        rw [e, Nat.pow_add, Nat.pow_one]
+      generalize hgeny : x / 2 = y
+      have hxeqy : x = 2 * y := by omega
+      rw [hrw]
+      constructor
+      · obtain ⟨q, hq⟩ := ihdvd
+        rw [hgen, hgeny] at hq
+        rw [hpow1]
+        exact ⟨q, by rw [hxeqy, hq, Nat.mul_assoc]⟩
+      · intro hdvd
+        apply ihnondvd
+        rw [hgen] at ihnondvd ⊢
+        rw [hgeny] at ihnondvd ⊢
+        rw [hpow2, hxeqy] at hdvd
+        exact (Nat.mul_dvd_mul_iff_left (by decide : 0 < 2)).mp hdvd
+
+/-- `ctz` spec over width `W = w + 1`: `2 ^ r ∣ x`, `¬ 2 ^ (r+1) ∣ x`. -/
+theorem ctzn_spez {w x : Nat} (hx0 : 0 < x) (hxW : x < 2 ^ (w + 1)) :
+    2 ^ ctzn w x ∣ x ∧ ¬ 2 ^ (ctzn w x + 1) ∣ x :=
+  ctzAux_spez (w + 1) x hx0 hxW
+
+/-- `ctz` fits the field: `ctz x ≤ w`. Both premises are used (`hxW` bounds
+    the power, `hx0` keeps the quotient positive). -/
+theorem ctzn_le {w x : Nat} (hx0 : 0 < x) (hxW : x < 2 ^ (w + 1)) :
+    ctzn w x ≤ w := by
+  obtain ⟨hdvd, _⟩ := ctzn_spez hx0 hxW
+  obtain ⟨q, hq⟩ := hdvd
+  cases Decidable.em (ctzn w x ≤ w) with
+  | inl h => exact h
+  | inr h =>
+    exfalso
+    have hge : w + 1 ≤ ctzn w x := by omega
+    have hmono : 2 ^ (w + 1) ≤ 2 ^ ctzn w x :=
+      Nat.pow_le_pow_right (by decide) hge
+    have hqpos : 0 < q := by
+      cases Decidable.em (q = 0) with
+      | inl h0 => simp [h0] at hq; omega
+      | inr h0 =>
+        have : 0 < q := Nat.pos_of_ne_zero h0
+        exact this
+    have hle : 2 ^ ctzn w x ≤ x := by
+      have h1 : 2 ^ ctzn w x * 1 ≤ 2 ^ ctzn w x * q :=
+        Nat.mul_le_mul_left _ hqpos
+      omega
+    omega
+
 end Gabbro.Grammatik
