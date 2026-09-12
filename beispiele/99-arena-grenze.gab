@@ -1,0 +1,30 @@
+-- 99 -- **The arena boundary.** A reservation that meets the hard bound
+-- (`capacity 2 .. 2`): the first two allocations owe no `else`, the third
+-- one does. An empty reservation (`capacity 0 .. 4`) owes it from the first
+-- allocation on. Two arenas side by side; the stored values are indices of
+-- the other arena -- plain numbers, and only the index positions are typed
+-- by their arena. Fully clean, and it emits.
+module beispiel::arena_grenze {
+arena Klein capacity 2 .. 2 of u16;
+arena Weit capacity 0 .. 4 of u16;
+
+impl fn grenze() -> u32 effects { writes Klein, writes Weit } costs <= 34 ops {
+    let a = alloc Klein (1);
+    let b = alloc Klein (2);
+    let c = alloc Klein (3) else {
+        return 100;
+    };
+    let x : u32 = Klein[a];
+    let y : u32 = Klein[b];
+    let z : u32 = Klein[c];
+    let sum = x + y + z;
+    reset Klein;
+    let d = alloc Klein (b);
+    let e = alloc Weit (d) else {
+        return 200;
+    };
+    let r1 : u32 = Klein[d];
+    let r2 : u32 = Weit[e];
+    return r1 + r2 + sum;
+}
+}

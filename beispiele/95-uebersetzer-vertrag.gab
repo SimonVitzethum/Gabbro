@@ -1,0 +1,27 @@
+-- 95 -- **The translator with a contract, clean.** The same linkage as
+-- `beispiele/94`, with a `requires` clause the ordinary checker holds
+-- against the region value: a translator IS an ordinary function for
+-- every declaration-side check. No call stands here, so nothing falls.
+module beispiel::uebersetzervertrag {
+table Nutzlast count 4 {
+    slot {
+        words : u32,
+    }
+}
+library fn einsetzen(n : u32) -> u32 payload Nutzlast
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+translator baue for einsetzen(region : Nutzlast) -> Nutzlast
+    requires region.words <= 256
+    effects { pure }
+    costs <= 16 ops
+    decreases region.words
+{
+    return region;
+}
+}

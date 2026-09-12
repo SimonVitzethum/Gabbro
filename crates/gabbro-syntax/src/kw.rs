@@ -252,6 +252,59 @@ wortschatz! {
     // parsing as a name: only the fixed clause position after a
     // `library fn` signature gives the word meaning.
     Payload       => "payload",       ctx;
+    // **«E4» (2026-09-12): the monotone arena, `PLAN-ERWEITUNG.md` §3.**
+    //
+    // A heap is allowed but never unbounded: every region carries a lower
+    // bound (the reservation) and an upper bound (the capacity). The arena
+    // is the monotone form -- release only as a whole, no fragmentation,
+    // allocation fails only beyond the upper bound. Without the word the
+    // region has no declaration to hold its two bounds (`N210`), and the
+    // index has no generation to be stale against (`N211`).
+    // CONTEXTUAL like every other declaration word: everywhere a name
+    // stands, it stays an identifier.
+    Arena         => "arena",         ctx;
+    // **«E4» (2026-09-12): the capacity clause of an arena.**
+    //
+    // Names the reservation `lo` and the hard bound `hi` in one clause
+    // (`capacity lo .. hi`), so the lower bound is a number the checker
+    // counts allocations against -- not a comment beside the declaration.
+    // Only the fixed clause position inside an `arena` declaration gives
+    // the word meaning; elsewhere it stays a name.
+    Capacity      => "capacity",      ctx;
+    // **«E4» (2026-09-12): allocation out of an arena.**
+    //
+    // `let i = alloc A (v) else { … }` stores `v` in the next free slot of
+    // `A` and binds its index. The `else` is owed exactly when the static
+    // allocation count since the last reset may exceed the reservation
+    // (`N212`); inside the reservation no branch is owed because none can
+    // run. Only the fixed position after `let ident =` gives the word
+    // meaning; elsewhere it stays a name.
+    Alloc         => "alloc",         ctx;
+    // **«E4» (2026-09-12): reset of an arena.**
+    //
+    // `reset A;` consumes the generation of `A` and starts a fresh one:
+    // every index bound before is stale afterwards (`N211`). A region
+    // whose release is not a whole-generation step would need lifetimes;
+    // the reset makes the release a form, and the wrong form unwritable.
+    // Only the statement head position gives the word meaning; followed
+    // by a place continuation it stays a name.
+    Reset         => "reset",         ctx;
+    // **«E3» (2026-09-12): the translator declaration (`SYNTAX.md` §7.2).**
+    //
+    // Heads the total, effect-free map from a call region's AST to the
+    // served function's payload type. Running it needs the compile-time
+    // evaluator (lane E5); only the declaration and its typing are built
+    // now. Contextual like `library`: a function or a local named
+    // `translator` keeps parsing as a name everywhere else.
+    Translator    => "translator",    ctx;
+    // **«E3» (2026-09-12): the link of a translator to its function.**
+    //
+    // `translator build for kernel` serves `kernel` in the same module;
+    // the checker holds exactly-one per `library fn` (`N200`/`N201`).
+    // No existing form carries the link -- a bare name would collide
+    // with the served function -- and the word stays an identifier
+    // everywhere the grammar expects one.
+    For           => "for",           ctx;
     Format        => "format",        ctx;
     Table         => "table",         ctx;
     Slot          => "slot",          ctx;

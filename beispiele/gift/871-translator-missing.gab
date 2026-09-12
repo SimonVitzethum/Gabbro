@@ -1,0 +1,19 @@
+-- erwartet: N200
+-- Lane E3: the library function declares a payload type but no translator
+-- serves it -- refused, although everything else about the declaration is
+-- clean. Without a translator no region can ever become a payload.
+module m {
+table P count 1 {
+    slot {
+        words : u32,
+    }
+}
+library fn f(n : u32) -> u32 payload P
+    requires n <= 256
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}

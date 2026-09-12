@@ -61,11 +61,21 @@ pub mod abi;
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and
 /// `H007`, so this module holds only the declaration itself.
 pub mod syscall;
+/// **The monotone `arena` («E4», `PLAN-ERWEITUNG.md` §3, checker half).**
+/// The declaration against its own shape (`N210`) and the per-function flow
+/// -- generations, the static count since the last reset, the owed `else`
+/// (`N211`-`N213`). The place shape and index belonging live where every
+/// `Ort` is typed (`N214`, `m1.rs`).
+pub mod arena;
 /// **«T1» -- the fixpoint over the BODIES**, as against the hull over the declarations in
 /// `aufrufgraph`. See the module head: a derivation that takes a callee's *declared* effects
 /// covers up exactly the error it is meant to find.
 pub mod ableitung;
 pub mod kontexte;
+/// **Lane 111 -- compile-time constants, first cut.** The total, effect-free
+/// fragment the checker evaluates: scalars and const tables, held
+/// element-wise, with the Lean certificate printed beside them.
+pub mod konstanten;
 /// **Lane C -- declared concurrency (`concurrent { f, g };`).** Pairwise
 /// non-interference from transitive hulls, closed world over context roots.
 pub mod nebeneinander;
@@ -414,6 +424,8 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         z!("syscall", syscall::pass(baum, absagen));
+        z!("arena", arena::pass(baum, absagen));
+        z!("konstanten", konstanten::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
@@ -449,6 +461,15 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // declaration-level like `entry`/`entrust`: its own shape is held here, and
     // every body pass below reads it through the shared maps.
     syscall::pass(baum, absagen);
+    // **Directly behind it, for the same reason.** The arena declaration is
+    // declaration-level like the syscall one: its bounds are held here, and
+    // the body flow (generations, counts, the owed `else`) walks beside M1,
+    // which owns the place shape (`N214`).
+    arena::pass(baum, absagen);
+    // **Lane 111, declaration-level beside it.** Const initializers are
+    // evaluated here, over the checked declarations: the fragment the folder
+    // computes, held element-wise, before any body pass reads the values.
+    konstanten::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
@@ -638,6 +659,8 @@ pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
                 }
             }
         }
+        // **«E4»:** the element type is a declared type like a slot field.
+        ItemArt::Arena(d) => typ(&d.element, f),
         // **These declare no type expression**, and each is written out rather than swept
         // into a `_`: when one of them grows a type, this is the line that must change.
         ItemArt::Modul(_)
@@ -717,6 +740,10 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         StmtArt::Sperrt(x) => vec![&x.rumpf],
         StmtArt::Observiert(x) => vec![&x.rumpf],
         StmtArt::LetSonst(x) => vec![&x.sonst],
+        // **«E4»:** the full-arena continuation is a sub-block like any
+        // `else` -- whoever walks blocks walks it, and whoever counts
+        // bindings scopes it.
+        StmtArt::Alloc(x) => x.sonst.iter().collect(),
         StmtArt::Exchange(e) => match &e.form {
             XForm::Update { rumpf, .. } => vec![rumpf],
             XForm::Vergleich { .. } => Vec::new(),
@@ -731,6 +758,8 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         | StmtArt::AwaitLoad(_)
         | StmtArt::Return(_)
         | StmtArt::Ruf(_)
+        // **«E4»:** `reset` carries no block and no expression.
+        | StmtArt::ResetArena(_)
         | StmtArt::LibraryCall(_) => Vec::new(),
     }
 }
@@ -742,6 +771,9 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
 pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
     match &s.art {
         StmtArt::Let(l) => vec![&l.wert],
+        // **«E4»:** the stored value is evaluated like any bound value; the
+        // arena name is a declaration, not an expression.
+        StmtArt::Alloc(a) => vec![&a.wert],
         StmtArt::Zuweisung(z) => vec![&z.wert],
         StmtArt::Return(e) => e.iter().collect(),
         StmtArt::Publish(p) => vec![&p.wert],
@@ -776,6 +808,7 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         | StmtArt::Observiert(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
+        | StmtArt::ResetArena(_)
         | StmtArt::AwaitLoad(_) => Vec::new(),
     }
 }
@@ -839,6 +872,8 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         },
         // Die Formen ohne eigenes Prädikat — **einzeln**, damit eine neue Art hier auffällt.
         StmtArt::Let(_)
+        | StmtArt::Alloc(_)
+        | StmtArt::ResetArena(_)
         | StmtArt::LetSonst(_)
         | StmtArt::Zuweisung(_)
         | StmtArt::Return(_)
@@ -959,10 +994,12 @@ pub fn praedikate_im_item(i: &Item) -> Vec<&Pred> {
         // **These carry no predicate of their own**, and each stands here by name so that a
         // clause added to one of them breaks the build instead of disappearing.
         // **Lane C: `concurrent` carries paths, no predicate.**
+        // **«E4»:** bounds are expressions, not predicates.
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Konst(_)
         | ItemArt::Statisch(_)
+        | ItemArt::Arena(_)
         | ItemArt::Reason(_)
         | ItemArt::State(_)
         | ItemArt::Assume(_)
@@ -1104,6 +1141,11 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
             aus.push(a);
             aus.push(b);
         }
+        // **Lane 111:** a const-table literal carries its elements -- every
+        // name, call and touch inside them is read here like any other
+        // sub-expression, or `effects { pure }` would cover a call hiding
+        // in a table element.
+        ExprArt::ArrayLit(es) => aus.extend(es.iter()),
         ExprArt::Eingebaut(g) => match &**g {
             Eingebaut::Aligned(a, b) => {
                 aus.push(a);
@@ -1202,6 +1244,10 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
             | ExprArt::Binaer(_, _, _)
+            // **Lane 111:** a table literal is itself no place -- its
+            // elements' places arrive through `alle_ausdruecke`, which
+            // descends into the elements since the `unterausdruecke` arm.
+            | ExprArt::ArrayLit(_)
             // **«SG-24»: a count is itself no place** -- its predicate's places arrive
             // through `alle_ausdruecke`, which descends into the predicate since the
             // `unterausdruecke` arm above.
@@ -1278,6 +1324,10 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         // **Der `else`-Zweig ist der AUSWEG, nicht der Weiterweg** — der Hauptpfad läuft
         // weiter, gleichgültig was darin steht.
         StmtArt::Narrow(_) | StmtArt::LetSonst(_) => false,
+        // **«E4»:** same shape -- the main path continues past the
+        // allocation, whatever the full-arena continuation does.
+        // `reset` moves a counter and nothing else.
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) => false,
         // **A `traverse` and a `retry` fall through; a `forever` without an exit does
         // not.** The exit is `leave <mark>` and nothing else -- `StmtArt::Leave` always
         // carries a mark, so an unnamed `forever` can be left by nothing at all.

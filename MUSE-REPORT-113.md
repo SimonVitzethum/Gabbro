@@ -64,3 +64,8 @@ INSIDE the region the user wrote, not at the call.
   when payload elements exist. Until then it is covered by unit tests only.
 - Empty region (`@lib#f(a) { }`): parses, `N069` falls back to the call span. If a
   later lane wants an explicit "empty region" refusal, code `N205` is free.
+- MERGE (master-neu, lanes 112/E3 translators + 116/arena + more): `N069` keeps
+  the E3 translator-naming text AND the E7 first-region-token span (both notes fire;
+  verified on gift 870 at 29:15); probes 875/876 gained the E3 translator idiom so
+  they still pin exactly one `N069`; shared fixture `library_module_src` now rides
+  the translator path; registers kept at `--ours`; `./cargo-pruef` exit 0, 0 failing.

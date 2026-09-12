@@ -641,6 +641,8 @@ impl<'a> Parser<'a> {
         // to say so with. *An implicit export set is exactly what D2 forbids.* The word
         // now stands at the carrier, and the closure is caught by `N038` in
         // `gabbro-check/src/bindung.rs`.
+        // **Since «E4» (2026-09-12) TWELVE: `arena` is a carrier too** -- it emits
+        // storage like a table, so it carries the word like one.
         let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
@@ -658,6 +660,7 @@ impl<'a> Parser<'a> {
                         | Kw::Type
                         | Kw::Fn
                         | Kw::Library
+                        | Kw::Translator
                         | Kw::Spec
                         | Kw::Impl
                         | Kw::Raw
@@ -666,6 +669,7 @@ impl<'a> Parser<'a> {
                         | Kw::Extern
                         | Kw::Atomic
                         | Kw::Table
+                        | Kw::Arena
                         | Kw::Device
                         | Kw::Format
                         | Kw::Lock
@@ -691,10 +695,10 @@ impl<'a> Parser<'a> {
                     ),
                 )
                 .mit_notiz(
-                    "`[ \"pub\" ]` stands at eleven item kinds: module use const static \
-                     type fn atomic table device format lock -- the parser accepted it \
-                     everywhere and threw it away",
-                ),
+                        "`[ \"pub\" ]` stands at twelve item kinds: module use const static \
+                      type fn atomic table arena device format lock -- the parser accepted it \
+                      everywhere and threw it away",
+                    ),
             );
         }
         let art = match t.art {
@@ -714,9 +718,26 @@ impl<'a> Parser<'a> {
             Art::Wort(
                 Kw::Fn | Kw::Library | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
             ) => ItemArt::Funktion(self.fndecl(oeffentlich)?),
+            // **Lane E3:** a translator declaration is an ordinary function
+            // with a `for` link (`translator_fuer`); every pass reads its
+            // body through `ItemArt::Funktion`, the linkage is the checker's.
+            // Parsed through `translator_item`, not inline: `translatordecl`
+            // answers `FnDecl` by value, and holding that temporary in
+            // `item`'s frame costs one `FnDecl` of stack on EVERY nested
+            // `module` level -- measured 2026-09-12, the depth guard
+            // (`die_beiden_wachen…`, 80 nested modules on a 2 MB test
+            // thread) overflowed before it could fire. The helper frame is
+            // entered once per translator and freed on return; it never
+            // nests with itself.
+            Art::Wort(Kw::Translator) => return self.translator_item(oeffentlich, anfang, when),
             Art::Wort(Kw::Atomic) => ItemArt::Atomic(self.atomicdecl(oeffentlich)?),
             Art::Wort(Kw::Format) => ItemArt::Format(self.format(oeffentlich)?),
             Art::Wort(Kw::Table) => ItemArt::Tabelle(self.table(oeffentlich)?),
+            // **«E4» (2026-09-12): `arena A capacity lo .. hi of T;`.**
+            // A monotone region beside the table: the declaration holds the
+            // reservation and the hard bound, the checker (`arena.rs`) the
+            // rest. `pub` is carried like at every other carrier.
+            Art::Wort(Kw::Arena) => ItemArt::Arena(self.arena(oeffentlich)?),
             Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason()?),
             Art::Wort(Kw::State) => ItemArt::State(self.statedecl()?),
             Art::Wort(Kw::Device) => ItemArt::Device(self.device(oeffentlich)?),
@@ -758,6 +779,22 @@ impl<'a> Parser<'a> {
         };
         let span = anfang.bis_zu(self.vorheriger_span());
         Ok(Item { when, art, span })
+    }
+
+    /// **Lane E3: the `translator` item, outside `item`'s frame (see above).**
+    fn translator_item(
+        &mut self,
+        oeffentlich: bool,
+        anfang: Span,
+        when: Option<Expr>,
+    ) -> Erg<Item> {
+        let f = self.translatordecl(oeffentlich)?;
+        let span = anfang.bis_zu(self.vorheriger_span());
+        Ok(Item {
+            when,
+            art: ItemArt::Funktion(f),
+            span,
+        })
     }
 
     fn vorheriger_span(&self) -> Span {
@@ -818,13 +855,45 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::Kolon)?;
         let typ = self.typeexpr()?;
         self.erwarte_z(Z::Gleich)?;
-        let wert = self.expr()?;
+        // **The const-table literal lives HERE and nowhere else.** `self.expr()`
+        // never reads `[`, so an array literal in any other position is a parse
+        // refusal (`P001`) by grammar shape, and no checker pass ever meets one
+        // outside a `const` initializer.
+        let wert = if self.ist_z(Z::EckAuf) {
+            self.arraylit()?
+        } else {
+            self.expr()?
+        };
         self.erwarte_z(Z::Semi)?;
         Ok(KonstDecl {
             oeffentlich,
             name,
             typ,
             wert,
+        })
+    }
+
+    /// `[e0, e1, ...]` -- elements are ordinary expressions, each held
+    /// element-wise by the checker. A trailing comma is admitted, as in
+    /// call argument lists.
+    fn arraylit(&mut self) -> Erg<Expr> {
+        let anfang = self.blick().span;
+        self.erwarte_z(Z::EckAuf)?;
+        let mut elemente = Vec::new();
+        if !self.ist_z(Z::EckZu) {
+            elemente.push(self.expr()?);
+            while self.friss_z(Z::Komma) {
+                if self.ist_z(Z::EckZu) {
+                    break;
+                }
+                elemente.push(self.expr()?);
+            }
+        }
+        let ende = self.erwarte_z(Z::EckZu)?;
+        let span = anfang.bis_zu(ende);
+        Ok(Expr {
+            art: ExprArt::ArrayLit(elemente),
+            span,
         })
     }
 
@@ -3006,6 +3075,7 @@ impl<'a> Parser<'a> {
             klasse,
             bibliothek,
             nutzlast,
+            translator_fuer: None,
             name,
             parameter,
             ergebnis,
@@ -3024,6 +3094,120 @@ impl<'a> Parser<'a> {
             section,
             arch,
             when,
+            rumpf,
+            span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// **`translator build for kernel(region : AstTab) -> Nutzlast` (lane E3,
+    /// `SYNTAX.md` §7.2).** The declaration side of translators: a total,
+    /// effect-free map from the region AST to the served library function's
+    /// payload type. Parsed into an ordinary `FnDecl` with `translator_fuer`
+    /// set, so every pass checks the body like any function body; the
+    /// linkage (exactly one per `library fn`, `effects { pure }`,
+    /// `decreases`, result against payload) is the checker's (`N200`-`N204`
+    /// in namen.rs). The grammar fixes what the signature promises -- one
+    /// parameter, a Gabbro block (`P044` for anything else, the same rule
+    /// that holds a `library fn` to real code) -- and leaves what must be
+    /// REFUSED to the checker: a missing or impure `effects` (`N202`), a
+    /// missing `decreases` (`N203`), a missing or foreign result (`N204`).
+    fn translatordecl(&mut self, oeffentlich: bool) -> Erg<FnDecl> {
+        let anfang = self.span();
+        self.erwarte_kw(Kw::Translator)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::For)?;
+        let fuer = self.erwarte_ident()?;
+        self.erwarte_z(Z::RundAuf)?;
+        let pname = self.erwarte_ident()?;
+        self.erwarte_z(Z::Kolon)?;
+        let ptyp = self.typeexpr()?;
+        self.erwarte_z(Z::RundZu)?;
+        let ergebnis = if self.friss_z(Z::Pfeil) {
+            Some(self.typeexpr()?)
+        } else {
+            None
+        };
+        // The fixed clause order is the `fndecl` order (E4); only the
+        // clauses a pure total map can carry stand here.
+        let requires = if self.friss_kw(Kw::Requires) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let ensures = if self.friss_kw(Kw::Ensures) {
+            self.vertrag(|s| s.predlist())?
+        } else {
+            Vec::new()
+        };
+        let effects = if self.ist_kw(Kw::Effects) {
+            Some(self.effects_block()?)
+        } else {
+            None
+        };
+        let costs = if self.friss_kw(Kw::Costs) {
+            self.erwarte_z(Z::KleinerGleich)?;
+            let e = self.expr()?;
+            self.erwarte_kw(Kw::Ops)?;
+            Some(e)
+        } else {
+            None
+        };
+        let decreases = if self.friss_kw(Kw::Decreases) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
+        let rumpf = if self.ist_z(Z::GeschweiftAuf) {
+            FnRumpf::Block(self.block()?)
+        } else {
+            if self.friss_z(Z::Gleich) {
+                let _ = self.vertrag(|s| s.pred())?;
+                self.erwarte_z(Z::Semi)?;
+            } else {
+                self.erwarte_z(Z::Semi)?;
+            }
+            self.absage(
+                Absage::fehler(
+                    "P044",
+                    anfang.bis_zu(self.vorheriger_span()),
+                    "a `translator` carries a Gabbro body -- `{ … }`, not `;`",
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: what a translator fills is checked \
+                     like any Gabbro body -- a bodyless declaration would be \
+                     a foreign promise, exactly what the library mechanism \
+                     stands against",
+                ),
+            );
+            return Err(Abbruch);
+        };
+        Ok(FnDecl {
+            oeffentlich,
+            klasse: None,
+            bibliothek: false,
+            nutzlast: None,
+            translator_fuer: Some(fuer),
+            name,
+            parameter: vec![Parameter {
+                name: pname,
+                typ: ptyp,
+            }],
+            ergebnis,
+            fehler: None,
+            verfeinert: None,
+            requires,
+            ensures,
+            maintains: Vec::new(),
+            advances: None,
+            retires: None,
+            effects,
+            costs,
+            deadline: None,
+            decreases,
+            by: Vec::new(),
+            section: None,
+            arch: None,
+            when: None,
             rumpf,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
@@ -3235,9 +3419,24 @@ impl<'a> Parser<'a> {
         }
         // Refuse, never interpret: the forms that deliberately do not exist get a refusal of
         // their own instead of a knock-on error three tokens later.
-        if self.blick().art == Art::Ident {
-            let wort = self.blick().text(self.quelle);
-            if let Some(grund) = abgeschaffte_form(wort) {
+        // **Lane E3:** `for` lexes as a contextual word (the translator
+        // link), not as an identifier -- the abolished `for` loop must
+        // still be refused as `for`, so the gate reads the text of any
+        // name-usable word, not only `Art::Ident`. Words the gate does not
+        // name (`match`, `table`, ...) fall through exactly as before --
+        // and a contextual word followed by a place continuation (`for = 1`)
+        // IS the place it spells: `wort_ist_anweisungskopf` decides, so a
+        // variable called `for` stays assignable.
+        let blick = self.blick().art;
+        let wort: Option<String> = match blick {
+            Art::Ident => Some(self.blick().text(self.quelle).to_string()),
+            Art::Wort(k) if !k.reserviert() && self.wort_ist_anweisungskopf() => {
+                Some(k.text().to_string())
+            }
+            _ => None,
+        };
+        if let Some(wort) = wort {
+            if let Some(grund) = abgeschaffte_form(&wort) {
                 self.absage(
                     Absage::fehler("P035", anfang, format!("`{wort}` does not exist in Gabbro"))
                         .mit_notiz(grund)
@@ -3343,6 +3542,17 @@ impl<'a> Parser<'a> {
                 self.erwarte_z(Z::Semi)?;
                 StmtArt::Return(wert)
             }
+            // **«E4»: `reset A;` -- a fresh generation of the arena.**
+            //
+            // The head word decides, like at every other keyword statement:
+            // `reset = 1;` and `reset.f = x;` continue with a place
+            // continuation and stay assignments to a name of that spelling.
+            Art::Wort(Kw::Reset) => {
+                self.pos += 1;
+                let tisch = self.erwarte_ident()?;
+                self.erwarte_z(Z::Semi)?;
+                StmtArt::ResetArena(tisch)
+            }
             _ => self.zuweisung_oder_ruf()?,
         };
         Ok(Stmt {
@@ -3372,6 +3582,36 @@ impl<'a> Parser<'a> {
                 art: ExprArt::LibraryCall(ruf),
                 span,
             }
+        // **«E4»: `let i = alloc A (v) [else block];`.**
+        //
+        // Only when the word is followed by a name and `(`: a bare `alloc`
+        // stays an ordinary expression (a variable, a call of a function
+        // of that name). The `else` needs no error binder -- like `narrow`,
+        // the failure continuation carries no value, only the decision to
+        // continue elsewhere.
+        } else if self.ist_kw(Kw::Alloc)
+            && matches!(self.blick_n(1).art, Art::Ident | Art::Wort(_))
+            && matches!(self.blick_n(2).art, Art::Zeichen(Z::RundAuf))
+        {
+            self.pos += 1;
+            let tisch = self.erwarte_ident()?;
+            self.erwarte_z(Z::RundAuf)?;
+            let wert = self.expr()?;
+            self.erwarte_z(Z::RundZu)?;
+            let sonst = if self.friss_kw(Kw::Else) {
+                Some(self.block()?)
+            } else {
+                None
+            };
+            self.erwarte_z(Z::Semi)?;
+            return Ok(StmtArt::Alloc(AllocStmt {
+                veraenderlich,
+                name,
+                typ,
+                tisch,
+                wert,
+                sonst,
+            }));
         } else {
             self.expr()?
         };
@@ -3967,6 +4207,35 @@ impl<'a> Parser<'a> {
             ops,
             baum,
             belegt,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
+    /// **`arena A capacity lo .. hi of T;` («E4»).**
+    ///
+    /// A monotone region beside `table`: no body, no slots, no guards --
+    /// the declaration holds the reservation `lo`, the hard bound `hi`
+    /// and the element type `T`, and nothing else. Both bounds are full
+    /// `constexpr` positions (a literal or a `const` name); the checker
+    /// holds them constant and ordered (`N210`). Only `..` joins the two
+    /// bounds: both count elements, so an exclusive upper bound would be a
+    /// second spelling of `hi - 1`.
+    fn arena(&mut self, oeffentlich: bool) -> Erg<ArenaDecl> {
+        let anfang = self.erwarte_kw(Kw::Arena)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Capacity)?;
+        let lo = self.expr()?;
+        self.erwarte_z(Z::Bereich)?;
+        let hi = self.expr()?;
+        self.erwarte_kw(Kw::Of)?;
+        let element = self.typeexpr()?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(ArenaDecl {
+            name,
+            oeffentlich,
+            lo,
+            hi,
+            element,
             span: anfang.bis_zu(ende),
         })
     }
@@ -5371,6 +5640,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Static
             | Kw::Fn
             | Kw::Library
+            | Kw::Translator
             | Kw::Spec
             | Kw::Impl
             | Kw::Raw
@@ -5393,6 +5663,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Entry
             | Kw::Entrust
             | Kw::Boot
+            | Kw::Arena
             | Kw::Syscall
             | Kw::Pub
             | Kw::When

@@ -1,0 +1,10 @@
+-- erwartet: N213
+-- Lane E4: `reset` names no declared arena -- there is no generation to
+-- consume and no index to invalidate. The effect line names the same word
+-- the statement names, so no second rule fires beside this one.
+module beispiel::arena_nirgendwo {
+impl fn f() -> u32 effects { writes Nirgendwo } costs <= 4 ops {
+    reset Nirgendwo;
+    return 0;
+}
+}

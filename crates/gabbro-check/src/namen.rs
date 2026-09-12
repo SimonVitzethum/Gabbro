@@ -3010,6 +3010,8 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
                     match &s.art {
                         StmtArt::Let(l) => aus.push(l.name.text.clone()),
                         StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+                        // **«E4»:** the bound index is visible like any `let`.
+                        StmtArt::Alloc(a) => aus.push(a.name.text.clone()),
                         StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
                         StmtArt::Exchange(e) => aus.push(e.name.text.clone()),
                         _ => {}
@@ -3588,6 +3590,121 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// **Lane E3 -- one translator declaration (`SYNTAX.md` §7.2).**
+///
+/// A translator is parsed into an ordinary `FnDecl` with `translator_fuer`
+/// set, so every pass checks its body like any function body; what only
+/// the name pass holds is the linkage to the served `library fn` and the
+/// signature the translation stage needs. Kept whole (effects, decreases,
+/// result) because the linkage checks read all three and the call side
+/// names the serving translator in `N069`.
+#[derive(Clone)]
+struct Uebersetzer {
+    qual: String,
+    modul: String,
+    ziel: String,
+    span: Span,
+    effects: Option<Wirkungen>,
+    decreases: Option<Expr>,
+    ergebnis: Option<TypExpr>,
+}
+
+/// The tables a path names, resolved from the using module outward --
+/// the read side of the raw payload paths (`Umgebung::nutzlasten`).
+fn benannte_tabellen(
+    u: &crate::umgebung::Umgebung,
+    von: &str,
+    pfad: &str,
+) -> Vec<String> {
+    u.kandidaten_aufloesbar(von, pfad)
+        .into_iter()
+        .filter(|k| u.tabellen.contains_key(k))
+        .collect()
+}
+
+/// **Lane E3: what a serving translator promises (`N202`/`N203`/`N204`).**
+///
+/// Called for every translator that serves a `library fn` (the first
+/// declaration by position where several name one function): its effects
+/// are exactly `pure`, it carries a `decreases` witness, and its result
+/// names the served function's payload table. A payload that itself names
+/// no table (`N060` beside it) pins no `N204` -- one refusal per defect.
+fn pruefe_uebersetzer_signatur(
+    t: &Uebersetzer,
+    bibliothek: &str,
+    u: &crate::umgebung::Umgebung,
+    absagen: &mut Absagen,
+) {
+    let rein = t.effects.as_ref().is_some_and(|w| {
+        w.liste.len() == 1 && matches!(w.liste[0].art, WirkungArt::Rein)
+    });
+    if !rein {
+        absagen.schiebe(
+            Absage::fehler(
+                "N202",
+                t.span,
+                format!(
+                    "`translator {}` for `{bibliothek}` must carry `effects {{ pure }}`",
+                    t.qual
+                ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §7.2: a translator is a total, effect-free map from \
+                 the region AST to the payload -- anything but `pure` would \
+                 run effects at translation time",
+            ),
+        );
+    }
+    if t.decreases.is_none() {
+        absagen.schiebe(
+            Absage::fehler(
+                "N203",
+                t.span,
+                format!(
+                    "`translator {}` for `{bibliothek}` carries no `decreases` clause",
+                    t.qual
+                ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §7.2: a translator is total -- the `decreases` \
+                 witness is the signature, not a convention",
+            ),
+        );
+    }
+    let nutzlast_tabellen = u
+        .nutzlasten
+        .get(bibliothek)
+        .map(|(modul, pfad, _)| benannte_tabellen(u, modul, pfad))
+        .unwrap_or_default();
+    if nutzlast_tabellen.is_empty() {
+        return;
+    }
+    let ergebnis_tabellen = match &t.ergebnis {
+        Some(TypExpr::Pfad(p)) => benannte_tabellen(u, &t.modul, &p.text()),
+        _ => Vec::new(),
+    };
+    if !nutzlast_tabellen
+        .iter()
+        .any(|n| ergebnis_tabellen.contains(n))
+    {
+        absagen.schiebe(
+            Absage::fehler(
+                "N204",
+                t.span,
+                format!(
+                    "`translator {}` for `{bibliothek}` must answer the payload type",
+                    t.qual
+                ),
+            )
+            .mit_notiz(
+                "SYNTAX.md §7.2: the translator fills the served function's \
+                 payload -- a result naming anything else leaves the call \
+                 without a payload of its type",
+            ),
+        );
+    }
+}
+
 /// **`N057` -- an unresolved library call; `N069` -- a resolved one;
 /// `N059` -- a foreign body in a library hull; `N060` -- a payload that
 /// names no table; `N061` -- a direct call to a library function**
@@ -3604,9 +3721,11 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
 ///   where the name stands for an ordinary function);
 /// * a resolved call is refused with `N069`: arguments, effects, `or R`
 ///   and costs are checked exactly like an ordinary call (m1, the call
-///   graph, kosten), but the region is still not interpreted -- until
-///   the translator exists (lanes E3/E5) there is no payload to hold the
-///   call against, so the refusal stands instead of a silent acceptance;
+///   graph, kosten), but the region is still not interpreted -- the
+///   translator is declared (lane E3, `SYNTAX.md` §7.2) but does not run
+///   yet (lane E5), so there is no payload to hold the call against and
+///   the refusal stands instead of a silent acceptance; the refusal names
+///   the translator that WOULD run the region;
 /// * the declaration side is held here too: the payload must name a
 ///   declared table (`N060`), and the library function's transitive hull
 ///   must hold no `extern`/`raw`/`prim`/`asm` (`N059`,
@@ -3624,8 +3743,8 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
     // ten times.
     let mut bibs: Vec<&String> = u.bibliotheken.iter().collect();
     bibs.sort();
-    for qual in bibs {
-        if let Some((decl_modul, nutzlast, span)) = u.nutzlasten.get(qual) {
+    for qual in &bibs {
+        if let Some((decl_modul, nutzlast, span)) = u.nutzlasten.get(*qual) {
             let benennt_tabelle = u
                 .kandidaten_aufloesbar(decl_modul, nutzlast)
                 .into_iter()
@@ -3648,7 +3767,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
         }
         let span = u
             .funktionen
-            .get(qual)
+            .get(*qual)
             .map(|s| s.span)
             .unwrap_or(gabbro_syntax::span::Span::neu(0, 0));
         for fremd in g.fremde_in_huelle(qual) {
@@ -3668,21 +3787,139 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
             );
         }
     }
+    // **Lane E3 (`SYNTAX.md` §7.2): the translator declaration side.**
+    // Translators are ordinary functions for every pass (they parsed into
+    // `ItemArt::Funktion` with `translator_fuer` set); here stand only the
+    // linkage and the signature -- exactly one translator per `library
+    // fn` (`N200`/`N201`), `effects { pure }` (`N202`), a `decreases`
+    // clause (`N203`), and the result against the payload (`N204`). The
+    // hull carries the same `N059` as a library body: a translator the
+    // translation stage would run is safe Gabbro or it is nothing.
+    let mut uebersetzer: Vec<Uebersetzer> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let Some(fuer) = &f.translator_fuer else { return };
+        uebersetzer.push(Uebersetzer {
+            qual: crate::umgebung::qualifiziere(modul, &f.name.text),
+            modul: modul.to_string(),
+            ziel: fuer.text.clone(),
+            span: f.span,
+            effects: f.effects.clone(),
+            decreases: f.decreases.clone(),
+            ergebnis: f.ergebnis.clone(),
+        });
+    });
+    uebersetzer.sort_by(|a, b| a.qual.cmp(&b.qual).then(a.span.von.cmp(&b.span.von)));
+    for qual in &bibs {
+        let modul = crate::umgebung::modul_von(qual);
+        let kurz = crate::umgebung::kurzname(qual);
+        let mut diener: Vec<&Uebersetzer> = uebersetzer
+            .iter()
+            .filter(|t| t.modul == modul && t.ziel == kurz)
+            .collect();
+        diener.sort_by_key(|t| t.span.von);
+        let span = u
+            .funktionen
+            .get(*qual)
+            .map(|s| s.span)
+            .unwrap_or(gabbro_syntax::span::Span::neu(0, 0));
+        if diener.is_empty() {
+            // Without a payload clause (`P043` beside it) there is no call
+            // shape to translate into -- one refusal per defect.
+            if !u.nutzlasten.contains_key(*qual) {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "N200",
+                    span,
+                    format!("`library fn {qual}` declares no translator"),
+                )
+                .mit_notiz(
+                    "SYNTAX.md §7.2: every library function with a payload type \
+                     has exactly one translator in its module -- `translator \
+                     <name> for <function> (region : <table>) -> <payload>`; \
+                     without it no region can ever become a payload",
+                ),
+            );
+            continue;
+        }
+        for doppelt in diener.iter().skip(1) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N201",
+                    doppelt.span,
+                    format!(
+                        "`translator {}` is a second translator for `{qual}`",
+                        doppelt.qual
+                    ),
+                )
+                .mit_notiz(
+                    "SYNTAX.md §7.2: exactly one translator serves a library \
+                     function -- the first declaration (by position) serves \
+                     it, every further one serves nothing",
+                ),
+            );
+        }
+        for t in &diener {
+            pruefe_uebersetzer_signatur(t, qual, &u, absagen);
+        }
+    }
+    for t in &uebersetzer {
+        let bedient = bibs.iter().any(|q| {
+            crate::umgebung::modul_von(*q) == t.modul
+                && crate::umgebung::kurzname(*q) == t.ziel
+        });
+        if !bedient {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N201",
+                    t.span,
+                    format!(
+                        "`translator {}` names no library function `{}` in its module",
+                        t.qual, t.ziel
+                    ),
+                )
+                .mit_notiz(
+                    "SYNTAX.md §7.2: a translator serves exactly one `library \
+                     fn` in its own module, named by the `for` link -- \
+                     without it the translator can never run",
+                ),
+            );
+            continue;
+        }
+        for fremd in g.fremde_in_huelle(&t.qual) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N059",
+                    t.span,
+                    format!("`translator {}` reaches the foreign body `{fremd}`", t.qual),
+                )
+                .mit_notiz(
+                    "PLAN-ERWEITUNG.md §0c: what the translation stage would \
+                     run is safe Gabbro -- `extern`, `raw`, `prim` and `asm` \
+                     are refused anywhere in a translator's call hull, \
+                     including itself",
+                ),
+            );
+        }
+    }
     // Call side, with the caller's module for resolution.
     crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
         let ItemArt::Funktion(f) = &i.art else { return };
         let FnRumpf::Block(b) = &f.rumpf else { return };
-        im_block(b, modul, &u, absagen);
+        im_block(b, modul, &u, &uebersetzer, absagen);
     });
     fn im_block(
         b: &Block,
         modul: &str,
         u: &crate::umgebung::Umgebung,
+        uebersetzer: &[Uebersetzer],
         absagen: &mut Absagen,
     ) {
         for s in &b.anweisungen {
             if let StmtArt::LibraryCall(r) = &s.art {
-                melde_bibliothek_ruf(r, modul, u, absagen);
+                melde_bibliothek_ruf(r, modul, u, uebersetzer, absagen);
             }
             if let StmtArt::Ruf(r) = &s.art {
                 melde_direkt_ruf(r, modul, u, absagen);
@@ -3695,7 +3932,9 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
             for e in crate::eigene_ausdruecke(s) {
                 for x in crate::alle_ausdruecke(e) {
                     match &x.art {
-                        ExprArt::LibraryCall(r) => melde_bibliothek_ruf(r, modul, u, absagen),
+                        ExprArt::LibraryCall(r) => {
+                            melde_bibliothek_ruf(r, modul, u, uebersetzer, absagen)
+                        }
                         ExprArt::Ruf(r) => melde_direkt_ruf(r, modul, u, absagen),
                         _ => {}
                     }
@@ -3715,7 +3954,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 }
             }
             for k in crate::unterbloecke(s) {
-                im_block(k, modul, u, absagen);
+                im_block(k, modul, u, uebersetzer, absagen);
             }
         }
     }
@@ -3724,21 +3963,45 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
         r: &LibraryCall,
         modul: &str,
         u: &crate::umgebung::Umgebung,
+        uebersetzer: &[Uebersetzer],
         absagen: &mut Absagen,
     ) {
-        if u.bibliothek(modul, &r.library.text, &r.function.text).is_some() {
+        if let Some(z) = u.bibliothek(modul, &r.library.text, &r.function.text) {
+            // **Lane E3:** the refusal names the translator that WOULD run
+            // the region -- declared since lane E3, running it is lane E5.
+            let diener = uebersetzer.iter().find(|t| {
+                t.modul == z.modul && t.ziel == crate::umgebung::kurzname(&z.name)
+            });
+            let (text, hinweis) = match diener {
+                Some(t) => (
+                    format!(
+                        "library call checked -- translator `{}` would run the region, \
+                         and translators do not run yet",
+                        t.qual
+                    ),
+                    "the region is compiled at translation time into a payload \
+                     (PLAN-ERWEITUNG.md §0b); the translator is declared and \
+                     typed (SYNTAX.md §7.2), but running it needs the \
+                     compile-time evaluator (lane E5) -- until then every \
+                     resolved call is refused here: never silently accepted, \
+                     never crashed on",
+                ),
+                None => (
+                    "library call checked -- no translator declared yet".to_string(),
+                    "the region is compiled at translation time into a payload \
+                     (PLAN-ERWEITUNG.md §0b); until a translator is declared \
+                     (SYNTAX.md §7.2, `N200` beside the function) every \
+                     resolved call is refused here: never silently accepted, \
+                     never crashed on",
+                ),
+            };
             // **Lane E7: the refusal points INTO the region.** The diagnostic
             // is about region content nobody compiled yet, so its span is the
             // first region token's (`RegionKarte`), not the call around it --
             // a diagnostic about a library call's region must point at the
             // line and column inside the region the user wrote.
             let karte = crate::regionkarte::RegionKarte::vom_ruf(r);
-            let mut absage = Absage::fehler(
-                "N069",
-                karte.ruf_span(r),
-                "library call checked -- payload translation not implemented",
-            )
-            .mit_notiz(format!(
+            let mut absage = Absage::fehler("N069", karte.ruf_span(r), text).mit_notiz(format!(
                 "`@{}#{}` resolves: arguments, effects, `or R` and costs \
                  are checked like an ordinary call -- but the region is \
                  captured, not interpreted, so there is no payload yet",
@@ -3755,12 +4018,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                      region span map (PLAN-ERWEITUNG.md §6, lane E7)",
                 ));
             }
-            absagen.schiebe(absage.mit_notiz(
-                "the region is compiled at translation time into a payload \
-                 (PLAN-ERWEITUNG.md §0b); until the translator exists \
-                 (lanes E3/E5) every resolved call is refused here: never \
-                 silently accepted, never crashed on",
-            ));
+            absagen.schiebe(absage.mit_notiz(hinweis));
             return;
         }
         match u.bibliothek_modul(modul, &r.library.text) {

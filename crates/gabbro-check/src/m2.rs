@@ -338,6 +338,19 @@ fn gehe(
             // **`narrow … else` is a BRANCH, and it was walked as a body** («L104»,
             // 2026-08-31). See `einseitig` for the whole argument.
             StmtArt::Narrow(n) => einseitig(&n.sonst, s.span, linear, v, zust, absagen),
+            // **«E4»:** the stored value may move a linear value, so it
+            // walks like any bound value; the `else` is a branch like any
+            // other. The bound index is no linear value -- an index is a
+            // number with a generation, not a resource -- so nothing is
+            // entered into `zust`.
+            StmtArt::Alloc(a) => {
+                ausdruck(&a.wert, s.span, v, zust, absagen);
+                if let Some(sonst) = &a.sonst {
+                    einseitig(sonst, s.span, linear, v, zust, absagen);
+                }
+            }
+            // **«E4»:** `reset` moves no value and binds no name.
+            StmtArt::ResetArena(_) => {}
             StmtArt::Return(Some(e)) => {
                 ausdruck(e, s.span, v, zust, absagen);
                 // **Wer zurueckgibt, verbraucht nicht -- er reicht WEITER.** Fuer diese

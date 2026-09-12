@@ -1346,6 +1346,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
             Ok(LeanCarried::ExprLiteral.term(format!("(.lit (.reason {}))", quoted(&fall.text))))
         }
         ExprArt::FnWert(_) => Err(LeanReason::OtherValue),
+        // **Lane 111:** a table literal has no term in this channel either --
+        // the model has no array literal form.
+        ExprArt::ArrayLit(_) => Err(LeanReason::OtherValue),
     }
 }
 
@@ -1984,7 +1987,10 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
         | ExprArt::Eingebaut(_)
         | ExprArt::FnWert(_)
         // **Lane E1:** a library call yields a value of no known shape.
+        // **Lane 111:** a table literal yields one the channel cannot name
+        // either -- the shape vocabulary has no array form.
         | ExprArt::LibraryCall(_)
+        | ExprArt::ArrayLit(_)
         | ExprArt::Grund { .. } => None,
     }
 }
@@ -2442,6 +2448,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // **Lane E2:** a library call lowers to no term -- refused like
         // any call the unit does not declare (checker: `N057`/`N069`).
         StmtArt::LibraryCall(_) => Err(LeanReason::CallStatement),
+        // **«E4»:** the monotone arena has no term in this channel -- the
+        // generations live in `grammatik/Grammatik/Arena.lean`, not in the
+        // program-logic body model, so both statements lower to no term.
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) => Err(LeanReason::Expression),
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it
         // bound to `e`, and ends. The `place` form (`let n = A else …`, unpacking an atomic)

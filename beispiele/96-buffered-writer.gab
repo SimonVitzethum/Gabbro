@@ -1,0 +1,180 @@
+-- 96 -- A buffered writer over the `write` syscall: four bytes, then the kernel.
+--
+-- `beispiele/74` calls `write` once per call; `beispiele/90` carries the error
+-- path. This file puts a buffer in front: `push` stores one byte and flushes
+-- when full, `flush` calls `write` in a loop until every buffered byte went
+-- out or an error reason comes back. The driver writes "hello\n" through it
+-- and the emission check observes the bytes on descriptor 1.
+--
+-- The shape of the buffer is deliberate. The bytes live in a TABLE of fixed
+-- capacity (`Buffer`, four slots); the count beside it (`COUNT`) carries its
+-- bound in its type. One byte at a time crosses to the kernel through a
+-- one-byte staging array (`WINDOW`): Gabbro has no address operator, so the
+-- table cannot lend the syscall its own address, and the staging byte is the
+-- window the `rsi` binding reads -- not a second buffer. `beispiele/64` passes
+-- its whole array for the same reason; here the array is one byte wide
+-- because the loop writes one byte per call.
+--
+-- The syscall is 74's, with one honest difference: `buf` is a pointer
+-- (`ptr<normal, r> u8`, the PLAN-SYSCALL.md §1 shape), not a `u64`. The stub
+-- widens it into `rsi` itself, and the call site passes the staging array
+-- the way 64 passes its buffer to `extern fn write`.
+--
+-- Contracts. `push` answers how many bytes left the buffer on this call: 0
+-- when the byte only grew the count, `CAP` when a full buffer flushed first.
+-- That disjunction IS the postcondition (`result == 0 || result == CAP`); the
+-- count itself is pinned by the body, one store per path. `flush` answers the
+-- bytes written and ensures `COUNT == 0` on success. On the error path there
+-- is no value to pin -- the reason travels the `or IoError` channel instead
+-- -- and the count is unchanged by construction: the loop advances locals
+-- only (`sent`), and `COUNT` is written exactly once, after the loop. Both
+-- `ensures` stand as counted N obligations for the prover; neither is
+-- discharged by the checker (see the report of lane 114).
+--
+-- Termination. The flush loop is `forever ... leave`: it ends when `sent`
+-- reaches the count, and the overrun is named (`writer_hangs`, the watchdog
+-- shape of `beispiele/41`). Its `progress` is the write contract itself --
+-- every pass answers under `linux_write_contract`, with `n <= len` or a
+-- reason, so a live kernel ends the loop. A `retry ... until` would say the
+-- same with a number, and the number is exactly what the emitter cannot
+-- build: a `retry` lowers through a static trip count (`bounded` over the
+-- per-pass cost), and a call to a costless callee has no per-pass cost. A
+-- syscall carries no `costs` clause by grammar, so no bounded loop can host
+-- one today -- `forever` can, and the `leave` is its trip count. That gap
+-- (costs on `syscalldecl`) is booked in the lane-114 report, not worked
+-- around here. The capacity is 4 on purpose: six pushed bytes flush once
+-- midway, so the driver exercises the full-buffer path, not only the end.
+
+module beispiel::buffered_writer {
+
+const CAP : u32 = 4;
+
+table Buffer count CAP {
+    slot {
+        byte : u8,
+    }
+}
+
+static mut COUNT  : u32 in 0 .. CAP = 0;
+static mut WINDOW : [u8; 1] = 0;
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    WouldBlock  = 11 "the descriptor is non-blocking and the write would block"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+extern fn writer_hangs() -> never effects { diverges } costs <= 1 ops;
+
+syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted, EAGAIN => WouldBlock }
+    requires len <= 1024
+    ensures result <= len
+    effects { pure }
+    assume linux_write_contract falsifier sonde_write;
+
+-- PUSH one byte. Full means flush first: the flushed count (`CAP`) is the
+-- answer on that path, 0 when the byte only grew the count.
+impl fn push(fd : u64, byte : u8) -> u64 or IoError
+    ensures result == 0 || result == CAP
+    effects { reads COUNT, writes COUNT,
+              reads Buffer.slots, writes Buffer.slots, writes WINDOW }
+{
+    if COUNT == CAP {
+        let out = flush(fd) else (e) { return e; }
+        -- `out` is `flush`'s answer over the pre-store state, so returning it
+        -- after two writes would read stale (M147): the flushed count over a
+        -- full buffer is `CAP` by construction, and the constant says so.
+        Buffer.slots[0].byte = byte;
+        COUNT = 1;
+        return CAP;
+    }
+    -- copy the count out, narrow the copy (`beispiele/28`), store through
+    -- it, and write it back. The copy carries a DECLARED type: without one
+    -- the emitter cannot prove the word unsigned and keeps a `>= 0` the C
+    -- compiler refuses (`-Wtype-limits`). The `else` arm cannot run here
+    -- (the full case returned above); it answers `WouldBlock`, the same
+    -- overrun the watchdog below would name.
+    let c : u32 = COUNT;
+    narrow c to 0 ..< CAP else { return IoError::WouldBlock; }
+    Buffer.slots[c].byte = byte;
+    COUNT = c + 1;
+    return 0;
+}
+
+-- FLUSH every buffered byte: one `write` per byte until `sent` reaches the
+-- count, or the first error reason comes back and `COUNT` stays untouched.
+impl fn flush(fd : u64) -> u64 or IoError
+    ensures COUNT == 0
+    effects { reads COUNT, writes COUNT, reads Buffer.slots, writes WINDOW }
+{
+    let mut sent : u32 = 0;
+    forever sending
+        per_pass bounded 1024 ops
+        on_exceeded writer_hangs
+        effects { reads COUNT, reads Buffer.slots, writes WINDOW }
+        progress linux_write_contract
+    {
+        if sent == COUNT {
+            leave sending;
+        }
+        narrow sent to 0 ..< CAP else { return IoError::WouldBlock; }
+        WINDOW[0] = Buffer.slots[sent].byte;
+        let n = write(fd, WINDOW, 1) else (e) { return e; }
+        if n == 1 {
+            sent += 1;
+        }
+    }
+    COUNT = 0;
+    return sent;
+}
+
+-- FILL the buffer with "hello\n" (six bytes over a capacity of four: the
+-- fifth push flushes midway, so the full-buffer path runs, not only the end).
+impl fn fill(fd : u64) -> u64 or IoError
+    effects { reads COUNT, writes COUNT,
+              reads Buffer.slots, writes Buffer.slots, writes WINDOW }
+{
+    let r1 = push(fd, 104) else (e) { return e; }
+    let r2 = push(fd, 101) else (e) { return e; }
+    let r3 = push(fd, 108) else (e) { return e; }
+    let r4 = push(fd, 108) else (e) { return e; }
+    let r5 = push(fd, 111) else (e) { return e; }
+    let r6 = push(fd, 10) else (e) { return e; }
+    return 0;
+}
+
+-- The driver entry: fill, flush, and answer the final flush's byte count
+-- (2: four bytes went out midway, two at the end). A push error is 701-703,
+-- a flush error 711-713 -- the 777 convention of `beispiele/90`.
+impl fn writer_demo(fd : u64) -> u64
+    effects { reads COUNT, writes COUNT,
+              reads Buffer.slots, writes Buffer.slots, writes WINDOW }
+{
+    let f = fill(fd) else (e) {
+        match e {
+            BadFd       => { return 701; }
+            Interrupted => { return 702; }
+            WouldBlock  => { return 703; }
+        }
+    }
+    let n = flush(fd) else (e) {
+        match e {
+            BadFd       => { return 711; }
+            Interrupted => { return 712; }
+            WouldBlock  => { return 713; }
+        }
+    }
+    return n;
+}
+
+}

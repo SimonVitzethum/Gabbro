@@ -921,7 +921,51 @@ impl<'a> Pruefer<'a> {
                     };
                 }
             }
+            // **«E4»: `let i = alloc A (v) [else block];`.**
+            //
+            // The value is held against the arena's element type (`M101`
+            // says nothing new here -- it is the ordinary `passt`); the
+            // bound name gets type `index into A`, the name the generation
+            // travels with (`arena.rs` tracks which generation, `N214` in
+            // `arena_ort` holds the belonging at every read). An unknown
+            // arena is `N213` in `arena.rs`, so this arm stays silent about
+            // it -- unknown falls loud, exactly once.
+            StmtArt::Alloc(a) => {
+                let wert = self.ausdruck(&a.wert, lage);
+                self.rufe_im_ausdruck(&a.wert, lage);
+                if let Some(q) = self.u.nennt_arena(&self.modul, &a.tisch.text) {
+                    // Cloned out of the map first: `passt` borrows `self`
+                    // mutably, and the map lives in it.
+                    let element = self.u.arenen.get(&q).map(|s| s.element.clone());
+                    if let Some(e) = &element {
+                        self.passt(&wert, e, a.wert.span, "arena element");
+                    }
+                    let index = self.u.indextyp(&self.modul, &a.tisch.text, false);
+                    let ziel = a.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(&self.modul, t));
+                    if let Some(z) = &ziel {
+                        self.passt(&index, z, a.wert.span, "arena index");
+                    }
+                    lage.fakten.retain(|f| !nennt_namen(f, &a.name.text));
+                    if a.veraenderlich {
+                        self.unveraenderlich.remove(&a.name.text);
+                    } else {
+                        self.unveraenderlich.insert(a.name.text.clone());
+                    }
+                    lage.lokal.insert(a.name.text.clone(), ziel.unwrap_or(index));
+                }
+                if let Some(sonst) = &a.sonst {
+                    self.unterblock(sonst, lage, ergebnis);
+                }
+            }
+            // **«E4»: `reset A;`.** No expression, no binding -- the
+            // generation moves in `arena.rs`, and nothing here has to move
+            // with it. An unknown arena is `N213` there.
+            StmtArt::ResetArena(_) => {}
             StmtArt::Zuweisung(z) => {
+                // **«E4»:** an arena slot is written by `alloc`, never by
+                // assignment -- the counter and the reservation count what
+                // `alloc` does (`N214`, third face).
+                self.arena_schreibziel(&z.ziel, lage);
                 // **`M116` -- eine Zuweisung an ein unveraenderliches Band («NL.2.1»).**
                 //
                 // `mut` war bis zum 2026-08-19 ein Verbot ohne Biss. *Und M1 rechnet mit ihm:*
@@ -1006,6 +1050,8 @@ impl<'a> Pruefer<'a> {
                 self.schreiben_toetet_fakten(&z.ziel, lage);
             }
             StmtArt::Publish(p) => {
+                // **«E4»:** like an assignment -- no store outside `alloc`.
+                self.arena_schreibziel(&p.ziel, lage);
                 self.index_pruefen(&p.ziel, lage);
                 let ziel = self.u.typ_von_ort(&self.modul, &p.ziel, &lage.lokal);
                 self.buche(&ziel);
@@ -1525,6 +1571,8 @@ impl<'a> Pruefer<'a> {
             // returning `Zaehlerwert`) and wrong at `beispiele/gift/209`, where the same
             // body sits in a `check` and `M135` read its `return v + 1` against `bool`.
             StmtArt::Exchange(e) => {
+                // **«E4»:** an exchange writes -- no RMW outside `alloc`.
+                self.arena_schreibziel(&e.ort, lage);
                 let t = self.u.typ_von_ort(&self.modul, &e.ort, &lage.lokal);
                 self.buche(&t);
                 let gebunden = match &e.form {
@@ -2106,6 +2154,12 @@ impl<'a> Pruefer<'a> {
                 Typ::Ganzzahl(IntBereich::genau(b.breite, false, hi - b.max, hi - b.min))
             }
             ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage),
+            // **Lane 111:** a const-table literal is not typed here.
+            // `konstanten.rs` holds it element-wise (`K190`-`K194`), and a
+            // second typing here would be the second register over the same
+            // fact (W7). `Unbekannt` is compatible with everything, so the
+            // `passt` at the `const` stays silent by construction.
+            ExprArt::ArrayLit(_) => Typ::Unbekannt,
         }
     }
 
@@ -5721,7 +5775,11 @@ impl<'a> Pruefer<'a> {
         let bekannt = lage.lokal.contains_key(n)
             || self.u.suche_global(&self.modul, n).is_some()
             || self.u.funktionen.contains_key(n)
-            || self.u.tabellen.keys().any(|k| k == n || k.rsplit("::").next() == Some(n.as_str()));
+            || self.u.tabellen.keys().any(|k| k == n || k.rsplit("::").next() == Some(n.as_str()))
+            // **«E4»:** an arena is no value in `globale` (a declaration name
+            // is no value), but it IS a declared name -- a read `A[i]` must
+            // not fall here beside the arena rules.
+            || self.u.arenen.keys().any(|k| k == n || k.rsplit("::").next() == Some(n.as_str()));
         // **`|| n == "result"` stood here and fell on 2026-09-05, for the same reason as
         // `breite_wort` above.** The return value used to be a NODE of its own
         // (`ExprArt::Ergebnis`) that no place could ever be, so a place literally named
@@ -5740,7 +5798,105 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **«E4» -- `N214`: an index is typed by its arena.**
+    ///
+    /// Three faces, one rule. A place whose basis is an unshadowed arena is
+    /// exactly `A[i]`: (1) any other shape -- a bare `A`, a field, a second
+    /// index -- names no readable slot; (2) `i` has type `index into A`,
+    /// the name this pass bound at the `alloc`. The generation question
+    /// belongs to `arena.rs` (`N211`); the unknown bare name to `M119`.
+    /// Returns whether the basis is an unshadowed arena at all.
+    fn arena_ort(&mut self, o: &Ort, lage: &Lage) -> bool {
+        if lage.lokal.contains_key(&o.basis.text) {
+            return false;
+        }
+        let Some(q) = self.u.nennt_arena(&self.modul, &o.basis.text) else {
+            return false;
+        };
+        let kurz = crate::umgebung::kurzname(&q);
+        if o.suffixe.len() != 1 || !matches!(o.suffixe.first(), Some(OrtSuffix::Index(_))) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "N214",
+                    o.span,
+                    format!(
+                        "`{}` names no slot: a place over the arena `{}` is \
+                         exactly `{}[i]`",
+                        o.text(),
+                        o.basis.text,
+                        o.basis.text
+                    ),
+                )
+                .mit_notiz(
+                    "an arena is no value -- only a slot of it can be read, \
+                     and only through its index",
+                ),
+            );
+            return true;
+        }
+        if let Some(OrtSuffix::Index(idx)) = o.suffixe.first() {
+            let it = self.ausdruck_roh(idx, lage);
+            let erwartet = format!("index into {kurz}");
+            let traegt = matches!(&it, Typ::Benannt { name, .. } if name == &erwartet);
+            if !traegt {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "N214",
+                        idx.span,
+                        format!(
+                            "this index is no index into `{}`: an index is \
+                             typed by its arena, and only `alloc` out of `{}` \
+                             binds one",
+                            o.basis.text, o.basis.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "a number in range is not enough -- after a `reset` \
+                         the same number names another lifetime of the slot, \
+                         and the generation travels with the bound name",
+                    ),
+                );
+            }
+        }
+        true
+    }
+
+    /// **«E4» -- `N214`, third face: an arena slot is written by `alloc`.**
+    ///
+    /// `A[i] = v`, `publishes` and `exchange` over an arena place bypass
+    /// the used counter: the slot may be unallocated, and the count the
+    /// reservation is held against drifts. Returns whether the target is
+    /// an unshadowed arena place.
+    fn arena_schreibziel(&mut self, o: &Ort, lage: &Lage) -> bool {
+        if lage.lokal.contains_key(&o.basis.text) {
+            return false;
+        }
+        if self.u.nennt_arena(&self.modul, &o.basis.text).is_none() {
+            return false;
+        }
+        self.absagen.schiebe(
+            Absage::fehler(
+                "N214",
+                o.span,
+                format!(
+                    "`{}` is written outside `alloc`: an arena slot is \
+                     stored once, at allocation -- the used counter and the \
+                     reservation count what `alloc` does",
+                    o.text()
+                ),
+            )
+            .mit_notiz("read the slot with `A[i]`, store it with `alloc`"),
+        );
+        true
+    }
+
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
+        // **«E4»:** an arena place is owned by `arena_ort` below -- shape,
+        // index belonging, and nothing else. A local shadowing the arena
+        // resolves to the local, so the rule stays silent about it.
+        if self.arena_ort(o, lage) {
+            return;
+        }
         // **`suche` und nicht `get`, und das war ein Loch in der ERSTEN getragenen Klasse.**
         //
         // Bis zum 2026-08-17 stand hier ein direktes `get(&o.basis.text)`. Die Schluessel in
@@ -6767,6 +6923,14 @@ fn bereichsgrenzen(baum: &Programm, u: &Umgebung, absagen: &mut Absagen) {
                     if let Some(t) = &l.typ {
                         im_typ(t, wo, absagen);
                         lokal.insert(l.name.text.clone(), u.typ_von_ausdruck_decl(modul, t));
+                    }
+                }
+                // **«E4»:** the `alloc` annotation is a type in a body like
+                // the `let` one -- same walk, same map.
+                StmtArt::Alloc(a) => {
+                    if let Some(t) = &a.typ {
+                        im_typ(t, wo, absagen);
+                        lokal.insert(a.name.text.clone(), u.typ_von_ausdruck_decl(modul, t));
                     }
                 }
                 // **`let … else` carries no type annotation** (`ast::LetSonst` has

@@ -1,7 +1,8 @@
 -- erwartet: N069
 -- Lane E7: a resolved call whose region spans several lines. The translation
 -- refusal is about region content, so it points at the first region token
--- (`dispatch` below), not at the call around it.
+-- (`dispatch` below), not at the call around it. The translator is declared
+-- (lane E3 idiom, as in gift 820), so NOTHING fires beside N069.
 module gpu::spirv {
 table KernelTab count 1 {
     slot {
@@ -15,6 +16,13 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
     costs <= 8 ops
 {
     return n;
+}
+translator build for kernel(region : KernelTab) -> KernelTab
+    effects { pure }
+    costs <= 8 ops
+    decreases region.words
+{
+    return region;
 }
 }
 module app {

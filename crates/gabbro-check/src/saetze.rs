@@ -360,31 +360,39 @@ pub const NAMEN: &[Satz] = &[
     // with `payload <table>`, SYNTAX.md §7.1); the call `@lib#f` resolves
     // like any name and is checked like any call -- arguments (`M143` and
     // per-argument shape and range), effects through the call graph
-    // (`E008`), costs against the declaration. Four new refusals hold the
-    // four things no ordinary check can: the missing translator (`N069`),
-    // a foreign body in the hull (`N059`, §0c), a payload naming no table
-    // (`N060`), and a direct call bypassing the region (`N061`).
+    // (`E008`), costs against the declaration. Four refusals hold the
+    // four things no ordinary check can: the still-untranslated call
+    // (`N069`, naming the translator lane E3 declares), a foreign body in
+    // the hull (`N059`, §0c), a payload naming no table (`N060`), and a
+    // direct call bypassing the region (`N061`). The translator linkage
+    // itself is `namen.uebersetzer_*` below (lane E3).
     Satz {
         name: "namen.bibliothek_ruf",
         kennungen: &["N069"],
         aussage: "Every RESOLVED library call is refused with the translation \
-                  diagnostic -- once per call, in both positions. Its arguments, \
+                  diagnostic -- once per call, in both positions, naming the \
+                  translator that WOULD run the region. Its arguments, \
                   effects, error channel and costs are checked exactly like an \
                   ordinary call's; only the region is still not interpreted, so \
-                  until the translator exists (lanes E3/E5) the call cannot pass.",
+                  until a translator RUNS it (declared since lane E3, running \
+                  it is lane E5) the call cannot pass.",
         vorbehalt: "The refusal is load-bearing, not provisional: a checked call \
                     without a payload would be a silent acceptance of a region \
-                    nobody compiled. `beispiele/gift/820` carries a declaration \
-                    and two calls and falls with nothing but this code. Since \
-                    lane E7 the refusal's span sits INSIDE the region -- at its \
-                    first token, carried back through the region span map \
-                    (`regionkarte.rs`) -- never at the call around it.",
+                    nobody compiled. `beispiele/gift/820` carries a declaration, \
+                    its translator and two calls and falls with nothing but \
+                    this code. Since lane E7 the refusal's span sits INSIDE \
+                    the region -- at its first token, carried back through \
+                    the region span map (`regionkarte.rs`) -- never at the \
+                    call around it.",
+        gemessen_an: "`beispiele/gift/820` (declaration plus translator plus \
+                      calls, `N069` only); `/823` (wrong argument type beside \
+                      it); `beispiele/gift/870` (the E3-numbered positive); \
+                      `/875` and `/876` (multi-line regions, span at the first \
+                      region token, in statement and in binding position); \
+                      counter-direction in `paesse.rs` (`bibliothek_*`, \
+                      `translator_declared_call_names_it_n069`, \
+                      `library_n069_points_*`).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N069` only); \
-                      `/823` (wrong argument type beside it); `/875` and `/876` \
-                      (multi-line regions, span at the first region token, in \
-                      statement and in binding position); counter-direction \
-                      in `paesse.rs` (`bibliothek_*`, `library_n069_points_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
     },
     Satz {
@@ -431,6 +439,52 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "counter-direction in `paesse.rs` (`bibliothek_direktruf_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1",
+    },
+    // --- lane E3, 2026-09-12: the translator declaration ---------------------------------
+    //
+    // **The DECLARATION side of translators (PLAN-ERWEITUNG.md §6, lane E3).**
+    // A library declares, per run-time function, the translator from the
+    // region AST to the payload (`translator … for …`, SYNTAX.md §7.2) --
+    // a total, effect-free Gabbro function whose body every pass checks
+    // like any function body. Running it needs the compile-time evaluator
+    // (lane E5); only the declaration and the typing are built now. Five
+    // new refusals hold the five things only the linkage can fail.
+    Satz {
+        name: "namen.uebersetzer_einzigkeit",
+        kennungen: &["N200", "N201"],
+        aussage: "Every `library fn` with a payload type has exactly one \
+                  translator in its module: none is refused on the function, \
+                  a second one -- and a translator naming no library function \
+                  at all -- on the translator.",
+        vorbehalt: "The first declaration by position serves the function; a \
+                    function without a payload clause (`P043`) owes no \
+                    translator -- one refusal per defect.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/871` (missing, `N200`); counter-direction \
+                      in `paesse.rs` (`translator_missing_n200`, \
+                      `translator_second_n201`, `translator_dangling_n201`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; PLAN-ERWEITUNG.md §6",
+    },
+    Satz {
+        name: "namen.uebersetzer_signatur",
+        kennungen: &["N202", "N203", "N204"],
+        aussage: "A serving translator is `effects { pure }` with a \
+                  `decreases` clause and answers the served function's \
+                  payload table: anything else -- including a missing clause \
+                  or a missing result -- is refused on the translator.",
+        vorbehalt: "A payload naming no table itself (`N060` beside it) pins \
+                    no `N204`: one refusal per defect. The body is ordinary \
+                    Gabbro for every other pass; a translator hull reaching a \
+                    foreign body falls under `N059` like a library body.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`beispiele/gift/872` (effects, `N202`); `/873` (no \
+                      decreases, `N203`); `/874` (foreign result, `N204`); \
+                      counter-direction in `paesse.rs` (`translator_effects_n202`, \
+                      `translator_no_effects_n202`, `translator_no_decreases_n203`, \
+                      `translator_result_mismatch_n204`, \
+                      `translator_foreign_hull_n059`, \
+                      `translator_without_body_p044`).",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; PLAN-ERWEITUNG.md §6",
     },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
@@ -1800,6 +1854,73 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; beispiele/gift/776-*; \
                      beispiele/gift/788-return-carries-a-value-without-a-result.gab",
     },
+    Satz {
+        name: "consts.evaluable",
+        kennungen: &["K190"],
+        aussage: "A `const` initializer, or a const-table element, outside the total, \
+                  effect-free fragment falls (`K190`): carrier reads, layout queries, \
+                  indirect calls and block-bodied calls do not fold, and the pass names \
+                  the site instead of leaving the emitter's unnamed refusal.",
+        vorbehalt: "It says nothing where another rule already speaks: division by zero \
+                    stays `M102`'s, `~` stays the emitter's (`C001`, gift 445), floats \
+                    stay silent (the fragment is integers), and scalar ranges stay \
+                    `M101`'s. A recursive hull without `decreases` is `K008`/`K009`/\
+                    `H022` where it stands, never `K190` -- recursion is their \
+                    territory, even when a `const` calls into it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/860 (a table read in an element falls as `K190` \
+                      alone); the pure block-bodied call is pinned inline \
+                      (`k190_reiner_aufruf_ohne_huelle` in \
+                      crates/gabbro-check/tests/konstanten.rs). The clean side is \
+                      beispiele/92-const-squares.gab and \
+                      beispiele/93-const-scalars.gab.",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_skalar`, \
+                     `pruefe_tabelle`); dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
+    Satz {
+        name: "consts.table",
+        kennungen: &["K191", "K194"],
+        aussage: "A const-table literal holds exactly the declared count (`K191`), and \
+                  every element evaluates inside the declared element range (`K194`). \
+                  The literal is element-wise: nothing is filled in, and `m1` leaves \
+                  the literal `Unbekannt` by construction, so no second rule ranges \
+                  the same elements.",
+        vorbehalt: "It checks the SHAPE, not the meaning: that the 64 entries are the \
+                    squares is the Lean certificate (`Konstanten.quadrate64_zert`), not \
+                    this rule. A length the declaration does not name (an unfoldable \
+                    count) skips the count check -- the count's own `const` owes the \
+                    refusal then, not the table.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/861 (two entries for three fall as `K191` alone) \
+                      and /864 (`300` in a `u8` table falls as `K194` alone). The clean \
+                      side is beispiele/92-const-squares.gab (64 folded entries, \
+                      emitted and compiled).",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_tabelle`); \
+                     dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
+    Satz {
+        name: "consts.callhull",
+        kennungen: &["K192", "K193"],
+        aussage: "Every function in a `const`'s call hull is `pure` (`K192`), and a \
+                  reference cycle through a `const` falls (`K193`): a `const` carries \
+                  no `decreases` by grammar shape, so a cycle through one is unbounded \
+                  as const evaluation. The hull descends through single-return \
+                  `const fn` bodies; anything else is opaque to it.",
+        vorbehalt: "Non-recursive callees without `decreases` are accepted: the bound \
+                    is owed where unboundedness lives, the same line `K008` draws. A \
+                    cycle of functions ALONE stays `K008`/`K009`/`H022`'s -- this pass \
+                    stays silent on it, including the `K190` it would otherwise owe. A \
+                    recursive `const fn` WITH `decreases` still exceeds the \
+                    single-unfolding folder and falls at `K190`, honestly named.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/862 (a `reads` callee falls as `K192` alone) and \
+                      /863 (two consts naming each other fall as `K193`, once per \
+                      member); the transitive impurity through a `const fn` is pinned \
+                      inline (`k192_through_const_fn`). The clean side is the \
+                      `quad` calls of beispiele/92-const-squares.gab.",
+        fundstelle: "crates/gabbro-check/src/konstanten.rs (`hull_expr`); \
+                     dokumente/SYNTAX.md §1 (`arraylit`)",
+    },
 ];
 
 // ===================================================================================
@@ -2426,6 +2547,25 @@ pub const WIRKUNGEN: &[Satz] = &[
                       ban on calls, not a contract.*",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs (`probenrumpf`); `N027` in namen.rs",
     },
+    Satz {
+        name: "wirkungen.vertragsfuss",
+        kennungen: &["E220", "E221"],
+        aussage: "A contract is part of the frame: every known world carrier a `requires` \
+                  (`E220`) or `ensures` (`E221`) clause reads is covered by a declared \
+                  `reads` or `writes` effect -- unless no function of the program writes \
+                  it at all, in which case it is read-only and needs no cover.",
+        vorbehalt: "Parameters, quantifier binders, constants and unknown names are no \
+                    world reads (the E010 line); `Has`/`Held` name a capability or a lock, \
+                    not a read; calls into spec functions count only their arguments. \
+                    `syscall`/`axiom` contracts, `maintains` and the `= pred ;` body of a \
+                    `spec fn` are not read. Device registers read bare are outside known \
+                    world state and stay silent -- the same boundary E010 draws.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/895-896 (requires/ensures over an undeclared \
+                      written carrier) and 898 (the index path); read-only and covered \
+                      twins pass.",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs (`vertrag_gegen_wirkungen`)",
+    },
 ];
 
 // ===================================================================================
@@ -2826,6 +2966,48 @@ pub const PHASEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: probe 827 on `P044`.",
         fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
     },
+    // --- lane E4, 2026-09-12: the monotone arena, checker half -------------------------
+    //
+    // **The structure lane of PLAN-ERWEITUNG.md §3.** A heap is allowed but never
+    // unbounded: `arena A capacity lo .. hi of T` declares the reservation and the
+    // hard bound, `let i = alloc A (v) else { … }` stores into the next free slot,
+    // `A[i]` reads, and `reset A` starts a fresh generation. Five refusals hold the
+    // five things no ordinary check can: unusable bounds (`N210`), a use outside
+    // its generation (`N211`), a missing `else` past the reservation (`N212`), a
+    // name that declares no arena (`N213`), and a place or index of another kind
+    // (`N214`, at the one place that types every `Ort`).
+    Satz {
+        name: "arena.erklaerung",
+        kennungen: &["N210", "N211", "N212", "N213", "N214"],
+        aussage: "Every arena declares two constant bounds with `0 <= lo <= hi` \
+                  (`N210`); every `alloc` past the reservation owes its `else` \
+                  (`N212`, counted per function like `costs`); no index is read \
+                  outside the generation its `alloc` bound it in (`N211`); \
+                  `alloc` and `reset` name a declared arena (`N213`); and a \
+                  place over an arena is exactly `A[i]` with `i : index into \
+                  A`, never written outside `alloc` (`N214`). The emitted array \
+                  holds exactly `hi` elements beside its `used` counter -- no \
+                  heap allocation in the C -- and `reset` stores zero into the \
+                  counter.",
+        vorbehalt: "The count is per function body: two functions allocating into \
+                    one arena share the runtime counter, and no static count sees \
+                    the other -- like `costs`, whose recursion carries an \
+                    assumption instead of a computation. A reservation shared \
+                    across functions needs the whole-program discipline, and that \
+                    is future work, not a silent promise. `beispiele/98` and \
+                    `/99` carry the positive direction (emission included); the \
+                    five poison probes pin the five refusals.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe `885` on `N210` (inverted bounds), \
+                      `886` on `N211` (stale index after `reset`), `887` on \
+                      `N212` (missing `else` past the reservation), `888` on \
+                      `N213` (undeclared arena), `889` on `N214` (foreign \
+                      index); beispiele/98 checks clean and emits, /99 the \
+                      boundary; counter-direction in `paesse.rs` (`arena_*`).",
+        fundstelle: "crates/gabbro-check/src/arena.rs (`N210`-`N213`); \
+                     crates/gabbro-check/src/m1.rs (`N214`); \
+                     dokumente/SYNTAX.md §9.1; PLAN-ERWEITUNG.md §3",
+    },
     Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],
@@ -3137,6 +3319,24 @@ pub const SPERREN: &[Satz] = &[
                       `gabbro kontexte` prints the zero beside the rule, which is the \
                       difference between „found nothing\" and „looked at nothing\".",
         fundstelle: "crates/gabbro-check/src/geteilt.rs; K11.2.2",
+    },
+    Satz {
+        name: "sperren.ungeteilt",
+        kennungen: &["H222"],
+        aussage: "A carrier no declaration shares is own state: it is written by the code \
+                  of at most one thread (`H222`). The computation is the W5 premise over \
+                  the built `Bau` -- the same reachability H013 is built beside, extended \
+                  by the thread witnesses, not a second one.",
+        vorbehalt: "H013 refuses per entry (one context already shares with every other \
+                    core in it); H222 refuses per carrier and only on a pair. No \
+                    `ein_kern`/`masks` exemption: masking orders one core against \
+                    preemption, while state written by two entries persists across both. \
+                    Unknown carriers read shared (S5); unresolvable entries drop out (S4).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/897 (two entries, one unshared write) and 899 \
+                      (the transitive leg); single-thread and guarded twins pass.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs (`H222`); bau.rs \
+                     (`ungeteilt_mit_faeden`)",
     },
     // --- Die drei Kennungen aus Stufe 6, nachgetragen 2026-08-21 -----------------------
     //
