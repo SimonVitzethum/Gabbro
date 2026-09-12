@@ -2004,3 +2004,98 @@ theorem hwitschritt_kleber_voll
 #print axioms Gabbro.Grammatik.hwitschritt_kleber_voll
 
 end Gabbro.Grammatik
+
+/-! ## 12. The witnessed whole run, closed: no open step premise (i01)
+
+    The call-site gap behind `kette_aus_lauf_bezeugt`
+    (`MaschinenKette.lean`, read-only here): its concluding identification --
+    a chain tracking the whole run with the unconditional table link plus the
+    guard -- travels with the step hypothesis `hWitSchritt`, and no consumer
+    discharges it. The discharge stands here, not there: `Ziel` imports
+    `MaschinenKette` (not vice versa), so the application corollary lives in
+    this file. `hwitschritt_kleber_voll` (§11, read-only reuse) has exactly the
+    `hWitSchritt` shape -- same quantified machines, reachabilities, firing
+    data, chain, and witness duties, over the same outer run, thread, carrier,
+    and guard -- so one positional application closes every leaf of the
+    whole-run induction. The corollary below takes the exact
+    `kette_aus_lauf_bezeugt` premises minus `hWitSchritt` and concludes the
+    exact `kette_aus_lauf_bezeugt` conclusion: worlds and run by construction,
+    the member thread, the unconditional table link, and the guard, with no
+    open step premise left.
+
+    Narrowing carried explicitly, never widened: single-thread runs
+    (`hsingle_prog`, `hsingle_run`), frame-covered leaves (`hRahmen`), one
+    shared table carrier under guard (`t₀`, `L`, `hGuardT`, `hCov`). Witness
+    duties stay posited -- per firing (`hwit_leaf`) and per prefix
+    (`hwit_lock`) -- as scheduler/witness duty, exactly as the call site
+    books them.
+
+    Every premise is load-bearing: each is passed whole to the call-site
+    theorem or to the glue, so deleting any premise breaks elaboration. There
+    is no `have _ :=` discard, no `sorry`/`admit`/`axiom`, and no bare `Prop`
+    slot.
+
+    Remainder (booked, not hidden): globals, multi-carrier conflicts,
+    multi-thread runs, and the witness duties themselves -- inherited from the
+    call site unchanged. -/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **The witnessed chain from the whole run, closed.** The exact
+    `kette_aus_lauf_bezeugt` premises minus `hWitSchritt`, with the exact
+    `kette_aus_lauf_bezeugt` conclusion: chain identification (worlds and run
+    by construction) with the unconditional table link plus the guard. The
+    open step premise vanishes into one positional application of the §11
+    glue (`hwitschritt_kleber_voll`, read-only reuse), which has exactly the
+    `hWitSchritt` shape. The narrowing rides along openly: single-thread
+    frame-covered runs over one table carrier under guard. Every premise is
+    load-bearing. -/
+theorem kette_aus_lauf_bezeugt_closed
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (Nb : Nebeneinander)
+    (prog : PCProg D) (M : GenMaschine D) (pc : PCStand)
+    (h : PCReach P O passes prog (GenStart sp) M pc)
+    (f : Faden) (code : Faden → D.Fn)
+    (t₀ : D.Tab) (L : D.Lock)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hsingle_prog : ∀ g, g ≠ f → prog g = [])
+    (hsingle_run : ∀ s ∈ M.lauf, s.faden = f)
+    (hRahmen : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+      (s : Stmt D V l Γ Λ Λ'), s.istBlatt = true →
+      (∀ t, V.schreibt t = true → D.schreibt (code f) t = true) ∧
+      (∀ g, V.gschreibt g = true → D.gschreibt (code f) g = true))
+    (hEintritt : EintrittPasst (code f) (GenStart sp).start)
+    (hSchuld : SchuldnerHaelt (code f))
+    (hInvSicht : InvSichtHaelt (code f) (GenStart sp).start)
+    (hwit_leaf : ∀ (Mx : GenMaschine D) (V : Vertrag D) (l : Bool) (Γ : Ctx)
+      (Λ Λ' : List (Res D)) (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+      (_hΛ : HeldGenau Λ (offen (Mx.spuren f))) (σ' : World D) (neu : List (Ereignis D))
+      (_hstep : (execStmt O passes keinRuf s (Mx.weltVon f) ρ).welt = some σ'),
+      TraegerSchreibt (code f) (.inl t₀) = true →
+      ∃ (w : Bool) (Λw : List (Res D)) (hwL : List D.Lock),
+        Ereignis.zugriff t₀ w Λw hwL ∈ neu)
+    (hwit_lock : ∀ (Mx : GenMaschine D) (pcx : PCStand),
+      PCReach P O passes prog (GenStart sp) Mx pcx →
+      TraegerSchreibt (code f) (.inl t₀) = true →
+      ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
+        Mx.lauf[j]? = some (Schritt.mk f (.zugriff t₀ w Λe he))) :
+    ∃ J : GemeinsamerLauf (D := D) Nb,
+      J.welten = M.welten ∧
+      J.l = M.lauf ∧
+      f ∈ J.faeden ∧
+      SerialLink Nb J M.lauf t₀ ∧
+      (∀ (g : Faden), g ∈ J.faeden → TraegerSchreibt (J.code g) (.inl t₀) = true →
+        L ∈ D.haelt (J.code g)) := by
+  exact kette_aus_lauf_bezeugt P O passes hO sp Nb prog M pc h f code t₀ L hGuardT hCov
+    hsingle_prog hsingle_run hRahmen hEintritt hSchuld hInvSicht hwit_leaf hwit_lock
+    (fun Mx Mx' hReach hReach' V l Γ Λ Λ' s ρ hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG
+      hsingle hGuardT hCov hwit_old hneu_wit =>
+      hwitschritt_kleber_voll P O passes hO sp Nb Mx Mx' f hReach hReach' V l Γ Λ Λ' s ρ
+        hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit)
+
+#print axioms Gabbro.Grammatik.kette_aus_lauf_bezeugt_closed
+
+end Gabbro.Grammatik
