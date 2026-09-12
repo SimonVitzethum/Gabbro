@@ -3138,3 +3138,390 @@ theorem hsingle_aus_einfaedig
 #print axioms Gabbro.Grammatik.hsingle_aus_einfaedig
 
 end Gabbro.Grammatik
+
+/-! ## 20. The spec triple from execution: one fired step extends the thread triple
+    (`spec_aus_fuehrung_schritt`)
+
+    The Owicki-Gries bind (`InterferenzAllgemein.lean` section 19: `SpecTriple`,
+    `seqTriple_from_spec`, `stabil_from_spec`, consumed by `owickiGries_stabil`)
+    posits each thread's triple over chain positions: `requiresEigen` and
+    `ensuresEigen` quantify over indices `k` with `schrittFaden[k]? = some f`,
+    with no link to the steps the machine actually fired. The sequential side
+    exists (`stabil_from_spec`) and the execution side exists (PC runs,
+    section 12: where each thread stands, firing through `PCSchritt`); nothing
+    binds the triple to the executed steps of the interleaving.
+
+    What is proved (no `sorry`):
+
+    - `spec_aus_fuehrung_schritt`: one executed PC step extends the thread
+      triple. A chain `J` tracks the machine `M` (`hJw`: the same worlds); the
+      thread's triple holds on `J` (`hSpec`, the prefix -- at the seed this is
+      head validity alone, since a zero-step chain carries no eigen
+      obligation); one `PCSchritt` of `f` fires (`hs`: where the thread stands
+      plus the firing data, read as a generated step through `pcSchritt_gen`);
+      the extended chain `J'` continues the history by construction
+      (`hJ'sf` / `hJ'w` / `hJ'code`, exactly what the section 14 / `blatt`
+      constructions supply definitionally). Then the triple holds on `J'`.
+      Old indices transfer through the prefix triple; the new index -- the
+      fired step -- transfers through the firing itself. Leaf steps go
+      through the per-firing contract preservation (`hBlatt`, the
+      sequential-verification duty, now stated over firings with `hstep`
+      evidence rather than over chain positions); lock steps (`nimmt` /
+      `gibt`, the section boundaries of the section 21 grain) go through
+      live-memory constancy plus memory-only contracts (`hMem`): a lock step
+      keeps the memory, and contracts read only memory, so `Pre` / `Post`
+      survive with no user logic owed.
+      Every premise is load-bearing: `hReach` / `hO` / `sp` feed the
+      last-world memory fact (`genWelten_letzte` through `pcReach_gen`); `hs`
+      feeds `pcSchritt_gen`; `hJw` / `hJ'sf` / `hJ'w` / `hJ'code` rewrite every
+      index; `hMem` bridges both step kinds; `hBlatt` closes the leaf case;
+      `hSpec` closes the old indices and both heads. There is no `have _ :=`
+      discard, no `sorry` / `admit` / `axiom`, and no bare `Prop` slot.
+
+    Coverage (exactly): one executed `PCSchritt` (`leaf` / `nimmt` / `gibt`)
+    by a tracked thread, extending a tracked chain. `Pre` holds along the
+    thread's executed steps and `Post` at its section ends, in the uniform
+    eigen shape that `owickiGries_stabil` consumes -- the indexing is executed
+    (chain positions are machine firings, worlds are machine history), while
+    the per-statement contract content stays where it belongs (below).
+
+    Remainder (booked, not hidden): iterating the step over a whole `PCReach`
+    run (the induction that carries a seed triple -- head validity from the
+    caller -- to the final chain); the per-step atom identity inside `hs`
+    (S12, the scheduler and witness duty: the counter points at the extracted
+    atom); the `axiomCall` oracle-event contract (S13: the oracle answers with
+    an arbitrary world, so `hBlatt` for oracle leaves is owed on arbitrary
+    answers); discharging `hMem` for `QRequires` / `QEnsures` (the
+    per-expression induction showing `eval` reads only slots and globals,
+    downstream where the contract instantiation lives); head validity from
+    thread entry (the caller side).
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **Memory-only contracts.** `Pre` / `Post` read only live memory (slots and
+    globals), never the trace: worlds over the same memory agree. Contract
+    shapes (`QRequires` / `QEnsures`) satisfy this because `eval` reads only
+    slots and globals; the per-expression induction stays downstream, where
+    the contract instantiation lives. -/
+structure SpeicherVertrag (Pre Post : D.Fn → World D → Prop) (fn : D.Fn) : Prop where
+  /-- The requires-side agrees on worlds over the same memory. -/
+  memPre : ∀ σ σ' : World D, σ.speicher = σ'.speicher → (Pre fn σ ↔ Pre fn σ')
+  /-- The ensures-side agrees on worlds over the same memory. -/
+  memPost : ∀ σ σ' : World D, σ.speicher = σ'.speicher → (Post fn σ ↔ Post fn σ')
+
+/-- A world built over a memory carries that memory. -/
+theorem speicher_welt_speicher (s : Speicher D) (tr : List (Ereignis D)) :
+    (s.welt tr).speicher = s := by
+  cases s
+  rfl
+
+#print axioms Gabbro.Grammatik.speicher_welt_speicher
+
+/-- **One executed step extends the thread triple.** Where a tracked chain
+    meets one fired PC step of its thread, the spec triple transfers to the
+    extended chain: old positions keep the prefix triple, the fired position
+    keeps the contract through the firing (leaf steps through per-firing
+    preservation, lock steps through memory constancy). This is the step that
+    binds spec triples to interleaved execution, so that `owickiGries_stabil`
+    consumes executed triples, not posited ones. -/
+theorem spec_aus_fuehrung_schritt
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (prog : PCProg D) (sp : Speicher D)
+    (M M' : GenMaschine D) (pc pc' : PCStand) (f : Faden)
+    (hReach : PCReach P O passes prog (GenStart sp) M pc)
+    (hs : PCSchritt P O passes prog M pc f M' pc')
+    (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (hJw : J.welten = M.welten)
+    (Pre Post : D.Fn → World D → Prop)
+    (hMem : SpeicherVertrag Pre Post (J.code f))
+    (hBlatt : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+      (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ),
+      s.istBlatt = true → HeldGenau Λ (offen (M.spuren f)) →
+      ∀ (σ' : World D) (neu : List (Ereignis D)),
+      (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ' →
+      σ'.spur = neu ++ M.spuren f →
+      (∀ (L : D.Lock) (h : List D.Lock), Ereignis.nimmt L h ∉ neu) →
+      (Pre (J.code f) (M.weltVon f) ↔ Pre (J.code f) σ') ∧
+        (Post (J.code f) (M.weltVon f) ↔ Post (J.code f) σ'))
+    (hSpec : SpecTriple Pre Post Nb J f)
+    (J' : GemeinsamerLauf (D := D) Nb)
+    (hJ'sf : J'.schrittFaden = J.schrittFaden ++ [f])
+    (hJ'w : J'.welten = M'.welten)
+    (hJ'code : J'.code f = J.code f) :
+    SpecTriple Pre Post Nb J' f := by
+  have hG : GenErreichbar P O passes (GenStart sp) M :=
+    pcReach_gen P O passes prog (GenStart sp) M pc hReach
+  have hGen : GenSchritt P O passes M f M' :=
+    pcSchritt_gen P O passes prog M M' pc pc' f hs
+  obtain ⟨f0, hlast⟩ := genWelten_letzte P O passes hO sp M hG
+  have hMlen : M.welten.length = J.schrittFaden.length + 1 := by
+    rw [← hJw]
+    exact J.hKette
+  have hlastIdx : M.welten[J.schrittFaden.length]? =
+      some (M.speicher.welt (M.spuren f0)) := by
+    have hget : M.welten.getLast? = M.welten[M.welten.length - 1]? :=
+      List.getLast?_eq_getElem?
+    have hn : M.welten.length - 1 = J.schrittFaden.length := by omega
+    rw [hn] at hget
+    rw [hlast] at hget
+    exact hget.symm
+  have hwf : (M.weltVon f).speicher = M.speicher :=
+    speicher_welt_speicher M.speicher (M.spuren f)
+  -- positions below the frontier read through the prefix triple
+  have hPrefix : ∀ (W : List (World D)), J'.welten = M.welten ++ W →
+      ∀ (k : Nat) (vor nach : World D),
+      k < J.schrittFaden.length →
+      J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach →
+        (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) ∧
+          (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+    intro W hW k vor nach hlt hkg hkv hkn
+    have e1 : (J.schrittFaden ++ [f])[k]? = J.schrittFaden[k]? :=
+      List.getElem?_append_left hlt
+    rw [hJ'sf] at hkg
+    rw [e1] at hkg
+    have hltM : k < M.welten.length := by omega
+    have hltM1 : k + 1 < M.welten.length := by omega
+    have e2 : (M.welten ++ W)[k]? = M.welten[k]? :=
+      List.getElem?_append_left hltM
+    have e3 : (M.welten ++ W)[k + 1]? = M.welten[k + 1]? :=
+      List.getElem?_append_left hltM1
+    rw [hW] at hkv hkn
+    rw [e2] at hkv
+    rw [e3] at hkn
+    have hJkv : J.welten[k]? = some vor := by
+      rw [hJw]
+      exact hkv
+    have hJkn : J.welten[k + 1]? = some nach := by
+      rw [hJw]
+      exact hkn
+    rw [hJ'code]
+    exact ⟨hSpec.requiresEigen k vor nach hkg hJkv hJkn,
+      hSpec.ensuresEigen k vor nach hkg hJkv hJkn⟩
+  -- the head reads through the prefix
+  have hHead : ∀ (W : List (World D)), J'.welten = M.welten ++ W →
+      ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → J.welten[0]? = some σ₀ := by
+    intro W hW σ₀ h0
+    have hne : 0 < M.welten.length := by omega
+    have e0 : (M.welten ++ W)[0]? = M.welten[0]? :=
+      List.getElem?_append_left hne
+    rw [hW, e0] at h0
+    rw [hJw]
+    exact h0
+  -- the frontier world carries live memory
+  have hFront : ∀ (W : List (World D)), J'.welten = M.welten ++ W →
+      ∀ vor : World D, J'.welten[J.schrittFaden.length]? = some vor →
+        vor.speicher = M.speicher := by
+    intro W hW vor hkv
+    have hltNew : J.schrittFaden.length < M.welten.length := by omega
+    have eW : (M.welten ++ W)[J.schrittFaden.length]? =
+        M.welten[J.schrittFaden.length]? :=
+      List.getElem?_append_left hltNew
+    rw [hW, eW, hlastIdx] at hkv
+    have hvor : vor = M.speicher.welt (M.spuren f0) :=
+      Option.some_inj.mp hkv.symm
+    rw [hvor]
+    exact speicher_welt_speicher _ _
+  -- beyond the frontier there is no step
+  have hBeyond : ∀ (k : Nat), J.schrittFaden.length < k →
+      J'.schrittFaden[k]? = some f → False := by
+    intro k hlt hkg
+    have hle : J.schrittFaden.length ≤ k := by omega
+    have eNone : (J.schrittFaden ++ [f])[k]? = none := by
+      rw [List.getElem?_append_right hle, List.getElem?_eq_none_iff,
+        List.length_singleton]
+      omega
+    rw [hJ'sf] at hkg
+    rw [eNone] at hkg
+    simp at hkg
+  rcases hGen with ⟨V, l, Γ, Λ, Λ', s, ρ, hleaf, hΛ, σ', neu, hstep, hneu, hkein⟩ |
+    ⟨L, _hself, _hrang, _hfrei⟩ | ⟨L, _hhaelt⟩
+  · -- the fired leaf appends its outcome world
+    have hW : J'.welten = M.welten ++ [σ'] := hJ'w
+    have eW2 : (M.welten ++ [σ'])[J.schrittFaden.length + 1]? = some σ' := by
+      have hle2 : M.welten.length ≤ J.schrittFaden.length + 1 := by omega
+      rw [List.getElem?_append_right hle2]
+      have hsub : J.schrittFaden.length + 1 - M.welten.length = 0 := by omega
+      rw [hsub]
+      rfl
+    have hNew : ∀ (vor nach : World D),
+        J'.welten[J.schrittFaden.length]? = some vor →
+        J'.welten[J.schrittFaden.length + 1]? = some nach →
+        (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) ∧
+          (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+      intro vor nach hkv hkn
+      have hvs : vor.speicher = M.speicher := hFront [σ'] hW vor hkv
+      have hnach : σ' = nach := by
+        rw [hW, eW2] at hkn
+        exact Option.some_inj.mp hkn
+      have hPre : Pre (J.code f) vor ↔ Pre (J.code f) σ' :=
+        (hMem.memPre vor (M.weltVon f) (hvs.trans hwf.symm)).trans
+          (hBlatt V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkein).1
+      have hPost : Post (J.code f) vor ↔ Post (J.code f) σ' :=
+        (hMem.memPost vor (M.weltVon f) (hvs.trans hwf.symm)).trans
+          (hBlatt V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkein).2
+      rw [hJ'code, ← hnach]
+      exact ⟨hPre, hPost⟩
+    have hReqH : ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → Pre (J'.code f) σ₀ := by
+      intro σ₀ h0
+      rw [hJ'code]
+      exact hSpec.requiresHead σ₀ (hHead [σ'] hW σ₀ h0)
+    have hEnsH : ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → Post (J'.code f) σ₀ := by
+      intro σ₀ h0
+      rw [hJ'code]
+      exact hSpec.ensuresHead σ₀ (hHead [σ'] hW σ₀ h0)
+    have hReqE : ∀ (k : Nat) (vor nach : World D),
+        J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach → (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) := by
+      intro k vor nach hkg hkv hkn
+      by_cases hlt : k < J.schrittFaden.length
+      · exact (hPrefix [σ'] hW k vor nach hlt hkg hkv hkn).1
+      · by_cases heq : k = J.schrittFaden.length
+        · subst heq
+          exact (hNew vor nach hkv hkn).1
+        · exact (hBeyond k (by omega) hkg).elim
+    have hEnsE : ∀ (k : Nat) (vor nach : World D),
+        J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach → (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+      intro k vor nach hkg hkv hkn
+      by_cases hlt : k < J.schrittFaden.length
+      · exact (hPrefix [σ'] hW k vor nach hlt hkg hkv hkn).2
+      · by_cases heq : k = J.schrittFaden.length
+        · subst heq
+          exact (hNew vor nach hkv hkn).2
+        · exact (hBeyond k (by omega) hkg).elim
+    exact ⟨hReqH, hEnsH, hReqE, hEnsE⟩
+  · -- the fired take keeps live memory: contracts survive with no user logic
+    have hW : J'.welten =
+        M.welten ++ [M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)] :=
+      hJ'w
+    have eW2 : (M.welten ++
+        [M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)])[J.schrittFaden.length + 1]? =
+        some (M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)) := by
+      have hle2 : M.welten.length ≤ J.schrittFaden.length + 1 := by omega
+      rw [List.getElem?_append_right hle2]
+      have hsub : J.schrittFaden.length + 1 - M.welten.length = 0 := by omega
+      rw [hsub]
+      rfl
+    have hNew : ∀ (vor nach : World D),
+        J'.welten[J.schrittFaden.length]? = some vor →
+        J'.welten[J.schrittFaden.length + 1]? = some nach →
+        (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) ∧
+          (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+      intro vor nach hkv hkn
+      have hvs : vor.speicher = M.speicher :=
+        hFront _ hW vor hkv
+      have hnach : M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f) = nach := by
+        rw [hW, eW2] at hkn
+        exact Option.some_inj.mp hkn
+      have hNs : (M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)).speicher =
+          M.speicher :=
+        speicher_welt_speicher _ _
+      have hBrPre : Pre (J.code f) vor ↔
+          Pre (J.code f) (M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)) :=
+        hMem.memPre vor _ (hvs.trans hNs.symm)
+      have hBrPost : Post (J.code f) vor ↔
+          Post (J.code f) (M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)) :=
+        hMem.memPost vor _ (hvs.trans hNs.symm)
+      rw [hJ'code, ← hnach]
+      exact ⟨hBrPre, hBrPost⟩
+    have hReqH : ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → Pre (J'.code f) σ₀ := by
+      intro σ₀ h0
+      rw [hJ'code]
+      exact hSpec.requiresHead σ₀ (hHead _ hW σ₀ h0)
+    have hEnsH : ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → Post (J'.code f) σ₀ := by
+      intro σ₀ h0
+      rw [hJ'code]
+      exact hSpec.ensuresHead σ₀ (hHead _ hW σ₀ h0)
+    have hReqE : ∀ (k : Nat) (vor nach : World D),
+        J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach → (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) := by
+      intro k vor nach hkg hkv hkn
+      by_cases hlt : k < J.schrittFaden.length
+      · exact (hPrefix _ hW k vor nach hlt hkg hkv hkn).1
+      · by_cases heq : k = J.schrittFaden.length
+        · subst heq
+          exact (hNew vor nach hkv hkn).1
+        · exact (hBeyond k (by omega) hkg).elim
+    have hEnsE : ∀ (k : Nat) (vor nach : World D),
+        J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach → (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+      intro k vor nach hkg hkv hkn
+      by_cases hlt : k < J.schrittFaden.length
+      · exact (hPrefix _ hW k vor nach hlt hkg hkv hkn).2
+      · by_cases heq : k = J.schrittFaden.length
+        · subst heq
+          exact (hNew vor nach hkv hkn).2
+        · exact (hBeyond k (by omega) hkg).elim
+    exact ⟨hReqH, hEnsH, hReqE, hEnsE⟩
+  · -- the fired release keeps live memory: the section end keeps the contract
+    have hW : J'.welten =
+        M.welten ++ [M.speicher.welt (Ereignis.gibt L :: M.spuren f)] :=
+      hJ'w
+    have eW2 : (M.welten ++
+        [M.speicher.welt (Ereignis.gibt L :: M.spuren f)])[J.schrittFaden.length + 1]? =
+        some (M.speicher.welt (Ereignis.gibt L :: M.spuren f)) := by
+      have hle2 : M.welten.length ≤ J.schrittFaden.length + 1 := by omega
+      rw [List.getElem?_append_right hle2]
+      have hsub : J.schrittFaden.length + 1 - M.welten.length = 0 := by omega
+      rw [hsub]
+      rfl
+    have hNew : ∀ (vor nach : World D),
+        J'.welten[J.schrittFaden.length]? = some vor →
+        J'.welten[J.schrittFaden.length + 1]? = some nach →
+        (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) ∧
+          (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+      intro vor nach hkv hkn
+      have hvs : vor.speicher = M.speicher :=
+        hFront _ hW vor hkv
+      have hnach : M.speicher.welt (Ereignis.gibt L :: M.spuren f) = nach := by
+        rw [hW, eW2] at hkn
+        exact Option.some_inj.mp hkn
+      have hNs : (M.speicher.welt (Ereignis.gibt L :: M.spuren f)).speicher =
+          M.speicher :=
+        speicher_welt_speicher _ _
+      have hBrPre : Pre (J.code f) vor ↔
+          Pre (J.code f) (M.speicher.welt (Ereignis.gibt L :: M.spuren f)) :=
+        hMem.memPre vor _ (hvs.trans hNs.symm)
+      have hBrPost : Post (J.code f) vor ↔
+          Post (J.code f) (M.speicher.welt (Ereignis.gibt L :: M.spuren f)) :=
+        hMem.memPost vor _ (hvs.trans hNs.symm)
+      rw [hJ'code, ← hnach]
+      exact ⟨hBrPre, hBrPost⟩
+    have hReqH : ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → Pre (J'.code f) σ₀ := by
+      intro σ₀ h0
+      rw [hJ'code]
+      exact hSpec.requiresHead σ₀ (hHead _ hW σ₀ h0)
+    have hEnsH : ∀ σ₀ : World D, J'.welten[0]? = some σ₀ → Post (J'.code f) σ₀ := by
+      intro σ₀ h0
+      rw [hJ'code]
+      exact hSpec.ensuresHead σ₀ (hHead _ hW σ₀ h0)
+    have hReqE : ∀ (k : Nat) (vor nach : World D),
+        J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach → (Pre (J'.code f) vor ↔ Pre (J'.code f) nach) := by
+      intro k vor nach hkg hkv hkn
+      by_cases hlt : k < J.schrittFaden.length
+      · exact (hPrefix _ hW k vor nach hlt hkg hkv hkn).1
+      · by_cases heq : k = J.schrittFaden.length
+        · subst heq
+          exact (hNew vor nach hkv hkn).1
+        · exact (hBeyond k (by omega) hkg).elim
+    have hEnsE : ∀ (k : Nat) (vor nach : World D),
+        J'.schrittFaden[k]? = some f → J'.welten[k]? = some vor →
+        J'.welten[k + 1]? = some nach → (Post (J'.code f) vor ↔ Post (J'.code f) nach) := by
+      intro k vor nach hkg hkv hkn
+      by_cases hlt : k < J.schrittFaden.length
+      · exact (hPrefix _ hW k vor nach hlt hkg hkv hkn).2
+      · by_cases heq : k = J.schrittFaden.length
+        · subst heq
+          exact (hNew vor nach hkv hkn).2
+        · exact (hBeyond k (by omega) hkg).elim
+    exact ⟨hReqH, hEnsH, hReqE, hEnsE⟩
+
+#print axioms Gabbro.Grammatik.spec_aus_fuehrung_schritt
+
+end Gabbro.Grammatik
+
