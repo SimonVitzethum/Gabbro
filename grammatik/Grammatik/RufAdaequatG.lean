@@ -2580,5 +2580,772 @@ theorem rufG_adaequat (P : Programm D) (O : Orakel D) (passes : Nat)
     (M.weltVon f) σ' ρ v hexec M hZ (by rw [hsp]; exact hΛ) hfrei
   exact ⟨M', hl, hG.1, hG.2, rufLaufG_fremd hl⟩
 
+/-! ## 12. Witness: a `locks` block around an `if` whose taken branch writes
+
+    `adD` has one table `konto` (2 slots, one `.int 0 100` field) guarded by
+    one lock (`braucht`), and two functions over `Bool`: `true` (no
+    parameters, returns `.int 0 100`, holds NO lock at entry, may write the
+    table) and `false` (the caller, returns nothing). The body of `true` is
+
+        locks m { if true { konto[0] := 5 } else { } }; return 7
+
+    The frame of `true` runs above a caller frame; every thread's trace is
+    empty, so no other thread holds `m`. -/
+
+def adSigA : Signatur Unit Empty Unit Empty where
+  params := []
+  erg := some (.int 0 100)
+  gruende := 0
+  haelt := []
+  schreibt := fun _ => true
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+def adSigB : Signatur Unit Empty Unit Empty where
+  params := []
+  erg := none
+  gruende := 0
+  haelt := []
+  schreibt := fun _ => false
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+def adD : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 2
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .int 0 100
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  decGlob := inferInstance
+  gtyp := fun e => nomatch e
+  nutzlast := fun e => nomatch e
+  atomar := fun e => nomatch e
+  geteilt := fun _ => true
+  ggeteilt := fun e => nomatch e
+  Lock := Unit
+  decLock := inferInstance
+  rang := fun _ => 0
+  maskiert := fun _ => false
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun e => nomatch e
+  braucht := fun _ => [.inl ()]
+  gbraucht := fun e => nomatch e
+  eigner := fun _ => []
+  Fn := Bool
+  sig := fun | true => 0 | false => 1
+  sigNr := fun | 0 => adSigA | _ => adSigB
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Empty
+  aparams := fun e => nomatch e
+  aerg := fun e => nomatch e
+  aschreibt := fun e => nomatch e
+  agschreibt := fun e => nomatch e
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t _ => by decide
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun e => nomatch e
+
+/-- The witness function (`true`) and the caller (`false`). -/
+def adFn : adD.Fn := show adD.Fn from true
+
+def adCallerFn : adD.Fn := show adD.Fn from false
+
+/-- The holdings inside the `locks` body. -/
+def adΛL : List (Res adD) := [Res.held (D := adD) ()]
+
+theorem adDarf : darf adD () adΛL := by
+  intro w h
+  have e : w = Sum.inl () := List.mem_singleton.mp h
+  rw [e]
+  exact List.mem_singleton.mpr rfl
+
+def adIdx : Expr adD [] adΛL (.index (adD.count ())) :=
+  .weiter (by decide) (by decide) (.lit 0)
+
+def adFuenf : Expr adD [] adΛL (adD.typ () ()) :=
+  .weiter (by decide) (by decide) (.lit 5)
+
+/-- `konto[0] := 5`. -/
+def adWrite : Stmt adD (vertragVon adD adFn) false [] adΛL adΛL :=
+  .assignSlot () () adIdx adFuenf rfl adDarf
+
+/-- The taken branch: the write. -/
+def adThen : Block adD (vertragVon adD adFn) false [] adΛL adΛL :=
+  .cons adWrite .nil
+
+/-- `if true { konto[0] := 5 } else { }`. -/
+def adIte : Stmt adD (vertragVon adD adFn) false [] adΛL adΛL :=
+  .ite .wahr adThen .nil
+
+def adBody : Block adD (vertragVon adD adFn) false [] adΛL adΛL :=
+  .cons adIte .nil
+
+/-- `locks m { … }`: nothing is held before, so the rank side is empty. -/
+def adLocks : Stmt adD (vertragVon adD adFn) false [] [] [] :=
+  .locks () (fun _ h => absurd h List.not_mem_nil) adBody
+
+def adSieben : Expr adD [] [] (.int 0 100) :=
+  .weiter (by decide) (by decide) (.lit 7)
+
+/-- The body: `locks m { if true { konto[0] := 5 } else { } }; return 7`. -/
+def adRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
+  .cons adLocks (.ret (.wert adSieben) List.Perm.nil)
+
+def adCallerRumpf : Endblock adD (vertragVon adD adCallerFn) false [] [] :=
+  .ret .keine List.Perm.nil
+
+def adP : Programm adD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf
+    | true => adRumpf
+    | false => adCallerRumpf
+
+def adO : Orakel adD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- Start memory: every slot reads `0`. -/
+def adSp0 : Speicher adD :=
+  ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
+
+/-- The suspended caller frame. -/
+def adCaller : RufRahmenG adD :=
+  ⟨adCallerFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adCallerRumpf⟩⟩
+
+/-- Every thread: the witness frame above the caller, empty trace, empty log. -/
+def adFaden : RufFadenG adD :=
+  ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adRumpf⟩⟩,
+    [], []⟩
+
+def adM : RufMaschineG adD := ⟨adSp0, fun _ => adFaden, [], adSp0.welt []⟩
+
+/-- The body is in the covered fragment, with the one lock admitted. -/
+theorem adRumpf_G : EndG (fun L : adD.Lock => L = ()) adRumpf :=
+  EndG.cons _ _
+    (StmtG.locks (A := fun L : adD.Lock => L = ()) () _ adBody rfl
+      (BlockG.cons _ _
+        (StmtG.ite _ _ _
+          (BlockG.cons _ _ (StmtG.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) BlockG.nil)
+          BlockG.nil)
+        BlockG.nil))
+    (EndG.ret _ _)
+
+/-- No thread of `adM` holds any lock. -/
+theorem adM_frei : ∀ L : adD.Lock, L = () → RufFreiG adM 0 L := by
+  intro L _ g _ hm
+  simp [adM, adFaden, offen] at hm
+
+/-- The frame's holdings are exactly the (empty) held locks. -/
+theorem adM_held : HeldGenau ([] : List (Res adD)) (offen ([] : List (Ereignis adD))) := by
+  intro L
+  simp [offen]
+
+/-- The sequential run of the body: a normal return with the written slot. -/
+theorem adRumpf_exec : ∃ (σ' : World adD) (v : ErgVal adD (vertragVon adD adFn).erg),
+    execEnd adO 0 keinRuf adRumpf (adM.weltVon 0) Env.nil = .zurueck σ' v ∧
+    (σ'.slots () 0 ()).n = 5 ∧ (show Zahl 0 100 from v).n = 7 :=
+  ⟨_, _, rfl, rfl, rfl⟩
+
+/-- **Witness for `rufG_adaequat`.** Every premise is instantiated jointly
+    on the non-degenerate program above: the body takes a lock (`locks`)
+    and, inside, runs an `if` whose taken branch WRITES the table. The
+    sequential semantics returns `7` in a world where slot 0 moved `0 -> 5`;
+    the machine, by steps of thread 0 alone, pops the frame logging that
+    same `7` and that same world, and its memory holds the moved slot. -/
+theorem rufG_adaequat_zeuge :
+    ∃ (σ' : World adD) (v : ErgVal adD (vertragVon adD adFn).erg),
+      execEnd adO 0 keinRuf adRumpf (adM.weltVon 0) Env.nil = .zurueck σ' v ∧
+      (σ'.slots () 0 ()).n = 5 ∧ ((adM.weltVon 0).slots () 0 ()).n = 0 ∧
+      (show Zahl 0 100 from v).n = 7 ∧
+      ∃ M', RufLaufG adP adO 0 0 adM M' ∧
+        M'.faeden 0 = ⟨[], adCaller, σ'.spur,
+          [RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) σ']⟩ ∧
+        M'.speicher = σ'.speicher ∧ (M'.speicher.slots () 0 ()).n = 5 ∧
+        (∀ g, g ≠ 0 → M'.faeden g = adM.faeden g) := by
+  obtain ⟨σ', v, hex, h5, h7⟩ := adRumpf_exec
+  obtain ⟨M', hl, hf, hsp, hfr⟩ := rufG_adaequat adP adO 0 adM 0 adFn Env.nil
+    (adSp0.welt []) adCaller [] [] [] Env.nil adRumpf (fun L : adD.Lock => L = ())
+    adRumpf_G rfl adM_held adM_frei σ' v hex
+  refine ⟨σ', v, hex, h5, rfl, h7, M', hl, hf, hsp, ?_, hfr⟩
+  rw [hsp]
+  exact h5
+
+/-! ## 13. Toward TARGET B: forms that never consult the oracle
+
+    The converse must survive the machine's bare `nimmt`/`gibt` steps (a
+    thread may take and release a free lock at any time, outside any
+    `locks` statement). They change only the thread's trace. The sequential
+    semantics depends on the trace only through the oracle (`regLies`,
+    `regLiesElse`, `awaits` hand the whole world to `O`), so the converse
+    is stated for bodies without those forms. -/
+
+mutual
+
+/-- The statement never hands the world to the oracle. -/
+def Stmt.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → Bool
+  | .ite _ t e => t.ohneOrakel && e.ohneOrakel
+  | .onOption _ p a => p.ohneOrakel && a.ohneOrakel
+  | .onTag _ arms => arms.ohneOrakel
+  | .onGrund _ arms => arms.ohneOrakel
+  | .locks _ _ body => body.ohneOrakel
+  | .breaking _ body => body.ohneOrakel
+  | .traverse _ _ body => body.ohneOrakel
+  | .retry _ _ body u => body.ohneOrakel && u.ohneOrakel
+  | .forever _ _ body => body.ohneOrakel
+  | .axiomCall .. => false
+  | _ => true
+
+def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Block D V l Γ Λ Λ' → Bool
+  | .nil => true
+  | .cons s rest => s.ohneOrakel && rest.ohneOrakel
+  | .bind _ rest => rest.ohneOrakel
+  | .bindCall _ _ _ _ _ rest => rest.ohneOrakel
+  | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
+  | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
+  | .bindAxiom .. => false
+  | .regLies .. => false
+  | .regLiesElse .. => false
+  | .awaits .. => false
+  | .exchange _ _ _ _ rest => rest.ohneOrakel
+  | .narrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .pruefung _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .gleit _ _ _ _ _ rest => rest.ohneOrakel
+  | .gleitLit _ _ _ rest => rest.ohneOrakel
+  | .gleitVon _ _ _ rest => rest.ohneOrakel
+  | .gleitNarrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+
+def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → Bool
+  | .cons s rest => s.ohneOrakel && rest.ohneOrakel
+  | .bind _ rest => rest.ohneOrakel
+  | _ => true
+
+def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+  | .nil => true
+  | .cons b rest => b.ohneOrakel && rest.ohneOrakel
+
+def GrundArms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat} : GrundArms D V l Γ Λ Λ' n → Bool
+  | .nil => true
+  | .cons b rest => b.ohneOrakel && rest.ohneOrakel
+
+end
+
+/-- `armWahlG` selects an oracle-free arm of oracle-free arms. -/
+theorem armWahlG_ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    arms.ohneOrakel = true → (armWahlG arms v).2.1.ohneOrakel = true
+  | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
+  | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by
+      simp only [Arms.ohneOrakel, Bool.and_eq_true] at h
+      exact h.1
+  | _, .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩, h => by
+      simp only [Arms.ohneOrakel, Bool.and_eq_true] at h
+      exact armWahlG_ohneOrakel rest _ h.2
+
+theorem grundWahlG_ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    ∀ {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n),
+    arms.ohneOrakel = true → (grundWahlG arms r).ohneOrakel = true
+  | _, .nil, ⟨k, hk⟩, _ => (Nat.not_lt_zero k hk).elim
+  | _, .cons _ _, ⟨0, _⟩, h => by
+      simp only [GrundArms.ohneOrakel, Bool.and_eq_true] at h
+      exact h.1
+  | _, .cons _ rest, ⟨_ + 1, _⟩, h => by
+      simp only [GrundArms.ohneOrakel, Bool.and_eq_true] at h
+      exact grundWahlG_ohneOrakel rest _ h.2
+
+/-! ## 14. The sequential semantics does not see the trace (oracle-free) -/
+
+/-- Two worlds with the same shared memory (traces may differ). -/
+def SG (σ σ' : World D) : Prop := σ.slots = σ'.slots ∧ σ.globs = σ'.globs
+
+theorem SG.speicher {σ σ' : World D} (h : SG σ σ') : σ.speicher = σ'.speicher := by
+  unfold World.speicher
+  rw [h.1, h.2]
+
+theorem SG.lese {σ σ' : World D} (h : SG σ σ') (Λ : List (Res D))
+    (os : List (D.Tab ⊕ D.Glob)) : SG (σ.lese Λ os) (σ'.lese Λ os) := h
+
+theorem SG.nimmt {σ σ' : World D} (h : SG σ σ') (L : D.Lock) : SG (σ.nimmt L) (σ'.nimmt L) := h
+
+theorem SG.gibt {σ σ' : World D} (h : SG σ σ') (L : D.Lock) : SG (σ.gibt L) (σ'.gibt L) := h
+
+theorem SG.schreibSlot {σ σ' : World D} (h : SG σ σ') (t : D.Tab) (Λ : List (Res D))
+    (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
+    SG (σ.schreibSlot t Λ k f v) (σ'.schreibSlot t Λ k f v) := by
+  refine ⟨?_, h.2⟩
+  show (σ.storeSlot t k f v).slots = (σ'.storeSlot t k f v).slots
+  simp only [World.storeSlot]
+  rw [h.1]
+
+theorem SG.schreibGlob {σ σ' : World D} (h : SG σ σ') (g : D.Glob) (Λ : List (Res D))
+    (v : Wert D (D.gtyp g)) : SG (σ.schreibGlob g Λ v) (σ'.schreibGlob g Λ v) := by
+  refine ⟨h.1, ?_⟩
+  show (σ.storeGlob g v).globs = (σ'.storeGlob g v).globs
+  simp only [World.storeGlob]
+  rw [h.2]
+
+theorem SG.schreibBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
+    (Λ : List (Res D)) : ∀ (bs : List Byte) (σ σ' : World D) (k : Int), SG σ σ' →
+    SG (σ.schreibBytes t f hf Λ k bs) (σ'.schreibBytes t f hf Λ k bs)
+  | [], _, _, _, h => h
+  | _ :: bs, _, _, k, h =>
+      SG.schreibBytes t f hf Λ bs _ _ (k + 1) (h.schreibSlot t Λ k f _)
+
+theorem SG.eval {σ σ' : World D} (h : SG σ σ') {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) (ρ : Env D Γ) : eval σ e σ ρ = eval σ' e σ' ρ :=
+  eval_liest_nur_speicher_diag e σ σ' ρ (fun t k f => by rw [h.1]) (fun g => by rw [h.2])
+
+theorem SG.evalErg {σ σ' : World D} (h : SG σ σ') {Γ : Ctx} {Λ : List (Res D)}
+    {e : Option Ty} (x : ErgExpr D Γ Λ e) (ρ : Env D Γ) :
+    evalErg σ x σ ρ = evalErg σ' x σ' ρ := by
+  cases x with
+  | keine => rfl
+  | wert e => exact h.eval e ρ
+
+/-- Outcomes that agree up to the trace: same kind, same memory, same
+    environment or value; every other kind agrees on the kind only. -/
+def AusSG {V : Vertrag D} {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Ausgang V l Γ → Prop
+  | .ok σ ρ, .ok σ' ρ' => SG σ σ' ∧ ρ = ρ'
+  | .zurueck σ v, .zurueck σ' v' => SG σ σ' ∧ v = v'
+  | .ok .., _ => False
+  | _, .ok .. => False
+  | .zurueck .., _ => False
+  | _, .zurueck .. => False
+  | _, _ => True
+
+def EndSG {V : Vertrag D} {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → EndAusgang V l Γ → Prop
+  | .zurueck σ v, .zurueck σ' v' => SG σ σ' ∧ v = v'
+  | .zurueck .., _ => False
+  | _, .zurueck .. => False
+  | _, _ => True
+
+section AusSGLemmas
+
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx}
+
+/-- Continuing after a statement preserves agreement. -/
+theorem AusSG.weiter {o o' : Ausgang V l Γ} (h : AusSG o o')
+    (g g' : World D → Env D Γ → Ausgang V l Γ)
+    (hg : ∀ σ σ' ρ, SG σ σ' → AusSG (g σ ρ) (g' σ' ρ)) :
+    AusSG (match o with | .ok σ ρ => g σ ρ | o => o)
+      (match o' with | .ok σ ρ => g' σ ρ | o => o) := by
+  cases o with
+  | ok σ ρ =>
+    cases o' with
+    | ok σ' ρ' =>
+      obtain ⟨hs, rfl⟩ := h
+      exact hg σ σ' ρ hs
+    | _ => exact False.elim h
+  | _ =>
+    cases o' with
+    | ok => exact False.elim h
+    | _ => exact h
+
+theorem AusSG.schrumpf {τ : Ty} {o o' : Ausgang V l (τ :: Γ)} (h : AusSG o o') :
+    AusSG o.schrumpf o'.schrumpf := by
+  cases o <;> cases o' <;> simp_all [AusSG, Ausgang.schrumpf]
+
+theorem AusSG.schrumpfArm (c : Option (Int × Int)) {o o' : Ausgang V l (ArmCtx Γ c)}
+    (h : AusSG o o') : AusSG (o.schrumpfArm c) (o'.schrumpfArm c) := by
+  cases c with
+  | none => exact h
+  | some p => exact AusSG.schrumpf h
+
+theorem AusSG.gibt {o o' : Ausgang V l Γ} (h : AusSG o o') (L : D.Lock) :
+    AusSG (o.mapWelt (·.gibt L)) (o'.mapWelt (·.gibt L)) := by
+  cases o <;> cases o' <;> simp_all [AusSG, Ausgang.mapWelt, SG, World.gibt]
+
+theorem EndSG.zuAusgang {o o' : EndAusgang V l Γ} (h : EndSG o o') :
+    AusSG o.zuAusgang o'.zuAusgang := by
+  cases o <;> cases o' <;> simp_all [AusSG, EndSG, EndAusgang.zuAusgang]
+
+theorem EndSG.schrumpf {τ : Ty} {o o' : EndAusgang V l (τ :: Γ)} (h : EndSG o o') :
+    EndSG o.schrumpf o'.schrumpf := by
+  cases o <;> cases o' <;> simp_all [EndSG, EndAusgang.schrumpf]
+
+/-- `execEnd` of `s; rest` from agreeing statement outcomes. -/
+theorem EndSG.weiter {o o' : Ausgang V l Γ} (h : AusSG o o')
+    (g g' : World D → Env D Γ → EndAusgang V l Γ)
+    (hg : ∀ σ σ' ρ, SG σ σ' → EndSG (g σ ρ) (g' σ' ρ)) :
+    EndSG (match o with
+        | .ok σ' ρ' => g σ' ρ'
+        | .zurueck σ' v => .zurueck σ' v
+        | .grund σ' r => .grund σ' r
+        | .leave h σ' ρ' => .leave h σ' ρ'
+        | .next h σ' ρ' => .next h σ' ρ'
+        | .logik e => .logik e
+        | .hardware e => .hardware e)
+      (match o' with
+        | .ok σ' ρ' => g' σ' ρ'
+        | .zurueck σ' v => .zurueck σ' v
+        | .grund σ' r => .grund σ' r
+        | .leave h σ' ρ' => .leave h σ' ρ'
+        | .next h σ' ρ' => .next h σ' ρ'
+        | .logik e => .logik e
+        | .hardware e => .hardware e) := by
+  cases o with
+  | ok σ ρ =>
+    cases o' with
+    | ok σ' ρ' =>
+      obtain ⟨hs, rfl⟩ := h
+      exact hg σ σ' ρ hs
+    | _ => exact False.elim h
+  | zurueck σ v =>
+    cases o' with
+    | zurueck σ' v' => exact h
+    | _ => exact False.elim h
+  | _ =>
+    cases o' with
+    | ok => exact False.elim h
+    | zurueck => exact False.elim h
+    | _ => trivial
+
+end AusSGLemmas
+
+/-- The `narrow` step of `execBlock` with the narrowed value abstracted
+    (the `dite` carries proofs about it, so it cannot be rewritten in place). -/
+def narrowWeiter (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {lo hi lo' hi' : Int}
+    (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ') (sonst : Endblock D V l Γ Λ)
+    (ρ : Env D Γ) (v : Zahl lo hi) (σ₁ : World D) : Ausgang V l Γ :=
+  if h : lo' ≤ v.n ∧ v.n ≤ hi' then
+    (execBlock O passes keinRuf rest σ₁ (.cons (τ := .int lo' hi') ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+  else (execEnd O passes keinRuf sonst σ₁ ρ).zuAusgang
+
+theorem execBlock_narrow (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
+    (lo' hi' : Int) (sonst : Endblock D V l Γ Λ)
+    (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ') (σ : World D) (ρ : Env D Γ) :
+    execBlock O passes keinRuf (.narrow e lo' hi' sonst rest) σ ρ =
+      narrowWeiter O passes rest sonst ρ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)
+        (σ.lese Λ e.orte) := rfl
+
+section Spur
+
+variable (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Prop)
+
+/-- A block's outcome agrees, up to the trace, from worlds with one memory. -/
+def SGB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') : Prop :=
+  ∀ (σ σ' : World D) (ρ : Env D Γ), SG σ σ' →
+    AusSG (execBlock O passes keinRuf b σ ρ) (execBlock O passes keinRuf b σ' ρ)
+
+mutual
+
+theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ'), StmtG A mr s → s.ohneOrakel = true →
+    ∀ (σ σ' : World D) (ρ : Env D Γ), SG σ σ' →
+      AusSG (execStmt O passes keinRuf s σ ρ) (execStmt O passes keinRuf s σ' ρ)
+  | _, _, _, Λ₀, _, .assignSlot t f' i e hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ (i.orte ++ e.orte)
+      simp only [execStmt]
+      rw [h1.eval i, h1.eval e]
+      exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
+  | _, _, _, Λ₀, _, .assignDurch p t ht f' i e hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ (p.orte ++ i.orte ++ e.orte)
+      simp only [execStmt]
+      rw [h1.eval i, h1.eval e]
+      exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
+  | _, _, _, Λ₀, _, .assignGlob g e hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execStmt]
+      rw [h1.eval e]
+      exact ⟨h1.schreibGlob _ _ _, rfl⟩
+  | _, _, _, Λ₀, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ (i.orte ++ e.orte)
+      simp only [execStmt]
+      rw [h1.eval i, h1.eval e]
+      exact ⟨SG.schreibBytes _ _ _ _ _ _ _ _ h1, rfl⟩
+  | _, _, _, Λ₀, _, .assignVar x e, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execStmt]
+      rw [h1.eval e]
+      exact ⟨h1, rfl⟩
+  | _, _, _, Λ₀, _, .uebergang t f' hτ i von nach hn he hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ (.inl t :: i.orte)
+      simp only [execStmt]
+      rw [h1.eval i, h1.1]
+      split
+      · exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
+      · trivial
+  | _, _, _, _, _, .regSchreib r hk e, _, _ => by
+      intro σ σ' ρ h
+      simp only [execStmt]
+      exact ⟨h.lese _ _, rfl⟩
+  | _, _, _, _, _, .transition r hk m hm hl maske bits, _, _ => by
+      intro σ σ' ρ h
+      simp only [execStmt]
+      exact ⟨h, rfl⟩
+  | _, _, _, Λ₀, _, .publish g e payload hp hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execStmt]
+      rw [h1.eval e]
+      exact ⟨h1.schreibGlob _ _ _, rfl⟩
+  | _, _, _, _, _, .advances m a h hs, _, _ => by
+      intro σ σ' ρ h'
+      simp only [execStmt]
+      exact ⟨h', rfl⟩
+  | _, _, _, _, _, .retires m s h a, _, _ => by
+      intro σ σ' ρ h'
+      simp only [execStmt]
+      exact ⟨h', rfl⟩
+  | _, _, _, Λ₀, _, .ite c t e, hs, ho => by
+      intro σ σ' ρ h
+      obtain ⟨ht, he⟩ := hs.ite_inv
+      simp only [Stmt.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := h.lese Λ₀ c.orte
+      simp only [execStmt]
+      rw [h1.eval c]
+      split
+      · exact blockSG t ht ho.1 _ _ _ h1
+      · exact blockSG e he ho.2 _ _ _ h1
+  | _, _, _, Λ₀, _, .onOption o p a, hs, ho => by
+      intro σ σ' ρ h
+      obtain ⟨hp, ha⟩ := hs.onOption_inv
+      simp only [Stmt.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := h.lese Λ₀ o.orte
+      simp only [execStmt]
+      rw [h1.eval o]
+      split
+      · exact AusSG.schrumpf (blockSG p hp ho.1 _ _ _ h1)
+      · exact blockSG a ha ho.2 _ _ _ h1
+  | _, _, _, Λ₀, _, .onTag w arms, hs, ho => by
+      intro σ σ' ρ h
+      have ha := hs.onTag_inv
+      simp only [Stmt.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ w.orte
+      simp only [execStmt]
+      rw [execArms_wahl, execArms_wahl, h1.eval w]
+      exact AusSG.schrumpfArm _ (armsSG arms ha ho _ _ _ _ h1)
+  | _, _, _, Λ₀, _, .onGrund r arms, hs, ho => by
+      intro σ σ' ρ h
+      have ha := hs.onGrund_inv
+      simp only [Stmt.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ r.orte
+      simp only [execStmt]
+      rw [execGrund_wahlW O passes keinRuf arms, execGrund_wahlW O passes keinRuf arms,
+        h1.eval r]
+      exact grundSG arms ha ho _ _ _ _ h1
+  | _, _, _, _, _, .call .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .callInd .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .locks L hr body, hs, ho => by
+      intro σ σ' ρ h
+      obtain ⟨_, hb⟩ := hs.locks_inv
+      simp only [Stmt.ohneOrakel] at ho
+      simp only [execStmt]
+      exact AusSG.gibt (blockSG body hb ho _ _ _ (h.nimmt L)) L
+  | _, _, _, _, _, .breaking i body, hs, ho => by
+      intro σ σ' ρ h
+      have hb := hs.breaking_inv
+      simp only [Stmt.ohneOrakel] at ho
+      simp only [execStmt]
+      exact blockSG body hb ho _ _ _ h
+  | _, _, _, _, _, .traverse .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retry .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .forever .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .axiomCall .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, Λ₀, _, .ret e hperm, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execStmt]
+      exact ⟨h1, h1.evalErg e ρ⟩
+  | _, _, _, _, _, .retGrund .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .leave .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .next .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+
+theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ'), BlockG A mr b → b.ohneOrakel = true → SGB O passes b
+  | _, _, _, _, _, .nil, _, _ => by
+      intro σ σ' ρ h
+      exact ⟨h, rfl⟩
+  | _, _, _, _, _, .cons s rest, hb, ho => by
+      intro σ σ' ρ h
+      obtain ⟨hs, hr⟩ := hb.cons_inv
+      simp only [Block.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := stmtSG s hs ho.1 _ _ ρ h
+      simp only [execBlock]
+      generalize execStmt O passes keinRuf s σ ρ = o at h1 ⊢
+      generalize execStmt O passes keinRuf s σ' ρ = o' at h1 ⊢
+      cases o <;> cases o' <;>
+        first
+        | exact False.elim h1
+        | exact h1
+        | (obtain ⟨hs1, rfl⟩ := h1; exact blockSG rest hr ho.2 _ _ _ hs1)
+  | _, _, _, Λ₀, _, .bind e rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.bind_inv
+      simp only [Block.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execBlock]
+      rw [h1.eval e]
+      exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h1)
+  | _, _, _, _, _, .bindCall .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindCallInd .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindCallElse .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindAxiom .., hb, _ => by cases hb
+  | _, _, _, _, _, .regLies .., _, ho => by simp [Block.ohneOrakel] at ho
+  | _, _, _, _, _, .regLiesElse .., _, ho => by simp [Block.ohneOrakel] at ho
+  | _, _, _, _, _, .awaits .., _, ho => by simp [Block.ohneOrakel] at ho
+  | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.exchange_inv
+      simp only [Block.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ (.inr g :: neuE.orte)
+      simp only [execBlock]
+      have hg : (σ.lese Λ₀ (.inr g :: neuE.orte)).globs g =
+          (σ'.lese Λ₀ (.inr g :: neuE.orte)).globs g := by rw [h1.2]
+      rw [hg, h1.eval neuE]
+      exact AusSG.schrumpf (blockSG rest hr ho _ _ _ (h1.schreibGlob _ _ _))
+  | _, _, _, Λ₀, _, .narrow e lo' hi' sonst rest, hb, ho => by
+      intro σ σ' ρ h
+      obtain ⟨_, hr, hs, _⟩ := hb.narrow_inv
+      simp only [Block.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := h.lese Λ₀ e.orte
+      rw [execBlock_narrow, execBlock_narrow, h1.eval e]
+      unfold narrowWeiter
+      split
+      · exact AusSG.schrumpf (blockSG rest hr ho.2 _ _ _ h1)
+      · exact EndSG.zuAusgang (endSG sonst hs ho.1 _ _ _ h1)
+  | _, _, _, Λ₀, _, .pruefung c sonst rest, hb, ho => by
+      intro σ σ' ρ h
+      obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
+      simp only [Block.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := h.lese Λ₀ c.orte
+      simp only [execBlock]
+      rw [h1.eval c]
+      split
+      · exact blockSG rest hr ho.2 _ _ _ h1
+      · exact EndSG.zuAusgang (endSG sonst hs ho.1 _ _ _ h1)
+  | _, _, _, Λ₀, _, .gleit op a b lo hi rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.gleit_inv
+      simp only [Block.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ (a.orte ++ b.orte)
+      simp only [execBlock]
+      rw [h1.eval a, h1.eval b]
+      split
+      · exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h1)
+      · trivial
+  | _, _, _, _, _, .gleitLit q lo hi rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.gleitLit_inv
+      simp only [Block.ohneOrakel] at ho
+      simp only [execBlock]
+      split
+      · exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h)
+      · trivial
+  | _, _, _, Λ₀, _, .gleitVon e lo hi rest, hb, ho => by
+      intro σ σ' ρ h
+      have hr := hb.gleitVon_inv
+      simp only [Block.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execBlock]
+      rw [h1.eval e]
+      split
+      · exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h1)
+      · trivial
+  | _, _, _, Λ₀, _, .gleitNarrow e lo hi sonst rest, hb, ho => by
+      intro σ σ' ρ h
+      obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
+      simp only [Block.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execBlock]
+      rw [h1.eval e]
+      split
+      · exact AusSG.schrumpf (blockSG rest hr ho.2 _ _ _ h1)
+      · exact EndSG.zuAusgang (endSG sonst hs ho.1 _ _ _ h1)
+
+theorem endSG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e : Endblock D V l Γ Λ), EndG A e → e.ohneOrakel = true →
+    ∀ (σ σ' : World D) (ρ : Env D Γ), SG σ σ' →
+      EndSG (execEnd O passes keinRuf e σ ρ) (execEnd O passes keinRuf e σ' ρ)
+  | _, _, Λ₀, .ret e hperm, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execEnd]
+      exact ⟨h1, h1.evalErg e ρ⟩
+  | _, _, _, .retGrund .., he, _ => by cases he
+  | _, _, _, .leave .., he, _ => by cases he
+  | _, _, _, .next .., he, _ => by cases he
+  | _, _, _, .cons s rest, he, ho => by
+      intro σ σ' ρ h
+      obtain ⟨hs, hr, _⟩ := he.cons_inv
+      simp only [Endblock.ohneOrakel, Bool.and_eq_true] at ho
+      have h1 := stmtSG s hs ho.1 _ _ ρ h
+      simp only [execEnd]
+      generalize execStmt O passes keinRuf s σ ρ = o at h1 ⊢
+      generalize execStmt O passes keinRuf s σ' ρ = o' at h1 ⊢
+      cases o <;> cases o' <;>
+        first
+        | exact False.elim h1
+        | exact h1
+        | trivial
+        | (obtain ⟨hs1, rfl⟩ := h1; exact endSG rest hr ho.2 _ _ _ hs1)
+  | _, _, Λ₀, .bind e rest, he, ho => by
+      intro σ σ' ρ h
+      have hr := he.bind_inv
+      simp only [Endblock.ohneOrakel] at ho
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execEnd]
+      rw [h1.eval e]
+      exact EndSG.schrumpf (endSG rest hr ho _ _ _ h1)
+
+theorem armsSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    ArmsG A mr arms → arms.ohneOrakel = true → ∀ (v : Wert D (.sum cs)),
+    SGB O passes (armWahlG arms v).2.1
+  | _, _, _, _, _, _, .nil, _, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
+  | _, _, _, _, _, _, .cons b _, ha, ho, ⟨⟨0, _⟩, _⟩ => by
+      simp only [Arms.ohneOrakel, Bool.and_eq_true] at ho
+      exact blockSG b ha.cons_inv.1 ho.1
+  | _, _, _, _, _, _, .cons _ rest, ha, ho, ⟨⟨_ + 1, _⟩, _⟩ => by
+      simp only [Arms.ohneOrakel, Bool.and_eq_true] at ho
+      exact armsSG rest ha.cons_inv.2 ho.2 _
+
+theorem grundSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (arms : GrundArms D V l Γ Λ Λ' n), GrundArmsG A mr arms → arms.ohneOrakel = true →
+    ∀ (r : Fin n), SGB O passes (grundWahlG arms r)
+  | _, _, _, _, _, _, .nil, _, _, ⟨k, hk⟩ => (Nat.not_lt_zero k hk).elim
+  | _, _, _, _, _, _, .cons b _, ha, ho, ⟨0, _⟩ => by
+      simp only [GrundArms.ohneOrakel, Bool.and_eq_true] at ho
+      exact blockSG b ha.cons_inv.1 ho.1
+  | _, _, _, _, _, _, .cons _ rest, ha, ho, ⟨_ + 1, _⟩ => by
+      simp only [GrundArms.ohneOrakel, Bool.and_eq_true] at ho
+      exact grundSG rest ha.cons_inv.2 ho.2 _
+
+end
+
+end Spur
+
 -- @ENDE
 
