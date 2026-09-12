@@ -890,4 +890,38 @@ def Zahl.bswap64 (x : Zahl 0 ((2 : Int) ^ 64 - 1)) :
       Int.ofNat_lt.mpr hlt
     omega⟩
 
+/-! ## Target theorems at `Zahl` level (PLAN-BITS.md section 3).
+
+    `r` is named as a `Nat` (`Nat.log2` / `ctzn` of the unwrapped value) and
+    tied to the wrapper by `rfl`: `(Zahl.log2_floor w x).n` IS
+    `Nat.log2 (zahlNat w x)` definitionally, and similarly for `clz`/`ctz`.
+    Every premise is consumed: the Nat specs need positivity and the upper
+    bound, both from `zahlNat_bounds`. -/
+
+/-- `log2_floor_spez`: `2 ^ r ≤ x < 2 ^ (r+1)` for `r = log2_floor x`. -/
+theorem log2_floor_spez (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
+    (2 : Int) ^ Nat.log2 (zahlNat w x) ≤ x.n
+      ∧ x.n < (2 : Int) ^ (Nat.log2 (zahlNat w x) + 1) := by
+  have hb := zahlNat_bounds w x
+  have hne : zahlNat w x ≠ 0 := Nat.ne_of_gt hb.1
+  obtain ⟨h1, h2⟩ := log2n_spez hne
+  simp only [log2n] at h1 h2
+  have hcast1 : (((2 ^ Nat.log2 (zahlNat w x) : Nat)) : Int)
+      = (2 : Int) ^ Nat.log2 (zahlNat w x) := by simp
+  have hcast2 : (((2 ^ (Nat.log2 (zahlNat w x) + 1) : Nat)) : Int)
+      = (2 : Int) ^ (Nat.log2 (zahlNat w x) + 1) := by simp
+  have hnn : 0 ≤ x.n := by have := x.lo_le; omega
+  have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
+  have hval : x.n.toNat = zahlNat w x := rfl
+  constructor
+  · have hle : ((2 ^ Nat.log2 (zahlNat w x) : Nat) : Int)
+        ≤ ((zahlNat w x : Nat) : Int) := Int.ofNat_le.mpr h1
+    rw [hcast1, ← hval, h2n] at hle
+    exact hle
+  · have hlt : ((x.n.toNat : Nat) : Int)
+        < ((2 ^ (Nat.log2 (zahlNat w x) + 1) : Nat) : Int) := by
+      rw [hval]; exact Int.ofNat_lt.mpr h2
+    rw [hcast2, h2n] at hlt
+    exact hlt
+
 end Gabbro.Grammatik
