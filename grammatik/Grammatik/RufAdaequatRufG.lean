@@ -2148,4 +2148,505 @@ theorem endG_tief (P : Programm D) (A : D.Lock → Prop) (n : Nat) {V : Vertrag 
   endG_R h
 
 
+
+/-! ## 9. Witness: a caller that continues after the call
+
+    `t4D` has one table `konto` (2 slots, one `.int 0 100` field, unguarded
+    and unshared), no locks, and three functions over `Fin 3` with one
+    signature (no parameters, returns `.int 0 100`, may write `konto`):
+
+        fn 0 (the callee):   konto[0] := 5; return 3
+        fn 1 (plain call):   g(); konto[1] := 7; return 9
+        fn 2 (bind-call):    if true { let x = g(); konto[1] := x } else { }; return 9
+
+    `fn 1` is exactly the shape the old `ruf` got wrong: the call stands at
+    `ende` position and the caller has an observable statement AFTER it. -/
+
+def t4Sig : Signatur Unit Empty Empty Empty where
+  params := []
+  erg := some (.int 0 100)
+  gruende := 0
+  haelt := []
+  schreibt := fun _ => true
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+def t4D : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 2
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .int 0 100
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun _ => none
+  Glob := Empty
+  decGlob := inferInstance
+  gtyp := fun e => nomatch e
+  nutzlast := fun e => nomatch e
+  atomar := fun e => nomatch e
+  geteilt := fun _ => false
+  ggeteilt := fun e => nomatch e
+  Lock := Empty
+  decLock := inferInstance
+  rang := fun e => nomatch e
+  maskiert := fun e => nomatch e
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun e => nomatch e
+  braucht := fun _ => []
+  gbraucht := fun e => nomatch e
+  eigner := fun _ => []
+  Fn := Fin 3
+  sig := fun _ => 0
+  sigNr := fun _ => t4Sig
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Empty
+  aparams := fun e => nomatch e
+  aerg := fun e => nomatch e
+  aschreibt := fun e => nomatch e
+  agschreibt := fun e => nomatch e
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun _ h => absurd h (by decide)
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun e => nomatch e
+
+/-- The callee, the plain caller, the bind caller. -/
+def t4G : t4D.Fn := show Fin 3 from 0
+def t4F : t4D.Fn := show Fin 3 from 1
+def t4B : t4D.Fn := show Fin 3 from 2
+
+theorem t4Darf : darf t4D () [] := fun _ h => absurd h List.not_mem_nil
+
+def t4Idx0 : Expr t4D [] [] (.index (t4D.count ())) := .weiter (by decide) (by decide) (.lit 0)
+def t4Idx1 : Expr t4D [] [] (.index (t4D.count ())) := .weiter (by decide) (by decide) (.lit 1)
+def t4Idx1x : Expr t4D [.int 0 100] [] (.index (t4D.count ())) :=
+  .weiter (by decide) (by decide) (.lit 1)
+def t4Lit (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 100) : Expr t4D [] [] (t4D.typ () ()) :=
+  .weiter h0 h1 (.lit k)
+
+/-- The callee body: `konto[0] := 5; return 3`. -/
+def t4GRumpf : Endblock t4D (vertragVon t4D t4G) false [] [] :=
+  .cons (.assignSlot () () t4Idx0 (t4Lit 5 (by decide) (by decide)) rfl t4Darf)
+    (.ret (.wert (t4Lit 3 (by decide) (by decide))) List.Perm.nil)
+
+/-- Every caller passes the callee's contract: it may write what the callee
+    writes, and there are no locks or marks. -/
+theorem t4Hp (fn : t4D.Fn) : RufPasst t4D (vertragVon t4D fn) (t4D.signatur t4G) [] where
+  hw := fun _ _ => rfl
+  hg := fun g _ => nomatch g
+  hk := ⟨[], List.Perm.nil, List.Sublist.slnil⟩
+  hh := fun L => nomatch L
+
+/-- The plain caller: `g(); konto[1] := 7; return 9`. -/
+def t4FRumpf : Endblock t4D (vertragVon t4D t4F) false [] [] :=
+  .cons (.call t4G .nil (t4Hp t4F) rfl)
+    (.cons (.assignSlot () () t4Idx1 (t4Lit 7 (by decide) (by decide)) rfl t4Darf)
+      (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))
+
+/-- The bind block: `let x = g(); konto[1] := x`. -/
+def t4BindBlock : Block t4D (vertragVon t4D t4B) false [] [] [] :=
+  .bindCall t4G .nil rfl (t4Hp t4B) rfl
+    (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
+
+/-- The bind caller: `if true { let x = g(); konto[1] := x } else { }; return 9`. -/
+def t4BRumpf : Endblock t4D (vertragVon t4D t4B) false [] [] :=
+  .cons (.ite .wahr t4BindBlock .nil)
+    (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)
+
+def t4P : Programm t4D where
+  invariante := fun i => nomatch i
+  requires := fun _ => .wahr
+  ensures := fun _ => .wahr
+  rumpf := fun (f : Fin 3) => match f with
+    | 0 => t4GRumpf
+    | 1 => t4FRumpf
+    | 2 => t4BRumpf
+
+def t4O : Orakel t4D where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- Start memory: every slot reads `0`. -/
+def t4Sp : Speicher t4D :=
+  ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
+
+/-- The frame below the caller (any frame will do: it is only resumed). -/
+def t4Unten : RufRahmenG t4D :=
+  ⟨t4F, Env.nil, t4Sp.welt [], ⟨false, [], [], Env.nil,
+    .ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)⟩⟩
+
+/-- A machine whose threads all run the frame of `fn` with body `b` above
+    `t4Unten`, with empty trace and log. -/
+def t4M (fn : t4D.Fn) (b : Endblock t4D (vertragVon t4D fn) false [] []) : RufMaschineG t4D :=
+  ⟨t4Sp, fun _ => ⟨[t4Unten], ⟨fn, Env.nil, t4Sp.welt [], ⟨false, [], [], Env.nil, .ende b⟩⟩,
+    [], []⟩, [], t4Sp.welt []⟩
+
+/-- The callee body is covered with no further calls: depth 1 admits it. -/
+theorem t4G_tief (A : t4D.Lock → Prop) : Tief t4P A 1 t4G :=
+  show EndR A (Tief t4P A 0) t4GRumpf from EndR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) (EndR.ret _ _)
+
+theorem t4FRumpf_R (A : t4D.Lock → Prop) : EndR A (Tief t4P A 1) t4FRumpf :=
+  EndR.cons _ _ (StmtR.call _ t4G rfl (t4G_tief A))
+    (EndR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) (EndR.ret _ _))
+
+theorem t4BRumpf_R (A : t4D.Lock → Prop) : EndR A (Tief t4P A 1) t4BRumpf :=
+  EndR.cons _ _
+    (StmtR.ite _ _ _
+      (BlockR.bindCall _ _ _ _ _ _ (t4G_tief A)
+        (BlockR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) BlockR.nil))
+      BlockR.nil)
+    (EndR.ret _ _)
+
+theorem t4_frei (fn : t4D.Fn) (b : Endblock t4D (vertragVon t4D fn) false [] []) :
+    ∀ L : t4D.Lock, (fun _ => False) L → RufFreiG (t4M fn b) 0 L := fun L => nomatch L
+
+theorem t4_held : HeldGenau ([] : List (Res t4D)) (offen ([] : List (Ereignis t4D))) :=
+  fun L => nomatch L
+
+/-- The sequential run of the plain caller with the body-running handler:
+    the callee writes slot 0, the caller then writes slot 1 and returns 9. -/
+theorem t4F_exec : ∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4F).erg),
+    execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4FRumpf ((t4M t4F t4FRumpf).weltVon 0) Env.nil =
+      .zurueck σ' v ∧
+    (σ'.slots () 0 ()).n = 5 ∧ (σ'.slots () 1 ()).n = 7 ∧ (show Zahl 0 100 from v).n = 9 :=
+  ⟨_, _, rfl, rfl, rfl, rfl⟩
+
+/-- The sequential run of the bind caller: the callee writes slot 0 and
+    returns 3, the caller binds it and writes it to slot 1, then returns 9. -/
+theorem t4B_exec : ∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4B).erg),
+    execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4BRumpf ((t4M t4B t4BRumpf).weltVon 0) Env.nil =
+      .zurueck σ' v ∧
+    (σ'.slots () 0 ()).n = 5 ∧ (σ'.slots () 1 ()).n = 3 ∧ (show Zahl 0 100 from v).n = 9 :=
+  ⟨_, _, rfl, rfl, rfl, rfl⟩
+
+/-- **Witness for `rufG_adaequat_ruf`** (plain call at `ende` position).
+    Every premise is instantiated jointly on the non-degenerate program
+    above at depth `1`: the caller's body calls a callee that WRITES the
+    table, and after the call the caller writes a second slot and returns
+    a value. The sequential semantics with the body-running handler ends
+    with slot 0 moved `0 -> 5` (the callee), slot 1 moved `0 -> 7` (the
+    caller, AFTER the call) and value `9`; the machine, by steps of thread 0
+    alone, pops the caller's frame logging that same `9` and that same
+    world, and its memory holds both moved slots. The old `ruf` rule could
+    never reach the write to slot 1. -/
+theorem rufG_adaequat_ruf_zeuge :
+    ∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4F).erg),
+      execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4FRumpf ((t4M t4F t4FRumpf).weltVon 0) Env.nil =
+        .zurueck σ' v ∧
+      (((t4M t4F t4FRumpf).weltVon 0).slots () 0 ()).n = 0 ∧
+      (((t4M t4F t4FRumpf).weltVon 0).slots () 1 ()).n = 0 ∧
+      (σ'.slots () 0 ()).n = 5 ∧ (σ'.slots () 1 ()).n = 7 ∧ (show Zahl 0 100 from v).n = 9 ∧
+      ∃ (M' : RufMaschineG t4D) (ext : List (RufEreignisF t4D)),
+        RufLaufG t4P t4O 0 0 (t4M t4F t4FRumpf) M' ∧
+        M'.faeden 0 = ⟨[], t4Unten, σ'.spur,
+          RufEreignisF.rueck t4F Env.nil v (t4Sp.welt []) σ' :: (ext ++ [])⟩ ∧
+        M'.speicher = σ'.speicher ∧ (M'.speicher.slots () 0 ()).n = 5 ∧
+        (M'.speicher.slots () 1 ()).n = 7 ∧
+        (∀ g, g ≠ 0 → M'.faeden g = (t4M t4F t4FRumpf).faeden g) := by
+  obtain ⟨σ', v, hex, h5, h7, h9⟩ := t4F_exec
+  obtain ⟨M', ext, hl, hf, hsp, hfr⟩ := rufG_adaequat_ruf t4P t4O 0 1 (t4M t4F t4FRumpf) 0 t4F
+    Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4FRumpf (fun _ => False)
+    (t4FRumpf_R _) rfl t4_held (t4_frei t4F t4FRumpf) σ' v hex
+  refine ⟨σ', v, hex, rfl, rfl, h5, h7, h9, M', ext, hl, hf, hsp, ?_, ?_, hfr⟩
+  · rw [hsp]; exact h5
+  · rw [hsp]; exact h7
+
+/-- **Witness for `rufG_adaequat_ruf`** (bind-call in block position, under
+    an `if`): the callee writes slot 0 and returns `3`; the caller binds
+    `x = 3` and writes it to slot 1. The machine pops the caller's frame
+    with the same value `9` and a memory holding `5` and `3` -- the bound
+    value travelled through the machine's `rueckBind`. -/
+theorem rufG_adaequat_ruf_zeuge_bind :
+    ∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4B).erg),
+      execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4BRumpf ((t4M t4B t4BRumpf).weltVon 0) Env.nil =
+        .zurueck σ' v ∧
+      (σ'.slots () 0 ()).n = 5 ∧ (σ'.slots () 1 ()).n = 3 ∧ (show Zahl 0 100 from v).n = 9 ∧
+      ∃ (M' : RufMaschineG t4D) (ext : List (RufEreignisF t4D)),
+        RufLaufG t4P t4O 0 0 (t4M t4B t4BRumpf) M' ∧
+        M'.faeden 0 = ⟨[], t4Unten, σ'.spur,
+          RufEreignisF.rueck t4B Env.nil v (t4Sp.welt []) σ' :: (ext ++ [])⟩ ∧
+        (M'.speicher.slots () 0 ()).n = 5 ∧ (M'.speicher.slots () 1 ()).n = 3 := by
+  obtain ⟨σ', v, hex, h5, h3, h9⟩ := t4B_exec
+  obtain ⟨M', ext, hl, hf, hsp, _⟩ := rufG_adaequat_ruf t4P t4O 0 1 (t4M t4B t4BRumpf) 0 t4B
+    Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4BRumpf (fun _ => False)
+    (t4BRumpf_R _) rfl t4_held (t4_frei t4B t4BRumpf) σ' v hex
+  refine ⟨σ', v, hex, h5, h3, h9, M', ext, hl, hf, ?_, ?_⟩
+  · rw [hsp]; exact h5
+  · rw [hsp]; exact h3
+
+
+
+/-! ## 10. FINDING: a verbatim pop into a waiting bind-caller deadlocks
+
+    `rueck`, `rueckCons` and `dannRet` pop the callee frame and restore the
+    caller frame VERBATIM. When the caller waits for a bound value (residue
+    `wartet rest k`, pushed by `dannBindCall`/`dannBindCallInd`/
+    `dannBindCallElse`), the restored head is `wartet …`, for which NO rule
+    exists: the thread is stuck for good (`wartet_steht`), while the
+    sequential semantics binds the value and continues. The binding pops
+    (`rueckBind`, and the new `rueckConsBind`/`dannRetBind`) exist beside
+    the verbatim ones, so the machine HAS the right run (that is what
+    `rufG_adaequat_ruf_zeuge_bind` uses) -- but it also has this wrong one.
+    Excluding it would need a premise "the caller does not wait" on the three
+    verbatim pops, which changes the statement of `rufG_adaequat`
+    (`RufAdaequatG.lean`, any caller frame) -- so it is reported, not
+    repaired. Machine-checked on the bind witness: -/
+
+/-- At a head `wartet rest k` every step of `f` is a bare lock step. -/
+theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (z : RufFadenG D) (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
+    (rest : Block D (vertragVon D z.kopf.f) l (τ :: Γ) Λ Λ')
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
+    (hR : z.kopf.rest = ⟨l, Γ, Λ, ρ, .wartet rest k⟩) :
+    ∃ sp, M'.faeden f = ⟨z.stapel, z.kopf, sp, z.log⟩ := by
+  subst hz
+  cases hs with
+  | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | nimmt => exact ⟨_, rufUpdateG_self _ _ _⟩
+  | gibt => exact ⟨_, rufUpdateG_self _ _ _⟩
+  | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
+  | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
+  | dannLeer _ _ _ _ _ hhead => kopfweg
+  | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
+  | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
+  | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
+  | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | freiGib _ _ _ _ _ _ hhead => kopfweg
+  | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
+  | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
+  | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
+  | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
+  | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+  | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
+  | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
+  | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
+  | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
+  | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+
+/-- A thread whose head waits stays so, and logs nothing, along any run. -/
+theorem wartet_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (hl : RufLaufG P O passes f M M')
+    (stapel : List (RufRahmenG D)) (kopf : RufRahmenG D) (log : List (RufEreignisF D))
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
+    (rest : Block D (vertragVon D kopf.f) l (τ :: Γ) Λ Λ')
+    (k : GRest D (vertragVon D kopf.f) l Γ Λ') (ρ : Env D Γ)
+    (hR : kopf.rest = ⟨l, Γ, Λ, ρ, .wartet rest k⟩) :
+    ∀ sp0, M.faeden f = ⟨stapel, kopf, sp0, log⟩ →
+      ∃ sp, M'.faeden f = ⟨stapel, kopf, sp, log⟩ := by
+  induction hl with
+  | refl => intro sp0 h; exact ⟨sp0, h⟩
+  | schritt hs _ ih =>
+    intro sp0 h
+    obtain ⟨sp, e⟩ := wartet_steht hs _ h rest k ρ hR
+    exact ih sp e
+
+/-- The function an event belongs to. -/
+def RufEreignisF.fnVon : RufEreignisF D → D.Fn
+  | .eintritt f .. => f
+  | .rueck f .. => f
+
+/-- The bind witness: the frame of `t4B` after `endeEntf`, `dannIteWahr`,
+    `dannBindCall`, the callee's writing leaf, and a VERBATIM `rueck`. -/
+theorem befund_wartet :
+    (∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4B).erg),
+      execEnd t4O 0 (rufRumpf t4P t4O 0 1) t4BRumpf ((t4M t4B t4BRumpf).weltVon 0) Env.nil =
+        .zurueck σ' v ∧ (show Zahl 0 100 from v).n = 9) ∧
+    ∃ M5 : RufMaschineG t4D, RufLaufG t4P t4O 0 0 (t4M t4B t4BRumpf) M5 ∧
+      ∀ M' : RufMaschineG t4D, RufLaufG t4P t4O 0 0 M5 M' →
+        (M'.faeden 0).log = (M5.faeden 0).log ∧ (M'.faeden 0).kopf = (M5.faeden 0).kopf ∧
+        ∀ (w : ErgVal t4D (t4D.erg t4B)) (s1 : World t4D),
+          RufEreignisF.rueck t4B Env.nil w (t4Sp.welt []) s1 ∉ (M'.faeden 0).log := by
+  refine ⟨⟨_, _, rfl, rfl⟩, ?_⟩
+  have hZ0 : ZustandG (t4M t4B t4BRumpf) 0 [t4Unten] t4B Env.nil (t4Sp.welt []) []
+      (Env.nil : Env t4D []) (.ende t4BRumpf) ((t4M t4B t4BRumpf).weltVon 0) := ⟨rfl, rfl⟩
+  obtain ⟨M1, hs1, hZ1⟩ := w_endeEntf (P := t4P) (O := t4O) (passes := 0) hZ0.1
+    (.ite .wahr t4BindBlock .nil) (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)
+    Env.nil rfl rfl
+  obtain ⟨M2, hs2, hZ2⟩ := w_iteWahr (P := t4P) (O := t4O) (passes := 0) hZ1.1
+    .wahr t4BindBlock .nil .nil
+    (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)) Env.nil rfl rfl
+  obtain ⟨M3, hs3, hZ3⟩ := w_bindCall (P := t4P) (O := t4O) (passes := 0) hZ2.1
+    t4G .nil rfl (t4Hp t4B) rfl (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
+    (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
+    rfl (fun L => nomatch L)
+  have hleaf : ∃ σ4, execStmt t4O 0 keinRuf
+      (Stmt.assignSlot (V := vertragVon t4D t4G) (l := false) () () t4Idx0
+        (t4Lit 5 (by decide) (by decide)) rfl t4Darf) (M3.weltVon 0) Env.nil = .ok σ4 Env.nil :=
+    ⟨_, rfl⟩
+  obtain ⟨σ4, h4⟩ := hleaf
+  obtain ⟨M4, hs4, hZ4⟩ := w_blatt (P := t4P) (O := t4O) (passes := 0) hZ3.1
+    (Stmt.assignSlot () () t4Idx0 (t4Lit 5 (by decide) (by decide)) rfl t4Darf)
+    (.ret (.wert (t4Lit 3 (by decide) (by decide))) List.Perm.nil) Env.nil rfl rfl
+    (fun L => nomatch L) σ4 Env.nil h4
+    (by
+      have e := BlattG.erw t4O 0 keinRuf (BlattG.assignSlot (l := false) (V := vertragVon t4D t4G)
+        () () t4Idx0 (t4Lit 5 (by decide) (by decide)) rfl t4Darf) _ _ _ _ h4
+      exact e)
+  obtain ⟨M5, hs5, hG⟩ := w_rueck (P := t4P) (O := t4O) (passes := 0) hZ4.1 _ [t4Unten] rfl
+    (.wert (t4Lit 3 (by decide) (by decide))) List.Perm.nil Env.nil rfl (fun L => nomatch L)
+  refine ⟨M5, RufLaufG.schritt hs1 (RufLaufG.schritt hs2 (RufLaufG.schritt hs3
+    (RufLaufG.schritt hs4 (RufLaufG.einzeln hs5)))), ?_⟩
+  intro M' hl
+  obtain ⟨sp, e⟩ := wartet_lauf hl (M5.faeden 0).stapel (M5.faeden 0).kopf (M5.faeden 0).log
+    (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
+    (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
+    (by rw [hG.1]; rfl) (M5.faeden 0).spur rfl
+  refine ⟨by rw [e], by rw [e], ?_⟩
+  intro w s1 hm
+  rw [e, hG.1] at hm
+  have hf := List.mem_map_of_mem (f := RufEreignisF.fnVon) hm
+  simp only [RufEreignisF.fnVon, List.map_cons, List.map_nil, List.mem_cons,
+    List.not_mem_nil, or_false, or_self] at hf
+  exact absurd (congrArg Fin.val hf) (by decide)
+
+/-! ## 11. NOTE: the machine realises `rufRumpf`, not `rufAt`
+
+    The program semantics `exec` calls through `rufAt`, which checks the
+    callee's `requires` (and `ensures`, and the owed invariants) and READS
+    their places. The machine checks no contract (booked in
+    `RufMaschineG.lean`'s CUTS). So G agrees with `exec` only where every
+    contract holds and reads nothing -- a design cut of G, not a defect of
+    its steps, shown here on the plain witness with `requires false`. -/
+
+/-- The plain witness program with every `requires` false. -/
+def t4Pk : Programm t4D :=
+  { t4P with requires := fun _ => .falsch }
+
+theorem befund_vertrag :
+    execEnd t4O 0 (rufAt t4Pk t4O 0 2) t4FRumpf ((t4M t4F t4FRumpf).weltVon 0) Env.nil =
+      .logik (.vorbedingung t4G) ∧
+    ∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4F).erg),
+      execEnd t4O 0 (rufRumpf t4Pk t4O 0 1) t4FRumpf ((t4M t4F t4FRumpf).weltVon 0) Env.nil =
+        .zurueck σ' v ∧
+      ∃ (M' : RufMaschineG t4D) (ext : List (RufEreignisF t4D)),
+        RufLaufG t4Pk t4O 0 0 (t4M t4F t4FRumpf) M' ∧
+        M'.faeden 0 = ⟨[], t4Unten, σ'.spur,
+          RufEreignisF.rueck t4F Env.nil v (t4Sp.welt []) σ' :: (ext ++ [])⟩ := by
+  refine ⟨rfl, ?_⟩
+  have hex : ∃ (σ' : World t4D) (v : ErgVal t4D (vertragVon t4D t4F).erg),
+      execEnd t4O 0 (rufRumpf t4Pk t4O 0 1) t4FRumpf ((t4M t4F t4FRumpf).weltVon 0) Env.nil =
+        .zurueck σ' v := ⟨_, _, rfl⟩
+  obtain ⟨σ', v, hex⟩ := hex
+  have hG : Tief t4Pk (fun _ => False) 1 t4G :=
+    show EndR (fun _ => False) (Tief t4Pk (fun _ => False) 0) t4GRumpf from
+      EndR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) (EndR.ret _ _)
+  have hb : EndR (fun _ => False) (Tief t4Pk (fun _ => False) 1) t4FRumpf :=
+    EndR.cons _ _ (StmtR.call _ t4G rfl hG)
+      (EndR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _)) (EndR.ret _ _))
+  obtain ⟨M', ext, hl, hf, _, _⟩ := rufG_adaequat_ruf t4Pk t4O 0 1 (t4M t4F t4FRumpf) 0 t4F
+    Env.nil (t4Sp.welt []) t4Unten [] [] [] Env.nil t4FRumpf (fun _ => False) hb rfl t4_held
+    (t4_frei t4F t4FRumpf) σ' v hex
+  exact ⟨σ', v, hex, M', ext, hl, hf⟩
+
+
+/-! ## CUTS:
+  What is proved: TARGET 4 (`rufG_adaequat_ruf`) -- for a body in the
+  fragment `EndR`/`StmtR`/`BlockR` (the covered fragment of
+  `RufAdaequatG.lean` plus direct `call` in block and `ende` position and
+  `let x = g(…)` in block position), whose callees are admitted at nesting
+  depth `n` (`Tief`), the machine realises `execEnd` with the body-running
+  handler `rufRumpf n`, by induction on `n` (`rufOk_tief`); the call-free
+  fragment embeds at every depth (`endG_tief`). Joint witnesses on a
+  non-degenerate program (`rufG_adaequat_ruf_zeuge`: a call at `ende`
+  position followed by a write and a return; `rufG_adaequat_ruf_zeuge_bind`:
+  a bind-call whose value is written). A FINDING (`befund_wartet`) and a
+  NOTE (`befund_vertrag`). What is NOT proved:
+
+  - Indirect calls (`callInd`, `bindCallInd`): the callee is the pointer's
+    VALUE, so the admission would be a premise over every function of the
+    signature; the machine rules (`rufCallInd`, `dannCallInd`,
+    `dannBindCallInd`) have the same shape as the direct ones and would go
+    through the same `RufOk`, not done.
+  - `bindCallElse`: its grund path has no machine rule (G's CUTS); its ok
+    path is like `bindCall`, not done.
+  - `retGrund` in a callee (no grund machinery in G), and every form
+    `RufAdaequatG.lean`'s CUTS excludes (loops, `leave`/`next`, axioms,
+    `ret` under `locks`).
+  - Contracts: `rufRumpf` checks no `requires`/`ensures`/invariant and the
+    machine neither; `exec` (through `rufAt`) does, and reads their places.
+    So the adequacy is against `rufRumpf`, not `rufAt` (`befund_vertrag`).
+  - Adequacy is existential (SOME f-only run realises the result): G also
+    has the deadlocking run of `befund_wartet`, so no statement about ALL
+    maximal runs holds for bind-calls.
+  - The log is described only as `rueck … :: (ext ++ log)`: the calls'
+    events `ext` are not characterised (they are balanced
+    `eintritt`/`rueck` pairs by `rufG_treu`'s invariant).
+  - Depth: `Tief P A n` admits callees by depth; recursion deeper than `n`
+    is `logik (abstieg f)` sequentially and no claim is made.
+-/
+
+#print axioms Gabbro.Grammatik.rufOk_tief
+#print axioms Gabbro.Grammatik.rufG_adaequat_ruf
+#print axioms Gabbro.Grammatik.endG_tief
+#print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge
+#print axioms Gabbro.Grammatik.rufG_adaequat_ruf_zeuge_bind
+#print axioms Gabbro.Grammatik.befund_wartet
+#print axioms Gabbro.Grammatik.befund_vertrag
+#print axioms Gabbro.Grammatik.stmtOkR
+#print axioms Gabbro.Grammatik.endRetR
+
 end Gabbro.Grammatik

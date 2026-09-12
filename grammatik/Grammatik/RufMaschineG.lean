@@ -3543,15 +3543,37 @@ theorem rufG_treu_zeuge_bind_leave :
       `trav`/`travRest`, `wieder`/`wiederRest`, `ewig`/`ewigRest` with the
       `passes` budget), `let` (`endeBind`/`dannBind` with `schrumpf`),
       `narrow` and `pruefung` (both outcomes, else-arms jump to `ende`).
+    - `traverse` reads its invariant exactly where `traverseLauf` does
+      (repaired 2026-09-13): `dannTrav` unfolds WITHOUT a read, `travNext`
+      reads before every iteration, `travDone` after the last one,
+      `dannLeaveTrav` after a `leave`; each fires only on `true`. On a
+      false read no rule for the frame fires -- it is stuck where
+      `traverseLauf` ends in `logik .schleife` (`trav_falsch_steht`,
+      `RufAdaequatG.lean`). Before the repair a false START invariant made
+      `dannTravFertig` skip the loop and continue, `travNext` re-read the
+      invariant before the first iteration, and `travDone` never read it.
+    - Direct calls: `ruf` (ende position) and `rufDann` (block position)
+      push the caller frame ADVANCED past the call (`.ende rest` resp.
+      `.dann rest k`, holdings `nach D g Λ`), so `rueck` resumes the caller
+      after the call. (Repaired 2026-09-13: `ruf` pushed the caller
+      unchanged, so the caller repeated the call after every `rueck` and
+      never reached `rest`.)
     - Indirect calls: `rufCallInd` (ende position) and `dannCallInd`
       (block position) resolve the pointer value and push the callee frame
-      like `ruf`/`rufDann`, logging `eintritt`.
+      like `ruf`/`rufDann`, logging `eintritt` (`rufCallInd` repaired like
+      `ruf`).
     - Bind-calls push the callee with a `wartet` caller residue
-      (`dannBindCall`, `dannBindCallInd`, `dannBindCallElse`); on `rueck`
-      the value is bound in the caller environment (`rueckBind`, logging
-      `rueck`). The `bindCallElse` grund path has NO step: a callee
-      grund-return cannot be logged (no event names a grund value) and a
-      silent pop breaks `RufLogPasstG`.
+      (`dannBindCall`, `dannBindCallInd`, `dannBindCallElse`); a return
+      binds the value in the caller environment -- from `ende ret`
+      (`rueckBind`), from an early `ret` at an `ende` cons head
+      (`rueckConsBind`) or in a block (`dannRetBind`), each logging
+      `rueck`. The verbatim pops (`rueck`, `rueckCons`, `dannRet`) can ALSO
+      fire into a waiting caller; the restored head `wartet …` then has no
+      rule and the thread deadlocks (`befund_wartet`,
+      `RufAdaequatRufG.lean`) -- kept, since excluding it would change the
+      statement of `rufG_adaequat`. The `bindCallElse` grund path has NO
+      step: a callee grund-return cannot be logged (no event names a grund
+      value) and a silent pop breaks `RufLogPasstG`.
     - Register/atomic/float binders run one layer deep, mirroring their
       `execBlock` equation (value pushed, body stepwise under `schrumpf`):
       `dannRegLies`, `dannRegLiesElseWahr`/`Falsch`, `dannAwaits`,
@@ -3568,7 +3590,10 @@ theorem rufG_treu_zeuge_bind_leave :
       `retryLauf`/`foreverLauf`); `peelDann`/`peelSchrumpf`/`peelFrei` (x
       `leave`/`next`) abandon holdings-uniform scaffolding (`frei`
       emits `gibt`, like `locks`); early `ret` pops with a `rueck` event
-      (`dannRet` in blocks, `rueckCons` at `ende` cons heads).
+      (`dannRet` in blocks, `rueckCons` at `ende` cons heads). `rueck`,
+      `rueckCons`, `rueckBind` accept a returning residue at ANY loop level,
+      so a `ret` that ends an else branch (`sonst`) inside a loop body pops
+      (it stalled before: the rules demanded level `false`).
     - NOT covered: `retGrund`/`Endblock.retGrund` anywhere (no grund
       machinery: popping without an event breaks `RufLogPasstG`, logging
       a value that does not exist is dishonest); `leave`/`next` at `ende`
@@ -3585,7 +3610,10 @@ theorem rufG_treu_zeuge_bind_leave :
       witnesses return through a call, like every `rueck`.
   - No contract discharge: the machine never gates on contracts, and no
     theorem connects `rueck` events to `ReqAmEintritt`/`EnsAmRueck`. The
-    events carry the actual values such a theorem would need.
+    events carry the actual values such a theorem would need. So the
+    machine realises calls through the bare body run (`rufRumpf`), not
+    through `rufAt`, which checks and reads the contracts (`befund_vertrag`,
+    `RufAdaequatRufG.lean`).
 -/
 
 #print axioms Gabbro.Grammatik.rufG_treu

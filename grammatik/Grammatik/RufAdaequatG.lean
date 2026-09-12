@@ -22,9 +22,12 @@
   pops the frame logs the value `execEnd` returns -- proved through a frame
   semantics `semR` that each of the 70 step rules preserves,
   `schrittErhalt`), with witnesses `rufG_adaequat_zeuge`,
-  `rufG_adaequat_umkehr_zeuge`. Two findings against G's rules,
-  machine-checked: `befund_travFertig` (`traverse` with a false invariant)
-  and `befund_ruf_wiederholt` (`ruf` re-enters the callee after `rueck`).
+  `rufG_adaequat_umkehr_zeuge`. Two findings against G's rules were
+  machine-checked here (`traverse` with a false invariant; `ruf` re-entering
+  the callee after `rueck`); both rule families are repaired in
+  `RufMaschineG.lean`, and the findings became agreement theorems
+  (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). Bodies WITH calls:
+  `RufAdaequatRufG.lean`.
 -/
 import Grammatik.RufMaschineG
 import Grammatik.HoareRegeln
@@ -5035,34 +5038,25 @@ theorem ruf_fortsetzung :
   What is proved: TARGET A (`rufG_adaequat`, and `rufG_adaequat_R` for any
   call handler) and TARGET B (`rufG_adaequat_umkehr`) for the covered
   fragment `EndG`/`StmtG`/`BlockG`/`ArmsG`/`GrundArmsG`, each with a joint
-  witness on a `locks { if { write } }; return` body; two FINDINGS against
-  G's step rules, each machine-checked (`befund_travFertig`,
-  `befund_ruf_wiederholt`). What is NOT proved:
+  witness on a `locks { if { write } }; return` body; the two former
+  FINDINGS against G's step rules, now repaired, as agreement theorems
+  (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). What is NOT
+  proved here:
 
   - Calls of every form (`call`, `callInd`, `bindCall`, `bindCallInd`,
-    `bindCallElse`), so TARGET 4 (bodies with calls, one level) is not
-    attempted. Reason: FINDING `befund_ruf_wiederholt` -- `ruf` and
-    `rufCallInd` (calls at `ende` position, the form of every call that is
-    a body's last statement before `return`) push the caller frame with its
-    unchanged residue, so after `rueck` the caller repeats the call and
-    never reaches the rest. Calls in block position (`rufDann`,
-    `dannCallInd`, the bind-call rules) look consistent with `execBlock`
-    under a handler that runs the callee body, but proving that needs the
-    simulation generalised over a growing call log; not done.
-  - `traverse`. Reason: FINDING `befund_travFertig` -- `dannTravFertig`
-    skips the loop on a false start invariant where `traverseLauf` ends in
-    `logik .schleife` (the machine then returns a value the sequential
-    semantics never returns); also `dannTravWeiter`+`travNext` read the
-    invariant twice before the first iteration and `travDone` never after
-    the last, so traces differ and a false final invariant is ignored.
+    `bindCallElse`): direct calls and bind-calls are covered in
+    `RufAdaequatRufG.lean` (TARGET 4, any nesting depth), after the repair
+    of `ruf`/`rufCallInd` (they pushed the caller frame with its unchanged
+    residue, so after `rueck` the caller repeated the call).
+  - `traverse`: after the repair (`dannTrav` reads nothing, `travNext`/
+    `travDone`/`dannLeaveTrav` read exactly where `traverseLauf` does, a
+    false read fires no rule) the rules agree with `traverseLauf`
+    (`trav_falsch_steht`), but the loop is not simulated here.
   - `retry`, `forever`, `leave`, `next`: the loop shims and the peel rules
     are not simulated (no RufRest invariant for `wiederRest`/`ewigRest`,
-    no abrupt-exit simulation). Not a finding; not done. Known gaps of G
-    there (booked in `RufMaschineG.lean`'s CUTS or found here, not
-    formalised): a `sonst` ending in `ret` inside a loop body stands at
-    `ende` with loop level `true`, where neither `rueck` nor `rueckCons`
-    fires (both demand level `false`), so the machine stalls where
-    `execBlock` returns.
+    no abrupt-exit simulation). Not a finding; not done. (The former gap
+    "a `sonst` ending in `ret` inside a loop body stalls" is closed: `rueck`
+    and `rueckCons` now accept any loop level.)
   - `retGrund`, `Endblock.retGrund`, `Endblock.leave`/`next`, and every
     `sonst` branch that does not end in `ret` at loop level `false`
     (machine has no grund rule; `leave`/`next` at `ende` are G's CUTS).
