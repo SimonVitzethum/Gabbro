@@ -2086,10 +2086,7 @@ impl<'a> Parser<'a> {
     fn library_call(&mut self) -> Erg<LibraryCall> {
         let anfang = self.erwarte_z(Z::At)?;
         let library = self.erwarte_ident()?;
-        self.erwarte_z_mit(
-            Z::Hash,
-            Some("a library call names its library and its function as `@library#function`"),
-        )?;
+        self.erwarte_z(Z::Hash)?;
         let function = self.erwarte_ident()?;
         self.erwarte_z(Z::RundAuf)?;
         let mut args = Vec::new();
@@ -2133,17 +2130,11 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::GeschweiftZu) if tiefe == 0 => break,
                 Art::Ende => {
                     let gefunden = t.benennung(self.quelle);
-                    self.absage(
-                        Absage::fehler(
-                            "P001",
-                            t.span,
-                            format!("`}}` expected, {gefunden} found"),
-                        )
-                        .mit_notiz(
-                            "the region of a library call is brace-balanced -- an opening \
-                             `{` without its `}` ends the unit, not the call",
-                        ),
-                    );
+                    self.absage(Absage::fehler(
+                        "P001",
+                        t.span,
+                        format!("`}}` expected, {gefunden} found"),
+                    ));
                     return Err(Abbruch);
                 }
                 _ => {
