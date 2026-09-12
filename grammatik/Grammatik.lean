@@ -73,6 +73,7 @@ import Grammatik.RufAtNachB
 import Grammatik.KetteMehrfadenC
 import Grammatik.MarkenInstanzA
 import Grammatik.RufMaschineD
+import Grammatik.Geist
 import Grammatik.EigenZustandD
 import Grammatik.ReferenzB
 import Grammatik.HoareRegeln
