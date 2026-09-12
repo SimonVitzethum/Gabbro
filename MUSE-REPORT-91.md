@@ -1,8 +1,41 @@
 # MUSE-REPORT-91: library function declaration with payload type (lane E2)
 
 Branch `muse/91`. Rust + Lean lane. Last `./lean-bau` result line:
-`Build completed successfully (54 jobs).` Last `./cargo-pruef`:
+`Build completed successfully (61 jobs).` Last `./cargo-pruef`:
 `== exit 0; failing tests: 0`.
+
+## Merge with master-neu (reviewer-started, resolved on the branch)
+
+The reviewer renumbered `N058` to `N069` (taken on master by lane 87) and
+started merging current master (lanes 86/syscall-checked, 87/bit
+intrinsics, 88/overflow operators, 107/syscall emitter stub, plus Lean
+files). All 8 conflicts resolved and committed as `10229012`, plus
+follow-ups in `f9cc73a1`:
+
+- `namen.rs`: `bibliothek_pruefen` beside `intrinsik_name_vergeben`;
+  master's stale `library_call_not_checked` call dropped (its body was
+  already replaced on this branch).
+- `korpus.rs` BENANNT: union minus retired `P042` (master removed the
+  code, its issuance and its sentence together; verified gone
+  tree-wide).
+- `Grammatik.lean`: import union (kept `Bibliothek` with the six new
+  master files).
+- `SYNTAX.md`: kept both productions; re-measured 167 rules / 228
+  terminals (lane 88 widened the operator arms inside the same three
+  expression rules -- net zero; lane 87's intrinsics add no vocabulary).
+- Registers re-measured on the merged tree: 130 sentences (122
+  `measured`), 330 codes, 275 claimed, `ohne Satz` still 55; 585 gifts,
+  76 clean examples, 54 emitting (master's 74/90 examples are C001-
+  blocked until S6/S7, so they do not join the emitting population).
+- Build fix: `Knoten.fremd` set at master's two new node sites --
+  `false` in both cases, and deliberately so: §0c names `syscall` as a
+  construct a library may reach hardware through, and bit intrinsics are
+  pure compiler ops. No non-exhaustive match on either side fired beyond
+  this; `./cargo-pruef` green, `./lean-bau` green (61 jobs).
+- `pruefe-todo` follow-ups: my README edit had dropped a closing `**`
+  (guardian pattern went blind -- fixed), clean examples 74→76
+  (master's two new examples are clean). Three remaining BEFUNDE are
+  verified pre-existing base drift (see the accepted lane report below).
 
 ## What was built
 
