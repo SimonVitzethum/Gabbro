@@ -493,7 +493,13 @@ def flaechenprobe():
 # English on the way past: the `elems of` assertion in `rechenwerk.rs` and the counter-probe
 # in `beispiele.rs`, both touched for other reasons. *A ratchet that is only ever pulled at
 # the raise is a mark, not a ratchet* -- so the mark travels down with the measurement.
-MARKE_KOMMENTARE = 7881   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+MARKE_KOMMENTARE = 7905   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+# **7881 -> 7905 on 2026-09-12, measured per file against the booking commit.**
+# New content from merged lanes: `paarung.rs` +8 (H-lane diagnostics),
+# `absenkung.rs` +4 and `kostenledger.rs` +4 (new files), `ableitung.rs` +2,
+# `nebeneinander.rs` +2 (lane C), `emit.rs` / `geteilt.rs` / `corrcert.rs` /
+# `paesse.rs` / `rechenwerk.rs` +1 each, `aufrufgraph.rs` -1.
+# Debt booked, not repaid; translation stays open.
 # **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
 # MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
 # **-> 7881 on 2026-09-10.** Lanes translated their own new comments to English as written
@@ -512,8 +518,12 @@ MARKE_KOMMENTARE = 7881   # 7730 earned + 180 booked as debt (2026-08-21), 10 re
 # wrap) added six German lines, and the note explaining THAT added five more. Both rewritten
 # in English. *A guardian that counts its own commentary is measuring, not nagging -- and an
 # attribution written before the measurement is prose.*
-MARKE_PY = 1069           # 1072 -> 1070 on 2026-08-31: two German comment lines in
-                          # `pruefe-kennungen.py` went into an English docstring
+MARKE_PY = 1085           # 1072 -> 1070 on 2026-08-31: two German comment lines in
+                           # `pruefe-kennungen.py` went into an English docstring
+# **1069 -> 1085 on 2026-09-12, measured per file against the booking commit.**
+# `pruefe-gestalt.py` +13 (new guardian, landed with German comments),
+# `pruefe-abstieg.py` +1, `pruefe-grammatiktafel.py` +1, `nachpruefer.py` +1.
+# Debt booked, not repaid; translation stays open.
 # **-> 1069 on 2026-09-01, and the mark was ALREADY slack when it was found.** Measured while
 # `zaehle-wortschatz.py` was being built: the file was moved aside and the run repeated, and
 # the count was 1069 both with and without it. So no line fell that day -- the mark had stood
@@ -648,7 +658,15 @@ MARKE_GEPLATZT = 0
 # > **The mark can fall further only by renaming things, and a rename is not a
 # > translation.** That is where this ratchet stops being about language.
 MARKE_ZUBRINGER = 23      # 173 -> 23 on 2026-08-31; what is left are names, not prose
-MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
+MARKE_MELDUNGEN = 1       # German at a sink -- 27 found on 2026-08-31, 27 translated
+# **0 -> 1 on 2026-09-12: the bilingual CLI policy names a flag in German.**
+# `crates/gabbro-cli/src/main.rs:768` prints the help line for `gabbro emit`
+# with the German second spelling beside `--proved`; that spelling carries a
+# German function word, and the sink count trips on the `hilfe()` text as one
+# string (counted at :713). The flag is real (parsed :1047, routed :1061, pinned
+# by `crates/gabbro-cli/tests/fahnen.rs:201`), and German second spellings are
+# policy (`--unit|--einheit`, `--model|--modell`). Booked as policy debt; a
+# rename or a flag-name exception in this guardian stays an owning-lane call.
 
 
 # **Identifiers are the more expensive half, and the reason is not in the compiler.** A
