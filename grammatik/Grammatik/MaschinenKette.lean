@@ -1615,3 +1615,129 @@ theorem kette_aus_lauf_bezeugt
 #print axioms Gabbro.Grammatik.kette_aus_lauf_bezeugt
 
 end Gabbro.Grammatik
+
+/-! ## Seed joint run J0: the hwit fold base, constructed.
+
+    The `hwit_alt_faltung` fold (`Extraktion.lean`, read-only here) takes its
+    base from a posited empty joint run `J₀` (`hempty : J₀.schrittFaden = []`,
+    `hcode : J₀.code = code`): at `start` the scheduler owes no thread steps,
+    so `hwit_leer` discharges the prefix witness duty vacuously. This section
+    constructs that seed instead of positing it: `samen_J0` over `GenStart sp`
+    with empty thread and step lists, worlds and run by construction, so both
+    `hempty` and `hcode` hold by `rfl`, and `samen_J0_hwit_base` is the
+    `hwit_leer` duty already instantiated at the seed (the fold base is the
+    instance at `run := (GenStart sp).lauf`; the glue instantiates `fn0` and
+    rewrites with `samen_J0_code`).
+
+    Read-only reuse, nothing existing moves: `GenStart` (`Maschine.lean`) and
+    the empty-run shapes (`Gesittet` / `BeschraenkteVerschraenkung` over `[]`,
+    vacuous `hSchritt` / `hPaar` / entry legs) of `kette_aus_maschinenlauf`
+    (`Maschine.lean` §14).
+
+    Construction choice, named exactly (not a narrowing of the duty): the seed
+    carries a constant code function (`fun _ => fn0`). With empty thread and
+    step lists no code value is ever read by the base duty, so any `fn0` the
+    glue supplies fits; `hcode` pins it by `rfl`.
+
+    Remainder (booked, not hidden): instantiating the fold (`hwit_alt_faltung`
+    at `J₀ := samen_J0`) and the glue live with the read-only consumers
+    elsewhere; this section only provides the seed and its properties. -/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **Seed joint run J0.** The start machine as a chain by construction: empty
+    thread list, constant code, generated worlds and the empty run, empty step
+    list. Identifications (`welten`, `l`) and the base premises (`hempty`,
+    `hcode`) hold by `rfl`. Every parameter is load-bearing: `Nb` indexes the
+    run, `sp` builds worlds and entry, `fn0` builds the code. -/
+def samen_J0 (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    GemeinsamerLauf (D := D) Nb :=
+  { faeden := []
+    code := fun _ => fn0
+    eintritt := fun _ => (GenStart sp).start
+    welten := (GenStart sp).welten
+    schrittFaden := []
+    l := (GenStart sp).lauf
+    hKette := by simp [GenStart]
+    hSchritt := by
+      intro k f vor nach hk _ _
+      simp at hk
+    hPaar := by
+      intro f hf
+      simp at hf
+    hGesittet := by
+      show Gesittet ([] : Lauf D)
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro f j
+        have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+        rw [hsp]
+        exact konsistent_nil
+      · intro f j e he
+        have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+        rw [hsp] at he
+        simp at he
+      · intro j f L h hi g hne
+        simp at hi
+      · intro i j f g m s s' ei ej hi hj hm hm'
+        simp at hi
+      · intro i j f g o ei ej hi hj ht1 ht2 hu
+        simp at hi
+    hBeschraenkt := by
+      show BeschraenkteVerschraenkung (D := D) Nb ([] : Lauf D)
+      intro i j f g ei ej hi hj hne
+      simp at hi
+    hEintritt := by
+      intro f hf
+      simp at hf
+    hSchuld := by
+      intro f hf
+      simp at hf
+    hInvSicht := by
+      intro f hf
+      simp at hf
+  }
+
+/-- The seed owes no thread steps: `hempty` by construction. -/
+theorem samen_J0_schritt_leer (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    (samen_J0 Nb sp fn0).schrittFaden = [] := rfl
+
+/-- The seed carries the supplied code: `hcode` by construction. -/
+theorem samen_J0_code (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    (samen_J0 Nb sp fn0).code = fun _ => fn0 := rfl
+
+/-- The seed tracks the start worlds by construction. -/
+theorem samen_J0_welten (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    (samen_J0 Nb sp fn0).welten = (GenStart sp).welten := rfl
+
+/-- The seed tracks the start run by construction. -/
+theorem samen_J0_lauf (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    (samen_J0 Nb sp fn0).l = (GenStart sp).lauf := rfl
+
+/-- The seed has no member threads by construction. -/
+theorem samen_J0_faeden (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
+    (samen_J0 Nb sp fn0).faeden = [] := rfl
+
+/-- Base-instantiation corollary for `hwit_leer`: the prefix witness duty at
+    the seed holds vacuously over any run -- no thread steps are owed, so no
+    witness is owed. The fold base is the instance at
+    `run := (GenStart sp).lauf` with `hempty`/`hcode` by `rfl`. Every premise
+    is load-bearing: `Nb`/`sp`/`fn0` build the seed, `run`/`t₀` type the
+    conclusion. -/
+theorem samen_J0_hwit_base (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn)
+    (run : Lauf D) (t₀ : D.Tab) :
+    ∀ (k : Nat) (g : Faden),
+      (samen_J0 Nb sp fn0).schrittFaden[k]? = some g →
+      TraegerSchreibt ((samen_J0 Nb sp fn0).code g) (.inl t₀) = true →
+      ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
+        run[j]? = some (Schritt.mk g (.zugriff t₀ w Λe he)) := by
+  intro k g hk _
+  have hempty : (samen_J0 Nb sp fn0).schrittFaden = [] := rfl
+  rw [hempty] at hk
+  simp at hk
+
+#print axioms Gabbro.Grammatik.samen_J0
+#print axioms Gabbro.Grammatik.samen_J0_hwit_base
+
+end Gabbro.Grammatik
