@@ -387,7 +387,7 @@ pub const NAMEN: &[Satz] = &[
                       in the same file supplied the machine anyway. *A witness standing \
                       next to a second source of the same answer witnesses nothing.* \
                       `/463` is the one that has no second source. Lane S5 extends the \
-                      rule to `syscall … arch`, pinned by `beispiele/gift/805` (a syscall \
+                      rule to `syscall … arch`, pinned by `beispiele/gift/833` (a syscall \
                       for `x86_64` in a unit that declares only `aarch64`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12; «B40»",
     },
@@ -2618,9 +2618,9 @@ pub const PHASEN: &[Satz] = &[
                     one register are not refused by any code above. The emitter refuses \
                     every unit carrying a syscall (`C001`) until the stub lands.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes `802`/`803`/`807`/`808`/`809` on \
-                      `N063`/`N064`/`H007`/`N065`/`N066`, `804`/`811`/`812` on the three \
-                      directions of `N067`, `806` on `N068`, `805` on `A005` and `810` \
+        gemessen_an: "beispiele/gift: probes `830`/`831`/`835`/`836`/`837` on \
+                      `N063`/`N064`/`H007`/`N065`/`N066`, `832`/`839`/`840` on the three \
+                      directions of `N067`, `834` on `N068`, `833` on `A005` and `838` \
                       on `A006`; beispiele/74 checks clean and falls only at the \
                       emitter (`C001`, pinned by gift 797).",
         fundstelle: "crates/gabbro-check/src/syscall.rs; dokumente/SYNTAX.md §12.1",

@@ -10636,6 +10636,11 @@ fn needs_saturation(baum: &Programm) -> bool {
             ExprArt::Ort(o) => suffixe(o),
             ExprArt::Alt(o) => suffixe(o),
             ExprArt::Ruf(r) => r.argumente.iter().any(expr),
+            // **A library call carries run-time arguments like a call.** The
+            // region is raw tokens, not expressions, so there is nothing to
+            // walk there -- a `+|` inside it is text the checker refuses
+            // (`N057`) before it could ever lower.
+            ExprArt::LibraryCall(l) => l.args.iter().any(expr),
             ExprArt::Eingebaut(b) => match b.as_ref() {
                 Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => match t {
                     TypOderOrt::Ort(o) => suffixe(o),
@@ -10750,6 +10755,9 @@ fn needs_saturation(baum: &Programm) -> bool {
             }
             StmtArt::Return(e) => e.as_ref().is_some_and(expr),
             StmtArt::Ruf(r) => r.argumente.iter().any(expr),
+            // **Same as the expression arm above:** the arguments lower, the
+            // region is raw text the checker refuses before it could lower.
+            StmtArt::LibraryCall(l) => l.args.iter().any(expr),
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }

@@ -44,10 +44,10 @@ recomputed (eleven->twelve newest, stress 87->94, same standing rules).
 
 **Probes**: `beispiele/74-syscall-schreiben.gab` (checks clean incl. a call,
 falls only at emit with exactly one `C001`); gift `797` rewritten to pin the
-`C001` emission refusal (was `P042`); new poison `802` (`N063`), `803`
-(`N064`), `804` (`N067` target), `805` (`A005`), `806` (`N068`), `807`
-(`H007` via syscall, mirrors `796`), `808` (`N065`), `809` (`N066`), `810`
-(`A006`), `811` (`N067` dup errno), `812` (`N067` no channel), `813`
+`C001` emission refusal (was `P042`); new poison `830` (`N063`), `831`
+(`N064`), `832` (`N067` target), `833` (`A005`), `834` (`N068`), `835`
+(`H007` via syscall, mirrors `796`), `836` (`N065`), `837` (`N066`), `838`
+(`A006`), `839` (`N067` dup errno), `840` (`N067` no channel), `841`
 (`N004` via syscall).
 
 **Documents**: `SYNTAX.md` §12.1 + §1 + State table (P042 wording replaced,
@@ -106,7 +106,6 @@ code names added, `sonde_write` in the example); `SONDENDECKUNG.md` (row 51,
   held against a kernel table (named hardware outcome by design).
 
 ## What I believe is wrong in the task / specs
-
 1. **SYNTAX.md §1 vs §12.1 disagree on the register spelling.** The
    production line says `regbind` (`:`) for both maps; every written example
    (PLAN §1, §12.1, gift 797, speech test) writes `rdi = fd` and bare `rax`.
@@ -125,3 +124,23 @@ code names added, `sonde_write` in the example); `SONDENDECKUNG.md` (row 51,
 4. **Stale prose found, not mine, left alone**: SONDENDECKUNG "Six rows"
    (17 P4 rows), TODO deutsch/Verweise drifts, emission marks, PLAN "four
    buckets over all 45". Touched only booked numbers my lane moves.
+
+## Reviewer merge (2026-09-12, after the lane)
+
+- **Renumbering by the reviewer** (commit "renumber lane 86", taken on
+  master): my codes `N057`-`N062` are now `N063`-`N068` (master took `N057`
+  for lane 64's library calls; `N058` stays free for lane 87's intrinsics),
+  my gifts `802`-`813` are now `830`-`841` (master took `802`-`805` for
+  lane-64 probes). This report and the `gemessen_an` sentences above use the
+  new numbers; the renumber commit missed the probe numbers inside my
+  `syscall.erklaerung` and `namen.annahmemaschine` sentences, which I fixed
+  post-merge (`830`-`841`, `833`).
+- **Merge of master-neu** (lanes 64, 75, 88): one conflict, in
+  `sprechprobe.rs` (my rewritten syscall test vs lane 64's library-call
+  test at the same spot) — resolved by keeping lane 64's test complete and
+  my updated syscall test complete; master's stale P042-era header dropped.
+- **Post-merge repairs, all mine in form**: lane 88's `needs_saturation`
+  pre-scan (`emit.rs`) missed both `LibraryCall` arms — added argument
+  walks (the region is raw tokens the checker refuses under `N057` before
+  it could lower). Lane 88's new `BinOp` variants touch no syscall code.
+  `./cargo-pruef` green (0 failing), wortschatz green (226/226).
