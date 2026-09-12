@@ -155,10 +155,23 @@ mechanism (b) is a hole with a library label. Two further facts for GPU work:
 * **The GPU memory model** (weak, scoped: workgroup/device) is a whole new set of A10-class
   assumptions. Gabbro's lock and rank discipline does not map onto SIMT execution with
   barriers and divergence; this is a concurrency model of its own, not a backend detail.
-* **A cheaper intermediate target:** emit a closed subset of OpenCL C (or CUDA C) with a form
-  table and a UB inventory, reusing the method that exists for C, instead of a binary format
-  with its own semantics. The OpenCL C is turned into SPIR-V **at build time** by a pinned
-  compiler (`clang -target spirv64`), recorded in the manifest like the C compiler today.
+* **Target: SPIR-V emitted directly, not through OpenCL C (review, 2026-09-12).** The OpenCL C
+  route reuses the C tooling but not the C proof load: OpenCL C has undefined behaviour of its
+  own with no reference comparable to the C standard to inventory it against; the Clang path
+  OpenCL C → SPIR-V is far less exercised than the C path; the prelude method (`_Static_assert`,
+  probes) cannot reach into it; and it puts two semantic gaps in a row (Gabbro → OpenCL C →
+  SPIR-V → driver) of which the profile assumption covers only the last. Direct emission of the
+  G1 subset is small. **Measured here:** a complete G1 kernel (`out[gid] = in[gid] * 3 + 1` on
+  `u32`, with its bounds guard, two storage buffers, `NonWritable`/`NonReadable`) is **29 distinct
+  opcodes, 760 bytes**, assembled with `spirv-as` and accepted by `spirv-val --target-env
+  vulkan1.1`. Bounded loops (`OpLoopMerge`, `OpPhi`), floats (`OpFAdd`/`OpFMul` with
+  `NoContraction`), signed operations and conversions bring it to roughly 40-50. The format is a
+  word stream with a fixed header and no relocations.
+* **The payload is validated by Gabbro's own validator** (structure: header, ids defined before
+  use, types, storage classes, the closed opcode set of the G1 subset). It checks shape, not
+  meaning; `spirv-val` (pinned version, manifest) runs as a second, independent check at build
+  time. The lowering's correctness is stated against a semantics of the G1 subset only -- small
+  because the subset is small -- and the driver's step is the profile assumption of §0b.
 
 ### 4a. GPU kernels written in Gabbro -- staged (owner question, 2026-09-12)
 
@@ -168,9 +181,21 @@ proof load by an order of magnitude each, so they are separate decisions:
 
 | stage | kernel form | race freedom by | new proof load |
 |---|---|---|---|
-| G1 | **map**: each invocation reads anything read-only and writes only `out[gid]` | construction -- the only writable index is the invocation's own id, so two invocations cannot write one cell (`PLAN-BITS.md` §0, option 2) | the lowering (form table, UB inventory for the OpenCL C subset), FP environment keys (denormals, contraction: `NoContraction`), host launch contract |
+| G1 | **map**: each invocation reads anything read-only and writes only its own output cell | construction (`PLAN-BITS.md` §0, option 2) -- see the two conditions below | the direct SPIR-V lowering of the subset with its validator, FP environment keys (denormals via float-controls execution modes, contraction via `NoContraction`), host launch contract |
 | G2 | **fixed patterns**: reduction, scan, histogram as library kernels proved once | the pattern's proof, done once in the library | one proof per pattern |
 | G3 | **free kernels** with workgroup memory, barriers, scoped atomics | a SIMT memory model with barrier divergence -- research grade (compare GPUVerify, VerCors) | a concurrency model of its own |
+
+**G1 is race-free only under two conditions, both structural:**
+
+1. **The own cell is a form, not an index.** The write target is written `out.mine` (spelling
+   open): a construct bound to the invocation id, with no index expression at all. An ordinary
+   indexed write `out[e]` is not admitted in a G1 kernel, even when `e` happens to be `gid` --
+   otherwise `out[gid % n]` looks the same and races. The error class disappears only because the
+   wrong form cannot be written.
+2. **Input and output buffers are disjoint.** Otherwise one invocation reads what another writes,
+   although each writes only its own cell. In Gabbro this is an aliasing statement over two
+   distinct linear marks, so it is expressible; the launch contract requires it, and the lowering
+   emits `NonWritable` on inputs and `NonReadable` on outputs (as in the measured kernel).
 
 **Recommendation:** G1 is worth it and fits the structure of §6 (payload = SPIR-V produced by
 the translator at translation time, launch = run-time library call with a contract). G2 follows
@@ -210,3 +235,8 @@ poison probes.
 
 E1, E3 and E4 start in parallel; E2, E6 and E7 follow E1 within the wave. E5 waits for the
 compile-time evaluator, which itself waits for the certificate measurement of `PLAN-BITS.md` §6.
+
+**The payload type stays abstract in wave 3.** E2/E3 fix only that a payload is a value of a
+library-declared table or tree type; nothing in the wave commits to a GPU form. A SPIR-V module
+is a table of `u32` words and fits that shape, so the direct-emission decision of §4 needs no
+change to E1-E7.
