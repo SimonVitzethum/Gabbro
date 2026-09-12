@@ -1964,7 +1964,7 @@ impl<'a> Pruefer<'a> {
             ExprArt::Ruf(r) => self.ruf_roh(r, lage),
             // **Lane E2:** a resolved library call answers its declared
             // result, checked like any call; unresolved it stays untyped.
-            // The call itself is refused (`N057` unresolved, `N058`
+            // The call itself is refused (`N057` unresolved, `N069`
             // resolved) by the name pass.
             ExprArt::LibraryCall(r) => {
                 let mut argtypen = Vec::new();

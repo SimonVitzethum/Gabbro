@@ -451,13 +451,13 @@ pub const EINORDNUNG: &[Posten] = &[
     // **Lane E2: booked, although nothing lowers it.** An entry without a
     // lowering is harmless by this table's own contract; a lowering without
     // an entry is `UNZUGEORDNET`. The checker refuses every library call
-    // (`N057` unresolved, `N058` resolved), so no C carries this mark --
+    // (`N057` unresolved, `N069` resolved), so no C carries this mark --
     // the translation lane re-books it with the lowering it brings.
     Posten {
         konstrukt: "library call",
         traegt: Traegt::Fremd,
         grund: "a run-time call of a function someone else provides (the checker \
-                refuses every such call -- `N057` unresolved, `N058` resolved) \
+                refuses every such call -- `N057` unresolved, `N069` resolved) \
                 -- no prototype, no lowering, only the refusal",
     },
 ];
@@ -823,7 +823,7 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Return(_) => zaehle(e, "return"),
             StmtArt::Ruf(_) => zaehle(e, "call"),
             // **Lane E2:** a library call is refused by the checker
-            // (`N057`/`N058`) -- the entry vouches nothing beyond that.
+            // (`N057`/`N069`) -- the entry vouches nothing beyond that.
             StmtArt::LibraryCall(_) => zaehle(e, "library call"),
             StmtArt::Wenn(w) => {
                 zaehle(e, "if");

@@ -1266,7 +1266,7 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // lower the count to C, contracts stating one are refused here, by name.
         ExprArt::Zaehle { .. } => Err(LeanReason::Counted),
         // **Lane E2:** a library call lowers to no term -- the checker
-        // refuses every one (`N057`/`N058`), so the channel maps it to the
+        // refuses every one (`N057`/`N069`), so the channel maps it to the
         // existing `CallStatement` refusal like any undeclared call.
         ExprArt::LibraryCall(_) => Err(LeanReason::CallStatement),
         // **Two built-ins have a meaning here, and the third has none.** `aligned(e, n)` is
@@ -2420,7 +2420,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
             Ok(LeanCarried::StmtCall.term(format!("{hoist}(.call {n} [{ps}] [{args}] {pre})")))
         }
         // **Lane E2:** a library call lowers to no term -- refused like
-        // any call the unit does not declare (checker: `N057`/`N058`).
+        // any call the unit does not declare (checker: `N057`/`N069`).
         StmtArt::LibraryCall(_) => Err(LeanReason::CallStatement),
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it

@@ -328,7 +328,7 @@ pub const NAMEN: &[Satz] = &[
     // no contract and no payload type to hold the call against. The sentence
     // is therefore not a claim about the call but about the refusal: every
     // such call falls here, in both positions. A call that DOES resolve
-    // falls under `N058` instead (`namen.bibliothek_ruf` below).
+    // falls under `N069` instead (`namen.bibliothek_ruf` below).
     Satz {
         name: "namen.library_call",
         kennungen: &["N057"],
@@ -341,7 +341,7 @@ pub const NAMEN: &[Satz] = &[
                     a gap** -- the arguments ARE judged: they are ordinary \
                     expressions, and every pass reads them through the shared \
                     walkers. Lane E2 narrowed the code to the unresolved call; \
-                    the resolved one is `N058`.",
+                    the resolved one is `N069`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/802` (unbalanced region, `P001`), `/803` \
                       (missing `#`, `P001`), `/804` (empty library name, `P003`), \
@@ -359,12 +359,12 @@ pub const NAMEN: &[Satz] = &[
     // like any name and is checked like any call -- arguments (`M143` and
     // per-argument shape and range), effects through the call graph
     // (`E008`), costs against the declaration. Four new refusals hold the
-    // four things no ordinary check can: the missing translator (`N058`),
+    // four things no ordinary check can: the missing translator (`N069`),
     // a foreign body in the hull (`N059`, §0c), a payload naming no table
     // (`N060`), and a direct call bypassing the region (`N061`).
     Satz {
         name: "namen.bibliothek_ruf",
-        kennungen: &["N058"],
+        kennungen: &["N069"],
         aussage: "Every RESOLVED library call is refused with the translation \
                   diagnostic -- once per call, in both positions. Its arguments, \
                   effects, error channel and costs are checked exactly like an \
@@ -375,7 +375,7 @@ pub const NAMEN: &[Satz] = &[
                     nobody compiled. `beispiele/gift/820` carries a declaration \
                     and two calls and falls with nothing but this code.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N058` only); \
+        gemessen_an: "`beispiele/gift/820` (declaration plus calls, `N069` only); \
                       `/823` (wrong argument type beside it); counter-direction \
                       in `paesse.rs` (`bibliothek_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",

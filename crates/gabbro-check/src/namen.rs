@@ -3497,7 +3497,7 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **`N057` -- an unresolved library call; `N058` -- a resolved one;
+/// **`N057` -- an unresolved library call; `N069` -- a resolved one;
 /// `N059` -- a foreign body in a library hull; `N060` -- a payload that
 /// names no table; `N061` -- a direct call to a library function**
 /// (lanes E1+E2).
@@ -3511,7 +3511,7 @@ fn sonde_kann_fallen(baum: &Programm, absagen: &mut Absagen) {
 ///   declared `library fn` in it -- otherwise `N057`, naming which half
 ///   failed (unknown library vs unknown function, including the case
 ///   where the name stands for an ordinary function);
-/// * a resolved call is refused with `N058`: arguments, effects, `or R`
+/// * a resolved call is refused with `N069`: arguments, effects, `or R`
 ///   and costs are checked exactly like an ordinary call (m1, the call
 ///   graph, kosten), but the region is still not interpreted -- until
 ///   the translator exists (lanes E3/E5) there is no payload to hold the
@@ -3638,7 +3638,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
         if u.bibliothek(modul, &r.library.text, &r.function.text).is_some() {
             absagen.schiebe(
                 Absage::fehler(
-                    "N058",
+                    "N069",
                     r.span,
                     "library call checked -- payload translation not implemented",
                 )

@@ -1,6 +1,6 @@
--- erwartet: N058
+-- erwartet: N069
 -- Lane E2: declaration plus calls -- refused ONLY by the translation
--- diagnostic (N058), once per call, in statement and in binding position.
+-- diagnostic (N069), once per call, in statement and in binding position.
 -- Arguments, effects and costs are all clean: the callee resolves, so no
 -- N057, no M143, no E009, no H021, no K003 fires beside it.
 module gpu::spirv {

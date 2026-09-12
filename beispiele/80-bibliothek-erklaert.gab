@@ -3,7 +3,7 @@
 -- `payload <table>`, SYNTAX.md §7.1): ordinary parameters, an optional
 -- result, an error channel like any function, and a Gabbro body whose
 -- hull holds no foreign code. The declaration alone is fully clean --
--- a CALL (`@lib#f`) always carries the translation refusal (`N058`),
+-- a CALL (`@lib#f`) always carries the translation refusal (`N069`),
 -- so calls live in the poison corpus (`beispiele/gift/820`), not here.
 --
 -- The one rule this file exercises without falling: a library function

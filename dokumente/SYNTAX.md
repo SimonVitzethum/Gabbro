@@ -915,7 +915,7 @@ payload the call carries (`PLAN-ERWEITUNG.md` §0b) — is **not implemented
 yet**: no translator runs. A call that resolves `lib` to a used module and
 `function` to a declared `library fn` in it (§7.1) is checked like an
 ordinary call — arguments, effects, `or R`, costs — and then refused with
-`N058` (`library call checked; payload translation not implemented`). A call
+`N069` (`library call checked; payload translation not implemented`). A call
 that resolves nowhere is refused with `N057`; the refusal is controlled —
 never a crash and never a silent acceptance. In any other expression position
 the reader refuses the `@` with `P011`.
@@ -927,8 +927,8 @@ let code = @spirv#kernel(n) { dispatch 0 };
 
 | spelling | attribute | Lean |
 |---|---|---|
-| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; resolved calls refused with `N058`, unresolved with `N057` | no term — refused by `N057`/`N058` |
-| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057`/`N058` |
+| `@lib#fn(args) { region };` | a run-time call; the region is captured uninterpreted; resolved calls refused with `N069`, unresolved with `N057` | no term — refused by `N057`/`N069` |
+| `let x = @lib#fn(args) { region };` | binds; the call is a run-time call; refused | no term — refused by `N057`/`N069` |
 
 ### 7.1 `library fn` — the declaration with a payload type (lane E2)
 
@@ -981,7 +981,7 @@ plus the four things only a library declaration can fail:
 * **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
   root, `use` lines) and `f` to a `library fn` in it; arguments, effects
   (through the call graph), `or R` and costs are checked exactly like an
-  ordinary call. Resolved calls are refused with `N058` until the
+  ordinary call. Resolved calls are refused with `N069` until the
   translator exists (lanes E3/E5); unresolved calls with `N057`.
 * **no bypass** — a direct call to a `library fn` is refused (`N061`):
   without a region there is no payload.

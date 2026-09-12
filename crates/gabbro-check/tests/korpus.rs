@@ -37,10 +37,10 @@ const BENANNT: &[&str] = &[
     // Lane E1: `N057` -- every library call is parsed and refused until lane
     // E2 checks it. Named here so the corpus run counts the rule, not noise.
     "N057",
-    // Lane E2: `N058` the resolved call (payload translation missing),
+    // Lane E2: `N069` the resolved call (payload translation missing),
     // `N059` a foreign body in a library hull, `N060` a payload naming no
     // table, `N061` a direct call to a library function.
-    "N058", "N059", "N060", "N061",
+    "N069", "N059", "N060", "N061",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
     // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein

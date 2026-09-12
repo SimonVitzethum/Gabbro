@@ -2522,7 +2522,7 @@ fn library_call_labelled_argument_falls() {
 // -- Lane E2: the checked library call ---------------------------------------------------
 // A library module declares a run-time function with a contract and a
 // payload type; the call resolves and is checked like an ordinary call,
-// then refused with `N058` until the translator exists. Unresolved calls
+// then refused with `N069` until the translator exists. Unresolved calls
 // stay `N057`; the declaration side has `N059`/`N060`/`P043`/`P044`, and a
 // direct call to a library function is `N061`.
 
@@ -2585,7 +2585,7 @@ fn library_resolved_n058_and_nothing_else() {
         &library_call_src(
             "@spirv#kernel(a) { dispatch 0 };\n    let code = @spirv#kernel(a) { dispatch 0 };",
         ),
-        &["N058", "N058"],
+        &["N069", "N069"],
     );
 }
 
@@ -2630,7 +2630,7 @@ fn library_wrong_argument_like_ordinary() {
     // per-argument diagnostic fires beside the translation refusal.
     faellt_genau(
         &library_call_src("@spirv#kernel(true) { dispatch 0 };"),
-        &["M135", "N058"],
+        &["M135", "N069"],
     );
 }
 
@@ -2640,7 +2640,7 @@ fn library_wrong_arity_m143() {
     faellt_mit(&library_call_src("@spirv#kernel(a, a) { dispatch 0 };"), "M143");
     faellt_genau(
         &library_call_src("@spirv#kernel(a, a) { dispatch 0 };"),
-        &["M143", "N058"],
+        &["M143", "N069"],
     );
 }
 
@@ -2677,7 +2677,7 @@ impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
 #[test]
 fn library_foreign_hull_n059() {
     // Direct (`launch`) and transitive (`mid` -> `launch`) foreign bodies
-    // are both named; the resolving call still carries N058 beside it.
+    // are both named; the resolving call still carries N069 beside it.
     faellt_genau(
         "module gpu::spirv {
 table KernelTab count 1 {
@@ -2705,7 +2705,7 @@ impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
     return a;
 }
 }",
-        &["N058", "N059"],
+        &["N069", "N059"],
     );
 }
 

@@ -1,4 +1,4 @@
--- erwartet: N058
+-- erwartet: N069
 -- Lane E2: the call resolves, so its arguments are judged exactly like an
 -- ordinary call's -- `true` against `u32` falls with the ordinary
 -- per-argument diagnostic beside the translation refusal.

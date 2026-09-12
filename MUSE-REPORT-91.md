@@ -71,13 +71,13 @@ behind the signature, then `requires` first) -- the sketch's
   `library_call_not_checked` (the `lane_e2_checks_calls` hook is gone):
   per declaration `N060` (payload names no table, resolved from the
   declaring module) and `N059` (foreign body in the transitive hull, via
-  `fremde_in_huelle`); per call `N058` (resolved -- "library call
+  `fremde_in_huelle`); per call `N069` (resolved -- "library call
   checked; payload translation not implemented") or `N057` (unresolved,
   naming unknown library vs unknown function, incl. the ordinary-function
   note); `N061` (direct call to a `library fn`, in statement, binding,
   `let … else` and contract position; constructors, conversions and
   place-calls never resolve and stay silent).
-- New codes `N058`/`N059`/`N060`/`N061`/`P043`/`P044` (each single-site;
+- New codes `N069`/`N059`/`N060`/`N061`/`P043`/`P044` (each single-site;
   `pruefe-kennungen` green); sentences `namen.bibliothek_ruf/-huelle/
   -nutzlast/-direktruf`, `parser.bibliothek-nutzlast/-rumpf`, all
   `measured`; `N057` sentence narrowed to the unresolved call.
@@ -115,9 +115,9 @@ behind the signature, then `requires` first) -- the sketch's
   (calls can never be clean); emits C accepted by `cc` (`library` and
   `payload` are grammatiktafel-`gesenkt` through it).
 - `beispiele/gift/820` (positive: declaration + two calls, exactly
-  `N058`+`N058`), `/821` (unknown library, `N057`), `/822` (unknown
+  `N069`+`N069`), `/821` (unknown library, `N057`), `/822` (unknown
   function incl. ordinary-function note, `N057`), `/823` (wrong arg,
-  exactly `M135`+`N058`), `/824` (extern in hull, `N059`+`N058`), `/825`
+  exactly `M135`+`N069`), `/824` (extern in hull, `N059`+`N069`), `/825`
   (payload names no table, exactly `N060`), `/826` (missing payload,
   exactly `P043`), `/827` (bodyless `;`, exactly `P044`), `/828`
   (direct call, exactly `N061`+`N061`). `gift/805` keeps `N057`
@@ -138,7 +138,7 @@ BEFUNDE; the 3 remaining are verified pre-existing (see below).
 ## What remains open
 
 - E3 (translator declaration) and E5 (translation stage with
-  certificate): `N058` retires when the translator runs.
+  certificate): `N069` retires when the translator runs.
 - `N025` visibility was not extended to library calls: resolution is
   `use`-aware, but a non-`pub` library function called cross-module is
   not refused on visibility grounds. Deferred to E6 linking.
@@ -166,5 +166,5 @@ BEFUNDE; the 3 remaining are verified pre-existing (see below).
   predate this lane (my comment lines contribute zero German-flagged
   lines; verified against the detector word list).
 - `MUSE-REPORT-64` (E1) says "`N057` in `BENANNT`" -- the BENANNT list
-  lives in `crates/gabbro-check/tests/korpus.rs`, where `N058`-`N061`
+  lives in `crates/gabbro-check/tests/korpus.rs`, where `N069`-`N061`
   and `P043`/`P044` are now entered beside it.

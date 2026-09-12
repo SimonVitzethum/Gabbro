@@ -26,7 +26,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 | of those claimed by a sentence | **257** | `./instrumente/pruefe-saetze.py` |
 
 > **2026-09-12, lane E2: recomputed to actuals, +6 of them mine.**
-> `namen.bibliothek_ruf` (`N058`, the resolved call refused until the
+> `namen.bibliothek_ruf` (`N069`, the resolved call refused until the
 > translator exists), `namen.bibliothek_huelle` (`N059`, no foreign body in
 > a library hull), `namen.bibliothek_nutzlast` (`N060`, the payload names a
 > table), `namen.bibliothek_direktruf` (`N061`, no direct call to a library
