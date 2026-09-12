@@ -296,12 +296,8 @@ theorem mulW_c_gleich (w : Nat)
     the range `0 .. 5` -- `3 + 3 = 6` wraps to `6`, which is
     outside `0 .. 5`. So no function into `0 .. 5` can compute
     `(a + b) mod 8`: the value at `3 + 3` would have to be both `6`
-    (`h6`) and inside the range. Both computation hypotheses are used:
-    `h6` names the escaping value, `h8` pins the modulus (a modulus with
-    `3 + 5` not `0` would not be `mod 8`). -/
-theorem wrapping_nur_exakt_kein_mod8
-    (h8 : ((3 : Int) + 5) % 8 = 0)
-    (h6 : ((3 : Int) + 3) % 8 = 6) :
+    (proved inside by `decide`) and inside the range. -/
+theorem wrapping_nur_exakt_kein_mod8 :
     ¬ ∃ _f : Zahl 0 5 → Zahl 0 5 → Zahl 0 5,
       (∀ a b : Zahl 0 5, a.n + b.n ≤ 5 → (_f a b).n = a.n + b.n) ∧
       (∀ a b : Zahl 0 5, (_f a b).n = (a.n + b.n) % 8) := by
@@ -310,8 +306,8 @@ theorem wrapping_nur_exakt_kein_mod8
   have h3 : (f ⟨3, by decide, by decide⟩ ⟨3, by decide, by decide⟩).n =
       ((3 : Int) + 3) % 8 := hfmod _ _
   have hle := (f ⟨3, by decide, by decide⟩ ⟨3, by decide, by decide⟩).le_hi
+  have h6 : ((3 : Int) + 3) % 8 = 6 := by decide
   rw [h6] at h3
-  have h8u := h8
   omega
 
 /-! ## No wrapping function on `0 .. 5` computed by `mod 2^k` -/
@@ -320,21 +316,35 @@ theorem wrapping_nur_exakt_kein_mod8
     `Zahl 0 5 → Zahl 0 5 → Zahl 0 5` that agrees with `+` whenever the sum
     fits AND is computed by `mod 2^k` for some `k` (the modulus is carried
     as `2 ^ (k + 1)`, so no `Nat` truncation can turn `k = 0` into a
-    silently wrong bound). Case plan, with the escaping pair per modulus:
-    `k = 0` (`mod 2`): `f 1 2 = 3` by fit, `3 % 2 = 1` by mod
-    (`h1`); `k = 1` (`mod 4`): `f 2 3 = 5` by fit, `5 % 4 = 1`
-    (`h5mod4`); `k = 2` (`mod 8`): `f 3 3` is `6 % 8 = 6` (`h6mod8`),
-    outside the range; `k ≥ 3` (`mod 2^(k+1) ≥ 16`): `f 5 5` is
-    `10 % 2^(k+1) = 10` (`h10nowrap`), outside the range.
-    Every computation hypothesis is used, one per case. -/
-theorem wrapping_nur_exakt
-    (h1 : ((1 : Int) + 2) % 2 ^ (0 + 1) = 1)
-    (h5mod4 : ((2 : Int) + 3) % 2 ^ ((0 + 1) + 1) = 1)
-    (h6mod8 : ((3 : Int) + 3) % 2 ^ (((0 + 1) + 1) + 1) = 6)
-    (h10nowrap : ∀ k : Nat, ((5 : Int) + 5) % 2 ^ (k + 1 + 1 + 1 + 1) = 10) :
+    silently wrong bound). All numeral facts are proved inside by
+    `decide`; the uniform tail fact `10 % 2^(k+4) = 10` is proved inside by
+    `Int.emod_eq_of_lt` with `10 < 2^(k+4)` from `Nat.pow_le_pow_right`.
+    Case plan, with the escaping pair per modulus:
+    `k = 0` (`mod 2`): `f 1 2 = 3` by fit, `3 % 2 = 1` by mod;
+    `k = 1` (`mod 4`): `f 2 3 = 5` by fit, `5 % 4 = 1`;
+    `k = 2` (`mod 8`): `f 3 3` is `6 % 8 = 6`, outside the range;
+    `k ≥ 3` (`mod 2^(k+1) ≥ 16`): `f 5 5` is `10 % 2^(k+1) = 10`,
+    outside the range. -/
+theorem wrapping_nur_exakt :
     ¬ ∃ _f : Zahl 0 5 → Zahl 0 5 → Zahl 0 5,
       (∀ a b : Zahl 0 5, a.n + b.n ≤ 5 → (_f a b).n = a.n + b.n) ∧
       ∃ k : Nat, ∀ a b : Zahl 0 5, (_f a b).n = (a.n + b.n) % 2 ^ (k + 1) := by
+  have h1 : ((1 : Int) + 2) % 2 ^ (0 + 1) = 1 := by decide
+  have h5mod4 : ((2 : Int) + 3) % 2 ^ ((0 + 1) + 1) = 1 := by decide
+  have h6mod8 : ((3 : Int) + 3) % 2 ^ (((0 + 1) + 1) + 1) = 6 := by decide
+  have h10nowrap : ∀ k : Nat, ((5 : Int) + 5) % 2 ^ (k + 1 + 1 + 1 + 1) = 10 := by
+    intro k
+    have e : ((5 : Int) + 5) = 10 := by decide
+    rw [e]
+    apply Int.emod_eq_of_lt (by decide)
+    have hN := Nat.pow_le_pow_right (show 0 < 2 by decide)
+      (show 4 ≤ k + 1 + 1 + 1 + 1 by omega)
+    have hle16 : ((2 ^ 4 : Nat) : Int) ≤ ((2 ^ (k + 1 + 1 + 1 + 1) : Nat) : Int) :=
+      Int.ofNat_le.mpr hN
+    have e1 : ((2 ^ 4 : Nat) : Int) = 16 := by decide
+    have e2 : ((2 ^ (k + 1 + 1 + 1 + 1) : Nat) : Int) =
+        (2 : Int) ^ (k + 1 + 1 + 1 + 1) := by simp
+    omega
   intro hEx
   obtain ⟨f, hfit, k, hmodf⟩ := hEx
   cases k with
@@ -371,19 +381,8 @@ theorem wrapping_nur_exakt
         omega
 
 /- CUTS: what is not proved.
-   - `h10nowrap` is taken as a computation hypothesis (one `decide` per
-     numeral would be needed for each concrete `k`; the uniform fact
-     `10 < 2^(k+4)` plus `emod_eq_of_lt` would discharge it, but that
-     bridge is not built here). Likewise `h1`, `h5mod4`, `h6mod8`, `h8`,
-     `h6` are `decide` facts passed as premises rather than proved inline,
-     so each stays visible as a computation the statement depends on.
-   - The strong statement quantifies the modulus as `2 ^ (k + 1)` over all
-     `k : Nat`; the wrap direction (every `mod 2^k` wraps SOME fitting
-     pair for `k = 0, 1` and escapes the range for `k ≥ 2`) is covered by
-     the four cases above.
-   - No statement about `subW`/`mulW`/`shlW` beyond their definitions:
-     they compute the C value by construction (`% 2^(w+1)`), but the
-     `addW_c_gleich`-style cast bridge is proved only for `addW`.
+   - `shlW` has a definition only; the C-equality cast bridge is proved for
+     `addW`, `subW`, `mulW`.
    - `addS` on the empty range (`hi < lo`) returns `a` by convention; no
      claim is made about that leg beyond inhabitation.
 -/
@@ -395,6 +394,8 @@ theorem wrapping_nur_exakt
 #print axioms Gabbro.Grammatik.addS_exakt_wenn_passt
 #print axioms Gabbro.Grammatik.addS_exakt_wenn_passt_zeuge
 #print axioms Gabbro.Grammatik.addW_c_gleich
+#print axioms Gabbro.Grammatik.subW_c_gleich
+#print axioms Gabbro.Grammatik.mulW_c_gleich
 #print axioms Gabbro.Grammatik.wrapping_nur_exakt
 #print axioms Gabbro.Grammatik.wrapping_nur_exakt_kein_mod8
 
