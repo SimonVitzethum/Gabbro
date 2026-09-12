@@ -681,6 +681,147 @@ theorem refPCschreibt_zeuge : refPC2.speicher.slots () 0 () ≠
       Wert refD (refD.typ () ())).n) := congrArg Zahl.n hcon
   simp [refV100] at hn
 
+/-! ## 7. The call-machine run on RufMaschineF: lock, write, call, return
+
+    The D-machine run of section 5 stops at the call (`refReachC`): its
+    `rueck` step needs frame equalities the D design cannot supply (no
+    stored environment, entry-world projection -- see CUTS). The F machine
+    stores each frame's local environment next to its residue and compares
+    frames only by (function, parameters, entry world), so the same bodies
+    go through: thread 1 takes the lock, fires the writing leaf, calls
+    `lies`, and returns the post-write slot value through the read world.
+    Proof pattern follows `schritt1F`/`schritt2F`/`schritt3F` in
+    RufMaschineF.lean; order differs (write before call) because the kept
+    `refP` puts the write first in the `einzahlen` body. -/
+
+/-- Thread start for the F run: thread 0 runs `lies`, thread 1 runs
+    `einzahlen 7`. -/
+def initB : Faden → Σ f : refD.Fn, Env refD (refD.params f)
+  | 0 => ⟨refLies, Env.nil⟩
+  | _ => ⟨refEin, refRho7⟩
+
+/-- The start machine for the F witness run. -/
+def refM0F : RufMaschineF refD := RufStartF refP refSp0 initB
+
+/-- The lock is free at the F start: every trace is empty. -/
+theorem refFrei0F : RufFreiF refM0F 1 (()) := by
+  intro g hne hmem
+  have e : (refM0F.faeden g).spur = [] := rfl
+  have hnil : offen (refM0F.faeden g).spur = [] := by rw [e]; rfl
+  have h2 : (()) ∈ ([] : List refD.Lock) := hnil ▸ hmem
+  exact (List.mem_nil_iff _).mp h2 |>.elim
+
+/-- Thread 1 holds nothing yet at the F start. -/
+theorem refSelf0F : (() : refD.Lock) ∉ offen (refM0F.faeden 1).spur := by
+  intro hmem
+  have e : (refM0F.faeden 1).spur = [] := rfl
+  have hnil : offen (refM0F.faeden 1).spur = [] := by rw [e]; rfl
+  have h2 : (()) ∈ ([] : List refD.Lock) := hnil ▸ hmem
+  exact (List.mem_nil_iff _).mp h2 |>.elim
+
+/-- Thread 1 holds nothing, so the rank side is vacuous. -/
+theorem refRang0F (K : refD.Lock) (hK : K ∈ offen (refM0F.faeden 1).spur) :
+    refD.rang K < refD.rang (()) := by
+  have e : (refM0F.faeden 1).spur = [] := rfl
+  have hnil : offen ([] : List (Ereignis refD)) = [] := rfl
+  rw [e, hnil, List.mem_nil_iff] at hK
+  exact absurd hK (by decide)
+
+/-- Step A (F): thread 1 takes the lock. -/
+def refM1F : RufMaschineF refD :=
+  ⟨refM0F.speicher,
+   rufUpdateF refM0F.faeden 1
+     ⟨(refM0F.faeden 1).stapel, (refM0F.faeden 1).kopf,
+      Ereignis.nimmt () (offen (refM0F.faeden 1).spur) :: (refM0F.faeden 1).spur,
+      (refM0F.faeden 1).log⟩,
+   refM0F.lauf ++ rufEigenF 1 [Ereignis.nimmt () (offen (refM0F.faeden 1).spur)],
+   refM0F.start⟩
+
+theorem refSchrittAF :
+    RufSchrittF refP refO 0 refM0F 1 refM1F := by
+  unfold refM1F
+  exact RufSchrittF.nimmt refM0F 1 () refSelf0F (fun K hK => refRang0F K hK)
+    refFrei0F
+
+theorem refReachAF : RufErreichbarF refP refO 0 refM0F refM1F :=
+  RufErreichbarF.schritt _ _ 1 RufErreichbarF.start refSchrittAF
+
+/-- Thread 1 head still runs `einzahlen` after taking the lock (F). -/
+theorem refM1Fkopf : (refM1F.faeden 1).kopf.f = refEin := rfl
+
+/-- Thread 1 holds the lock exactly after step A (F). -/
+theorem refM1Fhaelt :
+    HeldGenau [Res.held (D := refD) ()]
+      (offen (refM1F.faeden 1).spur) := by
+  intro L
+  have eL : L = () := by cases L <;> rfl
+  have eH : offen (refM1F.faeden 1).spur = [()] := rfl
+  rw [eH, eL]
+  constructor
+  · intro hL
+    have heq : Res.held (D := refD) L = Res.held (D := refD) () :=
+      (List.mem_singleton.mp hL)
+    cases heq
+    exact List.mem_singleton.mpr rfl
+  · intro hL
+    have heq : L = () :=
+      (List.mem_singleton.mp (eH ▸ hL))
+    cases heq
+    exact List.mem_singleton.mpr rfl
+
+/-- Step B (F): thread 1 fires the writing leaf `konto[0] := 100` under
+    the STORED `refRho7`; the outcome stores the same environment. -/
+def refM2F : RufMaschineF refD :=
+  ⟨(((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
+      (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
+      refK0 () refV100).speicher,
+   rufUpdateF refM1F.faeden 1
+     ⟨(refM1F.faeden 1).stapel,
+      ⟨(refM1F.faeden 1).kopf.f, (refM1F.faeden 1).kopf.rho,
+       (refM1F.faeden 1).kopf.s0,
+       ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
+        .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
+          refHpLiesAt rfl)
+          (.ret .keine (by rfl))⟩⟩,
+      (((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
+        (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
+        refK0 () refV100).spur,
+      (refM1F.faeden 1).log⟩,
+   refM1F.lauf ++ rufEigenF 1
+     [Ereignis.zugriff () true [Res.held (D := refD) ()]
+       (refM1F.weltVon 1).haelt],
+   refM1F.start⟩
+
+theorem refSchrittBF : RufSchrittF refP refO 0 refM1F 1 refM2F := by
+  have hhead : (refM1F.faeden 1).kopf.rest =
+      ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
+        .cons refWriteStAt
+          (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
+            refHpLiesAt rfl)
+            (.ret .keine (by rfl)))⟩ := rfl
+  have hstep : (execStmt refO 0 keinRuf refWriteStAt
+      (refM1F.weltVon 1) refRho7) =
+      Ausgang.ok (D := refD) (V := vertragVon refD refEin)
+        (((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
+          (refIdxEin.orte ++ refHundert.orte)).schreibSlot ()
+          [Res.held (D := refD) ()] refK0 () refV100) refRho7 := rfl
+  have hneu : (((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
+      (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
+      refK0 () refV100).spur =
+      [Ereignis.zugriff () true [Res.held (D := refD) ()]
+        (refM1F.weltVon 1).haelt] ++ (refM1F.faeden 1).spur := rfl
+  have hkn : ∀ (L : refD.Lock) (h : List refD.Lock),
+      Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
+        [Res.held (D := refD) ()] (refM1F.weltVon 1).haelt] := by
+    intro L h hm
+    simp at hm
+  exact RufSchrittF.blatt refM1F 1 false [.int 0 10]
+    [Res.held (D := refD) ()] [Res.held (D := refD) ()]
+    refWriteStAt _ refRho7 rfl hhead refM1Fhaelt _ _ _ hstep hneu hkn
+
+theorem refReachBF : RufErreichbarF refP refO 0 refM0F refM2F :=
+  RufErreichbarF.schritt _ _ 1 refReachAF refSchrittBF
+
 /-! ## CUTS:
   - PARTIAL RESULT (attempt B of 2, rule 8): `refD`/`refP`/`refO`/
     `refO_gut`/`refSp0` are proved; the call-machine run reaches through
