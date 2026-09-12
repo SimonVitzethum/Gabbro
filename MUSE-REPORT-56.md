@@ -123,3 +123,22 @@ table `konto`, lock `m`, no axioms/registers/marks/globals):
 - Two Lean-environment notes for future lanes: the `set` tactic is
   unavailable in this toolchain (avoid it); a bare `nomatch g` inside a
   structure instance swallows following fields -- parenthesize it.
+
+## Lane-74 repair round (`hd`/`hgd` guard premises on `axiomCall`)
+
+Lane 74 added two constructor arguments to `Stmt.axiomCall`, after `hw`/`hg`:
+`hd : ∀ t, D.aschreibt a t = true → darf D t Λ` (every written table is
+guarded by the held locks) and the global analogue `hgd`. All 14 code
+touchpoints in `EigenZustandD.lean` were mechanical: five constructor terms
+gained `hd hgd`, four `∃`-binders (dispatch disjunct, both `hNoAx` shapes,
+both refD witnesses' `hNoAx`, `wNoAx`) bind the two extra proofs, three
+`obtain` patterns grew two `_`, one `cases s` arm pattern grew two binders.
+
+The finding survives, exactly in the predicted shape: the counterexample
+table `D2`/`()` is UNGUARDED (`braucht := fun _ => []`), so `hd` holds
+vacuously at `Λ = []` (`fun t _ w hw => by simp [D2] at hw; cases hw`;
+`hgd` by `nomatch` over the empty `Glob`). The repair removes the
+guarded-without-lock case (`axiomCall_ohne_sperre_nicht_ableitbar` in
+`FremdSperre.lean`); it does not cover writes to unguarded own-state tables,
+which is what `axiomCall_ohne_ereignis_falsch` exhibits. No proof changed
+beyond the arity adaptation; `./lean-bau` green (49 jobs).

@@ -1076,8 +1076,10 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
     {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {h : D.aerg a = none}
     {hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true}
     {hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true}
+    {hd : ∀ t, D.aschreibt a t = true → darf D t Λ}
+    {hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ}
     (s : Stmt D V l Γ Λ Λ)
-    (hs : s = Stmt.axiomCall (V := V) a args h hw hg)
+    (hs : s = Stmt.axiomCall (V := V) a args h hw hg hd hgd)
     (t : D.Tab) (ht : D.aschreibt a t = false)
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
@@ -1091,10 +1093,10 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
       cases snd with
       | some v =>
           have hcomp : (execStmt O passes keinRuf
-              (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+              (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ).welt =
               some fst := by
             have hrfl : (execStmt O passes keinRuf
-                (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+                (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ).welt =
                 (match axiomAntwort O a (σ.lese Λ args.orte)
                   (evalArgs (σ.lese Λ args.orte) args
                     (σ.lese Λ args.orte) ρ) with
@@ -1122,10 +1124,10 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
           rw [hframe, hlese]
       | none =>
           have hcomp : (execStmt O passes keinRuf
-              (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+              (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ).welt =
               (Ausgang.hardware (D := D) (.annahme a) : Ausgang V l Γ).welt := by
             have hrfl : (execStmt O passes keinRuf
-                (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+                (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ).welt =
                 (match axiomAntwort O a (σ.lese Λ args.orte)
                   (evalArgs (σ.lese Λ args.orte) args
                     (σ.lese Λ args.orte) ρ) with
@@ -1162,9 +1164,11 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
       (∀ k f, σ'.slots t k f = σ.slots t k f) ∨
       (∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
         (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+        (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+        (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ),
         (execStmt O passes keinRuf
-          (Stmt.axiomCall (V := V) (l := l) a args h hw hg) σ ρ).welt =
+          (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ).welt =
           some σ' ∧
           D.aschreibt a t = true) := by
   cases s with
@@ -1220,15 +1224,15 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | traverse tt inv body => simp [Stmt.istBlatt] at hleaf
   | retry n bis body ueb => simp [Stmt.istBlatt] at hleaf
   | forever a inv body => simp [Stmt.istBlatt] at hleaf
-  | axiomCall a args h hw hg =>
+  | axiomCall a args h hw hg hd hgd =>
       by_cases ht : D.aschreibt a t = true
-      · exact Or.inr (Or.inr ⟨a, args, h, hw, hg, hstep, ht⟩)
+      · exact Or.inr (Or.inr ⟨a, args, h, hw, hg, hd, hgd, hstep, ht⟩)
       · have htF : D.aschreibt a t = false := by
           cases hT : D.aschreibt a t with
           | true => exact absurd hT (by simp [ht])
           | false => rfl
         exact Or.inr (Or.inl fun k f =>
-          axiomCall_nichtschreibt_fest (Λ' := Λ) O hO passes (Stmt.axiomCall (V := V) (l := l) a args h hw hg) rfl t htF σ ρ σ' hstep k f)
+          axiomCall_nichtschreibt_fest (Λ' := Λ) O hO passes (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) rfl t htF σ ρ σ' hstep k f)
   | regSchreib r hk e =>
       exact Or.inr (Or.inl fun k f =>
         regSchreib_slots_fest O passes σ ρ σ' hstep t k f)
@@ -1289,9 +1293,11 @@ theorem pcSchritt_fremd_fest (P : Programm D) (O : Orakel D) (hO : GutO O)
       (hpc : (prog h)[pc h]? = some (PCAtom.leaf Λa cs)),
       ¬ ∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
         (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+        (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+        (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ),
         (execStmt O passes keinRuf
-          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
           (M.weltVon h) ρ).welt = some σ' ∧ D.aschreibt a t = true)
     (k : Int) (f : D.Feld t) :
     M'.speicher.slots t k f = M.speicher.slots t k f := by
@@ -1302,9 +1308,11 @@ theorem pcSchritt_fremd_fest (P : Programm D) (O : Orakel D) (hO : GutO O)
           (∃ ev ∈ neu, ev.traeger = some (Sum.inl t)) ∨
           (∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
             (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-            (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+            (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+            (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+            (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ),
             (execStmt O passes keinRuf
-              (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+              (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
               (M.weltVon h) ρ).welt = some σ' ∧ D.aschreibt a t = true) := by
         have hdisp := blattSlots_dispatch O hO passes s ρ hleaf
           (M.weltVon h) σ' neu hstep hneu t
@@ -1330,8 +1338,8 @@ theorem pcSchritt_fremd_fest (P : Programm D) (O : Orakel D) (hO : GutO O)
         have hcon := hNurG _ hatom hcarEv
         exact absurd hcon (by simp)
       · -- Declared oracle write: excluded by `hNoAx`.
-        obtain ⟨a, args, hh, hw, hg, hfire, hwr⟩ := hAx
-        exact absurd ⟨a, args, hh, hw, hg, hfire, hwr⟩
+        obtain ⟨a, args, hh, hw, hg, hd, hgd, hfire, hwr⟩ := hAx
+        exact absurd ⟨a, args, hh, hw, hg, hd, hgd, hfire, hwr⟩
           (hNoAx V l Γ Λ Λ' s ρ σ' neu hstep Λa cs hpc)
   | take L hself hrang hfrei hpc =>
       rfl
@@ -1370,9 +1378,11 @@ theorem eigenzustand_nur_eigene_schritteD_rep
       (hpc : (prog h)[pc h]? = some (PCAtom.leaf Λa cs)),
       ¬ ∃ (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (hh : D.aerg a = none)
         (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
-        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true),
+        (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+        (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+        (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ),
         (execStmt O passes keinRuf
-          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
           (M.weltVon h) ρ).welt = some σ' ∧ D.aschreibt a t = true) :
     ∀ M pc h M' pc', PCReach P O passes prog (GenStart sp) M pc →
       PCSchritt P O passes prog M pc h M' pc' → h ≠ g →
@@ -1436,12 +1446,14 @@ theorem wNoAx (M : GenMaschine Gabbro.Grammatik.BG.D1) (pc : PCStand) (h : Faden
     ¬ ∃ (a : Gabbro.Grammatik.BG.D1.Ax) (args : Args Gabbro.Grammatik.BG.D1 Γ Λ (Gabbro.Grammatik.BG.D1.aparams a))
       (hh : Gabbro.Grammatik.BG.D1.aerg a = none)
       (hw : ∀ t, Gabbro.Grammatik.BG.D1.aschreibt a t = true → V.schreibt t = true)
-      (hg : ∀ g, Gabbro.Grammatik.BG.D1.agschreibt a g = true → V.gschreibt g = true),
+      (hg : ∀ g, Gabbro.Grammatik.BG.D1.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, Gabbro.Grammatik.BG.D1.aschreibt a t = true → darf Gabbro.Grammatik.BG.D1 t Λ)
+      (hgd : ∀ g, Gabbro.Grammatik.BG.D1.agschreibt a g = true → gdarf Gabbro.Grammatik.BG.D1 g Λ),
       (execStmt Gabbro.Grammatik.BG.O1 0 keinRuf
-        (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+        (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
         (M.weltVon h) ρ).welt = some σ' ∧ Gabbro.Grammatik.BG.D1.aschreibt a t = true := by
   intro hEx
-  obtain ⟨a, _, _, _, _, _, _⟩ := hEx
+  obtain ⟨a, _, _, _, _, _, _, _, _⟩ := hEx
   exact nomatch a
 
 /-- Step 1: thread `0` fires the write leaf; the slot flips to `true`. -/
@@ -1654,9 +1666,11 @@ theorem eigenzustand_nur_eigene_schritteD_rep_zeuge :
         ¬ ∃ (a : refD.Ax) (args : Args refD Γ Λ (refD.aparams a))
           (hh : refD.aerg a = none)
           (hw : ∀ t, refD.aschreibt a t = true → V.schreibt t = true)
-          (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true),
+          (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true)
+          (hd : ∀ t, refD.aschreibt a t = true → darf refD t Λ)
+          (hgd : ∀ g, refD.agschreibt a g = true → gdarf refD g Λ),
           (execStmt O passes keinRuf
-            (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+            (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
             (M.weltVon h) ρ).welt = some σ' ∧ refD.aschreibt a t = true) ∧
       (∃ (M : GenMaschine refD) (pc : PCStand) (h : Faden)
         (M' : GenMaschine refD) (pc' : PCStand) (k : Int) (f : refD.Feld t)
@@ -1680,12 +1694,14 @@ theorem eigenzustand_nur_eigene_schritteD_rep_zeuge :
       ¬ ∃ (a : refD.Ax) (args : Args refD Γ Λ (refD.aparams a))
         (hh : refD.aerg a = none)
         (hw : ∀ t, refD.aschreibt a t = true → V.schreibt t = true)
-        (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true),
+        (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true)
+        (hd : ∀ t, refD.aschreibt a t = true → darf refD t Λ)
+        (hgd : ∀ g, refD.agschreibt a g = true → gdarf refD g Λ),
         (execStmt refO 0 keinRuf
-          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
           (M.weltVon h) ρ).welt = some σ' ∧ refD.aschreibt a () = true := by
     intro M pc h V l Γ Λ Λ' s ρ σ' neu hstep Λa cs hpc hEx
-    obtain ⟨a, _, _, _, _, _, _⟩ := hEx
+    obtain ⟨a, _, _, _, _, _, _, _, _⟩ := hEx
     exact nomatch a
   have hs0 := ezdLeave_step (GenStart refSp0) rfl
   refine ⟨refP, refO, 0, refO_gut, ezdProg, refSp0, 1, (), hNurG0, hNoAx0, ?_, ?_, ?_⟩
@@ -1808,10 +1824,14 @@ theorem O2gut : GutO (D := D2) O2 := by
           (Wflip2 σ, 0).fst.globs g = σ.globs g)
       exact ⟨fun t ht => absurd ht (by simp [D2]), fun g _ => nomatch g⟩
 
-/-- The axiom call statement (answer type `none`, so it is a `Stmt`). -/
+/-- The axiom call statement (answer type `none`, so it is a `Stmt`).
+    The new guard premises hold: `D2`'s table is UNGUARDED (`braucht = []`),
+    so `darf` is vacuous at any `Λ` (this is exactly the case the lane-74
+    repair does not cover); there are no globals. -/
 def axCall : Stmt D2 V2 false [] [] [] :=
   .axiomCall (a := ()) (Args.nil (D := D2) (Γ := []) (Λ := [])) rfl
     (fun t _ => rfl) (fun g => nomatch g)
+    (fun t _ w hw => by simp [D2] at hw; cases hw) (fun g => nomatch g)
 
 /-- Firing the axiom call flips the slot. -/
 theorem axFeuert (σ : World D2) (ρ : Env D2 [])
@@ -2074,9 +2094,11 @@ theorem pcSchritt_fremd_fest_zeuge :
         ¬ ∃ (a : refD.Ax) (args : Args refD Γ Λ (refD.aparams a))
           (hh : refD.aerg a = none)
           (hw : ∀ t, refD.aschreibt a t = true → V.schreibt t = true)
-          (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true),
+          (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true)
+          (hd : ∀ t, refD.aschreibt a t = true → darf refD t Λ)
+          (hgd : ∀ g, refD.agschreibt a g = true → gdarf refD g Λ),
           (execStmt O passes keinRuf
-            (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+            (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
             (M.weltVon h) ρ).welt = some σ' ∧ refD.aschreibt a t = true)
       (k : Int) (f : refD.Feld t),
       M'.speicher.slots t k f = M.speicher.slots t k f ∧
@@ -2102,12 +2124,14 @@ theorem pcSchritt_fremd_fest_zeuge :
       ¬ ∃ (a : refD.Ax) (args : Args refD Γ Λ (refD.aparams a))
         (hh : refD.aerg a = none)
         (hw : ∀ t, refD.aschreibt a t = true → V.schreibt t = true)
-        (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true),
+        (hg : ∀ g, refD.agschreibt a g = true → V.gschreibt g = true)
+        (hd : ∀ t, refD.aschreibt a t = true → darf refD t Λ)
+        (hgd : ∀ g, refD.agschreibt a g = true → gdarf refD g Λ),
         (execStmt refO 0 keinRuf
-          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+          (Stmt.axiomCall (V := V) (l := l) a args hh hw hg hd hgd)
           (refPC2.weltVon 0) ρ).welt = some σ' ∧ refD.aschreibt a () = true := by
     intro V l Γ Λ Λ' s ρ σ' neu hstep Λa cs hpc hEx
-    obtain ⟨a, _, _, _, _, _, _⟩ := hEx
+    obtain ⟨a, _, _, _, _, _, _, _, _⟩ := hEx
     exact nomatch a
   refine ⟨refP, refO, 0, refO_gut, ezdProg, refPC2, fun _ => 0, 0, _, _,
     1, (), hs0, by decide, hNurG0, hNoAx0, 0, (), ?_, ?_, ?_⟩
