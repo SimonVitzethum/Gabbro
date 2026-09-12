@@ -342,9 +342,9 @@ pub const NAMEN: &[Satz] = &[
                     region and payload. Lane E2 retires this code when it checks \
                     the call like any call.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/796` (unbalanced region, `P001`), `/797` \
-                      (missing `#`, `P001`), `/798` (empty library name, `P003`), \
-                      `/799` (the refusal itself, `N057`, in both positions); \
+        gemessen_an: "`beispiele/gift/802` (unbalanced region, `P001`), `/803` \
+                      (missing `#`, `P001`), `/804` (empty library name, `P003`), \
+                      `/805` (the refusal itself, `N057`, in both positions); \
                       counter-direction in `paesse.rs` (`library_call_*`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; PLAN-ERWEITUNG.md §6",
     },

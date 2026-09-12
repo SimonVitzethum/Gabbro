@@ -60,9 +60,9 @@ Exact new names:
   `program`; vocabulary still 221/221 both readings — `@`/`#` are
   punctuation, invisible to the vocabulary guardian by its own terminal
   pattern, so no guardian pattern needed changing (verified, not assumed).
-- Probes: `beispiele/gift/796` (unbalanced region → `P001`),
-  `/797` (missing `#` → `P001`), `/798` (empty library name → `P003`),
-  `/799` (`N057` in both positions, plus honest `K003` for the unknown
+- Probes: `beispiele/gift/802` (unbalanced region → `P001`),
+  `/803` (missing `#` → `P001`), `/804` (empty library name → `P003`),
+  `/805` (`N057` in both positions, plus honest `K003` for the unknown
   cost); seven `library_call_*` tests in `paesse.rs`; one AST-shape test
   in `sprechprobe.rs` (`library_call_reads_names_args_and_region`: names,
   one arg, region `["dispatch","{","nested","}","0"]`); `N057` in
@@ -93,7 +93,7 @@ until E2 declares library functions.
    marks — my 134 comment lines are all English, my 6 identifiers match no
    stem), `pruefe-zahlen.py` (13 BEFUNDs, all drift or broken search paths;
    my three entries — Sätze, Absagekennungen, tragend/unklar — now green),
-   `zaehle-gifttreffer.py` (19 verdeckt vs 8; none is 796–799, mine are
+   `zaehle-gifttreffer.py` (19 verdeckt vs 8; none is 802–805, mine are
    sauber/begleitet), `emission-pruef` (beispiel19 stage-8 speech test:
    the gift sed `s/; i++)/; i += 2)/` predates the emitter's `{v} += 1`
    template — both identical at `ce312f0` and HEAD).
@@ -113,5 +113,24 @@ until E2 declares library functions.
    cells. If a later lane wants the form in the axis, every cell needs a
    `keine_zelle` entry (`N057` in every position) or the blind count
    grows by unclosable cells.
+
+## Merge with master (reviewer-started, resolved by this lane)
+
+Two conflicts, both resolved without touching the other side:
+
+1. `crates/gabbro-syntax/tests/sprechprobe.rs`: kept both tests complete,
+   one after the other — `library_call_reads_names_args_and_region`
+   (lane E1) then `syscall_faellt_mit_einem_namen` (lane S1, `P042`).
+   Both pass (`--test sprechprobe`: 21 passed, 0 failed).
+2. `dokumente/SYNTAX.md` EBNF-rules row: both sides had written 163 with
+   different additions. Re-measured via `pruefe-syntax.sh`: **167**
+   defined, 0 open (master added `syscalldecl`, `errmap`, `nonzero`,
+   `uint`; lane E1 added `libcall`, `libregion`) — the reviewer's guess
+   of 165 was short by two, the measured number stands.
+3. Poison probes renumbered: master took gift 796–801, so mine moved
+   796→802, 797→803, 798→804, 799→805 (`git mv`); references updated in
+   `saetze.rs` (`namen.library_call` entry), the gift module names, and
+   this report. `./cargo-pruef` green (exit 0, 0 failing),
+   `pruefe-wortschatz.py` green (226/226 both readings).
 
 Co-Authored-By: muse-agent-64 <muse-agent-64@noreply.invalid>

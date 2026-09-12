@@ -1,6 +1,6 @@
 -- erwartet: P003
 -- Lane E1: the library name is compulsory -- `@#function` names none.
-module gift798 {
+module gift804 {
 impl fn f(a : u32) -> u32 effects { pure } costs <= 8 ops {
     @#kernel(a) { dispatch 0 };
     return a;

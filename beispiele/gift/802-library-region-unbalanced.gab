@@ -1,7 +1,7 @@
 -- erwartet: P001
 -- Lane E1: the region of a library call is brace-balanced -- an opening
 -- `{` without its `}` ends the unit, not the call.
-module gift796 {
+module gift802 {
 impl fn f(a : u32) -> u32 effects { pure } costs <= 8 ops {
     @spirv#kernel(a) { dispatch 0;
     return a;

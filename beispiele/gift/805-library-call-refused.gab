@@ -1,7 +1,7 @@
 -- erwartet: N057
 -- Lane E1: every library call is refused with N057 until lane E2 checks
 -- it -- once per call, in statement and in binding position alike.
-module gift799 {
+module gift805 {
 impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
     @spirv#kernel(a) { dispatch 0 };
     let code = @spirv#kernel(a) { dispatch { nested } 0 };
