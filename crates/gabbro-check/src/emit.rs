@@ -707,12 +707,11 @@ pub const KOPF_GLEITKOMMA: &str = "\
  *   holds is an assumption, never a promise of this generator.
  */
 #include <float.h>
-/* The pragma only under `__clang__`: GCC does not implement it and `-Wall -Werror`
- * refuses the unknown pragma (measured 2026-09-12, GCC 13.3.0 here; PLAN-BITS.md
- * section 5). The probe in `instrumente/sonde-fma.c` carries the claim, not the pragma. */
-#if defined(__clang__)
-#pragma STDC FP_CONTRACT OFF
-#endif
+/* No `#pragma STDC FP_CONTRACT OFF`: `#pragma` is on the C-form census's NEVER list
+ * (`instrumente/zaehle-c-formen.py`), GCC does not implement it, and it carries nothing
+ * the build does not already carry -- `-ffp-contract=off` is binding in the manifest for
+ * every compiler, and the probe `instrumente/sonde-fma.c` PROVES it at build time
+ * (PLAN-BITS.md section 5). */
 /* No excess precision anywhere, x86_64 included: `__FLT_EVAL_METHOD__` is 0 by default
  * and 2 under `-mfpmath=387` or `-m32` -- flags somebody may set for unrelated reasons.
  * `== 0` also excludes `-1` (indeterminable). This replaces the prose SSE2 assumption. */
