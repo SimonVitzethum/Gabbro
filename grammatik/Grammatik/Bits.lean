@@ -1068,4 +1068,35 @@ theorem clz_log2_zeuge :
       ∧ (Zahl.clz 31 zeuge2).n = 0 ∧ (Zahl.log2_floor 31 zeuge2).n = 31 := by
   refine ⟨?_, ?_, ?_, ?_⟩ <;> decide
 
+/- CUTS: what is not proved.
+   - Syntax integration: no `Expr.clz` / `Stmt` constructor takes these
+     operations yet; the file is the model half (PLAN-BITS.md section 3).
+     Wiring the intrinsics into `Syntax.lean` / the checker ranges is open.
+   - `rotl_rotr` is proved in one direction only (`rotr ∘ rotl = id`);
+     `rotl ∘ rotr = id` is not stated (same proof shape, mirrored halves).
+   - `bswap` range/round-trip at `Nat` level is proved; the `Zahl` wrappers
+     for 16/32/64 restate involution per width instead of one parametric
+     theorem (the task allows three functions or one with a premise; the
+     three-function form was chosen because the widths are concrete types).
+   - C lowering note: `Zahl.clz` / `Zahl.ctz` / `Zahl.log2_floor` map to
+     `__builtin_clz` / `__builtin_ctz` / `31 - __builtin_clz` (on `unsigned`);
+     `Zahl.popcount` to `__builtin_popcount`; `Zahl.rotl` / `Zahl.rotr` to
+     the `(x << s) | (x >> (W - s))` idiom (GCC/Clang lower it to `rol`);
+     `Zahl.bswap16/32/64` to `__builtin_bswap16/32/64`. The zero case is
+     unreachable because the argument type `Zahl 1 (2^(w+1) - 1)` excludes
+     `0`: there is no value to pass to `__builtin_clz(0)` (undefined per
+     the GCC manual), so no convention like `clz 0 = w` is needed and no
+     `31 - clz(x)` index derivation can go negative from it.
+-/
+
+#print axioms Gabbro.Grammatik.log2_floor_spez
+#print axioms Gabbro.Grammatik.clz_log2
+#print axioms Gabbro.Grammatik.ctz_spez
+#print axioms Gabbro.Grammatik.popcount_rotl
+#print axioms Gabbro.Grammatik.rotl_rotr
+#print axioms Gabbro.Grammatik.bswap_bswap16
+#print axioms Gabbro.Grammatik.bswap_bswap32
+#print axioms Gabbro.Grammatik.bswap_bswap64
+#print axioms Gabbro.Grammatik.clz_log2_zeuge
+
 end Gabbro.Grammatik
