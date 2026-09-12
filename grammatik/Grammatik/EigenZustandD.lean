@@ -220,4 +220,70 @@ theorem assignDurch_neu (O : Orakel D) (passes : Nat)
     rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
 
+/-- `uebergang t` records its write event in the recorded list. -/
+theorem uebergang_neu (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t : D.Tab} {f : D.Feld t} {lo hi : Int}
+    {hτ : D.typ t f = .int lo hi}
+    {i : Expr D Γ Λ (.index (D.count t))} {von nach : Int}
+    {hn : lo ≤ nach ∧ nach ≤ hi} {he : D.erlaubt t f von nach = true}
+    {hw : V.schreibt t = true} {hL : darf D t Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
+      = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    Ereignis.zugriff t true Λ (σ.lese Λ (.inl t :: i.orte)).haelt ∈ neu := by
+  have hcomp : (execStmt O passes keinRuf
+      ((.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
+      (if (hτ ▸ (σ.lese Λ (.inl t :: i.orte)).slots t
+          (eval (σ.lese Λ (.inl t :: i.orte)) i
+            (σ.lese Λ (.inl t :: i.orte)) ρ).n f : Zahl _ _).n = von
+        then (Ausgang.ok ((σ.lese Λ (.inl t :: i.orte)).schreibSlot t Λ
+            (eval (σ.lese Λ (.inl t :: i.orte)) i
+              (σ.lese Λ (.inl t :: i.orte)) ρ).n f
+            (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))) ρ :
+          Ausgang V l Γ)
+        else .logik .vorzustand).welt := rfl
+  rw [hcomp] at hstep
+  by_cases hvon : (hτ ▸ (σ.lese Λ (.inl t :: i.orte)).slots t
+      (eval (σ.lese Λ (.inl t :: i.orte)) i
+        (σ.lese Λ (.inl t :: i.orte)) ρ).n f : Zahl _ _).n = von
+  · rw [if_pos hvon, Ausgang.welt] at hstep
+    have hσ' : σ' = (σ.lese Λ (.inl t :: i.orte)).schreibSlot t Λ
+        (eval (σ.lese Λ (.inl t :: i.orte)) i
+          (σ.lese Λ (.inl t :: i.orte)) ρ).n f
+        (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _)) :=
+      Option.some_inj.mp hstep.symm
+    have hspur : (σ.lese Λ (.inl t :: i.orte)).spur =
+        ((.inl t :: i.orte).map fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+          | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := rfl
+    have h1 : σ'.spur =
+        Ereignis.zugriff t true Λ
+          (σ.lese Λ (.inl t :: i.orte)).haelt ::
+          ((.inl t :: i.orte).map fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
+      have hsc : (σ.lese Λ (.inl t :: i.orte)).schreibSlot t Λ
+          (eval (σ.lese Λ (.inl t :: i.orte)) i
+            (σ.lese Λ (.inl t :: i.orte)) ρ).n f
+          (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _)) =
+          ((σ.lese Λ (.inl t :: i.orte)).storeSlot t
+            (eval (σ.lese Λ (.inl t :: i.orte)) i
+              (σ.lese Λ (.inl t :: i.orte)) ρ).n f
+            (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))).merke
+          [.zugriff t true Λ (σ.lese Λ (.inl t :: i.orte)).haelt] := rfl
+      rw [hσ', hsc]
+      simp only [World.merke]
+      have hspur₂ : ((σ.lese Λ (.inl t :: i.orte)).storeSlot t
+            (eval (σ.lese Λ (.inl t :: i.orte)) i
+              (σ.lese Λ (.inl t :: i.orte)) ρ).n f
+            (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))).spur =
+          (σ.lese Λ (.inl t :: i.orte)).spur := rfl
+      rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+    exact neu_head h1 hneu
+  · rw [if_neg hvon, Ausgang.welt] at hstep
+    exact absurd hstep (by simp)
+
 end Gabbro.Grammatik.EZD
