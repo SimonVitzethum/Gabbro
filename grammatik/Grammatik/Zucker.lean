@@ -73,8 +73,8 @@ def Expr.ins (Γ1 : Ctx) : Expr D (Γ1 ++ Γ2) Λ τ → Expr D (Γ1 ++ σ :: Γ
   | .band h0 h0' a b => .band h0 h0' (a.ins Γ1) (b.ins Γ1)
   | .bor w h0 h0' hw1 hw2 a b => .bor w h0 h0' hw1 hw2 (a.ins Γ1) (b.ins Γ1)
   | .bxor w h0 h0' hw1 hw2 a b => .bxor w h0 h0' hw1 hw2 (a.ins Γ1) (b.ins Γ1)
-  | .shl h0 h0' a b => .shl h0 h0' (a.ins Γ1) (b.ins Γ1)
-  | .shr h0 h0' a b => .shr h0 h0' (a.ins Γ1) (b.ins Γ1)
+  | .shl w hw1 hw2 h0 h0' a b => .shl w hw1 hw2 h0 h0' (a.ins Γ1) (b.ins Γ1)
+  | .shr w hw1 hw2 h0 h0' a b => .shr w hw1 hw2 h0 h0' (a.ins Γ1) (b.ins Γ1)
   | .lt a b => .lt (a.ins Γ1) (b.ins Γ1)
   | .le a b => .le (a.ins Γ1) (b.ins Γ1)
   | .eq a b => .eq (a.ins Γ1) (b.ins Γ1)
@@ -202,23 +202,31 @@ variable {Γ : Ctx} {Λ : List (Res D)}
 
 /-- Ein `format`-Feld `@[hi:lo]` in einem Wort von `n` Bytes am Versatz `off` eines
     Bytetraegers: `(bytes >> lo) & (2^(hi-lo+1) - 1)`. `offset_into` und `@bitpos` sind
-    diese Lesung; die Schranke am Versatz steht an `leseBytes`. -/
+    diese Lesung; die Schranke am Versatz steht an `leseBytes`.
+
+    SCHRANKE (2026-09-12, lane 61): die Schiebeweite `lo'` braucht eine
+    Speicherbreite `w` mit `256^n - 1 < 2^w` und `lo' < w` (PLAN-BITS.md §2).
+    Beides folgt NICHT aus den Argumenten -- `lo'` und `n` sind frei --,
+    darum nimmt `bitfeld` sie als Voraussetzungen. -/
 def bitfeld (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
     (off : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t) (hL : darf D t Λ)
-    (lo' breite : Nat) :
+    (lo' breite : Nat) (hw1 : (256 : Int) ^ n - 1 < 2 ^ (lo' + 1))
+    (hw2 : (lo' : Int) < ((lo' + 1 : Nat) : Int)) :
     Expr D Γ Λ (.int 0 (2 ^ breite - 1)) :=
   .band (l1 := 2 ^ breite - 1) (l2 := 0) (by have := two_pow_pos_int breite; omega) (Int.le_refl 0)
     (.lit (2 ^ breite - 1))
-    (.shr (l1 := 0) (l2 := (lo' : Int)) (Int.le_refl 0) (Int.natCast_nonneg lo')
+    (.shr (lo' + 1) hw1 hw2 (l1 := 0) (l2 := (lo' : Int))
+      (Int.le_refl 0) (Int.natCast_nonneg lo')
       (.leseBytes t f hf n off hlo hhi hL) (.lit lo'))
 
 /-- `embeds [hi:lo] scale s` -- das Bitfeld, mal `s`. -/
 def embeds (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
     (off : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t) (hL : darf D t Λ)
-    (lo' breite : Nat) (s : Int) :
+    (lo' breite : Nat) (hw1 : (256 : Int) ^ n - 1 < 2 ^ (lo' + 1))
+    (hw2 : (lo' : Int) < ((lo' + 1 : Nat) : Int)) (s : Int) :
     Expr D Γ Λ (.int (imin (imin (0 * s) (0 * s)) (imin ((2 ^ breite - 1) * s) ((2 ^ breite - 1) * s)))
                      (imax (imax (0 * s) (0 * s)) (imax ((2 ^ breite - 1) * s) ((2 ^ breite - 1) * s)))) :=
-  .mul (bitfeld t f hf n off hlo hhi hL lo' breite) (.lit s)
+  .mul (bitfeld t f hf n off hlo hhi hL lo' breite hw1 hw2) (.lit s)
 end Expr
 
 /-- `endian big`: dieselben Bytes, umgedreht -- eine Zahl aus der gespiegelten Liste. -/

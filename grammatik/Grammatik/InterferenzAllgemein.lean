@@ -2091,12 +2091,12 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [ha, hb]
-  | .shl _ _ a b =>
+  | .shl _ _ _ _ _ a b =>
       have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [ha, hb]
-  | .shr _ _ a b =>
+  | .shr _ _ _ _ _ a b =>
       have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
