@@ -124,6 +124,9 @@ pub mod lean;
 pub mod beweis;
 pub mod refinement;
 pub mod schablonen;
+/// **The region span map (PLAN-ERWEITUNG.md §6, lane E7).** No pass of its
+/// own: `namen.rs` reads it and reports region diagnostics through it.
+pub mod regionkarte;
 // **Das PASSREGISTER, seit 2026-08-21** (PLAN.md PL.1). Je Pass die Saetze, die er SCHULDET
 // -- die Aussage, die gelten muss, wenn er schweigt. Ohne sie ist „formal verifiziert" nicht
 // einmal formulierbar, denn niemand wuesste, was zu beweisen waere.

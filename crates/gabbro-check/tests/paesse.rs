@@ -2829,6 +2829,65 @@ impl fn g(a : u32) -> u32 effects { pure } costs <= 16 ops {
     );
 }
 
+// -- Lane E7: error mapping into the region --------------------------------------------
+// The translation refusal (`N069`) is about region content nobody compiled
+// yet, so its span sits INSIDE the region -- at the first region token --
+// not at the call. This pins the line AND the column over a region that
+// spans several lines: the reported site must equal the token's own site.
+
+#[test]
+fn library_n069_points_at_first_region_token_across_lines() {
+    let quelle = format!(
+        "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
+    @spirv#kernel(a) {{
+        dispatch
+        0
+    }};
+    return a;
+}}
+}}",
+        library_module_src()
+    );
+    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", &quelle);
+    let _ = pruefe(&baum, &mut absagen);
+    let mut gefallen: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    gefallen.sort_unstable();
+    assert_eq!(
+        gefallen,
+        vec!["N069"],
+        "a clean resolving call falls with exactly one N069:\n{}",
+        absagen.zeige(&quelle)
+    );
+    let weigerung = absagen
+        .absagen
+        .iter()
+        .find(|a| a.code == "N069")
+        .expect("N069 fired");
+    let index = gabbro_syntax::span::Zeilenindex::neu(&quelle);
+    let gemeldet = index.stelle(&quelle, weigerung.span.von);
+    // The first region token is `dispatch`, on its own line below the call.
+    let token_versatz = quelle.find("dispatch").expect("the region names `dispatch`") as u32;
+    let erwartet = index.stelle(&quelle, token_versatz);
+    let ruf_zeile = index.stelle(&quelle, quelle.find("@spirv").expect("the call") as u32).zeile;
+    assert!(
+        erwartet.zeile > ruf_zeile,
+        "the probe must span lines: call on {ruf_zeile}, token on {}",
+        erwartet.zeile
+    );
+    assert_eq!(
+        (gemeldet.zeile, gemeldet.spalte),
+        (erwartet.zeile, erwartet.spalte),
+        "N069 must point at the region token, not at the call"
+    );
+}
+
 // -- Lane E3: the translator declaration side (SYNTAX.md §7.2) ----------------------------
 // Every `library fn` with a payload type has exactly one translator in its
 // module; the translator is `effects { pure }` with a `decreases` clause
@@ -2886,6 +2945,42 @@ impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 32 ops {{
         &["N069"],
     );
 }
+
+#[test]
+fn library_n069_points_into_binding_position_region_too() {
+    // The same routing in binding position: `let code = @lib#f …`.
+    let quelle = format!(
+        "{}module app {{
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects {{ pure }} costs <= 64 ops {{
+    let code = @spirv#kernel(a) {{
+        dispatch 0
+    }};
+    return code;
+}}
+}}",
+        library_module_src()
+    );
+    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", &quelle);
+    let _ = pruefe(&baum, &mut absagen);
+    let weigerung = absagen
+        .absagen
+        .iter()
+        .find(|a| a.code == "N069" && a.stufe == Stufe::Fehler)
+        .expect("N069 fired in binding position");
+    let index = gabbro_syntax::span::Zeilenindex::neu(&quelle);
+    let gemeldet = index.stelle(&quelle, weigerung.span.von);
+    let erwartet = index.stelle(&quelle, quelle.find("dispatch").expect("the region") as u32);
+    assert_eq!(
+        (gemeldet.zeile, gemeldet.spalte),
+        (erwartet.zeile, erwartet.spalte),
+        "N069 must point at the region token in binding position too"
+    );
+}
+
+// -- Lane E3 (continued): translator declaration refusals -------------------------------
+// `translator_modul_src` and `translator_declared_call_names_it_n069` stand above,
+// beside the E7 span tests for the same `N069`.
 
 #[test]
 fn translator_missing_n200() {

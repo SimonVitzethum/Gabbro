@@ -3995,15 +3995,30 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                      never crashed on",
                 ),
             };
-            absagen.schiebe(
-                Absage::fehler("N069", r.span, text).mit_notiz(format!(
-                    "`@{}#{}` resolves: arguments, effects, `or R` and costs \
-                     are checked like an ordinary call -- but the region is \
-                     captured, not interpreted, so there is no payload yet",
-                    r.library.text, r.function.text
-                ))
-                .mit_notiz(hinweis),
-            );
+            // **Lane E7: the refusal points INTO the region.** The diagnostic
+            // is about region content nobody compiled yet, so its span is the
+            // first region token's (`RegionKarte`), not the call around it --
+            // a diagnostic about a library call's region must point at the
+            // line and column inside the region the user wrote.
+            let karte = crate::regionkarte::RegionKarte::vom_ruf(r);
+            let mut absage = Absage::fehler("N069", karte.ruf_span(r), text).mit_notiz(format!(
+                "`@{}#{}` resolves: arguments, effects, `or R` and costs \
+                 are checked like an ordinary call -- but the region is \
+                 captured, not interpreted, so there is no payload yet",
+                r.library.text, r.function.text
+            ));
+            // An empty region has no first token and the span above is the
+            // call itself (`RegionKarte::ruf_span` falls back to it); naming
+            // a token there would name nothing.
+            if let Some(t) = r.region.first() {
+                let erster = t.text.clone();
+                absage = absage.mit_notiz(format!(
+                    "the refusal names the region's first token `{erster}`: \
+                     the span above is its site, carried back through the \
+                     region span map (PLAN-ERWEITUNG.md §6, lane E7)",
+                ));
+            }
+            absagen.schiebe(absage.mit_notiz(hinweis));
             return;
         }
         match u.bibliothek_modul(modul, &r.library.text) {

@@ -380,12 +380,18 @@ pub const NAMEN: &[Satz] = &[
                     without a payload would be a silent acceptance of a region \
                     nobody compiled. `beispiele/gift/820` carries a declaration, \
                     its translator and two calls and falls with nothing but \
-                    this code.",
+                    this code. Since lane E7 the refusal's span sits INSIDE \
+                    the region -- at its first token, carried back through \
+                    the region span map (`regionkarte.rs`) -- never at the \
+                    call around it.",
         gemessen_an: "`beispiele/gift/820` (declaration plus translator plus \
                       calls, `N069` only); `/823` (wrong argument type beside \
                       it); `beispiele/gift/870` (the E3-numbered positive); \
+                      `/875` and `/876` (multi-line regions, span at the first \
+                      region token, in statement and in binding position); \
                       counter-direction in `paesse.rs` (`bibliothek_*`, \
-                      `translator_declared_call_names_it_n069`).",
+                      `translator_declared_call_names_it_n069`, \
+                      `library_n069_points_*`).",
         stand: Satzstand::Gemessen,
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; PLAN-ERWEITUNG.md §6",
     },
