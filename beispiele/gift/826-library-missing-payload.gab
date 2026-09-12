@@ -1,0 +1,8 @@
+-- erwartet: P043
+-- Lane E2: a `library fn` without its `payload` clause -- refused by the
+-- reader, which carries the clause in the grammar.
+module m {
+library fn f(a : u32) -> u32 effects { pure } costs <= 1 ops {
+    return a;
+}
+}

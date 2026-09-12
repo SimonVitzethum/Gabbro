@@ -1,0 +1,26 @@
+-- erwartet: N069
+-- Lane E2: the call resolves, so its arguments are judged exactly like an
+-- ordinary call's -- `true` against `u32` falls with the ordinary
+-- per-argument diagnostic beside the translation refusal.
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+}
+module app {
+use gpu::spirv;
+impl fn f(a : u32) -> u32 effects { pure } costs <= 64 ops {
+    @spirv#kernel(true) { dispatch 0 };
+    return a;
+}
+}

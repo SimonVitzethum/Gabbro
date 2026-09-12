@@ -1,0 +1,11 @@
+-- erwartet: N057
+-- Lane E2: the library names no used module -- nothing resolves, so the
+-- call is refused as unresolved (N057). The graph and cost companions
+-- (E009, H021, K003) fire beside it: with no callee there is no contract
+-- to hold the call against.
+module app {
+impl fn f(a : u32) -> u32 effects { pure } costs <= 32 ops {
+    @nope#kernel(a) { dispatch 0 };
+    return a;
+}
+}

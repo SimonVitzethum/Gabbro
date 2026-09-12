@@ -91,6 +91,7 @@ import Grammatik.EigenZustand
 import Grammatik.SyscallPaarung
 import Grammatik.RufMaschineG
 import Grammatik.CSLInvariante
+import Grammatik.Bibliothek
 import Grammatik.WacheGlobal
 import Grammatik.StabilBewacht
 import Grammatik.DisziplinBedarf

@@ -1,0 +1,12 @@
+-- erwartet: P044
+-- Lane E2: a `library fn` without a Gabbro body -- a bodyless declaration
+-- would be a foreign promise, exactly what the library mechanism stands
+-- against (PLAN-ERWEITUNG.md §0c).
+module m {
+table T count 1 {
+    slot {
+        w : u32,
+    }
+}
+library fn f(a : u32) -> u32 payload T effects { pure } costs <= 1 ops;
+}

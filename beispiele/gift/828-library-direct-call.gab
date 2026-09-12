@@ -1,0 +1,22 @@
+-- erwartet: N061
+-- Lane E2: a direct call to a `library fn` -- without a region there is no
+-- payload, so the call would silently bypass the mechanism. The function
+-- is called through `@lib#f` with a region.
+module gpu::spirv {
+table KernelTab count 1 {
+    slot {
+        words : u32,
+    }
+}
+pub library fn kernel(n : u32) -> u32 payload KernelTab
+    requires n <= 1024
+    ensures result == n
+    effects { pure }
+    costs <= 8 ops
+{
+    return n;
+}
+pub impl fn direct(n : u32) -> u32 effects { pure } costs <= 16 ops {
+    return kernel(n);
+}
+}
