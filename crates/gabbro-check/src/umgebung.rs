@@ -106,6 +106,13 @@ pub struct Umgebung {
     pub tabellen: HashMap<String, Vec<(String, Typ)>>,
     /// Tabellenname -> `count N`, wenn die Deklaration sie nennt.
     pub kapazitaeten: HashMap<String, u128>,
+    /// **Arenaname -> reservation, hard bound and element type («E4»).**
+    ///
+    /// The declaration holds both bounds even when they are unusable
+    /// (non-constant, inverted): the refusal (`N210` in `arena.rs`) names
+    /// the declaration, so the map must too. `lo`/`hi` are `None` exactly
+    /// when the bound expression is no translation-time constant.
+    pub arenen: HashMap<String, ArenaSig>,
     /// **Tabelle -> der Name des Werts, bis zu dem sie HINTERLEGT ist** (`backed k`).
     ///
     /// `count` ist Adressraum, `backed` ist Speicher. Steht hier ein Eintrag, reicht `i < N`
@@ -295,6 +302,20 @@ pub struct BibliotheksZiel {
     pub name: String,
 }
 
+/// **One `arena` declaration, resolved («E4»).**
+///
+/// `lo`/`hi` are the evaluated bounds (`None` = no translation-time
+/// constant); `element` is the resolved element type. The checker holds
+/// `Some(lo) <= Some(hi)` (`N210`); an arena whose bounds never resolve
+/// is still listed, so every later use names the declaration and not a
+/// missing entry.
+#[derive(Debug, Clone)]
+pub struct ArenaSig {
+    pub lo: Option<i128>,
+    pub hi: Option<i128>,
+    pub element: Typ,
+}
+
 /// Das Modul, in dem ein qualifizierter Name steht.
 pub fn modul_von(qualifiziert: &str) -> &str {
     match qualifiziert.rfind("::") {
@@ -405,6 +426,24 @@ impl Umgebung {
                             .insert(qualifiziere(pfad, &t.name.text), k.text.clone());
                     }
                 }
+                // **«E4»: the arena bounds, collected beside the table capacities.**
+                //
+                // Both bounds are evaluated here so that `index into A` and the
+                // reservation count read one map. A bound that is no constant
+                // is `None`, not zero: zero would be a bound, and the refusal
+                // (`N210`) belongs to the pass, not to this map.
+                ItemArt::Arena(a) => {
+                    let lo = self.konst_wert(pfad, &a.lo);
+                    let hi = self.konst_wert(pfad, &a.hi);
+                    self.arenen.insert(
+                        qualifiziere(pfad, &a.name.text),
+                        ArenaSig {
+                            lo,
+                            hi,
+                            element: Typ::Unbekannt,
+                        },
+                    );
+                }
                 _ => {}
             }
         }
@@ -441,6 +480,18 @@ impl Umgebung {
         self.kandidaten(von, name)
             .into_iter()
             .find(|k| self.tabellen.contains_key(k))
+    }
+
+    /// **Does this bare name stand for an `arena` («E4»)**, resolved from the
+    /// using module? The qualified name, or `None`.
+    ///
+    /// Beside `nennt_tabelle`, and for the same reason: the arena is no
+    /// value in `globale`, so a reader that only asks the value maps finds
+    /// nothing where the declaration stands.
+    pub fn nennt_arena(&self, von: &str, name: &str) -> Option<String> {
+        self.kandidaten(von, name)
+            .into_iter()
+            .find(|k| self.arenen.contains_key(k))
     }
 
     /// Does this bare name stand for a `walk`? -- `walknamen`, not `walkschranken`: whether
@@ -808,6 +859,23 @@ impl Umgebung {
                             span: k.span,
                         };
                         self.funktionen.insert(q(&k.pfad()), sig);
+                    }
+                }
+                // **«E4»: the arena element type, resolved beside the table slots.**
+                //
+                // The bounds already stand (first phase); only the element is
+                // still `Unbekannt`. An arena the first phase never saw (it
+                // always does -- both phases walk the same tree) is entered
+                // whole, so the two phases cannot drift apart.
+                ItemArt::Arena(a) => {
+                    let element = self.typ_von_ausdruck_decl(pfad, &a.element);
+                    let qn = q(&a.name.text);
+                    if let Some(sig) = self.arenen.get_mut(&qn) {
+                        sig.element = element;
+                    } else {
+                        let lo = self.konst_wert(pfad, &a.lo);
+                        let hi = self.konst_wert(pfad, &a.hi);
+                        self.arenen.insert(qn, ArenaSig { lo, hi, element });
                     }
                 }
                 ItemArt::Format(f) => {
@@ -1562,11 +1630,21 @@ impl Umgebung {
     /// the declaration rather than a convention.
     pub fn indextyp(&self, von: &str, tabelle: &str, optional: bool) -> Typ {
         let sonderwert = i128::from(optional);
+        // **«E4»: an arena carries its hard bound the same way.** `index into
+        // A` is the type of an allocated slot number: `0 .. hi - 1`. A table
+        // reads `kapazitaeten`, an arena its `hi`; both answer one bound, so
+        // there is one place to change the range of either.
         let bereich = self
             .kandidaten(von, tabelle)
             .into_iter()
-            .find_map(|k| self.kapazitaeten.get(&k).copied())
-            .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))
+            .find_map(|k| {
+                self.kapazitaeten
+                    .get(&k)
+                    .copied()
+                    .map(|n| n as i128)
+                    .or_else(|| self.arenen.get(&k).and_then(|a| a.hi))
+            })
+            .map(|n| IntBereich::genau(32, false, 0, n - 1 + sonderwert))
             .unwrap_or_else(|| IntBereich::voll(32, false));
         let vorsatz = if optional { "option " } else { "" };
         Typ::Benannt {
@@ -1705,6 +1783,22 @@ impl Umgebung {
             .cloned()
             .or_else(|| self.suche(&self.globale, von, &ort.basis.text).cloned())
             .unwrap_or(Typ::Unbekannt);
+
+        // **«E4»: `A[i]` reads the arena element.** The arena is no value in
+        // `globale` (a declaration name is no value -- see `nennt_tabelle`),
+        // so the one well-shaped arena place resolves here: exactly one
+        // `[index]` suffix. Any other shape stays `Unbekannt`, and M1 names
+        // it (`N214`); a local of the same name shadows the arena through
+        // the lookup above, as everywhere else.
+        if aktuell.ist_unbekannt() && ort.suffixe.len() == 1 {
+            if let OrtSuffix::Index(_) = &ort.suffixe[0] {
+                if let Some(q) = self.nennt_arena(von, &ort.basis.text) {
+                    if let Some(a) = self.arenen.get(&q) {
+                        return a.element.clone();
+                    }
+                }
+            }
+        }
 
         for suffix in &ort.suffixe {
             aktuell = match suffix {

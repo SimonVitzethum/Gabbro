@@ -98,7 +98,13 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # **229 -> 231 on 2026-09-12 («E2»).** `library` + `payload` arrive with one
 # reason block above EACH entry, so the second mark below does not move.
 #
-# **231 -> 236 on 2026-09-12 («E6»).** `profile` + `rounding` + `fp_contract`
+# **231 -> 235 on 2026-09-12 («E4»).** `arena` + `capacity` + `alloc` + `reset`
+# name the monotone region (`dokumente/SYNTAX.md` §9.1, `PLAN-ERWEITUNG.md`
+# §3): no existing form carries a bounded heap -- a `table` has no lower
+# bound and no whole-region release, and an `owner` mark has no minter -- and
+# the reason stands at EACH entry in `kw.rs`. The second mark does NOT move.
+#
+# **235 -> 240 on 2026-09-12 («E6»).** `profile` + `rounding` + `fp_contract`
 # + `memory_model` + `interrupt_routing` name the hardware profile
 # (`dokumente/SYNTAX.md` §12.2, `PLAN-ERWEITUNG.md` §0c): no existing form
 # carries the fixed key set -- an identifier for a key would accept any
@@ -106,14 +112,14 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # the reason stands above EACH entry in `kw.rs`. The second mark does NOT
 # move; the third does not move either (all five are `ctx`).
 #
-# **236 -> 238 on merge with master-neu («E3»).** `translator` + `for` name
-# the translator declaration (`dokumente/SYNTAX.md` §7.2,
+# **240 -> 242 on 2026-09-12 («E3»).** `translator` + `for` name the
+# translator declaration (`dokumente/SYNTAX.md` §7.2,
 # `PLAN-ERWEITUNG.md` §6, lane E3): no existing form carries the
 # region-to-payload map or its link to the served function -- a bare name
 # would collide with the served function -- and the reason stands at each
 # entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
 # so the third mark does not move either.
-MARKE_WOERTER = 238
+MARKE_WOERTER = 242
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

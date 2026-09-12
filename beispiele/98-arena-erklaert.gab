@@ -1,0 +1,20 @@
+-- 98 -- **The monotone arena.** One declaration with a reservation and a
+-- hard bound (`capacity 2 .. 8`); allocations inside the reservation owe no
+-- `else`, the third one past it owes its failure branch; `reset` starts a
+-- fresh generation, and the index bound after it reads the new lifetime of
+-- the slots. Fully clean -- and it emits: a static array of eight elements
+-- beside its `used` counter, no heap allocation in the C.
+module beispiel::arena {
+arena Log capacity 2 .. 8 of u32;
+
+impl fn nutzen() -> u32 effects { writes Log } costs <= 16 ops {
+    let a = alloc Log (10);
+    let b = alloc Log (20);
+    let c = alloc Log (a + b) else {
+        return 0;
+    };
+    reset Log;
+    let d = alloc Log (c);
+    return Log[d];
+}
+}

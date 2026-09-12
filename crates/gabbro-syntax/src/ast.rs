@@ -106,6 +106,14 @@ pub enum ItemArt {
     /// by reference. Linking refuses a requirement the program's profile
     /// does not carry (`N217`).
     ProfilBedarf(ProfilBlock),
+    /// **`arena` -- a monotone region with a lower and an upper bound**
+    /// («E4», SYNTAX.md §9.1, `PLAN-ERWEITUNG.md` §3).
+    ///
+    /// The declaration holds the reservation `lo` and the hard bound `hi`
+    /// (`capacity lo .. hi`) plus the element type. Allocation is monotone
+    /// (no per-element release, no fragmentation); `reset` starts a fresh
+    /// generation and invalidates every index bound before it.
+    Arena(ArenaDecl),
 }
 
 impl ItemArt {
@@ -140,6 +148,7 @@ impl ItemArt {
             // **«E6»:** a profile block carries entries, not a name -- like
             // `use` and `concurrent` it names nothing into the scope.
             ItemArt::Profil(_) | ItemArt::ProfilBedarf(_) => None,
+            ItemArt::Arena(a) => Some(&a.name),
         }
     }
 
@@ -173,6 +182,7 @@ impl ItemArt {
             ItemArt::Syscall(_) => "syscall",
             ItemArt::Profil(_) => "profile",
             ItemArt::ProfilBedarf(_) => "requires profile",
+            ItemArt::Arena(_) => "arena",
         }
     }
 }
@@ -1311,6 +1321,18 @@ pub enum StmtArt {
     /// `@library#function ( args ) { region };` -- a run-time library call
     /// (lane E1), refused by the checker with `N057` until lane E2 checks it.
     LibraryCall(LibraryCall),
+    /// `let i = alloc A (v) [else block];` -- monotone allocation («E4»).
+    ///
+    /// Stores `wert` in the next free slot of arena `tisch` and binds its
+    /// index to `name`. The `else` runs when the arena is full; it is owed
+    /// exactly when the static allocation count since the last reset may
+    /// exceed the reservation (`N212` in the checker).
+    Alloc(AllocStmt),
+    /// `reset A;` -- start a fresh generation of arena `tisch` («E4»).
+    ///
+    /// Sets the used counter to zero; every index bound before is stale
+    /// afterwards (`N211` in the checker).
+    ResetArena(Ident),
 }
 
 #[derive(Debug, Clone)]
@@ -1351,6 +1373,20 @@ impl LetSonst {
             LetQuelle::Ort(_) => None,
         }
     }
+}
+
+/// `let i = alloc A (v) [else block];` -- the bound index has the type
+/// `index into A` of the CURRENT generation; the checker tracks which.
+#[derive(Debug, Clone)]
+pub struct AllocStmt {
+    pub veraenderlich: bool,
+    pub name: Ident,
+    pub typ: Option<TypExpr>,
+    pub tisch: Ident,
+    pub wert: Expr,
+    /// The full-arena continuation. Owed exactly when the static count
+    /// since the last reset may exceed the reservation.
+    pub sonst: Option<Block>,
 }
 
 #[derive(Debug, Clone)]
@@ -1661,6 +1697,22 @@ pub struct Baumkanten {
     pub elter: Option<Ident>,
     pub kind: Option<Ident>,
     pub geschwister: Option<Ident>,
+    pub span: Span,
+}
+
+/// **`arena A capacity lo .. hi of T;` -- a monotone region («E4»).**
+///
+/// `lo` is the reservation: allocations statically within it owe no `else`.
+/// `hi` is the hard bound: the emitted array holds exactly `hi` elements.
+/// Both are translation-time constants with `lo <= hi` (`N210`).
+/// `T` is the element type; `A[i]` reads it, `alloc` stores it.
+#[derive(Debug, Clone)]
+pub struct ArenaDecl {
+    pub name: Ident,
+    pub oeffentlich: bool,
+    pub lo: Expr,
+    pub hi: Expr,
+    pub element: TypExpr,
     pub span: Span,
 }
 

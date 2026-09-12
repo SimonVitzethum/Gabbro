@@ -700,6 +700,13 @@ pub fn pass_mit(
                 welt.push(x.name.text.clone());
                 tabellen.push(x.name.text.clone());
             }
+            // **«E4»:** an arena is global mutable state like a table -- its
+            // storage outlives every function -- so it joins the world. It
+            // is no table for `ist_tab` (no slots, no guards), so only
+            // `welt` grows.
+            ItemArt::Arena(x) => {
+                welt.push(x.name.text.clone());
+            }
             ItemArt::State(x) => welt.push(x.name.text.clone()),
             _ => {}
         });

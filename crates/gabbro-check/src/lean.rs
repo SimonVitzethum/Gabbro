@@ -2448,6 +2448,10 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // **Lane E2:** a library call lowers to no term -- refused like
         // any call the unit does not declare (checker: `N057`/`N069`).
         StmtArt::LibraryCall(_) => Err(LeanReason::CallStatement),
+        // **«E4»:** the monotone arena has no term in this channel -- the
+        // generations live in `grammatik/Grammatik/Arena.lean`, not in the
+        // program-logic body model, so both statements lower to no term.
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) => Err(LeanReason::Expression),
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it
         // bound to `e`, and ends. The `place` form (`let n = A else …`, unpacking an atomic)

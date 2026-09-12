@@ -554,6 +554,8 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         StmtArt::Publish(p) => out.push(p.ziel.basis.text.clone()),
         StmtArt::AwaitLoad(a) => out.push(a.name.text.clone()),
         StmtArt::Exchange(x) => out.push(x.name.text.clone()),
+        // **«E4»:** the bound index is written here like any `let`.
+        StmtArt::Alloc(a) => out.push(a.name.text.clone()),
         StmtArt::Match(m) => {
             for z in &m.zweige {
                 if let Some(b) = &z.binder {
@@ -571,6 +573,7 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         | StmtArt::Bricht(_)
         | StmtArt::Sperrt(_)
         | StmtArt::Observiert(_)
+        | StmtArt::ResetArena(_)
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::Return(_)
@@ -677,12 +680,20 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             StmtArt::Observiert(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
             StmtArt::Bricht(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
             StmtArt::LetSonst(x) => schleifeninvarianten(&x.sonst, n, funktion, aus),
+            // **«E4»:** the full-arena continuation may loop, so it is
+            // walked like any other `else`.
+            StmtArt::Alloc(x) => {
+                if let Some(sonst) = &x.sonst {
+                    schleifeninvarianten(sonst, n, funktion, aus);
+                }
+            },
             // **No catch-all.** A statement kind that carries a block and is not listed here
             // would hide every loop inside it, and the register would be short by a duty
             // nobody could see was missing.
             StmtArt::Let(_)
             | StmtArt::Zuweisung(_)
             | StmtArt::Narrow(_)
+            | StmtArt::ResetArena(_)
             | StmtArt::Leave(_)
             | StmtArt::Next(_)
             | StmtArt::Publish(_)

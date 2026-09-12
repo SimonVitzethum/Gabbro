@@ -3238,3 +3238,113 @@ fn translator_without_body_p044() {
         "P044",
     );
 }
+
+// -- Lane E4 («E4»): the monotone arena --------------------------------------------------
+// Each rule with its poison shape and its clean counter-direction. `faellt_genau`
+// pins the exact code set: a second rule firing beside the meant one is a finding
+// here, not tolerance.
+
+#[test]
+fn arena_verkehrte_schranke_n210() {
+    faellt_genau(
+        "arena Falsch capacity 8 .. 2 of u32;
+impl fn f() -> u32 effects { pure } costs <= 1 ops {
+    return 0;
+}",
+        &["N210"],
+    );
+    faellt_nicht(
+        "arena Gut capacity 2 .. 8 of u32;
+impl fn f() -> u32 effects { pure } costs <= 1 ops {
+    return 0;
+}",
+    );
+}
+
+#[test]
+fn arena_alter_index_n211() {
+    faellt_genau(
+        "arena Kasse capacity 4 .. 8 of u32;
+impl fn f() -> u32 effects { writes Kasse } costs <= 8 ops {
+    let i = alloc Kasse (7);
+    reset Kasse;
+    return Kasse[i];
+}",
+        &["N211"],
+    );
+    // The same index read before the reset is its own generation -- clean.
+    faellt_nicht(
+        "arena Kasse capacity 4 .. 8 of u32;
+impl fn f() -> u32 effects { writes Kasse } costs <= 8 ops {
+    let i = alloc Kasse (7);
+    let v = Kasse[i];
+    reset Kasse;
+    return v;
+}",
+    );
+}
+
+#[test]
+fn arena_ohne_else_n212() {
+    faellt_genau(
+        "arena Eng capacity 1 .. 4 of u16;
+impl fn f() -> u32 effects { writes Eng } costs <= 8 ops {
+    let a = alloc Eng (1);
+    let b = alloc Eng (2);
+    if a == b {
+        return Eng[a];
+    }
+    return Eng[b];
+}",
+        &["N212"],
+    );
+    // Inside the reservation no `else` is owed.
+    faellt_nicht(
+        "arena Eng capacity 1 .. 4 of u16;
+impl fn f() -> u32 effects { writes Eng } costs <= 8 ops {
+    let a = alloc Eng (1);
+    return Eng[a];
+}",
+    );
+}
+
+#[test]
+fn arena_unbekannt_n213() {
+    faellt_genau(
+        "impl fn f() -> u32 effects { writes Nirgendwo } costs <= 4 ops {
+    reset Nirgendwo;
+    return 0;
+}",
+        &["N213"],
+    );
+}
+
+#[test]
+fn arena_fremder_index_n214() {
+    faellt_genau(
+        "arena A capacity 2 .. 8 of u16;
+arena B capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A, writes B } costs <= 8 ops {
+    let i = alloc A (1);
+    let j = alloc B (2);
+    if i == j {
+        return B[i];
+    }
+    return A[j];
+}",
+        &["N214", "N214"],
+    );
+    // Each index on its own arena is clean.
+    faellt_nicht(
+        "arena A capacity 2 .. 8 of u16;
+arena B capacity 2 .. 8 of u16;
+impl fn f() -> u32 effects { writes A, writes B } costs <= 8 ops {
+    let i = alloc A (1);
+    let j = alloc B (2);
+    if i == j {
+        return A[i];
+    }
+    return B[j];
+}",
+    );
+}

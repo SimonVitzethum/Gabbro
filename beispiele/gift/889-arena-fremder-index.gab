@@ -1,0 +1,19 @@
+-- erwartet: N214
+-- Lane E4: a foreign index -- `i` is an index into `A`, `j` one into `B`,
+-- and each is read on the other arena. A number in range is not enough:
+-- after a `reset` the same number names another lifetime of the slot, and
+-- the generation travels with the bound name. Both allocations stand inside
+-- their reservations, so no `else` is owed and no second rule fires.
+module beispiel::arena_fremd {
+arena A capacity 2 .. 8 of u16;
+arena B capacity 2 .. 8 of u16;
+
+impl fn f() -> u32 effects { writes A, writes B } costs <= 8 ops {
+    let i = alloc A (1);
+    let j = alloc B (2);
+    if i == j {
+        return B[i];
+    }
+    return A[j];
+}
+}

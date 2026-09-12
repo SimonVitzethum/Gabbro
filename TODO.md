@@ -911,7 +911,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       eigenen Gegenstands.*
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
-      *(2026-08-19, nachgemessen 2026-08-20)*. **27 von 27 Item-Arten** sind „gelesen" —
+      *(2026-08-19, nachgemessen 2026-08-20)*. **28 von 28 Item-Arten** sind „gelesen" —
+      *(lane E4, nachgezogen: `Arena` ist die 28. Variante; das Muster `von \d+`
+      trägt die Grundgesamtheit mit — Stand wird mit `pruefe-konstrukte.py`
+      nachgemessen)* —
       *(2026-09-12, lane E6: 25 → 27 gelesen — `Profil`/`ProfilBedarf`; die Grundgesamtheit
       23 → 27 holt `Syscall`, `Concurrent` und die beiden Profilblöcke nach, mechanisch aus
       `ast.rs` gelesen)* —

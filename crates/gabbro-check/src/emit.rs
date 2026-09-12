@@ -105,6 +105,17 @@ struct Namen {
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
+    /// **«E4»: each arena maps to its `hi` expression and element type.** The bound
+    /// stays an expression (a literal or a `const` name, like `count`),
+    /// because the C array length spells it the same way; the element
+    /// type sizes the buffer. Keyed by bare name, last wins -- the same
+    /// module caveat as every other map on this struct.
+    arenen: HashMap<String, (Expr, TypExpr)>,
+    /// **«E4»: the arenas this unit really touches.** An arena whose name
+    /// no body names gets no storage -- an unused file-scope `static`
+    /// is a `-Wunused-variable` finding about the generator, not the user
+    /// (the same reason `tabelle()` asks `tabellenglobal`).
+    arenen_global: BTreeSet<String>,
     /// **The `let` bindings this body never reads back** (2026-08-31).
     ///
     /// The emitter already writes `(void)k;` for an unread PARAMETER, and the comment at
@@ -375,12 +386,16 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             // The forms that bind no name at all. **Written out one by one** so that a new
             // `StmtArt` is a compile error here rather than a silent "binds nothing".
             // **Lane E1:** a library call in statement position binds nothing.
+            // **«E4»:** an arena index is a `uint32_t`, never a record; `reset`
+            // binds nothing at all.
             StmtArt::Zuweisung(_)
             | StmtArt::Wenn(_)
             | StmtArt::Match(_)
             | StmtArt::Schleife(_)
             | StmtArt::Bricht(_)
             | StmtArt::Narrow(_)
+            | StmtArt::Alloc(_)
+            | StmtArt::ResetArena(_)
             | StmtArt::Sperrt(_)
             | StmtArt::Observiert(_)
             | StmtArt::Leave(_)
@@ -769,6 +784,12 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
             }
             ja |= t.konstanten.iter().any(|k| im_typ(&k.typ));
         }
+        // **«E4»:** the element type decides whether this unit touches the
+        // FPU -- like a slot field above, and for the same `-ffast-math`
+        // reason.
+        ItemArt::Arena(a) => {
+            ja |= im_typ(&a.element);
+        }
         ItemArt::Format(f) => ja |= f.felder.iter().any(|x| im_typ(&x.typ.typ)),
         // **Und die Traeger, die KEINEN Gleitkommatyp fuehren koennen -- einzeln, mit dem
         // Grund.** Ein Register ist ein Wort fester Breite (`intty`), eine `reason` eine
@@ -1053,6 +1074,15 @@ pub fn emittiere_mit(
         }
         ItemArt::Accumulates(ac) => {
             namen.akkus.insert(ac.name.text.clone());
+        }
+        // **«E4»:** the arena declares a name every lowering looks up --
+        // the storage (`A_arena_speicher`), the buffer, the bound. The
+        // `hi` expression and the element type travel with it, so the
+        // declaration arm and the statement arms read one map.
+        ItemArt::Arena(a) => {
+            namen
+                .arenen
+                .insert(a.name.text.clone(), (a.hi.clone(), a.element.clone()));
         }
         ItemArt::Atomic(a) => {
             // (Speichern, Laden) -- die Deklaration nennt die Speicherseite.
@@ -1563,6 +1593,9 @@ pub fn emittiere_mit(
             | ItemArt::Konst(_)
             | ItemArt::Statisch(_)
             | ItemArt::Tabelle(_)
+            // **«E4»:** the declaration names no body -- its USES do, and
+            // they arrive through `benutzte_namen` above.
+            | ItemArt::Arena(_)
             | ItemArt::Format(_)
             | ItemArt::Device(_)
             | ItemArt::Reason(_)
@@ -1631,6 +1664,17 @@ pub fn emittiere_mit(
             .tabellen
             .iter()
             .filter(|t| benutzt.contains(*t) && !namen.tabellenzeiger.contains_key(*t))
+            .cloned()
+            .collect();
+        // **«E4»:** an arena whose name no body names gets no storage --
+        // the same reason as above, one map over. The names arrive through
+        // `benutzte_namen` (reads name the basis, `alloc`/`reset` name the
+        // arena itself), so a declaration nobody touches emits its type
+        // and no object.
+        namen.arenen_global = namen
+            .arenen
+            .keys()
+            .filter(|t| benutzt.contains(*t))
             .cloned()
             .collect();
     }
@@ -1968,6 +2012,10 @@ pub fn emittiere_mit(
         // names, not numbers.
         | ItemArt::Profil(_)
         | ItemArt::ProfilBedarf(_)
+        // **«E4»:** an arena hoists no constant either. Its bounds may name
+        // `const`s, but they are read where they are spelled (`zahltext`
+        // in `arena()`), not hoisted.
+        | ItemArt::Arena(_)
         | ItemArt::Concurrent(_) => {}
     });
     crate::fuer_jedes_item(baum, &mut |item| {
@@ -1987,6 +2035,9 @@ pub fn emittiere_mit(
         // Die Typen stehen VOR der Schleife -- siehe dort.
         ItemArt::Typ(_) => {}
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
+        // **«E4»:** the buffer type and, when used, its storage -- beside
+        // the table, in the same gang.
+        ItemArt::Arena(a) => arena(a, &mut aus, &namen, absagen),
         ItemArt::Format(f) => format_(f, &mut aus, &namen, absagen),
         ItemArt::Device(d) => geraet(d, &mut aus, &namen, absagen),
         // **`atomic x : u32 publishes nothing relaxed;`** -- der lastfreie Zaehler, und nur
@@ -2717,7 +2768,9 @@ fn korr_form(art: &ItemArt) -> Option<crate::corrcert::CForm> {
         },
         // Static storage, with or without initializer; `tabelle()` writes the same
         // kind of storage for tables, `accumulates` one cell per core.
-        ItemArt::Statisch(_) | ItemArt::Tabelle(_) | ItemArt::Accumulates(_) => {
+        // **«E4»:** `arena()` writes the buffer plus its counter -- the same
+        // kind of storage, one construct over.
+        ItemArt::Statisch(_) | ItemArt::Tabelle(_) | ItemArt::Arena(_) | ItemArt::Accumulates(_) => {
             Some(Statisch)
         }
         // `_Atomic T name;` — the atomic shape, not plain storage.
@@ -3539,6 +3592,51 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         ),
     }
     ops(t, aus, u, absagen);
+}
+
+/// **`arena A capacity lo .. hi of T;` («E4»).**
+///
+/// A static array of `hi` elements beside a `used` counter -- no heap
+/// allocation in the C, ever. The reservation `lo` emits nothing: it is a
+/// checker fact (which `alloc` owes its `else`), not a second object.
+/// `reset` stores zero into the counter; `alloc` bumps it. The storage is
+/// conditional on use (`arenen_global`), like a table's: an untouched
+/// declaration emits its type and no object.
+fn arena(a: &ArenaDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let Some((hi_expr, element)) = u.arenen.get(&a.name.text) else {
+        weigere(
+            absagen,
+            a.span,
+            "arena without a collected bound -- the array would have no size",
+        );
+        return;
+    };
+    let Some(c) = ctyp(element, u) else {
+        weigere(
+            absagen,
+            a.span,
+            "arena element type -- the buffer holds values of one C type, \
+             and this one has no lowering",
+        );
+        return;
+    };
+    let hi = zahltext(hi_expr, absagen);
+    if hi.is_empty() {
+        return;
+    }
+    aus.push_str(&format!(
+        "\ntypedef struct {{\n    {c} buf[{hi}];\n    uint32_t used;\n}} {n}_arena;\n",
+        n = a.name.text
+    ));
+    // **Where the source names the arena, it gets its storage.** *Only there*:
+    // like the table, unused bulk in the generated C is a finding about the
+    // generator, not the user.
+    if u.arenen_global.contains(&a.name.text) {
+        aus.push_str(&format!(
+            "static {n}_arena {n}_arena_speicher;\n",
+            n = a.name.text
+        ));
+    }
 }
 
 /// **Cut (c): the generated mutations -- and the PROOF writes them, not I.**
@@ -6273,14 +6371,22 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
     if let FnRumpf::Block(b) = &f.rumpf {
         let mut gelesen = BTreeSet::new();
         benutzte_namen(b, &mut gelesen);
-        let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
-        sammle_lets(b, &mut lets, &mut wieoft);
+        let (mut lets, mut allocs, mut wieoft) = (Vec::new(), Vec::new(), HashMap::new());
+        sammle_lets(b, &mut lets, &mut allocs, &mut wieoft);
         for l in lets {
             // A name bound TWICE is not decided here -- the same rule the ghost
             // fixpoint above follows, and for the same reason: two bindings under
             // one name are two questions, and this map answers one.
             if wieoft.get(&l.name.text) == Some(&1) && !gelesen.contains(&l.name.text) {
                 lokal.ungelesene_lets.insert(l.name.text.clone());
+            }
+        }
+        // **«E4»:** an unread arena index is silenced the same way -- the
+        // binding lowers to `uint32_t i;` unconditionally, and `-Werror`
+        // asks about it just the same.
+        for name in allocs {
+            if wieoft.get(&name) == Some(&1) && !gelesen.contains(&name) {
+                lokal.ungelesene_lets.insert(name);
             }
         }
     }
@@ -6461,21 +6567,37 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
 /// Every `let` of a body and how often each NAME is bound. **Pulled out of `lokale_lets`
 /// on 2026-08-31** so `eigene_sicht` can ask the same question -- a second copy of it would
 /// be the drift this file already records once.
-fn sammle_lets<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>, wieoft: &mut HashMap<String, u32>) {
+///
+/// **«E4»:** `alloc` bindings ride along in `allocs`, counted in the same
+/// `wieoft` -- a name bound by both a `let` and an `alloc` is bound twice,
+/// and the fixpoint drops it like any other double binding. The index type
+/// needs no fixpoint (it is always `uint32_t`), so only the name travels.
+fn sammle_lets<'a>(
+    b: &'a Block,
+    aus: &mut Vec<&'a LetStmt>,
+    allocs: &mut Vec<String>,
+    wieoft: &mut HashMap<String, u32>,
+) {
     for s in &b.anweisungen {
         if let StmtArt::Let(l) = &s.art {
             *wieoft.entry(l.name.text.clone()).or_insert(0) += 1;
             aus.push(l);
         }
+        if let StmtArt::Alloc(a) = &s.art {
+            *wieoft.entry(a.name.text.clone()).or_insert(0) += 1;
+            allocs.push(a.name.text.clone());
+        }
         for k in crate::unterbloecke(s) {
-            sammle_lets(k, aus, wieoft);
+            sammle_lets(k, aus, allocs, wieoft);
         }
     }
 }
 
 fn lokale_lets(b: &Block, lokal: &mut Namen) {
     let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
-    sammle_lets(b, &mut lets, &mut wieoft);
+    // `alloc` names count into `wieoft` (a double-bound name is dropped),
+    // but their types need no fixpoint -- always `uint32_t`.
+    sammle_lets(b, &mut lets, &mut Vec::new(), &mut wieoft);
     loop {
         let mut neu: Vec<(String, String)> = Vec::new();
         let mut neu_tx: Vec<(String, TypExpr)> = Vec::new();
@@ -7889,6 +8011,22 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
                 }
                 benutzte_namen(&l.sonst, aus);
             }
+            // **«E4»:** the stored value is read like any bound value, and the
+            // full-arena continuation with it. The arena itself is named too:
+            // like a table named by its body, the name decides the storage
+            // (`arenen_global`) -- *a lowering and its name set are one
+            // change, not two.*
+            StmtArt::Alloc(a) => {
+                aus.insert(a.tisch.text.clone());
+                e(&a.wert, aus);
+                if let Some(sonst) = &a.sonst {
+                    benutzte_namen(sonst, aus);
+                }
+            }
+            // **«E4»:** `reset` names its arena and nothing else.
+            StmtArt::ResetArena(tisch) => {
+                aus.insert(tisch.text.clone());
+            }
             // **Only the value.** The target of a `publishes` is an ATOMIC global -- the
             // lowering looks it up in `u.atomics` and refuses anything else -- so it is
             // neither a parameter (no parameter is an atomic) nor a table. It belongs to
@@ -9171,6 +9309,86 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}    }}\n{e}}}\n"));
         }
+        // **«E4»: `let i = alloc A (v) [else block];`.**
+        //
+        // The checked bump: while the counter stands below the hard bound,
+        // the next slot is taken and the value stored. With an `else` the
+        // bound is read at run time and the continuation runs when the
+        // arena is full; without one the checker has counted the
+        // reservation (`N212`), and the bump is unconditional. The bound
+        // spells through `(uint32_t)` -- a bare literal beside a `uint32_t`
+        // counter is `-Wsign-compare` under `-Wextra`, and the warning
+        // would be about a line the user never wrote.
+        StmtArt::Alloc(a) => {
+            let Some((hi_expr, element)) = u.arenen.get(&a.tisch.text) else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`alloc` out of an arena this unit cannot size -- no `hi` \
+                     from its declaration",
+                );
+                return;
+            };
+            let Some(c) = ctyp(element, u) else {
+                weigere(absagen, s.span, "`alloc` whose element type has no lowering");
+                return;
+            };
+            let hi = zahltext(hi_expr, absagen);
+            if hi.is_empty() {
+                return;
+            }
+            let speicher = format!("{}_arena_speicher", a.tisch.text);
+            let wert = verenge(
+                ausdruck(&a.wert, u, absagen),
+                &a.wert,
+                Some(c.as_str()),
+                u,
+            );
+            match &a.sonst {
+                Some(sonst) => {
+                    aus.push_str(&format!("{e}uint32_t {};\n", a.name.text));
+                    aus.push_str(&format!(
+                        "{e}if ({speicher}.used < (uint32_t)({hi})) {{\n\
+                         {e}    {n} = {speicher}.used;\n\
+                         {e}    {speicher}.buf[{speicher}.used++] = ({wert});\n\
+                         {e}}} else {{\n",
+                        n = a.name.text
+                    ));
+                    for k in &sonst.anweisungen {
+                        anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                    }
+                    aus.push_str(&format!("{e}}}\n"));
+                }
+                None => {
+                    aus.push_str(&format!(
+                        "{e}uint32_t {n} = {speicher}.used;\n\
+                         {e}{speicher}.buf[{speicher}.used++] = ({wert});\n",
+                        n = a.name.text
+                    ));
+                }
+            }
+            // **`(void)i;` for a binding this body never reads back** -- the
+            // same answer the `let` arm gives through
+            // `Namen::ungelesene_lets`, and for the same `-Werror` reason.
+            if u.ungelesene_lets.contains(&a.name.text) {
+                aus.push_str(&format!("{e}(void){};\n", a.name.text));
+            }
+        }
+        // **«E4»: `reset A;`.** The counter goes back to zero; every index
+        // bound before names another lifetime of the same slots, and the
+        // checker (`N211`) says so -- the C only moves the counter.
+        StmtArt::ResetArena(tisch) => {
+            if !u.arenen.contains_key(&tisch.text) {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`reset` of an arena this unit never declared -- no \
+                     storage to empty",
+                );
+                return;
+            }
+            aus.push_str(&format!("{e}{}_arena_speicher.used = 0;\n", tisch.text));
+        }
         // -- und die EINE Form, die weiter abgelehnt wird, jetzt aber MIT GRUND ----------
         //
         // **Der Sammelzweig ist weg, und beim Verschwinden hat er dasselbe gesagt wie der
@@ -9640,8 +9858,11 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // SPRINGT, fragt es nicht -- und ein neues `goto` waere hier stumm
                 // durchgefallen, waehrend `-Wunused-label` dann eine Marke meldet, die sehr
                 // wohl angesprungen wird. (**Fuenfzehn** bis lane E1; ein Bibliothekruf
-                // springt so wenig wie ein Ruf.)
+                // springt so wenig wie ein Ruf. **Achtzehn** seit «E4»: `alloc` and
+                // `reset` lower to straight-line C and never jump.)
                 StmtArt::Let(_)
+                | StmtArt::Alloc(_)
+                | StmtArt::ResetArena(_)
                 | StmtArt::LetSonst(_)
                 | StmtArt::Zuweisung(_)
                 | StmtArt::Wenn(_)
@@ -11561,6 +11782,13 @@ fn needs_saturation(baum: &Programm) -> bool {
             // **Same as the expression arm above:** the arguments lower, the
             // region is raw text the checker refuses before it could lower.
             StmtArt::LibraryCall(l) => l.args.iter().any(expr),
+            // **«E4»:** the stored value lowers like any bound value, and
+            // the full-arena continuation with it; `reset` lowers to a
+            // counter store with no expression in it.
+            StmtArt::Alloc(a) => {
+                expr(&a.wert) || a.sonst.as_ref().is_some_and(block)
+            }
+            StmtArt::ResetArena(_) => false,
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }
@@ -12713,6 +12941,15 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // Zeiger auf ihn -- `Kappenraum.slots[s]` greift den Speicher selbst.
     if u.tabellenglobal.contains(&o.basis.text) {
         t = format!("{}_speicher", o.basis.text);
+        zeiger = false;
+    }
+    // **«E4»: and except when the base is an ARENA.** `A[i]` reads
+    // through the buffer -- `A_arena_speicher.buf[i]`. The storage name is
+    // the arena's own (see `arena()`), and the counter beside it is written
+    // by `alloc` and `reset`, never read through this path. Like the table
+    // above, the membership asked is the USED set, not the declared one.
+    if u.arenen_global.contains(&o.basis.text) {
+        t = format!("{}_arena_speicher.buf", o.basis.text);
         zeiger = false;
     }
     // **And a `static` of a RECORD is a value too** (2026-08-26). `static irq : IrqMarke`

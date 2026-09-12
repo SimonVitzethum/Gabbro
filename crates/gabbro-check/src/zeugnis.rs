@@ -129,6 +129,15 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Schablone("table.absenkung"),
         grund: "slot struct plus a fixed array; `count N` is the reason it is fixed",
     },
+    // **«E4»:** the buffer plus its counter -- a fixed array for the same
+    // reason as the table's, and the reservation is a checker fact (W6),
+    // not a second object.
+    Posten {
+        konstrukt: "arena",
+        traegt: Traegt::Direkt,
+        grund: "`buf[hi]` beside a `uint32_t used`; `hi` is the reason the \
+                array is fixed, `reset` stores zero into the counter",
+    },
     Posten {
         konstrukt: "format",
         traegt: Traegt::Schablone("format.roundtrip"),
@@ -298,6 +307,23 @@ pub const EINORDNUNG: &[Posten] = &[
         konstrukt: "narrow",
         traegt: Traegt::Direkt,
         grund: "the one place where a range check REMAINS in the C — and there it stands",
+    },
+    // **«E4»:** the checked bump and the counter store. The `else` is the
+    // failure branch the reservation owes; without one the checker has
+    // counted the room, and the bump is unconditional (W6 in reverse: what
+    // the checker carries is NOT repeated in the C).
+    Posten {
+        konstrukt: "alloc",
+        traegt: Traegt::Direkt,
+        grund: "`i = used; buf[used++] = (v)`, guarded by `used < hi` where \
+                the `else` stands -- the reservation decides statically \
+                whether the guard is owed",
+    },
+    Posten {
+        konstrukt: "arena reset",
+        traegt: Traegt::Direkt,
+        grund: "`used = 0` -- the generation moves in the checker alone, and \
+                every older index is stale by the rule, not by a runtime check",
     },
     // **The nine traversal domains, one entry each** *(2026-08-31)*.
     //
@@ -619,6 +645,9 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             }
         }
         ItemArt::Tabelle(_) => zaehle(&mut e, "table"),
+        // **«E4»:** the buffer type beside its counter -- booked like the
+        // table, because the emitter lowers it.
+        ItemArt::Arena(_) => zaehle(&mut e, "arena"),
         ItemArt::Format(_) => zaehle(&mut e, "format"),
         ItemArt::Device(d) => {
             zaehle(&mut e, "device");
@@ -881,6 +910,8 @@ fn art_name(a: &ItemArt) -> &'static str {
         // certificate books the kind beside the generated body -- the
         // counterpart line above carries what the stub assumes.
         ItemArt::Syscall(_) => "syscall",
+        // **«E4», additive:** the buffer type beside the generated storage.
+        ItemArt::Arena(_) => "arena",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
         ItemArt::Entry(_) => "entry",
@@ -951,6 +982,16 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 zaehle(e, "let … else");
                 block(&l.sonst, e, geister);
             }
+            // **«E4»:** the allocation and the reset lower to a checked
+            // bump and a counter store -- both are derivation steps the
+            // certificate counts, like the `narrow` above.
+            StmtArt::Alloc(a) => {
+                zaehle(e, "alloc");
+                if let Some(sonst) = &a.sonst {
+                    block(sonst, e, geister);
+                }
+            }
+            StmtArt::ResetArena(_) => zaehle(e, "arena reset"),
             // **`breaking` is a booked construct since 2026-08-31.** It used to be pushed
             // straight onto `unzugeordnet` because the emitter refused it -- and the two
             // halves moved together: the lowering and its entry in `EINORDNUNG`.
