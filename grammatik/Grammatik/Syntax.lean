@@ -335,9 +335,9 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ (.int 0 (2 ^ w - 1))
   | bxor (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
       (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ (.int 0 (2 ^ w - 1))
-  | shl (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
+  | shl (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
       Expr Γ Λ (.int 0 (h1 * 2 ^ h2.toNat))
-  | shr (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
+  | shr (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) :
       Expr Γ Λ (.int 0 h1)
   | lt (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ .bool
   | le (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ .bool

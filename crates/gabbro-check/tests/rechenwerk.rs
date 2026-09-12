@@ -9064,3 +9064,71 @@ impl fn f() -> u32
         "the name never becomes a place of the world:\n{lean}"
     );
 }
+
+/// **A `dispatch`/`step` reference to a `-> never` function is a plain pointer,
+/// never a `_Noreturn` pointer** (lane 71).
+///
+/// `beispiele/07-eintritt-und-boot.gab` dispatches its boot path to `rust_eintritt`,
+/// an `extern fn ... -> never`. The emitter spelled the checked reference with the
+/// callee's own core, `_Noreturn void`, and both compilers refuse the line: gcc
+/// with `declared '_Noreturn'`, clang with `'_Noreturn' can only appear on
+/// functions` -- C11 has no pointer-to-noreturn type. The guarantee stays where
+/// both compilers read it, on the function's own prototype; the reference binds
+/// a plain pointer to that noreturn function.
+#[test]
+fn ein_bezug_auf_never_ist_ein_schlichter_zeiger() {
+    let c_von = |q: &str| {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "the probe itself does not parse:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+        c
+    };
+    // **The poison direction.** A boot dispatch to a `-> never` target must not
+    // carry `_Noreturn` on the pointer: no such type exists in C11.
+    let c = c_von(
+        "module p {
+assume ein_kern \"one core\" falsifier sonde;
+linear ghost type BootPhase;
+extern fn ziel(t : BootPhase) -> never effects { diverges } costs <= 1 ops;
+boot b arch x86_64 {
+    dispatch p::ziel;
+}
+}",
+    );
+    assert!(
+        !c.contains("_Noreturn void (*const"),
+        "a `_Noreturn` pointer is not a C11 type -- gcc and clang both refuse it:\n{c}"
+    );
+    assert!(
+        c.contains("static void (*const gabbro_boot_b_dispatch)(void) __attribute__((unused)) = ziel;"),
+        "the reference stays a plain checked pointer to the target:\n{c}"
+    );
+    // **The positive direction.** The noreturn guarantee itself is kept -- on the
+    // function's own declaration, where both compilers accept it.
+    assert!(
+        c.contains("_Noreturn void ziel(void);"),
+        "the guarantee stands on the prototype, not on the pointer:\n{c}"
+    );
+    // **The entry form reads the same core.** A dispatch to a returning target is
+    // untouched: its reference keeps the spelled signature verbatim.
+    let d = c_von(
+        "module p {
+assume ein_kern \"one core\" falsifier sonde;
+static mut z : u32 = 0;
+impl fn a() effects { writes z } costs <= 4 ops { z = 1; }
+entry sc vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ks per cpu nested never
+    dispatch p::a;
+}
+}",
+    );
+    assert!(
+        d.contains("static void (*const gabbro_eintritt_sc_verteiler)(void) __attribute__((unused)) = a;"),
+        "a returning dispatch keeps its reference line verbatim:\n{d}"
+    );
+}

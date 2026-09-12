@@ -200,6 +200,49 @@ fi
 sprechprobe_asan
 echo
 
+# **FMA probe: no silent contraction (PLAN-BITS.md 5, item 3).**
+#
+# Claim: no fused multiply-add hides in the two-statement shape the emitter
+# writes (`p = a*b; r = p + c;`). The probe (`instrumente/sonde-fma.c`) IS the
+# shape, with inputs where the fused and the separately rounded result differ:
+# `a = 1 + 2^-27`, `b = 1 - 2^-27`, `c = -1` yield `r == 0` under separate
+# rounding and `r == -2^-54` fused. `volatile` keeps the compiler from folding
+# the inputs at compile time -- WITHOUT it the probe would witness constant
+# folding and not contraction.
+#
+# It is compiled with the manifest flags (`-std=c11 -ffp-contract=off`) plus
+# `-O2 -mfma`, and RUN at build time: any result but `0` fails the build.
+# That, not the pragma, carries the claim. Without `-mfma` the x86_64 baseline
+# has no FMA instruction at all, so only the flag makes the question sharp:
+# with it BOTH compilers contract unless told not to (measured 2026-09-12).
+#
+# **The speech probe in the OTHER direction stands beside it.** A probe that
+# cannot bite under any flag measures nothing (R11): under `-std=gnu17
+# -ffp-contract=fast` it MUST fall, or the green line above is decoration.
+# Holding there would mean this machine does not contract even when fast --
+# and the probe would witness nothing.
+LETZTE_STUFE="the FMA probe"
+echo "== FMA probe: no fused multiply-add in the emitted shape (PLAN-BITS.md 5.3) =="
+if ! cc -std=c11 -ffp-contract=off -O2 -mfma -Wall -Wextra -Werror \
+        -o "$ARB/sonde-fma" "$W/instrumente/sonde-fma.c" 2> "$ARB/fma-ccfehler"; then
+    echo "  FMA probe:  FAILED to compile (manifest flags)"; head -10 "$ARB/fma-ccfehler"; exit 1
+fi
+if ! "$ARB/sonde-fma" > "$ARB/fma-ausgabe" 2>&1; then
+    echo "  FMA probe:  FUSED -- separate rounding gives 0, this build contracts:"
+    cat "$ARB/fma-ausgabe"; exit 1
+fi
+echo "  FMA probe:  ok ($(head -1 "$ARB/fma-ausgabe"))"
+cc -std=gnu17 -ffp-contract=fast -O2 -mfma -o "$ARB/sonde-fma-schnell" \
+    "$W/instrumente/sonde-fma.c" 2>/dev/null
+if "$ARB/sonde-fma-schnell" > /dev/null 2>&1; then
+    echo "  Speech probe: FAILED -- the same probe does NOT fall under -ffp-contract=fast."
+    echo "               Then it witnessed constant folding, not contraction"
+    echo "               (or this machine has no FMA) -- and the line above measures NOTHING."
+    exit 2
+fi
+echo "  Speech probe: ok (under -std=gnu17 -ffp-contract=fast it fuses -- the probe bites)"
+echo
+
 # Schneidet den ```gabbro-Block, der eine gegebene Zeile enthaelt, aus einer Markdown-Datei.
 # **Aus dem Korpus, nicht aus einer Kopie** -- sonst misst der Waechter seine eigene Ablage.
 schneide() {
@@ -1565,7 +1608,7 @@ int main(void) {
 # entfallen -- ein Zaehler erbt die Schranke seiner Domaene, und die Zeile war ein Ritual.
 # *Eine direkte Form weniger heisst hier: eine Klempnereizeile weniger, nicht eine Luecke.*
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
-     's/; i++)/; i += 2)/' \
+     's/; i += 1)/; i += 2)/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
