@@ -155,7 +155,7 @@ newline    = ? end of line ? ;
 comment    = "--" { char } newline ;
 path       = pathseg { "::" pathseg } ;                        (* G5 *)
 pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
-           | opname ;
+           | uint | int | opname ;
 (* `u64::max` -- both segments are vocabulary words. `opname` as a segment is the call form
    of a generated table operation (`T::insert`, `messung/OPS-RUFFORM.md`). *)
 identlist  = ident { "," ident } ;
@@ -270,10 +270,19 @@ indexty    = [ "option" ] "index" "into" ident ;
    must be nameable in a signature -- otherwise the bound would again be a hand-written type
    beside the table. *)
 nevertype  = "never" ;                             (* return type of prim/divergent *)
-intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
+intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" | uint | int ) [ "in" range ] ;
+uint       = "u" nonzero ;                             (* 1 .. 64, storage is the next standard width *)
+int        = "i" nonzero ;                             (* 1 .. 64, storage is the next standard width *)
+nonzero    = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
+             "1" digit | "2" digit | "3" digit | "4" digit | "5" digit | "6" digit ;
 (* CHANGED «SG-1»: in the core EVERY integer type carries its range. `u32` without `in` is
    SUGAR for `u32 in 0 .. u32::max`, `i32` for `i32 in i32::min .. i32::max`; a `wrapping`
-   field (§9) is the one place where the width and not the range is the type. *)
+   field (§9) is the one place where the width and not the range is the type.
+   `uN`/`iN` (PLAN-BITS §1): SUGAR for the next standard storage width plus the exact
+   range — `u13` is `u16 in 0 .. 8191`, `i37` is `i64 in -2^36 .. 2^36 - 1`;
+   `u0`, `u65`, `i0` and wider are refused (`P008`). The eight standard words keep
+   their full-width meaning exactly. The emitted C uses the storage width, never
+   `_BitInt`; a packed table field of type `u13` occupies exactly 13 bits. *)
 floatty    = ( "f32" | "f64" ) [ "in" frange ] ;                    (* «F» *)
 frange     = fexpr ( ".." | "..=" | "..<" ) fexpr ;
 fexpr      = float [ "rounded" ] | ident | int ;

@@ -17,7 +17,7 @@ pub mod parse;
 pub mod span;
 
 pub use diag::{Absage, Absagen, Stufe};
-pub use parse::parse;
+pub use parse::{parse, zucker_bereich, zucker_speicher};
 
 /// Reads a source and yields tree and refusals.
 pub fn lies(datei: &str, quelle: &str) -> (ast::Programm, Absagen) {

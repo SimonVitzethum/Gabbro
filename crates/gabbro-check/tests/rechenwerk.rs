@@ -3887,6 +3887,53 @@ entry sc vector 0x80 via idt arch x86_64 {
     assert!(ohne.contains(&"H013"), "der ungeschuetzte Platz faellt weiterhin: {ohne:?}");
 }
 
+/// **PLAN-BITS §1: `uN`/`iN` sugar -- storage, range, refusal, lowering.**
+///
+/// The parser desugars to the storage word plus the exact range, so the checker
+/// and the emitter below read sugar exactly as if the longhand had been
+/// written. Each direction stands beside its longhand twin: the range the
+/// checker holds, the width the emitter writes, the width it refuses, and the
+/// exact bound the limit form names.
+#[test]
+fn zuckerbreiten_tragen_speicher_bereich_und_schranke() {
+    fn codes(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    fn c_und_codes(quelle: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.code.to_string()).collect())
+    }
+    // 1 -- the range the checker holds: 8192 leaves `u13`, 8191 stays.
+    let voll = codes("module t { impl fn f() -> u13 effects { pure } costs <= 2 ops { return 8192; } }");
+    assert!(voll.iter().any(|c| c == "M101"), "8192 leaves `u13`: {voll:?}");
+    let rand = codes("module t { impl fn f() -> u13 effects { pure } costs <= 2 ops { return 8191; } }");
+    assert!(!rand.iter().any(|c| c == "M101"), "8191 stays in `u13`: {rand:?}");
+    // 2 -- the signed twin: `i37` holds -2^36 and refuses past it.
+    let neg = codes("module t { impl fn f(x : i37) -> i64 effects { pure } costs <= 2 ops { return x; } }");
+    assert!(neg.is_empty(), "`i37` at its storage word stays silent: {neg:?}");
+    // 3 -- the width the emitter writes: storage, never `_BitInt`.
+    let (c, ab) = c_und_codes(
+        "module t { impl fn f(x : u13) -> u16 effects { pure } costs <= 2 ops { return x; } }",
+    );
+    assert!(ab.is_empty(), "sugar at its storage word emits: {ab:?}");
+    assert!(c.contains("uint16_t"), "the storage of `u13` is `uint16_t`:\n{c}");
+    assert!(!c.contains("_BitInt"), "no `_BitInt` in the lowering:\n{c}");
+    // 4 -- the exact bound the limit form names: `u13::max` is 8191.
+    let (cm, _) = c_und_codes(
+        "module t { impl fn f() -> u64 effects { pure } costs <= 2 ops { return u13::max; } }",
+    );
+    assert!(cm.contains("8191u"), "`u13::max` lowers its exact bound:\n{cm}");
+    // 5 -- the conversion at the storage word: `u13(a)` is `(uint16_t)(a)`.
+    let (cc, ac) = c_und_codes(
+        "module t { impl fn f(a : u32 in 0 .. 100) -> u13 effects { pure } costs <= 4 ops { return u13(a); } }",
+    );
+    assert!(ac.is_empty(), "the sugared conversion checks: {ac:?}");
+    assert!(cc.contains("(uint16_t)"), "`u13(a)` lowers at the storage word:\n{cc}");
+}
+
 /// **Die Zahl neben dem Urteil: ein erklaerter Traeger, den KEIN Kontext erreicht.**
 ///
 /// `messung/fragmente/F08.gab` ist genau dieser Fall — ein `masks IRQ` und kein `entry`.

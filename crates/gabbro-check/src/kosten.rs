@@ -979,7 +979,12 @@ impl<'a> Rechner<'a> {
         // `K003`: *"`u64` is not declared here"* -- true and unhelpful, since `u64` is a
         // vocabulary word and will never BE declared. One primitive op, `SPRACHE.md` §7's
         // unit -- the emitted form is a single C cast (`emit.rs::ruf`).
-        if gabbro_syntax::kw::Kw::suche(&name).is_some_and(|k| k.ist_intty()) {
+        //
+        // PLAN-BITS §1: the sugar spelling converts at its storage word's cost.
+        // `u13(a)` is one primitive op, exactly like `u16(a)`.
+        if gabbro_syntax::kw::Kw::suche(&name).is_some_and(|k| k.ist_intty())
+            || crate::aufrufgraph::zucker_umschreiben(&name).is_some()
+        {
             return r
                 .argumente
                 .iter()

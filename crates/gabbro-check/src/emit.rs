@@ -10401,6 +10401,10 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
     // one integer argument before this ever runs; `ganzzahlwort` is the SAME table
     // `intty`/`breite_von` use for a declared type, so a conversion's target and a
     // declaration's type can never disagree on the C spelling.
+    //
+    // PLAN-BITS §1: a sugared conversion lowers through its storage word.
+    // `u13(a)` is `(uint16_t)(a)` -- no `_BitInt`, the next standard width.
+    let name = crate::aufrufgraph::zucker_umschreiben(&name).unwrap_or(name);
     if let Some((ctyp, _)) = gabbro_syntax::kw::Kw::suche(&name)
         .filter(|k| k.ist_intty())
         .and_then(ganzzahlwort)
@@ -10602,6 +10606,23 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // The suffix follows the same rule as the `#define`: `u` for a non-negative value, none
     // for `i32::min` -- an `-2147483648u` would not merely be ugly, it would be another
     // number.
+    //
+    // PLAN-BITS §1: a sugared limit lowers its exact bound. `u13::max` is
+    // `8191u` -- the edge of the promised range, not of the storage word.
+    if let Some((lo, hi)) = gabbro_syntax::zucker_bereich(&o.basis.text) {
+        if o.suffixe.len() == 1 {
+            if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+                let w = match f.text.as_str() {
+                    "max" => Some(hi),
+                    "min" => Some(lo),
+                    _ => None,
+                };
+                if let Some(w) = w {
+                    return if w < 0 { format!("({w})") } else { format!("{w}u") };
+                }
+            }
+        }
+    }
     if let Some((_, _, w)) = crate::umgebung::grenzwort(o) {
         return if w < 0 { format!("({w})") } else { format!("{w}u") };
     }

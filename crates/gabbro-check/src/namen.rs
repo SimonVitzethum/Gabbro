@@ -1202,6 +1202,10 @@ fn typname_bekannt(baum: &Programm, u: &crate::umgebung::Umgebung, absagen: &mut
         absagen: &mut Absagen,
     ) {
         match t {
+            // PLAN-BITS §1: a desugared integer type is `TypExpr::Int` and never
+            // reaches this arm -- the parser builds the storage word plus the
+            // exact range, and `typ_von_ausdruck_decl` below types it. Only a
+            // NAMED type (`Pfad`) can be undeclared.
             TypExpr::Pfad(p) => {
                 if !matches!(u.typ_von_ausdruck_decl(modul, t), crate::typen::Typ::Unbekannt) {
                     return;

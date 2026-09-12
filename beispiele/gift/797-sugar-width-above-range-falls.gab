@@ -1,0 +1,13 @@
+-- erwartet: P008
+-- **No width outside 1..64, the upper edge -- and never widened silently.**
+--
+-- `u65` needs nine bytes, and the widest standard word holds eight. Answering
+-- `u64` would silently narrow the promised range; the reader refuses with
+-- `P008` where the type is read instead.
+module gift {
+
+impl fn f(x : u65) -> u32 effects { pure } costs <= 2 ops {
+    return x;
+}
+
+}
