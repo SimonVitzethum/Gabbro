@@ -2537,6 +2537,25 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/DECKUNGSLUECKE.md",
     },
     Satz {
+        name: "parser.syscall-bevor-s5",
+        kennungen: &["P042"],
+        aussage: "A `syscall` item is refused BY NAME until the checker implements it. \
+                  The grammar production `syscalldecl` stands since lane S1 \
+                  (`SYNTAX.md` §12.1, «SS-1»); the checker, the emitter ruling and \
+                  the corpus example (lanes S5-S7) are written against it, and until \
+                  then every `syscall` item falls here -- a controlled refusal, never \
+                  silent acceptance and never a crash.",
+        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing about \
+                    whether the ABI binding, the register map or the error map are RIGHT \
+                    -- those checks belong to lanes S5-S7, and until they stand every \
+                    such question falls here unread. `entry syscall …` keeps parsing: \
+                    the entry NAME is an identifier, and `syscall` as a `ctx` word \
+                    stays one there. Probe 796 pins it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 796 on `P042`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §12.1",
+    },
+    Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],
         aussage: "The boot theorem's first two layers: a `raw fn` demands a `linear ghost` \

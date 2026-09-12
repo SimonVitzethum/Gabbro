@@ -729,6 +729,61 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
+            // **«SS-1» (2026-09-12): `syscall` is specified (`SYNTAX.md` §12.1)
+            // and not implemented.** The grammar production stands, the lexer
+            // knows the words, and the parser refuses the item BY NAME -- a
+            // controlled refusal, never silent acceptance and never a crash.
+            // *`entry syscall …` keeps parsing: the entry NAME is an
+            // identifier, and `syscall` as a `ctx` word stays one there.*
+            Art::Wort(Kw::Syscall) => {
+                // **Skip the whole item before refusing it.** The caller
+                // (`programm`/`synchronisiere`) recovers at the next item head
+                // or `;` at depth 0 -- and a `syscall` body carries no `;`
+                // until its closing line, so recovery would re-enter MID-ITEM
+                // (`abi`, `regs`, …) and bury the one refusal under knock-on
+                // errors. *One fault, one refusal:* consume to the balancing
+                // `}` (or `;`, for the one-line shape), THEN refuse by name.
+                let sp = self.span();
+                let mut tiefe = 0i32;
+                loop {
+                    match self.blick().art {
+                        Art::Ende => break,
+                        Art::Zeichen(Z::GeschweiftAuf) => {
+                            tiefe += 1;
+                            self.pos += 1;
+                        }
+                        Art::Zeichen(Z::GeschweiftZu) => {
+                            self.pos += 1;
+                            if tiefe <= 0 {
+                                break;
+                            }
+                            tiefe -= 1;
+                        }
+                        Art::Zeichen(Z::Semi) if tiefe <= 0 => {
+                            self.pos += 1;
+                            break;
+                        }
+                        _ => {
+                            self.pos += 1;
+                        }
+                    }
+                }
+                self.absage(
+                    Absage::fehler(
+                        "P042",
+                        sp,
+                        "`syscall` declarations are specified (SYNTAX.md \u{00a7}12.1) \
+                         but not yet implemented",
+                    )
+                    .mit_notiz(
+                        "the grammar production `syscalldecl` stands since lane S1; \
+                         the checker, the emitter ruling and the corpus example \
+                         (lanes S5-S7) are written against it -- until then every \
+                         `syscall` item falls here, by name",
+                    ),
+                );
+                return Err(Abbruch);
+            }
             Art::Wort(Kw::Entrust) => ItemArt::Entrust(self.entrustdecl()?),
             Art::Wort(Kw::Boot) => ItemArt::Boot(self.bootdecl()?),
             _ => {
@@ -4765,6 +4820,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Entry
             | Kw::Entrust
             | Kw::Boot
+            | Kw::Syscall
             | Kw::Pub
             | Kw::When
     )

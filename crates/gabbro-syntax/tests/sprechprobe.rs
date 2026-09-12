@@ -340,3 +340,35 @@ fn modul_mit_strichpunkt_nennt_den_rumpf() {
     faellt_nicht("module m { }");
     faellt_mit_notiz("module m;", "P001", "`module` carries a brace body");
 }
+
+// -- «SS-1» (2026-09-12): `syscall` is specified and refused by name ----------------------
+//
+// **One test, three directions.** A `syscall …` item falls with EXACTLY the named
+// diagnostic -- a controlled refusal, never a crash and never silent acceptance.
+// And the entry name `syscall` stays legal: `entry syscall …` is an identifier
+// at a name position (`ctx`), not the header word.
+#[test]
+fn syscall_faellt_mit_einem_namen() {
+    // The refusal: exactly one error, and it is `P042`.
+    let quelle = "syscall write(fd : u64) -> u64 abi linux arch x86_64 number 1 \
+                  regs in { rdi = fd } regs out { rax } clobbers { rcx } \
+                  errors { EBADF => BadFd } effects { pure } \
+                  assume linux_write_contract falsifier probe_write;";
+    let (_, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    let fehler: Vec<_> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .collect();
+    assert_eq!(
+        fehler.iter().map(|a| a.code).collect::<Vec<_>>(),
+        vec!["P042"],
+        "a `syscall` item falls with exactly one diagnostic:\n{quelle}\n{}",
+        absagen.zeige(quelle)
+    );
+    // The name stays free: `entry syscall …` names an entry, not a syscall.
+    faellt_nicht(
+        "entry syscall vector 0x80 arch x86_64 { regs in { } regs out { } \
+         preserves { } clobbers { r11 } stack s dispatch m::f; }",
+    );
+}

@@ -362,6 +362,22 @@ wortschatz! {
     Leaf          => "leaf",          ctx;
     Mappings      => "mappings",      ctx;
     Entry         => "entry",         ctx;
+    // **«SS-1» (2026-09-12): the `syscall` declaration, specified in
+    // `dokumente/SYNTAX.md` §12.1, refused by the parser until S5 lands.**
+    //
+    // Five words: the header (`syscall`), the two clause heads no existing
+    // form carries (`abi`, `number`), and the two clause heads that name the
+    // new maps (`errors`, `kernel`). `arch`, `regs` and `clobbers` stand in
+    // the table already (entry/axiom clauses) -- reusing a word for the same
+    // job is the trade `decreasing`/`decreases` already made, and one word
+    // meaning two things is the `reserved` trap class (`HISTORIE.md`).
+    // All five are CONTEXTUAL like every other clause word: everywhere a
+    // name stands, they stay identifiers.
+    Syscall       => "syscall",       ctx;
+    Abi           => "abi",           ctx;
+    Sysnumber     => "number",        ctx;
+    Errors        => "errors",        ctx;
+    Kernel        => "kernel",        ctx;
     // **«entrust» -- ein `code`-Raum, dessen INHALT Gabbro nicht kennt.**
     //
     // Das eine Wort, das JIT, JVM und jedes Gastmodul oeffnet. Es erbt den Eintrittsvertrag

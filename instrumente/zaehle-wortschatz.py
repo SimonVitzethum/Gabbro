@@ -86,7 +86,15 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # names the declared-concurrent bodies (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §4):
 # no spawn syntax names a second body, so no existing form carries it, and the
 # reason stands at the entry in `kw.rs`. The second mark does NOT move.
-MARKE_WOERTER = 224
+#
+# **224 -> 229 on 2026-09-12, and by the ratchet's own first case («SS-1»).**
+# `syscall` + `abi` + `number` + `errors` + `kernel` name the user side of a
+# system call (`dokumente/SYNTAX.md` §12.1, `PLAN-SYSCALL.md` §1): no existing
+# form carries it -- an `axiom`/`extern fn` throws away the ABI binding, the
+# generated errno decoding, the ghost OS state and the kernel pairing -- and
+# the reason stands at the entry in `kw.rs`. The third mark does NOT move:
+# all five are `ctx`, like every other clause word.
+MARKE_WOERTER = 229
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #
@@ -103,7 +111,15 @@ MARKE_WOERTER = 224
 # ledger entry for its fall sits above `unvisited`, which therefore now carries a reason too.
 # *A mark that is only ever touched on the way up is a mark and not a ratchet* -- so it
 # travels down with the measurement, in the same run that measured it.
-MARKE_OHNE_GRUND = 208
+#
+# **208 -> 212 on 2026-09-12 («SS-1»).** Five words arrive with one shared reason
+# block at the `Syscall` entry in `kw.rs` (the mechanical rule counts comment
+# lines directly above EACH entry, so four of the five carry none of their own).
+# The shared block is the ledger entry the ratchet's own rule demands -- one word,
+# one job, and no existing form carries it -- written once for all five instead
+# of five times. *The second mark rises here because the rule counts blocks, not
+# ledger lines; the reason travels with the words either way.*
+MARKE_OHNE_GRUND = 212
 
 # **THE THIRD MARK -- words that are not a NAME.** A ratchet downwards, set 2026-09-05.
 #
