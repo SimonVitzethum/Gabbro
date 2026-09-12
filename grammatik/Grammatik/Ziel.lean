@@ -1679,4 +1679,89 @@ theorem kette_mit_zeugen_orakel
 
 #print axioms Gabbro.Grammatik.kette_mit_zeugen_orakel
 
+/-! ## 11. The hWitSchritt glue: reuse leg closed, identities open (d01, 2026-09-12)
+
+    BEFUND (rank HOCH): `kette_mit_zeugen_schritt` (§10 above) concludes 5
+    conjuncts, but `kette_aus_lauf_bezeugt`'s `hWitSchritt`
+    (`MaschinenKette.lean:1450-58`) needs 7 -- plus the `faeden`/`code`
+    construction identities, which hold `by rfl` AT THE LITERAL
+    (`Ziel.lean:1466`: `faeden := J.faeden, code := J.code`).
+
+    MISSION was `hWitSchritt := kette_mit_zeugen_schritt + identities`.
+    RESULT (measured, not assumed): 5 of 7 close by read-only reuse
+    (`hwitschritt_kleber_reuse` below: every §10 premise forwarded in one
+    application, so every premise is load-bearing); the 2 identities do NOT
+    close from the obtained witness. After `obtain`, `J'` is an opaque
+    variable: the literal stays hidden behind the existential elimination,
+    and the 5 obtained hypotheses say nothing about `J'.faeden`/`J'.code`.
+    Both `rfl` attempts fail definitionally (checked against these exact
+    premises, witness obtained from the §10 step):
+
+    - `J'.faeden = J.faeden`: tactic `rfl` failed, LHS not definitionally
+      equal to RHS.
+    - `J'.code = J.code`: tactic `rfl` failed, LHS not definitionally equal
+      to RHS.
+
+    So `∃ J', P5 J'` does not entail the identities; only the premises entail
+    the 7-conjunct statement, via the construction. Full discharge needs the
+    construction replayed (the literal plus its proof fields, §10 body),
+    which §11 does not duplicate (`MaschinenKette.lean:1051`: the step proof
+    is never duplicated).
+
+    Remainder (booked, not hidden): `J'.faeden = J.faeden` and
+    `J'.code = J.code` over the §10 premises -- the two `hWitSchritt`
+    conjuncts `MaschinenKette.lean:1454-55`.
+-/
+
+/-- **The hWitSchritt reuse leg (5 of 7 conjuncts).** The exact §10 step
+    premises forwarded in one application to `kette_mit_zeugen_schritt`
+    (read-only reuse, same file): worlds and run by construction, member,
+    the unconditional table link, and the guard. Every premise is
+    load-bearing: each is passed to the step, so deleting any premise breaks
+    elaboration. The 2 construction identities (`J'.faeden`/`J'.code`) are
+    NOT concluded here -- they do not follow from the obtained witness (see
+    §11 header for the measured `rfl` failures); they stay open as remainder.
+    -/
+theorem hwitschritt_kleber_reuse
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (Nb : Nebeneinander)
+    (M M' : GenMaschine D) (f : Faden)
+    (hReach : GenErreichbar P O passes (GenStart sp) M)
+    (hReach' : GenErreichbar P O passes (GenStart sp) M')
+    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
+    (hM'l : M'.lauf = M.lauf ++ genEigen f neu)
+    (hM'w : M'.welten = M.welten ++ [σ'])
+    (J : GemeinsamerLauf (D := D) Nb)
+    (hJw : J.welten = M.welten)
+    (hmem : f ∈ J.faeden)
+    (hW : ∀ t, V.schreibt t = true → D.schreibt (J.code f) t = true)
+    (hG : ∀ g, V.gschreibt g = true → D.gschreibt (J.code f) g = true)
+    (hsingle : ∀ st ∈ M.lauf, st.faden = f)
+    (t₀ : D.Tab) (L : D.Lock)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (hCov : ∀ (g : Faden), g ∈ J.faeden →
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hwit_old : ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
+      TraegerSchreibt (J.code g) (.inl t₀) = true →
+      ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
+        M.lauf[j]? = some (Schritt.mk g (.zugriff t₀ w Λe he)))
+    (hneu_wit : TraegerSchreibt (J.code f) (.inl t₀) = true →
+      ∃ (w : Bool) (Λw : List (Res D)) (hwL : List D.Lock),
+        Ereignis.zugriff t₀ w Λw hwL ∈ neu) :
+    ∃ J' : GemeinsamerLauf (D := D) Nb,
+      J'.welten = M'.welten ∧
+      J'.l = M'.lauf ∧
+      f ∈ J'.faeden ∧
+      SerialLink Nb J' M'.lauf t₀ ∧
+      (∀ (g : Faden), g ∈ J'.faeden → TraegerSchreibt (J'.code g) (.inl t₀) = true →
+        L ∈ D.haelt (J'.code g)) :=
+  kette_mit_zeugen_schritt P O passes hO sp Nb M M' f hReach hReach' V l Γ Λ Λ' s ρ
+    hΛ σ' neu hstep hM'l hM'w J hJw hmem hW hG hsingle t₀ L hGuardT hCov hwit_old hneu_wit
+
+#print axioms Gabbro.Grammatik.hwitschritt_kleber_reuse
+
 end Gabbro.Grammatik
