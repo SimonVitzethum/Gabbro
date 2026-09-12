@@ -805,4 +805,60 @@ theorem next_slots_fest (O : Orakel D) (passes : Nat)
   subst hstep
   rfl
 
+/-! ## 6. Call leaves: `call`/`callInd` through `keinRuf` yield no world.
+
+  The machine fires leaves through `execStmt O passes keinRuf`: the call
+  handler is `keinRuf`, which answers every call with
+  `.logik (.abstieg f)`. Hence a firing equation `hstep` for a `call` or
+  `callInd` leaf reduces to `none = some σ'` -- vacuous. Both lemmas use
+  every premise: `hs` to rewrite the statement, `hstep` to close. -/
+
+/-- `call` through `keinRuf` yields no world: the slot goal is vacuous. -/
+theorem call_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {fn : D.Fn} {args : Args D Γ Λ (D.params fn)}
+    {hp : RufPasst D V (D.signatur fn) Λ} {hr : D.gruende fn = 0}
+    (s : Stmt D V l Γ Λ (nach D fn Λ))
+    (hs : s = Stmt.call (V := V) fn args hp hr)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  have hR : keinRuf (D := D) fn (sg.lese Λ args.orte)
+      (evalArgs (sg.lese Λ args.orte) args (sg.lese Λ args.orte) rho) =
+      RufAusgang.logik (.abstieg fn) := rfl
+  simp only [execStmt] at hstep
+  rw [hR] at hstep
+  simp only [Ausgang.welt] at hstep
+  exact absurd hstep (by simp)
+
+/-- `callInd` through `keinRuf` yields no world: the slot goal is vacuous. -/
+theorem callInd_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    {p : Expr D Γ Λ (.fnptr n)} {args : Args D Γ Λ (D.sigNr n).params}
+    {hp : RufPasst D V (D.sigNr n) Λ} {hr : (D.sigNr n).gruende = 0}
+    (s : Stmt D V l Γ Λ (nachSig D (D.sigNr n) Λ))
+    (hs : s = Stmt.callInd (V := V) p args hp hr)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt] at hstep
+  revert hstep
+  generalize hP : eval (sg.lese Λ (p.orte ++ args.orte)) p
+      (sg.lese Λ (p.orte ++ args.orte)) rho = pv
+  intro hstep
+  cases pv with
+  | mk fn hf =>
+      simp only at hstep
+      have hR : keinRuf (D := D) fn (sg.lese Λ (p.orte ++ args.orte))
+          (umsig hf (evalArgs (sg.lese Λ (p.orte ++ args.orte)) args
+            (sg.lese Λ (p.orte ++ args.orte)) rho)) =
+          RufAusgang.logik (.abstieg fn) := rfl
+      rw [hR] at hstep
+      simp only [Ausgang.welt] at hstep
+      exact absurd hstep (by simp)
+
 end Gabbro.Grammatik.EZD
