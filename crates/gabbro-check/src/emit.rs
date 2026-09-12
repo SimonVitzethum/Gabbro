@@ -11784,14 +11784,25 @@ fn baum_hat_accumulates(baum: &Programm) -> bool {
 /// `forever` watchdog already ships. A name with no core falls back to the old
 /// spelling; that only happens where the prototype emission refused the same
 /// name through the same helper, so the unit already carries that refusal.
+///
+/// **The `_Noreturn` of a `-> never` core is NOT spelled here** (lane 71). `_Noreturn`
+/// is a property of a FUNCTION declaration, and C11 has no pointer-to-noreturn
+/// type: `static _Noreturn void (*const m)(void)` is refused by gcc
+/// (`declared '_Noreturn'`) and by clang (`'_Noreturn' can only appear on
+/// functions`), measured on `beispiele/07-eintritt-und-boot.gab`. The guarantee
+/// stays where both compilers read it -- on the function's own prototype, which
+/// this same lowering writes as `_Noreturn void rust_eintritt(void);` -- so the
+/// reference binds a plain pointer to a noreturn function instead of naming a
+/// type the language does not have.
 fn bezugnahme(
     marke: &str,
     ziel: &str,
     kerne: &std::collections::BTreeMap<String, (String, String)>,
 ) -> String {
     if let Some((rueck, liste)) = kerne.get(ziel) {
+        let rueck_zeiger = rueck.strip_prefix("_Noreturn ").unwrap_or(rueck);
         return format!(
-            "static {rueck} (*const {marke})({liste}) __attribute__((unused)) = {ziel};\n"
+            "static {rueck_zeiger} (*const {marke})({liste}) __attribute__((unused)) = {ziel};\n"
         );
     }
     format!("static __typeof__({ziel}) *const {marke} __attribute__((unused)) = {ziel};\n")
