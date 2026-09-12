@@ -189,4 +189,118 @@ def erfuellt {D : Deklaration} (m : ModusBelegung) : AnnahmeEintrag D → Prop
 def Profil.gilt {D : Deklaration} (P : Profil D) (m : ModusBelegung) : Prop :=
   ∀ a ∈ P, erfuellt m a
 
+/-- Keyed pair conflict: two keyed entries with the same key, different values. -/
+def schluesselKonflikt {D : Deklaration} : AnnahmeEintrag D →
+    AnnahmeEintrag D → Bool
+  | .modus _ _ k v, .modus _ _ k' v' =>
+      decide (k = k' ∧ v ≠ v')
+  | _, _ => false
+
+/-- Key agreement as a boolean over one pair-list pass. -/
+def pruefeSchluesselAux {D : Deklaration} : Profil D → Profil D → Bool
+  | [], _ => true
+  | a :: rest, P =>
+      P.all (fun b => !schluesselKonflikt a b) && pruefeSchluesselAux rest P
+
+/-- Key agreement over the whole profile. -/
+def pruefeSchluessel {D : Deklaration} (P : Profil D) : Bool :=
+  pruefeSchluesselAux P P
+
+/-- A passing pair check means no keyed conflict for that left element. -/
+theorem pruefeSchluesselAux_kons {D : Deklaration} (a : AnnahmeEintrag D)
+    (rest P : Profil D)
+    (h : pruefeSchluesselAux (a :: rest) P = true) :
+    (∀ b ∈ P, schluesselKonflikt a b = false) ∧
+      pruefeSchluesselAux rest P = true := by
+  unfold pruefeSchluesselAux at h
+  rw [Bool.and_eq_true] at h
+  obtain ⟨hpair, hrest⟩ := h
+  refine ⟨?_, hrest⟩
+  intro b hb
+  have hall := (List.all_eq_true.mp hpair) b hb
+  cases hc : schluesselKonflikt a b with
+  | true => simp [hc] at hall
+  | false => rfl
+
+/-- No conflict on a pair means key agreement: both directions of the
+    disagreement are ruled out by the `decide` shape. -/
+theorem keinKonflikt_einigung {D : Deklaration} (a b : AnnahmeEintrag D)
+    (h : schluesselKonflikt a b = false)
+    (k : ProfilSchluessel) (v w : Nat)
+    (h1 : istModus a k v) (h2 : istModus b k w) : v = w := by
+  obtain ⟨na, ca, rfl⟩ := h1
+  obtain ⟨nb, cb, rfl⟩ := h2
+  simp only [schluesselKonflikt] at h
+  by_cases hvw : v = w
+  · exact hvw
+  · exfalso
+    have htrue : decide (True ∧ v ≠ w) = true := by
+      rw [decide_eq_true_eq]
+      exact ⟨trivial, hvw⟩
+    rw [htrue] at h
+    exact absurd h (by decide)
+
+/-- A passing boolean check yields key agreement over the profile. -/
+theorem pruefeSchluessel_einigung {D : Deklaration} (P : Profil D)
+    (h : pruefeSchluessel (D := D) P = true) : einigung P := by
+  unfold pruefeSchluessel at h
+  have hall : ∀ Q : Profil D, Q ⊆ P → pruefeSchluesselAux Q P = true →
+      (∀ a ∈ Q, ∀ b ∈ Q, ∀ k v w,
+        istModus a k v → istModus b k w → v = w) ∧
+      (∀ x ∈ Q, ∀ y ∈ P, ∀ k v w,
+        istModus x k v → istModus y k w → v = w) := by
+    intro Q hsub hQ
+    induction Q with
+    | nil =>
+        constructor
+        · intro a ha
+          simp at ha
+        · intro x hx
+          simp at hx
+    | cons hd tl ih =>
+        have hpair := (pruefeSchluesselAux_kons hd tl P hQ).1
+        have hrest := (pruefeSchluesselAux_kons hd tl P hQ).2
+        have hsubTl : tl ⊆ P := fun x hx => hsub (List.mem_cons_of_mem _ hx)
+        obtain ⟨ihIn, ihCross⟩ := ih hsubTl hrest
+        have hmemHd : hd ∈ P := hsub List.mem_cons_self
+        constructor
+        · intro a ha b hb k v w h1 h2
+          simp only [List.mem_cons] at ha hb
+          cases ha with
+          | inl heq =>
+              subst heq
+              cases hb with
+              | inl heq2 =>
+                  obtain ⟨na, ca, ha1⟩ := h1
+                  obtain ⟨nb, cb, hb2⟩ := h2
+                  -- `a` and `b` are both the head: `ha1 hb2` exhibit the
+                  -- same constructor, so `v = w` by injection.
+                  have hsame : AnnahmeEintrag.modus (D := D) na ca k v =
+                      AnnahmeEintrag.modus (D := D) nb cb k w := by
+                    rw [← ha1, ← hb2, heq2]
+                  cases hsame
+                  rfl
+              | inr hbtl =>
+                  have hmem : b ∈ P := hsubTl hbtl
+                  have hnc := hpair b hmem
+                  exact keinKonflikt_einigung _ _ hnc k v w h1 h2
+          | inr hatl =>
+              cases hb with
+              | inl heq2 =>
+                  subst heq2
+                  have hmem : a ∈ P := hsubTl hatl
+                  exact ihCross a hatl b hmemHd k v w h1 h2
+              | inr hbtl =>
+                  exact ihIn a hatl b hbtl k v w h1 h2
+        · intro x hx y hy k v w h1 h2
+          simp only [List.mem_cons] at hx
+          cases hx with
+          | inl heq =>
+              subst heq
+              have hnc := hpair y hy
+              exact keinKonflikt_einigung _ _ hnc k v w h1 h2
+          | inr hxtl =>
+              exact ihCross x hxtl y hy k v w h1 h2
+  exact (hall P (fun x hx => hx) h).1
+
 end Gabbro.Grammatik
