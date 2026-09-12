@@ -151,6 +151,42 @@ fn w5_names_the_carrier_h013_refuses() {
     );
 }
 
+/// The H222 refusal beside the W5 answer: the pair over `z` falls, naming the
+/// carrier and both entry roots; the guarded single-thread carrier stays silent.
+#[test]
+fn h222_refuses_the_pair_and_names_it() {
+    let (baum, mut absagen) = gabbro_syntax::lies("bau-zwei-faeden", ZWEI_FAEDEN);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    let h222: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.code == "H222")
+        .map(|a| a.text.as_str())
+        .collect();
+    assert_eq!(
+        h222.len(),
+        1,
+        "one refusal per carrier, not per thread: {h222:?}"
+    );
+    assert!(
+        h222[0].contains("`z`")
+            && h222[0].contains("mitte")
+            && h222[0].contains("seite"),
+        "the refusal names the carrier and both threads: {:?}",
+        h222[0]
+    );
+}
+
+#[test]
+fn h222_silent_over_guarded_single_thread() {
+    let (baum, mut absagen) = gabbro_syntax::lies("bau-ruhig", RUHIG);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    assert!(
+        !absagen.absagen.iter().any(|a| a.code == "H222"),
+        "a guarded carrier under one entry draws no H222"
+    );
+}
+
 #[test]
 fn guarded_single_thread_carrier_stays_silent() {
     let b = erhebe_aus(RUHIG, "bau-ruhig");

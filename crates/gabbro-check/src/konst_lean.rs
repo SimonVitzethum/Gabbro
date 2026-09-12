@@ -3,7 +3,9 @@
 //! A `const fn` body in the accepted single-expression fragment is printed
 //! to a Lean `Nat` function, and the evaluated table becomes a `List.all`
 //! certificate over `zipIdx` with that function -- so Lean checks the values
-//! against the translated SOURCE, not a hand-written formula.
+//! against the translated SOURCE, not a hand-written formula. The assembly
+//! into a certificate file lives in `konstanten::certificate`, which takes
+//! the translated definition line from here and never a hand equation.
 //!
 //! Fragment: integer literals, `wahr`/`falsch`, the parameter, other named
 //! consts, arithmetic and bit operators, comparisons and logic (as `0`/`1`),
@@ -130,25 +132,6 @@ pub fn funktion_lean(
 pub fn tabelle_lean(werte: &[u128]) -> String {
     let zahlen: Vec<String> = werte.iter().map(|v| format!("{v}")).collect();
     format!("[{}]", zahlen.join(", "))
-}
-
-/// The whole certificate file: the TRANSLATED function, the evaluated
-/// table, and the `List.all` check of values against the function,
-/// closed by `decide`.
-pub fn zertifikat_lean(
-    lean_name: &str,
-    param: &str,
-    rumpf: &Expr,
-    tabelle_name: &str,
-    pruefe_name: &str,
-    werte: &[u128],
-    funktionen: &HashMap<String, String>,
-) -> Option<String> {
-    let definition = funktion_lean(lean_name, param, rumpf, funktionen)?;
-    Some(format!(
-        "{definition}\ndef {tabelle_name} : List Nat := {}\ndef {pruefe_name} : Bool := List.all {tabelle_name}.zipIdx (fun (v, i) => v == {lean_name} i)\nexample : {pruefe_name} = true := by decide\n",
-        tabelle_lean(werte)
-    ))
 }
 
 /// A call expression `name(arg0, arg1, ...)` for probing the checker's own

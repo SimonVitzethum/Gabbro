@@ -1,0 +1,11 @@
+-- erwartet: K191
+-- **Gift 861 -- a const-table literal with fewer entries than declared.**
+--
+-- The literal is element-wise: nothing is filled in, and a short literal
+-- falls at the name (`K191`) instead of silently changing the count.
+
+module gift::const_table_too_short {
+
+const Q : [u32; 3] = [1, 2];
+
+}

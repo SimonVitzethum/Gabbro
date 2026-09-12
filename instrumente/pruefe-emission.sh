@@ -2842,7 +2842,13 @@ fi
 # measured as 73 in `messung/muse/MUSE-REPORT-86.md`), plus the two above.
 # *A mark that absorbs foreign growth without naming it is a slack ratchet,
 # so the decomposition stands here and not in a merge note.*
-MARKE_EMIT=75
+# **75 -> 77 on 2026-09-12 (lane 118, root cleanup).** `+1` is `beispiele/halde.gab`,
+# moved from the repository root (checker-clean: `pruefe` 0 errors, 0 hints; the
+# basename is kept, so the `.gab` comments naming it stay true). `+1` is
+# `beispiele/80-bibliothek-erklaert.gab` (lane 91/E2, emitting since merge `2e9be3c0`,
+# landed after the 75 booking above) -- foreign growth booked here WITH its address,
+# under the same decomposition rule as the 72 -> 75 booking.
+MARKE_EMIT=77
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
@@ -3055,7 +3061,12 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 # straight-line code and merged its state into the join. The arm was healed (`f1831fa`), and
 # the file has emitted since. *A mark that stood at zero because a false refusal held the
 # only witness.*
-MARKE_EMIT_X=1      # `halde.gab` -- emittiert seit `f1831fa`, s. den Kasten darueber
+# **1 -> 0 on 2026-09-12 (lane 118, root cleanup).** The last root outside the five
+# booked roots stopped being one: `halde.gab` moved to `beispiele/halde.gab` (counted
+# at `MARKE_EMIT` now), and `Claude outputs/` -- 7 emitting scratch copies of committed
+# files, 15 tracked files, no live reference -- is deleted next. Nothing outside the
+# five roots emits anymore.
+MARKE_EMIT_X=0
 #
 # **Und `arbeitsprotokoll/` ist ausgenommen, weil es nicht im Baum ist** (2026-08-31). Der
 # erste Lauf dieser erweiterten Reichweite meldete `NEUE WURZEL EMITTIERT: 2` -- beide unter
