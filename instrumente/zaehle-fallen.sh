@@ -10,7 +10,7 @@ set -euo pipefail
 export LC_ALL=C
 
 cd "$(dirname "$0")/.."
-D=fallen-klassifikation.tsv
+D=messung/fallen-klassifikation.tsv
 n=$(grep -cE '^[0-9]+\s' "$D")
 [ "$n" -eq 100 ] || { echo "ERWARTET 100 Eintraege, gefunden $n -- Quelle und Tabelle sind auseinander."; exit 1; }
 echo "== Klassen (n=$n) =="
