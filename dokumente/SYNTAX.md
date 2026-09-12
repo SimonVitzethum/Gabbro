@@ -42,7 +42,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 |---|---|---|
 | defined EBNF rules | 132 | **167** measured (`pruefe-syntax.sh` EBNF branch: 167 defined, 0 open, 0 unreachable from `program`) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, refused as `P042` until S5-S7) |
+| vocabulary words | 221 | **226 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 226 EBNF terminals against 226 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -170,8 +170,9 @@ the vocabulary — identifiers in a fixed position, counted and named by the gua
 
 **The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors` and `kernel` are
 words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
-side carries them through `syscalldecl`, and a `syscall` item is refused BY NAME
-as `P042` until lanes S5-S7 implement it. `entry syscall …` keeps parsing: the
+side carries them through `syscalldecl`, and a `syscall` item has been checked
+since lane S5 (`N063`-`N068`, `A005`/`A006`; emission refused as `C001` until the
+lane-S6 stub lands). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
@@ -224,8 +225,10 @@ entrustdecl = "entrust" ident "at" ident "arch" ident "{"
    falsifiable (`N004`/`N005`), the same rule as `progress`. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
-(* Specified, NOT yet implemented by the checker («SS-1», §12.1): the user side of a
-   system call. The checker refuses every `syscall` with a named error until S5 lands;
+(* Checked since lane S5 («SS-1», §12.1): the user side of a
+   system call. The checker holds the declaration against its own shape
+   (`N063`-`N068`, `A005`/`A006`) and refuses the emission as `C001` until
+   the lane-S6 stub lands;
    the grammar below is the surface the checker, the emitter ruling and the corpus
    example (§12.1) are written against. *)
 syscalldecl = "syscall" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
@@ -263,7 +266,7 @@ world before the first body and has no run-time meaning of its own.
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **refused as `P042` until S5-S7** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -1369,14 +1372,15 @@ footnote: *memory-safe under A1…An*.
 > parameter `O : Orakel D`, and `#print axioms` at the end of `Satz.lean` shows that nothing
 > else was assumed.
 
-### 12.1 `syscall` — the user side of a system call (refused as `P042` until S5-S7)
+### 12.1 `syscall` — the user side of a system call (checked since lane S5)
 
-**Specified, the words lexed, the item refused by name («SS-1», `P042`).** What
+**Specified since «SS-1», checked since lane S5.** What
 follows is the surface of `PLAN-SYSCALL.md` §1, written as grammar, named checks
 and one example, so that the checker lane (S5), the emitter lane (S6) and the
-corpus lane (S7) have a text to build against. Until S5-S7 land, every `syscall`
-item falls at `P042` -- a controlled refusal, never silent acceptance; nothing
-below is checked by any pass. The example block is an excerpt (`…`), not a
+corpus lane (S7) have a text to build against. Every `syscall`
+item is held against its own shape -- register map, errno decoding, machine and
+counterpart -- and the emission is refused as `C001` until the lane-S6 stub
+lands. The example block is an excerpt (`…`), not a
 translation unit.
 
 **The checks** — each names the passes of §1 it mirrors (`G4`, `G7` at
@@ -1385,19 +1389,30 @@ they point at stands in §1 beside `entrydecl`.
 
 * **arch** — the `arch` after `abi` is held against a declared `arch`, as for
   `assume` (`A005`). A syscall for a machine no `arch` declares is refused.
-  **x86_64 only** — `aarch64` stays sealed.
+  **x86_64 only** — `aarch64` stays sealed (`A006`).
 * **register map** — `regs in` / `regs out` / `clobbers` carry the same checks
-  as `entry`: every binding names a register the ABI table knows (`G4`, same
-  `regbind` shape), `clobbers` may be empty (`G7`).
+  as `entry` (`G4`, `G7` at `entrydecl`): the in-registers are pairwise
+  distinct (`N063`), no out register is clobbered (`N064`), every parameter is
+  bound exactly once (`N065`), and every named register is one of the sixteen
+  x86_64 general registers (`N066`); `clobbers` may be empty.
 * **error map** — `errors` is a total map from the errnos the contract admits
   to the declared reasons (`or R`): every admitted errno has exactly one arm,
-  no arm names an errno outside the table. The decoding is generated; an errno
-  outside the table is `hardware (annahme a)` — the kernel answered outside
-  its contract.
+  every target is a case of the declared channel (`N067`). The decoding is
+  generated; an errno outside the table is `hardware (annahme a)` — the kernel
+  answered outside its contract.
 * **`assume … falsifier …` or `kernel <path>`** — with `kernel`, the call is
   paired with a Gabbro kernel's dispatch `entry` for the same `number` and no
-  assumption is named; with `assume`, the per-call assumption is named with
-  its falsifier, as for a device (`N004`/`N005` shape).
+  assumption is named (refused as `N068` until the pairing check lands); with
+  `assume`, the per-call assumption is named with its falsifier, as for a
+  device (`N004`/`N005` shape).
+
+**Two places where the written example fixes the production's letter** (measured
+at the build, lane S5): the §1 production line says `regbind` (`ident ":"
+ident`, entry order) for both maps, but every written example — `PLAN-SYSCALL.md`
+§1, the block below, the probes — writes `regs in { rdi = fd }` (register
+first, `=`) and `regs out { rax }` (bare registers). What parses is what the
+examples write, with `:` accepted beside `=` at `regs in`; a `regs out` pair
+has no reading (the out value has no Gabbro-side name) and falls at the parser.
 
 ```gabbro
 syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
@@ -1410,7 +1425,7 @@ syscall write(fd : Fd, buf : ptr<normal, r> Bytes, len : u64 in 0 .. MAXLEN)
     requires Open(fd)
     ensures  result <= len
     effects  { reads buf, writes os.fds }
-    assume   linux_write_contract falsifier probe_write;
+    assume   linux_write_contract falsifier sonde_write;
 …
 ```
 

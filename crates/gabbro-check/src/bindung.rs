@@ -94,7 +94,8 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         ItemArt::Modul(_) | ItemArt::Use(_) | ItemArt::Concurrent(_) => None,
         // The constructs without `pub` -- the grammar gives them none, so nothing of them
         // crosses the boundary either. **Written out and not swept up**, so that a `pub` on
-        // one of them shows up here instead of vanishing quietly.
+        // one of them shows up here instead of vanishing quietly. A `syscall` joins
+        // this group: `syscalldecl` carries no `[ "pub" ]`, and `P041` refuses one.
         ItemArt::Reason(_)
         | ItemArt::State(_)
         | ItemArt::Assume(_)
@@ -106,6 +107,7 @@ pub fn ausgefuehrter_name(item: &Item) -> Option<&Ident> {
         | ItemArt::Walk(_)
         | ItemArt::Entry(_)
         | ItemArt::Entrust(_)
+        | ItemArt::Syscall(_)
         | ItemArt::Boot(_) => None,
     }
 }
@@ -193,6 +195,33 @@ fn genannte_namen(item: &Item, aus: &mut Vec<(String, Span)>) {
             if let Some(c) = &f.costs {
                 expr_namen(c, aus);
             }
+        }
+        // **A `syscall` mentions what its contract mentions.** Same shape as an
+        // `fn`: the `or R` channel, the effect places, the contract predicates
+        // and the call number -- a `number MAXLEN` travels, so it has to be
+        // explainable, like a table's `count`.
+        ItemArt::Syscall(s) => {
+            if let Some(r) = &s.fehler {
+                aus.push((r.text.clone(), r.span));
+            }
+            for w in &s.effects.liste {
+                match &w.art {
+                    WirkungArt::Liest(o)
+                    | WirkungArt::Schreibt(o)
+                    | WirkungArt::Sperrt(o)
+                    | WirkungArt::SperrtGeteilt(o)
+                    | WirkungArt::Verbraucht(o)
+                    | WirkungArt::Veroeffentlicht(o) => ort_namen(o, aus),
+                    WirkungArt::Maskiert(i) | WirkungArt::Belegt(i) => {
+                        aus.push((i.text.clone(), i.span))
+                    }
+                    WirkungArt::Divergiert | WirkungArt::Rein => {}
+                }
+            }
+            for p in s.requires.iter().chain(&s.ensures) {
+                pred_namen(p, s.name.span, aus);
+            }
+            expr_namen(&s.nummer, aus);
         }
         // **A table's `count` is its address space, and without it `index into T` has no
         // bound** -- it travels, so it has to be explainable.
