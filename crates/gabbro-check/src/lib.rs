@@ -66,6 +66,10 @@ pub mod syscall;
 /// covers up exactly the error it is meant to find.
 pub mod ableitung;
 pub mod kontexte;
+/// **Lane 111 -- compile-time constants, first cut.** The total, effect-free
+/// fragment the checker evaluates: scalars and const tables, held
+/// element-wise, with the Lean certificate printed beside them.
+pub mod konstanten;
 /// **Lane C -- declared concurrency (`concurrent { f, g };`).** Pairwise
 /// non-interference from transitive hulls, closed world over context roots.
 pub mod nebeneinander;
@@ -397,6 +401,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         z!("syscall", syscall::pass(baum, absagen));
+        z!("konstanten", konstanten::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
@@ -432,6 +437,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // declaration-level like `entry`/`entrust`: its own shape is held here, and
     // every body pass below reads it through the shared maps.
     syscall::pass(baum, absagen);
+    // **Lane 111, declaration-level beside it.** Const initializers are
+    // evaluated here, over the checked declarations: the fragment the folder
+    // computes, held element-wise, before any body pass reads the values.
+    konstanten::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
@@ -1087,6 +1096,11 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
             aus.push(a);
             aus.push(b);
         }
+        // **Lane 111:** a const-table literal carries its elements -- every
+        // name, call and touch inside them is read here like any other
+        // sub-expression, or `effects { pure }` would cover a call hiding
+        // in a table element.
+        ExprArt::ArrayLit(es) => aus.extend(es.iter()),
         ExprArt::Eingebaut(g) => match &**g {
             Eingebaut::Aligned(a, b) => {
                 aus.push(a);
@@ -1185,6 +1199,10 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
             | ExprArt::Binaer(_, _, _)
+            // **Lane 111:** a table literal is itself no place -- its
+            // elements' places arrive through `alle_ausdruecke`, which
+            // descends into the elements since the `unterausdruecke` arm.
+            | ExprArt::ArrayLit(_)
             // **«SG-24»: a count is itself no place** -- its predicate's places arrive
             // through `alle_ausdruecke`, which descends into the predicate since the
             // `unterausdruecke` arm above.

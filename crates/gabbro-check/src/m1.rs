@@ -2073,6 +2073,12 @@ impl<'a> Pruefer<'a> {
                 Typ::Ganzzahl(IntBereich::genau(b.breite, false, hi - b.max, hi - b.min))
             }
             ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage),
+            // **Lane 111:** a const-table literal is not typed here.
+            // `konstanten.rs` holds it element-wise (`K190`-`K194`), and a
+            // second typing here would be the second register over the same
+            // fact (W7). `Unbekannt` is compatible with everything, so the
+            // `passt` at the `const` stays silent by construction.
+            ExprArt::ArrayLit(_) => Typ::Unbekannt,
         }
     }
 

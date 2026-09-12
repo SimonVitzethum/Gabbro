@@ -599,6 +599,15 @@ pub enum ExprArt {
     },
     Unaer(UnOp, Box<Expr>),
     Binaer(BinOp, Box<Expr>, Box<Expr>),
+    /// **`[e0, e1, ...]` -- the const-table literal, and ONLY that.**
+    ///
+    /// Parsed exclusively as a `const` initializer (`constdecl`); the general
+    /// expression reader never produces it, so no body ever holds one. The
+    /// checker holds it against the declared array type element-wise
+    /// (`konstanten.rs`, `K190`-`K194`) and the emitter lowers it to one
+    /// `static const` C array. Any other position never parses, which is a
+    /// grammar fact rather than a refusal.
+    ArrayLit(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

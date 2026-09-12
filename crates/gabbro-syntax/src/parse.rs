@@ -817,13 +817,45 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::Kolon)?;
         let typ = self.typeexpr()?;
         self.erwarte_z(Z::Gleich)?;
-        let wert = self.expr()?;
+        // **The const-table literal lives HERE and nowhere else.** `self.expr()`
+        // never reads `[`, so an array literal in any other position is a parse
+        // refusal (`P001`) by grammar shape, and no checker pass ever meets one
+        // outside a `const` initializer.
+        let wert = if self.ist_z(Z::EckAuf) {
+            self.arraylit()?
+        } else {
+            self.expr()?
+        };
         self.erwarte_z(Z::Semi)?;
         Ok(KonstDecl {
             oeffentlich,
             name,
             typ,
             wert,
+        })
+    }
+
+    /// `[e0, e1, ...]` -- elements are ordinary expressions, each held
+    /// element-wise by the checker. A trailing comma is admitted, as in
+    /// call argument lists.
+    fn arraylit(&mut self) -> Erg<Expr> {
+        let anfang = self.blick().span;
+        self.erwarte_z(Z::EckAuf)?;
+        let mut elemente = Vec::new();
+        if !self.ist_z(Z::EckZu) {
+            elemente.push(self.expr()?);
+            while self.friss_z(Z::Komma) {
+                if self.ist_z(Z::EckZu) {
+                    break;
+                }
+                elemente.push(self.expr()?);
+            }
+        }
+        let ende = self.erwarte_z(Z::EckZu)?;
+        let span = anfang.bis_zu(ende);
+        Ok(Expr {
+            art: ExprArt::ArrayLit(elemente),
+            span,
         })
     }
 
