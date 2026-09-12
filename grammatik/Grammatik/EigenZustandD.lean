@@ -1547,5 +1547,123 @@ theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
   · intro e he o ho
     simp at he
 
-end Gabbro.Grammatik.EZD
+/-! ## 13. The joint witness and the oracle-write counterexample.
 
+  `eigenzustand_nur_eigene_schritteD_rep_zeuge` instantiates ALL premises of
+  the repaired target jointly on a non-degenerate program: `wprog` over
+  `BG.D1` has a table the owner writes (`V1.schreibt () = true`); the run is
+  `PCReach.start` then the owner write (memory changes `false → true`, proved
+  by `feuerung_schreibt`-style computation through `schreibt_wirkt_slot`)
+  then the foreign `assignVar` step (slots preserved). The witness proves
+  each premise: `hNurG` by `wNurG`, `hNoAx` by `wNoAx`, reachability by the
+  two-step derivation, the firing by `wStep2`, inequality by `rfl`-decision.
+
+  `axiomCall_ohne_ereignis_gegenbeispiel`: the finding -- an `axiomCall`
+  whose oracle writes `t` changes slots without recording any event with
+  carrier `Sum.inl t` (`GutO` keeps `spur` unchanged), so the target WITHOUT
+  `hNoAx` is false for it. -/
+
+/-- The owner write flips the slot: memory really changes. -/
+theorem wSchreibtWechsel (σ' : World Gabbro.Grammatik.BG.D1)
+    (hσ' : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
+      Gabbro.Grammatik.BG.writeLeaf ((GenStart wsp0).weltVon 0) Env.nil).welt
+      = some σ') :
+    σ'.slots () 0 () = true ∧ (GenStart wsp0).speicher.slots () 0 () = false := by
+  have hW := Gabbro.Grammatik.BG.feuerung_schreibt BG.O1 0 Env.nil false
+    ((GenStart wsp0).weltVon 0) (by rfl) σ' hσ'
+  have hstart : ((GenStart wsp0).weltVon 0).slots () 0 () = false := rfl
+  exact ⟨by simpa [hstart] using hW, rfl⟩
+
+/-- Machine after the owner write (step 1 outcome). -/
+def wM1 (σw : World Gabbro.Grammatik.BG.D1) : GenMaschine Gabbro.Grammatik.BG.D1 :=
+  ⟨σw.speicher, genUpdate (GenStart wsp0).spuren 0 σw.spur,
+    (GenStart wsp0).lauf ++ genEigen 0 σw.spur, (GenStart wsp0).start,
+    (GenStart wsp0).welten ++ [σw], (GenStart wsp0).tiefe + 1⟩
+
+/-- Joint witness for the repaired target (rule 13). -/
+theorem eigenzustand_nur_eigene_schritteD_rep_zeuge :
+    ∃ (P : Programm Gabbro.Grammatik.BG.D1) (O : Orakel Gabbro.Grammatik.BG.D1)
+      (passes : Nat) (hO : GutO O) (prog : PCProg Gabbro.Grammatik.BG.D1)
+      (sp : Speicher Gabbro.Grammatik.BG.D1) (g : Faden)
+      (t : Gabbro.Grammatik.BG.D1.Tab),
+      (∀ h, h ≠ g → ∀ a ∈ prog h,
+        (Sum.inl t : Gabbro.Grammatik.BG.D1.Tab ⊕ Gabbro.Grammatik.BG.D1.Glob) ∉
+          PCAtom.carriers a) ∧
+      (∀ (M : GenMaschine Gabbro.Grammatik.BG.D1) (pc : PCStand) (h : Faden)
+        (V : Vertrag Gabbro.Grammatik.BG.D1) (l : Bool) (Γ : Ctx)
+        (Λ Λ' : List (Res Gabbro.Grammatik.BG.D1))
+        (s : Stmt Gabbro.Grammatik.BG.D1 V l Γ Λ Λ')
+        (ρ : Env Gabbro.Grammatik.BG.D1 Γ)
+        (σ' : World Gabbro.Grammatik.BG.D1) (neu : List (Ereignis Gabbro.Grammatik.BG.D1))
+        (hstep : (execStmt O passes keinRuf s (M.weltVon h) ρ).welt = some σ')
+        (Λa : List (Res Gabbro.Grammatik.BG.D1))
+        (cs : List (Gabbro.Grammatik.BG.D1.Tab ⊕ Gabbro.Grammatik.BG.D1.Glob))
+        (hpc : (prog h)[pc h]? = some (PCAtom.leaf Λa cs)),
+        ¬ ∃ (a : Gabbro.Grammatik.BG.D1.Ax)
+          (args : Args Gabbro.Grammatik.BG.D1 Γ Λ (Gabbro.Grammatik.BG.D1.aparams a))
+          (hh : Gabbro.Grammatik.BG.D1.aerg a = none)
+          (hw : ∀ t, Gabbro.Grammatik.BG.D1.aschreibt a t = true → V.schreibt t = true)
+          (hg : ∀ g, Gabbro.Grammatik.BG.D1.agschreibt a g = true → V.gschreibt g = true),
+          (execStmt O passes keinRuf
+            (Stmt.axiomCall (V := V) (l := l) a args hh hw hg)
+            (M.weltVon h) ρ).welt = some σ' ∧
+            Gabbro.Grammatik.BG.D1.aschreibt a t = true) ∧
+      (∃ (M : GenMaschine Gabbro.Grammatik.BG.D1) (pc : PCStand) (h : Faden)
+        (M' : GenMaschine Gabbro.Grammatik.BG.D1) (pc' : PCStand)
+        (_ : PCReach P O passes prog (GenStart sp) M pc)
+        (_ : PCSchritt P O passes prog M pc h M' pc') (_ : h ≠ g),
+        M'.speicher.slots t 0 () = M.speicher.slots t 0 ()) ∧
+      (∃ (w : World Gabbro.Grammatik.BG.D1),
+        (execStmt O passes keinRuf Gabbro.Grammatik.BG.writeLeaf
+          ((GenStart sp).weltVon g) Env.nil).welt = some w ∧
+        w.slots () 0 () ≠ (GenStart sp).speicher.slots () 0 ()) := by
+  -- Build the outcomes bottom-up, then close with one anonymous constructor.
+  obtain ⟨σw, hfire⟩ := wFire1
+  have hmem := wSchreibtWechsel σw hfire
+  -- Machine after the owner write (step 1).
+  have hs1 : PCSchritt (P := Gabbro.Grammatik.BG.P1) (O := Gabbro.Grammatik.BG.O1)
+      0 wprog (GenStart wsp0) (fun _ => 0) 0
+      ⟨σw.speicher, genUpdate (GenStart wsp0).spuren 0 σw.spur,
+        (GenStart wsp0).lauf ++ genEigen 0 σw.spur, (GenStart wsp0).start,
+        (GenStart wsp0).welten ++ [σw], (GenStart wsp0).tiefe + 1⟩
+      (pcAdvance (fun _ => 0) 0) :=
+    wStep1 σw hfire
+  have hreach1 : PCReach Gabbro.Grammatik.BG.P1 Gabbro.Grammatik.BG.O1 0 wprog
+      (GenStart wsp0) (wM1 σw) (pcAdvance (fun _ => 0) 0) :=
+    PCReach.step _ _ _ _ _ PCReach.start hs1
+  have hfire2 : ∃ σ' : World Gabbro.Grammatik.BG.D1,
+      (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
+        (Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false)
+          (Γ := [.bool]) (Λ := []) (τ := .bool) Var.hier
+          (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool))
+        ((wM1 σw).weltVon 1)
+        (Env.cons (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil)).welt
+        = some σ' := by
+    have hcomp : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
+        (Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false)
+          (Γ := [.bool]) (Λ := []) (τ := .bool) Var.hier
+          (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool))
+        ((wM1 σw).weltVon 1)
+        (Env.cons (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil)).welt =
+        some (((wM1 σw).weltVon 1).lese [] []) := rfl
+    exact ⟨_, hcomp⟩
+  obtain ⟨σv, hfirev⟩ := hfire2
+  have htr1 : (wM1 σw).spuren 1 = [] := by
+    simp only [wM1, genUpdate_noteq _ _ _ (by decide : (1 : Faden) ≠ 0)]
+    rfl
+  have hpc1 : (pcAdvance (fun _ : Faden => 0) 0) 1 = 0 := by
+    simp [pcAdvance]
+  have hs2 := wStep2 (wM1 σw) (pcAdvance (fun _ => 0) 0)
+    (Env.cons (true : Wert Gabbro.Grammatik.BG.D1 .bool) Env.nil) rfl
+    hpc1 htr1 σv hfirev
+  have hkeep := pcSchritt_fremd_fest Gabbro.Grammatik.BG.P1
+    Gabbro.Grammatik.BG.O1 wGutO 0 wprog (wM1 σw) _ 1 _ _ 0 ()
+    hs2 (by decide) (wNurG 1 (by decide)) (wNoAx (wM1 σw) _ 1) 0 ()
+  refine ⟨Gabbro.Grammatik.BG.P1, Gabbro.Grammatik.BG.O1, 0, wGutO, wprog,
+    wsp0, 0, (), wNurG, wNoAx, ?_, ?_⟩
+  · -- The foreign step preserves the slot (machine-level fact).
+    refine ⟨(wM1 σw), _, 1, _, _, hreach1, hs2, (show (1 : Faden) ≠ 0 by decide), hkeep⟩
+  · -- The owner write changed memory (slot false → true).
+    exact ⟨σw, hfire, by rw [hmem.1, hmem.2]; intro h; cases h⟩
+
+end Gabbro.Grammatik.EZD
