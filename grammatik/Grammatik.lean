@@ -71,3 +71,4 @@ import Grammatik.BlattGegenbeispiel
 import Grammatik.VertragOrtB
 import Grammatik.RufAtNachB
 import Grammatik.KetteMehrfadenC
+import Grammatik.MarkenInstanzA
