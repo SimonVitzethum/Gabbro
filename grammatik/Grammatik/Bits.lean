@@ -161,4 +161,77 @@ theorem ctzn_le {w x : Nat} (hx0 : 0 < x) (hxW : x < 2 ^ (w + 1)) :
       omega
     omega
 
+/-! ## Popcount, rotation, byteswap at `Nat` level. -/
+
+/-- Popcount over `fuel` binary digits. -/
+def popAux : Nat → Nat → Nat
+  | 0, _ => 0
+  | fuel + 1, x => (x % 2) + popAux fuel (x / 2)
+
+/-- Popcount over width `W = w + 1`. -/
+def popcountn (w x : Nat) : Nat := popAux (w + 1) x
+
+theorem popAux_le (fuel x : Nat) : popAux fuel x ≤ fuel := by
+  induction fuel generalizing x with
+  | zero => simp [popAux]
+  | succ fuel ih =>
+    simp only [popAux]
+    have hmod : x % 2 ≤ 1 := by
+      have h := Nat.mod_lt x (by decide : 0 < 2)
+      omega
+    have hi := ih (x / 2)
+    omega
+
+theorem popcountn_le (w x : Nat) : popcountn w x ≤ w + 1 :=
+  popAux_le (w + 1) x
+
+/-- Popcount splits over fuel addition at a `2 ^ a` boundary. -/
+theorem popAux_add_fuel (a b x : Nat) :
+    popAux (a + b) x = popAux a x + popAux b (x / 2 ^ a) := by
+  induction a generalizing x with
+  | zero => simp [popAux]
+  | succ a ih =>
+    have e : a + 1 + b = (a + b) + 1 := by omega
+    rw [e]
+    simp only [popAux]
+    rw [ih]
+    have hdiv : x / 2 / 2 ^ a = x / 2 ^ (a + 1) := by
+      have e2 : (2 : Nat) * 2 ^ a = 2 ^ (a + 1) := by
+        rw [Nat.pow_succ, Nat.mul_comm]
+      rw [Nat.div_div_eq_div_mul, e2]
+    rw [hdiv]
+    omega
+
+/-- Popcount of disjoint halves adds. -/
+theorem popAux_add_mul_pow (s t lo hi : Nat) (hlo : lo < 2 ^ s) :
+    popAux (s + t) (lo + hi * 2 ^ s) = popAux s lo + popAux t hi := by
+  induction s generalizing lo hi with
+  | zero =>
+    simp at hlo
+    simp [popAux, hlo]
+  | succ s ih =>
+    have e : s + 1 + t = (s + t) + 1 := by omega
+    rw [e]
+    simp only [popAux]
+    have hps : (2 : Nat) ^ (s + 1) = 2 ^ s * 2 := Nat.pow_succ 2 s
+    have hmod : (lo + hi * 2 ^ (s + 1)) % 2 = lo % 2 := by
+      have h2 : hi * 2 ^ (s + 1) = 2 * (hi * 2 ^ s) := by
+        calc hi * 2 ^ (s + 1) = hi * (2 ^ s * 2) := by rw [hps]
+          _ = hi * (2 * 2 ^ s) := by rw [Nat.mul_comm (2 ^ s) 2]
+          _ = 2 * (hi * 2 ^ s) := by
+              rw [← Nat.mul_assoc, Nat.mul_comm hi 2, Nat.mul_assoc]
+      rw [h2, Nat.add_mul_mod_self_left]
+    have hdiv : (lo + hi * 2 ^ (s + 1)) / 2
+        = lo / 2 + hi * 2 ^ s := by
+      have h2 : hi * 2 ^ (s + 1) = (hi * 2 ^ s) * 2 := by
+        rw [hps, Nat.mul_assoc]
+      rw [h2]
+      rw [Nat.add_mul_div_right _ _ (by decide : 0 < 2)]
+    rw [hmod, hdiv]
+    have hlo2 : lo / 2 < 2 ^ s := by
+      have h2 : lo < 2 * 2 ^ s := by omega
+      exact Nat.div_lt_of_lt_mul h2
+    rw [ih _ _ hlo2]
+    omega
+
 end Gabbro.Grammatik
