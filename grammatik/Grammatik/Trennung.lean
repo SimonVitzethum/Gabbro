@@ -208,4 +208,69 @@ theorem nurG_aus_B_progAus (P : Programm D) (fcode : Faden → D.Fn)
       (Sum.inl t : D.Tab ⊕ D.Glob) ∉ PCAtom.carriers a :=
   nurG_aus_B t g _ fs hcov hB
 
+/-! ## 4. Structural special case: distinct threads run distinct functions.
+
+  The marks named in a body are the flattened atoms' marks
+  (`endblockAtome` is what `progAus` flattens per thread).
+
+  On the task sketch: its two premises (distinct functions with nonzero
+  mark codes) do NOT suffice -- two distinct function bodies may name
+  the SAME mark (hence the same code), exactly as two same-function
+  threads do (`pcMarkSep_scheitert_gleich_fn` in MarkenInstanzA.lean).
+  `pcMarkSep_scheitert_geteilte_marke` below mechanizes that gap for an
+  arbitrary program text. The repaired theorem therefore carries the
+  load-bearing premise `hDisj`: distinct function bodies name marks with
+  distinct codes. The nonzero-code premise of the sketch is load-free
+  for `PCMarkSep` (zero collides like any code) and is not carried. -/
+
+/-- The marks named anywhere in a function body: the flattened atoms'
+    marks, the same traversal `progAus` uses per thread. -/
+def koerperMarken (tabs : List D.Tab) (globs : List D.Glob)
+    {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+    (b : Endblock D V false Γ Λ) : List D.Marke :=
+  (endblockAtome tabs globs b).flatMap PCAtom.marks
+
+/-- A mark in a thread's extracted text sits in its function's body
+    marks: `progAus` unfolds to the body's atoms. -/
+theorem marke_aus_progAus_in_koerper (P : Programm D)
+    (fcode : Faden → D.Fn) (tabs : List D.Tab) (globs : List D.Glob)
+    (f : Faden) (m : D.Marke)
+    (hm : m ∈ (progAus P fcode tabs globs).marks f) :
+    m ∈ koerperMarken tabs globs (P.rumpf (fcode f)) := by
+  show m ∈ (endblockAtome tabs globs (P.rumpf (fcode f))).flatMap PCAtom.marks
+  exact hm
+
+/-- Structural mark separation: distinct threads run distinct functions
+    whose bodies name marks with pairwise distinct codes. Every premise
+    fires: `hFn` separates the functions, `hDisj` the codes. -/
+theorem pcMarkSep_aus_verschiedenen_funktionen (P : Programm D)
+    (fcode : Faden → D.Fn)
+    (tabs : List D.Tab) (globs : List D.Glob) (code : D.Marke → Nat)
+    (hFn : ∀ g₁ g₂, g₁ ≠ g₂ → fcode g₁ ≠ fcode g₂)
+    (hDisj : ∀ (f₁ f₂ : D.Fn), f₁ ≠ f₂ →
+      ∀ m₁ ∈ koerperMarken tabs globs (P.rumpf f₁),
+      ∀ m₂ ∈ koerperMarken tabs globs (P.rumpf f₂),
+        code m₁ ≠ code m₂) :
+    PCMarkSep code (progAus P fcode tabs globs) := by
+  intro f g hfg c hcf hcg
+  obtain ⟨m₁, hm₁, hc₁⟩ := List.mem_map.mp hcf
+  obtain ⟨m₂, hm₂, hc₂⟩ := List.mem_map.mp hcg
+  exact absurd (hc₁.trans hc₂.symm)
+    (hDisj _ _ (hFn f g hfg) _ (marke_aus_progAus_in_koerper P fcode tabs globs f m₁ hm₁)
+      _ (marke_aus_progAus_in_koerper P fcode tabs globs g m₂ hm₂))
+
+/-- Why the two sketch premises do not suffice, over an arbitrary text:
+    one mark named by two threads' texts already breaks `PCMarkSep`,
+    whatever the functions and codes are. Every premise fires: `hmf` and
+    `hmg` name the shared code on both sides. -/
+theorem pcMarkSep_scheitert_geteilte_marke (code : D.Marke → Nat)
+    (prog : PCProg D) (f g : Faden) (hfg : f ≠ g)
+    (m : D.Marke)
+    (hmf : m ∈ prog.marks f) (hmg : m ∈ prog.marks g) :
+    ¬ PCMarkSep code prog := by
+  intro hSep
+  exact (hSep f g hfg (code m)
+    (List.mem_map.mpr ⟨m, hmf, rfl⟩))
+    (List.mem_map.mpr ⟨m, hmg, rfl⟩)
+
 end Gabbro.Grammatik
