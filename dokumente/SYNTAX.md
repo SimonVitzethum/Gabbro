@@ -947,10 +947,10 @@ table KernelTab count 1 {
     }
 }
 …
-pub library fn kernel(n : u32) payload KernelTab
-    effects { pure }
+pub library fn kernel(n : u32) -> u32 payload KernelTab
     requires n <= 1024
     ensures result == n
+    effects { pure }
     costs <= 8 ops
 {
     return n;

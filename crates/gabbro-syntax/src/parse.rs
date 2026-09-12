@@ -657,6 +657,7 @@ impl<'a> Parser<'a> {
                         | Kw::Tagged
                         | Kw::Type
                         | Kw::Fn
+                        | Kw::Library
                         | Kw::Spec
                         | Kw::Impl
                         | Kw::Raw
@@ -711,7 +712,7 @@ impl<'a> Parser<'a> {
                 ItemArt::Typ(self.typedecl(oeffentlich)?)
             }
             Art::Wort(
-                Kw::Fn | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
+                Kw::Fn | Kw::Library | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
             ) => ItemArt::Funktion(self.fndecl(oeffentlich)?),
             Art::Wort(Kw::Atomic) => ItemArt::Atomic(self.atomicdecl(oeffentlich)?),
             Art::Wort(Kw::Format) => ItemArt::Format(self.format(oeffentlich)?),
@@ -5238,6 +5239,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Const
             | Kw::Static
             | Kw::Fn
+            | Kw::Library
             | Kw::Spec
             | Kw::Impl
             | Kw::Raw

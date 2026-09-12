@@ -2662,6 +2662,37 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §12.1",
     },
     Satz {
+        name: "parser.bibliothek-nutzlast",
+        kennungen: &["P043"],
+        aussage: "A `library fn` carries its `payload <table>` clause: the grammar \
+                  line `fndecl` (`SYNTAX.md` §6, «E2») holds the clause behind the \
+                  signature, so a library declaration without one falls at the \
+                  reader, not in a pass behind it.",
+        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing \
+                    about whether the named table EXISTS -- that check belongs to \
+                    the checker (`N060`). Probes 826 (missing) and 820 (present) \
+                    pin both directions.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 826 on `P043`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
+    },
+    Satz {
+        name: "parser.bibliothek-rumpf",
+        kennungen: &["P044"],
+        aussage: "A `library fn` carries a Gabbro block body: the grammar admits \
+                  only the `endblock` arm for it (`SYNTAX.md` §6, «E2»). A \
+                  bodyless declaration would be a foreign promise -- exactly \
+                  what the library mechanism stands against \
+                  (`PLAN-ERWEITUNG.md` §0c) -- and a spec or sealed body leaves \
+                  the hull check (`N059`) nothing to walk.",
+        vorbehalt: "A shape rule of the parser, and nothing else. What the body \
+                    must NOT call is a statement about the program and belongs \
+                    to the checker (`N059`). Probe 827 pins the `;` form.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 827 on `P044`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; dokumente/SYNTAX.md §6",
+    },
+    Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],
         aussage: "The boot theorem's first two layers: a `raw fn` demands a `linear ghost` \
