@@ -234,4 +234,105 @@ theorem popAux_add_mul_pow (s t lo hi : Nat) (hlo : lo < 2 ^ s) :
     rw [ih _ _ hlo2]
     omega
 
+/-! ## Rotation at `Nat` level. -/
+
+/-- Rotate left over width `W = w + 1` by `s`: low `W - s` bits move up. -/
+def rotln (w s x : Nat) : Nat :=
+  (x % 2 ^ (w + 1 - s)) * 2 ^ s + x / 2 ^ (w + 1 - s)
+
+/-- Rotate right over width `W = w + 1` by `s`. -/
+def rotrn (w s x : Nat) : Nat :=
+  (x % 2 ^ s) * 2 ^ (w + 1 - s) + x / 2 ^ s
+
+/-- Rotation stays in the field. Uses `hs` (shift fits) and `hx` (input fits). -/
+theorem rotln_lt (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
+    rotln w s x < 2 ^ (w + 1) := by
+  have hW : w + 1 - s + s = w + 1 := by omega
+  have hpowW : 2 ^ (w + 1 - s) * 2 ^ s = 2 ^ (w + 1) := by
+    rw [← Nat.pow_add, hW]
+  have hmod : x % 2 ^ (w + 1 - s) < 2 ^ (w + 1 - s) :=
+    Nat.mod_lt x (Nat.pow_pos (by decide))
+  have hdiv : x / 2 ^ (w + 1 - s) < 2 ^ s := by
+    have hxW : x < 2 ^ (w + 1 - s) * 2 ^ s := by omega
+    exact Nat.div_lt_of_lt_mul hxW
+  have hmul1 : (x % 2 ^ (w + 1 - s) + 1) * 2 ^ s
+      ≤ 2 ^ (w + 1 - s) * 2 ^ s :=
+    Nat.mul_le_mul_right _ hmod
+  have hexpand : (x % 2 ^ (w + 1 - s) + 1) * 2 ^ s
+      = (x % 2 ^ (w + 1 - s)) * 2 ^ s + 2 ^ s := by
+    rw [Nat.add_mul, Nat.one_mul]
+  have hstep : (x % 2 ^ (w + 1 - s)) * 2 ^ s + x / 2 ^ (w + 1 - s)
+      < (x % 2 ^ (w + 1 - s)) * 2 ^ s + 2 ^ s :=
+    Nat.add_lt_add_left hdiv _
+  have h2 : (x % 2 ^ (w + 1 - s)) * 2 ^ s + 2 ^ s ≤ 2 ^ (w + 1) := by
+    rw [← hexpand]
+    exact Nat.le_trans hmul1 (Nat.le_of_eq hpowW)
+  have hchain : (x % 2 ^ (w + 1 - s)) * 2 ^ s + x / 2 ^ (w + 1 - s)
+      < 2 ^ (w + 1) :=
+    Nat.lt_of_lt_of_le hstep h2
+  show rotln w s x < 2 ^ (w + 1)
+  unfold rotln
+  exact hchain
+
+/-- `rotr ∘ rotl = id`. Uses `hs` (split points fit) and `hx` (input fits). -/
+theorem rotrn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
+    rotrn w s (rotln w s x) = x := by
+  have hW : w + 1 - s + s = w + 1 := by omega
+  have hpowW : 2 ^ (w + 1 - s) * 2 ^ s = 2 ^ (w + 1) := by
+    rw [← Nat.pow_add, hW]
+  generalize hhi : x / 2 ^ (w + 1 - s) = hi
+  generalize hlo : x % 2 ^ (w + 1 - s) = lo
+  have hlox : lo < 2 ^ (w + 1 - s) := by omega
+  have hhix : hi < 2 ^ s := by
+    have hxW : x < 2 ^ (w + 1 - s) * 2 ^ s := by omega
+    have hdiv : x / 2 ^ (w + 1 - s) < 2 ^ s := Nat.div_lt_of_lt_mul hxW
+    omega
+  have hsplit : hi * 2 ^ (w + 1 - s) + lo = x := by
+    have h := Nat.div_add_mod x (2 ^ (w + 1 - s))
+    have hc : 2 ^ (w + 1 - s) * (x / 2 ^ (w + 1 - s))
+        = hi * 2 ^ (w + 1 - s) := by rw [hhi, Nat.mul_comm]
+    omega
+  have hrot : rotln w s x = hi + lo * 2 ^ s := by
+    simp [rotln, hlo, hhi, Nat.add_comm]
+  have hmod : (hi + lo * 2 ^ s) % 2 ^ s = hi % 2 ^ s :=
+    Nat.add_mul_mod_self_right hi lo (2 ^ s)
+  have hmodhi : hi % 2 ^ s = hi := Nat.mod_eq_of_lt hhix
+  have hdiv : (hi + lo * 2 ^ s) / 2 ^ s = hi / 2 ^ s + lo :=
+    Nat.add_mul_div_right hi lo (Nat.pow_pos (by decide))
+  have hdivhi : hi / 2 ^ s = 0 := Nat.div_eq_zero_iff.mpr (Or.inr hhix)
+  have hfin : rotrn w s (hi + lo * 2 ^ s) = hi * 2 ^ (w + 1 - s) + lo := by
+    simp [rotrn, hmod, hmodhi, hdiv, hdivhi]
+  rw [← hrot, hfin] at *
+  omega
+
+/-- Popcount is invariant under rotation. Uses `hs` and `hx` via the halves. -/
+theorem popcountn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
+    popcountn w (rotln w s x) = popcountn w x := by
+  generalize ht : w + 1 - s = t
+  have hW : s + t = w + 1 := by omega
+  have hW2 : t + s = w + 1 := by omega
+  have hpowW : 2 ^ t * 2 ^ s = 2 ^ (w + 1) := by
+    rw [← Nat.pow_add, hW2]
+  generalize hhi : x / 2 ^ t = hi
+  generalize hlo : x % 2 ^ t = lo
+  have hlox : lo < 2 ^ t := by omega
+  have hhix : hi < 2 ^ s := by
+    have hxW : x < 2 ^ t * 2 ^ s := by omega
+    have hdiv : x / 2 ^ t < 2 ^ s := Nat.div_lt_of_lt_mul hxW
+    omega
+  have hrot : rotln w s x = hi + lo * 2 ^ s := by
+    simp [rotln, ht, hlo, hhi, Nat.add_comm]
+  have hsplit : x = lo + hi * 2 ^ t := by
+    have h := Nat.div_add_mod x (2 ^ t)
+    have hc : 2 ^ t * (x / 2 ^ t) = hi * 2 ^ t := by rw [hhi, Nat.mul_comm]
+    omega
+  have hLHS : popAux (w + 1) (hi + lo * 2 ^ s)
+      = popAux s hi + popAux t lo := by
+    rw [← hW]
+    exact popAux_add_mul_pow s t hi lo hhix
+  have hRHS : popAux (w + 1) x = popAux t lo + popAux s hi := by
+    rw [← hW2, hsplit]
+    exact popAux_add_mul_pow t s lo hi hlox
+  simp [popcountn, hrot, hLHS, hRHS, Nat.add_comm]
+
 end Gabbro.Grammatik
