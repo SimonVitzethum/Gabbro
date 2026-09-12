@@ -574,7 +574,9 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::Return(_)
-        | StmtArt::Ruf(_) => {}
+        // **Lane E1:** a library call in statement position binds nothing.
+        | StmtArt::Ruf(_)
+        | StmtArt::LibraryCall(_) => {}
     }
     for k in crate::unterbloecke(s) {
         for a in &k.anweisungen {
@@ -687,7 +689,9 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             | StmtArt::AwaitLoad(_)
             | StmtArt::Exchange(_)
             | StmtArt::Return(_)
-            | StmtArt::Ruf(_) => {}
+            // **Lane E1:** a library call carries no block.
+            | StmtArt::Ruf(_)
+            | StmtArt::LibraryCall(_) => {}
         }
     }
 }

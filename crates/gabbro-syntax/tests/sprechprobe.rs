@@ -367,6 +367,42 @@ fn modul_mit_strichpunkt_nennt_den_rumpf() {
     faellt_mit_notiz("module m;", "P001", "`module` carries a brace body");
 }
 
+// -- Lane E1: library calls ------------------------------------------------------------
+// `@library#function ( args ) { region }` parses in statement position; the
+// reader captures names, arguments and the brace-balanced region without
+// interpreting it. (The checker says `N057`; this crate never refuses what it
+// can read.)
+
+#[test]
+fn library_call_reads_names_args_and_region() {
+    let quelle = "module t { impl fn f(a : u32) -> u32 effects { pure } costs <= 8 ops \
+                  { @spirv#kernel(a) { dispatch { nested } 0 }; return a; } }";
+    let (baum, absagen) = gabbro_syntax::lies("<probe>", quelle);
+    assert!(
+        !absagen.absagen.iter().any(|a| a.stufe == Stufe::Fehler),
+        "a well-formed library call parses:\n{}",
+        absagen.zeige(quelle)
+    );
+    let gabbro_syntax::ast::ItemArt::Modul(m) = &baum.items[0].art else {
+        panic!("a module parses as a module");
+    };
+    let gabbro_syntax::ast::ItemArt::Funktion(f) = &m.items[0].art else {
+        panic!("a function parses as a function");
+    };
+    let gabbro_syntax::ast::FnRumpf::Block(b) = &f.rumpf else {
+        panic!("a body parses as a block");
+    };
+    let gabbro_syntax::ast::StmtArt::LibraryCall(r) = &b.anweisungen[0].art else {
+        panic!("a library call parses as a library call");
+    };
+    assert_eq!(r.library.text, "spirv");
+    assert_eq!(r.function.text, "kernel");
+    assert_eq!(r.args.len(), 1);
+    // The region is raw tokens: nested braces balanced, nothing interpreted.
+    let rohtexte: Vec<&str> = r.region.iter().map(|t| t.text.as_str()).collect();
+    assert_eq!(rohtexte, vec!["dispatch", "{", "nested", "}", "0"]);
+}
+
 // -- «SS-1» (2026-09-12): `syscall` is specified and refused by name ----------------------
 //
 // **One test, three directions.** A `syscall …` item falls with EXACTLY the named

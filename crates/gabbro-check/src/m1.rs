@@ -1466,6 +1466,15 @@ impl<'a> Pruefer<'a> {
                 let _ = self.ruf(r, lage);
                 self.rufe_toeten_fakten(&rufnamen_im_ruf(r), lage);
             }
+            // **Lane E1:** no callee and no contract -- the call itself is
+            // refused (`N057`). What remains for M1 is the arguments:
+            // ordinary expressions with ordinary diagnostics.
+            StmtArt::LibraryCall(r) => {
+                for a in &r.args {
+                    self.ausdruck(a, lage);
+                    self.rufe_im_ausdruck(a, lage);
+                }
+            }
             StmtArt::AwaitLoad(a) => {
                 let t = self.u.typ_von_ort(&self.modul, &a.quelle, &lage.lokal);
                 self.buche(&t);
@@ -1930,6 +1939,15 @@ impl<'a> Pruefer<'a> {
             // `old(x)` ist ein Geisterausdruck: er steht in `ensures`, nicht im Rumpf.
             ExprArt::Alt(_) => Typ::Unbekannt,
             ExprArt::Ruf(r) => self.ruf_roh(r, lage),
+            // **Lane E1:** a library call has no type until lane E2 checks
+            // it; its arguments are ordinary expressions, diagnosed where
+            // they stand. The call itself is refused (`N057`).
+            ExprArt::LibraryCall(r) => {
+                for a in &r.args {
+                    self.ausdruck(a, lage);
+                }
+                Typ::Unbekannt
+            }
             ExprArt::Eingebaut(_) => Typ::Unbekannt,
             ExprArt::Unaer(UnOp::Nicht, i) => {
                 let _ = self.ausdruck(i, lage);
@@ -3782,6 +3800,12 @@ impl<'a> Pruefer<'a> {
                 }
             }
         }
+        // **Lane E1:** the arguments of a library call decide like any call's.
+        if let StmtArt::LibraryCall(r) = &s.art {
+            for a in &r.args {
+                self.frische_verweigere(a, lage);
+            }
+        }
         // An index decides which cell is meant -- everywhere, including stores.
         // The indexed place's own basis travels as the enclosing index carrier,
         // so an index into a disjoint carrier is excused here exactly as it is
@@ -5527,6 +5551,9 @@ fn enthaelt_ruf(e: &Expr) -> bool {
         ExprArt::Zaehle { rumpf, .. } => crate::ausdruecke_im_praedikat(rumpf)
             .into_iter()
             .any(enthaelt_ruf),
+        // **Lane E1:** a call inside the arguments of a library call kills
+        // facts like any other call.
+        ExprArt::LibraryCall(r) => r.args.iter().any(enthaelt_ruf),
         _ => false,
     }
 }

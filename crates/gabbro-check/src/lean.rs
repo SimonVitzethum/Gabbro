@@ -1265,6 +1265,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // **«SG-24»** -- the model folds nothing (`LeanReason::Counted`); bodies
         // lower the count to C, contracts stating one are refused here, by name.
         ExprArt::Zaehle { .. } => Err(LeanReason::Counted),
+        // **Lane E1:** a library call names no declared routine -- refused
+        // like any call the unit does not declare.
+        ExprArt::LibraryCall(_) => Err(LeanReason::CallStatement),
         // **Two built-ins have a meaning here, and the third has none.** `aligned(e, n)` is
         // `e % n == 0`; `lenof` of an array is its declared length, a constant of the
         // declaration and not of the run. `sizeof` is about the LAYOUT, and `lenof` of a
@@ -1726,6 +1729,13 @@ fn calls_in<'a>(e: &'a Expr, c: &Ctx, out: &mut Vec<&'a Ruf>) {
             }
             out.push(r);
         }
+        // **Lane E1:** the library call itself is no hoistable call, but the
+        // calls in its arguments run before it like any call's.
+        ExprArt::LibraryCall(r) => {
+            for a in &r.args {
+                calls_in(a, c, out);
+            }
+        }
         ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => calls_in(x, c, out),
         ExprArt::Binaer(BinOp::Und, _, _) | ExprArt::Binaer(BinOp::Oder, _, _) => {}
         ExprArt::Binaer(_, a, b) => {
@@ -1952,6 +1962,8 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Eingebaut(_)
         | ExprArt::FnWert(_)
+        // **Lane E1:** a library call yields a value of no known shape.
+        | ExprArt::LibraryCall(_)
         | ExprArt::Grund { .. } => None,
     }
 }
@@ -2406,6 +2418,9 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
             let (hoist, (n, ps, args, pre)) = hoisted_call(r, c)?;
             Ok(LeanCarried::StmtCall.term(format!("{hoist}(.call {n} [{ps}] [{args}] {pre})")))
         }
+        // **Lane E1:** a library call names no declared routine -- refused
+        // like any call the unit does not declare.
+        StmtArt::LibraryCall(_) => Err(LeanReason::CallStatement),
         // **`let n = f(a) else (e) { … }` is the error propagation** (2026-09-07): the
         // callee answers with a reason instead of a value, the `else` block runs with it
         // bound to `e`, and ends. The `place` form (`let n = A else …`, unpacking an atomic)
@@ -3862,6 +3877,15 @@ fn renamed_expr(e: &Expr, pairs: &[(String, String)]) -> Expr {
                 *a = renamed_expr(a, pairs);
             }
             ExprArt::Ruf(r)
+        }
+        // **Lane E1:** the arguments rename like any call's; the region is
+        // raw tokens and carries no names.
+        ExprArt::LibraryCall(r) => {
+            let mut r = r.clone();
+            for a in &mut r.args {
+                *a = renamed_expr(a, pairs);
+            }
+            ExprArt::LibraryCall(r)
         }
         other => other.clone(),
     };
