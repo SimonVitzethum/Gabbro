@@ -163,3 +163,20 @@ green (64 jobs). Known aftermath, not mine: PASSREGISTER/TODO corpus
 figures now underbook master's sentences/codes/examples (reviewer-accepted
 `--ours`); `pruefe-syntax.sh` warnings stage names two snake-case test fns
 from master's `referenz` test.
+
+## Merge with master-neu2, round 2 (reviewer, 2026-09-12): arena (E4) + stack fix
+
+Same procedure as round 1, plus lane 116 (`arena`, `capacity`, `alloc`,
+`reset`; `N210`-`N214`; `ItemArt::Arena`). One real collision found and
+fixed: E4 constructs `ItemArt::Arena` inline in `item()`'s match, holding
+an `ArenaDecl` temporary in `item()`'s frame on every nested `module`
+level — the merged tree overflowed a 2 MB test thread at 31 nested
+modules, before the depth guard could fire
+(`die_beiden_wachen_sitzen_an_allen_ihren_stellen`, deterministic 3/3;
+E3's `translator_item` comment records the same shape). Fix: `arena_item`
+helper holding the construction outside `item()`'s frame (E4's declaration
+and checks untouched; verified green on true-2MB runs plus full suite).
+Dead duplicate `Arena` arms of lane 117 in emit/bindung removed (E4's arms
+above already match). Counts re-measured: 176 EBNF rules, 239 terminals
+both readings, 242 words. `./cargo-pruef` green, `./lean-bau` green
+(64 jobs).
