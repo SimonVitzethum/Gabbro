@@ -67,3 +67,4 @@ import Grammatik.LesenStabil
 import Grammatik.Maschine
 import Grammatik.MaschinenKette
 import Grammatik.QLeer
+import Grammatik.BlattGegenbeispiel
