@@ -1666,4 +1666,151 @@ theorem eigenzustand_nur_eigene_schritteD_rep_zeuge :
   · -- The owner write changed memory (slot false → true).
     exact ⟨σw, hfire, by rw [hmem.1, hmem.2]; intro h; cases h⟩
 
+/-! ## 14. Counterexample: without `hNoAx` the target is false.
+
+  `axiomCall_ohne_ereignis_falsch`: an `axiomCall a` whose oracle writes `t`
+  changes slots of `t` while recording NO event with carrier `Sum.inl t`
+  (`GutO` forces `(O.wirkt ..).1.spur = σ.spur`, so the recorded list `neu`
+  contains only the `lese` reads, all with `schreibt = false`). Hence the
+  leaf dispatch's first two arms fail and only the oracle-write arm remains:
+  the repaired target's `hNoAx` is load-bearing, and the TARGET AS STATED
+  (without `hNoAx`) is false at this constructor. This is the finding the
+  task asks for: the constructor is `Stmt.axiomCall`.
+
+  Construction: extend `BG.D1` with one axiom `ax` with
+  `D.aschreibt ax () = true` and an oracle that flips the slot. Since
+  `Deklaration`/`Orakel` are structures, build them directly (one table,
+  one axiom, no locks/marks/globals). -/
+
+namespace AxGegen
+
+open Gabbro.Grammatik
+
+/-- One table, one axiom that declares a write to the table. -/
+def D2 : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .bool
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  decGlob := inferInstance
+  gtyp := fun e => (nomatch e)
+  nutzlast := fun e => (nomatch e)
+  atomar := fun e => (nomatch e)
+  geteilt := fun _ => false
+  ggeteilt := fun e => (nomatch e)
+  Lock := Empty
+  decLock := inferInstance
+  rang := fun e => nomatch e
+  maskiert := fun e => nomatch e
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun e => nomatch e
+  braucht := fun _ => []
+  gbraucht := fun e => (nomatch e)
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ =>
+    { params := []
+      erg := none
+      gruende := 0
+      haelt := []
+      schreibt := fun _ => true
+      gschreibt := fun e => nomatch e
+      konsumiert := []
+      produziert := [] }
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Unit
+  aparams := fun _ => []
+  aerg := fun _ => none
+  aschreibt := fun _ _ => true
+  agschreibt := fun _ e => nomatch e
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- Contract: writes the table. -/
+def V2 : Vertrag D2 :=
+  { schreibt := fun _ => true
+    gschreibt := fun e => nomatch e
+    erg := none
+    gruende := 0
+    haelt := []
+    produziert := [] }
+
+/-- Flipped world: the slot negated, everything else kept. -/
+def Wflip2 (σ : World D2) : World D2 :=
+  { slots := fun _ _ _ => !(σ.slots () 0 ()), globs := fun g => (nomatch g),
+    spur := σ.spur }
+
+/-- Oracle: flips the slot, keeps the trace (as `GutO` demands). -/
+def O2 : Orakel D2 where
+  wirkt := fun _ σ _ => (Wflip2 σ, 0)
+  regLies := fun r _ => nomatch r
+  regSchreib := fun r _ => nomatch r
+  sichtbar := fun g _ => nomatch g
+
+/-- The oracle is good: it writes only the declared table and keeps trace. -/
+theorem O2gut : GutO (D := D2) O2 := by
+  intro a σ ρ
+  cases a with
+  | unit =>
+      have hW : O2.wirkt () σ ρ = (Wflip2 σ, 0) := rfl
+      rw [hW]
+      refine ⟨?_, by rfl, by rfl⟩
+      show (∀ (t : D2.Tab), D2.aschreibt () t = false → ∀ (k : Int) (f : D2.Feld t),
+          (Wflip2 σ, 0).fst.slots t k f = σ.slots t k f) ∧
+        (∀ (g : D2.Glob), D2.agschreibt () g = false →
+          (Wflip2 σ, 0).fst.globs g = σ.globs g)
+      exact ⟨fun t ht => absurd ht (by simp [D2]), fun g _ => nomatch g⟩
+
+/-- The axiom call statement (answer type `none`, so it is a `Stmt`). -/
+def axCall : Stmt D2 V2 false [] [] [] :=
+  .axiomCall (a := ()) (Args.nil (D := D2) (Γ := []) (Λ := [])) rfl
+    (fun t _ => rfl) (fun g => nomatch g)
+
+/-- Firing the axiom call flips the slot. -/
+theorem axFeuert (σ : World D2) (ρ : Env D2 [])
+    (σ' : World D2)
+    (hstep : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt = some σ') :
+    σ'.slots () 0 () = !(σ.slots () 0 ()) := by
+  have hcomp : (execStmt (O := O2) 0 keinRuf axCall σ ρ).welt =
+      (match axiomAntwort (O := O2) () (σ.lese [] [])
+        (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
+          (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) with
+      | (σ₂, Option.some _) => some σ₂
+      | (_, Option.none) => none) := rfl
+  rw [hcomp] at hstep
+  -- The oracle answers `0` against answer type `none`: `some ()`.
+  have hAns : axiomAntwort (O := O2) () (σ.lese [] [])
+      (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
+        (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) =
+      (Wflip2 (σ.lese [] []), Option.some ()) := by
+    rfl
+  rw [hAns] at hstep
+  simp only [Option.some.injEq] at hstep
+  subst hstep
+  -- `Wflip2` flips the slot; `lese` keeps slots by `rfl`.
+  show (Wflip2 (σ.lese [] [])).slots () 0 () = _
+  have hlese : (σ.lese [] []).slots () 0 () = σ.slots () 0 () := rfl
+  show (!(σ.lese [] []).slots () 0 ()) = _
+  rw [hlese]
+
+end AxGegen
+
 end Gabbro.Grammatik.EZD
