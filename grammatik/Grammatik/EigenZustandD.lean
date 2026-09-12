@@ -11,6 +11,7 @@
 import Grammatik.Maschine
 import Grammatik.Satz
 import Grammatik.BlattGegenbeispiel
+import Grammatik.ReferenzB
 
 namespace Gabbro.Grammatik.EZD
 
@@ -2006,6 +2007,30 @@ theorem axiomCall_ohne_ereignis_falsch :
   exact absurd hcon2 (by intro h; cases h)
 
 end AxGegen
+
+
+/-! ## 15. Reference-fixture witnesses (merge-gate inhabitation).
+
+  The merge gate owes `pcSchritt_fremd_fest_zeuge` (the `hNoAx` premise
+  quantifies over `Vertrag`/`Stmt`) and a witness for
+  `eigenzustand_nur_eigene_schritteD_rep`. Both are built on the reference
+  fixture (`ReferenzB`): `refD` declares no axiom, so `hNoAx` is provable
+  (vacuous over the empty `Ax`); the witnessed foreign step is thread `0`
+  firing `leave` (memory-preserving, carrier-free atom) from a machine whose
+  thread-0 trace is empty. Non-degeneracy comes from the fixture itself:
+  `refEin` writes `konto`, and `refB_pc_erreicht`/`refB_pc_schreibt` exhibit
+  a reached run whose write moves memory. -/
+
+/-- Constant carrier-free program text for the witnessed foreign step. -/
+def ezdProg : PCProg refD := fun _ => [PCAtom.leaf [] []]
+
+/-- Every atom of `ezdProg` is carrier-free. -/
+theorem ezdProg_nurG (h : Faden) (a : PCAtom refD) (ha : a ∈ ezdProg h) :
+    (Sum.inl () : refD.Tab ⊕ refD.Glob) ∉ PCAtom.carriers a := by
+  have e : ezdProg h = [PCAtom.leaf (D := refD) [] []] := rfl
+  rw [e, List.mem_singleton] at ha
+  subst ha
+  simp [PCAtom.carriers]
 
 
 /-! CUTS: what is not proved.
