@@ -20,12 +20,15 @@ Three probe kinds, one verdict scale:
                           are deleted, matching `intro` binders dropped,
                           body uses left to fail.
 
-Verdicts:
+ Verdicts:
 
-  DERIVED    a downstream proof fails that is not the forwarding theorem
-             itself (hyp: A shows prem necessary, B shows the rest
-             necessary too -- joint derivation; field/gate: a proved
-             declaration breaks on the stripped content).
+   DERIVED    per theorem: a downstream proof fails that is not the
+              forwarding theorem itself (hyp: A shows prem necessary, B
+              shows the rest necessary too -- joint derivation);
+              per conjunct: the per-theorem verdict alone goes blind
+              when A and B both hold on other conjuncts (see the
+              blind-spot speech pair BLIND-WEAK/BLIND-STRONG) -- field/gate:
+              a proved declaration breaks on the stripped content.
   FORWARDED  only the theorem restating the premise breaks (hyp: A shows
              prem necessary, B builds with prem alone -- prem carries the
              whole conclusion; field: only the structure and constructor
@@ -1589,6 +1592,23 @@ theorem mid (h : 0 < 1) (k : 1 < 2) : 0 < 2 ∧ 0 < 1 := by
   exact ⟨Nat.lt_trans h k, h⟩
 """
 
+SPEECH_BLIND_WEAK = """-- Speech fixture BLIND-WEAK: per-conjunct blind spot, weak side.
+-- Conjunct c3 follows from h alone by a representation change; c1 needs
+-- h and k jointly, c2 needs k only. Per-theorem reads DERIVED (A and B
+-- both red), per-conjunct need reads [NEEDS, FREE, NEEDS] and strength
+-- at c3 reads ALONE.
+theorem mid (h : 0 < 1) (k : 1 < 2) : 0 < 2 ∧ 1 < 2 ∧ 0 < 1 := by
+  exact ⟨Nat.lt_trans h k, k, h⟩
+"""
+
+SPEECH_BLIND_STRONG = """-- Speech fixture BLIND-STRONG: per-conjunct blind spot, strong side.
+-- Same shape as BLIND-WEAK except c3 needs h and k jointly. Per-theorem
+-- still reads DERIVED, per-conjunct need still [NEEDS, FREE, NEEDS],
+-- but strength at c3 reads JOINT.
+theorem mid (h : 0 < 1) (k : 1 < 2) : 0 < 2 ∧ 1 < 2 ∧ 0 < 2 := by
+  exact ⟨Nat.lt_trans h k, k, Nat.lt_trans h k⟩
+"""
+
 SPEECH_DERIVED = """-- Speech fixture DERIVED: joint-use pattern quoted from
 -- `ungeteilt_aus_lauf` (Geteilt.lean): the stripped premise is one
 -- ingredient among several in the proof term.
@@ -1725,6 +1745,51 @@ def speech_probe():
               "(want need %-5s strength %-5s) -- %s" %
               (tag, got_need, got_str, want_need, want,
                "PASS" if ok else "FAIL"))
+        results.append(ok)
+    # Blind-spot pair: per-theorem says DERIVED for both, per-conjunct
+    # need agrees [NEEDS, FREE, NEEDS] for both -- only strength at c3
+    # tells them apart (ALONE vs JOINT). Both directions, hermetic.
+    blind_cases = [("blind-weak", SPEECH_BLIND_WEAK, "mid", "h",
+                    ["NEEDS", "FREE", "NEEDS"], "ALONE", "DERIVED"),
+                   ("blind-strong", SPEECH_BLIND_STRONG, "mid", "h",
+                    ["NEEDS", "FREE", "NEEDS"], "JOINT", "DERIVED")]
+    for tag, src, thm, prem, want_need, want_str, want_thm in blind_cases:
+        if not speech_conjunct_basis(tag, src):
+            return False
+        builds_a, log_a = check_single_variant(src, thm, prem)
+        if builds_a is None:
+            print("  speech %s: variant A error: %s" % (tag, log_a))
+            return False
+        if builds_a:
+            got_thm, note = "UNUSED", "variant A builds"
+        else:
+            builds_b, log_b = check_single_variant(src, thm, prem,
+                                                   weaken_all_but=True)
+            if builds_b is None:
+                print("  speech %s: variant B error: %s" % (tag, log_b))
+                return False
+            got_thm = "FORWARDED" if builds_b else "DERIVED"
+            note = "A red, B %s" % ("green" if builds_b else "red")
+        need = []
+        for idx in (1, 2, 3):
+            got_w, log = check_conjunct_variant(src, thm, prem, idx)
+            if got_w is None:
+                print("  speech %s: need variant error at c%d: %s" %
+                      (tag, idx, log[-400:]))
+                return False
+            need.append(got_w)
+        got_str, log = check_conjunct_variant(src, thm, prem, 3,
+                                              weaken_rest=True)
+        if got_str is None:
+            print("  speech %s: strength variant error: %s" %
+                  (tag, log[-400:]))
+            return False
+        ok = (got_thm == want_thm and need == want_need
+              and got_str == want_str)
+        print("  speech %-9s reads thm %-9s need %-21s strength %-5s "
+              "(want thm %-9s need %-21s strength %-5s) -- %s (%s)" %
+              (tag, got_thm, need, got_str, want_thm, want_need, want_str,
+               "PASS" if ok else "FAIL", note))
         results.append(ok)
     return all(results)
 
