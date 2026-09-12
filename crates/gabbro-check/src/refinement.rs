@@ -419,6 +419,15 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
                 | BinOp::SchiebRechts
                 | BinOp::Geteilt
                 | BinOp::Rest => return Err(Reason::NoTerm),
+                // PLAN-BITS section 4 (lane 88): the overflow operators are
+                // refused for the same reason as the bit operations -- this
+                // theory imports `Main`, and neither a modulo-2^N wrap nor a
+                // clamp has a term in it.
+                BinOp::PlusWrap
+                | BinOp::MinusWrap
+                | BinOp::MalWrap
+                | BinOp::SchiebLinksWrap
+                | BinOp::PlusSat => return Err(Reason::NoTerm),
             };
             Ok(format!(
                 "({}) {z} ({})",

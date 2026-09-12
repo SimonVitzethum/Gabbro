@@ -2367,6 +2367,22 @@ impl<'a> Pruefer<'a> {
             }
         }
 
+        // **PLAN-BITS section 4 (lane 88): the overflow operators never take
+        // the width-overflow path below.** Wrapping is defined modulo 2^N on an
+        // exact unsigned range and saturating clamps into the shared operand
+        // range by construction -- there is no `M104` for either of them, only
+        // the exactness refusals `M153`/`M154` inside.
+        if matches!(
+            op,
+            BinOp::PlusWrap
+                | BinOp::MinusWrap
+                | BinOp::MalWrap
+                | BinOp::SchiebLinksWrap
+                | BinOp::PlusSat
+        ) {
+            return self.wrapping_or_saturating(op, &ba, &bb, span);
+        }
+
         let r = match op {
             BinOp::Plus => typen::addiere(&ba, &bb),
             BinOp::Minus => typen::subtrahiere(&ba, &bb),
@@ -4550,6 +4566,196 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **PLAN-BITS section 4 (lane 88): the overflow operators.**
+    ///
+    /// Wrapping (`+%`, `-%`, `*%`, `<<%`) lives only on an exact unsigned range
+    /// `0 .. 2^N - 1` and answers that range; saturating (`+|`) lives on one
+    /// shared integer range and answers it, clamped. Neither ever takes the
+    /// `M104` width path -- a wrap is defined modulo 2^N and a clamp fits its
+    /// interval by construction. What fails here is exactness (`M153`) or
+    /// sharedness (`M154`), never width.
+    ///
+    /// A literal operand has no range of its own: it takes the other's exact
+    /// range when its value lies in it (the `M153`/`M154` sentences say so).
+    /// Two literals wrap in their common width and saturate to their exact sum.
+    fn wrapping_or_saturating(
+        &mut self,
+        op: BinOp,
+        ba: &IntBereich,
+        bb: &IntBereich,
+        span: Span,
+    ) -> Typ {
+        if op == BinOp::PlusSat {
+            return self.saturating(ba, bb, span);
+        }
+        if op == BinOp::SchiebLinksWrap {
+            return self.wrapping_shift(ba, bb, span);
+        }
+        let Some((width, signed)) = typen::gemeinsame_form(ba, bb) else {
+            return Typ::Unbekannt;
+        };
+        if signed {
+            self.wrapping_refused(span, ba, bb, op_zeichen(op));
+            return Typ::Unbekannt;
+        }
+        let na = if ba.literal {
+            None
+        } else {
+            typen::exact_wrap_n(ba)
+        };
+        let nb = if bb.literal {
+            None
+        } else {
+            typen::exact_wrap_n(bb)
+        };
+        let n = match (na, nb) {
+            (Some(x), Some(y)) if x == y => x,
+            (Some(x), None)
+                if bb.literal && bb.min >= 0 && bb.max <= ((1i128 << x) - 1) =>
+            {
+                x
+            }
+            (None, Some(y))
+                if ba.literal && ba.min >= 0 && ba.max <= ((1i128 << y) - 1) =>
+            {
+                y
+            }
+            // Two literals: no declared range anywhere, so the common width is
+            // the modulus -- both values have to lie in it.
+            (None, None)
+                if ba.literal
+                    && bb.literal
+                    && ba.min >= 0
+                    && bb.min >= 0
+                    && ba.max <= ((1i128 << width) - 1)
+                    && bb.max <= ((1i128 << width) - 1) =>
+            {
+                width as u32
+            }
+            _ => {
+                self.wrapping_refused(span, ba, bb, op_zeichen(op));
+                return Typ::Unbekannt;
+            }
+        };
+        if n == 0 || n as u8 > width {
+            self.wrapping_refused(span, ba, bb, op_zeichen(op));
+            return Typ::Unbekannt;
+        }
+        Typ::Ganzzahl(IntBereich::genau(width, false, 0, (1i128 << n) - 1))
+    }
+
+    /// Wrapping dynamic left shift: the value side is exact unsigned, the amount
+    /// side only has to lie below the bit count -- like `schiebe_links`, but
+    /// against `N` instead of the storage width (PLAN-BITS section 2: the amount
+    /// is in the type; `Zahl.shlW` takes it as `Zahl 0 w`).
+    fn wrapping_shift(&mut self, ba: &IntBereich, bb: &IntBereich, span: Span) -> Typ {
+        let n = if ba.literal {
+            let (width, signed) = (ba.breite, ba.vorzeichen);
+            if signed || ba.min < 0 || ba.max > ((1i128 << width) - 1) {
+                self.wrapping_refused(span, ba, bb, op_zeichen(BinOp::SchiebLinksWrap));
+                return Typ::Unbekannt;
+            }
+            width as u32
+        } else {
+            match typen::exact_wrap_n(ba) {
+                Some(n) if !ba.vorzeichen && n as u8 <= ba.breite => n,
+                _ => {
+                    self.wrapping_refused(span, ba, bb, op_zeichen(BinOp::SchiebLinksWrap));
+                    return Typ::Unbekannt;
+                }
+            }
+        };
+        if bb.min < 0 || bb.max >= n as i128 {
+            // The amount leaves `0 .. N-1`: the same width refusal a plain shift
+            // gets from `schiebe_links`, at the operation and not at the use.
+            self.ueberlauf_ausdruck(span, ba, bb, op_zeichen(BinOp::SchiebLinksWrap));
+        }
+        Typ::Ganzzahl(IntBereich::genau(ba.breite, false, 0, (1i128 << n) - 1))
+    }
+
+    /// Saturating addition: one shared integer range in, the same range clamped
+    /// out. Signed or unsigned, any interval -- the clamp is what makes it total.
+    fn saturating(&mut self, ba: &IntBereich, bb: &IntBereich, span: Span) -> Typ {
+        let Some((width, signed)) = typen::gemeinsame_form(ba, bb) else {
+            return Typ::Unbekannt;
+        };
+        let (lo, hi) = match (ba.literal, bb.literal) {
+            (true, true) => match ba.min.checked_add(bb.min) {
+                Some(s) if ba.min == ba.max && bb.min == bb.max => (s, s),
+                _ => return Typ::Unbekannt,
+            },
+            (true, false) => (bb.min, bb.max),
+            (false, true) => (ba.min, ba.max),
+            (false, false) => {
+                if ba.min != bb.min || ba.max != bb.max {
+                    self.saturation_refused(span, ba, bb);
+                    return Typ::Unbekannt;
+                }
+                (ba.min, ba.max)
+            }
+        };
+        let out = IntBereich::genau(width, signed, lo, hi);
+        if !out.passt_in_die_breite() {
+            // Only the two-literals corner reaches here with a range of its own
+            // making: a declared range that already leaves its width falls at
+            // its declaration, long before this operation reads it.
+            self.ueberlauf_ausdruck(span, ba, bb, op_zeichen(BinOp::PlusSat));
+        }
+        Typ::Ganzzahl(out)
+    }
+
+    /// **`M153` -- wrapping needs a power-of-two range.**
+    fn wrapping_refused(&mut self, span: Span, a: &IntBereich, b: &IntBereich, zeichen: &str) {
+        let mut absage = Absage::fehler(
+            "M153",
+            span,
+            format!(
+                "wrapping `{zeichen}` needs both sides on an exact unsigned range \
+                 `0 .. 2^N - 1`, found `{}` and `{}`",
+                a.text(),
+                b.text()
+            ),
+        );
+        if a.vorzeichen || b.vorzeichen {
+            absage = absage.mit_notiz(
+                "wrapping is unsigned-only: signed overflow is undefined in C, \
+                 and the conversion back from unsigned is implementation-defined \
+                 (PLAN-BITS.md section 5b)",
+            );
+        } else {
+            absage = absage.mit_notiz(
+                "on a range like `0 .. 5` wrapping is ambiguous (mod 6 costs a \
+                 division per operation), so it is not derivable there \
+                 (PLAN-BITS.md section 4)",
+            );
+        }
+        absage = absage.mit_notiz(
+            "saturating `+|` clamps into the shared range instead and works on \
+             every integer range",
+        );
+        self.absagen.schiebe(absage);
+    }
+
+    /// **`M154` -- saturating needs one shared range.**
+    fn saturation_refused(&mut self, span: Span, a: &IntBereich, b: &IntBereich) {
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M154",
+                span,
+                format!(
+                    "saturating `+|` needs one shared integer range to clamp into, \
+                     found `{}` and `{}`",
+                    a.text(),
+                    b.text()
+                ),
+            )
+            .mit_notiz(
+                "narrow both sides to one range first (`narrow … to … else { … }`); \
+                 a literal takes the other's range",
+            ),
+        );
+    }
+
     fn ueberlauf_ausdruck(&mut self, span: Span, a: &IntBereich, b: &IntBereich, zeichen: &str) {
         self.absagen.schiebe(
             Absage::fehler(
@@ -5831,6 +6037,14 @@ fn op_zeichen(op: BinOp) -> &'static str {
         BinOp::Mal => "*",
         BinOp::Geteilt => "/",
         BinOp::Rest => "%",
+        // PLAN-BITS section 4 (lane 88): the overflow spellings, quoted the way
+        // the source wrote them -- held to the same answer as the other two
+        // tables by `op_zeichen_sagt_dasselbe_wie_fremdverengung` below.
+        BinOp::PlusWrap => "+%",
+        BinOp::MinusWrap => "-%",
+        BinOp::MalWrap => "*%",
+        BinOp::SchiebLinksWrap => "<<%",
+        BinOp::PlusSat => "+|",
         BinOp::SchiebLinks => "<<",
         BinOp::SchiebRechts => ">>",
         BinOp::BitUnd => "&",
@@ -6337,6 +6551,11 @@ mod operatortafel {
             BinOp::Mal,
             BinOp::Geteilt,
             BinOp::Rest,
+            BinOp::PlusWrap,
+            BinOp::MinusWrap,
+            BinOp::MalWrap,
+            BinOp::SchiebLinksWrap,
+            BinOp::PlusSat,
         ];
         for op in alle {
             assert_eq!(op_zeichen(op), crate::fremdverengung::zeichen(op), "{op:?}");

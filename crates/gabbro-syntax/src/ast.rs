@@ -630,6 +630,16 @@ pub enum BinOp {
     Mal,
     Geteilt,
     Rest,
+    /// **PLAN-BITS section 4 (lane 88): the overflow operators.** Each rides at
+    /// the precedence of its base operator (`parse.rs`: `addexpr` for the `+`-
+    /// family, `mulexpr` for `*%`, `bitexpr` for `<<%`). `PlusWrap`/`MinusWrap`/
+    /// `MalWrap`/`SchiebLinksWrap` wrap modulo 2^N on an exact unsigned range
+    /// `0 .. 2^N-1`; `PlusSat` clamps a sum into the shared operand range.
+    PlusWrap,
+    MinusWrap,
+    MalWrap,
+    SchiebLinksWrap,
+    PlusSat,
 }
 
 impl BinOp {

@@ -1389,6 +1389,31 @@ pub const M1: &[Satz] = &[
                      messung/VERFEINERUNG.md",
     },
     Satz {
+        name: "m1.umlauf_saettigung",
+        kennungen: &["M153", "M154"],
+        aussage: "The overflow operators check exactness at the operation: wrapping \
+                  (`+%`, `-%`, `*%`, `<<%`) lives only on an exact unsigned range \
+                  `0 .. 2^N-1` and answers it (`M153` elsewhere, naming `+|`), \
+                  saturating (`+|`) lives on one shared integer range and answers \
+                  it clamped (`M154` on two ranges). A literal operand takes the \
+                  other's range when its value lies in it; two literals wrap in \
+                  their common width. Neither ever takes the `M104` width path.",
+        vorbehalt: "**Exactness is read off the operand ranges with their V1/V2 \
+                    facts, not off the declarations**: a narrowed `0..3` is not \
+                    exact and still falls. Mixed widths answer `Unbekannt`, like \
+                    plain `+` -- no implicit conversion, and no refusal either. \
+                    The shift amount is bounded, never exact. Says nothing about \
+                    whether the lowered C computes the wrap -- that is the \
+                    emitter's `umlauf_c`/`saettigung_c`, measured separately.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "crates/gabbro-check/tests/ueberlauf.rs: exact-shape \
+                      acceptance (u32, u13, literals, signed saturation), \
+                      `M153`/`M154`/`M104` refusals by code, emitted mask and \
+                      helper-call shapes, compiled-and-run values.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`umlauf_oder_saettigung`); \
+                     PLAN-BITS.md section 4",
+    },
+    Satz {
         name: "m1.vorzeichenwechsel",
         kennungen: &["M150"],
         aussage: "Unary minus checks overflow at the operation (`M150`):

@@ -1771,6 +1771,8 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::Dach) => BinOp::BitXor,
                 Art::Zeichen(Z::SchiebLinks) => BinOp::SchiebLinks,
                 Art::Zeichen(Z::SchiebRechts) => BinOp::SchiebRechts,
+                // PLAN-BITS section 4 (lane 88): `<<%` rides with the shifts.
+                Art::Zeichen(Z::SchiebLinksProzent) => BinOp::SchiebLinksWrap,
                 _ => break,
             };
             self.pos += 1;
@@ -1789,6 +1791,11 @@ impl<'a> Parser<'a> {
             let op = match self.blick().art {
                 Art::Zeichen(Z::Plus) => BinOp::Plus,
                 Art::Zeichen(Z::Minus) => BinOp::Minus,
+                // PLAN-BITS section 4 (lane 88): `+%`, `-%` and `+|` ride
+                // with `+`/`-` (same level, same left associativity).
+                Art::Zeichen(Z::PlusProzent) => BinOp::PlusWrap,
+                Art::Zeichen(Z::MinusProzent) => BinOp::MinusWrap,
+                Art::Zeichen(Z::PlusStrich) => BinOp::PlusSat,
                 _ => break,
             };
             self.pos += 1;
@@ -1808,6 +1815,8 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::Stern) => BinOp::Mal,
                 Art::Zeichen(Z::Schraeg) => BinOp::Geteilt,
                 Art::Zeichen(Z::Prozent) => BinOp::Rest,
+                // PLAN-BITS section 4 (lane 88): `*%` rides with `*`.
+                Art::Zeichen(Z::SternProzent) => BinOp::MalWrap,
                 _ => break,
             };
             self.pos += 1;
