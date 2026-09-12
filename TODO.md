@@ -1327,7 +1327,7 @@ Heute **3203 Zeilenfortsetzungen** in den Quellen, **0 kleben**, **0 geplatzt**.
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      ~~163~~ ~~167~~ 169 EBNF-Regeln (2026-09-12, lanes 111+E2: `constwert`/`arraylit` und `syscalldecl` u. a. kamen dazu; +2 Terminale sind `library`/`payload`, §7.1) und ~~226~~ 228 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      ~~163~~ ~~167~~ 169 EBNF-Regeln (2026-09-12, lanes 111+E2: `constwert`/`arraylit` und `syscalldecl` u. a. kamen dazu; +2 Terminale sind `library`/`payload`, §7.1) und ~~226~~ 228 Terminale (2026-09-12) gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**

@@ -136,6 +136,20 @@ codes (the row stood at 94 while the register held 121), TODO's 304→319.
    but is new syntax with its own fragment questions; the literal keeps
    the first cut to one production.
 
+## Merge master-neu (reviewer request, 2026-09-12)
+
+Merged master (lanes 86, 87, 88, 91, 100-107) with conflicts in
+`Grammatik.lean` (union of all import lines), `README.md`, `TODO.md`,
+`DONE.md` (union prose, every count re-measured, never picked).
+No new enum variants on master (only `FnDecl.bibliothek/nutzlast`
+fields), so no match arms were owed in either direction; `./cargo-pruef`
+exit 0 first try (600 passed), `./lean-bau` 62 jobs green. Merged truth:
+78 examples, 590 poison, 335 diagnostics, 169 EBNF rules, 228 terminals,
+133 sentences (125/2/6/0) claiming 284, 55 unmapped, 1427+110 ceremony
+sites, blind spots 79/169/24/13 of 285, all 78 examples emitting and
+`cc -O2`-clean (both sides' 53/54 were stale). Guardians: saetze mark 55
+held, todo 3 pre-existing findings, probe CARRIES on the merged binary.
+
 ## CUTS (not proved / not built)
 
 - No theorem that the printed literal equals the evaluated table — trust
