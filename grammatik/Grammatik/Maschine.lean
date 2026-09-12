@@ -3064,3 +3064,77 @@ theorem kette_aus_maschinenlauf_blatt
 #print axioms Gabbro.Grammatik.kette_aus_maschinenlauf_blatt
 
 end Gabbro.Grammatik
+
+/-! ## 19. The single-thread discharge for Einfaedig runs (`hsingle_aus_einfaedig`)
+
+    The `hsingle` premises of §14 (`kette_aus_maschinenlauf_schritt`,
+    `_nimmt`, `_gibt`) and §18 (`kette_aus_maschinenlauf_blatt`) narrow
+    everything to single-thread runs: every run step is `f`'s. Inside those
+    proofs `hsingle` is consumed for exactly two duties:
+
+    - the ownership fields of `Gesittet M'.lauf` (`marke_eindeutig`, W4, and
+      `ungeteilt`, W5), via `hfaden` arithmetic;
+    - `BeschraenkteVerschraenkung Nb M'.lauf`, vacuously via the same
+      arithmetic.
+
+    What is proved (no `sorry`):
+
+    - `hsingle_aus_einfaedig`: the first duty discharged for multi-thread
+      runs. From reachability (`h`, which yields W1-W3 through the §11
+      projection theorems), the `Einfaedig` projection (`hEin`, W4 through
+      `marke_eindeutig_aus_einfaedig`, `Wettlauf.lean` §7), and the
+      declaration side (`hungeteilt`, W5, the exact shape `gen_gesittet`
+      takes), the run is `Gesittet` -- with no single-thread premise
+      anywhere. Read-only reuse of `gen_gesittet` (§11): one positional
+      application, no duplicated proof. Every premise is load-bearing: each
+      feeds `gen_gesittet` positionally, so deleting any premise breaks
+      elaboration. There is no `have _ :=` discard, no `sorry`/`admit`/
+      `axiom`, and no bare `Prop` slot.
+
+    Coverage (exactly): the `Gesittet` half of `hsingle`'s duties, for every
+    generated reachable run whose threads satisfy `Einfaedig` plus the
+    declaration side -- multi-thread Einfaedig runs included. The
+    `.marke_eindeutig` and `.ungeteilt` projections of the conclusion are
+    the literal shapes `hsingle` supplied at the §14/§18 use sites.
+
+    Remainder (booked, not hidden): `BeschraenkteVerschraenkung` does not
+    follow from `Einfaedig` plus the declaration side -- it constrains which
+    thread pairs may share a run (`Nb`), and under `hsingle` it held
+    vacuously only because no second thread had steps. Multi-thread use
+    sites keep it as an explicit `Nb` declaration premise (or keep
+    `hsingle`); the step theorems themselves are not restated here.
+    `hsingle_prog` (the program side, `Extraktion.lean` counter routing)
+    is untouched, as are `SerialLink` witnesses, globals, and
+    multi-carrier conflicts (as before).
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **The single-thread narrowing discharged for Einfaedig runs.** A
+    generated reachable run whose threads satisfy `Einfaedig` (plus the
+    declaration side) is `Gesittet`: W1-W3 are generated, W4 travels as the
+    `Einfaedig` projection, W5 as the declaration side. This is the
+    `Gesittet` half of what `hsingle` supplies at the §14/§18 use sites,
+    now without any single-thread premise, so multi-thread Einfaedig runs
+    are covered. Every premise is load-bearing: each is passed whole to
+    `gen_gesittet`. -/
+theorem hsingle_aus_einfaedig
+    (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
+    (sp : Speicher D) (M : GenMaschine D)
+    (h : GenErreichbar P O passes (GenStart sp) M)
+    (code : D.Marke → Nat) (hEin : Marken.Einfaedig (laufProj code M.lauf))
+    (hungeteilt : ∀ (i j : Nat) (f g : Faden) (o : D.Tab ⊕ D.Glob)
+      (ei ej : Ereignis D),
+      M.lauf[i]? = some (Schritt.mk f ei) → M.lauf[j]? = some (Schritt.mk g ej) →
+      ei.traeger = some o → ej.traeger = some o →
+      (match o with
+        | .inl t => D.geteilt t = false
+        | .inr x => D.ggeteilt x = false) → f = g) :
+    Gesittet M.lauf :=
+  gen_gesittet P O passes hO sp M h code hEin hungeteilt
+
+#print axioms Gabbro.Grammatik.hsingle_aus_einfaedig
+
+end Gabbro.Grammatik
