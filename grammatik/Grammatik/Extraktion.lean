@@ -656,8 +656,6 @@ def miniD : Deklaration where
   geteilt_bewacht := fun t h => by simp at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
-  geist := fun _ => false
-  ggeist := fun g => nomatch g
 
 /-- Die Probe-Ruempfe: je ein leeres `return` (keine Rufe -- die Kantenliste
     ist leer, und `kantenVoll` gilt per Fallunterscheidung). -/

@@ -1386,8 +1386,6 @@ def leer : Deklaration where
   geteilt_bewacht := fun t => t.elim
   invarianten_gehalten := fun _ i => i.elim
   ggeteilt_bewacht := fun g => g.elim
-  geist := fun t => t.elim
-  ggeist := fun g => g.elim
 
 def leereWelt : World leer := ⟨fun t => Empty.elim t, fun g => Empty.elim g, []⟩
 

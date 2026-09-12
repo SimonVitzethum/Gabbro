@@ -92,8 +92,6 @@ def qD : Deklaration where
   geteilt_bewacht := fun t => t.elim
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
-  geist := fun t => t.elim
-  ggeist := fun g => nomatch g
 
 /-- The function under test: the only inhabitant of `qD.Fn`. -/
 def qfn : qD.Fn := ()

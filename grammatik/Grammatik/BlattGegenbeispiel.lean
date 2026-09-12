@@ -88,8 +88,6 @@ def D1 : Deklaration where
   geteilt_bewacht := fun t h => by simp at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
-  geist := fun _ => false
-  ggeist := fun g => nomatch g
 
 /-- The contract of the only function: no parameters, no result. -/
 def V1 : Vertrag D1 :=

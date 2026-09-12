@@ -185,8 +185,8 @@ structure Deklaration where
       them like any carrier (so every theorem stays valid) and the emitter omits
       them. That the emitter may do so is rule `G001`: executable code reads no
       ghost -- `Geist.lean` says what that means. Default: none is ghost. -/
-  geist : Tab → Bool
-  ggeist : Glob → Bool
+  geist : Tab → Bool := fun _ => false
+  ggeist : Glob → Bool := fun _ => false
 
 attribute [instance] Deklaration.decTab Deklaration.decFeld Deklaration.decGlob
   Deklaration.decLock Deklaration.decMarke

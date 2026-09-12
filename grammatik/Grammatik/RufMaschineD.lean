@@ -444,8 +444,6 @@ def rufD : Deklaration where
   geteilt_bewacht := fun t h => by simp at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
-  geist := fun _ => false
-  ggeist := fun e => nomatch e
 
 
 /-- The witness function id. -/

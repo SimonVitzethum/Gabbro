@@ -672,8 +672,6 @@ def TestD : Deklaration where
   geteilt_bewacht := fun t h => by simp at h
   invarianten_gehalten := fun _ i => i.elim
   ggeteilt_bewacht := fun g h => by simp at h
-  geist := fun _ => false
-  ggeist := fun _ => false
 
 /-- Procedure contract: no result, holds nothing, produces nothing. -/
 def TestV : Vertrag TestD :=
