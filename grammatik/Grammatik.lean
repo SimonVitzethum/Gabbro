@@ -93,3 +93,4 @@ import Grammatik.RufMaschineG
 import Grammatik.CSLInvariante
 import Grammatik.WacheGlobal
 import Grammatik.StabilBewacht
+import Grammatik.DisziplinBedarf
