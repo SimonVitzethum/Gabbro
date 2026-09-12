@@ -542,6 +542,9 @@ pub enum ExprArt {
     /// admits one.
     FnWert(Pfad),
     Ruf(Ruf),
+    /// `@library#function ( args ) { region }` in binding position (lane E1):
+    /// `let x = @lib#fn(a) { region };`, refused by the checker with `N057`.
+    LibraryCall(LibraryCall),
     Klammer(Box<Expr>),
     Eingebaut(Box<Eingebaut>),
     /// `old(place)` -- expression, not predicate; only in `ensures`.
@@ -627,6 +630,16 @@ pub enum BinOp {
     Mal,
     Geteilt,
     Rest,
+    /// **PLAN-BITS section 4 (lane 88): the overflow operators.** Each rides at
+    /// the precedence of its base operator (`parse.rs`: `addexpr` for the `+`-
+    /// family, `mulexpr` for `*%`, `bitexpr` for `<<%`). `PlusWrap`/`MinusWrap`/
+    /// `MalWrap`/`SchiebLinksWrap` wrap modulo 2^N on an exact unsigned range
+    /// `0 .. 2^N-1`; `PlusSat` clamps a sum into the shared operand range.
+    PlusWrap,
+    MinusWrap,
+    MalWrap,
+    SchiebLinksWrap,
+    PlusSat,
 }
 
 impl BinOp {
@@ -799,6 +812,30 @@ impl Ruf {
     pub fn ist_verbundwert(&self) -> bool {
         !self.marken.is_empty()
     }
+}
+
+/// **`@library#function ( args ) { region }` -- a library call (lane E1).**
+///
+/// One struct for both positions (statement and binding) so that no pass can
+/// read one and miss the other. The reader captures the region as a
+/// brace-balanced token tree WITHOUT interpreting it; translating the region
+/// into a payload (`PLAN-ERWEITUNG.md` §0b) is not implemented yet, so the
+/// checker refuses every such call with `N057`.
+#[derive(Debug, Clone)]
+pub struct LibraryCall {
+    pub library: Ident,
+    pub function: Ident,
+    pub args: Vec<Expr>,
+    /// The raw tokens of the region, braces balanced by the reader.
+    pub region: Vec<RawToken>,
+    pub span: Span,
+}
+
+/// One uninterpreted token of a library call region: its text and its site.
+#[derive(Debug, Clone)]
+pub struct RawToken {
+    pub text: String,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -1205,6 +1242,9 @@ pub enum StmtArt {
     Exchange(Box<ExchangeStmt>),
     Return(Option<Expr>),
     Ruf(Ruf),
+    /// `@library#function ( args ) { region };` -- a run-time library call
+    /// (lane E1), refused by the checker with `N057` until lane E2 checks it.
+    LibraryCall(LibraryCall),
 }
 
 #[derive(Debug, Clone)]

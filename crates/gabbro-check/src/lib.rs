@@ -708,7 +708,8 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
         | StmtArt::Return(_)
-        | StmtArt::Ruf(_) => Vec::new(),
+        | StmtArt::Ruf(_)
+        | StmtArt::LibraryCall(_) => Vec::new(),
     }
 }
 
@@ -741,6 +742,10 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
             Schleife::Retry(_) | Schleife::Forever(_) => Vec::new(),
         },
         // `let x = f() else …` trägt seinen Ruf in der Quelle, nicht in einem `Expr`.
+        // A library call in statement position carries its arguments the same
+        // way: every pass that walks `eigene_ausdruecke` sees them, so a call
+        // inside them stays visible to the effect hull, the costs and the graph.
+        StmtArt::LibraryCall(r) => r.args.iter().collect(),
         StmtArt::LetSonst(_)
         | StmtArt::Ruf(_)
         | StmtArt::Bricht(_)
@@ -819,6 +824,7 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         | StmtArt::Wenn(_)
         | StmtArt::Match(_)
         | StmtArt::Ruf(_)
+        | StmtArt::LibraryCall(_)
         | StmtArt::Bricht(_)
         | StmtArt::Narrow(_)
         | StmtArt::Sperrt(_)
@@ -1057,6 +1063,9 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         // **Ein Ort trägt Ausdrücke** — in jedem `[…]`. Das war die eine vergessene Kante.
         ExprArt::Ort(o) | ExprArt::Alt(o) => aus.extend(ausdruecke_im_ort(o)),
         ExprArt::Ruf(r) => aus.extend(r.argumente.iter()),
+        // **Lane E1:** the arguments of a library call are evaluated like any
+        // call's; the region is raw tokens, not expressions, and stays out.
+        ExprArt::LibraryCall(r) => aus.extend(r.args.iter()),
         // **«SG-24»: a count carries its predicate** -- the expressions the predicate
         // reads are read here too, or `effects { pure }` would cover a `count` over
         // foreign writes (same class as the `Folgt`/`Quantor` hole of 2026-08-20).
@@ -1159,6 +1168,8 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             // gezaehlt, die es gar nicht gibt.
             | ExprArt::Grund { .. }
             | ExprArt::Ruf(_)
+            // **Lane E1:** a library call is itself no place.
+            | ExprArt::LibraryCall(_)
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
             | ExprArt::Binaer(_, _, _)
@@ -1252,6 +1263,9 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         | StmtArt::Zuweisung(_)
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
+        // **Lane E1:** a library call returns to its caller -- until lane E2
+        // checks the call there is no callee whose divergence could be read.
+        | StmtArt::LibraryCall(_)
         | StmtArt::Exchange(_) => false,
     }
 }

@@ -1122,6 +1122,16 @@ impl Umgebung {
                     BinOp::GroesserGleich => i128::from(x >= y),
                     BinOp::Und => i128::from(x != 0 && y != 0),
                     BinOp::Oder => i128::from(x != 0 || y != 0),
+                    // PLAN-BITS section 4 (lane 88): the overflow operators are
+                    // not constant-folded here. The modulus of a wrap and the
+                    // interval of a clamp live in the CHECKER's ranges, not in
+                    // the two values -- folding `(a + b) mod 2^N` without `N`
+                    // would be a guess, and this function does not guess.
+                    BinOp::PlusWrap
+                    | BinOp::MinusWrap
+                    | BinOp::MalWrap
+                    | BinOp::SchiebLinksWrap
+                    | BinOp::PlusSat => return None,
                 })
             }
             // **Ein `const fn` wird HIER gerechnet, und nur hier.**

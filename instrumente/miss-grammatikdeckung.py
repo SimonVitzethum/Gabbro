@@ -322,11 +322,21 @@ probe("zuweisung_oder_ruf.publishes", "rumpf", "        r = r;", NICHT)
 # -- expressions -------------------------------------------------------------------------
 for _k, _e in (("+", "a + b"), ("-", "a - b")):
     probe(f"addexpr.{_k}", "ausdruck", "a", _e)
+# PLAN-BITS section 4 (lane 88): the overflow operators ride at the precedence
+# of their base operator. On the `ausdruck` host neither operand has an exact
+# unsigned range, so the wrapping variants score REFUSES (M153) and the
+# saturating one REFUSES (M154) -- both are carried verdicts: the checker has
+# a sentence about the form. The accept direction is pinned by
+# `crates/gabbro-check/tests/ueberlauf.rs`.
+for _k, _e in (("+%", "a +% b"), ("-%", "a -% b"), ("+|", "a +| b")):
+    probe(f"addexpr.{_k}", "ausdruck", "a", _e)
 for _k, _e in (("*", "a * b"), ("/", "a / b"), ("%", "a % b")):
     probe(f"mulexpr.{_k}", "ausdruck", "a", _e)
+probe("mulexpr.*%", "ausdruck", "a", "a *% b")
 for _k, _e in (("&", "a & b"), ("|", "a | b"), ("^", "a ^ b"),
                ("<<", "a << 1"), (">>", "a >> 1")):
     probe(f"bitexpr.{_k}", "ausdruck", "a", _e)
+probe("bitexpr.<<%", "ausdruck", "a", "a <<% b")
 for _k, _e in (("!", "!(a == b)"), ("-", "0 - a"), ("~", "~a")):
     probe(f"unary.{_k}", "ausdruck", "a", _e)
 probe("orexpr.||", "praedikat", "", " || true")

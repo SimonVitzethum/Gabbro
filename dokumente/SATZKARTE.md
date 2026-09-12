@@ -1,4 +1,170 @@
-# SATZKARTE-A: theorem map for `ziel_nutzer_last_aus_pc_Q`
+# SATZKARTE-C: goal-family premise map, re-measured 2026-09-12 (lane 97)
+
+Replaces the class column of SATZKARTE-A (§2) with the four binding classes:
+(a) USER obligation, (b) HARDWARE assumption, (c) DISCHARGED by a merged
+theorem (named), (d) STILL OPEN language duty. Covers every premise of every
+theorem in the goal family (`grammatik/Grammatik/Ziel.lean`: `ziel_nutzer_last`,
+`ziel_seqLogic_aus_spec`, `ziel_seqLogic_aus_spec_invariantForm`,
+`ziel_nutzer_last_aus_disziplin`, `ziel_nutzer_last_aus_maschine`,
+`ziel_nutzer_last_aus_pc`, `ziel_nutzer_last_aus_pc_stabil`,
+`ziel_nutzer_last_aus_pc_Q`) and of `csl_ressourceninvariante`
+(`CSLInvariante.lean:305`), `EZD.eigenzustand_nur_eigene_schritteD_rep`
+(`EigenZustandD.lean:1368`), `rufG_treu` (`RufMaschineG.lean:1198`).
+All claims verified by reading the Lean sources cited as `file:line`.
+Line numbers refer to the working tree on branch `muse/97`.
+
+Prior maps are kept below unchanged: §§1-5 (draft A, lane 16) and §6
+(wave-1 verdicts). §7 is the new classification table, §8 the next-lane
+proposals for each (d) item, §9 the `#print axioms` record, §10 the
+distance to the goal.
+
+## 7. Re-measured premise table (2026-09-12)
+
+One row per premise of the flagship `ziel_nutzer_last_aus_pc_Q`
+(`Ziel.lean:2330-2399`); the paragraph after the table books how the
+seven older family members differ. "Discharged" names the exact merged
+theorem that proves (or per-run constructs) the premise.
+
+| Name | One-sentence meaning | Class | Discharging theorem or next lane |
+|---|---|---|---|
+| `hO : GutO O` | The oracle respects every axiom frame and never changes held locks or the trace (`Satz.lean:794`). | (b) HARDWARE, per-axiom instance (c) | `syscall_paarung` (`SyscallPaarung.lean:74`) discharges the per-syscall instance (`PaarGut`) from the kernel contract; `refO_gut` (`ReferenzB.lean:316`) is the fixture instance; event-emitting oracles stay (d) → D8 (lane 80 expected) |
+| `h : PCReach …` | The machine is reachable by program-counter steps of the computed thread program. | (c) constructed per run | one-step lifters `pcSchritt_blatt_progAus_ohne_axiomCall` (`Ziel.lean:929`), `pcSchritt_blatt_progAus_axiomCall` (`Ziel.lean:1129`), `pcReach_blatt_progAus_axiomCall` (`Ziel.lean:1188`); per-step atom identity stays (d) → D1 |
+| `hMSep : PCMarkSep …` | No mark code named by one thread's text is named by another's. | (d) checker text-check duty | → D2 (same-function threads still excluded, §5 B8) |
+| `hCSep : PCUnsharedSep …` | Any carrier reached from two threads' texts is declared shared. | (d) checker text-check duty | → D2 |
+| `hAbD` | Every carrier invariant reads only its witnessed footprint. | (a) USER | per-invariant obligation, none needed |
+| `hFrameTD` / `hFrameGD` | Each footprint is a singleton frame. | (a) USER | per-invariant shape proof, none needed |
+| `hGuardEx` | Every carrier has a guard lock in its watch list. | (d) STILL OPEN | → D3 (narrow to written shared carriers) |
+| `hEntry` | Every carrier invariant holds at the chain head. | (a) USER | caller/sequential side, none needed |
+| `hReturn` | Every writing chain step re-establishes every carrier invariant under the guard. | (a) USER, fragment (c) | `csl_ressourceninvariante` (`CSLInvariante.lean:305`) covers the quiescent (lock-free) reading; per-step restoration stays user-side |
+| `hWatch` | Every writing chain step holds the guard lock. | (c) tables / (d) globals | tables via `wache_aus_schuld` (`InterferenzAllgemein.lean:1481`); globals → D6 |
+| `hDeck : GeteiltGedeckt Nb J` | Any carrier written by two threads is shared with a common guard lock. | (a) USER discipline, fragment (c) | `kette_zwei_aus_lauf` (`KetteMehrfadenC.lean:766`) takes it as premise for the lock-only two-thread fragment; N-thread coverage → D4 |
+| `hReqTAll` / `hReqGAll` / `hEnsTAll` / `hEnsGAll` | Every carrier read by `requires`/`ensures` lies in the function's write signature. | (d) checker footprint duty, folded (c) | folded into `hAb` by `haengtAb_vertrag_gesamt` (`Extraktion.lean:1568`); establishing the containment → D7 |
+| `hForm : InvariantForm …` | Per thread, the contract conjunction coincides with some carrier invariant. | (a) USER | exhibit one carrier per thread; consumed by `interferenceFree_of_invariantForm` (`InterferenzAllgemein.lean:1213`) |
+| `htr : PCSpur …` | The derivation fires exactly the thread sequence `tr`. | (c) DISCHARGED | `pcSpur_von_reach` (`Maschine.lean:3607`) |
+| `hJw` / `hJsf` | Chain worlds / step threads equal the machine's. | (d) STILL OPEN, fragment (c) | `kette_zwei_aus_lauf` for two-thread lock-only; witnessed single-thread via `kette_aus_lauf_bezeugt_closed` (`Ziel.lean:2241`) and per-step via `kette_mit_zeugen` (`Ziel.lean:1713`); general wiring → D4 |
+| `hSeedAll` | Per member thread, `QRequires` and `QEnsures` hold at the start world. | (a) USER caller side, repaired shape (c) | place-check repair `ReqAmEintritt`/`EnsAmRueck` (`VertragOrtB.lean:114/120`) with bridge `rufAt_ok_of_gates` (`:406`), call rule `hoare_call` (`HoareRuf.lean:57`), fidelity `rufF_treu` (`RufMaschineF.lean:633`) / `rufG_treu` (`RufMaschineG.lean:1198`); residual wiring → D11 |
+| `hBlattAll` | Uniform per-firing preservation over every reachable intermediate machine. | (d) STILL OPEN, fragment (c) | nine memory-preserving leaves via `hBlattAll_speicherfest_aus_feuerung` (`Maschine.lean:4093`); writing leaves refuted (`BlattGegenbeispiel.lean:286`); Hoare rules (`HoareRegeln.lean`, `HoareRuf.lean`) give the per-statement repair; straight-line part → lane 84 expected (D5) |
+| `hstart : c.tick 0 ≤ S` | The first clock tick is within one period. | (b) HARDWARE | per-clock fact, consumed by `TickClock.covers` |
+| `hspace : deadlineSpacing S p d` | The use waits out the sampling window. | (b) HARDWARE | per-use premise, watchdog/granularity argument outside Lean |
+| `hLowering : Absenkung` | A lowering witness with cap 18. | (c) DISCHARGED | measured witness `absenkung` (`Ziel.lean:97`) via `absenkung_haelt_schranke` (`:110`) |
+| `hpd`/`hdl`, `hne`/`hw₁`/`hw₂` | Deadline strictly inside check-use; two exhibited accesses by distinct threads. | DATA | per-deadline / per-run witness selection |
+
+How the seven older family members differ (all verified against the proof
+terms in `Ziel.lean`):
+`ziel_nutzer_last` additionally owes `hvoll`/`hvers` (per-thread `Brav`
+provenance + interleaving: run DATA, closed per body by
+`ziel_brav_aus_exec` (`Ziel.lean:207`) over `exec_spur` — (c) per body),
+`hausschluss : ForeignExclusion` ((b) HARDWARE, `A_lock`), `hEin`/`hungeteilt`
+as bare shapes ((d), discharged in the PC variant by `pc_discharge_einfaedig`
+(`Maschine.lean:1619`) / `pc_discharge_unshared` (`:1704`)), `hLink` ((d),
+gone from the machine variant on), `hInv` ((c) from the disziplin variant on,
+via `invariantenKontext_aus_disziplin` (`InterferenzAllgemein.lean:1530`)),
+`hSpec` ((a) USER triples; from the stabil variant on replaced by the
+`stabil_aus_lauf` (`Maschine.lean:3879`) run premises `hMemAll`/`hSeedAll`/
+`hBlattAll`, where `hMemAll` is premise-free at Q-instantiation by
+`speicherVertrag_aus_Q` (`Extraktion.lean:3928`) — (c)), and `hFree` ((a) USER;
+from the disziplin variant on derived inside by
+`interferenceFree_of_invariantForm` from `hForm` for the invariant fragment —
+(c); the non-invariant fragment still owes `hFree` — (d) → D9).
+`ziel_seqLogic_aus_spec` / `..._invariantForm` are the two sequential-logic
+legs (`hSpec`+`hFree` vs `hSpec`+`hForm`) with the same classes as above.
+
+Three theorems outside `Ziel.lean`, every premise classified:
+`csl_ressourceninvariante` (`CSLInvariante.lean:305-314`): `hO` (b);
+`hGuard : Sum.inl L ∈ D.braucht t` program DATA (decidable declaration fact);
+`hLokal` (a) USER locality; `hStart` (a) USER entry; `hRelease` (a) USER
+release obligation; the concluded `PCReach`/`∀ g, L ∉ offen …` are run DATA.
+`EZD.eigenzustand_nur_eigene_schritteD_rep` (`EigenZustandD.lean:1368-1388`):
+`hO` (b); `hNurG` (other threads never name `t`) (d) checker text fact → D2
+family; `hNoAx` (no oracle write of `t` on foreign steps) (d) → D12
+(lane 80 expected); reachability + step are run DATA.
+`rufG_treu` (`RufMaschineG.lean:1198-1203`): the only premise besides the
+machine is the reachability derivation `h : RufErreichbarG …` (run DATA);
+the return-fidelity conclusion is proved from the log invariant
+(`rufErreichbarG_passt`, `rufLogPasstG_gedeckt`) — no user or hardware
+obligation. Same shape for `rufF_treu` (`RufMaschineF.lean:633`).
+
+## 8. Next lanes for each (d) item (fixed target proposals)
+
+- **D1 (S12 atom identity).** Prove the counter points at the extracted atom
+  for fired straight-line leaves.
+  Target: `theorem pcAtom_aus_feuerung (P : Programm D) (fcode : Faden → D.Fn) (tabs : List D.Tab) (globs : List D.Glob) (f : Faden) (pc : PCStand) (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (s : Stmt D V l Γ Λ Λ') : s.istBlatt = true → (Extraktion.progAus P fcode tabs globs f)[pc f]? = some (PCAtom.leaf Λ (Extraktion.stmtTraeger tabs globs s ++ Extraktion.stmtOrte s))` under an explicit scheduler hypothesis for the step. Witness on `refB_prog`.
+- **D2 (checker separation/footprint facts).** Decide `PCMarkSep`/`PCUnsharedSep`
+  and the `hNurG` shape per program by computation over `progAus`.
+  Target: `theorem pcMarkSep_aus_verschiedenen_funktionen (P : Programm D) (fcode : Faden → D.Fn) (tabs : List D.Tab) (globs : List D.Glob) (code : D.Marke → Nat) : (∀ g₁ g₂, g₁ ≠ g₂ → fcode g₁ ≠ fcode g₂) → (∀ f (m : D.Marke), m ∈ markenDesKoerpers (P.rumpf (fcode f)) → code m ≠ 0) → PCMarkSep code (Extraktion.progAus P fcode tabs globs)` (same-function threads stay excluded until per-thread marks exist).
+- **D3 (guard existence).** Narrow the discipline package to carriers that are
+  written and shared.
+  Target: `theorem invariantenKontext_aus_disziplin_bedarf (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) (I : TraegerInv (D := D)) (Wc : (c : D.Tab ⊕ D.Glob) → D.Tab → Bool) (Gc : (c : D.Tab ⊕ D.Glob) → D.Glob → Bool) (hAbD : ∀ c, HaengtAb (Wc c) (Gc c) (I.inv c)) (hFrameTD : ∀ (c : D.Tab ⊕ D.Glob) (t : D.Tab), Wc c t = true → c = .inl t) (hFrameGD : ∀ (c : D.Tab ⊕ D.Glob) (x : D.Glob), Gc c x = true → c = .inr x) (hGuardBedarf : ∀ c : D.Tab ⊕ D.Glob, (∃ g, g ∈ J.faeden ∧ TraegerSchreibt (J.code g) c = true) → ∃ L : D.Lock, Bewacht (D := D) c L) (hEntry : ∀ (c : D.Tab ⊕ D.Glob) (σ₀ : World D), J.welten[0]? = some σ₀ → I.inv c σ₀) (hReturn : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden) (vor nach : World D), Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g) → I.inv c nach) (hWatch : ∀ (c : D.Tab ⊕ D.Glob) (L : D.Lock) (k : Nat) (g : Faden) (vor nach : World D), Bewacht (D := D) c L → g ∈ J.faeden → J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) c = true → L ∈ D.haelt (J.code g)) : InvariantenKontext Nb J I`.
+- **D4 (chain-machine wiring, N-thread).** Iterate the witnessed step
+  (`kette_mit_zeugen`, `Ziel.lean:1713`) over a whole `PCReach` run.
+  Target: `theorem kette_aus_lauf_voll_ohne_hlock (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (sp : Speicher D) (M : GenMaschine D) (pc : PCStand) (h : PCReach P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc) (t₀ : D.Tab) : ∃ Nb (J : GemeinsamerLauf (D := D) Nb), J.welten = M.welten ∧ ∃ tr, PCSpur P O passes (Extraktion.progAus P fcode tabs globs) (GenStart sp) M pc tr ∧ J.schrittFaden = tr` for the single shared-table lock fragment (globals stay excluded).
+- **D5 (per-leaf preservation).** Replace the uniform `hBlattAll` by
+  per-statement Hoare triples: straight-line leaves via lane 84 (adequacy of
+  F), call leaves via `hoare_call` + `rufF_treu`, unfold leaves via the G
+  adequacy to follow.
+  Target: `theorem hBlattAll_aus_hoare_gerade (P : Programm D) (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hR : RespektiertVertraege P R) (g : Faden) (Pre Post : D.Fn → World D → Prop) (hPre : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ), s.istBlatt = true → s.istGerade = true → STTripel (V := V) (l := l) (Γ := Γ) (Λ := Λ) O passes R s (Pre (J.code g)) (Post (J.code g))) : …` (exact conclusion: the `hBlattAll` shape restricted to straight-line leaves; the writing-leaf refutation stays as the boundary).
+- **D6 (global watches).** Checker-side discharge of `hWatch` for globals.
+  Target: `theorem wache_global_aus_schuld (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) (x : D.Glob) (L : D.Lock) : Sum.inl L ∈ D.gbraucht x → J.hSchuld → (global coverage) → (the `hWatch` conclusion for `.inr x`)` mirroring `wache_aus_schuld`.
+- **D7 (footprint containment).** Decide `requires`/`ensures` footprint
+  containment per function by computation.
+  Target: `theorem vertragFuss_in_signatur (P : Programm D) (f : D.Fn) (t : D.Tab) : .inl t ∈ (P.requires f).orte → D.schreibt f t = true` from a decidable checker predicate over the contract syntax (one theorem per each of the four shapes).
+- **D8 (event-emitting oracles).** Relax the `GutO` spur conjunct so DMA-like
+  oracles are covered; lane 80 (GutO records oracle events) is expected to
+  close this.
+  Target: `theorem gutO_mit_orakelspur (O : Orakel D) (hO : GutOmitSpur O) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) : Gut (D.aschreibt a) (D.agschreibt a) σ (O.wirkt a σ ρ).1 ∧ (O.wirkt a σ ρ).1.haelt = σ.haelt` (frame + lock preservation without spur equality; goodness of oracle events becomes a per-oracle proof obligation).
+- **D9 (non-invariant fragment).** No lane yet: assertions over shared carriers
+  not in invariant form still owe `hFree` per run. Smallest lane: a
+  two-thread stability transfer for assertions that are stable under
+  foreign steps holding the guard.
+  Target: `theorem stabil_ohne_form_bewacht (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) (I : TraegerInv (D := D)) (Q : Faden → World D → Prop) (hStabil : ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D), g ∈ J.faeden → g ≠ f → J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach → (Q f vor ↔ Q f nach)) (σ : World D) (hletzte : J.welten.getLast? = some σ) (f : Faden) (hf : f ∈ J.faeden) : Q f σ` from per-thread head validity plus step stability (the per-run check stays user-side but no longer needs the full `InterferenceFree` shape).
+- **D11 (contract place wiring).** Wire `EnsAmRueck` into the `hSeedAll`/
+  `stabil_aus_lauf` head-validity shape so `Post`-at-entry is never asked.
+  Target: `theorem seedAll_aus_ruf (P : Programm D) (O : Orakel D) (passes : Nat) (sp : Speicher D) (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb) (g : Faden) (hf : g ∈ J.faeden) (rho : Env D (D.params (J.code g))) (hreq : ReqAmEintritt P (J.code g) (GenStart sp).start rho) : Extraktion.QRequires P (J.code g) ((GenStart sp).welten[0]?.getD default)` — i.e. entry-side requires from the gate; the ensures leg travels via `rueck_ohne_nachbedingung` at return, not at the head.
+- **D12 (`hNoAx` consumption).** Lane 80 (own-state without remainder) is
+  expected to close this: with oracle events recorded, foreign oracle writes
+  of `t` are ruled out by the oracle frame instead of posited.
+  Target: `theorem hNoAx_aus_rahmen (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutOmitSpur O) (prog : PCProg D) (t : D.Tab) (M : GenMaschine D) (pc : PCStand) (h : Faden) … : (the `hNoAx` conclusion for `t`)` from `hO`'s frame clause plus the foreign-carrier program fact.
+
+## 9. Axiom record (2026-09-12, probe `.tmp/sonde97.lean`, `./lean-probe` 0 errors)
+
+Every theorem in the family and the three named theorems depend only on
+`[propext, Classical.choice, Quot.sound]` — no `sorryAx`, no extra axiom:
+
+- `ziel_nutzer_last`, `ziel_seqLogic_aus_spec`,
+  `ziel_seqLogic_aus_spec_invariantForm`, `ziel_nutzer_last_aus_disziplin`,
+  `ziel_nutzer_last_aus_maschine`, `ziel_nutzer_last_aus_pc`,
+  `ziel_nutzer_last_aus_pc_stabil`, `ziel_nutzer_last_aus_pc_Q`,
+  `csl_ressourceninvariante`, `EZD.eigenzustand_nur_eigene_schritteD_rep`,
+  `rufG_treu` (and `rufF_treu` by the same proof shape): all
+  `[propext, Classical.choice, Quot.sound]`.
+
+## 10. Distance to the goal
+
+(a) Count of (d) items: **11** (D1-D9 plus D11-D12). Of these, D2/D7 are pure checker-computation duties (decidable per
+program, no new mathematics), D1/D4/D5/D11 are run/witness wiring with a
+merged fragment each already closed, and D3/D6/D8/D9/D12 need new theorems.
+(b) Wave-4 lanes running: lane 80 (GutO records oracle events + own-state
+without remainder) is expected to close **D8** (the spur conjunct it relaxes
+is exactly the D8 target's dropped conjunct) and **D12** (the `hNoAx`
+remainder it consumes); lane 84 (adequacy of F for straight-line bodies) is
+expected to close the straight-line half of **D5** and the straight-line
+instances of **D1** (counter-at-atom for straight-line firings runs through
+the same adequacy). Remaining after both: D2, D3, D4, D6, D7, D9, D11 and
+the non-straight-line (call/unfold) half of D5.
+(c) Narrowing carried, not counted as (d): C4 endpoints/absent deadlines,
+C12 single-table two-access shape, same-function threads (§5 B8),
+lock-free sharing (`hDeck` shape), lowering leg numeric-only (§5 B11).
+(d) What the user proves at the flagship after §§7-8: their contracts at
+their place (`hSeedAll` entry side, `EnsAmRueck` return side), their
+invariants (`hEntry`/`hReturn`/`hAbD`/frames/`hForm`/`hLokal`/`hStart`/
+`hRelease`), their per-leaf preservation for writing leaves (until D5
+closes), plus the named hardware assumptions (`hO` oracle class, `hstart`/
+`hspace`, `ForeignExclusion`, deadline `fortschritt`). Everything else is
+carried by the theorems named in the (c) column.
+
+---
+
+Prior map follows (draft A §§1-5, wave-1 verdicts §6 — kept for history).
 
 Draft A (lane 16). Independent draft; no Lean changes.
 Target: `Gabbro.Grammatik.ziel_nutzer_last_aus_pc_Q`, `grammatik/Grammatik/Ziel.lean:2324`.
