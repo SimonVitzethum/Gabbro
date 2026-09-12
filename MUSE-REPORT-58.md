@@ -143,8 +143,13 @@ Nothing is wrong. Two notes:
 - Proof engineering, measured: mutual tactic-theorem induction over
   `Stmt`/`Block` needs tactic `match` (not `cases` -- `cases` elaborates
   to something `brecOn` cannot eliminate, failing with
-  `true = g001Block e` unsolved) plus `termination_by structural` (the
+  `true = g001 e` unsolved) plus `termination_by structural` (the
   `termination_by x => e` form is rejected for tactic theorems in this
   toolchain with a spurious "binds 0 parameters"). Equation-compiler style
   fails on the dependent indices. No precedent exists in-tree -- nobody
   inducts over these types in proofs today.
+- 2026-09-12 (post-merge): master added `hd`/`hgd` guard premises to
+  `Stmt.axiomCall` (lane 74) and a width prefix to `Expr.shl`/`shr`
+  (lane 61); adapted two `axiomCall` patterns in `Geist.lean` (extra `_`
+  binders, statements unchanged) -- the `shl`/`shr` change needs nothing
+  here since footprints are reused via `Expr.orte`.

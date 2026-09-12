@@ -103,7 +103,7 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse _ inv body => orteOk (D := D) inv.orte && g001 body
   | .retry _ bis body ueber => orteOk (D := D) bis.orte && g001 body && g001 ueber
   | .forever _ inv body => orteOk (D := D) inv.orte && g001 body
-  | .axiomCall _ args _ _ _ => orteOk (D := D) args.orte
+  | .axiomCall _ args _ _ _ _ _ => orteOk (D := D) args.orte
   | .regSchreib _ _ e => orteOk (D := D) e.orte
   | .transition _ _ _ _ _ _ _ => true
   | .publish _ e _ _ _ _ => orteOk (D := D) e.orte
@@ -261,7 +261,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have ho' : o ∈ p.orte ++ args.orte := by
         simpa [Extraktion.stmtOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
-  | .axiomCall a args h hw hg =>
+  | .axiomCall a args h hw hg hd hgd =>
       intro h ho
       have h0 : (orteOk (D := D) args.orte) = true := h
       have ho' : o ∈ args.orte := by
