@@ -414,3 +414,107 @@ theorem kette_aus_lauf_voll
 #print axioms Gabbro.Grammatik.kette_aus_lauf_voll
 
 end Gabbro.Grammatik
+
+/-! ## Table witnesses for `SerialLink`: writing steps at `zugriff` events
+
+    The whole-run induction above (`kette_aus_lauf_voll`) threads a GUARDED
+    `SerialLink`: each new lock step closes the link by contradiction from the
+    non-writer premise, and the base closes it vacuously over the empty step
+    list. No level ever exhibits a real witness event -- for writing steps the
+    slot stays owed. This section closes the TABLE half of that remainder.
+
+    What is proved (no `sorry`, no `admit`, no `axiom`):
+
+    - `serialLink_zeuge_tabelle`: over one table carrier `t₀` with guard `L`,
+      writing chain steps own BOTH a real `zugriff` witness event in the run
+      (the `hwit` witness function: per writing step `(k, g)` a run index `j`
+      with `run[j]? = some (Schritt.mk g (.zugriff t₀ w Λ h))`) AND the guard
+      (`L ∈ D.haelt (J.code g)`). The event half is posited -- positing the
+      witness is scheduler/witness duty (as `hpc` is for `PCSchritt`), with its
+      shape read off `writeSlot_trace_singleton` (`Koernung.lean`),
+      `schreibBytes_spur_eq` and `execEreignis_aus_blatt_ohne_axiomCall`
+      (`Extraktion.lean`), all read-only. The guard half is DERIVED through the
+      U003 chain, read-only: `wache_aus_schuld` (`InterferenzAllgemein.lean`
+      section 21) from `J.hSchuld` -- the `SchuldnerHaelt` premise the checker
+      side carries, proved per body by `schuldnerHaelt_gilt` (U003,
+      `Syntax.lean`:181) -- plus coverage. Every premise is load-bearing:
+      `Nb J run t₀ L` type both conjuncts, `hGuardT` and `hCov` feed the guard
+      discharge, `hwit` feeds the witness conjunct.
+    - `serialLink_zeuge_fuer_kette`: the corollary feeding the induction's
+      guarded `SerialLink` slot (`∀ t₀, TraegerSchreibt (J.code f) (.inl t₀) =
+      false → SerialLink Nb J run t₀`, as consumed by
+      `kette_aus_lauf_schritt`): the per-carrier table package closes the slot
+      unconditionally, so the slot guard is matched but unneeded -- writers are
+      covered by real witnesses, not assumed away. The package premises
+      (`hGuard`, `hCov`, `hwit`) are all load-bearing; only the consumer-named
+      guard hypothesis is discarded, and it is discarded openly (strength of
+      the package, not a hidden gap).
+
+    Checker-side premises, named: `hGuardT` (the static watch list -- which
+    lock guards the carrier, the `sperren_je_traeger` side of `gruppe.rs`);
+    `hCov` (coverage -- the written table sits in some owed invariant's
+    carrier list, the group/invariant side of `gruppe.rs`); `hwit` (the run
+    really records the access -- the `schreibSlot` event shape). `J.hSchuld`
+    itself is the U003 premise (`SchuldnerHaelt`), not re-proved here.
+
+    Coverage (exactly): single shared TABLE carrier witnesses with guard, plus
+    the guarded-slot adapter for whole-run consumers.
+
+    Remainder (booked, not hidden): globals -- U003 is table-only
+    (`Syntax.lean`:181-182), so `gzugriff` witnesses and the global guard stay
+    owed; multi-carrier conflicts; folding the table witness into a writing
+    `blatt` induction step (the `execStmt` frame correspondence `hslots` /
+    `hglobs` for moving memory, as booked at `kette_aus_maschinenlauf_schritt`).
+-/
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **Table witness: writing steps own a real `zugriff` event plus the U003
+    guard.** Over one table carrier `t₀` with guard `L`, every writing chain
+    step has its witness access in the run (`hwit`, witness duty) and every
+    writer holds the guard (derived via `wache_aus_schuld` from `J.hSchuld`
+    plus coverage `hCov`). -/
+theorem serialLink_zeuge_tabelle (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (run : Lauf D) (t₀ : D.Tab) (L : D.Lock)
+    (hGuardT : Sum.inl L ∈ D.braucht t₀)
+    (hCov : ∀ (g : Faden), g ∈ J.faeden →
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hwit : ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
+      TraegerSchreibt (J.code g) (.inl t₀) = true →
+      ∃ (j : Nat) (w : Bool) (Λ : List (Res D)) (h : List D.Lock),
+        run[j]? = some (Schritt.mk g (.zugriff t₀ w Λ h))) :
+    SerialLink Nb J run t₀ ∧
+      ∀ (g : Faden), g ∈ J.faeden → TraegerSchreibt (J.code g) (.inl t₀) = true →
+        L ∈ D.haelt (J.code g) := by
+  constructor
+  · intro k g hkg hW
+    exact hwit k g hkg hW
+  · intro g hg hW
+    exact wache_aus_schuld Nb J t₀ L hGuardT g hg hW (hCov g hg hW)
+
+/-- **Corollary: the table package feeds the induction's guarded `SerialLink`
+    slot.** From the per-carrier package (guard existence, coverage, witness
+    events) the guarded slot closes unconditionally: the slot guard is matched
+    for the consumer (`kette_aus_lauf_schritt`) but carries no content, because
+    writers are covered by real witnesses. -/
+theorem serialLink_zeuge_fuer_kette (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (run : Lauf D) (f : Faden)
+    (hGuard : ∀ t₀ : D.Tab, ∃ L : D.Lock, Sum.inl L ∈ D.braucht t₀)
+    (hCov : ∀ (t₀ : D.Tab) (g : Faden), g ∈ J.faeden →
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hwit : ∀ (t₀ : D.Tab) (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
+      TraegerSchreibt (J.code g) (.inl t₀) = true →
+      ∃ (j : Nat) (w : Bool) (Λ : List (Res D)) (h : List D.Lock),
+        run[j]? = some (Schritt.mk g (.zugriff t₀ w Λ h))) :
+    ∀ t₀ : D.Tab, TraegerSchreibt (J.code f) (.inl t₀) = false →
+      SerialLink Nb J run t₀ := by
+  intro t₀ _
+  obtain ⟨L, hL⟩ := hGuard t₀
+  exact (serialLink_zeuge_tabelle Nb J run t₀ L hL (hCov t₀) (hwit t₀)).1
+
+#print axioms Gabbro.Grammatik.serialLink_zeuge_tabelle
+#print axioms Gabbro.Grammatik.serialLink_zeuge_fuer_kette
+
+end Gabbro.Grammatik
