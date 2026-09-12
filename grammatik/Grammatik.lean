@@ -87,6 +87,7 @@ import Grammatik.Bits
 import Grammatik.CSLInvarianteC
 import Grammatik.Arena
 import Grammatik.HoareRuf
+import Grammatik.EigenZustand
 import Grammatik.SyscallPaarung
 import Grammatik.RufMaschineG
 import Grammatik.CSLInvariante
